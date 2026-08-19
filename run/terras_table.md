@@ -26,6 +26,18 @@ sandbox, so the anchor stays flagged `shaky` in the graph — from_memory, unver
 | 12 | 226 | 0.055176 | 5,773* | 132,078 | 531,440 | ✓ |
 | 13 | 367 | 0.044800 | 19,477 | 279,538 | 1,594,322 | ✓ |
 | 14 | 734 | 0.044800 | 70,880 | 590,838 | 4,782,968 | ✓ |
+| 15 | 1,295 | 0.039520 | 332,402 | 1,246,202 | 14,348,906 | ✓ |
+| 16 | 2,114 | 0.032257 | 1,921,823 | 2,622,462 | 43,046,720 | ✓ |
+| 17 | 4,228 | 0.032257 | — oracle only — | — | 129,140,162 | n/a |
+| 18 | 7,495 | 0.028591 | — oracle only — | — | 387,420,488 | n/a |
+| 19 | 14,990 | 0.028591 | — oracle only — | — | 1,162,261,466 | n/a |
+| 20 | 27,328 | 0.026062 | — oracle only — | — | 3,486,784,400 | n/a |
+
+**In-substrate ceiling: k=16** (measured: 71s → 332s → 1,922s for k=14→16; k=17
+projects to 3–5h and ~5.5M facts with provenance doubling the store). Rows k=17..20
+come from the TS oracle alone and are stored in a separate relation
+`terras_oracle_only/2` with `oracle_only_computed_*` grounds — never silently mixed
+with the dual-computed `terras/2` rows.
 
 Densities are monotone non-increasing so far, consistent with Terras density → 0.
 Notable: densities repeat in adjacent pairs (k=5/6: 0.125, k=8/9: 0.0742,

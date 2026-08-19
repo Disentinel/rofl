@@ -1,0 +1,16 @@
+-- Round 8. TARGET: Track A — k=15, k=16, and the measured substrate ceiling.
+-- Engine == oracle on both: 1295 (k=15, 332.4s, 1,246,202 facts) and
+-- 2114 (k=16, 1921.8s, 2,622,462 facts). Time curve k=14..16: 71s -> 332s -> 1922s
+-- (x4.7, x5.8 — superlinearity worsening with heap pressure; provenance doubles the
+-- store, SUBSTRATE_ISSUES #5). k=17 projects to 3-5 hours and ~5.5M facts:
+-- IN-SUBSTRATE CEILING FOR THIS RUN IS k=16, measured, not assumed.
+terras[world](15, 1295).
+terras[world](16, 2114).
+claim_of[a](terras_k15). ground[a](terras_k15, scratch_oracle_agree_k15).
+evidence[world](terras_k15, scratch_oracle_agree_k15).
+claim_of[a](terras_k16). ground[a](terras_k16, scratch_oracle_agree_k16).
+evidence[world](terras_k16, scratch_oracle_agree_k16).
+
+claim_of[a](substrate_ceiling_k16).
+ground[a](substrate_ceiling_k16, timing_curve_71_332_1922_seconds).
+evidence[world](substrate_ceiling_k16, timing_curve_71_332_1922_seconds).

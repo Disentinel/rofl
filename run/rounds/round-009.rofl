@@ -1,0 +1,22 @@
+-- Round 9. TARGET: Track A completion k=17..20 — ORACLE-ONLY rows, honestly marked.
+-- Beyond the measured k=16 ceiling the classification comes from the independent TS
+-- implementation alone (driver terrasOracle); there is NO in-substrate double-check,
+-- so these rows carry an oracle_only ground, deliberately distinct from the
+-- scratch_oracle_agree grounds of k<=16. A future engine (or bigger heap) can
+-- upgrade them by re-deriving in-substrate.
+terras_oracle_only[world](17, 4228).
+terras_oracle_only[world](18, 7495).
+terras_oracle_only[world](19, 14990).
+terras_oracle_only[world](20, 27328).
+claim_of[a](terras_k17). ground[a](terras_k17, oracle_only_computed_k17).
+evidence[world](terras_k17, oracle_only_computed_k17).
+claim_of[a](terras_k18). ground[a](terras_k18, oracle_only_computed_k18).
+evidence[world](terras_k18, oracle_only_computed_k18).
+claim_of[a](terras_k19). ground[a](terras_k19, oracle_only_computed_k19).
+evidence[world](terras_k19, oracle_only_computed_k19).
+claim_of[a](terras_k20). ground[a](terras_k20, oracle_only_computed_k20).
+evidence[world](terras_k20, oracle_only_computed_k20).
+-- separation of relations is deliberate: terras/2 = dual-computed; querying
+-- terras(K, U) never silently mixes in oracle-only rows.
+level(oracle_only_level).
+decision[a](attach(terras_oracle_only, oracle_only_level)).

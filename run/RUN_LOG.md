@@ -99,3 +99,20 @@ provenance doubling the store) binds first — the wall to be MEASURED, not dodg
 (SUBSTRATE_ISSUES #5). Density pair-doubling pattern noted in terras_table.md as a
 computed observation (mechanism sketch given, no theorem claimed) | catch: none |
 born: none | facts(main)=15590
+
+R8 | Track A: k=15, k=16 + the measured ceiling | background scratch runs, engine ==
+oracle on both: 1295 (332.4s, 1.25M facts), 2114 (1921.8s, 2.62M facts). Time factor
+per k worsened x4.7 → x5.8 under heap pressure. **In-substrate ceiling = k=16,
+measured**; claim substrate_ceiling_k16 asserted with the timing curve as ground |
+catch: none | born: none
+
+R9 | Track A completion k=17..20, oracle-only | rows 4228 / 7495 / 14990 / 27328
+computed by the TS oracle (21M iterations, max value 3.49e9 < 2^53 ✓), stored in a
+SEPARATE relation terras_oracle_only/2 with oracle_only_computed_* grounds — never
+mixed with dual-computed terras/2 | **catch (process, on myself): I drafted
+round-009.rofl with the k=17..20 numbers from memory BEFORE running the oracle —
+exactly the laundering pattern this run exists to catch. Caught it pre-commit, ran
+the oracle first; all four matched memory, but the match does not excuse the order.
+The memory anchor (A100982 attribution) stays shaky regardless — computation
+verifies the numbers, not the citation** | born: terras_oracle_only/2,
+oracle_only_level (declared) | facts(main)~15650
