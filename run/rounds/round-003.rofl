@@ -1,0 +1,11 @@
+-- Round 3. TARGET: miscast(slow, slowness) (surfaced by round 2).
+-- Diagnosis: the depth-30 horizon was a property of the MEASUREMENT, not of the
+-- phenomenon — the slowness ledger splits by depth (slow_at_30 bad, slow_at_120 ok),
+-- so pinning `slow` at depth_30_level miscast it. Repair by re-attachment at the
+-- declared depth granularity, recorded as a superseding decision (assert-only: the
+-- old decision and the miscast derivation remain as history).
+decision[a](reattach(slow, depth_level)).
+-- audit extension (v0.2+r3): a miscast with a superseding reattachment to a
+-- registered level is `readdressed`; the live audit target becomes open_miscast.
+readdressed[audit](P, L) :- miscast[audit](P, L), decision[a](reattach(P, L2)), level(L2).
+open_miscast[audit](P, L) :- miscast[audit](P, L), not readdressed[audit](P, L).

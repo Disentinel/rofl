@@ -44,7 +44,11 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // loading & asserting (rules become reflection facts through this one path)
 
-  load(text: string, opts: { who?: string; budget?: number } = {}): LoadResult {
+  /** With defer: true the post-load evaluation is skipped; parse-level and
+   *  write-protection checks still run per clause. Callers batching many
+   *  trusted files evaluate once at the end (stratification rejection then
+   *  surfaces at that evaluation instead of per file). */
+  load(text: string, opts: { who?: string; budget?: number; defer?: boolean } = {}): LoadResult {
     this.loadn++;
     const holeId = mkf('$load', [mki(this.loadn)]);
     let clauses: Clause[];
@@ -63,6 +67,7 @@ export class Rofl {
       this.store = backup;
       return { ok: false, diagnostics: diags };
     }
+    if (opts.defer) return { ok: true, diagnostics: [] };
     try {
       this.ensure(opts.budget ?? DEFAULT_BUDGET, holeId);
     } catch (e) {
