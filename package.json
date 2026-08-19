@@ -1,0 +1,17 @@
+{
+  "name": "rofl",
+  "version": "0.1.0",
+  "description": "ROFL kernel v0 - Relation-Oriented Fixpoint Language",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --experimental-strip-types --test --test-reporter=spec test/*.test.ts",
+    "test:bun": "bun test --timeout 60000",
+    "grepcheck": "node --experimental-strip-types scripts/kernel_grep.ts",
+    "repl": "node --experimental-strip-types src/repl.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3"
+  }
+}
