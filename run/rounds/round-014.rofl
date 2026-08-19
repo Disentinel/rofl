@@ -1,0 +1,16 @@
+-- Round 14. TARGET: cross-link the run's two computations — is the empirical slow
+-- set (30-full-step non-droppers, n<=999) contained in the Terras-undecided residue
+-- classes mod 32? Theory sketch (not asserted as ground): a k=5-decided class has
+-- multiplier 3^a < 2^j within 5 accelerated steps, forcing a drop below the start
+-- for n large enough — so slow numbers should sit inside the undecided classes,
+-- with only small-n boundary effects as possible exceptions. The engine decides.
+--
+-- und32 facts: computed THIS round, engine scratch (boot+terras.rofl+kk(5)) ==
+-- oracle, residue lists identical: {7, 15, 27, 31}.
+und32(7). und32(15). und32(27). und32(31).
+claim_of[a](und32_set_k5).
+ground[a](und32_set_k5, scratch_oracle_agree_k5_residue_list).
+evidence[world](und32_set_k5, scratch_oracle_agree_k5_residue_list).
+
+slowres32(R) :- slow(N), R is N mod 32.
+slow_outside_und32(N) :- slow(N), R is N mod 32, not und32(R).

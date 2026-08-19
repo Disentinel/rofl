@@ -1,0 +1,16 @@
+-- Round 15. TARGET: record the round-14 result as claims (compute-then-claim order).
+-- Computed: slow_outside_und32 is EMPTY (inclusion holds with zero boundary
+-- exceptions), and slowres32 = {7,15,27,31} EXACTLY = the k=5 undecided set:
+-- the mod-16 observation from the seed session ({7,11,15}) refines at mod 32 to
+-- precisely the Terras-undecided classes — 11 mod 16 lifts to {11,27} and only 27
+-- survives; 23 (from 7 mod 16) never appears. Two independent notions — empirical
+-- 30-full-step non-dropping at n<=999 and the 5-accelerated-step coefficient
+-- criterion — coincide at mod-32 granularity, assembled by the engine's own joins.
+-- Scope honesty: an equality AT RANGE 999, not a claimed theorem.
+claim_of[a](slow_subset_und32_at_999).
+ground[a](slow_subset_und32_at_999, computed_slow_outside_und32_empty).
+evidence[world](slow_subset_und32_at_999, computed_slow_outside_und32_empty).
+
+claim_of[a](slowres32_equals_und32_at_999).
+ground[a](slowres32_equals_und32_at_999, computed_both_inclusions_range_999).
+evidence[world](slowres32_equals_und32_at_999, computed_both_inclusions_range_999).

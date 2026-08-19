@@ -161,3 +161,19 @@ atom under-describes the post-R12 computation — an atom-naming drift the vocab
 rule cannot see; noted for audit v0.3). Claims asserted: slowres persistence,
 horizon range-tuning | catch: a repair whose reason dies while its conclusion
 survives — exactly the distinction prose CoT blurs | born: none | facts(main)=70269
+
+R14 | cross-link the run's two computations: slow set vs Terras-undecided mod 32 |
+und32 = {7,15,27,31} computed fresh (k=5 scratch engine == oracle residue lists);
+in-substrate inclusion test: **slow_outside_und32 EMPTY** — every slow number at
+n<=999 sits in an undecided class, zero boundary exceptions (theory sketch predicted
+small-n exceptions were possible; none exist at this range) | catch: none | born:
+und32/1, slowres32/1, slow_outside_und32/1 (+3; window R6..R15 = 11, under threshold)
+
+R15 | record R14 as claims | **slowres32 = {7,15,27,31} EXACTLY equals the k=5
+undecided set at range 999**: the seed session's mod-16 observation {7,11,15}
+refines to precisely the Terras-undecided classes (11 lifts to {11,27}, only 27
+survives; 23 never appears). Two independent notions — empirical 30-full-step
+non-dropping and the 5-accelerated-step coefficient criterion — coincide at mod-32
+granularity, assembled by joins. Claimed as an equality AT RANGE 999, no theorem |
+catch: none | born: none | facts(main)=70390. Ledger fully clean (live columns all
+empty; shaky/split/miscast are the standing honest history).
