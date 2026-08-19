@@ -18,7 +18,7 @@ function lcg(seed: number): () => number {
   };
 }
 
-function randomProgram(seed: number): string {
+function randomProgram(seed: number): { text: string; arity: Map<string, number> } {
   const rnd = lcg(seed || 1);
   const pick = <T>(xs: T[]): T => xs[Math.floor(rnd() * xs.length)];
   const rels = ['p0', 'p1', 'p2', 'p3'];
@@ -50,7 +50,7 @@ function randomProgram(seed: number): string {
       bodyVars.length && rnd() < 0.8 ? pick(bodyVars) : pick(consts));
     lines.push(`${headRel}(${headArgs.join(', ')}) :- ${prems.join(', ')}.`);
   }
-  return lines.join('\n');
+  return { text: lines.join('\n'), arity };
 }
 
 function domainFacts(r: Rofl): string[] {
@@ -62,13 +62,41 @@ function domainFacts(r: Rofl): string[] {
 
 test('differential: naive ≡ seminaive on 120 random seeded programs', () => {
   for (let seed = 1; seed <= 120; seed++) {
-    const prog = randomProgram(seed);
+    const prog = randomProgram(seed).text;
     const a = new Rofl({ naive: false });
     const b = new Rofl({ naive: true });
     assert.equal(a.load(prog).ok, true, `seed ${seed} seminaive load`);
     assert.equal(b.load(prog).ok, true, `seed ${seed} naive load`);
     assert.deepEqual(domainFacts(a), domainFacts(b), `seed ${seed} diverged`);
   }
+});
+
+test('differential with stratified negation: naive ≡ seminaive on 30 seeds', () => {
+  // guaranteed-stratified second layer: q-relations negate p-relations only
+  const bootR = new Rofl();
+  assert.equal(bootR.load(BOOT).ok, true);
+  const bootSnap = bootR.save();
+  let qFactsSeen = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const rnd = lcg(seed * 7919);
+    const pick = <T>(xs: T[]): T => xs[Math.floor(rnd() * xs.length)];
+    const base = randomProgram(seed);
+    const lines: string[] = [base.text];
+    const pad = (rel: string) => base.arity.get(rel)! === 2 ? ', _' : '';
+    for (let i = 0; i < 3; i++) {
+      const posRel = pick(['p0', 'p1']);
+      const negRel = pick(['p2', 'p3']);
+      lines.push(`q${i}(X) :- ${posRel}(X${pad(posRel)}), not ${negRel}(X${pad(negRel)}).`);
+    }
+    const prog = lines.join('\n');
+    const a = Rofl.fromSnapshot(bootSnap, { naive: false });
+    const b = Rofl.fromSnapshot(bootSnap, { naive: true });
+    assert.equal(a.load(prog).ok, true, `seed ${seed} seminaive load`);
+    assert.equal(b.load(prog).ok, true, `seed ${seed} naive load`);
+    assert.deepEqual(domainFacts(a), domainFacts(b), `seed ${seed} diverged`);
+    qFactsSeen += a.factKeys().filter((k) => a.store.get(k)!.rel.startsWith('q')).length;
+  }
+  assert.ok(qFactsSeen > 0, 'negation layer actually derived facts');
 });
 
 test('why returns a derivation tree ending in EDB facts', () => {

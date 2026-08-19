@@ -179,6 +179,11 @@ bit-identical state, tick log, and provenance regardless of insertion order
   explicit carry rules for `delta` and the halted `cfg` — Appendix C is a
   sketch; carrying `delta` forward is the "persistence is not a storage
   property" discipline applied honestly.
+- **Node ≥ 22.6 instead of ≥ 20.** The spec says "Bun or Node ≥ 20"; the
+  sources are erasable-syntax TypeScript executed via Node's built-in type
+  stripping, which shipped in 22.6. Nothing in the code needs Node 22 —
+  compiling with `tsc` would restore Node 20 support at the cost of a build
+  step; zero-toolchain execution was judged closer to the spec's intent.
 
 ## Acceptance status
 
