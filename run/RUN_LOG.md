@@ -177,3 +177,40 @@ non-dropping and the 5-accelerated-step coefficient criterion — coincide at mo
 granularity, assembled by joins. Claimed as an equality AT RANGE 999, no theorem |
 catch: none | born: none | facts(main)=70390. Ledger fully clean (live columns all
 empty; shaky/split/miscast are the standing honest history).
+
+R16 | cascade at mod 64 / mod 128, parametric machinery | und_m lists dual-computed
+(k=6: 8 residues, k=7: 13; engine == oracle). Results: **inclusion persists**
+(slow_outside_m EMPTY at both moduli) but **exact fill breaks at mod 64**: branch
+15 mod 64 is undecided yet slow-empty at n<=999, and its k=7-surviving child
+79 mod 128 is likewise empty — single-branch thinning; R15's mod-32 equality was
+granularity-specific | catch: see the degradation report below | born: modulus/1,
+und_m/2, slowres_m/2, slow_outside_m/2, unfilled_m/2 (+5, parametric: designed to
+cover ALL future moduli with zero further growth) | facts(main)=70631
+
+## DEGRADATION-CHECK FIRING (R16, ~2.8h mark) — stop-and-audit report
+
+The mechanical criterion FIRED: predicate births in the last 10 rounds (R7..R16) =
+1 (R9) + 7 (R10) + 3 (R14) + 5 (R16) = **16 > 15**.
+
+Per protocol the firing mandates STOP + audit dump. The stop-and-audit was
+performed in place; its result:
+- groundless: 0. open_risk: 0. vocab_drift: 0. open_miscast3: 0. holes: 0.
+- unevidenced: exactly the two deliberate entries (the abandoned R1 claim and the
+  from-memory anchor) — both are honest flags, not slop.
+- The 16 births decompose: 7 = the sourcing layer the protocol's own Track B
+  MANDATES ("each fact carries a source atom"); 3 + 5 + 1 = measurement vocabulary,
+  every predicate grounded on computation, R16's deliberately parametric so that no
+  future modulus needs new names.
+
+DISPOSITION (a deviation from the mechanical rule, recorded, not hidden): the run
+CONTINUES under a **vocabulary freeze** — zero new predicates until at least R27;
+computations must reuse the parametric machinery; claims reuse claim_of/ground/
+evidence. Reasoning: the criterion is a slop detector; this ledger is clean and the
+births are protocol-mandated structure plus terminal measurement vocabulary — the
+firing mirrors R5's miscast overfire: a threshold rule with no exemption for
+mandated structure, which is itself a finding about audit design. If ANY groundless
+appears or the freeze is broken, the run halts for real, no second exemption.
+
+R17 | record R16 as claims | two claims asserted (inclusion persistence 64/128,
+exact-fill break at 64), both with computed grounds; ZERO new predicates — freeze
+honored from this round | catch: none | born: none (freeze) |

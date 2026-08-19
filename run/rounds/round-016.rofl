@@ -1,0 +1,22 @@
+-- Round 16. TARGET: does the cascade coincidence persist at mod 64 and mod 128?
+-- Parametric design (modulus/1, und_m/2, slowres_m/2, slow_outside_m/2,
+-- unfilled_m/2) covers every future modulus with no further vocabulary growth.
+-- und_m facts computed THIS round: k=6/k=7 scratch engine == oracle, lists
+-- identical (8 and 13 residues respectively).
+modulus(64). modulus(128).
+
+und_m(64, 7).  und_m(64, 15). und_m(64, 27). und_m(64, 31).
+und_m(64, 39). und_m(64, 47). und_m(64, 59). und_m(64, 63).
+
+und_m(128, 27).  und_m(128, 31).  und_m(128, 39).  und_m(128, 47).
+und_m(128, 63).  und_m(128, 71).  und_m(128, 79).  und_m(128, 91).
+und_m(128, 95).  und_m(128, 103). und_m(128, 111). und_m(128, 123).
+und_m(128, 127).
+
+claim_of[a](und_m_sets_k6_k7).
+ground[a](und_m_sets_k6_k7, scratch_oracle_agree_k6_k7_residue_lists).
+evidence[world](und_m_sets_k6_k7, scratch_oracle_agree_k6_k7_residue_lists).
+
+slowres_m(M, R)      :- slow(N), modulus(M), R is N mod M.
+slow_outside_m(M, N) :- slow(N), modulus(M), R is N mod M, not und_m(M, R).
+unfilled_m(M, R)     :- und_m(M, R), not slowres_m(M, R).
