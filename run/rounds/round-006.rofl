@@ -1,0 +1,16 @@
+-- Round 6. TARGET: Track A extension — Terras rows k=9..12.
+-- Same dual computation as round 4 (in-substrate scratch + independent TS oracle);
+-- engine == oracle on all four rows. Overflow guard: max value 531,440 at k=12,
+-- analytic bound 3^k <= 3^12 ~ 5.3e5 << 2^53.
+terras[world](9, 38).
+terras[world](10, 64).
+terras[world](11, 128).
+terras[world](12, 226).
+claim_of[a](terras_k9).  ground[a](terras_k9,  scratch_oracle_agree_k9).
+evidence[world](terras_k9,  scratch_oracle_agree_k9).
+claim_of[a](terras_k10). ground[a](terras_k10, scratch_oracle_agree_k10).
+evidence[world](terras_k10, scratch_oracle_agree_k10).
+claim_of[a](terras_k11). ground[a](terras_k11, scratch_oracle_agree_k11).
+evidence[world](terras_k11, scratch_oracle_agree_k11).
+claim_of[a](terras_k12). ground[a](terras_k12, scratch_oracle_agree_k12).
+evidence[world](terras_k12, scratch_oracle_agree_k12).

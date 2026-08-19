@@ -78,3 +78,24 @@ open_miscast3; live audit target moved to open_miscast3 (empty: slow readdressed
 terras clean); v0.2 columns kept as history | catch: THE catch of the batch |
 born: concerns/2, miscast3/2, readdressed3/2, open_miscast3/2 (+4, declared audit
 vocabulary — birth rate watched) | rels=~80, facts=15489
+
+
+R6 | Track A: Terras rows k=9..12 | engine == oracle on all four: 38, 64, 128, 226;
+densities 0.0742 → 0.0552. Timing curve bent superlinear (k=12: 10.1s on 132k facts)
+— profiled the engine (CPU profile): 16% O(n) splice inserts into sorted index
+arrays, 10% per-read array rematerialization in relPersp, 14.6% substitution-map
+clones in unify. | catch: substrate cost curve is superlinear in facts | born: none
+| facts(main)=15546
+
+Engine work #2 (owner-authorized, tested): store index reworked to append +
+merge-on-read buckets holding FactRec directly (tombstoned removals, lazy normalize)
+— O(1) amortized insert, no per-read copying, same canonical order. 29/29 tests
+green, tsc clean. k=12 scratch: 10.1s → 5.8s. Unify-clone cost (14.6%) noted but NOT
+refactored (trail-based subst is deeper surgery; memory, not time, is the k-ceiling).
+
+R7 | Track A: k=13, k=14 + cost curve | engine == oracle: 367, 734. k=14: 590,838
+facts, 70.9s. Extrapolation: time ceiling k~16-17, but memory (facts + derived_by
+provenance doubling the store) binds first — the wall to be MEASURED, not dodged
+(SUBSTRATE_ISSUES #5). Density pair-doubling pattern noted in terras_table.md as a
+computed observation (mechanism sketch given, no theorem claimed) | catch: none |
+born: none | facts(main)=15590

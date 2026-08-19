@@ -28,6 +28,26 @@ JS float53; 2^68 unrepresentable. Track A guard: representative values stay < 2^
 (max trajectory value for n ≤ 2^20 within k ≤ 20 steps is bounded by n·(3/2)^20 ≈
 3.3e9 ≪ 2^53). Verified per computation round.
 
+## #4a — store index: O(n) sorted-insert made big computations superlinear
+CPU profile of the k=12 Terras scratch run: 16% splice inserts into sorted key
+arrays, 10% per-read rematerialization of FactRec arrays, 14.6% substitution-map
+clones in unify, 7.6% GC.
+Disposition: index FIXED mid-run (owner-authorized): append + merge-on-read buckets
+holding FactRec directly, tombstoned removals — O(1) amortized insert, no per-read
+copying, identical canonical order; 29/29 tests green; k=12 10.1s → 5.8s. The
+unify substitution-clone cost is logged but NOT refactored (trail-based bindings are
+deep surgery, and time is not the binding constraint — see #5).
+
+## #5 — Track A memory wall: provenance doubles the store
+Every derivation emits a derived_by fact (kernel semantics, §3.5), so a scratch
+computation of F facts stores ~2F entries plus firing signatures and witnesses.
+Measured: k=14 → 590,838 facts / 70.9s. Facts grow ~x2.1 per k; projected k=17-18
+crosses multi-GB heap. The engine deliberately has no provenance-off switch (the
+spec forbids provenance-as-afterthought); the honest ceiling for in-substrate Terras
+classification is k≈16 on this hardware. Rows beyond the wall can only come from the
+TS oracle alone and are therefore NOT asserted as engine-computed evidence — if
+asserted at all, they carry an oracle-only ground. Exact wall to be measured.
+
 ## #4 — (inherited, package-documented) deep why through computational derivations
 Witness trees through arithmetic chains are unreadable; the driver exposes `why` but
 the run uses query results and shallow whys only. Builtin-folding remains an open

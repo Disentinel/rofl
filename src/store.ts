@@ -35,7 +35,10 @@ export class Store {
   dirty = true;          // derived layer out of date w.r.t. base facts
   partialEval = false;   // last evaluation hit its budget
 
-  private idx = new Map<string, Map<string, string[]>>(); // rel -> persp -> sorted keys
+  // rel -> persp -> bucket. main is sorted by key; tail collects appends; dead
+  // counts tombstoned recs. Reads normalize (merge tail, drop dead) lazily —
+  // O(1) amortized inserts, no per-read rematerialization, same canonical order.
+  private idx = new Map<string, Map<string, { main: FactRec[]; tail: FactRec[]; dead: number }>>();
 
   /** Add a fact. Returns true if it was new. */
   add(rel: string, persp: string, args: Term[], opts: { scope: Scope; base: boolean; frozen?: boolean }): boolean {
@@ -46,18 +49,13 @@ export class Store {
       if (opts.base && !existing.base) existing.base = true;
       return false;
     }
-    this.facts.set(key, { key, rel, persp, args, scope: opts.scope, base: opts.base, frozen: opts.frozen ?? false });
+    const rec: FactRec = { key, rel, persp, args, scope: opts.scope, base: opts.base, frozen: opts.frozen ?? false };
+    this.facts.set(key, rec);
     let byP = this.idx.get(rel);
     if (!byP) { byP = new Map(); this.idx.set(rel, byP); }
-    let arr = byP.get(persp);
-    if (!arr) { arr = []; byP.set(persp, arr); }
-    // binary insertion keeps every index canonically sorted at all times
-    let lo = 0, hi = arr.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (arr[mid] < key) lo = mid + 1; else hi = mid;
-    }
-    arr.splice(lo, 0, key);
+    let b = byP.get(persp);
+    if (!b) { b = { main: [], tail: [], dead: 0 }; byP.set(persp, b); }
+    b.tail.push(rec);
     return true;
   }
 
@@ -70,19 +68,34 @@ export class Store {
     this.facts.delete(key);
     this.witnesses.delete(key);
     this.firings.delete(key);
-    const arr = this.idx.get(rec.rel)?.get(rec.persp);
-    if (arr) {
-      const i = arr.indexOf(key);
-      if (i >= 0) arr.splice(i, 1);
-    }
+    const b = this.idx.get(rec.rel)?.get(rec.persp);
+    if (b) b.dead++; // rec stays in the arrays as a tombstone until the next read
     return true;
   }
 
-  /** All facts of a relation in one perspective, canonically sorted. */
+  /** All facts of a relation in one perspective, canonically sorted.
+   *  Returns the internal array — callers must not mutate it. */
   relPersp(rel: string, persp: string): FactRec[] {
-    const arr = this.idx.get(rel)?.get(persp);
-    if (!arr || arr.length === 0) return [];
-    return arr.map((k) => this.facts.get(k)!).filter(Boolean);
+    const b = this.idx.get(rel)?.get(persp);
+    if (!b) return [];
+    if (b.tail.length > 0 || b.dead > 0) {
+      const live = (r: FactRec) => this.facts.get(r.key) === r;
+      const tail = (b.dead > 0 ? b.tail.filter(live) : b.tail)
+        .sort((x, y) => (x.key < y.key ? -1 : 1));
+      const main = b.dead > 0 ? b.main.filter(live) : b.main;
+      // merge two sorted runs
+      const out: FactRec[] = new Array(main.length + tail.length);
+      let i = 0, j = 0, o = 0;
+      while (i < main.length && j < tail.length) {
+        out[o++] = main[i].key <= tail[j].key ? main[i++] : tail[j++];
+      }
+      while (i < main.length) out[o++] = main[i++];
+      while (j < tail.length) out[o++] = tail[j++];
+      b.main = out;
+      b.tail = [];
+      b.dead = 0;
+    }
+    return b.main;
   }
 
   /** All facts of a relation across perspectives, canonically sorted. */
@@ -102,8 +115,7 @@ export class Store {
 
   relCount(rel: string): number {
     let n = 0;
-    const byP = this.idx.get(rel);
-    if (byP) for (const arr of byP.values()) n += arr.length;
+    for (const p of this.perspectivesOf(rel)) n += this.relPersp(rel, p).length;
     return n;
   }
 
