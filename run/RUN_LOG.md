@@ -116,3 +116,24 @@ the oracle first; all four matched memory, but the match does not excuse the ord
 The memory anchor (A100982 attribution) stays shaky regardless — computation
 verifies the numbers, not the citation** | born: terras_oracle_only/2,
 oracle_only_level (declared) | facts(main)~15650
+
+R10 | Track B — sourcing the literature layer | source registry (7 src atoms, ALL
+honestly src_basis from_memory — egress to literature blocked; attribution recalled,
+not fetched, nothing fabricated); all 6 obstacles + 2 partial_results linked via
+source_of; audits unsourced_obstacle / unsourced_partial both EMPTY;
+memory_only_source stays queryable as the standing caveat (all 7 srcs, correct) |
+catch: none | born: src/1, src_basis/2, source_of/2, has_source/1,
+unsourced_obstacle/2, unsourced_partial/2, memory_only_source/1 (+7) | rels=85
+
+R11 | Track B closure — hard_core derivation | why hard_core(no_divergence) yields
+the full shallow proof in-substrate: uncovered (all 4 covering strategies dead under
+uncontested literature obstacles, finite-failure demos inline) AND no partials
+(vs no_cycles' Eliahou + Simons-de Weger). Deliverable run/hard_core_proof.md
+(obligation graph dump + proof tree). Claim asserted with the derivation as ground.
+Explicitly NOT new mathematics — expert consensus assembled by joins | catch: none |
+born: none | facts(main)=15842
+
+DEGRADATION CHECK (2h mark): groundless 0 (<3) ✓; open_risk empty, flat ✓;
+predicate births in last 10 rounds (R2..R11) = 15 — AT the >15 threshold, not over.
+WATCH ITEM: vocabulary growth must slow; next rounds should compute/verify within
+existing vocabulary, not model new layers. No HALT.

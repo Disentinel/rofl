@@ -1,0 +1,27 @@
+-- Round 10. TARGET: Track B — sourcing discipline for the literature layer.
+-- The seed's obstacle[lit]/partial_result[lit] facts carried no source atoms.
+-- Source registry below; every src is honestly marked from_memory (the sandbox
+-- blocks egress to the literature; memory_only_source stays queryable as the
+-- standing caveat — attribution is recalled, not fetched. No fabricated pages,
+-- volumes, or DOIs are asserted anywhere.)
+src(src_terras_1976).      src_basis(src_terras_1976, from_memory).
+src(src_tao_2019).         src_basis(src_tao_2019, from_memory).
+src(src_lagarias_survey).  src_basis(src_lagarias_survey, from_memory).
+src(src_conway_1972).      src_basis(src_conway_1972, from_memory).
+src(src_eliahou_1993).     src_basis(src_eliahou_1993, from_memory).
+src(src_simons_deweger).   src_basis(src_simons_deweger, from_memory).
+src(src_baker_theory).     src_basis(src_baker_theory, from_memory).
+
+source_of(measure_zero_gap, src_terras_1976).
+source_of(measure_zero_gap, src_tao_2019).
+source_of(expectation_not_certainty, src_lagarias_survey).
+source_of(conway_undecidability, src_conway_1972).
+source_of(baker_bounds_finite_only, src_baker_theory).
+source_of(conjugacy_loses_arithmetic, src_lagarias_survey).
+source_of(eliahou_cycle_length_bound, src_eliahou_1993).
+source_of(simons_deweger_mcycles, src_simons_deweger).
+
+has_source(X) :- source_of(X, S), src(S).
+unsourced_obstacle[audit](S, X) :- obstacle[lit](S, X), not has_source(X).
+unsourced_partial[audit](B, E) :- partial_result[lit](B, E), not has_source(E).
+memory_only_source[audit](S)   :- src(S), not verified[world](S).
