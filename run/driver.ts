@@ -60,8 +60,9 @@ const AUDIT_QUERIES: [string, string][] = [
   ['groundless', 'groundless[audit](C)'],
   ['shaky', 'shaky[audit](C)'],
   ['split', 'split[audit](L)'],
-  ['miscast', 'miscast[audit](P, L)'],
-  ['open_miscast', 'open_miscast[audit](P, L)'],
+  ['miscast', 'miscast[audit](P, L)'],           // v0.2 rule, kept as history (overfires; see round 5)
+  ['open_miscast', 'open_miscast[audit](P, L)'], // v0.2+r3, superseded by r5
+  ['open_miscast3', 'open_miscast3[audit](P, L)'], // live since round 5 (subject-linked)
   ['holes', 'hole(Q, R)'],
 ];
 
@@ -104,7 +105,52 @@ switch (cmd) {
     console.log(`${arg}: ${gz.length} bytes gzipped`);
     break;
   }
+  case 'terras': {
+    // Track A scratch run for one k: engine classification + independent TS oracle.
+    const k = parseInt(arg, 10);
+    const oracle = terrasOracle(k);
+    const t0 = Date.now();
+    const r = new Rofl();
+    r.load(fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8'), { budget: BUDGET, defer: true });
+    r.load(fs.readFileSync(path.join(RUN, 'terras.rofl'), 'utf8'), { budget: BUDGET, defer: true });
+    r.load(`kk(${k}).`, { budget: BUDGET, defer: true });
+    const ev = r.evaluate(BUDGET);
+    const und = r.query('undecided(R)', { budget: BUDGET });
+    const ms = Date.now() - t0;
+    const count = und.rows.length;
+    const agree = !ev.partial && !und.partial && count === oracle.count;
+    console.log(JSON.stringify({
+      k, engine_undecided: count, oracle_undecided: oracle.count,
+      agree, partial: ev.partial || und.partial,
+      density: count / 2 ** k, ms, facts: r.store.facts.size,
+      oracle_max_value: oracle.maxV,
+    }));
+    if (!agree) process.exit(3);
+    break;
+  }
   default:
     console.error('unknown command');
     process.exit(1);
+}
+
+/** Independent implementation of the same classification — the bug-oracle.
+ *  Deliberately written against the definition, not against terras.rofl. */
+function terrasOracle(k: number): { count: number; maxV: number } {
+  const total = 2 ** k;
+  let count = 0;
+  let maxV = 0;
+  for (let r = 0; r < total; r++) {
+    let v = r === 0 ? total : r;
+    let a = 0;
+    let decided = false;
+    for (let j = 1; j <= k; j++) {
+      if (v % 2 === 0) v = v / 2;
+      else { v = (3 * v + 1) / 2; a++; }
+      if (v > maxV) maxV = v;
+      if (v > Number.MAX_SAFE_INTEGER) throw new Error(`overflow at k=${k} r=${r}`);
+      if (3 ** a < 2 ** j) { decided = true; break; }
+    }
+    if (!decided) count++;
+  }
+  return { count, maxV };
 }

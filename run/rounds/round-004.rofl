@@ -1,0 +1,35 @@
+-- Round 4. TARGET: Track A begins — Terras table rows k=4..8.
+-- Each row computed twice: (1) in-substrate scratch run (boot + terras.rofl + kk(K),
+-- undecided/1 derived by the engine), (2) independent TS oracle (driver terrasOracle).
+-- Engine == oracle on all five rows; grounds below name that agreement.
+-- Overflow guard verified: max trajectory value at k=8 is 6560 << 2^53.
+
+terras[world](4, 3).
+terras[world](5, 4).
+terras[world](6, 8).
+terras[world](7, 13).
+terras[world](8, 19).
+
+claim_of[a](terras_k4). ground[a](terras_k4, scratch_oracle_agree_k4).
+evidence[world](terras_k4, scratch_oracle_agree_k4).
+claim_of[a](terras_k5). ground[a](terras_k5, scratch_oracle_agree_k5).
+evidence[world](terras_k5, scratch_oracle_agree_k5).
+claim_of[a](terras_k6). ground[a](terras_k6, scratch_oracle_agree_k6).
+evidence[world](terras_k6, scratch_oracle_agree_k6).
+claim_of[a](terras_k7). ground[a](terras_k7, scratch_oracle_agree_k7).
+evidence[world](terras_k7, scratch_oracle_agree_k7).
+claim_of[a](terras_k8). ground[a](terras_k8, scratch_oracle_agree_k8).
+evidence[world](terras_k8, scratch_oracle_agree_k8).
+
+-- Literature anchor, honestly marked: the counts 3,4,8,13,19 (k=4..8) match the
+-- agent's memory of the classical uncertain-residue counts (OEIS A100982 tail), but
+-- oeis.org is egress-blocked in this sandbox, so the anchor is a HYPOTHESIS ground —
+-- this deliberately keeps shaky(terras_memory_anchor) standing in every audit until
+-- someone verifies it outside the sandbox. No fabricated citation.
+claim_of[a](terras_memory_anchor).
+hypothesis[a](memory_recall_a100982_unverified).
+ground[a](terras_memory_anchor, memory_recall_a100982_unverified).
+
+-- modeling decision, with declared level (v0.2 discipline)
+level(residue_mod_2k_level).
+decision[a](attach(terras, residue_mod_2k_level)).

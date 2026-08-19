@@ -1,0 +1,22 @@
+-- Round 5. TARGET: open_miscast(terras, slowness) — a FALSE POSITIVE that exposed a
+-- structural flaw in audit v0.2 itself. The rule
+--   miscast(P, L) :- decision[a](attach(P, Lv)), level(Lv), split[audit](L).
+-- has no premise linking the decision's subject P to the ledger L: it cross-joins
+-- EVERY leveled attach-decision with EVERY split ledger. Round 4's unrelated
+-- decision[a](attach(terras, residue_mod_2k_level)) instantly became
+-- miscast(terras, slowness). The R10 episode only looked correct because one
+-- decision and one ledger existed. The engine caught this the moment a second
+-- decision appeared — this is the audit auditing itself.
+claim_of[a](miscast_rule_overfires_v02).
+ground[a](miscast_rule_overfires_v02, computed_cross_join_terras_slowness).
+evidence[world](miscast_rule_overfires_v02, computed_cross_join_terras_slowness).
+
+-- Repair (assert-only, v0.2+r5): miscast3 requires explicit subject linkage via
+-- concerns/2. The old miscast/open_miscast derivations remain as history; the live
+-- audit target moves to open_miscast3 (driver updated in the same commit).
+concerns(slow, slowness).
+miscast3[audit](P, L)      :- decision[a](attach(P, Lv)), level(Lv), split[audit](L),
+                              concerns(P, L).
+readdressed3[audit](P, L)  :- miscast3[audit](P, L), decision[a](reattach(P, L2)),
+                              level(L2).
+open_miscast3[audit](P, L) :- miscast3[audit](P, L), not readdressed3[audit](P, L).

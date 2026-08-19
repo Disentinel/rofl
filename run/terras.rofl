@@ -1,0 +1,32 @@
+-- terras.rofl — coefficient stopping-time classification mod 2^K (Track A).
+-- Scratch program: the driver asserts kk(K), loads boot + this file, evaluates,
+-- and counts undecided/1 rows (counting is host-side; the SET is derived here —
+-- the kernel has no aggregation by design).
+--
+-- Model: accelerated map T(v) = v/2 (even) | (3v+1)/2 (odd). The first K parities
+-- are constant on a residue class mod 2^K, so the class's trajectory is followed on
+-- a representative (r itself; 2^K for r = 0). Class decided at step J when the
+-- multiplier 3^A < 2^J (A = odd steps among the first J). Undecided = no J <= K works.
+--
+-- Overflow guard (no bignum, float53): max value <= rep * (3/2)^K <= 2^K * (3/2)^K =
+-- 3^K <= 3^20 ~ 3.49e9 << 2^53. pow3(K) same bound. Safe for K <= 20.
+-- Universe-first: res/1 bounded by pow2(K, _); tr/4 bounded by J < K.
+
+pow2(0, 1).
+pow2(J2, P2) :- pow2(J, P), kk(K), J < K, J2 is J + 1, P2 is P * 2.
+pow3(0, 1).
+pow3(A2, P2) :- pow3(A, P), kk(K), A < K, A2 is A + 1, P2 is P * 3.
+
+res(0).
+res(M) :- res(N), kk(K), pow2(K, P), N < P - 1, M is N + 1.
+rep(R, R) :- res(R), R > 0.
+rep(0, P) :- kk(K), pow2(K, P).
+
+tr(R, 0, V, 0) :- rep(R, V).
+tr(R, J2, V2, A)  :- tr(R, J, V, A), kk(K), J < K, Par is V mod 2, Par = 0,
+                     J2 is J + 1, V2 is V / 2.
+tr(R, J2, V2, A2) :- tr(R, J, V, A), kk(K), J < K, Par is V mod 2, Par = 1,
+                     J2 is J + 1, V2 is (3 * V + 1) / 2, A2 is A + 1.
+
+decided(R)   :- tr(R, J, V, A), J > 0, pow3(A, P3), pow2(J, P2), P3 < P2.
+undecided(R) :- res(R), not decided(R).

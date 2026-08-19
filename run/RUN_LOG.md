@@ -55,3 +55,26 @@ split(slowness) — historical ledger of the R10 episode.
 Engine work (owner-authorized, tested, committed separately): api.load gained
 `defer: true` (batch loads evaluate once at the end) — rebuild was O(files × eval),
 10.2s at 5 files and growing; now flat ~3.4s. 29/29 tests green after the change.
+
+R4 | Track A start: Terras rows k=4..8 | scratch runs (boot + terras.rofl + kk(K))
+vs independent TS oracle — **engine == oracle on all five rows**: undecided =
+3, 4, 8, 13, 19; densities 0.1875 → 0.0742 monotone non-increasing (consistent with
+Terras density → 0). Rows asserted as terras[world](K, U) with computed grounds;
+memory anchor to the classical counts flagged as hypothesis-ground → shaky stands
+deliberately (oeis.org egress-blocked; no fabricated citation). Overflow guard: max
+value 6,560 at k=8, analytic bound 3^k ≪ 2^53. Timings: 83→290ms, facts 1,230→7,134
+| catch: none in Track A itself — but see R5 | born: terras/2 (+claims, level
+residue_mod_2k_level declared) | rels=76, facts=15334
+
+R5 | open_miscast(terras, slowness) — FALSE POSITIVE that exposed audit v0.2 itself |
+**The substrate audited its own audit theory**: v0.2's miscast rule has no premise
+linking the decision's subject to the split ledger, so it cross-joins every leveled
+attach-decision with every split ledger. R10's original catch only looked right
+because exactly one decision and one ledger existed; round 4's unrelated
+attach(terras, residue_mod_2k_level) instantly became miscast(terras, slowness).
+Claim miscast_rule_overfires_v02 asserted with the computed cross-join as ground.
+Repair (assert-only, v0.2+r5): concerns/2 subject linkage + miscast3/readdressed3/
+open_miscast3; live audit target moved to open_miscast3 (empty: slow readdressed,
+terras clean); v0.2 columns kept as history | catch: THE catch of the batch |
+born: concerns/2, miscast3/2, readdressed3/2, open_miscast3/2 (+4, declared audit
+vocabulary — birth rate watched) | rels=~80, facts=15489
