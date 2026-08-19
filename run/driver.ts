@@ -14,6 +14,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as zlib from 'node:zlib';
+import * as crypto from 'node:crypto';
 import { Rofl } from '../src/api.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -27,7 +28,6 @@ const [cmd, arg] = args;
 
 function build(): Rofl {
   const t0 = Date.now();
-  const r = new Rofl();
   const sources = [
     path.join(ROOT, 'boot.rofl'),
     path.join(RUN, 'audit-v0.2.rofl'),
@@ -35,14 +35,30 @@ function build(): Rofl {
     ...fs.readdirSync(path.join(RUN, 'rounds')).filter((f) => f.endsWith('.rofl')).sort()
       .map((f) => path.join(RUN, 'rounds', f)),
   ];
-  for (const f of sources) {
-    const res = r.load(fs.readFileSync(f, 'utf8'), { budget: BUDGET, defer: true });
+  const texts = sources.map((f) => fs.readFileSync(f, 'utf8'));
+  // the snapshot is a cache; the .rofl sources are the truth (protocol) —
+  // reuse the evaluated store only while the sources hash is unchanged
+  const sha = crypto.createHash('sha256').update(texts.join('|')).digest('hex');
+  const cacheGz = path.join(RUN, 'state', 'cache.json.gz');
+  const cacheSha = path.join(RUN, 'state', 'cache.sha');
+  if (fs.existsSync(cacheGz) && fs.existsSync(cacheSha) && fs.readFileSync(cacheSha, 'utf8') === sha) {
+    const r = Rofl.fromSnapshot(zlib.gunzipSync(fs.readFileSync(cacheGz)).toString('utf8'), { trusted: true });
+    console.error(`# cache hit: ${Date.now() - t0}ms, ${r.store.facts.size} facts`);
+    return r;
+  }
+  const r = new Rofl();
+  for (let i = 0; i < sources.length; i++) {
+    const res = r.load(texts[i], { budget: BUDGET, defer: true });
     if (!res.ok) {
-      console.error(`LOAD REJECTED ${path.basename(f)}: ${res.diagnostics.join(' | ')}`);
+      console.error(`LOAD REJECTED ${path.basename(sources[i])}: ${res.diagnostics.join(' | ')}`);
       process.exit(2);
     }
   }
   const ev = r.evaluate(BUDGET);
+  if (!ev.partial) {
+    fs.writeFileSync(cacheGz, zlib.gzipSync(Buffer.from(r.save(), 'utf8'), { level: 5 }));
+    fs.writeFileSync(cacheSha, sha);
+  }
   console.error(`# rebuilt: ${Date.now() - t0}ms, ${r.store.facts.size} facts, partial=${ev.partial}`);
   return r;
 }

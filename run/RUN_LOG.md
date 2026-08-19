@@ -137,3 +137,27 @@ DEGRADATION CHECK (2h mark): groundless 0 (<3) ✓; open_risk empty, flat ✓;
 predicate births in last 10 rounds (R2..R11) = 15 — AT the >15 threshold, not over.
 WATCH ITEM: vocabulary growth must slow; next rounds should compute/verify within
 existing vocabulary, not model new layers. No HALT.
+
+R12 | widen the slow-set computation to n<=999, ZERO new predicates | assert-only
+rule extensions: gen bound 199→999, num/edge value window widened to 10^6 (the
+seed's 20,000 guard would have silently truncated trajectories — 703 peaks at
+250,504; caught before it bit). Result: 33 slow residues (was 11), and **slowres
+STILL ⊆ {7,11,15} mod 16 at 5x the range**. Eval cost of the widened main store:
+92s / 69,718 facts | catch: the truncation-guard trap, pre-empted | born: none
+
+Engine work #3 (owner-authorized, tested): protocol-sanctioned snapshot caching —
+api.fromSnapshot gained `trusted` (skip re-evaluation), driver caches the evaluated
+store keyed by sha256 of all sources; rebuild 92s pays once, every later query 0.6s.
+29/29 kernel tests green.
+
+R13 | **still_slow(703)** — the 120-step horizon's first survivor | at range 999 the
+R4-era ground of R1's repair ("all slow transient by 120") is FALSE: 703 stays above
+itself past 120 while reach1(703) holds. The abandonment CONCLUSION stands; its
+recorded REASON broke — superseding repair asserted with a range-independent reason
+(every_slow_number_reaches_1_by_computation), old repair kept as history. Horizon
+extended 120→260 in-vocabulary: transient(703) ✓, still_slow empty again. Also:
+coverage-honest evidence atom computed_batch_3mod4_to_999 (the seed rule's _to_199
+atom under-describes the post-R12 computation — an atom-naming drift the vocab_drift
+rule cannot see; noted for audit v0.3). Claims asserted: slowres persistence,
+horizon range-tuning | catch: a repair whose reason dies while its conclusion
+survives — exactly the distinction prose CoT blurs | born: none | facts(main)=70269

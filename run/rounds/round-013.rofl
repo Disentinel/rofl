@@ -1,0 +1,26 @@
+-- Round 13. TARGET: still_slow(703) — the first survivor of the 120-step horizon.
+-- At range <=999 the R4-era statement "all slow are transient by depth 120" is
+-- FALSE: 703 (the classic long-excursion number, peak 250,504 in this universe)
+-- does not drop below itself within 120 steps, though reach1(703) holds. The R1
+-- abandonment of slow_set_signals_divergence therefore stands — but its recorded
+-- REASON (all_slow_transient_by_depth_120) broke at the wider range. Assert-only:
+-- a superseding repair whose reason survives any range, plus a deeper horizon.
+
+-- (a) depth extension, same predicate (no new vocabulary): horizon 120 -> 260
+fdist(N, M2, D2) :- fdist(N, M, D), D >= 120, D < 260, edge(M, M2), D2 is D + 1.
+
+-- (b) range-honest superseding repair reason (the old repair stays as history)
+repair[a](slow_set_signals_divergence, abandoned_because(every_slow_number_reaches_1_by_computation)).
+
+-- (c) coverage-honest evidence for the widened batch: the seed rule's atom
+--     computed_batch_3mod4_to_199 under-describes the post-R12 computation
+evidence[world](collatz, computed_batch_3mod4_to_999) :- all_ok(yes).
+
+-- (d) computed claims
+claim_of[a](slowres_7_11_15_persists_to_999).
+ground[a](slowres_7_11_15_persists_to_999, computed_slowres_range_999).
+evidence[world](slowres_7_11_15_persists_to_999, computed_slowres_range_999).
+
+claim_of[a](horizon_120_is_range_tuned).
+ground[a](horizon_120_is_range_tuned, computed_still_slow_703_at_120).
+evidence[world](horizon_120_is_range_tuned, computed_still_slow_703_at_120).

@@ -30,10 +30,13 @@ export class Rofl {
     bootstrapKernel(this.store);
   }
 
-  static fromSnapshot(json: string, opts: { naive?: boolean } = {}): Rofl {
+  /** trusted: the snapshot is a cache of an already-evaluated store (the caller
+   *  vouches its sources are unchanged) — skip re-evaluation on first query. */
+  static fromSnapshot(json: string, opts: { naive?: boolean; trusted?: boolean } = {}): Rofl {
     const r = new Rofl(opts);
     r.store = Store.restore(json);
     bootstrapKernel(r.store); // idempotent
+    if (opts.trusted) r.store.dirty = false;
     return r;
   }
 
