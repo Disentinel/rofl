@@ -540,3 +540,12 @@ experiment, the five-layer mathematical chain ending in the sandwich, the
 8-catch ledger record, the substrate verdict, the honest boundary. Claims
 nothing the graph does not hold | catch: none | born: none |
 facts(main)=72402
+
+R48 | METRICS.md — the experiment's own data | cadence by phase from git
+history (7 → 10 rounds/hr; pace ROSE as machinery accumulated), 10-catch
+distribution (early = vocabulary/process, late = content revisions), growth
+curves, and the headline: zero rounds shipped with an unexplained red audit.
+Also: Enox shared memory carries the run summary; the hourly checkpoint-NNN
+adaptation was subsumed by per-round committed latest.json.gz (every commit
+is a restorable checkpoint) — recorded as an adaptation refinement | catch:
+none | born: none | facts(main)=72420
