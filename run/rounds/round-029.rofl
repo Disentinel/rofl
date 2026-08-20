@@ -1,0 +1,22 @@
+-- Round 29 (Track C). TARGET: the first-drop horizon function — the exact
+-- quantity the run's sdist/fdist horizon-chase episodes were sampling
+-- (run/math/horizon.js, exact BigInt, overflow-guarded).
+-- Computed maxima of "full steps until the orbit first falls below n" over
+-- n = 3 mod 4:
+--   N <= 199:   max 96  at n = 27     (why the seed's depth-120 sufficed)
+--   N <= 999:   max 132 at n = 703    (why 703 broke the 120 horizon in R13,
+--                                      and why 260 then sufficed)
+--   N <= 9999:  max STILL 132 at 703  (why R18 found still_slow empty at 260
+--                                      with no further chase: no new record
+--                                      appears in 1000..9999)
+--   N <= 99999: max 220 at n = 35655  (the NEXT horizon-breaker; 260 would
+--                                      still suffice up to 99999)
+-- Max value seen at N <= 9999 is 27,114,424 — inside the R18 probe's 10^8
+-- window, retroactively validating that guard by computation.
+claim_of[a](first_drop_horizon_records).
+ground[a](first_drop_horizon_records, computed_horizon_records_199_999_9999_99999).
+evidence[world](first_drop_horizon_records, computed_horizon_records_199_999_9999_99999).
+
+claim_of[a](horizon_260_suffices_to_99999).
+ground[a](horizon_260_suffices_to_99999, computed_max_first_drop_220_lt_260).
+evidence[world](horizon_260_suffices_to_99999, computed_max_first_drop_220_lt_260).

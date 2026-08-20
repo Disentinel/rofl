@@ -333,3 +333,23 @@ by contradiction), dpf_gs_pos (the DP counts it), wf_pos_of_gap. Round-23
 honesty limitation repaired by supersession — it no longer exists. Doubling
 criterion: u_{k+1} = 2u_k ⟺ no 3-power in (2^k, 2^{k+1}), proved | born: none
 (freeze) | facts(main)=70854
+
+R28 | proof-artifact sourcing — the ledger now grounds out in files | every
+mathematical claim's ground linked (source_of) to its checker artifact through
+the EXISTING src machinery: lemma1/2_3/4 prose + the four Lean files become
+first-class sources with basis repo_committed; run/math/README.md indexes all
+artifacts with re-run commands (Lean 4.21.0 core, node). The freeze window
+(declared R17→R27) formally ends here — held unbroken, zero main-graph
+predicate births in 11 rounds | catch: round file promised README.md before it
+existed — created before eval, order kept | born: none | facts(main)=70930
+
+R29 | Track C: the first-drop horizon FUNCTION — the quantity every horizon-
+chase episode was sampling | run/math/horizon.js (exact BigInt, overflow-
+guarded): max full steps to first drop below start, n ≡ 3 (mod 4):
+N≤199 → 96 (n=27); N≤999 → 132 (n=703); N≤9999 → STILL 132 (703);
+N≤99999 → 220 (n=35655). This explains the run's own history by computation:
+why the seed's depth-120 sufficed at 199, why 703 broke it in R13, why R18's
+still_slow probe at 260 came back empty with NO new chase (no record appears
+in 1000..9999), and names the next breaker (35655) that 260 would still absorb
+up to 99999. Max value seen at N≤9999 = 27,114,424 — retroactively validates
+R18's 10^8 overflow window | catch: none | born: none | facts(main)=70944
