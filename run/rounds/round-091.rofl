@@ -1,0 +1,35 @@
+-- Round 91 (Track E). THE INVARIANCE-GAP PROBE IS NOT NULL — the core
+-- has exact affine self-structure. Measured (times3_invariance.js,
+-- times3_verify.js; depths 20/22/24, 400k+ classes):
+--   |3S ∩ S| = 0 EXACTLY (while ~33% of S is divisible by 3);
+--   closure under the odd inverse branch (2c-1)/3 EXACT (100.0%);
+--   |(2S+1) ∩ S| / |S| = 46-49% vs null 2-4% (x21 above null, and
+--   NOT explained — the first reopened observable since R87).
+-- Mechanism of the anti-invariance FOUND AND KERNEL-CHECKED:
+-- theorem times3_leaves_core — every core class's word begins 1,1
+-- (core_first_two_odd, from gates at depths 1-2), and T(3r) = 3*T(r)-1
+-- (T_three_mul) flips the second parity, so 3r's word begins 1,0 and
+-- the depth-2 gate fails: core and 3*(core) are provably disjoint.
+-- Significance for the adelic face: the Rudolph-lever question "does
+-- the core measure have x3-compatible structure" has an answer — YES,
+-- exact ANTI-invariance (as rigid as invariance, with the opposite
+-- sign) plus an exact backward-branch closure. The mechanism search
+-- inventory REOPENS with the unexplained 46% correlation of r and 2r+1.
+claim_of[a](times3_anti_invariance_kernel_checked).
+ground[a](times3_anti_invariance_kernel_checked, lean_times3_leaves_core_compiles).
+evidence[world](times3_anti_invariance_kernel_checked, lean_times3_leaves_core_compiles).
+
+claim_of[a](backward_branch_closure_measured_exact).
+ground[a](backward_branch_closure_measured_exact, times3_verify_oracle).
+evidence[oracle](backward_branch_closure_measured_exact, times3_verify_oracle).
+oracle_only(backward_branch_closure_measured_exact).
+
+claim_of[a](core_2rplus1_correlation_unexplained).
+ground[a](core_2rplus1_correlation_unexplained, times3_verify_oracle).
+evidence[oracle](core_2rplus1_correlation_unexplained, times3_verify_oracle).
+oracle_only(core_2rplus1_correlation_unexplained).
+
+lean_theorem(thm_times3_leaves_core).  lean_axioms_minimal(thm_times3_leaves_core).
+lean_theorem(thm_core_first_two_odd).
+depends_on(thm_times3_leaves_core, thm_core_first_two_odd).
+depends_on(thm_times3_leaves_core, thm_T_three_mul).

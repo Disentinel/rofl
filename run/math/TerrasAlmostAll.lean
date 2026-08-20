@@ -5319,3 +5319,99 @@ theorem cycle_not_in_core (p n : Nat) (hp : 1 ≤ p) (hn : 1 ≤ n)
       omega
   · have := indU_le_one p n
     omega
+
+/- ---------- Track E: exact affine self-structure of the core ---------- -/
+
+/-- The ×3 anti-invariance mechanism: for odd r, T(3r) = 3·T(r) − 1. -/
+theorem T_three_mul (r : Nat) (h : r % 2 = 1) : T (3 * r) = 3 * T r - 1 := by
+  have h3 : (3 * r) % 2 = 1 := by omega
+  have h1 := T_odd (3 * r) h3
+  have h2 := T_odd r h
+  omega
+
+/-- Membership in the core (depth ≥ 2) forces the first TWO steps odd. -/
+theorem core_first_two_odd (k r : Nat) (hk : 2 ≤ k) (h : indU k r = 1) :
+    r % 2 = 1 ∧ T r % 2 = 1 := by
+  -- indU is a product of gates; extract the depth-2 gate: A 2 r = 2.
+  have h2 : indU 2 r = 1 := by
+    -- indU k r = 1 → indU j r = 1 for j ≤ k (each level multiplies a 0/1 gate)
+    have hmono : ∀ j, indU (j + 1) r = 1 → indU j r = 1 := by
+      intro j hj
+      rw [indU_succ] at hj
+      by_cases hz : indU j r = 1
+      · exact hz
+      · have := indU_le_one j r
+        have hz0 : indU j r = 0 := by omega
+        rw [hz0, Nat.zero_mul] at hj
+        omega
+    have hstep : ∀ d, indU (2 + d) r = 1 → indU 2 r = 1 := by
+      intro d
+      induction d with
+      | zero => intro hh; exact hh
+      | succ p ih =>
+        intro hh
+        have e : 2 + (p + 1) = (2 + p) + 1 := by omega
+        rw [e] at hh
+        exact ih (hmono (2 + p) hh)
+    have e : k = 2 + (k - 2) := by omega
+    rw [e] at h
+    exact hstep (k - 2) h
+  have hg := indU_one_gate 1 r h2
+  have e11 : (1 : Nat) + 1 = 2 := by omega
+  rw [e11] at hg
+  -- hg : 2^2 < 3^(A 2 r) → A 2 r = 2 → both bits odd
+  have hA2 : A 2 r = 2 := by
+    have hle := A_le 2 r
+    by_cases hA : A 2 r = 2
+    · exact hA
+    · have hA1 : A 2 r ≤ 1 := by omega
+      have hmono : (3 : Nat) ^ A 2 r ≤ 3 ^ 1 := Nat.pow_le_pow_right (by omega) hA1
+      have e1 : (3 : Nat) ^ 1 = 3 := by decide
+      have e2 : (2 : Nat) ^ 2 = 4 := by decide
+      omega
+  have hs := A_snoc 1 r
+  have hs0 := A_snoc 0 r
+  have hz : A 0 r = 0 := rfl
+  have ht0 : Titer 0 r = r := rfl
+  have ht1 : Titer 1 r = T r := rfl
+  have e01 : (0 : Nat) + 1 = 1 := by omega
+  rw [hz, ht0, e01] at hs0
+  rw [ht1, e11] at hs
+  -- hs0 : A 1 r = 0 + r % 2; hs : A 2 r = A 1 r + T r % 2; hA2 : A 2 r = 2
+  constructor
+  · omega
+  · omega
+
+/-- ×3 ANTI-INVARIANCE OF THE CORE: the image of a core class under
+    multiplication by 3 is decided by depth 2 — the core and 3×(core)
+    are EXACTLY disjoint (measured: |3S ∩ S| = 0 at depths 20/22/24
+    over 400k classes; here is the mechanism, kernel-checked). The word
+    of any core class begins 1,1; T(3r) = 3·T(r) − 1 flips the second
+    parity, so 3r's word begins 1,0 and the depth-2 gate 4 < 3^A fails. -/
+theorem times3_leaves_core (k r : Nat) (hk : 2 ≤ k) (h : indU k r = 1) :
+    indU 2 (3 * r) = 0 := by
+  have ⟨h1, h2⟩ := core_first_two_odd k r hk h
+  have h3 : (3 * r) % 2 = 1 := by omega
+  have hT := T_three_mul r h1
+  have hTpos : 1 ≤ T r := by
+    -- T r is odd, hence ≥ 1
+    omega
+  have hTeven : T (3 * r) % 2 = 0 := by
+    rw [hT]
+    omega
+  -- A 2 (3r) = 1 → gate 2^2 < 3^1 fails → indU 2 (3r) = 0
+  have hs := A_snoc 1 (3 * r)
+  have hs0 := A_snoc 0 (3 * r)
+  have hz : A 0 (3 * r) = 0 := rfl
+  have ht0 : Titer 0 (3 * r) = 3 * r := rfl
+  have ht1 : Titer 1 (3 * r) = T (3 * r) := rfl
+  have e11 : (1 : Nat) + 1 = 2 := by omega
+  have e01 : (0 : Nat) + 1 = 1 := by omega
+  rw [hz, ht0, e01] at hs0
+  rw [ht1, e11] at hs
+  have hA2 : A 2 (3 * r) = 1 := by omega
+  rw [indU_succ]
+  have hgate : ¬(2 ^ (1 + 1) < 3 ^ A (1 + 1) (3 * r)) := by
+    rw [e11, hA2]
+    decide
+  rw [if_neg hgate, Nat.mul_zero]

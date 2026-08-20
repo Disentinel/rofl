@@ -582,3 +582,21 @@ indistinguishable from independence. The mechanism search ends not
 because ideas ran out but because the phenomenon inventory did — the
 problem's remaining content is exactly the coupling bit, and the run can
 certify there is nothing else hiding in the marginals it measured.
+
+**Round 91 — the board reopens: the core has exact affine self-structure.**
+
+The invariance-gap probe (the sharpest question the primitive
+decomposition produced) came back NOT null: (a) core ∩ 3·core = ∅
+exactly — now a THEOREM (`times3_leaves_core`: every core word begins
+1,1; T(3r) = 3T(r)−1 flips the second parity); (b) the core is exactly
+closed under the odd inverse branch (2c−1)/3 (measured 100%, provable
+by prepend-1 domination); (c) r ∈ core and 2r+1 ∈ core correlate at
+46–49% against a 2–4% null — ×21, with NO explanation from any proved
+law. After R87 declared the inventory closed, one hour of Track E
+rotation reopened it: the ×3-anti-invariance and the backward closure
+are exactly the kind of arithmetic self-correlation the rigidity
+(Rudolph-lever) face requires as raw material, and the 2r+1 correlation
+is a fresh unexplained observable in the place everything else was
+transparent. The open question is now concrete: characterize
+P(2r+1 ∈ core | r ∈ core) — it couples a class to its double, i.e., the
+core to its own image one depth down the OTHER way.

@@ -1022,3 +1022,16 @@ R-breaking — the TRIZ contradiction named | catch: the run proved
 "−1 ∈ core" at R75 without noticing what it proved — filter-blindness
 caught by the rotation itself | born: none (verified) |
 facts(main)=73553
+
+R91 | Track E: **the invariance probe is NOT null — exact affine
+self-structure of the core** | Measured at depths 20/22/24: |3S ∩ S| = 0
+exactly (33% of S divisible by 3 — not a residue effect); odd
+inverse branch closure exact (95,806/95,806); |(2S+1) ∩ S|/|S| ≈ 46–49%
+vs null 2–4% — ×21, UNEXPLAINED (first reopened observable since R87).
+Anti-invariance mechanism found and kernel-checked: core words begin 1,1
+(`core_first_two_odd`); T(3r) = 3T(r)−1 (`T_three_mul`) flips the second
+parity → `times3_leaves_core`: core ∩ 3·core = ∅, provably. For the
+adelic face: the Rudolph-lever question has an answer — exact
+ANTI-invariance plus exact backward closure. Mechanism inventory
+reopened | catch: first-compile atom mismatch (1+1 vs 2), fixed | born:
+none (verified) | facts(main)=73591
