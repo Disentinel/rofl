@@ -2577,3 +2577,283 @@ theorem core_half (k : Nat) (hk : 4 ≤ k) : 2 ^ (k / 2) ≤ 8 * uf k := by
 theorem core_sandwich_half (k : Nat) (hk : 4 ≤ k) :
     2 ^ (k / 2) ≤ 8 * uf k ∧ uf k * 2 ^ (k / 20) ≤ 2 ^ k :=
   ⟨core_half k hk, eta_20 k (by omega)⟩
+
+/- ---------- the family method's ceiling: exponent 7/13 ---------- -/
+/- Prefix 1^(12m'), then any word of length 14m' with at most 7m' zeros:
+   worst prefix ratio (3^12)^m' vs (2^19)^m' — the block certificate
+   531441 > 524288. Exponent 14/26 = 7/13 ≈ 0.5385, and with central words
+   this is the method's ceiling (a longer relative prefix is forced by the
+   3^12/2^19 margin; pushing β beyond 1/2 needs non-central binomial lower
+   bounds, i.e. Stirling — out of core-Lean scope). -/
+
+def gg2 (m : Nat) : Nat → Nat → Nat
+  | 0, s => if s = 0 then 1 else 0
+  | j + 1, s =>
+    if j + 1 ≤ 12 * m then (if s = j + 1 then 1 else 0)
+    else if j + 1 - s ≤ 7 * m then gg2 m j s + shift (gg2 m j) s
+    else 0
+
+theorem gg2_succ (m j s : Nat) :
+    gg2 m (j + 1) s
+      = if j + 1 ≤ 12 * m then (if s = j + 1 then 1 else 0)
+        else if j + 1 - s ≤ 7 * m then gg2 m j s + shift (gg2 m j) s
+        else 0 := rfl
+
+theorem gg2_pos (m : Nat) : ∀ j s, gg2 m j s ≠ 0 → s ≤ j ∧ (12 * m ≤ j → 12 * m ≤ s) := by
+  intro j
+  induction j with
+  | zero =>
+    intro s h
+    have h0 : gg2 m 0 s = if s = 0 then 1 else 0 := rfl
+    by_cases hs : s = 0
+    · subst hs
+      exact ⟨by omega, by omega⟩
+    · rw [h0, if_neg hs] at h
+      omega
+  | succ p ih =>
+    intro s h
+    rw [gg2_succ] at h
+    by_cases h1 : p + 1 ≤ 12 * m
+    · rw [if_pos h1] at h
+      by_cases hs : s = p + 1
+      · subst hs
+        exact ⟨by omega, by omega⟩
+      · rw [if_neg hs] at h
+        omega
+    · rw [if_neg h1] at h
+      by_cases h2 : p + 1 - s ≤ 7 * m
+      · rw [if_pos h2] at h
+        by_cases hz1 : gg2 m p s = 0
+        · match s, h, hz1 with
+          | 0, h, hz1 =>
+            have hsh : shift (gg2 m p) 0 = 0 := rfl
+            rw [hz1, hsh] at h
+            omega
+          | t + 1, h, hz1 =>
+            have hsh : shift (gg2 m p) (t + 1) = gg2 m p t := rfl
+            rw [hz1, hsh] at h
+            have h' : gg2 m p t ≠ 0 := by omega
+            have ⟨ha, hb⟩ := ih t h'
+            constructor
+            · omega
+            · intro h2m
+              by_cases hp2 : 12 * m ≤ p
+              · have := hb hp2
+                omega
+              · omega
+        · have ⟨ha, hb⟩ := ih s hz1
+          constructor
+          · omega
+          · intro h2m
+            by_cases hp2 : 12 * m ≤ p
+            · exact hb hp2
+            · omega
+      · rw [if_neg h2] at h
+        omega
+
+theorem block_cert : (2 : Nat) ^ 19 < 3 ^ 12 := by decide
+
+theorem gg2_gate (m : Nat) (hm : 1 ≤ m) :
+    ∀ j s, gg2 m (j + 1) s ≠ 0 → 2 ^ (j + 1) < 3 ^ s := by
+  intro j s h
+  rw [gg2_succ] at h
+  by_cases h1 : j + 1 ≤ 12 * m
+  · rw [if_pos h1] at h
+    by_cases hs : s = j + 1
+    · subst hs
+      exact Nat.pow_lt_pow_left (by omega) (by omega)
+    · rw [if_neg hs] at h
+      omega
+  · rw [if_neg h1] at h
+    by_cases h2 : j + 1 - s ≤ 7 * m
+    · rw [if_pos h2] at h
+      have hpos : gg2 m (j + 1) s ≠ 0 := by
+        rw [gg2_succ, if_neg h1, if_pos h2]
+        exact h
+      have ⟨hsj, hs12⟩ := gg2_pos m (j + 1) s hpos
+      have hs2 : 12 * m ≤ s := hs12 (by omega)
+      have hblocks : (2 : Nat) ^ (19 * m) < 3 ^ (12 * m) := by
+        have hc := Nat.pow_lt_pow_left block_cert (n := m) (by omega)
+        rw [← Nat.pow_mul, ← Nat.pow_mul, Nat.mul_comm 19 m, Nat.mul_comm 12 m] at hc
+        rw [Nat.mul_comm m 19, Nat.mul_comm m 12] at hc
+        exact hc
+      by_cases h3 : j + 1 ≤ 19 * m
+      · have ha : (3 : Nat) ^ (12 * m) ≤ 3 ^ s := Nat.pow_le_pow_right (by omega) hs2
+        have hb : (2 : Nat) ^ (j + 1) ≤ 2 ^ (19 * m) := Nat.pow_le_pow_right (by omega) h3
+        omega
+      · -- j+1 = 19m + t, t ≥ 1; s ≥ j+1 − 7m = 12m + t
+        have hst : 12 * m + (j + 1 - 19 * m) ≤ s := by omega
+        have ha : (3 : Nat) ^ (12 * m + (j + 1 - 19 * m)) ≤ 3 ^ s :=
+          Nat.pow_le_pow_right (by omega) hst
+        have hb : (3 : Nat) ^ (12 * m + (j + 1 - 19 * m))
+            = 3 ^ (12 * m) * 3 ^ (j + 1 - 19 * m) := Nat.pow_add 3 _ _
+        have hc : (2 : Nat) ^ (j + 1) = 2 ^ (19 * m) * 2 ^ (j + 1 - 19 * m) := by
+          have he : j + 1 = 19 * m + (j + 1 - 19 * m) := by omega
+          calc (2 : Nat) ^ (j + 1) = 2 ^ (19 * m + (j + 1 - 19 * m)) := by rw [← he]
+            _ = 2 ^ (19 * m) * 2 ^ (j + 1 - 19 * m) := Nat.pow_add 2 _ _
+        have hd : (2 : Nat) ^ (19 * m) * 2 ^ (j + 1 - 19 * m)
+            < 3 ^ (12 * m) * 2 ^ (j + 1 - 19 * m) := by
+          have hp2 : 0 < (2 : Nat) ^ (j + 1 - 19 * m) := Nat.pow_pos (by omega)
+          exact Nat.mul_lt_mul_of_lt_of_le hblocks (Nat.le_refl _) hp2
+        have hf : (3 : Nat) ^ (12 * m) * 2 ^ (j + 1 - 19 * m)
+            ≤ 3 ^ (12 * m) * 3 ^ (j + 1 - 19 * m) :=
+          Nat.mul_le_mul_left _ (Nat.pow_le_pow_left (by omega) _)
+        omega
+    · rw [if_neg h2] at h
+      omega
+
+theorem gg2_le_dpf (m : Nat) (hm : 1 ≤ m) : ∀ j s, gg2 m j s ≤ dpf j s := by
+  intro j
+  induction j with
+  | zero =>
+    intro s
+    have h0 : gg2 m 0 s = if s = 0 then 1 else 0 := rfl
+    match s with
+    | 0 =>
+      rw [h0, if_pos rfl]
+      show 1 ≤ dpf 0 0
+      exact Nat.le_refl 1
+    | t + 1 =>
+      rw [h0, if_neg (by omega)]
+      omega
+  | succ p ih =>
+    intro s
+    by_cases hz : gg2 m (p + 1) s = 0
+    · rw [hz]
+      omega
+    · have hgate := gg2_gate m hm p s hz
+      have hd : dpf (p + 1) s = dpf p s + shift (dpf p) s := by
+        rw [dpf_succ_eq, if_pos hgate]
+      rw [gg2_succ] at hz ⊢
+      by_cases h1 : p + 1 ≤ 12 * m
+      · rw [if_pos h1] at hz ⊢
+        by_cases hs : s = p + 1
+        · subst hs
+          rw [if_pos rfl]
+          have := dpf_diag (p + 1)
+          omega
+        · rw [if_neg hs]
+          omega
+      · rw [if_neg h1] at hz ⊢
+        by_cases h2 : p + 1 - s ≤ 7 * m
+        · rw [if_pos h2]
+          have ha := ih s
+          have hb : shift (gg2 m p) s ≤ shift (dpf p) s := by
+            match s with
+            | 0 => exact Nat.le_refl 0
+            | t + 1 => exact ih t
+          omega
+        · rw [if_neg h2]
+          omega
+
+theorem gg2_ge_choose (m : Nat) (hm : 1 ≤ m) : ∀ j' r,
+    (if r ≤ j' ∧ j' - r ≤ 7 * m then choose j' r else 0)
+      ≤ gg2 m (12 * m + j') (12 * m + r) := by
+  intro j'
+  induction j' with
+  | zero =>
+    intro r
+    have h2m : 12 * m + 0 = (12 * m - 1) + 1 := by omega
+    rw [h2m, gg2_succ]
+    rw [if_pos (by omega : 12 * m - 1 + 1 ≤ 12 * m)]
+    match r with
+    | 0 =>
+      rw [if_pos (by omega : (0:Nat) ≤ 0 ∧ 0 - 0 ≤ 7 * m),
+          if_pos (by omega : 12 * m + 0 = 12 * m - 1 + 1)]
+      exact Nat.le_refl 1
+    | t + 1 =>
+      rw [if_neg (by omega : ¬ (t + 1 ≤ 0 ∧ 0 - (t + 1) ≤ 7 * m))]
+      omega
+  | succ p ih =>
+    intro r
+    have hidx : 12 * m + (p + 1) = (12 * m + p) + 1 := by omega
+    rw [hidx, gg2_succ, if_neg (by omega : ¬ (12 * m + p + 1 ≤ 12 * m))]
+    by_cases hv : p + 1 - r ≤ 7 * m
+    · rw [if_pos (by omega : 12 * m + p + 1 - (12 * m + r) ≤ 7 * m)]
+      match r with
+      | 0 =>
+        by_cases ht : (0 : Nat) ≤ p + 1 ∧ p + 1 - 0 ≤ 7 * m
+        · rw [if_pos ht]
+          have hi := ih 0
+          rw [if_pos (by omega : (0:Nat) ≤ p ∧ p - 0 ≤ 7 * m)] at hi
+          have hc0 : choose (p + 1) 0 = 1 := choose_zero (p + 1)
+          have hcp : choose p 0 = 1 := choose_zero p
+          omega
+        · rw [if_neg ht]
+          omega
+      | t + 1 =>
+        have hsh : shift (gg2 m (12 * m + p)) (12 * m + (t + 1))
+            = gg2 m (12 * m + p) (12 * m + t) := by
+          have he : 12 * m + (t + 1) = (12 * m + t) + 1 := by omega
+          rw [he]
+          rfl
+        by_cases ht : t + 1 ≤ p + 1 ∧ p + 1 - (t + 1) ≤ 7 * m
+        · rw [if_pos ht]
+          have hpascal : choose (p + 1) (t + 1) = choose p t + choose p (t + 1) := rfl
+          have hi1 := ih (t + 1)
+          have hi2 := ih t
+          have hb1 : choose p (t + 1) ≤ gg2 m (12 * m + p) (12 * m + (t + 1)) := by
+            by_cases hc : t + 1 ≤ p ∧ p - (t + 1) ≤ 7 * m
+            · rw [if_pos hc] at hi1
+              exact hi1
+            · have hz : choose p (t + 1) = 0 := by
+                have hgt : p < t + 1 := by omega
+                exact choose_above_diag p (t + 1) hgt
+              omega
+          have hb2 : choose p t ≤ gg2 m (12 * m + p) (12 * m + t) := by
+            rw [if_pos (by omega : t ≤ p ∧ p - t ≤ 7 * m)] at hi2
+            exact hi2
+          rw [hsh]
+          omega
+        · rw [if_neg ht]
+          omega
+    · rw [if_neg (by omega : ¬ (12 * m + p + 1 - (12 * m + r) ≤ 7 * m))]
+      by_cases ht : r ≤ p + 1 ∧ p + 1 - r ≤ 7 * m
+      · omega
+      · rw [if_neg ht]
+        omega
+
+/-- 4^(7m) ≤ 2·u_(26m): the 7/13-exponent family lands. -/
+theorem uf_26m (m : Nat) (hm : 1 ≤ m) : 4 ^ (7 * m) ≤ 2 * uf (26 * m) := by
+  have h1 : ∀ i, i < 7 * m + 1 →
+      choose (14 * m) (7 * m + i) ≤ gg2 m (26 * m) (19 * m + i) := by
+    intro i hi
+    have hg := gg2_ge_choose m hm (14 * m) (7 * m + i)
+    rw [if_pos (by omega : 7 * m + i ≤ 14 * m ∧ 14 * m - (7 * m + i) ≤ 7 * m)] at hg
+    have he1 : 12 * m + 14 * m = 26 * m := by omega
+    have he2 : 12 * m + (7 * m + i) = 19 * m + i := by omega
+    rw [he1, he2] at hg
+    exact hg
+  have h2 : S (fun i => choose (14 * m) (7 * m + i)) (7 * m + 1)
+      ≤ S (fun i => gg2 m (26 * m) (19 * m + i)) (7 * m + 1) :=
+    S_mono _ _ _ h1
+  have h3 : S (fun s => gg2 m (26 * m) s) (19 * m + (7 * m + 1))
+      = S (fun s => gg2 m (26 * m) s) (19 * m)
+        + S (fun i => gg2 m (26 * m) (19 * m + i)) (7 * m + 1) :=
+    S_append _ (19 * m) (7 * m + 1)
+  have h4 : S (fun s => gg2 m (26 * m) s) (26 * m + 1)
+      ≤ S (fun s => dpf (26 * m) s) (26 * m + 1) :=
+    S_mono _ _ _ (fun s _ => gg2_le_dpf m hm (26 * m) s)
+  have he3 : 19 * m + (7 * m + 1) = 26 * m + 1 := by omega
+  rw [he3] at h3
+  have h5 : uf (26 * m) = S (fun s => dpf (26 * m) s) (26 * m + 1) := rfl
+  have h6 := half_sum (7 * m)
+  have he4 : 2 * (7 * m) = 14 * m := by omega
+  rw [he4] at h6
+  omega
+
+/-- The family method's ceiling: 2^(7k/13) ≤ 16384·u_k for every k ≥ 26. -/
+theorem core_713 (k : Nat) (hk : 26 ≤ k) : 2 ^ (7 * k / 13) ≤ 16384 * uf k := by
+  have hm : 1 ≤ k / 26 := by omega
+  have h1 := uf_26m (k / 26) hm
+  have h2 : uf (26 * (k / 26)) ≤ uf k := uf_mono_le _ _ (by omega)
+  have h3 : (4 : Nat) ^ (7 * (k / 26)) = 2 ^ (14 * (k / 26)) := by
+    have h4eq : (4 : Nat) ^ (7 * (k / 26)) = (2 ^ 2) ^ (7 * (k / 26)) := rfl
+    rw [h4eq, ← Nat.pow_mul]
+    have : 2 * (7 * (k / 26)) = 14 * (k / 26) := by omega
+    rw [this]
+  have h4 : (2 : Nat) ^ (7 * k / 13) ≤ 2 ^ (14 * (k / 26) + 13) :=
+    Nat.pow_le_pow_right (by omega) (by omega)
+  have h5 : (2 : Nat) ^ (14 * (k / 26) + 13) = 2 ^ (14 * (k / 26)) * 8192 := by
+    rw [Nat.pow_add]
+  omega

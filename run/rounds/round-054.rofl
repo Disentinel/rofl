@@ -1,0 +1,26 @@
+-- Round 54 (Track C). TARGET: the family method's CEILING — exponent 7/13.
+-- SUPERSESSION of the R50 "not pursued" decision, with cause: that decision
+-- cited "diminishing returns against remaining time"; the remaining time
+-- proved abundant, so the extension was done. Prefix 1^(12m), then any word
+-- of length 14m with at most 7m zeros; worst prefix ratio is the BLOCK
+-- certificate 3^12 = 531441 > 524288 = 2^19 (kernel decide, no axioms).
+-- Kernel-checked (TerrasAlmostAll.lean, 2859 lines, exit 0): gg2 family DP,
+-- gg2_gate (19m-boundary case analysis), gg2_le_dpf, gg2_ge_choose, uf_26m
+-- (4^(7m) <= 2 u_{26m}), and core_713: 2^(7k/13) <= 16384 u_k for k >= 26.
+-- 7/13 = 0.5385 is the ceiling of the central-word family method: the
+-- 3^12/2^19 margin forces prefix >= 12/7 per free pair, and beta > 1/2
+-- needs non-central binomial lower bounds (Stirling) — out of core-Lean
+-- scope, recorded as the method's honest boundary.
+-- Numerically verified (uf_26m all m <= 11, core_713 all k = 26..300) first.
+claim_of[a](family_method_ceiling_7_13).
+ground[a](family_method_ceiling_7_13, lean_kernel_proof_core_713).
+evidence[world](family_method_ceiling_7_13, lean_kernel_proof_core_713).
+source_of(lean_kernel_proof_core_713, file_terras_almost_all_lean).
+
+thm(core_713).  thm(uf_26m_thm).  thm(gg2_ge_choose).  thm(gg2_le_dpf).
+thm(block_cert).
+thm_dep(core_713, uf_26m_thm).
+thm_dep(uf_26m_thm, gg2_ge_choose).
+thm_dep(uf_26m_thm, gg2_le_dpf).
+thm_dep(uf_26m_thm, half_sum).
+thm_dep(gg2_le_dpf, block_cert).

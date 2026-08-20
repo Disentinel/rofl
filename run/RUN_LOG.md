@@ -590,3 +590,12 @@ below. Conjectured form now η_k ~ C·k^(−3/2)·2^(−(1−H)k), unproven, dat
 k=600; the shaky flag stays with refined content | catch: R41's α reading
 superseded by scale (recursion of the R41 lesson) | born: none |
 facts(main)=72598
+
+R54 | Track C: **the family method's ceiling — exponent 7/13** | R50's
+"not pursued" superseded with cause (time proved abundant). Prefix 1^(12m) +
+any 14m-word with ≤ 7m zeros; block certificate 3^12 = 531441 > 524288 =
+2^19 (kernel decide, no axioms). gg2 chain cloned from R49's template;
+core_713: 2^(7k/13) ≤ 16384·u_k, all k ≥ 26. 0.5385 is the central-word
+family ceiling — β > 1/2 needs Stirling, out of core-Lean scope, recorded
+as the method's honest boundary. Verified numerically first. 2859 lines |
+catch: none | born: none | facts(main)=72668
