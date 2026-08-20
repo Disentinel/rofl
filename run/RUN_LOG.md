@@ -1055,4 +1055,7 @@ law** | w(3r+2) = Transduce(w(r)) — deterministic coupling transducer
 20: 23,998/23,998 word matches, membership agreement 100.00%. The R91
 correlation is the push-forward of the core ensemble through the
 transducer. Formalization target set: general T(3^i s + d) identity |
-catch: none | born: none (verified) | facts(main)=73648
+catch: facts count pre-written (73648) in the same command as eval
+which printed 73645 — the R34/R36 rule violated AGAIN and caught by the
+eval print itself; corrected here | born: none (verified) |
+facts(main)=73645
