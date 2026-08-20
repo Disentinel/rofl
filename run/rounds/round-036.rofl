@@ -1,0 +1,7 @@
+-- Round 36. TARGET: engine hygiene at run scale — the kernel test suite and
+-- the kernel grep check, re-run at the current state of the tree (no engine
+-- changes since the store-index rework, but the driver and run programs have
+-- grown; the suite is the regression net). Result: 29/29 green, grep clean.
+claim_of[a](engine_healthy_at_run_scale).
+ground[a](engine_healthy_at_run_scale, test_suite_29_green_grep_clean_r36).
+evidence[world](engine_healthy_at_run_scale, test_suite_29_green_grep_clean_r36).

@@ -424,3 +424,8 @@ decide-checked inequalities 3^63 < 2^100 and 22·3^100 ≤ 2^163 — the whole
 almost-all theorem rests numerically on two integer facts. Also: correction
 to R34's facts count recorded in place | catch: none | born: thm, thm_dep,
 thm_reach (declared) | facts(main)=71460
+
+R36 | engine hygiene | full kernel test suite re-run at current tree: 29/29
+green; kernel grep: clean. No engine changes since the store-index rework —
+this is the regression net staying up | catch: none | born: none |
+facts(main)=71464
