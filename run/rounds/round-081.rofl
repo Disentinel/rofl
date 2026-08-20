@@ -1,0 +1,28 @@
+-- Round 81 (Track D). THE EXACT LOCAL BRANCHING LAW, kernel-checked:
+-- theorem branch_law — unconditional, per class: for every k, r,
+--   indU(k+1) r + indU(k+1) (r+2^k) + crit(r) = 2 * indU k r,
+-- where crit(r) = indU k r * [3^(A k r) <= 2^(k+1)]. An undecided class
+-- keeps BOTH children unless its 3-power sits in the crossing window
+-- (2^k, 2^(k+1)) — then exactly the odd-step child survives. Refines
+-- indU_double (which needed a globally gap-free depth) to single-class
+-- granularity, unconditionally. Summed (theorem count_law):
+--   u_{k+1} + #critical_k = 2 * u_k  EXACTLY at every depth —
+-- the core's deficit from pure doubling IS the critical count. Axioms:
+-- propext + Quot.sound; kernel #eval confirms the law at k = 0..11.
+-- Mechanism reading: the entire non-determinism of core evolution is
+-- localized in WHICH classes are critical (their A-histogram at the
+-- crossing exponent) and which parities they carry — the R73 coupling
+-- bit now sits inside a proved exact conservation-with-loss law, the
+-- discrete analogue of a continuity equation with a point sink.
+claim_of[a](branch_law_kernel_checked).
+ground[a](branch_law_kernel_checked, lean_branch_law_compiles).
+evidence[world](branch_law_kernel_checked, lean_branch_law_compiles).
+
+claim_of[a](count_law_exact_doubling_deficit).
+ground[a](count_law_exact_doubling_deficit, branch_law_kernel_checked).
+
+lean_theorem(thm_branch_law).  lean_axioms_minimal(thm_branch_law).
+lean_theorem(thm_count_law).   lean_axioms_minimal(thm_count_law).
+depends_on(thm_count_law, thm_branch_law).
+depends_on(thm_branch_law, thm_lift_flip).
+depends_on(thm_branch_law, thm_A_snoc).

@@ -4720,3 +4720,129 @@ theorem core_meets_every_class (m s k ρ : Nat) (hodd : m % 2 = 1)
       rw [h2, ← h0]
     exact witness_pack k s m m ρ hk (by omega) hms hm hρ hcm
   · exact witness_pack k s c₀ m ρ hk (by omega) (by omega) hm hρ hc₀
+
+/- ---------- THE EXACT LOCAL BRANCHING LAW of the core ---------- -/
+/- Unconditional, per class: an undecided class has exactly TWO surviving
+   children when its 3-power clears the next 2-power (non-critical) and
+   exactly ONE (the odd-step child) when 3^A sits in (2^k, 2^(k+1))
+   (critical). Summed: u_{k+1} = 2·u_k − #critical — the core's growth
+   deficit IS the critical count. Refines indU_double (which needed a
+   gap-free depth) to single-class granularity. -/
+
+theorem indU_one_gate (k r : Nat) (h : indU (k + 1) r = 1) :
+    2 ^ (k + 1) < 3 ^ A (k + 1) r := by
+  rw [indU_succ] at h
+  by_cases hg : 2 ^ (k + 1) < 3 ^ A (k + 1) r
+  · exact hg
+  · rw [if_neg hg, Nat.mul_zero] at h
+    omega
+
+theorem indU_one_pow (k r : Nat) (h : indU k r = 1) : 2 ^ k ≤ 3 ^ A k r := by
+  cases k with
+  | zero =>
+    have e1 : A 0 r = 0 := rfl
+    rw [e1]
+    decide
+  | succ p =>
+    have := indU_one_gate p r h
+    omega
+
+theorem branch_law (k r : Nat) :
+    indU (k + 1) r + indU (k + 1) (r + 2 ^ k)
+      + indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)
+      = 2 * indU k r := by
+  have hper : indU k (r + 2 ^ k) = indU k r := by
+    have h1 : r + 2 ^ k = r + 1 * 2 ^ k := by omega
+    rw [h1]
+    exact indU_periodic k r 1
+  have hind1 : indU (k + 1) r
+      = indU k r * (if 2 ^ (k + 1) < 3 ^ A (k + 1) r then 1 else 0) := indU_succ k r
+  have hind2 : indU (k + 1) (r + 2 ^ k)
+      = indU k r * (if 2 ^ (k + 1) < 3 ^ A (k + 1) (r + 2 ^ k) then 1 else 0) := by
+    rw [indU_succ, hper]
+  by_cases hu : indU k r = 1
+  · have hpow := indU_one_pow k r hu
+    have hpos : 0 < (2 : Nat) ^ k := Nat.pow_pos (by omega)
+    have hA1 : A (k + 1) r = A k r + Titer k r % 2 := A_snoc k r
+    have hA2 : A (k + 1) (r + 2 ^ k) = A k r + (1 - Titer k r % 2) := by
+      have h1 := A_snoc k (r + 2 ^ k)
+      have h2 : A k (r + 2 ^ k) = A k r := by
+        have e : r + 2 ^ k = r + 1 * 2 ^ k := by omega
+        rw [e]
+        exact (AD_periodic k r 1).1
+      have h3 := lift_flip k r
+      have h4 := odd_pow3 (A k r)
+      rw [h2, h3] at h1
+      omega
+    have hs : 2 ^ (k + 1) < 3 ^ (A k r + 1) := by
+      have h1 : (3 : Nat) ^ (A k r + 1) = 3 ^ A k r * 3 := Nat.pow_succ 3 _
+      have h2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 k
+      omega
+    have g3 : (if 2 ^ (k + 1) < 3 ^ (A k r + 1) then (1 : Nat) else 0) = 1 := if_pos hs
+    by_cases hbit : Titer k r % 2 = 0
+    · have e1 : A (k + 1) r = A k r := by omega
+      have e2 : A (k + 1) (r + 2 ^ k) = A k r + 1 := by omega
+      rw [hind1, hind2, e1, e2, hu]
+      by_cases hg : 2 ^ (k + 1) < 3 ^ A k r
+      · have g1 : (if 2 ^ (k + 1) < 3 ^ A k r then (1 : Nat) else 0) = 1 := if_pos hg
+        have g2 : (if 2 ^ (k + 1) < 3 ^ A k r then (0 : Nat) else 1) = 0 := if_pos hg
+        omega
+      · have g1 : (if 2 ^ (k + 1) < 3 ^ A k r then (1 : Nat) else 0) = 0 := if_neg hg
+        have g2 : (if 2 ^ (k + 1) < 3 ^ A k r then (0 : Nat) else 1) = 1 := if_neg hg
+        omega
+    · have e1 : A (k + 1) r = A k r + 1 := by omega
+      have e2 : A (k + 1) (r + 2 ^ k) = A k r := by omega
+      rw [hind1, hind2, e1, e2, hu]
+      by_cases hg : 2 ^ (k + 1) < 3 ^ A k r
+      · have g1 : (if 2 ^ (k + 1) < 3 ^ A k r then (1 : Nat) else 0) = 1 := if_pos hg
+        have g2 : (if 2 ^ (k + 1) < 3 ^ A k r then (0 : Nat) else 1) = 0 := if_pos hg
+        omega
+      · have g1 : (if 2 ^ (k + 1) < 3 ^ A k r then (1 : Nat) else 0) = 0 := if_neg hg
+        have g2 : (if 2 ^ (k + 1) < 3 ^ A k r then (0 : Nat) else 1) = 1 := if_neg hg
+        omega
+  · have hz : indU k r = 0 := by
+      have := indU_le_one k r
+      omega
+    rw [hind1, hind2, hz]
+    omega
+
+/-- THE COUNTING LAW: u_{k+1} + #critical = 2·u_k, exactly, at every
+    depth. The core's deficit from pure doubling is precisely the number
+    of undecided classes whose 3-power lies in the crossing window. -/
+theorem count_law (k : Nat) :
+    NU (k + 1)
+      + S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k)
+      = 2 * NU k := by
+  have hsplit : (2 : Nat) ^ (k + 1) = 2 ^ k + 2 ^ k := by
+    have := Nat.pow_succ 2 k
+    omega
+  have h1 : NU (k + 1)
+      = S (fun r => indU (k + 1) r) (2 ^ k)
+        + S (fun i => indU (k + 1) (2 ^ k + i)) (2 ^ k) := by
+    show S (fun r => indU (k + 1) r) (2 ^ (k + 1)) = _
+    rw [hsplit, S_append]
+  have h2 : ∀ r, r < 2 ^ k →
+      indU (k + 1) r + indU (k + 1) (2 ^ k + r)
+        + indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)
+      = indU k r * 2 := by
+    intro r _
+    have e : 2 ^ k + r = r + 2 ^ k := Nat.add_comm _ _
+    rw [e]
+    have hb := branch_law k r
+    omega
+  have h3 : S (fun r => indU (k + 1) r + indU (k + 1) (2 ^ k + r)
+        + indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k)
+      = S (fun r => indU k r * 2) (2 ^ k) :=
+    S_congr _ _ _ h2
+  have h4 : S (fun r => indU (k + 1) r + indU (k + 1) (2 ^ k + r)
+        + indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k)
+      = S (fun r => indU (k + 1) r + indU (k + 1) (2 ^ k + r)) (2 ^ k)
+        + S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k) :=
+    S_add _ _ _
+  have h5 : S (fun r => indU (k + 1) r + indU (k + 1) (2 ^ k + r)) (2 ^ k)
+      = S (fun r => indU (k + 1) r) (2 ^ k)
+        + S (fun i => indU (k + 1) (2 ^ k + i)) (2 ^ k) :=
+    S_add _ _ _
+  have h6 : S (fun r => indU k r * 2) (2 ^ k) = NU k * 2 :=
+    S_mul_right _ 2 _
+  omega

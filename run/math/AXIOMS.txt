@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T11:45Z; 244 theorem declarations.
+# Generated 2026-08-20T12:05Z; 248 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -261,4 +261,8 @@
 'solve_exists' depends on axioms: [propext, Quot.sound]
 'witness_pack' depends on axioms: [propext, Quot.sound]
 'core_meets_every_class' depends on axioms: [propext, Quot.sound]
+'indU_one_gate' depends on axioms: [propext, Quot.sound]
+'indU_one_pow' depends on axioms: [propext, Quot.sound]
+'branch_law' depends on axioms: [propext, Quot.sound]
+'count_law' depends on axioms: [propext, Quot.sound]
 

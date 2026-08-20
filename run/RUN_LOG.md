@@ -851,3 +851,15 @@ at every modulus | catch: one omega failure on symbolic division modeled
 in Int (counterexample l ≤ −1 on a Nat atom) — replaced by
 Nat.pos_of_ne_zero; instructive substrate note | born: none |
 facts(main)=73333
+
+R81 | Track D: **the exact local branching law** | `branch_law`
+(unconditional, per class): indU(k+1) r + indU(k+1)(r+2^k) + crit(r) =
+2·indU k r — an undecided class keeps both children unless its 3-power
+sits in (2^k, 2^(k+1)), in which case exactly the odd-step child
+survives. Refines indU_double from per-depth to per-class, no gap-free
+hypothesis. Summed: `count_law` — u_{k+1} + #critical = 2·u_k EXACTLY.
+Axioms: propext + Quot.sound; kernel #eval confirms k = 0..11. The core's
+evolution is a continuity equation with a point sink at the crossing
+exponent; all remaining non-determinism is the critical set's composition
+— the R73 coupling bit inside a proved conservation-with-loss law |
+catch: none | born: none | facts(main)=73361

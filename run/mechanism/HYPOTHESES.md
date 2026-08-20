@@ -479,3 +479,22 @@ near-equal counts (e.g. mod 105: min 60 vs mean 71) — the equidistribution
 observable extends across all small odd moduli, far beyond what the
 theorem asserts. The gap between proved positivity (≥ 1) and measured
 uniformity (χ² far below Poisson) remains the search's open thread.
+
+**Round 81 — the branching law: the mechanism picture completes.**
+
+`branch_law` (kernel-checked, unconditional, per class): every undecided
+class at depth k keeps BOTH its children unless 3^(A k r) lies in the
+crossing window (2^k, 2^(k+1)) — then exactly the odd-step child
+survives and the even-step child dies. Summed over classes (`count_law`):
+u_{k+1} + #critical_k = 2·u_k, exactly, at every depth. This is the final
+form of the flow picture: core evolution is literal doubling with a point
+sink at the crossing exponent. Everything the run measured now has its
+proved container: the flows (mod3/mod9) are this law's residue-marginals;
+V3-conservation is its gap-free case (#critical = 0); the crossing kicks
+are the sink's residue composition; and the ONLY unproved content left in
+the whole 3-adic program is the statistical structure of the critical
+set — which classes sit at the crossing exponent and which parities they
+carry. That is precisely the R73 coupling bit, now localized not just by
+measurement but by a kernel-checked exact identity. The mechanism search
+ends where it kept pointing: one pseudo-random bit per class per depth,
+everything else is theorem.

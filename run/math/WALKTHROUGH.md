@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 244 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 248 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -106,7 +106,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–80)
+## 8. Track D additions (mechanism search, rounds 57–81)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -149,6 +149,13 @@ this route cannot reach it.
   counting contradiction across `S_swap`). Subsumes the mod-3 and mod-9
   positivity theorems: no covering system whatsoever can certify descent
   on the core.
+- `branch_law` + `count_law` : the exact local law of core evolution —
+  each undecided class keeps both children unless its 3-power lies in
+  (2^k, 2^(k+1)) (then exactly the odd-step child survives), and summed:
+  **u_{k+1} + #critical = 2·u_k** at every depth. The flows of the
+  previous bullets are this law's residue-marginals; the only unproved
+  content left at mod 3^t is the critical set's composition (the coupling
+  bit of the mechanism board).
 - `collatz_iff_descent` (§1) : the canonical reduction itself, proved in
   round 76 — universal eventual descent ⟺ every n reaches 1 under the
   original map (`descent_to_one` strong induction + `citer_cycle` 1→4→2 +
