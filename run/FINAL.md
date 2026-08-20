@@ -46,8 +46,10 @@ carries the final chain:
    2^(36k/100) ≤ 2·u_k via a failure counter obeying the single invariant
    3^F ≤ 2^k, then lifted to **2^(k/2) ≤ 8·u_k** by an explicit surviving
    family (1^2m followed by any word with ≤ m zeros — worst prefix ratio
-   9^m vs 8^m — counted by a central-binomial half-sum). Headline
-   (`core_sandwich_half`): **2^(k/2)/8 ≤ u_k ≤ 2^(k−k/20)** — the core is
+   9^m vs 8^m — counted by a central-binomial half-sum), and finally to the
+   family method's ceiling **2^(7k/13) ≤ 16384·u_k** (block certificate
+   3^12 > 2^19). Headline (`core_sandwich_half` + `core_713`):
+   **2^(0.538·k)/2^14 ≤ u_k ≤ 2^(k−k/20)** — the core is
    exponentially thin and exponentially large, kernel-checked both sides —
    the formal content of "no route from density to totality": no
    finite-depth residue analysis can settle the conjecture. (True exponents

@@ -1,0 +1,8 @@
+-- Round 55. TARGET: self-sufficiency proof + docs to 7/13. The entire
+-- verification stack re-run on a FRESH git clone of the branch (nothing
+-- from the working tree): ALL CHECKS PASSED, 57 s wall — the committed
+-- state alone reproduces every proof. FINAL.md and README carry the
+-- 7/13 sandwich. Owner checked in; status reported.
+claim_of[a](committed_state_self_sufficient).
+ground[a](committed_state_self_sufficient, clean_clone_checkall_exit0_r55).
+evidence[world](committed_state_self_sufficient, clean_clone_checkall_exit0_r55).

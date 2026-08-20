@@ -599,3 +599,11 @@ core_713: 2^(7k/13) ≤ 16384·u_k, all k ≥ 26. 0.5385 is the central-word
 family ceiling — β > 1/2 needs Stirling, out of core-Lean scope, recorded
 as the method's honest boundary. Verified numerically first. 2859 lines |
 catch: none | born: none | facts(main)=72668
+
+R55 | self-sufficiency + docs to 7/13 | full verification re-run on a FRESH
+git clone of the branch: ALL CHECKS PASSED, 57 s — the committed state alone
+reproduces every proof. FINAL/README carry the 7/13 sandwich. Owner check-in
+answered with the boundary stated plainly: the canonical conjecture is NOT
+solved and remains open; what is kernel-checked is the classical almost-all
+layer plus the formal obstruction (the never-empty core) showing this route
+cannot close it | catch: none | born: none | facts(main)=72676
