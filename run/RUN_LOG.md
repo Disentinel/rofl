@@ -986,3 +986,19 @@ the cycle bound past the 2^71 floor. no_small_cycles' 183 is exactly what
 the sourced floor supports; extension needs a higher floor, not compute.
 Oracle sweep to j = 400 confirms (184, 116) is the first failure | catch:
 none | born: none (verified) | facts(main)=73495
+
+R89 | Track E (owner-directed): **the problem decomposed like reasoning
+was** | run/mechanism/PRIMITIVES.md — seven primitives (2-adic shift,
+carry odometer, archimedean drift, clock incommensurability, the sign,
+THE DIAGONAL ℕ ⊂ ℝ×Z₂, the coupling bit); assembly table mapping all 263
+theorems to primitive products; every proved theorem avoids the diagonal
+— the conjecture is the unique statement requiring it. Unification: the
+three obstruction theorems have ONE cause — one-place blindness. Five
+re-representations preserving the interaction algebra (adelic/Furstenberg
+face with the entropy hypothesis already certified h ∈ [0.538, 0.95];
+Cobham two-base face; transport face with its blindness explained;
+S-unit ledger face; ROFL-native face: the conjecture as a provenance
+statement — counterexamples consume infinitely many unsourced coupling
+bits). Analogies literature-known; the kernel-checked mapping and the
+blindness unification are the run's | catch: none | born: none
+(verified) | facts(main)=73515
