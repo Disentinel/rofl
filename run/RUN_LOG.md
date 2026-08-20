@@ -303,3 +303,24 @@ DELIBERATELY-shaky claim (hypothesis ground, no evidence): observed per-step
 Honesty: this is the machine-checked core of Terras's η→0, not a new result |
 catch: none | born: none (freeze) | facts(main)=70822; shaky now holds exactly
 the three honest flags (collatz, memory anchor, unproven rate)
+
+R24 | cross-process determinism at run scale | rebuild-from-sources vs untrusted
+snapshot-restore in separate OS processes: canonicalState sha256 IDENTICAL
+(d2e7ceee…, 70,822 facts) — facts, supports, witnesses, provenance all
+reproduce bit-for-bit. + SATURATION.md delivered (n=1 caveat up front;
+predicate/atom split is where saturation discipline bites) | born: none
+
+MODE CHANGE (owner, ~06:00Z): continuous work — no more paced wakeups between
+batches; wakeups only as fallback during genuinely background compute.
+
+R25 | Track C: **general theorem u_{k+1} ≤ 2u_k for ALL k** | Lemma5Check.lean
+(exit 0): functional DP, child-count ≤ sum of two parents, sum machinery built
+from scratch on core List.range, above-diagonal vanishing; theorem uf_double
+kernel-checked; bridged to the list DP by native_decide (k ≤ 20). Lemma 4(a)
+upgraded from finite check to theorem | born: none (freeze)
+
+R26 | Track C: table to k=40, criterion tested across range | two independent
+BigInt implementations agree exactly k=1..40; Lemma 2's doubling criterion
+holds at every step k=1..39; u_40 = 6,402,835,000, η_40 ≈ 5.8e-3, per-step
+ratio ≈ 0.933 at k=36..40 (ballot-gap hypothesis stays shaky as designed) |
+born: none (freeze) | facts(main)=70846
