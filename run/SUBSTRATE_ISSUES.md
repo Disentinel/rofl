@@ -52,3 +52,16 @@ asserted at all, they carry an oracle-only ground. Exact wall to be measured.
 Witness trees through arithmetic chains are unreadable; the driver exposes `why` but
 the run uses query results and shallow whys only. Builtin-folding remains an open
 kernel feature request, deliberately NOT built mid-run.
+
+## #6 — prose artifacts sit outside the audit net (found by the R34 catch)
+The ledger's supersession discipline caught every CLAIM whose ground was refuted
+or upgraded — but the run's prose (.md) files carry honesty NOTES that are not
+claims, and one went stale: terras_table.md still said the pair-doubling
+mechanism was "not a claimed theorem" seven rounds after Lemma 2's iff was
+kernel-proved (caught only by a deliberate R34 coherence pass, not by the
+audit). The graph audits what the graph holds. Proposal: prose honesty notes
+should be first-class — a doc_note(File, NoteId) fact per honesty note, with
+the same supersession machinery as claims, so a proof landing in the graph
+surfaces `stale_note` for every note whose limitation it removes. Cost: one
+fact per note at write time; the audit rules already exist. Not built mid-run
+(vocabulary discipline: the run records the lesson, the kernel keeps its shape).

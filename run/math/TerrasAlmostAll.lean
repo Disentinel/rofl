@@ -1336,3 +1336,35 @@ theorem collatz_original_integers (m k q : Nat) (hk : 1 ≤ k) (hmk : 25 * m ≤
     Nat.mul_le_mul_left (2 ^ m) h1
   have h3 := terras_integers_log m k q hk hmk
   omega
+
+/- ---------- where counterexamples must live ---------- -/
+
+theorem indU_le_one (j : Nat) : ∀ r, indU j r ≤ 1 := by
+  induction j with
+  | zero => intro r; exact Nat.le_refl 1
+  | succ m ih =>
+    intro r
+    have h := ih r
+    rw [indU_succ]
+    by_cases hg : 2 ^ (m + 1) < 3 ^ A (m + 1) r
+    · rw [if_pos hg, Nat.mul_one]
+      exact h
+    · rw [if_neg hg, Nat.mul_zero]
+      omega
+
+/-- Any n that NEVER drops below itself is coefficient-undecided at EVERY
+    depth k with 3^k ≤ n: potential counterexamples to descent live inside
+    the intersection of the (density → 0) undecided cores. -/
+theorem never_dropper_in_core (n : Nat) (hnd : ∀ i, ¬ Titer i n < n)
+    (k : Nat) (hn : 3 ^ k ≤ n) : indU k (n % 2 ^ k) = 1 := by
+  by_cases h0 : indU k (n % 2 ^ k) = 0
+  · exfalso
+    have ⟨i, _, hik, hdec⟩ := indU_zero_decided k (n % 2 ^ k) h0
+    have hAe : A i (n % 2 ^ k) = A i n := A_period_general i k hik n
+    rw [hAe] at hdec
+    have hni : 3 ^ i ≤ n := by
+      have : (3 : Nat) ^ i ≤ 3 ^ k := Nat.pow_le_pow_right (by omega) hik
+      omega
+    exact hnd i (drop_criterion i n hdec hni)
+  · have := indU_le_one k (n % 2 ^ k)
+    omega

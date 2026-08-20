@@ -449,3 +449,16 @@ form); collatz_original_integers: 2^m·NDC(q·2^k, 2k) ≤ q·2^k + 2^m·3^k onc
 k ≥ 25m — almost every n drops below itself under the LITERAL 3n+1 | n/2
 iteration, kernel-checked, three standard axioms. TerrasAlmostAll.lean now
 1338 lines. DAG updated | catch: none | born: none | facts(main)=71690
+
+R39 | leaves of the proof DAG + the core corollary + a substrate lesson |
+(a) thm_leaf via negation (births: has_dep, thm_leaf, cone_leaf — declared);
+the engine DERIVES the cone leaves of terras_integers: 14 total — 12
+structural inductions + exactly the 2 numeric facts (pow_63_100, pow_22_163),
+verifying R35's observation by derivation. (b) never_dropper_in_core (Lean,
+exit 0): any never-dropping n is undecided at EVERY depth k ≤ log₃ n —
+descent counterexamples live in the intersection of the density→0 cores.
+(c) SUBSTRATE_ISSUES #6 from the R34 catch: prose honesty notes sit outside
+the audit net; proposal recorded (doc_note facts + existing supersession
+machinery), deliberately not built mid-run. README synced to the full
+TerrasAlmostAll contents | catch: none | born: has_dep, thm_leaf, cone_leaf
+(declared) | facts(main)=71924
