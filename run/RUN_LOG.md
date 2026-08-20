@@ -692,3 +692,10 @@ no-axiom lines now including the cycle table); WALKTHROUGH gains the
 Track D section; check_all end-to-end: ALL CHECKS PASSED, 70 s (kernel
 table adds ~15 s, accepted for axiom-freedom) | catch: stale "170 theorems"
 in walkthrough header, fixed | born: none | facts(main)=72958
+
+R65 | FINAL.md: the Track D account | reduction, conformity results, three
+constraint fronts, the mod-3 discovery with its sub-Poisson kick anomaly,
+and the honest closing: the canonical conjecture is exactly as open after
+the mechanism search as before — as the run's own obstruction theorem
+requires for this method class | catch: none | born: none |
+facts(main)=72966

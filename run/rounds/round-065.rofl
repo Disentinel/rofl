@@ -1,0 +1,8 @@
+-- Round 65. TARGET: FINAL.md carries the Track D account — the reduction,
+-- the conformity results, the three constraint fronts, the mod-3 discovery
+-- with its sub-Poisson kick anomaly, and the honest closing: the canonical
+-- conjecture is exactly as open after the mechanism search as before it,
+-- as the run's own obstruction theorem requires for this method class.
+claim_of[a](final_md_track_d_section).
+ground[a](final_md_track_d_section, final_md_updated_r65).
+evidence[world](final_md_track_d_section, final_md_updated_r65).

@@ -74,7 +74,44 @@ Tao's log-density almost-all). The open gap is untouched and now formally
 why density arguments alone cannot reach them.
 
 `run/math/check_all.sh` re-verifies the entire stack — 7 Lean files, 6
-executable checkers, the 29-test kernel suite, the vocabulary grep — in ~54 s.
+executable checkers, the 29-test kernel suite, the vocabulary grep — in ~70 s.
+
+## The mechanism search (Track D, owner-directed)
+
+In the final third of the run the owner redirected the effort at the
+canonical formulation itself: mechanism thinking, TRIZ, knowledge transfer,
+absurd brainstorming, hypotheses and tests. The full board and test log are
+in `run/mechanism/HYPOTHESES.md`. Outcome, honestly:
+
+- **The reduction made formal**: canonical ⟺ no cycles + "the infinite
+  undecided core misses ℕ" — with the core's finite levels kernel-sandwiched
+  by this run, and the 3n−1 falsification filter identifying positivity of
+  the affine constant D as the load-bearing sign resource.
+- **Conformity everywhere it was hoped structure would show**: first-drop
+  records over n ≤ 10^7 match the run's own fitted density prediction
+  within ~2 steps at two scales; drift excursions of record penetrators sit
+  in excursion-class scaling. No orbit observable measured here deviates
+  exploitably from the stochastic model.
+- **The constraint surface pushed on three fronts** (all kernel-checked):
+  conditional cycle exclusion to accelerated length 183 with a pure-kernel
+  17k-entry table (`no_small_cycles`, axioms: propext + Quot.sound only);
+  the unconditional size-cap law making never-droppers strictly dominated
+  to ≈ 2.71·log₂ n (`never_dropper_cap`); and counterexamples locked into
+  the dominated core for 183 straight depths under the floor
+  (`never_dropper_dominated`).
+- **One constructive discovery**: the core's exact mod-3 flow
+  (`indU_double` + `mod3_flow`) — on gap-free depths both lifts of every
+  undecided class survive and the mod-3 profile evolves by I + σ with
+  eigenvalue modulus 1, so all 3-adic imbalance enters at 3-power
+  crossings; measured, the crossing kicks are anomalously sub-Poisson
+  (dying sets of ~1000 classes balance to ±1) — the single observable of
+  the search that the stochastic model does NOT predict, flagged as the
+  open thread.
+
+The canonical conjecture is exactly as open after Track D as before it —
+as the run's own obstruction theorem says it must be for methods of this
+class. What the search added is precision about where the boundary sits
+and one new structured observable inside the core.
 
 ## What the ledger actually did
 
