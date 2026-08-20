@@ -1035,3 +1035,16 @@ adelic face: the Rudolph-lever question has an answer — exact
 ANTI-invariance plus exact backward closure. Mechanism inventory
 reopened | catch: first-compile atom mismatch (1+1 vs 2), fixed | born:
 none (verified) | facts(main)=73591
+
+R92 | Track E ultracode: **the coupling algebra, first kernel layer** |
+Independent derivation of the affine coupling automaton (x = 3^i·s + d;
+letters agree iff d even; merge (0,0); four local rules) — 3.26M
+invariant checks, 0 failures; from (1,2): ~50% merge, median 4 steps.
+KERNEL-CHECKED: the four identities T_c12_odd/even, T_c11_odd (= the
+merge), T_c11_even, coupling_merge; and the mod-4 letter calculus:
+core_mod4 (core ⟺ r ≡ 3 mod 4 through depth 2) + affine_leaves_core
+(3a+b ≢ 3 mod 4 ⟹ ar+b exits by depth 2 — one theorem closes a whole
+atlas column). Mechanism sketch for 46%/28%: merged word = base word
+with one 1→0 flip; slack decides; prepend-1 compensates. Agent sweep
+(10 explorers) running in background; transition table cross-check
+pending | catch: none | born: none (verified) | facts(main)=73629

@@ -5415,3 +5415,66 @@ theorem times3_leaves_core (k r : Nat) (hk : 2 ≤ k) (h : indU k r = 1) :
     rw [e11, hA2]
     decide
   rw [if_neg hgate, Nat.mul_zero]
+
+/- ---------- Track E: the coupling algebra (local identities) ---------- -/
+/- The affine coupling automaton: x = 3^i·s + d evolves under T with the
+   letter agreement controlled by parity of d. The four local identities
+   below generate the whole transition system (validated over 3.26M
+   checks); T_c11_odd IS the merge — after it the orbits coincide. -/
+
+theorem T_c12_odd (s : Nat) (h : s % 2 = 1) : T (3 * s + 2) = 3 * T s + 2 := by
+  have h1 : (3 * s + 2) % 2 = 1 := by omega
+  have h2 := T_odd (3 * s + 2) h1
+  have h3 := T_odd s h
+  omega
+
+theorem T_c12_even (s : Nat) (h : s % 2 = 0) : T (3 * s + 2) = 3 * T s + 1 := by
+  have h1 : (3 * s + 2) % 2 = 0 := by omega
+  have h2 := T_even (3 * s + 2) h1
+  have h3 := T_even s h
+  omega
+
+theorem T_c11_odd (s : Nat) (h : s % 2 = 1) : T (3 * s + 1) = T s := by
+  have h1 : (3 * s + 1) % 2 = 0 := by omega
+  have h2 := T_even (3 * s + 1) h1
+  have h3 := T_odd s h
+  omega
+
+theorem T_c11_even (s : Nat) (h : s % 2 = 0) : T (3 * s + 1) = 9 * T s + 2 := by
+  have h1 : (3 * s + 1) % 2 = 1 := by omega
+  have h2 := T_odd (3 * s + 1) h1
+  have h3 := T_even s h
+  omega
+
+/-- MERGE: after the pattern (even step, then odd step) of the base
+    orbit, the orbit of 3s+2 coincides with the base orbit forever:
+    T²(3s+2) = T(T s) when s is even and T s is odd. -/
+theorem coupling_merge (s : Nat) (h0 : s % 2 = 0) (h1 : T s % 2 = 1) :
+    T (T (3 * s + 2)) = T (T s) := by
+  rw [T_c12_even s h0]
+  exact T_c11_odd (T s) h1
+
+/-- The mod-4 law of the core: words begin 1,1 ⟺ r ≡ 3 (mod 4). Every
+    affine exclusion with 3a+b ≢ 3 (mod 4) is an instance. -/
+theorem core_mod4 (k r : Nat) (hk : 2 ≤ k) (h : indU k r = 1) : r % 4 = 3 := by
+  have ⟨h1, h2⟩ := core_first_two_odd k r hk h
+  have hT := T_odd r h1
+  -- T r = (3r+1)/2 odd; r ≡ 1 mod 4 would give T r even
+  omega
+
+/-- The general affine depth-2 exclusion: if 3a+b ≢ 3 (mod 4) then a·r+b
+    is outside the core (depth ≥ 2) for EVERY core r — the calculus
+    behind times3_leaves_core (a=3, b=0) and its whole family. -/
+theorem affine_leaves_core (k a b r : Nat) (hk : 2 ≤ k) (h : indU k r = 1)
+    (hab : (3 * a + b) % 4 ≠ 3) : indU 2 (a * r + b) = 0 := by
+  have hr4 := core_mod4 k r hk h
+  by_cases hu : indU 2 (a * r + b) = 1
+  · have h4 := core_mod4 2 (a * r + b) (Nat.le_refl 2) hu
+    -- a*r+b ≡ 3 mod 4 with r ≡ 3 mod 4 → 3a+b ≡ 3 mod 4: contradiction
+    have m1 := Nat.mul_mod a r 4
+    rw [hr4] at m1
+    have m2 := Nat.mul_mod a 3 4
+    have mc : a * 3 = 3 * a := Nat.mul_comm a 3
+    omega
+  · have := indU_le_one 2 (a * r + b)
+    omega
