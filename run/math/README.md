@@ -33,6 +33,7 @@ recorded in `lemma2_3.md`).
 | `Lemma4Check.lean` | `pow3_lt_pow4`, `half_not_dominated` (kernel proofs); Pascal-rule `choose`; `u_le_endTail`, `density_monotone`. |
 | `Lemma5Check.lean` | **General** `uf_double : ∀ k, uf (k+1) ≤ 2 * uf k`; sum lemmas `S_succ/S_mono/S_add/S_shift`; `dpf_above_diag`; `dpf_step_le`. |
 | `Lemma6Check.lean` | Greedy minimal dominated string `gs`; `gs_dominated`, `gs_minimal`, `dpf_gs_pos`, `gs_le_diag`, `S_ge`, `wf_pos_of_gap` — closes Lemma 2's iff in both directions for all k. |
+| `Lemma7Check.lean` | **General density decay** (Terras's η_k → 0, all k): integer Chernoff at λ=2 — `dpf_le_choose`, `binom_two` (Σ C(k,s)·2^s = 3^k), `threshold_63_100` (from 3^63 < 2^100), `chernoff` (u_k·2^(63k/100+1) ≤ 3^k), `density_decay` (∀c k, 1≤k → c^100≤k → c·u_k ≤ 2^k). `#print axioms density_decay`: propext, Classical.choice, Quot.sound — no native_decide in the chain. |
 
 ## Executable checkers (Node)
 

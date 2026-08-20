@@ -353,3 +353,15 @@ still_slow probe at 260 came back empty with NO new chase (no record appears
 in 1000..9999), and names the next breaker (35655) that 260 would still absorb
 up to 99999. Max value seen at N≤9999 = 27,114,424 — retroactively validates
 R18's 10^8 overflow window | catch: none | born: none | facts(main)=70944
+
+R30 | Track C: **GENERAL density decay — Terras's η_k → 0, kernel-checked, ALL
+k** | Lemma7Check.lean (exit 0; #print axioms density_decay = propext,
+Classical.choice, Quot.sound — NO native_decide in the chain). All-integer
+Chernoff at λ=2: dpf_le_choose (counts below Pascal binomials), binom_two
+(Σ C(k,s)·2^s = 3^k), threshold_63_100 (3^s > 2^k ⟹ 100s ≥ 63k+1, from
+3^63 < 2^100 by kernel decide), chernoff (u_k·2^(63k/100+1) ≤ 3^k, k ≥ 1),
+density_decay (∀ c k, 1≤k → c^100≤k → c·u_k ≤ 2^k) — "η → 0" in pure Nat.
+Proved rate/step ≈ 0.969 vs observed ≈ 0.948: the rate gap STAYS shaky as
+designed — the theorem proves decay, not the observed speed. Lemma 4 upgraded
+from finite end-tail check to the full limit statement | catch: none | born:
+none | facts(main)=70962

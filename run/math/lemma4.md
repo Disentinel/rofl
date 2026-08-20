@@ -3,6 +3,13 @@
 Status: parts (a)–(c) **proved** (cores kernel-checked in Lean: Lemma4Check.lean,
 compiles exit 0); part (d) is honest numerics, flagged unproven.
 
+**Round-30 upgrade**: the limit statement itself — η_k → 0 for ALL k, with an
+explicit exponential rate — is now a general kernel-checked theorem
+(Lemma7Check.lean `density_decay`: ∀ c k, 1 ≤ k → c^100 ≤ k → c·u_k ≤ 2^k,
+via the all-integer Chernoff bound `chernoff`: u_k · 2^(63k/100+1) ≤ 3^k).
+Proved per-step decay constant 3/2^1.63 ≈ 0.969; the *observed* ≈ 0.948 stays
+unproven — part (d) below is unchanged and still flagged.
+
 Notation: u_k = # coefficient-undecided classes mod 2^k, η_k = u_k / 2^k,
 t_k = min{ s : 3^s > 2^k }.
 

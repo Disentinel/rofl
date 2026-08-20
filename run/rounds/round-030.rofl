@@ -1,0 +1,24 @@
+-- Round 30 (Track C). TARGET: GENERAL density decay — Terras's eta_k -> 0 as a
+-- kernel-checked theorem for ALL k (run/math/Lemma7Check.lean, exit 0; axioms
+-- of density_decay: propext, Classical.choice, Quot.sound only — NO
+-- native_decide in the load-bearing chain).
+-- All-integer Chernoff at lambda = 2:
+--   dpf_le_choose:    dominated counts sit below Pascal binomials (induction);
+--   binom_two:        Sigma_s C(k,s) 2^s = 3^k (weighted binomial, induction);
+--   threshold_63_100: 3^s > 2^k => 100 s >= 63 k + 1 (from 3^63 < 2^100, decide);
+--   chernoff:         uf k * 2^(63k/100 + 1) <= 3^k for all k >= 1;
+--   density_decay:    forall c k, 1 <= k -> c^100 <= k -> c * uf k <= 2^k.
+-- The last line is "u_k / 2^k -> 0" said in pure Nat arithmetic: undecided-class
+-- density is eventually below 1/c for EVERY c. Proved decay constant per step:
+-- 3 / 2^1.63 ~ 0.969 — weaker than the observed ~0.948 (that gap is exactly the
+-- lemma4_observed_rate_unproven shaky flag, which STAYS: the theorem proves
+-- decay, not the observed rate).
+-- This upgrades Lemma 4's finite end-tail check (k <= 20) to the full limit
+-- statement — the analytic heart of Terras 1976 for coefficient density.
+claim_of[a](eta_decay_general_theorem).
+ground[a](eta_decay_general_theorem, lean_kernel_proof_density_decay).
+evidence[world](eta_decay_general_theorem, lean_kernel_proof_density_decay).
+
+src(file_lemma7_check_lean).    src_basis(file_lemma7_check_lean, repo_committed).
+verified[world](file_lemma7_check_lean).
+source_of(lean_kernel_proof_density_decay, file_lemma7_check_lean).
