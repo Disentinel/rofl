@@ -526,3 +526,11 @@ full ~2100-line TerrasAlmostAll contents; check_all.sh re-run end-to-end at
 the final math state: ALL CHECKS PASSED, 54 s wall (7 Lean files including
 the 42,000-bit no-axiom certificates, 6 checkers, 29 tests, grep) | catch:
 none | born: none | facts(main)=72368
+
+R46 | end-state verification + saturation record | determinism at the final
+count: sha256 IDENTICAL (207cbbf3…) across rebuild-from-sources vs untrusted-
+snapshot-restore in separate processes at 72,368 facts — second curve point
+after R24's 70,822. SATURATION.md full-run table: 6 declared births in
+R25–R45 (all six for the proof DAG); ZERO for the entire mathematics program
+— schema saturates, knowledge doesn't | catch: none | born: none |
+facts(main)=72384

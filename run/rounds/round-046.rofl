@@ -1,0 +1,14 @@
+-- Round 46. TARGET: end-state verification + saturation record complete.
+-- Cross-process determinism at the FINAL fact count: rebuild-from-sources vs
+-- untrusted-snapshot-restore in separate OS processes, canonical-state sha256
+-- IDENTICAL (207cbbf3...) at 72,368 facts — second point on the curve after
+-- R24's 70,822. SATURATION.md now carries the full-run birth table: 6
+-- declared births in R25-R45 (all for the proof DAG), zero for the entire
+-- mathematics program. Schema saturates; knowledge doesn't.
+claim_of[a](determinism_at_end_state).
+ground[a](determinism_at_end_state, sha_match_72368_two_processes).
+evidence[world](determinism_at_end_state, sha_match_72368_two_processes).
+
+claim_of[a](saturation_record_complete).
+ground[a](saturation_record_complete, saturation_md_full_run_table).
+evidence[world](saturation_record_complete, saturation_md_full_run_table).
