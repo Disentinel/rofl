@@ -62,3 +62,28 @@ births in 21 rounds, all for one purpose: holding the proof DAG).
    across rebuild-from-sources vs untrusted-snapshot-restore in separate OS
    processes at 70,822 facts (R24) and again at 72,368 facts (R45,
    207cbbf3…).
+
+## Addendum (R48–R85): the second half
+
+Raw data from `driver rels` at the R74 and R85 states (97 and 101
+relations respectively; the R47 figure of 97 confirmed by rebuild):
+
+| span | born | what |
+|---|---|---|
+| R48–R74 | 0 | **27 straight rounds on frozen vocabulary** — the entire Track D program: mechanism board, TRIZ decomposition, H1–H4 tests, kick measurements, mod-3/mod-9 flow laws, V3 conservation, λ_C closure, MI localization, cycle exclusion, never-dropper laws, Lyapunov corollary — all fit in existing predicates + new atoms |
+| R75 | +3 | lean_theorem, lean_axioms_minimal, depends_on — bookkeeping layer for Lean artifacts entering the graph as first-class objects |
+| R76–R77 | 0 | canonical reduction, mod-9 positivity — atoms only |
+| R78 | +1 | oracle_only — generalizes R9's terras_oracle_only to arbitrary oracle-only claims |
+| R79–R85 | 0 | frontier check, covering obstruction, branching law, growth closed form, infinite path — atoms only |
+
+Curve: 73 (R0) → 97 (R47) → 97 (R74) → 101 (R85). The asymptote is
+sharper in the second half than the first: 4 births in 38 rounds, all
+four being *meta* vocabulary (recording proofs and evidence provenance),
+zero being *mathematical* vocabulary. The object language saturated at
+R16; the meta language is saturating an order of magnitude slower.
+
+Honesty note: the R75/R78 births were initially logged as "born: none"
+and caught at R85 by re-deriving the relation lists from ground truth
+(worktree rebuild of the R74 state) — the R34/R36 transcription failure
+mode, third occurrence, now on a new field. The check that caught it is
+the one the protocol prescribes: never write a count you haven't read.

@@ -58,3 +58,17 @@ Zero rounds shipped with an unexplained red audit. Every degradation signal
 either fired a designed response (R16 freeze) or was a deliberate,
 named, standing flag. The protocol's bet — that assert-only revision plus
 per-round audits keeps 24 hours of autonomous work honest — held on this run.
+
+## Addendum: cadence of the second half (R48–R85)
+
+| phase | window (UTC) | rounds | content |
+|---|---|---|---|
+| Track D opening | 08:00–10:04 (Aug 20) | R48–R74 | mechanism board, TRIZ, H1–H4, kick anomaly work, flow laws mod 3/9, V3 conservation, cycle exclusion 183, never-dropper laws, λ_C, MI localization, wild semigroup + Lyapunov obstruction |
+| The positivity program | 10:12–11:21 | R75–R80 | mod-3 positivity (witnesses), canonical reduction, mod-9 positivity (spine machinery, 54 cases), χ² hyper-uniformity at mod 9, frontier novelty check, **general covering obstruction** (S-sum pigeonhole, no inverses) |
+| The exact laws | 11:21–12:02 | R81–R84 | branching law, count_law, sink-never-dry, growth closed form (crit = dpf row), explicit infinite core path (α shadows 27 to depth 58) |
+| Consolidation checkpoint | 12:02–12:30 | R85 | born-field corrections (ground-truth rels diff), SATURATION/METRICS addenda |
+
+Facts (main): 73,174 (R74) → 73,429 (R84). Lean:
+TerrasAlmostAll.lean ~5,150 lines, 259 theorems total in run/math, every
+new theorem this span at propext + Quot.sound (or the standard three).
+Rebuild steady at ~87 s/round at 73k facts.

@@ -786,8 +786,10 @@ check k=10: NN3 = [21,22,21], witnesses all undecided, residues [0,1,2].
 Kills every covering-system certificate of modulus 3·2^j — the mod-3
 refinement of core_never_empty, pairing with mod3_flow: the profile is
 conserved AND positive | catch: two first-compile defects (subst ate k;
-unascribed pow_succ gave .succ form), fixed pre-commit | born: none |
-facts(main)=73211
+unascribed pow_succ gave .succ form), fixed pre-commit | born:
+lean_theorem, lean_axioms_minimal, depends_on (+3; CORRECTED at R85 — the
+entry originally said "none", written without checking rels; same failure
+mode as R34/R36, now on the born field) | facts(main)=73211
 
 R76 | Track D: **THE CANONICAL REDUCTION kernel-checked** |
 `collatz_iff_descent`: (∀ n ≥ 2, ∃ j, T^j(n) < n) ⟺ (∀ n ≥ 1, ∃ j,
@@ -823,7 +825,8 @@ mod 3 mean 0.237 (null 2.0, ×8.4 suppression); mod 9 mean 1.477 (null
 than mod-3 as the six-phase rotation predicts. Kick-relax visible: χ²
 spike 1.26 at k=24 after the k=23 crossing pair, decayed to 0.22 by k=26
 — matching V3_conserved. The anomalously weak crossing injection remains
-THE open structured observable | catch: none | born: none |
+THE open structured observable | catch: none | born: oracle_only (+1;
+CORRECTED at R85 — originally "none", written without checking rels) |
 facts(main)=73277
 
 R79 | Track D FRONTIER: **novelty check on R75–R78** | Live search before
@@ -900,3 +903,13 @@ misses ℕ" in action. R83's negative stands: the limit's non-integrality
 is critical-line territory | catch: Lean #eval of alphaT beyond ~16 is
 exponential (3 unmemoized self-references) — exhibit computed in the
 oracle instead, noted | born: none | facts(main)=73429
+
+R85 | consolidation checkpoint: **ground-truth vocabulary audit** |
+driver rels at the R74 state (worktree rebuild): 97 relations; at R85:
+101. Births: R75 +3 (lean_theorem, lean_axioms_minimal, depends_on),
+R78 +1 (oracle_only); R48–R74: ZERO births in 27 rounds — the entire
+Track D program ran on frozen vocabulary. SATURATION.md and METRICS.md
+extended with second-half data | catch: R75/R78 "born: none" entries
+were written without reading rels — corrected in place; the R34/R36
+transcription failure mode, third occurrence, on a new field | born:
+none (verified against rels this time) | facts(main)=73443

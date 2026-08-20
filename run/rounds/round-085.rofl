@@ -1,0 +1,15 @@
+-- Round 85 (consolidation checkpoint). Ground-truth vocabulary audit for
+-- the second half: driver rels at the R74 state (worktree rebuild) = 97
+-- relations, at R85 = 101. Births: R75 +3 (lean_theorem,
+-- lean_axioms_minimal, depends_on), R78 +1 (oracle_only); R48-R74 = 0
+-- births across 27 rounds (the whole Track D program on frozen
+-- vocabulary). CATCH: the R75/R78 RUN_LOG entries said "born: none" —
+-- written without reading rels; corrected in place with notes, the
+-- R34/R36 transcription failure mode's third occurrence, on a new
+-- field. SATURATION.md and METRICS.md extended with second-half data.
+claim_of[a](second_half_vocabulary_audited).
+ground[a](second_half_vocabulary_audited, rels_diff_r74_r85).
+evidence[world](second_half_vocabulary_audited, rels_diff_r74_r85).
+
+claim_of[a](born_field_transcription_caught).
+ground[a](born_field_transcription_caught, rels_diff_r74_r85).
