@@ -506,3 +506,15 @@ progression in one run: k ≥ c^100 → 2^(−k/25) → 2^(−k/21) → 2^(−k/
 improvement line TERMINATES here, honestly. TerrasAlmostAll.lean: 1821
 lines | catch: stale line count in draft round file (1834 vs 1821),
 corrected before commit | born: none | facts(main)=72164
+
+R44 | Track C: **THE LOWER BOUND — the core provably never empties** | the
+formal content of R22's hard-core claim: kernel-checked, no finite-depth
+residue analysis can settle Collatz. F_pow (3^(F k) ≤ 2^k — ONE induction
+invariant replaces all set-cardinality machinery: each failure's 3-power
+sits strictly above all earlier ones), F_le (≤ 64k/100 from 2^100 < 3^64),
+uf_mono, uf_double_low (failure-free depths double exactly), eta_lower_raw
+(the +1 absorbs R41's k=0 boundary anomaly), eta_lower, core_never_empty,
+core_exponential (2^(36k/100) ≤ 2u_k). With R43's eta_20 the core is
+SANDWICHED both sides: 2^(0.36k)/2 ≤ u_k ≤ 2^(k−k/20). Verified to k=300
+before proving. TerrasAlmostAll.lean: 2111 lines | catch: none | born: none
+| facts(main)=72300

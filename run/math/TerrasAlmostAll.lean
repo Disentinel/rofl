@@ -1819,3 +1819,293 @@ theorem eta_20 (k : Nat) (hk : 1 ≤ k) : uf k * 2 ^ (k / 20) ≤ 2 ^ k := by
       rw [Nat.mul_pow, ← Nat.pow_mul, Nat.mul_comm (k / 20) 10000]
     rw [hE, hexp] at hstrict
     omega
+
+/- ---------- THE LOWER BOUND: the undecided core never empties ---------- -/
+/- u_k ≥ 2^(36k/100)/2 for every k — kernel-checked. Together with eta_20 this
+   sandwiches the core: exponentially thin, exponentially large. The formal
+   content of the frontier's "no route from density to totality": the residue
+   core that depth-k analysis leaves open is NEVER empty — no finite-depth
+   class argument can settle the conjecture. -/
+
+theorem dpf_above_diag (j s : Nat) (h : j < s) : dpf j s = 0 := by
+  induction j generalizing s with
+  | zero =>
+    match s, h with
+    | t + 1, _ => rfl
+  | succ m ih =>
+    match s, h with
+    | t + 1, h =>
+      show (if 2 ^ (m + 1) < 3 ^ (t + 1) then dpf m (t + 1) + dpf m t else 0) = 0
+      by_cases hc : 2 ^ (m + 1) < 3 ^ (t + 1)
+      · simp only [if_pos hc]
+        rw [ih (t + 1) (by omega), ih t (by omega)]
+      · simp only [if_neg hc]
+
+/-- 0/1 indicator: a power of 3 lies in (2^k, 2^(k+1)). -/
+def failb (k : Nat) : Nat :=
+  if (List.range (k + 2)).any
+      (fun a => decide (2 ^ k < 3 ^ a) && decide (3 ^ a < 2 ^ (k + 1)))
+  then 1 else 0
+
+/-- Number of failure depths below k. -/
+def F (k : Nat) : Nat := S failb k
+
+theorem failb_cases (k : Nat) : failb k = 0 ∨ failb k = 1 := by
+  unfold failb
+  by_cases hc : (List.range (k + 2)).any
+      (fun a => decide (2 ^ k < 3 ^ a) && decide (3 ^ a < 2 ^ (k + 1))) = true
+  · rw [if_pos hc]
+    right
+    rfl
+  · rw [if_neg hc]
+    left
+    rfl
+
+theorem fail_one_gap (k : Nat) (h : failb k = 1) :
+    ∃ a, 2 ^ k < 3 ^ a ∧ 3 ^ a < 2 ^ (k + 1) := by
+  unfold failb at h
+  by_cases hc : (List.range (k + 2)).any
+      (fun a => decide (2 ^ k < 3 ^ a) && decide (3 ^ a < 2 ^ (k + 1))) = true
+  · simp only [List.any_eq_true, List.mem_range, Bool.and_eq_true,
+        decide_eq_true_eq] at hc
+    have ⟨a, _, h1, h2⟩ := hc
+    exact ⟨a, h1, h2⟩
+  · rw [if_neg hc] at h
+    omega
+
+theorem fail_zero_no_gap (k : Nat) (h : failb k = 0) :
+    ∀ s, ¬ (2 ^ k < 3 ^ s ∧ 3 ^ s < 2 ^ (k + 1)) := by
+  intro s ⟨h1, h2⟩
+  unfold failb at h
+  by_cases hc : (List.range (k + 2)).any
+      (fun a => decide (2 ^ k < 3 ^ a) && decide (3 ^ a < 2 ^ (k + 1))) = true
+  · rw [if_pos hc] at h
+    omega
+  · by_cases hs : s < k + 2
+    · apply hc
+      simp only [List.any_eq_true, List.mem_range, Bool.and_eq_true,
+          decide_eq_true_eq]
+      exact ⟨s, hs, h1, h2⟩
+    · -- s ≥ k+2: 3^s ≥ 3^(k+2) > 2^(k+1), contradicting h2
+      have hb : (2 : Nat) ^ (k + 2) ≤ 3 ^ (k + 2) := Nat.pow_le_pow_left (by omega) _
+      have hbb : (3 : Nat) ^ (k + 2) ≤ 3 ^ s := Nat.pow_le_pow_right (by omega) (by omega)
+      have hc2 : (2 : Nat) ^ (k + 1) < 2 ^ (k + 2) := Nat.pow_lt_pow_right (by omega) (by omega)
+      omega
+
+theorem F_succ (k : Nat) : F (k + 1) = F k + failb k := S_succ failb k
+
+theorem pow_2_3_64 : (2 : Nat) ^ 100 < 3 ^ 64 := by decide
+
+/-- The failure counter is bounded by the 3-power ladder: 3^(F k) ≤ 2^k. -/
+theorem F_pow (k : Nat) : 3 ^ F k ≤ 2 ^ k := by
+  induction k with
+  | zero =>
+    show (3 : Nat) ^ F 0 ≤ 1
+    have h0 : F 0 = 0 := rfl
+    rw [h0]
+    decide
+  | succ m ih =>
+    rw [F_succ]
+    cases failb_cases m with
+    | inl h0 =>
+      rw [h0, Nat.add_zero]
+      have : (2 : Nat) ^ m ≤ 2 ^ (m + 1) := Nat.pow_le_pow_right (by omega) (by omega)
+      omega
+    | inr h1 =>
+      rw [h1]
+      have ⟨a, ha1, ha2⟩ := fail_one_gap m h1
+      have hFa : F m < a := by
+        by_cases hle : a ≤ F m
+        · exfalso
+          have : (3 : Nat) ^ a ≤ 3 ^ F m := Nat.pow_le_pow_right (by omega) hle
+          omega
+        · omega
+      have : (3 : Nat) ^ (F m + 1) ≤ 3 ^ a := Nat.pow_le_pow_right (by omega) (by omega)
+      omega
+
+theorem F_le (k : Nat) : F k ≤ 64 * k / 100 := by
+  match k with
+  | 0 =>
+    have h0 : F 0 = 0 := rfl
+    omega
+  | k + 1 =>
+    have hp := F_pow (k + 1)
+    -- 3^(100 F) ≤ 2^(100(k+1)) < 3^(64(k+1))  ⟹  100 F < 64(k+1)
+    have h1 : (3 : Nat) ^ (100 * F (k + 1)) ≤ 2 ^ (100 * (k + 1)) := by
+      have := Nat.pow_le_pow_left hp 100
+      rw [← Nat.pow_mul, ← Nat.pow_mul, Nat.mul_comm (F (k + 1)) 100,
+          Nat.mul_comm (k + 1) 100] at this
+      exact this
+    have h2 : (2 : Nat) ^ (100 * (k + 1)) < 3 ^ (64 * (k + 1)) := by
+      have hcert := Nat.pow_lt_pow_left pow_2_3_64 (n := k + 1) (by omega)
+      rw [← Nat.pow_mul, ← Nat.pow_mul, Nat.mul_comm 100 (k + 1),
+          Nat.mul_comm 64 (k + 1)] at hcert
+      rw [Nat.mul_comm (k + 1) 100, Nat.mul_comm (k + 1) 64] at hcert
+      exact hcert
+    have h3 : (3 : Nat) ^ (100 * F (k + 1)) < 3 ^ (64 * (k + 1)) := by omega
+    have h4 : 100 * F (k + 1) < 64 * (k + 1) := by
+      by_cases hle : 64 * (k + 1) ≤ 100 * F (k + 1)
+      · exfalso
+        have : (3 : Nat) ^ (64 * (k + 1)) ≤ 3 ^ (100 * F (k + 1)) :=
+          Nat.pow_le_pow_right (by omega) hle
+        omega
+      · omega
+    omega
+
+/-- Odd extensions always survive: uf is monotone. -/
+theorem uf_mono (k : Nat) : uf k ≤ uf (k + 1) := by
+  have hg : ∀ s, s < k + 1 → dpf k s ≤ dpf (k + 1) (s + 1) := by
+    intro s hs
+    by_cases hz : dpf k s = 0
+    · rw [hz]
+      omega
+    · have hgate : 2 ^ (k + 1) < 3 ^ (s + 1) := by
+        match k, hz with
+        | 0, hz =>
+          have hs0 : s = 0 := by omega
+          subst hs0
+          decide
+        | j + 1, hz =>
+          have hdom := dpf_pos_dominates j s hz
+          have h3 : (3 : Nat) ^ (s + 1) = 3 ^ s * 3 := Nat.pow_succ 3 s
+          have h2 : (2 : Nat) ^ (j + 1 + 1) = 2 ^ (j + 1) * 2 := Nat.pow_succ 2 (j + 1)
+          omega
+      have he : dpf (k + 1) (s + 1) = dpf k (s + 1) + dpf k s := by
+        rw [dpf_succ_eq, if_pos hgate]
+        rfl
+      omega
+  have h1 : uf k ≤ S (fun s => dpf (k + 1) (s + 1)) (k + 1) := S_mono _ _ _ hg
+  have h2 : S (shift (fun s => dpf (k + 1) (s + 1))) (k + 1 + 1)
+      = S (fun s => dpf (k + 1) (s + 1)) (k + 1) := S_shift _ _
+  have h3 : S (shift (fun s => dpf (k + 1) (s + 1))) (k + 1 + 1)
+      ≤ S (dpf (k + 1)) (k + 1 + 1) := by
+    apply S_mono
+    intro t _
+    match t with
+    | 0 =>
+      show (0 : Nat) ≤ dpf (k + 1) 0
+      omega
+    | r + 1 =>
+      show dpf (k + 1) (r + 1) ≤ dpf (k + 1) (r + 1)
+      omega
+  show uf k ≤ S (dpf (k + 1)) (k + 1 + 1)
+  omega
+
+/-- On failure-free depths (k ≥ 1), the core exactly doubles (≥ suffices). -/
+theorem uf_double_low (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
+    2 * uf k ≤ uf (k + 1) := by
+  have hng := fail_zero_no_gap k hf
+  have hpt : ∀ s, s < k + 2 →
+      dpf k s + shift (dpf k) s ≤ dpf (k + 1) s := by
+    intro s hs
+    by_cases hz : dpf k s + shift (dpf k) s = 0
+    · omega
+    · have hgate : 2 ^ (k + 1) < 3 ^ s := by
+        by_cases hz1 : dpf k s = 0
+        · -- the shift part is positive: s = t+1 with dpf k t > 0
+          match s, hz, hz1 with
+          | t + 1, hz, hz1 =>
+            have hzt : dpf k t ≠ 0 := by
+              have hsh : shift (dpf k) (t + 1) = dpf k t := rfl
+              omega
+            match k, hk, hzt with
+            | j + 1, _, hzt =>
+              have hdom := dpf_pos_dominates j t hzt
+              have h3 : (3 : Nat) ^ (t + 1) = 3 ^ t * 3 := Nat.pow_succ 3 t
+              have h2 : (2 : Nat) ^ (j + 1 + 1) = 2 ^ (j + 1) * 2 := Nat.pow_succ 2 (j + 1)
+              omega
+        · match k, hk, hz1 with
+          | j + 1, _, hz1 =>
+            have hdom := dpf_pos_dominates j s hz1
+            have hne : (3 : Nat) ^ s ≠ 2 ^ (j + 1 + 1) := by
+              have ho := odd_pow3 s
+              have h2 : (2 : Nat) ^ (j + 1 + 1) = 2 ^ (j + 1) * 2 := Nat.pow_succ 2 (j + 1)
+              omega
+            have hno := hng s
+            omega
+      have he : dpf (k + 1) s = dpf k s + shift (dpf k) s := by
+        rw [dpf_succ_eq, if_pos hgate]
+      omega
+  have h1 : S (fun s => dpf k s + shift (dpf k) s) (k + 2) ≤ S (dpf (k + 1)) (k + 2) :=
+    S_mono _ _ _ hpt
+  have h2 : S (fun s => dpf k s + shift (dpf k) s) (k + 2)
+      = S (dpf k) (k + 2) + S (shift (dpf k)) (k + 2) := S_add _ _ _
+  have h3 : S (dpf k) (k + 2) = S (dpf k) (k + 1) + dpf k (k + 1) := S_succ _ _
+  have h4 : dpf k (k + 1) = 0 := dpf_above_diag k (k + 1) (by omega)
+  have h5 : S (shift (dpf k)) (k + 2) = S (dpf k) (k + 1) := S_shift _ _
+  have hu : uf k = S (dpf k) (k + 1) := rfl
+  have hgoal : uf (k + 1) = S (dpf (k + 1)) (k + 2) := rfl
+  omega
+
+/-- Raw lower bound: 2^k ≤ u_k · 2^(F k + 1) for k ≥ 1. -/
+theorem eta_lower_raw (k : Nat) (hk : 1 ≤ k) : 2 ^ k ≤ uf k * 2 ^ (F k + 1) := by
+  induction k with
+  | zero => omega
+  | succ m ih =>
+    by_cases hm : 1 ≤ m
+    · have ihm := ih hm
+      rw [F_succ]
+      cases failb_cases m with
+      | inl h0 =>
+        rw [h0]
+        show 2 ^ (m + 1) ≤ uf (m + 1) * 2 ^ (F m + 1)
+        have hd := uf_double_low m hm h0
+        have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+        have h3 : uf (m + 1) * 2 ^ (F m + 1) ≥ 2 * uf m * 2 ^ (F m + 1) := by
+          exact Nat.mul_le_mul_right _ hd
+        have h4 : 2 * uf m * 2 ^ (F m + 1) = 2 * (uf m * 2 ^ (F m + 1)) := by
+          rw [Nat.mul_assoc]
+        omega
+      | inr h1 =>
+        rw [h1]
+        have hmono := uf_mono m
+        have h2 : (2 : Nat) ^ (F m + 1 + 1) = 2 ^ (F m + 1) * 2 := Nat.pow_succ 2 (F m + 1)
+        have h3 : uf (m + 1) * 2 ^ (F m + 1 + 1) ≥ uf m * 2 ^ (F m + 1) * 2 := by
+          rw [h2, ← Nat.mul_assoc]
+          exact Nat.mul_le_mul_right _ (Nat.mul_le_mul_right _ hmono)
+        have h4 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+        omega
+    · -- m = 0: k = 1, direct computation
+      have hm0 : m = 0 := by omega
+      subst hm0
+      decide
+
+/-- η_k ≥ 2^(−64k/100−1): the undecided core is exponentially LARGE. -/
+theorem eta_lower (k : Nat) (hk : 1 ≤ k) : 2 ^ k ≤ uf k * 2 ^ (64 * k / 100 + 1) := by
+  have hr := eta_lower_raw k hk
+  have hF := F_le k
+  have hp : (2 : Nat) ^ (F k + 1) ≤ 2 ^ (64 * k / 100 + 1) :=
+    Nat.pow_le_pow_right (by omega) (by omega)
+  have := Nat.mul_le_mul_left (uf k) hp
+  omega
+
+/-- The core NEVER empties: no finite-depth class analysis settles Collatz. -/
+theorem core_never_empty (k : Nat) : 1 ≤ uf k := by
+  match k with
+  | 0 => decide
+  | k + 1 =>
+    have hr := eta_lower_raw (k + 1) (by omega)
+    by_cases hz : uf (k + 1) = 0
+    · exfalso
+      rw [hz, Nat.zero_mul] at hr
+      have : 0 < (2 : Nat) ^ (k + 1) := Nat.pow_pos (by omega)
+      omega
+    · omega
+
+/-- Clean exponential form: 2^(36k/100) ≤ 2·u_k. -/
+theorem core_exponential (k : Nat) (hk : 1 ≤ k) : 2 ^ (36 * k / 100) ≤ 2 * uf k := by
+  have hl := eta_lower k hk
+  have he : 36 * k / 100 + (64 * k / 100 + 1) ≤ k + 1 := by omega
+  have h1 : (2 : Nat) ^ (36 * k / 100) * 2 ^ (64 * k / 100 + 1) ≤ 2 ^ (k + 1) := by
+    rw [← Nat.pow_add]
+    exact Nat.pow_le_pow_right (by omega) he
+  have h2 : (2 : Nat) ^ (k + 1) = 2 * 2 ^ k := by
+    rw [Nat.pow_succ]
+    omega
+  have h3 : 2 * 2 ^ k ≤ 2 * (uf k * 2 ^ (64 * k / 100 + 1)) :=
+    Nat.mul_le_mul_left 2 hl
+  have h4 : 2 * (uf k * 2 ^ (64 * k / 100 + 1)) = (2 * uf k) * 2 ^ (64 * k / 100 + 1) := by
+    rw [← Nat.mul_assoc]
+  have h5 : (2 : Nat) ^ (36 * k / 100) * 2 ^ (64 * k / 100 + 1)
+      ≤ (2 * uf k) * 2 ^ (64 * k / 100 + 1) := by omega
+  exact Nat.le_of_mul_le_mul_right h5 (Nat.pow_pos (by omega))
