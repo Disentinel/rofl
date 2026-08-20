@@ -615,3 +615,16 @@ formulation — mechanism thinking, TRIZ, knowledge transfer, absurd
 brainstorming, hypotheses + tests. Track D (mechanism search) opens next
 round; posture: every hypothesis made testable, every test recorded,
 refutations are results | catch: none | born: none | facts(main)=72694
+
+R57 | Track D opens: **mechanism search** (owner directive) | HYPOTHESES.md:
+TRIZ decomposition, the 3n−1 falsification filter (any mechanism that works
+verbatim for 3n−1 is dead — positivity of D is where the sign enters), and
+the crystallized reduction: CANONICAL ⟺ no cycles ∧ A∩ℕ=∅, where A ⊂ ℤ₂ is
+the infinite undecided core this run sandwiched in-kernel. H1 tested and
+REFUTED in its hoped-for form: penetration records over n ≤ 10^7 match the
+run's own fitted density prediction within ~2 steps at two scales (135 vs
+138 at 1e5; 246 vs 248 at 1e7) — integers populate the core exactly as
+random membership predicts; no avoidance fingerprint in first-drop
+statistics. A strong negative, honestly recorded | catch: H1's own naive
+ceiling ignored the polynomial factor — corrected inside the test |
+born: none | facts(main)=72720
