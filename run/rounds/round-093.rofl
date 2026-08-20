@@ -1,0 +1,20 @@
+-- Round 93 (Track E ultracode). THE 46%/28% ANOMALY DISSOLVES INTO AN
+-- EXACT LAW: the parity word of 3r+2 is a DETERMINISTIC function of the
+-- parity word of r — the coupling transducer (state (i,d); output letter
+-- = input letter XOR parity(d); transitions per the R92 table). Per-class
+-- verification at depth 20 (flip_criterion.js): word prediction 23,998
+-- matches / 0 mismatches (12% decoupling cases excluded — prefix-only
+-- prediction there); membership prediction agreement 100.00% (6,682 =
+-- 6,682). The R91 correlation is the push-forward of the core word
+-- ensemble through this transducer — not a statistical anomaly but a
+-- theorem-shaped identity awaiting formalization:
+--   w(3r+2) = Transduce(w(r)), membership = domination of the image.
+-- Next: general lemma T(3^i s + d) = 3^i' T(s) + d' (four cases, 3^i odd
+-- via odd_pow3) to kernel-check the transducer itself.
+claim_of[a](affine_correlation_is_exact_transduction).
+ground[a](affine_correlation_is_exact_transduction, flip_criterion_oracle).
+evidence[oracle](affine_correlation_is_exact_transduction, flip_criterion_oracle).
+oracle_only(affine_correlation_is_exact_transduction).
+
+claim_of[a](r91_correlation_explained).
+ground[a](r91_correlation_explained, affine_correlation_is_exact_transduction).

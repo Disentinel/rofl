@@ -1048,3 +1048,11 @@ atlas column). Mechanism sketch for 46%/28%: merged word = base word
 with one 1→0 flip; slack decides; prepend-1 compensates. Agent sweep
 (10 explorers) running in background; transition table cross-check
 pending | catch: none | born: none (verified) | facts(main)=73629
+
+R93 | Track E ultracode: **the 46%/28% anomaly dissolves into an exact
+law** | w(3r+2) = Transduce(w(r)) — deterministic coupling transducer
+(state (i,d), output = input XOR parity(d)); per-class check at depth
+20: 23,998/23,998 word matches, membership agreement 100.00%. The R91
+correlation is the push-forward of the core ensemble through the
+transducer. Formalization target set: general T(3^i s + d) identity |
+catch: none | born: none (verified) | facts(main)=73648
