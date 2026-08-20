@@ -3410,3 +3410,90 @@ theorem mod3_flow (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) (c : Nat) (hc : c 
     rw [hcong]
   rw [S_congr _ _ _ h1, S_congr _ _ _ h2, ← hsplit]
   rfl
+
+/- ---------- the conservation law of 3-adic imbalance ---------- -/
+/- mod3_flow implies more than hyper-uniformity: the imbalance energy
+   V = |N₀−N₁|² + |N₁−N₂|² + |N₂−N₀|² is EXACTLY conserved across gap-free
+   depths (the difference vector is permuted with sign flips — the integer
+   shadow of |1+ω| = 1). Confirmed verbatim in the data: V = 518 at both
+   k = 19, 20; V = 1638 at both k = 21, 22. All imbalance energy of the
+   core enters at 3-power crossings, provably. -/
+
+def sqdiff (a b : Nat) : Nat := (a - b) * (a - b) + (b - a) * (b - a)
+
+theorem sqdiff_shift (a b c d : Nat) (h : a + d = c + b) : sqdiff a b = sqdiff c d := by
+  unfold sqdiff
+  have h1 : a - b = c - d := by omega
+  have h2 : b - a = d - c := by omega
+  rw [h1, h2]
+
+def V3 (k : Nat) : Nat :=
+  sqdiff (NN3 0 k) (NN3 1 k) + sqdiff (NN3 1 k) (NN3 2 k) + sqdiff (NN3 2 k) (NN3 0 k)
+
+theorem pow2_mod3 (m : Nat) : 2 ^ m % 3 = 1 ∨ 2 ^ m % 3 = 2 := by
+  induction m with
+  | zero => left; rfl
+  | succ p ih =>
+    have h : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+    cases ih with
+    | inl h1 => right; omega
+    | inr h2 => left; omega
+
+/-- THE CONSERVATION LAW: on gap-free depths, the imbalance energy of the
+    core's mod-3 profile is exactly preserved. -/
+theorem V3_conserved (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
+    V3 (k + 1) = V3 k := by
+  have hflow := mod3_flow k hk hf
+  have h0 := hflow 0 (by omega)
+  have h1 := hflow 1 (by omega)
+  have h2 := hflow 2 (by omega)
+  cases pow2_mod3 (k + 1) with
+  | inl ht =>
+    -- shift t = 1: children add class c+1; (0+2^(k+1))%3 = 1, (1+..)%3 = 2, (2+..)%3 = 0
+    have e0 : (0 + 2 ^ (k + 1)) % 3 = 1 := by omega
+    have e1 : (1 + 2 ^ (k + 1)) % 3 = 2 := by omega
+    have e2 : (2 + 2 ^ (k + 1)) % 3 = 0 := by omega
+    rw [e0] at h0; rw [e1] at h1; rw [e2] at h2
+    -- N'₀ = N₀+N₁, N'₁ = N₁+N₂, N'₂ = N₂+N₀
+    unfold V3
+    have s1 : sqdiff (NN3 0 (k+1)) (NN3 1 (k+1)) = sqdiff (NN3 0 k) (NN3 2 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have s2 : sqdiff (NN3 1 (k+1)) (NN3 2 (k+1)) = sqdiff (NN3 1 k) (NN3 0 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have s3 : sqdiff (NN3 2 (k+1)) (NN3 0 (k+1)) = sqdiff (NN3 2 k) (NN3 1 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have c1 : sqdiff (NN3 0 k) (NN3 2 k) = sqdiff (NN3 2 k) (NN3 0 k) := by
+      unfold sqdiff
+      omega
+    have c2 : sqdiff (NN3 1 k) (NN3 0 k) = sqdiff (NN3 0 k) (NN3 1 k) := by
+      unfold sqdiff
+      omega
+    have c3 : sqdiff (NN3 2 k) (NN3 1 k) = sqdiff (NN3 1 k) (NN3 2 k) := by
+      unfold sqdiff
+      omega
+    rw [s1, s2, s3, c1, c2, c3]
+    omega
+  | inr ht =>
+    -- shift t = 2: (0+2^(k+1))%3 = 2, (1+..)%3 = 0, (2+..)%3 = 1
+    have e0 : (0 + 2 ^ (k + 1)) % 3 = 2 := by omega
+    have e1 : (1 + 2 ^ (k + 1)) % 3 = 0 := by omega
+    have e2 : (2 + 2 ^ (k + 1)) % 3 = 1 := by omega
+    rw [e0] at h0; rw [e1] at h1; rw [e2] at h2
+    unfold V3
+    have s1 : sqdiff (NN3 0 (k+1)) (NN3 1 (k+1)) = sqdiff (NN3 2 k) (NN3 1 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have s2 : sqdiff (NN3 1 (k+1)) (NN3 2 (k+1)) = sqdiff (NN3 0 k) (NN3 2 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have s3 : sqdiff (NN3 2 (k+1)) (NN3 0 (k+1)) = sqdiff (NN3 1 k) (NN3 0 k) :=
+      sqdiff_shift _ _ _ _ (by omega)
+    have c1 : sqdiff (NN3 2 k) (NN3 1 k) = sqdiff (NN3 1 k) (NN3 2 k) := by
+      unfold sqdiff
+      omega
+    have c2 : sqdiff (NN3 0 k) (NN3 2 k) = sqdiff (NN3 2 k) (NN3 0 k) := by
+      unfold sqdiff
+      omega
+    have c3 : sqdiff (NN3 1 k) (NN3 0 k) = sqdiff (NN3 0 k) (NN3 1 k) := by
+      unfold sqdiff
+      omega
+    rw [s1, s2, s3, c1, c2, c3]
+    omega

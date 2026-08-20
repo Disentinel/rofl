@@ -1,0 +1,26 @@
+-- Round 66 (Track D). TARGET: the loose thread crystallized. PROVED
+-- (V3_conserved, kernel, standard axioms): the imbalance energy
+-- V = |N0-N1|^2 + |N1-N2|^2 + |N2-N0|^2 of the core's mod-3 profile is
+-- EXACTLY conserved across every gap-free depth — the integer shadow of
+-- |1 + omega| = 1 (data verbatim: V = 518 at k=19,20; 1638 at k=21,22).
+-- All 3-adic imbalance energy of the Collatz core is injected at 3-power
+-- crossings, provably — a discrete Noether-style law for the 2x3
+-- interaction. OPEN (formulated): bound the crossing kick — the character
+-- sum of omega^rep over the dying slice (dominated strings of fixed sum,
+-- through the nonlinear string->residue bijection); measured O(1) to
+-- sub-Poisson for j <= 21. A nontrivial kick bound would yield, via the
+-- conservation law, the first structural equidistribution theorem inside
+-- the counterexample core beyond the stochastic model.
+claim_of[a](v3_conservation_law_proved).
+ground[a](v3_conservation_law_proved, lean_kernel_proof_v3_conserved).
+evidence[world](v3_conservation_law_proved, lean_kernel_proof_v3_conserved).
+source_of(lean_kernel_proof_v3_conserved, file_terras_almost_all_lean).
+
+claim_of[a](kick_character_sum_open_problem).
+ground[a](kick_character_sum_open_problem, hypotheses_md_r66).
+evidence[world](kick_character_sum_open_problem, hypotheses_md_r66).
+
+thm(v3_conserved).  thm(sqdiff_shift).  thm(pow2_mod3).
+thm_dep(v3_conserved, mod3_flow).
+thm_dep(v3_conserved, sqdiff_shift).
+thm_dep(v3_conserved, pow2_mod3).

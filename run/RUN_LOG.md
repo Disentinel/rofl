@@ -699,3 +699,15 @@ and the honest closing: the canonical conjecture is exactly as open after
 the mechanism search as before — as the run's own obstruction theorem
 requires for this method class | catch: none | born: none |
 facts(main)=72966
+
+R66 | Track D: **the conservation law** | V3_conserved (kernel, standard
+axioms): the imbalance energy V = |N₀−N₁|²+|N₁−N₂|²+|N₂−N₀|² of the core's
+mod-3 profile is EXACTLY preserved across every gap-free depth — the
+integer shadow of |1+ω| = 1, confirmed verbatim in data (V = 518 at k=19,20;
+1638 at k=21,22). All 3-adic imbalance energy of the Collatz core enters at
+3-power crossings, provably — a discrete Noether-style law for the 2×3
+interaction. The open problem is now FORMULATED: bound the crossing kick
+(character sum over the dying slice through the nonlinear rep bijection);
+a nontrivial bound would give the first structural theorem inside the core
+beyond the stochastic model. 3499 lines | catch: none | born: none |
+facts(main)=73024

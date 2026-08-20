@@ -243,3 +243,22 @@ thread this search leaves that looks pullable.
    search's real products are the reduction made formal, the constraint
    surface pushed outward on three fronts, and one genuinely new-looking
    structured observable (the kick spectrum) flagged for pulling.
+
+**Round 66: the thread crystallized into a CONSERVATION LAW (proved) and a
+character-sum problem (open).** The flow law is equivalent to saying the
+core's mod-3 character sum Σ ω^r is multiplied by (1 + ω^(±1)) — modulus
+1 — on gap-free depths. Its integer shadow is now a kernel theorem,
+`V3_conserved`: the imbalance energy V = |N₀−N₁|²+|N₁−N₂|²+|N₂−N₀|² is
+EXACTLY preserved across every gap-free depth (data verbatim: V = 518 at
+k = 19 and 20; V = 1638 at k = 21 and 22). So, provably, ALL 3-adic
+imbalance energy of the Collatz core is injected at 3-power crossings —
+a discrete Noether-style statement for the 2×3 interaction.
+
+What remains open is exactly one estimate: bound the crossing kicks — the
+character sum Σ ω^(rep(p)) over dominated strings p of length j with sum
+exactly a*(j), where rep is the (nonlinear, trajectory-defined) string→
+residue bijection. Measured: O(1)–sub-Poisson for j ≤ 21, drifting toward
+√w after. A nontrivial bound here would propagate, via V3_conserved, to
+genuine equidistribution of the core mod 3 — the first structural theorem
+INSIDE the counterexample core that the stochastic model does not already
+give. This is the search's formulated open problem.
