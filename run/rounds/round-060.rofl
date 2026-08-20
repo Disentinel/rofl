@@ -1,0 +1,23 @@
+-- Round 60 (Track D). TWO results.
+-- (a) never_dropper_cap (kernel, unconditional): a never-dropper's size is
+--     capped at EVERY undominated depth — n 2^a (2^k - 3^a) <= 2^k (3^a - 2^a)
+--     with no floor and no depth bound; the cap grows like (3/2)^(gamma k),
+--     so never-droppers are strictly dominated to depth ~2.71 log2 n,
+--     4.3x wider than never_dropper_in_core's log3 n window.
+-- (b) H4 tested: record penetrators' excess above the domination line is
+--     small (max 4-9, mid 3-4, return to 0 at drop) — consistent with the
+--     EXCURSION null model (endpoint pinned) within a factor ~2; no
+--     exploitable anomaly. Third conformity datum: every observable tested
+--     in Track D behaves like the stochastic model.
+claim_of[a](never_dropper_cap_unconditional).
+ground[a](never_dropper_cap_unconditional, lean_kernel_proof_nd_cap).
+evidence[world](never_dropper_cap_unconditional, lean_kernel_proof_nd_cap).
+source_of(lean_kernel_proof_nd_cap, file_terras_almost_all_lean).
+
+claim_of[a](h4_excursion_conformity).
+ground[a](h4_excursion_conformity, computed_drift_records_r60).
+evidence[world](h4_excursion_conformity, computed_drift_records_r60).
+
+thm(never_dropper_cap).
+thm_dep(never_dropper_cap, d_bound).
+thm_dep(never_dropper_cap, affine).

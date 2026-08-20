@@ -142,3 +142,22 @@ from this run's affine lemma. The positivity of D — the "+1 sign resource"
 from §0 — is exactly what forces 2^j > 3^a here; the 3n−1 filter passes:
 for 3n−1 the analogous D is negative and the argument correctly refuses to
 exclude its real cycles.
+
+**H4 — TESTED, round 60: consistent with the conditioned model.** For the
+five record penetrators, the excess a_j − ⌈γj⌉ above the domination line
+stays small (max 4–9; mid-trajectory 3–4) and returns to 0 at the drop.
+The correct null model for a first-drop trajectory is an EXCURSION
+(endpoint pinned), whose max scales like c·√pen ≈ 8–16 here; measured
+maxima sit a factor ≈2 below that but within excursion-class scaling.
+Verdict: no exploitable anomaly; records realize soft, line-returning
+strings exactly as conditioning predicts. Third conformity datum (after H1
+and the R41/R53 rate story): every observable tested behaves like the
+stochastic model.
+
+**Round-60 bonus (formal): the unconditional size-cap law.** Extracted from
+the H3 machinery: `never_dropper_cap` — with NO floor and NO depth limit, a
+never-dropper's size is capped at every undominated depth:
+n·2^a·(2^k−3^a) ≤ 2^k·(3^a−2^a). Since the cap grows like (3/2)^(γk),
+never-droppers are strictly dominated to depth ≈ 2.71·log₂n — 4.3× wider
+than the log₃n window of never_dropper_in_core, unconditionally. Kernel,
+propext+Quot.sound.

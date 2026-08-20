@@ -649,3 +649,12 @@ cycle machinery to the divergence side. Potential counterexamples now sit
 in a locked 183-deep core of density ≤ 2^−9 with no size escape | catch:
 one compound command with cd broke relative paths — redone; reinforces the
 separate-command rule | born: none | facts(main)=72828
+
+R60 | Track D: **the unconditional size-cap law + H4** | never_dropper_cap
+(kernel, no floor, no depth limit): a never-dropper's size is capped at
+every undominated depth; the cap grows like (3/2)^(γk), so never-droppers
+are strictly dominated to ≈2.71·log₂n — 4.3× the log₃n window,
+unconditionally. H4 tested: record penetrators' line-excess (max 4–9,
+return to 0) is consistent with the excursion null model within factor ~2 —
+third conformity datum; no exploitable anomaly in any Track-D observable so
+far | catch: none | born: none | facts(main)=72862

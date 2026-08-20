@@ -3258,3 +3258,30 @@ theorem never_dropper_dominated
       ≤ n * (2 ^ A k n * (2 ^ k - 3 ^ A k n)) :=
     Nat.mul_le_mul_right _ hbig
   omega
+
+/-- UNCONDITIONAL size-cap law: a never-dropper's size is capped at every
+    depth where its parity string is undominated — n·2^a·(2^k−3^a) ≤
+    2^k·(3^a−2^a) in subtraction-free form. (The bound grows like
+    (3/2)^(γk), so never-droppers are strictly dominated to depth
+    ≈ 2.71·log₂ n — 4.3× wider than never_dropper_in_core's log₃ n window,
+    with no verification floor needed.) -/
+theorem never_dropper_cap (n : Nat) (hnd : ∀ i, ¬ Titer i n < n) (k : Nat) :
+    n * (2 ^ A k n * 2 ^ k) + 2 ^ k * 2 ^ A k n
+      ≤ n * (2 ^ A k n * 3 ^ A k n) + 2 ^ k * 3 ^ A k n := by
+  have haff := affine k n
+  have hge : n ≤ Titer k n := by
+    have := hnd k
+    omega
+  have hdb := D_bound k n
+  have h1 : 2 ^ k * n ≤ 3 ^ A k n * n + D k n := by
+    have h2 : 2 ^ k * n ≤ 2 ^ k * Titer k n := Nat.mul_le_mul_left _ hge
+    omega
+  have hmul : 2 ^ k * n * 2 ^ A k n ≤ (3 ^ A k n * n + D k n) * 2 ^ A k n :=
+    Nat.mul_le_mul_right _ h1
+  have hexp : (3 ^ A k n * n + D k n) * 2 ^ A k n
+      = 3 ^ A k n * n * 2 ^ A k n + D k n * 2 ^ A k n := Nat.add_mul _ _ _
+  have hs1 : 2 ^ k * n * 2 ^ A k n = n * (2 ^ A k n * 2 ^ k) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  have hs2 : 3 ^ A k n * n * 2 ^ A k n = n * (2 ^ A k n * 3 ^ A k n) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  omega
