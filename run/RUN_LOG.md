@@ -469,3 +469,17 @@ command re-verifies all 7 Lean files (kernel), 6 executable checkers, the
 CHECKS PASSED. never_dropper_C_in_core: the shrinking-core statement for the
 ORIGINAL map (a C-never-dropper is a T-never-dropper via titer_citer) |
 catch: none | born: none | facts(main)=71972
+
+R41 | Track C empirical: **the run revises its OWN numerics — DP to k=160** |
+dp100.js (exact BigInt): R23's "observed rate ≈0.948, exponentially faster
+than the end-tail heuristic" was a SMALL-K ARTIFACT — window ratios climb
+monotonically (0.9278 → 0.9501 → 0.9596 at k=130..160) toward the entropy
+rate 2^−(1−H) ≈ 0.96591; fit η_k ≈ 1.2·k^−1.04·0.9638^k; the ballot
+constraint appears to cost only a SUBEXPONENTIAL factor (α ∈ [1, 1.3]
+unresolved at k=160). lemma4.md (d) superseded in place, original kept.
+Also exact to k=160: every doubling failure k ≥ 1 brackets its 3-power
+(100/100); the gap word is the Sturmian word of log₂3; the k=0 boundary
+exception (w_0=1, empty gap) documented — exactly why the Lean iff starts at
+k=1. Loss fractions w_k/u_k oscillate in [0.09, 0.20], no trend. The shaky
+rate flag STAYS with corrected content | catch: R23 numerics superseded by
+scale | born: none | facts(main)=71988

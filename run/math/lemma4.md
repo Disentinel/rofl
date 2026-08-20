@@ -52,13 +52,26 @@ analysis here and do not claim it as kernel-checked.)
 
 ## (d) Observed rates (numerics, unproven, stated for the record)
 
+**SUPERSEDED IN ROUND 41 (kept for the record):** the analysis below, made at
+k ≤ 20, read the per-step ratio as ≈ 0.948 and concluded the ballot constraint
+buys extra *exponential* decay below the end-tail heuristic. Exact DP to
+k = 160 (dp100.js) shows that was a finite-size artifact: the window ratio
+climbs monotonically (0.9278 at k=20..40 → 0.9501 at 80..100 → 0.9596 at
+130..160) toward the entropy rate 2^{−(1−H(γ))} ≈ 0.96591; LSQ fit gives
+η_k ≈ 1.2·k^{−1.04}·0.9638^k. The ballot constraint appears to cost only a
+*subexponential* factor (ballot-bridge heuristic suggests k^{−1}; the
+entropy-normalized residual still drifts at k = 160, so α ∈ [1, 1.3] is
+unresolved). Nothing here is proved; the shaky flag stays, with this
+corrected content.
+
 - η_8 = 0.0742, η_12 = 0.0552, η_16 = 0.0323, η_20 = 0.0261.
-- Per-step ratio η_{k+1}/η_k over k = 16..20: ≈ 0.948.
+- Per-step ratio η_{k+1}/η_k over k = 16..20: ≈ 0.948 *(small-k artifact —
+  see the supersession note above)*.
 - Large-deviation heuristic for the end-tail alone: 2^{−(1−H(γ))} ≈ 0.966
-  per step (γ = log₃2 ≈ 0.6309, H = binary entropy ≈ 0.950). The observed
-  decay is *faster* than the end-tail heuristic, as it must be — the all-j
-  domination (ballot-type) constraint discards more strings; quantifying that
-  gap is exactly the unproven part. endTail densities (0.145, 0.194, 0.105,
+  per step (γ = log₃2 ≈ 0.6309, H = binary entropy ≈ 0.950). ~~The observed
+  decay is *faster* than the end-tail heuristic~~ — superseded: asymptotically
+  the rate converges TO the end-tail value; the all-j domination (ballot-type)
+  constraint appears to cost only a polynomial factor. endTail densities (0.145, 0.194, 0.105,
   0.132 at k = 8, 12, 16, 20) are non-monotone because t_k jumps with the
   3-power ladder — the bound is valid but slack at ladder steps.
 - Terras (1976) proved η_k → 0 (the coefficient stopping time is finite a.e.);

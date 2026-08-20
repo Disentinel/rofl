@@ -1,0 +1,29 @@
+-- Round 41 (Track C, empirical). TARGET: the observed-rate story at scale —
+-- exact BigInt DP to k = 160 (run/math/dp100.js). THREE results, one of them
+-- a REVISION of the run's own R23 numerics:
+-- (1) REVISION BY COMPUTATION: R23 recorded "observed per-step eta ratio
+--     ~0.948, FASTER than the end-tail LD heuristic 0.966 — the ballot gap
+--     is where the extra decay lives". At k <= 20 that reading was a
+--     finite-size artifact: the window ratio CLIMBS monotonically
+--     (20..40: 0.9278; 80..100: 0.9501; 130..160: 0.9596) toward the entropy
+--     rate 2^-(1-H(log_3 2)) = 0.96591. LSQ fit on k=40..160:
+--     eta_k ~ 1.2 * k^-1.04 * 0.9638^k. The ballot constraint appears to
+--     cost only a SUBEXPONENTIAL factor (classical ballot-bridge heuristic
+--     suggests k^-1; the entropy-normalized residual still drifts at k=160,
+--     alpha in [1, 1.3] unresolved). The old claim's content is superseded;
+--     the lemma4_observed_rate_unproven shaky flag STAYS (nothing is proved),
+--     with corrected content.
+-- (2) The doubling-failure ladder verified EXACTLY to k = 160: every failure
+--     k >= 1 brackets its 3-power (2^k < 3^a < 2^{k+1}) — 100 of 100; the
+--     gap word 1212122121221... is the Sturmian word of log_2 3. The k = 0
+--     case is a boundary exception (w_0 = 1, no 3-power in (1,2)) — exactly
+--     why the Lean iff quantifies k >= 1; now documented by computation.
+-- (3) Loss fractions at failures w_k/u_k oscillate in [0.09, 0.20] with no
+--     trend — each 3-power crossing removes a bounded share of the core.
+claim_of[a](eta_rate_smallk_artifact_superseded).
+ground[a](eta_rate_smallk_artifact_superseded, computed_dp160_rate_windows).
+evidence[world](eta_rate_smallk_artifact_superseded, computed_dp160_rate_windows).
+
+claim_of[a](doubling_ladder_sturmian_to_160).
+ground[a](doubling_ladder_sturmian_to_160, computed_dp160_ladder_exact).
+evidence[world](doubling_ladder_sturmian_to_160, computed_dp160_ladder_exact).
