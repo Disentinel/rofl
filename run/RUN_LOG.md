@@ -756,3 +756,13 @@ trees vary "significantly narrower" than the branching model — the same
 mild sub-random regularity Track D measured in kicks and slices: the
 suppression is a documented, unexplained feature of the problem, not an
 artifact | catch: none | born: none | facts(main)=73132
+
+R73 | Track D: **pseudo-randomness localized** | the sum-marginal and
+residue-marginal dynamics are autonomous and proved; the joint cannot be —
+the coupling runs through the trajectory parity bit whose evolution is the
+full map (the character-sum problem in another dress). Measured: I(p; mod3)
+AT the independence floor (0.2–0.4 µbits vs null 1.4–5 at k=24–26);
+I(p; sum) trace excess vanishing by k=26. Every pairwise observable is at
+its stochastic floor; all order above the floor is proved structure. The
+measurement program of the mechanism search closes | catch: none | born:
+none | facts(main)=73148

@@ -348,3 +348,24 @@ than the branching-process predictions — the same
 mildly-more-regular-than-random phenomenon Track D measured in crossing
 kicks and slice profiles. The suppression is a documented, still
 unexplained feature of the problem, not an artifact of this run.
+
+**Round 73 — where the pseudo-randomness lives, precisely.** Two closures:
+
+1. *Non-autonomy insight*: every AUTONOMOUS projection of the core dynamics
+   is now solved — the sum-marginal (the dpf recurrence, proved), the
+   residue-marginal (mod3_flow/mod9_flow, proved). But the JOINT (sum ×
+   residue) dynamics cannot be autonomous: which child takes the odd step
+   depends on the trajectory parity bit p = T^k(r) mod 2, and p's own
+   evolution is the full map again. The coupling bit is exactly where the
+   problem's pseudo-randomness is stored — the character-sum problem is
+   this statement in Fourier clothing.
+2. *The coupling is invisible in pairwise marginals*: measured mutual
+   information on the class tree, I(p; rep mod 3) sits AT the finite-sample
+   independence floor for k ≥ 19 (e.g. 0.2–0.4 µbits vs null 1.4–5 µbits at
+   k = 24–26); I(p; sum) shows only trace excess (2–3× null at k = 23–24,
+   gone by k = 26). The parity bit is empirically independent of residue
+   class and near-independent of the sum — all the AL95-style "narrower
+   than random" order lives in exact global counting constraints and the
+   proved flow structure, not in any pairwise statistic. The mechanism
+   search's measurement program ends here: every local/pairwise observable
+   is at its stochastic floor; everything above the floor is proved.
