@@ -549,3 +549,14 @@ Also: Enox shared memory carries the run summary; the hourly checkpoint-NNN
 adaptation was subsumed by per-round committed latest.json.gz (every commit
 is a restorable checkpoint) — recorded as an adaptation refinement | catch:
 none | born: none | facts(main)=72420
+
+R49 | Track C: **lower exponent 0.36 → 1/2** | explicit family 1^(2m) ⌢ w
+(any w with ≤ m zeros; worst prefix 9^m vs 8^m) counted by a central-binomial
+half-sum ≥ 4^m/2. New kernel theorems: choose symmetry, Σ C = 2^k, sum
+reversal, half_sum, the family DP gg with its 9/8-margin gate, gg ≤ dpf,
+choose ≤ gg in the valid window, uf_4m, and core_half: 2^(k/2) ≤ 8·u_k for
+all k ≥ 4; core_sandwich_half: 2^(k/2)/8 ≤ u_k ≤ 2^(k−k/20). Proved
+exponents [0.500, 0.950]; upper is 0.05-tight, lower's remaining gap to the
+true ~0.95 is anti-concentration territory — honestly out of core-Lean reach
+this run. Verified k=4..300 first. 2579 lines | catch: none | born: none |
+facts(main)=72556

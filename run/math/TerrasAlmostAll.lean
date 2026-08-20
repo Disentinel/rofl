@@ -2118,3 +2118,462 @@ theorem core_exponential (k : Nat) (hk : 1 ≤ k) : 2 ^ (36 * k / 100) ≤ 2 * u
 theorem core_sandwich (k : Nat) (hk : 1 ≤ k) :
     2 ^ (36 * k / 100) ≤ 2 * uf k ∧ uf k * 2 ^ (k / 20) ≤ 2 ^ k :=
   ⟨core_exponential k hk, eta_20 k hk⟩
+
+/- ---------- a stronger lower bound: exponent 1/2 ---------- -/
+/- Explicit surviving family: 1^(2m) ⌢ w for ANY w of length 2m with at most
+   m zeros — the worst prefix ratio is 9^m vs 8^m. The family is counted by a
+   central-binomial half-sum ≥ 4^m/2, lifting the core's lower exponent from
+   0.36 to 1/2. -/
+
+theorem choose_diag (n : Nat) : choose n n = 1 := by
+  induction n with
+  | zero => rfl
+  | succ m ih =>
+    show choose m m + choose m (m + 1) = 1
+    rw [ih, choose_above_diag m (m + 1) (by omega)]
+
+theorem choose_symm (n : Nat) : ∀ k, k ≤ n → choose n k = choose n (n - k) := by
+  induction n with
+  | zero =>
+    intro k hk
+    have h0 : k = 0 := by omega
+    subst h0
+    rfl
+  | succ m ih =>
+    intro k hk
+    match k with
+    | 0 =>
+      have h1 : m + 1 - 0 = m + 1 := by omega
+      rw [h1, choose_zero, choose_diag]
+    | t + 1 =>
+      by_cases he : t + 1 = m + 1
+      · rw [he]
+        have h1 : m + 1 - (m + 1) = 0 := by omega
+        rw [h1, choose_diag, choose_zero]
+      · -- t + 1 ≤ m
+        have htm : t + 1 ≤ m := by omega
+        have hp : choose (m + 1) (t + 1) = choose m t + choose m (t + 1) := rfl
+        have h1 := ih t (by omega)
+        have h2 := ih (t + 1) htm
+        have h3 : m - t = (m - (t + 1)) + 1 := by omega
+        have hp2 : choose (m + 1) ((m - (t + 1)) + 1)
+            = choose m (m - (t + 1)) + choose m ((m - (t + 1)) + 1) := rfl
+        have h4 : m + 1 - (t + 1) = (m - (t + 1)) + 1 := by omega
+        rw [hp, h4, hp2, ← h3, h1, h2, h3]
+        omega
+
+theorem binom_one (k : Nat) : S (fun s => choose k s) (k + 1) = 2 ^ k := by
+  induction k with
+  | zero =>
+    show S (fun s => choose 0 s) 1 = 1
+    rw [S_succ]
+    rfl
+  | succ m ih =>
+    have hsplit : ∀ s, s < m + 1 + 1 →
+        choose (m + 1) s = choose m s + shift (choose m) s := by
+      intro s _
+      match s with
+      | 0 =>
+        show choose (m + 1) 0 = choose m 0 + 0
+        rw [choose_zero, choose_zero]
+      | t + 1 =>
+        have hp : choose (m + 1) (t + 1) = choose m t + choose m (t + 1) := rfl
+        have hs : shift (choose m) (t + 1) = choose m t := rfl
+        omega
+    have e1 : S (fun s => choose (m + 1) s) (m + 1 + 1)
+        = S (fun s => choose m s + shift (choose m) s) (m + 1 + 1) :=
+      S_congr _ _ _ hsplit
+    have e2 : S (fun s => choose m s + shift (choose m) s) (m + 1 + 1)
+        = S (fun s => choose m s) (m + 1 + 1) + S (shift (choose m)) (m + 1 + 1) :=
+      S_add _ _ _
+    have e3 : S (fun s => choose m s) (m + 1 + 1) = 2 ^ m := by
+      have ha := S_succ (fun s => choose m s) (m + 1)
+      have hz : choose m (m + 1) = 0 := choose_above_diag m (m + 1) (by omega)
+      rw [ha, hz, ih]
+      omega
+    have e4 : S (shift (choose m)) (m + 1 + 1) = S (fun s => choose m s) (m + 1) :=
+      S_shift _ _
+    have e5 : S (fun s => choose m s) (m + 1) = 2 ^ m := ih
+    have hpow : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+    show S (fun s => choose (m + 1) s) (m + 1 + 1) = 2 ^ (m + 1)
+    omega
+
+theorem bottom_peel (g : Nat → Nat) : ∀ n, S g (n + 1) = g 0 + S (fun i => g (i + 1)) n := by
+  intro n
+  induction n with
+  | zero =>
+    have h0 := S_succ g 0
+    have h1 : S g 0 = 0 := rfl
+    have h2 : S (fun i => g (i + 1)) 0 = 0 := rfl
+    omega
+  | succ p ih =>
+    have h1 := S_succ g (p + 1)
+    have h2 := S_succ (fun i => g (i + 1)) p
+    omega
+
+theorem S_rev (f : Nat → Nat) : ∀ n, S f n = S (fun i => f (n - 1 - i)) n := by
+  intro n
+  induction n generalizing f with
+  | zero => rfl
+  | succ p ih =>
+    have h1 := S_succ f p
+    have h2 : S (fun i => f (p + 1 - 1 - i)) (p + 1)
+        = f (p + 1 - 1 - 0) + S (fun i => f (p + 1 - 1 - (i + 1))) p :=
+      bottom_peel _ p
+    have h3 : ∀ i, i < p → f (p + 1 - 1 - (i + 1)) = (fun j => f (p - 1 - j)) i := by
+      intro i _
+      have : p + 1 - 1 - (i + 1) = p - 1 - i := by omega
+      rw [this]
+    have h4 : S (fun i => f (p + 1 - 1 - (i + 1))) p = S (fun j => f (p - 1 - j)) p :=
+      S_congr _ _ _ h3
+    have h5 := ih f
+    have h6 : p + 1 - 1 - 0 = p := by omega
+    rw [h2, h4, h6, ← h5, h1]
+    omega
+
+/-- Central half-sum: 4^m ≤ 2 · Σ_{r=m}^{2m} C(2m, r). -/
+theorem half_sum (m : Nat) :
+    4 ^ m ≤ 2 * S (fun i => choose (2 * m) (m + i)) (m + 1) := by
+  -- total = lower + upper where lower = Σ_{r<m}, upper = Σ_{r=m}^{2m}
+  have htot : S (fun s => choose (2 * m) s) (2 * m + 1) = 2 ^ (2 * m) := binom_one (2 * m)
+  have hsplitn : 2 * m + 1 = m + (m + 1) := by omega
+  have hsplit : S (fun s => choose (2 * m) s) (m + (m + 1))
+      = S (fun s => choose (2 * m) s) m
+        + S (fun i => choose (2 * m) (m + i)) (m + 1) :=
+    S_append _ m (m + 1)
+  -- lower ≤ upper: reverse the lower sum and use symmetry
+  have hlow : S (fun s => choose (2 * m) s) m
+      = S (fun i => choose (2 * m) (2 * m - (m - 1 - i))) m := by
+    have hrev := S_rev (fun s => choose (2 * m) s) m
+    have hpt : ∀ i, i < m →
+        choose (2 * m) (m - 1 - i) = choose (2 * m) (2 * m - (m - 1 - i)) := by
+      intro i hi
+      exact choose_symm (2 * m) (m - 1 - i) (by omega)
+    rw [hrev, S_congr _ _ _ hpt]
+  have hlow2 : S (fun i => choose (2 * m) (2 * m - (m - 1 - i))) m
+      ≤ S (fun i => choose (2 * m) (m + i)) (m + 1) := by
+    -- 2m - (m-1-i) = m + 1 + i for i < m; the upper sum contains these indices
+    have hup : S (fun i => choose (2 * m) (m + i)) (m + 1)
+        = choose (2 * m) (m + 0) + S (fun i => choose (2 * m) (m + (i + 1))) m :=
+      bottom_peel _ m
+    have hpt : ∀ i, i < m →
+        choose (2 * m) (2 * m - (m - 1 - i)) = choose (2 * m) (m + (i + 1)) := by
+      intro i hi
+      have : 2 * m - (m - 1 - i) = m + (i + 1) := by omega
+      rw [this]
+    have he : S (fun i => choose (2 * m) (2 * m - (m - 1 - i))) m
+        = S (fun i => choose (2 * m) (m + (i + 1))) m :=
+      S_congr _ _ _ hpt
+    omega
+  have hfour : (4 : Nat) ^ m = 2 ^ (2 * m) := by
+    rw [Nat.pow_mul]
+  rw [hsplitn] at htot
+  omega
+
+/-- Family DP: prefix 1^(2m), then any word that never exceeds m zeros. -/
+def gg (m : Nat) : Nat → Nat → Nat
+  | 0, s => if s = 0 then 1 else 0
+  | j + 1, s =>
+    if j + 1 ≤ 2 * m then (if s = j + 1 then 1 else 0)
+    else if j + 1 - s ≤ m then gg m j s + shift (gg m j) s
+    else 0
+
+theorem gg_succ (m j s : Nat) :
+    gg m (j + 1) s
+      = if j + 1 ≤ 2 * m then (if s = j + 1 then 1 else 0)
+        else if j + 1 - s ≤ m then gg m j s + shift (gg m j) s
+        else 0 := rfl
+
+/-- Positivity invariant: in the free phase, the ones-count never drops
+    below 2m (and never exceeds the position). -/
+theorem gg_pos (m : Nat) : ∀ j s, gg m j s ≠ 0 → s ≤ j ∧ (2 * m ≤ j → 2 * m ≤ s) := by
+  intro j
+  induction j with
+  | zero =>
+    intro s h
+    have h0 : gg m 0 s = if s = 0 then 1 else 0 := rfl
+    by_cases hs : s = 0
+    · subst hs
+      exact ⟨by omega, by omega⟩
+    · rw [h0, if_neg hs] at h
+      omega
+  | succ p ih =>
+    intro s h
+    rw [gg_succ] at h
+    by_cases h1 : p + 1 ≤ 2 * m
+    · rw [if_pos h1] at h
+      by_cases hs : s = p + 1
+      · subst hs
+        exact ⟨by omega, by omega⟩
+      · rw [if_neg hs] at h
+        omega
+    · rw [if_neg h1] at h
+      by_cases h2 : p + 1 - s ≤ m
+      · rw [if_pos h2] at h
+        by_cases hz1 : gg m p s = 0
+        · -- the shift part is positive
+          match s, h, hz1 with
+          | 0, h, hz1 =>
+            have hsh : shift (gg m p) 0 = 0 := rfl
+            rw [hz1, hsh] at h
+            omega
+          | t + 1, h, hz1 =>
+            have hsh : shift (gg m p) (t + 1) = gg m p t := rfl
+            rw [hz1, hsh] at h
+            have h' : gg m p t ≠ 0 := by omega
+            have ⟨ha, hb⟩ := ih t h'
+            constructor
+            · omega
+            · intro h2m
+              by_cases hp2 : 2 * m ≤ p
+              · have := hb hp2
+                omega
+              · omega
+        · have ⟨ha, hb⟩ := ih s hz1
+          constructor
+          · omega
+          · intro h2m
+            by_cases hp2 : 2 * m ≤ p
+            · exact hb hp2
+            · -- p < 2m ≤ p+1: p+1 = 2m, but branch h1 says p+1 > 2m
+              omega
+      · rw [if_neg h2] at h
+        omega
+
+/-- The all-ones string survives every depth. -/
+theorem dpf_diag (j : Nat) : 1 ≤ dpf j j := by
+  induction j with
+  | zero => exact Nat.le_refl 1
+  | succ p ih =>
+    have hgate : 2 ^ (p + 1) < 3 ^ (p + 1) :=
+      Nat.pow_lt_pow_left (by omega) (by omega)
+    have he : dpf (p + 1) (p + 1) = dpf p (p + 1) + shift (dpf p) (p + 1) := by
+      rw [dpf_succ_eq, if_pos hgate]
+    have hs : shift (dpf p) (p + 1) = dpf p p := rfl
+    omega
+
+/-- Every nonzero family cell is dominated. -/
+theorem gg_gate (m : Nat) (hm : 1 ≤ m) :
+    ∀ j s, gg m (j + 1) s ≠ 0 → 2 ^ (j + 1) < 3 ^ s := by
+  intro j s h
+  rw [gg_succ] at h
+  by_cases h1 : j + 1 ≤ 2 * m
+  · rw [if_pos h1] at h
+    by_cases hs : s = j + 1
+    · subst hs
+      exact Nat.pow_lt_pow_left (by omega) (by omega)
+    · rw [if_neg hs] at h
+      omega
+  · rw [if_neg h1] at h
+    by_cases h2 : j + 1 - s ≤ m
+    · rw [if_pos h2] at h
+      have hpos : gg m (j + 1) s ≠ 0 := by
+        rw [gg_succ, if_neg h1, if_pos h2]
+        exact h
+      have ⟨hsj, hs2m⟩ := gg_pos m (j + 1) s hpos
+      have hs2 : 2 * m ≤ s := hs2m (by omega)
+      -- 9^m > 8^m core
+      have h98 : (8 : Nat) ^ m < 9 ^ m := Nat.pow_lt_pow_left (by omega) (by omega)
+      have h9 : (3 : Nat) ^ (2 * m) = 9 ^ m := by
+        rw [Nat.pow_mul]
+      have h8 : (2 : Nat) ^ (3 * m) = 8 ^ m := by
+        rw [Nat.pow_mul]
+      by_cases h3 : j + 1 ≤ 3 * m
+      · -- s ≥ 2m: 3^s ≥ 9^m > 8^m = 2^(3m) ≥ 2^(j+1)
+        have ha : (3 : Nat) ^ (2 * m) ≤ 3 ^ s := Nat.pow_le_pow_right (by omega) hs2
+        have hb : (2 : Nat) ^ (j + 1) ≤ 2 ^ (3 * m) := Nat.pow_le_pow_right (by omega) h3
+        omega
+      · -- j+1 = 3m + t, t ≥ 1; s ≥ j+1−m = 2m+t
+        have hst : 2 * m + (j + 1 - 3 * m) ≤ s := by omega
+        have ha : (3 : Nat) ^ (2 * m + (j + 1 - 3 * m)) ≤ 3 ^ s :=
+          Nat.pow_le_pow_right (by omega) hst
+        have hb : (3 : Nat) ^ (2 * m + (j + 1 - 3 * m))
+            = 9 ^ m * 3 ^ (j + 1 - 3 * m) := by
+          rw [Nat.pow_add, h9]
+        have hc : (2 : Nat) ^ (j + 1) = 8 ^ m * 2 ^ (j + 1 - 3 * m) := by
+          have he : j + 1 = 3 * m + (j + 1 - 3 * m) := by omega
+          calc (2 : Nat) ^ (j + 1) = 2 ^ (3 * m + (j + 1 - 3 * m)) := by rw [← he]
+            _ = 2 ^ (3 * m) * 2 ^ (j + 1 - 3 * m) := Nat.pow_add 2 _ _
+            _ = 8 ^ m * 2 ^ (j + 1 - 3 * m) := by rw [h8]
+      -- 8^m·2^t < 9^m·3^t
+        have hd : (8 : Nat) ^ m * 2 ^ (j + 1 - 3 * m) < 9 ^ m * 2 ^ (j + 1 - 3 * m) := by
+          have hp2 : 0 < (2 : Nat) ^ (j + 1 - 3 * m) := Nat.pow_pos (by omega)
+          exact Nat.mul_lt_mul_of_lt_of_le h98 (Nat.le_refl _) hp2
+        have hf : (9 : Nat) ^ m * 2 ^ (j + 1 - 3 * m) ≤ 9 ^ m * 3 ^ (j + 1 - 3 * m) :=
+          Nat.mul_le_mul_left _ (Nat.pow_le_pow_left (by omega) _)
+        omega
+    · rw [if_neg h2] at h
+      omega
+
+/-- The family undercounts the dominated strings. -/
+theorem gg_le_dpf (m : Nat) (hm : 1 ≤ m) : ∀ j s, gg m j s ≤ dpf j s := by
+  intro j
+  induction j with
+  | zero =>
+    intro s
+    have h0 : gg m 0 s = if s = 0 then 1 else 0 := rfl
+    match s with
+    | 0 =>
+      rw [h0, if_pos rfl]
+      show 1 ≤ dpf 0 0
+      exact Nat.le_refl 1
+    | t + 1 =>
+      rw [h0, if_neg (by omega)]
+      omega
+  | succ p ih =>
+    intro s
+    by_cases hz : gg m (p + 1) s = 0
+    · rw [hz]
+      omega
+    · have hgate := gg_gate m hm p s hz
+      have hd : dpf (p + 1) s = dpf p s + shift (dpf p) s := by
+        rw [dpf_succ_eq, if_pos hgate]
+      rw [gg_succ] at hz ⊢
+      by_cases h1 : p + 1 ≤ 2 * m
+      · rw [if_pos h1] at hz ⊢
+        by_cases hs : s = p + 1
+        · subst hs
+          rw [if_pos rfl]
+          have := dpf_diag (p + 1)
+          omega
+        · rw [if_neg hs]
+          omega
+      · rw [if_neg h1] at hz ⊢
+        by_cases h2 : p + 1 - s ≤ m
+        · rw [if_pos h2]
+          have ha := ih s
+          have hb : shift (gg m p) s ≤ shift (dpf p) s := by
+            match s with
+            | 0 => exact Nat.le_refl 0
+            | t + 1 => exact ih t
+          omega
+        · rw [if_neg h2]
+          omega
+
+/-- In the valid window the family DP dominates the plain binomial. -/
+theorem gg_ge_choose (m : Nat) (hm : 1 ≤ m) : ∀ j' r,
+    (if r ≤ j' ∧ j' - r ≤ m then choose j' r else 0) ≤ gg m (2 * m + j') (2 * m + r) := by
+  intro j'
+  induction j' with
+  | zero =>
+    intro r
+    have h2m : 2 * m + 0 = (2 * m - 1) + 1 := by omega
+    rw [h2m, gg_succ]
+    rw [if_pos (by omega : 2 * m - 1 + 1 ≤ 2 * m)]
+    match r with
+    | 0 =>
+      rw [if_pos (by omega : (0:Nat) ≤ 0 ∧ 0 - 0 ≤ m),
+          if_pos (by omega : 2 * m + 0 = 2 * m - 1 + 1)]
+      exact Nat.le_refl 1
+    | t + 1 =>
+      rw [if_neg (by omega : ¬ (t + 1 ≤ 0 ∧ 0 - (t + 1) ≤ m))]
+      omega
+  | succ p ih =>
+    intro r
+    have hidx : 2 * m + (p + 1) = (2 * m + p) + 1 := by omega
+    rw [hidx, gg_succ, if_neg (by omega : ¬ (2 * m + p + 1 ≤ 2 * m))]
+    by_cases hv : p + 1 - r ≤ m
+    · rw [if_pos (by omega : 2 * m + p + 1 - (2 * m + r) ≤ m)]
+      match r with
+      | 0 =>
+        by_cases ht : (0 : Nat) ≤ p + 1 ∧ p + 1 - 0 ≤ m
+        · rw [if_pos ht]
+          have hi := ih 0
+          rw [if_pos (by omega : (0:Nat) ≤ p ∧ p - 0 ≤ m)] at hi
+          have hc0 : choose (p + 1) 0 = 1 := choose_zero (p + 1)
+          have hcp : choose p 0 = 1 := choose_zero p
+          omega
+        · rw [if_neg ht]
+          omega
+      | t + 1 =>
+        have hsh : shift (gg m (2 * m + p)) (2 * m + (t + 1)) = gg m (2 * m + p) (2 * m + t) := by
+          have he : 2 * m + (t + 1) = (2 * m + t) + 1 := by omega
+          rw [he]
+          rfl
+        by_cases ht : t + 1 ≤ p + 1 ∧ p + 1 - (t + 1) ≤ m
+        · rw [if_pos ht]
+          have hpascal : choose (p + 1) (t + 1) = choose p t + choose p (t + 1) := rfl
+          have hi1 := ih (t + 1)
+          have hi2 := ih t
+          have hb1 : choose p (t + 1) ≤ gg m (2 * m + p) (2 * m + (t + 1)) := by
+            by_cases hc : t + 1 ≤ p ∧ p - (t + 1) ≤ m
+            · rw [if_pos hc] at hi1
+              exact hi1
+            · -- t + 1 > p (since p−(t+1) ≤ m holds when t+1 ≤ p from ht) → choose = 0
+              have hz : choose p (t + 1) = 0 := by
+                have hgt : p < t + 1 := by omega
+                exact choose_above_diag p (t + 1) hgt
+              omega
+          have hb2 : choose p t ≤ gg m (2 * m + p) (2 * m + t) := by
+            rw [if_pos (by omega : t ≤ p ∧ p - t ≤ m)] at hi2
+            exact hi2
+          rw [hsh]
+          omega
+        · rw [if_neg ht]
+          omega
+    · rw [if_neg (by omega : ¬ (2 * m + p + 1 - (2 * m + r) ≤ m))]
+      by_cases ht : r ≤ p + 1 ∧ p + 1 - r ≤ m
+      · omega
+      · rw [if_neg ht]
+        omega
+
+theorem uf_mono_le (a b : Nat) (h : a ≤ b) : uf a ≤ uf b := by
+  induction b with
+  | zero =>
+    have ha : a = 0 := by omega
+    subst ha
+    exact Nat.le_refl _
+  | succ p ih =>
+    by_cases hp : a ≤ p
+    · exact Nat.le_trans (ih hp) (uf_mono p)
+    · have ha : a = p + 1 := by omega
+      subst ha
+      exact Nat.le_refl _
+
+/-- The family lower bound lands: 4^m ≤ 2·u_(4m). -/
+theorem uf_4m (m : Nat) (hm : 1 ≤ m) : 4 ^ m ≤ 2 * uf (4 * m) := by
+  -- choose-tail ≤ gg-row tail
+  have h1 : ∀ i, i < m + 1 →
+      choose (2 * m) (m + i) ≤ gg m (4 * m) (3 * m + i) := by
+    intro i hi
+    have hg := gg_ge_choose m hm (2 * m) (m + i)
+    rw [if_pos (by omega : m + i ≤ 2 * m ∧ 2 * m - (m + i) ≤ m)] at hg
+    have he1 : 2 * m + 2 * m = 4 * m := by omega
+    have he2 : 2 * m + (m + i) = 3 * m + i := by omega
+    rw [he1, he2] at hg
+    exact hg
+  have h2 : S (fun i => choose (2 * m) (m + i)) (m + 1)
+      ≤ S (fun i => gg m (4 * m) (3 * m + i)) (m + 1) :=
+    S_mono _ _ _ h1
+  -- gg-row tail ≤ full gg-row sum ≤ dpf-row sum = uf(4m)
+  have h3 : S (fun s => gg m (4 * m) s) (3 * m + (m + 1))
+      = S (fun s => gg m (4 * m) s) (3 * m)
+        + S (fun i => gg m (4 * m) (3 * m + i)) (m + 1) :=
+    S_append _ (3 * m) (m + 1)
+  have h4 : S (fun s => gg m (4 * m) s) (4 * m + 1)
+      ≤ S (fun s => dpf (4 * m) s) (4 * m + 1) :=
+    S_mono _ _ _ (fun s _ => gg_le_dpf m hm (4 * m) s)
+  have he3 : 3 * m + (m + 1) = 4 * m + 1 := by omega
+  rw [he3] at h3
+  have h5 : uf (4 * m) = S (fun s => dpf (4 * m) s) (4 * m + 1) := rfl
+  have h6 := half_sum m
+  omega
+
+/-- Exponent 1/2 for the core: 2^(k/2) ≤ 8·u_k for every k ≥ 4 —
+    superseding core_exponential's 36/100. -/
+theorem core_half (k : Nat) (hk : 4 ≤ k) : 2 ^ (k / 2) ≤ 8 * uf k := by
+  have hm : 1 ≤ k / 4 := by omega
+  have h1 := uf_4m (k / 4) hm
+  have h2 : uf (4 * (k / 4)) ≤ uf k := uf_mono_le _ _ (by omega)
+  have h3 : (4 : Nat) ^ (k / 4) = 2 ^ (2 * (k / 4)) := by
+    rw [Nat.pow_mul]
+  have h4 : (2 : Nat) ^ (k / 2) ≤ 2 ^ (2 * (k / 4) + 2) :=
+    Nat.pow_le_pow_right (by omega) (by omega)
+  have h5 : (2 : Nat) ^ (2 * (k / 4) + 2) = 2 ^ (2 * (k / 4)) * 4 := by
+    rw [Nat.pow_add]
+  omega
+
+/-- The upgraded sandwich: 2^(k/2)/8 ≤ u_k ≤ 2^(k−k/20), kernel-checked. -/
+theorem core_sandwich_half (k : Nat) (hk : 4 ≤ k) :
+    2 ^ (k / 2) ≤ 8 * uf k ∧ uf k * 2 ^ (k / 20) ≤ 2 ^ k :=
+  ⟨core_half k hk, eta_20 k (by omega)⟩
