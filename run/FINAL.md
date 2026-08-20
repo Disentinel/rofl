@@ -42,12 +42,17 @@ carries the final chain:
    (`terras_almost_all`), for honest integer counting (`terras_integers`),
    and for the **original** 3n+1 | n/2 map (`collatz_original_integers`, via
    T^i = C^j with i ≤ j ≤ 2i): almost every n drops below itself.
-5. **The lower bound** — the undecided core **never empties**:
-   2^(36k/100) ≤ 2·u_k for every k (the failure counter obeys the single
-   invariant 3^F ≤ 2^k). Headline (`core_sandwich`): the core is
-   **exponentially thin and exponentially large**, kernel-checked both sides
-   — the formal content of "no route from density to totality": no
-   finite-depth residue analysis can settle the conjecture.
+5. **The lower bound** — the undecided core **never empties**: first
+   2^(36k/100) ≤ 2·u_k via a failure counter obeying the single invariant
+   3^F ≤ 2^k, then lifted to **2^(k/2) ≤ 8·u_k** by an explicit surviving
+   family (1^2m followed by any word with ≤ m zeros — worst prefix ratio
+   9^m vs 8^m — counted by a central-binomial half-sum). Headline
+   (`core_sandwich_half`): **2^(k/2)/8 ≤ u_k ≤ 2^(k−k/20)** — the core is
+   exponentially thin and exponentially large, kernel-checked both sides —
+   the formal content of "no route from density to totality": no
+   finite-depth residue analysis can settle the conjecture. (True exponents
+   ≈ [0.95, 0.95]; the upper side is 0.05-tight, the lower side's remaining
+   gap is anti-concentration territory, out of core-Lean reach this run.)
 
 Everything is honest about what it is: a from-scratch, fully mechanized
 reconstruction of 1976-era theory plus its exact quantitative envelope — not

@@ -560,3 +560,7 @@ exponents [0.500, 0.950]; upper is 0.05-tight, lower's remaining gap to the
 true ~0.95 is anti-concentration territory — honestly out of core-Lean reach
 this run. Verified k=4..300 first. 2579 lines | catch: none | born: none |
 facts(main)=72556
+
+R50 | doc coherence after R49 | FINAL.md + README carry the lifted sandwich;
+the 7/13-exponent extension (12m/7 prefix, 3^12 > 2^19 blocks) recorded as a
+not-pursued note | catch: none | born: none | facts(main)=72568

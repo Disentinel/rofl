@@ -1,0 +1,9 @@
+-- Round 50. TARGET: doc coherence after R49 — FINAL.md and README updated to
+-- the lifted sandwich (2^(k/2)/8 <= u_k <= 2^(k-k/20)); the 0.36 stepping
+-- stone stays recorded as the route. Also noted for the record: the family
+-- method extends to exponent 7/13 with a 12m/7 prefix (3^12 > 2^19 blocks),
+-- and further only with non-central binomial lower bounds — recorded as a
+-- hypothesis-note, NOT pursued (diminishing returns against remaining time).
+claim_of[a](docs_synced_after_core_half).
+ground[a](docs_synced_after_core_half, doc_pass_r50).
+evidence[world](docs_synced_after_core_half, doc_pass_r50).
