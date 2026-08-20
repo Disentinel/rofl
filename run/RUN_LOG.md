@@ -563,4 +563,8 @@ facts(main)=72556
 
 R50 | doc coherence after R49 | FINAL.md + README carry the lifted sandwich;
 the 7/13-exponent extension (12m/7 prefix, 3^12 > 2^19 blocks) recorded as a
-not-pursued note | catch: none | born: none | facts(main)=72568
+not-pursued note | catch: THIRD facts-count pre-write (72568 vs actual
+72564) — the R36 rule said "write only after the eval prints it" and the
+compound-command habit violated it again; rule hardened: the RUN_LOG entry is
+now written in a separate command AFTER eval output is read, never in the
+same shell compound | born: none | facts(main)=72564
