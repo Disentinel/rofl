@@ -1,0 +1,23 @@
+-- Round 20. PIVOT (owner instruction, 04:45Z): attempt the mathematics itself,
+-- with the ledger as the harness against sloppiness — not just measure the
+-- substrate. Track C opens. Still no fake claims: proofs carry their machine-
+-- checked finite parts, and whatever stays unproven stays flagged.
+--
+-- TARGET: Lemma 1 (run/math/lemma1.md) — upgrade the empirical inclusion
+-- slow => undecided-class from range-scoped to UNCONDITIONAL for k <= 8:
+-- for all integers n >= M_k+1 (M_5..7 = 4, M_8 = 24; n <= M_k checked directly),
+-- a coefficient-decided class forces a drop within 2k <= 16 < 30 full steps.
+-- Proof: class-affine induction + exact thresholds; finite part machine-checked
+-- TWICE (TS exact integers; in-substrate D = V*2^J - 3^A*rep derivation over
+-- terras.rofl facts, badclass empty at k = 5,6,7,8).
+--
+-- CATCH recorded: the first in-substrate encoding (theta <= M) disagreed with
+-- the TS floor-threshold at class 11 mod 32 (theta fractional in (4,5)) —
+-- two mechanizations of one prose statement encoded different inequalities;
+-- caught in one round, corrected to the strict form theta < M+1.
+claim_of[a](lemma1_slow_subset_undecided_unconditional_k8).
+ground[a](lemma1_slow_subset_undecided_unconditional_k8, proof_lemma1_dual_checked_thresholds).
+evidence[world](lemma1_slow_subset_undecided_unconditional_k8, proof_lemma1_dual_checked_thresholds).
+
+-- The exact-fill DIRECTION stays honestly computational (witness existence is
+-- range-dependent: R16 vs R18) — no claim upgrade there.

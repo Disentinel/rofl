@@ -239,3 +239,23 @@ oracle; joined host-side with the R18-verified 285-member slow set: outside_256
 EMPTY, unfilled_256 EMPTY — inclusion AND exact fill extend to mod 256 at range
 9999. Ground names the hybrid method honestly (the join, unlike mod 32/64/128,
 was not performed in-substrate) | catch: none | born: none (freeze) | facts(main)=70687
+
+## PIVOT (owner instruction, 04:45Z): Track C — the mathematics itself
+The owner overrides the protocol's goal statement in one direction: ATTEMPT the
+mathematical problem, using the substrate/ledger as the harness against
+sloppiness. What stays: no fake claims, every assertion grounded, unproven parts
+flagged, contradictions surfaced. What changes: the target of each round is now a
+mathematical statement to prove or refute, not a substrate measurement.
+(Freeze interpretation on the ledger side: main-graph vocabulary stays frozen;
+scratch computations may use working predicates that never enter main.)
+
+R20 | Track C: **Lemma 1 proved** (run/math/lemma1.md) | the empirical inclusion
+slow ⟹ undecided-class upgraded from range-scoped to UNCONDITIONAL for k ≤ 8:
+class-affine induction (proof written out) + exact thresholds M_5..7 = 4,
+M_8 = 24; finite part machine-checked twice — TS exact integers AND in-substrate
+(D = V·2^J − 3^A·rep over terras.rofl facts; badclass empty at k=5..8); small n
+checked directly | **catch: the two mechanizations initially encoded DIFFERENT
+inequalities** (θ ≤ M vs θ < M+1) and disagreed at class 11 mod 32 (θ fractional
+in (4,5)) — the dual-check surfaced my sloppy encoding in one round; corrected to
+the strict form. Exactly the harness behavior the pivot asks for | born: none in
+main (freeze; scratch preds okthr/badclass stayed scratch) | facts(main)=70705
