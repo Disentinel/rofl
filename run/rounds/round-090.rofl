@@ -1,0 +1,40 @@
+-- Round 90 (Track E). THINKING-ALGEBRA ROTATION on the primitive
+-- decomposition: audited own filters (survivorship over the run corpus,
+-- prestige of analogies, forward-only orientation, positive-side
+-- attention), rotated them. Yields:
+-- (1) THE NEGATIVE SIDE: oracle — truncations of -1, -5, -17 (exactly
+--     the minima of the known negative cycles) are in the core to depth
+--     40; non-minima decide early. w1_undecided (R75) IS "-1 in the
+--     infinite core", now named neg_one_in_core; NEW cycle_not_in_core:
+--     positive cycle integers leave the core by depth = period. The
+--     core CONTAINS integers — negative ones; the sign of D is the
+--     exact separator. Pi5 x Pi6 is where the conjecture lives.
+-- (2) DIAGONAL-CONDITIONED MEASUREMENT (the one marginal never taken):
+--     core classes containing an integer <= 1e6 at depth 24 are
+--     indistinguishable from random core samples (ratio 1.000, meanA
+--     17.04 vs 17.05, residues balanced); all 17k small reps drop
+--     anyway. The diagonal is statistically transparent.
+-- (3) BACKWARD FACE: inversion makes the map free; the coupling bit
+--     reappears as the backward tree's equidistribution deficit — one
+--     pressure, two charts (balloon lens).
+-- (4) RENORMALIZATION: branch_law is the RG operator; all proofs are
+--     R-equivariant, the answer is R-breaking — the TRIZ contradiction
+--     named; ideal final result = equivariant family with a
+--     diagonal-sensitive limit.
+claim_of[a](negative_cycle_minima_in_core_measured).
+ground[a](negative_cycle_minima_in_core_measured, negative_core_oracle).
+evidence[oracle](negative_cycle_minima_in_core_measured, negative_core_oracle).
+oracle_only(negative_cycle_minima_in_core_measured).
+
+claim_of[a](neg_one_in_core_named).
+ground[a](neg_one_in_core_named, lean_neg_one_cycle_not_in_core_compile).
+evidence[world](neg_one_in_core_named, lean_neg_one_cycle_not_in_core_compile).
+
+claim_of[a](diagonal_statistically_transparent).
+ground[a](diagonal_statistically_transparent, diagonal_cond_oracle_depth24).
+evidence[oracle](diagonal_statistically_transparent, diagonal_cond_oracle_depth24).
+oracle_only(diagonal_statistically_transparent).
+
+lean_theorem(thm_neg_one_in_core).   lean_axioms_minimal(thm_neg_one_in_core).
+lean_theorem(thm_cycle_not_in_core). lean_axioms_minimal(thm_cycle_not_in_core).
+depends_on(thm_cycle_not_in_core, thm_cycle_ineq).

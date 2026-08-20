@@ -1002,3 +1002,23 @@ statement — counterexamples consume infinitely many unsourced coupling
 bits). Analogies literature-known; the kernel-checked mapping and the
 blindness unification are the run's | catch: none | born: none
 (verified) | facts(main)=73515
+
+R90 | Track E: **thinking-algebra rotation — the negative side surfaces**
+| Audited the decomposition's own filters (survivorship over the corpus,
+prestige of analogies, forward orientation, positive-side attention);
+rotated. (1) Oracle: truncations of −1, −5, −17 — exactly the minima of
+the known negative cycles — are in the core to depth 40; non-minima
+decide early. w1_undecided IS "−1 ∈ infinite core" (now
+`neg_one_in_core`); new `cycle_not_in_core`: positive cycle integers
+leave the core by depth = period. The core CONTAINS integers — negative
+ones; Π5×Π6 is where the conjecture lives. (2) Diagonal-conditioned
+measurement (the marginal never taken): integer-visible core classes
+indistinguishable from random core samples at depth 24; all 17k small
+reps drop anyway — the diagonal is statistically transparent. (3)
+Inversion: backward the map is free; the coupling bit reappears as the
+backward tree's equidistribution deficit — one pressure, two charts.
+(4) branch_law as the RG operator; all proofs R-equivariant, the answer
+R-breaking — the TRIZ contradiction named | catch: the run proved
+"−1 ∈ core" at R75 without noticing what it proved — filter-blindness
+caught by the rotation itself | born: none (verified) |
+facts(main)=73553

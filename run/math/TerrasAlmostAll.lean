@@ -5292,3 +5292,30 @@ theorem stairT_A (k : Nat) (hk : 1 ≤ k) :
 theorem excl_table_sharp : ¬(2 ^ 184 * 3 ^ 116
     < 2 ^ 71 * (2 ^ 116 * (2 ^ 184 - 3 ^ 116)) + 2 ^ 184 * 2 ^ 116) := by
   decide
+
+/- ---------- Track E: the sign primitive's two faces ---------- -/
+
+/-- −1 IS IN THE INFINITE CORE: w1_undecided restated 2-adically. The
+    truncations of the fixed point −1 (2^k − 1 ≡ −1 mod 2^k) are
+    undecided at every depth — the core CONTAINS an integer, a negative
+    one. (Oracle: −5 and −17, the minima of the two known negative
+    cycles, are likewise in the core to depth 40; non-minimal cycle
+    members and off-cycle negatives all decide early.) -/
+theorem neg_one_in_core (k : Nat) : indU k (2 ^ k - 1) = 1 := w1_undecided k
+
+/-- ...and positive integers on cycles LEAVE the core by the depth of
+    their period — dominated periodic points are impossible on the
+    positive side, by the sign of D (cycle_ineq). With neg_one_in_core:
+    the sign of the "+1" is exactly what separates the two halves of ℤ
+    inside the core. -/
+theorem cycle_not_in_core (p n : Nat) (hp : 1 ≤ p) (hn : 1 ≤ n)
+    (hc : Titer p n = n) : indU p n = 0 := by
+  have h := (cycle_ineq p n hp hn hc).1
+  by_cases hu : indU p n = 1
+  · cases p with
+    | zero => omega
+    | succ q =>
+      have hg := indU_one_gate q n hu
+      omega
+  · have := indU_le_one p n
+    omega

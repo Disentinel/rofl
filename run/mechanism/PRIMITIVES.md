@@ -178,3 +178,78 @@ kernel-checked mapping of both onto one primitive inventory, the
 blindness unification (§3), and the entropy number's proved sandwich.
 Nothing in this document proves or refutes the conjecture; it
 re-partitions where its difficulty sits.
+
+---
+
+## Addendum (R90): the thinking-algebra rotation — what the filters hid
+
+The decomposition above was audited for its own filters (survivorship
+over the run's corpus; prestige in the choice of analogies; forward-only
+orientation; positivity-of-attention on Π5). Rotating them produced:
+
+### The negative side (survivorship rotation) — the sharpest find
+
+The extension of T to Z₂ has known integer cycles at **negative**
+integers (−1; −5→−7→−10; −17→…−34→). Oracle (negative_core.js): the
+truncations of **−1, −5, −17 — exactly the minima of the three known
+cycles — are in the core to depth 40**; non-minimal cycle members and
+off-cycle negatives decide within ≤ 10 depths. And the run had already
+kernel-checked the first of these without naming it: `w1_undecided`
+(R75) IS "−1 ∈ the infinite core" (2^k − 1 ≡ −1 mod 2^k) — now named
+`neg_one_in_core`. Dually, `cycle_not_in_core` (new, from cycle_ineq):
+positive integers on cycles leave the core by the depth of their period.
+
+The reframe this forces: **the core does contain integers — negative
+ones, precisely the cycle minima — and the sign of D is the exact
+mechanism that forbids the mirror phenomenon on ℕ.** The rational-cycle
+formula n = D/(2^p − 3^a) with D > 0 (Π5) makes dominated periodic
+points negative *by construction*. The conjecture's cycle half is a pure
+sign statement; the divergence half asks whether ℕ can touch the core's
+aperiodic part. Π5×Π6 is not one interaction among many — it is where
+the conjecture lives.
+
+### The diagonal conditioned (homeostasis rotation)
+
+The one marginal the run never measured: statistics of core classes
+**conditioned on containing a small integer** (diagonal_cond.js, depth
+24): count ratio vs uniform 1.000 (17,083 vs 17,082 expected at
+N = 10^6), mean exponent identical (17.04 vs 17.05), residues balanced —
+and all 17k small representatives of undecided classes drop anyway
+within 2000 steps. The diagonal is statistically transparent: even
+conditioning on integer-visibility, every observable sits at its
+unconditional value. Consistent with the conjecture-true world and with
+one-place blindness: the class filtration carries no information about
+true integer fates at these depths.
+
+### The backward face (inversion rotation) — R-f
+
+Backward, the map is a FREE object: n ↦ 2n always, n ↦ (2n−1)/3 when
+admissible — no coupling bit; every backward word exists (the
+Applegate–Lagarias semigroup face, sourced R74). The conjecture becomes
+a covering statement: tree(1) ⊇ ℕ. Squeezing the balloon: Π7 does not
+disappear under inversion — it reappears as the *equidistribution
+deficit* of the free tree's image in ℕ. The coupling bit (forward) and
+backward-equidistribution are the same pressure in two coordinate
+systems; Tao's log-density theorem lives on the backward side of this
+identity.
+
+### The renormalization note (homeostatic hijack)
+
+What holds the problem in place: branch_law IS a renormalization
+operator R (structure at depth k → depth k+1), and every provable
+statement in the run is R-equivariant. ℕ is the only non-R-invariant
+object in sight. TRIZ-form contradiction: methods must be R-equivariant
+to prove anything at all scales, but the answer requires R-breaking.
+The ideal final result is an R-equivariant observable that nonetheless
+distinguishes ℕ — the diagonal-conditioned measurement above is the
+first (null) attempt of that family.
+
+### Equations to carry (inconsistencies, not ideas)
+
+1. core ∩ (−ℤ) ⊇ {−1} (proved), {−5, −17} (measured, formalizable) vs
+   core ∩ ℕ = ∅ (the conjecture): solve for X = the mechanism turning
+   D > 0 into diagonal exclusion beyond periodicity.
+2. Π7-forward = equidistribution-backward: one pressure, two charts;
+   any bound on one is a bound on the other.
+3. All proofs R-equivariant, the answer R-breaking: X = an equivariant
+   family with a diagonal-sensitive limit.
