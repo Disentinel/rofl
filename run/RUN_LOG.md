@@ -978,3 +978,11 @@ born: none (verified) | facts(main)=73483
 (Note: this entry postdates the closing block — the owner's directive
 was continuous search to the window's end; the closing statistics are
 refreshed in the final commit.)
+
+R88 | Track D closure: **the cycle ceiling is sharp** | `excl_table_sharp`
+(kernel decide): the exclusion condition fails at length 184, a = 116 —
+the near-coincidence 3^116 ≈ 2^183.86 (near-convergent of log₂3) pushes
+the cycle bound past the 2^71 floor. no_small_cycles' 183 is exactly what
+the sourced floor supports; extension needs a higher floor, not compute.
+Oracle sweep to j = 400 confirms (184, 116) is the first failure | catch:
+none | born: none (verified) | facts(main)=73495

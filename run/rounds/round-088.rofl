@@ -1,0 +1,15 @@
+-- Round 88 (Track D, closure). SHARPNESS OF THE CYCLE CEILING:
+-- theorem excl_table_sharp (kernel decide) — the exclusion condition
+-- FAILS at accelerated length 184 with a = 116: the near-coincidence
+-- 3^116 = 2^183.86... (a continued-fraction near-convergent of log2 3)
+-- pushes the cycle-element bound past the 2^71 verification floor. So
+-- no_small_cycles' 183 is EXACTLY the ceiling the sourced floor
+-- supports, not a table-size choice; extending needs a higher verified
+-- floor, not more compute. Oracle sweep confirms (cycle_ceiling.js
+-- logic): first failure over all j <= 400 is (184, 116).
+claim_of[a](cycle_exclusion_ceiling_sharp).
+ground[a](cycle_exclusion_ceiling_sharp, lean_excl_table_sharp_compiles).
+evidence[world](cycle_exclusion_ceiling_sharp, lean_excl_table_sharp_compiles).
+
+lean_theorem(thm_excl_table_sharp).
+depends_on(thm_excl_table_sharp, thm_excl_table).

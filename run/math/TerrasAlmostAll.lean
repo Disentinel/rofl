@@ -5284,3 +5284,11 @@ theorem stairT_A (k : Nat) (hk : 1 ≤ k) :
       omega
     · rw [if_neg hbit]
       omega
+
+/-- SHARPNESS of the cycle-exclusion ceiling: at accelerated length 184
+    the near-coincidence 3^116 ≈ 2^183.86 pushes the cycle-element bound
+    past the 2^71 floor — 183 is not a compute limit but the exact
+    ceiling this verification floor supports. -/
+theorem excl_table_sharp : ¬(2 ^ 184 * 3 ^ 116
+    < 2 ^ 71 * (2 ^ 116 * (2 ^ 184 - 3 ^ 116)) + 2 ^ 184 * 2 ^ 116) := by
+  decide
