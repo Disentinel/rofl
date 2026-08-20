@@ -874,3 +874,17 @@ count_law + fail_zero_no_gap the core's growth dynamics is fully pinned:
 exact doubling on gap-free depths, loss ≥ 1 at crossings. Kernel #eval
 losses [1,1,0,1,2,0,3,7,0,12,0,30] — zeros exactly at the Sturmian
 gap-free depths | catch: none | born: none | facts(main)=73381
+
+R83 | Track D: **the growth law in closed form** | `crit_eq_dpf` — the
+critical set IS the core's population at the unique crossing exponent
+(uniqueness by 3-power spacing, 3^a = 2^(k+1) excluded by parity), so via
+NN_eq_dpf: `growth_closed_form` u_{k+1} + dpf k a* = 2·u_k at crossings,
+`doubling_at_gap` u_{k+1} = 2·u_k on gap-free depths — the core's growth
+fully computable, kernel-checked (spots: 4+2=6=2·3? no — NU5+dpf43 =
+4+2 = 6 = 2·NU4 ✓; 19+7 = 26 = 2·NU7 ✓). HONEST NEGATIVE also recorded:
+the planned "staircase point α ∉ ℕ" theorem is NOT reachable by the
+bounded-orbit route — on the staircase D/2^j has ~0.63j Θ(1) terms, the
+hypothetical orbit grows linearly; α ∈ ℕ is exactly a critical-line
+orbit, open territory. Strategy refuted before formalization, ledgered
+as such | catch: the α-strategy refutation (self-caught at design time)
+| born: none | facts(main)=73405

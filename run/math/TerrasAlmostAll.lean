@@ -4971,3 +4971,110 @@ theorem crossing_strict_loss (k a : Nat) (hk : 1 ≤ k)
   have hc := count_law k
   have hs := sink_never_dry k a hk h1 h2
   omega
+
+/- ---------- THE GROWTH LAW IN CLOSED FORM ---------- -/
+/- The critical set is exactly the core's population at the unique
+   crossing exponent, so count_law becomes fully computable:
+   u_{k+1} = 2·u_k − dpf k a* at a crossing, and u_{k+1} = 2·u_k exactly
+   on gap-free depths. -/
+
+theorem crit_eq_dpf (k a : Nat) (hk : 1 ≤ k) (h1 : 2 ^ k < 3 ^ a)
+    (h2 : 3 ^ a ≤ 2 ^ (k + 1)) :
+    S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k)
+      = dpf k a := by
+  have hpt : ∀ r, r < 2 ^ k →
+      indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)
+        = indU k r * (if A k r = a then 1 else 0) := by
+    intro r _
+    by_cases hu : indU k r = 1
+    · have hgate := indU_one_gate (k - 1) r (by
+        have e : k - 1 + 1 = k := by omega
+        rw [e]
+        exact hu)
+      have egate : k - 1 + 1 = k := by omega
+      rw [egate] at hgate
+      by_cases hcrit : 2 ^ (k + 1) < 3 ^ A k r
+      · -- non-critical: A ≠ a (3^A > 2^(k+1) ≥ 3^a → A > a)
+        have hne : ¬(A k r = a) := by
+          intro hAa
+          rw [hAa] at hcrit
+          omega
+        rw [if_pos hcrit, if_neg hne]
+      · -- critical: A = a by uniqueness of the crossing exponent
+        have hAa : A k r = a := by
+          by_cases hle : A k r ≤ a - 1
+          · have hmono : (3 : Nat) ^ A k r ≤ 3 ^ (a - 1) :=
+              Nat.pow_le_pow_right (by omega) hle
+            have ha1 : 1 ≤ a := by
+              by_cases h0 : a = 0
+              · subst h0
+                have : (3 : Nat) ^ 0 = 1 := rfl
+                rw [this] at h1
+                have hpos : 0 < (2 : Nat) ^ k := Nat.pow_pos (by omega)
+                omega
+              · omega
+            have hsucc : (3 : Nat) ^ ((a - 1) + 1) = 3 ^ (a - 1) * 3 := Nat.pow_succ 3 _
+            have e : a - 1 + 1 = a := by omega
+            rw [e] at hsucc
+            have hpow2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 k
+            omega
+          · by_cases hge : a + 1 ≤ A k r
+            · have hmono : (3 : Nat) ^ (a + 1) ≤ 3 ^ A k r :=
+                Nat.pow_le_pow_right (by omega) hge
+              have hsucc : (3 : Nat) ^ (a + 1) = 3 ^ a * 3 := Nat.pow_succ 3 a
+              have hpow2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 k
+              omega
+            · omega
+        rw [if_neg hcrit, if_pos hAa]
+    · have hz : indU k r = 0 := by
+        have := indU_le_one k r
+        omega
+      rw [hz, Nat.zero_mul, Nat.zero_mul]
+  have hcongr := S_congr _ _ (2 ^ k) hpt
+  rw [hcongr]
+  exact NN_eq_dpf k a
+
+/-- u_{k+1} = 2·u_k − dpf k a* at a crossing depth, in Nat form. -/
+theorem growth_closed_form (k a : Nat) (hk : 1 ≤ k) (h1 : 2 ^ k < 3 ^ a)
+    (h2 : 3 ^ a ≤ 2 ^ (k + 1)) :
+    NU (k + 1) + dpf k a = 2 * NU k := by
+  have hc := count_law k
+  have he := crit_eq_dpf k a hk h1 h2
+  omega
+
+/-- EXACT DOUBLING on gap-free depths: u_{k+1} = 2·u_k. -/
+theorem doubling_at_gap (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
+    NU (k + 1) = 2 * NU k := by
+  have hng := fail_zero_no_gap k hf
+  have hpt : ∀ r, r < 2 ^ k →
+      indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1) = 0 := by
+    intro r _
+    by_cases hu : indU k r = 1
+    · have hgate := indU_one_gate (k - 1) r (by
+        have e : k - 1 + 1 = k := by omega
+        rw [e]
+        exact hu)
+      have egate : k - 1 + 1 = k := by omega
+      rw [egate] at hgate
+      have hne := hng (A k r)
+      have hodd := odd_pow3 (A k r)
+      have hcrit : 2 ^ (k + 1) < 3 ^ A k r := by
+        by_cases hc : 2 ^ (k + 1) < 3 ^ A k r
+        · exact hc
+        · -- 2^k < 3^A ≤ 2^(k+1); equality excluded by parity; else a gap 3-power
+          have hpow2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 k
+          by_cases heq : 3 ^ A k r = 2 ^ (k + 1)
+          · have hpos : 0 < (2 : Nat) ^ k := Nat.pow_pos (by omega)
+            omega
+          · exact absurd ⟨hgate, by omega⟩ hne
+      rw [if_pos hcrit, Nat.mul_zero]
+    · have hz : indU k r = 0 := by
+        have := indU_le_one k r
+        omega
+      rw [hz, Nat.zero_mul]
+  have hc := count_law k
+  have hzero : S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k)
+      = 0 := by
+    have := S_congr _ (fun _ => 0) (2 ^ k) hpt
+    rw [this, S_const_zero]
+  omega
