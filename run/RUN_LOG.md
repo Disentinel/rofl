@@ -880,8 +880,8 @@ critical set IS the core's population at the unique crossing exponent
 (uniqueness by 3-power spacing, 3^a = 2^(k+1) excluded by parity), so via
 NN_eq_dpf: `growth_closed_form` u_{k+1} + dpf k a* = 2·u_k at crossings,
 `doubling_at_gap` u_{k+1} = 2·u_k on gap-free depths — the core's growth
-fully computable, kernel-checked (spots: 4+2=6=2·3? no — NU5+dpf43 =
-4+2 = 6 = 2·NU4 ✓; 19+7 = 26 = 2·NU7 ✓). HONEST NEGATIVE also recorded:
+fully computable, kernel-checked (spots: NU 5 + dpf 4 3 = 4+2 = 6 =
+2·NU 4 ✓; NU 8 + dpf 7 5 = 19+7 = 26 = 2·NU 7 ✓). HONEST NEGATIVE also recorded:
 the planned "staircase point α ∉ ℕ" theorem is NOT reachable by the
 bounded-orbit route — on the staircase D/2^j has ~0.63j Θ(1) terms, the
 hypothetical orbit grows linearly; α ∈ ℕ is exactly a critical-line
