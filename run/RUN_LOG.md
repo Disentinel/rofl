@@ -568,3 +568,9 @@ not-pursued note | catch: THIRD facts-count pre-write (72568 vs actual
 compound-command habit violated it again; rule hardened: the RUN_LOG entry is
 now written in a separate command AFTER eval output is read, never in the
 same shell compound | born: none | facts(main)=72564
+
+R51 | AXIOMS.txt — the trust surface as one file | #print axioms re-elicited
+for all 170 theorem declarations across the 7 Lean files: native_decide in
+exactly 10 distinct theorems (all finite checks); every general theorem on
+the three standard axioms or fewer; 26 pure-kernel no-axiom lines including
+both rate certificates | catch: none | born: none | facts(main)=72582
