@@ -125,3 +125,20 @@ negative result of the strongest kind: the first-drop statistics carry no
 exploitable structure beyond the stochastic model — which is precisely the
 established difficulty (every measurable observable behaves randomly; the
 conjecture is that the random model never "gets lucky" on a single orbit).
+
+**H3 — TESTED, round 58: FORMALIZED.** From the run's own affine machinery,
+the sharp subtraction-free bound D·2^A + 2^j·2^A ≤ 2^j·3^A (odd steps late
+maximize the additive constant; the induction closes on A ≤ j alone). Every
+element of a j-step cycle then satisfies n·2^a·(2^j−3^a) ≤ 2^j·(3^a−2^a),
+and exact minima of 2^j − 3^a push every such element below 2^71 for all
+j ≤ 183 (first failure at j = 184, where the closest 3-power convergent
+lifts the bound to ~2^72). Kernel result `no_small_cycles`: CONDITIONAL on
+the 2^71 verification floor (external, web-sourced), the accelerated map
+has no cycle of length 1..183 through any n ≥ 3 — with the full exclusion
+table a pure kernel decide (~17k exact big-integer comparisons, NO axioms;
+the theorem itself needs only propext + Quot.sound). Weaker than Hercher's
+m ≤ 91 odd-runs bound, but self-contained, mechanized, and grown entirely
+from this run's affine lemma. The positivity of D — the "+1 sign resource"
+from §0 — is exactly what forces 2^j > 3^a here; the 3n−1 filter passes:
+for 3n−1 the analogous D is negative and the argument correctly refuses to
+exclude its real cycles.

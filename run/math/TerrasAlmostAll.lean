@@ -2857,3 +2857,346 @@ theorem core_713 (k : Nat) (hk : 26 ≤ k) : 2 ^ (7 * k / 13) ≤ 16384 * uf k :
   have h5 : (2 : Nat) ^ (14 * (k / 26) + 13) = 2 ^ (14 * (k / 26)) * 8192 := by
     rw [Nat.pow_add]
   omega
+
+/- ---------- Track D, H3: conditional cycle exclusion ---------- -/
+/- From the run's own affine machinery: a j-step cycle element satisfies
+   n·(2^j − 3^a) = D with the sharp bound D·2^a ≤ 2^j·(3^a − 2^a) (odd steps
+   late maximize D; the proof needs only A ≤ j). Exact minima of 2^j − 3^a
+   then bound every cycle element below the 2^71 verification floor for all
+   accelerated lengths j ≤ 183. CONDITIONAL on that floor (an external,
+   web-sourced computation), no nontrivial cycle has length ≤ 183. -/
+
+theorem titer_add (x : Nat) : ∀ y n, Titer (x + y) n = Titer y (Titer x n) := by
+  induction x with
+  | zero =>
+    intro y n
+    have h : (0 : Nat) + y = y := by omega
+    rw [h]
+    rfl
+  | succ p ih =>
+    intro y n
+    have h : p + 1 + y = (p + y) + 1 := by omega
+    -- Titer (p+1+y) n = Titer (p+y+1) n = ... peel from the FRONT:
+    -- Titer (k+1) n = Titer k (T n), so induct through the first step
+    have h1 : Titer (p + 1 + y) n = Titer (p + y) (T n) := by
+      rw [h]
+      show Titer ((p + y) + 1) n = Titer (p + y) (T n)
+      -- both peel the first application: Titer (k+1) n = Titer k (T n) by def
+      rfl
+    have h2 : Titer (p + 1) n = Titer p (T n) := rfl
+    rw [h1, h2, ← ih y (T n)]
+
+/-- Orbit periodicity from a cycle. -/
+theorem titer_period (j n : Nat) (hc : Titer j n = n) :
+    ∀ q r, Titer (q * j + r) n = Titer r n := by
+  intro q
+  induction q with
+  | zero =>
+    intro r
+    have h : 0 * j + r = r := by omega
+    rw [h]
+  | succ p ih =>
+    intro r
+    have h : (p + 1) * j + r = j + (p * j + r) := by
+      have : (p + 1) * j = j + p * j := by
+        rw [Nat.add_mul]
+        omega
+      omega
+    rw [h, titer_add j (p * j + r) n, hc]
+    exact ih r
+
+/-- Argmin over an initial range. -/
+theorem range_argmin (f : Nat → Nat) : ∀ j, 1 ≤ j →
+    ∃ i0, i0 < j ∧ ∀ i, i < j → f i0 ≤ f i := by
+  intro j
+  induction j with
+  | zero => omega
+  | succ p ih =>
+    intro _
+    by_cases hp : 1 ≤ p
+    · have ⟨i0, hi0, hmin⟩ := ih hp
+      by_cases hle : f i0 ≤ f p
+      · exact ⟨i0, by omega, by
+          intro i hi
+          by_cases hip : i < p
+          · exact hmin i hip
+          · have : i = p := by omega
+            subst this
+            exact hle⟩
+      · exact ⟨p, by omega, by
+          intro i hi
+          by_cases hip : i < p
+          · have := hmin i hip
+            omega
+          · have : i = p := by omega
+            subst this
+            omega⟩
+    · have hp0 : p = 0 := by omega
+      subst hp0
+      exact ⟨0, by omega, by
+        intro i hi
+        have : i = 0 := by omega
+        subst this
+        omega⟩
+
+/-- The orbit of 1 is {1, 2}. -/
+theorem orbit_one : ∀ i, Titer i 1 = 1 ∨ Titer i 1 = 2 := by
+  intro i
+  induction i with
+  | zero => left; rfl
+  | succ p ih =>
+    -- Titer (p+1) 1 = T (Titer p 1)? careful: our Titer applies T first.
+    -- Use titer_add: Titer (p+1) 1 = Titer 1 (Titer p 1)? p+1 = p + 1 ✓
+    have h : Titer (p + 1) 1 = Titer 1 (Titer p 1) := titer_add p 1 1
+    cases ih with
+    | inl h1 =>
+      rw [h, h1]
+      right
+      rfl
+    | inr h2 =>
+      rw [h, h2]
+      left
+      rfl
+
+theorem mul_lit4 (a b : Nat) : 2 * a * (2 * b) = 4 * (a * b) := by
+  have h1 : 2 * a * (2 * b) = 2 * (a * (2 * b)) := Nat.mul_assoc 2 a (2 * b)
+  have h2 : a * (2 * b) = 2 * (a * b) := Nat.mul_left_comm a 2 b
+  omega
+
+theorem mul_lit6 (a b : Nat) : 2 * a * (3 * b) = 6 * (a * b) := by
+  have h1 : 2 * a * (3 * b) = 2 * (a * (3 * b)) := Nat.mul_assoc 2 a (3 * b)
+  have h2 : a * (3 * b) = 3 * (a * b) := Nat.mul_left_comm a 3 b
+  omega
+
+theorem mul_lit2 (a b : Nat) : a * (2 * b) = 2 * (a * b) := Nat.mul_left_comm a 2 b
+
+/-- Subtraction-free sharp D bound: D·2^A + 2^j·2^A ≤ 2^j·3^A. -/
+theorem D_bound (j : Nat) : ∀ n,
+    D j n * 2 ^ A j n + 2 ^ j * 2 ^ A j n ≤ 2 ^ j * 3 ^ A j n := by
+  induction j with
+  | zero =>
+    intro n
+    show D 0 n * 2 ^ A 0 n + 1 * 2 ^ A 0 n ≤ 1 * 3 ^ A 0 n
+    have h1 : D 0 n = 0 := rfl
+    have h2 : A 0 n = 0 := rfl
+    rw [h1, h2]
+    omega
+  | succ m ih =>
+    intro n
+    have hIH := ih (T n)
+    have hAle := A_le m (T n)
+    have hYZ : (2 : Nat) ^ A m (T n) ≤ 2 ^ m :=
+      Nat.pow_le_pow_right (by omega) hAle
+    by_cases hp : n % 2 = 0
+    · have hA : A (m + 1) n = A m (T n) := by
+        rw [A_succ, if_pos hp]
+        omega
+      have hD : D (m + 1) n = 2 * D m (T n) := by
+        rw [D_succ, if_pos hp]
+      rw [hA, hD]
+      have hpj : (2 : Nat) ^ (m + 1) = 2 * 2 ^ m := by
+        rw [Nat.pow_succ]
+        omega
+      rw [hpj]
+      -- 2D'·Y + 2Z·Y ≤ 2Z·X from D'Y + ZY ≤ ZX
+      have e1 : 2 * D m (T n) * 2 ^ A m (T n)
+          = 2 * (D m (T n) * 2 ^ A m (T n)) := by rw [Nat.mul_assoc]
+      have e2 : 2 * 2 ^ m * 2 ^ A m (T n) = 2 * (2 ^ m * 2 ^ A m (T n)) := by
+        rw [Nat.mul_assoc]
+      have e3 : 2 * 2 ^ m * 3 ^ A m (T n) = 2 * (2 ^ m * 3 ^ A m (T n)) := by
+        rw [Nat.mul_assoc]
+      omega
+    · have hA : A (m + 1) n = 1 + A m (T n) := by
+        rw [A_succ, if_neg hp]
+      have hD : D (m + 1) n = 3 ^ A m (T n) + 2 * D m (T n) := by
+        rw [D_succ, if_neg hp]
+      rw [hA, hD]
+      have hpj : (2 : Nat) ^ (m + 1) = 2 * 2 ^ m := by
+        rw [Nat.pow_succ]
+        omega
+      have hpy : (2 : Nat) ^ (1 + A m (T n)) = 2 * 2 ^ A m (T n) := by
+        rw [Nat.pow_add]
+      have hpx : (3 : Nat) ^ (1 + A m (T n)) = 3 * 3 ^ A m (T n) := by
+        rw [Nat.pow_add]
+      rw [hpj, hpy, hpx]
+      -- atoms: X = 3^A', Y = 2^A', Z = 2^m, W = D'
+      -- goal: (X + 2W)(2Y) + 2Z·2Y ≤ 2Z·3X
+      -- from IH: WY + ZY ≤ ZX and XY ≤ XZ (Y ≤ Z)
+      have hXY : 3 ^ A m (T n) * 2 ^ A m (T n) ≤ 3 ^ A m (T n) * 2 ^ m :=
+        Nat.mul_le_mul_left _ hYZ
+      have e1 : (3 ^ A m (T n) + 2 * D m (T n)) * (2 * 2 ^ A m (T n))
+          = 2 * (3 ^ A m (T n) * 2 ^ A m (T n)) + 4 * (D m (T n) * 2 ^ A m (T n)) := by
+        rw [Nat.add_mul]
+        have a1 := mul_lit2 (3 ^ A m (T n)) (2 ^ A m (T n))
+        have a2 := mul_lit4 (D m (T n)) (2 ^ A m (T n))
+        omega
+      have e2 := mul_lit4 (2 ^ m) (2 ^ A m (T n))
+      have e3 := mul_lit6 (2 ^ m) (3 ^ A m (T n))
+      have hXZcomm : 3 ^ A m (T n) * 2 ^ m = 2 ^ m * 3 ^ A m (T n) := Nat.mul_comm _ _
+      omega
+
+/-- The positivity of the orbit. -/
+theorem titer_pos (i : Nat) : ∀ n, 1 ≤ n → 1 ≤ Titer i n := by
+  induction i with
+  | zero => intro n hn; exact hn
+  | succ p ih =>
+    intro n hn
+    have hstep : Titer (p + 1) n = Titer p (T n) := rfl
+    have hT : 1 ≤ T n := by
+      by_cases hp : n % 2 = 0
+      · rw [T_even n hp]
+        omega
+      · have hp1 : n % 2 = 1 := by omega
+        rw [T_odd n hp1]
+        omega
+    rw [hstep]
+    exact ih (T n) hT
+
+/-- A cycle element satisfies the sharp inequality (subtraction-free form). -/
+theorem cycle_ineq (j n : Nat) (hj : 1 ≤ j) (hn : 1 ≤ n) (hc : Titer j n = n) :
+    3 ^ A j n < 2 ^ j ∧
+    n * (2 ^ A j n * 2 ^ j) + 2 ^ j * 2 ^ A j n
+      ≤ n * (2 ^ A j n * 3 ^ A j n) + 2 ^ j * 3 ^ A j n := by
+  have haff := affine j n
+  rw [hc] at haff
+  -- haff : 2^j * n = 3^A * n + D
+  have hdb := D_bound j n
+  -- first: 3^A < 2^j
+  have hlt : 3 ^ A j n < 2 ^ j := by
+    by_cases hge : 2 ^ j ≤ 3 ^ A j n
+    · exfalso
+      have hmono : 2 ^ j * n ≤ 3 ^ A j n * n := Nat.mul_le_mul_right n hge
+      have hD0 : D j n = 0 := by omega
+      have heq2 : 2 ^ j * n = 3 ^ A j n * n := by omega
+      have heqp : 2 ^ j = 3 ^ A j n := Nat.eq_of_mul_eq_mul_right (by omega) heq2
+      have hodd := odd_pow3 (A j n)
+      have heven : (2 : Nat) ^ j % 2 = 0 := by
+        have hj1 : j = (j - 1) + 1 := by omega
+        rw [hj1, Nat.pow_succ]
+        omega
+      omega
+    · omega
+  refine ⟨hlt, ?_⟩
+  -- multiply haff by 2^A and reshape
+  have hmul := congrArg (fun z => z * 2 ^ A j n) haff
+  simp only [] at hmul
+  -- hmul : 2^j * n * 2^A = (3^A * n + D) * 2^A
+  have hexp : (3 ^ A j n * n + D j n) * 2 ^ A j n
+      = 3 ^ A j n * n * 2 ^ A j n + D j n * 2 ^ A j n := Nat.add_mul _ _ _
+  -- canonical shapes
+  have hs1 : 2 ^ j * n * 2 ^ A j n = n * (2 ^ A j n * 2 ^ j) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  have hs2 : 3 ^ A j n * n * 2 ^ A j n = n * (2 ^ A j n * 3 ^ A j n) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  omega
+
+set_option maxRecDepth 2000000 in
+/-- The exclusion table: for every accelerated length j ≤ 183 and every
+    admissible a, the cycle bound lands strictly below the 2^71 floor —
+    pure kernel decide, ~17k exact big-integer comparisons. -/
+theorem excl_table : ((List.range 183).all (fun j0 =>
+    (List.range (j0 + 2)).all (fun a =>
+      decide (3 ^ a < 2 ^ (j0 + 1) →
+        2 ^ (j0 + 1) * 3 ^ a
+          < 2 ^ 71 * (2 ^ a * (2 ^ (j0 + 1) - 3 ^ a)) + 2 ^ (j0 + 1) * 2 ^ a)))) = true := by
+  decide
+
+/-- CONDITIONAL CYCLE EXCLUSION: if every 2 ≤ m < 2^71 eventually drops
+    below itself (the verification floor, an external computation), then the
+    accelerated Collatz map has no cycle of length 1..183 through any n ≥ 3. -/
+theorem no_small_cycles
+    (hfloor : ∀ m, 2 ≤ m → m < 2 ^ 71 → ∃ i, Titer i m < m) :
+    ∀ n j, 3 ≤ n → 1 ≤ j → j ≤ 183 → Titer j n ≠ n := by
+  intro n j hn hj hjle hc
+  have ⟨i0, hi0j, hmin⟩ := range_argmin (fun i => Titer i n) j hj
+  -- the orbit minimum M := Titer i0 n is itself a j-cycle element
+  have hrot : Titer j (Titer i0 n) = Titer i0 n := by
+    rw [← titer_add i0 j n]
+    have hcomm : i0 + j = 1 * j + i0 := by omega
+    rw [hcomm, titer_period j n hc 1 i0]
+  have hnever : ∀ i, ¬ Titer i (Titer i0 n) < Titer i0 n := by
+    intro i hlt
+    have h1 : Titer i (Titer i0 n) = Titer (i0 + i) n := (titer_add i0 i n).symm
+    have hjpos : 0 < j := hj
+    have hmr : (i0 + i) % j < j := Nat.mod_lt _ hjpos
+    have h2 : Titer (i0 + i) n = Titer ((i0 + i) % j) n := by
+      have hd : i0 + i = ((i0 + i) / j) * j + (i0 + i) % j := by
+        have h1 := Nat.div_add_mod (i0 + i) j
+        have h2 : ((i0 + i) / j) * j = j * ((i0 + i) / j) := Nat.mul_comm _ _
+        omega
+      have hstep : Titer ((i0 + i) / j * j + (i0 + i) % j) n
+          = Titer ((i0 + i) % j) n :=
+        titer_period j n hc ((i0 + i) / j) ((i0 + i) % j)
+      rw [← hd] at hstep
+      exact hstep
+    have h3 : Titer i0 n ≤ Titer ((i0 + i) % j) n := hmin _ hmr
+    omega
+  by_cases hm2 : Titer i0 n ≤ 2
+  · -- the cycle would be the trivial {1,2} one, but n ≥ 3 sits on it
+    have hni : Titer (j - i0) (Titer i0 n) = n := by
+      rw [← titer_add i0 (j - i0) n]
+      have he : i0 + (j - i0) = j := by omega
+      rw [he, hc]
+    have hm1 : 1 ≤ Titer i0 n := titer_pos i0 n (by omega)
+    have horb : ∀ i, Titer i (Titer i0 n) ≤ 2 := by
+      intro i
+      by_cases h1 : Titer i0 n = 1
+      · rw [h1]
+        cases orbit_one i with
+        | inl h => omega
+        | inr h => omega
+      · have h2v : Titer i0 n = 2 := by omega
+        rw [h2v]
+        have hT12 : (2 : Nat) = T 1 := by rfl
+        rw [hT12]
+        have hT11 : Titer 1 1 = T 1 := rfl
+        have hsh : Titer i (T 1) = Titer (1 + i) 1 := by
+          rw [← hT11]
+          exact (titer_add 1 i 1).symm
+        rw [hsh]
+        cases orbit_one (1 + i) with
+        | inl h => omega
+        | inr h => omega
+    have := horb (j - i0)
+    rw [hni] at this
+    omega
+  · -- M ≥ 3: bound it under the floor via the table, then contradict hfloor
+    have hm1 : 1 ≤ Titer i0 n := by omega
+    have ⟨hlt, hineq⟩ := cycle_ineq j (Titer i0 n) hj hm1 hrot
+    by_cases hbig : Titer i0 n < 2 ^ 71
+    · have ⟨i, hdrop⟩ := hfloor (Titer i0 n) (by omega) hbig
+      exact hnever i hdrop
+    · -- M ≥ 2^71 contradicts the table bound
+      exfalso
+      have hF : 2 ^ 71 ≤ Titer i0 n := by omega
+      -- extract the table entry at (j, A j M)
+      have haj : A j (Titer i0 n) ≤ j := A_le j _
+      have htab := excl_table
+      simp only [List.all_eq_true, List.mem_range, decide_eq_true_eq] at htab
+      have hentry := htab (j - 1) (by omega) (A j (Titer i0 n)) (by omega)
+      have hj1 : j - 1 + 1 = j := by omega
+      rw [hj1] at hentry
+      have htabi := hentry hlt
+      -- assemble the contradiction
+      have hGsum : 2 ^ A j (Titer i0 n) * 3 ^ A j (Titer i0 n)
+            + 2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))
+          = 2 ^ A j (Titer i0 n) * 2 ^ j := by
+        have h1 : 3 ^ A j (Titer i0 n) + (2 ^ j - 3 ^ A j (Titer i0 n)) = 2 ^ j := by
+          omega
+        calc 2 ^ A j (Titer i0 n) * 3 ^ A j (Titer i0 n)
+              + 2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))
+            = 2 ^ A j (Titer i0 n)
+              * (3 ^ A j (Titer i0 n) + (2 ^ j - 3 ^ A j (Titer i0 n))) :=
+              (Nat.mul_add _ _ _).symm
+          _ = 2 ^ A j (Titer i0 n) * 2 ^ j := by rw [h1]
+      have hMsplit : Titer i0 n * (2 ^ A j (Titer i0 n) * 2 ^ j)
+          = Titer i0 n * (2 ^ A j (Titer i0 n) * 3 ^ A j (Titer i0 n))
+            + Titer i0 n * (2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))) := by
+        calc Titer i0 n * (2 ^ A j (Titer i0 n) * 2 ^ j)
+            = Titer i0 n * (2 ^ A j (Titer i0 n) * 3 ^ A j (Titer i0 n)
+              + 2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))) := by rw [hGsum]
+          _ = _ := Nat.mul_add _ _ _
+      have hFM : 2 ^ 71 * (2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n)))
+          ≤ Titer i0 n * (2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))) :=
+        Nat.mul_le_mul_right _ hF
+      omega

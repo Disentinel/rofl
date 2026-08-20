@@ -1,0 +1,28 @@
+-- Round 58 (Track D, H3). TARGET: conditional cycle exclusion, FORMALIZED.
+-- New kernel theorems (TerrasAlmostAll.lean, 3201 lines, exit 0):
+--   titer_add, titer_period, range_argmin, orbit_one, titer_pos (orbit
+--   machinery); mul_lit2/4/6; D_bound (D 2^A + 2^j 2^A <= 2^j 3^A — the
+--   sharp constant bound, induction closing on A <= j); cycle_ineq (every
+--   cycle element obeys the subtraction-free bound; the 3^a < 2^j half is
+--   forced by POSITIVITY of D — the sign resource of HYPOTHESES.md at
+--   work, and the 3n-1 falsification filter passes); excl_table (~17k
+--   exact comparisons, PURE KERNEL DECIDE, no axioms — upgraded from
+--   native); no_small_cycles: conditional on the 2^71 floor, NO cycle of
+--   accelerated length 1..183 through any n >= 3. Axioms of the final
+--   theorem: propext, Quot.sound only. First failure at j = 184 (bound
+--   ~2^72) — the honest edge of this method against this floor.
+claim_of[a](conditional_cycle_exclusion_183).
+ground[a](conditional_cycle_exclusion_183, lean_kernel_proof_no_small_cycles).
+evidence[world](conditional_cycle_exclusion_183, lean_kernel_proof_no_small_cycles).
+source_of(lean_kernel_proof_no_small_cycles, file_terras_almost_all_lean).
+
+thm(no_small_cycles).  thm(cycle_ineq).  thm(d_bound).  thm(excl_table).
+thm(titer_period).  thm(range_argmin).
+thm_dep(no_small_cycles, cycle_ineq).
+thm_dep(no_small_cycles, excl_table).
+thm_dep(no_small_cycles, titer_period).
+thm_dep(no_small_cycles, range_argmin).
+thm_dep(cycle_ineq, d_bound).
+thm_dep(cycle_ineq, affine).
+thm_dep(cycle_ineq, odd_pow3).
+thm_dep(d_bound, a_le).

@@ -628,3 +628,14 @@ random membership predicts; no avoidance fingerprint in first-drop
 statistics. A strong negative, honestly recorded | catch: H1's own naive
 ceiling ignored the polynomial factor — corrected inside the test |
 born: none | facts(main)=72720
+
+R58 | Track D, H3: **conditional cycle exclusion, formalized** | D_bound
+(D·2^A + 2^j·2^A ≤ 2^j·3^A — odd steps late maximize D; induction closes on
+A ≤ j), cycle_ineq (positivity of D forces 2^j > 3^a — the sign resource in
+action; the 3n−1 filter passes), orbit machinery (period, argmin, orbit of
+1), excl_table (~17k exact comparisons as a PURE KERNEL DECIDE, no axioms),
+no_small_cycles: conditional on the 2^71 floor, no cycle of accelerated
+length 1..183 through any n ≥ 3 — final theorem on propext + Quot.sound
+ONLY. First method failure at j = 184 (bound ~2^72). Weaker than Hercher's
+m ≤ 91 but self-contained and grown from the run's own affine lemma.
+3201 lines | catch: none | born: none | facts(main)=72798
