@@ -443,3 +443,20 @@ manifestly scales to modulus 3^t·2^j for any t (2 is a primitive root mod
 and gate k ≥ 2.71·s), so no covering system whose moduli involve only the
 primes 2 and 3 can certify descent — the class of certificates the
 sandwich already excluded in aggregate is now excluded residue-by-residue.
+
+**Round 78 — the hyper-uniformity, quantified one level deeper.**
+
+With flow and positivity proved at both 3-adic levels, the remaining
+content at mod 9 is quantitative. Exact class DP to depth 26 (u₂₆ =
+1,037,374; `nn9_chi2.js`): χ² of the residue profile against the
+multinomial null, averaged over k = 8..26 — mod 3: 0.237 vs null 2.0
+(×8.4 suppression); mod 9: 1.477 vs null 8.0 (×5.4). Bounded in k across
+five orders of magnitude of core growth; a Poisson-independent core would
+hold χ² ≈ df at both levels. The mod-9 suppression is weaker, as the flow
+predicts (six rotation phases vs two — slower mixing of imbalance).
+Kick-relax dynamics are directly visible: the k=23 crossing pair spikes
+χ²_mod3 to 1.26 at k=24, decaying to 0.22 by k=26 — exactly the
+V3_conserved picture (energy injected only at crossings, conserved
+between them). What no proved layer explains: WHY the injection is 5–8×
+below Poisson. That anomaly — the dying sets' balance — stays the single
+open structured observable of the search.

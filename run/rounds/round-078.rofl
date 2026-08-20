@@ -1,0 +1,20 @@
+-- Round 78 (Track D, measurement). HYPER-UNIFORMITY ONE LEVEL DEEPER:
+-- exact class DP to depth 26 (u_26 = 1,037,374; oracle
+-- run/mechanism/nn9_chi2.js). chi^2 of the core's residue profile vs the
+-- multinomial null, k = 8..26:
+--   mod 3: mean 0.237 vs null 2.0  -> x8.4 suppression
+--   mod 9: mean 1.477 vs null 8.0  -> x5.4 suppression
+-- No growth with k across five orders of magnitude in u_k; the mod-9
+-- suppression is weaker than mod-3, consistent with the flow picture
+-- (six rotation phases mod 9 vs two mod 3 => slower mixing). Kick-relax
+-- dynamics visible: chi^2_mod3 spikes to 1.26 at k=24 right after the
+-- k=23 crossing pair, decays to 0.22 by k=26 — matching V3_conserved
+-- (energy conserved on gap-free depths, injected only at crossings).
+-- The proved layer (mod3/mod9 flow + positivity) says the profile CANNOT
+-- die and CANNOT lose energy between crossings; the measured layer says
+-- the crossings inject far less than Poisson — that anomalous injection
+-- remains THE open structured observable of the mechanism search.
+claim_of[a](mod9_hyperuniformity_measured).
+ground[a](mod9_hyperuniformity_measured, nn9_chi2_oracle_depth26).
+evidence[oracle](mod9_hyperuniformity_measured, nn9_chi2_oracle_depth26).
+oracle_only(mod9_hyperuniformity_measured).

@@ -814,3 +814,14 @@ No covering certificate at modulus 9·2^j; the method visibly scales to any
 3^t·2^j — positivity now matches the flow laws at both proved 3-adic
 levels | catch: none (generator bug caught pre-emit: list-clearing slice)
 | born: none | facts(main)=73259
+
+R78 | Track D measurement: **hyper-uniformity extends to mod 9** | exact
+class DP to depth 26 (u₂₆ = 1,037,374; oracle run/mechanism/nn9_chi2.js).
+χ² of the core's residue profile vs multinomial null over k = 8..26:
+mod 3 mean 0.237 (null 2.0, ×8.4 suppression); mod 9 mean 1.477 (null
+8.0, ×5.4). No k-growth across five orders of magnitude; mod-9 weaker
+than mod-3 as the six-phase rotation predicts. Kick-relax visible: χ²
+spike 1.26 at k=24 after the k=23 crossing pair, decayed to 0.22 by k=26
+— matching V3_conserved. The anomalously weak crossing injection remains
+THE open structured observable | catch: none | born: none |
+facts(main)=73277
