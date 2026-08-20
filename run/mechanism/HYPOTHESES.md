@@ -262,3 +262,18 @@ residue bijection. Measured: O(1)–sub-Poisson for j ≤ 21, drifting toward
 genuine equidistribution of the core mod 3 — the first structural theorem
 INSIDE the counterexample core that the stochastic model does not already
 give. This is the search's formulated open problem.
+
+**Round 67 — the kick spectrum to j = 29 (revision).** New enumerator
+(lift_flip-based class tree, cross-validated against the DP: u₃₀ matches
+exactly) extends the kick data: ratios |kick|/√w per crossing:
+0.02–0.09 at j = 18, 20, 21 (the striking near-exact balances), 0.20–0.29
+at j = 26, 27, but 1.08 at j = 24 and 0.97 at j = 29 — full Poisson scale.
+REVISION of the round-63 framing: the anomaly is NOT a uniform sub-Poisson
+law; it concentrates at particular crossings (post-hoc significance of the
+three striking cases ≈ 1%, suggestive but not conclusive), while deep
+crossings look Poisson. The character-sum problem stands as formulated,
+but the honest reading is now "occasionally anomalously balanced, possibly
+structured at specific ladder positions" — the a*(j) arithmetic of the
+striking crossings (which 3-power, which convergent) is the place to look
+next. Recorded per the run's discipline: revise your own observation when
+scale arrives.

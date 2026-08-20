@@ -711,3 +711,12 @@ interaction. The open problem is now FORMULATED: bound the crossing kick
 a nontrivial bound would give the first structural theorem inside the core
 beyond the stochastic model. 3499 lines | catch: none | born: none |
 facts(main)=73024
+
+R67 | Track D: **kick spectrum to j=29 — self-revision** | new
+lift_flip-based enumerator (cross-validated: u₃₀ matches the DP exactly);
+kick ratios are deeply sub-Poisson at j=18/20/21 (0.02–0.09) but full
+Poisson at j=24 (1.08) and j=29 (0.97) — R63's uniform-sub-Poisson framing
+REVISED: the anomaly concentrates at specific ladder positions (post-hoc
+≈1%); next lead is the arithmetic of a*(j) at the striking crossings. The
+discipline's third self-revision-by-scale | catch: R63 framing revised |
+born: none | facts(main)=73032
