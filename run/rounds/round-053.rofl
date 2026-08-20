@@ -1,0 +1,15 @@
+-- Round 53 (Track C, empirical). TARGET: the rate-correction exponent at
+-- k = 600 (exact BigInt DP). R41's own alpha-estimate turns out to be a
+-- finite-size reading too: with lambda pinned at the entropy value
+-- 2^-(1-H) = 0.965907, pairwise exponent estimates over k = 150..600 give
+-- alpha ~ 1.36-1.40; the free 3-parameter fit gives alpha = 1.34 with
+-- r = 0.965747. This is consistent with the CLASSICAL ballot/first-passage
+-- polynomial exponent alpha = 3/2, approached slowly from below — and
+-- supersedes R41's "ballot-bridge heuristic suggests k^-1" reading (which
+-- the R41 record already flagged as unresolved). Window per-step rates:
+-- 0.9605 (200..300) -> 0.9635 (500..600), still climbing toward entropy.
+-- The lemma4_observed_rate_unproven shaky flag STAYS; its content is now:
+-- eta_k ~ C k^(-3/2) 2^(-(1-H)k), conjectured, unproven, data to k = 600.
+claim_of[a](ballot_exponent_three_halves_consistent).
+ground[a](ballot_exponent_three_halves_consistent, computed_dp600_alpha_fits).
+evidence[world](ballot_exponent_three_halves_consistent, computed_dp600_alpha_fits).

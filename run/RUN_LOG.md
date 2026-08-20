@@ -581,3 +581,12 @@ headline theorem signatures re-read adversarially against the prose
 No discrepancy: each statement says exactly what the docs claim. Two stale
 numerics in FINAL.md caught (line count fixed; rounds header queued for the
 close) | catch: stale FINAL.md numerics | born: none | facts(main)=72590
+
+R53 | Track C empirical: **the exponent refines again at k=600** | R41's
+α-estimate was itself finite-size: with λ pinned at entropy, pairwise
+estimates over k=150..600 give α ≈ 1.36–1.40; free fit α=1.34, r=0.965747 —
+consistent with the CLASSICAL ballot exponent 3/2 approached slowly from
+below. Conjectured form now η_k ~ C·k^(−3/2)·2^(−(1−H)k), unproven, data to
+k=600; the shaky flag stays with refined content | catch: R41's α reading
+superseded by scale (recursion of the R41 lesson) | born: none |
+facts(main)=72598
