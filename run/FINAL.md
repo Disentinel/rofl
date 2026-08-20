@@ -23,7 +23,7 @@ rebuilt and machine-checked the complete classical density theory of Collatz
 (Terras 1976's skeleton), in **core Lean 4.21.0, no mathlib**, with every
 load-bearing theorem kernel-checked (axioms: propext, Classical.choice,
 Quot.sound; the two big numeric certificates depend on **no axioms at all**).
-One self-contained file, `run/math/TerrasAlmostAll.lean` (~2100 lines),
+One self-contained file, `run/math/TerrasAlmostAll.lean` (~2600 lines),
 carries the final chain:
 
 1. **The map itself** — class-affine lemma 2^j·T^j(n) = 3^(A j n)·n + D j n

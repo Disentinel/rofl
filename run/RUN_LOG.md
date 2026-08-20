@@ -574,3 +574,10 @@ for all 170 theorem declarations across the 7 Lean files: native_decide in
 exactly 10 distinct theorems (all finite checks); every general theorem on
 the three standard axioms or fewer; 26 pure-kernel no-axiom lines including
 both rate certificates | catch: none | born: none | facts(main)=72582
+
+R52 | statement audit — the formalization's trust boundary | all nine
+headline theorem signatures re-read adversarially against the prose
+(FINAL/README/RUN_LOG) together with the definitions they quantify over.
+No discrepancy: each statement says exactly what the docs claim. Two stale
+numerics in FINAL.md caught (line count fixed; rounds header queued for the
+close) | catch: stale FINAL.md numerics | born: none | facts(main)=72590
