@@ -658,3 +658,12 @@ unconditionally. H4 tested: record penetrators' line-excess (max 4–9,
 return to 0) is consistent with the excursion null model within factor ~2 —
 third conformity datum; no exploitable anomaly in any Track-D observable so
 far | catch: none | born: none | facts(main)=72862
+
+R61 | Track D: H2 + **the mod-3 flow of the core** | backward tree: λ =
+1.2637 stable (≠ naive 4/3 — multiples of 3 never branch; the tree carries
+exactly computable 3-adic structure). NEW: the forward core's mod-3 profile
+is hyper-uniform (dev 10–20 vs √N ≈ 300 at k ≤ 22); the doubling-step law
+N(k+1) = (I+σ)·N(k) with |1+ω| = 1 is visible verbatim in the data
+(deviation vectors rotate without growing); only 3-power crossings inject
+sub-Poisson kicks. First nontrivial 2×3-interaction observable of the
+search | catch: none | born: none | facts(main)=72878

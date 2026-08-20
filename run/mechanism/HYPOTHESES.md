@@ -161,3 +161,28 @@ n·2^a·(2^k−3^a) ≤ 2^k·(3^a−2^a). Since the cap grows like (3/2)^(γk),
 never-droppers are strictly dominated to depth ≈ 2.71·log₂n — 4.3× wider
 than the log₃n window of never_dropper_in_core, unconditionally. Kernel,
 propext+Quot.sound.
+
+**H2 — TESTED, round 61.** Backward-tree level growth measured to depth 60:
+λ = 1.2637, stable over windows 30–60 — visibly BELOW the naive uniform-
+residue heuristic 4/3, and above 2^(1/3) ≈ 1.2599. The deficit is real
+structure: multiples of 3 never branch (a branch child (x−1)/3 ≡ 0 mod 3
+roots a branchless doubling chain), so the tree's residue distribution is
+the Perron eigenvector of a finite transition system — the backward tree
+carries exactly computable 3-adic structure.
+
+**NEW OBSERVATION (round 61): the mod-3 flow of the forward core.** The
+representatives of undecided classes mod 3 are HYPER-uniform: deviations
+from N/3 stay at 10–20 through k = 22 where √N ≈ 300 (χ² ≈ 0.02), then
+step to ~100–279 at k = 23–24, still ≪ √N. Mechanism, visible in the data:
+on doubling (gap-free) steps the children of class r are r and r + 2^k,
+i.e. mod 3 the counting vector obeys the EXACT linear law
+N(k+1) = (I + σ_s)·N(k) with s = 2^k mod 3 alternating — and I + σ has
+eigenvalue modulus |1 + ω| = 1 on the zero-sum subspace, so doubling steps
+ROTATE the deviation vector without growing it (observed verbatim:
+[8,11,−19] → [19,−8,−11]). All imbalance is injected only by the dying
+sets at 3-power crossings, and empirically those kicks are themselves
+sub-Poisson. The first nontrivial 2×3-interaction observable of the search:
+the core's 3-adic profile is governed by a rigid, provable flow plus small
+structured noise — exactly the Cobham-tension territory §1 pointed at.
+Candidate formalization (next round): the doubling-step law as a kernel
+theorem via the two-lift pairing.

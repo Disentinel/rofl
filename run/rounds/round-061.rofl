@@ -1,0 +1,19 @@
+-- Round 61 (Track D). H2 + a NEW observation.
+-- H2: backward-tree growth lambda = 1.2637 (stable, depth 30..60) — below
+-- the naive 4/3: multiples of 3 never branch, the tree's residue profile is
+-- the Perron eigenvector of a finite system; the backward tree has exactly
+-- computable 3-adic structure.
+-- NEW: the forward core's mod-3 profile is HYPER-uniform (dev 10-20 vs
+-- sqrtN ~ 300 through k=22), with the doubling-step law visible exactly in
+-- the data: N(k+1) = (I + sigma_{2^k mod 3}) N(k), and |1 + omega| = 1 —
+-- doubling steps ROTATE deviations without growth; only 3-power crossings
+-- inject (sub-Poisson) imbalance. First nontrivial 2x3-interaction
+-- observable of Track D; formalization of the doubling-step law targeted
+-- next round.
+claim_of[a](backward_tree_lambda_measured).
+ground[a](backward_tree_lambda_measured, computed_tree_levels_d60).
+evidence[world](backward_tree_lambda_measured, computed_tree_levels_d60).
+
+claim_of[a](core_mod3_hyperuniform_flow).
+ground[a](core_mod3_hyperuniform_flow, computed_mod3_profile_k26).
+evidence[world](core_mod3_hyperuniform_flow, computed_mod3_profile_k26).
