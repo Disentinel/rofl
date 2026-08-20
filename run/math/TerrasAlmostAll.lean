@@ -5146,3 +5146,141 @@ theorem alphaT_compat : ∀ k, alphaT (k + 1) % 2 ^ k = alphaT k := by
 theorem core_infinite_path : ∀ k,
     alphaT k < 2 ^ k ∧ indU k (alphaT k) = 1 ∧ alphaT (k + 1) % 2 ^ k = alphaT k :=
   fun k => ⟨alphaT_lt k, alphaT_undecided k, alphaT_compat k⟩
+
+/- ---------- THE STAIRCASE POINT, EXPLICITLY ---------- -/
+/- A second explicit core point: at each depth take the child whose
+   exponent stays MINIMAL — the odd child exactly when the current level
+   is critical. Its A-sequence is the mechanical staircase (A increments
+   iff 3^A fails to clear the next 2-power), i.e. its parity word is the
+   Sturmian word of log₂3. Whether its limit is a natural number is the
+   critical-line question — open, and shown (R83) to be out of reach of
+   the bounded-orbit method. -/
+
+def stairT : Nat → Nat
+  | 0 => 0
+  | k + 1 =>
+    if 3 ^ A k (stairT k) ≤ 2 ^ (k + 1) then
+      (if Titer k (stairT k) % 2 = 1 then stairT k else stairT k + 2 ^ k)
+    else
+      (if Titer k (stairT k) % 2 = 0 then stairT k else stairT k + 2 ^ k)
+
+theorem stairT_succ (k : Nat) : stairT (k + 1)
+    = if 3 ^ A k (stairT k) ≤ 2 ^ (k + 1) then
+        (if Titer k (stairT k) % 2 = 1 then stairT k else stairT k + 2 ^ k)
+      else
+        (if Titer k (stairT k) % 2 = 0 then stairT k else stairT k + 2 ^ k) := rfl
+
+/-- Range, membership, tight exponent, and the staircase A-recursion, in
+    one induction. -/
+theorem stairT_spec : ∀ k, 1 ≤ k →
+    stairT k < 2 ^ k ∧ indU k (stairT k) = 1 ∧ 3 ^ A k (stairT k) ≤ 2 ^ k * 3 := by
+  intro k
+  induction k with
+  | zero => intro h; omega
+  | succ p ih =>
+    intro _
+    by_cases hp : 1 ≤ p
+    · have ⟨hr, hu, htight⟩ := ih hp
+      have hgate := indU_one_gate (p - 1) (stairT p) (by
+        have e : p - 1 + 1 = p := by omega
+        rw [e]
+        exact hu)
+      have egate : p - 1 + 1 = p := by omega
+      rw [egate] at hgate
+      have hper : indU p (stairT p + 2 ^ p) = indU p (stairT p) := by
+        have h1 : stairT p + 2 ^ p = stairT p + 1 * 2 ^ p := by omega
+        rw [h1]
+        exact indU_periodic p (stairT p) 1
+      have hA1 : A (p + 1) (stairT p) = A p (stairT p) + Titer p (stairT p) % 2 :=
+        A_snoc p (stairT p)
+      have hA2 : A (p + 1) (stairT p + 2 ^ p)
+          = A p (stairT p) + (1 - Titer p (stairT p) % 2) := by
+        have h1 := A_snoc p (stairT p + 2 ^ p)
+        have h2 : A p (stairT p + 2 ^ p) = A p (stairT p) := by
+          have e : stairT p + 2 ^ p = stairT p + 1 * 2 ^ p := by omega
+          rw [e]
+          exact (AD_periodic p (stairT p) 1).1
+        have h3 := lift_flip p (stairT p)
+        have h4 := odd_pow3 (A p (stairT p))
+        rw [h2, h3] at h1
+        omega
+      have hind1 : indU (p + 1) (stairT p)
+          = indU p (stairT p)
+            * (if 2 ^ (p + 1) < 3 ^ A (p + 1) (stairT p) then 1 else 0) :=
+        indU_succ p (stairT p)
+      have hind2 : indU (p + 1) (stairT p + 2 ^ p)
+          = indU p (stairT p)
+            * (if 2 ^ (p + 1) < 3 ^ A (p + 1) (stairT p + 2 ^ p) then 1 else 0) := by
+        rw [indU_succ, hper]
+      have hpow3 : (3 : Nat) ^ (A p (stairT p) + 1) = 3 ^ A p (stairT p) * 3 :=
+        Nat.pow_succ 3 _
+      have hpow2 : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+      have hodd : 2 ^ (p + 1) < 3 ^ (A p (stairT p) + 1) := by omega
+      rw [stairT_succ]
+      by_cases hcrit : 3 ^ A p (stairT p) ≤ 2 ^ (p + 1)
+      · rw [if_pos hcrit]
+        by_cases hbit : Titer p (stairT p) % 2 = 1
+        · rw [if_pos hbit]
+          have eA : A (p + 1) (stairT p) = A p (stairT p) + 1 := by omega
+          refine ⟨by omega, ?_, ?_⟩
+          · rw [hind1, hu, eA, if_pos hodd]
+          · rw [eA]
+            omega
+        · rw [if_neg hbit]
+          have eA : A (p + 1) (stairT p + 2 ^ p) = A p (stairT p) + 1 := by omega
+          refine ⟨by omega, ?_, ?_⟩
+          · rw [hind2, hu, eA, if_pos hodd]
+          · rw [eA]
+            omega
+      · rw [if_neg hcrit]
+        by_cases hbit : Titer p (stairT p) % 2 = 0
+        · rw [if_pos hbit]
+          have eA : A (p + 1) (stairT p) = A p (stairT p) := by omega
+          refine ⟨by omega, ?_, ?_⟩
+          · rw [hind1, hu, eA, if_pos (by omega)]
+          · rw [eA]
+            omega
+        · rw [if_neg hbit]
+          have eA : A (p + 1) (stairT p + 2 ^ p) = A p (stairT p) := by omega
+          refine ⟨by omega, ?_, ?_⟩
+          · rw [hind2, hu, eA, if_pos (by omega)]
+          · rw [eA]
+            omega
+    · have hp0 : p = 0 := by omega
+      subst hp0
+      refine ⟨?_, ?_, ?_⟩ <;> decide
+
+/-- The staircase A-recursion: the point's exponent increments exactly
+    when the level is critical — its parity word is the mechanical
+    (Sturmian) word of log₂3. -/
+theorem stairT_A (k : Nat) (hk : 1 ≤ k) :
+    A (k + 1) (stairT (k + 1))
+      = A k (stairT k) + (if 3 ^ A k (stairT k) ≤ 2 ^ (k + 1) then 1 else 0) := by
+  have ⟨hr, hu, htight⟩ := stairT_spec k hk
+  have hA1 : A (k + 1) (stairT k) = A k (stairT k) + Titer k (stairT k) % 2 :=
+    A_snoc k (stairT k)
+  have hA2 : A (k + 1) (stairT k + 2 ^ k)
+      = A k (stairT k) + (1 - Titer k (stairT k) % 2) := by
+    have h1 := A_snoc k (stairT k + 2 ^ k)
+    have h2 : A k (stairT k + 2 ^ k) = A k (stairT k) := by
+      have e : stairT k + 2 ^ k = stairT k + 1 * 2 ^ k := by omega
+      rw [e]
+      exact (AD_periodic k (stairT k) 1).1
+    have h3 := lift_flip k (stairT k)
+    have h4 := odd_pow3 (A k (stairT k))
+    rw [h2, h3] at h1
+    omega
+  rw [stairT_succ]
+  by_cases hcrit : 3 ^ A k (stairT k) ≤ 2 ^ (k + 1)
+  · rw [if_pos hcrit, if_pos hcrit]
+    by_cases hbit : Titer k (stairT k) % 2 = 1
+    · rw [if_pos hbit]
+      omega
+    · rw [if_neg hbit]
+      omega
+  · rw [if_neg hcrit, if_neg hcrit]
+    by_cases hbit : Titer k (stairT k) % 2 = 0
+    · rw [if_pos hbit]
+      omega
+    · rw [if_neg hbit]
+      omega

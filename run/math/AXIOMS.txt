@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T12:20Z; 259 theorem declarations.
+# Generated 2026-08-20T12:40Z; 262 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -276,4 +276,7 @@
 'alphaT_undecided' depends on axioms: [propext, Quot.sound]
 'alphaT_compat' depends on axioms: [propext, Quot.sound]
 'core_infinite_path' depends on axioms: [propext, Quot.sound]
+'stairT_succ' does not depend on any axioms
+'stairT_spec' depends on axioms: [propext, Quot.sound]
+'stairT_A' depends on axioms: [propext, Quot.sound]
 

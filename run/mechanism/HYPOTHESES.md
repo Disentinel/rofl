@@ -542,3 +542,21 @@ language, is that EVERY such infinite path escapes ℕ the way this one
 visibly does — and that no cycle path exists. The run leaves that exactly
 as open as it found it, now with the boundary drawn through a concrete
 2-adic number.
+
+**Round 86 — the staircase point made explicit; the board closes.**
+
+`stairT`: the minimal-exponent branch as a computable def, with
+kernel-checked range/membership/tightness (`stairT_spec`) and the
+staircase A-recursion (`stairT_A`) — the point's parity word is the
+mechanical Sturmian word of log₂3. The run leaves the core bracketed by
+two explicit 2-adic points: alphaT (greedy-stay; shadows 27 for 58
+depths, escapes upward at each decision event — the dynamical face) and
+stairT (extremal; departs 27 at depth 6, rides the critical line — the
+symbolic face, ones-density → log₃2). Both undecided at every depth,
+both propext + Quot.sound. The canonical question, restated one last
+time in the run's sharpest vocabulary: does any infinite core path other
+than these — or these themselves — have a natural-number limit? The
+sandwich says such paths are exponentially many; the covering
+obstruction says no residue sieve can separate them from ℕ; the
+branching law says exactly where they are pruned; and the coupling bit
+holds whatever answer exists.

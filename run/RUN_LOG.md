@@ -913,3 +913,14 @@ extended with second-half data | catch: R75/R78 "born: none" entries
 were written without reading rels — corrected in place; the R34/R36
 transcription failure mode, third occurrence, on a new field | born:
 none (verified against rels this time) | facts(main)=73443
+
+R86 | Track D: **the staircase point, explicitly** | `stairT` — the
+minimal-exponent core point (odd child exactly at critical levels);
+`stairT_spec`: in-range, undecided at every depth, tight 3^A ≤ 3·2^k;
+`stairT_A`: A increments iff critical — the parity word is the mechanical
+Sturmian word of log₂3, kernel-checked. Exhibits: truncations depart 27
+at depth 6 (vs alphaT's 58 — the two explicit points bracket the core:
+greedy-stay shadows real orbits, extremal rides the critical line);
+parity word 110110110101...(ones → log₃2). stairT's limit ∈ ℕ would BE a
+critical-line orbit — exactly the open question R83 fenced | catch: none
+| born: none (verified: rels 101 unchanged) | facts(main)=73467

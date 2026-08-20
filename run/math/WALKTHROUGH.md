@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 259 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 262 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -106,7 +106,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–84)
+## 8. Track D additions (mechanism search, rounds 57–86)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -168,6 +168,12 @@ this route cannot reach it.
   whose every truncation is undecided — the INFINITE core is nonempty,
   constructively (it shadows 27 to depth 58, then escapes upward forever;
   see run/mechanism/alpha_path.js).
+- `stairT` + `stairT_spec` / `stairT_A` : the second explicit core point —
+  minimal exponent at every depth, parity word = the Sturmian word of
+  log₂3 (A increments iff the level is critical). With `alphaT`: two
+  computable 2-adic points bracketing the core's character; whether
+  stairT's limit is a natural number is precisely the critical-line
+  question, left open.
 - `collatz_iff_descent` (§1) : the canonical reduction itself, proved in
   round 76 — universal eventual descent ⟺ every n reaches 1 under the
   original map (`descent_to_one` strong induction + `citer_cycle` 1→4→2 +
