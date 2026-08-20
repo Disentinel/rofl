@@ -214,3 +214,22 @@ appears or the freeze is broken, the run halts for real, no second exemption.
 R17 | record R16 as claims | two claims asserted (inclusion persistence 64/128,
 exact-fill break at 64), both with computed grounds; ZERO new predicates — freeze
 honored from this round | catch: none | born: none (freeze) |
+
+## WALL-CLOCK GAP (recorded honestly)
+Container restart killed the running range-9999 probe and the session worker;
+~21:40Z (Aug 19) → 00:17Z (Aug 20) lost, probe relaunched 00:20Z from committed
+state (nothing lost from the ledger — sources + snapshots are in git; the
+rebuild-from-sources discipline paid for itself). The probe then ran 4h03m.
+
+R18 | range-9999 scratch probe (freeze honored, zero new predicates) | 808,523
+facts, in-substrate eval 4.03h (measured scaling point: 70k facts ~100s -> 808k
+facts ~14,500s, the superlinear curve of SUBSTRATE_ISSUES #5 at main-model shape).
+Results at n<=9999: **(1) slow set dual-computed EXACTLY — engine == oracle on the
+full 285-member sorted list**, not just counts; (2) inclusion persists: all
+slow_outside_m EMPTY at mod 32/64/128; (3) **exact fill RESTORED at all three
+moduli** — the 15-mod-64 branch (empty at 999) came alive at 9999: R16's
+strictness was a range artifact, and R17's range-scoped hedge is exactly why that
+claim needs no repair — scope discipline paid; (4) still_slow EMPTY at horizon
+260 — no new horizon chase at 10x range. Four claims asserted with computed
+grounds | catch: the R16->R18 pair is the run's cleanest demonstration of WHY
+range-scoping claims matters | born: none (freeze) | probe facts=808523
