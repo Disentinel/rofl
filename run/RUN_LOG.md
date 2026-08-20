@@ -377,3 +377,17 @@ WHOLE tail of every decided class provably drops — undecided classes (density
 (native_decide k ≤ 14): undecidedCount from the REAL map = string-DP uf.
 Next natural target: the Q_k bijection as a kernel theorem | catch: none |
 born: none | facts(main)=70988
+
+R32 | Track C: **THE CULMINATION — Terras's almost-all theorem assembled as
+one kernel object** | TerrasAlmostAll.lean (949 lines, self-contained,
+exit 0; axioms: propext, Classical.choice, Quot.sound — zero native_decide in
+the load-bearing chain). NEW general theorems: NN_eq_dpf — #{r < 2^j
+undecided, s odd steps} = dpf j s for ALL j,s, proof pairs the two lifts
+r, r+2^j of each class via lift_flip (T^j(r+2^j) = T^j(r) + 3^(A j r); 3^a
+odd ⟹ trajectory parity FLIPS between lifts ⟹ exactly one lift extends the
+odd count — the DP recurrence emerges from the affine lemma); NU_eq_uf (all
+k, upgrading R31's k≤14 native bridge — repaired by supersession); and
+terras_almost_all: ∀c, k ≥ max(1,c^100) ⟹ c·NU k ≤ 2^k ∧ every n ≥ 3^k in a
+decided class drops within k steps. Density decay + counting identification
++ drop criterion with no gap between abstract DP and honest trajectories |
+catch: none | born: none | facts(main)=71014

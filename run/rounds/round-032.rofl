@@ -1,0 +1,32 @@
+-- Round 32 (Track C). TARGET: the run's mathematical culmination —
+-- run/math/TerrasAlmostAll.lean (949 lines, self-contained, exit 0):
+-- the GENERAL counting theorem + the assembled almost-all theorem,
+-- kernel-checked, axioms of terras_almost_all: propext, Classical.choice,
+-- Quot.sound — no native_decide anywhere in the load-bearing chain.
+-- NEW general theorems (upgrading round-31's k<=14 finite bridge to ALL k):
+--   NN_eq_dpf: #{r < 2^j : undecided through j with s odd steps} = dpf j s.
+--     Proof pairs the two lifts r, r + 2^j of each depth-j class via
+--     lift_flip (T^j(r + 2^j) = T^j(r) + 3^(A j r), from the affine lemma;
+--     3^a is odd, so the trajectory parity FLIPS between lifts — exactly one
+--     lift extends the odd-step count, reproducing the DP recurrence).
+--   NU_eq_uf: total undecided residues mod 2^k = uf k, for every k.
+--   terras_almost_all: for every c, once k >= max(1, c^100):
+--     (1) c * NU k <= 2^k  (at most a 1/c fraction of classes undecided), and
+--     (2) every n >= 3^k in a decided class has some i <= k with T^i(n) < n.
+-- This is Terras's 1976 almost-all theorem's full skeleton as ONE machine
+-- object: density decay + counting identification + drop criterion, no gaps
+-- between the abstract DP and the honest Collatz trajectories.
+-- The round-31 note "general bijection remains prose" is REPAIRED by
+-- supersession: the counting identification is now a kernel theorem (the
+-- prose Q_k bijection stays as the human-readable account).
+claim_of[a](terras_almost_all_assembled_lean).
+ground[a](terras_almost_all_assembled_lean, lean_kernel_proof_terras_almost_all).
+evidence[world](terras_almost_all_assembled_lean, lean_kernel_proof_terras_almost_all).
+
+claim_of[a](counting_bridge_general_all_k).
+ground[a](counting_bridge_general_all_k, lean_kernel_proof_terras_almost_all).
+evidence[world](counting_bridge_general_all_k, lean_kernel_proof_terras_almost_all).
+
+src(file_terras_almost_all_lean).  src_basis(file_terras_almost_all_lean, repo_committed).
+verified[world](file_terras_almost_all_lean).
+source_of(lean_kernel_proof_terras_almost_all, file_terras_almost_all_lean).
