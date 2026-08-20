@@ -186,3 +186,17 @@ the core's 3-adic profile is governed by a rigid, provable flow plus small
 structured noise — exactly the Cobham-tension territory §1 pointed at.
 Candidate formalization (next round): the doubling-step law as a kernel
 theorem via the two-lift pairing.
+
+**Round 62 (formal): the mod-3 flow law PROVED.** `indU_double` — on a
+gap-free depth k, BOTH lifts of every undecided class stay undecided (the
+odd-parity lift by 3·3^A > 2^(k+1), the even-parity lift because the gap is
+empty and 3^A ≠ 2^(k+1) by parity) — and `mod3_flow`:
+
+    NN3 c (k+1) = NN3 c k + NN3 ((c + 2^(k+1)) mod 3) k
+
+kernel-checked. The round-61 observation is now a theorem: the core's mod-3
+profile evolves by the exact I + σ dynamics on gap-free depths (eigenvalue
+modulus 1 on the zero-sum subspace — deviations rotate, never grow there);
+ALL mod-3 imbalance of the core originates at 3-power crossings. This is
+the search's one genuinely constructive find: a rigid, machine-checked 2×3
+interaction law inside the very set where counterexamples must live.

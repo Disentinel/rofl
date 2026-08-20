@@ -3285,3 +3285,128 @@ theorem never_dropper_cap (n : Nat) (hnd : ∀ i, ¬ Titer i n < n) (k : Nat) :
   have hs2 : 3 ^ A k n * n * 2 ^ A k n = n * (2 ^ A k n * 3 ^ A k n) := by
     simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
   omega
+
+/- ---------- Track D: the exact mod-3 flow of the core ---------- -/
+/- Observed in round 61: the core's mod-3 profile is hyper-uniform, and on
+   doubling steps its deviation vector rotates without growing. The law
+   behind it, formalized: on a gap-free depth (no 3-power in (2^k, 2^(k+1))),
+   BOTH lifts of every undecided class stay undecided, so the mod-3 counting
+   vector obeys N_c(k+1) = N_c(k) + N_{c'}(k) with c' = (c + 2^(k+1)) mod 3
+   — the I + σ dynamics whose eigenvalue modulus on the zero-sum subspace
+   is |1 + ω| = 1. -/
+
+/-- On a gap-free depth, both lifts of an undecided class survive. -/
+theorem indU_double (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
+    ∀ r, indU (k + 1) r = indU k r ∧ indU (k + 1) (2 ^ k + r) = indU k r := by
+  intro r
+  have hng := fail_zero_no_gap k hf
+  have hper : indU k (2 ^ k + r) = indU k r := by
+    rw [Nat.add_comm (2 ^ k) r]
+    have h1 : r + 2 ^ k = r + 1 * 2 ^ k := by omega
+    rw [h1]
+    exact indU_periodic k r 1
+  by_cases hz : indU k r = 0
+  · constructor
+    · rw [indU_succ, hz, Nat.zero_mul]
+    · rw [indU_succ, hper, hz, Nat.zero_mul]
+  · have h1 : indU k r = 1 := by
+      have := indU_le_one k r
+      omega
+    -- extract domination at depth k
+    have hdom : 2 ^ k < 3 ^ A k r := by
+      match k, hk, h1 with
+      | k0 + 1, _, h1 =>
+        rw [indU_succ] at h1
+        by_cases hg : 2 ^ (k0 + 1) < 3 ^ A (k0 + 1) r
+        · exact hg
+        · rw [if_neg hg, Nat.mul_zero] at h1
+          omega
+    -- the two lifts take the two parities at step k+1
+    have hs1 := A_snoc k r
+    have hs2' := A_snoc k (2 ^ k + r)
+    have hAp : A k (2 ^ k + r) = A k r := by
+      rw [Nat.add_comm (2 ^ k) r]
+      have h2 : r + 2 ^ k = r + 1 * 2 ^ k := by omega
+      rw [h2]
+      exact (AD_periodic k r 1).1
+    have hflip : Titer k (2 ^ k + r) = Titer k r + 3 ^ A k r := by
+      rw [Nat.add_comm (2 ^ k) r]
+      exact lift_flip k r
+    have hodd := odd_pow3 (A k r)
+    have hpar : Titer k (2 ^ k + r) % 2 = 1 - Titer k r % 2 := by
+      rw [hflip]
+      omega
+    -- gate at A + 1 always passes
+    have hgate1 : ∀ b, b = 1 → 2 ^ (k + 1) < 3 ^ (A k r + b) := by
+      intro b hb
+      subst hb
+      have h3 : (3 : Nat) ^ (A k r + 1) = 3 ^ A k r * 3 := Nat.pow_succ 3 _
+      have h2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 _
+      omega
+    -- gate at A + 0 passes because the gap is empty
+    have hgate0 : 2 ^ (k + 1) < 3 ^ A k r := by
+      have hno := hng (A k r)
+      have hne : (3 : Nat) ^ A k r ≠ 2 ^ (k + 1) := by
+        have h2 : (2 : Nat) ^ (k + 1) = 2 ^ k * 2 := Nat.pow_succ 2 _
+        omega
+      have : ¬ (3 ^ A k r < 2 ^ (k + 1)) := by
+        intro hlt
+        exact hno ⟨hdom, hlt⟩
+      omega
+    -- both gates pass whatever the parity split is
+    have hg1 : 2 ^ (k + 1) < 3 ^ A (k + 1) r := by
+      rw [hs1]
+      by_cases hp : Titer k r % 2 = 0
+      · rw [hp]
+        exact hgate0
+      · have hp1 : Titer k r % 2 = 1 := by omega
+        rw [hp1]
+        exact hgate1 1 rfl
+    have hg2 : 2 ^ (k + 1) < 3 ^ A (k + 1) (2 ^ k + r) := by
+      rw [hs2', hAp, hpar]
+      by_cases hp : Titer k r % 2 = 0
+      · rw [hp]
+        exact hgate1 1 rfl
+      · have hp1 : Titer k r % 2 = 1 := by omega
+        rw [hp1]
+        exact hgate0
+    constructor
+    · rw [indU_succ, if_pos hg1, h1]
+    · rw [indU_succ, if_pos hg2, hper, h1]
+
+/-- Mod-3-refined core count. -/
+def NN3 (c k : Nat) : Nat :=
+  S (fun r => indU k r * (if r % 3 = c then 1 else 0)) (2 ^ k)
+
+/-- THE MOD-3 FLOW LAW: on gap-free depths the mod-3 counting vector obeys
+    the exact I + σ dynamics. -/
+theorem mod3_flow (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) (c : Nat) (hc : c < 3) :
+    NN3 c (k + 1) = NN3 c k + NN3 ((c + 2 ^ (k + 1)) % 3) k := by
+  have hd := indU_double k hk hf
+  have hsplit : (2 : Nat) ^ (k + 1) = 2 ^ k + 2 ^ k := by
+    have := Nat.pow_succ 2 k
+    omega
+  show S (fun r => indU (k + 1) r * (if r % 3 = c then 1 else 0)) (2 ^ (k + 1))
+      = NN3 c k + NN3 ((c + 2 ^ (k + 1)) % 3) k
+  rw [hsplit, S_append _ (2 ^ k) (2 ^ k)]
+  have h1 : ∀ r, r < 2 ^ k →
+      indU (k + 1) r * (if r % 3 = c then 1 else 0)
+        = indU k r * (if r % 3 = c then 1 else 0) := by
+    intro r _
+    rw [(hd r).1]
+  have h2 : ∀ i, i < 2 ^ k →
+      indU (k + 1) (2 ^ k + i) * (if (2 ^ k + i) % 3 = c then 1 else 0)
+        = indU k i * (if i % 3 = (c + 2 ^ (k + 1)) % 3 then 1 else 0) := by
+    intro i _
+    rw [(hd i).2]
+    have hcong : (if (2 ^ k + i) % 3 = c then (1 : Nat) else 0)
+        = (if i % 3 = (c + 2 ^ (k + 1)) % 3 then 1 else 0) := by
+      have h2k : (2 : Nat) ^ (k + 1) = 2 * 2 ^ k := by
+        have := Nat.pow_succ 2 k
+        omega
+      by_cases hcase : (2 ^ k + i) % 3 = c
+      · rw [if_pos hcase, if_pos (by omega)]
+      · rw [if_neg hcase, if_neg (by omega)]
+    rw [hcong]
+  rw [S_congr _ _ _ h1, S_congr _ _ _ h2, ← hsplit]
+  rfl

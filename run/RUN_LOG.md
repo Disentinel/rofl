@@ -667,3 +667,12 @@ N(k+1) = (I+σ)·N(k) with |1+ω| = 1 is visible verbatim in the data
 (deviation vectors rotate without growing); only 3-power crossings inject
 sub-Poisson kicks. First nontrivial 2×3-interaction observable of the
 search | catch: none | born: none | facts(main)=72878
+
+R62 | Track D: **the mod-3 flow law PROVED** | indU_double (on gap-free
+depths BOTH lifts of every undecided class survive) + mod3_flow:
+NN3 c (k+1) = NN3 c k + NN3 ((c+2^(k+1)) mod 3) k, kernel-checked. R61's
+hyper-uniformity is now theorem-explained: gap-free steps rotate the
+deviation vector (|1+ω| = 1) without growing it; all mod-3 imbalance of the
+core originates at 3-power crossings. Track D's one constructive find: a
+rigid machine-checked 2×3 interaction law inside the counterexample core.
+3412 lines | catch: none | born: none | facts(main)=72934
