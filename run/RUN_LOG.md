@@ -292,3 +292,14 @@ fetched literature frontier vs the open gap. Zero new predicates | catch: a
 seed-modeling artifact (partials recorded only for no_cycles) exposed by real
 literature — in prose that sentence would have survived | born: none (freeze) |
 facts(main)=70804
+
+R23 | Track C: **Lemma 4** — the undecided classes thin out | Proved (Lean
+cores KERNEL-checked, no native_decide in the theorems): half-threshold
+2s ≤ k ⟹ 3^s < 2^k via 3^k < 4^k — dominated strings are majority-odd;
+η monotone; u_k ≤ binomial end-tail beyond t_k > k/2 (finite check k ≤ 20,
+Pascal choose — core Lean has no binomial). Numerics flagged unproven as a
+DELIBERATELY-shaky claim (hypothesis ground, no evidence): observed per-step
+η ratio ≈0.948 vs end-tail LD heuristic ≈0.966 — the ballot-constraint gap.
+Honesty: this is the machine-checked core of Terras's η→0, not a new result |
+catch: none | born: none (freeze) | facts(main)=70822; shaky now holds exactly
+the three honest flags (collatz, memory anchor, unproven rate)
