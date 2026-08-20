@@ -1,0 +1,22 @@
+-- Round 33 (Track C). TARGET: from residue classes to HONEST INTEGERS — the
+-- natural-density form, kernel-checked (TerrasAlmostAll.lean extended to
+-- 1101 lines, exit 0; #print axioms terras_integers: propext,
+-- Classical.choice, Quot.sound).
+-- New general theorems:
+--   ndrop (recursive 0/1 indicator: n has not dropped within k steps),
+--   ndrop_zero_of_drop, S_periodic (sums of mod-2^k-periodic functions over
+--   q full periods equal q times one period), S_below_le,
+--   ndrop_pointwise: a non-dropper is in an undecided class OR is < 3^k
+--   (via indU_zero_decided + A_period_general + drop_criterion);
+--   terras_integers: for every c, once k >= max(1, c^100):
+--     c * ND(q*2^k, k) <= q*2^k + c*3^k   for ALL q,
+--   where ND(N,k) = #{n < N : T^i(n) >= n for all i <= k}. As q grows the
+--   density of k-step non-droppers is bounded by 1/c + o(1) — the classical
+--   almost-all statement about INTEGERS, not classes, in pure Nat arithmetic.
+-- The chain is now: string DP = real-map classes (R32) -> class density -> 0
+-- (R30) -> decided tails drop (R31) -> integer counting (R33). No gaps.
+claim_of[a](terras_integer_density_form).
+ground[a](terras_integer_density_form, lean_kernel_proof_terras_integers).
+evidence[world](terras_integer_density_form, lean_kernel_proof_terras_integers).
+
+source_of(lean_kernel_proof_terras_integers, file_terras_almost_all_lean).

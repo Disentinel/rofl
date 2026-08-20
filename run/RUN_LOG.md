@@ -391,3 +391,15 @@ terras_almost_all: ∀c, k ≥ max(1,c^100) ⟹ c·NU k ≤ 2^k ∧ every n ≥ 
 decided class drops within k steps. Density decay + counting identification
 + drop criterion with no gap between abstract DP and honest trajectories |
 catch: none | born: none | facts(main)=71014
+
+R33 | Track C: **the integer form — Terras for honest n, not classes** |
+TerrasAlmostAll.lean grown to 1101 lines (exit 0, same three standard
+axioms). New: ndrop indicator (recursive), S_periodic (periodic sums over q
+full periods), S_below_le, ndrop_pointwise (a non-dropper is in an undecided
+class or is < 3^k), and terras_integers: ∀c, k ≥ max(1,c^100) ⟹
+c·ND(q·2^k, k) ≤ q·2^k + c·3^k for ALL q, where ND counts n < N with no drop
+within k steps. As q → ∞: density of k-step non-droppers ≤ 1/c + o(1) — the
+classical almost-all statement about integers in pure Nat. Full chain with no
+gaps: string DP = real classes (R32) → density → 0 (R30) → decided tails
+drop (R31) → integer counting (R33) | catch: none | born: none |
+facts(main)=71026

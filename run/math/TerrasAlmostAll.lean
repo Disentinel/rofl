@@ -947,3 +947,155 @@ theorem terras_almost_all (c k : Nat) (hk : 1 ≤ k) (hck : c ^ 100 ≤ k) :
       have : (3 : Nat) ^ i ≤ 3 ^ k := Nat.pow_le_pow_right (by omega) hik
       omega
     exact ⟨i, hik, drop_criterion i n hdec hni⟩
+
+/- ---------- FROM CLASSES TO INTEGERS: natural-density form ---------- -/
+
+/-- 0/1 indicator: n has NOT dropped below itself within k accelerated steps. -/
+def ndrop : Nat → Nat → Nat
+  | 0, _ => 1
+  | k + 1, n => ndrop k n * (if Titer (k + 1) n < n then 0 else 1)
+
+theorem ndrop_le_one (k : Nat) : ∀ n, ndrop k n ≤ 1 := by
+  induction k with
+  | zero => intro n; exact Nat.le_refl 1
+  | succ m ih =>
+    intro n
+    have h := ih n
+    show ndrop m n * (if Titer (m + 1) n < n then 0 else 1) ≤ 1
+    by_cases hc : Titer (m + 1) n < n
+    · rw [if_pos hc, Nat.mul_zero]
+      omega
+    · rw [if_neg hc, Nat.mul_one]
+      exact h
+
+theorem ndrop_zero_of_drop (k : Nat) : ∀ n i, i ≤ k → Titer i n < n → ndrop k n = 0 := by
+  induction k with
+  | zero =>
+    intro n i hik hdrop
+    have hi0 : i = 0 := by omega
+    subst hi0
+    have : Titer 0 n = n := rfl
+    omega
+  | succ m ih =>
+    intro n i hik hdrop
+    show ndrop m n * (if Titer (m + 1) n < n then 0 else 1) = 0
+    by_cases hi : i ≤ m
+    · rw [ih n i hi hdrop, Nat.zero_mul]
+    · have him : i = m + 1 := by omega
+      subst him
+      rw [if_pos hdrop, Nat.mul_zero]
+
+/-- Number of n < N that have not dropped within k steps. -/
+def ND (N k : Nat) : Nat := S (fun n => ndrop k n) N
+
+theorem S_const_one (n : Nat) : S (fun _ => 1) n = n := by
+  induction n with
+  | zero => rfl
+  | succ m ih =>
+    have := S_succ (fun _ => 1) m
+    omega
+
+/-- The number of n < N below a bound B is at most B. -/
+theorem S_below_le (B N : Nat) : S (fun n => if n < B then 1 else 0) N ≤ B := by
+  induction N with
+  | zero =>
+    show (0 : Nat) ≤ B
+    omega
+  | succ m ih =>
+    have hs := S_succ (fun n => if n < B then 1 else 0) m
+    by_cases hc : m < B
+    · have hle : S (fun n => if n < B then 1 else 0) m ≤ m := by
+        have h1 : ∀ n, n < m → (if n < B then (1 : Nat) else 0) ≤ (fun _ => 1) n := by
+          intro n _
+          by_cases h : n < B
+          · rw [if_pos h]
+            exact Nat.le_refl 1
+          · rw [if_neg h]
+            omega
+        have h2 := S_mono _ _ m h1
+        rw [S_const_one] at h2
+        exact h2
+      rw [hs, if_pos hc]
+      omega
+    · rw [hs, if_neg hc]
+      omega
+
+/-- Sums of a mod-2^k-periodic function over q full periods. -/
+theorem S_periodic (g : Nat → Nat) (k : Nat) : ∀ q,
+    S (fun n => g (n % 2 ^ k)) (q * 2 ^ k) = q * S (fun r => g r) (2 ^ k) := by
+  intro q
+  induction q with
+  | zero =>
+    rw [Nat.zero_mul, Nat.zero_mul]
+    rfl
+  | succ p ih =>
+    have hq : (p + 1) * 2 ^ k = p * 2 ^ k + 2 ^ k := by
+      rw [Nat.add_mul, Nat.one_mul]
+    rw [hq, S_append (fun n => g (n % 2 ^ k)) (p * 2 ^ k) (2 ^ k), ih]
+    have hpt : ∀ i, i < 2 ^ k →
+        g ((p * 2 ^ k + i) % 2 ^ k) = g i := by
+      intro i hi
+      have h1 : (p * 2 ^ k + i) % 2 ^ k = i % 2 ^ k := by
+        rw [Nat.add_comm (p * 2 ^ k) i]
+        exact Nat.add_mul_mod_self_right i p (2 ^ k)
+      have h2 : i % 2 ^ k = i := Nat.mod_eq_of_lt hi
+      rw [h1, h2]
+    rw [S_congr _ _ _ hpt, Nat.add_mul, Nat.one_mul]
+
+/-- Pointwise: a non-dropper is in an undecided class, or is small. -/
+theorem ndrop_pointwise (k n : Nat) (hk : 1 ≤ k) :
+    ndrop k n ≤ indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0) := by
+  by_cases hu : indU k (n % 2 ^ k) = 0
+  · by_cases hs : n < 3 ^ k
+    · rw [if_pos hs]
+      have := ndrop_le_one k n
+      omega
+    · -- decided class, large n: it drops, so the indicator is 0
+      have hn : 3 ^ k ≤ n := by omega
+      have ⟨i, _, hik, hdec⟩ := indU_zero_decided k (n % 2 ^ k) hu
+      have hAe : A i (n % 2 ^ k) = A i n := A_period_general i k hik n
+      rw [hAe] at hdec
+      have hni : 3 ^ i ≤ n := by
+        have : (3 : Nat) ^ i ≤ 3 ^ k := Nat.pow_le_pow_right (by omega) hik
+        omega
+      have hdrop := drop_criterion i n hdec hni
+      rw [ndrop_zero_of_drop k n i hik hdrop]
+      omega
+  · have := ndrop_le_one k n
+    omega
+
+/-- TERRAS FOR INTEGERS, kernel-checked: among the first q·2^k integers, the
+    non-droppers (within k accelerated steps) number at most (q·2^k)/c + 3^k
+    — in Nat form: c · ND(q·2^k, k) ≤ q·2^k + c·3^k, once k ≥ max(1, c^100).
+    As q → ∞ the density bound tends to 1/c, for every c. -/
+theorem terras_integers (c k q : Nat) (hk : 1 ≤ k) (hck : c ^ 100 ≤ k) :
+    c * ND (q * 2 ^ k) k ≤ q * 2 ^ k + c * 3 ^ k := by
+  have hpt : ∀ n, n < q * 2 ^ k →
+      ndrop k n ≤ indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0) := by
+    intro n _
+    exact ndrop_pointwise k n hk
+  have h1 : ND (q * 2 ^ k) k
+      ≤ S (fun n => indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0)) (q * 2 ^ k) :=
+    S_mono _ _ _ hpt
+  have h2 : S (fun n => indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0)) (q * 2 ^ k)
+      = S (fun n => indU k (n % 2 ^ k)) (q * 2 ^ k)
+        + S (fun n => if n < 3 ^ k then 1 else 0) (q * 2 ^ k) :=
+    S_add _ _ _
+  have h3 : S (fun n => indU k (n % 2 ^ k)) (q * 2 ^ k) = q * NU k := by
+    have := S_periodic (fun r => indU k r) k q
+    exact this
+  have h4 : S (fun n => if n < 3 ^ k then 1 else 0) (q * 2 ^ k) ≤ 3 ^ k :=
+    S_below_le (3 ^ k) (q * 2 ^ k)
+  have h5 : ND (q * 2 ^ k) k ≤ q * NU k + 3 ^ k := by omega
+  have h6 : c * ND (q * 2 ^ k) k ≤ c * (q * NU k + 3 ^ k) :=
+    Nat.mul_le_mul_left c h5
+  have h7 : c * (q * NU k + 3 ^ k) = q * (c * NU k) + c * 3 ^ k := by
+    rw [Nat.mul_add]
+    have : c * (q * NU k) = q * (c * NU k) := by
+      rw [← Nat.mul_assoc, Nat.mul_comm c q, Nat.mul_assoc]
+    omega
+  have h8 : c * NU k ≤ 2 ^ k := by
+    rw [NU_eq_uf]
+    exact density_decay c k hk hck
+  have h9 : q * (c * NU k) ≤ q * 2 ^ k := Nat.mul_le_mul_left q h8
+  omega
