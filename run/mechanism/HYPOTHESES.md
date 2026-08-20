@@ -498,3 +498,20 @@ carry. That is precisely the R73 coupling bit, now localized not just by
 measurement but by a kernel-checked exact identity. The mechanism search
 ends where it kept pointing: one pseudo-random bit per class per depth,
 everything else is theorem.
+
+**Round 82 — the sink never runs dry.**
+
+Completion of the branching-law picture: `min_level_inhabited` proves by
+a greedy induction (take the even child while it survives; a crossing
+forces the odd child) that the minimal-exponent level of the core is
+inhabited at EVERY depth, with the tight bound 3^A ≤ 3·2^k riding along
+as the induction invariant. So the critical set is nonempty at every
+crossing (`sink_never_dry`) and the core strictly loses there
+(`crossing_strict_loss`). Growth dynamics now fully proved: exact
+doubling at gap-free depths (count_law + fail_zero_no_gap), loss ≥ 1 at
+crossings. Kernel-evaluated losses at k = 0..11: [1,1,0,1,2,0,3,7,0,12,
+0,30] — the zeros land exactly on the Sturmian gap-free pattern of
+log₂3. The measured reality (losses ≈ h_k(a*) growing like the staircase
+level's population) sits between the proved floor (≥ 1) and the trivial
+ceiling (u_k); the composition question — WHICH classes are critical —
+remains the localized open bit.

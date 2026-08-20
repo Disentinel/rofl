@@ -4846,3 +4846,128 @@ theorem count_law (k : Nat) :
   have h6 : S (fun r => indU k r * 2) (2 ^ k) = NU k * 2 :=
     S_mul_right _ 2 _
   omega
+
+/- ---------- THE SINK NEVER RUNS DRY ---------- -/
+/- The minimal-exponent "staircase" level of the core is inhabited at
+   every depth (greedy witness: follow the even child while it survives,
+   forced to the odd child exactly at crossings). Hence at every crossing
+   depth at least one class dies: u_{k+1} < 2·u_k — combined with
+   count_law and fail_zero_no_gap, the core doubles EXACTLY at gap-free
+   depths and strictly less at every crossing. -/
+
+theorem min_level_inhabited : ∀ k, 1 ≤ k →
+    ∃ r, r < 2 ^ k ∧ indU k r = 1 ∧ 3 ^ A k r ≤ 2 ^ k * 3 := by
+  intro k
+  induction k with
+  | zero => intro h; omega
+  | succ p ih =>
+    intro _
+    by_cases hp : 1 ≤ p
+    · have ⟨r, hr, hu, htight⟩ := ih hp
+      have hgate := indU_one_gate (p - 1) r (by
+        have e : p - 1 + 1 = p := by omega
+        rw [e]
+        exact hu)
+      have egate : p - 1 + 1 = p := by omega
+      rw [egate] at hgate
+      -- hgate : 2 ^ p < 3 ^ A p r
+      have hper : indU p (r + 2 ^ p) = indU p r := by
+        have h1 : r + 2 ^ p = r + 1 * 2 ^ p := by omega
+        rw [h1]
+        exact indU_periodic p r 1
+      have hA1 : A (p + 1) r = A p r + Titer p r % 2 := A_snoc p r
+      have hA2 : A (p + 1) (r + 2 ^ p) = A p r + (1 - Titer p r % 2) := by
+        have h1 := A_snoc p (r + 2 ^ p)
+        have h2 : A p (r + 2 ^ p) = A p r := by
+          have e : r + 2 ^ p = r + 1 * 2 ^ p := by omega
+          rw [e]
+          exact (AD_periodic p r 1).1
+        have h3 := lift_flip p r
+        have h4 := odd_pow3 (A p r)
+        rw [h2, h3] at h1
+        omega
+      have hind1 : indU (p + 1) r
+          = indU p r * (if 2 ^ (p + 1) < 3 ^ A (p + 1) r then 1 else 0) := indU_succ p r
+      have hind2 : indU (p + 1) (r + 2 ^ p)
+          = indU p r * (if 2 ^ (p + 1) < 3 ^ A (p + 1) (r + 2 ^ p) then 1 else 0) := by
+        rw [indU_succ, hper]
+      have hpow3 : (3 : Nat) ^ (A p r + 1) = 3 ^ A p r * 3 := Nat.pow_succ 3 _
+      have hpow2 : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+      have hodd : 2 ^ (p + 1) < 3 ^ (A p r + 1) := by omega
+      by_cases hcrit : 3 ^ A p r ≤ 2 ^ (p + 1)
+      · -- forced to the odd-step child; its A is A p r + 1
+        by_cases hbit : Titer p r % 2 = 1
+        · -- r itself is the odd child
+          have eA : A (p + 1) r = A p r + 1 := by omega
+          refine ⟨r, by omega, ?_, ?_⟩
+          · rw [hind1, hu, eA, if_pos hodd]
+          · rw [eA]
+            omega
+        · -- the lift is the odd child
+          have eA : A (p + 1) (r + 2 ^ p) = A p r + 1 := by omega
+          refine ⟨r + 2 ^ p, by omega, ?_, ?_⟩
+          · rw [hind2, hu, eA, if_pos hodd]
+          · rw [eA]
+            omega
+      · -- non-critical: the even-step child keeps A p r
+        by_cases hbit : Titer p r % 2 = 0
+        · have eA : A (p + 1) r = A p r := by omega
+          refine ⟨r, by omega, ?_, ?_⟩
+          · rw [hind1, hu, eA, if_pos (by omega)]
+          · rw [eA]
+            omega
+        · have eA : A (p + 1) (r + 2 ^ p) = A p r := by omega
+          refine ⟨r + 2 ^ p, by omega, ?_, ?_⟩
+          · rw [hind2, hu, eA, if_pos (by omega)]
+          · rw [eA]
+            omega
+    · -- p = 0, k = 1: witness r = 1
+      have hp0 : p = 0 := by omega
+      subst hp0
+      refine ⟨1, by omega, ?_, ?_⟩
+      · decide
+      · decide
+
+/-- At every crossing depth the critical set is nonempty. -/
+theorem sink_never_dry (k a : Nat) (hk : 1 ≤ k)
+    (h1 : 2 ^ k < 3 ^ a) (h2 : 3 ^ a < 2 ^ (k + 1)) :
+    1 ≤ S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k) := by
+  have ⟨r, hr, hu, htight⟩ := min_level_inhabited k hk
+  have hgate := indU_one_gate (k - 1) r (by
+    have e : k - 1 + 1 = k := by omega
+    rw [e]
+    exact hu)
+  have egate : k - 1 + 1 = k := by omega
+  rw [egate] at hgate
+  -- the witness is critical: 3 ^ A k r ≤ 2 ^ (k+1)
+  have hcrit : 3 ^ A k r ≤ 2 ^ (k + 1) := by
+    by_cases hc : 3 ^ A k r ≤ 2 ^ (k + 1)
+    · exact hc
+    · -- 3^A > 2^(k+1) > 3^a → A ≥ a+1 → 3^A ≥ 3·3^a > 3·2^k ≥ 3^A: contradiction
+      have haA : a + 1 ≤ A k r := by
+        by_cases hle : A k r ≤ a
+        · have hmm : (3 : Nat) ^ A k r ≤ 3 ^ a := Nat.pow_le_pow_right (by omega) hle
+          omega
+        · omega
+      have hmono : (3 : Nat) ^ (a + 1) ≤ 3 ^ A k r :=
+        Nat.pow_le_pow_right (by omega) haA
+      have hpow3 : (3 : Nat) ^ (a + 1) = 3 ^ a * 3 := Nat.pow_succ 3 a
+      omega
+  have hterm : indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1) = 1 := by
+    rw [hu, if_neg (by omega), Nat.one_mul]
+  have hge := S_ge_term (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1))
+    (2 ^ k) r hr
+  have hge' : indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)
+      ≤ S (fun r => indU k r * (if 2 ^ (k + 1) < 3 ^ A k r then 0 else 1)) (2 ^ k) := hge
+  omega
+
+/-- STRICT LOSS AT CROSSINGS: u_{k+1} < 2·u_k whenever a 3-power lies in
+    (2^k, 2^(k+1)). With count_law and fail_zero_no_gap: the core doubles
+    exactly on gap-free depths, and loses at least one class at every
+    crossing — the growth dynamics fully pinned. -/
+theorem crossing_strict_loss (k a : Nat) (hk : 1 ≤ k)
+    (h1 : 2 ^ k < 3 ^ a) (h2 : 3 ^ a < 2 ^ (k + 1)) :
+    NU (k + 1) < 2 * NU k := by
+  have hc := count_law k
+  have hs := sink_never_dry k a hk h1 h2
+  omega

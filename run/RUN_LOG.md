@@ -863,3 +863,14 @@ evolution is a continuity equation with a point sink at the crossing
 exponent; all remaining non-determinism is the critical set's composition
 — the R73 coupling bit inside a proved conservation-with-loss law |
 catch: none | born: none | facts(main)=73361
+
+R82 | Track D: **the sink never runs dry** | `min_level_inhabited`: the
+staircase level (minimal exponent, 3^A ≤ 3·2^k tight) is inhabited at
+every depth — greedy witness follows the even child while non-critical,
+forced to the odd child exactly at crossings. Corollaries:
+`sink_never_dry` (critical set nonempty at every crossing) and
+`crossing_strict_loss` (u_{k+1} < 2·u_k at every crossing). With
+count_law + fail_zero_no_gap the core's growth dynamics is fully pinned:
+exact doubling on gap-free depths, loss ≥ 1 at crossings. Kernel #eval
+losses [1,1,0,1,2,0,3,7,0,12,0,30] — zeros exactly at the Sturmian
+gap-free depths | catch: none | born: none | facts(main)=73381
