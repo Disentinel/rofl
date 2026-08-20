@@ -825,3 +825,14 @@ spike 1.26 at k=24 after the k=23 crossing pair, decayed to 0.22 by k=26
 — matching V3_conserved. The anomalously weak crossing injection remains
 THE open structured observable | catch: none | born: none |
 facts(main)=73277
+
+R79 | Track D FRONTIER: **novelty check on R75–R78** | Live search before
+final synthesis: (1) the modulus family 3·2^σ is Terras's own 1976
+structure — the positivity theorems' OBJECTS are classical; (2) the
+2^k − 1 spine is textbook (Mersenne trajectory literature) — mirror_traj
+formalizes folklore; (3) the positivity statements themselves ("the
+depth-k core meets every class mod 3/9") and their kernel-checked forms
+NOT found stated; assessment recorded: refinement-level novelty on
+classical ingredients; (4) Conway-line undecidability of AP-partition
+recursions motivates the covering-obstruction framing. Sources in the
+ledger | catch: none | born: none | facts(main)=73301

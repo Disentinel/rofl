@@ -1,0 +1,25 @@
+-- Round 79 (Track D, FRONTIER). Novelty check on the R75-R78 claims
+-- against live literature before final synthesis. Findings:
+-- (1) The modulus family 3*2^sigma is Terras's own 1976 structure
+--     (stopping times constant on classes mod 3*2^sigma(s); confirmed in
+--     the stopping-time literature, e.g. arXiv:1504.00212). The OBJECTS
+--     of mod3/mod9_positive are classical.
+-- (2) The 2^k - 1 spine (k consecutive odd steps) is textbook; Mersenne
+--     trajectory structure studied (e.g. arXiv:1104.2804 on Collatz path
+--     lengths of Mersenne primes). mirror_traj formalizes folklore.
+-- (3) The POSITIVITY statements themselves — "the depth-k undecided core
+--     meets every residue class mod 3 (mod 9) at every depth", and their
+--     kernel-checked forms — were NOT found stated in the searched
+--     literature. Assessment: refinement-level novelty on classical
+--     ingredients; the mechanized form is new as far as searched.
+-- (4) Undecidability of generalized Collatz recursions on arithmetic-
+--     progression partitions (Conway line) — consistent with, and
+--     motivating, the covering-obstruction framing.
+src(src_stopping_time_1504_00212).  src_basis(src_stopping_time_1504_00212, web_fetched).
+verified[world](src_stopping_time_1504_00212).
+src(src_mersenne_1104_2804).  src_basis(src_mersenne_1104_2804, web_fetched).
+verified[world](src_mersenne_1104_2804).
+claim_of[a](positivity_claims_novelty_assessed).
+ground[a](positivity_claims_novelty_assessed, frontier_search_r79).
+evidence[world](positivity_claims_novelty_assessed, frontier_search_r79).
+source_of(frontier_search_r79, src_stopping_time_1504_00212).
