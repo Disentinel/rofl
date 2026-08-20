@@ -1,0 +1,11 @@
+-- Round 24. TARGET: cross-process determinism at run scale (protocol-grade
+-- substrate check, promoted from the kernel's phase-3 test to the live 70,822-
+-- fact reasoning state). Two OS processes: (A) rebuild from the .rofl sources;
+-- (B) restore run/state/latest.json.gz UNTRUSTED and re-evaluate from its base
+-- facts. canonicalState sha256 identical:
+--   d2e7ceeef89da09ecf749cfae2b5637a6a6f9764e9a799a07ada949b78d7fae1 (both).
+-- The full derived layer — facts, supports, witnesses, provenance — reproduces
+-- exactly across processes and across the two loading paths.
+claim_of[a](cross_process_determinism_70k).
+ground[a](cross_process_determinism_70k, computed_sha256_match_sources_vs_snapshot).
+evidence[world](cross_process_determinism_70k, computed_sha256_match_sources_vs_snapshot).
