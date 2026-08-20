@@ -1,0 +1,18 @@
+-- Round 59 (Track D). TARGET: the cycle table turns out to bind DESCENT
+-- counterexamples too. never_dropper_dominated (kernel, propext+Quot.sound):
+-- under the 2^71 floor, EVERY never-dropper n >= 3 is STRICTLY dominated at
+-- all depths k <= 183, regardless of size. never_dropper_in_core alone gave
+-- domination only to depth log3(n); for n in [2^71, 3^183) this is a real
+-- extension (window 45 -> 183 at the floor edge), and it welds the two
+-- Track-D fragments: the cycle machinery (H3) constrains the divergence
+-- side too. Combined with the sandwich, potential counterexamples now sit
+-- inside a locked 183-deep core of density <= 2^(-9) with NO size escape.
+claim_of[a](never_droppers_locked_183).
+ground[a](never_droppers_locked_183, lean_kernel_proof_nd_dominated).
+evidence[world](never_droppers_locked_183, lean_kernel_proof_nd_dominated).
+source_of(lean_kernel_proof_nd_dominated, file_terras_almost_all_lean).
+
+thm(never_dropper_dominated).
+thm_dep(never_dropper_dominated, d_bound).
+thm_dep(never_dropper_dominated, excl_table).
+thm_dep(never_dropper_dominated, affine).

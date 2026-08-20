@@ -639,3 +639,13 @@ length 1..183 through any n ≥ 3 — final theorem on propext + Quot.sound
 ONLY. First method failure at j = 184 (bound ~2^72). Weaker than Hercher's
 m ≤ 91 but self-contained and grown from the run's own affine lemma.
 3201 lines | catch: none | born: none | facts(main)=72798
+
+R59 | Track D: **the cycle table binds descent counterexamples too** |
+never_dropper_dominated (kernel, propext+Quot.sound): under the 2^71 floor,
+every never-dropper n ≥ 3 is STRICTLY dominated at all depths k ≤ 183
+regardless of size — extending never_dropper_in_core's log₃n window (a real
+gain for n ∈ [2^71, 3^183): 45 → 183 at the floor edge) and welding H3's
+cycle machinery to the divergence side. Potential counterexamples now sit
+in a locked 183-deep core of density ≤ 2^−9 with no size escape | catch:
+one compound command with cd broke relative paths — redone; reinforces the
+separate-command rule | born: none | facts(main)=72828

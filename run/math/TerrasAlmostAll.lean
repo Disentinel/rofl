@@ -3200,3 +3200,61 @@ theorem no_small_cycles
           ≤ Titer i0 n * (2 ^ A j (Titer i0 n) * (2 ^ j - 3 ^ A j (Titer i0 n))) :=
         Nat.mul_le_mul_right _ hF
       omega
+
+/-- Under the verification floor, every never-dropper is STRICTLY dominated
+    at all depths k ≤ 183 — the cycle table locks potential counterexamples
+    into the deep core regardless of their size (never_dropper_in_core alone
+    gives only depths ≤ log₃ n). -/
+theorem never_dropper_dominated
+    (hfloor : ∀ m, 2 ≤ m → m < 2 ^ 71 → ∃ i, Titer i m < m)
+    (n : Nat) (hn : 3 ≤ n) (hnd : ∀ i, ¬ Titer i n < n) :
+    ∀ k, 1 ≤ k → k ≤ 183 → 3 ^ A k n < 2 ^ k → False := by
+  intro k hk hkle hundom
+  -- the floor forces n ≥ 2^71
+  have hbig : 2 ^ 71 ≤ n := by
+    by_cases hb : n < 2 ^ 71
+    · have ⟨i, hdrop⟩ := hfloor n (by omega) hb
+      exact absurd hdrop (hnd i)
+    · omega
+  -- never dropping at depth k gives the cycle-type inequality
+  have haff := affine k n
+  have hge : n ≤ Titer k n := by
+    have := hnd k
+    omega
+  have hdb := D_bound k n
+  -- 2^k·n ≤ 2^k·Titer = 3^a·n + D; multiply by 2^a and combine with D_bound
+  have h1 : 2 ^ k * n ≤ 3 ^ A k n * n + D k n := by
+    have h2 : 2 ^ k * n ≤ 2 ^ k * Titer k n := Nat.mul_le_mul_left _ hge
+    omega
+  have hmul : 2 ^ k * n * 2 ^ A k n ≤ (3 ^ A k n * n + D k n) * 2 ^ A k n :=
+    Nat.mul_le_mul_right _ h1
+  have hexp : (3 ^ A k n * n + D k n) * 2 ^ A k n
+      = 3 ^ A k n * n * 2 ^ A k n + D k n * 2 ^ A k n := Nat.add_mul _ _ _
+  have hs1 : 2 ^ k * n * 2 ^ A k n = n * (2 ^ A k n * 2 ^ k) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  have hs2 : 3 ^ A k n * n * 2 ^ A k n = n * (2 ^ A k n * 3 ^ A k n) := by
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  -- table entry at (k, A k n)
+  have haj : A k n ≤ k := A_le k n
+  have htab := excl_table
+  simp only [List.all_eq_true, List.mem_range, decide_eq_true_eq] at htab
+  have hentry := htab (k - 1) (by omega) (A k n) (by omega)
+  have hk1 : k - 1 + 1 = k := by omega
+  rw [hk1] at hentry
+  have htabi := hentry hundom
+  -- assemble exactly as in no_small_cycles
+  have hGsum : 2 ^ A k n * 3 ^ A k n + 2 ^ A k n * (2 ^ k - 3 ^ A k n)
+      = 2 ^ A k n * 2 ^ k := by
+    have h2 : 3 ^ A k n + (2 ^ k - 3 ^ A k n) = 2 ^ k := by omega
+    calc 2 ^ A k n * 3 ^ A k n + 2 ^ A k n * (2 ^ k - 3 ^ A k n)
+        = 2 ^ A k n * (3 ^ A k n + (2 ^ k - 3 ^ A k n)) := (Nat.mul_add _ _ _).symm
+      _ = 2 ^ A k n * 2 ^ k := by rw [h2]
+  have hMsplit : n * (2 ^ A k n * 2 ^ k)
+      = n * (2 ^ A k n * 3 ^ A k n) + n * (2 ^ A k n * (2 ^ k - 3 ^ A k n)) := by
+    calc n * (2 ^ A k n * 2 ^ k)
+        = n * (2 ^ A k n * 3 ^ A k n + 2 ^ A k n * (2 ^ k - 3 ^ A k n)) := by rw [hGsum]
+      _ = _ := Nat.mul_add _ _ _
+  have hFM : 2 ^ 71 * (2 ^ A k n * (2 ^ k - 3 ^ A k n))
+      ≤ n * (2 ^ A k n * (2 ^ k - 3 ^ A k n)) :=
+    Nat.mul_le_mul_right _ hbig
+  omega
