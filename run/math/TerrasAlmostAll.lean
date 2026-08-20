@@ -2109,3 +2109,12 @@ theorem core_exponential (k : Nat) (hk : 1 ≤ k) : 2 ^ (36 * k / 100) ≤ 2 * u
   have h5 : (2 : Nat) ^ (36 * k / 100) * 2 ^ (64 * k / 100 + 1)
       ≤ (2 * uf k) * 2 ^ (64 * k / 100 + 1) := by omega
   exact Nat.le_of_mul_le_mul_right h5 (Nat.pow_pos (by omega))
+
+/-- THE SANDWICH, one statement: for every k ≥ 1,
+    2^(36k/100) ≤ 2·u_k  and  u_k · 2^(k/20) ≤ 2^k.
+    The undecided core of Collatz at depth k is exponentially large (no
+    finite-depth analysis closes the conjecture) and exponentially thin
+    (almost every integer drops) — kernel-checked from both sides. -/
+theorem core_sandwich (k : Nat) (hk : 1 ≤ k) :
+    2 ^ (36 * k / 100) ≤ 2 * uf k ∧ uf k * 2 ^ (k / 20) ≤ 2 ^ k :=
+  ⟨core_exponential k hk, eta_20 k hk⟩

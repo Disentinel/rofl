@@ -518,3 +518,11 @@ core_exponential (2^(36k/100) ≤ 2u_k). With R43's eta_20 the core is
 SANDWICHED both sides: 2^(0.36k)/2 ≤ u_k ≤ 2^(k−k/20). Verified to k=300
 before proving. TerrasAlmostAll.lean: 2111 lines | catch: none | born: none
 | facts(main)=72300
+
+R45 | consolidation: the sandwich as one theorem | core_sandwich (kernel):
+2^(36k/100) ≤ 2u_k ∧ u_k·2^(k/20) ≤ 2^k for all k ≥ 1 — exponentially large
+AND exponentially thin, both sides machine-checked. README current with the
+full ~2100-line TerrasAlmostAll contents; check_all.sh re-run end-to-end at
+the final math state: ALL CHECKS PASSED, 54 s wall (7 Lean files including
+the 42,000-bit no-axiom certificates, 6 checkers, 29 tests, grep) | catch:
+none | born: none | facts(main)=72368

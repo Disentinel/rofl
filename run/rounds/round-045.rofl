@@ -1,0 +1,18 @@
+-- Round 45. TARGET: consolidation of the sandwich. core_sandwich stated as
+-- ONE kernel theorem (2^(36k/100) <= 2 u_k AND u_k 2^(k/20) <= 2^k, k >= 1);
+-- README brought current with the full TerrasAlmostAll contents (~2100 lines);
+-- check_all.sh re-run END TO END at the final math state: ALL CHECKS PASSED
+-- in 54 s wall (7 Lean files incl. the 42,000-bit kernel certificates, 6
+-- executable checkers, 29 kernel tests, grep).
+claim_of[a](core_sandwich_one_theorem).
+ground[a](core_sandwich_one_theorem, lean_kernel_proof_core_sandwich).
+evidence[world](core_sandwich_one_theorem, lean_kernel_proof_core_sandwich).
+source_of(lean_kernel_proof_core_sandwich, file_terras_almost_all_lean).
+
+claim_of[a](full_verification_54s).
+ground[a](full_verification_54s, check_all_sh_rerun_exit0_r45).
+evidence[world](full_verification_54s, check_all_sh_rerun_exit0_r45).
+
+thm(core_sandwich).
+thm_dep(core_sandwich, core_exponential).
+thm_dep(core_sandwich, eta_20).
