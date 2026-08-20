@@ -766,3 +766,12 @@ I(p; sum) trace excess vanishing by k=26. Every pairwise observable is at
 its stochastic floor; all order above the floor is proved structure. The
 measurement program of the mechanism search closes | catch: none | born:
 none | facts(main)=73148
+
+R74 | Track D: wild semigroup sourced + **Lyapunov obstruction corollary** |
+Farkas weak conjecture proved by Applegate–Lagarias (arXiv:math/0411140):
+semigroup = {a/b : 3∤b}; transfer fails at forcedness (the R73 coupling-bit
+again, now sourced). NEW: core_713 kills every finite-window Foster–
+Lyapunov certificate (any window, any modulus) — ≥ 2^(0.538k)/2^14
+positive-drift windows at every k, each realized by infinitely many
+integers; a folklore obstruction in kernel-checked quantitative form |
+catch: none | born: none | facts(main)=73174
