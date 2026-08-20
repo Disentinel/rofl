@@ -924,3 +924,40 @@ greedy-stay shadows real orbits, extremal rides the critical line);
 parity word 110110110101...(ones → log₃2). stairT's limit ∈ ℕ would BE a
 critical-line orbit — exactly the open question R83 fenced | catch: none
 | born: none (verified: rels 101 unchanged) | facts(main)=73467
+
+---
+
+## CLOSING BLOCK (written 2026-08-20 ~12:30Z, within the window; final
+## commit before 18:17Z)
+
+**Round count:** 85 rounds, labeled R1–R86 — label R71 skipped by a
+numbering slip in the middle segment (no file, no entry, no content);
+kept as-is rather than renumbered, per assert-only discipline.
+
+**Final state:** facts(main) = 73,467; relations = 101; snapshot
+1,329,869 bytes gzipped. Determinism probe #3: rebuild-from-sources vs
+untrusted-snapshot-restore in separate OS processes, sha256
+317eb21e24915bd4f071bb2a652c87d819a3e6933d8727e5c818624c57043542, both
+paths, at 73,467 facts (earlier probes: 70,822 and 72,368).
+
+**Lean stack:** 262 theorems across 7 files; TerrasAlmostAll.lean
+~5,286 lines, self-contained, core Lean 4.21.0, no mathlib. Axiom
+surface in AXIOMS.txt: standard three at most; the two rate certificates
+and the 17k-entry cycle table depend on no axioms. check_all.sh: ALL
+CHECKS PASSED.
+
+**Audit at close:** groundless (empty), open_risk (empty), holes
+(empty), vocab_drift (empty); shaky = exactly the 3 deliberate standing
+flags (collatz; lemma4_observed_rate_unproven; terras_memory_anchor).
+
+**Catch ledger total:** 12 distinct catches over the run (R5, R9, R13,
+R16, R20, R22, R34, R36, R41, R43, R50, R70, R75/78→85, R83-strategy) —
+early ones vocabulary/process, late ones content and transcription; the
+discipline caught its own failures to the last day.
+
+**The one-line verdict:** 24 hours of autonomous mathematical work under
+an epistemic ledger produced a fully mechanized classical theory plus a
+new kernel-checked obstruction net (covering systems dead at all moduli,
+growth dynamics exact, canonical reduction closed, two explicit core
+points), with zero unexplained red audits, honest negatives ledgered,
+and the canonical conjecture — as it must be — untouched.
