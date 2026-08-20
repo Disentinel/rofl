@@ -233,3 +233,9 @@ claim needs no repair — scope discipline paid; (4) still_slow EMPTY at horizon
 260 — no new horizon chase at 10x range. Four claims asserted with computed
 grounds | catch: the R16->R18 pair is the run's cleanest demonstration of WHY
 range-scoping claims matters | born: none (freeze) | probe facts=808523
+
+R19 | mod-256 fill, hybrid method | und256 (19 residues) dual-computed engine ==
+oracle; joined host-side with the R18-verified 285-member slow set: outside_256
+EMPTY, unfilled_256 EMPTY — inclusion AND exact fill extend to mod 256 at range
+9999. Ground names the hybrid method honestly (the join, unlike mod 32/64/128,
+was not performed in-substrate) | catch: none | born: none (freeze) | facts(main)=70687
