@@ -6,6 +6,16 @@ this repository, unmodified except owner-authorized performance work logged in
 SUBSTRATE_ISSUES. **Protocol:** run/PROTOCOL.md (audit → act → audit → record →
 snapshot → commit, every round).
 
+**THE BOUNDARY, FIRST:** the canonical Collatz conjecture — *every* n
+reaches 1 — is **not solved** by this run and remains open. What is
+kernel-checked here is (a) the classical *almost-all* layer (Terras 1976's
+skeleton, rebuilt from scratch and fully mechanized, with tight explicit
+rates), and (b) a formal *obstruction*: the residue core where any
+counterexample must live is provably never empty, so this route — and any
+finite-depth density analysis like it — cannot close the conjecture. The
+strongest statement proved about the full conjecture is a precise account of
+why this method cannot reach it.
+
 ## What was attempted
 
 The experiment: sustained autonomous reasoning on the Collatz conjecture with
