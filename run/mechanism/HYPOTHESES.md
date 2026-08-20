@@ -297,3 +297,28 @@ amplification of every mod-9 imbalance mode is polynomially bounded forever
 at modulus 9 as well. The core's 3-adic Fourier dynamics are completely
 mapped: deterministic cocycle (proved) × crossing kicks (open, the
 character-sum problem).
+
+**Round 70 — the kick mechanism DISSOLVED (mostly), via a caught false
+alarm.** Three results:
+
+1. *Transpositions refuted*: adjacent "10"→"01" moves within the j=18
+   dying slice shift rep mod 3 nearly uniformly ([1010, 1184, 888] over
+   3082 pairs) — no local-move structure controls the residue.
+2. *A false contradiction, caught before recording*: reasoning that "the
+   dying set inherits parent reps" predicted kick ≈ slice imbalance (±25),
+   contradicting the measured ±2. Resolution: WHICH child dies depends on
+   the parity of T^(k−1)(r) — the dying rep is r or r + 2^(k−1) per parent
+   trajectory. Both measurement codes were correct; the inference was
+   wrong. Cross-tab ground truth reconstructs the measured kick exactly:
+   parents [859,892,901] split by parity into [437,445,460] (dying keeps
+   rep) + [422,447,441] (dying shifts +2 mod 3) → dying [884,886,882].
+3. *The mechanism*: kicks are the convolution of two √-scale sub-profiles
+   with a mod-3 shift — occasional anti-alignment produces the near-zero
+   kicks, generic alignment the Poisson-scale ones, matching the mixed
+   spectrum of round 67. Residual suppression is mild (sub-profile
+   deviations ≈ 0.6–0.8 of √(n/3)). The evidence for a strong hidden
+   balancing law is now WEAK; the character-sum problem stands as the
+   precise formulation of what remains, with expectations lowered
+   accordingly. Per-slice survey (k = 14..22, all sums): deviations
+   consistent with mild sub-Gaussian suppression, 2σ exceedances at the
+   rate chance predicts.

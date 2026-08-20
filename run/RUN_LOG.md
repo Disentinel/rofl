@@ -736,3 +736,14 @@ polynomially bounded forever; every exponential-scale 3-adic feature of the
 core is kick-driven. The 3-adic Fourier dynamics of the core are fully
 mapped: proved cocycle × open kicks | catch: none | born: none |
 facts(main)=73080
+
+R70 | Track D: **kick mechanism resolved via a caught false alarm** |
+transposition hypothesis refuted (near-uniform deltas); a false
+contradiction (predicted kick ±25 vs measured ±2) caught BEFORE recording —
+which child dies depends on the parity of T^(k−1)(r); both measurement
+codes were correct, the inference was wrong; cross-tab reconstructs the
+kick exactly ([437,445,460] + shift[422,447,441] = [884,886,882]). Kicks =
+convolution of two √-scale parity sub-profiles with a mod-3 shift;
+near-zeros are occasional anti-alignments — R67's mixed spectrum explained;
+strong-hidden-law reading downgraded | catch: the false contradiction,
+resolved before it entered the ledger | born: none | facts(main)=73096

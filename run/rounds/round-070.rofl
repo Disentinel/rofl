@@ -1,0 +1,19 @@
+-- Round 70 (Track D). TARGET: the kick mechanism — resolved by a caught
+-- false alarm. (1) Transposition hypothesis REFUTED (deltas near-uniform).
+-- (2) A false contradiction ("dying set inherits parent reps" predicted
+-- kick ±25 vs measured ±2) was caught BEFORE recording: which child dies
+-- depends on the parity of T^(k-1)(r); both measurement codes were correct,
+-- the inference was wrong. Cross-tab reconstructs the measured kick
+-- EXACTLY: [437,445,460] + shift([422,447,441]) = [884,886,882].
+-- (3) Mechanism: kicks = convolution of two sqrt-scale parity sub-profiles
+-- with a mod-3 shift; occasional anti-alignment gives the near-zero kicks,
+-- generic alignment the Poisson ones — matching R67's mixed spectrum. The
+-- strong-hidden-law reading is DOWNGRADED; the character-sum problem stays
+-- as the precise open formulation with lowered expectations.
+claim_of[a](kick_mechanism_convolution_resolved).
+ground[a](kick_mechanism_convolution_resolved, crosstab_reconstruction_r70).
+evidence[world](kick_mechanism_convolution_resolved, crosstab_reconstruction_r70).
+
+claim_of[a](transposition_hypothesis_refuted).
+ground[a](transposition_hypothesis_refuted, computed_transposition_deltas_j18).
+evidence[world](transposition_hypothesis_refuted, computed_transposition_deltas_j18).
