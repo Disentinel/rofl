@@ -322,3 +322,29 @@ alarm.** Three results:
    accordingly. Per-slice survey (k = 14..22, all sums): deviations
    consistent with mild sub-Gaussian suppression, 2σ exceedances at the
    rate chance predicts.
+
+**Round 71 — H2 completed: the backward tree's growth is automaton-exact.**
+The residue automaton (branching depends only on x mod 6; child residues
+tracked mod 2·3^7) reproduces the measured level growth to four digits:
+1.26355 vs 1.2637 from the true tree. So λ is the Perron root of a finite
+integer transition system — computable to any precision, distinctly above
+2^(1/3) = 1.2599 and distinctly below the naive covering-consistency value
+(λ·log₂λ + (λ−1)·log₂3 = 1 gives ≈ 1.3095): the gap between level growth
+and covering rate quantifies how unevenly tree levels tile size scales —
+the backward-tree face of the same large-deviation structure seen forward.
+
+**Round 72 — literature closure for H2 (web-sourced).** The measured
+backward-tree constant is the classical model's value in C-parametrization:
+with the standard branching heuristic (a /3-child for 1/3 of nodes —
+Lagarias–Weiss multi-type model), C-level counts satisfy N(ℓ) ≈ N(ℓ−1) +
+(1/3)N(ℓ−2), giving λ_C = (1+√(7/3))/2 ≈ 1.26376. Three independent
+computations agree: true tree 1.2637, residue automaton 1.26355, closed
+form 1.26376 — H2 is fully reconciled with Applegate–Lagarias
+("The Distribution of 3x+1 Trees", Experimental Math 4, 1995; Lagarias's
+3x+1 page; Kontorovich–Lagarias stochastic models, arXiv:0910.1944).
+SOURCED ECHO of this run's recurring observation: Applegate–Lagarias report
+that actual 3x+1 trees show a range of variation "significantly narrower"
+than the branching-process predictions — the same
+mildly-more-regular-than-random phenomenon Track D measured in crossing
+kicks and slice profiles. The suppression is a documented, still
+unexplained feature of the problem, not an artifact of this run.

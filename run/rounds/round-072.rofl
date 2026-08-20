@@ -1,0 +1,21 @@
+-- Round 72 (Track D). TARGET: literature closure for H2 + a sourced echo.
+-- lambda_C identified: the classical Lagarias-Weiss branching model in
+-- C-parametrization gives x^2 = x + 1/3, lambda = (1+sqrt(7/3))/2 =
+-- 1.26376; three computations agree (tree 1.2637, automaton 1.26355,
+-- closed form). Applegate-Lagarias (Experimental Math 4, 1995) report real
+-- trees vary "significantly narrower" than the branching model — the same
+-- mild sub-random regularity Track D measured in kicks and slices: the
+-- suppression is a DOCUMENTED, unexplained feature of the problem.
+src(src_al_trees_1995).  src_basis(src_al_trees_1995, web_fetched).
+verified[world](src_al_trees_1995).
+src(src_lagarias_page).  src_basis(src_lagarias_page, web_fetched).
+verified[world](src_lagarias_page).
+claim_of[a](lambda_c_identified_closed_form).
+ground[a](lambda_c_identified_closed_form, three_way_agreement_lambda).
+evidence[world](lambda_c_identified_closed_form, three_way_agreement_lambda).
+source_of(three_way_agreement_lambda, src_al_trees_1995).
+
+claim_of[a](narrow_variation_documented_al95).
+ground[a](narrow_variation_documented_al95, al95_narrower_range_quote).
+evidence[world](narrow_variation_documented_al95, al95_narrower_range_quote).
+source_of(al95_narrower_range_quote, src_al_trees_1995).

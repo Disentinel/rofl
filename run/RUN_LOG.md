@@ -747,3 +747,12 @@ convolution of two √-scale parity sub-profiles with a mod-3 shift;
 near-zeros are occasional anti-alignments — R67's mixed spectrum explained;
 strong-hidden-law reading downgraded | catch: the false contradiction,
 resolved before it entered the ledger | born: none | facts(main)=73096
+
+R72 | Track D: **literature closure for H2 + sourced echo** | λ_C identified:
+Lagarias–Weiss branching in C-parametrization gives x² = x + 1/3, λ =
+(1+√(7/3))/2 = 1.26376 — three-way agreement (tree 1.2637, automaton
+1.26355, closed form). Applegate–Lagarias (Exp. Math 4, 1995) report real
+trees vary "significantly narrower" than the branching model — the same
+mild sub-random regularity Track D measured in kicks and slices: the
+suppression is a documented, unexplained feature of the problem, not an
+artifact | catch: none | born: none | facts(main)=73132
