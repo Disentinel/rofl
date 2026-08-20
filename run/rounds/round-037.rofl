@@ -1,0 +1,21 @@
+-- Round 37 (Track C). TARGET: the decay threshold made USABLE. round-30's
+-- density_decay needed k >= c^100 — correct but astronomically loose (eta < 1/10
+-- only promised at k >= 10^200). Sharpened, same Chernoff chain, one bound
+-- replaced ((2^m)^100 = 2^(100m) <= 16^k <= 22^k, needing just 100m <= 4k):
+--   density_decay_log: forall m k, 1 <= k -> 25*m <= k -> 2^m * u_k <= 2^k
+--     (eta_k <= 2^-m as soon as k >= 25m — LOGARITHMIC threshold in the
+--      accuracy, not power-100);
+--   eta_exponential:   forall k >= 1, u_k * 2^(k/25) <= 2^k
+--     (eta_k <= 2^-floor(k/25): an explicit exponential rate at every k —
+--      at k = 100 the bound is 1/16, live at computational scales).
+-- Kernel-checked, same three standard axioms. The proved rate 2^(-1/25) ~ 0.973
+-- per step vs observed ~0.948: the rate gap stays honestly shaky as designed.
+claim_of[a](eta_decay_usable_threshold).
+ground[a](eta_decay_usable_threshold, lean_kernel_proofs_decay_log_eta_exp).
+evidence[world](eta_decay_usable_threshold, lean_kernel_proofs_decay_log_eta_exp).
+source_of(lean_kernel_proofs_decay_log_eta_exp, file_terras_almost_all_lean).
+
+thm(density_decay_log).        thm(eta_exponential).
+thm_dep(density_decay_log, chernoff).
+thm_dep(density_decay_log, pow_22_163).
+thm_dep(eta_exponential, density_decay_log).

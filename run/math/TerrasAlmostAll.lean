@@ -1099,3 +1099,79 @@ theorem terras_integers (c k q : Nat) (hk : 1 ≤ k) (hck : c ^ 100 ≤ k) :
     exact density_decay c k hk hck
   have h9 : q * (c * NU k) ≤ q * 2 ^ k := Nat.mul_le_mul_left q h8
   omega
+
+/- ---------- sharper thresholds: logarithmic, not power-100 ---------- -/
+
+/-- Sharpened decay: 2^m · u_k ≤ 2^k as soon as k ≥ 25·m (and k ≥ 1) — i.e.
+    η_k ≤ 2^(−m) once k ≥ 25m. Same Chernoff chain as density_decay; only the
+    bound c^100 ≤ 22^k is replaced by (2^m)^100 = 2^(100m) ≤ 16^k ≤ 22^k,
+    which needs just 100·m ≤ 4·k. -/
+theorem density_decay_log (m k : Nat) (hk : 1 ≤ k) (hmk : 25 * m ≤ k) :
+    2 ^ m * uf k ≤ 2 ^ k := by
+  have hch := chernoff k hk
+  have h1 : 2 ^ m * uf k * 2 ^ (63 * k / 100 + 1) ≤ 2 ^ m * 3 ^ k := by
+    calc 2 ^ m * uf k * 2 ^ (63 * k / 100 + 1)
+        = 2 ^ m * (uf k * 2 ^ (63 * k / 100 + 1)) := Nat.mul_assoc _ _ _
+      _ ≤ 2 ^ m * 3 ^ k := Nat.mul_le_mul_left (2 ^ m) hch
+  have h2 : (2 ^ m * uf k * 2 ^ (63 * k / 100 + 1)) ^ 100 ≤ (2 ^ m * 3 ^ k) ^ 100 :=
+    Nat.pow_le_pow_left h1 100
+  have hc22 : ((2 : Nat) ^ m) ^ 100 ≤ 22 ^ k := by
+    have ha : ((2 : Nat) ^ m) ^ 100 = 2 ^ (m * 100) := (Nat.pow_mul 2 m 100).symm
+    have hb : (2 : Nat) ^ (m * 100) ≤ 2 ^ (4 * k) :=
+      Nat.pow_le_pow_right (by omega) (by omega)
+    have hcc : (2 : Nat) ^ (4 * k) = 16 ^ k := by
+      rw [Nat.pow_mul]
+    have hd : (16 : Nat) ^ k ≤ 22 ^ k := Nat.pow_le_pow_left (by omega) k
+    omega
+  have h3 : ((2 : Nat) ^ m * 3 ^ k) ^ 100 = (2 ^ m) ^ 100 * 3 ^ (k * 100) := by
+    rw [Nat.mul_pow, Nat.pow_mul]
+  have h4 : ((2 : Nat) ^ m) ^ 100 * 3 ^ (k * 100) ≤ 22 ^ k * 3 ^ (k * 100) :=
+    Nat.mul_le_mul_right _ hc22
+  have h5 : (22 : Nat) ^ k * 3 ^ (k * 100) = (22 * 3 ^ 100) ^ k := by
+    rw [Nat.mul_pow, Nat.mul_comm k 100, Nat.pow_mul]
+  have h6 : ((22 : Nat) * 3 ^ 100) ^ k ≤ (2 ^ 163) ^ k :=
+    Nat.pow_le_pow_left pow_22_163 k
+  have h7 : ((2 : Nat) ^ 163) ^ k = 2 ^ (163 * k) := (Nat.pow_mul 2 163 k).symm
+  have h8 : (2 ^ m * uf k * 2 ^ (63 * k / 100 + 1)) ^ 100
+      = (2 ^ m * uf k) ^ 100 * 2 ^ ((63 * k / 100 + 1) * 100) := by
+    rw [Nat.mul_pow, Nat.pow_mul]
+  have h9 : 163 * k ≤ 100 * k + (63 * k / 100 + 1) * 100 := by
+    have hdm := Nat.div_add_mod (63 * k) 100
+    have hm : 63 * k % 100 < 100 := Nat.mod_lt _ (by omega)
+    omega
+  have h10 : (2 : Nat) ^ (163 * k) ≤ 2 ^ (100 * k + (63 * k / 100 + 1) * 100) :=
+    Nat.pow_le_pow_right (by omega) h9
+  have h11 : (2 : Nat) ^ (100 * k + (63 * k / 100 + 1) * 100)
+      = 2 ^ (100 * k) * 2 ^ ((63 * k / 100 + 1) * 100) :=
+    Nat.pow_add 2 (100 * k) ((63 * k / 100 + 1) * 100)
+  have h12 : (2 ^ m * uf k) ^ 100 * 2 ^ ((63 * k / 100 + 1) * 100)
+      ≤ 2 ^ (100 * k) * 2 ^ ((63 * k / 100 + 1) * 100) := by
+    calc (2 ^ m * uf k) ^ 100 * 2 ^ ((63 * k / 100 + 1) * 100)
+        = (2 ^ m * uf k * 2 ^ (63 * k / 100 + 1)) ^ 100 := h8.symm
+      _ ≤ (2 ^ m * 3 ^ k) ^ 100 := h2
+      _ = (2 ^ m) ^ 100 * 3 ^ (k * 100) := h3
+      _ ≤ 22 ^ k * 3 ^ (k * 100) := h4
+      _ = (22 * 3 ^ 100) ^ k := h5
+      _ ≤ (2 ^ 163) ^ k := h6
+      _ = 2 ^ (163 * k) := h7
+      _ ≤ 2 ^ (100 * k + (63 * k / 100 + 1) * 100) := h10
+      _ = 2 ^ (100 * k) * 2 ^ ((63 * k / 100 + 1) * 100) := h11
+  have h13 : (2 ^ m * uf k) ^ 100 ≤ 2 ^ (100 * k) :=
+    Nat.le_of_mul_le_mul_right h12 (Nat.pow_pos (by omega))
+  by_cases hfin : 2 ^ m * uf k ≤ 2 ^ k
+  · exact hfin
+  · exfalso
+    have hgt : 2 ^ k < 2 ^ m * uf k := by omega
+    have hstrict : ((2 : Nat) ^ k) ^ 100 < (2 ^ m * uf k) ^ 100 :=
+      Nat.pow_lt_pow_left hgt (by omega)
+    have hE : ((2 : Nat) ^ k) ^ 100 = 2 ^ (100 * k) := by
+      rw [Nat.mul_comm 100 k, Nat.pow_mul]
+    omega
+
+/-- The clean per-k exponential form: u_k · 2^(k/25) ≤ 2^k for every k ≥ 1 —
+    i.e. η_k ≤ 2^(−⌊k/25⌋), an explicit, usable decay rate. -/
+theorem eta_exponential (k : Nat) (hk : 1 ≤ k) :
+    uf k * 2 ^ (k / 25) ≤ 2 ^ k := by
+  have h := density_decay_log (k / 25) k hk (by omega)
+  calc uf k * 2 ^ (k / 25) = 2 ^ (k / 25) * uf k := Nat.mul_comm _ _
+    _ ≤ 2 ^ k := h

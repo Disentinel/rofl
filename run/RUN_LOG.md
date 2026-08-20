@@ -431,3 +431,12 @@ this is the regression net staying up | catch: pre-wrote the facts count
 before reading the eval output AGAIN (71464 vs actual 71468) — same failure
 mode as R34; process rule adopted: the count is written only after the eval
 prints it | born: none | facts(main)=71468
+
+R37 | Track C: **decay threshold made usable** | density_decay's k ≥ c^100 was
+correct but astronomically loose. Same Chernoff chain, one bound swapped
+((2^m)^100 ≤ 16^k ≤ 22^k needs just 100m ≤ 4k): density_decay_log — η_k ≤ 2^−m
+once k ≥ 25m (logarithmic threshold); eta_exponential — u_k·2^(k/25) ≤ 2^k at
+EVERY k ≥ 1 (η_100 ≤ 1/16, live at computational scale). Kernel-checked, three
+standard axioms. Proved rate 0.973/step vs observed 0.948 — the gap stays
+shaky as designed. DAG nodes added for both | catch: none | born: none |
+facts(main)=71528
