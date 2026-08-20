@@ -1,0 +1,16 @@
+-- Round 27 (Track C). TARGET: the last unproved piece of Lemma 2 — the
+-- direction "3-power in the gap => w_k > 0" — now a GENERAL kernel-checked
+-- theorem (run/math/Lemma6Check.lean, exit 0). Witness construction: the
+-- GREEDY minimal dominated string (stay when domination survives, step up
+-- otherwise). Proved: gs_dominated (greedy survives every depth, reusing the
+-- one_ext_survives inequality), gs_minimal (greedy realizes the minimal
+-- admissible sum — the equality case kills the if-branch by contradiction),
+-- dpf_gs_pos (the DP counts the greedy string), wf_pos_of_gap (the greedy
+-- string dies on 0-extension when a 3-power sits in the gap, so w_k >= 1).
+-- With one_ext_survives + gap_unique this closes the doubling criterion as an
+-- IFF for ALL k: u_{k+1} = 2 u_k <=> no power of 3 in (2^k, 2^{k+1}).
+-- The round-23 honesty note "w_k>0 finite-checked, not proved" is REPAIRED by
+-- supersession: the limitation no longer exists.
+claim_of[a](lemma2_iff_fully_proved).
+ground[a](lemma2_iff_fully_proved, lean_kernel_proofs_wf_pos_gap_unique).
+evidence[world](lemma2_iff_fully_proved, lean_kernel_proofs_wf_pos_gap_unique).

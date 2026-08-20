@@ -324,3 +324,12 @@ BigInt implementations agree exactly k=1..40; Lemma 2's doubling criterion
 holds at every step k=1..39; u_40 = 6,402,835,000, η_40 ≈ 5.8e-3, per-step
 ratio ≈ 0.933 at k=36..40 (ballot-gap hypothesis stays shaky as designed) |
 born: none (freeze) | facts(main)=70846
+
+R27 | Track C: **Lemma 2's iff closed, both directions, ALL k** | the missing
+"3-power in gap ⟹ w_k > 0" is now a general kernel-checked theorem
+(Lemma6Check.lean, exit 0): greedy minimal dominated string — gs_dominated
+(survives via one_ext_survives), gs_minimal (equality case kills the if-branch
+by contradiction), dpf_gs_pos (the DP counts it), wf_pos_of_gap. Round-23
+honesty limitation repaired by supersession — it no longer exists. Doubling
+criterion: u_{k+1} = 2u_k ⟺ no 3-power in (2^k, 2^{k+1}), proved | born: none
+(freeze) | facts(main)=70854

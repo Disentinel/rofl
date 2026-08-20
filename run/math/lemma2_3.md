@@ -64,5 +64,7 @@ the float-free form "no 3-power in the gap".
   remains a `shaky`-flagged memory anchor (no fetch possible in-sandbox).
 - `native_decide` trusts Lean's compiled evaluator (standard caveat); the two
   load-bearing inequalities are proved theorems checked by the kernel proper.
-- w_k > 0 in the one-power case is asserted from the finite check (k ≤ 19),
-  not proved for all k; the run's claims stay scoped accordingly.
+- w_k > 0 in the one-power case was initially only finite-checked; round 27
+  UPGRADED it to a general kernel-checked theorem (Lemma6Check.lean:
+  greedy minimal dominated string; wf_pos_of_gap). The doubling criterion is
+  now an iff proved in both directions for all k.
