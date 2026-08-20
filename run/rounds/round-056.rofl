@@ -1,0 +1,13 @@
+-- Round 56. TARGET: WALKTHROUGH.md — the guided map from classical
+-- statements to formal names, written for a mathematician who wants to
+-- check what exactly is proved. Opens with what is NOT there (a proof of
+-- the conjecture); walks the seven layers (maps, coefficient framework,
+-- counting, decay, almost-all, obstruction, headline); ends with the
+-- re-run commands. Prompted by the owner's canonical-formulation question:
+-- FINAL.md also now opens with the boundary statement.
+claim_of[a](walkthrough_committed).
+ground[a](walkthrough_committed, walkthrough_md_r56).
+evidence[world](walkthrough_committed, walkthrough_md_r56).
+src(file_walkthrough_md).  src_basis(file_walkthrough_md, repo_committed).
+verified[world](file_walkthrough_md).
+source_of(walkthrough_md_r56, file_walkthrough_md).

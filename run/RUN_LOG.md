@@ -607,3 +607,11 @@ answered with the boundary stated plainly: the canonical conjecture is NOT
 solved and remains open; what is kernel-checked is the classical almost-all
 layer plus the formal obstruction (the never-empty core) showing this route
 cannot close it | catch: none | born: none | facts(main)=72676
+
+R56 | WALKTHROUGH.md + boundary-first FINAL | guided map from classical
+statements to formal names for a mathematician-reader; FINAL.md now opens
+with the not-solved boundary. OWNER DIRECTIVE received: aim at the canonical
+formulation — mechanism thinking, TRIZ, knowledge transfer, absurd
+brainstorming, hypotheses + tests. Track D (mechanism search) opens next
+round; posture: every hypothesis made testable, every test recorded,
+refutations are results | catch: none | born: none | facts(main)=72694
