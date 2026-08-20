@@ -440,3 +440,12 @@ EVERY k ≥ 1 (η_100 ≤ 1/16, live at computational scale). Kernel-checked, th
 standard axioms. Proved rate 0.973/step vs observed 0.948 — the gap stays
 shaky as designed. DAG nodes added for both | catch: none | born: none |
 facts(main)=71528
+
+R38 | Track C: **the ORIGINAL map — the last respectability gap closed** |
+plain C(n) = 3n+1 | n/2 enters Lean; titer_citer (T^i = C^j, i ≤ j ≤ 2i);
+non-dropper inclusion (original 2k steps ⊆ accelerated k steps); ND_le
+factored; terras_integers_log (sharp 25m threshold, subsuming R33's c^100
+form); collatz_original_integers: 2^m·NDC(q·2^k, 2k) ≤ q·2^k + 2^m·3^k once
+k ≥ 25m — almost every n drops below itself under the LITERAL 3n+1 | n/2
+iteration, kernel-checked, three standard axioms. TerrasAlmostAll.lean now
+1338 lines. DAG updated | catch: none | born: none | facts(main)=71690

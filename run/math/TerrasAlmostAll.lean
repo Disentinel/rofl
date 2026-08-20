@@ -1175,3 +1175,164 @@ theorem eta_exponential (k : Nat) (hk : 1 ≤ k) :
   have h := density_decay_log (k / 25) k hk (by omega)
   calc uf k * 2 ^ (k / 25) = 2 ^ (k / 25) * uf k := Nat.mul_comm _ _
     _ ≤ 2 ^ k := h
+
+/- ---------- THE ORIGINAL COLLATZ MAP ---------- -/
+
+/-- The original (un-accelerated) Collatz function. -/
+def C (n : Nat) : Nat := if n % 2 = 0 then n / 2 else 3 * n + 1
+
+def Citer : Nat → Nat → Nat
+  | 0, n => n
+  | j + 1, n => Citer j (C n)
+
+theorem C_even (n : Nat) (h : n % 2 = 0) : C n = n / 2 := by simp [C, h]
+
+theorem C_odd (n : Nat) (h : n % 2 = 1) : C n = 3 * n + 1 := by simp [C, h]
+
+/-- One accelerated step is one or two original steps. -/
+theorem T_via_C_even (n : Nat) (h : n % 2 = 0) : T n = C n := by
+  rw [T_even n h, C_even n h]
+
+theorem T_via_C_odd (n : Nat) (h : n % 2 = 1) : T n = C (C n) := by
+  rw [T_odd n h, C_odd n h]
+  have he : (3 * n + 1) % 2 = 0 := by omega
+  rw [C_even _ he]
+
+/-- Every accelerated trajectory point is an original trajectory point, with
+    step index between i and 2i. -/
+theorem titer_citer (i : Nat) : ∀ n, ∃ j, i ≤ j ∧ j ≤ 2 * i ∧ Citer j n = Titer i n := by
+  induction i with
+  | zero =>
+    intro n
+    exact ⟨0, Nat.le_refl 0, by omega, rfl⟩
+  | succ p ih =>
+    intro n
+    have hstep : Titer (p + 1) n = Titer p (T n) := rfl
+    have ⟨j', hj1, hj2, hj3⟩ := ih (T n)
+    by_cases hp : n % 2 = 0
+    · -- T n = C n: one original step
+      refine ⟨j' + 1, by omega, by omega, ?_⟩
+      have h1 : Citer (j' + 1) n = Citer j' (C n) := rfl
+      rw [h1, ← T_via_C_even n hp, hj3, hstep]
+    · -- T n = C (C n): two original steps
+      have hp1 : n % 2 = 1 := by omega
+      refine ⟨j' + 2, by omega, by omega, ?_⟩
+      have h1 : Citer (j' + 2) n = Citer j' (C (C n)) := rfl
+      rw [h1, ← T_via_C_odd n hp1, hj3, hstep]
+
+/-- 0/1 indicator: n has not dropped within k ORIGINAL steps. -/
+def ndropC : Nat → Nat → Nat
+  | 0, _ => 1
+  | k + 1, n => ndropC k n * (if Citer (k + 1) n < n then 0 else 1)
+
+theorem ndropC_le_one (k : Nat) : ∀ n, ndropC k n ≤ 1 := by
+  induction k with
+  | zero => intro n; exact Nat.le_refl 1
+  | succ m ih =>
+    intro n
+    have h := ih n
+    show ndropC m n * (if Citer (m + 1) n < n then 0 else 1) ≤ 1
+    by_cases hc : Citer (m + 1) n < n
+    · rw [if_pos hc, Nat.mul_zero]
+      omega
+    · rw [if_neg hc, Nat.mul_one]
+      exact h
+
+theorem ndropC_zero_of_drop (k : Nat) : ∀ n j, j ≤ k → Citer j n < n → ndropC k n = 0 := by
+  induction k with
+  | zero =>
+    intro n j hjk hdrop
+    have hj0 : j = 0 := by omega
+    subst hj0
+    have : Citer 0 n = n := rfl
+    omega
+  | succ m ih =>
+    intro n j hjk hdrop
+    show ndropC m n * (if Citer (m + 1) n < n then 0 else 1) = 0
+    by_cases hj : j ≤ m
+    · rw [ih n j hj hdrop, Nat.zero_mul]
+    · have hjm : j = m + 1 := by omega
+      subst hjm
+      rw [if_pos hdrop, Nat.mul_zero]
+
+/-- Converse extraction: a zero accelerated indicator names a dropping step. -/
+theorem ndrop_zero_drop (k : Nat) : ∀ n, ndrop k n = 0 → ∃ i, i ≤ k ∧ Titer i n < n := by
+  induction k with
+  | zero =>
+    intro n h
+    have h1 : ndrop 0 n = 1 := rfl
+    exact absurd (h1 ▸ h) (by omega)
+  | succ m ih =>
+    intro n h
+    have hs : ndrop (m + 1) n = ndrop m n * (if Titer (m + 1) n < n then 0 else 1) := rfl
+    by_cases hz : ndrop m n = 0
+    · have ⟨i, hik, hdrop⟩ := ih n hz
+      exact ⟨i, by omega, hdrop⟩
+    · by_cases hc : Titer (m + 1) n < n
+      · exact ⟨m + 1, Nat.le_refl _, hc⟩
+      · rw [hs, if_neg hc, Nat.mul_one] at h
+        exact absurd h hz
+
+/-- A non-dropper of the original map (2k steps) is a non-dropper of the
+    accelerated map (k steps). -/
+theorem ndropC_le_ndrop (k : Nat) (n : Nat) : ndropC (2 * k) n ≤ ndrop k n := by
+  by_cases hz : ndrop k n = 0
+  · have ⟨i, hik, hdrop⟩ := ndrop_zero_drop k n hz
+    have ⟨j, hj1, hj2, hj3⟩ := titer_citer i n
+    have hdropC : Citer j n < n := by omega
+    have hj2k : j ≤ 2 * k := by omega
+    rw [hz, ndropC_zero_of_drop (2 * k) n j hj2k hdropC]
+    exact Nat.le_refl 0
+  · have := ndropC_le_one (2 * k) n
+    omega
+
+def NDC (N k : Nat) : Nat := S (fun n => ndropC k n) N
+
+/-- The class-to-integer counting bound, factored for reuse. -/
+theorem ND_le (k q : Nat) (hk : 1 ≤ k) : ND (q * 2 ^ k) k ≤ q * NU k + 3 ^ k := by
+  have hpt : ∀ n, n < q * 2 ^ k →
+      ndrop k n ≤ indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0) := by
+    intro n _
+    exact ndrop_pointwise k n hk
+  have h1 : ND (q * 2 ^ k) k
+      ≤ S (fun n => indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0)) (q * 2 ^ k) :=
+    S_mono _ _ _ hpt
+  have h2 : S (fun n => indU k (n % 2 ^ k) + (if n < 3 ^ k then 1 else 0)) (q * 2 ^ k)
+      = S (fun n => indU k (n % 2 ^ k)) (q * 2 ^ k)
+        + S (fun n => if n < 3 ^ k then 1 else 0) (q * 2 ^ k) :=
+    S_add _ _ _
+  have h3 : S (fun n => indU k (n % 2 ^ k)) (q * 2 ^ k) = q * NU k :=
+    S_periodic (fun r => indU k r) k q
+  have h4 : S (fun n => if n < 3 ^ k then 1 else 0) (q * 2 ^ k) ≤ 3 ^ k :=
+    S_below_le (3 ^ k) (q * 2 ^ k)
+  omega
+
+/-- Sharp-threshold integer form for the accelerated map. -/
+theorem terras_integers_log (m k q : Nat) (hk : 1 ≤ k) (hmk : 25 * m ≤ k) :
+    2 ^ m * ND (q * 2 ^ k) k ≤ q * 2 ^ k + 2 ^ m * 3 ^ k := by
+  have h5 := ND_le k q hk
+  have h6 : 2 ^ m * ND (q * 2 ^ k) k ≤ 2 ^ m * (q * NU k + 3 ^ k) :=
+    Nat.mul_le_mul_left (2 ^ m) h5
+  have h7 : 2 ^ m * (q * NU k + 3 ^ k) = q * (2 ^ m * NU k) + 2 ^ m * 3 ^ k := by
+    rw [Nat.mul_add]
+    have : 2 ^ m * (q * NU k) = q * (2 ^ m * NU k) := by
+      rw [← Nat.mul_assoc, Nat.mul_comm (2 ^ m) q, Nat.mul_assoc]
+    omega
+  have h8 : 2 ^ m * NU k ≤ 2 ^ k := by
+    rw [NU_eq_uf]
+    exact density_decay_log m k hk hmk
+  have h9 : q * (2 ^ m * NU k) ≤ q * 2 ^ k := Nat.mul_le_mul_left q h8
+  omega
+
+/-- THE ORIGINAL COLLATZ MAP, INTEGER FORM, kernel-checked: among the first
+    q·2^k integers, those that have not dropped below themselves within 2k
+    ORIGINAL Collatz steps number at most (q·2^k)/2^m + 3^k, once k ≥ 25m.
+    Almost every n drops below itself under the plain 3n+1 | n/2 iteration. -/
+theorem collatz_original_integers (m k q : Nat) (hk : 1 ≤ k) (hmk : 25 * m ≤ k) :
+    2 ^ m * NDC (q * 2 ^ k) (2 * k) ≤ q * 2 ^ k + 2 ^ m * 3 ^ k := by
+  have h1 : NDC (q * 2 ^ k) (2 * k) ≤ ND (q * 2 ^ k) k :=
+    S_mono _ _ _ (fun n _ => ndropC_le_ndrop k n)
+  have h2 : 2 ^ m * NDC (q * 2 ^ k) (2 * k) ≤ 2 ^ m * ND (q * 2 ^ k) k :=
+    Nat.mul_le_mul_left (2 ^ m) h1
+  have h3 := terras_integers_log m k q hk hmk
+  omega

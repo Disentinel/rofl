@@ -1,0 +1,30 @@
+-- Round 38 (Track C). TARGET: the ORIGINAL Collatz map — everything so far
+-- was about the accelerated T; the plain C(n) = 3n+1 | n/2 now gets its own
+-- kernel theorem (TerrasAlmostAll.lean, 1338 lines, exit 0, same 3 axioms).
+-- Chain: C defined; T_via_C (one accelerated step = 1 or 2 original steps);
+-- titer_citer (T^i(n) = C^j(n) with i <= j <= 2i, induction); ndropC +
+-- ndrop_zero_drop (converse extraction) + ndropC_le_ndrop (an original-map
+-- non-dropper over 2k steps is an accelerated non-dropper over k); ND_le
+-- (class-to-integer bound factored for reuse); terras_integers_log (sharp
+-- 25m threshold for T, subsuming round-33's c^100 form); and
+--   collatz_original_integers: forall m k q, 1 <= k -> 25 m <= k ->
+--     2^m * NDC(q*2^k, 2k) <= q*2^k + 2^m * 3^k
+-- — among the first q*2^k integers, those that have not dropped below
+-- themselves within 2k PLAIN 3n+1|n/2 steps have density <= 2^-m + o(1).
+-- The respectability gap "you proved it for the accelerated map" is closed.
+claim_of[a](collatz_original_map_integer_form).
+ground[a](collatz_original_map_integer_form, lean_kernel_proof_collatz_original).
+evidence[world](collatz_original_map_integer_form, lean_kernel_proof_collatz_original).
+source_of(lean_kernel_proof_collatz_original, file_terras_almost_all_lean).
+
+thm(collatz_original_integers). thm(terras_integers_log).
+thm(titer_citer).               thm(ndropc_le_ndrop).
+thm(nd_le).
+thm_dep(collatz_original_integers, ndropc_le_ndrop).
+thm_dep(collatz_original_integers, terras_integers_log).
+thm_dep(terras_integers_log, nd_le).
+thm_dep(terras_integers_log, density_decay_log).
+thm_dep(nd_le, ndrop_pointwise).
+thm_dep(nd_le, s_periodic).
+thm_dep(nd_le, s_below_le).
+thm_dep(ndropc_le_ndrop, titer_citer).
