@@ -1,0 +1,10 @@
+-- Round 68. TARGET: the a*-quality lead checked (inconclusive) + external
+-- memory updated. The perfectly-balanced crossing j=20 is exactly the 19/12
+-- convergent of log2(3) (3^12/2^19 = 1.0136, the tightest in range) —
+-- suggestive; but j=18 (quality 1.35) also balances while j=29 (1.44) is
+-- Poisson and j=27 (1.92) moderate: no monotone quality-balance law.
+-- Recorded as checked-and-inconclusive. Enox shared memory carries the full
+-- Track D outcome for future sessions.
+claim_of[a](astar_quality_lead_inconclusive).
+ground[a](astar_quality_lead_inconclusive, computed_crossing_qualities_r68).
+evidence[world](astar_quality_lead_inconclusive, computed_crossing_qualities_r68).

@@ -720,3 +720,8 @@ REVISED: the anomaly concentrates at specific ladder positions (post-hoc
 ≈1%); next lead is the arithmetic of a*(j) at the striking crossings. The
 discipline's third self-revision-by-scale | catch: R63 framing revised |
 born: none | facts(main)=73032
+
+R68 | a*-quality lead checked (inconclusive) + memory | j=20's perfect
+balance coincides with the 19/12 convergent (3^12/2^19 = 1.0136) —
+suggestive but no monotone quality-balance law across crossings. Enox
+carries the Track D outcome | catch: none | born: none | facts(main)=73040
