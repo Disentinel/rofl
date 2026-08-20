@@ -411,4 +411,16 @@ outlived its own honesty; superseded in place. Also: lemma2_3.md records the
 counting content as kernel-general (bijection demoted to readable account),
 lemma4.md points at the R31-33 chain, FRONTIER.md gets the post-fetch update
 with the explicit "still base camp, density→totality untouched" boundary |
-catch: stale honesty note | born: none | facts(main)=71038
+catch: stale honesty note | born: none | facts(main)=71042 (corrected in R35: first pushed as 71038, a transcription error against the eval output)
+
+R35 | Track C × substrate: **the proof DAG lives in the graph** | thm/1,
+thm_dep/2 (main spine transcribed from the proof texts), thm_reach/2 (derived
+transitive closure) — 3 declared births, first since R16 (freeze window ended
+R27, held 11 extra rounds). The engine derives the support cone of
+terras_integers: 28 theorems; why/1 walks dependency chains
+(terras_integers → density_decay → chernoff → threshold_63_100 → pow_63_100).
+The checkable observation: the ONLY numeric leaves in the cone are the two
+decide-checked inequalities 3^63 < 2^100 and 22·3^100 ≤ 2^163 — the whole
+almost-all theorem rests numerically on two integer facts. Also: correction
+to R34's facts count recorded in place | catch: none | born: thm, thm_dep,
+thm_reach (declared) | facts(main)=71460
