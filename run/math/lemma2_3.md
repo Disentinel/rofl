@@ -68,3 +68,10 @@ the float-free form "no 3-power in the gap".
   UPGRADED it to a general kernel-checked theorem (Lemma6Check.lean:
   greedy minimal dominated string; wf_pos_of_gap). The doubling criterion is
   now an iff proved in both directions for all k.
+- Round 32 UPGRADE: the *counting content* of Lemma 3 — that the dominated-
+  string DP counts the real map's undecided residue classes — is now a
+  kernel-checked theorem for ALL k (TerrasAlmostAll.lean `NN_eq_dpf`,
+  `NU_eq_uf`), proved not via the bijection but by pairing the two lifts
+  r, r + 2^j of each class (T^j(r+2^j) = T^j(r) + 3^(A j r), odd, so the
+  parities flip). The prose bijection above remains the human-readable
+  account; nothing in the machine chain depends on it any more.

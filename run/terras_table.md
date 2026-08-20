@@ -46,7 +46,11 @@ doubles: every undecided class mod 2^k lifts to two undecided classes mod 2^{k+1
 and no class gets newly decided at that depth. Mechanism: a class decided exactly
 at depth j=k+1 needs the multiplier 3^a to cross below 2^{k+1} there, which only
 happens when floor((k+1)/log2 3) admits a new (j, a) pair — on the other steps the
-threshold doesn't move. Computed observation over k ≤ 14, not a claimed theorem.
+threshold doesn't move. *(Originally recorded here as "computed observation over
+k ≤ 14, not a claimed theorem" — superseded in rounds 23/27: the doubling
+criterion u_{k+1} = 2·u_k ⟺ no 3-power in (2^k, 2^{k+1}) is now a
+kernel-checked iff for ALL k, both directions: run/math/lemma2_3.md,
+CollatzLedgerCheck.lean `gap_unique` + Lemma6Check.lean `wf_pos_of_gap`.)*
 Overflow guard: max trajectory value ≤ 3^k (analytic bound); observed max at k=14 is
 4,782,968 ≪ 2^53.
 

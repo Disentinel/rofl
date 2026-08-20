@@ -403,3 +403,12 @@ classical almost-all statement about integers in pure Nat. Full chain with no
 gaps: string DP = real classes (R32) → density → 0 (R30) → decided tails
 drop (R31) → integer counting (R33) | catch: none | born: none |
 facts(main)=71026
+
+R34 | documentation coherence pass | CATCH: terras_table.md's honesty note
+("pair-doubling: computed observation, not a claimed theorem") went stale in
+R27 when the doubling iff was kernel-proved for all k — an honesty note that
+outlived its own honesty; superseded in place. Also: lemma2_3.md records the
+counting content as kernel-general (bijection demoted to readable account),
+lemma4.md points at the R31-33 chain, FRONTIER.md gets the post-fetch update
+with the explicit "still base camp, density→totality untouched" boundary |
+catch: stale honesty note | born: none | facts(main)=71038

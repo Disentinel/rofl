@@ -10,6 +10,11 @@ via the all-integer Chernoff bound `chernoff`: u_k · 2^(63k/100+1) ≤ 3^k).
 Proved per-step decay constant 3/2^1.63 ≈ 0.969; the *observed* ≈ 0.948 stays
 unproven — part (d) below is unchanged and still flagged.
 
+**Rounds 31–33**: the abstract u_k is identified with the real map's undecided
+classes (all k), decided classes provably drop (n ≥ 3^j ⟹ T^j(n) < n), and
+the whole thing descends to integer counting: c·ND(q·2^k, k) ≤ q·2^k + c·3^k
+— TerrasAlmostAll.lean `terras_almost_all`, `terras_integers`.
+
 Notation: u_k = # coefficient-undecided classes mod 2^k, η_k = u_k / 2^k,
 t_k = min{ s : 3^s > 2^k }.
 

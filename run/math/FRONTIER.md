@@ -87,3 +87,14 @@ entirely different invariant — is precisely what none of the fetched results
 provides. This run's Lemmas 1–3 live at the base of that mountain: they make
 the coefficient-stopping-time layer exact and machine-checked, which is the
 layer both Terras-style density results and the empirical structure stand on.
+
+**Post-fetch update (rounds 30–33)**: the run then climbed that base layer to
+the top of the classical density story: Terras's almost-all theorem — density
+decay of undecided classes (integer Chernoff, explicit rate), identification
+of the abstract string DP with the real map's residue classes, the drop
+criterion for decided classes, and the integer-counting form — is now ONE
+self-contained kernel-checked Lean object (TerrasAlmostAll.lean, core Lean
+4.21.0, no mathlib, no native_decide in the chain; axioms: propext, choice,
+quot). Relative to the fetched frontier this is still the *base camp* — the
+1976 result, made fully formal from nothing — not new territory: the open gap
+(density → totality) is untouched, exactly as the sourced barrier says.
