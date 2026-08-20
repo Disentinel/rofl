@@ -462,3 +462,10 @@ the audit net; proposal recorded (doc_note facts + existing supersession
 machinery), deliberately not built mid-run. README synced to the full
 TerrasAlmostAll contents | catch: none | born: has_dep, thm_leaf, cone_leaf
 (declared) | facts(main)=71924
+
+R40 | reproducibility + the C-map core corollary | run/math/check_all.sh: one
+command re-verifies all 7 Lean files (kernel), 6 executable checkers, the
+29-test kernel suite and the grep — executed end-to-end before commit, ALL
+CHECKS PASSED. never_dropper_C_in_core: the shrinking-core statement for the
+ORIGINAL map (a C-never-dropper is a T-never-dropper via titer_citer) |
+catch: none | born: none | facts(main)=71972

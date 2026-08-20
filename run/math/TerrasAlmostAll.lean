@@ -1368,3 +1368,13 @@ theorem never_dropper_in_core (n : Nat) (hnd : ∀ i, ¬ Titer i n < n)
     exact hnd i (drop_criterion i n hdec hni)
   · have := indU_le_one k (n % 2 ^ k)
     omega
+
+/-- The same core statement for the ORIGINAL map: if n never drops below
+    itself under plain 3n+1 | n/2 iteration, it never drops under T either
+    (T-values are C-values), so it is undecided at every depth ≤ log₃ n. -/
+theorem never_dropper_C_in_core (n : Nat) (hnd : ∀ j, ¬ Citer j n < n)
+    (k : Nat) (hn : 3 ^ k ≤ n) : indU k (n % 2 ^ k) = 1 := by
+  apply never_dropper_in_core n _ k hn
+  intro i hdrop
+  have ⟨j, _, _, hj3⟩ := titer_citer i n
+  exact hnd j (by omega)
