@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 210 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 219 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -23,6 +23,10 @@ every fractional exponent. Sums are `S f n = f 0 + … + f (n−1)`.
 - `C n = n/2 | 3n+1` — the original map (`C`, `Citer`).
 - `titer_citer`: T^i(n) = C^j(n) for some i ≤ j ≤ 2i — every accelerated
   statement transfers to the original map at the cost of a factor 2 in steps.
+- `collatz_iff_descent` : **(∀ n ≥ 2, T eventually drops below n) ⟺
+  (∀ n ≥ 1, C reaches 1)** — the canonical reduction, kernel-checked. The
+  right side is the Collatz conjecture verbatim; everything this file
+  proves about descent addresses the left side.
 
 ## 2. The coefficient framework (Terras's skeleton)
 
@@ -102,7 +106,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–75)
+## 8. Track D additions (mechanism search, rounds 57–76)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -131,6 +135,13 @@ this route cannot reach it.
   No covering system at modulus 3·2^j can certify descent — the
   arithmetic-progression refinement of `core_never_empty`, and the
   positivity companion to `mod3_flow`'s conservation.
+- `collatz_iff_descent` (§1) : the canonical reduction itself, proved in
+  round 76 — universal eventual descent ⟺ every n reaches 1 under the
+  original map (`descent_to_one` strong induction + `citer_cycle` 1→4→2 +
+  two-way orbit transfer). The conjecture's exact remaining content, in
+  the file's own vocabulary: no cycles ≥ 3 (partially excluded by
+  `no_small_cycles`) and no divergent never-dropper (locked into the
+  dominated core by `never_dropper_cap` / `never_dropper_dominated`).
 
 ## Re-running
 

@@ -788,3 +788,16 @@ refinement of core_never_empty, pairing with mod3_flow: the profile is
 conserved AND positive | catch: two first-compile defects (subst ate k;
 unascribed pow_succ gave .succ form), fixed pre-commit | born: none |
 facts(main)=73211
+
+R76 | Track D: **THE CANONICAL REDUCTION kernel-checked** |
+`collatz_iff_descent`: (∀ n ≥ 2, ∃ j, T^j(n) < n) ⟺ (∀ n ≥ 1, ∃ j,
+C^j(n) = 1). The reduction was ledger-claimed since the Track D opening but
+absent from Lean — the claim-to-kernel gap is closed. Ingredients:
+citer_add, bounded strong induction, the 1→4→2 cycle lemma, orbit transfer
+both directions via titer_citer. Axioms: the standard three. Spot: Citer
+cycles [1,4,2] from 1; orbit of 27 matches canonical. Every descent theorem
+in the file now formally addresses the left side of an equivalence whose
+right side IS the canonical conjecture | catch: FINAL.md's "reduction made
+formal" was ahead of the Lean file — prose again outside the audit net
+(substrate issue #6 pattern); repaired by proving it | born: none |
+facts(main)=73231

@@ -3824,3 +3824,106 @@ theorem mod3_positive (k : Nat) (hk : 6 ≤ k) (c : Nat) (hc : c < 3) :
         subst hc2
         exact NN3_pos_of_witness k (3 * 2 ^ (k - 2) - 1) 2 (by omega)
           (w3_undecided k hk) (by omega)
+
+/- ---------- THE CANONICAL REDUCTION, kernel-checked ---------- -/
+/- Universal eventual descent for the accelerated map T is EQUIVALENT to
+   the canonical Collatz conjecture: every n ≥ 1 reaches 1 under the
+   original 3n+1 | n/2 map C. This is the bridge that connects the run's
+   entire descent apparatus (almost-all theorems, never-dropper laws, the
+   core sandwich) to the canonical formulation itself. -/
+
+theorem citer_add (x : Nat) : ∀ y n, Citer (x + y) n = Citer y (Citer x n) := by
+  induction x with
+  | zero =>
+    intro y n
+    have h : (0 : Nat) + y = y := by omega
+    rw [h]
+    rfl
+  | succ p ih =>
+    intro y n
+    have h : p + 1 + y = (p + y) + 1 := by omega
+    have h1 : Citer (p + 1 + y) n = Citer (p + y) (C n) := by
+      rw [h]
+      show Citer ((p + y) + 1) n = Citer (p + y) (C n)
+      rfl
+    have h2 : Citer (p + 1) n = Citer p (C n) := rfl
+    rw [h1, h2, ← ih y (C n)]
+
+/-- Strong induction bounded by N: universal descent gives descent to 1. -/
+theorem descent_to_one (h : ∀ m, 2 ≤ m → ∃ j, Titer j m < m) :
+    ∀ N, ∀ n, n ≤ N → 1 ≤ n → ∃ i, Titer i n = 1 := by
+  intro N
+  induction N with
+  | zero => intro n h1 h2; omega
+  | succ p ih =>
+    intro n hn h1
+    by_cases hcase : n ≤ p
+    · exact ih n hcase h1
+    · by_cases hone : n = 1
+      · exact ⟨0, by rw [hone]; rfl⟩
+      · have h2 : 2 ≤ n := by omega
+        have ⟨j, hj⟩ := h n h2
+        have hpos : 1 ≤ Titer j n := titer_pos j n (by omega)
+        have ⟨i, hi⟩ := ih (Titer j n) (by omega) hpos
+        exact ⟨j + i, by rw [titer_add j i n, hi]⟩
+
+theorem drops_to_one (h : ∀ m, 2 ≤ m → ∃ j, Titer j m < m) :
+    ∀ n, 1 ≤ n → ∃ i, Titer i n = 1 :=
+  fun n hn => descent_to_one h n n (Nat.le_refl n) hn
+
+theorem titer_one_citer_one (n : Nat) (h : ∃ i, Titer i n = 1) :
+    ∃ j, Citer j n = 1 := by
+  have ⟨i, hi⟩ := h
+  have ⟨j, _, _, hj3⟩ := titer_citer i n
+  exact ⟨j, by rw [hj3, hi]⟩
+
+/-- The original map's cycle at 1: 1 → 4 → 2 → 1. -/
+theorem citer_cycle : ∀ d, Citer d 1 = 1 ∨ Citer d 1 = 4 ∨ Citer d 1 = 2 := by
+  intro d
+  induction d with
+  | zero => left; rfl
+  | succ p ih =>
+    have hsnoc : Citer (p + 1) 1 = C (Citer p 1) := citer_add p 1 1
+    cases ih with
+    | inl h => right; left; rw [hsnoc, h]; decide
+    | inr h' => cases h' with
+      | inl h4 => right; right; rw [hsnoc, h4]; decide
+      | inr h2 => left; rw [hsnoc, h2]; decide
+
+theorem citer_one_after (J n : Nat) (hJ : Citer J n = 1) :
+    ∀ j, J ≤ j → Citer j n = 1 ∨ Citer j n = 4 ∨ Citer j n = 2 := by
+  intro j hj
+  have e : j = J + (j - J) := by omega
+  rw [e, citer_add J (j - J) n, hJ]
+  exact citer_cycle (j - J)
+
+theorem citer_one_titer_one (n : Nat) (h : ∃ j, Citer j n = 1) :
+    ∃ i, Titer i n = 1 := by
+  have ⟨J, hJ⟩ := h
+  have ⟨j, hj1, _, hj3⟩ := titer_citer J n
+  have h3 := citer_one_after J n hJ j hj1
+  cases h3 with
+  | inl h1 => exact ⟨J, by rw [← hj3]; exact h1⟩
+  | inr h' => cases h' with
+    | inl h4 =>
+      have e : Titer (J + 2) n = Titer 2 (Titer J n) := titer_add J 2 n
+      have h4' : Titer J n = 4 := by rw [← hj3]; exact h4
+      exact ⟨J + 2, by rw [e, h4']; decide⟩
+    | inr h2 =>
+      have e : Titer (J + 1) n = Titer 1 (Titer J n) := titer_add J 1 n
+      have h2' : Titer J n = 2 := by rw [← hj3]; exact h2
+      exact ⟨J + 1, by rw [e, h2']; decide⟩
+
+/-- THE REDUCTION: universal eventual descent (accelerated map) is
+    equivalent to the canonical Collatz conjecture (original map reaches 1
+    from every n ≥ 1). Everything this file proves about descent — the
+    almost-all layer, the never-dropper laws, the core sandwich — speaks
+    about the left side; the conjecture is the right side. -/
+theorem collatz_iff_descent :
+    (∀ n, 2 ≤ n → ∃ j, Titer j n < n) ↔ (∀ n, 1 ≤ n → ∃ j, Citer j n = 1) := by
+  constructor
+  · intro h n hn
+    exact titer_one_citer_one n (drops_to_one h n hn)
+  · intro h n hn
+    have ⟨i, hi⟩ := citer_one_titer_one n (h n (by omega))
+    exact ⟨i, by omega⟩

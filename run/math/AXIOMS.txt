@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T10:30Z; 210 theorem declarations.
+# Generated 2026-08-20T10:55Z; 219 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -228,4 +228,12 @@
 'S_ge_term' depends on axioms: [propext, Quot.sound]
 'NN3_pos_of_witness' depends on axioms: [propext, Quot.sound]
 'mod3_positive' depends on axioms: [propext, Quot.sound]
+'citer_add' depends on axioms: [propext, Quot.sound]
+'descent_to_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+'drops_to_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+'titer_one_citer_one' depends on axioms: [propext, Quot.sound]
+'citer_cycle' depends on axioms: [propext, Quot.sound]
+'citer_one_after' depends on axioms: [propext, Quot.sound]
+'citer_one_titer_one' depends on axioms: [propext, Quot.sound]
+'collatz_iff_descent' depends on axioms: [propext, Classical.choice, Quot.sound]
 
