@@ -365,3 +365,15 @@ Proved rate/step ≈ 0.969 vs observed ≈ 0.948: the rate gap STAYS shaky as
 designed — the theorem proves decay, not the observed speed. Lemma 4 upgraded
 from finite end-tail check to the full limit statement | catch: none | born:
 none | facts(main)=70962
+
+R31 | Track C: **the real Collatz map enters Lean — class-affine lemma GENERAL,
+kernel-checked** | Lemma8Check.lean (exit 0): T(n) = n/2 | (3n+1)/2 defined;
+proved for ALL j,n: affine (2^j·T^j(n) = 3^(A j n)·n + D j n), AD_periodic
+(coefficients live on n mod 2^j), A_le (A j n ≤ j), D_lt (D j n < 3^j), and
+drop_criterion: decided class + n ≥ 3^j ⟹ T^j(n) < n. Until now the affine
+form was native_decide-at-k=8 and the map lived in the TS oracle; now the
+WHOLE tail of every decided class provably drops — undecided classes (density
+→ 0 by R30) are the only home for non-dropping n ≥ 3^j. Finite bridge
+(native_decide k ≤ 14): undecidedCount from the REAL map = string-DP uf.
+Next natural target: the Q_k bijection as a kernel theorem | catch: none |
+born: none | facts(main)=70988
