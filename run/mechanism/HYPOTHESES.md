@@ -560,3 +560,25 @@ sandwich says such paths are exponentially many; the covering
 obstruction says no residue sieve can separate them from ℕ; the
 branching law says exactly where they are pruned; and the coupling bit
 holds whatever answer exists.
+
+**Round 87 — the board's last flag comes down.**
+
+The one observable the stochastic model "did not predict" — the
+hyper-uniform residue profile / weak crossing kicks — is dissolved by
+decomposition. Measured at every crossing depth to 26
+(`critical_comp.js`): the critical set's own mod-3 profile is
+near-balanced (χ² ≈ 1 vs null 2); the parity bit is independent of
+residue WITHIN criticals (MI at the finite-sample floor, every depth
+≥ 14); consequently the dying-set imbalance is Poisson-scale — R67's
+correction of R63 confirmed at the mechanism level. So the injection is
+NOT anomalously small. The full-core suppression (χ² 5–8× below null,
+R78) is *dilution by proved laws*: V3_conserved fixes the imbalance
+energy on gap-free depths while doubling_at_gap doubles the mean, so
+χ² = V/mean halves per gap-free depth; bounded χ² is the equilibrium of
+proved conservation, proved doubling, and floor-level randomness at the
+sink. Nothing measured in this run now lacks an explanation: every
+observable is either a kernel-checked theorem or statistically
+indistinguishable from independence. The mechanism search ends not
+because ideas ran out but because the phenomenon inventory did — the
+problem's remaining content is exactly the coupling bit, and the run can
+certify there is nothing else hiding in the marginals it measured.

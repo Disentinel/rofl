@@ -1,0 +1,27 @@
+-- Round 87 (Track D, measurement). THE LAST OPEN OBSERVABLE DISSOLVES.
+-- Critical-set composition measured at every crossing depth to k=26
+-- (oracle run/mechanism/critical_comp.js): (a) the criticals' own mod-3
+-- profile is near-balanced (chi2 ~ 1.0 vs null 2.0, mild suppression);
+-- (b) MI(parity; residue) WITHIN criticals sits at the finite-sample
+-- independence floor at every depth k >= 14 (e.g. 4e-7 vs floor 5e-6
+-- bits at k=26) — the R73 localization holds on the critical subset;
+-- (c) hence the dying-set imbalance is POISSON-SCALE (L1 319 on 312k
+-- dying at k=26, ~0.57 sqrt-scale) — confirming the R67 revision of
+-- R63's "anomalously balanced +-1" reading.
+-- RESOLUTION: the full-core hyper-uniformity (chi2 5-8x below null,
+-- R78) is NOT suppressed injection. It is DILUTION BY PROVED LAWS:
+-- V3_conserved holds the imbalance energy fixed on gap-free depths
+-- while doubling_at_gap doubles the mean — chi2 = V/mean halves per
+-- gap-free depth; crossings inject Poisson-scale energy; the measured
+-- bounded chi2 is the equilibrium of proved conservation + proved
+-- doubling + floor-level randomness. Supersedes the "open structured
+-- observable" flag: the mechanism search closes with ZERO unexplained
+-- observables — everything measured is either kernel-checked structure
+-- or at the independence floor.
+claim_of[a](kick_suppression_explained_by_proved_laws).
+ground[a](kick_suppression_explained_by_proved_laws, critical_comp_oracle_depth26).
+evidence[oracle](kick_suppression_explained_by_proved_laws, critical_comp_oracle_depth26).
+oracle_only(kick_suppression_explained_by_proved_laws).
+
+claim_of[a](mechanism_search_zero_unexplained_observables).
+ground[a](mechanism_search_zero_unexplained_observables, kick_suppression_explained_by_proved_laws).

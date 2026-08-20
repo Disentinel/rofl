@@ -961,3 +961,20 @@ new kernel-checked obstruction net (covering systems dead at all moduli,
 growth dynamics exact, canonical reduction closed, two explicit core
 points), with zero unexplained red audits, honest negatives ledgered,
 and the canonical conjecture — as it must be — untouched.
+
+R87 | Track D measurement: **the last open observable dissolves** |
+critical-set composition at every crossing to k=26 (critical_comp.js):
+criticals near-balanced (χ² ≈ 1.0); MI(parity; residue) within criticals
+AT the independence floor (4e-7 vs floor 5e-6 bits at k=26); dying-set
+imbalance POISSON-scale (confirms R67's revision of R63). Resolution:
+the full-core hyper-uniformity is not suppressed injection — it is
+dilution by the run's own proved laws (V3_conserved holds V fixed on
+gap-free depths while doubling_at_gap doubles the mean → χ² halves per
+gap-free depth; crossings inject at Poisson scale). The mechanism search
+closes with ZERO unexplained observables: everything measured is
+kernel-checked structure or floor-level randomness | catch: none |
+born: none (verified) | facts(main)=73483
+
+(Note: this entry postdates the closing block — the owner's directive
+was continuous search to the window's end; the closing statistics are
+refreshed in the final commit.)

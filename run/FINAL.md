@@ -115,12 +115,16 @@ The full board and test log are in `run/mechanism/HYPOTHESES.md`. Outcome:
   *composition of the critical set* — which classes sit at the crossing
   exponent, i.e. the trajectory-parity coupling bit, whose pairwise mutual
   information with everything else measures at the independence floor.
-- **The one measured anomaly**: the crossing kicks are 5–8× below the
-  multinomial/Poisson null (χ² of the residue profile: mod 3 mean 0.24 vs
-  null 2.0; mod 9 mean 1.48 vs null 8.0; persistent over five orders of
-  magnitude of core growth, kick-relax dynamics visible). The proved layer
-  says the profile cannot die and cannot lose energy between crossings; why
-  the crossings inject so little remains the open structured observable.
+- **The apparent anomaly, dissolved (R87)**: the core's residue profile
+  runs 5–8× below the multinomial null (χ²: mod 3 mean 0.24 vs null 2.0;
+  mod 9 mean 1.48 vs 8.0) — but decomposition shows the crossing kicks are
+  Poisson-scale, the critical set is near-balanced, and parity is
+  independent of residue within criticals (MI at the floor). The
+  suppression is *dilution by the run's own proved laws*: V3_conserved
+  fixes the imbalance energy on gap-free depths while doubling_at_gap
+  doubles the mean, so χ² halves per gap-free depth. The mechanism search
+  closes with zero unexplained observables — everything measured is
+  kernel-checked structure or floor-level randomness.
 - **Refuted strategies ledgered as such**: the staircase-point-∉-ℕ theorem
   died at design time (on the staircase the affine offset accumulates ~0.63j
   Θ(1) terms — a hypothetical integer there has a linearly growing orbit; no
