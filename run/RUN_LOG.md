@@ -259,3 +259,19 @@ inequalities** (θ ≤ M vs θ < M+1) and disagreed at class 11 mod 32 (θ fract
 in (4,5)) — the dual-check surfaced my sloppy encoding in one round; corrected to
 the strict form. Exactly the harness behavior the pivot asks for | born: none in
 main (freeze; scratch preds okthr/badclass stayed scratch) | facts(main)=70705
+
+R21 | Track C: **Lemmas 2 & 3 proved** (run/math/lemma2_3.md) + **Lean layer**
+(owner request) | Lemma 3: u_k = # dominated parity strings (bijection Q_k by
+induction). Lemma 2: u_{k+1} = 2u_k − w_k with the float-free doubling criterion
+— u doubles ⟺ no power of 3 in (2^k, 2^{k+1}); R7's empirical pair-doubling is
+now a theorem. Verification is FOUR independent paths: in-substrate
+classification (k≤16), TS trajectory oracle (k≤20), exact-integer lattice DP
+(no trajectory simulation), and **Lean 4.21.0** — CollatzLedgerCheck.lean
+compiles exit 0 on the FIRST attempt: one_ext_survives and gap_unique are
+kernel-checked proofs; u==classification (k=4..20), the recurrence, the
+doubling criterion, Lemma 1 thresholds (k=5..8) and the affine invariant (all
+256 classes at k=8) pass native_decide. Toolchain: Lean release tarball via
+direct GitHub asset download (API 403, assets pass), zstd via apt. Caveats
+stated in the lemma file (native_decide trusts the evaluator; w_k>0 in the
+one-power case is finite-checked k≤19, not proved for all k) | catch: none |
+born: none in main (freeze) | facts(main)~70730
