@@ -420,3 +420,26 @@ everywhere. The negative-orbit witness search of round 70 (no ≡0 mod 3
 dominated representative below 10^7 to depth 300) is resolved by
 construction: 2^k − 1 at even k IS such a representative — it just grows
 with k instead of sitting at a fixed small integer.
+
+**Round 77 — the spine machinery and mod-9 positivity.**
+
+The three mod-3 witnesses were one construction in disguise:
+`spine_undecided` — c·2^(k−s) − 1 is undecided at depth k whenever
+2^k < 3^(k−s). The spine (A_j = j through depth k−s) comes from
+`mirror_traj`; the tail needs no case analysis at all because A is
+monotone (`A_mono`), so the single inequality covers every tail gate.
+Since 2 is a primitive root mod 9, witnesses with c ∈ {1, 3, 9} and
+s ≤ 5 realize every residue mod 9 at every depth ≥ 14: `mod9_positive`
+(54 cases, generated from a numerically verified phase table, propext +
+Quot.sound). Measured NN9 at k = 14: [85,80,89,79,90,74,83,78,76] —
+positivity is proved; the striking near-uniformity (spread 74–90 around
+u₁₄/9 ≈ 81.6) remains the flow laws' hyper-uniformity observable.
+
+Board consequence: the covering-obstruction net now stands at both 3-adic
+levels where the flow laws exist — conservation (mod3_flow, V3_conserved,
+mod9_flow) AND positivity (mod3_positive, mod9_positive). The construction
+manifestly scales to modulus 3^t·2^j for any t (2 is a primitive root mod
+3^t for all t ≥ 1; witnesses 3^i·2^(k−s) − 1 with s ≤ ord(2) = 2·3^(t−1)
+and gate k ≥ 2.71·s), so no covering system whose moduli involve only the
+primes 2 and 3 can certify descent — the class of certificates the
+sandwich already excluded in aggregate is now excluded residue-by-residue.

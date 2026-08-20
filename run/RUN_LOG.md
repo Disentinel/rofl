@@ -801,3 +801,16 @@ right side IS the canonical conjecture | catch: FINAL.md's "reduction made
 formal" was ahead of the Lean file — prose again outside the audit net
 (substrate issue #6 pattern); repaired by proving it | born: none |
 facts(main)=73231
+
+R77 | Track D: **mod-9 POSITIVITY + the unified spine machinery** |
+`mod9_positive`: NN9 c k ≥ 1 for all k ≥ 14, c < 9. The three mod-3
+witnesses generalize to ONE lemma `spine_undecided`: c·2^(k−s) − 1 has
+spine A_j = j to k−s, A monotone beyond (`A_mono`), single tail gate
+2^k < 3^(k−s) (`pow23_lemma5`, k ≥ 14). 2 is a primitive root mod 9, so
+c ∈ {1,3,9}, s ≤ 5 hit every residue: 54-case assembly generated from a
+numerically verified table, compiled first try. Axioms: propext +
+Quot.sound. Spot k=14: NN9 = [85,80,89,79,90,74,83,78,76], sum 734 = u₁₄.
+No covering certificate at modulus 9·2^j; the method visibly scales to any
+3^t·2^j — positivity now matches the flow laws at both proved 3-adic
+levels | catch: none (generator bug caught pre-emit: list-clearing slice)
+| born: none | facts(main)=73259

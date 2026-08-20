@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T10:55Z; 219 theorem declarations.
+# Generated 2026-08-20T11:25Z; 235 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -236,4 +236,20 @@
 'citer_one_after' depends on axioms: [propext, Quot.sound]
 'citer_one_titer_one' depends on axioms: [propext, Quot.sound]
 'collatz_iff_descent' depends on axioms: [propext, Classical.choice, Quot.sound]
+'A_mono' depends on axioms: [propext, Quot.sound]
+'pow23_lemma5' depends on axioms: [propext, Quot.sound]
+'pow_split' depends on axioms: [propext, Quot.sound]
+'spine_lt' depends on axioms: [propext, Quot.sound]
+'gate_from5' depends on axioms: [propext, Quot.sound]
+'spine_undecided' depends on axioms: [propext, Quot.sound]
+'pow2_mod9' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_0' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_1' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_2' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_3' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_4' depends on axioms: [propext, Quot.sound]
+'pow2_mod9_5' depends on axioms: [propext, Quot.sound]
+'NN9_pos_of_witness' depends on axioms: [propext, Quot.sound]
+'spine_case' depends on axioms: [propext, Quot.sound]
+'mod9_positive' depends on axioms: [propext, Quot.sound]
 

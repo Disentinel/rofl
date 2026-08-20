@@ -3927,3 +3927,522 @@ theorem collatz_iff_descent :
   · intro h n hn
     have ⟨i, hi⟩ := citer_one_titer_one n (h n (by omega))
     exact ⟨i, by omega⟩
+
+/- ---------- mod-9 POSITIVITY: the unified spine machinery ---------- -/
+/- The three mod-3 witnesses generalize: c·2^(k−s) − 1 (c ≥ 1, s tail
+   depths) has spine A_j = j through depth k−s (mirror_traj); beyond it A
+   is monotone, so ONE gate 2^k < 3^(k−s) covers the whole tail. With
+   c ∈ {1, 3, 9} and s ≤ 5 the witnesses hit every residue mod 9 at every
+   depth k ≥ 14 — no covering system at modulus 9·2^j can certify descent. -/
+
+theorem A_mono (n : Nat) : ∀ d j, A j n ≤ A (j + d) n := by
+  intro d
+  induction d with
+  | zero => intro j; exact Nat.le_refl _
+  | succ p ih =>
+    intro j
+    have h1 := ih j
+    have h2 := A_snoc (j + p) n
+    have e : j + (p + 1) = (j + p) + 1 := by omega
+    rw [e]
+    omega
+
+theorem pow23_lemma5 (k : Nat) (hk : 14 ≤ k) : 2 ^ k < 3 ^ (k - 5) := by
+  induction k with
+  | zero => omega
+  | succ m ih =>
+    by_cases hm : 14 ≤ m
+    · have h1 := ih hm
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3 : m + 1 - 5 = (m - 5) + 1 := by omega
+      have h4 : (3 : Nat) ^ ((m - 5) + 1) = 3 ^ (m - 5) * 3 := Nat.pow_succ 3 _
+      rw [h3, h4]
+      omega
+    · have hm13 : m = 13 := by omega
+      subst hm13
+      decide
+
+theorem pow_split (k s : Nat) (hs : s ≤ k) : (2 : Nat) ^ k = 2 ^ (k - s) * 2 ^ s := by
+  have h1 : (2 : Nat) ^ ((k - s) + s) = 2 ^ (k - s) * 2 ^ s := Nat.pow_add 2 (k - s) s
+  have e : (k - s) + s = k := by omega
+  rw [e] at h1
+  exact h1
+
+theorem spine_lt (k s c' : Nat) (hs : s ≤ k) (hcs : c' ≤ 2 ^ s) :
+    c' * 2 ^ (k - s) - 1 < 2 ^ k := by
+  have hb := pow_split k s hs
+  have hpos : 0 < (2 : Nat) ^ k := Nat.pow_pos (by omega)
+  have hmul : c' * 2 ^ (k - s) ≤ 2 ^ s * 2 ^ (k - s) := Nat.mul_le_mul_right _ hcs
+  have hcomm : (2 : Nat) ^ s * 2 ^ (k - s) = 2 ^ (k - s) * 2 ^ s := Nat.mul_comm _ _
+  omega
+
+theorem gate_from5 (k s : Nat) (hk : 14 ≤ k) (hs : s ≤ 5) :
+    (2 : Nat) ^ k < 3 ^ (k - s) := by
+  have h5 := pow23_lemma5 k hk
+  have hmono : (3 : Nat) ^ (k - 5) ≤ 3 ^ (k - s) :=
+    Nat.pow_le_pow_right (by omega) (by omega)
+  omega
+
+/-- The unified witness lemma: a spine class with a dominated tail gate is
+    undecided at depth k. Subsumes w1 (s=0), w2 (s=1), w3 (c=3, s=2). -/
+theorem spine_undecided (c s k : Nat) (hc : 1 ≤ c) (hs : s ≤ k)
+    (hgate : 2 ^ k < 3 ^ (k - s)) : indU k (c * 2 ^ (k - s) - 1) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  by_cases hjk : j ≤ k - s
+  · have hm := (mirror_traj c (k - s) hc j hjk).2
+    rw [hm]
+    exact two_pow_lt_three_pow j hj1
+  · have ha := (mirror_traj c (k - s) hc (k - s) (Nat.le_refl _)).2
+    have hmono := A_mono (c * 2 ^ (k - s) - 1) (j - (k - s)) (k - s)
+    have e : (k - s) + (j - (k - s)) = j := by omega
+    rw [e] at hmono
+    have hAj : k - s ≤ A j (c * 2 ^ (k - s) - 1) := by omega
+    have hpow : (3 : Nat) ^ (k - s) ≤ 3 ^ A j (c * 2 ^ (k - s) - 1) :=
+      Nat.pow_le_pow_right (by omega) hAj
+    have hj2' : (2 : Nat) ^ j ≤ 2 ^ k := Nat.pow_le_pow_right (by omega) hj2
+    omega
+
+/-- 2^m mod 9 by m mod 6: the six phases 1,2,4,8,7,5. -/
+theorem pow2_mod9 (m : Nat) :
+    (m % 6 = 0 → 2 ^ m % 9 = 1) ∧ (m % 6 = 1 → 2 ^ m % 9 = 2) ∧
+    (m % 6 = 2 → 2 ^ m % 9 = 4) ∧ (m % 6 = 3 → 2 ^ m % 9 = 8) ∧
+    (m % 6 = 4 → 2 ^ m % 9 = 7) ∧ (m % 6 = 5 → 2 ^ m % 9 = 5) := by
+  induction m with
+  | zero =>
+    exact ⟨fun _ => by decide, fun h => by omega, fun h => by omega,
+           fun h => by omega, fun h => by omega, fun h => by omega⟩
+  | succ p ih =>
+    have h : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+    have h0 := ih.1
+    have h1 := ih.2.1
+    have h2 := ih.2.2.1
+    have h3 := ih.2.2.2.1
+    have h4 := ih.2.2.2.2.1
+    have h5 := ih.2.2.2.2.2
+    exact ⟨fun hp => by have := h5 (by omega); omega,
+           fun hp => by have := h0 (by omega); omega,
+           fun hp => by have := h1 (by omega); omega,
+           fun hp => by have := h2 (by omega); omega,
+           fun hp => by have := h3 (by omega); omega,
+           fun hp => by have := h4 (by omega); omega⟩
+
+theorem pow2_mod9_0 (m : Nat) (h : m % 6 = 0) : 2 ^ m % 9 = 1 := (pow2_mod9 m).1 h
+theorem pow2_mod9_1 (m : Nat) (h : m % 6 = 1) : 2 ^ m % 9 = 2 := (pow2_mod9 m).2.1 h
+theorem pow2_mod9_2 (m : Nat) (h : m % 6 = 2) : 2 ^ m % 9 = 4 := (pow2_mod9 m).2.2.1 h
+theorem pow2_mod9_3 (m : Nat) (h : m % 6 = 3) : 2 ^ m % 9 = 8 := (pow2_mod9 m).2.2.2.1 h
+theorem pow2_mod9_4 (m : Nat) (h : m % 6 = 4) : 2 ^ m % 9 = 7 := (pow2_mod9 m).2.2.2.2.1 h
+theorem pow2_mod9_5 (m : Nat) (h : m % 6 = 5) : 2 ^ m % 9 = 5 := (pow2_mod9 m).2.2.2.2.2 h
+
+theorem NN9_pos_of_witness (k r c : Nat) (h1 : r < 2 ^ k) (h2 : indU k r = 1)
+    (h3 : r % 9 = c) : 1 ≤ NN9 c k := by
+  have hge : indU k r * (if r % 9 = c then 1 else 0)
+      ≤ S (fun s => indU k s * (if s % 9 = c then 1 else 0)) (2 ^ k) :=
+    S_ge_term (fun s => indU k s * (if s % 9 = c then 1 else 0)) (2 ^ k) r h1
+  rw [h2, if_pos h3] at hge
+  show 1 ≤ S (fun s => indU k s * (if s % 9 = c then 1 else 0)) (2 ^ k)
+  omega
+
+/-- One spine witness settles one residue class of NN9. -/
+theorem spine_case (k s c' ρ : Nat) (hk : 14 ≤ k) (hs : s ≤ 5) (hc1 : 1 ≤ c')
+    (hcs : c' ≤ 2 ^ s) (hres : (c' * 2 ^ (k - s) - 1) % 9 = ρ) : 1 ≤ NN9 ρ k :=
+  NN9_pos_of_witness k (c' * 2 ^ (k - s) - 1) ρ
+    (spine_lt k s c' (by omega) hcs)
+    (spine_undecided c' s k hc1 (by omega) (gate_from5 k s hk hs))
+    hres
+
+/-- MOD-9 POSITIVITY OF THE CORE: at every depth k ≥ 14 the undecided
+    core meets EVERY residue class mod 9 — witnesses c·2^(k−s) − 1,
+    c ∈ {1,3,9}, s ≤ 5, chosen by the phase of 2^k mod 9. With
+    mod3_positive: no covering system at modulus 9·2^j (or 3·2^j) can
+    certify descent on the core. -/
+theorem mod9_positive (k : Nat) (hk : 14 ≤ k) (c : Nat) (hc : c < 9) :
+    1 ≤ NN9 c k := by
+  by_cases ht0 : k % 6 = 0
+  ·
+    by_cases hc0 : c = 0
+    · rw [hc0]
+      exact spine_case k 0 1 0 hk (by omega) (by omega) (by decide)
+        (by have hv := pow2_mod9_0 (k - 0) (by omega)
+            have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+            omega)
+    ·
+      by_cases hc1 : c = 1
+      · rw [hc1]
+        exact spine_case k 5 1 1 hk (by omega) (by omega) (by decide)
+          (by have hv := pow2_mod9_1 (k - 5) (by omega)
+              have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+              omega)
+      ·
+        by_cases hc2 : c = 2
+        · rw [hc2]
+          exact spine_case k 2 3 2 hk (by omega) (by omega) (by decide)
+            (by have hv := pow2_mod9_4 (k - 2) (by omega)
+                have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                omega)
+        ·
+          by_cases hc3 : c = 3
+          · rw [hc3]
+            exact spine_case k 4 1 3 hk (by omega) (by omega) (by decide)
+              (by have hv := pow2_mod9_2 (k - 4) (by omega)
+                  have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                  omega)
+          ·
+            by_cases hc4 : c = 4
+            · rw [hc4]
+              exact spine_case k 1 1 4 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_5 (k - 1) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc5 : c = 5
+              · rw [hc5]
+                exact spine_case k 3 3 5 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_3 (k - 3) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc6 : c = 6
+                · rw [hc6]
+                  exact spine_case k 2 1 6 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_4 (k - 2) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc7 : c = 7
+                  · rw [hc7]
+                    exact spine_case k 3 1 7 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_3 (k - 3) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    have hc8 : c = 8 := by omega
+                    rw [hc8]
+                    exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_2 (k - 4) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                          omega)
+  ·
+    by_cases ht1 : k % 6 = 1
+    ·
+      by_cases hc0 : c = 0
+      · rw [hc0]
+        exact spine_case k 1 1 0 hk (by omega) (by omega) (by decide)
+          (by have hv := pow2_mod9_0 (k - 1) (by omega)
+              have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+              omega)
+      ·
+        by_cases hc1 : c = 1
+        · rw [hc1]
+          exact spine_case k 0 1 1 hk (by omega) (by omega) (by decide)
+            (by have hv := pow2_mod9_1 (k - 0) (by omega)
+                have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+                omega)
+        ·
+          by_cases hc2 : c = 2
+          · rw [hc2]
+            exact spine_case k 3 3 2 hk (by omega) (by omega) (by decide)
+              (by have hv := pow2_mod9_4 (k - 3) (by omega)
+                  have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                  omega)
+          ·
+            by_cases hc3 : c = 3
+            · rw [hc3]
+              exact spine_case k 5 1 3 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_2 (k - 5) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc4 : c = 4
+              · rw [hc4]
+                exact spine_case k 2 1 4 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_5 (k - 2) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc5 : c = 5
+                · rw [hc5]
+                  exact spine_case k 2 3 5 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_5 (k - 2) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc6 : c = 6
+                  · rw [hc6]
+                    exact spine_case k 3 1 6 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_4 (k - 3) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    by_cases hc7 : c = 7
+                    · rw [hc7]
+                      exact spine_case k 4 1 7 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_3 (k - 4) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                            omega)
+                    ·
+                      have hc8 : c = 8 := by omega
+                      rw [hc8]
+                      exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_3 (k - 4) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                            omega)
+    ·
+      by_cases ht2 : k % 6 = 2
+      ·
+        by_cases hc0 : c = 0
+        · rw [hc0]
+          exact spine_case k 2 1 0 hk (by omega) (by omega) (by decide)
+            (by have hv := pow2_mod9_0 (k - 2) (by omega)
+                have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                omega)
+        ·
+          by_cases hc1 : c = 1
+          · rw [hc1]
+            exact spine_case k 1 1 1 hk (by omega) (by omega) (by decide)
+              (by have hv := pow2_mod9_1 (k - 1) (by omega)
+                  have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+                  omega)
+          ·
+            by_cases hc2 : c = 2
+            · rw [hc2]
+              exact spine_case k 2 3 2 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_0 (k - 2) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc3 : c = 3
+              · rw [hc3]
+                exact spine_case k 0 1 3 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_2 (k - 0) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc4 : c = 4
+                · rw [hc4]
+                  exact spine_case k 3 1 4 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_5 (k - 3) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc5 : c = 5
+                  · rw [hc5]
+                    exact spine_case k 3 3 5 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_5 (k - 3) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    by_cases hc6 : c = 6
+                    · rw [hc6]
+                      exact spine_case k 4 1 6 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_4 (k - 4) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                            omega)
+                    ·
+                      by_cases hc7 : c = 7
+                      · rw [hc7]
+                        exact spine_case k 5 1 7 hk (by omega) (by omega) (by decide)
+                          (by have hv := pow2_mod9_3 (k - 5) (by omega)
+                              have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+                              omega)
+                      ·
+                        have hc8 : c = 8 := by omega
+                        rw [hc8]
+                        exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                          (by have hv := pow2_mod9_4 (k - 4) (by omega)
+                              have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                              omega)
+      ·
+        by_cases ht3 : k % 6 = 3
+        ·
+          by_cases hc0 : c = 0
+          · rw [hc0]
+            exact spine_case k 3 1 0 hk (by omega) (by omega) (by decide)
+              (by have hv := pow2_mod9_0 (k - 3) (by omega)
+                  have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                  omega)
+          ·
+            by_cases hc1 : c = 1
+            · rw [hc1]
+              exact spine_case k 2 1 1 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_1 (k - 2) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc2 : c = 2
+              · rw [hc2]
+                exact spine_case k 3 3 2 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_0 (k - 3) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc3 : c = 3
+                · rw [hc3]
+                  exact spine_case k 1 1 3 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_2 (k - 1) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc4 : c = 4
+                  · rw [hc4]
+                    exact spine_case k 4 1 4 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_5 (k - 4) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    by_cases hc5 : c = 5
+                    · rw [hc5]
+                      exact spine_case k 2 3 5 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_1 (k - 2) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                            omega)
+                    ·
+                      by_cases hc6 : c = 6
+                      · rw [hc6]
+                        exact spine_case k 5 1 6 hk (by omega) (by omega) (by decide)
+                          (by have hv := pow2_mod9_4 (k - 5) (by omega)
+                              have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+                              omega)
+                      ·
+                        by_cases hc7 : c = 7
+                        · rw [hc7]
+                          exact spine_case k 0 1 7 hk (by omega) (by omega) (by decide)
+                            (by have hv := pow2_mod9_3 (k - 0) (by omega)
+                                have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+                                omega)
+                        ·
+                          have hc8 : c = 8 := by omega
+                          rw [hc8]
+                          exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                            (by have hv := pow2_mod9_5 (k - 4) (by omega)
+                                have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                                omega)
+        ·
+          by_cases ht4 : k % 6 = 4
+          ·
+            by_cases hc0 : c = 0
+            · rw [hc0]
+              exact spine_case k 4 1 0 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_0 (k - 4) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc1 : c = 1
+              · rw [hc1]
+                exact spine_case k 3 1 1 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_1 (k - 3) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc2 : c = 2
+                · rw [hc2]
+                  exact spine_case k 2 3 2 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_2 (k - 2) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc3 : c = 3
+                  · rw [hc3]
+                    exact spine_case k 2 1 3 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_2 (k - 2) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    by_cases hc4 : c = 4
+                    · rw [hc4]
+                      exact spine_case k 5 1 4 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_5 (k - 5) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+                            omega)
+                    ·
+                      by_cases hc5 : c = 5
+                      · rw [hc5]
+                        exact spine_case k 3 3 5 hk (by omega) (by omega) (by decide)
+                          (by have hv := pow2_mod9_1 (k - 3) (by omega)
+                              have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                              omega)
+                      ·
+                        by_cases hc6 : c = 6
+                        · rw [hc6]
+                          exact spine_case k 0 1 6 hk (by omega) (by omega) (by decide)
+                            (by have hv := pow2_mod9_4 (k - 0) (by omega)
+                                have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+                                omega)
+                        ·
+                          by_cases hc7 : c = 7
+                          · rw [hc7]
+                            exact spine_case k 1 1 7 hk (by omega) (by omega) (by decide)
+                              (by have hv := pow2_mod9_3 (k - 1) (by omega)
+                                  have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+                                  omega)
+                          ·
+                            have hc8 : c = 8 := by omega
+                            rw [hc8]
+                            exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                              (by have hv := pow2_mod9_0 (k - 4) (by omega)
+                                  have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                                  omega)
+          ·
+            have ht5 : k % 6 = 5 := by omega
+            by_cases hc0 : c = 0
+            · rw [hc0]
+              exact spine_case k 5 1 0 hk (by omega) (by omega) (by decide)
+                (by have hv := pow2_mod9_0 (k - 5) (by omega)
+                    have hpos : 0 < (2 : Nat) ^ (k - 5) := Nat.pow_pos (by omega)
+                    omega)
+            ·
+              by_cases hc1 : c = 1
+              · rw [hc1]
+                exact spine_case k 4 1 1 hk (by omega) (by omega) (by decide)
+                  (by have hv := pow2_mod9_1 (k - 4) (by omega)
+                      have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                      omega)
+              ·
+                by_cases hc2 : c = 2
+                · rw [hc2]
+                  exact spine_case k 3 3 2 hk (by omega) (by omega) (by decide)
+                    (by have hv := pow2_mod9_2 (k - 3) (by omega)
+                        have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                        omega)
+                ·
+                  by_cases hc3 : c = 3
+                  · rw [hc3]
+                    exact spine_case k 3 1 3 hk (by omega) (by omega) (by decide)
+                      (by have hv := pow2_mod9_2 (k - 3) (by omega)
+                          have hpos : 0 < (2 : Nat) ^ (k - 3) := Nat.pow_pos (by omega)
+                          omega)
+                  ·
+                    by_cases hc4 : c = 4
+                    · rw [hc4]
+                      exact spine_case k 0 1 4 hk (by omega) (by omega) (by decide)
+                        (by have hv := pow2_mod9_5 (k - 0) (by omega)
+                            have hpos : 0 < (2 : Nat) ^ (k - 0) := Nat.pow_pos (by omega)
+                            omega)
+                    ·
+                      by_cases hc5 : c = 5
+                      · rw [hc5]
+                        exact spine_case k 2 3 5 hk (by omega) (by omega) (by decide)
+                          (by have hv := pow2_mod9_3 (k - 2) (by omega)
+                              have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                              omega)
+                      ·
+                        by_cases hc6 : c = 6
+                        · rw [hc6]
+                          exact spine_case k 1 1 6 hk (by omega) (by omega) (by decide)
+                            (by have hv := pow2_mod9_4 (k - 1) (by omega)
+                                have hpos : 0 < (2 : Nat) ^ (k - 1) := Nat.pow_pos (by omega)
+                                omega)
+                        ·
+                          by_cases hc7 : c = 7
+                          · rw [hc7]
+                            exact spine_case k 2 1 7 hk (by omega) (by omega) (by decide)
+                              (by have hv := pow2_mod9_3 (k - 2) (by omega)
+                                  have hpos : 0 < (2 : Nat) ^ (k - 2) := Nat.pow_pos (by omega)
+                                  omega)
+                          ·
+                            have hc8 : c = 8 := by omega
+                            rw [hc8]
+                            exact spine_case k 4 9 8 hk (by omega) (by omega) (by decide)
+                              (by have hv := pow2_mod9_1 (k - 4) (by omega)
+                                  have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
+                                  omega)
