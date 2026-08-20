@@ -5478,3 +5478,357 @@ theorem affine_leaves_core (k a b r : Nat) (hk : 2 ≤ k) (h : indU k r = 1)
     omega
   · have := indU_le_one 2 (a * r + b)
     omega
+
+/- ---------- −5 IS IN THE CORE ---------- -/
+/- The truncations 2^k − 5 of −5 (the minimum of the second negative cycle
+   −5 → −7 → −10 → −5) are coefficient-undecided at every depth k ≥ 3.
+   Closed form: T^(3m)(2^k−5) = 9^m·2^(k−3m) − 5 (period-3 mirror of the
+   negative cycle), with intermediate steps 3·9^m·2^(k−3m−1) − 7 (odd) and
+   9^(m+1)·2^(k−3m−2) − 10 (odd then even), so A(3m)=2m, A(3m+1)=2m+1,
+   A(3m+2)=2m+2, and every gate 2^j < 3^(A j) reduces to the 8^m ≤ 9^m
+   family with small factors. -/
+
+theorem pow89_le (m : Nat) : 8 ^ m ≤ 9 ^ m := by
+  induction m with
+  | zero => decide
+  | succ p ih =>
+    have h1 : (8 : Nat) ^ (p + 1) = 8 ^ p * 8 := Nat.pow_succ 8 p
+    have h2 : (9 : Nat) ^ (p + 1) = 9 ^ p * 9 := Nat.pow_succ 9 p
+    omega
+
+theorem pow89_lt (m : Nat) : 1 ≤ m → 8 ^ m < 9 ^ m := by
+  induction m with
+  | zero => intro h; omega
+  | succ p ih =>
+    intro _
+    by_cases hp : 1 ≤ p
+    · have h1 := ih hp
+      have h2 : (8 : Nat) ^ (p + 1) = 8 ^ p * 8 := Nat.pow_succ 8 p
+      have h3 : (9 : Nat) ^ (p + 1) = 9 ^ p * 9 := Nat.pow_succ 9 p
+      omega
+    · have hp0 : p = 0 := by omega
+      subst hp0
+      decide
+
+/-- Gate at depth 3m (m ≥ 1): 2^(3m) < 3^(2m), i.e. 8^m < 9^m. -/
+theorem neg5_gate0 (m : Nat) (hm : 1 ≤ m) : 2 ^ (3 * m) < 3 ^ (2 * m) := by
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have d0 : (3 : Nat) ^ 2 = 9 := by decide
+  have d1 : (3 : Nat) ^ (2 * m) = 9 ^ m := by rw [Nat.pow_mul, d0]
+  have h := pow89_lt m hm
+  omega
+
+/-- Gate at depth 3m+1: 2·8^m < 3·9^m. -/
+theorem neg5_gate1 (m : Nat) : 2 ^ (3 * m + 1) < 3 ^ (2 * m + 1) := by
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have d0 : (3 : Nat) ^ 2 = 9 := by decide
+  have d1 : (3 : Nat) ^ (2 * m) = 9 ^ m := by rw [Nat.pow_mul, d0]
+  have e2 : (2 : Nat) ^ (3 * m + 1) = 2 ^ (3 * m) * 2 := Nat.pow_succ 2 (3 * m)
+  have e3 : (3 : Nat) ^ (2 * m + 1) = 3 ^ (2 * m) * 3 := Nat.pow_succ 3 (2 * m)
+  have h := pow89_le m
+  have hpos : 0 < (9 : Nat) ^ m := Nat.pow_pos (by omega)
+  omega
+
+/-- Gate at depth 3m+2: 4·8^m < 9·9^m. -/
+theorem neg5_gate2 (m : Nat) : 2 ^ (3 * m + 2) < 3 ^ (2 * m + 2) := by
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have d0 : (3 : Nat) ^ 2 = 9 := by decide
+  have d1 : (3 : Nat) ^ (2 * m) = 9 ^ m := by rw [Nat.pow_mul, d0]
+  have e2 : (2 : Nat) ^ (3 * m + 1) = 2 ^ (3 * m) * 2 := Nat.pow_succ 2 (3 * m)
+  have e2b : (2 : Nat) ^ (3 * m + 2) = 2 ^ (3 * m + 1) * 2 := by
+    have e : 3 * m + 2 = (3 * m + 1) + 1 := by omega
+    rw [e]
+    exact Nat.pow_succ 2 (3 * m + 1)
+  have e3 : (3 : Nat) ^ (2 * m + 1) = 3 ^ (2 * m) * 3 := Nat.pow_succ 3 (2 * m)
+  have e3b : (3 : Nat) ^ (2 * m + 2) = 3 ^ (2 * m + 1) * 3 := by
+    have e : 2 * m + 2 = (2 * m + 1) + 1 := by omega
+    rw [e]
+    exact Nat.pow_succ 3 (2 * m + 1)
+  have h := pow89_le m
+  have hpos : 0 < (9 : Nat) ^ m := Nat.pow_pos (by omega)
+  omega
+
+/-- One odd step: 9^m·2^t − 5 (odd for t ≥ 1) ↦ 3·9^m·2^(t−1) − 7. -/
+theorem neg5_step1 (k m : Nat) (hk : 3 ≤ k) (h1 : 3 * m + 1 ≤ k)
+    (ht : Titer (3 * m) (2 ^ k - 5) = 9 ^ m * 2 ^ (k - 3 * m) - 5)
+    (ha : A (3 * m) (2 ^ k - 5) = 2 * m) :
+    Titer (3 * m + 1) (2 ^ k - 5) = 3 * (9 ^ m * 2 ^ (k - 3 * m - 1)) - 7
+      ∧ A (3 * m + 1) (2 ^ k - 5) = 2 * m + 1 := by
+  have h89 := pow89_le m
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have e0 : 3 * m + (k - 3 * m) = k := by omega
+  have hp0 : (2 : Nat) ^ (3 * m + (k - 3 * m)) = 2 ^ (3 * m) * 2 ^ (k - 3 * m) :=
+    Nat.pow_add 2 (3 * m) (k - 3 * m)
+  rw [e0, c1] at hp0
+  have hmul : 8 ^ m * 2 ^ (k - 3 * m) ≤ 9 ^ m * 2 ^ (k - 3 * m) :=
+    Nat.mul_le_mul h89 (Nat.le_refl _)
+  have h2k : (2 : Nat) ^ 3 ≤ 2 ^ k := Nat.pow_le_pow_right (by omega) hk
+  have e1 : k - 3 * m = (k - 3 * m - 1) + 1 := by omega
+  have hsplit : (2 : Nat) ^ (k - 3 * m) = 2 ^ (k - 3 * m - 1) * 2 := by
+    rw [e1]
+    exact Nat.pow_succ 2 _
+  have hP0 : 9 ^ m * 2 ^ (k - 3 * m) = 9 ^ m * 2 ^ (k - 3 * m - 1) * 2 := by
+    rw [hsplit, ← Nat.mul_assoc]
+  have hoddX : Titer (3 * m) (2 ^ k - 5) % 2 = 1 := by omega
+  have hstep : Titer (3 * m + 1) (2 ^ k - 5) = T (Titer (3 * m) (2 ^ k - 5)) :=
+    titer_add (3 * m) 1 (2 ^ k - 5)
+  have hTodd : T (Titer (3 * m) (2 ^ k - 5))
+      = (3 * Titer (3 * m) (2 ^ k - 5) + 1) / 2 := T_odd _ hoddX
+  constructor
+  · omega
+  · have hA := A_snoc (3 * m) (2 ^ k - 5)
+    omega
+
+/-- Second odd step: 3·9^m·2^(t−1) − 7 (odd for t ≥ 2) ↦ 9^(m+1)·2^(t−2) − 10. -/
+theorem neg5_step2 (k m : Nat) (hk : 3 ≤ k) (h2 : 3 * m + 2 ≤ k)
+    (ht : Titer (3 * m + 1) (2 ^ k - 5) = 3 * (9 ^ m * 2 ^ (k - 3 * m - 1)) - 7)
+    (ha : A (3 * m + 1) (2 ^ k - 5) = 2 * m + 1) :
+    Titer (3 * m + 2) (2 ^ k - 5) = 9 ^ (m + 1) * 2 ^ (k - 3 * m - 2) - 10
+      ∧ A (3 * m + 2) (2 ^ k - 5) = 2 * m + 2 := by
+  have h89 := pow89_le m
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have e0 : 3 * m + (k - 3 * m - 2) = k - 2 := by omega
+  have hp0 : (2 : Nat) ^ (3 * m + (k - 3 * m - 2))
+      = 2 ^ (3 * m) * 2 ^ (k - 3 * m - 2) := Nat.pow_add 2 (3 * m) (k - 3 * m - 2)
+  rw [e0, c1] at hp0
+  have hmul : 8 ^ m * 2 ^ (k - 3 * m - 2) ≤ 9 ^ m * 2 ^ (k - 3 * m - 2) :=
+    Nat.mul_le_mul h89 (Nat.le_refl _)
+  have c2 : (2 : Nat) ^ 1 = 2 := by decide
+  have h2k : (2 : Nat) ^ 1 ≤ 2 ^ (k - 2) := Nat.pow_le_pow_right (by omega) (by omega)
+  have e1 : k - 3 * m - 1 = (k - 3 * m - 2) + 1 := by omega
+  have hsplit : (2 : Nat) ^ (k - 3 * m - 1) = 2 ^ (k - 3 * m - 2) * 2 := by
+    rw [e1]
+    exact Nat.pow_succ 2 _
+  have hP1 : 9 ^ m * 2 ^ (k - 3 * m - 1) = 9 ^ m * 2 ^ (k - 3 * m - 2) * 2 := by
+    rw [hsplit, ← Nat.mul_assoc]
+  have hQ2 : 9 ^ (m + 1) * 2 ^ (k - 3 * m - 2)
+      = 9 * (9 ^ m * 2 ^ (k - 3 * m - 2)) := by
+    rw [Nat.pow_succ]
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  have hoddX : Titer (3 * m + 1) (2 ^ k - 5) % 2 = 1 := by omega
+  have hstep : Titer (3 * m + 2) (2 ^ k - 5) = T (Titer (3 * m + 1) (2 ^ k - 5)) := by
+    have e : 3 * m + 2 = (3 * m + 1) + 1 := by omega
+    rw [e]
+    exact titer_add (3 * m + 1) 1 (2 ^ k - 5)
+  have hTodd : T (Titer (3 * m + 1) (2 ^ k - 5))
+      = (3 * Titer (3 * m + 1) (2 ^ k - 5) + 1) / 2 := T_odd _ hoddX
+  constructor
+  · omega
+  · have hA : A (3 * m + 2) (2 ^ k - 5)
+        = A (3 * m + 1) (2 ^ k - 5) + Titer (3 * m + 1) (2 ^ k - 5) % 2 := by
+      have e : 3 * m + 2 = (3 * m + 1) + 1 := by omega
+      rw [e]
+      exact A_snoc (3 * m + 1) (2 ^ k - 5)
+    omega
+
+/-- Even step closing the period: 9^(m+1)·2^(t−2) − 10 (even for t ≥ 3)
+    ↦ 9^(m+1)·2^(t−3) − 5. -/
+theorem neg5_step3 (k m : Nat) (hk : 3 ≤ k) (h3 : 3 * m + 3 ≤ k)
+    (ht : Titer (3 * m + 2) (2 ^ k - 5) = 9 ^ (m + 1) * 2 ^ (k - 3 * m - 2) - 10)
+    (ha : A (3 * m + 2) (2 ^ k - 5) = 2 * m + 2) :
+    Titer (3 * m + 3) (2 ^ k - 5) = 9 ^ (m + 1) * 2 ^ (k - 3 * m - 3) - 5
+      ∧ A (3 * m + 3) (2 ^ k - 5) = 2 * m + 2 := by
+  have h89 := pow89_le m
+  have c0 : (2 : Nat) ^ 3 = 8 := by decide
+  have c1 : (2 : Nat) ^ (3 * m) = 8 ^ m := by rw [Nat.pow_mul, c0]
+  have e0 : 3 * m + (k - 3 * m - 2) = k - 2 := by omega
+  have hp0 : (2 : Nat) ^ (3 * m + (k - 3 * m - 2))
+      = 2 ^ (3 * m) * 2 ^ (k - 3 * m - 2) := Nat.pow_add 2 (3 * m) (k - 3 * m - 2)
+  rw [e0, c1] at hp0
+  have hmul : 8 ^ m * 2 ^ (k - 3 * m - 2) ≤ 9 ^ m * 2 ^ (k - 3 * m - 2) :=
+    Nat.mul_le_mul h89 (Nat.le_refl _)
+  have c2 : (2 : Nat) ^ 1 = 2 := by decide
+  have h2k : (2 : Nat) ^ 1 ≤ 2 ^ (k - 2) := Nat.pow_le_pow_right (by omega) (by omega)
+  have hQ2 : 9 ^ (m + 1) * 2 ^ (k - 3 * m - 2)
+      = 9 * (9 ^ m * 2 ^ (k - 3 * m - 2)) := by
+    rw [Nat.pow_succ]
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  have e1 : k - 3 * m - 2 = (k - 3 * m - 3) + 1 := by omega
+  have hsplit : (2 : Nat) ^ (k - 3 * m - 2) = 2 ^ (k - 3 * m - 3) * 2 := by
+    rw [e1]
+    exact Nat.pow_succ 2 _
+  have hQ23 : 9 ^ (m + 1) * 2 ^ (k - 3 * m - 2)
+      = 9 ^ (m + 1) * 2 ^ (k - 3 * m - 3) * 2 := by
+    rw [hsplit, ← Nat.mul_assoc]
+  have hevenX : Titer (3 * m + 2) (2 ^ k - 5) % 2 = 0 := by omega
+  have hstep : Titer (3 * m + 3) (2 ^ k - 5) = T (Titer (3 * m + 2) (2 ^ k - 5)) := by
+    have e : 3 * m + 3 = (3 * m + 2) + 1 := by omega
+    rw [e]
+    exact titer_add (3 * m + 2) 1 (2 ^ k - 5)
+  have hTeven : T (Titer (3 * m + 2) (2 ^ k - 5))
+      = Titer (3 * m + 2) (2 ^ k - 5) / 2 := T_even _ hevenX
+  constructor
+  · omega
+  · have hA : A (3 * m + 3) (2 ^ k - 5)
+        = A (3 * m + 2) (2 ^ k - 5) + Titer (3 * m + 2) (2 ^ k - 5) % 2 := by
+      have e : 3 * m + 3 = (3 * m + 2) + 1 := by omega
+      rw [e]
+      exact A_snoc (3 * m + 2) (2 ^ k - 5)
+    omega
+
+/-- The period-3 closed form of the truncated negative cycle:
+    T^(3m)(2^k − 5) = 9^m·2^(k−3m) − 5 and A(3m) = 2m, for all 3m ≤ k. -/
+theorem neg5_traj (k : Nat) (hk : 3 ≤ k) : ∀ m, 3 * m ≤ k →
+    Titer (3 * m) (2 ^ k - 5) = 9 ^ m * 2 ^ (k - 3 * m) - 5
+      ∧ A (3 * m) (2 ^ k - 5) = 2 * m := by
+  intro m
+  induction m with
+  | zero =>
+    intro _
+    constructor
+    · show 2 ^ k - 5 = 9 ^ 0 * 2 ^ (k - 3 * 0) - 5
+      have e : k - 3 * 0 = k := by omega
+      rw [Nat.pow_zero, Nat.one_mul, e]
+    · rfl
+  | succ p ih =>
+    intro h
+    have h3p : 3 * p ≤ k := by omega
+    have ht := (ih h3p).1
+    have ha := (ih h3p).2
+    have s1 := neg5_step1 k p hk (by omega) ht ha
+    have s2 := neg5_step2 k p hk (by omega) s1.1 s1.2
+    have s3 := neg5_step3 k p hk (by omega) s2.1 s2.2
+    have ht3 := s3.1
+    have ha3 := s3.2
+    have em : 3 * (p + 1) = 3 * p + 3 := by omega
+    have ee : k - (3 * p + 3) = k - 3 * p - 3 := by omega
+    rw [em, ee]
+    constructor
+    · exact ht3
+    · omega
+
+/-- The full A-profile of 2^k − 5: A j = 2·⌊j/3⌋ + (j mod 3) for all j ≤ k. -/
+theorem neg5_A (k j : Nat) (hk : 3 ≤ k) (hj : j ≤ k) :
+    A j (2 ^ k - 5) = 2 * (j / 3) + j % 3 := by
+  by_cases h0 : j % 3 = 0
+  · have hje : j = 3 * (j / 3) := by omega
+    have ha := (neg5_traj k hk (j / 3) (by omega)).2
+    have hAe : A j (2 ^ k - 5) = A (3 * (j / 3)) (2 ^ k - 5) := by rw [← hje]
+    omega
+  · by_cases h1 : j % 3 = 1
+    · have hje : j = 3 * (j / 3) + 1 := by omega
+      have ht0 := (neg5_traj k hk (j / 3) (by omega)).1
+      have ha0 := (neg5_traj k hk (j / 3) (by omega)).2
+      have s1 := neg5_step1 k (j / 3) hk (by omega) ht0 ha0
+      have ha := s1.2
+      have hAe : A j (2 ^ k - 5) = A (3 * (j / 3) + 1) (2 ^ k - 5) := by rw [← hje]
+      omega
+    · have h2 : j % 3 = 2 := by omega
+      have hje : j = 3 * (j / 3) + 2 := by omega
+      have ht0 := (neg5_traj k hk (j / 3) (by omega)).1
+      have ha0 := (neg5_traj k hk (j / 3) (by omega)).2
+      have s1 := neg5_step1 k (j / 3) hk (by omega) ht0 ha0
+      have s2 := neg5_step2 k (j / 3) hk (by omega) s1.1 s1.2
+      have ha := s2.2
+      have hAe : A j (2 ^ k - 5) = A (3 * (j / 3) + 2) (2 ^ k - 5) := by rw [← hje]
+      omega
+
+/-- −5 IS IN THE CORE: the mirror truncation 2^k − 5 of the second negative
+    cycle's minimum is coefficient-undecided at every depth k ≥ 3. -/
+theorem neg_five_in_core (k : Nat) (hk : 3 ≤ k) : indU k (2 ^ k - 5) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  have hA := neg5_A k j hk hj2
+  rw [hA]
+  by_cases h0 : j % 3 = 0
+  · have hje : j = 3 * (j / 3) := by omega
+    have hexp : 2 * (j / 3) + j % 3 = 2 * (j / 3) := by omega
+    have hpe : (2 : Nat) ^ j = 2 ^ (3 * (j / 3)) := by rw [← hje]
+    rw [hexp, hpe]
+    exact neg5_gate0 (j / 3) (by omega)
+  · by_cases h1 : j % 3 = 1
+    · have hje : j = 3 * (j / 3) + 1 := by omega
+      have hexp : 2 * (j / 3) + j % 3 = 2 * (j / 3) + 1 := by omega
+      have hpe : (2 : Nat) ^ j = 2 ^ (3 * (j / 3) + 1) := by rw [← hje]
+      rw [hexp, hpe]
+      exact neg5_gate1 (j / 3)
+    · have h2 : j % 3 = 2 := by omega
+      have hje : j = 3 * (j / 3) + 2 := by omega
+      have hexp : 2 * (j / 3) + j % 3 = 2 * (j / 3) + 2 := by omega
+      have hpe : (2 : Nat) ^ j = 2 ^ (3 * (j / 3) + 2) := by rw [← hje]
+      rw [hexp, hpe]
+      exact neg5_gate2 (j / 3)
+/- ---------- backward-branch closure of the core ---------- -/
+
+/-- BACKWARD ODD-BRANCH CLOSURE: if c is in the core at depth k and
+    c ≡ 2 (mod 3) — i.e. the odd inverse branch x = (2c−1)/3 exists as a
+    natural, stated division-free as 3x + 1 = 2c — then x is in the core
+    at depth k+1. Mechanism: 3x+1 = 2c forces x odd (free parity), so
+    T x = (3x+1)/2 = c EXACTLY as naturals; hence the word of x is 1
+    followed by the word of c, A (j+1) x = 1 + A j c with NO induction
+    (one unfolding of A_succ), and every gate of x is the corresponding
+    gate of c multiplied by 2 < 3: 2^(j+1) = 2·2^j < 3·3^(A j c).
+    This proves the measured 100% closure of the core under the map
+    c ↦ (2c−1)/3 (on classes where it lands in ℕ). Note c ≥ 1 is forced
+    by 3x + 1 = 2c, so no positivity hypothesis is needed. -/
+theorem backward_closure (k c x : Nat) (h3 : 3 * x + 1 = 2 * c)
+    (hu : indU k c = 1) : indU (k + 1) x = 1 := by
+  -- x is odd: 3x + 1 = 2c is even, so 3x is odd, so x is odd
+  have hxodd : x % 2 = 1 := by omega
+  -- T x = c exactly: T x = (3x+1)/2 = 2c/2 = c
+  have hTx : T x = c := by
+    rw [T_odd x hxodd, h3]
+    omega
+  -- the word of x is 1 ++ word of c: one unfolding of A_succ
+  have hAx : ∀ j, A (j + 1) x = 1 + A j c := by
+    intro j
+    rw [A_succ j x, hTx, hxodd]
+    rfl
+  -- gate monotone: peel one gate off indU
+  have hmono1 : ∀ j, indU (j + 1) c = 1 → indU j c = 1 := by
+    intro j hj
+    rw [indU_succ] at hj
+    by_cases hz : indU j c = 1
+    · exact hz
+    · have := indU_le_one j c
+      have hz0 : indU j c = 0 := by omega
+      rw [hz0, Nat.zero_mul] at hj
+      omega
+  -- all prefixes of a core class are core
+  have hall : ∀ m, m ≤ k → indU m c = 1 := by
+    intro m hm
+    have hstep : ∀ d, indU (m + d) c = 1 → indU m c = 1 := by
+      intro d
+      induction d with
+      | zero => intro hh; exact hh
+      | succ p ih =>
+        intro hh
+        have e : m + (p + 1) = (m + p) + 1 := by omega
+        rw [e] at hh
+        exact ih (hmono1 (m + p) hh)
+    have hu' := hu
+    have e : k = m + (k - m) := by omega
+    rw [e] at hu'
+    exact hstep (k - m) hu'
+  -- every gate of c through depth k is dominated
+  have hgatec : ∀ m, 1 ≤ m → m ≤ k → 2 ^ m < 3 ^ A m c := by
+    intro m hm1 hmk
+    have h1 : indU m c = 1 := hall m hmk
+    cases m with
+    | zero => omega
+    | succ p => exact indU_one_gate p c h1
+  -- x is dominated through depth k+1: each gate is c's gate times 2 < 3
+  apply indU_of_dominated
+  intro j hj1 hj2
+  cases j with
+  | zero => omega
+  | succ m =>
+    rw [hAx m]
+    by_cases hm : 1 ≤ m
+    · have hg := hgatec m hm (by omega)
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3p : (3 : Nat) ^ (A m c + 1) = 3 ^ A m c * 3 := Nat.pow_succ 3 (A m c)
+      have hcm : 1 + A m c = A m c + 1 := Nat.add_comm 1 (A m c)
+      rw [hcm, h3p]
+      omega
+    · have hm0 : m = 0 := by omega
+      subst hm0
+      have hA0 : A 0 c = 0 := rfl
+      rw [hA0]
+      decide
+

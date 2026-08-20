@@ -1059,3 +1059,23 @@ catch: facts count pre-written (73648) in the same command as eval
 which printed 73645 — the R34/R36 rule violated AGAIN and caught by the
 eval print itself; corrected here | born: none (verified) |
 facts(main)=73645
+
+R94 | Track E ultracode: **breadth sweep synthesis (10 explorers +
+synthesis, 1.25M tokens)** | 70 tagged claims, 5-way convergences, 5
+explicit contradictions. SUPERSESSION: R92's merge-sketch refuted by
+agent cross-check (merge-only predicts 35.4% vs measured 47.9%;
+never-merged classes in S at HIGHER rates; exact mechanism = coupling
+error-walk with thresholds θ = 1.000/1.585, verified per-class ×6 maps
+×4 depths; R93's transducer-exactness stands). INTEGRATED:
+neg_five_in_core (first negative-cycle core membership) +
+backward_closure — both kernel-checked in main file. CATCH (from the
+meta-audit's mirror-world control): R90's "off-cycle negatives decide
+within ≤10" REFUTED — 89 odd negatives dominated past depth 96; only
+{−1,−5,−17} provably in the infinite core. Mirror-world result: EVERY
+mod-2^k observable is sign-blind (3n−1 core has identical u_k and
+identical affine laws) — strategic filter: viable mechanisms must be
+affine-relational AND sign-carrying; only the D>0 line currently passes.
+Five-way convergence: {−1,−5,−17} = CF-approximant lockings 1/1, 2/3,
+7/11; next slot predicted at 12/19. Queued: superadditivity → lower
+bound 3/4 (R95) | catch: see supersessions above | born: none
+(verified) | facts(main)=73687
