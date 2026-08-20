@@ -1,0 +1,61 @@
+-- Round 22 (Track C, owner instruction): THE FRONTIER — state of the art fetched
+-- from the live web (2026-08-20, WebSearch; first round with non-memory sources)
+-- and formulated in ROFL. Zero new predicates (freeze intact): everything lands
+-- in the existing source/obstacle/partial/claim vocabulary.
+--
+-- Sources fetched today (full links in run/math/FRONTIER.md):
+--   src_barina_2025:  verification limit n <= 2^71 (J. Supercomputing 2025)
+--   src_hercher_2023: no Collatz m-cycles with m <= 91 (JIS 26, 23.3.5;
+--                     supersedes Simons-de Weger m >= 76/83 lineage)
+--   src_tao_2019:     almost all orbits attain almost bounded values
+--                     (logarithmic density; arXiv:1909.03562, Forum of Math Pi)
+--   src_krasikov_lagarias: >= x^0.84 integers below x reach 1 (arXiv:math/0205002)
+--   src_ccchallenge:  community effort formalizing Collatz literature in Lean
+src(src_barina_2025).        src_basis(src_barina_2025, web_fetched).
+verified[world](src_barina_2025).
+src(src_hercher_2023).       src_basis(src_hercher_2023, web_fetched).
+verified[world](src_hercher_2023).
+src(src_krasikov_lagarias).  src_basis(src_krasikov_lagarias, web_fetched).
+verified[world](src_krasikov_lagarias).
+src(src_ccchallenge).        src_basis(src_ccchallenge, web_fetched).
+verified[world](src_ccchallenge).
+-- memory anchors CONFIRMED by today's fetch (their memory_only flags clear):
+verified[world](src_tao_2019).
+verified[world](src_simons_deweger).
+-- NOT confirmed today, stay honestly memory-flagged: src_terras_1976,
+-- src_conway_1972, src_eliahou_1993, src_baker_theory, src_lagarias_survey.
+
+-- Quantitative frontier facts (existing vocabulary):
+ground[a](collatz, verified_to_2pow71).
+evidence[world](collatz, verified_to_2pow71).
+source_of(verified_to_2pow71, src_barina_2025).
+partial_result[lit](no_cycles, hercher_no_mcycles_m_le_91).
+source_of(hercher_no_mcycles_m_le_91, src_hercher_2023).
+partial_result[lit](no_divergence, tao_almost_all_log_density).
+source_of(tao_almost_all_log_density, src_tao_2019).
+partial_result[lit](no_divergence, krasikov_lagarias_x084_reach_1).
+source_of(krasikov_lagarias_x084_reach_1, src_krasikov_lagarias).
+
+-- THE REVISION EVENT. The R9/R11 derivation hard_core(no_divergence) rested on
+-- "no_divergence has no partial results" — an artifact of the seed's modeling,
+-- now REFUTED by sourced facts (Tao, Krasikov-Lagarias are partials for that
+-- branch). The graph self-corrects: has_partial(no_divergence) now derives, so
+-- hard_core(no_divergence) stops deriving. The audit chain is exercised in full:
+refuted[b](derivation_uncovered_and_no_partials).
+repair[a](hard_core_is_no_divergence,
+          superseded_because(both_branches_carry_partials_after_frontier_fetch)).
+
+-- The refined frontier claim that SURVIVES the sourced literature: the real
+-- asymmetry is not partials-vs-none but the TYPE of partials — no_cycles has
+-- finite-obstruction exclusions (m <= 91 + the 2^71 floor force astronomically
+-- long hypothetical cycles), while no_divergence has density statements
+-- (almost-all in log density; x^0.84) with NO KNOWN ROUTE from density to
+-- totality: almost-all is not all, and Tao's method is explicitly barriered
+-- there. That routelessness is the honest hard core.
+claim_of[a](hard_core_no_route_from_density_to_totality).
+ground[a](hard_core_no_route_from_density_to_totality, sourced_frontier_fetch_2026_08_20).
+evidence[world](hard_core_no_route_from_density_to_totality, sourced_frontier_fetch_2026_08_20).
+source_of(sourced_frontier_fetch_2026_08_20, src_tao_2019).
+source_of(sourced_frontier_fetch_2026_08_20, src_krasikov_lagarias).
+source_of(sourced_frontier_fetch_2026_08_20, src_hercher_2023).
+source_of(sourced_frontier_fetch_2026_08_20, src_barina_2025).

@@ -275,3 +275,20 @@ direct GitHub asset download (API 403, assets pass), zstd via apt. Caveats
 stated in the lemma file (native_decide trusts the evaluator; w_k>0 in the
 one-power case is finite-checked k≤19, not proved for all k) | catch: none |
 born: none in main (freeze) | facts(main)~70730
+
+R22 | Track C (owner instruction): THE FRONTIER — live web fetch, formulated in
+ROFL | First non-memory sources of the run (WebSearch): Barina 2025 (2^71
+verification floor, upgrades seed's 2^68), Hercher 2023 (no m-cycles m≤91,
+supersedes Simons-de Weger), Tao 2019 (almost-all in log density), Krasikov-
+Lagarias (x^0.84), ccchallenge.org (Lean formalization effort). Six memory
+anchors upgraded to verified[world]; five stay honestly memory-flagged.
+**THE REVISION EVENT: the fetched partials for no_divergence refuted the ground
+of hard_core_is_no_divergence (R9/R11)** — the graph self-corrected
+(hard_core stopped deriving), the audit chain fired in full (refuted[b] →
+at_risk → repair by supersession, assert-only), and the refined claim survives:
+the real hard core is "no known route from density to totality", sourced.
+FRONTIER.md maps proved territory (Lemmas 1-3, four verification paths) vs the
+fetched literature frontier vs the open gap. Zero new predicates | catch: a
+seed-modeling artifact (partials recorded only for no_cycles) exposed by real
+literature — in prose that sentence would have survived | born: none (freeze) |
+facts(main)=70804
