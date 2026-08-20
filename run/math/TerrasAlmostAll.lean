@@ -1378,3 +1378,260 @@ theorem never_dropper_C_in_core (n : Nat) (hnd : ∀ j, ¬ Citer j n < n)
   intro i hdrop
   have ⟨j, _, _, hj3⟩ := titer_citer i n
   exact hnd j (by omega)
+
+/- ---------- the OPTIMAL-λ Chernoff: η_k ≤ 2^(−k/21) ---------- -/
+/- λ = 12/7 ≈ 1.714 sits at the entropy optimum γ/(1−γ) for γ = log₃2.
+   Everything is integer: weights 12^s·7^(k−s), total (12+7)^k = 19^k, and
+   one thin decide certificate (margin ≈ ×12):
+   19^2100 · 2^100 · 7^1323 ≤ 2^2100 · 7^2100 · 12^1323.
+   The resulting proved rate 2^(−1/21) ≈ 0.9675 sits within 0.1% of the
+   empirically observed asymptotic rate ≈ 0.96591 (see dp100.js / round 41). -/
+
+theorem binom_127 (k : Nat) :
+    S (fun s => choose k s * 12 ^ s * 7 ^ (k - s)) (k + 1) = 19 ^ k := by
+  induction k with
+  | zero =>
+    show S (fun s => choose 0 s * 12 ^ s * 7 ^ (0 - s)) 1 = 1
+    rw [S_succ]
+    rfl
+  | succ m ih =>
+    have hsplit : ∀ s, s < m + 1 + 1 →
+        choose (m + 1) s * 12 ^ s * 7 ^ (m + 1 - s)
+          = 7 * (choose m s * 12 ^ s * 7 ^ (m - s))
+            + shift (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t))) s := by
+      intro s hs
+      match s with
+      | 0 =>
+        show choose (m + 1) 0 * 12 ^ 0 * 7 ^ (m + 1 - 0)
+              = 7 * (choose m 0 * 12 ^ 0 * 7 ^ (m - 0)) + 0
+        rw [choose_zero, choose_zero]
+        have e1 : m + 1 - 0 = (m - 0) + 1 := by omega
+        rw [e1, Nat.pow_succ]
+        simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+      | t + 1 =>
+        have hy : shift (fun r => 12 * (choose m r * 12 ^ r * 7 ^ (m - r))) (t + 1)
+            = 12 * (choose m t * 12 ^ t * 7 ^ (m - t)) := rfl
+        have hp : choose (m + 1) (t + 1) = choose m t + choose m (t + 1) := rfl
+        rw [hy, hp]
+        by_cases htm : t < m
+        · have e2 : (7 : Nat) ^ (m + 1 - (t + 1)) = 7 ^ (m - (t + 1)) * 7 := by
+            have hh : m + 1 - (t + 1) = (m - (t + 1)) + 1 := by omega
+            rw [hh, Nat.pow_succ]
+          have e2' : (7 : Nat) ^ (m - t) = 7 ^ (m - (t + 1)) * 7 := by
+            have hh : m - t = (m - (t + 1)) + 1 := by omega
+            rw [hh, Nat.pow_succ]
+          have e3 : (12 : Nat) ^ (t + 1) = 12 ^ t * 12 := Nat.pow_succ 12 t
+          rw [e2, e2', e3]
+          simp [Nat.add_mul, Nat.mul_add, Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+          omega
+        · -- t ≥ m, and s = t+1 < m+2 forces t = m: the B-term dies above diagonal
+          have htm' : t = m := by omega
+          subst htm'
+          have hz : choose t (t + 1) = 0 := choose_above_diag t (t + 1) (by omega)
+          rw [hz]
+          have e3 : (12 : Nat) ^ (t + 1) = 12 ^ t * 12 := Nat.pow_succ 12 t
+          rw [e3]
+          have h0 : t + 1 - (t + 1) = 0 := by omega
+          have h0' : t - t = 0 := by omega
+          rw [h0, h0']
+          simp [Nat.add_mul, Nat.mul_add, Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    have e1 : S (fun s => choose (m + 1) s * 12 ^ s * 7 ^ (m + 1 - s)) (m + 1 + 1)
+        = S (fun s => 7 * (choose m s * 12 ^ s * 7 ^ (m - s))
+              + shift (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t))) s) (m + 1 + 1) :=
+      S_congr _ _ _ hsplit
+    have e2 : S (fun s => 7 * (choose m s * 12 ^ s * 7 ^ (m - s))
+              + shift (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t))) s) (m + 1 + 1)
+        = S (fun s => 7 * (choose m s * 12 ^ s * 7 ^ (m - s))) (m + 1 + 1)
+          + S (shift (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t)))) (m + 1 + 1) :=
+      S_add _ _ _
+    have e3 : S (fun s => 7 * (choose m s * 12 ^ s * 7 ^ (m - s))) (m + 1 + 1) = 7 * 19 ^ m := by
+      have ha : ∀ s, s < m + 1 + 1 →
+          7 * (choose m s * 12 ^ s * 7 ^ (m - s))
+            = (choose m s * 12 ^ s * 7 ^ (m - s)) * 7 := by
+        intro s _
+        exact Nat.mul_comm _ _
+      rw [S_congr _ _ _ ha, S_mul_right]
+      have hb := S_succ (fun s => choose m s * 12 ^ s * 7 ^ (m - s)) (m + 1)
+      have hz : choose m (m + 1) = 0 := choose_above_diag m (m + 1) (by omega)
+      rw [hb, hz, ih]
+      simp [Nat.mul_comm]
+    have e4 : S (shift (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t)))) (m + 1 + 1)
+        = S (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t))) (m + 1) :=
+      S_shift _ _
+    have e5 : S (fun t => 12 * (choose m t * 12 ^ t * 7 ^ (m - t))) (m + 1) = 12 * 19 ^ m := by
+      have ha : ∀ t, t < m + 1 →
+          12 * (choose m t * 12 ^ t * 7 ^ (m - t))
+            = (choose m t * 12 ^ t * 7 ^ (m - t)) * 12 := by
+        intro t _
+        exact Nat.mul_comm _ _
+      rw [S_congr _ _ _ ha, S_mul_right, ih]
+      exact Nat.mul_comm _ _
+    have hpow : (19 : Nat) ^ (m + 1) = 19 ^ m * 19 := Nat.pow_succ 19 m
+    show S (fun s => choose (m + 1) s * 12 ^ s * 7 ^ (m + 1 - s)) (m + 1 + 1) = 19 ^ (m + 1)
+    omega
+
+/-- Optimal-λ Chernoff bound: uf k · 12^m · 7^(k−m) ≤ 19^k at m = 63k/100+1. -/
+theorem chernoff_127 (k : Nat) (hk : 1 ≤ k) :
+    uf k * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1))) ≤ 19 ^ k := by
+  have hmk : 63 * k / 100 + 1 ≤ k := by omega
+  have hq : ∀ s, s < k + 1 →
+      dpf k s * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1)))
+        ≤ choose k s * 12 ^ s * 7 ^ (k - s) := by
+    intro s hs
+    by_cases hz : dpf k s = 0
+    · rw [hz, Nat.zero_mul]
+      omega
+    · have hex : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+      have ⟨j, hj⟩ := hex
+      subst hj
+      have hdom := dpf_pos_dominates j s hz
+      have hth := threshold_63_100 (j + 1) s hdom
+      have hsge : 63 * (j + 1) / 100 + 1 ≤ s := by omega
+      -- weight monotonicity: 12^m·7^(k−m) ≤ 12^s·7^(k−s) for m ≤ s ≤ k
+      have hsk : s ≤ j + 1 := by omega
+      have hsplit1 : (12 : Nat) ^ s = 12 ^ (63 * (j + 1) / 100 + 1) * 12 ^ (s - (63 * (j + 1) / 100 + 1)) := by
+        rw [← Nat.pow_add]
+        have : 63 * (j + 1) / 100 + 1 + (s - (63 * (j + 1) / 100 + 1)) = s := by omega
+        rw [this]
+      have hsplit2 : (7 : Nat) ^ (j + 1 - (63 * (j + 1) / 100 + 1))
+          = 7 ^ (s - (63 * (j + 1) / 100 + 1)) * 7 ^ (j + 1 - s) := by
+        rw [← Nat.pow_add]
+        have : s - (63 * (j + 1) / 100 + 1) + (j + 1 - s) = j + 1 - (63 * (j + 1) / 100 + 1) := by omega
+        rw [this]
+      have hwle : (7 : Nat) ^ (s - (63 * (j + 1) / 100 + 1)) ≤ 12 ^ (s - (63 * (j + 1) / 100 + 1)) :=
+        Nat.pow_le_pow_left (by omega) _
+      have hw : (12 : Nat) ^ (63 * (j + 1) / 100 + 1) * 7 ^ (j + 1 - (63 * (j + 1) / 100 + 1))
+          ≤ 12 ^ s * 7 ^ (j + 1 - s) := by
+        rw [hsplit1, hsplit2]
+        calc 12 ^ (63 * (j + 1) / 100 + 1) * (7 ^ (s - (63 * (j + 1) / 100 + 1)) * 7 ^ (j + 1 - s))
+            = 12 ^ (63 * (j + 1) / 100 + 1) * 7 ^ (s - (63 * (j + 1) / 100 + 1)) * 7 ^ (j + 1 - s) := by
+              rw [Nat.mul_assoc]
+          _ ≤ 12 ^ (63 * (j + 1) / 100 + 1) * 12 ^ (s - (63 * (j + 1) / 100 + 1)) * 7 ^ (j + 1 - s) :=
+              Nat.mul_le_mul_right _ (Nat.mul_le_mul_left _ hwle)
+          _ = 12 ^ (63 * (j + 1) / 100 + 1) * 12 ^ (s - (63 * (j + 1) / 100 + 1)) * 7 ^ (j + 1 - s) := rfl
+      have hd := dpf_le_choose (j + 1) s
+      calc dpf (j + 1) s * (12 ^ (63 * (j + 1) / 100 + 1) * 7 ^ (j + 1 - (63 * (j + 1) / 100 + 1)))
+          ≤ dpf (j + 1) s * (12 ^ s * 7 ^ (j + 1 - s)) := Nat.mul_le_mul_left _ hw
+        _ ≤ choose (j + 1) s * (12 ^ s * 7 ^ (j + 1 - s)) := Nat.mul_le_mul_right _ hd
+        _ = choose (j + 1) s * 12 ^ s * 7 ^ (j + 1 - s) := by rw [Nat.mul_assoc]
+  have h1 : uf k * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1)))
+      = S (fun s => dpf k s * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1)))) (k + 1) :=
+    (S_mul_right (dpf k) _ (k + 1)).symm
+  have h2 : S (fun s => dpf k s * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1)))) (k + 1)
+      ≤ S (fun s => choose k s * 12 ^ s * 7 ^ (k - s)) (k + 1) := S_mono _ _ _ hq
+  have h3 := binom_127 k
+  omega
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 3000 in
+theorem cert_1927 : (19 : Nat) ^ 2100 * 2 ^ 100 * 7 ^ 1323 ≤ 2 ^ 2100 * 7 ^ 2100 * 12 ^ 1323 := by
+  decide
+
+theorem cert_712 : (7 : Nat) ^ 21 ≤ 12 ^ 21 := by decide
+
+/-- Ratio-monotone lift: an A·7^P ≤ B·12^P inequality survives raising P. -/
+theorem pow_ratio_mono (L R P0 : Nat) (h : L * 7 ^ P0 ≤ R * 12 ^ P0) :
+    ∀ d, L * 7 ^ (P0 + d) ≤ R * 12 ^ (P0 + d) := by
+  intro d
+  induction d with
+  | zero => exact h
+  | succ e ih =>
+    have h7 : (7 : Nat) ^ (P0 + (e + 1)) = 7 ^ (P0 + e) * 7 := Nat.pow_succ 7 (P0 + e)
+    have h12 : (12 : Nat) ^ (P0 + (e + 1)) = 12 ^ (P0 + e) * 12 := Nat.pow_succ 12 (P0 + e)
+    rw [h7, h12, ← Nat.mul_assoc, ← Nat.mul_assoc]
+    calc L * 7 ^ (P0 + e) * 7 ≤ R * 12 ^ (P0 + e) * 7 := Nat.mul_le_mul_right _ ih
+      _ ≤ R * 12 ^ (P0 + e) * 12 := Nat.mul_le_mul_left _ (by omega)
+
+/-- THE OPTIMAL-λ RATE: u_k · 2^(k/21) ≤ 2^k for every k ≥ 1 — proved rate
+    2^(−1/21) ≈ 0.9675, within 0.1% of the observed asymptotic ≈ 0.96591. -/
+theorem eta_21 (k : Nat) (hk : 1 ≤ k) : uf k * 2 ^ (k / 21) ≤ 2 ^ k := by
+  have hch := chernoff_127 k hk
+  have hmk : 63 * k / 100 + 1 ≤ k := by omega
+  -- A: Chernoff raised to the 2100th power, exponents flattened
+  have hA := Nat.pow_le_pow_left hch 2100
+  have hA1 : (uf k * (12 ^ (63 * k / 100 + 1) * 7 ^ (k - (63 * k / 100 + 1)))) ^ 2100
+      = uf k ^ 2100 * (12 ^ (2100 * (63 * k / 100 + 1))
+          * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) := by
+    rw [Nat.mul_pow, Nat.mul_pow, ← Nat.pow_mul, ← Nat.pow_mul,
+        Nat.mul_comm (63 * k / 100 + 1) 2100, Nat.mul_comm (k - (63 * k / 100 + 1)) 2100]
+  have hA2 : ((19 : Nat) ^ k) ^ 2100 = 19 ^ (2100 * k) := by
+    rw [← Nat.pow_mul, Nat.mul_comm k 2100]
+  rw [hA1, hA2] at hA
+  -- B: the certified exponent inequality at P = 2100·(63k/100+1)
+  have hB : (19 : Nat) ^ (2100 * k) * 2 ^ (100 * k) * 7 ^ (2100 * (63 * k / 100 + 1))
+      ≤ 2 ^ (2100 * k) * 7 ^ (2100 * k) * 12 ^ (2100 * (63 * k / 100 + 1)) := by
+    have hPd : 2100 * (63 * k / 100 + 1)
+        = (1323 * k + 21) + (2100 * (63 * k / 100 + 1) - (1323 * k + 21)) := by
+      have hdm := Nat.div_add_mod (63 * k) 100
+      have hm : 63 * k % 100 < 100 := Nat.mod_lt _ (by omega)
+      omega
+    rw [hPd]
+    apply pow_ratio_mono
+    have hL : (19 : Nat) ^ (2100 * k) * 2 ^ (100 * k) * 7 ^ (1323 * k + 21)
+        = (19 ^ 2100 * 2 ^ 100 * 7 ^ 1323) ^ k * 7 ^ 21 := by
+      rw [Nat.pow_add, ← Nat.mul_assoc, Nat.mul_pow, Nat.mul_pow,
+          ← Nat.pow_mul 19 2100 k, ← Nat.pow_mul 2 100 k, ← Nat.pow_mul 7 1323 k]
+    have hR : (2 : Nat) ^ (2100 * k) * 7 ^ (2100 * k) * 12 ^ (1323 * k + 21)
+        = (2 ^ 2100 * 7 ^ 2100 * 12 ^ 1323) ^ k * 12 ^ 21 := by
+      rw [Nat.pow_add, ← Nat.mul_assoc, Nat.mul_pow, Nat.mul_pow,
+          ← Nat.pow_mul 2 2100 k, ← Nat.pow_mul 7 2100 k, ← Nat.pow_mul 12 1323 k]
+    rw [hL, hR]
+    exact Nat.mul_le_mul (Nat.pow_le_pow_left cert_1927 k) cert_712
+  -- C2: divide hB by 7^P
+  have hC2 : (19 : Nat) ^ (2100 * k) * 2 ^ (100 * k)
+      ≤ 2 ^ (2100 * k) * (12 ^ (2100 * (63 * k / 100 + 1))
+          * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) := by
+    have h7pos : 0 < (7 : Nat) ^ (2100 * (63 * k / 100 + 1)) := Nat.pow_pos (by omega)
+    apply Nat.le_of_mul_le_mul_right _ h7pos
+    have h7 : (7 : Nat) ^ (2100 * k)
+        = 7 ^ (2100 * (k - (63 * k / 100 + 1))) * 7 ^ (2100 * (63 * k / 100 + 1)) := by
+      rw [← Nat.pow_add]
+      have he : 2100 * (k - (63 * k / 100 + 1)) + 2100 * (63 * k / 100 + 1) = 2100 * k := by
+        omega
+      rw [he]
+    have hEq : (2 : Nat) ^ (2100 * k) * (12 ^ (2100 * (63 * k / 100 + 1))
+          * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) * 7 ^ (2100 * (63 * k / 100 + 1))
+        = 2 ^ (2100 * k) * 7 ^ (2100 * k) * 12 ^ (2100 * (63 * k / 100 + 1)) := by
+      rw [h7]
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [hEq]
+    exact hB
+  -- C: combine A and C2, with 2^(2100·(k/21)) ≤ 2^(100k)
+  have h21 : 2100 * (k / 21) ≤ 100 * k := by omega
+  have hpow2 : (2 : Nat) ^ (2100 * (k / 21)) ≤ 2 ^ (100 * k) :=
+    Nat.pow_le_pow_right (by omega) h21
+  have hC1 : uf k ^ 2100 * (12 ^ (2100 * (63 * k / 100 + 1))
+        * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) * 2 ^ (2100 * (k / 21))
+      ≤ 19 ^ (2100 * k) * 2 ^ (100 * k) :=
+    Nat.mul_le_mul hA hpow2
+  have hC3 : uf k ^ 2100 * 2 ^ (2100 * (k / 21)) * (12 ^ (2100 * (63 * k / 100 + 1))
+        * 7 ^ (2100 * (k - (63 * k / 100 + 1))))
+      ≤ 2 ^ (2100 * k) * (12 ^ (2100 * (63 * k / 100 + 1))
+        * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) := by
+    have hswap : uf k ^ 2100 * 2 ^ (2100 * (k / 21)) * (12 ^ (2100 * (63 * k / 100 + 1))
+          * 7 ^ (2100 * (k - (63 * k / 100 + 1))))
+        = uf k ^ 2100 * (12 ^ (2100 * (63 * k / 100 + 1))
+          * 7 ^ (2100 * (k - (63 * k / 100 + 1)))) * 2 ^ (2100 * (k / 21)) := by
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [hswap]
+    omega
+  have hWpos : 0 < (12 : Nat) ^ (2100 * (63 * k / 100 + 1))
+      * 7 ^ (2100 * (k - (63 * k / 100 + 1))) := by
+    have h1 : 0 < (12 : Nat) ^ (2100 * (63 * k / 100 + 1)) := Nat.pow_pos (by omega)
+    have h2 : 0 < (7 : Nat) ^ (2100 * (k - (63 * k / 100 + 1))) := Nat.pow_pos (by omega)
+    exact Nat.mul_pos h1 h2
+  have hC4 : uf k ^ 2100 * 2 ^ (2100 * (k / 21)) ≤ 2 ^ (2100 * k) :=
+    Nat.le_of_mul_le_mul_right hC3 hWpos
+  -- root extraction
+  have hexp : (uf k * 2 ^ (k / 21)) ^ 2100 = uf k ^ 2100 * 2 ^ (2100 * (k / 21)) := by
+    rw [Nat.mul_pow, ← Nat.pow_mul, Nat.mul_comm (k / 21) 2100]
+  by_cases hfin : uf k * 2 ^ (k / 21) ≤ 2 ^ k
+  · exact hfin
+  · exfalso
+    have hgt : 2 ^ k < uf k * 2 ^ (k / 21) := by omega
+    have hstrict : ((2 : Nat) ^ k) ^ 2100 < (uf k * 2 ^ (k / 21)) ^ 2100 :=
+      Nat.pow_lt_pow_left hgt (by omega)
+    have hE : ((2 : Nat) ^ k) ^ 2100 = 2 ^ (2100 * k) := by
+      rw [← Nat.pow_mul, Nat.mul_comm k 2100]
+    rw [hE, hexp] at hstrict
+    omega

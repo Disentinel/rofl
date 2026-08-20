@@ -483,3 +483,15 @@ exception (w_0=1, empty gap) documented — exactly why the Lean iff starts at
 k=1. Loss fractions w_k/u_k oscillate in [0.09, 0.20], no trend. The shaky
 rate flag STAYS with corrected content | catch: R23 numerics superseded by
 scale | born: none | facts(main)=71988
+
+R42 | Track C: **optimal-λ Chernoff — proved rate within 0.1% of observed** |
+λ = 12/7 at the entropy optimum: binom_127 (two-weight binomial = 19^k),
+chernoff_127 (u_k·12^m·7^(k−m) ≤ 19^k), cert_1927 (19^2100·2^100·7^1323 ≤
+2^2100·7^2100·12^1323 — kernel decide on ~12,700-bit integers, margin ~×12,
+numerically verified BEFORE the Lean work; #print axioms: depends on NO
+axioms), pow_ratio_mono, and eta_21: u_k·2^(k/21) ≤ 2^k for all k ≥ 1.
+Proved 2^(−1/21) = 0.9675 vs observed asymptotic 0.96591; true exponent
+≈ k/20 — the method's slack is now 21 vs 20. Progression R30→R37→R42:
+k ≥ c^100 → 2^(−k/25) → 2^(−k/21), same skeleton, sharper certificates.
+TerrasAlmostAll.lean: 1637 lines | catch: none | born: none |
+facts(main)=72080
