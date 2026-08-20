@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 251 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 259 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -106,7 +106,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–82)
+## 8. Track D additions (mechanism search, rounds 57–84)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -160,6 +160,14 @@ this route cannot reach it.
   staircase level is always inhabited, so the critical set is nonempty at
   every crossing: **u_{k+1} < 2·u_k at crossings, = 2·u_k on gap-free
   depths** — the core's growth dynamics fully pinned.
+- `crit_eq_dpf` / `growth_closed_form` / `doubling_at_gap` : the loss at a
+  crossing IS the dpf-table row at the unique crossing exponent —
+  u_{k+1} + dpf k a* = 2·u_k — and exact doubling on gap-free depths: the
+  growth law fully computable.
+- `alphaT` + `core_infinite_path` : an explicit computable 2-adic point
+  whose every truncation is undecided — the INFINITE core is nonempty,
+  constructively (it shadows 27 to depth 58, then escapes upward forever;
+  see run/mechanism/alpha_path.js).
 - `collatz_iff_descent` (§1) : the canonical reduction itself, proved in
   round 76 — universal eventual descent ⟺ every n reaches 1 under the
   original map (`descent_to_one` strong induction + `citer_cycle` 1→4→2 +

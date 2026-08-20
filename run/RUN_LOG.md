@@ -888,3 +888,15 @@ hypothetical orbit grows linearly; α ∈ ℕ is exactly a critical-line
 orbit, open territory. Strategy refuted before formalization, ledgered
 as such | catch: the α-strategy refutation (self-caught at design time)
 | born: none | facts(main)=73405
+
+R84 | Track D: **an explicit infinite path in the core** | `alphaT`
+(greedy branch, computable) + `core_infinite_path`: truncations in-range,
+undecided at every depth, coherent — the infinite core A ⊆ Z₂ is nonempty
+via an explicit 2-adic point, no compactness, no choice (propext +
+Quot.sound). Exhibit (alpha_path.js): the point shadows 27 through depth
+58, departs to 27 + 2^58 at the exact depth 27's class is decided, keeps
+escaping upward (→1.5e23 by depth 79) — the 2-adic trace of "the core
+misses ℕ" in action. R83's negative stands: the limit's non-integrality
+is critical-line territory | catch: Lean #eval of alphaT beyond ~16 is
+exponential (3 unmemoized self-references) — exhibit computed in the
+oracle instead, noted | born: none | facts(main)=73429

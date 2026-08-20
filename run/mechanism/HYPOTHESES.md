@@ -515,3 +515,30 @@ log₂3. The measured reality (losses ≈ h_k(a*) growing like the staircase
 level's population) sits between the proved floor (≥ 1) and the trivial
 ceiling (u_k); the composition question — WHICH classes are critical —
 remains the localized open bit.
+
+**Rounds 83–84 — closed form, and the core made pointwise.**
+
+R83: the critical set is exactly the core's population at the unique
+crossing exponent (`crit_eq_dpf`, uniqueness by 3-power spacing plus the
+parity exclusion 3^a ≠ 2^k), so the growth law is fully computable:
+u_{k+1} + dpf k a* = 2·u_k at crossings, u_{k+1} = 2·u_k on gap-free
+depths. Honest negative, ledgered: the planned "staircase point ∉ ℕ"
+theorem died at design time — on the staircase the affine offset D/2^j
+accumulates ~0.63j terms of size Θ(1), so a hypothetical integer there
+has a LINEARLY growing orbit, not a bounded one; no pigeonhole, no
+cycle. Such an integer is precisely a critical-line orbit — the open
+territory the sandwich already fences.
+
+R84: the infinite core exhibited pointwise — `alphaT`, the greedy branch
+(keep the class while undecided, else the sibling lift; branch_law says
+one survives), with kernel-checked range/undecidedness/coherence
+(`core_infinite_path`). No compactness, no choice. The exhibit is
+striking: the point shadows 27 — the famous 111-step orbit — through
+depth 58, and at the exact depth where 27's class is finally decided it
+jumps to 27 + 2^58 and keeps climbing (1.5·10^23 by depth 79). Every
+natural number that reaches 1 must eventually exit the core; the core's
+point exits ℕ instead. What the canonical conjecture asks, in this
+language, is that EVERY such infinite path escapes ℕ the way this one
+visibly does — and that no cycle path exists. The run leaves that exactly
+as open as it found it, now with the boundary drawn through a concrete
+2-adic number.

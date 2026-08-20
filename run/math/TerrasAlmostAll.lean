@@ -5078,3 +5078,71 @@ theorem doubling_at_gap (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
     have := S_congr _ (fun _ => 0) (2 ^ k) hpt
     rw [this, S_const_zero]
   omega
+
+/- ---------- AN EXPLICIT INFINITE PATH IN THE CORE ---------- -/
+/- The greedy branch: at each depth keep the current class if it is still
+   undecided, else move to its sibling lift (branch_law guarantees one of
+   the two survives). A COMPUTABLE choice sequence whose truncations are
+   undecided at every depth and coherent — the infinite core A ⊆ Z₂ is
+   nonempty, exhibited by an explicit 2-adic point, no compactness or
+   choice needed. -/
+
+def alphaT : Nat → Nat
+  | 0 => 0
+  | k + 1 => if indU (k + 1) (alphaT k) = 1 then alphaT k else alphaT k + 2 ^ k
+
+theorem alphaT_succ (k : Nat) : alphaT (k + 1)
+    = if indU (k + 1) (alphaT k) = 1 then alphaT k else alphaT k + 2 ^ k := rfl
+
+theorem alphaT_lt : ∀ k, alphaT k < 2 ^ k := by
+  intro k
+  induction k with
+  | zero => decide
+  | succ p ih =>
+    have hpow : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+    rw [alphaT_succ]
+    by_cases hc : indU (p + 1) (alphaT p) = 1
+    · rw [if_pos hc]
+      omega
+    · rw [if_neg hc]
+      omega
+
+theorem alphaT_undecided : ∀ k, indU k (alphaT k) = 1 := by
+  intro k
+  induction k with
+  | zero => rfl
+  | succ p ih =>
+    rw [alphaT_succ]
+    by_cases hc : indU (p + 1) (alphaT p) = 1
+    · rw [if_pos hc]
+      exact hc
+    · rw [if_neg hc]
+      have hb := branch_law p (alphaT p)
+      rw [ih] at hb
+      have ha1 := indU_le_one (p + 1) (alphaT p)
+      have hb1 := indU_le_one (p + 1) (alphaT p + 2 ^ p)
+      have hite : (if 2 ^ (p + 1) < 3 ^ A p (alphaT p) then (0 : Nat) else 1) ≤ 1 := by
+        by_cases hg : 2 ^ (p + 1) < 3 ^ A p (alphaT p)
+        · rw [if_pos hg]
+          omega
+        · rw [if_neg hg]
+          omega
+      omega
+
+theorem alphaT_compat : ∀ k, alphaT (k + 1) % 2 ^ k = alphaT k := by
+  intro k
+  have hlt := alphaT_lt k
+  rw [alphaT_succ]
+  by_cases hc : indU (k + 1) (alphaT k) = 1
+  · rw [if_pos hc]
+    exact Nat.mod_eq_of_lt hlt
+  · rw [if_neg hc]
+    have h1 : (alphaT k + 2 ^ k) % 2 ^ k = alphaT k % 2 ^ k := Nat.add_mod_right _ _
+    rw [h1]
+    exact Nat.mod_eq_of_lt hlt
+
+/-- THE INFINITE CORE IS NONEMPTY, EXPLICITLY: the greedy 2-adic point's
+    truncations are in-range, undecided at every depth, and coherent. -/
+theorem core_infinite_path : ∀ k,
+    alphaT k < 2 ^ k ∧ indU k (alphaT k) = 1 ∧ alphaT (k + 1) % 2 ^ k = alphaT k :=
+  fun k => ⟨alphaT_lt k, alphaT_undecided k, alphaT_compat k⟩
