@@ -1,0 +1,13 @@
+-- Round 47. TARGET: FINAL.md — the run's executive summary, committed early
+-- (restart-robust; the R19 container loss taught that lesson). Contents: the
+-- experiment, the mathematical outcome (the five-layer chain ending in the
+-- sandwich), the ledger's caught-defect record (8 catches named with rounds),
+-- the substrate verdict (determinism x2, saturation curve, DAG-in-graph,
+-- 6 issues), and the honest boundary. The document claims nothing the graph
+-- does not hold.
+claim_of[a](final_summary_committed).
+ground[a](final_summary_committed, final_md_r47).
+evidence[world](final_summary_committed, final_md_r47).
+src(file_final_md).  src_basis(file_final_md, repo_committed).
+verified[world](file_final_md).
+source_of(final_md_r47, file_final_md).

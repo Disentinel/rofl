@@ -534,3 +534,9 @@ after R24's 70,822. SATURATION.md full-run table: 6 declared births in
 R25–R45 (all six for the proof DAG); ZERO for the entire mathematics program
 — schema saturates, knowledge doesn't | catch: none | born: none |
 facts(main)=72384
+
+R47 | FINAL.md committed early (restart-robust) | executive summary: the
+experiment, the five-layer mathematical chain ending in the sandwich, the
+8-catch ledger record, the substrate verdict, the honest boundary. Claims
+nothing the graph does not hold | catch: none | born: none |
+facts(main)=72402
