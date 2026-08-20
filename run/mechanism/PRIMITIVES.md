@@ -253,3 +253,42 @@ first (null) attempt of that family.
    any bound on one is a bound on the other.
 3. All proofs R-equivariant, the answer R-breaking: X = an equivariant
    family with a diagonal-sensitive limit.
+
+---
+
+## Addendum (R92–R93): the transducer monoid — the sixth face
+
+The exact laws of R91 unfolded into a face nobody ordered: **the affine
+maps act on parity words as exact transducers.** State (i, d) ∈ ℕ × ℤ
+encodes x = 3^i·s + d; the output letter is the input letter XOR
+parity(d); transitions:
+
+    d even, s odd : (i, (3d + 1 − 3^i)/2)
+    d even, s even: (i, d/2)
+    d odd,  s odd : (i−1, (d − 3^(i−1))/2)   [needs i ≥ 1]
+    d odd,  s even: (i+1, (3d + 1)/2)
+
+Absorbing merge (0,0); decoupling exit at (0, d odd). Kernel-checked
+instances: T_c12_odd/even, T_c11_odd (the merge), T_c11_even,
+coupling_merge; 3.26M-check numeric validation of the general table;
+**per-class exactness: w(3r+2) = Transduce(w(r)) with 0 mismatches over
+23,998 classes and 100.00% membership prediction** (flip_criterion.js).
+
+Consequences:
+
+1. The R91 "unexplained correlation" is not statistics — it is the
+   push-forward of the core ensemble through a deterministic transducer.
+2. The core's affine self-structure IS a monoid action: {×3+b maps} act
+   on 2^ω by transducers; exact-zero laws (times3_leaves_core, the mod-4
+   column affine_leaves_core) are walks forced through domination-
+   killing states; enrichments are walks that merge.
+3. The ×2×3 rigidity story now lives INSIDE the symbolic space with
+   computable structure: T (the shift side) and the ×3-transducers
+   generate a semigroup acting on the core with exact, kernel-checkable
+   laws. The Rudolph-lever asked for invariance; what exists is exact
+   computable QUASI-invariance — walk-conditioned membership transfer.
+   Whether quasi-invariance of this precise kind feeds any rigidity
+   argument is the sharpest open question Track E leaves.
+4. Queued formalization: the general step identity T(3^i·s + d) =
+   3^(i')·T(s) + d' needs signed d (Int) — the four kernel-checked
+   instances cover the (1,2)-component seed used by the laws measured.
