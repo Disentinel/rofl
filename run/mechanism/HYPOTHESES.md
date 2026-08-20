@@ -200,3 +200,46 @@ modulus 1 on the zero-sum subspace — deviations rotate, never grow there);
 ALL mod-3 imbalance of the core originates at 3-power crossings. This is
 the search's one genuinely constructive find: a rigid, machine-checked 2×3
 interaction law inside the very set where counterexamples must live.
+
+**Round 63: the kick spectrum + synthesis.** Kick vectors measured at every
+3-power crossing j ≤ 26: through j = 21 the dying sets are near-EXACTLY
+mod-3 balanced (e.g. w = 961 dies as [320,320,321]; kick magnitudes 0–8
+against √w up to 90 — a factor 10–30 below Poisson), degrading toward
+Poisson scale at j ≥ 23 (kick ≈ 0.5–0.7·√w). So the core's 3-adic
+hyper-uniformity is recursive: even the crossing slices are hyper-uniform
+at small depth, with randomness creeping in later. WHY the small-depth
+slices balance almost exactly is an open micro-question — the one loose
+thread this search leaves that looks pullable.
+
+---
+
+## Track D synthesis (what the mechanism search established)
+
+1. **The reduction** (§1): canonical ⟺ no cycles + A∩ℕ = ∅, with A's
+   finite levels kernel-sandwiched. The problem is exactly "why do the
+   positive integers avoid a dimension-0.95 closed 2-adic set".
+2. **Conformity results** (H1, H4, plus R41/R53): first-drop records,
+   penetration depths, and drift excursions of real integers match the
+   conditioned stochastic model to within small factors at every scale
+   tested. No exploitable deviation exists in any orbit observable measured
+   by this run — the mechanism, if it exists, is not visible there.
+3. **Formal constraint extensions** (H3 line): conditional cycle exclusion
+   to accelerated length 183 (pure-kernel table); the unconditional
+   size-cap law at undominated depths (never-droppers strictly dominated to
+   ≈ 2.71·log₂ n, no floor needed); under the floor, counterexamples locked
+   into the dominated core for 183 straight depths regardless of size.
+   All grown from one identity — the affine form — plus positivity of D
+   (the "+1 sign", which the 3n−1 filter confirms is load-bearing).
+4. **One constructive discovery**: the core's exact mod-3 flow
+   (`indU_double`, `mod3_flow`, kernel-checked) — deviations rotate
+   (|1+ω| = 1) on gap-free depths; all 3-adic imbalance enters at
+   crossings; and the crossing kicks are themselves anomalously balanced at
+   small depth (open). The first rigid 2×3 interaction law inside the
+   counterexample core, plus a measured sub-Poisson phenomenon that the
+   stochastic model does NOT predict.
+5. **The honest bottom line**: nothing here approaches the canonical
+   statement — consistent with the proved obstruction (the core never
+   empties under finite-depth analysis) and the fetched barrier. The
+   search's real products are the reduction made formal, the constraint
+   surface pushed outward on three fronts, and one genuinely new-looking
+   structured observable (the kick spectrum) flagged for pulling.

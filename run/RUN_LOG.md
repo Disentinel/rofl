@@ -676,3 +676,12 @@ deviation vector (|1+ω| = 1) without growing it; all mod-3 imbalance of the
 core originates at 3-power crossings. Track D's one constructive find: a
 rigid machine-checked 2×3 interaction law inside the counterexample core.
 3412 lines | catch: none | born: none | facts(main)=72934
+
+R63 | Track D: **kick spectrum + synthesis** | dying sets at 3-power
+crossings are near-EXACTLY mod-3 balanced through j=21 (961 → [320,320,321];
+kicks 10–30× below Poisson), approaching Poisson at j ≥ 23 — the core's
+3-adic hyper-uniformity is recursive, and the small-depth exactness is an
+open micro-question (the search's one pullable loose thread; NOT predicted
+by the stochastic model — the single anti-conformity datum of Track D).
+HYPOTHESES.md closes with the five-point synthesis | catch: none | born:
+none | facts(main)=72950
