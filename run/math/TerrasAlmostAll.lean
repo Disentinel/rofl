@@ -1635,3 +1635,187 @@ theorem eta_21 (k : Nat) (hk : 1 ≤ k) : uf k * 2 ^ (k / 21) ≤ 2 ^ k := by
       rw [← Nat.pow_mul, Nat.mul_comm k 2100]
     rw [hE, hexp] at hstrict
     omega
+
+/- ---------- the LAST rate step: η_k ≤ 2^(−k/20) ---------- -/
+/- Same skeleton at the finer threshold 6309/10000 (log₃2 = 0.630930…).
+   True exponent 1−H(log₃2) = 0.050042; proved exponent 1/20 = 0.050000 —
+   matching to three decimal places. The certificate margin is ×1.148. -/
+
+set_option maxRecDepth 200000 in
+set_option exponentiation.threshold 11000 in
+theorem pow_6309_10000 : (3 : Nat) ^ 6309 < 2 ^ 10000 := by decide
+
+theorem threshold_6309_10000 (k s : Nat) (h : 2 ^ k < 3 ^ s) :
+    6309 * k + 1 ≤ 10000 * s := by
+  by_cases hc : 6309 * k + 1 ≤ 10000 * s
+  · exact hc
+  · exfalso
+    have hle : 10000 * s ≤ 6309 * k := by omega
+    have h1 : (3 : Nat) ^ (10000 * s) ≤ 3 ^ (6309 * k) :=
+      Nat.pow_le_pow_right (by omega) hle
+    have h2 : (3 : Nat) ^ (6309 * k) = (3 ^ 6309) ^ k := Nat.pow_mul 3 6309 k
+    have h3 : ((3 : Nat) ^ 6309) ^ k ≤ (2 ^ 10000) ^ k :=
+      Nat.pow_le_pow_left (Nat.le_of_lt pow_6309_10000) k
+    have h4 : ((2 : Nat) ^ 10000) ^ k = 2 ^ (10000 * k) := (Nat.pow_mul 2 10000 k).symm
+    have h5 : ((2 : Nat) ^ k) ^ 10000 < (3 ^ s) ^ 10000 :=
+      Nat.pow_lt_pow_left h (by omega)
+    have h6 : ((2 : Nat) ^ k) ^ 10000 = 2 ^ (k * 10000) := (Nat.pow_mul 2 k 10000).symm
+    have h7 : ((3 : Nat) ^ s) ^ 10000 = 3 ^ (s * 10000) := (Nat.pow_mul 3 s 10000).symm
+    have hk2 : k * 10000 = 10000 * k := Nat.mul_comm k 10000
+    have hs2 : s * 10000 = 10000 * s := Nat.mul_comm s 10000
+    rw [h6, h7, hk2, hs2] at h5
+    rw [h2] at h1
+    omega
+
+theorem chernoff_1279 (k : Nat) (hk : 1 ≤ k) :
+    uf k * (12 ^ (6309 * k / 10000 + 1) * 7 ^ (k - (6309 * k / 10000 + 1))) ≤ 19 ^ k := by
+  have hmk : 6309 * k / 10000 + 1 ≤ k := by omega
+  have hq : ∀ s, s < k + 1 →
+      dpf k s * (12 ^ (6309 * k / 10000 + 1) * 7 ^ (k - (6309 * k / 10000 + 1)))
+        ≤ choose k s * 12 ^ s * 7 ^ (k - s) := by
+    intro s hs
+    by_cases hz : dpf k s = 0
+    · rw [hz, Nat.zero_mul]
+      omega
+    · have hex : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+      have ⟨j, hj⟩ := hex
+      subst hj
+      have hdom := dpf_pos_dominates j s hz
+      have hth := threshold_6309_10000 (j + 1) s hdom
+      have hsge : 6309 * (j + 1) / 10000 + 1 ≤ s := by omega
+      have hsk : s ≤ j + 1 := by omega
+      have hsplit1 : (12 : Nat) ^ s
+          = 12 ^ (6309 * (j + 1) / 10000 + 1) * 12 ^ (s - (6309 * (j + 1) / 10000 + 1)) := by
+        rw [← Nat.pow_add]
+        have : 6309 * (j + 1) / 10000 + 1 + (s - (6309 * (j + 1) / 10000 + 1)) = s := by omega
+        rw [this]
+      have hsplit2 : (7 : Nat) ^ (j + 1 - (6309 * (j + 1) / 10000 + 1))
+          = 7 ^ (s - (6309 * (j + 1) / 10000 + 1)) * 7 ^ (j + 1 - s) := by
+        rw [← Nat.pow_add]
+        have : s - (6309 * (j + 1) / 10000 + 1) + (j + 1 - s)
+            = j + 1 - (6309 * (j + 1) / 10000 + 1) := by omega
+        rw [this]
+      have hwle : (7 : Nat) ^ (s - (6309 * (j + 1) / 10000 + 1))
+          ≤ 12 ^ (s - (6309 * (j + 1) / 10000 + 1)) :=
+        Nat.pow_le_pow_left (by omega) _
+      have hw : (12 : Nat) ^ (6309 * (j + 1) / 10000 + 1)
+            * 7 ^ (j + 1 - (6309 * (j + 1) / 10000 + 1))
+          ≤ 12 ^ s * 7 ^ (j + 1 - s) := by
+        rw [hsplit1, hsplit2]
+        calc 12 ^ (6309 * (j + 1) / 10000 + 1)
+              * (7 ^ (s - (6309 * (j + 1) / 10000 + 1)) * 7 ^ (j + 1 - s))
+            = 12 ^ (6309 * (j + 1) / 10000 + 1)
+              * 7 ^ (s - (6309 * (j + 1) / 10000 + 1)) * 7 ^ (j + 1 - s) := by
+              rw [Nat.mul_assoc]
+          _ ≤ 12 ^ (6309 * (j + 1) / 10000 + 1)
+              * 12 ^ (s - (6309 * (j + 1) / 10000 + 1)) * 7 ^ (j + 1 - s) :=
+              Nat.mul_le_mul_right _ (Nat.mul_le_mul_left _ hwle)
+      have hd := dpf_le_choose (j + 1) s
+      calc dpf (j + 1) s * (12 ^ (6309 * (j + 1) / 10000 + 1)
+            * 7 ^ (j + 1 - (6309 * (j + 1) / 10000 + 1)))
+          ≤ dpf (j + 1) s * (12 ^ s * 7 ^ (j + 1 - s)) := Nat.mul_le_mul_left _ hw
+        _ ≤ choose (j + 1) s * (12 ^ s * 7 ^ (j + 1 - s)) := Nat.mul_le_mul_right _ hd
+        _ = choose (j + 1) s * 12 ^ s * 7 ^ (j + 1 - s) := by rw [Nat.mul_assoc]
+  have h1 : uf k * (12 ^ (6309 * k / 10000 + 1) * 7 ^ (k - (6309 * k / 10000 + 1)))
+      = S (fun s => dpf k s * (12 ^ (6309 * k / 10000 + 1)
+          * 7 ^ (k - (6309 * k / 10000 + 1)))) (k + 1) :=
+    (S_mul_right (dpf k) _ (k + 1)).symm
+  have h2 : S (fun s => dpf k s * (12 ^ (6309 * k / 10000 + 1)
+        * 7 ^ (k - (6309 * k / 10000 + 1)))) (k + 1)
+      ≤ S (fun s => choose k s * 12 ^ s * 7 ^ (k - s)) (k + 1) := S_mono _ _ _ hq
+  have h3 := binom_127 k
+  omega
+
+set_option maxRecDepth 200000 in
+set_option exponentiation.threshold 11000 in
+theorem cert_20 : (19 : Nat) ^ 10000 * 2 ^ 500 * 7 ^ 6309
+    ≤ 2 ^ 10000 * 7 ^ 10000 * 12 ^ 6309 := by decide
+
+/-- η_k ≤ 2^(−⌊k/20⌋): the proved exponent 0.0500 vs the true 0.050042. -/
+theorem eta_20 (k : Nat) (hk : 1 ≤ k) : uf k * 2 ^ (k / 20) ≤ 2 ^ k := by
+  have hch := chernoff_1279 k hk
+  have hmk : 6309 * k / 10000 + 1 ≤ k := by omega
+  have hA := Nat.pow_le_pow_left hch 10000
+  have hA1 : (uf k * (12 ^ (6309 * k / 10000 + 1) * 7 ^ (k - (6309 * k / 10000 + 1)))) ^ 10000
+      = uf k ^ 10000 * (12 ^ (10000 * (6309 * k / 10000 + 1))
+          * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) := by
+    rw [Nat.mul_pow, Nat.mul_pow, ← Nat.pow_mul, ← Nat.pow_mul,
+        Nat.mul_comm (6309 * k / 10000 + 1) 10000,
+        Nat.mul_comm (k - (6309 * k / 10000 + 1)) 10000]
+  have hA2 : ((19 : Nat) ^ k) ^ 10000 = 19 ^ (10000 * k) := by
+    rw [← Nat.pow_mul, Nat.mul_comm k 10000]
+  rw [hA1, hA2] at hA
+  have hB : (19 : Nat) ^ (10000 * k) * 2 ^ (500 * k) * 7 ^ (10000 * (6309 * k / 10000 + 1))
+      ≤ 2 ^ (10000 * k) * 7 ^ (10000 * k) * 12 ^ (10000 * (6309 * k / 10000 + 1)) := by
+    have hPd : 10000 * (6309 * k / 10000 + 1)
+        = (6309 * k + 1) + (10000 * (6309 * k / 10000 + 1) - (6309 * k + 1)) := by
+      have hdm := Nat.div_add_mod (6309 * k) 10000
+      have hm : 6309 * k % 10000 < 10000 := Nat.mod_lt _ (by omega)
+      omega
+    rw [hPd]
+    apply pow_ratio_mono
+    have hL : (19 : Nat) ^ (10000 * k) * 2 ^ (500 * k) * 7 ^ (6309 * k + 1)
+        = (19 ^ 10000 * 2 ^ 500 * 7 ^ 6309) ^ k * 7 ^ 1 := by
+      rw [Nat.pow_add, ← Nat.mul_assoc, Nat.mul_pow, Nat.mul_pow,
+          ← Nat.pow_mul 19 10000 k, ← Nat.pow_mul 2 500 k, ← Nat.pow_mul 7 6309 k]
+    have hR : (2 : Nat) ^ (10000 * k) * 7 ^ (10000 * k) * 12 ^ (6309 * k + 1)
+        = (2 ^ 10000 * 7 ^ 10000 * 12 ^ 6309) ^ k * 12 ^ 1 := by
+      rw [Nat.pow_add, ← Nat.mul_assoc, Nat.mul_pow, Nat.mul_pow,
+          ← Nat.pow_mul 2 10000 k, ← Nat.pow_mul 7 10000 k, ← Nat.pow_mul 12 6309 k]
+    rw [hL, hR]
+    exact Nat.mul_le_mul (Nat.pow_le_pow_left cert_20 k) (by omega)
+  have hC2 : (19 : Nat) ^ (10000 * k) * 2 ^ (500 * k)
+      ≤ 2 ^ (10000 * k) * (12 ^ (10000 * (6309 * k / 10000 + 1))
+          * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) := by
+    have h7pos : 0 < (7 : Nat) ^ (10000 * (6309 * k / 10000 + 1)) := Nat.pow_pos (by omega)
+    apply Nat.le_of_mul_le_mul_right _ h7pos
+    have h7 : (7 : Nat) ^ (10000 * k)
+        = 7 ^ (10000 * (k - (6309 * k / 10000 + 1))) * 7 ^ (10000 * (6309 * k / 10000 + 1)) := by
+      rw [← Nat.pow_add]
+      have he : 10000 * (k - (6309 * k / 10000 + 1)) + 10000 * (6309 * k / 10000 + 1)
+          = 10000 * k := by omega
+      rw [he]
+    have hEq : (2 : Nat) ^ (10000 * k) * (12 ^ (10000 * (6309 * k / 10000 + 1))
+          * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) * 7 ^ (10000 * (6309 * k / 10000 + 1))
+        = 2 ^ (10000 * k) * 7 ^ (10000 * k) * 12 ^ (10000 * (6309 * k / 10000 + 1)) := by
+      rw [h7]
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [hEq]
+    exact hB
+  have h20 : 10000 * (k / 20) ≤ 500 * k := by omega
+  have hpow2 : (2 : Nat) ^ (10000 * (k / 20)) ≤ 2 ^ (500 * k) :=
+    Nat.pow_le_pow_right (by omega) h20
+  have hC1 : uf k ^ 10000 * (12 ^ (10000 * (6309 * k / 10000 + 1))
+        * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) * 2 ^ (10000 * (k / 20))
+      ≤ 19 ^ (10000 * k) * 2 ^ (500 * k) :=
+    Nat.mul_le_mul hA hpow2
+  have hC3 : uf k ^ 10000 * 2 ^ (10000 * (k / 20)) * (12 ^ (10000 * (6309 * k / 10000 + 1))
+        * 7 ^ (10000 * (k - (6309 * k / 10000 + 1))))
+      ≤ 2 ^ (10000 * k) * (12 ^ (10000 * (6309 * k / 10000 + 1))
+        * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) := by
+    have hswap : uf k ^ 10000 * 2 ^ (10000 * (k / 20)) * (12 ^ (10000 * (6309 * k / 10000 + 1))
+          * 7 ^ (10000 * (k - (6309 * k / 10000 + 1))))
+        = uf k ^ 10000 * (12 ^ (10000 * (6309 * k / 10000 + 1))
+          * 7 ^ (10000 * (k - (6309 * k / 10000 + 1)))) * 2 ^ (10000 * (k / 20)) := by
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [hswap]
+    omega
+  have hWpos : 0 < (12 : Nat) ^ (10000 * (6309 * k / 10000 + 1))
+      * 7 ^ (10000 * (k - (6309 * k / 10000 + 1))) := by
+    have h1 : 0 < (12 : Nat) ^ (10000 * (6309 * k / 10000 + 1)) := Nat.pow_pos (by omega)
+    have h2 : 0 < (7 : Nat) ^ (10000 * (k - (6309 * k / 10000 + 1))) := Nat.pow_pos (by omega)
+    exact Nat.mul_pos h1 h2
+  have hC4 : uf k ^ 10000 * 2 ^ (10000 * (k / 20)) ≤ 2 ^ (10000 * k) :=
+    Nat.le_of_mul_le_mul_right hC3 hWpos
+  by_cases hfin : uf k * 2 ^ (k / 20) ≤ 2 ^ k
+  · exact hfin
+  · exfalso
+    have hgt : 2 ^ k < uf k * 2 ^ (k / 20) := by omega
+    have hstrict : ((2 : Nat) ^ k) ^ 10000 < (uf k * 2 ^ (k / 20)) ^ 10000 :=
+      Nat.pow_lt_pow_left hgt (by omega)
+    have hE : ((2 : Nat) ^ k) ^ 10000 = 2 ^ (10000 * k) := by
+      rw [← Nat.pow_mul, Nat.mul_comm k 10000]
+    have hexp : (uf k * 2 ^ (k / 20)) ^ 10000 = uf k ^ 10000 * 2 ^ (10000 * (k / 20)) := by
+      rw [Nat.mul_pow, ← Nat.pow_mul, Nat.mul_comm (k / 20) 10000]
+    rw [hE, hexp] at hstrict
+    omega

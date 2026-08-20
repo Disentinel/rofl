@@ -495,3 +495,14 @@ Proved 2^(−1/21) = 0.9675 vs observed asymptotic 0.96591; true exponent
 k ≥ c^100 → 2^(−k/25) → 2^(−k/21), same skeleton, sharper certificates.
 TerrasAlmostAll.lean: 1637 lines | catch: none | born: none |
 facts(main)=72080
+
+R43 | Track C: **η_k ≤ 2^(−k/20) — three decimal places from truth** | finer
+threshold 6309/10000: pow_6309_10000 (3^6309 < 2^10000, kernel decide, NO
+axioms), threshold_6309_10000, chernoff_1279, cert_20 (~42,000-bit kernel
+decide, margin ×1.148 — numerically verified first), eta_20 (claim verified
+to k=300 before proving). Proved exponent 0.050000 vs true 0.050042. Rate
+progression in one run: k ≥ c^100 → 2^(−k/25) → 2^(−k/21) → 2^(−k/20);
+1/20 is the last unit-denominator step above the true exponent — this
+improvement line TERMINATES here, honestly. TerrasAlmostAll.lean: 1821
+lines | catch: stale line count in draft round file (1834 vs 1821),
+corrected before commit | born: none | facts(main)=72164
