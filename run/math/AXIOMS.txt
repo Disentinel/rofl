@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T11:25Z; 235 theorem declarations.
+# Generated 2026-08-20T11:45Z; 244 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -252,4 +252,13 @@
 'NN9_pos_of_witness' depends on axioms: [propext, Quot.sound]
 'spine_case' depends on axioms: [propext, Quot.sound]
 'mod9_positive' depends on axioms: [propext, Quot.sound]
+'pow89' depends on axioms: [propext, Quot.sound]
+'pow23_gen' depends on axioms: [propext, Quot.sound]
+'odd_cancel' depends on axioms: [propext, Quot.sound]
+'mul_pow2_mod_inj' depends on axioms: [propext, Quot.sound]
+'S_ind_le_one' depends on axioms: [propext, Quot.sound]
+'S_missing' depends on axioms: [propext, Quot.sound]
+'solve_exists' depends on axioms: [propext, Quot.sound]
+'witness_pack' depends on axioms: [propext, Quot.sound]
+'core_meets_every_class' depends on axioms: [propext, Quot.sound]
 

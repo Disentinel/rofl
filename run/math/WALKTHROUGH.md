@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 235 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 244 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -106,7 +106,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–77)
+## 8. Track D additions (mechanism search, rounds 57–80)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -141,6 +141,14 @@ this route cannot reach it.
   s ≤ 5 they meet every residue class mod 9 at every depth k ≥ 14 (54-case
   assembly over the six phases of 2^k mod 9). The covering-system door is
   closed at both proved 3-adic levels; the construction scales to any 3^t.
+- `core_meets_every_class` : **the general covering obstruction** — for
+  EVERY odd modulus m, every residue class mod m contains undecided classes
+  at every depth k ≥ 3s+3 (m ≤ 2^s). The spine congruence c·2^(k−s) ≡ ρ+1
+  (mod m) is solved with no modular inverses: an S-sum pigeonhole (rows
+  sum to 1, columns ≤ 1 by `odd_cancel` parity induction, `S_missing`
+  counting contradiction across `S_swap`). Subsumes the mod-3 and mod-9
+  positivity theorems: no covering system whatsoever can certify descent
+  on the core.
 - `collatz_iff_descent` (§1) : the canonical reduction itself, proved in
   round 76 — universal eventual descent ⟺ every n reaches 1 under the
   original map (`descent_to_one` strong induction + `citer_cycle` 1→4→2 +

@@ -460,3 +460,22 @@ V3_conserved picture (energy injected only at crossings, conserved
 between them). What no proved layer explains: WHY the injection is 5–8×
 below Poisson. That anomaly — the dying sets' balance — stays the single
 open structured observable of the search.
+
+**Round 80 — the covering door closed for good.**
+
+The mod-3 and mod-9 positivity theorems generalize to their final form:
+`core_meets_every_class` — for EVERY odd modulus m (composite included),
+every residue class mod m contains undecided classes at every depth
+k ≥ 3s+3 where m ≤ 2^s. Kernel-checked, propext + Quot.sound. Since every
+modulus factors as odd × 2-power and the 2-power part is the core's own
+class structure (AD_periodic), this excludes covering-system certificates
+of descent at ALL moduli, not just 3-adic ones. The proof finds the
+witness congruence c·2^(k−s) ≡ ρ+1 (mod m) with no inverse computation:
+injectivity of c ↦ c·2^j mod m (odd-cancellation by parity induction)
+plus an S-sum pigeonhole — the same counting machinery that carried the
+Terras identification now carries the obstruction's arithmetic.
+Measured at k = 18: every class hit for m = 5, 7, 15, 21, 35, 105, with
+near-equal counts (e.g. mod 105: min 60 vs mean 71) — the equidistribution
+observable extends across all small odd moduli, far beyond what the
+theorem asserts. The gap between proved positivity (≥ 1) and measured
+uniformity (χ² far below Poisson) remains the search's open thread.

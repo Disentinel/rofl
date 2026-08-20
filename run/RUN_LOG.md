@@ -836,3 +836,18 @@ NOT found stated; assessment recorded: refinement-level novelty on
 classical ingredients; (4) Conway-line undecidability of AP-partition
 recursions motivates the covering-obstruction framing. Sources in the
 ledger | catch: none | born: none | facts(main)=73301
+
+R80 | Track D: **THE GENERAL COVERING OBSTRUCTION kernel-checked** |
+`core_meets_every_class`: for EVERY odd m, every ρ < m, every s with
+m ≤ 2^s, every k ≥ 3s+3, an undecided class ≡ ρ (mod m) exists at depth
+k. Subsumes mod3/mod9_positive; excludes ALL covering-system certificates
+(odd modulus × 2-power = every modulus). The congruence c·2^(k−s) ≡ ρ+1
+(mod m) is solved WITHOUT modular inverses: S-sum pigeonhole (rows = 1
+via S_indicator, columns ≤ 1 via new odd_cancel parity induction, missing-
+column contradiction via S_missing over S_swap); gate pow23_gen from
+8^s·8 < 9^s·27. Axioms: propext + Quot.sound. Oracle spot k=18: all
+classes hit for m = 5,7,15,21,35,105 (min counts 1492…60), equidistribution
+at every modulus | catch: one omega failure on symbolic division modeled
+in Int (counterexample l ≤ −1 on a Nat atom) — replaced by
+Nat.pos_of_ne_zero; instructive substrate note | born: none |
+facts(main)=73333

@@ -4446,3 +4446,277 @@ theorem mod9_positive (k : Nat) (hk : 14 ≤ k) (c : Nat) (hc : c < 9) :
                               (by have hv := pow2_mod9_1 (k - 4) (by omega)
                                   have hpos : 0 < (2 : Nat) ^ (k - 4) := Nat.pow_pos (by omega)
                                   omega)
+
+/- ---------- THE GENERAL COVERING OBSTRUCTION ---------- -/
+/- For EVERY odd modulus m the undecided core meets EVERY residue class
+   mod m at every depth k ≥ 3s+3 (s = any exponent with m ≤ 2^s). The
+   witness is a spine class c·2^(k−s) − 1; the solvability of
+   c·2^(k−s) ≡ ρ+1 (mod m) is proved by an S-sum pigeonhole (row sums = 1,
+   columns ≤ 1 by odd-cancellation injectivity), no modular inverses. -/
+
+theorem pow89 (s : Nat) : 8 ^ s * 8 < 9 ^ s * 27 := by
+  induction s with
+  | zero => decide
+  | succ p ih =>
+    have h1 : (8 : Nat) ^ (p + 1) = 8 ^ p * 8 := Nat.pow_succ 8 p
+    have h2 : (9 : Nat) ^ (p + 1) = 9 ^ p * 9 := Nat.pow_succ 9 p
+    omega
+
+theorem pow23_gen (s : Nat) : ∀ k, 3 * s + 3 ≤ k → 2 ^ k < 3 ^ (k - s) := by
+  intro k
+  induction k with
+  | zero => intro h; omega
+  | succ m ih =>
+    intro h
+    by_cases hm : 3 * s + 3 ≤ m
+    · have h1 := ih hm
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3 : m + 1 - s = (m - s) + 1 := by omega
+      have h4 : (3 : Nat) ^ ((m - s) + 1) = 3 ^ (m - s) * 3 := Nat.pow_succ 3 _
+      rw [h3, h4]
+      omega
+    · have hsub : m + 1 - s = 2 * s + 3 := by omega
+      have he : m + 1 = 3 * s + 3 := by omega
+      rw [hsub, he]
+      have a0 : (2 : Nat) ^ 3 = 8 := by decide
+      have a1 : (2 : Nat) ^ (3 * s) = 8 ^ s := by rw [Nat.pow_mul, a0]
+      have a2 : (2 : Nat) ^ (3 * s + 3) = 2 ^ (3 * s) * 2 ^ 3 := Nat.pow_add 2 (3 * s) 3
+      have a3 : (2 : Nat) ^ (3 * s + 3) = 8 ^ s * 8 := by rw [a2, a1, a0]
+      have b0 : (3 : Nat) ^ 2 = 9 := by decide
+      have b1 : (3 : Nat) ^ (2 * s) = 9 ^ s := by rw [Nat.pow_mul, b0]
+      have b2 : (3 : Nat) ^ (2 * s + 3) = 3 ^ (2 * s) * 3 ^ 3 := Nat.pow_add 3 (2 * s) 3
+      have b3 : (3 : Nat) ^ (2 * s + 3) = 9 ^ s * 27 := by
+        have h27 : (3 : Nat) ^ 3 = 27 := by decide
+        rw [b2, b1, h27]
+      have hp := pow89 s
+      omega
+
+/-- Odd m divides c·2^j only through c. -/
+theorem odd_cancel (m : Nat) (hodd : m % 2 = 1) :
+    ∀ j c q, c * 2 ^ j = m * q → ∃ t, c = m * t := by
+  intro j
+  induction j with
+  | zero =>
+    intro c q h
+    have e : (2 : Nat) ^ 0 = 1 := rfl
+    rw [e, Nat.mul_one] at h
+    exact ⟨q, h⟩
+  | succ p ih =>
+    intro c q h
+    have e : c * 2 ^ (p + 1) = c * 2 * 2 ^ p := by
+      rw [Nat.pow_succ]
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [e] at h
+    have ⟨t, ht⟩ := ih (c * 2) q h
+    have hpar : t % 2 = 0 := by
+      by_cases hp2 : t % 2 = 0
+      · exact hp2
+      · have h1 : (m * t) % 2 = m % 2 * (t % 2) % 2 := Nat.mul_mod m t 2
+        rw [hodd] at h1
+        omega
+    have e2 : t = 2 * (t / 2) := by omega
+    rw [e2] at ht
+    have e3 : m * (2 * (t / 2)) = 2 * (m * (t / 2)) := by
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    exact ⟨t / 2, by omega⟩
+
+/-- c ↦ c·2^j is injective mod odd m on [0, m). -/
+theorem mul_pow2_mod_inj (m : Nat) (hodd : m % 2 = 1) (j c1 c2 : Nat)
+    (h12 : c1 < c2) (h2m : c2 < m) :
+    ¬(c1 * 2 ^ j % m = c2 * 2 ^ j % m) := by
+  intro he
+  have hm : 0 < m := by omega
+  have hd1 := Nat.div_add_mod (c1 * 2 ^ j) m
+  have hd2 := Nat.div_add_mod (c2 * 2 ^ j) m
+  have hle : c1 * 2 ^ j ≤ c2 * 2 ^ j := Nat.mul_le_mul_right _ (by omega)
+  have hsub : (c2 - c1) * 2 ^ j = c2 * 2 ^ j - c1 * 2 ^ j := Nat.sub_mul c2 c1 (2 ^ j)
+  have hms : m * (c2 * 2 ^ j / m - c1 * 2 ^ j / m)
+      = m * (c2 * 2 ^ j / m) - m * (c1 * 2 ^ j / m) := Nat.mul_sub m _ _
+  have key : (c2 - c1) * 2 ^ j = m * (c2 * 2 ^ j / m - c1 * 2 ^ j / m) := by omega
+  have ⟨t, ht⟩ := odd_cancel m hodd j (c2 - c1) _ key
+  by_cases ht0 : t = 0
+  · rw [ht0, Nat.mul_zero] at ht
+    omega
+  · have hmt : m * 1 ≤ m * t := Nat.mul_le_mul_left m (by omega)
+    rw [Nat.mul_one] at hmt
+    omega
+
+/-- A 0/1 row with pairwise-exclusive support sums to at most 1. -/
+theorem S_ind_le_one (f : Nat → Nat) : ∀ n,
+    (∀ i1 i2, i1 < i2 → i2 < n → f i1 = 0 ∨ f i2 = 0) →
+    (∀ i, i < n → f i ≤ 1) → S f n ≤ 1 := by
+  intro n
+  induction n with
+  | zero =>
+    intro _ _
+    have := S_zero f
+    omega
+  | succ p ih =>
+    intro hpair hb
+    have hs := S_succ f p
+    by_cases hfp : f p = 0
+    · have h1 := ih (fun i1 i2 ha hb' => hpair i1 i2 ha (by omega))
+        (fun i hi => hb i (by omega))
+      omega
+    · have hz : ∀ i, i < p → f i = 0 := by
+        intro i hi
+        cases hpair i p hi (by omega) with
+        | inl h => exact h
+        | inr h => exact absurd h hfp
+      have h0 : S f p = 0 := by
+        have := S_congr f (fun _ => 0) p hz
+        rw [this, S_const_zero]
+      have hbp := hb p (by omega)
+      omega
+
+/-- A sum of terms ≤ 1 with one vanishing term over n slots is < n. -/
+theorem S_missing (g : Nat → Nat) : ∀ n y, y < n → (∀ i, i < n → g i ≤ 1) →
+    g y = 0 → S g n + 1 ≤ n := by
+  intro n
+  induction n with
+  | zero => intro y hy _ _; omega
+  | succ p ih =>
+    intro y hy hone hzero
+    have hs := S_succ g p
+    by_cases hyp : y < p
+    · have h1 := ih y hyp (fun i hi => hone i (by omega)) hzero
+      have h2 := hone p (by omega)
+      omega
+    · have hyy : y = p := by omega
+      have h1 : S g p ≤ p := by
+        have hmono := S_mono g (fun _ => 1) p (fun s' hs' => hone s' (by omega))
+        rw [S_const_one] at hmono
+        exact hmono
+      have h2 : g p = 0 := by rw [← hyy]; exact hzero
+      omega
+
+/-- Solvability of c·2^j ≡ y (mod odd m) with 0 ≤ c < m — by pigeonhole
+    over the file's own S-sums, no modular inverses. -/
+theorem solve_exists (m : Nat) (hodd : m % 2 = 1) (j y : Nat) (hy : y < m) :
+    ∃ c, c < m ∧ c * 2 ^ j % m = y := by
+  have hm : 0 < m := by omega
+  by_cases hex : ∃ c, c < m ∧ c * 2 ^ j % m = y
+  · exact hex
+  · exfalso
+    have hrow : ∀ c, c < m →
+        S (fun y' => if c * 2 ^ j % m = y' then 1 else 0) m = 1 := by
+      intro c _
+      have hxm : c * 2 ^ j % m < m := Nat.mod_lt _ hm
+      have hbr := S_congr (fun y' => if c * 2 ^ j % m = y' then 1 else 0)
+        (fun y' => 1 * (if c * 2 ^ j % m = y' then 1 else 0)) m
+        (fun s' _ => by
+          show (if c * 2 ^ j % m = s' then (1 : Nat) else 0)
+            = 1 * (if c * 2 ^ j % m = s' then 1 else 0)
+          rw [Nat.one_mul])
+      rw [hbr, S_indicator 1 _ m hxm]
+    have htotal : S (fun c => S (fun y' => if c * 2 ^ j % m = y' then 1 else 0) m) m
+        = m := by
+      have h1 := S_congr (fun c => S (fun y' => if c * 2 ^ j % m = y' then 1 else 0) m)
+        (fun _ => 1) m (fun c hc => hrow c hc)
+      rw [h1, S_const_one]
+    have h2 : S (fun c => S (fun y' => if c * 2 ^ j % m = y' then 1 else 0) m) m
+        = S (fun y' => S (fun c => if c * 2 ^ j % m = y' then 1 else 0) m) m :=
+      S_swap (fun c y' => if c * 2 ^ j % m = y' then 1 else 0) m m
+    have htotal2 : S (fun y' => S (fun c => if c * 2 ^ j % m = y' then 1 else 0) m) m
+        = m := by
+      rw [← h2]
+      exact htotal
+    have hcol : ∀ y', y' < m →
+        S (fun c => if c * 2 ^ j % m = y' then 1 else 0) m ≤ 1 := by
+      intro y' _
+      apply S_ind_le_one
+      · intro i1 i2 h12 h2m
+        by_cases hc1 : i1 * 2 ^ j % m = y'
+        · by_cases hc2 : i2 * 2 ^ j % m = y'
+          · have he : i1 * 2 ^ j % m = i2 * 2 ^ j % m := by rw [hc1, hc2]
+            exact absurd he (mul_pow2_mod_inj m hodd j i1 i2 h12 h2m)
+          · right
+            show (if i2 * 2 ^ j % m = y' then (1 : Nat) else 0) = 0
+            rw [if_neg hc2]
+        · left
+          show (if i1 * 2 ^ j % m = y' then (1 : Nat) else 0) = 0
+          rw [if_neg hc1]
+      · intro i _
+        show (if i * 2 ^ j % m = y' then (1 : Nat) else 0) ≤ 1
+        by_cases hc : i * 2 ^ j % m = y'
+        · rw [if_pos hc]
+          omega
+        · rw [if_neg hc]
+          omega
+    have hcoly : S (fun c => if c * 2 ^ j % m = y then 1 else 0) m = 0 := by
+      have hz : ∀ c, c < m → (if c * 2 ^ j % m = y then (1 : Nat) else 0) = 0 := by
+        intro c hc
+        by_cases hcc : c * 2 ^ j % m = y
+        · exact absurd ⟨c, hc, hcc⟩ hex
+        · rw [if_neg hcc]
+      have := S_congr (fun c => if c * 2 ^ j % m = y then 1 else 0) (fun _ => 0) m hz
+      rw [this, S_const_zero]
+    have hmiss := S_missing
+      (fun y' => S (fun c => if c * 2 ^ j % m = y' then 1 else 0) m) m y hy hcol hcoly
+    omega
+
+/-- Packaging: a congruent spine witness settles a residue class mod m. -/
+theorem witness_pack (k s c m ρ : Nat) (hk : 3 * s + 3 ≤ k) (hc1 : 1 ≤ c)
+    (hcs : c ≤ 2 ^ s) (hm : 0 < m) (hρ : ρ < m)
+    (hcong : c * 2 ^ (k - s) % m = (ρ + 1) % m) :
+    ∃ r, r < 2 ^ k ∧ indU k r = 1 ∧ r % m = ρ := by
+  have hsk : s ≤ k := by omega
+  have hgate : 2 ^ k < 3 ^ (k - s) := pow23_gen s k hk
+  have hlt := spine_lt k s c hsk hcs
+  have hund := spine_undecided c s k hc1 hsk hgate
+  have hX : 0 < (2 : Nat) ^ (k - s) := Nat.pow_pos (by omega)
+  have hcx : 0 < c * 2 ^ (k - s) := Nat.mul_pos (by omega) hX
+  have hdm := Nat.div_add_mod (c * 2 ^ (k - s)) m
+  by_cases hcase : ρ + 1 < m
+  · have hrem : c * 2 ^ (k - s) % m = ρ + 1 := by
+      rw [hcong]
+      exact Nat.mod_eq_of_lt hcase
+    have hval : c * 2 ^ (k - s) - 1 = ρ + m * (c * 2 ^ (k - s) / m) := by omega
+    have hmod : (ρ + m * (c * 2 ^ (k - s) / m)) % m = ρ % m :=
+      Nat.add_mul_mod_self_left ρ m _
+    have hρm : ρ % m = ρ := Nat.mod_eq_of_lt hρ
+    exact ⟨c * 2 ^ (k - s) - 1, hlt, hund, by rw [hval, hmod, hρm]⟩
+  · have hρ1 : ρ + 1 = m := by omega
+    have hrem : c * 2 ^ (k - s) % m = 0 := by
+      rw [hcong, hρ1]
+      exact Nat.mod_self m
+    have hq1 : 1 ≤ c * 2 ^ (k - s) / m := by
+      by_cases hq0 : c * 2 ^ (k - s) / m = 0
+      · rw [hq0, Nat.mul_zero] at hdm
+        omega
+      · exact Nat.pos_of_ne_zero hq0
+    have hsub : m * (c * 2 ^ (k - s) / m - 1) = m * (c * 2 ^ (k - s) / m) - m * 1 :=
+      Nat.mul_sub m _ 1
+    rw [Nat.mul_one] at hsub
+    have hA : m * 1 ≤ m * (c * 2 ^ (k - s) / m) := Nat.mul_le_mul_left m hq1
+    rw [Nat.mul_one] at hA
+    have hval : c * 2 ^ (k - s) - 1 = (m - 1) + m * (c * 2 ^ (k - s) / m - 1) := by
+      omega
+    have hmod : ((m - 1) + m * (c * 2 ^ (k - s) / m - 1)) % m = (m - 1) % m :=
+      Nat.add_mul_mod_self_left _ m _
+    have hm1 : (m - 1) % m = m - 1 := Nat.mod_eq_of_lt (by omega)
+    have hρm : ρ = m - 1 := by omega
+    exact ⟨c * 2 ^ (k - s) - 1, hlt, hund, by rw [hval, hmod, hm1, ← hρm]⟩
+
+/-- THE GENERAL COVERING OBSTRUCTION: for EVERY odd modulus m the
+    undecided core meets EVERY residue class mod m, at every depth
+    k ≥ 3s + 3 for any s with m ≤ 2^s. No covering system built from odd
+    moduli (times the 2-power class structure the core already refines)
+    can certify descent. Subsumes mod3_positive and mod9_positive. -/
+theorem core_meets_every_class (m s k ρ : Nat) (hodd : m % 2 = 1)
+    (hms : m ≤ 2 ^ s) (hk : 3 * s + 3 ≤ k) (hρ : ρ < m) :
+    ∃ r, r < 2 ^ k ∧ indU k r = 1 ∧ r % m = ρ := by
+  have hm : 0 < m := by omega
+  have ⟨c₀, hc₀m, hc₀⟩ := solve_exists m hodd (k - s) ((ρ + 1) % m) (Nat.mod_lt _ hm)
+  by_cases hc00 : c₀ = 0
+  · have hcm : m * 2 ^ (k - s) % m = (ρ + 1) % m := by
+      have h0 : (0 : Nat) * 2 ^ (k - s) % m = (ρ + 1) % m := by
+        rw [← hc00]
+        exact hc₀
+      have h1 : (0 : Nat) * 2 ^ (k - s) = 0 := Nat.zero_mul _
+      have h3 : (0 : Nat) % m = 0 := Nat.zero_mod m
+      rw [h1, h3] at h0
+      have h2 : m * 2 ^ (k - s) % m = 0 := Nat.mul_mod_right m _
+      rw [h2, ← h0]
+    exact witness_pack k s m m ρ hk (by omega) hms hm hρ hcm
+  · exact witness_pack k s c₀ m ρ hk (by omega) (by omega) hm hρ hc₀
