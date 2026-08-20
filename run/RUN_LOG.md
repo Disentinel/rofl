@@ -427,5 +427,7 @@ thm_reach (declared) | facts(main)=71460
 
 R36 | engine hygiene | full kernel test suite re-run at current tree: 29/29
 green; kernel grep: clean. No engine changes since the store-index rework —
-this is the regression net staying up | catch: none | born: none |
-facts(main)=71464
+this is the regression net staying up | catch: pre-wrote the facts count
+before reading the eval output AGAIN (71464 vs actual 71468) — same failure
+mode as R34; process rule adopted: the count is written only after the eval
+prints it | born: none | facts(main)=71468
