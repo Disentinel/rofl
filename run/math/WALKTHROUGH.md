@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 194 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 210 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -102,7 +102,7 @@ empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
 
-## 8. Track D additions (mechanism search, rounds 57–63)
+## 8. Track D additions (mechanism search, rounds 57–75)
 
 - `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
   of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
@@ -120,7 +120,17 @@ this route cannot reach it.
   undecided class survive, and the mod-3-refined core counts obey the exact
   I + σ flow NN3 c (k+1) = NN3 c k + NN3 ((c+2^(k+1)) mod 3) k — the
   machine-checked law behind the observed hyper-uniformity of the core's
-  3-adic profile (run/mechanism/HYPOTHESES.md).
+  3-adic profile (run/mechanism/HYPOTHESES.md). `V3_conserved` : the
+  imbalance energy of that profile is exactly preserved on gap-free depths;
+  `mod9_flow` : the same I + σ cocycle one 3-adic level deeper.
+- `mod3_positive` : at EVERY depth k ≥ 6 the core meets EVERY residue
+  class mod 3 (NN3 c k ≥ 1). Three explicit witness families with
+  closed-form trajectories (`mirror_traj`: T^j(c·2^m − 1) =
+  3^j·c·2^(m−j) − 1, A_j = j): 2^k − 1, 2^(k−1) − 1, and 3·2^(k−2) − 1
+  (≡ 2 mod 3 at every k); tail gates from 2^k < 3^(k−1) and 2^k < 3^(k−2).
+  No covering system at modulus 3·2^j can certify descent — the
+  arithmetic-progression refinement of `core_never_empty`, and the
+  positivity companion to `mod3_flow`'s conservation.
 
 ## Re-running
 

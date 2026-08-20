@@ -3538,3 +3538,289 @@ theorem mod9_flow (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) (c : Nat) (hc : c 
     rw [hcong]
   rw [S_congr _ _ _ h1, S_congr _ _ _ h2]
   rfl
+
+/- ---------- mod-3 POSITIVITY of the core: explicit witnesses ---------- -/
+/- Three explicit class families with closed-form trajectories:
+     w₁ = 2^k − 1        (the mirror of −1: every step odd, A_j = j)
+     w₂ = 2^(k−1) − 1    (truncation: one even step at the end)
+     w₃ = 3·2^(k−2) − 1  (≡ 2 mod 3 at EVERY k)
+   Together they meet all three residue classes mod 3 at every depth k ≥ 6:
+   the core is provably present in every residue class mod 3 — no covering
+   system of modulus 3·2^j can certify descent. -/
+
+theorem pow23_lemma (k : Nat) (hk : 3 ≤ k) : 2 ^ k < 3 ^ (k - 1) := by
+  induction k with
+  | zero => omega
+  | succ m ih =>
+    by_cases hm : 3 ≤ m
+    · have h1 := ih hm
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3 : m + 1 - 1 = (m - 1) + 1 := by omega
+      have h4 : (3 : Nat) ^ ((m - 1) + 1) = 3 ^ (m - 1) * 3 := Nat.pow_succ 3 _
+      rw [h3, h4]
+      omega
+    · have hm3 : m = 2 := by omega
+      subst hm3
+      decide
+
+theorem pow23_lemma2 (k : Nat) (hk : 6 ≤ k) : 2 ^ k < 3 ^ (k - 2) := by
+  induction k with
+  | zero => omega
+  | succ m ih =>
+    by_cases hm : 6 ≤ m
+    · have h1 := ih hm
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3 : m + 1 - 2 = (m - 2) + 1 := by omega
+      have h4 : (3 : Nat) ^ ((m - 2) + 1) = 3 ^ (m - 2) * 3 := Nat.pow_succ 3 _
+      rw [h3, h4]
+      omega
+    · have hm5 : m = 5 := by omega
+      subst hm5
+      decide
+
+/-- The mirror trajectory of c·2^m − 1 (any c ≥ 1): closed form, one odd
+    step per depth while the 2-power lasts, so A j = j exactly. -/
+theorem mirror_traj (c m : Nat) (hc1 : 1 ≤ c) :
+    ∀ j, j ≤ m → Titer j (c * 2 ^ m - 1) = 3 ^ j * c * 2 ^ (m - j) - 1
+      ∧ A j (c * 2 ^ m - 1) = j := by
+  intro j
+  induction j with
+  | zero =>
+    intro _
+    constructor
+    · show c * 2 ^ m - 1 = 3 ^ 0 * c * 2 ^ (m - 0) - 1
+      have e : m - 0 = m := rfl
+      rw [Nat.pow_zero, Nat.one_mul, e]
+    · rfl
+  | succ p ih =>
+    intro hj
+    have hple : p ≤ m := by omega
+    have ht := (ih hple).1
+    have ha := (ih hple).2
+    have hpos3 : 0 < (3 : Nat) ^ p := Nat.pow_pos (by omega)
+    have hpos2 : 0 < (2 : Nat) ^ (m - p - 1) := Nat.pow_pos (by omega)
+    have e1 : m - p = (m - p - 1) + 1 := by omega
+    have e2 : (2 : Nat) ^ (m - p) = 2 ^ (m - p - 1) * 2 := by
+      rw [e1]
+      exact Nat.pow_succ 2 _
+    have e3 : (3 : Nat) ^ p * c * 2 ^ (m - p) = 3 ^ p * c * 2 ^ (m - p - 1) * 2 := by
+      rw [e2, ← Nat.mul_assoc]
+    have hX : 0 < (3 : Nat) ^ p * c * 2 ^ (m - p - 1) :=
+      Nat.mul_pos (Nat.mul_pos hpos3 (by omega)) hpos2
+    have hoddT : Titer p (c * 2 ^ m - 1) % 2 = 1 := by
+      rw [ht]
+      omega
+    have hsnoc : Titer (p + 1) (c * 2 ^ m - 1) = T (Titer p (c * 2 ^ m - 1)) :=
+      titer_add p 1 (c * 2 ^ m - 1)
+    have hTodd : T (Titer p (c * 2 ^ m - 1)) = (3 * Titer p (c * 2 ^ m - 1) + 1) / 2 :=
+      T_odd _ hoddT
+    have e4 : m - (p + 1) = m - p - 1 := by omega
+    have e5 : (3 : Nat) ^ (p + 1) * c * 2 ^ (m - p - 1)
+        = 3 * (3 ^ p * c * 2 ^ (m - p - 1)) := by
+      rw [Nat.pow_succ]
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    constructor
+    · rw [hsnoc, hTodd, ht, e4, e5]
+      omega
+    · have hA := A_snoc p (c * 2 ^ m - 1)
+      rw [ha, hoddT] at hA
+      exact hA
+
+/-- 2^j < 3^j for j ≥ 1. -/
+theorem two_pow_lt_three_pow (j : Nat) : 1 ≤ j → 2 ^ j < 3 ^ j := by
+  induction j with
+  | zero => intro h; omega
+  | succ m ih =>
+    intro _
+    by_cases hm : 1 ≤ m
+    · have h1 := ih hm
+      have h2 : (2 : Nat) ^ (m + 1) = 2 ^ m * 2 := Nat.pow_succ 2 m
+      have h3 : (3 : Nat) ^ (m + 1) = 3 ^ m * 3 := Nat.pow_succ 3 m
+      omega
+    · have hm0 : m = 0 := by omega
+      subst hm0
+      decide
+
+/-- If every gate through depth k is dominated, the class is undecided. -/
+theorem indU_of_dominated (k r : Nat) :
+    (∀ j, 1 ≤ j → j ≤ k → 2 ^ j < 3 ^ A j r) → indU k r = 1 := by
+  induction k with
+  | zero => intro _; rfl
+  | succ p ih =>
+    intro h
+    have h1 : indU p r = 1 := ih (fun j hj1 hj2 => h j hj1 (by omega))
+    rw [indU_succ, h1, if_pos (h (p + 1) (by omega) (Nat.le_refl _))]
+
+/-- Witness 1: 2^k − 1 (the mirror of −1) is undecided at every depth. -/
+theorem w1_undecided (k : Nat) : indU k (2 ^ k - 1) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  have hm := (mirror_traj 1 k (by decide) j hj2).2
+  rw [Nat.one_mul] at hm
+  rw [hm]
+  exact two_pow_lt_three_pow j hj1
+
+/-- Witness 2: 2^(k−1) − 1 — one even step at the end, gate saved by
+    2^k < 3^(k−1). -/
+theorem w2_undecided (k : Nat) (hk : 3 ≤ k) : indU k (2 ^ (k - 1) - 1) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  by_cases hjk : j ≤ k - 1
+  · have hm := (mirror_traj 1 (k - 1) (by decide) j hjk).2
+    rw [Nat.one_mul] at hm
+    rw [hm]
+    exact two_pow_lt_three_pow j hj1
+  · have hjeq : j = k := by omega
+    rw [hjeq]
+    have ht := (mirror_traj 1 (k - 1) (by decide) (k - 1) (Nat.le_refl _)).1
+    have ha := (mirror_traj 1 (k - 1) (by decide) (k - 1) (Nat.le_refl _)).2
+    rw [Nat.one_mul] at ht ha
+    have e0 : k - 1 - (k - 1) = 0 := Nat.sub_self (k - 1)
+    rw [e0, Nat.pow_zero, Nat.mul_one, Nat.mul_one] at ht
+    have hodd := odd_pow3 (k - 1)
+    have hbit : Titer (k - 1) (2 ^ (k - 1) - 1) % 2 = 0 := by
+      rw [ht]
+      omega
+    have hAk : A k (2 ^ (k - 1) - 1) = k - 1 := by
+      have hs := A_snoc (k - 1) (2 ^ (k - 1) - 1)
+      have e : k - 1 + 1 = k := by omega
+      rw [e, ha, hbit] at hs
+      omega
+    rw [hAk]
+    exact pow23_lemma k (by omega)
+
+/-- Witness 3: 3·2^(k−2) − 1 ≡ 2 mod 3 at EVERY k — two even-step gates at
+    the end, saved by 2^(k−1) < 3^(k−2) and 2^k < 3^(k−2). -/
+theorem w3_undecided (k : Nat) (hk : 6 ≤ k) : indU k (3 * 2 ^ (k - 2) - 1) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  by_cases hjk : j ≤ k - 2
+  · have hm := (mirror_traj 3 (k - 2) (by decide) j hjk).2
+    rw [hm]
+    exact two_pow_lt_three_pow j hj1
+  · have ht := (mirror_traj 3 (k - 2) (by decide) (k - 2) (Nat.le_refl _)).1
+    have ha := (mirror_traj 3 (k - 2) (by decide) (k - 2) (Nat.le_refl _)).2
+    have e0 : k - 2 - (k - 2) = 0 := Nat.sub_self (k - 2)
+    rw [e0, Nat.pow_zero, Nat.mul_one] at ht
+    have e1 : (3 : Nat) ^ (k - 2) * 3 = 3 ^ (k - 1) := by
+      have h : (3 : Nat) ^ ((k - 2) + 1) = 3 ^ (k - 2) * 3 := Nat.pow_succ 3 (k - 2)
+      have e : k - 2 + 1 = k - 1 := by omega
+      rw [e] at h
+      exact h.symm
+    rw [e1] at ht
+    have hodd := odd_pow3 (k - 1)
+    have hbit : Titer (k - 2) (3 * 2 ^ (k - 2) - 1) % 2 = 0 := by
+      rw [ht]
+      omega
+    have hAk1 : A (k - 1) (3 * 2 ^ (k - 2) - 1) = k - 2 := by
+      have hs := A_snoc (k - 2) (3 * 2 ^ (k - 2) - 1)
+      have e : k - 2 + 1 = k - 1 := by omega
+      rw [e, ha, hbit] at hs
+      omega
+    by_cases hjk1 : j = k - 1
+    · rw [hjk1]
+      rw [hAk1]
+      have hp := pow23_lemma (k - 1) (by omega)
+      have e : k - 1 - 1 = k - 2 := by omega
+      rw [e] at hp
+      exact hp
+    · have hjeq : j = k := by omega
+      rw [hjeq]
+      have hAk : k - 2 ≤ A k (3 * 2 ^ (k - 2) - 1) := by
+        have hs := A_snoc (k - 1) (3 * 2 ^ (k - 2) - 1)
+        have e : k - 1 + 1 = k := by omega
+        rw [e, hAk1] at hs
+        omega
+      have hmono : (3 : Nat) ^ (k - 2) ≤ 3 ^ A k (3 * 2 ^ (k - 2) - 1) :=
+        Nat.pow_le_pow_right (by omega) hAk
+      have hp2 := pow23_lemma2 k hk
+      omega
+
+/-- 2^m mod 3 by parity of m. -/
+theorem pow2_mod3_parity (m : Nat) :
+    (m % 2 = 0 → 2 ^ m % 3 = 1) ∧ (m % 2 = 1 → 2 ^ m % 3 = 2) := by
+  induction m with
+  | zero => exact ⟨fun _ => by decide, fun h => by omega⟩
+  | succ p ih =>
+    have h : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+    constructor
+    · intro hp
+      have h2 := ih.2 (by omega)
+      omega
+    · intro hp
+      have h1 := ih.1 (by omega)
+      omega
+
+/-- A sum is at least any of its terms. -/
+theorem S_ge_term (f : Nat → Nat) : ∀ n r, r < n → f r ≤ S f n := by
+  intro n
+  induction n with
+  | zero => intro r hr; omega
+  | succ p ih =>
+    intro r hr
+    rw [S_succ]
+    by_cases hrp : r < p
+    · have := ih r hrp
+      omega
+    · have hre : r = p := by omega
+      subst hre
+      omega
+
+/-- One undecided representative in residue class c makes NN3 c k positive. -/
+theorem NN3_pos_of_witness (k r c : Nat) (h1 : r < 2 ^ k) (h2 : indU k r = 1)
+    (h3 : r % 3 = c) : 1 ≤ NN3 c k := by
+  have hge : indU k r * (if r % 3 = c then 1 else 0)
+      ≤ S (fun s => indU k s * (if s % 3 = c then 1 else 0)) (2 ^ k) :=
+    S_ge_term (fun s => indU k s * (if s % 3 = c then 1 else 0)) (2 ^ k) r h1
+  rw [h2, if_pos h3] at hge
+  show 1 ≤ S (fun s => indU k s * (if s % 3 = c then 1 else 0)) (2 ^ k)
+  omega
+
+/-- MOD-3 POSITIVITY OF THE CORE: at every depth k ≥ 6 the undecided core
+    meets EVERY residue class mod 3. No covering system with modulus 3·2^j
+    can certify descent — the mod-3 refinement of the never-empty theorem. -/
+theorem mod3_positive (k : Nat) (hk : 6 ≤ k) (c : Nat) (hc : c < 3) :
+    1 ≤ NN3 c k := by
+  have hlt := lt_two_pow (k - 2)
+  have hpos2 : 1 ≤ (2 : Nat) ^ (k - 2) := by omega
+  have hpk1 : (2 : Nat) ^ k = 2 ^ (k - 1) * 2 := by
+    have h : (2 : Nat) ^ ((k - 1) + 1) = 2 ^ (k - 1) * 2 := Nat.pow_succ 2 (k - 1)
+    have e : k - 1 + 1 = k := by omega
+    rw [e] at h
+    exact h
+  have hpk2 : (2 : Nat) ^ k = 2 ^ (k - 2) * 4 := by
+    have h1 : (2 : Nat) ^ ((k - 2) + 2) = 2 ^ (k - 2) * 2 ^ 2 := Nat.pow_add 2 (k - 2) 2
+    have e : (k - 2) + 2 = k := by omega
+    rw [e] at h1
+    have h2 : (2 : Nat) ^ 2 = 4 := by decide
+    rw [h2] at h1
+    exact h1
+  have hpar1 := pow2_mod3_parity k
+  have hpar2 := pow2_mod3_parity (k - 1)
+  by_cases hp : k % 2 = 0
+  · have hm1 : (2 : Nat) ^ k % 3 = 1 := hpar1.1 hp
+    have hm2 : (2 : Nat) ^ (k - 1) % 3 = 2 := hpar2.2 (by omega)
+    by_cases hc0 : c = 0
+    · subst hc0
+      exact NN3_pos_of_witness k (2 ^ k - 1) 0 (by omega) (w1_undecided k) (by omega)
+    · by_cases hc1 : c = 1
+      · subst hc1
+        exact NN3_pos_of_witness k (2 ^ (k - 1) - 1) 1 (by omega)
+          (w2_undecided k (by omega)) (by omega)
+      · have hc2 : c = 2 := by omega
+        subst hc2
+        exact NN3_pos_of_witness k (3 * 2 ^ (k - 2) - 1) 2 (by omega)
+          (w3_undecided k hk) (by omega)
+  · have hm1 : (2 : Nat) ^ k % 3 = 2 := hpar1.2 (by omega)
+    have hm2 : (2 : Nat) ^ (k - 1) % 3 = 1 := hpar2.1 (by omega)
+    by_cases hc0 : c = 0
+    · subst hc0
+      exact NN3_pos_of_witness k (2 ^ (k - 1) - 1) 0 (by omega)
+        (w2_undecided k (by omega)) (by omega)
+    · by_cases hc1 : c = 1
+      · subst hc1
+        exact NN3_pos_of_witness k (2 ^ k - 1) 1 (by omega) (w1_undecided k) (by omega)
+      · have hc2 : c = 2 := by omega
+        subst hc2
+        exact NN3_pos_of_witness k (3 * 2 ^ (k - 2) - 1) 2 (by omega)
+          (w3_undecided k hk) (by omega)

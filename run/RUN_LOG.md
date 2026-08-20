@@ -775,3 +775,16 @@ Lyapunov certificate (any window, any modulus) — ≥ 2^(0.538k)/2^14
 positive-drift windows at every k, each realized by infinitely many
 integers; a folklore obstruction in kernel-checked quantitative form |
 catch: none | born: none | facts(main)=73174
+
+R75 | Track D: **mod-3 POSITIVITY of the core, kernel-checked** |
+`mod3_positive`: for every k ≥ 6 and every c < 3, NN3 c k ≥ 1 — via three
+witness families with closed-form trajectories (`mirror_traj`:
+T^j(c·2^m − 1) = 3^j·c·2^(m−j) − 1, A_j = j): w₁ = 2^k − 1, w₂ =
+2^(k−1) − 1, w₃ = 3·2^(k−2) − 1 (≡ 2 mod 3 at every k); tail gates from
+2^k < 3^(k−1), 2^k < 3^(k−2). Axioms: propext + Quot.sound only. Spot
+check k=10: NN3 = [21,22,21], witnesses all undecided, residues [0,1,2].
+Kills every covering-system certificate of modulus 3·2^j — the mod-3
+refinement of core_never_empty, pairing with mod3_flow: the profile is
+conserved AND positive | catch: two first-compile defects (subst ate k;
+unascribed pow_succ gave .succ form), fixed pre-commit | born: none |
+facts(main)=73211

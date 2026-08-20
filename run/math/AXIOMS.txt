@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T09:20Z; 194 theorem declarations.
+# Generated 2026-08-20T10:30Z; 210 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -212,4 +212,20 @@
 'never_dropper_cap' depends on axioms: [propext, Quot.sound]
 'indU_double' depends on axioms: [propext, Classical.choice, Quot.sound]
 'mod3_flow' depends on axioms: [propext, Classical.choice, Quot.sound]
+'sqdiff_shift' depends on axioms: [propext, Quot.sound]
+'pow2_mod3' depends on axioms: [propext, Quot.sound]
+'V3_conserved' depends on axioms: [propext, Classical.choice, Quot.sound]
+'mod9_flow' depends on axioms: [propext, Classical.choice, Quot.sound]
+'pow23_lemma' depends on axioms: [propext, Quot.sound]
+'pow23_lemma2' depends on axioms: [propext, Quot.sound]
+'mirror_traj' depends on axioms: [propext, Quot.sound]
+'two_pow_lt_three_pow' depends on axioms: [propext, Quot.sound]
+'indU_of_dominated' depends on axioms: [propext, Quot.sound]
+'w1_undecided' depends on axioms: [propext, Quot.sound]
+'w2_undecided' depends on axioms: [propext, Quot.sound]
+'w3_undecided' depends on axioms: [propext, Quot.sound]
+'pow2_mod3_parity' depends on axioms: [propext, Quot.sound]
+'S_ge_term' depends on axioms: [propext, Quot.sound]
+'NN3_pos_of_witness' depends on axioms: [propext, Quot.sound]
+'mod3_positive' depends on axioms: [propext, Quot.sound]
 

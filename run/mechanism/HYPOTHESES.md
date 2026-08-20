@@ -391,3 +391,32 @@ unexplained feature of the problem, not an artifact of this run.
    k-window drift. No finite-window uniform-drift certificate exists, for
    any window length, any residue modulus. (A folklore obstruction, here
    with a kernel-checked quantitative form.)
+
+**Round 75 — the mod-3 covering door closed, constructively.**
+
+The conserved mod-3 flow (rounds 68–71) said the core's 3-adic profile
+cannot lose mass; it did not say the profile is nonzero. Now it does:
+`mod3_positive` (kernel-checked, propext + Quot.sound only): for every
+depth k ≥ 6 and every residue c ∈ {0,1,2}, NN3 c k ≥ 1. Proof by three
+explicit witness families with closed-form trajectories — `mirror_traj`
+gives T^j(c·2^m − 1) = 3^j·c·2^(m−j) − 1 with A_j = j (one odd step per
+depth while the 2-power lasts):
+
+- w₁ = 2^k − 1 (the mirror of −1's divergent trajectory): dominated at
+  every gate by 2^j < 3^j. Residue 0 at even k, 1 at odd k.
+- w₂ = 2^(k−1) − 1: same spine one level down, one even step at depth k;
+  the final gate holds because 2^k < 3^(k−1). Residue 1 at even k, 0 at odd.
+- w₃ = 3·2^(k−2) − 1 ≡ 2 (mod 3) at EVERY k: two even tail steps, gates
+  2^(k−1) < 3^(k−2) and 2^k < 3^(k−2) (k ≥ 6).
+
+Together the three witnesses hit all of {0,1,2} at every depth and parity.
+Consequence: no covering-system argument at modulus 3·2^j — "every
+undecided class lies in residues R mod 3, and R-classes descend for other
+reasons" — can exist, because the undecided set meets every mod-3 class at
+every depth. This upgrades core_never_empty (the core is nonempty) to its
+arithmetic-progression refinement for the modulus that matters most (the 3
+of 3n+1), and pairs with mod3_flow: the profile is conserved AND positive
+everywhere. The negative-orbit witness search of round 70 (no ≡0 mod 3
+dominated representative below 10^7 to depth 300) is resolved by
+construction: 2^k − 1 at even k IS such a representative — it just grows
+with k instead of sitting at a fixed small integer.
