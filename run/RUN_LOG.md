@@ -685,3 +685,10 @@ open micro-question (the search's one pullable loose thread; NOT predicted
 by the stochastic model — the single anti-conformity datum of Track D).
 HYPOTHESES.md closes with the five-point synthesis | catch: none | born:
 none | facts(main)=72950
+
+R64 | verification artifacts current after Track D | AXIOMS.txt regenerated
+(194 theorems; native_decide still confined to 10 finite checks; 29
+no-axiom lines now including the cycle table); WALKTHROUGH gains the
+Track D section; check_all end-to-end: ALL CHECKS PASSED, 70 s (kernel
+table adds ~15 s, accepted for axiom-freedom) | catch: stale "170 theorems"
+in walkthrough header, fixed | born: none | facts(main)=72958

@@ -1,8 +1,9 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T08:13Z by re-eliciting '#print axioms' for all 170 theorems.
+# Generated 2026-08-20T09:20Z; 194 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
-#         [Lean.ofReduceBool] = native_decide (trusts the compiled evaluator) — finite checks only;
-#         'does not depend on any axioms' = pure kernel computation.
+#         [Lean.ofReduceBool] = native_decide (finite checks only);
+#         'does not depend on any axioms' = pure kernel computation
+#         (includes the rate certificates AND the 17k-entry cycle exclusion table).
 
 == CollatzLedgerCheck.lean ==
 'one_ext_survives' depends on axioms: [propext, Quot.sound]
@@ -187,4 +188,28 @@
 'uf_4m' depends on axioms: [propext, Classical.choice, Quot.sound]
 'core_half' depends on axioms: [propext, Classical.choice, Quot.sound]
 'core_sandwich_half' depends on axioms: [propext, Classical.choice, Quot.sound]
+'gg2_succ' does not depend on any axioms
+'gg2_pos' depends on axioms: [propext, Classical.choice, Quot.sound]
+'block_cert' does not depend on any axioms
+'gg2_gate' depends on axioms: [propext, Classical.choice, Quot.sound]
+'gg2_le_dpf' depends on axioms: [propext, Classical.choice, Quot.sound]
+'gg2_ge_choose' depends on axioms: [propext, Classical.choice, Quot.sound]
+'uf_26m' depends on axioms: [propext, Classical.choice, Quot.sound]
+'core_713' depends on axioms: [propext, Classical.choice, Quot.sound]
+'titer_add' depends on axioms: [propext, Quot.sound]
+'titer_period' depends on axioms: [propext, Quot.sound]
+'range_argmin' depends on axioms: [propext, Quot.sound]
+'orbit_one' depends on axioms: [propext, Quot.sound]
+'mul_lit4' depends on axioms: [propext, Quot.sound]
+'mul_lit6' depends on axioms: [propext, Quot.sound]
+'mul_lit2' depends on axioms: [propext]
+'D_bound' depends on axioms: [propext, Quot.sound]
+'titer_pos' depends on axioms: [propext, Quot.sound]
+'cycle_ineq' depends on axioms: [propext, Quot.sound]
+'excl_table' does not depend on any axioms
+'no_small_cycles' depends on axioms: [propext, Quot.sound]
+'never_dropper_dominated' depends on axioms: [propext, Quot.sound]
+'never_dropper_cap' depends on axioms: [propext, Quot.sound]
+'indU_double' depends on axioms: [propext, Classical.choice, Quot.sound]
+'mod3_flow' depends on axioms: [propext, Classical.choice, Quot.sound]
 

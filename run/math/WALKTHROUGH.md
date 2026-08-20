@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 170 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 194 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -101,6 +101,26 @@ Terras side) and exponentially large (no finite-depth residue analysis can
 empty it — the obstruction side). Both sides kernel-checked. The canonical
 conjecture lives strictly beyond this sandwich, and this file proves *why*
 this route cannot reach it.
+
+## 8. Track D additions (mechanism search, rounds 57–63)
+
+- `no_small_cycles` : conditional on the 2^71 verification floor, no cycle
+  of accelerated length 1..183 through any n ≥ 3. Ingredients: the sharp
+  constant bound `D_bound` (D·2^A + 2^j·2^A ≤ 2^j·3^A), `cycle_ineq`
+  (positivity of D forces 2^j > 3^a — the "+1" sign at work), orbit
+  machinery (`titer_add`, `titer_period`, `range_argmin`, `orbit_one`), and
+  `excl_table` — ~17k exact big-integer comparisons as a PURE KERNEL decide
+  (no axioms). The theorem needs only propext + Quot.sound.
+- `never_dropper_dominated` : under the same floor, every never-dropper is
+  strictly dominated at all depths ≤ 183, regardless of size.
+- `never_dropper_cap` : unconditionally, a never-dropper's size is capped
+  at every undominated depth — so never-droppers are strictly dominated to
+  depth ≈ 2.71·log₂ n (4.3× the log₃ n window of never_dropper_in_core).
+- `indU_double` + `mod3_flow` : on gap-free depths BOTH lifts of every
+  undecided class survive, and the mod-3-refined core counts obey the exact
+  I + σ flow NN3 c (k+1) = NN3 c k + NN3 ((c+2^(k+1)) mod 3) k — the
+  machine-checked law behind the observed hyper-uniformity of the core's
+  3-adic profile (run/mechanism/HYPOTHESES.md).
 
 ## Re-running
 
