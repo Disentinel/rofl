@@ -3497,3 +3497,44 @@ theorem V3_conserved (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) :
       omega
     rw [s1, s2, s3, c1, c2, c3]
     omega
+
+/- ---------- the mod-9 flow (the Fourier picture opens) ---------- -/
+/- Same two-lift mechanism, modulus 9: −1 ≡ 2³ (mod 9), so the partner class
+   sits at c + 2^(k+3). Unlike mod 3, the I + σ operator on ℤ[ℤ/9] has
+   Fourier multipliers |1 + ω₉^(ts)| ∈ {2cos(π/9), 2cos(2π/9), 1} — the
+   mod-9 imbalance modes evolve at explicit, DIFFERENT rates on gap-free
+   depths, all still slower than the total's doubling. -/
+
+def NN9 (c k : Nat) : Nat :=
+  S (fun r => indU k r * (if r % 9 = c then 1 else 0)) (2 ^ k)
+
+theorem mod9_flow (k : Nat) (hk : 1 ≤ k) (hf : failb k = 0) (c : Nat) (hc : c < 9) :
+    NN9 c (k + 1) = NN9 c k + NN9 ((c + 2 ^ (k + 3)) % 9) k := by
+  have hd := indU_double k hk hf
+  have hsplit : (2 : Nat) ^ (k + 1) = 2 ^ k + 2 ^ k := by
+    have := Nat.pow_succ 2 k
+    omega
+  show S (fun r => indU (k + 1) r * (if r % 9 = c then 1 else 0)) (2 ^ (k + 1))
+      = NN9 c k + NN9 ((c + 2 ^ (k + 3)) % 9) k
+  rw [hsplit, S_append _ (2 ^ k) (2 ^ k)]
+  have h1 : ∀ r, r < 2 ^ k →
+      indU (k + 1) r * (if r % 9 = c then 1 else 0)
+        = indU k r * (if r % 9 = c then 1 else 0) := by
+    intro r _
+    rw [(hd r).1]
+  have h2 : ∀ i, i < 2 ^ k →
+      indU (k + 1) (2 ^ k + i) * (if (2 ^ k + i) % 9 = c then 1 else 0)
+        = indU k i * (if i % 9 = (c + 2 ^ (k + 3)) % 9 then 1 else 0) := by
+    intro i _
+    rw [(hd i).2]
+    have hcong : (if (2 ^ k + i) % 9 = c then (1 : Nat) else 0)
+        = (if i % 9 = (c + 2 ^ (k + 3)) % 9 then 1 else 0) := by
+      have h2k3 : (2 : Nat) ^ (k + 3) = 8 * 2 ^ k := by
+        have e1 : (2 : Nat) ^ (k + 3) = 2 ^ k * 2 ^ 3 := Nat.pow_add 2 k 3
+        omega
+      by_cases hcase : (2 ^ k + i) % 9 = c
+      · rw [if_pos hcase, if_pos (by omega)]
+      · rw [if_neg hcase, if_neg (by omega)]
+    rw [hcong]
+  rw [S_congr _ _ _ h1, S_congr _ _ _ h2]
+  rfl

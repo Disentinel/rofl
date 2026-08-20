@@ -725,3 +725,14 @@ R68 | a*-quality lead checked (inconclusive) + memory | j=20's perfect
 balance coincides with the 19/12 convergent (3^12/2^19 = 1.0136) —
 suggestive but no monotone quality-balance law across crossings. Enox
 carries the Track D outcome | catch: none | born: none | facts(main)=73040
+
+R69 | Track D: **the mod-9 Fourier picture** | mod9_flow proved (kernel;
+−1 ≡ 2³ mod 9); cocycle verified verbatim to k=28 (mode ratios =
+[0.347, 1.879, 1, 1.532] permutations exactly, incl. the contracting
+2cos(4π/9) mode); the 6-cycle multiplier product is EXACTLY 1 on every
+non-constant mode (8cos(π/9)cos(2π/9)cos(4π/9) = 1) — with Sturmian
+discrepancy O(log k), deterministic amplification of all mod-9 imbalance is
+polynomially bounded forever; every exponential-scale 3-adic feature of the
+core is kick-driven. The 3-adic Fourier dynamics of the core are fully
+mapped: proved cocycle × open kicks | catch: none | born: none |
+facts(main)=73080

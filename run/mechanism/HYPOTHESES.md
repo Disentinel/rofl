@@ -277,3 +277,23 @@ structured at specific ladder positions" — the a*(j) arithmetic of the
 striking crossings (which 3-power, which convergent) is the place to look
 next. Recorded per the run's discipline: revise your own observation when
 scale arrives.
+
+**Round 69 — the full Fourier picture (mod 9), proved + verified.**
+`mod9_flow` kernel-checked (same two-lift mechanism; −1 ≡ 2³ mod 9 puts the
+partner class at c + 2^(k+3)). Consequences, verified verbatim in data at
+every gap-free step to k = 28: the DFT modes χ_s of the mod-9 profile
+multiply by |1 + ω₉^(h·s)|, h = 2^k mod 9 — the measured ratios equal the
+predicted [0.347, 1.879, 1.000, 1.532] permutations to all displayed
+digits, including the CONTRACTING mode 2cos(4π/9) ≈ 0.347. Algebraic
+structure: over the full 6-cycle of h the multiplier product is EXACTLY 1
+on every non-constant mode — the classical identity
+8cos(π/9)cos(2π/9)cos(4π/9) = 1 (and (1+ζ)(1+ζ²) = 1 for the mod-3
+submodes). Six consecutive gap-free steps would act as the identity on all
+imbalance modes; the Sturmian ladder (gaps ≤ 2) never allows six, but the
+consequence survives in aggregate: the gap-free h-subsequence equidistributes
+over the 6-cycle with Sturmian discrepancy O(log k), so the DETERMINISTIC
+amplification of every mod-9 imbalance mode is polynomially bounded forever
+— all exponential-scale 3-adic structure of the core is kick-driven, now
+at modulus 9 as well. The core's 3-adic Fourier dynamics are completely
+mapped: deterministic cocycle (proved) × crossing kicks (open, the
+character-sum problem).
