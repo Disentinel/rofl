@@ -1093,3 +1093,21 @@ Sandwich now 2^(3j/4−18) ≤ u_j ≤ 2^(j−j/20). Batch-1 machinery
 indU_gate_all) from the recovered pre-crash working tree, assembled and
 compiled this round | catch: docstring-before-set_option (known trap,
 2nd occurrence) | born: none (verified) | facts(main)=73721
+
+---
+
+## POST-WINDOW POSTSCRIPT (2026-08-21, ~09:05Z)
+
+The 24h window closed 2026-08-20T18:17Z; the last in-window commit was
+the R93-era state (~14:05Z) plus the ultracode breadth sweep completing
+in-window at 15:14Z whose integration (R94) and the superadditivity
+theorem (R95) landed post-window at the owner's direction to continue.
+Post-window state: rounds through R95; facts(main) = 73,721; 301 Lean
+theorems; determinism probe #4 sha a63ad035…, identical across
+rebuild-from-sources vs untrusted-snapshot-restore at 73,721 facts;
+check_all.sh ALL CHECKS PASSED; audit clean (0/0/0/0 + the 3 standing
+shaky flags). Headline change vs the in-window FINAL: the sandwich's
+lower exponent is now **3/4** (`NU_superadd` + `core_lower_34`),
+superseding 7/13; and the Track E corpus (coupling transducer, affine
+atlas laws, negative-side integers, mirror-world sign-blindness filter)
+is ledgered in R89–R95.

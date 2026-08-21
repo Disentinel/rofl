@@ -1,5 +1,5 @@
 # AXIOMS — full axiom audit of every theorem in run/math (Lean 4.21.0 core)
-# Generated 2026-08-20T12:50Z; 263 theorem declarations.
+# Generated 2026-08-21T09:05Z; 301 theorem declarations.
 # Legend: [propext, Classical.choice, Quot.sound] = the three standard Lean axioms;
 #         [Lean.ofReduceBool] = native_decide (finite checks only);
 #         'does not depend on any axioms' = pure kernel computation
@@ -280,4 +280,42 @@
 'stairT_spec' depends on axioms: [propext, Quot.sound]
 'stairT_A' depends on axioms: [propext, Quot.sound]
 'excl_table_sharp' does not depend on any axioms
+'neg_one_in_core' depends on axioms: [propext, Quot.sound]
+'cycle_not_in_core' depends on axioms: [propext, Quot.sound]
+'T_three_mul' depends on axioms: [propext, Quot.sound]
+'core_first_two_odd' depends on axioms: [propext, Quot.sound]
+'times3_leaves_core' depends on axioms: [propext, Quot.sound]
+'T_c12_odd' depends on axioms: [propext, Quot.sound]
+'T_c12_even' depends on axioms: [propext, Quot.sound]
+'T_c11_odd' depends on axioms: [propext, Quot.sound]
+'T_c11_even' depends on axioms: [propext, Quot.sound]
+'coupling_merge' depends on axioms: [propext, Quot.sound]
+'core_mod4' depends on axioms: [propext, Quot.sound]
+'affine_leaves_core' depends on axioms: [propext, Quot.sound]
+'pow89_le' depends on axioms: [propext, Quot.sound]
+'pow89_lt' depends on axioms: [propext, Quot.sound]
+'neg5_gate0' depends on axioms: [propext, Quot.sound]
+'neg5_gate1' depends on axioms: [propext, Quot.sound]
+'neg5_gate2' depends on axioms: [propext, Quot.sound]
+'neg5_step1' depends on axioms: [propext, Quot.sound]
+'neg5_step2' depends on axioms: [propext, Quot.sound]
+'neg5_step3' depends on axioms: [propext, Quot.sound]
+'neg5_traj' depends on axioms: [propext, Quot.sound]
+'neg5_A' depends on axioms: [propext, Quot.sound]
+'neg_five_in_core' depends on axioms: [propext, Quot.sound]
+'backward_closure' depends on axioms: [propext, Quot.sound]
+'pow2_cancel' depends on axioms: [propext, Quot.sound]
+'lift_flip_gen' depends on axioms: [propext, Quot.sound]
+'A_shift_high' depends on axioms: [propext, Quot.sound]
+'indU_gate_all' depends on axioms: [propext, Quot.sound]
+'A_add' depends on axioms: [propext, Quot.sound]
+'composite_undecided' depends on axioms: [propext, Quot.sound]
+'S_grid' depends on axioms: [propext, Quot.sound]
+'add_mul_mod_inj' depends on axioms: [propext, Quot.sound]
+'S_reindex_count' depends on axioms: [propext, Quot.sound]
+'splice_ge' depends on axioms: [propext, Quot.sound]
+'NU_superadd' depends on axioms: [propext, Quot.sound]
+'NU_superadd_pow' depends on axioms: [propext, Quot.sound]
+'uf_anchor_24' does not depend on any axioms
+'core_lower_34' depends on axioms: [propext, Classical.choice, Quot.sound]
 

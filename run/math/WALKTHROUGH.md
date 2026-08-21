@@ -4,7 +4,7 @@ A guided map from classical statements to formal names, for a reader who
 wants to check what exactly is proved. Everything below is in
 `TerrasAlmostAll.lean` (self-contained, core Lean 4.21.0, no mathlib;
 compile with `lean TerrasAlmostAll.lean`, exit 0 = all kernel-checked).
-`AXIOMS.txt` lists the axiom footprint of all 263 theorems.
+`AXIOMS.txt` lists the axiom footprint of all 301 theorems.
 
 **What is NOT here:** a proof of the Collatz conjecture. The file proves the
 classical almost-all theory plus a formal obstruction (see §7).
@@ -91,8 +91,9 @@ yields
 - Explicit families sharpen the exponent: `core_half` (2^(k/2) ≤ 8·uf k,
   prefix 1^2m + central words, margin 9^m vs 8^m) and `core_713`
   (2^(7k/13) ≤ 16384·uf k, prefix 1^12m, block certificate 3^12 > 2^19).
-  7/13 is this method's ceiling; beyond it needs non-central binomial lower
-  bounds (Stirling), out of core-Lean scope here.
+  7/13 was the FAMILY method's ceiling — superseded in §7 by
+  superadditivity (`NU_superadd` + `core_lower_34`), which has no ceiling
+  short of the true entropy.
 
 ## 7. The headline
 
