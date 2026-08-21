@@ -289,6 +289,15 @@ Consequences:
    computable QUASI-invariance — walk-conditioned membership transfer.
    Whether quasi-invariance of this precise kind feeds any rigidity
    argument is the sharpest open question Track E leaves.
+
+**Literature flag (R96):** Canales Chacón–Vielhaber 2004 (annotated in
+Lagarias's bibliography II, item 23) exhibit a 5-state shift automaton
+computing the *shift commutator* of the 3x+1 function — the map
+a ↦ a (even) / 3a+2 (odd), i.e. exactly the ×3+2 direction our
+transducer transports. Our (i,d) state space, merge state, and
+core-membership transfer are likely the same object in dual
+presentation; ledgered shaky until the full paper is read
+(run/NOVELTY_DIFF.md).
 4. Queued formalization: the general step identity T(3^i·s + d) =
    3^(i')·T(s) + d' needs signed d (Int) — the four kernel-checked
    instances cover the (1,2)-component seed used by the laws measured.

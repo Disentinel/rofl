@@ -1111,3 +1111,24 @@ lower exponent is now **3/4** (`NU_superadd` + `core_lower_34`),
 superseding 7/13; and the Track E corpus (coupling transducer, affine
 atlas laws, negative-side integers, mirror-world sign-blindness filter)
 is ledgered in R89–R95.
+
+R96 | the literature diff (owner-supplied corpus: Chang, KL, AL-I/II, Tao,
+biblio-II, YAH — 7 PDFs, full-text extracted, NOT committed) | per-claim
+diff table written to run/NOVELTY_DIFF.md. Verdicts: classical layer
+REDISCOVERY (mechanization is the artifact); no_small_cycles
+KNOWN-STRONGER; coupling transducer PARALLEL-PROBABLE-REDISCOVERY
+(Canales Chacón–Vielhaber 2004 shift-commutator automaton, a↦3a+2 —
+ledgered as a deliberately-shaky hypothesis until the full paper is
+read); Sturmian PARALLEL (López–Stoll 2009, converse direction);
+CF-locking mechanism classical, packaging ours; NOT FOUND in corpus:
+superadditivity lower bound (the literature's π_a(x)/n_k(a) are
+provably different quantities), covering obstruction, exact 3-adic
+flow/conservation laws, the two constructive core points as computable
+exhibits. Calibrated bottom line: boundary of the known NOT expanded in
+the strong sense; two genuine novelty candidates pending a database
+pass. | catches: (1) earlier "coefficient stopping: 0 hits" grep was an
+ﬃ-LIGATURE artifact — the term is Terras's own, 4+ hits in biblio-II;
+instrument-read-too-literally, 4th occurrence of the class; (2) earlier
+"Syracuse mod-3^n equidistribution unclaimed" corrected — Tao PROVES
+superpolynomial fine-scale mixing (Props 1.14/1.17), only exp(−cm)
+open. | born: none | facts(main)=73763, snapshot sha 152d354f…

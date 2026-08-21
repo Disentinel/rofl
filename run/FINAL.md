@@ -60,7 +60,9 @@ certificates depend on **no axioms at all**).
 5. **The lower bound** — the undecided core never empties, lifted through
    explicit families to **2^(7k/13) ≤ 16384·u_k**. Headline sandwich:
    **2^(0.538·k)/2^14 ≤ u_k ≤ 2^(k−k/20)** — the core is exponentially thin
-   and exponentially large, kernel-checked both sides.
+   and exponentially large, kernel-checked both sides. *(Superseded
+   post-window: superadditivity lifts the lower exponent to **3/4** — see
+   the addendum.)*
 
 ### The Track D layer (rounds 57–86): obstructions made exact
 
@@ -199,3 +201,47 @@ a mechanism nobody has; the run's contribution is that the needed mechanism
 is now formally separated from everything a density, covering, or
 finite-window argument can provide, and every claim in that separation is
 one command away from re-verification.
+
+## Post-window addendum (R87–R96, owner-directed continuation)
+
+The window closed at 2026-08-20T18:17Z; the owner directed continuation.
+Three things changed after the bell:
+
+**The sandwich tightened to 3/4** (R95). Superadditivity —
+`NU_superadd` : u_k·u_m ≤ u_{k+m}, a splice construction with an S-sum
+pigeonhole and no bijection machinery — converts the axiom-free kernel
+anchor u_24 ≥ 2^18 into **2^(3k/4)/2^18 ≤ u_k ≤ 2^(k−k/20)**
+(`core_lower_34`), superseding the family method's 7/13. The method has
+no ceiling short of the true entropy h = H(log₃2) ≈ 0.9500. The Lean
+stack now holds 301 theorems (~6,500 lines).
+
+**Track E re-represented the problem** (R88–R94): seven primitives, the
+one-place-blindness unification, the affine atlas (×3 anti-invariance
+`times3_leaves_core`, `affine_leaves_core`, backward closure), the
+negative-side integers (−1, −5 in core; minima as CF-approximant
+lockings, next slot 12/19 — falsifiable), the mirror-world strategic
+filter (any viable mechanism must be affine-relational AND
+sign-carrying), and the coupling transducer: w(3r+2) = Transduce(w(r)),
+exact per-class, 100% membership prediction.
+
+**The novelty question got an answer that is a table, not an adjective**
+(R96). The owner supplied seven primary sources (Chang, Krasikov–Lagarias,
+Applegate–Lagarias I+II, Tao, the annotated bibliography II,
+Yolcu–Aaronson–Heule); every headline claim was diffed against the corpus
+in `run/NOVELTY_DIFF.md`. Calibrated verdict: **the boundary of the known
+has not been expanded in the strong sense.** The classical layer is a
+rediscovery whose value is its mechanization; the cycle bound is far
+weaker than the field's; the coupling transducer is probably the
+Canales Chacón–Vielhaber shift commutator in dual presentation (ledgered
+shaky pending the full paper); Sturmian and CF-locking have literature
+parallels. Two corrections were ledgered: the "coefficient stopping: 0
+hits" grep was an ﬃ-ligature artifact (the term is Terras's own), and
+Tao *does* prove superpolynomial fine-scale mixing mod 3^n — only the
+exponential rate is open. What survived as candidate novelty, not located
+in any form in the corpus: the **superadditivity lower bound** on the
+undecided-class count (the literature's quantities π_a(x) and n_k(a) are
+provably different objects), the **covering obstruction**
+`core_meets_every_class`, the **exact 3-adic flow/conservation laws**,
+and the **two constructive core points** as computable exhibits. Each
+needs a full database pass before any public claim; the honest formula
+stands in NOVELTY_DIFF.md's bottom line.
