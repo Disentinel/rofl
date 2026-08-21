@@ -5832,3 +5832,476 @@ theorem backward_closure (k c x : Nat) (h3 : 3 * x + 1 = 2 * c)
       rw [hA0]
       decide
 
+
+/- ---------- SUPERADDITIVITY: gates multiply, the core concatenates ---------- -/
+/- u_{k+m} >= u_k * u_m: an undecided class at depth k and one at depth m
+   splice into an undecided class at depth k+m (prefix gates from the
+   first, tail gates from the product of both). Lifts the proved lower
+   exponent from 7/13 to log2(u_k)/k for ANY kernel-evaluated anchor —
+   the "family ceiling" of R44 was a ceiling of the family method, not of
+   the truth. Batch 1: the four independent helpers. -/
+
+/-- 2-power cancellation against an odd factor (mirror of odd_cancel). -/
+theorem pow2_cancel (m : Nat) : ∀ u t q, u % 2 = 1 → t * u = 2 ^ m * q →
+    ∃ s, t = 2 ^ m * s := by
+  induction m with
+  | zero =>
+    intro u t q _ h
+    exact ⟨t, by omega⟩
+  | succ p ih =>
+    intro u t q hu h
+    have hpow : (2 : Nat) ^ (p + 1) = 2 ^ p * 2 := Nat.pow_succ 2 p
+    have hteven : t % 2 = 0 := by
+      have hmod : t * u % 2 = t % 2 * (u % 2) % 2 := Nat.mul_mod t u 2
+      rw [hu] at hmod
+      have h2 : 2 ^ (p + 1) * q = 2 * (2 ^ p * q) := by
+        have e : (2 : Nat) ^ (p + 1) * q = 2 ^ p * 2 * q := by rw [hpow]
+        have e2 : 2 ^ p * 2 * q = 2 * (2 ^ p * q) := by
+          simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+        omega
+      omega
+    have e2 : t = 2 * (t / 2) := by omega
+    have h3 : (2 * (t / 2)) * u = 2 * (t / 2 * u) := by
+      simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    rw [e2] at h
+    have h4 : 2 ^ (p + 1) * q = 2 * (2 ^ p * q) := by
+      have e : (2 : Nat) ^ (p + 1) * q = 2 ^ p * 2 * q := by rw [hpow]
+      have e2' : 2 ^ p * 2 * q = 2 * (2 ^ p * q) := by
+        simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+      omega
+    have h5 : t / 2 * u = 2 ^ p * q := by omega
+    have ⟨s, hs⟩ := ih u (t / 2) q hu h5
+    have hlink : 2 ^ (p + 1) * s = 2 * (2 ^ p * s) := by
+      have e : (2 : Nat) ^ (p + 1) * s = 2 ^ p * 2 * s := by rw [hpow]
+      have e2'' : 2 ^ p * 2 * s = 2 * (2 ^ p * s) := by
+        simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+      omega
+    exact ⟨s, by omega⟩
+
+/-- Generalized lift: shifting a class by t·2^k shifts T^k by t·3^(A k r). -/
+theorem lift_flip_gen (k r : Nat) : ∀ t,
+    Titer k (r + t * 2 ^ k) = Titer k r + t * 3 ^ A k r := by
+  intro t
+  induction t with
+  | zero =>
+    have z1 : 0 * 2 ^ k = 0 := Nat.zero_mul _
+    have z2 : 0 * 3 ^ A k r = 0 := Nat.zero_mul _
+    have e1 : r + 0 * 2 ^ k = r := by omega
+    rw [e1]
+    omega
+  | succ p ih =>
+    have e1 : r + (p + 1) * 2 ^ k = (r + p * 2 ^ k) + 2 ^ k := by
+      have hsm : (p + 1) * 2 ^ k = p * 2 ^ k + 2 ^ k := Nat.succ_mul p (2 ^ k)
+      omega
+    rw [e1]
+    have h1 := lift_flip k (r + p * 2 ^ k)
+    have h2 : A k (r + p * 2 ^ k) = A k r := (AD_periodic k r p).1
+    rw [h2, ih] at h1
+    have e2 : (p + 1) * 3 ^ A k r = p * 3 ^ A k r + 3 ^ A k r :=
+      Nat.succ_mul p _
+    omega
+
+/-- A at depth j ≤ k is blind to shifts by multiples of 2^k. -/
+theorem A_shift_high (j k r t : Nat) (hjk : j ≤ k) :
+    A j (r + t * 2 ^ k) = A j r := by
+  have e1 : (2 : Nat) ^ k = 2 ^ j * 2 ^ (k - j) := by
+    have h := Nat.pow_add 2 j (k - j)
+    have e : j + (k - j) = k := by omega
+    rw [e] at h
+    exact h
+  have e2 : t * 2 ^ k = t * 2 ^ (k - j) * 2 ^ j := by
+    rw [e1]
+    simp [Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+  rw [e2]
+  exact (AD_periodic j r (t * 2 ^ (k - j))).1
+
+/-- The converse of indU_of_dominated: membership yields every gate. -/
+theorem indU_gate_all (k r : Nat) (h : indU k r = 1) :
+    ∀ j, 1 ≤ j → j ≤ k → 2 ^ j < 3 ^ A j r := by
+  have hmono : ∀ j, indU (j + 1) r = 1 → indU j r = 1 := by
+    intro j hj
+    rw [indU_succ] at hj
+    by_cases hz : indU j r = 1
+    · exact hz
+    · have := indU_le_one j r
+      have hz0 : indU j r = 0 := by omega
+      rw [hz0, Nat.zero_mul] at hj
+      omega
+  have hdown : ∀ d j, indU (j + d) r = 1 → indU j r = 1 := by
+    intro d
+    induction d with
+    | zero => intro j hj; exact hj
+    | succ p ih =>
+      intro j hj
+      have e : j + (p + 1) = (j + p) + 1 := by omega
+      rw [e] at hj
+      exact ih j (hmono (j + p) hj)
+  intro j hj1 hj2
+  have hj : indU j r = 1 := by
+    have e : k = j + (k - j) := by omega
+    rw [e] at h
+    exact hdown (k - j) j h
+  cases j with
+  | zero => omega
+  | succ p =>
+    exact indU_one_gate p r hj
+
+/-- A is additive along the orbit: the count over k+m steps splits at k. -/
+theorem A_add (x : Nat) : ∀ y n, A (x + y) n = A x n + A y (Titer x n) := by
+  induction x with
+  | zero =>
+    intro y n
+    have h : (0 : Nat) + y = y := by omega
+    rw [h]
+    have h1 : A 0 n = 0 := rfl
+    have h2 : Titer 0 n = n := rfl
+    rw [h1, h2]
+    omega
+  | succ p ih =>
+    intro y n
+    have h : p + 1 + y = (p + y) + 1 := by omega
+    have h1 : A (p + 1 + y) n = (if n % 2 = 0 then 0 else 1) + A (p + y) (T n) := by
+      rw [h]
+      exact A_succ (p + y) n
+    have h2 : A (p + 1) n = (if n % 2 = 0 then 0 else 1) + A p (T n) := A_succ p n
+    have h3 : Titer (p + 1) n = Titer p (T n) := rfl
+    have h4 := ih y (T n)
+    rw [h1, h2, h3, h4]
+    omega
+
+/-- THE SPLICE: an undecided depth-k class and an undecided depth-m class
+    combine into an undecided depth-(k+m) class — prefix gates from the
+    first, tail gates from the product of both (gates multiply). -/
+theorem composite_undecided (k m r1 r2 t : Nat)
+    (h1 : indU k r1 = 1) (h2 : indU m r2 = 1)
+    (hc : (Titer k r1 + t * 3 ^ A k r1) % 2 ^ m = r2) :
+    indU (k + m) (r1 + t * 2 ^ k) = 1 := by
+  apply indU_of_dominated
+  intro j hj1 hj2
+  by_cases hjk : j ≤ k
+  · have hA := A_shift_high j k r1 t hjk
+    rw [hA]
+    exact indU_gate_all k r1 h1 j hj1 hjk
+  · have hi1 : 1 ≤ j - k := by omega
+    have hi2 : j - k ≤ m := by omega
+    have hadd := A_add k (j - k) (r1 + t * 2 ^ k)
+    have ejk : k + (j - k) = j := by omega
+    rw [ejk] at hadd
+    have hAk : A k (r1 + t * 2 ^ k) = A k r1 := (AD_periodic k r1 t).1
+    have hT := lift_flip_gen k r1 t
+    rw [hAk, hT] at hadd
+    have hdm := Nat.div_add_mod (Titer k r1 + t * 3 ^ A k r1) (2 ^ m)
+    rw [hc] at hdm
+    have hcomm : 2 ^ m * ((Titer k r1 + t * 3 ^ A k r1) / 2 ^ m)
+        = ((Titer k r1 + t * 3 ^ A k r1) / 2 ^ m) * 2 ^ m := Nat.mul_comm _ _
+    have hAe : A (j - k) (Titer k r1 + t * 3 ^ A k r1) = A (j - k) r2 := by
+      have e : Titer k r1 + t * 3 ^ A k r1
+          = r2 + ((Titer k r1 + t * 3 ^ A k r1) / 2 ^ m) * 2 ^ m := by omega
+      rw [e]
+      exact A_shift_high (j - k) m r2 _ hi2
+    rw [hAe] at hadd
+    have hg1 : 2 ^ k ≤ 3 ^ A k r1 := indU_one_pow k r1 h1
+    have hg2 : 2 ^ (j - k) < 3 ^ A (j - k) r2 :=
+      indU_gate_all m r2 h2 (j - k) hi1 hi2
+    have hsplit2 : (2 : Nat) ^ j = 2 ^ k * 2 ^ (j - k) := by
+      have h := Nat.pow_add 2 k (j - k)
+      rw [ejk] at h
+      exact h
+    have hsplit3 : (3 : Nat) ^ (A k r1 + A (j - k) r2)
+        = 3 ^ A k r1 * 3 ^ A (j - k) r2 := Nat.pow_add 3 _ _
+    rw [hadd, hsplit2, hsplit3]
+    have hmul1 : 2 ^ k * 2 ^ (j - k) ≤ 3 ^ A k r1 * 2 ^ (j - k) :=
+      Nat.mul_le_mul_right _ hg1
+    have hmul2 : 3 ^ A k r1 * 2 ^ (j - k) < 3 ^ A k r1 * 3 ^ A (j - k) r2 := by
+      have hle : 3 ^ A k r1 * (2 ^ (j - k) + 1) ≤ 3 ^ A k r1 * 3 ^ A (j - k) r2 :=
+        Nat.mul_le_mul_left _ (by omega)
+      have hd : 3 ^ A k r1 * (2 ^ (j - k) + 1)
+          = 3 ^ A k r1 * 2 ^ (j - k) + 3 ^ A k r1 := by
+        have hm := Nat.mul_add (3 ^ A k r1) (2 ^ (j - k)) 1
+        have e1 : (3 : Nat) ^ A k r1 * 1 = 3 ^ A k r1 := Nat.mul_one _
+        omega
+      have hpos : 0 < (3 : Nat) ^ A k r1 := Nat.pow_pos (by omega)
+      omega
+    omega
+
+/-- Grid decomposition of a sum over [0, B·C). -/
+theorem S_grid (f : Nat → Nat) (B : Nat) : ∀ C, S f (B * C)
+    = S (fun q => S (fun i => f (i + q * B)) B) C := by
+  intro C
+  induction C with
+  | zero =>
+    have e : B * 0 = 0 := rfl
+    rw [e]
+    rfl
+  | succ q ih =>
+    have e : B * (q + 1) = B * q + B := Nat.mul_succ B q
+    rw [e]
+    have h1 := S_append f (B * q) B
+    rw [h1, ih]
+    have h2 := S_succ (fun q' => S (fun i => f (i + q' * B)) B) q
+    rw [h2]
+    have h3 := S_congr (fun i => f (B * q + i)) (fun i => f (i + q * B)) B
+      (fun s _ => by
+        show f (B * q + s) = f (s + q * B)
+        have e2 : B * q + s = s + q * B := by
+          have := Nat.mul_comm B q
+          omega
+        rw [e2])
+    omega
+
+/-- Shifted-multiples map t ↦ (a + t·u) mod 2^m is injective on [0, 2^m)
+    for odd u. -/
+theorem add_mul_mod_inj (m u a t1 t2 : Nat) (hu : u % 2 = 1)
+    (h12 : t1 < t2) (h2 : t2 < 2 ^ m) :
+    ¬((a + t1 * u) % 2 ^ m = (a + t2 * u) % 2 ^ m) := by
+  intro he
+  have hm : 0 < (2 : Nat) ^ m := Nat.pow_pos (by omega)
+  have hd1 := Nat.div_add_mod (a + t1 * u) (2 ^ m)
+  have hd2 := Nat.div_add_mod (a + t2 * u) (2 ^ m)
+  have hle : t1 * u ≤ t2 * u := Nat.mul_le_mul_right _ (by omega)
+  have hsub : (t2 - t1) * u = t2 * u - t1 * u := Nat.sub_mul t2 t1 u
+  have hms : 2 ^ m * ((a + t2 * u) / 2 ^ m - (a + t1 * u) / 2 ^ m)
+      = 2 ^ m * ((a + t2 * u) / 2 ^ m) - 2 ^ m * ((a + t1 * u) / 2 ^ m) :=
+    Nat.mul_sub (2 ^ m) _ _
+  have key : (t2 - t1) * u
+      = 2 ^ m * ((a + t2 * u) / 2 ^ m - (a + t1 * u) / 2 ^ m) := by omega
+  have ⟨s, hs⟩ := pow2_cancel m u (t2 - t1) _ hu key
+  by_cases hs0 : s = 0
+  · rw [hs0, Nat.mul_zero] at hs
+    omega
+  · have hmt : 2 ^ m * 1 ≤ 2 ^ m * s := Nat.mul_le_mul_left _ (by omega)
+    rw [Nat.mul_one] at hmt
+    omega
+
+/-- The weighted bijection count: summing indU m over the images
+    (a + t·u) mod 2^m for t < 2^m gives exactly NU m (u odd). -/
+theorem S_reindex_count (m u a : Nat) (hu : u % 2 = 1) :
+    S (fun t => indU m ((a + t * u) % 2 ^ m)) (2 ^ m)
+      = NU m := by
+  have hm : 0 < (2 : Nat) ^ m := Nat.pow_pos (by omega)
+  -- rows: each t contributes its indicator row summing to indU m (image t)
+  have hrow : ∀ t, t < 2 ^ m →
+      S (fun y => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m)
+        = indU m ((a + t * u) % 2 ^ m) := by
+    intro t _
+    have hlt : (a + t * u) % 2 ^ m < 2 ^ m := Nat.mod_lt _ hm
+    have hbr := S_congr
+      (fun y => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0))
+      (fun y => indU m ((a + t * u) % 2 ^ m) * (if (a + t * u) % 2 ^ m = y then 1 else 0))
+      (2 ^ m)
+      (fun s' _ => by
+        show indU m s' * (if (a + t * u) % 2 ^ m = s' then 1 else 0)
+          = indU m ((a + t * u) % 2 ^ m) * (if (a + t * u) % 2 ^ m = s' then 1 else 0)
+        by_cases hcs : (a + t * u) % 2 ^ m = s'
+        · rw [if_pos hcs, hcs]
+        · rw [if_neg hcs, Nat.mul_zero, Nat.mul_zero])
+    rw [hbr, S_indicator _ _ _ hlt]
+  -- switch the double sum
+  have hswap : S (fun t => S (fun y => indU m y
+        * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m)) (2 ^ m)
+      = S (fun y => S (fun t => indU m y
+        * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m)) (2 ^ m) :=
+    S_swap (fun t y => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m) (2 ^ m)
+  -- columns: for each y the count of t hitting y is ≤ 1 (injectivity)
+  have hcol1 : ∀ y, y < 2 ^ m →
+      S (fun t => if (a + t * u) % 2 ^ m = y then 1 else 0) (2 ^ m) ≤ 1 := by
+    intro y _
+    apply S_ind_le_one
+    · intro i1 i2 hlt12 hi2
+      by_cases hc1 : (a + i1 * u) % 2 ^ m = y
+      · by_cases hc2 : (a + i2 * u) % 2 ^ m = y
+        · have he : (a + i1 * u) % 2 ^ m = (a + i2 * u) % 2 ^ m := by rw [hc1, hc2]
+          exact absurd he (add_mul_mod_inj m u a i1 i2 hu hlt12 hi2)
+        · right
+          show (if (a + i2 * u) % 2 ^ m = y then (1 : Nat) else 0) = 0
+          rw [if_neg hc2]
+      · left
+        show (if (a + i1 * u) % 2 ^ m = y then (1 : Nat) else 0) = 0
+        rw [if_neg hc1]
+    · intro i _
+      show (if (a + i * u) % 2 ^ m = y then (1 : Nat) else 0) ≤ 1
+      by_cases hc : (a + i * u) % 2 ^ m = y
+      · rw [if_pos hc]
+        omega
+      · rw [if_neg hc]
+        omega
+  -- total of the unweighted columns is 2^m (each row of ones sums to 1)
+  have hrow1 : ∀ t, t < 2 ^ m →
+      S (fun y => if (a + t * u) % 2 ^ m = y then 1 else 0) (2 ^ m) = 1 := by
+    intro t _
+    have hlt : (a + t * u) % 2 ^ m < 2 ^ m := Nat.mod_lt _ hm
+    have hbr := S_congr
+      (fun y => if (a + t * u) % 2 ^ m = y then 1 else 0)
+      (fun y => 1 * (if (a + t * u) % 2 ^ m = y then 1 else 0))
+      (2 ^ m)
+      (fun s' _ => by
+        show (if (a + t * u) % 2 ^ m = s' then (1 : Nat) else 0)
+          = 1 * (if (a + t * u) % 2 ^ m = s' then 1 else 0)
+        rw [Nat.one_mul])
+    rw [hbr, S_indicator _ _ _ hlt]
+  have htot : S (fun t => S (fun y => if (a + t * u) % 2 ^ m = y then 1 else 0)
+      (2 ^ m)) (2 ^ m) = 2 ^ m := by
+    have h1 := S_congr (fun t => S (fun y => if (a + t * u) % 2 ^ m = y then 1 else 0)
+      (2 ^ m)) (fun _ => 1) (2 ^ m) (fun t ht => hrow1 t ht)
+    rw [h1, S_const_one]
+  have hswap0 : S (fun t => S (fun y => if (a + t * u) % 2 ^ m = y then 1 else 0)
+        (2 ^ m)) (2 ^ m)
+      = S (fun y => S (fun t => if (a + t * u) % 2 ^ m = y then 1 else 0)
+        (2 ^ m)) (2 ^ m) :=
+    S_swap (fun t y => if (a + t * u) % 2 ^ m = y then 1 else 0) (2 ^ m) (2 ^ m)
+  -- every column equals exactly 1
+  have hcolall : ∀ y, y < 2 ^ m →
+      S (fun t => if (a + t * u) % 2 ^ m = y then 1 else 0) (2 ^ m) = 1 := by
+    intro y hy
+    by_cases hz : S (fun t => if (a + t * u) % 2 ^ m = y then 1 else 0) (2 ^ m) = 0
+    · exfalso
+      have hmiss := S_missing
+        (fun y' => S (fun t => if (a + t * u) % 2 ^ m = y' then 1 else 0) (2 ^ m))
+        (2 ^ m) y hy hcol1 hz
+      omega
+    · have := hcol1 y hy
+      omega
+  -- assemble: weighted columns = indU m y * 1
+  have hW : S (fun y => S (fun t => indU m y
+        * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m)) (2 ^ m)
+      = S (fun y => indU m y) (2 ^ m) := by
+    apply S_congr
+    intro y hy
+    show S (fun t => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m)
+      = indU m y
+    have hpull := S_mul_right (fun t => if (a + t * u) % 2 ^ m = y then 1 else 0)
+      (indU m y) (2 ^ m)
+    have hcomm := S_congr
+      (fun t => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0))
+      (fun t => (if (a + t * u) % 2 ^ m = y then 1 else 0) * indU m y)
+      (2 ^ m)
+      (fun t _ => by
+        show indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0)
+          = (if (a + t * u) % 2 ^ m = y then 1 else 0) * indU m y
+        exact Nat.mul_comm _ _)
+    rw [hcomm, hpull, hcolall y hy, Nat.one_mul]
+  -- chain everything
+  have hstep := S_congr
+    (fun t => indU m ((a + t * u) % 2 ^ m))
+    (fun t => S (fun y => indU m y * (if (a + t * u) % 2 ^ m = y then 1 else 0)) (2 ^ m))
+    (2 ^ m)
+    (fun t ht => (hrow t ht).symm)
+  rw [hstep, hswap, hW]
+  rfl
+
+/-- Splice inequality, pointwise: the product of the two indicators is
+    dominated by the composite class's indicator. -/
+theorem splice_ge (k m r1 t : Nat) :
+    indU k r1 * indU m ((Titer k r1 + t * 3 ^ A k r1) % 2 ^ m)
+      ≤ indU (k + m) (r1 + t * 2 ^ k) := by
+  by_cases h1 : indU k r1 = 1
+  · by_cases h2 : indU m ((Titer k r1 + t * 3 ^ A k r1) % 2 ^ m) = 1
+    · have hc := composite_undecided k m r1
+        ((Titer k r1 + t * 3 ^ A k r1) % 2 ^ m) t h1 h2 rfl
+      rw [h1, h2]
+      omega
+    · have hb := indU_le_one m ((Titer k r1 + t * 3 ^ A k r1) % 2 ^ m)
+      have hz : indU m ((Titer k r1 + t * 3 ^ A k r1) % 2 ^ m) = 0 := by omega
+      rw [hz, Nat.mul_zero]
+      omega
+  · have hb := indU_le_one k r1
+    have hz : indU k r1 = 0 := by omega
+    rw [hz, Nat.zero_mul]
+    omega
+
+/-- SUPERADDITIVITY OF THE CORE: gates multiply, so the core concatenates:
+    u_k · u_m ≤ u_{k+m}. The R44-era "family ceiling" 7/13 was a ceiling
+    of the family method, not of the truth — every kernel-evaluated
+    anchor u_k now lifts the proved lower exponent to log₂(u_k)/k. -/
+theorem NU_superadd (k m : Nat) : NU k * NU m ≤ NU (k + m) := by
+  have hgrid : NU (k + m)
+      = S (fun q => S (fun i => indU (k + m) (i + q * 2 ^ k)) (2 ^ k)) (2 ^ m) := by
+    show S (fun r => indU (k + m) r) (2 ^ (k + m)) = _
+    have e : (2 : Nat) ^ (k + m) = 2 ^ k * 2 ^ m := Nat.pow_add 2 k m
+    rw [e]
+    exact S_grid (fun r => indU (k + m) r) (2 ^ k) (2 ^ m)
+  have hswap : S (fun q => S (fun i => indU (k + m) (i + q * 2 ^ k)) (2 ^ k)) (2 ^ m)
+      = S (fun i => S (fun q => indU (k + m) (i + q * 2 ^ k)) (2 ^ m)) (2 ^ k) :=
+    S_swap (fun q i => indU (k + m) (i + q * 2 ^ k)) (2 ^ m) (2 ^ k)
+  have hinner : ∀ i, i < 2 ^ k →
+      indU k i * NU m ≤ S (fun q => indU (k + m) (i + q * 2 ^ k)) (2 ^ m) := by
+    intro i _
+    have hodd := odd_pow3 (A k i)
+    have hre := S_reindex_count m (3 ^ A k i) (Titer k i) hodd
+    have hpull : S (fun q => indU k i
+          * indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m)) (2 ^ m)
+        = indU k i * NU m := by
+      have hcomm := S_congr
+        (fun q => indU k i * indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m))
+        (fun q => indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m) * indU k i)
+        (2 ^ m)
+        (fun q _ => by
+          show indU k i * indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m)
+            = indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m) * indU k i
+          exact Nat.mul_comm _ _)
+      have hmr := S_mul_right
+        (fun q => indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m)) (indU k i) (2 ^ m)
+      rw [hcomm, hmr, hre]
+      exact Nat.mul_comm _ _
+    have hmono := S_mono
+      (fun q => indU k i * indU m ((Titer k i + q * 3 ^ A k i) % 2 ^ m))
+      (fun q => indU (k + m) (i + q * 2 ^ k))
+      (2 ^ m)
+      (fun q _ => splice_ge k m i q)
+    omega
+  have houter := S_mono
+    (fun i => indU k i * NU m)
+    (fun i => S (fun q => indU (k + m) (i + q * 2 ^ k)) (2 ^ m))
+    (2 ^ k)
+    hinner
+  have hleft : S (fun i => indU k i * NU m) (2 ^ k) = NU k * NU m :=
+    S_mul_right (fun i => indU k i) (NU m) (2 ^ k)
+  omega
+
+/-- Iterated: u_k^n ≤ u_{k·n}. -/
+theorem NU_superadd_pow (k : Nat) : ∀ n, NU k ^ n ≤ NU (k * n) := by
+  intro n
+  induction n with
+  | zero =>
+    have e : k * 0 = 0 := rfl
+    rw [e]
+    have h0 : NU 0 = 1 := rfl
+    have hp0 : NU k ^ 0 = 1 := Nat.pow_zero _
+    omega
+  | succ p ih =>
+    have hs := NU_superadd (k * p) k
+    have hmul : NU k ^ p * NU k ≤ NU (k * p) * NU k := Nat.mul_le_mul_right _ ih
+    have hp : NU k ^ (p + 1) = NU k ^ p * NU k := Nat.pow_succ _ _
+    have e : k * (p + 1) = k * p + k := Nat.mul_succ k p
+    rw [hp, e]
+    omega
+
+/- Kernel anchor: u_24 = 286,581 ≥ 2^18 — pure decide on the dpf DP. -/
+set_option maxRecDepth 2000000 in
+theorem uf_anchor_24 : 2 ^ 18 ≤ uf 24 := by decide
+
+/-- THE NEW LOWER BOUND, exponent 3/4: 2^(18·⌊j/24⌋) ≤ u_j — superseding
+    core_713's 7/13 ≈ 0.538. Superadditivity converts ANY kernel-evaluated
+    anchor u_k into a proved exponent log₂(u_k)/k; deeper anchors push
+    toward the true h ≈ 0.9500 with no method ceiling short of h itself. -/
+theorem core_lower_34 (j : Nat) : 2 ^ (18 * (j / 24)) ≤ NU j := by
+  have hanchor : 2 ^ 18 ≤ NU 24 := by
+    have he := NU_eq_uf 24
+    have hu := uf_anchor_24
+    omega
+  have hpow := NU_superadd_pow 24 (j / 24)
+  have h2 : ((2 : Nat) ^ 18) ^ (j / 24) ≤ NU 24 ^ (j / 24) :=
+    Nat.pow_le_pow_left hanchor (j / 24)
+  have e : ((2 : Nat) ^ 18) ^ (j / 24) = 2 ^ (18 * (j / 24)) :=
+    (Nat.pow_mul 2 18 (j / 24)).symm
+  have hs := NU_superadd (24 * (j / 24)) (j % 24)
+  have h3 : 1 ≤ NU (j % 24) := by
+    have h4 := core_never_empty (j % 24)
+    have h5 := NU_eq_uf (j % 24)
+    omega
+  have hq : 24 * (j / 24) + j % 24 = j := Nat.div_add_mod j 24
+  rw [hq] at hs
+  have h6 : NU (24 * (j / 24)) * 1 ≤ NU (24 * (j / 24)) * NU (j % 24) :=
+    Nat.mul_le_mul_left _ h3
+  rw [Nat.mul_one] at h6
+  omega

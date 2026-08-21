@@ -98,7 +98,12 @@ yields
 
 `core_sandwich_half` / `core_713` + `eta_20`:
 
-    2^(0.538·k) / 2^14  ≤  u_k  ≤  2^(k − k/20)
+    2^(3k/4) / 2^18  ≤  u_k  ≤  2^(k − k/20)
+
+(The lower exponent was 7/13 ≈ 0.538 by explicit families until
+`NU_superadd` — superadditivity, u_k·u_m ≤ u_{k+m} — converted the
+kernel anchor u_24 ≥ 2^18 into exponent 3/4, with no method ceiling
+short of the true entropy ≈ 0.9500: see `core_lower_34`.)
 
 The undecided core is exponentially thin (almost every integer drops — the
 Terras side) and exponentially large (no finite-depth residue analysis can

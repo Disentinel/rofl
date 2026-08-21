@@ -1079,3 +1079,17 @@ Five-way convergence: {−1,−5,−17} = CF-approximant lockings 1/1, 2/3,
 7/11; next slot predicted at 12/19. Queued: superadditivity → lower
 bound 3/4 (R95) | catch: see supersessions above | born: none
 (verified) | facts(main)=73687
+
+R95 | post-window: **SUPERADDITIVITY — the lower bound jumps to 3/4** |
+`NU_superadd`: u_k·u_m ≤ u_{k+m} kernel-checked (the splice construction
++ reindexing pigeonhole); `uf_anchor_24`: 2^18 ≤ u_24 by pure kernel
+decide on the dpf DP (NO axioms — the NU-side decide stack-overflows,
+the DP side is depth-24 recursion, ~free); `core_lower_34`:
+2^(18·⌊j/24⌋) ≤ u_j for ALL j. SUPERSESSION of R44's "7/13 family
+ceiling" — it was the method's ceiling, not the truth: any kernel anchor
+now yields exponent log₂(u_k)/k, no ceiling short of h ≈ 0.9500.
+Sandwich now 2^(3j/4−18) ≤ u_j ≤ 2^(j−j/20). Batch-1 machinery
+(composite_undecided, S_reindex_count, S_grid, pow2_cancel, A_add,
+indU_gate_all) from the recovered pre-crash working tree, assembled and
+compiled this round | catch: docstring-before-set_option (known trap,
+2nd occurrence) | born: none (verified) | facts(main)=73721
