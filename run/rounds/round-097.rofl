@@ -1,0 +1,25 @@
+-- Round 97 (post-window continuation, owner-directed). THE TEST-DRIVE
+-- REPORT: run/TESTDRIVE.md — the substrate verdict as a user report.
+-- Envelope: 97 rounds, 15,166 -> 73,763 facts, 73 -> 101 relations,
+-- rebuild 3.6s -> ~100s, in-substrate ceiling k~16, 4 determinism
+-- probes all sha-identical, 6 kernel issues (2 fixed mid-run).
+-- Verdict: the substrate multiplied HONESTY, not intelligence — 15
+-- caught distortions across 5 classes (7 instrument-read-literally,
+-- 3 cross-check, 2 kernel-audit-machinery firing as designed, 2
+-- external refutation, 1 design-time strategy refutation); zero
+-- groundless claims at every round boundary; the mathematics belongs
+-- to Lean + oracles, the epistemics to the graph — division of labor
+-- stated honestly. Top feature requests ranked from real friction:
+-- doc_note/stale_note (issue #6, the only hole found in the honesty
+-- net), builtin-folding for why (#4), a compact provenance tier for
+-- scratch computation (#5), bignum (#3), audit v0.3 self-clean head
+-- perspectives (#1).
+claim_of[a](testdrive_report_complete).
+ground[a](testdrive_report_complete, testdrive_document).
+evidence[world](testdrive_report_complete, testdrive_document).
+
+claim_of[a](substrate_verdict_honesty_multiplier).
+ground[a](substrate_verdict_honesty_multiplier, testdrive_report_complete).
+
+claim_of[a](division_of_labor_stated).
+ground[a](division_of_labor_stated, testdrive_report_complete).

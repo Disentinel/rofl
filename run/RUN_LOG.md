@@ -1132,3 +1132,18 @@ instrument-read-too-literally, 4th occurrence of the class; (2) earlier
 "Syracuse mod-3^n equidistribution unclaimed" corrected — Tao PROVES
 superpolynomial fine-scale mixing (Props 1.14/1.17), only exp(−cm)
 open. | born: none | facts(main)=73763, snapshot sha 152d354f…
+
+R97 | итоги тест-драйва (owner: "можно позволить итоги ROFL тест
+драйва") | run/TESTDRIVE.md — the substrate verdict as a user report:
+envelope (98 rounds, 15,166→73,783 facts, 73→101 rels, rebuild
+3.6s→~100s, ceiling k≈16, 4 sha-identical determinism probes);
+15 caught distortions in 5 classes; zero groundless at every boundary;
+division of labor stated (Lean+oracles = mathematics, graph =
+epistemics); feature requests ranked from real friction: doc_note (#6),
+builtin-folding why (#4), compact provenance tier (#5), bignum (#3),
+audit v0.3 head perspectives (#1). Verdict: the substrate multiplied
+honesty, not intelligence — and that is the positive test result. |
+catches: two stale numbers in the report draft itself (probe-4 fact
+count 73,763→73,721; final count written only after reading eval) —
+fixed before commit, the protocol rule applied to the report about the
+protocol | born: none | facts(main)=73783, snapshot sha 18f76f7a…
