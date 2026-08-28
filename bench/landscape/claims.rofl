@@ -1,0 +1,13 @@
+-- wave 1 leases: orchestrator's assignment facts.
+claimed(verify, fr_landscape, c_souffle, sw_souffle).
+claimed(verify, fr_landscape, c_codeql, sw_codeql).
+claimed(verify, fr_landscape, c_glean, sw_glean).
+claimed(verify, fr_landscape, c_clingo, sw_clingo).
+claimed(verify, fr_landscape, c_prolog, sw_prolog).
+claimed(verify, fr_landscape, c_ddlog, sw_ddlog).
+claimed(verify, fr_landscape, c_lean_itp, sw_lean_itp).
+claimed(verify, fr_landscape, c_smt, sw_smt).
+claimed(verify, fr_landscape, c_tms, sw_tms).
+claimed(verify, fr_landscape, c_argumentation, sw_argumentation).
+claimed(verify, fr_landscape, c_kr_owl, sw_kr_owl).
+claimed(verify, fr_landscape, c_llm_hybrids, sw_llm_hybrids).

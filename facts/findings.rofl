@@ -8,6 +8,18 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_swarm_one_wave_quiescence, insight).
+recorded(f_swarm_one_wave_quiescence, "2026-08-28").
+finding_note(f_swarm_one_wave_quiescence,
+  "first swarm run: 12 fresh haiku researchers over a derived frontier (rules/swarm.rofl: leases and reports as facts, availability and retry derived) produced 12/12 on-contract deliverables and one-wave quiescence; the bounded frame slice with an explicit JSON contract is what made cheap agents reliable; dispute derivation and lease expiry deliberately not yet exercised - only unit-tested").
+addressed_by(f_swarm_one_wave_quiescence, "docs/dogfood/2026-08-28-swarm.md").
+
+finding(f_tms_is_the_ancestor, insight).
+recorded(f_tms_is_the_ancestor, "2026-08-28").
+finding_note(f_tms_is_the_ancestor,
+  "the landscape run's sharpest output: ROFL is a truth-maintenance system reborn on Datalog with an LLM admission gate - JTMS/ATMS/AGM had the epistemics without a writer at scale, agent-memory systems have the writer without the epistemics, ROFL is the join; steal list ranked: nogood explanations, ATMS assumption labels, temporal edges, AGM postulates as mutation tests, solver-as-oracle intents").
+addressed_by(f_tms_is_the_ancestor, "docs/formal-reasoning-landscape.md").
+
 finding(f_amnesiac_matches_persistent, insight).
 recorded(f_amnesiac_matches_persistent, "2026-08-28").
 finding_note(f_amnesiac_matches_persistent,

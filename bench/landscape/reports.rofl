@@ -1,0 +1,13 @@
+-- wave 1 outcomes
+reported(verify, fr_landscape, c_argumentation, sw_argumentation, done).
+reported(verify, fr_landscape, c_clingo, sw_clingo, done).
+reported(verify, fr_landscape, c_codeql, sw_codeql, done).
+reported(verify, fr_landscape, c_ddlog, sw_ddlog, done).
+reported(verify, fr_landscape, c_glean, sw_glean, done).
+reported(verify, fr_landscape, c_kr_owl, sw_kr_owl, done).
+reported(verify, fr_landscape, c_lean_itp, sw_lean_itp, done).
+reported(verify, fr_landscape, c_llm_hybrids, sw_llm_hybrids, done).
+reported(verify, fr_landscape, c_prolog, sw_prolog, done).
+reported(verify, fr_landscape, c_smt, sw_smt, done).
+reported(verify, fr_landscape, c_souffle, sw_souffle, done).
+reported(verify, fr_landscape, c_tms, sw_tms, done).

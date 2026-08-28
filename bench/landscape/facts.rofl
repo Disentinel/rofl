@@ -1,0 +1,145 @@
+-- profile evidence + axis data, admitted from wave-1 deliverables
+supports[obs](e_sw_argumentation, c_argumentation).
+evidence_kind[obs](e_sw_argumentation, document).
+axis_level(c_argumentation, a1_perspectives, lacks).
+axis_level(c_argumentation, a2_provenance, partial).
+axis_level(c_argumentation, a3_epistemic_openworld, partial).
+axis_level(c_argumentation, a4_fixpoint_replay, partial).
+axis_level(c_argumentation, a5_incremental_materialization, lacks).
+axis_level(c_argumentation, a6_llm_admission_gate, lacks).
+axis_level(c_argumentation, a7_anytime_budgets, lacks).
+axis_level(c_argumentation, a8_typed_inquiry, lacks).
+axis_level(c_argumentation, a9_embeddable_kernel, partial).
+axis_level(c_argumentation, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_clingo, c_clingo).
+evidence_kind[obs](e_sw_clingo, document).
+axis_level(c_clingo, a1_perspectives, lacks).
+axis_level(c_clingo, a2_provenance, partial).
+axis_level(c_clingo, a3_epistemic_openworld, lacks).
+axis_level(c_clingo, a4_fixpoint_replay, has).
+axis_level(c_clingo, a5_incremental_materialization, lacks).
+axis_level(c_clingo, a6_llm_admission_gate, lacks).
+axis_level(c_clingo, a7_anytime_budgets, partial).
+axis_level(c_clingo, a8_typed_inquiry, lacks).
+axis_level(c_clingo, a9_embeddable_kernel, partial).
+axis_level(c_clingo, a10_rule_mutation_testing, partial).
+supports[obs](e_sw_codeql, c_codeql).
+evidence_kind[obs](e_sw_codeql, document).
+axis_level(c_codeql, a1_perspectives, lacks).
+axis_level(c_codeql, a2_provenance, partial).
+axis_level(c_codeql, a3_epistemic_openworld, lacks).
+axis_level(c_codeql, a4_fixpoint_replay, partial).
+axis_level(c_codeql, a5_incremental_materialization, partial).
+axis_level(c_codeql, a6_llm_admission_gate, lacks).
+axis_level(c_codeql, a7_anytime_budgets, partial).
+axis_level(c_codeql, a8_typed_inquiry, lacks).
+axis_level(c_codeql, a9_embeddable_kernel, partial).
+axis_level(c_codeql, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_ddlog, c_ddlog).
+evidence_kind[obs](e_sw_ddlog, document).
+axis_level(c_ddlog, a1_perspectives, lacks).
+axis_level(c_ddlog, a2_provenance, partial).
+axis_level(c_ddlog, a3_epistemic_openworld, lacks).
+axis_level(c_ddlog, a4_fixpoint_replay, has).
+axis_level(c_ddlog, a5_incremental_materialization, has).
+axis_level(c_ddlog, a6_llm_admission_gate, lacks).
+axis_level(c_ddlog, a7_anytime_budgets, lacks).
+axis_level(c_ddlog, a8_typed_inquiry, lacks).
+axis_level(c_ddlog, a9_embeddable_kernel, partial).
+axis_level(c_ddlog, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_glean, c_glean).
+evidence_kind[obs](e_sw_glean, document).
+axis_level(c_glean, a1_perspectives, lacks).
+axis_level(c_glean, a2_provenance, partial).
+axis_level(c_glean, a3_epistemic_openworld, lacks).
+axis_level(c_glean, a4_fixpoint_replay, partial).
+axis_level(c_glean, a5_incremental_materialization, lacks).
+axis_level(c_glean, a6_llm_admission_gate, lacks).
+axis_level(c_glean, a7_anytime_budgets, lacks).
+axis_level(c_glean, a8_typed_inquiry, lacks).
+axis_level(c_glean, a9_embeddable_kernel, lacks).
+axis_level(c_glean, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_kr_owl, c_kr_owl).
+evidence_kind[obs](e_sw_kr_owl, document).
+axis_level(c_kr_owl, a1_perspectives, lacks).
+axis_level(c_kr_owl, a2_provenance, partial).
+axis_level(c_kr_owl, a3_epistemic_openworld, partial).
+axis_level(c_kr_owl, a4_fixpoint_replay, lacks).
+axis_level(c_kr_owl, a5_incremental_materialization, partial).
+axis_level(c_kr_owl, a6_llm_admission_gate, lacks).
+axis_level(c_kr_owl, a7_anytime_budgets, partial).
+axis_level(c_kr_owl, a8_typed_inquiry, lacks).
+axis_level(c_kr_owl, a9_embeddable_kernel, partial).
+axis_level(c_kr_owl, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_lean_itp, c_lean_itp).
+evidence_kind[obs](e_sw_lean_itp, document).
+axis_level(c_lean_itp, a1_perspectives, lacks).
+axis_level(c_lean_itp, a2_provenance, partial).
+axis_level(c_lean_itp, a3_epistemic_openworld, lacks).
+axis_level(c_lean_itp, a4_fixpoint_replay, lacks).
+axis_level(c_lean_itp, a5_incremental_materialization, lacks).
+axis_level(c_lean_itp, a6_llm_admission_gate, lacks).
+axis_level(c_lean_itp, a7_anytime_budgets, partial).
+axis_level(c_lean_itp, a8_typed_inquiry, lacks).
+axis_level(c_lean_itp, a9_embeddable_kernel, has).
+axis_level(c_lean_itp, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_llm_hybrids, c_llm_hybrids).
+evidence_kind[obs](e_sw_llm_hybrids, document).
+axis_level(c_llm_hybrids, a1_perspectives, partial).
+axis_level(c_llm_hybrids, a2_provenance, partial).
+axis_level(c_llm_hybrids, a3_epistemic_openworld, lacks).
+axis_level(c_llm_hybrids, a4_fixpoint_replay, lacks).
+axis_level(c_llm_hybrids, a5_incremental_materialization, lacks).
+axis_level(c_llm_hybrids, a6_llm_admission_gate, partial).
+axis_level(c_llm_hybrids, a7_anytime_budgets, partial).
+axis_level(c_llm_hybrids, a8_typed_inquiry, lacks).
+axis_level(c_llm_hybrids, a9_embeddable_kernel, partial).
+axis_level(c_llm_hybrids, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_prolog, c_prolog).
+evidence_kind[obs](e_sw_prolog, document).
+axis_level(c_prolog, a1_perspectives, lacks).
+axis_level(c_prolog, a2_provenance, partial).
+axis_level(c_prolog, a3_epistemic_openworld, lacks).
+axis_level(c_prolog, a4_fixpoint_replay, partial).
+axis_level(c_prolog, a5_incremental_materialization, lacks).
+axis_level(c_prolog, a6_llm_admission_gate, lacks).
+axis_level(c_prolog, a7_anytime_budgets, lacks).
+axis_level(c_prolog, a8_typed_inquiry, lacks).
+axis_level(c_prolog, a9_embeddable_kernel, lacks).
+axis_level(c_prolog, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_smt, c_smt).
+evidence_kind[obs](e_sw_smt, document).
+axis_level(c_smt, a1_perspectives, lacks).
+axis_level(c_smt, a2_provenance, partial).
+axis_level(c_smt, a3_epistemic_openworld, partial).
+axis_level(c_smt, a4_fixpoint_replay, partial).
+axis_level(c_smt, a5_incremental_materialization, lacks).
+axis_level(c_smt, a6_llm_admission_gate, lacks).
+axis_level(c_smt, a7_anytime_budgets, partial).
+axis_level(c_smt, a8_typed_inquiry, lacks).
+axis_level(c_smt, a9_embeddable_kernel, partial).
+axis_level(c_smt, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_souffle, c_souffle).
+evidence_kind[obs](e_sw_souffle, document).
+axis_level(c_souffle, a1_perspectives, lacks).
+axis_level(c_souffle, a2_provenance, partial).
+axis_level(c_souffle, a3_epistemic_openworld, lacks).
+axis_level(c_souffle, a4_fixpoint_replay, has).
+axis_level(c_souffle, a5_incremental_materialization, partial).
+axis_level(c_souffle, a6_llm_admission_gate, lacks).
+axis_level(c_souffle, a7_anytime_budgets, lacks).
+axis_level(c_souffle, a8_typed_inquiry, lacks).
+axis_level(c_souffle, a9_embeddable_kernel, partial).
+axis_level(c_souffle, a10_rule_mutation_testing, lacks).
+supports[obs](e_sw_tms, c_tms).
+evidence_kind[obs](e_sw_tms, document).
+axis_level(c_tms, a1_perspectives, partial).
+axis_level(c_tms, a2_provenance, partial).
+axis_level(c_tms, a3_epistemic_openworld, has).
+axis_level(c_tms, a4_fixpoint_replay, lacks).
+axis_level(c_tms, a5_incremental_materialization, has).
+axis_level(c_tms, a6_llm_admission_gate, lacks).
+axis_level(c_tms, a7_anytime_budgets, lacks).
+axis_level(c_tms, a8_typed_inquiry, lacks).
+axis_level(c_tms, a9_embeddable_kernel, partial).
+axis_level(c_tms, a10_rule_mutation_testing, lacks).
