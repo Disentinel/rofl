@@ -14,7 +14,8 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-const INQUIRY_RULES = ['ontology.rofl', 'epistemic.rofl', 'obligations.rofl', 'intents.rofl']
+const INQUIRY_RULES = ['ontology.rofl', 'terminology.rofl', 'epistemic.rofl',
+  'obligations.rofl', 'intents.rofl', 'perspectives.rofl']
   .map((f) => path.join(ROOT, 'rules', 'inquiry', f));
 const FINDINGS_RULES = path.join(ROOT, 'rules', 'findings.rofl');
 

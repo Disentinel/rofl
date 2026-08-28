@@ -87,13 +87,34 @@ test('an open BLOCKING claim permits neither go nor conditional_go', () => {
 });
 
 // ------------------------------------------------------------ mutations ---
-test('mutation: evidence removal drops GO (excise diff is the regression)', () => {
+// The mutation standard (per Vadim, 2026-08-28): a standing green variant,
+// violated manually in several distinct ways, each violation checked to
+// change the verdict. excise stays a preview diagnostic, not the mutation.
+
+test('mutation: evidence removal drops GO and reopens the claim', () => {
+  const r = green();
+  assert.ok(r.retract('supports[obs](e_billing, c_billing)').ok);
+  assert.ok(!r.holds('recommendation(mini, go)'));
+  assert.ok(r.holds('go_blocked(mini, c_billing)'));
+  assert.ok(r.holds('candidate_intent(verify, mini, c_billing)'));
+});
+
+test('mutation: refuting evidence turns GO into NO-GO', () => {
+  const r = green();
+  r.assert('refutes[obs](incident_42, c_billing).', { who: 'runtime' });
+  assert.ok(!r.holds('recommendation(mini, go)'));
+  assert.ok(r.holds('recommendation(mini, no_go)'));
+  assert.ok(r.holds('contested_obligation(mini, c_billing)'),
+    'the supporting evidence still stands: contested, both visible');
+});
+
+test('excise previews the same blast radius without mutating', () => {
   const r = green();
   const e = r.excise('supports[obs](e_billing, c_billing)');
   assert.ok(e.ok);
   assert.ok(e.removed.some((k) => k.includes('recommendation[main](mini,go)')));
-  assert.ok(e.added.some((k) => k.includes('go_blocked[main](mini,c_billing)')));
   assert.ok(e.added.some((k) => k.includes('candidate_intent[main](verify,mini,c_billing')));
+  assert.ok(r.holds('recommendation(mini, go)'), 'the store itself is untouched');
 });
 
 test('mutation: a new deployment stales pinned evidence and revokes GO', () => {
@@ -120,8 +141,7 @@ test('mutation: evidence for an isolated-scope claim proves nothing aggregate', 
 
 test('mutation: removing the billing concern mapping surfaces a coverage gap', () => {
   const r = green();
-  const e = r.excise('concern_claim(mini, billing, c_billing)');
-  assert.ok(e.ok);
-  assert.ok(e.added.some((k) => k.includes('coverage_gap[main](mini,billing)')));
-  assert.ok(e.removed.some((k) => k.includes('recommendation[main](mini,go)')));
+  assert.ok(r.retract('concern_claim(mini, billing, c_billing)').ok);
+  assert.ok(r.holds('coverage_gap(mini, billing)'));
+  assert.ok(!r.holds('recommendation(mini, go)'));
 });

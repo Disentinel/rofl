@@ -9,9 +9,11 @@
 
 -- stale evidence supports and refutes nothing; staleness is defined by
 -- rules/policies/evidence.rofl (undefined => nothing is ever stale).
-supported[epistemic](C) :- claim(C), supports[obs](E, C),
+-- Evidence may target an alias; it counts for the canonical claim
+-- (rules/inquiry/terminology.rofl; identity when no mapping exists).
+supported[epistemic](C) :- claim(C), supports[obs](E, T), canonical(T, C),
                            not stale_evidence[epistemic](E).
-refuted[epistemic](C)   :- claim(C), refutes[obs](E, C),
+refuted[epistemic](C)   :- claim(C), refutes[obs](E, T), canonical(T, C),
                            not stale_evidence[epistemic](E).
 
 contested[epistemic](C) :- supported[epistemic](C), refuted[epistemic](C).

@@ -25,7 +25,7 @@ export function scheduleIntents(r: Rofl, topK: number): Schedule {
     .map((it) => ({
       it,
       key: [
-        r.holds(`blocking(${it.inquiry}, ${it.target})`) ? 0 : 1,
+        r.holds(`blocks_on(${it.inquiry}, ${it.target})`) ? 0 : 1,
         KIND_RANK[it.kind] ?? 9,
         it.target,
       ] as const,

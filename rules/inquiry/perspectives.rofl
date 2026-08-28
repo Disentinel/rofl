@@ -1,0 +1,17 @@
+-- rules/inquiry/perspectives.rofl — multi-agent perspectives (roadmap §14,
+-- Phase 7). Agent ledgers ([agent_*], created by admission) carry opinions;
+-- this file localizes their disagreements to claims and turns factual
+-- conflict into a discriminating intent. What it deliberately does NOT do:
+-- derive anything into [epistemic] — any number of agreeing agents is still
+-- zero measurements (the echo invariant, tested).
+--
+-- NB: bodies with variable perspectives require an explicit head
+-- perspective, otherwise the flow surfaces as leak[audit] (the explicit
+-- head is what emits bridge_decl — see docs/choosing-perspectives.md).
+
+agent_disputed[main](C) :- agent_state[P](C, supported),
+                           agent_state[Q](C, refuted).
+
+candidate_intent(discriminate, I, C) :- obligation(I, C),
+                                        agent_disputed(C),
+                                        not resolved_obligation(I, C).

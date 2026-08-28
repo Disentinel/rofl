@@ -30,8 +30,14 @@ finding(f_excise_as_mutation_primitive, idea).
 recorded(f_excise_as_mutation_primitive, "2026-08-28").
 demands(f_excise_as_mutation_primitive, decision).
 finding_note(f_excise_as_mutation_primitive,
-  "adopted in practice: pack mutation tests use excise for regression diffs; reversible if Vadim objects").
+  "DECIDED by Vadim 2026-08-28: the mutation standard is a standing green variant violated manually in several ways; excise stays a blast-radius preview diagnostic, not the mutation mechanism").
 addressed_by(f_excise_as_mutation_primitive, "test/production-readiness.test.ts").
+
+finding(f_normalization_must_be_total, insight).
+recorded(f_normalization_must_be_total, "2026-08-28").
+finding_note(f_normalization_must_be_total,
+  "terminology normalization must cover every claim-taking touchpoint at once (obligations, evidence routing, scheduler ranking) or aliases silently split the world; new claim-argument relations must choose alias-or-canonical explicitly").
+addressed_by(f_normalization_must_be_total, "rules/inquiry/terminology.rofl").
 
 finding(f_excise_is_counterfactual, insight).
 recorded(f_excise_is_counterfactual, "2026-08-28").

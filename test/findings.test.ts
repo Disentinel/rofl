@@ -43,7 +43,7 @@ test('the ledger: one open finding awaiting a human decision, nine settled', () 
   const r = withLedger();
   const open = r.query('open_finding(F)').rows.map((x) => x.bindings.F).sort();
   assert.deepEqual(open, ['f_evidence_polarity_agent_interpreted']);
-  assert.equal(r.query('settled(F)').rows.length, 9);
+  assert.equal(r.query('settled(F)').rows.length, 10);
   assert.ok(r.holds('finding_action(f_evidence_polarity_agent_interpreted, decision)'));
 });
 
@@ -51,7 +51,7 @@ test('the report renders the backlog in your face', () => {
   const r = withLedger();
   const report = buildReport(r);
   assert.match(report, /# Findings backlog/);
-  assert.match(report, /1 open, 9 settled/);
+  assert.match(report, /1 open, 10 settled/);
   assert.match(report, /f_evidence_polarity_agent_interpreted.*decision/);
   assert.match(report, /never silence/);
   assert.doesNotMatch(report, /f_intent_tuple_no_gensym/, 'settled findings stay out of the face');
