@@ -61,6 +61,20 @@ preamble granting `authority(code, scanner)`, fact files are loaded with
 `who=scanner`, and anyone else asserting into `[code]` surfaces as
 `forged[audit]` — no scanner-specific enforcement code.
 
+## Inquiry layer
+
+`rules/inquiry/` is the Phase 1 guided-formal-reasoning kernel
+(`docs/guided-formal-reasoning-roadmap.md`, `docs/inquiry-kinds.md`,
+`docs/choosing-perspectives.md`): a typed inquiry root, epistemic states as
+a derived `[epistemic]` ledger over an `[obs]` evidence journal
+(authority: runtime only), proof obligations, and candidate-intent
+generation. `runtime/report.ts` renders the anytime epistemic report:
+
+```sh
+npm run report -- examples/reflection-readiness/frame.rofl \
+  examples/reflection-readiness/evidence.rofl --who-obs runtime
+```
+
 ## Grammar
 
 ```

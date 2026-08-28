@@ -9,7 +9,8 @@
     "test:bun": "bun test --timeout 60000",
     "grepcheck": "node --experimental-strip-types scripts/kernel_grep.ts",
     "repl": "node --experimental-strip-types src/repl.ts",
-    "scan": "node --experimental-strip-types scanners/cli.ts"
+    "scan": "node --experimental-strip-types scanners/cli.ts",
+    "report": "node --experimental-strip-types runtime/report.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

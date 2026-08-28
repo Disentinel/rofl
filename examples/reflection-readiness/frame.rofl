@@ -1,0 +1,34 @@
+-- examples/reflection-readiness/frame.rofl — the framing of one real
+-- decision (roadmap §4, Phase 0 fixture). Asserted by the framer into the
+-- shared working book.
+
+inquiry(reflection_launch, decide).
+
+claim(requirements_complete).
+requires(reflection_launch, requirements_complete).
+
+claim(monitoring_ready).
+requires(reflection_launch, monitoring_ready).
+
+claim(rollback_ready).
+requires(reflection_launch, rollback_ready).
+
+claim(aggregate_capacity_verified).
+blocking(reflection_launch, aggregate_capacity_verified).
+observable(aggregate_capacity_verified).
+
+claim(billing_e2e_verified).
+blocking(reflection_launch, billing_e2e_verified).
+observable(billing_e2e_verified).
+
+claim(delivery_rate_ok).
+requires(reflection_launch, delivery_rate_ok).
+observable(delivery_rate_ok).
+
+claim(pdf_dedup_required).
+requires(reflection_launch, pdf_dedup_required).
+ambiguous(pdf_dedup_required).
+
+claim(capacity_risk_accepted).
+requires(reflection_launch, capacity_risk_accepted).
+requires_authority(capacity_risk_accepted).

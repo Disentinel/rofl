@@ -1,0 +1,17 @@
+-- rules/inquiry/epistemic.rofl — epistemic states as a derived ledger.
+-- [epistemic] is the book of conclusions of this discipline; these four
+-- rules are its only writers (docs/choosing-perspectives.md).
+--
+-- Invariants carried here (roadmap §20):
+--   Absence of evidence must not derive falsehood: `refuted` needs an
+--   explicit refutes[obs] entry; no evidence at all yields `unknown`.
+--   `contested` keeps both sides visible instead of collapsing them.
+
+supported[epistemic](C) :- claim(C), supports[obs](_, C).
+refuted[epistemic](C)   :- claim(C), refutes[obs](_, C).
+
+contested[epistemic](C) :- supported[epistemic](C), refuted[epistemic](C).
+
+unknown[epistemic](C)   :- claim(C),
+                           not supported[epistemic](C),
+                           not refuted[epistemic](C).
