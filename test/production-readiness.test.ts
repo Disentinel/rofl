@@ -10,7 +10,7 @@ import * as fs from 'node:fs';
 import { Rofl } from '../src/api.ts';
 import { loadDecisionPack, loadInquiryKernel } from '../runtime/report.ts';
 
-const DIR = new URL('../examples/reflection-readiness/', import.meta.url);
+const DIR = new URL('../examples/atlas-launch/', import.meta.url);
 const read = (f: string) => fs.readFileSync(new URL(f, DIR), 'utf8');
 
 const CONCERNS = ['requirements', 'product_coverage', 'testing', 'load', 'monitoring',
@@ -27,7 +27,7 @@ function packed(): Rofl {
 function green(): Rofl {
   const r = packed();
   const facts: string[] = ['inquiry(mini, decide).', 'pack(mini, production_readiness).',
-    'decision_authority(mini, vadimr).'];
+    'decision_authority(mini, dana).'];
   for (const con of CONCERNS) {
     const c = `c_${con}`;
     facts.push(`claim(${c}).`, `observable(${c}).`, `concern_claim(mini, ${con}, ${c}).`);
@@ -41,14 +41,14 @@ function green(): Rofl {
 }
 
 // --------------------------------------------------------------------------
-test('the Reflection fixture under the pack: no_go plus named coverage gaps', () => {
+test('the Atlas fixture under the pack: no_go plus named coverage gaps', () => {
   const r = packed();
   assert.ok(r.load(read('frame.rofl')).ok);
   assert.ok(r.load(read('evidence.rofl'), { who: 'runtime' }).ok);
   assert.ok(r.load(read('context.rofl')).ok);
-  assert.ok(r.holds('recommendation(reflection_launch, no_go)'));
-  assert.ok(!r.holds('recommendation(reflection_launch, go)'));
-  const gaps = r.query('coverage_gap(reflection_launch, Con)').rows.map((x) => x.bindings.Con).sort();
+  assert.ok(r.holds('recommendation(atlas_launch, no_go)'));
+  assert.ok(!r.holds('recommendation(atlas_launch, go)'));
+  const gaps = r.query('coverage_gap(atlas_launch, Con)').rows.map((x) => x.bindings.Con).sort();
   assert.deepEqual(gaps, ['customer_acceptance', 'dependencies', 'product_coverage', 'testing']);
 });
 
@@ -71,7 +71,7 @@ test('an accepted non-blocking gap earns CONDITIONAL_GO; an observer cannot acce
   r.assert('accepted_gap_by(mini, c_testing, observer_oleg).');
   assert.ok(!r.holds('recommendation(mini, conditional_go)'), 'observer acceptance is not acceptance');
 
-  r.assert('accepted_gap_by(mini, c_testing, vadimr).');
+  r.assert('accepted_gap_by(mini, c_testing, dana).');
   assert.ok(r.holds('gap_accepted(mini, c_testing)'));
   assert.ok(r.holds('recommendation(mini, conditional_go)'));
 });
@@ -79,7 +79,7 @@ test('an accepted non-blocking gap earns CONDITIONAL_GO; an observer cannot acce
 test('an open BLOCKING claim permits neither go nor conditional_go', () => {
   const r = green();
   assert.ok(r.retract('supports[obs](e_load, c_load)').ok);
-  r.assert('accepted_gap_by(mini, c_load, vadimr).');
+  r.assert('accepted_gap_by(mini, c_load, dana).');
   assert.ok(!r.holds('recommendation(mini, go)'));
   assert.ok(!r.holds('recommendation(mini, conditional_go)'),
     'authority cannot accept away a blocking obligation');

@@ -4,13 +4,22 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- (none)
+
+-- ------------------------------------------------------------- settled ---
+
 finding(f_evidence_polarity_agent_interpreted, pitfall).
 recorded(f_evidence_polarity_agent_interpreted, "2026-08-28").
 demands(f_evidence_polarity_agent_interpreted, decision).
 finding_note(f_evidence_polarity_agent_interpreted,
-  "admission enters supports/refutes into [obs] from the agent's own assertion state: the evidence item is real but its polarity is agent judgment; decide whether blocking claims need human or tool confirmation of polarity").
+  "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
+addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
 
--- ------------------------------------------------------------- settled ---
+finding(f_progress_counts_new_facts, insight).
+recorded(f_progress_counts_new_facts, "2026-08-28").
+finding_note(f_progress_counts_new_facts,
+  "admission must count only NEW facts as progress: re-admitting a duplicate result fooled stagnation detection into budget exhaustion").
+addressed_by(f_progress_counts_new_facts, "runtime/admission.ts").
 
 finding(f_admission_requires_who, pitfall).
 recorded(f_admission_requires_who, "2026-08-28").

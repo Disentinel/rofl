@@ -11,14 +11,17 @@ contested_obligation(I, C) :- obligation(I, C), contested[epistemic](C).
 resolved_obligation(I, C)  :- obligation(I, C), supported[epistemic](C),
                               not refuted[epistemic](C).
 
+-- Blocking verdicts run on the CONFIRMED grade (decision b): an
+-- agent-attached polarity moves a blocking claim only after confirmation.
 violated_blocking(I, C)    :- inquiry(I, _), blocks_on(I, C),
-                              refuted[epistemic](C).
+                              refuted_confirmed[epistemic](C).
 
 -- go_blocked: what stands between this inquiry and an unconditional GO.
--- Two ways to block: a blocking claim not supported, or supported-but-
--- contested (roadmap §20: a contested blocking claim prevents GO).
+-- Two ways to block: a blocking claim without confirmed support, or a
+-- contested one (roadmap §20: a contested blocking claim prevents GO;
+-- contested is judged on the plain grade — conservative on purpose).
 go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
-                              not supported[epistemic](C).
+                              not supported_confirmed[epistemic](C).
 go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
                               contested[epistemic](C).
 

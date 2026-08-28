@@ -45,7 +45,7 @@ export interface AdmissionReport {
 }
 
 const ATOM = /^[a-z][A-Za-z0-9_]*$/;
-const INTENT_KINDS = new Set(['verify', 'clarify', 'discriminate', 'escalate', 'challenge']);
+const INTENT_KINDS = new Set(['verify', 'clarify', 'discriminate', 'escalate', 'challenge', 'confirm']);
 const OUTCOMES = new Set(['progress', 'no_progress', 'blocked']);
 const STATES = new Set(['supported', 'refuted', 'inconclusive']);
 const EVIDENCE_KINDS = new Set(['human_assertion', 'document', 'log_excerpt', 'agent_claim']);
@@ -125,6 +125,9 @@ export function admit(r: Rofl, result: IntentResult, opts: { agent?: string }): 
   }
 
   for (const f of facts) {
+    // an already-known fact is not progress: admitted counts NEW facts only,
+    // so re-running an intent cannot fool stagnation detection.
+    if (r.holds(f.text.replace(/\.\s*$/, ''))) continue;
     const res = r.assert(f.text, { who: f.who });
     if (!res.ok) { out.diagnostics.push(...res.diagnostics); return out; }
     out.asserted++;

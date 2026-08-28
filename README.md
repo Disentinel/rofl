@@ -71,9 +71,9 @@ a derived `[epistemic]` ledger over an `[obs]` evidence journal
 generation. `runtime/report.ts` renders the anytime epistemic report:
 
 ```sh
-npm run report -- examples/reflection-readiness/frame.rofl \
-  examples/reflection-readiness/evidence.rofl --who-obs runtime \
-  --pack production-readiness examples/reflection-readiness/context.rofl
+npm run report -- examples/atlas-launch/frame.rofl \
+  examples/atlas-launch/evidence.rofl --who-obs runtime \
+  --pack production-readiness examples/atlas-launch/context.rofl
 ```
 
 The rest of the loop: `runtime/admission.ts` validates agent results

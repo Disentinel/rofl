@@ -17,3 +17,8 @@ candidate_intent(discriminate, I, C) :- contested_obligation(I, C).
 candidate_intent(escalate, I, C)     :- obligation(I, C),
                                         requires_authority(C),
                                         not resolved_obligation(I, C).
+
+-- an agent-attached polarity on a BLOCKING claim awaits confirmation by a
+-- human or tool (decision b); the confirm intent keeps it visible.
+candidate_intent(confirm, I, C)      :- blocks_on(I, C),
+                                        pending_polarity(C, _).

@@ -13,7 +13,8 @@
 import { Rofl } from '../src/api.ts';
 import type { IntentRef } from './admission.ts';
 
-const KIND_RANK: Record<string, number> = { verify: 0, discriminate: 1, clarify: 2, escalate: 3 };
+const KIND_RANK: Record<string, number> =
+  { verify: 0, confirm: 1, discriminate: 2, clarify: 3, escalate: 4 };
 
 export interface Schedule { scheduled: IntentRef[]; deferred: IntentRef[]; }
 

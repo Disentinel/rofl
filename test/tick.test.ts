@@ -11,8 +11,8 @@ import { scheduleIntents } from '../runtime/scheduler.ts';
 import { runInquiry } from '../runtime/tick.ts';
 import type { IntentRef, IntentResult } from '../runtime/admission.ts';
 
-const FRAME = fs.readFileSync(new URL('../examples/reflection-readiness/frame.rofl', import.meta.url), 'utf8');
-const EVIDENCE = fs.readFileSync(new URL('../examples/reflection-readiness/evidence.rofl', import.meta.url), 'utf8');
+const FRAME = fs.readFileSync(new URL('../examples/atlas-launch/frame.rofl', import.meta.url), 'utf8');
+const EVIDENCE = fs.readFileSync(new URL('../examples/atlas-launch/evidence.rofl', import.meta.url), 'utf8');
 
 function fixture(): Rofl {
   const r = new Rofl();
@@ -23,7 +23,7 @@ function fixture(): Rofl {
 }
 
 const capacityResult: IntentResult = {
-  intent: { kind: 'verify', inquiry: 'reflection_launch', target: 'aggregate_capacity_verified' },
+  intent: { kind: 'verify', inquiry: 'atlas_launch', target: 'aggregate_capacity_verified' },
   outcome: 'progress',
   assertions: [{ claim: 'aggregate_capacity_verified', state: 'supported', based_on: ['load_report_500'] }],
   evidence: [{ id: 'load_report_500', kind: 'document', source: 'ci', scope: 'aggregate_load' }],
@@ -35,29 +35,32 @@ test('scheduler: blocking verify first, top-K bound, frontier preserved', () => 
   const s = scheduleIntents(r, 1);
   assert.equal(s.scheduled.length, 1);
   assert.deepEqual(s.scheduled[0],
-    { kind: 'verify', inquiry: 'reflection_launch', target: 'aggregate_capacity_verified' });
+    { kind: 'verify', inquiry: 'atlas_launch', target: 'aggregate_capacity_verified' });
   assert.equal(s.deferred.length, 3, 'unscheduled intents remain candidates');
 });
 
 test('a tick that closes the blocking obligation retires its intent', async () => {
   const r = fixture();
   const run = await runInquiry(r, (it: IntentRef) =>
-    it.target === 'aggregate_capacity_verified' ? capacityResult : null,
+    it.kind === 'verify' && it.target === 'aggregate_capacity_verified' ? capacityResult : null,
   { agent: 'claude', maxTicks: 5, topK: 3 });
 
   assert.equal(run.status, 'stalled', 'after the one executable intent, nothing else moves');
-  assert.ok(!r.holds('candidate_intent(verify, reflection_launch, aggregate_capacity_verified)'));
-  assert.ok(r.holds('resolved_obligation(reflection_launch, aggregate_capacity_verified)'));
+  assert.ok(!r.holds('candidate_intent(verify, atlas_launch, aggregate_capacity_verified)'));
+  assert.ok(r.holds('resolved_obligation(atlas_launch, aggregate_capacity_verified)'));
   assert.ok(run.log[0].admitted > 0);
   assert.match(run.report, /# Epistemic report/, 'anytime report present at checkpoint');
   const remaining = scheduleIntents(r, 10).scheduled.map((x) => x.kind).sort();
-  assert.deepEqual(remaining, ['clarify', 'discriminate', 'escalate'], 'frontier preserved');
+  assert.deepEqual(remaining, ['clarify', 'confirm', 'discriminate', 'escalate'],
+    'frontier preserved; the agent-attached polarity on a blocking claim awaits confirmation');
 });
 
 test('quiescence: an inquiry whose frontier empties ends cleanly', async () => {
   const r = new Rofl();
   loadInquiryKernel(r);
-  r.load('inquiry(mini, decide). claim(c1). blocking(mini, c1). observable(c1).');
+  // non-blocking obligation: the plain grade resolves it, no confirmation
+  // round needed (decision b asymmetry), so the frontier can empty.
+  r.load('inquiry(mini, decide). claim(c1). requires(mini, c1). observable(c1).');
   const run = await runInquiry(r, () => ({
     intent: { kind: 'verify', inquiry: 'mini', target: 'c1' },
     outcome: 'progress',
@@ -67,7 +70,7 @@ test('quiescence: an inquiry whose frontier empties ends cleanly', async () => {
   }), { agent: 'claude', maxTicks: 5, topK: 3 });
   assert.equal(run.status, 'quiescent');
   assert.equal(run.ticks, 1);
-  assert.ok(!r.holds('go_blocked(mini, C)'));
+  assert.ok(r.holds('resolved_obligation(mini, c1)'));
 });
 
 test('tick budget exhaustion yields a checkpoint, not an infinite loop', async () => {

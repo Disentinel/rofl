@@ -23,7 +23,7 @@ Three axes people try to put into the slot:
 
 ### 1. Viewpoint / source of assertion → YES, a perspective
 
-`ready[product](reflection)` and `not_ready[operations](reflection)` coexist
+`ready[product](atlas)` and `not_ready[operations](atlas)` coexist
 without explosion; that is what perspectives are for. Writing is gated by
 `authority(P, Who)`; impostors surface as `forged[audit]`. Cross-ledger reads
 are explicit (`imports`, `bridge_decl`); implicit flow surfaces as
@@ -55,10 +55,11 @@ conclusions of the epistemic discipline, written only by these rules. That is
 fine. What is not fine is `capacity[supported](3000)` — status smuggled into
 the slot, unverifiable and unwritable by any rule.
 
-Unknown is asserted explicitly, not inferred from absence
-(`epistemic_state(C, unknown)` as a fact) — absence of evidence must not
-derive falsehood, and negation-as-failure cannot tell "nobody looked" from
-"it is false".
+Unknown derives from a declared claim with no evidence either way
+(`unknown :- claim(C), not supported(C), not refuted(C)`) — this derives
+*unknownness*, never falsehood: the "absence of evidence must not derive
+falsehood" invariant lives in `refuted` requiring an explicit journal entry
+(see the roadmap §5.1 amendment and `rules/inquiry/epistemic.rofl`).
 
 ### 3. Evidence modality (measured / human_assertion / agent_claim) → NO
 

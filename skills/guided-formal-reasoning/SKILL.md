@@ -33,7 +33,7 @@ Classify the request FIRST (docs/inquiry-kinds.md):
 
 ## 2. Frame
 
-Write the frame as facts (see `examples/reflection-readiness/frame.rofl`):
+Write the frame as facts (see `examples/atlas-launch/frame.rofl`):
 `inquiry(Id, Kind)`, one `claim(C)` per thing that must be settled,
 `requires`/`blocking` for obligations, `observable` where an experiment or
 scan could settle it, `ambiguous` where meaning is unsettled,
@@ -50,7 +50,8 @@ npm run pair -- init  --session s.snapshot.json frame.rofl evidence.rofl \
   --who-obs runtime [--pack production-readiness]
 npm run pair -- next  --session s.snapshot.json        # your top-K intents
 # ... execute ONE intent per its typed instruction file
-#     (verify.md / clarify.md / challenge.md / discriminate.md / escalate.md),
+#     (verify.md / clarify.md / challenge.md / discriminate.md /
+#      escalate.md / confirm.md),
 #     write the intent-result JSON ...
 npm run pair -- admit --session s.snapshot.json --agent claude result.json
 npm run pair -- next  --session s.snapshot.json        # repeat until empty

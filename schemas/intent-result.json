@@ -11,7 +11,7 @@
       "required": ["kind", "inquiry", "target"],
       "additionalProperties": false,
       "properties": {
-        "kind": { "enum": ["verify", "clarify", "discriminate", "escalate", "challenge"] },
+        "kind": { "enum": ["verify", "clarify", "discriminate", "escalate", "challenge", "confirm"] },
         "inquiry": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" },
         "target": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" }
       }

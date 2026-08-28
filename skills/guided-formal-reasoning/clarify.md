@@ -24,8 +24,8 @@ a separate intent that becomes possible after yours.
 ## Result
 
 If settled from documents: an assertion on a SPLIT claim — propose the
-disambiguated claims via `new_intents` (e.g. `pdf_dedup_required` splits
-into `pdf_dedup_blocking_for_launch` vs `pdf_dedup_fast_follow`), and say in
+disambiguated claims via `new_intents` (e.g. `legacy_import_required` splits
+into `legacy_import_blocking_for_launch` vs `legacy_import_fast_follow`), and say in
 `summary` which reading the source supports. If a human must answer:
 `outcome: blocked`, with the minimal question and its addressee in
 `summary`.
