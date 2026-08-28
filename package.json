@@ -11,7 +11,8 @@
     "repl": "node --experimental-strip-types src/repl.ts",
     "scan": "node --experimental-strip-types scanners/cli.ts",
     "report": "node --experimental-strip-types runtime/report.ts",
-    "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl"
+    "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
+    "pair": "node --experimental-strip-types runtime/pair.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

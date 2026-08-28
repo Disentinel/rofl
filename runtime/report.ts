@@ -131,5 +131,6 @@ function main(): void {
   process.stdout.write(buildReport(r));
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]).includes('report');
+const isMain = process.argv[1] &&
+  path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
 if (isMain) main();

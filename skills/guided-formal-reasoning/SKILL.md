@@ -40,17 +40,27 @@ scan could settle it, `ambiguous` where meaning is unsettled,
 `requires_authority` where only a human can accept the risk. Name claims as
 scoped atoms — `aggregate_capacity_verified`, not `capacity_ok`.
 
-## 3. Run the loop
+## 3. Run the loop — you ARE the executor
+
+The engine works in a pair with a coding agent: it derives what to inquire,
+you execute. State lives in a session snapshot between steps.
 
 ```sh
-npm run report -- frame.rofl evidence.rofl --who-obs runtime \
-  [--pack production-readiness]
+npm run pair -- init  --session s.snapshot.json frame.rofl evidence.rofl \
+  --who-obs runtime [--pack production-readiness]
+npm run pair -- next  --session s.snapshot.json        # your top-K intents
+# ... execute ONE intent per its typed instruction file
+#     (verify.md / clarify.md / challenge.md / discriminate.md / escalate.md),
+#     write the intent-result JSON ...
+npm run pair -- admit --session s.snapshot.json --agent claude result.json
+npm run pair -- next  --session s.snapshot.json        # repeat until empty
 ```
 
-The report gives you the frontier: candidate intents ranked. Execute them by
-their typed instructions — `clarify.md`, `verify.md`, `challenge.md` — and
-return results in the `schemas/intent-result.json` shape. Admission
-(`runtime/admission.ts`) validates before anything enters the fact base.
+Human/runtime facts arriving outside intent execution (an escalation answer,
+a frame amendment) enter via
+`npm run pair -- assert --session s.snapshot.json [--who W] 'fact.'`.
+Admission (`runtime/admission.ts`) validates every result against
+`schemas/intent-result.json` before anything touches the fact base.
 
 ## 4. Non-negotiable discipline
 
