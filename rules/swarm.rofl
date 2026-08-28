@@ -1,0 +1,21 @@
+-- rules/swarm.rofl — assignment discipline for a swarm of executors.
+-- The work queue IS the intent frontier; assignment state is facts, never
+-- imperative bookkeeping. (The LIC harness taught this the hard way: the
+-- orchestrator's hand-maintained json drifted mid-run; the transcript-derived
+-- record did not. Derived state cannot drift.)
+--
+-- EDB (orchestrator's ledger):
+--   claimed(K, I, C, A)        intent (K,I,C) leased to agent A
+--   reported(K, I, C, A, O)    agent A returned outcome O (done | failed)
+--   lease_expired(A)           orchestrator declares agent A dead/timed out
+--
+-- Derived: swarm_available (dispatchable now), swarm_pending (who owes a
+-- report), swarm_done, swarm_retryable (lease died before a report).
+
+swarm_assigned(K, I, C) :- claimed(K, I, C, A).
+swarm_reported_by(K, I, C, A) :- reported(K, I, C, A, O).
+swarm_done(K, I, C) :- reported(K, I, C, A, done).
+swarm_pending(K, I, C, A) :- claimed(K, I, C, A), not swarm_reported_by(K, I, C, A).
+swarm_available(K, I, C) :- candidate_intent(K, I, C), not swarm_assigned(K, I, C).
+swarm_retryable(K, I, C) :- claimed(K, I, C, A), lease_expired(A),
+  not swarm_done(K, I, C).
