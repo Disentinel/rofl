@@ -1,0 +1,48 @@
+-- rules/decisions/production-readiness.rofl — the first decision pack.
+-- Activated per inquiry by `pack(I, production_readiness).` in the frame.
+-- Owns the positive verdicts; the kernel only ever derives no_go.
+--
+-- EDB (in addition to the inquiry kernel's frame):
+--   pack(I, production_readiness)
+--   concern_claim(I, Concern, Claim)   -- maps a pack concern to a claim
+
+-- the concern axes every production launch must cover (roadmap Phase 3)
+concern(production_readiness, requirements).
+concern(production_readiness, product_coverage).
+concern(production_readiness, testing).
+concern(production_readiness, load).
+concern(production_readiness, monitoring).
+concern(production_readiness, rollback).
+concern(production_readiness, billing).
+concern(production_readiness, dependencies).
+concern(production_readiness, customer_acceptance).
+
+concern_covered(I, Con) :- concern_claim(I, Con, C), claim(C).
+coverage_gap(I, Con)    :- pack(I, production_readiness),
+                           concern(production_readiness, Con),
+                           not concern_covered(I, Con).
+
+-- an open non-blocking obligation that nobody with authority accepted
+unaccepted_open(I)      :- pack(I, production_readiness),
+                           open_obligation(I, C),
+                           not gap_accepted(I, C).
+
+-- GO: nothing blocks, nothing open, nothing contested, full coverage.
+recommendation(I, go) :-
+    pack(I, production_readiness),
+    inquiry(I, decide),
+    not go_blocked(I, _),
+    not open_obligation(I, _),
+    not contested_obligation(I, _),
+    not coverage_gap(I, _).
+
+-- CONDITIONAL GO: nothing blocks and nothing is contested, but open
+-- non-blocking gaps remain — every one of them accepted by authority.
+recommendation(I, conditional_go) :-
+    pack(I, production_readiness),
+    inquiry(I, decide),
+    not go_blocked(I, _),
+    not contested_obligation(I, _),
+    not coverage_gap(I, _),
+    open_obligation(I, _),
+    not unaccepted_open(I).

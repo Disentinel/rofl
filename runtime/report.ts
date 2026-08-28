@@ -26,6 +26,19 @@ export function loadInquiryKernel(r: Rofl): void {
   }
 }
 
+/** Load a decision pack plus the shared policies (evidence, authority). */
+export function loadDecisionPack(r: Rofl, name: string): void {
+  const files = [
+    path.join(ROOT, 'rules', 'policies', 'evidence.rofl'),
+    path.join(ROOT, 'rules', 'policies', 'authority.rofl'),
+    path.join(ROOT, 'rules', 'decisions', `${name}.rofl`),
+  ];
+  for (const f of files) {
+    const res = r.load(fs.readFileSync(f, 'utf8'));
+    if (!res.ok) throw new Error(`${f} REJECTED:\n` + res.diagnostics.join('\n'));
+  }
+}
+
 function col(r: Rofl, q: string, v: string): string[] {
   return r.query(q).rows.map((row) => row.bindings[v]).sort();
 }
@@ -99,12 +112,15 @@ function main(): void {
   const argv = process.argv.slice(2);
   const files: string[] = [];
   let whoObs: string | undefined;
+  const packs: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--who-obs') whoObs = argv[++i];
+    else if (argv[i] === '--pack') packs.push(argv[++i]);
     else files.push(argv[i]);
   }
   const r = new Rofl();
   loadInquiryKernel(r);
+  for (const p of packs) loadDecisionPack(r, p);
   for (const f of files) {
     const text = fs.readFileSync(f, 'utf8');
     const who = whoObs && /\[obs\]/.test(text) ? whoObs : undefined;

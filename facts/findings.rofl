@@ -4,25 +4,40 @@
 
 -- ---------------------------------------------------------------- open ---
 
+finding(f_evidence_polarity_agent_interpreted, pitfall).
+recorded(f_evidence_polarity_agent_interpreted, "2026-08-28").
+demands(f_evidence_polarity_agent_interpreted, decision).
+finding_note(f_evidence_polarity_agent_interpreted,
+  "admission enters supports/refutes into [obs] from the agent's own assertion state: the evidence item is real but its polarity is agent judgment; decide whether blocking claims need human or tool confirmation of polarity").
+
+-- ------------------------------------------------------------- settled ---
+
 finding(f_admission_requires_who, pitfall).
 recorded(f_admission_requires_who, "2026-08-28").
 demands(f_admission_requires_who, rule_and_test).
 finding_note(f_admission_requires_who,
-  "forged audit is opt-in: loads without who emit no asserted_by; Phase 2 admission must refuse unattributed [obs] facts").
+  "forged audit is opt-in: loads without who emit no asserted_by; admission now refuses unattributed calls").
+addressed_by(f_admission_requires_who, "runtime/admission.ts").
 
 finding(f_negation_empty_edb, pitfall).
 recorded(f_negation_empty_edb, "2026-08-28").
 demands(f_negation_empty_edb, kernel_test).
 finding_note(f_negation_empty_edb,
-  "negating a never-populated EDB relation leaves it without edb()/stratum; needs a kernel test with a frame omitting each optional relation").
+  "negating a never-populated EDB relation evaluates and stratifies correctly; pinned by kernel-edge tests").
+addressed_by(f_negation_empty_edb, "test/kernel-edge.test.ts").
 
 finding(f_excise_as_mutation_primitive, idea).
 recorded(f_excise_as_mutation_primitive, "2026-08-28").
 demands(f_excise_as_mutation_primitive, decision).
 finding_note(f_excise_as_mutation_primitive,
-  "excise blast-radius diff is a ready-made mutation-test primitive; decide whether Phase 3 mutation tests standardize on it").
+  "adopted in practice: pack mutation tests use excise for regression diffs; reversible if Vadim objects").
+addressed_by(f_excise_as_mutation_primitive, "test/production-readiness.test.ts").
 
--- ------------------------------------------------------------- settled ---
+finding(f_excise_is_counterfactual, insight).
+recorded(f_excise_is_counterfactual, "2026-08-28").
+finding_note(f_excise_is_counterfactual,
+  "excise is a counterfactual QUERY (diff on a scratch store), retract is the mutation; three tests written assuming excise mutates all failed the same way").
+addressed_by(f_excise_is_counterfactual, "test/production-readiness.test.ts").
 
 finding(f_roadmap_explicit_unknown, insight).
 recorded(f_roadmap_explicit_unknown, "2026-08-28").

@@ -72,8 +72,21 @@ generation. `runtime/report.ts` renders the anytime epistemic report:
 
 ```sh
 npm run report -- examples/reflection-readiness/frame.rofl \
-  examples/reflection-readiness/evidence.rofl --who-obs runtime
+  examples/reflection-readiness/evidence.rofl --who-obs runtime \
+  --pack production-readiness examples/reflection-readiness/context.rofl
 ```
+
+The rest of the loop: `runtime/admission.ts` validates agent results
+(`schemas/intent-result.json` — agents cannot mint `measured` evidence, and
+unattributed admission is refused), `runtime/scheduler.ts` picks a top-K
+batch (blocking claims first), `runtime/tick.ts` runs the bounded
+derive → execute → admit → recompute loop with stagnation and budget
+checkpoints. `rules/decisions/production-readiness.rofl` is the first
+decision pack (GO / CONDITIONAL_GO / coverage gaps, authority-gated gap
+acceptance); `rules/policies/` holds evidence freshness and authority.
+`skills/guided-formal-reasoning/` is the agent-facing skill seed. Findings
+discovered while working live in `facts/findings.rofl` and replay at
+session start until settled (`rules/findings.rofl`, CLAUDE.md).
 
 ## Grammar
 

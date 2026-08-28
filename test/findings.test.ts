@@ -39,24 +39,20 @@ test('dismissal with a reason also settles, and why explains the openness', () =
   assert.ok(!r.holds('open_finding(f_y)'));
 });
 
-test('the PR1 ledger: three open, five settled, actions typed', () => {
+test('the ledger: one open finding awaiting a human decision, nine settled', () => {
   const r = withLedger();
   const open = r.query('open_finding(F)').rows.map((x) => x.bindings.F).sort();
-  assert.deepEqual(open, [
-    'f_admission_requires_who',
-    'f_excise_as_mutation_primitive',
-    'f_negation_empty_edb',
-  ]);
-  assert.equal(r.query('settled(F)').rows.length, 5);
-  assert.ok(r.holds('finding_action(f_admission_requires_who, rule_and_test)'));
+  assert.deepEqual(open, ['f_evidence_polarity_agent_interpreted']);
+  assert.equal(r.query('settled(F)').rows.length, 9);
+  assert.ok(r.holds('finding_action(f_evidence_polarity_agent_interpreted, decision)'));
 });
 
 test('the report renders the backlog in your face', () => {
   const r = withLedger();
   const report = buildReport(r);
   assert.match(report, /# Findings backlog/);
-  assert.match(report, /3 open, 5 settled/);
-  assert.match(report, /f_admission_requires_who.*rule_and_test/);
+  assert.match(report, /1 open, 9 settled/);
+  assert.match(report, /f_evidence_polarity_agent_interpreted.*decision/);
   assert.match(report, /never silence/);
   assert.doesNotMatch(report, /f_intent_tuple_no_gensym/, 'settled findings stay out of the face');
 });

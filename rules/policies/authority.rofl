@@ -1,0 +1,10 @@
+-- rules/policies/authority.rofl — gap acceptance requires authority.
+-- An observer's opinion does not accept residual risk (roadmap §18
+-- authority mutation): only the inquiry's decision authority can.
+--
+-- EDB:
+--   decision_authority(I, Who)
+--   accepted_gap_by(I, Claim, Who)
+
+gap_accepted(I, C) :- accepted_gap_by(I, C, Who),
+                      decision_authority(I, Who).

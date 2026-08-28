@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IntentResult",
+  "description": "What an agent returns after executing one typed intent. runtime/admission.ts validates this shape (hand-rolled, mirrored from here) before anything touches the fact base. Note: evidence.kind has NO 'measured' member — measured evidence can only be minted by the runtime's own tool executions, never through agent admission.",
+  "type": "object",
+  "required": ["intent", "outcome", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "intent": {
+      "type": "object",
+      "required": ["kind", "inquiry", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["verify", "clarify", "discriminate", "escalate", "challenge"] },
+        "inquiry": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" },
+        "target": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" }
+      }
+    },
+    "outcome": { "enum": ["progress", "no_progress", "blocked"] },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "state"],
+        "additionalProperties": false,
+        "properties": {
+          "claim": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" },
+          "state": { "enum": ["supported", "refuted", "inconclusive"] },
+          "based_on": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][A-Za-z0-9_]*$" },
+          "kind": { "enum": ["human_assertion", "document", "log_excerpt", "agent_claim"] },
+          "source": { "type": "string" },
+          "content": { "type": "string" },
+          "scope": { "type": "string" },
+          "observed_at": { "type": "string" }
+        }
+      }
+    },
+    "new_intents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "target"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string" },
+          "target": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "model_extensions": { "type": "array" },
+    "summary": { "type": "string" }
+  }
+}
