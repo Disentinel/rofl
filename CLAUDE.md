@@ -7,7 +7,10 @@ turns code into facts, `rules/` holds the inquiry kernel and disciplines,
 
 Commands: `npm test` · `npm run grepcheck` · `npx tsc -p tsconfig.json` ·
 `npm run repl` · `npm run scan -- <dir>` · `npm run report -- <files>` ·
-`npm run findings`.
+`npm run findings`. Both runners must stay green: `bun test` too.
+
+After every push: verify the Actions run for your commit — local green is
+not green (finding `f_ci_is_the_referee`).
 
 ## Findings protocol (the dogfood loop)
 

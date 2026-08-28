@@ -120,8 +120,8 @@ A successful happy-path test does not prove the absence of a failure mode that t
 The system does not need to collapse contradictions immediately:
 
 ```prolog
-asserted_by("ready(reflection)", "product").
-asserted_by("not_ready(reflection)", "operations").
+asserted_by("ready(atlas)", "product").
+asserted_by("not_ready(atlas)", "operations").
 ```
 
 Instead, it should identify the address of the disagreement:
@@ -258,8 +258,8 @@ Potential sources:
 - configuration;
 - CI and test reports;
 - monitoring;
-- Monday;
-- Slack;
+- task tracker;
+- team chat;
 - documents;
 - deployment state;
 - human responses;
@@ -362,10 +362,10 @@ Humans remain responsible for:
 ## 4.1. Decisions
 
 ```prolog
-decision("reflection_launch", "production_readiness").
-decision_scope("reflection_launch", "reflection_full_production").
-decision_deadline("reflection_launch", "2026-08-31").
-decision_authority("reflection_launch", "vadimr").
+decision("atlas_launch", "production_readiness").
+decision_scope("atlas_launch", "atlas_full_production").
+decision_deadline("atlas_launch", "2026-08-31").
+decision_authority("atlas_launch", "dana").
 ```
 
 ## 4.2. Claims and Obligations
@@ -377,24 +377,24 @@ claim("monitoring_ready").
 claim("rollback_ready").
 claim("billing_e2e_verified").
 
-requires("reflection_launch", "requirements_complete").
-requires("reflection_launch", "aggregate_capacity_verified").
-requires("reflection_launch", "monitoring_ready").
-requires("reflection_launch", "rollback_ready").
-requires("reflection_launch", "billing_e2e_verified").
+requires("atlas_launch", "requirements_complete").
+requires("atlas_launch", "aggregate_capacity_verified").
+requires("atlas_launch", "monitoring_ready").
+requires("atlas_launch", "rollback_ready").
+requires("atlas_launch", "billing_e2e_verified").
 
-blocking("reflection_launch", "aggregate_capacity_verified").
-blocking("reflection_launch", "billing_e2e_verified").
+blocking("atlas_launch", "aggregate_capacity_verified").
+blocking("atlas_launch", "billing_e2e_verified").
 ```
 
 ## 4.3. Assertions and Perspectives
 
 ```prolog
-asserted_by("reflection_ready", "jonathanr").
-perspective("jonathanr", "product").
+asserted_by("atlas_ready", "alex_pm").
+perspective("alex_pm", "product").
 
-asserted_by("aggregate_capacity_unknown", "vadimr").
-perspective("vadimr", "engineering").
+asserted_by("aggregate_capacity_unknown", "dana").
+perspective("dana", "engineering").
 ```
 
 ## 4.4. Evidence
@@ -429,7 +429,7 @@ For example:
 ```prolog
 candidate_intent(
     "verify",
-    "reflection_launch",
+    "atlas_launch",
     "aggregate_capacity_verified",
     "engineering"
 ).
@@ -605,7 +605,7 @@ Example:
 ```json
 {
   "kind": "verify",
-  "decision": "reflection_launch",
+  "decision": "atlas_launch",
   "target": "aggregate_capacity_verified",
   "rationale": "Full production readiness requires capacity under combined load.",
   "possible_outcomes": [
@@ -934,7 +934,7 @@ The agent must:
 {
   "intent": {
     "kind": "verify",
-    "decision": "reflection_launch",
+    "decision": "atlas_launch",
     "target": "billing_e2e_verified"
   },
   "outcome": "progress",
@@ -944,16 +944,16 @@ The agent must:
       "state": "refuted",
       "asserted_by": "agent_claude",
       "perspective": "evidence",
-      "based_on": ["slack_message_1842"]
+      "based_on": ["chat_note_17"]
     }
   ],
   "evidence": [
     {
-      "id": "slack_message_1842",
+      "id": "chat_note_17",
       "kind": "human_assertion",
-      "source": "andriih",
+      "source": "sam_qa",
       "content": "We never tested that.",
-      "scope": "reflection_billing",
+      "scope": "atlas_billing",
       "observed_at": "2026-08-26"
     }
   ],
@@ -995,7 +995,7 @@ The system may add terms such as:
 
 ```text
 aggregate_capacity
-pdf_dedup
+legacy_import
 billing_e2e
 language_filter
 parquet_delivery
@@ -1255,7 +1255,7 @@ agent_role(Agent, Role).
 The system should produce a structured result:
 
 ```yaml
-decision: reflection_launch
+decision: atlas_launch
 recommendation: CONDITIONAL_GO
 scope: 10_percent_production_traffic
 assurance: medium
@@ -1269,7 +1269,7 @@ blocking:
   - billing_e2e_verified: refuted
 
 contested:
-  - pdf_dedup_is_mandatory
+  - legacy_import_is_mandatory
 
 unknown:
   - aggregate_capacity_at_full_load
@@ -1287,7 +1287,7 @@ requires_human_authority:
 
 next_best_intents:
   - run aggregate load test
-  - clarify PDF dedup requirement
+  - clarify legacy import requirement
 
 frontier:
   active: 2
@@ -1330,7 +1330,7 @@ Choose one end-to-end use case: `production_readiness`.
 ```text
 docs/guided-formal-reasoning-roadmap.md
 docs/adr/inquiry-engine.md
-examples/reflection-readiness/
+examples/atlas-launch/
 ```
 
 ### Work
@@ -1450,7 +1450,7 @@ Build the first useful domain pack.
 rules/decisions/production-readiness.cf
 rules/policies/evidence.cf
 rules/policies/authority.cf
-examples/reflection-readiness/
+examples/atlas-launch/
 ```
 
 ### Criteria
@@ -1752,11 +1752,11 @@ runtime/snapshot.mjs
 
 ### Goal
 
-Allow Clio to perform safe actions in addition to inquiry.
+Allow the runtime to perform safe actions in addition to inquiry.
 
 ### Examples
 
-- create a Monday task;
+- create a tracker task;
 - request clarification;
 - run a read-only query;
 - execute an approved test;
@@ -1875,7 +1875,7 @@ Expected: terminology tests detect invalid claim strengthening.
 
 ## 19.4. Operational Value
 
-- reduction in Slack interruptions;
+- reduction in chat interruptions;
 - time to readiness verdict;
 - premature launches prevented;
 - launches converted into safe limited rollouts;
@@ -1983,8 +1983,8 @@ codefacts/
     authority/
 
   scanners/
-    slack.mjs
-    monday.mjs
+    chat.mjs
+    tracker.mjs
     docs.mjs
     tests.mjs
     monitoring.mjs
@@ -2022,7 +2022,7 @@ codefacts/
     model-extension.json
 
   examples/
-    reflection-readiness/
+    atlas-launch/
 
   test/
     inquiry-kernel.test.mjs
@@ -2043,7 +2043,7 @@ codefacts/
 - [ ] Implement `obligation → unknown → verify intent`.
 - [ ] Implement `contested → discriminate intent`.
 - [ ] Add inquiry kernel tests.
-- [ ] Create a minimal Reflection fixture.
+- [ ] Create a minimal Atlas fixture.
 
 ## Second Pull Request
 
@@ -2079,7 +2079,7 @@ codefacts/
 
 The first version is successful if, when asked:
 
-> Are we ready to launch Reflection?
+> Are we ready to launch Atlas?
 
 it can:
 

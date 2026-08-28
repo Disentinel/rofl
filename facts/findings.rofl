@@ -15,6 +15,12 @@ finding_note(f_evidence_polarity_agent_interpreted,
   "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
 addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
 
+finding(f_ci_is_the_referee, pitfall).
+recorded(f_ci_is_the_referee, "2026-08-28").
+finding_note(f_ci_is_the_referee,
+  "eight consecutive pushes ran red in CI (the bun job had no dependency install) while local suites reported green; the pipeline you ship through is the referee - verify the Actions run for your commit after every push").
+addressed_by(f_ci_is_the_referee, ".github/workflows/ci.yml").
+
 finding(f_progress_counts_new_facts, insight).
 recorded(f_progress_counts_new_facts, "2026-08-28").
 finding_note(f_progress_counts_new_facts,
