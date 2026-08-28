@@ -15,6 +15,12 @@ finding_note(f_evidence_polarity_agent_interpreted,
   "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
 addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
 
+finding(f_report_hid_refuted_nonblocking, pitfall).
+recorded(f_report_hid_refuted_nonblocking, "2026-08-28").
+finding_note(f_report_hid_refuted_nonblocking,
+  "the report's refuted row rendered violated_blocking only, so a refuted NON-blocking obligation appeared in no section at all; found live while running the grant-pursuit inquiry; fixed with refuted_obligation").
+addressed_by(f_report_hid_refuted_nonblocking, "runtime/report.ts").
+
 finding(f_ci_is_the_referee, pitfall).
 recorded(f_ci_is_the_referee, "2026-08-28").
 finding_note(f_ci_is_the_referee,

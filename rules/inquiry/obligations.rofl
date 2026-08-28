@@ -10,6 +10,8 @@ open_obligation(I, C)      :- obligation(I, C), unknown[epistemic](C).
 contested_obligation(I, C) :- obligation(I, C), contested[epistemic](C).
 resolved_obligation(I, C)  :- obligation(I, C), supported[epistemic](C),
                               not refuted[epistemic](C).
+refuted_obligation(I, C)   :- obligation(I, C), refuted[epistemic](C),
+                              not contested[epistemic](C).
 
 -- Blocking verdicts run on the CONFIRMED grade (decision b): an
 -- agent-attached polarity moves a blocking claim only after confirmation.

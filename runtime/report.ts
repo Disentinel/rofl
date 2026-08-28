@@ -81,7 +81,7 @@ export function buildReport(r: Rofl): string {
 
     const states: [string, string][] = [
       ['supported', `resolved_obligation(${I}, C)`],
-      ['refuted', `violated_blocking(${I}, C)`],
+      ['refuted', `refuted_obligation(${I}, C)`],
       ['contested', `contested_obligation(${I}, C)`],
       ['unknown', `open_obligation(${I}, C)`],
     ];
