@@ -8,6 +8,12 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_amnesiac_matches_persistent, insight).
+recorded(f_amnesiac_matches_persistent, "2026-08-28").
+finding_note(f_amnesiac_matches_persistent,
+  "killer-case run: a FRESH one-shot haiku-4.5 per turn given only the rendered ledger reproduced the persistent conversation on all 6 LIC samples - identical solve turns, near-identical error traces (same fabrication, same premature answers), 6/6 correct, one divergence in amnesia's favor (an abstention where all persistent arms guessed); the ledger carried 100% of task state - context DEATH survived by construction, on external tasks with their scorer; caveats: harness overhead dominated cost here, n=6, GSM8K-easy").
+addressed_by(f_amnesiac_matches_persistent, "docs/dogfood/2026-08-28-amnesiac.md").
+
 finding(f_lic_floor_above_slice, insight).
 recorded(f_lic_floor_above_slice, "2026-08-28").
 finding_note(f_lic_floor_above_slice,
