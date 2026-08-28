@@ -1,0 +1,354 @@
+{
+ "model": "claude-haiku-4-5 (session subagents)",
+ "date": "2026-08-28",
+ "protocol": "lost_in_conversation sharded-GSM8K slice; 6 samples x 3 arms; verbatim shard delivery; ANSWER-line detection; scoring via TaskMath.evaluator_function verbatim",
+ "conversations": {
+  "144/sharded": {
+   "shards": 12,
+   "gold": "20",
+   "turns_delivered": 11,
+   "attempts": [
+    {
+     "turn": 11,
+     "extracted": "20",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 11,
+   "final_correct": true
+  },
+  "144/snowball": {
+   "shards": 12,
+   "gold": "20",
+   "turns_delivered": 11,
+   "attempts": [
+    {
+     "turn": 11,
+     "extracted": "20",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 11,
+   "final_correct": true
+  },
+  "144/ledger": {
+   "shards": 12,
+   "gold": "20",
+   "turns_delivered": 11,
+   "attempts": [
+    {
+     "turn": 11,
+     "extracted": "20",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 11,
+   "final_correct": true
+  },
+  "968/sharded": {
+   "shards": 9,
+   "gold": "227",
+   "turns_delivered": 9,
+   "attempts": [
+    {
+     "turn": 9,
+     "extracted": "227",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 9,
+   "final_correct": true
+  },
+  "968/snowball": {
+   "shards": 9,
+   "gold": "227",
+   "turns_delivered": 9,
+   "attempts": [
+    {
+     "turn": 9,
+     "extracted": "227",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 9,
+   "final_correct": true
+  },
+  "968/ledger": {
+   "shards": 9,
+   "gold": "227",
+   "turns_delivered": 9,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "229",
+     "correct": false
+    },
+    {
+     "turn": 9,
+     "extracted": "227",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 1,
+   "solved_at_turn": 9,
+   "final_correct": true
+  },
+  "158/sharded": {
+   "shards": 8,
+   "gold": "34",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 6,
+     "extracted": "14",
+     "correct": false
+    },
+    {
+     "turn": 8,
+     "extracted": "34",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 1,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "158/snowball": {
+   "shards": 8,
+   "gold": "34",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 6,
+     "extracted": "14",
+     "correct": false
+    },
+    {
+     "turn": 8,
+     "extracted": "34",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 1,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "158/ledger": {
+   "shards": 8,
+   "gold": "34",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 4,
+     "extracted": "6",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "14",
+     "correct": false
+    },
+    {
+     "turn": 8,
+     "extracted": "34",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 2,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "1190/sharded": {
+   "shards": 8,
+   "gold": "19",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "19",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "1190/snowball": {
+   "shards": 8,
+   "gold": "19",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "19",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "1190/ledger": {
+   "shards": 8,
+   "gold": "19",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "19",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "346/sharded": {
+   "shards": 8,
+   "gold": "9",
+   "turns_delivered": 6,
+   "attempts": [
+    {
+     "turn": 3,
+     "extracted": "36",
+     "correct": false
+    },
+    {
+     "turn": 5,
+     "extracted": "16",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "9",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 2,
+   "solved_at_turn": 6,
+   "final_correct": true
+  },
+  "346/snowball": {
+   "shards": 8,
+   "gold": "9",
+   "turns_delivered": 6,
+   "attempts": [
+    {
+     "turn": 3,
+     "extracted": "36",
+     "correct": false
+    },
+    {
+     "turn": 5,
+     "extracted": "16",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "9",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 2,
+   "solved_at_turn": 6,
+   "final_correct": true
+  },
+  "346/ledger": {
+   "shards": 8,
+   "gold": "9",
+   "turns_delivered": 6,
+   "attempts": [
+    {
+     "turn": 3,
+     "extracted": "36",
+     "correct": false
+    },
+    {
+     "turn": 4,
+     "extracted": "32",
+     "correct": false
+    },
+    {
+     "turn": 5,
+     "extracted": "16",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "9",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 3,
+   "solved_at_turn": 6,
+   "final_correct": true
+  },
+  "976/sharded": {
+   "shards": 8,
+   "gold": "540",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "540",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "976/snowball": {
+   "shards": 8,
+   "gold": "540",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "540",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  },
+  "976/ledger": {
+   "shards": 8,
+   "gold": "540",
+   "turns_delivered": 8,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "540",
+     "correct": true
+    }
+   ],
+   "wrong_attempts": 0,
+   "solved_at_turn": 8,
+   "final_correct": true
+  }
+ },
+ "per_arm": {
+  "sharded": {
+   "n": 6,
+   "correct": 6,
+   "wrong_attempts": 3
+  },
+  "snowball": {
+   "n": 6,
+   "correct": 6,
+   "wrong_attempts": 3
+  },
+  "ledger": {
+   "n": 6,
+   "correct": 6,
+   "wrong_attempts": 6
+  }
+ }
+}

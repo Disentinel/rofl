@@ -8,6 +8,19 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_lic_floor_above_slice, insight).
+recorded(f_lic_floor_above_slice, "2026-08-28").
+finding_note(f_lic_floor_above_slice,
+  "lost_in_conversation slice on haiku-4.5 (6 sharded-GSM8K x 3 arms, their evaluator verbatim): ALL arms 6/6 - the published Claude 3 Haiku degradation did not manifest, so the ledger hypothesis is untested at this difficulty, not refuted; confounds recorded: two model generations, verbatim shards easier than their paraphrasing simulator, n=6; evidence runs must use their simulator and move to tasks where the model under test still degrades").
+addressed_by(f_lic_floor_above_slice, "docs/dogfood/2026-08-28-lic-haiku45.md").
+
+finding(f_ledger_rendering_forces_answers, pitfall).
+recorded(f_ledger_rendering_forces_answers, "2026-08-28").
+demands(f_ledger_rendering_forces_answers, doc).
+finding_note(f_ledger_rendering_forces_answers,
+  "the naive ledger rendering DOUBLED premature wrong answers (6 vs 3/3) and induced fabrication of a missing quantity: 'complete set of statements' converts absence into nonexistence and 'if answerable, answer now' is an answer-forcing prompt - a ledger without the open-world marker injects the closed-world fallacy it exists to cure; rendering rules now fixed in the protocol").
+addressed_by(f_ledger_rendering_forces_answers, "docs/benchmark-protocol.md").
+
 finding(f_evidence_polarity_agent_interpreted, pitfall).
 recorded(f_evidence_polarity_agent_interpreted, "2026-08-28").
 demands(f_evidence_polarity_agent_interpreted, decision).
