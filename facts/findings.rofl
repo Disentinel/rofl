@@ -15,6 +15,18 @@ finding_note(f_evidence_polarity_agent_interpreted,
   "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
 addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
 
+finding(f_staleness_needs_kernel_load, pitfall).
+recorded(f_staleness_needs_kernel_load, "2026-08-28").
+finding_note(f_staleness_needs_kernel_load,
+  "epistemic.rofl depends on stale_evidence whose defining rule lived in an OPTIONAL policy file; a harness loading only the kernel silently ran with freshness off - caught by pilot ground truth (all six engine-arm misses were the stale trap); freshness now loads with the kernel").
+addressed_by(f_staleness_needs_kernel_load, "runtime/report.ts").
+
+finding(f_pilot_toy_scale_ties, insight).
+recorded(f_pilot_toy_scale_ties, "2026-08-28").
+finding_note(f_pilot_toy_scale_ties,
+  "registered prediction FAILED both ways at toy scale (K=8, 14 memos): haiku-4.5 baseline with a rubric scored 48/48 in-head, and the engine arm's 42/48 was entirely a harness bug; after the fix both arms are perfect - the measurable edge must come from scale and horizon, confirming the long-horizon protocol; bonus: engine misses were replayed to 48/48 at zero model cost (determinism dividend)").
+addressed_by(f_pilot_toy_scale_ties, "bench/pilot.ts").
+
 finding(f_report_hid_refuted_nonblocking, pitfall).
 recorded(f_report_hid_refuted_nonblocking, "2026-08-28").
 finding_note(f_report_hid_refuted_nonblocking,

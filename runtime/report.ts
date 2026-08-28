@@ -17,11 +17,15 @@ const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
 const INQUIRY_RULES = ['ontology.rofl', 'terminology.rofl', 'epistemic.rofl',
   'obligations.rofl', 'intents.rofl', 'perspectives.rofl']
   .map((f) => path.join(ROOT, 'rules', 'inquiry', f));
+// evidence freshness is a §20 core invariant, not an optional pack policy:
+// epistemic.rofl depends on stale_evidence, so its defining rule loads with
+// the kernel (finding f_staleness_needs_kernel_load).
+const EVIDENCE_POLICY = path.join(ROOT, 'rules', 'policies', 'evidence.rofl');
 const FINDINGS_RULES = path.join(ROOT, 'rules', 'findings.rofl');
 
 export function loadInquiryKernel(r: Rofl): void {
   const boot = path.join(ROOT, 'boot.rofl');
-  for (const f of [boot, ...INQUIRY_RULES, FINDINGS_RULES]) {
+  for (const f of [boot, ...INQUIRY_RULES, EVIDENCE_POLICY, FINDINGS_RULES]) {
     const res = r.load(fs.readFileSync(f, 'utf8'));
     if (!res.ok) throw new Error(`${f} REJECTED:\n` + res.diagnostics.join('\n'));
   }

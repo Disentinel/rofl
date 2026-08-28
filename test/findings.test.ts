@@ -39,16 +39,16 @@ test('dismissal with a reason also settles, and why explains the openness', () =
   assert.ok(!r.holds('open_finding(f_y)'));
 });
 
-test('the ledger: nothing open, fourteen settled', () => {
+test('the ledger: nothing open, sixteen settled', () => {
   const r = withLedger();
   assert.deepEqual(r.query('open_finding(F)').rows, []);
-  assert.equal(r.query('settled(F)').rows.length, 14);
+  assert.equal(r.query('settled(F)').rows.length, 16);
 });
 
 test('the report renders the backlog in your face', () => {
   const r = withLedger();
   const report = buildReport(r);
   assert.match(report, /# Findings backlog/);
-  assert.match(report, /all 14 findings settled/);
+  assert.match(report, /all 16 findings settled/);
   assert.doesNotMatch(report, /f_intent_tuple_no_gensym/, 'settled findings stay out of the face');
 });
