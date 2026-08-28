@@ -33,7 +33,7 @@ Classify the request FIRST (docs/inquiry-kinds.md):
 
 ## 2. Frame
 
-Write the frame as facts (see `examples/atlas-launch/frame.rofl`):
+Write the frame as facts (see `$GFR/examples/atlas-launch/frame.rofl`):
 `inquiry(Id, Kind)`, one `claim(C)` per thing that must be settled,
 `requires`/`blocking` for obligations, `observable` where an experiment or
 scan could settle it, `ambiguous` where meaning is unsettled,
@@ -45,16 +45,25 @@ scoped atoms — `aggregate_capacity_verified`, not `capacity_ok`.
 The engine works in a pair with a coding agent: it derives what to inquire,
 you execute. State lives in a session snapshot between steps.
 
+Locate the engine root first (requires Node >= 22.6, zero dependencies):
+
+- installed as a skill: `GFR="<this skill's base directory>/engine"`
+- inside the ROFL repo: `GFR="<repo root>"` (`npm run pair --` is equivalent)
+
+Keep session state in the project you are working on (e.g. `.gfr/`); write
+your frame `.rofl` files there too.
+
 ```sh
-npm run pair -- init  --session s.snapshot.json frame.rofl evidence.rofl \
+PAIR='node --experimental-strip-types '"$GFR"'/runtime/pair.ts'
+$PAIR init  --session .gfr/s.snapshot.json frame.rofl evidence.rofl \
   --who-obs runtime [--pack production-readiness]
-npm run pair -- next  --session s.snapshot.json        # your top-K intents
+$PAIR next  --session .gfr/s.snapshot.json        # your top-K intents
 # ... execute ONE intent per its typed instruction file
 #     (verify.md / clarify.md / challenge.md / discriminate.md /
 #      escalate.md / confirm.md),
 #     write the intent-result JSON ...
-npm run pair -- admit --session s.snapshot.json --agent claude result.json
-npm run pair -- next  --session s.snapshot.json        # repeat until empty
+$PAIR admit --session .gfr/s.snapshot.json --agent claude result.json
+$PAIR next  --session .gfr/s.snapshot.json        # repeat until empty
 ```
 
 Human/runtime facts arriving outside intent execution (an escalation answer,
@@ -78,7 +87,9 @@ Admission (`runtime/admission.ts`) validates every result against
 - **New concerns go to `new_intents` / `model_extensions`** — separately
   from facts, for the runtime and the human to admit.
 - **Findings protocol**: insights and pitfalls discovered on the way go
-  into `facts/findings.rofl` (see CLAUDE.md) — found, recorded, replayed
+  into the project's findings ledger, `facts/findings.rofl` (start one in
+  your project if absent; the discipline is `$GFR/rules/findings.rofl`) —
+  found, recorded, replayed
   until settled.
 
 ## 5. Deliver

@@ -54,10 +54,16 @@ export function saveSession(r: Rofl, sessionPath: string): void {
 }
 
 function instructionFor(kind: string): string {
-  const f = path.join(ROOT, 'skills', 'guided-formal-reasoning', `${kind}.md`);
-  return fs.existsSync(f)
-    ? path.relative(process.cwd(), f)
-    : 'skills/guided-formal-reasoning/SKILL.md';
+  const candidates = [
+    path.join(ROOT, 'skills', 'guided-formal-reasoning', `${kind}.md`), // repo layout
+    path.join(ROOT, '..', `${kind}.md`),                                // skill bundle: engine/../
+  ];
+  for (const f of candidates) {
+    if (!fs.existsSync(f)) continue;
+    const rel = path.relative(process.cwd(), f);
+    return rel.startsWith('..') ? path.resolve(f) : rel;
+  }
+  return 'SKILL.md (at the skill root)';
 }
 
 export function renderNext(r: Rofl, topK: number): string {

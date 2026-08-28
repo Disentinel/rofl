@@ -88,6 +88,13 @@ acceptance); `rules/policies/` holds evidence freshness and authority.
 discovered while working live in `facts/findings.rofl` and replay at
 session start until settled (`rules/findings.rofl`, CLAUDE.md).
 
+`npm run build:skill` assembles the self-contained marketplace bundle in
+`dist/guided-formal-reasoning/` — instruction files at the root, the engine
+(kernel, rules, runtime, schemas, the synthetic demo fixture) under
+`engine/`, zero dependencies, runnable from any directory on bare
+Node >= 22.6. The build smoke-tests the bundle by running a real pair
+session inside it.
+
 ## Grammar
 
 ```
