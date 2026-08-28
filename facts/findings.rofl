@@ -1,0 +1,56 @@
+-- facts/findings.rofl — the findings ledger. Prose narratives live in
+-- docs/dogfood/; this file is the actionable index the engine replays at
+-- session start. Discipline: rules/findings.rofl.
+
+-- ---------------------------------------------------------------- open ---
+
+finding(f_admission_requires_who, pitfall).
+recorded(f_admission_requires_who, "2026-08-28").
+demands(f_admission_requires_who, rule_and_test).
+finding_note(f_admission_requires_who,
+  "forged audit is opt-in: loads without who emit no asserted_by; Phase 2 admission must refuse unattributed [obs] facts").
+
+finding(f_negation_empty_edb, pitfall).
+recorded(f_negation_empty_edb, "2026-08-28").
+demands(f_negation_empty_edb, kernel_test).
+finding_note(f_negation_empty_edb,
+  "negating a never-populated EDB relation leaves it without edb()/stratum; needs a kernel test with a frame omitting each optional relation").
+
+finding(f_excise_as_mutation_primitive, idea).
+recorded(f_excise_as_mutation_primitive, "2026-08-28").
+demands(f_excise_as_mutation_primitive, decision).
+finding_note(f_excise_as_mutation_primitive,
+  "excise blast-radius diff is a ready-made mutation-test primitive; decide whether Phase 3 mutation tests standardize on it").
+
+-- ------------------------------------------------------------- settled ---
+
+finding(f_roadmap_explicit_unknown, insight).
+recorded(f_roadmap_explicit_unknown, "2026-08-28").
+demands(f_roadmap_explicit_unknown, doc).
+finding_note(f_roadmap_explicit_unknown,
+  "roadmap 5.1 preferred hand-asserted unknown; PR1 shows unknown derives soundly from claim + no evidence; roadmap amended").
+addressed_by(f_roadmap_explicit_unknown, "docs/guided-formal-reasoning-roadmap.md").
+
+finding(f_perspective_discipline_zero_code, insight).
+recorded(f_perspective_discipline_zero_code, "2026-08-28").
+finding_note(f_perspective_discipline_zero_code,
+  "the perspective discipline mapped onto kernel machinery with zero enforcement code").
+addressed_by(f_perspective_discipline_zero_code, "docs/choosing-perspectives.md").
+
+finding(f_layout_constrained_by_grep, insight).
+recorded(f_layout_constrained_by_grep, "2026-08-28").
+finding_note(f_layout_constrained_by_grep,
+  "kernel grep test forbids domain code in src/; scanners/ and runtime/ exist because of it").
+addressed_by(f_layout_constrained_by_grep, "docs/dogfood/2026-08-28-pr1.md").
+
+finding(f_resolved_needs_not_refuted, insight).
+recorded(f_resolved_needs_not_refuted, "2026-08-28").
+finding_note(f_resolved_needs_not_refuted,
+  "resolved_obligation without not-refuted would mark contested claims resolved; caught test-first").
+addressed_by(f_resolved_needs_not_refuted, "test/inquiry.test.ts").
+
+finding(f_intent_tuple_no_gensym, insight).
+recorded(f_intent_tuple_no_gensym, "2026-08-28").
+finding_note(f_intent_tuple_no_gensym,
+  "intent identity as (kind, inquiry, target) tuple held with no gensym pressure").
+addressed_by(f_intent_tuple_no_gensym, "rules/inquiry/intents.rofl").

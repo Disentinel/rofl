@@ -1,0 +1,20 @@
+-- rules/findings.rofl — findings as stimuli to action (the dogfood loop).
+-- A finding, once recorded, stays in the open backlog until it receives an
+-- explicit disposition: addressed_by(F, Artifact) or dismissed(F, Reason).
+-- Silent forgetting is not a state this model can represent: the session
+-- start hook renders open_finding into every session's face.
+--
+-- EDB (facts/findings.rofl):
+--   finding(F, Kind)           Kind: insight | pitfall | question | idea
+--   recorded(F, Date)          "YYYY-MM-DD"
+--   demands(F, What)           What: rule_and_test | kernel_test | doc | decision
+--   finding_note(F, Note)      one-line human summary (prose lives in docs/dogfood/)
+--   addressed_by(F, Artifact)  path of the rule/test/doc that settles it
+--   dismissed(F, Reason)       explicit refusal, with a named reason
+
+settled(F)           :- addressed_by(F, _).
+settled(F)           :- dismissed(F, _).
+
+open_finding(F)      :- finding(F, _), not settled(F).
+
+finding_action(F, W) :- open_finding(F), demands(F, W).

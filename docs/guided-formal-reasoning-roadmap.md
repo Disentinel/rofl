@@ -478,6 +478,14 @@ and:
 The claim was proven false.
 ```
 
+> **Amendment (2026-08-28, PR1):** the implemented kernel derives unknownness
+> instead of hand-asserting it: `unknown :- claim(C), not supported(C),
+> not refuted(C)`. Because claims are declared in the frame and `refuted`
+> requires an explicit evidence-journal entry, this derives *unknownness*,
+> never falsehood — the invariant lives in `refuted`, and no hand-maintained
+> `epistemic_state` facts are needed. See `rules/inquiry/epistemic.rofl` and
+> finding `f_roadmap_explicit_unknown`.
+
 ## 5.2. Proof Obligations
 
 ```prolog

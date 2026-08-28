@@ -16,10 +16,11 @@ import { Rofl } from '../src/api.ts';
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
 const INQUIRY_RULES = ['ontology.rofl', 'epistemic.rofl', 'obligations.rofl', 'intents.rofl']
   .map((f) => path.join(ROOT, 'rules', 'inquiry', f));
+const FINDINGS_RULES = path.join(ROOT, 'rules', 'findings.rofl');
 
 export function loadInquiryKernel(r: Rofl): void {
   const boot = path.join(ROOT, 'boot.rofl');
-  for (const f of [boot, ...INQUIRY_RULES]) {
+  for (const f of [boot, ...INQUIRY_RULES, FINDINGS_RULES]) {
     const res = r.load(fs.readFileSync(f, 'utf8'));
     if (!res.ok) throw new Error(`${f} REJECTED:\n` + res.diagnostics.join('\n'));
   }
@@ -29,10 +30,33 @@ function col(r: Rofl, q: string, v: string): string[] {
   return r.query(q).rows.map((row) => row.bindings[v]).sort();
 }
 
+function findingsSection(r: Rofl): string[] {
+  const open = r.query('open_finding(F)').rows.map((row) => row.bindings.F).sort();
+  const settled = r.query('settled(F)').rows.length;
+  if (open.length + settled === 0) return [];
+  const out = ['# Findings backlog', ''];
+  if (open.length === 0) {
+    out.push(`(all ${settled} findings settled — nothing demands a reaction)`);
+    return out;
+  }
+  out.push(`${open.length} open, ${settled} settled. Every open finding demands a reaction:`,
+    'address it, dismiss it with a reason, or knowingly defer it — never silence.', '');
+  for (const f of open) {
+    const kind = col(r, `finding(${f}, K)`, 'K').join(',');
+    const wants = col(r, `finding_action(${f}, W)`, 'W').join(', ');
+    const note = col(r, `finding_note(${f}, N)`, 'N').join(' ');
+    out.push(`- **${f}** [${kind} → ${wants || 'unspecified'}] ${note.replace(/^"|"$/g, '')}`);
+  }
+  return out;
+}
+
 export function buildReport(r: Rofl): string {
   const out: string[] = [];
   const inquiries = r.query('inquiry(I, K)').rows;
-  if (inquiries.length === 0) return '# Epistemic report\n\n(no inquiry framed)\n';
+  const findings = findingsSection(r);
+  if (inquiries.length === 0 && findings.length === 0) {
+    return '# Epistemic report\n\n(no inquiry framed, no findings recorded)\n';
+  }
   for (const iq of inquiries) {
     const I = iq.bindings.I;
     const K = iq.bindings.K;
@@ -67,6 +91,7 @@ export function buildReport(r: Rofl): string {
     }
     out.push('');
   }
+  if (findings.length) out.push(...findings, '');
   return out.join('\n');
 }
 
