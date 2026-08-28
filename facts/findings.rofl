@@ -15,6 +15,12 @@ finding_note(f_evidence_polarity_agent_interpreted,
   "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
 addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
 
+finding(f_self_authored_benchmarks_circular, pitfall).
+recorded(f_self_authored_benchmarks_circular, "2026-08-28").
+finding_note(f_self_authored_benchmarks_circular,
+  "Vadim's verdict: self-designed tests are worthless as evidence - the author of the traps is the author of the trap-catchers; benchmark validity requires externally authored ground truth with published degradation curves; the pilot is demoted to harness-smoke status; adopted external suites: lost_in_conversation (Claude 3 Haiku degradation published, open harness with recap/snowball controls), tau2-bench (pass^k), Vending-Bench class for grant scale").
+addressed_by(f_self_authored_benchmarks_circular, "docs/dogfood/2026-08-28-pilot.md").
+
 finding(f_staleness_needs_kernel_load, pitfall).
 recorded(f_staleness_needs_kernel_load, "2026-08-28").
 finding_note(f_staleness_needs_kernel_load,
