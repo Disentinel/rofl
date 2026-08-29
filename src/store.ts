@@ -1,7 +1,17 @@
 // store.ts — fact store. Map-based, perspective-tagged, deterministic.
 // The store is generic: it knows no relation names at all.
 
-import { type Term, canonTerm, termToJson, termFromJson } from './unify.ts';
+import { type Term, canonTerm, isGround, termToJson, termFromJson } from './unify.ts';
+
+/** Binary insertion into a canonically sorted key array. */
+function insertSorted(arr: string[], key: string): void {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < key) lo = mid + 1; else hi = mid;
+  }
+  arr.splice(lo, 0, key);
+}
 
 export type Scope = 'timeless' | 'tick';
 
@@ -36,6 +46,15 @@ export class Store {
   partialEval = false;   // last evaluation hit its budget
 
   private idx = new Map<string, Map<string, string[]>>(); // rel -> persp -> sorted keys
+  private aidx = new Map<string, string[]>();   // "rel pos arg" -> sorted keys
+  private opaque = new Set<string>();           // relations holding a non-ground argument
+
+  /** Slot key. A relation name never contains a space and a position is
+   *  decimal digits, so the first two space-separated tokens are unambiguous
+   *  however the argument prints. */
+  private static argSlot(rel: string, pos: number, arg: string): string {
+    return rel + ' ' + pos + ' ' + arg;
+  }
 
   /** Add a fact. Returns true if it was new. */
   add(rel: string, persp: string, args: Term[], opts: { scope: Scope; base: boolean; frozen?: boolean }): boolean {
@@ -52,13 +71,26 @@ export class Store {
     let arr = byP.get(persp);
     if (!arr) { arr = []; byP.set(persp, arr); }
     // binary insertion keeps every index canonically sorted at all times
-    let lo = 0, hi = arr.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (arr[mid] < key) lo = mid + 1; else hi = mid;
+    insertSorted(arr, key);
+    // per-argument index: the join key a premise is matched on
+    for (let i = 0; i < args.length; i++) {
+      if (!isGround(args[i])) { this.opaque.add(rel); continue; }
+      const slot = Store.argSlot(rel, i, canonTerm(args[i]));
+      let bucket = this.aidx.get(slot);
+      if (!bucket) { bucket = []; this.aidx.set(slot, bucket); }
+      insertSorted(bucket, key);
     }
-    arr.splice(lo, 0, key);
     return true;
+  }
+
+  /** Facts whose pos-th argument is this canonical ground term, canonically
+   *  sorted. Null when the relation holds a non-ground argument somewhere and
+   *  therefore cannot be served from the argument index. */
+  argMatch(rel: string, pos: number, arg: string): FactRec[] | null {
+    if (this.opaque.has(rel)) return null;
+    const bucket = this.aidx.get(Store.argSlot(rel, pos, arg));
+    if (!bucket) return [];
+    return bucket.map((k) => this.facts.get(k)!).filter(Boolean);
   }
 
   has(key: string): boolean { return this.facts.has(key); }
@@ -74,6 +106,15 @@ export class Store {
     if (arr) {
       const i = arr.indexOf(key);
       if (i >= 0) arr.splice(i, 1);
+    }
+    for (let i = 0; i < rec.args.length; i++) {
+      if (!isGround(rec.args[i])) continue;
+      const slot = Store.argSlot(rec.rel, i, canonTerm(rec.args[i]));
+      const bucket = this.aidx.get(slot);
+      if (!bucket) continue;
+      const at = bucket.indexOf(key);
+      if (at >= 0) bucket.splice(at, 1);
+      if (bucket.length === 0) this.aidx.delete(slot);
     }
     return true;
   }

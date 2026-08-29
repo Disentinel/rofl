@@ -167,6 +167,53 @@ their canonical serialization everywhere; same program + same inputs ⇒
 bit-identical state, tick log, and provenance regardless of insertion order
 (tested over 100 shuffles).
 
+## What it costs
+
+Rules that join four relations look like they are asking for a combinatorial
+search. They are not. This is Datalog, not Prolog: there is no search, no
+backtracking, no unification against clause heads. Evaluation is a *bottom-up
+seminaive fixpoint* — every rule is a join over relations, each join runs on
+the delta of the previous round, and the loop stops when nothing new is
+derived. The answer is the fixpoint of a monotone operator, so the cost is the
+cost of the joins plus the size of the answer, not the size of a search space.
+
+- **In the data:** PTIME. A rule with *k* body literals is a *k*-way join;
+  with an argument index on the join keys it costs O(matching facts), not
+  O(relation). Recursion adds the derived facts back into the input, so a
+  recursive rule costs the size of its own output — transitive closure over
+  *n* nodes is Θ(n²) *because the answer has n² pairs*, not because anything
+  is exploring.
+- **In the rules:** linear in the number of rules — they are independent
+  producers over a shared store, and one rule cannot make another exponential.
+  Only a single rule's own *arity* (distinct variables in one rule body) sits
+  in the exponent, which is the standard Datalog combined-complexity result.
+  Rules in this repo have 3–6 variables; the practical ceiling is per-rule
+  width, not rule count.
+- **Negation:** stratified, so `not` is set difference against an already
+  complete relation. No guessing, no choice points — this is the reason the
+  kernel refuses unstratified programs instead of searching for a model.
+
+Measured, reproducibly (`npm run bench:scale`, a laptop-class container):
+
+| sweep | scale | result |
+|---|---|---|
+| facts, rules fixed (the 17 wiring rules) | 2K → 32K facts | ~90–110 µs per fact, **flat** — linear in the fact base |
+| rules, facts fixed | 1 → 16 four-way join rules | 118 ms → 399 ms total, i.e. **25 ms marginal per rule** (fixed evaluation cost amortizes) |
+| recursion (transitive closure) | chain of 160 → 12,880 derived pairs | 583 ms, ~45 µs per derived pair — cost tracks *output size* |
+
+On a real corpus — 2,905 TypeScript files of VS Code, scanned to 106,484 facts
+— loading is ~11 s, and a join rule over 56K `src_call` × 33K `src_func` facts
+reaches fixpoint in ~7 s. Rescanning after an edit re-parses only the changed
+files (content-hash keyed), so the steady-state cost is the changed file, not
+the tree.
+
+The honest ceiling: this is a naive in-memory engine with no query planner and
+no persistence. Hundreds of thousands of facts are comfortable, millions are
+not — at that point you want the fact store on disk and a real join order, and
+nothing in the semantics stops that. What you do *not* have to worry about is
+the rule set: rules are cheap, and adding the twentieth invariant costs about
+as much as the second.
+
 ## Deviations from START.md (and why)
 
 - **Vocabulary additions.** `bridge_decl`, `in_perspective`, `uses_builtin`

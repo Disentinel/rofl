@@ -13,6 +13,7 @@
     "report": "node --experimental-strip-types runtime/report.ts",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
     "pair": "node --experimental-strip-types runtime/pair.ts",
+    "bench:scale": "node --experimental-strip-types bench/scale.ts",
     "build:skill": "node --experimental-strip-types scripts/build_skill.ts"
   },
   "devDependencies": {

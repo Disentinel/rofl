@@ -8,6 +8,18 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_joins_were_unindexed, pitfall).
+recorded(f_joins_were_unindexed, "2026-08-29").
+finding_note(f_joins_were_unindexed,
+  "the premise matcher scanned a whole relation per partial solution and re-materialized-and-sorted the seminaive front once per partial solution too, so every join was quadratic in the fact base while the theory said linear: 16K wiring facts took 71s; an argument index (store, join keys) plus a per-front slice cache made the same run 1.7s (43x) and the whole test suite 62s -> 20s; the complexity claim was true of the semantics and false of the implementation, and only a measurement could tell them apart").
+addressed_by(f_joins_were_unindexed, "test/store-index.test.ts").
+
+finding(f_complexity_belongs_in_the_readme, insight).
+recorded(f_complexity_belongs_in_the_readme, "2026-08-29").
+finding_note(f_complexity_belongs_in_the_readme,
+  "an outside reader judged the rule files 'screaming NP-complete or worse' and noted the README said nothing about cost - a fair hit: the distinction that answers it (Datalog bottom-up fixpoint, no search, no backtracking; PTIME in data, rule count linear, only per-rule arity in the exponent) was nowhere stated, and the missing section hid a real quadratic in the engine; the answer to a complexity objection is a reproducible benchmark, not a paragraph of theory").
+addressed_by(f_complexity_belongs_in_the_readme, "bench/scale.ts").
+
 finding(f_rules_are_dialect_free, insight).
 recorded(f_rules_are_dialect_free, "2026-08-29").
 finding_note(f_rules_are_dialect_free,

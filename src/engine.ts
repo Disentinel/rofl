@@ -55,6 +55,7 @@ export class Evaluation {
   private staged = new Map<string, StagedFact>();
   private renameCounter = 0;
   private curFront: FrontInfo = { keys: new Set(), rels: new Set() };
+  private frontCache = new WeakMap<Set<string>, Map<string, FactRec[]>>();
 
   constructor(store: Store, opts: { budget?: number; naive?: boolean; holeId?: Term } = {}) {
     this.store = store;
@@ -354,22 +355,61 @@ export class Evaluation {
     return `${lit.rel}[${canonTerm(p)}](${lit.args.map((a) => canonTerm(resolve(a, s))).join(',')})`;
   }
 
+  /** Candidates for a premise. Every argument already bound by the partial
+   *  substitution is a join key: the store can hand back just the facts
+   *  carrying that value, and the narrowest such bucket wins. Only a premise
+   *  with no bound argument (or over a relation the index cannot serve)
+   *  scans the whole relation. This is what keeps a join linear in the
+   *  matching facts instead of quadratic in the relation. */
+  private indexed(lit: Lit, s: Subst, perspT: Term): FactRec[] | null {
+    let best: FactRec[] | null = null;
+    for (let i = 0; i < lit.args.length; i++) {
+      const a = resolve(lit.args[i], s);
+      if (!isGround(a)) continue;
+      const hit = this.store.argMatch(lit.rel, i, canonTerm(a));
+      if (hit === null) return null;
+      if (best === null || hit.length < best.length) best = hit;
+      if (best.length === 0) break;
+    }
+    if (best === null) return null;
+    return perspT.k === 'a' ? best.filter((f) => f.persp === perspT.name) : best;
+  }
+
+  /** The front's slice of one relation, materialized once per front rather
+   *  than once per partial solution (that materialization is what made a
+   *  join over a large front quadratic). The front set is never mutated
+   *  while it is being consumed: rules write into the next front. */
+  private frontSlice(only: Set<string>, rel: string): FactRec[] {
+    let byRel = this.frontCache.get(only);
+    if (!byRel) { byRel = new Map(); this.frontCache.set(only, byRel); }
+    let slice = byRel.get(rel);
+    if (!slice) {
+      slice = [...only].sort()
+        .map((k) => this.store.get(k))
+        .filter((f): f is FactRec => !!f && f.rel === rel);
+      byRel.set(rel, slice);
+    }
+    return slice;
+  }
+
   /** Matches for one positive premise: store facts plus demand unfolding. */
   matchPremise(lit: Lit, s: Subst, depth: number,
                only: Set<string> | null): { s: Subst; ref: PremRef }[] {
     if (lit.temporal === 'init' && this.store.tick !== 0) return [];
     const perspT = walk(lit.persp, s);
+    const hits = this.indexed(lit, s, perspT);
     let cands: FactRec[];
     if (only) {
-      // seminaive: iterate the (small) front, not the whole relation
-      cands = [...only].sort()
-        .map((k) => this.store.get(k))
-        .filter((f): f is FactRec => !!f && f.rel === lit.rel &&
-          (perspT.k !== 'a' || f.persp === perspT.name));
+      // seminaive: iterate the (small) front, not the whole relation — and
+      // when the premise has a bound argument, only the front facts carrying it
+      cands = hits
+        ? hits.filter((f) => only.has(f.key))
+        : this.frontSlice(only, lit.rel)
+          .filter((f) => perspT.k !== 'a' || f.persp === perspT.name);
     } else {
-      cands = perspT.k === 'a'
+      cands = hits ?? (perspT.k === 'a'
         ? this.store.relPersp(lit.rel, perspT.name)
-        : this.store.relAll(lit.rel);
+        : this.store.relAll(lit.rel));
     }
     const out: { s: Subst; ref: PremRef }[] = [];
     const seen = new Set<string>();

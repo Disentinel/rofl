@@ -58,3 +58,8 @@ including the check that unrelated calls stay green.
   two languages plus one binary. The rules never mention Node, Go, k8s or
   nginx — they speak hosts, ports, routes and fields. That is the point:
   add an extractor, keep the invariants.
+- These rules join four relations at a time, which looks like it should cost
+  a search. It does not — this is a bottom-up Datalog fixpoint, no search and
+  no backtracking. `npm run bench:scale` runs this rule set over a generated
+  corpus: flat cost per fact from 2K to 32K facts, ~25 ms marginal per added
+  rule. See [What it costs](../../README.md#what-it-costs).
