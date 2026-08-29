@@ -1,0 +1,161 @@
+-- facts/findings.rofl — the findings ledger. Prose narratives live in
+-- docs/dogfood/; this file is the actionable index the engine replays at
+-- session start. Discipline: rules/findings.rofl.
+
+-- ---------------------------------------------------------------- open ---
+
+-- (none)
+
+-- ------------------------------------------------------------- settled ---
+
+finding(f_blocking_not_waivable_by_authority, insight).
+recorded(f_blocking_not_waivable_by_authority, "2026-08-29").
+demands(f_blocking_not_waivable_by_authority, doc).
+finding_note(f_blocking_not_waivable_by_authority,
+  "recorded by the COLD-AGENT run (first agent to use the skill unaided): accepting a risk claim via authority does not clear a BLOCKING claim - blocking requires confirmed evidence, never a waiver; the agent verified this is the engine's actual rule behavior and flagged that escalate.md should say so, so an authority answers with open eyes").
+addressed_by(f_blocking_not_waivable_by_authority, "skills/guided-formal-reasoning/escalate.md").
+
+finding(f_discriminate_needs_evidence_content, question).
+recorded(f_discriminate_needs_evidence_content, "2026-08-29").
+demands(f_discriminate_needs_evidence_content, decision).
+finding_note(f_discriminate_needs_evidence_content,
+  "recorded by the cold-agent run: the Atlas fixture's evidence journal carries ids and polarity only, so discriminate cannot localize the delivery_rate_ok conflict from the fixture alone; DECIDED: this is by design - the fixture exercises the honest-dead-end paths (no_progress + clarify re-route), now documented in the fixture header").
+addressed_by(f_discriminate_needs_evidence_content, "examples/atlas-launch/evidence.rofl").
+
+finding(f_swarm_one_wave_quiescence, insight).
+recorded(f_swarm_one_wave_quiescence, "2026-08-28").
+finding_note(f_swarm_one_wave_quiescence,
+  "first swarm run: 12 fresh haiku researchers over a derived frontier (rules/swarm.rofl: leases and reports as facts, availability and retry derived) produced 12/12 on-contract deliverables and one-wave quiescence; the bounded frame slice with an explicit JSON contract is what made cheap agents reliable; dispute derivation and lease expiry deliberately not yet exercised - only unit-tested").
+addressed_by(f_swarm_one_wave_quiescence, "docs/dogfood/2026-08-28-swarm.md").
+
+finding(f_tms_is_the_ancestor, insight).
+recorded(f_tms_is_the_ancestor, "2026-08-28").
+finding_note(f_tms_is_the_ancestor,
+  "the landscape run's sharpest output: ROFL is a truth-maintenance system reborn on Datalog with an LLM admission gate - JTMS/ATMS/AGM had the epistemics without a writer at scale, agent-memory systems have the writer without the epistemics, ROFL is the join; steal list ranked: nogood explanations, ATMS assumption labels, temporal edges, AGM postulates as mutation tests, solver-as-oracle intents").
+addressed_by(f_tms_is_the_ancestor, "docs/formal-reasoning-landscape.md").
+
+finding(f_amnesiac_matches_persistent, insight).
+recorded(f_amnesiac_matches_persistent, "2026-08-28").
+finding_note(f_amnesiac_matches_persistent,
+  "killer-case run: a FRESH one-shot haiku-4.5 per turn given only the rendered ledger reproduced the persistent conversation on all 6 LIC samples - identical solve turns, near-identical error traces (same fabrication, same premature answers), 6/6 correct, one divergence in amnesia's favor (an abstention where all persistent arms guessed); the ledger carried 100% of task state - context DEATH survived by construction, on external tasks with their scorer; caveats: harness overhead dominated cost here, n=6, GSM8K-easy").
+addressed_by(f_amnesiac_matches_persistent, "docs/dogfood/2026-08-28-amnesiac.md").
+
+finding(f_lic_floor_above_slice, insight).
+recorded(f_lic_floor_above_slice, "2026-08-28").
+finding_note(f_lic_floor_above_slice,
+  "lost_in_conversation slice on haiku-4.5 (6 sharded-GSM8K x 3 arms, their evaluator verbatim): ALL arms 6/6 - the published Claude 3 Haiku degradation did not manifest, so the ledger hypothesis is untested at this difficulty, not refuted; confounds recorded: two model generations, verbatim shards easier than their paraphrasing simulator, n=6; evidence runs must use their simulator and move to tasks where the model under test still degrades").
+addressed_by(f_lic_floor_above_slice, "docs/dogfood/2026-08-28-lic-haiku45.md").
+
+finding(f_ledger_rendering_forces_answers, pitfall).
+recorded(f_ledger_rendering_forces_answers, "2026-08-28").
+demands(f_ledger_rendering_forces_answers, doc).
+finding_note(f_ledger_rendering_forces_answers,
+  "the naive ledger rendering DOUBLED premature wrong answers (6 vs 3/3) and induced fabrication of a missing quantity: 'complete set of statements' converts absence into nonexistence and 'if answerable, answer now' is an answer-forcing prompt - a ledger without the open-world marker injects the closed-world fallacy it exists to cure; rendering rules now fixed in the protocol").
+addressed_by(f_ledger_rendering_forces_answers, "docs/benchmark-protocol.md").
+
+finding(f_evidence_polarity_agent_interpreted, pitfall).
+recorded(f_evidence_polarity_agent_interpreted, "2026-08-28").
+demands(f_evidence_polarity_agent_interpreted, decision).
+finding_note(f_evidence_polarity_agent_interpreted,
+  "DECIDED by Vadim 2026-08-28, option b: agent-attached polarity on BLOCKING claims counts only after confirmed_polarity by human or tool; non-blocking claims live on the plain grade; confirm intent keeps pending links visible").
+addressed_by(f_evidence_polarity_agent_interpreted, "rules/inquiry/epistemic.rofl").
+
+finding(f_self_authored_benchmarks_circular, pitfall).
+recorded(f_self_authored_benchmarks_circular, "2026-08-28").
+finding_note(f_self_authored_benchmarks_circular,
+  "Vadim's verdict: self-designed tests are worthless as evidence - the author of the traps is the author of the trap-catchers; benchmark validity requires externally authored ground truth with published degradation curves; the pilot is demoted to harness-smoke status; adopted external suites: lost_in_conversation (Claude 3 Haiku degradation published, open harness with recap/snowball controls), tau2-bench (pass^k), Vending-Bench class for grant scale").
+addressed_by(f_self_authored_benchmarks_circular, "docs/dogfood/2026-08-28-pilot.md").
+
+finding(f_staleness_needs_kernel_load, pitfall).
+recorded(f_staleness_needs_kernel_load, "2026-08-28").
+finding_note(f_staleness_needs_kernel_load,
+  "epistemic.rofl depends on stale_evidence whose defining rule lived in an OPTIONAL policy file; a harness loading only the kernel silently ran with freshness off - caught by pilot ground truth (all six engine-arm misses were the stale trap); freshness now loads with the kernel").
+addressed_by(f_staleness_needs_kernel_load, "runtime/report.ts").
+
+finding(f_pilot_toy_scale_ties, insight).
+recorded(f_pilot_toy_scale_ties, "2026-08-28").
+finding_note(f_pilot_toy_scale_ties,
+  "registered prediction FAILED both ways at toy scale (K=8, 14 memos): haiku-4.5 baseline with a rubric scored 48/48 in-head, and the engine arm's 42/48 was entirely a harness bug; after the fix both arms are perfect - the measurable edge must come from scale and horizon, confirming the long-horizon protocol; bonus: engine misses were replayed to 48/48 at zero model cost (determinism dividend)").
+addressed_by(f_pilot_toy_scale_ties, "bench/pilot.ts").
+
+finding(f_report_hid_refuted_nonblocking, pitfall).
+recorded(f_report_hid_refuted_nonblocking, "2026-08-28").
+finding_note(f_report_hid_refuted_nonblocking,
+  "the report's refuted row rendered violated_blocking only, so a refuted NON-blocking obligation appeared in no section at all; found live while running the grant-pursuit inquiry; fixed with refuted_obligation").
+addressed_by(f_report_hid_refuted_nonblocking, "runtime/report.ts").
+
+finding(f_ci_is_the_referee, pitfall).
+recorded(f_ci_is_the_referee, "2026-08-28").
+finding_note(f_ci_is_the_referee,
+  "eight consecutive pushes ran red in CI (the bun job had no dependency install) while local suites reported green; the pipeline you ship through is the referee - verify the Actions run for your commit after every push").
+addressed_by(f_ci_is_the_referee, ".github/workflows/ci.yml").
+
+finding(f_progress_counts_new_facts, insight).
+recorded(f_progress_counts_new_facts, "2026-08-28").
+finding_note(f_progress_counts_new_facts,
+  "admission must count only NEW facts as progress: re-admitting a duplicate result fooled stagnation detection into budget exhaustion").
+addressed_by(f_progress_counts_new_facts, "runtime/admission.ts").
+
+finding(f_admission_requires_who, pitfall).
+recorded(f_admission_requires_who, "2026-08-28").
+demands(f_admission_requires_who, rule_and_test).
+finding_note(f_admission_requires_who,
+  "forged audit is opt-in: loads without who emit no asserted_by; admission now refuses unattributed calls").
+addressed_by(f_admission_requires_who, "runtime/admission.ts").
+
+finding(f_negation_empty_edb, pitfall).
+recorded(f_negation_empty_edb, "2026-08-28").
+demands(f_negation_empty_edb, kernel_test).
+finding_note(f_negation_empty_edb,
+  "negating a never-populated EDB relation evaluates and stratifies correctly; pinned by kernel-edge tests").
+addressed_by(f_negation_empty_edb, "test/kernel-edge.test.ts").
+
+finding(f_excise_as_mutation_primitive, idea).
+recorded(f_excise_as_mutation_primitive, "2026-08-28").
+demands(f_excise_as_mutation_primitive, decision).
+finding_note(f_excise_as_mutation_primitive,
+  "DECIDED by Vadim 2026-08-28: the mutation standard is a standing green variant violated manually in several ways; excise stays a blast-radius preview diagnostic, not the mutation mechanism").
+addressed_by(f_excise_as_mutation_primitive, "test/production-readiness.test.ts").
+
+finding(f_normalization_must_be_total, insight).
+recorded(f_normalization_must_be_total, "2026-08-28").
+finding_note(f_normalization_must_be_total,
+  "terminology normalization must cover every claim-taking touchpoint at once (obligations, evidence routing, scheduler ranking) or aliases silently split the world; new claim-argument relations must choose alias-or-canonical explicitly").
+addressed_by(f_normalization_must_be_total, "rules/inquiry/terminology.rofl").
+
+finding(f_excise_is_counterfactual, insight).
+recorded(f_excise_is_counterfactual, "2026-08-28").
+finding_note(f_excise_is_counterfactual,
+  "excise is a counterfactual QUERY (diff on a scratch store), retract is the mutation; three tests written assuming excise mutates all failed the same way").
+addressed_by(f_excise_is_counterfactual, "test/production-readiness.test.ts").
+
+finding(f_roadmap_explicit_unknown, insight).
+recorded(f_roadmap_explicit_unknown, "2026-08-28").
+demands(f_roadmap_explicit_unknown, doc).
+finding_note(f_roadmap_explicit_unknown,
+  "roadmap 5.1 preferred hand-asserted unknown; PR1 shows unknown derives soundly from claim + no evidence; roadmap amended").
+addressed_by(f_roadmap_explicit_unknown, "docs/guided-formal-reasoning-roadmap.md").
+
+finding(f_perspective_discipline_zero_code, insight).
+recorded(f_perspective_discipline_zero_code, "2026-08-28").
+finding_note(f_perspective_discipline_zero_code,
+  "the perspective discipline mapped onto kernel machinery with zero enforcement code").
+addressed_by(f_perspective_discipline_zero_code, "docs/choosing-perspectives.md").
+
+finding(f_layout_constrained_by_grep, insight).
+recorded(f_layout_constrained_by_grep, "2026-08-28").
+finding_note(f_layout_constrained_by_grep,
+  "kernel grep test forbids domain code in src/; scanners/ and runtime/ exist because of it").
+addressed_by(f_layout_constrained_by_grep, "docs/dogfood/2026-08-28-pr1.md").
+
+finding(f_resolved_needs_not_refuted, insight).
+recorded(f_resolved_needs_not_refuted, "2026-08-28").
+finding_note(f_resolved_needs_not_refuted,
+  "resolved_obligation without not-refuted would mark contested claims resolved; caught test-first").
+addressed_by(f_resolved_needs_not_refuted, "test/inquiry.test.ts").
+
+finding(f_intent_tuple_no_gensym, insight).
+recorded(f_intent_tuple_no_gensym, "2026-08-28").
+finding_note(f_intent_tuple_no_gensym,
+  "intent identity as (kind, inquiry, target) tuple held with no gensym pressure").
+addressed_by(f_intent_tuple_no_gensym, "rules/inquiry/intents.rofl").

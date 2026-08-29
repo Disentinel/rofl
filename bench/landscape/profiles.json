@@ -1,0 +1,883 @@
+{
+ "c_argumentation": {
+  "system": "Computational Argumentation Frameworks (Dung/ASPIC+/Carneades)",
+  "category": "Formal reasoning framework family",
+  "confidence": "high",
+  "sources": {
+   "url": 4,
+   "model_knowledge": 6
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No named ledgers or write-authority enforcement; arguments exist in unified abstract space with no perspective isolation or provenance tracking by ledger.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Recent work discusses provenance of stable solutions, but standard AAF/ASPIC+/Carneades systems do not emit kernel-level why-traces for derivations; solvers return extensions without mechanical derivation trails.",
+    "source": "https://dl.acm.org/doi/full/10.1145/3736229.3736270"
+   },
+   "A3_epistemic_openworld": {
+    "level": "partial",
+    "note": "Carneades models proof standards and burden of proof; Dung semantics define acceptable vs. unacceptable arguments. However, state is not open-world; unknown is implicit in unacceptable, not explicit; contested (mutual attack) is modeled but not a first-class decision-blocking state.",
+    "source": "https://www.sciencedirect.com/science/article/pii/S0004370207000677"
+   },
+   "A4_fixpoint_replay": {
+    "level": "partial",
+    "note": "ASPARTIX uses ASP (Datalog-based), which is deterministic and fixpoint-based. However, no incremental replay from fact journals; each invocation recomputes from scratch with no journal-based re-materialization.",
+    "source": "https://www.dbai.tuwien.ac.at/research/argumentation/aspartix/"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "No content-addressed file storage, no incremental rebuilding, no unchanged-source skipping. Systems recompute extensions on each invocation with no caching discipline.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "No untrusted-agent model or admission gates. Argumentation frameworks assume all input is trusted; no mechanism for attributing or validating assertions from external agents.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Solvers compute complete extensions under requested semantics; no bounded work loops, stagnation detection, or anytime epistemic reports. All-or-nothing computation model.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No inquiry types (decide/verify/explore/monitor) or typed intents. Frameworks compute extensions; work queue is not derived from epistemic state or inquiry type.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Tweety has lightweight Python libraries. However, many systems (ASPARTIX, LabSAT) require external solvers (ASP solver, SAT solver). Not zero-dependency embeddable kernels.",
+    "source": "https://www.semanticscholar.org/paper/The-Formal-Argumentation-Libraries-of-Tweety-Thimm/46c6780c933dfc59e3223d0333d8dcf45d0d1bd9"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No concept of rule packs or mutation testing discipline. Frameworks define semantics mathematically; no standing green variant with deliberate breaks to validate correctness.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Formal semantics for attack/support relations with multiple extension semantics (grounded, preferred, stable, complete)",
+   "Structured argumentation: arguments as inference trees with strict/defeasible rules, premises, and conclusions (ASPIC+)",
+   "Explicit burden of proof and proof standards with dialogical aspects (Carneades)",
+   "Preference-based and value-based conflict resolution between competing arguments",
+   "Argument mapping and visual representation of dispute structure"
+  ],
+  "steal": [
+   "Formal semantics for conflict resolution: the theory of acceptable extensions under multiple criteria mirrors how ROFL could formalize contested state and defeasible conclusions",
+   "Structured argumentation with premises/inferences/conclusions: richer argument structure than flat facts enables hierarchical reasoning and attack at multiple levels",
+   "Explicit burden of proof: formal treatment of who must provide evidence and how strong that evidence must be, orthogonal to open-world epistemic state"
+  ],
+  "positioning": "ROFL is a mutable-fact Datalog engine with incremental, journaled replay and LLM admission gates; computational argumentation is a static-input, complete-extension solver family with rich formal semantics for acceptable conclusions but no incremental replay, write authority, or untrusted-agent model."
+ },
+ "c_clingo": {
+  "system": "Clingo",
+  "category": "Answer Set Programming (ASP) Solver",
+  "confidence": "high",
+  "sources": {
+   "url": 4,
+   "model_knowledge": 6
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No named ledgers or write-authority enforcement. Input is logic program + facts; no provenance tracking of fact sources or authority separation.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Core clingo emits answer sets but not derivation traces. xclingo extension adds causal-graph justifications via annotations. Not kernel-emitted.",
+    "source": "https://github.com/bramucas/xclingo"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Answer set semantics yields true/false in each stable model; all models presented but no epistemic class (supported/contested/unknown). Not open-world.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "has",
+    "note": "Deterministic stratified-negation fixpoint semantics. Same facts + rules = same answer sets. Multi-shot solving enables replay by rerunning grounding/solving.",
+    "source": "https://arxiv.org/pdf/1705.09811"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "No content-hash keyed materialization or selective re-extraction. Each query regrounds and resolves entire program; no unchanged-source caching.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "Clingo is a declarative solver, not designed around LLM agents. No untrusted writer gates, ledger separation, or agent attribution framework.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Asynchronous solving and thread support available; can interrupt mid-solve. No explicit budgets, stagnation detection, or anytime epistemic reports.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No inquiry-root system or work-queue generation from epistemic state. Users write rules; solver computes answer sets. Query-driven, not inquiry-driven.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Embeddable via Python API and C++ core. Requires clingo library; not zero-dependency. Heavier than bare Node/Bun model.",
+    "source": "https://potassco.org/clingo/python-api/5.4/"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "partial",
+    "note": "Testing tools exist (ASPIDE unit testing, HARVEY random testing) but no systematic mutation-test discipline with standing green variants.",
+    "source": "https://arxiv.org/pdf/1007.3223"
+   }
+  },
+  "adjacent": [
+   "Answer set semantics with choice rules (non-determinism, branching)",
+   "Integer constraint domains (clingcon extension)",
+   "Theory solving for custom inference",
+   "Optimization framework (minimize/maximize statements)",
+   "Multi-shot incremental grounding and solving",
+   "Rich ecosystem (Clorm ORM, Clingraph visualization, Clinguin UI)"
+  ],
+  "steal": [
+   "Answer set semantics with choice operators for modeling non-deterministic decisions and branching search",
+   "Multi-shot incremental paradigm: split programs, interleave grounding/solving, resume state",
+   "Constraint domain integration: pluggable theory solvers for domain-specific reasoning"
+  ],
+  "positioning": "Clingo is a mature, performant solver for modeling and solving combinatorial problems declaratively via logic programs; ROFL is a Datalog-family engine for epistemically-structured reasoning within LLM coding workflows."
+ },
+ "c_codeql": {
+  "system": "CodeQL",
+  "category": "Semantic static analysis database",
+  "confidence": "high",
+  "sources": {
+   "url": 0,
+   "model_knowledge": 10
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No ledger-based perspective system; facts extracted from code but no write-authority or forgery detection.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Query results are deterministic; static provenance in QL text. No kernel-emitted derivation traces over mutable facts.",
+    "source": "model-knowledge"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Pattern-matching engine; no epistemic states (supported/refuted/contested/unknown) or evidence-based reasoning.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "partial",
+    "note": "Deterministic, reproducible (same code+queries yield same results). Not Datalog fixpoint; uses QL (first-order logic + aggregation).",
+    "source": "model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "partial",
+    "note": "Database extracted once, reused for queries. Not content-hash keyed; caching strategy rather than incremental rebuild.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "Static analysis tool; no agent writer, no untrusted-writer isolation, no polarity-checking on findings.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Resource budgets (query timeout, memory). No anytime epistemic reporting or stagnation detection.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "Manual query writing; no typed inquiry roots that auto-generate work queues from epistemic state.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Has CLI and libraries; database extraction is heavyweight. Not a minimal zero-dependency kernel.",
+    "source": "model-knowledge"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No standard discipline shipping mutation tests with query packs; not a built-in practice.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Multi-language semantic extraction (11+ languages unified)",
+   "Sophisticated taint and data-flow analysis",
+   "Mature security vulnerability detection ecosystem (400+ CVEs)",
+   "Variant analysis (finding similar vulnerabilities across codebases)",
+   "GitHub Advanced Security platform integration"
+  ],
+  "steal": [
+   "Multi-language semantic extraction pipeline and unified queryable representation",
+   "Mature taint/data-flow analysis patterns and optimizations",
+   "Industrial-grade database indexing for large codebases"
+  ],
+  "positioning": "CodeQL is industrial semantic static analysis via queryable code databases; ROFL is agent-aware epistemic reasoning over provenance-traced derivations."
+ },
+ "c_ddlog": {
+  "system": "Differential Datalog / Differential Dataflow / Materialize",
+  "category": "incremental-view-maintenance",
+  "confidence": "high",
+  "sources": {
+   "url": 4,
+   "model_knowledge": 6
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No named ledgers with write-authority enforcement; Materialize has sources/sinks but no perspective-based write control.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Datalog family supports why-provenance in principle; DDlog/Differential Dataflow do not emit kernel-level derivation traces; provenance is external add-on research.",
+    "source": "https://github.com/vmware-archive/differential-datalog/blob/master/README.md, model-knowledge"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Query engines with deterministic output; no claim-status derivation or contested-state semantics.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "has",
+    "note": "DDlog enforces stratified negation and fixpoint Datalog semantics; deterministic evaluation enables replay from input streams.",
+    "source": "https://github.com/vmware-archive/differential-datalog/blob/master/README.md, model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "has",
+    "note": "Core innovation: both DDlog and Differential Dataflow compute only deltas; store changes indexed by key/time; reconstruct from update logs.",
+    "source": "https://www.cidrdb.org/cidr2013/Papers/CIDR13_Paper111.pdf, model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "No notion of untrusted writers or attributed admission gates; all data assumed trustworthy.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Event-driven streaming model; no bounded work loops, stagnation detection, or epistemic reports on demand.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No inquiry-driven work frontier; user submits queries, system computes answers; no epistemic intents.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "DDlog compiles to Rust libraries; Differential Dataflow is Rust crate; Materialize is cloud service or self-managed deployment; none are lightweight zero-dep TS.",
+    "source": "https://github.com/vmware-archive/differential-datalog/blob/master/README.md, model-knowledge"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No evidence of mutation testing discipline as shipped standard in rule packs.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Partial-order versioning with time-stamped deltas enable efficient multi-version state reconstruction",
+   "Arrangement index data structure for O(log n) lookup of changes by key over time intervals",
+   "Distributed execution across threads/processes/clusters via Timely Dataflow scheduler",
+   "SQL query front-end with standard relational operators (joins, aggregations, recursive CTEs)"
+  ],
+  "steal": [
+   "Indexed delta storage keyed by (key, time) rather than content-hash, reducing query latency on hot facts",
+   "Automatic incremental derivation of all transitive closures and joins without manual algorithm design",
+   "Concrete implementations proving stratified-negation fixpoint semantics scale to real systems (OVS, cloud management)"
+  ],
+  "positioning": "DDlog/Differential Dataflow are high-performance incremental query engines; ROFL is an epistemic reasoning substrate that treats incrementality as one layer atop provenance, authority, and typed inquiry."
+ },
+ "c_glean": {
+  "system": "Glean",
+  "category": "code facts infrastructures",
+  "confidence": "medium",
+  "sources": {
+   "url": 3,
+   "model_knowledge": 7
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "Facts are collected and stored but no ledger-based write-authority enforcement; no forged/audit derivation.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Stores facts with schemas in DAG structure; Angle queries can traverse dependencies, but no kernel-emitted derivation why-traces.",
+    "source": "https://github.com/facebookincubator/Glean"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Glean is a static fact store, not an epistemic reasoner; claims are facts or absent, not contested/supported/refuted states.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "partial",
+    "note": "Datalog-style queries via Angle; deterministic on stored facts, but explicit stratified-negation fixpoint and replay from journal not evident.",
+    "source": "https://github.com/facebookincubator/Glean"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "RocksDB storage with efficient indexing; no evidence of content-hash keying or re-materialization from immutable fact journal.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "No LLM integration or untrusted writer admission layer; facts come from language indexers only.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Glean is a static indexing and query system, not an interactive work loop with budgets or anytime epistemic reporting.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "Query-driven system; users issue Angle queries, not system-generated typed inquiry frontiers (decide/verify/explore).",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "lacks",
+    "note": "Full distributed system: indexers, RocksDB backend, server infrastructure; not embeddable or zero-dependency.",
+    "source": "https://github.com/facebookincubator/Glean"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No evidence of mutation-test discipline on indexer rules or Angle query definitions.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Multi-language indexing with native C++, Python, Hack, Haskell, JS/Flow plus SCIP/LSIF support",
+   "Scalable RocksDB-backed storage for massive codebases at production scale",
+   "Angle: mature Datalog-style query language with real-world adoption",
+   "Pluggable language-specific indexer architecture for fact extraction"
+  ],
+  "steal": [
+   "Architectural separation of fact collection (indexers) from fact querying (Angle DSL)",
+   "Immutable schema-validated facts in DAG form as a spine for semantic reasoning",
+   "Incremental indexing strategy to avoid re-scanning unchanged source"
+  ],
+  "positioning": "ROFL is an LLM-agent epistemic reasoner with provenance tracking and human/agent separation; Glean is a static semantic fact store optimized for multi-language code indexing and efficient querying at scale\u2014complementary, not competitive."
+ },
+ "c_kr_owl": {
+  "system": "Knowledge-Representation Reasoners (HermiT, ELK, SHACL, Cyc)",
+  "category": "Description-Logic & Knowledge-Base Reasoning",
+  "confidence": "high",
+  "sources": {
+   "url": 3,
+   "model_knowledge": 7
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "Stateless reasoners; no named ledgers with write-authority enforcement. Derivations are epiphenomenal to a single fact space.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "ELK provides goal-directed tracing; HermiT & Cyc explain derivations. No kernel-emitted why-trace over mutable fact journals.",
+    "source": "https://github.com/liveontologies/elk-reasoner/wiki"
+   },
+   "A3_epistemic_openworld": {
+    "level": "partial",
+    "note": "OWL makes open-world assumption; SHACL inverts to closed-world for validation. Cyc uses argumentation (pro/con weighing) but not first-class contested state.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "lacks",
+    "note": "Fixpoint semantics via tableau or consequence-based calculi, but not replayed from mutable fact journal. Deterministic only within a static ontology.",
+    "source": "model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "partial",
+    "note": "ELK explicitly supports incremental reasoning without bookkeeping. HermiT & Cyc are monolithic; no content-addressed materialization or cache invalidation.",
+    "source": "https://github.com/liveontologies/elk-reasoner/wiki"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "No LLM-specific validation layer. Reasoning is purely logical; cannot distinguish agent-attributed claims or attach blocking polarity.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Cyc uses best-first search with heuristics & micro-theories to bound search. Others (HermiT, ELK) are fully deterministic but lack budget-aware anytime reports.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No query-root taxonomy (decide/verify/explain/explore). Reasoning is passive: user poses a query, reasoner exhausts entailment check. No work-queue derivation.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "HermiT & ELK are embeddable libraries (OWL API, Prot\u00e9g\u00e9 plugins). Cyc is a large monolithic system. SHACL is a language, not a kernel.",
+    "source": "https://www.semanticscholar.org/paper/ELK-Reasoner:-Architecture-and-Evaluation-Kazakov-Kr%C3%B6tzsch/928561aa86321b71db9fcf72b97d6dbe79bbf561"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No rule-mutation testing discipline. Ontologies ship without broken-variant suites to validate reasoning coverage.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Tableau/consequence-based calculi: sound & complete reasoning over description-logic fragments at scale.",
+   "Open-world vs closed-world semantics toggles: OWL assumes incompleteness; SHACL enforces completeness for validation.",
+   "Specialized fragment reasoning: ELK's per-profile optimization (EL, QL, DL) trades expressiveness for speed on real-world ontologies.",
+   "Argumentation & default reasoning: Cyc's pro/con weighing & micro-theory scoping to tame commonsense reasoning."
+  ],
+  "steal": [
+   "Incremental reasoning without journal bookkeeping: ELK's techniques for updating conclusions when ontology edges change.",
+   "Anytime reasoning budgets: Cyc's best-first + heuristic pruning model for bounding search in open queries.",
+   "Tracing as a first-class reasoning service: ELK's goal-directed backward chaining to explain *why* an entailment holds."
+  ],
+  "positioning": "ROFL fuses Datalog-family fixpoint determinism with epistemic state machines and LLM-gated admission; OWL/SHACL reasoners are sound complete-reasoning engines over static logical languages, while Cyc maximizes real-world coverage via hand-curated facts and heuristic search."
+ },
+ "c_lean_itp": {
+  "system": "Lean 4 / Coq-Rocq / Isabelle (ITP family)",
+  "category": "Interactive theorem provers / proof assistants",
+  "confidence": "high",
+  "sources": {
+   "url": 0,
+   "model_knowledge": 10
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No named ledgers or write-authority enforcement; proofs are monolithic terms. No perspective/provenance distinction.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Proof terms encode derivation implicitly; typed kernel tracks type checking, but no explicit why-trace mechanism like ROFL's derived_by.",
+    "source": "model-knowledge"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Closed-world: proven, refuted, or undecided. No contested state; claims resolve to true/false/unknown, not evidence-derived status.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "lacks",
+    "note": "Tactics and proof search are imperative; no stratified-negation Datalog fixpoint. Replaying requires re-executing tactic sequences, not re-deriving facts.",
+    "source": "model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "No content-hash-keyed materialization or incremental cache. Proofs rebuild from source, not from immutable fact stores.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "ITPs can consume LLM-generated proof sketches but lack a validated, attributed admission gate or agent ledger; claims enter the trusted kernel directly.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Tactic timeouts and search depth limits exist, but no bounded best-first loop or epistemic report at every tick. Work is explicit tactic sequence, not anytime queue.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No typed inquiry roots (decide/verify/explain); proof goals are untyped obligations. No frontier of derived intents; work is manual or heuristic-driven tactic selection.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "has",
+    "note": "All three have small trusted kernels (type checking, reduction). Lean 4 and Rocq embed well; Isabelle's ML automation is less minimal but kernel is sound.",
+    "source": "model-knowledge"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No standing practice of shipping tactic/automation packs with mutation tests. Proofs and tactics verified manually, not via systematic break-and-flip.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "dependently-typed proof terms as executable specifications",
+   "extensible metaprogramming for automation (tactics, automation procedures)",
+   "deep library ecosystems for mathematics and CS formalization",
+   "interactive refinement of proof goals in real-time IDEs"
+  ],
+  "steal": [
+   "stratified-negation fixpoint for deterministic, replayable proof search; epistemic-openworld status (contested claims block decisions rather than resolving by tactic order)",
+   "attributed admission gates for untrusted proof generators (LLM agents, automated search)"
+  ],
+  "positioning": "ITPs certify individual proofs through type checking; ROFL derives conclusions from facts under epistemic uncertainty, admitting LLM agents via validated gates and replaying via stratified fixpoint."
+ },
+ "c_llm_hybrids": {
+  "system": "LLM x Formal Hybrids (Logic-LM, LINC, AlphaProof; MemGPT/Letta, Zep/Graphiti)",
+  "category": "Neuro-symbolic agent reasoning",
+  "confidence": "high",
+  "sources": {
+   "url": 6,
+   "model_knowledge": 4
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "partial",
+    "note": "Solver pipelines (Logic-LM) assign facts to agent/symbolic ledgers; memory systems (Letta) separate in-context vs archival tiers. Write authority not enforced; no forgery detection.",
+    "source": "https://arxiv.org/pdf/2305.12295"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "AlphaProof emits Lean proof state traces; Logic-LM shows solver derivations. But provenance is not kernel-level: it's library output, not systematic why-trace over mutable facts.",
+    "source": "https://arxiv.org/html/2605.22763v1"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "LLMs assign confidence scores; solvers return satisfiable/unsat. No first-class contested state blocking decisions; unknown defaults to retry or refusal.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "lacks",
+    "note": "LLMs are non-deterministic; no stratified negation. Memory systems accumulate state incrementally but not from a deterministic fact journal.",
+    "source": "model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "Solver pipelines re-invoke on each call; memory systems persist to vector DBs or graph stores but not via content-hash incremental rebuilds.",
+    "source": "https://help.getzep.com/graph-overview"
+   },
+   "A6_llm_admission_gate": {
+    "level": "partial",
+    "note": "AlphaProof gates proofs through Lean; Logic-LM gates through solver verification. Memory systems (Letta) run entirely in-LLM with memory-bound validation only.",
+    "source": "https://www.letta.com/blog/letta-v1-agent/"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Solver pipelines implement search budgets (timeout, proof attempts). Memory systems lack anytime epistemic reporting; they serve best-effort retrieval only.",
+    "source": "https://arxiv.org/html/2605.22763v1"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "Both subfamilies execute agent loops but generate no typed inquiry frontiers (verify, clarify, challenge). Work items are implicit in the LLM's loop.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Solver pipelines (Logic-LM) compose modularly but depend on external solvers. Letta is a framework; Zep is a service. None are zero-dependency kernels.",
+    "source": "https://medium.com/@piyush.jhamb4u/stateful-ai-agents-a-deep-dive-into-letta-memgpt-memory-models-a2ffc01a7ea1"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No mutation discipline. Solver correctness rests on external verifiers; memory systems have no rule pack to mutate.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Temporal reasoning: Zep/Graphiti track entity relationships and fact evolution over time, with historical provenance per edge.",
+   "Runtime learning: MemGPT/Letta self-edit memory via LLM decisions; agents adapt internal state without retraining.",
+   "Formal solver integration: Logic-LM/AlphaProof compose SMT and proof solvers as verifying oracles with structured feedback loops.",
+   "Memory hierarchy: Letta's core/archival pattern manages context windows as a resource; LLM operates on in-memory core while delegating to persistent storage.",
+   "Agent loop feedback: AlphaProof's multi-agent search over proof states, with Lean error traces fed back to guide next attempts."
+  ],
+  "steal": [
+   "Temporal knowledge graphs with time-stamped edges and entity evolution: Zep's model of tracking when facts become/cease true is orthogonal to ROFL's perspectives and would enrich temporal reasoning.",
+   "Structured solver-as-oracle pattern: Logic-LM's three-stage (formulate\u2192solve\u2192interpret) pipeline is more modular than monolithic translation.",
+   "Anytime best-first search with early stopping: AlphaProof's parallel proof attempts and stagnation detection inform anytime epistemic budgets."
+  ],
+  "positioning": "ROFL is a fixed-point derivation kernel with mechanical provenance and epistemic stratification; LLM x formal hybrids are runtime-adaptive orchestrators that pair LLM agents with formal verification or persistent memory, sacrificing determinism and provenance for flexibility and learning."
+ },
+ "c_prolog": {
+  "system": "Prolog (SWI-Prolog, Scryer Prolog)",
+  "category": "Logic Programming",
+  "confidence": "high",
+  "sources": {
+   "url": 2,
+   "model_knowledge": 8
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "Single global predicate database; modules namespace but do not track write-authority or emit forged-write audits.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Can generate proof traces via debugger/tracer; provenance is introspectable but not kernel-emitted as first-class fact alongside derivations.",
+    "source": "model-knowledge"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Prolog assumes Closed World: not provable = false. Unknown and false are identical; no contested state.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "partial",
+    "note": "SLD resolution is deterministic and fixpoint-based; tabling (SWI, Scryer) improves termination. But proof search \u2260 materialization; replay requires re-execution.",
+    "source": "https://news.ycombinator.com/item?id=28966133"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "In-memory reasoning engine; no built-in content-hash-keyed materialization to disk or incremental rebuild from fact journals.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "No concept of untrusted agent ledgers or admission gates; predates LLM-era reasoning architectures.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Supports depth/time limits and can timeout; lacks designed anytime algorithm with stagnation detection and epistemic reports at each tick.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "General-purpose logic engine; no built-in typed inquiry roots or derived work-queue based on epistemic state.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "lacks",
+    "note": "SWI-Prolog requires GMP and external libraries; Scryer (Rust) is modern but both are full systems, not zero-dep embedded kernels.",
+    "source": "https://www.freshports.org/lang/scryer-prolog/"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "Testing frameworks exist; rule-mutation-testing as a standing discipline is not built into Prolog systems.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Constraint Logic Programming (CLP(FD), CLP(B), CLP(\u2124)) for structured search over discrete domains",
+   "Tabling/memoization for guaranteed termination and avoiding infinite loops in recursive predicates",
+   "Direct logical inference: reasoning happens in the language itself, not reified as mutable facts",
+   "Proof tracing and debugging infrastructure integrated into the runtime",
+   "Large ecosystem: web servers, multithreading, RDF/Linked Data, cryptographic libraries"
+  ],
+  "steal": [
+   "Tabling: systematize memoization and termination guarantees for recursive inquiry work",
+   "Proof tracing as first-class kernel output: emit why-traces for all derived conclusions, not just on demand",
+   "Constraint integration: encode search-space reduction declaratively, not just in imperative inquiry heuristics"
+  ],
+  "positioning": "Prolog is a Turing-complete proof-search engine for symbolic reasoning; ROFL is a stratified Datalog materialization engine with epistemic layers and LLM-agent coordination\u2014complementary substrates: one for open-ended logical inference, one for bounded, audited fact derivation."
+ },
+ "c_smt": {
+  "system": "Z3 / CVC5",
+  "category": "Satisfiability Modulo Theories (SMT) Solvers",
+  "confidence": "high",
+  "sources": {
+   "url": 4,
+   "model_knowledge": 6
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "SMT solvers take formulas as atomic input; no named ledgers or write-authority model.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "CVC5/Z3 produce proofs (LFSC, natural-deduction) and unsat cores post-hoc, not as kernel-emitted derivation metadata during solving.",
+    "source": "https://www.researchgate.net/publication/359546891_cvc5_A_Versatile_and_Industrial-Strength_SMT_Solver"
+   },
+   "A3_epistemic_openworld": {
+    "level": "partial",
+    "note": "Return SAT/UNSAT/UNKNOWN; unknown is recognized but driven by solver capability, not evidence-derived claim status.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "partial",
+    "note": "Deterministic (same formula\u2192same result), but no journal-based replay; state is internal, ephemeral.",
+    "source": "https://github.com/Z3Prover/z3/discussions/5046"
+   },
+   "A5_incremental_materialization": {
+    "level": "lacks",
+    "note": "Incremental solving via push/pop but no content-hash-keyed file materialization; state is in-memory.",
+    "source": "https://link.springer.com/chapter/10.1007/978-3-031-38499-8_3"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "SMT solvers are pure constraint engines; no LLM integration, untrusted writer gates, or agent admission logic.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "partial",
+    "note": "Timeouts available but not anytime budgets with per-tick epistemic reporting; run-to-completion or timeout.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "Single inquiry type: satisfiability. No work queue derived from epistemic state or typed intent frontier.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Embeddable with language bindings (Python, C++, etc.) but carries external deps (theory solvers, algorithms); not zero-dependency.",
+    "source": "https://docs.rs/z3/latest/z3/struct.Solver.html"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "Monolithic algorithms, not rule packs; no mutation testing discipline for reasoning rules.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Decidable satisfiability checking over rich theories (linear/nonlinear arithmetic, arrays, datatypes)",
+   "Proof certificates and UNSAT core extraction for diagnosis and verification",
+   "Theory-specific decision procedures (algebraic coverings, cylindrical decomposition)",
+   "Industrial automation for constraint-heavy verification and synthesis"
+  ],
+  "steal": [
+   "Proof-based reasoning: emit derivation certificates alongside conclusions for trust and diagnosis.",
+   "Theory-specific decision procedures: plug specialized solvers for high-leverage domains.",
+   "Incremental solving architecture: support efficient constraint set modification and backtracking."
+  ],
+  "positioning": "SMT solvers are single-purpose constraint oracles with no epistemic model; ROFL is a multi-perspective reasoning engine where claims are first-class epistemic entities derived from evidence."
+ },
+ "c_souffle": {
+  "system": "Souffl\u00e9 & Doop",
+  "category": "Datalog for static program analysis",
+  "confidence": "high",
+  "sources": {
+   "url": 3,
+   "model_knowledge": 7
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "lacks",
+    "note": "No named ledgers or write-authority enforcement. Relations hold facts but no perspective/provenance ledger model.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Integrated provenance debugging system for backward tracing from conclusions. Not systematic kernel-emitted derivation tracking.",
+    "source": "https://arxiv.org/pdf/1907.05045"
+   },
+   "A3_epistemic_openworld": {
+    "level": "lacks",
+    "note": "Closed-world assumption: derived facts are true, ungrounded facts false. No contested/unknown states or open-world reasoning.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "has",
+    "note": "Stratified-negation Datalog with deterministic fixpoint semantics. Same facts + rules yields identical conclusions, fully repeatable.",
+    "source": "https://github.com/plast-lab/doop"
+   },
+   "A5_incremental_materialization": {
+    "level": "partial",
+    "note": "Elastic incremental evaluation for evolving inputs. Efficient delta-based re-evaluation but no evidence of content-hash file-keyed re-materialization.",
+    "source": "https://arxiv.org/pdf/2408.14017"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "Pure Datalog engine. No concept of untrusted writers, agent ledgers, or validated admission gates for external assertions.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Runs to completion fixpoint. No bounded best-first work loops, budgets, stagnation detection, or anytime epistemic reports.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "No typed inquiry roots or derived work queues. Pure bottom-up evaluation; no epistemic-state-driven frontier generation.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Compiles Datalog to high-performance C++ executables. Not a zero-dependency embedded runtime; requires compilation step.",
+    "source": "model-knowledge"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "No evidence of mutation-test discipline on rule packs. Discipline appears unique to ROFL's epistemic methodology.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Industrial-scale synthesis: compiles Datalog to optimized C++ code",
+   "Elastic incremental evaluation: efficient re-analysis for evolving inputs",
+   "Integrated provenance debugging: backward tracing for diagnosis",
+   "Mature ecosystem: real-world static analyzers (Doop, DDISASM, smart contract analysis)"
+  ],
+  "steal": [
+   "Synthesis/compilation: code generation for performance vs. interpretation",
+   "Elastic incremental evaluation: selective delta-based re-computation",
+   "Provenance debugging strategies: integration into evaluation engine"
+  ],
+  "positioning": "ROFL is an epistemic substrate for LLM-guided reasoning with agent admission; Souffl\u00e9 is a high-performance Datalog compiler for static analysis with industrial polish but no agent integration."
+ },
+ "c_tms": {
+  "system": "Truth Maintenance Systems (JTMS, ATMS, AGM)",
+  "category": "Classical dependency-tracking belief engines",
+  "confidence": "high",
+  "sources": {
+   "url": 0,
+   "model_knowledge": 10
+  },
+  "axes": {
+   "A1_perspectives": {
+    "level": "partial",
+    "note": "Justifications link statements with implicit provenance (who asserted), but no formal ledger-based write-authority enforcement or impostor-forged-fact detection.",
+    "source": "model-knowledge"
+   },
+   "A2_provenance": {
+    "level": "partial",
+    "note": "Justification networks and ATMS labels emit why-traces; the kernel tracks inference chains. But provenance is justification-based, not kernel-mechanical over a mutable fact store.",
+    "source": "model-knowledge"
+   },
+   "A3_epistemic_openworld": {
+    "level": "has",
+    "note": "Supported/refuted/undecided distinction is foundational. Unknown \u2260 false. Contested (conflicting justifications) blocks decisions. First-class epistemic state derivation from evidence.",
+    "source": "model-knowledge"
+   },
+   "A4_fixpoint_replay": {
+    "level": "lacks",
+    "note": "Incremental update is central, but no stratified-negation Datalog fixpoint with deterministic replay from fact journal. State accumulates; re-derivation requires reconstruction.",
+    "source": "model-knowledge"
+   },
+   "A5_incremental_materialization": {
+    "level": "has",
+    "note": "JTMS and ATMS designed for incremental belief update with retraction. Changes propagate through justification network. But no content-hash file-keying or zero-cost re-materialization.",
+    "source": "model-knowledge"
+   },
+   "A6_llm_admission_gate": {
+    "level": "lacks",
+    "note": "Pre-LLM systems. No concept of untrusted-writer admission gates, attributed assertions, or polarity-blocking claims requiring confirmation. All justifications are trusted.",
+    "source": "model-knowledge"
+   },
+   "A7_anytime_budgets": {
+    "level": "lacks",
+    "note": "Work loop is exhaustive until fixpoint; no bounded best-first budgets, stagnation detection, or anytime epistemic reports at every tick.",
+    "source": "model-knowledge"
+   },
+   "A8_typed_inquiry": {
+    "level": "lacks",
+    "note": "External problem solver drives queries via justification updates; TMS itself has no typed inquiry roots (decide/verify/explain/explore), no frontier of typed intents, no derived work queue.",
+    "source": "model-knowledge"
+   },
+   "A9_embeddable_kernel": {
+    "level": "partial",
+    "note": "Original JTMS implementations were small and self-contained; some modern reconstructions are lightweight. But no zero-dependency standard embedded kernel comparable to ROFL.",
+    "source": "model-knowledge"
+   },
+   "A10_rule_mutation_testing": {
+    "level": "lacks",
+    "note": "Pre-dates mutation testing discipline. No standing green variant broken-and-checked methodology. Rule sets shipped without systematic mutation coverage.",
+    "source": "model-knowledge"
+   }
+  },
+  "adjacent": [
+   "Multiple consistent environments/scenarios tracked simultaneously (ATMS labels and nogood sets)",
+   "Formal epistemic axioms for rational belief change (AGM postulates: success, inclusion, vacuity, consistency, extensionality)",
+   "Nogood-based conflict explanation and contradiction detection",
+   "Default logic and exception handling integrated into justification structure"
+  ],
+  "steal": [
+   "Nogood-based explanations: when a belief is contested, emit explicit reason-why-conflict (what justifications contradict)",
+   "Environment/scenario labels (ATMS-style): tag derived facts by the assumption set that entails them; support multi-scenario replay",
+   "Rational postulates for belief change: formalize and test belief operators (revision, contraction, expansion) against AGM axioms"
+  ],
+  "positioning": "ROFL is a modern Datalog engine with LLM admission gates and anytime budgets; TMS are classical dependency trackers from 1979\u20131986 that excel at epistemic open-world reasoning but lack untrusted-writer validation and typed inquiry."
+ }
+}

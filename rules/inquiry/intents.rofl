@@ -1,0 +1,24 @@
+-- rules/inquiry/intents.rofl — candidate intent generation.
+-- Intent identity is the tuple (Kind, Inquiry, Target): no fresh ids in
+-- logic; the runtime assigns execution ids when scheduling (roadmap §4.6).
+-- A resolved obligation generates nothing (roadmap Phase 1 test list).
+
+-- an unknown, observable, unambiguous obligation wants verification;
+-- ambiguity is a prerequisite gap: clarify precedes verify by design.
+candidate_intent(verify, I, C)       :- open_obligation(I, C),
+                                        observable(C),
+                                        not ambiguous(C).
+
+candidate_intent(clarify, I, C)      :- obligation(I, C), ambiguous(C),
+                                        not resolved_obligation(I, C).
+
+candidate_intent(discriminate, I, C) :- contested_obligation(I, C).
+
+candidate_intent(escalate, I, C)     :- obligation(I, C),
+                                        requires_authority(C),
+                                        not resolved_obligation(I, C).
+
+-- an agent-attached polarity on a BLOCKING claim awaits confirmation by a
+-- human or tool (decision b); the confirm intent keeps it visible.
+candidate_intent(confirm, I, C)      :- blocks_on(I, C),
+                                        pending_polarity(C, _).

@@ -1,0 +1,30 @@
+-- rules/inquiry/terminology.rofl — controlled terminology (roadmap §13).
+-- Reversible normalization: mentions map to canonical terms; the original
+-- facts are never rewritten, so retracting a mapping restores the world.
+--
+-- EDB:
+--   alias_of(Alias, Canonical)        -- same meaning, different name
+--   maps_to(Term, Canonical)          -- direct normalization decision
+--   broader_than(A, B) / narrower_than(A, B) / overlaps_with(A, B)
+--                                     -- related but NOT mergeable: no rule
+--                                     -- below touches them, by design
+--   semantic_candidate(A, B, Score)   -- embedding scanner output: a HINT,
+--                                     -- never an equivalence (roadmap §20)
+--
+-- The canonical term must itself be declared `claim(C)` in the frame;
+-- aliases need not be.
+
+maps_to(A, C)      :- alias_of(A, C).
+
+canonical(T, C)    :- maps_to(T, C).
+canonical(C, C)    :- claim(C), not maps_to(C, _).
+
+-- normalized obligations: frames may require/block on aliases;
+-- everything downstream sees only canonical targets.
+requires_on(I, C)  :- requires(I, T), canonical(T, C).
+blocks_on(I, C)    :- blocking(I, T), canonical(T, C).
+
+-- an embedding hint produces a reviewable proposal, nothing more.
+mapping_proposal(A, B) :- semantic_candidate(A, B, _),
+                          A != B,
+                          not maps_to(A, _).

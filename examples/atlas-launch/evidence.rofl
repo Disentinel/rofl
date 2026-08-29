@@ -1,0 +1,34 @@
+-- examples/atlas-launch/evidence.rofl — the observation journal (synthetic).
+-- Load with who=runtime (authority over [obs] is granted in
+-- rules/inquiry/ontology.rofl); nobody else can write here unforged.
+--
+-- BY DESIGN the journal carries ids and polarity only, no artifact content:
+-- a discriminate intent on this fixture cannot localize the
+-- delivery_rate_ok conflict and its honest outcome is no_progress with a
+-- clarify re-route. The fixture exercises the honest-dead-end paths, not
+-- only the happy ones (finding f_discriminate_needs_evidence_content, from
+-- the first cold-agent run).
+--
+-- Expected epistemic outcome:
+--   requirements_complete / monitoring_ready / rollback_ready  supported
+--   billing_e2e_verified                                       refuted
+--   delivery_rate_ok                                           contested
+--   aggregate_capacity_verified                                unknown
+
+supports[obs](spec_review_12, requirements_complete).
+evidence_kind[obs](spec_review_12, human_assertion).
+
+supports[obs](dashboard_check_8, monitoring_ready).
+evidence_kind[obs](dashboard_check_8, measured).
+
+supports[obs](rollback_drill_9, rollback_ready).
+evidence_kind[obs](rollback_drill_9, measured).
+
+refutes[obs](chat_note_17, billing_e2e_verified).
+evidence_kind[obs](chat_note_17, human_assertion).
+
+supports[obs](pipeline_metrics_3, delivery_rate_ok).
+evidence_kind[obs](pipeline_metrics_3, measured).
+
+refutes[obs](client_ticket_5, delivery_rate_ok).
+evidence_kind[obs](client_ticket_5, human_assertion).

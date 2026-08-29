@@ -30,5 +30,7 @@ jobs:
           bun-version: latest
       - name: kernel grep test (vocabulary check)
         run: bun scripts/kernel_grep.ts
+      - name: install dependencies (the scanner needs @babel/parser)
+        run: bun install
       - name: tests (bun test)
         run: bun test --timeout 60000

@@ -1,0 +1,19 @@
+{
+  "name": "guided-formal-reasoning",
+  "description": "Evidence-gated reasoning for coding agents: frame a hard question as proof obligations over a zero-dependency Datalog engine, gather evidence through typed intents, and return an epistemic report (supported / refuted / contested / unknown) with why-traces down to evidence. Experimental: engine and method carry first measurements; see docs/dogfood/.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Disentinel"
+  },
+  "homepage": "https://github.com/Disentinel/rofl",
+  "repository": "https://github.com/Disentinel/rofl",
+  "license": "MIT",
+  "keywords": [
+    "reasoning",
+    "formal-methods",
+    "datalog",
+    "epistemics",
+    "decision-support",
+    "agent-memory"
+  ]
+}

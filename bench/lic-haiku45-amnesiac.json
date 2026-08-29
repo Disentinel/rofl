@@ -1,0 +1,152 @@
+{
+ "arm": "amnesiac+naive-ledger (fresh one-shot haiku per turn)",
+ "date": "2026-08-28",
+ "conversations": {
+  "144": {
+   "gold": "20",
+   "shards": 12,
+   "solved_at": 11,
+   "final_correct": true,
+   "wrong_attempts": 0,
+   "abstention_answer_lines": 6,
+   "attempts": [
+    {
+     "turn": 11,
+     "extracted": "20",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 11,
+    "wrong_attempts": 0
+   }
+  },
+  "968": {
+   "gold": "227",
+   "shards": 9,
+   "solved_at": 9,
+   "final_correct": true,
+   "wrong_attempts": 1,
+   "abstention_answer_lines": 7,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "229",
+     "correct": false
+    },
+    {
+     "turn": 9,
+     "extracted": "227",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 9,
+    "wrong_attempts": 1
+   }
+  },
+  "158": {
+   "gold": "34",
+   "shards": 8,
+   "solved_at": 8,
+   "final_correct": true,
+   "wrong_attempts": 2,
+   "abstention_answer_lines": 3,
+   "attempts": [
+    {
+     "turn": 4,
+     "extracted": "6",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "14",
+     "correct": false
+    },
+    {
+     "turn": 8,
+     "extracted": "34",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 8,
+    "wrong_attempts": 2
+   }
+  },
+  "346": {
+   "gold": "9",
+   "shards": 8,
+   "solved_at": 6,
+   "final_correct": true,
+   "wrong_attempts": 2,
+   "abstention_answer_lines": 1,
+   "attempts": [
+    {
+     "turn": 4,
+     "extracted": "32",
+     "correct": false
+    },
+    {
+     "turn": 5,
+     "extracted": "16",
+     "correct": false
+    },
+    {
+     "turn": 6,
+     "extracted": "9",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 6,
+    "wrong_attempts": 3
+   }
+  },
+  "1190": {
+   "gold": "19",
+   "shards": 8,
+   "solved_at": 8,
+   "final_correct": true,
+   "wrong_attempts": 0,
+   "abstention_answer_lines": 3,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "19",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 8,
+    "wrong_attempts": 0
+   }
+  },
+  "976": {
+   "gold": "540",
+   "shards": 8,
+   "solved_at": 8,
+   "final_correct": true,
+   "wrong_attempts": 0,
+   "abstention_answer_lines": 5,
+   "attempts": [
+    {
+     "turn": 8,
+     "extracted": "540",
+     "correct": true
+    }
+   ],
+   "persistent_ledger": {
+    "solved_at": 8,
+    "wrong_attempts": 0
+   }
+  }
+ },
+ "summary": {
+  "n": 6,
+  "final_correct": 6,
+  "wrong_attempts": 5,
+  "persistent_ledger_wrong_attempts": 6,
+  "solve_turn_matches_persistent": 6
+ }
+}

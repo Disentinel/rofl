@@ -1,0 +1,14 @@
+{
+  "name": "rofl",
+  "description": "ROFL: relation-oriented fixpoint language and the guided-formal-reasoning skill built on it.",
+  "owner": {
+    "name": "Disentinel"
+  },
+  "plugins": [
+    {
+      "name": "guided-formal-reasoning",
+      "source": "./",
+      "description": "Evidence-gated reasoning for coding agents: proof obligations, typed inquiry intents, and epistemic reports over a zero-dependency Datalog engine."
+    }
+  ]
+}

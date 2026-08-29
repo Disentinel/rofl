@@ -1,0 +1,32 @@
+-- rules/inquiry/obligations.rofl — proof obligations and their status,
+-- derived in the shared working book (reads [epistemic] via imports).
+
+-- obligations are stated over canonical targets: frames may name aliases
+-- (requires_on/blocks_on normalize via rules/inquiry/terminology.rofl).
+obligation(I, C)           :- inquiry(I, _), requires_on(I, C).
+obligation(I, C)           :- inquiry(I, _), blocks_on(I, C).
+
+open_obligation(I, C)      :- obligation(I, C), unknown[epistemic](C).
+contested_obligation(I, C) :- obligation(I, C), contested[epistemic](C).
+resolved_obligation(I, C)  :- obligation(I, C), supported[epistemic](C),
+                              not refuted[epistemic](C).
+refuted_obligation(I, C)   :- obligation(I, C), refuted[epistemic](C),
+                              not contested[epistemic](C).
+
+-- Blocking verdicts run on the CONFIRMED grade (decision b): an
+-- agent-attached polarity moves a blocking claim only after confirmation.
+violated_blocking(I, C)    :- inquiry(I, _), blocks_on(I, C),
+                              refuted_confirmed[epistemic](C).
+
+-- go_blocked: what stands between this inquiry and an unconditional GO.
+-- Two ways to block: a blocking claim without confirmed support, or a
+-- contested one (roadmap §20: a contested blocking claim prevents GO;
+-- contested is judged on the plain grade — conservative on purpose).
+go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
+                              not supported_confirmed[epistemic](C).
+go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
+                              contested[epistemic](C).
+
+-- preliminary verdicts; a full GO is a domain certificate (Phase 3),
+-- derived per decision pack, never by a generic kernel rule.
+recommendation(I, no_go)   :- violated_blocking(I, _).

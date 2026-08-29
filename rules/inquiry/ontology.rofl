@@ -1,0 +1,31 @@
+-- rules/inquiry/ontology.rofl — the inquiry kernel's EDB contract and ledgers.
+-- Perspective discipline: docs/choosing-perspectives.md. Kind taxonomy:
+-- docs/inquiry-kinds.md. This file holds facts only; rules live in
+-- epistemic.rofl / obligations.rofl / intents.rofl.
+--
+-- EDB asserted by the framer (default [main], the shared working book):
+--   inquiry(Id, Kind)            -- Kind: decide|verify|explain|explore|design|monitor
+--   requires(Id, Claim)          -- proof obligation of the inquiry
+--   blocking(Id, Claim)          -- blocking obligation (implies requires)
+--   claim(C)                     -- the claim exists in the frame
+--   observable(C)                -- some experiment/scan could verify it
+--   ambiguous(C)                 -- the claim's meaning is not settled
+--   requires_authority(C)        -- only a human authority can settle it
+--
+-- EDB asserted into the observation journal [obs] by the runtime only:
+--   supports[obs](Evidence, Claim)
+--   refutes[obs](Evidence, Claim)
+--   evidence_kind[obs](Evidence, Kind)   -- measured|human_assertion|agent_claim
+--
+-- Ledgers:
+--   [obs]        source ledger, sole writer: runtime (evidence journal)
+--   [epistemic]  derived ledger, sole writers: the rules in epistemic.rofl
+--   [main]       shared working book: frame EDB + obligation/intent derivations
+
+-- only the runtime may write the observation journal; an agent asserting
+-- into [obs] surfaces as forged[audit] with no further enforcement code.
+authority(obs, runtime).
+
+-- the working book reads the epistemic ledger wholesale (explicit knowledge
+-- flow; rules writing INTO [epistemic] auto-bridge via their explicit heads).
+imports(main, epistemic).

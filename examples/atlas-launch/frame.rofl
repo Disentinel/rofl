@@ -1,0 +1,34 @@
+-- examples/atlas-launch/frame.rofl — the framing of one launch-readiness
+-- decision. Fully SYNTHETIC: the product (Atlas), the people, and every
+-- piece of evidence are fictional. Phase 0 fixture (roadmap §17).
+
+inquiry(atlas_launch, decide).
+
+claim(requirements_complete).
+requires(atlas_launch, requirements_complete).
+
+claim(monitoring_ready).
+requires(atlas_launch, monitoring_ready).
+
+claim(rollback_ready).
+requires(atlas_launch, rollback_ready).
+
+claim(aggregate_capacity_verified).
+blocking(atlas_launch, aggregate_capacity_verified).
+observable(aggregate_capacity_verified).
+
+claim(billing_e2e_verified).
+blocking(atlas_launch, billing_e2e_verified).
+observable(billing_e2e_verified).
+
+claim(delivery_rate_ok).
+requires(atlas_launch, delivery_rate_ok).
+observable(delivery_rate_ok).
+
+claim(legacy_import_required).
+requires(atlas_launch, legacy_import_required).
+ambiguous(legacy_import_required).
+
+claim(capacity_risk_accepted).
+requires(atlas_launch, capacity_risk_accepted).
+requires_authority(capacity_risk_accepted).

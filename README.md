@@ -7,8 +7,9 @@ are part of the semantics.
 
 The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
-graph as data (`boot.rofl`). Zero runtime dependencies. TypeScript, runs under
-Bun or Node ≥ 22.
+graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
+optional code scanner under `scanners/` is the only component with one,
+`@babel/parser`). TypeScript, runs under Bun or Node ≥ 22.
 
 ## How to run
 
@@ -32,6 +33,67 @@ REPL commands: `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`,
 `load FILE`, `who NAME`, `retract F`, `tick`, `run [N]`, `save FILE`,
 `restore FILE`, `facts [REL]`, `quit`; any other line ending in `.` is
 asserted as program text.
+
+## Code scanner
+
+`scanners/` turns a JS/TS source tree into materialized ROFL facts,
+incrementally: each source file becomes one `.rofl` fact file keyed by content
+hash (unchanged files are never re-parsed; deleted files lose their fact
+file; `manifest.json` tracks what is current). Not part of the kernel — it
+lives outside `src/` and the kernel grep test on purpose.
+
+```sh
+npm run scan -- src --out facts/generated            # (re)materialize
+npm run scan -- src --out facts/generated \
+  --rules deps.rofl \
+  --query 'dependency[code]("repl.ts", M)' \
+  --why 'dependency[code]("repl.ts", "node:fs")'     # load boot + facts + rules, then ask
+```
+
+Fact vocabulary (v0), all in the `[code]` perspective: `src_file(Path, Hash12)`,
+`src_func(Path, Name, Line)`, `src_class(Path, Name, Line)`,
+`src_method(Path, Class, Name, Line)`, `src_import(Path, Source)`,
+`src_export(Path, Name)`, `src_call(Path, Caller, Callee)`,
+`src_parse_error(Path, Message)`.
+
+Provenance rides on the kernel's own machinery: the materializer emits a
+preamble granting `authority(code, scanner)`, fact files are loaded with
+`who=scanner`, and anyone else asserting into `[code]` surfaces as
+`forged[audit]` — no scanner-specific enforcement code.
+
+## Inquiry layer
+
+`rules/inquiry/` is the Phase 1 guided-formal-reasoning kernel
+(`docs/guided-formal-reasoning-roadmap.md`, `docs/inquiry-kinds.md`,
+`docs/choosing-perspectives.md`): a typed inquiry root, epistemic states as
+a derived `[epistemic]` ledger over an `[obs]` evidence journal
+(authority: runtime only), proof obligations, and candidate-intent
+generation. `runtime/report.ts` renders the anytime epistemic report:
+
+```sh
+npm run report -- examples/atlas-launch/frame.rofl \
+  examples/atlas-launch/evidence.rofl --who-obs runtime \
+  --pack production-readiness examples/atlas-launch/context.rofl
+```
+
+The rest of the loop: `runtime/admission.ts` validates agent results
+(`schemas/intent-result.json` — agents cannot mint `measured` evidence, and
+unattributed admission is refused), `runtime/scheduler.ts` picks a top-K
+batch (blocking claims first), `runtime/tick.ts` runs the bounded
+derive → execute → admit → recompute loop with stagnation and budget
+checkpoints. `rules/decisions/production-readiness.rofl` is the first
+decision pack (GO / CONDITIONAL_GO / coverage gaps, authority-gated gap
+acceptance); `rules/policies/` holds evidence freshness and authority.
+`skills/guided-formal-reasoning/` is the agent-facing skill seed. Findings
+discovered while working live in `facts/findings.rofl` and replay at
+session start until settled (`rules/findings.rofl`, CLAUDE.md).
+
+`npm run build:skill` assembles the self-contained marketplace bundle in
+`dist/guided-formal-reasoning/` — instruction files at the root, the engine
+(kernel, rules, runtime, schemas, the synthetic demo fixture) under
+`engine/`, zero dependencies, runnable from any directory on bare
+Node >= 22.6. The build smoke-tests the bundle by running a real pair
+session inside it.
 
 ## Grammar
 

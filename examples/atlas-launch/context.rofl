@@ -1,0 +1,19 @@
+-- examples/atlas-launch/context.rofl — pack activation, authority, versions
+-- (synthetic). Load together with frame.rofl and evidence.rofl when running
+-- the production-readiness pack:
+--   npm run report -- --pack production-readiness \
+--     examples/atlas-launch/{frame,evidence,context}.rofl --who-obs runtime
+
+pack(atlas_launch, production_readiness).
+decision_authority(atlas_launch, dana).
+
+-- concern mapping: five of nine concerns covered by the frame's claims;
+-- the pack surfaces the other four as coverage gaps.
+concern_claim(atlas_launch, requirements, requirements_complete).
+concern_claim(atlas_launch, monitoring, monitoring_ready).
+concern_claim(atlas_launch, rollback, rollback_ready).
+concern_claim(atlas_launch, load, aggregate_capacity_verified).
+concern_claim(atlas_launch, billing, billing_e2e_verified).
+
+-- deployment context for the freshness policy
+current_version("build_104").

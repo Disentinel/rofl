@@ -1,0 +1,16 @@
+-- seed: the landscape inquiry. One observable claim per target system;
+-- profiling it = supporting evidence; the frontier generates the work.
+inquiry(fr_landscape, explore).
+
+claim(c_souffle).      requires(fr_landscape, c_souffle).      observable(c_souffle).
+claim(c_codeql).       requires(fr_landscape, c_codeql).       observable(c_codeql).
+claim(c_glean).        requires(fr_landscape, c_glean).        observable(c_glean).
+claim(c_clingo).       requires(fr_landscape, c_clingo).       observable(c_clingo).
+claim(c_prolog).       requires(fr_landscape, c_prolog).       observable(c_prolog).
+claim(c_ddlog).        requires(fr_landscape, c_ddlog).        observable(c_ddlog).
+claim(c_lean_itp).     requires(fr_landscape, c_lean_itp).     observable(c_lean_itp).
+claim(c_smt).          requires(fr_landscape, c_smt).          observable(c_smt).
+claim(c_tms).          requires(fr_landscape, c_tms).          observable(c_tms).
+claim(c_argumentation).requires(fr_landscape, c_argumentation).observable(c_argumentation).
+claim(c_kr_owl).       requires(fr_landscape, c_kr_owl).       observable(c_kr_owl).
+claim(c_llm_hybrids).  requires(fr_landscape, c_llm_hybrids).  observable(c_llm_hybrids).

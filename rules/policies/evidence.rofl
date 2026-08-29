@@ -1,0 +1,17 @@
+-- rules/policies/evidence.rofl — evidence quality policy: staleness.
+-- Evidence pinned to a version stops supporting anything once the current
+-- version moves on (roadmap §20: evidence must not inherit freshness
+-- implicitly; Phase 3 test: stale tests do not support the current
+-- deployment).
+--
+-- EDB:
+--   evidence_version[obs](E, Version)   -- what the evidence was taken on
+--   current_version(Version)            -- what is deployed now
+--
+-- Without this file loaded (or without version facts) nothing is ever
+-- stale — epistemic.rofl's `not stale_evidence` premise fails finitely,
+-- which the kernel handles (test/kernel-edge.test.ts).
+
+stale_evidence[epistemic](E) :- evidence_version[obs](E, V),
+                                current_version(V2),
+                                V != V2.

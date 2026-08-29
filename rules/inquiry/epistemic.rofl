@@ -1,0 +1,55 @@
+-- rules/inquiry/epistemic.rofl — epistemic states as a derived ledger.
+-- [epistemic] is the book of conclusions of this discipline; these four
+-- rules are its only writers (docs/choosing-perspectives.md).
+--
+-- Invariants carried here (roadmap §20):
+--   Absence of evidence must not derive falsehood: `refuted` needs an
+--   explicit refutes[obs] entry; no evidence at all yields `unknown`.
+--   `contested` keeps both sides visible instead of collapsing them.
+
+-- stale evidence supports and refutes nothing; staleness is defined by
+-- rules/policies/evidence.rofl (undefined => nothing is ever stale).
+-- Evidence may target an alias; it counts for the canonical claim
+-- (rules/inquiry/terminology.rofl; identity when no mapping exists).
+supported[epistemic](C) :- claim(C), supports[obs](E, T), canonical(T, C),
+                           not stale_evidence[epistemic](E).
+refuted[epistemic](C)   :- claim(C), refutes[obs](E, T), canonical(T, C),
+                           not stale_evidence[epistemic](E).
+
+contested[epistemic](C) :- supported[epistemic](C), refuted[epistemic](C).
+
+unknown[epistemic](C)   :- claim(C),
+                           not supported[epistemic](C),
+                           not refuted[epistemic](C).
+
+-- Confirmation grades (decision b, 2026-08-28): a polarity link attached by
+-- an AGENT (visible as agent_basis) reaches the confirmed grade only after
+-- an explicit confirmed_polarity(E, C) fact — asserted by a human or a
+-- runtime tool run (authority-gating of the confirmer can follow the
+-- accepted_gap pattern later). Links the runtime entered natively (no
+-- agent_basis anywhere) are confirmed by construction. Blocking verdicts
+-- (obligations.rofl) use ONLY the confirmed grade; non-blocking obligations
+-- live on the plain grade — the asymmetry is the point.
+
+agent_attached[main](E, C)        :- agent_basis[P](T, E), canonical(T, C).
+
+pending_polarity(C, E)            :- agent_attached(E, C),
+                                     not confirmed_polarity(E, C).
+
+supported_confirmed[epistemic](C) :- claim(C), supports[obs](E, T),
+                                     canonical(T, C),
+                                     not stale_evidence[epistemic](E),
+                                     not agent_attached(E, C).
+supported_confirmed[epistemic](C) :- claim(C), supports[obs](E, T),
+                                     canonical(T, C),
+                                     not stale_evidence[epistemic](E),
+                                     confirmed_polarity(E, C).
+
+refuted_confirmed[epistemic](C)   :- claim(C), refutes[obs](E, T),
+                                     canonical(T, C),
+                                     not stale_evidence[epistemic](E),
+                                     not agent_attached(E, C).
+refuted_confirmed[epistemic](C)   :- claim(C), refutes[obs](E, T),
+                                     canonical(T, C),
+                                     not stale_evidence[epistemic](E),
+                                     confirmed_polarity(E, C).
