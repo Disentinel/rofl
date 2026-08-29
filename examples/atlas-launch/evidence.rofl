@@ -2,6 +2,13 @@
 -- Load with who=runtime (authority over [obs] is granted in
 -- rules/inquiry/ontology.rofl); nobody else can write here unforged.
 --
+-- BY DESIGN the journal carries ids and polarity only, no artifact content:
+-- a discriminate intent on this fixture cannot localize the
+-- delivery_rate_ok conflict and its honest outcome is no_progress with a
+-- clarify re-route. The fixture exercises the honest-dead-end paths, not
+-- only the happy ones (finding f_discriminate_needs_evidence_content, from
+-- the first cold-agent run).
+--
 -- Expected epistemic outcome:
 --   requirements_complete / monitoring_ready / rollback_ready  supported
 --   billing_e2e_verified                                       refuted

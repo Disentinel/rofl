@@ -8,6 +8,20 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_blocking_not_waivable_by_authority, insight).
+recorded(f_blocking_not_waivable_by_authority, "2026-08-29").
+demands(f_blocking_not_waivable_by_authority, doc).
+finding_note(f_blocking_not_waivable_by_authority,
+  "recorded by the COLD-AGENT run (first agent to use the skill unaided): accepting a risk claim via authority does not clear a BLOCKING claim - blocking requires confirmed evidence, never a waiver; the agent verified this is the engine's actual rule behavior and flagged that escalate.md should say so, so an authority answers with open eyes").
+addressed_by(f_blocking_not_waivable_by_authority, "skills/guided-formal-reasoning/escalate.md").
+
+finding(f_discriminate_needs_evidence_content, question).
+recorded(f_discriminate_needs_evidence_content, "2026-08-29").
+demands(f_discriminate_needs_evidence_content, decision).
+finding_note(f_discriminate_needs_evidence_content,
+  "recorded by the cold-agent run: the Atlas fixture's evidence journal carries ids and polarity only, so discriminate cannot localize the delivery_rate_ok conflict from the fixture alone; DECIDED: this is by design - the fixture exercises the honest-dead-end paths (no_progress + clarify re-route), now documented in the fixture header").
+addressed_by(f_discriminate_needs_evidence_content, "examples/atlas-launch/evidence.rofl").
+
 finding(f_swarm_one_wave_quiescence, insight).
 recorded(f_swarm_one_wave_quiescence, "2026-08-28").
 finding_note(f_swarm_one_wave_quiescence,

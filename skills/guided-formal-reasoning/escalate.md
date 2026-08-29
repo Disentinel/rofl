@@ -21,6 +21,11 @@ deliver a complete, minimal escalation, not to answer it yourself.
   does not count (`rules/policies/authority.rofl` will ignore it anyway).
 - Never bundle several escalations into one message to "save a roundtrip";
   each gets its own addressable question.
+- Never let the authority believe their acceptance clears a BLOCKING claim:
+  accepting a risk settles the acceptance claim only — blocking claims
+  require confirmed evidence and no authority can waive them
+  (`rules/inquiry/obligations.rofl`). Say this in the escalation so the
+  answer is given with open eyes.
 
 ## Stop when
 
