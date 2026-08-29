@@ -1,0 +1,6 @@
+-- reports service ships as an opaque Rust binary; you cannot parse it.
+-- Its wiring contract is DECLARED beside the binary as facts. A second,
+-- independent evidence path for the same call comes from the k8s args
+-- (--orders-url) — the two corroborate each other.
+svc_listen("reports", "9000").
+call_url("reports", "api.internal", "/orders").

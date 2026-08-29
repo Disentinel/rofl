@@ -1,0 +1,51 @@
+-- examples/wiring/wiring.rofl — cross-layer wiring invariants.
+-- Facts come from scanners/infra.ts (DNS zone, nginx config, k8s
+-- manifests, Node/Go interface surfaces) and from declared contracts of
+-- opaque binaries. Every break relation names one class of wiring rupture:
+-- derived, explainable via `why`, and pinned by mutation in
+-- test/wiring.test.ts.
+
+-- a host resolves if the DNS zone leads it to an A record
+resolved_host(H) :- dns_a(H, IP).
+resolved_host(H) :- dns_cname(H, T), resolved_host(T).
+
+-- a call declared through an env var resolves against the deployment's env:
+-- code says "process.env.BILLING_URL + '/charge'", the manifest says what
+-- BILLING_URL is — neither layer alone knows the call target
+call_url(S, H, Seg) :- svc_call_env(S, V, Sub), k8s_env_url(S, V, H, Seg).
+
+-- an upstream is alive if it lands on a k8s service whose target port is
+-- actually served by a deployment carrying the selector label
+upstream_ok(U) :- nginx_upstream(U, S, P), k8s_service(S, P, TP, App),
+                  k8s_deployment(D, App, TP).
+
+route_ok(Seg) :- nginx_route(Seg, U), upstream_ok(U).
+
+call_ok(S, H, Seg) :- call_url(S, H, Seg), resolved_host(H),
+                      nginx_server(H), route_ok(Seg).
+
+-- ------------------------------------------------------------- breaks ---
+
+broken_call(S, H, Seg) :- call_url(S, H, Seg), not call_ok(S, H, Seg).
+
+unresolved_host(H) :- call_url(S, H, Seg), not resolved_host(H).
+
+routed(Seg) :- nginx_route(Seg, U).
+unrouted_call(S, Seg) :- call_url(S, H, Seg), nginx_server(H),
+                         not routed(Seg).
+
+dead_route(Seg) :- nginx_route(Seg, U), not upstream_ok(U).
+
+port_mismatch(S) :- k8s_service(S, P, TP, App), k8s_deployment(D, App, CP),
+                    TP != CP.
+
+has_deployment(App) :- k8s_deployment(D, App, CP).
+missing_deployment(S) :- k8s_service(S, P, TP, App), not has_deployment(App).
+
+-- ------------------------------------- wire contracts (the typecheck) ---
+
+type_break(E, F) :- consumer_field(C, E, F, T), producer_field(Pr, E, F, T2),
+                    T != T2.
+
+produced(E, F) :- producer_field(Pr, E, F, T).
+missing_field(E, F) :- consumer_field(C, E, F, T), not produced(E, F).

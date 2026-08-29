@@ -1,0 +1,4 @@
+; internal. zone — who exists on the network
+$ORIGIN internal.
+api     IN A     10.0.0.10
+orders  IN CNAME api.internal.

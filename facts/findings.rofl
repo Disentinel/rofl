@@ -8,6 +8,12 @@
 
 -- ------------------------------------------------------------- settled ---
 
+finding(f_rules_are_dialect_free, insight).
+recorded(f_rules_are_dialect_free, "2026-08-29").
+finding_note(f_rules_are_dialect_free,
+  "the wiring demo (Node + Go + opaque Rust binary over k8s + nginx + DNS): five config/language dialects joined by ~40 lines of rules that never mention any of them - extractors emit the wiring surface (who listens, who calls, which fields cross), rules speak only hosts/ports/routes/fields; adding a language = adding an extractor, invariants unchanged; the opaque binary is handled by a declared contract corroborated by its k8s args - two evidence paths, one call").
+addressed_by(f_rules_are_dialect_free, "examples/wiring/README.md").
+
 finding(f_blocking_not_waivable_by_authority, insight).
 recorded(f_blocking_not_waivable_by_authority, "2026-08-29").
 demands(f_blocking_not_waivable_by_authority, doc).
