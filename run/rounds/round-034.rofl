@@ -1,0 +1,20 @@
+-- Round 34. TARGET: documentation coherence — the prose artifacts still
+-- described superseded finite checks. CATCH (real): terras_table.md's honesty
+-- note "computed observation over k <= 14, not a claimed theorem" (about the
+-- pair-doubling mechanism) went STALE in round 27 when the doubling iff was
+-- kernel-proved for all k — an honesty note that outlived its own honesty.
+-- Repaired by supersession in the file (original text kept, strikethrough
+-- semantics via explicit supersession note). Also brought current:
+-- lemma2_3.md (counting content now kernel-general, bijection demoted to
+-- readable account), lemma4.md (R31-33 chain pointer), FRONTIER.md
+-- (post-fetch update: the run reached the top of the classical density story;
+-- explicitly still BASE CAMP relative to the fetched frontier — the
+-- density-to-totality gap is untouched).
+claim_of[a](docs_coherent_with_kernel_state).
+ground[a](docs_coherent_with_kernel_state, doc_supersession_pass_r34).
+evidence[world](docs_coherent_with_kernel_state, doc_supersession_pass_r34).
+
+-- The stale-note catch, recorded as an audit event on the run's own process:
+claim_of[a](stale_honesty_note_terras_table).
+ground[a](stale_honesty_note_terras_table, doc_supersession_pass_r34).
+evidence[world](stale_honesty_note_terras_table, doc_supersession_pass_r34).

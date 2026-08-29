@@ -1,0 +1,18 @@
+-- Round 73 (Track D). TARGET: precise localization of the pseudo-random
+-- part. (1) Non-autonomy: the sum-marginal (dpf) and residue-marginal
+-- (mod3/9_flow) dynamics are autonomous and PROVED; the joint (sum x
+-- residue) dynamics cannot be autonomous — the coupling runs through the
+-- trajectory parity bit whose evolution is the full map. The character-sum
+-- problem is this coupling in Fourier form. (2) Measured: I(p; mod3) sits
+-- AT the finite-sample independence floor (0.2-0.4 microbits vs null
+-- 1.4-5 at k=24-26); I(p; sum) shows only trace excess vanishing by k=26.
+-- Every pairwise observable is at its stochastic floor; all order above
+-- the floor is proved structure. The measurement program of the mechanism
+-- search closes here.
+claim_of[a](pseudorandomness_localized_coupling_bit).
+ground[a](pseudorandomness_localized_coupling_bit, mi_measurements_k26).
+evidence[world](pseudorandomness_localized_coupling_bit, mi_measurements_k26).
+
+claim_of[a](pairwise_observables_at_floor).
+ground[a](pairwise_observables_at_floor, mi_measurements_k26).
+evidence[world](pairwise_observables_at_floor, mi_measurements_k26).

@@ -1,0 +1,29 @@
+-- Round 80 (Track D). THE GENERAL COVERING OBSTRUCTION, kernel-checked:
+-- theorem core_meets_every_class — for EVERY odd modulus m, every residue
+-- rho < m, every s with m <= 2^s, every depth k >= 3s+3: there is an
+-- undecided class r < 2^k with r = rho (mod m). Subsumes mod3_positive
+-- and mod9_positive; kills ALL covering-system certificates whose moduli
+-- are odd-times-2-power (i.e., all of them). Construction: spine witness
+-- c*2^(k-s) - 1 with c*2^(k-s) = rho+1 (mod m); solvability of the
+-- congruence proved WITHOUT modular inverses via an S-sum pigeonhole:
+-- row sums = 1 (S_indicator), columns <= 1 (injectivity from the new
+-- odd_cancel: odd m | c*2^j -> m | c, by parity induction), and a
+-- missing-column counting contradiction (S_missing) over S_swap.
+-- New gate: pow23_gen (2^k < 3^(k-s) for k >= 3s+3, base 8^s*8 < 9^s*27).
+-- Axioms: propext + Quot.sound. Oracle spot at k=18 (u_18 = 7495):
+-- all classes hit for m = 5, 7, 15, 21, 35, 105 (min counts 1492, 1061,
+-- 488, 345, 202, 60) — equidistribution visible at every modulus.
+claim_of[a](general_covering_obstruction_kernel_checked).
+ground[a](general_covering_obstruction_kernel_checked, lean_core_meets_every_class_compiles).
+evidence[world](general_covering_obstruction_kernel_checked, lean_core_meets_every_class_compiles).
+
+claim_of[a](all_odd_modulus_covering_certificates_excluded).
+ground[a](all_odd_modulus_covering_certificates_excluded, general_covering_obstruction_kernel_checked).
+
+lean_theorem(thm_core_meets_every_class).  lean_axioms_minimal(thm_core_meets_every_class).
+lean_theorem(thm_solve_exists).  lean_axioms_minimal(thm_solve_exists).
+lean_theorem(thm_odd_cancel).
+depends_on(thm_core_meets_every_class, thm_solve_exists).
+depends_on(thm_core_meets_every_class, thm_spine_undecided).
+depends_on(thm_core_meets_every_class, thm_pow23_gen).
+depends_on(thm_solve_exists, thm_odd_cancel).

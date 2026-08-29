@@ -1,0 +1,29 @@
+-- Round 43 (Track C). TARGET: the last rate step — eta_k <= 2^(-k/20).
+-- True exponent 1 - H(log_3 2) = 0.050042; proved exponent 1/20 = 0.050000:
+-- the certified bound now matches the true asymptotic to THREE DECIMAL
+-- PLACES. Same optimal-lambda skeleton at the finer threshold 6309/10000
+-- (log_3 2 = 0.630930...): pow_6309_10000 (3^6309 < 2^10000, kernel decide,
+-- NO axioms), threshold_6309_10000, chernoff_1279, cert_20
+-- (19^10000 * 2^500 * 7^6309 <= 2^10000 * 7^10000 * 12^6309 — kernel decide
+-- on ~42,000-bit integers, margin factor 1.148, numerically verified before
+-- the Lean work; NO axioms), eta_20 (all k >= 1; claim numerically verified
+-- to k = 300 first). TerrasAlmostAll.lean: 1821 lines, exit 0.
+-- Rate progression, one run: k >= c^100 (R30) -> 2^(-k/25) (R37) ->
+-- 2^(-k/21) (R42) -> 2^(-k/20) (R43); truth ~ 2^(-k/19.98). Further tightening
+-- (k/19.99...) buys nothing: 1/20 is the last unit-denominator step above
+-- the true exponent — this line of improvement TERMINATES here, honestly.
+claim_of[a](eta_rate_three_decimals).
+ground[a](eta_rate_three_decimals, lean_kernel_proof_eta_20).
+evidence[world](eta_rate_three_decimals, lean_kernel_proof_eta_20).
+source_of(lean_kernel_proof_eta_20, file_terras_almost_all_lean).
+
+thm(eta_20).  thm(chernoff_1279).  thm(cert_20).  thm(pow_6309_10000).
+thm(threshold_6309_10000).
+thm_dep(eta_20, chernoff_1279).
+thm_dep(eta_20, cert_20).
+thm_dep(eta_20, pow_ratio_mono).
+thm_dep(chernoff_1279, binom_127).
+thm_dep(chernoff_1279, threshold_6309_10000).
+thm_dep(chernoff_1279, dpf_le_choose).
+thm_dep(chernoff_1279, dpf_pos_dominates).
+thm_dep(threshold_6309_10000, pow_6309_10000).

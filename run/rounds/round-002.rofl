@@ -1,0 +1,9 @@
+-- Round 2. TARGET: vocab_drift(slow, depth_30_level) — the preserved R10 catch.
+-- The v0.2 discipline: a new granularity must be DECLARED in the level/1 registry.
+-- Declaring it has two intended consequences, both verified in the round audit:
+--   (1) vocab_drift clears (the atom is now vocabulary, not drift);
+--   (2) the ORIGINAL R10 derivation that the closed world silently missed finally
+--       fires: miscast(slow, slowness) — the decision pinned `slow` to a depth-30
+--       horizon while the slowness ledger splits by depth (slow_at_30 bad,
+--       slow_at_120 ok). That miscast becomes the next round's target.
+level(depth_30_level).

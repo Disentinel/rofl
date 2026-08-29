@@ -1,0 +1,29 @@
+-- Round 28. TARGET: proof-artifact sourcing — every mathematical claim's ground
+-- now points to its checker artifact through the EXISTING src machinery (zero
+-- new predicates; the freeze window ends here anyway, unbroken since R17).
+-- Files are first-class sources with basis repo_committed; run/math/README.md
+-- indexes them with re-run commands.
+src(file_lemma1_md).            src_basis(file_lemma1_md, repo_committed).
+verified[world](file_lemma1_md).
+src(file_lemma2_3_md).          src_basis(file_lemma2_3_md, repo_committed).
+verified[world](file_lemma2_3_md).
+src(file_lemma4_md).            src_basis(file_lemma4_md, repo_committed).
+verified[world](file_lemma4_md).
+src(file_collatz_ledger_check_lean). src_basis(file_collatz_ledger_check_lean, repo_committed).
+verified[world](file_collatz_ledger_check_lean).
+src(file_lemma4_check_lean).    src_basis(file_lemma4_check_lean, repo_committed).
+verified[world](file_lemma4_check_lean).
+src(file_lemma5_check_lean).    src_basis(file_lemma5_check_lean, repo_committed).
+verified[world](file_lemma5_check_lean).
+src(file_lemma6_check_lean).    src_basis(file_lemma6_check_lean, repo_committed).
+verified[world](file_lemma6_check_lean).
+
+source_of(proof_lemma1_dual_checked_thresholds, file_lemma1_md).
+source_of(proof_lemma1_dual_checked_thresholds, file_collatz_ledger_check_lean).
+source_of(proof_bijection_plus_four_path_check, file_lemma2_3_md).
+source_of(proof_one_ext_gap_unique_lean_checked, file_collatz_ledger_check_lean).
+source_of(lean4_compile_exit0_kernel_checked, file_collatz_ledger_check_lean).
+source_of(proof_monotone_half_threshold_endtail_lean, file_lemma4_check_lean).
+source_of(proof_monotone_half_threshold_endtail_lean, file_lemma4_md).
+source_of(lean_kernel_proof_uf_double, file_lemma5_check_lean).
+source_of(lean_kernel_proofs_wf_pos_gap_unique, file_lemma6_check_lean).

@@ -1,0 +1,27 @@
+-- Round 39. TARGET (three-part): leaf analysis of the proof DAG in-substrate;
+-- the "counterexamples live in the shrinking core" corollary in Lean; and a
+-- substrate lesson from the R34 catch promoted to SUBSTRATE_ISSUES.
+-- (a) DAG leaves via negation over the R35 relations (births: thm_leaf/1,
+--     has_dep/1 — derived, declared):
+has_dep(X) :- thm_dep(X, _).
+thm_leaf(X) :- thm(X), not has_dep(X).
+-- The checkable claim from R35 refined and now DERIVABLE: the leaves of the
+-- terras_integers cone are exactly the structural inductions plus TWO numeric
+-- facts (pow_63_100, pow_22_163) — derived (third declared birth this round):
+cone_leaf(X) :- thm_reach(terras_integers, X), thm_leaf(X).
+claim_of[a](proof_dag_leaves_derivable).
+ground[a](proof_dag_leaves_derivable, thm_leaf_rule_r39).
+evidence[world](proof_dag_leaves_derivable, thm_leaf_rule_r39).
+-- (b) never_dropper_in_core (TerrasAlmostAll.lean, exit 0): any n that never
+--     drops below itself is coefficient-undecided at EVERY depth k <= log3 n
+--     — potential descent counterexamples live inside the intersection of the
+--     density->0 cores. Trivial corollary of the chain, but the cleanest
+--     statement of WHERE the conjecture's difficulty sits.
+claim_of[a](counterexamples_live_in_core).
+ground[a](counterexamples_live_in_core, lean_kernel_proof_never_dropper).
+evidence[world](counterexamples_live_in_core, lean_kernel_proof_never_dropper).
+source_of(lean_kernel_proof_never_dropper, file_terras_almost_all_lean).
+thm(never_dropper_in_core).
+thm_dep(never_dropper_in_core, indu_zero_decided).
+thm_dep(never_dropper_in_core, a_period_general).
+thm_dep(never_dropper_in_core, drop_criterion).

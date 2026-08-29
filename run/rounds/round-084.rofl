@@ -1,0 +1,28 @@
+-- Round 84 (Track D). AN EXPLICIT INFINITE PATH IN THE CORE:
+-- def alphaT (greedy branch: keep the class while undecided, else take
+-- the sibling lift; branch_law guarantees one survives). Theorems
+-- alphaT_lt / alphaT_undecided / alphaT_compat, packaged as
+-- core_infinite_path: the truncations are in-range, undecided at EVERY
+-- depth, and coherent — the infinite core A subset Z_2 is nonempty via
+-- an explicit computable 2-adic point, no compactness and no choice
+-- (axioms: propext + Quot.sound).
+-- The exhibit (oracle run/mechanism/alpha_path.js): the point shadows 27
+-- — the famous 111-step orbit — through depth 58, then departs to
+-- 27 + 2^58 = 288230376151711771 at the exact depth where 27's class is
+-- decided, and keeps escaping upward (27 -> 2.88e17 -> 2.59e18 -> ... ->
+-- 1.5e23 by depth 79). A natural number whose orbit reaches 1 must leave
+-- the core; the core's point survives by jumping to the sibling lift at
+-- each such event — the 2-adic trace of "the core misses N" in action.
+-- (R83's honest negative stands: proving alphaT's limit is not in N is
+-- critical-line territory, open.)
+claim_of[a](core_infinite_path_kernel_checked).
+ground[a](core_infinite_path_kernel_checked, lean_core_infinite_path_compiles).
+evidence[world](core_infinite_path_kernel_checked, lean_core_infinite_path_compiles).
+
+claim_of[a](alpha_shadows_27_to_depth58).
+ground[a](alpha_shadows_27_to_depth58, alpha_path_oracle).
+evidence[oracle](alpha_shadows_27_to_depth58, alpha_path_oracle).
+oracle_only(alpha_shadows_27_to_depth58).
+
+lean_theorem(thm_core_infinite_path).  lean_axioms_minimal(thm_core_infinite_path).
+depends_on(thm_core_infinite_path, thm_branch_law).

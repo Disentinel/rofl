@@ -1,0 +1,38 @@
+-- Round 92 (Track E, ultracode phase). THE COUPLING ALGEBRA, first
+-- kernel-checked layer + the mod-4 letter calculus.
+-- (1) Independent derivation (main loop, for double-computation vs the
+--     running agent sweep): affine couplings x = 3^i*s + d evolve by
+--     four local rules; letters agree iff d even; merge state (0,0);
+--     validated over 3.26M invariant checks, 0 failures
+--     (coupling_check.js). From seed (1,2) [x=3s+2]: ~50% merge
+--     (median 4 steps), ~42% decouple. Mechanism sketch for the 46%/28%
+--     laws: merged word = base word with ONE 1->0 flip after the first
+--     even step; domination survives iff slack; prepend-1 (2r+1)
+--     compensates the flip — hence 46% > 28%.
+-- (2) KERNEL-CHECKED: T_c12_odd (T(3s+2)=3T(s)+2), T_c12_even
+--     (=3T(s)+1), T_c11_odd (T(3s+1)=T(s) — THE MERGE), T_c11_even
+--     (=9T(s)+2), coupling_merge (after even-then-odd the orbits of
+--     3s+2 and s coincide forever).
+-- (3) KERNEL-CHECKED: core_mod4 (core words begin 1,1 iff r = 3 mod 4)
+--     and affine_leaves_core: for ANY a,b with 3a+b != 3 mod 4, a*r+b
+--     exits the core by depth 2 for every core r — the general law
+--     behind times3_leaves_core, closing a whole atlas column by one
+--     theorem. Agent cross-check of the transition table pending
+--     (workflow wf_9e0b2d3b).
+claim_of[a](coupling_algebra_kernel_checked).
+ground[a](coupling_algebra_kernel_checked, lean_coupling_identities_compile).
+evidence[world](coupling_algebra_kernel_checked, lean_coupling_identities_compile).
+
+claim_of[a](mod4_letter_calculus_kernel_checked).
+ground[a](mod4_letter_calculus_kernel_checked, lean_affine_leaves_core_compiles).
+evidence[world](mod4_letter_calculus_kernel_checked, lean_affine_leaves_core_compiles).
+
+claim_of[a](coupling_transition_table_validated).
+ground[a](coupling_transition_table_validated, coupling_check_oracle).
+evidence[oracle](coupling_transition_table_validated, coupling_check_oracle).
+oracle_only(coupling_transition_table_validated).
+
+lean_theorem(thm_coupling_merge).      lean_axioms_minimal(thm_coupling_merge).
+lean_theorem(thm_affine_leaves_core).  lean_axioms_minimal(thm_affine_leaves_core).
+depends_on(thm_affine_leaves_core, thm_core_mod4).
+depends_on(thm_core_mod4, thm_core_first_two_odd).

@@ -1,0 +1,32 @@
+-- Round 89 (Track E, owner-directed). THE PROBLEM DECOMPOSED THE WAY
+-- REASONING WAS: run/mechanism/PRIMITIVES.md — the ROFL genesis move
+-- applied to Collatz itself. Seven primitives (shift at 2, carry
+-- odometer, archimedean drift, incommensurability of the clocks, the
+-- sign of +1, the DIAGONAL N in R x Z_2, the coupling bit); an assembly
+-- table mapping all 263 kernel-checked theorems to primitive products;
+-- the observation that EVERY proved theorem avoids the diagonal
+-- primitive and the conjecture is the unique statement requiring it.
+-- Unification: the run's three obstruction theorems have one cause —
+-- ONE-PLACE BLINDNESS (atomless measures cannot see the countable
+-- diagonal; coverings are finite quotients of one place; Lyapunov
+-- windows live at the other place). Five re-representations preserving
+-- the interaction algebra: adelic skew product (Furstenberg x2x3 face;
+-- entropy hypothesis ALREADY certified by the run's sandwich
+-- h in [0.538, 0.95], measured 0.9500 — the gap is invariance),
+-- two-base automata (Cobham-beyond-automatic face), transport with
+-- Sturmian sink (the run's own face, blindness now explained), S-unit
+-- heights ledger (orbit-wise Baker face), and the ROFL-native face:
+-- the conjecture as a provenance statement — every counterexample
+-- consumes infinitely many unsourced coupling bits. Analogies to
+-- Furstenberg/Cobham are literature-known (Lagarias surveys); the
+-- kernel-checked mapping, the blindness unification, and the proved
+-- entropy sandwich are this run's.
+claim_of[a](problem_decomposed_into_primitives).
+ground[a](problem_decomposed_into_primitives, primitives_document).
+evidence[world](problem_decomposed_into_primitives, primitives_document).
+
+claim_of[a](obstructions_unified_as_one_place_blindness).
+ground[a](obstructions_unified_as_one_place_blindness, assembly_table_diagonal_gap).
+
+claim_of[a](winning_method_must_consume_diagonal).
+ground[a](winning_method_must_consume_diagonal, obstructions_unified_as_one_place_blindness).

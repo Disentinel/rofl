@@ -1,0 +1,20 @@
+-- Round 74 (Track D). (1) Wild semigroup SOURCED: Farkas weak conjecture
+-- proved by Applegate-Lagarias (arXiv:math/0411140; Caraiani follow-up) —
+-- semigroup = {a/b > 0 : 3 does not divide b}. Transfer fails at
+-- forcedness: semigroups compose orbit fragments freely; the map forces
+-- composition — the round-73 coupling-bit localization again, now with
+-- sources. (2) NEW corollary of the run's own bound: core_713 kills every
+-- finite-window Foster-Lyapunov certificate (log + bounded residue
+-- correction, any window k, any modulus): >= 2^(0.538k)/2^14 positive-
+-- drift windows exist at every k, each realized by infinitely many
+-- integers. Folklore obstruction, kernel-checked quantitative form.
+src(src_al_semigroup_0411140).  src_basis(src_al_semigroup_0411140, web_fetched).
+verified[world](src_al_semigroup_0411140).
+claim_of[a](wild_semigroup_sourced_transfer_fails).
+ground[a](wild_semigroup_sourced_transfer_fails, al_semigroup_characterization).
+evidence[world](wild_semigroup_sourced_transfer_fails, al_semigroup_characterization).
+source_of(al_semigroup_characterization, src_al_semigroup_0411140).
+
+claim_of[a](lyapunov_certificates_killed_by_core713).
+ground[a](lyapunov_certificates_killed_by_core713, corollary_of_core_713).
+evidence[world](lyapunov_certificates_killed_by_core713, corollary_of_core_713).

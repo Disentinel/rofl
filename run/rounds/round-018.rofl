@@ -1,0 +1,31 @@
+-- Round 18. TARGET: range-9999 scratch probe (main model + widening overlay in a
+-- scratch store; nothing heavy persisted to main). ZERO new predicates (freeze).
+-- Probe: gen widened to 9999, value window 10^8; 808,523 facts; in-substrate
+-- eval 4.03 HOURS (the measured cost of the widened main model — substrate
+-- scaling data, see SUBSTRATE_ISSUES #5 curve); exit clean, no holes.
+-- Independent TS oracle of the empirical slow set ran alongside.
+--
+-- Computed results at n<=9999:
+-- (1) slow set: engine == oracle EXACTLY — 285 numbers, sorted lists identical
+--     (the strongest dual-computation of the run: not counts, full member sets);
+-- (2) inclusion persists at mod 32, 64, 128: all slow_outside_m EMPTY at 10x range;
+-- (3) EXACT FILL RESTORED: unfilled_m EMPTY at 32, 64 AND 128 — the branch
+--     15 mod 64 (empty at n<=999, R16) came alive at n<=9999; R17's strictness
+--     claim was correctly range-scoped and is hereby refined: the gap was a range
+--     artifact, not cascade structure;
+-- (4) still_slow EMPTY at horizon 260: the R13 horizon suffices at 10x range.
+claim_of[a](slow_set_9999_dual_computed).
+ground[a](slow_set_9999_dual_computed, computed_engine_oracle_identical_285).
+evidence[world](slow_set_9999_dual_computed, computed_engine_oracle_identical_285).
+
+claim_of[a](slow_subset_und_persists_at_9999).
+ground[a](slow_subset_und_persists_at_9999, computed_outside_m_empty_32_64_128_range_9999).
+evidence[world](slow_subset_und_persists_at_9999, computed_outside_m_empty_32_64_128_range_9999).
+
+claim_of[a](exact_fill_restored_at_9999).
+ground[a](exact_fill_restored_at_9999, computed_unfilled_m_empty_32_64_128_range_9999).
+evidence[world](exact_fill_restored_at_9999, computed_unfilled_m_empty_32_64_128_range_9999).
+
+claim_of[a](horizon_260_suffices_at_9999).
+ground[a](horizon_260_suffices_at_9999, computed_still_slow_empty_range_9999).
+evidence[world](horizon_260_suffices_at_9999, computed_still_slow_empty_range_9999).

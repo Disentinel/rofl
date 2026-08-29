@@ -1,0 +1,25 @@
+-- Round 57 (Track D). TARGET: mechanism search opened per owner directive.
+-- HYPOTHESES.md: TRIZ decomposition (administrative/technical/physical
+-- contradictions; separation principles mapped to known routes), the sign
+-- resource (3n-1 falsification filter: any mechanism that works verbatim
+-- for 3n-1 is dead on arrival — positivity of D is where the sign enters),
+-- and the crystallized reduction: CANONICAL <=> (no cycles) AND
+-- (A cap N = empty) where A in Z_2 is the infinite undecided core whose
+-- finite levels this run has sandwiched in-kernel.
+-- H1 TESTED AND REFUTED (in its hoped-for form): first-drop penetration
+-- records over n <= 10^7 match the run's own fitted density prediction to
+-- within ~2 steps at two scales (predicted 138/248 vs measured 135/246 at
+-- X = 1e5/1e7) — integers populate the core exactly as random membership
+-- predicts; NO avoidance fingerprint in this observable. Recorded as a
+-- strong negative: the mechanism, if it exists, is invisible to first-drop
+-- statistics.
+claim_of[a](track_d_reduction_recorded).
+ground[a](track_d_reduction_recorded, hypotheses_md_r57).
+evidence[world](track_d_reduction_recorded, hypotheses_md_r57).
+
+claim_of[a](h1_no_avoidance_fingerprint).
+ground[a](h1_no_avoidance_fingerprint, computed_pen_records_1e7).
+evidence[world](h1_no_avoidance_fingerprint, computed_pen_records_1e7).
+src(file_hypotheses_md).  src_basis(file_hypotheses_md, repo_committed).
+verified[world](file_hypotheses_md).
+source_of(hypotheses_md_r57, file_hypotheses_md).

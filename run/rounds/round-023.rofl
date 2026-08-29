@@ -1,0 +1,21 @@
+-- Round 23 (Track C). TARGET: Lemma 4 — the undecided classes thin out
+-- (run/math/lemma4.md, Lean cores in run/math/Lemma4Check.lean, exit 0).
+-- Proved: (a) eta_k monotone non-increasing (u_{k+1} <= 2u_k, from L2/L3);
+-- (b) half-threshold: 2s <= k => 3^s < 2^k, fully elementary via 3^k < 4^k,
+--     KERNEL-CHECKED (no native_decide in the core theorems) — every dominated
+--     string has parity sum > k/2;
+-- (c) u_k <= endTail(k) = binomial tail beyond t_k > k/2 (set inclusion; Lean
+--     finite check k=1..20 with Pascal-rule choose).
+-- Numeric, flagged unproven: observed per-step eta ratio ~0.948 (k=16..20) vs
+-- end-tail LD heuristic ~0.966 — the all-j ballot constraint is the gap.
+-- Terras 1976 proved eta -> 0; our (a)-(c) is the machine-checked core of that
+-- phenomenon, NOT a new result (attribution stays a flagged memory anchor).
+claim_of[a](lemma4_density_thinning).
+ground[a](lemma4_density_thinning, proof_monotone_half_threshold_endtail_lean).
+evidence[world](lemma4_density_thinning, proof_monotone_half_threshold_endtail_lean).
+
+claim_of[a](lemma4_observed_rate_unproven).
+hypothesis[a](rate_0948_vs_ld_0966_gap_is_ballot_constraint).
+ground[a](lemma4_observed_rate_unproven, rate_0948_vs_ld_0966_gap_is_ballot_constraint).
+-- deliberately NO evidence[world] and a hypothesis ground: this claim must
+-- stand as shaky in every audit until someone proves the ballot-rate gap.

@@ -1,0 +1,9 @@
+-- Round 12. TARGET: widen the R2-R4 slow-set computation from n<=199 to n<=999,
+-- ZERO new predicates (degradation watch item): assert-only rule extensions to the
+-- existing gen/num/edge universe. The seed's K<20000 value guard would silently
+-- truncate trajectories for the wider range (max excursion for n<1000 is
+-- 703 -> 250,504), so the value window is widened to 10^6 — overflow-safe
+-- (3*10^6 << 2^53) and covering every odd value reachable in 30 steps from n<=999.
+gen(M) :- gen(N), N < 999, M is N + 4.
+num(M)     :- num(K),  R is K mod 2, R = 1, K >= 20000, K < 1000000, M is 3 * K + 1.
+edge(K, M) :- num(K),  R is K mod 2, R = 1, K >= 20000, K < 1000000, M is 3 * K + 1.

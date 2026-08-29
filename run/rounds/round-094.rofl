@@ -1,0 +1,53 @@
+-- Round 94 (Track E ultracode). BREADTH SWEEP SYNTHESIS: 10 explorers +
+-- synthesis, 1.25M tokens, all complete. Claim ledger: 70 items tagged
+-- [Vk]/[V]/[P]/[M]/[U]; five-way convergences and five explicit
+-- contradictions. Highlights:
+-- (1) SUPERSESSION of R92's mechanism sketch: merge does NOT explain the
+--     46% law (merge-only predicts 35.4%; never-merged classes are in S
+--     at HIGHER rates). The exact mechanism is the coupling error-walk
+--     with a threshold (theta = 1.000 for 2r+1, 1.585 for 3r+2): exact
+--     criterion verified on every class x six maps x four depths, laws
+--     reproduced to all digits by a ~10^3-state product automaton.
+--     R93's transducer-exactness STANDS; the merge attribution dies.
+-- (2) INTEGRATED kernel theorems from agents: neg_five_in_core (k>=3,
+--     first negative-CYCLE core membership, A_j = 2 floor(j/3) + j%3)
+--     and backward_closure (3x+1 = 2c, c in core => x in core at k+1) —
+--     both propext+Quot.sound, compile green in main file.
+-- (3) Thermodynamic face: h = H(log3 2) = 0.9499555 identity claimed
+--     with elementary two-sided sketch; CONCATENATION SUPERADDITIVITY
+--     (gates multiply => u_{k+m} >= u_k*u_m) lifts the proved lower
+--     bound to log2(u_k)/k for any anchor k — formalization begun as
+--     R95 (target: exponent 3/4 from u_24 >= 2^18).
+-- (4) Five-way convergence on {-1,-5,-17}: atlas enrichment centers =
+--     Frenkel-Kontorova lockings at CF approximants 1/1, 2/3, 7/11 of
+--     log3(2) = the only provable infinite-core negatives; next locking
+--     slot PREDICTED at density 12/19.
+-- (5) Mirror-world control (meta-audit): the 3n-1 core has IDENTICAL
+--     u_k and identical affine laws under r -> -r: EVERY mod-2^k
+--     observable is sign-blind. Strategic filter C4: a viable mechanism
+--     must be affine-relational AND sign-carrying; currently only the
+--     D>0 ledger line passes both. Krasikov-Lagarias named the one
+--     untested executable method that could pass.
+-- (6) CATCH (meta-audit): R90's "off-cycle negatives decide within <=10
+--     depths" is REFUTED: 89 odd negatives (|n| <= 2e5) stay dominated
+--     past depth 96 (deep transients). Corrected: only {-1,-5,-17}
+--     PROVABLY in the infinite core; other negatives can linger long.
+claim_of[a](sweep_synthesis_recorded).
+ground[a](sweep_synthesis_recorded, workflow_wf9e0b2d3b_reports).
+evidence[oracle](sweep_synthesis_recorded, workflow_wf9e0b2d3b_reports).
+oracle_only(sweep_synthesis_recorded).
+
+claim_of[a](r92_merge_sketch_superseded).
+ground[a](r92_merge_sketch_superseded, agent_r1_error_walk_criterion).
+evidence[oracle](r92_merge_sketch_superseded, agent_r1_error_walk_criterion).
+oracle_only(r92_merge_sketch_superseded).
+
+claim_of[a](r90_negative_decay_claim_refuted).
+ground[a](r90_negative_decay_claim_refuted, meta_audit_deep_transients).
+evidence[oracle](r90_negative_decay_claim_refuted, meta_audit_deep_transients).
+oracle_only(r90_negative_decay_claim_refuted).
+
+lean_theorem(thm_neg_five_in_core).  lean_axioms_minimal(thm_neg_five_in_core).
+lean_theorem(thm_backward_closure).  lean_axioms_minimal(thm_backward_closure).
+depends_on(thm_neg_five_in_core, thm_indU_of_dominated).
+depends_on(thm_backward_closure, thm_indU_of_dominated).

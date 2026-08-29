@@ -1,0 +1,20 @@
+-- Round 82 (Track D). THE SINK NEVER RUNS DRY, kernel-checked:
+-- min_level_inhabited — the minimal-exponent staircase level of the core
+-- is inhabited at every depth (greedy witness by induction: follow the
+-- even child while non-critical, forced to the odd child exactly at
+-- crossings; the witness keeps 3^(A k r) <= 3*2^k tight). Hence
+-- sink_never_dry: the critical set is nonempty at every crossing depth,
+-- and crossing_strict_loss: u_{k+1} < 2*u_k whenever a 3-power lies in
+-- (2^k, 2^(k+1)). With count_law + fail_zero_no_gap the growth dynamics
+-- of the core is fully pinned: EXACT doubling at gap-free depths, strict
+-- loss >= 1 at every crossing. Axioms: propext + Quot.sound. Kernel
+-- #eval: losses [1,1,0,1,2,0,3,7,0,12,0,30] at k=0..11 — zeros exactly
+-- at the gap-free depths 2,5,8,10 (the Sturmian pattern of log2(3)).
+claim_of[a](sink_never_dry_kernel_checked).
+ground[a](sink_never_dry_kernel_checked, lean_crossing_strict_loss_compiles).
+evidence[world](sink_never_dry_kernel_checked, lean_crossing_strict_loss_compiles).
+
+lean_theorem(thm_min_level_inhabited).  lean_axioms_minimal(thm_min_level_inhabited).
+lean_theorem(thm_crossing_strict_loss). lean_axioms_minimal(thm_crossing_strict_loss).
+depends_on(thm_crossing_strict_loss, thm_count_law).
+depends_on(thm_crossing_strict_loss, thm_min_level_inhabited).

@@ -1,0 +1,78 @@
+-- Round 35 (Track C x substrate). TARGET: the Lean proof-dependency DAG held
+-- IN the graph — the engine derives the support cone of the final theorems,
+-- and why/1 answers dependency queries over the mathematics itself.
+-- Vocabulary births (freeze window ended R27; declared justification): thm/1
+-- (theorem nodes of run/math/*.lean), thm_dep/2 (direct proof dependency,
+-- main spine only — S-plumbing lemmas elided), thm_reach/2 (derived closure).
+-- Edges transcribed from the actual proof texts (TerrasAlmostAll.lean unless
+-- noted; cross-file edges to CollatzLedgerCheck/Lemma6Check marked).
+thm(terras_integers).          thm(terras_almost_all).
+thm(ndrop_pointwise).          thm(s_periodic).
+thm(s_below_le).               thm(nu_eq_uf).
+thm(nn_eq_dpf).                thm(pair_step).
+thm(lift_flip).                thm(a_snoc).
+thm(ad_periodic).              thm(affine).
+thm(a_period_general).         thm(indu_zero_decided).
+thm(drop_criterion).           thm(d_lt).
+thm(a_le).                     thm(odd_pow3).
+thm(ndrop_zero_of_drop).       thm(density_decay).
+thm(chernoff).                 thm(binom_two).
+thm(dpf_le_choose).            thm(dpf_step_le).
+thm(threshold_63_100).         thm(pow_63_100).
+thm(pow_22_163).               thm(lt_two_pow).
+thm(choose_above_diag).        thm(dpf_pos_dominates).
+thm(one_ext_survives).         thm(gap_unique).
+thm(wf_pos_of_gap).
+
+thm_dep(terras_integers, ndrop_pointwise).
+thm_dep(terras_integers, s_periodic).
+thm_dep(terras_integers, s_below_le).
+thm_dep(terras_integers, nu_eq_uf).
+thm_dep(terras_integers, density_decay).
+thm_dep(terras_almost_all, nu_eq_uf).
+thm_dep(terras_almost_all, density_decay).
+thm_dep(terras_almost_all, indu_zero_decided).
+thm_dep(terras_almost_all, a_period_general).
+thm_dep(terras_almost_all, drop_criterion).
+thm_dep(ndrop_pointwise, indu_zero_decided).
+thm_dep(ndrop_pointwise, a_period_general).
+thm_dep(ndrop_pointwise, drop_criterion).
+thm_dep(ndrop_pointwise, ndrop_zero_of_drop).
+thm_dep(nu_eq_uf, nn_eq_dpf).
+thm_dep(nu_eq_uf, a_le).
+thm_dep(nn_eq_dpf, pair_step).
+thm_dep(pair_step, lift_flip).
+thm_dep(pair_step, a_snoc).
+thm_dep(pair_step, ad_periodic).
+thm_dep(pair_step, odd_pow3).
+thm_dep(lift_flip, affine).
+thm_dep(lift_flip, ad_periodic).
+thm_dep(a_period_general, ad_periodic).
+thm_dep(indu_zero_decided, odd_pow3).
+thm_dep(drop_criterion, affine).
+thm_dep(drop_criterion, d_lt).
+thm_dep(d_lt, a_le).
+thm_dep(density_decay, chernoff).
+thm_dep(density_decay, lt_two_pow).
+thm_dep(density_decay, pow_22_163).
+thm_dep(chernoff, dpf_le_choose).
+thm_dep(chernoff, binom_two).
+thm_dep(chernoff, threshold_63_100).
+thm_dep(chernoff, dpf_pos_dominates).
+thm_dep(binom_two, choose_above_diag).
+thm_dep(dpf_le_choose, dpf_step_le).
+thm_dep(threshold_63_100, pow_63_100).
+-- cross-file spine of the doubling iff (lemma2_3.md):
+thm_dep(gap_unique, one_ext_survives).
+thm_dep(wf_pos_of_gap, one_ext_survives).
+
+thm_reach(X, Y) :- thm_dep(X, Y).
+thm_reach(X, Z) :- thm_dep(X, Y), thm_reach(Y, Z).
+
+-- The observation this round exists to make checkable: the ONLY numeric leaves
+-- reachable from terras_integers are the two decide-checked inequalities
+-- pow_63_100 (3^63 < 2^100) and pow_22_163 (22*3^100 <= 2^163) — the entire
+-- almost-all theorem rests numerically on two integer facts.
+claim_of[a](proof_dag_in_graph).
+ground[a](proof_dag_in_graph, thm_dep_edges_transcribed_r35).
+evidence[world](proof_dag_in_graph, thm_dep_edges_transcribed_r35).

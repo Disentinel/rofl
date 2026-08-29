@@ -1,0 +1,28 @@
+-- Round 31 (Track C). TARGET: the ACTUAL Collatz map enters Lean — until now
+-- the affine form was native_decide-checked at k=8 only; the map itself lived
+-- in the TS oracle. run/math/Lemma8Check.lean (exit 0) defines
+-- T(n) = n/2 | (3n+1)/2 and PROVES, general, kernel-checked (axioms: propext,
+-- Classical.choice, Quot.sound; native_decide only in the finite bridge):
+--   affine:         2^j * T^j(n) = 3^(A j n) * n + D j n   for ALL j, n;
+--   AD_periodic:    A j, D j depend only on n mod 2^j;
+--   A_le, D_lt:     A j n <= j,  D j n < 3^j;
+--   drop_criterion: 3^(A j n) < 2^j  ->  n >= 3^j  ->  T^j(n) < n.
+-- So in every coefficient-DECIDED class the ENTIRE tail n >= 3^j drops within
+-- j accelerated steps — the bridge from round-30's density theorem to honest
+-- integer trajectories: undecided classes (density -> 0, kernel-proved) are
+-- the ONLY place where non-dropping n >= 3^j can live.
+-- Finite bridge (native_decide, k <= 14): undecidedCount k — counted from the
+-- REAL map via A, not from parity strings — equals the string-DP uf k. The
+-- general bijection remains lemma2_3.md's Q_k (prose + this evidence); making
+-- it a kernel theorem is the natural next target.
+claim_of[a](collatz_map_affine_lean_general).
+ground[a](collatz_map_affine_lean_general, lean_kernel_proofs_affine_periodic_drop).
+evidence[world](collatz_map_affine_lean_general, lean_kernel_proofs_affine_periodic_drop).
+
+claim_of[a](decided_tail_drops_within_j_steps).
+ground[a](decided_tail_drops_within_j_steps, lean_kernel_proofs_affine_periodic_drop).
+evidence[world](decided_tail_drops_within_j_steps, lean_kernel_proofs_affine_periodic_drop).
+
+src(file_lemma8_check_lean).    src_basis(file_lemma8_check_lean, repo_committed).
+verified[world](file_lemma8_check_lean).
+source_of(lean_kernel_proofs_affine_periodic_drop, file_lemma8_check_lean).

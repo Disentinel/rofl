@@ -1,0 +1,26 @@
+-- Round 21 (Track C). TARGET: Lemmas 2 & 3 — the undecided-count recurrence and
+-- its lattice characterization (run/math/lemma2_3.md).
+--
+-- Lemma 3: u_k = # dominated parity strings (bijection Q_k proved by induction;
+-- decided <=> 3^{s_j} < 2^j). Lemma 2: u_{k+1} = 2u_k - w_k, and u doubles
+-- exactly when no power of 3 lies in (2^k, 2^{k+1}) — the pair-doubling pattern
+-- observed empirically in R7 is now a theorem with a float-free criterion.
+--
+-- Verification is now FOUR independent paths: (1) in-substrate classification
+-- (k<=16), (2) TS trajectory oracle (k<=20), (3) exact-integer lattice DP with
+-- no trajectory simulation, (4) Lean 4 (owner request): core inequalities
+-- one_ext_survives and gap_unique PROVED and kernel-checked; finite identities
+-- native_decide-checked (run/math/CollatzLedgerCheck.lean, compiles exit 0 on
+-- Lean 4.21.0). Lean also re-verified Lemma 1's thresholds (k=5..8) and the
+-- affine invariant on all 256 classes at k=8.
+claim_of[a](lemma3_lattice_characterization).
+ground[a](lemma3_lattice_characterization, proof_bijection_plus_four_path_check).
+evidence[world](lemma3_lattice_characterization, proof_bijection_plus_four_path_check).
+
+claim_of[a](lemma2_doubling_recurrence).
+ground[a](lemma2_doubling_recurrence, proof_one_ext_gap_unique_lean_checked).
+evidence[world](lemma2_doubling_recurrence, proof_one_ext_gap_unique_lean_checked).
+
+claim_of[a](lean_verification_layer).
+ground[a](lean_verification_layer, lean4_compile_exit0_kernel_checked).
+evidence[world](lean_verification_layer, lean4_compile_exit0_kernel_checked).

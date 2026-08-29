@@ -1,0 +1,28 @@
+-- Round 77 (Track D). MOD-9 POSITIVITY + THE UNIFIED SPINE MACHINERY:
+-- theorem mod9_positive — for every k >= 14 and every c < 9, NN9 c k >= 1.
+-- The mod-3 witnesses generalize into ONE lemma (spine_undecided):
+-- c*2^(k-s) - 1 has spine A_j = j to depth k-s (mirror_traj), A monotone
+-- beyond it (new A_mono), so a single gate 2^k < 3^(k-s) dominates the
+-- whole tail (gate_from5 <- pow23_lemma5: 2^k < 3^(k-5), k >= 14).
+-- Since 2 is a primitive root mod 9, witnesses c in {1,3,9}, s <= 5 hit
+-- every residue: 54-case assembly (6 phases of 2^k mod 9 x 9 residues),
+-- generated from a numerically verified table, compiled first try.
+-- Axioms: propext + Quot.sound. Spot k=14: NN9 = [85,80,89,79,90,74,83,
+-- 78,76], all positive, sum 734 = u_14.
+-- Consequence: no covering system at modulus 9*2^j (or 3*2^j) can certify
+-- descent. The method visibly scales to any 3^t*2^j modulus (2 is a
+-- primitive root mod 3^t for all t; witnesses 3^i*u*2^(k-s) - 1) — the
+-- covering-obstruction net now closes at TWO 3-adic levels, matching the
+-- flow laws (mod3_flow, mod9_flow) with positivity at both.
+claim_of[a](mod9_positive_kernel_checked).
+ground[a](mod9_positive_kernel_checked, lean_mod9_positive_compiles).
+evidence[world](mod9_positive_kernel_checked, lean_mod9_positive_compiles).
+
+claim_of[a](mod9_covering_certificates_excluded).
+ground[a](mod9_covering_certificates_excluded, mod9_positive_kernel_checked).
+
+lean_theorem(thm_mod9_positive).  lean_axioms_minimal(thm_mod9_positive).
+lean_theorem(thm_spine_undecided). lean_axioms_minimal(thm_spine_undecided).
+depends_on(thm_mod9_positive, thm_spine_undecided).
+depends_on(thm_spine_undecided, thm_mirror_traj).
+depends_on(thm_spine_undecided, thm_A_mono).

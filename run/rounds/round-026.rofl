@@ -1,0 +1,13 @@
+-- Round 26 (Track C). TARGET: extend the undecided-count table to k = 40 and
+-- test Lemma 2's doubling criterion across the full range (run/math/dp40.js).
+-- TWO independent BigInt implementations (forward DP over sum-rows; memoized
+-- top-down recursion written against the recurrence) agree exactly for
+-- k = 1..40. Lemma 2's criterion — u doubles iff no power of 3 lies in
+-- (2^k, 2^{k+1}) — holds at every step k = 1..39, as the proved theorem
+-- requires. u_30 = 12,771,274; u_40 = 6,402,835,000; eta_40 ~ 5.8e-3;
+-- per-step eta ratio at k = 36..40 ~ 0.933, still faster than the end-tail
+-- LD heuristic 0.966 — consistent with the flagged-unproven ballot-gap
+-- hypothesis of round 23 (which stays shaky).
+claim_of[a](table_extended_k40_dual_impl).
+ground[a](table_extended_k40_dual_impl, computed_two_bigint_impls_agree_k40).
+evidence[world](table_extended_k40_dual_impl, computed_two_bigint_impls_agree_k40).

@@ -1,0 +1,34 @@
+-- Round 42 (Track C). TARGET: the OPTIMAL-lambda Chernoff — closing the gap
+-- between the proved and the observed decay rate. lambda = 12/7 ~ 1.714 sits
+-- at the entropy optimum gamma/(1-gamma) for gamma = log_3 2. All integer:
+--   binom_127:    Sigma_s C(k,s) 12^s 7^(k-s) = 19^k  (two-weight binomial,
+--                 induction; Nat-subtraction edge at s = k+1 killed by
+--                 choose-above-diagonal);
+--   chernoff_127: u_k * 12^m * 7^(k-m) <= 19^k at m = 63k/100+1;
+--   cert_1927:    19^2100 * 2^100 * 7^1323 <= 2^2100 * 7^2100 * 12^1323 —
+--                 kernel decide on ~12,700-bit integers, margin factor ~12
+--                 (numerically verified BEFORE the Lean work, per compute-
+--                 then-claim); #print axioms: DEPENDS ON NO AXIOMS AT ALL;
+--   pow_ratio_mono: (7/12)-ratio inequalities survive raising the exponent;
+--   eta_21:       forall k >= 1, u_k * 2^(k/21) <= 2^k.
+-- Proved rate 2^(-1/21) = 0.9675 vs observed asymptotic 0.96591 (round 41):
+-- the certified bound now sits within 0.1% of the empirical rate; the true
+-- exponent is ~k/20, so the method's remaining slack is 21 vs 20.
+-- The R30 -> R37 -> R42 sequence: k >= c^100, then eta <= 2^-(k/25), now
+-- 2^-(k/21) — same Chernoff skeleton, sharper certificates each time.
+claim_of[a](eta_rate_within_point1_percent).
+ground[a](eta_rate_within_point1_percent, lean_kernel_proof_eta_21).
+evidence[world](eta_rate_within_point1_percent, lean_kernel_proof_eta_21).
+source_of(lean_kernel_proof_eta_21, file_terras_almost_all_lean).
+
+thm(binom_127).  thm(chernoff_127).  thm(cert_1927).  thm(eta_21).
+thm(pow_ratio_mono).  thm(cert_712).
+thm_dep(eta_21, chernoff_127).
+thm_dep(eta_21, cert_1927).
+thm_dep(eta_21, cert_712).
+thm_dep(eta_21, pow_ratio_mono).
+thm_dep(chernoff_127, binom_127).
+thm_dep(chernoff_127, threshold_63_100).
+thm_dep(chernoff_127, dpf_le_choose).
+thm_dep(chernoff_127, dpf_pos_dominates).
+thm_dep(binom_127, choose_above_diag).

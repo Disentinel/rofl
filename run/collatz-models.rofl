@@ -1,0 +1,91 @@
+-- collatz-models.rofl — the complete 10-round Collatz session models (2026-08-19)
+-- Load order: boot.rofl, audit-v0.2.rofl, then this file. Evaluate with budget >= 50M.
+-- Rebuilds the seed state exactly (the snapshot is a cache; this file is the truth).
+-- NOTE for the 24h run: decision[a](attach(slow, depth_30_level)) uses a level NOT in
+-- audit v0.2's registry — under v0.2 this now correctly fires vocab_drift (the R10
+-- catch, preserved deliberately as round-1 warm-up material).
+
+-- R1: landscape
+claim_of[a](collatz).
+ground[a](collatz, verified_to_2pow68).
+evidence[world](collatz, verified_to_2pow68).
+hypothesis[a](finite_check_generalizes).
+ground[a](collatz, finite_check_generalizes).
+
+-- R2-R3: materialize a bounded universe FIRST (safety discipline), then edges
+seed(27).
+gen(3).
+gen(M) :- gen(N), N < 199, M is N + 4.
+num(N) :- seed(N).
+num(N) :- gen(N).
+num(M) :- num(K), R is K mod 2, R = 0, M is K / 2.
+num(M) :- num(K), R is K mod 2, R = 1, K > 1, K < 20000, M is 3 * K + 1.
+edge(K, M) :- num(K), R is K mod 2, R = 0, M is K / 2.
+edge(K, M) :- num(K), R is K mod 2, R = 1, K > 1, K < 20000, M is 3 * K + 1.
+
+dist(N, N, 0) :- seed(N).
+dist(N, M2, D2) :- dist(N, M, D), edge(M, M2), D2 is D + 1.
+total(N, D) :- dist(N, 1, D).
+
+sdist(N, N, 0) :- gen(N).
+sdist(N, M2, D2) :- sdist(N, M, D), D < 30, edge(M, M2), D2 is D + 1.
+dropped(N) :- sdist(N, M, D), M < N.
+slow(N)    :- gen(N), not dropped(N).
+slowres(R) :- slow(N), R is N mod 16.
+
+-- R4: refine the cascade — deeper horizon for the slow set
+fdist(N, N, 0) :- slow(N).
+fdist(N, M2, D2) :- fdist(N, M, D), D < 120, edge(M, M2), D2 is D + 1.
+fdrop(N)     :- fdist(N, M, D), M < N.
+transient(N) :- slow(N), fdrop(N).
+still_slow(N):- slow(N), not fdrop(N).
+firstdrop_by(N, 60) :- slow(N), fdist(N, M, D), D <= 60, M < N.
+
+ground[a](slow_set_signals_divergence, slow_nonempty_at_30).
+claim_of[a](slow_set_signals_divergence).
+
+-- R5: proof obligations
+needs(collatz, no_cycles).  needs(collatz, no_divergence).
+branch(no_cycles).          branch(no_divergence).
+mark(yes).
+proven(C) :- claim_of[a](C), established(C, no_cycles), established(C, no_divergence).
+
+-- R6: strategies vs branches, obstacles from the literature
+covers(cycle_diophantine, no_cycles).   covers(twoadic_ext, no_cycles).
+covers(density_terras, no_divergence).  covers(density_tao, no_divergence).
+covers(drift_martingale, no_divergence).
+covers(uniform_automata, no_cycles).    covers(uniform_automata, no_divergence).
+obstacle[lit](density_terras, measure_zero_gap).
+obstacle[lit](density_tao, measure_zero_gap).
+obstacle[lit](drift_martingale, expectation_not_certainty).
+obstacle[lit](uniform_automata, conway_undecidability).
+obstacle[lit](cycle_diophantine, baker_bounds_finite_only).
+obstacle[lit](twoadic_ext, conjugacy_loses_arithmetic).
+partial_result[lit](no_cycles, eliahou_cycle_length_bound).
+partial_result[lit](no_cycles, simons_deweger_mcycles).
+
+dead(S)      :- obstacle[lit](S, X), not overcome[a](S, X).
+live(S)      :- covers(S, B), not dead(S).
+covered(B)   :- covers(S, B), live(S).
+uncovered(B) :- branch(B), not covered(B).
+
+-- R7: the engine generates its own instance evidence
+gdist(N, M)  :- gen(N), edge(N, M).
+gdist(N, M2) :- gdist(N, M), edge(M, M2).
+reach1(N)    :- gdist(N, 1).
+bad_exists(yes) :- mark(yes), gen(N), not reach1(N).
+all_ok(yes)     :- mark(yes), not bad_exists(yes).
+evidence[world](collatz, computed_batch_3mod4_to_199) :- all_ok(yes).
+
+-- R8: the engine audits the R4 inference
+refuted[b](slow_nonempty_at_30) :- transient(N), not still_slow(N).
+
+-- R9: synthesis — which branch is the hard core
+has_partial(B)  :- partial_result[lit](B, E).
+hard_core(B)    :- uncovered(B), not has_partial(B).
+
+-- R10: modeling self-audit
+decision[a](attach(slow, depth_30_level)).
+part_of(slow_at_30, slowness).  part_of(slow_at_120, slowness).
+verdict_ok[audit](slow_at_120).
+verdict_bad[audit](slow_at_30).

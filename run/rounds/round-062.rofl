@@ -1,0 +1,23 @@
+-- Round 62 (Track D). TARGET: the mod-3 flow law, FORMALIZED. Kernel
+-- theorems (TerrasAlmostAll.lean, 3412 lines, exit 0, standard axioms):
+--   indU_double: on gap-free depths BOTH lifts of every undecided class
+--     survive (odd lift via 3*3^A > 2^(k+1); even lift via empty gap +
+--     parity — the run-61 observation's engine);
+--   NN3 (mod-3-refined core count) and mod3_flow:
+--     NN3 c (k+1) = NN3 c k + NN3 ((c + 2^(k+1)) mod 3) k.
+-- The hyper-uniformity seen in R61 is now explained by theorem: on gap-free
+-- depths the deviation vector is rotated by I+sigma (|1+omega| = 1), never
+-- grown; all mod-3 imbalance of the core originates at 3-power crossings.
+-- Track D's one constructive find: a rigid machine-checked 2x3 interaction
+-- law inside the counterexample core.
+claim_of[a](mod3_flow_law_proved).
+ground[a](mod3_flow_law_proved, lean_kernel_proof_mod3_flow).
+evidence[world](mod3_flow_law_proved, lean_kernel_proof_mod3_flow).
+source_of(lean_kernel_proof_mod3_flow, file_terras_almost_all_lean).
+
+thm(mod3_flow).  thm(indu_double).
+thm_dep(mod3_flow, indu_double).
+thm_dep(indu_double, a_snoc).
+thm_dep(indu_double, lift_flip).
+thm_dep(indu_double, indu_periodic).
+thm_dep(indu_double, odd_pow3).

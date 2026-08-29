@@ -1,0 +1,17 @@
+-- Round 52. TARGET: the STATEMENT audit — the kernel checks proofs, but the
+-- trust boundary of a formalization is whether the theorem statements say
+-- what the prose claims. All nine headline signatures re-read adversarially
+-- against FINAL.md/README/RUN_LOG:
+--   drop_criterion, NU_eq_uf, terras_almost_all, terras_integers,
+--   collatz_original_integers, never_dropper_in_core, eta_20, core_half,
+--   core_sandwich_half — and the definitions they quantify over (T, C, A,
+--   indU, ndrop, ndropC, NU, ND, NDC, uf, gg).
+-- RESULT: no discrepancy. Each statement matches its documented claim; the
+-- definitions carry the intended semantics (A counts odd steps of the
+-- ACCELERATED trajectory; indU is prefix-domination; ndrop/ndropC quantify
+-- over ALL steps <= k; gg's zeros-budget is total-word, enforced per prefix
+-- by monotonicity). Two stale numerics in FINAL.md found and queued (line
+-- count fixed now; the rounds-count header is finalized at close).
+claim_of[a](statement_audit_clean).
+ground[a](statement_audit_clean, statement_crosscheck_r52).
+evidence[world](statement_audit_clean, statement_crosscheck_r52).

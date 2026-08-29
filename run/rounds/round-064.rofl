@@ -1,0 +1,10 @@
+-- Round 64. TARGET: verification artifacts brought current after Track D.
+-- AXIOMS.txt regenerated: 194 theorem declarations; native_decide still
+-- confined to 10 distinct finite checks; 29 pure-kernel no-axiom lines now
+-- INCLUDING the 17k-entry cycle exclusion table. WALKTHROUGH.md gains the
+-- Track D section (cycle exclusion, cap laws, mod-3 flow). check_all.sh
+-- re-run end-to-end: ALL CHECKS PASSED, 70 s wall (the kernel-decide table
+-- adds ~15 s — accepted for axiom-freedom).
+claim_of[a](verification_artifacts_current_r64).
+ground[a](verification_artifacts_current_r64, checkall_70s_axioms_194_r64).
+evidence[world](verification_artifacts_current_r64, checkall_70s_axioms_194_r64).

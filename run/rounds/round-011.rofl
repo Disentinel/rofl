@@ -1,0 +1,9 @@
+-- Round 11. TARGET: Track B closure — the hard_core derivation recorded as a claim.
+-- hard_core(no_divergence) derives in-substrate: all four strategies covering
+-- no_divergence are dead under uncontested literature obstacles AND the branch has
+-- no partial results (no_cycles has two). Shallow proof captured in
+-- run/hard_core_proof.md; the derivation is joins over the sourced obligation
+-- graph, explicitly NOT new mathematics.
+claim_of[a](hard_core_is_no_divergence).
+ground[a](hard_core_is_no_divergence, derivation_uncovered_and_no_partials).
+evidence[world](hard_core_is_no_divergence, derivation_uncovered_and_no_partials).

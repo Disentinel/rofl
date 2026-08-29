@@ -1,0 +1,36 @@
+-- Round 95 (post-window continuation, owner-directed). SUPERADDITIVITY
+-- KERNEL-CHECKED — the lower bound jumps 0.538 -> 3/4.
+-- theorem NU_superadd: u_k * u_m <= u_{k+m} (the splice: an undecided
+-- depth-k class and an undecided depth-m class combine, prefix gates
+-- from the first, tail gates from the product — gates multiply; the
+-- counting side is a reindexing bijection t -> (Titer k r1 + t*3^A) mod
+-- 2^m, odd multiplier, S-sum pigeonhole). NU_superadd_pow iterates;
+-- uf_anchor_24 (2^18 <= u_24 = 286,581, pure kernel decide on the dpf
+-- DP, NO AXIOMS) anchors; theorem core_lower_34:
+--   2^(18 * floor(j/24)) <= u_j  for ALL j — exponent 3/4.
+-- SUPERSESSION: core_713's "7/13 is the family method's ceiling" (R44)
+-- was a ceiling of the METHOD, not the truth: superadditivity converts
+-- any kernel-evaluated anchor into a proved exponent log2(u_k)/k with
+-- no ceiling short of the true entropy h ~ 0.9500 (thermo agent's
+-- entropy identity h = H(log3(2)), sketch pending formalization).
+-- Sandwich now: 2^(3j/4 - 18) <= u_j <= 2^(j - j/20).
+-- Engineering note: direct NU-anchor decide stack-overflows (65k-deep
+-- fold); the dpf side is depth-k recursion — decide at k=24 costs ~0s.
+-- Axioms: NU_superadd propext+Quot.sound; anchor NONE; corollary
+-- standard three.
+claim_of[a](superadditivity_kernel_checked).
+ground[a](superadditivity_kernel_checked, lean_NU_superadd_compiles).
+evidence[world](superadditivity_kernel_checked, lean_NU_superadd_compiles).
+
+claim_of[a](lower_bound_three_quarters).
+ground[a](lower_bound_three_quarters, superadditivity_kernel_checked).
+
+claim_of[a](family_ceiling_superseded).
+ground[a](family_ceiling_superseded, lower_bound_three_quarters).
+
+lean_theorem(thm_NU_superadd).    lean_axioms_minimal(thm_NU_superadd).
+lean_theorem(thm_core_lower_34).
+lean_theorem(thm_uf_anchor_24).
+depends_on(thm_core_lower_34, thm_NU_superadd).
+depends_on(thm_core_lower_34, thm_uf_anchor_24).
+depends_on(thm_NU_superadd, thm_composite_undecided).

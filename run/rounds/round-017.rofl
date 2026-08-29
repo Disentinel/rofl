@@ -1,0 +1,18 @@
+-- Round 17. TARGET: record round 16 as claims (zero new predicates — the
+-- vocabulary FREEZE is in force, see RUN_LOG degradation-check report).
+--
+-- Computed at range n<=999:
+-- (1) inclusion persists: slow_outside_m EMPTY at mod 64 AND mod 128 — every slow
+--     number lies in a Terras-undecided class at both granularities;
+-- (2) exact fill BREAKS at mod 64: branch 15 mod 64 is k=6-undecided yet contains
+--     no slow number <=999, and its sole k=7-surviving child 79 mod 128 is likewise
+--     empty — a coherent single-branch thinning. The mod-32 equality of R15 was
+--     granularity-specific; from mod 64 on the empirical slow set is a STRICT
+--     subset of the undecided classes at this range.
+claim_of[a](slow_subset_und_persists_64_128).
+ground[a](slow_subset_und_persists_64_128, computed_slow_outside_m_empty_64_128).
+evidence[world](slow_subset_und_persists_64_128, computed_slow_outside_m_empty_64_128).
+
+claim_of[a](exact_fill_breaks_at_64).
+ground[a](exact_fill_breaks_at_64, computed_unfilled_15_mod64_79_mod128).
+evidence[world](exact_fill_breaks_at_64, computed_unfilled_15_mod64_79_mod128).

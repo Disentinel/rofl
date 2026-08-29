@@ -1,0 +1,26 @@
+-- Round 86 (Track D). THE STAIRCASE POINT, EXPLICITLY: def stairT — the
+-- second canonical core point, taking at each depth the child with
+-- MINIMAL exponent (the odd child exactly at critical levels).
+-- stairT_spec (one induction): range + undecidedness at every depth +
+-- the tight bound 3^A <= 3*2^k. stairT_A: the exponent increments IFF
+-- the level is critical — the point's parity word is the mechanical
+-- (Sturmian) word of log2(3). Axioms: propext + Quot.sound.
+-- Exhibits (oracle stair_path.js + kernel #eval): truncations
+-- [0,1,3,3,11,27,59,123,251,507,1019,1019,3067,...] — departs 27 at
+-- depth 6 (unlike alphaT which shadows it to 58); parity word
+-- 1101101101011011010110110110101101101011 (ones density -> log3(2)).
+-- The two explicit points now bracket the core's character: alphaT
+-- (greedy-stay, shadows real orbits, escapes upward at decision events)
+-- and stairT (extremal, rides the critical line, Sturmian symbolic
+-- dynamics). stairT's limit in N would BE a critical-line orbit — the
+-- precise open question R83's negative fenced.
+claim_of[a](staircase_point_kernel_checked).
+ground[a](staircase_point_kernel_checked, lean_stairT_spec_compiles).
+evidence[world](staircase_point_kernel_checked, lean_stairT_spec_compiles).
+
+claim_of[a](sturmian_word_realized_in_core).
+ground[a](sturmian_word_realized_in_core, staircase_point_kernel_checked).
+
+lean_theorem(thm_stairT_spec).  lean_axioms_minimal(thm_stairT_spec).
+lean_theorem(thm_stairT_A).     lean_axioms_minimal(thm_stairT_A).
+depends_on(thm_stairT_spec, thm_branch_law).

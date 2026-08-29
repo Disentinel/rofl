@@ -1,0 +1,19 @@
+-- Round 63 (Track D). TARGET: the kick spectrum + Track D synthesis.
+-- Kick vectors at every 3-power crossing j <= 26: dying sets are
+-- near-EXACTLY mod-3 balanced through j = 21 (961 -> [320,320,321]; kicks
+-- 10-30x below Poisson), approaching Poisson at j >= 23. The core's 3-adic
+-- hyper-uniformity is RECURSIVE (even crossing slices balance), with the
+-- small-depth exactness an open micro-question — the search's one loose
+-- thread that looks pullable. HYPOTHESES.md closes with the five-point
+-- synthesis: reduction formal, conformity everywhere, three constraint
+-- extensions, one constructive law (mod3_flow + sub-Poisson kicks — the
+-- single measured phenomenon the stochastic model does NOT predict), and
+-- the honest bottom line: nothing approaches the canonical statement,
+-- consistent with the run's own obstruction theorem.
+claim_of[a](kick_spectrum_sub_poisson).
+ground[a](kick_spectrum_sub_poisson, computed_kick_vectors_j26).
+evidence[world](kick_spectrum_sub_poisson, computed_kick_vectors_j26).
+
+claim_of[a](track_d_synthesis_recorded).
+ground[a](track_d_synthesis_recorded, hypotheses_md_synthesis_r63).
+evidence[world](track_d_synthesis_recorded, hypotheses_md_synthesis_r63).

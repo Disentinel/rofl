@@ -1,0 +1,26 @@
+-- Round 83 (Track D). THE GROWTH LAW IN CLOSED FORM, kernel-checked:
+-- crit_eq_dpf — the critical set IS the core's population at the unique
+-- crossing exponent a* (uniqueness by 3-power spacing; equality with the
+-- 2-power excluded by parity), so via NN_eq_dpf the loss is the
+-- COMPUTABLE dpf table row: growth_closed_form
+--   u_{k+1} + dpf k a* = 2*u_k  (at crossings 2^k < 3^a* <= 2^(k+1)),
+-- doubling_at_gap: u_{k+1} = 2*u_k exactly on gap-free depths.
+-- Kernel #eval: NU 5 + dpf 4 3 = 4+2 = 6 = 2*NU 4; NU 8 + dpf 7 5 =
+-- 19+7 = 26 = 2*NU 7. Axioms: standard.
+-- Note (honest negative): the round also KILLED a planned theorem — the
+-- staircase point alpha (greedy minimal path) is NOT provably non-integer
+-- by the bounded-orbit/pigeonhole route: on the staircase D/2^j is a sum
+-- of ~0.63j Theta(1) terms, so the hypothetical orbit grows LINEARLY,
+-- not boundedly — alpha in N is exactly a critical-line orbit, open
+-- territory. Recorded as a refuted proof strategy, not a refuted claim.
+claim_of[a](growth_law_closed_form_kernel_checked).
+ground[a](growth_law_closed_form_kernel_checked, lean_growth_closed_form_compiles).
+evidence[world](growth_law_closed_form_kernel_checked, lean_growth_closed_form_compiles).
+
+claim_of[a](staircase_nonintegrality_strategy_refuted).
+ground[a](staircase_nonintegrality_strategy_refuted, linear_growth_of_staircase_orbit).
+
+lean_theorem(thm_growth_closed_form).  lean_axioms_minimal(thm_growth_closed_form).
+lean_theorem(thm_doubling_at_gap).
+depends_on(thm_growth_closed_form, thm_crit_eq_dpf).
+depends_on(thm_crit_eq_dpf, thm_NN_eq_dpf).

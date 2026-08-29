@@ -1,0 +1,46 @@
+-- Round 96 (post-window continuation, owner-directed). THE LITERATURE
+-- DIFF. Owner uploaded 7 primary sources (Chang 2603.25753;
+-- Krasikov-Lagarias 0205002; Applegate-Lagarias I+II; Tao 1909.03562v7;
+-- Lagarias annotated bibliography II 0608208v6; Yolcu-Aaronson-Heule
+-- 2105.14697v3). Full-text extraction (pymupdf), targeted reads, and a
+-- per-claim diff table: run/NOVELTY_DIFF.md.
+-- VERDICTS: classical layer = REDISCOVERY (mechanization is the
+-- artifact); no_small_cycles = KNOWN-STRONGER (CF/transcendence line is
+-- orders of magnitude beyond 183); coupling transducer = PARALLEL-
+-- PROBABLE-REDISCOVERY (Canales Chacon-Vielhaber 2004: 5-state shift-
+-- commutator automaton for a -> 3a+2, same object dual presentation);
+-- Sturmian = PARALLEL (Lopez-Stoll 2009, converse direction); negative
+-- CF-locking = mechanism classical, packaging ours; NOT FOUND in corpus:
+-- superadditivity lower bound u_k*u_m <= u_{k+m} => 2^(3k/4-18) <= u_k,
+-- covering obstruction core_meets_every_class, exact 3-adic flow/
+-- conservation laws, the two constructive core points as computable
+-- exhibits. NOT FOUND is not a novelty certificate: corpus = 7 papers +
+-- one bibliography ending 2009.
+-- TWO CORRECTIONS ledgered: (1) earlier grep "coefficient stopping: 0
+-- hits" was an ffi-LIGATURE ARTIFACT — Terras 1976 owns the term, C6
+-- has 4+ hits; instrument-read-too-literally, same class as the three
+-- write-before-read incidents. (2) earlier note "Syracuse mod-3^n
+-- equidistribution unclaimed" — Tao PROVES superpolynomial fine-scale
+-- mixing (Props 1.14/1.17); only the exp(-cm) sharpening is open.
+claim_of[a](literature_diff_completed).
+ground[a](literature_diff_completed, novelty_diff_document).
+evidence[world](literature_diff_completed, novelty_diff_document).
+
+claim_of[a](novelty_calibrated_not_expanded).
+ground[a](novelty_calibrated_not_expanded, literature_diff_completed).
+
+claim_of[a](superadd_bound_not_found_in_corpus).
+ground[a](superadd_bound_not_found_in_corpus, literature_diff_completed).
+
+claim_of[a](covering_obstruction_not_found_in_corpus).
+ground[a](covering_obstruction_not_found_in_corpus, literature_diff_completed).
+
+claim_of[a](ligature_artifact_corrected).
+ground[a](ligature_artifact_corrected, novelty_diff_document).
+
+-- Grounded in an unverified hypothesis DELIBERATELY: the audit rule
+-- derives shaky[audit] for it, and it stays shaky until someone reads
+-- the full Canales Chacon-Vielhaber paper (only C6's annotation read).
+hypothesis[a](ccv2004_shift_commutator_same_object).
+claim_of[a](transducer_probable_rediscovery_ccv2004).
+ground[a](transducer_probable_rediscovery_ccv2004, ccv2004_shift_commutator_same_object).

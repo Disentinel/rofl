@@ -1,0 +1,16 @@
+{
+ "partial": false,
+ "ms": 14525910,
+ "facts": 808523,
+ "slow_count_engine": 285,
+ "slow_count_oracle": 285,
+ "slow_sets_agree": true,
+ "oracle_max_value_30steps": 3188644,
+ "outside_32": [],
+ "outside_64": [],
+ "outside_128": [],
+ "unfilled_32": [],
+ "unfilled_64": [],
+ "unfilled_128": [],
+ "still_slow_260": []
+}

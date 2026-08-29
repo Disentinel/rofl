@@ -1,0 +1,23 @@
+-- Round 69 (Track D). TARGET: the Fourier picture at modulus 9. PROVED:
+-- mod9_flow (kernel; -1 = 2^3 mod 9 puts the partner at c + 2^(k+3)).
+-- VERIFIED verbatim to k=28: DFT mode ratios on gap-free steps equal the
+-- predicted |1 + w9^(hs)| multipliers to all displayed digits, including
+-- the contracting 2cos(4pi/9) ~ 0.347 mode. ALGEBRA: the multiplier product
+-- over the full 6-cycle of h = 2^k mod 9 is EXACTLY 1 on every non-constant
+-- mode (8 cos(pi/9) cos(2pi/9) cos(4pi/9) = 1; (1+z)(1+z^2) = 1) — with
+-- Sturmian discrepancy O(log k) for the gap-free subsequence, deterministic
+-- amplification of all mod-9 imbalance modes is polynomially bounded
+-- forever; every exponential-scale 3-adic feature of the core is
+-- kick-driven. The core's 3-adic Fourier dynamics: deterministic cocycle
+-- (proved) x crossing kicks (open character-sum problem).
+claim_of[a](mod9_flow_proved_cocycle_verified).
+ground[a](mod9_flow_proved_cocycle_verified, lean_kernel_proof_mod9_flow).
+evidence[world](mod9_flow_proved_cocycle_verified, lean_kernel_proof_mod9_flow).
+source_of(lean_kernel_proof_mod9_flow, file_terras_almost_all_lean).
+
+claim_of[a](six_cycle_identity_polynomial_amplification).
+ground[a](six_cycle_identity_polynomial_amplification, cosine_identity_plus_sturmian_discrepancy).
+evidence[world](six_cycle_identity_polynomial_amplification, cosine_identity_plus_sturmian_discrepancy).
+
+thm(mod9_flow).
+thm_dep(mod9_flow, indu_double).

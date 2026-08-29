@@ -1,0 +1,12 @@
+-- Round 48. TARGET: METRICS.md — the sustained-reasoning experiment's own
+-- primary data, from git history: cadence by phase (7 -> 10 rounds/hr, pace
+-- ROSE as machinery accumulated), the 10-catch distribution (early catches
+-- are vocabulary/process, late ones are CONTENT revisions — R41 deepest),
+-- growth curves, and the headline: zero rounds shipped with an unexplained
+-- red audit over the whole window. n=1 caveat stated.
+claim_of[a](run_metrics_recorded).
+ground[a](run_metrics_recorded, metrics_md_from_git_history_r48).
+evidence[world](run_metrics_recorded, metrics_md_from_git_history_r48).
+src(file_metrics_md).  src_basis(file_metrics_md, repo_committed).
+verified[world](file_metrics_md).
+source_of(metrics_md_from_git_history_r48, file_metrics_md).

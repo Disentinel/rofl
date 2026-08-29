@@ -1,0 +1,43 @@
+-- Round 44 (Track C). TARGET: THE LOWER BOUND — the undecided core provably
+-- NEVER EMPTIES. This is the formal content of the frontier's hard-core
+-- claim (R22): no finite-depth residue-class analysis can settle Collatz,
+-- because the core that depth-k analysis leaves open is exponentially LARGE
+-- for every k. Kernel-checked (TerrasAlmostAll.lean, 2111 lines, exit 0):
+--   failb/F:          computable failure indicator and counter;
+--   F_pow:            3^(F k) <= 2^k — the failure counter is bounded by the
+--                     3-power ladder via ONE induction invariant (each
+--                     failure's power is strictly above all earlier ones —
+--                     no set cardinality machinery needed);
+--   F_le:             F k <= 64k/100 (from 2^100 < 3^64, kernel decide);
+--   uf_mono:          odd extensions always survive;
+--   uf_double_low:    on failure-free depths the core exactly doubles;
+--   eta_lower_raw:    2^k <= u_k * 2^(F k + 1) (the +1 absorbs the k=0
+--                     boundary anomaly documented in R41);
+--   eta_lower:        2^k <= u_k * 2^(64k/100 + 1);
+--   core_never_empty: u_k >= 1 for ALL k;
+--   core_exponential: 2^(36k/100) <= 2 u_k.
+-- With eta_20 (R43) the core is now SANDWICHED, kernel-checked both sides:
+--   2^(0.36 k)/2 <= u_k <= 2^(k - k/20).
+-- Numerically verified to k=300 before proving, per compute-then-claim.
+claim_of[a](core_never_empties_formal).
+ground[a](core_never_empties_formal, lean_kernel_proof_core_lower).
+evidence[world](core_never_empties_formal, lean_kernel_proof_core_lower).
+source_of(lean_kernel_proof_core_lower, file_terras_almost_all_lean).
+
+claim_of[a](density_route_cannot_close_collatz).
+ground[a](density_route_cannot_close_collatz, lean_kernel_proof_core_lower).
+evidence[world](density_route_cannot_close_collatz, lean_kernel_proof_core_lower).
+
+thm(eta_lower).  thm(core_never_empty).  thm(core_exponential).
+thm(f_pow).  thm(f_le).  thm(uf_mono_thm).  thm(uf_double_low).
+thm(eta_lower_raw).  thm(pow_2_3_64).
+thm_dep(core_exponential, eta_lower).
+thm_dep(core_never_empty, eta_lower_raw).
+thm_dep(eta_lower, eta_lower_raw).
+thm_dep(eta_lower, f_le).
+thm_dep(eta_lower_raw, uf_mono_thm).
+thm_dep(eta_lower_raw, uf_double_low).
+thm_dep(f_le, f_pow).
+thm_dep(f_le, pow_2_3_64).
+thm_dep(uf_double_low, dpf_pos_dominates).
+thm_dep(uf_double_low, odd_pow3).

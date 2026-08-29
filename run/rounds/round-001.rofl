@@ -1,0 +1,8 @@
+-- Round 1 (2026-08-19, 24h run). MANDATORY TARGET: open_risk(slow_set_signals_divergence).
+-- The claim was Claude's R4 inference ("a nonempty slow set at depth 30 signals
+-- divergence"). Its ground, slow_nonempty_at_30, was REFUTED by the engine's own R4
+-- computation: every one of the 11 slow residues n≡3(4)≤199 drops below its start by
+-- depth 120 (transient/1 covers slow/1; still_slow/1 is empty in the seed state).
+-- Assert-only revision: the claim is explicitly ABANDONED, never retracted. at_risk
+-- remains derivable as history; open_risk must clear via repaired.
+repair[a](slow_set_signals_divergence, abandoned_because(all_slow_transient_by_depth_120)).

@@ -1,0 +1,37 @@
+-- Round 49 (Track C). TARGET: the lower exponent lifted 0.36 -> 1/2. An
+-- EXPLICIT surviving family: 1^(2m) followed by ANY word of length 2m with
+-- at most m zeros — worst prefix ratio 9^m vs 8^m, so every member is
+-- dominated; the family is counted by a central-binomial half-sum
+-- Sigma_{r>=m} C(2m,r) >= 4^m/2. Kernel-checked (TerrasAlmostAll.lean,
+-- 2579 lines, exit 0, three standard axioms):
+--   choose_diag, choose_symm (Pascal symmetry, induction);
+--   binom_one (Sigma C(k,s) = 2^k), bottom_peel, S_rev (sum reversal),
+--   half_sum (4^m <= 2 Sigma_{r=m}^{2m} C(2m,r));
+--   gg (the family DP), gg_pos, dpf_diag, gg_gate (9/8-margin domination),
+--   gg_le_dpf (the family undercounts dominated strings),
+--   gg_ge_choose (in the valid window the family dominates the binomial),
+--   uf_4m (4^m <= 2 u_{4m}), uf_mono_le, and
+--   core_half: 2^(k/2) <= 8 u_k for ALL k >= 4;
+--   core_sandwich_half: 2^(k/2)/8 <= u_k <= 2^(k - k/20).
+-- Bounds now: proved [0.500, 0.950] vs true exponent ~0.9500 (upper side is
+-- 0.05-tight; lower side improved from 0.36; truth for the lower is ~0.95 —
+-- the remaining lower-side gap is the ballot/entropy counting that needs
+-- anti-concentration, honestly out of core-Lean reach this run).
+-- Numerically verified k=4..300 before proving.
+claim_of[a](core_lower_half_exponent).
+ground[a](core_lower_half_exponent, lean_kernel_proof_core_half).
+evidence[world](core_lower_half_exponent, lean_kernel_proof_core_half).
+source_of(lean_kernel_proof_core_half, file_terras_almost_all_lean).
+
+thm(core_half).  thm(uf_4m_thm).  thm(gg_ge_choose).  thm(gg_le_dpf).
+thm(gg_gate).  thm(half_sum).  thm(choose_symm).  thm(binom_one).
+thm(core_sandwich_half).
+thm_dep(core_sandwich_half, core_half).
+thm_dep(core_sandwich_half, eta_20).
+thm_dep(core_half, uf_4m_thm).
+thm_dep(uf_4m_thm, gg_ge_choose).
+thm_dep(uf_4m_thm, gg_le_dpf).
+thm_dep(uf_4m_thm, half_sum).
+thm_dep(gg_le_dpf, gg_gate).
+thm_dep(half_sum, choose_symm).
+thm_dep(half_sum, binom_one).

@@ -1,0 +1,13 @@
+-- Round 67 (Track D). TARGET: kick spectrum to j = 29 — and a REVISION of
+-- the run's own R63 framing, per discipline. New lift_flip-based class-tree
+-- enumerator (cross-validated: u_30 = 12,771,274 matches the DP exactly).
+-- Ratios |kick|/sqrt(w): deeply sub-Poisson at j = 18/20/21 (0.02-0.09),
+-- moderate at 26/27 (0.20-0.29), but FULL POISSON at j = 24 (1.08) and
+-- j = 29 (0.97). The sub-Poisson claim is NOT uniform: it concentrates at
+-- particular crossings (post-hoc ~1% significance for the striking three);
+-- deep crossings look Poisson. The character-sum problem stands, with the
+-- honest reading downgraded to "anomalous at specific ladder positions" —
+-- next lead: the arithmetic of a*(j) at the striking crossings.
+claim_of[a](kick_spectrum_revised_j29).
+ground[a](kick_spectrum_revised_j29, computed_kicks_lift_flip_j29).
+evidence[world](kick_spectrum_revised_j29, computed_kicks_lift_flip_j29).

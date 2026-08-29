@@ -1,0 +1,13 @@
+-- Round 19. TARGET: mod-256 fill test, hybrid method (freeze honored, no new
+-- predicates; claims only). Ingredients both dual-computed, final join host-side:
+--   (a) und256 = the 19 k=8-undecided residues, engine scratch == oracle lists;
+--   (b) the 285-member slow set at n<=9999, whose engine==oracle identity was
+--       established in-substrate in R18 (full sorted-list agreement).
+-- Host-side join of (a) x (b): outside_256 EMPTY, unfilled_256 EMPTY,
+-- slowres256 covers all 19 classes. The cascade coincidence extends to mod 256:
+-- inclusion AND exact fill at range 9999. Honest labeling: the JOIN was not
+-- performed in-substrate (unlike mod 32/64/128 in R14/R16/R18) — the ground
+-- names the hybrid method explicitly.
+claim_of[a](fill_exact_at_256_range_9999).
+ground[a](fill_exact_at_256_range_9999, hybrid_dual_ingredients_host_join_256).
+evidence[world](fill_exact_at_256_range_9999, hybrid_dual_ingredients_host_join_256).

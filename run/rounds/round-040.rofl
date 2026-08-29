@@ -1,0 +1,21 @@
+-- Round 40. TARGET: reproducibility as an artifact + the C-map core corollary.
+-- (a) run/math/check_all.sh — ONE command re-verifies everything: 7 standalone
+--     Lean files (kernel), 6 executable checkers (Node), the kernel test suite
+--     (29 green), and the kernel grep. Executed end-to-end before commit:
+--     ALL CHECKS PASSED, exit 0. Toolchain fetch instructions embedded.
+-- (b) never_dropper_C_in_core (TerrasAlmostAll.lean, exit 0): the shrinking-
+--     core statement transferred to the ORIGINAL map — if n never drops under
+--     plain 3n+1|n/2 iteration it is undecided at every depth <= log3 n
+--     (T-values are C-values via titer_citer, so a C-never-dropper is a
+--     T-never-dropper).
+claim_of[a](one_command_reproducibility).
+ground[a](one_command_reproducibility, check_all_sh_exit0_r40).
+evidence[world](one_command_reproducibility, check_all_sh_exit0_r40).
+
+claim_of[a](c_map_counterexamples_in_core).
+ground[a](c_map_counterexamples_in_core, lean_kernel_proof_never_dropper_c).
+evidence[world](c_map_counterexamples_in_core, lean_kernel_proof_never_dropper_c).
+source_of(lean_kernel_proof_never_dropper_c, file_terras_almost_all_lean).
+thm(never_dropper_c_in_core).
+thm_dep(never_dropper_c_in_core, never_dropper_in_core).
+thm_dep(never_dropper_c_in_core, titer_citer).

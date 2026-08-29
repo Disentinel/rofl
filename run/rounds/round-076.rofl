@@ -1,0 +1,27 @@
+-- Round 76 (Track D). THE CANONICAL REDUCTION, kernel-checked:
+-- theorem collatz_iff_descent — (forall n >= 2, exists j, T^j(n) < n)
+-- IFF (forall n >= 1, exists j, C^j(n) = 1). Universal eventual descent
+-- for the accelerated map is EQUIVALENT to the canonical conjecture on
+-- the original 3n+1 map. Until now this reduction was ledger-claimed
+-- (FINAL.md "the reduction made formal") but NOT in Lean — the gap
+-- between claim and kernel is now closed. Ingredients: citer_add,
+-- bounded strong induction (descent_to_one), the 1->4->2 cycle lemma
+-- (citer_cycle), orbit transfer both ways (titer_one_citer_one,
+-- citer_one_titer_one via titer_citer + citer_one_after). Axioms:
+-- propext, Classical.choice, Quot.sound. Spot: Citer d 1 cycles [1,4,2],
+-- Citer orbit of 27 matches the canonical trajectory.
+-- Consequence for the run's story: every descent statement in the file
+-- (terras_almost_all, never_dropper laws, the core sandwich) now speaks
+-- FORMALLY about the left side of an equivalence whose right side IS the
+-- canonical conjecture. The boundary statement sharpens: what is missing
+-- is exactly "the infinite core misses N" — nothing is lost in translation.
+claim_of[a](canonical_reduction_kernel_checked).
+ground[a](canonical_reduction_kernel_checked, lean_collatz_iff_descent_compiles).
+evidence[world](canonical_reduction_kernel_checked, lean_collatz_iff_descent_compiles).
+
+claim_of[a](reduction_claim_now_lean_backed).
+ground[a](reduction_claim_now_lean_backed, canonical_reduction_kernel_checked).
+
+lean_theorem(thm_collatz_iff_descent).
+depends_on(thm_collatz_iff_descent, thm_titer_citer).
+depends_on(thm_collatz_iff_descent, thm_titer_pos).

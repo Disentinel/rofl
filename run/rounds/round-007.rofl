@@ -1,0 +1,13 @@
+-- Round 7. TARGET: Track A — k=13, k=14, and the substrate cost curve.
+-- Engine == oracle again: 367 (k=13), 734 (k=14). k=14 scratch run: 590,838 facts,
+-- 70.9s. Cost per k grows ~x3.4 in time and ~x2.1 in facts: extrapolated ceiling
+-- in-substrate is k~16-17 (time), with memory (facts + provenance doubling the
+-- store) the binding constraint beyond that. This EXPECTED wall is a run
+-- deliverable, to be measured precisely in a later round, not worked around
+-- silently (SUBSTRATE_ISSUES).
+terras[world](13, 367).
+terras[world](14, 734).
+claim_of[a](terras_k13). ground[a](terras_k13, scratch_oracle_agree_k13).
+evidence[world](terras_k13, scratch_oracle_agree_k13).
+claim_of[a](terras_k14). ground[a](terras_k14, scratch_oracle_agree_k14).
+evidence[world](terras_k14, scratch_oracle_agree_k14).

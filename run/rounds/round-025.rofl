@@ -1,0 +1,11 @@
+-- Round 25 (Track C). TARGET: upgrade "u_{k+1} <= 2 u_k" from a finite check to
+-- a GENERAL kernel-checked theorem (run/math/Lemma5Check.lean, exit 0).
+-- Proof: functional DP dpf; each child count is at most the sum of its two
+-- parent counts (dpf_step_le); sum machinery (S_succ / S_mono / S_add /
+-- S_shift) built from scratch over core List.range; dpf vanishes above the
+-- diagonal. Theorem uf_double : forall k, uf (k+1) <= 2 * uf k — the density
+-- monotonicity of Lemma 4(a) now holds for ALL k, not just k <= 19. The
+-- functional DP is bridged to the earlier list DP by native_decide (k <= 20).
+claim_of[a](lemma5_general_density_monotone).
+ground[a](lemma5_general_density_monotone, lean_kernel_proof_uf_double).
+evidence[world](lemma5_general_density_monotone, lean_kernel_proof_uf_double).

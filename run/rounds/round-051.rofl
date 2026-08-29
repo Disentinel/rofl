@@ -1,0 +1,15 @@
+-- Round 51. TARGET: verification transparency — run/math/AXIOMS.txt, the
+-- complete axiom audit: #print axioms re-elicited for ALL 170 theorem
+-- declarations across the 7 Lean files. Findings: Lean.ofReduceBool
+-- (native_decide) appears in exactly 10 distinct theorems, every one a
+-- FINITE check (k-bounded tables and bridges); every general theorem
+-- carries only [propext, Classical.choice, Quot.sound] or fewer; 26 lines
+-- are pure kernel computations with NO axioms at all (including the two big
+-- rate certificates). The trust surface of the whole formalization is now
+-- one committed text file.
+claim_of[a](axiom_audit_complete).
+ground[a](axiom_audit_complete, axioms_txt_all_170_r51).
+evidence[world](axiom_audit_complete, axioms_txt_all_170_r51).
+src(file_axioms_txt).  src_basis(file_axioms_txt, repo_committed).
+verified[world](file_axioms_txt).
+source_of(axioms_txt_all_170_r51, file_axioms_txt).
