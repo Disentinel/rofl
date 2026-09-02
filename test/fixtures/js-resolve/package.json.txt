@@ -1,0 +1,6 @@
+{
+  "name": "fx",
+  "imports": {
+    "#sub/*": "./sub/*"
+  }
+}

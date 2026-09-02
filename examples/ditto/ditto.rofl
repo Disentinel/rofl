@@ -1,0 +1,465 @@
+-- ditto.rofl — DITTO: pin the model, make the edit, prove what you promised
+-- to preserve was preserved.
+--
+-- "This is a refactoring" is an assertion nobody checks. Tests check sampled
+-- OUTPUTS on sampled INPUTS and everyone hopes that was enough. Nothing checks
+-- STRUCTURE, and nothing lets the author say WHICH subset of the structure was
+-- supposed to survive.
+--
+-- WHAT CANNOT BE PROMISED, SAID ONCE, HERE. Program equivalence is
+-- undecidable. "Behaviour is identical" cannot be proved and promising it is a
+-- lie. What can be proved is that the DECLARED AND EXTRACTABLE set of
+-- invariants survived — strictly weaker than the informal promise and strictly
+-- more useful, because it is checkable. Every verdict below is worded that way
+-- and `undecidable/1` and `out_of_scope/1` are facts so the tool prints its own
+-- boundary instead of implying it covered everything.
+--
+-- WHY THIS DOMAIN IS CHEAP. Extraction is deterministic at both ends, as in
+-- examples/drip: the model of the code before the edit and the model after it
+-- are both the output of the SAME dumb reader — scanners/js.ts, which already
+-- exists in this repository and parses TypeScript into src_func / src_call /
+-- src_import / src_export facts. Nobody judges anything on the way in. The one
+-- thing a human must supply is the equivalence class, and that is the whole
+-- point: declaring what counts as a refactoring is the human's job and cannot
+-- be automated (the tool asserting into [claim] is `forged[audit]`, and
+-- demo.ts fires it).
+--
+-- TWO LEDGERS FOR THE TWO MODELS, and that is the natural shape:
+--   [before]  the frozen model: what the extractor read at the pinned
+--             revision. Written by the freeze, which is a stored artefact.
+--   [after]   the same extractor, re-run on the working tree.
+--   [claim]   the engineer's declaration: which edits these are, which names
+--             and paths were deliberately moved, what the entry points are.
+--   [main]    every conclusion, reading all three through declared imports.
+--
+-- These are LEDGERS, not statuses (docs/choosing-perspectives.md). "Preserved"
+-- and "violated" are DERIVED in [main]; nothing is ever filed under them. The
+-- closest this comes to the perspective-per-run anti-pattern is worth naming:
+-- [before] and [after] are not one ledger per extractor execution. There are
+-- exactly two, always, by construction — the pinned baseline and the current
+-- tree — and the next edit re-freezes [after] as the new [before] rather than
+-- spawning a third. test/example-ditto.test.ts pins the count at two.
+--
+-- Fixture: examples/ditto/before/ and examples/ditto/after/, seven ordinary
+-- TypeScript files each, carrying five declared edits (an extraction, a
+-- rename, a module move, a data-structure swap and a de-duplication), one
+-- planted defect and one planted loss of redundancy. README.md says which.
+
+-- =========================================================================
+-- 0. the ledgers, and who may write into them
+-- =========================================================================
+
+authority(before, frozen_extract).
+authority(after,  live_extract).
+authority(claim,  engineer).
+imports(main, before).
+imports(main, after).
+imports(main, claim).
+
+-- And the other direction, which the leak audit asks about since `flows_to`
+-- closed the flow graph. Every audit rule in boot.rofl reads [main] and
+-- writes [audit], so content that reached [main] from one of these three
+-- books reaches [audit] on the next hop. Each line below is a decision, not
+-- a formality: yes, the audit ledger may name the frozen extraction, the
+-- live one, and the engineer's claim -- reporting on them is the whole
+-- reason this program exists, and `forged[audit]` cannot name a facts's
+-- book without reading that book.
+imports(audit, before).
+imports(audit, after).
+imports(audit, claim).
+
+-- And the crossing `imports` cannot express, said in the one place it is
+-- true. The extraction rules are polymorphic in the side -- `file[S](P, H)
+-- :- src_file[S](P, H)` and its siblings serve [before] and [after] both,
+-- which is the point, since two rules would be two chances to extract the
+-- two sides differently -- and the comparison rules read [S] and write
+-- [main]. So [main] gathers from a ledger it does not name, and no
+-- `imports(main, From)` can say so: `imports` relates two REGISTERED
+-- perspectives and `$var("S")` has no `authority` fact and never will.
+-- `collects(main)` says it once, at the ledger that does the gathering, and
+-- `collected[audit](main)` then reports that the declaration was exercised.
+collects(main).
+
+side(before).
+side(after).
+
+-- The extractor's own vocabulary. Declared, not merely populated: these facts
+-- arrive from demo.ts after this file loads, and boot.rofl's
+-- `undefined_premise` audit reads an unpopulated positive premise as a
+-- misspelling — correctly. Declaring the input is the remedy and doubles as
+-- the schema (same reason examples/moot declares its config schema).
+edb(imports).
+edb(src_file).      -- src_file[S](Path, Hash12)
+edb(src_func).      -- src_func[S](Path, Name, Line)
+edb(src_call).      -- src_call[S](Path, Caller, CalleeName)
+edb(src_import).    -- src_import[S](Path, Specifier)
+edb(src_export).    -- src_export[S](Path, Name)
+edb(src_class).     -- src_class[S](Path, Name, Line)
+edb(src_method).    -- src_method[S](Path, Class, Name, Line)
+edb(src_parse_error).
+edb(resolves).      -- resolves[S](Path, Specifier, TargetModule)
+edb(extractor).     -- extractor[S](Tool, Version)
+
+-- The engineer's declaration.
+edb(edit).          -- edit[claim](Id, Kind)
+edb(edit_note).     -- edit_note[claim](Id, Prose)
+edb(renamed).       -- renamed[claim](OldName, NewName)
+edb(moved).         -- moved[claim](OldPath, NewPath)
+edb(entry_point).   -- entry_point[claim](fn(Path, Name))
+
+-- =========================================================================
+-- 1. the extractor is a node of the graph, and skew REFUSES the answer
+-- =========================================================================
+-- Freezing with one parser and checking with another is a source of both
+-- false violations and false calm, and it is invisible unless the tool is made
+-- to look. So the tool version is data, the mismatch is derived, and the
+-- comparison is REFUSED rather than annotated: `checked/1` is what every
+-- verdict below is guarded by, and it is empty while anything is refused.
+--
+-- A gate that has never said no is indistinguishable from an absent one, so
+-- demo.ts §8 runs a world whose [after] was extracted by a different version
+-- and shows the whole report collapse to REFUSED.
+
+skew(Tool, V1, V2)    :- extractor[before](Tool, V1), extractor[after](Tool, V2), V1 != V2.
+tool_swap(T1, T2)     :- extractor[before](T1, _), extractor[after](T2, _), T1 != T2.
+any_before(yes)       :- extractor[before](_, _).
+no_baseline(after)    :- extractor[after](_, _), not any_before(_).
+refused(version_skew) :- skew(_, _, _).
+refused(tool_swap)    :- tool_swap(_, _).
+refused(no_baseline)  :- no_baseline(_).
+
+-- =========================================================================
+-- 2. the two models, lifted out of their ledgers into one vocabulary
+-- =========================================================================
+-- One rule per relation, with the LEDGER IN THE PERSPECTIVE VARIABLE and the
+-- side carried into [main] as an ordinary column. The head perspective is
+-- written out so the kernel emits `bridge_decl` and the cross-ledger read is
+-- licensed rather than silent; examples/loot reads its rulepacks the same way.
+--
+-- The side is a column and not a perspective ONCE IT IS IN [main], and that is
+-- deliberate: [main] is the book of this program's conclusions, and "which
+-- revision was this observed in" is an attribute of the observation, not a
+-- second book. The books are [before] and [after]; nothing writes into them
+-- here.
+
+file[main](S, P)          :- src_file[S](P, _), side(S).
+content[main](S, P, H)    :- src_file[S](P, H), side(S).
+func[main](S, P, F)       :- src_func[S](P, F, _), side(S).
+exported[main](S, P, N)   :- src_export[S](P, N), side(S).
+calls[main](S, P, F, C)   :- src_call[S](P, F, C), side(S).
+imports_spec[main](S, P, Spec) :- src_import[S](P, Spec), side(S).
+resolved[main](S, P, Spec, Q)  :- resolves[S](P, Spec, Q), side(S).
+
+-- =========================================================================
+-- 3. resolution — from a callee NAME to a definition site
+-- =========================================================================
+-- scanners/js.ts records a call as the enclosing function plus the callee's
+-- syntactic name; it does not resolve the name to a file, because a scanner
+-- that resolved imports would be a compiler. Resolution therefore happens in
+-- RULES, which is where examples/moot puts its operator semantics for the same
+-- reason: the reader stays dumb and the meaning stays inspectable.
+--
+-- `visible` is computed over every (module, name) pair rather than only over
+-- names actually called, so `target` has exactly ONE derivation per pair. That
+-- is not tidiness: the counting fold in §6 multiplies through this relation,
+-- and examples/drip paid for learning that a helper with N derivations
+-- multiplies every count downstream by N.
+
+imports_edge[main](S, P, Q) :- imports_spec(S, P, Spec), resolved(S, P, Spec, Q).
+visible[main](S, P, N, Q)   :- imports_edge(S, P, Q), func(S, Q, N), exported(S, Q, N).
+
+target[main](S, P, N, P)    :- func(S, P, N).
+target[main](S, P, N, Q)    :- visible(S, P, N, Q), not func(S, P, N).
+
+-- Two modules exporting the same name into one importer. Not an error of the
+-- code; an AMBIGUITY OF THIS MODEL, and the report prints it rather than
+-- letting the extra derivation quietly double a count.
+ambiguous(S, P, N)          :- target(S, P, N, Q), target(S, P, N, R), Q != R.
+
+-- A node is a function AT a path. The pair is one term, so the call graph is
+-- an ordinary binary relation and the path travels with the name — which is
+-- exactly what a module move perturbs and what §5 canonicalises.
+node[main](S, fn(P, F))                :- func(S, P, F).
+edge[main](S, fn(P, F), fn(Q, N))      :- calls(S, P, F, N), func(S, P, F),
+                                          target(S, P, N, Q).
+has_caller[main](S, B)                 :- edge(S, _, B).
+
+-- Everything the extractor saw called and could not place: library methods,
+-- host builtins, anything reached through a value. This is the model's
+-- coverage, printed as a number instead of assumed to be zero.
+unresolved(S, P, F, N) :- calls(S, P, F, N), not target(S, P, N, _), not effect_api(N, _).
+
+-- =========================================================================
+-- 4. effects — the only semantics in the file, and it is a table
+-- =========================================================================
+-- An effect is a call into a declared external API. The table is the TOOL's
+-- catalogue, not the engineer's claim: it must be identical on both sides by
+-- construction, or the comparison would be measuring the classifier instead of
+-- the code. That is the extractor-version invariant of §1 in miniature.
+
+effect_api("db.insert",   db_write).
+effect_api("db.update",   db_write).
+effect_api("db.delete",   db_write).
+effect_api("db.select",   db_read).
+effect_api("http.post",   net_call).
+effect_api("http.get",    net_call).
+effect_api("mail.send",   mail_send).
+effect_api("sink.append", audit_write).
+effect_api("fs.writeFile", fs_write).
+
+does[main](S, fn(P, F), E) :- calls(S, P, F, C), effect_api(C, E).
+
+-- =========================================================================
+-- 5. reachability, twice — once as a walk and once as simple paths
+-- =========================================================================
+-- The walk is what "can control get from here to there" means and it is the
+-- right BOOLEAN. It is the wrong thing to COUNT: a recursive function puts the
+-- graph on a cycle, every trip round the cycle is another derivation, and the
+-- counting semiring answers "infinitely many" — honest, and useless as a
+-- measure of redundancy. `flattenLines` in the fixture is recursive precisely
+-- so that this is exercised rather than avoided.
+--
+-- So routes carry the visited chain INSIDE THE FACT, the technique
+-- examples/nope uses for assume-role chains and examples/drip for metric
+-- lineage. `fresh` is positive, not a negation: the chain domain is generated
+-- by `chain` from the routes already derived, so this is ordinary monotone
+-- recursion over terms and the stratification checker is never argued with.
+-- The chain is keyed by SIDE as well as by path, or one path present in both
+-- revisions would carry two derivations and double every count through it.
+
+creach[main](S, A, B)     :- edge(S, A, B).
+creach[main](S, A, C)     :- creach(S, A, B), edge(S, B, C).
+
+chain[main](S, Path)      :- route(S, _, _, Path).
+fresh[main](S, X, nil)    :- node(S, X).
+fresh[main](S, X, cons(Y, Path)) :- chain(S, cons(Y, Path)), fresh(S, X, Path), X != Y.
+
+route[main](S, A, A, cons(A, nil))   :- node(S, A).
+route[main](S, A, C, cons(C, Path))  :- route(S, A, B, Path), edge(S, B, C),
+                                        fresh(S, C, Path).
+
+-- Reflexive by construction: a function that performs the effect itself
+-- reaches it by the one-element route. The COUNT of this relation is the
+-- number of independent routes from A to that effect, and §9 reads a drop in
+-- it as lost redundancy rather than as a violation.
+effect_reachable[main](S, A, E) :- route(S, A, B, _), does(S, B, E).
+
+-- =========================================================================
+-- 6. the declared identification — a rename and a move are NOT a diff
+-- =========================================================================
+-- A rename moves every extracted tuple that mentions the name; a module move
+-- moves every tuple that mentions the path. A textual diff, a golden master or
+-- a byte comparison therefore reports that everything changed, which is true
+-- and worthless. What makes the comparison possible is the engineer DECLARING
+-- the identification — and it has to be declared, because inferring it is
+-- guessing (examples/drip offers exactly that guess and keeps it a guess).
+--
+-- The map applies to [before] only, never to [after]. Applying it in both
+-- directions would silently rewrite an unrelated new function that happened to
+-- reuse an old name, which is the sort of quiet wrongness this whole example
+-- exists to make loud.
+
+name[main](S, N)  :- func(S, _, N).
+name[main](S, N)  :- exported(S, P, N), not func(S, P, N).
+path[main](S, P)  :- file(S, P).
+path[main](S, Q)  :- imports_edge(S, _, Q), not file(S, Q).
+
+cname[main](before, N, M) :- renamed[claim](N, M).
+cname[main](before, N, N) :- name(before, N), not renamed[claim](N, _).
+cname[main](after,  N, N) :- name(after, N).
+cpath[main](before, P, Q) :- moved[claim](P, Q).
+cpath[main](before, P, P) :- path(before, P), not moved[claim](P, _).
+cpath[main](after,  P, P) :- path(after, P).
+
+cnode[main](S, fn(P, F), fn(Q, G)) :- node(S, fn(P, F)), cpath(S, P, Q), cname(S, F, G).
+cedge[main](S, CA, CB)             :- edge(S, A, B), cnode(S, A, CA), cnode(S, B, CB).
+
+-- The entry points are declared in the CANONICAL (post-edit) vocabulary and
+-- mapped back onto each side. If an entry point stops existing, this relation
+-- is empty on that side and every one of its observations is lost at once —
+-- loudly, which is the correct behaviour for deleting the front door.
+entry[main](S, A) :- entry_point[claim](CA), cnode(S, A, CA).
+
+-- =========================================================================
+-- 7. the invariant vocabulary — a set of derived predicates, not a file list
+-- =========================================================================
+-- Each invariant is a SET OF GROUND TUPLES, extracted the same way on both
+-- sides. `obs(S, I, T)` is "revision S exhibits tuple T of invariant I", and
+-- the whole check is set difference over it.
+--
+-- Four are canonical (the declared rename and move are applied first, so a
+-- legal identification does not read as a change). Two are RAW on purpose:
+-- `identifier` and `layout` are precisely the things the maps are allowed to
+-- move, so canonicalising them would make a rename unfalsifiable.
+
+invariant(entry_effect).  -- (entry point, effect) reachable from it
+invariant(entry_reach).   -- (entry point, exported function) it can reach
+invariant(boundary).      -- (module, exported name): the signature surface
+invariant(module_dep).    -- (module, module): the import graph
+invariant(internal).      -- (caller, callee): the call graph itself
+invariant(identifier).    -- every name the extractor saw, raw
+invariant(layout).        -- every file path, raw
+
+-- Exact means the tuple set must be EQUAL. The others are no-loss: nothing may
+-- disappear, and an addition is not a violation. Gaining an effect reachable
+-- from an entry point IS a behaviour change, so entry_effect is exact.
+exact_invariant(entry_effect).
+exact_invariant(boundary).
+exact_invariant(module_dep).
+
+obs[main](S, entry_effect, pair(CA, E)) :- entry(S, A), effect_reachable(S, A, E),
+                                           cnode(S, A, CA).
+obs[main](S, entry_reach, pair(CA, CB)) :- entry(S, A), creach(S, A, B),
+                                           boundary_node(S, B),
+                                           cnode(S, A, CA), cnode(S, B, CB).
+obs[main](S, boundary, pair(CP, CN))    :- exported(S, P, N), cpath(S, P, CP),
+                                           cname(S, N, CN).
+obs[main](S, module_dep, pair(CP, CQ))  :- imports_edge(S, P, Q), cpath(S, P, CP),
+                                           cpath(S, Q, CQ).
+obs[main](S, internal, pair(CA, CB))    :- cedge(S, CA, CB).
+obs[main](S, identifier, N)             :- name(S, N).
+obs[main](S, layout, P)                 :- file(S, P).
+
+boundary_node[main](S, fn(P, N)) :- exported(S, P, N), func(S, P, N).
+
+lost(I, T)   :- obs(before, I, T), not obs(after, I, T).
+gained(I, T) :- obs(after, I, T), not obs(before, I, T).
+
+-- =========================================================================
+-- 8. the equivalence class — the catalogue is the tool's, the choice is not
+-- =========================================================================
+-- The catalogue below is fixed by the tool: it is what the WORDS mean. Which
+-- of them applies to this edit is the engineer's declaration in [claim], and
+-- that is the manual step the spec insists on and this file enforces
+-- mechanically: the extractor has no authority over [claim].
+
+class_preserves(extract_method, entry_effect).
+class_preserves(extract_method, entry_reach).
+class_preserves(extract_method, boundary).
+class_preserves(extract_method, module_dep).
+class_preserves(extract_method, layout).
+class_permits(extract_method, internal).
+class_permits(extract_method, identifier).
+
+class_preserves(rename, entry_effect).
+class_preserves(rename, entry_reach).
+class_preserves(rename, boundary).
+class_preserves(rename, module_dep).
+class_preserves(rename, internal).
+class_preserves(rename, layout).
+class_permits(rename, identifier).
+
+class_preserves(module_move, entry_effect).
+class_preserves(module_move, entry_reach).
+class_preserves(module_move, boundary).
+class_preserves(module_move, module_dep).
+class_preserves(module_move, internal).
+class_preserves(module_move, identifier).
+class_permits(module_move, layout).
+
+class_preserves(data_structure, entry_effect).
+class_preserves(data_structure, entry_reach).
+class_preserves(data_structure, boundary).
+class_preserves(data_structure, module_dep).
+class_preserves(data_structure, layout).
+class_permits(data_structure, internal).
+class_permits(data_structure, identifier).
+
+class_preserves(dedupe, entry_effect).
+class_preserves(dedupe, entry_reach).
+class_preserves(dedupe, boundary).
+class_preserves(dedupe, module_dep).
+class_preserves(dedupe, layout).
+class_permits(dedupe, internal).
+class_permits(dedupe, identifier).
+
+-- MIXING EDITS WEAKENS THE CLAIM, MONOTONICALLY, and this is the honest
+-- semantics of putting several refactorings in one change: you may only
+-- promise what ALL of them promise. One permissive edit waives an invariant
+-- for the whole comparison, and `weakened_by` names which edit cost which
+-- promise so the price of a mixed change is a number rather than a feeling.
+
+declared_kind(K)    :- edit[claim](_, K).
+waived(I)           :- declared_kind(K), class_permits(K, I).
+obliged(I)          :- declared_kind(K), class_preserves(K, I), not waived(I).
+weakened_by(I, K2, K) :- declared_kind(K2), class_preserves(K2, I),
+                         declared_kind(K), class_permits(K, I).
+
+-- Nothing is checked while the comparison is refused. This is the whole point
+-- of §1: a version-skewed report must not look like a clean one.
+checked(I) :- obliged(I), not refused(_).
+
+-- =========================================================================
+-- 9. the verdicts
+-- =========================================================================
+-- The wording matters and is fixed here rather than in the renderer: what is
+-- established is that the DECLARED AND EXTRACTABLE tuple set survived. Never
+-- that behaviour is preserved.
+
+violated(I, T, disappeared) :- checked(I), lost(I, T).
+violated(I, T, appeared)    :- checked(I), gained(I, T), exact_invariant(I).
+broken(I)                   :- violated(I, _, _).
+held(I)                     :- checked(I), not broken(I).
+
+-- Changed, and allowed to have changed. Counting these is what separates "the
+-- edit did nothing" from "the edit did a great deal, all of it inside the
+-- licence it declared".
+permitted_change(I, T, removed) :- waived(I), lost(I, T).
+permitted_change(I, T, added)   :- waived(I), gained(I, T).
+
+-- LOST REDUNDANCY. The invariant still holds and the number of independent
+-- routes that carry it has dropped. Not a violation — a future regression,
+-- visible today. The counting semiring supplies the numbers (demo.ts §6); this
+-- relation is the set the numbers are read over.
+carried(I, T) :- obs(before, I, T), obs(after, I, T).
+
+-- =========================================================================
+-- 10. WHY it broke — a hypothesis, and the proof that it stays one
+-- =========================================================================
+-- whynot already walks the chain link by link; this is the one-sentence guess
+-- that goes on the ticket. It is a GUESS: a call that used to exist does not,
+-- and its target is now called from nowhere. Nothing in §7, §8 or §9 reads any
+-- relation defined here, and demo.ts proves that from the kernel's own rule
+-- dependency graph rather than asking to be believed — the same discipline
+-- examples/drip applies to its rename hypothesis.
+
+orphan(S, B)         :- boundary_node(S, B), not has_caller(S, B).
+lost_edge(CA, CB)    :- cedge(before, CA, CB), not cedge(after, CA, CB).
+carries_effect(CB, E) :- cnode(before, B, CB), does(before, B, E).
+
+-- Three tiers of evidence for the same guess, each a separate derivation, so
+-- the Viterbi fold in demo.ts takes the best-supported one rather than the
+-- product of all of them.
+hint(CA, CB, edge_gone)        :- lost_edge(CA, CB).
+hint(CA, CB, edge_gone_orphan) :- lost_edge(CA, CB), orphan(after, CB).
+hint(CA, CB, edge_gone_effect) :- lost_edge(CA, CB), orphan(after, CB),
+                                  carries_effect(CB, _).
+probable_cause(CA, CB) :- hint(CA, CB, _).
+
+-- =========================================================================
+-- 11. the boundary, as facts rather than as a paragraph
+-- =========================================================================
+
+undecidable(program_equivalence).
+scope_covered(call_graph).
+scope_covered(reachability_from_entry_points).
+scope_covered(effects_through_declared_apis).
+scope_covered(export_surface).
+scope_covered(module_dependency).
+out_of_scope(dynamic_dispatch).
+out_of_scope(higher_order_callbacks).
+out_of_scope(reflection_and_eval).
+out_of_scope(control_flow_and_data_values).
+out_of_scope(concurrency_and_ordering).
+out_of_scope(performance_and_resource_use).
+out_of_scope(anything_needing_symbolic_execution).
+
+-- Acceptance scenario (examples/ditto/demo.ts runs all of it):
+--   ? obliged(I) / waived(I)           -> what the declared class demands
+--   ? held(I) vs violated(I, T, D)     -> 36 of 38 tuples, one defect, two rows
+--   why  effect_reachable(before, ...) -> the chain that carried the effect
+--   whynot effect_reachable(after, ..) -> the link that is no longer there
+--   ? probable_cause(A, B)             -> a guess, and it reaches no verdict
+--   counting over effect_reachable     -> an invariant that lost its spare route
+--   excise src_call[before](...)       -> the same violation, computed a second way
+--   a skewed extractor                 -> the whole report REFUSED

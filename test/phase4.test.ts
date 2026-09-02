@@ -116,16 +116,35 @@ test('tm_diverge.rofl: budget exhausts, hole emitted, partial trace queryable, n
 });
 
 // --------------------------------------------------------------------------
-test('boot.rofl loads; all four audit queries empty; whynot unstratified(reach) finite', () => {
+test('boot.rofl loads; all six audit queries empty; whynot flows_to(red, blue) finite', () => {
   const r = new Rofl();
   assert.equal(r.load(BOOT).ok, true);
-  assert.deepEqual(r.query('unstratified(X)').rows, []);
   assert.deepEqual(r.query('malformed[audit](R)').rows, []);
   assert.deepEqual(r.query('breach[audit](R)').rows, []);
   assert.deepEqual(r.query('leak[audit](A, B)').rows, []);
-  const wn = r.whynot('unstratified(reach)');
+  assert.deepEqual(r.query('forged[audit](F)').rows, []);
+  assert.deepEqual(r.query('unmoded[audit](R)').rows, []);
+  assert.deepEqual(r.query('undefined_premise[audit](R, Rel)').rows, []);
+
+  // THE STRATIFIABILITY QUESTION IS ANSWERED BY THE FILE LOADING AT ALL.
+  // `? unstratified(X) -> empty` used to be one of the required results; the
+  // relation and the nine rules under it left boot.rofl when the evaluator
+  // started peeling its schedule off the decoded rules, and a program whose
+  // peel stalls is refused before a rule fires — so it never reaches a query.
+  // The positive control is that the refusal is live and this file is not it.
+  assert.equal(r.query('unstratified(X)').rows.length, 0, 'the relation is gone, not merely empty');
+  const cyclic = new Rofl();
+  const bad = cyclic.load('n(1).\np(X) :- n(X), not q(X).\nq(X) :- n(X), not p(X).');
+  assert.equal(bad.ok, false, 'positive control: the load path CAN refuse a program');
+  assert.match(bad.diagnostics.join('\n'), /settled nothing while/);
+
+  // ...and the finite-failure demonstration through a RECURSIVE relation, which
+  // is what `whynot unstratified(reach)` asked for. `flows_to` is the transitive
+  // closure boot.rofl still carries — the same shape `reach` was.
+  const wn = r.whynot('flows_to(red, blue)');
   assert.equal(wn.holds, false);
-  assert.match(wn.text, /dep_neg\[main\]\(reach/, 'demonstration goes through dep/reach');
+  assert.match(wn.text, /flows_to\[main\]\(red,\?X/, 'demonstration goes through the closure');
+  assert.match(wn.text, /\[cycle\]/, 'and terminates by naming the cycle rather than entering it');
   assert.ok(wn.text.split('\n').length < 20, 'finite demonstration');
 });
 
@@ -160,10 +179,92 @@ test('sensors.rofl: the full acceptance scenario', () => {
   assert.match(wn.text, /close\[main\]\(95,20\)/);
   assert.match(wn.text, /close\[main\]\(95,21\)/);
 
-  // audits still clean with sensors loaded
-  for (const q of ['unstratified(X)', 'malformed[audit](R)', 'breach[audit](R)', 'leak[audit](A, B)', 'forged[audit](F)', 'unmoded[audit](R)']) {
+  // audits still clean with sensors loaded, but for two KNOWN-OPEN leaks
+  for (const q of ['unstratified(X)', 'malformed[audit](R)', 'breach[audit](R)', 'forged[audit](F)', 'unmoded[audit](R)']) {
     assert.deepEqual(r.query(q).rows, [], q);
   }
+  // Two walks run out through [trust], because `corroborated[trust]` reads a
+  // second sensor under `[S2]` and reads `close/2` out of [main], while
+  // `temp[verified]` reads [trust]. One is declared and one is not.
+  //
+  //   $var("S2") -> verified   DECLARED, by `collects(trust)`: corroboration
+  //                            that named its corroborator in advance would
+  //                            not be corroboration. No `imports` fact could
+  //                            say it -- `$var("S2")` is not a registered
+  //                            perspective -- which is what `collects` is for.
+  //   main       -> verified   left FIRING. It is declarable, as
+  //                            `imports(verified, main)`, and that sentence
+  //                            would be false about this model: what crosses
+  //                            is `close/2`, an arithmetic helper that lives
+  //                            in [main] only because it was given no ledger
+  //                            of its own. `collects` does not reach it
+  //                            either, and should not -- `main` IS a
+  //                            registered perspective, so the audit is right
+  //                            to keep asking. The repair is above this file.
+  assert.ok(r.holds('collected[audit](trust)'), 'the collection was exercised');
+
+  // TWO ROWS WHERE THERE WAS ONE, and it is the SAME walk reported better.
+  // `crossing` used to carry `not bridge_decl(R, A, B)`, a row the kernel
+  // emitted for any rule whose head named a ledger and whose body read
+  // another, so the audit could only ever fire on a walk of two hops or more —
+  // and this walk, main -> trust -> verified, surfaced as its far end alone.
+  // Both hops are visible now, and `main -> trust` is where it actually
+  // starts. Nothing new is wrong; the report got sharper.
+  //
+  // Both are left firing for the reason sensors.rofl gives at length: what
+  // crosses is `close/2`, an arithmetic helper that lives in [main] only
+  // because it was given no ledger of its own. `imports(verified, main)` would
+  // silence them and would be FALSE about this program, and `collects` does
+  // not reach a source that is a registered perspective. The repair is above
+  // that file.
+  //
+  // TWO ROWS BECAME FOUR, and the two new ones are the SAME KNOWN-OPEN WALK
+  // named one hop earlier. Reflection moved into `[$kernel]`, boot.rofl's own
+  // `rule_known` and `flow` are derived into [main] and read it, so
+  // `imports(main, $kernel)` is declared — and `flows_to` is transitive, so
+  // the walk now starts at the kernel's book and runs $kernel -> main ->
+  // trust -> verified. Nothing new is wrong here either; the report got longer
+  // at the same end it got sharper at last time.
+  assert.deepEqual(r.query('leak[audit](A, B)').rows.map((x) => x.text),
+    ['A = $kernel, B = trust', 'A = $kernel, B = verified',
+     'A = main, B = trust', 'A = main, B = verified']);
+
+  // MUTANT, and it is what stops the four above from being a re-baseline: the
+  // `$kernel` rows are not a NEW CLASS of finding, they are the existing one
+  // doubled. `leak($kernel, X)` holds exactly where `leak(main, X)` already
+  // did — a theorem before it is a measurement, since `sees` is transitive, so
+  // a ledger declaring `imports(X, main)` inherits `sees(X, $kernel)` and
+  // reports neither, while one that declares nothing reports both. The two
+  // sets cannot come apart, and a pair of controls says so in both directions.
+  const dest = (a: string) => new Set(r.query('leak[audit](A, B)').rows
+    .filter((x) => x.bindings['A'] === a).map((x) => x.bindings['B']));
+  assert.deepEqual([...dest('$kernel')].sort(), [...dest('main')].sort(),
+    'the kernel rows name the same destinations as the [main] rows, and no others');
+  const openWalk = new Rofl();
+  assert.equal(openWalk.load(BOOT).ok, true);
+  assert.equal(openWalk.load('authority(x, w). datum(a). d[x](A) :- datum(A).').ok, true);
+  assert.deepEqual(openWalk.query('leak[audit](A, B)').rows.map((x) => x.text),
+    ['A = $kernel, B = x', 'A = main, B = x'], 'undeclared: both ends report');
+  const dec = new Rofl();
+  assert.equal(dec.load(BOOT).ok, true);
+  assert.equal(dec.load('authority(x, w). imports(x, main). datum(a). d[x](A) :- datum(A).').ok, true);
+  assert.deepEqual(dec.query('leak[audit](A, B)').rows, [],
+    'declared: BOTH go quiet — one sentence, both rows, which is why they are one finding');
+
+  // AND THE THIRD ROW IS GONE, because it was declarable and got declared:
+  // `imports(verified, trust)` in sensors.rofl. That hop — [verified] reading
+  // the corroboration book on purpose — is the crossing the old audit was
+  // structurally blind to, and it is the whole reason this list moved.
+  assert.ok(r.holds('sees(verified, trust)'), 'the honest declaration is in force');
+  assert.ok(!r.holds('leak[audit](trust, verified)'));
+  // MUTANT: without it, that hop reports. A row absent because it was declared
+  // must be distinguishable from a row absent because nothing looked.
+  const undeclared = new Rofl();
+  assert.equal(undeclared.load(BOOT).ok, true);
+  assert.equal(undeclared.load(SENSORS.replace('imports(verified, trust).', '')).ok, true);
+  assert.ok(undeclared.query('leak[audit](A, B)').rows
+    .some((x) => x.text === 'A = trust, B = verified'),
+    'the declaration is load-bearing, not decoration');
 });
 
 test('excise survives multiple support (not witness-based)', () => {

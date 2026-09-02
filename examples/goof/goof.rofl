@@ -1,0 +1,663 @@
+-- goof.rofl — GOOF: Grothendieck Or Other Foundations.
+--
+-- One rule set. Nine books. The rules below do not name a single foundation,
+-- and nothing in them changes when the foundation does: the switch is which
+-- axioms a book holds, and the axioms live in that book's ledger.
+--
+-- WHY THIS DOMAIN AND NOT AN INVENTED LOGIC.
+-- Euclidean and hyperbolic geometry are the same theorems derived from
+-- different axiom sets. People fought over which set was true for two
+-- thousand years, and the fight was decidable only because the axioms were
+-- separable in exactly the sense a ledger is separable. Nothing here is
+-- adapted to fit the engine; the corpus is Euclid's postulates, Saccheri's
+-- programme, Legendre's two theorems and the standard neutral-geometry
+-- development, with the historical attributions in README.md.
+--
+-- THE PERSPECTIVE IS A LEDGER, and here that is not an analogy.
+-- docs/choosing-perspectives.md asks five questions before anything goes in
+-- the slot. A foundation answers all five:
+--
+--   * two contradictory facts coexist legitimately under different books —
+--     `thm[euclid](angle_sum_180)` and `thm[lobachevsky](defect_positive)`
+--     are BOTH true, and neither is an error. That is the whole subject;
+--   * a book is not computed from other facts. It is chosen;
+--   * a book does not describe how a fact was obtained. `by_reductio` does,
+--     and it is an attribute of a proof step, not a perspective;
+--   * the writers are nameable and finite: the axiom-setter, via
+--     `authority(euclid, euclid)`, writes the axioms; the deduction rules of
+--     section 4 write the theorems. Two classes of writer, both declared —
+--     the source and derived sub-kinds of ledger, in one book, which is what
+--     a book of mathematics is;
+--   * no literal ever needs two of them.
+--
+-- What would be WRONG here, and is worth naming because it is the obvious
+-- first draft: `thm(euclid, angle_sum_180)` with the foundation as an
+-- argument column. That is the mega-main anti-pattern. It loses `forged`
+-- (anybody may write any foundation's axioms), it loses the audit of
+-- cross-book reads, and it turns "the rules do not mention a foundation"
+-- into a claim nobody can check, since the column is right there in every
+-- rule.
+--
+-- THE COST THIS EXAMPLE PAID, AND GOT BACK. A rule polymorphic in the
+-- ledger used to reduce to `$any` on both ends of the reflection, so
+-- `boot.rofl` saw a flow from `$any` into `$any`, could not see that the
+-- two were the SAME variable, and reported `leak[audit]($any, $any)` — a
+-- false positive with no way to declare the bridge. examples/sus and
+-- examples/aka met the same limit and could write one rule per ledger
+-- instead; GOOF cannot, because one rule per ledger IS the thesis failing,
+-- and that is what made the limit worth fixing rather than working around:
+-- `src/reflect.ts` now records a variable perspective as itself, `$var(G)`,
+-- and `boot.rofl` reads a flow whose two ends are one term as the identity
+-- it is. The audit is empty here. `demo.ts` §1 still plants a REAL leak in
+-- the same store, so the empty audit is not an alarm somebody switched off;
+-- §3 still expands the rule set nine times over and checks that both
+-- versions derive the same theorems, now measuring only the rule count.
+
+-- =========================================================================
+-- 0. who may write in which book
+-- =========================================================================
+-- A ledger per foundation, and the writer is the person who fixed that
+-- axiom set. Euclid gets two books because the Elements contains two
+-- geometries — plane in I-VI, solid in XI-XIII — and the demo uses the
+-- pair to change the dimension and nothing else.
+
+authority(main,        goof).
+authority(euclid,      euclid).
+authority(solid,       euclid).
+authority(saccheri,    saccheri).
+authority(lobachevsky, lobachevsky).
+authority(riemann,     riemann).
+authority(schlafli,    schlafli).
+authority(brouwer,     brouwer).
+authority(frege,       frege).
+authority(dacosta,     dacosta).
+
+-- `proposition[main](P) :- axiom[G](P).` pools the axiom sets of all nine
+-- books into one shared language, and `only_in[main](G, H, A)` reads a
+-- second book to say what the first has that it lacks. [main] therefore
+-- gathers from ledgers it does not name -- which is deliberate and is half
+-- the thesis: nine axiom sets over ONE language, so that explosion has a
+-- language to range over. `imports` cannot express it, because the source is
+-- `$var("G")` and an import needs a registered perspective at both ends.
+-- This is the sentence that can. It also licenses the walk
+-- `$var("H") -> main -> $var("G")` -- one foundation's content reaching
+-- another's -- which is a real crossing (README.md shows [frege] exploding
+-- and taking four other books' axioms as theorems) and a declared one.
+collects(main).
+
+-- =========================================================================
+-- 1. the nine books
+-- =========================================================================
+-- `foundation[G](Book, Year)` is the ledger declaring itself: the title the
+-- axioms were published under and the year. It is also what BINDS the
+-- ledger variable in the rules of section 4 — a rule that ranges over
+-- foundations needs a positive premise in the ledger it ranges over, and
+-- this is it. A book with no `foundation` entry is invisible to the whole
+-- rule set, which is the correct reading of an unpublished axiom set.
+
+-- -------------------------------------------------------------------------
+-- the axioms, one book at a time. THIS IS THE ENTIRE SWITCH.
+--
+-- Read the blocks against each other: euclid and lobachevsky differ by one
+-- line. That is the two-hundred-year argument, in the only place it is
+-- allowed to live.
+--
+-- The `-- @who X` markers are not kernel syntax. They are comments that
+-- examples/goof/demo.ts splits the file on, so that each book is loaded
+-- under the identity of the person who published it, and `asserted_by` is
+-- therefore the LOAD identity checked against `authority` — never a column
+-- anybody could fill in with any name they liked. Section 11 of the demo
+-- writes the hyperbolic axiom into Euclid's book and watches `forged`
+-- surface it with no enforcement code anywhere.
+
+-- SACCHERI, 1733 — neutral geometry: the four postulates, no parallel axiom
+-- at all. Girolamo Saccheri assumed the fifth was a theorem of the other
+-- four and spent thirty years looking for the contradiction that would
+-- prove it. There is none, and section 5 of the demo is that search,
+-- answered in a millisecond by `whynot`.
+-- @who saccheri
+foundation[saccheri](euclides_vindicatus, 1733).
+axiom[saccheri](post1_two_points).
+axiom[saccheri](post2_extend).
+axiom[saccheri](post3_circle).
+axiom[saccheri](post4_right_angles).
+axiom[saccheri](archimedes).
+axiom[saccheri](excluded_middle).
+axiom[saccheri](ex_falso).
+axiom[saccheri](dim_plane).
+
+-- EUCLID, -300 — Saccheri's list plus Playfair's form of the fifth.
+-- @who euclid
+foundation[euclid](elements, -300).
+axiom[euclid](post1_two_points).
+axiom[euclid](post2_extend).
+axiom[euclid](post3_circle).
+axiom[euclid](post4_right_angles).
+axiom[euclid](archimedes).
+axiom[euclid](excluded_middle).
+axiom[euclid](ex_falso).
+axiom[euclid](dim_plane).
+axiom[euclid](post5_unique).
+
+-- LOBACHEVSKY, 1829 — the same list with one line changed. Bolyai reached
+-- the same system independently in 1832; the demo credits both.
+-- @who lobachevsky
+foundation[lobachevsky](imaginary_geometry, 1829).
+axiom[lobachevsky](post1_two_points).
+axiom[lobachevsky](post2_extend).
+axiom[lobachevsky](post3_circle).
+axiom[lobachevsky](post4_right_angles).
+axiom[lobachevsky](archimedes).
+axiom[lobachevsky](excluded_middle).
+axiom[lobachevsky](ex_falso).
+axiom[lobachevsky](dim_plane).
+axiom[lobachevsky](post5_many).
+
+-- RIEMANN, 1854 — and here the tidy story about one switch breaks, which
+-- is why the example keeps it. Elliptic geometry cannot merely deny the
+-- fifth: a line on a sphere is unbounded but FINITE, so postulate 2 goes
+-- too. Two lines changed, not one, and section 6 measures which theorems
+-- die of which change. The neutral theorems that lean on post2 — Euclid
+-- I.16 above all — are lost here and nowhere else.
+-- @who riemann
+foundation[riemann](habilitation, 1854).
+axiom[riemann](post1_two_points).
+axiom[riemann](post2_finite).
+axiom[riemann](post3_circle).
+axiom[riemann](post4_right_angles).
+axiom[riemann](archimedes).
+axiom[riemann](excluded_middle).
+axiom[riemann](ex_falso).
+axiom[riemann](dim_plane).
+axiom[riemann](post5_none).
+
+-- SOLID / SCHLAFLI — Euclid's plane list with the dimension axiom changed
+-- and nothing else. Ludwig Schlafli wrote n-dimensional geometry in 1852
+-- and could not get it published. The pair exists for one derived fact:
+-- a knot is knotted in three dimensions and unties in four.
+-- @who euclid
+foundation[solid](elements_xi, -300).
+axiom[solid](post1_two_points).
+axiom[solid](post2_extend).
+axiom[solid](post3_circle).
+axiom[solid](post4_right_angles).
+axiom[solid](archimedes).
+axiom[solid](excluded_middle).
+axiom[solid](ex_falso).
+axiom[solid](post5_unique).
+axiom[solid](dim_space).
+
+-- @who schlafli
+foundation[schlafli](vielfache_kontinuitaet, 1852).
+axiom[schlafli](post1_two_points).
+axiom[schlafli](post2_extend).
+axiom[schlafli](post3_circle).
+axiom[schlafli](post4_right_angles).
+axiom[schlafli](archimedes).
+axiom[schlafli](excluded_middle).
+axiom[schlafli](ex_falso).
+axiom[schlafli](post5_unique).
+axiom[schlafli](dim_four).
+
+-- BROUWER, 1908 — Euclid's geometry, intuitionist logic. One line removed:
+-- excluded middle. The geometry is untouched, and the theorems that stop
+-- being derivable are exactly those whose only proof is a reductio.
+-- @who brouwer
+foundation[brouwer](unreliability, 1908).
+axiom[brouwer](post1_two_points).
+axiom[brouwer](post2_extend).
+axiom[brouwer](post3_circle).
+axiom[brouwer](post4_right_angles).
+axiom[brouwer](archimedes).
+axiom[brouwer](ex_falso).
+axiom[brouwer](dim_plane).
+axiom[brouwer](post5_unique).
+
+-- FREGE, 1893 — the book that really did explode. The Grundgesetze was
+-- consistent-looking until Russell's letter of 1902, and classical logic
+-- turns one contradiction into every sentence. Here the contradiction is
+-- put in by hand — both parallel axioms at once — and `ex_falso` does the
+-- rest. Nothing about the geometry causes it.
+-- @who frege
+foundation[frege](grundgesetze, 1893).
+axiom[frege](post1_two_points).
+axiom[frege](post2_extend).
+axiom[frege](post3_circle).
+axiom[frege](post4_right_angles).
+axiom[frege](archimedes).
+axiom[frege](excluded_middle).
+axiom[frege](ex_falso).
+axiom[frege](dim_plane).
+axiom[frege](post5_unique).
+axiom[frege](post5_many).
+
+-- DA COSTA, 1963 — the same contradiction, and one line fewer: no
+-- `ex_falso`. Newton da Costa's C-systems keep a contradiction local
+-- instead of letting it decide everything. The two books differ by that
+-- single axiom, and section 9 counts the difference in theorems.
+-- @who dacosta
+foundation[dacosta](calculs_inconsistants, 1963).
+axiom[dacosta](post1_two_points).
+axiom[dacosta](post2_extend).
+axiom[dacosta](post3_circle).
+axiom[dacosta](post4_right_angles).
+axiom[dacosta](archimedes).
+axiom[dacosta](excluded_middle).
+axiom[dacosta](dim_plane).
+axiom[dacosta](post5_unique).
+axiom[dacosta](post5_many).
+
+-- @who goof
+-- Which propositions deny each other. `contrary` is stated once per pair and
+-- symmetrised by a rule; it carries no logical force by itself, and a book
+-- holding both members of a pair is not an error — see `clash` in §4 and
+-- what the two books above do with it. Axioms and derived theorems are both
+-- here, so a book can be caught contradicting itself several steps away from
+-- its axioms and not only in them.
+contrary(post5_unique, post5_many).
+contrary(post5_unique, post5_none).
+contrary(post5_many, post5_none).
+contrary(post2_extend, post2_finite).
+contrary(dim_plane, dim_space).
+contrary(dim_plane, dim_four).
+contrary(dim_space, dim_four).
+contrary(angle_sum_180, defect_positive).
+contrary(angle_sum_180, excess_positive).
+contrary(defect_positive, excess_positive).
+contrary(rectangle_exists, no_rectangle).
+contrary(similar_triangles_exist, aaa_congruence).
+contrary(knots_exist, no_knots_at_all).
+contrary(knots_exist, every_knot_unties).
+
+-- =========================================================================
+-- 2. the corpus: proof steps, shared by every book
+-- =========================================================================
+-- `step(S, P)` concludes P; `needs(S, K, Q)` is its K-th premise, 1-based;
+-- `need_count(S, N)` says how many. The indexing is moot.rofl's device and
+-- it is here for the same reason: "every premise of S holds" is a universal
+-- over an open set, the obvious spelling puts the rule in a negative cycle
+-- with itself, and walking the premises by index turns it into a positive
+-- recursion the engine stratifies without complaint.
+--
+-- A premise may be an axiom or another proposition; nothing distinguishes
+-- them, because `thm[G](A) :- axiom[G](A)` makes an axiom a theorem with an
+-- empty proof. That is also why a LOGICAL principle is written as an
+-- ordinary premise: a step that argues by contradiction names
+-- `excluded_middle` among its premises, and a book that does not hold it
+-- loses the step. No special case anywhere for logic.
+
+-- ---- the neutral core: no parallel axiom is named by any of these -------
+
+-- I.4 side-angle-side, and I.5 pons asinorum. The two theorems that survive
+-- every foundation in this file, including the exploding one.
+step(s_sas, sas_congruence).
+needs(s_sas, 1, post1_two_points).
+needs(s_sas, 2, post4_right_angles).
+need_count(s_sas, 2).
+
+step(s_pons, pons_asinorum).
+needs(s_pons, 1, post1_two_points).
+needs(s_pons, 2, post4_right_angles).
+need_count(s_pons, 2).
+
+step(s_tri_ineq, triangle_inequality).
+needs(s_tri_ineq, 1, post1_two_points).
+needs(s_tri_ineq, 2, sas_congruence).
+need_count(s_tri_ineq, 2).
+
+-- I.16, the exterior angle theorem: an exterior angle exceeds either remote
+-- interior angle. The proof doubles a median and needs the doubled segment
+-- to exist, so it needs post2. On a sphere it is FALSE, and everything
+-- below it in this corpus falls with it. This one step is why elliptic
+-- geometry is not "Euclid minus the fifth".
+step(s_exterior, exterior_angle).
+needs(s_exterior, 1, post1_two_points).
+needs(s_exterior, 2, post2_extend).
+needs(s_exterior, 3, post4_right_angles).
+need_count(s_exterior, 3).
+
+-- I.27: alternate angles equal implies the lines never meet. Neutral.
+step(s_i27, alternate_angles_parallel).
+needs(s_i27, 1, exterior_angle).
+need_count(s_i27, 1).
+
+-- I.31: through a point off a line there is AT LEAST one parallel. Neutral,
+-- and the fifth postulate is only about how many. Two millennia of readers
+-- have taken existence and uniqueness for one statement; here they are two
+-- facts with different supports, and section 4 counts the second.
+step(s_i31, parallel_exists).
+needs(s_i31, 1, alternate_angles_parallel).
+needs(s_i31, 2, post3_circle).
+need_count(s_i31, 2).
+
+-- Saccheri-Legendre: the angle sum of a triangle is at most 180 degrees.
+-- Neutral, and the first step in the corpus that argues by contradiction:
+-- assume an excess, halve the triangle repeatedly, and the excess
+-- accumulates past two right angles. Needs Archimedes for the halving to
+-- terminate and excluded middle for the reductio.
+step(s_sacc_leg, angle_sum_at_most_180).
+needs(s_sacc_leg, 1, exterior_angle).
+needs(s_sacc_leg, 2, archimedes).
+needs(s_sacc_leg, 3, excluded_middle).
+need_count(s_sacc_leg, 3).
+
+-- The defect of a triangle is additive under subdivision by a cevian. This
+-- is the theorem section 7 turns into arithmetic; it is neutral, and it is
+-- what makes an angle sum a function of area rather than of shape.
+step(s_defect_add, defect_additive).
+needs(s_defect_add, 1, post1_two_points).
+need_count(s_defect_add, 1).
+
+-- Legendre's second theorem: if ONE triangle has angle sum 180, every
+-- triangle does. Also a reductio.
+step(s_legendre2, all_or_none).
+needs(s_legendre2, 1, angle_sum_at_most_180).
+needs(s_legendre2, 2, defect_additive).
+needs(s_legendre2, 3, excluded_middle).
+need_count(s_legendre2, 3).
+
+-- ---- the euclidean branch ----------------------------------------------
+
+step(s_playfair, angle_sum_180).
+needs(s_playfair, 1, post5_unique).
+needs(s_playfair, 2, alternate_angles_parallel).
+need_count(s_playfair, 2).
+
+step(s_pythagoras, pythagoras).
+needs(s_pythagoras, 1, angle_sum_180).
+needs(s_pythagoras, 2, sas_congruence).
+need_count(s_pythagoras, 2).
+
+step(s_thales, thales_semicircle).
+needs(s_thales, 1, angle_sum_180).
+needs(s_thales, 2, pons_asinorum).
+need_count(s_thales, 2).
+
+step(s_rectangle, rectangle_exists).
+needs(s_rectangle, 1, angle_sum_180).
+need_count(s_rectangle, 1).
+
+step(s_similar, similar_triangles_exist).
+needs(s_similar, 1, angle_sum_180).
+needs(s_similar, 2, post3_circle).
+need_count(s_similar, 2).
+
+-- ---- the hyperbolic branch ---------------------------------------------
+
+step(s_defect_pos, defect_positive).
+needs(s_defect_pos, 1, post5_many).
+needs(s_defect_pos, 2, angle_sum_at_most_180).
+needs(s_defect_pos, 3, all_or_none).
+need_count(s_defect_pos, 3).
+
+step(s_defect_prop, defect_proportional_to_area).
+needs(s_defect_prop, 1, defect_positive).
+needs(s_defect_prop, 2, defect_additive).
+needs(s_defect_prop, 3, archimedes).
+need_count(s_defect_prop, 3).
+
+step(s_no_rect, no_rectangle).
+needs(s_no_rect, 1, defect_positive).
+need_count(s_no_rect, 1).
+
+-- ---- the elliptic branch -----------------------------------------------
+-- The excess is positive, and the proof does NOT go through I.16: on a
+-- sphere the exterior angle theorem is false, so the whole neutral tower
+-- above is unavailable and the excess is established from the finiteness of
+-- lines directly. Which is exactly why riemann's provenance polynomial in
+-- section 6 has a different shape from lobachevsky's.
+step(s_excess_pos, excess_positive).
+needs(s_excess_pos, 1, post5_none).
+needs(s_excess_pos, 2, post2_finite).
+needs(s_excess_pos, 3, defect_additive).
+need_count(s_excess_pos, 3).
+
+step(s_excess_prop, excess_proportional_to_area).
+needs(s_excess_prop, 1, excess_positive).
+needs(s_excess_prop, 2, defect_additive).
+needs(s_excess_prop, 3, archimedes).
+need_count(s_excess_prop, 3).
+
+-- Angle-angle-angle congruence: equal angles force equal size, so there is
+-- no similarity. TWO steps conclude it, one per non-euclidean branch, and
+-- no book holds both. A proposition with several proofs is ordinary; the
+-- counting semiring is what tells them apart.
+step(s_aaa_hyp, aaa_congruence).
+needs(s_aaa_hyp, 1, defect_proportional_to_area).
+need_count(s_aaa_hyp, 1).
+
+step(s_aaa_ell, aaa_congruence).
+needs(s_aaa_ell, 1, excess_proportional_to_area).
+need_count(s_aaa_ell, 1).
+
+-- ---- dimension ---------------------------------------------------------
+-- The one line the spec asks for from the dimension axis, because it is
+-- counter-intuitive and it is derived rather than declared: a closed curve
+-- cannot be knotted in the plane, is knotted in space, and unties in four
+-- dimensions (Wu 1958, Zeeman 1960 — an isotopy exists in codimension 3).
+-- "Obvious" is a property of the model you grew up in.
+step(s_flat_curve, no_knots_at_all).
+needs(s_flat_curve, 1, dim_plane).
+need_count(s_flat_curve, 1).
+
+step(s_knots, knots_exist).
+needs(s_knots, 1, dim_space).
+need_count(s_knots, 1).
+
+step(s_unknotting, every_knot_unties).
+needs(s_unknotting, 1, dim_four).
+need_count(s_unknotting, 1).
+
+-- Which steps argue by contradiction. Reporting only: the logical principle
+-- is already a premise, so nothing derives from this table. It exists so a
+-- reader can ask "which of my theorems needed a reductio" without reading
+-- every proof, and section 8 asks it.
+by_reductio(s_sacc_leg).
+by_reductio(s_legendre2).
+
+-- =========================================================================
+-- 3. the figure: one triangle, cut twice
+-- =========================================================================
+-- Areas are data — this is a figure someone drew, not a theorem — and they
+-- are additive by construction: 2 + 3 = 5, 5 + 7 = 12. What is NOT data is
+-- the angle sum. Section 7 derives it two ways for every compound triangle,
+-- once from the area law and once from the parts, and the two agree only
+-- because the defect is additive and proportional. In a book where they
+-- disagree, `disagree` says so instead of picking a winner.
+
+leaf(t_a, 2).
+leaf(t_b, 3).
+leaf(t_left, 5).
+leaf(t_right, 7).
+leaf(t_whole, 12).
+
+cut(t_left, t_a, t_b).
+cut(t_whole, t_left, t_right).
+
+-- Two triangles of different size, offered to each book as candidates for
+-- similarity. Whether they CAN have the same angles is derived, not given.
+pair(t_left, t_whole).
+
+-- One knot, so the dimension steps have something to be about.
+knot(trefoil).
+
+-- =========================================================================
+-- 4. THE ONE RULE SET
+-- =========================================================================
+-- Everything below this marker is rules, and not one of them names a
+-- foundation. `[G]` is a ledger variable: the same rule reads the book it
+-- writes into, whichever book that is. demo.ts §3 splits the file here,
+-- substitutes a book name for `[G]` nine times over, loads the result and
+-- checks that the expanded program derives exactly the same facts — the
+-- price of naming the ledger, counted in rules.
+--
+-- Every head that is not `[G]` names its perspective explicitly, `[main]`
+-- included. That USED TO BE the fix for a false alarm: a head with no
+-- perspective defaulted to `[main]` without setting the explicit flag, the
+-- kernel emitted no `bridge_decl` for it, and `leak[audit]` fired on a rule
+-- doing nothing wrong. The mechanism is gone — `crossing` no longer reads
+-- `bridge_decl`, and nothing emits it — so the bracket now decides nothing in
+-- either direction. It is kept because naming the ledger you write is worth
+-- doing on its own, not because it silences anything.
+--
+-- ONE ROW IS LEFT REPORTING HERE, AND IT IS A GAP IN THE LANGUAGE.
+-- `leak[audit](main, $var("G"))`: a rule reads [main] — the arithmetic and
+-- structural helpers nobody gave a book to — and writes the ledger VARIABLE.
+-- The crossing's DESTINATION is unnameable, and every instrument this
+-- language has points the other way. `imports(To, From)` needs both ends
+-- registered; `collects(X)` says "X gathers from books it does not name",
+-- which is the mirror image and does not fit.
+--
+-- The line that silences it, `imports($var("G"), main).`, is writable —
+-- `$var` is typeable since `$` became a leading name character — and it is
+-- WRONG: it licenses by the SPELLING OF THE VARIABLE, so renaming `?G` to
+-- `?H` throughout would revoke a licence that nothing about the program
+-- changed. examples/npc carries the same row for the same reason
+-- (`world -> $var("A")`). Two demos, one missing sentence. An open gap beats
+-- a closed one in the wrong instrument, so both rows stand and are named.
+--
+-- @rules
+
+-- -------------------------------------------------------------------------
+-- 4.1 derivation: an axiom is a theorem, and a step whose premises are all
+-- theorems concludes one.
+
+thm[G](P) :- axiom[G](P).
+
+-- "every premise of S holds in G", walked by index. The base case is the
+-- position past the last premise, and it needs `foundation[G]` to bind the
+-- ledger: without it the rule would be true of every book that does not
+-- exist. The recursive case reads premise K, demands it, and moves on.
+holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
+holds_from[G](S, K)  :- needs(S, K, P), thm[G](P), K1 is K + 1, holds_from[G](S, K1).
+
+thm[G](P) :- step(S, P), holds_from[G](S, 1).
+
+-- The vocabulary of the whole inquiry: everything any book talks about.
+-- Explicitly `[main]`, which is what keeps it out of `leak`.
+proposition[main](P) :- step(_, P).
+proposition[main](P) :- axiom[G](P).
+
+-- -------------------------------------------------------------------------
+-- 4.2 contradiction, and what a book does with one.
+--
+-- `clash` records that a book holds two theorems that deny each other. It
+-- is a fact, not an error: nothing in the engine reacts to it. What reacts
+-- is the next rule, and only in a book that holds `ex_falso`.
+--
+-- This is the paraconsistency demonstration and it is worth being exact
+-- about what it does and does not show. ROFL is not paraconsistent by
+-- accident of having no negation-as-failure at the object level — it simply
+-- has no ex falso rule of its own. So explosion is written HERE, as an
+-- ordinary rule licensed by an ordinary axiom, and the difference between
+-- Frege's book and da Costa's is that axiom and nothing else.
+
+opposes[main](A, B) :- contrary(A, B).
+opposes[main](B, A) :- contrary(A, B).
+
+clash[G](A, B) :- thm[G](A), thm[G](B), opposes[main](A, B).
+
+-- `explodes` exists as its own relation rather than being folded into the
+-- rule below it, and the reason is `whynot`. Every failed proof in every
+-- book has to consider the possibility that the book explodes, because that
+-- is genuinely one of the three ways to derive anything here. Given a name,
+-- that branch reads as one line — "the book does not explode" — instead of
+-- an enumeration of every pair of theorems that failed to contradict each
+-- other. The demonstration's shape is part of the model's design.
+explodes[G](P) :- clash[G](_, _), axiom[G](ex_falso), proposition[main](P).
+
+thm[G](P) :- explodes[G](P).
+
+-- -------------------------------------------------------------------------
+-- 4.3 how many parallels pass through the point.
+--
+-- The count is not asserted anywhere. Existence is the neutral theorem
+-- I.31; the parallel axiom decides how many witnesses that existence has,
+-- and the last rule is the hyperbolic construction: between any two
+-- distinct parallels lies another. In euclid it never fires, because there
+-- is only one parallel and it needs two DIFFERENT ones. In riemann there
+-- are none to begin with — and note that the elliptic book fails to derive
+-- even `parallel_exists`, because I.31 rests on I.16 which rests on post2.
+--
+-- The counting semiring folded over the support of these four rules answers
+-- "how many": 1 for euclid, 0 for riemann, and INFINITE for lobachevsky,
+-- because `interior` is on a cycle of the support graph and the CLOSED
+-- discipline closes it. See README.md for what that count is a count OF —
+-- derivations, which coincide with lines here only because each application
+-- of the construction exhibits a new line.
+
+parallel[G](sole)     :- thm[G](parallel_exists), axiom[G](post5_unique).
+parallel[G](limit_a)  :- thm[G](parallel_exists), axiom[G](post5_many).
+parallel[G](limit_b)  :- thm[G](parallel_exists), axiom[G](post5_many).
+parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.
+
+-- -------------------------------------------------------------------------
+-- 4.4 the angle sum as a function of area.
+--
+-- `law[G](K)` is the defect coefficient of the book, and it is DERIVED from
+-- which theorem about the angle sum that book proved: flat, hyperbolic,
+-- elliptic. A book that proved none of the three — neutral geometry — has
+-- no law, and therefore no angle sum at all, which is the correct answer
+-- and the one Saccheri would have wanted.
+--
+-- Then two rules for the sum itself. The leaf rule applies the law to an
+-- area. The cut rule composes a triangle from its parts and uses no law at
+-- all: the two angles at the foot of a cevian make a straight line, so the
+-- sums of the parts overcount by exactly 180. The cut rule is NEUTRAL — it
+-- is the additivity of the defect, spelled in degrees — and every compound
+-- triangle therefore gets its sum derived twice, by routes that share no
+-- rule. They agree, and `disagree` is the gate that would say so if they
+-- did not.
+
+law[G](0)  :- thm[G](angle_sum_180).
+law[G](1)  :- thm[G](defect_proportional_to_area).
+law[G](-1) :- thm[G](excess_proportional_to_area).
+
+angle_sum[G](T, S) :- leaf(T, A), law[G](K), S is 180 - K * A.
+angle_sum[G](T, S) :- cut(T, T1, T2), angle_sum[G](T1, S1), angle_sum[G](T2, S2),
+                      S is S1 + S2 - 180.
+
+disagree[G](T, S1, S2) :- angle_sum[G](T, S1), angle_sum[G](T, S2), S1 < S2.
+
+-- Similarity, derived rather than declared. Two triangles of different area
+-- can share their angles only if the angle sum does not depend on the area.
+-- Where it does, the smaller triangle has a bigger sum, the two cannot be
+-- equiangular, and `aaa_congruence` above is the same statement proved
+-- symbolically — two routes to "a triangle knows its size", one through the
+-- corpus and one through arithmetic.
+
+similar_possible[G](T1, T2) :- pair(T1, T2), angle_sum[G](T1, S), angle_sum[G](T2, S).
+size_shows[G](T1, T2, D)    :- pair(T1, T2), angle_sum[G](T1, S1), angle_sum[G](T2, S2),
+                               S1 != S2, D is S1 - S2.
+
+-- -------------------------------------------------------------------------
+-- 4.5 knots. The three steps of §2 do the work; this rule only reads their
+-- conclusions back onto the object, so that the answer names the knot.
+
+knot_state[G](K, unknottable) :- knot(K), thm[G](no_knots_at_all).
+knot_state[G](K, knotted)     :- knot(K), thm[G](knots_exist).
+knot_state[G](K, unties)      :- knot(K), thm[G](every_knot_unties).
+
+-- -------------------------------------------------------------------------
+-- 4.6 reporting: which theorems needed a reductio, and which axioms a book
+-- has that another does not. Both are ordinary derived relations in
+-- `[main]`, and both exist so that a person can ask the question without
+-- reading nine axiom blocks by eye.
+
+reductio_needed[main](P, S) :- step(S, P), by_reductio(S).
+
+-- `only_in(G, H, A)` — A is an axiom of G that H does not hold. The pair of
+-- books is bound by two `foundation` premises, so the relation is over
+-- books that exist; the negated premise is what makes it a difference.
+-- This is the measurement behind "one line changed".
+only_in[main](G, H, A) :- axiom[G](A), foundation[H](_, _), not axiom[H](A).
+
+-- Acceptance scenario (examples/goof/demo.ts runs all of it):
+--   ? unstratified(X)                  -> empty
+--   ? leak[audit](A, B)                -> empty (planted leak: one row)
+--   ? thm[euclid](angle_sum_180)       -> holds;  thm[lobachevsky] -> does not
+--   whynot thm[saccheri](angle_sum_180)-> names post5_unique, twice over
+--   counting parallel[G](interior)     -> 1 / 0 / infinitely many
+--   provenance thm[euclid](pythagoras) -> every monomial contains post5_unique
+--   ? disagree[dacosta](T, A, B)       -> non-empty, and explodes[dacosta] empty
+--   ? knot_state[schlafli](trefoil, S) -> unties

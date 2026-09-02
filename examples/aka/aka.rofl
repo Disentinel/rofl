@@ -1,0 +1,440 @@
+-- aka.rofl -- AKA: bridges between perspectives.
+--
+-- Two ontologies over one stream of money. Billing knows ACCOUNTS and the
+-- LEGAL ENTITIES it invoices. The CRM knows CUSTOMERS. Neither is a
+-- renaming of the other:
+--
+--   * one customer has several accounts   (northwind: acct_nw_prod, acct_nw_eu)
+--   * one account covers several entities (acct_wingtip, a reseller)
+--   * some accounts are in no CRM at all  (acct_ghost_ops, acct_orphan_eu)
+--   * some customers have no account      (litware)
+--
+-- The mapping between them is not data either system holds. It is a set of
+-- ASSERTIONS BY PEOPLE, and this file models them as such:
+--
+--   1. A bridge lives in its AUTHOR'S ledger. `maps[integration](b4, ...)`
+--      is what the integration team holds true; `authority(integration,
+--      integration_team)` is the whole list of who may write there, and an
+--      entry written by anybody else surfaces as `forged[audit]` with no
+--      enforcement code. Withdrawing a bridge is likewise an entry in its
+--      author's own book: only the author may take their own mapping back.
+--   2. Two authors may map the same account DIFFERENTLY and both mappings
+--      stand -- `maps[integration](b6, acct_adv_a, adventure, 70)` and
+--      `maps[finance](b7, acct_adv_a, contoso, 85)` are different facts
+--      because their perspectives differ, exactly as two contradicting
+--      claims coexist in examples/sus.
+--   3. A bridge carries a CONFIDENCE. It is a number its author chose, not
+--      a measurement, and section 8 shows the reconciliation refusing two
+--      bridges whose confidences said they were fine.
+--
+-- Every rule below that reads one book and writes another names its head
+-- perspective. That is what makes the kernel emit `bridge_decl(Rule, From,
+-- To)` and keeps `leak[audit]` empty -- and it is a DIFFERENT bridge from
+-- the ones above: the kernel's licenses a rule to read a ledger, an entry
+-- in `maps` licenses one entity to stand for another. See README.md.
+--
+-- Data is synthetic and hand-built. Amounts are whole dollars, confidences
+-- whole percent: the kernel's arithmetic is integer-only.
+
+-- =========================================================================
+-- 0. who may write where
+-- =========================================================================
+-- Three source ledgers of record ([billing], [crm], and [main] for the
+-- parameters of the run), three ledgers of MAPPINGS -- one per author -- and
+-- one derived ledger, [recon], the book of the reconciliation discipline,
+-- whose only writers are the rules in sections 3 to 9.
+
+authority(main, analyst).
+authority(billing, billing_export).
+authority(crm, crm_export).
+authority(integration, integration_team).
+authority(finance, finance_ops).
+authority(sales, sales_ops).
+
+-- A bridge its author has taken back. Host-supplied and EMPTY in the
+-- shipped model -- demo.ts loads one in section 7 -- so it is declared
+-- extensional here, or `undefined_premise[audit]` reads that emptiness as a
+-- misspelt relation. Declaring an input is the remedy, not a waiver.
+edb(withdrawn).
+
+-- The quarter under reconciliation. Swapping this fact and evaluating once
+-- is the whole of "as of another quarter": see demo.ts `asOf`.
+quarter[main](q3).
+
+-- =========================================================================
+-- 1. the billing book -- [billing], written by the billing export
+-- =========================================================================
+-- Billing has never heard of a customer. It has accounts, the legal
+-- entities it raises invoices against, and invoices.
+
+-- @who billing_export
+
+account[billing](acct_nw_prod,    active).
+account[billing](acct_nw_eu,      active).
+account[billing](acct_contoso,    active).
+account[billing](acct_wingtip,    active).
+account[billing](acct_adv_a,      active).
+account[billing](acct_tailspin,   active).
+account[billing](acct_ghost_ops,  active).
+account[billing](acct_orphan_eu,  active).
+account[billing](acct_litware_x,  closed).
+
+-- the legal entities on each account. acct_wingtip has TWO: it is a
+-- reseller account, and the invoices on it are raised for both.
+entity[billing](acct_nw_prod,   northwind_traders_ltd).
+entity[billing](acct_nw_eu,     northwind_traders_bv).
+entity[billing](acct_contoso,   contoso_ltd).
+entity[billing](acct_wingtip,   fabrikam_inc).
+entity[billing](acct_wingtip,   tailspin_toys).
+entity[billing](acct_adv_a,     adventure_works_gmbh).
+entity[billing](acct_tailspin,  tailspin_toys_llc).
+entity[billing](acct_ghost_ops, ghost_operations_ltd).
+entity[billing](acct_orphan_eu, orphan_holdings_sarl).
+entity[billing](acct_litware_x, litware_x_ag).
+
+-- invoice(Id, Account, Amount, Quarter)
+invoice[billing](inv_01, acct_nw_prod,   240000, q3).
+invoice[billing](inv_02, acct_nw_prod,   180000, q3).
+invoice[billing](inv_03, acct_nw_eu,     130000, q3).
+invoice[billing](inv_04, acct_nw_eu,      95000, q3).
+invoice[billing](inv_05, acct_contoso,   210000, q3).
+invoice[billing](inv_06, acct_contoso,   155000, q3).
+invoice[billing](inv_07, acct_tailspin,  135000, q3).
+invoice[billing](inv_08, acct_wingtip,    60000, q3).
+invoice[billing](inv_09, acct_wingtip,    45000, q3).
+invoice[billing](inv_10, acct_adv_a,      60000, q3).
+invoice[billing](inv_11, acct_ghost_ops,  88000, q3).
+invoice[billing](inv_12, acct_orphan_eu,  22000, q3).
+invoice[billing](inv_13, acct_nw_prod,   200000, q2).
+invoice[billing](inv_14, acct_contoso,   150000, q2).
+invoice[billing](inv_15, acct_tailspin,   90000, q2).
+
+-- The index exists for the same reason SUS indexes its players: the kernel
+-- has no aggregation, so a sum is a SCAN (section 6), and a scan needs a
+-- position to step through.
+inv_no[billing](inv_01,  1).   inv_no[billing](inv_02,  2).
+inv_no[billing](inv_03,  3).   inv_no[billing](inv_04,  4).
+inv_no[billing](inv_05,  5).   inv_no[billing](inv_06,  6).
+inv_no[billing](inv_07,  7).   inv_no[billing](inv_08,  8).
+inv_no[billing](inv_09,  9).   inv_no[billing](inv_10, 10).
+inv_no[billing](inv_11, 11).   inv_no[billing](inv_12, 12).
+inv_no[billing](inv_13, 13).   inv_no[billing](inv_14, 14).
+inv_no[billing](inv_15, 15).
+rows[billing](15).
+
+-- =========================================================================
+-- 2. the CRM book -- [crm], written by the CRM export
+-- =========================================================================
+-- The CRM has never heard of an account. It has customers and the revenue
+-- its own pipeline booked against them.
+
+-- @who crm_export
+
+customer[crm](northwind, "Northwind Traders").
+customer[crm](contoso,   "Contoso Ltd").
+customer[crm](fabrikam,  "Fabrikam Inc").
+customer[crm](tailspin,  "Tailspin Toys").
+customer[crm](wingtip,   "Wingtip Partners").
+customer[crm](adventure, "Adventure Works").
+customer[crm](litware,   "Litware").
+
+cust_no[crm](northwind, 1).  cust_no[crm](contoso,   2).
+cust_no[crm](fabrikam,  3).  cust_no[crm](tailspin,  4).
+cust_no[crm](wingtip,   5).  cust_no[crm](adventure, 6).
+cust_no[crm](litware,   7).
+
+-- booked(Customer, Amount, Quarter): what the CRM says the quarter was
+-- worth for that customer. This is the other system's OWN reported total,
+-- and it is the hard number the reconciliation has to close against.
+booked[crm](northwind, 645000, q3).
+booked[crm](contoso,   365000, q3).
+booked[crm](fabrikam,       0, q3).
+booked[crm](tailspin,  240000, q3).
+booked[crm](wingtip,        0, q3).
+booked[crm](adventure,      0, q3).
+booked[crm](litware,    88000, q3).
+booked[crm](northwind, 200000, q2).
+booked[crm](contoso,   150000, q2).
+booked[crm](fabrikam,       0, q2).
+booked[crm](tailspin,   90000, q2).
+booked[crm](wingtip,        0, q2).
+booked[crm](adventure,      0, q2).
+booked[crm](litware,        0, q2).
+
+-- =========================================================================
+-- 3. the bridges -- one ledger per author
+-- =========================================================================
+-- `maps[X](Id, Account, Customer, Confidence)`: author X asserts that this
+-- billing account is that CRM customer, and how sure they are, in percent.
+--
+-- Nothing here is a join. Every line is somebody's opinion, dated by the
+-- ledger it sits in and revocable by its author alone. Three shapes worth
+-- naming, all three present below and all three DERIVED in section 5:
+--
+--   corroborated  two authors, the same target      (acct_contoso)
+--   split         one author, two targets           (acct_wingtip, a reseller)
+--   disputed      two authors, different targets    (acct_adv_a)
+
+-- @who integration_team
+
+maps[integration](b1, acct_nw_prod,  northwind, 95).
+maps[integration](b2, acct_nw_eu,    northwind, 80).
+maps[integration](b3, acct_contoso,  contoso,   90).
+maps[integration](b4, acct_wingtip,  fabrikam,  60).
+maps[integration](b5, acct_wingtip,  tailspin,  55).
+maps[integration](b6, acct_adv_a,    adventure, 70).
+
+-- @who finance_ops
+
+maps[finance](b7, acct_adv_a,   contoso, 85).
+maps[finance](b8, acct_contoso, contoso, 90).
+
+-- @who sales_ops
+
+maps[sales](b9, acct_tailspin, tailspin, 75).
+
+-- @who analyst
+
+-- =========================================================================
+-- 4. the inquiry's index of the bridges -- [recon]
+-- =========================================================================
+-- Every rule here reads an author's book and writes the reconciliation's.
+-- That crossing is the point, and naming the head perspective is what
+-- declares it: the kernel emits `bridge_decl(R, integration, recon)` for
+-- the first of these, and `leak[audit]` stays empty because of it.
+--
+-- Written out one rule per author rather than once with a variable
+-- perspective, for the reason examples/sus records: `maps[X](..)` reduces
+-- to `$any` in the audit, and a bridge declared from `$any` licenses
+-- reading EVERY ledger at once, which is not what is meant here.
+
+bridge[recon](B, integration, A, C, Conf) :- maps[integration](B, A, C, Conf).
+bridge[recon](B, finance,     A, C, Conf) :- maps[finance](B, A, C, Conf).
+bridge[recon](B, sales,       A, C, Conf) :- maps[sales](B, A, C, Conf).
+
+-- A withdrawal is an entry in the withdrawing author's OWN book. Nobody
+-- can retract somebody else's mapping without it surfacing as forgery.
+retracted[recon](B) :- withdrawn[integration](B).
+retracted[recon](B) :- withdrawn[finance](B).
+retracted[recon](B) :- withdrawn[sales](B).
+
+-- =========================================================================
+-- 5. what a bridge set says about one account
+-- =========================================================================
+
+target[recon](A, C)         :- bridge[recon](_, _, A, C, _).
+mapped_acct[recon](A)       :- bridge[recon](_, _, A, _, _).
+unmapped_acct[recon](A)     :- account[billing](A, _), not mapped_acct[recon](A).
+
+-- two authors, the same target: the mapping is CORROBORATED, and the count
+-- of derivations of `target` is how many authors say it (section 9).
+corroborated[recon](A, C)   :- bridge[recon](_, X1, A, C, _), bridge[recon](_, X2, A, C, _), X1 != X2.
+-- one author, two targets: the account genuinely covers both, and the
+-- bridge vocabulary cannot say in what proportion.
+split[recon](A, C1, C2)     :- bridge[recon](_, X, A, C1, _), bridge[recon](_, X, A, C2, _),
+                               cust_no[crm](C1, I1), cust_no[crm](C2, I2), I1 < I2.
+-- two authors, different targets: a DISPUTE. Both entries stand.
+disputed[recon](A, C1, C2)  :- bridge[recon](_, X1, A, C1, _), bridge[recon](_, X2, A, C2, _),
+                               X1 != X2, cust_no[crm](C1, I1), cust_no[crm](C2, I2), I1 < I2.
+
+-- =========================================================================
+-- 6. carrying the money across, and refusing to do it silently
+-- =========================================================================
+-- `link` is STRUCTURAL and survives a withdrawal, for the reason SUS builds
+-- its support graph on `clash` rather than on `conflict`: the question in
+-- section 7 is what a total was BUILT on, and retracting a bridge must not
+-- quietly erase the fact that the total ever rested on it.
+
+link[recon](Inv, C, B)      :- invoice[billing](Inv, A, _, Q), quarter[main](Q),
+                               bridge[recon](B, _, A, C, _).
+live_link[recon](Inv, C, B) :- link[recon](Inv, C, B), not retracted[recon](B).
+route[recon](Inv, C)        :- live_link[recon](Inv, C, _).
+-- one derivation per live mapping path. Counted in section 9; more than one
+-- is a defect ONLY when the paths land on different customers, which is what
+-- `ambiguous` says and the number alone does not.
+paths[recon](Inv)           :- live_link[recon](Inv, _, _).
+
+carried[recon](Inv)         :- route[recon](Inv, _).
+ambiguous[recon](Inv)       :- route[recon](Inv, C1), route[recon](Inv, C2), C1 != C2.
+in_quarter[recon](Inv)      :- invoice[billing](Inv, _, _, Q), quarter[main](Q).
+unmapped[recon](Inv)        :- in_quarter[recon](Inv), not carried[recon](Inv).
+-- THE REFUSAL. An ambiguous invoice is not attributed to anybody. It is not
+-- resolved by picking the confident candidate, because the confidence is
+-- its author's opinion and section 8 shows the money disagreeing with it.
+attributed[recon](Inv, C)   :- route[recon](Inv, C), not ambiguous[recon](Inv).
+loose[recon](Inv)           :- ambiguous[recon](Inv).
+loose[recon](Inv)           :- unmapped[recon](Inv).
+
+-- =========================================================================
+-- 7. the totals -- a sum is a scan
+-- =========================================================================
+-- The kernel has no aggregation, and this is what that costs: to add up a
+-- set of invoices you index them and walk the index, carrying the running
+-- total, skipping the positions that are not in the pot. One chain serves
+-- every pot at once, because the pot is a term.
+--
+--   billing        every invoice in the quarter
+--   attributed     every invoice that landed on exactly one customer
+--   ambiguous      money with more than one candidate customer
+--   unmapped       money with none
+--   cust(C)        what billing says C is worth, through the bridges
+--   loose(A)       account A's money that landed nowhere -- section 8 reads it
+--   crm_booked     what the CRM says the quarter is worth, over its own index
+
+tag[recon](billing)     :- quarter[main](_).
+tag[recon](attributed)  :- quarter[main](_).
+tag[recon](ambiguous)   :- quarter[main](_).
+tag[recon](unmapped)    :- quarter[main](_).
+tag[recon](crm_booked)  :- quarter[main](_).
+tag[recon](cust(C))     :- customer[crm](C, _).
+tag[recon](loose(A))    :- account[billing](A, _).
+
+-- what each pot counts, said once, so that section 9 can ask a pot which
+-- invoices it took and not have to be told a second time.
+counts[recon](billing, Inv)    :- in_quarter[recon](Inv).
+counts[recon](attributed, Inv) :- attributed[recon](Inv, _).
+counts[recon](ambiguous, Inv)  :- ambiguous[recon](Inv).
+counts[recon](unmapped, Inv)   :- unmapped[recon](Inv).
+counts[recon](cust(C), Inv)    :- attributed[recon](Inv, C).
+counts[recon](loose(A), Inv)   :- loose[recon](Inv), invoice[billing](Inv, A, _, _).
+
+tagged[recon](T, N, Amt)          :- counts[recon](T, Inv), inv_no[billing](Inv, N),
+                                     invoice[billing](Inv, _, Amt, _).
+-- the CRM's own total walks the CUSTOMER index instead; the two index
+-- spaces never meet, because a tag never mixes them.
+tagged[recon](crm_booked, I, Amt) :- booked[crm](C, Amt, Q), quarter[main](Q), cust_no[crm](C, I).
+
+at[recon](T, N)    :- tagged[recon](T, N, _).
+scan[recon](T, 0, 0) :- tag[recon](T).
+scan[recon](T, N, S) :- scan[recon](T, M, S0), N is M + 1, tagged[recon](T, N, Amt), S is S0 + Amt.
+scan[recon](T, N, S) :- scan[recon](T, M, S), N is M + 1, rows[billing](L), N <= L,
+                        not at[recon](T, N).
+total[recon](T, S)   :- scan[recon](T, L, S), rows[billing](L).
+
+-- =========================================================================
+-- 8. does it close, and if not, what mapping would close it
+-- =========================================================================
+
+gap[recon](C, G)     :- total[recon](cust(C), A), booked[crm](C, B, Q), quarter[main](Q),
+                        G is A - B.
+reconciles[recon](C) :- gap[recon](C, 0).
+short[recon](C, N)   :- gap[recon](C, G), G < 0, N is 0 - G.
+over[recon](C, N)    :- gap[recon](C, G), G > 0, N is G.
+
+-- WHYNOT, AS A LIST OF MISSING BRIDGES. An account whose loose money is
+-- exactly what a customer is short: a bridge from it to that customer would
+-- close the reconciliation, and the engine names which.
+would_close[recon](C, A) :- short[recon](C, N), total[recon](loose(A), N), N > 0.
+proposed[recon](A)       :- would_close[recon](_, A).
+-- and whether the bridge has to be INVENTED or only SHARPENED: if a bridge
+-- to that customer already exists, the account is ambiguous rather than
+-- unmapped, and the repair is to settle the ambiguity, not to add a line.
+sharpen[recon](C, A, B)  :- would_close[recon](C, A), bridge[recon](B, _, A, C, _).
+add_bridge[recon](C, A)  :- would_close[recon](C, A), not mapped_acct[recon](A).
+
+-- What no bridge can absorb. An account still holding loose money that no
+-- customer's shortfall accounts for -- this is the irreducible residual,
+-- and section 10 checks that it equals the two systems' headline difference.
+residual[recon](A, S)    :- total[recon](loose(A), S), S > 0, not proposed[recon](A).
+
+-- THE RECONCILIATION REFUTING A BRIDGE. A candidate whose target already
+-- closes exactly cannot take the money without breaking a total that
+-- currently balances -- so the bridge is wrong however confident its author
+-- was. This is evidence overruling an assertion, in one rule.
+refuted_bridge[recon](B, C) :- bridge[recon](B, _, A, C, _), residual[recon](A, _),
+                               reconciles[recon](C).
+
+-- =========================================================================
+-- 9. the mark: this number crossed a perspective boundary
+-- =========================================================================
+-- A conclusion reached through a bridge must not look like one derived
+-- inside a single ontology. `crossed` names the bridge, its author and its
+-- confidence, and `within_one_book` is its complement -- `total(billing)`
+-- is derived from the billing ledger alone and is marked as such.
+
+-- ONE RULE PER CONCLUSION SHAPE, and that is the honest cost of the mark:
+-- it is a modelling obligation, not something the kernel derives. The first
+-- draft of this file marked `total(cust(C))` and `gap(C)` and forgot
+-- `total(attributed)` and `total(ambiguous)`, which cross bridges just as
+-- hard -- and the Viterbi fold in demo.ts §5 caught both, because a fold
+-- follows the support graph and cannot be forgotten. The test pins the two
+-- against each other: a total is marked as crossed exactly when its Viterbi
+-- certainty is below 1.
+conclusion[recon](total(T))   :- total[recon](T, _).
+conclusion[recon](gap(C))     :- gap[recon](C, _).
+crossed[recon](total(cust(C)), B, X, Conf)    :- attributed[recon](Inv, C),
+                                                 live_link[recon](Inv, C, B),
+                                                 bridge[recon](B, X, _, _, Conf).
+crossed[recon](total(attributed), B, X, Conf) :- attributed[recon](Inv, C),
+                                                 live_link[recon](Inv, C, B),
+                                                 bridge[recon](B, X, _, _, Conf).
+crossed[recon](total(ambiguous), B, X, Conf)  :- ambiguous[recon](Inv),
+                                                 live_link[recon](Inv, _, B),
+                                                 bridge[recon](B, X, _, _, Conf).
+crossed[recon](gap(C), B, X, Conf)            :- gap[recon](C, _),
+                                                 crossed[recon](total(cust(C)), B, X, Conf).
+crossing[recon](X)            :- crossed[recon](X, _, _, _).
+-- `total(billing)`, `total(crm_booked)` and `total(unmapped)` land here.
+-- The first two belong here. THE THIRD IS THE TRAP: it rests on the ABSENCE
+-- of a bridge, and an absence carries no provenance, so no mark can reach
+-- the number in this whole report that is most sensitive to the bridge set.
+within_one_book[recon](X)     :- conclusion[recon](X), not crossing[recon](X).
+
+-- =========================================================================
+-- 10. what a total was built on, and what a withdrawal takes with it
+-- =========================================================================
+-- The support graph is built on `link`, never on `live_link`: retracting a
+-- bridge must mark what rested on it, not erase the fact that it did. The
+-- machinery is examples/oops's, applied to bridges instead of to papers.
+
+-- The attribution as it would stand if no bridge had been taken back. This
+-- is the skeleton the support graph is drawn on: `attributed` collapses
+-- when a bridge is retracted, and a collapsed support cannot be marked --
+-- it has already vanished, taking with it the record that the total ever
+-- rested on it. Measured: without this pair of rules the withdrawal in
+-- section 7 leaves `shaken` empty, because northwind's total no longer
+-- admits that it was ever built on the two invoices it just lost.
+declared_amb[recon](Inv)     :- link[recon](Inv, C1, _), link[recon](Inv, C2, _), C1 != C2.
+declared_attr[recon](Inv, C) :- link[recon](Inv, C, _), not declared_amb[recon](Inv).
+
+rests_on[recon](attribution(Inv, C), B)              :- link[recon](Inv, C, B).
+rests_on[recon](total(cust(C)), attribution(Inv, C)) :- declared_attr[recon](Inv, C).
+rests_on[recon](reconciliation(C), total(cust(C)))   :- customer[crm](C, _).
+rests_on[recon](X, Z)                                :- rests_on[recon](X, Y), rests_on[recon](Y, Z).
+
+leaf[recon](X, B)  :- rests_on[recon](X, B), bridge[recon](B, _, _, _, _).
+gone[recon](X)     :- leaf[recon](X, B), retracted[recon](B).
+standing[recon](X) :- leaf[recon](X, B), not retracted[recon](B).
+at_risk[recon](X)  :- gone[recon](X), not standing[recon](X).
+shaken[recon](X)   :- gone[recon](X), standing[recon](X).
+
+-- Acceptance scenario (examples/aka/demo.ts runs all of it):
+--   aka trace revenue_q3 --from billing --to crm  -> 1.42M / 1.31M / 0.11M
+--   ? ambiguous[recon](Inv)                       -> inv_08, inv_09, inv_10
+--   ? disputed[recon](acct_adv_a, C1, C2)         -> adventure vs contoso
+--   aka -n tailspin                               -> sharpen b5; aka -n litware -> add a bridge
+--   withdraw b2                                   -> at_risk / shaken reach the reconciliation
+--   ? refuted_bridge[recon](B, C)                 -> b6 and b7, both of them
+
+-- ============ what [recon] is allowed to read ============
+--
+-- Written out because the kernel stopped writing it. `crossing` carried
+-- `not bridge_decl(R, A, B)`, emitted for any rule whose head named a ledger
+-- and whose body read another, so every rule in this file licensed its own
+-- read by existing and `leak[audit]` was 0 for a reason unrelated to the file.
+-- Six crossings report now, and every one of them is [recon] reading a book
+-- it reconciles.
+--
+-- That is what a reconciliation ledger IS: [recon] holds the conclusions of
+-- comparing the export books against each other, so it must read all of them.
+-- Six separate sentences and not one blanket, because `imports` names the
+-- pair — a seventh export book added tomorrow gets a seventh line, and until
+-- it does the audit says no about it.
+imports(recon, billing).
+imports(recon, crm).
+imports(recon, finance).
+imports(recon, integration).
+imports(recon, sales).
+
+-- and [main], where the analyst's own working facts live.
+imports(recon, main).

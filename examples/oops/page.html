@@ -1,0 +1,1048 @@
+<title>The Retraction Cascade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground: #f2f3f7;
+    --panel: #ffffff;
+    --sunk: #e7e9f1;
+    --ink: #161a26;
+    --muted: #59607a;
+    --hair: #d2d6e3;
+    --accent: #26356e;
+    --retracted: #98232b;
+    --retracted-bg: #f7e6e7;
+    --risk: #a6661a;
+    --risk-bg: #f9eddc;
+    --robust: #14685a;
+    --robust-bg: #e0f0eb;
+    --clean-bg: #eceef5;
+    --shadow: 0 1px 2px rgba(22, 26, 38, .06), 0 8px 24px rgba(22, 26, 38, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11131b;
+      --panel: #191c27;
+      --sunk: #21253247;
+      --ink: #e5e7ef;
+      --muted: #98a0ba;
+      --hair: #2e3345;
+      --accent: #93a8ff;
+      --retracted: #e4747e;
+      --retracted-bg: #33191d;
+      --risk: #dba24e;
+      --risk-bg: #2f2415;
+      --robust: #4cc3a4;
+      --robust-bg: #132c28;
+      --clean-bg: #20242f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11131b;
+    --panel: #191c27;
+    --sunk: #21253247;
+    --ink: #e5e7ef;
+    --muted: #98a0ba;
+    --hair: #2e3345;
+    --accent: #93a8ff;
+    --retracted: #e4747e;
+    --retracted-bg: #33191d;
+    --risk: #dba24e;
+    --risk-bg: #2f2415;
+    --robust: #4cc3a4;
+    --robust-bg: #132c28;
+    --clean-bg: #20242f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 17px/1.62 "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 45rem; margin: 0 auto; padding: 0 1.5rem 5rem; }
+
+  /* ---- masthead ---- */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--ground);
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hair);
+  }
+  .top-in {
+    max-width: 45rem; margin: 0 auto; padding: .6rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .sig {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .seg { display: flex; gap: 2px; padding: 2px; background: var(--sunk); border-radius: 999px; }
+  .seg button {
+    font: 500 .78rem/1 "IBM Plex Sans", sans-serif;
+    border: 0; border-radius: 999px; padding: .45rem .8rem;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- type ---- */
+  h1 {
+    font: 500 clamp(2.4rem, 7vw, 3.4rem)/1.06 Newsreader, Georgia, serif;
+    letter-spacing: -.02em; text-wrap: balance; margin: 3rem 0 0;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .stand {
+    font: 400 1.24rem/1.5 Newsreader, Georgia, serif;
+    color: var(--muted); text-wrap: balance; margin: 1rem 0 0; max-width: 34rem;
+  }
+  h2 {
+    font: 500 1.5rem/1.2 Newsreader, Georgia, serif;
+    margin: 3.4rem 0 .2rem; text-wrap: balance; letter-spacing: -.01em;
+  }
+  h3 { font: 600 .96rem/1.4 "IBM Plex Sans", sans-serif; margin: 2rem 0 .3rem; }
+  p { margin: .9rem 0; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .7rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); margin: 0;
+  }
+  .lede { font-size: 1.06rem; }
+  code, .m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .88em; }
+  code { background: var(--sunk); padding: .1em .34em; border-radius: 3px; }
+  a { color: var(--accent); text-underline-offset: .2em; }
+  hr { border: 0; border-top: 1px solid var(--hair); margin: 3.5rem 0 0; }
+
+  /* ---- level switching ---- */
+  [data-level] { display: none; }
+  :root.lv-kid [data-level="kid"],
+  :root.lv-eng [data-level="eng"],
+  :root:not(.lv-kid):not(.lv-eng) [data-level="eng"] { display: revert; }
+
+  /* ---- panels ---- */
+  .panel {
+    background: var(--panel); border: 1px solid var(--hair); border-radius: 10px;
+    padding: 1.1rem 1.2rem; margin: 1.4rem 0; box-shadow: var(--shadow);
+  }
+  .scroll { overflow-x: auto; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .87rem; color: var(--muted); margin-top: .7rem; }
+
+  pre {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .8rem; line-height: 1.55; margin: 0;
+    background: var(--panel); border: 1px solid var(--hair); border-radius: 8px;
+    padding: .9rem 1rem; overflow-x: auto;
+  }
+  pre b { color: var(--accent); font-weight: 500; }
+  pre i { color: var(--muted); font-style: normal; }
+  pre .neg { color: var(--retracted); }
+
+  /* ---- diagram ---- */
+  .diagram { min-width: 620px; }
+  .node rect {
+    fill: var(--clean-bg); stroke: var(--hair); stroke-width: 1.5;
+    transition: fill .25s, stroke .25s, opacity .25s;
+  }
+  .node text {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px;
+    fill: var(--ink); dominant-baseline: middle; text-anchor: middle;
+  }
+  .node .tag {
+    font-family: "IBM Plex Sans", sans-serif; font-size: 8.5px;
+    letter-spacing: .1em; text-anchor: middle;
+  }
+  .node[data-state="retracted"] rect { fill: var(--retracted-bg); stroke: var(--retracted); }
+  .node[data-state="retracted"] .tag { fill: var(--retracted); }
+  .node[data-state="at_risk"] rect { fill: var(--risk-bg); stroke: var(--risk); }
+  .node[data-state="at_risk"] .tag { fill: var(--risk); }
+  .node[data-state="robust"] rect { fill: var(--robust-bg); stroke: var(--robust); }
+  .node[data-state="robust"] .tag { fill: var(--robust); }
+  .node[data-state="clean"] .tag { fill: var(--muted); }
+  .node[data-state="absent"] { opacity: .22; }
+  .node[data-state="absent"] rect { stroke-dasharray: 3 3; }
+  .edge {
+    fill: none; stroke: var(--muted); stroke-width: 1.6; opacity: .75;
+    transition: stroke .25s, opacity .25s;
+  }
+  .edge[data-kind="mention"] { stroke-dasharray: 2 4; opacity: .55; }
+  .edge[data-flow="risk"] { stroke: var(--risk); opacity: 1; }
+  .edge[data-flow="robust"] { stroke: var(--robust); opacity: .95; }
+  .edge[data-flow="hidden"] { opacity: .1; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; margin-top: .9rem; }
+  .key { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); }
+  .dot { width: .7rem; height: .7rem; border-radius: 3px; border: 1.5px solid; }
+  .dot.r { background: var(--retracted-bg); border-color: var(--retracted); }
+  .dot.a { background: var(--risk-bg); border-color: var(--risk); }
+  .dot.o { background: var(--robust-bg); border-color: var(--robust); }
+  .dot.c { background: var(--clean-bg); border-color: var(--hair); }
+
+  /* ---- year scrubber ---- */
+  .year-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .year-num {
+    font: 500 2.6rem/1 Newsreader, Georgia, serif;
+    font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); margin: .8rem 0 .2rem; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .ticks {
+    display: flex; justify-content: space-between;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .68rem; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .rows { display: grid; gap: .5rem; margin-top: 1.1rem; }
+  .row { display: grid; grid-template-columns: 5.6rem 1fr; gap: .7rem; align-items: baseline; }
+  .row .lbl {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .7rem;
+    letter-spacing: .1em; text-transform: uppercase; text-align: right;
+  }
+  .row.r .lbl { color: var(--retracted); }
+  .row.a .lbl { color: var(--risk); }
+  .row.o .lbl { color: var(--robust); }
+  .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .chip {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .74rem;
+    padding: .1rem .42rem; border-radius: 4px; border: 1px solid var(--hair);
+    background: var(--sunk); white-space: nowrap;
+  }
+  .chip.r { color: var(--retracted); border-color: var(--retracted); background: var(--retracted-bg); }
+  .chip.a { color: var(--risk); border-color: var(--risk); background: var(--risk-bg); }
+  .chip.o { color: var(--robust); border-color: var(--robust); background: var(--robust-bg); }
+  .none { color: var(--muted); font-size: .85rem; }
+  .note { font-size: .87rem; color: var(--muted); margin-top: 1rem; }
+
+  /* ---- tables ---- */
+  table { border-collapse: collapse; width: 100%; font-size: .87rem; }
+  th, td { text-align: left; padding: .42rem .6rem .42rem 0; border-bottom: 1px solid var(--hair); }
+  th { font-weight: 600; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  td.n { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .ok { color: var(--robust); font-weight: 600; }
+
+  .foot { margin-top: 3rem; font-size: .87rem; color: var(--muted); }
+  .foot code { font-size: .82rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="top">
+  <div class="top-in">
+    <span class="sig">rofl / examples / oops</span>
+    <div class="seg" role="group" aria-label="Reading level">
+      <button type="button" id="b-kid" aria-pressed="false">Plain</button>
+      <button type="button" id="b-eng" aria-pressed="true">Engineer</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <h1>A paper was retracted.<br><em>What is now in doubt?</em></h1>
+
+  <p class="stand" data-level="kid">A science paper turned out to be wrong. Some other papers
+    trusted it. Which of those are shaky now — and which are fine, because they had
+    other reasons too?</p>
+  <p class="stand" data-level="eng">The retraction is recorded. The conclusions that leaned on
+    it keep living. Every tool answers <span class="m">is X retracted</span>; none answers
+    <span class="m">what became unreliable</span>. This one does, in 25 rules over a
+    46-fact ledger.</p>
+
+  <h2 data-level="kid">Papers stand on other papers</h2>
+  <h2 data-level="eng">A citation is not a dependency</h2>
+
+  <div data-level="kid">
+    <p class="lede">Scientists build on each other. A new paper leans on older ones the way a
+      floor of a building leans on the floor below.</p>
+    <p>But there are two very different ways to lean. Sometimes a paper's whole argument
+      rests on an older one — pull the older one out and the newer one falls down. And
+      sometimes a paper just <em>mentions</em> the older one in passing, the way you might
+      say "other people have looked at this too". Pull that one out and nothing happens.</p>
+    <p>When a paper turns out to be wrong, it gets <strong>retracted</strong> — the journal
+      officially takes it back. Right now, computers can tell you which papers mentioned
+      it. Nobody can tell you which ones <em>fall down</em>.</p>
+  </div>
+
+  <div data-level="eng">
+    <p class="lede">The distinction is not who cited the retracted paper. It is whose
+      conclusion depended on it.</p>
+    <p>A paper that named the retracted work in its introduction is unharmed. A paper whose
+      only argument rests on it is destroyed. Today those are the same row in the same
+      database. So the model carries two kinds of citation edge, and only one of them
+      carries poison:</p>
+    <pre><b>depends_on</b>(A, B) :- citation(A, B, <i>load_bearing</i>, Yc), clock(Y), Yc &lt;= Y.
+<b>mentions</b>(A, B)   :- citation(A, B, <i>mention</i>, Yc),      clock(Y), Yc &lt;= Y.</pre>
+    <p>Every one of the five papers citing the retracted <span class="m">helix_2019</span>,
+      and what actually became of it:</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>paper</th><th>edge</th><th>verdict</th></tr></thead>
+        <tbody id="citers"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2 data-level="kid">The picture</h2>
+  <h2 data-level="eng">The cascade, and where it stops</h2>
+
+  <figure>
+    <div class="panel scroll">
+      <svg class="diagram" viewBox="0 0 660 570" role="img"
+           aria-label="Citation graph: papers stand on the papers they depend on. helix_2019 is retracted; yield_2020, scaleup_2021 and replication_2025 are at risk; meta_2022 and policy_2023 are robust; review_2021 is untouched.">
+        <g id="edges" stroke-linecap="round"></g>
+        <g id="nodes"></g>
+      </svg>
+      <div class="legend">
+        <span class="key"><span class="dot r"></span>retracted</span>
+        <span class="key"><span class="dot a"></span>at risk — every chain runs through the retraction</span>
+        <span class="key"><span class="dot o"></span>robust — independently supported</span>
+        <span class="key"><span class="dot c"></span>untouched</span>
+      </div>
+    </div>
+    <figcaption data-level="kid">Each box is a paper. A line going down means "this paper
+      leans on that one". The dotted line is a paper that only <em>mentions</em> the wrong
+      one — it does not lean on it, so it is fine. Ten of the nineteen papers are drawn
+      here; the other nine include a second, older retraction that works exactly the
+      same way.</figcaption>
+    <figcaption data-level="eng">Ten of the 19 papers, arranged so that an edge points from a
+      paper to what it depends on. Orange edges rest on something broken; green edges rest
+      on something standing. Data is real output from
+      <span class="m">examples/oops/demo.ts</span>, not an illustration.</figcaption>
+  </figure>
+
+  <div data-level="kid">
+    <p><span class="m">helix_2019</span> is the paper that turned out to be wrong.
+      <span class="m">yield_2020</span> leaned on it for everything, so
+      <span class="m">yield_2020</span> is shaky. <span class="m">scaleup_2021</span> leaned
+      only on <span class="m">yield_2020</span>, so it is shaky too — the problem travels.</p>
+    <p><strong>And then it stops.</strong> <span class="m">meta_2022</span> leans on the
+      shaky <span class="m">scaleup_2021</span> — but it <em>also</em> leans on
+      <span class="m">thermo_2016</span>, which is perfectly fine. So
+      <span class="m">meta_2022</span> still has a leg to stand on. It is not shaky. And
+      <span class="m">policy_2023</span>, which stands on <span class="m">meta_2022</span>,
+      is not shaky either.</p>
+    <p>That is the whole trick. Knowing which papers <em>touched</em> the wrong one is easy
+      and useless — it would paint half the picture orange. Knowing which ones have
+      nothing else to stand on is the answer people actually need.</p>
+  </div>
+
+  <div data-level="eng">
+    <p>Two monotone reachability relations and one stratified negation between them:</p>
+    <pre><b>tainted</b>(P)  :- depends_on(P, B), retracted(B).      <i>-- some chain reaches a wreck</i>
+<b>tainted</b>(P)  :- depends_on(P, B), tainted(B).
+
+<b>grounded</b>(P) :- own_evidence(P), <span class="neg">not</span> retracted(P).   <i>-- some chain still stands</i>
+<b>grounded</b>(P) :- depends_on(P, B), grounded(B), <span class="neg">not</span> retracted(P).
+
+<b>at_risk</b>(P)  :- tainted(P), <span class="neg">not</span> grounded(P).         <i>-- every chain runs through it</i>
+<b>robust</b>(P)   :- tainted(P), grounded(P).             <i>-- touched, and survives it</i></pre>
+    <p><span class="m">tainted</span> alone is the useless answer everyone already has:
+      touched by the retraction, which paints half the graph. <strong>The stopping condition
+      is the product.</strong> A robust paper is not at risk, and a paper that depends only
+      on a robust paper is grounded <em>through</em> it — so the cascade dies there instead
+      of running to the leaves.</p>
+    <p>The natural formulation is mutually recursive through negation
+      (<span class="m">at_risk</span> unless a pillar is clean; a pillar is clean unless it
+      is at risk) and the kernel rejects it — correctly, since that program has no unique
+      least model. Splitting it into <em>reaches a wreck</em>, <em>reaches something
+      standing</em>, and one negation between them makes it computable and clearer about
+      what is being claimed.</p>
+  </div>
+
+  <h2 data-level="kid">Now watch the years go by</h2>
+  <h2 data-level="eng">The knowledge state is a function of the tick</h2>
+
+  <p data-level="kid">Drag the slider. Papers appear when they are published. In 2022 one
+    paper is taken back; in 2024 another one is. In 2025 somebody cites the retracted paper
+    <em>anyway</em>. And in 2026 the retraction is itself taken back — and everything that
+    fell down stands up again, all by itself.</p>
+  <p data-level="eng">One program, one store, and the year is an input. Every status relation
+    carries <span class="m">clock(Y)</span> in its body, so a paper does not exist before it
+    is published, a citation does not exist before it is made, and
+    <span class="m">retracted</span> is derived from the retraction and un-retraction events
+    against the clock. Nothing below is patched when the clock moves. The facts are simply
+    derived again.</p>
+
+  <div class="panel">
+    <div class="year-head">
+      <span class="year-num" id="year">2025</span>
+      <span class="sig" id="year-note">the loud retraction stands</span>
+    </div>
+    <label class="sig" for="scrub" style="position:absolute;left:-9999px">Year</label>
+    <input type="range" id="scrub" min="2020" max="2026" step="1" value="2025">
+    <div class="ticks"><span>2020</span><span>2026</span></div>
+    <div class="rows">
+      <div class="row r"><span class="lbl">retracted</span><span class="chips" id="c-r"></span></div>
+      <div class="row a"><span class="lbl">at risk</span><span class="chips" id="c-a"></span></div>
+      <div class="row o"><span class="lbl">robust</span><span class="chips" id="c-o"></span></div>
+    </div>
+    <p class="note" data-level="eng">Each year here is one tick. The same sets come out of
+      running the world forward one tick per year and out of evaluating the program once
+      with the clock set to that year — 142 domain facts, identical both ways.</p>
+    <p class="note" data-level="kid">The computer does not remember an answer and fix it up.
+      It works the whole thing out again, from scratch, for whichever year you point at.</p>
+  </div>
+
+  <h2 data-level="kid">How do we know it is right?</h2>
+  <h2 data-level="eng">The oracle: two computations of the same thing</h2>
+
+  <div data-level="kid">
+    <p>Here is the nice part. There are two completely different ways to ask "what did this
+      retraction cost us?", and they were both run.</p>
+    <p>The first way is the rules above: follow the leaning, mark what has nothing left to
+      stand on. The second way is to <strong>rub the retraction out entirely</strong> — take
+      it out of the pile of facts, work the whole world out again from nothing, and see
+      which answers disappeared. If the two ways ever disagreed, something would be wrong.
+      They agree exactly.</p>
+    <p>And rubbing out a retraction does not only <em>delete</em> things. It brings papers
+      back: three of them stand on evidence again. That is the same machinery a real
+      un-retraction uses.</p>
+  </div>
+
+  <div data-level="eng">
+    <p><span class="m">excise(F)</span> re-runs the fixpoint on the EDB minus
+      <span class="m">F</span> and returns the diff. That is not a way to compute the blast
+      radius — it <em>is</em> the blast radius, and it shipped before this example existed.
+      It is a clean re-evaluation, so multiple support is handled by construction: a fact
+      with two independent derivations does not fall when one support is removed, and
+      nothing had to be told about that.</p>
+    <p>So the same question gets answered twice by different machinery — once by the derived
+      attribution <span class="m">at_risk_from(P, R)</span>, once by subtracting the
+      retraction from the EDB and re-deriving everything:</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>excise</th><th class="n">facts&nbsp;-/+</th><th>at_risk removed</th><th>= at_risk_from</th></tr></thead>
+        <tbody id="oracle"></tbody>
+      </table>
+    </div>
+    <p>The check is discriminating because the two retracted roots have disjoint cascades:
+      excising the 2024 retraction removes three of the five at-risk facts and leaves the
+      other two standing. If the rules over-propagated, or <span class="m">excise</span>
+      over-removed, the sets would differ. They do not, for either root, at either the
+      <span class="m">at_risk</span> or the larger <span class="m">tainted</span> level.</p>
+    <p><span class="m">added</span> is the striking half: excising a retraction
+      <em>adds</em> <span class="m">grounded(yield_2020)</span>, because with the retraction
+      gone those papers stand on evidence again. Un-retraction and blast radius turn out to
+      be the same operation read in two directions.</p>
+  </div>
+
+  <h2 data-level="kid">How shaky is shaky?</h2>
+  <h2 data-level="eng">Counting is the robustness metric</h2>
+
+  <p data-level="kid">A paper with one reason behind it is fragile. A paper with three
+    separate reasons survives losing one of them. So the machine counts the reasons:</p>
+  <p data-level="eng">One surviving support chain is fragile; three survive a retraction.
+    Folding the counting semiring over the recorded support gives that number directly —
+    the number of distinct derivations of <span class="m">grounded(P)</span>:</p>
+
+  <div class="panel scroll">
+    <table>
+      <thead><tr><th>paper</th><th class="n">independent chains</th><th>verdict</th></tr></thead>
+      <tbody id="chains"></tbody>
+    </table>
+  </div>
+
+  <p data-level="kid"><span class="m">preprint_a</span> and <span class="m">preprint_b</span>
+    cite <em>each other</em>. So you can walk in a circle between them forever, and there is
+    no honest number of reasons to give. The machine says <strong>infinitely many</strong>
+    instead of making something up. Real science does contain little loops like this.</p>
+  <p data-level="eng"><span class="m">INFINITE</span> is not an overflow: it is a member of
+    the carrier. <span class="m">preprint_a</span> and <span class="m">preprint_b</span>
+    cite each other, so each trip round the loop is another derivation tree, and the
+    counting semiring is <span class="m">CLOSED</span> — it multiplies facts on a cycle by
+    <span class="m">star(one)</span> and says so. Real citation graphs contain cycles; a
+    robustness score that silently invented a finite number there would be worse than one
+    that refuses.</p>
+
+  <div data-level="eng">
+    <h3>Where the kernel fought back</h3>
+    <p>Three places worth stating plainly, because they are the honest cost of doing time
+      properly. Persistence is not a storage property here: the ledger survives a tick only
+      because six <span class="m">@next</span> carry rules move it forward. That means a
+      carried fact's support names the same fact one tick earlier — a self-loop — and past
+      tick 0 the counting semiring used to report <span class="m">infinitely many</span> for
+      everything, including a paper that cites nothing. This example is what measured that,
+      and it is settled: the fold is about <strong>one tick</strong>, so a fact that arrived
+      over the boundary is a given in the tick that reads it, with count one. The ticked
+      store and the store evaluated <em>at</em> a clock value now agree on all 142 domain
+      facts and on every count over them; the cycle that stays
+      <span class="m">infinitely many</span> is the two preprints citing each other, inside
+      a single tick.</p>
+    <p>For the same reason a <span class="m">why</span> tree past tick 0 carries
+      <span class="m">[cycle]</span> and <span class="m">[past tick]</span> leaves — that is
+      what persistence-by-rule looks like in provenance, rendered honestly rather than
+      hidden. And "the state at an earlier tick" is queryable as <em>provenance</em>, not as
+      facts: tick-scoped facts are dropped at the boundary, but frozen
+      <span class="m">derived_by/3</span> survives, so the tick-5 store still reports the
+      four <span class="m">at_risk</span> facts it derived at tick 4 beside the five it
+      holds now.</p>
+  </div>
+
+  <hr>
+
+  <div class="foot">
+    <p><strong>What is real here and what is not.</strong> The 19 papers and 23 citation
+      edges are synthetic and hand-labelled, small enough to check every verdict by hand.
+      Everything computed from them — the sets, the counts, the diffs, the timeline — is
+      real output from a real run. On live data the retraction facts (Retraction Watch,
+      Crossref) and the citation graph (OpenAlex) are hard ground truth; the citation
+      <em>type</em> is the one field open data labels badly. Two honest options: run on a
+      labelled subset, or treat every citation as load-bearing and publish the result as an
+      upper bound, clearly labelled. An upper bound is still strictly more than "is X
+      retracted?", and it tightens as labels improve without anything else changing.</p>
+    <p>Run it: <code>node --experimental-strip-types examples/oops/demo.ts</code> —
+      the rules are <code>examples/oops/oops.rofl</code>, the tests are
+      <code>test/example-oops.test.ts</code>.</p>
+  </div>
+</div>
+
+<script type="application/json" id="oops-data">{
+ "years": {
+  "2020": {
+   "state": {
+    "assay_2017": "clean",
+    "audit_2020": "clean",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "clean",
+    "helix_2019": "clean",
+    "panel_2018": "clean",
+    "spectra_2015": "clean",
+    "thermo_2016": "clean",
+    "yield_2020": "clean"
+   },
+   "at_risk": [],
+   "robust": [],
+   "retracted": []
+  },
+  "2021": {
+   "state": {
+    "assay_2017": "clean",
+    "audit_2020": "clean",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "clean",
+    "helix_2019": "clean",
+    "panel_2018": "clean",
+    "review_2021": "clean",
+    "scaleup_2021": "clean",
+    "spectra_2015": "clean",
+    "thermo_2016": "clean",
+    "yield_2020": "clean"
+   },
+   "at_risk": [],
+   "robust": [],
+   "retracted": []
+  },
+  "2022": {
+   "state": {
+    "assay_2017": "retracted",
+    "audit_2020": "robust",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "at_risk",
+    "helix_2019": "clean",
+    "meta_2022": "clean",
+    "panel_2018": "at_risk",
+    "preprint_a": "clean",
+    "preprint_b": "clean",
+    "review_2021": "clean",
+    "scaleup_2021": "clean",
+    "spectra_2015": "clean",
+    "thermo_2016": "clean",
+    "yield_2020": "clean"
+   },
+   "at_risk": [
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "robust": [
+    "audit_2020"
+   ],
+   "retracted": [
+    "assay_2017"
+   ]
+  },
+  "2023": {
+   "state": {
+    "assay_2017": "retracted",
+    "audit_2020": "robust",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "at_risk",
+    "helix_2019": "clean",
+    "meta_2022": "clean",
+    "panel_2018": "at_risk",
+    "policy_2023": "clean",
+    "preprint_a": "clean",
+    "preprint_b": "clean",
+    "review_2021": "clean",
+    "scaleup_2021": "clean",
+    "spectra_2015": "clean",
+    "synthesis_2023": "clean",
+    "thermo_2016": "clean",
+    "yield_2020": "clean"
+   },
+   "at_risk": [
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "robust": [
+    "audit_2020"
+   ],
+   "retracted": [
+    "assay_2017"
+   ]
+  },
+  "2024": {
+   "state": {
+    "assay_2017": "retracted",
+    "audit_2020": "robust",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "at_risk",
+    "helix_2019": "retracted",
+    "meta_2022": "robust",
+    "panel_2018": "at_risk",
+    "policy_2023": "robust",
+    "preprint_a": "robust",
+    "preprint_b": "robust",
+    "review_2021": "clean",
+    "scaleup_2021": "at_risk",
+    "spectra_2015": "clean",
+    "synthesis_2023": "robust",
+    "thermo_2016": "clean",
+    "yield_2020": "at_risk"
+   },
+   "at_risk": [
+    "guideline_2019",
+    "panel_2018",
+    "scaleup_2021",
+    "yield_2020"
+   ],
+   "robust": [
+    "audit_2020",
+    "meta_2022",
+    "policy_2023",
+    "preprint_a",
+    "preprint_b",
+    "synthesis_2023"
+   ],
+   "retracted": [
+    "assay_2017",
+    "helix_2019"
+   ]
+  },
+  "2025": {
+   "state": {
+    "assay_2017": "retracted",
+    "audit_2020": "robust",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "at_risk",
+    "helix_2019": "retracted",
+    "meta_2022": "robust",
+    "panel_2018": "at_risk",
+    "policy_2023": "robust",
+    "preprint_a": "robust",
+    "preprint_b": "robust",
+    "replication_2025": "at_risk",
+    "review_2021": "clean",
+    "scaleup_2021": "at_risk",
+    "spectra_2015": "clean",
+    "synthesis_2023": "robust",
+    "thermo_2016": "clean",
+    "yield_2020": "at_risk"
+   },
+   "at_risk": [
+    "guideline_2019",
+    "panel_2018",
+    "replication_2025",
+    "scaleup_2021",
+    "yield_2020"
+   ],
+   "robust": [
+    "audit_2020",
+    "meta_2022",
+    "policy_2023",
+    "preprint_a",
+    "preprint_b",
+    "synthesis_2023"
+   ],
+   "retracted": [
+    "assay_2017",
+    "helix_2019"
+   ]
+  },
+  "2026": {
+   "state": {
+    "assay_2017": "retracted",
+    "audit_2020": "robust",
+    "calib_2014": "clean",
+    "dataset_2020": "clean",
+    "field_2018": "clean",
+    "guideline_2019": "at_risk",
+    "helix_2019": "clean",
+    "meta_2022": "clean",
+    "panel_2018": "at_risk",
+    "policy_2023": "clean",
+    "preprint_a": "clean",
+    "preprint_b": "clean",
+    "replication_2025": "clean",
+    "review_2021": "clean",
+    "scaleup_2021": "clean",
+    "spectra_2015": "clean",
+    "synthesis_2023": "clean",
+    "thermo_2016": "clean",
+    "yield_2020": "clean"
+   },
+   "at_risk": [
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "robust": [
+    "audit_2020"
+   ],
+   "retracted": [
+    "assay_2017"
+   ]
+  }
+ },
+ "meta": {
+  "papers": 19,
+  "allPapers": 19,
+  "edges": 23,
+  "loadBearing": 21,
+  "chains": {
+   "assay_2017": 0,
+   "audit_2020": 1,
+   "calib_2014": 1,
+   "dataset_2020": 1,
+   "field_2018": 1,
+   "guideline_2019": 0,
+   "helix_2019": 0,
+   "meta_2022": 1,
+   "panel_2018": 0,
+   "policy_2023": 1,
+   "preprint_a": "INFINITE",
+   "preprint_b": "INFINITE",
+   "replication_2025": 0,
+   "review_2021": 1,
+   "scaleup_2021": 0,
+   "spectra_2015": 1,
+   "synthesis_2023": 3,
+   "thermo_2016": 1,
+   "yield_2020": 0
+  },
+  "hops": {
+   "audit_2020": 2,
+   "guideline_2019": 2,
+   "meta_2022": 3,
+   "panel_2018": 1,
+   "policy_2023": 4,
+   "preprint_a": 1,
+   "preprint_b": 2,
+   "replication_2025": 1,
+   "scaleup_2021": 2,
+   "synthesis_2023": 3,
+   "yield_2020": 1
+  },
+  "helix_2019": {
+   "removed": 34,
+   "added": 4,
+   "excisedRisk": [
+    "replication_2025",
+    "scaleup_2021",
+    "yield_2020"
+   ],
+   "derivedRisk": [
+    "replication_2025",
+    "scaleup_2021",
+    "yield_2020"
+   ],
+   "excisedTaint": [
+    "meta_2022",
+    "policy_2023",
+    "preprint_a",
+    "preprint_b",
+    "replication_2025",
+    "scaleup_2021",
+    "synthesis_2023",
+    "yield_2020"
+   ],
+   "derivedTaint": [
+    "meta_2022",
+    "policy_2023",
+    "preprint_a",
+    "preprint_b",
+    "replication_2025",
+    "scaleup_2021",
+    "synthesis_2023",
+    "yield_2020"
+   ],
+   "restored": [
+    "helix_2019",
+    "replication_2025",
+    "scaleup_2021",
+    "yield_2020"
+   ]
+  },
+  "assay_2017": {
+   "removed": 14,
+   "added": 3,
+   "excisedRisk": [
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "derivedRisk": [
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "excisedTaint": [
+    "audit_2020",
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "derivedTaint": [
+    "audit_2020",
+    "guideline_2019",
+    "panel_2018"
+   ],
+   "restored": [
+    "assay_2017",
+    "guideline_2019",
+    "panel_2018"
+   ]
+  },
+  "citers": [
+   {
+    "p": "policy_2023",
+    "bearing": false,
+    "state": "robust",
+    "taintedByHelix": true
+   },
+   {
+    "p": "preprint_a",
+    "bearing": true,
+    "state": "robust",
+    "taintedByHelix": true
+   },
+   {
+    "p": "replication_2025",
+    "bearing": true,
+    "state": "at_risk",
+    "taintedByHelix": true
+   },
+   {
+    "p": "review_2021",
+    "bearing": false,
+    "state": "clean",
+    "taintedByHelix": false
+   },
+   {
+    "p": "yield_2020",
+    "bearing": true,
+    "state": "at_risk",
+    "taintedByHelix": true
+   }
+  ]
+ }
+}</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('oops-data').textContent);
+
+  /* ---- reading level ---------------------------------------------------- */
+  var root = document.documentElement;
+  function setLevel(l) {
+    root.classList.toggle('lv-kid', l === 'kid');
+    root.classList.toggle('lv-eng', l === 'eng');
+    document.getElementById('b-kid').setAttribute('aria-pressed', String(l === 'kid'));
+    document.getElementById('b-eng').setAttribute('aria-pressed', String(l === 'eng'));
+    try { localStorage.setItem('oops-level', l); } catch (e) { /* private mode */ }
+  }
+  document.getElementById('b-kid').onclick = function () { setLevel('kid'); };
+  document.getElementById('b-eng').onclick = function () { setLevel('eng'); };
+  var saved = 'eng';
+  try { saved = localStorage.getItem('oops-level') || 'eng'; } catch (e) { /* ignore */ }
+  setLevel(saved === 'kid' ? 'kid' : 'eng');
+
+  /* ---- the diagram ------------------------------------------------------ */
+  var NODES = [
+    { id: 'spectra_2015', x: 105, y: 512 },
+    { id: 'field_2018',   x: 320, y: 512 },
+    { id: 'thermo_2016',  x: 545, y: 512 },
+    { id: 'helix_2019',   x: 105, y: 415 },
+    { id: 'yield_2020',   x: 85,  y: 318 },
+    { id: 'review_2021',  x: 320, y: 318 },
+    { id: 'replication_2025', x: 545, y: 318 },
+    { id: 'scaleup_2021', x: 85,  y: 221 },
+    { id: 'meta_2022',    x: 245, y: 124 },
+    { id: 'policy_2023',  x: 245, y: 34 }
+  ];
+  var EDGES = [
+    { a: 'helix_2019', b: 'spectra_2015' },
+    { a: 'yield_2020', b: 'helix_2019' },
+    { a: 'scaleup_2021', b: 'yield_2020' },
+    { a: 'meta_2022', b: 'scaleup_2021' },
+    { a: 'meta_2022', b: 'thermo_2016' },
+    { a: 'policy_2023', b: 'meta_2022' },
+    { a: 'review_2021', b: 'helix_2019', kind: 'mention' },
+    { a: 'review_2021', b: 'field_2018' },
+    { a: 'replication_2025', b: 'helix_2019' }
+  ];
+  var W = 138, H = 34, pos = {};
+  NODES.forEach(function (n) { pos[n.id] = n; });
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var gE = document.getElementById('edges'), gN = document.getElementById('nodes');
+  EDGES.forEach(function (e) {
+    var a = pos[e.a], b = pos[e.b];
+    var x1 = a.x, y1 = a.y + H / 2, x2 = b.x, y2 = b.y - H / 2;
+    var my = (y1 + y2) / 2;
+    var p = el('path', {
+      class: 'edge',
+      d: 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + my + ' ' + x2 + ' ' + my + ' ' + x2 + ' ' + y2
+    });
+    if (e.kind) p.setAttribute('data-kind', e.kind);
+    p.setAttribute('data-a', e.a);
+    p.setAttribute('data-b', e.b);
+    gE.appendChild(p);
+  });
+  NODES.forEach(function (n) {
+    var g = el('g', { class: 'node', 'data-id': n.id });
+    g.appendChild(el('rect', { x: n.x - W / 2, y: n.y - H / 2, width: W, height: H, rx: 5 }));
+    var t = el('text', { x: n.x, y: n.y - 3 });
+    t.textContent = n.id;
+    g.appendChild(t);
+    var tag = el('text', { class: 'tag', x: n.x, y: n.y + 10 });
+    g.appendChild(tag);
+    gN.appendChild(g);
+  });
+
+  var TAG = { retracted: 'RETRACTED', at_risk: 'AT RISK', robust: 'ROBUST', clean: '', absent: 'NOT YET PUBLISHED' };
+
+  /* ---- the year scrubber ------------------------------------------------ */
+  var NOTE = {
+    2020: 'nothing is retracted yet',
+    2021: 'nothing is retracted yet',
+    2022: 'the older retraction lands',
+    2023: 'two more papers are published',
+    2024: 'the loud retraction lands',
+    2025: 'a new paper cites it anyway',
+    2026: 'the retraction is itself retracted'
+  };
+  function chips(id, list, cls) {
+    var box = document.getElementById(id);
+    box.textContent = '';
+    if (!list.length) {
+      var n = document.createElement('span');
+      n.className = 'none';
+      n.textContent = 'none';
+      box.appendChild(n);
+      return;
+    }
+    list.forEach(function (p) {
+      var s = document.createElement('span');
+      s.className = 'chip ' + cls;
+      s.textContent = p;
+      box.appendChild(s);
+    });
+  }
+  function render(year) {
+    var y = D.years[year];
+    document.getElementById('year').textContent = year;
+    document.getElementById('year-note').textContent = NOTE[year];
+    chips('c-r', y.retracted, 'r');
+    chips('c-a', y.at_risk, 'a');
+    chips('c-o', y.robust, 'o');
+    Array.prototype.forEach.call(gN.children, function (g) {
+      var st = y.state[g.getAttribute('data-id')] || 'absent';
+      g.setAttribute('data-state', st);
+      g.querySelector('.tag').textContent = TAG[st];
+    });
+    Array.prototype.forEach.call(gE.children, function (p) {
+      var sa = y.state[p.getAttribute('data-a')], sb = y.state[p.getAttribute('data-b')];
+      if (!sa || !sb) { p.setAttribute('data-flow', 'hidden'); return; }
+      if (p.getAttribute('data-kind') === 'mention') { p.removeAttribute('data-flow'); return; }
+      p.setAttribute('data-flow', (sb === 'retracted' || sb === 'at_risk') ? 'risk' : 'robust');
+    });
+  }
+  var scrub = document.getElementById('scrub');
+  scrub.addEventListener('input', function () { render(scrub.value); });
+  render(scrub.value);
+
+  /* ---- tables ----------------------------------------------------------- */
+  function cell(row, text, cls) {
+    var td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.textContent = text;
+    row.appendChild(td);
+    return td;
+  }
+  var citers = document.getElementById('citers');
+  D.meta.citers.forEach(function (c) {
+    var tr = document.createElement('tr');
+    cell(tr, c.p, 'n');
+    cell(tr, c.bearing ? 'load-bearing' : 'mention');
+    var verdict = c.bearing
+      ? (c.state === 'at_risk' ? 'at risk — every chain runs through it'
+         : 'robust — it has another pillar')
+      : (c.taintedByHelix ? 'this edge carries nothing; poisoned anyway, through its own chain'
+         : 'untouched — this edge carries nothing');
+    var td = cell(tr, verdict);
+    if (c.bearing && c.state === 'at_risk') td.style.color = 'var(--risk)';
+    citers.appendChild(tr);
+  });
+
+  var oracle = document.getElementById('oracle');
+  [['helix_2019', 2024], ['assay_2017', 2022]].forEach(function (r) {
+    var m = D.meta[r[0]], tr = document.createElement('tr');
+    cell(tr, 'retraction(' + r[0] + ', ' + r[1] + ')', 'n');
+    cell(tr, '-' + m.removed + ' / +' + m.added, 'n');
+    cell(tr, m.excisedRisk.join(', '), 'n');
+    var td = cell(tr, JSON.stringify(m.excisedRisk) === JSON.stringify(m.derivedRisk) ? 'agree' : 'DISAGREE');
+    td.className = 'ok';
+    oracle.appendChild(tr);
+  });
+
+  var chainsBody = document.getElementById('chains');
+  var st25 = D.years[2025].state;
+  Object.keys(D.meta.chains).sort(function (a, b) {
+    var ca = D.meta.chains[a], cb = D.meta.chains[b];
+    var na = ca === 'INFINITE' ? 1e9 : ca, nb = cb === 'INFINITE' ? 1e9 : cb;
+    return nb - na || (a < b ? -1 : 1);
+  }).forEach(function (p) {
+    var c = D.meta.chains[p], tr = document.createElement('tr');
+    cell(tr, p, 'n');
+    var td = cell(tr, c === 'INFINITE' ? 'infinitely many' : String(c), 'n');
+    if (c === 'INFINITE') td.style.color = 'var(--accent)';
+    if (c === 0) td.style.color = 'var(--risk)';
+    var s = st25[p] || 'clean';
+    cell(tr, s === 'at_risk' ? 'at risk' : s === 'retracted' ? 'retracted' : s === 'robust' ? 'robust' : 'untouched');
+    chainsBody.appendChild(tr);
+  });
+})();
+</script>

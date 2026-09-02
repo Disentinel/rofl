@@ -1,0 +1,994 @@
+<meta charset="utf-8">
+<title>DRIP — Data Lineage in Observability</title>
+
+<style>
+  :root {
+    --bg:        #f9f8f5;
+    --panel:     #ffffff;
+    --ink:       #1a1a1d;
+    --ink-soft:  #55535a;
+    --ink-faint: #86838d;
+    --line:      #e2dfda;
+    --line-soft: #edeae5;
+    --accent:    #1f5f8b;
+    --accent-bg: #e8f1f7;
+    --good:      #2f6b3f;
+    --good-bg:   #eaf3ec;
+    --gone:      #a33232;
+    --gone-bg:   #fbeceb;
+    --warn:      #8a5a10;
+    --warn-bg:   #fbf1e0;
+    --code-bg:   #f2efe9;
+    --shadow:    0 1px 2px rgba(26, 26, 29, .05), 0 8px 24px rgba(26, 26, 29, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #131418;
+      --panel:     #1c1d23;
+      --ink:       #e9e8ee;
+      --ink-soft:  #adaab6;
+      --ink-faint: #7d7a86;
+      --line:      #32333d;
+      --line-soft: #26272f;
+      --accent:    #74b8e0;
+      --accent-bg: #16262f;
+      --good:      #8ad3a0;
+      --good-bg:   #16271b;
+      --gone:      #ef9494;
+      --gone-bg:   #2c1717;
+      --warn:      #e5b567;
+      --warn-bg:   #2b2113;
+      --code-bg:   #101116;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #131418;
+    --panel:     #1c1d23;
+    --ink:       #e9e8ee;
+    --ink-soft:  #adaab6;
+    --ink-faint: #7d7a86;
+    --line:      #32333d;
+    --line-soft: #26272f;
+    --accent:    #74b8e0;
+    --accent-bg: #16262f;
+    --good:      #8ad3a0;
+    --good-bg:   #16271b;
+    --gone:      #ef9494;
+    --gone-bg:   #2c1717;
+    --warn:      #e5b567;
+    --warn-bg:   #2b2113;
+    --code-bg:   #101116;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 48rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem;
+    display: flex; align-items: baseline; gap: .6rem;
+  }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; max-width: 48rem; }
+  .kid p { font-size: 1.05rem; }
+  ul { padding-left: 1.2rem; max-width: 48rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .8rem; line-height: 1.5;
+    margin: 1rem 0; color: var(--ink);
+  }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  figure { margin: 1.4rem 0; }
+  figcaption {
+    font-size: .82rem; color: var(--ink-faint); margin-top: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--good); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .cards { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.5rem 0; }
+  .card {
+    flex: 1 1 15rem; min-width: 13rem; border: 1px solid var(--line); border-radius: 12px;
+    padding: .9rem 1rem; background: var(--panel); box-shadow: var(--shadow);
+  }
+  .card .h {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .card .v { font-size: 1.5rem; font-weight: 650; margin: .2rem 0 .1rem; letter-spacing: -.02em; }
+  .card .w { font-size: .84rem; color: var(--ink-soft); }
+  .card.bad .v { color: var(--gone); }
+  .card.ok .v { color: var(--good); }
+
+  .chain {
+    margin: 1.5rem 0; padding: 1.1rem; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .chain ol { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+  .chain li {
+    position: relative; padding: .55rem 0 .55rem 2.2rem; margin: 0;
+    border-bottom: 1px solid var(--line-soft); font-size: .95rem;
+  }
+  .chain li:last-child { border-bottom: 0; }
+  .chain li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: .5rem;
+    width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: var(--gone-bg); color: var(--gone); font-weight: 650;
+    font-size: .78rem; display: grid; place-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .chain li .m { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem; }
+  .chain li small { display: block; color: var(--ink-soft); font-size: .85rem; }
+
+  .split { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.4rem 0; }
+  .half {
+    flex: 1 1 18rem; border: 1px solid var(--line); border-radius: 12px; padding: 1rem;
+    background: var(--panel); box-shadow: var(--shadow);
+  }
+  .half.dies { border-color: var(--gone); background: var(--gone-bg); }
+  .half.lives { border-color: var(--good); background: var(--good-bg); }
+  .half .t { font-weight: 650; margin-bottom: .3rem; }
+  .half .s { font-size: .88rem; color: var(--ink-soft); }
+
+  .note {
+    border-left: 3px solid var(--warn); background: var(--warn-bg);
+    padding: .8rem 1rem; border-radius: 0 8px 8px 0; margin: 1.4rem 0;
+    font-size: .95rem; max-width: 48rem;
+  }
+  .note strong { color: var(--warn); }
+
+  table.t { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1.2rem 0; }
+  table.t th, table.t td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  table.t th { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-size: .95em; }
+
+  @media (max-width: 34rem) {
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/drip</p>
+  <h1>DRIP <span class="dim">— what goes dark if you delete this metric</span></h1>
+  <p class="lede">
+    A chart goes blank and nobody notices, because blank is not an error. This
+    says which missing thing made it blank — the metric, one label value, or a
+    rule four steps upstream — and what else goes blank if you delete that thing.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> The problem</h2>
+
+  <div class="kid">
+    <p>
+      A dashboard is a wall of charts. Somebody renames or deletes one of the
+      numbers those charts are drawn from, and a chart just goes <em>empty</em>.
+      Not red. Not broken. Empty — which looks exactly like "nothing is
+      happening right now", so nobody looks twice.
+    </p>
+    <p>
+      The dangerous version is the alarm. An alarm that watches a number that no
+      longer exists never goes off. You find out on the day it should have.
+    </p>
+    <p>
+      And the question in reverse is the same one. Before you delete a number,
+      you would like to know what is standing on it. Nobody can answer that
+      either.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Panels and alerts are <strong>queries over a namespace that changes
+      underneath them</strong>. When a series disappears, the query does not
+      fail; it returns an empty vector. Absence of data is indistinguishable
+      from absence of events, so a broken panel and a quiet system look
+      identical, and the failure is discovered by an incident rather than by a
+      check.
+    </p>
+    <p>
+      Resolution is a <strong>least fixpoint over lineage</strong>: a query
+      resolves if every selector resolves; a selector resolves if its metric
+      exists and every label matcher is satisfied; a metric exists if it is
+      scraped, or if the recording rule that writes it resolves — which is a
+      query again. That recursion is why one dead scrape target can take out a
+      panel four links away, and why the interesting output is not a boolean but
+      the <em>chain</em>.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card bad"><div class="h">consumers</div><div class="v">10 / 31</div><div class="w">panels, alerts and SLOs that resolve into nothing</div></div>
+    <div class="card bad"><div class="h">silent alerts</div><div class="v">4</div><div class="w">alerts and SLOs that cannot fire; nobody sees these at all</div></div>
+    <div class="card"><div class="h">dead series</div><div class="v">5 / 21</div><div class="w">stored metrics that provably influence nothing</div></div>
+    <div class="card ok"><div class="h">guesses required</div><div class="v">0</div><div class="w">both sides of the comparison are parsed, not judged</div></div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> Why this one is cheap to build</h2>
+
+  <div class="kid">
+    <p>
+      Most tools like this need somebody to explain the meaning of things first.
+      This one does not. Both halves of the comparison are already written down
+      by machines:
+    </p>
+    <ul>
+      <li>the dashboards are files, and the names of the numbers are inside them;</li>
+      <li>the list of numbers that actually exist comes from the thing storing them.</li>
+    </ul>
+    <p>
+      Two dumb readers, no expert, no guessing. And you can check the answer for
+      free: it says a chart is empty, so open the chart.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      <strong>Extraction is deterministic at both ends.</strong> Dashboards are
+      JSON; metric names and label matchers parse out of the query text; the
+      live series list comes from the store's own label and series endpoints.
+      There is no generative step and no annotation an expert has to supply,
+      which is the layer that makes comparable tools expensive and arguable.
+    </p>
+    <p>
+      The two sources go into <strong>two ledgers</strong>, and the kernel keeps
+      them apart. <code>[repo]</code> is written by the dashboard exporter,
+      <code>[store]</code> by the metrics store, and every conclusion lives in
+      <code>[main]</code> and reads both through declared imports. An exporter
+      that would like a metric to exist cannot make it exist:
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <pre>$ assert series[store]("wishful_thinking_total")  who=dashboard_exporter
+forged[audit] -&gt; $fact(series,store,$cons("wishful_thinking_total",$nil))
+authority(store, Who) -&gt; $kernel, metrics_store</pre>
+      <figcaption>the forgery audit fires with no code enforcing it</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> What is dark, and why</h2>
+
+  <div class="kid">
+    <p>
+      Ten things on these dashboards are showing nothing. The tool does not say
+      "no data" — it names the missing thing, and there are four different kinds
+      of missing thing:
+    </p>
+    <ul>
+      <li><strong>the number is gone</strong> — somebody deleted it;</li>
+      <li><strong>one setting on the number is gone</strong> — the number is
+          fine, but the chart asks only for the part of it that came from a test
+          environment, and that environment was switched off;</li>
+      <li><strong>a step in the middle broke</strong> — the chart reads a number
+          that another rule computes, and that rule lost <em>its</em> input;</li>
+      <li><strong>it never worked</strong> — the chart has a typo in it and has
+          been empty since the day it was written.</li>
+    </ul>
+  </div>
+
+  <div class="eng">
+    <p>
+      The classification is derived, not pattern-matched on the error text —
+      there is no error text. Each row below is a relation
+      (<code>dark_missing_metric</code>, <code>dark_missing_label</code>,
+      <code>dark_broken_rule</code>, <code>never_existed</code>) that names its
+      own link.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>CONSUMER                  KIND   CAUSE                   LINK
+al_canary_errors          alert  label value absent      http_requests_total{env="canary"}
+p_canary_errors           panel  label value absent      http_requests_total{env="canary"}
+p_canary_latency          panel  label value absent      http_request_duration_seconds{env="canary"}
+al_payment_gw_errors      alert  metric absent           payment_gateway_errors_total
+p_checkout_funnel         panel  metric absent           checkout_funnel_steps_total
+p_payment_gw_errors       panel  metric absent           payment_gateway_errors_total
+p_ingest_errors           panel  metric never existed    ingest_errors_totl
+al_checkout_conv_drop     alert  recording rule broken   rr_checkout_conv -&gt; job:checkout:conversion5m
+p_checkout_conv           panel  recording rule broken   rr_checkout_conv -&gt; job:checkout:conversion5m
+slo_checkout_availability slo    recording rule broken   rr_checkout_conv -&gt; job:checkout:conversion5m</pre></div>
+    <figcaption>examples/drip/demo.ts, section 1</figcaption>
+  </figure>
+
+  <div class="note">
+    <strong>Four of those ten are alerts or SLOs.</strong> A dark panel is
+    visible to whoever opens the dashboard. A dark alert is visible to nobody,
+    until the day it was needed and did not come.
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> The label case, which is the whole difficulty</h2>
+
+  <div class="kid">
+    <p>
+      Here is the one that catches people out. The number the chart wants
+      <em>does</em> exist. It is being written right now. The chart is still
+      empty.
+    </p>
+    <p>
+      Because a chart does not ask for "the number" — it asks for a slice of it:
+      requests <em>from the canary environment</em> that failed. The canary
+      environment was decommissioned three weeks ago, so that slice has nothing
+      in it, and the chart draws nothing.
+    </p>
+    <p>
+      A tool that only compares names would tick this off as healthy. That is
+      why the settings — the labels — are in the model from the first line, and
+      not bolted on later.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      <code>http_requests_total</code> resolves. <code>metric_ok</code> holds all
+      the way down. The selector carries
+      <code>{env="canary", status="5xx"}</code>; <code>status="5xx"</code> is
+      present and <code>env="canary"</code> is not, so
+      <code>matchers_ok</code> fails at index 1 and the chain names the exact
+      matcher. Notice that <code>metric_ok</code> never appears as a failed
+      premise anywhere in this tree — the metric is not the break.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>                failed premise: matchers_ok[main](s_canary_err)
+                  rule r50faab3f: matchers_ok[main](?S)@now :- matcher_count[repo](?S,?N)@now, ml_ok[main](?S,?N)@now
+                    failed premise: ml_ok[main](s_canary_err,2)
+                      rule r49dfc6b3: head does not unify
+                      rule r9328ff57: ml_ok[main](?S,?N)@now :- matcher_at[repo](?S,?N,?K,?V)@now, selector_metric[repo](?S,?M)@now, label_ok[main](?M,?K,?V)@now, ?N1 is -(?N,1), ml_ok[main](?S,?N1)@now
+                        failed premise: ml_ok[main](s_canary_err,1)
+                          rule r49dfc6b3: head does not unify
+                          rule r9328ff57: ml_ok[main](?S,?N)@now :- matcher_at[repo](?S,?N,?K,?V)@now, selector_metric[repo](?S,?M)@now, label_ok[main](?M,?K,?V)@now, ?N1 is -(?N,1), ml_ok[main](?S,?N1)@now
+                            failed premise: label_ok[main]("http_requests_total","env","canary")
+                              rule r2601336e: label_ok[main](?M,?K,?V)@now :- records[repo](?R,?M)@now, rule_ok[main](?R)@now, rule_label[repo](?R,?K,?V)@now
+                                failed premise: records[repo](?R#10,"http_requests_total")
+                                  no rule concludes 'records' and no matching base fact exists
+                              rule r701b6967: label_ok[main](?M,?K,?V)@now :- series_label[store](?M,?K,?V)@now, not recorded_metric[main](?M)@now
+                                failed premise: series_label[store]("http_requests_total","env","canary")
+                                  no rule concludes 'series_label' and no matching base fact exists</pre></div>
+    <figcaption>whynot consumer_live(p_canary_errors) — the tail of the chain</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> Four links up</h2>
+
+  <div class="kid">
+    <p>
+      Nobody deleted the number this chart reads. What happened is a chain, and
+      each link looked fine to whoever was looking at it:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The chain the tool exists for. Each link is a rule firing, and
+      <code>whynot</code> walks all of them because the recursion is the model
+      rather than a special case bolted onto it:
+    </p>
+  </div>
+
+  <div class="chain">
+    <ol>
+      <li><span class="m">checkout_funnel_steps_total</span>
+          <small>a service stopped writing it. Nobody noticed: it is not on any chart directly.</small></li>
+      <li><span class="m">rr_checkout_conv</span>
+          <small>the recording rule that reads it can no longer evaluate.</small></li>
+      <li><span class="m">job:checkout:conversion5m</span>
+          <small>the metric that rule was writing stops being written, and ages out of the store.</small></li>
+      <li><span class="m">p_checkout_conv &middot; al_checkout_conv_drop &middot; slo_checkout_availability</span>
+          <small>a panel goes blank, a page alert goes quiet, and an SLO stops being computed.</small></li>
+    </ol>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>                failed premise: metric_ok[main]("job:checkout:conversion5m")
+                  rule r42f556b3: metric_ok[main](?M)@now :- records[repo](?R,?M)@now, rule_ok[main](?R)@now
+                    failed premise: rule_ok[main](rr_checkout_conv)
+                      rule r05a0ea8f: rule_ok[main](?R)@now :- recording_rule[repo](?R)@now, query[repo](?Q,?R)@now, query_ok[main](?Q)@now
+                        failed premise: query_ok[main](q_rr_conv)
+                          rule rb134e973: query_ok[main](?Q)@now :- selector_count[repo](?Q,?N)@now, sl_ok[main](?Q,?N)@now
+                            failed premise: sl_ok[main](q_rr_conv,1)
+                              rule r7092752b: head does not unify
+                              rule r01d2e3fa: sl_ok[main](?Q,?N)@now :- selector_at[repo](?Q,?N,?S)@now, selector_ok[main](?S)@now, ?N1 is -(?N,1), sl_ok[main](?Q,?N1)@now
+                                failed premise: selector_ok[main](s_rr_conv)
+                                  rule r3468ba50: selector_ok[main](?S)@now :- selector_metric[repo](?S,?M)@now, metric_ok[main](?M)@now, matchers_ok[main](?S)@now
+                                    failed premise: metric_ok[main]("checkout_funnel_steps_total")
+                                      rule r42f556b3: metric_ok[main](?M)@now :- records[repo](?R,?M)@now, rule_ok[main](?R)@now
+                                        failed premise: records[repo](?R#11,"checkout_funnel_steps_total")
+                                          no rule concludes 'records' and no matching base fact exists
+                                      rule r0a7b57d4: metric_ok[main](?M)@now :- series[store](?M)@now, not recorded_metric[main](?M)@now
+                                        failed premise: series[store]("checkout_funnel_steps_total")
+                                          no rule concludes 'series' and no matching base fact exists
+                  rule r0a7b57d4: metric_ok[main](?M)@now :- series[store](?M)@now, not recorded_metric[main](?M)@now
+                    failed premise: series[store]("job:checkout:conversion5m")
+                      no rule concludes 'series' and no matching base fact exists</pre></div>
+    <figcaption>whynot consumer_live(p_checkout_conv)</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> Blast radius: load-bearing against mention</h2>
+
+  <div class="kid">
+    <p>
+      Now the question in reverse. You are about to delete a number. What goes
+      dark?
+    </p>
+    <p>
+      Two charts can use the same number and be hurt completely differently. A
+      chart drawn from that number <em>alone</em> dies. A chart with six lines on
+      it, one of which is that number, loses a line and keeps working. Both are
+      "affected"; only one is an outage.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      The distinction <code>examples/oops</code> draws between a citation that
+      carries an argument and one that names a paper in passing. Here it is
+      <strong>computed rather than declared</strong>: a consumer with a second,
+      resolving query that does not itself need the metric survives losing it.
+    </p>
+  </div>
+
+  <div class="split">
+    <div class="half dies">
+      <div class="t">p_payment_gw_errors — DARK</div>
+      <div class="s">its only query stands on the metric. Delete it and there is nothing left to draw.</div>
+    </div>
+    <div class="half lives">
+      <div class="t">p_exec_health — DEGRADED</div>
+      <div class="s">one of six lines. Five still plot, and nobody opening the dashboard can tell that the sixth is missing.</div>
+    </div>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>The metric already gone, both fates on one name — payment_gateway_errors_total:
+    al_payment_gw_errors     DARK      (sole source)
+    p_payment_gw_errors      DARK      (sole source)
+    p_exec_health            DEGRADED  (1 of 6 lines; the other 5 still plot)</pre></div>
+  </figure>
+
+  <div class="eng">
+    <p>
+      The <code>ORACLE</code> line below is two independent computations of the
+      same set: the derived answer reads the rules, and <code>excise</code>
+      deletes the base fact and re-runs the whole program from scratch. The diff
+      <em>is</em> the blast radius. Neither knows about the other.
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>$ drip blast kafka_consumer_lag
+    goes dark : al_queue_backlog, p_kafka_lag
+    degrades  : p_exec_health
+    excise series[store]("kafka_consumer_lag") removed consumer_live: al_queue_backlog, p_kafka_lag
+    ORACLE (derived vs re-evaluated): AGREE
+
+$ drip blast db_connections_active
+    goes dark : al_db_pool_exhaustion, p_capacity_headroom, p_db_conns, p_db_saturation
+    degrades  : p_exec_health
+    excise series[store]("db_connections_active") removed consumer_live: al_db_pool_exhaustion, p_capacity_headroom, p_db_conns, p_db_saturation
+    ORACLE (derived vs re-evaluated): AGREE
+
+$ drip blast http_requests_total
+    goes dark : al_api_5xx, p_api_error_ratio, p_api_rps
+    degrades  : p_exec_health
+    excise series[store]("http_requests_total") removed consumer_live: al_api_5xx, p_api_error_ratio, p_api_rps
+    ORACLE (derived vs re-evaluated): AGREE
+
+$ drip blast queue_depth
+    goes dark : p_load_index, p_queue_depth
+    degrades  : -
+    excise series[store]("queue_depth") removed consumer_live: p_load_index, p_queue_depth
+    ORACLE (derived vs re-evaluated): AGREE</pre></div>
+    </figure>
+    <div class="note">
+      <strong>This is where the model was wrong, and the oracle caught it.</strong>
+      The first version had one <code>feeds</code> relation for both kinds of
+      edge, and predicted that deleting <code>queue_depth</code> would darken
+      <code>p_capacity_headroom</code>. It does not: the only route between them
+      runs through a rule reading <em>already-written samples</em> — a real
+      lineage edge, but not an availability one. Two metrics out of four
+      disagreed. The fix was two relations, not one, and the disagreement is
+      reported rather than tuned away.
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">7</span> Counting: how fragile is each chart</h2>
+
+  <div class="kid">
+    <p>
+      Count the number of independent things a chart is drawn from. One means
+      that chart is a single point of failure — one deletion anywhere upstream
+      and it goes blank. Zero means it already has.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      The counting semiring folded over the support hypergraph: the value of
+      <code>consumer_live(C)</code> is the number of derivations, which here is
+      exactly the number of independently resolving queries. Twenty of
+      thirty-one consumers have exactly one.
+    </p>
+    <p>
+      The <em>reading</em> of that count is domain knowledge and is stated on
+      purpose: the identical metric means robustness in
+      <code>examples/nope</code> and <code>examples/oops</code>, ambiguity in
+      AKA, launderability in BLEEP, and fragility here.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>  al_canary_errors              0   DARK
+  al_checkout_conv_drop         0   DARK
+  al_payment_gw_errors          0   DARK
+  p_canary_errors               0   DARK
+  p_canary_latency              0   DARK
+  p_checkout_conv               0   DARK
+  p_checkout_funnel             0   DARK
+  p_ingest_errors               0   DARK
+  p_payment_gw_errors           0   DARK
+  slo_checkout_availability     0   DARK
+  al_api_5xx                    1   single point of failure
+  al_db_pool_exhaustion         1   single point of failure
+  al_queue_backlog              1   single point of failure
+  p_api_error_ratio             1   single point of failure
+  p_api_latency                 1   single point of failure
+  p_api_rps                     1   single point of failure
+  p_capacity_headroom           1   single point of failure
+  p_checkout_orders             1   single point of failure
+  p_db_conns                    1   single point of failure
+  p_db_latency                  1   single point of failure
+  p_db_saturation               1   single point of failure
+  p_goroutines                  1   single point of failure
+  p_ingest_rate                 1   single point of failure
+  p_kafka_lag                   1   single point of failure
+  p_latency_ewma                1   single point of failure
+  p_load_index                  1   single point of failure
+  p_memory                      1   single point of failure
+  p_payment_attempts            1   single point of failure
+  p_queue_depth                 1   single point of failure
+  slo_api_latency               1   single point of failure
+  p_exec_health                 5   survives losing one source</pre></div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">8</span> The loop, and why counting survives it</h2>
+
+  <div class="kid">
+    <p>
+      One of the rules here smooths a number using its own earlier values, and
+      two others feed each other. That is a loop. If you count "ways data can
+      reach this chart" by walking the loop, you can go round it forever, so the
+      honest answer is <em>infinitely many</em> — true, and useless.
+    </p>
+    <p>
+      The fix is to remember where you have been. A route that revisits
+      something it already passed is not a new route.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      The lineage graph is acyclic except for three <code>past_input</code>
+      edges. Walking it, every trip round a cycle is another derivation and the
+      counting semiring answers <code>INFINITE</code> — correct, and the wrong
+      metric. Carrying the visited chain <em>inside the fact</em> makes a repeat
+      impossible, so the value becomes the number of simple paths. This is the
+      technique <code>examples/nope</code> uses for assume-role chains, and
+      <code>absent</code> is positive rather than negated so the stratification
+      checker never has to be argued with.
+    </p>
+    <pre>lineage(Top, Top, cons(Top, nil)) :- metric(Top).
+lineage(Top, M, cons(M, P))       :- lineage(Top, X, P), feeds(M, X), absent(M, P).</pre>
+    <p>
+      Rooted at a <strong>metric</strong>, not at a query: the root is then
+      recoverable from the path, so each path has exactly one derivation.
+      Rooting it at the query gives the same set of paths and multiplies every
+      count by the number of queries that happen to share a root.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>  METRIC                          REACHES                   SIMPLE  NAIVE
+  db_connections_active           svc:capacity:headroom     1       infinitely many
+  db_connections_active           svc:load:index            1       infinitely many
+  http_request_duration_seconds   svc:latency:ewma          1       infinitely many
+  job:db:saturation               svc:capacity:headroom     1       infinitely many
+  job:db:saturation               svc:load:index            1       infinitely many
+  queue_depth                     svc:capacity:headroom     1       infinitely many
+  queue_depth                     svc:load:index            1       infinitely many
+  svc:capacity:headroom           svc:capacity:headroom     1       infinitely many
+  svc:capacity:headroom           svc:load:index            1       infinitely many
+  svc:latency:ewma                svc:latency:ewma          1       infinitely many
+  svc:load:index                  svc:capacity:headroom     1       infinitely many
+  svc:load:index                  svc:load:index            1       infinitely many</pre></div>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">9</span> Dead series — the question nobody asks</h2>
+
+  <div class="kid">
+    <p>
+      The reverse audit. Which stored numbers is <em>nobody</em> looking at? Not
+      "rarely looked at" — provably not looked at, by any chart or alarm,
+      directly or through any rule. Somebody is paying to store those every
+      month.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>examples/moot</code>'s dead-rule audit pointed at data instead of
+      rules: <code>dead_series(M) :- series[store](M), not watched(M)</code>,
+      where <code>watched</code> is the reflexive-transitive lineage over
+      <em>both</em> kinds of edge, because a metric read only for its history is
+      still read. The rule that computes a dead metric is itself dead, so the
+      audit finds the CPU as well as the storage.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>  cdn_cache_hits_total              scraped, read by nobody
+  job:legacy:batch_rate             written by rr_legacy_batch, read by nobody
+  legacy_batch_runs_total           scraped, read by nobody
+  payments_gateway_errors_total     scraped, read by nobody
+  tls_cert_expiry_seconds           scraped, read by nobody
+
+and 1 recording rule computes one of them every interval: rr_legacy_batch.</pre></div>
+  </figure>
+
+  <div class="note">
+    <code>payments_gateway_errors_total</code> is in that list — the metric that
+    <em>appeared</em>. Nobody has moved a dashboard onto the new name yet, so by
+    the model's own definition it is dead, and that is exactly the evidence that
+    raises the rename guess in the next section to its top tier.
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">10</span> Rename is a guess, and it stays a guess</h2>
+
+  <div class="kid">
+    <p>
+      One number vanished and another appeared with the same shape two weeks
+      later. That <em>looks</em> like somebody renaming it. It is not a fact, it
+      is a hunch, and the tool says so — with a number attached to how sure it
+      is.
+    </p>
+    <p>
+      More importantly: nothing else the tool says depends on the hunch. Delete
+      the guess entirely and every verdict on this page is identical.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Three tiers of evidence, each a separate derivation of
+      <code>renamed_to</code>, folded with the Viterbi semiring — which takes the
+      <strong>best</strong> tier rather than the product, so confidence is the
+      strongest evidence available and not what survives multiplying the weakest.
+      The weights ride on the <em>firing</em>, so the ledger never carries a
+      number nobody measured.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>between 2026-08-16 and 2026-08-30:
+  vanished: checkout_funnel_steps_total, job:checkout:conversion5m, payment_gateway_errors_total
+  appeared: payments_gateway_errors_total
+
+payment_gateway_errors_total
+  -&gt; payments_gateway_errors_total     confidence 0.8600  (HYPOTHESIS, not a conclusion)
+     shape_only           0.5500
+     shape_and_job        0.7400
+     shape_job_orphan     0.8600
+
+the vanished metrics for which NO hypothesis is offered, and why not:
+  checkout_funnel_steps_total       shape mismatch against payments_gateway_errors_total
+  job:checkout:conversion5m         written by rr_checkout_conv; a rule stopped producing, not a rename
+Rejecting a pairing matters as much as offering one: a tool that guesses
+a rename for every deletion is a tool nobody reads twice.</pre></div>
+  </figure>
+
+  <div class="eng">
+    <p>
+      The guarantee that it does not harden into a conclusion is structural, and
+      it is checked against the kernel's own rule dependency graph rather than
+      against a promise in a comment:
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>reach(consumer_dark,  renamed_to) -&gt; empty
+reach(consumer_live,  renamed_to) -&gt; empty
+reach(metric_ok,      renamed_to) -&gt; empty
+reach(goes_dark,      renamed_to) -&gt; empty
+reach(dead_series,    renamed_to) -&gt; empty</pre></div>
+      <figcaption>and test/example-drip.test.ts deletes the evidence outright and asserts that no verdict moves</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">11</span> What it does not answer</h2>
+
+  <div class="kid">
+    <p>
+      A chart can be empty for reasons this tool cannot see at all — the thing
+      collecting the numbers is down, the dashboard has no permission to read
+      them, the numbers are older than what is kept, or the service simply is
+      not running. The tool answers for the structural reasons only, and it says
+      so in its own output rather than letting you assume it checked everything.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The covered classes and the uncovered ones are <em>facts in the program</em>
+      (<code>scope_covered</code>, <code>unmodelled_cause</code>), so the boundary
+      is printed by the tool and not only documented next to it. "Structurally
+      fine" is the strongest verdict available here.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>Structural causes only. The model covers:
+  + label_value_absent
+  + metric_absent
+  + recording_rule_broken
+  + recording_rule_deleted
+A panel can be empty for reasons this program cannot see, and does not
+claim to have ruled out:
+  - collector_down
+  - dashboard_time_range
+  - retention_expired
+  - scrape_permission_denied
+  - service_not_writing</pre></div>
+  </figure>
+
+  <div class="eng">
+    <p>
+      One further limit, measured rather than asserted: <code>dead_series</code>
+      holds <em>because</em> nothing watches the metric, finite failure carries no
+      annotation, and so the provenance fold names the presence and never the
+      absence. That is printed in the demo's own output too.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">12</span> Checked against something that is not the engine</h2>
+
+  <div class="kid">
+    <p>
+      A tool that only agrees with itself has proved nothing. So the same
+      question is answered a second time, by a short piece of ordinary code that
+      shares the raw data and none of the reasoning — and the two answers are
+      compared, chart by chart.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      An independent re-resolution of every consumer against the live series
+      list, in plain TypeScript: it reads the EDB relations back out of the store,
+      never touches a derived one, and is a worklist and two loops. The suite also
+      runs it on a fixture it has not seen — delete a live metric in both worlds —
+      because an oracle that agrees on one fixture proves very little.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>sample: 31 consumers x 21 live series = 651 consumer/series pairs;
+        23 of those consumers are panels;
+        45 selectors and 49 matchers re-resolved by hand;
+        10 probes taken to attribute the dark ones.
+
+engine dark set (10): al_canary_errors, al_checkout_conv_drop, al_payment_gw_errors, p_canary_errors, p_canary_latency, p_checkout_conv, p_checkout_funnel, p_ingest_errors, p_payment_gw_errors, slo_checkout_availability
+oracle dark set (10): al_canary_errors, al_checkout_conv_drop, al_payment_gw_errors, p_canary_errors, p_canary_latency, p_checkout_conv, p_checkout_funnel, p_ingest_errors, p_payment_gw_errors, slo_checkout_availability
+VERDICT: AGREE, consumer for consumer
+and the ATTRIBUTION agrees for 10/10.
+The one thing the oracle cannot say is "never existed": it never reads the
+previous snapshot, so it stops at "absent" where the engine goes one step
+further. That is a difference in what was asked, not in what was computed.</pre></div>
+  </figure>
+
+  <div class="eng">
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>rules decoded (boot + drip)         98
+of which drip.rofl contributes      76
+rules not range-restricted          0
+relations evaluated by demand       0
+unstratified relations              0
+holes (budget exhaustion)           0
+malformed[audit]                    0
+breach[audit]                       0
+leak[audit]                         0
+forged[audit]                       0
+undefined_premise[audit]            0</pre></div>
+      <figcaption>and the assertions every number on this page rests on</figcaption>
+    </figure>
+    <p>
+      A rule outside range restriction is evaluated top-down; the boolean answers
+      stay correct and every count above would then be folded over a different
+      fact set than the verdicts describe. That is asserted, not assumed.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    <code>examples/drip/</code> — <code>drip.rofl</code> (the two ledgers, the
+    data and the rules), <code>demo.ts</code> (run it: <code>node
+    --experimental-strip-types examples/drip/demo.ts</code>),
+    <code>README.md</code>, this page, and
+    <code>test/example-drip.test.ts</code>. Every transcript above is pasted
+    output from a real run; nothing on this page was composed by hand.
+  </p>
+  <p>
+    Data is synthetic: ten dashboards, twenty-three panels, six alerts, two
+    SLOs, seven recording rules. Real dashboards from anyone's company are
+    neither needed nor suitable.
+  </p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('drip-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('drip-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('drip-theme', next);
+    });
+
+    var savedTheme = load('drip-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

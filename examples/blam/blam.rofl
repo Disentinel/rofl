@@ -1,0 +1,201 @@
+-- blam.rofl — BLAM: what a diff hits, and WHY.
+--
+-- The domain is a monorepo build graph. Bazel, Nx and Turborepo compute the
+-- affected set correctly and fast; none of them explains it. Two questions
+-- are asked every day and have no answer in any of them:
+--
+--   * why did CI rebuild THIS, I never touched it
+--   * why did CI NOT rebuild THIS, I just broke it
+--
+-- Both are derivation-tree questions, so both are free here: `why` walks the
+-- support down to the changed file, `whynot` walks it down to the front where
+-- the reachability walk stopped.
+--
+-- Layout of this file:
+--   1. the packages, and what each depends on
+--   2. the file -> target ownership map
+--   3. the declared cost of each target (data; no rule reads it)
+--   4. the rules — two build the target graph, three are the inquiry
+--
+-- The diff is NOT in this file. It is one relation, `changed/1`, asserted per
+-- run, because a build graph outlives any particular diff. In the REPL:
+--
+--   npm run repl examples/blam/blam.rofl
+--   changed("packages/utils/src/str.ts").
+--   ? affected(T)
+--   why affected(t(web, build))
+--   whynot affected(t(docs, build))
+--
+-- examples/blam/demo.ts runs exactly that, plus the semiring folds, and
+-- checks every number against an independent transitive closure.
+
+-- =========================================================================
+-- 1. the packages
+-- =========================================================================
+-- Eight packages. `config` is the global one: it depends on nothing, and
+-- every other package reaches it — that is the source of "why did the
+-- whole world rebuild", the commonest real pathology in a monorepo.
+--
+-- The shape, drawn with edges pointing at what a package needs:
+--
+--                 config
+--                /   |   \
+--          core -+   |    +- docs
+--         /   \      |      /
+--        |     utils-+-----+
+--        |     /   \
+--        |   ui     +-- api
+--        |    \        /   \
+--        +-----+-- web      cli
+--
+-- The DIAMOND is utils -> {api, ui} -> web: two branches converging on web,
+-- so a change in utils reaches web by two independent routes and the
+-- counting semiring answers 2 rather than 1. `docs` is the target
+-- unreachable from a utils diff — the subject for `whynot`.
+
+package(config).
+package(core).
+package(utils).
+package(api).
+package(ui).
+package(web).
+package(cli).
+package(docs).
+
+pkg_dep(core,  config).
+pkg_dep(utils, config).
+pkg_dep(utils, core).
+pkg_dep(api,   utils).
+pkg_dep(api,   core).
+pkg_dep(ui,    utils).
+pkg_dep(web,   api).
+pkg_dep(web,   ui).
+pkg_dep(cli,   api).
+pkg_dep(docs,  config).
+pkg_dep(docs,  core).
+
+-- =========================================================================
+-- 2. ownership: which target is responsible for which file
+-- =========================================================================
+-- Ownership is many-to-many on purpose. `shared/schema/events.json` is owned
+-- by TWO targets — api and ui both code-generate from it — which is the
+-- ordinary case a package-per-directory model cannot express, and which is
+-- why the affected set is computed from targets rather than directories.
+--
+-- Note that a test target can own files nobody depends on: nothing depends
+-- on a test target, so a change to `packages/utils/test/str.spec.ts` rebuilds
+-- exactly one thing. That asymmetry is the whole reason build and test are
+-- separate targets.
+
+owns(t(config, build), "config/build.config.json").
+owns(t(config, build), "config/tsconfig.base.json").
+owns(t(core,   build), "packages/core/src/index.ts").
+owns(t(utils,  build), "packages/utils/src/str.ts").
+owns(t(utils,  build), "packages/utils/src/num.ts").
+owns(t(utils,  test),  "packages/utils/test/str.spec.ts").
+owns(t(api,    build), "packages/api/src/client.ts").
+owns(t(ui,     build), "packages/ui/src/button.ts").
+owns(t(web,    build), "packages/web/src/app.ts").
+owns(t(cli,    build), "packages/cli/src/main.ts").
+owns(t(docs,   build), "packages/docs/src/gen.ts").
+
+-- the one file with two owners
+owns(t(api,    build), "shared/schema/events.json").
+owns(t(ui,     build), "shared/schema/events.json").
+
+-- =========================================================================
+-- 3. what each target costs to run, in minutes
+-- =========================================================================
+-- Declared data, from CI history. NO RULE READS THIS: v0 has no aggregation
+-- (LIMITS.md), so the ranking that uses it is host-side arithmetic over an
+-- engine-computed provenance fold, and demo.ts says so where it prints it.
+-- It lives here rather than in demo.ts because it is a property of the
+-- repository, not of the script that asks about it.
+
+minutes(config,   1,   1).
+minutes(core,    40,  55).
+minutes(utils,   25,  30).
+minutes(api,     60,  90).
+minutes(ui,      70,  45).
+minutes(web,    240, 310).
+minutes(cli,     20,  25).
+minutes(docs,    35,  10).
+
+-- =========================================================================
+-- 4. the rules
+-- =========================================================================
+-- Five, and the carrier appears in none of them. The same five clauses are
+-- read by the Boolean fixpoint (is it affected), by the counting semiring
+-- (how many independent routes), by the tropical semiring (how deep) and by
+-- the provenance semiring (which edges carry it). Rules as data: what a rule
+-- MEANS is not part of what a rule IS.
+--
+-- The edge relation is `needs`, not `dep`, and the name is not cosmetic:
+-- boot.rofl concludes into `dep/2` for its own rule-dependency graph, so a
+-- domain `dep/2` silently merges with it. Loaded together, the target-graph
+-- edges and boot's stratification edges become one relation, boot's `reach`
+-- closes over both, and `why` on a domain fact starts quoting rules about
+-- `concludes`/`premise_pos`. Nothing errors; the answers just stop meaning
+-- what they say. Domain relation names are part of the model — see
+-- README.md, "Where the kernel fought us".
+
+-- -- the target graph, derived from the package graph ---------------------
+
+-- a package's test target is built after its own build target
+needs(t(P, test),  t(P, build))  :- package(P).
+
+-- a package's build target is built after the build targets it depends on
+needs(t(P, build), t(Q, build))  :- pkg_dep(P, Q).
+
+-- -- the inquiry -----------------------------------------------------------
+
+-- base case: the target that owns a changed file is reached in zero edges
+reaches(F, T)  :- owns(T, F).
+
+-- one dependency edge. `needs(T, U)` is named in the body, so it appears as an
+-- axiom in every `why` tree: the answer is the CHAIN OF EDGES, not the word
+-- "affected".
+--
+-- ACYCLICITY, AND WHY COUNTING IS SAFE HERE WITHOUT A CLOSURE OPERATOR.
+-- =====================================================================
+-- A build graph is acyclic by construction — a cycle in `pkg_dep` is a
+-- configuration error that Bazel, Nx and Turborepo all reject at load, and
+-- so does any build that terminates. So the support hypergraph of `reaches`
+-- has no cycle, the counting fold converges by plain Kleene iteration, and
+-- the number it reports is the number of distinct dependency PATHS from the
+-- changed file to the target. Finite, exact, meaningful.
+--
+-- DO NOT COPY THIS REASONING INTO A DOMAIN WITH CYCLES. The instance used
+-- here (runtime/semirings.ts `countingSemiring`) is declared CLOSED and
+-- carries a `star`; on cyclic data it multiplies every fact on a cycle by
+-- star(one) and correctly answers INFINITE, because a fact on a cycle really
+-- does have unboundedly many derivations. That is the engine being right,
+-- and it is a useless metric. examples/nope/ hits exactly that: an
+-- assume-role graph has cycles, and the count there is only a number because
+-- the model carries the path inside the fact so the SUPPORT graph is acyclic
+-- even though the role graph is not. Here we need no such trick, and the
+-- reason is a property of build graphs, not of these rules.
+--
+-- demo.ts proves both halves: it reports `cyclic: 0` on this graph, then
+-- adds one forbidden edge (utils <-> ui) and shows the same semiring
+-- instance answering "infinitely many".
+--
+-- WHAT THE COUNT MEANS HERE (f_counting_reads_oppositely_by_domain demands
+-- every example say this, because the same metric reads in opposite
+-- directions across domains). In BLAM the count is COUPLING, and a high one
+-- is a DEFECT. Two routes from a diff to a target mean the target is dragged
+-- into the rebuild by two independent chains, so removing either one changes
+-- nothing and the rebuild is that much harder to stop; five routes mean the
+-- target is wired into everything. That is the opposite sign to NOPE and
+-- OOPS, where independent supports mean a conclusion SURVIVES losing one, and
+-- opposite again to AKA, where many routes mean ambiguity. Read operationally
+-- the number is the same fact as the cut analysis: the count is how many
+-- routes a cut would have to break, and a count of 1 is the only case a
+-- single edge can fix. The metric is one metric; its sign belongs to the
+-- domain, and here the domain says lower is better.
+reaches(F, T)  :- needs(T, U), reaches(F, U).
+
+-- the diff. One relation, asserted per run. A target is affected once for
+-- each (changed file, route) pair that arrives at it, and that multiplicity
+-- is what the counting semiring folds.
+affected(T)    :- changed(F), reaches(F, T).

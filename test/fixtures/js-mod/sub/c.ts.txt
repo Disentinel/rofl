@@ -1,0 +1,4 @@
+// sub/c.ts — the file `./c.ts` resolves to FROM INSIDE sub/.
+import '../side.ts';
+export const cc = 'sub';
+export const which = 'sub';

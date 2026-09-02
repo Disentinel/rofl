@@ -27,5 +27,41 @@
 authority(obs, runtime).
 
 -- the working book reads the epistemic ledger wholesale (explicit knowledge
--- flow; rules writing INTO [epistemic] auto-bridge via their explicit heads).
+-- flow). The parenthesis that stood here said "rules writing INTO [epistemic]
+-- auto-bridge via their explicit heads", and that mechanism is gone: the
+-- kernel used to emit `bridge_decl` for any rule whose head named a ledger and
+-- whose body read another, so every rule in this layer licensed its own read
+-- by existing. `crossing` no longer reads it, and the reads are declared here.
 imports(main, epistemic).
+
+-- [epistemic] READS [obs]. This is the discipline's central sentence, not an
+-- incidental one: `supported[epistemic](C) :- supports[obs](E, T), ...` is the
+-- worked example in docs/choosing-perspectives.md, and trust comes from WHICH
+-- ledger the evidence lives in. Six rules make the hop.
+imports(epistemic, obs).
+
+-- [epistemic] READS [main]. Seven rules: `claim(C)` and `canonical(T, C)` are
+-- ordinary working-book facts, and a verdict about a claim has to read the
+-- claim.
+imports(epistemic, main).
+
+-- AND the gather. `agent_disputed[main](C) :- agent_state[P](C, supported),
+-- agent_state[Q](C, refuted).` in perspectives.rofl reads TWO variable
+-- ledgers, and `agent_attached[main](E, C) :- agent_basis[P](T, E), ...` in
+-- epistemic.rofl reads a third. Agent ledgers are created by admission and
+-- named at runtime, so `$var("P")` has no `authority` fact and can never be
+-- the From of an import; `collects` is the only sentence available.
+--
+-- RESERVATION, recorded rather than hidden: [main] is also the DEFAULT ledger,
+-- the one every rule nobody gave a book to writes into, and the flow graph
+-- cannot tell such a namespace from a book of asserted content
+-- (examples/sensors.rofl makes the same point about the same ledger). So this
+-- licence is broader than the two rules that need it. The narrow repair is to
+-- give `agent_disputed` and `agent_attached` a derived ledger of their own —
+-- [disputes], say — and declare `collects` on THAT. It is not made here
+-- because it changes what every program over this layer computes.
+--
+-- Still narrow in the direction that matters: `collects_from` requires
+-- `not perspective(A)`, so the two named crossings above are NOT licensed by
+-- this line and would still be reported without their own `imports`.
+collects(main).

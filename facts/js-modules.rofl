@@ -1,0 +1,152 @@
+-- js-modules.rofl — the CLAIMS the module-graph model makes about itself.
+--
+-- Rules live in rules/js-modules.rofl; this file is the ledger side: which
+-- layer, which cells are handled, which are deliberately out and why, which
+-- vocabulary the shape rules read, and what the model was CHECKED against.
+--
+-- Nothing here is asserted about the domain. Every row is a statement about
+-- the MODEL, and every row is meant to be contradictable by a rule in
+-- rules/js-modules.rofl or rules/js-model.rofl.
+
+-- ---------------------------------------------------------------------------
+-- THE LAYER. One fact. That is the whole claim of docs/modelling-a-language.md
+-- and it is exercised here rather than argued: adding this line makes the
+-- coverage audit enumerate a module-graph cell for every node kind that
+-- exists, with no edit to any rule anywhere.
+layer(modules).
+
+-- The node kinds this layer actually walks, beyond the two already in
+-- facts/js-kinds.rofl (import_declaration, import_expression). A kind claimed
+-- but absent from node_kind evaporates silently — rules/js-model.rofl's
+-- orphan_claim exists because that happened — so a claim about a specifier
+-- kind needs the kind to be in the vocabulary first.
+node_kind(js, import_specifier).
+node_kind(js, import_default_specifier).
+node_kind(js, import_namespace_specifier).
+
+-- ...and the two kinds that carry a module specifier and are NOT imports.
+-- Named so the audit can see them, ignored so the silence is not an option.
+node_kind(js, export_named_declaration).
+node_kind(js, export_all_declaration).
+
+-- ---------------------------------------------------------------------------
+-- WHAT THE HOST SUPPLIES, DECLARED (docs/modelling-a-language.md, rule 2).
+--
+-- A dirty emitter is allowed if the contamination is DECLARED and therefore
+-- countable. These two are, and the honest reading of the first one is a
+-- statement about the KERNEL rather than about JavaScript: the builtins are
+-- `=`, `!=`, `is`, `<`, `<=`, `>`, `>=`, so there is no way to take a string
+-- apart inside a rule. Path resolution is string surgery. Until the kernel has
+-- a string primitive, every language model that resolves anything needs the
+-- host to cut the string first.
+--
+-- Neither emitter carries import semantics: `str_*` would split a shopping
+-- list the same way, and `fs_*` reports what is on disk. What they are NOT
+-- allowed to do is decide anything, and the count of these rows going to zero
+-- is what "the kernel grew a string primitive" would mean, measurably.
+host_emitter(js, modules, str_algebra, a_kernel_has_no_string_builtins).
+host_emitter(js, modules, fs_listing,  a_no_ast_can_see_the_disk).
+
+-- ---------------------------------------------------------------------------
+-- THE BARE-FORM BUILTIN VOCABULARY, with the canonical spelling beside it.
+--
+-- `node:fs` is classified by its SCHEME and needs no list. This table is only
+-- for the un-prefixed form, `import fs from 'fs'`, and it carries the `node:`
+-- spelling as DATA because prefixing a string is not something a rule can do
+-- with the kernel's builtins — the canonical name is what makes a builtin
+-- compare exactly against node's own resolver instead of approximately.
+--
+-- Measured over this repository: 371 builtin imports, every single one
+-- `node:`-prefixed, so this table matches nothing here. It exists because
+-- babel's grammar and node's resolver both still accept the bare form, and a
+-- fixture exercises it so the branch is not a rule nothing runs.
+--
+-- Keyed on the WHOLE specifier, not on its first segment: `fs/promises` is
+-- deliberately absent, falls through to `bare`, and shows up as an
+-- under-report against the oracle rather than as a rule guessing.
+node_builtin_bare("assert",         "node:assert").
+node_builtin_bare("buffer",         "node:buffer").
+node_builtin_bare("child_process",  "node:child_process").
+node_builtin_bare("crypto",         "node:crypto").
+node_builtin_bare("events",         "node:events").
+node_builtin_bare("fs",             "node:fs").
+node_builtin_bare("http",           "node:http").
+node_builtin_bare("https",          "node:https").
+node_builtin_bare("module",         "node:module").
+node_builtin_bare("os",             "node:os").
+node_builtin_bare("path",           "node:path").
+node_builtin_bare("process",        "node:process").
+node_builtin_bare("readline",       "node:readline").
+node_builtin_bare("stream",         "node:stream").
+node_builtin_bare("string_decoder", "node:string_decoder").
+node_builtin_bare("test",           "node:test").
+node_builtin_bare("timers",         "node:timers").
+node_builtin_bare("tty",            "node:tty").
+node_builtin_bare("url",            "node:url").
+node_builtin_bare("util",           "node:util").
+node_builtin_bare("worker_threads", "node:worker_threads").
+node_builtin_bare("zlib",           "node:zlib").
+
+-- ---------------------------------------------------------------------------
+-- THE VERDICT PER SHAPE. Total over the shapes the rules can produce, and
+-- the audit reports a shape that occurs without one.
+--
+-- The reason taxonomy is fixed at four: `runtime_dependent` is irreducible and
+-- the other three are ours. Exactly one cell in this whole construct is
+-- irreducible, and it is the dynamic import with a computed argument.
+shape_verdict(relative,     resolves).
+shape_verdict(node_builtin, resolves).
+shape_verdict(bare,         out_of_scope).
+shape_verdict(subpath,      not_yet).
+shape_verdict(computed,     runtime_dependent).
+
+-- `budget_exhausted` is the fourth reason and is deliberately NOT claimed:
+-- nothing here ran out of budget, and rules/js-modules.rofl's
+-- reason_unexercised would report it as decoration if it were written down.
+
+-- ---------------------------------------------------------------------------
+-- THE FRONTIER, per (kind, reason). The audit checks BOTH directions: a
+-- reason missing for something that happens, and a reason recorded for
+-- something that never does.
+--
+-- out_of_scope: a bare specifier is a package name and resolving it means
+-- walking node_modules, reading package.json "exports", and following the
+-- conditions map. 1.5% of this repository's imports; deliberately out.
+unknown_because(js, import_declaration, modules, out_of_scope).
+
+-- not_yet: `#foo` needs the importing package's package.json "imports" map.
+-- Zero occurrences in this repository and it still needs a verdict, because
+-- the denominator is babel's grammar rather than the corpus.
+unknown_because(js, import_declaration, modules, not_yet).
+
+-- runtime_dependent: THE irreducible cell. `import(pathVar)` names a module
+-- that does not exist until the expression is evaluated. One site in the
+-- whole 802-import corpus, and no module-graph rule recovers it.
+unknown_because(js, import_expression, modules, runtime_dependent).
+
+-- ---------------------------------------------------------------------------
+-- THE CELLS, CLAIMED.
+handled(js, import_declaration,          modules, r_import_decl_module_edge).
+handled(js, import_expression,           modules, r_dynamic_import_literal).
+handled(js, import_specifier,            modules, r_named_binding).
+handled(js, import_default_specifier,    modules, r_default_binding).
+handled(js, import_namespace_specifier,  modules, r_namespace_binding).
+
+-- ...AND THE CELLS DELIBERATELY OUT.
+--
+-- `export { q } from './d'` and `export * from './d'` are module-graph edges
+-- by every definition — a re-export both DEPENDS and FLOWS — and they are not
+-- imports. They are named here so that the gap is a row rather than a silence;
+-- the work is one more rule over the same `source` child and it is not done.
+ignored(js, export_named_declaration, modules, a_reexport_is_a_separate_cell).
+ignored(js, export_all_declaration,   modules, a_reexport_is_a_separate_cell).
+
+-- ---------------------------------------------------------------------------
+-- THE EVIDENCE. Not a claim: the number of fixture import sites whose
+-- resolution was compared, SET FOR SET, against node's own resolver
+-- (import.meta.resolve, cross-checked with createRequire().resolve) —
+-- an oracle that reads no ROFL fact and enumerates its own sites from babel.
+--
+--   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
+checked(js, import_declaration, modules, r_import_decl_module_edge, o_node_resolver, 15).
+checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resolver, 2).

@@ -1,0 +1,557 @@
+<title>IFFY — What If We Changed the Rule</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  :root {
+    --bg:        #fbf9f6;
+    --panel:     #ffffff;
+    --ink:       #1b1a18;
+    --ink-soft:  #58554f;
+    --ink-faint: #8b877f;
+    --line:      #e4e0d8;
+    --line-soft: #efece5;
+    --accent:    #1f6f8b;
+    --accent-bg: #e8f2f6;
+    --warn:      #9a5b12;
+    --warn-bg:   #fbf1e2;
+    --good:      #2c6b41;
+    --gone:      #a33232;
+    --code-bg:   #f3f0e9;
+    --shadow:    0 1px 2px rgba(28, 26, 22, .06), 0 8px 24px rgba(28, 26, 22, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f25;
+      --ink:       #eaecf0;
+      --ink-soft:  #adb2ba;
+      --ink-faint: #7d828a;
+      --line:      #333840;
+      --line-soft: #262a31;
+      --accent:    #6fc4dd;
+      --accent-bg: #17313a;
+      --warn:      #e0ab6a;
+      --warn-bg:   #33260f;
+      --good:      #8ed4a5;
+      --gone:      #f09292;
+      --code-bg:   #111318;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f25;
+    --ink:       #eaecf0;
+    --ink-soft:  #adb2ba;
+    --ink-faint: #7d828a;
+    --line:      #333840;
+    --line-soft: #262a31;
+    --accent:    #6fc4dd;
+    --accent-bg: #17313a;
+    --warn:      #e0ab6a;
+    --warn-bg:   #33260f;
+    --good:      #8ed4a5;
+    --gone:      #f09292;
+    --code-bg:   #111318;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 58rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2.25rem; }
+  .eyebrow {
+    font-size: .75rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin: 0 0 .5rem;
+  }
+  h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 .6rem; letter-spacing: -.02em; }
+  .lede { font-size: 1.1rem; color: var(--ink-soft); margin: 0; max-width: 44rem; }
+
+  h2 {
+    font-size: 1.45rem; margin: 3rem 0 .9rem; letter-spacing: -.01em;
+    padding-top: 1.4rem; border-top: 1px solid var(--line-soft);
+  }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+  h4 { font-size: .95rem; margin: 1.4rem 0 .4rem; color: var(--ink-soft); }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.35rem; }
+  li { margin: .3rem 0; }
+  strong { font-weight: 650; }
+  a { color: var(--accent); }
+
+  .level {
+    display: inline-block; font-size: .72rem; letter-spacing: .1em;
+    text-transform: uppercase; font-weight: 700; border-radius: 999px;
+    padding: .2rem .7rem; background: var(--accent-bg); color: var(--accent);
+    margin-bottom: .5rem;
+  }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
+    padding: 1.15rem 1.3rem; margin: 1.25rem 0; box-shadow: var(--shadow);
+  }
+  .panel > :last-child { margin-bottom: 0; }
+  .panel.warn { background: var(--warn-bg); border-color: var(--warn); }
+  .panel.warn .k { color: var(--warn); }
+  .k {
+    font-size: .74rem; letter-spacing: .12em; text-transform: uppercase;
+    font-weight: 700; color: var(--ink-faint); margin: 0 0 .5rem;
+  }
+
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1rem 0; }
+  pre {
+    margin: 0; padding: 1rem 1.15rem; background: var(--code-bg);
+    border: 1px solid var(--line-soft); border-radius: .5rem;
+    font-size: .82rem; line-height: 1.55; white-space: pre; min-width: max-content;
+  }
+  .scroll > pre { margin: 0; }
+  code { background: var(--code-bg); padding: .1em .35em; border-radius: .25rem; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 34rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 650; }
+  td.num { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .yes { color: var(--good); font-weight: 650; }
+  .no  { color: var(--gone); font-weight: 650; }
+
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .85rem; color: var(--ink-faint); margin-top: .6rem; }
+  svg { display: block; max-width: 100%; height: auto; }
+
+  .cards { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 1.25rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: .55rem; padding: .9rem 1rem; }
+  .card h4 { margin: 0 0 .35rem; color: var(--ink); font-size: .95rem; }
+  .card p { margin: 0; font-size: .88rem; color: var(--ink-soft); }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-size: .85rem; color: var(--ink-faint); }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL · examples/iffy</p>
+  <h1>What if we changed the rule?</h1>
+  <p class="lede">There is a rule in force and a pile of decisions already made under it.
+  Someone proposes a change. Which of those decisions would come out differently — and,
+  for each one, exactly which link in the reasoning did it?</p>
+</header>
+
+<span class="level">Level 1 · the plain version</span>
+<h2>A rule, a pile of old answers, and a proposed change</h2>
+
+<p>Imagine an insurance company. There is a rule book. One rule says: <em>if you want money
+for a fire, you have to tell us within 30 days.</em> Over the years the company has
+decided thousands of claims using that book. Some got paid. Some did not.</p>
+
+<p>Now someone says: <strong>let us make it 21 days instead of 30.</strong></p>
+
+<p>The obvious question is: what would that have done to all the claims we already decided?
+Some people who got paid would not have been. But <em>which</em> people? And is it really
+the 21 days that did it, or something else in the same proposal?</p>
+
+<div class="panel">
+  <p class="k">The way this normally gets answered</p>
+  <p>You change the rule for a few customers, wait, and see who complains. That is called
+  a canary. It is slow, it makes real people the experiment, and it can only ever tell you
+  about the cases that actually came up while you were watching.</p>
+</div>
+
+<h3>The trick</h3>
+
+<p>You do not need real customers. You have the facts of every old case written down. So:
+work out every old answer twice — once using the old rule book, once using the new one —
+and compare the two lists.</p>
+
+<figure>
+  <svg viewBox="0 0 640 220" role="img" aria-labelledby="fork-t">
+    <title id="fork-t">One pile of case facts, read by two rule books, giving two lists of answers that are then compared</title>
+    <rect x="8" y="70" width="150" height="80" rx="8" fill="var(--accent-bg)" stroke="var(--accent)"/>
+    <text x="83" y="102" text-anchor="middle" font-size="14" fill="var(--ink)" font-family="inherit">144 case files</text>
+    <text x="83" y="122" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="inherit">stored once</text>
+
+    <path d="M158 96 L232 60" stroke="var(--ink-faint)" stroke-width="1.5" fill="none"/>
+    <path d="M158 124 L232 160" stroke="var(--ink-faint)" stroke-width="1.5" fill="none"/>
+
+    <rect x="232" y="34" width="150" height="52" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="307" y="56" text-anchor="middle" font-size="13" fill="var(--ink)" font-family="inherit">rule book as it is</text>
+    <text x="307" y="74" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="inherit">notice within 30 days</text>
+
+    <rect x="232" y="134" width="150" height="52" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="307" y="156" text-anchor="middle" font-size="13" fill="var(--ink)" font-family="inherit">rule book as proposed</text>
+    <text x="307" y="174" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="inherit">notice within 21 days</text>
+
+    <path d="M382 60 L456 96" stroke="var(--ink-faint)" stroke-width="1.5" fill="none"/>
+    <path d="M382 160 L456 124" stroke="var(--ink-faint)" stroke-width="1.5" fill="none"/>
+
+    <rect x="456" y="70" width="176" height="80" rx="8" fill="var(--accent-bg)" stroke="var(--accent)"/>
+    <text x="544" y="98" text-anchor="middle" font-size="14" fill="var(--ink)" font-family="inherit">compare the answers</text>
+    <text x="544" y="118" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="inherit">15 came out differently</text>
+    <text x="544" y="136" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="inherit">and here is why, each one</text>
+  </svg>
+  <figcaption>The case files are not copied. One pile, two rule books, two sets of answers.</figcaption>
+</figure>
+
+<h3>Three things the comparison finds that a canary cannot</h3>
+
+<div class="cards">
+  <div class="card">
+    <h4>Which link did it</h4>
+    <p>Not "43 answers changed" but "this claim changed because the notice rule moved, and
+    that one changed because a different kind of evidence stopped counting."</p>
+  </div>
+  <div class="card">
+    <h4>Two harmless changes that are not</h4>
+    <p>A proposal usually has several parts. Sometimes no single part changes a case, and all
+    of them together do. A canary runs one world and can never see this.</p>
+  </div>
+  <div class="card">
+    <h4>Answers that held on, barely</h4>
+    <p>A claim that was proved two independent ways and is now proved only one way did not
+    change. It is one step from changing, and nothing else would tell you.</p>
+  </div>
+</div>
+
+<h3>And the question backwards</h3>
+
+<p>You can also ask it the other way round. Instead of <em>what does my change break</em>,
+ask <strong>what is the smallest change that would give me the answer I want</strong>. Try
+every combination of the proposed clauses — there were sixteen — and take the cheapest one
+that works. That turns the tool from something that checks a draft into something that
+helps write one.</p>
+
+<div class="panel">
+  <p class="k">One more, and it is the odd one</p>
+  <p>You can ask: <em>if I deleted this piece of evidence, what falls over?</em> — and get the
+  answer <strong>before</strong> deleting it. Sometimes the answer is "nothing", and that is
+  still not permission to delete it: the claim it supported may now rest on a single leg
+  where it used to rest on two.</p>
+</div>
+
+<span class="level">Level 2 · what actually happens in the engine</span>
+<h2>This is a mode, and it has three applications</h2>
+
+<p>The four steps are: <strong>fork the thing being changed, evaluate twice over the same
+facts, diff the two fixpoints, and attribute each row of the difference to a link.</strong>
+Nothing in that says "insurance" or "access control". What varies between applications is only
+what gets forked.</p>
+
+<div class="scroll"><table>
+  <thead><tr><th></th><th><code>examples/ditto</code></th><th>IFFY / statute</th><th>IFFY / policy</th></tr></thead>
+  <tbody>
+    <tr><td>what is forked</td><td>the code, at two revisions</td><td>a statute, as enacted and as amended</td><td>an access policy, as deployed and as proposed</td></tr>
+    <tr><td>what is held once</td><td>nothing — both sides are extracted</td><td>the case corpus, 144 claims</td><td>the organization and role graph</td></tr>
+    <tr><td>the question</td><td>did the declared invariants survive?</td><td>which past claims decide differently?</td><td>who loses access, who gains?</td></tr>
+    <tr><td>the fork is</td><td>a <strong>copy</strong> — unavoidable</td><td>a <strong>column</strong></td><td>a <strong>column</strong></td></tr>
+  </tbody>
+</table></div>
+
+<p>The last row is the mode's own boundary rather than a difference of taste. DITTO's two
+sides are two different extractions of two different trees, so its copy is not a design choice
+— the facts really <em>are</em> different. IFFY's corpus is the same corpus in both arms, so
+nothing needs copying at all. <strong>Whether a fork can be a column or has to be a copy is
+decided by the application, not by the mode.</strong></p>
+
+<div class="panel">
+  <p class="k">Why two corpora and not one</p>
+  <p>Because one made the mode look complete when it was not. A statute has no norm that
+  <em>defeats</em> a conclusion — <code>jopa.rofl</code> deliberately writes its exclusion as a
+  positive conclusion instead — so two of the four cause kinds below were unreachable and
+  their absence was invisible. Adding the access corpus forced two new rules into the kernel
+  and set off the <code>unexplained</code> audit twice. Shipped on the statute alone, IFFY
+  would have had a quarter of its vocabulary missing and nothing would have said so.</p>
+  <p>What the second corpus cost: its adapter asks the kernel for <strong>17 rules</strong>
+  against the first's <strong>14</strong>, while the corpus behind it is three times the size
+  (36 evaluation rules against 12). That near-constant surface is the "mode" claim as a
+  number. The restatement — the corpus's own rules, one column wider — does scale with the
+  corpus, and will not get cheaper with practice.</p>
+</div>
+
+<h2>The fork is a column, not a copy</h2>
+
+<p>ROFL stores facts. The obvious way to explore a hypothesis is to copy the store, change
+the copy, and re-run. The kernel can do that — <code>store.clone()</code> is
+<code>snapshot()</code> to JSON and <code>restore()</code> back — and it costs a deep copy of
+every fact in the store. Measured on these corpora: <strong>13.7–18.1 microseconds per
+fact</strong>, which is about 1.6 seconds for a hundred-thousand-fact store, before any
+re-derivation. That rate is for a store carrying rules, derived facts, provenance and
+witnesses; a store of bare integer facts clones several times faster and is not what anybody
+forks.</p>
+
+<p>IFFY does not do that. An <strong>arm</strong> of the comparison is a term — a name
+carried as an ordinary column through the rules that read the rule set. The amendment is a
+<strong>delta</strong> against the norms already in the store. The entire fork is four
+rules:</p>
+
+<div class="scroll"><pre><code>repealed(A, Elem)   :- carries[draft](A, Ed), repeals[draft](Ed, Elem).
+enacted_by(A, Elem) :- carries[draft](A, Ed), enacts[draft](Ed, Elem).
+
+in_force(A, Elem)   :- arm[draft](A), enacted_elem(Elem), not repealed(A, Elem).
+in_force(A, Elem)   :- enacted_by(A, Elem).</code></pre></div>
+
+<p>Read the third rule slowly: <em>for every arm, every norm the rule book already carries is
+in force under that arm, unless that arm repealed it.</em> The norms are stored once. The
+case files are stored once. Nine arms read them through one rule each. A modification is a
+repeal plus an enactment, and the kernel needs no third verb — which is also what lets the
+report say which half of "30 becomes 21" a given case turned on.</p>
+
+<h3>What a fork costs, in a number that does not move</h3>
+
+<div class="scroll"><table>
+  <thead><tr><th></th><th>statute corpus</th><th>policy corpus</th></tr></thead>
+  <tbody>
+    <tr><td>one fork by <code>clone()</code> copies</td><td class="num">7,675 facts</td><td class="num">3,752 facts</td></tr>
+    <tr><td>one more arm adds</td><td class="num">3,673 facts</td><td class="num">1,538 facts</td></tr>
+    <tr><td>ratio</td><td class="num">2.1&times;</td><td class="num">2.4&times;</td></tr>
+    <tr><td><code>store.clone()</code> alone</td><td class="num">13.7–18.1 µs/fact</td><td class="num">14.9–17.6 µs/fact</td></tr>
+    <tr><td>a whole fork by clone</td><td class="num">368–427 ms</td><td class="num">198–246 ms</td></tr>
+    <tr><td>one more arm</td><td class="num">130–173 ms</td><td class="num">76–91 ms</td></tr>
+  </tbody>
+</table></div>
+
+<div class="panel warn">
+  <p class="k">The measurement's own honesty</p>
+  <p>The fact counts are deterministic: identical on every run. <strong>The timings are
+  not.</strong> The ranges above are three cold runs; across a whole afternoon on the same
+  machine, carrying three other agents, the per-arm figure was measured at 42 ms and at 237 ms. Measured cold it came out <em>negative</em>, because the
+  first world built paid for the runtime compiling the evaluator and the second did not — a
+  fork that makes the program faster is not a measurement of anything. The demo now warms up
+  first, takes the fastest of five runs, and prints "below this machine's noise floor" rather
+  than a number when the difference is not positive.</p>
+</div>
+
+<p>So the declared ceiling is stated in facts, not seconds: <strong>about 100 arms on the
+statute corpus</strong> — roughly 380,000 facts. Everything lives in one store and nothing is
+released, so memory binds long before the clock does. A full subset lattice is comfortable to
+6 clauses (64 arms) and already awkward at 8 (256 arms). Beyond that you need copy-on-write in
+the store, or a bounded frontier search instead of the whole lattice.</p>
+
+<p><strong>And speed was never the argument.</strong> Two fixpoints in two stores can only be
+compared by a script: the diff has no witnesses, no derivation tree, nothing to ask
+<code>why</code> of. Two fixpoints in one store make every line of the report below an
+ordinary derived relation with a proof behind it.</p>
+
+<h2>Step by step, on one case</h2>
+
+<p>Case <code>g_018</code>: a fire, notice given on day 25, proved by a meteorological
+report and physical traces. Under the rule book as it stands the claim is paid.</p>
+
+<ol>
+  <li><strong>The corpus loads once.</strong> 144 case files into the <code>[record]</code>
+  ledger, written by the tribunal of fact. 270 pieces of evidence. Nothing here mentions an
+  arm.</li>
+
+  <li><strong>The amendable slice is read out of the statute, not restated.</strong> Three
+  rules turn the Act's own tables into eleven <code>enacted_elem</code> facts —
+  <code>peril(fire)</code>, <code>notice_limit(30)</code>,
+  <code>admits(met_office_report, peril_caused_loss)</code>, and so on. Amend the Act's tables
+  and this vocabulary follows without an edit.</li>
+
+  <li><strong>The draft arrives in its own ledger.</strong> <code>[draft]</code>, with
+  <code>authority(draft, drafter)</code>. Six amendments, nine arms. An arm asserted by anyone
+  else comes out as <code>forged[audit]</code> from the kernel with no checking code
+  written.</li>
+
+  <li><strong>One fixpoint, all arms at once.</strong> The statute's rules, restated with an
+  arm column, run over the shared corpus. 48,798 facts, 105 rules, nothing outside range
+  restriction, nothing unstratified.</li>
+
+  <li><strong>The control.</strong> The baseline arm must reproduce
+  <code>jopa.rofl</code>'s own <code>indemnity_due</code>, <code>deliberate_loss</code> and
+  <code>elements_met</code> — computed by rules that know nothing about arms. 47, 42 and 47
+  rows, identical. An adapter that agrees with nothing is a claim about itself.</li>
+
+  <li><strong>The diff is a rule, not a script.</strong>
+  <code>lost(A, Q) :- arm(A), baseline(B), verdict(B, Q), not verdict(A, Q).</code>
+  For the bill: 49 of 288 questions flipped, 43 lost and 6 gained.</li>
+
+  <li><strong>The cause is a rule too.</strong> For <code>g_018</code>:</li>
+</ol>
+
+<div class="scroll"><pre>  under enacted:  q_due  true
+  under bill:     q_due  false
+  the model says it flipped BECAUSE:
+    withdrawn(notice_limit(30))
+  attributed to: ed_notice21
+
+  and the kernel, asked directly, names the same link:
+    whynot amet[main](bill,g_018,notice_in_time):
+      rule r00280332: amet[main](?A,?C,notice_in_time)@now :-
+          in_force[main](?A,notice_limit(?Limit))@now, ...
+        failed premise: 25 &lt;= 21 [builtin fails]</pre></div>
+
+<p>Two different computations — a model-level attribution and the kernel's own
+<code>whynot</code> walking the rule body — naming the same link. The test requires them to
+agree.</p>
+
+<h3>Four kinds of cause, because they need four different conversations</h3>
+
+<div class="scroll"><table>
+  <thead><tr><th>cause</th><th>what happened</th><th>seen in</th></tr></thead>
+  <tbody>
+    <tr><td><code>withdrawn</code></td><td>the old answer leaned on a norm, and the norm is gone</td><td>both corpora</td></tr>
+    <tr><td><code>overridden</code></td><td>every premise still stands and a <em>newly enacted</em> norm defeats the conclusion</td><td>policy only</td></tr>
+    <tr><td><code>admitted</code></td><td>a conclusion that did not hold now does, on a norm the amendment brought in</td><td>both corpora</td></tr>
+    <tr><td><code>unblocked</code></td><td>a conclusion that did not hold now does, because what blocked it is gone</td><td>policy only</td></tr>
+  </tbody>
+</table></div>
+
+<p>The middle two are the ones a tool that diffs supports cannot produce. <code>overridden</code>
+is a conclusion lost with <em>nothing withdrawn</em>: on the policy corpus, an organization-wide
+Deny that did not exist before takes write access away from four principals, and every policy
+statement they ever relied on is still exactly where it was.</p>
+
+<h2>The audit that rejected its own author</h2>
+
+<p><code>unexplained[audit](A, Q)</code> derives a flip that nothing explains. It cannot happen
+while every amendable norm is reachable through <code>enacted_elem</code> — which is precisely
+why it is worth deriving. It was non-empty twice while this example was being written, and both
+times it was right:</p>
+
+<ul>
+  <li>Repealing a <strong>permission boundary's allow</strong> loses a route whose support never
+  mentioned the boundary — a route survives a boundary by the <em>absence</em> of a deny, so the
+  boundary appears nowhere in the route's provenance.</li>
+  <li>Detaching a <strong>service control policy from an organizational unit</strong> lifts every
+  Deny it carries while the statement text stays exactly where it was.</li>
+</ul>
+
+<p>Both are now named as blocking elements in their own right. The test deletes one
+<code>uses</code> rule from the statute adapter and requires the audit to fire, so it stays a
+gate rather than becoming decoration. Three more gates are planted and required to fire the same
+way: a repeal of a norm that is not in force, an enactment of one that already is, and an arm
+carrying two contradictory notice periods at once.</p>
+
+<h2>Interaction: two clauses that need each other</h2>
+
+<p>The bill for the access model has two clauses. Neither, alone, gives <code>alice</code> write
+access to the production bucket.</p>
+
+<div class="scroll"><pre>q_access(alice,"s3:PutObject","arn:aws:s3:::prod-bucket/data.csv")
+
+  enacted          false
+  a_scp_off        false     detaching the control policy alone: still no Allow at all
+  a_grant_reader   false     granting the write alone: the control policy still denies it
+  bill_open        true</pre></div>
+
+<p>Five such cases in the statute corpus: a subsidence claim with notice on day 41 needs both
+the new peril <em>and</em> the longer notice period, and neither amendment alone touches it.</p>
+
+<p>The mirror image is <code>masked</code> — a clause flips a case on its own and the whole bill
+does not, because another clause hides it. Ten of those. That is the row that detonates later:
+remove the masking clause in a tidy-up six months on, and the flip arrives with nothing to point
+at.</p>
+
+<h2>Held, and lost its spare</h2>
+
+<div class="scroll"><pre>a_no_brigade   fragile   9   hardened   0   supports lost   9   gained   0
+a_neighbour    fragile   0   hardened  10   supports lost   0   gained  10
+bill           fragile   6   hardened   0   supports lost  14   gained   7</pre></div>
+
+<p>Counted structurally: a support carries its own identity in a term, so two independent
+supports are two facts and the question is whether a second one exists. The test recomputes the
+same set by set arithmetic in TypeScript, sharing none of the Datalog.</p>
+
+<div class="panel">
+  <p class="k">Derivations are not supports</p>
+  <p>Folded over the same conclusion, the counting semiring says <strong>4</strong> where the
+  structural count says <strong>2</strong>. A derivation count multiplies through every rule
+  below the conclusion: two admissible reports each proving causation give two derivations of
+  <em>causation</em> and therefore four of the conclusion that consumes it. Both numbers are
+  correct answers to different questions, and the report prints them side by side rather than
+  quietly using one for the other.</p>
+</div>
+
+<h2>Excise: the radius before the deletion</h2>
+
+<div class="scroll"><pre>proposed: delete evidence[record](g_001_e0, fire_brigade_report, g_001, 95)
+  radius as an arm, with the fact still in the store: 1   q_due(g_001)
+  the kernel's own excise, which deep-copies and re-derives: 1   IDENTICAL
+  supports lost without any verdict moving: 0
+
+proposed: delete evidence[record](g_002_e0, fire_brigade_report, g_002, 95)
+  radius as an arm, with the fact still in the store: 0   (empty: radius_empty = true)
+  the kernel's own excise, which deep-copies and re-derives: 0   IDENTICAL
+  supports lost without any verdict moving: 1</pre></div>
+
+<p>An excision arm needs nothing new: it removes a case fact rather than a norm, so the radius is
+the ordinary <code>lost/2</code> restricted to that arm. The kernel's own <code>excise</code>
+deep-copies the store, removes the fact, re-derives from scratch and diffs — sharing no reasoning
+with the arm at all. The two answers must be the same set, and this is the positive control for
+the whole example: <em>a radius computed as an arm is a claim about an arm until something
+outside the arm confirms it.</em></p>
+
+<p>The second row is the point of computing this beforehand. Nothing decided differently, and a
+conclusion that stood on two legs now stands on one.</p>
+
+<h2>The question backwards</h2>
+
+<div class="scroll"><pre>wanted: q_due(g_106)  — subsidence, notice on day 41
+  search: 16 arms — the whole subset lattice over 4 clauses — in ONE store
+  arms reaching it: 4
+
+  cheapest, by the tropical fold over the support hypergraph:
+    cost 5   x06   ed_notice45 + ed_subsidence
+    cost 5   x07   ed_notice21 + ed_notice45 + ed_subsidence
+
+  cheapest, by adding up declared costs outside the engine:
+    cost 5   x06   ed_notice45 + ed_subsidence
+    cost 6   x07   ed_notice21 + ed_notice45 + ed_subsidence</pre></div>
+
+<p>The cost of an edit rides on the base fact that puts it in an arm and on nothing else.
+Min-plus over the support hypergraph then values each arm at the least total cost of the edits
+some derivation of the target <strong>actually used</strong> — which is why arm <code>x07</code>
+comes out at 5 by the fold and 6 by the hand count: it carries a clause the derivation never
+touched. The fold answers "what did this need"; the hand count answers "what does this arm
+cost". No rule anywhere mentions a cost, exactly as no rule in <code>jopa.rofl</code> mentions a
+standard of proof. The number belongs to the fold.</p>
+
+<h2>What could not be modelled</h2>
+
+<ul>
+  <li><strong>An amendment that changes a <em>rule</em>.</strong> IFFY forks the rule-set
+  <em>data</em> a corpus exposes. Rewriting a rule is a new statute, not an amendment, and
+  nothing here detects the difference. A corpus whose norms live in rules rather than facts
+  cannot be forked this way at all.</li>
+  <li><strong>The cost of threading the column.</strong> An adapter restates its corpus's
+  evaluation rules with one extra column — 8 of the statute's 12, 16 of the policy's 36. The
+  restatement is checked against the original, but it is a restatement, and if the original
+  moves it has to follow.</li>
+  <li><strong>A slot with at most one value.</strong> The element vocabulary is flat, so an arm
+  carrying two amendments that each set the notice period has both in force and the longer wins
+  silently. The constraint has to live in each adapter; nothing checks that its author wrote
+  one.</li>
+  <li><strong>A repeal that causes a gain, in the tropical fold.</strong> Costs ride on
+  enactments, so a gain produced by removing a blocker is priced at zero. The statute corpus has
+  no such path; the policy corpus does.</li>
+  <li><strong>Anything about whether the amendment is a good idea.</strong> IFFY says which past
+  decisions move and on which link. Whether the new answers are better is a question about the
+  world.</li>
+</ul>
+
+<footer>
+  <p>ROFL · <code>examples/iffy</code> — model in <code>iffy.rofl</code>, adapters in
+  <code>statute.rofl</code> and <code>policy.rofl</code>, transcript from
+  <code>demo.ts</code>, checks in <code>test/example-iffy.test.ts</code>. Corpora:
+  <code>examples/jopa</code> and <code>examples/nope</code>. The same mode applied to code
+  revisions: <code>examples/ditto</code>.</p>
+  <p>The Household Fire Indemnity Act 2026 does not exist. Nothing here is legal advice and it
+  decides nobody's claim.</p>
+</footer>
+
+</div>

@@ -1,0 +1,538 @@
+<title>HECK — Rules That Must Disagree</title>
+<meta charset="utf-8">
+
+<style>
+  :root {
+    --bg:        #fbf8f6;
+    --panel:     #ffffff;
+    --ink:       #1c1917;
+    --ink-soft:  #5c534d;
+    --ink-faint: #8a8078;
+    --line:      #e6ded8;
+    --line-soft: #f0eae5;
+    --accent:    #a83a24;
+    --accent-bg: #fbeee9;
+    --good:      #2f6b3f;
+    --gone:      #a03030;
+    --code-bg:   #f4eee9;
+    --shadow:    0 1px 2px rgba(40, 25, 20, .06), 0 8px 24px rgba(40, 25, 20, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #171311;
+      --panel:     #221c19;
+      --ink:       #f0eae6;
+      --ink-soft:  #b9aca4;
+      --ink-faint: #8b7f77;
+      --line:      #3a302b;
+      --line-soft: #2b2320;
+      --accent:    #f0916f;
+      --accent-bg: #2e1c15;
+      --good:      #8fd6a2;
+      --gone:      #f09090;
+      --code-bg:   #130f0d;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #171311;
+    --panel:     #221c19;
+    --ink:       #f0eae6;
+    --ink-soft:  #b9aca4;
+    --ink-faint: #8b7f77;
+    --line:      #3a302b;
+    --line-soft: #2b2320;
+    --accent:    #f0916f;
+    --accent-bg: #2e1c15;
+    --good:      #8fd6a2;
+    --gone:      #f09090;
+    --code-bg:   #130f0d;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.65 ui-serif, Georgia, "Times New Roman", serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 3.5rem 1.25rem 6rem; }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    line-height: 1.1;
+    margin: 0 0 .6rem;
+    letter-spacing: -.02em;
+  }
+  .sub {
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+    margin: 0 0 2.5rem;
+    font-style: italic;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 3.25rem 0 .9rem;
+    letter-spacing: -.01em;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+  h3 {
+    font-size: 1.08rem;
+    margin: 2rem 0 .5rem;
+    color: var(--accent);
+    letter-spacing: .01em;
+  }
+  p { margin: 0 0 1.05rem; }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+
+  strong { font-weight: 700; }
+  em.term { font-style: normal; font-weight: 700; color: var(--accent); }
+
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .87em;
+  }
+  p code, li code, td code {
+    background: var(--code-bg);
+    padding: .1em .35em;
+    border-radius: 3px;
+  }
+
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  pre {
+    margin: 0 0 1.3rem;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8rem;
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.15rem 1.3rem;
+    margin: 0 0 1.3rem;
+    box-shadow: var(--shadow);
+  }
+  .card > :last-child { margin-bottom: 0; }
+  .card h3 { margin-top: 0; }
+
+  .stamp {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-bg);
+    padding: .9rem 1.1rem;
+    margin: 0 0 1.3rem;
+    border-radius: 0 6px 6px 0;
+  }
+  .stamp > :last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: .92rem;
+    margin: 0 0 1.3rem;
+    min-width: 30rem;
+  }
+  th, td {
+    text-align: left;
+    padding: .5rem .7rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  th { font-weight: 700; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td.num { text-align: right; font-family: ui-monospace, Menlo, monospace; }
+
+  .yes { color: var(--good); font-weight: 700; }
+  .no  { color: var(--gone); font-weight: 700; }
+  .faint { color: var(--ink-faint); }
+
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.8rem;
+    margin-bottom: 1.5rem;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: .05em;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 50%;
+    background: var(--accent-bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font: 700 .85rem/1.75rem ui-monospace, Menlo, monospace;
+    text-align: center;
+  }
+  .steps h3 { margin-top: 0; }
+
+  figure { margin: 0 0 1.4rem; }
+  figcaption {
+    font-size: .85rem;
+    color: var(--ink-faint);
+    margin-top: .5rem;
+    text-align: center;
+  }
+  svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+
+  .foot {
+    margin-top: 4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--line);
+    font-size: .9rem;
+    color: var(--ink-faint);
+  }
+</style>
+
+<div class="wrap">
+
+  <h1>Rules that are <em>supposed</em> to disagree</h1>
+  <p class="sub">A demonstration in which making the rulebook agree with itself
+    is the crime — and the one place where a piece of the ROFL engine gets
+    asked a question the other six never posed.</p>
+
+  <!-- ==================================================================== -->
+  <h2>Part one — the idea, with no jargon</h2>
+
+  <p>Imagine a very large rulebook. Somewhere in it, rule 1 says
+    <em>every form must be filed three times</em>, and rule 2 says
+    <em>nobody may file a form three times before mid-morning</em>.</p>
+
+  <p>If you show up at nine in the morning with a form, you are stuck. Do it
+    and you break rule 2. Don't and you break rule 1. That stuck feeling has a
+    name: the two rules <em class="term">contradict</em> each other.</p>
+
+  <p>Everywhere else in the world, that is a bug. Somebody notices, somebody
+    fixes it, and the rulebook gets a little more sensible.</p>
+
+  <div class="stamp">
+    <p><strong>Here it is the opposite.</strong> This rulebook belongs to the
+      Department of Standing Ordinances, which is in Hell, and Hell likes being
+      stuck. A proposed change to the rulebook is <strong>approved</strong>
+      only if it creates <em>more</em> contradictions than there were before.
+      Tidy one away and your proposal is thrown out.</p>
+  </div>
+
+  <p>So the department has an unusual job. Instead of hunting for rules that
+    clash so it can fix them, it hunts for rules that get along so it can
+    <em>break</em> them. A paragraph that has sat in the book for a thousand
+    years without ever getting in anyone's way is not a good paragraph. It is a
+    wasted one.</p>
+
+  <h3>The interesting question underneath the joke</h3>
+
+  <p>If every approved change has to make things worse, does the rulebook get
+    worse <em>forever</em>? Or is there a point where it cannot get any worse —
+    where every possible contradiction already exists and there is nothing left
+    to ruin?</p>
+
+  <p>There is. And the reason is simpler than it sounds. The department only
+    knows six actions — stamp a form, file it three times, set the petitioner
+    on fire, and three others. A contradiction is one paragraph demanding one
+    of those six and another paragraph banning it. There are only so many ways
+    to pair up twenty-four paragraphs over six actions, so there are only so
+    many <strong>different</strong> contradictions available. Count them and
+    you have the ceiling.</p>
+
+  <p>The program counts them: <strong>sixteen</strong>. Then it works out which
+    paragraphs have already reached that ceiling — and reports, in the flat
+    voice of a status line, that Hell has reached maximum entropy.</p>
+
+  <pre class="scroll">  4 paragraphs stand at the ceiling: para 13, para 14, para 15, para 16.
+  THE CODEX HAS NOWHERE TO GROW HERE. HELL HAS REACHED MAXIMUM ENTROPY.</pre>
+
+  <p>That number is <em>computed</em>, not written down by a person who thought
+    it sounded right. That distinction is the whole reason this exists.</p>
+
+  <!-- ==================================================================== -->
+  <h2>Part two — what actually happens in the engine</h2>
+
+  <p>ROFL is a rules engine. You give it facts and rules, it works out
+    everything that follows, and it can show you <em>why</em> any conclusion
+    follows. What makes this example worth building is a component called a
+    <em class="term">semiring</em>: a small piece of arithmetic that rides
+    along on top of the ordinary yes/no answer and attaches a
+    <strong>number</strong> to every conclusion.</p>
+
+  <p>The engine ships six of them. Swap one for another and the same rules over
+    the same facts answer a different question — how many ways is this true, how
+    cheaply, how likely, on whose evidence, how much can it be trusted. The
+    rules never move. Only the arithmetic does.</p>
+
+  <h3>A semiring is two operations</h3>
+
+  <div class="card">
+    <p><strong><span class="mono">⊗</span> (&ldquo;times&rdquo;) combines the
+      steps <em>along</em> one chain of reasoning.</strong> If a conclusion
+      needed three steps, their three numbers get combined with ⊗.</p>
+    <p><strong><span class="mono">⊕</span> (&ldquo;plus&rdquo;) combines
+      <em>rival</em> chains that reach the same conclusion.</strong> If there
+      are two different ways to prove the same thing, ⊕ decides which number
+      the conclusion ends up with.</p>
+  </div>
+
+  <p>For HECK the choice is forced by the domain:</p>
+
+  <div class="scroll">
+    <table>
+      <tr><th>piece</th><th>what it is</th><th>why</th></tr>
+      <tr>
+        <td><span class="mono">⊗</span> = <strong>add</strong></td>
+        <td>contradictions pile up along a chain</td>
+        <td>each paragraph you pass through drags its quarrels along</td>
+      </tr>
+      <tr>
+        <td><span class="mono">⊕</span> = <strong>max</strong></td>
+        <td>of two readings, keep the <em>worse</em> one</td>
+        <td>the department wants the most contradictory reading available</td>
+      </tr>
+      <tr>
+        <td>zero</td>
+        <td><span class="mono">REJECTED</span></td>
+        <td>a change that reduces chaos: refused</td>
+      </tr>
+      <tr>
+        <td>one</td>
+        <td><span class="mono">0</span></td>
+        <td>a change that alters nothing</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Why that one word &ldquo;max&rdquo; changes everything</h3>
+
+  <p>ROFL already ships this exact arithmetic with <strong>min</strong> instead
+    of max. It answers <em>what is the cheapest way to prove this?</em> — costs
+    add up along a chain, and of two rival chains you keep the cheaper. HECK is
+    that same arithmetic with one word swapped.</p>
+
+  <p>And that one word is the difference between an engine that finishes and
+    one that does not. Here is why, in one picture.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" role="img"
+         aria-label="Two panels. On the left, min-plus: a loop adds cost, and min throws the looped value away, so the value settles. On the right, max-plus: a loop adds contradictions, and max keeps the looped value, so the value climbs without end.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <g fill="var(--ink)" font-family="ui-monospace, Menlo, monospace" font-size="12">
+
+        <!-- left panel: min-plus -->
+        <g color="var(--good)">
+          <text x="20" y="24" font-size="13" font-weight="700" fill="var(--good)">min &amp; +  (cheapest proof)</text>
+          <circle cx="70" cy="90" r="20" fill="none" stroke="var(--good)" stroke-width="1.5"/>
+          <text x="70" y="95" text-anchor="middle" fill="var(--ink)">4</text>
+          <path d="M70 68 A 42 42 0 1 1 92 78" fill="none" stroke="var(--good)"
+                stroke-width="1.5" marker-end="url(#ah)"/>
+          <text x="150" y="70" fill="var(--ink-soft)">go round the loop: 4 + 3 = 7</text>
+          <text x="150" y="92" fill="var(--ink-soft)">min(4, 7) = 4</text>
+          <text x="150" y="118" fill="var(--good)" font-weight="700">the loop is thrown away</text>
+          <text x="20" y="160" fill="var(--ink-soft)">4 &#8594; 4 &#8594; 4 &#8594; 4 &#8230;  settled</text>
+          <text x="20" y="185" fill="var(--ink-faint)" font-size="11">⊗ pushes UP, ⊕ prefers DOWN.</text>
+          <text x="20" y="202" fill="var(--ink-faint)" font-size="11">They pull opposite ways, so a</text>
+          <text x="20" y="219" fill="var(--ink-faint)" font-size="11">loop costs nothing.</text>
+        </g>
+
+        <line x1="310" y1="10" x2="310" y2="240" stroke="var(--line)" stroke-width="1"/>
+
+        <!-- right panel: max-plus -->
+        <g color="var(--gone)">
+          <text x="335" y="24" font-size="13" font-weight="700" fill="var(--gone)">max &amp; +  (HECK)</text>
+          <circle cx="385" cy="90" r="20" fill="none" stroke="var(--gone)" stroke-width="1.5"/>
+          <text x="385" y="95" text-anchor="middle" fill="var(--ink)">4</text>
+          <path d="M385 68 A 42 42 0 1 1 407 78" fill="none" stroke="var(--gone)"
+                stroke-width="1.5" marker-end="url(#ah)"/>
+          <text x="465" y="70" fill="var(--ink-soft)">go round the loop: 4 + 3 = 7</text>
+          <text x="465" y="92" fill="var(--ink-soft)">max(4, 7) = 7</text>
+          <text x="465" y="118" fill="var(--gone)" font-weight="700">the loop is KEPT</text>
+          <text x="335" y="160" fill="var(--ink-soft)">4 &#8594; 7 &#8594; 10 &#8594; 13 &#8230;  never settles</text>
+          <text x="335" y="185" fill="var(--ink-faint)" font-size="11">⊗ pushes UP, ⊕ prefers UP.</text>
+          <text x="335" y="202" fill="var(--ink-faint)" font-size="11">They pull the same way, so a</text>
+          <text x="335" y="219" fill="var(--ink-faint)" font-size="11">loop is a pump.</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>The same loop, the same numbers, one word different in the
+      arithmetic. Left: the engine finishes. Right: it does not.</figcaption>
+  </figure>
+
+  <p>The loop is real and it is in the rulebook, because bureaucracies write
+    rulebooks like this:</p>
+
+  <pre class="scroll">para 13   "The provisions of paragraph 14 apply to the present paragraph in
+           their entirety."
+para 14   "The provisions of paragraph 13 apply to the present paragraph in
+           their entirety, and the requirement of triplicate filing is
+           hereby incorporated."</pre>
+
+  <p>Follow the citations and you can go round forever, picking up paragraph
+    1's triplicate requirement — and the quarrel it has with paragraph 2 —
+    every single time. Under <strong>max</strong>, the engine keeps the longest
+    trip it has found so far. There is no longest trip.</p>
+
+  <h3>What stops it: a ceiling</h3>
+
+  <p>The fix is the sixteen from Part One. A trip round the loop can drag in
+    <em>more copies</em> of a contradiction, but it cannot drag in a
+    contradiction that does not exist. There are sixteen different ones, so
+    sixteen is as high as the number can honestly go — and the arithmetic is
+    told to stop counting there.</p>
+
+  <p>Which turns an endless climb into a finite one. The value goes
+    <span class="mono">1, 3, 7, 13, &#8230; 16, 16, 16</span> and the engine
+    declares itself finished. That is not a trick or a timeout: the set of
+    possible values is now finite, and something that only ever goes up inside
+    a finite set has to stop.</p>
+
+  <div class="stamp">
+    <p><strong>The argument had a hole, and finding it is the point.</strong>
+      The original write-up said: the vocabulary is finite, therefore the
+      contradictions are finite, therefore the engine finishes. But a finite
+      vocabulary bounds a <em>set</em> of contradictions. It only bounds their
+      <em>sum</em> if nothing gets counted twice — and going round a loop
+      counts the same quarrel again and again. So the ceiling is not a
+      consequence of the argument. It is an extra ingredient, and without it
+      the engine really does run forever.</p>
+  </div>
+
+  <h3>Step by step, on the real rulebook</h3>
+
+  <ol class="steps">
+    <li>
+      <h3>Turn the rulebook into facts</h3>
+      <p>Twenty-four ordinances become 123 facts: who is in scope, what is
+        commanded, what is forbidden, which paragraphs cite which.</p>
+    </li>
+    <li>
+      <h3>Work out what each paragraph binds you to</h3>
+      <p>Directly, and through every citation. This is the step with the loop
+        in it. The plain yes/no answer settles immediately — the loop adds no
+        <em>new</em> obligations, only new ways to arrive at the old ones.</p>
+    </li>
+    <li>
+      <h3>Find the contradictions</h3>
+      <p>Two paragraphs in force in the same situation, one demanding an act
+        the other bans. Sixteen of them. A second program then enumerates all
+        256 situations by brute force, sharing no code with the rules, and gets
+        the same sixteen — so the engine is checked against an answer, not
+        against a number somebody remembered.</p>
+    </li>
+    <li>
+      <h3>Attach the chaos number</h3>
+      <p>Now the semiring runs over the same reasoning the engine already did,
+        with the ceiling set to sixteen. Twenty rounds later it settles. The
+        four paragraphs in the two citation loops come out at sixteen — they
+        hold almost nothing of their own and inherit everything, so every
+        contradiction in the book is reachable from them.</p>
+    </li>
+    <li>
+      <h3>Take the ceiling away, and check that it breaks</h3>
+      <p>Same data, same rules, same weights, ceiling removed. The engine
+        reports <span class="mono">converged: false</span> and stops at the
+        caller's round limit rather than hanging. The highest value is 38 after
+        40 rounds and 78 after 80 — measured twice, because one number stopped
+        at a limit cannot tell you whether it was climbing or merely slow.</p>
+    </li>
+  </ol>
+
+  <div class="scroll">
+    <table>
+      <tr><th>the fold</th><th class="num">with the ceiling</th><th class="num">without it</th></tr>
+      <tr><td>reached a fixed point</td><td class="num yes">yes</td><td class="num no">no</td></tr>
+      <tr><td>rounds</td><td class="num">20</td><td class="num">stopped at 40</td></tr>
+      <tr><td>highest value</td><td class="num">16</td><td class="num">38, then 78</td></tr>
+      <tr><td>declaration honoured</td><td class="num yes">yes</td><td class="num no">no</td></tr>
+    </table>
+  </div>
+
+  <p class="faint">Both rows come from the same program run. A claim that
+    something converges, printed without the divergence beside it, is a claim
+    nobody tested.</p>
+
+  <!-- ==================================================================== -->
+  <h2>The department at work</h2>
+
+  <p>With the machinery in place, the rest is bureaucracy. Ten petitions are
+    filed. The engine evaluates the rulebook twice for each — as it stands, and
+    as it would stand if granted — and decides on the difference. Seven are
+    granted. The three refusals are refused for three different reasons.</p>
+
+  <div class="scroll">
+    <pre>  GRANTED  p_09  +5 manufactured  -0 reconciled
+           That the citation ring of paragraphs 13 and 14 be extended to
+           the prohibition of rescission.
+  REFUSED  p_02  +0 manufactured  -1 reconciled
+           That the prohibition on the ignition of auditors be confined
+           to matins, in the interest of good order.
+  REFUSED  p_04  +3 manufactured  -1 reconciled
+           That the surrender of receipts be confined to the damned.
+  REFUSED  p_06  +0 manufactured  -0 reconciled
+           That paragraph 19 be affirmed in identical terms.</pre>
+  </div>
+
+  <p>Look at <span class="mono">p_04</span>. It creates three contradictions
+    and removes one — the rulebook ends up strictly worse — and it is
+    <strong>still refused</strong>. The department does not do arithmetic on
+    the balance. Making peace <em>anywhere</em> is the offence, and the engine
+    can say exactly where:</p>
+
+  <pre class="scroll">whynot approved[chancery](p_04):
+    failed premise: not reconciles[main](p_04, ...)
+      -- blocked: reconciles[main](p_04, o_007, o_008, surrender_receipt) holds
+
+  para 7 required surrender_receipt, para 8 forbade it, and now neither does.</pre>
+
+  <p>That is the petition's guilt, named. Not &ldquo;a condition was not
+    met&rdquo; but <em>these two paragraphs, and this act, which you made peace
+    over</em>.</p>
+
+  <h3>And the region that is too quiet</h3>
+
+  <p>The last verdict is about the rulebook's own drafting habit. Every
+    prohibition in it ends with the words <em>save upon a sealed writ</em>. Nobody
+    planned the consequence: since no prohibition applies to a sealed writ,
+    nothing in the entire codex contradicts anything else there.</p>
+
+  <pre class="scroll">  PLACID (1) — a REGION of the situation space at peace.
+    writ = sealed</pre>
+
+  <p>Twenty-four paragraphs agreeing by accident. The department will be
+    aiming its next amendment at exactly that spot — and nobody wrote a rule
+    saying so. It fell out of the same reflection machinery that
+    <span class="mono">examples/moot</span> uses to find dead feature flags,
+    with the sign of the judgement reversed and nothing else changed.</p>
+
+  <div class="foot">
+    <p>Rules: <span class="mono">examples/heck/heck.rofl</span> ·
+      program: <span class="mono">examples/heck/demo.ts</span> ·
+      pinned by <span class="mono">test/example-heck.test.ts</span> and
+      <span class="mono">test/semiring.test.ts</span>.</p>
+    <p>What could not be modelled — deontic override, netting, contradictions
+      that are not about acts, and whether Hell converges when the vocabulary
+      itself is allowed to grow — is set out in
+      <span class="mono">examples/heck/README.md</span>.</p>
+  </div>
+
+</div>

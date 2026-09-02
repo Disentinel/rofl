@@ -1,0 +1,18 @@
+// a.ts — every import site this layer is measured on, ONE PER LINE, so that a
+// site's identity (file, line, specifier) is the name a person would use.
+//
+// The set is chosen so that each of the seven resolution mechanisms occurs at
+// least once, and so that the two environments DISAGREE on three of them.
+import { b } from './b.ts';
+import { deep } from './sub/deep.ts';
+import p from './pick';
+import o from './onlyts';
+import i from './idx2';
+import { deep as s } from '#sub/deep.ts';
+import { parse } from '@babel/parser';
+import * as np from 'node:path';
+import bp from 'path';
+import { gone } from './nope.ts';
+
+const which = 'b';
+export const later = import('./' + which + '.ts');

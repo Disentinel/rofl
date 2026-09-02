@@ -1,0 +1,163 @@
+-- rules/spec-coverage.rofl — coverage of the SPECIFICATION, not of the code.
+--
+-- The kernel's own obligations, modelled so that the engine whose behaviour
+-- they govern can be asked about them. The question no grep and no coverage
+-- tool in this repository can answer today:
+--
+--     which obligation has no check, and which test guards nothing anyone
+--     wrote down.
+--
+-- A DUTY is one sentence in one document. It carries its citation in the same
+-- fact, so a duty with no provenance is not a thing this model can represent
+-- — the fabrication `examples/yak` is about is excluded by the shape rather
+-- than caught by an audit. What the audit catches is the citation that no
+-- longer resolves (`unfounded`), which is the failure mode that survives.
+--
+-- EDB — one ledger per source document (facts/spec.rofl):
+--   duty[Doc](Id, Kind, File, Line, Anchor)
+--       Kind: guaranteed | prohibited | limit | acceptance | done
+--       Anchor: text that must occur at File:Line, verified by scanners/spec.ts
+--
+-- EDB — [map], the librarian's editorial links (facts/spec.rofl):
+--   cited_check(C, File, Name)   a check named as it is written in the tree
+--   guards(C, Duty)              this check is what stands behind that duty
+--   amends(New, Old)             a later decision replaces an earlier sentence
+--   qualifies(New, Old)          a later sentence narrows one without retiring it
+--   restates(New, Old)           the same obligation, written twice
+--   discharged_by(Duty, Path)    an obligation whose discharge is an artefact,
+--                                not a test (a document, a paragraph)
+--
+-- EDB — [checks], written by scanners/spec.ts (`authority(checks, census)`):
+--   check(File, Name, Kind)      Kind: test | gate | ci
+--   test_file(File)              every test/*.test.ts in the tree
+--   citation_ok(Duty)            the anchor was found at the cited line
+--   artifact_present(Duty)       the artefact named by discharged_by exists
+--
+-- All eleven are declared extensional below: every one of them can legitimately
+-- be EMPTY (a census that found nothing, a run with no broken citation), and
+-- `undefined_premise[audit]` reads emptiness as a misspelling unless the input
+-- is declared. Declaring the input is the remedy, not a waiver — the same
+-- discipline `boot.rofl` applies to `imports`.
+
+edb(duty).
+edb(cited_check).
+edb(guards).
+edb(amends).
+edb(qualifies).
+edb(restates).
+edb(discharged_by).
+edb(check).
+edb(test_file).
+edb(citation_ok).
+edb(artifact_present).
+
+-- The working relation, gathered out of the document ledgers with the ledger
+-- kept as an ordinary argument. The bracket on the head IS the declaration of
+-- the crossing (`test/persp-var.test.ts`), so this is a bridge and not a leak.
+duty_of[coverage](O, K, P, F, L, A) :- duty[P](O, K, F, L, A).
+
+-- ---------------------------------------------------------------- change ---
+
+-- An obligation a later decision replaced. It stays in the model — the
+-- document still says it — but it is not what the kernel owes today, so it
+-- is not counted against coverage.
+superseded[coverage](Old) :- amends[map](_, Old).
+
+-- ...and one that a later sentence NARROWED without withdrawing. The
+-- distinction is load-bearing: a qualified obligation is still owed, so it
+-- still has to be covered. Recording `Facts may be asserted into reserved
+-- relations` as an amendment would have retired the rule-rejection duty that
+-- `test/phase3.test.ts` still holds — the model lying in the direction that
+-- flatters it.
+qualified[coverage](Old, New) :- qualifies[map](New, Old).
+live_duty[coverage](O)    :- duty_of[coverage](O, _, _, _, _, _),
+                             not superseded[coverage](O).
+
+-- ------------------------------------------------------------- coverage ---
+
+-- A cited check STANDS when the census found it under that exact name.
+check_stands[coverage](C)  :- cited_check[map](C, F, N), check[checks](F, N, _).
+
+-- ...and it DANGLES when it did not: the test was renamed or deleted, and the
+-- citation now names nothing. This is the rule that makes the model an audit
+-- rather than a bibliography — deleting a guard test moves a duty from
+-- covered to uncovered without anyone editing this file.
+dangling[coverage](C, O)   :- guards[map](C, O), cited_check[map](C, F, N),
+                              not check[checks](F, N, _).
+
+-- ...and a guard naming a check id that nothing declares at all. Without
+-- this rule such a link is INVISIBLE: `guarded_by` needs a `cited_check` to
+-- join through, so a typo'd id silently guards nothing and its duty reports
+-- as uncovered with no explanation. An audit whose failure mode is silence
+-- is the failure mode this repository exists to remove.
+undefined_citation[coverage](C, O) :- guards[map](C, O), not cited_check[map](C, _, _).
+
+-- What kind of instrument stands behind an obligation: a test, a gate script,
+-- a CI step. The distinction the documents cannot make about themselves.
+guarded_by[coverage](O, K) :- guards[map](C, O), cited_check[map](C, F, N),
+                              check[checks](F, N, K).
+covered[coverage](O)       :- guarded_by[coverage](O, _).
+
+-- THE ANSWER. An obligation the kernel owes today with nothing mechanical
+-- behind it: it holds because the prose says so.
+uncovered[coverage](O)     :- live_duty[coverage](O), not covered[coverage](O).
+
+-- Not every uncovered duty is unattended. `document the omission` is
+-- discharged by a document; the model says which document, and the census
+-- says whether it is still there.
+prose_discharged[coverage](O) :- uncovered[coverage](O), artifact_present[checks](O).
+unattended[coverage](O)       :- uncovered[coverage](O),
+                                 not prose_discharged[coverage](O).
+
+-- The sharp end: a PROHIBITION with no mechanical check. Nothing at all
+-- stands between the next author and the shortcut.
+open_shortcut[coverage](O) :- uncovered[coverage](O),
+                              duty_of[coverage](O, prohibited, _, _, _, _).
+
+-- ---------------------------------------------------------- fabrication ---
+
+-- A duty whose anchor is not at the line it names. Either the document moved
+-- under the model, or the sentence was never there — and the model cannot
+-- tell those apart, which is why it reports the citation and not a verdict.
+unfounded[coverage](O)     :- duty_of[coverage](O, _, _, _, _, _),
+                              not citation_ok[checks](O).
+
+-- --------------------------------------------------------- the converse ---
+
+-- A test file no duty cites: behaviour the tree guards and no document in the
+-- model demands. Reported per FILE, because a single test is guarded prose at
+-- the wrong granularity — obligations are sentences, and one sentence is
+-- normally guarded by one or two named tests out of a file of twenty.
+named_file[coverage](F)    :- guards[map](C, _), cited_check[map](C, F, _).
+unwritten[coverage](F)     :- test_file[checks](F), not named_file[coverage](F).
+
+-- ============ what [coverage] is allowed to read ============
+--
+-- Written out because the kernel stopped writing it. `crossing` used to carry
+-- `not bridge_decl(R, A, B)`, emitted for any rule whose head named a ledger
+-- and whose body read another, so every rule above licensed its own read by
+-- existing and this file reported `leak[audit]` 0 for a reason unrelated to
+-- the file. It reports three crossings now, and they are declared here.
+--
+-- [coverage] READS [map], the citation book: `guards`, `cited_check` and
+-- `amends`/`qualifies` are what a coverage verdict is COMPUTED FROM. Reading
+-- them is the whole of this model.
+imports(coverage, map).
+
+-- [coverage] READS [checks], the book of tests that exist on disk. Same
+-- reason: `check_stands` and `unwritten` compare a citation against the file
+-- it names, and there is no way to do that without reading both books.
+imports(coverage, checks).
+
+-- AND the gather `imports` cannot express. `duty_of[coverage](O, K, P, F, L,
+-- A) :- duty[P](O, K, F, L, A).` reads a VARIABLE ledger: seven documents each
+-- keep their duties in their own book ([boot], [decided], [limits], [perf],
+-- [readme], [spec], [wfs]), and the point of the relation is that it does not
+-- care which. `$var("P")` has no `authority` fact and can never be the From of
+-- an import, so `collects` is the only sentence available — and it is true:
+-- this ledger deliberately gathers from books it does not name.
+--
+-- Narrow: `collects_from` requires `not perspective(A)`, so the two named
+-- crossings above still need the two `imports` lines above, and would still be
+-- reported without them.
+collects(coverage).

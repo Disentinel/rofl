@@ -1,0 +1,535 @@
+-- facts/spec.rofl — the kernel's obligations, as facts.
+--
+-- Six documents, six ledgers. A ledger is a book with a nameable list of
+-- writers (docs/choosing-perspectives.md), and these six qualify for the
+-- reason that discipline gives: contradictory entries coexist in them
+-- LEGALLY and neither is an error. `duty[limits](l_frozen_never_gc, ...)`
+-- says provenance is never collected; `duty[decided](d_retain_ticks, ...)`
+-- says a window may drop it. Both sentences are really in the tree. Filing
+-- them in one book would make the pair a defect to be resolved; filing them
+-- in two makes it an amendment to be recorded, which is what it is.
+--
+-- The librarian is the transcriber, not the author, so `authority` is not
+-- what keeps this honest — every ledger has the same single writer. What
+-- keeps it honest is that a duty carries its citation in the same fact and
+-- `scanners/spec.ts` reads the cited line: an entry nobody can trace to a
+-- line surfaces as `unfounded[coverage]`. Discipline: rules/spec-coverage.rofl.
+
+authority(main, librarian).
+authority(spec, librarian).
+authority(limits, librarian).
+authority(boot, librarian).
+authority(readme, librarian).
+authority(decided, librarian).
+authority(perf, librarian).
+authority(wfs, librarian).
+authority(map, librarian).
+authority(checks, census).
+
+-- @who librarian
+
+-- ======================================================= START.md [spec] ===
+-- The contract. Kinds: `guaranteed` (the kernel must do this), `prohibited`
+-- (§7, each voids acceptance), `acceptance` (§5, a criterion with a test
+-- named in the spec itself), `done` (§6, a deliverable).
+
+duty[spec](s_semantics_as_data, guaranteed, "START.md", 7, "live in the graph as data").
+duty[spec](s_zero_deps, guaranteed, "START.md", 5, "zero runtime dependencies").
+duty[spec](s_two_runtimes, guaranteed, "START.md", 5, "runs under Bun or Node").
+
+duty[spec](s_budgets_are_semantics, guaranteed, "START.md", 13, "budgets are part of the semantics, not a safety net").
+duty[spec](s_structured_terms, guaranteed, "START.md", 36, "are required").
+duty[spec](s_document_no_occurs_check, done, "START.md", 36, "document the omission").
+duty[spec](s_whynot_is_abduction, guaranteed, "START.md", 49, "it names the unbound premise").
+
+duty[spec](s_grammar_temporal, guaranteed, "START.md", 26, "temporal   :=").
+duty[spec](s_appendix_dep_edges, guaranteed, "START.md", 160, "dep(A, B)          :- concludes(R, A), premise_pos(R, B).").
+duty[spec](s_appendix_leak, guaranteed, "START.md", 180, "leak[audit](A, B)     :- flow(A, B), not sees(B, A), not bridge_decl(R, A, B).").
+duty[spec](s_vocabulary_closed, guaranteed, "START.md", 55, "This list is closed").
+duty[spec](s_reserved_rejected_at_load, guaranteed, "START.md", 69, "is rejected at load with a diagnostic").
+
+duty[spec](s_main_is_named, guaranteed, "START.md", 76, "which is *named*, not implied").
+duty[spec](s_reads_only_what_it_sees, guaranteed, "START.md", 76, "may only match facts in perspectives it").
+duty[spec](s_no_silent_crossing, guaranteed, "START.md", 76, "no silent crossing").
+duty[spec](s_sees_computed_by_boot, guaranteed, "START.md", 76, "computed by boot rules, not by the kernel").
+
+duty[spec](s_no_stratification_checker, guaranteed, "START.md", 79, "The kernel does not contain a stratification checker").
+duty[spec](s_strata_read_from_facts, guaranteed, "START.md", 79, "read from derived facts").
+duty[spec](s_reject_unstratified, guaranteed, "START.md", 79, "reject the program with the reach-trace as diagnostic").
+
+duty[spec](s_init_at_tick_zero, guaranteed, "START.md", 82, "facts exist at tick 0 only").
+duty[spec](s_persistence_is_a_rule, guaranteed, "START.md", 82, "Persistence is not a storage property").
+duty[spec](s_async_reserved_rejected, prohibited, "START.md", 82, "reserved syntax").
+
+duty[spec](s_determinism, guaranteed, "START.md", 85, "regardless of insertion order").
+duty[spec](s_canonical_order, guaranteed, "START.md", 85, "lexicographic order of their canonical serialization").
+
+duty[spec](s_provenance_per_firing, guaranteed, "START.md", 88, "On every successful rule firing the kernel emits").
+duty[spec](s_witness_is_first_canonical, guaranteed, "START.md", 88, "first derivation in canonical order").
+duty[spec](s_excise_not_from_witness, guaranteed, "START.md", 88, "must NOT be computed from witnesses").
+
+duty[spec](s_budget_emits_hole, guaranteed, "START.md", 91, "returns the partial result marked partial").
+duty[spec](s_never_hang, prohibited, "START.md", 91, "a kernel that hangs instead of emitting").
+
+duty[spec](s_report_loc_overrun, done, "START.md", 107, "report it rather than pushing through").
+duty[spec](s_rules_are_subgraphs, guaranteed, "START.md", 109, "every rule is stored as a subgraph").
+duty[spec](s_evaluator_reads_store, guaranteed, "START.md", 109, "the evaluator reads rules only from the store").
+
+-- §5, the phase acceptance criteria. These are the obligations the spec
+-- itself paired with a test, and they are here as the POSITIVE CONTROL for
+-- the coverage rules: a model in which nothing comes out covered would be
+-- as useless as one in which everything does.
+duty[spec](s_a_transitive_closure, acceptance, "START.md", 115, "transitive-closure program derives correct closure").
+duty[spec](s_a_structured_term_test, acceptance, "START.md", 115, "structured-term test (list append via terms) passes").
+duty[spec](s_a_naive_eq_seminaive, acceptance, "START.md", 117, "differential test: naive").
+duty[spec](s_a_why_tree, acceptance, "START.md", 117, "returns a derivation tree ending in EDB facts").
+duty[spec](s_a_perspective_isolation, acceptance, "START.md", 117, "a rule reading a perspective it cannot see matches nothing").
+duty[spec](s_a_stratum_order, acceptance, "START.md", 117, "negation executes in stratum order").
+duty[spec](s_a_kernel_grep, acceptance, "START.md", 119, "no relation name outside").
+duty[spec](s_a_runtime_rule, acceptance, "START.md", 119, "starts deriving without restart or reload").
+duty[spec](s_a_malformed_sibling, acceptance, "START.md", 119, "is condemned by its sibling rule").
+duty[spec](s_a_round_trip, acceptance, "START.md", 119, "round-trip test from").
+duty[spec](s_a_counter, acceptance, "START.md", 121, "counter.rofl runs").
+duty[spec](s_a_replay_shuffled, acceptance, "START.md", 121, "bit-identical states across 100 runs with shuffled insertion order").
+duty[spec](s_a_busy_beaver, acceptance, "START.md", 121, "executes a 3-state busy beaver to halt under budget").
+duty[spec](s_a_diverging_hole, acceptance, "START.md", 121, "a diverging variant yields").
+duty[spec](s_a_boot_audits_empty, acceptance, "START.md", 121, "all four audit queries return empty").
+duty[spec](s_a_sensors_scenario, acceptance, "START.md", 121, "full scenario passes").
+
+-- §6, definition of done.
+duty[spec](s_done_ci_green, done, "START.md", 127, "criteria green in CI").
+duty[spec](s_done_readme, done, "START.md", 128, "a paragraph on every place where you deviated").
+duty[spec](s_done_limits, done, "START.md", 129, "honestly listing what v0 does not do").
+
+-- §7, the prohibited shortcuts. Each voids acceptance.
+duty[spec](s7_no_hardcoded_boot, prohibited, "START.md", 133, "Hardcoding any boot.rofl rule").
+duty[spec](s7_no_clause_objects, prohibited, "START.md", 134, "Evaluator reading parsed clause objects").
+duty[spec](s7_no_log_provenance, prohibited, "START.md", 135, "Provenance as a log string").
+duty[spec](s7_no_witness_excise, prohibited, "START.md", 136, "Excise computed from stored witnesses").
+duty[spec](s7_no_nondeterministic_iteration, prohibited, "START.md", 137, "Nondeterministic iteration").
+duty[spec](s7_no_silent_overrun, prohibited, "START.md", 138, "Silently completing a budgeted query past its budget").
+duty[spec](s7_no_skipping_reject_path, prohibited, "START.md", 139, "Skipping the stratification reject path").
+duty[spec](s7_no_pretend_async, prohibited, "START.md", 140, "as implemented instead of explicitly rejected").
+
+-- §8, out of scope.
+duty[spec](s8_out_of_scope, prohibited, "START.md", 144, "aggregation, GPU anything, persistence layers, optimization passes, syntax sugar").
+
+-- ====================================================== LIMITS.md [limits] ===
+-- What v0 deliberately does NOT do. Nineteen bullets; four of them state
+-- several separately-checkable claims and are split here, because one named
+-- test against a twenty-line bullet would mark the whole bullet covered and
+-- that is exactly the generosity this model exists to avoid.
+
+duty[limits](l_no_async, limit, "LIMITS.md", 6, "No `@async`").
+duty[limits](l_no_incremental_maintenance, limit, "LIMITS.md", 9, "No delta is ever propagated into a").
+duty[limits](l_reuse_fingerprint, limit, "LIMITS.md", 14, "The derived layer is reused per relation, under an exact fingerprint").
+duty[limits](l_reuse_a_no_read_reused, limit, "LIMITS.md", 37, "may not read one it reuses").
+duty[limits](l_reuse_b_stratum_gate, limit, "LIMITS.md", 44, "SCHEDULE is an input to every derivation").
+duty[limits](l_reuse_c_tick_boundary, limit, "LIMITS.md", 60, "Nothing").
+duty[limits](l_reuse_switchable, limit, "LIMITS.md", 66, "Reuse can be switched off").
+duty[limits](l_no_multi_fact_abduction, limit, "LIMITS.md", 72, "Every level of `whynot` is single-step").
+duty[limits](l_whynot_recurses, limit, "LIMITS.md", 75, "It does now recurse *into* each failing premise").
+duty[limits](l_no_occurs_check, limit, "LIMITS.md", 83, "No occurs-check").
+duty[limits](l_no_persistence, limit, "LIMITS.md", 86, "No persistence beyond store serialization").
+duty[limits](l_partial_strata, limit, "LIMITS.md", 89, "Stratum inference is data-driven and can be partial").
+duty[limits](l_unchecked_without_boot, limit, "LIMITS.md", 101, "negation is").
+duty[limits](l_demand_premise_order, limit, "LIMITS.md", 113, "Rules that are not range-restricted").
+duty[limits](l_demand_depth_512, limit, "LIMITS.md", 115, "Recursion depth through demand rules is capped at").
+duty[limits](l_demand_no_enumeration, limit, "LIMITS.md", 120, "with all arguments unbound cannot").
+duty[limits](l_queries_are_god_view, limit, "LIMITS.md", 122, "Queries are god-view").
+duty[limits](l_budget_counts_firings, limit, "LIMITS.md", 124, "Budgets count distinct firings + demand nodes").
+duty[limits](l_no_floats_no_bignums, limit, "LIMITS.md", 127, "No floats, no bignums").
+duty[limits](l_zero_divisor_fails, limit, "LIMITS.md", 128, "division/modulo by zero simply fails the builtin premise").
+duty[limits](l_comparisons_need_ground_ints, limit, "LIMITS.md", 129, "builtins require ground integer operands").
+duty[limits](l_reflection_in_main, limit, "LIMITS.md", 130, "Reflection facts live in").
+duty[limits](l_asserted_by_needs_who, limit, "LIMITS.md", 133, "assert provides a").
+duty[limits](l_retraction_leaves_no_trail, limit, "LIMITS.md", 136, "a retraction removes the trail rows outright").
+duty[limits](l_init_after_zero_inert, limit, "LIMITS.md", 139, "after tick 0 is inert").
+duty[limits](l_next_not_assertable, limit, "LIMITS.md", 140, "are not assertable directly").
+duty[limits](l_frozen_never_collected, limit, "LIMITS.md", 141, "Frozen provenance is never garbage-collected").
+duty[limits](l_undefined_is_a_dictionary, limit, "LIMITS.md", 144, "a dictionary check, not a coverage check").
+duty[limits](l_undefined_silent_on_negation, limit, "LIMITS.md", 147, "nothing about negated").
+duty[limits](l_undefined_silenced_by_one_fact, limit, "LIMITS.md", 151, "one stray fact of the right name silences the audit").
+duty[limits](l_no_aggregation, limit, "LIMITS.md", 156, "No aggregation, no optimization passes, no syntax sugar, no GPU anything").
+
+-- ======================================================= README.md [readme] ===
+-- The deviation register START.md 128 demands. Twelve bullets; every one of
+-- them is a sentence of the contract the kernel does NOT keep as written, and
+-- six name the sentence they replace. This ledger is why `superseded` exists:
+-- an obligation nobody owes any more is not an obligation with no test.
+
+duty[readme](r_vocabulary_additions, guaranteed, "README.md", 237, "Vocabulary additions.").
+duty[readme](r_conclusion_tense, guaranteed, "README.md", 243, "conclusion_tense").
+duty[readme](r_flows_to, guaranteed, "README.md", 258, "the transitive closure of").
+duty[readme](r_collects, guaranteed, "README.md", 275, "the collection graph").
+duty[readme](r_stratum_in_kernel_source, guaranteed, "README.md", 299, "appear in kernel source").
+duty[readme](r_perspective_registration, guaranteed, "README.md", 306, "Perspective registration.").
+duty[readme](r_variable_perspectives, guaranteed, "README.md", 312, "Variable perspectives.").
+duty[readme](r_moded_relations, guaranteed, "README.md", 323, "Moded (demand) relations.").
+duty[readme](r_timeless_kernel_facts, guaranteed, "README.md", 332, "Timeless kernel facts.").
+duty[readme](r_facts_into_reserved, guaranteed, "README.md", 339, "Facts may be asserted into reserved relations.").
+duty[readme](r_edb_for_reserved, guaranteed, "README.md", 344, "for reserved relations.").
+duty[readme](r_unstratifiable_is_budgeted, guaranteed, "README.md", 349, "Unstratifiable rejection is budget-mediated").
+duty[readme](r_rounds_replace_strata, guaranteed, "README.md", 358, "Rounds replace the stratum table").
+
+-- ======================================================= boot.rofl [boot] ===
+-- The meta-kernel's own required results, stated in a comment block at the
+-- foot of the file it governs. Seven assertions; START.md's Appendix A had
+-- four, and the three added since are the interesting half.
+
+duty[boot](b_malformed_empty, guaranteed, "boot.rofl", 154, "malformed[audit](R)").
+duty[boot](b_breach_empty, guaranteed, "boot.rofl", 154, "breach[audit](R)").
+duty[boot](b_leak_empty, guaranteed, "boot.rofl", 155, "leak[audit](A,B)").
+duty[boot](b_forged_empty, guaranteed, "boot.rofl", 155, "forged[audit](F)").
+duty[boot](b_unmoded_empty, guaranteed, "boot.rofl", 156, "unmoded[audit](R)").
+duty[boot](b_collected_declared_only, guaranteed, "boot.rofl", 157, "collected[audit](X)").
+duty[boot](b_undefined_premise_empty, guaranteed, "boot.rofl", 158, "undefined_premise[audit](R, Rel)").
+duty[boot](b_whynot_finite, guaranteed, "boot.rofl", 159, "whynot flows_to(red, blue)").
+duty[boot](b_stratifiable_by_loading, guaranteed, "boot.rofl", 163, "answered by the file LOADING AT ALL").
+
+-- TWO REQUIRED RESULTS WERE WITHDRAWN, not merely re-anchored, and the
+-- difference is the reason this ledger exists. `? unstratified(X) -> empty`
+-- and `whynot unstratified(reach) -> finite demonstration via dep/reach` are
+-- not sentences that moved: the ten rules that answered them left boot.rofl
+-- when the evaluator started peeling its schedule off the decoded rules, and
+-- the relation they were about does not exist. Re-anchoring either of them to
+-- the paragraph that explains their removal would have made the model say the
+-- obligation still stands and is still cited, which is the flattering lie the
+-- `unfounded` audit exists to catch — so both were deleted and replaced:
+--   `b_stratifiable_by_loading` is what answers the first question now (a
+--   program whose peel stalls is refused before a query is possible, so the
+--   file loading IS the answer), and
+--   `b_whynot_finite` keeps its id and its meaning — a finite failure
+--   demonstration through a RECURSIVE relation — asked of `flows_to`, the
+--   transitive closure boot.rofl still carries.
+-- `b_forged_empty` and `b_unmoded_empty` are new for a duller reason: the
+-- required-results list always ran those audits and never listed them.
+
+-- ======================= docs/time-and-continuity.md [decided] =============
+-- Decisions taken this week that amend the contract. Each `amends` link below
+-- names the sentence it replaces, and both ends are cited.
+
+duty[decided](d_not_p_is_this_tick, guaranteed, "docs/time-and-continuity.md", 8, "is not derivable in the CURRENT TICK").
+duty[decided](d_dep_graph_is_one_tick, guaranteed, "docs/time-and-continuity.md", 31, "the dependency graph is about ONE tick").
+duty[decided](d_semiring_is_one_tick, guaranteed, "docs/time-and-continuity.md", 36, "the semiring fold is about one tick too").
+duty[decided](d_next_in_body_rejected, guaranteed, "docs/time-and-continuity.md", 59, "is rejected by the parser, deliberately").
+duty[decided](d_veto_belongs_inside, guaranteed, "docs/time-and-continuity.md", 114, "A veto the model can express belongs inside the model").
+duty[decided](d_retain_ticks, guaranteed, "docs/time-and-continuity.md", 160, "keeps the current tick's provenance plus the").
+duty[decided](d_retention_off_by_default, guaranteed, "docs/time-and-continuity.md", 164, "It is off unless asked for").
+duty[decided](d_retention_conditional, guaranteed, "docs/time-and-continuity.md", 170, "Retention is conditional on whether the program reads its own provenance").
+duty[decided](d_tick_records_budget, guaranteed, "docs/time-and-continuity.md", 186, "a tick now records the budget it was evaluated with").
+
+-- ==================== docs/performance-invariants.md [perf] ================
+-- Only the invariants that are about THIS kernel. I3, I5 and I6 in that
+-- section are measurements of the FIELD (Souffle, RecStep, DDlog) and oblige
+-- nothing here, so they are not duties and are not listed.
+
+duty[perf](p_p1_one_witness_per_derivation, guaranteed, "docs/performance-invariants.md", 130, "Provenance costs one witness per distinct derivation").
+duty[perf](p_p2_provenance_is_not_the_cost, guaranteed, "docs/performance-invariants.md", 134, "the reason this engine is slow").
+duty[perf](p_i1_insertion_order_is_the_cost, guaranteed, "docs/performance-invariants.md", 151, "Insertion order, not the index, is the cost").
+duty[perf](p_i2_self_audit_tracks_program_size, guaranteed, "docs/performance-invariants.md", 160, "Self-audit cost tracks program size, not data size").
+
+-- ====================== docs/three-valued-answers.md [wfs] =================
+
+duty[wfs](t_alternating_fixpoint, guaranteed, "docs/three-valued-answers.md", 9, "runs an alternating fixpoint instead of the").
+duty[wfs](t_budget_emits_no_unknown, guaranteed, "docs/three-valued-answers.md", 70, "row is emitted at all").
+duty[wfs](t_stratum_table_survives, guaranteed, "docs/three-valued-answers.md", 76, "It survives, untouched, on the evaluator that reads it").
+
+-- @who librarian
+
+-- ========================================================== the map [map] ==
+-- Editorial links: which check stands behind which duty, which sentence
+-- replaced which. Every check below is named exactly as it is written in the
+-- tree; `scanners/spec.ts` looks each one up, and a rename breaks the link
+-- loudly (`dangling[coverage]`) instead of quietly.
+
+-- ---- checks, as cited -----------------------------------------------------
+
+cited_check[map](c_grep_test, "test/phase3.test.ts", "kernel grep test: no relation name outside the vocabulary in kernel source").
+cited_check[map](c_grepcheck_gate, "scripts/kernel_grep.ts", "npm run grepcheck").
+cited_check[map](c_reserved_reject, "test/phase3.test.ts", "rules concluding into kernel relations are rejected at load").
+cited_check[map](c_breach_surfaces, "test/phase3.test.ts", "hand-asserted reflection concluding into reserved surfaces as breach").
+cited_check[map](c_runtime_rule, "test/phase3.test.ts", "a rule added at runtime (as facts, same assert path) derives without reload").
+cited_check[map](c_malformed_sibling, "test/phase3.test.ts", "boot's malformed validator, premise deleted via API, is condemned by its sibling").
+cited_check[map](c_round_trip, "test/phase3.test.ts", "round-trip: serialize store -> new process -> load -> identical evaluation, no re-parse").
+
+cited_check[map](c_tc_seminaive, "test/phase1.test.ts", "transitive closure derives the correct closure (seminaive)").
+cited_check[map](c_tc_naive, "test/phase1.test.ts", "transitive closure derives the correct closure (naive)").
+cited_check[map](c_structured_terms, "test/phase1.test.ts", "structured terms: list append via moded rules").
+cited_check[map](c_async_rejected, "test/phase1.test.ts", "@async parses but is rejected with a diagnostic").
+cited_check[map](c_next_body_rejected, "test/phase1.test.ts", "@next is rejected in rule bodies").
+cited_check[map](c_arith_builtins, "test/phase1.test.ts", "arithmetic builtins: is, mod, comparisons, negatives").
+
+cited_check[map](c_differential, "test/phase2.test.ts", "differential: naive ≡ seminaive on 120 random seeded programs").
+cited_check[map](c_differential_negation, "test/phase2.test.ts", "differential with stratified negation: naive ≡ seminaive on 30 seeds").
+cited_check[map](c_why_tree, "test/phase2.test.ts", "why returns a derivation tree ending in EDB facts").
+cited_check[map](c_perspective_isolation, "test/phase2.test.ts", "a rule reading a perspective it cannot see matches nothing").
+cited_check[map](c_stratum_order, "test/phase2.test.ts", "negation executes in stratum order read from stratum/2 facts").
+cited_check[map](c_no_boot_no_strata, "test/phase2.test.ts", "without boot meta-rules there are no stratum facts and the plan says so").
+cited_check[map](c_unstratified_rejected, "test/phase2.test.ts", "unstratifiable program is rejected with a reach-trace diagnostic").
+cited_check[map](c_provenance_queryable, "test/phase2.test.ts", "provenance: derived_by facts are queryable and support counting works").
+
+cited_check[map](c_counter, "test/phase4.test.ts", "counter.rofl: intention facts 1..5 at tick boundaries, silent fixpoint after").
+cited_check[map](c_replay_shuffled, "test/phase4.test.ts", "replay: bit-identical states across 100 runs with shuffled insertion order").
+cited_check[map](c_busy_beaver, "test/phase4.test.ts", "tm.rofl: 3-state busy beaver halts under budget with the correct tape").
+cited_check[map](c_diverging_hole, "test/phase4.test.ts", "tm_diverge.rofl: budget exhausts, hole emitted, partial trace queryable, no hang").
+cited_check[map](c_boot_four_audits, "test/phase4.test.ts", "boot.rofl loads; all six audit queries empty; whynot flows_to(red, blue) finite").
+cited_check[map](c_rounds_primary, "test/phase2.test.ts", "...and the PRIMARY path orders the same program with no table at all").
+cited_check[map](c_reject_is_free, "test/reject-budget-invariance.test.ts", "refusing a program costs the same at 16x the budget").
+cited_check[map](c_sensors_scenario, "test/phase4.test.ts", "sensors.rofl: the full acceptance scenario").
+cited_check[map](c_excise_multiple_support, "test/phase4.test.ts", "excise survives multiple support (not witness-based)").
+cited_check[map](c_forged_audit, "test/phase4.test.ts", "forged audit: asserting into a perspective without authority").
+cited_check[map](c_budget_partial, "test/phase4.test.ts", "budgeted query on a heavy program returns partial and emits hole").
+
+cited_check[map](c_arrival_order, "test/index-arrival.test.ts", "ascending, shuffled and descending arrival build the same store, byte for byte").
+cited_check[map](c_sorted_keys, "test/store-conformance.test.ts", "MUTANT: unsorted keys turn the end-to-end oracle red").
+cited_check[map](c_witness_canonical, "test/semiring.test.ts", "the store retains every witness, in canonical order, and round-trips it").
+cited_check[map](c_witness_load_order, "test/semiring.test.ts", "witness order does not depend on the order the rules were loaded").
+cited_check[map](c_semiring_boundary, "test/semiring.test.ts", "the witness tick stamp cannot tell a boundary support from a fresh one").
+
+cited_check[map](c_undefined_boot_clean, "test/undefined-premise.test.ts", "boot.rofl audits itself clean, and its other audits stay clean").
+cited_check[map](c_undefined_negation, "test/undefined-premise.test.ts", "a negated premise on an unpopulatable relation is deliberately NOT flagged").
+cited_check[map](c_reserved_never_flagged, "test/undefined-premise.test.ts", "reserved relations are never flagged, even when they hold nothing").
+cited_check[map](c_undefined_misspelling, "test/undefined-premise.test.ts", "a premise misspelled by one character is caught; the correct spelling is not").
+
+cited_check[map](c_reuse_boot, "test/derived-reuse.test.ts", "boot.rofl alone: reuse ≡ scratch across asserts, new relations, new perspectives").
+cited_check[map](c_reuse_no_read_reused, "test/derived-reuse.test.ts", "a new relation moves `undefined_premise` and leaves `flows_to` alone; a new fact of an existing one moves neither").
+cited_check[map](c_reuse_stratum_gate, "test/derived-reuse.test.ts", "the schedule is gated globally: a stratum table that moves refuses reuse").
+cited_check[map](c_reuse_tick_boundary, "test/derived-reuse.test.ts", "a tick boundary drops every fingerprint: nothing derived crosses one").
+cited_check[map](c_reuse_provenance_off, "test/derived-reuse.test.ts", "a rule that reads provenance turns reuse off entirely").
+cited_check[map](c_save_restore, "test/derived-reuse.test.ts", "save/restore: a restored store starts cold and lands on the same state").
+
+cited_check[map](c_whynot_names_stage, "test/whynot.test.ts", "the pipe: whynot names the stage that ate the row, down to the builtin").
+cited_check[map](c_whynot_single_step, "test/whynot.test.ts", "depth 1 is the single-step form whynot has always produced").
+cited_check[map](c_whynot_recursion, "test/whynot.test.ts", "an open query recurses on the existential reading of the failure").
+cited_check[map](c_whynot_caps, "test/whynot.test.ts", "the depth cap fires, and announces itself").
+
+cited_check[map](c_next_no_dep_edge, "test/next-tense.test.ts", "a relation only ever concluded @next draws no same-tick edge, and is ordered by nothing").
+cited_check[map](c_next_loop_opens, "test/next-tense.test.ts", "the SAME loop written across the tick boundary loads and runs").
+cited_check[map](c_next_cycle_refused, "test/next-tense.test.ts", "a same-tick negative cycle is still refused, and the same program opened is not").
+
+cited_check[map](c_retain_default, "test/provenance-retention.test.ts", "an unconfigured Rofl keeps every completed tick, exactly as before").
+cited_check[map](c_retain_window, "test/provenance-retention.test.ts", "the window is off unless asked for, and keeps exactly N completed ticks").
+cited_check[map](c_retain_conditional, "test/provenance-retention.test.ts", "a program that reads derived_by keeps its provenance, and its answers").
+cited_check[map](c_tick_budget_logged, "test/provenance-retention.test.ts", "each tick records the budget it ran under, and a replay can read it").
+cited_check[map](c_asserted_tick, "test/asserted-tick.test.ts", "an assertion records the tick it was made in").
+cited_check[map](c_asserted_who_and_when, "test/asserted-tick.test.ts", "two authors of the same fact keep who and when together").
+
+cited_check[map](c_persp_var_same_ledger, "test/persp-var.test.ts", "a rule that reads and writes the SAME ledger variable is not a leak").
+cited_check[map](c_flow_closure, "test/flow-closure.test.ts", "the closure ADDS the walk and does not swallow the direct crossing").
+cited_check[map](c_collects_narrow, "test/flow-closure.test.ts", "the declaration licenses the gather and does NOT license the named walk").
+cited_check[map](c_collects_askable, "test/flow-closure.test.ts", "the licence can be ASKED about: `why` names the declaration and its author").
+
+cited_check[map](c_firing_counts_once, "test/firing-signature.test.ts", "a demand-backed derivation counts once, as its range-restricted twin does").
+cited_check[map](c_firing_two_stay_two, "test/firing-signature.test.ts", "two derivations that differ only in bound values stay two").
+cited_check[map](c_shuffled_arrival_cost, "test/index-arrival.test.ts", "shuffled arrival costs about what ascending arrival costs").
+cited_check[map](c_arith_zero_divisor, "test/arith-hole.test.ts", "a zero divisor is its own reason, and the other rows still derive").
+cited_check[map](c_wf_three_values, "test/well-founded.test.ts", "three values in ONE store: true, false, and undefined are all distinguishable").
+cited_check[map](c_wf_budget_no_unknown, "test/well-founded.test.ts", "a run cut short is a hole, and claims no unknowns at all").
+cited_check[map](c_wf_stratum_untouched, "test/well-founded.test.ts", "stratum is not computed under the alternation, and the peel still answers").
+cited_check[map](c_wf_demand_refused, "test/well-founded.test.ts", "a demand-backed relation is refused rather than silently assumed").
+
+cited_check[map](c_text_reviewable, "test/text-check.test.ts", "every tracked source file is reviewable text").
+cited_check[map](c_ci_node, ".github/workflows/ci.yml", "tests (node --test)").
+cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "tests (bun test)").
+cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
+
+-- ---- what stands behind what ----------------------------------------------
+
+guards[map](c_grepcheck_gate, s_semantics_as_data).
+guards[map](c_grep_test, s_semantics_as_data).
+guards[map](c_grepcheck_gate, s_vocabulary_closed).
+guards[map](c_ci_bun, s_two_runtimes).
+guards[map](c_ci_node, s_two_runtimes).
+guards[map](c_structured_terms, s_structured_terms).
+guards[map](c_reserved_reject, s_reserved_rejected_at_load).
+guards[map](c_breach_surfaces, s_reserved_rejected_at_load).
+guards[map](c_perspective_isolation, s_reads_only_what_it_sees).
+guards[map](c_persp_var_same_ledger, s_no_silent_crossing).
+guards[map](c_flow_closure, s_no_silent_crossing).
+guards[map](c_grepcheck_gate, s_sees_computed_by_boot).
+guards[map](c_grepcheck_gate, s_no_stratification_checker).
+guards[map](c_no_boot_no_strata, s_no_stratification_checker).
+guards[map](c_stratum_order, s_strata_read_from_facts).
+guards[map](c_unstratified_rejected, s_reject_unstratified).
+guards[map](c_async_rejected, s_async_reserved_rejected).
+guards[map](c_replay_shuffled, s_determinism).
+guards[map](c_arrival_order, s_determinism).
+guards[map](c_sorted_keys, s_canonical_order).
+guards[map](c_provenance_queryable, s_provenance_per_firing).
+guards[map](c_witness_canonical, s_witness_is_first_canonical).
+guards[map](c_witness_load_order, s_witness_is_first_canonical).
+guards[map](c_excise_multiple_support, s_excise_not_from_witness).
+guards[map](c_budget_partial, s_budget_emits_hole).
+guards[map](c_budget_partial, s_budgets_are_semantics).
+guards[map](c_diverging_hole, s_budgets_are_semantics).
+guards[map](c_whynot_names_stage, s_whynot_is_abduction).
+guards[map](c_diverging_hole, s_never_hang).
+guards[map](c_round_trip, s_rules_are_subgraphs).
+guards[map](c_round_trip, s_evaluator_reads_store).
+
+guards[map](c_tc_seminaive, s_a_transitive_closure).
+guards[map](c_tc_naive, s_a_transitive_closure).
+guards[map](c_structured_terms, s_a_structured_term_test).
+guards[map](c_differential, s_a_naive_eq_seminaive).
+guards[map](c_differential_negation, s_a_naive_eq_seminaive).
+guards[map](c_why_tree, s_a_why_tree).
+guards[map](c_perspective_isolation, s_a_perspective_isolation).
+guards[map](c_stratum_order, s_a_stratum_order).
+guards[map](c_grep_test, s_a_kernel_grep).
+guards[map](c_runtime_rule, s_a_runtime_rule).
+guards[map](c_malformed_sibling, s_a_malformed_sibling).
+guards[map](c_round_trip, s_a_round_trip).
+guards[map](c_counter, s_a_counter).
+guards[map](c_replay_shuffled, s_a_replay_shuffled).
+guards[map](c_busy_beaver, s_a_busy_beaver).
+guards[map](c_diverging_hole, s_a_diverging_hole).
+guards[map](c_boot_four_audits, s_a_boot_audits_empty).
+guards[map](c_sensors_scenario, s_a_sensors_scenario).
+guards[map](c_ci_node, s_done_ci_green).
+guards[map](c_ci_bun, s_done_ci_green).
+
+guards[map](c_grep_test, s7_no_hardcoded_boot).
+guards[map](c_grepcheck_gate, s7_no_hardcoded_boot).
+guards[map](c_round_trip, s7_no_clause_objects).
+guards[map](c_provenance_queryable, s7_no_log_provenance).
+guards[map](c_excise_multiple_support, s7_no_witness_excise).
+guards[map](c_sorted_keys, s7_no_nondeterministic_iteration).
+guards[map](c_arrival_order, s7_no_nondeterministic_iteration).
+guards[map](c_budget_partial, s7_no_silent_overrun).
+guards[map](c_unstratified_rejected, s7_no_skipping_reject_path).
+guards[map](c_async_rejected, s7_no_pretend_async).
+
+guards[map](c_async_rejected, l_no_async).
+guards[map](c_excise_multiple_support, l_no_incremental_maintenance).
+guards[map](c_reuse_boot, l_reuse_fingerprint).
+guards[map](c_reuse_no_read_reused, l_reuse_a_no_read_reused).
+guards[map](c_reuse_stratum_gate, l_reuse_b_stratum_gate).
+guards[map](c_reuse_tick_boundary, l_reuse_c_tick_boundary).
+guards[map](c_whynot_single_step, l_no_multi_fact_abduction).
+guards[map](c_whynot_recursion, l_whynot_recurses).
+guards[map](c_whynot_caps, l_whynot_recurses).
+guards[map](c_save_restore, l_no_persistence).
+guards[map](c_no_boot_no_strata, l_partial_strata).
+guards[map](c_no_boot_no_strata, l_unchecked_without_boot).
+guards[map](c_wf_demand_refused, l_demand_premise_order).
+guards[map](c_arith_zero_divisor, l_zero_divisor_fails).
+guards[map](c_firing_counts_once, l_budget_counts_firings).
+guards[map](c_firing_two_stay_two, p_p1_one_witness_per_derivation).
+guards[map](c_shuffled_arrival_cost, p_i1_insertion_order_is_the_cost).
+guards[map](c_asserted_tick, l_asserted_by_needs_who).
+guards[map](c_asserted_who_and_when, l_asserted_by_needs_who).
+guards[map](c_retain_default, l_frozen_never_collected).
+guards[map](c_undefined_misspelling, l_undefined_is_a_dictionary).
+guards[map](c_undefined_negation, l_undefined_silent_on_negation).
+
+guards[map](c_grepcheck_gate, r_vocabulary_additions).
+guards[map](c_grepcheck_gate, r_stratum_in_kernel_source).
+guards[map](c_next_no_dep_edge, r_conclusion_tense).
+guards[map](c_flow_closure, r_flows_to).
+guards[map](c_collects_narrow, r_collects).
+guards[map](c_collects_askable, r_collects).
+guards[map](c_persp_var_same_ledger, r_variable_perspectives).
+guards[map](c_breach_surfaces, r_facts_into_reserved).
+guards[map](c_unstratified_rejected, r_unstratifiable_is_budgeted).
+guards[map](c_structured_terms, r_moded_relations).
+guards[map](c_reserved_never_flagged, r_edb_for_reserved).
+
+guards[map](c_boot_four_audits, b_malformed_empty).
+guards[map](c_boot_four_audits, b_breach_empty).
+guards[map](c_boot_four_audits, b_leak_empty).
+guards[map](c_boot_four_audits, b_forged_empty).
+guards[map](c_boot_four_audits, b_unmoded_empty).
+guards[map](c_undefined_boot_clean, b_undefined_premise_empty).
+guards[map](c_boot_four_audits, b_whynot_finite).
+guards[map](c_boot_four_audits, b_stratifiable_by_loading).
+guards[map](c_rounds_primary, r_rounds_replace_strata).
+guards[map](c_reject_is_free, r_rounds_replace_strata).
+guards[map](c_no_boot_no_strata, r_rounds_replace_strata).
+
+guards[map](c_next_cycle_refused, d_not_p_is_this_tick).
+guards[map](c_next_no_dep_edge, d_dep_graph_is_one_tick).
+guards[map](c_next_loop_opens, d_dep_graph_is_one_tick).
+guards[map](c_semiring_boundary, d_semiring_is_one_tick).
+guards[map](c_next_body_rejected, d_next_in_body_rejected).
+guards[map](c_retain_window, d_retain_ticks).
+guards[map](c_retain_default, d_retention_off_by_default).
+guards[map](c_retain_window, d_retention_off_by_default).
+guards[map](c_retain_conditional, d_retention_conditional).
+guards[map](c_tick_budget_logged, d_tick_records_budget).
+
+guards[map](c_wf_three_values, t_alternating_fixpoint).
+guards[map](c_wf_budget_no_unknown, t_budget_emits_no_unknown).
+guards[map](c_wf_stratum_untouched, t_stratum_table_survives).
+
+-- ---- what changed ---------------------------------------------------------
+-- The amendment that matters: LIMITS.md still says provenance is never
+-- collected, and `retainTicks` collects it. Neither LIMITS.md nor README.md
+-- mentions the window; the decision is recorded only in
+-- docs/time-and-continuity.md.
+
+amends[map](d_retain_ticks, l_frozen_never_collected).
+
+-- THE TEN RULES, and what their deletion did to the contract. START.md §3.2
+-- puts stratification in boot.rofl as data and keeps a checker out of the
+-- kernel; `src/rounds.ts` peels the phase order off the decoded rules, so that
+-- sentence is not kept as written and `s_no_stratification_checker` is amended
+-- rather than qualified — it is CONTRADICTED, not narrowed, and nothing
+-- mechanical can hold a sentence that is false.
+--
+-- `s_reject_unstratified` was written as an amendment here first, and the model
+-- refused it: `r_unstratifiable_is_budgeted` already qualifies that duty, and
+-- retiring a qualified obligation would have marked a live, tested duty as no
+-- longer owed — the flattering direction this ledger's own note warns about,
+-- caught by the check that every qualified duty is still live. The kernel does
+-- still reject unstratifiable programs, on both evaluators; what changed is the
+-- FORM of the diagnostic, which is a narrowing. So it is a qualification, and
+-- the others below are qualifications for the same reason: `stratum/2` is still
+-- the stock evaluator's input, still read from derived facts, still partial in
+-- the same corner, and `test/phase2.test.ts` holds all of it on that path.
+amends[map](r_rounds_replace_strata, s_no_stratification_checker).
+qualifies[map](r_rounds_replace_strata, s_reject_unstratified).
+qualifies[map](r_rounds_replace_strata, s_strata_read_from_facts).
+qualifies[map](r_rounds_replace_strata, s_a_stratum_order).
+qualifies[map](r_rounds_replace_strata, l_partial_strata).
+qualifies[map](r_rounds_replace_strata, l_unchecked_without_boot).
+amends[map](d_dep_graph_is_one_tick, s_appendix_dep_edges).
+amends[map](d_next_in_body_rejected, s_grammar_temporal).
+amends[map](r_conclusion_tense, s_appendix_dep_edges).
+amends[map](r_flows_to, s_appendix_leak).
+amends[map](r_vocabulary_additions, s_vocabulary_closed).
+amends[map](r_stratum_in_kernel_source, s_a_kernel_grep).
+
+-- A QUALIFICATION is not a replacement, and the difference decides whether an
+-- obligation still has to be covered. `Facts may be asserted into reserved
+-- relations` narrows §2's enforcement without withdrawing it: the rule
+-- rejection is still owed and still tested. Filing these three as `amends`
+-- would have marked three live, tested obligations as no longer owed, which
+-- is the model lying in the flattering direction.
+qualifies[map](r_facts_into_reserved, s_reserved_rejected_at_load).
+qualifies[map](r_unstratifiable_is_budgeted, s_reject_unstratified).
+qualifies[map](r_timeless_kernel_facts, s_persistence_is_a_rule).
+qualifies[map](r_edb_for_reserved, l_undefined_silenced_by_one_fact).
+qualifies[map](r_moded_relations, l_demand_premise_order).
+
+-- ---- the same obligation, written twice -----------------------------------
+-- Seven of the eight prohibited shortcuts in §7 are a §3 or §4 guarantee
+-- restated in the negative. The eighth (s7_no_hardcoded_boot) is broader
+-- than its §3.2 twin — it covers schema validation and the sees/leak/breach
+-- audits as well — so it is not listed here.
+
+restates[map](s7_no_clause_objects, s_evaluator_reads_store).
+restates[map](s7_no_log_provenance, s_provenance_per_firing).
+restates[map](s7_no_witness_excise, s_excise_not_from_witness).
+restates[map](s7_no_nondeterministic_iteration, s_determinism).
+restates[map](s7_no_silent_overrun, s_budget_emits_hole).
+restates[map](s7_no_skipping_reject_path, s_reject_unstratified).
+restates[map](s7_no_pretend_async, s_async_reserved_rejected).
+
+-- ---- obligations discharged by an artefact, not a test --------------------
+-- `document the omission` is not testable; it is done or it is not, and the
+-- census checks that the document is still there.
+
+discharged_by[map](s_document_no_occurs_check, "LIMITS.md").
+discharged_by[map](s_done_readme, "README.md").
+discharged_by[map](s_done_limits, "LIMITS.md").

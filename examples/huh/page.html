@@ -1,0 +1,763 @@
+<meta charset="utf-8">
+<title>HUH — How'd yoU get Here</title>
+
+<style>
+  :root {
+    --bg:        #fbfaf7;
+    --panel:     #ffffff;
+    --ink:       #1d1c1a;
+    --ink-soft:  #5d5a54;
+    --ink-faint: #8a867e;
+    --line:      #e3e0d8;
+    --line-soft: #eeebe4;
+    --accent:    #9a4a17;
+    --accent-bg: #fdf1e7;
+    --good:      #2f6b3f;
+    --gone:      #a03030;
+    --code-bg:   #f4f1ea;
+    --shadow:    0 1px 2px rgba(30, 28, 24, .06), 0 8px 24px rgba(30, 28, 24, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #16151a;
+      --panel:     #1e1d23;
+      --ink:       #eceaf0;
+      --ink-soft:  #b0acb8;
+      --ink-faint: #807c88;
+      --line:      #34323c;
+      --line-soft: #282730;
+      --accent:    #f0a06a;
+      --accent-bg: #2c2119;
+      --good:      #8fd6a2;
+      --gone:      #f09090;
+      --code-bg:   #121116;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #16151a;
+    --panel:     #1e1d23;
+    --ink:       #eceaf0;
+    --ink-soft:  #b0acb8;
+    --ink-faint: #807c88;
+    --line:      #34323c;
+    --line-soft: #282730;
+    --accent:    #f0a06a;
+    --accent-bg: #2c2119;
+    --good:      #8fd6a2;
+    --gone:      #f09090;
+    --code-bg:   #121116;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- header ---------- */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  /* ---------- level switching ---------- */
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  /* ---------- sections ---------- */
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem;
+    display: flex; align-items: baseline; gap: .6rem;
+  }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; }
+  .kid p { font-size: 1.05rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  /* ---------- code ---------- */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .84rem; line-height: 1.55;
+    margin: 1rem 0; color: var(--ink);
+  }
+  pre.tight { font-size: .8rem; }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  figure { margin: 1.4rem 0; }
+  figcaption {
+    font-size: .82rem; color: var(--ink-faint); margin-top: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--good); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* ---------- the pipe diagram ---------- */
+  .pipe {
+    display: flex; align-items: stretch; gap: .4rem; flex-wrap: wrap;
+    margin: 1.6rem 0; padding: 1.1rem; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .stage {
+    flex: 1 1 7.5rem; min-width: 7rem; border: 1px solid var(--line-soft); border-radius: 9px;
+    padding: .6rem .7rem; background: var(--bg);
+  }
+  .stage .cmd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .78rem; color: var(--accent); font-weight: 600; display: block;
+  }
+  .stage .what { font-size: .78rem; color: var(--ink-soft); display: block; margin-top: .25rem; }
+  .stage .out {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .95rem; margin-top: .5rem; display: block; font-weight: 650;
+  }
+  .stage .out small { font-weight: 400; color: var(--ink-faint); font-size: .72rem; }
+  .stage.final { border-color: var(--accent); background: var(--accent-bg); }
+  .arrow { align-self: center; color: var(--ink-faint); font-size: 1.1rem; flex: none; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-size: .95em; }
+
+  @media (max-width: 34rem) {
+    .arrow { display: none; }
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/huh</p>
+  <h1>HUH <span class="dim">— How'd yoU get Here</span></h1>
+  <p class="lede">
+    A shell pipe throws rows away at every step, and then forgets. This one
+    doesn't: ask it about a row that should be in the answer and isn't, and it
+    names the step that threw it away and the exact test that row failed.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> The thing we are asking about</h2>
+
+  <p>
+    A web server writes one line every time somebody asks it for a page. Here
+    is a log of 2000 such lines, and the one-liner every engineer types to find
+    out which URLs are breaking:
+  </p>
+
+  <pre>cat access.log | grep 4xx | awk '{print $7}' | sort | uniq -c | sort -rn | head
+     47 /api/v2/checkout</pre>
+
+  <div class="kid">
+    <p>
+      That command is five small machines standing in a row. Each one takes the
+      rows it is handed, throws some away or rewrites them, and passes the rest
+      to the next machine. At the end, one number comes out.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Five stages, each a total function on a stream. The output is an
+      aggregate over the survivors, and the survivorship information is
+      destroyed the moment each stage returns.
+    </p>
+  </div>
+
+  <div class="pipe">
+    <div class="stage">
+      <span class="cmd">cat</span>
+      <span class="what">every line of the log</span>
+      <span class="out">2000 <small>rows</small></span>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="stage">
+      <span class="cmd">grep 4xx</span>
+      <span class="what">keep only broken requests</span>
+      <span class="out">153 <small>rows</small></span>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="stage">
+      <span class="cmd">awk '{print $7}'</span>
+      <span class="what">keep only the URL part</span>
+      <span class="out">153 <small>URLs</small></span>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="stage">
+      <span class="cmd">sort</span>
+      <span class="what">put equal ones together</span>
+      <span class="out">153 <small>URLs</small></span>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="stage final">
+      <span class="cmd">uniq -c</span>
+      <span class="what">count each group</span>
+      <span class="out">47 <small>checkout</small></span>
+    </div>
+  </div>
+
+  <div class="kid">
+    <p>Two questions that number does not answer, and you always want both:</p>
+    <ul>
+      <li><strong>Which 47?</strong> Which lines of the log added up to it.</li>
+      <li>
+        <strong>Where did mine go?</strong> You know a particular line is a
+        checkout that failed. It is not in the 47. Which of the five machines
+        threw it away?
+      </li>
+    </ul>
+    <p>
+      The second question is the painful one. Once a row is thrown away it is
+      gone; nothing kept a note. So people run the command again, and again,
+      chopping the last machine off each time, trying to see where their row
+      disappeared.
+    </p>
+  </div>
+  <div class="eng">
+    <p>Two queries, neither answerable from the output:</p>
+    <ul>
+      <li>
+        <strong>why</strong> — the set of input tuples whose derivations
+        contribute to this aggregate.
+      </li>
+      <li>
+        <strong>whynot</strong> — for an expected tuple that is absent, the
+        stage and the predicate instance that made it absent.
+      </li>
+    </ul>
+    <p>
+      The second is the expensive one in practice, and the usual method for it
+      is bisection by re-execution: truncate the pipeline, re-run, eyeball.
+      That is a linear search over stages, by hand, per question.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> The pipe, rewritten as rules</h2>
+
+  <div class="kid">
+    <p>
+      So we wrote the same five machines a second way — as four <em>rules</em>,
+      the kind of thing a logic engine can read. A rule says "this is true when
+      all of these are true". Reading them out loud:
+    </p>
+    <ul>
+      <li>a line <em>survives grep</em> when it exists, and its number is at least 400 and at most 499;</li>
+      <li>a line <em>survives awk</em> when it survived grep, and we know what its 7th word is;</li>
+      <li><em>sort</em> keeps everything it is given;</li>
+      <li>a URL gets a <em>bucket</em> when at least one line reached it carrying that URL.</li>
+    </ul>
+  </div>
+  <div class="eng">
+    <p>
+      The same pipeline as four Datalog rules over pre-tokenized facts. Rules
+      in ROFL are not compiled: they are stored as facts in the same graph as
+      the data (<code>premise_lit</code> / <code>conclusion_lit</code>), and
+      the evaluator has no other source of rules.
+    </p>
+  </div>
+
+  <pre>s_grep(N)    :- line(N), status(N, C), C &gt;= 400, C &lt;= 499.
+s_awk(N, P)  :- s_grep(N), field(N, 7, P).
+s_sort(N, P) :- s_awk(N, P).
+s_uniq(P)    :- s_sort(_, P).</pre>
+
+  <p>
+    The host reads the log and emits three facts per line — <code>line(N)</code>,
+    <code>status(N, C)</code>, <code>field(N, 7, "…")</code> — and that is the
+    whole translation. Everything after it is inference.
+  </p>
+
+  <div class="eng">
+    <p>
+      Evaluation is bottom-up to least fixpoint, seminaive, with facts, rules
+      and firings all processed in lexicographic order of their canonical
+      serialization — so the same program on the same inputs yields a
+      bit-identical store, tick log and provenance, whatever order anything was
+      inserted in.
+    </p>
+    <p>
+      The load above is one tick: no <code>@next</code>, no negation, no
+      perspectives. Nothing exotic is carrying the demo.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> Where 47 comes from</h2>
+
+  <div class="kid">
+    <p>
+      Notice the last rule does not count anything. It only says a bucket
+      <em>exists</em>. The counting happens somewhere else, and this is the
+      trick worth understanding:
+    </p>
+    <p>
+      Every time a rule fires, the engine writes down a note: which rule, and
+      which facts it used. So the bucket for <code>/api/v2/checkout</code> ends
+      up with 47 separate notes attached to it — one per line that got there.
+      <strong>The count is just how many notes there are.</strong> Nobody had
+      to write a counting machine.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>uniq -c</code> is not a rule and does not need to be. Every firing
+      is recorded as a witness — rule id plus the premise references it
+      consumed (fact, negated, or builtin) — so the derived fact
+      <code>s_uniq("/api/v2/checkout")</code> carries 47 witnesses in the
+      support hypergraph, not one.
+    </p>
+    <p>
+      A semiring is then folded over that hypergraph. The Boolean fixpoint is
+      untouched: annotation changes a fact's <em>value</em>, never whether it
+      holds, so the engine runs first, unchanged, and the fold reads the
+      support the store already recorded:
+    </p>
+    <pre>v_0(f)     = base(f) if f is base, else zero
+v_{n+1}(f) = loop ⊗ ( v_0(f) ⊕ ⊕_supports ( weight ⊗ ⊗_premises v_n(p) ) )</pre>
+    <p>
+      With ⊕ = + and ⊗ = × over ℕ ∪ {∞} you get the number of derivations —
+      <code>uniq -c</code>. With ⊕ = ∪ and ⊗ = pairwise ∪ over sets of source
+      facts you get which inputs a fact rests on. Neither semiring is named
+      anywhere in <code>src/</code>: the kernel knows "a semiring", the
+      instances live in <code>runtime/semirings.ts</code>, and each declares
+      its own convergence discipline (bounded / closed / bounded-unfolding) so
+      that "it did not converge" cannot be used to paper over three different
+      situations.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">      47  /api/v2/checkout
+      27  /api/v2/cart
+      23  /api/v2/refund
+      22  /healthz
+      20  /static/app.js
+      14  /api/v2/login
+
+the same file through /bin/sh:
+      47  /api/v2/checkout
+      27  /api/v2/cart
+      23  /api/v2/refund
+      22  /healthz
+      20  /static/app.js
+      14  /api/v2/login
+  oracle: AGREE — all 6 buckets over 2000 lines</pre>
+    <figcaption>examples/huh/demo.ts, section 1 — engine first, then the same file through /bin/sh</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> Which 47? &mdash; <code>why</code></h2>
+
+  <div class="kid">
+    <p>
+      Because every firing left a note, the engine can walk backwards from the
+      answer to the raw log lines. Here is one such walk — one of the 47 routes
+      into that bucket, all the way down to the facts nothing had to prove:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>why</code> is a tree walk over recorded witnesses, not a
+      re-derivation. It follows a fact's canonical witness down to base facts
+      (<code>[axiom]</code>) and builtin premises (<code>[builtin]</code>). It
+      is therefore a record of what happened, not a plausible reconstruction
+      of it.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">$ why s_uniq("/api/v2/checkout")
+s_uniq[main]("/api/v2/checkout")  &lt;= r682af6c8 @tick 0
+  s_sort[main](1057,"/api/v2/checkout")  &lt;= r4af65fc3 @tick 0
+    s_awk[main](1057,"/api/v2/checkout")  &lt;= r9aa262d3 @tick 0
+      s_grep[main](1057)  &lt;= r82171c0f @tick 0
+        line[main](1057) [axiom]
+        status[main](1057,404) [axiom]
+        404 &gt;= 400 [builtin]
+        404 &lt;= 499 [builtin]
+      field[main](1057,7,"/api/v2/checkout") [axiom]</pre>
+    <figcaption>one derivation of the bucket; 46 more are recorded alongside it</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      And if you want all of them rather than one, the engine can carry the set
+      of source lines up the chain instead of a count. Same notes, different
+      bookkeeping:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Swapping the counting semiring for the provenance one — with the base
+      annotation set to name only the <code>line/1</code> facts, so a monomial
+      <em>is</em> a log line — turns the same fold into the source set:
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">  /api/v2/refund  (23 lines)
+  176 256 300 322 410 459 480 604 624 682 765 1042 1106 1178 1199 1372 1411 1414 1717 1732 1742 1799 1896
+  grep -n over the same file: 23 line numbers
+  oracle: AGREE — the 23 source lines behind /api/v2/refund</pre>
+    <figcaption>the engine's 23 line numbers, checked against grep -n over the same file</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> Where did mine go? &mdash; <code>whynot</code></h2>
+
+  <div class="kid">
+    <p>
+      This is the part that is worth the whole exercise. Line 102 of the log is
+      a checkout request. You expected it in the 47. It is not there. Ask why
+      it is not, and you get:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>whynot</code> is the mirror image, and it recurses. For a literal
+      that does not hold, it takes each rule that could conclude it, walks the
+      body under the head substitution, names the premise instances that fail —
+      and then does the same to each of those. On a four-stage pipe that walk
+      <em>is</em> the stage chain.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">whynot s_sort[main](102,"/api/v2/checkout"):
+  rule r4af65fc3: s_sort[main](?N,?P)@now :- s_awk[main](?N,?P)@now
+    failed premise: s_awk[main](102,"/api/v2/checkout")
+      rule r9aa262d3: s_awk[main](?N,?P)@now :- s_grep[main](?N)@now, field[main](?N,7,?P)@now
+        failed premise: s_grep[main](102)
+          rule r82171c0f: s_grep[main](?N)@now :- line[main](?N)@now, status[main](?N,?C)@now, ?C &gt;= 400, ?C &lt;= 499
+            failed premise: 500 &lt;= 499 [builtin fails]</pre>
+    <figcaption>whynot s_sort(102, "/api/v2/checkout") — depth 4</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Read the last line. Line 102's number was <strong>500</strong>, and the
+      first machine only keeps numbers up to 499. <em>500 is not ≤ 499.</em>
+      Machine one threw it away, on that exact test. Nothing was re-run to find
+      that out — the engine just followed the rules backwards.
+    </p>
+    <p>
+      Now the same question about line 2. This one <em>is</em> a broken
+      request, so machine one kept it. It is still not in the 47:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The leaf is a builtin evaluated on ground values, which is as specific as
+      an answer gets: not "grep dropped it" but <code>500 &lt;= 499</code>. Now
+      the same query on a row grep <em>kept</em>:
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">whynot s_sort[main](2,"/api/v2/checkout"):
+  rule r4af65fc3: s_sort[main](?N,?P)@now :- s_awk[main](?N,?P)@now
+    failed premise: s_awk[main](2,"/api/v2/checkout")
+      rule r9aa262d3: s_awk[main](?N,?P)@now :- s_grep[main](?N)@now, field[main](?N,7,?P)@now
+        failed premise: field[main](2,7,"/api/v2/checkout")
+          no rule concludes 'field' and no matching base fact exists</pre>
+    <figcaption>whynot s_sort(2, "/api/v2/checkout") — a different stage answers</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Different culprit: machine <em>two</em>. It read line 2's 7th word and
+      found <code>/api/v2/cart</code>, so the row went into a different bucket.
+      Same question, same single call, and the answer points at whichever
+      machine actually did it.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The failing premise is now the <code>awk</code> projection, one level
+      higher, and no builtin failed at all. Same call, same bounds, different
+      stage named. Three guards make the recursion terminate and each announces
+      itself in the output rather than truncating quietly: a literal already
+      being explained above is marked <code>[cycle]</code>,
+      <code>depth</code> shapes the tree, <code>nodes</code> caps it outright.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> Delete one line &mdash; <code>excise</code></h2>
+
+  <div class="kid">
+    <p>
+      Last question: if you deleted one line from the log, what would change?
+      Not "roughly" — exactly.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>excise</code> is a clean re-evaluation on the EDB minus one fact,
+      and the diff against the current store <em>is</em> the blast radius. It
+      is sound under multiple support by construction, because there is no
+      incremental maintenance to be wrong about.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">$ excise line(96)   -- 10.0.3.90 - - [30/Aug/2026:12:01:35 +0000] "GET /api/v2/checkout HTTP/1.1" 404 847
+  - line[main](96)
+  - s_awk[main](96,"/api/v2/checkout")
+  - s_grep[main](96)
+  - s_sort[main](96,"/api/v2/checkout")
+  4 facts fall; s_uniq[main]("/api/v2/checkout") is not among them —
+  the bucket has 47 supports and only lost one.
+
+  count on the excised world: 47 -&gt; 46
+  the shell, with the same line deleted: 46
+  oracle: AGREE — the blast radius of deleting line 96</pre>
+    <figcaption>the line, its three stage rows, and one unit of the count</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Four things disappear: the line itself and its trace through three
+      machines. The bucket survives, because 46 other lines still hold it up,
+      and the count moves by exactly one.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">7</span> How do we know it is telling the truth?</h2>
+
+  <div class="kid">
+    <p>
+      Easy, and this matters more than anything else on this page: the real
+      command already exists. So the demo runs it — the actual
+      <code>grep | awk | sort | uniq -c</code>, in an actual shell, over the
+      same file — and compares the two answers every time it runs.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      HUH's ground truth is free and deterministic, so there is no excuse for
+      asserting the engine is right instead of checking it. The demo spawns
+      <code>/bin/sh</code> on the same file and compares: the full bucket
+      table, the source line numbers behind a bucket (against
+      <code>grep -n</code>), and the table after deleting one line (against
+      <code>awk 'NR != 96'</code>). A disagreement would be reported as a
+      finding, not reconciled by adjusting the engine's answer.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">3 comparisons against the real pipe over 2000 log lines:
+  AGREE     all 6 buckets over 2000 lines
+  AGREE     the 23 source lines behind /api/v2/refund
+  AGREE     the blast radius of deleting line 96
+
+the engine and /bin/sh compute the same numbers.</pre>
+    <figcaption>three comparisons over a 2000-line log</figcaption>
+  </figure>
+
+  <p>
+    The same assertions run as a test (<code>test/example-huh.test.ts</code>)
+    over a 400-line prefix of the same log, so the demo cannot rot: the counted
+    result, the whynot chain down to the deciding builtin, the provenance set,
+    and the excise blast radius are all checked against the shell on every run
+    of the suite.
+  </p>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">8</span> What this does not do</h2>
+
+  <div class="kid">
+    <p>
+      One honest catch. The engine has no idea what a <em>word</em> is — it
+      only does whole facts and whole numbers. So the part that chops a log
+      line into pieces is ordinary code, written by hand, outside the engine.
+      The engine explains everything from the pieces onward, and stops there.
+      You can see the floor in the second whynot above, on the last line:
+      "no rule concludes 'field'" means <em>this is where my explanations run
+      out; a human's code decided that bit.</em>
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <strong>There are no string builtins in the kernel, and <code>is</code>
+      is integer-only.</strong> So <code>grep 4xx</code> and
+      <code>awk '{print $7}'</code> cannot be rules. The host splits each line
+      and emits <code>field(N, 7, "…")</code>; the rules are the pipe
+      <em>over</em> the split. This is architecturally right — it is what
+      <code>scanners/</code> exists for — but it costs something specific:
+      <strong>the why-boundary sits one step higher than HUH's own sketch
+      draws it.</strong> That sketch starts inside the line ("grep skipped 47
+      of 128340"); this one bottoms out at <code>field(N, 7, P)</code> as an
+      axiom. Section 5's second tree shows the boundary in the open rather than
+      hiding it.
+    </p>
+    <ul>
+      <li>
+        <strong>The regex is not the shorthand.</strong> <code>grep 4xx</code>
+        matches nothing literally; engine and oracle both use
+        <code>grep -E '" 4[0-9][0-9] '</code>, anchored on the quote that
+        closes the request so it can only match the status field.
+      </li>
+      <li>
+        <strong><code>sort -rn | head</code> is presentation.</strong> v0 has
+        no aggregation, so ranking the buckets is host-side sorting of the
+        annotations. <code>sort</code> appears in the rules only as a nameable
+        stage: order is not a fact here, so it is the identity on the multiset.
+      </li>
+      <li>
+        <strong>Provenance is capped at 32 source sets</strong>
+        (<code>PROVENANCE_MAX_TERMS</code>), applied before superset pruning.
+        The 47-line bucket therefore reports 32 of its 47 lines — a documented
+        under-approximation, printed as such, and the reason the page lists
+        sources for a bucket that fits under the cap. Counting is unaffected:
+        one bigint per fact.
+      </li>
+      <li>
+        <strong>No cost claim.</strong> 2000 lines, one fixpoint, about a
+        second on a laptop. That is a fact about this example, not a benchmark.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <code>examples/huh/</code> — <code>huh.rofl</code> (the four rules),
+    <code>demo.ts</code> (run it: <code>node --experimental-strip-types
+    examples/huh/demo.ts</code>), <code>README.md</code>, this page, and
+    <code>test/example-huh.test.ts</code>. Every transcript above is pasted
+    output from a real run; nothing on this page was composed by hand.
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('huh-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('huh-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('huh-theme', next);
+    });
+
+    var savedTheme = load('huh-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

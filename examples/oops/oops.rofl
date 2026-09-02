@@ -1,0 +1,164 @@
+-- oops.rofl — the retraction cascade.
+--
+-- A paper is retracted. What is now in doubt?
+--
+-- The question every retraction database refuses to answer. It records THAT
+-- a paper was retracted; nothing computes what became unreliable. This file
+-- computes it, in three ideas:
+--
+--   1. A citation is not a dependency. `load_bearing` means the citing
+--      paper's argument rests on the cited one; `mention` means it was named
+--      in passing. Only load-bearing edges carry poison.
+--   2. The cascade stops at nodes that have an INDEPENDENT SUPPORT. A paper
+--      whose every argument chain runs through the retracted work is
+--      at_risk; one that also stands on something still standing is robust,
+--      and nothing downstream of it is poisoned through it.
+--   3. Time is the clock, not a column. The ledger records WHEN each thing
+--      happened; the world at tick Y is derived from the events dated <= Y.
+--      Citing before a retraction is an honest mistake; citing after it is a
+--      different category; a retraction can itself be reversed.
+--
+-- Data is synthetic (see README.md). Retraction facts and the citation graph
+-- would come from Retraction Watch / Crossref and OpenAlex; the citation TYPE
+-- is the one field open data labels badly, and that is stated in the README
+-- rather than hidden here.
+
+-- === the ledger: what happened, and when ==============================
+-- published(Paper, Year).
+-- citation(Citing, Cited, Kind, Year).       Kind = load_bearing | mention
+-- retraction(Paper, Year).  unretraction(Paper, Year).
+--
+-- Nothing below is a status. Every fact here is an event with a date; every
+-- status in this program is derived from these events and the clock.
+
+-- original evidence: papers that rest on no one (the axioms of this world)
+published(calib_2014, 2014)      @init.
+published(spectra_2015, 2015)    @init.
+published(thermo_2016, 2016)     @init.
+published(field_2018, 2018)      @init.
+published(dataset_2020, 2020)    @init.
+
+-- cascade A: the loud retraction
+published(helix_2019, 2019)      @init.
+published(yield_2020, 2020)      @init.
+published(review_2021, 2021)     @init.
+published(scaleup_2021, 2021)    @init.
+published(preprint_a, 2022)      @init.
+published(preprint_b, 2022)      @init.
+published(meta_2022, 2022)       @init.
+published(policy_2023, 2023)     @init.
+published(synthesis_2023, 2023)  @init.
+published(replication_2025, 2025) @init.
+
+-- cascade B: an older, quieter retraction, disjoint from A
+published(assay_2017, 2017)      @init.
+published(panel_2018, 2018)      @init.
+published(guideline_2019, 2019)  @init.
+published(audit_2020, 2020)      @init.
+
+citation(helix_2019, spectra_2015, load_bearing, 2019)   @init.
+citation(yield_2020, helix_2019, load_bearing, 2020)     @init.
+citation(review_2021, helix_2019, mention, 2021)         @init.
+citation(review_2021, field_2018, load_bearing, 2021)    @init.
+citation(scaleup_2021, yield_2020, load_bearing, 2021)   @init.
+citation(preprint_a, helix_2019, load_bearing, 2022)     @init.
+citation(preprint_a, preprint_b, load_bearing, 2022)     @init.
+citation(preprint_b, preprint_a, load_bearing, 2022)     @init.
+citation(preprint_b, dataset_2020, load_bearing, 2022)   @init.
+citation(meta_2022, scaleup_2021, load_bearing, 2022)    @init.
+citation(meta_2022, thermo_2016, load_bearing, 2022)     @init.
+citation(policy_2023, meta_2022, load_bearing, 2023)     @init.
+citation(policy_2023, helix_2019, mention, 2023)         @init.
+citation(synthesis_2023, scaleup_2021, load_bearing, 2023) @init.
+citation(synthesis_2023, field_2018, load_bearing, 2023) @init.
+citation(synthesis_2023, thermo_2016, load_bearing, 2023) @init.
+citation(synthesis_2023, dataset_2020, load_bearing, 2023) @init.
+citation(replication_2025, helix_2019, load_bearing, 2025) @init.
+
+citation(assay_2017, calib_2014, load_bearing, 2017)     @init.
+citation(panel_2018, assay_2017, load_bearing, 2018)     @init.
+citation(guideline_2019, panel_2018, load_bearing, 2019) @init.
+citation(audit_2020, panel_2018, load_bearing, 2020)     @init.
+citation(audit_2020, calib_2014, load_bearing, 2020)     @init.
+
+retraction(assay_2017, 2022)     @init.
+retraction(helix_2019, 2024)     @init.
+unretraction(helix_2019, 2026)   @init.
+
+clock(2020) @init.
+
+-- === time ============================================================
+-- Persistence is not a storage property: the ledger survives a tick only
+-- because these rules carry it. The clock is the one thing that moves.
+
+published(P, Y)      @next :- published(P, Y).
+citation(A, B, K, Y) @next :- citation(A, B, K, Y).
+retraction(P, Y)     @next :- retraction(P, Y).
+unretraction(P, Y)   @next :- unretraction(P, Y).
+clock(Y1)            @next :- clock(Y), Y < 2026, Y1 is Y + 1.
+clock(Y)             @next :- clock(Y), Y >= 2026.
+
+-- === the world as of the current tick =================================
+-- Everything below is a function of the tick. A paper does not exist before
+-- it is published; a citation does not exist before it is made.
+
+paper(P)              :- published(P, Yp), clock(Y), Yp <= Y.
+depends_on(A, B)      :- citation(A, B, load_bearing, Yc), clock(Y), Yc <= Y.
+mentions(A, B)        :- citation(A, B, mention, Yc), clock(Y), Yc <= Y.
+direct_citation(A, B) :- citation(A, B, _, Yc), clock(Y), Yc <= Y.
+
+unretracted(P)        :- unretraction(P, Yu), clock(Y), Yu <= Y.
+retracted(P)          :- retraction(P, Yr), clock(Y), Yr <= Y, not unretracted(P).
+
+-- honest mistake vs. citing a paper already known to be retracted
+cited_before_retraction(A, B) :- citation(A, B, _, Yc), retraction(B, Yr),
+                                 Yc < Yr, clock(Y), Yc <= Y.
+cited_after_retraction(A, B)  :- citation(A, B, _, Yc), retraction(B, Yr),
+                                 Yc >= Yr, clock(Y), Yc <= Y.
+
+-- === the cascade ======================================================
+-- tainted: some load-bearing chain reaches a retracted paper. Monotone,
+--   transitive, cycle-safe. This is "touched by the retraction" — the upper
+--   bound, and on its own it is the useless answer everyone already has.
+-- grounded: some load-bearing chain reaches un-retracted original evidence.
+--   Also monotone and transitive. This is "at least one argument still
+--   stands".
+-- at_risk = tainted and NOT grounded: every chain runs through the wreck.
+-- robust  = tainted and grounded: touched, and survives it.
+--
+-- The stop is what makes this worth computing: a robust paper is not at
+-- risk, and a paper that depends only on a robust paper is grounded through
+-- it, so the cascade dies there instead of painting the whole graph red.
+--
+-- Stratification (boot.rofl computes it; this is the reasoning): retracted
+-- negates unretracted, own_evidence negates has_pillar, grounded negates
+-- retracted, at_risk negates grounded. No negative cycle — the mutual
+-- "at_risk unless independently supported" formulation would have one, and
+-- the kernel would reject it. Splitting it into two monotone reachability
+-- relations plus one stratified negation is what makes it computable.
+
+has_pillar(P)   :- depends_on(P, _).
+own_evidence(P) :- paper(P), not has_pillar(P).
+
+tainted(P)      :- depends_on(P, B), retracted(B).
+tainted(P)      :- depends_on(P, B), tainted(B).
+
+grounded(P)     :- own_evidence(P), not retracted(P).
+grounded(P)     :- depends_on(P, B), grounded(B), not retracted(P).
+
+at_risk(P)      :- tainted(P), not grounded(P).
+robust(P)       :- tainted(P), grounded(P).
+
+-- which retracted root poisons which paper — the attribution the blast
+-- radius needs when more than one retraction is in force at once
+tainted_by(P, R)   :- depends_on(P, R), retracted(R).
+tainted_by(P, R)   :- depends_on(P, B), tainted_by(B, R).
+at_risk_from(P, R) :- at_risk(P), tainted_by(P, R).
+
+-- Acceptance scenario (examples/oops/demo.ts runs all of it):
+--   ? at_risk(P)                       -> 5 papers at tick 2025
+--   ? robust(P)                        -> 6, each with an independent support
+--   why at_risk[main](scaleup_2021)    -> the chain down to the retraction
+--   excise retraction(helix_2019, 2024) -> the blast radius as a diff, and
+--                                          it equals at_risk_from(P, helix_2019)
+--   tick to 2026 (the un-retraction)   -> cascade A restored

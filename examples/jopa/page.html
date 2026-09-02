@@ -1,0 +1,897 @@
+<meta charset="utf-8">
+<title>JOPA — the standard of proof as a parameter</title>
+
+<style>
+  :root {
+    --bg:        #fbfaf8;
+    --panel:     #ffffff;
+    --ink:       #1b1a19;
+    --ink-soft:  #57544f;
+    --ink-faint: #86827b;
+    --line:      #e4e1da;
+    --line-soft: #efece6;
+    --accent:    #1f5f7a;
+    --accent-bg: #e8f2f6;
+    --good:      #2c6b45;
+    --good-bg:   #e7f2ea;
+    --bad:       #9d3131;
+    --bad-bg:    #f8eaea;
+    --warn:      #8a5a12;
+    --warn-bg:   #f9f0df;
+    --code-bg:   #f3f1ec;
+    --meter-bg:  #e9e6df;
+    --shadow:    0 1px 2px rgba(28, 26, 24, .06), 0 8px 24px rgba(28, 26, 24, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f24;
+      --ink:       #e9ecf0;
+      --ink-soft:  #adb3bb;
+      --ink-faint: #7d838c;
+      --line:      #30343b;
+      --line-soft: #25282e;
+      --accent:    #6fc0dc;
+      --accent-bg: #16303a;
+      --good:      #86d3a4;
+      --good-bg:   #162b1f;
+      --bad:       #f0928f;
+      --bad-bg:    #33191a;
+      --warn:      #e5b569;
+      --warn-bg:   #322613;
+      --code-bg:   #101215;
+      --meter-bg:  #2a2e34;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .32);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f24;
+    --ink:       #e9ecf0;
+    --ink-soft:  #adb3bb;
+    --ink-faint: #7d838c;
+    --line:      #30343b;
+    --line-soft: #25282e;
+    --accent:    #6fc0dc;
+    --accent-bg: #16303a;
+    --good:      #86d3a4;
+    --good-bg:   #162b1f;
+    --bad:       #f0928f;
+    --bad-bg:    #33191a;
+    --warn:      #e5b569;
+    --warn-bg:   #322613;
+    --code-bg:   #101215;
+    --meter-bg:  #2a2e34;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .32);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- header ---------- */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  /* ---------- level switching ---------- */
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  /* ---------- the disclaimer, at both levels, above everything ---------- */
+  .disclaimer {
+    border: 1px solid var(--warn); background: var(--warn-bg); color: var(--warn);
+    border-radius: 10px; padding: .9rem 1.1rem; margin: 0 0 2rem;
+    font-size: .95rem;
+  }
+  .disclaimer strong { color: var(--warn); }
+
+  /* ---------- sections ---------- */
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 { font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem; display: flex; align-items: baseline; gap: .6rem; }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; }
+  .kid p { font-size: 1.05rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+  .sub { color: var(--ink-soft); font-size: .95rem; }
+
+  /* ---------- code ---------- */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .8rem; line-height: 1.55;
+  }
+  p code { background: var(--code-bg); border-radius: 4px; padding: .1rem .3rem; font-size: .9em; }
+
+  /* ---------- the proof meter ---------- */
+  .meter { margin: .4rem 0 0; }
+  .meter .track {
+    position: relative; height: 26px; background: var(--meter-bg);
+    border-radius: 6px; overflow: hidden; border: 1px solid var(--line);
+  }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: .38; }
+  .meter .tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .55; }
+  .meter .labels { position: relative; height: 1.35rem; margin-top: .2rem; font-size: .68rem; color: var(--ink-faint); }
+  .meter .labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .meter .value {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75rem;
+    font-weight: 650; color: var(--ink); padding-left: .4rem;
+  }
+
+  /* ---------- the chain of steps ---------- */
+  .chain { margin: 1.2rem 0 0; }
+  .step {
+    border: 1px solid var(--line); background: var(--panel); border-radius: 10px;
+    padding: .85rem 1rem; box-shadow: var(--shadow); margin: 0 0 .55rem;
+  }
+  .step.top { border-color: var(--accent); }
+  .step .head { display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; }
+  .step .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; font-weight: 650; }
+  .step .num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.05rem;
+    font-weight: 650; color: var(--accent); margin-left: auto;
+  }
+  .step .cite { font-size: .82rem; color: var(--ink-soft); margin: .35rem 0 0; }
+  .step .rests { font-size: .78rem; color: var(--ink-faint); margin: .25rem 0 0; }
+  .step .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; }
+  .chip {
+    font-size: .72rem; border-radius: 999px; padding: .15rem .6rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid transparent;
+  }
+  .chip.yes { background: var(--good-bg); color: var(--good); }
+  .chip.no  { background: var(--bad-bg);  color: var(--bad); }
+  .indent { margin-left: 1.6rem; }
+  .breakline {
+    border-left: 3px solid var(--bad); background: var(--bad-bg); color: var(--bad);
+    border-radius: 0 8px 8px 0; padding: .55rem .85rem; margin: .3rem 0 .9rem 1.6rem; font-size: .87rem;
+  }
+  .breakline b { font-weight: 700; }
+
+  /* ---------- verdict cards ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin: 1.2rem 0 0; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem; background: var(--panel); box-shadow: var(--shadow); }
+  .card .who { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+  .card .std { font-size: .95rem; font-weight: 650; margin-top: .2rem; }
+  .card .pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.5rem; font-weight: 650; margin-top: .3rem; }
+  .card .out { margin-top: .5rem; font-size: .85rem; font-weight: 650; }
+  .card.made { border-color: var(--bad); } .card.made .out { color: var(--bad); }
+  .card.notmade { border-color: var(--good); } .card.notmade .out { color: var(--good); }
+
+  /* ---------- ledger / file table ---------- */
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0 0; font-size: .9rem; }
+  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  td code { font-size: .88em; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-bg);
+    border-radius: 0 8px 8px 0; padding: .8rem 1rem; margin: 1.2rem 0; font-size: .97rem;
+  }
+  .callout.plain { border-left-color: var(--ink-faint); background: var(--code-bg); }
+
+  .scroll { overflow-x: auto; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-size: .95em; }
+
+  @media (max-width: 34rem) {
+    .level-hint { margin-left: 0; width: 100%; }
+    .step .num { margin-left: 0; }
+    .indent, .breakline { margin-left: .7rem; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/jopa</p>
+  <h1>JOPA <span class="dim">— Judgments Over Provenance Algebra</span></h1>
+  <p class="lede">
+    The same rules, the same facts, and three different answers — because in
+    law <em>how sure you have to be</em> changes with the proceeding. Here that
+    is not written into the rules at all. It is a number you hand to the
+    calculation afterwards.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<p class="disclaimer">
+  <strong>This is a demonstration of a mechanism. It is not legal advice.</strong>
+  The statute below is <strong>synthetic</strong> — invented for this page,
+  modelled on no country's law. The case is invented. Nothing here decides
+  anybody's claim, and nothing on this page should ever be shown to anyone as
+  if it did.
+</p>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> The thing we are asking about</h2>
+
+  <div class="kid">
+    <p>
+      A mill burned down. The owner had insurance, so he asked for his money.
+      The insurance company thinks he set the fire himself — and if he did,
+      the policy says they do not have to pay.
+    </p>
+    <p>
+      Now the same question — <em>did he do it on purpose?</em> — has to be
+      answered by two different people, and here is the thing most people
+      never notice: <strong>they are not allowed to be equally unsure.</strong>
+    </p>
+    <ul>
+      <li>The insurance company only has to think it is <strong>likely</strong>.</li>
+      <li>A court deciding whether he goes to <strong>prison</strong> has to be
+        almost completely certain.</li>
+    </ul>
+    <p>
+      So the very same story can be strong enough to lose you your insurance
+      money and nowhere near strong enough to convict you. That is not a bug
+      in the law. It is the law working the way it is supposed to.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      One claim under a synthetic indemnity statute; one set of established
+      facts; two proceedings whose <strong>standards of proof differ</strong>.
+      The composite element in dispute — deliberate causation of the loss —
+      is the same derived predicate in both, from the same rules over the
+      same case file.
+    </p>
+    <p>
+      Every existing legal-reasoning engine we know of handles this by baking
+      the threshold into the rule logic or by deciding it outside the engine.
+      Here the standard of proof is a table of facts <strong>no rule
+      reads</strong>, and switching it amends that table.
+    </p>
+    <div class="callout">
+      <strong>What is not claimed.</strong> "Datalog for statutes" is a
+      forty-year-old field — Catala, PROLEG, LegalRuleML, Blawx, Sergot &amp;
+      Kowalski from 1986 on. This example claims exactly one thing: that the
+      standard of proof can be a parameter of the algebra rather than a
+      constant in the rules. Nothing else.
+    </div>
+  </div>
+
+  <h3>The synthetic statute, in full</h3>
+  <div class="scroll">
+  <table>
+    <tr><th>§</th><th>what it says</th></tr>
+    <tr><td><code>s.2</code></td><td>the insured perils are fire, storm and escape of water</td></tr>
+    <tr><td><code>s.4</code></td><td>where the elements in s.5 are established, the insurer shall indemnify</td></tr>
+    <tr><td><code>s.5</code></td><td>five elements: cover in force, insured property, insured peril, causation, notice within 30 days</td></tr>
+    <tr><td><code>s.6</code></td><td>what proves what — authority reports, physical traces, presence; and <em>an anonymous communication is not evidence of any fact</em></td></tr>
+    <tr><td><code>s.7</code></td><td>no indemnity where the loss was deliberately caused by the policyholder</td></tr>
+    <tr><td><code>s.8</code></td><td><strong>the standards of proof</strong> — (1) the elements, on the balance; (2) an allegation of deliberate loss, by clear and convincing evidence; (3) an offence under s.9, beyond reasonable doubt</td></tr>
+    <tr><td><code>s.9</code></td><td>deliberately causing a loss and claiming on it is an offence</td></tr>
+  </table>
+  </div>
+  <p class="sub">
+    That whole statute becomes <strong>12 rules</strong>. The smallness is the
+    point: it is the only thing anyone has to check by eye.
+  </p>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> Three levels of "sure"</h2>
+
+  <div class="kid">
+    <p>
+      Think of one long bar from "no idea" on the left to "completely certain"
+      on the right. The law draws lines on that bar, and a different line
+      counts depending on what is at stake.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Three thresholds, as data. <code>s.8</code> assigns a standard to a
+      question; the standard has a value. Nothing below reads either table —
+      the demo checks that through the kernel's own reflection of the rules,
+      not by grepping a file.
+    </p>
+    <pre>standard(balance_of_probabilities, 50).
+standard(clear_and_convincing,     75).
+standard(beyond_reasonable_doubt,  95).
+
+standard_for(claim_elements, balance_of_probabilities, s8_1).
+standard_for(exclusion_s7,   clear_and_convincing,     s8_2).
+standard_for(offence_s9,     beyond_reasonable_doubt,  s8_3).</pre>
+  </div>
+
+  <div class="meter" aria-hidden="true">
+    <div class="track">
+      <div class="tick" style="left: 50%"></div>
+      <div class="tick" style="left: 75%"></div>
+      <div class="tick" style="left: 95%"></div>
+    </div>
+    <div class="labels">
+      <span style="left: 50%">50% &mdash; more likely than not</span>
+      <span style="left: 75%">75% &mdash; clear &amp; convincing</span>
+      <span style="left: 95%">95% &mdash; beyond reasonable doubt</span>
+    </div>
+  </div>
+
+  <div class="kid">
+    <p>
+      Those three lines are the <em>only</em> thing that changes between the
+      three answers on this page. Not the rules. Not what happened. Just where
+      the line is.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> What the machine works out</h2>
+
+  <div class="kid">
+    <p>
+      The machine follows the story from the evidence up to the accusation and
+      keeps track of how much certainty survives each step. It ends up with
+      one number for "he did it on purpose":
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      One fold of the Viterbi semiring over the support hypergraph the engine
+      already recorded: each fact gets the probability of its <em>most
+      probable</em> derivation. The rules do not know this is happening.
+    </p>
+  </div>
+
+  <div class="meter">
+    <div class="track">
+      <div class="fill" style="width: 70.38%"></div>
+      <div class="tick" style="left: 50%"></div>
+      <div class="tick" style="left: 75%"></div>
+      <div class="tick" style="left: 95%"></div>
+      <div class="value" style="left: 70.38%">0.7038</div>
+    </div>
+    <div class="labels">
+      <span style="left: 50%">50%</span>
+      <span style="left: 75%">75%</span>
+      <span style="left: 95%">95%</span>
+    </div>
+  </div>
+
+  <p class="eng sub">
+    <code>deliberate_loss(c_ash) = 0.7038</code> and
+    <code>offence_s9(k_ashby, c_ash) = 0.7038</code> — literally the same
+    number, because the offence adds no evidential step to the exclusion. The
+    test asserts the equality.
+  </p>
+
+  <div class="cards">
+    <div class="card notmade">
+      <div class="who">s.8(2) &mdash; the insurer's refusal</div>
+      <div class="std">clear and convincing</div>
+      <div class="pct">0.7038 &lt; 0.75</div>
+      <div class="out">NOT made out &rarr; the insurer must pay</div>
+    </div>
+    <div class="card notmade">
+      <div class="who">s.8(3) &mdash; the prosecution</div>
+      <div class="std">beyond reasonable doubt</div>
+      <div class="pct">0.7038 &lt; 0.95</div>
+      <div class="out">NOT made out &rarr; no conviction</div>
+    </div>
+    <div class="card made">
+      <div class="who">a jurisdiction where s.8(2) said "balance"</div>
+      <div class="std">balance of probabilities</div>
+      <div class="pct">0.7038 &ge; 0.50</div>
+      <div class="out">MADE OUT &rarr; the claim is refused</div>
+    </div>
+  </div>
+
+  <h3>The other kind of failure &mdash; one a threshold alone would hide</h3>
+
+  <div class="kid">
+    <p>
+      There is a second fire in the file. Same accusation, and the lab evidence
+      is just as good &mdash; but the <em>only</em> thing saying the owner was
+      there that night is an <strong>unsigned letter</strong>, and the law says
+      an anonymous letter is not evidence of anything at all. So it counts for
+      nothing. Not "a little". <strong>Nothing.</strong>
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Claim <code>c_okoro</code>: the only route to <code>at_property</code>
+      runs through evidence the tribunal weighed at 0. Probability zero is an
+      explicit <strong>symbol</strong> in the carrier, not a float arithmetic
+      produced, so it <em>annihilates</em> the chain above it rather than
+      merely dragging it down.
+    </p>
+  </div>
+
+  <div class="scroll">
+  <table>
+    <tr><th>the allegation</th><th>value</th><th>1%</th><th>50%</th><th>75%</th><th>95%</th></tr>
+    <tr>
+      <td><code>deliberate_loss(c_ash)</code></td>
+      <td><code>0.7038</code></td>
+      <td><span class="chip yes">&check;</span></td>
+      <td><span class="chip yes">&check;</span></td>
+      <td><span class="chip no">&times;</span></td>
+      <td><span class="chip no">&times;</span></td>
+    </tr>
+    <tr>
+      <td><code>deliberate_loss(c_okoro)</code></td>
+      <td><code>impossible</code></td>
+      <td><span class="chip no">&times;</span></td>
+      <td><span class="chip no">&times;</span></td>
+      <td><span class="chip no">&times;</span></td>
+      <td><span class="chip no">&times;</span></td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="kid">
+    <p>
+      Look at the <strong>1%</strong> column. Even if you dropped the bar to
+      "one chance in a hundred", the first accusation gets over it and the
+      second still does not. Being <em>almost</em> unproven and being
+      <em>unprovable</em> are two different things, and only the second one
+      stays no matter how low you set the bar.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Both are <strong>derivable</strong> &mdash; the Boolean reading lists
+      both and cannot tell them apart. One allegation is not strong enough; the
+      other cannot be established at any standard above zero, and lowering the
+      standard never rescues it. Excluded evidence is not weak evidence.
+    </p>
+    <pre>established(c_okoro,accelerant_used)  = 0.8000
+established(c_okoro,at_property)      = impossible
+deliberate_loss(c_okoro)              = impossible   &lt;- one impossible premise, and the whole chain is impossible</pre>
+    <p>
+      They agree in exactly one place: a standard of 0, which both clear &mdash;
+      the algebra saying out loud that a standard of 0 is not a standard.
+      Nothing in this example casts the carrier to a plain number, because a
+      cast would flatten precisely this distinction: <em>"we could not prove
+      it"</em> and <em>"this could never have proved anything"</em> are not the
+      same sentence in a decision about somebody's property or liberty.
+    </p>
+  </div>
+
+  <div class="kid">
+    <p>
+      Same fire. Same evidence. Same rules. The only difference between the
+      last card and the first is <em>where somebody drew the line</em> — and
+      in one of them the man gets his money and in the other he does not.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The third card is a one-fact amendment to <code>s.8(2)</code>, run in the
+      demo. What makes it worth printing is what did <em>not</em> happen:
+    </p>
+    <pre>    before: exclusion at 75%  -&gt; indemnity payable
+    after:  exclusion at 50%  -&gt; indemnity refused: the s.7 exclusion is made out
+
+    derived facts identical:        true
+    annotations on them identical:  true</pre>
+    <p>
+      Nothing was recomputed differently. The fixpoint did not move and neither
+      did a single annotation. A rule of the form
+      <code>refuse(C) :- deliberate_loss(C), confidence(C, X), X &gt;= 75.</code>
+      would have required editing the logic of the norm to state the same
+      amendment.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> Exactly which step stops being sure enough</h2>
+
+  <div class="kid">
+    <p>
+      "Not proven" is a useless answer on its own. The useful answer is
+      <strong>which link in the chain gave out</strong> — and that is a
+      different link depending on how sure you had to be.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The chain below is the argmax backpointer of the same fold — the most
+      probable derivation, read back through the support the store recorded.
+      A step "breaks" at a standard when it does not clear it although
+      everything it rests on does. Values only fall as a derivation is
+      composed, so that is exactly where confidence dropped below the line.
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="step top">
+      <div class="head">
+        <span class="name">deliberate_loss(c_ash)</span>
+        <span class="num">0.7038</span>
+      </div>
+      <p class="cite"><strong>s.7</strong> No indemnity is payable where the loss was deliberately caused by the policyholder or with their connivance.</p>
+      <p class="rests">rests on 90% &mdash; inference strength <code>s7_step</code>, chosen by the modeller <code>[calibration]</code></p>
+      <div class="chips">
+        <span class="chip yes">50% &check;</span>
+        <span class="chip no">75% &times;</span>
+        <span class="chip no">95% &times;</span>
+      </div>
+    </div>
+
+    <div class="breakline">
+      <b>At 75% the chain breaks here.</b> Both findings of fact below still
+      clear the line. It is the <em>inference</em> from them to a deliberate
+      act that does not.
+    </div>
+
+    <div class="indent">
+      <div class="step">
+        <div class="head">
+          <span class="name">established(c_ash, at_property)</span>
+          <span class="num">0.9200</span>
+        </div>
+        <p class="cite"><strong>s.6(3)</strong> presence at the property may be proved by any admissible evidence</p>
+        <p class="rests">rests on 92% &mdash; <code>e_cam_07</code>: still from the yard camera opposite the gate, timed 23:41 <code>[record]</code></p>
+        <div class="chips">
+          <span class="chip yes">50% &check;</span>
+          <span class="chip yes">75% &check;</span>
+          <span class="chip no">95% &times;</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="head">
+          <span class="name">established(c_ash, accelerant_used)</span>
+          <span class="num">0.8500</span>
+        </div>
+        <p class="cite"><strong>s.6(2)</strong> physical traces recovered from the property are evidence of the manner in which a peril was brought about</p>
+        <p class="rests">rests on 85% &mdash; <code>e_lab_01</code>: county forensic laboratory, petroleum distillate recovered from three floor samples <code>[record]</code></p>
+        <div class="chips">
+          <span class="chip yes">50% &check;</span>
+          <span class="chip yes">75% &check;</span>
+          <span class="chip no">95% &times;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="breakline">
+      <b>At 95% the break has moved down here.</b> Under the criminal standard
+      the laboratory report does not itself reach the line, and neither does
+      the camera still.
+    </div>
+  </div>
+
+  <div class="kid">
+    <p>
+      Read the two red boxes. At the middle level the pieces of evidence are
+      each fine and it is the <em>guess joining them together</em> that is too
+      shaky. At the highest level even the lab report on its own is not enough.
+      Those are two completely different complaints, and a machine that just
+      says "not proven" tells you neither.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Note where the weakest number came from. The 90% is not law and not a
+      finding of fact — it is the modeller's, and it lives in its own ledger
+      (<code>[calibration]</code>, writer <code>modeller</code>) precisely so
+      that it can be pointed at. If you distrust one number in this whole
+      demonstration, distrust that one.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> "Does not meet the requirements"</h2>
+
+  <div class="callout">
+    <strong>"Your claim does not meet the requirements" is an absent
+    <code>whynot</code>, not an absent ground.</strong> The ground exists. It
+    is a specific condition of a specific norm and a specific fact, and the
+    machine that refused you knows all three.
+  </div>
+
+  <div class="kid">
+    <p>
+      This is the part people have spent years failing to get out of
+      institutions. Not "no". <em>Why</em> no — which rule, which condition,
+      and which fact was missing. Two refusals from the same case file:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Both trees below are produced by the kernel's recursive
+      <code>whynot</code>; the sentences above them are read back out of the
+      same model — the days, the limit, the list of insured perils. Nothing is
+      a template about a claim the engine did not actually decide.
+    </p>
+  </div>
+
+  <h3>A condition that failed</h3>
+  <pre>$ whynot indemnity_due(c_reed)
+
+  the element that failed: notice_in_time
+  s.5(e)  notice of the loss was given within 30 days of it.
+  the loss was on 11 April 2026; notice was given on 22 May 2026;
+  that is 41 days, and s.5(e) allows 30.
+
+  the demonstration, from the engine:
+    whynot indemnity_due[main](c_reed):
+      rule ra101652b: indemnity_due[main](?C)@now :- norm[main](s4)@now, elements_met[main](?C)@now
+        failed premise: elements_met[main](c_reed)
+          rule r6762f352: elements_met[main](?C)@now :- norm[main](s5)@now, [... the five elements ...]
+            failed premise: element_met[main](c_reed,notice_in_time)
+              rule rd126d614: element_met[main](?C,notice_in_time)@now :- norm[main](s5_e)@now, [...]
+                failed premise: 41 &lt;= 30 [builtin fails]</pre>
+
+  <h3>A fact that does not exist</h3>
+  <pre>$ whynot indemnity_due(c_vale)
+
+  the element that failed: covered_peril
+  s.5(c)  the peril alleged is an insured peril within s.2;
+  the peril alleged is subsidence; s.2 makes escape_of_water, fire, storm insured perils,
+  and there is no fact anywhere in the model making subsidence one.
+
+            failed premise: element_met[main](c_vale,covered_peril)
+              rule r76b7fa2c: element_met[main](?C,covered_peril)@now :- norm[main](s5_c)@now, peril_alleged[record](?C,?Peril)@now, insured_peril[main](?Peril)@now
+                failed premise: insured_peril[main](subsidence)
+                  no rule concludes 'insured_peril' and no matching base fact exists</pre>
+  <p class="sub">
+    Two different shapes of "no": a condition that was tested and failed, and a
+    fact that was looked for and is not there. The lines marked
+    <code>[...]</code> are elided for width; everything else is the program's
+    own output.
+  </p>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> Where the model sits</h2>
+
+  <div class="kid">
+    <p>
+      An AI reads the law and turns each sentence into a rule. Then a small,
+      dumb, completely predictable program does the actual reasoning, and prints
+      the chain it followed with the sentence of the law next to every step.
+    </p>
+    <p>
+      So a human never has to check whether the AI's <em>answer</em> is right.
+      They only have to check whether it copied each sentence over correctly —
+      and that they can do by reading twelve short rules next to twelve short
+      sentences.
+    </p>
+  </div>
+  <div class="eng">
+    <ol>
+      <li>a model translates the text of a norm into <strong>rules as data</strong>;</li>
+      <li>ROFL computes and emits a <strong>derivation tree with citations</strong>;</li>
+      <li>a human checks <strong>the translation</strong>, not the conclusion.</li>
+    </ol>
+    <p>
+      Hallucination is then possible only at step 1, localised to a specific
+      rule, sitting next to the sentence it claims to translate, and checkable
+      by eye. The positioning is <strong>not "an LLM with explainability" but
+      an LLM as a parser in front of an auditable kernel</strong>: in the first
+      case the explanation is generated after the fact and may diverge from the
+      real cause; in the second <strong>the explanation <em>is</em> the
+      cause</strong>. The reasoned decision on this page is the argmax
+      backpointer of the fold. There is no second artefact that could disagree
+      with it.
+    </p>
+    <p>
+      That is what the <code>norm(S)</code> premise on every operative rule
+      buys: it puts the citation <em>inside</em> the derivation, so the
+      provenance semiring reports it as a source and the test can assert
+      mechanically that <strong>no conclusion is reachable without passing
+      through a cited norm</strong>.
+    </p>
+    <div class="scroll">
+    <table>
+      <tr><th>ledger</th><th>holds</th><th>writer</th></tr>
+      <tr><td><code>[main]</code></td><td>the law</td><td><code>legislature</code></td></tr>
+      <tr><td><code>[record]</code></td><td>the facts as found, including the weight put on each piece of evidence</td><td><code>tribunal_of_fact</code></td></tr>
+      <tr><td><code>[calibration]</code></td><td>how much confidence survives an inference step</td><td><code>modeller</code></td></tr>
+    </table>
+    </div>
+    <p class="sub">
+      Three books, three writers, and the kernel's <code>forged[audit]</code>
+      catches a number filed in the wrong one with no checking code written.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">7</span> What this does <em>not</em> show</h2>
+
+  <div class="kid">
+    <p>
+      Everything else in this project can be checked by a second program: run
+      the real thing, compare the answers. <strong>This one cannot.</strong>
+      Whether the law was copied into rules correctly is something only a
+      lawyer can say, and no amount of computing makes that go away.
+    </p>
+    <p>
+      So we did not invent a fake judge to mark our homework. What we can check
+      is that the machine is consistent with itself — and we do. What we cannot
+      check, we have written down.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <strong>JOPA has no independent oracle.</strong> Every other example in
+      the set can be checked against something executable — a shell pipe, an
+      IAM simulator, a spreadsheet, exhaustive enumeration. Correctness of a
+      legal translation is verifiable only by a lawyer. This example therefore
+      stands last, because it lacks an oracle, not because it is hard. Two
+      things partially substitute: the translation is small enough to read in
+      full, and every conclusion carries a tree back to the norm it rests on.
+    </p>
+  </div>
+
+  <h3>Checked mechanically &mdash; 19 tests, about 2 seconds</h3>
+  <ul>
+    <li>the kernel's seven audits are empty; every rule is range-restricted</li>
+    <li><strong>no rule reads a standard of proof</strong> &mdash; via the kernel's own reflection of the rules, not a grep</li>
+    <li><strong>moving the standard moves nothing</strong>: identical derived facts, identical annotations, different verdict</li>
+    <li>a higher standard is never cleared where a lower one is refused, over every annotated fact</li>
+    <li>no conclusion is reachable without passing through a cited norm</li>
+    <li><strong><code>impossible</code> is not merely improbable</strong>: a weak conclusion fails only the higher standards and clears some positive one; an impossible conclusion fails <em>every</em> standard down to 1e-9 &mdash; and both clear a standard of 0, because a standard of 0 is not a standard</li>
+    <li>the weights are live: revise a finding of fact and the conclusion moves</li>
+    <li>three <strong>mutation tests</strong> break the model by hand &mdash; a threshold smuggled into a rule, a conclusion citing no norm, an unreadable weight &mdash; and each is caught. A check that has never failed has not been shown to work.</li>
+  </ul>
+
+  <h3>Not established, and not establishable here</h3>
+  <ul>
+    <li><strong>that the translation is faithful.</strong> The statute is synthetic, so there is nothing to be faithful <em>to</em>.</li>
+    <li><strong>that the evidence weights are calibrated.</strong> 92% for a camera still is a number a tribunal would have to justify. Here it is invented.</li>
+    <li><strong>that multiplying along a chain is right.</strong> It assumes independence; traces and presence are not independent.</li>
+    <li><strong>that <code>max</code> across routes is right.</strong> Corroboration does not accumulate here: two independent 60% witnesses are worth 60%, not more. Law thinks corroboration matters; Viterbi cannot say so. There is a test that asserts this limitation rather than hiding it.</li>
+    <li><strong>that the standard belongs on the composite</strong> rather than element by element. Five elements at 90% give a composite of 59%; a lawyer would say each element is proved. That is a real dispute in evidence law and the algebra does not settle it — it only makes the choice explicit and movable.</li>
+    <li><strong>anything at all about any real jurisdiction.</strong></li>
+  </ul>
+
+  <div class="eng">
+    <h3>Where the kernel fought back</h3>
+    <p>
+      The exclusion in <code>s.7</code> is <em>not</em> written as a negated
+      premise of <code>s.4</code>, and that is the load-bearing design decision
+      of the whole example. A negated premise is settled in the Boolean
+      fixpoint, which runs <em>before</em> any semiring is chosen — so the
+      exclusion would be in or out at derivability, at no standard of proof at
+      all, and <code>s.8(2)</code>'s higher standard for it could not be stated.
+    </p>
+    <p>
+      The model ships the demonstration. <code>s.5</code> is in it twice: as a
+      conjunction of its five elements, and as "no element is missing" with the
+      element list as data. Same verdict on every claim, and:
+    </p>
+    <pre>elements_met(c_ash)         = 0.9700   (the five elements, multiplied)
+elements_met_closed(c_ash)  = 1.000   (nothing is missing -- and a finite failure carries no annotation)</pre>
+    <p>
+      The second reading says the claim is <strong>certain</strong>. It is not;
+      it rests on a fire brigade report the tribunal put at 97%. So whether a
+      norm can be tested at a standard of proof at all depends on how the norm
+      was written down — which is not a property anyone would expect a
+      translation to have to preserve.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <code>examples/jopa/</code> — <code>jopa.rofl</code> (the synthetic
+    statute), <code>facts.rofl</code> (one case file), <code>calibration.rofl</code>
+    (the modeller's one number), <code>demo.ts</code> (run it:
+    <code>node --experimental-strip-types examples/jopa/demo.ts</code>),
+    <code>README.md</code>, this page, and
+    <code>test/example-jopa.test.ts</code>. Every transcript above is pasted
+    output from a real run; nothing on this page was composed by hand.
+  </p>
+  <p>
+    A demonstration of a mechanism. Not legal advice.
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('jopa-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('jopa-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('jopa-theme', next);
+    });
+
+    var savedTheme = load('jopa-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

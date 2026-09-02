@@ -1,0 +1,195 @@
+-- cram.rofl — CRAM: a flight computer that must fit its own future in a box.
+--
+-- THE SITUATION. A probe is nine light-minutes out and climbing. Its store is
+-- whatever was bolted on before launch; nothing will ever be added to it. It
+-- senses, it judges, it latches faults, it picks a posture, and it does that
+-- once per tick for years. The mission is bounded — twenty-four sensors, four
+-- subsystems, eighteen bus segments, and that is the whole craft, for ever.
+-- The RECORD of the mission is not bounded: every completed tick leaves behind
+-- the kernel's account of which rule concluded what, and that account grows
+-- with the clock and nothing else.
+--
+-- So the program is a fixed world with an unbounded memory of itself, and the
+-- box is fixed. Measured over this file in demo.ts §2: the craft's own facts
+-- settle at ~1470 and never move again; the provenance grows by ~840 records
+-- every tick. By tick 10 the record of the mission is four times the mission.
+-- Nothing in the domain caused that and nothing in the domain can stop it.
+--
+-- WHAT THE KERNEL OFFERS, and it is the subject of this example:
+--
+--   new Rofl({ retainTicks: n })  keep the current tick's provenance and the
+--                                 last n completed ones; drop the rest at the
+--                                 boundary.
+--   new Rofl({ reuse: false })    rebuild every derived relation on every
+--                                 evaluation instead of keeping the ones whose
+--                                 inputs have not moved.
+--
+-- They look like two settings and they are one decision, because ONE predicate
+-- gates both: `Evaluation.readsProvenance`. A program whose rules read
+-- `derived_by` can observe its own derivations from inside, so pruning would
+-- change a derivable fact rather than evict a cache — and so would reuse,
+-- because every firing anywhere emits a provenance record and such a rule sits
+-- outside the dependency cone reuse rests on. §5 is that program, and it is
+-- loaded from a separate file precisely so that the demo can run the craft
+-- with it and without it and put the two stores side by side.
+--
+-- WHAT YOU GIVE UP. The provenance is the only record of WHICH RULE concluded
+-- something and WHEN. Prune it and the store stops being able to answer that
+-- about the pruned ticks — and it stops in the worst available way: the query
+-- returns no rows, which is the same answer it gives for a tick that never
+-- happened. demo.ts §6 puts those two side by side. The box is bought with
+-- the length of the answerable past, and demo.ts §9 prints the exchange rate.
+
+-- ===========================================================================
+-- §1  THE CRAFT
+--
+-- Static for the life of the mission, and therefore carried tick to tick by
+-- §4 rather than republished. Nothing here ever changes; every fact below is
+-- part of the constant 1470.
+-- ===========================================================================
+
+subsystem[bus](thermal).  subsystem[bus](power).
+subsystem[bus](comms).    subsystem[bus](attitude).
+
+-- Losing one of these puts the craft in `safe`. Losing thermal or comms is
+-- bad and survivable; losing power or attitude ends the mission.
+critical[bus](power).  critical[bus](attitude).
+
+-- The sensors: which subsystem each reports for, and the value above which it
+-- is out of limits. The limits are the craft's, not the model's — they are
+-- what the sensing rules of §3 compare against.
+sensor[bus](s0, thermal).   limit[bus](s0, 60).   strikes[bus](s0, 0).
+sensor[bus](s1, power).     limit[bus](s1, 65).   strikes[bus](s1, 0).
+sensor[bus](s2, comms).     limit[bus](s2, 70).   strikes[bus](s2, 0).
+sensor[bus](s3, attitude).  limit[bus](s3, 75).   strikes[bus](s3, 0).
+sensor[bus](s4, thermal).   limit[bus](s4, 80).   strikes[bus](s4, 0).
+sensor[bus](s5, power).     limit[bus](s5, 85).   strikes[bus](s5, 0).
+sensor[bus](s6, comms).     limit[bus](s6, 90).   strikes[bus](s6, 0).
+sensor[bus](s7, attitude).  limit[bus](s7, 60).   strikes[bus](s7, 0).
+sensor[bus](s8, thermal).   limit[bus](s8, 65).   strikes[bus](s8, 0).
+sensor[bus](s9, power).     limit[bus](s9, 70).   strikes[bus](s9, 0).
+sensor[bus](s10, comms).    limit[bus](s10, 75).  strikes[bus](s10, 0).
+sensor[bus](s11, attitude). limit[bus](s11, 80).  strikes[bus](s11, 0).
+sensor[bus](s12, thermal).  limit[bus](s12, 85).  strikes[bus](s12, 0).
+sensor[bus](s13, power).    limit[bus](s13, 90).  strikes[bus](s13, 0).
+sensor[bus](s14, comms).    limit[bus](s14, 60).  strikes[bus](s14, 0).
+sensor[bus](s15, attitude). limit[bus](s15, 65).  strikes[bus](s15, 0).
+sensor[bus](s16, thermal).  limit[bus](s16, 70).  strikes[bus](s16, 0).
+sensor[bus](s17, power).    limit[bus](s17, 75).  strikes[bus](s17, 0).
+sensor[bus](s18, comms).    limit[bus](s18, 80).  strikes[bus](s18, 0).
+sensor[bus](s19, attitude). limit[bus](s19, 85).  strikes[bus](s19, 0).
+sensor[bus](s20, thermal).  limit[bus](s20, 90).  strikes[bus](s20, 0).
+sensor[bus](s21, power).    limit[bus](s21, 60).  strikes[bus](s21, 0).
+sensor[bus](s22, comms).    limit[bus](s22, 65).  strikes[bus](s22, 0).
+sensor[bus](s23, attitude). limit[bus](s23, 70).  strikes[bus](s23, 0).
+
+-- The power bus: a chain from the array outward. `powered` is therefore a
+-- transitive closure, and it is the only part of the craft whose fixpoint
+-- takes more than a round or two to settle — which is what makes the
+-- difference between naive and seminaive evaluation observable at all
+-- (demo.ts §4, where it turns out the kernel's own meter cannot see it).
+source[bus](seg0).
+segment[bus](seg0).  segment[bus](seg1).  segment[bus](seg2).
+segment[bus](seg3).  segment[bus](seg4).  segment[bus](seg5).
+segment[bus](seg6).  segment[bus](seg7).  segment[bus](seg8).
+segment[bus](seg9).  segment[bus](seg10). segment[bus](seg11).
+segment[bus](seg12). segment[bus](seg13). segment[bus](seg14).
+segment[bus](seg15). segment[bus](seg16). segment[bus](seg17).
+
+feeds[bus](seg0, seg1).    feeds[bus](seg1, seg2).    feeds[bus](seg2, seg3).
+feeds[bus](seg3, seg4).    feeds[bus](seg4, seg5).    feeds[bus](seg5, seg6).
+feeds[bus](seg6, seg7).    feeds[bus](seg7, seg8).    feeds[bus](seg8, seg9).
+feeds[bus](seg9, seg10).   feeds[bus](seg10, seg11).  feeds[bus](seg11, seg12).
+feeds[bus](seg12, seg13).  feeds[bus](seg13, seg14).  feeds[bus](seg14, seg15).
+feeds[bus](seg15, seg16).  feeds[bus](seg16, seg17).
+
+on_segment[bus](s0, seg0).    on_segment[bus](s1, seg1).    on_segment[bus](s2, seg2).
+on_segment[bus](s3, seg3).    on_segment[bus](s4, seg4).    on_segment[bus](s5, seg5).
+on_segment[bus](s6, seg6).    on_segment[bus](s7, seg7).    on_segment[bus](s8, seg8).
+on_segment[bus](s9, seg9).    on_segment[bus](s10, seg10).  on_segment[bus](s11, seg11).
+on_segment[bus](s12, seg12).  on_segment[bus](s13, seg13).  on_segment[bus](s14, seg14).
+on_segment[bus](s15, seg15).  on_segment[bus](s16, seg16).  on_segment[bus](s17, seg17).
+on_segment[bus](s18, seg0).   on_segment[bus](s19, seg1).   on_segment[bus](s20, seg2).
+on_segment[bus](s21, seg3).   on_segment[bus](s22, seg4).   on_segment[bus](s23, seg5).
+
+clock[bus](0).
+
+-- ===========================================================================
+-- §2  THE SENSING
+--
+-- `reading[bus](S, V)` is the only thing the host publishes, and it publishes
+-- it FOUR TIMES A TICK — six sensors per packet, the way a real bus delivers
+-- them. That detail is not decoration: each packet marks the store dirty, so a
+-- tick is four evaluations rather than one, and it is across those four that
+-- `reuse` has anything to keep. A demo that published the whole tick at once
+-- would measure `reuse` at exactly zero and conclude the wrong thing.
+-- ===========================================================================
+
+-- (no rules here: `reading` is asserted by the host, tick-scoped, and gone at
+-- the boundary. What survives a tick is only what §4 stages.)
+
+-- ===========================================================================
+-- §3  THE JUDGEMENT
+--
+-- One tick's worth of thinking. Everything here is derived and everything here
+-- dies at the tick boundary; what the next tick sees of it is only what §4
+-- carries forward.
+-- ===========================================================================
+
+over[bus](S)          :- reading[bus](S, V), limit[bus](S, Hi), V > Hi.
+fault[bus](Sub)       :- over[bus](S), sensor[bus](S, Sub).
+nominal[bus](Sub)     :- subsystem[bus](Sub), not fault[bus](Sub).
+
+alarm[bus](Sub)       :- fault[bus](Sub), critical[bus](Sub).
+alarmed[bus](yes)     :- alarm[bus](_).
+
+-- The posture is the craft's one decision per tick, and it is the fact the
+-- ground will later ask about: "why were we in safe at tick 4?"
+posture[bus](safe)    :- alarmed[bus](yes).
+posture[bus](science) :- not alarmed[bus](yes).
+
+-- A sensor out of limits trips its bus segment, and everything downstream of a
+-- tripped segment goes dark. `powered` is recursive and reads `tripped`
+-- negatively; `tripped` is settled first, so the program is stratified.
+tripped[bus](Seg)     :- over[bus](S), on_segment[bus](S, Seg).
+powered[bus](B)       :- source[bus](B), not tripped[bus](B).
+powered[bus](B)       :- powered[bus](A), feeds[bus](A, B), not tripped[bus](B).
+dark[bus](Seg)        :- segment[bus](Seg), not powered[bus](Seg).
+
+-- ===========================================================================
+-- §4  WHAT SURVIVES A TICK
+--
+-- AND THIS IS WHERE THE LEAK IS. Every `@next` head staged here becomes a base
+-- fact of the next tick, and the kernel writes one `derived_by` record for
+-- each, frozen, at the boundary. Roughly 110 heads stage per tick here; the
+-- rest of the ~840 records a tick mints are the boot.rofl meta layer's, which
+-- is loaded for real work (its audits judge these rules) and pays the same
+-- toll. Neither number is the domain's fault: the craft is the same craft at
+-- tick 1000 as at tick 1.
+-- ===========================================================================
+
+subsystem[bus](Sub)      @next :- subsystem[bus](Sub).
+critical[bus](Sub)       @next :- critical[bus](Sub).
+sensor[bus](S, Sub)      @next :- sensor[bus](S, Sub).
+limit[bus](S, Hi)        @next :- limit[bus](S, Hi).
+segment[bus](Seg)        @next :- segment[bus](Seg).
+source[bus](B)           @next :- source[bus](B).
+feeds[bus](A, B)         @next :- feeds[bus](A, B).
+on_segment[bus](S, Seg)  @next :- on_segment[bus](S, Seg).
+
+clock[bus](T1)           @next :- clock[bus](T), T1 is T + 1.
+
+-- The strike counter: how many ticks in a row this sensor has been out of
+-- limits. Two rules, and between them they stage one fact per sensor per tick
+-- whatever happens — which is the point. A craft that is perfectly healthy
+-- leaks provenance at exactly the same rate as one that is on fire.
+strikes[bus](S, N1)      @next :- strikes[bus](S, N), over[bus](S), N1 is N + 1.
+strikes[bus](S, N)       @next :- strikes[bus](S, N), not over[bus](S).
+
+-- A latched alarm remembers the tick it fired on, and never clears: this is
+-- the craft's own record of its past, in the domain, and it is bounded by the
+-- number of subsystems. It is here so that §6's question has a domain-side
+-- answer to be compared against — `latched` survives pruning, and knowing
+-- WHEN a subsystem latched is not the same as knowing WHICH RULE concluded it.
+latched[bus](Sub, T)     @next :- alarm[bus](Sub), clock[bus](T).
+latched[bus](Sub, T)     @next :- latched[bus](Sub, T).

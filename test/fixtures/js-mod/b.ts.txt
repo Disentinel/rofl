@@ -1,0 +1,4 @@
+import { helper } from './c.ts';
+export const v1 = helper(1);
+export const v2 = 2;
+export type T2 = { tag: 'T2' };

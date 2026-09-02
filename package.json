@@ -5,17 +5,29 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --experimental-strip-types --test --test-reporter=spec test/*.test.ts",
+    "test": "node --expose-gc --experimental-strip-types --test --test-reporter=spec test/*.test.ts",
     "test:bun": "bun test --timeout 60000",
     "grepcheck": "node --experimental-strip-types scripts/kernel_grep.ts",
+    "textcheck": "node --experimental-strip-types scripts/text_check.ts",
     "repl": "node --experimental-strip-types src/repl.ts",
     "scan": "node --experimental-strip-types scanners/cli.ts",
     "report": "node --experimental-strip-types runtime/report.ts",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
     "pair": "node --experimental-strip-types runtime/pair.ts",
-    "build:skill": "node --experimental-strip-types scripts/build_skill.ts"
+    "build:skill": "node --experimental-strip-types scripts/build_skill.ts",
+    "measurecheck": "node --experimental-strip-types scripts/measurement_check.ts",
+    "flagcheck": "node --experimental-strip-types scripts/flag_census.ts",
+    "speccheck": "node --experimental-strip-types scanners/spec.ts",
+    "splitcheck": "node --experimental-strip-types scanners/engine_split.ts",
+    "dagcheck": "node --experimental-strip-types scanners/bootstrap_dag.ts",
+    "ablate": "node --experimental-strip-types scanners/ablate.ts",
+    "laddercheck": "node --experimental-strip-types scanners/policy_ladder.ts"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/generator": "^8.0.0",
+    "@babel/plugin-transform-async-to-generator": "^8.0.1",
+    "@babel/plugin-transform-regenerator": "^8.0.2",
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3"
   },

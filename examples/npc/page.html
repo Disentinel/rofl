@@ -1,0 +1,816 @@
+<title>NPC — Non-Player Cognition</title>
+<meta charset="utf-8">
+
+<style>
+  :root {
+    --bg:        #fbf9f6;
+    --panel:     #ffffff;
+    --ink:       #1b1a19;
+    --ink-soft:  #595650;
+    --ink-faint: #8b867d;
+    --line:      #e4e0d7;
+    --line-soft: #efece5;
+    --accent:    #1f6f6b;
+    --accent-bg: #e6f2f1;
+    --warm:      #a8641c;
+    --warm-bg:   #faf0e2;
+    --good:      #2f6b3f;
+    --gone:      #a03030;
+    --code-bg:   #f3f0e9;
+    --shadow:    0 1px 2px rgba(28, 26, 22, .06), 0 8px 24px rgba(28, 26, 22, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f24;
+      --ink:       #e9ecef;
+      --ink-soft:  #aeb4bb;
+      --ink-faint: #7d838b;
+      --line:      #31353c;
+      --line-soft: #25282e;
+      --accent:    #6fd3cb;
+      --accent-bg: #16302f;
+      --warm:      #e8a45c;
+      --warm-bg:   #2e2417;
+      --good:      #8fd6a2;
+      --gone:      #f09090;
+      --code-bg:   #111318;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .33);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f24;
+    --ink:       #e9ecef;
+    --ink-soft:  #aeb4bb;
+    --ink-faint: #7d838b;
+    --line:      #31353c;
+    --line-soft: #25282e;
+    --accent:    #6fd3cb;
+    --accent-bg: #16302f;
+    --warm:      #e8a45c;
+    --warm-bg:   #2e2417;
+    --good:      #8fd6a2;
+    --gone:      #f09090;
+    --code-bg:   #111318;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .33);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 47rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+
+  section { margin: 3.2rem 0 0; }
+  h2 { font-size: 1.4rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .3rem; }
+  p { margin: .8rem 0; max-width: 47rem; }
+  .kicker { color: var(--ink-faint); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0 0 .3rem; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .82rem; line-height: 1.5; margin: 1.2rem 0;
+  }
+  pre.tight { font-size: .74rem; }
+  code { background: var(--code-bg); border-radius: 4px; padding: .08em .35em; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin: 1.4rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .card h4 { margin: 0 0 .35rem; font-size: .95rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+  .card p { margin: 0; font-size: .92rem; color: var(--ink-soft); max-width: none; }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 8px 8px 0;
+          padding: .8rem 1rem; margin: 1.4rem 0; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: .6rem; }
+  .warn { border-left-color: var(--warm); background: var(--warm-bg); }
+
+  .scroll { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { color: var(--ink-faint); font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+  td.mono, th.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 1.4rem 0; }
+  .steps li {
+    counter-increment: step; position: relative; padding: .55rem 0 .55rem 2.6rem;
+    border-bottom: 1px solid var(--line-soft); max-width: 47rem;
+  }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: .55rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 999px; background: var(--accent-bg); color: var(--accent);
+    display: grid; place-items: center; font-size: .78rem; font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .steps b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: .9em; }
+
+  .win { color: var(--good); font-weight: 600; }
+  .lose { color: var(--gone); font-weight: 600; }
+  .hush { color: var(--ink-faint); }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .88rem; }
+  footer p { max-width: 47rem; }
+
+  /* level switching */
+  body[data-level="kid"] .eng { display: none; }
+  body[data-level="eng"] .kid { display: none; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">ROFL &middot; example</p>
+  <h1>NPC <span class="dim">&mdash; the game character that can say why not</span></h1>
+  <p class="lede kid">Ten little characters live in a walled yard. Each one keeps its own
+    notebook of what it has seen. A computer works out what each of them wants, what it
+    should do about it, and &mdash; this is the unusual part &mdash; it can always explain
+    why it did that, and why it did <em>not</em> do the obvious thing instead.</p>
+  <p class="lede eng">Ten agents, a 9&times;5 grid, four act shapes. Intents are facts,
+    decomposition is rules, the plan is a fixpoint, and conflict is resolved by a Viterbi
+    fold over the support hypergraph rather than by a priority comparison. Then an agent
+    meets an uncovered situation, records it as a fact, and a rule written at runtime is
+    applied to the whole recorded past.</p>
+
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="reading level">
+      <button data-set="kid" aria-pressed="false">Plain</button>
+      <button data-set="eng" aria-pressed="true">In the engine</button>
+    </div>
+    <button class="ghost" id="theme">light / dark</button>
+  </div>
+</header>
+
+<section>
+  <h2 class="kid">The yard</h2>
+  <h2 class="eng">The yard at tick 1</h2>
+
+  <p class="kid"><code>W</code> is a guard, <code>w</code> is a wolf, <code>*</code> is a
+    drifting light, and <code>##</code> is a crate you cannot see through or walk into.
+    Everything that happens later follows from this picture and nothing is arranged
+    afterwards.</p>
+  <p class="eng">Six wardens, three wolves, one wisp, three sight-blocking props in a line
+    at x&nbsp;=&nbsp;3. Every interesting thing in the transcript is a consequence of these
+    ten rows of the roster.</p>
+
+<pre>  y=5  W2 W3  . W5  .  .  .  . w9
+  y=4   . W1 ##  .  .  .  . W6  .
+  y=3 *10  . ##  .  .  .  .  .  .
+  y=2   .  . ## w7  .  . W4 w8  .
+  y=1   .  .  .  .  .  .  .  .  .
+         1  2  3  4  5  6  7  8  9</pre>
+
+  <div class="cards">
+    <div class="card">
+      <h4>npc_1 &amp; npc_5</h4>
+      <p class="kid">Close enough to see each other, but a cart is in the way. npc_5 is
+        hurt and npc_1 has no idea.</p>
+      <p class="eng">In range, screened by <code>cart_3</code>. The fog of war, and the
+        section below shows what the missing line is worth.</p>
+    </div>
+    <div class="card">
+      <h4>npc_3 &amp; npc_5</h4>
+      <p class="kid">npc_3 <em>can</em> see the hurt guard, wants to help, and has no rule
+        that says how to walk over there.</p>
+      <p class="eng">Subgoal <code>tend(npc_5)</code> with no derivable option. This is the
+        hole the agent later closes with a rule it writes itself.</p>
+    </div>
+    <div class="card">
+      <h4>npc_4 &amp; npc_8</h4>
+      <p class="kid">A guard standing right next to a wolf. Fight, or hold the post? The
+        computer works it out with arithmetic, not with a list of priorities.</p>
+      <p class="eng">Two intents reaching two acts. The pair the semiring arbitrates, and
+        the pair that flips when one constant moves by three.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2 class="kid">Everybody has their own notebook</h2>
+  <h2 class="eng">A perspective is a ledger, and here there are thirteen</h2>
+
+  <p class="kid">The computer keeps a separate notebook for every character. npc_3's
+    notebook says <em>"npc_5, hurt, over at square (4,5), saw it on turn 0"</em>. npc_1's
+    notebook does not say that, because the cart was in the way. Two notebooks can
+    disagree about the same yard and neither of them is wrong &mdash; they just saw
+    different things.</p>
+  <p class="kid">Nothing has to stop npc_1 from peeking at npc_3's notebook. It cannot,
+    because they are different notebooks, and that is the whole trick.</p>
+
+  <p class="eng"><code>saw[npc_3](...)</code> and <code>saw[npc_1](...)</code> are
+    different facts because their perspectives differ, so two agents holding incompatible
+    pictures of the same yard is <em>legal</em> rather than a data error. Nothing enforces
+    the wall between them because the wall <em>is</em> the ledger. An agent that writes
+    into somebody else's journal surfaces as <code>forged[audit]</code> mechanically, with
+    no enforcement code &mdash; the test does it on purpose and watches it fire.</p>
+
+  <h3 class="eng">One rule writes all ten journals</h3>
+<pre class="eng">saw[A](E, K, X, Y, B, T) :- spots[world](A, E, X, Y),
+                            kind[world](E, K), band[world](E, B), now[world](T).
+saw[P](E, K, X, Y, B, T) @next :- saw[P](E, K, X, Y, B, T).</pre>
+  <p class="eng">The head perspective is a variable bound by the body, and an agent's id
+    and the name of its ledger are deliberately the same atom. The carry rule reads and
+    writes the <em>same</em> perspective variable, which until recently surfaced as
+    <code>leak[audit]</code>: the audit recorded every variable perspective as one
+    wildcard, so a rule polymorphic in the ledger looked exactly like a rule reading one
+    ledger and writing another. <code>examples/sus</code> wrote twenty carry rules by hand
+    to get round it. The kernel now records a variable perspective as itself and
+    <code>leak</code> excludes a flow whose two ends are the same term. Ten journals, one
+    line &mdash; and <code>leak[audit]</code> is 0, which is the check, not the claim.</p>
+
+  <h3 class="kid">What one missing line is worth</h3>
+  <h3 class="eng">Incomplete information reaching all the way to a commitment</h3>
+
+  <p class="kid">Write one sentence into npc_1's notebook &mdash; <em>"npc_5 is hurt, over
+    there"</em> &mdash; and change nothing else in the yard at all. Now npc_1 wants
+    something it did not want before, and it also discovers that it has no idea how to do
+    it:</p>
+  <p class="eng">One fact asserted into one agent's own ledger, the world untouched
+    (positions and wounds compared fact-for-fact in the test), and re-derived:</p>
+
+<pre>    npc_1's intents without it: hold_post
+    npc_1's intents with it:    hold_post, tend(npc_5), tend_wounded
+    and a hole it did not have: uncovered(npc_1, no_action, tend(npc_5))</pre>
+</section>
+
+<section>
+  <h2 class="kid">Fight or stand still? The computer does arithmetic</h2>
+  <h2 class="eng">Conflict resolved by a semiring, not by a priority <code>if</code></h2>
+
+  <p class="kid">npc_4 is a guard standing next to a wolf. It has two things it might do.
+    "Drive the wolf off" is a stronger wish than "hold your post" &mdash; but driving a
+    wolf off takes <em>two</em> steps of thinking, and each step of thinking costs a
+    little confidence, the way a rumour loses something each time it is passed on.</p>
+
+  <p class="eng">Every option carries the whole chain of intents it came from. The Viterbi
+    fold multiplies one factor per decomposition step &mdash; the priority of the intent
+    that step concluded &mdash; so an option's value is the probability of its
+    <em>best</em> derivation, and &oplus;&nbsp;=&nbsp;max picks the better of two routes to
+    the same act. Nothing else in the arbiter is domain knowledge: which derivations exist
+    and what they rest on comes out of the store.</p>
+
+  <div class="scroll">
+  <table>
+    <tr><th>drive</th><th class="num">priority</th><th>reaches</th><th class="num">steps</th><th class="num">score</th><th>outcome</th></tr>
+    <tr><td class="mono">repel</td><td class="num">65</td><td class="mono">strike(npc_8)</td><td class="num">2</td><td class="num">0.4225</td><td class="win">chosen</td></tr>
+    <tr><td class="mono">hold_post</td><td class="num">40</td><td class="mono">hold</td><td class="num">1</td><td class="num">0.4000</td><td class="hush">&mdash;</td></tr>
+    <tr><td class="mono">repel</td><td class="num">62</td><td class="mono">strike(npc_8)</td><td class="num">2</td><td class="num">0.3844</td><td class="lose">not chosen</td></tr>
+    <tr><td class="mono">hold_post</td><td class="num">40</td><td class="mono">hold</td><td class="num">1</td><td class="num">0.4000</td><td class="win">chosen</td></tr>
+  </table>
+  </div>
+
+  <div class="note">
+    <p class="kid"><strong>Look at the bottom half.</strong> "Drive the wolf off" was 65 and
+      is now 62 &mdash; still much more important than "hold your post", which is 40. And
+      yet the guard now stands still. Nothing about which wish is bigger changed. What
+      changed is how far away the doing was.</p>
+    <p class="eng"><strong>This is not "65&nbsp;&gt;&nbsp;40".</strong> Move one constant
+      from 65 to 62 &mdash; still far above hold_post, priority <em>order</em> completely
+      unchanged &mdash; and the act flips, because two steps of 0.62 are worth less than
+      one of 0.40. No <code>if</code> in any language expresses that, and no priority list
+      contains it: it is a fact about the shape of the derivation, not about the ordering
+      of the constants.</p>
+  </div>
+
+  <p class="eng"><strong>Depth costs, and that is a real semantic commitment.</strong> A
+    deeply decomposed plan under a strong drive can lose to a shallow one under a weak
+    drive. A designer has to know that; it is the price of arbitration being an algebra
+    over the whole derivation rather than a comparison of two numbers.</p>
+
+  <h3 class="eng">And the inheritance rule is written the awkward way on purpose</h3>
+  <p class="eng">The obvious form &mdash; <code>intent(A,G,P) :- subgoal(A,Par,G),
+    intent(A,Par,P)</code> &mdash; makes the parent intent a premise of the child twice,
+    once directly and once inside the subgoal, and &otimes; over the premises of one firing
+    multiplies its factor in both times: 0.7 becomes 0.343 instead of 0.49. That is not a
+    bug in the semiring. Viterbi folds over derivation <em>trees</em>, and in a tree a
+    shared premise really does occur twice. Reading the constant out of the drive table
+    instead leaves exactly one occurrence.</p>
+
+  <h3 class="kid">When the arithmetic cannot decide</h3>
+  <h3 class="eng">Indifference is not conflict, and the difference is recorded</h3>
+  <p class="kid">Sometimes two different steps are exactly as good as each other &mdash;
+    running left and running right both get you away from the wolf. Then a plain written-
+    down order decides: help somebody, else hit somebody, else move, else stand still. And
+    every single time that order decided anything, it gets written in the log.</p>
+  <p class="eng">The fold scores identical alternatives identically, because they
+    <em>are</em> identical to it. A declared total order over acts then decides, and every
+    occasion it decided anything lands in <code>tie[audit]</code>. It is a real commitment,
+    not a formality: an agent standing beside the ally it means to tend scores
+    <code>tend(B)</code> and <code>move(D) towards B</code> identically, both being one
+    step off the same intent, and without "help before travel" it walks past the wound for
+    ever. That is not hypothetical &mdash; it is what the first version of this example
+    did.</p>
+</section>
+
+<section>
+  <h2 class="kid">"Why didn't it do the obvious thing?"</h2>
+  <h2 class="eng">whynot: the question a behaviour tree cannot answer in principle</h2>
+
+  <p class="kid">This is the question that makes people who build game characters tear
+    their hair out. The usual tools can show you which branch ran. They cannot show you why
+    a different branch did <em>not</em> run, because nothing ever looked at it.</p>
+  <p class="kid">Here you just ask. npc_3 can see a hurt friend two squares away and is not
+    bandaging them. Why not? Because bandaging needs you to be <em>next to</em> the person,
+    and the distance is 4 where it needed to be 1:</p>
+
+  <p class="eng">You can see which node ran; you cannot see why another did not. Here the
+    demonstration is a query, and it names the premise instance that failed and the value
+    it failed on:</p>
+
+<pre class="tight">whynot option[mind](npc_3,tend(npc_5),tend(npc_5)):
+  rule r13e81b69: option[mind](?A,tend(?B),tend(?B))@now :- intent[mind](?A,tend(?B),?_$0)@now, adjacent[mind](?A,?B)@now, in_sight[mind](?A,?B)@now
+    failed premise: adjacent[mind](npc_3,npc_5)
+      rule rabaa78a0: adjacent[mind](?A,?E)@now :- gap[mind](?A,?E,?D)@now, melee[world](?R)@now, ?D &lt;= ?R
+        failed premise: 4 &lt;= 1 [builtin fails]</pre>
+
+  <p class="kid">And the harder one. npc_1 cannot see npc_5 at all. Not "it is too far"
+    &mdash; it is close enough. The answer names the thing that is in the way, by name:</p>
+  <p class="eng">The spec's own example &mdash; <em>line_of_sight = false, blocked by
+    props/crate_14</em>. In range, unseen, and the blocker is <strong>named</strong> rather
+    than reported as a <code>false</code>:</p>
+
+<pre class="tight">whynot in_sight[mind](npc_1,npc_5):
+  rule rd855e15c: in_sight[mind](?A,?E)@now :- recalls[mind](?A,?E,?_$0,?_$1,?_$2,?_$3,?T)@now, now[world](?T)@now
+    failed premise: recalls[mind](npc_1,npc_5,?_$0#0,?_$1#0,?_$2#0,?_$3#0,?T#0)
+      rule r693c2c00: recalls[mind](?A,?E,?K,?X,?Y,?B,?T)@now :- saw[?A](?E,?K,?X,?Y,?B,?T)@now, not outdated[mind](?A,?E,?T)@now
+        failed premise: saw[npc_1](npc_5,?_$0#0,?_$1#0,?_$2#0,?_$3#0,?T#0)
+          rule r92e1d2ea: saw[?A](?E,?K,?X,?Y,?B,?T)@now :- spots[world](?A,?E,?X,?Y)@now, kind[world](?E,?K)@now, band[world](?E,?B)@now, now[world](?T)@now
+            failed premise: spots[world](npc_1,npc_5,?_$1#0,?_$2#0)
+              rule ra4ebf83d: spots[world](?A,?E,?X,?Y)@now :- in_range[world](?A,?E,?X,?Y)@now, not screened[world](?A,?E,?_$0)@now
+                failed premise: not screened[world](npc_1,npc_5,?_$0#3) -- blocked: screened[world](npc_1,npc_5,cart_3) holds</pre>
+
+  <p class="eng">The rule ids in that block are content hashes of <code>npc.rofl</code>'s
+    clauses, so editing any of those rules forces the test &mdash; and this page &mdash; to
+    be redone. <code>whynot</code> takes <code>depth</code> and <code>nodes</code>, and both
+    announce themselves when they fire; the test asks for a demonstration that is too
+    shallow and one that is too narrow and checks that each says which bound cut it. A
+    truncation that does not say it truncated is the failure mode this API is built
+    against.</p>
+</section>
+
+<section>
+  <h2 class="eng">What one tick actually does</h2>
+  <h2 class="kid">One turn, step by step</h2>
+
+  <ol class="steps eng">
+    <li><b>publish</b> &mdash; the simulator asserts <code>at</code> and
+      <code>hp</code> into <code>[world]</code>. Everything static was carried here by
+      seventeen <code>@next</code> rules.</li>
+    <li><b>sense</b> &mdash; <code>in_range</code>, <code>screened</code>,
+      <code>spots</code>, then one rule writes a stamped entry into each of the ten
+      journals.</li>
+    <li><b>believe</b> &mdash; <code>outdated</code> / <code>recalls</code>
+      pick the freshest entry per entity; <code>foe</code>, <code>ally</code>,
+      <code>gap</code>, <code>adjacent</code>, <code>in_sight</code> follow.</li>
+    <li><b>intend</b> &mdash; drives fire intents, intents decompose into
+      subgoals, subgoals are intents again. Fixpoint.</li>
+    <li><b>propose</b> &mdash; every intent that can reach an act proposes one,
+      several if several steps qualify.</li>
+    <li><b>arbitrate</b> &mdash; the host folds Viterbi over the support the
+      kernel recorded, collapses to one score per (agent, act) with &oplus;&nbsp;=&nbsp;max,
+      and asserts <code>score[choice]</code>.</li>
+    <li><b>decide</b> &mdash; rules again: <code>beaten</code>,
+      <code>contender</code>, <code>preempted</code>, <code>does</code>, plus
+      <code>tie[audit]</code> and <code>uncovered[audit]</code>.</li>
+    <li><b>apply</b> &mdash; the simulator moves, strikes, tends. Host code,
+      and the next section says why it has to be.</li>
+    <li><b>advance</b> &mdash; <code>tickAdvance</code> stages the
+      <code>@next</code> layer, drops the tick-scoped facts, and freezes the tick's
+      provenance.</li>
+  </ol>
+
+  <ol class="steps kid">
+    <li>The yard tells everybody where everything is.</li>
+    <li>Each character looks around and writes what it can see into its own
+      notebook, with the turn number beside it.</li>
+    <li>Each character works out what it now believes: where its friends are,
+      where the wolves are, how far away.</li>
+    <li>Each character works out what it wants, and then what smaller thing it
+      wants in order to get it.</li>
+    <li>Each wish suggests something to actually do.</li>
+    <li>The suggestions get scored by the arithmetic from the section above.</li>
+    <li>The best score wins; ties are broken by a written-down order and the tie
+      is noted; a wish with nothing to do about it is noted too.</li>
+    <li>The yard makes the chosen things happen &mdash; people move, hit,
+      bandage.</li>
+    <li>The turn ends. Notebooks are kept. Everything else is thrown away and
+      the yard says it all again next turn.</li>
+  </ol>
+</section>
+
+<section>
+  <h2 class="kid">One thing the computer flatly refused to do &mdash; until it learned about time</h2>
+  <h2 class="eng">The loop the kernel would not close, and now does</h2>
+
+  <p class="kid">The natural way to build this is to let the rules move people around too,
+    not just decide. The computer would not accept that program at all &mdash; and it
+    explained itself instead of crashing or guessing.</p>
+  <p class="kid">The trouble looked like a circle: looking around depends on where
+    everybody is; deciding depends on looking around; moving depends on deciding; and
+    where everybody is depends on moving. Because one of those steps involves the word
+    <em>not</em> ("no better option than this one"), a circle like that has no consistent
+    answer. Saying "but the moving happens <em>next</em> turn" did not help, because the
+    checker looked at which rule depends on which, and not at when.</p>
+  <p class="kid">It looks at when now. A rule that writes into <em>next</em> turn is not
+    part of this turn's circle at all, so the program is accepted &mdash; and the world
+    really does move one turn later. Take the word <em>next</em> back off those same two
+    rules and the circle is real again, and the computer refuses again.</p>
+
+  <p class="eng">Sensing reads <code>at[world]</code>; deliberation reads sensing through
+    <code>not</code>; a transition rule writes <code>at[world]</code>. That used to read as
+    a negative dependency cycle, and <code>@next</code> did not help: stratification was
+    computed from <code>concludes</code>/<code>premise_pos</code>, which carry no temporal
+    marker. The loop was acyclic in time and cyclic in the graph, and the graph was what
+    was checked.</p>
+
+  <p class="eng"><code>not p</code> now means <em>p is not derivable in the current
+    tick's store</em>. A <code>@next</code> head therefore contributes no same-tick
+    dependency edge &mdash; its conclusion is not derived in this tick at all, it is
+    staged and installed at the tick boundary, which is also why it takes stratum 0
+    there. The kernel emits <code>conclusion_tense(RuleId, now|next)</code> and
+    <code>boot.rofl</code> reads it. The program above loads. What has not changed is the
+    check: take <code>@next</code> off those same rules and the kernel still refuses,
+    with a derivation:</p>
+
+<pre class="eng">program rejected: unstratified[main](at), unstratified[main](does)
+unstratified[main](at)  &lt;= ...
+  dep_neg[main](at,moves)  &lt;= ...
+  reach[main](moves,at)  &lt;= ...
+    ... dep[main](saw,at) ...</pre>
+
+  <div class="note eng">
+    <p><strong>The probe carries its own positive control.</strong> Acceptance proves
+      nothing on its own &mdash; a checker that had simply stopped checking would accept
+      it too. So the control is the same transition one word apart, without
+      <code>@next</code>, which must still be refused; and the same program with no
+      transition at all must load <em>and derive something</em>. An empty result is a fact
+      about the instrument until it is shown to be a fact about the subject.</p>
+  </div>
+
+  <p class="eng">The simulator here still applies acts in host code and republishes
+    <code>at</code>/<code>hp</code> every tick &mdash; now by choice rather than by force,
+    and that boundary is exactly where the fog of war already put it. Deliberation may not
+    read ground truth, and that discipline holds whether or not the kernel would permit
+    otherwise.</p>
+</section>
+
+<section>
+  <h2 class="kid">"I don't know what to do here"</h2>
+  <h2 class="eng">An uncovered situation is a fact, not a fallback</h2>
+
+  <p class="kid">npc_3 can see a hurt friend two squares away. It wants to help. There is no
+    rule anywhere that says how to walk over to somebody. Most game characters would quietly
+    do something else, or pick at random, and nobody would ever find out. This one writes
+    down <em>"I committed to helping npc_5 and I have no idea how"</em> and then holds its
+    post on purpose.</p>
+
+<pre class="eng">uncovered[audit](A, no_action, G) :- subgoal[mind](A, _, G),
+                                     not any_option[mind](A, G),
+                                     not decomposed[mind](A, G).</pre>
+  <p class="eng">A subgoal is a commitment to act; a drive that simply does not apply is
+    <em>not</em> a hole, or every agent would be one every tick. <code>hole</code> itself is
+    reserved kernel vocabulary &mdash; a rule may read it, never conclude into it &mdash; so
+    the domain hole has a domain name, and the kernel's own holes
+    (<code>hole($tick(N), budget_exhausted)</code>) are read separately.</p>
+
+  <div class="note warn">
+    <p class="kid"><strong>And one of these is left unanswered on purpose.</strong> The
+      drifting light is neither a friend nor an enemy &mdash; no list mentions it at all
+      &mdash; so every guard that sees it writes down "I don't know what this is". Nobody
+      ever writes a rule about it. Seeing one strange thing once is not a good reason to
+      invent a rule about it, and the honest thing is to leave the note sitting there.</p>
+    <p class="eng"><strong>The second hole stays open on purpose.</strong>
+      <code>uncovered(A, unclassified, npc_10)</code>: the wisp is in no
+      <code>hostile</code> row and no <code>kin</code> row. It is never closed. One sighting
+      of one thing is not a reason to write a rule, and the restraint is the same claim as
+      the extension &mdash; what the kernel gives you is an honest record of what is not
+      covered; deciding which records deserve a rule is not something a fixpoint does.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="kid">The character writes itself a new rule</h2>
+  <h2 class="eng">Self-extension, and the boundary stated plainly</h2>
+
+  <p class="kid">After ten notes of the same shape &mdash; <em>"wanted to help somebody,
+    couldn't reach them"</em> &mdash; a new rule gets written and handed to the computer
+    while it is running: <em>if you mean to help somebody you cannot reach, walk towards
+    the last place you saw them.</em></p>
+
+<pre>option[mind](A, move(D), tend(B)) :- intent[mind](A, tend(B), _),
+                                     step_to[mind](A, D, X2, Y2),
+                                     recalls[mind](A, B, _, BX, BY, _, _),
+                                     gap[mind](A, B, D0),
+                                     D1 is (X2 - BX) * (X2 - BX) + (Y2 - BY) * (Y2 - BY),
+                                     D1 &lt; D0.</pre>
+
+  <div class="note">
+    <p class="kid"><strong>Be honest about who did what.</strong> A person wrote that
+      sentence. The computer noticed that the same gap kept appearing, and it can promise
+      four things about the new rule afterwards: it is stored the same way as every other
+      rule, it applies to everything that already happened, the safety checks judge it just
+      like the rest, and you can diff it. It cannot promise the rule is a good idea.</p>
+    <p class="eng"><strong>Choosing that template is a generative step and the kernel does
+      not perform it.</strong> <code>proposeRule</code> is a human's template with a
+      threshold of three holes on it, and the threshold is the only mechanical part. What
+      the kernel guarantees is everything after: recorded as facts like any other, applied
+      to the <em>whole past</em> on the next evaluation, judged by <code>boot.rofl</code>'s
+      audits, diffable. It does not guarantee the rule is sensible. Same boundary as JOPA:
+      the model proposes, the kernel answers for consequences.</p>
+  </div>
+
+  <p class="kid">"Applies to everything that already happened" is meant literally. Go back
+    to the very first turn, put the new rule in, and work it all out again &mdash; the note
+    that said "I don't know what to do" is gone from turn one, because it was never stored,
+    only ever worked out:</p>
+  <p class="eng"><code>Store.restore</code> comes back dirty, so a restored tick
+    <em>re-derives</em> rather than replaying a log. The hole at tick 1 is not deleted; it
+    simply is not derivable any more:</p>
+
+<pre>    uncovered(npc_3, no_action, tend(npc_5)) at tick 1 before: true
+    ... and after:                                            false
+    options npc_3 now has for tend(npc_5): move(east)</pre>
+
+  <p class="kid">And here is what it changes. Same yard, same eight turns, same start:</p>
+  <p class="eng">The same eight ticks, the same roster, one rule different:</p>
+
+<pre>    npc_3 before: hold hold hold hold hold hold hold hold
+    npc_3 after:  move(east) tend(npc_5) hold hold hold hold hold hold
+    npc_5's hp at the end: 55 before, 95 after</pre>
+
+  <p class="kid">The last line is the one that counts. The friend actually got better. The
+    new rule did not just change what the character was thinking; it changed the yard.</p>
+  <p class="eng">The extension reached the world, not just the store. And the two
+    <code>stalk</code> holes survive untouched &mdash; a wolf standing on the exact spot
+    where it last saw prey that is no longer alive, with no step that decreases a distance
+    already zero. The rule was generalised from <code>tend</code> holes and closes
+    <code>tend</code> holes; it does not accidentally fix a different one, and no such
+    claim is made.</p>
+
+  <h3 class="eng">The rule set, diffed</h3>
+<pre class="eng">  rules in the head at tick 1: 99
+  after the agent writes one:  100
+  added:   r9cdce170
+  removed: (none)
+  and the id recomputed from the text alone: r9cdce170
+
+  same rule, two variables renamed:   r0c86a060  DIFFERENT
+  same rule, whitespace reflowed:     r9cdce170  SAME</pre>
+  <p class="eng"><code>examples/loot</code> diffs two <em>editions of a pack</em> by hashing
+    two texts; this diffs two <em>snapshots of one head</em> by reading <code>rule(R)</code>
+    back out of the store. Same identity function, different source, no machinery
+    duplicated. LOOT's finding transfers and is not re-litigated here: renaming a variable
+    changes the id. The reflow line is the control that makes the rename line a
+    measurement &mdash; without it, a hash that changed could have changed for any
+    reason.</p>
+</section>
+
+<section>
+  <h2 class="kid">Running out of time to think</h2>
+  <h2 class="eng">The frame budget</h2>
+
+  <p class="kid">A game gets a few milliseconds per character per frame. If the thinking is
+    not finished by then, most systems either freeze or hand back nonsense. This one hands
+    back <em>what it got so far</em>, with a note saying it was cut short.</p>
+  <p class="eng">The kernel's inference budget and the domain's frame budget are the same
+    thing, one for one &mdash; the rare case where an abstract kernel primitive meets an
+    existing domain requirement exactly. A tick thought from cold costs about 2700 firings
+    here; give it 1200:</p>
+
+<pre>    partial: true
+    hole(Id, budget_exhausted): $adhoc
+    and what it reached anyway:  5 sightings for npc_4, 10 intents, 6 options</pre>
+
+  <div class="note warn">
+    <p class="kid"><strong>A funny catch.</strong> The note that says "I ran out of time"
+      cannot be written by the turn that ran out of time &mdash; writing it is itself a bit
+      of work, and there was none left. The <em>next</em> turn reads it.</p>
+    <p class="eng"><strong>The marker is invisible to the frame that earns it.</strong>
+      Deriving <code>thought_partial[audit](Id) :- hole(Id, budget_exhausted)</code> is
+      itself a firing, and there were none left. So the marker is always one evaluation
+      behind: correct for the domain (a frame that ran out cannot also report that it ran
+      out) and worth knowing before designing anything that reacts to its own
+      partiality.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="kid">How fast is it? Not very, and here is the number</h2>
+  <h2 class="eng">Throughput, published whatever it is</h2>
+
+  <p class="kid">Ten characters, eight turns. About <strong>three turns a second at the
+    start and a bit over one by the end</strong>. It gets slower as it goes, and the reason
+    is interesting.</p>
+  <p class="eng">Ten agents, eight ticks. <strong>2.8 ticks per second at the first tick,
+    1.3 at tick seven.</strong> That is not a good number and it is the number.</p>
+
+  <div class="scroll">
+  <table>
+    <tr><th>tick</th><th class="num">ms</th><th class="num">ticks/s</th><th class="num">facts</th><th class="num">derived</th></tr>
+    <tr><td class="num">0</td><td class="num">363</td><td class="num">2.8</td><td class="num">5022</td><td class="num">3187</td></tr>
+    <tr><td class="num">1</td><td class="num">422</td><td class="num">2.4</td><td class="num">6950</td><td class="num">5051</td></tr>
+    <tr><td class="num">2</td><td class="num">545</td><td class="num">1.8</td><td class="num">9066</td><td class="num">7094</td></tr>
+    <tr><td class="num">3</td><td class="num">480</td><td class="num">2.1</td><td class="num">11205</td><td class="num">9175</td></tr>
+    <tr><td class="num">4</td><td class="num">564</td><td class="num">1.8</td><td class="num">13161</td><td class="num">11097</td></tr>
+    <tr><td class="num">5</td><td class="num">676</td><td class="num">1.5</td><td class="num">15412</td><td class="num">13308</td></tr>
+    <tr><td class="num">6</td><td class="num">681</td><td class="num">1.5</td><td class="num">17627</td><td class="num">15487</td></tr>
+    <tr><td class="num">7</td><td class="num">789</td><td class="num">1.3</td><td class="num">19977</td><td class="num">17798</td></tr>
+  </table>
+  </div>
+
+  <p class="kid">Ten characters on a small grid see about a hundred new things per turn. But
+    the computer's memory grows by <em>two thousand</em> facts per turn. Almost all of that
+    is the computer writing down, for every single conclusion, which rule produced it and
+    when. That is the whole reason it can answer "why not" three turns later &mdash; and it
+    is also the whole reason turn eight costs twice what turn one cost.</p>
+
+  <p class="eng">The growth is not the yard. Counted by relation, between tick 1 and
+    tick 4:</p>
+<pre class="eng">    derived_by       +5966
+    saw              +103
+    outdated         +99
+    asserted_by      +29
+    in_perspective   +29</pre>
+  <p class="eng"><code>derived_by</code> is the kernel's own provenance &mdash; one fact per
+    firing &mdash; and <code>advanceTick</code> freezes it so a completed tick keeps the
+    record of which rule concluded what. That is a deliberate guarantee and it is also the
+    entire cost curve: every fold, the arbiter's included, walks the whole store.</p>
+
+  <p class="eng"><strong>Measured from the other side rather than argued.</strong> A second
+    benchmark prunes completed-tick provenance in host code and re-runs the identical eight
+    ticks: 2575&nbsp;ms against 4571, a factor of 1.8, with both runs ending in provably the
+    same world state &mdash; the test checks that, or it would be comparing two different
+    simulations.</p>
+
+  <div class="note">
+    <p class="kid"><strong>The trade, in one sentence.</strong> Keeping every reason is the
+      whole point of the system, and keeping every reason is exactly what makes it slow
+      down. A real game would throw the old reasons away, and would then be a game that
+      cannot tell you why its characters did anything.</p>
+    <p class="eng"><strong>The trade is the product.</strong> A game would prune, and would
+      then be a game that cannot say why its NPC did anything three seconds ago &mdash;
+      which is exactly what this example exists to make possible. And anyone reproducing
+      this: measure first, on a cold heap. The identical eight ticks measured at the end of
+      the transcript, after four worlds and sixteen snapshots have been retained, run
+      measurably slower in the same process. The demo measures that too and prints both,
+      rather than asserting the methodology.</p>
+  </div>
+</section>
+
+<section class="eng">
+  <h2>Counting across ticks &mdash; the third case, and the one that settled it</h2>
+  <p>A carry rule makes every carried fact its own support one tick back; that self-loop
+    met the CLOSED counting semiring, whose <code>star(one)</code> is INFINITE; so past
+    tick 0 the count of anything downstream of memory was "infinitely many".
+    <code>examples/oops</code> measured why, <code>examples/loot</code> avoided it by
+    rebuilding worlds instead of using ticks. NPC could not avoid it &mdash; restoring a
+    tick is one of the things it is for &mdash; so it was decided instead, the way
+    <code>not p</code> was: the fold is about <strong>one tick</strong>, and a fact that
+    arrived over the boundary is a given in the tick that reads it. Measured rather than
+    assumed, before and after:</p>
+<pre>  store                    finite  infinite  on a cycle  in memory
+  tick 0, nobody in it       2785       233          26          0
+  tick 3, before            9144      1137         186        185
+  tick 3, after            10048       233          26          0</pre>
+  <p>The clock no longer moves the last three columns &mdash; and the control is the
+    column that did <em>not</em> go to zero: 233 facts stay INFINITE at both ticks, and
+    they are boot.rofl's own <code>reach</code>/<code>stratum</code> closure, a cycle
+    inside one tick. The arbiter still uses Viterbi, which is BOUNDED and converges over
+    exactly the same cycles &mdash; a fact the test checks by folding both instances over
+    the <em>same</em> restored store and requiring <code>cyclic&nbsp;&gt;&nbsp;0</code>, or
+    the comparison would mean nothing.</p>
+</section>
+
+<section>
+  <h2 class="kid">What this does not do</h2>
+  <h2 class="eng">What could not be modelled</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h4>the world transition</h4>
+      <p class="kid">The rules cannot move anybody. A normal program does that part.</p>
+      <p class="eng">A negative dependency cycle, refused by the kernel. Not a matter of
+        effort, and any simulation with deliberation in it meets the same wall.</p>
+    </div>
+    <div class="card">
+      <h4>other agents as obstacles</h4>
+      <p class="kid">A character will plan to walk into a square somebody is standing in,
+        and the yard just says no.</p>
+      <p class="eng"><code>step_to</code> avoids props it has seen and knows nothing about
+        agents. Four lines to add, left out deliberately: with memories in it an agent would
+        refuse a cell a stale sighting says is occupied &mdash; better model, much worse
+        transcript. The refusals are printed, so the gap is visible.</p>
+    </div>
+    <div class="card">
+      <h4>fractions</h4>
+      <p class="kid">Health is a whole number. There is no way to say 0.34.</p>
+      <p class="eng">The kernel's <code>is</code> is integer-only, so hp is 0&ndash;100 and
+        sight is a squared radius. The spec's own example has <code>hp = 0.34</code> and
+        there is no way to write it.</p>
+    </div>
+    <div class="card">
+      <h4>real line of sight</h4>
+      <p class="kid">"Can I see you" is worked out with a rectangle, not a straight line.</p>
+      <p class="eng">Bounding-box occlusion: four rules, no derived geometry. Coarser than a
+        ray, and chosen against a two-thousand-fact precomputed visibility table. It buys
+        the named blocker, which is what the demonstration needs.</p>
+    </div>
+    <div class="card">
+      <h4>learning anything else</h4>
+      <p class="kid">The new rule came out of a fill-in-the-blanks sentence a person wrote.
+        Inventing a genuinely new kind of rule is not something this does.</p>
+      <p class="eng"><code>proposeRule</code> fills one template. Generalising the shape of a
+        rule from holes is program synthesis, and the spec is explicit that the kernel does
+        not do the generative half.</p>
+    </div>
+    <div class="card">
+      <h4>any claim the rule is good</h4>
+      <p class="kid">We know it worked <em>here</em>. That is all we know.</p>
+      <p class="eng">Checked by running it and seeing npc_5 healed &mdash; evidence about
+        this yard and this roster and nothing more. A rule that helps here and is terrible
+        in general passes every check in this example.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>ROFL &mdash; <code>examples/npc/</code>. The model is <code>npc.rofl</code>, the
+    runnable demonstration is <code>demo.ts</code>, and every number and every block of
+    output on this page is pasted from that program's stdout rather than written by hand.
+    <code>test/example-npc.test.ts</code> re-derives all of it, including the whynot
+    demonstration above, line for line.</p>
+</footer>
+</div>
+
+<script>
+  (function () {
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+    var body = document.body;
+    var buttons = document.querySelectorAll('.segmented button');
+
+    function setLevel(level) {
+      body.setAttribute('data-level', level);
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.set === level));
+      }
+      store('npc-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    setLevel('eng');
+    var saved = load('npc-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('npc-theme', next);
+    });
+
+    var savedTheme = load('npc-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

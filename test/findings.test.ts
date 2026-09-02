@@ -39,16 +39,33 @@ test('dismissal with a reason also settles, and why explains the openness', () =
   assert.ok(!r.holds('open_finding(f_y)'));
 });
 
-test('the ledger: nothing open, twenty-four settled', () => {
+// The census used to be pinned here ("nothing open, twenty-four settled"),
+// which made the suite go red the moment anyone recorded a finding — and
+// CLAUDE.md's protocol explicitly allows a finding to be *left open
+// deliberately*. A test may not forbid what the protocol permits. What is
+// worth pinning is the partition itself: every finding is settled or open,
+// never neither and never both.
+test('the ledger: every finding is exactly one of settled or open', () => {
   const r = withLedger();
-  assert.deepEqual(r.query('open_finding(F)').rows, []);
-  assert.equal(r.query('settled(F)').rows.length, 24);
+  const ids = (q: string, v: string) => new Set(r.query(q).rows.map((x) => x.bindings[v]));
+  const all = ids('finding(F, K)', 'F');
+  const open = ids('open_finding(F)', 'F');
+  const settled = ids('settled(F)', 'F');
+  assert.ok(all.size > 0, 'the ledger carries findings');
+  assert.ok(settled.size > 0, 'the ledger carries settled findings');
+  for (const f of all) {
+    assert.equal(open.has(f) !== settled.has(f), true, `${f} is exactly one of open/settled`);
+  }
+  // catches the silent typo: a disposition naming an id no finding declares
+  for (const f of settled) assert.ok(all.has(f), `settled id ${f} is a declared finding`);
 });
 
 test('the report renders the backlog in your face', () => {
   const r = withLedger();
   const report = buildReport(r);
   assert.match(report, /# Findings backlog/);
-  assert.match(report, /all 24 findings settled/);
+  const open = r.query('open_finding(F)').rows.map((x) => x.bindings.F);
+  if (open.length === 0) assert.match(report, /findings settled/);
+  for (const f of open) assert.ok(report.includes(f), `open finding ${f} is in your face`);
   assert.doesNotMatch(report, /f_intent_tuple_no_gensym/, 'settled findings stay out of the face');
 });

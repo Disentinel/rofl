@@ -1,0 +1,855 @@
+<title>AKA</title>
+
+<style>
+/* ---------------------------------------------------------------------------
+   Palette: ledger paper. Warm off-white, iron ink, one indigo accent for a
+   bridge — the only thing on the page a person put there by hand. Green and
+   red are semantic and mean CLOSES and DOES NOT CLOSE; amber means CONTESTED,
+   which is neither a failure nor an agreement and must not be coloured as
+   either.
+   --------------------------------------------------------------------------- */
+:root {
+  --paper:      #F4F1EA;
+  --surface:    #FCFAF6;
+  --surface-2:  #E8E3D8;
+  --ink:        #1D1B16;
+  --ink-soft:   #4A463C;
+  --muted:      #736E60;
+  --line:       #D6D0C2;
+  --line-soft:  #E4DFD3;
+  --accent:     #2F4A87;
+  --accent-dim: #DEE4F1;
+  --warn:       #8A5A0B;
+  --warn-dim:   #F4E6CC;
+  --bad:        #9C3128;
+  --bad-dim:    #F3DBD7;
+  --good:       #2C6247;
+  --good-dim:   #DAE9E0;
+  --shadow:     0 1px 2px rgba(29, 27, 22, .06), 0 8px 24px -16px rgba(29, 27, 22, .32);
+
+  /* No web fonts: this page is one file and makes no external request. */
+  --f-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --f-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 36rem;
+  --wide:    50rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #14130F;
+    --surface:    #1C1A15;
+    --surface-2:  #26231C;
+    --ink:        #EDE8DC;
+    --ink-soft:   #C0BAAA;
+    --muted:      #948D7C;
+    --line:       #333027;
+    --line-soft:  #282520;
+    --accent:     #93AEE4;
+    --accent-dim: #1B2438;
+    --warn:       #E0AD59;
+    --warn-dim:   #33270F;
+    --bad:        #EA9089;
+    --bad-dim:    #351A17;
+    --good:       #7CC5A2;
+    --good-dim:   #142C21;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #14130F;
+  --surface:    #1C1A15;
+  --surface-2:  #26231C;
+  --ink:        #EDE8DC;
+  --ink-soft:   #C0BAAA;
+  --muted:      #948D7C;
+  --line:       #333027;
+  --line-soft:  #282520;
+  --accent:     #93AEE4;
+  --accent-dim: #1B2438;
+  --warn:       #E0AD59;
+  --warn-dim:   #33270F;
+  --bad:        #EA9089;
+  --bad-dim:    #351A17;
+  --good:       #7CC5A2;
+  --good-dim:   #142C21;
+  --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1rem/1.65 var(--f-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* --- chrome --------------------------------------------------------------- */
+
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 1rem;
+  padding: .7rem clamp(1rem, 5vw, 3rem);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.mark { font: 700 .95rem/1 var(--f-mono); letter-spacing: .16em; }
+.mark span {
+  display: block; margin-top: .25rem;
+  font: 400 .68rem/1 var(--f-body); letter-spacing: .04em; color: var(--muted);
+}
+.spacer { flex: 1; }
+.switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.switch button {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: 500 .78rem/1 var(--f-body); color: var(--muted);
+  padding: .5rem .9rem;
+}
+.switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+main { padding: 0 clamp(1rem, 5vw, 3rem) 5rem; }
+.col { max-width: var(--measure); margin-inline: auto; }
+.wide { max-width: var(--wide); margin-inline: auto; }
+.stack > * + * { margin-top: 1.1rem; }
+
+h1 { font: 400 clamp(2rem, 5vw, 2.9rem)/1.12 var(--f-display); margin: .2rem 0 0; letter-spacing: -.01em; }
+h1 em { font-style: italic; color: var(--accent); }
+h2 {
+  font: 400 clamp(1.35rem, 3vw, 1.7rem)/1.2 var(--f-display);
+  margin: 3.4rem 0 0; letter-spacing: -.005em;
+}
+h3 { font: 600 .95rem/1.4 var(--f-body); margin: 2rem 0 0; }
+p { margin: 0; color: var(--ink-soft); }
+p strong, li strong { color: var(--ink); font-weight: 600; }
+.lede { font-size: 1.1rem; color: var(--ink); }
+.eyebrow {
+  display: inline-block; font: 600 .7rem/1 var(--f-body);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+}
+.hero { padding: 3.5rem 0 1rem; }
+ul { margin: 0; padding-left: 1.15rem; color: var(--ink-soft); }
+li + li { margin-top: .45rem; }
+code { font-family: var(--f-mono); font-size: .88em; color: var(--accent); }
+em.term { font-style: normal; font-weight: 600; color: var(--ink); }
+
+pre {
+  margin: 0; padding: 1rem 1.1rem; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px;
+  font: 400 .8rem/1.6 var(--f-mono); color: var(--ink);
+}
+pre b { color: var(--accent); font-weight: 600; }
+pre i { color: var(--muted); font-style: normal; }
+pre u { color: var(--bad); text-decoration: none; }
+pre s { color: var(--good); text-decoration: none; }
+pre em { color: var(--warn); font-style: normal; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: 10px; padding: 1.2rem 1.3rem; box-shadow: var(--shadow);
+}
+.note {
+  border-left: 3px solid var(--accent); background: var(--accent-dim);
+  border-radius: 0 8px 8px 0; padding: .9rem 1.1rem; font-size: .93rem;
+}
+.note.warn { border-left-color: var(--warn); background: var(--warn-dim); }
+.grid2 { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+
+/* --- the money bar -------------------------------------------------------- */
+.bars { display: flex; height: 2.2rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.bars > div {
+  display: flex; align-items: center; justify-content: center;
+  font: 600 .72rem/1 var(--f-mono); color: var(--ink); white-space: nowrap; overflow: hidden;
+}
+.b-att { background: var(--good-dim); }
+.b-amb { background: var(--warn-dim); }
+.b-unm { background: var(--bad-dim); }
+.legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .82rem; color: var(--muted); }
+.legend span::before {
+  content: ""; display: inline-block; width: .7rem; height: .7rem;
+  border-radius: 2px; margin-right: .4rem; vertical-align: baseline;
+}
+.legend .l-att::before { background: var(--good-dim); border: 1px solid var(--good); }
+.legend .l-amb::before { background: var(--warn-dim); border: 1px solid var(--warn); }
+.legend .l-unm::before { background: var(--bad-dim); border: 1px solid var(--bad); }
+
+/* --- tables --------------------------------------------------------------- */
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font: 600 .7rem/1.4 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+td.mono, th.mono { font-family: var(--f-mono); font-size: .82rem; white-space: nowrap; }
+td.num { text-align: right; font-family: var(--f-mono); font-size: .82rem; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.tag {
+  display: inline-block; padding: .1rem .45rem; border-radius: 4px;
+  font: 600 .68rem/1.5 var(--f-body); letter-spacing: .04em; text-transform: uppercase;
+}
+.t-good { background: var(--good-dim); color: var(--good); }
+.t-bad  { background: var(--bad-dim);  color: var(--bad); }
+.t-warn { background: var(--warn-dim); color: var(--warn); }
+.t-flat { background: var(--surface-2); color: var(--muted); }
+
+/* --- diagram -------------------------------------------------------------- */
+figure { margin: 0; }
+figcaption { margin-top: .7rem; font-size: .82rem; color: var(--muted); }
+svg { display: block; width: 100%; height: auto; }
+.d-box { fill: var(--surface); stroke: var(--line); }
+.d-lost { fill: var(--bad-dim); stroke: var(--bad); }
+.d-name { fill: var(--ink); font: 600 12px var(--f-mono); }
+.d-sub  { fill: var(--muted); font: 400 10.5px var(--f-mono); }
+.d-edge { fill: none; stroke: var(--accent); stroke-width: 1.8; opacity: .8; }
+.d-edge.contested { stroke: var(--warn); stroke-dasharray: 5 4; }
+.d-edge.dead { stroke: var(--bad); stroke-dasharray: 2 4; }
+.d-lab { fill: var(--accent); font: 500 10px var(--f-mono); }
+.d-lab.contested { fill: var(--warn); }
+.d-head { fill: var(--muted); font: 600 10px var(--f-body); letter-spacing: .12em; }
+
+footer { border-top: 1px solid var(--line); padding: 2.5rem 0 0; color: var(--muted); font-size: .88rem; }
+footer a { color: var(--accent); }
+
+/* --- level switching ------------------------------------------------------ */
+#doc[data-level="plain"] .eng { display: none; }
+#doc[data-level="eng"] .plain { display: none; }
+#doc.switched .lvl { animation: fade .24s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #doc.switched .lvl { animation: none; } }
+</style>
+
+<div id="doc" data-level="plain">
+
+<div class="bar">
+  <span class="mark">AKA<span>the seam between two books</span></span>
+  <span class="spacer"></span>
+  <div class="switch" role="group" aria-label="Explanation level">
+    <button type="button" data-set="plain" aria-pressed="true">Plain</button>
+    <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ===================== hero ===================== -->
+<div class="hero col stack">
+  <span class="eyebrow">A worked example on the ROFL kernel</span>
+  <h1>Two teams wrote down the same customers. <em>They never agreed on the names.</em></h1>
+
+  <div class="lvl plain stack">
+    <p class="lede">One team keeps a list of <strong>accounts</strong> — who gets
+    the bill. The other keeps a list of <strong>customers</strong> — who the
+    company thinks it is selling to. The lists were made by different people at
+    different times and they do not line up: one customer can have two accounts,
+    one account can be shared by two companies, and some names appear on only
+    one list.</p>
+
+    <p>So somebody, at some point, sat down and matched them by hand. This tool
+    keeps that matching as a <strong>list of who matched what, and how sure they
+    were</strong> — and then it follows the money through, shows where the two
+    lists disagree, and points at the money that fits neither.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <p class="lede">Two ontologies over one stream of events, not reducible to
+    each other by renaming. Billing has accounts and legal entities; the CRM has
+    customers. The mapping between them is not data either system holds — it is
+    a set of <strong>assertions with an author, a confidence and a
+    provenance</strong>, and this example treats them as first-class facts
+    subject to every operation an ordinary fact is subject to.</p>
+
+    <p>A bridge is not a merge. Two authors may map one account differently and
+    both mappings stand, because their perspectives differ. A conclusion that
+    travelled through a bridge is <strong>marked as having crossed a
+    boundary</strong>, naming the bridge and whose confidence it borrowed.
+    Withdrawing a bridge transitively marks everything derived through it.</p>
+  </div>
+
+  <div class="note">
+    <strong>The paired example.</strong>
+    <span class="lvl plain">Its twin, <em class="term">SUS</em>, shows what happens
+    when two people flatly contradict each other and the tool keeps both stories.
+    This one shows the other half: what happens when somebody tries to stitch two
+    stories together. You need both to see the shape of the idea; either one alone
+    gives a misleading half.</span>
+    <span class="lvl eng"><code>examples/sus</code> — perspectives diverge and that
+    is data; <code>examples/aka</code> — perspectives are stitched and the seam
+    stays visible. The metaphor is double entry: several books over the same
+    events are perspectives, and <strong>the reconciliations between books are
+    bridges</strong>. Without reconciliations double entry does not work.</span>
+  </div>
+</div>
+
+<!-- ===================== the two lists ===================== -->
+<div class="wide stack">
+  <h2>The two lists, and the hand-made stitches between them</h2>
+
+  <figure class="card">
+    <svg viewBox="0 0 760 450" role="img" aria-label="Nine billing accounts on the left, seven CRM customers on the right, joined by nine hand-asserted bridges; two accounts join nothing.">
+      <text x="16" y="24" class="d-head">BILLING — ACCOUNTS</text>
+      <text x="540" y="24" class="d-head">CRM — CUSTOMERS</text>
+
+      <!-- edges first, so boxes sit on top -->
+      <path class="d-edge" d="M216 63 C 326 63, 430 73, 540 73"/>
+      <path class="d-edge" d="M216 111 C 326 111, 430 73, 540 73"/>
+      <path class="d-edge" d="M216 155 C 326 155, 430 121, 540 121"/>
+      <path class="d-edge" d="M216 163 C 326 163, 430 129, 540 129"/>
+      <path class="d-edge" d="M216 207 C 326 207, 430 229, 540 229"/>
+      <path class="d-edge contested" d="M216 251 C 326 251, 430 177, 540 177"/>
+      <path class="d-edge contested" d="M216 259 C 326 259, 430 233, 540 233"/>
+      <path class="d-edge contested" d="M216 299 C 326 299, 430 333, 540 333"/>
+      <path class="d-edge contested" d="M216 307 C 326 307, 430 133, 540 133"/>
+      <path class="d-edge dead" d="M216 351 C 300 351, 320 351, 360 351"/>
+      <path class="d-edge dead" d="M216 399 C 300 399, 320 399, 360 399"/>
+
+      <text x="300" y="52"  class="d-lab">b1 0.95</text>
+      <text x="300" y="104" class="d-lab">b2 0.80</text>
+      <text x="300" y="146" class="d-lab">b3 b8 0.90</text>
+      <text x="300" y="200" class="d-lab">b9 0.75</text>
+      <text x="300" y="242" class="d-lab contested">b4 0.60</text>
+      <text x="300" y="276" class="d-lab contested">b5 0.55</text>
+      <text x="300" y="292" class="d-lab contested">b6 0.70</text>
+      <text x="300" y="324" class="d-lab contested">b7 0.85</text>
+      <text x="368" y="355" class="d-lab" fill="currentColor" style="fill: var(--bad)">no mapping — $88,000</text>
+      <text x="368" y="403" class="d-lab" fill="currentColor" style="fill: var(--bad)">no mapping — $22,000</text>
+
+      <rect x="16" y="46"  width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="63"  class="d-name">acct_nw_prod</text>
+      <text x="28" y="75"  class="d-sub">$420,000 · northwind_traders_ltd</text>
+      <rect x="16" y="94"  width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="111" class="d-name">acct_nw_eu</text>
+      <text x="28" y="123" class="d-sub">$225,000 · northwind_traders_bv</text>
+      <rect x="16" y="142" width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="159" class="d-name">acct_contoso</text>
+      <text x="28" y="171" class="d-sub">$365,000 · contoso_ltd</text>
+      <rect x="16" y="190" width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="207" class="d-name">acct_tailspin</text>
+      <text x="28" y="219" class="d-sub">$135,000 · tailspin_toys_llc</text>
+      <rect x="16" y="238" width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="255" class="d-name">acct_wingtip</text>
+      <text x="28" y="267" class="d-sub">$105,000 · fabrikam_inc + tailspin_toys</text>
+      <rect x="16" y="286" width="200" height="34" rx="6" class="d-box"/>
+      <text x="28" y="303" class="d-name">acct_adv_a</text>
+      <text x="28" y="315" class="d-sub">$60,000 · adventure_works_gmbh</text>
+      <rect x="16" y="334" width="200" height="34" rx="6" class="d-lost"/>
+      <text x="28" y="351" class="d-name">acct_ghost_ops</text>
+      <text x="28" y="363" class="d-sub">$88,000 · ghost_operations_ltd</text>
+      <rect x="16" y="382" width="200" height="34" rx="6" class="d-lost"/>
+      <text x="28" y="399" class="d-name">acct_orphan_eu</text>
+      <text x="28" y="411" class="d-sub">$22,000 · orphan_holdings_sarl</text>
+
+      <rect x="540" y="56"  width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="73"  class="d-name">northwind</text>
+      <text x="552" y="85"  class="d-sub">crm books $645,000</text>
+      <rect x="540" y="108" width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="125" class="d-name">contoso</text>
+      <text x="552" y="137" class="d-sub">crm books $365,000</text>
+      <rect x="540" y="160" width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="177" class="d-name">fabrikam</text>
+      <text x="552" y="189" class="d-sub">crm books $0</text>
+      <rect x="540" y="212" width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="229" class="d-name">tailspin</text>
+      <text x="552" y="241" class="d-sub">crm books $240,000</text>
+      <rect x="540" y="264" width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="281" class="d-name">wingtip</text>
+      <text x="552" y="293" class="d-sub">crm books $0</text>
+      <rect x="540" y="316" width="190" height="34" rx="6" class="d-box"/>
+      <text x="552" y="333" class="d-name">adventure</text>
+      <text x="552" y="345" class="d-sub">crm books $0</text>
+      <rect x="540" y="368" width="190" height="34" rx="6" class="d-lost"/>
+      <text x="552" y="385" class="d-name">litware</text>
+      <text x="552" y="397" class="d-sub">crm books $88,000 · no account</text>
+    </svg>
+    <figcaption>Solid lines are mappings nobody disputes. Dashed amber lines are
+    accounts with more than one candidate customer — <code>acct_wingtip</code>
+    because one author says it covers two companies, <code>acct_adv_a</code>
+    because two authors disagree. Every line carries the id of the assertion and
+    the confidence its author put on it.</figcaption>
+  </figure>
+</div>
+
+<!-- ===================== a bridge is an assertion ===================== -->
+<div class="col stack">
+  <h2>A bridge is not a merge</h2>
+
+  <div class="lvl plain stack">
+    <p>When two systems disagree, the usual fix is to pick one and overwrite the
+    other. That throws away the only interesting information in the room: who
+    thought what, and how confident they were.</p>
+    <p>Here every match is a note that says <strong>who wrote it</strong> and
+    <strong>how sure they were</strong>. Two people can write down different
+    matches for the same account, and both notes stay. Nothing gets quietly
+    picked.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <p>An explicit mapping with an author and a confidence, itself an assertion
+    that can be disputed, dated and withdrawn. It lives in its author's own
+    ledger, so who wrote it is the <em class="term">load identity</em> checked
+    against <code>authority</code> — never a column somebody could fill in with
+    any name they liked.</p>
+  </div>
+
+  <pre><i>-- the integration team's book                   -- finance ops' book</i>
+<b>maps[integration]</b>(b6, acct_adv_a, adventure, 70).
+<b>maps[finance]</b>(b7,     acct_adv_a, contoso,   85).
+
+<i>-- both hold. Nothing was ranked, resolved or dropped. What the
+-- engine derives from the pair is the finding:</i>
+<em>disputed[recon](acct_adv_a, contoso, adventure)</em>
+    -&gt; acct_adv_a has two candidate customers, and its money is held back</pre>
+
+  <div class="scroll card">
+    <table>
+      <thead><tr><th>Shape</th><th>Who</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">corroborated</td><td>two authors, the <strong>same</strong> target</td>
+          <td>Independent agreement. Reassuring.</td></tr>
+        <tr><td class="mono">split</td><td><strong>one</strong> author, two targets</td>
+          <td>The account really does cover both, and the vocabulary cannot say in what proportion.</td></tr>
+        <tr><td class="mono">disputed</td><td>two authors, <strong>different</strong> targets</td>
+          <td>A genuine disagreement. Both entries stand.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lvl eng">All three are derived, none asserted. And a withdrawal is an
+  entry in the withdrawing author's own book, so finance cannot retract the
+  integration team's mapping without it surfacing as <code>forged[audit]</code> —
+  with no enforcement code anywhere.</p>
+</div>
+
+<!-- ===================== the trace ===================== -->
+<div class="wide stack">
+  <h2>Following the money across</h2>
+
+  <div class="col stack">
+    <p class="lvl plain">Billing raised <strong>$1,420,000</strong> of invoices
+    last quarter. Push each invoice through the matching and see where it lands.
+    Most of it lands on exactly one customer. Some of it has two possible
+    customers and the tool <strong>refuses to guess</strong>. Some of it has none
+    at all.</p>
+    <p class="lvl eng">Every dollar in billing ends up in exactly one bucket, and
+    the arithmetic is checked: <code>attributed + ambiguous + unmapped ==
+    billing</code>.</p>
+  </div>
+
+  <div class="card stack">
+    <div class="bars" role="img" aria-label="Of $1,420,000, $1,145,000 is attributed, $165,000 is ambiguous and $110,000 is unmapped.">
+      <div class="b-att" style="flex: 1145">$1,145,000 attributed</div>
+      <div class="b-amb" style="flex: 165">$165,000</div>
+      <div class="b-unm" style="flex: 110">$110,000</div>
+    </div>
+    <div class="legend">
+      <span class="l-att">lands on exactly one customer</span>
+      <span class="l-amb">two or more candidates — held back</span>
+      <span class="l-unm">maps to nothing at all</span>
+    </div>
+  </div>
+
+  <pre>$ aka trace revenue_q3 --from billing --to crm
+<b>1.42M</b>
+
+  within billing: 1.42M   [12 invoices, $1,420,000, no mapping involved]
+  bridge invoice.account -&gt; crm.customer
+    author: finance, confidence b7 0.85  b8 0.90
+    author: integration, confidence b1 0.95  b2 0.80  b3 0.90  b4 0.60  b5 0.55  b6 0.70
+    author: sales, confidence b9 0.75
+    3 invoices map ambiguously (2+ candidates): inv_08 inv_09 inv_10
+  in crm: 1.15M — <em>0.17M ambiguous</em>, <u>0.11M maps to nothing</u>
+
+  <b>result marked: crossed a perspective boundary — 9 bridge assertions
+  of one mapping kind, by 3 authors (finance, integration, sales).</b></pre>
+
+  <p class="col">The last two lines are the product.
+  <span class="lvl plain">A gap between two systems is normally found at quarter
+  end and picked apart by hand. Here it is worked out for you, with the place it
+  leaks named and whose matching it leaked through.</span>
+  <span class="lvl eng">A discrepancy between two systems is normally found at
+  quarter end and reconciled by hand; here it is derived, with the place it leaks
+  named and whose mapping it leaked through.</span></p>
+
+  <div class="scroll card">
+    <table>
+      <thead><tr><th>Customer</th><th class="num">billing &rarr; crm</th>
+        <th class="num">crm booked</th><th class="num">gap</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">tailspin</td><td class="num">$135,000</td><td class="num">$240,000</td>
+          <td class="num">-$105,000</td><td><span class="tag t-bad">does not close</span></td></tr>
+        <tr><td class="mono">litware</td><td class="num">$0</td><td class="num">$88,000</td>
+          <td class="num">-$88,000</td><td><span class="tag t-bad">does not close</span></td></tr>
+        <tr><td class="mono">northwind</td><td class="num">$645,000</td><td class="num">$645,000</td>
+          <td class="num">$0</td><td><span class="tag t-good">closes</span></td></tr>
+        <tr><td class="mono">contoso</td><td class="num">$365,000</td><td class="num">$365,000</td>
+          <td class="num">$0</td><td><span class="tag t-good">closes</span></td></tr>
+        <tr><td class="mono">adventure</td><td class="num">$0</td><td class="num">$0</td>
+          <td class="num">$0</td><td><span class="tag t-good">closes</span></td></tr>
+        <tr><td class="mono">fabrikam</td><td class="num">$0</td><td class="num">$0</td>
+          <td class="num">$0</td><td><span class="tag t-good">closes</span></td></tr>
+        <tr><td class="mono">wingtip</td><td class="num">$0</td><td class="num">$0</td>
+          <td class="num">$0</td><td><span class="tag t-good">closes</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note col">
+    <strong>$82,000 apart, and it is not a mystery.</strong> Billing says
+    $1,420,000, the CRM says $1,338,000, and the difference is exactly the money
+    no bridge can absorb: <code>acct_adv_a</code>'s $60,000, which two authors
+    map to two different customers who both already balance, plus
+    <code>acct_orphan_eu</code>'s $22,000, which nobody has ever mapped to
+    anything.
+  </div>
+</div>
+
+<!-- ===================== the mark ===================== -->
+<div class="wide stack">
+  <h2>A number that crossed a boundary must not look like one that did not</h2>
+
+  <div class="col stack">
+    <p class="lvl plain">Some of these totals are just addition inside one
+    system — nothing can be wrong with them except the arithmetic. Others only
+    exist because somebody matched two names by hand, and if that person was
+    wrong, the total is wrong. Those two kinds of number should not be printed
+    the same way.</p>
+    <p class="lvl eng">Viterbi over the bridge confidences. A total derived
+    inside one book scores 1.000; a total that crossed bridges scores the product
+    of the confidences it crossed. The independence assumption is stated rather
+    than hidden — the score treats each mapping as right or wrong independently,
+    which is false when one author's whole table rests on the same
+    misunderstanding.</p>
+  </div>
+
+  <div class="scroll card">
+    <table>
+      <thead><tr><th>Conclusion</th><th class="num">Value</th><th class="num">Certainty</th>
+        <th>Crossed</th><th>Source books</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">total(ambiguous)</td><td class="num">$165,000</td><td class="num">0.0648</td>
+          <td class="mono">b4 b5 b6 b7</td><td class="mono">billing finance integration main</td></tr>
+        <tr><td class="mono">total(attributed)</td><td class="num">$1,145,000</td><td class="num">0.3509</td>
+          <td class="mono">b1 b2 b3 b8 b9</td><td class="mono">billing finance integration main sales</td></tr>
+        <tr><td class="mono">total(cust(northwind))</td><td class="num">$645,000</td><td class="num">0.5776</td>
+          <td class="mono">b1 b2</td><td class="mono">billing crm integration main</td></tr>
+        <tr><td class="mono">total(cust(tailspin))</td><td class="num">$135,000</td><td class="num">0.7500</td>
+          <td class="mono">b9</td><td class="mono">billing crm main sales</td></tr>
+        <tr><td class="mono">total(cust(contoso))</td><td class="num">$365,000</td><td class="num">0.8100</td>
+          <td class="mono">b3 b8</td><td class="mono">billing crm finance integration main</td></tr>
+        <tr><td class="mono">total(billing)</td><td class="num">$1,420,000</td><td class="num">1.000</td>
+          <td class="mono">nothing</td><td class="mono">billing main</td></tr>
+        <tr><td class="mono">total(unmapped)</td><td class="num">$110,000</td><td class="num">1.000</td>
+          <td class="mono">nothing</td><td class="mono">billing main</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col stack">
+    <p class="lvl eng">Three different mechanisms produce that table and none of
+    them agrees with the others by construction: the <em class="term">crossed</em>
+    column is written by rules, the certainty is a semiring fold over the recorded
+    support, and the source books come out of the provenance semiring reading the
+    perspective off each base-fact key.</p>
+
+    <div class="note lvl eng">
+      <strong>The fold caught the rules.</strong> The first draft of the marking
+      rules marked the per-customer totals and forgot
+      <code>total(attributed)</code> and <code>total(ambiguous)</code>, which cross
+      bridges just as hard. A hand-written mark can be forgotten; a fold follows
+      the support graph and cannot. The test now pins the two against each other:
+      a total is marked as crossed <strong>exactly</strong> when its certainty is
+      below 1.
+    </div>
+
+    <div class="note warn">
+      <strong>The trap in that table.</strong>
+      <span class="lvl plain"><code>total(unmapped)</code> — the money that fits
+      neither list — looks like the safest number there. It is the shakiest one:
+      it exists <em>because</em> no match was written down, so every match anybody
+      adds changes it, and nothing on the row can say so.</span>
+      <span class="lvl eng"><code>total(unmapped)</code> scores 1.000, crosses
+      nothing, and is filed under <code>within_one_book</code>. It is also the
+      number most sensitive to the bridge set — withdraw one bridge and it moves
+      from $110,000 to $335,000. It rests on the <em>absence</em> of a bridge,
+      finite failure carries no annotation, so no mark can reach it. That is
+      honest, and it is why the tool has to say it in words.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== counting ===================== -->
+<div class="wide stack">
+  <h2>The same number, read in opposite directions</h2>
+
+  <div class="col stack">
+    <p class="lvl plain">Two of these invoices have <strong>two ways</strong> of
+    being matched. Reading the number alone, they look identical. They are
+    opposites: for one of them, two different people arrived at the
+    <em>same</em> answer — that is reassuring. For the other, the two ways lead to
+    <em>different</em> customers — that is the problem.</p>
+    <p class="lvl eng">Across this example set the same count means robustness
+    (NOPE, OOPS), fragility (SPAT), launderability (BLEEP), suspicion as a share
+    of worlds (SUS), margin loss (DITTO) — and here <strong>ambiguity</strong>:
+    more than one mapping path to the same result is a defect, not reassurance.
+    The metric is identical and only the domain fixes its sign. This example
+    sharpens that, because here the domain alone is not enough — the sign is
+    fixed <em>per relation</em>.</p>
+  </div>
+
+  <div class="scroll card">
+    <table>
+      <thead><tr><th>Invoice</th><th class="num">Amount</th><th class="num">Paths</th>
+        <th>Lands on</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">inv_01</td><td class="num">$240,000</td><td class="num">1</td>
+          <td class="mono">northwind</td><td><span class="tag t-flat">the only reading</span></td></tr>
+        <tr><td class="mono">inv_05</td><td class="num">$210,000</td><td class="num">2</td>
+          <td class="mono">contoso</td><td><span class="tag t-good">corroborated</span></td></tr>
+        <tr><td class="mono">inv_08</td><td class="num">$60,000</td><td class="num">2</td>
+          <td class="mono">fabrikam, tailspin</td><td><span class="tag t-warn">ambiguous</span></td></tr>
+        <tr><td class="mono">inv_10</td><td class="num">$60,000</td><td class="num">2</td>
+          <td class="mono">adventure, contoso</td><td><span class="tag t-warn">ambiguous</span></td></tr>
+        <tr><td class="mono">inv_11</td><td class="num">$88,000</td><td class="num">0</td>
+          <td class="mono">(nothing)</td><td><span class="tag t-bad">unmapped</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <pre class="lvl eng">count <b>route[recon]</b>(inv_05, contoso)  = <s>2</s>   authors who agree
+count <b>paths[recon]</b>(inv_08)           = <u>2</u>   customers it could be</pre>
+
+  <p class="col lvl eng">The rules derive the classification; the fold supplies
+  the number. Neither is enough alone, and an instance that ships a bare count
+  invites a tool to report robustness where it should report ambiguity.</p>
+</div>
+
+<!-- ===================== whynot ===================== -->
+<div class="wide stack">
+  <h2>Not &ldquo;the data does not match&rdquo; — a list of missing bridges</h2>
+
+  <div class="col">
+    <p class="lvl plain">When a customer does not add up, the useful answer is not
+    <em>the numbers disagree</em>. It is <strong>which match somebody would have
+    to write down, or settle, to make it add up</strong> — and the tool works that
+    out from the money.</p>
+    <p class="lvl eng">On a total that does not reconcile: which entities are
+    unmapped, which map ambiguously, and what mapping would have to be added or
+    sharpened for it to reconcile.</p>
+  </div>
+
+  <pre>$ aka -n tailspin
+tailspin does not reconcile. billing says $135,000, crm says $240,000 — short by $105,000.
+
+  the mapping that would close it:
+    <em>SHARPEN</em>  acct_wingtip -&gt; tailspin   (bridge b5)
+             acct_wingtip holds $105,000 the engine refused to
+             attribute, because b5 is not the only candidate: fabrikam also claims it.
+             Settling that one ambiguity in tailspin's favour closes the gap exactly.
+
+$ aka -n litware
+litware does not reconcile. billing says $0, crm says $88,000 — short by $88,000.
+
+  the mapping that would close it:
+    <b>ADD</b>      acct_ghost_ops -&gt; litware
+             acct_ghost_ops holds $88,000 that maps to nothing at all,
+             and $88,000 is exactly what litware is short. Nobody has
+             ever asserted a mapping for this account.</pre>
+
+  <div class="note col">
+    <strong>The confident answer is the wrong one.</strong> For the reseller
+    account, the money points at <code>b5</code> — asserted at
+    <strong>0.55</strong> — against <code>b4</code>'s 0.60. A tool that resolved
+    ambiguity by picking the higher confidence would have taken the money to the
+    wrong company and reported a clean quarter.
+  </div>
+
+  <div class="col stack">
+    <h3>And the two the arithmetic refuses to propose</h3>
+    <p><code>acct_adv_a</code>'s $60,000 has two candidates, at confidence 0.85
+    and 0.70. Both are <strong>refuted</strong>: contoso already closes to the
+    dollar, and adventure books nothing at all, so neither can absorb the money
+    without breaking a total that balances.</p>
+    <p><span class="lvl plain">A confidence is a number somebody chose. The
+    reconciliation is not, and it overrules both of them.</span>
+    <span class="lvl eng">A confidence is a number its author chose; the
+    reconciliation is not, and it overrules 0.85 and 0.70. Evidence overruling an
+    assertion, in one rule.</span></p>
+  </div>
+</div>
+
+<!-- ===================== withdrawal ===================== -->
+<div class="wide stack">
+  <h2>Taking a match back marks everything it touched</h2>
+
+  <div class="col">
+    <p class="lvl plain">Say the integration team realises one of their matches
+    was wrong and takes it back. Everything that was worked out using that match
+    gets <strong>flagged</strong> — including the reconciliation somebody had
+    already signed off. Nothing is silently rewritten.</p>
+    <p class="lvl eng">Withdrawing a bridge transitively marks everything derived
+    through it — the mechanics <code>examples/oops</code> ships, applied to
+    bridges instead of to retracted papers.</p>
+  </div>
+
+  <pre>$ integration_team: <b>withdrawn[integration]</b>(b2).   <i>-- acct_nw_eu is not northwind</i>
+
+  <u>AT RISK</u>  attribution(inv_03,northwind)      every support gone: b2
+  <u>AT RISK</u>  attribution(inv_04,northwind)      every support gone: b2
+  <em>SHAKEN</em>   reconciliation(northwind)          gone: b2   still standing: b1
+  <em>SHAKEN</em>   total(cust(northwind))             gone: b2   still standing: b1</pre>
+
+  <div class="grid2 col" style="max-width: var(--wide)">
+    <div class="card">
+      <h3 style="margin-top:0">Withdrawal is history</h3>
+      <p>It was asserted, it was acted on, and it has been taken back. The record
+      that the total once rested on it survives, which is what makes the mark
+      possible at all.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Excision is a counterfactual</h3>
+      <p>What would we believe if this mapping had never been asserted? It
+      produces no flags at all — in that world there is nothing to mark. The tool
+      needs both, and they are not the same operation.</p>
+    </div>
+  </div>
+
+  <div class="note warn col lvl eng">
+    <strong>Measured while building this.</strong> With the support graph drawn on
+    <code>attributed</code> rather than on <code>link</code>, the withdrawal leaves
+    the flags <em>empty</em> — northwind's total no longer admits it was ever built
+    on the two invoices it just lost. A support that has already vanished cannot be
+    marked: it has taken the record with it. <code>examples/sus</code> states the
+    same lesson about <code>clash</code> versus <code>conflict</code>, and it is
+    worth stating twice, because the wrong version produces a clean empty report
+    rather than an error.
+  </div>
+</div>
+
+<!-- ===================== two kinds of bridge ===================== -->
+<div class="wide stack eng">
+  <h2>The kernel has a <code>bridge_decl</code>, and it is a different thing</h2>
+
+  <div class="col stack">
+    <p><code>boot.rofl</code> audits cross-ledger flow, and the kernel emits
+    <code>bridge_decl(RuleId, From, To)</code> when a rule's head perspective
+    differs from a premise's. It is real machinery and this example uses it as it
+    stands: six ledgers are read, one is written, every crossing is on the record,
+    and <code>leak[audit]</code> stays empty.</p>
+
+    <pre>billing -&gt; recon         8 rules      main -&gt; recon      9 rules
+crm -&gt; recon             6 rules      sales -&gt; recon     2 rules
+finance -&gt; recon         2 rules      integration -&gt; recon  2 rules
+
+<i>-- and an undeclared crossing surfaces without a line of enforcement code:</i>
+$ shadow(Inv, A) :- invoice[billing](Inv, A, _, _).
+  <u>leak[audit](billing, main)</u></pre>
+
+    <p><strong>But it is about rules crossing perspectives, not about entity
+    mappings.</strong> It answers &ldquo;may the reconciliation book read the
+    integration team's book&rdquo;; it has nothing to say about whether
+    <code>acct_adv_a</code> is adventure or contoso, and it cannot — which account
+    is which customer is not a property of the rule set. One
+    <code>bridge_decl</code> covers the whole of an author's mapping table,
+    whatever is in it.</p>
+  </div>
+
+  <div class="scroll card">
+    <table>
+      <thead><tr><th></th><th>Licenses</th><th>Granularity</th><th>Emitted by</th><th>Disputable</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">bridge_decl</td><td>a rule to read a ledger</td>
+          <td>one per rule per source ledger</td><td>the kernel, automatically</td><td>no</td></tr>
+        <tr><td class="mono">maps[X](B,A,C,Conf)</td><td>one entity to stand for another</td>
+          <td>one per mapping</td><td>its author, by hand</td><td>yes — that is the point</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="col">No parallel machinery was built and nothing was worked around:
+  the kernel's audit is used as it stands, and the data bridges sit on top of it
+  as ordinary domain facts. What the kernel does <em>not</em> supply is the second
+  row, and nothing about the way <code>bridge_decl</code> is emitted suggests it
+  ever could.</p>
+</div>
+
+<!-- ===================== oracle ===================== -->
+<div class="wide stack">
+  <h2>Checked against arithmetic that knows nothing about the engine</h2>
+
+  <div class="col">
+    <p class="lvl plain">Both systems report their own totals, so there is a right
+    answer: either the books close or they do not, and by how much. Every one of
+    those judgements was worked out twice — once by the tool, and once by a
+    separate piece of ordinary code that shares nothing with it but the raw
+    ledgers.</p>
+    <p class="lvl eng">Every invoice classification, every per-customer gap, every
+    headline total and the residual identity is decided once by the engine and once
+    by a direct computation over the same base facts in plain TypeScript — no
+    engine, no rules, no shared code beyond reading the ledgers.</p>
+  </div>
+
+  <pre>    decisions compared:  <b>90</b>
+    disagreements:       <s>0</s>
+
+    arm            quarter   billing        crm       residual   identity
+    as shipped     q3        $1,420,000 $1,338,000      $82,000   <s>holds</s>
+    as shipped     q2          $440,000   $440,000           $0   <s>holds</s>
+    b2 withdrawn   q3        $1,420,000 $1,338,000      $82,000   <s>holds</s></pre>
+
+  <p class="col"><strong>billing &minus; crm == the money no bridge can
+  absorb.</strong> That identity is the whole claim of the example, and it is
+  checked in three different worlds.</p>
+
+  <div class="note col lvl eng">
+    <strong>What the oracle does not establish.</strong> It shares the
+    <em>definition</em> of the proposal rule with the engine, so it checks that
+    definition's arithmetic and not the definition itself; and it is small enough
+    to check by hand, which is the point of a demo and also the reason none of it
+    is evidence about scale. It is discriminating, and that is tested: hand the
+    oracle a bridge the engine has never seen and the two part company on three
+    separate answers.
+  </div>
+</div>
+
+<footer class="wide">
+  <p><strong>AKA</strong> — <code>examples/aka/</code> in the ROFL repository:
+  <code>aka.rofl</code> (88 base facts, 72 rules), <code>demo.ts</code> (the
+  transcript above, verbatim), <code>README.md</code>, and
+  <code>test/example-aka.test.ts</code> (19 tests, 9.7 s). Data synthetic and
+  hand-built; the numbers on this page are this program's output.</p>
+  <p>Read with its pair, <code>examples/sus/</code>. Perspectives diverge and that
+  is data; perspectives are stitched and the seam stays visible. Separately each
+  gives half.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  var doc = document.getElementById('doc');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.switch button'));
+  var KEY = 'aka-level';
+
+  function apply(level) {
+    doc.setAttribute('data-level', level);
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-set') === level));
+    });
+    try { localStorage.setItem(KEY, level); } catch (e) { /* private mode: fine */ }
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      doc.classList.remove('switched');
+      void doc.offsetWidth;
+      doc.classList.add('switched');
+      apply(b.getAttribute('data-set'));
+    });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { saved = null; }
+  apply(saved === 'eng' ? 'eng' : 'plain');
+})();
+</script>

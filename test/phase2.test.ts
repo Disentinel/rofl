@@ -5,6 +5,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { RESERVED, IFACE } from '../src/reflect.ts';
+import { STRATUM_RULES } from './strata-fixture.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
@@ -127,8 +128,15 @@ test('a rule reading a perspective it cannot see matches nothing', () => {
 });
 
 test('negation executes in stratum order read from stratum/2 facts', () => {
-  const r = new Rofl();
-  assert.equal(r.load(BOOT).ok, true);
+  // THE STOCK EVALUATOR, and the criterion is about it. `stratum/2` is the
+  // kernel's READ INTERFACE and this arm proves the engine really orders by
+  // what it finds there. What changed is the supplier: boot.rofl used to derive
+  // the table and those ten rules were deleted when the primary evaluator
+  // started peeling its schedule off the decoded rules. They are ordinary rules
+  // and `test/strata-fixture.ts` keeps them verbatim, which is exactly the point
+  // the deletion makes — any program may write this table.
+  const r = new Rofl({ evaluator: 'strata' });
+  assert.equal(r.load(BOOT + STRATUM_RULES).ok, true);
   assert.equal(r.load(`
     node(a). node(b). node(c).
     edge(a, b).
@@ -140,22 +148,59 @@ test('negation executes in stratum order read from stratum/2 facts', () => {
   // the stratum assignment used by the engine comes from stratum/2 facts
   const stratumFacts = r.query('stratum(isolated, N)');
   const levels = stratumFacts.rows.map((x) => parseInt(x.bindings['N'], 10));
-  assert.ok(levels.includes(1), 'boot rules must derive stratum(isolated, 1)');
+  assert.ok(levels.includes(1), 'the meta-rules must derive stratum(isolated, 1)');
   const plan = r.strataPlan();
   const iso = plan.find((p) => p.rel === 'isolated');
   assert.ok(iso, 'isolated rule present in plan');
   assert.equal(iso!.level, Math.max(...levels), 'engine level == max stratum fact');
 });
 
-test('without boot meta-rules there are no stratum facts and the plan says so', () => {
+test('...and the PRIMARY path orders the same program with no table at all', () => {
+  // The same program, the same answer, and nothing derived about it: the round
+  // a relation settles in is its level, peeled off the decoded rules before a
+  // rule fires. `boot.rofl` is not loaded here at all, which is the positive
+  // control that no table is reachable.
   const r = new Rofl();
-  r.load(`
+  assert.equal(r.load(`
+    node(a). node(b). node(c).
+    edge(a, b).
+    linked(X) :- edge(X, Y).
+    linked(Y) :- edge(X, Y).
+    isolated(X) :- node(X), not linked(X).
+  `).ok, true);
+  assert.deepEqual(r.query('isolated(X)').rows.map((x) => x.text), ['X = c']);
+  assert.equal(r.query('stratum(R, N)').rows.length, 0, 'there is genuinely no table');
+  const iso = r.strataPlan().find((p) => p.rel === 'isolated');
+  assert.ok(iso, 'isolated rule present in plan');
+  assert.equal(iso!.level, 2, 'it wakes after `linked`, which wakes after the base facts');
+});
+
+test('without boot meta-rules there are no stratum facts and the plan says so', () => {
+  // THE LIMITATION, and it belongs to the STOCK evaluator. It reads its phase
+  // order out of `stratum/2`; nothing supplies that table unless the program
+  // does, so every negation rule falls into one final pass and the plan reports
+  // `null` — the honest "I was not told". This is what LIMITS.md's "without a
+  // stratum table negation is unchecked" is about, and it is still true here.
+  const PROG = `
     node(a). edge(a, a).
     linked(X) :- edge(X, Y).
     isolated(X) :- node(X), not linked(X).
-  `);
-  const plan = r.strataPlan();
-  assert.equal(plan.find((p) => p.rel === 'isolated')!.level, null);
+  `;
+  const stock = new Rofl({ evaluator: 'strata' });
+  stock.load(PROG);
+  assert.equal(stock.query('stratum(R, N)').rows.length, 0, 'no table, as the premise says');
+  assert.equal(stock.strataPlan().find((p) => p.rel === 'isolated')!.level, null);
+
+  // ...AND IT IS NOT A LIMITATION OF THE PRIMARY PATH. The same program with
+  // the same absent table is ordered anyway, because the schedule is peeled off
+  // the decoded rules rather than read out of facts the program had to derive.
+  // The two arms are the measurement: same program, same empty table, one
+  // evaluator says `null` and the other says which round.
+  const rounds = new Rofl();
+  rounds.load(PROG);
+  assert.equal(rounds.query('stratum(R, N)').rows.length, 0, 'still no table');
+  assert.equal(rounds.strataPlan().find((p) => p.rel === 'isolated')!.level, 2,
+    'and the negation is scheduled regardless');
 });
 
 test('unstratifiable program is rejected with a reach-trace diagnostic', () => {
@@ -166,8 +211,11 @@ test('unstratifiable program is rejected with a reach-trace diagnostic', () => {
     p(X) :- e(X), not p(X).
   `, { budget: 5000 });
   assert.equal(res.ok, false);
-  assert.match(res.diagnostics.join('\n'), /unstratified\[main\]\(p\)/);
-  assert.match(res.diagnostics.join('\n'), /dep_neg/); // the demonstration
+  // The refusal is the round evaluator's now: a peel over the decoded rules
+  // stalls before a rule fires, so the message names the STUCK SET rather
+  // than walking `reach`. It names `p` either way, which is the property.
+  assert.match(res.diagnostics.join('\n'), /settled nothing while .*\bp\b/);
+  assert.match(res.diagnostics.join('\n'), /negated dependencies/); // the demonstration
   // rollback: the offending program is gone, boot still fine
   assert.equal(r.holds('e(1)'), false);
   assert.deepEqual(r.query('unstratified(X)').rows, []);

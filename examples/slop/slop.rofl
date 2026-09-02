@@ -1,0 +1,464 @@
+-- slop.rofl — SLOP, "Spreadsheet Ledger Over Provenance": a spreadsheet as
+-- a fixpoint, with the carrier of a value as a parameter.
+--
+-- A spreadsheet ALREADY IS a fixpoint engine. It is a bad one, and the four
+-- things it is bad at are one thing: the carrier of a value is hardwired to
+-- "a double, and nothing else".
+--
+--   circular references  ->  a checkbox, an iteration limit, and no answer
+--                            to "did it converge"
+--   provenance           ->  arrows one level deep
+--   uncertainty          ->  a point number, or a Monte Carlo add-in
+--   sensitivity          ->  retype a value and look at what moved
+--
+-- Here the sheet is facts and the evaluation is rules, so the carrier is a
+-- choice. THE SAME reified formula tree is walked by three evaluators —
+--
+--   val   / value      the ordinary number, in fixed point
+--   iv    / ivalue     an interval, so uncertainty comes out in ONE pass
+--   rval  / rvalue     the same arithmetic with a ROUND INDEX, which is what
+--                      a circular reference needs and what the checkbox is
+--
+-- — and the kernel's own machinery answers the rest: `why` is the why-tree
+-- to full depth, the provenance semiring names which manual entries a number
+-- rests on, the Boolean semiring names what a given input can reach, and the
+-- counting semiring finds the ambiguous cells.
+--
+-- examples/slop/formula.ts is the tokenizer, and its boundary is the same one
+-- examples/huh draws: the kernel has no string builtins, so taking
+-- `IF(D5>0,D5-(D5-C10)*D6,D5)` apart is the host's job. Everything above the
+-- tree is inference. A why tree bottoms out at `num`, `input`, `label` or
+-- `empty` and never inside the characters of a formula.
+
+-- ---------------------------------------------------------------------------
+-- the vocabulary the host supplies (examples/slop/formula.ts)
+
+edb(formula).        -- formula(Cell, Node).        cell Cell is computed by Node
+edb(formula_text).   -- formula_text(Cell, "…").    the formula as written, for display
+edb(input).          -- input(Cell, V).             A NUMBER A HUMAN TYPED IN
+edb(label).          -- label(Cell, "…").           text a human typed in
+edb(empty).          -- empty(Cell).                referenced but blank
+edb(num).            -- num(Node, V).               A CONSTANT INSIDE A FORMULA
+edb(lit_text).       -- lit_text(Node, "…").        a string literal inside a formula
+edb(ref).            -- ref(Node, Cell).            a reference to a cell
+edb(plus).           -- plus(Node, A, B).
+edb(minus).          -- minus(Node, A, B).
+edb(times).          -- times(Node, A, B).
+edb(over).           -- over(Node, A, B).
+edb(negate).         -- negate(Node, A).
+edb(cmp).            -- cmp(Node, Op, A, B).        Op: eq ne lt le gt ge
+edb(pick).           -- pick(Node, C, T, E).        IF(C, T, E)
+edb(sum_head).       -- sum_head(Node, Item).       SUM over the chain at Item
+edb(sum_item).       -- sum_item(Item, Cell, Next).
+edb(sum_last).       -- sum_last(Item, Cell).
+edb(find).           -- find(Node, KeyNode, Table, Col).   VLOOKUP, exact match
+edb(tkey).           -- tkey(Table, Row, Key).
+edb(tcell).          -- tcell(Table, Row, Col, Cell).
+edb(outside_subset). -- outside_subset(Node, "why"). a formula SLOP will not compute
+edb(span).           -- span(Cell, Lo, Hi).         declared uncertainty on an input
+edb(horizon).        -- horizon(R).                 round cap for the cyclic evaluator
+edb(tolerance).      -- tolerance(T).              convergence tolerance, in carrier units
+
+-- ---------------------------------------------------------------------------
+-- THE CARRIER
+--
+-- One unit is 1e-8 of a sheet value: a value v is carried as round(v * 1e8),
+-- and in a model denominated in dollars a CENT IS 1 000 000 UNITS. Money is
+-- therefore not in cents here but in hundred-millionths, and the six spare
+-- decimals below the cent are not decoration — see the multiply below.
+--
+-- `is` is integer-only and `/` truncates toward zero, so both multiplication
+-- and division are written out. Multiplication splits each operand at radix
+-- 1e4 (X = 1e4*Xh + Xr, with truncated division so the identity holds for
+-- negatives too):
+--
+--   X*Y/1e8  =  Xh*Yh  +  Xh*Yr/1e4  +  Xr*Yh/1e4  +  Xr*Yr/1e8
+--
+-- Three of those four terms truncate, so a product is short of exact by at
+-- most 3 units — 3e-8 of a value, SIX DECIMAL PLACES BELOW A CENT. That
+-- margin is the whole reason for the scale: the error that matters in a
+-- financial model is not the arithmetic, it is representing a ratio like
+-- 0.14063146094259696 as an integer, and a ratio wrong by 5e-9 multiplied
+-- into a revenue of 21765 is wrong by 0.0001 — a hundredth of a cent.
+-- At 1e-6 the same ratio is wrong by 0.01 and the model misses by a cent.
+--
+-- The guards are the honest part: outside them the intermediates leave the
+-- 2^53 range and the answer would be silently wrong, so instead NO VALUE IS
+-- DERIVED and `whynot` names the comparison that refused.
+
+-- ---------------------------------------------------------------------------
+-- the ordinary carrier: one number per cell
+
+value(C, V) :- input(C, V).
+value(C, V) :- label(C, V).
+value(C, 0) :- empty(C).              -- Excel reads a blank as zero, and so does this
+value(C, V) :- formula(C, N), val(N, V).
+
+val(N, V) :- num(N, V).
+val(N, V) :- lit_text(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+
+val(N, V) :- negate(N, A), val(A, X), V is 0 - X.
+val(N, V) :- plus(N, A, B),  val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- minus(N, A, B), val(A, X), val(B, Y), V is X - Y.
+
+val(N, V) :- times(N, A, B), val(A, X), val(B, Y),
+             X >= -1000000000000000, X <= 1000000000000000,
+             Y >= -1000000000000000, Y <= 1000000000000000,
+             V is X / 10000 * (Y / 10000)
+                  + X / 10000 * (Y mod 10000) / 10000
+                  + X mod 10000 * (Y / 10000) / 10000
+                  + X mod 10000 * (Y mod 10000) / 100000000,
+             V >= -1000000000000000, V <= 1000000000000000.
+
+-- Division, the same idea from the other side. X*1e8/Y comes out as
+--   q0*1e8 + q1*1e6 + q2*1e4 + q3*1e2 + q4,  where q0 = X/Y, M0 = X mod Y,
+-- and M0 is then carried down FOUR times at radix 100: q(i+1) = Mi*100/Y,
+-- M(i+1) = Mi*100 mod Y. The radix is 100 and not 1000 because a remainder
+-- is smaller than the divisor, and a divisor as large as 900 000 (which is
+-- what a revenue total in this model is) times 1000 would leave the
+-- safe-integer range. Only the last term truncates and the final remainder
+-- is below one unit, so a quotient is short by at most 2 units.
+val(N, V) :- over(N, A, B), val(A, X), val(B, Y), Y != 0,
+             X >= -1000000000000000, X <= 1000000000000000,
+             Y >= -90000000000000, Y <= 90000000000000,
+             V is X / Y * 100000000
+                  + X mod Y * 100 / Y * 1000000
+                  + X mod Y * 100 mod Y * 100 / Y * 10000
+                  + X mod Y * 100 mod Y * 100 mod Y * 100 / Y * 100
+                  + X mod Y * 100 mod Y * 100 mod Y * 100 mod Y * 100 / Y,
+             V >= -1000000000000000, V <= 1000000000000000.
+
+-- comparisons. TRUE is 100000000 because TRUE is the number 1 in the carrier,
+-- which is what makes `IF(a>b,1,0)*2` come out the way Excel computes it.
+val(N, 100000000) :- cmp(N, eq, A, B), val(A, X), val(B, X).
+val(N, 0)         :- cmp(N, eq, A, B), val(A, X), val(B, Y), X != Y.
+val(N, 100000000) :- cmp(N, ne, A, B), val(A, X), val(B, Y), X != Y.
+val(N, 0)         :- cmp(N, ne, A, B), val(A, X), val(B, X).
+val(N, 100000000) :- cmp(N, lt, A, B), val(A, X), val(B, Y), X <  Y.
+val(N, 0)         :- cmp(N, lt, A, B), val(A, X), val(B, Y), X >= Y.
+val(N, 100000000) :- cmp(N, le, A, B), val(A, X), val(B, Y), X <= Y.
+val(N, 0)         :- cmp(N, le, A, B), val(A, X), val(B, Y), X >  Y.
+val(N, 100000000) :- cmp(N, gt, A, B), val(A, X), val(B, Y), X >  Y.
+val(N, 0)         :- cmp(N, gt, A, B), val(A, X), val(B, Y), X <= Y.
+val(N, 100000000) :- cmp(N, ge, A, B), val(A, X), val(B, Y), X >= Y.
+val(N, 0)         :- cmp(N, ge, A, B), val(A, X), val(B, Y), X <  Y.
+
+-- IF. The unevaluated branch contributes nothing to the value AND nothing to
+-- the provenance, which is the difference between "this number depends on
+-- that cell" and "this formula mentions that cell".
+val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).
+val(N, V) :- pick(N, C, _, E), val(C, 0), val(E, V).
+
+-- SUM. v0 has no aggregation (LIMITS.md), so a range is a CHAIN the host
+-- lays out and the fold is these two rules. A text cell inside a range
+-- contributes zero, as it does in Excel.
+val(N, V)   :- sum_head(N, I), total(I, V).
+total(I, V) :- sum_last(I, C), addend(C, V).
+total(I, V) :- sum_item(I, C, J), addend(C, X), total(J, Y), V is X + Y.
+
+addend(C, V) :- value(C, V), V >= 0.
+addend(C, V) :- value(C, V), V <  0.
+addend(C, 0) :- label(C, _).
+
+-- VLOOKUP, exact match. The value comes from the LOOKED-UP CELL, so the why
+-- tree walks into the rate table and stops at whoever typed the rate in.
+val(N, V) :- find(N, K, T, Col), val(K, Key), tkey(T, Row, Key),
+             tcell(T, Row, Col, C), value(C, V).
+
+-- ---------------------------------------------------------------------------
+-- what the file says about itself: the two marks that are the whole point
+--
+-- A number a human typed into a cell, and a constant a human typed INSIDE a
+-- formula, are the two commonest sources of error in a financial model and
+-- neither is visible in a spreadsheet. Both are facts about the file here.
+
+manual_entry(C) :- input(C, _).
+hardcoded(C, V) :- node_in(C, N), num(N, V).
+
+-- the formula tree, walked structurally: which nodes belong to which cell
+child(N, A) :- negate(N, A).
+child(N, A) :- plus(N, A, _).
+child(N, B) :- plus(N, _, B).
+child(N, A) :- minus(N, A, _).
+child(N, B) :- minus(N, _, B).
+child(N, A) :- times(N, A, _).
+child(N, B) :- times(N, _, B).
+child(N, A) :- over(N, A, _).
+child(N, B) :- over(N, _, B).
+child(N, A) :- cmp(N, _, A, _).
+child(N, B) :- cmp(N, _, _, B).
+child(N, A) :- pick(N, A, _, _).
+child(N, A) :- pick(N, _, A, _).
+child(N, A) :- pick(N, _, _, A).
+child(N, K) :- find(N, K, _, _).
+
+node_in(C, N) :- formula(C, N).
+node_in(C, A) :- node_in(C, N), child(N, A).
+
+-- who reads whom, at the level a spreadsheet user thinks in
+feeds(D, C) :- node_in(C, N), ref(N, D).
+feeds(D, C) :- node_in(C, N), sum_head(N, I), chain(I, D).
+chain(I, D) :- sum_item(I, D, _).
+chain(I, D) :- sum_last(I, D).
+chain(I, D) :- sum_item(I, _, J), chain(J, D).
+
+-- a manual entry that a computed cell depends on: the number in the MIDDLE
+-- of a model, which is the one nobody re-checks
+buried(D) :- manual_entry(D), feeds(D, C), formula(C, _).
+
+-- what SLOP will not compute, and the difference between the two reasons
+refusal(C, W) :- node_in(C, N), outside_subset(N, W).
+refused(C)    :- refusal(C, _).
+computed(C)   :- formula(C, _), value(C, _).
+uncomputed(C) :- formula(C, _), not computed(C).
+-- a cell SLOP could have computed if its precedents had come out: the cascade
+starved(C) :- uncomputed(C), not refused(C).
+
+-- ---------------------------------------------------------------------------
+-- THE INTERVAL CARRIER. The same tree, no formula touched, one pass.
+--
+-- An input the host declares uncertain gets `span(Cell, Lo, Hi)`; every other
+-- input is a point widened by ONE UNIT, which is the rounding the host did
+-- when it turned the file's decimal text into an integer. Every arithmetic
+-- result is widened by FOUR, which covers the at-most-three-unit truncation
+-- of a product. Both widenings are OUTWARD, so what comes out is a
+-- GUARANTEED ENCLOSURE and not an estimate: with no uncertainty declared at
+-- all, the interval run is a proof that the fixed-point run is within 1e-8,
+-- and the demo checks the oracle's doubles against it cell by cell.
+
+ivalue(C, L, H) :- span(C, L, H).
+ivalue(C, L, H) :- input(C, V), not spanned(C), L is V - 1, H is V + 1.
+ivalue(C, V, V) :- label(C, V).
+ivalue(C, 0, 0) :- empty(C).
+ivalue(C, L, H) :- formula(C, N), iv(N, L, H).
+spanned(C) :- span(C, _, _).
+
+iv(N, L, H) :- num(N, V), L is V - 1, H is V + 1.
+iv(N, V, V) :- lit_text(N, V).
+iv(N, L, H) :- ref(N, C), ivalue(C, L, H).
+
+iv(N, L, H) :- negate(N, A), iv(A, X, Y), L is 0 - Y, H is 0 - X.
+iv(N, L, H) :- plus(N, A, B),  iv(A, LA, HA), iv(B, LB, HB), L is LA + LB, H is HA + HB.
+iv(N, L, H) :- minus(N, A, B), iv(A, LA, HA), iv(B, LB, HB), L is LA - HB, H is HA - LB.
+
+-- A product of two intervals is the least and the greatest of the four
+-- corner products. Picking a least out of a DERIVED set needs negation, and
+-- negation here would sit inside the recursion, so the four candidates go
+-- into one fact and each selector below claims one of them under comparisons
+-- that make exactly one claim true. Ties agree on the value and collapse.
+corners(N, P1, P2, P3, P4) :- times(N, A, B), iv(A, LA, HA), iv(B, LB, HB),
+    LA >= -1000000000000000, HA <= 1000000000000000,
+    LB >= -1000000000000000, HB <= 1000000000000000,
+    P1 is LA / 10000 * (LB / 10000) + LA / 10000 * (LB mod 10000) / 10000
+          + LA mod 10000 * (LB / 10000) / 10000 + LA mod 10000 * (LB mod 10000) / 100000000,
+    P2 is LA / 10000 * (HB / 10000) + LA / 10000 * (HB mod 10000) / 10000
+          + LA mod 10000 * (HB / 10000) / 10000 + LA mod 10000 * (HB mod 10000) / 100000000,
+    P3 is HA / 10000 * (LB / 10000) + HA / 10000 * (LB mod 10000) / 10000
+          + HA mod 10000 * (LB / 10000) / 10000 + HA mod 10000 * (LB mod 10000) / 100000000,
+    P4 is HA / 10000 * (HB / 10000) + HA / 10000 * (HB mod 10000) / 10000
+          + HA mod 10000 * (HB / 10000) / 10000 + HA mod 10000 * (HB mod 10000) / 100000000.
+
+-- Division is multiplication by the reciprocal interval, so the four corner
+-- products above serve both. A divisor range that straddles zero has no
+-- bounded reciprocal and is refused rather than enclosed in nonsense; note
+-- that 1/x is decreasing on either side of zero, hence the swap.
+recip(N, L, H) :- over(N, _, B), iv(B, LB, HB), LB > 0, HB <= 90000000000000,
+    L is 100000000 / HB * 100000000 + 100000000 mod HB * 100 / HB * 1000000
+         + 100000000 mod HB * 100 mod HB * 100 / HB * 10000
+         + 100000000 mod HB * 100 mod HB * 100 mod HB * 100 / HB * 100
+         + 100000000 mod HB * 100 mod HB * 100 mod HB * 100 mod HB * 100 / HB - 4,
+    H is 100000000 / LB * 100000000 + 100000000 mod LB * 100 / LB * 1000000
+         + 100000000 mod LB * 100 mod LB * 100 / LB * 10000
+         + 100000000 mod LB * 100 mod LB * 100 mod LB * 100 / LB * 100
+         + 100000000 mod LB * 100 mod LB * 100 mod LB * 100 mod LB * 100 / LB + 4.
+recip(N, L, H) :- over(N, _, B), iv(B, LB, HB), HB < 0, LB >= -90000000000000,
+    L is 100000000 / HB * 100000000 + 100000000 mod HB * 100 / HB * 1000000
+         + 100000000 mod HB * 100 mod HB * 100 / HB * 10000
+         + 100000000 mod HB * 100 mod HB * 100 mod HB * 100 / HB * 100
+         + 100000000 mod HB * 100 mod HB * 100 mod HB * 100 mod HB * 100 / HB - 4,
+    H is 100000000 / LB * 100000000 + 100000000 mod LB * 100 / LB * 1000000
+         + 100000000 mod LB * 100 mod LB * 100 / LB * 10000
+         + 100000000 mod LB * 100 mod LB * 100 mod LB * 100 / LB * 100
+         + 100000000 mod LB * 100 mod LB * 100 mod LB * 100 mod LB * 100 / LB + 4.
+
+corners(N, P1, P2, P3, P4) :- over(N, A, _), iv(A, LA, HA), recip(N, LB, HB),
+    LA >= -1000000000000000, HA <= 1000000000000000,
+    LB >= -1000000000000000, HB <= 1000000000000000,
+    P1 is LA / 10000 * (LB / 10000) + LA / 10000 * (LB mod 10000) / 10000
+          + LA mod 10000 * (LB / 10000) / 10000 + LA mod 10000 * (LB mod 10000) / 100000000,
+    P2 is LA / 10000 * (HB / 10000) + LA / 10000 * (HB mod 10000) / 10000
+          + LA mod 10000 * (HB / 10000) / 10000 + LA mod 10000 * (HB mod 10000) / 100000000,
+    P3 is HA / 10000 * (LB / 10000) + HA / 10000 * (LB mod 10000) / 10000
+          + HA mod 10000 * (LB / 10000) / 10000 + HA mod 10000 * (LB mod 10000) / 100000000,
+    P4 is HA / 10000 * (HB / 10000) + HA / 10000 * (HB mod 10000) / 10000
+          + HA mod 10000 * (HB / 10000) / 10000 + HA mod 10000 * (HB mod 10000) / 100000000.
+
+mlo(N, P1) :- corners(N, P1, P2, P3, P4), P1 <= P2, P1 <= P3, P1 <= P4.
+mlo(N, P2) :- corners(N, P1, P2, P3, P4), P2 <= P1, P2 <= P3, P2 <= P4.
+mlo(N, P3) :- corners(N, P1, P2, P3, P4), P3 <= P1, P3 <= P2, P3 <= P4.
+mlo(N, P4) :- corners(N, P1, P2, P3, P4), P4 <= P1, P4 <= P2, P4 <= P3.
+mhi(N, P1) :- corners(N, P1, P2, P3, P4), P1 >= P2, P1 >= P3, P1 >= P4.
+mhi(N, P2) :- corners(N, P1, P2, P3, P4), P2 >= P1, P2 >= P3, P2 >= P4.
+mhi(N, P3) :- corners(N, P1, P2, P3, P4), P3 >= P1, P3 >= P2, P3 >= P4.
+mhi(N, P4) :- corners(N, P1, P2, P3, P4), P4 >= P1, P4 >= P2, P4 >= P3.
+
+iv(N, L, H) :- mlo(N, P), mhi(N, Q), L is P - 4, H is Q + 4,
+               L >= -1000000000000000, H <= 1000000000000000.
+
+-- Comparison under uncertainty has THREE answers, and the third one is the
+-- interesting one: [0, 100000000] means the model would take EITHER branch,
+-- which is a fact about the sheet that no point recomputation can produce.
+iv(N, 100000000, 100000000) :- cmp(N, gt, A, B), iv(A, LA, _), iv(B, _, HB), LA >  HB.
+iv(N, 0, 0)                 :- cmp(N, gt, A, B), iv(A, _, HA), iv(B, LB, _), HA <= LB.
+iv(N, 0, 100000000)         :- cmp(N, gt, A, B), iv(A, LA, HA), iv(B, LB, HB), LA <= HB, HA >  LB.
+iv(N, 100000000, 100000000) :- cmp(N, ge, A, B), iv(A, LA, _), iv(B, _, HB), LA >= HB.
+iv(N, 0, 0)                 :- cmp(N, ge, A, B), iv(A, _, HA), iv(B, LB, _), HA <  LB.
+iv(N, 0, 100000000)         :- cmp(N, ge, A, B), iv(A, LA, HA), iv(B, LB, HB), LA <  HB, HA >= LB.
+iv(N, 100000000, 100000000) :- cmp(N, lt, A, B), iv(A, _, HA), iv(B, LB, _), HA <  LB.
+iv(N, 0, 0)                 :- cmp(N, lt, A, B), iv(A, LA, _), iv(B, _, HB), LA >= HB.
+iv(N, 0, 100000000)         :- cmp(N, lt, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >= LB, LA <  HB.
+iv(N, 100000000, 100000000) :- cmp(N, le, A, B), iv(A, _, HA), iv(B, LB, _), HA <= LB.
+iv(N, 0, 0)                 :- cmp(N, le, A, B), iv(A, LA, _), iv(B, _, HB), LA >  HB.
+iv(N, 0, 100000000)         :- cmp(N, le, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >  LB, LA <= HB.
+
+-- Equality is certainly true only between two identical points, which is
+-- also the only form that works on TEXT — the kernel orders integers and
+-- nothing else.
+iv(N, 100000000, 100000000) :- cmp(N, eq, A, B), iv(A, X, X), iv(B, X, X).
+iv(N, 0, 0)                 :- cmp(N, eq, A, B), iv(A, X, X), iv(B, Y, Y), X != Y.
+iv(N, 0, 0)                 :- cmp(N, eq, A, B), iv(A, _, HA), iv(B, LB, _), HA <  LB.
+iv(N, 0, 0)                 :- cmp(N, eq, A, B), iv(A, LA, _), iv(B, _, HB), LA >  HB.
+iv(N, 0, 100000000)         :- cmp(N, eq, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >= LB, LA <= HB, LA != HA.
+iv(N, 0, 100000000)         :- cmp(N, eq, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >= LB, LA <= HB, LB != HB.
+iv(N, 0, 0)                 :- cmp(N, ne, A, B), iv(A, X, X), iv(B, X, X).
+iv(N, 100000000, 100000000) :- cmp(N, ne, A, B), iv(A, X, X), iv(B, Y, Y), X != Y.
+iv(N, 100000000, 100000000) :- cmp(N, ne, A, B), iv(A, _, HA), iv(B, LB, _), HA <  LB.
+iv(N, 100000000, 100000000) :- cmp(N, ne, A, B), iv(A, LA, _), iv(B, _, HB), LA >  HB.
+iv(N, 0, 100000000)         :- cmp(N, ne, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >= LB, LA <= HB, LA != HA.
+iv(N, 0, 100000000)         :- cmp(N, ne, A, B), iv(A, LA, HA), iv(B, LB, HB), HA >= LB, LA <= HB, LB != HB.
+
+-- IF under uncertainty. A decided condition takes its branch; an undecided
+-- one takes the HULL of both, because both are reachable.
+iv(N, L, H)   :- pick(N, C, T, _), iv(C, 100000000, 100000000), iv(T, L, H).
+iv(N, L, H)   :- pick(N, C, _, E), iv(C, 0, 0), iv(E, L, H).
+iv(N, LT, HT) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT <= LE, HT >= HE.
+iv(N, LT, HE) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT <= LE, HT <  HE.
+iv(N, LE, HT) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT >  LE, HT >= HE.
+iv(N, LE, HE) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT >  LE, HT <  HE.
+
+iv(N, L, H)     :- sum_head(N, I), itotal(I, L, H).
+itotal(I, L, H) :- sum_last(I, C), iaddend(C, L, H).
+itotal(I, L, H) :- sum_item(I, C, J), iaddend(C, LC, HC), itotal(J, LJ, HJ),
+                   L is LC + LJ, H is HC + HJ.
+iaddend(C, L, H) :- ivalue(C, L, H), L >= 0.
+iaddend(C, L, H) :- ivalue(C, L, H), L <  0.
+iaddend(C, 0, 0) :- label(C, _).
+
+iv(N, L, H) :- find(N, K, T, Col), iv(K, Key, Key), tkey(T, Row, Key),
+               tcell(T, Row, Col, C), ivalue(C, L, H).
+
+-- ---------------------------------------------------------------------------
+-- THE ROUND-INDEXED CARRIER: circular references, with an answer
+--
+-- A cyclic sheet is not a least fixpoint over a SET of facts — it is a
+-- numeric fixpoint, and the iterates of a numeric fixpoint are all DIFFERENT
+-- facts, so a plain Datalog evaluation of a cycle derives nothing at all.
+-- (Try it: `val` above is silent on every cell of a circular model, and
+-- `whynot` marks the loop `[cycle]`.) What a circular reference needs is an
+-- index over the iterates. That index IS Excel's iterative-calculation
+-- checkbox, made into data — and once it is data, "did it converge, and
+-- when" is a DERIVED FACT with a why tree, which is exactly what the
+-- checkbox does not give you.
+--
+-- The evaluator below is deliberately the same arithmetic as `val`, with the
+-- round threaded through, and covers arithmetic and references only. v0 has
+-- no way to parameterise a relation over its carrier, so this duplication is
+-- the price of the demonstration, and it is stated rather than hidden.
+--
+-- Inert unless the host supplies `horizon`.
+
+round(0).
+round(R) :- round(P), horizon(H), R is P + 1, R <= H.
+
+-- ROUND 0 IS THE SEED, and it is Excel's seed: every computed cell reads
+-- zero before the first iteration. Without it a cycle has no way to start,
+-- because every cell in it is waiting on another one.
+rvalue(0, C, 0) :- formula(C, _).
+rvalue(R, C, V) :- input(C, V), round(R).
+rvalue(R, C, 0) :- empty(C), round(R).
+rvalue(R, C, V) :- formula(C, N), rval(R, N, V), R >= 1.
+
+rval(R, N, V) :- num(N, V), round(R).
+-- THE ONE RULE THAT MAKES A CYCLE FINITE: a reference reads the PREVIOUS
+-- round. Every other rule stays inside its own round, so the sheet's depth
+-- costs rounds and a cycle costs one round per turn round it.
+rval(R, N, V) :- ref(N, C), round(R), P is R - 1, P >= 0, rvalue(P, C, V).
+
+rval(R, N, V) :- negate(N, A), rval(R, A, X), V is 0 - X.
+rval(R, N, V) :- plus(N, A, B),  rval(R, A, X), rval(R, B, Y), V is X + Y.
+rval(R, N, V) :- minus(N, A, B), rval(R, A, X), rval(R, B, Y), V is X - Y.
+rval(R, N, V) :- times(N, A, B), rval(R, A, X), rval(R, B, Y),
+             X >= -1000000000000000, X <= 1000000000000000,
+             Y >= -1000000000000000, Y <= 1000000000000000,
+             V is X / 10000 * (Y / 10000)
+                  + X / 10000 * (Y mod 10000) / 10000
+                  + X mod 10000 * (Y / 10000) / 10000
+                  + X mod 10000 * (Y mod 10000) / 100000000,
+             V >= -1000000000000000, V <= 1000000000000000.
+rval(R, N, V) :- over(N, A, B), rval(R, A, X), rval(R, B, Y), Y != 0,
+             X >= -1000000000000000, X <= 1000000000000000,
+             Y >= -90000000000000, Y <= 90000000000000,
+             V is X / Y * 100000000
+                  + X mod Y * 100 / Y * 1000000
+                  + X mod Y * 100 mod Y * 100 / Y * 10000
+                  + X mod Y * 100 mod Y * 100 mod Y * 100 / Y * 100
+                  + X mod Y * 100 mod Y * 100 mod Y * 100 mod Y * 100 / Y,
+             V >= -1000000000000000, V <= 1000000000000000.
+
+-- CONVERGENCE, as a fact. A round moved if some cell's value differs from
+-- the round before, or appeared when it had not been there.
+moved(R) :- rvalue(R, C, V), P is R - 1, P >= 0, rvalue(P, C, W), V != W.
+moved(R) :- rvalue(R, C, _), P is R - 1, P >= 0, not present(P, C).
+-- and the case that would otherwise read as convergence: a cell that STOPPED
+-- having a value, because its arithmetic left the carrier's guarded range.
+moved(R) :- rvalue(P, C, _), round(R), R is P + 1, not present(R, C).
+present(R, C) :- rvalue(R, C, _).
+
+settled(R) :- round(R), R > 0, not moved(R).
+outdone(R) :- settled(R), settled(P), P < R.
+converged_at(R) :- settled(R), not outdone(R).
+
+-- CONVERGENCE TO A TOLERANCE, which is the thing a spreadsheet's iteration
+-- limit approximates without ever saying so. Exact equality is a hard test
+-- and a truncating carrier can miss it forever: the map has a period-two
+-- orbit one unit wide, and one unit is 1e-8 of a dollar. So the honest
+-- report is BOTH — the round the sheet stopped moving by more than the
+-- declared tolerance, and whether it ever stopped moving at all.
+moved_beyond(R) :- rvalue(R, C, V), P is R - 1, P >= 0, rvalue(P, C, W), tolerance(T), V - W >  T.
+moved_beyond(R) :- rvalue(R, C, V), P is R - 1, P >= 0, rvalue(P, C, W), tolerance(T), W - V >  T.
+moved_beyond(R) :- rvalue(R, C, _), P is R - 1, P >= 0, not present(P, C).
+moved_beyond(R) :- rvalue(P, C, _), round(R), R is P + 1, not present(R, C).
+steady(R) :- round(R), R > 0, tolerance(_), not moved_beyond(R).
+outsteadied(R) :- steady(R), steady(P), P < R.
+steady_at(R) :- steady(R), not outsteadied(R).
+-- and the guard on that answer: a sheet may settle inside the tolerance and
+-- then leave it again, and a report that stopped at the first quiet round
+-- would be wrong.
+relapsed(R) :- steady_at(R), moved_beyond(P), P > R.
+
+-- and the negative answer, which Excel never gives: the sheet ran to the
+-- horizon and was still moving, and here is the cell that was still moving.
+diverging(H) :- horizon(H), moved(H).
+still_moving(C, V, W) :- horizon(H), rvalue(H, C, V), P is H - 1, rvalue(P, C, W), V != W.
+
+-- ---------------------------------------------------------------------------
+-- What the counting semiring counts here, since the same metric reads in
+-- opposite directions across domains (f_counting_reads_oppositely_by_domain).
+--
+-- In SLOP a derivation of `value(Cell, V)` is A WAY THE SHEET PRODUCES THAT
+-- NUMBER, and a well-formed sheet produces each number exactly one way. So
+-- the count is not a magnitude as in HUH and not robustness as in NOPE:
+-- COUNT > 1 IS A DEFECT REPORT. It means a cell is ambiguous — in practice a
+-- VLOOKUP whose table holds the key twice, which Excel resolves silently by
+-- taking whichever row it reaches first. The demo asks for exactly that.

@@ -1,0 +1,260 @@
+-- heck.rofl — HECK: contradiction as the objective function.
+--
+-- Infernal bureaucracy, implemented straight. An ordinance is a rule-as-data:
+-- a scope over a finite situation space, an act it commands or forbids, and a
+-- list of paragraphs it incorporates by reference. So this file is a sibling
+-- of examples/moot/moot.rofl and of boot.rofl's own audits — rules over the
+-- reflection of other rules, condemning them, each with a derivation tree.
+--
+-- WHAT IS INVERTED, AND WHAT IS NOT.
+-- Not the engine, not the rules, not the verdict machinery. MOOT hunts dead
+-- clauses to delete; HECK hunts CONSISTENT ones to spoil. The five verdicts
+-- below are MOOT's five with the sign of the judgement reversed and nothing
+-- else changed, which is the point worth demonstrating: reflection is
+-- parameterised along with everything else.
+--
+-- The one thing that really is different lives outside this file, in the
+-- semiring the host folds over the support: contradiction accumulates along a
+-- derivation (times is +) and the MORE contradictory of two readings wins
+-- (plus is max). Every other instance in runtime/semirings.ts has those two
+-- pulling opposite ways, which is why a cycle costs them nothing. Here they
+-- pull the same way, and the citation cycle in section 4 is a pump. See
+-- README.md, section "why the ceiling is the whole argument".
+--
+-- THE DECIDABILITY BOUNDARY, STATED ONCE, HERE.
+-- Inherited wholesale from MOOT and true for the same reason: every scope
+-- constrains ONE dimension of the situation, every dimension is FINITE and
+-- declared as data (`dim/1`, `dom/2`), and a scope is a conjunction of such
+-- constraints. So the situations an ordinance governs are the PRODUCT of its
+-- per-dimension sets, and both questions this file asks of a pair —
+--   do they govern a common situation?   is one's scope inside the other's?
+-- — decompose per dimension and are decided exactly, not approximated. What
+-- would break it is the same thing that breaks it there: an unbounded domain,
+-- or a constraint relating two dimensions.
+--
+-- Nothing here decides an ACT, only whether two ordinances can be in force at
+-- once and disagree. Deontic logic proper — permission, obligation, defeasible
+-- override — is not modelled and README.md says so at length.
+
+-- ---------------------------------------------------------------------------
+-- the input schema: everything the codex parser emits.
+--
+-- Declared rather than merely populated, so that boot.rofl's
+-- `undefined_premise` audit reads a misspelling as a misspelling instead of a
+-- rule pack loaded without its host facts.
+
+edb(ordinance).   -- ordinance(O).       a standing ordinance of the codex
+edb(text).        -- text(O, T).         its wording, for the report only
+edb(filed).       -- filed(O, I).        its position in the codex, 1-based
+edb(scope).       -- scope(O, D, V).     O is in force where dimension D is V
+edb(commands).    -- commands(O, A).     O requires act A
+edb(forbids).     -- forbids(O, A).      O prohibits act A
+edb(cites).       -- cites(O, P).        O incorporates paragraph P by reference
+edb(dim).         -- dim(D).             a dimension of the situation
+edb(dom).         -- dom(D, V).          V is a value of dimension D
+edb(act).         -- act(A).             an act the codex can speak about
+
+-- the petition docket. `was_clash`/`now_clash` are the codex's contradictions
+-- before and after the amendment, asserted by the host from two fixpoints of
+-- the rules above. The chancery decides on the DIFFERENCE, below.
+edb(petition).      -- petition(P).
+edb(petition_text). -- petition_text(P, T).
+edb(was_clash).     -- was_clash(P, O1, O2, A).
+edb(now_clash).     -- now_clash(P, O1, O2, A).
+
+-- ---------------------------------------------------------------------------
+-- layer 1 — the situations an ordinance governs, one dimension at a time.
+--
+-- A dimension the ordinance does not mention is governed WHOLE, and that falls
+-- out rather than being special-cased: nothing puts the value outside. `dom`
+-- on every rule is what keeps the answer inside the declared finite space, so
+-- a scope naming a watch that does not exist governs nothing — which is the
+-- correct reading of a clerical error, and section 5 condemns it as one.
+
+scoped(O, D)     :- scope(O, D, _).
+outside(O, D, V) :- scoped(O, D), dom(D, V), not scope(O, D, V).
+governs(O, D, V) :- ordinance(O), dom(D, V), not outside(O, D, V).
+
+-- ---------------------------------------------------------------------------
+-- layer 2 — an ordinance that governs nothing.
+--
+-- One empty dimension empties the whole product, exactly as in MOOT. The
+-- second rule is the degenerate case the first would lose: a dimension
+-- declared with no values at all.
+
+inhabited(O, D) :- governs(O, D, V).
+dom_known(D)    :- dom(D, _).
+barren(O, D)    :- outside(O, D, _), not inhabited(O, D).
+barren(O, D)    :- ordinance(O), dim(D), not dom_known(D).
+inert(O)        :- barren(O, _).
+
+-- ---------------------------------------------------------------------------
+-- layer 3 — two ordinances in force at once.
+--
+-- By the product decomposition, a common situation exists iff the two meet on
+-- EVERY dimension, so the question is per-dimension and `misses` is its
+-- negation. An ordinance meets itself on every dimension, so `concurrent` is
+-- reflexive — deliberately: an ordinance that contradicts itself through its
+-- own citation chain is a real pathology of this codex and section 4 catches
+-- it with no extra rule.
+
+meets(O1, O2, D)  :- governs(O1, D, V), governs(O2, D, V).
+misses(O1, O2, D) :- ordinance(O1), ordinance(O2), dim(D), not meets(O1, O2, D).
+concurrent(O1, O2) :- ordinance(O1), ordinance(O2), not inert(O1), not inert(O2),
+                      not misses(O1, O2, _).
+
+-- ---------------------------------------------------------------------------
+-- layer 4 — what a paragraph binds you to, THROUGH the citations.
+--
+-- The only recursion in the file, and the reason the convergence question has
+-- teeth. A codex whose paragraphs cite each other in a ring binds you to
+-- everything the ring mentions, by a derivation of any length you please:
+-- these two rules have a genuine cycle in the support hypergraph, and the
+-- host's fold has to survive it. Under a semiring where contradiction
+-- accumulates and the worse reading wins, the ring is a pump.
+--
+-- The Boolean answer is finite and dull — the least fixpoint closes after one
+-- pass round the ring. It is the ANNOTATION that grows, which is exactly the
+-- distinction src/semiring.ts opens with: the set of derived facts never
+-- changes, only a fact's value.
+
+binds(O, A) :- commands(O, A).
+binds(O, A) :- cites(O, P), binds(P, A).
+bars(O, A)  :- forbids(O, A).
+bars(O, A)  :- cites(O, P), bars(P, A).
+
+-- ---------------------------------------------------------------------------
+-- THE CONTRADICTION. One ordinance requires an act, another in force at the
+-- same time forbids it. Directed on purpose: the pair (commander, forbidder)
+-- is the contradiction, and the mirror image is a second, distinct one.
+--
+-- This relation is the CARRIER of the whole example. Its extension is what the
+-- chancery counts, and its cardinality is the ceiling the host hands to
+-- `chaosSemiring` — the finite vocabulary of section 0 admits only finitely
+-- many distinguishable contradictions, and this is that finite set.
+
+clash(O1, O2, A) :- concurrent(O1, O2), binds(O1, A), bars(O2, A).
+
+-- Contradiction spreading back up the citations: to cite a paragraph is to
+-- take on its quarrels. Cyclic through `cites`, and this is the relation whose
+-- semiring annotation the demo folds — see README, "what the numbers are".
+
+tainted(O) :- clash(O, _, _).
+tainted(O) :- clash(_, O, _).
+tainted(O) :- cites(O, P), tainted(P).
+
+-- ===========================================================================
+-- THE FIVE VERDICTS — the demonic MOOT. All in [audit], all with a tree.
+--
+-- Read them beside moot.rofl's five. Same shapes, same operators, same
+-- stratification, opposite sign: there, a clause that decides nothing is
+-- waste to be deleted; here, a paragraph that offends nobody is waste to be
+-- spoiled. Nothing in the engine knows which way round the judgement runs.
+-- ===========================================================================
+
+-- 1. SERENE — the gravest defect available to an ordinance: it is party to no
+-- contradiction at all, neither of its own making nor inherited through a
+-- citation. It has been in force for an age and has never once obstructed
+-- anybody. MOOT's `unreachable` with the verdict reversed — there, a flag that
+-- can never be on; here, a paragraph that can never be in anyone's way.
+
+serene[audit](O) :- ordinance(O), not inert(O), not tainted(O).
+
+-- 2. HARMONISED — two ordinances that govern common situations, bind to a
+-- common act, and quarrel over nothing whatsoever. Two paragraphs in perfect
+-- agreement do the work of one, and the second is an opportunity forgone.
+-- `filed` orders the pair so exactly one of a symmetric couple is named.
+
+concurs(O1, O2, A) :- concurrent(O1, O2), binds(O1, A), binds(O2, A).
+discord(O1, O2)    :- clash(O1, O2, _).
+discord(O1, O2)    :- clash(O2, O1, _).
+earlier(O1, O2)    :- filed(O1, I), filed(O2, J), I < J.
+
+harmonised[audit](O1, O2) :- earlier(O1, O2), concurs(O1, O2, _), not discord(O1, O2).
+
+-- 3. INERT — a paragraph that governs no situation whatever, usually because a
+-- clerk scoped it to a watch the calendar does not have. It cannot contradict
+-- anything, and unlike a serene paragraph it cannot be provoked into it
+-- either: nothing can be built on a scope that is empty. MOOT's dead clause,
+-- and the one verdict whose sign does NOT flip — waste is waste in both
+-- administrations.
+
+inert[audit](O, D) :- barren(O, D).
+
+-- 4. REDUNDANT — the second paragraph's scope lies wholly inside the first's
+-- and it binds to nothing the first does not, so striking it removes no
+-- contradiction from the codex. Entailment between scopes rather than
+-- derivation, decided exactly by the product decomposition: `escapes` looks
+-- for a single (dimension, value) the junior governs and the senior does not,
+-- and its absence IS the containment.
+--
+-- Three guards, all load-bearing. The first two are moot.rofl's `shadowed`
+-- verbatim: the junior must not be inert (the empty scope is contained in
+-- everything, while its per-dimension image is not), and it must bind nothing
+-- the senior does not. The third has no counterpart there and this file cannot
+-- do without it — an ordinance that only PROHIBITS binds nothing at all, so on
+-- the first two guards alone every prohibition inside a wider command would be
+-- called redundant, which is exactly backwards: a prohibition inside a command
+-- is the contradiction the department exists to manufacture.
+
+escapes(O2, O1, D, V) :- earlier(O1, O2), governs(O2, D, V), outside(O1, D, V).
+act_escape(O2, O1)    :- earlier(O1, O2), binds(O2, A), not binds(O1, A).
+bar_escape(O2, O1)    :- earlier(O1, O2), bars(O2, A), not bars(O1, A).
+
+redundant[audit](O2, O1) :- earlier(O1, O2), not inert(O2),
+                            not escapes(O2, O1, _, _),
+                            not act_escape(O2, O1), not bar_escape(O2, O1).
+
+-- 5. PLACID — a whole REGION of the situation space in which no contradiction
+-- is derivable at all. Not a paragraph but a watch, a venue, a class of
+-- petitioner at which the codex is at peace. This is the verdict the
+-- department acts on: it names where the next amendment must be aimed.
+
+turmoil(D, V)      :- clash(O1, O2, _), governs(O1, D, V), governs(O2, D, V).
+placid[audit](D, V) :- dom(D, V), not turmoil(D, V).
+
+-- ===========================================================================
+-- THE CHANCERY — whether a petition may be granted.
+--
+-- A petition amends the codex. The host evaluates the rules above twice, once
+-- on the codex as it stands and once on the codex as amended, and files both
+-- contradiction sets against the petition. Everything below decides on the
+-- DIFFERENCE, which is why it needs no arithmetic: set difference is two
+-- negations, and the engine already does those.
+--
+-- [chancery] is a derived ledger in the sense of docs/choosing-perspectives.md
+-- — the book of decisions reached under the chancery's discipline, and its
+-- only writers are these three rules. It is not a status label: `approved` is
+-- computed here and asserted by nobody.
+-- ===========================================================================
+
+manufactures(P, O1, O2, A) :- now_clash(P, O1, O2, A), not was_clash(P, O1, O2, A).
+reconciles(P, O1, O2, A)   :- was_clash(P, O1, O2, A), not now_clash(P, O1, O2, A).
+
+-- THE STANDARD, and it is deliberately not "on balance". A petition that
+-- manufactures three contradictions and reconciles one leaves the codex
+-- worse — and is refused anyway, because the department does not net. Making
+-- peace anywhere is the offence, and `whynot approved(P)` names the paragraphs
+-- it made peace between. README.md argues the choice; the rule states it.
+
+approved[chancery](P) :- petition(P), manufactures(P, _, _, _),
+                         not reconciles(P, _, _, _).
+
+-- Required results on a healthy codex, all checked in test/example-heck.test.ts:
+--   ? unstratified(X)                  -> empty
+--   ? malformed[audit](R)              -> empty   ? breach[audit](R)  -> empty
+--   ? leak[audit](A, B)                -> empty   ? forged[audit](F)  -> empty
+--   ? undefined_premise[audit](R, Rel) -> empty
+--   whynot approved(p_...)             -> the paragraphs the petition reconciled
+--   why clash(O1, O2, A)               -> the citation chain that produced it
+
+-- ============ what [chancery] is allowed to read ============
+--
+-- Written out because the kernel stopped writing it: `crossing` carried
+-- `not bridge_decl(R, A, B)`, a row emitted for any rule whose head named a
+-- ledger and whose body read another, so this crossing licensed itself by
+-- existing. It reports now.
+--
+-- [chancery] READS [main]. The chancery's rulings are computed from the
+-- ordinary working facts of the case, which were given no ledger of their own.
+imports(chancery, main).

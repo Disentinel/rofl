@@ -1,0 +1,519 @@
+-- spat.rofl — SPAT: the rules. Your week lives in week.rofl; nothing here
+-- needs editing to describe a different family.
+--
+-- BRUTE FORCE COMPUTES, ROFL EXPLAINS. Nothing here is a solver. These rules
+-- materialise the whole picture — where everyone is, minute by minute, who is
+-- covering which child, how much slack every handover has, which
+-- responsibilities have a backup and which do not — and name, for every hole,
+-- THE CONSTRAINT AND ITS OWNER. Choosing among what survives is a search over
+-- a handful of items and lives in spat.ts, where CP-SAT could replace it
+-- without touching a line of this file.
+--
+-- THE CENTRAL PREDICATE IS COVERAGE. `uncovered(Child, Day, Slot)` is the red
+-- block in a hand-built schedule: the child is awake, is not at school or
+-- садик, and there is nobody to be with them. Everything else in this file
+-- either feeds it or reads it. Feasibility is the wider question and coverage
+-- is one component of it — `broken/1` collects all of them.
+--
+-- TWO CLOCKS, ON PURPOSE:
+--   * COVERAGE runs on a 20-minute grid (`slot/2`). Coverage is a
+--     point-in-time property of a whole day, and materialising it is what
+--     makes `uncovered`, `sole`, free time and effective hours all fall out of
+--     one model instead of four.
+--   * SLACK is exact integer arithmetic on the endpoints themselves. "Физио
+--     ends 13:20, pickup starts 13:25" is a five-minute fact and rounding it
+--     to a grid would destroy the answer that matters most.
+--
+-- ENGINE DISCIPLINES, all three load-bearing and all three tested:
+--   * NO @next TICKS. The day is an ordinary fact argument; the WEEK is
+--     selected by one `current/1` fact, re-seeded and evaluated at tick 0.
+--     Carrying facts across ticks would make every one its own support one
+--     tick back and the counting semiring would say "infinitely many" for
+--     every responsibility in the house.
+--   * EVERY RULE RANGE-RESTRICTED in written premise order, so everything is
+--     materialised and the semirings fold over the same world the Boolean
+--     answers came from.
+--   * PREMISE ORDER IS PERFORMANCE. The engine has no argument index: every
+--     premise lookup scans its whole relation, so a rule costs
+--     (rows the prefix yields) x (size of the next relation). Where a rule
+--     below looks written backwards, that is why, and the comment says so.
+
+-- =========================================================================
+-- 0. THE CALENDAR AND THE GRID
+-- =========================================================================
+-- The whole weekday difference comes from `applies_on/2`: a day field is one
+-- day, the atom `weekdays`, `alldays`, or a group named with `in_group/2`.
+-- There are no seven schedules anywhere.
+
+weekday(D)              :- day(D, N), N <= 5.
+applies_on(D, D)        :- day(D, _).
+applies_on(weekdays, D) :- weekday(D).
+applies_on(alldays, D)  :- day(D, _).
+applies_on(G, D)        :- in_group(G, D), day(D, _).
+
+-- The coverage grid. `hh`/`mm` are crossed once rather than counted up
+-- recursively: 90 slots a day generated in one firing instead of 90 rounds.
+hh(7).  hh(8).  hh(9).  hh(10). hh(11). hh(12). hh(13). hh(14).
+hh(15). hh(16). hh(17). hh(18). hh(19). hh(20). hh(21).
+mm(0). mm(20). mm(40).
+grid(20).
+day_end(1320).
+slot(D, T) :- day(D, _), hh(H), mm(M), T is H * 60 + M.
+
+-- =========================================================================
+-- 1. CONSTRAINTS BELONG TO PEOPLE
+-- =========================================================================
+-- `constraint(Id, Owner, Scope)` is required for every constraint id used
+-- anywhere. Scope `external` marks what the household does not own — the
+-- садик's closing time, the school bus, the neighbours, the employer. Those
+-- change without warning and are the source of nearly every perturbation.
+--
+-- The user's own question — "садик до 13:30: это решение или ограничение?" —
+-- is answered by the owner field and by nothing else.
+
+owner(C, O)        :- constraint(C, O, _).
+external(C)        :- constraint(C, _, external).
+household(C)       :- constraint(C, _, household).
+has_give(C)        :- give(C, _).
+give_cost(C, N)    :- give(C, N).
+give_cost(C, 50)   :- constraint(C, _, household), not has_give(C).
+give_cost(C, 200)  :- constraint(C, _, external), not has_give(C).
+
+-- `waived(C)` is how `relax` asks "and if this one gave?". Every rule that
+-- applies a constraint reads `not waived(C)`, so waiving is a data change.
+
+-- =========================================================================
+-- 2. THE WEEK: ONE TYPICAL PATTERN, PLUS WHAT THIS WEEK DID DIFFERENTLY
+-- =========================================================================
+-- Four layers, in order of authority:
+--   usual/7      the typical week
+--   usual_on/5   a day that is always different (the Friday bus)
+--   moved/7      this week only, possibly to a different day
+--   skipped/4    this week only, not on at all
+--   added/8      this week only, a one-off
+--
+-- `current(Week)` selects which dated week is in force. Swapping it and
+-- re-evaluating is the as-of pattern: the same ledger, a different lens, one
+-- evaluation at tick 0.
+
+usual_on_day(Ev, D) :- usual_on(_, Ev, D, _, _).
+week_changed(Ev, D) :- moved(_, Ev, W, D, _, _, _), current(W).
+week_changed(Ev, D) :- skipped(_, Ev, W, D), current(W).
+
+-- `person(W, _)` is what makes a misspelt name lose its week rather than
+-- quietly acquiring one nobody can see. `spat` lints for exactly that.
+span(C, Ev, W, P, D, F, T) :- usual(C, Ev, W, P, Spec, F, T), person(W, _),
+                              applies_on(Spec, D),
+                              not usual_on_day(Ev, D), not week_changed(Ev, D),
+                              not waived(C).
+span(C, Ev, W, P, D, F, T) :- usual(C, Ev, W, P, Spec, _, _), person(W, _),
+                              applies_on(Spec, D),
+                              usual_on(C2, Ev, D, F, T), not week_changed(Ev, D),
+                              not waived(C), not waived(C2).
+span(C, Ev, W, P, D2, F, T) :- moved(C2, Ev, Wk, D, D2, F, T), current(Wk),
+                               usual(C, Ev, W, P, Spec, _, _), person(W, _),
+                               applies_on(Spec, D), not waived(C), not waived(C2).
+span(C, Ev, W, P, D, F, T) :- added(C, Ev, W, P, Wk, D, F, T), person(W, _),
+                              current(Wk), not waived(C).
+
+-- =========================================================================
+-- 3. WHERE EVERYONE IS
+-- =========================================================================
+-- Travel is real and it is derived, never typed. A block away from base costs
+-- the journey out before it and the journey back after it, and those minutes
+-- are exactly what turns "плавание until 18:00" into "not home until 18:20".
+
+-- TRAVEL IS NOT A NUMBER, and pretending it is puts a lie under every slack
+-- in the week. The same drive varies with traffic, with the route taken, and
+-- with how hard the driver is pressing; a figure measured on a quiet morning
+-- by the long way round is ONE SAMPLE OF ONE CONDITION.
+--
+-- So a condition is named, and `assume/1` picks which one the week is being
+-- read under - exactly the shape `current/1` already has for weeks. With no
+-- `travel_as` fact for a pair, `travel/3` still answers, so a household that
+-- never measured a second condition pays nothing and nothing changes.
+--
+-- The condition name carries route AND style together on purpose: what the
+-- schedule needs is the minutes, and `long_easy` versus `yards_brisk` is the
+-- distinction a person can actually report.
+
+tt(A, B, M) :- assume(C), travel_as(C, A, B, M).
+tt(B, A, M) :- assume(C), travel_as(C, A, B, M), A != B.
+tt(A, B, M) :- travel(A, B, M), not measured(A, B).
+tt(B, A, M) :- travel(A, B, M), A != B, not measured(A, B).
+tt(A, A, 0) :- place(A).
+
+measured(A, B) :- assume(C), travel_as(C, A, B, _).
+measured(B, A) :- assume(C), travel_as(C, A, B, _).
+
+-- HOW MUCH DRIVING A HANDOVER CAN ABSORB. `slack` says how many minutes are
+-- left over; this says the whole envelope, so a measurement can be placed
+-- inside it: "today took 25 of the 25 there are" is a different sentence from
+-- "today took 25 minutes".
+travel_budget(P, D, E1, E2, Max) :-
+    adjacent(P, D, E1, E2), pair_next(P, D, E1, E2, End1, _),
+    latest_start(E2, D, L), Max is L - End1.
+
+away(P, D, C) :- absent(C, P, Spec), applies_on(Spec, D), not waived(C).
+away(P, D, C) :- absent_on(C, P, Wk, D), current(Wk), day(D, _), not waived(C).
+off(P, D)     :- away(P, D, _).
+
+-- OUT: physically not at base, journey included. This is what blocks
+-- coverage, and it is deliberately NOT the same as being busy: a parent
+-- working from home is busy and still covering.
+--
+-- `out_why` carries the CONSTRAINT that put them there, which is the whole
+-- reason this example exists: a red block has to name the assertion that
+-- caused it and whose it is, and that attribution belongs in the rules, not
+-- in whatever renders them.
+out_why(P, D, S, C) :- span(C, _, P, Pl, D, F, T), base(B), Pl != B,
+                       slot(D, S), S >= F, S < T.
+out_why(P, D, S, C) :- span(C, _, P, Pl, D, F, T), base(B), Pl != B, tt(B, Pl, M),
+                       slot(D, S), Pre is F - M, S >= Pre, S < F.
+out_why(P, D, S, C) :- span(C, _, P, Pl, D, F, T), base(B), Pl != B, tt(Pl, B, M),
+                       slot(D, S), Post is T + M, S >= T, S < Post.
+out(P, D, S)        :- out_why(P, D, S, _).
+
+-- BUSY: committed to anything at all, wherever it happens. This is what free
+-- time is measured against — and only free time and placement read it, so it
+-- is gated: materialising it always costs about a thousand facts, and in this
+-- engine the store's sorted insert makes fact count, not join count, the
+-- thing that costs.
+deep(slots) :- asking(free).
+deep(slots) :- asking(hours).
+deep(slots) :- want(_, _, _, _).
+busy(P, D, S) :- deep(slots), span(_, _, P, _, D, F, T), slot(D, S), S >= F, S < T.
+busy(P, D, S) :- deep(slots), out(P, D, S).
+
+-- =========================================================================
+-- 4. COVERAGE — the central predicate
+-- =========================================================================
+
+coverer(P) :- person(P, adult).
+coverer(P) :- person(P, helper).
+coverer(P) :- person(P, neighbour).
+
+-- A helper or a neighbour exists only inside a declared window; everyone else
+-- is around all day unless away.
+bounded(P)    :- present_window(_, P, _, _, _).
+here(P, D, S) :- needy(D, S), coverer(P), present_window(C, P, Spec, F, T),
+                 applies_on(Spec, D), S >= F, S < T, not waived(C), not off(P, D).
+here(P, D, S) :- needy(D, S), coverer(P), not bounded(P), not off(P, D).
+
+-- Restricted to the slots where a child actually needs somebody: an adult
+-- being free at 09:00 on a Wednesday while both children are at school is a
+-- true fact about nothing.
+on_duty(P, D, S) :- needy(D, S), here(P, D, S), not out(P, D, S).
+
+-- ONE DERIVATION PER PERSON ON DUTY. The counting semiring folded over this
+-- is the backup number, and it is the same metric NOPE uses for privilege
+-- sprawl with the sign inverted: there many independent paths is the alarm,
+-- here many is the reassurance and ONE is the alarm.
+any_duty(D, S)   :- on_duty(_, D, S).
+
+-- A child needs looking after when awake, not somewhere supervised, and not
+-- already with an adult whose block says so (`with/2`).
+awake_at(Ch, D, S) :- awake(C, Ch, Spec, F, T), applies_on(Spec, D),
+                      slot(D, S), S >= F, S < T, not waived(C).
+at_sup(Ch, D, S)   :- span(_, _, Ch, Pl, D, F, T), supervised(Pl),
+                      slot(D, S), S >= F, S < T.
+-- A child in somebody's `with` block is with them for the JOURNEY too, not
+-- only for the block. Without the two travel rules the model reports a
+-- twenty-minute hole at the end of every outing, which is an artefact of the
+-- grid and not a fact about the family.
+minding(P, Ch, D, S) :- span(_, Ev, P, _, D, F, T), with(Ev, Ch),
+                        slot(D, S), S >= F, S < T.
+minding(P, Ch, D, S) :- span(_, Ev, P, Pl, D, F, _), with(Ev, Ch), base(B), Pl != B,
+                        tt(B, Pl, M), slot(D, S), Pre is F - M, S >= Pre, S < F.
+minding(P, Ch, D, S) :- span(_, Ev, P, Pl, D, _, T), with(Ev, Ch), base(B), Pl != B,
+                        tt(Pl, B, M), slot(D, S), Post is T + M, S >= T, S < Post.
+minded(Ch, D, S)   :- minding(_, Ch, D, S).
+
+needs_cover(Ch, D, S) :- awake_at(Ch, D, S), not at_sup(Ch, D, S), not minded(Ch, D, S).
+
+-- `needy` must have exactly ONE derivation per slot. Written the obvious way
+-- (`needy(D,S) :- needs_cover(_,D,S)`) it has one per CHILD, and that
+-- multiplicity rides all the way through `here` and `on_duty` into the
+-- counting semiring, which then reports two coverers as four. Routing it
+-- through a negation collapses it: finite failure carries no annotation.
+no_need(D, S)         :- slot(D, S), not needs_cover(_, D, S).
+needy(D, S)           :- slot(D, S), not no_need(D, S).
+uncovered(Ch, D, S)   :- needs_cover(Ch, D, S), not any_duty(D, S).
+
+-- SOLE COVER: on duty, with nobody else who could take over. This is the
+-- predicate free time and effective working hours are both subtracted by, and
+-- it is why "работа 08:30-13:00" is really three or four hours.
+--
+-- `backed` is written pivot-first on purpose: `pairc` has six rows, so the
+-- rule costs six scans of `duty` instead of one scan per duty row. Written
+-- the natural way round (duty, duty, P != Q) the same answer costs a
+-- thousand times more work — measured, 15.6 s against 0.02 s.
+-- Gated with `busy` for the same reason: only free time, working hours and
+-- placement read sole cover, and each of those announces itself.
+pairc(P, Q)     :- coverer(P), coverer(Q), P != Q.
+backed(P, D, S) :- deep(slots), pairc(P, Q), on_duty(Q, D, S).
+sole(P, D, S)   :- deep(slots), on_duty(P, D, S), not backed(P, D, S).
+
+-- =========================================================================
+-- 5. CHAINS AND SLACK — "works, with not one minute to spare"
+-- =========================================================================
+-- Two consecutive commitments of the same person on the same day, and the
+-- minutes left over once the journey between them is paid for. Slack may be
+-- zero, and it may be negative: a Boolean feasibility answer says YES to both
+-- and that is exactly what it conceals.
+
+pair_next(P, D, E1, E2, End1, Start2) :-
+    span(_, E1, P, _, D, _, End1), span(_, E2, P, _, D, Start2, _),
+    E1 != E2, End1 <= Start2.
+crowded(P, D, E1, E2) :-
+    pair_next(P, D, E1, E2, End1, Start2), span(_, E3, P, _, D, S3, _),
+    E3 != E1, E3 != E2, End1 < S3, S3 < Start2.
+adjacent(P, D, E1, E2) :- pair_next(P, D, E1, E2, _, _), not crowded(P, D, E1, E2).
+
+-- A TIME IS NOT ALWAYS A TIME. Some blocks must begin exactly when they say;
+-- others have a WINDOW - "Рому можно сдать с 7:45 до 8:15" - and some have
+-- only a far edge - "Родион должен быть у остановки не позднее 7:45". Inside a
+-- window there is room to manoeuvre, and a model that reads the observed
+-- arrival as the requirement CANNOT SEE THAT ROOM. It reported zero slack on a
+-- morning that had twenty minutes in hand, because the drop-off was recorded
+-- at the minute it happened rather than the minute it was due.
+--
+-- `must_start(C, Ev, Earliest, Latest)` states the window. A deadline is a
+-- window whose early edge is 0. With no such fact the latest start IS the
+-- written start, so a week that declares no window is unchanged to the byte.
+
+has_window(C, Ev)      :- must_start(C, Ev, _, _).
+latest_start(Ev, D, L) :- must_start(C, Ev, _, L), span(C, Ev, _, _, D, _, _).
+latest_start(Ev, D, F) :- span(C, Ev, _, _, D, F, _), not has_window(C, Ev).
+
+too_early(C, Ev, D, F, By) :- must_start(C, Ev, E, _), span(C, Ev, _, _, D, F, _),
+                              F < E, By is E - F.
+too_late(C, Ev, D, F, By)  :- must_start(C, Ev, _, L), span(C, Ev, _, _, D, F, _),
+                              F > L, By is F - L.
+
+-- SLACK IS MEASURED TO THE LATEST ALLOWED START, not to the written one. That
+-- is the whole correction: how late you may leave and still be in time.
+slack(P, D, E1, E2, M) :-
+    adjacent(P, D, E1, E2), pair_next(P, D, E1, E2, End1, _),
+    span(_, E1, P, Pl1, D, _, End1), span(_, E2, P, Pl2, D, _, _),
+    latest_start(E2, D, L), tt(Pl1, Pl2, TT), M is L - End1 - TT.
+
+-- One derivation per chain, so the tropical semiring folded over this gives
+-- the MINIMUM slack of the day — an aggregation the kernel deliberately does
+-- not have (START.md section 8) and the semiring supplies exactly.
+day_tight(P, D) :- slack(P, D, _, _, _).
+
+zero_slack(P, D, E1, E2)     :- slack(P, D, E1, E2, 0).
+negative_slack(P, D, E1, E2) :- slack(P, D, E1, E2, M), M < 0.
+tight(P, D, E1, E2)          :- slack(P, D, E1, E2, M), M <= 0.
+
+-- A gap with no slack is not free time: any overrun eats it.
+in_tight_gap(P, D, S) :- tight(P, D, E1, E2), pair_next(P, D, E1, E2, End1, Start2),
+                         slot(D, S), S >= End1, S < Start2.
+
+-- =========================================================================
+-- 6. RUNS: getting a child from one place to another
+-- =========================================================================
+-- Derived from the child's own day, not typed: wherever a child's
+-- commitments change place — and at the two ends of the day, to and from
+-- base — somebody has to make that happen.
+
+has_prev(Ch, D, E2) :- adjacent(Ch, D, _, E2).
+has_next(Ch, D, E1) :- adjacent(Ch, D, E1, _).
+
+-- A run whose arrival is already inside an adult's `with` block is not a
+-- run: somebody wrote the school run down, and that IS the answer.
+carried_at(Ch, D, Pl, At) :- span(_, _, Ch, Pl, D, At, _), person(Ch, child),
+                             span(_, Ev, P, Pl, D, F, X), with(Ev, Ch),
+                             person(P, adult), F <= At, At <= X.
+carried_lv(Ch, D, Pl, Lv) :- span(_, _, Ch, Pl, D, _, Lv), person(Ch, child),
+                             span(_, Ev, P, Pl, D, F, X), with(Ev, Ch),
+                             person(P, adult), F <= Lv, Lv <= X.
+
+run(go(Ev, D), Ch, B, Pl, D, arrive_by, Arr) :-
+    span(_, Ev, Ch, Pl, D, Arr, _), person(Ch, child), base(B), Pl != B,
+    not has_prev(Ch, D, Ev), not carried_at(Ch, D, Pl, Arr).
+run(back(Ev, D), Ch, Pl, B, D, depart_at, Lv) :-
+    span(_, Ev, Ch, Pl, D, _, Lv), person(Ch, child), base(B), Pl != B,
+    not has_next(Ch, D, Ev), not carried_lv(Ch, D, Pl, Lv).
+run(hop(E1, E2, D), Ch, P1, P2, D, arrive_by, Arr) :-
+    adjacent(Ch, D, E1, E2), person(Ch, child),
+    span(_, E1, Ch, P1, D, _, _), span(_, E2, Ch, P2, D, Arr, _), P1 != P2,
+    not carried_at(Ch, D, P2, Arr).
+
+-- The ways a run could happen. `attempt` is shape only; what kills one is
+-- decided next, so the answer is a NAMED CONSTRAINT and not a missing row.
+may_walk(P) :- person(P, adult).
+may_walk(P) :- walks_alone(C, P), not waived(C).
+
+attempt(T, drive(Dr, Cr), Dr, D, Dep, Ret) :-
+    run(T, _, From, To, D, _, At), tt(From, To, M), driver(Dr), person(Dr, adult),
+    car(Cr), not off(Dr, D), Dep is At - M, Ret is At + M.
+attempt(T, walk(Ch), nobody, D, Dep, At) :-
+    run(T, Ch, From, To, D, _, At), on_foot(From, To, M), may_walk(Ch), Dep is At - M.
+offers(Cr, R, From, To, D, L, Arr, C) :-
+    lift(C, Cr, R, From, To, Spec, L, Arr), applies_on(Spec, D),
+    person(Cr, _), not off(Cr, D), not waived(C).
+-- direction matters: a lift TO somewhere must arrive before the child is due,
+-- a lift HOME must not leave before the child is free
+attempt(T, lift(Cr), nobody, D, L, Arr) :-
+    run(T, Ch, From, To, D, arrive_by, At), offers(Cr, Ch, From, To, D, L, Arr, _),
+    Arr <= At.
+attempt(T, lift(Cr), nobody, D, L, Arr) :-
+    run(T, Ch, From, To, D, depart_at, At), offers(Cr, Ch, From, To, D, L, Arr, _),
+    L >= At.
+
+way_blocked(T, W, C) :- attempt(T, W, H, D, Dep, Ret), person(H, adult),
+                        span(C, _, H, _, D, F, X), Dep < X, F < Ret.
+blocked(T, W) :- way_blocked(T, W, _).
+way(T, W)     :- attempt(T, W, _, _, _, _), not blocked(T, W).
+run_ok(T)     :- way(T, _).
+run_stuck(T)  :- run(T, _, _, _, _, _, _), not run_ok(T).
+
+-- Fragility: exactly one way to make this run happen.
+run_alt(T)     :- way(T, W1), way(T, W2), W1 != W2.
+run_fragile(T) :- run_ok(T), not run_alt(T).
+
+-- =========================================================================
+-- 7. FREE TIME — derived, not read off as gaps
+-- =========================================================================
+-- A gap is not free when you are the only person who could cover a child in
+-- it (on call even while idle), or when it sits inside a chain with no slack
+-- (any overrun eats it). `raw_gap` is the naive reading, kept so the two can
+-- be compared: the difference between them is the answer.
+
+-- Gated on `asking(free)`, which `spat free` asserts. Materialising free
+-- time for two adults over a whole week is a third of the model's cost and
+-- nothing else reads it, so it is not computed unless somebody asks.
+waking(P, D, S)    :- deep(slots), person(P, adult), slot(D, S), day_wake(F, T),
+                      S >= F, S < T.
+raw_gap(P, D, S)   :- asking(free), waking(P, D, S), not busy(P, D, S), not off(P, D).
+free_slot(P, D, S) :- raw_gap(P, D, S), not sole(P, D, S), not in_tight_gap(P, D, S).
+on_call(P, D, S)   :- raw_gap(P, D, S), sole(P, D, S).
+
+-- =========================================================================
+-- 8. WORKING HOURS, NOMINAL AND EFFECTIVE
+-- =========================================================================
+-- The kernel has no aggregation (START.md section 8), so the SUM is host-side
+-- in spat.ts. What the rules decide is WHICH minutes count, and that is the
+-- part with content in it: an hour of work while you are the only person a
+-- child can turn to is not an hour of work.
+
+work_slot(P, D, S) :- deep(slots), span(_, Ev, P, _, D, F, T), kind(Ev, work),
+                      slot(D, S), S >= F, S < T.
+eff_work(P, D, S)  :- work_slot(P, D, S), not sole(P, D, S).
+diluted(P, D, S)   :- work_slot(P, D, S), sole(P, D, S).
+-- and the weaker reading, which is the one the original schedule annotates
+-- ("с Ромой рядом — реально часа 3-4"): work done while a child is in the
+-- house needing somebody, whether or not the other adult is also around.
+shared_work(P, D, S) :- work_slot(P, D, S), on_duty(P, D, S).
+
+-- THE DAILY TOTAL, IN RULES. The paragraph above says the sum is host-side
+-- because the kernel has no aggregation. That is true of AGGREGATION and
+-- FALSE OF SUMMING A SET: examples/slop folds a spreadsheet range with two
+-- rules over a CHAIN --
+--
+--     total(I, V) :- sum_last(I, C), addend(C, V).
+--     total(I, V) :- sum_item(I, C, J), addend(C, X), total(J, Y), V is X + Y.
+--
+-- -- and the same fold works here. One difference, in our favour: SLOP's HOST
+-- has to lay the chain out, because a spreadsheet range is given by the text
+-- of a formula and nothing in the sheet orders it. Here the order is
+-- DERIVABLE, because blocks carry times, so the chain is rules too.
+--
+-- Only with the total inside the model can "не менее 7.5 часов в день" be a
+-- constraint the week is CHECKED against, instead of a number a person reads
+-- off a report and compares in their head.
+
+work_blk(P, D, E, F, T) :- span(_, E, P, _, D, F, T), kind(E, work).
+
+-- IMMEDIATE SUCCESSOR: E2 starts at or after E1 ends, and no third block sits
+-- between them. `work_gap` is the two-hop composition, and negating it is
+-- what turns a partial order into a chain.
+work_after(P, D, E1, E2) :- work_blk(P, D, E1, _, T1), work_blk(P, D, E2, F2, _), F2 >= T1.
+work_gap(P, D, E1, E2)   :- work_after(P, D, E1, E3), work_after(P, D, E3, E2).
+work_next(P, D, E1, E2)  :- work_after(P, D, E1, E2), not work_gap(P, D, E1, E2).
+
+work_has_next(P, D, E) :- work_next(P, D, E, _).
+work_has_prev(P, D, E) :- work_next(P, D, _, E).
+work_first(P, D, E)    :- work_blk(P, D, E, _, _), not work_has_prev(P, D, E).
+
+-- the fold itself, the same two rules SLOP uses
+work_run(P, D, E, M) :- work_blk(P, D, E, F, T), not work_has_next(P, D, E), M is T - F.
+work_run(P, D, E, M) :- work_next(P, D, E, E2), work_blk(P, D, E, F, T),
+                        work_run(P, D, E2, Y), M is T - F + Y.
+
+day_work(P, D, M) :- work_first(P, D, E), work_run(P, D, E, M).
+
+-- The requirement is a FACT in the week file, so a household that has no such
+-- rule pays nothing: with no `work_needed` there is no `short_day` and the
+-- reason never appears. Same shape as `give/2`.
+short_day(P, D, M, N) :- work_needed(P, N), day_work(P, D, M), M < N.
+
+-- =========================================================================
+-- 9. BACKUP: who else could do this
+-- =========================================================================
+-- A responsibility with one possible discharger is a single point of failure;
+-- with none it is already a hole. The counting semiring folded over
+-- `run_ok/1` and over `covered/3` gives the number directly, one derivation
+-- per person who could take it. Same metric NOPE uses for privilege sprawl,
+-- with the sign inverted: there many paths is the alarm, here it is the
+-- reassurance.
+
+-- =========================================================================
+-- 10. WHERE COULD SOMETHING NEW GO
+-- =========================================================================
+-- The one query that GENERATES rather than evaluates. `want/4` is asserted by
+-- `spat place`; with no want fact none of this costs anything. Candidates are
+-- every grid start that fits in the day, filtered by exactly the rules that
+-- decide everything else — so a placement is admissible on the same terms.
+
+cand(A, D, S) :- want(A, _, _, Dur), slot(D, S), day_end(E), End is S + Dur, End <= E.
+cand_slot(A, D, S, S2) :- cand(A, D, S), want(A, _, _, Dur), End is S + Dur,
+                          slot(D, S2), S2 >= S, S2 < End.
+cand_bad(A, D, S, owner_busy)  :- cand_slot(A, D, S, S2), want(A, P, _, _), busy(P, D, S2).
+cand_bad(A, D, S, sole_cover)  :- cand_slot(A, D, S, S2), want(A, P, _, _), sole(P, D, S2).
+cand_bad(A, D, S, owner_away)  :- cand(A, D, S), want(A, P, _, _), off(P, D).
+cand_bad(A, D, S, asleep)      :- cand_slot(A, D, S, S2), want(A, P, _, _), not waking(P, D, S2).
+admissible(A, D, S) :- cand(A, D, S), not cand_bad(A, D, S, _).
+
+-- =========================================================================
+-- 11. DOES THE WEEK HOLD TOGETHER
+-- =========================================================================
+-- Feasibility is the wider question and coverage is one component of it.
+
+overbooked(P, D, E1, E2) :- span(_, E1, P, _, D, F1, T1), span(_, E2, P, _, D, F2, T2),
+                            E1 != E2, F1 < T2, F2 < T1.
+broken(double_booked) :- overbooked(_, _, _, _).
+broken(uncovered)     :- uncovered(_, _, _).
+broken(no_time)       :- negative_slack(_, _, _, _).
+broken(no_way)        :- run_stuck(_).
+broken(short_day)     :- short_day(_, _, _, _).
+broken(missed_window) :- too_early(_, _, _, _, _).
+broken(missed_window) :- too_late(_, _, _, _, _).
+holds_together(week)  :- not broken(_).
+
+-- =========================================================================
+-- 12. DECLARED INPUTS — do not edit, do not delete
+-- =========================================================================
+-- Every relation a week file supplies, declared extensional. Without this a
+-- relation read under `not` with neither facts nor rules gets no stratum
+-- (LIMITS.md), and boot's `undefined_premise` audit correctly reads an
+-- unpopulated positive premise as a misspelling. So a half-written week file
+-- — no lifts yet, nobody away, no overrides — loads clean and answers,
+-- instead of failing in a way nobody can see.
+
+edb(day).             edb(in_group).       edb(place).        edb(base).
+edb(supervised).      edb(travel).         edb(on_foot).
+edb(person).          edb(driver).         edb(car).          edb(walks_alone).
+edb(constraint).      edb(give).           edb(kind).         edb(with).
+edb(week).            edb(current).
+edb(usual).           edb(usual_on).       edb(moved).        edb(skipped).
+edb(added).
+edb(present_window).  edb(absent).         edb(absent_on).    edb(awake).
+edb(lift).            edb(day_wake).
+edb(want).            edb(waived).         edb(asking).
+edb(work_needed).
+edb(travel_as).       edb(assume).
+edb(ru_name).
+edb(must_start).

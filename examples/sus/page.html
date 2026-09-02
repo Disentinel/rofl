@@ -1,0 +1,852 @@
+<title>SUS</title>
+
+<style>
+/* ---------------------------------------------------------------------------
+   Palette: cold cabin light. Slate paper, indigo ink, and a single amber
+   accent for suspicion — the one warm thing in the room. `alive` and `dead`
+   are semantic (a world that still holds together, a world that does not) and
+   deliberately are NOT the accent, because a count of surviving worlds is not
+   itself an accusation.
+   --------------------------------------------------------------------------- */
+:root {
+  --paper:      #EDEFF3;
+  --surface:    #FAFBFD;
+  --surface-2:  #E1E5EC;
+  --ink:        #171B24;
+  --ink-soft:   #444C5C;
+  --muted:      #6B7488;
+  --line:       #CFD5E0;
+  --line-soft:  #DFE3EB;
+  --accent:     #9A5B12;
+  --accent-dim: #F5E7D4;
+  --dead:       #A63A47;
+  --dead-dim:   #F3DDDF;
+  --alive:      #2F6E55;
+  --alive-dim:  #DCEBE3;
+  --shadow:     0 1px 2px rgba(23, 27, 36, .06), 0 8px 24px -16px rgba(23, 27, 36, .3);
+
+  /* No web fonts: this page is one file and makes no external request. The
+     type is built from stacks already on the machine — a bookish serif for
+     headings, the platform sans for running text, the platform mono for every
+     identifier and every figure, because a count is evidence and should be
+     set like evidence. */
+  --f-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --f-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 36rem;
+  --wide:    48rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #101319;
+    --surface:    #171B23;
+    --surface-2:  #1F242E;
+    --ink:        #E4E8F0;
+    --ink-soft:   #B2BAC9;
+    --muted:      #8A93A6;
+    --line:       #2A303C;
+    --line-soft:  #222833;
+    --accent:     #E2A75A;
+    --accent-dim: #33260F;
+    --dead:       #E88A93;
+    --dead-dim:   #351A1E;
+    --alive:      #74C6A2;
+    --alive-dim:  #143025;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .45), 0 10px 30px -18px rgba(0, 0, 0, .85);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #101319;
+  --surface:    #171B23;
+  --surface-2:  #1F242E;
+  --ink:        #E4E8F0;
+  --ink-soft:   #B2BAC9;
+  --muted:      #8A93A6;
+  --line:       #2A303C;
+  --line-soft:  #222833;
+  --accent:     #E2A75A;
+  --accent-dim: #33260F;
+  --dead:       #E88A93;
+  --dead-dim:   #351A1E;
+  --alive:      #74C6A2;
+  --alive-dim:  #143025;
+  --shadow:     0 1px 2px rgba(0, 0, 0, .45), 0 10px 30px -18px rgba(0, 0, 0, .85);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 1rem;
+  padding: .7rem clamp(1rem, 4vw, 2.5rem);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.mark {
+  font-family: var(--f-display);
+  font-weight: 700; font-size: 1.05rem;
+  letter-spacing: .16em;
+  color: var(--accent);
+}
+.mark span {
+  color: var(--muted); font-weight: 400; letter-spacing: 0;
+  font-family: var(--f-body); font-size: .8rem; margin-left: .6rem;
+}
+.bar .spacer { flex: 1; }
+
+.switch { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.switch button {
+  font: 500 .78rem/1 var(--f-body);
+  letter-spacing: .04em;
+  padding: .48rem .95rem;
+  border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted);
+  cursor: pointer;
+}
+.switch button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+main { padding: 0 clamp(1rem, 4vw, 2.5rem) 6rem; }
+.col { max-width: var(--wide); margin-inline: auto; }
+h1, h2, .lede, .cap, .note, .count, .stack > p, section > p { max-width: var(--measure); }
+
+/* --- type ----------------------------------------------------------------- */
+
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 7.5vw, 4rem); line-height: 1.04; letter-spacing: -.02em; }
+h1 em { font-style: italic; color: var(--accent); }
+h2 { font-size: clamp(1.5rem, 3.8vw, 2rem); line-height: 1.16; letter-spacing: -.012em; }
+h3 { font-size: 1.06rem; line-height: 1.32; }
+p { margin: 0; }
+strong { font-weight: 600; }
+
+.eyebrow {
+  font: 600 .7rem/1 var(--f-body);
+  letter-spacing: .17em; text-transform: uppercase;
+  color: var(--accent);
+}
+.lede { font-size: 1.2rem; color: var(--ink-soft); }
+.note { font-size: .88rem; color: var(--muted); }
+
+code, .mono { font-family: var(--f-mono); font-size: .88em; }
+code { background: var(--surface-2); padding: .1em .34em; border-radius: 3px; }
+
+.hero { padding: clamp(3.5rem, 11vw, 7rem) 0 clamp(2.5rem, 6vw, 4rem); }
+.stack { display: flex; flex-direction: column; gap: 1.15rem; }
+section { padding-block: clamp(2.75rem, 7vw, 4.5rem); border-top: 1px solid var(--line); }
+section > * + * { margin-top: 1.6rem; }
+
+/* --- headline number ------------------------------------------------------ */
+
+.count {
+  display: grid; grid-template-columns: auto 1fr; align-items: center;
+  gap: 0 1.4rem;
+  margin-top: 2.6rem; padding: 1.5rem 1.6rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.count .n {
+  font-family: var(--f-mono); font-weight: 600;
+  font-size: 3.4rem; line-height: .9; letter-spacing: -.04em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.count .t { font-size: .95rem; color: var(--ink-soft); }
+.count .t b { display: block; font-family: var(--f-body); font-weight: 600; color: var(--ink); }
+
+/* --- the two books -------------------------------------------------------- */
+
+.books { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 44rem) { .books { grid-template-columns: 1fr 1fr; } }
+.book {
+  padding: 1.1rem 1.2rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.book .who { font: 600 .74rem/1.4 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.book .said { font-family: var(--f-mono); font-size: .82rem; margin-top: .5rem; color: var(--ink); overflow-x: auto; }
+.book p { font-size: .9rem; color: var(--ink-soft); margin-top: .6rem; }
+.verdict {
+  margin-top: 1rem; padding: .9rem 1.1rem; border-radius: 4px;
+  border: 1px solid var(--accent); background: var(--accent-dim);
+  font: 500 .9rem/1.5 var(--f-body); color: var(--ink);
+}
+.verdict .mono { color: var(--accent); font-weight: 600; }
+
+/* --- the world grid ------------------------------------------------------- */
+
+.grids { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
+@media (min-width: 40rem) { .grids { grid-template-columns: 1fr 1fr; } }
+.gridbox { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1rem 1.1rem; }
+.gridbox h3 { font-family: var(--f-body); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.gridbox .big { font-family: var(--f-mono); font-weight: 600; font-size: 1.6rem; letter-spacing: -.02em; margin-top: .3rem; }
+.gridbox .big .of { color: var(--muted); font-size: 1rem; font-weight: 400; }
+.wgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: .9rem; }
+.w {
+  aspect-ratio: 1; border-radius: 3px;
+  border: 1px solid var(--line-soft); background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  font: 500 .55rem/1 var(--f-mono); color: var(--muted);
+  overflow: hidden;
+}
+.w.alive { background: var(--alive-dim); border-color: var(--alive); color: var(--alive); font-weight: 700; }
+.w.target { outline: 2px solid var(--accent); outline-offset: 1px; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .8rem; font-size: .78rem; color: var(--muted); }
+.legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .35rem; vertical-align: -1px; }
+.legend .a { background: var(--alive-dim); border: 1px solid var(--alive); }
+.legend .d { background: var(--surface-2); border: 1px solid var(--line-soft); }
+.legend .t { background: transparent; border: 2px solid var(--accent); }
+
+/* --- the arc -------------------------------------------------------------- */
+
+.arc { display: flex; flex-direction: column; gap: 4px; }
+.round {
+  display: grid; grid-template-columns: 2.6rem 4.2rem 1fr;
+  gap: .2rem .9rem; align-items: center;
+  padding: .7rem .9rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.round .rd { font: 600 .78rem/1.4 var(--f-mono); color: var(--muted); }
+.round .pc { font: 600 1.05rem/1.2 var(--f-mono); font-variant-numeric: tabular-nums; }
+.round .ev { font-size: .85rem; color: var(--ink-soft); }
+.round .meter { grid-column: 2 / -1; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.round .meter i { display: block; height: 100%; background: var(--muted); }
+.round.hot { border-color: var(--accent); background: var(--accent-dim); }
+.round.hot .pc { color: var(--accent); }
+.round.hot .meter i { background: var(--accent); }
+.round.hot .ev { color: var(--ink); }
+.round.drop { border-color: var(--alive); }
+.round.drop .pc { color: var(--alive); }
+.round.drop .meter i { background: var(--alive); }
+
+/* --- links that broke ----------------------------------------------------- */
+
+.links { display: flex; flex-direction: column; gap: 6px; }
+.link {
+  display: grid; grid-template-columns: 6.5rem 1fr; gap: .2rem .9rem;
+  padding: .8rem 1rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.link .st { font: 600 .72rem/1.6 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.link .nm { font: 500 .88rem/1.5 var(--f-mono); }
+.link .ds { grid-column: 2; font-size: .86rem; color: var(--ink-soft); }
+.link.gone { border-color: var(--dead); background: var(--dead-dim); }
+.link.gone .st, .link.gone .nm { color: var(--dead); }
+.link.gone .ds { color: var(--ink); }
+.link.stands { border-left: 3px solid var(--alive); }
+.link.stands .st { color: var(--alive); }
+
+/* --- transcripts ---------------------------------------------------------- */
+
+.term {
+  margin: 0; padding: 1.15rem 1.25rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 4px; overflow-x: auto;
+  font: 400 .8rem/1.62 var(--f-mono);
+  color: var(--ink-soft);
+  white-space: pre;
+  box-shadow: var(--shadow);
+}
+.term b { color: var(--ink); font-weight: 600; }
+.term .no { color: var(--dead); font-weight: 600; }
+.term .yes { color: var(--alive); font-weight: 600; }
+.term .hi { color: var(--accent); font-weight: 600; }
+.term .dim { color: var(--muted); }
+.cap { font-size: .82rem; color: var(--muted); margin-top: .6rem; }
+
+.rulebox {
+  padding: 1.15rem 1.25rem; border-radius: 4px;
+  border: 1px solid var(--accent); background: var(--accent-dim);
+  font: 500 .85rem/1.6 var(--f-mono); color: var(--ink);
+  overflow-x: auto; white-space: pre;
+}
+.rulebox em { color: var(--dead); font-style: normal; font-weight: 700; }
+
+.duo { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 44rem) { .duo { grid-template-columns: 1fr 1fr; } }
+.card {
+  padding: 1.2rem 1.3rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.card h3 { margin-bottom: .5rem; }
+.card .big { font-family: var(--f-mono); font-weight: 600; font-size: 1.6rem; line-height: 1.15; letter-spacing: -.02em; }
+.card.bad .big { color: var(--dead); }
+.card.good .big { color: var(--alive); }
+.card p { font-size: .89rem; color: var(--ink-soft); margin-top: .55rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font: 600 .72rem/1.4 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-family: var(--f-mono); font-size: .82rem; color: var(--accent); white-space: nowrap; }
+.scroll { overflow-x: auto; }
+
+footer { border-top: 1px solid var(--line); padding: 2.5rem 0 0; color: var(--muted); font-size: .88rem; }
+
+/* --- level switching ------------------------------------------------------ */
+
+#doc[data-level="plain"] .eng { display: none; }
+#doc[data-level="eng"] .plain { display: none; }
+#doc.switched .lvl { animation: fade .24s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #doc.switched .lvl { animation: none; } }
+</style>
+
+<div id="doc" data-level="plain">
+
+<div class="bar">
+  <span class="mark">SUS<span>suspicion, counted</span></span>
+  <span class="spacer"></span>
+  <div class="switch" role="group" aria-label="Explanation level">
+    <button type="button" data-set="plain" aria-pressed="true">Plain</button>
+    <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ===================== hero ===================== -->
+<div class="hero col stack">
+  <span class="eyebrow">A worked example on the ROFL kernel</span>
+  <h1>Everybody says things. <em>Some of them are lying.</em></h1>
+
+  <div class="lvl plain">
+    <p class="lede">Eight players, two of them secretly traitors. Nobody can see
+    who. What people <em>can</em> do is talk — and some of what they say is false
+    on purpose. This tool works out every way the two traitors could have been
+    chosen so that everyone honest is still telling the truth all at once, and
+    then counts how many of those ways make <strong>you</strong> the culprit.</p>
+  </div>
+
+  <div class="lvl eng">
+    <p class="lede">A perspective here is not a technical detail, it is the
+    subject. Each player writes into their own ledger; two contradicting claims
+    coexist because their perspectives differ; who wrote a fact is the load
+    identity checked against <code>authority</code>, so an entry in somebody
+    else's book is <code>forged[audit]</code> with no enforcement code. On top
+    of that, the suspicion metric is <strong>model counting</strong> — one fold
+    of a counting semiring over the support the Boolean fixpoint already
+    recorded.</p>
+  </div>
+
+  <div class="count">
+    <span class="n">5&#8202;/&#8202;5</span>
+    <span class="t"><b>green is a traitor in every world that still holds together — in round 3</b>
+    Twenty-three of the twenty-eight ways to deal the two traitor cards are already
+    ruled out by something somebody said. Green is in all five that are left.
+    Green is innocent.</span>
+  </div>
+</div>
+
+<!-- ===================== 1. contradiction ===================== -->
+<section class="col">
+  <span class="eyebrow">1 &middot; Two people, one round, two stories</span>
+
+  <div class="lvl plain stack">
+    <h2>Both statements are kept. Neither is thrown away.</h2>
+    <p>Pink says green was in the engine room when the murder happened. Green
+    says green was in the canteen. They cannot both be right — nobody is in two
+    places at once.</p>
+    <p>A normal program would have to pick one, or refuse to run. This one keeps
+    both, because it does not store <em>what happened</em>. It stores
+    <em>who said what</em>, and those two things never contradict each other.
+    What it works out from the pair is the useful bit: <strong>at least one of
+    pink and green is a traitor.</strong></p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>The contradiction is a derived fact, not a load error.</h2>
+    <p>The two claims are different facts because their perspective differs, so
+    the program stays loadable and the fixpoint stays total. No rule anywhere
+    says "X unless not-X"; the incompatibility is derived and named.</p>
+  </div>
+
+  <div class="books">
+    <div class="book">
+      <span class="who">pink's book</span>
+      <div class="said">said[pink](k5, saw(green, electrical), 2, 2).</div>
+      <p class="lvl plain">"I saw green by the engine room in round 2."</p>
+      <p class="lvl eng">Loaded under <code>who=pink</code>; <code>authority(pink, pink)</code>
+      is the entire list of who may write here.</p>
+    </div>
+    <div class="book">
+      <span class="who">green's book</span>
+      <div class="said">said[green](k7, saw(green, cafeteria), 2, 2).</div>
+      <p class="lvl plain">"No — I was in the canteen the whole round."</p>
+      <p class="lvl eng">The accused's own testimony is a claim like any other,
+      and structurally the weakest kind: it contradicts everybody.</p>
+    </div>
+  </div>
+
+  <div class="verdict">Both hold. Nothing was ranked, resolved or dropped. What the
+  engine derives from the pair is the finding:
+  <span class="mono">clash(k5, k7)</span> &mdash; at most one of pink and green is crew.</div>
+
+  <div class="lvl eng stack">
+    <div class="rulebox">clash[case](K1, K2) :- sighting[case](K1, _, Q, R1, T),
+                      sighting[case](K2, _, Q, R2, T),
+                      <em>R1 != R2</em>, claim_no(K1, N1), claim_no(K2, N2), N1 &lt; N2.</div>
+    <p class="note">And the forgery check needs no rule at all. Load one entry
+    into green's ledger under <code>who=pink</code> and
+    <code>forged[audit]</code> returns exactly that fact &mdash; because
+    <code>asserted_by</code> is the load identity, checked against
+    <code>authority</code>. The same forgery in a single ledger with a
+    <code>claimed_by</code> column is a perfectly well-formed row, and no audit
+    in any kernel can see it.</p>
+  </div>
+
+  <div class="lvl plain">
+    <p class="note">There is also no way to write in somebody else's notebook.
+    If pink tries to add a line to green's book, the tool notices immediately
+    &mdash; not because anyone wrote a rule against forgery, but because every
+    book has a list of who is allowed to write in it, and pink is not on
+    green's.</p>
+  </div>
+</section>
+
+<!-- ===================== 2. counting ===================== -->
+<section class="col">
+  <span class="eyebrow">2 &middot; The number</span>
+
+  <div class="lvl plain stack">
+    <h2>There are 28 ways to pick two traitors out of eight. Cross out the impossible ones.</h2>
+    <p>Start with every possible pairing &mdash; red and blue, red and green, and
+    so on: twenty-eight in total. Then go through everything anybody said, and
+    cross out any pairing that would need an <em>honest</em> person to have
+    lied.</p>
+    <p>Whatever is left is what could still be true. If you appear in most of
+    what is left, you look guilty. If you appear in none of it, you are in the
+    clear. That is the whole idea, and it is exactly what people at the table do
+    in their heads &mdash; only badly, because nobody can hold twenty-eight
+    stories at once.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>The suspicion is a model count, and it comes out of the fold.</h2>
+    <p>One bridging assumption carries the model &mdash; <strong>crew never lie,
+    traitors may</strong> &mdash; and every consistency rule is a consequence of
+    it. A world is refuted when some live claim, read under that assumption, is
+    false in it; the refutation names its own reason, so it is attributable
+    rather than a bare Boolean.</p>
+    <div class="rulebox">outcome[case](guilty, P) :- guilty_in[worlds](P, W).
+outcome[case](any, P)    :- consistent[worlds](W), player[public](P, _).</div>
+    <p><code>outcome(guilty, P)</code> has exactly one derivation per consistent
+    world in which P is a traitor, and <code>outcome(any, P)</code> one per
+    consistent world. The counting semiring folded over the recorded support
+    returns both numbers, and their ratio is the suspicion. Nothing is
+    enumerated in TypeScript to get it; the query language is not extended.</p>
+  </div>
+
+  <div class="grids">
+    <div class="gridbox">
+      <h3>Round 3 &mdash; the accusation</h3>
+      <div class="big">5 <span class="of">of 28 worlds survive</span></div>
+      <div class="wgrid" data-round="3"></div>
+      <div class="legend">
+        <span><i class="a"></i>still possible</span>
+        <span><i class="d"></i>ruled out</span>
+        <span><i class="t"></i>contains green</span>
+      </div>
+    </div>
+    <div class="gridbox">
+      <h3>Round 5 &mdash; after the reveal</h3>
+      <div class="big">2 <span class="of">of 28 worlds survive</span></div>
+      <div class="wgrid" data-round="5"></div>
+      <div class="legend">
+        <span><i class="a"></i>still possible</span>
+        <span><i class="d"></i>ruled out</span>
+        <span><i class="t"></i>contains green</span>
+      </div>
+    </div>
+  </div>
+
+<pre class="term">  round 3, every player, guilty worlds / consistent worlds:
+    <b>green   5/5  ####################  100%</b>
+    blue    1/5  ####................   20%
+    pink    1/5  ####................   20%
+    cyan    1/5  ####................   20%
+    lime    1/5  ####................   20%
+    black   1/5  ####................   20%
+    red     0/5  ....................    0%
+    white   0/5  ....................    0%</pre>
+  <p class="cap">Real output. Every transcript on this page is stdout from
+  <span class="mono">examples/sus/demo.ts</span>, pasted. Pink and cyan are in
+  fact the traitors, and at this point they each look 20% suspicious.</p>
+</section>
+
+<!-- ===================== 3. the arc ===================== -->
+<section class="col">
+  <span class="eyebrow">3 &middot; Accuse in round 3, withdraw in round 5</span>
+
+  <div class="lvl plain stack">
+    <h2>The tool was confidently, correctly, completely wrong.</h2>
+    <p>By round 3 there is no story left in which green is innocent, so the
+    table votes green out. Two rounds later pink's card is turned over and pink
+    is a traitor &mdash; which means two of the things said about green were
+    lies, and half the stories that were crossed out should never have been.</p>
+    <p>The interesting part is not that it changed its mind. It is that it can
+    say <strong>exactly which sentence, said by whom, in which round</strong>
+    stopped holding &mdash; and that the decision the table already acted on is
+    <em>marked</em>, not quietly rewritten.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>A standard of proof is a policy, so it lives outside the rules.</h2>
+    <p>The count is a measurement; the threshold on it is not. Three consistent
+    worlds in four, declared in <code>demo.ts</code> beside
+    <code>clearsThreshold</code>, which makes the same separation for the
+    Viterbi carrier. The rules never mention it.</p>
+  </div>
+
+  <div class="arc" id="arc"></div>
+
+  <div class="lvl plain">
+    <p class="note">Round 4 is worth a look: red admits a mistake and takes back
+    what red said. That single retraction puts a story back on the table
+    &mdash; and it is the true one, pink and cyan.</p>
+  </div>
+
+  <div class="lvl eng">
+    <p class="note">The two annulments are <strong>not the same arithmetic</strong>,
+    and that is this example's unexpected finding. A withdrawal restores worlds:
+    red may be crew, so red's word was load-bearing wherever red is crew.
+    An unmasking changes no count at all &mdash; in every world where pink is a
+    traitor, pink's claims never constrained anything to begin with, so the model
+    had already priced the possibility that pink was lying. The
+    <code>annulled</code> / <code>at_risk</code> machinery therefore
+    <em>explains</em> the round-5 change to a person; it does not compute it.
+    Model counting does that on its own, silently, and would never tell the
+    table that the vote it already took no longer stands.</p>
+  </div>
+
+  <h3 style="margin-top:2rem">Which link broke</h3>
+  <div class="lvl plain">
+    <p>The case against green was never one thing. Three different people said
+    something that put green in the frame, and the tool keeps their three cases
+    apart on purpose &mdash; so that when one of them falls over, it can name
+    it.</p>
+  </div>
+  <div class="lvl eng">
+    <p>Each accuser's case is its own conclusion in the support graph, so the
+    marking is per-accuser rather than per-target. The graph is built on
+    <code>clash</code> and <code>stated</code>, never on <code>conflict</code>
+    and <code>live</code>: annulling a claim must not quietly erase the fact
+    that the case ever rested on it.</p>
+  </div>
+
+  <div class="links">
+    <div class="link gone">
+      <span class="st">collapsed</span><span class="nm">case_against(green, pink)</span>
+      <span class="ds">k5, k9 &mdash; both annulled in round 5 when pink's card was shown.
+      This is the accusation the table voted on.</span>
+    </div>
+    <div class="link gone">
+      <span class="st">collapsed</span><span class="nm">case_against(green, red)</span>
+      <span class="ds">k10 &mdash; withdrawn in round 4. Red admitted the sighting was a mistake.</span>
+    </div>
+    <div class="link stands">
+      <span class="st">stands</span><span class="nm">case_against(green, cyan)</span>
+      <span class="ds">k6 &mdash; cyan also placed green at the scene, and nobody has
+      asked cyan anything. It is the only thing still keeping green in the frame.</span>
+    </div>
+    <div class="link">
+      <span class="st">shaken</span><span class="nm">ejection(green)</span>
+      <span class="ds">The decision the table took in round 3. Marked transitively,
+      through <span class="mono">finding(green)</span>, because part of what it
+      rested on is gone and part is not.</span>
+    </div>
+  </div>
+
+  <div class="lvl eng">
+    <div class="rulebox">rests_on[case](case_against(Q, P), K)          :- points_at[case](Q, K), claimant[case](K, P).
+rests_on[case](finding(Q), case_against(Q, P)) :- case_against[case](Q, P).
+rests_on[case](ejection(Q), finding(Q))        :- ejected[public](Q, _), case_against[case](Q, _).
+rests_on[case](X, Z)                           :- rests_on[case](X, Y), <em>rests_on[case](Y, Z)</em>.</div>
+  </div>
+</section>
+
+<!-- ===================== 4. whynot ===================== -->
+<section class="col">
+  <span class="eyebrow">4 &middot; The price of an accusation</span>
+
+  <div class="lvl plain stack">
+    <h2>"No" is not an answer. The answer is what you would have to call a lie.</h2>
+    <p>When the tool says green cannot be the traitor, it does not stop there.
+    It lists every story that would make green guilty, and for each one, the
+    exact statements standing in the way. Want to accuse green anyway? Fine
+    &mdash; here is the bill, itemised.</p>
+    <p>Players do this in their heads all the time, and get it wrong. "You'd
+    have to think lime is lying <em>and</em> that the card was faked" is a real
+    argument, and it is usually made badly because nobody actually works out
+    the list.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>One relation, read from both ends.</h2>
+    <div class="rulebox">price[case](P, W, R)        :- world[worlds](W), traitor_in[worlds](W, P),
+                               refuted_by[worlds](W, R).
+incriminates[case](P, W, R) :- world[worlds](W), crew_in[worlds](W, P),
+                               refuted_by[worlds](W, R).</div>
+    <p><code>price</code> is simultaneously <em>what clears P</em> and <em>what
+    you must retract to accuse P</em>. Same set, opposite reading. The cheapest
+    blocker set over the guilty worlds is the price.</p>
+  </div>
+
+<pre class="term">$ sus -n green                  <span class="dim">[round 6]</span>
+<b class="yes">green cannot be a traitor.</b> Every one of the 7 worlds that would make them one is ruled out.
+
+  w(green,cyan)    ruled out by reveal(pink)
+  w(green,lime)    ruled out by reveal(pink)
+  w(green,pink)    ruled out by clash(k14,k15), k16
+  w(blue,green)    ruled out by clash(k14,k15), k16, reveal(pink)
+  w(green,black)   ruled out by clash(k14,k15), k16, reveal(pink), victim(black)
+  w(green,white)   ruled out by clash(k14,k15), k16, reveal(pink), victim(white)
+  w(red,green)     ruled out by clash(k14,k15), k16, k3, reveal(pink)
+
+  <b class="hi">THE PRICE OF THE ACCUSATION.</b> The cheapest route to "green did it" is
+  w(green,cyan), and it costs 1 retraction. You must declare false:
+    reveal(pink)       pink's card was shown
+
+  If the game log stands, the cheapest route is w(green,pink) at 2 retractions: clash(k14,k15), k16.</pre>
+
+  <div class="lvl eng">
+    <p class="note">The kernel's own <code>whynot</code> bottoms out on the same
+    blocked premise, one negated literal down:
+    <span class="mono">not impossible[worlds](w(green,lime)) -- blocked:
+    impossible[worlds](w(green,lime)) holds</span>. The rendering above is the
+    same information arranged for a person at a table.</p>
+  </div>
+</section>
+
+<!-- ===================== 5. time ===================== -->
+<section class="col">
+  <span class="eyebrow">5 &middot; Time, and the trap in it</span>
+
+  <div class="lvl plain stack">
+    <h2>"What did we know in round 3?" is a question you can ask.</h2>
+    <p>Rounds are time. Something said in round 6 must not be allowed to change
+    what the table could reasonably have believed in round 3, and something
+    revealed in round 5 has to be able to undo a conclusion from round 3.</p>
+    <p>There are two ways to get back to round 3: play the game forward again
+    round by round, or just set the clock to 3 and ask. Both give the same
+    answer here &mdash; checked, at every round, fact for fact.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>The rule this example taught, and its retirement.</h2>
+    <p>The rule was <em>fold as-of, never over a ticked store</em>. A
+    <code>fact @next :- fact</code> carry rule makes every carried fact its own
+    support one tick back; past tick 0 the <code>CLOSED</code> counting semiring
+    therefore answered "infinitely many" for <em>everything</em> &mdash; while
+    every Boolean answer stayed correct. Silent, total, and fatal to an example
+    whose whole product is a count. It was retired on 2026-08-30 by a decision
+    rather than a workaround: <code>not p</code> means "not derivable in the
+    CURRENT tick's store", and by the same argument the fold is about one tick,
+    so a fact that arrived over the boundary is a given in the tick that reads
+    it. Measured here, since this is where the as-of machinery was built: at all
+    six rounds the two stores agree on every domain fact and on every count, and
+    at round 3 tropical, provenance and Viterbi agree too.</p>
+  </div>
+
+  <div class="duo">
+    <div class="card good">
+      <h3>Same world</h3>
+      <span class="big">IDENTICAL &times; 6</span>
+      <p>Ticked and as-of agree on the domain facts at <em>every</em> round:
+      1226, 1010, 1484, 1412, 1209, 1503 facts, list for list.</p>
+    </div>
+    <div class="card good">
+      <h3>Same count</h3>
+      <span class="big">5 &equals; 5</span>
+      <p><span class="mono">outcome(any, green)</span> is <span class="mono">5</span>
+      as-of and <span class="mono">5</span> after the ticks. It used to be
+      uncountable after two ticks; 20 facts lie on a support cycle either way.</p>
+    </div>
+  </div>
+
+  <div class="lvl eng">
+    <p class="note">What a past tick <em>does</em> still answer is the frozen
+    <code>derived_by</code> record &mdash; 88 <code>refuted_by</code> facts were
+    derived at tick 2 and are still on the books. What it does not answer is
+    <em>what could have been asked</em> at tick 2: tick-scoped facts are dropped
+    at the boundary. <code>asOf(3)</code> answers that second question, and it
+    is a different store rather than a view of this one. Stated here rather than
+    papered over, because the difference is easy to miss and easy to claim.</p>
+  </div>
+</section>
+
+<!-- ===================== 6. oracle ===================== -->
+<section class="col">
+  <span class="eyebrow">6 &middot; How we know it is right</span>
+
+  <div class="lvl plain stack">
+    <h2>We checked all 168 answers by hand. Well &mdash; by a second program.</h2>
+    <p>Twenty-eight possible pairs of traitors, six rounds: 168 yes-or-no
+    questions in total. Each one was answered twice &mdash; once by the rule
+    engine, and once by a completely separate program that just walks through
+    what everybody said and checks it. They agreed on all 168, and on every
+    count.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>For a finite model, enumeration is a complete oracle.</h2>
+    <p>No engine, no rules, no shared code beyond reading the same base facts,
+    and compared on the verdict <strong>and</strong> on the counting semiring's
+    guilty/total numbers &mdash; comparing counts is what makes it an oracle for
+    the metric rather than only for the decision. A disagreement would be the
+    finding; the model is never tuned until one goes away.</p>
+  </div>
+
+<pre class="term">    verdict disagreements:     <b class="yes">0</b>
+    guilty-count disagreements: <b class="yes">0</b>
+    consistent worlds by round: r1=22  r2=9  r3=5  r4=5  r5=2  r6=1</pre>
+
+  <div class="lvl eng">
+    <p class="note">A second check runs on the model itself and is asserted in
+    the test rather than printed and forgotten: no rule may fall outside range
+    restriction, and no relation may be evaluated top-down. It earned its place
+    &mdash; it caught the alibi rule leaving the kill room unbound while this
+    example was being written, which would have made <code>elsewhere</code> a
+    demand relation and put its facts outside the fold entirely.</p>
+  </div>
+</section>
+
+<!-- ===================== 7. semirings ===================== -->
+<section class="col lvl eng">
+  <span class="eyebrow">7 &middot; Five questions, one fixpoint</span>
+  <h2>Same facts, different semiring.</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Semiring</th><th>Question</th><th>Answer here</th></tr></thead>
+    <tbody>
+      <tr><td>Boolean</td><td>Is this role assignment possible at all?</td><td>5 of 28, in round 3</td></tr>
+      <tr><td>counting</td><td>In how many of them is green a traitor?</td><td>5 &mdash; the suspicion metric</td></tr>
+      <tr><td>Viterbi</td><td>Which possible world is most likely, given who lies boldly?</td><td>w(pink,cyan), 65.8% of the mass at round 5</td></tr>
+      <tr><td>provenance</td><td>Which claims produce this refutation?</td><td>one minimal source set per refutation</td></tr>
+      <tr><td>tropical</td><td>What is the shortest chain to the conclusion?</td><td>5 rule firings</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">The Viterbi arm never changes which worlds are <em>possible</em>:
+  it is a prior on people laid over an answer the Boolean fixpoint already fixed,
+  and the test asserts the ranked set is exactly the consistent set. Its
+  independence assumption is stated in the model rather than hidden &mdash; the
+  score is a product over claims, so it treats each claim's honesty as
+  independent given the roles, which is false of any table where liars
+  coordinate.</p>
+</section>
+
+<footer class="col">
+  <p><strong>Run it.</strong> <span class="mono">node --experimental-strip-types
+  examples/sus/demo.ts</span> &mdash; zero dependencies, Node 22.6+ or Bun. The model
+  is <span class="mono">examples/sus/sus.rofl</span>; the properties above are tested
+  in <span class="mono">test/example-sus.test.ts</span>.</p>
+  <p style="margin-top:.9rem">Data is synthetic and hand-built: the scenario is
+  arranged so that the engine crosses a standard of proof and then falls back
+  under it, which is a thing you construct rather than a thing you find.</p>
+  <p style="margin-top:.9rem">Built on the ROFL kernel: a Datalog-family language
+  with perspectives, explicit time, kernel-emitted provenance and budgets as
+  semantics.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  var PLAYERS = ['red', 'blue', 'green', 'pink', 'cyan', 'lime', 'white', 'black'];
+  var ALIVE = {
+    3: ['blue+green', 'green+black', 'green+cyan', 'green+lime', 'green+pink'],
+    5: ['green+pink', 'pink+cyan']
+  };
+  var ARC = [
+    { rd: 1, worlds: 22, guilty: 6,  pct: 27,  ev: 'the first four statements' },
+    { rd: 2, worlds: 9,  guilty: 5,  pct: 56,  ev: 'white is killed in the engine room' },
+    { rd: 3, worlds: 5,  guilty: 5,  pct: 100, ev: 'pink accuses green; cyan and red back it up', hot: true },
+    { rd: 4, worlds: 5,  guilty: 4,  pct: 80,  ev: 'black is killed; red takes back the sighting', hot: true },
+    { rd: 5, worlds: 2,  guilty: 1,  pct: 50,  ev: "pink's card is shown: TRAITOR", drop: true },
+    { rd: 6, worlds: 1,  guilty: 0,  pct: 0,   ev: 'lime finally reports what lime saw', drop: true }
+  ];
+
+  function key(a, b) { return a + '+' + b; }
+
+  function buildGrid(el) {
+    var round = el.getAttribute('data-round');
+    var alive = {};
+    ALIVE[round].forEach(function (k) { alive[k] = true; });
+    for (var i = 0; i < PLAYERS.length; i++) {
+      for (var j = i + 1; j < PLAYERS.length; j++) {
+        var a = PLAYERS[i], b = PLAYERS[j];
+        var cell = document.createElement('span');
+        var live = alive[key(a, b)] || alive[key(b, a)];
+        cell.className = 'w' + (live ? ' alive' : '') + (a === 'green' || b === 'green' ? ' target' : '');
+        cell.textContent = a.slice(0, 2) + b.slice(0, 2);
+        cell.title = a + ' + ' + b + (live ? ' — still possible' : ' — ruled out');
+        el.appendChild(cell);
+      }
+    }
+  }
+
+  function buildArc(el) {
+    ARC.forEach(function (r) {
+      var row = document.createElement('div');
+      row.className = 'round' + (r.hot ? ' hot' : '') + (r.drop ? ' drop' : '');
+      var rd = document.createElement('span');
+      rd.className = 'rd'; rd.textContent = 'r' + r.rd;
+      var pc = document.createElement('span');
+      pc.className = 'pc'; pc.textContent = r.pct + '%';
+      var ev = document.createElement('span');
+      ev.className = 'ev';
+      ev.textContent = r.guilty + ' of ' + r.worlds + ' worlds — ' + r.ev
+        + (r.hot ? '  ·  ACCUSE' : '');
+      var meter = document.createElement('span');
+      meter.className = 'meter';
+      var fill = document.createElement('i');
+      fill.style.width = r.pct + '%';
+      meter.appendChild(fill);
+      row.appendChild(rd); row.appendChild(pc); row.appendChild(ev); row.appendChild(meter);
+      el.appendChild(row);
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.wgrid'), buildGrid);
+  buildArc(document.getElementById('arc'));
+
+  var doc = document.getElementById('doc');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.switch button'));
+  var KEY = 'sus-level';
+
+  function apply(level) {
+    doc.setAttribute('data-level', level);
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-set') === level));
+    });
+    try { localStorage.setItem(KEY, level); } catch (e) { /* private mode: fine */ }
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      doc.classList.remove('switched');
+      void doc.offsetWidth;
+      doc.classList.add('switched');
+      apply(b.getAttribute('data-set'));
+    });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { saved = null; }
+  apply(saved === 'eng' ? 'eng' : 'plain');
+})();
+</script>

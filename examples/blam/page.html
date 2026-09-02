@@ -1,0 +1,968 @@
+<title>BLAM — what a diff hits</title>
+<meta charset="utf-8">
+
+<style>
+  :root {
+    --bg:        #fbfaf7;
+    --panel:     #ffffff;
+    --ink:       #1d1c1a;
+    --ink-soft:  #5d5a54;
+    --ink-faint: #8a867e;
+    --line:      #e3e0d8;
+    --line-soft: #eeebe4;
+    --accent:    #1d5a8a;
+    --accent-bg: #e8f1f8;
+    --good:      #2f6b3f;
+    --warn:      #9a5b17;
+    --gone:      #a03030;
+    --code-bg:   #f4f1ea;
+    --shadow:    0 1px 2px rgba(30, 28, 24, .06), 0 8px 24px rgba(30, 28, 24, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f25;
+      --ink:       #e9ecf0;
+      --ink-soft:  #aab0b8;
+      --ink-faint: #7c828a;
+      --line:      #313640;
+      --line-soft: #262a32;
+      --accent:    #74b9e8;
+      --accent-bg: #17293a;
+      --good:      #8fd6a2;
+      --warn:      #e0a860;
+      --gone:      #f09090;
+      --code-bg:   #101216;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f25;
+    --ink:       #e9ecf0;
+    --ink-soft:  #aab0b8;
+    --ink-faint: #7c828a;
+    --line:      #313640;
+    --line-soft: #262a32;
+    --accent:    #74b9e8;
+    --accent-bg: #17293a;
+    --good:      #8fd6a2;
+    --warn:      #e0a860;
+    --gone:      #f09090;
+    --code-bg:   #101216;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- header ---------- */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  /* ---------- level switching ---------- */
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  /* ---------- sections ---------- */
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem;
+    display: flex; align-items: baseline; gap: .6rem;
+  }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; }
+  .kid p { font-size: 1.05rem; }
+  ul, ol { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  /* ---------- code ---------- */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .82rem; line-height: 1.55;
+    margin: 1rem 0; color: var(--ink);
+  }
+  pre.tight { font-size: .74rem; line-height: 1.5; }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  figure { margin: 1.4rem 0; }
+  figcaption {
+    font-size: .82rem; color: var(--ink-faint); margin-top: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--good); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* ---------- the graph ---------- */
+  .graph {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 1rem; margin: 1.4rem 0;
+  }
+  .graph svg { display: block; width: 100%; height: auto; max-width: 26rem; margin: 0 auto; }
+  .graph .box { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
+  .graph .box.hot { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.8; }
+  .graph .box.seed { fill: var(--accent); stroke: var(--accent); }
+  .graph .lbl { fill: var(--ink-soft); font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-anchor: middle; }
+  .graph .lbl.hot { fill: var(--accent); font-weight: 700; }
+  .graph .lbl.seed { fill: var(--panel); font-weight: 700; }
+  .graph .edge { stroke: var(--line); stroke-width: 1.4; fill: none; }
+  .graph .edge.hot { stroke: var(--accent); stroke-width: 2.2; }
+  .graph .tag { fill: var(--ink-faint); font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8rem; color: var(--ink-faint); margin-top: .8rem; justify-content: center; }
+  .legend span { display: inline-flex; align-items: center; gap: .35rem; }
+  .swatch { width: .8rem; height: .8rem; border-radius: 3px; border: 1px solid var(--line); display: inline-block; }
+  .swatch.hot { background: var(--accent-bg); border-color: var(--accent); }
+  .swatch.seed { background: var(--accent); border-color: var(--accent); }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; font-size: .87rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .35rem .9rem .35rem 0; border-bottom: 1px solid var(--line-soft); }
+  th { color: var(--ink-faint); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+  td.num { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  td.mono, th.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  tr.win td { color: var(--accent); font-weight: 650; }
+  tr.nil td { color: var(--ink-faint); }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-bg);
+    padding: .8rem 1rem; border-radius: 0 8px 8px 0; margin: 1.2rem 0;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-size: .95em; }
+
+  @media (max-width: 34rem) {
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/blam</p>
+  <h1>BLAM <span class="dim">— what a diff hits, and why</span></h1>
+  <p class="lede">
+    Change one file in a big repository and a build system decides what to
+    rebuild. It gets the answer right and then throws away the reasoning. This
+    keeps the reasoning: which chain of dependencies dragged each thing in,
+    which things were spared and where the search for them stopped, how many
+    separate routes lead to each, and which single dependency to delete so it
+    stops happening.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> Boxes built out of other boxes</h2>
+
+  <div class="kid">
+    <p>
+      A big software project is kept in one repository full of parts. Each part
+      is a <strong>box</strong>, and some boxes are built out of other boxes.
+      The website box is built out of the interface box and the data box; both
+      of those are built out of the little box of shared helpers; and everything
+      sits on one settings file at the bottom.
+    </p>
+    <p>
+      Now you change one file. Which boxes have to be built again? Every box
+      that is built out of the box you touched, and every box built out of
+      <em>those</em>, all the way up. That is all the computation there is, and
+      every build tool does it correctly.
+    </p>
+    <p>
+      The interesting part is not the answer. It is that the tool cannot tell
+      you <em>anything</em> about the answer afterwards.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      A monorepo build graph: packages as nodes, dependency edges pointing at
+      what a package needs. Every package has a <code>build</code> target and a
+      <code>test</code> target, and the test target depends on its own build.
+      Files are mapped onto targets, many-to-many.
+    </p>
+    <p>
+      The affected set of a diff is the reflexive-transitive closure of the
+      reverse dependency relation over the targets that own the changed files.
+      As a fixpoint:
+    </p>
+    <pre>reaches(F, T)  &lt;-  owns(T, F)
+reaches(F, T)  &lt;-  needs(T, U) &and; reaches(F, U)
+affected(T)    &lt;-  changed(F) &and; reaches(F, T)</pre>
+    <p>
+      Least fixpoint of a monotone operator over a finite domain; it converges,
+      and Bazel, Nx and Turborepo all compute it. What none of them retains is
+      the <strong>support</strong>: which rule instance, with which premises,
+      put each fact into the set. Drop that and the set is an oracle you cannot
+      cross-examine.
+    </p>
+  </div>
+
+  <figure class="graph">
+    <svg viewBox="0 0 370 372" role="img" aria-label="Eight packages: config at the bottom, then core, then utils, with api and ui above it converging on web; cli depends on api; docs depends on config and core.">
+      <!-- edges: dependents on top, arrows point down at what they need -->
+      <path class="edge hot" d="M215,41 L191,93" />
+      <path class="edge hot" d="M280,41 L310,93" />
+      <path class="edge hot" d="M191,119 L241,171" />
+      <path class="edge hot" d="M310,119 L262,171" />
+      <path class="edge hot" d="M150,41 L179,93" />
+      <path class="edge" d="M185,119 L163,249" />
+      <path class="edge" d="M245,197 L172,249" />
+      <path class="edge" d="M256,197 L235,327" />
+      <path class="edge" d="M160,275 L215,327" />
+      <path class="edge" d="M40,41 L120,251" />
+      <path class="edge" d="M28,41 L14,300 L197,341" />
+
+      <!-- row 0 -->
+      <rect class="box" x="7" y="15" width="66" height="26" rx="6" />
+      <text class="lbl" x="40" y="33">docs</text>
+      <rect class="box hot" x="117" y="15" width="66" height="26" rx="6" />
+      <text class="lbl hot" x="150" y="33">cli</text>
+      <rect class="box hot" x="247" y="15" width="66" height="26" rx="6" />
+      <text class="lbl hot" x="280" y="33">web</text>
+
+      <!-- row 1 -->
+      <rect class="box hot" x="152" y="93" width="66" height="26" rx="6" />
+      <text class="lbl hot" x="185" y="111">api</text>
+      <rect class="box hot" x="277" y="93" width="66" height="26" rx="6" />
+      <text class="lbl hot" x="310" y="111">ui</text>
+
+      <!-- row 2 : the changed package -->
+      <rect class="box seed" x="217" y="171" width="66" height="26" rx="6" />
+      <text class="lbl seed" x="250" y="189">utils</text>
+      <text class="tag" x="290" y="189">&larr; you changed this</text>
+
+      <!-- row 3 -->
+      <rect class="box" x="127" y="249" width="66" height="26" rx="6" />
+      <text class="lbl" x="160" y="267">core</text>
+
+      <!-- row 4 -->
+      <rect class="box" x="197" y="327" width="66" height="26" rx="6" />
+      <text class="lbl" x="230" y="345">config</text>
+    </svg>
+    <div class="legend">
+      <span><i class="swatch seed"></i> the file you changed lives here</span>
+      <span><i class="swatch hot"></i> rebuilt</span>
+      <span><i class="swatch"></i> spared</span>
+    </div>
+    <figcaption>
+      eight packages, eleven dependency edges; each has a build and a test
+      target, so sixteen targets in all. Arrows point at what a package needs.
+    </figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Two shapes in that picture do all the work later on. <strong>utils</strong>
+      is reached by <strong>web</strong> in two different ways — through
+      <em>api</em> and through <em>ui</em> — so there are two separate reasons
+      web has to be rebuilt. And <strong>config</strong> at the bottom is needed
+      by absolutely everything, so changing it rebuilds the entire repository.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Two features are load-bearing. The <strong>diamond</strong>
+      <code>utils &rarr; {api, ui} &rarr; web</code> gives two edge-disjoint
+      routes, so path counting exceeds one without anyone arranging it. The
+      <strong>global config</strong> is reachable from every package, which is
+      the commonest real pathology and the one an affected-set tool reports as
+      a single word. <code>docs</code> is unreachable from a <code>utils</code>
+      diff, which is what makes <code>whynot</code> have something to explain,
+      and <code>shared/schema/events.json</code> is owned by two targets at
+      once, which is what makes ownership many-to-many rather than a directory
+      prefix.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> The answer every build tool gives</h2>
+
+  <p>
+    One file changes — <code>packages/utils/src/str.ts</code> — and here is the
+    whole of what you get:
+  </p>
+
+  <pre>one file changed. 10 of 16 targets are affected:
+  api:build api:test cli:build cli:test ui:build ui:test utils:build
+  utils:test web:build web:test
+spared: config:build config:test core:build core:test docs:build docs:test
+cost:   915 minutes of the repository's 1057</pre>
+
+  <div class="kid">
+    <p>
+      Correct, and unarguable. Two questions get asked about it every single
+      day, and neither has an answer anywhere in the tool:
+    </p>
+    <ul>
+      <li><strong>Why is <em>web</em> on that list?</strong> Nobody touched it.</li>
+      <li><strong>Why is <em>docs</em> <em>not</em> on that list?</strong> I am
+        fairly sure I broke it.</li>
+    </ul>
+    <p>
+      The first makes people stop trusting the tool and rebuild everything by
+      hand, which is slow. The second is the dangerous one: the thing you broke
+      never gets tested, and you find out later.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The set is right; it is also the entire output. Two queries have no place
+      to live:
+    </p>
+    <ul>
+      <li>
+        <strong>why</strong> — the derivation of a membership fact, down to the
+        axioms. <code>bazel query somepath()</code> gives you a path through the
+        target graph, but only against a hypothesis you already formed, and it
+        never connects the path to the file in the diff that started it.
+      </li>
+      <li>
+        <strong>whynot</strong> — for a target absent from the set, the front at
+        which the closure stopped. Nothing answers this, because absence from a
+        set carries no information about its own cause. Non-membership is where
+        missed regressions live.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> Why did it rebuild <code>web</code>?</h2>
+
+  <div class="kid">
+    <p>
+      Ask, and the answer is not a yes. It is the whole chain, one link at a
+      time, ending at the file you actually touched:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The proof tree, expanded to axioms. Every dependency edge is a named
+      premise, so it appears as a node rather than being summarised away:
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">$ why affected(t(web,build))
+affected[main](t(web,build))  &lt;= ra23d9c41 @tick 0
+  changed[main]("packages/utils/src/str.ts") [axiom]
+  reaches[main]("packages/utils/src/str.ts",t(web,build))  &lt;= re402eac5 @tick 0
+    needs[main](t(web,build),t(api,build))  &lt;= rb7a77a0d @tick 0
+      pkg_dep[main](web,api) [axiom]
+    reaches[main]("packages/utils/src/str.ts",t(api,build))  &lt;= re402eac5 @tick 0
+      needs[main](t(api,build),t(utils,build))  &lt;= rb7a77a0d @tick 0
+        pkg_dep[main](api,utils) [axiom]
+      reaches[main]("packages/utils/src/str.ts",t(utils,build))  &lt;= r41cf71f6 @tick 0
+        owns[main](t(utils,build),"packages/utils/src/str.ts") [axiom]</pre>
+    <figcaption>examples/blam/demo.ts, section 2</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Read the bottom lines upward and it is a sentence: the file belongs to
+      <em>utils</em>; <em>api</em> is built out of <em>utils</em>; <em>web</em>
+      is built out of <em>api</em>. Every step is something you can go and check
+      in the project's own settings, and each one is marked
+      <code>[axiom]</code> — meaning nothing was inferred, it was simply written
+      down somewhere.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Every leaf is a base fact: two <code>pkg_dep</code> edges, one
+      <code>owns</code>, one <code>changed</code>. Nothing is elided, and the
+      rule id on each internal node identifies which of the five clauses fired.
+      This is not a report the demo constructs — it is the support the kernel
+      recorded while computing the set, rendered.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> Why did it <em>not</em> rebuild <code>docs</code>?</h2>
+
+  <div class="kid">
+    <p>
+      This is the half nothing else has, and the half that matters more. You
+      believe you broke <em>docs</em>. The tool did not rebuild it. Asking why
+      not gives you the exact place the search gave up:
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      <code>whynot</code> walks the same rules downward and names, per rule, the
+      premise instances that failed, recursing into each until it bottoms out.
+      The result is a <strong>stopping front</strong>, not an empty set:
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre class="tight">$ whynot affected(t(docs,build))
+whynot affected[main](t(docs,build)):
+  rule ra23d9c41: affected[main](?T)@now :- changed[main](?F)@now, reaches[main](?F,?T)@now
+    failed premise: reaches[main]("packages/utils/src/str.ts",t(docs,build))
+      rule re402eac5: reaches[main](?F,?T)@now :- needs[main](?T,?U)@now, reaches[main](?F,?U)@now
+        failed premise: reaches[main]("packages/utils/src/str.ts",t(config,build))
+          rule re402eac5: reaches[main](?F,?T)@now :- needs[main](?T,?U)@now, reaches[main](?F,?U)@now
+            failed premise: needs[main](t(config,build),?U#2)
+              rule rb7a77a0d: needs[main](t(?P,build),t(?Q,build))@now :- pkg_dep[main](?P,?Q)@now
+                failed premise: pkg_dep[main](config,?Q#3)
+                  no rule concludes 'pkg_dep' and no matching base fact exists
+              rule r9c7a66bc: head does not unify
+          rule r41cf71f6: reaches[main](?F,?T)@now :- owns[main](?T,?F)@now
+            failed premise: owns[main](t(config,build),"packages/utils/src/str.ts")
+              no rule concludes 'owns' and no matching base fact exists
+        failed premise: reaches[main]("packages/utils/src/str.ts",t(core,build))
+          ...
+      rule r41cf71f6: reaches[main](?F,?T)@now :- owns[main](?T,?F)@now
+        failed premise: owns[main](t(docs,build),"packages/utils/src/str.ts")
+          no rule concludes 'owns' and no matching base fact exists</pre>
+    <figcaption>examples/blam/demo.ts, section 3 (the <code>core</code> branch elided; it is the same shape)</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>Three statements, which together are the answer:</p>
+    <ol>
+      <li><em>docs</em> does not own the file you changed.</li>
+      <li>Neither of the two boxes <em>docs</em> is built out of was rebuilt
+        either — and here is the same question asked about each of them.</li>
+      <li>The bottom box, <em>config</em>, is built out of nothing at all, so
+        there is nowhere further to look. That is where the search stops.</li>
+    </ol>
+    <div class="callout">
+      <p>
+        And now the useful bit. If <em>docs</em> really does use the file you
+        changed, then the missing link is the bug — somebody forgot to write
+        down that <em>docs</em> is built out of <em>utils</em>. Your change was
+        never tested against it, and nothing would ever have told you. This is
+        how you find that out on the day you make the change, instead of three
+        weeks later.
+      </p>
+    </div>
+  </div>
+  <div class="eng">
+    <p>
+      The tree terminates on its own: no depth or node bound fires, which the
+      test asserts, because a front truncated by a budget is not a front.
+      <code>rule r9c7a66bc: head does not unify</code> is the
+      <code>needs(t(P,test), t(P,build))</code> clause being ruled out against
+      a build target — structural noise, and deliberately not hidden, since a
+      demonstration that silently skipped candidate rules would be a weaker
+      demonstration.
+    </p>
+    <div class="callout">
+      <p>
+        The operational payoff: if the source really does import the changed
+        module, the absent <code>pkg_dep</code> edge <em>is</em> the defect, and
+        the front points straight at it. A missed regression is a
+        non-derivability whose cause is a missing base fact; you cannot chase
+        that with a tool that only prints derivable things.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> How many separate reasons?</h2>
+
+  <div class="kid">
+    <p>
+      The same rules, counted instead of just checked. For each rebuilt box:
+      how many different chains lead to it from the file you changed?
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The counting semiring folded over the support hypergraph the kernel
+      already recorded — <code>&oplus;</code> is <code>+</code>,
+      <code>&otimes;</code> is <code>&times;</code>, base facts annotate to
+      <code>1</code>. The value of a fact becomes the number of derivation
+      trees for it, which here is the number of distinct dependency paths.
+      Not one line of the rules changed.
+    </p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">target</th><th class="num">routes</th><th>&nbsp;</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">utils:build</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">utils:test</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">api:build</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">api:test</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">ui:build</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">ui:test</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">cli:build</td><td class="num">1</td><td></td></tr>
+        <tr><td class="mono">cli:test</td><td class="num">1</td><td></td></tr>
+        <tr class="win"><td class="mono">web:build</td><td class="num">2</td><td>through api, and through ui</td></tr>
+        <tr class="win"><td class="mono">web:test</td><td class="num">2</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="kid">
+    <p>
+      A <strong>1</strong> means one chain: delete that one link and this box
+      stops being rebuilt. A <strong>2</strong> means two chains that share
+      nothing, so deleting either link changes nothing — the other one still
+      drags it in. That number is a measure of how tangled a box is, and no
+      build tool reports it.
+    </p>
+    <p>
+      Change the settings file at the bottom instead, and <em>web</em> comes
+      out at <strong>5</strong>. All sixteen boxes rebuild, and there are five
+      separate reasons for that one.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      One route means removing one edge stops the rebuild. Five means the
+      target is wired into everything — a connectivity metric that computing
+      the affected set never needs, and therefore never produces, but that the
+      recorded support gives away for the price of one fold. Under the global
+      config diff, <code>web:build</code> scores 5 and every one of the sixteen
+      targets is affected.
+    </p>
+  </div>
+
+  <h3>Why this number is finite here, and would not be everywhere</h3>
+
+  <div class="kid">
+    <p>
+      Counting chains only works if the chains cannot run in circles. A build
+      graph never does: if box A were built out of box B and box B out of box
+      A, nothing could ever be built at all, so every build tool refuses such a
+      project outright.
+    </p>
+    <p>
+      Put one circular link in on purpose and ask the same question, and the
+      tool answers <em>infinitely many</em> — which is the truthful answer, and
+      a completely useless one. That is why the reason for the number being
+      finite is written down in the rules file, rather than quietly assumed.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The support hypergraph of <code>reaches</code> is acyclic <em>because the
+      package graph is</em>, and the package graph is acyclic by construction —
+      a cycle in it is a configuration error every build tool rejects at load.
+      So the counting fold converges by plain Kleene iteration and needs no
+      closure operator; the demo reports <code>cyclic: 0</code>.
+    </p>
+    <p>
+      The instance itself is nonetheless declared CLOSED and carries a
+      <code>star</code>, and that is not decoration. Load one forbidden edge and
+      the same instance says so:
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <pre class="tight">$ load pkg_dep(utils, ui).      -- one forbidden edge: utils &lt;-&gt; ui
+  cyclic: 14
+  api:build      infinitely many
+  ui:build       infinitely many
+  utils:build    infinitely many
+  web:build      infinitely many
+  ...</pre>
+      <figcaption>examples/blam/demo.ts, section 4 (all ten affected targets read the same; six rows elided)</figcaption>
+    </figure>
+    <p>
+      A fact on a cycle really does have unboundedly many derivations, so
+      <code>infinitely many</code> is correct — and useless. The Boolean
+      verdicts are unchanged; only the metric died. That is the whole reason to
+      state the acyclicity as a property of <em>build graphs</em> rather than
+      of these rules: copy the rules into a cyclic domain and the counting stops
+      meaning what you think it means, silently, with no error anywhere.
+      <code>examples/nope/</code> is the sibling case — an assume-role graph
+      <em>has</em> cycles, and the count there is a number only because that
+      model carries the path inside the fact.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> In what order?</h2>
+
+  <div class="kid">
+    <p>
+      A third question off the same rules: how far is each box from the file
+      you changed? That gives the order to build things in — what can start
+      right now, and what has to wait.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The tropical (min-plus) semiring over the same support, charging one per
+      rule firing: <code>&oplus;</code> is <code>min</code>,
+      <code>&otimes;</code> is <code>+</code>, so a fact's value is the cost of
+      its cheapest derivation. Divide out the constant and it is the number of
+      dependency edges between the diff and the target.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre>  wave 0   utils:build                                25 min
+  wave 1   api:build ui:build utils:test             160 min
+  wave 2   api:test cli:build ui:test web:build      395 min
+  wave 3   cli:test web:test                         335 min</pre>
+    <figcaption>examples/blam/demo.ts, section 5</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Wave 0 can start the second the change lands. Everything in wave 1 waits
+      for wave 0, and so on. Four waves, and the deepest wave is what decides
+      how long you sit waiting.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Honest caveat: min-plus gives the <em>earliest</em> wave a target can be
+      reached in, which is a lower bound on when it may start — not a schedule.
+      A scheduler wants the longest path, since nothing may start before all of
+      its dependencies finish. That is max-plus, a different instance, and it
+      would be BOUNDED only because this graph is acyclic — the same caveat as
+      counting, one step further along.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">7</span> Which one link should we cut?</h2>
+
+  <div class="kid">
+    <p>
+      The question that turns a report into a decision. If you could delete one
+      dependency from the whole project, which one buys the most? Not "which is
+      ugliest" — which one, removed, stops the most rebuilding from ever being
+      triggered.
+    </p>
+    <p>
+      The tool can answer that, because it knows every chain. A link is worth
+      cutting for a particular box exactly when it appears on <em>every</em>
+      chain to that box. If two chains avoid each other, cutting either one
+      changes nothing.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The provenance semiring, with the base annotation carried only by the
+      <code>pkg_dep</code> facts. A monomial of <code>reaches(F, T)</code> is
+      then the set of package edges one route uses, and the polynomial is the
+      set of routes. So the single-edge cuts for a pair are exactly the
+      <strong>intersection</strong> of its polynomial, and an empty intersection
+      is a proof that no single edge suffices. The
+      <code>needs(t(P,test), t(P,build))</code> edge comes from an unannotated
+      fact and contributes the multiplicative identity, which is correct: you
+      cannot stop a test depending on its own build.
+    </p>
+    <p>
+      Scored over every single-file diff the repository admits, weighted by the
+      declared CI cost of each target:
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">edge</th><th class="num">pairs cut</th><th class="num">minutes no longer triggered</th></tr></thead>
+        <tbody>
+          <tr class="win"><td class="mono">ui &rarr; utils</td><td class="num">10</td><td class="num">575</td></tr>
+          <tr><td class="mono">web &rarr; api</td><td class="num">2</td><td class="num">550</td></tr>
+          <tr><td class="mono">web &rarr; ui</td><td class="num">2</td><td class="num">550</td></tr>
+          <tr><td class="mono">api &rarr; utils</td><td class="num">8</td><td class="num">390</td></tr>
+          <tr><td class="mono">cli &rarr; api</td><td class="num">14</td><td class="num">315</td></tr>
+          <tr><td class="mono">core &rarr; config</td><td class="num">4</td><td class="num">190</td></tr>
+          <tr><td class="mono">utils &rarr; core</td><td class="num">4</td><td class="num">170</td></tr>
+          <tr><td class="mono">docs &rarr; core</td><td class="num">2</td><td class="num">45</td></tr>
+          <tr class="nil"><td class="mono">api &rarr; core</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr class="nil"><td class="mono">docs &rarr; config</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr class="nil"><td class="mono">utils &rarr; config</td><td class="num">0</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figcaption>examples/blam/demo.ts, section 6</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>Three things fall out of that table that you would not have guessed:</p>
+    <ul>
+      <li>
+        The link that disconnects the <em>most things</em> is not the link that
+        saves the <em>most time</em>. Cutting <code>cli &rarr; api</code>
+        untangles 14 pairings; cutting <code>ui &rarr; utils</code> untangles
+        only 10 but saves nearly twice the waiting.
+      </li>
+      <li>
+        Three of the eleven links are worth <strong>nothing</strong> to cut.
+        Every chain that goes through them has another way round, so removing
+        them changes not one rebuild. They are free to keep and free to delete.
+      </li>
+      <li>
+        For <em>web</em>, the answer is that there is <strong>no</strong> single
+        link. Its two chains share nothing — which is exactly what the
+        <strong>2</strong> in the previous section was telling you. The same
+        fact, seen twice.
+      </li>
+    </ul>
+  </div>
+  <div class="eng">
+    <ul>
+      <li>
+        Ranking by couplings and ranking by money disagree:
+        <code>cli &rarr; api</code> cuts the most pairs (14) and
+        <code>ui &rarr; utils</code> saves the most minutes (575). Only one of
+        the two is anybody's actual question, and a tool that reported "affected
+        set size" would have offered neither.
+      </li>
+      <li>
+        Three edges have an empty score: every route they carry has an
+        alternative. A structural dependency review spends time on them; this
+        ranking says not to.
+      </li>
+      <li>
+        The intersection for <code>(utils/src/str.ts, web:build)</code> is
+        empty, matching the count of 2 — the connectivity metric and the cut
+        analysis are two readings of one polynomial.
+      </li>
+    </ul>
+    <p>
+      And the prediction is checked rather than asserted: the demo retracts
+      <code>pkg_dep(api, utils)</code>, re-runs the fixpoint from scratch, and
+      compares.
+    </p>
+    <pre>  $ retract pkg_dep(api, utils)   -- and re-run the fixpoint
+  affected: 10 targets / 915 min  -&gt;  6 targets / 720 min
+  ui:build ui:test utils:build utils:test web:build web:test
+  oracle: AGREE — the predicted blast radius of cutting api -&gt; utils</pre>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">8</span> Is it right?</h2>
+
+  <div class="kid">
+    <p>
+      Every number on this page is checked against a second, completely
+      separate program that walks the same boxes by hand and counts the chains
+      itself. It shares the list of boxes and links and nothing else — none of
+      the rules, none of the machinery.
+    </p>
+    <p>
+      Then every one of the twelve files in the project is treated as a change
+      in turn, and both programs are asked about all sixteen targets: is it
+      rebuilt, and by how many chains?
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The oracle is an independent memoized depth-first path count over the
+      target graph, sharing only the base facts — no rules, no derived
+      relations, no semiring. Every file as a single-file diff, against every
+      target, on the verdict and on the route count. It throws rather than
+      returning a wrong finite number on a cyclic graph, which is what makes it
+      usable as the check on the cyclic variant too.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre>  sample: 12 files x 16 targets = 192 (changed file, target) pairs
+  verdict mismatches: 0
+  route-count mismatches: 0</pre>
+    <figcaption>examples/blam/demo.ts, the oracle</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">9</span> What this gives over Bazel</h2>
+
+  <p>
+    Honestly: <strong>by result, nothing.</strong> Bazel, Nx and Turborepo
+    compute the same set, on real repositories, far faster. This is a toy graph
+    on an engine that re-runs the whole fixpoint from scratch on every change.
+  </p>
+
+  <div class="kid">
+    <p>By question, four they do not answer:</p>
+    <ol>
+      <li><strong>Why did this get rebuilt</strong> — the chain, link by link,
+        down to the file you touched.</li>
+      <li><strong>Why did this <em>not</em> get rebuilt</strong> — the place the
+        search stopped, which is where a missed break is hiding.</li>
+      <li><strong>How tangled is this</strong> — how many separate chains reach
+        it.</li>
+      <li><strong>Which one link to cut</strong> — and what it buys.</li>
+    </ol>
+    <p>
+      All four come off the same five rules and the same single computation.
+      Nothing was added to get them; the tool simply stopped throwing the
+      reasoning away.
+    </p>
+  </div>
+  <div class="eng">
+    <ol>
+      <li>
+        <strong>why</strong> — the derivation, every edge named. Not a separate
+        query against a hypothesis you already have, but the support of the
+        computation that was already run.
+      </li>
+      <li>
+        <strong>whynot</strong> — the stopping front for a non-member. No build
+        tool has this at all, because absence from a set carries no cause.
+      </li>
+      <li>
+        <strong>counting</strong> — connectivity, from one fold over the
+        recorded support.
+      </li>
+      <li>
+        <strong>the cut</strong> — the intersection of a provenance polynomial,
+        turning the report into a design decision.
+      </li>
+    </ol>
+    <p>
+      Four questions off five rules that mention no carrier anywhere. The
+      Boolean fixpoint, the count, the depth and the provenance are four folds
+      over one support hypergraph, and the rules do not know which one is being
+      asked. That is the actual claim; the affected set is just the price of
+      entry.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <code>examples/blam/</code> — <code>blam.rofl</code> (the graph and the five
+    rules), <code>demo.ts</code> (run it:
+    <code>node --experimental-strip-types examples/blam/demo.ts</code>),
+    <code>README.md</code>, this page, and
+    <code>test/example-blam.test.ts</code>. Every transcript above is pasted
+    output from a real run; nothing on this page was composed by hand.
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('blam-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('blam-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('blam-theme', next);
+    });
+
+    var savedTheme = load('blam-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

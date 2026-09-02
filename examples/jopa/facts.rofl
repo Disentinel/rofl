@@ -1,0 +1,127 @@
+-- facts.rofl -- one case file: the facts of three claims as a tribunal of
+-- fact found them, INCLUDING the weight it put on each piece of evidence.
+--
+-- Everything here lives in the [record] ledger, written by
+-- `tribunal_of_fact` and by nobody else. Swap this file and you swap the
+-- case; the statute in jopa.rofl does not move, and neither does a single
+-- rule. jopa.rofl declares, with `edb`, exactly which relations a case file
+-- must supply, so an empty or partial case file still audits clean instead
+-- of failing silently.
+--
+-- Days are integers from 1 January 2026 = day 0, because the kernel's
+-- arithmetic is integer-only and "within 30 days" has to be a subtraction.
+-- day_label carries the calendar date for rendering.
+--
+-- The fourth column of `evidence` is the weight the tribunal put on that
+-- piece of evidence, as a percentage. It is a finding, not a rule: another
+-- tribunal on the same material could find differently, and then the whole
+-- annotated reading moves while the norms stay exactly where they are.
+
+-- =========================================================================
+-- claim 1 -- c_ash: a fire at The Old Mill, and an allegation of arson
+-- =========================================================================
+-- The claim the demo is built around. Every element of s.5 is made out; the
+-- fight is over the s.7 exclusion, and it is the same fight in three
+-- different proceedings at three different standards of proof.
+
+policy[record](p_ash, k_ashby, "The Old Mill, Wrenfield", 0, 364).
+claim[record](c_ash, p_ash).
+peril_alleged[record](c_ash, fire).
+loss_of[record](c_ash, "The Old Mill, Wrenfield").
+loss_day[record](c_ash, 46).
+notice_day[record](c_ash, 60).
+claim_made[record](c_ash, k_ashby).
+
+evidence[record](e_brig_03, fire_brigade_report, c_ash, 97).
+evidence[record](e_lab_01,  accelerant_traces,   c_ash, 85).
+evidence[record](e_cam_07,  cctv_still,          c_ash, 92).
+evidence[record](e_wit_04,  neighbour_statement, c_ash, 60).
+evidence[record](e_tip_11,  anonymous_tip,       c_ash, 0).
+
+evidence_note[record](e_brig_03, "Wrenfield Fire and Rescue, incident report 2026/0412: seat of the fire in the ground-floor store").
+evidence_note[record](e_lab_01,  "county forensic laboratory: petroleum distillate recovered from three floor samples").
+evidence_note[record](e_cam_07,  "still from the yard camera opposite the gate, timed 23:41").
+evidence_note[record](e_wit_04,  "a neighbour who says she saw the policyholder at the gate that night").
+evidence_note[record](e_tip_11,  "an unsigned letter to the insurer naming the policyholder -- s.6(4): not evidence of any fact").
+
+-- =========================================================================
+-- claim 2 -- c_reed: a storm, and notice given too late
+-- =========================================================================
+-- Nothing wrong with the claim except the calendar. This is the one the
+-- refusal letter is written about: "does not meet the requirements" is an
+-- absent whynot, not an absent ground.
+
+policy[record](p_reed, m_reed, "12 Harbour Row, Saltmere", 0, 364).
+claim[record](c_reed, p_reed).
+peril_alleged[record](c_reed, storm).
+loss_of[record](c_reed, "12 Harbour Row, Saltmere").
+loss_day[record](c_reed, 100).
+notice_day[record](c_reed, 141).
+claim_made[record](c_reed, m_reed).
+
+evidence[record](e_met_31, met_office_report, c_reed, 90).
+evidence_note[record](e_met_31, "national weather service: gusts of 92 mph over Saltmere on the night of the loss").
+
+-- =========================================================================
+-- claim 3 -- c_vale: subsidence, which this policy never covered
+-- =========================================================================
+-- A different shape of refusal: not a condition that failed but a fact that
+-- does not exist. whynot has to say so in those words.
+
+policy[record](p_vale, j_vale, "Beacon Cottage, Ilsden", 0, 364).
+claim[record](c_vale, p_vale).
+peril_alleged[record](c_vale, subsidence).
+loss_of[record](c_vale, "Beacon Cottage, Ilsden").
+loss_day[record](c_vale, 200).
+notice_day[record](c_vale, 210).
+claim_made[record](c_vale, j_vale).
+
+evidence[record](e_eng_41, engineer_report, c_vale, 88).
+evidence_note[record](e_eng_41, "consulting engineer: differential settlement of the south wall footing").
+
+-- =========================================================================
+-- claim 4 -- c_okoro: the same allegation, on evidence that is not evidence
+-- =========================================================================
+-- The insurer says the same thing it says about c_ash: deliberate. The
+-- difference is what it has. The traces are there, but the ONLY thing putting
+-- the policyholder at the property is an unsigned letter, and s.6(4) says an
+-- anonymous communication is not evidence of any fact -- so the tribunal
+-- weighed it at 0.
+--
+-- Zero is not a small number here. It is `impossible`, an explicit member of
+-- the carrier, and it ANNIHILATES the chain above it. The allegation against
+-- Ashby is not strong enough; the allegation against Okoro cannot be
+-- established at any standard above zero, and lowering the standard will
+-- never rescue it. Excluded evidence is not weak evidence. Both allegations
+-- are DERIVABLE, and the Boolean reading cannot tell them apart.
+
+policy[record](p_okoro, n_okoro, "Ferry Lane Workshop, Byrne", 0, 364).
+claim[record](c_okoro, p_okoro).
+peril_alleged[record](c_okoro, fire).
+loss_of[record](c_okoro, "Ferry Lane Workshop, Byrne").
+loss_day[record](c_okoro, 120).
+notice_day[record](c_okoro, 128).
+claim_made[record](c_okoro, n_okoro).
+
+evidence[record](e_brig_55, fire_brigade_report, c_okoro, 95).
+evidence[record](e_lab_57, accelerant_traces,   c_okoro, 80).
+evidence[record](e_tip_58, anonymous_tip,       c_okoro, 0).
+
+evidence_note[record](e_brig_55, "Byrne Fire and Rescue, incident report 2026/1180: fire began in the paint store").
+evidence_note[record](e_lab_57, "county forensic laboratory: petroleum distillate on two bench samples").
+evidence_note[record](e_tip_58, "an unsigned letter naming the policyholder -- s.6(4): not evidence of any fact, and the ONLY thing placing him there").
+
+-- =========================================================================
+-- the calendar
+-- =========================================================================
+
+day_label[record](0,   "1 January 2026").
+day_label[record](46,  "16 February 2026").
+day_label[record](60,  "2 March 2026").
+day_label[record](100, "11 April 2026").
+day_label[record](120, "1 May 2026").
+day_label[record](128, "9 May 2026").
+day_label[record](141, "22 May 2026").
+day_label[record](200, "20 July 2026").
+day_label[record](210, "30 July 2026").
+day_label[record](364, "31 December 2026").

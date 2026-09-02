@@ -1,0 +1,562 @@
+-- npc.rofl — NPC: Non-Player Cognition.
+--
+-- Ten agents in a walled yard at night. The engine does not answer a question
+-- about them; it RUNS them. Every tick it derives what each agent intends,
+-- decomposes that into subgoals, proposes concrete actions, and hands the
+-- winner to the simulator. The plan is a fixpoint and therefore has a
+-- derivation tree, which is the whole point: `why` works on an action and
+-- `whynot` works on one that was not taken.
+--
+-- FOUR THINGS THIS FILE IS ORGANISED AROUND, in the order they appear.
+--
+--   1. WHAT AN AGENT MAY READ. An agent reads its own ledger and nothing
+--      else, with one deliberate exception named in §3: it knows where it
+--      itself stands and how hurt it is. Everything about anyone else has to
+--      have been SEEN. That is the fog of war, and `docs/choosing-perspectives.md`
+--      is what makes it free: `saw[npc_3](...)` and `saw[npc_7](...)` are
+--      different facts because their perspectives differ, two agents holding
+--      incompatible pictures of the same yard is legal rather than a data
+--      error, and nothing enforces the wall because the wall IS the ledger.
+--
+--   2. NO NEGATION MAY CLOSE THE LOOP IN ONE TICK. Sensing reads [world]. If
+--      the world transition were also rules WITHOUT `@next`, `at[world]` would
+--      depend on `does[mind]` which depends through `not` on `saw` which
+--      depends on `at[world]` — a negative cycle, and the kernel REFUSES the
+--      program with a demonstration (measured; see README "the loop the kernel
+--      would not close, and now does"). `@next` DOES break it: stratification
+--      reads `conclusion_tense`, and a conclusion staged for the next tick is
+--      no part of this tick's graph. The simulator here still applies actions
+--      in host code and republishes `at`/`hp` every tick — by choice now, on
+--      the epistemic discipline of §1 rather than on a wall — and the only
+--      thing that persists BY RULE is memory. That is the honest split and it
+--      is also the interesting one — memory is what a tick is for here.
+--
+--   3. CONFLICT IS RESOLVED BY A SEMIRING. Every option carries the whole
+--      chain of intents it came from. The Viterbi fold multiplies one factor
+--      per decomposition step — the priority of the intent that step
+--      concluded — so an option's score is the probability of its BEST
+--      derivation, and `plus` = max picks the best of several routes to the
+--      same act. Depth costs: `repel` at 65 reaching `strike` in two steps
+--      scores 0.65^2 = 0.4225 and only just beats `hold_post` at 40 in one.
+--      Drop repel to 62 and the warden holds instead of fighting, with the
+--      priority ORDER unchanged. No `if` in any language expresses that.
+--
+--   4. AN UNCOVERED SITUATION IS A HOLE, NOT A DEFAULT. §9. A subgoal is a
+--      commitment to act; a subgoal with no derivable option produces
+--      `uncovered[audit]` and the agent does something else on purpose,
+--      rather than falling through to a silent default nobody wrote down.
+--
+-- `hole` itself is reserved kernel vocabulary (a rule may READ it, never
+-- conclude into it), so the domain hole has a domain name. The kernel's own
+-- holes — `hole($tick(N), budget_exhausted)` — are read in §10.
+
+-- =========================================================================
+-- 0. who may write where
+-- =========================================================================
+-- [world]      the yard as it is. Written by the simulator, republished
+--              every tick for the mutable part (`at`, `hp`) and carried by
+--              @next for the part that never moves.
+-- [npc_1..10]  one journal per agent: what that agent has seen, and when.
+--              Written by the sensing rules of §4, and by that agent under
+--              its own authority. An entry from anyone else is
+--              `forged[audit]`, mechanically and with no enforcement code.
+-- [mind]       the book of deliberation. Rules only.
+-- [choice]     the arbiter's book: one score per option, written by the
+--              Viterbi fold in host code (§8). Rules only read it.
+-- [audit]      verdicts about the run itself: holes, ties, staleness.
+--              Rules only, as in boot.rofl and examples/moot.
+
+authority(main, sim).
+authority(world, sim).
+authority(choice, arbiter).
+
+authority(npc_1, npc_1).    authority(npc_2, npc_2).
+authority(npc_3, npc_3).    authority(npc_4, npc_4).
+authority(npc_5, npc_5).    authority(npc_6, npc_6).
+authority(npc_7, npc_7).    authority(npc_8, npc_8).
+authority(npc_9, npc_9).    authority(npc_10, npc_10).
+
+-- The arbiter's scores reach [mind] (§8 reads [choice] to settle a tie) and
+-- [mind] reaches [audit] (`tie`, `uncovered`, `stale`), so with the flow
+-- graph transitively closed the walk [choice] -> [audit] is a crossing this
+-- program must own. It does: `tie[audit]` is a verdict ABOUT the arbiter's
+-- scores, and a verdict that could not read what it judges would be worth
+-- nothing.
+imports(audit, choice).
+
+-- [mind] is the book of deliberation, and ONE rule fills it from ten
+-- journals: the sensing rules read `saw[A](..)` under the agent VARIABLE.
+-- No `imports(mind, From)` can name that source -- `$var("A")` has no
+-- `authority` fact -- so the crossing had no way to be declared and stood as
+-- a permanent finding. This is it, declared at the ledger that gathers.
+collects(mind).
+
+-- THREE MORE, written out because the kernel stopped writing them. `crossing`
+-- carried `not bridge_decl(R, A, B)` and the kernel emitted that row for any
+-- rule whose head named a ledger and whose body read another, so most of this
+-- program's crossings licensed themselves by existing and only the two above
+-- ever had to be typed. They report now, and they are owned here.
+--
+-- [mind] READS [world]. The sensing rules turn what the simulator published
+-- about the world into what an agent believes; deliberation that could not
+-- read the world would have nothing to deliberate about.
+imports(mind, world).
+
+-- [mind] READS [choice]. §8 settles a tie by looking at the arbiter's scores.
+imports(mind, choice).
+
+-- [audit] READS [mind]. `tie`, `uncovered` and `stale` are verdicts about the
+-- deliberation, and `imports(audit, choice)` above says the same thing one
+-- ledger over.
+imports(audit, mind).
+
+-- NOT DECLARED, and left reporting on purpose: `world -> $var("A")`. A rule
+-- reads [world] and writes an agent's OWN journal under the ledger variable,
+-- so the crossing's DESTINATION is unnameable. `collects(X)` says "X gathers
+-- from books it does not name" and is the mirror image — there is no sentence
+-- in this language for "an unnamed reader may read a named book". The one
+-- line that silences it, `imports($var("A"), world).`, is writable and wrong:
+-- it licenses by the SPELLING OF THE VARIABLE, so renaming ?A to ?B in the
+-- rule would revoke it. An open gap in the language beats a closed one in the
+-- wrong instrument, so the row stands.
+
+
+-- The simulator republishes these every tick, so at load time they are
+-- empty and every rule that reads them would otherwise surface as
+-- `undefined_premise[audit]`. Declaring an input is the remedy, exactly as
+-- boot.rofl declares `imports`.
+edb(at).
+edb(hp).
+edb(score).
+
+-- =========================================================================
+-- 1. the yard
+-- =========================================================================
+-- Nine by five. Three props stand in a line at x = 3 and split it: north of
+-- them and south of them are open, straight across is not.
+--
+--        y=5  .  .  .  .  .  .  .  .  .
+--        y=4  .  .  #  .  .  .  .  .  .
+--        y=3  .  .  #  .  .  .  .  .  .
+--        y=2  .  .  #  .  .  .  .  .  .
+--        y=1  .  .  .  .  .  .  .  .  .
+--             1  2  3  4  5  6  7  8  9
+--
+-- Everything in this section is carried by §2's rules, so it survives a
+-- tick without the simulator saying it again.
+
+width[world](9)  @init.
+height[world](5) @init.
+
+prop[world](crate_14, 3, 2) @init.
+prop[world](crate_15, 3, 3) @init.
+prop[world](cart_3,   3, 4) @init.
+
+-- sight is a radius, in SQUARED cells (the kernel's `is` is integer-only, so
+-- there are no square roots anywhere in this file); melee is orthogonal
+-- adjacency, likewise squared.
+sight[world](5) @init.
+melee[world](1) @init.
+hurt_below[world](60) @init.
+alarm[world](9) @init.
+
+dir[world](north, 0,  1) @init.
+dir[world](south, 0, -1) @init.
+dir[world](east,  1,  0) @init.
+dir[world](west, -1,  0) @init.
+
+-- the two orderings the tie-break of §8 needs. The kernel's comparison
+-- builtins are arithmetic — `A < B` over two atoms binds nothing — so an
+-- order over names has to be declared as numbers, exactly as
+-- examples/sus numbers its players.
+-- east first, so that an agent with nothing to prefer walks east. That is a
+-- declared order and not a hidden one: §8 records every occasion it decided
+-- anything as `tie[audit]`.
+dir_no[world](east,  1) @init.  dir_no[world](west,  2) @init.
+dir_no[world](north, 3) @init.  dir_no[world](south, 4) @init.
+
+kind[world](npc_1, warden) @init.   entity_no[world](npc_1, 1) @init.
+kind[world](npc_2, warden) @init.   entity_no[world](npc_2, 2) @init.
+kind[world](npc_3, warden) @init.   entity_no[world](npc_3, 3) @init.
+kind[world](npc_4, warden) @init.   entity_no[world](npc_4, 4) @init.
+kind[world](npc_5, warden) @init.   entity_no[world](npc_5, 5) @init.
+kind[world](npc_6, warden) @init.   entity_no[world](npc_6, 6) @init.
+kind[world](npc_7, wolf)   @init.   entity_no[world](npc_7, 7) @init.
+kind[world](npc_8, wolf)   @init.   entity_no[world](npc_8, 8) @init.
+kind[world](npc_9, wolf)   @init.   entity_no[world](npc_9, 9) @init.
+kind[world](npc_10, wisp)  @init.   entity_no[world](npc_10, 10) @init.
+
+-- who counts as an enemy and who as one of ours. The wisp is in NEITHER
+-- table, and that omission is not an oversight: it is the second hole of
+-- §9, left open on purpose.
+hostile[world](warden, wolf) @init.
+hostile[world](wolf, warden) @init.
+kin[world](warden, warden) @init.
+kin[world](wolf, wolf) @init.
+
+-- THE DRIVES. A drive is a disposition, not a plan: it produces an intent
+-- whenever its trigger holds, and the number beside it is the factor the
+-- Viterbi fold multiplies in when that intent is concluded.
+--
+-- `repel` at 65 against `hold_post` at 40 is the pair to watch. See §8.
+drive[world](warden, survive,      90) @init.
+drive[world](warden, tend_wounded, 70) @init.
+drive[world](warden, repel,        65) @init.
+drive[world](warden, hold_post,    40) @init.
+drive[world](wolf,   survive,      95) @init.
+drive[world](wolf,   hunt,         80) @init.
+drive[world](wolf,   prowl,        20) @init.
+drive[world](wisp,   drift,        10) @init.
+
+-- the clock, and where it stops
+now[world](0)     @init.
+horizon[world](24) @init.
+
+-- =========================================================================
+-- 2. time
+-- =========================================================================
+-- Persistence is not a storage property. Everything that survives a tick
+-- survives because a rule carries it, and the carry rules are the only
+-- @next rules in the file. `at` and `hp` are deliberately NOT here: the
+-- simulator republishes them, which is what keeps the sense-act loop of
+-- preamble item 2 open.
+--
+-- The static half of the yard: seventeen one-liners, each saying that this
+-- relation is still true next tick. Nothing clever, and nothing implicit —
+-- delete one and the yard loses that fact at the first tick boundary, which
+-- is the point of making persistence a rule.
+now[world](T1)             @next :- now[world](T), horizon[world](H), T < H, T1 is T + 1.
+now[world](T)              @next :- now[world](T), horizon[world](H), T >= H.
+horizon[world](H)          @next :- horizon[world](H).
+width[world](W)            @next :- width[world](W).
+height[world](H)           @next :- height[world](H).
+prop[world](P, X, Y)       @next :- prop[world](P, X, Y).
+sight[world](R)            @next :- sight[world](R).
+melee[world](R)            @next :- melee[world](R).
+alarm[world](R)            @next :- alarm[world](R).
+hurt_below[world](L)       @next :- hurt_below[world](L).
+dir[world](D, DX, DY)      @next :- dir[world](D, DX, DY).
+dir_no[world](D, N)        @next :- dir_no[world](D, N).
+kind[world](E, K)          @next :- kind[world](E, K).
+entity_no[world](E, N)     @next :- entity_no[world](E, N).
+hostile[world](K, L)       @next :- hostile[world](K, L).
+kin[world](K, L)           @next :- kin[world](K, L).
+drive[world](K, G, P)      @next :- drive[world](K, G, P).
+
+-- The ledger topology is on this list too, and finding that out cost a tick.
+-- `imports` is not a kernel relation, so a plain `imports(audit, choice).`
+-- is TICK-SCOPED and the boundary drops it, while `authority(choice,
+-- arbiter)` right beside it is reserved and timeless. `@init` does not
+-- change that: the loader decides scope by whether the relation is reserved
+-- and never looks at the tense. So the declaration went quiet at tick 1 and
+-- `leak[audit](choice, audit)` came back with nothing in the file changed.
+-- Measured that way, not reasoned to.
+imports(P, Q)              @next :- imports(P, Q).
+collects(X)                @next :- collects(X).
+
+-- MEMORY. ONE rule for ten journals, and it is worth a paragraph.
+--
+-- `saw[P](..) @next :- saw[P](..)` reads and writes the SAME perspective
+-- variable. Until today that surfaced as `leak[audit]`: the audit recorded
+-- every variable perspective as one wildcard, so a rule polymorphic in the
+-- ledger looked exactly like a rule reading one ledger and writing another,
+-- and examples/sus wrote its carry rules out one per player to get round it.
+-- The kernel now records a variable perspective AS ITSELF and `leak` excludes
+-- a flow whose two ends are the same term, so a rule that is polymorphic in
+-- the ledger crosses no boundary and says so. Ten journals, one line.
+--
+-- Nothing here takes that on trust: `leak[audit]` is 0 in the transcript's
+-- hygiene section, and the test carries the positive control — two agents,
+-- two different journals, both still there after the clock moves.
+--
+-- These are the only @next rules in the file that are not bookkeeping, and
+-- they are the reason this example uses ticks at all: a sighting made at
+-- tick 3 is still in the journal at tick 9, stamped with 3, and an agent
+-- that acts on it is acting on a memory rather than on the world.
+saw[P](E, K, X, Y, B, T) @next :- saw[P](E, K, X, Y, B, T).
+
+-- =========================================================================
+-- 3. what an agent knows about itself
+-- =========================================================================
+-- The ONE bridge from ground truth into a mind, and it is drawn here rather
+-- than left implicit: an agent knows where it stands and whether it is
+-- bleeding. It knows nothing else about the yard that it has not seen.
+
+self[mind](A, X, Y) :- at[world](A, X, Y), kind[world](A, _).
+self_hurt[mind](A) :- hp[world](A, H), hurt_below[world](L), H < L, kind[world](A, _).
+alive[mind](A)     :- hp[world](A, H), H > 0.
+
+-- =========================================================================
+-- 4. sensing — [world] into ten journals
+-- =========================================================================
+-- LINE OF SIGHT IS A BOUNDING BOX, not a ray. A prop blocks A from E when it
+-- stands inside the rectangle spanned by the two positions. That is coarser
+-- than Bresenham and the README says so plainly; it is chosen because it is
+-- four rules and no derived geometry, where a per-cell ray over a 9x5 grid
+-- would be two thousand facts of precomputed visibility. What it buys is the
+-- thing the demonstration needs: the blocker is NAMED, so `whynot` says
+-- "crate_15" rather than "false".
+
+in_range[world](A, E, X, Y) :- at[world](A, AX, AY), at[world](E, X, Y),
+                               A != E, sight[world](R),
+                               D is (X - AX) * (X - AX) + (Y - AY) * (Y - AY),
+                               D <= R.
+
+screened[world](A, E, P) :- at[world](A, AX, AY), at[world](E, EX, EY), A != E,
+                            prop[world](P, PX, PY),
+                            PX >= AX, PX <= EX, PY >= AY, PY <= EY.
+screened[world](A, E, P) :- at[world](A, AX, AY), at[world](E, EX, EY), A != E,
+                            prop[world](P, PX, PY),
+                            PX >= EX, PX <= AX, PY >= AY, PY <= EY.
+screened[world](A, E, P) :- at[world](A, AX, AY), at[world](E, EX, EY), A != E,
+                            prop[world](P, PX, PY),
+                            PX >= AX, PX <= EX, PY >= EY, PY <= AY.
+screened[world](A, E, P) :- at[world](A, AX, AY), at[world](E, EX, EY), A != E,
+                            prop[world](P, PX, PY),
+                            PX >= EX, PX <= AX, PY >= EY, PY <= AY.
+
+spots[world](A, E, X, Y) :- in_range[world](A, E, X, Y), not screened[world](A, E, _).
+
+band[world](E, hurt) :- hp[world](E, H), hurt_below[world](L), H < L.
+band[world](E, hale) :- hp[world](E, H), hurt_below[world](L), H >= L.
+
+-- The head perspective is a VARIABLE bound by the body, so one rule writes
+-- ten journals — the same idiom examples/loot uses for `pack[P](P)`, where
+-- an entity and its ledger are deliberately the same atom. The explicit head
+-- perspective is what emits `bridge_decl` and keeps `leak[audit]` empty.
+saw[A](E, K, X, Y, B, T) :- spots[world](A, E, X, Y),
+                            kind[world](E, K), band[world](E, B), now[world](T).
+
+-- props are seen too, and remembered the same way. They never move, so this
+-- memory is never stale — which is exactly why the agent may navigate by it
+-- while it must not aim by its memory of a wolf.
+prop_in_range[world](A, P, X, Y) :- at[world](A, AX, AY), prop[world](P, X, Y),
+                                    sight[world](R),
+                                    D is (X - AX) * (X - AX) + (Y - AY) * (Y - AY),
+                                    D <= R.
+
+saw[A](P, prop, X, Y, hale, T) :- prop_in_range[world](A, P, X, Y), now[world](T).
+
+-- =========================================================================
+-- 5. memory, and how stale it is
+-- =========================================================================
+-- A journal accumulates. What the agent BELIEVES now is its freshest entry
+-- per entity, and the tick that entry was stamped with is kept, so the gap
+-- between belief and world is a number the report can print rather than a
+-- thing the reader has to infer.
+
+outdated[mind](A, E, T) :- saw[A](E, _, _, _, _, T), saw[A](E, _, _, _, _, T2), T2 > T.
+
+recalls[mind](A, E, K, X, Y, B, T) :- saw[A](E, K, X, Y, B, T),
+                                      not outdated[mind](A, E, T).
+
+in_sight[mind](A, E) :- recalls[mind](A, E, _, _, _, _, T), now[world](T).
+
+-- A prop never moves, so a memory of one is never stale however old it is;
+-- only a memory of something that could have moved counts.
+stale[audit](A, E, Age) :- recalls[mind](A, E, K, _, _, _, T), K != prop,
+                           now[world](N), Age is N - T, Age > 0.
+
+-- who the agent takes the remembered entity to be
+foe[mind](A, E)  :- recalls[mind](A, E, K, _, _, _, _), kind[world](A, KA),
+                    hostile[world](KA, K).
+ally[mind](A, E) :- recalls[mind](A, E, K, _, _, _, _), kind[world](A, KA),
+                    kin[world](KA, K), A != E.
+
+-- distance to a REMEMBERED position, which is not the distance to the thing
+gap[mind](A, E, D) :- recalls[mind](A, E, _, X, Y, _, _), self[mind](A, AX, AY),
+                      D is (X - AX) * (X - AX) + (Y - AY) * (Y - AY).
+
+near[mind](A, E)     :- gap[mind](A, E, D), alarm[world](R), D <= R.
+adjacent[mind](A, E) :- gap[mind](A, E, D), melee[world](R), D <= R.
+
+-- =========================================================================
+-- 6. intents — facts, not a data structure in some agent's code
+-- =========================================================================
+-- A drive fires an intent when its trigger holds. A trigger is a condition
+-- on the agent's own book, never on the yard.
+
+intent[mind](A, survive, P) :- kind[world](A, K), drive[world](K, survive, P),
+                               alive[mind](A), self_hurt[mind](A).
+intent[mind](A, repel, P) :- kind[world](A, K), drive[world](K, repel, P),
+                             alive[mind](A), foe[mind](A, F), adjacent[mind](A, F).
+intent[mind](A, tend_wounded, P) :- kind[world](A, K), drive[world](K, tend_wounded, P),
+                                    alive[mind](A), ally[mind](A, B),
+                                    recalls[mind](A, B, _, _, _, hurt, _).
+intent[mind](A, hold_post, P) :- kind[world](A, K), drive[world](K, hold_post, P),
+                                 alive[mind](A).
+intent[mind](A, hunt, P) :- kind[world](A, K), drive[world](K, hunt, P),
+                            alive[mind](A), foe[mind](A, _).
+intent[mind](A, prowl, P) :- kind[world](A, K), drive[world](K, prowl, P),
+                             alive[mind](A).
+intent[mind](A, drift, P) :- kind[world](A, K), drive[world](K, drift, P),
+                             alive[mind](A).
+
+-- DECOMPOSITION. Each rule records the parent it came from, so the tree is
+-- readable in both directions: `why` walks down it and `subgoal` reads it
+-- across. A subgoal is a COMMITMENT — §9 holds it to producing an action.
+
+subgoal[mind](A, survive, flee_from(F)) :- intent[mind](A, survive, _),
+                                           foe[mind](A, F), near[mind](A, F).
+subgoal[mind](A, repel, drive_off(F)) :- intent[mind](A, repel, _),
+                                         foe[mind](A, F), adjacent[mind](A, F).
+subgoal[mind](A, tend_wounded, tend(B)) :- intent[mind](A, tend_wounded, _),
+                                           ally[mind](A, B),
+                                           recalls[mind](A, B, _, _, _, hurt, _).
+subgoal[mind](A, hunt, stalk(F)) :- intent[mind](A, hunt, _), foe[mind](A, F).
+
+-- A subgoal is an intent in its own right, and its priority comes from the
+-- DRIVE TABLE rather than from the parent intent fact.
+--
+-- That is not cosmetic and it is worth the extra join. Written the obvious
+-- way — `intent(A,G,P) :- subgoal(A,Par,G), intent(A,Par,P)` — the parent
+-- intent is a premise of the child TWICE, once directly and once inside the
+-- subgoal, and ⊗ over the premises of one firing multiplies its factor in
+-- both times: 0.7 becomes 0.343 rather than 0.49. Viterbi is a fold over
+-- derivation TREES, and in a tree a shared premise really does occur twice.
+-- Reading the constant out of the drive table instead leaves exactly one
+-- occurrence, so the score is the product of one factor per decomposition
+-- step, which is what preamble item 3 promises.
+intent[mind](A, G, P) :- subgoal[mind](A, Par, G), kind[world](A, K),
+                         drive[world](K, Par, P).
+
+decomposed[mind](A, G) :- subgoal[mind](A, G, _).
+
+-- =========================================================================
+-- 7. options — the concrete acts, one per intent that can reach one
+-- =========================================================================
+-- Four action shapes: move(Dir), strike(E), tend(E), hold. An option is
+-- proposed, never chosen: §8 chooses. Several options may be proposed for
+-- one subgoal (every step that runs away is a way of running away), and
+-- then the arbiter scores them identically and the tie is broken and
+-- RECORDED rather than resolved silently.
+
+-- a step the agent believes it can take: on the grid, and not into a prop
+-- it remembers. Props are in the journal like everything else — an agent
+-- walks into a crate it has never seen.
+--
+-- The bounds are written inline rather than as an `on_grid(X, Y)` helper on
+-- purpose: a helper's head variables would be bound by comparisons only,
+-- which is not range-restricted, and the engine would fall back to
+-- evaluating it top-down by demand. Here `X2 is X + DX` binds X2 from a
+-- ground right-hand side, so every rule in this file stays bottom-up —
+-- checked in the transcript's hygiene section, not assumed.
+step_to[mind](A, D, X2, Y2) :- self[mind](A, X, Y), dir[world](D, DX, DY),
+                               X2 is X + DX, Y2 is Y + DY,
+                               width[world](W), height[world](H),
+                               X2 >= 1, X2 <= W, Y2 >= 1, Y2 <= H,
+                               not prop_at[mind](A, X2, Y2).
+
+prop_at[mind](A, X, Y) :- recalls[mind](A, _, prop, X, Y, _, _).
+
+-- (a) run away: any legal step that increases the gap to the remembered foe
+option[mind](A, move(D), flee_from(F)) :- intent[mind](A, flee_from(F), _),
+                                          step_to[mind](A, D, X2, Y2),
+                                          recalls[mind](A, F, _, FX, FY, _, _),
+                                          gap[mind](A, F, D0),
+                                          D1 is (X2 - FX) * (X2 - FX) + (Y2 - FY) * (Y2 - FY),
+                                          D1 > D0.
+
+-- (b) hit it: only what is adjacent AND visible now. A remembered position
+-- is not a target — this is the premise the whole `whynot` section turns on.
+option[mind](A, strike(F), drive_off(F)) :- intent[mind](A, drive_off(F), _),
+                                            adjacent[mind](A, F), in_sight[mind](A, F).
+
+-- (c) close on prey
+option[mind](A, strike(F), stalk(F)) :- intent[mind](A, stalk(F), _),
+                                        adjacent[mind](A, F), in_sight[mind](A, F).
+option[mind](A, move(D), stalk(F)) :- intent[mind](A, stalk(F), _),
+                                      step_to[mind](A, D, X2, Y2),
+                                      recalls[mind](A, F, _, FX, FY, _, _),
+                                      gap[mind](A, F, D0),
+                                      D1 is (X2 - FX) * (X2 - FX) + (Y2 - FY) * (Y2 - FY),
+                                      D1 < D0.
+
+-- (d) bind a wound: adjacent AND visible now. THE HOLE OF §9 IS HERE. An
+-- ally seen bleeding two cells away matches the subgoal and matches no
+-- option at all: `adjacent` fails, and no rule in this file says how to
+-- walk to somebody. The agent records that and does something else.
+option[mind](A, tend(B), tend(B)) :- intent[mind](A, tend(B), _),
+                                     adjacent[mind](A, B), in_sight[mind](A, B).
+
+-- (e) stand where you are
+option[mind](A, hold, hold_post) :- intent[mind](A, hold_post, _).
+
+-- (f) walk about. A wolf that has seen nobody has NO intent to hunt and no
+-- post to hold; without this it would have no option at all and stand still
+-- for ever, which is a perfectly honest thing for the model to say and a
+-- dull thing for a yard to contain.
+option[mind](A, move(D), prowl) :- intent[mind](A, prowl, _), step_to[mind](A, D, _, _).
+
+-- (g) drift
+option[mind](A, move(D), drift) :- intent[mind](A, drift, _), step_to[mind](A, D, _, _).
+
+any_option[mind](A, G) :- option[mind](A, _, G).
+
+-- The declared order over ACTS, used ONLY where the arbiter is indifferent —
+-- and every occasion it decides anything is recorded as `tie[audit]` in §8.
+-- Reading it out: help somebody, else hit somebody, else move, else stand.
+-- It is a real commitment and not a formality: an agent standing beside the
+-- ally it means to tend scores `tend(B)` and `move(D) towards B` identically,
+-- because both come off the same intent by one step, and without this order
+-- it would walk past the wound for ever.
+act_ord[mind](tend(E), N)   :- entity_no[world](E, N).
+act_ord[mind](strike(E), N) :- entity_no[world](E, M), N is 100 + M.
+act_ord[mind](move(D), N)   :- dir_no[world](D, M), N is 200 + M.
+act_ord[mind](hold, 300)    :- width[world](_).
+
+-- =========================================================================
+-- 8. the choice
+-- =========================================================================
+-- `score[choice](A, Act, V)` arrives from host code: the Viterbi fold over
+-- the support the kernel already recorded, in log-probability units scaled
+-- by 1e6 (runtime/semirings.ts). The fold multiplies one factor per
+-- decomposition step and takes the MAX over alternative derivations of the
+-- same act — so an act reachable two ways gets its best route, which no
+-- priority comparison can express.
+--
+-- Everything decided ABOUT those numbers is a rule, so `why does[mind](...)`
+-- and `whynot does[mind](...)` are answers rather than a stack trace. The
+-- same split as examples/loot's quarantine: the arithmetic is host, the
+-- verdict is rules.
+
+beaten[mind](A, V) :- score[choice](A, _, V), score[choice](A, _, W), W > V.
+contender[mind](A, Act) :- score[choice](A, Act, V), not beaten[mind](A, V).
+
+-- the arbiter was indifferent between two acts. Recorded, not hidden.
+tie[audit](A, Act, Other) :- contender[mind](A, Act), contender[mind](A, Other),
+                             act_ord[mind](Act, N), act_ord[mind](Other, M), N < M.
+
+preempted[mind](A, Act) :- contender[mind](A, Act), contender[mind](A, Other),
+                           act_ord[mind](Act, N), act_ord[mind](Other, M), M < N.
+
+does[mind](A, Act) :- contender[mind](A, Act), not preempted[mind](A, Act).
+
+-- =========================================================================
+-- 9. holes
+-- =========================================================================
+-- A SUBGOAL IS A COMMITMENT TO ACT. One that neither decomposes further nor
+-- reaches a single option is a situation no rule covers, and the agent says
+-- so instead of falling through to a default. This is the fact the
+-- self-extension of the README is generalised from — and the generalising
+-- is done by a human template in host code, not by the kernel.
+uncovered[audit](A, no_action, G) :- subgoal[mind](A, _, G),
+                                     not any_option[mind](A, G),
+                                     not decomposed[mind](A, G).
+
+-- A remembered entity that is neither foe nor kin. The wisp is in no
+-- `hostile` and no `kin` row, so every warden that sees it lands here. Left
+-- open on purpose: one sighting of one thing is not a reason to write a
+-- rule, and the README says why that restraint is the point.
+uncovered[audit](A, unclassified, E) :- recalls[mind](A, E, K, _, _, _, _),
+                                        K != prop, A != E,
+                                        not foe[mind](A, E), not ally[mind](A, E).
+
+-- =========================================================================
+-- 10. the tick's own budget
+-- =========================================================================
+-- `hole(Id, budget_exhausted)` is written by the kernel when an evaluation
+-- runs out of firings. Reading it turns "the frame ran out of time" into a
+-- fact the rules can act on — which is the one place in this file where an
+-- abstract kernel primitive and a domain requirement are the same thing.
+thought_partial[audit](Id) :- hole(Id, budget_exhausted).

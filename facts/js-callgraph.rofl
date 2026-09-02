@@ -1,0 +1,162 @@
+-- js-callgraph.rofl — the CLAIMS the call-graph model makes about itself.
+-- Rules derive; this file asserts, and every assertion here is answerable by
+-- `npm run report` rather than by reading prose.
+--
+-- Three ledgers, and they are not interchangeable:
+--
+--   node_kind / handled / ignored / unknown_because   — js-model's matrix,
+--       keyed by babel node KIND x layer. Modelling the call graph made this
+--       layer touch kinds nobody had declared; they are declared here, and
+--       the count of them is the price of the cell.
+--   shape_because                                     — keyed by callee SHAPE,
+--       which is the dimension the kind matrix cannot express. `member_expression`
+--       HAS a rule and still misses seven of its eight shapes; at kind level that
+--       cell reads `modelled` and the residue is invisible.
+--   checked                                           — evidence, not claim.
+
+-- ===========================================================================
+-- KINDS THE CALL GRAPH DRAGGED IN
+--
+-- MEASURED, not guessed: `kind_undeclared[audit](K)` derives the kinds this
+-- layer's rules touch and `node_kind(js, K)` does not declare. Before this
+-- block it reported 17; after it, 0. Those 17 are new rows in a matrix that is
+-- LAYER-WIDE, so each one also opens an unanswered dataflow cell — a call-graph
+-- rule is what put `this_expression` on the dataflow queue.
+node_kind(js, identifier).
+node_kind(js, member_expression).
+node_kind(js, optional_member_expression).
+node_kind(js, optional_call_expression).
+node_kind(js, new_expression).
+node_kind(js, this_expression).
+node_kind(js, super).
+node_kind(js, array_expression).
+node_kind(js, object_expression).
+node_kind(js, object_method).
+node_kind(js, object_property).
+node_kind(js, function_expression).
+node_kind(js, arrow_function_expression).
+node_kind(js, class_method).
+node_kind(js, conditional_expression).
+node_kind(js, sequence_expression).
+node_kind(js, tsnon_null_expression).
+-- the PROPERTY of a computed callee is read by the rules too, so its kinds are
+-- part of the layer's vocabulary
+node_kind(js, string_literal).
+node_kind(js, numeric_literal).
+node_kind(js, template_literal).
+
+-- ===========================================================================
+-- WHAT THE RULES ACTUALLY DO — one rule id, r_call_edge, because one rule set
+-- is what was written and splitting it into invented ids would be the
+-- tautology js-model.rofl already paid for.
+handled(js, identifier,                callgraph, r_call_edge).
+handled(js, optional_call_expression,  callgraph, r_call_edge).
+handled(js, function_expression,       callgraph, r_call_edge).
+handled(js, arrow_function_expression, callgraph, r_call_edge).
+handled(js, object_method,             callgraph, r_call_edge).
+handled(js, object_property,           callgraph, r_call_edge).
+handled(js, object_expression,         callgraph, r_call_edge).
+handled(js, class_method,              callgraph, r_call_edge).
+handled(js, variable_declarator,       callgraph, r_call_edge).
+
+-- `member_expression` is the honest half-truth of this file. Tier 2 resolves
+-- `ns.method()` where ns is a local object literal, so a rule exists and the
+-- cell is `modelled` — and seven of that kind's eight shapes resolve nothing.
+-- The kind matrix has no way to say so; the shape ledger below does.
+handled(js, member_expression,         callgraph, r_call_edge).
+
+-- ===========================================================================
+-- WHAT IS NOT MODELLED, WITH A TYPED REASON. js-model's default for a cell
+-- nobody touched is already `not_yet`; these are written out anyway, because a
+-- default that is never contradicted is indistinguishable from an oversight.
+unknown_because(js, this_expression,         callgraph, not_yet).
+unknown_because(js, super,                   callgraph, not_yet).
+unknown_because(js, new_expression,          callgraph, not_yet).
+unknown_because(js, optional_member_expression, callgraph, not_yet).
+unknown_because(js, conditional_expression,  callgraph, not_yet).
+unknown_because(js, sequence_expression,     callgraph, not_yet).
+unknown_because(js, tsnon_null_expression,   callgraph, not_yet).
+-- the receiver is a host literal and its methods belong to the runtime, not to
+-- any corpus this analyser can be pointed at
+unknown_because(js, array_expression,        callgraph, out_of_scope).
+
+-- A LITERAL AS A COMPUTED KEY. `string_literal` and `numeric_literal` are read
+-- for their KIND, which is all a shape needs, and their value is on the facts
+-- when a later tier wants it. `template_literal` is the one that is NOT
+-- recoverable: TemplateElement.value is `{raw, cooked}` and the contract emits
+-- scalar own properties only, so the chunk's text never becomes a fact. The
+-- key is knowable and not derivable, which is ours and unfinished.
+handled(js, string_literal,  callgraph, r_call_edge).
+handled(js, numeric_literal, callgraph, r_call_edge).
+unknown_because(js, template_literal, callgraph, not_yet).
+
+-- ===========================================================================
+-- CONTROL TRANSFERS THAT ARE NOT CALL EXPRESSIONS.
+--
+-- This is the frontier the callee-shape taxonomy cannot see, because it starts
+-- from CallExpression and these are not one. Each of them runs a function the
+-- call graph never records, and the execution oracle proves it: `new Box(1)`
+-- put `useClass -> Box` on the runtime's list and nowhere on the model's.
+-- Declared here so the gap is a queryable row rather than a paragraph.
+node_kind(js, tagged_template_expression).
+node_kind(js, await_expression).
+node_kind(js, for_of_statement).
+node_kind(js, decorator).
+
+unknown_because(js, tagged_template_expression, callgraph, not_yet).
+unknown_because(js, await_expression,           callgraph, not_yet).
+unknown_because(js, for_of_statement,           callgraph, not_yet).
+unknown_because(js, decorator,                  callgraph, not_yet).
+
+-- ===========================================================================
+-- THE FRONTIER, BY SHAPE. Every shape whose sites do not all resolve has a row
+-- here; `shape_unexplained[audit]` is the gate that says so, and it must be
+-- empty. `runtime_dependent` appears EXACTLY ONCE, and that is the point of
+-- the taxonomy: a computed callee `o[k]()` with a non-literal k names a method
+-- that does not exist until the program runs, and nothing else on this list
+-- can borrow that excuse. `a.b.c()` is merely unfinished.
+shape_because(js, s_computed_dynamic_key,  callgraph, runtime_dependent).
+
+-- ours, and on the queue
+shape_because(js, s_identifier,            callgraph, not_yet).
+-- `ns.method()` resolves only when ns is a LOCAL OBJECT LITERAL; every other
+-- receiver — an import, a parameter, a class instance, a host global — is
+-- residue, and this shape therefore carries both a rule and a reason.
+shape_because(js, s_member_on_ident,       callgraph, not_yet).
+shape_because(js, s_computed_literal_key,  callgraph, not_yet).
+-- knowable at parse time, and absent from the fact vocabulary: see
+-- `template_literal` above. NOT runtime_dependent.
+shape_because(js, s_computed_template_key, callgraph, not_yet).
+shape_because(js, s_member_on_member,      callgraph, not_yet).
+shape_because(js, s_member_on_call,        callgraph, not_yet).
+shape_because(js, s_member_on_this,        callgraph, not_yet).
+shape_because(js, s_member_on_new,         callgraph, not_yet).
+shape_because(js, s_member_on_super,       callgraph, not_yet).
+shape_because(js, s_member_on_object_literal, callgraph, not_yet).
+shape_because(js, s_member_on_literal,     callgraph, not_yet).
+shape_because(js, s_member_on_other,       callgraph, not_yet).
+shape_because(js, s_optional_member,       callgraph, not_yet).
+shape_because(js, s_call_result,           callgraph, not_yet).
+shape_because(js, s_new_result,            callgraph, not_yet).
+shape_because(js, s_super,                 callgraph, not_yet).
+shape_because(js, s_non_null,              callgraph, not_yet).
+shape_because(js, s_sequence,              callgraph, not_yet).
+shape_because(js, s_conditional,           callgraph, not_yet).
+shape_because(js, s_ts_as,                 callgraph, not_yet).
+shape_because(js, s_parenthesized,         callgraph, not_yet).
+shape_because(js, s_dynamic_import,        callgraph, not_yet).
+
+-- the receiver is a host literal — see array_expression above
+shape_because(js, s_member_on_array,       callgraph, out_of_scope).
+
+-- A shape nothing produced. It exists so that a grammar form nobody
+-- anticipated is a ROW rather than a silence, and the day it appears the
+-- verdict is already `not_yet` instead of nothing at all.
+shape_because(js, s_unclassified,          callgraph, not_yet).
+
+-- ===========================================================================
+-- EVIDENCE. Three fixture files: two executed against a V8 stack-trace oracle,
+-- one scanned only, because the grammar shapes it carries cannot be spelled in
+-- runnable JS. The fixture count is the executed pair — the number the oracle
+-- actually ran.
+checked(js, call_expression, callgraph, r_call_edge, o_run_with_stack, 2).

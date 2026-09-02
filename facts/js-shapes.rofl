@@ -1,0 +1,156 @@
+-- js-shapes.rofl — THE THIRD AXIS, as facts.
+--
+-- The two-axis matrix is (language, node KIND, layer) and it has a blind spot
+-- that this file exists to open up. `member_expression` is one kind and six
+-- different jobs — `o.m()`, `a.b.c()`, `f().g()`, `this.x()`, `super.x()`,
+-- `o[k]()` — and the matrix carries ONE tick for all of them. The execution
+-- oracle in test/js-callgraph.test.ts found 37 edges where the model found 26,
+-- and six of the eleven misses sit inside that one ticked cell. A table built
+-- so that an EMPTY cell shouts said nothing, because the hole was inside a
+-- FULL one.
+--
+-- Nothing here is asserted about JavaScript. Every row is a statement about
+-- the MODEL, contradictable by a rule in rules/js-model.rofl.
+--
+-- PROVENANCE OF THE SHAPE LIST — it is measured, not invented. The shapes and
+-- the kind each one belongs to are read off the classification tables in
+-- rules/js-callgraph.rofl (`callee_shape`, `member_shape`, and the three
+-- computed-key rules), and the list is cross-checked in
+-- test/js-model.test.ts against the CENSUS the rules actually produce on the
+-- call corpus: 83 call sites, 17 distinct shapes. The corpus is the work
+-- order and the grammar is the denominator, so a shape nobody has written yet
+-- still has a cell here.
+
+-- ---------------------------------------------------------------------------
+-- THE AXIS. Declaring it is NOT what makes it exist — a relation has a fixed
+-- arity, so an axis is a COLUMN and the column was cut in rules/js-model.rofl
+-- by hand. What this row buys is that `axis_applies` can be checked against
+-- it, and that the set of axes is enumerable rather than implied.
+axis(shape).
+
+-- ---------------------------------------------------------------------------
+-- WHERE THE AXIS APPLIES, and this is the row the whole design turns on.
+--
+-- ONE LAYER, not two. The draft of this file carried `axis_applies(shape,
+-- dataflow)` as well, on the argument that a callee's shape matters to data
+-- flow too. `unearned_axis[audit]` refused it, and the refusal is correct:
+-- nothing is modelled at shape granularity in the dataflow layer, so every one
+-- of the thirty shaped cells it would open carries the same verdict and the
+-- same reason as its neighbour. That is 30 rows of arithmetic and 0 questions,
+-- which is exactly the pathology the applicability row exists to prevent —
+-- measured one tick earlier as 24 kinds x 2 layers = 48 cells, not one of them
+-- a question.
+--
+-- There is deliberately NO row for `modules`. A callee's shape is a fact about
+-- a call and says nothing whatever about a module graph; `importKind` is the
+-- local axis there and it is not this one. That absence is not a silence — it
+-- is the difference between a CROSS-CUTTING axis and a LOCAL one, and it is
+-- checkable: declare the row and `unearned_axis[audit](shape, modules)` says
+-- no.
+axis_applies(shape, callgraph).
+
+-- ---------------------------------------------------------------------------
+-- THE KINDS THE AXIS NAMES THAT NOBODY HAD DECLARED. Three, and they are the
+-- price of the column: a shape whose kind is absent from `node_kind` is an
+-- `orphan_shape[audit]`, the same vocabulary hole `orphan_claim` was written
+-- for, reopened by a new relation over the same arguments exactly as
+-- rules/js-model.rofl predicts each new relation will.
+--
+-- All three are callee positions the grammar allows and this corpus does not
+-- contain, which is why the call-graph model never had to name them: the
+-- pseudo-kind babel gives `import(...)` in callee position, a parenthesised
+-- callee, and a TS `as`-expression callee.
+node_kind(js, import).
+node_kind(js, parenthesized_expression).
+node_kind(js, tsas_expression).
+
+-- ---------------------------------------------------------------------------
+-- SHAPE OF KIND. 30 rows over 15 kinds, covering 25 of the 26 shapes in
+-- `shape_vocab[audit]`.
+--
+-- THE ONE THAT CANNOT BE WRITTEN, declared rather than left silent:
+-- `s_unclassified` is the catch-all, reached exactly when a callee's kind is
+-- in no table, so it belongs to NO kind and has no cell in this matrix. The
+-- axis is keyed by kind and the catch-all is keyed by the absence of one. That
+-- is a third structural limit of the same family as the two in
+-- docs/modelling-a-language.md, and the shape ledger in
+-- facts/js-callgraph.rofl covers it while this matrix cannot.
+
+-- one kind, one shape: the callee IS the form
+shape_of(js, identifier,                s_identifier).
+shape_of(js, function_expression,       s_iife).
+shape_of(js, arrow_function_expression, s_iife).
+shape_of(js, super,                     s_super).
+shape_of(js, tsnon_null_expression,     s_non_null).
+shape_of(js, call_expression,           s_call_result).
+shape_of(js, optional_call_expression,  s_call_result).
+shape_of(js, new_expression,            s_new_result).
+shape_of(js, import,                    s_dynamic_import).
+shape_of(js, sequence_expression,       s_sequence).
+shape_of(js, parenthesized_expression,  s_parenthesized).
+shape_of(js, tsas_expression,           s_ts_as).
+shape_of(js, conditional_expression,    s_conditional).
+
+-- THE KIND THIS FILE EXISTS FOR. Thirteen shapes: ten receivers a static
+-- member callee can have, plus the three computed-key forms. Nine of the
+-- thirteen occur in the corpus; the other four are grammar and are here for
+-- the same reason facts/js-callgraph.rofl writes verdicts for shapes it never
+-- saw — the denominator is the grammar.
+shape_of(js, member_expression, s_member_on_ident).
+shape_of(js, member_expression, s_member_on_member).
+shape_of(js, member_expression, s_member_on_call).
+shape_of(js, member_expression, s_member_on_this).
+shape_of(js, member_expression, s_member_on_super).
+shape_of(js, member_expression, s_member_on_array).
+shape_of(js, member_expression, s_member_on_new).
+shape_of(js, member_expression, s_member_on_object_literal).
+shape_of(js, member_expression, s_member_on_literal).
+shape_of(js, member_expression, s_member_on_other).
+shape_of(js, member_expression, s_computed_literal_key).
+shape_of(js, member_expression, s_computed_dynamic_key).
+shape_of(js, member_expression, s_computed_template_key).
+
+-- `a?.b()` has its own kind and its own shape when the access is static; when
+-- it is computed it lands in the same three computed forms, because the rules
+-- read `computed` before they read optionality.
+shape_of(js, optional_member_expression, s_optional_member).
+shape_of(js, optional_member_expression, s_computed_literal_key).
+shape_of(js, optional_member_expression, s_computed_dynamic_key).
+shape_of(js, optional_member_expression, s_computed_template_key).
+
+-- ---------------------------------------------------------------------------
+-- WHAT IS MODELLED, PER SHAPE. Four rows, and the number is the finding.
+--
+-- The kind-level ledger in facts/js-callgraph.rofl carries twelve `handled`
+-- rows at the call-graph layer. Six of them name a kind this axis splits, and
+-- those six tick NOTHING once the cells they named stop existing — they are
+-- reported by `coarser_claim[audit]` rather than deleted, because each is
+-- still true of some shape and false of the rest. What survives the refinement
+-- is these four: the identifier callee (tier 1), the IIFE in its two spellings
+-- (tier 1b), and `ns.method()` where `ns` is a local object literal (tier 2).
+--
+-- `r_call_edge` for all four, because one rule set is what was written and
+-- inventing four rule ids would be the tautology rules/js-model.rofl already
+-- paid for.
+handled(js, identifier,                s_identifier,       callgraph, r_call_edge).
+handled(js, function_expression,       s_iife,             callgraph, r_call_edge).
+handled(js, arrow_function_expression, s_iife,             callgraph, r_call_edge).
+handled(js, member_expression,         s_member_on_ident,  callgraph, r_call_edge).
+
+-- ---------------------------------------------------------------------------
+-- TYPED REASONS, only where the default `not_yet` would be a LIE. Same
+-- convention as facts/js-kinds.rofl: every other not_modelled shape takes
+-- `not_yet` from the rule, and writing the defaults out would make the
+-- taxonomy look exercised without exercising it.
+--
+-- `o[k]()` with a non-literal k names a method that does not exist until the
+-- program runs. This is the ONE irreducible cell of the whole axis, and
+-- nothing else on the list may borrow the reason: `a.b.c()` is merely
+-- unfinished, and `o[`fixed`]()` is knowable at parse time and blocked on the
+-- scanner's scalar-only contract, which is ours.
+unknown_because(js, member_expression,          s_computed_dynamic_key, callgraph, runtime_dependent).
+unknown_because(js, optional_member_expression, s_computed_dynamic_key, callgraph, runtime_dependent).
+
+-- the receiver is a host literal and its methods belong to the runtime rather
+-- than to any corpus this analyser can be pointed at
+unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scope).

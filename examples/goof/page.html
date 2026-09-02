@@ -1,0 +1,969 @@
+<title>GOOF — One Rule Set, Nine Foundations</title>
+<meta charset="utf-8">
+
+<style>
+  :root {
+    --bg:        #fbfaf8;
+    --panel:     #ffffff;
+    --ink:       #1c1b19;
+    --ink-soft:  #57544e;
+    --ink-faint: #86827a;
+    --line:      #e2ded4;
+    --line-soft: #eeeae0;
+    --accent:    #1f6f78;
+    --accent-bg: #e6f2f2;
+    --warm:      #a8621b;
+    --warm-bg:   #f8efe4;
+    --good:      #2f6b3f;
+    --gone:      #a03030;
+    --code-bg:   #f4f1e9;
+    --shadow:    0 1px 2px rgba(28, 27, 25, .06), 0 8px 24px rgba(28, 27, 25, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f24;
+      --ink:       #eaecef;
+      --ink-soft:  #aeb2b8;
+      --ink-faint: #7e838a;
+      --line:      #313640;
+      --line-soft: #23272e;
+      --accent:    #6fcfd6;
+      --accent-bg: #16292c;
+      --warm:      #e0a465;
+      --warm-bg:   #2d2418;
+      --good:      #8fd6a2;
+      --gone:      #f09090;
+      --code-bg:   #101215;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f24;
+    --ink:       #eaecef;
+    --ink-soft:  #aeb2b8;
+    --ink-faint: #7e838a;
+    --line:      #313640;
+    --line-soft: #23272e;
+    --accent:    #6fcfd6;
+    --accent-bg: #16292c;
+    --warm:      #e0a465;
+    --warm-bg:   #2d2418;
+    --good:      #8fd6a2;
+    --gone:      #f09090;
+    --code-bg:   #101215;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+
+  section { margin: 3rem 0 0; }
+  h2 { font-size: 1.4rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .3rem; }
+  p { margin: .8rem 0; max-width: 46rem; }
+  ul, ol { max-width: 46rem; padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .kicker { color: var(--ink-faint); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0 0 .3rem; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .82rem; line-height: 1.5; margin: 1.2rem 0;
+  }
+  pre.tight { font-size: .74rem; }
+  code { background: var(--code-bg); border-radius: 4px; padding: .08em .35em; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin: 1.4rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .card h4 { margin: 0 0 .35rem; font-size: .95rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+  .card p { margin: 0; font-size: .92rem; color: var(--ink-soft); max-width: none; }
+  .card .year { float: right; color: var(--ink-faint); font-size: .8rem; font-weight: 400; }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 8px 8px 0;
+          padding: .8rem 1rem; margin: 1.4rem 0; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: .6rem; }
+  .warn { border-left-color: var(--warm); background: var(--warm-bg); }
+
+  .scroll { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { text-align: left; padding: .45rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; white-space: nowrap; }
+  th { color: var(--ink-faint); font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+  td.mono, th.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+  td.wrap-cell { white-space: normal; }
+
+  .dead { color: var(--gone); font-weight: 600; }
+  .alive { color: var(--good); font-weight: 600; }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .88rem; }
+
+  /* level switching */
+  body[data-level="kid"] .eng { display: none; }
+  body[data-level="eng"] .kid { display: none; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">ROFL &middot; example</p>
+  <h1>GOOF <span class="dim">&mdash; Grothendieck Or Other Foundations</span></h1>
+  <p class="lede kid">People spent two thousand years arguing about <em>one</em> rule of geometry.
+    It turned out you can just switch it off &mdash; and get a different, perfectly good
+    geometry. This page runs that argument as a program: the same reasoning, nine different
+    starting sets of rules, and the computer works out who ends up believing what.</p>
+  <p class="lede eng">One rule set, evaluated against nine ledgers. A foundation is a
+    perspective &mdash; a truth context with a named list of writers &mdash; so
+    <code>thm[euclid](angle_sum_180)</code> and
+    <code>thm[lobachevsky](defect_positive)</code> coexist without a special case. The rules
+    never name a foundation; the switch is which axioms a book holds.</p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="reading level">
+      <button type="button" data-set="kid" aria-pressed="false">explain it simply</button>
+      <button type="button" data-set="eng" aria-pressed="true">explain it to an engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">theme</button>
+  </div>
+</header>
+
+<section>
+  <p class="kicker">the argument</p>
+  <h2 class="kid">One stubborn rule, and two thousand years</h2>
+  <h2 class="eng">The fifth postulate is separable, and that is the whole demonstration</h2>
+
+  <p class="kid">Around 300 BC, Euclid wrote down five rules for geometry. Four of them are
+    the sort of thing nobody argues with: you can draw a line between two points; all right
+    angles are the same size. The fifth was different and clumsy, and it comes down to this:</p>
+  <p class="kid"><strong>Take a line, and a dot that is not on it. How many lines can you draw
+    through the dot that never touch the first line?</strong></p>
+  <p class="kid">Euclid said: exactly one. And that <em>sounds</em> obvious. For two thousand
+    years mathematicians tried to prove it from the other four rules, because a rule you can
+    prove is not really a rule &mdash; it is a result. Nobody managed. Then, in the 1800s, a
+    few people tried assuming the opposite, expecting nonsense &mdash; and got a whole new
+    geometry that works perfectly well and is <em>not</em> the one we learn at school.</p>
+  <p class="kid">This program keeps nine "books". Each book is a list of starting rules. The
+    reasoning is written once and shared by all of them. Change one line in one book, and
+    watch what stops being true.</p>
+
+  <p class="eng">The natural way to model "different foundations" is to make the foundation
+    an argument: <code>thm(euclid, angle_sum_180)</code>. That is the mega-main anti-pattern
+    from <code>docs/choosing-perspectives.md</code>: it loses <code>forged</code>, it loses
+    the audit of cross-book reads, and it makes "the rules never mention a foundation"
+    unfalsifiable, because the column is in every rule.</p>
+  <p class="eng">A foundation is a <strong>ledger</strong>, and it passes the discipline's
+    litmus without argument. Two contradictory facts coexist legitimately under different
+    books &mdash; that is the entire subject. A book is chosen, not computed. A book says
+    whose entry this is, not how the entry was obtained. And the writers are nameable:
+    the axiom-setter, via <code>authority(euclid, euclid)</code>, plus the deduction rules.</p>
+
+  <pre>axiom[euclid](post5_unique).        -- Playfair: exactly one parallel
+axiom[lobachevsky](post5_many).     -- at least two
+axiom[riemann](post5_none).         -- none, and postulate 2 goes too</pre>
+
+  <p class="eng">The rest of this page is what falls out of those three lines and one
+    twenty-eight-clause rule set that mentions none of them.</p>
+</section>
+
+<section>
+  <p class="kicker">the library</p>
+  <h2 class="kid">Nine books, each with its own list of starting rules</h2>
+  <h2 class="eng">Nine ledgers, and what separates them, measured</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h4>euclid <span class="year">&minus;300</span></h4>
+      <p class="kid">The geometry from school. One parallel line, angles of a triangle add
+        up to 180.</p>
+      <p class="eng">Four postulates, Archimedes, classical logic, plus Playfair's form of
+        the fifth. The baseline.</p>
+    </div>
+    <div class="card">
+      <h4>saccheri <span class="year">1733</span></h4>
+      <p class="kid">The same book with the fifth rule simply <em>missing</em>. A priest
+        spent thirty years trying to prove it had to be there.</p>
+      <p class="eng">Neutral geometry: no parallel axiom at all. Everything derivable here
+        is derivable in all three geometries.</p>
+    </div>
+    <div class="card">
+      <h4>lobachevsky <span class="year">1829</span></h4>
+      <p class="kid">One line changed: <em>many</em> parallels instead of one. Triangles
+        now add up to less than 180, and the bigger they are the less.</p>
+      <p class="eng">Hyperbolic. The defect is positive and proportional to area; similarity
+        collapses into congruence.</p>
+    </div>
+    <div class="card">
+      <h4>riemann <span class="year">1854</span></h4>
+      <p class="kid">Geometry on a ball. No parallels at all &mdash; and, less famously,
+        <em>two</em> lines had to change, not one.</p>
+      <p class="eng">Elliptic. Postulate 2 becomes "unbounded but finite", which takes
+        Euclid I.16 and the whole neutral tower above it.</p>
+    </div>
+    <div class="card">
+      <h4>solid / schlafli <span class="year">1852</span></h4>
+      <p class="kid">Euclid in three dimensions, and Euclid in four. Everything is the same
+        except one number.</p>
+      <p class="eng">Euclid's list with the dimension axiom swapped. The only difference
+        anything downstream can see is a knot.</p>
+    </div>
+    <div class="card">
+      <h4>brouwer <span class="year">1908</span></h4>
+      <p class="kid">Euclid's geometry, but you are not allowed to prove something by
+        showing the opposite is impossible.</p>
+      <p class="eng">Euclid minus <code>excluded_middle</code>. Only steps whose proof is a
+        reductio are lost, and the model records which those are.</p>
+    </div>
+    <div class="card">
+      <h4>frege <span class="year">1893</span></h4>
+      <p class="kid">A book that contradicts itself and takes the usual rule "from a
+        contradiction, anything follows". So it proves <em>everything</em>.</p>
+      <p class="eng">Holds both parallel axioms and <code>ex_falso</code>. All 37
+        propositions become theorems. Russell's letter, 1902.</p>
+    </div>
+    <div class="card">
+      <h4>dacosta <span class="year">1963</span></h4>
+      <p class="kid">The same contradiction, but this book refuses the "anything follows"
+        rule. It stays contradictory in one spot and sensible everywhere else.</p>
+      <p class="eng">Paraconsistent: same clashes, no <code>ex_falso</code>. 28 of 37
+        propositions, and two angle-sum laws held at once.</p>
+    </div>
+  </div>
+
+  <p class="kid">How different are two books? Count the lines they do not share. The program
+    computes it &mdash; nobody typed these numbers in:</p>
+  <p class="eng"><code>only_in(G, H, A)</code> is an ordinary derived relation: A is an axiom
+    of G that H does not hold. It is also the only rule in this model that uses negation.</p>
+
+  <pre>    euclid       vs lobachevsky   euclid only:  post5_unique                 lobachevsky only: post5_many
+    euclid       vs riemann       euclid only:  post2_extend, post5_unique   riemann only:     post2_finite, post5_none
+    euclid       vs saccheri      euclid only:  post5_unique                 saccheri only:    (none)
+    euclid       vs brouwer       euclid only:  excluded_middle              brouwer only:     (none)
+    solid        vs schlafli      solid only:   dim_space                    schlafli only:    dim_four
+    frege        vs dacosta       frege only:   ex_falso                     dacosta only:     (none)</pre>
+
+  <div class="note">
+    <p class="kid"><strong>The surprise in that table.</strong> Everyone tells the story as
+      "Riemann changed the one rule about parallels". He had to change <em>two</em>. On a ball,
+      a straight line comes back to where it started &mdash; it has no end, but it is not
+      endless. So the rule that says "a line can always be extended" had to go as well. And
+      that second change quietly destroys a pile of results nobody thought were about
+      parallels at all.</p>
+    <p class="eng"><strong>Riemann differs by two lines, and that is the story rather than a
+      defect in it.</strong> A great circle is unbounded but finite, so
+      <code>post2_extend</code> is replaced by <code>post2_finite</code>. Euclid I.16 &mdash;
+      the exterior angle theorem &mdash; proves itself by doubling a median, which needs the
+      line to extend; it is false on a sphere, and the whole neutral tower resting on it goes
+      with it. The provenance section below identifies exactly which theorems those are, and
+      five of them never needed the fifth postulate at all.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">the classic question</p>
+  <h2 class="kid">How many lines can you draw through the dot?</h2>
+  <h2 class="eng">One, none, infinitely many &mdash; from four rules and a semiring</h2>
+
+  <p class="kid">Here is the question the whole argument was about, asked of every book.
+    Notice that nobody wrote the numbers down anywhere: the program worked them out from
+    the starting rules.</p>
+  <p class="eng">Existence is <em>neutral</em>: Euclid I.31 proves at least one parallel
+    exists using no parallel axiom. The fifth postulate is about the number. Four rules turn
+    the axiom into witnesses, and the last one is the hyperbolic construction &mdash; between
+    any two distinct parallels lies another:</p>
+
+  <pre>parallel[G](sole)     :- thm[G](parallel_exists), axiom[G](post5_unique).
+parallel[G](limit_a)  :- thm[G](parallel_exists), axiom[G](post5_many).
+parallel[G](limit_b)  :- thm[G](parallel_exists), axiom[G](post5_many).
+parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
+
+  <pre class="tight">   book          exists?  witnesses                          derivations
+   euclid        yes      sole                               1
+   solid         yes      sole                               1
+   saccheri      yes      (none)                             0
+   lobachevsky   yes      interior, limit_a, limit_b         infinitely many
+   schlafli      yes      sole                               1
+   riemann       no       (none)                             0
+   frege         yes      interior, limit_a, limit_b, sole   infinitely many
+   brouwer       yes      sole                               1
+   dacosta       yes      interior, limit_a, limit_b, sole   infinitely many</pre>
+
+  <p class="kid">"Infinitely many" is not a special case somebody typed in. In the book where
+    there are two parallels, the rule says: between any two of them there is another one. So
+    you can keep going forever, and the program notices that the reasoning loops back into
+    itself and reports "infinitely many" instead of counting for ever.</p>
+  <p class="eng"><code>interior</code> sits on a cycle of the support hypergraph, because the
+    construction consumes its own output. The <code>CLOSED</code> counting semiring closes
+    that cycle &mdash; <code>star(one)</code> is <code>INFINITE</code> for a count &mdash; so
+    the fold terminates with the correct answer rather than diverging. In Euclid the rule
+    never fires: it needs two <em>different</em> parallels and there is one.</p>
+
+  <div class="note warn">
+    <p class="kid"><strong>Being careful about what was counted.</strong> The program counts
+      <em>ways of proving</em> there is another line, not the lines themselves. They match up
+      here because every time you use the rule you get a genuinely new line &mdash; but that
+      is something a person has to check, and it is written down rather than assumed.</p>
+    <p class="eng"><strong>The count is of derivations, not of lines.</strong> They coincide
+      because each application of the construction exhibits a new line strictly between two
+      old ones &mdash; a property of this construction, not of counting in general. It is the
+      modelling assumption that carries the word "infinitely many" from the algebra back to
+      the geometry, and it is stated in <code>goof.rofl</code> §4.3 rather than left implicit.</p>
+  </div>
+
+  <p class="kid">And how do you check that "infinitely many" is a real answer and not the
+    program giving up? Ask it to count only the short proofs, then slightly longer ones, then
+    longer still. If the answer keeps growing, it really is endless:</p>
+  <p class="eng"><strong>The positive control.</strong> An <code>INFINITE</code> produced by
+    closing a cycle is a claim about the support graph. Test it by refusing to close the
+    cycle: <code>depthBoundedCountingSemiring(n)</code> counts derivations of height at most
+    <em>n</em> &mdash; different semantics, declared on the instance.</p>
+
+  <pre>    derivations of height at most      lobachevsky/interior        euclid/sole
+      10                                       0                  1
+      15                                     682                  1
+      20                                  699050                  1
+      25                               715827882                  1</pre>
+
+  <p>One column grows without settling; the other is fixed by depth 10. The
+    <code>CLOSED</code> instance is not hiding a failure to converge &mdash; it is naming one.</p>
+
+  <p class="kid">Look at <code>saccheri</code> in the table: the book knows there <em>is</em>
+    a parallel line and cannot say how many. That is the right answer, and it is the answer
+    the priest could not accept.</p>
+  <p class="eng"><code>saccheri</code> proves <code>parallel_exists</code> and has no
+    witnesses. Neutral geometry does not determine the number, and the model declines to
+    guess rather than defaulting to Euclid.</p>
+</section>
+
+<section>
+  <p class="kicker">the failed proof</p>
+  <h2 class="kid">Thirty years of work, answered in a millisecond</h2>
+  <h2 class="eng">whynot: a finite failure with a demonstration attached</h2>
+
+  <p class="kid">Girolamo Saccheri believed the fifth rule <em>had</em> to follow from the
+    other four, and that if he assumed the opposite he would eventually hit a contradiction
+    and be done. He published in 1733, convinced. He was wrong, and the reason is small
+    enough to fit in seven lines. Ask the program why the angle-sum result is not provable
+    in his book:</p>
+  <p class="eng">Saccheri's programme was: assume the negation, derive a contradiction, and
+    the fifth postulate follows from the other four. The second rule in the answer below is
+    literally that programme &mdash; <em>if the book explodes, everything follows</em> &mdash;
+    and it fails because the book does not explode.</p>
+
+  <pre>whynot thm[saccheri](angle_sum_180):
+  rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
+    failed premise: axiom[saccheri](angle_sum_180)
+  rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
+    failed premise: explodes[saccheri](angle_sum_180)
+  rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
+    failed premise: holds_from[saccheri](s_playfair,1)</pre>
+
+  <p class="kid">Three ways it could have been proved, three dead ends. Follow the third one
+    down and the program names the missing piece:</p>
+  <p class="eng">Three rules conclude <code>thm</code>; each is tried, each fails, and each
+    failure names the premise instance that blocked it. Drill into the third:</p>
+
+  <pre class="tight">whynot holds_from[saccheri](s_playfair,1):
+  rule r1cadcdda: holds_from[?G](?S,?K)@now :- needs[main](?S,?K,?P)@now, thm[?G](?P)@now, ?K1 is +(?K,1), holds_from[?G](?S,?K1)@now
+    failed premise: thm[saccheri](post5_unique)
+      rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
+        failed premise: axiom[saccheri](post5_unique)
+          no rule concludes 'axiom' and no matching base fact exists
+      rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
+        failed premise: explodes[saccheri](post5_unique)
+          rule r6f42d5ca: explodes[?G](?P)@now :- clash[?G](?_$0,?_$1)@now, axiom[?G](ex_falso)@now, proposition[main](?P)@now
+            failed premise: clash[saccheri](?_$0#3,?_$1#3)
+              [depth limit 3 reached]
+      rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
+        failed premise: step[main](?S#4,post5_unique)
+          no rule concludes 'step' and no matching base fact exists</pre>
+
+  <p class="kid"><code>post5_unique</code> &mdash; the fifth rule itself. It is not in his
+    book, nothing else produces it, and that is the end of it.</p>
+  <p class="eng">Beltrami settled it in 1868 by building a model of hyperbolic geometry inside
+    Euclidean geometry, which is a consistency proof rather than a search. Here it is a finite
+    failure, and the demonstration bottoms out on "no rule concludes <code>axiom</code> and no
+    matching base fact exists" &mdash; the exact shape of what Saccheri was looking for and
+    could not find.</p>
+</section>
+
+<section>
+  <p class="kicker">inside the engine</p>
+  <h2 class="kid">What the computer is actually doing</h2>
+  <h2 class="eng">The full walkthrough: load, stratify, fire, fold, interrogate</h2>
+
+  <p class="kid">Everything above is one program running once. Here is what happens inside it,
+    step by step. It is worth reading even if you skip the code, because the machine does
+    something unusual: <strong>it keeps its reasons.</strong> It does not just work out the
+    answers &mdash; it remembers, for every answer, exactly which starting rules and which
+    steps produced it, so you can ask "why?" afterwards and get a real answer instead of a
+    shrug.</p>
+
+  <h3 class="kid">Step 1 &mdash; the books get loaded, each signed by its author</h3>
+  <h3 class="eng">1. Loading: nine sections, nine identities</h3>
+  <p class="kid">The file is split into sections, one per book, and each is loaded "as" the
+    person who wrote it. That is not decoration: later, when somebody tries to sneak a rule
+    into a book they do not own, the program notices without anybody writing a check for it.</p>
+  <p class="eng"><code>demo.ts</code> splits <code>goof.rofl</code> on its
+    <code>-- @who X</code> markers and loads each block under that identity. The kernel emits
+    <code>asserted_by(fact, who)</code> and <code>in_perspective(fact, ledger)</code>, and
+    <code>boot.rofl</code>'s audit is one rule:</p>
+  <pre>forged[audit](F) :- asserted_by(F, Who), in_perspective(F, P), not authority(P, Who).</pre>
+  <p class="eng">5351 facts land in the store, of which 1716 are domain facts; the rest are
+    reflection &mdash; every rule of the program is itself stored as facts
+    (<code>rule</code>, <code>premise_lit</code>, <code>concludes</code>,
+    <code>reads_from</code>, <code>writes_to</code>), which is what makes the audits below
+    ordinary queries rather than compiler passes.</p>
+
+  <h3 class="kid">Step 2 &mdash; the program checks itself before it starts</h3>
+  <h3 class="eng">2. The audits, which are rules over the program's own reflection</h3>
+  <pre>  ? unstratified(X)                    -&gt; 0 rows
+  ? malformed[audit](R)                -&gt; 0 rows
+  ? breach[audit](R)                   -&gt; 0 rows
+  ? leak[audit](A, B)                  -&gt; 0 rows
+  ? forged[audit](F)                   -&gt; 0 rows
+  ? unmoded[audit](R)                  -&gt; 0 rows
+  ? undefined_premise[audit](R, Rel)   -&gt; 0 rows</pre>
+  <p class="kid">All seven checks are clean. An empty check is only worth something if it
+    can also say no, so the section at the bottom of this page plants a real violation and
+    shows this one catching it.</p>
+  <p class="eng">Seven empty audits, and the seventh was not always empty: writing rules
+    polymorphic in the ledger cost a false <code>leak</code> row until this example paid for
+    the kernel repair. The last section tells that story and shows the audit still catching a
+    real leak in the same store, so the empty row is not an alarm somebody switched off.</p>
+
+  <h3 class="kid">Step 3 &mdash; sorting the work into layers</h3>
+  <h3 class="eng">3. Stratification: the deduction layer needs no negation at all</h3>
+  <p class="kid">Some questions can only be answered after others. "What does Euclid's book
+    prove?" has to be settled before "what does Euclid's book have that Riemann's does not?",
+    because the second question involves the word <em>not</em>. The program sorts its rules
+    into layers so that never goes in a circle.</p>
+  <p class="eng">Negation forces a stratum boundary: a rule reading <code>not p</code> may
+    only run once <code>p</code> is complete. Of GOOF's 28 clauses, <strong>exactly one</strong>
+    uses negation.</p>
+  <div class="scroll">
+    <table>
+      <tr><th>stratum</th><th>relations</th><th class="wrap-cell">why</th></tr>
+      <tr>
+        <td class="mono">0</td>
+        <td class="mono">thm, holds_from, proposition, opposes, clash, explodes, parallel, law, angle_sum, disagree, similar_possible, size_shows, knot_state, reductio_needed</td>
+        <td class="wrap-cell">the entire deduction layer, one monotone fixpoint</td>
+      </tr>
+      <tr>
+        <td class="mono">1</td>
+        <td class="mono">only_in</td>
+        <td class="wrap-cell"><code>not axiom[H](A)</code> &mdash; the only negation in the model</td>
+      </tr>
+      <tr>
+        <td class="mono">1</td>
+        <td class="mono">forged, leak, malformed, unmoded, undefined_premise</td>
+        <td class="wrap-cell">boot.rofl's audits, which all read <code>not</code> something</td>
+      </tr>
+    </table>
+  </div>
+  <p class="eng">That is a fact about the domain and not about the encoding: <strong>the
+    mathematics needs no negation.</strong> Deriving theorems from axioms is monotone &mdash;
+    more axioms, more theorems, never fewer. The only thing here that needs to say "not" is
+    the meta-question of what one book has that another lacks. Every claim on this page
+    except that table therefore comes out of a single monotone fixpoint, which is also why
+    the semiring folds below are exact: provenance semantics coincide with the Boolean least
+    fixpoint on a stratum.</p>
+
+  <h3 class="kid">Step 4 &mdash; the rules fire until nothing new appears</h3>
+  <h3 class="eng">4. The fixpoint: which rules fire, and on what</h3>
+  <p class="kid">The engine keeps applying rules to facts until applying them again produces
+    nothing new. Three rules do almost all of the work:</p>
+  <pre>thm[G](P) :- axiom[G](P).                                        <span class="dim">-- an axiom is a theorem</span>
+
+holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
+holds_from[G](S, K)  :- needs(S, K, P), thm[G](P), K1 is K + 1, holds_from[G](S, K1).
+
+thm[G](P) :- step(S, P), holds_from[G](S, 1).                    <span class="dim">-- a step whose premises all hold</span></pre>
+  <p class="kid">The middle pair is a counting trick. "All of this step's requirements are
+    satisfied" is a statement about a list, and the direct way of writing it makes the program
+    chase its own tail. So the rules walk the list one position at a time instead, which the
+    engine can do safely.</p>
+  <p class="eng">"Every premise of S holds in G" is a universal over an open set, and the
+    obvious spelling (<code>blocked(S) :- needs(S,_,P), not thm[G](P)</code>) puts
+    <code>thm</code> and <code>blocked</code> in a negative cycle, which the kernel rejects as
+    unstratifiable &mdash; correctly. Indexing the premises turns the universal into a positive
+    recursion: <code>holds_from(S, K)</code> means "premises K..N of S all hold", the base case
+    is the position past the last one, and no negation is left. The same device carries
+    <code>examples/moot</code>'s flag requirements, and it is a real cost of relation-level
+    stratification, paid deliberately.</p>
+  <p class="eng">Note what the ledger variable <code>[G]</code> does to the search: the rule
+    is one rule, and it fires once per (book, step) pair for which the premises hold. Nine
+    books over 24 steps, with the premise walk in between, is the bulk of the 5351 facts.</p>
+
+  <h3 class="kid">Step 5 &mdash; the proof tree, which was kept the whole time</h3>
+  <h3 class="eng">5. why: the recorded support, rendered</h3>
+  <p class="kid">Ask "why is the angle sum 180 in Euclid's book?" and the answer is the whole
+    proof, from the result down to the starting rules. Read it from the bottom: it needs the
+    exterior-angle result, which needs three of the four uncontroversial postulates, and then
+    the fifth postulate at the top.</p>
+  <p class="eng">Every firing is recorded as a hyperedge from its premises to its conclusion;
+    <code>why</code> walks that record. Nothing is re-derived and nothing is searched &mdash;
+    the tree below <em>is</em> the store's support relation, printed. Note
+    <code>[axiom]</code> on the leaves (base facts, no support) and <code>[builtin]</code> on
+    the arithmetic:</p>
+
+  <pre class="tight">thm[euclid](angle_sum_180)  &lt;= r9749238b @tick 0
+  step[main](s_playfair,angle_sum_180) [axiom]
+  holds_from[euclid](s_playfair,1)  &lt;= r1cadcdda @tick 0
+    needs[main](s_playfair,1,post5_unique) [axiom]
+    thm[euclid](post5_unique)  &lt;= rac159495 @tick 0
+      axiom[euclid](post5_unique) [axiom]
+    2 is +(1,1) [builtin]
+    holds_from[euclid](s_playfair,2)  &lt;= r1cadcdda @tick 0
+      needs[main](s_playfair,2,alternate_angles_parallel) [axiom]
+      thm[euclid](alternate_angles_parallel)  &lt;= r9749238b @tick 0
+        step[main](s_i27,alternate_angles_parallel) [axiom]
+        holds_from[euclid](s_i27,1)  &lt;= r1cadcdda @tick 0
+          needs[main](s_i27,1,exterior_angle) [axiom]
+          thm[euclid](exterior_angle)  &lt;= r9749238b @tick 0
+            step[main](s_exterior,exterior_angle) [axiom]
+            holds_from[euclid](s_exterior,1)  &lt;= r1cadcdda @tick 0
+              needs[main](s_exterior,1,post1_two_points) [axiom]
+              thm[euclid](post1_two_points)  &lt;= rac159495 @tick 0
+                axiom[euclid](post1_two_points) [axiom]
+              2 is +(1,1) [builtin]
+              holds_from[euclid](s_exterior,2)  &lt;= r1cadcdda @tick 0
+                needs[main](s_exterior,2,post2_extend) [axiom]
+                thm[euclid](post2_extend)  &lt;= rac159495 @tick 0
+                  axiom[euclid](post2_extend) [axiom]
+                3 is +(2,1) [builtin]
+                ...</pre>
+
+  <p class="eng">Four rule ids appear in the whole tree &mdash; <code>rac159495</code>
+    (axiom&rarr;theorem), <code>r1cadcdda</code> and <code>r1c420810</code> (the premise walk
+    and its base case) and <code>r9749238b</code> (step&rarr;theorem) &mdash; because the
+    deduction layer is four clauses and that is all of them. The
+    ids are content hashes of the clauses, so editing a rule changes them and forces the
+    pinned expectations in <code>test/example-goof.test.ts</code> to be redone deliberately.</p>
+
+  <h3 class="kid">Step 6 &mdash; the same run, asked different questions</h3>
+  <h3 class="eng">6. The semiring folds: four questions, one support graph</h3>
+  <p class="kid">Here is the part that is genuinely unusual. The program worked out
+    <em>what is true</em> once. Everything else &mdash; how many proofs there are, which
+    starting rules a result depends on, which proof is shortest &mdash; is computed afterwards
+    by walking the same record of what happened, with different arithmetic. The reasoning is
+    not repeated.</p>
+  <p class="eng">The Boolean fixpoint is untouched. A semiring fold replays the recorded
+    support with a different &oplus; and &otimes;, so the <em>set</em> of derived facts never
+    changes and only the annotation does:</p>
+  <div class="scroll">
+    <table>
+      <tr><th>semiring</th><th>&oplus; / &otimes;</th><th class="wrap-cell">answers, here</th></tr>
+      <tr><td class="mono">boolean</td><td class="mono">or / and</td><td class="wrap-cell">is this theorem derivable in this book</td></tr>
+      <tr><td class="mono">counting</td><td class="mono">+ / &times;, with star</td><td class="wrap-cell">how many parallels; how many proofs a theorem has</td></tr>
+      <tr><td class="mono">provenance</td><td class="mono">union / pairwise union</td><td class="wrap-cell">which axioms carry the theorem</td></tr>
+      <tr><td class="mono">tropical</td><td class="mono">min / +</td><td class="wrap-cell">the cheapest proof, in rule firings</td></tr>
+    </table>
+  </div>
+  <p class="eng">Each instance declares its convergence discipline, and the fold reports
+    whether the declaration held on this data. Counting is <code>CLOSED</code> &mdash; it
+    supplies <code>star</code>, so a cycle answers <code>INFINITE</code> instead of growing
+    for ever; over this store it converges in 21 rounds with 188 facts on cycles. Provenance
+    is <code>BOUNDED</code>, because antichains over a finite base set have finite height.</p>
+
+  <h3 class="kid">Step 7 &mdash; how a person (or another program) digs in</h3>
+  <h3 class="eng">7. Interrogation: what an agent actually asks</h3>
+  <p class="kid">Nothing here is a fixed report. Every line on this page is a question you can
+    ask a different way:</p>
+  <p class="eng">The store is a queryable object, and the interesting workflow is a
+    conversation with it. A typical one, in the order it actually goes:</p>
+  <pre>? thm[G](pythagoras)              -- which books prove it at all
+     G = brouwer, dacosta, euclid, frege, schlafli, solid
+
+? thm[G](aaa_congruence)          -- and its rival: no similar triangles
+     G = dacosta, frege, lobachevsky, riemann
+
+why thm[euclid](angle_sum_180)    -- the proof, as recorded, not re-derived
+whynot thm[saccheri](angle_sum_180)
+                                  -- the failure, with the blocking premise named
+
+excise axiom[euclid](post5_unique)
+                                  -- delete the axiom, re-evaluate a scratch copy,
+                                     and diff: the blast radius IS the answer
+     removed: axiom[euclid](post5_unique), thm[euclid](post5_unique),
+              thm[euclid](angle_sum_180), thm[euclid](pythagoras),
+              thm[euclid](rectangle_exists), thm[euclid](similar_triangles_exist),
+              thm[euclid](thales_semicircle)   ... and their support
+     added:   only_in[main](brouwer, euclid, post5_unique)   ... and four more</pre>
+  <p class="kid">The last one is the best trick: remove the fifth rule from Euclid's book and
+    ask what collapses. Exactly five results fall &mdash; and five other books suddenly "have
+    something Euclid does not", which the program also notices on its own.</p>
+  <p class="eng"><code>excise</code> re-evaluates a scratch copy on EDB minus that fact and
+    returns the diff, so the blast radius is measured rather than predicted. The five removed
+    theorems are <em>exactly</em> the set the provenance polynomial marks as needing
+    <code>post5_unique</code> &mdash; two independent computations, and the test asserts they
+    agree.</p>
+</section>
+
+<section>
+  <p class="kicker">the reverse question</p>
+  <h2 class="kid">Which starting rules is each result really using?</h2>
+  <h2 class="eng">Provenance: the question reverse mathematics asks, as one fold</h2>
+
+  <p class="kid">"Does this need the controversial fifth rule?" is the question people spent
+    centuries answering by hand, proof by proof. Here it is a table the program produces:</p>
+  <p class="eng">The provenance polynomial's monomials name every base fact in a derivation.
+    Projected onto the axioms of the book the theorem was proved in, and intersected across
+    all monomials, that is exactly "which axioms does every proof of this pass through":</p>
+
+  <pre class="tight">   theorem                     book          needs, in every derivation
+   pons_asinorum               euclid        post1_two_points post4_right_angles
+   triangle_inequality         euclid        post1_two_points post4_right_angles
+   exterior_angle              euclid        post1_two_points post2_extend post4_right_angles
+   angle_sum_at_most_180       euclid        archimedes excluded_middle post1_two_points post2_extend post4_right_angles
+   parallel_exists             euclid        post1_two_points post2_extend post3_circle post4_right_angles
+   angle_sum_180               euclid        post1_two_points post2_extend post4_right_angles post5_unique
+   pythagoras                  euclid        post1_two_points post2_extend post4_right_angles post5_unique
+   aaa_congruence              lobachevsky   archimedes excluded_middle post1_two_points post2_extend post4_right_angles post5_many
+   aaa_congruence              riemann       archimedes post1_two_points post2_finite post5_none
+   every_knot_unties           frege         ex_falso post5_many post5_unique</pre>
+
+  <p class="kid">Five of Euclid's fifteen results genuinely need the fifth rule. Ten do not,
+    and those ten survive in every one of the other geometries. The last row is the
+    self-contradicting book proving a fact about four dimensions that it has no rule about
+    dimensions for &mdash; and admitting, in the same line, exactly how it cheated.</p>
+  <p class="eng">Five of fifteen derived theorems in Euclid's book need <code>post5_unique</code>:
+    <code>angle_sum_180</code>, <code>pythagoras</code>, <code>rectangle_exists</code>,
+    <code>similar_triangles_exist</code>, <code>thales_semicircle</code>. And the two
+    non-Euclidean books reach the <em>same</em> theorem, <code>aaa_congruence</code>, through
+    disjoint axiom sets &mdash; which is what a polynomial with two independent routes looks
+    like when no single book holds both.</p>
+
+  <pre>    theorems Euclid has and Riemann does not: all_or_none, alternate_angles_parallel,
+      angle_sum_180, angle_sum_at_most_180, exterior_angle, parallel_exists, pythagoras,
+      rectangle_exists, similar_triangles_exist, thales_semicircle
+    of those, the ones that never needed the fifth at all: all_or_none,
+      alternate_angles_parallel, angle_sum_at_most_180, exterior_angle, parallel_exists</pre>
+
+  <p><strong>Riemann pays for postulate 2, not for postulate 5.</strong> Five neutral theorems
+    &mdash; results that hold in Euclid's and Lobachevsky's geometries alike &mdash; are lost
+    to a change nobody counts as part of the parallel debate.</p>
+</section>
+
+<section>
+  <p class="kicker">numbers out of axioms</p>
+  <h2 class="kid">Why big triangles are different from small ones</h2>
+  <h2 class="eng">The angle sum as a function of area, derived twice</h2>
+
+  <p class="kid">In school geometry every triangle's angles add up to 180, whatever its size.
+    In the curved geometries they do not &mdash; and the amount they are off by is exactly the
+    triangle's area. So a triangle <em>knows how big it is</em>, and two triangles of the same
+    shape but different size cannot exist. That is not something anybody typed in. Here is
+    where the number comes from:</p>
+  <p class="eng"><code>law[G](K)</code> is the defect coefficient, and it is derived from
+    which angle-sum theorem the book proved. The second rule below uses no law at all: it is
+    the additivity of the defect written in degrees, and it is a <em>neutral</em> theorem.</p>
+
+  <pre>law[G](0)  :- thm[G](angle_sum_180).
+law[G](1)  :- thm[G](defect_proportional_to_area).
+law[G](-1) :- thm[G](excess_proportional_to_area).
+
+angle_sum[G](T, S) :- leaf(T, A), law[G](K), S is 180 - K * A.
+angle_sum[G](T, S) :- cut(T, T1, T2), angle_sum[G](T1, S1), angle_sum[G](T2, S2),
+                      S is S1 + S2 - 180.</pre>
+
+  <p class="kid">The second rule says: cut a triangle in two, and the two halves' angle sums
+    add up to the whole's, plus a straight line's worth of extra. That is true in every
+    geometry. So every big triangle gets its answer worked out <em>twice</em>, by two routes
+    that share nothing &mdash; and they agree. If they ever disagreed, the program would say
+    so instead of picking one.</p>
+  <p class="eng">Every compound triangle therefore has its sum derived once from its own area
+    and once per way of composing it out of the cut tree, by routes sharing no rule.
+    <code>angle_sum[euclid](t_whole,180)</code> has 3 derivations under the counting semiring,
+    and they agree.</p>
+
+  <pre class="tight">   book          law         t_a/2      t_b/3   t_left/5  t_right/7 t_whole/12
+   euclid            0         180        180        180        180        180
+   solid             0         180        180        180        180        180
+   saccheri                      —          —          —          —          —
+   lobachevsky       1         178        177        175        173        168
+   schlafli          0         180        180        180        180        180
+   riemann          -1         182        183        185        187        192
+   frege         -1,0,1    3 values   3 values   9 values   3 values  23 values
+   brouwer           0         180        180        180        180        180
+   dacosta         0,1     178/180    177/180   4 values    173/180   8 values</pre>
+
+  <div class="note">
+    <p class="kid"><strong>The empty row is the most honest one on this page.</strong>
+      Saccheri's book has no fifth rule at all, in either direction &mdash; so it simply
+      does not settle what a triangle's angles add up to. The program answers "nothing"
+      rather than guessing 180 because that is what we are used to.</p>
+    <p class="eng"><strong><code>saccheri</code> has no law, and therefore no angle sum at
+      all.</strong> Neutral geometry does not determine it. An engine that answered 180 there
+      would be wrong in a way no test with a fixed expected value would catch &mdash; the
+      absence is derived, from the absence of any of the three angle-sum theorems.</p>
+  </div>
+
+  <p class="kid">And the check that this is a real test and not a rubber stamp: the rule that
+    complains about disagreement <em>does</em> complain, in the two books that hold two
+    contradictory laws at once.</p>
+  <p class="eng">A gate that never fires is an assumption wearing a gate's interface, so
+    <code>disagree/3</code> is exercised rather than assumed:</p>
+
+  <pre>    ? disagree[euclid](T, S1, S2)     -&gt; 0 rows
+    ? disagree[lobachevsky](T, S1, S2)-&gt; 0 rows
+    ? disagree[riemann](T, S1, S2)    -&gt; 0 rows
+    ? disagree[dacosta](T, S1, S2)    -&gt; 37 rows
+    ? disagree[frege](T, S1, S2)      -&gt; 298 rows</pre>
+
+  <p class="kid">Finally, similarity. In Euclid's book the small triangle and the big one can
+    have the same angles. In the curved books they cannot, and the program says by how much
+    they differ:</p>
+  <pre>    euclid        similar pairs: 1   the two triangles can share their angles
+    lobachevsky   similar pairs: 0   t_left (area 5) and t_whole (area 12) differ by 7 degrees
+    riemann       similar pairs: 0   t_left (area 5) and t_whole (area 12) differ by 7 degrees</pre>
+  <p class="eng">The same statement is also proved symbolically as <code>aaa_congruence</code>
+    &mdash; through the proof corpus rather than through arithmetic &mdash; in exactly the
+    books where the arithmetic says it. Two independent routes to "a triangle knows its size".</p>
+</section>
+
+<section>
+  <p class="kicker">the second axis</p>
+  <h2 class="kid">Changing the logic instead of the geometry</h2>
+  <h2 class="eng">Constructive and paraconsistent foundations, same rule set</h2>
+
+  <p class="kid">There is a second thing you can change: not what geometry assumes, but what
+    counts as a valid argument.</p>
+  <p class="eng">A logical principle is an axiom like any other here, and a step that argues
+    by contradiction names it among its premises. Nothing in the rules knows what logic is.</p>
+
+  <pre>step(s_sacc_leg, angle_sum_at_most_180).
+needs(s_sacc_leg, 1, exterior_angle).
+needs(s_sacc_leg, 2, archimedes).
+needs(s_sacc_leg, 3, excluded_middle).      <span class="dim">-- the reductio, as a premise</span></pre>
+
+  <p class="kid"><strong>Brouwer's book</strong> forbids proving something by showing its
+    opposite is impossible. Take that one line away and exactly two results disappear &mdash;
+    and they are exactly the two whose only known proof works that way. The geometry is
+    untouched: Pythagoras still holds.</p>
+  <p class="eng">Removing <code>excluded_middle</code> loses exactly
+    <code>all_or_none</code> and <code>angle_sum_at_most_180</code>, which are exactly the two
+    steps the corpus marks <code>by_reductio</code>. <code>whynot</code> walks the premise
+    chain and stops on <code>thm[brouwer](excluded_middle)</code> &mdash; premise 3 of
+    Saccheri&ndash;Legendre, named.</p>
+
+  <p class="kid"><strong>Frege's and da Costa's books</strong> both contain a flat
+    contradiction: they claim there is exactly one parallel <em>and</em> that there are many.
+    Frege's book also has the traditional rule "from a contradiction, anything follows" &mdash;
+    so it proves all 37 statements in the vocabulary, including nonsense about four dimensions
+    it knows nothing about. Da Costa's book drops that one rule, and stays contradictory in
+    one spot while remaining sensible everywhere else.</p>
+  <p class="eng">Explosion is written in the model, not built into the engine:</p>
+
+  <pre>clash[G](A, B) :- thm[G](A), thm[G](B), opposes[main](A, B).
+explodes[G](P) :- clash[G](_, _), axiom[G](ex_falso), proposition[main](P).
+thm[G](P)      :- explodes[G](P).</pre>
+
+  <pre>    frege     ex_falso: true   clashes:  28   explodes:  37   theorems: 37 of 37 propositions
+    dacosta   ex_falso: false  clashes:   8   explodes:   0   theorems: 28 of 37 propositions</pre>
+
+  <p class="eng">The engine has no <em>ex falso</em> rule of its own, so this is not "ROFL
+    happens not to explode" &mdash; it is a paraconsistent foundation and a classical one run
+    through the same rules, differing by one axiom. What da Costa's book does with its
+    contradiction is hold four angle sums at once for the same triangle &mdash; 175, 177, 178,
+    180 degrees &mdash; and say so through <code>disagree</code>, instead of picking a winner
+    or refusing to answer. Frege's <em>Grundgesetze</em> is the honest name for the other
+    book: it looked consistent until Russell's letter of 1902.</p>
+
+  <h3>And the third axis, in one line: dimension</h3>
+  <pre>    euclid     dim_plane   -&gt; trefoil unknottable
+    solid      dim_space   -&gt; trefoil knotted
+    schlafli   dim_four    -&gt; trefoil unties</pre>
+  <p class="kid">A knotted piece of string cannot be untied without cutting it &mdash; in three
+    dimensions. In four, every knot falls apart. "Obvious" turns out to be a property of the
+    world you grew up in, not of the reasoning.</p>
+  <p class="eng"><code>solid</code> and <code>schlafli</code> differ by that one axiom and
+    nothing else (Wu 1958, Zeeman 1960: an embedded circle in codimension three is isotopic to
+    the unknot). The spec is right that this axis is weaker than the geometry one &mdash; a
+    parameter changes, not the logic &mdash; which is why it gets one fact and not a section.</p>
+</section>
+
+<section>
+  <p class="kicker">the check</p>
+  <h2 class="kid">How do we know the program is not just confidently wrong?</h2>
+  <h2 class="eng">A complete oracle, and the one gap it found</h2>
+
+  <p class="kid">Everything above is done a second time, in a completely separate program
+    written the boring way, with no rules and no engine &mdash; and the two are compared on
+    every single answer. Because each book has only nine or ten starting rules, the slow way
+    can try <em>every possible combination</em> of them, so this is not spot-checking: it is
+    a complete second opinion.</p>
+  <p class="eng">A forward closure over the same corpus in plain TypeScript, sharing no code
+    with the engine beyond reading the same base facts. Then every subset of every book's
+    axioms is closed as well &mdash; 2<sup>9</sup> and 2<sup>10</sup> of them &mdash; which
+    makes the provenance question <em>decided</em> rather than sampled: it is exactly "which
+    axioms can this theorem be proved from, and which can it not be proved without".</p>
+
+  <pre>    derivability decisions:        333   disagreements: 0
+    axiom-necessity decisions:    1942   disagreements: 14  (14 of them conservative)
+    axiom-sufficiency checks:      282   disagreements: 0
+    minimal axiom sets, found / existing: 236 / 242
+    angle-sum comparisons:          45   disagreements: 0
+    parallel-witness decisions:     36   disagreements: 0</pre>
+
+  <div class="note warn">
+    <p class="kid"><strong>The one thing that did not match, and why it is reported instead
+      of hidden.</strong> For six results in the self-contradicting book, the program's list of
+      "which starting rules did this need" is missing an entry. The reason is a memory limit:
+      that book has so many short proofs (everything follows from its contradiction) that the
+      long honest proof gets crowded out of the list. The effect only ever goes one way &mdash;
+      the program says a rule is <em>needed</em> when a proof avoiding it exists, never the
+      reverse &mdash; so it errs on the cautious side, and the test pins both the number and
+      the direction so it cannot quietly grow.</p>
+    <p class="eng"><strong>Sound everywhere, incomplete in one place, and the size is
+      measured.</strong> Every axiom set the polynomial names really does prove the theorem
+      &mdash; 282 for 282. It is incomplete for 6 theorems, all in <code>frege</code>, where 6
+      minimal axiom sets exist that no monomial names.
+      <code>provenanceSemiring</code> keeps at most <code>PROVENANCE_MAX_TERMS</code> = 32
+      monomials and applies that cap <em>before</em> pruning supersets, so a short proof from
+      a contradiction crowds out the long honest one. The reading is one-directional and it is
+      the safe direction: the polynomial then over-claims necessity, never under-claims it.
+      All 14 necessity disagreements are of that kind, and
+      <code>test/example-goof.test.ts</code> asserts both the count and the direction.</p>
+    <p class="eng">The gap was found by the oracle, not by inspection &mdash; and so was a
+      bug in the first version of the projection itself, which collected axioms from
+      <em>any</em> book because a derivation by explosion passes through
+      <code>proposition[main](P)</code>. The oracle reported it as a minimality failure, and
+      it was one: the projection was wrong, not the polynomial.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">the cost</p>
+  <h2 class="kid">The one thing this example could not do cleanly, until it was fixed</h2>
+  <h2 class="eng">Where the kernel fought back, and what it took to fix</h2>
+
+  <p class="kid">The whole point here is that the reasoning is written <em>once</em> and works
+    for every book. But the safety check that watches for one book secretly reading another
+    could not tell the difference between "this rule works on whichever book you point it at"
+    and "this rule reads one book and writes into another", so it raised a false alarm, once.
+    Nobody switched the check off. The check was taught to tell the two apart, and this
+    example is what paid for it.</p>
+
+  <p class="eng">Every rule's reflection records <code>reads_from</code> and
+    <code>writes_to</code> per perspective, and a <em>variable</em> perspective used to reduce
+    to <code>$any</code> at both ends. <code>boot.rofl</code> then saw a flow from
+    <code>$any</code> into <code>$any</code>, could not see the two were the same variable,
+    and reported a leak. There was no way to declare that bridge either:
+    <code>bridge_decl</code> is kernel-emitted only when the head perspective <em>differs</em>
+    from the premise's, and <code>$any</code> is not writable in the surface syntax.</p>
+
+  <p class="eng"><code>examples/sus</code> and <code>examples/aka</code> met the same limit and
+    could write one rule per ledger instead. GOOF cannot &mdash; <strong>one rule per ledger
+    is the thesis failing</strong> &mdash; and that is what made the limit worth repairing
+    rather than working around. <code>src/reflect.ts</code> now records a variable perspective
+    as itself, <code>$var("G")</code>, so a rule polymorphic in the ledger carries one term at
+    both ends, and <code>boot.rofl</code> reads a flow whose ends are one term as the identity
+    it is while still reporting a rule that reads <code>?G</code> and writes somewhere
+    undeclared. The false row is gone; the planted one still bites:</p>
+
+  <pre>      leak[audit](euclid, main)        <span class="dim">-- a REAL leak, planted, and caught</span></pre>
+
+  <p class="eng">The demo still expands the rule set one copy per book, because the comparison
+    is the thesis; what it measures now is only the rule count:</p>
+
+  <pre>    polymorphic: 1716 facts     expanded: 1716 facts     IDENTICAL
+    leak[audit] rows — polymorphic: 0   expanded: 0
+    28 clauses become 292 — and one of them, the rule that compares two books,
+    becomes 81, because it ranges over PAIRS of ledgers.</pre>
+
+  <p class="eng">Two smaller scars, both still visible in the file's shape. A head written
+    without brackets defaults to <code>[main]</code> <em>without</em> the explicit flag, so no
+    <code>bridge_decl</code> is emitted and the leak audit fires on a rule doing nothing wrong
+    &mdash; which is why <code>proposition[main](P) :- axiom[G](P).</code> spells out a
+    perspective that looks redundant. And <code>explodes/1</code> exists as its own relation
+    purely so that <code>whynot</code> renders "the book does not explode" as one line instead
+    of enumerating every pair of theorems that failed to contradict each other. The shape of
+    the demonstration is part of the model's design.</p>
+</section>
+
+<footer>
+  <p><code>examples/goof/</code> in the ROFL repository. Everything quoted on this page is
+  <code>demo.ts</code>'s stdout, unedited, and <code>test/example-goof.test.ts</code> pins it.
+  Run it: <code>node --experimental-strip-types examples/goof/demo.ts</code></p>
+  <p>The proof corpus is a hand-built abstraction of classical proofs, not a formalisation of
+  them: each step is one fact saying "this follows from these", and nothing here checks that
+  it does. What is computed exactly is everything downstream. No novelty is claimed &mdash;
+  intuitionistic Datalog, paraconsistent logics and reverse mathematics are old fields; what
+  is shown is that a general-purpose rule engine with ledgers and semirings answers their
+  questions without knowing any geometry.</p>
+</footer>
+</div>
+
+<script>
+  (function () {
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+    var body = document.body;
+    var buttons = document.querySelectorAll('.segmented button');
+
+    function setLevel(level) {
+      body.setAttribute('data-level', level);
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.set === level));
+      }
+      store('goof-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    setLevel('eng');
+    var saved = load('goof-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('goof-theme', next);
+    });
+
+    var savedTheme = load('goof-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

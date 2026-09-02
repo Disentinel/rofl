@@ -1,0 +1,688 @@
+<title>RIP — Rest In Peace</title>
+<meta charset="utf-8">
+
+<style>
+  :root {
+    --bg:        #fbfaf9;
+    --panel:     #ffffff;
+    --ink:       #1a1a1c;
+    --ink-soft:  #55555c;
+    --ink-faint: #85858e;
+    --line:      #e1dfdb;
+    --line-soft: #eeecea;
+    --accent:    #35548f;
+    --accent-bg: #e8eef8;
+    --warm:      #9a5a1c;
+    --warm-bg:   #f9efe3;
+    --good:      #2d6a42;
+    --gone:      #a52f2f;
+    --maybe:     #7a5aa8;
+    --maybe-bg:  #f0eaf8;
+    --code-bg:   #f3f1ee;
+    --shadow:    0 1px 2px rgba(20, 20, 22, .06), 0 8px 24px rgba(20, 20, 22, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #131519;
+      --panel:     #1b1e23;
+      --ink:       #e9ebee;
+      --ink-soft:  #acb0b7;
+      --ink-faint: #7c8189;
+      --line:      #2f343d;
+      --line-soft: #22262c;
+      --accent:    #85aaf0;
+      --accent-bg: #17233a;
+      --warm:      #dda265;
+      --warm-bg:   #2c2317;
+      --good:      #86d19c;
+      --gone:      #f08d8d;
+      --maybe:     #c0a4ec;
+      --maybe-bg:  #251d33;
+      --code-bg:   #0f1114;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #131519;
+    --panel:     #1b1e23;
+    --ink:       #e9ebee;
+    --ink-soft:  #acb0b7;
+    --ink-faint: #7c8189;
+    --line:      #2f343d;
+    --line-soft: #22262c;
+    --accent:    #85aaf0;
+    --accent-bg: #17233a;
+    --warm:      #dda265;
+    --warm-bg:   #2c2317;
+    --good:      #86d19c;
+    --gone:      #f08d8d;
+    --maybe:     #c0a4ec;
+    --maybe-bg:  #251d33;
+    --code-bg:   #0f1114;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+
+  section { margin: 3rem 0 0; }
+  h2 { font-size: 1.4rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .3rem; }
+  p { margin: .8rem 0; max-width: 46rem; }
+  ul, ol { max-width: 46rem; padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .kicker { color: var(--ink-faint); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0 0 .3rem; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .82rem; line-height: 1.5; margin: 1.2rem 0;
+  }
+  pre.tight { font-size: .72rem; }
+  code { background: var(--code-bg); border-radius: 4px; padding: .08em .35em; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin: 1.4rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .card h4 { margin: 0 0 .35rem; font-size: .95rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .card p { margin: 0; font-size: .92rem; color: var(--ink-soft); max-width: none; }
+  .card .n { float: right; font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .card.yes h4, .card.yes .n { color: var(--good); }
+  .card.no h4, .card.no .n { color: var(--gone); }
+  .card.maybe h4, .card.maybe .n { color: var(--maybe); }
+  .card.maybe { border-color: var(--maybe); background: var(--maybe-bg); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 8px 8px 0;
+          padding: .8rem 1rem; margin: 1.4rem 0; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: .6rem; }
+  .warn { border-left-color: var(--warm); background: var(--warm-bg); }
+
+  .scroll { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { text-align: left; padding: .45rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; white-space: nowrap; }
+  th { color: var(--ink-faint); font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+  td.mono, th.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+  td.num { text-align: right; }
+  td.wrap-cell { white-space: normal; }
+
+  .dim { color: var(--ink-faint); }
+  .dead { color: var(--gone); font-weight: 600; }
+  .alive { color: var(--good); font-weight: 600; }
+  .luck { color: var(--maybe); font-weight: 600; }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .88rem; }
+
+  /* level switching */
+  body[data-level="kid"] .eng { display: none; }
+  body[data-level="eng"] .kid { display: none; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">ROFL &middot; example</p>
+  <h1>RIP <span class="dim">&mdash; Rest In Peace</span></h1>
+  <p class="lede kid">Somewhere in every online shop there is a list of orders that got stuck.
+    Nobody knows why they are there. This page is about a program that reads the rules of how
+    orders are processed and works out, in advance, <em>which kinds of order will get stuck</em>
+    &mdash; and, more surprisingly, which ones can never be rescued no matter how many times you
+    try again.</p>
+  <p class="lede eng">An AND/OR reachability game over a workflow with non-idempotent stages,
+    solved by the kernel's alternating fixpoint. Three regions: the workflow's winning region,
+    the environment's, and the gap between them &mdash; and the gap is not a value the engine
+    assigns, it is the complement of the fixpoint, carrying the firing that put it there.</p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="reading level">
+      <button type="button" data-set="kid" aria-pressed="false">explain it simply</button>
+      <button type="button" data-set="eng" aria-pressed="true">explain it to an engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">theme</button>
+  </div>
+</header>
+
+<section>
+  <p class="kicker">the problem</p>
+  <h2 class="kid">The order that paid twice</h2>
+  <h2 class="eng">Retrying a non-idempotent stage is not an edge back to the same state</h2>
+
+  <p class="kid">Here is the whole story in five lines. You order a book. The shop reserves a
+    copy, charges your card, and posts the parcel. Each of those three things is done by asking
+    somebody else &mdash; the warehouse, the bank, the courier &mdash; and any of them can be
+    slow, broken, or simply silent.</p>
+  <p class="kid">Now the nasty bit. The shop asks the bank to take your money. The bank
+    <strong>takes it</strong>, and then the reply gets lost on the way back. The shop is still
+    waiting. It waits, gives up, and does the sensible thing: it tries again. And now you have
+    paid twice.</p>
+  <p class="kid">Trying again is only free if doing the thing twice is the same as doing it
+    once. Reserving a copy twice is fine &mdash; it is the same copy. Taking money twice is not
+    fine. That single difference is what this whole page is about.</p>
+
+  <p class="eng">Every retry story assumes repetition is free. Where a stage is idempotent it
+    is: the second call lands on the same state as the first. Where it is not, the retry is an
+    edge into a <strong>new</strong> state with the side effect accumulated, and the environment
+    gets a move that no ordinary reliability model has &mdash; answer <em>after</em> the effect
+    has landed and before anyone has been told.</p>
+  <p class="eng">The machine below is <code>w(At, T, D, R, C, Sh, F)</code>: the stage, the
+    attempts spent, whether the workflow is unsure, the reservation, the money that has
+    <em>actually</em> moved, the parcels that have <em>actually</em> gone, and how much
+    misbehaviour the environment has left. The first three are the workflow's own bookkeeping.
+    The next three are the world, and the workflow is not told them.</p>
+
+  <pre>respond(w(charge,0,0,1,0,0,2), call, ok,      w(ship,  0,0,1,1,0,2)).  <span class="dim">-- moved on, no doubt</span>
+respond(w(charge,0,0,1,0,0,2), call, fail,    w(charge,1,0,1,0,0,1)).  <span class="dim">-- attempt spent, no doubt</span>
+respond(w(charge,0,0,1,0,0,2), call, timeout, w(charge,1,1,1,0,0,1)).  <span class="dim">-- attempt spent, DOUBT</span>
+respond(w(charge,0,0,1,0,0,2), call, lost,    w(charge,1,1,1,1,0,1)).  <span class="dim">-- the money moved</span></pre>
+
+  <p class="eng">The third and fourth lines produce states with the <strong>same
+    observation</strong> &mdash; same stage, same attempt count, same doubt &mdash; and different
+    worlds. That indistinguishability is the subject. The fifth behaviour, <code>silence</code>,
+    is the one the whole third category is made of: nothing came back, no attempt was consumed,
+    the environment spent nothing, and the state is a genuine self-loop.</p>
+</section>
+
+<section>
+  <p class="kicker">the answer</p>
+  <h2 class="kid">Three answers, not two</h2>
+  <h2 class="eng">Three regions, and the third is the complement of the fixpoint</h2>
+
+  <p class="kid">The program looks at every situation the order could possibly be in &mdash;
+    there are 133 of them &mdash; and sorts them into three piles.</p>
+  <p class="eng">133 reachable states, 389 transitions, an environment allowed at most two
+    misbehaviours over the run. Every state falls into exactly one region, and the three cover
+    the machine.</p>
+
+  <div class="cards">
+    <div class="card yes">
+      <h4>settles <span class="n">77</span></h4>
+      <p class="kid">Whatever goes wrong, there is something the shop can do that ends with the
+        books straight &mdash; either the order arrives and is paid for once, or it is cancelled
+        with the money back and nothing sent.</p>
+      <p class="eng">The workflow's winning region: there exists an action such that all of the
+        environment's answers lead to states that settle. A strategy, not a hope.</p>
+    </div>
+    <div class="card no">
+      <h4>doomed <span class="n">32</span></h4>
+      <p class="kid">The shop has already lost. Nothing it does from here can put things right
+        &mdash; the money is gone twice, or the parcel went out and cannot be un-sent. Trying
+        again does not help. This is a bug in the rules, not bad luck.</p>
+      <p class="eng">The environment's winning region. Note what it does <em>not</em> mean: two
+        of these states still have a lucky sequence of answers that gets home. What it means is
+        that a provider which <em>wants</em> it to fail can make it fail.</p>
+    </div>
+    <div class="card maybe">
+      <h4>dead letter <span class="n">24</span></h4>
+      <p class="kid">Neither. There is no way to guarantee it works, and no way to prove it
+        cannot. It might go fine and it might hang for ever. <strong>These are the orders that
+        end up on the stuck list.</strong></p>
+      <p class="eng">Neither region. No strategy forces settlement, no adversary forces failure,
+        and the play can go on for ever. This is not a value the engine assigned &mdash; it is
+        what neither of the two limits reached.</p>
+    </div>
+  </div>
+
+  <p class="kid">All twenty-four of the third pile are in one place: the shop has asked the
+    courier to send the parcel, is not sure whether it went, and the courier has stopped
+    answering. That is it. Everything else about this shop is decidable.</p>
+  <p class="eng">All twenty-four are at <code>ship</code> or <code>track</code>, and every one
+    carries the doubt flag. A dispatch that may already have gone out, and a carrier that has
+    gone quiet. Nothing else in this machine is undecidable, and §5 of the transcript checks that
+    claim from both sides.</p>
+</section>
+
+<section>
+  <p class="kicker">how the engine does it</p>
+  <h2 class="kid">How can a program be sure it is not sure?</h2>
+  <h2 class="eng">Step by step, inside the alternating fixpoint</h2>
+
+  <p class="kid">The clever part is the third pile. It is easy to write a program that says yes
+    or no. It is much harder to write one where "I cannot tell" is a real answer and not just
+    what is left over after the yeses and the noes &mdash; because "left over" also contains
+    "the program ran out of time", and those two are not the same thing at all.</p>
+  <p class="kid">Here is the trick, and you can do it on paper. Run the rules <strong>twice</strong>
+    with two different attitudes.</p>
+  <ol class="kid">
+    <li><strong>The generous run.</strong> Assume every question you cannot answer yet is
+      answered the way that lets you write down the most. You will write down some things that
+      are not really true.</li>
+    <li><strong>The mean run.</strong> Now assume everything the generous run wrote down.
+      Anything you can still conclude was worth concluding.</li>
+    <li>Repeat. The generous list keeps shrinking; the mean list keeps growing. Eventually they
+      stop moving.</li>
+  </ol>
+  <p class="kid">Whatever is on <em>both</em> lists is true. Whatever is on <em>neither</em> is
+    false &mdash; not one single generous run could talk itself into it. And whatever is on the
+    generous list but not the mean one is the third answer: a claim that can only be believed by
+    assuming itself. That is what "it depends on luck" looks like from the inside.</p>
+
+  <p class="eng">The universal quantifier is the difficulty. "All the environment's answers
+    settle" is a statement about an open set, which a rule language cannot write, so it is
+    written as the negation of an existential:</p>
+
+  <pre>will_settle(S) :- settled(S).
+will_settle(S) :- action(S, A), not risky(S, A).
+risky(S, A)    :- respond(S, A, _, S2), not will_settle(S2).</pre>
+
+  <p class="eng"><code>will_settle</code> depends on itself through <strong>two</strong>
+    negations. That is a genuine negative cycle, and the ordinary phase-ordered evaluator is
+    right to refuse it &mdash; the stratum number does not exist inside such a cycle, and
+    <code>boot.rofl</code>'s own rule for computing one diverges. Delete
+    <code>semantics(well_founded).</code> from the file and it is refused, at every budget above
+    2000 steps:</p>
+
+  <pre>program rejected: unstratified[main](risky), unstratified[main](will_settle)</pre>
+
+  <p class="eng">With the declaration, the evaluator runs two sequences from the same operator,
+    with every <code>not p</code> judged against a <strong>frozen</strong> set rather than
+    against the store being built. Start from the base layer. A round that assumes little
+    derives much; a round that assumes much derives little. The generous rounds decrease, the
+    mean rounds increase, and here they meet after <strong>eight</strong> alternations.</p>
+  <ul class="eng">
+    <li>in both limits &rarr; <span class="alive">TRUE</span>, the workflow's winning region;</li>
+    <li>in neither &rarr; <span class="dead">FALSE</span>, and false is a real claim: no round
+      derived it however generous the assumption;</li>
+    <li>in the generous limit only &rarr; <span class="luck">UNDEFINED</span> &mdash; an atom
+      whose only derivation needs to assume itself.</li>
+  </ul>
+
+  <div class="note">
+    <p class="kid"><strong>Why this matters.</strong> A program that just said "I do not know"
+      would be useless, because it could mean "I gave up". This one can tell you the difference:
+      it can point at the exact sequence of events that goes round in a circle.</p>
+    <p class="eng"><strong>The third value is derived, not subtracted.</strong> An atom reaches
+      the gap only by being derived in a round, so it carries the firing that derived it. That is
+      what makes <code>why unknown(X)</code> possible and what separates the third value from a
+      budget that ran out &mdash; a run cut short reports
+      <code>hole(Id, budget_exhausted)</code> and claims <em>no</em> unknowns at all.</p>
+  </div>
+
+  <div class="scroll eng">
+    <table>
+      <tr><th>budget</th><th>loads</th><th class="num">unknown rows</th><th>hole</th><th>partial</th></tr>
+      <tr><td class="mono">20 000</td><td>yes</td><td class="num mono">0</td><td class="mono">budget_exhausted</td><td class="mono">true</td></tr>
+      <tr><td class="mono">20 000 000</td><td>yes</td><td class="num mono">130</td><td class="mono">(none)</td><td class="mono">false</td></tr>
+    </table>
+  </div>
+
+  <h3 class="eng">And the undefined set has to move when its cause moves</h3>
+  <p class="eng">Take the carrier's <code>silence</code> out of the machine and the whole
+    program becomes two-valued: <strong>zero</strong> dead letters, zero unknown rows, the
+    negative cycle still there and simply without consequences. Then the other direction, which
+    is the one that could have gone either way &mdash; let the <em>payment gateway</em> go quiet
+    as well:</p>
+
+  <div class="scroll eng">
+    <table>
+      <tr><th>machine</th><th class="num">states</th><th class="num">dead letters</th><th class="num">unknown rows</th></tr>
+      <tr><td>baseline</td><td class="num mono">133</td><td class="num mono">24</td><td class="num mono">130</td></tr>
+      <tr><td>carrier cannot go quiet</td><td class="num mono">123</td><td class="num mono">0</td><td class="num mono">0</td></tr>
+      <tr><td>the gateway goes quiet too</td><td class="num mono">137</td><td class="num mono">24</td><td class="num mono">130</td></tr>
+    </table>
+  </div>
+
+  <p class="eng">Four more states and <strong>not one more dead letter</strong> &mdash; the same
+    twenty-four, not merely the same count. Silence alone is not the ingredient. At the charge
+    stage the workflow has somewhere else to go, so the exists-quantifier finds a safe move and
+    never has to look at the silent one; at the shipping stage with the doubt flag up there is no
+    abort, and the probe inherits the same silence. <strong>Silence plus no alternative</strong>
+    is what makes a dead letter, and the two runs separate the ingredients.</p>
+  <p class="kid">And the same check the other way round: if the courier is forbidden to go quiet,
+    the stuck pile drops to <strong>zero</strong>. If the <em>bank</em> is allowed to go quiet as
+    well, the stuck pile does not grow at all &mdash; because when the bank goes quiet the shop
+    still has something sensible to do, and when the courier goes quiet it does not. Going quiet
+    is only fatal where there is nothing else to try.</p>
+</section>
+
+<section>
+  <p class="kicker">the tree</p>
+  <h2 class="kid">Ask it why, and it draws the circle</h2>
+  <h2 class="eng"><code>why unknown(will_settle(S))</code> names the unfounded set</h2>
+
+  <p class="kid">This is the program explaining one stuck order. Read it downwards and it is a
+    little story: the courier fails, the courier fails again, the shop has run out of tries so it
+    asks "did you send it or not?" &mdash; and the courier says nothing. For ever. The last line
+    is the program noticing it has walked in a circle and stopping.</p>
+  <p class="eng">Read the tree as the play it is. Note the two things that make it an answer
+    rather than an absence: every failed premise prints <code>[undefined]</code> and not
+    <code>[finite failure]</code>, and the walk ends by naming the <strong>unfounded set</strong>
+    &mdash; the atoms that hold each other up and rest on nothing founded.</p>
+
+  <pre class="tight">unknown[main](will_settle(w(ship,0,1,1,1,0,2)))  &lt;= r70d8af2b @tick 0
+  action[main](w(ship,0,1,1,1,0,2),call) [axiom]
+  not risky[main](w(ship,0,1,1,1,0,2),call) [undefined]
+    unknown[main](risky(w(ship,0,1,1,1,0,2),call))  &lt;= r25915533 @tick 0
+      respond[main](w(ship,0,1,1,1,0,2),call,fail,w(ship,1,1,1,1,0,1)) [axiom]
+      not will_settle[main](w(ship,1,1,1,1,0,1)) [undefined]
+        unknown[main](will_settle(w(ship,1,1,1,1,0,1)))  &lt;= r70d8af2b @tick 0
+          action[main](w(ship,1,1,1,1,0,1),call) [axiom]
+          not risky[main](w(ship,1,1,1,1,0,1),call) [undefined]
+            unknown[main](risky(w(ship,1,1,1,1,0,1),call))  &lt;= r25915533 @tick 0
+              respond[main](w(ship,1,1,1,1,0,1),call,fail,w(ship,2,1,1,1,0,0)) [axiom]
+              not will_settle[main](w(ship,2,1,1,1,0,0)) [undefined]
+                unknown[main](will_settle(w(ship,2,1,1,1,0,0)))  &lt;= r70d8af2b @tick 0
+                  action[main](w(ship,2,1,1,1,0,0),check) [axiom]
+                  not risky[main](w(ship,2,1,1,1,0,0),check) [undefined]
+                    unknown[main](risky(w(ship,2,1,1,1,0,0),check))  &lt;= r25915533 @tick 0
+                      respond[main](w(ship,2,1,1,1,0,0),check,none,w(track,2,1,1,1,0,0)) [axiom]
+                      not will_settle[main](w(track,2,1,1,1,0,0)) [undefined]
+                        unknown[main](will_settle(w(track,2,1,1,1,0,0)))  &lt;= r70d8af2b @tick 0
+                          action[main](w(track,2,1,1,1,0,0),call) [axiom]
+                          not risky[main](w(track,2,1,1,1,0,0),call) [undefined]
+                            unknown[main](risky(w(track,2,1,1,1,0,0),call))  &lt;= r25915533 @tick 0
+                              respond[main](w(track,2,1,1,1,0,0),call,silence,w(track,2,1,1,1,0,0)) [axiom]
+                              not will_settle[main](w(track,2,1,1,1,0,0)) [undefined]
+                                unknown[main](will_settle(w(track,2,1,1,1,0,0))) [cycle]
+unfounded set: risky[main](w(ship,0,1,1,1,0,2),call), risky[main](w(ship,1,1,1,1,0,1),call), risky[main](w(ship,2,1,1,1,0,0),check), risky[main](w(track,2,1,1,1,0,0),call), will_settle[main](w(ship,0,1,1,1,0,2)), will_settle[main](w(ship,1,1,1,1,0,1)), will_settle[main](w(ship,2,1,1,1,0,0)), will_settle[main](w(track,2,1,1,1,0,0))</pre>
+
+  <p class="kid">Compare it with an order that is fine: that explanation is six lines long, made
+    entirely of facts, and mentions no circle at all.</p>
+  <p class="eng">The control, in the same store: a state that settles explains itself the old
+    way, through facts and finite failure, with no <code>[undefined]</code> and no unfounded
+    set. Both shapes come out of one program, which is what stops "unknown" meaning "everything
+    left".</p>
+</section>
+
+<section>
+  <p class="kicker">the useful part</p>
+  <h2 class="kid">It hands you the recipe for the bug</h2>
+  <h2 class="eng">Best derivation: a reproducing trace, as an executable test</h2>
+
+  <p class="kid">Knowing an order <em>can</em> break is not very useful on its own. What you want
+    is the exact sequence of unlucky events that breaks it, so you can try it yourself. The
+    program has that already, because it kept track of how it reached every situation. The
+    shortest way to make a customer pay twice:</p>
+  <p class="eng">The tropical fold priced every derivation of <code>reached/1</code>. Walking
+    down and choosing at each step the firing whose cost <em>is</em> that number reads the argmin
+    back out of the support the engine recorded &mdash; not a search, and not a story told about
+    the answer afterwards.</p>
+
+  <pre>    step  where                        the workflow   the provider
+       1  w(reserve,0,0,0,0,0,2)       call           fail
+       2  w(reserve,1,0,0,0,0,1)       call           ok
+       3  w(charge,0,0,1,0,0,1)        call           lost
+       4  w(charge,1,1,1,1,0,0)        call           ok
+       5  w(ship,0,0,1,2,0,0)          call           ok
+       6  w(fulfilled,0,0,0,2,1,0)</pre>
+
+  <p class="kid">In words: the warehouse fails once and works on the retry; the bank
+    <strong>takes the money and the answer is lost</strong>; the shop, thinking nothing happened,
+    charges again; the parcel goes out. The order looks completed. The customer has paid twice
+    and nobody will notice.</p>
+  <p class="eng">That script is pinned line for line by the test and then handed to the
+    <strong>simulator</strong>, which shares no transition code with the engine:</p>
+
+  <pre>    replay -&gt; w(fulfilled,0,0,0,2,1,0)   REPRODUCED
+    settled? false</pre>
+
+  <p class="eng">And the control that makes "reproduced" a measurement rather than a formality:
+    a script with one answer altered is <em>rejected</em> by the same replay.</p>
+</section>
+
+<section>
+  <p class="kicker">the check</p>
+  <h2 class="kid">Does it actually work? We ran the shop 200 000 times</h2>
+  <h2 class="eng">The simulator, the oracle, and the discrepancies by name</h2>
+
+  <p class="kid">A program that reasons about a shop is only worth trusting if somebody also
+    <em>runs</em> the shop and checks. So there is a second program that plays out orders for
+    real, with a coin flip deciding whether each provider works. Two hundred thousand orders.</p>
+  <p class="eng">The whole machine is re-derived in plain TypeScript from the domain description
+    &mdash; a switch over stages, no rules, no engine &mdash; and the three regions are computed
+    by the two textbook attractors. Neither is an alternating fixpoint, so the gap between them
+    is an independent prediction.</p>
+
+  <div class="scroll eng">
+    <table>
+      <tr><th>compared</th><th class="num">n</th><th class="num">disagreements</th></tr>
+      <tr><td>states</td><td class="num mono">133</td><td class="num mono">0</td></tr>
+      <tr><td>transitions</td><td class="num mono">389</td><td class="num mono">0</td></tr>
+      <tr><td>settled terminals</td><td class="num mono">6</td><td class="num mono">0</td></tr>
+      <tr><td>verdicts</td><td class="num mono">133</td><td class="num mono">0</td></tr>
+      <tr><td><code>can_settle</code></td><td class="num mono">133</td><td class="num mono">0</td></tr>
+    </table>
+  </div>
+
+  <p class="kid">And the result of the two hundred thousand orders is the most interesting number
+    on this page:</p>
+
+  <pre>    200 000 random runs -&gt; 173100 settled, 26900 failed, 0 capped.</pre>
+
+  <p class="kid"><strong>Not one of them got stuck.</strong> That is not a failure of the
+    experiment &mdash; it is the whole point. Getting stuck needs the courier to go quiet sixty
+    times in a row, which has a chance of about one in
+    10<sup>40</sup>. You could run a billion orders a second until the sun goes out and never
+    see it. But it happens in real shops, because real couriers do not flip coins &mdash; they
+    have outages. The reasoning found it without running anything.</p>
+  <p class="eng"><code>silence</code> has weight 8 in 100 and the cap is 60 steps, so a hanging
+    run needs a run of silences of probability around 1e-40. Sampling is the wrong instrument
+    for this pathology. Under the malicious provider &mdash; a fixed preference order that knows
+    nothing about the analysis &mdash; the same twenty-four states hang on the first run.</p>
+
+  <h3 class="eng">Four outcomes, named, never averaged</h3>
+  <p class="eng">The comparison is a derived relation in the model, not a diff in TypeScript:
+    the simulator files its journal into its own ledger <code>[sim]</code> and
+    <code>crosscheck/3</code> joins it against <code>verdict/2</code>. A table of rates would say
+    the two agree 94% of the time and destroy exactly what the comparison is for.</p>
+
+  <div class="scroll eng">
+    <table>
+      <tr><th>name</th><th class="num">rows</th><th class="wrap-cell">what it is</th></tr>
+      <tr><td class="mono">dead_letter_never_observed</td><td class="num mono">48</td>
+        <td class="wrap-cell">24 dead letters &times; 2 non-adversarial environments. The pathology no sampling reaches &mdash; the reason to do the analysis at all.</td></tr>
+      <tr><td class="mono">policy_hangs_where_a_strategy_exists</td><td class="num mono">20</td>
+        <td class="wrap-cell">A defect in the <em>deployed policy</em>: a strategy exists and the policy is not playing it.</td></tr>
+      <tr><td class="mono">forced_but_never_seen</td><td class="num mono">4</td>
+        <td class="wrap-cell">Not a defect in either. <code>doomed</code> is a claim about an adversary; a random provider is not one.</td></tr>
+      <tr><td class="mono">agrees_forced_and_observed</td><td class="num mono">22</td>
+        <td class="wrap-cell">The agreement, kept as its own row. A comparison that can only report trouble is not a comparison.</td></tr>
+    </table>
+  </div>
+
+  <p class="eng">The second row is worth the whole exercise. Replaying each hanging run step by
+    step gives the exact move where the model and the policy part company &mdash; eight distinct
+    moves, all the same mistake:</p>
+
+  <pre>    parts company at              plays   certified
+    w(ship,0,0,1,1,0,0)           call    abort
+    w(ship,0,0,1,1,0,1)           call    abort
+    w(ship,0,0,1,2,0,0)           call    abort
+    w(ship,1,0,1,1,0,0)           call    abort</pre>
+
+  <p class="eng">At the shipping stage the policy calls the carrier and the certificate says
+    <strong>do not</strong> &mdash; cancel the order instead, because a carrier that can go quiet
+    cannot be made to deliver. An unwelcome answer, a correct one, and one no amount of retrying
+    discovers.</p>
+  <p class="kid">And when the two disagree, the program does not average them into a percentage.
+    It says <em>which</em> orders, and <em>at which step</em>, and <em>what should have been done
+    instead</em>. An average would throw away the only thing worth knowing.</p>
+</section>
+
+<section>
+  <p class="kicker">what a line is worth</p>
+  <h2 class="kid">One rule, twelve orders</h2>
+  <h2 class="eng">The policy is a block of facts, and each line has a price</h2>
+
+  <p class="kid">Nothing in the reasoning part of the file mentions how many times to retry, or
+    whether to double-check with the bank. Those are separate lines, so you can delete one and
+    see what it cost.</p>
+  <p class="eng">Nothing below the <code>-- @machine</code> marker names a retry count. A policy
+    change is a line, and what it is worth is a number.</p>
+
+  <div class="scroll">
+    <table>
+      <tr><th>policy</th><th class="num">states</th><th class="num">settles</th><th class="num">doomed</th><th class="num">dead letter</th></tr>
+      <tr><td>baseline</td><td class="num mono">133</td><td class="num mono">77</td><td class="num mono">32</td><td class="num mono">24</td></tr>
+      <tr><td>no verify probe for the charge</td><td class="num mono">126</td><td class="num mono">65</td><td class="num mono">37</td><td class="num mono">24</td></tr>
+      <tr><td>no probes at all</td><td class="num mono">108</td><td class="num mono">65</td><td class="num mono">41</td><td class="num mono">2</td></tr>
+      <tr><td>reserve may abort under doubt</td><td class="num mono">137</td><td class="num mono">85</td><td class="num mono">28</td><td class="num mono">24</td></tr>
+      <tr><td>no stage needs certainty</td><td class="num mono">160</td><td class="num mono">101</td><td class="num mono">44</td><td class="num mono">15</td></tr>
+      <tr><td>refund gets the forward budget</td><td class="num mono">133</td><td class="num mono">65</td><td class="num mono">42</td><td class="num mono">26</td></tr>
+    </table>
+  </div>
+
+  <p class="kid">Deleting the rule "before charging again, ask the bank whether the first one went
+    through" costs twelve situations their guarantee &mdash; and it is exactly the twelve where a
+    retry would take the money twice.</p>
+  <p class="eng">Deleting <code>probe_of(charge, verify)</code> costs twelve states their
+    guarantee, all of them at the charge stage with the doubt flag set. And one line the other
+    way: <code>abort_needs_certainty(reserve)</code> &mdash; <em>only compensate when you know
+    where you stand</em> &mdash; sounds prudent and costs eight states, because reserving is
+    idempotent and the doubt is harmless there. The policy has no idea which stages are
+    idempotent. The model does.</p>
+
+  <div class="note warn">
+    <p class="kid"><strong>One thing the program has to be told.</strong> If the bank is allowed
+      to be broken for ever, then nothing can ever be guaranteed and the answer is useless. So it
+      is told a number: the providers may misbehave at most twice per order. Every answer above
+      depends on that number, so the program shows what happens at other numbers instead of
+      hiding it.</p>
+    <p class="eng"><strong>The fairness assumption, stated as a number because it has to be.</strong>
+      Real reliability work assumes providers <em>eventually</em> behave &mdash; a liveness
+      property over infinite plays, which a finite AND/OR fixpoint cannot express.
+      <code>slack(N)</code> is the finite approximation, and it is swept rather than asserted.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <tr><th class="num">slack</th><th class="num">states</th><th class="num">settles</th><th class="num">doomed</th><th class="num">dead letter</th><th class="num">alternations</th></tr>
+      <tr><td class="num mono">0</td><td class="num mono">14</td><td class="num mono">9</td><td class="num mono">3</td><td class="num mono">2</td><td class="num mono">5</td></tr>
+      <tr><td class="num mono">1</td><td class="num mono">56</td><td class="num mono">36</td><td class="num mono">10</td><td class="num mono">10</td><td class="num mono">6</td></tr>
+      <tr><td class="num mono">2</td><td class="num mono">133</td><td class="num mono">77</td><td class="num mono">32</td><td class="num mono">24</td><td class="num mono">8</td></tr>
+      <tr><td class="num mono">3</td><td class="num mono">238</td><td class="num mono">100</td><td class="num mono">94</td><td class="num mono">44</td><td class="num mono">10</td></tr>
+    </table>
+  </div>
+
+  <p class="eng">Note the degenerate control on the first row: a provider that never misbehaves
+    at all <strong>still leaves two dead letters</strong>, because silence costs it nothing.
+    Silence is not misbehaviour, it is the absence of an answer &mdash; which is why the third
+    category survives a bounded budget and is the one pathology a retry budget cannot buy its way
+    out of.</p>
+</section>
+
+<section>
+  <p class="kicker">the honest part</p>
+  <h2 class="kid">What it cannot do</h2>
+  <h2 class="eng">What could not be modelled</h2>
+
+  <ul class="kid">
+    <li><strong>It cannot tell you how likely anything is.</strong> It says "possible" and
+      "unavoidable", never "probably". For that you need the simulator, and the simulator is
+      blind to the rare cases &mdash; which is exactly why both exist.</li>
+    <li><strong>It has no clock.</strong> A retry budget stands in for real timeouts, and an
+      order one attempt from the end is treated the same whether that attempt comes in a second
+      or a week.</li>
+    <li><strong>It cannot count past two.</strong> Money and parcels are capped, so "charged
+      twice" and "charged five times" are the same state.</li>
+    <li><strong>Somebody has to write the rules down.</strong> The program does not read your
+      code and work out what your shop does. That step is a person's job, and everything after it
+      is guaranteed.</li>
+  </ul>
+
+  <ul class="eng">
+    <li><strong>Fairness.</strong> "A provider called infinitely often eventually answers" is a
+      Streett condition over infinite plays. A Datalog AND/OR fixpoint cannot express it;
+      <code>slack(N)</code> is the finite approximation and every verdict is relative to it.</li>
+    <li><strong>Probability.</strong> The Viterbi semiring could carry a probability through the
+      machine; it cannot carry one through the <em>alternation</em>, because the third value is
+      not a number. So this cannot rank two dead-letter classes by expected volume.</li>
+    <li><strong>Imperfect information, properly.</strong> The fixpoint chooses per state,
+      including states the workflow cannot tell apart. §12 measures whether that mattered here
+      &mdash; 23 observation classes, all uniform, zero needing hidden information &mdash; and
+      that is a measurement, not a theorem. A machine where the classes split would need a
+      genuine imperfect-information game.</li>
+    <li><strong>Unbounded counters.</strong> Capped at two, which is sound for a verdict that
+      only distinguishes "exactly one" and lossy for anything else. <code>dangling/2</code> is
+      the gate that stops the cap becoming a silent hole, and the demo makes it fire.</li>
+    <li><strong>Time.</strong> No clock, no backoff, no deadline. Production dead letter queues
+      are full of tasks that died of a deadline rather than of a counter.</li>
+    <li><strong>Extracting the machine from real code.</strong> The transitions are written by
+      hand. <em>The kernel guarantees consequences, not translation</em> &mdash; softened here
+      only because the translation is checkable, and checked.</li>
+  </ul>
+</section>
+
+<footer>
+  <p><code>examples/rip/</code> in the ROFL repository. Everything quoted on this page is
+  <code>demo.ts</code>'s stdout, unedited, and <code>test/example-rip.test.ts</code> pins it.
+  Run it: <code>node --experimental-strip-types examples/rip/demo.ts</code></p>
+  <p>This is model checking, and no scientific novelty is claimed: well-founded semantics is
+  Van Gelder, Ross and Schlipf's, the alternating fixpoint is Van Gelder's, and games on graphs
+  are a mature field. What is this example's own is the observation that the third value
+  <em>is</em> the dead letter queue &mdash; that the tasks a workflow gets stuck in are exactly
+  the ones for which neither outcome is derivable, and that an engine which can say so hands you
+  the class rather than the incident.</p>
+</footer>
+</div>
+
+<script>
+  (function () {
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+    var body = document.body;
+    var buttons = document.querySelectorAll('.segmented button');
+
+    function setLevel(level) {
+      body.setAttribute('data-level', level);
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.set === level));
+      }
+      store('rip-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    setLevel('eng');
+    var saved = load('rip-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('rip-theme', next);
+    });
+
+    var savedTheme = load('rip-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

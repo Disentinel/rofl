@@ -56,8 +56,14 @@ export function tokenize(src: string): Tok[] {
       i = j;
       continue;
     }
-    if (/[A-Za-z_]/.test(c)) {
-      let j = i;
+    // `$` is a name character in LEADING position only. Every reflected name
+    // the kernel builds ($lit, $cons, $var, $nil, $not, $builtin, $fact, and
+    // the tense atoms $now/$init/$next) has the marker first and nothing else,
+    // so admitting it there — and nowhere else — makes the reflection readable
+    // from the language that produces it, without letting `_$0` (the parser's
+    // own name for an anonymous variable, minted below) be written by hand.
+    if (/[A-Za-z_$]/.test(c)) {
+      let j = i + 1; // first char already classified; for `$` it is not a continuation char
       while (j < n && /[A-Za-z0-9_]/.test(src[j])) j++;
       const w = src.slice(i, j);
       toks.push({ t: /[A-Z_]/.test(c) ? 'var' : 'ident', v: w, line });

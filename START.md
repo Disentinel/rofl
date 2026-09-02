@@ -61,7 +61,8 @@ The kernel owns exactly these relations. Domain rules may **read** them, never c
 | `reads_from(Id,Persp)` `writes_to(Id,Persp)` | 2 | perspective signature of a rule |
 | `mode(Builtin, ModeList)` | 2 | declared directionality of builtins |
 | `reserved(Rel)` | 1 | this table itself, queryable |
-| `authority(Persp, Who)` `asserted_by(Fact, Who)` | 2 | who may / did assert |
+| `authority(Persp, Who)` | 2 | who may assert |
+| `asserted_by(Fact, Who, Tick)` | 3 | who did assert, and when |
 | `hole(QueryId, Reason)` | 2 | budget exhaustion marker, emitted by kernel |
 | `edb(Rel)` | 1 | relation has base facts |
 
@@ -178,7 +179,7 @@ breach[audit](R)      :- concludes(R, Rel), reserved(Rel).
 flow(A, B)            :- reads_from(R, A), writes_to(R, B).
 leak[audit](A, B)     :- flow(A, B), not sees(B, A), not bridge_decl(R, A, B).
 
-forged[audit](F)      :- asserted_by(F, Who), in_perspective(F, P),
+forged[audit](F)      :- asserted_by(F, Who, _), in_perspective(F, P),
                          not authority(P, Who).
 
 unmoded[audit](R)     :- uses_builtin(R, B), not mode(B, _).

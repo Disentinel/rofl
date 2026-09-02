@@ -5,9 +5,12 @@
 -- derive anything into [epistemic] — any number of agreeing agents is still
 -- zero measurements (the echo invariant, tested).
 --
--- NB: bodies with variable perspectives require an explicit head
--- perspective, otherwise the flow surfaces as leak[audit] (the explicit
--- head is what emits bridge_decl — see docs/choosing-perspectives.md).
+-- NB: a body with a VARIABLE perspective is a gather, and it must be
+-- declared. Writing an explicit head perspective used to be enough — the
+-- kernel emitted `bridge_decl` for it and `crossing` read that as a licence,
+-- so the rule authorised its own read by existing. That is gone. The sentence
+-- that licenses `agent_disputed` below is `collects(main)`, written out in
+-- ontology.rofl with the reservation it deserves.
 
 agent_disputed[main](C) :- agent_state[P](C, supported),
                            agent_state[Q](C, refuted).

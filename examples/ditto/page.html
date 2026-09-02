@@ -1,0 +1,1229 @@
+<meta charset="utf-8">
+<title>DITTO — Proving a Refactoring Preserved What It Promised</title>
+
+<style>
+  :root {
+    --bg:        #f9f8f5;
+    --panel:     #ffffff;
+    --ink:       #1a1a1d;
+    --ink-soft:  #55535a;
+    --ink-faint: #86838d;
+    --line:      #e2dfda;
+    --line-soft: #edeae5;
+    --accent:    #3a5a8c;
+    --accent-bg: #eaeff7;
+    --good:      #2f6b3f;
+    --good-bg:   #eaf3ec;
+    --gone:      #a33232;
+    --gone-bg:   #fbeceb;
+    --warn:      #8a5a10;
+    --warn-bg:   #fbf1e0;
+    --code-bg:   #f2efe9;
+    --shadow:    0 1px 2px rgba(26, 26, 29, .05), 0 8px 24px rgba(26, 26, 29, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #131418;
+      --panel:     #1c1d23;
+      --ink:       #e9e8ee;
+      --ink-soft:  #adaab6;
+      --ink-faint: #7d7a86;
+      --line:      #32333d;
+      --line-soft: #26272f;
+      --accent:    #8fb4e4;
+      --accent-bg: #1a222f;
+      --good:      #8ad3a0;
+      --good-bg:   #16271b;
+      --gone:      #ef9494;
+      --gone-bg:   #2c1717;
+      --warn:      #e5b567;
+      --warn-bg:   #2b2113;
+      --code-bg:   #101116;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #131418;
+    --panel:     #1c1d23;
+    --ink:       #e9e8ee;
+    --ink-soft:  #adaab6;
+    --ink-faint: #7d7a86;
+    --line:      #32333d;
+    --line-soft: #26272f;
+    --accent:    #8fb4e4;
+    --accent-bg: #1a222f;
+    --good:      #8ad3a0;
+    --good-bg:   #16271b;
+    --gone:      #ef9494;
+    --gone-bg:   #2c1717;
+    --warn:      #e5b567;
+    --warn-bg:   #2b2113;
+    --code-bg:   #101116;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 48rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem;
+    display: flex; align-items: baseline; gap: .6rem;
+  }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; max-width: 48rem; }
+  .kid p { font-size: 1.05rem; }
+  ul, ol { padding-left: 1.2rem; max-width: 48rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .8rem; line-height: 1.5;
+    margin: 1rem 0; color: var(--ink);
+  }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  figure { margin: 1.4rem 0; }
+  figcaption {
+    font-size: .82rem; color: var(--ink-faint); margin-top: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--good); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .cards { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.5rem 0; }
+  .card {
+    flex: 1 1 15rem; min-width: 13rem; border: 1px solid var(--line); border-radius: 12px;
+    padding: .9rem 1rem; background: var(--panel); box-shadow: var(--shadow);
+  }
+  .card .h {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .card .v { font-size: 1.5rem; font-weight: 650; margin: .2rem 0 .1rem; letter-spacing: -.02em; }
+  .card .w { font-size: .84rem; color: var(--ink-soft); }
+  .card.bad .v { color: var(--gone); }
+  .card.ok .v { color: var(--good); }
+
+  .chain {
+    margin: 1.5rem 0; padding: 1.1rem; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .chain ol { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+  .chain li {
+    position: relative; padding: .55rem 0 .55rem 2.2rem; margin: 0;
+    border-bottom: 1px solid var(--line-soft); font-size: .95rem;
+  }
+  .chain li:last-child { border-bottom: 0; }
+  .chain li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: .5rem;
+    width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent); font-weight: 650;
+    font-size: .78rem; display: grid; place-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .chain li .m { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem; }
+  .chain li small { display: block; color: var(--ink-soft); font-size: .85rem; }
+
+  .split { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.4rem 0; }
+  .half {
+    flex: 1 1 18rem; border: 1px solid var(--line); border-radius: 12px; padding: 1rem;
+    background: var(--panel); box-shadow: var(--shadow);
+  }
+  .half.dies { border-color: var(--gone); background: var(--gone-bg); }
+  .half.lives { border-color: var(--good); background: var(--good-bg); }
+  .half .t { font-weight: 650; margin-bottom: .3rem; }
+  .half .s { font-size: .88rem; color: var(--ink-soft); }
+
+  .note {
+    border-left: 3px solid var(--warn); background: var(--warn-bg);
+    padding: .8rem 1rem; border-radius: 0 8px 8px 0; margin: 1.4rem 0;
+    font-size: .95rem; max-width: 48rem;
+  }
+  .note strong { color: var(--warn); }
+
+  table.t { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1.2rem 0; }
+  table.t th, table.t td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  table.t th { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  table.t td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84rem; white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-size: .95em; }
+
+  @media (max-width: 34rem) {
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/ditto</p>
+  <h1>DITTO <span class="dim">— prove the refactoring preserved what it promised</span></h1>
+  <p class="lede">
+    Somebody says "I only tidied it up". Pin the model of the code before the
+    edit, re-read it after, and check the exact list of things the edit said it
+    would not touch. Not "behaviour is identical" — that cannot be proved, and
+    promising it is a lie.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> The problem</h2>
+
+  <div class="kid">
+    <p>
+      Imagine a big machine made of small parts, and somebody rearranges the
+      parts to make it tidier. They promise the machine still does exactly the
+      same thing.
+    </p>
+    <p>
+      How would you check? Today you press a few buttons and see if the right
+      lights come on. If they do, everyone says "fine". But you only pressed a
+      few buttons, and the machine has thousands.
+    </p>
+    <p>
+      What nobody checks is the <em>wiring</em>. A wire can be unplugged and all
+      the lights you happened to press still come on — until the day you need
+      the one that does not.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      "This is a refactoring" is an assertion nobody checks. Tests check sampled
+      <strong>outputs</strong> on sampled <strong>inputs</strong>. Nothing
+      checks <strong>structure</strong>, and nothing lets the author say
+      <em>which subset</em> of the structure was supposed to survive.
+    </p>
+    <p>
+      A refactoring is an <strong>equivalence class</strong>, and different
+      refactorings preserve different things — extract-method preserves external
+      behaviour and reachability while changing internal structure, a rename
+      preserves everything but identifiers, a module move preserves dependencies
+      while changing file layout. Existing tools cannot express "this may move
+      and that may not".
+    </p>
+    <p>
+      The prior art is dense and it all does the same thing:
+      characterization tests and golden master, snapshot testing, contract
+      testing, differential testing, shadow traffic and request replay, GitHub
+      Scientist, Twitter Diffy. <strong>All of them compare outputs.</strong>
+      None compares structure, and none lets you declare which invariants have
+      to survive. The gap is exactly there, and it is narrow.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card bad"><div class="v">2</div><div class="h">violated</div><div class="w">declared invariant tuples that did not survive the edit</div></div>
+    <div class="card ok"><div class="v">36</div><div class="h">held</div><div class="w">of 38 tuples the change promised to preserve</div></div>
+    <div class="card"><div class="v">51</div><div class="h">facts moved</div><div class="w">what a byte diff or a golden master sees instead</div></div>
+    <div class="card"><div class="v">0</div><div class="h">guesses in extraction</div><div class="w">both models are the output of the same dumb reader</div></div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> What cannot be proved</h2>
+
+  <div class="kid">
+    <p>
+      There is no way — not with more computers, not with more time — to prove
+      that two programs always do the same thing. That is a settled
+      mathematical fact, not a limitation of this tool.
+    </p>
+    <p>
+      So this tool never says "it behaves the same". It says something smaller
+      and true: <em>you wrote down a list, and here is what happened to every
+      item on your list.</em>
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Program equivalence is undecidable. "Behaviour is identical" cannot be
+      proved and promising it is a lie. What <em>can</em> be proved is that the
+      <strong>declared and extractable</strong> set of invariants survived —
+      strictly weaker than the informal promise and strictly more useful,
+      because it is checkable.
+    </p>
+    <p>
+      That wording is fixed in the model rather than in the renderer, and
+      <code>undecidable/1</code>, <code>scope_covered/1</code> and
+      <code>out_of_scope/1</code> are facts in the program, so the tool prints
+      its own boundary instead of letting a reader assume it covered everything.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> Two revisions, one reader</h2>
+
+  <div class="kid">
+    <p>
+      Before the change, a machine reads the code and writes down plain facts:
+      which functions exist, which one calls which, what each file lets the
+      outside world use. After the change, <em>the same machine</em> reads the
+      new code and writes the same kind of facts.
+    </p>
+    <p>
+      Nobody judges anything while reading. Two lists, made the same way, and
+      then they get compared.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Extraction is deterministic at both ends. <code>scanners/js.ts</code> —
+      which already exists in this repository for other purposes — parses
+      TypeScript into <code>src_func</code>, <code>src_call</code>,
+      <code>src_import</code>, <code>src_export</code> facts and stops. It does
+      not resolve an import specifier to a file, because a scanner that resolved
+      imports would be a compiler, so resolution happens in
+      <strong>rules</strong> instead, where it stays inspectable.
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>[before]  before/  7 files, 16 functions, 23 call sites, 12 exports, 86 facts
+[after]   after/   7 files, 19 functions, 27 call sites, 12 exports, 93 facts
+extractor: rofl_js_scanner @ 17e95752918c  (the content hash of scanners/js.ts)</pre></div>
+    </figure>
+    <p>
+      The two models go into <strong>two ledgers</strong> and the kernel keeps
+      them apart. <code>[before]</code> is written by the freeze,
+      <code>[after]</code> by the live re-extraction, <code>[claim]</code> by the
+      engineer, and every conclusion lives in <code>[main]</code> and reads all
+      three through declared imports. "Preserved" and "violated" are
+      <em>derived</em>; nothing is ever filed under them.
+    </p>
+    <div class="note">
+      <strong>The extractor version is the content hash of the extractor.</strong>
+      Change the reader and the version changes by construction. Section 11 shows
+      what happens when the freeze and the check disagree about it.
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> The list is written by a person</h2>
+
+  <div class="kid">
+    <p>
+      This is the one step a machine cannot do. Somebody has to say what kind of
+      tidying this was, because that is what decides which things are allowed to
+      move.
+    </p>
+    <p>
+      Renaming something is allowed to change names and nothing else. Moving a
+      file is allowed to change where files live and nothing else. Pulling a
+      piece of one function into a new function is allowed to change the inside
+      wiring — but not what the program reaches out and touches.
+    </p>
+    <div class="note">
+      <strong>Putting several kinds of tidying in one change costs you.</strong>
+      You can only promise what <em>all</em> of them promise. The rename alone
+      promised the wiring would not move; doing the rename and the extraction
+      together gives that promise away, and the tool tells you so.
+    </div>
+  </div>
+
+  <div class="eng">
+    <p>
+      The <em>catalogue</em> of classes belongs to the tool — it is what the
+      words mean. <em>Choosing</em> one belongs to the engineer, in
+      <code>[claim]</code>, and that separation is enforced rather than
+      conventional: the extractor has no <code>authority</code> over
+      <code>[claim]</code>, so a tool that tried to declare its own equivalence
+      class would surface as <code>forged[audit]</code>, mechanically.
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>e_dedupe_audit      dedupe           notifyOps stops writing a second audit line
+e_extract_discount  extract_method   pull the discount arithmetic out of settle()
+e_move_storage      module_move      db.ts moves under storage/
+e_rename_customer   rename           findCustomer -&gt; loadCustomer, everywhere
+e_swap_price_index  data_structure   price lookup: linear scan -&gt; Map
+
+OBLIGED (must survive) : boundary, entry_effect, entry_reach, module_dep
+WAIVED  (may change)   : identifier, internal, layout
+
+Mixing edits weakens the claim, monotonically: you may promise only what
+ALL of your edits promise. What this change gave up, and to whom:
+  identifier   promised by module_move
+               waived   by data_structure, dedupe, extract_method, rename
+  internal     promised by module_move, rename
+               waived   by data_structure, dedupe, extract_method
+  layout       promised by data_structure, dedupe, extract_method, rename
+               waived   by module_move</pre></div>
+      <figcaption>examples/ditto/demo.ts, section 1</figcaption>
+    </figure>
+    <p>
+      Each invariant is a <strong>set of ground tuples</strong> extracted the
+      same way on both sides — a set of derived predicates, never a list of
+      files. <code>entry_effect</code> is the (entry point, effect) pairs
+      reachable from the front door; <code>boundary</code> is (module, exported
+      name); <code>module_dep</code> is the import graph;
+      <code>entry_reach</code> is which exported functions the entry point can
+      still get to. The check is set difference over
+      <code>obs(Side, Invariant, Tuple)</code>.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> The verdict</h2>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>INVARIANT      BEFORE  AFTER  LOST  GAINED  VERDICT
+boundary       12      12     0     0       HELD
+entry_effect   5       4      1     0       VIOLATED
+entry_reach    7       6      1     0       VIOLATED
+module_dep     14      14     0     0       HELD
+
+36 of 38 declared tuples survived.
+  VIOLATED  entry_effect  orders.ts:handleOrder -&gt; db_write   (disappeared)
+  VIOLATED  entry_reach   orders.ts:handleOrder -&gt; storage/db.ts:persist   (disappeared)
+
+and the changes that were licensed, which is most of the edit:
+  identifier    2 removed, 5 added   (waived)
+  internal      3 removed, 4 added   (waived)
+  layout        1 removed, 1 added   (waived)</pre></div>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Two problems, one cause. While pulling a piece out of one function, the
+      line that <em>saves the order to the database</em> came out with it and
+      never went back. The order is still processed. The customer still gets a
+      receipt. Nothing is ever written down.
+    </p>
+    <p>
+      The last block matters as much: most of the change <em>did</em> move
+      things, and all of that was allowed. A checker that found nothing changed
+      at all would not be checking anything.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Extracting <code>applyDiscount</code> out of <code>settle()</code> took the
+      <code>persist(order, receipt)</code> call with it. The database write is no
+      longer reachable from the entry point, and an exported function is no
+      longer reachable either — two rows, one cause. Every test over this service
+      still passes: <code>handleOrder</code> returns the same receipt.
+    </p>
+    <p>
+      Directions are per-invariant. <code>entry_effect</code>,
+      <code>boundary</code> and <code>module_dep</code> are exact — gaining an
+      effect reachable from an entry point <em>is</em> a behaviour change — while
+      the rest are no-loss.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> Was / is</h2>
+
+  <div class="kid">
+    <p>
+      The useful answer is not "something is different". It is: here is the path
+      the data used to take, and here is exactly the step that is missing.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Not "the diff did not match", but: the predicate is no longer derivable,
+      here is the chain that derived it, here is the link that is gone.
+    </p>
+  </div>
+
+  <div class="chain">
+    <ol>
+      <li><span class="m">handleOrder</span>
+          <small>the entry point — the one function the outside world calls.</small></li>
+      <li><span class="m">settle</span>
+          <small>takes the money, and used to write the order down afterwards.</small></li>
+      <li><span class="m">persist &middot; db.insert</span>
+          <small>the database write. In the new code nothing calls it any more, from anywhere.</small></li>
+    </ol>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>$ ditto why orders.ts:handleOrder -&gt; db_write
+
+WAS — every route in the frozen model that carried it:
+  orders.ts:handleOrder -&gt; orders.ts:settle -&gt; db.ts:persist  [db_write]
+
+  and it rested on 11 base facts — 9 read out of the source, the rest
+  the effect catalogue and the ledger tag. Remove any one and it is gone:
+    effect_api[main]("db.insert",db_write)
+    resolves[before]("orders.ts","./db.ts","db.ts")
+    side[main](before)
+    src_call[before]("db.ts","persist","db.insert")
+    src_call[before]("orders.ts","handleOrder","settle")
+    src_call[before]("orders.ts","settle","persist")
+    src_export[before]("db.ts","persist")
+    src_func[before]("db.ts","persist",6)
+    src_func[before]("orders.ts","handleOrder",9)
+    src_func[before]("orders.ts","settle",31)
+    src_import[before]("orders.ts","./db.ts")
+
+IS — the chain stops one link short:
+  orders.ts:handleOrder -&gt; orders.ts:settle   (stops here)</pre></div>
+    <figcaption>the provenance fold: which parts of the code carried the invariant</figcaption>
+  </figure>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>whynot edge[main](after,fn("orders.ts","settle"),fn("storage/db.ts","persist")):
+  rule r87550593: edge[main](?S,fn(?P,?F),fn(?Q,?N))@now :- calls[main](?S,?P,?F,?N)@now, func[main](?S,?P,?F)@now, target[main](?S,?P,?N,?Q)@now
+    failed premise: calls[main](after,"orders.ts","settle","persist")
+      rule rda797ee2: calls[main](?S,?P,?F,?C)@now :- src_call[?S](?P,?F,?C)@now, side[main](?S)@now
+        failed premise: src_call[after]("orders.ts","settle","persist")
+          no rule concludes 'src_call' and no matching base fact exists</pre></div>
+    <figcaption>the missing link, named</figcaption>
+  </figure>
+
+  <div class="eng">
+    <p>
+      And nothing else calls it either. <code>whynot</code> enumerates every
+      candidate rather than asserting exhaustiveness — the list below is every
+      function reachable from the entry point, each one checked and each one
+      not calling <code>persist</code>:
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>whynot creach[main](after,fn("orders.ts","handleOrder"),fn("storage/db.ts","persist")):
+  rule r9f50189f: creach[main](?S,?A,?B)@now :- edge[main](?S,?A,?B)@now
+    failed premise: edge[main](after,fn("orders.ts","handleOrder"),fn("storage/db.ts","persist"))
+  rule rfbd513bf: creach[main](?S,?A,?C)@now :- creach[main](?S,?A,?B)@now, edge[main](?S,?B,?C)@now
+    failed premise: edge[main](after,fn("audit.ts","record"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("audit.ts","stamp"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("notify.ts","notifyCustomer"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("notify.ts","notifyOps"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("notify.ts","renderReceipt"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("notify.ts","summarize"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("orders.ts","applyDiscount"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("orders.ts","checkStock"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("orders.ts","settle"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("orders.ts","validateOrder"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("payments.ts","charge"),fn("storage/db.ts","persist"))
+    failed premise: edge[main](after,fn("payments.ts","toReceipt"),fn("storage/db.ts","persist"))</pre></div>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">7</span> What actually happens in the engine</h2>
+
+  <div class="kid">
+    <p>
+      This part is for people who want to see the gears. The short version: the
+      whole thing is a list of "if this, then that" rules, applied over and over
+      to a pile of facts until nothing new comes out. Then the same rules are
+      run <em>backwards</em> to explain any answer.
+    </p>
+    <p>
+      Switch to <strong>Engineer</strong> above for the long version.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      One evaluation of this world decodes <strong>96 rules</strong> — 22 from
+      <code>boot.rofl</code>, the meta-kernel, and 74 from
+      <code>ditto.rofl</code> — and leaves <strong>10,170 facts</strong> in the
+      store, of which <strong>5,836</strong> are the kernel's own rule
+      reflection and firing provenance rather than anything about the code.
+      Every derived fact carries a <code>derived_by(Fact, RuleId, Tick)</code>
+      record, emitted by the kernel with no cooperation from the program.
+    </p>
+
+    <h3>The strata, and why the order is load-bearing</h3>
+    <p>
+      <code>boot.rofl</code> computes the stratification <em>as data</em>: it
+      derives <code>dep/2</code>, <code>dep_neg/2</code>, <code>reach/2</code>
+      and <code>stratum/2</code> over the program's own reflection, and the
+      kernel reads the table rather than containing a stratification checker.
+      Over this program that gives <strong>112 relations across 4 distinct
+      strata</strong>, and the engine runs each negation phase to fixpoint before
+      opening the next.
+    </p>
+    <div class="scroll">
+      <table class="t">
+        <tr><th>stratum</th><th>relations</th><th>what has to be finished first</th></tr>
+        <tr>
+          <td class="mono">0</td>
+          <td class="mono">func, calls, exported, imports_edge, visible, does, boundary_node, skew, waived, weakened_by</td>
+          <td>nothing — this layer is monotone. Both models are lifted out of their ledgers into one vocabulary, imports resolve, and effects attach to call sites.</td>
+        </tr>
+        <tr>
+          <td class="mono">1</td>
+          <td class="mono">target, edge, creach, route, chain, fresh, cname, cpath, cnode, cedge, obs, entry, effect_reachable, obliged, refused</td>
+          <td><code>target</code> needs <code>not func</code> (a local definition wins over an import); <code>cname</code> needs <code>not renamed</code>; <code>obliged</code> needs <code>not waived</code>. The call graph, the routes and every observation are built here.</td>
+        </tr>
+        <tr>
+          <td class="mono">2</td>
+          <td class="mono">lost, gained, violated, broken, checked, permitted_change, orphan, lost_edge, hint, probable_cause</td>
+          <td><code>lost</code> is <code>obs(before, I, T), not obs(after, I, T)</code> — it must not be computed until <code>obs</code> is <em>complete on both sides</em>, or "absent" would mean "not derived yet" instead of "not derivable".</td>
+        </tr>
+        <tr>
+          <td class="mono">3</td>
+          <td class="mono">held</td>
+          <td><code>held(I) :- checked(I), not broken(I)</code>. Saying an invariant survived is the last thing the program is allowed to conclude.</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>The recursion, and the reason it carries a chain</h3>
+    <p>
+      Reachability is asked twice, for two different questions.
+      <code>creach</code> is the ordinary walk and it is the right
+      <em>boolean</em>. It is the wrong thing to <em>count</em>:
+      <code>flattenLines</code> in the fixture is recursive, so the graph is on a
+      cycle, every trip round it is another derivation, and the counting
+      semiring answers <code>INFINITE</code> — honest, and useless as a measure
+      of redundancy.
+    </p>
+    <pre>route[main](S, A, A, cons(A, nil))   :- node(S, A).
+route[main](S, A, C, cons(C, Path))  :- route(S, A, B, Path), edge(S, B, C),
+                                        fresh(S, C, Path).</pre>
+    <p>
+      So routes carry the visited chain <strong>inside the fact</strong>, the
+      technique <code>examples/nope</code> uses for assume-role chains.
+      <code>fresh</code> is positive rather than negated — the chain domain is
+      generated by <code>chain</code> from the routes already derived — so this
+      is ordinary monotone recursion over terms and the stratification checker
+      never has to be argued with. It also has to be keyed by <em>side</em>: one
+      route present in both revisions would otherwise give the same
+      <code>chain</code> fact two derivations and double every count through it.
+    </p>
+
+    <h3>The shape of the why-tree</h3>
+    <p>
+      <code>whynot</code> is not a search for a reason. It is the rule set run
+      backwards: for the queried literal it takes <em>every rule that could
+      conclude it</em>, unifies the head, and for each one reports the premise
+      instances that fail — then recurses into each failing premise. Read the
+      block in section 6 as four levels:
+    </p>
+    <ol>
+      <li><code>edge[main](after, settle, persist)</code> — the queried literal;</li>
+      <li><code>rule r87550593</code> — the one rule that concludes
+          <code>edge</code>, with its body printed as stored. The rule id is a
+          content hash of the canonical clause, so editing the rule changes the
+          id and any prose quoting it stops matching;</li>
+      <li><code>failed premise: calls[main](after,"orders.ts","settle","persist")</code>
+          — of the three premises, this is the one with no instance;</li>
+      <li>the same treatment one level down, until it bottoms out at
+          <code>no rule concludes 'src_call' and no matching base fact exists</code>
+          — an extensional relation with no fact. That line is the answer.</li>
+    </ol>
+    <p>
+      Both bounds are hard stops that announce themselves:
+      <code>depth</code> caps the levels and <code>nodes</code> caps the whole
+      tree, and a truncated demonstration prints
+      <code>[depth limit N reached]</code> rather than trailing off. Cycles are
+      caught by a path guard and print <code>[cycle]</code>.
+    </p>
+
+    <h3>How an agent interrogates it</h3>
+    <p>
+      The point of the whole arrangement is that a caller with no knowledge of
+      this program can drive it with six queries:
+    </p>
+    <ol>
+      <li><code>? refused(R)</code> — is the comparison admissible at all? If
+          this is non-empty, stop: nothing below means anything.</li>
+      <li><code>? violated(I, T, D)</code> — what broke, as tuples, with the
+          direction (<code>disappeared</code> or <code>appeared</code>).</li>
+      <li><code>? route(before, Entry, B, Path)</code> — the chains that carried
+          it, with the path inside the fact so it can be printed directly.</li>
+      <li><code>whynot</code> on the corresponding <code>after</code> literal —
+          the missing link, named, with the rule that would have concluded it.</li>
+      <li>a provenance fold over the frozen fact — which extracted facts carried
+          the invariant, and therefore where the loss can be. A counting fold
+          over the same fact — how many independent routes carried it, and
+          whether the survivor is now alone.</li>
+      <li><code>? probable_cause(A, B)</code> — a ranked guess, explicitly a
+          guess, with its evidence tiers.</li>
+    </ol>
+    <p>
+      And then the loop closes: fork the store, assert the repair, evaluate
+      again, and read <code>violated</code> a second time. Nothing in that
+      sequence requires the caller to have read <code>ditto.rofl</code>.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">8</span> A guess, and the proof it stays one</h2>
+
+  <div class="kid">
+    <p>
+      Three calls vanished in this change. Two of them were meant to vanish and
+      one was not — and the tool is <em>not told which</em>. It offers all three
+      with a confidence score, and the real mistake comes out on top because
+      there is more evidence for it: the thing it used to call is still there,
+      still advertised to the outside world, and now nobody calls it at all.
+    </p>
+    <p>
+      It stays a guess. Nothing else the tool says leans on it.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Three tiers of evidence, each a separate derivation of
+      <code>hint</code>, folded with the Viterbi semiring — which takes the
+      <strong>best</strong> tier rather than the product, so confidence is the
+      strongest evidence available and not what survives multiplying the
+      weakest. The weights ride on the <em>firing</em>, so the ledger never
+      carries a number nobody measured.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>orders.ts:settle -&gt; storage/db.ts:persist     confidence 0.8800  (HYPOTHESIS)
+     edge_gone           0.4000   a call that used to exist does not
+     edge_gone_orphan    0.7200   ... and its target is still exported, now called from nowhere
+     edge_gone_effect    0.8800   ... and that orphaned target performs an effect
+notify.ts:notifyOps -&gt; audit.ts:record        confidence 0.4000  (HYPOTHESIS)
+     edge_gone           0.4000   a call that used to exist does not
+pricing.ts:priceOf -&gt; pricing.ts:scanTable    confidence 0.4000  (HYPOTHESIS)
+     edge_gone           0.4000   a call that used to exist does not</pre></div>
+  </figure>
+
+  <div class="eng">
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>reach(violated,   &lt;any guess relation&gt;) -&gt; empty
+reach(held,       &lt;any guess relation&gt;) -&gt; empty
+reach(obliged,    &lt;any guess relation&gt;) -&gt; empty
+reach(lost,       &lt;any guess relation&gt;) -&gt; empty
+reach(obs,        &lt;any guess relation&gt;) -&gt; empty
+reach(checked,    &lt;any guess relation&gt;) -&gt; empty</pre></div>
+      <figcaption>the guarantee is structural, read off the kernel's own rule dependency graph</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">9</span> What a diff sees</h2>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>raw extraction, no declared identification at all:
+  facts before / after            72 / 79
+  identical                       50
+  only in before / only in after  22 / 29
+  files byte-identical            3 of 7</pre></div>
+  </figure>
+
+  <div class="split">
+    <div class="half dies">
+      <div class="t">51 facts moved</div>
+      <div class="s">what a golden master, a snapshot test or a byte diff is looking at. It can only say "it all changed".</div>
+    </div>
+    <div class="half lives">
+      <div class="t">2 violations</div>
+      <div class="s">the same edit under the declared class. Everything else is legal and named as legal.</div>
+    </div>
+  </div>
+
+  <div class="kid">
+    <p>
+      Two of the changes here were a rename and a moved file. Those touch
+      <em>everything</em> that mentions the old name or the old place, so a tool
+      that just compares the two lists screams that the whole program was
+      rewritten. It has no way to know a rename is a rename — unless somebody
+      tells it.
+    </p>
+    <p>
+      Telling it is two lines. And those two lines have to be right: take the
+      rename line away and the tool immediately reports the tidy-up as a
+      rewrite, which is the check proving it can say <em>no</em>.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      The declared identification is
+      <code>renamed[claim]("findCustomer", "loadCustomer")</code> and
+      <code>moved[claim]("db.ts", "storage/db.ts")</code>. The map applies to
+      <code>[before]</code> only, never to <code>[after]</code>: applying it in
+      both directions would silently rewrite an unrelated new function that
+      happened to reuse an old name.
+    </p>
+    <p>
+      Two invariants are deliberately <strong>raw</strong> rather than
+      canonicalised — <code>identifier</code> and <code>layout</code> — because
+      those are precisely what the maps are allowed to move. Canonicalising them
+      would make a rename unfalsifiable.
+    </p>
+    <div class="note">
+      <strong>The suite proves both directions.</strong> Delete the declared
+      rename and <code>boundary</code> and <code>entry_reach</code> both fail;
+      delete the declared move and <code>module_dep</code> and
+      <code>boundary</code> fail. Two tests further on, two identical revisions
+      violate nothing and all four invariants report HELD. A gate that has only
+      ever answered one way is not a gate.
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">10</span> The invariant that held and lost its spare</h2>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>EFFECT        BEFORE  AFTER   READING
+audit_write   2       1       held, and lost a route: RESERVE GONE
+db_read       1       1       unchanged
+db_write      1       0       VIOLATED — no route left
+mail_send     1       1       unchanged
+net_call      1       1       unchanged</pre></div>
+  </figure>
+
+  <div class="kid">
+    <p>
+      One of the things this program does is write a line into a log every time
+      an order goes through. Before the change, <em>two</em> different paths
+      wrote that line — somebody thought that was wasteful and removed one.
+    </p>
+    <p>
+      The log line still gets written, so nothing is broken. But there used to
+      be a spare and now there is not: the next person who touches the one
+      remaining path can delete the log line entirely, and nothing will notice.
+      That is a problem you can see today about a day that has not happened yet.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      The counting semiring over <code>effect_reachable</code>: the value of the
+      fact is the number of independent simple routes from the entry point to a
+      site performing that effect. <code>audit_write</code> is <strong>not</strong>
+      a violation — the declared invariant holds and the tool says so — and it
+      has gone from two carriers to one.
+    </p>
+    <p>
+      Stating the <em>reading</em> is part of shipping the number. The identical
+      count means robustness in <code>examples/nope</code>, ambiguity in AKA,
+      fragility in <code>examples/drip</code>, and <strong>reserve</strong> here.
+    </p>
+    <div class="note">
+      <strong>What the declaration cannot say.</strong> There is no way in this
+      vocabulary to write "and the number of routes must not drop". Whether
+      losing a spare should block a merge is a human call, and it is named here
+      rather than quietly decided.
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">11</span> Proposing a fix, and refusing to answer</h2>
+
+  <div class="kid">
+    <p>
+      Once the tool knows which wire is missing, it can put the wire back in a
+      <em>copy</em> of the model and check again, without touching anything real.
+      Two violations become zero — so that really was the missing wire.
+    </p>
+    <p>
+      And the tool knows when not to answer at all. If the "before" list and the
+      "after" list were written down by two different readers, comparing them
+      says something about the readers, not about the code. So it refuses —
+      including refusing to say everything is fine.
+    </p>
+  </div>
+
+  <div class="eng">
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>$ ditto propose src_call[after]("orders.ts", "settle", "persist").
+  violations before the fork : 2
+  violations after the fork  : 0
+  invariants held            : boundary, entry_effect, entry_reach, module_dep
+  store.clone() of 10170 facts : 219 ms (21.5 us/fact)
+  full re-evaluation         : 254 ms
+  control — a FLAT store     : 136 ms for 10049 ground facts (13.5 us/fact)</pre></div>
+      <figcaption>the proposal is CHECKED in a second fixpoint, not asserted</figcaption>
+    </figure>
+    <p>
+      The control is printed because a per-fact cost is not portable: 5,836 of
+      this store's 10,170 facts are rule reflection and firing provenance
+      carrying nested terms, and they copy at about 1.6&times; the cost of a flat
+      ground fact. Neither figure reproduces the ~3&nbsp;µs/fact recorded for
+      <code>clone()</code> elsewhere in this repository — and the flat control
+      here does not either, so most of that gap belongs to the measurement
+      rather than to this store. Printed rather than smoothed over.
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>freeze taken with 17e95752918c, check run with a-different-parser
+
+  ? refused(R)   -&gt; version_skew
+  ? checked(I)   -&gt; -
+  ? violated(I, T, D) -&gt; 0 rows
+  ? held(I)      -&gt; -</pre></div>
+      <figcaption>note the last line: a refused comparison must not be able to say YES either</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">12</span> The case this repository provided, the day this was written</h2>
+
+  <div class="kid">
+    <p>
+      This is not a made-up worry. On the day this page was written, three
+      tidy-ups landed in the engine that runs all of this, and the way each one
+      was approved was: <em>take a photograph of the output before and after; if
+      the photographs are identical, it is fine.</em>
+    </p>
+    <p>
+      One of them really was fine. Another one passed the photograph test
+      perfectly — identical, not one byte different — and was broken anyway,
+      badly enough to give nine wrong answers elsewhere. The photographs could
+      not see it because they were all taken of simple programs, and the broken
+      part only showed up in a complicated one.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      Three refactorings landed inside <code>src/</code> on 2026-08-30, and the
+      acceptance gate for each was literally a golden master: <em>the goldens
+      must move zero bytes</em>.
+    </p>
+    <ul>
+      <li>The <strong>argument index</strong> rewrote much of
+          <code>src/store.ts</code>. Goldens moved zero bytes, full suite green.
+          A legal internal rebuild, correctly accepted.</li>
+      <li>The <strong>meta-layer cache</strong> passed its own fifteen tests,
+          moved the goldens by zero bytes, <strong>and still broke nine tests in
+          <code>examples/wtf/</code></strong> — a creature's characteristics
+          computed as 2/2 where they should be 3/3. Wrong answers, not flakes.
+          The goldens could not see it because every golden program stops at one
+          to three strata and <code>wtf</code> carries fourteen.</li>
+    </ul>
+    <p>
+      The lesson recorded that day, in <code>facts/findings.rofl</code>: a golden
+      is not a substitute for coverage, it is a substitute for a diff. The same
+      evidence — "the goldens moved zero bytes" — was produced by a change that
+      preserved what mattered and by a change that did not, and it could not
+      distinguish them.
+    </p>
+
+    <h3>What a declared class would have caught here, and what it would not</h3>
+    <div class="note">
+      <strong>It would not have caught the meta-cache bug.</strong> Both changes
+      are legal internal rebuilds by DITTO's structural measure:
+      <code>Store</code>'s exported surface, the kernel's entry points and the
+      effects reachable from them did not move in either case. A structural check
+      over <code>src/</code> would have said HELD for both — agreeing with the
+      golden master, including the time the golden master was wrong.
+    </div>
+    <p>
+      <strong>What it adds is that the claim becomes falsifiable.</strong> Both
+      authors made the same acceptance argument and neither had to write down
+      what it meant. Written down, the meta-cache author's class is "the derived
+      fact set of every loaded program is preserved; the internal structure of
+      the meta layer is not" — a sentence that is <em>false</em>, and false in a
+      way something can check. "The goldens moved zero bytes" cannot be false in
+      any interesting way, because it says nothing at all about programs the
+      goldens do not contain.
+    </p>
+    <p>
+      <strong>And it names where the check has to run</strong>: not over
+      <code>src/</code> but over the derived fact set of loaded programs, with
+      <code>[before]</code> the pre-change evaluation and <code>[after]</code>
+      the post-change one. That acceptance had already been written in prose in
+      the finding that proposed the cache — cached must equal uncached,
+      byte-identical, plus a negative test proving the cache can miss. It was
+      implemented, it passed, and the bug went through anyway, because the
+      programs it ran on were the shallow ones.
+    </p>
+    <p>
+      So the honest general statement, which is this example's own boundary:
+      <strong>a declared equivalence class tells you WHAT to compare; it does not
+      tell you WHAT TO COMPARE IT ON.</strong> Corpus coverage is an orthogonal
+      axis and DITTO does not touch it.
+    </p>
+    <p>
+      What DITTO <em>does</em> catch is the other failure: a change whose
+      structure moved while every sampled output stayed the same. That is the
+      planted defect on this page, and it is the shape a golden master is blind
+      to by construction rather than by bad luck —
+      <code>handleOrder</code> returns the same receipt either way.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">13</span> What it does not prove</h2>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>undecidable: program_equivalence — so the verdict is about the
+declared and extractable set and nothing else. The model covers:
+  + call_graph
+  + effects_through_declared_apis
+  + export_surface
+  + module_dependency
+  + reachability_from_entry_points
+and is blind to, and does not claim to have ruled out:
+  - anything_needing_symbolic_execution
+  - concurrency_and_ordering
+  - control_flow_and_data_values
+  - dynamic_dispatch
+  - higher_order_callbacks
+  - performance_and_resource_use
+  - reflection_and_eval
+
+Extraction coverage, measured rather than assumed: 45 of 50 call
+sites across both revisions resolve to a definition in the tree; the rest
+are library and host calls the reader cannot place:
+  after   orders.ts       applyDiscount -&gt; endsWith
+  after   pricing.ts      buildIndex -&gt; index.set
+  after   pricing.ts      flattenLines -&gt; out.push
+  before  pricing.ts      flattenLines -&gt; out.push
+  after   pricing.ts      lookupPrice -&gt; index.get
+ambiguous name resolutions: 0</pre></div>
+  </figure>
+
+  <div class="kid">
+    <p>
+      The reader can only see calls it can follow by name. A call made through a
+      variable, or decided while the program is running, is invisible to it —
+      and it says so, with a count, instead of pretending the number is zero.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Five of fifty call sites are not placed. The call graph is a
+      <strong>syntactic over-approximation</strong>: a call through an interface,
+      a callback or a value is invisible to it, and on a codebase that dispatches
+      dynamically that is not a rounding error.
+    </p>
+    <p>
+      It also does not replace tests and must not be sold as doing so. It checks
+      a different dimension — structure and effects — where tests check outputs.
+      Together they cover more than either.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">14</span> Checked against things that are not the engine</h2>
+
+  <div class="kid">
+    <p>
+      A tool that only agrees with itself has proved nothing. So the same
+      question is answered twice more — once by deleting the suspect line from
+      the old model and re-running everything, and once by a short piece of
+      ordinary code that shares the raw facts and none of the reasoning.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <div class="scroll"><pre>(a) excise src_call[before]("orders.ts", "settle", "persist").
+      removed: entry_effect  orders.ts:handleOrder -&gt; db_write
+      removed: entry_reach  orders.ts:handleOrder -&gt; storage/db.ts:persist
+    VERDICT: AGREE, tuple for tuple
+
+(b) sample: 16 + 19 functions, 17 + 18 resolved edges, 50 call sites re-resolved by hand.
+
+    boundary      engine lost []                        oracle lost []                        AGREE
+    entry_effect  engine lost ["db_write"]              oracle lost ["db_write"]              AGREE
+    entry_reach   engine lost ["storage/db.ts:persist"] oracle lost ["storage/db.ts:persist"] AGREE
+    module_dep    engine lost []                        oracle lost []                        AGREE
+
+    VERDICT: AGREE on every obliged invariant</pre></div>
+  </figure>
+
+  <div class="eng">
+    <p>
+      (a) deletes the base fact from the <strong>frozen</strong> model and
+      re-runs the whole program from scratch: if the model is right about what
+      carried the invariant, the obliged observations that disappear are exactly
+      the ones the edit lost. (b) re-resolves both call graphs in plain
+      TypeScript over the EDB relations, never touching a derived one. The suite
+      also runs it on a fixture it has not seen, because an oracle that agrees on
+      one fixture proves very little.
+    </p>
+    <figure>
+      <span class="real">real output</span>
+      <div class="scroll"><pre>rules decoded (boot + ditto)        96
+of which ditto.rofl contributes     74
+rules not range-restricted          0
+relations evaluated by demand       0
+unstratified relations              0
+holes (budget exhaustion)           0
+malformed[audit]                    0
+breach[audit]                       0
+leak[audit]                         0
+forged[audit]                       0
+undefined_premise[audit]            0</pre></div>
+      <figcaption>and the assertions every number on this page rests on</figcaption>
+    </figure>
+    <p>
+      A rule outside range restriction is evaluated top-down; the boolean answers
+      stay correct and every count above would then be folded over a different
+      fact set than the verdicts describe. That is asserted, not assumed.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    <code>examples/ditto/</code> — <code>ditto.rofl</code> (the ledgers, the
+    invariant vocabulary and the rules), <code>before/</code> and
+    <code>after/</code> (the two revisions, seven TypeScript files each),
+    <code>demo.ts</code> (run it: <code>node --experimental-strip-types
+    examples/ditto/demo.ts</code>), <code>README.md</code>, this page, and
+    <code>test/example-ditto.test.ts</code>. Every transcript above is pasted
+    output from a real run; nothing on this page was composed by hand.
+  </p>
+  <p>
+    The fixture is synthetic; the case in section 12 is not.
+  </p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('ditto-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('ditto-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('ditto-theme', next);
+    });
+
+    var savedTheme = load('ditto-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

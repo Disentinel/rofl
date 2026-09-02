@@ -1,0 +1,179 @@
+-- statute.rofl — the IFFY adapter for examples/jopa: an amendment to a norm,
+-- and which past cases decide differently under it.
+--
+-- WHAT AN ADAPTER IS. iffy.rofl is a mode and knows nothing about insurance.
+-- An adapter does two things and nothing else:
+--
+--   (1) it READS the amendable slice of its corpus's rule set out of the
+--       corpus itself — `enacted_elem/1` below is nine lines and restates no
+--       norm; amend jopa.rofl's `insured_peril` table and the amendable
+--       vocabulary here follows without an edit;
+--   (2) it threads the ARM COLUMN through those rules of the corpus that read
+--       the rule set, and hands iffy.rofl the six relations its §1 asks for.
+--
+-- The price of (2) is the honest cost of this whole mode and it is worth a
+-- number: jopa.rofl has 12 rules and 8 of them are restated below with one
+-- extra column — `established`, the five elements of s.5, `elements_met` and
+-- the s.7 exclusion. Four are not: s.4's indemnity, which is `elements_met`
+-- under another name; the s.9 offence, which decides a person rather than a
+-- claim; and the two rules of the closed-form contrast, which exist in
+-- jopa.rofl to make a point about negation and would only blur this one.
+-- THE COLUMN IS THE FORK. There is no second store, no snapshot, and one copy
+-- of the case corpus however many arms run.
+--
+-- WHAT IS DELIBERATELY NOT COPIED FROM jopa.rofl. Not the standards of proof
+-- and not the semiring fold over them. jopa.rofl's §6 explains at length why
+-- the s.7 exclusion is a positive conclusion and not a negated premise of s.4,
+-- and IFFY does not get to overturn that to make its report tidier: `q_due`
+-- and `q_excl` are two questions here, decided separately, exactly as the
+-- statute decides them at two different standards. A flip is a flip in the
+-- DERIVABILITY of one of them.
+--
+-- THE CORPUS. examples/jopa/facts.rofl carries four cases, written by hand and
+-- argued over in that example's README. demo.ts adds a systematic grid of
+-- further case files in the same shape and the same [record] ledger — every
+-- combination of peril, notice delay and evidence bundle that the statute
+-- distinguishes — because "214 flipped" is not a measurement and "214 of
+-- 10384" is, and four cases cannot carry a denominator. They are enumerated,
+-- not sampled: nothing here is random and nothing is drawn from a distribution
+-- anybody would have to defend. README.md says which four are real.
+
+-- =========================================================================
+-- 1. the amendable slice, READ OUT OF THE STATUTE
+-- =========================================================================
+-- Three kinds of element, and between them they are everything in the Act that
+-- an amendment can move without rewriting a rule:
+--
+--   peril(P)           s.2   — the schedule of insured perils
+--   notice_limit(N)    s.5(e) — the notice period
+--   admits(Kind, Fact) s.6   — what proves what
+--
+-- Everything else in the Act is a RULE, and amending a rule is not an
+-- amendment in this sense — it is a new statute, and the comparison IFFY
+-- makes is not the one you want for it. README.md says so under "what could
+-- not be modelled".
+
+enacted_elem(peril(P))         :- insured_peril(P).
+enacted_elem(notice_limit(N))  :- notice_period(s5_e, N).
+enacted_elem(admits(K, F))     :- proves(K, F, Sub), norm(Sub).
+
+-- =========================================================================
+-- 2. the corpus, and the questions asked of it
+-- =========================================================================
+
+acase(C)           :- claim[record](C, _).
+question(q_due(C)) :- acase(C).
+question(q_excl(C)):- acase(C).
+
+-- The one place a corpus fact is read through the arm, and therefore the one
+-- place an EXCISION can reach. Everything else about a case — the policy, the
+-- calendar, the peril alleged — is read directly, because nothing in this
+-- example proposes to delete a policy.
+aev(A, Id, K, C, W) :- arm[draft](A), evidence[record](Id, K, C, W), not excised[draft](A, ev(Id)).
+
+-- =========================================================================
+-- 3. the statute, with the arm column
+-- =========================================================================
+-- s.6, s.5(a)-(e), s.4, s.7. Compare with jopa.rofl §3-§6 line by line: the
+-- only difference is `A` and the reading of the amendable slice through
+-- `in_force/2` instead of directly. test/example-iffy.test.ts requires the
+-- baseline arm to reproduce jopa.rofl's own `elements_met/1`,
+-- `indemnity_due/1` and `deliberate_loss/1` exactly, on every case in the
+-- corpus. That equality is the positive control for this entire file: an arm
+-- that agrees with nothing is a claim about itself.
+
+aestab(A, C, F)              :- aev(A, _, K, C, _), in_force(A, admits(K, F)).
+
+amet(A, C, cover_in_force)   :- arm[draft](A), claim[record](C, P),
+                                policy[record](P, _, _, Start, End),
+                                loss_day[record](C, D), D >= Start, D <= End.
+amet(A, C, insured_property) :- arm[draft](A), claim[record](C, P),
+                                policy[record](P, _, Prop, _, _),
+                                loss_of[record](C, Prop).
+amet(A, C, covered_peril)    :- peril_alleged[record](C, Peril),
+                                in_force(A, peril(Peril)).
+amet(A, C, causation)        :- aestab(A, C, peril_caused_loss).
+amet(A, C, notice_in_time)   :- in_force(A, notice_limit(Limit)),
+                                loss_day[record](C, L), notice_day[record](C, N),
+                                Delay is N - L, Delay >= 0, Delay <= Limit.
+
+aelements(A, C) :- amet(A, C, cover_in_force), amet(A, C, insured_property),
+                   amet(A, C, covered_peril), amet(A, C, causation),
+                   amet(A, C, notice_in_time).
+
+adeliberate(A, C) :- aestab(A, C, at_property), aestab(A, C, accelerant_used).
+
+-- =========================================================================
+-- 4. supports — what makes one conclusion carry two legs
+-- =========================================================================
+-- A SUPPORT IS NOT A DERIVATION. The kernel's counting semiring counts
+-- derivations of the support hypergraph, which is the right answer to a
+-- different question: five elements each derived one way still gives one
+-- derivation, and a case proved by two independent reports gives two. What a
+-- drafter needs is the second number — how many INDEPENDENT reasons survive —
+-- so the support carries the thing that varies, and only that.
+--
+-- For s.4 that is the piece of evidence carrying causation: every element but
+-- causation is proved one way or not at all. For s.7 it is the PAIR (presence,
+-- accelerant), because the exclusion needs both and either half can have
+-- several sources.
+--
+-- demo.ts folds `verdict` under the counting semiring as well and requires the
+-- two counts to stand in the relation this decomposition predicts. Where they
+-- disagree, this decomposition is wrong, and it is the one thing in this file
+-- that could be wrong quietly.
+
+support(A, q_due(C), s_due(Id)) :- aelements(A, C), aev(A, Id, K, C, _),
+                                   in_force(A, admits(K, peril_caused_loss)).
+support(A, q_excl(C), s_excl(Ip, Ia)) :-
+    aev(A, Ip, Kp, C, _), in_force(A, admits(Kp, at_property)),
+    aev(A, Ia, Ka, C, _), in_force(A, admits(Ka, accelerant_used)).
+
+verdict(A, Q) :- support(A, Q, _).
+
+-- =========================================================================
+-- 5. what each derivation consumed
+-- =========================================================================
+-- The input to iffy.rofl §5. One row per amendable element the arm's own
+-- derivation of that question actually leaned on — never the whole rule set,
+-- or every flip would be attributed to every clause of the bill.
+
+uses(A, q_due(C), peril(P))        :- verdict(A, q_due(C)),
+                                      peril_alleged[record](C, P), in_force(A, peril(P)).
+uses(A, q_due(C), notice_limit(L)) :- verdict(A, q_due(C)), in_force(A, notice_limit(L)).
+uses(A, q_due(C), admits(K, peril_caused_loss)) :-
+    support(A, q_due(C), s_due(Id)), evidence[record](Id, K, C, _).
+uses(A, q_excl(C), admits(K, at_property)) :-
+    support(A, q_excl(C), s_excl(Ip, _)), evidence[record](Ip, K, C, _).
+uses(A, q_excl(C), admits(K, accelerant_used)) :-
+    support(A, q_excl(C), s_excl(_, Ia)), evidence[record](Ia, K, C, _).
+
+-- THE STATUTE HAS NO DEFEATING NORM, and that is a fact about jopa.rofl rather
+-- than an omission here. Its §6 writes the s.7 exclusion as a positive
+-- conclusion precisely so that nothing in the s.4 chain is settled by a
+-- negated premise, so no conclusion in this corpus can be lost by being
+-- overridden — only by losing its support. The relation is therefore DEFINED
+-- AND EMPTY, which is not the same thing as undefined: iffy.rofl §5 asks it
+-- and gets a no. examples/iffy/policy.rofl, over a corpus that IS built on
+-- Deny-overrides-Allow, answers the same question with rows.
+edb(defeating_norm).
+blocks(A, q_due(C), defeated_by(N)) :- arm[draft](A), acase(C), defeating_norm(N).
+
+-- =========================================================================
+-- 6. an amendment that cannot have been drafted
+-- =========================================================================
+-- THE ELEMENT VOCABULARY IS FLAT, AND s.5(e) IS A SLOT. `notice_limit(30)` and
+-- `notice_limit(21)` are two elements, not two values of one, so an arm that
+-- carries two amendments each enacting a period has BOTH in force, and
+-- `amet(A, C, notice_in_time)` then reads whichever admits the case — the
+-- longer one, in effect, silently.
+--
+-- iffy.rofl cannot see this: knowing that s.5(e) may hold at most one value is
+-- knowing something about the Act, and the Act is the adapter's business. So
+-- the constraint lives here, as an audit with a derivation tree, and
+-- test/example-iffy.test.ts builds an arm carrying both notice amendments and
+-- requires it to fire. Without it, a drafter combining two bills gets a number
+-- computed under a statute that says two contradictory things at once, and
+-- nothing anywhere says so.
+double_limit[audit](A, L1, L2) :- in_force(A, notice_limit(L1)),
+                                  in_force(A, notice_limit(L2)), L1 != L2.

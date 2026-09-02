@@ -1,0 +1,444 @@
+-- js-model.rofl — the coverage audit, and nothing else yet.
+--
+-- THE ONE CLAIM THIS FILE EXISTS TO TEST: adding a semantic layer is ONE FACT,
+-- and the audit immediately enumerates every cell that layer needs, with no
+-- change to any rule and no code at all. If that holds the programme's premise
+-- holds; if it needs an edit here, the premise is false and two languages is a
+-- far cheaper place to learn it than twenty-one.
+--
+-- The audit is DECLARED as an audit ledger, not [main]: a coverage gap is a
+-- statement about the model, not a fact of the domain.
+
+-- THE BYPASS THIS REPLACES. The first version had `covered` include `ignored`,
+-- so declaring the whole matrix ignored with plausible reasons drove the audit
+-- to zero and it reported success: a discipline that says silence is not an
+-- option, with a door one fact wide. Found by auditing my own tick rather than
+-- by a test, an hour after stating the principle.
+--
+-- The repair is the form this ledger already uses for a dismissed finding:
+-- an ignored cell is COUNTED AND VISIBLE, never hidden. Three buckets that
+-- partition the matrix, and a waiver moves a cell between buckets rather than
+-- out of sight.
+
+modelled[audit](Lang, K, L)    :- handled(Lang, K, L, _).
+waived[audit](Lang, K, L)      :- ignored(Lang, K, L, _).
+
+unaccounted[audit](Lang, K, L) :- node_kind(Lang, K), layer(L),
+                                  not modelled[audit](Lang, K, L),
+                                  not waived[audit](Lang, K, L).
+
+-- A cell claimed BOTH ways is a contradiction about the model, not a fact of
+-- the domain, and it must be visible rather than resolved by rule order.
+double_claimed[audit](Lang, K, L) :- modelled[audit](Lang, K, L),
+                                     waived[audit](Lang, K, L).
+
+-- AND A CLAIM ABOUT A CELL THAT DOES NOT EXIST. Found by making the mistake:
+-- `handled(js, variable_declarator, dataflow, ...)` was recorded for a kind
+-- absent from node_kind, the counts did not move, and NOTHING OBJECTED - the
+-- claim simply evaporated. That is the same silence this audit exists to
+-- forbid, in the audit itself. A claim naming an unknown kind or an unknown
+-- layer is a typo or a gap in the vocabulary, and either way it must be said
+-- out loud rather than dropped.
+--
+-- THE CHECK WAS WRITTEN THREE TIMES BY HAND BEFORE IT WAS WRITTEN ONCE. Four
+-- arms for `handled` and `ignored`; then `unknown_because` arrived over the
+-- same three arguments and the hole was open again — measured with a positive
+-- control, the claim LOADS, is HELD in the store, and moves no count — and it
+-- was closed by writing two more arms; then the shape ledger arrived and it
+-- was open a third time. Nine arms over three ledgers, and the tenth ledger
+-- reopens it. That is exactly the defect this file's own header names: the
+-- gate's criterion is borrowed from whichever relation produced the first red.
+--
+-- THE REMEDY IS TO MAKE THE LEDGER NAME AN ARGUMENT. A claim about a cell is
+-- ONE relation whose first argument says which ledger files it, so the
+-- vocabulary check is one rule per ARITY instead of one pair per relation, and
+-- a fourth ledger over the same arguments is checked the moment its facts are
+-- spelled as claims — with no rule edit at all.
+edb(claim).
+
+-- WHICH LEDGERS EXIST, as rows, because the name is data now and data can be
+-- misspelled. This is the hole the normalisation itself opens and it is closed
+-- in the same breath: `claim(handeled, js, call_expression, dataflow, r)` is
+-- not a claim about nothing, it is a claim nobody can read, and without this
+-- table it would be audited for its CELL and pass.
+edb(claim_kind).
+claim_kind(handled).
+claim_kind(ignored).
+claim_kind(unknown_because).
+
+-- ADOPTION and PROJECTION, and BOTH directions are wanted rather than one.
+--
+-- THE DIRECTION QUESTION, ANSWERED WITH A NUMBER. Sixty authored facts across
+-- five files spell the three ledgers bare. Rewriting them into `claim(...)`
+-- costs those 60 lines plus six projection rules and buys exactly ONE thing a
+-- comment cannot — an example the next author copies. It buys NOTHING on the
+-- property this block exists for: `claim` is extensional, so a fourth ledger
+-- written as a claim reaches the audit with no rule either way. The facts
+-- therefore stay where they are, and the two bridges below make the two
+-- spellings interchangeable instead of making one of them canonical.
+--
+-- ADOPTION is legacy scaffolding, three lines wide, and it is precisely what a
+-- fourth ledger does NOT need. PROJECTION is what stops a claim written in the
+-- new spelling from HALF-working: without it `claim(handled, ...)` would be
+-- audited and would tick nothing, which is a worse silence than the one this
+-- block replaces, because it would look like it had been filed.
+claim(handled,         Lang, K, L, R) :- handled(Lang, K, L, R).
+claim(ignored,         Lang, K, L, R) :- ignored(Lang, K, L, R).
+claim(unknown_because, Lang, K, L, R) :- unknown_because(Lang, K, L, R).
+
+handled(Lang, K, L, R)         :- claim(handled, Lang, K, L, R).
+ignored(Lang, K, L, R)         :- claim(ignored, Lang, K, L, R).
+unknown_because(Lang, K, L, R) :- claim(unknown_because, Lang, K, L, R).
+
+-- THE CHECK, ONCE. `not cell[audit]` rather than `not node_kind` and `not
+-- layer` as separate arms: the coarse cell is exactly their conjunction, so
+-- one premise covers both halves of the vocabulary and covers them in the one
+-- place where the cell space is defined — which is the same move the shape
+-- ledger's check already makes, arrived at from the other end.
+orphan[audit](What, Lang, K, L) :- claim(What, Lang, K, L, _),
+                                   not cell[audit](Lang, K, L).
+
+unknown_ledger[audit](What) :- claim(What, _, _, _, _), not claim_kind(What).
+
+-- ...and the name that was here before, now ONE projection of the check per
+-- ledger rather than a copy of the check per ledger. Every query already
+-- written against it answers the same rows.
+orphan_claim[audit](Lang, K, L)  :- orphan[audit](handled, Lang, K, L).
+orphan_claim[audit](Lang, K, L)  :- orphan[audit](ignored, Lang, K, L).
+
+-- the cells that exist at all, so the audit can be read as a fraction rather
+-- than as a bare count
+cell[audit](Lang, K, L)        :- node_kind(Lang, K), layer(L).
+
+-- WHERE THE LANGUAGES AGREE — and the first version of this was a TAUTOLOGY.
+-- It read `handled(A, _, L, Rule), handled(B, _, L, Rule), A != B` and reported
+-- eight rows of convergence, of which all four named rules EXISTED NOWHERE: I
+-- had typed the same atom into two handled facts and the relation called it
+-- agreement. A derived relation that looks like a finding and reflects only the
+-- keyboard.
+--
+-- Convergence now requires EVIDENCE on both sides: the cell must have been run
+-- against an oracle, which is what `checked` records. Nothing is checked yet, so
+-- this correctly reports ZERO, and it will grow only as work is actually done.
+--   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
+edb(checked).
+
+verified[audit](Lang, K, L, Rule)  :- handled(Lang, K, L, Rule),
+                                      checked(Lang, K, L, Rule, _, _).
+
+converges[audit](L, Rule, A, B)    :- verified[audit](A, _, L, Rule),
+                                      verified[audit](B, _, L, Rule), A != B.
+
+-- and the gap between claiming and showing, which is the number that matters
+unverified[audit](Lang, K, L, Rule) :- handled(Lang, K, L, Rule),
+                                       not checked(Lang, K, L, Rule, _, _).
+
+-- ===========================================================================
+-- THE DEFAULT VERDICT — «по дефолту ставим "не смоделировано"», like an
+-- abstract base class: declared, answering when asked, and waiting for a
+-- concrete implementation to be supplied.
+--
+-- Everything above this line answers only where somebody already wrote
+-- something down. `modelled` needs a `handled` fact, `waived` needs an
+-- `ignored` one, and `unaccounted` — the one relation that speaks for a cell
+-- nobody has touched — speaks by ABSENCE: it is named for what is missing, so
+-- the reading of an empty result is "nothing is missing" and the reading of a
+-- silent model is the same picture. That is the standing rule of this
+-- repository turned on this file: an empty answer is a fact about the QUERY
+-- until proven otherwise.
+--
+-- A total function over the cell space fixes it. Every cell carries a verdict;
+-- `not_modelled` is the one it is born with. It is a positive, typed,
+-- queryable row, so `why verdict[audit](js, yield_expression, dataflow,
+-- not_modelled)` is askable and answers with the two failing premises — where
+-- the absence of an `unaccounted` row could only ever be approached from the
+-- other side, with `whynot`.
+--
+-- The first two rules deliberately do NOT carry `cell[audit]` as a premise:
+-- they mirror `modelled`/`waived` exactly, which is what makes the row-for-row
+-- agreement with `unaccounted` a real cross-check rather than a restatement.
+-- The consequence is measured and wanted: a `handled` fact naming a kind that
+-- does not exist produces a verdict with no cell under it, and the partition
+-- count breaks — a SECOND, independent detector for the thing `orphan_claim`
+-- reports.
+verdict[audit](Lang, K, L, modelled)     :- handled(Lang, K, L, _).
+verdict[audit](Lang, K, L, waived)       :- ignored(Lang, K, L, _).
+verdict[audit](Lang, K, L, not_modelled) :- cell[audit](Lang, K, L),
+                                            not handled(Lang, K, L, _),
+                                            not ignored(Lang, K, L, _).
+
+-- THE TYPE OF THE UNKNOWN, which is what turns a count into a queue. "247
+-- unknowns" is a number nobody can act on; "3 irreducible, 244 ours" is a work
+-- queue with a bottom and an owner. The four are not equal — exactly ONE of
+-- them is a property of the SUBJECT rather than of us:
+edb(unknown_type).
+unknown_type(runtime_dependent, irreducible).
+unknown_type(not_yet,           ours).
+unknown_type(budget_exhausted,  ours).
+unknown_type(out_of_scope,      ours).
+
+-- The authored reason, per cell. Host data like `checked`: nobody derives it,
+-- and without the declaration `undefined_premise` would read the empty table
+-- as a misspelling.   unknown_because(Lang, Kind, Layer, Reason)
+edb(unknown_because).
+
+-- ...and the DEFAULT that makes it total. A not_modelled cell that nobody has
+-- explained is `not_yet` — ours, unfinished, on the queue. This is the second
+-- place the abstract-class shape appears: the base answer exists, and an
+-- authored fact overrides it.
+reason[audit](Lang, K, L, R)       :- verdict[audit](Lang, K, L, not_modelled),
+                                      unknown_because(Lang, K, L, R).
+reason[audit](Lang, K, L, not_yet) :- verdict[audit](Lang, K, L, not_modelled),
+                                      not unknown_because(Lang, K, L, _).
+
+irreducible_unknown[audit](Lang, K, L) :- reason[audit](Lang, K, L, R),
+                                          unknown_type(R, irreducible).
+our_unknown[audit](Lang, K, L)         :- reason[audit](Lang, K, L, R),
+                                          unknown_type(R, ours).
+
+-- TWO AUDITS OF THE AUDIT, and both must be able to say no.
+--
+-- A reason whose atom is in no taxonomy is not a reason, it is a word. It also
+-- falls out of BOTH counts above, so the split stops summing to the
+-- not_modelled total — the silent half of this defect, and the reason the test
+-- asserts the sum rather than the two counts alone.
+bad_reason[audit](Lang, K, L, R)   :- unknown_because(Lang, K, L, R),
+                                      not unknown_type(R, _).
+
+-- An excuse that outlived its cause: the cell was modelled or waived since,
+-- and the reason stayed behind. Narrow on purpose — it demands the cell EXIST,
+-- so a reason naming a kind nobody declared is not laundered into this
+-- relation under a name that would read as "we fixed that one".
+stale_reason[audit](Lang, K, L, R) :- unknown_because(Lang, K, L, R),
+                                      cell[audit](Lang, K, L),
+                                      not verdict[audit](Lang, K, L, not_modelled).
+
+-- ...which is where the hole `orphan_claim` was written for used to reopen, in
+-- the new relation. MEASURED before it was closed: with the two hand-written
+-- rules that stood here stripped, an `unknown_because(js, no_such_kind,
+-- dataflow, not_yet)` moved no count, fired no audit, and evaporated exactly
+-- as `handled(js, variable_declarator, ...)` once did.
+--
+-- IT NO LONGER REOPENS, and the difference is worth stating in the same place
+-- the defect was: `unknown_because` is ADOPTED as a claim above, so the single
+-- `orphan[audit]` rule already objects to it, and stripping this line leaves
+-- the objection standing under its general name. What is left here is one
+-- PROJECTION, so every query already written against the old name answers the
+-- same rows it did.
+orphan_reason[audit](Lang, K, L) :- orphan[audit](unknown_because, Lang, K, L).
+
+-- ===========================================================================
+-- THE THIRD AXIS — SHAPE — AND WHY ITS APPLICABILITY IS A FACT
+--
+-- WHAT PAID FOR IT. `member_expression` is ONE KIND and SIX DIFFERENT JOBS —
+-- `o.m()`, `a.b.c()`, `f().g()`, `this.x()`, `super.x()`, `o[k]()` — nine
+-- distinct shapes measured over the call corpus and thirteen the grammar
+-- allows. The two-axis matrix carries ONE tick for all of them,
+-- `handled(js, member_expression, callgraph, r_call_edge)`, and the execution
+-- oracle found 37 edges where the model found 26. SIX of the eleven misses sit
+-- inside that single ticked cell. The table was built so that an EMPTY cell
+-- would shout; the hole turned out to be INSIDE a full one, where a table
+-- keyed by kind is silent by construction.
+--
+-- THE ARITY IS THE POINT, and it is also the honest limit. A relation here has
+-- a fixed arity, so an AXIS is a COLUMN and adding a column is a RULE edit.
+-- What is a fact — and what this section exists to make a fact — is
+--   * which VALUES the axis takes for a kind      shape_of/3
+--   * which LAYERS the axis applies to            axis_applies/2
+--   * that the axis exists at all                 axis/1
+-- `layer(scope).` really does add a whole dimension in one fact. `axis(shape).`
+-- does not, and claiming otherwise would be the tautology this file has already
+-- paid for once.
+--
+-- WHY APPLICABILITY IS DECLARED RATHER THAN ASSUMED. Measured on the tick
+-- before this one: the call-graph model named 24 node kinds the matrix did not
+-- know, and at two layers that was exactly 48 new cells, NOT ONE of which was a
+-- question. Pure arithmetic. A LOCAL axis multiplied over layers where it means
+-- nothing repeats that exactly: a callee's shape is a fact about a call and
+-- says nothing whatever about a module graph. So applicability is a ROW, the
+-- row can be wrong, and `unearned_axis[audit]` is the relation that says so.
+edb(axis).
+edb(axis_applies).
+edb(shape_of).
+
+-- A kind the axis SPLITS. A kind with no declared shape is ATOMIC for this
+-- axis even in a layer where the axis applies, and it keeps exactly one cell.
+-- Without this the refinement would delete `if_statement x callgraph` — a cell
+-- somebody deliberately waived — from the table entirely.
+shape_kind[audit](Lang, K) :- shape_of(Lang, K, _).
+
+-- THE CELL, AT THREE AXES. Same name, one more argument. This kernel keys a
+-- relation by NAME and unifies by ARITY, so `cell[audit]/3` above keeps
+-- answering every query already written against it while `cell[audit]/4` is
+-- the same matrix refined; the two are cross-checked against each other by
+-- `lost_cell` and `invented_cell` below rather than trusted to agree.
+--
+-- `none` is not a shape. It is the reading "this cell is not refined by the
+-- axis", and there are TWO different ways to earn it — the axis does not apply
+-- to the layer, or it applies and this kind does not split. Collapsing them
+-- into one rule would make the second unremovable and therefore untestable.
+cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
+                                    not axis_applies(shape, Lay).
+cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
+                                    axis_applies(shape, Lay),
+                                    not shape_kind[audit](Lang, K).
+cell[audit](Lang, K, Shape, Lay) :- shape_of(Lang, K, Shape), layer(Lay),
+                                    axis_applies(shape, Lay).
+
+-- THE REFINEMENT IS A PARTITION OF THE COARSE MATRIX, and both directions are
+-- checked. A coarse cell with no fine cell under it has been LOST by the
+-- refinement; a fine cell over no coarse cell has been INVENTED, which is the
+-- vocabulary hole `orphan_claim` was written for, arriving through a third
+-- relation over the same arguments exactly as this file predicted it would.
+coarse_of[audit](Lang, K, Lay)     :- cell[audit](Lang, K, _, Lay).
+lost_cell[audit](Lang, K, Lay)     :- cell[audit](Lang, K, Lay),
+                                      not coarse_of[audit](Lang, K, Lay).
+invented_cell[audit](Lang, K, Lay) :- coarse_of[audit](Lang, K, Lay),
+                                      not cell[audit](Lang, K, Lay).
+
+-- ...and a cell must not be BOTH refined and unrefined. Stated as the
+-- invariant rather than copied from the guard above: one coarse cell is
+-- either split by the axis or it is not, so `none` beside a real shape is a
+-- cell counted twice.
+refined_cell[audit](Lang, K, Lay) :- cell[audit](Lang, K, S, Lay), S != none.
+double_cell[audit](Lang, K, Lay)  :- cell[audit](Lang, K, none, Lay),
+                                     refined_cell[audit](Lang, K, Lay).
+
+-- A shape declared for a kind nobody declared, and an applicability declared
+-- for an axis or a layer nobody declared. The same silence, in the two new
+-- relations.
+orphan_shape[audit](Lang, K, S) :- shape_of(Lang, K, S), not node_kind(Lang, K).
+orphan_axis[audit](A, Lay)      :- axis_applies(A, Lay), not axis(A).
+orphan_axis[audit](A, Lay)      :- axis_applies(A, Lay), not layer(Lay).
+
+-- ===========================================================================
+-- THE CLAIM LEDGER AT SHAPE GRANULARITY
+--
+-- Authored facts carry a shape:  handled(Lang, K, Shape, Layer, Rule)
+--                                ignored(Lang, K, Shape, Layer, Reason)
+--                                unknown_because(Lang, K, Shape, Layer, Reason)
+--
+-- A KIND-LEVEL CLAIM ANSWERS ONLY FOR AN UNREFINED CELL. This is the whole
+-- content of the axis: `handled(js, member_expression, callgraph, r_call_edge)`
+-- does NOT tick thirteen shapes, it ticks nothing, because the cell it names
+-- no longer exists. The claim is still true of SOMETHING — the rule really
+-- does resolve `ns.method()` — which is why it is reported by
+-- `coarser_claim[audit]` rather than deleted or silently honoured.
+shaped_handled[audit](Lang, K, S, Lay, R)    :- handled(Lang, K, S, Lay, R).
+shaped_handled[audit](Lang, K, none, Lay, R) :- handled(Lang, K, Lay, R),
+                                                cell[audit](Lang, K, none, Lay).
+shaped_ignored[audit](Lang, K, S, Lay, R)    :- ignored(Lang, K, S, Lay, R).
+shaped_ignored[audit](Lang, K, none, Lay, R) :- ignored(Lang, K, Lay, R),
+                                                cell[audit](Lang, K, none, Lay).
+shaped_because[audit](Lang, K, S, Lay, R)    :- unknown_because(Lang, K, S, Lay, R).
+shaped_because[audit](Lang, K, none, Lay, R) :- unknown_because(Lang, K, Lay, R),
+                                                cell[audit](Lang, K, none, Lay).
+
+coarser_claim[audit](Lang, K, Lay, R) :- handled(Lang, K, Lay, R),
+                                         shape_kind[audit](Lang, K),
+                                         axis_applies(shape, Lay).
+coarser_claim[audit](Lang, K, Lay, R) :- ignored(Lang, K, Lay, R),
+                                         shape_kind[audit](Lang, K),
+                                         axis_applies(shape, Lay).
+
+-- THE DEFAULT SURVIVES THE REFINEMENT, which is the one property that may not
+-- be traded for the extra column: every cell of the three-axis matrix carries
+-- a verdict and `not_modelled` is the one it is born with. As above, the
+-- AUTHORED branch of `shaped_handled` deliberately does not carry
+-- `cell[audit]`, so a shape claim over no cell produces a verdict with no cell
+-- under it and the partition stops summing — a second, independent detector
+-- for what `orphan_shape` reports.
+verdict[audit](Lang, K, S, Lay, modelled)     :- shaped_handled[audit](Lang, K, S, Lay, _).
+verdict[audit](Lang, K, S, Lay, waived)       :- shaped_ignored[audit](Lang, K, S, Lay, _).
+verdict[audit](Lang, K, S, Lay, not_modelled) :- cell[audit](Lang, K, S, Lay),
+                                                 not shaped_handled[audit](Lang, K, S, Lay, _),
+                                                 not shaped_ignored[audit](Lang, K, S, Lay, _).
+
+double_claimed[audit](Lang, K, S, Lay) :- verdict[audit](Lang, K, S, Lay, modelled),
+                                          verdict[audit](Lang, K, S, Lay, waived).
+
+-- A CLAIM ABOUT A CELL THAT DOES NOT EXIST, at the finer grain. It is derived
+-- from the CELL rather than from the vocabulary tables, so it covers every way
+-- a claim can miss at once — an undeclared kind, an undeclared shape, an
+-- unknown layer, and the one the vocabulary checks cannot see, a shape claim
+-- in a layer the axis does not apply to.
+--
+-- AND IT IS THE SAME RULE AS THE COARSE ONE, at one more argument. The ledger
+-- name is an argument here too, so the three ledgers cost three ADOPTION lines
+-- and the check itself is written once for this arity. The honest limit is
+-- visible in that sentence: the check is generic over the LEDGER and not over
+-- the ARITY, because a relation has a fixed arity here, so a fourth axis would
+-- need `claim/7` and one more copy of these two rules — which is the same
+-- honest limit `axis(shape)` has, and it is stated in the same terms.
+claim(handled,         Lang, K, S, Lay, R) :- handled(Lang, K, S, Lay, R).
+claim(ignored,         Lang, K, S, Lay, R) :- ignored(Lang, K, S, Lay, R).
+claim(unknown_because, Lang, K, S, Lay, R) :- unknown_because(Lang, K, S, Lay, R).
+
+handled(Lang, K, S, Lay, R)         :- claim(handled, Lang, K, S, Lay, R).
+ignored(Lang, K, S, Lay, R)         :- claim(ignored, Lang, K, S, Lay, R).
+unknown_because(Lang, K, S, Lay, R) :- claim(unknown_because, Lang, K, S, Lay, R).
+
+orphan[audit](What, Lang, K, S, Lay) :- claim(What, Lang, K, S, Lay, _),
+                                        not cell[audit](Lang, K, S, Lay).
+
+unknown_ledger[audit](What) :- claim(What, _, _, _, _, _), not claim_kind(What).
+
+orphan_claim[audit](Lang, K, S, Lay)  :- orphan[audit](handled, Lang, K, S, Lay).
+orphan_claim[audit](Lang, K, S, Lay)  :- orphan[audit](ignored, Lang, K, S, Lay).
+orphan_reason[audit](Lang, K, S, Lay) :- orphan[audit](unknown_because, Lang, K, S, Lay).
+
+reason[audit](Lang, K, S, Lay, R)       :- verdict[audit](Lang, K, S, Lay, not_modelled),
+                                           shaped_because[audit](Lang, K, S, Lay, R).
+reason[audit](Lang, K, S, Lay, not_yet) :- verdict[audit](Lang, K, S, Lay, not_modelled),
+                                           not shaped_because[audit](Lang, K, S, Lay, _).
+
+bad_reason[audit](Lang, K, S, Lay, R) :- unknown_because(Lang, K, S, Lay, R),
+                                         not unknown_type(R, _).
+irreducible_unknown[audit](Lang, K, S, Lay) :- reason[audit](Lang, K, S, Lay, R),
+                                               unknown_type(R, irreducible).
+our_unknown[audit](Lang, K, S, Lay)         :- reason[audit](Lang, K, S, Lay, R),
+                                               unknown_type(R, ours).
+
+-- ===========================================================================
+-- CAN ANYTHING SAY NO TO A LOCAL AXIS DECLARED AS CROSS-CUTTING?
+--
+-- Yes, and this is the relation that does it. An axis EARNS a layer when its
+-- refinement makes the model say something DIFFERENT about two shapes of the
+-- SAME kind there — a different verdict, or a different typed reason. An axis
+-- that refines a layer into rows all carrying the same answer has multiplied
+-- the table and answered nothing, which is precisely the 48-cells-no-questions
+-- measurement above wearing a new column.
+--
+-- The comparison is per KIND on purpose. Two different kinds disagreeing says
+-- only that the matrix already had two rows; the axis is earning its column
+-- exactly when it splits ONE row into rows that disagree.
+refined_verdict[audit](Lang, K, Lay, V) :- verdict[audit](Lang, K, S, Lay, V), S != none.
+refined_reason[audit](Lang, K, Lay, R)  :- reason[audit](Lang, K, S, Lay, R), S != none.
+
+axis_earns[audit](A, Lay)    :- axis(A),
+                                refined_verdict[audit](Lang, K, Lay, V),
+                                refined_verdict[audit](Lang, K, Lay, W), V != W.
+axis_earns[audit](A, Lay)    :- axis(A),
+                                refined_reason[audit](Lang, K, Lay, R1),
+                                refined_reason[audit](Lang, K, Lay, R2), R1 != R2.
+unearned_axis[audit](A, Lay) :- axis_applies(A, Lay), not axis_earns[audit](A, Lay).
+
+-- ============ what this layer's ledgers are allowed to read ============
+--
+-- Written out because the kernel stopped writing it for us. `crossing` used
+-- to carry `not bridge_decl(R, A, B)` and `src/reflect.ts` emitted that row
+-- for any rule whose head named a ledger and whose body read another — so
+-- every rule here licensed its own read by existing, and `leak[audit]` was 0
+-- across this whole layer for a reason that had nothing to do with the layer.
+-- With that gone the layer reports 6 crossings and declares them here.
+--
+-- [code] READS [main]. Twelve rules do it — `obj_class`, `call_site`,
+-- `shape_known`, `explicit_shape` and the rest — because the kind and shape
+-- tables they join against are ordinary program facts with no ledger of their
+-- own. The scanner's book is built from them; that is what this layer is.
+imports(code, main).
+
+-- [audit] READS [code]. Twenty-nine rules: every gate in this layer reads the
+-- scanner's facts and writes its verdict. An audit that could not read the
+-- book it audits would have nothing to say.
+imports(audit, code).

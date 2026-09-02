@@ -86,29 +86,73 @@ export function canonTerm(t: Term): string {
   }
 }
 
+/** Rename the variables of a term list to positional placeholders, numbered
+ *  by first appearance across the whole list. Ground terms come back
+ *  unchanged, so a ground rendering is byte-identical to the input's.
+ *  Used where a rendering must not depend on which clause instance produced
+ *  it: two terms that differ only by variable naming render alike, while
+ *  differing variable SHARING still renders differently. */
+export function canonVars(ts: Term[]): Term[] {
+  const seen = new Map<string, Term>();
+  const go = (t: Term): Term => {
+    if (t.k === 'v') {
+      let r = seen.get(t.name);
+      if (!r) { r = mkv(String(seen.size)); seen.set(t.name, r); }
+      return r;
+    }
+    if (t.k === 'f') return mkf(t.name, t.args.map(go));
+    return t;
+  };
+  return ts.map(go);
+}
+
 export function termEq(a: Term, b: Term): boolean {
   return canonTerm(a) === canonTerm(b);
 }
 
+/** Why `evalArith` could not produce a number. The first is NOT an error: a
+ *  variable that is not bound yet is the ordinary state of a builtin that
+ *  runs before its generator, and of a clause body solved with open
+ *  bindings. The other two are inabilities — no binding of the variables
+ *  that remain makes a string or an unknown operator arithmetic, and a zero
+ *  divisor has no quotient. Numbers, not names, so the kernel's closed
+ *  relation vocabulary does not grow with an internal distinction. */
+export const ARITH_UNBOUND = 0;
+export const ARITH_TYPE = 1;
+export const ARITH_ZERO = 2;
+
+/** Failure sink. The caller owns one and passes it in when it intends to act
+ *  on the reason; `evalArith` writes it ONLY on failure, so the successful
+ *  path allocates nothing and callers that do not care pass nothing. On a
+ *  nested failure the DEEPEST cause survives: an outer call returns on its
+ *  operand's null without touching the sink. */
+export interface ArithFail { code: number }
+
 /** Evaluate an arithmetic expression term to an integer, or null if it
  *  contains unbound variables / non-arithmetic leaves. Operators: + - * / mod.
- *  Division truncates toward zero. */
-export function evalArith(t: Term, s: Subst): number | null {
+ *  Division truncates toward zero. With `fail`, a null return also says which
+ *  of the three reasons it was. */
+export function evalArith(t: Term, s: Subst, fail?: ArithFail): number | null {
   t = walk(t, s);
   if (t.k === 'i') return t.v;
   if (t.k === 'f' && t.args.length === 2) {
-    const l = evalArith(t.args[0], s);
+    const l = evalArith(t.args[0], s, fail);
     if (l === null) return null;
-    const r = evalArith(t.args[1], s);
+    const r = evalArith(t.args[1], s, fail);
     if (r === null) return null;
     switch (t.name) {
       case '+': return l + r;
       case '-': return l - r;
       case '*': return l * r;
-      case '/': return r === 0 ? null : Math.trunc(l / r);
-      case 'mod': return r === 0 ? null : l - r * Math.trunc(l / r);
+      case '/': if (r !== 0) return Math.trunc(l / r); break;
+      case 'mod': if (r !== 0) return l - r * Math.trunc(l / r); break;
+      default: if (fail) fail.code = ARITH_TYPE; return null;
     }
+    // only the two zero-divisor breaks reach here
+    if (fail) fail.code = ARITH_ZERO;
+    return null;
   }
+  if (fail) fail.code = t.k === 'v' ? ARITH_UNBOUND : ARITH_TYPE;
   return null;
 }
 

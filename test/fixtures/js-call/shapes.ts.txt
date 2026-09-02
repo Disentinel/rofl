@@ -1,0 +1,41 @@
+// shapes.ts.txt — SCANNED, NEVER RUN. The grammar allows callee shapes that a
+// runnable .mjs cannot spell (TS non-null) or that only appear in positions
+// the executable fixture has no use for. They are here so the CLASSIFIER is
+// measured against the grammar, while the ORACLE is measured against what
+// runs. The two denominators are different and saying so is the point.
+//
+// THE `.txt` TAIL IS LOAD-BEARING. tsconfig's include covers `test/**/*.ts`,
+// so a fixture named `shapes.ts` is COMPILED as part of the project — and a
+// fixture whose whole job is to hold odd or deliberately degenerate shapes
+// cannot also satisfy tsc. The first version of this file was bent to please
+// the compiler (`(0, curried)` grew a side effect to dodge TS2695), which
+// silently changed the construct under study. The name keeps `.ts` so the
+// reader and the scanner still know what language it is.
+declare const maybe: ((n: number) => number) | null;
+declare const bag: Record<string, (n: number) => number>;
+declare const key: string;
+
+export function tsShapes(n: number): number {
+  return maybe!(n) + bag[key](n) + bag['fixed'](n);
+}
+
+// A computed callee whose key is a template with no expressions. The value is
+// fixed at parse time, and the scanner's four-relation contract cannot carry
+// it: TemplateElement.value is `{raw, cooked}`, a nested OBJECT, and only
+// scalar own properties become ast_attr facts. So this site is knowable and
+// not derivable, which is `not_yet` and emphatically NOT runtime_dependent.
+export function tmplKey(n: number): number { return bag[`fixed`](n); }
+
+class Base { m(): number { return 1; } }
+export class Sub extends Base {
+  constructor() { super(); }
+  m(): number { return super.m(); }
+}
+
+function curried(n: number) { return (m: number) => m + n; }
+export function chained(n: number): number { return curried(n)(n); }
+export function seq(n: number): number { return (0, curried)(n)(n); }
+export function cond(n: number, f: (x: number) => number, g: (x: number) => number) {
+  return (n > 0 ? f : g)(n);
+}
+export async function dyn(p: string) { return import(p); }

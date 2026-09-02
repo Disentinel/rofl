@@ -1,3 +1,10 @@
+$kernel_authority(boot).
+-- ^ THE KERNEL'S OWN CLAIM, and it must be the first clause of the first load.
+-- Everything below is signed `$kernel` rather than `user`, which is what makes
+-- `forged[audit]` able to mean anything: a fact signed by a principal with no
+-- standing in the book it landed in. A second claim, in this file or any other,
+-- is REFUSED — the ring is entered once, before there is anyone to stop it.
+
 -- boot.rofl — the meta-kernel as data (Appendix A of START.md).
 -- STRATUM 0: monotone meta-kernel. No `not` above the marked line.
 
@@ -8,17 +15,40 @@ sees(P, P)         :- perspective(P).
 sees(P, Q)         :- imports(P, Q).
 sees(P, Q)         :- imports(P, X), sees(X, Q).
 
-dep(A, B)          :- concludes(R, A), premise_pos(R, B).
-dep(A, B)          :- concludes(R, A), premise_neg(R, B).
-dep_neg(A, B)      :- concludes(R, A), premise_neg(R, B).
+-- The import graph is host data, so `imports` has no rule and may hold no
+-- facts. Declared extensional, or `undefined_premise` below reads that
+-- emptiness as a misspelling. Declaring an input is the remedy, not a waiver.
+edb(imports).
 
-reach(A, B)        :- dep(A, B).
-reach(A, B)        :- reach(A, X), dep(X, B).
-unstratified(Rel)  :- dep_neg(Rel, Q), reach(Q, Rel).
-
-stratum(Rel, 0)    :- edb(Rel).
-stratum(Rel, N)    :- dep_neg(Rel, Q), stratum(Q, M), N is M + 1.
-stratum(Rel, N)    :- dep(Rel, Q), stratum(Q, N).
+-- WHERE THE DEPENDENCY GRAPH WENT, and why nothing replaced it here.
+--
+-- Ten rules stood at this point — `dep/2` twice, `dep_neg/2`, `reach/2` twice,
+-- `unstratified/1`, `stratum/2` four times. They computed, as data, the
+-- schedule the evaluator then read back out of the store. The evaluator now
+-- peels that schedule off the DECODED RULES before a single rule fires
+-- (`src/rounds.ts`, `peelRounds`), so the program no longer has to derive a
+-- description of itself in order to be run.
+--
+-- Unstratifiability stopped being a property that has to be DETECTED. It is a
+-- round that settles nothing while work remains, and the relations still
+-- standing are the refusal. That refusal reaches further than `unstratified`
+-- did: it names every relation that cannot ever settle, not only the ones
+-- sitting on the cycle. What it no longer carries is the `reach` trace that
+-- showed WHY, and that is the price.
+--
+-- THE ONE DECISION THOSE RULES HELD THAT IS KEPT. `conclusion_tense` still
+-- decides it, now in `peelRounds` instead of in `dep`: a rule whose head is
+-- written '@next' contributes no edge and settles no relation, because its
+-- conclusion is not derived in this tick at all. It is staged and installed at
+-- the tick boundary, and the tick that reads it reads a base fact. A sense ->
+-- decide -> act -> world -> sense loop is acyclic in time; without this it
+-- read as a negative cycle and the program was refused (examples/npc measured
+-- exactly that). The old `stratum(Rel, 0) :- conclusion_tense(R, next)` floor
+-- said the same thing from the other side and is kept the same way: such a
+-- relation is base for the tick that sees it, which is round 0.
+--
+-- `edb/1` survives the deletion because `undefined_premise` below still reads
+-- it. It no longer feeds a stratum.
 
 -- ============ negation below this line only ============
 
@@ -28,14 +58,263 @@ malformed[audit](R)   :- has_premise(R, _), not has_conclusion(R, _).
 breach[audit](R)      :- concludes(R, Rel), reserved(Rel).
 
 flow(A, B)            :- reads_from(R, A), writes_to(R, B).
-leak[audit](A, B)     :- flow(A, B), not sees(B, A), not bridge_decl(R, A, B).
 
-forged[audit](F)      :- asserted_by(F, Who), in_perspective(F, P),
+-- Content does not stop at the first hop. `flow` is one rule's signature:
+-- this rule reads that ledger and writes this one. The property the leak
+-- audit guards is TRANSITIVE — content that reached `case` from `red` and
+-- then `report` from `case` is in `report`, and by then the attribution is
+-- gone (the collected `claim[case](red, a)` becomes `digest[report](a)`;
+-- the ledger name survives collection as an ordinary argument and is then
+-- projected away). Every step separately licensed does not license the
+-- walk. `sees` was already the reflexive-transitive closure of `imports`;
+-- `flow` was the half that was not closed, so the audit compared a
+-- transitive right against a single-hop crossing.
+flows_to(A, B)        :- flow(A, B).
+flows_to(A, B)        :- flows_to(A, X), flow(X, B).
+
+-- A crossing is a walk between two DIFFERENT ledgers that nothing licensed.
+-- The two ends being the same perspective term is no crossing at all: a rule
+-- polymorphic in the ledger reads and writes one variable, and both ends
+-- instantiate together. A named ledger gets that from `sees(P, P)`; a
+-- variable perspective has no `authority` fact and never will, so `A != B`
+-- states the identity here instead. `not bridge_decl` STOOD HERE; see the end.
+crossing(A, B)        :- flows_to(A, B), A != B, not sees(B, A).
+
+-- The collection graph, host data like `imports` and declared the same way.
+-- `collects(X)` says: X is a ledger that deliberately gathers from ledgers it
+-- does not name. It is the sentence an author had no way to write before —
+-- `imports(To, From)` relates two REGISTERED perspectives, and a rule
+-- polymorphic in the ledger reads `$var("P")`, which has no `authority` fact
+-- and can never be the From of an import. So a gathering rule was a permanent
+-- finding whose only remedy was a paragraph in a README, and a paragraph is
+-- not auditable, does not go stale loudly, and no check reads it.
+edb(collects).
+
+-- The collection EVENT: X collected from A, where A is not a registered
+-- ledger. `not perspective(A)` is the test, because `perspective(P) :-
+-- authority(P, _)` and the kernel registers an `authority` fact for every
+-- named ledger on first use — so the premise holds for exactly the terms that
+-- have no `imports` fact available. (It also admits `$any`, the term kept for
+-- a perspective that is neither a name nor a variable; that term occurs 0
+-- times against 56 `$var` occurrences across the corpus as this was written.)
+--
+-- It is keyed on the ledger that GATHERS, not on where the content ends up,
+-- and that was measured rather than assumed. Keyed on the destination, a
+-- store where `[case]` gathers and feeds both `[worlds]` and `[ledger_x]`
+-- demands `collects` on BOTH downstream ledgers — two statements that are
+-- false about them, since neither gathers anything — and demands a third the
+-- day a third reader is added. Keyed here, the author writes one true
+-- sentence about `[case]` and the onward hops stay subject to the ordinary
+-- audit. Control for that measurement: with the declaration removed, both
+-- shapes report the walk, so the silence is the declaration's doing.
+collects_from(X, A)   :- collects(X), flow(A, X), A != X, not perspective(A).
+
+-- The declaration EXERCISED, as a positive row that can be ASKED about.
+-- `why` needs a ground literal and `$` is unwritable in surface syntax, so
+-- `why gathered($var("P"), worlds)` cannot be typed at all; `why
+-- collected[audit](case)` can, and its tree names `collects(case)` as an
+-- axiom and `not perspective($var("P"))` as the reason the escape applied.
+-- A licence nobody can ask about is the invisible absence this replaced.
+collected[audit](X)   :- collects_from(X, _).
+
+-- Once X has gathered A, content that travels on from X travels as X's, under
+-- X's own licences: an undeclared hop out of X is still `crossing(X, ...)`
+-- and still a leak. So the walk is covered from the collection point onward,
+-- and no further.
+gathered(A, B)        :- collects_from(X, A), flows_to(X, B).
+gathered(A, B)        :- collects_from(B, A).
+
+-- Narrow on purpose. The escape applies only where the SOURCE is not a
+-- registered perspective — exactly the case `imports` cannot express. A
+-- crossing FROM a named ledger still needs `imports`, so declaring
+-- `collects(X)` never stops the audit saying no about X. Measured, because
+-- the wide form was the obvious one and it is an off switch: with
+-- `not collects(B)` as a bare premise on `leak`, a store carrying a walk from
+-- `[secret]` through `[mid]` into a collecting `[case]` — each hop bracketed,
+-- the walk declared nowhere — reports NOTHING. This form reports it.
+leak[audit](A, B)     :- crossing(A, B), not gathered(A, B).
+
+-- The trail is dated: `asserted_by(F, Who, T)` records WHEN the assertion was
+-- made, so that a past state can be replayed rather than stored. Forgery is a
+-- question about authority and not about time, so the tick is a wildcard here.
+forged[audit](F)      :- asserted_by(F, Who, _), in_perspective(F, P),
                          not authority(P, Who).
 
 unmoded[audit](R)     :- uses_builtin(R, B), not mode(B, _).
 
+-- A positive premise on a relation nothing concludes and no fact populates.
+-- The rule is not wrong, it is unpopulatable: it fails silently and forever.
+-- Positive only — an unpopulatable NEGATED premise always succeeds, so it
+-- hides nothing; and `not exception(X)` over a table the host may leave empty
+-- is the ordinary idiom, not a defect.
+undefined_premise[audit](R, Rel) :- premise_pos(R, Rel),
+                                    not concludes(_, Rel), not edb(Rel).
+
 -- Required results on load:
---   ? unstratified(X)      -> empty      ? malformed[audit](R) -> empty
---   ? breach[audit](R)     -> empty      ? leak[audit](A,B)    -> empty
---   whynot unstratified(reach) -> finite demonstration via dep/reach
+--   ? malformed[audit](R)  -> empty      ? breach[audit](R)    -> empty
+--   ? leak[audit](A,B)     -> empty      ? forged[audit](F)    -> empty
+--   ? unmoded[audit](R)    -> empty
+--   ? collected[audit](X)  -> declared collections only, each with a `why`
+--   ? undefined_premise[audit](R, Rel) -> empty
+--   whynot flows_to(red, blue) -> finite demonstration via flow
+--
+-- The two results this list used to open with are gone with the rules that
+-- answered them. `? unstratified(X) -> empty` asked whether this file is
+-- stratifiable; that question is now answered by the file LOADING AT ALL,
+-- since a program whose peel stalls is refused and never reaches a query.
+-- `whynot unstratified(reach)` demanded a finite demonstration through a
+-- recursive relation; `flows_to` is the recursive relation that is left —
+-- the transitive closure of `flow`, the same shape `reach` was — so the
+-- property is still asked, of the closure that still exists.
+
+-- ============ authorship, appended below the cited region ============
+--
+-- THIS BLOCK IS AT THE END OF THE FILE ON PURPOSE. `facts/spec.rofl` cites
+-- boot.rofl by LINE NUMBER — nine duties anchored between 147 and 156 — so a
+-- comment inserted higher up silently unfounds every one of them. Measured:
+-- the same rules written above `undefined_premise` broke all nine citations
+-- and `spec-coverage` reported them as unfounded duties. Appending is what
+-- costs nothing.
+--
+-- ANONYMITY. Every asserted fact now carries `asserted_by`; a call that named
+-- no author is signed `$anon` (src/reflect.ts). That closes the hole where an
+-- unsigned fact had no row at all and so lay outside every audit that reads
+-- one — measured: a forgery signed `mallory` gave `forged[audit]` = 1, the
+-- same forgery unsigned gave 0, with no diagnostic anywhere. Anonymity was
+-- the cheaper attack than impersonation, which inverts what a trail is for.
+--
+-- The obvious next step is NOT taken, and the reason is a measurement rather
+-- than a preference. Withholding `authority(P, $anon)` would make anonymity a
+-- forgery outright and needs no rule at all; it is refused because the honest
+-- corpus is anonymous end to end — a bare boot+sensors world holds 9 asserted
+-- facts and, before the change, 0 authors — so `forged[audit]` would be red
+-- on the first load of every program in this repository and green on nothing.
+-- A gate in that state is switched off within a week, and what is left is the
+-- appearance of one.
+--
+-- So the kernel RECORDS anonymity and a LEDGER judges it. `demands_authorship`
+-- is host data, declared like `imports` and `collects`: a ledger that says
+-- nothing keeps exactly what it had, and a ledger that asks gets every
+-- unsigned fact in it named. Same shape as `collects`, for the same reason —
+-- the alternative was a sentence in a README, and a README is not auditable.
+edb(demands_authorship).
+
+unattributed[audit](F, P) :- asserted_by(F, user, _), in_perspective(F, P),
+                             demands_authorship(P).
+
+-- Required result, appended to the list above:
+--   ? unattributed[audit](F, P) -> empty UNLESS a ledger declared
+--     `demands_authorship(P)`, in which case its unsigned facts, each with a
+--     `why`. Deliberately NOT on the required-empty list: it is a report about
+--     ledgers that asked to be reported on, and a gate that no program can
+--     satisfy is a gate that gets deleted.
+
+-- ============ the bridge that granted itself, and its replacement ============
+--
+-- ALSO AT THE END OF THE FILE ON PURPOSE, for the reason the block above
+-- gives: `facts/spec.rofl` anchors nine duties at lines 147-156, so the edit
+-- at `crossing` was kept line-for-line and the argument lives down here.
+--
+-- `crossing` used to carry a fourth premise, `not bridge_decl(R, A, B)`, and
+-- the kernel emitted that row for EVERY rule whose head named a perspective
+-- and whose body read a different one (`src/reflect.ts`, `encodeRule`:
+-- `if (c.head.perspExplicit && pk !== canonTerm(headP))`). The licence was
+-- therefore granted by the very act that needed one — a rule crossing two
+-- ledgers wrote its own exemption, and typing the bracket was the whole of
+-- the authorisation.
+--
+-- MEASURED against this file with nothing else loaded, three probes:
+--
+--   digest[report](X) :- datum[secret](X).            leak 0, crossing 0
+--   ... the same, through an intermediate ledger      leak 1, crossing 1
+--   ... the one hop WITH `imports(report, secret)`    leak 0, crossing 0
+--
+-- The first and the third are the finding: the declared crossing and the
+-- undeclared one were INDISTINGUISHABLE, so `imports` was documentation over
+-- single hops and the audit could only ever fire on a walk of two or more.
+-- That contradicts the argument written above `flows_to`, which is that the
+-- property is transitive and every step separately licensed does not license
+-- the walk. Nine such rows existed in a bare boot.rofl, one per audit rule,
+-- so the audit exempted itself before any program was loaded; the tree of
+-- this file plus `rules/js-*.rofl` and `rules/findings.rofl` held 122, and
+-- reported `crossing` 0 and `leak` 0 for all of them.
+--
+-- NOTHING REPLACES IT AT RULE LEVEL, because there was nothing there to
+-- replace. `bridge_decl(R, A, B)` was the conjunction of `reads_from(R, A)`
+-- and `writes_to(R, B)` — both still emitted — plus one bit recording whether
+-- the author had typed a bracket. And R was joined against nothing: it
+-- appeared in no other literal of `crossing`, so the "per rule" licence was
+-- per PAIR all along, which is the sentence `imports` already says. The
+-- difference was never granularity, it was WHO WRITES IT: a rule says what it
+-- DOES, a ledger says what it PERMITS, and those two must not be the same
+-- statement. The name stays reserved in `src/reflect.ts` so that no program
+-- can conclude into it and spell the self-licence by hand; `breach[audit]`
+-- is what refuses that.
+--
+-- A REAL DECLARATION, then, for the crossings this file makes. There are two
+-- of them now, and separating them is the whole point of the ledger split
+-- above: [$kernel] is what the kernel WRITES about a program (the structure of
+-- its rules, the trail of its assertions), and [main] is what the PROGRAM
+-- writes and did not file anywhere else. One sentence used to cover both,
+-- which meant it said neither.
+--
+-- The audits read the kernel's book: `concludes`, `has_premise`, `reads_from`,
+-- `writes_to`, `uses_builtin`, `asserted_by`, `in_perspective`. That is the
+-- sentence below, and it is now REVOCABLE on its own — delete it and the six
+-- audit rules that need it go red by name, while the ones that only read the
+-- program's declarations stay green.
+imports(audit, $kernel).
+
+-- The audits also read the program's DECLARATION tables, which stayed in
+-- [main] because programs write them by hand: `authority` (forged), `mode`
+-- (unmoded), `edb` (undefined_premise), `reserved` (breach),
+-- `demands_authorship` (unattributed), plus this file's own derived
+-- `rule_known`, `crossing`, `gathered` and `collects_from`. That is a
+-- different sentence about a different book and it keeps its own line.
+imports(audit, main).
+
+-- AND THE ONE THAT IS NOT AN AUDIT. `rule_known`, `flow` and `perspective`
+-- above are derived into [main] — the default ledger — and two of them read
+-- the kernel's book. So the default ledger reads it too, and saying so is
+-- honest rather than convenient.
+--
+-- It is also the widest sentence in this file, and the price is written down
+-- rather than discovered later: it licenses EVERY rule anywhere that reads
+-- reflection and writes no ledger of its own, which is 19 of the 30 such rules
+-- in the tree (`rules/kernel-policy.rofl` 8, `rules/strata.rofl` 7, this file
+-- 2, `examples/rip` 1, `examples/loot` 1). A rule that writes a NAMED ledger
+-- gets nothing from it and must declare its own, which is what keeps
+-- requirement one alive: `uninvited[audit]` in examples/loot reads `writes_to`
+-- and is covered by the audit's line above, not by this one.
+--
+-- The alternative was measured and refused: moving `rule_known` and `flow`
+-- into [audit] removes the need for this line and breaks 21 host-side reads of
+-- `flow`, `flows_to`, `crossing`, `collects_from` and `gathered` in test files
+-- this change does not own. The line stays, the number is on the record, and
+-- the move is a separate piece of work.
+imports(main, $kernel).
+
+-- AND THE CROSSING THIS FILE DELIBERATELY DOES NOT DECLARE. An audit rule
+-- that quantifies over the ledger — `answer_without_trace[audit](S, Env, P)
+-- :- resolve_answer[Env](S, P), not explained[Env](S).` in
+-- `rules/js-resolve.rofl` is the shape — reads `$var("Env")`, which has no
+-- `authority` fact and so can never be the From of an `imports`. That is the
+-- case `collects` exists for, and `collects(audit).` would license all four
+-- such crossings in that layer at a stroke.
+--
+-- It is NOT written here, and the reason is this file's own test: a
+-- declaration that licenses nothing derives no `collected[audit]` row and is
+-- a decoration. Bare boot.rofl has no polymorphic audit rule — its nine rules
+-- all read [main], which has a name — so the sentence would license nothing
+-- HERE while standing as a blanket, permanent licence for every polymorphic
+-- read into [audit] in every program that ever loads this file, including
+-- audits nobody has written yet. Measured, too: with it here, every store in
+-- the repository carries a `collects` fact signed `$anon`, which is a row in
+-- somebody else's provenance query that nobody put there.
+--
+-- So it belongs to the LAYER that writes such a rule, next to the rule, where
+-- it is true and where it derives a row. `collects` is narrow enough for that
+-- to be safe: `collects_from` requires `not perspective(A)`, so a layer
+-- declaring it never stops the audit saying no about a ledger that HAS a
+-- name — `rules/js-*.rofl` crosses `code -> audit`, and that one still needs
+-- `imports(audit, code)` written out.

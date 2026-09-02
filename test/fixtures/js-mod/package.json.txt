@@ -1,0 +1,7 @@
+{
+  "name": "js-mod-fixture",
+  "type": "module",
+  "imports": {
+    "#sub": "./sub/c.ts"
+  }
+}

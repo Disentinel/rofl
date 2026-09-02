@@ -1,0 +1,719 @@
+<title>BLEEP — blacked out on purpose</title>
+
+<style>
+  :root {
+    --bg:        #fbfaf7;
+    --panel:     #ffffff;
+    --ink:       #1d1c1a;
+    --ink-soft:  #5d5a54;
+    --ink-faint: #8a867e;
+    --line:      #e3e0d8;
+    --line-soft: #eeebe4;
+    --accent:    #1f5fa0;
+    --accent-bg: #e8f0f9;
+    --good:      #2f6b3f;
+    --warn:      #8a6a12;
+    --bad:       #a03030;
+    --stop:      #6b3fa0;
+    --code-bg:   #f3f1ec;
+    --shadow:    0 1px 2px rgba(30, 28, 24, .06), 0 8px 24px rgba(30, 28, 24, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f25;
+      --ink:       #e9ecf1;
+      --ink-soft:  #adb3be;
+      --ink-faint: #7d838e;
+      --line:      #313640;
+      --line-soft: #262a32;
+      --accent:    #7ab6ef;
+      --accent-bg: #17252f;
+      --good:      #8fd6a2;
+      --warn:      #e2c069;
+      --bad:       #f09090;
+      --stop:      #c0a0ee;
+      --code-bg:   #101216;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f25;
+    --ink:       #e9ecf1;
+    --ink-soft:  #adb3be;
+    --ink-faint: #7d838e;
+    --line:      #313640;
+    --line-soft: #262a32;
+    --accent:    #7ab6ef;
+    --accent-bg: #17252f;
+    --good:      #8fd6a2;
+    --warn:      #e2c069;
+    --bad:       #f09090;
+    --stop:      #c0a0ee;
+    --code-bg:   #101216;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem;
+    display: flex; align-items: baseline; gap: .6rem;
+  }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; }
+  .kid p { font-size: 1.05rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .84rem; line-height: 1.55;
+    margin: 1rem 0; color: var(--ink);
+  }
+  pre.tight { font-size: .78rem; }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  figure { margin: 1.4rem 0; }
+  figcaption {
+    font-size: .82rem; color: var(--ink-faint); margin-top: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--good); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .callout {
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: .9rem 1.1rem; margin: 1.4rem 0; box-shadow: var(--shadow);
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* the lattice strip */
+  .lattice { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.2rem 0; }
+  .lvl {
+    flex: 1 1 9rem; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); padding: .7rem .8rem;
+  }
+  .lvl .name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 650;
+    font-size: .9rem; display: block; margin-bottom: .2rem;
+  }
+  .lvl .what { font-size: .82rem; color: var(--ink-soft); }
+  .lvl.clean .name { color: var(--good); }
+  .lvl.dubious .name { color: var(--warn); }
+  .lvl.dirty .name { color: var(--bad); }
+  .lvl.forbidden .name { color: var(--stop); }
+
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .9rem; }
+  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line-soft); }
+  th { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84rem; }
+
+  footer { margin-top: 4rem; border-top: 1px solid var(--line); padding-top: 1.2rem; font-size: .9rem; color: var(--ink-faint); }
+
+  @media (max-width: 34rem) {
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL · examples/bleep</p>
+  <h1>BLEEP <span class="dim">— blacked out on purpose</span></h1>
+  <p class="lede">
+    A report where the numbers nobody checked are not printed. Not an error
+    message, not a warning: <strong>visible dirt</strong>, computed by
+    multiplication in a semiring rather than by a subsystem that tracks it.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Theme</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<section>
+  <h2><span class="n">1</span> What you are looking at</h2>
+
+  <div class="kid">
+    <p>
+      Here is the rule of this page, and it is the whole idea:
+      <strong>if part of an answer came from something nobody checked, the
+      whole answer is blacked out — until somebody works it out a second way,
+      honestly.</strong>
+    </p>
+    <p>
+      Imagine your class works out how much money the school fair made. Most
+      of the numbers come from the till roll, which is a real record. One
+      number — how much was refunded — somebody just remembers hearing in a
+      group chat. Nobody checked it.
+    </p>
+    <p>
+      The total is worked out from both. So how much do you trust the total?
+      Exactly as much as you trust the shakiest number in it. Not the
+      average. The <em>worst</em> one. A chain is as strong as its weakest
+      link, and this is that, written down as arithmetic.
+    </p>
+    <p>
+      So the total gets blacked out too. Not because the sum is wrong — the
+      sum is fine — but because you do not know what you added up.
+    </p>
+    <p>
+      And there is a way to get it back. If somebody works out the same
+      number a <em>second</em> way, using only records you trust, then you
+      have a clean route to that answer and the blacking-out lifts. That is
+      not cheating; it is what checking means.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      A quarterly report modelled in ROFL. Numbers arrive through channels
+      with different trustworthiness; the report derives conclusions from
+      them; the question is which conclusions may be shown.
+    </p>
+    <p>
+      Nothing in <code>bleep.rofl</code> computes trustworthiness. There is
+      no <code>dirty/1</code>, no <code>taint/2</code>, no propagation rule.
+      The rules compute the report, and the levels are the <em>value</em> of
+      each fact under a four-element semiring folded over the support
+      hypergraph the kernel recorded while computing it —
+      <code>evaluateSemiring</code>, the same fold that does counting and
+      provenance for the other examples.
+    </p>
+    <p class="callout">
+      <strong>Honestly, about novelty.</strong> This is a classical label
+      lattice: Bell–LaPadula, information-flow control, taint tracking. The
+      field is about forty years old and there is <em>no new idea here</em>.
+      What is worth showing is narrower and true — distrust propagation turns
+      out to be <strong>multiplication in a semiring</strong>, an instance of
+      machinery already present, about fifteen lines in
+      <code>runtime/semirings.ts</code>, rather than the separate subsystem
+      industrial tools implement. That is the entire claim.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span> The report</h2>
+  <p class="real">real output</p>
+  <figure>
+    <pre class="tight">  gross_revenue       4 200 000   [clean]     clean
+  returns                  ████   [dirty]     min(dirty, clean) = dirty
+  cogs                1 900 000   [clean]     max(clean, clean) = clean
+  payroll               620 000   [clean]     clean
+  shipping              180 000   [clean]     max(clean, dubious) = clean
+  fx_rate                  ▒▒▒▒   [dubious]   min(dubious, clean) = dubious
+  headcount            ████████   [forbidden] min(forbidden, clean) = forbidden
+  --------------------------------------------------------------------------
+  net_revenue              ▒▒▒▒   [dubious]   max(dirty, dubious) = dubious
+  opex                  800 000   [clean]     clean
+  operating_profit         ▒▒▒▒   [dubious]   min(clean, dubious) = dubious
+  margin_pct               ▒▒▒▒   [dubious]   min(clean, dubious) = dubious
+  refund_rate              ████   [dirty]     min(clean, dirty) = dirty
+  cogs_eur                 ▒▒▒▒   [dubious]   min(clean, dubious) = dubious
+  revenue_per_head     ████████   [forbidden] min(clean, dubious, forbidden) = forbidden</pre>
+    <figcaption>node --experimental-strip-types examples/bleep/demo.ts</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      Five lines print. Nine do not. The right-hand column is the sum that
+      decided it, and it is always the same sum: take the worst.
+      <code>min(clean, dirty) = dirty</code> means "one part was clean, one
+      part was hearsay, so the answer counts as hearsay".
+    </p>
+    <p>
+      Notice there are two shades of blacking-out.
+      <code>▒▒▒▒</code> means "probably fine, but nobody has confirmed it".
+      <code>████</code> means "somebody typed this in a chat".
+      <code>████████</code> means something different again: that number came
+      from a place we are <em>not allowed</em> to use. Checking it would not
+      help. It is off the table.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Two rows have <strong>more than one hyperedge</strong> into them, and
+      the column above only shows what <code>⊕</code> chose between them:
+    </p>
+    <pre class="tight">  shipping
+    via says[main](carrier_invoice,shipping,180000)    min(clean, clean) = clean
+    via says[main](vendor_email,shipping,180000)       min(dubious, clean) = dubious
+  net_revenue
+    via (no licence: a plain step)                     min(clean, clean, dirty) = dirty
+    via rule_of_thumb[main](net_revenue,925)           min(dubious, clean, clean) = dubious</pre>
+    <p>
+      <code>shipping</code> is laundering: a supplier's email and the
+      carrier's invoice carry the same number, and <code>max</code> takes the
+      clean route. <code>net_revenue</code> is the same story from the other
+      side — its exact route runs through a chat message and is dirty, its
+      rule-of-thumb route runs through clean inputs but an inexact
+      <em>step</em> and is dubious, and <code>max</code> keeps the better of
+      the two. The report is therefore dubious rather than dirty, which is
+      the correct answer and not one you would guess.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">3</span> The two operations</h2>
+
+  <div class="lattice">
+    <div class="lvl clean"><span class="name">clean</span><span class="what">a system of record</span></div>
+    <div class="lvl dubious"><span class="name">dubious</span><span class="what">plausible, unreconciled</span></div>
+    <div class="lvl dirty"><span class="name">dirty</span><span class="what">hearsay — somebody typed it</span></div>
+    <div class="lvl forbidden"><span class="name">forbidden</span><span class="what">may not be used at all</span></div>
+  </div>
+
+  <div class="kid">
+    <p>
+      <strong>Down a chain, take the worst.</strong> If an answer is built
+      out of several things, it is only as good as the shakiest one. One bad
+      ingredient spoils the dish however carefully you cook afterwards. This
+      is the part an ordinary spreadsheet does not do: there the label falls
+      off the moment you add two cells together.
+    </p>
+    <p>
+      <strong>Across different ways of getting there, take the best.</strong>
+      If the same answer can also be reached by a route you trust, use that
+      one. You worked it out twice and one of the workings was clean, so the
+      answer is clean. That is not a loophole — it is exactly what "check it"
+      means.
+    </p>
+  </div>
+
+  <div class="eng">
+    <table>
+      <tr><th>operator</th><th>is</th><th>meaning</th></tr>
+      <tr><td class="mono">⊗</td><td class="mono">min</td>
+          <td>along one derivation: a conclusion is never cleaner than its worst premise</td></tr>
+      <tr><td class="mono">⊕</td><td class="mono">max</td>
+          <td>across alternative derivations: laundering through independent derivation</td></tr>
+      <tr><td class="mono">one</td><td class="mono">clean</td><td>an axiom costs nothing</td></tr>
+      <tr><td class="mono">zero</td><td class="mono">forbidden</td><td>additive identity <em>and</em> annihilator</td></tr>
+    </table>
+    <p>
+      That last row says something worth saying out loud: a fact whose every
+      route is forbidden is annotated <em>exactly</em> like a fact with no
+      route at all. An embargoed source is algebraically no source. It is
+      also the veto — <code>revenue_per_head</code> is Boolean-derivable, the
+      engine derives it, and its annotation is the semiring zero, so an
+      action gated on a clean basis reads "no admissible derivation" and
+      "no derivation" as the same value. Nothing to tune, nothing to evade.
+    </p>
+
+    <h3>Why the instance declares BOUNDED</h3>
+    <p>
+      Every instance in <code>runtime/semirings.ts</code> declares its
+      convergence discipline and says why the declaration is true. This one
+      declares <strong>BOUNDED</strong>, and the argument is a counting
+      argument: the carrier has <em>four elements</em>, iteration starts every
+      derived fact at <code>forbidden</code> and only ever moves it up, and
+      <code>clean</code> is the top. Any fact's value can change at most three
+      times, whatever the support graph does. Cycles are free.
+    </p>
+    <p>
+      Contrast <code>countingSemiring</code>, which is CLOSED and
+      <em>needs</em> <code>star</code>: <code>⊕ = +</code> has infinite
+      height, so over a cycle the count really does grow without bound and
+      "infinitely many" has to be a legal carrier value rather than an
+      overflow. Here, going round a cycle can only take <code>min</code>
+      against a value already seen.
+    </p>
+    <p>
+      (<code>star(a) = one ⊕ a ⊕ a² ⊕ … = max(clean, a) = clean = one</code>,
+      so declaring it CLOSED would compute the same values. BOUNDED is the
+      honest declaration, because convergence is by finite height and not by
+      closure.)
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">4</span> The label is on the edge</h2>
+
+  <div class="kid">
+    <p>
+      Here is a distinction that sounds fussy and is the whole trick.
+    </p>
+    <p>
+      "Someone said in the chat that refunds were 315,000" — that is
+      <strong>true</strong>. The message exists. You could screenshot it.
+      Nothing about that is doubtful.
+    </p>
+    <p>
+      "Refunds were 315,000" — <em>that</em> is the doubtful part.
+    </p>
+    <p>
+      So the doubt does not belong to either sentence. It belongs to the
+      <strong>arrow between them</strong>: the step from "somebody said it"
+      to "it is so". Put the mark on the arrow, and you can keep the message
+      as a solid fact while treating what it claims as shaky. Put the mark on
+      the message instead and you have to pretend the message never happened
+      in order to doubt it, which is silly.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      <code>says(ops_chat, returns, 315000)</code> is a <strong>clean
+      fact</strong>. The doubtful thing is the <em>step</em> from "the channel
+      said it" to "the number is 315000", and that step is a hyperedge.
+      <code>evaluateSemiring</code> has exactly that slot:
+      <code>weight(key, witness)</code> is called once per firing, and a
+      firing is a hyperedge. <code>demo.ts</code> supplies it; nothing in the
+      model carries a level.
+    </p>
+    <p>
+      Two consequences. <strong>The same fact, two edges, two labels</strong>
+      — <code>figure(shipping, 180000)</code> above. And <strong>doubt with
+      no premise to hang it on</strong>: the rule-of-thumb route to
+      <code>net_revenue</code> has clean premises and an inexact inference,
+      so there is no <em>fact</em> to label.
+    </p>
+    <p class="callout">
+      <strong>Where the distinction is real, and where it is not.</strong>
+      Being exact, because this is easy to oversell: in a Datalog where every
+      step is licensed by a fact, node labels on those licence facts are
+      <em>expressively equivalent</em> for the values of derived facts.
+      Labelling the <code>says</code> fact dirty would annotate everything
+      downstream identically. Two things are still lost. First, the record is
+      corrupted in order to express doubt about the claim — under node
+      labelling <code>says(ops_chat, …)</code> itself reads dirty, which is
+      false. Second, counterfactuals stop being cheap: "what gets laundered
+      if I verify X" is answered here by re-folding with a different label
+      function over the <em>same store</em>, with no assertion, no
+      retraction and no re-derivation. The fold did not fight the model on
+      any of this; <code>weight(key, witness)</code> is a proper edge slot
+      and it was enough. The trap next door is <code>base(key)</code>, which
+      is a <em>node</em> slot — mixing the two is how the distinction quietly
+      gets lost.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">5</span> Four questions</h2>
+
+  <h3>Which link is dirty</h3>
+  <div class="kid"><p>
+    Follow the working backwards, and at every step keep the worst part.
+    You end up at the one arrow that spoiled it, and it names the chat.
+  </p></div>
+  <div class="eng"><p>
+    The kernel's own derivation tree, then the same tree with the lattice
+    folded over it: descend the route <code>⊕</code> chose, take its worst
+    part, repeat. The chain ends on an <em>edge</em>, not on a fact.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">refund_rate prints as ████. The kernel's own derivation tree:
+
+refund_rate[main](75)  &lt;= r5e0a72f7 @tick 0
+  figure[main](returns,315000)  &lt;= r4b8d2a74 @tick 0
+    says[main](ops_chat,returns,315000) [axiom]
+  figure[main](gross_revenue,4200000)  &lt;= r4b8d2a74 @tick 0
+    says[main](billing_export,gross_revenue,4200000) [axiom]
+  75 is /(*(315000,1000),4200000) [builtin]
+
+and the same tree with the lattice folded over it, descending the route
+(+) chose and taking its worst part at every step:
+
+  refund_rate[main](75)                      dirty      worst premise below
+  figure[main](returns,315000)               dirty      EDGE is dirty, licensed by says[main](ops_chat,returns,315000)</pre>
+
+  <h3>What would have to be confirmed</h3>
+  <div class="kid"><p>
+    Ask the machine why there is no trustworthy route to that number, and it
+    tells you the exact missing piece: nobody has said the chat is a reliable
+    source, and no reliable source carries this number.
+  </p></div>
+  <div class="eng"><p>
+    <code>clean_route(M, V)</code> is the structural precondition and nothing
+    more: some system of record carries this number directly. It is
+    deliberately <em>not</em> recursive — propagating along a derivation is
+    <code>⊗</code>'s job, and writing it a second time in the rules would be
+    the separate subsystem this example exists to avoid.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">$ whynot clean_route(returns, 315000)
+whynot clean_route[main](returns,315000):
+  rule r3f0bfd8e: clean_route[main](?M,?V)@now :- says[main](?S,?M,?V)@now, trust[main](?S,clean)@now
+    failed premise: trust[main](ops_chat,clean)
+      no rule concludes 'trust' and no matching base fact exists
+
+The failing premise is the whole answer: trust(ops_chat, clean) is what is
+missing. Confirm ops_chat, or find a system of record that carries 315000.
+
+And the contrast that shows corroboration is not the same as cleanliness:
+  shipping   carried by 2 channel(s) — carrier_invoice, vendor_email — clean_route holds, level clean
+  headcount  carried by 1 channel(s) — hr_embargo — clean_route FAILS, level forbidden</pre>
+  <div class="eng"><p>
+    The last two lines are what stops corroboration being mistaken for
+    cleanliness. Two <em>dirty</em> channels agreeing gives two dirty edges,
+    and <code>max(dirty, dirty)</code> is still dirty.
+  </p></div>
+
+  <h3>Which single check is worth doing</h3>
+  <div class="kid"><p>
+    If you only have time to check one thing, which one? The machine works
+    it out rather than guessing: checking the chat un-blacks five lines;
+    checking the supplier un-blacks two.
+  </p></div>
+  <div class="eng"><p>
+    The inverse query, and the most practical of the four. Verification moves
+    an <em>edge label</em>, so one re-fold over the unchanged store answers
+    it. Verification priority, derived rather than guessed.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">  verify ops_chat (dirty)       -&gt; 5 report line(s) clean, 6 facts in all
+       returns, net_revenue, operating_profit, margin_pct, refund_rate
+  verify vendor_email (dubious) -&gt; 2 report line(s) clean, 4 facts in all
+       fx_rate, cogs_eur</pre>
+  <div class="kid"><p>
+    Look closely at the second line. The supplier's email <em>does</em>
+    mention the shipping cost — and checking it would still not un-black
+    anything about shipping, because shipping already has a second, trusted
+    source. Effort there buys nothing. Nobody worked that out by hand.
+  </p></div>
+  <div class="eng"><p>
+    <code>vendor_email</code> carries <code>shipping</code> and confirming it
+    cleans nothing there, because <code>shipping</code> is already laundered.
+    That fell out of the fold. A forbidden channel is not on the list at all:
+    an embargo is a permission, not a doubt.
+  </p></div>
+
+  <h3>How many clean routes exist</h3>
+  <div class="kid"><p>
+    Zero means there is nothing in the model to check it against — a person
+    has to go and look. Two means the number is confirmed twice over.
+  </p></div>
+  <div class="eng"><p>
+    The counting semiring with every non-clean edge annihilated, so a
+    derivation is counted only if every step of it is clean.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">  gross_revenue        1   clean
+  returns              0   dirty
+  cogs                 2   clean
+  payroll              1   clean
+  shipping             1   clean
+  fx_rate              0   dubious
+  headcount            0   forbidden
+  net_revenue          0   dubious
+  opex                 1   clean
+  operating_profit     0   dubious
+  margin_pct           0   dubious
+  refund_rate          0   dirty
+  cogs_eur             0   dubious
+  revenue_per_head     0   forbidden</pre>
+  <div class="eng"><p>
+    <strong>Which reading of the count applies here.</strong> The project
+    records this as a finding: the same metric reads in different directions
+    by domain, and an instance that ships the number bare invites a tool to
+    report robustness where it should report ambiguity. Across this example
+    set it now reads five ways — robustness (NOPE, OOPS), ambiguity (AKA),
+    fragility (SPAT), and <strong>launderability</strong> here. The
+    interpretation belongs to the instance, not to the metric.
+  </p></div>
+</section>
+
+<section>
+  <h2><span class="n">6</span> The echo chamber</h2>
+  <div class="kid"><p>
+    Two people each say "well, <em>they</em> said so". That is not two
+    sources; it is one rumour going round in a circle. Counting how many
+    times it has been repeated gives you an enormous number and tells you
+    nothing. Taking the worst link every time round the circle gives you the
+    right answer immediately, and the counting never runs away.
+  </p></div>
+  <div class="eng"><p>
+    <code>ops_chat</code> and <code>vendor_email</code> each restate the
+    other, so <code>stands_behind</code> rests on itself through the loop — a
+    cycle of the <em>support hypergraph</em>, not of the rules only, which is
+    the kind that actually breaks folds.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">  counting   stands_behind[main](ops_chat,shipping,180000)
+             infinitely many — arithmetically right, epistemically absurd
+  trust      dirty — the loop adds nothing, because going round it
+             can only take min against a value already seen
+
+The fold declared BOUNDED and stopped after 5 rounds with
+16 facts on a cycle and disciplineHeld=true. No closure operator, no depth
+cap: a four-element lattice has finite height and every value starts at
+forbidden and only ever rises, so the chain has nowhere to run.</pre>
+  <div class="eng"><p>
+    Mutual confirmation is not independent confirmation, and the lattice says
+    so without being told. <code>test/example-bleep.test.ts</code> also runs a
+    fixture where <em>every</em> fact is on the cycle, and checks that a round
+    cap far below any runaway gives byte-identical values.
+  </p></div>
+</section>
+
+<section>
+  <h2><span class="n">7</span> One check, five lines</h2>
+  <div class="kid"><p>
+    Somebody goes and reconciles the chat number against the refund ledger.
+    Here is the same report afterwards.
+  </p></div>
+  <div class="eng"><p>
+    <code>verify ops_chat</code>: the same store, the same fixpoint, one
+    different edge label, one re-fold.
+  </p></div>
+  <p class="real">real output</p>
+  <pre class="tight">$ verify ops_chat
+
+  gross_revenue       4 200 000   [clean]     clean
+  returns               315 000   [clean]     clean
+  cogs                1 900 000   [clean]     max(clean, clean) = clean
+  payroll               620 000   [clean]     clean
+  shipping              180 000   [clean]     max(clean, dubious) = clean
+  fx_rate                  ▒▒▒▒   [dubious]   min(dubious, clean) = dubious
+  headcount            ████████   [forbidden] min(forbidden, clean) = forbidden
+  --------------------------------------------------------------------------
+  net_revenue         3 885 000   [clean]     max(clean, dubious) = clean
+  opex                  800 000   [clean]     clean
+  operating_profit    1 185 000   [clean]     clean
+  margin_pct                 28   [clean]     clean
+  refund_rate                75   [clean]     clean
+  cogs_eur                 ▒▒▒▒   [dubious]   min(clean, dubious) = dubious
+  revenue_per_head     ████████   [forbidden] min(clean, forbidden) = forbidden
+
+5 report line(s) moved on one reconciliation:
+  returns           dirty -&gt; clean
+  net_revenue       dubious -&gt; clean
+  operating_profit  dubious -&gt; clean
+  margin_pct        dubious -&gt; clean
+  refund_rate       dirty -&gt; clean
+
+still not clean: fx_rate, headcount, cogs_eur, revenue_per_head. The first two need
+the vendor, and the last two rest on the embargoed headcount, which no
+reconciliation reaches. One check moved five lines; the next one moves two.</pre>
+</section>
+
+<footer>
+  <p>
+    <code>examples/bleep/</code> — <code>bleep.rofl</code> (the model),
+    <code>demo.ts</code> (run it: <code>node --experimental-strip-types
+    examples/bleep/demo.ts</code>), <code>README.md</code>, this page, and
+    <code>test/example-bleep.test.ts</code>. The instance itself is
+    <code>trustSemiring</code> in <code>runtime/semirings.ts</code>, next to
+    the counting and provenance ones. Every transcript above is pasted output
+    from a real run; nothing on this page was composed by hand.
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Explained as mechanism.'
+    };
+
+    function store(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* private mode, file://, blocked */ }
+    }
+    function load(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('bleep-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('bleep-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('bleep-theme', next);
+    });
+
+    var savedTheme = load('bleep-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

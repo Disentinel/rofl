@@ -1,0 +1,179 @@
+-- js-resolve.rofl — the ledger side of observed resolution.
+--
+-- Rules live in rules/js-resolve.rofl; nothing here is asserted about
+-- JavaScript. Every row is a statement about the MODEL — which books exist,
+-- who may write in them, which mechanisms the vocabulary admits, what was
+-- loaned from the host and why — and every row is meant to be contradictable
+-- by a rule over there.
+--
+-- ===========================================================================
+-- WHY THE ENVIRONMENT IS IN THE PERSPECTIVE SLOT
+--
+-- docs/choosing-perspectives.md admits exactly one thing into that slot — a
+-- LEDGER, "a truth context with an explicit list of who may write into it" —
+-- and rejects two others by name: epistemic status, and the modality of how a
+-- fact was obtained. The environment is put there deliberately, so it owes the
+-- document an argument. Its own litmus list, item by item:
+--
+--  1. CAN TWO CONTRADICTORY FACTS COEXIST UNDER DIFFERENT X, NEITHER BEING AN
+--     ERROR?  Yes, and this is the case that motivated the whole file.
+--     `resolves_to[env_ts_loader]("a.ts:8:./pick", "pick.ts")` and
+--     `resolves_to[env_plain_node]("a.ts:8:./pick", "pick/index.js")` are both
+--     TRUE. Neither is a mistake to be resolved; they are the answer to "it
+--     works on my machine — what happens on the deployed one?", and a model
+--     that had to pick one of them could not ask that question at all.
+--
+--  2. IS X COMPUTED FROM OTHER FACTS?  No. An environment is a configuration
+--     the world is in, chosen before any fact is gathered. Nothing here
+--     derives one; `env_declared` below is authored and `env_ran` is reported
+--     by the observer, and rules/js-resolve.rofl compares the two.
+--
+--  3. DOES X DESCRIBE HOW THE FACT WAS OBTAINED RATHER THAN WHOSE BOOK IT IS
+--     IN?  This is the sharp one, because "which resolver algorithm ran" does
+--     sound like a method, and method is modality, and modality is an
+--     attribute rather than a ledger.
+--
+--     It is not modality, and the discriminator is whose property it is.
+--     Modality is a property of the ACT of observing — measured, claimed,
+--     inferred — and the act is IDENTICAL for both books here: the same
+--     observer, in the same process, calls the same `require.resolve`. If the
+--     environment were modality the two would have to differ in how they
+--     looked, and they do not. What differs is the WORLD looked at: one has a
+--     TypeScript loader in it and one does not. `env_ts_loader` is not "found
+--     by the TypeScript method", it is "true in the configuration where a
+--     TypeScript loader is installed", and a second asserter — a deployment
+--     reporting what its own runtime resolved — would write into the same book
+--     without changing what the book means. A modality label could not survive
+--     that substitution; a ledger is defined by it.
+--
+--     The modality axis is not homeless, it is simply elsewhere and is an
+--     ordinary attribute, as the document requires: `resolve_via` records the
+--     mechanism, and `host_emitter` below records what the observer was
+--     allowed to decide for itself.
+--
+--  4. IS THERE A FINITE, NAMEABLE LIST OF WRITERS?  Yes — the `authority`
+--     facts below, and today it is one observer per book. That the two books
+--     share a writer is not a defect: `reading[s1]` and `reading[s2]` in the
+--     house sensor example share `sensor_net` too. What the declaration buys
+--     is that an impostor writing into an environment ledger is `forged[audit]`
+--     mechanically, and test/js-resolve.test.ts plants exactly that.
+--
+--  5. WOULD YOU EVER NEED TWO X ON ONE LITERAL?  No. A resolution is relative
+--     to exactly one environment; there is no sentence of the form "resolved
+--     under both configurations at once" that is not just two facts.
+--
+-- WHAT THE DOCUMENT'S ANTI-PATTERN LIST WOULD HAVE COST. The alternative was
+-- an argument column — `resolves_to[code](Env, Site, File)` — which is the
+-- "mega-main" pattern by name: it re-implements perspectives by hand and
+-- gives up `forged`, `leak` and paraconsistency to do it. It also loses the
+-- thing that makes the divergence rule short: `host_verdict[A]` and
+-- `host_verdict[B]` join on the perspective slot, and the environment arrives
+-- in `resolve_divergence`'s fourth argument by being the ledger, not by being
+-- carried through every intermediate relation by hand.
+--
+-- AND WHERE THE LEDGER MACHINERY DOES NOT PAY, measured rather than claimed:
+-- `leak[audit]` is SILENT on this layer and structurally cannot fire. The
+-- kernel emits `bridge_decl` for every rule whose head has an explicit
+-- perspective and whose body reads a different named one (src/reflect.ts), so
+-- a single-hop crossing declares itself; `leak` catches only a TRANSITIVE walk,
+-- and this layer has none — nothing writes from `[code]` into an environment
+-- ledger. So the leak audit is reported here as inapplicable rather than as
+-- green, because a gate that cannot go red is not evidence.
+--
+-- ===========================================================================
+
+-- ---------------------------------------------------------------------------
+-- THE BOOKS, AND WHO MAY WRITE IN THEM.
+--
+-- One observer writes all three. `[code]` is the scanner's book and the site
+-- enumeration belongs in it, because WHERE the import sites are is a property
+-- of the source text and cannot differ between environments; filing it per
+-- environment would duplicate a fact that cannot disagree, and duplication is
+-- where disagreement hides.
+authority(code,           js_resolve).
+authority(env_ts_loader,  js_resolve).
+authority(env_plain_node, js_resolve).
+
+-- ...and [main], because the CONFIGURATION REGISTER lives there. `env_ran` and
+-- `env_extension` are the observer's report of what it actually configured,
+-- and they sit in the same unperspectived vocabulary as `env_declared` below
+-- so that the two lists can be compared without a bridge. Measured: signing
+-- them `js_resolve` without this row is nine `forged[audit]` rows, and the
+-- alternative — loading them anonymously — is the cheaper attack boot.rofl was
+-- written against, so the row is the honest half of the choice.
+authority(main, js_resolve).
+
+-- ---------------------------------------------------------------------------
+-- THE ENVIRONMENTS, DECLARED. `env_ran` is what the observer reports it
+-- actually configured, and rules/js-resolve.rofl compares the two lists in
+-- both directions — a book declared and never written is decoration, and one
+-- written and never declared is unaccountable.
+--
+-- The axis these two differ on is the loader's registered extension list,
+-- which is what `tsx`, `ts-node` and `@babel/register` change about the
+-- process they run in — and it is this repository's own situation, which runs
+-- its sources under `--experimental-strip-types` and would deploy them
+-- compiled.
+env_declared(env_ts_loader).
+env_declared(env_plain_node).
+
+-- THE SECOND AXIS, NAMED AND NOT TAKEN. `exports` conditions (`import` against
+-- `require`, `browser` against `node`) are the other environment setting that
+-- moves resolution, and they are absent here for a reason that is a fact about
+-- node rather than a preference: conditions come from the `--conditions`
+-- command line and are read once per PROCESS, so varying them needs a child
+-- process per environment. That is buildable and it is not built; the honest
+-- report is that the environment axis measured here is one of two.
+
+-- ---------------------------------------------------------------------------
+-- THE MECHANISM VOCABULARY. Closed on purpose: rules/js-resolve.rofl reports a
+-- mechanism that occurs without being declared here, AND one declared here
+-- that never occurs. Both directions, because an under-report and a decoration
+-- are different defects and neither is visible from the count alone.
+resolve_mechanism(relative).
+resolve_mechanism(extension_guess).
+resolve_mechanism(index_file).
+resolve_mechanism(exports_map).
+resolve_mechanism(imports_map).
+resolve_mechanism(builtin).
+resolve_mechanism(node_modules_walk).
+
+-- ---------------------------------------------------------------------------
+-- WHAT THE HOST WAS ALLOWED TO DECIDE, DECLARED (docs/modelling-a-language.md
+-- rule 2: a dirty emitter is allowed if the contamination is countable).
+--
+-- The first row is the whole point of the file and is not a loan to be repaid:
+-- the disk and the loader configuration are not in any AST, so somebody has to
+-- look, and the looker is the host. The other three are real loans, each a
+-- place where the observer decided rather than reported, and the count going
+-- to zero would mean the rules had taken the work back.
+host_emitter(js, modules, node_resolver,     a_resolution_is_a_fact_about_the_machine).
+host_emitter(js, modules, mechanism_label,   a_the_specifier_prefix_selects_the_algorithm).
+host_emitter(js, modules, path_normalisation, a_realpath_and_root_relative_spelling).
+host_emitter(js, modules, builtin_canonical,  a_the_node_prefix_is_added_by_the_host).
+
+-- ---------------------------------------------------------------------------
+-- THE CELLS, CLAIMED. No new `layer` fact: resolution is not a semantic layer
+-- beside the module graph, it is the same cell answered a second way, and
+-- declaring a layer would enumerate a cell for every node kind in the
+-- vocabulary and demand a verdict for each — a matrix of claims about
+-- resolution for `yield_expression` and friends, which would be false.
+handled(js, import_declaration, modules, r_host_observed_resolution).
+handled(js, import_expression,  modules, r_host_unasked_without_a_literal).
+
+-- ...and no new `unknown_because` row, which is a measurement rather than an
+-- omission. rules/js-modules.rofl's `reason_unexercised` reports a reason
+-- recorded for something that never happens, and the frontier this layer meets
+-- is already covered by the rows in facts/js-modules.rofl: the one place the
+-- observer cannot ask about is `import(expr)`, whose reason is
+-- `runtime_dependent` and is declared there. A fresh row would name a reason
+-- nothing earns, and the gate over there would correctly call it decoration.
+
+-- ---------------------------------------------------------------------------
+-- THE EVIDENCE. Not a claim: the number of fixture import sites whose
+-- resolution was observed and compared, in BOTH environments, against the
+-- rule model — and against the other environment.
+--
+--   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
+checked(js, import_declaration, modules, r_host_observed_resolution,      o_node_resolver_traced, 10).
+checked(js, import_expression,  modules, r_host_unasked_without_a_literal, o_node_resolver_traced, 1).

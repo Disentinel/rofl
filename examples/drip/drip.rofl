@@ -1,0 +1,889 @@
+-- drip.rofl — data lineage in observability.
+--
+-- A metric is renamed or deleted. Panels quietly empty and alerts stop
+-- firing. That is not an error, it is an ABSENCE of data, so nobody notices
+-- until the alert was needed and did not come. The reverse question is the
+-- same one: before deleting a metric, nobody can say what stands on it.
+--
+-- WHY THIS DOMAIN. Extraction is deterministic at BOTH ends. Dashboards are
+-- JSON and metric names parse out of query text; the live series list comes
+-- from the metrics store's own API. Neither end needs a model or an expert,
+-- so the translation layer that sinks other examples simply is not there.
+-- Everything below is the OUTPUT of two dumb readers, and the file says
+-- which reader wrote what.
+--
+-- TWO LEDGERS, and that is the point:
+--   [repo]  what humans wrote: dashboards, alert rules, recording rules.
+--           Written by the dashboard exporter.
+--   [store] what actually exists: the series list and its label values.
+--           Written by the metrics store.
+-- Nobody can write into the other one's book. An exporter that asserts a
+-- series exists is `forged[audit]`, mechanically (demo.ts shows it firing).
+-- Conclusions live in [main] and read both ledgers through declared imports.
+--
+-- Data is synthetic (see README.md). 10 dashboards, 23 panels, 6 alerts,
+-- 2 SLOs, 7 recording rules, 25 metric names; one metric deleted, one
+-- renamed, one label VALUE gone, one query naming a metric that never
+-- existed at all.
+
+-- =========================================================================
+-- 0. the ledgers
+-- =========================================================================
+
+authority(repo, dashboard_exporter).
+authority(store, metrics_store).
+imports(main, repo).
+imports(main, store).
+
+-- The reverse crossings, which the closed flow graph now asks about: the
+-- audit rules of boot.rofl read [main], and both books reach [main], so
+-- both reach [audit] in two hops. Declared deliberately -- an audit that
+-- could not name the dashboard config or the metrics store could not report
+-- a broken matcher in either of them.
+imports(audit, repo).
+imports(audit, store).
+
+-- What this program CANNOT see. Named as facts, not as a comment, so the
+-- output can print its own boundary instead of implying it covered
+-- everything. A panel can be empty for any of these and the model will
+-- still say "structurally fine".
+scope_covered(metric_absent).
+scope_covered(label_value_absent).
+scope_covered(recording_rule_broken).
+scope_covered(recording_rule_deleted).
+unmodelled_cause(collector_down).
+unmodelled_cause(scrape_permission_denied).
+unmodelled_cause(retention_expired).
+unmodelled_cause(service_not_writing).
+unmodelled_cause(dashboard_time_range).
+
+-- =========================================================================
+-- 1. [repo] — the dashboards
+-- =========================================================================
+-- A PANEL owns one or more QUERIES (Grafana calls them targets). A QUERY is
+-- a list of SELECTORS: the metric-with-matchers leaves of its PromQL
+-- expression. A ratio has two selectors; a plain graph has one.
+--
+-- The list is a cons term and not a set of facts on purpose. "Every selector
+-- resolves" and "every matcher holds" are UNIVERSAL, and negation cannot
+-- express them here: recording rules make the consumer graph recursive, so
+-- `not broken(Q)` would put a negation inside its own cycle and the kernel
+-- would reject the program. Walking a list is the positive form of "all of
+-- them", exactly as examples/nope carries the assume-role chain inside the
+-- fact. See README.md, "What fought back".
+
+dashboard[repo](dash_api_overview).
+dashboard[repo](dash_checkout).
+dashboard[repo](dash_payments).
+dashboard[repo](dash_database).
+dashboard[repo](dash_canary).
+dashboard[repo](dash_queues).
+dashboard[repo](dash_ingest).
+dashboard[repo](dash_runtime).
+dashboard[repo](dash_exec_summary).
+dashboard[repo](dash_capacity).
+
+panel[repo](p_api_rps,           dash_api_overview).
+panel[repo](p_api_latency,       dash_api_overview).
+panel[repo](p_api_error_ratio,   dash_api_overview).
+panel[repo](p_checkout_orders,   dash_checkout).
+panel[repo](p_checkout_funnel,   dash_checkout).
+panel[repo](p_checkout_conv,     dash_checkout).
+panel[repo](p_payment_attempts,  dash_payments).
+panel[repo](p_payment_gw_errors, dash_payments).
+panel[repo](p_db_conns,          dash_database).
+panel[repo](p_db_latency,        dash_database).
+panel[repo](p_db_saturation,     dash_database).
+panel[repo](p_canary_errors,     dash_canary).
+panel[repo](p_canary_latency,    dash_canary).
+panel[repo](p_kafka_lag,         dash_queues).
+panel[repo](p_queue_depth,       dash_queues).
+panel[repo](p_ingest_rate,       dash_ingest).
+panel[repo](p_ingest_errors,     dash_ingest).
+panel[repo](p_goroutines,        dash_runtime).
+panel[repo](p_memory,            dash_runtime).
+panel[repo](p_exec_health,       dash_exec_summary).
+panel[repo](p_capacity_headroom, dash_capacity).
+panel[repo](p_load_index,        dash_capacity).
+panel[repo](p_latency_ewma,      dash_capacity).
+
+title[repo](p_api_rps,           "API requests / s").
+title[repo](p_api_latency,       "API latency p99").
+title[repo](p_api_error_ratio,   "API 5xx ratio (5m)").
+title[repo](p_checkout_orders,   "Orders placed").
+title[repo](p_checkout_funnel,   "Checkout funnel by step").
+title[repo](p_checkout_conv,     "Checkout conversion (5m)").
+title[repo](p_payment_attempts,  "Payment attempts").
+title[repo](p_payment_gw_errors, "Gateway errors by provider").
+title[repo](p_db_conns,          "Active DB connections").
+title[repo](p_db_latency,        "Query duration p99").
+title[repo](p_db_saturation,     "Pool saturation").
+title[repo](p_canary_errors,     "Canary 5xx").
+title[repo](p_canary_latency,    "Canary latency").
+title[repo](p_kafka_lag,         "Consumer lag").
+title[repo](p_queue_depth,       "Queue depth").
+title[repo](p_ingest_rate,       "Events ingested / s").
+title[repo](p_ingest_errors,     "Ingest errors / s").
+title[repo](p_goroutines,        "Goroutines").
+title[repo](p_memory,            "Resident memory").
+title[repo](p_exec_health,       "Service health (all signals)").
+title[repo](p_capacity_headroom, "Capacity headroom").
+title[repo](p_load_index,        "Load index").
+title[repo](p_latency_ewma,      "Latency, smoothed").
+
+-- =========================================================================
+-- 2. [repo] — the alerts and the SLOs
+-- =========================================================================
+-- These are the consumers that fail SILENTLY. A dark panel is at least
+-- visible to whoever opens the dashboard; a dark alert is visible to nobody
+-- until the day it was needed.
+
+alert[repo](al_api_5xx).
+alert[repo](al_checkout_conv_drop).
+alert[repo](al_payment_gw_errors).
+alert[repo](al_db_pool_exhaustion).
+alert[repo](al_queue_backlog).
+alert[repo](al_canary_errors).
+
+severity[repo](al_api_5xx,             page).
+severity[repo](al_checkout_conv_drop,  page).
+severity[repo](al_payment_gw_errors,   page).
+severity[repo](al_db_pool_exhaustion,  page).
+severity[repo](al_queue_backlog,       ticket).
+severity[repo](al_canary_errors,       ticket).
+
+title[repo](al_api_5xx,            "API 5xx ratio above 2%").
+title[repo](al_checkout_conv_drop, "Checkout conversion dropped").
+title[repo](al_payment_gw_errors,  "Payment gateway erroring").
+title[repo](al_db_pool_exhaustion, "DB pool near exhaustion").
+title[repo](al_queue_backlog,      "Consumer lag climbing").
+title[repo](al_canary_errors,      "Canary returning 5xx").
+
+slo[repo](slo_checkout_availability).
+slo[repo](slo_api_latency).
+title[repo](slo_checkout_availability, "Checkout availability 99.5%").
+title[repo](slo_api_latency,           "API latency p99 < 300ms").
+
+-- =========================================================================
+-- 3. [repo] — the recording rules
+-- =========================================================================
+-- A recording rule is a consumer AND a producer: it owns a query like a
+-- panel does, and it writes a new metric back into the store. That is what
+-- makes lineage recursive and what makes a broken rule a SILENT amplifier —
+-- one missing input takes out everything downstream of its output.
+--
+-- past_input is a different edge from a query selector, and the difference
+-- is load-bearing. A smoothing rule reads its OWN previously written
+-- samples: that is a real lineage edge (delete the metric and the rule loses
+-- its history) but NOT an availability dependency (the rule still evaluates
+-- from the live half of its expression). Collapsing the two would make the
+-- rule depend on itself and nothing would ever be derivable.
+
+recording_rule[repo](rr_api_error_ratio).
+recording_rule[repo](rr_checkout_conv).
+recording_rule[repo](rr_db_saturation).
+recording_rule[repo](rr_latency_ewma).
+recording_rule[repo](rr_load_index).
+recording_rule[repo](rr_capacity_headroom).
+recording_rule[repo](rr_legacy_batch).
+
+records[repo](rr_api_error_ratio,  "job:http_errors:ratio5m").
+records[repo](rr_checkout_conv,    "job:checkout:conversion5m").
+records[repo](rr_db_saturation,    "job:db:saturation").
+records[repo](rr_latency_ewma,     "svc:latency:ewma").
+records[repo](rr_load_index,       "svc:load:index").
+records[repo](rr_capacity_headroom, "svc:capacity:headroom").
+records[repo](rr_legacy_batch,     "job:legacy:batch_rate").
+
+-- the labels a rule's output carries (its by() clause plus its labels: block)
+rule_label[repo](rr_api_error_ratio,  "job", "api").
+rule_label[repo](rr_checkout_conv,    "job", "checkout").
+rule_label[repo](rr_db_saturation,    "job", "db").
+rule_label[repo](rr_db_saturation,    "pool", "primary").
+rule_label[repo](rr_latency_ewma,     "job", "api").
+rule_label[repo](rr_load_index,       "job", "api").
+rule_label[repo](rr_capacity_headroom, "job", "api").
+rule_label[repo](rr_legacy_batch,     "job", "batch").
+
+-- the three lineage-only edges: two rules that read each other's past
+-- output, and one that reads its own. The lineage graph is cyclic here and
+-- nowhere else.
+past_input[repo](rr_latency_ewma,      "svc:latency:ewma").
+past_input[repo](rr_load_index,        "svc:capacity:headroom").
+past_input[repo](rr_capacity_headroom, "svc:load:index").
+
+-- =========================================================================
+-- 4. [repo] — the queries, and their selectors
+-- =========================================================================
+
+query[repo](q_api_rps,        p_api_rps).
+query[repo](q_api_latency,    p_api_latency).
+query[repo](q_api_ratio,      p_api_error_ratio).
+query[repo](q_ck_orders,      p_checkout_orders).
+query[repo](q_ck_funnel,      p_checkout_funnel).
+query[repo](q_ck_conv,        p_checkout_conv).
+query[repo](q_pay_attempts,   p_payment_attempts).
+query[repo](q_pay_gw,         p_payment_gw_errors).
+query[repo](q_db_conns,       p_db_conns).
+query[repo](q_db_latency,     p_db_latency).
+query[repo](q_db_sat,         p_db_saturation).
+query[repo](q_canary_err,     p_canary_errors).
+query[repo](q_canary_lat,     p_canary_latency).
+query[repo](q_kafka_lag,      p_kafka_lag).
+query[repo](q_queue_depth,    p_queue_depth).
+query[repo](q_ingest_rate,    p_ingest_rate).
+query[repo](q_ingest_err,     p_ingest_errors).
+query[repo](q_goroutines,     p_goroutines).
+query[repo](q_memory,         p_memory).
+query[repo](q_cap_headroom,   p_capacity_headroom).
+query[repo](q_load_index,     p_load_index).
+query[repo](q_lat_ewma,       p_latency_ewma).
+
+-- the executive panel: six independent signals on one graph
+query[repo](q_exec_rps,       p_exec_health).
+query[repo](q_exec_latency,   p_exec_health).
+query[repo](q_exec_orders,    p_exec_health).
+query[repo](q_exec_db,        p_exec_health).
+query[repo](q_exec_lag,       p_exec_health).
+query[repo](q_exec_gw,        p_exec_health).
+
+query[repo](q_al_api,         al_api_5xx).
+query[repo](q_al_conv,        al_checkout_conv_drop).
+query[repo](q_al_gw,          al_payment_gw_errors).
+query[repo](q_al_db,          al_db_pool_exhaustion).
+query[repo](q_al_lag,         al_queue_backlog).
+query[repo](q_al_canary,      al_canary_errors).
+
+query[repo](q_slo_checkout,   slo_checkout_availability).
+query[repo](q_slo_latency,    slo_api_latency).
+
+query[repo](q_rr_api,         rr_api_error_ratio).
+query[repo](q_rr_conv,        rr_checkout_conv).
+query[repo](q_rr_db,          rr_db_saturation).
+query[repo](q_rr_ewma,        rr_latency_ewma).
+query[repo](q_rr_load,        rr_load_index).
+query[repo](q_rr_cap,         rr_capacity_headroom).
+query[repo](q_rr_legacy,      rr_legacy_batch).
+
+-- The leaves of each query's PromQL expression, BY POSITION. A dashboard's
+-- targets are a JSON array and a selector's matchers are a JSON object read
+-- in source order, so an index is what the extractor already has.
+--
+-- Indexed, not a cons list, and the reason is arithmetic rather than taste.
+-- "Every selector resolves" and "every matcher holds" are UNIVERSAL, and
+-- negation cannot express them here: recording rules make the consumer graph
+-- recursive, so `not broken(Q)` would put a negation inside its own cycle and
+-- the kernel would reject the program (README.md, "What fought back"). Both
+-- a cons-list walk and an index walk say "all of them" positively; the index
+-- walk additionally keeps every step SINGLE-DERIVATION, and a shared list
+-- term does not, which is the difference between a fragility count of 1 and
+-- a fragility count of 14 for the same one-source panel.
+
+selector_at[repo](q_api_rps,      1, s_api_rps).
+selector_count[repo](q_api_rps,      1).
+selector_at[repo](q_api_latency,  1, s_api_lat).
+selector_count[repo](q_api_latency,  1).
+selector_at[repo](q_api_ratio,    1, s_api_ratio).
+selector_count[repo](q_api_ratio,    1).
+selector_at[repo](q_ck_orders,    1, s_ck_orders).
+selector_count[repo](q_ck_orders,    1).
+selector_at[repo](q_ck_funnel,    1, s_ck_funnel).
+selector_count[repo](q_ck_funnel,    1).
+selector_at[repo](q_ck_conv,      1, s_ck_conv).
+selector_count[repo](q_ck_conv,      1).
+selector_at[repo](q_pay_attempts, 1, s_pay_ok).
+selector_at[repo](q_pay_attempts, 2, s_pay_all).
+selector_count[repo](q_pay_attempts, 2).
+selector_at[repo](q_pay_gw,       1, s_pay_gw).
+selector_count[repo](q_pay_gw,       1).
+selector_at[repo](q_db_conns,     1, s_db_conns).
+selector_count[repo](q_db_conns,     1).
+selector_at[repo](q_db_latency,   1, s_db_lat).
+selector_count[repo](q_db_latency,   1).
+selector_at[repo](q_db_sat,       1, s_db_sat).
+selector_count[repo](q_db_sat,       1).
+selector_at[repo](q_canary_err,   1, s_canary_err).
+selector_count[repo](q_canary_err,   1).
+selector_at[repo](q_canary_lat,   1, s_canary_lat).
+selector_count[repo](q_canary_lat,   1).
+selector_at[repo](q_kafka_lag,    1, s_kafka_lag).
+selector_count[repo](q_kafka_lag,    1).
+selector_at[repo](q_queue_depth,  1, s_queue_depth).
+selector_count[repo](q_queue_depth,  1).
+selector_at[repo](q_ingest_rate,  1, s_ingest).
+selector_count[repo](q_ingest_rate,  1).
+selector_at[repo](q_ingest_err,   1, s_ingest_err).
+selector_count[repo](q_ingest_err,   1).
+selector_at[repo](q_goroutines,   1, s_goroutines).
+selector_count[repo](q_goroutines,   1).
+selector_at[repo](q_memory,       1, s_memory).
+selector_count[repo](q_memory,       1).
+selector_at[repo](q_cap_headroom, 1, s_cap_headroom).
+selector_count[repo](q_cap_headroom, 1).
+selector_at[repo](q_load_index,   1, s_load_index).
+selector_count[repo](q_load_index,   1).
+selector_at[repo](q_lat_ewma,     1, s_lat_ewma).
+selector_count[repo](q_lat_ewma,     1).
+selector_at[repo](q_exec_rps,     1, s_exec_rps).
+selector_count[repo](q_exec_rps,     1).
+selector_at[repo](q_exec_latency, 1, s_exec_lat).
+selector_count[repo](q_exec_latency, 1).
+selector_at[repo](q_exec_orders,  1, s_exec_orders).
+selector_count[repo](q_exec_orders,  1).
+selector_at[repo](q_exec_db,      1, s_exec_db).
+selector_count[repo](q_exec_db,      1).
+selector_at[repo](q_exec_lag,     1, s_exec_lag).
+selector_count[repo](q_exec_lag,     1).
+selector_at[repo](q_exec_gw,      1, s_exec_gw).
+selector_count[repo](q_exec_gw,      1).
+selector_at[repo](q_al_api,       1, s_al_api).
+selector_count[repo](q_al_api,       1).
+selector_at[repo](q_al_conv,      1, s_al_conv).
+selector_count[repo](q_al_conv,      1).
+selector_at[repo](q_al_gw,        1, s_al_gw).
+selector_count[repo](q_al_gw,        1).
+selector_at[repo](q_al_db,        1, s_al_db).
+selector_count[repo](q_al_db,        1).
+selector_at[repo](q_al_lag,       1, s_al_lag).
+selector_count[repo](q_al_lag,       1).
+selector_at[repo](q_al_canary,    1, s_al_canary).
+selector_count[repo](q_al_canary,    1).
+selector_at[repo](q_slo_checkout, 1, s_slo_checkout).
+selector_count[repo](q_slo_checkout, 1).
+selector_at[repo](q_slo_latency,  1, s_slo_latency).
+selector_count[repo](q_slo_latency,  1).
+selector_at[repo](q_rr_api,       1, s_rr_api_5xx).
+selector_at[repo](q_rr_api,       2, s_rr_api_all).
+selector_count[repo](q_rr_api,       2).
+selector_at[repo](q_rr_conv,      1, s_rr_conv).
+selector_count[repo](q_rr_conv,      1).
+selector_at[repo](q_rr_db,        1, s_rr_db).
+selector_count[repo](q_rr_db,        1).
+selector_at[repo](q_rr_ewma,      1, s_rr_ewma).
+selector_count[repo](q_rr_ewma,      1).
+selector_at[repo](q_rr_load,      1, s_rr_load).
+selector_count[repo](q_rr_load,      1).
+selector_at[repo](q_rr_cap,       1, s_rr_cap).
+selector_count[repo](q_rr_cap,       1).
+selector_at[repo](q_rr_legacy,    1, s_rr_legacy).
+selector_count[repo](q_rr_legacy,    1).
+
+selector_metric[repo](s_api_rps,      "http_requests_total").
+selector_metric[repo](s_api_lat,      "http_request_duration_seconds").
+selector_metric[repo](s_api_ratio,    "job:http_errors:ratio5m").
+selector_metric[repo](s_ck_orders,    "checkout_orders_total").
+selector_metric[repo](s_ck_funnel,    "checkout_funnel_steps_total").
+selector_metric[repo](s_ck_conv,      "job:checkout:conversion5m").
+selector_metric[repo](s_pay_ok,       "payment_attempts_total").
+selector_metric[repo](s_pay_all,      "payment_attempts_total").
+selector_metric[repo](s_pay_gw,       "payment_gateway_errors_total").
+selector_metric[repo](s_db_conns,     "db_connections_active").
+selector_metric[repo](s_db_lat,       "db_query_duration_seconds").
+selector_metric[repo](s_db_sat,       "job:db:saturation").
+selector_metric[repo](s_canary_err,   "http_requests_total").
+selector_metric[repo](s_canary_lat,   "http_request_duration_seconds").
+selector_metric[repo](s_kafka_lag,    "kafka_consumer_lag").
+selector_metric[repo](s_queue_depth,  "queue_depth").
+selector_metric[repo](s_ingest,       "ingest_events_total").
+selector_metric[repo](s_ingest_err,   "ingest_errors_totl").
+selector_metric[repo](s_goroutines,   "go_goroutines").
+selector_metric[repo](s_memory,       "process_resident_memory_bytes").
+selector_metric[repo](s_cap_headroom, "svc:capacity:headroom").
+selector_metric[repo](s_load_index,   "svc:load:index").
+selector_metric[repo](s_lat_ewma,     "svc:latency:ewma").
+selector_metric[repo](s_exec_rps,     "http_requests_total").
+selector_metric[repo](s_exec_lat,     "http_request_duration_seconds").
+selector_metric[repo](s_exec_orders,  "checkout_orders_total").
+selector_metric[repo](s_exec_db,      "db_connections_active").
+selector_metric[repo](s_exec_lag,     "kafka_consumer_lag").
+selector_metric[repo](s_exec_gw,      "payment_gateway_errors_total").
+selector_metric[repo](s_al_api,       "job:http_errors:ratio5m").
+selector_metric[repo](s_al_conv,      "job:checkout:conversion5m").
+selector_metric[repo](s_al_gw,        "payment_gateway_errors_total").
+selector_metric[repo](s_al_db,        "db_connections_active").
+selector_metric[repo](s_al_lag,       "kafka_consumer_lag").
+selector_metric[repo](s_al_canary,    "http_requests_total").
+selector_metric[repo](s_slo_checkout, "job:checkout:conversion5m").
+selector_metric[repo](s_slo_latency,  "svc:latency:ewma").
+selector_metric[repo](s_rr_api_5xx,   "http_requests_total").
+selector_metric[repo](s_rr_api_all,   "http_requests_total").
+selector_metric[repo](s_rr_conv,      "checkout_funnel_steps_total").
+selector_metric[repo](s_rr_db,        "db_connections_active").
+selector_metric[repo](s_rr_ewma,      "http_request_duration_seconds").
+selector_metric[repo](s_rr_load,      "queue_depth").
+selector_metric[repo](s_rr_cap,       "job:db:saturation").
+selector_metric[repo](s_rr_legacy,    "legacy_batch_runs_total").
+
+-- THE LABELS ARE THE WHOLE DIFFICULTY: matching on the metric NAME alone
+-- reports "all fine" over a dashboard that has been blank for three weeks,
+-- because the metric is perfectly alive and it is the label VALUE that went
+-- away. Matcher 1 of s_canary_err is that case.
+
+matcher_at[repo](s_api_rps,      1, "job", "api").
+matcher_count[repo](s_api_rps,      1).
+matcher_at[repo](s_api_lat,      1, "job", "api").
+matcher_count[repo](s_api_lat,      1).
+matcher_at[repo](s_api_ratio,    1, "job", "api").
+matcher_count[repo](s_api_ratio,    1).
+matcher_at[repo](s_ck_orders,    1, "job", "checkout").
+matcher_count[repo](s_ck_orders,    1).
+matcher_at[repo](s_ck_funnel,    1, "job", "checkout").
+matcher_count[repo](s_ck_funnel,    1).
+matcher_at[repo](s_ck_conv,      1, "job", "checkout").
+matcher_count[repo](s_ck_conv,      1).
+matcher_at[repo](s_pay_ok,       1, "job", "billing").
+matcher_at[repo](s_pay_ok,       2, "result", "ok").
+matcher_count[repo](s_pay_ok,       2).
+matcher_at[repo](s_pay_all,      1, "job", "billing").
+matcher_count[repo](s_pay_all,      1).
+matcher_at[repo](s_pay_gw,       1, "job", "billing").
+matcher_count[repo](s_pay_gw,       1).
+matcher_at[repo](s_db_conns,     1, "job", "db").
+matcher_count[repo](s_db_conns,     1).
+matcher_at[repo](s_db_lat,       1, "job", "db").
+matcher_count[repo](s_db_lat,       1).
+matcher_at[repo](s_db_sat,       1, "job", "db").
+matcher_at[repo](s_db_sat,       2, "pool", "primary").
+matcher_count[repo](s_db_sat,       2).
+matcher_at[repo](s_canary_err,   1, "env", "canary").
+matcher_at[repo](s_canary_err,   2, "status", "5xx").
+matcher_count[repo](s_canary_err,   2).
+matcher_at[repo](s_canary_lat,   1, "env", "canary").
+matcher_count[repo](s_canary_lat,   1).
+matcher_at[repo](s_kafka_lag,    1, "job", "ingest").
+matcher_count[repo](s_kafka_lag,    1).
+matcher_at[repo](s_queue_depth,  1, "job", "ingest").
+matcher_count[repo](s_queue_depth,  1).
+matcher_at[repo](s_ingest,       1, "job", "ingest").
+matcher_count[repo](s_ingest,       1).
+matcher_at[repo](s_ingest_err,   1, "job", "ingest").
+matcher_count[repo](s_ingest_err,   1).
+matcher_at[repo](s_goroutines,   1, "job", "api").
+matcher_count[repo](s_goroutines,   1).
+matcher_at[repo](s_memory,       1, "job", "api").
+matcher_count[repo](s_memory,       1).
+matcher_at[repo](s_cap_headroom, 1, "job", "api").
+matcher_count[repo](s_cap_headroom, 1).
+matcher_at[repo](s_load_index,   1, "job", "api").
+matcher_count[repo](s_load_index,   1).
+matcher_at[repo](s_lat_ewma,     1, "job", "api").
+matcher_count[repo](s_lat_ewma,     1).
+matcher_at[repo](s_exec_rps,     1, "job", "api").
+matcher_count[repo](s_exec_rps,     1).
+matcher_at[repo](s_exec_lat,     1, "job", "api").
+matcher_count[repo](s_exec_lat,     1).
+matcher_at[repo](s_exec_orders,  1, "job", "checkout").
+matcher_count[repo](s_exec_orders,  1).
+matcher_at[repo](s_exec_db,      1, "job", "db").
+matcher_count[repo](s_exec_db,      1).
+matcher_at[repo](s_exec_lag,     1, "job", "ingest").
+matcher_count[repo](s_exec_lag,     1).
+matcher_at[repo](s_exec_gw,      1, "job", "billing").
+matcher_count[repo](s_exec_gw,      1).
+matcher_at[repo](s_al_api,       1, "job", "api").
+matcher_count[repo](s_al_api,       1).
+matcher_at[repo](s_al_conv,      1, "job", "checkout").
+matcher_count[repo](s_al_conv,      1).
+matcher_at[repo](s_al_gw,        1, "job", "billing").
+matcher_count[repo](s_al_gw,        1).
+matcher_at[repo](s_al_db,        1, "job", "db").
+matcher_count[repo](s_al_db,        1).
+matcher_at[repo](s_al_lag,       1, "job", "ingest").
+matcher_count[repo](s_al_lag,       1).
+matcher_at[repo](s_al_canary,    1, "env", "canary").
+matcher_count[repo](s_al_canary,    1).
+matcher_at[repo](s_slo_checkout, 1, "job", "checkout").
+matcher_count[repo](s_slo_checkout, 1).
+matcher_at[repo](s_slo_latency,  1, "job", "api").
+matcher_count[repo](s_slo_latency,  1).
+matcher_at[repo](s_rr_api_5xx,   1, "job", "api").
+matcher_at[repo](s_rr_api_5xx,   2, "status", "5xx").
+matcher_count[repo](s_rr_api_5xx,   2).
+matcher_at[repo](s_rr_api_all,   1, "job", "api").
+matcher_count[repo](s_rr_api_all,   1).
+matcher_at[repo](s_rr_conv,      1, "job", "checkout").
+matcher_count[repo](s_rr_conv,      1).
+matcher_at[repo](s_rr_db,        1, "job", "db").
+matcher_count[repo](s_rr_db,        1).
+matcher_at[repo](s_rr_ewma,      1, "job", "api").
+matcher_count[repo](s_rr_ewma,      1).
+matcher_at[repo](s_rr_load,      1, "job", "ingest").
+matcher_count[repo](s_rr_load,      1).
+matcher_at[repo](s_rr_cap,       1, "job", "db").
+matcher_count[repo](s_rr_cap,       1).
+matcher_at[repo](s_rr_legacy,    1, "job", "batch").
+matcher_count[repo](s_rr_legacy,    1).
+
+-- =========================================================================
+-- 5. [store] — what actually exists, right now
+-- =========================================================================
+-- GET /api/v1/label/__name__/values, then /api/v1/series per metric. No
+-- interpretation happens on the way in; this is a transcription.
+
+series[store]("http_requests_total").
+series[store]("http_request_duration_seconds").
+series[store]("checkout_orders_total").
+series[store]("payment_attempts_total").
+series[store]("payments_gateway_errors_total").
+series[store]("db_connections_active").
+series[store]("db_query_duration_seconds").
+series[store]("queue_depth").
+series[store]("ingest_events_total").
+series[store]("kafka_consumer_lag").
+series[store]("go_goroutines").
+series[store]("process_resident_memory_bytes").
+series[store]("cdn_cache_hits_total").
+series[store]("legacy_batch_runs_total").
+series[store]("tls_cert_expiry_seconds").
+series[store]("job:http_errors:ratio5m").
+series[store]("job:db:saturation").
+series[store]("svc:latency:ewma").
+series[store]("svc:load:index").
+series[store]("svc:capacity:headroom").
+series[store]("job:legacy:batch_rate").
+
+series_label[store]("http_requests_total", "job", "api").
+series_label[store]("http_requests_total", "job", "checkout").
+series_label[store]("http_requests_total", "route", "/v2/orders").
+series_label[store]("http_requests_total", "status", "2xx").
+series_label[store]("http_requests_total", "status", "4xx").
+series_label[store]("http_requests_total", "status", "5xx").
+series_label[store]("http_requests_total", "env", "prod").
+series_label[store]("http_request_duration_seconds", "job", "api").
+series_label[store]("http_request_duration_seconds", "route", "/v2/orders").
+series_label[store]("http_request_duration_seconds", "env", "prod").
+series_label[store]("checkout_orders_total", "job", "checkout").
+series_label[store]("checkout_orders_total", "result", "ok").
+series_label[store]("checkout_orders_total", "result", "failed").
+series_label[store]("checkout_orders_total", "env", "prod").
+series_label[store]("payment_attempts_total", "job", "billing").
+series_label[store]("payment_attempts_total", "provider", "stripe").
+series_label[store]("payment_attempts_total", "provider", "adyen").
+series_label[store]("payment_attempts_total", "result", "ok").
+series_label[store]("payment_attempts_total", "result", "failed").
+series_label[store]("payments_gateway_errors_total", "job", "billing").
+series_label[store]("payments_gateway_errors_total", "provider", "stripe").
+series_label[store]("payments_gateway_errors_total", "provider", "adyen").
+series_label[store]("payments_gateway_errors_total", "code", "502").
+series_label[store]("db_connections_active", "job", "db").
+series_label[store]("db_connections_active", "pool", "primary").
+series_label[store]("db_connections_active", "pool", "replica").
+series_label[store]("db_query_duration_seconds", "job", "db").
+series_label[store]("db_query_duration_seconds", "query", "select_orders").
+series_label[store]("queue_depth", "job", "ingest").
+series_label[store]("queue_depth", "queue", "events").
+series_label[store]("ingest_events_total", "job", "ingest").
+series_label[store]("ingest_events_total", "source", "web").
+series_label[store]("kafka_consumer_lag", "job", "ingest").
+series_label[store]("kafka_consumer_lag", "topic", "orders").
+series_label[store]("kafka_consumer_lag", "group", "billing").
+series_label[store]("go_goroutines", "job", "api").
+series_label[store]("process_resident_memory_bytes", "job", "api").
+series_label[store]("cdn_cache_hits_total", "job", "edge").
+series_label[store]("cdn_cache_hits_total", "pop", "ams").
+series_label[store]("legacy_batch_runs_total", "job", "batch").
+series_label[store]("tls_cert_expiry_seconds", "job", "edge").
+
+-- Only the metrics the rename question needs. A real /api/v1/metadata dump
+-- carries a type for every metric; nothing else here reads it.
+metric_type[store]("payments_gateway_errors_total", counter).
+was_type[store]("payment_gateway_errors_total", counter).
+was_type[store]("checkout_funnel_steps_total", counter).
+
+-- =========================================================================
+-- 6. [store] — the same two calls, two weeks ago
+-- =========================================================================
+-- The previous snapshot. NOT a tick: two ledgers of observation, taken at
+-- two dates, both present at once. Time here is data, not a clock, because
+-- nothing in the world is being simulated forward — two dumps are being
+-- compared.
+
+snapshot[store](was, "2026-08-16").
+snapshot[store](now, "2026-08-30").
+
+was_series[store]("http_requests_total").
+was_series[store]("http_request_duration_seconds").
+was_series[store]("checkout_orders_total").
+was_series[store]("checkout_funnel_steps_total").
+was_series[store]("payment_attempts_total").
+was_series[store]("payment_gateway_errors_total").
+was_series[store]("db_connections_active").
+was_series[store]("db_query_duration_seconds").
+was_series[store]("queue_depth").
+was_series[store]("ingest_events_total").
+was_series[store]("kafka_consumer_lag").
+was_series[store]("go_goroutines").
+was_series[store]("process_resident_memory_bytes").
+was_series[store]("cdn_cache_hits_total").
+was_series[store]("legacy_batch_runs_total").
+was_series[store]("tls_cert_expiry_seconds").
+was_series[store]("job:http_errors:ratio5m").
+was_series[store]("job:checkout:conversion5m").
+was_series[store]("job:db:saturation").
+was_series[store]("svc:latency:ewma").
+was_series[store]("svc:load:index").
+was_series[store]("svc:capacity:headroom").
+was_series[store]("job:legacy:batch_rate").
+
+was_label[store]("payment_gateway_errors_total", "job", "billing").
+was_label[store]("payment_gateway_errors_total", "provider", "stripe").
+was_label[store]("payment_gateway_errors_total", "provider", "adyen").
+was_label[store]("payment_gateway_errors_total", "code", "502").
+was_label[store]("checkout_funnel_steps_total", "job", "checkout").
+was_label[store]("checkout_funnel_steps_total", "step", "cart").
+was_label[store]("checkout_funnel_steps_total", "step", "pay").
+was_label[store]("checkout_funnel_steps_total", "env", "prod").
+was_label[store]("http_requests_total", "job", "api").
+was_label[store]("http_requests_total", "env", "prod").
+was_label[store]("http_requests_total", "env", "canary").
+was_label[store]("http_requests_total", "status", "5xx").
+was_label[store]("http_request_duration_seconds", "job", "api").
+was_label[store]("http_request_duration_seconds", "env", "prod").
+was_label[store]("http_request_duration_seconds", "env", "canary").
+
+-- =========================================================================
+-- 7. the vocabulary of the two ledgers, lifted into [main]
+-- =========================================================================
+
+consumer(C)             :- panel[repo](C, _).
+consumer(C)             :- alert[repo](C).
+consumer(C)             :- slo[repo](C).
+consumer_kind(C, panel) :- panel[repo](C, _).
+consumer_kind(C, alert) :- alert[repo](C).
+consumer_kind(C, slo)   :- slo[repo](C).
+
+-- Every metric name this world knows about, from either end. The three arms
+-- are DISJOINT on purpose: in the store now, in the store two weeks ago and
+-- not now, or named by a query and never in the store at all (the last arm
+-- catches a typo, and is why counting over lineage stays exact — a metric
+-- with two derivations here would double every path count through it).
+metric(M) :- series[store](M).
+metric(M) :- was_series[store](M), not series[store](M).
+metric(M) :- selector_metric[repo](_, M), not series[store](M), not was_series[store](M).
+
+-- =========================================================================
+-- 8. walking a list positively — "all of them", without negation
+-- =========================================================================
+-- ml_ok(S, N): the first N matchers of selector S all hold.
+-- sl_ok(Q, N): the first N selectors of query Q all resolve.
+-- Each step multiplies exactly one derivation into the next, so a semiring
+-- folded over these relations counts sources and not bookkeeping.
+
+sel_in(Q, S)        :- selector_at[repo](Q, _, S).
+matcher_of(S, K, V) :- matcher_at[repo](S, _, K, V).
+
+-- =========================================================================
+-- 9. resolution — does this query resolve into series that exist?
+-- =========================================================================
+-- The recursion that matters: a query resolves only if its metrics resolve,
+-- and a recorded metric resolves only if the RULE that writes it resolves,
+-- which is a query again. One missing scrape target can therefore darken a
+-- panel four links away, and that chain is what whynot walks.
+--
+-- A recorded metric is answered for by its rule, not by the store: it is in
+-- the store only because the rule put it there, so `not recorded_metric`
+-- keeps exactly one derivation per metric instead of two. (A recorded metric
+-- whose rule broke last week may still be in the store until retention
+-- expires; this model calls it gone the moment the rule breaks, which is
+-- early rather than wrong. Stated in README.md.)
+
+recorded_metric(M)  :- records[repo](_, M).
+metric_ok(M)        :- series[store](M), not recorded_metric(M).
+metric_ok(M)        :- records[repo](R, M), rule_ok(R).
+
+label_ok(M, K, V)   :- series_label[store](M, K, V), not recorded_metric(M).
+label_ok(M, K, V)   :- records[repo](R, M), rule_ok(R), rule_label[repo](R, K, V).
+
+ml_ok(S, 0)         :- selector_metric[repo](S, _).
+ml_ok(S, N)         :- matcher_at[repo](S, N, K, V), selector_metric[repo](S, M),
+                       label_ok(M, K, V), N1 is N - 1, ml_ok(S, N1).
+matchers_ok(S)      :- matcher_count[repo](S, N), ml_ok(S, N).
+
+selector_ok(S)      :- selector_metric[repo](S, M), metric_ok(M), matchers_ok(S).
+
+sl_ok(Q, 0)         :- query[repo](Q, _).
+sl_ok(Q, N)         :- selector_at[repo](Q, N, S), selector_ok(S),
+                       N1 is N - 1, sl_ok(Q, N1).
+query_ok(Q)         :- selector_count[repo](Q, N), sl_ok(Q, N).
+
+-- A recording rule owns exactly one query (Prometheus allows exactly one
+-- expr); test/example-drip.test.ts asserts that, so the existential below is
+-- a universal in disguise and stays one.
+rule_ok(R)          :- recording_rule[repo](R), query[repo](Q, R), query_ok(Q).
+
+-- A panel plots what it can: one resolving query is enough to draw
+-- something. That is the whole difference between DARK and DEGRADED.
+consumer_live(C)    :- consumer(C), query[repo](Q, C), query_ok(Q).
+consumer_dark(C)    :- consumer(C), not consumer_live(C).
+
+-- =========================================================================
+-- 10. two different edges, and collapsing them is the mistake
+-- =========================================================================
+-- feeds_now(A, B): metric A is read by the query of the rule that writes B.
+--   Delete A and B stops being written. This is the AVAILABILITY edge, and
+--   the graph over it is acyclic — a cycle here would mean Prometheus itself
+--   could not order the rules.
+-- feeds_past(A, B): the rule that writes B reads A's already-written
+--   samples. Delete A and B keeps being written, but its history is gone.
+--   This is a LINEAGE edge only, and the graph over it has a self-loop and
+--   a two-cycle.
+--
+-- The first version of this file had one `feeds` relation for both, and the
+-- excise oracle disagreed with the derived blast radius on two metrics out
+-- of four — p_capacity_headroom was predicted to go dark when queue_depth
+-- was deleted, and it does not. The disagreement was the model's, not the
+-- engine's. Two relations, two questions.
+
+query_uses(Q, M)   :- sel_in(Q, S), selector_metric[repo](S, M).
+uses(C, M)         :- query[repo](Q, C), query_uses(Q, M).
+
+feeds_now(In, Out)  :- records[repo](R, Out), query[repo](Q, R), query_uses(Q, In).
+feeds_past(In, Out) :- records[repo](R, Out), past_input[repo](R, In).
+feeds(In, Out)      :- feeds_now(In, Out).
+feeds(In, Out)      :- feeds_past(In, Out).
+
+-- === availability: acyclic, so no chain is needed ===
+needs_up(Top, Top) :- metric(Top).
+needs_up(Top, M)   :- needs_up(Top, X), feeds_now(M, X).
+q_needs(Q, M)      :- query_uses(Q, Top), needs_up(Top, M).
+needs(C, M)        :- consumer(C), query[repo](Q, C), q_needs(Q, M).
+
+-- === lineage: cyclic, so the path goes inside the fact ===
+-- lineage(Top, M, Path): metric M reaches Top along Path, current metric
+-- first, Top last, no metric repeated. Re-entering a metric is not another
+-- way for data to arrive, so a chain may not repeat one — which is what
+-- makes the count of paths finite over the two cycles above, and what
+-- examples/nope does with assume-role chains for the same reason.
+--
+-- Rooted at a METRIC and not at a query on purpose: the root is recoverable
+-- from the path, so each path has exactly one derivation. Rooting it at the
+-- query would give the same set of paths and multiply every count by the
+-- number of queries that happen to share the root.
+
+chain_seen(P)         :- lineage(_, _, P).
+absent(M, nil)        :- metric(M).
+absent(M, cons(X, P)) :- chain_seen(cons(X, P)), absent(M, P), M != X.
+
+lineage(Top, Top, cons(Top, nil)) :- metric(Top).
+lineage(Top, M, cons(M, P))       :- lineage(Top, X, P), feeds(M, X), absent(M, P).
+
+upstream(Top, M)  :- lineage(Top, M, _).
+q_depends(Q, M)   :- query_uses(Q, Top), upstream(Top, M).
+depends(C, M)     :- consumer(C), query[repo](Q, C), q_depends(Q, M).
+
+-- =========================================================================
+-- 11. blast radius — load-bearing against mention
+-- =========================================================================
+-- The distinction examples/oops draws between a citation that carries an
+-- argument and one that names a paper in passing. Here it is not declared,
+-- it is computed: a consumer with a second, resolving query that does not
+-- itself need M survives losing M. p_payment_gw_errors and p_exec_health
+-- both stand on the same metric; one dies and one loses a line.
+--
+-- Over the AVAILABILITY edge, because that is the question being asked. The
+-- lineage edge answers a different one and is used in part 13.
+
+survives_without(C, M) :- needs(C, M), query[repo](Q, C), query_ok(Q),
+                          not q_needs(Q, M).
+goes_dark(M, C)        :- needs(C, M), consumer_live(C), not survives_without(C, M).
+degrades(M, C)         :- needs(C, M), consumer_live(C), survives_without(C, M).
+
+-- the post-mortem half: consumers already dark, and the metric they wanted
+already_dark(M, C)     :- needs(C, M), consumer_dark(C), not metric_ok(M).
+
+-- =========================================================================
+-- 12. why it is empty — the structural causes, named
+-- =========================================================================
+-- whynot walks the chain link by link; these relations are the summary that
+-- chain adds up to, so a report can group by cause without parsing a tree.
+
+wanted(M)               :- selector_metric[repo](_, M).
+absent_metric(M)        :- wanted(M), not metric_ok(M).
+never_existed(M)        :- wanted(M), not series[store](M), not was_series[store](M).
+broken_matcher(S, K, V) :- matcher_of(S, K, V), selector_metric[repo](S, M),
+                           metric_ok(M), not label_ok(M, K, V).
+broken_rule(R)          :- recording_rule[repo](R), not rule_ok(R).
+
+dark_missing_metric(C, M)      :- consumer_dark(C), uses(C, M), not metric_ok(M),
+                                  not recorded_metric(M).
+dark_broken_rule(C, R, M)      :- consumer_dark(C), uses(C, M), records[repo](R, M),
+                                  broken_rule(R).
+dark_missing_label(C, M, K, V) :- consumer_dark(C), query[repo](Q, C), sel_in(Q, S),
+                                  selector_metric[repo](S, M), metric_ok(M),
+                                  broken_matcher(S, K, V).
+
+-- the exact label value that went away between the two snapshots
+label_disappeared(M, K, V) :- was_label[store](M, K, V), series[store](M),
+                              not series_label[store](M, K, V).
+
+-- =========================================================================
+-- 13. dead series — the query nobody runs
+-- =========================================================================
+-- Not "rarely queried" by request statistics: PROVABLY influencing nothing.
+-- No panel, no alert, no SLO stands on it, directly or through any rule, by
+-- either kind of edge — a metric read only for its history is still read.
+-- This is MOOT's dead-rule audit pointed at data instead of rules, and it is
+-- the query most likely to pay for itself, because storage is billed.
+
+watched(M)      :- depends(_, M).
+dead_series(M)  :- series[store](M), not watched(M).
+dead_rule(R)    :- recording_rule[repo](R), records[repo](R, M), not watched(M).
+
+-- =========================================================================
+-- 14. rename — a HYPOTHESIS, and it stays one
+-- =========================================================================
+-- An old metric vanished and a new one appeared with the same shape. That is
+-- a guess, not a derivation, and the guarantee that it stays a guess is
+-- structural rather than editorial: NOTHING in parts 9 to 13 reads any
+-- relation defined here. demo.ts proves that from the kernel's own rule
+-- dependency graph — `reach(consumer_dark, renamed_to)` is empty — instead
+-- of asking to be believed.
+
+vanished(M)         :- was_series[store](M), not series[store](M).
+appeared(M)         :- series[store](M), not was_series[store](M).
+label_key(M, K)     :- series_label[store](M, K, _).
+was_label_key(M, K) :- was_label[store](M, K, _).
+
+key_missing(Old, New) :- vanished(Old), appeared(New),
+                         was_label_key(Old, K), not label_key(New, K).
+key_extra(Old, New)   :- vanished(Old), appeared(New),
+                         label_key(New, K), not was_label_key(Old, K).
+same_type(Old, New)   :- was_type[store](Old, T), metric_type[store](New, T).
+
+shape_match(Old, New) :- vanished(Old), appeared(New), same_type(Old, New),
+                         not key_missing(Old, New), not key_extra(Old, New).
+
+same_job(Old, New)    :- was_label[store](Old, "job", J), series_label[store](New, "job", J).
+orphan_name(M)        :- appeared(M), not watched(M).
+
+-- Three tiers of evidence for the same guess. Each is a separate derivation
+-- of renamed_to, and the Viterbi fold takes the best one: confidence is the
+-- strongest evidence available, not the product of the weakest.
+rename_hypothesis(Old, New, shape_only)    :- shape_match(Old, New).
+rename_hypothesis(Old, New, shape_and_job) :- shape_match(Old, New), same_job(Old, New).
+rename_hypothesis(Old, New, shape_job_orphan) :- shape_match(Old, New),
+                                                 same_job(Old, New),
+                                                 orphan_name(New), watched(Old).
+renamed_to(Old, New) :- rename_hypothesis(Old, New, _).
+
+-- =========================================================================
+-- 15. the same lineage question, asked without the chain
+-- =========================================================================
+-- Identical Boolean answer — walk reachability and simple-path reachability
+-- coincide — over a support hypergraph that is genuinely cyclic, so the
+-- counting semiring answers "infinitely many". The engine is being honest;
+-- it is simply the wrong metric for fragility. Same contrast as part 7 of
+-- examples/nope.
+
+upstream_naive(Top, Top) :- metric(Top).
+upstream_naive(Top, M)   :- upstream_naive(Top, X), feeds(M, X).
+
+-- Acceptance scenario (examples/drip/demo.ts runs all of it):
+--   ? consumer_dark(C)                     -> 10 of 31, with a named cause each
+--   whynot consumer_live(p_checkout_conv)  -> four links down to the missing scrape
+--   whynot consumer_live(p_canary_errors)  -> the metric is fine; the LABEL is gone
+--   ? goes_dark(M, C) vs degrades(M, C)    -> sole source against one line of six
+--   excise series[store](M)                -> the blast radius as a diff, and it
+--                                             equals goes_dark(M, C), metric by metric
+--   ? dead_series(M)                       -> metrics nothing stands on
+--   ? renamed_to(Old, New)                 -> one hypothesis, and it stays one

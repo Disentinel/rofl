@@ -135,6 +135,9 @@ function main(): void {
   process.stdout.write(buildReport(r));
 }
 
+// realpath BOTH sides: path.resolve does not follow symlinks while Node
+// realpaths module URLs (finding f_main_guard_breaks_on_symlinked_tmp).
+const realMain = (p0: string): string => { try { return fs.realpathSync(p0); } catch { return p0; } };
 const isMain = process.argv[1] &&
-  path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
+  realMain(path.resolve(process.argv[1])) === realMain(new URL(import.meta.url).pathname);
 if (isMain) main();

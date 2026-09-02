@@ -1,0 +1,24 @@
+-- calibration.rofl -- the modeller's numbers, which are neither law nor fact.
+--
+-- WHY THIS IS A SEPARATE FILE AND A SEPARATE LEDGER, and it is not tidiness.
+--
+-- An evidence weight in facts.rofl is a finding of the tribunal of fact: a
+-- human with a duty said "I put the camera still at 92%". The strength of an
+-- INFERENCE STEP -- how much confidence survives the move from "traces were
+-- found and he was there" to "he did it deliberately" -- is nobody's finding
+-- and nothing the statute says. It is a number the modeller picked, and it
+-- moves the answer as much as any evidence weight does.
+--
+-- So it gets its own book with its own writer. `authority(calibration,
+-- modeller)` is the whole list of who may write here; an evidence weight
+-- asserted into this ledger, or one of these asserted by the tribunal, comes
+-- out as `forged[audit]` from the kernel with no checking code written.
+--
+-- A file boundary, because attribution is per LOAD: `load(text, {who})` tags
+-- everything in one text with one asserter, so one writer is one file. That
+-- is a real constraint of the kernel and it is the reason this example ships
+-- three .rofl files rather than two.
+--
+-- If you distrust one number in this whole demonstration, distrust this one.
+
+strength[calibration](s7_step, 90).

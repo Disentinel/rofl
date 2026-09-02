@@ -2,3 +2,14 @@ node_modules/
 dist/
 *.snapshot.json
 facts/generated/
+
+# reference material, fetched not written — see reference/kjs/PROVENANCE.md
+reference/
+
+# A household's own week: names, hours, and the intervals when a child is
+# alone. Local only, never pushed. `examples/spat/week.example.rofl` is the
+# made-up household the demo and the tests ship with.
+examples/spat/week.rofl
+examples/spat/week-sep.rofl
+examples/spat/week-*.rofl
+examples/spat/*.local.md

@@ -1,0 +1,690 @@
+<title>NOPE</title>
+
+<style>
+/* ---------------------------------------------------------------------------
+   Palette: verdigris ink on cool paper. Oxidised copper is the accent because
+   the subject is old permissions nobody cleaned up. allow / deny are semantic
+   and deliberately not the accent.
+   --------------------------------------------------------------------------- */
+:root {
+  --paper:      #ECEFEC;
+  --surface:    #FBFCFB;
+  --surface-2:  #E3E8E4;
+  --ink:        #16211F;
+  --ink-soft:   #465551;
+  --muted:      #6C7C77;
+  --line:       #CFD8D3;
+  --line-soft:  #DFE5E1;
+  --accent:     #1F5F55;
+  --accent-dim: #DCE9E4;
+  --deny:       #A3352A;
+  --deny-dim:   #F2DEDA;
+  --allow:      #3B7A66;
+  --allow-dim:  #DDEAE1;
+  --shadow:     0 1px 2px rgba(22, 33, 31, .06), 0 8px 24px -16px rgba(22, 33, 31, .28);
+
+  /* No web fonts: this page ships as one file with no external requests, so
+     the type is built from stacks that are already on the machine. A high-
+     contrast bookish serif for headings, the platform UI sans for running
+     text, and the platform mono wherever an identifier or a figure appears --
+     including the big numbers, because a policy report should set its numbers
+     in the same face it sets its ARNs. */
+  --f-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --f-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 36rem;   /* running text, ~65 characters */
+  --wide:    48rem;   /* evidence: transcripts, ladders, route fans */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0E1514;
+    --surface:    #151E1C;
+    --surface-2:  #1C2725;
+    --ink:        #E3EAE7;
+    --ink-soft:   #B4C2BE;
+    --muted:      #8C9D98;
+    --line:       #26332F;
+    --line-soft:  #1F2B28;
+    --accent:     #6BC6B1;
+    --accent-dim: #17322C;
+    --deny:       #EC8375;
+    --deny-dim:   #351D19;
+    --allow:      #79C8A8;
+    --allow-dim:  #16302A;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -18px rgba(0, 0, 0, .8);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #0E1514;
+  --surface:    #151E1C;
+  --surface-2:  #1C2725;
+  --ink:        #E3EAE7;
+  --ink-soft:   #B4C2BE;
+  --muted:      #8C9D98;
+  --line:       #26332F;
+  --line-soft:  #1F2B28;
+  --accent:     #6BC6B1;
+  --accent-dim: #17322C;
+  --deny:       #EC8375;
+  --deny-dim:   #351D19;
+  --allow:      #79C8A8;
+  --allow-dim:  #16302A;
+  --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -18px rgba(0, 0, 0, .8);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 1rem;
+  padding: .7rem clamp(1rem, 4vw, 2.5rem);
+  background: var(--paper);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.mark {
+  font-family: var(--f-display);
+  font-weight: 700; font-size: 1.05rem;
+  letter-spacing: .14em;
+  color: var(--accent);
+}
+.mark span { color: var(--muted); font-weight: 400; letter-spacing: 0; font-family: var(--f-body); font-size: .8rem; margin-left: .6rem; }
+.bar .spacer { flex: 1; }
+
+.switch { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.switch button {
+  font: 500 .78rem/1 var(--f-body);
+  letter-spacing: .04em;
+  padding: .48rem .95rem;
+  border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted);
+  cursor: pointer;
+}
+.switch button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+main { padding: 0 clamp(1rem, 4vw, 2.5rem) 6rem; }
+.col { max-width: var(--wide); margin-inline: auto; }
+/* Prose stays at reading measure; evidence blocks keep the full column and
+   share its left edge. */
+h1, h2, .lede, .cap, .note, .count, .stack > p, section > p { max-width: var(--measure); }
+
+/* --- type ----------------------------------------------------------------- */
+
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 7.5vw, 4rem); line-height: 1.04; letter-spacing: -.02em; }
+h1 .no-word { font-style: italic; color: var(--deny); }
+h2 { font-size: clamp(1.5rem, 3.8vw, 2rem); line-height: 1.16; letter-spacing: -.012em; }
+h3 { font-size: 1.08rem; line-height: 1.32; }
+p { margin: 0; }
+strong { font-weight: 600; }
+
+.eyebrow {
+  font: 600 .7rem/1 var(--f-body);
+  letter-spacing: .17em; text-transform: uppercase;
+  color: var(--accent);
+}
+.lede { font-size: 1.2rem; color: var(--ink-soft); }
+.note { font-size: .88rem; color: var(--muted); }
+
+code, .mono { font-family: var(--f-mono); font-size: .88em; }
+code { background: var(--surface-2); padding: .1em .34em; border-radius: 3px; }
+
+/* --- rhythm --------------------------------------------------------------- */
+
+.hero { padding: clamp(3.5rem, 11vw, 7rem) 0 clamp(2.5rem, 6vw, 4rem); }
+.stack { display: flex; flex-direction: column; gap: 1.15rem; }
+section { padding-block: clamp(2.75rem, 7vw, 4.5rem); border-top: 1px solid var(--line); }
+section > * + * { margin-top: 1.6rem; }
+
+/* --- the headline number -------------------------------------------------- */
+
+.count {
+  display: grid; grid-template-columns: auto 1fr; align-items: center;
+  gap: 0 1.4rem;
+  margin-top: 2.6rem; padding: 1.5rem 1.6rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.count .n {
+  font-family: var(--f-mono); font-weight: 600;
+  font-size: 3.6rem; line-height: .9; letter-spacing: -.04em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.count .t { font-size: .95rem; color: var(--ink-soft); }
+.count .t b { display: block; font-family: var(--f-body); font-weight: 600; color: var(--ink); }
+
+/* --- the ladder ----------------------------------------------------------- */
+
+.ladder { display: flex; flex-direction: column; gap: 6px; }
+.rung {
+  display: grid; grid-template-columns: 2.2rem 1fr; align-items: baseline;
+  gap: .1rem 1rem; padding: .85rem 1.1rem;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px;
+}
+.rung .lv { font: 600 .78rem/1.6 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rung .nm { font-weight: 600; font-size: .96rem; }
+.rung .ds { grid-column: 2; font-size: .88rem; color: var(--ink-soft); }
+.rung.cut { border-color: var(--deny); background: var(--deny-dim); }
+.rung.cut .lv, .rung.cut .nm { color: var(--deny); }
+.rung.cut .ds { color: var(--ink); }
+.rung.pass { border-left: 3px solid var(--allow); }
+
+/* --- routes --------------------------------------------------------------- */
+
+.routes { display: flex; flex-direction: column; gap: 5px; }
+.route {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .45rem;
+  padding: .6rem .85rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.route.dead { background: transparent; border-style: dashed; border-color: var(--deny); }
+.hop {
+  font: 500 .82rem/1 var(--f-mono);
+  padding: .34rem .5rem; border-radius: 3px;
+  background: var(--accent-dim); color: var(--accent);
+  white-space: nowrap;
+}
+.route.dead .hop { background: transparent; color: var(--muted); text-decoration: line-through; }
+.arrow { color: var(--muted); font-size: .8rem; }
+.route .why { margin-left: auto; font: 400 .78rem/1.4 var(--f-mono); color: var(--muted); }
+.route.dead .why { color: var(--deny); }
+
+/* --- strata bands --------------------------------------------------------- */
+
+.strata { display: flex; flex-direction: column-reverse; gap: 4px; }
+.band {
+  display: grid; grid-template-columns: 4.5rem 1fr; gap: 1rem; align-items: center;
+  padding: .8rem 1rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.band .k { font: 600 .74rem/1.4 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.band .v { display: flex; flex-wrap: wrap; gap: .3rem; }
+.band.top { border-color: var(--accent); background: var(--accent-dim); }
+.rel { font: 500 .82rem/1 var(--f-mono); padding: .32rem .48rem; border-radius: 3px; background: var(--surface-2); }
+.band.top .rel { background: var(--surface); color: var(--accent); }
+
+/* --- code / transcripts --------------------------------------------------- */
+
+.term {
+  margin: 0; padding: 1.15rem 1.25rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 4px; overflow-x: auto;
+  font: 400 .8rem/1.62 var(--f-mono);
+  color: var(--ink-soft);
+  white-space: pre;
+  box-shadow: var(--shadow);
+}
+.term b { color: var(--ink); font-weight: 600; }
+.term .no { color: var(--deny); font-weight: 600; }
+.term .yes { color: var(--allow); font-weight: 600; }
+.term .dim { color: var(--muted); }
+.cap { font-size: .82rem; color: var(--muted); margin-top: .6rem; }
+
+.rulebox {
+  padding: 1.15rem 1.25rem; border-radius: 4px;
+  border: 1px solid var(--accent); background: var(--accent-dim);
+  font: 500 .88rem/1.6 var(--f-mono); color: var(--ink);
+  overflow-x: auto; white-space: pre;
+}
+.rulebox em { color: var(--deny); font-style: normal; font-weight: 600; }
+
+/* --- two-up --------------------------------------------------------------- */
+
+.duo { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 44rem) { .duo { grid-template-columns: 1fr 1fr; } }
+.card {
+  padding: 1.2rem 1.3rem; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.card h3 { margin-bottom: .5rem; }
+.card .big { font-family: var(--f-mono); font-weight: 600; font-size: 1.7rem; line-height: 1.1; letter-spacing: -.02em; }
+.card.bad .big { color: var(--deny); }
+.card.good .big { color: var(--allow); }
+.card p { font-size: .9rem; color: var(--ink-soft); margin-top: .55rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font: 600 .72rem/1.4 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-family: var(--f-mono); font-size: .82rem; color: var(--accent); white-space: nowrap; }
+.scroll { overflow-x: auto; }
+
+footer { border-top: 1px solid var(--line); padding: 2.5rem 0 0; color: var(--muted); font-size: .88rem; }
+footer a { color: var(--accent); }
+
+/* --- level switching ------------------------------------------------------ */
+
+#doc[data-level="plain"] .eng { display: none; }
+#doc[data-level="eng"] .plain { display: none; }
+#doc.switched .lvl { animation: fade .24s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #doc.switched .lvl { animation: none; } }
+</style>
+
+<div id="doc" data-level="plain">
+
+<div class="bar">
+  <span class="mark">NOPE<span>access control, explained</span></span>
+  <span class="spacer"></span>
+  <div class="switch" role="group" aria-label="Explanation level">
+    <button type="button" data-set="plain" aria-pressed="true">Plain</button>
+    <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ===================== hero ===================== -->
+<div class="hero col stack">
+  <span class="eyebrow">A worked example on the ROFL kernel</span>
+  <h1>Which <em class="no-word">no</em> stopped you, and how many ways in are left</h1>
+
+  <div class="lvl plain">
+    <p class="lede">Some rules say yes. Some rules say no. <strong>No always wins.</strong>
+    When a computer tells you "access denied", it almost never tells you <em>which</em> no
+    — and it never tells you the more useful thing: if you <em>can</em> get in, how many
+    different ways could you still get in if someone took one of them away?</p>
+  </div>
+
+  <div class="lvl eng">
+    <p class="lede">Deny-overrides-Allow is not a priority pass bolted onto a policy
+    engine. It is <strong>stratified negation</strong>, which a Datalog kernel does natively:
+    one negated premise, an evaluation order derived from the rule dependency graph rather
+    than written down. And once the decision is a fixpoint over a support hypergraph, the
+    same fact answers questions a Boolean simulator cannot phrase — starting with
+    <strong>how many independent derivations grant this access</strong>.</p>
+  </div>
+
+  <div class="count">
+    <span class="n">6</span>
+    <span class="t"><b>independent ways bob can write to the production bucket</b>
+    Eight policy grants reach the request; two are cut by a permission boundary.
+    Revoke any single one of the survivors and he still has access.</span>
+  </div>
+</div>
+
+<!-- ===================== 1. no wins ===================== -->
+<section class="col">
+  <span class="eyebrow">1 &middot; No always wins</span>
+  <h2>Four places a rule can live. A no in any of them ends it.</h2>
+
+  <div class="lvl plain stack">
+    <p>Permissions are not one list. They are four lists stacked on top of each other,
+    written by four different groups of people who mostly do not talk to each other: the
+    company, the security team, whoever set up your account, and whoever owns the thing
+    you are trying to touch.</p>
+    <p>Every list can say yes and every list can say no. The rule is simple and it is
+    the same everywhere: <strong>if any list says no, the answer is no</strong>, no matter
+    how many other lists said yes.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <p>The model is AWS-shaped: a service control policy at the organizational unit, a
+    permission boundary on the identity, identity policies attached to users, groups and
+    roles, and a resource policy on the bucket. Each level contributes <code>allow</code>
+    and <code>deny</code> statements, gated by conditions over principal tags.</p>
+    <p>The permission boundary is the interesting one: it is not an explicit Deny but the
+    <em>absence</em> of an Allow, so it is modelled as a negation over what the boundary
+    permits — a second stratum, one level below the Deny-overrides rule.</p>
+  </div>
+
+  <div class="ladder">
+    <div class="rung cut">
+      <span class="lv">1</span><span class="nm">Service control policy &mdash; the organization</span>
+      <span class="ds">Deny <code>s3:*</code> on <code>prod-bucket/*</code> when <code>aws:PrincipalTag/env != prod</code>. This is the one that stopped alice.</span>
+    </div>
+    <div class="rung">
+      <span class="lv">2</span><span class="nm">Permission boundary &mdash; the identity</span>
+      <span class="ds"><code>ci_runner</code> may only write to <code>artifacts/*</code>. Not a Deny: a missing Allow.</span>
+    </div>
+    <div class="rung pass">
+      <span class="lv">3</span><span class="nm">Identity policy &mdash; user, group, role</span>
+      <span class="ds"><code>data_reader</code> allows <code>s3:GetObject</code> on <code>prod-bucket/*</code>. The yes that everyone looks at first.</span>
+    </div>
+    <div class="rung">
+      <span class="lv">4</span><span class="nm">Resource policy &mdash; the bucket</span>
+      <span class="ds">Allows <code>bob</code> to write; denies <code>s3:DeleteObject</code> to everyone, including the role holding <code>Allow * on *</code>.</span>
+    </div>
+  </div>
+
+  <div class="lvl plain">
+    <p>Alice asked to read one file. A rule on her role said yes. A rule three floors up,
+    written by the company and not by her team, said no — because a label on her account
+    says <code>staging</code> and the rule wants <code>prod</code>. Every tool she has will
+    tell her "denied". This one tells her which floor, which rule, and which label.</p>
+  </div>
+
+  <div class="lvl eng">
+    <p>Asked directly, <code>whynot</code> walks the rule that could have concluded the
+    fact, names the premise that failed, and then explains <em>that</em> premise, down to a
+    builtin failing on real values. Here it bottoms out on the negated premise of the
+    Deny-overrides rule, naming the witness that blocks it; <code>why</code> on that witness
+    is the level / policy / condition answer.</p>
+  </div>
+
+<pre class="term">$ nope alice s3:GetObject arn:aws:s3:::prod-bucket/data.csv
+<b class="no">access absent.</b>
+
+  alice -> data_reader
+    data_reader grants   <b class="yes">Allow</b> s3:GetObject on arn:aws:s3:::prod-bucket/*  <span class="dim">[p_data_reader / s_read_prod]</span>
+    but scp (level 1) denies   <b class="no">Deny</b> s3:* on arn:aws:s3:::prod-bucket/*  <span class="dim">[p_scp_prod / s_scp_env_guard]</span>
+       condition aws:PrincipalTag/env != prod;  alice has staging
+
+  <b>cutting link: scp, level 1 of 4 -- not the role.</b></pre>
+  <p class="cap">Real output. Every line of every transcript on this page is stdout from
+  <code>examples/nope/demo.ts</code>, pasted.</p>
+
+  <div class="lvl eng">
+<pre class="term">why blocked(alice, data_reader, s3:GetObject, prod-bucket/data.csv)
+
+blocked[main](alice,data_reader,...)  &lt;= r9fcbe645 @tick 0
+  deny_at[main](alice,data_reader,...,<b class="no">scp</b>,s_scp_env_guard)  &lt;= r57c41837 @tick 0
+    in_account[main](data_reader,a_prod)  &lt;= r062f1bc9 @tick 0
+      role[main](data_reader,a_prod) <span class="dim">[axiom]</span>
+    governs[main](a_prod,prod_ou)  &lt;= r45f38871 @tick 0
+      account[main](a_prod,prod_ou) <span class="dim">[axiom]</span>
+      ou_ancestor[main](prod_ou,prod_ou)  &lt;= rf8dbd792 @tick 0
+        ou[main](prod_ou) <span class="dim">[axiom]</span>
+    scp[main](prod_ou,p_scp_prod) <span class="dim">[axiom]</span>
+    statement[main](p_scp_prod,s_scp_env_guard,deny,"s3:*","arn:aws:s3:::prod-bucket/*") <span class="dim">[axiom]</span>
+    applies[main](s_scp_env_guard,alice)  &lt;= r34a6c028 @tick 0
+      condition[main](s_scp_env_guard,"aws:PrincipalTag/env",ne,"prod") <span class="dim">[axiom]</span>
+      tag[main](alice,"aws:PrincipalTag/env","staging") <span class="dim">[axiom]</span>
+      <b>"staging" != "prod"</b> <span class="dim">[builtin]</span></pre>
+    <p class="cap">Abridged: the <code>action_in</code> / <code>resource_in</code> leaves
+    (the wildcard expansion) are omitted. Nothing else is edited.</p>
+  </div>
+</section>
+
+<!-- ===================== 2. the stratum ===================== -->
+<section class="col">
+  <span class="eyebrow">2 &middot; Where the precedence comes from</span>
+
+  <div class="lvl plain stack">
+    <h2>Nobody wrote "no beats yes". It fell out of the order.</h2>
+    <p>You might expect a program full of instructions: collect all the rules, sort them,
+    check the nos before the yeses. That is how these systems are usually built, and it is
+    where the bugs live — someone forgets a level, or checks it in the wrong order.</p>
+    <p>Here there is one sentence. <em>You get in if some rule lets you in, and nothing
+    blocks you.</em> The word "nothing" is what does all the work: to know that nothing
+    blocks you, the machine has to finish looking for blocks first. So it does. The order
+    is not a decision anyone made — it is forced by the sentence.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>Deny-overrides is a stratum, not a priority pass.</h2>
+    <p>A negated premise in a stratified Datalog <em>means</em> "after the layer that
+    concludes it has reached its fixpoint". <code>boot.rofl</code> computes
+    <code>stratum/2</code> from the rule dependency graph with three ordinary rules, as
+    data; the kernel reads the resulting facts and contains no stratification checker of
+    its own. A model with circular negation is rejected at load with a trace instead of
+    silently picking an order.</p>
+  </div>
+
+  <div class="rulebox">route(P, A, R, Route) :- grant(P, Q, A, R, Route), <em>not blocked(P, Q, A, R)</em>.</div>
+
+  <div class="lvl eng stack">
+    <p>These are the strata from an actual run — the AWS evaluation order, computed rather
+    than written down. <code>route</code> sits strictly above every rule that can conclude
+    a Deny, so every Deny is complete before any Allow survives:</p>
+    <div class="strata">
+      <div class="band">
+        <span class="k">0</span>
+        <span class="v"><span class="rel">statement</span><span class="rel">action_in</span><span class="rel">resource_in</span><span class="rel">policy_of</span><span class="rel">boundary_allows</span><span class="rel">has_cond</span><span class="rel">via</span><span class="rel">absent</span></span>
+      </div>
+      <div class="band">
+        <span class="k">1</span>
+        <span class="v"><span class="rel">applies</span><span class="rel">grant</span><span class="rel">deny_at</span><span class="rel">blocked</span></span>
+      </div>
+      <div class="band top">
+        <span class="k">2</span>
+        <span class="v"><span class="rel">route</span><span class="rel">access</span></span>
+      </div>
+    </div>
+    <p class="note">Stratum 1 carries two negations of its own: <code>applies</code> reads
+    <code>not has_cond</code> (a statement with no Condition block applies to everyone) and
+    <code>deny_at</code> reads <code>not boundary_allows</code> (a permission boundary is a
+    missing Allow). Add a fifth policy level tomorrow and the precedence code does not
+    change, because there isn't any.</p>
+  </div>
+
+  <div class="lvl plain">
+    <p class="note">The machine sorts the rules into layers by itself, and only then runs
+    them: everything that could possibly say no, first; the decision, last.</p>
+  </div>
+</section>
+
+<!-- ===================== 3. how many ways ===================== -->
+<section class="col">
+  <span class="eyebrow">3 &middot; The number nobody checks</span>
+
+  <div class="lvl plain stack">
+    <h2>Bob can get in six different ways.</h2>
+    <p>Bob is on a team. The team has a key. He also has his own key, and he is allowed to
+    borrow two robots' keys, and one of those robots can borrow a third robot's key, and
+    that third robot can open everything.</p>
+    <p>So when someone files a ticket that says "remove bob's access" and takes away the
+    team key, bob still has <strong>five</strong> ways in. Nobody notices, because the tool
+    they checked with only knows how to say yes or no. This is the real reason permission
+    cleanups in big companies run for years and the risk never goes down.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>Privilege sprawl is a count, and the count is a fold.</h2>
+    <p>The Boolean answer and the sprawl number come from <em>the same fact</em>,
+    <code>access(bob, "s3:PutObject", ...)</code>, folded with a different semiring over
+    the support the engine already recorded. Nothing is re-derived and the query language
+    is not extended: the store keeps every witness, and
+    <code>evaluateSemiring</code> walks them.</p>
+  </div>
+
+  <div class="routes">
+    <div class="route"><span class="hop">bob</span><span class="why">p_bucket / s_bucket_bob</span></div>
+    <div class="route"><span class="hop">bob</span><span class="why">p_dev_write / s_dev_put</span></div>
+    <div class="route"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">deployer</span><span class="why">p_deploy / s_put_prod</span></div>
+    <div class="route"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">ci_runner</span><span class="arrow">&rarr;</span><span class="hop">admin_legacy</span><span class="why">p_admin / s_admin_all</span></div>
+    <div class="route"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">ci_runner</span><span class="arrow">&rarr;</span><span class="hop">deployer</span><span class="why">p_deploy / s_put_prod</span></div>
+    <div class="route"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">deployer</span><span class="arrow">&rarr;</span><span class="hop">ci_runner</span><span class="arrow">&rarr;</span><span class="hop">admin_legacy</span><span class="why">p_admin / s_admin_all</span></div>
+    <div class="route dead"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">ci_runner</span><span class="why">cut &mdash; permission boundary</span></div>
+    <div class="route dead"><span class="hop">bob</span><span class="arrow">&rarr;</span><span class="hop">deployer</span><span class="arrow">&rarr;</span><span class="hop">ci_runner</span><span class="why">cut &mdash; permission boundary</span></div>
+  </div>
+  <p class="cap">Eight grants, two cut, six survivors. Note what the boundary on
+  <code>ci_runner</code> does <em>not</em> do: it caps what ci_runner may do, not what
+  ci_runner may become. Both routes passing <em>through</em> ci_runner to
+  <code>admin_legacy</code> survive it.</p>
+
+  <div class="lvl eng">
+    <p class="note"><strong>What the number means here.</strong> A count of derivations
+    reads differently per domain, so the sign has to be stated rather than assumed: this
+    one measures how <em>robust the access is to revocation</em>, and robustness of a grant
+    nobody intended is exactly the risk. Six is not six times as much access &mdash; it is
+    one access that survives five separate revocations, which makes the count a
+    remediation-cost estimate.</p>
+  </div>
+
+<pre class="term">  revocation drill -- take one grant away, ask again:
+
+    revoke member_of(bob, developers)         -> access <b class="yes">true</b>, paths 5
+    revoke assumes(bob, deployer)             -> access <b class="yes">true</b>, paths 4
+    revoke attached(admin_legacy, p_admin)    -> access <b class="yes">true</b>, paths 4</pre>
+</section>
+
+<!-- ===================== 4. the cycle ===================== -->
+<section class="col">
+  <span class="eyebrow">4 &middot; The cycle</span>
+
+  <div class="lvl plain stack">
+    <h2>Two robots can borrow each other's keys. That is not infinite ways in.</h2>
+    <p>Two of the robots can each borrow the other's key, round and round forever. If you
+    count "routes" the lazy way, you get infinity — you can always take one more lap. But a
+    lap gets you nothing you did not already have, so a lap is not a way in.</p>
+    <p>So the count is over paths that never visit the same robot twice. Add another loop
+    to the map and the number does not move.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>Simple paths, because a lap is not a derivation of new privilege.</h2>
+    <p>Assume-role chains genuinely cycle, and the number of walks through a cyclic graph
+    is infinite. The fix is not a smaller semiring — it is putting the path
+    <em>inside the fact</em>:</p>
+    <div class="rulebox">via(P, P, cons(P, nil))  :- identity(P).
+via(P, Q, cons(Q, C))    :- via(P, X, C), assumes(X, Q), <em>absent(Q, C)</em>.</div>
+    <p>Every derivation extends the chain by one identity not already on it, so the role
+    graph may cycle all it likes while the support hypergraph of <code>via</code> stays
+    acyclic — and a cycle that is not in the support hypergraph cannot inflate a fold over
+    it. Chain membership is positive, not negated: its term domain is generated from chains
+    already derived, so the whole thing is monotone recursion over terms and never argues
+    with the stratification checker.</p>
+  </div>
+
+  <div class="duo">
+    <div class="card bad">
+      <h3>Asked as routes-in-a-graph</h3>
+      <span class="big">infinitely many</span>
+      <p><span class="mono">access_naive(bob, s3:PutObject, ...)</span> — no chain in the
+      fact, so the support hypergraph is cyclic, and the counting semiring is
+      <span class="mono">CLOSED</span>: <span class="mono">star(1) = INFINITE</span>. That
+      is the engine being honest, not a bug. It is the wrong question.</p>
+    </div>
+    <div class="card good">
+      <h3>Asked as simple paths</h3>
+      <span class="big">6</span>
+      <p><span class="mono">access(bob, s3:PutObject, ...)</span> — the chain is in the
+      fact, nothing is on a support cycle, and the fold returns a number. Close a
+      <em>second</em> cycle in the role graph and it stays 6.</p>
+    </div>
+  </div>
+
+  <p class="cap"><strong>And the cycle is a finding by itself.</strong>
+  <code>deployer</code> and <code>ci_runner</code> can each assume the other, so
+  compromising either is compromising both &mdash; something no review that looks at roles
+  one at a time will see. Detecting it is free: it is the same strongly-connected component
+  the fold already computes to decide where <span class="mono">star</span> applies.</p>
+
+  <div class="lvl eng">
+    <p class="note">Both formulations agree on the <strong>verdict</strong> on every triple
+    — walk reachability and simple-path reachability coincide, and all 45 access facts
+    match. Only the count differs. The discipline was changed in the <em>model</em>, not by
+    reaching for <code>depthBoundedCountingSemiring(n)</code>: that answers "how many
+    derivations of height at most n", which is a different question whose answer moves when
+    you change n, and a metric with a knob on it does not belong in a report.</p>
+  </div>
+</section>
+
+<!-- ===================== 5. oracle ===================== -->
+<section class="col">
+  <span class="eyebrow">5 &middot; How we know it is right</span>
+
+  <div class="lvl plain stack">
+    <h2>We checked every possible question. All 72 of them.</h2>
+    <p>This world is small: six people and robots, four things you can do, three things you
+    can do them to. That is 72 questions in total — so we asked all of them twice. Once
+    through the rule engine, and once with a completely separate program that just walks
+    the policies by hand.</p>
+    <p>They agreed on all 72, on the answer <em>and</em> on the number of ways in. If they
+    had disagreed, that would be the finding — and the rules would not be quietly edited
+    until the disagreement went away.</p>
+  </div>
+
+  <div class="lvl eng stack">
+    <h2>For a finite model, exhaustive enumeration is a complete oracle.</h2>
+    <p>Every (principal, action, resource) triple is decided a second time by a direct
+    evaluation of the policy set in plain TypeScript — a DFS over the assume-role graph
+    with a visited set, no engine, no rules, no shared code beyond reading the same base
+    facts — and compared on <strong>both</strong> the verdict and the route count.
+    Comparing counts, not only verdicts, is what makes it an oracle for the metric rather
+    than just for the decision.</p>
+  </div>
+
+<pre class="term">    principals x actions x resources = 6 x 4 x 3 = 72 triples
+    verdict disagreements: <b class="yes">0</b>
+    route-count disagreements: <b class="yes">0</b></pre>
+
+  <div class="lvl eng">
+    <p class="note">A second check runs on the model itself: no rule may fall outside range
+    restriction and no relation may be evaluated top-down. That one earned its place — it
+    caught the resource-policy Deny rule leaving the acting identity unbound while this
+    example was being written, which would have made <code>deny_at</code> a demand relation
+    and put its facts outside the fold entirely.</p>
+  </div>
+</section>
+
+<!-- ===================== 6. semirings ===================== -->
+<section class="col lvl eng">
+  <span class="eyebrow">6 &middot; Five questions, one fixpoint</span>
+  <h2>Same fact, different semiring.</h2>
+  <p>Every IAM simulator on the market, AWS's own included, is the first row of this table.
+  The remaining rows are the questions asked at security audits, answered today by hand and
+  incompletely.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Semiring</th><th>Question</th><th>Answer here</th></tr></thead>
+    <tbody>
+      <tr><td>Boolean</td><td>Is there access?</td><td>yes</td></tr>
+      <tr><td>counting</td><td>How many independent ways?</td><td>6</td></tr>
+      <tr><td>tropical</td><td>What is the shortest route?</td><td>8 rule firings</td></tr>
+      <tr><td>provenance</td><td>Which policies jointly produce it?</td><td>6 minimal source sets</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">The kernel knows "a semiring", never "the tropical semiring" — the
+  instances live outside <code>src/</code>, each declaring the convergence discipline it
+  honours, and the fold reports whether that declaration actually held on this data.</p>
+</section>
+
+<footer class="col">
+  <p><strong>Run it.</strong> <span class="mono">node --experimental-strip-types
+  examples/nope/demo.ts</span> — zero dependencies, Node 22.6+ or Bun. The model is
+  <span class="mono">examples/nope/nope.rofl</span>; the properties above are tested in
+  <span class="mono">test/example-nope.test.ts</span>.</p>
+  <p style="margin-top:.9rem">Built on the ROFL kernel: a Datalog-family language with
+  perspectives, explicit time, kernel-emitted provenance and budgets as semantics.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  var doc = document.getElementById('doc');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.switch button'));
+  var KEY = 'nope-level';
+
+  function apply(level) {
+    doc.setAttribute('data-level', level);
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.set === level));
+    });
+    try { localStorage.setItem(KEY, level); } catch (e) { /* private mode: fine */ }
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      doc.classList.remove('switched');
+      void doc.offsetWidth;          // restart the crossfade
+      doc.classList.add('switched');
+      apply(b.dataset.set);
+    });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { saved = null; }
+  apply(saved === 'eng' ? 'eng' : 'plain');
+})();
+</script>

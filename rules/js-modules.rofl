@@ -1,0 +1,303 @@
+-- js-modules.rofl — ONE construct, the FILE IMPORT, at the MODULE GRAPH layer.
+--
+-- Reads scanners/js_ast.ts's four relations plus rules/js-structure.rofl's
+-- ast_name / ast_value, and judges everything itself. The scanner classified
+-- nothing; `relative`, `bare`, `depends`, `flows` are all conclusions and all
+-- of them are below.
+--
+-- THE DISTINCTION THIS FILE EXISTS FOR (docs/modelling-a-language.md):
+--
+--   DEPENDS is potential — if B changes, A might break.
+--   FLOWS   is actual    — at runtime this value travels from A to B.
+--
+-- They are separate relations here and never one `imports` edge, because a
+-- type-only import is a DEPENDS with NOTHING flowing: `import type { X }` is
+-- erased before the program runs. Conflating them makes a module graph that
+-- says a value crosses an edge no value crosses.
+--
+-- And the erasure has TWO markers, neither implying the other. Measured
+-- against babel 8 rather than recalled:
+--
+--   import type { e } from './d'   -> ImportDeclaration importKind "type",
+--                                     and its ImportSpecifier importKind "VALUE"
+--   import { type c } from './d'   -> ImportDeclaration importKind "value",
+--                                     and its ImportSpecifier importKind "type"
+--
+-- So reading either marker alone gets one of the two forms wrong, and the
+-- specifier of a type-only declaration says the OPPOSITE of the truth. Both
+-- are read below, and the mutant set targets exactly that.
+--
+-- WHAT THE HOST HAS TO SUPPLY, and why (a declared loan, not a hidden one):
+-- the kernel's builtins are `=`, `!=`, `is`, `<`, `<=`, `>`, `>=` — arithmetic
+-- and comparison, no string operations at all. Resolution is a path join, so
+-- a specifier has to arrive already CUT INTO SEGMENTS, and the file tree has
+-- to arrive as facts because no AST can see the disk. Both emitters are blind:
+-- `str_*` splits any string on "/" and ":" without knowing an import from a
+-- greeting, and `fs_*` says what is on disk without saying what it means.
+-- Resolution itself — which directory to start in, when to walk up, what
+-- counts as arriving — is a JOIN, and it is here.
+
+-- ---------------------------------------------------------------------------
+-- vocabulary supplied from outside the AST (see facts/js-modules.rofl)
+edb(str_seg).           -- str_seg[code](S, K, Segment)   S cut on "/", 0-based
+edb(str_segs).          -- str_segs[code](S, N)           how many segments
+edb(str_char0).         -- str_char0[code](S, C)          first character
+edb(str_scheme).        -- str_scheme[code](S, Scheme)    text before the first ":"
+edb(fs_file).           -- fs_file(Path)
+edb(fs_dir).            -- fs_dir(Dir)
+edb(fs_parent).         -- fs_parent(Dir, Parent)
+edb(fs_file_in).        -- fs_file_in(Dir, Name, Path)
+edb(fs_dir_in).         -- fs_dir_in(Dir, Name, Child)
+edb(fs_dir_of).         -- fs_dir_of(File, Dir)
+edb(node_builtin_bare). -- node_builtin_bare(Bare, Canonical)  "fs" -> "node:fs"
+edb(shape_verdict).     -- shape_verdict(Shape, Reason)
+edb(unknown_because).   -- unknown_because(Lang, Kind, Layer, Reason)
+
+-- ---------------------------------------------------------------------------
+-- 1. IMPORT SITES
+--
+-- Two node kinds carry a module specifier. `export { q } from './d'` is a
+-- third and is NOT modelled here — see facts/js-modules.rofl for the verdict.
+
+import_site[code](I, static_import)  :- ast_node[code](I, import_declaration, _, _).
+import_site[code](I, dynamic_import) :- ast_node[code](I, import_expression, _, _).
+
+site_kind[code](I, import_declaration) :- ast_node[code](I, import_declaration, _, _).
+site_kind[code](I, import_expression)  :- ast_node[code](I, import_expression, _, _).
+
+-- the importing file, straight off the node the site is
+site_file[code](I, F) :- import_site[code](I, _), ast_node[code](I, _, F, _).
+
+-- the line, so a site can be named the way a person names one and the oracle
+-- probe can key on (file, line, specifier) without seeing a node id
+site_line[code](I, L) :- import_site[code](I, _), ast_node[code](I, _, _, L).
+
+-- the source expression, whatever it turns out to be
+site_source_node[code](I, Src) :- import_site[code](I, _), ast_child[code](I, source, 0, Src).
+
+-- ...and its VALUE, when it is a string literal
+site_source[code](I, S) :- site_source_node[code](I, Src),
+                           ast_node[code](Src, string_literal, _, _),
+                           ast_value[code](Src, S).
+
+site_source_literal[code](I) :- site_source[code](I, _).
+
+-- THE ONE IRREDUCIBLE CELL. `import(pathVar)` names a module that does not
+-- exist until the expression is evaluated; no amount of module-graph rule
+-- recovers it, and saying so is the honest answer rather than a gap.
+site_source_computed[code](I) :- site_source_node[code](I, _),
+                                 not site_source_literal[code](I).
+
+-- ---------------------------------------------------------------------------
+-- 2. SOURCE SHAPE — total over sites with a literal source, and disjoint.
+--
+-- Keyed on the STRING, not on the site: the shape of "./b.ts" is a property
+-- of that text and of nothing else, so two sites with the same specifier
+-- cannot disagree by construction.
+
+-- "./x" and "../x" both cut to a first segment of "." or "..", so the first
+-- CHARACTER is the discriminator and the segments never need to be scanned.
+explicit_shape[code](S, relative) :- str_char0[code](S, ".").
+
+-- "#foo" is a package-internal subpath; it needs the importing package's
+-- package.json "imports" map, which is not read here.
+explicit_shape[code](S, subpath)  :- str_char0[code](S, "#").
+
+-- "node:fs" is a builtin by its SCHEME, whatever comes after it — so a builtin
+-- this file has never heard of is still classified. The bare form ("fs",
+-- "path") has no scheme and is a lookup in a declared vocabulary, keyed on the
+-- WHOLE specifier: `fs/promises` is not in the table, so it falls to `bare`
+-- and the oracle reports the under-report instead of a rule guessing.
+explicit_shape[code](S, node_builtin) :- str_scheme[code](S, "node").
+explicit_shape[code](S, node_builtin) :- node_builtin_bare(S, _).
+
+has_explicit_shape[code](S) :- explicit_shape[code](S, _).
+
+-- everything else is a package name. This is the DEFAULT cell and it is
+-- written as a complement so that the classification cannot have a hole:
+-- a specifier no rule above claimed is `bare`, never nothing.
+src_shape[code](S, Sh)   :- explicit_shape[code](S, Sh).
+src_shape[code](S, bare) :- str_char0[code](S, _), not has_explicit_shape[code](S).
+
+site_shape[code](I, Sh)  :- site_source[code](I, S), src_shape[code](S, Sh).
+has_shape[code](I)       :- site_shape[code](I, _).
+
+-- ---------------------------------------------------------------------------
+-- 3. RESOLUTION — a walk over the directory tree, one segment at a time.
+--
+-- The walk STARTS in the importing file's own directory. That is the whole
+-- content of "relative", and it is the one thing a join against the project
+-- root gets wrong while still returning a plausible-looking file.
+
+walk[code](I, 0, D) :- site_shape[code](I, relative),
+                       site_file[code](I, F), fs_dir_of[code](F, D).
+
+-- "." stays put
+walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, "."), K1 is K + 1.
+
+-- ".." walks up, and only as far as the tree goes: a specifier that climbs
+-- out of the scanned root simply has no parent to climb to and stops.
+walk[code](I, K1, P) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, ".."), fs_parent[code](D, P), K1 is K + 1.
+
+-- any other segment descends into a real subdirectory
+walk[code](I, K1, C) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, Seg), Seg != ".", Seg != "..",
+                        fs_dir_in[code](D, Seg, C), K1 is K + 1.
+
+-- ARRIVAL: the LAST segment names a file in the directory the walk reached.
+-- The `N is K + 1, str_segs[code](S, N)` pair is what makes it the last one —
+-- without it "./sub/c.ts" would also claim any file called "sub".
+resolved_import[code](I, T) :- walk[code](I, K, D), site_source[code](I, S),
+                               str_seg[code](S, K, Seg), fs_file_in[code](D, Seg, T),
+                               N is K + 1, str_segs[code](S, N).
+
+-- A builtin resolves to a NAME rather than a file, and that is not a failure.
+-- The name is canonicalised to the `node:` spelling so that it compares
+-- exactly against what node's resolver returns for either form — a table
+-- lookup, because prefixing a string is not something a rule can do here.
+builtin_canonical[code](S, S) :- str_scheme[code](S, "node").
+builtin_canonical[code](S, C) :- node_builtin_bare(S, C).
+
+resolved_builtin[code](I, C) :- site_shape[code](I, node_builtin),
+                                site_source[code](I, S), builtin_canonical[code](S, C).
+
+resolved_site[code](I) :- resolved_import[code](I, _).
+resolved_site[code](I) :- resolved_builtin[code](I, _).
+
+-- A relative specifier whose shape IS handled and whose target is not on
+-- disk. This is a broken import, not a missing rule, and the two must not
+-- be counted in the same bucket.
+dangling_import[code](I, S) :- site_shape[code](I, relative), site_source[code](I, S),
+                               not resolved_site[code](I).
+
+-- ---------------------------------------------------------------------------
+-- 4. BINDINGS — all four specifier kinds, because all four occur.
+--
+--   import { b }        ImportSpecifier            local b   <- imported b
+--   import { b as bb }  ImportSpecifier            local bb  <- imported b
+--   import a            ImportDefaultSpecifier     local a   <- "default"
+--   import * as ns      ImportNamespaceSpecifier   local ns  <- "*"
+
+import_specifier_node[code](Sp) :- ast_node[code](Sp, import_specifier, _, _).
+import_specifier_node[code](Sp) :- ast_node[code](Sp, import_default_specifier, _, _).
+import_specifier_node[code](Sp) :- ast_node[code](Sp, import_namespace_specifier, _, _).
+
+import_spec[code](I, Sp) :- import_site[code](I, static_import),
+                            ast_child[code](I, specifiers, _, Sp).
+
+spec_local[code](Sp, L) :- import_specifier_node[code](Sp),
+                           ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
+
+-- the ordinary case: `imported` is an Identifier
+spec_imported[code](Sp, M) :- ast_node[code](Sp, import_specifier, _, _),
+                              ast_child[code](Sp, imported, 0, N), ast_name[code](N, M).
+
+-- ...and the arbitrary-module-namespace-name case, `import { "a-b" as c }`,
+-- where `imported` is a StringLiteral instead. Zero occurrences in this
+-- repository; two lines is cheaper than a verdict about why it is missing.
+spec_imported[code](Sp, M) :- ast_node[code](Sp, import_specifier, _, _),
+                              ast_child[code](Sp, imported, 0, N), ast_value[code](N, M).
+
+spec_imported[code](Sp, "default") :- ast_node[code](Sp, import_default_specifier, _, _).
+spec_imported[code](Sp, "*")       :- ast_node[code](Sp, import_namespace_specifier, _, _).
+
+binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
+                                         spec_local[code](Sp, Local),
+                                         spec_imported[code](Sp, Imported).
+
+has_specifier[code](I) :- import_spec[code](I, _).
+
+-- ---------------------------------------------------------------------------
+-- 5. DEPENDS, EVALUATES, FLOWS — three relations, because two do not separate
+--    the three things that actually happen.
+
+-- `import type { X } from ...`
+decl_type_only[code](I) :- ast_attr[code](I, import_kind, "type").
+
+-- `import { type X } from ...` — the INLINE marker, on the specifier.
+spec_type_only[code](Sp) :- ast_attr[code](Sp, import_kind, "type").
+
+-- a binding that survives to runtime: NEITHER marker says type. Both
+-- negations are load-bearing and each one alone is wrong for one of the two
+-- forms; the mutant set removes them one at a time.
+value_binding[code](I, Sp) :- binding[code](I, Sp, _, _),
+                              not decl_type_only[code](I),
+                              not spec_type_only[code](Sp).
+
+has_value_binding[code](I) :- value_binding[code](I, _).
+
+no_specifiers[code](I) :- import_site[code](I, static_import), not has_specifier[code](I).
+
+-- DEPENDS: the file is named. Whether anything crosses is a different question
+-- and it is the next two relations.
+depends[code](F, T) :- resolved_import[code](I, T), site_file[code](I, F).
+
+-- FLOWS: a value travels. A binding that survives erasure carries one; a
+-- dynamic import carries the module object itself.
+flows[code](F, T) :- has_value_binding[code](I),
+                     resolved_import[code](I, T), site_file[code](I, F).
+flows[code](F, T) :- import_site[code](I, dynamic_import),
+                     resolved_import[code](I, T), site_file[code](I, F).
+
+-- EVALUATES: the module body RUNS. This is the third thing, and it exists
+-- because DEPENDS and FLOWS cannot tell a side-effect import from a type-only
+-- one — both are "depends, nothing flows" — while at runtime they are
+-- opposites: `import './side.ts'` executes a file, `import type {}` executes
+-- nothing at all. Discovered by modelling, not planned.
+evaluates[code](F, T) :- flows[code](F, T).
+evaluates[code](F, T) :- no_specifiers[code](I), not decl_type_only[code](I),
+                         resolved_import[code](I, T), site_file[code](I, F).
+
+-- ---------------------------------------------------------------------------
+-- 6. THE FRONTIER, AS A POSITIVE RELATION
+--
+-- Every site is resolved or unresolved-with-a-shape. Nothing falls out of the
+-- bottom, and `unaccounted_site` is what says so out loud.
+
+unresolved_import[code](I, Sh)       :- site_shape[code](I, Sh), not resolved_site[code](I).
+unresolved_import[code](I, computed) :- site_source_computed[code](I).
+
+accounted[audit](I) :- resolved_site[code](I).
+accounted[audit](I) :- unresolved_import[code](I, _).
+
+unaccounted_site[audit](I) :- import_site[code](I, _), not accounted[audit](I).
+
+-- ---------------------------------------------------------------------------
+-- 7. THE AUDIT — the model checked against itself.
+--
+-- These are the gates. Each one is a statement the model makes about its own
+-- totality, and each must be able to say NO: the test file plants a defect
+-- for every one of them and asserts the row appears.
+
+-- a shape whose declared verdict is `resolves`, that did not resolve, and is
+-- not a broken relative path. Without this the frontier has a quiet door: a
+-- builtin missing from the canonical table would be counted as unresolved and
+-- nothing would say the model had promised otherwise.
+resolve_gap[audit](I, Sh) :- unresolved_import[code](I, Sh), shape_verdict(Sh, resolves),
+                             not dangling_import[code](I, _).
+
+-- shape must be a FUNCTION of the specifier: exactly one, never two
+shape_conflict[audit](I, A, B) :- site_shape[code](I, A), site_shape[code](I, B), A != B.
+
+-- ...and never none, for a site whose source is a literal
+shape_missing[audit](I) :- site_source_literal[code](I), not has_shape[code](I).
+
+-- every shape that OCCURS must have a declared verdict
+has_verdict[audit](Sh) :- shape_verdict(Sh, _).
+shape_without_verdict[audit](Sh) :- site_shape[code](_, Sh), not has_verdict[audit](Sh).
+shape_without_verdict[audit](computed) :- site_source_computed[code](_),
+                                          not has_verdict[audit](computed).
+
+-- ...and every unresolved shape must carry a recorded reason, in BOTH
+-- directions: a reason missing for something that happens is under-reporting,
+-- and a reason recorded for something that never happens is decoration.
+reason_missing[audit](K, Sh, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
+                                   shape_verdict(Sh, R), R != resolves,
+                                   not unknown_because(js, K, modules, R).
+
+reason_unexercised[audit](K, R) :- unknown_because(js, K, modules, R),
+                                   not reason_earned[audit](K, R).
+reason_earned[audit](K, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
+                              shape_verdict(Sh, R).

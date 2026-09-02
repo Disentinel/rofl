@@ -1,0 +1,24 @@
+// a.ts — one import site per SHAPE and per SPECIFIER KIND.
+//
+// Stored as `.ts.txt` and materialised to a real tree at test time: the repo's
+// tsconfig includes `test/**/*.ts`, and this file deliberately imports a
+// missing module and a package subpath, both of which are tsc errors. The
+// resolver oracle needs real files on disk, so the tree is written to a temp
+// directory instead of living under test/ as .ts.
+
+import def, { v1 } from './b.ts';          // default + named, value
+import type { T1 } from './types.ts';      // DECLARATION-level type-only
+import { type T2, v2 } from './b.ts';      // mixed: inline type + value
+import { type T3 } from './types2.ts';     // INLINE type-only, and nothing else
+import * as ns from './sub/c.ts';          // namespace, multi-segment relative
+import './side.ts';                        // side effect: no binding at all
+import fs from 'node:fs';                  // node builtin
+import { parse } from '@babel/parser';     // bare
+import sp from '#sub';                     // subpath import
+import { gone } from './nope.ts';          // relative, and the file is not there
+
+export const chosen = './dyn.ts';
+export const m = import('./dyn.ts');       // dynamic, literal argument
+export const n = import(chosen);           // dynamic, COMPUTED argument
+export const use = [def, v1, v2, ns, fs, parse, sp, gone, m, n];
+export type Alias = T1 | T2 | T3;

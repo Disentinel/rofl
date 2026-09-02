@@ -1,0 +1,446 @@
+-- sus.rofl -- SUS: suspicion under semirings.
+--
+-- A social-deduction table (Mafia, Among Us, Blood on the Clocktower). The
+-- engine does not play. It explains.
+--
+-- Why this domain is not an illustration of the perspective model but an
+-- instance of it:
+--
+--   1. Every player holds their own, necessarily incomplete, book of what
+--      they saw. That book is a LEDGER, in the sense of
+--      docs/choosing-perspectives.md: `said[pink](...)` is what pink holds
+--      true, `authority(pink, pink)` is the whole list of who may write
+--      there, and an entry written by anyone else surfaces as
+--      `forged[audit]` without a line of enforcement code.
+--   2. Players make CLAIMS, not reports of fact. A claim may be false by
+--      construction -- that is what a traitor is for -- so nothing here may
+--      read a claim as data.
+--   3. Contradicting claims coexist LEGALLY. `said[pink](k5, saw(green,
+--      electrical), 2, 2)` and `said[green](k7, saw(green, cafeteria), 2, 2)`
+--      are different facts because their perspectives differ, and the
+--      contradiction between them is the main signal rather than a data
+--      error to be resolved.
+--
+-- The one bridging assumption the whole model rests on, stated once:
+-- CREW NEVER LIE, TRAITORS MAY. Everything below is a consequence.
+--
+-- The metric is model counting. A world is an assignment of the two traitor
+-- roles; C(8,2) = 28 of them; a world is consistent when no live claim, read
+-- under that assumption, is false in it. The share of consistent worlds in
+-- which a player is a traitor is the suspicion, and it is what people at the
+-- table compute by eye and badly.
+--
+-- Data is synthetic and hand-built (see README.md). The transcript is a
+-- game that never happened, arranged so that the engine accuses in round 3
+-- and withdraws in round 5.
+
+-- =========================================================================
+-- 0. who may write where
+-- =========================================================================
+-- Two source ledgers per the discipline: `[public]`, the game log, written
+-- by the moderator; and one per player, written by that player alone. Two
+-- derived ledgers: `[worlds]`, the book of the world enumeration, and
+-- `[case]`, the book of the inquiry. Their writers are rules, and every
+-- rule that crosses from a claim into a conclusion says so by naming its
+-- head perspective -- which is what emits `bridge_decl` and keeps
+-- `leak[audit]` empty.
+
+authority(main, moderator).
+authority(public, moderator).
+authority(red, red).
+authority(blue, blue).
+authority(green, green).
+authority(pink, pink).
+authority(cyan, cyan).
+authority(lime, lime).
+authority(white, white).
+authority(black, black).
+
+-- [case] is where testimony from every speaker is collected: `claim[case](P,
+-- K, C, A, T) :- said[P](K, C, A, T)` and its three siblings read a speaker's
+-- own book under the perspective VARIABLE [P]. That is a crossing `imports`
+-- cannot license -- `$var("P")` is not a registered perspective and cannot be
+-- the From of an import -- and it is entirely deliberate: collecting what
+-- each player said, with the speaker relocated from the perspective slot into
+-- an ordinary argument, is what the case file IS. Declared once here, at the
+-- ledger that gathers; the hops out of [case] into [worlds] stay subject to
+-- the ordinary audit, and an undeclared one would still be a leak.
+collects(case).
+
+-- THREE MORE, and the reason they were never typed: `crossing` used to carry
+-- `not bridge_decl(R, A, B)`, a row the kernel emitted for any rule whose head
+-- named a ledger and whose body read another. Every named crossing here
+-- licensed itself by existing; only the gather above, which the kernel could
+-- not emit for, ever had to be declared. These three report now.
+--
+-- [case] READS [worlds] and [worlds] READS [case]. The two books are read into
+-- each other on purpose: a world is a hypothesis ABOUT the case file, and the
+-- case file records which worlds survive. `imports` is not symmetric, so both
+-- directions are separate sentences and both are true here.
+imports(case, worlds).
+imports(worlds, case).
+
+-- [worlds] READS [public], the moderator's game log. A hypothesis about who
+-- lied has to read what was said in the open.
+imports(worlds, public).
+
+-- `imports(case, public)` is NOT written, and that is a measurement rather
+-- than an omission: `sees` is the transitive closure of `imports`, so
+-- `imports(case, worlds)` and `imports(worlds, public)` already give
+-- `sees(case, public)`. Adding it changes no row. A declaration that licenses
+-- nothing already licensed is a decoration.
+
+
+-- =========================================================================
+-- 1. the game log -- [public], written by the moderator
+-- =========================================================================
+-- The index on `player` exists because the kernel's comparison builtins are
+-- arithmetic: `A < B` over atoms binds nothing, so the unordered pair that
+-- makes a world needs a number to break the symmetry.
+
+player[public](red,   1) @init.
+player[public](blue,  2) @init.
+player[public](green, 3) @init.
+player[public](pink,  4) @init.
+player[public](cyan,  5) @init.
+player[public](lime,  6) @init.
+player[public](white, 7) @init.
+player[public](black, 8) @init.
+
+traitors[public](2) @init.
+horizon[public](6)  @init.
+now[public](1)      @init.
+
+-- bodies: victim, room, the round during which they died
+kill[public](white, electrical, 2) @init.
+kill[public](black, storage,    4) @init.
+
+-- the table voted green out in round 3, on the engine's own accusation.
+-- No role card was shown, so this constrains nothing -- it is a DECISION,
+-- and section 7 marks it at risk when its support collapses.
+ejected[public](green, 3) @init.
+
+-- round 5: pink is caught on camera and ejected, and the card IS shown.
+-- This is the revelation. It is a fact about roles, and it prunes worlds.
+exposed[public](pink, traitor, 5) @init.
+
+-- round 4: red admits the round-3 sighting was a mistake and takes it back.
+withdrawn[public](k10, 4) @init.
+
+-- the claims, numbered, so that a pair of them has an order and the
+-- likelihood scan in section 8 has something to iterate over
+claim_no[public](k1,   1) @init.  claim_no[public](k2,   2) @init.
+claim_no[public](k3,   3) @init.  claim_no[public](k4,   4) @init.
+claim_no[public](k5,   5) @init.  claim_no[public](k6,   6) @init.
+claim_no[public](k7,   7) @init.  claim_no[public](k8,   8) @init.
+claim_no[public](k9,   9) @init.  claim_no[public](k10, 10) @init.
+claim_no[public](k11, 11) @init.  claim_no[public](k12, 12) @init.
+claim_no[public](k13, 13) @init.  claim_no[public](k14, 14) @init.
+claim_no[public](k15, 15) @init.  claim_no[public](k16, 16) @init.
+last_claim[public](16) @init.
+
+-- how boldly each player lies WHEN THEY ARE A TRAITOR, in percent. A prior
+-- on people, not on claims; it never touches the Boolean answer and only
+-- ranks the worlds the Boolean answer already admits (section 8).
+deceit[public](red,   50) @init.
+deceit[public](blue,  50) @init.
+deceit[public](green, 50) @init.
+deceit[public](pink,  85) @init.
+deceit[public](cyan,  60) @init.
+deceit[public](lime,  35) @init.
+deceit[public](white, 50) @init.
+deceit[public](black, 50) @init.
+
+-- =========================================================================
+-- 2. the claims -- one ledger per player
+-- =========================================================================
+-- `said[P](Id, Content, About, At)`: player P entered claim Id in their own
+-- book at round At, about round About. The two rounds are different columns
+-- on purpose: k9 is made in round 3 about round 2, and "what was knowable at
+-- round 3" needs the round it was SAID, while "what it asserts" needs the
+-- round it is ABOUT.
+--
+-- Four contents, and one of them is deliberately worthless:
+--   saw(Q, Room)  -- Q was in Room. Constrains only by contradicting another
+--                    sighting: nobody is in two rooms at once.
+--   vouch(Q)      -- I watched Q complete a visual task. Traitors cannot, so
+--                    a truthful vouch makes Q crew.
+--   accuse(Q)     -- I saw Q kill or vent. A truthful accusation makes Q a
+--                    traitor.
+--   alone         -- I was doing tasks by myself. UNFALSIFIABLE: no rule
+--                    below consumes it, so it refutes no world and appears
+--                    in no explanation. Real tables are full of these.
+--
+-- The `-- @who X` markers are not kernel syntax; they are comments that
+-- examples/sus/demo.ts splits on, so that each player's entries are loaded
+-- under that player's identity. That is the whole forgery story: WHO wrote a
+-- fact is the load identity checked against `authority`, never a column.
+
+-- @who white
+said[white](k1, saw(white, electrical), 1, 1) @init.
+
+-- @who red
+said[red](k2, alone, 1, 1) @init.
+said[red](k10, saw(green, electrical), 2, 3) @init.
+
+-- @who blue
+said[blue](k8, alone, 2, 2) @init.
+
+-- @who green
+said[green](k4, saw(green, medbay), 1, 1) @init.
+said[green](k7, saw(green, cafeteria), 2, 2) @init.
+said[green](k12, accuse(pink), 2, 3) @init.
+
+-- @who pink
+said[pink](k5, saw(green, electrical), 2, 2) @init.
+said[pink](k9, accuse(green), 2, 3) @init.
+
+-- @who cyan
+said[cyan](k6, saw(green, electrical), 2, 3) @init.
+said[cyan](k13, alone, 4, 4) @init.
+said[cyan](k15, saw(cyan, reactor), 4, 6) @init.
+
+-- @who lime
+said[lime](k3, vouch(red), 1, 1) @init.
+said[lime](k14, saw(cyan, storage), 4, 6) @init.
+said[lime](k16, accuse(cyan), 4, 6) @init.
+
+-- @who black
+said[black](k11, saw(black, storage), 3, 3) @init.
+
+-- @who moderator
+-- =========================================================================
+-- 3. time
+-- =========================================================================
+-- Rounds are ticks, and persistence is not a storage property: the ledgers
+-- survive a tick only because these rules carry them. One carry rule per
+-- player ledger, written out rather than expressed once with a perspective
+-- variable -- see README.md: `said[P](..) @next :- said[P](..)` reads and
+-- writes the same variable perspective, the audit sees only `$any` on both
+-- ends, and `leak[audit]($any, $any)` fires. Naming the ledger is the fix
+-- and it is also the more honest statement: each book carries itself.
+
+now[public](T1)          @next :- now[public](T), horizon[public](H), T < H, T1 is T + 1.
+now[public](T)           @next :- now[public](T), horizon[public](H), T >= H.
+horizon[public](H)       @next :- horizon[public](H).
+traitors[public](N)      @next :- traitors[public](N).
+last_claim[public](L)    @next :- last_claim[public](L).
+player[public](P, I)     @next :- player[public](P, I).
+kill[public](V, R, T)    @next :- kill[public](V, R, T).
+ejected[public](P, T)    @next :- ejected[public](P, T).
+exposed[public](P, R, T) @next :- exposed[public](P, R, T).
+withdrawn[public](K, T)  @next :- withdrawn[public](K, T).
+claim_no[public](K, N)   @next :- claim_no[public](K, N).
+deceit[public](P, D)     @next :- deceit[public](P, D).
+
+said[red](K, C, A, T)    @next :- said[red](K, C, A, T).
+said[blue](K, C, A, T)   @next :- said[blue](K, C, A, T).
+said[green](K, C, A, T)  @next :- said[green](K, C, A, T).
+said[pink](K, C, A, T)   @next :- said[pink](K, C, A, T).
+said[cyan](K, C, A, T)   @next :- said[cyan](K, C, A, T).
+said[lime](K, C, A, T)   @next :- said[lime](K, C, A, T).
+said[white](K, C, A, T)  @next :- said[white](K, C, A, T).
+said[black](K, C, A, T)  @next :- said[black](K, C, A, T).
+
+-- =========================================================================
+-- 4. the inquiry's index -- [case]
+-- =========================================================================
+-- Every rule here reads a player's book and writes the inquiry's. That
+-- crossing is the point: the claim stays in the claimant's ledger, and what
+-- the inquiry knows about it is a separate entry with the claimant named.
+
+claim[case](K, P, About, At)         :- said[P](K, _, About, At).
+claimant[case](K, P)                 :- claim[case](K, P, _, _).
+sighting[case](K, P, Q, Room, About) :- said[P](K, saw(Q, Room), About, _).
+vouching[case](K, P, Q, About)       :- said[P](K, vouch(Q), About, _).
+charge[case](K, P, Q, About)         :- said[P](K, accuse(Q), About, _).
+
+-- STATED vs LIVE. A claim is stated once it has been made; it stays stated
+-- for ever, because the table heard it. It is live while it still carries
+-- weight. Annulment is the difference, and the two annulments are not the
+-- same arithmetic (section 7).
+stated[case](K)              :- claim[case](K, _, _, At), now[public](N), At <= N.
+annulled[case](K, withdrawn) :- withdrawn[public](K, TW), now[public](N), TW <= N.
+annulled[case](K, unmasked)  :- claimant[case](K, P), exposed[public](P, traitor, TE),
+                                now[public](N), TE <= N.
+live[case](K)                :- stated[case](K), not annulled[case](K, _).
+
+-- Two sightings that put the same player in two rooms in the same round.
+-- Both may stand; at most one may be true. `clash` is the structural fact
+-- and survives annulment, `conflict` is the live one that refutes worlds.
+clash[case](K1, K2)    :- sighting[case](K1, _, Q, R1, T), sighting[case](K2, _, Q, R2, T),
+                          R1 != R2, claim_no[public](K1, N1), claim_no[public](K2, N2),
+                          N1 < N2, stated[case](K1), stated[case](K2).
+conflict[case](K1, K2) :- clash[case](K1, K2), live[case](K1), live[case](K2).
+
+dead[case](P)  :- kill[public](P, _, T), now[public](N), T <= N.
+dead[case](P)  :- ejected[public](P, T), now[public](N), T <= N.
+dead[case](P)  :- exposed[public](P, _, T), now[public](N), T <= N.
+
+-- =========================================================================
+-- 5. the worlds -- [worlds]
+-- =========================================================================
+-- A world names the two traitors. Nothing else about the world is modelled:
+-- who was where is not a hidden variable here, it is only ever a claim.
+
+world[worlds](w(A, B))         :- player[public](A, I), player[public](B, J), I < J.
+traitor_in[worlds](w(A, B), A) :- world[worlds](w(A, B)).
+traitor_in[worlds](w(A, B), B) :- world[worlds](w(A, B)).
+crew_in[worlds](W, P)          :- world[worlds](W), player[public](P, _),
+                                  not traitor_in[worlds](W, P).
+
+-- REFUTATION. Every clause below names the reason as a term, so that the
+-- refutation is attributable rather than a bare Boolean: a claim id when a
+-- single claim does it, a term when the game log or a pair of claims does.
+
+-- a traitor is not murdered by their own side
+refuted_by[worlds](W, victim(V)) :- kill[public](V, _, T), now[public](N), T <= N,
+                                    traitor_in[worlds](W, V).
+
+-- a revealed card is not a claim: it is the log, and it is binding
+refuted_by[worlds](W, reveal(P)) :- exposed[public](P, traitor, T), now[public](N), T <= N,
+                                    crew_in[worlds](W, P).
+refuted_by[worlds](W, reveal(P)) :- exposed[public](P, crew, T), now[public](N), T <= N,
+                                    traitor_in[worlds](W, P).
+
+-- a crew member never lies, so a crew accusation of a crewmate cannot stand
+refuted_by[worlds](W, K) :- charge[case](K, P, Q, _), live[case](K),
+                            crew_in[worlds](W, P), crew_in[worlds](W, Q).
+
+-- ... nor a crew vouch for a traitor
+refuted_by[worlds](W, K) :- vouching[case](K, P, Q, _), live[case](K),
+                            crew_in[worlds](W, P), traitor_in[worlds](W, Q).
+
+-- ... nor two crew putting the same player in two rooms at once
+refuted_by[worlds](W, clash(K1, K2)) :- conflict[case](K1, K2),
+                                        claimant[case](K1, P1), claimant[case](K2, P2),
+                                        crew_in[worlds](W, P1), crew_in[worlds](W, P2).
+
+-- the victim was in the room they died in
+refuted_by[worlds](W, K) :- kill[public](V, Room, T), now[public](N), T <= N,
+                            sighting[case](K, P, V, R2, T), R2 != Room,
+                            live[case](K), crew_in[worlds](W, P).
+
+-- and somebody was there to do it: if every traitor of W is truthfully
+-- placed somewhere else at that moment, nobody in W could have killed
+elsewhere[worlds](W, Q, Room, T) :- kill[public](_, Room, T),
+                                    sighting[case](K, P, Q, R2, T), R2 != Room,
+                                    live[case](K), crew_in[worlds](W, P).
+refuted_by[worlds](W, nobody_there(Room, T)) :-
+        kill[public](_, Room, T), now[public](N), T <= N,
+        traitor_in[worlds](W, X), traitor_in[worlds](W, Y), X != Y,
+        elsewhere[worlds](W, X, Room, T), elsewhere[worlds](W, Y, Room, T).
+
+impossible[worlds](W)   :- refuted_by[worlds](W, _).
+consistent[worlds](W)   :- world[worlds](W), not impossible[worlds](W).
+guilty_in[worlds](P, W) :- consistent[worlds](W), traitor_in[worlds](W, P).
+
+-- THE COUNT IS THE METRIC. `outcome(guilty, P)` has exactly one derivation
+-- per consistent world in which P is a traitor; `outcome(any, P)` has one
+-- per consistent world. The counting semiring folded over the support the
+-- engine already recorded returns both numbers, and their ratio is the
+-- suspicion. Nothing is enumerated in TypeScript to get it.
+outcome[case](guilty, P) :- guilty_in[worlds](P, W).
+outcome[case](any, P)    :- consistent[worlds](W), player[public](P, _).
+
+-- =========================================================================
+-- 6. what clears you, and the price of an accusation
+-- =========================================================================
+-- The two questions a player actually asks, and they are the same relation
+-- read from two sides: which reasons rule out the worlds where I am guilty,
+-- and which rule out the worlds where I am innocent.
+
+-- `price(P, W, R)`: W would make P a traitor, and R is what rules W out. It
+-- is simultaneously the answer to "what clears P" and to "what would you have
+-- to declare false to accuse P anyway", which is the same set read from the
+-- two ends.
+price[case](P, W, R)        :- world[worlds](W), traitor_in[worlds](W, P),
+                               refuted_by[worlds](W, R).
+-- and the mirror: W would make P innocent, and R is what rules W out.
+incriminates[case](P, W, R) :- world[worlds](W), crew_in[worlds](W, P),
+                               refuted_by[worlds](W, R).
+
+-- =========================================================================
+-- 7. annulment, and what it takes with it
+-- =========================================================================
+-- `points_at(Q, K)`: claim K puts Q in the frame -- an accusation of Q, or
+-- somebody else's sighting of Q that Q's own account contradicts. Built on
+-- `clash` and `stated`, NOT on `conflict` and `live`, because the question
+-- here is what the case against Q was BUILT on, and annulling a claim must
+-- not quietly erase the fact that the case ever rested on it.
+
+points_at[case](Q, K) :- charge[case](K, _, Q, _), stated[case](K).
+points_at[case](Q, K) :- clash[case](K, K2), sighting[case](K, P, Q, _, _), P != Q,
+                         sighting[case](K2, Q, Q, _, _).
+points_at[case](Q, K) :- clash[case](K2, K), sighting[case](K, P, Q, _, _), P != Q,
+                         sighting[case](K2, Q, Q, _, _).
+
+-- The support graph of the conclusions the table acted on. Each accuser's
+-- case is its own conclusion, which is what lets the engine say WHICH LINK
+-- broke instead of only that something did.
+case_against[case](Q, P)                          :- points_at[case](Q, K), claimant[case](K, P).
+rests_on[case](case_against(Q, P), K)             :- points_at[case](Q, K), claimant[case](K, P).
+rests_on[case](finding(Q), case_against(Q, P))    :- case_against[case](Q, P).
+rests_on[case](ejection(Q), finding(Q))           :- ejected[public](Q, _), case_against[case](Q, _).
+rests_on[case](X, Z)                              :- rests_on[case](X, Y), rests_on[case](Y, Z).
+
+leaf[case](X, K)  :- rests_on[case](X, K), claim[case](K, _, _, _).
+gone[case](X)     :- leaf[case](X, K), annulled[case](K, _).
+standing[case](X) :- leaf[case](X, K), not annulled[case](K, _).
+at_risk[case](X)  :- gone[case](X), not standing[case](X).
+shaken[case](X)   :- gone[case](X), standing[case](X).
+
+-- =========================================================================
+-- 8. which world is most likely -- the deceit priors
+-- =========================================================================
+-- A world says who the traitors are; it does not say which of their claims
+-- were lies. `lie(W, K)` is the part that IS determined: a claim by a
+-- traitor of W that some crew member of W contradicts, or that asserts a
+-- role W denies. `stance` then classifies every claim in every consistent
+-- world into exactly one of four boxes, and the Viterbi fold weights them:
+--
+--   forced   the claimant is crew in W, so the claim is true by the crew
+--            axiom. Carries no information, weight 1.
+--   lied     the claimant is a traitor in W and the claim is false there.
+--            Weight deceit(P).
+--   spared   the claimant is a traitor in W and the claim survives.
+--            Weight 1 - deceit(P).
+--   pending  not yet said, or annulled. Weight 1.
+--
+-- The independence assumption is stated rather than hidden: the score is a
+-- product over claims, so it treats each claim's honesty as independent
+-- given the roles, which is false of any real table where liars coordinate.
+
+lie[worlds](W, K) :- charge[case](K, P, Q, _), live[case](K),
+                     traitor_in[worlds](W, P), crew_in[worlds](W, Q).
+lie[worlds](W, K) :- vouching[case](K, P, Q, _), live[case](K),
+                     traitor_in[worlds](W, P), traitor_in[worlds](W, Q).
+lie[worlds](W, K) :- conflict[case](K, K2), claimant[case](K, P1), claimant[case](K2, P2),
+                     traitor_in[worlds](W, P1), crew_in[worlds](W, P2).
+lie[worlds](W, K) :- conflict[case](K2, K), claimant[case](K, P1), claimant[case](K2, P2),
+                     traitor_in[worlds](W, P1), crew_in[worlds](W, P2).
+
+stance[worlds](W, K, forced)  :- consistent[worlds](W), claimant[case](K, P), live[case](K),
+                                 crew_in[worlds](W, P).
+stance[worlds](W, K, lied)    :- consistent[worlds](W), lie[worlds](W, K).
+stance[worlds](W, K, spared)  :- consistent[worlds](W), claimant[case](K, P), live[case](K),
+                                 traitor_in[worlds](W, P), not lie[worlds](W, K).
+-- keyed on the NUMBERING rather than on the claim, so that excising a claim
+-- leaves the scan intact instead of silently truncating every world's score
+stance[worlds](W, K, pending) :- consistent[worlds](W), claim_no[public](K, _),
+                                 not live[case](K).
+
+-- One derivation per world, visiting every claim exactly once in claim_no
+-- order, so the Viterbi product over that derivation is the world's score.
+scanned[worlds](W, 0) :- consistent[worlds](W).
+scanned[worlds](W, N) :- scanned[worlds](W, M), N is M + 1,
+                         claim_no[public](K, N), stance[worlds](W, K, _).
+weighed[worlds](W)    :- scanned[worlds](W, L), last_claim[public](L).
+
+-- Acceptance scenario (examples/sus/demo.ts runs all of it):
+--   ? consistent[worlds](W)        -> 5 of 28 at round 3, 2 at round 5
+--   sus --explain green            -> 5/5 at round 3, 1/2 at round 5
+--   sus -n green   (round 6)       -> impossible, and the price of saying
+--                                     otherwise, claim by claim
+--   which link broke               -> at_risk(case_against(green, pink))
+--   oracle                         -> 28 worlds x 6 rounds, enumerated twice

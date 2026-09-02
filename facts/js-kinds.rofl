@@ -1,0 +1,97 @@
+-- js-kinds.rofl — a DELIBERATELY TINY sample, enough to test the mechanism and
+-- not one node more. The real vocabulary is babel's 252 concrete types; this is
+-- eight of them plus five Python counterparts, because the question here is
+-- whether ADDING A LAYER IS ONE FACT, not what any cell contains.
+edb(node_kind).
+edb(layer).
+edb(handled).
+edb(ignored).
+
+node_kind(js, call_expression).
+node_kind(js, if_statement).
+node_kind(js, assignment_expression).
+node_kind(js, function_declaration).
+node_kind(js, import_declaration).
+node_kind(js, ts_string_keyword).
+node_kind(js, yield_expression).
+node_kind(js, import_expression).
+node_kind(js, variable_declarator).
+
+node_kind(py, call).
+node_kind(py, if_stmt).
+node_kind(py, assign).
+node_kind(py, function_def).
+node_kind(py, import_from).
+
+-- TWO layers to begin with. The third is added later, as ONE FACT, and nothing
+-- else may change: that is the whole experiment.
+layer(dataflow).
+layer(callgraph).
+
+-- what is modelled so far, per (language, kind, layer)
+handled(js, call_expression,       dataflow,  r_call_args_flow).
+handled(js, call_expression,       callgraph, r_call_edge).
+handled(js, assignment_expression, dataflow,  r_assign_flow).
+handled(js, function_declaration,  callgraph, r_callee_target).
+handled(py, call,                  dataflow,  r_call_args_flow).
+handled(py, call,                  callgraph, r_call_edge).
+handled(py, assign,                dataflow,  r_assign_flow).
+handled(py, function_def,          callgraph, r_callee_target).
+
+-- and what is deliberately out, WITH A REASON. Silence is not an option.
+ignored(js, ts_string_keyword, dataflow,  a_type_only_no_runtime_value).
+ignored(js, ts_string_keyword, callgraph, a_type_only_no_runtime_value).
+ignored(js, if_statement,      dataflow,  a_control_not_data).
+ignored(py, if_stmt,           dataflow,  a_control_not_data).
+
+-- модель, дописанная тиком 3
+handled(js, variable_declarator, dataflow, r_declarator_init_flow).
+ignored(js, if_statement, callgraph, a_no_call_edge_from_a_conditional).
+
+-- The ONE cell actually run against an oracle, tick 3: scanner -> rule ->
+-- execution with a tagged value, four fixtures, 3 agree and 1 predicted miss.
+-- Recorded as EVIDENCE rather than as a claim, which is the difference the
+-- tautology above was hiding.
+checked(js, variable_declarator, dataflow, r_declarator_init_flow, o_run_with_tag, 4).
+
+
+-- TYPED REASONS for cells that are not modelled. Every other not_modelled cell
+-- takes the default `not_yet` from the rule, so this file records only the
+-- ones where the default would be a LIE — where the unknown belongs to the
+-- subject rather than to us.
+--
+-- `import(specifier)` with a computed specifier: which module is loaded, and
+-- therefore what the promise resolves to and which function a later call
+-- reaches, is not determined until the program runs. No amount of rule-writing
+-- here removes it; only an assumption about resolution would, and an
+-- assumption is a different claim.
+unknown_because(js, import_expression, dataflow,  runtime_dependent).
+unknown_because(js, import_expression, callgraph, runtime_dependent).
+
+-- DECLARED GAP, so it is not mistaken for a complete exercise of the taxonomy:
+-- `budget_exhausted` and `out_of_scope` have no honest row in this file yet —
+-- no evaluation here has hit a bound, and everything deliberately outside the
+-- model is already a waiver with a reason (`ignored`). Both atoms are
+-- exercised in test/js-model.test.ts instead. Writing a false row to make the
+-- census look full is the failure this whole file exists to prevent.
+
+-- ===========================================================================
+-- THE THIRD AXIS IS NOT IN THIS FILE, AND THAT IS DELIBERATE.
+--
+-- `axis(shape)`, `axis_applies/2` and `shape_of/3` live in facts/js-shapes.rofl.
+-- They could be written here — the rules that read them are in
+-- rules/js-model.rofl, loaded by everything — and putting them here would be
+-- wrong for a measured reason rather than a tidiness one.
+--
+-- This file is the MECHANISM fixture: 14 kinds, 2 layers, 28 cells, pinned
+-- number for number in test/js-model.test.ts because the question it answers
+-- is "does adding a layer take one fact", not "what does any cell contain".
+-- Not one of its kinds has a shape. Declaring `axis_applies(shape, callgraph)`
+-- here would open 28 shaped-but-unsplit cells over a fixture with no shapes in
+-- it, which is an axis applied to a layer it cannot say anything about — the
+-- exact defect `unearned_axis[audit]` was written to report, planted in the
+-- fixture that is supposed to be clean.
+--
+-- The shape axis therefore loads on top of this file together with
+-- facts/js-callgraph.rofl, which is where the kinds it splits are declared.
+-- Two worlds, and test/js-model.test.ts builds both.

@@ -1,0 +1,13 @@
+// a line comment, so File.comments is non-empty and comment nodes are captured
+const holes = [1, , 3];
+const args = pick(alpha, beta, gamma);
+const quoted = "he said \"hi\"";
+const fraction = 1.5;
+const big = 17;
+dotted.member();
+bracket[key]();
+maybe?.member?.();
+async function* generated(param = 2) { yield param; }
+class Shape { static tagged = /ab/gi; }
+const templated = tag`head${args}tail`;
+export const annotated: string = quoted;

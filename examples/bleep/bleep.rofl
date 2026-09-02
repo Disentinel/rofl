@@ -1,0 +1,131 @@
+-- bleep.rofl — BLEEP: distrust propagation as multiplication in a semiring.
+--
+-- A quarterly report. Numbers arrive through CHANNELS of differing
+-- trustworthiness, the report derives conclusions from them, and the
+-- question is which conclusions may be shown as numbers and which must be
+-- shown as ████.
+--
+-- WHAT IS AND IS NOT IN THIS FILE. These rules compute the report and
+-- nothing else. There is no `dirty/1`, no `taint/2`, no propagation rule
+-- anywhere: the level of a conclusion is not derived here, it is the value
+-- of the fact under a four-element semiring folded over the support
+-- hypergraph the kernel already recorded. That is the whole claim of the
+-- example — distrust propagation is ⊗, not a subsystem — and it would be
+-- worth nothing if the rules quietly did the propagation themselves.
+--
+-- THE LABEL LIVES ON THE EDGE. `says(ops_chat, returns, 315000)` is a
+-- perfectly clean fact: ops_chat really did say that, and the record of it
+-- is not in doubt. What is in doubt is the STEP from "the channel said it"
+-- to "the number is 315000". So the label belongs to that derivation edge,
+-- not to either fact it connects. examples/bleep/demo.ts supplies it
+-- through the fold's per-firing `weight` hook, which is exactly an edge
+-- slot; nothing in this file carries a level.
+--
+-- Two engine disciplines kept deliberately, as in examples/spat:
+--   * NO @next TICKS. A carry rule makes every carried fact its own support
+--     one tick back, which is harmless for a BOUNDED instance and confusing
+--     for a reader. Everything here is evaluated at tick 0.
+--   * EVERY RULE RANGE-RESTRICTED IN WRITTEN PREMISE ORDER, so the whole
+--     model materialises and the fold runs over the same fact set the
+--     verdicts describe. test/example-bleep.test.ts asserts zero of both.
+
+-- =========================================================================
+-- 1. THE CHANNELS
+-- =========================================================================
+-- The four levels, ordered clean > dubious > dirty > forbidden. They are
+-- ordinary atoms here; the ORDER is in the semiring, not in these facts.
+--
+--   clean      a system of record
+--   dubious    plausible, unreconciled: a supplier's own statement
+--   dirty      hearsay: somebody typed a number into a chat
+--   forbidden  may not be used at all, however true it is
+
+trust(billing_export,  clean).
+trust(gl_ledger,       clean).
+trust(carrier_invoice, clean).
+trust(vendor_email,    dubious).
+trust(ops_chat,        dirty).
+trust(hr_embargo,      forbidden).
+
+-- =========================================================================
+-- 2. WHAT EACH CHANNEL SAID
+-- =========================================================================
+-- says(Channel, Metric, Value) — a record of a claim, not the claim itself.
+
+says(billing_export,  gross_revenue, 4200000).
+says(billing_export,  cogs,          1900000).
+says(gl_ledger,       cogs,          1900000).
+says(gl_ledger,       payroll,        620000).
+says(vendor_email,    shipping,       180000).
+says(carrier_invoice, shipping,       180000).
+says(vendor_email,    fx_rate,             92).
+says(ops_chat,        returns,        315000).
+says(hr_embargo,      headcount,           64).
+
+-- The rule of thumb. Returns have run at 7.5% of gross for three years, so
+-- when nobody has reconciled the real number the report estimates it. The
+-- constant is DATA rather than a literal inside a rule, so that the doubt
+-- attaching to the estimate has a premise to hang on.
+rule_of_thumb(net_revenue, 925).
+
+-- Two channels that each restate the other's numbers: the group chat quotes
+-- the vendor's mail and the vendor quotes the chat. Section 5 turns this
+-- into a genuine cycle of the support hypergraph.
+restates(ops_chat,    vendor_email).
+restates(vendor_email, ops_chat).
+
+-- =========================================================================
+-- 3. THE REPORT
+-- =========================================================================
+-- One figure per metric, however many channels carry it. Two channels
+-- carrying the same number are TWO EDGES into the same fact, which is what
+-- makes laundering expressible: ⊕ = max takes the better of them.
+
+figure(M, V)        :- says(S, M, V).
+
+-- net revenue, two ways to the same number:
+--   exact       gross minus the reconciled returns figure
+--   rule of thumb  92.5% of gross, no returns figure needed
+-- Both give 3885000. The first rests on a chat message; the second rests on
+-- clean inputs through a step nobody would call exact. Neither is better
+-- than the other on its face, and the algebra is what says which wins.
+net_revenue(N)      :- figure(gross_revenue, G), figure(returns, R), N is G - R.
+net_revenue(N)      :- rule_of_thumb(net_revenue, K), figure(gross_revenue, G),
+                       N is G * K / 1000.
+
+opex(N)             :- figure(payroll, P), figure(shipping, H), N is P + H.
+operating_profit(N) :- net_revenue(NR), figure(cogs, C), opex(O), N is NR - C - O.
+margin_pct(N)       :- operating_profit(P), figure(gross_revenue, G), N is P * 100 / G.
+refund_rate(N)      :- figure(returns, R), figure(gross_revenue, G), N is R * 1000 / G.
+cogs_eur(N)         :- figure(cogs, C), figure(fx_rate, F), N is C * F / 100.
+revenue_per_head(N) :- net_revenue(NR), figure(headcount, H), N is NR / H.
+
+-- =========================================================================
+-- 4. THE STRUCTURAL PRECONDITION FOR LAUNDERING
+-- =========================================================================
+-- `clean_route(M, V)` — some system of record carries this number directly.
+-- It is deliberately NOT recursive: it says nothing about derived figures,
+-- because propagating along a derivation is ⊗'s job and writing it twice
+-- would be the subsystem this example exists to avoid. What it is for is
+-- `whynot`: ask it about a redacted figure and the failing premise names
+-- the missing fact, i.e. exactly what somebody has to go and confirm.
+
+clean_route(M, V)   :- says(S, M, V), trust(S, clean).
+
+-- =========================================================================
+-- 5. THE ECHO CHAMBER — a real cycle
+-- =========================================================================
+-- "S stands behind V for M": S said it, or S restates a channel that stands
+-- behind it. Because `restates` goes both ways, stands_behind(ops_chat, …)
+-- rests on stands_behind(vendor_email, …) and vice versa — a cycle of the
+-- support hypergraph, not of the rules only.
+--
+-- Under the counting semiring this is "infinitely many confirmations",
+-- which is arithmetically right and epistemically absurd. Under BLEEP the
+-- chain stops moving after a couple of rounds and the answer stays as dirty
+-- as the worst link in the loop: a four-element lattice has finite height,
+-- so going round the circle can only take the min again. That is the
+-- BOUNDED discipline earning its declaration on real data.
+
+stands_behind(S, M, V) :- says(S, M, V).
+stands_behind(S, M, V) :- restates(S, T), stands_behind(T, M, V).

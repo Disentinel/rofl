@@ -1,0 +1,66 @@
+-- rules/kernel-policy.rofl — the kernel's own before-A policy, as rules.
+--
+-- `scanners/engine_split.ts` measures the evaluator in LINE-RANGE BLOCKS, which
+-- is the right unit for its question (how many lines a rewrite must carry) and
+-- the wrong one for this: a block can hold two policies, and one policy can
+-- span two blocks. The unit here is the RELATION, and the ladder is not
+-- measured by a scanner at all — `boot.rofl` computes `dep/2` and the kernel
+-- reads `stratum/2`, so the program says where each policy stands.
+--
+-- Tiers 1, 2 and 3 only. Tier 0 (range restriction) is NOT here: the reflection
+-- the kernel emits is a SET — `premise_pos(R, Rel)` says which relations occur
+-- — and safety needs a SEQUENCE: which variable stands in which position of
+-- which premise, in written order. Five fact families are missing for it
+-- (`premise_kind/3`, `premise_var/4`, `head_var/3`, `builtin_at/3`,
+-- `builtin_operand/4`), so its verdict arrives here as an input.
+
+-- The one input that is not emitted reflection: tier 0's answer. Declared
+-- extensional, because a program with no unsafe rule leaves it empty and
+-- `undefined_premise[audit]` reads emptiness as a misspelling otherwise.
+edb(unsafe).
+
+-- `semantics/1` is read by the kernel and written by the PROGRAM, so a store
+-- where nobody declared the alternation holds none — and an undeclared input
+-- reads to `undefined_premise[audit]` as a misspelling. Measured: without this
+-- line the pack raises exactly one audit row, naming `semantics`.
+edb(semantics).
+
+-- ---------------------------------------------------------------- tier 1 ---
+-- src/engine.ts 107-118. A rule whose head is a kernel relation is not
+-- executable. `reserved/1` is the §2 table, emitted at bootstrap and queryable.
+blocked_head(R)      :- concludes(R, Rel), reserved(Rel).
+executable(R)        :- rule(R), not blocked_head(R).
+
+-- src/engine.ts 509-521, added 2026-08-31. The monotone rules that may not run
+-- before the program is judged: the ones concluding the stratum table, and
+-- anything reading what they conclude. Positive premises are the whole body
+-- here by construction — a monotone rule has no negated premise.
+has_neg_rule(R)      :- premise_neg(R, _).
+mono_rule(R)         :- executable(R), not has_neg_rule(R), not unsafe(R).
+stratum_cone(stratum).
+stratum_cone(Rel)    :- concludes(R, Rel), mono_rule(R), premise_pos(R, Q),
+                        stratum_cone(Q).
+late_rule(R)         :- concludes(R, Rel), mono_rule(R), stratum_cone(Rel).
+
+-- ---------------------------------------------------------------- tier 2 ---
+-- src/engine.ts 119-169. A relation is demand-backed when a rule defining it
+-- in the present tense is not range-restricted, or when it reads one that is.
+-- `@next` heads never unfold: they stage instead of matching at a call site.
+demand_rel(Rel)      :- concludes(R, Rel), conclusion_tense(R, now),
+                        executable(R), unsafe(R).
+demand_rel(Rel)      :- concludes(R, Rel), conclusion_tense(R, now),
+                        executable(R), premise_pos(R, Q), demand_rel(Q).
+
+-- ---------------------------------------------------------------- tier 3 ---
+-- src/engine.ts 214-224. Which rules run at all, and whether the program has
+-- any negation to schedule — the condition the rejection path is gated on.
+safe_rule(R)         :- executable(R), not unsafe(R).
+neg_rule(R)          :- safe_rule(R), has_neg_rule(R).
+program_negates(yes) :- neg_rule(_).
+
+-- src/engine.ts 666-681. Under the alternating fixpoint no round can hold a
+-- demand-backed relation fixed, because it materialises as a side effect of
+-- matching at a call site. `semantics/1` is not emitted reflection — the
+-- PROGRAM writes it and the kernel reads it — so it is available here already.
+wf_declared(yes)     :- semantics(well_founded).
+wf_inadmissible(Rel) :- wf_declared(yes), demand_rel(Rel).

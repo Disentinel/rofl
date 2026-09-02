@@ -1,0 +1,13 @@
+// the two specifiers that separate "relative to the importer" from
+// "relative to the root": `../b.ts` only resolves by walking UP out of sub/,
+// and `./c.ts` resolves to sub/c.ts while a root-relative join finds the
+// decoy c.ts and reports a WRONG file rather than none.
+import { v1 } from '../b.ts';
+import { cc } from './c.ts';
+// the BARE FORM of a node builtin. Measured over this repository: all 371
+// builtin imports are `node:`-prefixed and not one is written this way, so
+// without this line the vocabulary branch of the shape rule is a rule nothing
+// exercises — invisible to every gate, which is the failure mode CLAUDE.md
+// names for opt-in features.
+import { join } from 'path';
+export const deep = [v1, cc, join];

@@ -1,0 +1,39 @@
+-- rules/strata.rofl — the schedule as data, for the evaluator that reads it.
+--
+-- These ten rules stood in `boot.rofl` until the evaluator stopped needing
+-- them. They compute, over a program's own reflection, the dependency graph
+-- (`dep/2`, `dep_neg/2`), its transitive closure (`reach/2`), the relations no
+-- schedule can order (`unstratified/1`), and the stratum table (`stratum/2`)
+-- that the STOCK evaluator reads back out of the store to order its negation
+-- phases.
+--
+-- The primary evaluator peels that schedule off the DECODED RULES before a
+-- single rule fires (`src/rounds.ts`, `peelRounds`), so a program no longer has
+-- to derive a description of itself in order to be run, and boot.rofl no longer
+-- carries these. `stratum/2` and `unstratified/1` remain the kernel's declared
+-- READ INTERFACE (README.md), and `new Rofl({ evaluator: 'strata' })` still
+-- reads them — it simply has no supplier unless a program is one.
+--
+-- THIS PACK IS THAT SUPPLIER, and it is an ordinary program. That is the whole
+-- point the deletion makes rather than hides: the table was always computed by
+-- rules over reflection, and moving it out of boot.rofl changes who loads it
+-- and nothing else. Load it beside boot.rofl and the stock path behaves exactly
+-- as it did.
+--
+-- WARNING, and it is why this is not loaded by default: `stratum(Rel, N) :-
+-- dep_neg(Rel, Q), stratum(Q, M), N is M + 1` invents a value that was not in
+-- the input, so it has no fixpoint on a negative cycle and is made safe only by
+-- being refused first. The peel invents nothing and is bounded by construction.
+
+dep(A, B)          :- concludes(R, A), conclusion_tense(R, now), premise_pos(R, B).
+dep(A, B)          :- concludes(R, A), conclusion_tense(R, now), premise_neg(R, B).
+dep_neg(A, B)      :- concludes(R, A), conclusion_tense(R, now), premise_neg(R, B).
+
+reach(A, B)        :- dep(A, B).
+reach(A, B)        :- reach(A, X), dep(X, B).
+unstratified(Rel)  :- dep_neg(Rel, Q), reach(Q, Rel).
+
+stratum(Rel, 0)    :- edb(Rel).
+stratum(Rel, 0)    :- concludes(R, Rel), conclusion_tense(R, next).
+stratum(Rel, N)    :- dep_neg(Rel, Q), stratum(Q, M), N is M + 1.
+stratum(Rel, N)    :- dep(Rel, Q), stratum(Q, N).

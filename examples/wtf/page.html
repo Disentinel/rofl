@@ -1,0 +1,710 @@
+<title>WTF</title>
+
+<style>
+/* ---------------------------------------------------------------------------
+   Palette: ink on warm card stock. Two semantic colours carry the whole
+   argument and are deliberately NOT the accent: amber is "decided by
+   timestamp", teal is "decided by dependency". Everything else stays quiet so
+   that those two read instantly, including in the ladder diagram.
+
+   No web fonts, no CDN, no external requests of any kind: this page is one
+   file and it renders offline.
+   --------------------------------------------------------------------------- */
+:root {
+  --paper:      #F2EFE9;
+  --surface:    #FDFCFA;
+  --surface-2:  #E8E3DA;
+  --ink:        #1D1A16;
+  --ink-soft:   #4A443C;
+  --muted:      #756E64;
+  --line:       #D6CFC3;
+  --line-soft:  #E3DDD2;
+  --accent:     #4A3A7B;
+  --accent-dim: #E5E0F0;
+  --stamp:      #9A6212;   /* timestamp decided it */
+  --stamp-dim:  #F5E7CF;
+  --dep:        #1F6157;   /* dependency decided it */
+  --dep-dim:    #D9E9E4;
+  --dead:       #A03A2B;
+  --dead-dim:   #F3DED9;
+  --shadow:     0 1px 2px rgba(29, 26, 22, .06), 0 10px 28px -18px rgba(29, 26, 22, .35);
+
+  --f-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --f-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 36rem;
+  --wide:    50rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #14120F;
+    --surface:    #1C1A16;
+    --surface-2:  #24211C;
+    --ink:        #EDE8E0;
+    --ink-soft:   #C0B9AE;
+    --muted:      #948C81;
+    --line:       #322D26;
+    --line-soft:  #262219;
+    --accent:     #A99AD8;
+    --accent-dim: #241F35;
+    --stamp:      #E0A857;
+    --stamp-dim:  #33260F;
+    --dep:        #6FC6B4;
+    --dep-dim:    #12302B;
+    --dead:       #E08677;
+    --dead-dim:   #341914;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 12px 32px -20px rgba(0, 0, 0, .9);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #14120F;
+  --surface:    #1C1A16;
+  --surface-2:  #24211C;
+  --ink:        #EDE8E0;
+  --ink-soft:   #C0B9AE;
+  --muted:      #948C81;
+  --line:       #322D26;
+  --line-soft:  #262219;
+  --accent:     #A99AD8;
+  --accent-dim: #241F35;
+  --stamp:      #E0A857;
+  --stamp-dim:  #33260F;
+  --dep:        #6FC6B4;
+  --dep-dim:    #12302B;
+  --dead:       #E08677;
+  --dead-dim:   #341914;
+  --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 12px 32px -20px rgba(0, 0, 0, .9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.65;
+  margin: 0;
+  padding: 0 1.25rem 6rem;
+  -webkit-text-size-adjust: 100%;
+}
+
+main { max-width: var(--wide); margin: 0 auto; }
+p, ul, ol { max-width: var(--measure); }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; }
+h1 { font-size: clamp(2.4rem, 7vw, 3.6rem); margin: 3rem 0 .25rem; letter-spacing: -.02em; }
+h2 { font-size: clamp(1.4rem, 3.4vw, 1.85rem); margin: 3.5rem 0 .75rem; }
+h3 { font-size: 1.12rem; margin: 2rem 0 .5rem; font-family: var(--f-body); font-weight: 650; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--f-mono); font-size: .92em; }
+.lede { font-size: 1.16rem; color: var(--ink-soft); max-width: var(--measure); }
+.small { font-size: .9rem; color: var(--muted); }
+
+/* --- the level switch ---------------------------------------------------- */
+.levels {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; gap: .35rem; align-items: center;
+  padding: .7rem 0; margin-bottom: .5rem;
+  background: linear-gradient(var(--paper) 72%, transparent);
+}
+.levels button {
+  font: inherit; font-size: .9rem; font-weight: 600;
+  padding: .35rem .85rem; border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-soft);
+  cursor: pointer;
+}
+.levels button[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--paper);
+}
+:root[data-theme="dark"] .levels button[aria-pressed="true"],
+.levels button[aria-pressed="true"] { color: #FDFCFA; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .levels button[aria-pressed="true"] { color: #14120F; }
+}
+:root[data-theme="dark"] .levels button[aria-pressed="true"] { color: #14120F; }
+.levels .hint { color: var(--muted); font-size: .82rem; margin-left: .4rem; }
+
+body[data-level="plain"] .eng { display: none; }
+body[data-level="eng"]   .kid { display: none; }
+
+/* --- blocks -------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow);
+}
+.scroll { overflow-x: auto; }
+pre {
+  font-family: var(--f-mono); font-size: .82rem; line-height: 1.5;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 8px; padding: .9rem 1rem; margin: 1rem 0;
+  overflow-x: auto; white-space: pre;
+}
+.tag {
+  display: inline-block; font-family: var(--f-mono); font-size: .72rem;
+  font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: .1rem .45rem; border-radius: 4px; vertical-align: .08em;
+}
+.tag.stamp { background: var(--stamp-dim); color: var(--stamp); }
+.tag.dep   { background: var(--dep-dim);   color: var(--dep); }
+.tag.dead  { background: var(--dead-dim);  color: var(--dead); }
+
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: .42rem .7rem .42rem 0; border-bottom: 1px solid var(--line-soft); }
+th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 650; }
+td.num, th.num { text-align: right; font-family: var(--f-mono); }
+tr.hi td { background: var(--dep-dim); }
+
+/* --- the ladder ---------------------------------------------------------- */
+.ladder { display: grid; gap: .3rem; margin: 1.25rem 0; min-width: 30rem; }
+.rung {
+  display: grid; grid-template-columns: 6.5rem 1fr; align-items: start;
+  gap: .8rem; padding: .45rem .6rem; border-radius: 7px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.rung .lname { font-family: var(--f-mono); font-size: .78rem; color: var(--muted); padding-top: .12rem; }
+.rung.busy { border-color: var(--line); }
+.eff {
+  display: inline-block; font-family: var(--f-mono); font-size: .76rem;
+  padding: .12rem .5rem; border-radius: 5px; margin: .1rem .25rem .1rem 0;
+  border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink-soft);
+}
+.eff.stamp { border-color: var(--stamp); color: var(--stamp); background: var(--stamp-dim); }
+.eff.dep   { border-color: var(--dep);   color: var(--dep);   background: var(--dep-dim); }
+.eff.dead  { border-color: var(--dead);  color: var(--dead);  background: var(--dead-dim);
+             text-decoration: line-through; }
+
+.pt {
+  font-family: var(--f-mono); font-weight: 700;
+  font-size: 1.05rem; color: var(--accent);
+}
+.big { font-family: var(--f-mono); font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 700; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: .2rem 1rem; font-size: .92rem; }
+.kv dt { font-family: var(--f-mono); font-size: .82rem; color: var(--muted); }
+.kv dd { margin: 0; }
+
+blockquote {
+  margin: 1.25rem 0; padding: .1rem 0 .1rem 1.1rem;
+  border-left: 3px solid var(--dep); color: var(--ink-soft);
+  max-width: var(--measure); font-style: italic;
+}
+hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
+</style>
+
+<main>
+
+<div class="levels">
+  <button id="b-kid" aria-pressed="true">Plain</button>
+  <button id="b-eng" aria-pressed="false">Engineer</button>
+  <span class="hint">two readings of the same computation</span>
+</div>
+
+<h1>WTF</h1>
+<p class="lede kid">
+  A creature's numbers get changed by several things at once, and the
+  <strong>order</strong> those changes happen in decides the answer. Here is
+  what one creature ends up as, and exactly why in that order.
+</p>
+<p class="lede eng">
+  Magic: the Gathering's continuous-effects rules (CR&nbsp;613) are a fixpoint
+  with three different ordering mechanisms stacked on it: seven layers,
+  timestamp order inside a layer, and dependency overriding timestamp on top
+  of that &mdash; plus state-based actions as a second fixpoint above the whole
+  thing. Only the first is stratification, and only under an encoding that
+  earns it. The numbers below are measured, not asserted.
+</p>
+
+<!-- ===================================================================== -->
+<h2>One creature</h2>
+
+<div class="card">
+  <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap">
+    <span style="font-family:var(--f-display);font-size:1.35rem">Grizzly Bears</span>
+    <span class="small">printed 2/2</span>
+    <span style="margin-left:auto" class="big">3/3</span>
+  </div>
+  <div class="scroll">
+  <div class="ladder" style="margin-bottom:.4rem">
+    <div class="rung"><span class="lname">printed</span>
+      <span><span class="eff">2/2</span><span class="eff">green</span><span class="eff">Bear</span></span></div>
+    <div class="rung busy"><span class="lname">5 colour</span>
+      <span><span class="eff dead">T600 +white</span>
+            <span class="eff stamp">T650 becomes blue</span>
+            <span class="small">later timestamp wins</span></span></div>
+    <div class="rung busy"><span class="lname">7c modify</span>
+      <span><span class="eff">T100 +1/+1</span>
+            <span class="small">a card that pumps Bears</span></span></div>
+  </div>
+  </div>
+  <p class="small" style="margin:.5rem 0 0">
+    <span class="tag stamp">timestamp</span> decided the colour;
+    <span class="tag dead">struck out</span> is an effect that was overridden.
+  </p>
+</div>
+
+<div class="kid">
+  <p>
+    Two things wanted to change this bear's numbers.
+  </p>
+  <ul>
+    <li>Another card on the table says <em>"other Bears you control get
+      +1/+1"</em>. It did not start out saying Bears &mdash; it said Elves, and
+      a spell rewrote that one word. So now it points at this bear, and the
+      bear is 3/3.</li>
+    <li>A second card says <em>"white creatures you control get +1/+1"</em>.
+      The bear <strong>was</strong> painted white by one card &mdash; and then a
+      later spell painted it blue. When two paint jobs land in the same layer,
+      the later one wins. Blue is not white, so that +1/+1 never arrives.</li>
+  </ul>
+  <p>
+    That is the whole answer to <strong>"why isn't it 4/4?"</strong>: one layer,
+    one timestamp, one card that arrived a moment too late. And it is checkable
+    &mdash; swap the two timestamps, run it again, and the bear <em>is</em> 4/4.
+  </p>
+  <p>
+    The same card, copied, sitting right next to it, is <strong>4/4</strong>.
+    Nothing about the copy is different except that nobody painted it blue.
+  </p>
+</div>
+
+<div class="eng">
+  <p>
+    Every step names its layer and its timestamp, and every override names
+    what beat it. The <code>whynot</code> query answers the negative form
+    directly: <code>mod73(grizzly, e_honor, 1, 1)</code> fails on
+    <code>co5(grizzly, white)</code>, which fails because
+    <code>clob5(grizzly, e_painter)</code> holds &mdash; a later setter in the
+    same sublayer. The "what would have to differ" is then executed rather
+    than asserted: the demo swaps the two timestamps, re-evaluates, and prints
+    <code class="mono">3/3 -&gt; 4/4</code>.
+  </p>
+  <pre>whynot mod73[main](grizzly,e_honor,1,1):
+  rule rb9e6e291: mod73[main](?O,?E,?DP,?DT) :- hits73[main](?E,?O), anthem_eff[main](?E,?S), ab6[main](?S,anthem(?_,?DP,?DT))
+    failed premise: hits73[main](e_honor,grizzly)
+      rule rb3eddda0: hits73[main](?E,?O) :- live73[main](?E), anthem_eff[main](?E,?S), ab6[main](?S,anthem(?C,?_,?_)), ty4[main](?O,creature), co5[main](?O,?C), ...
+        failed premise: co5[main](grizzly,white)
+          rule r39ea5fd3: co5[main](?O,?C) :- addcol5[main](?O,?C,?E), not clob5[main](?O,?E)
+            failed premise: not clob5[main](grizzly,e_painter) -- blocked: clob5[main](grizzly,e_painter) holds</pre>
+</div>
+
+<!-- ===================================================================== -->
+<h2 class="kid">When "who got here first" stops being the rule</h2>
+<h2 class="eng">Dependency overrides timestamp (CR 613.8)</h2>
+
+<div class="kid">
+  <p>
+    Usually, when two cards want to change the same thing, the one that
+    arrived earlier goes first. Usually.
+  </p>
+  <p>Three cards are on the table, and all three change what lands <em>are</em>:</p>
+  <ul>
+    <li><strong>Urborg</strong> (arrived first): "every land is also a Swamp."</li>
+    <li><strong>Yavimaya</strong> (arrived second): "every land is also a Forest."</li>
+    <li><strong>Blood Moon</strong> (arrived last): "any land that isn't a basic
+      land is a Mountain &mdash; and it forgets everything written on it."</li>
+  </ul>
+  <p>
+    Here is the catch. Urborg and Yavimaya are not basic lands. So Blood Moon
+    <em>erases their text</em>. If Blood Moon goes last, they have already done
+    their job and every land is a Swamp and a Forest. If Blood Moon goes first,
+    they never say anything at all.
+  </p>
+  <p>
+    The rules do not let that be decided by who arrived first. An effect that
+    would wipe out another effect has to be applied <strong>before</strong> it.
+    So Blood Moon goes first &mdash; even though it arrived last. Urborg and
+    Yavimaya do nothing, ever.
+  </p>
+  <p>
+    Judges have written this down. This tool works it out from the rules, and
+    it gets the same answer.
+  </p>
+</div>
+
+<div class="eng">
+  <p>
+    CR&nbsp;613.8a: an effect depends on another if they apply in the same
+    layer and applying the other <em>"would change the text or the existence of
+    the first effect, what it applies to, or what it does to any of the things
+    it applies to"</em>. CR&nbsp;305.7 makes setting a land's subtype also strip
+    the abilities from its rules text &mdash; so Blood Moon's layer 4 effect
+    removes the abilities that <em>generate</em> Urborg's and Yavimaya's layer 4
+    effects. Existence clause; both depend on Blood Moon; 613.8b applies it
+    first regardless of timestamps.
+  </p>
+  <p>
+    None of that is declared in the model. <code>dep_reason/3</code> derives it,
+    including the counterfactual half: a relation <code>hyp4</code> holds the
+    state in which <em>only</em> the other effect has been applied, and the two
+    target sets are compared. 613.8b's dependency-<em>loop</em> fallback is
+    <code>loop4</code>, mutual reachability in the dependency graph &mdash; a
+    strongly connected component, by transitive closure.
+  </p>
+</div>
+
+<div class="card scroll">
+  <div class="ladder">
+    <div class="rung"><span class="lname">timestamps</span>
+      <span><span class="eff">T300 Urborg</span><span class="eff">T350 Yavimaya</span><span class="eff">T700 Blood Moon</span></span></div>
+    <div class="rung busy"><span class="lname">applied</span>
+      <span><span class="eff dep">T700 Blood Moon</span>
+            <span class="eff dead">T300 Urborg</span>
+            <span class="eff dead">T350 Yavimaya</span></span></div>
+  </div>
+  <p class="small" style="margin:.4rem 0 0">
+    <span class="tag dep">dependency</span> put the last timestamp first;
+    <span class="tag dead">struck out</span> never applies at all &mdash; its
+    ability was removed before its turn came.
+  </p>
+</div>
+
+<blockquote>
+  "Hence no matter which order they enter the battlefield, we always apply
+  Blood Moon first."
+</blockquote>
+<p class="small">
+  Felix Ramon M. Capule III, <em>"Blood Moon, Progenitor of Dependency"</em>,
+  Judges of Southeast Asia, 24 January 2019 &mdash;
+  <span class="mono">blogs.magicjudges.org/searegion/2019/01/24/blood-moon-progenitor-of-dependency/</span>
+</p>
+
+<h3>And it does not stay in layer 4</h3>
+<div class="card">
+  <dl class="kv">
+    <dt>the basic Forest is</dt><dd><code>basic forest land</code></dd>
+    <dt>under timestamp order</dt><dd><code>basic forest land swamp</code></dd>
+    <dt>Swamps controlled</dt><dd><strong>1</strong> &mdash; under timestamp order, <strong>2</strong></dd>
+    <dt>Nightmare</dt><dd><span class="pt">2/2</span> &mdash; its power and toughness
+      <em class="kid">count the Swamps you have</em><em class="eng">are a
+      characteristic-defining ability counting Swamps, applied in layer 7a</em>,
+      so the ruling decides the size of a creature three layers up</dd>
+  </dl>
+</div>
+
+<!-- ===================================================================== -->
+<h2 class="eng">Three ordering mechanisms, and only one is stratification</h2>
+
+<div class="eng">
+  <p>
+    CR&nbsp;613 stacks three different orderings, and calling all of them
+    "strata" would be a false claim about the kernel:
+  </p>
+  <ol>
+    <li><strong>The seven layers</strong> &mdash; a candidate for strata,
+      measured below.</li>
+    <li><strong>Timestamps inside a layer</strong> &mdash; <em>not</em> strata.
+      Stratification cannot order anything <em>inside</em> one level at all.
+      <code>bef_ts</code> is one rule over integer timestamps that reads no
+      layer state, and it sits at the bottom.</li>
+    <li><strong>Dependency overriding timestamp</strong> &mdash; <em>not</em>
+      strata either. It is a conditional reordering derived from the effects'
+      own semantics. Its own relations do form strata
+      (<code>dep_reason=5 &le; edep4=6 &le; eta4=7 &le; live4=8 &le; ty4=9</code>),
+      which is a fact about how it is <em>computed</em> &mdash; below the layer
+      it reorders, so nothing had to schedule it &mdash; not about what it
+      <em>is</em>.</li>
+  </ol>
+
+  <h3>And (1) is not free either</h3>
+  <p>
+    A kernel stratum is a level forced by <strong>negation</strong>, derived by
+    <code>boot.rofl</code> from the rule dependency graph. An MTG layer is an
+    order the rulebook <strong>asserts</strong>. The two coincide only where
+    layer N's rules negate on layer N&minus;1's <em>relation</em>, so every
+    boundary in the model is written in one shape:
+  </p>
+  <pre>lost_N(...) :- &lt;layer N-1&gt;(...), &lt;it was replaced&gt;.
+&lt;layer N&gt;   :- &lt;layer N-1&gt;(...), not lost_N(...).</pre>
+  <p>
+    Writing <code>not anyset5(O)</code> instead &mdash; a fact about
+    <em>effects</em> &mdash; is semantically identical and buys nothing,
+    because it never reads the layer below. Measured on this program, layer 5,
+    both ways:
+  </p>
+  <div class="card">
+    <dl class="kv">
+      <dt>co3</dt><dd>stratum <strong>1</strong></dd>
+      <dt>co5 :- co3, not lost5(O,&nbsp;C)</dt><dd>stratum <strong>2</strong> &mdash; <code>lost5</code> ranges over <code>co3</code></dd>
+      <dt>co5 :- co3, not anyset5(O)</dt><dd>stratum <strong>1</strong> &mdash; <code>anyset5</code> is about effects</dd>
+      <dt>same answers?</dt><dd><strong>yes</strong>, fact for fact</dd>
+    </dl>
+  </div>
+  <p>
+    So the claim "the kernel derived the layer order" is worth exactly as much
+    as the encoding that earns it, and no more.
+  </p>
+
+  <h3>The boundaries, measured</h3>
+  <p>
+    Two relations <code>boot.rofl</code> derived. <code>stratum/2</code> is the
+    level a negation forces; <code>reach/2</code> is the direction of the
+    rule-graph dependency, which is forced even where no negation makes it a
+    level.
+  </p>
+  <div class="card scroll">
+  <table>
+    <thead><tr><th>layer</th><th>below</th><th>above</th><th>verdict</th></tr></thead>
+    <tbody>
+      <tr><td>1&nbsp; copy</td><td class="mono">printed_type=0</td><td class="mono">ty1=1</td><td>forced by negation</td></tr>
+      <tr><td>3&nbsp; text</td><td class="mono">ty1=1</td><td class="mono">ty3=1</td><td><span class="tag stamp">flat</span></td></tr>
+      <tr class="hi"><td>4&nbsp; type</td><td class="mono">ty3=1</td><td class="mono">ty4=9</td><td>forced by negation</td></tr>
+      <tr><td>3&nbsp; text</td><td class="mono">co1=1</td><td class="mono">co3=1</td><td><span class="tag stamp">flat</span></td></tr>
+      <tr><td>5&nbsp; colour</td><td class="mono">co3=1</td><td class="mono">co5=2</td><td>forced by negation</td></tr>
+      <tr><td>3&nbsp; text</td><td class="mono">ab1=1</td><td class="mono">ab3=2</td><td>forced by negation</td></tr>
+      <tr><td>4&nbsp; CR 305.7</td><td class="mono">ab3=2</td><td class="mono">ab4=9</td><td>forced by negation</td></tr>
+      <tr><td>6&nbsp; abilities</td><td class="mono">ab4=9</td><td class="mono">ab6=10</td><td>forced by negation</td></tr>
+      <tr><td>2&nbsp; control</td><td class="mono">ct1=0</td><td class="mono">ct2=1</td><td>forced by negation</td></tr>
+      <tr><td>7a CDA</td><td class="mono">bp1=1</td><td class="mono">pt7a=11</td><td>forced by negation</td></tr>
+      <tr><td>7b set</td><td class="mono">pt7a=11</td><td class="mono">pt7b=12</td><td>forced by negation</td></tr>
+      <tr><td>7c modify</td><td class="mono">pt7b=12</td><td class="mono">pt7c=12</td><td><span class="tag stamp">flat</span></td></tr>
+      <tr><td>7d switch</td><td class="mono">pt7c=12</td><td class="mono">pt7d=13</td><td>forced by negation</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small">
+    Four copy-layer rows omitted for width; the full seventeen are in the
+    transcript. <strong>13 of 17 boundaries are levels the kernel derived, and
+    all 17 are one-way in <code>reach/2</code></strong> &mdash; the rule graph
+    forces the direction everywhere, whether or not a negation turns it into a
+    numbered level.
+  </p>
+  <p>
+    The four flat ones are reported, not explained away, and each is a fact
+    about the domain rather than a defect in the encoding:
+  </p>
+  <ul>
+    <li><code>ty1&rarr;ty3</code>, <code>co1&rarr;co3</code>: a text-changing
+      effect rewrites <em>text</em>, never types or colours.
+      <code>ty3(O, T) :- ty1(O, T).</code> is a literal alias &mdash; no
+      removal, so no negation to route.</li>
+    <li><code>printed_ctrl&rarr;ct1</code>: a copy effect does not change who
+      controls the object.</li>
+    <li><code>pt7b&rarr;pt7c</code>: layer 7c only <em>adds</em>. It overrides
+      nothing, so no negation exists; the order is still forced, positively
+      &mdash; <code>reach(pt7c, pt7b)</code> holds and
+      <code>reach(pt7b, pt7c)</code> does not.</li>
+  </ul>
+
+  <h3>The one place the kernel refused</h3>
+  <p>
+    613.8b's scheduler &mdash; "waits to apply until just after all of those
+    effects have been applied" &mdash; is a greedy topological sort keyed on
+    timestamp, i.e. a <code>max</code> over a transitive closure. v0 has no
+    aggregation, and the natural encoding puts a negation inside a recursion,
+    which <code>unstratified/1</code> rejects. Correctly: that program has no
+    least fixpoint. The way through is to compute the closure positively
+    <em>first</em>, then take the maximum with a single negation on top:
+  </p>
+  <pre>anc4(A, B)  :- edep4(A, B).
+anc4(A, B)  :- edep4(A, X), anc4(X, B).
+
+cts4(E, T)  :- lay4(E), eff_ts(E, T).
+cts4(E, T)  :- anc4(E, B), eff_ts(B, T).
+low4(E, T)  :- cts4(E, T), cts4(E, T2), T2 &gt; T.
+eta4(E, T)  :- cts4(E, T), not low4(E, T).</pre>
+  <p>
+    <code>eta4</code> is the largest timestamp among an effect and its
+    dependency ancestors; sorting by <code>(eta4, timestamp)</code> reproduces
+    the greedy walk exactly. An independent implementation checks that claim on
+    every order the sweep produces.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 class="kid">We tried every order</h2>
+<h2 class="eng">Counting application orders</h2>
+
+<div class="kid">
+  <p>
+    If the order matters, the obvious thing to do is try all of them. So the
+    tool shuffles the timestamps inside one layer, every possible way, works
+    the whole board out again each time, and counts <strong>how many different
+    answers</strong> come out.
+  </p>
+  <p>
+    One answer from every order means nothing can go wrong there. More than one
+    answer means the board really does depend on which card showed up first
+    &mdash; and that is exactly the situation people argue about and judges
+    write rulings for. The tool finds those on its own.
+  </p>
+</div>
+
+<div class="eng">
+  <p>
+    Every permutation of a sublayer's timestamps is a distinct application
+    order. The sweep re-runs the entire layer computation under each and counts
+    distinct final boards &mdash; characteristics only, never the intermediate
+    ordering relations, which change by construction.
+  </p>
+</div>
+
+<div class="card scroll">
+<table>
+  <thead><tr><th>sublayer</th><th class="num">effects</th><th class="num">orders</th><th class="num">outcomes</th><th>verdict</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>4&nbsp; type</td><td class="num">3</td><td class="num">6</td><td class="num">1</td><td>stable</td></tr>
+    <tr><td>5&nbsp; colour</td><td class="num">2</td><td class="num">2</td><td class="num">2</td><td>order-dependent</td></tr>
+    <tr><td>6&nbsp; abilities</td><td class="num">4</td><td class="num">24</td><td class="num">4</td><td>order-dependent</td></tr>
+    <tr><td>7b set p/t</td><td class="num">2</td><td class="num">2</td><td class="num">1</td><td>stable</td></tr>
+    <tr><td>7c modify p/t</td><td class="num">3</td><td class="num">6</td><td class="num">1</td><td>stable</td></tr>
+    <tr><td>7d switch p/t</td><td class="num">1</td><td class="num">1</td><td class="num">1</td><td>stable</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The headline is the first row against its own shadow: <strong>layer 4 gives
+  one outcome over all six orders &mdash; and the same six orders read off a
+  timestamp-only pipeline give four.</strong>
+  <span class="kid">The rule about erasing effects is the whole reason there is
+  one answer instead of four.</span>
+  <span class="eng">CR 613.8 is what collapses an order-dependent
+  configuration into a stable one, and the sweep demonstrates that instead of
+  asserting it. Layer 7c is stable for an unrelated reason &mdash; integer
+  addition commutes &mdash; and layers 5 and 6 are order-dependent, correctly:
+  those are the ones where the rules really do let the timestamp decide.</span>
+</p>
+
+<!-- ===================================================================== -->
+<h2 class="kid">One death causes another</h2>
+<h2 class="eng">State-based actions: a second fixpoint</h2>
+
+<div class="kid">
+  <p>
+    A creature whose toughness drops to zero dies. But a creature that dies
+    stops doing whatever it was doing &mdash; and if what it was doing was
+    keeping another creature big, that one can die too. So you cannot check
+    once. You check, remove, work the whole board out again, and check again,
+    until nothing else dies.
+  </p>
+</div>
+<div class="eng">
+  <p>
+    CR 704.5f is a fixpoint <em>above</em> the layer computation: a creature
+    with toughness &le; 0 leaves the battlefield, which removes the effects its
+    abilities generated, which re-runs all seven layers, which can make another
+    creature lethal. The demo drives it by retracting <code>on_bf/1</code> and
+    re-evaluating.
+  </p>
+</div>
+
+<div class="card scroll">
+<table>
+  <thead><tr><th>round</th><th>the lord</th><th>Grizzly Bears</th><th>its copy</th><th>dies</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td class="mono">-1/-1</td><td class="mono">1/1</td><td class="mono">4/4</td><td>the lord</td></tr>
+    <tr><td class="num">2</td><td class="small">gone</td><td class="mono">0/0</td><td class="mono">3/3</td><td>Grizzly Bears</td></tr>
+    <tr><td class="num">3</td><td class="small">gone</td><td class="small">gone</td><td class="mono">3/3</td><td>&mdash; quiescent</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">
+  A single pass would have stopped after round 1 and reported a live 1/1.
+</p>
+
+<!-- ===================================================================== -->
+<h2>Is any of this right?</h2>
+
+<div class="kid">
+  <p>
+    A program that only checks itself against itself has checked nothing. So
+    the answers here are checked three ways:
+  </p>
+  <ul>
+    <li>A second, completely separate program works the same boards out the
+      plain step-by-step way, and gets the same answer &mdash; on
+      <strong>42</strong> boards and <strong>41</strong> orderings, with zero
+      disagreements.</li>
+    <li>The official rulebook contains worked examples that <em>state the
+      answer</em>. Two of them are set up on this board, and both come out:
+      <span class="mono">4/6</span> and <span class="mono">5/8</span>.</li>
+    <li>The Blood Moon case above is a published judge ruling.</li>
+  </ul>
+  <p class="small">
+    Not done: running a real Magic game program. Those are games you play, not
+    calculators you can ask a question, so it would have meant building a whole
+    game inside one. Better to say so than to imply it was checked.
+  </p>
+</div>
+
+<div class="eng">
+  <ol>
+    <li><strong>An independent implementation of CR 613</strong> &mdash;
+      <code>simulate()</code>, the obvious sequential layer walk in plain
+      TypeScript, with 613.8a's dependency test done by cloning the board and
+      comparing, and 613.8b's scheduler written as the greedy loop the rule
+      describes. It is <em>stricter</em> than the rules file in one respect: it
+      re-evaluates each effect's target set at the moment that effect is
+      applied. Agreement on <strong>42 boards, 41 layer-4 orders, zero
+      disagreements</strong>; and it is shown to discriminate rather than
+      rubber-stamp &mdash; it sides with the dependency answer against the
+      timestamp-only one, and a changed board breaks the match.</li>
+    <li><strong>The Comprehensive Rules' own worked examples</strong>, which
+      state their answers numerically: CR 613.4d Example 1 must be
+      <code>4/6</code>, CR 613.5 Example 2 must be <code>5/8</code>. Both
+      reproduce.</li>
+    <li><strong>The documented judge ruling.</strong></li>
+  </ol>
+  <p class="small">
+    Not run: an actual rules engine. Java is installed on the build machine,
+    but Forge and XMage are interactive game clients with no scriptable
+    "evaluate this board" entry point. Stated rather than implied.
+  </p>
+
+  <h3>What the encoding assumes, as relations that must be empty</h3>
+  <p>
+    Each of these is a way the model could be quietly wrong, written as a rule
+    rather than a comment, so the test asserts it instead of trusting it:
+    <code>unordered4</code>, <code>cyclic4</code>, <code>intrans4</code> (the
+    layer 4 order is a strict total order), <code>kill_chain4</code>
+    (<code>dead4</code>'s one-level reading holds), <code>unsound4</code> (no
+    surviving effect's target set shifts inside its layer),
+    <code>p5_dep</code>/<code>p6_dep</code>/<code>p72_dep</code> (the
+    timestamp-only sublayers have no dependency to miss &mdash; an empty
+    over-approximation of 613.8a is a proof the exact relation is empty), and
+    <code>ts_tie</code> (no two effects in one sublayer share a timestamp).
+  </p>
+  <p>
+    One measured result worth keeping: <strong><code>boot.rofl</code> is
+    load-bearing for this program, not an audit bolted on.</strong> Loaded
+    without it there are no <code>stratum/2</code> facts, every negation rule
+    runs in one final pass, and the answers are wrong &mdash; Urborg's dead
+    effect applies and Blood Moon loses. The test pins that too.
+  </p>
+</div>
+
+<hr>
+<p class="small">
+  <code>examples/wtf/</code> in the ROFL repository:
+  <code>wtf.rofl</code> (the effects as facts, the layers as rules),
+  <code>demo.ts</code> (runnable; every number on this page is its output),
+  <code>README.md</code>, and <code>test/example-wtf.test.ts</code>.
+  Card names are identifiers; no card text is reproduced.
+</p>
+
+</main>
+
+<script>
+(function () {
+  var body = document.body;
+  var kid = document.getElementById('b-kid');
+  var eng = document.getElementById('b-eng');
+  function set(level) {
+    body.setAttribute('data-level', level);
+    kid.setAttribute('aria-pressed', String(level === 'plain'));
+    eng.setAttribute('aria-pressed', String(level === 'eng'));
+  }
+  kid.addEventListener('click', function () { set('plain'); });
+  eng.addEventListener('click', function () { set('eng'); });
+  set('plain');
+})();
+</script>

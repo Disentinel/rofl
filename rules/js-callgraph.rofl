@@ -1,0 +1,376 @@
+-- js-callgraph.rofl — ONE construct, the FUNCTION CALL, at the call-graph
+-- layer. Written over the scanner's four relations plus js-structure's
+-- ast_within / ast_name / ast_value, and nothing else: the scanner judged
+-- nothing and every classification below is this file's.
+--
+-- THE FINISH LINE IS NOT "the rule fires". It is that every callee SHAPE in
+-- the corpus either has a rule or has a typed verdict saying why not. A model
+-- that resolves `f(x)` and says nothing about `o.m()` reports a SMALLER call
+-- graph that looks correct, and that silent under-report is the failure this
+-- file is built against. So the classification is a TOTAL function — every
+-- call site gets exactly one shape, including the shapes nothing resolves —
+-- and `unresolved_call` is a POSITIVE relation, countable and queryable,
+-- rather than the absence of a row.
+--
+-- Depends on rules/js-model.rofl for the `unknown_type` taxonomy (which
+-- reasons are irreducible and which are ours). Load both.
+
+-- ===========================================================================
+-- 1. CALL SITES
+
+edb(call_kind).
+call_kind(call_expression).
+call_kind(optional_call_expression).
+
+call_site[code](C, File)      :- ast_node[code](C, K, File, _), call_kind(K).
+call_site_kind[code](C, K)    :- ast_node[code](C, K, _, _), call_kind(K).
+call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, Line).
+
+callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
+callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _, _).
+
+-- NOT EVERY CONTROL TRANSFER IS A CALL EXPRESSION. `new C()` runs C's
+-- constructor and is not a call site under any reading of the grammar, so a
+-- model built only on CallExpression misses that edge with nothing to point
+-- at. Declaring it a TRANSFER SITE does not resolve it — it makes the miss
+-- attributable, which is the difference between a gap and a silence.
+edb(transfer_kind).
+transfer_kind(new_expression).
+transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
+
+-- what an enclosing function can be asked about: a call site or a transfer site
+site[code](X) :- call_site[code](X, _).
+site[code](X) :- transfer_site[code](X, _).
+
+-- arguments, WITH THEIR POSITION. The index is not decoration: without it
+-- `f(a, b)` and `f(b, a)` are the same fact set, so which function is passed
+-- in the callback slot becomes unanswerable.
+call_arg[code](C, I, A)       :- call_site[code](C, _), ast_child[code](C, arguments, I, A).
+
+-- ===========================================================================
+-- 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
+--
+-- Two mapping tables and a catch-all, rather than a chain of negations: a
+-- rule that says "everything else" by negating its own head is unstratifiable,
+-- and the table makes the closed set of shapes readable in one place.
+
+edb(callee_shape).
+callee_shape(identifier,                s_identifier).
+callee_shape(arrow_function_expression, s_iife).
+callee_shape(function_expression,       s_iife).
+callee_shape(super,                     s_super).
+-- NOT `ts_non_null_expression`: atomise() inserts a break only between a
+-- lower-case and an upper-case letter, so the acronym `TSN` survives whole.
+-- The first version of this table guessed the split, matched nothing, and the
+-- site landed in s_unclassified — which is exactly what the catch-all is for.
+callee_shape(tsnon_null_expression,     s_non_null).
+callee_shape(call_expression,           s_call_result).
+callee_shape(optional_call_expression,  s_call_result).
+callee_shape(new_expression,            s_new_result).
+callee_shape(import,                    s_dynamic_import).
+callee_shape(sequence_expression,       s_sequence).
+callee_shape(parenthesized_expression,  s_parenthesized).
+callee_shape(tsas_expression,           s_ts_as).
+callee_shape(conditional_expression,    s_conditional).
+
+-- member callees need two more bits: `computed`, and the object's kind.
+edb(member_kind).
+member_kind(member_expression).
+member_kind(optional_member_expression).
+
+member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _, _), member_kind(K).
+optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _, _).
+computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).
+static_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).
+
+callee_obj[code](C, O)      :- member_like[code](C, N), ast_child[code](N, object, 0, O).
+callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _, _).
+callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
+
+edb(obj_kind_class).
+obj_kind_class(identifier,                 o_ident).
+obj_kind_class(member_expression,          o_member).
+obj_kind_class(optional_member_expression, o_member).
+obj_kind_class(call_expression,            o_call).
+obj_kind_class(optional_call_expression,   o_call).
+obj_kind_class(this_expression,            o_this).
+obj_kind_class(super,                      o_super).
+obj_kind_class(array_expression,           o_array).
+obj_kind_class(new_expression,             o_new).
+obj_kind_class(object_expression,          o_object_literal).
+obj_kind_class(string_literal,             o_literal).
+obj_kind_class(numeric_literal,            o_literal).
+
+obj_kind_known(K)           :- obj_kind_class(K, _).
+obj_class[code](C, Cl)      :- callee_obj_kind[code](C, K), obj_kind_class(K, Cl).
+obj_class[code](C, o_other) :- callee_obj_kind[code](C, K), not obj_kind_known(K).
+
+edb(member_shape).
+member_shape(o_ident,          s_member_on_ident).
+member_shape(o_member,         s_member_on_member).
+member_shape(o_call,           s_member_on_call).
+member_shape(o_this,           s_member_on_this).
+member_shape(o_super,          s_member_on_super).
+member_shape(o_array,          s_member_on_array).
+member_shape(o_new,            s_member_on_new).
+member_shape(o_object_literal, s_member_on_object_literal).
+member_shape(o_literal,        s_member_on_literal).
+member_shape(o_other,          s_member_on_other).
+
+-- A COMPUTED callee is the one place the taxonomy's `runtime_dependent` is
+-- honest: `o[k]()` with a non-literal k names a method that does not exist
+-- until the program runs. `a.b.c()` does NOT qualify and must never borrow
+-- that reason.
+edb(static_key_kind).
+static_key_kind(string_literal).
+static_key_kind(numeric_literal).
+
+computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
+                                ast_node[code](P, K, _, _), static_key_kind(K).
+
+-- A THIRD CASE, and it is the interesting one: `o[`fixed`]()`. The key is
+-- fixed at parse time, so calling it `runtime_dependent` would be a lie — and
+-- it is not derivable either, because the scanner's contract carries only
+-- SCALAR own properties and `TemplateElement.value` is `{raw, cooked}`, an
+-- object. The text of the template is simply not in the fact vocabulary. That
+-- is `not_yet` with a named cause in the layer below, which is a different
+-- verdict from both of its neighbours, and collapsing it into either would
+-- misreport where the work is.
+computed_key_template[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
+                                  ast_node[code](P, template_literal, _, _).
+
+shape_known[code](C, S) :- callee_kind[code](C, K), callee_shape(K, S).
+shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
+                                                computed_key_static[code](C).
+shape_known[code](C, s_computed_template_key) :- computed_key_template[code](C).
+shape_known[code](C, s_computed_dynamic_key) :- computed_member[code](C, _),
+                                                not computed_key_static[code](C),
+                                                not computed_key_template[code](C).
+shape_known[code](C, s_optional_member)      :- static_member[code](C, _),
+                                                optional_member[code](C).
+shape_known[code](C, S) :- static_member[code](C, _), not optional_member[code](C),
+                           obj_class[code](C, Cl), member_shape(Cl, S).
+
+-- THE CATCH-ALL, and the reason shape_known exists as a separate relation:
+-- `shape` may negate `has_shape` because `has_shape` does not depend on
+-- `shape`. A grammar form nobody anticipated lands here rather than vanishing.
+has_shape[code](C)             :- shape_known[code](C, _).
+shape[code](C, S)              :- shape_known[code](C, S).
+shape[code](C, s_unclassified) :- call_site[code](C, _), not has_shape[code](C).
+
+-- and the two ways totality can fail, each a positive row
+shaped[code](C)         :- shape[code](C, _).
+unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C).
+multi_shape[audit](C, A, B) :- shape[code](C, A), shape[code](C, B), A != B.
+
+-- ===========================================================================
+-- 3. THE ENCLOSING FUNCTION — nearest, which is where negation earns its keep
+
+edb(fn_kind).
+fn_kind(function_declaration).
+fn_kind(function_expression).
+fn_kind(arrow_function_expression).
+fn_kind(object_method).
+fn_kind(class_method).
+fn_kind(class_private_method).
+
+fn_node[code](F)     :- ast_node[code](F, K, _, _), fn_kind(K).
+fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
+
+-- A function's name is whatever binds it. Several rules, because JS has
+-- several ways, and a relation may hold more than one name for one node.
+fn_name[code](F, N) :- ast_node[code](F, function_declaration, _, _),
+                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- ast_node[code](F, function_expression, _, _),
+                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
+                       ast_child[code](F, key, 0, K), ast_name[code](K, N).
+fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+                       ast_child[code](F, key, 0, K), ast_name[code](K, N).
+fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
+                       ast_child[code](D, init, 0, F),
+                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- fn_node[code](F), ast_node[code](P, object_property, _, _),
+                       ast_child[code](P, value, 0, F),
+                       ast_child[code](P, key, 0, K), ast_name[code](K, N).
+-- a constructor answers to the CLASS's name at runtime, which is what a stack
+-- frame says and therefore what an execution oracle can be compared against
+fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+                       ast_attr[code](F, kind, "constructor"),
+                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       ast_child[code](CD, id, 0, I), ast_name[code](I, N).
+
+encloses[code](F, C)   :- fn_node[code](F), site[code](C), ast_within[code](F, C).
+-- F is not the nearest if some OTHER enclosing G sits inside it. `F != G`
+-- is carried explicitly so the rule does not silently depend on ast_within
+-- being irreflexive.
+closer[code](F, C)     :- encloses[code](F, C), encloses[code](G, C),
+                          ast_within[code](F, G), F != G.
+nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
+
+enclosed[code](C)      :- encloses[code](_, C).
+top_call[code](C, R)   :- call_site[code](C, File), ast_file[code](R, File),
+                          not enclosed[code](C).
+top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
+                          ast_file[code](R, File), not enclosed[code](X).
+
+-- ===========================================================================
+-- 4. RESOLUTION
+--
+-- Scope-blind ON PURPOSE and this is a declared over-approximation: a name
+-- bound anywhere in the file answers a call anywhere in the file. Shadowing
+-- and block scope are the scope layer's job, not this one's.
+
+-- TIER 1: identifier callee naming a function bound in the SAME file.
+fn_binding[code](F, Name, File) :- ast_node[code](F, function_declaration, File, _),
+                                   ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+fn_binding[code](F, Name, File) :- fn_node[code](F), fn_file[code](F, File),
+                                   ast_node[code](D, variable_declarator, _, _),
+                                   ast_child[code](D, init, 0, F),
+                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+
+resolves[code](C, F) :- shape[code](C, s_identifier), callee_of[code](C, N),
+                        ast_name[code](N, Name), call_site[code](C, File),
+                        fn_binding[code](F, Name, File).
+
+-- TIER 1b: an IIFE resolves to its own callee. Exact, with no name involved.
+resolves[code](C, F) :- shape[code](C, s_iife), callee_of[code](C, F).
+
+-- TIER 2: `ns.method()` where ns is a local object literal.
+obj_literal_binding[code](Name, O, File) :- ast_node[code](D, variable_declarator, File, _),
+                                            ast_child[code](D, id, 0, I), ast_name[code](I, Name),
+                                            ast_child[code](D, init, 0, O),
+                                            ast_node[code](O, object_expression, _, _).
+
+obj_member_fn[code](O, Key, M) :- ast_node[code](O, object_expression, _, _),
+                                  ast_child[code](O, properties, _, M),
+                                  ast_node[code](M, object_method, _, _),
+                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+obj_member_fn[code](O, Key, F) :- ast_node[code](O, object_expression, _, _),
+                                  ast_child[code](O, properties, _, P),
+                                  ast_node[code](P, object_property, _, _),
+                                  ast_child[code](P, key, 0, K), ast_name[code](K, Key),
+                                  ast_child[code](P, value, 0, F), fn_node[code](F).
+
+resolves[code](C, F) :- shape[code](C, s_member_on_ident), callee_of[code](C, N),
+                        ast_child[code](N, object, 0, O), ast_name[code](O, ObjName),
+                        ast_child[code](N, property, 0, P), ast_name[code](P, Key),
+                        call_site[code](C, File),
+                        obj_literal_binding[code](ObjName, OL, File),
+                        obj_member_fn[code](OL, Key, F).
+
+-- A site resolving two ways is an over-approximation that must be VISIBLE,
+-- not averaged away.
+ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
+
+-- ===========================================================================
+-- 5. THE EDGE
+
+calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Caller, C).
+calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
+
+-- by name, because a stack frame carries a name and not a node id
+calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_name[code](Y, B).
+calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_name[code](Y, B).
+
+-- the same edge, carrying the file it was derived in. An oracle can only be
+-- compared against the files it actually ran, and mixing in a scanned-but-
+-- never-executed fixture would count its edges as over-approximation.
+calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _),
+                                fn_name[code](X, A), fn_name[code](Y, B).
+calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
+                                fn_name[code](Y, B).
+
+-- HIGHER-ORDER, recorded and NOT folded into `calls`: passing a function is
+-- not calling it. The index is the content — argument 0 and argument 1 are
+-- different facts about the program.
+passes_function[code](C, I, F, Name) :- call_arg[code](C, I, A), ast_name[code](A, Name),
+                                        call_site[code](C, File),
+                                        fn_binding[code](F, Name, File).
+
+-- ===========================================================================
+-- 6. THE FRONTIER, AS A POSITIVE RELATION
+
+resolved_site[code](C)      :- resolves[code](C, _).
+unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
+unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
+
+-- The verdict ledger for SHAPES. It is separate from js-model's
+-- `unknown_because`, which is keyed by node KIND, because a kind's verdict
+-- cannot express partial coverage: `member_expression` has a rule (tier 2)
+-- and still misses seven of its eight shapes, and the kind-level matrix reads
+-- that cell as `modelled`. The shape ledger is where the residue is counted.
+--   shape_because(Lang, Shape, Layer, Reason)
+edb(shape_because).
+
+-- WHERE THE FRONTIER SITS. An unresolved site or an unmodelled transfer,
+-- attributed to the caller unit that contains it. A missing edge whose caller
+-- has no row here is a SILENT under-report: the model lost a call and has
+-- nothing to point at as the reason.
+frontier_at[code](F, S) :- nearest_fn[code](F, C), unresolved_call[code](C, S).
+frontier_at[code](R, S) :- top_call[code](C, R), unresolved_call[code](C, S).
+frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K).
+frontier_at[code](R, K) :- top_site[code](X, R), transfer_site[code](X, K).
+
+frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
+frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
+
+-- the same frontier, located by FILE AND LINE rather than by caller. A stack
+-- frame carries the line of the call site, so this is what turns "the caller
+-- has some unresolved site somewhere" — which every function does, since every
+-- one of them calls the imported `trace` — into "the exact site the runtime
+-- transferred from is on the list".
+frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File, Line).
+frontier_line[code](File, Line, K) :- transfer_site[code](X, K), ast_node[code](X, _, File, Line).
+
+-- the CLOSED vocabulary of shapes, read off the classification tables rather
+-- than listed again: the denominator is the grammar, so a shape the corpus
+-- never produces still exists and still wants an answer.
+shape_vocab[audit](S) :- callee_shape(_, S).
+shape_vocab[audit](S) :- member_shape(_, S).
+shape_vocab[audit](s_computed_literal_key).
+shape_vocab[audit](s_computed_dynamic_key).
+shape_vocab[audit](s_computed_template_key).
+shape_vocab[audit](s_optional_member).
+shape_vocab[audit](s_unclassified).
+
+shape_seen[audit](S)     :- shape[code](_, S).
+resolved_shape[audit](S) :- resolves[code](C, _), shape[code](C, S).
+
+-- three verdicts that partition the vocabulary, and the middle one is the
+-- one a coverage list cannot say: a shape SOME of whose sites resolve.
+shape_verdict[audit](S, absent)         :- shape_vocab[audit](S), not shape_seen[audit](S).
+shape_verdict[audit](S, fully_resolved) :- shape_seen[audit](S), not unresolved_shape[audit](S).
+shape_verdict[audit](S, has_residue)    :- unresolved_shape[audit](S).
+
+shape_reason[audit](S, R)     :- unresolved_shape[audit](S), shape_because(js, S, callgraph, R).
+shape_unexplained[audit](S)   :- unresolved_shape[audit](S), not shape_because(js, S, callgraph, _).
+shape_bad_reason[audit](S, R) :- shape_because(js, S, callgraph, R), not unknown_type(R, _).
+shape_orphan[audit](S)        :- shape_because(js, S, callgraph, _), not shape_vocab[audit](S).
+-- an excuse that outlived its cause: the shape occurs and every one of its
+-- sites now resolves, and the reason stayed behind.
+shape_stale[audit](S)         :- shape_because(js, S, callgraph, _), shape_seen[audit](S),
+                                 not unresolved_shape[audit](S).
+-- a verdict the corpus does not exercise. Expected, not an error.
+shape_unexercised[audit](S)   :- shape_because(js, S, callgraph, _), not shape_seen[audit](S).
+shape_irreducible[audit](S)   :- shape_reason[audit](S, R), unknown_type(R, irreducible).
+shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours).
+
+-- WHAT MODELLING THIS CELL DRAGGED IN. The kinds the call-graph layer must
+-- now have an opinion about are DERIVED from what the rules actually touch —
+-- the kind of every call node, of every callee, and of every callee's object.
+-- A kind here that no `node_kind` declares is a cell the matrix does not yet
+-- know exists, which is the same silence the whole audit forbids.
+fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _, _),
+                         ast_child[code](D, init, 0, F), fn_node[code](F).
+fn_binder[code](P, F) :- ast_node[code](P, object_property, _, _),
+                         ast_child[code](P, value, 0, F), fn_node[code](F).
+fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
+
+callgraph_kind[audit](K)  :- call_site_kind[code](_, K).
+callgraph_kind[audit](K)  :- callee_kind[code](_, K).
+callgraph_kind[audit](K)  :- callee_obj_kind[code](_, K).
+callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _, _).
+callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _, _).
+callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _, _).
+kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).

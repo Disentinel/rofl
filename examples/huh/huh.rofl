@@ -1,0 +1,63 @@
+-- huh.rofl — HUH, "How'd yoU get Here": a shell pipe written as rules, so
+-- that why / whynot / the counting semiring answer questions about it.
+--
+-- The pipe being modelled, which examples/huh/demo.ts also runs for real as
+-- the oracle:
+--
+--   cat access.log | grep -E '" 4[0-9][0-9] ' | awk '{print $7}'
+--                  | sort | uniq -c | sort -k1,1nr -k2,2
+--
+-- The host tokenizes the log; these rules are the pipe over the tokens.
+-- Fact vocabulary the tokenizer emits, one group per log line N:
+--
+--   line(N).                    -- line N exists
+--   status(N, C).               -- its HTTP status is the integer C
+--   field(N, 7, "/api/…").      -- awk's $7 on line N is that string
+--
+-- Why a tokenizer at all: the kernel has no string builtins and `is` is
+-- integer-only, so `grep 4xx` and `awk '{print $7}'` cannot themselves be
+-- rules. Splitting a line into fields is the host's job — that is exactly
+-- what scanners/ exists for — and the pipe over the split is the part that
+-- has to be inferable. It is. The cost is that the why-boundary sits one
+-- step higher than HUH.md draws it: a why tree bottoms out at
+-- field(N, 7, P) as an axiom, never inside the bytes of line N. Stated
+-- plainly in README.md under "What this does not do".
+
+-- stage 1 — grep: keep the 4xx lines. The two comparisons ARE the filter,
+-- and they are what whynot names when a line you expected is missing.
+s_grep(N)    :- line(N), status(N, C), C >= 400, C <= 499.
+
+-- stage 2 — awk '{print $7}': project field 7 of the surviving lines.
+s_awk(N, P)  :- s_grep(N), field(N, 7, P).
+
+-- stage 3 — sort: a permutation. Order is not a fact here, so sort is the
+-- identity on the multiset. The stage is kept anyway, because the question
+-- "which stage ate my row" needs every stage to exist as a nameable step.
+s_sort(N, P) :- s_awk(N, P).
+
+-- stage 4 — uniq -c: the BUCKET is what this rule concludes; the COUNT is
+-- not in this layer at all. Each surviving line is one distinct firing of
+-- this rule, so 47 is the number of DERIVATIONS of s_uniq("/api/v2/checkout")
+-- — the counting semiring folded over the support hypergraph the kernel
+-- already recorded. The trailing `sort -rn | head` ranks those annotations
+-- and is presentation, not inference: v0 has no aggregation (LIMITS.md).
+--
+-- WHAT THE COUNT MEANS HERE (f_counting_reads_oppositely_by_domain demands
+-- every example say this, because the same metric reads in opposite
+-- directions across domains): in HUH the count is a plain MAGNITUDE — how
+-- many input rows reached this bucket — and nothing more. It is not
+-- robustness as in NOPE and OOPS, where independent supports mean a
+-- conclusion survives losing one; it is not ambiguity as in AKA. Two
+-- derivations of a bucket here are two log lines, never two arguments for
+-- the same thing. Excising one line therefore moves the count by exactly
+-- one, which is the property demo.ts checks against the real pipe.
+s_uniq(P)    :- s_sort(_, P).
+
+-- Acceptance scenario. demo.ts runs all of it and compares every number
+-- against the real pipe over the same file:
+--   count      s_uniq("/api/v2/checkout")   -> 47, and so does uniq -c
+--   why        s_uniq("/api/v2/checkout")   -> one derivation, down to axioms
+--   provenance s_uniq("/api/v2/refund")     -> the 23 line numbers grep -n gives
+--   whynot     s_sort(102, "/api/v2/checkout") -> 500 <= 499: stage 1 ate it
+--   whynot     s_sort(2, "/api/v2/checkout")   -> field(2,7,…): stage 2 sent it elsewhere
+--   excise     line(96)                     -> 4 facts fall, the bucket goes 47 -> 46

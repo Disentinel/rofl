@@ -1,0 +1,795 @@
+-- wtf.rofl -- WTF, "What The Fixpoint": the Magic: the Gathering layer
+-- system (Comprehensive Rules 613) written as rules, so that why / whynot /
+-- the counting semiring answer questions about it.
+--
+-- The domain argues for itself. CR 613.1 applies continuous effects in seven
+-- layers in a FIXED ORDER (copy, control, text, type, colour, abilities,
+-- power/toughness), layer 7 is itself split into sublayers 7a-7d (613.4),
+-- within a sublayer the order is by TIMESTAMP (613.7) -- and on top of that,
+-- DEPENDENCY overrides timestamp (613.8). Nobody who has played thinks a
+-- single pass computes this.
+--
+-- What the kernel supplies and what this file supplies:
+--
+--   * The seven layers are STRATA. Layer L reads the state layer L-1 left
+--     behind, and removal ("loses all abilities", "loses its other land
+--     types") is negation, so `ty4` sits above `not clob4` sits above `ty3`.
+--     boot.rofl computes stratum/2 from the rule dependency graph as data.
+--     Nothing here schedules the layers; the file does not contain the
+--     sequence 1..7 anywhere except as labels for printing.
+--   * Timestamp order inside a sublayer is one rule: `bef_ts`.
+--   * Dependency (613.8) is DERIVED, not declared. `depends4` implements
+--     613.8a's two operative clauses -- "the existence of the first effect"
+--     and "what it applies to" -- the second by building the hypothetical
+--     state `hyp4` in which only the other effect has been applied and
+--     comparing target sets. 613.8b's dependency-loop fallback is the
+--     mutual-reachability test `loop4`, i.e. a strongly connected component
+--     of the dependency graph, computed by transitive closure.
+--
+-- WHAT THE COUNT MEANS HERE (f_counting_reads_oppositely_by_domain demands
+-- every example say this, because the same-shaped metric reads in opposite
+-- directions across domains). WTF's count is NOT a count of derivations and
+-- the counting semiring does not produce it. It is the number of DISTINCT
+-- BOARDS obtained by re-running the whole layer computation under every
+-- permutation of one sublayer's timestamps -- a sixth reading to add to
+-- robustness, ambiguity, launderability, fragility and magnitude:
+-- ORDER-SENSITIVITY. ONE is the good answer: one outcome over many orders
+-- means the interaction is stable and nobody has to ask who arrived first.
+-- More than one means the board really does turn on the order, which is the
+-- configuration judges write rulings about. So here, unlike NOPE and OOPS,
+-- a LARGER count is worse, and it is worse in a specific way: it marks a
+-- question the rules leave to the timestamp.
+--
+-- Layout of this file:
+--   1.  the battlefield and the printed cards
+--   2.  the continuous effects, as data
+--   3.  order inside a sublayer: timestamp (613.7)
+--   4.  layer 1 -- copy
+--   5.  layer 2 -- control
+--   6.  layer 3 -- text
+--   7.  layer 4 -- type, and the dependency system (613.8)
+--   8.  layer 5 -- colour
+--   9.  layer 6 -- abilities
+--   10. layer 7a/7b/7c/7d -- power and toughness
+--   11. the answer, and state-based actions
+--   12. the timestamp-only counterpart (for the contrast, and for counting)
+--   13. audits: what this encoding assumes, as relations that must be empty
+--
+-- Card names are used as identifiers only; no card text is reproduced. The
+-- effects below are the formalised continuous effects and nothing else.
+
+-- =========================================================================
+-- 1. the battlefield
+-- =========================================================================
+
+player(p1).
+player(p2).
+
+-- perm(O) / on_bf(O): on_bf is the one fact state-based actions retract, so
+-- a creature that dies stops contributing effects and the whole layer
+-- computation runs again. See section 11.
+perm(grizzly).      on_bf(grizzly).
+perm(mongrel).      on_bf(mongrel).
+perm(nightmare).    on_bf(nightmare).
+perm(clone1).       on_bf(clone1).
+perm(archdruid).    on_bf(archdruid).
+perm(gray_ogre).    on_bf(gray_ogre).
+perm(oracle).       on_bf(oracle).
+perm(honor).        on_bf(honor).
+perm(painter).      on_bf(painter).
+perm(blood_moon).   on_bf(blood_moon).
+perm(hammer).       on_bf(hammer).
+perm(ogre_aura).    on_bf(ogre_aura).
+perm(urborg).       on_bf(urborg).
+perm(yavimaya).     on_bf(yavimaya).
+perm(steam_vents).  on_bf(steam_vents).
+perm(forest1).      on_bf(forest1).
+perm(swamp1).       on_bf(swamp1).
+
+printed_ctrl(grizzly, p1).      printed_ctrl(mongrel, p1).
+printed_ctrl(nightmare, p1).    printed_ctrl(clone1, p1).
+printed_ctrl(archdruid, p1).    printed_ctrl(honor, p1).
+printed_ctrl(painter, p1).      printed_ctrl(blood_moon, p1).
+printed_ctrl(hammer, p1).       printed_ctrl(urborg, p1).
+printed_ctrl(yavimaya, p1).     printed_ctrl(steam_vents, p1).
+printed_ctrl(forest1, p1).      printed_ctrl(swamp1, p1).
+printed_ctrl(gray_ogre, p2).    printed_ctrl(oracle, p2).
+printed_ctrl(ogre_aura, p2).
+
+-- Card names, for printing only. Nothing reasons over them.
+card(grizzly, "Grizzly Bears").          card(mongrel, "Wild Mongrel").
+card(nightmare, "Nightmare").            card(clone1, "Clone").
+card(archdruid, "Elvish Archdruid").     card(gray_ogre, "Gray Ogre").
+card(oracle, "Sea Gate Oracle").         card(honor, "Honor of the Pure").
+card(painter, "Painter's Servant").      card(blood_moon, "Blood Moon").
+card(hammer, "Colossus Hammer").         card(ogre_aura, "an Aura on Gray Ogre").
+card(urborg, "Urborg, Tomb of Yawgmoth").
+card(yavimaya, "Yavimaya, Cradle of Growth").
+card(steam_vents, "Steam Vents").        card(forest1, "Forest").
+card(swamp1, "Swamp").
+
+-- card types, supertypes and subtypes are all just types here; `land_type`
+-- marks the ones CR 305.7 removes when a land's subtype is set.
+land_type(swamp).   land_type(forest).   land_type(mountain).
+land_type(island).  land_type(plains).
+
+printed_type(grizzly, creature).     printed_type(grizzly, bear).
+printed_type(mongrel, creature).     printed_type(mongrel, dog).
+printed_type(nightmare, creature).   printed_type(nightmare, horse).
+printed_type(clone1, creature).      printed_type(clone1, shapeshifter).
+printed_type(archdruid, creature).   printed_type(archdruid, elf).
+printed_type(archdruid, druid).
+printed_type(gray_ogre, creature).   printed_type(gray_ogre, ogre).
+printed_type(oracle, creature).      printed_type(oracle, human).
+printed_type(honor, enchantment).
+printed_type(painter, artifact).     printed_type(painter, creature).
+printed_type(blood_moon, enchantment).
+printed_type(hammer, artifact).      printed_type(hammer, equipment).
+printed_type(ogre_aura, enchantment).
+printed_type(urborg, land).          printed_type(urborg, legendary).
+printed_type(yavimaya, land).        printed_type(yavimaya, legendary).
+printed_type(steam_vents, land).
+printed_type(steam_vents, island).   printed_type(steam_vents, mountain).
+printed_type(forest1, land).         printed_type(forest1, basic).
+printed_type(forest1, forest).
+printed_type(swamp1, land).          printed_type(swamp1, basic).
+printed_type(swamp1, swamp).
+
+printed_color(grizzly, green).       printed_color(mongrel, green).
+printed_color(nightmare, black).     printed_color(archdruid, green).
+printed_color(gray_ogre, red).       printed_color(oracle, blue).
+printed_color(honor, white).         printed_color(blood_moon, red).
+printed_color(ogre_aura, white).
+-- clone1, painter, hammer and the lands are colourless: no printed_color.
+
+printed_pt(grizzly, 2, 2).           printed_pt(mongrel, 2, 2).
+printed_pt(clone1, 0, 0).            printed_pt(archdruid, 2, 2).
+printed_pt(gray_ogre, 2, 2).         printed_pt(oracle, 1, 3).
+printed_pt(painter, 1, 3).
+-- nightmare has no printed power/toughness: a characteristic-defining
+-- ability supplies them in layer 7a.
+
+-- Abilities are terms. `lord(Subtype, DP, DT)` and `anthem(Colour, DP, DT)`
+-- are the two that GENERATE continuous effects, and both are read back out
+-- of the ability state at the layer where their effect applies -- which is
+-- how a text change in layer 3 reaches layer 7c, and how losing an ability
+-- in layer 6 switches a layer 7c effect off.
+printed_ability(archdruid, lord(elf, 1, 1)).
+printed_ability(honor, anthem(white, 1, 1)).
+printed_ability(mongrel, discard_pump).
+printed_ability(oracle, etb_draw).
+printed_ability(urborg, rules_text_urborg).
+printed_ability(yavimaya, rules_text_yavimaya).
+printed_ability(steam_vents, rules_text_steam_vents).
+printed_ability(painter, rules_text_painter).
+printed_ability(blood_moon, rules_text_blood_moon).
+printed_ability(nightmare, cda_swamps).
+
+-- =========================================================================
+-- 2. the continuous effects
+-- =========================================================================
+-- eff_layer(E, L): L is the layer, times ten, with layer 7's sublayers as
+-- 71..74. The numbers are OPAQUE to every rule below except `bef_ts`, which
+-- only tests them for equality: nothing sorts by L, because the order of the
+-- layers is not encoded here at all -- it falls out of which state relation
+-- each layer's rules read. Section 13 prints the strata that result.
+--
+-- eff_ts(E, T): the timestamp (613.7). Ordinary integer arguments, not ticks.
+-- eff_src(E, O): the permanent whose static ability generates E; its effect
+--   stops existing if O leaves the battlefield or loses the ability.
+-- eff_free(E): an effect from a resolved spell or a counter -- it has no
+--   source on the battlefield and outlives one.
+
+layer_label(10, "1  copy").
+layer_label(20, "2  control").
+layer_label(30, "3  text").
+layer_label(40, "4  type").
+layer_label(50, "5  colour").
+layer_label(60, "6  abilities").
+layer_label(71, "7a CDA power/toughness").
+layer_label(72, "7b set power/toughness").
+layer_label(73, "7c modify power/toughness").
+layer_label(74, "7d switch power/toughness").
+
+-- Effect names, for printing only.
+eff_name(e_clone, "Clone enters as a copy").
+eff_name(e_treason_ctl, "Act of Treason: gain control").
+eff_name(e_evolution, "Artificial Evolution: elf -> bear").
+eff_name(e_urborg, "Urborg: each land is a Swamp").
+eff_name(e_yavimaya, "Yavimaya: each land is a Forest").
+eff_name(e_bloodmoon, "Blood Moon: nonbasic lands are Mountains").
+eff_name(e_painter, "Painter's Servant: everything is white too").
+eff_name(e_wisps, "Cerulean Wisps: becomes blue").
+eff_name(e_jump, "gains flying").
+eff_name(e_hammer_ab, "Colossus Hammer: loses flying").
+eff_name(e_treason_haste, "Act of Treason: gains haste").
+eff_name(e_frog_ab, "Turn to Frog: loses all abilities").
+eff_name(e_nightmare, "Nightmare: p/t = Swamps you control").
+eff_name(e_frog_pt, "Turn to Frog: becomes 1/1").
+eff_name(e_ogre_set, "becomes 0/1").
+eff_name(e_archdruid, "the lord ability").
+eff_name(e_oracle_p01, "+0/+1").
+eff_name(e_honor, "Honor of the Pure: white creatures +1/+1").
+eff_name(e_oracle_p50, "+5/+0").
+eff_name(e_hammer_pt, "Colossus Hammer: +10/+10").
+eff_name(e_ogre_counter, "a +1/+1 counter").
+eff_name(e_ogre_pump, "+4/+4").
+eff_name(e_ogre_ench, "+0/+2").
+eff_name(e_twisted, "Twisted Image: switch p/t").
+
+-- layer 1 -- copy
+eff(e_clone).        eff_layer(e_clone, 10).   eff_ts(e_clone, 100).
+eff_src(e_clone, clone1).
+sel(e_clone, only(clone1)).   does(e_clone, copy(grizzly)).
+
+-- layer 2 -- control
+eff(e_treason_ctl).  eff_layer(e_treason_ctl, 20). eff_ts(e_treason_ctl, 900).
+eff_free(e_treason_ctl).
+sel(e_treason_ctl, only(mongrel)).   does(e_treason_ctl, control(p2)).
+
+-- layer 3 -- text
+eff(e_evolution).    eff_layer(e_evolution, 30). eff_ts(e_evolution, 500).
+eff_free(e_evolution).
+sel(e_evolution, only(archdruid)).   does(e_evolution, text_change(elf, bear)).
+
+-- layer 4 -- type. These three are the documented dependency case.
+eff(e_urborg).       eff_layer(e_urborg, 40).  eff_ts(e_urborg, 300).
+eff_src(e_urborg, urborg).
+sel(e_urborg, all_lands).            does(e_urborg, add_type(swamp)).
+
+eff(e_yavimaya).     eff_layer(e_yavimaya, 40). eff_ts(e_yavimaya, 350).
+eff_src(e_yavimaya, yavimaya).
+sel(e_yavimaya, all_lands).          does(e_yavimaya, add_type(forest)).
+
+eff(e_bloodmoon).    eff_layer(e_bloodmoon, 40). eff_ts(e_bloodmoon, 700).
+eff_src(e_bloodmoon, blood_moon).
+sel(e_bloodmoon, nonbasic_lands).    does(e_bloodmoon, set_land_type(mountain)).
+
+-- layer 5 -- colour
+eff(e_painter).      eff_layer(e_painter, 50). eff_ts(e_painter, 600).
+eff_src(e_painter, painter).
+sel(e_painter, all_perms).           does(e_painter, add_color(white)).
+
+eff(e_wisps).        eff_layer(e_wisps, 50).   eff_ts(e_wisps, 650).
+eff_free(e_wisps).
+sel(e_wisps, only(grizzly)).         does(e_wisps, set_color(blue)).
+
+-- layer 6 -- abilities
+eff(e_jump).         eff_layer(e_jump, 60).    eff_ts(e_jump, 200).
+eff_free(e_jump).
+sel(e_jump, only(mongrel)).          does(e_jump, gain(flying)).
+
+eff(e_hammer_ab).    eff_layer(e_hammer_ab, 60). eff_ts(e_hammer_ab, 400).
+eff_src(e_hammer_ab, hammer).
+sel(e_hammer_ab, only(mongrel)).     does(e_hammer_ab, lose(flying)).
+
+eff(e_treason_haste). eff_layer(e_treason_haste, 60). eff_ts(e_treason_haste, 900).
+eff_free(e_treason_haste).
+sel(e_treason_haste, only(mongrel)). does(e_treason_haste, gain(haste)).
+
+eff(e_frog_ab).      eff_layer(e_frog_ab, 60). eff_ts(e_frog_ab, 950).
+eff_free(e_frog_ab).
+sel(e_frog_ab, only(mongrel)).       does(e_frog_ab, lose_all_abilities).
+
+-- layer 7a -- characteristic-defining ability
+eff(e_nightmare).    eff_layer(e_nightmare, 71). eff_ts(e_nightmare, 50).
+eff_src(e_nightmare, nightmare).     cda(e_nightmare).
+sel(e_nightmare, self(nightmare)).   does(e_nightmare, cda_swamps).
+
+-- layer 7b -- set power/toughness
+eff(e_frog_pt).      eff_layer(e_frog_pt, 72). eff_ts(e_frog_pt, 950).
+eff_free(e_frog_pt).
+sel(e_frog_pt, only(mongrel)).       does(e_frog_pt, set_pt(1, 1)).
+
+eff(e_ogre_set).     eff_layer(e_ogre_set, 72). eff_ts(e_ogre_set, 1000).
+eff_free(e_ogre_set).
+sel(e_ogre_set, only(gray_ogre)).    does(e_ogre_set, set_pt(0, 1)).
+
+-- layer 7c -- modify power/toughness
+eff(e_archdruid).    eff_layer(e_archdruid, 73). eff_ts(e_archdruid, 100).
+eff_src(e_archdruid, archdruid).     lord_eff(e_archdruid, archdruid).
+
+eff(e_oracle_p01).   eff_layer(e_oracle_p01, 73). eff_ts(e_oracle_p01, 110).
+eff_free(e_oracle_p01).
+sel(e_oracle_p01, only(oracle)).     does(e_oracle_p01, mod_pt(0, 1)).
+
+eff(e_honor).        eff_layer(e_honor, 73). eff_ts(e_honor, 250).
+eff_src(e_honor, honor).             anthem_eff(e_honor, honor).
+
+eff(e_oracle_p50).   eff_layer(e_oracle_p50, 73). eff_ts(e_oracle_p50, 300).
+eff_free(e_oracle_p50).
+sel(e_oracle_p50, only(oracle)).     does(e_oracle_p50, mod_pt(5, 0)).
+
+eff(e_hammer_pt).    eff_layer(e_hammer_pt, 73). eff_ts(e_hammer_pt, 400).
+eff_src(e_hammer_pt, hammer).
+sel(e_hammer_pt, only(mongrel)).     does(e_hammer_pt, mod_pt(10, 10)).
+
+eff(e_ogre_counter). eff_layer(e_ogre_counter, 73). eff_ts(e_ogre_counter, 500).
+eff_free(e_ogre_counter).
+sel(e_ogre_counter, only(gray_ogre)). does(e_ogre_counter, mod_pt(1, 1)).
+
+eff(e_ogre_pump).    eff_layer(e_ogre_pump, 73). eff_ts(e_ogre_pump, 600).
+eff_free(e_ogre_pump).
+sel(e_ogre_pump, only(gray_ogre)).   does(e_ogre_pump, mod_pt(4, 4)).
+
+eff(e_ogre_ench).    eff_layer(e_ogre_ench, 73). eff_ts(e_ogre_ench, 700).
+eff_src(e_ogre_ench, ogre_aura).
+sel(e_ogre_ench, only(gray_ogre)).   does(e_ogre_ench, mod_pt(0, 2)).
+
+-- layer 7d -- switch power/toughness
+eff(e_twisted).      eff_layer(e_twisted, 74). eff_ts(e_twisted, 200).
+eff_free(e_twisted).
+sel(e_twisted, only(oracle)).        does(e_twisted, switch_pt).
+
+-- An effect exists while its source is on the battlefield; a spell's effect
+-- exists regardless. (Losing the ABILITY is handled per layer, below.)
+eff_live(E)     :- eff_free(E).
+eff_live(E)     :- eff_src(E, O), on_bf(O).
+
+lay1(E)   :- eff_layer(E, 10).      lay2(E)   :- eff_layer(E, 20).
+lay3(E)   :- eff_layer(E, 30).      lay4(E)   :- eff_layer(E, 40).
+lay5(E)   :- eff_layer(E, 50).      lay6(E)   :- eff_layer(E, 60).
+lay71(E)  :- eff_layer(E, 71).      lay72(E)  :- eff_layer(E, 72).
+lay73(E)  :- eff_layer(E, 73).      lay74(E)  :- eff_layer(E, 74).
+
+-- =========================================================================
+-- 3. order inside a sublayer: timestamp (CR 613.7)
+-- =========================================================================
+-- One rule for every layer. `bef_ts(A, B)` reads no state at all, only the
+-- effect table, which is why it can sit below every layer's state relations
+-- without closing a loop through them. Sublayers whose order is settled by
+-- timestamp alone use it directly; layer 4 does not (section 7).
+
+bef_ts(A, B)    :- eff_layer(A, L), eff_layer(B, L), eff_ts(A, TA), eff_ts(B, TB),
+                   TA < TB.
+
+-- =========================================================================
+-- 4. layer 1 -- copy (CR 613.2a)
+-- =========================================================================
+-- Copiable values. After this layer the object's characteristics ARE its
+-- copiable values (613.2c), which is what every later layer starts from.
+
+live1(E)        :- lay1(E), eff_live(E).
+hits1(E, O)     :- live1(E), sel(E, only(O)), on_bf(O).
+copy_src(O, S)  :- hits1(E, O), does(E, copy(S)).
+copied(O)       :- copy_src(O, _).
+
+ty1(O, T)       :- on_bf(O), printed_type(O, T), not copied(O).
+ty1(O, T)       :- copy_src(O, S), printed_type(S, T).
+co1(O, C)       :- on_bf(O), printed_color(O, C), not copied(O).
+co1(O, C)       :- copy_src(O, S), printed_color(S, C).
+ab1(O, A)       :- on_bf(O), printed_ability(O, A), not copied(O).
+ab1(O, A)       :- copy_src(O, S), printed_ability(S, A).
+bp1(O, P, T)    :- on_bf(O), printed_pt(O, P, T), not copied(O).
+bp1(O, P, T)    :- copy_src(O, S), printed_pt(S, P, T).
+
+-- A copy effect does not change who controls the object.
+ct1(O, Pl)      :- on_bf(O), printed_ctrl(O, Pl).
+
+-- =========================================================================
+-- 5. layer 2 -- control (CR 613.1b)
+-- =========================================================================
+
+live2(E)        :- lay2(E), eff_live(E).
+hits2(E, O)     :- live2(E), sel(E, only(O)), on_bf(O).
+ctl2(O, Pl, E)  :- hits2(E, O), does(E, control(Pl)).
+anyctl2(O)      :- ctl2(O, _, _).
+overctl2(O, E)  :- ctl2(O, _, F), bef_ts(E, F).
+
+-- THE LAYER BOUNDARY, WRITTEN SO THE KERNEL CAN SEE IT. Every "survives from
+-- the layer below" rule in this file has the same two-line shape, and the
+-- shape is the point (section 0 of README.md explains why):
+--
+--     lost_N(...)  :- <layer N-1's relation>(...), <it was replaced>.
+--     <layer N>    :- <layer N-1's relation>(...), not lost_N(...).
+--
+-- `not anyctl2(O)` in the second rule would be SEMANTICALLY IDENTICAL and
+-- would NOT create a stratum boundary: `anyctl2` is a fact about EFFECTS, it
+-- does not read ct1, so boot.rofl would put ct2 at the same level as ct1 and
+-- the "the kernel derived the layer order" claim would be empty. Routing the
+-- negation through a relation that RANGES OVER THE LAYER BELOW is what turns
+-- an order the rulebook asserts into an order the rule graph forces.
+-- demo.ts measures both encodings and prints the two stratum numbers.
+lost2(O, Pl)    :- ct1(O, Pl), anyctl2(O).
+ct2(O, Pl)      :- ct1(O, Pl), not lost2(O, Pl).
+ct2(O, Pl)      :- ctl2(O, Pl, E), not overctl2(O, E).
+
+-- =========================================================================
+-- 6. layer 3 -- text (CR 613.1c, 612)
+-- =========================================================================
+-- The only text change modelled is a creature-type word inside an ability
+-- term. It is the shortest honest demonstration that layer 3 reaches layer
+-- 7c: rewriting one word in a lord's ability changes which creatures its
+-- layer 7c effect applies to, three layers later.
+
+live3(E)        :- lay3(E), eff_live(E).
+hits3(E, O)     :- live3(E), sel(E, only(O)), on_bf(O).
+tc3(O, W1, W2)  :- hits3(E, O), does(E, text_change(W1, W2)).
+
+rewritten(O, lord(W1, P, T)) :- ab1(O, lord(W1, P, T)), tc3(O, W1, _).
+ab3(O, A)                    :- ab1(O, A), not rewritten(O, A).
+ab3(O, lord(W2, P, T))       :- ab1(O, lord(W1, P, T)), tc3(O, W1, W2).
+
+-- Nothing in this corpus changes types or colours by text.
+ty3(O, T)       :- ty1(O, T).
+co3(O, C)       :- co1(O, C).
+
+-- =========================================================================
+-- 7. layer 4 -- type, and the dependency system (CR 613.8)
+-- =========================================================================
+-- This is the layer the whole example exists for. Three effects:
+--
+--   e_urborg    T300  each land is a Swamp in addition to its other types
+--   e_yavimaya  T350  each land is a Forest in addition to its other types
+--   e_bloodmoon T700  each nonbasic land's land subtype is set to Mountain
+--
+-- CR 305.7: setting a land's subtype to a basic land type also removes the
+-- abilities that came from its rules text. Urborg and Yavimaya are nonbasic
+-- lands, so Blood Moon removes the very abilities that generate their layer 4
+-- effects -- and 613.8a's clause (b) names exactly that: "applying the other
+-- would change ... the existence of the first effect". Both therefore DEPEND
+-- on Blood Moon, and 613.8b applies Blood Moon first whatever the timestamps
+-- say. The timestamps here say the opposite (700 is last), which is the whole
+-- point: section 12 computes the timestamp-only answer for the contrast.
+
+-- 7.1 target sets on the state layer 3 left behind ---------------------------
+
+-- `eff_live` and not `live4`: an effect whose SOURCE has left the battlefield
+-- generates nothing at all and can neither hit nor kill, but asking whether it
+-- was killed by a same-layer effect is what `live4` is for, three relations
+-- down, and asking it here would close the loop. The distinction is not
+-- cosmetic -- the independent implementation in demo.ts caught this file
+-- getting it wrong: without `eff_live` here, a Blood Moon that had left the
+-- battlefield still removed Urborg's ability, and the rules answered 2/2 for a
+-- creature the oracle made 6/6.
+hits4(E, O)     :- lay4(E), eff_live(E), sel(E, all_lands), ty3(O, land).
+hits4(E, O)     :- lay4(E), eff_live(E), sel(E, nonbasic_lands),
+                   ty3(O, land), not ty3(O, basic).
+hits4(E, O)     :- lay4(E), eff_live(E), sel(E, only(O)), on_bf(O).
+
+-- CR 305.7, as a relation, because 613.8a's existence clause needs it.
+kills_ability(B, O) :- lay4(B), eff_live(B), does(B, set_land_type(_)), hits4(B, O).
+
+-- 7.2 the hypothetical state: layer 3's state with ONLY B applied -----------
+-- 613.8a asks a counterfactual -- "applying the other WOULD change what it
+-- applies to" -- so the counterfactual is built as a relation and the two
+-- target sets are compared. This is the part that makes dependency derived
+-- rather than declared.
+
+hyp4(B, O, T)   :- lay4(B), ty3(O, T), not land_type(T).
+hyp4(B, O, T)   :- lay4(B), ty3(O, T), land_type(T), not kills_ability(B, O).
+hyp4(B, O, T)   :- does(B, set_land_type(T)), hits4(B, O).
+hyp4(B, O, T)   :- does(B, add_type(T)), hits4(B, O).
+
+hits4h(A, B, O) :- lay4(A), lay4(B), A != B, sel(A, all_lands), hyp4(B, O, land).
+hits4h(A, B, O) :- lay4(A), lay4(B), A != B, sel(A, nonbasic_lands),
+                   hyp4(B, O, land), not hyp4(B, O, basic).
+hits4h(A, B, O) :- lay4(A), lay4(B), A != B, sel(A, only(O)), on_bf(O).
+
+-- 7.3 dependency itself (CR 613.8a) -----------------------------------------
+-- Clause (c): neither effect is from a characteristic-defining ability, or
+-- both are.
+cda_ok(A, B)    :- eff(A), eff(B), not cda(A), not cda(B).
+cda_ok(A, B)    :- cda(A), cda(B).
+
+-- clause (b), "the existence of the first effect"
+dep_reason(A, B, existence) :- lay4(A), eff_src(A, S), kills_ability(B, S),
+                               A != B, cda_ok(A, B).
+-- clause (b), "what it applies to" -- the two target sets differ
+dep_reason(A, B, target_set) :- hits4h(A, B, O), not hits4(A, O), cda_ok(A, B).
+dep_reason(A, B, target_set) :- hits4(A, O), lay4(B), A != B,
+                                not hits4h(A, B, O), cda_ok(A, B).
+
+depends4(A, B)  :- dep_reason(A, B, _).
+
+-- 613.8b, last sentence: effects in a dependency LOOP ignore dependency and
+-- go back to timestamp order. A loop is mutual reachability in the
+-- dependency graph -- a strongly connected component, by transitive closure.
+reach4(A, B)    :- depends4(A, B).
+reach4(A, B)    :- depends4(A, X), reach4(X, B).
+loop4(A, B)     :- reach4(A, B), reach4(B, A).
+edep4(A, B)     :- depends4(A, B), not loop4(A, B).
+
+anc4(A, B)      :- edep4(A, B).
+anc4(A, B)      :- edep4(A, X), anc4(X, B).
+
+-- 7.4 the order (CR 613.8b + 613.7) ----------------------------------------
+-- "An effect dependent on one or more other effects waits to apply until
+-- just after all of those effects have been applied", and everything else is
+-- timestamp order. That is: walk the effects in timestamp order, skipping
+-- any whose dependencies are still unapplied.
+--
+-- The kernel has no aggregation, so that walk is not written as a loop. It
+-- is written as a KEY: eta(E) is the largest timestamp among E and its
+-- dependency ancestors, and sorting by (eta, timestamp) reproduces the walk
+-- exactly. `max` over a transitive closure is expressible because the
+-- closure (anc4) is computed positively FIRST and the max is one negation
+-- over the finished set -- no negation inside the recursion.
+cts4(E, T)      :- lay4(E), eff_ts(E, T).
+cts4(E, T)      :- anc4(E, B), eff_ts(B, T).
+low4(E, T)      :- cts4(E, T), cts4(E, T2), T2 > T.
+eta4(E, T)      :- cts4(E, T), not low4(E, T).
+
+bef4(A, B)      :- eta4(A, X), eta4(B, Y), X < Y.
+bef4(A, B)      :- eta4(A, X), eta4(B, X), anc4(B, A).
+bef4(A, B)      :- eta4(A, X), eta4(B, X), A != B, not anc4(B, A), not anc4(A, B),
+                   eff_ts(A, TA), eff_ts(B, TB), TA < TB.
+
+-- 7.5 applying the layer ----------------------------------------------------
+-- An effect whose source lost its rules-text abilities to an EARLIER layer 4
+-- effect never starts to apply. Under the dependency order that is Urborg and
+-- Yavimaya; under the timestamp order (section 12) it is neither.
+dead4(E)        :- lay4(E), eff_src(E, S), kills_ability(B, S), bef4(B, E).
+live4(E)        :- lay4(E), eff_live(E), not dead4(E).
+
+setter4(O, T, E) :- live4(E), does(E, set_land_type(T)), hits4(E, O).
+adder4(O, T, E)  :- live4(E), does(E, add_type(T)), hits4(E, O).
+anyset4(O)       :- setter4(O, _, _).
+clob4(O, E)      :- setter4(O, _, F), bef4(E, F).
+
+lost4(O, T)     :- ty3(O, T), land_type(T), anyset4(O).
+ty4(O, T)       :- ty3(O, T), not land_type(T).
+ty4(O, T)       :- ty3(O, T), land_type(T), not lost4(O, T).
+ty4(O, T)       :- adder4(O, T, E), not clob4(O, E).
+ty4(O, T)       :- setter4(O, T, E), not clob4(O, E).
+
+-- CR 305.7's other half: the land loses the abilities from its rules text.
+stripped4(O)    :- setter4(O, _, _).
+lost_ab4(O, A)  :- ab3(O, A), stripped4(O).
+ab4(O, A)       :- ab3(O, A), not lost_ab4(O, A).
+
+-- =========================================================================
+-- 8. layer 5 -- colour (CR 613.1e)
+-- =========================================================================
+-- Two effects, both with selectors that read nothing an effect in this layer
+-- can write (see p5_dep in section 13), so 613.8 cannot apply and 613.7's
+-- timestamp order is exact. Painter's Servant ADDS white at T600; the Wisps
+-- SET blue at T650. The later one wins on Grizzly Bears, and that single
+-- fact is what `whynot` reports three layers later.
+
+live5(E)        :- lay5(E), eff_live(E).
+hits5(E, O)     :- live5(E), sel(E, only(O)), on_bf(O).
+hits5(E, O)     :- live5(E), sel(E, all_perms), on_bf(O).
+
+setcol5(O, C, E) :- hits5(E, O), does(E, set_color(C)).
+addcol5(O, C, E) :- hits5(E, O), does(E, add_color(C)).
+anyset5(O)       :- setcol5(O, _, _).
+clob5(O, E)      :- setcol5(O, _, F), bef_ts(E, F).
+
+-- demo.ts's before/after probe swaps exactly these two lines for the
+-- one-line `co5(O, C) :- co3(O, C), not anyset5(O).` form and prints what
+-- stratum/2 says about each. Keep them adjacent and verbatim.
+lost5(O, C)     :- co3(O, C), anyset5(O).
+co5(O, C)       :- co3(O, C), not lost5(O, C).
+co5(O, C)       :- addcol5(O, C, E), not clob5(O, E).
+co5(O, C)       :- setcol5(O, C, E), not clob5(O, E).
+
+-- =========================================================================
+-- 9. layer 6 -- abilities (CR 613.1f)
+-- =========================================================================
+-- Four effects on one creature: gain flying T200, lose flying T400, gain
+-- haste T900, lose all abilities T950. CR 613.9's own Example 1 says a gain
+-- and a loss of the same ability are NOT dependent -- "nothing changes what
+-- they affect or what they're doing to it" -- so the later timestamp wins.
+-- p6_dep in section 13 is the mechanical check that says the same thing.
+--
+-- `src6(O, A, E)` is where ability A came from; `base` stands for the state
+-- layer 4 left behind, which is before every layer 6 effect.
+
+live6(E)        :- lay6(E), eff_live(E).
+hits6(E, O)     :- live6(E), sel(E, only(O)), on_bf(O).
+
+src6(O, A, base) :- ab4(O, A).
+src6(O, A, E)    :- hits6(E, O), does(E, gain(A)).
+kill6(O, A, F)   :- hits6(F, O), does(F, lose(A)).
+kill6(O, A, F)   :- hits6(F, O), does(F, lose_all_abilities), src6(O, A, _).
+
+aft6(base, F)   :- lay6(F).
+aft6(E, F)      :- bef_ts(E, F).
+gone6(O, A, E)  :- src6(O, A, E), kill6(O, A, F), aft6(E, F).
+
+ab6(O, A)       :- src6(O, A, E), not gone6(O, A, E).
+
+-- =========================================================================
+-- 10. layer 7 -- power and toughness (CR 613.4)
+-- =========================================================================
+
+-- 10.1 layer 7a: characteristic-defining abilities (613.4a) -----------------
+-- Nightmare's power and toughness are each the number of Swamps its
+-- controller controls -- read out of ty4, so layer 4's answer is layer 7a's
+-- input. Change the layer 4 ORDER and this number changes; that is the
+-- dependency system reaching all the way into the creature's size.
+--
+-- v0 has no aggregation, so the count is a FOLD over a declared enumeration
+-- of the lands. The fold's order is declared data, and it is arithmetic, so
+-- the answer does not depend on it; the counting mode in demo.ts checks that.
+cnt_ord(forest1, 1).      cnt_ord(swamp1, 2).      cnt_ord(steam_vents, 3).
+cnt_ord(urborg, 4).       cnt_ord(yavimaya, 5).
+nland(5).
+
+swamp_of(Pl, O)  :- ty4(O, swamp), ct2(O, Pl).
+cnt(Pl, 0, 0)    :- player(Pl).
+cnt(Pl, K, N)    :- cnt(Pl, K1, N0), K is K1 + 1, nland(NL), K <= NL,
+                    cnt_ord(O, K), swamp_of(Pl, O), N is N0 + 1.
+cnt(Pl, K, N)    :- cnt(Pl, K1, N), K is K1 + 1, nland(NL), K <= NL,
+                    cnt_ord(O, K), not swamp_of(Pl, O).
+swamps(Pl, N)    :- nland(NL), cnt(Pl, NL, N).
+
+live71(E)       :- lay71(E), eff_live(E).
+cda_pt(O, N, N) :- live71(E), sel(E, self(O)), does(E, cda_swamps),
+                   ab6(O, cda_swamps), ct2(O, Pl), swamps(Pl, N).
+has_cda(O)      :- cda_pt(O, _, _).
+
+lost71(O, P, T) :- bp1(O, P, T), has_cda(O).
+pt7a(O, P, T)   :- bp1(O, P, T), not lost71(O, P, T).
+pt7a(O, P, T)   :- cda_pt(O, P, T).
+
+-- 10.2 layer 7b: set (613.4b) ----------------------------------------------
+live72(E)       :- lay72(E), eff_live(E).
+hits72(E, O)    :- live72(E), sel(E, only(O)), on_bf(O).
+set72(O, P, T, E) :- hits72(E, O), does(E, set_pt(P, T)).
+anyset72(O)     :- set72(O, _, _, _).
+clob72(O, E)    :- set72(O, _, _, F), bef_ts(E, F).
+
+lost72(O, P, T) :- pt7a(O, P, T), anyset72(O).
+pt7b(O, P, T)   :- pt7a(O, P, T), not lost72(O, P, T).
+pt7b(O, P, T)   :- set72(O, P, T, E), not clob72(O, E).
+
+-- 10.3 layer 7c: modify (613.4c) -------------------------------------------
+-- Counters live here too (613.4c names them). Two of these effects come from
+-- static abilities and their SELECTORS are read out of the ability state:
+-- `lord` reads ty4 (so layer 4 decides who it pumps) and the ability term
+-- itself out of ab6 (so layer 6 can switch it off, and layer 3 already
+-- rewrote which subtype it names).
+live73(E)       :- lay73(E), eff_live(E).
+
+hits73(E, O)    :- live73(E), sel(E, only(O)), on_bf(O).
+hits73(E, O)    :- live73(E), lord_eff(E, S), ab6(S, lord(ST, _, _)),
+                   ty4(O, ST), O != S, ct2(O, Pl), ct2(S, Pl).
+hits73(E, O)    :- live73(E), anthem_eff(E, S), ab6(S, anthem(C, _, _)),
+                   ty4(O, creature), co5(O, C), ct2(O, Pl), ct2(S, Pl).
+
+mod73(O, E, DP, DT) :- hits73(E, O), does(E, mod_pt(DP, DT)).
+mod73(O, E, DP, DT) :- hits73(E, O), lord_eff(E, S), ab6(S, lord(_, DP, DT)).
+mod73(O, E, DP, DT) :- hits73(E, O), anthem_eff(E, S), ab6(S, anthem(_, DP, DT)).
+
+-- The sum, as a fold over a declared enumeration. Integer addition is
+-- commutative, so this order is arithmetic bookkeeping and not a rules
+-- decision -- which is exactly what the counting mode measures.
+eord(e_archdruid, 1).     eord(e_oracle_p01, 2).    eord(e_honor, 3).
+eord(e_oracle_p50, 4).    eord(e_hammer_pt, 5).     eord(e_ogre_counter, 6).
+eord(e_ogre_pump, 7).     eord(e_ogre_ench, 8).
+-- Room in the fold for effects a scenario adds later (demo.ts resolves two
+-- removal spells on top of this battlefield to drive the state-based-action
+-- fixpoint). A slot with no effect in it is skipped, so the bound may exceed
+-- the enumeration.
+nmod(10).
+eord_at(K)      :- eord(_, K).
+
+acc(O, 0, P, T) :- pt7b(O, P, T).
+acc(O, K, P, T) :- acc(O, K1, P0, T0), K is K1 + 1, nmod(NM), K <= NM,
+                   eord(E, K), mod73(O, E, DP, DT), P is P0 + DP, T is T0 + DT.
+acc(O, K, P, T) :- acc(O, K1, P, T), K is K1 + 1, nmod(NM), K <= NM,
+                   eord(E, K), not mod73(O, E, _, _).
+acc(O, K, P, T) :- acc(O, K1, P, T), K is K1 + 1, nmod(NM), K <= NM,
+                   not eord_at(K).
+pt7c(O, P, T)   :- nmod(NM), acc(O, NM, P, T).
+
+-- 10.4 layer 7d: switch (613.4d) -------------------------------------------
+-- An even number of switches cancels, so the state carried through the fold
+-- is one parity bit.
+live74(E)       :- lay74(E), eff_live(E).
+hits74(E, O)    :- live74(E), sel(E, only(O)), on_bf(O).
+sw74(O, E)      :- hits74(E, O), does(E, switch_pt).
+
+sord(e_twisted, 1).
+nsw(1).
+
+swacc(O, 0, 0)  :- pt7c(O, _, _).
+swacc(O, K, R)  :- swacc(O, K1, R0), K is K1 + 1, nsw(NS), K <= NS,
+                   sord(E, K), sw74(O, E), R is (R0 + 1) mod 2.
+swacc(O, K, R)  :- swacc(O, K1, R), K is K1 + 1, nsw(NS), K <= NS,
+                   sord(E, K), not sw74(O, E).
+switched(O)     :- nsw(NS), swacc(O, NS, 1).
+
+pt7d(O, P, T)   :- pt7c(O, P, T), not switched(O).
+pt7d(O, T, P)   :- pt7c(O, P, T), switched(O).
+
+-- =========================================================================
+-- 11. the answer, and state-based actions
+-- =========================================================================
+
+is_creature(O)  :- ty4(O, creature).
+pt(O, P, T)     :- pt7d(O, P, T), is_creature(O).
+
+-- CR 704.5f. State-based actions are a SEPARATE fixpoint above this one:
+-- a creature with toughness 0 or less leaves the battlefield, which removes
+-- whatever effects its abilities generated, which re-runs every layer above,
+-- which can make another creature lethal. demo.ts drives that outer loop by
+-- retracting on_bf/1 and re-evaluating until `lethal` is empty; the round
+-- count is the height of the outer fixpoint.
+lethal(O)       :- pt(O, _, T), T <= 0.
+
+-- =========================================================================
+-- 12. the same layer, ordered by timestamp alone
+-- =========================================================================
+-- Identical rules to section 7.5 with `bef4` replaced by `bef_ts`: what an
+-- engine that sorts by timestamp and stops there computes. It is not a
+-- strawman -- it is the documented failure mode, and it disagrees here.
+
+dead4n(E)        :- lay4(E), eff_src(E, S), kills_ability(B, S), bef_ts(B, E).
+live4n(E)        :- lay4(E), eff_live(E), not dead4n(E).
+setter4n(O, T, E) :- live4n(E), does(E, set_land_type(T)), hits4(E, O).
+adder4n(O, T, E)  :- live4n(E), does(E, add_type(T)), hits4(E, O).
+anyset4n(O)       :- setter4n(O, _, _).
+clob4n(O, E)      :- setter4n(O, _, F), bef_ts(E, F).
+
+ty4n(O, T)      :- ty3(O, T), not land_type(T).
+ty4n(O, T)      :- ty3(O, T), land_type(T), not anyset4n(O).
+ty4n(O, T)      :- adder4n(O, T, E), not clob4n(O, E).
+ty4n(O, T)      :- setter4n(O, T, E), not clob4n(O, E).
+
+swamp_of_n(Pl, O) :- ty4n(O, swamp), ct2(O, Pl).
+cntn(Pl, 0, 0)  :- player(Pl).
+cntn(Pl, K, N)  :- cntn(Pl, K1, N0), K is K1 + 1, nland(NL), K <= NL,
+                   cnt_ord(O, K), swamp_of_n(Pl, O), N is N0 + 1.
+cntn(Pl, K, N)  :- cntn(Pl, K1, N), K is K1 + 1, nland(NL), K <= NL,
+                   cnt_ord(O, K), not swamp_of_n(Pl, O).
+swamps_n(Pl, N) :- nland(NL), cntn(Pl, NL, N).
+
+-- =========================================================================
+-- 13. audits -- the encoding's assumptions, as relations that must be empty
+-- =========================================================================
+-- Each of these is a way this file could be quietly wrong. They are rules,
+-- not comments, so `? name(X)` answers them and the test asserts emptiness.
+
+-- (a) `bef4` must be a strict total order on layer 4, or "the order" is not
+--     an order and every "last one wins" rule above means nothing.
+pair4(A, B)      :- lay4(A), lay4(B), A != B.
+unordered4(A, B) :- pair4(A, B), not bef4(A, B), not bef4(B, A).
+cyclic4(A, B)    :- bef4(A, B), bef4(B, A).
+intrans4(A, B, C) :- bef4(A, B), bef4(B, C), A != C, not bef4(A, C).
+
+-- (b) `dead4` reads kills_ability without asking whether the KILLER itself
+--     survived. That is exact only while no killer is itself killed.
+kill_chain4(B)   :- kills_ability(B, _), dead4(B).
+
+-- (c) Target sets are evaluated on the state layer 3 left behind. That is
+--     exact for an effect whose set does not shift under a same-layer effect
+--     applied before it -- unless the effect is dead anyway, in which case
+--     its set is never used.
+shift4(A, B)     :- hits4h(A, B, O), not hits4(A, O).
+shift4(A, B)     :- hits4(A, O), lay4(B), A != B, not hits4h(A, B, O).
+unsound4(A)      :- shift4(A, B), bef4(B, A), not dead4(A).
+
+-- (d) The sublayers that use timestamp order alone must have no dependency
+--     to miss. These probes OVER-approximate 613.8a: an effect can only
+--     depend on another if that other writes a characteristic its selector
+--     reads, or removes the abilities of its source. Empty over-approximation
+--     is a proof the exact relation is empty too.
+reads(E, types)   :- sel(E, all_lands).
+reads(E, types)   :- sel(E, nonbasic_lands).
+reads(E, types)   :- lord_eff(E, _).
+reads(E, types)   :- anthem_eff(E, _).
+reads(E, colors)  :- anthem_eff(E, _).
+writes(E, types)  :- does(E, set_land_type(_)).
+writes(E, types)  :- does(E, add_type(_)).
+writes(E, types)  :- does(E, copy(_)).
+writes(E, colors) :- does(E, set_color(_)).
+writes(E, colors) :- does(E, add_color(_)).
+
+p5_dep(A, B)     :- lay5(A), lay5(B), A != B, reads(A, K), writes(B, K).
+p5_dep(A, B)     :- lay5(A), lay5(B), A != B, eff_src(A, S),
+                    does(B, lose_all_abilities), hits5(B, S).
+p6_dep(A, B)     :- lay6(A), lay6(B), A != B, reads(A, K), writes(B, K).
+p6_dep(A, B)     :- lay6(A), lay6(B), A != B, eff_src(A, S),
+                    does(B, lose_all_abilities), hits6(B, S).
+p72_dep(A, B)    :- lay72(A), lay72(B), A != B, reads(A, K), writes(B, K).
+p72_dep(A, B)    :- lay72(A), lay72(B), A != B, eff_src(A, S),
+                    does(B, lose_all_abilities), hits72(B, S).
+
+-- (e) Two effects in one sublayer sharing a timestamp would leave `bef_ts`
+--     silent about their order (CR 613.7m breaks such ties by turn order,
+--     which is not modelled).
+ts_tie(A, B)     :- eff_layer(A, L), eff_layer(B, L), A != B,
+                    eff_ts(A, T), eff_ts(B, T).

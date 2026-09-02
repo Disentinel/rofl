@@ -1,0 +1,168 @@
+-- policy.rofl — the IFFY adapter for examples/nope: a policy change, and who
+-- loses access and who gains under it.
+--
+-- WHY A SECOND CORPUS EXISTS. One adapter proves the mode works. Two prove it
+-- TRANSFERS, and the transfer is where the claim is: IFFY is a mode, and a
+-- mode that only ever ran on the corpus it was written against is a feature
+-- with a corpus attached. Same iffy.rofl, byte for byte, over a rule set that
+-- shares nothing with a statute.
+--
+-- AND THIS CORPUS ANSWERS A QUESTION THE STATUTE CANNOT. examples/jopa has no
+-- defeating norm — its README's §6 explains why the exclusion is a positive
+-- conclusion rather than a negated premise — so in that corpus a conclusion
+-- can only be lost by losing its support. Here Deny overrides Allow, so a past
+-- decision can be reversed by a norm that DID NOT EXIST BEFORE, with every
+-- premise it ever rested on still standing. iffy.rofl §5 calls that
+-- `overridden` and gives it a different name for that reason: a tool that
+-- diffs supports reports it as "flipped, cause unknown".
+--
+-- WHAT IS SHARED AND NOT FORKED, WHICH IS THE MEASUREMENT. The expensive part
+-- of nope.rofl is `via/3`: simple-path reachability through a cyclic
+-- assume-role graph, with the visited chain carried inside the fact. No
+-- amendment here moves it, so it is not threaded, not recomputed and not
+-- copied — every arm reads the one closure nope.rofl already built. So do
+-- `ou_ancestor`, `governs`, `holder`, the tags, and the wildcard expansion. An
+-- arm pays for the policy layer and for nothing else: 1538 facts, against 3752
+-- for a `store.clone()` fork of the same world. Measured in README.md.
+
+-- =========================================================================
+-- 1. the amendable slice, READ OUT OF THE POLICY SET
+-- =========================================================================
+-- Six kinds of element, and between them they are every knob an IAM change
+-- ticket actually turns. Each is read from nope.rofl's own facts; nothing is
+-- restated, and a statement added to nope.rofl appears here without an edit.
+--
+-- The element term CARRIES THE NORM: `stmt(Sid, Pol, Effect, Action, Resource)`
+-- is the statement, not a pointer to it. That is what lets an amendment ENACT
+-- a statement that nowhere exists yet — an insertion is an element in force
+-- under an arm and under no other, and §2 needs no separate vocabulary for
+-- "new" versus "existing".
+
+enacted_elem(stmt(Sid, Pol, Eff, AP, RP)) :- statement(Pol, Sid, Eff, AP, RP).
+enacted_elem(cond(Sid, K, Op, V))         :- condition(Sid, K, Op, V).
+enacted_elem(attach(H, Pol))              :- attached(H, Pol).
+enacted_elem(bound(Q, Pol))               :- boundary(Q, Pol).
+enacted_elem(scp_at(Ou, Pol))             :- scp(Ou, Pol).
+enacted_elem(bpol(BP, Pol))               :- bucket_policy(BP, Pol).
+
+-- =========================================================================
+-- 2. the policy set, with the arm column
+-- =========================================================================
+
+astmt(A, Pol, Sid, E, AP, RP) :- in_force(A, stmt(Sid, Pol, E, AP, RP)).
+acond(A, Sid, K, Op, V)       :- in_force(A, cond(Sid, K, Op, V)).
+aattached(A, H, Pol)          :- in_force(A, attach(H, Pol)).
+aboundary(A, Q, Pol)          :- in_force(A, bound(Q, Pol)).
+ascp(A, Ou, Pol)              :- in_force(A, scp_at(Ou, Pol)).
+abucket(A, BP, Pol)           :- in_force(A, bpol(BP, Pol)).
+
+-- =========================================================================
+-- 3. evaluation, with the arm column — nope.rofl §6, one column wider
+-- =========================================================================
+-- `holder/2`, `identity/1`, `in_account/2`, `governs/2`, `via/3`, `tag/3`,
+-- `action_in/2`, `resource_in/2` and `stmt_principal/2` are read from
+-- nope.rofl unchanged and unthreaded: no amendment moves them, so every arm
+-- shares one copy. test/example-iffy.test.ts requires the baseline arm to
+-- reproduce nope.rofl's own `access/3` and `route/4` exactly, over all 72
+-- questions. That equality is this file's positive control.
+
+apolicy_of(A, Q, H, Pol) :- holder(Q, H), aattached(A, H, Pol).
+
+aallow(A, Q, Act, R, H, Sid) :-
+    apolicy_of(A, Q, H, Pol), astmt(A, Pol, Sid, allow, AP, RP),
+    action_in(Act, AP), resource_in(R, RP).
+aallow(A, Q, Act, R, Pol, Sid) :-
+    abucket(A, BP, Pol), resource_in(R, BP),
+    astmt(A, Pol, Sid, allow, AP, RP), stmt_principal(Sid, Q),
+    action_in(Act, AP), resource_in(R, RP).
+
+abound_allows(A, Q, Act, R) :-
+    aboundary(A, Q, Pol), astmt(A, Pol, Sid, allow, AP, RP),
+    action_in(Act, AP), resource_in(R, RP).
+ahas_boundary(A, Q) :- aboundary(A, Q, _).
+ahas_cond(A, Sid)   :- acond(A, Sid, _, _, _).
+
+-- ============ negation below this line only ============
+
+aapplies(A, Sid, P) :- astmt(A, _, Sid, _, _, _), identity(P), not ahas_cond(A, Sid).
+aapplies(A, Sid, P) :- acond(A, Sid, K, eq, V), tag(P, K, V).
+aapplies(A, Sid, P) :- acond(A, Sid, K, ne, V), tag(P, K, W), W != V.
+
+agrant(A, P, Q, Act, R, path(Chain, H, Sid)) :-
+    via(P, Q, Chain), aallow(A, Q, Act, R, H, Sid), aapplies(A, Sid, P).
+
+adeny(A, P, Q, Act, R, scp, Sid) :-
+    in_account(Q, Acct), governs(Acct, Ou), ascp(A, Ou, Pol),
+    astmt(A, Pol, Sid, deny, AP, RP), action_in(Act, AP), resource_in(R, RP),
+    aapplies(A, Sid, P).
+adeny(A, P, Q, Act, R, identity_policy, Sid) :-
+    apolicy_of(A, Q, _, Pol), astmt(A, Pol, Sid, deny, AP, RP),
+    action_in(Act, AP), resource_in(R, RP), aapplies(A, Sid, P).
+adeny(A, P, Q, Act, R, resource_policy, Sid) :-
+    identity(Q), abucket(A, BP, Pol), resource_in(R, BP),
+    astmt(A, Pol, Sid, deny, AP, RP), action_in(Act, AP), resource_in(R, RP),
+    aapplies(A, Sid, P).
+adeny(A, P, Q, Act, R, permission_boundary, implicit) :-
+    agrant(A, P, Q, Act, R, _), ahas_boundary(A, Q), not abound_allows(A, Q, Act, R).
+
+ablocked(A, P, Q, Act, R) :- adeny(A, P, Q, Act, R, _, _).
+aroute(A, P, Act, R, Route) :-
+    agrant(A, P, Q, Act, R, Route), not ablocked(A, P, Q, Act, R).
+
+-- =========================================================================
+-- 4. the interface iffy.rofl asks for
+-- =========================================================================
+-- The question set is the whole request domain — every principal against every
+-- action against every resource — and not the requests somebody happened to
+-- log. A change ticket is judged against what it COULD decide, and an
+-- unexercised permission that the amendment turns on is exactly the kind of
+-- thing a canary never sees.
+
+question(q_access(P, Act, R)) :- identity(P), action(Act), resource(R).
+
+-- A support is a ROUTE: the chain of assumed roles, the policy holder and the
+-- statement. nope.rofl carries the chain inside the term precisely so that two
+-- routes are two facts and a cycle in the role graph cannot inflate the count;
+-- IFFY inherits that for free and its `redundant/2` means what it says.
+support(A, q_access(P, Act, R), Route) :- aroute(A, P, Act, R, Route).
+verdict(A, Q) :- support(A, Q, _).
+
+uses(A, q_access(P, Act, R), stmt(Sid, Pol, allow, AP, RP)) :-
+    aroute(A, P, Act, R, path(_, _, Sid)), in_force(A, stmt(Sid, Pol, allow, AP, RP)).
+uses(A, q_access(P, Act, R), attach(H, Pol)) :-
+    aroute(A, P, Act, R, path(_, H, Sid)),
+    in_force(A, stmt(Sid, Pol, allow, _, _)), in_force(A, attach(H, Pol)).
+uses(A, q_access(P, Act, R), bpol(BP, Pol)) :-
+    aroute(A, P, Act, R, path(_, Pol, Sid)), in_force(A, bpol(BP, Pol)),
+    resource_in(R, BP), in_force(A, stmt(Sid, Pol, allow, _, _)).
+
+-- THE BOUNDARY IS A PREMISE OF THE ROUTE THAT NO SUPPORT MENTIONS. A route
+-- survives a permission boundary by the ABSENCE of a deny, so the boundary's
+-- allow does not appear anywhere in the route term, and repealing it loses the
+-- route with nothing in `uses` to point at. That flip would come out as
+-- `unexplained[audit]` — which is what that audit is for, and it is how this
+-- rule came to be written. Naming the boundary allow the route needed closes
+-- it, and the audit stays at zero to prove the closure holds.
+uses(A, q_access(P, Act, R), stmt(SidB, PolB, allow, APB, RPB)) :-
+    aroute(A, P, Act, R, path(cons(Q, _), _, _)),
+    aboundary(A, Q, PolB), astmt(A, PolB, SidB, allow, APB, RPB),
+    action_in(Act, APB), resource_in(R, RPB).
+
+blocks(A, q_access(P, Act, R), stmt(Sid, Pol, deny, AP, RP)) :-
+    adeny(A, P, _, Act, R, _, Sid), in_force(A, stmt(Sid, Pol, deny, AP, RP)).
+blocks(A, q_access(P, Act, R), bound(Q, Pol)) :-
+    adeny(A, P, Q, Act, R, permission_boundary, implicit), in_force(A, bound(Q, Pol)).
+
+-- A DENY IS TWO ELEMENTS, NOT ONE: the statement, and the thing that puts it
+-- in the request's path. Repealing the service control policy's ATTACHMENT to
+-- the organizational unit lifts every deny it carries while the statement text
+-- stays exactly where it was, so an arm that does that gains conclusions whose
+-- cause is nowhere in the statement. `unexplained[audit]` is what said so —
+-- it was non-empty for three rows of alice's while this file was being
+-- written, and these two rules are what emptied it.
+blocks(A, q_access(P, Act, R), scp_at(Ou, Pol)) :-
+    adeny(A, P, Q, Act, R, scp, Sid), in_account(Q, Acct), governs(Acct, Ou),
+    ascp(A, Ou, Pol), astmt(A, Pol, Sid, deny, _, _).
+blocks(A, q_access(P, Act, R), attach(H, Pol)) :-
+    adeny(A, P, Q, Act, R, identity_policy, Sid), apolicy_of(A, Q, H, Pol),
+    astmt(A, Pol, Sid, deny, _, _).

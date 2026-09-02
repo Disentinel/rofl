@@ -1,0 +1,580 @@
+-- rip.rofl — RIP: Rest In Peace. Why tasks die in a dead letter queue.
+--
+-- A DLQ is a graveyard, and the tool answers the question nobody asks over
+-- it: why did these tasks end up here, and which ones will be next. The
+-- domain is a workflow with unreliable external calls and non-idempotent
+-- stages — order, reserve, charge, ship, with compensation — against an
+-- environment that can succeed, fail, time out, go quiet, or fail AFTER the
+-- effect has already landed.
+--
+-- WHY THIS EXAMPLE EXISTS, and it is one property and not three.
+-- Every other example in this repository accumulates facts monotonically.
+-- This one alternates quantifiers: a state settles if there EXISTS an action
+-- such that ALL of the environment's answers lead to states that settle. The
+-- universal quantifier is what makes this an AND/OR graph, and it is written
+-- the only way a rule language can write a universal over an open set — as
+-- the negation of an existential:
+--
+--     will_settle(S) :- action(S, A), not risky(S, A).
+--     risky(S, A)    :- respond(S, A, _, S2), not will_settle(S2).
+--
+-- `will_settle` depends on itself through two negations. That is a negative
+-- cycle, and the ordinary phase-ordered evaluator is RIGHT to refuse it: the
+-- number the stratum table computes does not exist inside such a cycle.
+-- `semantics(well_founded).` swaps the phase ordering for an alternating
+-- fixpoint, and the states the two limits disagree about come back as
+-- `unknown(will_settle(S))` — which is this example's product.
+--
+-- THE THIRD CATEGORY IS NOT A THIRD VALUE SOMEBODY ASSERTED.
+--
+--   settles       there is a strategy: whatever the providers do, the task
+--                 comes to rest with the books balanced
+--   doomed        the environment can FORCE the books not to balance. This
+--                 is a bug to fix, not a task to retry
+--   dead letter   neither is derivable. The play can go on for ever, so no
+--                 strategy guarantees the good end and no adversary
+--                 guarantees the bad one. It depends on luck
+--
+-- The third is the COMPLEMENT of the fixpoint, and the kernel computes it as
+-- one: an atom reaches the gap only by being DERIVED in a generous round, so
+-- it carries the firing that derived it and `why unknown(will_settle(S))`
+-- walks the circular dependency and names the unfounded set. It is not
+-- "everything left over" — a store where nothing is unknown and a store
+-- where everything is would both prove nothing, and §5 of demo.ts pins the
+-- undefined set as a PROPER, NON-EMPTY part of the state space from both
+-- sides: delete the carrier's silence and it is empty, restore it and it is
+-- exactly twenty-four states.
+--
+-- And it is not the budget either. A run cut short reports
+-- `hole(Id, budget_exhausted)` and claims no unknowns at all; demo.ts §5
+-- shows the same program answering both ways at two budgets.
+--
+-- THE PERSPECTIVE IS A LEDGER, and there are two books here.
+-- `[main]` is the analysis: the machine, the fixpoint, the verdict. `[sim]`
+-- is the failure simulator's journal — what actually happened in a run,
+-- written by the runtime and by nobody else. It passes the litmus of
+-- docs/choosing-perspectives.md without argument: the simulator and the
+-- fixpoint can legitimately disagree about one state and neither entry is an
+-- error (that disagreement is the whole of §11); the book is not computed
+-- from other facts, it is observed; it says whose entry this is, not how the
+-- entry was obtained; and its writer is nameable and single —
+-- `authority(sim, simulator)`.
+--
+-- What would be WRONG, and it is the obvious first draft:
+-- `outcome(simulator, S, capped)` with the source as an argument column.
+-- That loses `forged` — anybody could file a run under the simulator's name
+-- — and it turns the crossing between the two books into an invisible join
+-- instead of the declared `imports(main, sim)` that `leak[audit]` checks.
+--
+-- WHERE THE ANALYSIS IS ONLY AS GOOD AS THE MODEL. The state machine here is
+-- synthetic and the transitions are written by hand; extracting a machine
+-- from real code or a real config is the generative step, and the kernel does
+-- not do it. That is the same boundary JOPA meets translating a law and NPC
+-- meets generalising a hole: THE KERNEL GUARANTEES CONSEQUENCES, NOT
+-- TRANSLATION. It is softer here than anywhere else in the corpus, because
+-- the translation is checkable — demo.ts §10 re-derives the whole machine in
+-- plain TypeScript and compares it transition by transition, and §11 runs it.
+
+-- =========================================================================
+-- 0. the two books
+-- =========================================================================
+
+authority(main, rip).
+authority(sim, simulator).
+
+-- [main] reads the simulator's journal to compute where the two disagree.
+-- Both ends are registered ledgers, so this is exactly what `imports` is
+-- for; `collects` would be the wrong sentence, and a false one — [main] here
+-- names the book it gathers from.
+imports(main, sim).
+
+-- The same crossing the other way, which the leak audit asks about now that
+-- the flow graph is transitively closed: the journal reaches [main] through
+-- `crosscheck/3`, every audit rule reads [main], so the journal reaches
+-- [audit]. Licensed on purpose, and not a formality — `forged[audit]` exists
+-- precisely to say that somebody other than the simulator filed a run, and
+-- it cannot say so without reading the journal. demo.ts §11 files one under
+-- the wrong name and watches the row appear.
+imports(audit, sim).
+
+-- The journal is an INPUT: the runtime writes it, no rule concludes it, and
+-- an empty journal is a legitimate state of the world (the model answers
+-- perfectly well before any simulation has run). Declaring an input is the
+-- remedy for `undefined_premise`; a waiver is not.
+edb(sim_settled).
+edb(sim_failed).
+edb(sim_capped).
+edb(sim_seen).
+
+-- =========================================================================
+-- 1. THE POLICY — the retry rules, and the whole switch
+-- =========================================================================
+-- Everything in this block is a decision somebody made about how the
+-- workflow behaves. demo.ts §9 substitutes this block, one line at a time,
+-- and measures what each line is worth in states rescued or lost. Nothing
+-- below the @machine marker mentions any of these numbers.
+--
+-- @policy
+
+-- How many times a stage may be attempted. `limit(S, N)` allows a call at
+-- attempt 0..N, so N+1 attempts. The compensations get a bigger budget than
+-- the forward path, which is what real workflows do and what this analysis
+-- shows is load-bearing: with `limit(refund, 1)` the environment can burn
+-- both refund attempts inside its own slack and the compensation stops being
+-- forceable. MEASURED, on this machine at slack 2: 12 states lose their
+-- guarantee, ten of them inside the refund itself, and the initial state is
+-- NOT among them — it keeps a route home through a charge that never lands.
+-- Which is the point of counting rather than arguing.
+limit(reserve, 1).
+limit(charge, 1).
+limit(ship, 1).
+limit(refund, 2).
+limit(release, 2).
+
+-- Which stages can ask the provider what really happened. This is the one
+-- defence against a non-idempotent retry, and demo.ts §9 measures it.
+probe_of(charge, verify).
+probe_of(ship, track).
+
+-- Where a stage goes when the workflow stops trying and starts undoing.
+aborts_to(reserve, release).
+aborts_to(charge, refund).
+aborts_to(ship, refund).
+
+-- THE POLICY LINE THAT COSTS THE MOST, and it is not the retry count.
+-- "Only compensate when you know where you stand" is a sensible-sounding
+-- rule and it strands the reserve stage: a reserve that timed out leaves the
+-- workflow unsure, unable to abort, and with one attempt left. Reserving is
+-- IDEMPOTENT, so the doubt is harmless and the rule is unnecessary there —
+-- but nothing in the policy says which stages are idempotent, so the rule
+-- applies to all of them. demo.ts §9 deletes the reserve line and counts.
+abort_needs_certainty(reserve).
+abort_needs_certainty(charge).
+abort_needs_certainty(ship).
+
+-- THE FAIRNESS ASSUMPTION, stated as a number because it has to be.
+--
+-- An environment that may misbehave for ever defeats every workflow: it
+-- answers `fail` to every attempt of every stage including the compensation,
+-- and then NOTHING is guaranteed and the analysis says "no strategy exists"
+-- about a perfectly healthy machine. The assumption real reliability work
+-- makes instead is that providers eventually behave; the assumption a finite
+-- AND/OR fixpoint can express is that they misbehave at most `slack` times
+-- over the whole run.
+--
+-- It is a strictly weaker statement than fairness and it is the honest one:
+-- every verdict below is relative to this number, and demo.ts §9 sweeps it
+-- from 0 to 3 so that the sensitivity is visible rather than assumed. Note
+-- that `silence` costs the environment NOTHING — silence is not an attempt
+-- that failed, it is an attempt that never came back — which is why an
+-- unbounded play survives a bounded misbehaviour budget, and why the third
+-- category exists at all.
+slack(2).
+
+-- =========================================================================
+-- 2. THE MACHINE
+-- =========================================================================
+-- @machine
+
+-- A state is `w(At, T, D, R, C, Sh, F)`:
+--
+--   At   where the workflow is: the stage it is about to call, or a terminal
+--   T    attempts already spent at this stage
+--   D    doubt — 1 if the last answer left the workflow unsure what landed
+--   R    a reservation is held
+--   C    how many times money has actually moved
+--   Sh   how many parcels have actually been dispatched
+--   F    how much misbehaviour the environment has left (the slack above)
+--
+-- WHAT IS HIDDEN FROM THE WORKFLOW AND WHAT IS NOT. `At`, `T` and `D` are
+-- the workflow's own bookkeeping and it can read them. `R`, `C` and `Sh` are
+-- the WORLD, and the workflow learns them only by being told — which is what
+-- a probe is for and why a lost answer is not the same as a failure. Two
+-- states differing only in `C` look identical from inside the workflow. That
+-- gap is real and it is measured: demo.ts §12 checks whether the strategy the
+-- fixpoint certifies ever needs to distinguish two states the workflow
+-- cannot tell apart, and names the classes where it does.
+
+stage(reserve). stage(charge). stage(ship).
+stage(verify). stage(track). stage(refund). stage(release).
+
+terminal(fulfilled). terminal(cancelled). terminal(abandoned).
+
+-- Which external system each stage talks to. Reporting only — no rule turns
+-- on it — and it is here because "which provider carries the risk" is the
+-- first question anybody asks of the answer.
+provider(reserve, inventory).
+provider(release, inventory).
+provider(charge, payments).
+provider(refund, payments).
+provider(verify, payments).
+provider(ship, carrier).
+provider(track, carrier).
+
+-- WHICH STAGES ARE IDEMPOTENT, and this is the core of the domain rather
+-- than an annotation. Reserving twice with the same token holds one
+-- reservation; refunding an order twice refunds it once; releasing twice
+-- releases once. CHARGING twice charges twice, and DISPATCHING twice sends
+-- two parcels. Reporting only, again — the difference is written into the
+-- transitions of §2.3, where an idempotent stage's `ok` does not depend on
+-- what already landed and a non-idempotent one's does.
+idempotent(reserve).
+idempotent(release).
+idempotent(refund).
+
+-- -------------------------------------------------------------------------
+-- 2.1 the environment's repertoire
+--
+-- Five behaviours, and each one has to leave a DIFFERENT mark or it is a
+-- fifth name for a third behaviour:
+--
+--   ok        the effect applied and the workflow was told
+--   fail      a definite no. Nothing applied, and the workflow knows it
+--   timeout   no answer inside the deadline. Nothing applied, and the
+--             workflow does NOT know that — it only knows it did not hear
+--   lost      the effect applied and the answer did not come back. The
+--             money moved; the workflow is retrying. This is the one the
+--             whole example is about
+--   silence   nothing came back at all, and nothing ever will. The retry
+--             timer never fires, no attempt is consumed, the task simply
+--             waits. Only a push-based provider can do this
+--
+-- `fail` and `timeout` differ in the workflow's belief (D), `timeout` and
+-- `lost` differ in the world (C, Sh) and are INDISTINGUISHABLE from inside
+-- the workflow, and `silence` differs from all of them by consuming nothing.
+
+free(ok).
+free(silence).
+costly(fail).
+costly(timeout).
+costly(lost).
+
+-- The repertoire is per stage rather than per provider, because a read has
+-- no effect to lose: `verify` and `track` ask a question and cannot answer
+-- `lost`. Only the carrier can go quiet — a payment gateway is
+-- request/response behind a hard deadline, so it produces a timeout where
+-- the carrier produces nothing at all. That asymmetry is a claim about the
+-- world, it is the sole source of the third category in this machine, and
+-- demo.ts §5 tests it from both directions.
+answers(reserve, ok).
+answers(reserve, fail).
+answers(reserve, timeout).
+answers(reserve, lost).
+answers(release, ok).
+answers(release, fail).
+answers(release, timeout).
+answers(release, lost).
+answers(charge, ok).
+answers(charge, fail).
+answers(charge, timeout).
+answers(charge, lost).
+answers(refund, ok).
+answers(refund, fail).
+answers(refund, timeout).
+answers(refund, lost).
+answers(verify, ok).
+answers(verify, fail).
+answers(verify, timeout).
+answers(ship, ok).
+answers(ship, fail).
+answers(ship, timeout).
+answers(ship, lost).
+answers(ship, silence).
+answers(track, ok).
+answers(track, fail).
+answers(track, timeout).
+answers(track, silence).
+
+-- -------------------------------------------------------------------------
+-- 2.2 the reachable state space
+--
+-- `reached` carries the move that got there IN ITS SUPPORT, which is what
+-- makes a shortest-path fold over it readable back as a script of failures.
+-- `state` is the same set without the reading; §8 of demo.ts walks the one
+-- and §6 explains from the other.
+
+initial(w(reserve, 0, 0, 0, 0, 0, F)) :- slack(F).
+
+reached(S)  :- initial(S).
+reached(S2) :- reached(S), respond(S, _, _, S2).
+state(S)    :- reached(S).
+
+-- -------------------------------------------------------------------------
+-- 2.3 what the workflow may do, and what the environment may answer
+--
+-- The workflow's alphabet is four moves. `call` makes the stage's external
+-- call. `abort` stops trying and starts undoing. `check` asks the provider
+-- what really happened. `park` gives up: the task goes to the dead letter
+-- queue, which is a terminal and is never settled, so parking is never a
+-- solution — it is available at every stage and the strategy never picks it,
+-- which is the point of having it in the model at all.
+
+action(w(At,T,D,R,C,Sh,F), call) :- state(w(At,T,D,R,C,Sh,F)), limit(At, N), T <= N.
+action(w(At,T,D,R,C,Sh,F), call) :- state(w(At,T,D,R,C,Sh,F)), probe_of(_, At).
+
+action(w(At,T,0,R,C,Sh,F), abort) :- state(w(At,T,0,R,C,Sh,F)), aborts_to(At, _).
+action(w(At,T,1,R,C,Sh,F), abort) :- state(w(At,T,1,R,C,Sh,F)), aborts_to(At, _),
+                                     not abort_needs_certainty(At).
+
+action(w(At,T,1,R,C,Sh,F), check) :- state(w(At,T,1,R,C,Sh,F)), probe_of(At, _).
+
+action(w(At,T,D,R,C,Sh,F), park) :- state(w(At,T,D,R,C,Sh,F)), stage(At).
+
+-- What the environment may answer to a call at this state: anything in the
+-- stage's repertoire, and a costly answer only while it has slack left.
+may(w(At,T,D,R,C,Sh,F), A) :- action(w(At,T,D,R,C,Sh,F), call), answers(At, A), free(A).
+may(w(At,T,D,R,C,Sh,F), A) :- action(w(At,T,D,R,C,Sh,F), call), answers(At, A), costly(A), F >= 1.
+
+-- The three internal moves. `none` is the answer of a move that talks to
+-- nobody, and it keeps `respond/4` one relation instead of two.
+respond(w(At,T,D,R,C,Sh,F), park, none, w(abandoned,0,0,R,C,Sh,F)) :-
+    action(w(At,T,D,R,C,Sh,F), park).
+respond(w(At,T,D,R,C,Sh,F), abort, none, w(To,0,D,R,C,Sh,F)) :-
+    action(w(At,T,D,R,C,Sh,F), abort), aborts_to(At, To).
+respond(w(At,T,1,R,C,Sh,F), check, none, w(Pr,T,1,R,C,Sh,F)) :-
+    action(w(At,T,1,R,C,Sh,F), check), probe_of(At, Pr).
+
+-- ---- reserve: IDEMPOTENT. `ok` holds one reservation whatever was held
+-- before, so a lost answer costs the workflow an attempt and nothing else.
+respond(w(reserve,T,D,R,C,Sh,F), call, ok, w(charge,0,0,1,C,Sh,F)) :-
+    may(w(reserve,T,D,R,C,Sh,F), ok).
+respond(w(reserve,T,D,R,C,Sh,F), call, fail, w(reserve,T1,D,R,C,Sh,F1)) :-
+    may(w(reserve,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(reserve,T,D,R,C,Sh,F), call, timeout, w(reserve,T1,1,R,C,Sh,F1)) :-
+    may(w(reserve,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(reserve,T,D,R,C,Sh,F), call, lost, w(reserve,T1,1,1,C,Sh,F1)) :-
+    may(w(reserve,T,D,R,C,Sh,F), lost), T1 is T + 1, F1 is F - 1.
+
+-- ---- charge: NOT IDEMPOTENT. Both `ok` and `lost` move money, and `lost`
+-- moves it without telling anyone. The retry is not an edge back into the
+-- same state; it is an edge into a NEW one with the side effect accumulated,
+-- and that is where the adversarial structure comes from.
+respond(w(charge,T,D,R,C,Sh,F), call, ok, w(ship,0,0,R,C1,Sh,F)) :-
+    may(w(charge,T,D,R,C,Sh,F), ok), C < 2, C1 is C + 1.
+respond(w(charge,T,D,R,C,Sh,F), call, fail, w(charge,T1,D,R,C,Sh,F1)) :-
+    may(w(charge,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(charge,T,D,R,C,Sh,F), call, timeout, w(charge,T1,1,R,C,Sh,F1)) :-
+    may(w(charge,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(charge,T,D,R,C,Sh,F), call, lost, w(charge,T1,1,R,C1,Sh,F1)) :-
+    may(w(charge,T,D,R,C,Sh,F), lost), C < 2, C1 is C + 1, T1 is T + 1, F1 is F - 1.
+
+-- ---- verify: one shot, charged against the SAME attempt budget as the
+-- stage it is protecting, because a probe that had a budget of its own would
+-- let the workflow ask for ever. Its `ok` reveals the world, and the three
+-- rules below are the three things it can find.
+respond(w(verify,T,D,R,0,Sh,F), call, ok, w(charge,T,0,R,0,Sh,F)) :-
+    may(w(verify,T,D,R,0,Sh,F), ok).
+respond(w(verify,T,D,R,1,Sh,F), call, ok, w(ship,0,0,R,1,Sh,F)) :-
+    may(w(verify,T,D,R,1,Sh,F), ok).
+respond(w(verify,T,D,R,2,Sh,F), call, ok, w(refund,0,0,R,2,Sh,F)) :-
+    may(w(verify,T,D,R,2,Sh,F), ok).
+respond(w(verify,T,D,R,C,Sh,F), call, fail, w(charge,T1,1,R,C,Sh,F1)) :-
+    may(w(verify,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(verify,T,D,R,C,Sh,F), call, timeout, w(charge,T1,1,R,C,Sh,F1)) :-
+    may(w(verify,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+
+-- ---- ship: NOT IDEMPOTENT, and the only stage that can go quiet. `ok`
+-- consumes the reservation and finishes; `lost` sends a parcel nobody
+-- acknowledged; `silence` changes nothing but the doubt and costs the
+-- environment nothing, which is the self-loop the third category is made of.
+respond(w(ship,T,D,R,C,Sh,F), call, ok, w(fulfilled,0,0,0,C,Sh1,F)) :-
+    may(w(ship,T,D,R,C,Sh,F), ok), Sh < 2, Sh1 is Sh + 1.
+respond(w(ship,T,D,R,C,Sh,F), call, fail, w(ship,T1,D,R,C,Sh,F1)) :-
+    may(w(ship,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(ship,T,D,R,C,Sh,F), call, timeout, w(ship,T1,1,R,C,Sh,F1)) :-
+    may(w(ship,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(ship,T,D,R,C,Sh,F), call, lost, w(ship,T1,1,R,C,Sh1,F1)) :-
+    may(w(ship,T,D,R,C,Sh,F), lost), Sh < 2, Sh1 is Sh + 1, T1 is T + 1, F1 is F - 1.
+respond(w(ship,T,D,R,C,Sh,F), call, silence, w(ship,T,1,R,C,Sh,F)) :-
+    may(w(ship,T,D,R,C,Sh,F), silence).
+
+-- ---- track: the carrier's probe, and it inherits the carrier's silence.
+-- That is why the fix that rescues the charge stage does not rescue this
+-- one: asking a provider that has gone quiet is itself quiet.
+respond(w(track,T,D,R,C,0,F), call, ok, w(ship,T,0,R,C,0,F)) :-
+    may(w(track,T,D,R,C,0,F), ok).
+respond(w(track,T,D,R,C,1,F), call, ok, w(fulfilled,0,0,0,C,1,F)) :-
+    may(w(track,T,D,R,C,1,F), ok).
+respond(w(track,T,D,R,C,2,F), call, ok, w(refund,0,0,R,C,2,F)) :-
+    may(w(track,T,D,R,C,2,F), ok).
+respond(w(track,T,D,R,C,Sh,F), call, fail, w(ship,T1,1,R,C,Sh,F1)) :-
+    may(w(track,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(track,T,D,R,C,Sh,F), call, timeout, w(ship,T1,1,R,C,Sh,F1)) :-
+    may(w(track,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(track,T,D,R,C,Sh,F), call, silence, w(track,T,1,R,C,Sh,F)) :-
+    may(w(track,T,D,R,C,Sh,F), silence).
+
+-- ---- refund: IDEMPOTENT, and it refunds the order rather than a charge, so
+-- `ok` from a double charge still lands on zero. A compensation that can
+-- itself fail is the whole reason the compensation budget is larger than the
+-- forward one.
+respond(w(refund,T,D,R,C,Sh,F), call, ok, w(release,0,0,R,0,Sh,F)) :-
+    may(w(refund,T,D,R,C,Sh,F), ok).
+respond(w(refund,T,D,R,C,Sh,F), call, fail, w(refund,T1,D,R,C,Sh,F1)) :-
+    may(w(refund,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(refund,T,D,R,C,Sh,F), call, timeout, w(refund,T1,1,R,C,Sh,F1)) :-
+    may(w(refund,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(refund,T,D,R,C,Sh,F), call, lost, w(refund,T1,1,R,0,Sh,F1)) :-
+    may(w(refund,T,D,R,C,Sh,F), lost), T1 is T + 1, F1 is F - 1.
+
+-- ---- release: IDEMPOTENT, and the last thing that happens on the way out.
+respond(w(release,T,D,R,C,Sh,F), call, ok, w(cancelled,0,0,0,C,Sh,F)) :-
+    may(w(release,T,D,R,C,Sh,F), ok).
+respond(w(release,T,D,R,C,Sh,F), call, fail, w(release,T1,D,R,C,Sh,F1)) :-
+    may(w(release,T,D,R,C,Sh,F), fail), T1 is T + 1, F1 is F - 1.
+respond(w(release,T,D,R,C,Sh,F), call, timeout, w(release,T1,1,R,C,Sh,F1)) :-
+    may(w(release,T,D,R,C,Sh,F), timeout), T1 is T + 1, F1 is F - 1.
+respond(w(release,T,D,R,C,Sh,F), call, lost, w(release,T1,1,0,C,Sh,F1)) :-
+    may(w(release,T,D,R,C,Sh,F), lost), T1 is T + 1, F1 is F - 1.
+
+-- -------------------------------------------------------------------------
+-- 2.4 when the books balance
+--
+-- A terminal is SETTLED when the world is consistent, and consistency is a
+-- statement about money and goods, not about the workflow's feelings. There
+-- are exactly two consistent endings: the order was fulfilled — charged
+-- once, dispatched once, reservation consumed — or it was cancelled with
+-- nothing charged, nothing sent and nothing held.
+--
+-- `abandoned` is never settled, whatever the world looks like. That is what
+-- a dead letter queue IS: the task stopped without an answer. It is also the
+-- line that keeps the analysis honest, because a `park` that counted as
+-- settled whenever the world happened to be clean would let the fixpoint
+-- certify the strategy "give up at exactly the right moment", which no
+-- workflow can implement.
+
+settled(w(fulfilled,T,D,0,1,1,F)) :- state(w(fulfilled,T,D,0,1,1,F)).
+settled(w(cancelled,T,D,0,0,0,F)) :- state(w(cancelled,T,D,0,0,0,F)).
+
+-- -------------------------------------------------------------------------
+-- 2.5 the machine's own audit
+--
+-- An action with no responses would be VACUOUSLY safe — `risky` needs a
+-- response to fire, so an action nobody can answer makes `will_settle` true
+-- for free. That is a soundness hole in the model rather than in the kernel,
+-- and it is exactly the shape of hole a cap on an arithmetic argument opens:
+-- raise `limit(charge, 2)` and a third charge has no `ok` successor, because
+-- `C < 2` refuses it. This relation is the gate that says so. It is empty in
+-- the baseline and demo.ts §2 makes it non-empty on purpose.
+
+has_response(S, A) :- respond(S, A, _, _).
+dangling(S, A) :- action(S, A), not has_response(S, A).
+
+-- =========================================================================
+-- 3. THE GAME
+-- =========================================================================
+-- Everything below this marker is the alternating fixpoint and what reads
+-- it. demo.ts §3 loads this half on its own against the machine of §2 dumped
+-- as facts, and checks that the staged answer and the whole-file answer
+-- agree state for state.
+--
+-- @game
+
+semantics(well_founded).
+
+-- THE ONE PLACE THE QUANTIFIERS ALTERNATE.
+--
+--   will_settle(S)  there EXISTS an action all of whose answers settle
+--   risky(S, A)     there EXISTS an answer to A that does not settle
+--
+-- `not risky(S, A)` is the universal quantifier: for ALL answers, the
+-- successor settles. Written directly it would be a universal over an open
+-- set, which no rule language has; written this way it is two existentials
+-- and one negation, and the negation is what puts the pair in a cycle.
+--
+-- Read the pair as a game and both halves are ordinary. The workflow moves
+-- first and wants to reach a settled terminal; the environment answers and
+-- wants to stop it. What the alternating fixpoint computes is the standard
+-- three-way split of such a game: the workflow's winning region, the
+-- environment's winning region, and the states where neither can force its
+-- own end and the play may go on for ever.
+
+will_settle(S) :- settled(S).
+will_settle(S) :- action(S, A), not risky(S, A).
+risky(S, A)    :- respond(S, A, _, S2), not will_settle(S2).
+
+-- The other two categories, and they are two different kinds of sentence.
+--
+-- `doomed` is DERIVED: it is the environment's winning region, and it is
+-- true of a state exactly where the alternation makes `will_settle` false —
+-- no round derives it, however generously negation is judged. Note what it
+-- does NOT mean: not "no lucky sequence exists". A doomed state can still be
+-- reached by a run that happens to finish (§6 counts them). It means the
+-- environment has a strategy that stops it, so retrying is not the fix.
+--
+-- `dead_letter` READS THE THIRD VALUE. `unknown/1` is a value like any
+-- other here: a rule may match it, and this one does. Its rows are the
+-- complement of the fixpoint, they carry the firing that derived them, and
+-- they are the population of the dead letter queue.
+
+doomed(S)      :- state(S), not will_settle(S).
+dead_letter(S) :- state(S), unknown(will_settle(S)).
+
+-- One relation carrying all three, so that a report can join on it. The
+-- third row is the one that could not be written in a two-valued engine.
+verdict(S, settles)     :- will_settle(S).
+verdict(S, doomed)      :- doomed(S).
+verdict(S, dead_letter) :- dead_letter(S).
+
+-- -------------------------------------------------------------------------
+-- 3.1 fragility, as a count of plays rather than of states
+--
+-- `can_settle(S)` is true where SOME play from S ends with the books
+-- balanced — luck, not strategy. Folded with the counting semiring it says
+-- how many such plays there are, and one is the number that matters: a task
+-- with exactly one route home dies the day that route stops existing, and no
+-- test fails when it does. Where a silence loop is on the way the count is
+-- infinitely many, which is the honest answer and is checked as a
+-- divergence rather than assumed — demo.ts §7 refuses to close the cycle and
+-- watches the bounded counts grow.
+
+can_settle(S) :- settled(S).
+can_settle(S) :- respond(S, _, _, S2), can_settle(S2).
+
+-- -------------------------------------------------------------------------
+-- 3.2 the cross-check against the simulator's journal
+--
+-- The simulator writes `sim_seen[sim](Env, S)` for a state it started runs
+-- from, and one of `sim_settled`, `sim_failed`, `sim_capped` for each
+-- outcome it saw. `capped` is a run that hit the step cap: the simulator's
+-- own budget hole, kept apart from both verdicts for the same reason the
+-- kernel keeps `hole(Id, budget_exhausted)` apart from `unknown` — a run
+-- that was stopped is not a run that finished badly.
+--
+-- The four outcomes below are named, one relation, one atom each — three
+-- disagreements and one agreement, because a comparison that can only report
+-- disagreement is not a comparison. A table of rates would say the two agree
+-- 94% of the time and destroy exactly what the comparison is for.
+
+-- The certified strategy is not the deployed policy: the model says a
+-- strategy exists and the policy in the simulator hangs anyway.
+crosscheck(S, Env, policy_hangs_where_a_strategy_exists) :-
+    verdict(S, settles), sim_capped[sim](Env, S).
+
+-- The model says the environment can force failure, and under this
+-- environment every single run failed — agreement, kept as its own row so
+-- the interesting rows can be read against something.
+crosscheck(S, Env, agrees_forced_and_observed) :-
+    verdict(S, doomed), sim_failed[sim](Env, S), not sim_settled[sim](Env, S).
+
+-- The model says the environment can force failure and this environment
+-- never managed it. Not a defect: `doomed` is about what an adversary CAN
+-- do, and a random provider is not an adversary.
+crosscheck(S, Env, forced_but_never_seen) :-
+    verdict(S, doomed), sim_seen[sim](Env, S), not sim_failed[sim](Env, S).
+
+-- The static analysis found a pathology the runs did not reach. This is the
+-- row that justifies doing the analysis at all, and it is expected to be
+-- large under a random environment and empty under an adversarial one.
+crosscheck(S, Env, dead_letter_never_observed) :-
+    verdict(S, dead_letter), sim_seen[sim](Env, S), not sim_capped[sim](Env, S).
+
+-- Acceptance scenario (examples/rip/demo.ts runs all of it):
+--   ? unstratified(X)              -> will_settle, reported as information
+--   ? leak[audit](A, B)            -> empty  (planted leak: one row)
+--   ? dangling(S, A)               -> empty  (raise limit(charge,2): non-empty)
+--   ? verdict(S, C)                -> 133 states, 77 / 32 / 24
+--   ? dead_letter(S)               -> 24, every one of them at ship or track
+--   why unknown(will_settle(...))  -> the failure sequence, closing on [cycle]
+--   counting can_settle(S)         -> 1 is fragile, infinitely many is a loop
+--   ? crosscheck(S, Env, What)     -> named, never averaged

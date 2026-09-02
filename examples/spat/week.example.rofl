@@ -1,0 +1,301 @@
+-- week.example.rofl — THE WEEK THIS DEMO SHIPS WITH.
+--
+-- A two-adult, two-child household with one school, one садик, a sitter, the
+-- neighbours, a school bus and an employer that runs late on Thursdays. The
+-- shape and every minute are transcribed from a real family week; the names
+-- are not, and the real one lives outside this repository.
+--
+-- COPY THIS FILE TO `week.rofl` AND TYPE IN YOURS. `week.rofl` is in
+-- .gitignore, so your household's hours stay on your machine — which is where
+-- a document listing where your children are every hour belongs.
+--
+--
+-- Everything below is data. The rules live in spat.rofl and never need
+-- touching. The example is a real family week, transcribed from a hand-built
+-- schedule; delete it, keep the shape, type in yours.
+--
+-- HOW TO READ A LINE. Every line is `relation(field, field, ...).` — the
+-- trailing full stop is part of it. Lowercase words are names (make them up;
+-- keep them consistent). Numbers are MINUTES SINCE MIDNIGHT:
+--
+--     07:00 = 420   09:00 =  540   13:00 = 780   17:00 = 1020   21:00 = 1260
+--     07:30 = 450   10:00 =  600   13:30 = 810   18:00 = 1080   22:00 = 1320
+--     08:00 = 480   11:00 =  660   14:00 = 840   19:00 = 1140
+--     08:30 = 510   12:00 =  720   15:00 = 900   20:00 = 1200
+--
+--     hours * 60 + minutes.   13:25 = 13*60 + 25 = 805.
+--
+-- `--` starts a comment. Comment a line out to see the week without it.
+--
+-- WHERE THIS EXAMPLE CAME FROM. The people, the institutions, the four
+-- external parties and the three weeks are transcribed from a real schedule.
+-- The exact minutes of several household blocks were not legible in the
+-- source and are marked `-- INFERRED`; change them to yours first, because
+-- the answers about slack depend on them to the minute.
+
+
+-- =========================================================================
+-- 1. WHO
+-- =========================================================================
+-- person(Name, Kind).
+--   adult      — can cover a child and can drive
+--   child      — needs covering whenever awake and not somewhere supervised
+--   helper     — paid help; present only inside declared windows (below)
+--   neighbour  — the same, and OUTSIDE the household: see section 5
+--   service    — a bus, a taxi; only ever appears as the giver of a lift
+--
+-- EVERYONE WHO CAN AFFECT YOUR WEEK GOES HERE, including the neighbours.
+-- That is what makes `whatif --without nextdoor` answerable.
+
+person(alex,      adult).
+person(robin,     adult).
+person(kit,     child).       -- school
+person(nico,       child).       -- садик
+person(nanny,      helper).      -- some evenings
+person(nextdoor,    neighbour).   -- next door; Кит waits at theirs
+person(school_bus, service).
+person(guest,      visitor).     -- comes on a Friday; see section 7
+
+driver(alex).
+driver(robin).
+car(car1).
+
+
+-- =========================================================================
+-- 2. WHERE
+-- =========================================================================
+-- base(Home) is where the day starts and ends. supervised(Place) means a
+-- child there needs nobody from the household — that is what school and
+-- садик ARE, in this model.
+
+base(home).
+
+place(home).    place(school).  place(sadik).   place(physio).
+place(pool).    place(office).  place(shop).    place(park).
+place(clinic).
+
+supervised(school).
+supervised(sadik).
+
+-- travel(A, B, Minutes) — BY CAR. Write each pair ONCE; the other direction
+-- is derived, and A-to-A is zero. Travel is what turns "плавание until 18:00"
+-- into "not home until 18:20", so it is worth getting right.
+travel(home,   school, 20).   -- the one journey the source gives exactly
+travel(home,   sadik,  15).   -- INFERRED
+travel(home,   physio, 20).   -- INFERRED
+travel(home,   pool,   20).   -- INFERRED
+travel(home,   office, 25).   -- INFERRED
+travel(home,   shop,   15).   -- INFERRED
+travel(home,   park,    5).   -- INFERRED
+travel(home,   clinic, 20).   -- INFERRED
+travel(school, sadik,   5).   -- INFERRED, both in the same town
+travel(physio, sadik,   5).   -- INFERRED, and load-bearing: see `spat fragile`
+
+
+-- =========================================================================
+-- 3. DAYS
+-- =========================================================================
+-- Days 1-5 are weekdays. A day field anywhere below takes one day (`fri`),
+-- the word `weekdays`, the word `alldays`, or a group named here.
+
+day(mon, 1).  day(tue, 2).  day(wed, 3).  day(thu, 4).
+day(fri, 5).  day(sat, 6).  day(sun, 7).
+
+in_group(physio_days, mon).   in_group(physio_days, fri).
+in_group(walk_days,   mon).   in_group(walk_days,   tue).   in_group(walk_days, fri).
+in_group(nanny_days,  mon).   in_group(nanny_days,  wed).   in_group(nanny_days, fri).
+in_group(bus_days,    mon).   in_group(bus_days,    tue).
+in_group(bus_days,    wed).   in_group(bus_days,    thu).
+
+-- When the adults are up. Free time is only ever measured inside this.
+day_wake(420, 1320).          -- 07:00-22:00
+
+
+-- =========================================================================
+-- 4. WHEN THE CHILDREN NEED SOMEBODY
+-- =========================================================================
+-- awake(Id, Child, Days, From, To). Outside this they are asleep and need
+-- nobody. Inside it, every minute not at school, not at садик and not in
+-- somebody's `with` block is a minute that must be covered — and if it is
+-- not, that is the red block.
+
+awake(c_sleep, nico,   alldays, 420, 1200).   -- 07:00-20:00
+awake(c_sleep, kit, alldays, 420, 1260).   -- 07:00-21:00
+
+
+-- =========================================================================
+-- 5. CONSTRAINTS BELONG TO PEOPLE  <<< the load-bearing idea
+-- =========================================================================
+-- constraint(Id, Owner, Scope).
+--
+--   Id     — a name you invent, starting with c_. Several facts may share one
+--            Id when they are one arrangement.
+--   Owner  — WHOSE requirement this is. Required. Never leave it out.
+--   Scope  — `household` if you can renegotiate it round the kitchen table,
+--            `external` if it belongs to someone outside and changes without
+--            warning.
+--
+-- This is where "садик Ромы до 13:30 — это решение или ограничение?" gets its
+-- answer, and the answer is a field, not an opinion. The scope is not
+-- decoration: external constraints are where perturbation comes from, and
+-- when the tool tells you what would have to give it tells you whose it is
+-- and whether that is a conversation you can actually have.
+
+-- --- outside the household -------------------------------------------------
+constraint(c_school,       school,   external).  -- the school day
+constraint(c_school_fri,   school,   external).  -- ...and Friday ends earlier
+constraint(c_lineika,      school,   external).  -- 1 September, линейка
+constraint(c_bus,          school,   external).  -- the bus home
+constraint(c_bus_fri,      school,   external).  -- ...which comes early on Friday
+constraint(c_sadik,        sadik,    external).  -- садик, closes 13:30
+constraint(c_sadik_closed, sadik,    external).  -- ...and is shut until Wednesday
+constraint(c_acme,      acme,  external).  -- Алекс's Thursday evening
+constraint(c_nanny,        nanny,    external).  -- when the няня can come
+constraint(c_nextdoor,      nextdoor,  external).  -- Кит waits at theirs
+constraint(c_guest,        guest,    external).  -- the Friday visit
+constraint(c_dentist,      dentist,  external).  -- and the Wednesday it displaced
+
+-- --- the household's own ---------------------------------------------------
+constraint(c_school_run,   alex,    household). -- who does the morning
+constraint(c_work,         alex,    household). -- the working day at home
+constraint(c_physio,       robin,   household). -- физио
+constraint(c_pickup,       robin,   household). -- забор детей
+constraint(c_swim,         robin,   household). -- плавание
+constraint(c_lunch,        robin,   household). -- обед
+constraint(c_walk,         robin,   household). -- прогулка
+constraint(c_shop,         alex,    household). -- закупка
+constraint(c_clean,        robin,   household). -- генуборка
+constraint(c_sleep,        robin,   household). -- bedtimes
+
+-- give(Id, Cost) — OPTIONAL. How much trouble relaxing this one is. Without
+-- a line, a household constraint costs 50 and an external one 200, because
+-- asking the school to move is harder than moving your own прогулка.
+give(c_walk,  20).
+give(c_swim,  40).
+give(c_shop,  30).
+
+
+-- =========================================================================
+-- 6. THE TYPICAL WEEK
+-- =========================================================================
+-- usual(Id, Block, Who, Where, Days, From, To).
+--
+-- This is the pattern, written ONCE. Two more layers sit on top of it:
+-- `usual_on` for a day that is always different, and section 7 for what one
+-- particular week did. There are no seven schedules anywhere.
+--
+-- kind(Block, work) marks a block as working time, for `spat hours`.
+-- with(Block, Child) says this block also has that child in it — which is
+-- what makes the block cover them.
+
+-- --- the morning run -------------------------------------------------------
+-- 07:30 and the twenty minutes to school are the one journey the source gives
+-- exactly; the two drop times around them are INFERRED.
+usual(c_school_run, run_school, alex, school, weekdays, 450, 480).  -- 07:30-08:00
+usual(c_school_run, run_sadik,  alex, sadik,  weekdays, 490, 510).  -- 08:10-08:30
+with(run_school, kit).
+with(run_sadik,  nico).
+
+-- --- the institutions ------------------------------------------------------
+usual(c_school, school_kit, kit, school, weekdays, 480, 840).  -- 08:00-14:00
+usual(c_sadik,  sadik_nico,    nico,   sadik,  weekdays, 510, 810).  -- 08:30-13:30
+
+-- usual_on(Id, Block, Day, From, To) — a day that is ALWAYS different. One
+-- fact, and Friday assembles itself differently everywhere downstream.
+usual_on(c_school_fri, school_kit, fri, 480, 800).                -- bus at 13:20
+
+-- --- Алекс's working day ---------------------------------------------------
+-- Acme's Thursday 18:00-20:30 is from the source. The two home blocks are
+-- INFERRED from the badge «работа ~6:00» and the annotation on the morning
+-- block («с Ромой рядом — реально часа 3-4»), which `spat hours` reproduces.
+usual(c_work, work_am, alex, home,   weekdays, 540, 780).           -- 09:00-13:00
+usual(c_work, work_pm, alex, home,   weekdays, 840, 960).           -- 14:00-16:00
+usual(c_acme, acme, alex, office, thu,   1080, 1230).         -- 18:00-20:30
+kind(work_am, work).
+kind(work_pm, work).
+kind(acme, work).
+
+-- --- Робин's week ---------------------------------------------------------
+-- 13:20 (физио ends) and 13:25 (забор детей starts) are BOTH from the source,
+-- and they are the two numbers the sharpest answer in the week rests on. The
+-- 12:30 start is INFERRED.
+usual(c_physio, physio, robin, physio, physio_days, 750, 800).      -- 12:30-13:20
+usual(c_pickup, pickup, robin, sadik,  weekdays,    805, 830).      -- 13:25-13:50
+usual(c_lunch,  lunch,  robin, home,   weekdays,    855, 885).      -- 14:15-14:45 INFERRED
+usual(c_walk,   walk,   robin, park,   walk_days,  1020, 1080).     -- 17:00-18:00 INFERRED
+usual(c_swim,   swim,   robin, pool,   wed,        1020, 1080).     -- 17:00-18:00
+with(pickup, nico).
+with(lunch,  nico).
+with(lunch,  kit).
+with(walk,   nico).
+with(walk,   kit).
+
+-- --- the household ---------------------------------------------------------
+usual(c_shop,  shopping, alex,  shop, fri, 990, 1080).              -- 16:30-18:00 INFERRED
+usual(c_clean, cleaning, robin, home, sat, 600,  720).              -- 10:00-12:00 INFERRED
+
+
+-- =========================================================================
+-- 7. THIS WEEK, AND THE NEXT ONE
+-- =========================================================================
+-- Three tabs in the original schedule: two dated weeks and the typical one.
+-- They are NOT three schedules. Each dated week is the typical week plus the
+-- handful of facts below, and every one of them names the constraint that
+-- caused it.
+--
+--   moved(Id, Block, Week, FromDay, ToDay, From, To)  — this week it is there
+--   skipped(Id, Block, Week, Day)                     — this week it is off
+--   added(Id, Block, Who, Where, Week, Day, From, To) — this week only
+--
+-- `current(Week)` picks which one you are looking at. `spat --week-of w0907`
+-- swaps it without editing anything.
+
+week(w0831).      -- 31.08 - 06.09
+week(w0907).      -- 07.09 - 13.09
+current(w0831).
+
+-- --- week of 31.08 ---------------------------------------------------------
+-- садик was shut until the Wednesday.
+skipped(c_sadik_closed, sadik_nico, w0831, mon).
+skipped(c_sadik_closed, sadik_nico, w0831, tue).
+-- 1 September: линейка instead of the school day.
+moved(c_lineika, school_kit, w0831, tue, tue, 500, 630).          -- 08:20-10:30
+-- The dentist took Wednesday evening, so плавание went to Thursday — which
+-- is the evening Алекс is at Acme and the няня does not come.
+moved(c_dentist,  swim, w0831, wed, thu, 1020, 1080).
+added(c_dentist, dentist, robin, clinic, w0831, wed, 1020, 1080).
+
+-- --- week of 07.09 ---------------------------------------------------------
+-- Гость comes on the Friday, so закупка moved to Saturday.
+moved(c_guest, shopping, w0907, fri, sat, 600, 690).                 -- 10:00-11:30
+
+
+-- =========================================================================
+-- 8. WHO IS AVAILABLE, AND WHEN
+-- =========================================================================
+-- present_window(Id, Who, Days, From, To) — a helper or a neighbour exists
+-- ONLY inside these windows. No window on a day means they are not there.
+-- Everyone else is around all day unless `absent`.
+
+present_window(c_nanny,   nanny,   nanny_days, 1140, 1320).   -- 19:00-22:00
+present_window(c_nextdoor, nextdoor, weekdays,    800,  860).   -- 13:20-14:20
+
+-- absent(Id, Who, Days)          — away in the typical week
+-- absent_on(Id, Who, Week, Day)  — away on one day of one week
+--
+-- Nothing here at the moment. `whatif --without <name>` asks the same
+-- question without editing the file, and `whatif --add 'absent_on(...).'`
+-- puts a future day in without committing to it.
+
+
+-- =========================================================================
+-- 9. LIFTS OTHER PEOPLE GIVE
+-- =========================================================================
+-- lift(Id, WhoGives, WhoRides, From, To, Days, Leaves, Arrives).
+--
+-- The school bus, the neighbour who takes a child, the grandparent who
+-- collects on Wednesdays. These are the arrangements you did not make and
+-- cannot control.
+
+lift(c_bus,     school_bus, kit, school, home, bus_days, 840, 870).  -- 14:00->14:30
+lift(c_bus_fri, school_bus, kit, school, home, fri,      800, 830).  -- 13:20->13:50

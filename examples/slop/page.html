@@ -1,0 +1,745 @@
+<meta charset="utf-8">
+<title>SLOP — Spreadsheet Ledger Over Provenance</title>
+
+<style>
+  :root {
+    --bg:        #fbfaf6;
+    --panel:     #ffffff;
+    --ink:       #1b1a17;
+    --ink-soft:  #58554e;
+    --ink-faint: #8a867c;
+    --line:      #e2dfd6;
+    --line-soft: #eeebe3;
+    --accent:    #15654a;
+    --accent-bg: #e6f2ec;
+    --warn:      #a2521a;
+    --warn-bg:   #fcf0e4;
+    --bad:       #a03030;
+    --code-bg:   #f3f1ea;
+    --shadow:    0 1px 2px rgba(28, 26, 22, .06), 0 8px 24px rgba(28, 26, 22, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #14161a;
+      --panel:     #1c1f24;
+      --ink:       #e9ecf0;
+      --ink-soft:  #aab0b8;
+      --ink-faint: #7b818a;
+      --line:      #313640;
+      --line-soft: #262a31;
+      --accent:    #6cd3ab;
+      --accent-bg: #17302a;
+      --warn:      #eda560;
+      --warn-bg:   #2e2318;
+      --bad:       #f09090;
+      --code-bg:   #101216;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #14161a;
+    --panel:     #1c1f24;
+    --ink:       #e9ecf0;
+    --ink-soft:  #aab0b8;
+    --ink-faint: #7b818a;
+    --line:      #313640;
+    --line-soft: #262a31;
+    --accent:    #6cd3ab;
+    --accent-bg: #17302a;
+    --warn:      #eda560;
+    --warn-bg:   #2e2318;
+    --bad:       #f09090;
+    --code-bg:   #101216;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 48rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); }
+  .level-hint { font-size: .85rem; color: var(--ink-faint); margin-left: auto; }
+
+  #doc[data-level="kid"] .eng { display: none; }
+  #doc[data-level="eng"] .kid { display: none; }
+
+  section { margin: 3rem 0 0; scroll-margin-top: 1rem; }
+  h2 { font-size: 1.35rem; letter-spacing: -.01em; margin: 0 0 .2rem; display: flex; align-items: baseline; gap: .6rem; }
+  h2 .n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem; color: var(--accent); background: var(--accent-bg);
+    border-radius: 999px; padding: .15rem .55rem; font-weight: 600; flex: none;
+  }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .4rem; letter-spacing: -.005em; }
+  p { margin: .8rem 0; }
+  .kid p { font-size: 1.05rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  strong { font-weight: 650; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .8rem; line-height: 1.55;
+    margin: 1rem 0; color: var(--ink);
+  }
+  :not(pre) > code {
+    background: var(--code-bg); border-radius: 5px; padding: .1em .35em;
+    font-size: .88em; border: 1px solid var(--line-soft);
+  }
+  pre b { color: var(--warn); font-weight: 700; }
+  pre i { color: var(--accent); font-style: normal; font-weight: 700; }
+  figure { margin: 1.4rem 0; }
+  figcaption { font-size: .82rem; color: var(--ink-faint); margin-top: .5rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .real {
+    display: inline-block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid currentColor; border-radius: 999px;
+    padding: .05rem .5rem; margin-bottom: .5rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .cards { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1.4rem 0; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: .9rem 1rem; box-shadow: var(--shadow);
+  }
+  .card .k { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .card .v { font-size: 1.5rem; font-weight: 650; letter-spacing: -.02em; margin: .2rem 0 .1rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .card .d { font-size: .85rem; color: var(--ink-soft); }
+
+  .split { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin: 1.4rem 0; }
+  .side { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .side h4 { margin: 0 0 .4rem; font-size: .95rem; }
+  .side.excel h4 { color: var(--bad); }
+  .side.slop h4 { color: var(--accent); }
+  .side p { margin: .5rem 0; font-size: .92rem; }
+  .side pre { margin: .6rem 0 0; font-size: .76rem; }
+
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; margin: 1.2rem 0; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  td:first-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+
+  .scroller { overflow-x: auto; }
+
+  .note {
+    border-left: 3px solid var(--warn); background: var(--warn-bg);
+    padding: .8rem 1rem; border-radius: 0 10px 10px 0; margin: 1.4rem 0; font-size: .95rem;
+  }
+  .note strong { color: var(--warn); }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .85rem; }
+
+  @media (max-width: 46rem) {
+    .split { grid-template-columns: 1fr; }
+    .level-hint { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ROFL &middot; examples/slop</p>
+  <h1>SLOP <span class="dim">— Spreadsheet Ledger Over Provenance</span></h1>
+  <p class="lede">
+    A spreadsheet cell says <strong>0.04732509</strong> and nobody can tell you
+    why. This walks it all the way back — through a total, through a lookup into
+    another sheet — and points at the numbers somebody typed in by hand.
+  </p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Explanation level">
+      <button type="button" data-set="kid" aria-pressed="true">Plain</button>
+      <button type="button" data-set="eng" aria-pressed="false">Engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">Light / dark</button>
+    <span class="level-hint" id="hint">Explained without jargon.</span>
+  </div>
+</header>
+
+<main id="doc" data-level="kid">
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">1</span> A number with no story</h2>
+
+  <div class="kid">
+    <p>
+      A spreadsheet is a grid of boxes. Some boxes have numbers a person typed
+      in. Other boxes have <em>recipes</em>: "add up those twelve boxes", "look
+      this word up in that table and bring back what is next to it". The
+      spreadsheet follows all the recipes and shows you the answers.
+    </p>
+    <p>
+      Then somebody points at one answer and asks <strong>where did that come
+      from?</strong> — and the spreadsheet has nothing to say. It kept the
+      answer. It threw away how it got there. If you want to know, you click
+      into one box, read its recipe, click into the next box, read that recipe,
+      and keep going, by hand, sometimes for an hour.
+    </p>
+    <p>
+      That is not a small annoyance. Spreadsheets run companies, and the
+      mistakes in them are famous and expensive. The mistake is almost never in
+      the arithmetic. It is a number somebody typed into the middle of the
+      grid years ago that nobody has looked at since.
+    </p>
+  </div>
+
+  <div class="eng">
+    <p>
+      A spreadsheet <strong>already is a fixpoint engine</strong>. Cells are
+      relations, formulas are rules, and recalculation is iteration to a
+      fixpoint over a dependency graph. It is just a bad one, and the four
+      things it is bad at are one thing:
+    </p>
+    <ul>
+      <li><strong>Circular references</strong> — a checkbox, a manual iteration
+        limit, no convergence guarantee and no report of whether it converged.</li>
+      <li><strong>Provenance</strong> — "trace precedents" draws arrows one
+        level deep, and that is all there is.</li>
+      <li><strong>Uncertainty</strong> — not modelled. A point number, or Monte
+        Carlo through an add-in.</li>
+      <li><strong>Sensitivity</strong> — retype a value, look at what moved.</li>
+    </ul>
+    <p>
+      All four follow from <strong>the carrier of a value being hardwired</strong>.
+      A cell holds a double; the engine knows only how to combine doubles; every
+      question that needs a different carrier — a set of sources, an interval, a
+      round index — has nowhere to live.
+    </p>
+    <p>
+      SLOP reads a real <code>.xlsx</code>, reifies each formula as a tree of
+      facts, and evaluates the tree with rules. The carrier then becomes a
+      parameter: the same tree is walked by three evaluators, and the kernel's
+      recorded support hypergraph answers the rest.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="k">the model</div><div class="v">1231</div><div class="d">formula cells, in a real published valuation spreadsheet — not one written for this demo</div></div>
+    <div class="card"><div class="k">the subset</div><div class="v">7</div><div class="d">formulas in the whole workbook use anything outside <code>IF</code>, <code>VLOOKUP</code>, <code>SUM</code> and arithmetic</div></div>
+    <div class="card"><div class="k">dependencies</div><div class="v">0</div><div class="d">an <code>.xlsx</code> is a ZIP of XML, and Node can unzip one on its own</div></div>
+    <div class="card"><div class="k">worst error</div><div class="v">2</div><div class="d">hundred-millionths off, against Excel and LibreOffice both — in this model, two cents</div></div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">2</span> The walk back</h2>
+
+  <div class="kid">
+    <p>
+      Here is one real answer from a real spreadsheet, walked all the way back.
+      Read it top to bottom: each indent is one step further into the past of
+      that number.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Every line below is read out of the <strong>witness forest the store
+      recorded while deriving the value</strong> — not recomputed to draw the
+      picture. Two consequences worth naming: only the branch of an
+      <code>IF</code> that actually fired is here, and the walk goes
+      <em>through</em> the <code>VLOOKUP</code> into the row the lookup hit.
+    </p>
+  </div>
+
+  <figure>
+    <span class="real">real output</span>
+    <pre>&gt; huh Cost of capital worksheet!K18
+Cost of capital worksheet!K18 = 0.04732509  &lt;- =SUM(K5:K17)
+  Cost of capital worksheet!K5 = 0.03830277  &lt;- =IF(J5=0,0,I5*J5)
+    <b>0   [A CONSTANT TYPED INTO THE FORMULA]</b>
+    Cost of capital worksheet!J5 = 0.85880667  &lt;- =IF(H5&gt;0,H5/$H$18,)
+      <b>Cost of capital worksheet!H5 = 193636   [MANUAL ENTRY — a number a human typed]</b>
+      Cost of capital worksheet!H18 = 225471  &lt;- =SUM(H5:H17)
+        Cost of capital worksheet!H6 = 500   [MANUAL ENTRY — a number a human typed]
+        <b>Cost of capital worksheet!H7 = 0   [BLANK CELL, read as zero]</b>
+    Cost of capital worksheet!I5 = 0.0446  &lt;- =IF(H5=0,0,VLOOKUP(G5,'Country equity risk premiums'!$A$5:$D$196,4))
+      <i>via VLOOKUP into Country equity risk premiums!A5:D196</i>
+      Cost of capital worksheet!G5 = "United States"   [text a human typed]
+      Country equity risk premiums!D189 = 0.0446  &lt;- =$B$1+E189
+        <b>Country equity risk premiums!B1 = 0.0423   [MANUAL ENTRY — a number a human typed]</b>
+        <b>Country equity risk premiums!E189 = 0.0023   [MANUAL ENTRY — a number a human typed]</b></pre>
+    <figcaption>node --experimental-strip-types examples/slop/demo.ts, section 2, abridged</figcaption>
+  </figure>
+
+  <div class="kid">
+    <p>
+      The lines in colour are the whole point.
+      <strong>A number a human typed</strong> sitting in the middle of a
+      calculated model, and <strong>a number typed straight into a recipe</strong>
+      where it is not even in a box, are the two commonest ways a spreadsheet
+      goes wrong — and normally you cannot see either of them. A blank box that
+      a total quietly counts as zero is a third.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The two marks are one rule each, over facts the reader emits from the file
+      itself — <code>input(Cell, V)</code> where the file holds a typed-in
+      number, <code>num(Node, V)</code> where it holds a constant inside formula
+      text:
+    </p>
+    <pre>manual_entry(C) :- input(C, _).
+hardcoded(C, V) :- node_in(C, N), num(N, V).</pre>
+    <p>
+      A third mark came out of building it and was kept: a blank cell inside a
+      <code>SUM</code> range is a silent zero in every spreadsheet, and there
+      are twenty of them in the precedent closure of this one cell.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">3</span> Which numbers actually matter</h2>
+
+  <div class="kid">
+    <p>
+      That one answer sits on top of <strong>197</strong> numbers people typed
+      into the grid. But if you changed most of them, the answer would not move
+      at all — they feed other parts of the sheet. Only <strong>seven</strong>
+      of them can change it.
+    </p>
+    <p>
+      Normally you find that out by changing a number, looking, changing it
+      back, and doing it again 196 times. Here it is one question.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      The provenance semiring, folded over the same support hypergraph, with the
+      base annotation set to name only <code>input</code> facts — so a monomial
+      <em>is</em> a set of typed-in numbers. One fold, no perturbation of
+      anything, and the answer is exact rather than sampled.
+    </p>
+    <pre>Cost of capital worksheet!K18 rests on 7 manual entries:
+  Cost of capital worksheet!H16      Country equity risk premiums!B1
+  Cost of capital worksheet!H5       Country equity risk premiums!E189
+  Cost of capital worksheet!H6       Country equity risk premiums!E42
+  Cost of capital worksheet!I16
+complete: true   (of 197 typed-in numbers in the closure)</pre>
+    <p>
+      Two more folds over the same forest answer two more questions. The Boolean
+      semiring, with a chosen input set true and every other typed-in number
+      false, gives the cells that rest <em>entirely</em> on those inputs —
+      &otimes; is AND, so it is "fully determined by", not "touched by". The
+      counting semiring gives, for each value, <em>how many ways the sheet
+      produces it</em> — and here anything but 1 is a defect report, because a
+      well-formed sheet produces each number one way. A count of 2 means a
+      <code>VLOOKUP</code> table holds the key twice, which a spreadsheet
+      resolves silently by taking whichever row it reaches first.
+    </p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">4</span> How wrong could it be</h2>
+
+  <div class="kid">
+    <p>
+      Every one of those typed-in numbers is a guess about the future. The
+      spreadsheet does not care: it takes each guess as if it were exact and
+      hands back one number to eight decimal places, which looks like certainty
+      and is not.
+    </p>
+    <p>
+      Say instead: "revenue grows somewhere between 3% and 7% a year — I do not
+      know which." Nothing else changes. No recipe is edited. The answer comes
+      back as a <em>range</em>:
+    </p>
+    <pre>Input sheet!B26     = 0.05                      the growth rate somebody typed
+Valuation output!M3 = 36634.40033821          revenue in year 10
+
+  with growth known only to be between 3% and 7%:
+
+Valuation output!M3 = [<b>28491.05807458 .. 46793.86593094</b>]</pre>
+    <p>
+      That took one pass. Not a thousand simulations, not an add-in — the same
+      walk over the same recipes, carrying two numbers instead of one.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Interval arithmetic lives in the <strong>rules</strong>
+      (<code>iv</code>/<code>ivalue</code> in <code>slop.rofl</code>), because
+      the carrier of a <em>cell value</em> is the thing this example
+      parameterises. It is declared honestly, and the declaration is checkable:
+    </p>
+    <ul>
+      <li>Every input is its value widened by <strong>one unit</strong> — the
+        rounding the host did turning decimal text into an integer.</li>
+      <li>Every product and quotient is widened outward by <strong>four
+        units</strong>, covering the at-most-three-unit truncation of the split
+        multiply.</li>
+      <li>Both widenings are <strong>outward</strong>, so the result is a
+        <strong>guaranteed enclosure</strong> and not an estimate.</li>
+      <li>A comparison under uncertainty has <strong>three</strong> answers, and
+        the third is the interesting one: <code>[0, 1]</code> means the model
+        would take <em>either</em> branch, and an <code>IF</code> then returns
+        the hull of both. No point recomputation can produce that.</li>
+    </ul>
+    <p>
+      Because it is an enclosure, it can be tested rather than trusted. Run the
+      interval evaluator with <em>no</em> uncertainty declared at all, and ask
+      whether the double the spreadsheet computed lies inside the interval:
+    </p>
+    <pre>212 cells checked, 212 enclose Excel's own value
+  oracle: AGREE — the interval run encloses Excel's value on 212 cells</pre>
+    <div class="note">
+      <strong>Why this is not a semiring.</strong> A fold over the support
+      hypergraph computes <code>v(f) = ⊕ over supports of (weight ⊗ ⊗ premises)</code>
+      — one &otimes; for every firing, whatever rule fired it. The hypergraph
+      does not record <em>which arithmetic</em> a firing performed, so a single
+      &otimes; cannot be <code>+</code> at a <code>plus</code> node and
+      <code>×</code> at a <code>times</code> node. The fold answers
+      <em>which</em>, <em>how many</em>, <em>how deep</em> and <em>how
+      trusted</em>. It can never answer <em>what number</em>. (And general
+      interval arithmetic is only sub-distributive over the hull, so it is not a
+      semiring in any case.)
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">5</span> The circle</h2>
+
+  <div class="kid">
+    <p>
+      Some sheets bite their own tail. Borrow money, and the interest you owe
+      depends on your <em>average</em> balance over the year. But your closing
+      balance depends on how much interest you paid. And the average depends on
+      the closing balance. Round and round.
+    </p>
+    <p>
+      This is not exotic — it is how every loan schedule and every model with
+      feedback works. A spreadsheet refuses to compute it until you find a
+      settings checkbox and turn it on. Then it asks you for two numbers you
+      have no way to choose: how many times to go round, and how close is close
+      enough. Then it shows you an answer, and never tells you whether going
+      round more times would have changed it.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      A cyclic sheet is <strong>not</strong> a least fixpoint over a set of
+      facts. It is a numeric fixpoint, and the iterates of a numeric fixpoint
+      are all different facts — so a plain Datalog evaluation of a circular
+      model derives <em>nothing at all</em>. The demo shows that first, because
+      it is the honest starting point.
+    </p>
+    <p>
+      What a circular reference needs is an index over the iterates.
+      <strong>That index is the checkbox, made into data</strong> — and once it
+      is data, "did it converge, and when" is a derived fact with a why tree:
+    </p>
+    <pre>round(0).
+round(R) :- round(P), horizon(H), R is P + 1, R &lt;= H.
+
+rvalue(0, C, 0) :- formula(C, _).        <i>-- the seed: every computed cell reads zero</i>
+rval(R, N, V)   :- ref(N, C), round(R), P is R - 1, P &gt;= 0, rvalue(P, C, V).
+
+moved(R)        :- rvalue(R, C, V), P is R - 1, P &gt;= 0, rvalue(P, C, W), V != W.
+settled(R)      :- round(R), R &gt; 0, not moved(R).
+converged_at(R) :- settled(R), not outdone(R).</pre>
+    <p>
+      One rule carries the idea: <strong>a reference reads the previous
+      round</strong>. Everything else stays inside its round, so the sheet's
+      depth costs rounds and a cycle costs one round per turn round it.
+    </p>
+  </div>
+
+  <div class="split">
+    <div class="side excel">
+      <h4>What a spreadsheet gives you</h4>
+      <p>A checkbox. Two numbers to guess. A value in black.</p>
+      <p>On a model that does <em>not</em> settle, LibreOffice puts an error
+      code in every cell of the cycle:</p>
+      <pre>B8 = #N/A</pre>
+      <p>That is a signal, and it is the whole signal. Not which cell, not how
+      many rounds, not how far it was still moving, not whether anything else
+      had settled.</p>
+    </div>
+    <div class="side slop">
+      <h4>What SLOP gives you</h4>
+      <pre>steady_at      29    <i>stopped moving by more than a cent</i>
+relapsed       false
+converged_at   (never)  <i>stopped moving AT ALL</i>
+still moving   Revolver!C5:
+   2946097.81477626
+&lt;- 2946097.81477627   (1 unit)</pre>
+      <p>Two answers rather than one, and the residual named to the cell and the
+      unit — here a hundred-millionth of a dollar, a period-two orbit in the
+      truncating carrier.</p>
+      <pre>steady_at      (never)
+converged_at   (never)
+diverging      <b>true</b>
+still moving   Revolver!B8, B7, B6</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">6</span> Checked against two spreadsheets</h2>
+
+  <div class="kid">
+    <p>
+      None of this is worth anything if the numbers are wrong. So every number
+      is checked twice, against the two programs that are supposed to be right:
+      the answers <strong>Excel itself saved into the file</strong>, and a
+      second run of the same file through <strong>LibreOffice</strong>.
+    </p>
+  </div>
+  <div class="eng">
+    <p>
+      Both oracles are exact and independent. An <code>.xlsx</code> stores, next
+      to each formula, the value Excel computed when it last saved; LibreOffice
+      is driven headless and made to recalculate, and the route is
+      <code>.xlsx&nbsp;→&nbsp;.xlsx</code> rather than CSV so that values come
+      back in full double precision instead of through a number format.
+    </p>
+  </div>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Checked</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>231 cells vs Excel's cache</td><td>227 exact, worst 2 hundred-millionths — in this model, 2 cents</td></tr>
+      <tr><td>231 cells vs LibreOffice</td><td>227 exact, worst 2 hundred-millionths</td></tr>
+      <tr><td>Excel vs LibreOffice</td><td>they disagree with <em>each other</em> on 619 of 1197 cells, by up to 4.2e-15 relative</td></tr>
+      <tr><td>212 interval enclosures</td><td>212 contain the oracle's value</td></tr>
+      <tr><td>the circular model</td><td>kernel, closed-form algebra and LibreOffice agree to 1 unit</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>The catch, and it is the point.</strong> The oracle is deterministic
+    on acyclic sheets. On <em>cyclic</em> ones a spreadsheet iterates without a
+    convergence guarantee — which is exactly what SLOP claims to fix. So SLOP
+    loses its oracle precisely on the models it exists for. What was done about
+    it instead of papering over it: the converging model is linear in one
+    unknown, so it has a closed form, computed in doubles outside the kernel and
+    outside any spreadsheet — and that check is available only because this
+    particular cycle happens to be linear. On the diverging model there is
+    nothing to compare, so what is checked is the <em>report</em>: both engines
+    fail, and only one of them says why.
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section class="eng">
+  <h2><span class="n">7</span> What it is made of</h2>
+
+  <p>
+    The reader is <code>node:zlib</code> and nothing else: an <code>.xlsx</code>
+    is a ZIP of XML, so <code>xlsx.ts</code> walks the central directory,
+    inflates the members, and scans the parts it needs — including expanding the
+    512 shared formulas by translating the master's relative references.
+    <code>revolver.ts</code> writes one too, for the cyclic model, with a CRC-32
+    and <code>deflateRawSync</code>.
+  </p>
+  <p>
+    <code>formula.ts</code> is the tokenizer, and its boundary is the same one
+    <code>examples/huh</code> draws: the kernel has no string builtins, so taking
+    <code>IF(D5&gt;0,D5-(D5-C10)*D6,D5)</code> apart is the host's job.
+    Everything above the tree is inference — a why tree bottoms out at
+    <code>input</code>, <code>label</code>, <code>num</code> and the structural
+    facts the tokenizer emitted, never inside the characters of a formula.
+  </p>
+
+  <h3>The evaluator</h3>
+  <pre>value(C, V) :- input(C, V).                              <i>-- a number a human typed</i>
+value(C, 0) :- empty(C).                                 <i>-- a blank, read as zero</i>
+value(C, V) :- formula(C, N), val(N, V).
+
+val(N, V) :- num(N, V).                                  <i>-- a constant inside a formula</i>
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).      <i>-- IF, true branch</i>
+val(N, V) :- sum_head(N, I), total(I, V).                          <i>-- SUM over a chain</i>
+val(N, V) :- find(N, K, T, Col), val(K, Key), tkey(T, Row, Key),
+             tcell(T, Row, Col, C), value(C, V).                   <i>-- VLOOKUP</i></pre>
+  <p>
+    <code>SUM</code> is a chain rather than an aggregate because the kernel has
+    no aggregation: the host lays a range out as
+    <code>sum_item(I, Cell, Next)</code> and the fold is two rules.
+    <code>VLOOKUP</code> reaches the <em>cell</em>, not a value, which is what
+    makes the tree walk on into the rate table.
+  </p>
+
+  <h3>Money, and where integer-only arithmetic bit</h3>
+  <p>
+    <code>is</code> is integer-only and <code>/</code> truncates, so a value is
+    carried as <code>round(v * 1e8)</code>. That scale is a measured
+    requirement, not caution. The first version used 1e-6 and <strong>missed by
+    a cent</strong> — not through the arithmetic but through representation:
+    this model's operating margin is <code>0.14063146094259696</code>, which at
+    1e-6 becomes <code>0.140631</code>, and a DCF multiplies that 5e-7 error
+    into a revenue of 21765.
+  </p>
+  <p>
+    Multiplication and division had to be written out, because the obvious
+    <code>X * Y / 100000000</code> leaves the safe-integer range immediately.
+    Both split their operands:
+  </p>
+  <pre>X = 1e4*Xh + Xr,  Y = 1e4*Yh + Yr
+X*Y/1e8  =  Xh*Yh + Xh*Yr/1e4 + Xr*Yh/1e4 + Xr*Yr/1e8      <i>3 truncations, &lt;= 3 units</i>
+X*1e8/Y  =  q0*1e8 + q1*1e6 + q2*1e4 + q3*1e2 + q4         <i>1 truncation,  &lt;= 2 units</i></pre>
+  <p>
+    The division took three attempts: two levels of radix 1000 handle divisors
+    up to 90 000, and the model divides by a revenue total of 225 471, so
+    thirteen cells silently had no value until the decomposition went to four
+    levels of radix 100. That failure was <em>visible</em> — the cells had no
+    value and <code>whynot</code> named the guard that refused. Which is the
+    difference this whole example is about: <strong>the failure mode of a
+    guarded integer carrier is a refusal, and the failure mode of a float is a
+    wrong number in black.</strong>
+  </p>
+
+  <div class="note">
+    <strong>"To the cent" is a property of the model, not of the engine.</strong>
+    A unit is 1e-8 of a sheet value. This model is denominated in millions of
+    dollars, so a unit <em>is</em> a cent and the worst cell is 2 units out. The
+    cyclic model is denominated in dollars, so a cent is 1 000 000 units and it
+    agrees with LibreOffice to 1 unit — six decimal places below the cent. Any
+    claim that does not name the unit is not a claim.
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2><span class="n">8</span> What it does not do</h2>
+
+  <div class="kid">
+    <p>
+      It reads spreadsheets; it does not let you edit them. It understands
+      adding, subtracting, multiplying, dividing, comparing, totalling, "if
+      this then that", and looking things up in a table — which turns out to
+      cover all but seven formulas in the whole real model. Anything else it
+      <strong>says it will not do</strong>, by name, and leaves the box empty.
+      It never guesses.
+    </p>
+  </div>
+  <div class="eng">
+    <ul>
+      <li><strong><code>VLOOKUP</code> is exact-match only.</strong> 108 of the
+        model's 121 calls use the approximate-match form on a <em>text</em> key,
+        which needs an ordering the kernel does not have on strings. Where the
+        key is present the two agree, and both oracles confirm the values; where
+        one were absent, a spreadsheet returns the predecessor row and SLOP
+        returns nothing.</li>
+      <li><strong>The demo runs the precedent closure of one cell</strong> — 231
+        of 1231 formula cells. Reaching fixpoint on that takes ~20 s and the
+        kernel's store insert is superlinear (2004 facts: 20 s; 381 facts: 2 s),
+        so the whole workbook would not finish inside the project's 300-second
+        budget. Not attempted, no performance claim made.</li>
+      <li><strong>The round-indexed evaluator covers arithmetic and references
+        only</strong> — no <code>IF</code>, <code>SUM</code> or
+        <code>VLOOKUP</code>. There is no way to parameterise a relation over
+        its carrier, so it is a hand-copy of the point evaluator with a round
+        threaded through. That is the clearest place where the absence of
+        relation-level polymorphism costs something concrete.</li>
+      <li><strong>Three evaluators triple the rule count</strong>, and the rule
+        count costs time: 154 rules where <code>huh.rofl</code> is 4, all
+        rescanned every round even when nothing asks them anything.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    <code>examples/slop</code> in the ROFL repository.
+    Run it: <code>node --experimental-strip-types examples/slop/demo.ts</code>.
+    Every number on this page is real output; the full transcript and the
+    honest list of limitations are in <code>examples/slop/README.md</code>.
+  </p>
+  <p>
+    The model is Aswath Damodaran's FCFF valuation spreadsheet, published free
+    by NYU Stern and used unmodified. The circular model is built here, and its
+    own file says so.
+  </p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    var doc = document.getElementById('doc');
+    var hint = document.getElementById('hint');
+    var buttons = document.querySelectorAll('.segmented button');
+    var HINTS = {
+      kid: 'Explained without jargon.',
+      eng: 'Rules, carriers and measured numbers.'
+    };
+
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+    function setLevel(level) {
+      doc.setAttribute('data-level', level);
+      hint.textContent = HINTS[level];
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', buttons[i].dataset.set === level ? 'true' : 'false');
+      }
+      store('slop-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    var saved = load('slop-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('slop-theme', next);
+    });
+
+    var savedTheme = load('slop-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

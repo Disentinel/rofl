@@ -1,0 +1,34 @@
+-- js-structure.rofl — the GENERIC structure over a captured AST. No domain
+-- knowledge lives here: not a language's idea of a call, not a notion of
+-- dataflow, not a judgement about which kinds matter. Everything below is
+-- true of any tree the scanner emits, and nothing below would change if the
+-- parser were pointed at another language.
+--
+-- Reads scanners/js_ast.ts's four relations and adds four convenience ones:
+--
+--   ast_in     — parent/child, forgetting which field and which position
+--   ast_within — the ancestor relation, ast_in's transitive closure
+--   ast_name   — the `name` attribute, under the name every rule reaches for
+--   ast_value  — the `value` attribute, likewise
+--
+-- ast_name / ast_value are DELIBERATELY thin: they rename two attributes and
+-- claim nothing about them. `name` on an Identifier and `name` on a JSX
+-- attribute are the same fact here, because deciding they differ is the job
+-- of the rule that cares.
+
+-- the tree, with the field and the position forgotten
+ast_in[code](P, C)     :- ast_child[code](P, _, _, C).
+
+-- COST NOTE. ast_within is a transitive closure over the parse tree, so its
+-- size is roughly nodes x depth: every node pairs with each of its ancestors.
+-- On the fixtures here that is a few thousand rows and free. Before this is
+-- ever pointed at a real corpus the number wants MEASURING rather than
+-- assuming — a 100k-node tree at depth 30 is ~3M derived rows, and that is
+-- the point where an ancestor query should be answered by walking ast_in from
+-- the node rather than by materialising the closure.
+ast_within[code](P, C) :- ast_in[code](P, C).
+ast_within[code](P, D) :- ast_within[code](P, X), ast_in[code](X, D).
+
+-- the two attributes worth a name of their own
+ast_name[code](N, V)   :- ast_attr[code](N, name, V).
+ast_value[code](N, V)  :- ast_attr[code](N, value, V).

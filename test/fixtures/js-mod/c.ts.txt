@@ -1,0 +1,3 @@
+// the ROOT c.ts — the decoy. `./c.ts` written inside sub/ must NOT land here.
+export const helper = (x: number) => x + 1;
+export const which = 'root';

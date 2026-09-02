@@ -1,0 +1,725 @@
+<title>YAK — Scanners Written Mid-Task</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  :root {
+    --bg:        #fbfaf7;
+    --panel:     #ffffff;
+    --ink:       #1d1c1a;
+    --ink-soft:  #5d5a54;
+    --ink-faint: #8a867e;
+    --line:      #e3e0d8;
+    --line-soft: #eeebe4;
+    --accent:    #9a5518;
+    --accent-bg: #fbf0e4;
+    --good:      #2f6b3f;
+    --gone:      #a03030;
+    --code-bg:   #f4f1ea;
+    --shadow:    0 1px 2px rgba(30, 28, 24, .06), 0 8px 24px rgba(30, 28, 24, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #17150f;
+      --panel:     #201d16;
+      --ink:       #efece4;
+      --ink-soft:  #b6b0a3;
+      --ink-faint: #86806f;
+      --line:      #3a352a;
+      --line-soft: #2a271f;
+      --accent:    #e6a765;
+      --accent-bg: #2d2115;
+      --good:      #8fd6a2;
+      --gone:      #f09090;
+      --code-bg:   #131109;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #17150f;
+    --panel:     #201d16;
+    --ink:       #efece4;
+    --ink-soft:  #b6b0a3;
+    --ink-faint: #86806f;
+    --line:      #3a352a;
+    --line-soft: #2a271f;
+    --accent:    #e6a765;
+    --accent-bg: #2d2115;
+    --good:      #8fd6a2;
+    --gone:      #f09090;
+    --code-bg:   #131109;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.02em; }
+  h1 .dim { color: var(--ink-faint); font-weight: 400; }
+  .lede { margin: .9rem 0 0; font-size: 1.12rem; color: var(--ink-soft); max-width: 46rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.5rem; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--panel); }
+  .segmented button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: .9rem; padding: .35rem 1rem; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .segmented button:focus-visible, .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost {
+    appearance: none; background: transparent; color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 999px; font: inherit; font-size: .85rem; padding: .4rem .9rem; cursor: pointer;
+  }
+
+  section { margin: 3rem 0 0; }
+  h2 { font-size: 1.4rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .3rem; }
+  p { margin: .8rem 0; max-width: 46rem; }
+  .kicker { color: var(--ink-faint); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0 0 .3rem; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-size: .82rem; line-height: 1.5; margin: 1.2rem 0;
+  }
+  pre.tight { font-size: .74rem; }
+  code { background: var(--code-bg); border-radius: 4px; padding: .08em .35em; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 8px 8px 0;
+          padding: .8rem 1rem; margin: 1.4rem 0; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: .6rem; }
+
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .92rem; display: block; overflow-x: auto; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { color: var(--ink-faint); font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+  td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; white-space: nowrap; }
+
+  .fate { font-size: .78rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+          border-radius: 999px; padding: .1rem .55rem; white-space: nowrap; }
+  .fate.discarded { color: var(--gone); background: var(--code-bg); }
+  .fate.kept { color: var(--good); background: var(--code-bg); }
+  .fate.corrected { color: var(--accent); background: var(--accent-bg); }
+
+  .frag { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 1.1rem 1.25rem; margin: 1.4rem 0; box-shadow: var(--shadow); }
+  .frag > h3 { margin-top: 0; display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; }
+  .frag > h3 .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-faint); }
+  .frag dl { margin: .6rem 0 0; }
+  .frag dt { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint);
+             font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: .9rem; }
+  .frag dd { margin: .2rem 0 0; }
+  .frag dd p { margin: .4rem 0; }
+
+  .lesson { border-top: 1px solid var(--line-soft); margin-top: 1rem; padding-top: .7rem;
+            color: var(--ink); font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin: 1.4rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .card h4 { margin: 0 0 .35rem; font-size: .95rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+  .card p { margin: 0; font-size: .92rem; color: var(--ink-soft); max-width: none; }
+
+  ul { max-width: 46rem; }
+  li { margin: .35rem 0; }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .88rem; }
+
+  /* level switching */
+  body[data-level="kid"] .eng { display: none; }
+  body[data-level="eng"] .kid { display: none; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">ROFL &middot; example</p>
+  <h1>YAK <span class="dim">&mdash; the rules you leave behind</span></h1>
+  <p class="lede kid">When you have a question about a big pile of code, you can write a
+    tiny rule that answers it. Most of those rules you throw away straight afterwards.
+    Here are ten real ones from a single day of work &mdash; including the ones that were
+    wrong, and one that should never have been written at all.</p>
+  <p class="lede eng">Every other example here demonstrates the engine. This one
+    demonstrates working with it: rules-as-data written mid-task, an ontology that
+    sediments instead of being designed, and the hygiene that stops a rule pile turning
+    into a linter nobody reads.</p>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="reading level">
+      <button type="button" data-set="kid" aria-pressed="false">explain it simply</button>
+      <button type="button" data-set="eng" aria-pressed="true">explain it to an engineer</button>
+    </div>
+    <button type="button" class="ghost" id="theme">theme</button>
+  </div>
+</header>
+
+<section>
+  <p class="kicker">the problem</p>
+  <h2 class="kid">Usually you have to build the map before you are allowed to ask directions</h2>
+  <h2 class="eng">The model is required before it pays off</h2>
+
+  <p class="kid">Imagine you are only allowed to ask a question about your city if you first
+    draw a complete map of it. Most people would just never ask. That is what the serious
+    code-checking tools feel like: you have to describe your whole program in their
+    language before any of it helps you, and that work happens now while the payoff happens
+    later, maybe.</p>
+  <p class="kid">There is another way round. Do not draw the map. Solve today's problem, and
+    on the way, when a question comes up, write the smallest possible rule that answers
+    just that question. Keep the answer. Usually throw the rule away. Do that a hundred
+    times and a map appears anyway, without anybody sitting down to draw one.</p>
+
+  <p class="eng">This is what every formal method runs into. TLA+ wants the process
+    rewritten. CodeQL wants queries written in advance, by people not working on your bug.
+    Expert systems want a year of knowledge acquisition first. The investment is up front,
+    the return is later and not guaranteed.</p>
+  <p class="eng">Writing scanners as you go inverts it. You are not building a model; you
+    are solving a task and <strong>leaving a rule behind</strong>. The unit cost is minutes,
+    not a sprint, and each step is paid for by the task that demanded it. The ontology of a
+    subsystem is not designed &mdash; it <strong>sediments</strong>.</p>
+  <p class="eng">What changes is not quality but <strong>frequency</strong>. If a new query
+    costs a ticket and a week, you ask a handful a year. If it costs three minutes, you ask
+    two orders of magnitude more. Against <code>grep</code> the bar is lower and meaner:
+    grep finds text, a scanner finds what is <em>derivable</em> &mdash; transitive
+    dependencies, combinations of conditions, the things a regex cannot say &mdash; and grep
+    leaves nothing behind.</p>
+</section>
+
+<section>
+  <p class="kicker">the rule that governs this page</p>
+  <h2 class="kid">Everything here really happened</h2>
+  <h2 class="eng">Nothing below was composed</h2>
+  <div class="note">
+    <p class="kid"><strong>It would be very easy to make these up, so we did not.</strong>
+      Made-up examples always work out nicely, because whoever wrote them decided how they
+      end. That makes them <em>more</em> convincing than real ones, which is exactly why
+      they are banned here. If something has never actually happened, it does not get a
+      story &mdash; it gets one line in a list at the bottom. An empty box is more honest
+      than a filled one.</p>
+    <p class="eng"><strong>Fragments must be records of real runs, not written text.</strong>
+      Invented fragments look more convincing than real ones, which is precisely why they
+      are forbidden. If a mode has no real run behind it, no fragment is written for it: it
+      goes as one line into &ldquo;what to expect&rdquo; at the end. Every fragment below
+      names an artefact, and <code>demo.ts</code> re-runs the nine that still run.</p>
+  </div>
+  <p class="eng">Two provenance labels are used, and both mean a real run happened:
+    <strong>caught</strong> &mdash; it happened on its own during real work; and
+    <strong>provoked</strong> &mdash; reproduced on purpose, where the going-there was
+    deliberate but the run was not staged. A third label, <em>predicted</em>, would mean
+    &ldquo;described, never reproduced&rdquo;. No predicted mode is written up as a
+    fragment; a test enforces it.</p>
+</section>
+
+<section>
+  <p class="kicker">the catalogue</p>
+  <h2 class="kid">Ten questions, ten tiny rules, seven of them binned</h2>
+  <h2 class="eng">Ten fragments from one working session</h2>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>mode</th><th>label</th><th>the rule&rsquo;s fate</th><th>what it was about</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">01</td><td>sedimentary success</td><td>caught</td><td><span class="fate kept">kept</span></td><td>a rule left behind by one task fires on code written after it</td></tr>
+      <tr><td class="mono">02</td><td>redefining success</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>the definition dissolved the question; the scanner never ran</td></tr>
+      <tr><td class="mono">03</td><td>quick success</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>three minutes, four mutations, an exact invalidation key</td></tr>
+      <tr><td class="mono">04</td><td>false miss</td><td>provoked</td><td><span class="fate discarded">discarded</span></td><td>grep said &ldquo;no exports&rdquo; about a file with three</td></tr>
+      <tr><td class="mono">05</td><td>diverging semiring</td><td>provoked</td><td><span class="fate kept">kept</span></td><td>a fact that cites nothing had infinitely many derivations, until the question was fixed</td></tr>
+      <tr><td class="mono">06</td><td>stale model</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>the probe survived; its subject did not</td></tr>
+      <tr><td class="mono">07</td><td>the scanner was not needed</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>four minutes of measurement against one comment</td></tr>
+      <tr><td class="mono">08</td><td>a rule that codes an accident</td><td>caught</td><td><span class="fate corrected">corrected</span></td><td>a byte-identical golden over three shallow programs</td></tr>
+      <tr><td class="mono">09</td><td>the wrong premise</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>the probe refuted the symptom it was built to confirm</td></tr>
+      <tr><td class="mono">10</td><td>yak shaving</td><td>caught</td><td><span class="fate discarded">discarded</span></td><td>a check built and enforced for work already covered</td></tr>
+    </tbody>
+  </table>
+
+  <p class="kid"><strong>Seven of the ten rules went in the bin.</strong> That is not a
+    failure rate &mdash; that is what is supposed to happen. A rule that answered your
+    question has done its job and can go. If a collection like this showed only rules that
+    were kept, it would be teaching you to hoard.</p>
+  <p class="eng"><strong>Seven of ten rules were thrown away</strong>, two kept, one
+    corrected. Showing discard is not decoration: a catalogue of retention teaches hoarding,
+    and hoarding is how a scanner set becomes a linter configuration nobody reads.</p>
+</section>
+
+<section>
+  <p class="kicker">fragment 01 &middot; the payoff</p>
+  <h2 class="kid">A rule that kept working after the person who wrote it had moved on</h2>
+  <h2 class="eng">Sedimentary success &mdash; the only real return</h2>
+
+  <div class="frag">
+    <h3><span class="num">01</span> a typo that cannot be seen <span class="fate kept">kept</span></h3>
+    <dl>
+      <dt>task</dt>
+      <dd class="kid">Make a tool explain which step of a chain threw a line away.</dd>
+      <dd class="eng">Make the HUH pipe demo say which stage ate a log line.</dd>
+
+      <dt>the question that came up</dt>
+      <dd class="kid"><p>Somebody wrote a rule that used a word the system did not know.
+        Instead of complaining, the system quietly treated that word as a thing that simply
+        never happens &mdash; so the rule was always silent, and silence looks exactly like
+        &ldquo;nothing to report&rdquo;. How many other rules in the program are silent like
+        that?</p></dd>
+      <dd class="eng"><p><code>hit(N) :- msg(N,S), contains(S,"404").</code> loads clean and
+        <code>hit</code> is silently always empty: <code>contains</code> is not a builtin, so
+        it parses as an ordinary relation with no rules and no facts. Every mistyped builtin
+        becomes an unpopulatable relation. How many relations in a program can never hold a
+        fact at all?</p></dd>
+
+      <dt>the scanner, whole</dt>
+      <dd><pre><code>undefined_premise[audit](R, Rel) :- premise_pos(R, Rel),
+                                    not concludes(_, Rel), not edb(Rel).</code></pre>
+        <p class="eng">Positive premises only: an unpopulatable <em>negated</em> premise
+          always succeeds, so it hides nothing.</p></dd>
+
+      <dt>what happened next</dt>
+      <dd class="kid"><p>The rule was kept. Months of code later &mdash; well, hours, in this
+        case &mdash; somebody else wrote a completely different program, and the old rule
+        spotted the same kind of silent hole in it, without anyone asking it to.</p></dd>
+      <dd class="eng"><p>The rule went into <code>boot.rofl</code> with a test and stayed.
+        Replayed now across the six rule files shipped <em>after</em> it, it fires on one:</p></dd>
+      <dd><pre class="tight"><code>examples/moot/moot.rofl    load=ok   undefined_premise: (none)
+examples/blam/blam.rofl    load=ok   undefined_premise: changed
+examples/bleep/bleep.rofl  load=ok   undefined_premise: (none)
+examples/drip/drip.rofl    load=ok   undefined_premise: (none)
+examples/wtf/wtf.rofl      load=ok   undefined_premise: (none)
+examples/spat/spat.rofl    load=ok   undefined_premise: (none)</code></pre></dd>
+      <dd class="eng"><p><code>changed/1</code> is BLAM&rsquo;s diff relation, supplied by its
+        host at runtime, and <code>blam.rofl</code> declares no inputs &mdash; so the rule
+        file alone is mute, and that cannot be told apart from a misspelling by reading it.
+        <code>moot.rofl</code>, written the same day, declares its twelve inputs and cites
+        this audit in its header.</p></dd>
+
+      <dt>the check on the check</dt>
+      <dd><p class="kid">Five of those lines say &ldquo;nothing found&rdquo;. That is only
+        worth believing if the rule is capable of finding something, so we broke one program
+        on purpose and made sure it noticed. It named all twelve holes.</p>
+        <p class="eng">Five <code>(none)</code> rows prove nothing unless the instrument can
+        say otherwise. Strip MOOT&rsquo;s declarations and the audit names all twelve
+        relations &mdash; so the empty rows are measurements, not a broken instrument.</p></dd>
+    </dl>
+    <p class="lesson">A rule earns its keep by firing on code its author never saw.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">fragment 04 &middot; the dangerous one</p>
+  <h2 class="kid">The search that found nothing &mdash; because it never looked</h2>
+  <h2 class="eng">False miss: the failure that agrees with you</h2>
+
+  <p class="kid">A wrong answer that says &ldquo;look at this!&rdquo; is annoying, and you
+    check it. A wrong answer that says &ldquo;nothing here&rdquo; is much worse, because you
+    nod and move on. This is one of those.</p>
+  <p class="eng">A false positive argues with you; a false miss agrees with you. That is why
+    it is worth twice as much attention and why a catalogue without one is lying.</p>
+
+  <div class="frag">
+    <h3><span class="num">04</span> &ldquo;this file has no exports&rdquo; <span class="fate discarded">discarded</span></h3>
+    <dl>
+      <dt>task &middot; question &middot; scanner</dt>
+      <dd><p>Review a newly written source file before landing it. What does it export?
+        Run <code>grep</code>.</p></dd>
+      <dt>what it returned</dt>
+      <dd><p>Nothing.</p></dd>
+      <dt>what happened next</dt>
+      <dd class="kid"><p>It was read as &ldquo;this file exports nothing&rdquo;. Wrong. The
+        file had one invisible character in it &mdash; a byte that is not really a letter
+        &mdash; and that made the search tool decide the file was not text at all, so it
+        skipped it. Without saying so. Every other check agreed everything was fine.</p></dd>
+      <dd class="eng"><p>Read as &ldquo;no exports&rdquo;. False: the file held a literal NUL
+        byte &mdash; a separator constant written as the raw character instead of the escape
+        &mdash; and a grep that skips binary files skipped it in silence. No warning, empty
+        stdout, exit 1. <code>tsc</code> was clean, the file&rsquo;s own eleven tests were
+        green, the kernel vocabulary check was clean because it only scans <code>src/</code>.
+        Only <code>git</code> objected, calling a TypeScript source
+        <code>Bin 0 -&gt; 7930 bytes</code> and refusing to diff it.</p></dd>
+      <dd><p>Provoked here on two files identical but for one NUL, with the same question put
+        to two invocations:</p>
+        <pre class="tight"><code>   instrument             clean.ts         withnul.ts
+   /usr/bin/grep -c       3  [exit 0]      3  [exit 0]
+   /usr/bin/grep -I -c    3  [exit 0]      (NOTHING AT ALL)  [exit 1]</code></pre></dd>
+      <dd><p class="kid">Same file, same question, two versions of the same tool, opposite
+        answers &mdash; and the quiet one is the one you get by default.</p>
+        <p class="eng">The sting is in which row you get by default. Typing <code>grep</code>
+          does not name a program; it names whatever the environment has bound, and in this
+          shell that is a wrapper with <code>-I</code> already applied. The silent row is the
+          ordinary one.</p></dd>
+      <dt>fate</dt>
+      <dd><p>The narrow scanner <span class="fate discarded">discarded</span>, replaced by a
+        gate that reads bytes rather than lines and runs in CI. Its own test plants a NUL to
+        prove the gate can say no &mdash; and it rejected its author on the first run.</p></dd>
+    </dl>
+    <p class="lesson">A negative result is a fact about the instrument until a positive
+      control says otherwise.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">fragments 06 and 07 &middot; the same afternoon</p>
+  <h2 class="kid">A rule we kept too long, and a rule we should not have written</h2>
+  <h2 class="eng">The stale model, and the case for not writing a scanner at all</h2>
+
+  <div class="frag">
+    <h3><span class="num">06</span> the probe outlived its subject <span class="fate discarded">discarded</span></h3>
+    <dl>
+      <dt>the question</dt>
+      <dd class="kid"><p>Earlier someone measured that the order things arrive in makes the
+        program five times slower. We re-ran that exact measurement to see if it was still
+        true.</p></dd>
+      <dd class="eng"><p>A recorded finding says the store&rsquo;s quadratic insert is not a
+        property of the index but of the <em>order keys arrive in</em>: measured at 64k facts,
+        ascending 132&nbsp;ms, scrambled 505&nbsp;ms, shuffled 716&nbsp;ms &mdash; a
+        <strong>5.4&times; spread</strong>. Does it still hold?</p></dd>
+      <dt>what it returned</dt>
+      <dd><pre class="tight"><code>  integer args (lex order is scrambled)         102 ms
+  zero-padded (keys strictly ascending)          84 ms
+  zero-padded, shuffled arrival                  88 ms
+  spread: 1.2x     (recorded when this probe was written: 5.4x)</code></pre></dd>
+      <dt>what happened next</dt>
+      <dd class="kid"><p>The rule still ran perfectly. It was just no longer about anything:
+        somebody had fixed the thing it was watching, so all three cases now go down the same
+        path. A person trusting this rule today would conclude the exact opposite of the
+        truth &mdash; that the order never mattered &mdash; when in fact it mattered so much
+        it got engineered away.</p></dd>
+      <dd class="eng"><p>The probe survived; its subject did not. <code>src/store.ts</code>
+        grew an append-then-merge index citing the performance invariant by name, so all
+        three arrival orders now take the identical append path and the spread is absent
+        <strong>by construction</strong>. A reader trusting this probe today would conclude
+        the opposite of the truth.</p></dd>
+    </dl>
+    <p class="lesson">A kept scanner with no owner goes on answering. It does not go on being
+      about anything.</p>
+  </div>
+
+  <div class="frag">
+    <h3><span class="num">07</span> the scanner was not needed <span class="fate discarded">discarded</span></h3>
+    <dl>
+      <dt>the question</dt>
+      <dd class="kid"><p>Did the slowness really go away, or had our measurement just gone
+        blind? Good question &mdash; so we built a second, cleverer measurement to find
+        out.</p></dd>
+      <dd class="eng"><p>&ldquo;No spread&rdquo; has two readings: the effect never existed,
+        or the probe can no longer see it. Fragment 04&rsquo;s rule applies here to us, so:
+        build the positive control, forcing the one path the index still splices on.</p></dd>
+      <dt>what it returned</dt>
+      <dd class="kid"><p>Nothing useful. The first run did not finish inside two minutes. We
+        made it smaller and ran it again, and it still could not tell the two possibilities
+        apart. About four minutes gone and the question still open.</p></dd>
+      <dd class="eng"><p>At 64k it did not finish in two minutes. Resized to 16k:
+        6.1&nbsp;s / 6.1&nbsp;s / 7.4&nbsp;s &mdash; a 1.2&times; spread, the same non-answer,
+        because an O(n) read per write swamps the splice it was built to expose. Two runs,
+        two resizes, four minutes, question still open.</p></dd>
+      <dt>what happened next</dt>
+      <dd class="kid"><p>The answer had been sitting in the code the whole time, written out
+        in plain English in a comment, about fourteen lines long. Reading it took under a
+        minute and settled the question completely.</p></dd>
+      <dd class="eng"><p>The answer was in <code>src/store.ts</code>, lines 29&ndash;42, in
+        English, in a comment left by whoever landed the fix:</p></dd>
+      <dd><pre class="tight"><code>Inserting one key at a time into a sorted array is free at the end and
+a memmove of the tail anywhere else, so the cost of a fact is decided
+by the ORDER facts arrive in. [...] Arrivals are appended instead, and
+the run is put back in order once, for a batch, by `absorb`.</code></pre></dd>
+    </dl>
+    <p class="lesson">The scanner was not needed. Reading the code would have been faster.</p>
+  </div>
+
+  <div class="note">
+    <p class="kid"><strong>When not to write one.</strong> Do not write a rule when your
+      question is &ldquo;what does this one bit of code do&rdquo; and you can just open it and
+      look. Rules are for questions where the answer is spread across lots of places, or
+      buried in more data than you could read yourself &mdash; those are the ones no amount
+      of looking will answer.</p>
+    <p class="eng"><strong>The criterion of abstention.</strong> Abstention is a mode of work,
+      not the absence of it, so it needs a criterion rather than a wish. Do not write a
+      scanner when the question is &ldquo;what does this one named function do&rdquo; and the
+      function is open in front of you: measurement is the wrong instrument for a question
+      whose answer is a <em>mechanism</em> rather than a <em>quantity</em>. A scanner earns
+      its cost when the question is about behaviour emergent over many sites, or over data
+      too large to eyeball &mdash; both of which resist reading precisely because no single
+      place contains the answer.</p>
+    <p class="eng">Without this fragment the demonstration would be unfalsifiable. A method
+      that always helps is advertising.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">fragment 10 &middot; the name</p>
+  <h2 class="kid">The day that got eaten</h2>
+  <h2 class="eng">Yak shaving proper &mdash; no scanner, no recovery</h2>
+
+  <p class="kid"><em>Yak shaving</em> is what people call it when you set out to do one thing
+    and end up four steps sideways doing something else entirely. The name of this example
+    admits that, so it has to show one.</p>
+  <p class="eng">The name obliges. This fragment ends badly, with no recovery and no rule to
+    discard, because none was ever written &mdash; and that is the fragment.</p>
+
+  <div class="frag">
+    <h3><span class="num">10</span> enforcing a check that protected nothing <span class="fate discarded">discarded</span></h3>
+    <dl>
+      <dt>task</dt>
+      <dd><p>Ship three demo examples.</p></dd>
+      <dt>the detour</dt>
+      <dd class="kid"><p>A written rule said &ldquo;always run both test suites&rdquo;. So
+        every helper was told to run both. Then a whole round of work went on worrying that
+        the slower suite would blow the time limit &mdash; and the slower suite was already
+        being run automatically somewhere else. Nothing needed protecting. The worrying cost
+        about five minutes per helper, three helpers at a time.</p></dd>
+      <dd class="eng"><p>&ldquo;Both runners green&rdquo; went into all four subagent briefs.
+        Then a whole turn went on <em>predicting</em> that the new demos would push the slow
+        runner past its budget &mdash; while that runner already had its own CI job, so
+        nothing local was being protected at all. Cost: about five minutes of dead
+        verification per agent cycle, three agents in parallel, 295&nbsp;s against the other
+        runner&rsquo;s 117&nbsp;s.</p></dd>
+      <dt>and then it compounded</dt>
+      <dd class="kid"><p>Trying to stop it made it worse. The helpers could not hear the
+        message to stop while they were busy, and stopping them by force looked to them like
+        a crash, so they started over. A fourth run began minutes after the third was killed.
+        The machine was so overloaded that every measurement taken during that stretch was
+        wrong and had to be taken again.</p></dd>
+      <dd class="eng"><p>A message reaches a subagent only at its next tool round, so three
+        countermands sat undelivered while three agents sat inside runs. Killing a child does
+        not cancel the intent &mdash; it reads as a failed run and triggers a retry &mdash; so
+        a fourth started minutes after the third was killed. Load hit 111 on 4 cores, and
+        every timing taken in that window was inflated and had to be re-measured before it
+        could be quoted.</p></dd>
+      <dt>fate</dt>
+      <dd><p>No rule to discard. What the detour left behind is a one-paragraph correction to
+        the project&rsquo;s own instructions, naming the measured numbers and separating
+        &ldquo;green in CI&rdquo; from &ldquo;run both by hand&rdquo;.</p></dd>
+    </dl>
+    <p class="lesson">The detour is only paid for by the artefact it leaves; here it left
+      one, and the thing it set out to protect never needed protecting.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">the rest of the catalogue</p>
+  <h2 class="kid">The other five, briefly</h2>
+  <h2 class="eng">Fragments 02, 03, 05, 08, 09</h2>
+  <div class="cards">
+    <div class="card">
+      <h4>02 &middot; redefining</h4>
+      <p class="kid">The question was &ldquo;count all the ways to make this thing&rdquo;.
+        Writing the counter down proved the answer was &ldquo;infinitely many&rdquo;, so the
+        counter was never finished. Working out what the question meant <em>was</em> the
+        answer.</p>
+      <p class="eng">&ldquo;Enumerate the derivations and check the count&rdquo; does not
+        terminate on a cyclic graph. Formalising it forced the replacement question &mdash;
+        can &ldquo;infinitely many&rdquo; be <em>decided</em>? &mdash; answered by twenty
+        lines of Tarjan over the support hypergraph. The enumerator was never written. The
+        value was the definition, not the computation.</p>
+    </div>
+    <div class="card">
+      <h4>03 &middot; quick</h4>
+      <p class="kid">One question, four experiments, one table, three minutes, then straight
+        in the bin. The table is still being used.</p>
+      <p class="eng">Four mutations against seven meta relations settled a cache&rsquo;s
+        invalidation key exactly: the expensive layer turned out to be completely immune to
+        data and to need only the rule ids. Probe deleted the same day.</p>
+    </div>
+    <div class="card">
+      <h4>05 &middot; diverging</h4>
+      <p class="kid">Asked &ldquo;how many ways can this be true?&rdquo; and got
+        &ldquo;infinite&rdquo; for something with exactly one cause. The machine was right;
+        the question had quietly changed meaning &mdash; and the question is what got
+        fixed. The same probe now answers &ldquo;one&rdquo;, and it stayed in the drawer as
+        the thing that would notice if &ldquo;infinite&rdquo; ever came back.</p>
+      <p class="eng">The carry idiom makes every persisted fact its own support one tick back,
+        so the counting semiring answered <code>INFINITE</code> for a fact that cites nothing.
+        The engine was not wrong &mdash; it answered about a support graph that contained
+        time travel. Settled by narrowing the question rather than the arithmetic: the fold
+        is about ONE tick, so a carried fact is a given in it. The probe is unchanged and
+        still runnable; it grew a control line, because <code>INFINITE=0</code> would also
+        be printed by a fold that walked nothing and by one that stopped detecting cycles.
+        The control puts both loops in one store &mdash; carried fact <code>1</code>, cycle
+        inside the tick <code>INFINITE</code> &mdash; and rejects both mutants.</p>
+    </div>
+    <div class="card">
+      <h4>08 &middot; an accident</h4>
+      <p class="kid">A check compared everything byte for byte and said the change was safe.
+        It was not: the check only ever looked at three very simple programs, which happened
+        to be the ones lying around.</p>
+      <p class="eng">A byte-identical golden capture certified a change that then failed nine
+        tests. Measured after the fact: every program in the golden set stops at one stratum
+        boundary; the program that broke has fourteen. A golden is a substitute for a diff,
+        never for coverage.</p>
+    </div>
+    <div class="card">
+      <h4>09 &middot; wrong premise</h4>
+      <p class="kid">Someone reported a bug. We wrote a rule to confirm it, and the rule
+        proved the bug was not there &mdash; which is how we found the real one, which was
+        different and better hidden.</p>
+      <p class="eng">A report claimed facts vanish from the fold. They do not. Refuting the
+        stated symptom is what surfaced the actual defect: a renaming counter leaking into the
+        firing signature, inflating one derivation into two supports while the Boolean verdict
+        stayed correct.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">hygiene</p>
+  <h2 class="kid">How do you stop ending up with three hundred rules nobody trusts?</h2>
+  <h2 class="eng">Accumulation hygiene, and the part it cannot reach</h2>
+
+  <p class="kid">This is the obvious worry. Write a rule every time you have a question and in
+    a year you have a mountain of them, half of them wrong, and everybody ignores the lot.
+    That is the life story of every code-checking setup anyone has ever had.</p>
+  <p class="eng">Three hundred rules nobody trusts is the fate of every linter with an
+    accumulated configuration, and the remedy has to be mechanical rather than
+    well-intentioned.</p>
+
+  <p class="kid">The answer is to point the same machinery at your own rules and ask which
+    of them are dead. Here is it doing that:</p>
+  <p class="eng">The instrument already exists: <strong>MOOT pointed at the accumulated
+    scanner set</strong> &mdash; the same five verdicts (unreachable, shadowed, tautological,
+    contradictory, dependent), turned on your own rules. It already points itself at the
+    kernel&rsquo;s audit layer, so this reuses it rather than growing a second one:</p>
+
+  <pre class="tight"><code>  22 rules encoded as clauses over 38 dimensions, 29 relations as flags
+
+  unreachable relations: asserted_by forged imports
+  rules that can never fire in this store: 3
+    r0145d338  concluding sees
+    r66afcc0f  concluding forged
+    rfc45fb4a  concluding sees
+  shadowed rule pairs: (none)</code></pre>
+
+  <p class="kid">One of those dead rules is the forgery check. It looks for facts written by
+    someone who was not allowed to write them &mdash; but nothing in this project records who
+    wrote what, so it has never once been able to fire. It has been cheerfully reporting
+    &ldquo;all clear&rdquo; for its whole life, and it would report &ldquo;all clear&rdquo;
+    about a forgery too.</p>
+  <p class="eng">Fragment 01&rsquo;s rule is not among the dead, which is what this pass was
+    run to find out. <code>forged[audit]</code> is: it reads an input nothing here populates,
+    so it has been answering &ldquo;clean&rdquo; to every program in the repository and would
+    answer &ldquo;clean&rdquo; to a forged fact too.</p>
+
+  <h3 class="kid">And the bit this cannot check</h3>
+  <h3 class="eng">The gap, which is the more useful half</h3>
+  <p class="kid">Only one of the ten rules on this page is the kind of rule that check
+    understands. The other nine are little programs, and the check has nothing to say about
+    those at all &mdash; including number 06, the one that had quietly stopped being about
+    anything. It still runs. It still answers. Nothing here notices. We do not have a way to
+    catch that yet, and saying so is more use than pretending otherwise.</p>
+  <p class="eng">Of the ten scanners catalogued here, <strong>exactly one is a rule</strong>.
+    The other nine are host-language probes against the store API &mdash; not an accident of
+    this session, since the questions were about the <em>engine</em>, and a rule cannot ask
+    how many milliseconds an insert took. MOOT decides rule-shaped scanners exactly and has
+    nothing whatever to say about probe-shaped ones.</p>
+  <p class="eng"><strong>Fragment 06 is the proof.</strong> A probe that has gone stale is not
+    unreachable, not shadowed, not tautological. It runs, it returns a number, and it is about
+    nothing. No verdict in this pass catches it. The hygiene that would &mdash; <em>does this
+    probe still measure what its comment claims</em> &mdash; is not mechanised anywhere in
+    this repository, and naming that is worth more than a clean bill of health.</p>
+</section>
+
+<section>
+  <p class="kicker">the empty cells</p>
+  <h2 class="kid">Things we expect to go wrong but have not seen yet</h2>
+  <h2 class="eng">What to expect &mdash; reasoned about, not reproduced</h2>
+
+  <p class="kid">These are ways this could go wrong that we have thought about but have not
+    actually had happen. They get one line each and no story, because a story would mean
+    making one up.</p>
+  <p class="eng">One line each, no invented session. As runs accumulate these should move up
+    into the catalogue with a <em>caught</em> label &mdash; and the ones that turn out to be
+    imaginary should be struck out instead.</p>
+
+  <ul>
+    <li><strong>a rule instead of a fix</strong> &mdash; formalisation as a substitute for the
+      hard work; converging useful activity in place of solving the problem.</li>
+    <li><strong>premature generalisation</strong> &mdash; a rule inferred from a single case.</li>
+    <li><strong>burial under scanners</strong> &mdash; six months on, half the firings are
+      false and everybody ignores all of them.</li>
+    <li><strong>a rule that codes a snapshot</strong> &mdash; it matched today and is
+      meaningless tomorrow. Fragment 08 is the <em>corpus</em> version; the snapshot version
+      needs a repository with history and was not attempted.</li>
+    <li><strong>approval without looking</strong> &mdash; an agent emits a rule with a
+      plausible but wrong premise and a human agrees. Trivially provoked; not provoked here.</li>
+    <li><strong>false positive</strong> &mdash; a rule written too broadly. The nearest real
+      instance is inside fragment 02, where the naive rule condemns 18 harmless kernel facts,
+      so it is written up there rather than given a fragment of its own.</li>
+    <li><strong>a model extracted once while the code moves on</strong> &mdash; fragment 06 is
+      the code-moved-under-the-probe form; the extracted-model form needs a prepared
+      repository and was not attempted.</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">modes of work</p>
+  <h2>Four modes, and the fourth is real work</h2>
+  <div class="cards">
+    <div class="card"><h4>reactive</h4><p>question in a task &rarr; scanner &rarr; answer
+      &rarr; usually thrown away. The common case.</p></div>
+    <div class="card"><h4>retained</h4><p>a scanner promoted to a standing check on diffs.
+      Rare, and it has to earn it.</p></div>
+    <div class="card"><h4>reflexive</h4><p>the five verdicts turned on your own accumulated
+      scanner set. Not a party trick &mdash; mandatory hygiene.</p></div>
+    <div class="card"><h4>abstention</h4><p>do not write a scanner. A mode of work, not the
+      absence of one, with a stated criterion in fragment 07.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p>ROFL &middot; <code>examples/yak/</code> &mdash; run it with
+    <code>node --experimental-strip-types examples/yak/demo.ts</code>.
+    Ten fragments, nine with a scanner that still runs, one with none.
+    Every run is real; where a moment has passed, the catalogue says so instead of
+    reconstructing it.</p>
+</footer>
+</div>
+
+<script>
+  (function () {
+    var body = document.body;
+    var buttons = document.querySelectorAll('.segmented button');
+
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+    function setLevel(level) {
+      body.setAttribute('data-level', level);
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.set === level));
+      }
+      store('yak-level', level);
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () { setLevel(this.dataset.set); });
+    }
+
+    setLevel('eng');
+    var saved = load('yak-level');
+    if (saved === 'kid' || saved === 'eng') setLevel(saved);
+
+    var themeBtn = document.getElementById('theme');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function () {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      store('yak-theme', next);
+    });
+
+    var savedTheme = load('yak-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  })();
+</script>

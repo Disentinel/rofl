@@ -1,0 +1,43 @@
+-- flight_log.rofl — CRAM §5: the question that shuts both doors.
+--
+-- Loaded on top of cram.rofl when the ground wants the craft to be able to
+-- account for itself FROM THE INSIDE — not "what did you conclude" (the craft
+-- always knows that) but "which rule concluded it, and on which tick".
+--
+-- These four rules read `derived_by` in a body, and that single syntactic fact
+-- is read by `Evaluation.readsProvenance`, which two policies consult:
+--
+--   RETENTION refuses. `Rofl.frozenRetention` returns undefined for such a
+--   program whatever `retainTicks` says, because pruning would no longer evict
+--   a cache — it would change a derivable fact. `quiet[log](T)` below is that
+--   fact, and it is the sharp case: pruned, it does not go missing, it goes
+--   TRUE. The store would start asserting that the computer sat idle through
+--   ticks it in fact worked through. demo.ts §8 performs exactly that sweep by
+--   hand, on a copy, to show what the refusal is protecting.
+--
+--   REUSE refuses, for its own reason: every firing anywhere in the program
+--   emits a provenance record, so a rule reading provenance is triggered by
+--   derivations everywhere and sits outside the dependency cone that reuse's
+--   fingerprint argument rests on.
+--
+-- One predicate, two policies, and they cannot come to different conclusions
+-- about the same program. Measured in demo.ts §7: loading this file makes the
+-- run cost 9.5x the firings and takes the store off any bound at all.
+
+-- Which rule fired on which tick. The join is trivial and the reach is not:
+-- this is the whole provenance table, and it is the table the policy exists
+-- to bound.
+fired_at[log](R, T)   :- derived_by(_, R, T).
+
+-- A tick the computer did work in.
+active[log](T)        :- fired_at[log](_, T).
+
+-- THE FACT THAT WOULD MOVE. A tick that happened and in which nothing at all
+-- was concluded — a stalled computer, which for a probe is the failure worth
+-- catching. `tick_no[log]` is published by the ground: it is the ground's
+-- record of which ticks the craft is believed to have lived through, and it is
+-- deliberately NOT derived from the provenance, or the question would answer
+-- itself.
+quiet[log](T)         :- tick_no[log](T), not active[log](T).
+
+tick_no[log](T)       @next :- tick_no[log](T).

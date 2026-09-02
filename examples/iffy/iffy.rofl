@@ -1,0 +1,346 @@
+-- iffy.rofl — IFFY: the amendment, before it is enacted.
+--
+-- The question, in one line: THERE IS A RULE SET IN FORCE AND A CORPUS OF PAST
+-- DECISIONS TAKEN UNDER IT; SOMEONE PROPOSES AN AMENDMENT; WHICH OF THOSE
+-- DECISIONS COME OUT DIFFERENTLY, AND WHY EACH ONE?
+--
+-- Today that question is answered by shipping to a canary and waiting for
+-- complaints. It is literally a diff of two fixpoints over one set of facts.
+--
+-- WHAT IS NOT A COPY, SAID FIRST, BECAUSE IT IS THE CRITERION. An arm of the
+-- comparison is not a second store and not a second copy of the corpus. The
+-- corpus is loaded once. The rule set is loaded once. An arm is a TERM — a
+-- name that rides as an ordinary column through the rules that read the rule
+-- set — and the amendment it carries is a DELTA against the rule set already
+-- there. So `in_force/2` below is the whole fork: one rule, one negation, and
+-- the elements nobody amended are read from the enacted book by every arm at
+-- once. Nothing is snapshotted, nothing is restored, and the store the
+-- baseline lives in is the same store the hypothesis lives in and is never
+-- written by it: an arm can only ADD facts carrying its own name in the arm
+-- column, and no rule in this file lets one arm's column bind another's.
+--
+-- WHAT THAT BUYS, MEASURED AND NOT ASSERTED, AND IT IS NOT MAINLY SPEED.
+-- README.md prints both prices on both corpora, and the honest headline is the
+-- one that does not move between runs: A FORK BY CLONE COPIES EVERY FACT IN
+-- THE STORE — 7675 on the statute corpus, 3752 on the policy corpus — WHILE AN
+-- ARM ADDS 3673 AND 1538. Two point one times and two point four times, exact
+-- and identical on every run. The wall clock says 368-427 ms against 130-173 ms
+-- and 198-246 ms against 76-91 ms over three cold runs, and those figures have
+-- moved by a factor of five across an afternoon on a loaded machine, so demo.ts
+-- prints them under a caveat and this file does not rest on them.
+--
+-- AND SPEED WAS NEVER THE ARGUMENT. Two fixpoints in two stores can only be
+-- compared by a script: the diff has no witnesses, no derivation tree, and
+-- nothing to ask `why` of. Two fixpoints in ONE store make `flipped`,
+-- `because`, `joint_only`, `masked` and `fragile` ordinary derived relations,
+-- each with a proof. §5 is the whole example, and §5 is impossible across a
+-- clone at any price.
+--
+-- The clone is not wrong — `excise` uses it, `excise` is exactly right, and §8
+-- checks this file against it. It is the wrong price for a SEARCH, and the
+-- limit is measured and declared in README.md rather than discovered later.
+--
+-- THIS FILE IS A MODE, NOT A DOMAIN, AND examples/ditto IS THE SAME MODE
+-- APPLIED TO CODE. That was settled before either was built, in
+-- `f_ditto_settles_iffy_and_closes_yak`: IFFY.md asks "separate example or
+-- mode?" out loud and the recorded answer was that IFFY ships as a mode with
+-- DITTO as one of its applications. The mode is four steps — fork the thing
+-- being changed, evaluate twice over the same facts, diff the two fixpoints,
+-- attribute each row of the difference to a link. What varies is what gets
+-- forked: two revisions of code in DITTO, a statute in
+-- examples/iffy/statute.rofl, an access policy in examples/iffy/policy.rofl.
+--
+-- AND THE APPLICATION, NOT THE MODE, DECIDES WHETHER THE FORK CAN BE A COLUMN.
+-- DITTO's two ledgers hold two genuinely different fact sets, extracted twice
+-- from two trees, so its copy is not a design choice — the facts really are
+-- different. IFFY's corpus is the SAME corpus in both arms, so nothing needs
+-- copying. That is why the finding's prediction, that a cheap fork was what
+-- still blocked DITTO, turned out not to apply to DITTO at all.
+--
+-- TWO CORPORA, BECAUSE ONE MAKES A MODE LOOK LIKE A DOMAIN. The measured
+-- reason, not the methodological one: this file gained §5's `unblocked` cause
+-- ONLY when the second corpus arrived, because a statute has no defeating norm
+-- and a quarter of the cause vocabulary below was unreachable and invisibly so.
+-- README.md prints what the second adapter cost against the first.
+--
+-- Layout:
+--   0. the ledgers
+--   1. what an adapter must supply
+--   2. the amendment, as a delta — the fork itself
+--   3. audits: an edit that does nothing is not an edit
+--   4. the diff of two fixpoints
+--   5. the cause of each difference — provenance of the DIFFERENCE
+--   6. interaction between amendments
+--   7. fragility: held, and lost its spare
+--   8. excise: the blast radius, computed before the deletion
+
+-- =========================================================================
+-- 0. the ledgers
+-- =========================================================================
+-- TWO BOOKS, AND THE ARM IS NOT ONE OF THEM.
+--
+-- docs/choosing-perspectives.md: a perspective is a ledger — a truth context
+-- with a nameable list of writers — never a status and never a modality. The
+-- two books here are the rule set as ENACTED (whatever ledger the corpus keeps
+-- it in; the adapter reads it there) and the amendment as DRAFTED, written by
+-- `drafter` and by nobody else. Those two genuinely disagree — the draft says
+-- a norm is repealed while the enacted book still carries it — and that is the
+-- litmus test for a ledger.
+--
+-- "Under which arm was this concluded" is NOT a third book. It is an attribute
+-- of a conclusion of THIS program, so it is a column in [main], exactly as
+-- examples/ditto carries its `side`. The decisive difference from the
+-- perspective-per-run anti-pattern: arms are not runs. They are the branches
+-- of one hypothesis, named in the draft, finite and listed.
+
+authority(draft, drafter).
+imports(main, draft).
+
+-- =========================================================================
+-- 1. what an adapter must supply
+-- =========================================================================
+-- IFFY is a MODE, not a domain: it says nothing about insurance claims or
+-- access control. A corpus adapter (examples/iffy/statute.rofl for JOPA,
+-- examples/iffy/policy.rofl for NOPE) threads the arm column through the rules
+-- of its own corpus that read the rule set, and hands back six relations. The
+-- adapter defines them with rules, so they are deliberately NOT declared
+-- `edb`: loading this file without an adapter leaves them undefined, and
+-- boot.rofl's `undefined_premise` audit says so, which is the correct
+-- complaint about half a program.
+--
+--   enacted_elem(Elem)     one amendable element of the rule set in force,
+--                          READ OUT OF THE CORPUS ITSELF rather than restated
+--   question(Q)            a past decision this comparison re-decides
+--   verdict(A, Q)          arm A decides Q affirmatively
+--   support(A, Q, S)       S is an independent support for Q under arm A
+--   uses(A, Q, Elem)       arm A's derivation of Q consumed norm element Elem
+--   blocks(A, Q, Elem)     norm element Elem DEFEATS Q under arm A
+--
+-- `blocks` is separate from `uses` and is not decoration. A conclusion can
+-- stop holding two ways: the premise it rested on went away, or a new premise
+-- defeated it. §5 gives those two different names because they need different
+-- fixes, and only the second is invisible to a tool that diffs supports.
+
+-- The host's part: the arms, and which one is the world as it stands.
+edb(arm).            -- arm(A)
+edb(baseline).       -- baseline(A)          exactly one
+edb(amendment).      -- amendment(Ed)
+edb(amendment_note). -- amendment_note(Ed, "what it does, in words")
+edb(carries).        -- carries(A, Ed)       arm A enacts amendment Ed
+edb(repeals).        -- repeals(Ed, Elem)
+edb(enacts).         -- enacts(Ed, Elem)
+edb(edit_cost).      -- edit_cost(Ed, N)     what this edit costs to make
+edb(excised).        -- excised(A, Fact)     §8: a deletion, not an amendment
+edb(target).         -- target(Q)            §8/tropical: the outcome wanted
+
+-- =========================================================================
+-- 2. the amendment, as a delta — THE FORK ITSELF
+-- =========================================================================
+-- A MODIFICATION IS A REPEAL PLUS AN ENACTMENT and the kernel needs no third
+-- verb: "the notice period becomes 21 days" is repeal notice_limit(30), enact
+-- notice_limit(21). Writing it that way is not bookkeeping — it is what makes
+-- §5 able to say WHICH of the two halves each flipped case turned on, and a
+-- single `amend(Old, New)` verb would have thrown that away.
+--
+-- These four lines are the entire fork. Every arm reads the same
+-- `enacted_elem` facts; an arm that amends nothing is the baseline, computed
+-- from the same premises, and the store holds one copy of them.
+
+repealed(A, Elem)   :- carries[draft](A, Ed), repeals[draft](Ed, Elem).
+enacted_by(A, Elem) :- carries[draft](A, Ed), enacts[draft](Ed, Elem).
+
+in_force(A, Elem)   :- arm[draft](A), enacted_elem(Elem), not repealed(A, Elem).
+in_force(A, Elem)   :- enacted_by(A, Elem).
+
+-- =========================================================================
+-- 3. audits: an edit that does nothing is not an edit
+-- =========================================================================
+-- A repeal of a norm that is not in force, and an enactment of one that
+-- already is, are both silent: the arm computes, the report prints, and the
+-- number at the bottom is the number for an amendment nobody made. A misspelt
+-- element name looks exactly like an amendment with no effect, and there is no
+-- way to tell them apart from the output.
+--
+-- So both are named here, in [audit], with a derivation tree, and
+-- test/example-iffy.test.ts plants one of each and requires them to fire. A
+-- check that has never rejected anything is a check nobody has tested.
+
+vacuous_repeal[audit](Ed, Elem) :- repeals[draft](Ed, Elem), not enacted_elem(Elem).
+vacuous_enact[audit](Ed, Elem)  :- enacts[draft](Ed, Elem), enacted_elem(Elem).
+
+-- An arm that carries nothing and is not the baseline is a comparison against
+-- itself: it will report zero flips forever and look like good news.
+carries_something(A)      :- carries[draft](A, _).
+idle_arm[audit](A)        :- arm[draft](A), not baseline[draft](A), not carries_something(A),
+                             not excises_something(A).
+excises_something(A)      :- excised[draft](A, _).
+
+-- =========================================================================
+-- 4. the diff of two fixpoints
+-- =========================================================================
+-- Set difference over `verdict`, which is the ordinary and correct thing, and
+-- the only reason it is worth writing down is that both sides are in one store
+-- and neither is a copy.
+
+gained(A, Q)  :- arm[draft](A), baseline[draft](B), verdict(A, Q), not verdict(B, Q).
+lost(A, Q)    :- arm[draft](A), baseline[draft](B), verdict(B, Q), not verdict(A, Q).
+flipped(A, Q) :- gained(A, Q).
+flipped(A, Q) :- lost(A, Q).
+steady(A, Q)  :- arm[draft](A), baseline[draft](B), verdict(A, Q), verdict(B, Q).
+
+-- The denominator. Printed with every count, because "214 flipped" is not a
+-- measurement and "214 of 10384" is.
+decided(Q)    :- question(Q).
+
+-- =========================================================================
+-- 5. the cause of each difference — PROVENANCE OF THE DIFFERENCE
+-- =========================================================================
+-- This is the part no canary gives you and the reason this example exists. Not
+-- "how many facts differ" — WHICH conclusion moved and WHICH LINK moved it.
+--
+-- Three kinds, and they are three kinds because they need three different
+-- conversations with whoever proposed the amendment:
+--
+--   withdrawn(Elem)  the baseline leaned on Elem, and Elem is gone. The
+--                    decisive link is the one the amendment touched.
+--   overridden(Elem) the baseline's support is untouched and a NEWLY ENACTED
+--                    element defeats the conclusion. The decisive link is one
+--                    that did not exist before — the link CHANGED, and a tool
+--                    that only diffs supports reports this as "no cause found".
+--   admitted(Elem)   a conclusion that did not hold now does, on the strength
+--                    of an element the amendment brought in.
+
+because(A, Q, withdrawn(Elem))  :- lost(A, Q), baseline[draft](B), uses(B, Q, Elem),
+                                   not in_force(A, Elem).
+because(A, Q, overridden(Elem)) :- lost(A, Q), blocks(A, Q, Elem),
+                                   baseline[draft](B), not in_force(B, Elem).
+because(A, Q, admitted(Elem))   :- gained(A, Q), uses(A, Q, Elem),
+                                   baseline[draft](B), not in_force(B, Elem).
+because(A, Q, unblocked(Elem))  :- gained(A, Q), baseline[draft](B),
+                                   blocks(B, Q, Elem), not in_force(A, Elem).
+
+cause_elem(A, Q, Elem) :- because(A, Q, withdrawn(Elem)).
+cause_elem(A, Q, Elem) :- because(A, Q, overridden(Elem)).
+cause_elem(A, Q, Elem) :- because(A, Q, admitted(Elem)).
+cause_elem(A, Q, Elem) :- because(A, Q, unblocked(Elem)).
+
+-- From the element back to the edit that moved it, and from the edit to the
+-- arm. `attributed` is what the grouped report counts.
+moves(Ed, Elem)         :- repeals[draft](Ed, Elem).
+moves(Ed, Elem)         :- enacts[draft](Ed, Elem).
+attributed(A, Q, Ed)    :- cause_elem(A, Q, Elem), moves(Ed, Elem), carries[draft](A, Ed).
+
+-- A flip nothing explains. It cannot happen while every amendable element is
+-- declared through `enacted_elem`, and that is precisely why it is worth
+-- deriving: if it is ever non-empty, an adapter is reading a norm through a
+-- path IFFY does not know about, and every count in the report is then a
+-- lower bound rather than a total. An unexplained row is louder than a wrong
+-- number.
+explained(A, Q)          :- attributed(A, Q, _).
+unexplained[audit](A, Q) :- flipped(A, Q), not explained(A, Q).
+
+-- One edit did it, or several did. The distinction is what tells a drafter
+-- whether dropping one clause of the amendment would rescue the case.
+-- Both `_other` relations name Ed in a POSITIVE premise as well as in the
+-- inequality. Written the short way -- `attributed(A, Q, E2), E2 != Ed` -- the
+-- head variable is unbound, the rule falls outside range restriction, and the
+-- engine answers it top-down instead of materialising it. The Boolean answers
+-- would stay right and the support hypergraph would not, so the tropical fold
+-- in demo.ts would be folding over a different fact set than the one the
+-- verdicts came from. demo.ts checks the rule count outside range restriction
+-- is zero, which is how this was caught.
+attributed_other(A, Q, Ed) :- attributed(A, Q, Ed), attributed(A, Q, E2), E2 != Ed.
+sole_reason(A, Q, Ed)      :- attributed(A, Q, Ed), not attributed_other(A, Q, Ed).
+multi_reason(A, Q)         :- attributed_other(A, Q, _).
+
+-- =========================================================================
+-- 6. interaction between amendments
+-- =========================================================================
+-- The two lines of the report a canary cannot produce in principle, because a
+-- canary runs one world.
+--
+--   joint_only   the case flips under the whole amendment and under NO single
+--                clause of it. Each clause is separately harmless; together
+--                they are not. This is the row to look at.
+--   masked       a clause flips the case on its own and the whole amendment
+--                does not. The flip is real and another clause is hiding it,
+--                so removing that other clause later — a tidy-up, a revert —
+--                brings the flip back with nothing to point at.
+--
+-- Both need an arm per single clause. That is what makes the search cheap
+-- enough to be routine: the arms are columns, so 2^k arms over k clauses is
+-- one fixpoint, not 2^k stores.
+
+carries_other(A, Ed) :- carries[draft](A, Ed), carries[draft](A, E2), E2 != Ed.
+solo(A, Ed)          :- carries[draft](A, Ed), not carries_other(A, Ed).
+
+flips_solo(J, Q)     :- carries[draft](J, Ed), solo(S, Ed), flipped(S, Q).
+joint_only(J, Q)     :- flipped(J, Q), carries_other(J, _), not flips_solo(J, Q).
+masked(J, Q, Ed)     :- carries[draft](J, Ed), solo(S, Ed), flipped(S, Q), not flipped(J, Q).
+
+-- =========================================================================
+-- 7. fragility: held, and lost its spare
+-- =========================================================================
+-- A conclusion that did not move and now stands on one leg instead of two. Not
+-- a regression — a regression that has not happened yet, and the only warning
+-- anyone will get before the next amendment lands on the remaining leg.
+--
+-- Counted structurally rather than by a fold: `support/3` carries the support's
+-- IDENTITY in a term, so two supports are two facts and the question is
+-- whether a second one exists. examples/ditto reads the same quantity off the
+-- counting semiring; demo.ts does it both ways here and requires the two
+-- answers to agree, because a structural count and a fold over the support
+-- hypergraph are two different things that happen to coincide when — and only
+-- when — the support relation has one derivation per support.
+
+redundant(A, Q)      :- support(A, Q, S1), support(A, Q, S2), S1 != S2.
+single_support(A, Q) :- verdict(A, Q), not redundant(A, Q).
+
+fragile(A, Q)        :- steady(A, Q), baseline[draft](B), redundant(B, Q), single_support(A, Q).
+hardened(A, Q)       :- steady(A, Q), baseline[draft](B), single_support(B, Q), redundant(A, Q).
+
+-- Which support went, for a conclusion that stayed. The same shape as §5, one
+-- level down: provenance of a difference that changed no verdict at all.
+support_lost(A, Q, S)   :- steady(A, Q), baseline[draft](B), support(B, Q, S), not support(A, Q, S).
+support_gained(A, Q, S) :- steady(A, Q), baseline[draft](B), support(A, Q, S), not support(B, Q, S).
+
+-- =========================================================================
+-- 8. excise: the blast radius, computed before the deletion
+-- =========================================================================
+-- The inverse question. Not "what does my amendment break" but "what rests on
+-- this, if I take it out". examples/oops does something adjacent and the
+-- refutation there arrives from outside and is an event; here nothing has
+-- happened yet and the deletion is a proposal like any other.
+--
+-- An excision arm removes a CORPUS fact rather than a norm — the adapter reads
+-- `excised/2` in the one rule that admits that kind of fact — so the radius is
+-- the ordinary `lost/2` of §4 restricted to that arm. Nothing new is needed,
+-- which is the point: a deletion is an amendment whose delta is on the other
+-- side of the reader.
+--
+-- The kernel's own `excise` computes the same radius by deep-copying the store
+-- and re-deriving. demo.ts §7 runs both and requires them to agree. Two
+-- methods that share no reasoning is the only kind of agreement worth having,
+-- and it is also the positive control for this whole file: a radius computed
+-- as an arm is a claim about an arm until something outside the arm confirms
+-- it.
+
+radius(A, Q)      :- excised[draft](A, _), lost(A, Q).
+radius_empty(A)   :- excised[draft](A, _), not radius_nonempty(A).
+radius_nonempty(A) :- radius(A, _).
+
+-- =========================================================================
+-- 9. the tropical question, and what makes it answerable
+-- =========================================================================
+-- "What is the smallest amendment that gives the outcome I want" — the inverse
+-- of everything above, and the one that turns the tool from a check into a
+-- drafting instrument.
+--
+-- The relation is Boolean and trivial: which arms reach the target. What makes
+-- the answer a MINIMUM is the fold: demo.ts §8 evaluates `achieves/1` under the
+-- tropical semiring with the cost of an edit on the firing that admits it, so
+-- the shortest path through the support hypergraph is the cheapest amendment
+-- reaching the target. Nothing here mentions a cost, exactly as jopa.rofl
+-- mentions no standard of proof: the number belongs to the fold.
+
+achieves(A)  :- target[draft](Q), verdict(A, Q).

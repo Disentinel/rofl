@@ -1,0 +1,417 @@
+-- loot.rofl — LOOT: rules as plunder.
+--
+-- An NPC walks a swamp road, takes books off corpses, and reads them. A book
+-- is a RULEPACK. Reading it puts its rules in the NPC's head, and the head is
+-- a ROFL store, so "reading" is `load` and nothing else.
+--
+-- The fiction buys one thing that a corporate domain would have to argue for:
+-- LEAFING THROUGH A BOOK BEFORE ABSORBING IT. That is installing a pack in a
+-- fork, diffing, and deciding — and in a swamp it needs no defence. Two NPCs
+-- walk the same road and find the same books. One leafs through; one swallows.
+--
+-- THREE THINGS THIS FILE STANDS ON, ALL ALREADY IN THE KERNEL.
+--
+--   (1) Rules ARE facts. `load` turns every clause into reflection facts and
+--       the evaluator reads rules only from the store (src/reflect.ts). So a
+--       pack is not a new kind of object: installing one is asserting facts,
+--       unloading one is retracting them, and a fork of the store is a fork of
+--       the rule set. Nothing below adds machinery for any of that.
+--
+--   (2) Rule identity is CONTENT-ADDRESSED. `ruleIdOf(c)` is 'r' + fnv1a of
+--       the canonical clause serialization, so two rules are the same rule iff
+--       they are literally the same clause. That is versioning in its
+--       strongest form and it is free — a pack's manifest names its rules by
+--       hash, a tampered book fails to match, and the diff between two
+--       editions of a book is a set difference on ids. It also has a sharp
+--       edge, measured in demo.ts §9 and named in README.md: the canonical
+--       form keeps VARIABLE NAMES, so renaming ?T to ?X is a different rule.
+--
+--   (3) Provenance is kernel-emitted. Every firing writes `derived_by(Fact,
+--       RuleId, Tick)`, so joining that with the manifest answers "which book
+--       is behind this belief" with no annotation anywhere. Section 5 is four
+--       rules over the kernel's own provenance; nothing in the packs
+--       cooperates, and nothing has to.
+--
+-- WHAT IS A PERSPECTIVE HERE, and what is deliberately not one
+-- (docs/choosing-perspectives.md). Perspectives are LEDGERS:
+--
+--   [world]     what the extractor saw. authority(world, extractor).
+--   [mind]      the reader's own head — the book of conclusions its rules
+--               reach. A derived ledger; its only writers are rules.
+--   [<book>]    one ledger per book, named after the book, written by its
+--               AUTHOR: the manifest and whatever the book asserts outright.
+--               "Rules I got off the dead wizard" is a ledger. An edition
+--               signed by the wrong hand is `forged[audit]`, mechanically.
+--   [quarantine] the reader's own record of what a trial reading showed:
+--               `proposed`, `gained`, `lost`. A journal of measurements, one
+--               entry per book leafed through. authority(quarantine, reader).
+--   [audit]     the verdicts, as in boot.rofl and examples/moot.
+--
+-- "Books I trust" is NOT a perspective. Trust is derived in section 6 from
+-- what the fork showed, and it can change without anything being re-filed.
+
+-- ===========================================================================
+-- 0. who may write where
+-- ===========================================================================
+
+authority(world, extractor).
+authority(quarantine, reader).
+authority(codex_of_thorns,       thornwood_of_the_low_fen).
+authority(broken_seal,           an_unknown_hand).
+authority(grimoire_of_ash,       the_ashen_hand).
+authority(hexers_marginalia,     mother_quill).
+authority(dead_mans_ledger,      the_ashen_hand).
+authority(wardens_primer,        the_fen_wardens).
+authority(low_road_sighting,     a_travelling_scout).
+authority(tongue_of_the_deep,    a_translator).
+authority(bog_herbal,            mother_quill).
+authority(chant_of_endless_names, a_mad_cantor).
+authority(old_bestiary,          a_dead_scholar).
+authority(dune_walkers_rule,     a_caravan_master).
+authority(weight_of_the_world,   an_over_thorough_monk).
+
+-- Reading a book is recorded at the ledger level too: [mind] imports the
+-- book's ledger. boot.rofl's `sees/2` closes over this, so a rule that reads a
+-- book's own claims and writes the head is visibly licensed, and section 5's
+-- `uninvited` audit is the negative half of the same fact.
+edb(imports).
+
+-- ===========================================================================
+-- 1. the extractor and its vocabulary
+-- ===========================================================================
+-- A pack is NOT just rules. A rule is not self-standing: it names predicates,
+-- and predicates come out of the extractor that turns the world into facts.
+-- So the unit of distribution is rules + the predicate vocabulary they need +
+-- the extractor version they were written against, and a pack missing any of
+-- the three does not install (section 4).
+--
+-- `produces/1` is that vocabulary, declared as data. It is the list the
+-- compatibility check compares a pack's `pack_needs` against — and the
+-- difference between "this book asks for a predicate I cannot make" and "this
+-- book asks for a predicate I can make and never do" is the whole difference
+-- between a MUTE pack and a DEAD one. Both derive nothing. Only one of them
+-- is a defect.
+
+extractor_version[world](2).
+
+produces[world](room).      produces[world](step).      produces[world](at).
+produces[world](here).      produces[world](beast).     produces[world](container).
+produces[world](corpse).    produces[world](book).      produces[world](lies_on).
+produces[world](armed).     produces[world](moving).    produces[world](rooted).
+produces[world](glows).     produces[world](wet).       produces[world](hostile).
+produces[world](lure_sign). produces[world](ward_glyph).produces[world](scorched).
+produces[world](carries).   produces[world](wounded).   produces[world](notch).
+produces[world](parched).   produces[world](sunlit).    produces[world](brittle).
+
+-- Every relation the extractor may emit is declared extensional, or
+-- boot.rofl's `undefined_premise` audit reads an empty one as a misspelling —
+-- and it is right to, which is exactly why the three desert predicates are
+-- here. `parched`, `sunlit` and `brittle` are IN the vocabulary and the swamp
+-- never sets them; that is what makes examples/loot's dead book dead rather
+-- than mute.
+edb(room).      edb(step).      edb(at).        edb(here).
+edb(beast).     edb(container). edb(corpse).    edb(book).      edb(lies_on).
+edb(armed).     edb(moving).    edb(rooted).    edb(glows).     edb(wet).
+edb(hostile).   edb(lure_sign). edb(ward_glyph).edb(scorched).
+edb(carries).   edb(wounded).   edb(notch).
+edb(parched).   edb(sunlit).    edb(brittle).
+edb(produces).  edb(extractor_version).
+
+-- the pack format, declared. A manifest is five relations and nothing else.
+edb(pack).           -- pack(P).                 a pack, in its own ledger
+edb(pack_title).     -- pack_title(P, S).        what the spine says
+edb(pack_author).    -- pack_author(P, Who).     who signed it
+edb(pack_extractor). -- pack_extractor(P, V).    the world version it assumes
+edb(pack_needs).     -- pack_needs(P, Rel).      a predicate its rules read
+edb(pack_rule).      -- pack_rule(P, RuleId).    a rule, by content hash
+
+-- what a trial reading in a fork reported (section 6). Host-measured, asserted
+-- back as facts, so the DECISION is a rule and not a branch in TypeScript.
+edb(proposed).       -- proposed(P).
+edb(gained).         -- gained(P, Rel, Arg).     a fact the fork has and we do not
+edb(lost).           -- lost(P, Rel, Arg).       a fact we have and the fork does not
+edb(guarded).        -- guarded(Rel).            a conclusion that is our own business
+
+-- ===========================================================================
+-- 2. the road
+-- ===========================================================================
+-- Six rooms, fourteen things, three or four actions. Not a game — a trace,
+-- short enough that every verdict below can be checked by hand.
+
+room[world](swamp_gate).    step[world](swamp_gate, 1).
+room[world](drowned_mill).  step[world](drowned_mill, 2).
+room[world](corpse_field).  step[world](corpse_field, 3).
+room[world](wisp_hollow).   step[world](wisp_hollow, 4).
+room[world](troll_bridge).  step[world](troll_bridge, 5).
+room[world](dry_shrine).    step[world](dry_shrine, 6).
+
+-- 1. the gate: a dead botanist, and a stump that looks like a beast
+corpse[world](dead_botanist).       here[world](dead_botanist, swamp_gate).
+beast[world](bog_stump).            here[world](bog_stump, swamp_gate).
+rooted[world](bog_stump).           hostile[world](bog_stump).
+book[world](codex_of_thorns).       lies_on[world](codex_of_thorns, dead_botanist).
+
+-- 2. the mill: a drowned pilgrim
+corpse[world](drowned_pilgrim).     here[world](drowned_pilgrim, drowned_mill).
+beast[world](eel).                  here[world](eel, drowned_mill).
+armed[world](eel).                  moving[world](eel).       wet[world](eel).
+book[world](broken_seal).           lies_on[world](broken_seal, drowned_pilgrim).
+
+-- 3. the field: a scorched supply chest, and a burnt sorcerer
+corpse[world](burnt_sorcerer).      here[world](burnt_sorcerer, corpse_field).
+container[world](supply_chest).     here[world](supply_chest, corpse_field).
+scorched[world](supply_chest).
+book[world](grimoire_of_ash).       lies_on[world](grimoire_of_ash, burnt_sorcerer).
+
+-- 4. the hollow: a wisp, and a chest that is not a chest
+beast[world](wisp).                 here[world](wisp, wisp_hollow).
+moving[world](wisp).                glows[world](wisp).       wet[world](wisp).
+container[world](false_chest).      here[world](false_chest, wisp_hollow).
+lure_sign[world](false_chest).      ward_glyph[world](false_chest).
+corpse[world](old_hexer).           here[world](old_hexer, wisp_hollow).
+book[world](hexers_marginalia).     lies_on[world](hexers_marginalia, old_hexer).
+
+-- 5. the bridge: a troll, and a debtor's ledger on the last traveller
+beast[world](troll).                here[world](troll, troll_bridge).
+armed[world](troll).                moving[world](troll).     hostile[world](troll).
+corpse[world](last_traveller).      here[world](last_traveller, troll_bridge).
+book[world](dead_mans_ledger).      lies_on[world](dead_mans_ledger, last_traveller).
+
+-- 6. the shrine: a warden's primer, a marsh light, and the doorpost notches
+corpse[world](dead_warden).         here[world](dead_warden, dry_shrine).
+beast[world](marsh_light).          here[world](marsh_light, dry_shrine).
+moving[world](marsh_light).         glows[world](marsh_light).  wet[world](marsh_light).
+book[world](wardens_primer).        lies_on[world](wardens_primer, dead_warden).
+notch[world](1).  notch[world](2).  notch[world](3).  notch[world](4).
+notch[world](5).  notch[world](6).  notch[world](7).  notch[world](8).
+notch[world](9).  notch[world](10). notch[world](11). notch[world](12).
+notch[world](13). notch[world](14). notch[world](15). notch[world](16).
+notch[world](17). notch[world](18). notch[world](19). notch[world](20).
+notch[world](21). notch[world](22). notch[world](23). notch[world](24).
+
+-- The wanderer's own body and pack are things the extractor sees too; demo.ts
+-- asserts `at/1`, `carries/1` and `wounded/1` per stop, because they are the
+-- only part of this world that moves.
+
+-- ===========================================================================
+-- 3. the head it starts with
+-- ===========================================================================
+-- Small on purpose. Everything a book can do to this NPC, it does to these
+-- fourteen rules, and every rule here is one a reader can hold in mind while
+-- reading section 7's transcript.
+
+-- 3.1 -- what is dangerous. Two positive rules and a hole between them: a
+-- thing that is neither moving-and-armed nor rooted-and-unarmed gets no
+-- verdict at all, and `unjudged` says so instead of defaulting to safe. That
+-- hole is what the codex closes.
+
+threat[mind](T)    :- beast[world](T), armed[world](T), moving[world](T).
+harmless[mind](T)  :- beast[world](T), rooted[world](T), not armed[world](T).
+unjudged[audit](T) :- beast[world](T), not threat[mind](T), not harmless[mind](T).
+
+-- and the other side of the same coin. Two rules reaching OPPOSITE verdicts
+-- about one thing do not explode — they both stand, in the same ledger, and
+-- the reader holds both. Nothing native can do this; it takes a foreign rule
+-- written against a world where the predicate meant something else, and then
+-- `confused` is the only place it becomes visible. §6 of demo.ts is that case.
+confused[audit](T) :- threat[mind](T), harmless[mind](T).
+
+-- 3.2 -- what may be opened. `suspect` is the only negated head-relation in
+-- the native rules, and therefore the only door a foreign rule can come
+-- through to take a conclusion AWAY: adding a `suspect` rule cannot add an
+-- `opens` fact, it can only remove one. That is where the Grimoire of Ash
+-- goes in, and nothing here anticipates it.
+
+suspect[mind](C)   :- container[world](C), lure_sign[world](C).
+safe[mind](C)      :- container[world](C), not suspect[mind](C).
+opens[mind](C)     :- container[world](C), safe[mind](C), at[world](R),
+                      here[world](C, R).
+
+-- 3.3 -- the body and the pack. `holds` is the NPC's inventory as it believes
+-- it to be; `hand_over` is in the vocabulary of its own head because giving a
+-- thing away is a conclusion it can reach — which is exactly why section 6
+-- guards it.
+
+holds[mind](I)     :- carries[world](I).
+hurt[mind](wanderer) :- wounded[world](wanderer).
+
+-- 3.4 -- the two things the road actually asks of it
+crosses[mind](troll_bridge) :- holds[mind](sword).
+treats[mind](wound)         :- hurt[mind](wanderer), holds[mind](bandage).
+
+-- 3.5 -- a reader's own business. These relations are the ones a foreign book
+-- may not quietly conclude into; section 6 turns a hit here into a refusal.
+guarded[main](hand_over).
+guarded[main](holds).
+guarded[main](crosses).
+
+-- ===========================================================================
+-- 4. what a pack is, and whether it may be installed at all
+-- ===========================================================================
+-- Three ways a book is unusable before a single rule of it runs, and they are
+-- different failures with different remedies:
+--
+--   incomplete       the manifest is torn. No extractor version, or no rules.
+--   version_gap      written against another world. `hostile` meant something
+--                    wider in v1, and a rule that says `hostile` still parses.
+--   missing_predicate a predicate this extractor cannot produce at all.
+--
+-- The third is the interesting one and it has a name of its own below, because
+-- what it produces is SILENCE, and silence is what "no threats found" also
+-- looks like.
+--
+-- All of these read the manifest through a VARIABLE perspective — `pack[P](P)`
+-- — which is the kernel's way of saying "in whichever book's ledger it lives".
+-- The pack's id and its ledger are the same atom on purpose: `imports(mind, P)`
+-- is then a sentence about the same thing the manifest is about.
+
+known_pack[audit](P)  :- pack[P](P).
+
+incomplete[audit](P)  :- known_pack[audit](P), not pack_extractor[P](P, _).
+incomplete[audit](P)  :- known_pack[audit](P), not pack_rule[P](P, _).
+incomplete[audit](P)  :- known_pack[audit](P), not pack_author[P](P, _).
+
+version_gap[audit](P, V, W) :- pack_extractor[P](P, V), extractor_version[world](W),
+                               V != W.
+
+missing_predicate[audit](P, Rel) :- pack_needs[P](P, Rel), not produces[world](Rel).
+
+-- A pack that asks for something this world cannot say. It will install
+-- cleanly, fire nothing, and report nothing — and "reported nothing" is
+-- indistinguishable from "looked and found nothing" unless somebody asks this
+-- question. This is the worst of the eight poisonings for exactly that reason,
+-- and it is one rule.
+mute[audit](P)        :- missing_predicate[audit](P, _).
+
+installable[audit](P) :- known_pack[audit](P), not incomplete[audit](P),
+                         not version_gap[audit](P, _, _), not mute[audit](P).
+
+-- ===========================================================================
+-- 5. which book is behind a belief
+-- ===========================================================================
+-- `derived_by/3` is kernel-emitted: one record per firing, naming the rule.
+-- The manifest names the rule too. Joining them is the whole of attribution,
+-- and no pack cooperates in it.
+--
+-- These are the only rules in this repository that read `derived_by` in a rule
+-- body. The kernel notices (src/engine.ts) and turns derived-relation reuse
+-- off for the whole program, because a rule triggered by derivations anywhere
+-- is outside the cone argument reuse rests on. That is a real, measured cost
+-- and demo.ts §10 reports it rather than leaving it as a footnote.
+
+fired[audit](R)         :- derived_by(_, R, _), pack_rule[P](P, R).
+pack_fired[audit](P)    :- pack_rule[P](P, R), fired[audit](R).
+
+-- A rule that never fired here. Correct rules about surviving a desert, picked
+-- up in a bog: nothing is wrong with them and nothing will ever come of them.
+-- This is examples/moot's faculty, four lines, over the kernel's provenance
+-- instead of over a config. `imports(mind, P)` is the guard that keeps the
+-- verdict about books actually READ: a book refused in quarantine has left its
+-- manifest on the shelf and none of its rules in the head, and calling that
+-- one dead would be a different claim entirely.
+dead_rule[audit](P, R)  :- pack_rule[P](P, R), imports(mind, P), not fired[audit](R).
+dead_book[audit](P)     :- known_pack[audit](P), imports(mind, P), not pack_fired[audit](P).
+
+-- A rule of a book that writes into the reader's head, from a book the reader
+-- never imported. `writes_to/2` is kernel-emitted from the rule's own head
+-- perspective, so this needs no cooperation from the pack either.
+uninvited[audit](P, R)  :- pack_rule[P](P, R), writes_to(R, mind),
+                           not imports(mind, P).
+
+-- Two books shipping the SAME rule. Content-addressing makes this exact — one
+-- id, two owners — and it is the reason unloading a pack cannot simply delete
+-- every rule the pack names (demo.ts §9).
+shared_rule[audit](P, Q, R) :- pack_rule[P](P, R), pack_rule[Q](Q, R), P != Q.
+
+-- ===========================================================================
+-- 6. quarantine — leafing through before absorbing
+-- ===========================================================================
+-- The mechanism the whole example is for. Install the pack in a FORK of the
+-- store, evaluate, diff against the world we are actually in, assert the diff
+-- back here as `gained`/`lost`, and let these rules decide. IFFY applied to
+-- rules: the counterfactual is a whole store, and the kernel already forks one
+-- (`Rofl.fromSnapshot(r.save())`).
+--
+-- The diff is host arithmetic — two stores cannot be compared inside one — but
+-- everything decided about it is a rule, so the policy is inspectable, and
+-- `why refuse[audit](grimoire_of_ash)` is an answer rather than a stack trace.
+
+gives[audit](P)         :- gained[quarantine](P, _, _).
+takes_away[audit](P)    :- lost[quarantine](P, _, _).
+
+-- a book that concludes into a relation the reader keeps to itself
+trespass[audit](P, Rel) :- gained[quarantine](P, Rel, _), guarded[main](Rel).
+
+-- a book that reaches the opposite verdict about something already judged.
+-- The Hexer's Marginalia uses `safe` in its own sense — magically warded —
+-- and the name collides where the meaning does not.
+overrules[audit](P, T)  :- gained[quarantine](P, safe, T), suspect[mind](T).
+
+-- nothing gained and nothing lost. TWO different books look like this: one
+-- that could not speak, and one that reached the same conclusions by shorter
+-- proofs. The rules cannot tell them apart and do not pretend to — they ask
+-- for a ruling, and demo.ts §5 settles it with the tropical semiring.
+inert[audit](P)         :- proposed[quarantine](P), not gives[audit](P),
+                           not takes_away[audit](P).
+
+accept[audit](P)  :- proposed[quarantine](P), gives[audit](P),
+                     not takes_away[audit](P), not trespass[audit](P, _),
+                     not overrules[audit](P, _).
+refuse[audit](P)  :- proposed[quarantine](P), takes_away[audit](P).
+refuse[audit](P)  :- proposed[quarantine](P), trespass[audit](P, _).
+refuse[audit](P)  :- proposed[quarantine](P), overrules[audit](P, _).
+ruling[audit](P)  :- proposed[quarantine](P), inert[audit](P).
+
+-- Conservativity is not a separate ritual: `accept` IS "it took nothing away",
+-- and `refuse` is "it did". The other two clauses of `refuse` are the reader's
+-- own policy on top of conservativity, not a weakening of it.
+
+-- ===========================================================================
+-- 7. the split
+-- ===========================================================================
+-- A book that asserts the opposite of a conclusion we hold does NOT explode,
+-- because its claim lives in its own ledger. What it leaves behind is two
+-- opinions and a decision to make, and `split` is where that decision surfaces
+-- instead of being resolved by whichever fact happened to arrive first.
+
+calm_claim[audit](P, T) :- calm[P](T), pack[P](P).
+split[audit](P, T)      :- calm_claim[audit](P, T), suspect[mind](T).
+edb(calm).
+
+-- ===========================================================================
+-- Required results, all checked in test/example-loot.test.ts:
+--   ? unstratified(X)                  -> empty
+--   ? malformed[audit](R)              -> empty     ? breach[audit](R)  -> empty
+--   ? leak[audit](A, B)                -> empty     ? unmoded[audit](R) -> empty
+--   ? undefined_premise[audit](R, Rel) -> empty on the native head
+--   ? unjudged[audit](T)               -> wisp, until the codex is read
+--   why refuse[audit](grimoire_of_ash) -> the lost fact, named
+--   why hand_over[mind](sword, the_ashen_hand) -> the trojan's own rule
+
+-- ============ what [audit] and [mind] are allowed to read ============
+--
+-- Written out because the kernel stopped writing it. `crossing` carried
+-- `not bridge_decl(R, A, B)`, emitted for any rule whose head named a ledger
+-- and whose body read another, so every crossing here licensed itself by
+-- existing and `leak[audit]` read 0 for a reason unrelated to this file.
+--
+-- [mind] READS [world]. What the extractor published about the world is what
+-- deliberation is about.
+imports(mind, world).
+
+-- [audit] READS [mind] and [quarantine]. Both are verdicts about a book: one
+-- about what was concluded, one about what was held back.
+imports(audit, mind).
+imports(audit, quarantine).
+
+-- `imports(audit, world)` is NOT written: `sees` is the transitive closure of
+-- `imports`, so `imports(audit, mind)` and `imports(mind, world)` already give
+-- `sees(audit, world)`. Adding it changes no row, and a declaration that
+-- licenses nothing already licensed is a decoration.
+--
+-- AND the gather `imports` cannot name. The audit rules read a grimoire under
+-- the ledger VARIABLE — one book per source, named at runtime by whoever wrote
+-- it — and `$var("P")` has no `authority` fact, so it can never be the From of
+-- an import. Narrow: `collects_from` requires `not perspective(A)`, so the
+-- three named crossings above still need the three lines above.
+collects(audit).

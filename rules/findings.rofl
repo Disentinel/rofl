@@ -18,3 +18,37 @@ settled(F)           :- dismissed(F, _).
 open_finding(F)      :- finding(F, _), not settled(F).
 
 finding_action(F, W) :- open_finding(F), demands(F, W).
+
+-- The QUEUE, derived rather than narrated. `blocks(A, B)` says A must be
+-- settled before B is briefed; until 2026-08-31 the order of work lived
+-- nowhere but in my head, so the ledger could say what was found and whether
+-- it was closed, and not what to do next. Three rules make the order a
+-- consequence of the facts, with a why-tree, and a circular queue would be
+-- refused by the same machinery that refuses a circular program.
+waiting(F)           :- blocks(A, F), not settled(A).
+ready(F)             :- open_finding(F), not waiting(F).
+blocked_by(F, A)     :- blocks(A, F), not settled(A).
+
+-- CAUGHT, AND FORBIDDEN TO EXECUTE. Three times in one session I took a
+-- DIAGNOSTIC mechanism -- a row in a report that blocks nothing -- and argued
+-- about it in the register of DEFENCE, then built a guard for it. Twice the
+-- work was reverted: an imperative refusal whose hole was already closed, and
+-- a new relation in the meta-kernel for two explained rows of a report. The
+-- common step was not carelessness, it was STARTING WORK ON A CLAIM THAT HAD
+-- NEVER BEEN RUN.
+--
+-- `witness(F, Query, N)` already exists for exactly this: a premise stated as
+-- a query someone can execute, with the number it returned. Measured when this
+-- rule was written: 150 open findings, FIVE with a witness, and of eight open
+-- defects exactly ONE. The instrument was built and left switched off.
+--
+-- So the queue now refuses to offer unproven work. Record whatever you like --
+-- an observation costs nothing and the ledger is a journal. But a finding that
+-- DEMANDS CODE stays out of `ready` until someone has run the query and
+-- written down what it returned. Not a rule about attention: `ready` simply
+-- does not contain it, and `unproven` says so by name.
+unproven(F)          :- finding_action(F, rule_and_test), not witness(F, _, _).
+unproven(F)          :- finding_action(F, kernel_test),   not witness(F, _, _).
+
+-- and the queue reads it, so an unproven item is not offered as work
+ready_proven(F)      :- ready(F), not unproven(F).

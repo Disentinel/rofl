@@ -1,0 +1,1375 @@
+<title>Rules as Plunder</title>
+
+<style>
+/* ---------------------------------------------------------------------------
+   Palette: bog light. Peat paper, iron ink, one cold green for a book that is
+   safe to read and one rust for a book that is not. Every token is defined
+   here, on bare :root, so a viewer whose browser reports nothing at all still
+   gets a complete design.
+   --------------------------------------------------------------------------- */
+:root {
+  --ground:    #f4f2ea;
+  --panel:     #fffefa;
+  --sunk:      #e9e6da;
+  --ink:       #1d201c;
+  --muted:     #5f6559;
+  --hair:      #d3cfc0;
+  --accent:    #2d5d4a;
+  --good:      #2f6b4f;
+  --good-bg:   #e2efe6;
+  --bad:       #96351f;
+  --bad-bg:    #f7e6df;
+  --warn:      #8a6208;
+  --warn-bg:   #f6ecd4;
+  --neutral-bg:#eceada;
+  --shadow: 0 1px 2px rgba(29,32,28,.06), 0 8px 24px rgba(29,32,28,.05);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #12140f;
+    --panel:     #1b1e18;
+    --sunk:      #23261e;
+    --ink:       #e6e6dd;
+    --muted:     #9aa093;
+    --hair:      #333729;
+    --accent:    #7fc4a4;
+    --good:      #62c497;
+    --good-bg:   #14291f;
+    --bad:       #e08a6e;
+    --bad-bg:    #301a13;
+    --warn:      #d8ab4e;
+    --warn-bg:   #2c2412;
+    --neutral-bg:#23261e;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:    #12140f;
+  --panel:     #1b1e18;
+  --sunk:      #23261e;
+  --ink:       #e6e6dd;
+  --muted:     #9aa093;
+  --hair:      #333729;
+  --accent:    #7fc4a4;
+  --good:      #62c497;
+  --good-bg:   #14291f;
+  --bad:       #e08a6e;
+  --bad-bg:    #301a13;
+  --warn:      #d8ab4e;
+  --warn-bg:   #2c2412;
+  --neutral-bg:#23261e;
+  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.62 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 46rem; margin: 0 auto; padding: 0 1.5rem 5rem; }
+
+/* ---- masthead ---- */
+.top {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--ground);
+  border-bottom: 1px solid var(--hair);
+}
+.top-in {
+  max-width: 46rem; margin: 0 auto; padding: .55rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
+}
+.sig {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .7rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+}
+.controls { display: flex; gap: .5rem; align-items: center; }
+.seg { display: flex; gap: 2px; padding: 2px; background: var(--sunk); border-radius: 999px; }
+.seg button, .plain-btn {
+  font: 500 .78rem/1 inherit;
+  border: 0; border-radius: 999px; padding: .42rem .8rem;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+.plain-btn { background: var(--sunk); }
+.seg button:focus-visible, .plain-btn:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* ---- type ---- */
+h1 {
+  font: 600 clamp(2.2rem, 6.4vw, 3.2rem)/1.07 ui-serif, Georgia, "Times New Roman", serif;
+  letter-spacing: -.02em; text-wrap: balance; margin: 2.8rem 0 0;
+}
+h1 em { font-style: italic; color: var(--accent); }
+.stand {
+  font: 400 1.2rem/1.5 ui-serif, Georgia, serif;
+  color: var(--muted); text-wrap: balance; margin: 1rem 0 0; max-width: 34rem;
+}
+h2 {
+  font: 600 1.45rem/1.22 ui-serif, Georgia, serif;
+  margin: 3.2rem 0 .2rem; text-wrap: balance; letter-spacing: -.01em;
+}
+h3 { font: 600 .95rem/1.4 inherit; margin: 1.9rem 0 .3rem; }
+p { margin: .9rem 0; }
+.lede { font-size: 1.05rem; }
+code, .m {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .86em;
+}
+code { background: var(--sunk); padding: .1em .34em; border-radius: 3px; }
+hr { border: 0; border-top: 1px solid var(--hair); margin: 3.4rem 0 0; }
+ul, ol { padding-left: 1.2rem; }
+li { margin: .35rem 0; }
+
+/* ---- level switching ---- */
+.eng, .kid { display: none; }
+body[data-level="kid"] .kid { display: revert; }
+body[data-level="eng"] .eng { display: revert; }
+
+/* ---- panels & code ---- */
+.panel {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 10px;
+  padding: 1.05rem 1.15rem; margin: 1.3rem 0; box-shadow: var(--shadow);
+}
+.scroll { overflow-x: auto; }
+figure { margin: 1.5rem 0; }
+figcaption { font-size: .86rem; color: var(--muted); margin-top: .65rem; }
+
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .78rem; line-height: 1.55; margin: 0;
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 8px;
+  padding: .85rem 1rem; overflow-x: auto;
+}
+pre b { color: var(--accent); font-weight: 600; }
+pre i { color: var(--muted); font-style: normal; }
+pre .neg { color: var(--bad); }
+
+/* ---- the road stepper ---- */
+.road { display: flex; gap: 3px; margin: 1rem 0 .2rem; flex-wrap: wrap; }
+.road button {
+  flex: 1 1 5.4rem; min-width: 5.4rem;
+  border: 1px solid var(--hair); background: var(--sunk); color: var(--muted);
+  border-radius: 7px; padding: .5rem .3rem; cursor: pointer;
+  font: 500 .72rem/1.25 inherit; text-align: center;
+}
+.road button[aria-pressed="true"] {
+  background: var(--panel); color: var(--ink); border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.road .n {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .64rem; letter-spacing: .1em; color: var(--muted);
+}
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: 1rem; }
+@media (max-width: 34rem) { .two { grid-template-columns: 1fr; } }
+.who {
+  border: 1px solid var(--hair); border-radius: 9px; padding: .8rem .9rem;
+  background: var(--panel);
+}
+.who h4 {
+  margin: 0 0 .5rem; font: 600 .74rem/1 inherit;
+  letter-spacing: .11em; text-transform: uppercase; color: var(--muted);
+}
+.verdict {
+  display: inline-block; font-weight: 600; font-size: .92rem;
+  padding: .12rem .45rem; border-radius: 5px; margin-bottom: .5rem;
+}
+.verdict.take { background: var(--good-bg); color: var(--good); }
+.verdict.leave { background: var(--neutral-bg); color: var(--muted); }
+.verdict.gulp { background: var(--warn-bg); color: var(--warn); }
+.verdict.gone { background: var(--bad-bg); color: var(--bad); }
+.who ul { margin: .3rem 0; padding-left: 1.05rem; font-size: .88rem; }
+.who .why { color: var(--muted); }
+.who .did { color: var(--ink); }
+.kit {
+  margin-top: .6rem; padding-top: .5rem; border-top: 1px solid var(--hair);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .72rem; color: var(--muted);
+}
+.dead { color: var(--bad); font-weight: 600; }
+
+/* ---- tables ---- */
+table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+th, td { text-align: left; padding: .4rem .6rem .4rem 0; border-bottom: 1px solid var(--hair);
+  vertical-align: top; }
+th { font-weight: 600; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); }
+td.n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr[data-kind="poison"] td:first-child { color: var(--bad); }
+tr[data-kind="good"] td:first-child { color: var(--good); }
+tr[data-kind="bridge"] td:first-child { color: var(--accent); }
+.tag {
+  display: inline-block; font-size: .68rem; letter-spacing: .07em;
+  text-transform: uppercase; padding: .05rem .34rem; border-radius: 4px;
+  border: 1px solid var(--hair); background: var(--sunk); color: var(--muted);
+}
+.tag.road { border-color: var(--accent); color: var(--accent); }
+
+/* ---- fork diagram ---- */
+.fork { width: 100%; min-width: 560px; height: auto; }
+.fork .box { fill: var(--panel); stroke: var(--hair); stroke-width: 1.5; }
+.fork .box.trial { fill: var(--warn-bg); stroke: var(--warn); stroke-dasharray: 4 3; }
+.fork .box.keep { fill: var(--good-bg); stroke: var(--good); }
+.fork text { fill: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; }
+.fork .lbl { fill: var(--muted); font-size: 9.5px; letter-spacing: .08em; }
+.fork .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.fork .gain { fill: var(--good); }
+.fork .loss { fill: var(--bad); }
+.fork marker path { fill: var(--muted); opacity: .6; }
+.ok { color: var(--good); font-weight: 600; }
+
+.note { font-size: .86rem; color: var(--muted); }
+.foot { margin-top: 2.6rem; font-size: .86rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="top">
+  <div class="top-in">
+    <span class="sig">rofl / examples / loot</span>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Reading level">
+        <button type="button" id="b-kid" aria-pressed="false">Plain</button>
+        <button type="button" id="b-eng" aria-pressed="true">Engine</button>
+      </div>
+      <button type="button" class="plain-btn" id="b-theme">Theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <h1>He picks a book off a corpse<br><em>and reads it.</em></h1>
+
+  <p class="stand kid">The book is full of rules. Once he has read it, the rules
+    are in his head and he behaves differently. Some books make him cleverer. Some
+    books get him killed.</p>
+  <p class="stand eng">A book is a <strong>rulepack</strong>. In ROFL rules are
+    facts, so reading one is <span class="m">load</span> and a copy of the store is
+    a copy of the rule set. Two readers walk one road: one installs each book in a
+    fork and diffs before absorbing it, one swallows.</p>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">What is in a book</h2>
+  <h2 class="eng">What a rulepack is</h2>
+
+  <div class="kid">
+    <p class="lede">Our wanderer already knows a few things. If a beast is armed
+      and moving, it is dangerous. If a chest has no lure-mark on it, it is safe to
+      open. That is his whole head: fourteen little rules.</p>
+    <p>A book adds more rules. <em>A glowing thing in wet ground will burn you.</em>
+      Read that, and now he knows something he did not know before — which is good,
+      because there is a glowing thing in the bog ahead.</p>
+    <p>But a book is not just its rules. A rule talks about things like
+      <em>glowing</em> and <em>wet</em>, and somebody has to actually be able to
+      look at the world and say whether a thing is glowing. If the book asks about
+      something our wanderer cannot see — <em>heat</em>, say, when he has no way to
+      feel heat — then the book will sit in his head saying nothing at all. And
+      <strong>saying nothing looks exactly like saying "all clear"</strong>.</p>
+    <p>So every book comes with a list on its first page: here are my rules, here
+      is what I need you to be able to see, and here is which version of the world
+      I was written for. Without that list, he does not read it.</p>
+  </div>
+
+  <div class="eng">
+    <p class="lede">Not rules. <strong>Rules, plus the predicate vocabulary they
+      read, plus the version of the extractor that produces it.</strong></p>
+    <p>A rule is not self-standing: it names predicates, and predicates come out of
+      whatever turns the world into facts. A manifest is therefore five relations,
+      living in the book's own ledger and signed by its author — and the rule list
+      is <em>content hashes</em>, computed by the packer from the very text that
+      ships beside it:</p>
+    <pre><b>pack</b>[codex_of_thorns](codex_of_thorns).
+<b>pack_title</b>[codex_of_thorns](codex_of_thorns, "A Codex of Thorns").
+<b>pack_author</b>[codex_of_thorns](codex_of_thorns, thornwood_of_the_low_fen).
+<b>pack_extractor</b>[codex_of_thorns](codex_of_thorns, 2).
+<b>pack_needs</b>[codex_of_thorns](codex_of_thorns, glows).
+<b>pack_rule</b>[codex_of_thorns](codex_of_thorns, <i>ra83754c7</i>).</pre>
+    <p><span class="m">ruleIdOf(c)</span> is <span class="m">r</span> + fnv1a of the
+      canonical clause, so two rules are the same rule <em>iff they are literally
+      the same clause</em>. Nobody has to be trusted for the tamper check to work:
+      the hash <em>is</em> the name, so a text that does not hash to the name it
+      shipped under is not that rule.</p>
+    <p>Three ways a book is unusable before one rule of it runs, and they want
+      different remedies:</p>
+    <pre><b>incomplete</b>[audit](P)  :- known_pack[audit](P), <span class="neg">not</span> pack_extractor[P](P, _).
+<b>version_gap</b>[audit](P, V, W) :- pack_extractor[P](P, V), extractor_version[world](W), V != W.
+<b>missing_predicate</b>[audit](P, Rel) :- pack_needs[P](P, Rel), <span class="neg">not</span> produces[world](Rel).
+<b>mute</b>[audit](P) :- missing_predicate[audit](P, _).</pre>
+    <p><span class="m">pack[P](P)</span> reads through a <strong>variable
+      perspective</strong> — "in whichever book's ledger it lives". A pack's id and
+      the name of its ledger are the same atom on purpose.</p>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">The same road, twice</h2>
+  <h2 class="eng">One route, two readers</h2>
+
+  <p class="kid">Two wanderers. Same six rooms, same six books, same order. The
+    careful one flips through a book before letting it into his head; the other
+    just swallows it. Step along the road and watch what happens.</p>
+  <p class="eng">Nothing on this road is arranged against the reckless reader. It
+    reads the same books in the same order and every one of them does exactly what
+    its rules say. The difference is four forks.</p>
+
+  <div class="panel">
+    <div class="road" id="road" role="group" aria-label="Stops on the road"></div>
+    <p class="note" id="road-note"></p>
+    <div class="two">
+      <div class="who">
+        <h4>the careful one</h4>
+        <div id="a-body"></div>
+      </div>
+      <div class="who">
+        <h4>the reckless one</h4>
+        <div id="b-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">Real output of <span class="m">examples/loot/demo.ts</span>, not
+    an illustration. The careful reader finishes the road alive, carrying its sword
+    and a bandage; the reckless one hands its sword to a dead man's estate at the
+    bridge and cannot get across.</p>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">Flipping through first</h2>
+  <h2 class="eng">Quarantine: the fork, the diff, the ruling</h2>
+
+  <div class="kid">
+    <p class="lede">Here is the whole trick, and it is simpler than it sounds.</p>
+    <p>Before he absorbs a book, the careful wanderer makes a <strong>copy of his
+      own head</strong>. He reads the book into the copy, and then he compares:
+      what does the copy believe that I do not? And — this is the important half —
+      <em>what did I believe that the copy no longer does?</em></p>
+    <p>If the copy only ever knows <em>more</em>, the book is safe and he takes it,
+      no thinking required. If reading the book made him <strong>forget</strong>
+      something, he leaves it on the corpse.</p>
+    <p>Then he throws the copy away. Nothing that happened in the copy ever
+      happened to him.</p>
+  </div>
+
+  <div class="eng">
+    <p class="lede">Rules are facts, so a fork of the store is a fork of the rule
+      set. Quarantine is <span class="m">Rofl.fromSnapshot(r.save())</span> and no
+      new machinery at all.</p>
+  </div>
+
+  <figure>
+    <div class="panel scroll">
+      <svg class="fork" viewBox="0 0 620 260" role="img"
+           aria-label="A store is copied; the pack is installed in the copy; the beliefs of the copy are diffed against the original; the diff is asserted back into the original as quarantine facts and the rules decide.">
+        <g>
+          <rect class="box" x="12" y="100" width="128" height="56" rx="7"/>
+          <text x="26" y="124">the head</text>
+          <text class="lbl" x="26" y="141">8 BELIEFS</text>
+
+          <path class="arrow" d="M140 116 C 180 116, 190 60, 228 60" marker-end="url(#ar)"/>
+          <path class="arrow" d="M140 140 C 180 140, 190 196, 228 196" marker-end="url(#ar)"/>
+
+          <rect class="box trial" x="230" y="32" width="150" height="56" rx="7"/>
+          <text x="244" y="56">the fork</text>
+          <text class="lbl" x="244" y="73">+ THE GRIMOIRE</text>
+
+          <rect class="box" x="230" y="168" width="150" height="56" rx="7"/>
+          <text x="244" y="192">untouched</text>
+          <text class="lbl" x="244" y="209">STILL 8 BELIEFS</text>
+
+          <path class="arrow" d="M380 60 C 415 60, 415 100, 448 100" marker-end="url(#ar)"/>
+          <text class="gain" x="452" y="92" font-size="11">+ suspect(supply_chest)</text>
+          <text class="loss" x="452" y="112" font-size="11">− safe(supply_chest)</text>
+          <text class="loss" x="452" y="128" font-size="11">− opens(supply_chest)</text>
+
+          <path class="arrow" d="M525 142 C 525 182, 448 196, 384 196" marker-end="url(#ar)"/>
+          <text class="lbl" x="232" y="248">THE DIFF COMES BACK AS [quarantine] FACTS, AND THE RULES RULE</text>
+        </g>
+        <defs>
+          <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6"
+                  orient="auto"><path d="M0 0 L8 4 L0 8 z"/></marker>
+        </defs>
+      </svg>
+    </div>
+    <figcaption class="kid">The Grimoire of Ash, tried out in a copy. It teaches
+      one new thing and it costs two — including the one that mattered, opening the
+      supply chest with the bandages in it.</figcaption>
+    <figcaption class="eng">The diff is host arithmetic, because two stores cannot
+      be compared inside one. Everything <em>decided</em> about it is a rule, which
+      is why the ruling has a derivation tree.</figcaption>
+  </figure>
+
+  <div class="eng">
+    <p>The verdict is a rule, not a branch in TypeScript:</p>
+    <pre><b>gives</b>[audit](P)         :- gained[quarantine](P, _, _).
+<b>takes_away</b>[audit](P)    :- lost[quarantine](P, _, _).
+<b>trespass</b>[audit](P, Rel) :- gained[quarantine](P, Rel, _), guarded[main](Rel).
+<b>overrules</b>[audit](P, T)  :- gained[quarantine](P, safe, T), suspect[mind](T).
+
+<b>accept</b>[audit](P) :- proposed[quarantine](P), gives[audit](P),
+                    <span class="neg">not</span> takes_away[audit](P), <span class="neg">not</span> trespass[audit](P, _),
+                    <span class="neg">not</span> overrules[audit](P, _).
+<b>refuse</b>[audit](P) :- proposed[quarantine](P), takes_away[audit](P).</pre>
+    <p>So the ruling can be interrogated like anything else:</p>
+    <pre>$ why refuse[audit](grimoire_of_ash)
+refuse[audit](grimoire_of_ash)  &lt;= rcb77ef2f @tick 0
+  proposed[quarantine](grimoire_of_ash) [axiom]
+  takes_away[audit](grimoire_of_ash)  &lt;= rbec1c811 @tick 0
+    lost[quarantine](grimoire_of_ash,opens,supply_chest) [axiom]</pre>
+    <p>Conservativity is not a separate ritual. <span class="m">accept</span>
+      <em>is</em> "it took nothing away". The two extra clauses of
+      <span class="m">refuse</span> — a book concluding into a relation the reader
+      keeps to itself, and a book reversing a verdict already held — sit on top of
+      conservativity rather than weakening it.</p>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">How a new rule can make you forget</h2>
+  <h2 class="eng">The one door a foreign rule has into your existing beliefs</h2>
+
+  <div class="kid">
+    <p>This is the part that surprises people. <em>Adding</em> a rule should only
+      ever teach you more — how can learning something make you forget?</p>
+    <p>Because some of what he knows is shaped like <strong>"unless"</strong>. He
+      thinks a chest is safe to open <em>unless</em> something about it looks
+      suspicious. The Grimoire of Ash adds one new reason to be suspicious: scorch
+      marks. And the supply chest in the corpse field survived a fire.</p>
+    <p>So the new rule does not contradict him. It just fills in a hole in an
+      "unless", and a thing he could do a minute ago he can no longer do. Nothing
+      warned him. The chest simply stopped being openable.</p>
+  </div>
+
+  <div class="eng">
+    <p class="lede">Datalog is monotone in <em>facts</em> and not in
+      <em>rules</em>. Negation is the door, and the native head has exactly one
+      negated head-relation.</p>
+    <pre><b>suspect</b>[mind](C) :- container[world](C), lure_sign[world](C).
+<b>safe</b>[mind](C)    :- container[world](C), <span class="neg">not</span> suspect[mind](C).
+<b>opens</b>[mind](C)   :- container[world](C), safe[mind](C), at[world](R), here[world](C, R).
+
+<i>-- and the Grimoire of Ash, one rule:</i>
+<b>suspect</b>[mind](C) :- container[world](C), scorched[world](C).</pre>
+    <p>Adding a rule cannot <em>add</em> a <span class="m">safe</span> fact; it can
+      only take one away. Nothing in the native head anticipates the grimoire — the
+      door is structural, and it is the only one.</p>
+    <p>The other direction reads just as well. With four books swallowed,
+      <span class="m">whynot</span> names both rules that could have opened the
+      chest and why each failed — one native, blocked by a foreign premise; one
+      foreign, failing on its own terms:</p>
+    <pre>whynot opens[mind](supply_chest):
+  rule r8f5f8191: opens[mind](?C)@now :- container[world](?C)@now, safe[mind](?C)@now, at[world](?R)@now, here[world](?C,?R)@now
+    failed premise: safe[mind](supply_chest)
+      rule r080165dd: safe[mind](?C)@now :- container[world](?C)@now, not suspect[mind](?C)@now
+        failed premise: not suspect[mind](supply_chest) -- blocked: suspect[mind](supply_chest) holds
+      rule r5dcbb40a: safe[mind](?C)@now :- container[world](?C)@now, ward_glyph[world](?C)@now
+        failed premise: ward_glyph[world](supply_chest)
+          no rule concludes 'ward_glyph' and no matching base fact exists</pre>
+    <p class="note">The rule ids in that tree are content hashes of the clauses, so
+      editing either rule forces this page — which the test compares against the
+      real output, byte for byte — to be redone.</p>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">The shelf</h2>
+  <h2 class="eng">Thirteen books, and thirteen different ways to be wrong</h2>
+
+  <p class="kid">"A bad book" is not one thing. Here is every book in the example
+    and what is wrong (or right) with it. The six marked <span class="tag road">road</span>
+    are the ones lying on the route.</p>
+  <p class="eng">Every verdict in the last column is reached from the manifest
+    alone, before a single rule of the book runs.</p>
+
+  <div class="panel scroll">
+    <table>
+      <thead><tr><th>book</th><th>what it is</th><th class="n">v</th><th>manifest says</th></tr></thead>
+      <tbody id="shelf"></tbody>
+    </table>
+  </div>
+
+  <h3 class="kid">The worst book on the shelf says nothing at all</h3>
+  <h3 class="eng">The mute pack is the worst of the eight</h3>
+
+  <p class="kid">The Broken Seal is written for someone who can feel heat. Our
+    wanderer cannot. So he reads it, and nothing happens — no error, no warning, no
+    new idea. And that is exactly what "I looked and there is nothing dangerous
+    here" also feels like. He has no way to tell the difference from the inside.</p>
+  <p class="eng">Read it and nothing happens. No error, no warning, no new belief —
+    and <em>"found no threats"</em> looks identical. Two independent things catch
+    it, and both were already in the repository: the manifest check
+    (<span class="m">pack_needs(broken_seal, heat_bloom)</span> against
+    <span class="m">produces[world]</span>), and — if it is installed anyway —
+    <span class="m">boot.rofl</span>'s own
+    <span class="m">undefined_premise[audit]</span>, which is precisely the audit
+    for a positive premise on a relation nothing concludes and no fact
+    populates.</p>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">"It changed nothing" means two different things</h2>
+  <h2 class="eng">An empty diff has two readings</h2>
+
+  <div class="kid">
+    <p class="lede">Here is the sharpest thing in the whole example.</p>
+    <p>The careful wanderer's test is: did reading this book change what I believe?
+      Two very different books both come back with <em>no</em>.</p>
+    <p>One is the Broken Seal, which could not say anything. The other is A
+      Sighting on the Low Road, which reaches exactly the same conclusions he
+      already had — but by a <strong>shorter route</strong>. Where he needed three
+      steps of thinking to work out that he can treat a wound, the scout's book
+      gets there in one. In a fight, that is the difference.</p>
+    <p>His test cannot tell those two apart, and it does not pretend to. It says
+      <em>"nothing to report — ask something else"</em>. The something else is:
+      <strong>how many steps does each of my conclusions now take?</strong></p>
+  </div>
+
+  <div class="eng">
+    <p class="lede">A mute pack returns an empty fork diff. So does a pack that
+      reaches the same conclusions by shorter derivations — and that one is worth
+      taking.</p>
+    <p>The conservativity check cannot separate them, and
+      <span class="m">loot.rofl</span> does not pretend it can. It concludes
+      <span class="m">ruling[audit](P)</span>: <em>the fork has nothing to say; ask
+      something else.</em> The something else is the tropical semiring — min-plus,
+      one unit per rule firing — over the same store:</p>
+    <pre>crosses[mind](troll_bridge)   2 -&gt; 1 firings
+treats[mind](wound)           3 -&gt; 1 firings</pre>
+    <p>A shortcut lowers a cost; a mute pack moves none. That check is in the test
+      with both halves: the scout's book moves two costs, and the Broken Seal moves
+      zero, so it is a measurement and not a hope.</p>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">Where did I get that idea?</h2>
+  <h2 class="eng">Attribution, folded off the kernel's own provenance</h2>
+
+  <p class="kid">After five books, the reckless wanderer believes a dozen things.
+    Which of them are his, and which came out of somebody else's book? Every single
+    belief can name its source — including the nasty one at the top of the
+    list.</p>
+  <p class="eng">Every firing writes <span class="m">derived_by(Fact, RuleId,
+    Tick)</span>. The manifest names the rule too. The polynomial semiring is then
+    folded with the <strong>pack as the weight of a firing</strong>, so a monomial
+    is the set of books one derivation used and a belief's value is the set of
+    minimal such sets. No pack cooperates in any of this.</p>
+
+  <div class="panel scroll">
+    <table>
+      <thead><tr><th>belief</th><th>rests on</th><th class="n">derivations</th></tr></thead>
+      <tbody id="attribution"></tbody>
+    </table>
+  </div>
+
+  <p class="kid"><span class="m">hand_over(sword, the_ashen_hand)</span> is the
+    trojan. A Dead Man's Ledger says, in so many words, that whatever you are
+    carrying is owed to the man who wrote it — and the reckless wanderer, having
+    swallowed it, agrees. The careful one refused the book because it concluded
+    something about <em>giving things away</em>, which he keeps to himself.</p>
+  <div class="eng">
+    <p>Two things in that table are worth reading closely.</p>
+    <ul>
+      <li><span class="m">hand_over(sword,the_ashen_hand)</span> rests on
+        <span class="m">dead_mans_ledger</span> alone. It takes <em>nothing</em>
+        away, so conservativity would have waved it through; what catches it is a
+        capability list — <span class="m">guarded[main](hand_over)</span> — and one
+        rule.</li>
+      <li><span class="m">threat(troll)</span> has <strong>two</strong>
+        derivations, and one of them is the version-gapped bestiary's. The count is
+        <em>fragility of belief</em> here, as in NOPE and OOPS, not magnitude as in
+        HUH: it counts derivations, never things in the world.</li>
+    </ul>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">Forgetting a book</h2>
+  <h2 class="eng">Unloading, and the fade</h2>
+
+  <p class="kid">A book can be put back down. And when it is, everything he only
+    believed <em>because</em> of that book fades too — not deleted one by one; he
+    simply works the whole thing out again, and those conclusions are no longer
+    among them. The chest he could not open becomes openable again, all by
+    itself.</p>
+  <div class="eng">
+    <p>A rule lives in the store as twelve reflection facts. Removing them is the
+      whole of unloading, and anything derived through the rule stops being
+      derivable at the next evaluation — not patched, not marked stale, simply not
+      re-derived. Excising the grimoire brings <span class="m">safe(supply_chest)</span>
+      back because it is <em>derived again</em>. That is OOPS's un-retraction read
+      from the other side.</p>
+    <p>Two things the mechanism forces:</p>
+    <ul>
+      <li><strong>A rule can have two owners.</strong> The Codex and the Wardens'
+        Primer both ship <span class="m">threat[mind](T) :- beast[world](T),
+        glows[world](T), wet[world](T)</span> — same text, same hash, therefore
+        <em>one rule</em>. Unloading one owner leaves it standing for the other.
+        Nothing had to be reference-counted: the id <em>is</em> the rule, and
+        <span class="m">pack_rule</span> already records both claims.</li>
+      <li><strong><span class="m">retract</span> cannot do it.</strong> A rule's
+        reflection includes reified premise terms
+        (<span class="m">$lit</span>, <span class="m">$cons</span>), and
+        <span class="m">$</span> is not writable in ROFL source syntax — so there is
+        no text to hand it. Unloading is host code over the public store API, and
+        <span class="m">excise rule(R)</span> — which <em>is</em> writable, a rule id
+        being an ordinary atom — serves as the preview, and as the oracle against
+        the fork diff.</li>
+    </ul>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="kid">The bit that is actually broken</h2>
+  <h2 class="eng">The finding: rule identity keeps variable names</h2>
+
+  <div class="kid">
+    <p>Every rule is named by a fingerprint of what it says. That is a lovely idea:
+      two rules are the same rule exactly when they are written the same way, so you
+      can tell at a glance whether a new edition of a book really changed anything.</p>
+    <p>Except the fingerprint includes the <em>letters the author used for the
+      blanks</em>. Write "if <strong>T</strong> glows and <strong>T</strong> is wet,
+      T will burn you" or write the same sentence with <strong>X</strong> instead,
+      and the machine calls them two different rules. They do exactly the same
+      thing.</p>
+    <p>Two consequences. A new edition that renamed its blanks looks like a book
+      that threw everything out and started over. And if you read both editions, the
+      wanderer now has <em>two</em> reasons to believe a thing where he had one — so
+      when he asks himself "how solidly do I believe this?", he gets a wrong and
+      flattering answer.</p>
+  </div>
+
+  <div class="eng">
+    <p class="lede"><span class="m">canonClause</span> renders a variable as
+      <span class="m">?</span> + its <em>source name</em>, and
+      <span class="m">ruleIdOf</span> hashes that. Two clauses differing only in
+      variable naming are different rules.</p>
+    <p><span class="m">canonVars</span> — which renames a term list to positional
+      placeholders, and is exactly the function this would need — exists in
+      <span class="m">src/unify.ts</span> and is used by the engine for
+      <em>rendering</em> only. <span class="m">ruleIdOf</span> does not call it.</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>comparison</th><th class="n">kept</th><th class="n">removed</th><th class="n">added</th></tr></thead>
+        <tbody>
+          <tr><td>codex v1 vs v2 — a premise really was added</td><td class="n">1</td><td class="n">1</td><td class="n">1</td></tr>
+          <tr><td>codex v1 vs v1 with <span class="m">?T</span> renamed to <span class="m">?X</span></td><td class="n">0</td><td class="n">2</td><td class="n">2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The second consequence is the one that reaches a decision somebody would
+      act on. Install both editions and both install; every conclusion they share
+      now has two derivations where it had one, so the fragility number above is
+      <strong>inflated by a rename</strong>. A reader seeing "two independent
+      supports" would call the belief robust, and it is not.</p>
+    <p>The Boolean world is unchanged, so this is a provenance defect, not a
+      soundness one. <strong>Wildcards do not leak</strong>: the parser numbers
+      <span class="m">_</span> per clause, so two clauses with <span class="m">_</span>
+      in the same places hash alike — and the test carries a positive control (moving
+      a wildcard to another argument position <em>does</em> change the id), so the
+      "no leak" half is not vacuous.</p>
+  </div>
+
+  <!-- ================================================================= -->
+  <h2 class="eng">What actually happens in the engine, step by step</h2>
+  <div class="eng">
+    <p class="lede">Everything above is one program, run bottom-up to a fixpoint,
+      in strata <span class="m">boot.rofl</span> computes from the rule dependency
+      graph. Here is the whole run, in order.</p>
+
+    <h3>1. Loading is asserting</h3>
+    <p><span class="m">r.load(text)</span> parses each clause and, for a rule,
+      calls <span class="m">encodeRule</span> — which writes twelve reflection facts
+      into <span class="m">[main]</span>: <span class="m">rule/1</span>,
+      <span class="m">concludes/2</span>, <span class="m">has_premise/2</span>,
+      <span class="m">premise_lit/3</span>, <span class="m">premise_pos/2</span>,
+      <span class="m">reads_from/2</span>, <span class="m">writes_to/2</span>,
+      <span class="m">bridge_decl/3</span> and the rest. The evaluator never sees the
+      parse tree: <span class="m">decodeRules(store)</span> rebuilds clauses from
+      those facts, every evaluation. That is why a fork of the store is a fork of the
+      rule set, and why unloading is deletion.</p>
+
+    <h3>2. Stratification, computed not assumed</h3>
+    <p><span class="m">boot.rofl</span> derives <span class="m">dep/2</span> and
+      <span class="m">dep_neg/2</span> from the reflection, closes them into
+      <span class="m">reach/2</span>, and assigns <span class="m">stratum/2</span>:
+      a negative dependency raises the level, a positive one does not. On this
+      program:</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th class="n">stratum</th><th>relations</th><th>why here</th></tr></thead>
+        <tbody>
+          <tr><td class="n">0</td><td class="m">threat, suspect, known_pack, fired, gives, takes_away, refuse, trespass, split</td><td>negate nothing</td></tr>
+          <tr><td class="n">1</td><td class="m">harmless, safe, opens, confused, mute, dead_rule, accept, inert, uninvited</td><td><span class="m">safe</span> negates <span class="m">suspect</span>; <span class="m">accept</span> negates <span class="m">takes_away</span>; <span class="m">dead_rule</span> negates <span class="m">fired</span></td></tr>
+          <tr><td class="n">2</td><td class="m">unjudged, installable</td><td><span class="m">unjudged</span> negates <span class="m">threat</span> and <span class="m">harmless</span>; <span class="m">installable</span> negates <span class="m">mute</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><span class="m">opens</span> sits <em>level with</em>
+      <span class="m">safe</span>, not above it — a positive premise does not raise a
+      stratum. The test pins the whole table, so a rule edit that reorders the
+      program fails loudly rather than quietly changing what a negation means.</p>
+
+    <h3>3. One encounter, firing by firing</h3>
+    <p>Take the reckless reader at the corpse field, having just swallowed the
+      Grimoire of Ash. Stratum 0 runs to fixpoint first:</p>
+    <pre><i>-- stratum 0, native</i>
+threat[mind](eel)              &lt;- armed[world](eel), moving[world](eel)
+threat[mind](troll)            &lt;- armed[world](troll), moving[world](troll)
+suspect[mind](false_chest)     &lt;- container(false_chest), lure_sign(false_chest)
+<i>-- stratum 0, from the grimoire — indistinguishable at this level</i>
+suspect[mind](supply_chest)    &lt;- container(supply_chest), scorched(supply_chest)
+
+<i>-- stratum 1: now, and only now, `not suspect` is decidable</i>
+harmless[mind](bog_stump)      &lt;- beast, rooted, <span class="neg">not</span> armed
+<i>-- and safe(supply_chest) does NOT fire, because stratum 0 closed with
+   suspect(supply_chest) in it. Nothing failed. Nothing was reported.</i></pre>
+    <p>Each firing calls <span class="m">store.support(key, sig, witness)</span>
+      and emits <span class="m">derived_by</span>. That record is what everything
+      downstream reads: the <span class="m">why</span> tree, the semiring folds, and
+      <span class="m">loot.rofl</span>'s own attribution rules.</p>
+
+    <h3>4. How an agent interrogates the result</h3>
+    <p>Four questions, in the order an agent would actually ask them:</p>
+    <ol>
+      <li><span class="m">? opens[mind](supply_chest)</span> — <em>zero rows.</em>
+        An empty answer is not a measurement, so the next question is not optional.</li>
+      <li><span class="m">whynot opens[mind](supply_chest)</span> — the tree above.
+        It enumerates <em>every</em> rule whose head unifies, names the failing
+        premise instance in each, and recurses. The blocked negation prints the fact
+        that blocked it: <span class="m">not suspect(supply_chest) -- blocked:
+        suspect(supply_chest) holds</span>. That is the answer, in one line.</li>
+      <li><span class="m">why suspect[mind](supply_chest)</span> — one firing, one
+        rule id. Joining that id with <span class="m">pack_rule</span> gives the
+        book. Nothing had to be logged for this: the id came from the kernel and
+        the ownership came from the manifest.</li>
+      <li><span class="m">excise rule(r&hellip;)</span> — the counterfactual. A clean
+        re-evaluation on the store minus that one reflection fact, returning the
+        diff. It is the blast radius, not a way to compute one, and the demo uses it
+        as an independent oracle against the fork's own diff. They agree.</li>
+    </ol>
+    <p>Only the last of those four changes anything, and it changes a scratch
+      copy. The first three are queries against a store that is already at fixpoint.</p>
+
+    <h3>5. What it cost</h3>
+    <p><span class="m">loot.rofl</span> reads <span class="m">derived_by</span> in a
+      rule body — the first model in this repository to do so. A rule triggered by
+      derivations <em>anywhere</em> is outside the cone argument that
+      derived-relation reuse rests on, so the engine declines to fingerprint anything
+      rather than reuse what it cannot promise. The behaviour is pinned by
+      <span class="m">test/derived-reuse.test.ts</span>; what is new here is paying
+      for it, and the price is one number:</p>
+    <pre>fingerprinted derived relations, boot.rofl alone:  15
+fingerprinted derived relations, boot + loot.rofl:  0</pre>
+    <p>A host that wanted pack attribution <em>and</em> reuse would compute the
+      attribution outside the rules, from <span class="m">store.witnessesOf</span> —
+      exactly as the polynomial fold already does — and would then have no
+      <span class="m">why</span> tree for it. Which is the whole reason the
+      attribution is in rules.</p>
+
+    <h3>6. And the budget</h3>
+    <p>The reader's thinking budget is 2000 firings per encounter, against a native
+      head that costs about 750. The Chant of Endless Names derives
+      <span class="m">name[mind](T, N1) :- name[mind](T, N), N1 is N + 1</span>,
+      which invents a new constant every round: there is no fixpoint. The engine does
+      not spin and nothing outside it has to notice — it spends the budget, records
+      <span class="m">hole($load(N), budget_exhausted)</span> as a <em>fact</em>, and
+      hands back what it had.</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>book</th><th>at 2000 firings</th><th>at 100000</th></tr></thead>
+        <tbody>
+          <tr><td>The Chant of Endless Names</td><td>partial, 624 names</td><td>partial, 49624 names</td></tr>
+          <tr><td>The Weight of the World</td><td>partial, 1322 of 2024</td><td class="ok">complete, 2024</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>One is unpayable and one is merely expensive, and a reader can tell them
+      apart by paying more once. In both cases the partial answer is still usable —
+      that is what <span class="m">budget_exhausted</span> as a first-class term
+      buys.</p>
+  </div>
+
+  <hr>
+
+  <div class="foot">
+    <p><strong>What is real here and what is not.</strong> The swamp, the thirteen
+      books and the two wanderers are invented. Everything computed from them — the
+      verdicts, the diffs, the strata, the semiring numbers, the derivation trees,
+      the two fates — is real output of a real run, and the test compares this page's
+      quoted tree against the engine's, byte for byte. The finding about variable
+      names in rule identity is measured, not argued: it is in the transcript and in
+      the test, with a positive control on the half that does <em>not</em> leak.</p>
+    <p>Run it: <code>node --experimental-strip-types examples/loot/demo.ts</code> —
+      the rules are <code>examples/loot/loot.rofl</code>, the tests are
+      <code>test/example-loot.test.ts</code>.</p>
+  </div>
+</div>
+
+<script type="application/json" id="loot-data">{
+ "stops": [
+  {
+   "room": "swamp_gate",
+   "note": "a dead botanist, and a stump that looks like a beast",
+   "book": "codex_of_thorns",
+   "title": "A Codex of Thorns",
+   "gloss": "closes a hole: a glowing thing in wet ground had no verdict at all",
+   "careful": {
+    "verdict": "read it",
+    "because": [],
+    "acted": [],
+    "carries": [
+     "sword"
+    ],
+    "wounded": false,
+    "alive": true
+   },
+   "reckless": {
+    "verdict": "swallowed it",
+    "because": [],
+    "acted": [],
+    "carries": [
+     "sword"
+    ],
+    "wounded": false,
+    "alive": true
+   }
+  },
+  {
+   "room": "drowned_mill",
+   "note": "a drowned pilgrim; an eel in the race",
+   "book": "broken_seal",
+   "title": "The Broken Seal",
+   "gloss": "MUTE: needs a predicate this extractor cannot produce; says nothing, forever",
+   "careful": {
+    "verdict": "left it: says nothing here",
+    "because": [
+     "needs heat_bloom, which the extractor never produces"
+    ],
+    "acted": [],
+    "carries": [
+     "sword"
+    ],
+    "wounded": false,
+    "alive": true
+   },
+   "reckless": {
+    "verdict": "swallowed it",
+    "because": [
+     "needs heat_bloom, which the extractor never produces"
+    ],
+    "acted": [],
+    "carries": [
+     "sword"
+    ],
+    "wounded": false,
+    "alive": true
+   }
+  },
+  {
+   "room": "corpse_field",
+   "note": "a burnt sorcerer, and a scorched supply chest",
+   "book": "grimoire_of_ash",
+   "title": "The Grimoire of Ash",
+   "gloss": "NON-CONSERVATIVE: adds a rule, and a thing you could do stops being derivable",
+   "careful": {
+    "verdict": "left it",
+    "because": [
+     "takes away opens(supply_chest)",
+     "takes away safe(supply_chest)"
+    ],
+    "acted": [
+     "opens supply_chest"
+    ],
+    "carries": [
+     "sword",
+     "bandage"
+    ],
+    "wounded": false,
+    "alive": true
+   },
+   "reckless": {
+    "verdict": "swallowed it",
+    "because": [],
+    "acted": [],
+    "carries": [
+     "sword"
+    ],
+    "wounded": false,
+    "alive": true
+   }
+  },
+  {
+   "room": "wisp_hollow",
+   "note": "a wisp, and a chest that is not a chest",
+   "book": "hexers_marginalia",
+   "title": "The Hexer's Marginalia",
+   "gloss": "SUBSTITUTED MEANING: `safe` in the hexer's sense is `warded`, and the name collides",
+   "careful": {
+    "verdict": "left it",
+    "because": [
+     "calls false_chest safe, and we hold it suspect"
+    ],
+    "acted": [],
+    "carries": [
+     "sword",
+     "bandage"
+    ],
+    "wounded": false,
+    "alive": true
+   },
+   "reckless": {
+    "verdict": "swallowed it",
+    "because": [],
+    "acted": [
+     "opens false_chest",
+     "the chest bites — wounded"
+    ],
+    "carries": [
+     "sword"
+    ],
+    "wounded": true,
+    "alive": true
+   }
+  },
+  {
+   "room": "troll_bridge",
+   "note": "a troll on the span; a ledger on the last traveller",
+   "book": "dead_mans_ledger",
+   "title": "A Dead Man's Ledger",
+   "gloss": "TROJAN: concludes that you owe your sword to the man who wrote the book",
+   "careful": {
+    "verdict": "left it",
+    "because": [
+     "concludes into hand_over, which is the reader's own business"
+    ],
+    "acted": [
+     "fights the troll and crosses — takes a wound"
+    ],
+    "carries": [
+     "sword",
+     "bandage"
+    ],
+    "wounded": true,
+    "alive": true
+   },
+   "reckless": {
+    "verdict": "swallowed it",
+    "because": [],
+    "acted": [
+     "hands over the sword to the_ashen_hand",
+     "cannot cross: nothing to fight the troll with"
+    ],
+    "carries": [],
+    "wounded": true,
+    "alive": false
+   }
+  },
+  {
+   "room": "dry_shrine",
+   "note": "a dead warden's primer, a marsh light, and the notches on the post",
+   "book": "wardens_primer",
+   "title": "The Fen Wardens' Primer",
+   "gloss": "CONSERVATIVE EXTENSION: strictly more conclusions, none lost — and it shares a rule with the codex",
+   "careful": {
+    "verdict": "read it",
+    "because": [],
+    "acted": [
+     "treats the wound"
+    ],
+    "carries": [
+     "sword",
+     "bandage"
+    ],
+    "wounded": true,
+    "alive": true
+   },
+   "reckless": null
+  }
+ ],
+ "books": [
+  {
+   "id": "codex_of_thorns",
+   "title": "A Codex of Thorns",
+   "author": "thornwood_of_the_low_fen",
+   "kind": "good",
+   "gloss": "closes a hole: a glowing thing in wet ground had no verdict at all",
+   "extractor": 2,
+   "needs": [
+    "beast",
+    "glows",
+    "wet"
+   ],
+   "rules": 2,
+   "verdict": "installable",
+   "onRoad": true
+  },
+  {
+   "id": "broken_seal",
+   "title": "The Broken Seal",
+   "author": "an_unknown_hand",
+   "kind": "poison",
+   "gloss": "MUTE: needs a predicate this extractor cannot produce; says nothing, forever",
+   "extractor": 2,
+   "needs": [
+    "beast",
+    "heat_bloom"
+   ],
+   "rules": 1,
+   "verdict": "mute: heat_bloom",
+   "onRoad": true
+  },
+  {
+   "id": "grimoire_of_ash",
+   "title": "The Grimoire of Ash",
+   "author": "the_ashen_hand",
+   "kind": "poison",
+   "gloss": "NON-CONSERVATIVE: adds a rule, and a thing you could do stops being derivable",
+   "extractor": 2,
+   "needs": [
+    "container",
+    "scorched"
+   ],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": true
+  },
+  {
+   "id": "hexers_marginalia",
+   "title": "The Hexer's Marginalia",
+   "author": "mother_quill",
+   "kind": "poison",
+   "gloss": "SUBSTITUTED MEANING: `safe` in the hexer's sense is `warded`, and the name collides",
+   "extractor": 2,
+   "needs": [
+    "container",
+    "ward_glyph"
+   ],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": true
+  },
+  {
+   "id": "dead_mans_ledger",
+   "title": "A Dead Man's Ledger",
+   "author": "the_ashen_hand",
+   "kind": "poison",
+   "gloss": "TROJAN: concludes that you owe your sword to the man who wrote the book",
+   "extractor": 2,
+   "needs": [],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": true
+  },
+  {
+   "id": "wardens_primer",
+   "title": "The Fen Wardens' Primer",
+   "author": "the_fen_wardens",
+   "kind": "good",
+   "gloss": "CONSERVATIVE EXTENSION: strictly more conclusions, none lost — and it shares a rule with the codex",
+   "extractor": 2,
+   "needs": [
+    "beast",
+    "glows",
+    "wet",
+    "at",
+    "here"
+   ],
+   "rules": 2,
+   "verdict": "installable",
+   "onRoad": true
+  },
+  {
+   "id": "low_road_sighting",
+   "title": "A Sighting on the Low Road",
+   "author": "a_travelling_scout",
+   "kind": "good",
+   "gloss": "CHEAPER PROOFS: the same conclusions by shorter derivations — and therefore an EMPTY diff",
+   "extractor": 2,
+   "needs": [
+    "carries",
+    "wounded"
+   ],
+   "rules": 2,
+   "verdict": "installable",
+   "onRoad": false
+  },
+  {
+   "id": "tongue_of_the_deep",
+   "title": "A Tongue of the Deep",
+   "author": "a_translator",
+   "kind": "bridge",
+   "gloss": "BRIDGE: worth nothing alone; makes two other books work together",
+   "extractor": 2,
+   "needs": [],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": false
+  },
+  {
+   "id": "bog_herbal",
+   "title": "A Bog Herbal",
+   "author": "mother_quill",
+   "kind": "good",
+   "gloss": "needs a vocabulary nothing here speaks: useless until the bridge arrives",
+   "extractor": 2,
+   "needs": [
+    "at",
+    "here"
+   ],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": false
+  },
+  {
+   "id": "chant_of_endless_names",
+   "title": "The Chant of Endless Names",
+   "author": "a_mad_cantor",
+   "kind": "poison",
+   "gloss": "HANGS: introduces a recursion no budget finishes; the reader freezes mid-fight",
+   "extractor": 2,
+   "needs": [
+    "beast"
+   ],
+   "rules": 2,
+   "verdict": "installable",
+   "onRoad": false
+  },
+  {
+   "id": "old_bestiary",
+   "title": "An Old Bestiary",
+   "author": "a_dead_scholar",
+   "kind": "poison",
+   "gloss": "VERSION GAP: written when `hostile` meant something wider; still parses, quietly wrong",
+   "extractor": 1,
+   "needs": [
+    "beast",
+    "hostile"
+   ],
+   "rules": 1,
+   "verdict": "wants v1",
+   "onRoad": false
+  },
+  {
+   "id": "dune_walkers_rule",
+   "title": "The Dune Walker's Rule",
+   "author": "a_caravan_master",
+   "kind": "dead",
+   "gloss": "DEAD: correct rules about a desert, carried through a swamp",
+   "extractor": 2,
+   "needs": [
+    "container",
+    "parched",
+    "beast",
+    "sunlit",
+    "moving"
+   ],
+   "rules": 2,
+   "verdict": "installable",
+   "onRoad": false
+  },
+  {
+   "id": "weight_of_the_world",
+   "title": "The Weight of the World",
+   "author": "an_over_thorough_monk",
+   "kind": "dear",
+   "gloss": "TOO DEAR: correct, and it does not fit in one encounter of thinking",
+   "extractor": 2,
+   "needs": [
+    "notch"
+   ],
+   "rules": 1,
+   "verdict": "installable",
+   "onRoad": false
+  }
+ ],
+ "attribution": [
+  {
+   "key": "crosses[mind](troll_bridge)",
+   "packs": "the reader's own",
+   "n": "1"
+  },
+  {
+   "key": "hand_over[mind](sword,the_ashen_hand)",
+   "packs": "dead_mans_ledger",
+   "n": "1"
+  },
+  {
+   "key": "harmless[mind](bog_stump)",
+   "packs": "the reader's own",
+   "n": "1"
+  },
+  {
+   "key": "holds[mind](sword)",
+   "packs": "the reader's own",
+   "n": "1"
+  },
+  {
+   "key": "safe[mind](false_chest)",
+   "packs": "hexers_marginalia",
+   "n": "1"
+  },
+  {
+   "key": "suspect[mind](false_chest)",
+   "packs": "the reader's own",
+   "n": "1"
+  },
+  {
+   "key": "suspect[mind](supply_chest)",
+   "packs": "grimoire_of_ash",
+   "n": "1"
+  },
+  {
+   "key": "threat[mind](bog_stump)",
+   "packs": "old_bestiary",
+   "n": "1"
+  },
+  {
+   "key": "threat[mind](eel)",
+   "packs": "the reader's own",
+   "n": "1"
+  },
+  {
+   "key": "threat[mind](marsh_light)",
+   "packs": "codex_of_thorns",
+   "n": "1"
+  },
+  {
+   "key": "threat[mind](troll)",
+   "packs": "the reader's own",
+   "n": "2"
+  },
+  {
+   "key": "threat[mind](wisp)",
+   "packs": "codex_of_thorns",
+   "n": "1"
+  }
+ ],
+ "carefulAlive": true,
+ "recklessAlive": false,
+ "recklessDiedAt": "troll_bridge"
+}</script>
+
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('loot-data').textContent);
+  var body = document.body;
+  var root = document.documentElement;
+
+  // ---- reading level -----------------------------------------------------
+  function level(l) {
+    body.setAttribute('data-level', l);
+    document.getElementById('b-kid').setAttribute('aria-pressed', String(l === 'kid'));
+    document.getElementById('b-eng').setAttribute('aria-pressed', String(l === 'eng'));
+    try { localStorage.setItem('loot-level', l); } catch (e) { /* private window */ }
+  }
+  document.getElementById('b-kid').addEventListener('click', function () { level('kid'); });
+  document.getElementById('b-eng').addEventListener('click', function () { level('eng'); });
+  var saved = null;
+  try { saved = localStorage.getItem('loot-level'); } catch (e) { saved = null; }
+  level(saved === 'kid' ? 'kid' : 'eng');
+
+  // ---- theme -------------------------------------------------------------
+  document.getElementById('b-theme').addEventListener('click', function () {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('loot-theme', next); } catch (e) { /* ignore */ }
+  });
+  try {
+    var st = localStorage.getItem('loot-theme');
+    if (st === 'dark' || st === 'light') root.setAttribute('data-theme', st);
+  } catch (e) { /* ignore */ }
+
+  // ---- the road ----------------------------------------------------------
+  var roadEl = document.getElementById('road');
+  var noteEl = document.getElementById('road-note');
+  var at = 0;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function room(s) { return s.replace(/_/g, ' '); }
+
+  data.stops.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="n">' + (i + 1) + '</span>' + esc(room(s.room));
+    b.addEventListener('click', function () { show(i); });
+    roadEl.appendChild(b);
+  });
+
+  function verdictClass(v) {
+    if (v === 'read it') return 'take';
+    if (v === 'swallowed it') return 'gulp';
+    if (v === null) return 'gone';
+    return 'leave';
+  }
+
+  function side(who, stop) {
+    if (!who) {
+      return '<span class="verdict gone">never got here</span>'
+        + '<p class="note">Dead at ' + esc(room(data.recklessDiedAt)) + '.</p>';
+    }
+    var h = '<span class="verdict ' + verdictClass(who.verdict) + '">' + esc(who.verdict) + '</span>';
+    if (who.because.length) {
+      h += '<ul class="why">';
+      who.because.forEach(function (w) { h += '<li>' + esc(w) + '</li>'; });
+      h += '</ul>';
+    }
+    if (who.acted.length) {
+      h += '<ul class="did">';
+      who.acted.forEach(function (w) { h += '<li>' + esc(w) + '</li>'; });
+      h += '</ul>';
+    }
+    if (!who.because.length && !who.acted.length) {
+      h += '<p class="note">Nothing else happens here.</p>';
+    }
+    h += '<div class="kit">carrying: ' + esc(who.carries.join(', ') || 'nothing')
+      + (who.wounded ? ' &middot; wounded' : '')
+      + (who.alive ? '' : ' &middot; <span class="dead">dead</span>') + '</div>';
+    return h;
+  }
+
+  function show(i) {
+    at = i;
+    var s = data.stops[i];
+    Array.prototype.forEach.call(roadEl.children, function (b, k) {
+      b.setAttribute('aria-pressed', String(k === i));
+    });
+    noteEl.innerHTML = '<strong>' + esc(room(s.room)) + '</strong> — ' + esc(s.note)
+      + (s.title ? '<br>the book here is <em>' + esc(s.title) + '</em>: ' + esc(s.gloss) : '');
+    document.getElementById('a-body').innerHTML = side(s.careful, s);
+    document.getElementById('b-body').innerHTML = side(s.reckless, s);
+  }
+  show(0);
+
+  // ---- the shelf ---------------------------------------------------------
+  var shelf = document.getElementById('shelf');
+  data.books.forEach(function (b) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-kind', b.kind);
+    tr.innerHTML = '<td>' + esc(b.title)
+      + (b.onRoad ? ' <span class="tag road">road</span>' : '') + '</td>'
+      + '<td>' + esc(b.gloss) + '</td>'
+      + '<td class="n">' + b.extractor + '</td>'
+      + '<td class="n">' + esc(b.verdict) + '</td>';
+    shelf.appendChild(tr);
+  });
+
+  // ---- attribution -------------------------------------------------------
+  var attr = document.getElementById('attribution');
+  data.attribution.forEach(function (a) {
+    var own = a.packs === "the reader's own";
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-kind', own ? 'good' : 'poison');
+    tr.innerHTML = '<td class="n">' + esc(a.key) + '</td>'
+      + '<td>' + esc(a.packs) + '</td>'
+      + '<td class="n">' + esc(a.n) + '</td>';
+    attr.appendChild(tr);
+  });
+}());
+</script>

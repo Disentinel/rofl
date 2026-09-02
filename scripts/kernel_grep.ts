@@ -24,13 +24,32 @@ const KERNEL_RELS = [
   'concludes', 'has_conclusion', 'reads_from', 'writes_to', 'mode',
   'reserved', 'authority', 'asserted_by', 'hole', 'edb',
   'bridge_decl', 'in_perspective', 'uses_builtin', 'premise_lit', 'conclusion_lit',
+  'conclusion_tense',
 ];
 // Stratification interface: kernel reads, boot writes (documented in README).
-const IFACE_RELS = ['stratum', 'unstratified'];
+// `semantics` is read the same way — the PROGRAM writes it to choose the
+// three-valued semantics — and `unknown` is the one relation of the pair the
+// kernel WRITES: one row per atom the alternating fixpoint leaves undefined.
+const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown'];
 // Language syntax tokens the parser must know (keywords, not relations).
 const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main'];
-// Kernel constants (mode atoms, hole reason).
-const CONSTANTS = ['budget_exhausted', 'any', 'in', 'out'];
+// Kernel constants (mode atoms, hole reasons).
+const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
+  'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator'];
+// Builtin OPERATION names -- the term-level operations a rule may call, the
+// same category as `is` and `mod` in SYNTAX above and NOT relations: no store
+// key is ever one of these, and no rule may conclude into one. The five string
+// destructors are listed because the kernel dispatches on them by name in
+// src/reflect.ts, and that is this check working as designed: extending the
+// language's vocabulary is a documented API change (README.md, the builtin
+// grammar), so it has to be written down here rather than pass unseen.
+//
+// They are GENERIC and not domain code. A destructor is an operation on the
+// term algebra -- the same standing arithmetic has over `i` terms -- and it
+// names no relation, no perspective and no subject matter. What would make a
+// name domain code is a relation of boot.rofl or of an appendix program,
+// which is exactly what FORBIDDEN below still refuses.
+const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs'];
 // Implementation tokens: tokenizer tags, term/premise kind tags, snapshot
 // field names, REPL command words. Not relation names; listed exhaustively.
 const IMPL = [
@@ -41,16 +60,29 @@ const IMPL = [
   'tick', 'timeless', 'base', 'drv', 'frozen', 'wit', 'true',
   // REPL command words
   'quit', 'exit', 'run', 'facts', 'ok', 'saved', 'restored', 'load', 'utf8',
+  // THE ORDINARY PRINCIPAL. Not a relation and not a ledger: it is the author
+  // a load carries when the caller named nobody. It has no `$` on purpose —
+  // `$` marks a kernel principal that a caller may NOT spell, and `user` is
+  // the one any caller may, because claiming it claims nothing.
+  'user',
   // rule id prefix ('r' + content hash)
   'r',
+  // WHICH EVALUATOR a `Rofl` runs (src/api.ts `evaluator`). Neither is a
+  // relation name — the stratification relation is `stratum`, and it is in
+  // IFACE_RELS above, where this check still guards it. Listed because the
+  // kernel now has two schedulers and has to be able to name the one it runs.
+  'rounds', 'strata',
 ];
-const ALLOWED = new Set([...KERNEL_RELS, ...IFACE_RELS, ...SYNTAX, ...CONSTANTS, ...IMPL]);
+const ALLOWED = new Set([...KERNEL_RELS, ...IFACE_RELS, ...SYNTAX, ...CONSTANTS, ...BUILTINS, ...IMPL]);
 
 // Relation names of boot.rofl and the appendix programs: exactly the names a
 // cheating kernel would hardcode. None may appear as a kernel identifier.
 const FORBIDDEN = [
   'rule_known', 'perspective', 'sees', 'imports', 'dep', 'dep_neg', 'reach',
-  'flow', 'malformed', 'breach', 'leak', 'forged', 'unmoded',
+  'flow', 'flows_to', 'crossing', 'collects', 'collects_from', 'gathered',
+  'collected',
+  'malformed', 'breach', 'leak', 'forged', 'unmoded',
+  'undefined_premise',
   'reading', 'corroborated', 'outlier', 'close', 'temp',
   'counter', 'emit', 'cfg', 'delta', 'step', 'move',
 ];

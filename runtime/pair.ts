@@ -146,6 +146,11 @@ function main(): void {
   }
 }
 
+// realpath BOTH sides: path.resolve does not follow symlinks, but Node
+// realpaths module URLs — and os.tmpdir() on macOS is /var -> /private/var.
+// Without this the guard silently disables main() inside a bundle built into
+// a temp dir: exit 0, empty stdout (finding f_main_guard_breaks_on_symlinked_tmp).
+const real = (p0: string): string => { try { return fs.realpathSync(p0); } catch { return p0; } };
 const isMain = process.argv[1] &&
-  path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
+  real(path.resolve(process.argv[1])) === real(new URL(import.meta.url).pathname);
 if (isMain) main();

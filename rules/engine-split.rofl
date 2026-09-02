@@ -1,0 +1,58 @@
+-- rules/engine-split.rofl — the evaluator's policy/mechanism split, as a query.
+--
+-- `scanners/engine_split.ts` used to PRINT its answer. Five console.log lines,
+-- and the numbers lived nowhere a rule could reach: a witness asking "how much
+-- of the kernel is mechanism" could not join against "491 of 778", because a
+-- print statement is not a fact. The scanner now emits the measurement and this
+-- pack turns it back into the headline.
+--
+-- THE COUNT IS A NUMBER OF ROWS, and that is not an accident of style. §8
+-- forbids the aggregate that would sum a column, so a scanner that wants a
+-- total has to emit the things being totalled: one `code_line/3` per code line
+-- of src/engine.ts, 778 of them. `block(engine_ts, L, mech)` then answers 491
+-- by returning 491 rows, which a query can check and a print statement cannot.
+--
+-- Every rule here is POSITIVE. There is no negation, so no stratification is
+-- needed and no boot.rofl has to be loaded to read the answer.
+
+-- The category of each code line, through the block that owns it. `cat_of/2`
+-- is the scanner's hand judgement (declared as a loan — `dirty/4` below);
+-- `code_line/3` is a fact about the file. The join is what makes the judgement
+-- countable at line granularity without the scanner counting anything.
+block(File, L, Cat)     :- code_line(File, L, K), cat_of(K, Cat).
+
+-- POL and POL* are one number for the rewrite question — both are decisions —
+-- and two numbers for the price question, which is why they stay apart above.
+policy(File, L)         :- block(File, L, pol).
+policy(File, L)         :- block(File, L, pol_star).
+mechanism(File, L)      :- block(File, L, mech).
+
+-- WHEN the answer is needed, relative to the kernel's one in-band policy slot.
+-- Only policy lines carry a tense worth reporting: a MECH block's `when` is
+-- either n/a or describes when the mechanism runs, not when a decision is due.
+policy_when(File, L, W) :- policy(File, L), code_line(File, L, K), when_of(K, W).
+
+-- A block that is a slice inside a method, and the method it cuts. Twelve of
+-- them, in four methods. Kept as its own relation because it is the shape of a
+-- claim about src/engine.ts, not about the scanner: a method holding a MECH
+-- slice and a POL slice is a method doing two things.
+cut_method(M)           :- part_of(_, M).
+cut_at(M, L, Cat)       :- part_of(K, M), code_line(File, L, K), block(File, L, Cat).
+
+-- ---------------------------------------------------------------------------
+-- the declared contamination, as a query rather than a paragraph
+--
+-- docs/modelling-a-language.md, THE DECOUPLING RULE: a scanner contaminated
+-- with semantics is admissible when the contamination is DECLARED as something
+-- that goes away with the language model. What makes that safe is that a
+-- declared loan can be COUNTED, so `dirty/4` is emitted one row per loan.
+
+-- A block whose category is asserted by a human and derived by nothing. Today
+-- that is every block; this relation going empty is the measurable form of
+-- "the language model is built", for this file.
+hand_judged(File, K)    :- block_at(File, K, _, _), dirty(engine_split, cat, K, _).
+
+-- The two loans do not retire together: the verdicts go when a model derives
+-- them, the twelve slices go when someone splits four methods in src/engine.ts.
+loan(Kind, Retires)     :- dirty(engine_split, Kind, _, Retires).
+owed(Retires, Unit)     :- dirty(engine_split, _, Unit, Retires).

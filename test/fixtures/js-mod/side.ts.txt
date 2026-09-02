@@ -1,0 +1,2 @@
+// evaluated for its effect; exports nothing anybody binds
+globalThis.__jsModFixtureSideEffect = true;

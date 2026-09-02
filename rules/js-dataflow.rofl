@@ -1,0 +1,31 @@
+-- js-dataflow.rofl — ONE cell, modelled: variable-to-variable value flow
+-- through a declarator initialiser. Written over the scanner's four relations
+-- plus rules/js-structure.rofl (which is where `ast_name` now comes from —
+-- LOAD IT FIRST, or every rule here is silent for want of a premise). The
+-- scanner judged nothing and this file does the judging.
+--
+-- DELIBERATELY NARROW. It sees `let x = y` and nothing more: not `x = y`
+-- (assignment expression), not `let x = y + 1` (the init is not an identifier),
+-- not a flow through a call or a property. Those are separate cells and the
+-- audit is what remembers they are missing.
+
+-- an identifier node, with its name.
+-- ARITY NOTE: ast_node carries File since the scanner became complete, and
+-- ast_child carries Index. Both extra columns are `_` here because this cell
+-- is about names and not about position — but the Index column is why the
+-- scanner can now tell `f(a, b)` from `f(b, a)`, which this cell does not
+-- need and the next one will.
+ident[code](N, Name)        :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name).
+
+-- a declarator binds Name (its `id`) and reads Src (its `init`), both identifiers
+decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
+                               ast_child[code](D, id, _, N), ident[code](N, Name).
+decl_reads[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
+                               ast_child[code](D, init, _, N), ident[code](N, Name).
+
+-- THE MODELLED CLAIM: a value flows from the name read to the name bound.
+var_flow[code](From, To)    :- decl_reads[code](D, From), decl_binds[code](D, To).
+
+-- and its transitive closure, because a chain is what a dataflow trace is
+var_reaches[code](A, B)     :- var_flow[code](A, B).
+var_reaches[code](A, C)     :- var_reaches[code](A, B), var_flow[code](B, C).

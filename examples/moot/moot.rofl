@@ -1,0 +1,252 @@
+-- moot.rofl — MOOT: proving which feature flags are dead.
+--
+-- A flag IS a rule-as-data. Its enabling condition is a predicate over a
+-- context (segment, region, version, bucket, channel, another flag), and a
+-- config file is already the reflection of that rule — nothing needs
+-- translating. So these rules are siblings of boot.rofl's `malformed`,
+-- `breach`, `leak`, `forged`, `unmoded` and `undefined_premise`: audits over
+-- a reflection, in `[audit]`, each with a derivation tree.
+--
+-- THE DECIDABILITY BOUNDARY, STATED ONCE, HERE.
+-- Every condition constrains ONE dimension of the context, every dimension is
+-- FINITE and declared as data (`dim/1`, `dom/2`), and clauses are conjunctions
+-- of such conditions. Two consequences carry this whole file:
+--
+--   (1) the set of contexts a clause admits is the PRODUCT of its
+--       per-dimension admitted sets. So satisfiability decomposes: a clause is
+--       satisfiable iff no single dimension of it is empty;
+--   (2) containment decomposes too. For a NON-EMPTY clause C2,
+--       contexts(C2) subset-of contexts(C1)  iff  for every dimension D,
+--       admits(C2,D) subset-of admits(C1,D). (Left to right: extend any value
+--       of C2 on D to a full context of C2, which must then be a context of
+--       C1. Right to left: componentwise.)
+--
+-- (2) is why `shadowed` is exact here and not an approximation, and the
+-- non-emptiness side condition is not decoration: the empty set is contained
+-- in everything, while its per-dimension image is not. `contains/2` carries
+-- that guard explicitly.
+--
+-- The boundary is the hypothesis, not the operators. Comparisons are fine: on
+-- a finite domain `version >= 7` denotes a finite set and is enumerated below
+-- by an ordinary rule. What breaks the decomposition is an UNBOUNDED domain
+-- (a timestamp, a real number), or a constraint RELATING two dimensions
+-- (`bucket < version * 8`), because then contexts(C) is no longer a product
+-- and (1) and (2) both fail. That is where SMT starts. README.md says so
+-- again, with the measured sample size of the enumeration oracle.
+
+-- ---------------------------------------------------------------------------
+-- the input schema: everything the config parser emits.
+--
+-- Declared, not merely populated. boot.rofl's `undefined_premise` audit reads
+-- an unpopulated positive premise as a misspelling, and it is right to: a rule
+-- pack loaded without its host facts is mute. Declaring the inputs is the
+-- remedy, and it doubles as the schema a reader needs.
+
+edb(flag).        -- flag(F).            a flag exists
+edb(ordered).     -- ordered(F, C, I).   flag F has clause C at position I
+edb(cond_of).     -- cond_of(C, L).      clause C carries condition L
+edb(cond).        -- cond(L, D, Op, K).  L constrains dimension D: Op K
+edb(cond_alt).    -- cond_alt(L, V).     a member of L's value set (oneof/noneof)
+edb(requires).    -- requires(C, G).     clause C needs flag G to be on
+edb(req_at).      -- req_at(C, K, G).    C's K-th requirement, 1-based
+edb(req_count).   -- req_count(C, N).    how many requirements C has
+edb(dim).         -- dim(D).             a context dimension
+edb(dom).         -- dom(D, V).          V is a value of dimension D
+edb(exclusive).   -- exclusive(F, G).    F and G are declared mutually exclusive
+edb(ctx).         -- ctx(D, V).          the ONE context under evaluation
+
+-- ---------------------------------------------------------------------------
+-- layer 1 — what a single condition admits.
+--
+-- The operator semantics live here, in rules, not in the parser. The host
+-- turns config text into `cond/4` and `cond_alt/2` facts and stops; whether
+-- `version >= 7` admits 6 is inferred. `dom(D, V)` on every rule is what keeps
+-- the answer inside the declared finite domain: a condition naming a value the
+-- domain does not have admits nothing, which is the correct reading of a typo.
+
+cond_admits(L, V) :- cond(L, D, eq, K), dom(D, V), V = K.
+cond_admits(L, V) :- cond(L, D, ne, K), dom(D, V), V != K.
+cond_admits(L, V) :- cond(L, D, ge, K), dom(D, V), V >= K.
+cond_admits(L, V) :- cond(L, D, le, K), dom(D, V), V <= K.
+cond_admits(L, V) :- cond(L, D, oneof, _), dom(D, V), cond_alt(L, V).
+cond_admits(L, V) :- cond(L, D, noneof, _), dom(D, V), not cond_alt(L, V).
+
+-- ---------------------------------------------------------------------------
+-- layer 2 — what a CLAUSE admits, one dimension at a time.
+--
+-- The intersection over the clause's conditions on that dimension, written as
+-- a double negation because a conjunction over an open set of conditions is a
+-- universal. A dimension no condition of C mentions is admitted whole, which
+-- falls out rather than being special-cased: nothing rejects it.
+
+clause_known(C)  :- ordered(_, C, _).
+rejects(C, D, V) :- cond_of(C, L), cond(L, D, _, _), dom(D, V), not cond_admits(L, V).
+admits(C, D, V)  :- clause_known(C), dom(D, V), not rejects(C, D, V).
+
+-- ---------------------------------------------------------------------------
+-- layer 3 — emptiness. By (1), one empty dimension kills the whole clause.
+
+-- `empty` is asked only where the clause rejects SOMETHING on that dimension:
+-- a dimension no condition of C mentions is admitted whole and cannot be
+-- empty. The second rule is the degenerate case that guard would otherwise
+-- lose — a dimension declared with no values at all, which makes every clause
+-- empty on it. (Written the direct way, over `clause_known(C), dim(D)`, this
+-- rule scanned `nonempty` once per (clause, dimension) pair: 21M unifications
+-- on the self-application of section 7, against 750k here.)
+nonempty(C, D)   :- admits(C, D, V).
+dom_known(D)     :- dom(D, _).
+empty(C, D)      :- rejects(C, D, _), not nonempty(C, D).
+empty(C, D)      :- clause_known(C), dim(D), not dom_known(D).
+dead_clause(C)   :- empty(C, D).
+
+-- The human-readable naming of an emptiness: a PAIR of conditions on the same
+-- dimension that share no value. Sufficient, NOT necessary — three conditions
+-- can be pairwise compatible and jointly empty, which is what `loyalty_banner`
+-- does in the demo config. `empty/2` above is the proof; `conflict/4` is the
+-- sentence, and when there is no such pair the report says the emptiness is
+-- three-way rather than inventing one. Restricted to already-empty dimensions
+-- because that is the only place anybody reads it.
+
+share(L1, L2)          :- cond_of(C, L1), cond_of(C, L2), cond(L1, D, _, _),
+                          cond(L2, D, _, _), cond_admits(L1, V), cond_admits(L2, V).
+conflict(C, D, L1, L2) :- empty(C, D), cond_of(C, L1), cond_of(C, L2),
+                          cond(L1, D, _, _), cond(L2, D, _, _), L1 != L2,
+                          not share(L1, L2).
+
+-- ---------------------------------------------------------------------------
+-- layer 4 — liveness through flag requirements.
+--
+-- "Every requirement of C is live" is a universal over a set, and the obvious
+-- spelling (`blocked(C) :- requires(C,G), not live(G)`) puts `live` and
+-- `blocked` in a NEGATIVE CYCLE, which boot.rofl rejects as unstratifiable and
+-- is right to. Indexing the requirements and walking them turns the universal
+-- into a positive recursion: `ok_from(C,K)` means "requirements K..N of C are
+-- all live", the base case is the position past the last one, and the only
+-- negation left in this layer is `not dead_clause`, which sits below.
+--
+-- This is a real cost of relation-level stratification, paid deliberately and
+-- once. It is also the reason `live/1` recurses positively and therefore
+-- carries a counting annotation that means something (see README).
+
+ok_from(C, N1)   :- req_count(C, N), N1 is N + 1.
+ok_from(C, K)    :- req_at(C, K, G), live(G), K1 is K + 1, ok_from(C, K1).
+usable(C)        :- clause_known(C), not dead_clause(C), ok_from(C, 1).
+live(F)          :- ordered(F, C, _), usable(C).
+
+-- ===========================================================================
+-- THE FIVE VERDICTS. All in [audit], all with a derivation tree.
+-- ===========================================================================
+
+-- 1. UNREACHABLE — no context whatsoever turns this flag on. Not "we saw no
+-- traffic": there is no traffic to see. `whynot live(F)` is the demonstration,
+-- and it recurses through the requirement chain on its own.
+
+unreachable[audit](F) :- flag(F), not live(F).
+
+-- 2. SHADOWED — another clause of the same flag admits every context this one
+-- admits, so deleting this clause changes no decision anywhere. This is
+-- entailment between rule bodies, not derivation, and by (2) it is decided
+-- exactly: `escapes` looks for a single (dimension, value) witness that C2
+-- admits and C1 does not, and its absence IS the containment.
+--
+-- Three guards, each load-bearing:
+--   * `not dead_clause(C2)` — the empty set is contained in everything but its
+--     per-dimension image is not, so (2) only holds for a non-empty C2. A dead
+--     clause is unreachable, not shadowed;
+--   * `req_escape` — containment of contexts is not enough. If C1 needs a flag
+--     C2 does not, C1 can fail where C2 fires. Every requirement of C1 must
+--     also be one of C2's;
+--   * `I < J` in `sibling` — the earlier clause is the survivor, so exactly one
+--     of a mutually-containing pair is condemned, deterministically.
+
+-- `escapes` is written positively for the same reason `narrows` is: on a value
+-- of dom(D), "C1 does not admit it" IS "C1 rejects it", by the admits rule
+-- above, and `rejects` is one fact per (condition, excluded value) where
+-- `admits` is one per (clause, dimension, value). Same relation, a fiftieth of
+-- the scanning: on the self-application of section 7 this rule alone was 25M
+-- unifications and is now under half a million.
+sibling(C1, C2)       :- ordered(F, C1, I), ordered(F, C2, J), I < J.
+escapes(C2, C1, D, V) :- sibling(C1, C2), rejects(C1, D, V), admits(C2, D, V).
+req_escape(C2, C1)    :- sibling(C1, C2), requires(C1, G), not requires(C2, G).
+contains(C1, C2)      :- sibling(C1, C2), not dead_clause(C2),
+                         not escapes(C2, C1, _, _), not req_escape(C2, C1).
+
+shadowed[audit](F, C2, C1) :- ordered(F, C2, _), sibling(C1, C2), contains(C1, C2).
+
+-- 3. TAUTOLOGICAL — a clause that narrows nothing on any dimension and needs
+-- no flag. The flag is effectively deleted; only the branch in the code is
+-- left, and every reader of that branch still believes it is conditional.
+--
+-- The claim is about ONE clause. A flag whose clauses are individually partial
+-- but jointly cover the space is also always on, and this rule does not say
+-- so: DNF tautology does not decompose per dimension the way (1) and (2) do.
+-- The enumeration oracle in demo.ts measures exactly that gap and the report
+-- names the flags it finds there. Stated, not silently approximated.
+
+-- `narrows` is the positive spelling of "some value of D this clause does not
+-- admit", and it is `rejects` verbatim: by the rule above, a value of dom(D) is
+-- admitted exactly when nothing rejects it. Written the obvious way — over
+-- `not admits` — this rule costs a scan of `admits` per (clause, value) pair
+-- and dominated the whole run at 5.5M of them. Same relation, same verdicts,
+-- one join instead.
+narrows(C, D)   :- rejects(C, D, _).
+total_clause(C) :- clause_known(C), not narrows(C, _).
+
+tautological[audit](F, C) :- ordered(F, C, _), total_clause(C), req_count(C, 0).
+
+-- 4. CONTRADICTORY — two flags the config declares mutually exclusive, whose
+-- clauses admit a common context. On that overlap BOTH are on, so which branch
+-- of the code runs is decided by the order the branches are written in, not by
+-- any condition anybody wrote. By (1) the overlap is non-empty iff the two
+-- clauses meet on EVERY dimension, which is again a per-dimension question.
+--
+-- `usable` on both sides keeps the verdict about reachable behaviour; a
+-- witness context is then built and CHECKED against `flag_on/1` below, so the
+-- overlap is not merely counted, it is exhibited.
+
+rival(C1, C2)      :- exclusive(F, G), ordered(F, C1, _), ordered(G, C2, _).
+meets(C1, C2, D)   :- rival(C1, C2), admits(C1, D, V), admits(C2, D, V).
+misses(C1, C2, D)  :- rival(C1, C2), dim(D), not meets(C1, C2, D).
+compatible(C1, C2) :- rival(C1, C2), usable(C1), usable(C2), not misses(C1, C2, _).
+
+contradictory[audit](F, G, C1, C2) :- exclusive(F, G), ordered(F, C1, _),
+                                      ordered(G, C2, _), compatible(C1, C2).
+
+-- 5. DEPENDENT — every usable clause of F requires G, so F's own conditions
+-- never decide anything on their own: F is on only where G is. Deleting G
+-- kills F, and the segment/region/version predicates on F are theatre.
+-- `live(F)` keeps it separate from `unreachable`: a flag with no usable clause
+-- satisfies the universal vacuously and has a better verdict already.
+
+gated(F, G)   :- ordered(F, C, _), requires(C, G).
+free_of(F, G) :- gated(F, G), ordered(F, C, _), usable(C), not requires(C, G).
+
+dependent[audit](F, G) :- gated(F, G), live(F), not free_of(F, G).
+
+-- ---------------------------------------------------------------------------
+-- the evaluator: ONE context, asserted by the host, and what it turns on.
+--
+-- This is what makes best-derivation an answer rather than a claim. The host
+-- reads `admits/3` to build a candidate enabling context, asserts it as
+-- `ctx/2`, and the engine derives `flag_on/1` with a proof that bottoms out in
+-- the same `admits/3` facts the audits used. A context nobody can verify is a
+-- guess; this one comes back with a tree.
+--
+-- `ctx_bad` over `dim/1` rather than over the asserted values is deliberate:
+-- with no context asserted, ctx_dim_ok is empty, every clause is bad, and
+-- nothing is on. A missing input reads as "unknown", never as "everything".
+
+ctx_dim_ok(C, D) :- ctx(D, V), admits(C, D, V).
+ctx_bad(C)       :- clause_known(C), dim(D), not ctx_dim_ok(C, D).
+ctx_ok(C)        :- clause_known(C), not ctx_bad(C).
+
+on_here(C, N1)   :- req_count(C, N), N1 is N + 1.
+on_here(C, K)    :- req_at(C, K, G), flag_on(G), K1 is K + 1, on_here(C, K1).
+flag_on(F)       :- ordered(F, C, _), ctx_ok(C), on_here(C, 1).
+
+-- Required results on a healthy config, all checked in test/example-moot.test.ts:
+--   ? unstratified(X)            -> empty   (boot.rofl computes stratum/2 over these)
+--   ? undefined_premise[audit](R, Rel) -> empty
+--   ? leak[audit](A, B)          -> empty   (the [audit] heads declare their bridge)
+--   whynot live(f_new_checkout)  -> both clauses, two different causes
+--   why flag_on(f_...)           -> a context, proved, ready to paste into a test

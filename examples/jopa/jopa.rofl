@@ -1,0 +1,282 @@
+-- jopa.rofl -- JOPA: the standard of proof as a parameter of the semiring.
+--
+-- A SYNTHETIC statute. The Household Fire Indemnity Act 2026 does not exist
+-- and is not modelled on any jurisdiction's wording. What is real is its
+-- STRUCTURE -- elements, an exclusion, an offence, and three different
+-- standards of proof over the same facts. This file is a demonstration of a
+-- mechanism. It is not legal advice and it decides nobody's claim.
+--
+-- Layout of this file:
+--   0. the ledgers            (who may write what)
+--   1. the case-file interface (what a case must supply)
+--   2. s.2  insured perils
+--   3. s.5  the elements of a claim
+--   4. s.6  what proves what
+--   5. s.4  the indemnity
+--   6. s.7  the exclusion, and s.9 the offence
+--   7. s.8  the standards of proof -- DATA, read by nobody below
+--   8. the closed-form contrast   (the same norm, written with `not`)
+--   9. the statute text, for citation
+--
+-- THE ONE THING TO CHECK WHILE READING: no rule below mentions a standard of
+-- proof, a threshold, or a probability. Every number in the whole model is a
+-- fact -- an evidence weight in [record], an inference strength in
+-- [calibration], a deadline in the statute -- and the standard of proof is
+-- applied AFTER the fixpoint, by choosing a threshold over the same fold.
+-- test/example-jopa.test.ts checks that mechanically, through the kernel's
+-- own reflection of the rules: no rule reads `standard` or `standard_for`.
+
+-- =========================================================================
+-- 0. the ledgers
+-- =========================================================================
+-- Three books, three writers, and the split is the point:
+--   [main]        the law. Written by the legislature.
+--   [record]      the facts of the case as the tribunal found them, INCLUDING
+--                 the weight it put on each piece of evidence. Written by the
+--                 tribunal of fact; swap this ledger and you swap the case.
+--   [calibration] the strength of an inference step. NOT law and NOT a
+--                 finding of fact -- a number the modeller chose. It is the
+--                 softest thing in the model and it has its own book so that
+--                 a reader can see exactly how much of the answer rests on it.
+
+authority(main, legislature).
+authority(record, tribunal_of_fact).
+authority(calibration, modeller).
+
+imports(main, record).
+imports(main, calibration).
+
+-- The same two crossings the other way, which the leak audit asks about now
+-- that the flow graph is transitively closed. Both books reach [main]
+-- through the rules of the statute, and every audit rule reads [main], so
+-- both reach [audit]. This is licensed on purpose and it is not a
+-- formality: `forged[audit]` exists precisely to say that someone other
+-- than the tribunal wrote into [record], or someone other than the modeller
+-- into [calibration], and it cannot say so without reading them.
+imports(audit, record).
+imports(audit, calibration).
+
+-- =========================================================================
+-- 1. the case-file interface
+-- =========================================================================
+-- What a case file must supply, declared here rather than discovered by a
+-- rule failing silently. An empty case file still audits clean.
+
+edb(claim).            -- claim(C, Policy)
+edb(policy).           -- policy(P, Holder, Property, StartDay, EndDay)
+edb(peril_alleged).    -- peril_alleged(C, Peril)
+edb(loss_of).          -- loss_of(C, Property)
+edb(loss_day).         -- loss_day(C, Day)
+edb(notice_day).       -- notice_day(C, Day)
+edb(claim_made).       -- claim_made(C, Person)
+edb(evidence).         -- evidence(Id, Kind, C, WeightPercent)
+edb(evidence_note).    -- evidence_note(Id, "what it is")
+edb(day_label).        -- day_label(Day, "16 February 2026")
+edb(strength).         -- strength(Step, Percent)   [calibration]
+
+-- =========================================================================
+-- 2. s.2 -- insured perils
+-- =========================================================================
+
+norm(s2).
+insured_peril(fire).
+insured_peril(storm).
+insured_peril(escape_of_water).
+
+-- =========================================================================
+-- 3. s.5 -- the elements of a claim
+-- =========================================================================
+-- Each element is one rule and cites one subsection. A claim is made out
+-- when every element is.
+
+norm(s5).
+norm(s5_a). norm(s5_b). norm(s5_c). norm(s5_d). norm(s5_e).
+
+notice_period(s5_e, 30).
+
+-- s.5(a) the policy was in force on the day of the loss
+element_met(C, cover_in_force)   :- norm(s5_a),
+                                    claim[record](C, P),
+                                    policy[record](P, _, _, Start, End),
+                                    loss_day[record](C, D),
+                                    D >= Start, D <= End.
+
+-- s.5(b) the property lost is the property insured
+element_met(C, insured_property) :- norm(s5_b),
+                                    claim[record](C, P),
+                                    policy[record](P, _, Prop, _, _),
+                                    loss_of[record](C, Prop).
+
+-- s.5(c) the peril alleged is an insured peril within s.2
+element_met(C, covered_peril)    :- norm(s5_c),
+                                    peril_alleged[record](C, Peril),
+                                    insured_peril(Peril).
+
+-- s.5(d) the peril caused the loss -- the one element that is a matter of
+-- degree, and therefore the one the standard of proof bites on
+element_met(C, causation)        :- norm(s5_d),
+                                    established(C, peril_caused_loss).
+
+-- s.5(e) notice within the period. A deadline is NOT a matter of degree:
+-- either the notice was in time or it was not, and no standard of proof
+-- makes 41 days into 30. The arithmetic carries no weight and the fold
+-- annotates this element `certain`.
+element_met(C, notice_in_time)   :- norm(s5_e),
+                                    notice_period(s5_e, Limit),
+                                    loss_day[record](C, L),
+                                    notice_day[record](C, N),
+                                    Delay is N - L,
+                                    Delay >= 0, Delay <= Limit.
+
+elements_met(C) :- norm(s5),
+                   element_met(C, cover_in_force),
+                   element_met(C, insured_property),
+                   element_met(C, covered_peril),
+                   element_met(C, causation),
+                   element_met(C, notice_in_time).
+
+-- =========================================================================
+-- 4. s.6 -- what proves what
+-- =========================================================================
+-- One rule. WHICH subsection a piece of evidence is admitted under is data,
+-- so the citation in the derivation tree comes from the statute table and
+-- not from the rule.
+--
+--   s.6(1) a report of a public authority is evidence of the occurrence of
+--          a peril and of its causing the loss
+--   s.6(2) physical traces recovered from the property are evidence of the
+--          manner in which a peril was brought about
+--   s.6(3) presence at the property may be proved by any admissible evidence
+--   s.6(4) an anonymous communication is not evidence of any fact
+
+norm(s6_1). norm(s6_2). norm(s6_3). norm(s6_4).
+
+proves(fire_brigade_report,  peril_caused_loss, s6_1).
+proves(met_office_report,    peril_caused_loss, s6_1).
+proves(engineer_report,      peril_caused_loss, s6_1).
+proves(accelerant_traces,    accelerant_used,   s6_2).
+proves(cctv_still,           at_property,       s6_3).
+proves(neighbour_statement,  at_property,       s6_3).
+proves(anonymous_tip,        at_property,       s6_4).
+
+established(C, F) :- evidence[record](_, Kind, C, _),
+                     proves(Kind, F, Sub),
+                     norm(Sub).
+
+-- =========================================================================
+-- 5. s.4 -- the indemnity
+-- =========================================================================
+
+norm(s4).
+indemnity_due(C) :- norm(s4), elements_met(C).
+
+-- =========================================================================
+-- 6. s.7 -- the exclusion, and s.9 -- the offence
+-- =========================================================================
+-- THE EXCLUSION IS NOT A NEGATED PREMISE OF s.4, AND THAT IS DELIBERATE.
+--
+-- Writing s.4 as `indemnity_due(C) :- elements_met(C), not deliberate_loss(C)`
+-- would be shorter and would give the same Boolean answer. It would also
+-- destroy the entire example. A negated premise is settled in the Boolean
+-- fixpoint, which runs BEFORE any semiring is chosen: the exclusion would
+-- then be in or out at derivability, at no standard of proof at all, and a
+-- 51%-probable allegation of arson would defeat the claim as completely as a
+-- confession. It would also make it impossible to state s.8(2), which puts a
+-- HIGHER standard on the exclusion than s.8(1) puts on the claim.
+--
+-- So the exclusion is a positive conclusion with its own annotation, and the
+-- decision procedure composes the two readings -- elements at their standard,
+-- exclusion at its own. That is also how the burden of proof actually works:
+-- the claimant proves the elements, the insurer proves the exclusion, and
+-- they are not proved to the same degree.
+
+norm(s7).
+deliberate_loss(C) :- norm(s7),
+                      strength[calibration](s7_step, _),
+                      established(C, at_property),
+                      established(C, accelerant_used).
+
+norm(s9).
+offence_s9(Person, C) :- norm(s9),
+                         deliberate_loss(C),
+                         claim[record](C, P),
+                         policy[record](P, Person, _, _, _),
+                         claim_made[record](C, Person).
+
+-- =========================================================================
+-- 7. s.8 -- the standards of proof
+-- =========================================================================
+-- Facts, and nothing below or above reads them. They are the parameter the
+-- caller hands to the fold's threshold, and moving one of them changes the
+-- outcome of a case without changing a single rule. That is the whole claim
+-- this example makes.
+
+standard(balance_of_probabilities, 50).
+standard(clear_and_convincing,     75).
+standard(beyond_reasonable_doubt,  95).
+
+-- s.8(1) / (2) / (3): which question is decided to which standard
+norm(s8_1). norm(s8_2). norm(s8_3).
+standard_for(claim_elements,     balance_of_probabilities, s8_1).
+standard_for(exclusion_s7,       clear_and_convincing,     s8_2).
+standard_for(offence_s9,         beyond_reasonable_doubt,  s8_3).
+
+-- which relation answers which question
+question_of(elements_met,  claim_elements).
+question_of(deliberate_loss, exclusion_s7).
+question_of(offence_s9,    offence_s9).
+
+-- =========================================================================
+-- 8. the closed-form contrast
+-- =========================================================================
+-- The same norm written the other way: instead of naming the five elements
+-- positively, say that none of them is missing. The element list becomes
+-- data (`element_of`), which is genuinely nicer -- amending the statute is
+-- then a fact, not a rule edit -- and the Boolean answer is identical.
+--
+-- And it cannot be tested at a standard of proof. A negated premise held by
+-- finite failure carries no annotation (src/semiring.ts says so in as many
+-- words), so the fold values this conclusion at `certain` however weak the
+-- evidence under it. The demo prints both numbers side by side. Whether a
+-- norm can be put to a standard of proof at all depends on how it was
+-- written down, which is not a property anyone would expect a translation to
+-- have to preserve.
+
+element_of(s5, cover_in_force).
+element_of(s5, insured_property).
+element_of(s5, covered_peril).
+element_of(s5, causation).
+element_of(s5, notice_in_time).
+
+-- ============ negation below this line only ============
+
+element_missing(C, E)   :- claim[record](C, _), element_of(s5, E),
+                           not element_met(C, E).
+
+elements_met_closed(C)  :- norm(s5), claim[record](C, _),
+                           not element_missing(C, _).
+
+-- =========================================================================
+-- 9. the statute text, for citation
+-- =========================================================================
+-- The prose each rule stands for, so that a derivation tree can be read as a
+-- reasoned decision and a human can check the TRANSLATION rather than the
+-- conclusion. This is the only thing anyone has to audit by eye.
+
+section_text(s2,   "s.2  The insured perils are fire, storm and escape of water.").
+section_text(s4,   "s.4  Where the elements in s.5 are established the insurer shall indemnify the policyholder for the loss.").
+section_text(s5,   "s.5  A claim is made out where each of the following is established.").
+section_text(s5_a, "s.5(a)  the policy was in force on the day of the loss;").
+section_text(s5_b, "s.5(b)  the property lost is the property insured under the policy;").
+section_text(s5_c, "s.5(c)  the peril alleged is an insured peril within s.2;").
+section_text(s5_d, "s.5(d)  that peril caused the loss;").
+section_text(s5_e, "s.5(e)  notice of the loss was given within 30 days of it.").
+section_text(s6_1, "s.6(1)  a report of a public authority is evidence of the occurrence of a peril and of its causing the loss;").
+section_text(s6_2, "s.6(2)  physical traces recovered from the property are evidence of the manner in which a peril was brought about;").
+section_text(s6_3, "s.6(3)  presence at the property may be proved by any admissible evidence;").
+section_text(s6_4, "s.6(4)  an anonymous communication is not evidence of any fact.").
+section_text(s7,   "s.7  No indemnity is payable where the loss was deliberately caused by the policyholder or with their connivance.").
+section_text(s8_1, "s.8(1)  the elements in s.5 are established on the balance of probabilities;").
+section_text(s8_2, "s.8(2)  an allegation that a loss was deliberately caused must be established by clear and convincing evidence;").
+section_text(s8_3, "s.8(3)  an offence under s.9 must be established beyond reasonable doubt.").
+section_text(s9,   "s.9  A person who deliberately causes a loss and makes a claim in respect of it commits an offence.").

@@ -6,6 +6,14 @@ reading[s2](t1, 21) @init.
 reading[s3](t1, 95) @init.
 authority(s1, sensor_net).  authority(s2, sensor_net).  authority(s3, sensor_net).
 
+-- [trust] corroborates one sensor against ANY other: `corroborated[trust]`
+-- reads a second reading under the perspective VARIABLE [S2]. That is a
+-- crossing `imports` cannot license, since `$var("S2")` is not a registered
+-- perspective, and it is the whole mechanism -- corroboration that named its
+-- corroborator in advance would not be corroboration. Declared here, at the
+-- ledger that gathers.
+collects(trust).
+
 close(V1, V2)          :- D is V1 - V2, D <= 2, D >= -2.  -- mode note: both bound
 corroborated[trust](S) :- reading[S](T, V1), reading[S2](T, V2),
                           S != S2, close(V1, V2).
@@ -19,3 +27,37 @@ temp[verified](T, V)   :- reading[S](T, V), corroborated[trust](S).
 --                                  the diff IS the blast radius
 --   whynot corroborated[trust](s3) -> names the missing close reading
 --                                    (single-step abduction)
+--   ? leak[audit](A, B)          -> ONE row, `main -> verified`; see below
+
+-- One row remains, and it is left firing deliberately:
+--
+--   main -> trust -> verified
+--       `close/2` has no bracket, so it lives in [main], and
+--       `corroborated[trust]` reads it, and `temp[verified]` reads [trust].
+--       `collects` does not reach this one and should not: [main] IS a
+--       registered perspective, so the audit is right to keep asking. It
+--       could be silenced with `imports(verified, main)`, and that sentence
+--       would be false about this program -- what crosses is an arithmetic
+--       helper, not content. [main] is the DEFAULT perspective, so it
+--       collects every rule nobody gave a ledger to, and the flow graph
+--       cannot tell such a namespace from a book of asserted content. The
+--       repair belongs above this file, not in a declaration written to make
+--       a row go away.
+--
+-- WHAT CHANGED, and why the row above became TWO rows. `crossing` used to
+-- carry `not bridge_decl(R, A, B)`, a row the kernel emitted for any rule
+-- whose head named a ledger and whose body read another. The audit could
+-- therefore only ever see a walk of two hops or more, which is why this one
+-- surfaced as its far end `main -> verified` and never as the hops it is made
+-- of. It now reports `main -> trust` as well: the SAME known-open walk, named
+-- where it actually starts. Nothing new is wrong; the report got sharper.
+--
+-- The third row it also surfaced, `trust -> verified`, is NOT that walk and
+-- IS declarable, so it is declared. `temp[verified](T, V) :- reading[S](T, V),
+-- corroborated[trust](S).` reads the corroboration book on purpose: a verified
+-- reading is one that [trust] vouched for, and a rule that could not read
+-- [trust] could not say so. This is the crossing the old audit was blind to.
+imports(verified, trust).
+
+-- The two `main -> ...` rows are still NOT declared, for the reason written
+-- above: the sentence would be false about this program.
