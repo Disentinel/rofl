@@ -1,0 +1,86 @@
+-- Character classes: DATA, generated, not a decision about the grammar.
+--
+-- ONE ROW CARRIES A LITERAL NEWLINE, and it has to. A ROFL escape means
+-- `take the next character literally`, so "\n" is the LETTER n and not a
+-- line feed -- measured, and it silently made `cls(n, nl)` true, which
+-- ended every comment at the first n in it. A real line feed written
+-- between the quotes does work and passes scripts/text_check.ts, which
+-- allows TAB and LF. A literal CR would NOT pass (it is reported as a
+-- lone CR), so no other control character appears here: everything
+-- unclassified is simply not a token character, which is what spaces,
+-- tabs and carriage returns need.
+edb(cls).
+cls("a", lower).
+cls("b", lower).
+cls("c", lower).
+cls("d", lower).
+cls("e", lower).
+cls("f", lower).
+cls("g", lower).
+cls("h", lower).
+cls("i", lower).
+cls("j", lower).
+cls("k", lower).
+cls("l", lower).
+cls("m", lower).
+cls("n", lower).
+cls("o", lower).
+cls("p", lower).
+cls("q", lower).
+cls("r", lower).
+cls("s", lower).
+cls("t", lower).
+cls("u", lower).
+cls("v", lower).
+cls("w", lower).
+cls("x", lower).
+cls("y", lower).
+cls("z", lower).
+cls("A", upper).
+cls("B", upper).
+cls("C", upper).
+cls("D", upper).
+cls("E", upper).
+cls("F", upper).
+cls("G", upper).
+cls("H", upper).
+cls("I", upper).
+cls("J", upper).
+cls("K", upper).
+cls("L", upper).
+cls("M", upper).
+cls("N", upper).
+cls("O", upper).
+cls("P", upper).
+cls("Q", upper).
+cls("R", upper).
+cls("S", upper).
+cls("T", upper).
+cls("U", upper).
+cls("V", upper).
+cls("W", upper).
+cls("X", upper).
+cls("Y", upper).
+cls("Z", upper).
+cls("0", digit).
+cls("1", digit).
+cls("2", digit).
+cls("3", digit).
+cls("4", digit).
+cls("5", digit).
+cls("6", digit).
+cls("7", digit).
+cls("8", digit).
+cls("9", digit).
+cls("_", upper).
+cls("(", lpar).
+cls(")", rpar).
+cls("[", lbrack).
+cls("]", rbrack).
+cls(",", comma).
+cls(".", dot).
+cls(":", colon).
+cls("-", dash).
+cls("\"", quote).
+cls("
+", nl).      -- the quotes really do enclose a line feed
