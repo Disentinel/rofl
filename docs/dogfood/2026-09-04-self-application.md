@@ -162,3 +162,73 @@ not a test and not reading the output.
 I built the macro, priced it, and called it sugar throughout; the tell was one
 grep away and I never ran it. The question that would have settled it before
 the first line of code: **which token is new?**
+
+---
+
+# Addendum, same day: the denominator was wrong
+
+Everything above measures ring 0 by asking what syntax *my* ring 1 happened to
+be written in. That denominator is circular — ring 1's source uses whatever I
+chose to write it in — and the owner supplied one that is not:
+
+> **Keep only what maps directly to a host operation and is inexpressible
+> otherwise.**
+
+## `:-` is provably sugar
+
+A snapshot was hand-extended with rows for a rule that never passed through the
+parser, and restored through `Rofl.fromSnapshot`:
+
+    rule(r_step).
+    concludes(r_step, reaches).
+    conclusion_lit(r_step, 1, $lit(reaches, main, [$var("X"), $var("Z")], $now)).
+    premise_lit(r_step, 1, $lit(reaches, main, [$var("X"), $var("Y")], $now)).
+    premise_lit(r_step, 2, $lit(edge,    main, [$var("Y"), $var("Z")], $now)).
+
+It runs — the full closure of a three-edge chain, 6 rows — and the why-tree
+names `r_step` and `r_base` down to `edge[main](a,b) [axiom]`.
+`src/engine.ts:2` already said the evaluator reads rules only from the
+reflected store; this is that sentence made visible from outside.
+
+So `:-` is an encoding over facts, and so are variables (`$var`), perspectives
+and tenses (arguments of `$lit`), negation (`$not`) and every builtin
+(`$builtin`). None is a host operation.
+
+## Ring 0 is then 60 lines, not 177
+
+A reader of **terms and facts only** — atoms, integers, negative integers,
+strings with escapes, `$`-names, nested compounds, argument lists, `rel(args).`
+— is **60 code lines against 231**, a saving of **74%**, and it reads a
+reflection-only program correctly. Thirteen of the twenty-eight surface
+features survive; the fifteen that go are every encoding over a term.
+
+| criterion | features | ring 0 | saving |
+|---|---|---|---|
+| what ring 1's source happens to use | 21 / 28 | 177 lines | 23% |
+| **what the host cannot do without** | **13 / 28** | **60 lines** | **74%** |
+
+The tell that the first number was incidental was in its own output: the seven
+droppable features were perspectives, tenses, wildcards, arithmetic — a list
+with no principle in it. A principled boundary states itself in one sentence;
+an incidental one can only be enumerated.
+
+## Three relocations, not savings
+
+1. **Ring 0 must be allowed to write `conclusion_lit`**, which the load path
+   refuses today. The protection becomes *trusted caller* rather than *nobody*.
+2. **Ring 1 stops being optional.** Nobody hand-writes
+   `conclusion_lit(r, 1, $lit(…))`, so the ergonomics of the whole language
+   move into a layer that does not exist yet — where today a person can write
+   ROFL with no layer at all.
+3. **Ring 1 ships as a snapshot, not as source**, since it cannot be written in
+   its own subset without being hand-encoded. `Rofl.fromSnapshot` already
+   supports this, and it is how a self-hosting compiler ships its bootstrap
+   image anyway.
+
+Also moved rather than removed: the language-level refusals (`'@next' is not
+allowed in rule bodies`) stop being parser errors and become rules — auditable,
+and unwritten.
+
+And the criterion has one step left in it: a fact is itself
+`$fact(Rel, Book, Args)`, so a ring 0 reading **one** form — a term, asserted —
+would be smaller still. That is S-expressions.
