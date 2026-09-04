@@ -229,25 +229,11 @@ top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
 -- and block scope are the scope layer's job, not this one's.
 
 -- TIER 1: identifier callee naming a function bound in the SAME file.
-fn_binding[code](F, Name, File) :- ast_node[code](F, function_declaration, File, _),
-                                   ast_child[code](F, id, 0, I), ast_name[code](I, Name).
-fn_binding[code](F, Name, File) :- fn_node[code](F), fn_file[code](F, File),
-                                   ast_node[code](D, variable_declarator, _, _),
-                                   ast_child[code](D, init, 0, F),
-                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
 
-resolves[code](C, F) :- shape[code](C, s_identifier), callee_of[code](C, N),
-                        ast_name[code](N, Name), call_site[code](C, File),
-                        fn_binding[code](F, Name, File).
 
 -- TIER 1b: an IIFE resolves to its own callee. Exact, with no name involved.
-resolves[code](C, F) :- shape[code](C, s_iife), callee_of[code](C, F).
 
 -- TIER 2: `ns.method()` where ns is a local object literal.
-obj_literal_binding[code](Name, O, File) :- ast_node[code](D, variable_declarator, File, _),
-                                            ast_child[code](D, id, 0, I), ast_name[code](I, Name),
-                                            ast_child[code](D, init, 0, O),
-                                            ast_node[code](O, object_expression, _, _).
 
 obj_member_fn[code](O, Key, M) :- ast_node[code](O, object_expression, _, _),
                                   ast_child[code](O, properties, _, M),
@@ -259,12 +245,6 @@ obj_member_fn[code](O, Key, F) :- ast_node[code](O, object_expression, _, _),
                                   ast_child[code](P, key, 0, K), ast_name[code](K, Key),
                                   ast_child[code](P, value, 0, F), fn_node[code](F).
 
-resolves[code](C, F) :- shape[code](C, s_member_on_ident), callee_of[code](C, N),
-                        ast_child[code](N, object, 0, O), ast_name[code](O, ObjName),
-                        ast_child[code](N, property, 0, P), ast_name[code](P, Key),
-                        call_site[code](C, File),
-                        obj_literal_binding[code](ObjName, OL, File),
-                        obj_member_fn[code](OL, Key, F).
 
 -- TIER 3: an identifier callee naming a PARAMETER, resolved through the value
 -- the caller passed at that index. This is the hole that lives INSIDE a shape
@@ -290,14 +270,7 @@ resolves[code](C, F) :- shape[code](C, s_member_on_ident), callee_of[code](C, N)
 -- visible rather than averaged away — `ambiguous_call[audit]` reports a site
 -- resolving two ways, and the oracle comparison counts an edge the runtime
 -- never ran. A context-sensitive version is a different analysis, not a fix.
-param_bind[code](F, PName, G) :- resolves[code](C, F),
-                                 passes_function[code](C, I, G, _),
-                                 ast_child[code](F, params, I, P),
-                                 ast_name[code](P, PName).
 
-resolves[code](C, G) :- shape[code](C, s_identifier), callee_of[code](C, N),
-                        ast_name[code](N, Name), nearest_fn[code](Fn, C),
-                        param_bind[code](Fn, Name, G).
 
 -- TIER 4: WHAT OBJECT DOES THIS EXPRESSION DENOTE?
 --
@@ -316,19 +289,8 @@ resolves[code](C, G) :- shape[code](C, s_identifier), callee_of[code](C, N),
 --
 -- WHAT AN OBJECT IS, for this layer: a node that can answer `.k`. Two kinds do,
 -- and they are not alike in the language but are identical in this question.
-obj_node[code](O) :- ast_node[code](O, object_expression, _, _).
-obj_node[code](O) :- ast_node[code](O, class_declaration, _, _).
 
-class_binding[code](CD, Name, File) :- ast_node[code](CD, class_declaration, File, _),
-                                       ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
-class_member_fn[code](CD, Key, M) :- ast_node[code](CD, class_declaration, _, _),
-                                     ast_child[code](CD, body, 0, B),
-                                     ast_child[code](B, body, _, M),
-                                     ast_node[code](M, class_method, _, _),
-                                     ast_child[code](M, key, 0, K), ast_name[code](K, Key).
 
-member_fn[code](O, Key, F) :- obj_member_fn[code](O, Key, F).
-member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).
 
 -- THE KEY, and the computed/static distinction collapses HERE rather than in
 -- the shape table: `o.pick` and `o["pick"]` select the same member and differ
@@ -336,32 +298,17 @@ member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).
 -- therefore never reaches this relation — which is the same refusal the shape
 -- axis records as `runtime_dependent`, arriving as an absence instead of a
 -- special case.
-member_node[code](N)          :- ast_node[code](N, K, _, _), member_kind(K).
-member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, false),
-                                 ast_child[code](N, property, 0, P), ast_name[code](P, Key).
 -- ...and the computed branch now asks the DATAFLOW layer what the key may be,
 -- which makes the literal case and the const case ONE rule. `o["pick"]()` and
 -- `const k = "pick"; o[k]()` differ only in how far the value travelled, and
 -- `may_be_lit` is what closes that distance. Requires rules/js-dataflow.rofl.
-member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),
-                                 ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).
 
 -- ENTRY 1 — an identifier bound to an object literal. This is tier 2's premise,
 -- lifted out of the resolution rule so the other four can share it.
-denotes[code](N, O) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),
-                       obj_literal_binding[code](Name, O, File).
 
 -- ENTRY 2 — an identifier bound to `new C()`. `const b = new Box(1); b.both()`
 -- was a miss the oracle caught, and it is NOT the constructor edge: this rule
 -- says what `b` IS, and says nothing about `new Box(1)` being a call.
-new_binding[code](Name, CD, File) :- ast_node[code](D, variable_declarator, File, _),
-                                     ast_child[code](D, id, 0, I), ast_name[code](I, Name),
-                                     ast_child[code](D, init, 0, X),
-                                     ast_node[code](X, new_expression, _, _),
-                                     ast_child[code](X, callee, 0, CE), ast_name[code](CE, CName),
-                                     class_binding[code](CD, CName, File).
-denotes[code](N, CD) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),
-                        new_binding[code](Name, CD, File).
 
 -- ENTRIES 3 AND 4 WENT HOME 2026-09-04. `this` inside a class method, and the
 -- recursion through a member of something that already denotes, were both
@@ -375,16 +322,12 @@ denotes[code](N, CD) :- ast_node[code](N, identifier, File, _), ast_name[code](N
 -- is most of it: an object literal reached through a name, a member of one at
 -- any depth, `this` in a class method, and a call's return value. This one rule
 -- is what makes the deletion above free.
-denotes[code](E, O) :- may_be_node[flow](E, O), obj_node[code](O).
 
 -- THE ONE RESOLUTION RULE the entries feed. Note what is NOT here: the
 -- shape. A rule keyed by shape would have to be repeated per shape and would
 -- silently stop covering a shape nobody thought of; keyed by the QUESTION, it
 -- covers every spelling the entries can reach, including ones this corpus has
 -- no site for.
-resolves[code](C, F) :- callee_of[code](C, N), member_node[code](N),
-                        ast_child[code](N, object, 0, Obj), denotes[code](Obj, O),
-                        member_node_key[code](N, Key), member_fn[code](O, Key, F).
 
 -- THE CONSTRUCTOR EDGE. `new Box(1)` is the one edge the execution oracle saw
 -- from the beginning and no callee shape could ever carry, because it is not a
@@ -397,6 +340,16 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
 
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, CD), class_ctor[code](CD, M).
+
+-- THE GENERAL CALLEE RULE. Everything above resolves a callee by recognising
+-- its SPELLING — an identifier, a member, an IIFE. This one asks the value
+-- question instead: whatever the callee expression may BE, if it is a function,
+-- the site calls it. That covers the five syntactic wrappers in one line —
+-- `(f)()`, `f as T ()`, `f!()`, `(a, f)()`, `c ? f : g ()` — because the
+-- dataflow layer already sees through a parenthesis, a cast, an assertion, a
+-- sequence and a conditional, and it will cover the next wrapper somebody adds
+-- to the grammar without a rule here at all.
+resolves[code](C, F) :- callee_of[code](C, N), may_be_node[flow](N, F), fn_node[code](F).
 
 -- A site resolving two ways is an over-approximation that must be VISIBLE,
 -- not averaged away.
@@ -423,9 +376,13 @@ calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
 -- HIGHER-ORDER, recorded and NOT folded into `calls`: passing a function is
 -- not calling it. The index is the content — argument 0 and argument 1 are
 -- different facts about the program.
-passes_function[code](C, I, F, Name) :- call_arg[code](C, I, A), ast_name[code](A, Name),
-                                        call_site[code](C, File),
-                                        fn_binding[code](F, Name, File).
+-- REGROUNDED 2026-09-04. This used to stand on `fn_binding`, the call graph's
+-- own name-to-function table, which went when the resolution tiers did. The
+-- relation itself is worth keeping — it is what makes ARGUMENT ORDER visible as
+-- a fact rather than as a comment — and it now stands on the value layer, so it
+-- covers a function reached any way the dataflow layer can reach one.
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), ast_name[code](A, Name),
+                                        may_be_node[flow](A, F), fn_node[code](F).
 
 -- ===========================================================================
 -- 6. THE FRONTIER, AS A POSITIVE RELATION

@@ -66,8 +66,7 @@ work_state(w_cg_new_expression, done).
 -- they really are one thing.
 work(w_cg_syntactic_wrappers, "(f)(), f as T (), f!(), (a, f)(), c ? f : g () — unwrap the callee and recurse").
 work_order(w_cg_syntactic_wrappers, 7).
-work_state(w_cg_syntactic_wrappers, open).
-claim(queued, js, parenthesized_expression, s_parenthesized, callgraph, w_cg_syntactic_wrappers).
+work_state(w_cg_syntactic_wrappers, done).
 claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).
 claim(queued, js, tsnon_null_expression,    s_non_null,      callgraph, w_cg_syntactic_wrappers).
 claim(queued, js, sequence_expression,      s_sequence,      callgraph, w_cg_syntactic_wrappers).

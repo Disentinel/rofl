@@ -47,4 +47,21 @@ export function seq(n: number): number { return (0, curried)(n)(n); }
 export function cond(n: number, f: (x: number) => number, g: (x: number) => number) {
   return (n > 0 ? f : g)(n);
 }
+// TWO MORE MEASUREMENT SITES, 2026-09-04, and for the same reason as the last
+// pair: `maybe!()` and `(c ? f : g)()` refused, and the refusal was about the
+// CORPUS — `maybe` is an ambient declaration with no value, and nobody calls
+// `cond`, so its parameters carry nothing. Give each a callee the value layer
+// can actually reach and the question becomes about the model instead.
+const notNull = curried;
+export function useNonNull(n: number): number { return notNull!(n)(n); }
+export function useCond(n: number): number { return cond(n, curried(1), curried(2)); }
+
+// a TS cast in the callee position. `s_parenthesized` gets no site on purpose:
+// measured 2026-09-04, babel does not emit ParenthesizedExpression under this
+// parser configuration at all — `(f)(1)` is a plain identifier callee — so no
+// corpus can produce that shape and it is waived rather than left `absent`.
+export function useAs(n: number): number {
+  return (curried as (m: number) => (k: number) => number)(n)(n);
+}
+
 export async function dyn(p: string) { return import(p); }

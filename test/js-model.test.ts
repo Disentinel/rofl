@@ -535,12 +535,12 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   //   the kinds that split: 82 + 15 = 97
   const coarse = counts(r);
   const f = fine(r);
-  console.log('      PREDICTED  coarse 82 | fine 98 = modelled 26 + waived 5 + not_modelled 67');
+  console.log('      PREDICTED  coarse 82 | fine 98 = modelled 32 + waived 6 + not_modelled 60');
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
   assert.equal(coarse.cell, 82, 'predicted 82 coarse cells');
-  assert.deepEqual(f, { cell: 98, modelled: 26, waived: 5, not_modelled: 67 },
-    'predicted 98 fine cells = 26 + 5 + 67');
+  assert.deepEqual(f, { cell: 98, modelled: 32, waived: 6, not_modelled: 60 },
+    'predicted 98 fine cells = 32 + 6 + 60');
   assert.equal(f.cell - coarse.cell, 16, 'predicted delta: 31 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -579,9 +579,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 67, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 60, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 67, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 60, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 4,
     'two dynamic-import cells at kind level, two computed-callee cells at shape level');
 
@@ -731,8 +731,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 112, 'positive control: the corpus is the one the census was taken on');
-  assert.equal(tally.size, 19, 'positive control: 19 distinct shapes; two sites added 2026-09-04');
+  assert.equal(sites, 119, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(tally.size, 20, 'positive control: 20 distinct shapes; four sites added 2026-09-04');
 
   console.log(`      census (${sites} call sites, ${tally.size} shapes):`);
   for (const [s, k] of [...tally].sort((a, b) => b[1] - a[1])) {
@@ -752,8 +752,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   console.log(`      declared but not in this corpus (${unseen.length} of ${declared.size} pairs):`);
   console.log('        ' + unseen.join(' '));
   assert.equal(declared.size, 31);
-  assert.equal(pairs.size, 19, 'every measured shape has exactly one callee kind in this corpus');
-  assert.equal(unseen.length, 12);
+  assert.equal(pairs.size, 20, 'every measured shape has exactly one callee kind in this corpus');
+  assert.equal(unseen.length, 11);
 
   // and the one shape that CANNOT be a cell, declared rather than left silent:
   // the catch-all is reached by the ABSENCE of a kind in any table, so it
@@ -918,10 +918,12 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 32, '21 kind-level claims + 11 shape claims with no cell under them');
+  assert.equal(f.modelled, 38, '21 kind-level claims + 17 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',
+    'js/call_expression/s_call_result/callgraph',
+    'js/conditional_expression/s_conditional/callgraph',
     'js/function_expression/s_iife/callgraph',
     'js/identifier/s_identifier/callgraph',
     'js/member_expression/s_member_on_ident/callgraph',
@@ -931,7 +933,12 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/member_expression/s_member_on_super/callgraph',
     'js/member_expression/s_member_on_this/callgraph',
     'js/new_expression/s_construct/callgraph',
+    'js/optional_call_expression/s_call_result/callgraph',
     'js/optional_member_expression/s_optional_member/callgraph',
+    'js/parenthesized_expression/s_parenthesized/callgraph',
+    'js/sequence_expression/s_sequence/callgraph',
+    'js/tsas_expression/s_ts_as/callgraph',
+    'js/tsnon_null_expression/s_non_null/callgraph',
   ]);
   assert.equal(n(shapeWorld(), 'orphan_claim[audit](A, B, S, L)'), 0, 'silent on the pristine tree');
   console.log('      KILLED: cells 97 -> 82 row for row, and 4 orphan_claim rows say the'
@@ -1070,7 +1077,7 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
             'positive control: the waiver it would have swallowed is still asserted');
   // both callgraph waivers go, not one: `ts_string_keyword x callgraph` is
   // deleted by the same branch
-  assert.equal(f.waived, 3, 'and the waived count really did drop, from 5');
+  assert.equal(f.waived, 4, 'and the waived count really did drop, from 6');
   console.log('      KILLED: lost_cell names 26, including a deliberately waived cell');
 });
 
@@ -1112,7 +1119,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of thirteen'
   // callgraph, r_denotes)`, so deleting those shapes now leaves a claim with no
   // cell under it, and `orphan_claim[audit]` names both by name. A cell that
   // nobody has ticked is deletable in silence; a ticked one is not.
-  assert.equal(finePartitions(f), false, '23 + 5 + 60 = 88 verdicts over 86 cells');
+  assert.equal(finePartitions(f), false, '32 + 6 + 53 = 91 verdicts over 86 cells');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/member_expression/s_member_on_member/callgraph',
     'js/member_expression/s_member_on_new/callgraph',

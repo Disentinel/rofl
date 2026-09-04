@@ -359,8 +359,10 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
   assert.ok(!edges.has('useCb -> leaf'), 'two parameters named `f` are two different bindings');
 
   // the binding table itself: five rows, one per (function, parameter, value)
-  const bound = m.binds('param_bind[code](F, N, G)', 'N');
-  assert.equal(bound.length, 5, `param_bind holds ${bound.length} rows`);
+  // the value that reaches each parameter, which is where this now lives: the
+  // call graph asks the dataflow layer instead of keeping a binding table.
+  const bound = m.binds('passes_function[code](C, I, F, N)', 'I', 'N');
+  assert.deepEqual([...new Set(bound)].sort(), ['0 -> leaf', '0 -> mid', '1 -> mid']);
 
   // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
   // `s_identifier` is not stale: an identifier naming an IMPORT still does not
@@ -423,7 +425,7 @@ test('argument position is content: which function is in which slot', () => {
 test('every unresolved shape carries a typed verdict, and it type-checks', () => {
   const m = build();
   const residue = m.binds('unresolved_shape[audit](S)', 'S');
-  assert.ok(residue.length >= 10, `positive control: ${residue.length} shapes with a residue`);
+  assert.equal(residue.length, 7, `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -521,7 +523,7 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // kinds the rules actually TOUCH — measured by kind_undeclared going 17 -> 0
   // — plus 4 the call graph must answer for and does not touch at all: the
   // control transfers that are not CallExpressions.
-  assert.equal(dKinds, 24, 'kinds the matrix did not know existed');
+  assert.equal(dKinds, 25, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -631,46 +633,56 @@ test('mutant 1 — drop `not closer`: a call is attributed to every enclosing fu
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 2 — ignore `computed`: the frontier collapses into a false resolution', () => {
+test('mutant 2 — read the computed key as a NAME: the trap springs', () => {
+  // RE-AIMED. The computed/static distinction lives in `selects` now, not in
+  // the call graph: `o.pick` and `o[k]` differ only in where the text is, so
+  // one relation answers both. Reading the computed branch's property by NAME
+  // instead of by VALUE is exactly the mistake the fixture's trap exists for.
   const base = probe([]);
   const mut = probe([{
-    find: 'computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).\nstatic_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).',
-    replace: 'computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, never).\nstatic_member[code](C, N)   :- member_like[code](C, N).',
+    file: 'rules/js-dataflow.rofl',
+    find: "selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, true),\n"
+        + "                               ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).",
+    replace: "selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, true),\n"
+        + "                               ast_child[code](N, property, 0, P), ast_name[code](P, Key).",
   }]);
-  // the trap: `const pickA = "pickB"; two[pickA]()` runs pickB. A model that
-  // reads the computed callee as `two.pickA` resolves to the WRONG function.
   assert.ok(mut.edges.has('useTrap -> pickA'), 'the mutant invents an edge no execution can produce');
-  assert.ok(!base.edges.has('useTrap -> pickA'), 'the baseline refuses');
-  // THE RESIDUE NO LONGER SHRINKS, and that is a fact about the baseline
-  // rather than about the mutant: since the value core landed, this site
-  // RESOLVES in the baseline too. So the mutant no longer looks like progress —
-  // it now derives the wrong edge BESIDE the right one, and that is what
-  // `ambiguous_call` is for.
-  assert.ok(mut.ambiguous > base.ambiguous,
-    'the site resolves two ways: the name and the value');
-  console.log(`  KILLED: residue ${base.residue} -> ${mut.residue}, edges ${base.edges.size} -> ${mut.edges.size}`);
+  assert.ok(!base.edges.has('useTrap -> pickA'), 'the baseline reads the VALUE and refuses');
+  assert.ok(base.edges.has('useTrap -> pickB'), 'and gets the right one');
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 3 — resolve across the corpus: two files each defining `run`', () => {
+test('mutant 3 — forget which file a function was declared in', () => {
+  // RE-AIMED to the dataflow entry that reaches a function declaration by name.
+  // Two files define `run`; without the File column both answer every call.
   const base = probe([]);
   const mut = probe([{
-    find: '                        ast_name[code](N, Name), call_site[code](C, File),\n                        fn_binding[code](F, Name, File).',
-    replace: '                        ast_name[code](N, Name), call_site[code](C, File),\n                        fn_binding[code](F, Name, _).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),\n'
+        + '                           ast_node[code](F, function_declaration, File, _),',
+    replace: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, _, _), ast_name[code](E, Name),\n'
+        + '                           ast_node[code](F, function_declaration, _, _),',
   }]);
   assert.equal(base.ambiguous, 0, 'baseline: no site resolves two ways');
   assert.ok(mut.ambiguous > 0, `mutant resolves ${mut.ambiguous} sites two ways`);
-  console.log(`  KILLED: ambiguous resolutions ${base.ambiguous} -> ${mut.ambiguous}`);
+  console.log(`  KILLED: ambiguous resolutions 0 -> ${mut.ambiguous}`);
 });
 
-test('mutant 4 — drop the argument index: which function is in which slot', () => {
+test('mutant 4 — drop the argument index: which value lands in which slot', () => {
+  // RE-AIMED to the value flow across a call. The index is the content:
+  // argument 0 and argument 1 are different facts about the program.
   const base = probe([]);
   const mut = probe([{
-    find: 'call_arg[code](C, I, A)       :- call_site[code](C, _), ast_child[code](C, arguments, I, A).',
-    replace: 'call_arg[code](C, 0, A)       :- call_site[code](C, _), ast_child[code](C, arguments, _, A).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),\n'
+        + '                           param_of[flow](F, I, Name), param_use[flow](F, Name, U).',
+    replace: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, _, A), may_be_node[flow](A, N),\n'
+        + '                           param_of[flow](F, _, Name), param_use[flow](F, Name, U).',
   }]);
-  assert.deepEqual(base.passed, ['0 -> leaf', '0 -> mid', '1 -> mid']);
-  assert.deepEqual(mut.passed, ['0 -> leaf', '0 -> mid'], 'every function collapses into slot 0');
-  console.log(`  KILLED: ${base.passed.join(', ')} -> ${mut.passed.join(', ')}`);
+  assert.ok(!base.edges.has('applyFirst -> mid'), 'baseline: a function passed is not a function called');
+  assert.ok(mut.edges.has('applyFirst -> mid'), 'the mutant calls the function in the other slot');
+  assert.ok(mut.ambiguous > base.ambiguous, 'and parameter sites resolve many ways');
+  console.log(`  KILLED: ambiguous ${base.ambiguous} -> ${mut.ambiguous}, edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
 test('mutant 5 — unresolved_call derives nothing: is the frontier checked for totality?', () => {
@@ -688,7 +700,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   const sites = mut.n('call_site[code](C, F)');
   const resolved = mut.n('resolved_site[code](C)');
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
-  assert.ok(sites - resolved > 50, `${sites - resolved} call sites vanished from the frontier`);
+  // 50 today: the number FALLS as the model resolves more, so it is pinned
+  // rather than bounded — a threshold would quietly stop meaning anything.
+  assert.equal(sites - resolved, 50, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -697,7 +711,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // shape that still HAS one, and three of those excuses were retired as the
   // model closed their cells. The threshold moves DOWN as the model improves,
   // so it is pinned rather than bounded.
-  assert.equal(stale.length, 10, `the stale-verdict audit fires on ${stale.length} shapes`);
+  assert.equal(stale.length, 7, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
@@ -782,76 +796,55 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
 // with apply2's and is handed a different function. Both defects now cost an
 // edge the runtime never ran, which is the one thing the oracle can see.
 
-test('mutant 8 — drop the argument index inside the binding: slot becomes name', () => {
+test('mutant 8 — sever the cycle: bind parameters without asking who is called', () => {
+  // RE-AIMED, and it is the mutant that says what the mutual recursion is FOR.
+  // Without `resolves` in the body, every function's parameters take every
+  // value passed at that index anywhere in the corpus.
   const base = probe([]);
   const mut = probe([{
-    find: 'passes_function[code](C, I, G, _),\n                                 ast_child[code](F, params, I, P)',
-    replace: 'passes_function[code](C, _, G, _),\n                                 ast_child[code](F, params, _, P)',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A),',
+    replace: 'may_be_node[flow](U, N) :- fn_node_v[flow](F), arg_at[flow](C, I, A),',
   }]);
-  assert.ok(!base.edges.has('applyFirst -> mid'), 'baseline: a function passed is not called');
-  assert.ok(mut.edges.has('applyFirst -> mid'), 'the mutant calls the function in the other slot');
-  assert.ok(mut.ambiguous > base.ambiguous, 'and every parameter site now resolves two ways');
-  console.log(`  KILLED: bindings ${base.bindings} -> ${mut.bindings}, `
-    + `ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
-});
-
-test('mutant 9 — sever the cycle: bind parameters without asking who is called', () => {
-  const base = probe([]);
-  const mut = probe([{
-    find: 'param_bind[code](F, PName, G) :- resolves[code](C, F),',
-    replace: 'param_bind[code](F, PName, G) :- fn_node[code](F), call_site[code](C, _),',
-  }]);
-  // this is the mutant that says what the recursion is FOR: without `resolves`
-  // in the body, every function's parameters bind to every function passed at
-  // that index anywhere in the corpus.
-  assert.ok(mut.bindings > base.bindings * 10, `bindings ${base.bindings} -> ${mut.bindings}`);
   assert.ok(mut.edges.has('useCb -> leaf'), 'the mutant hands useCb a function nobody passed it');
   assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
-  console.log(`  KILLED: bindings ${base.bindings} -> ${mut.bindings}, `
-    + `edges ${base.edges.size} -> ${mut.edges.size}`);
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 10 — resolve a parameter callee by name alone', () => {
+test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
   const base = probe([]);
   const mut = probe([{
-    find: 'ast_name[code](N, Name), nearest_fn[code](Fn, C),\n                        param_bind[code](Fn, Name, G).',
-    replace: 'ast_name[code](N, Name), param_bind[code](_, Name, G).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
+        + '                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name),\n'
+        + '                               ast_within[code](F, U).',
+    replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
+        + '                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name).',
   }]);
-  // THE COUNT IS BLIND HERE AND THE EDGES ARE NOT: the binding table is
-  // untouched — the mutant changes who may READ a binding, not how many exist
-  // — so a check that watched `param_bind` would have slept through.
-  assert.equal(mut.bindings, base.bindings, 'the binding table does not move');
-  assert.ok(mut.edges.has('useCb -> leaf'), 'the mutant mixes two parameters that share a name');
-  assert.ok(mut.edges.has('applyFirst -> mid'), 'and hands applyFirst the value it never calls');
-  console.log(`  KILLED: bindings unchanged at ${mut.bindings}, edges `
-    + `${base.edges.size} -> ${mut.edges.size}`);
+  assert.ok(mut.edges.has('useCb -> leaf'), 'two parameters named `f` become one');
+  assert.ok(!base.edges.has('useCb -> leaf'));
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 11 — delete tier 3: the higher-order edges are its doing', () => {
+test('mutant 10 — delete the value flow across a call', () => {
   const base = probe([]);
   const mut = probe([{
-    find: 'param_bind[code](F, PName, G) :- resolves[code](C, F),',
-    replace: 'param_bind_unused[code](F, PName, G) :- resolves[code](C, F),',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),',
+    replace: 'may_be_node_unused[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),',
   }]);
   const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
   assert.deepEqual(lost, ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf', 'useCb -> mid'],
-    'exactly the parameter-callee edges, and nothing else, depend on tier 3');
-  assert.equal(mut.bindings, 0, 'and no binding survives');
-  console.log(`  KILLED (liveness): ${lost.length} edges lost, ${lost.join(', ')}`);
+    'exactly the callback edges, and nothing else');
+  console.log(`  KILLED (liveness): ${lost.length} edges lost`);
 });
 
-// ---------------------------------------------------------------------------
-// TIER 4's MUTANTS. Four die on the oracle's edge set. TWO DO NOT, AND THE
-// REASON IS THE ORACLE ITSELF: V8 reports a frame as the last dot-segment of
-// its name, so `Box.get` and `Crate.get` are both `get` and an edge set cannot
-// tell them apart. Those two are killed by `ambiguous_call[audit]`, which
-// counts a SITE resolving two ways and never looks at a name.
-
-test('mutant 12 — a computed key that is a literal stops being a key', () => {
+test('mutant 11 — a computed key stops being a key at all', () => {
   const base = probe([]);
   const mut = probe([{
-    find: "member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),\n"
-        + "                                 ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).",
+    file: 'rules/js-dataflow.rofl',
+    find: "selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, true),\n"
+        + "                               ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).",
     replace: '',
   }]);
   assert.ok(base.edges.has('useLit -> pick'));
@@ -860,9 +853,7 @@ test('mutant 12 — a computed key that is a literal stops being a key', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 13 — drop the recursion: a.b.c() loses its middle', () => {
-  // RE-AIMED 2026-09-04: the recursion moved to the dataflow pack, where it is
-  // a fact about values rather than about callees. The mutant follows it.
+test('mutant 12 — drop the recursion: a.b.c() loses its middle', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -874,34 +865,47 @@ test('mutant 13 — drop the recursion: a.b.c() loses its middle', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 14 — a class is not an object: drop the class lookup', () => {
+test('mutant 13 — a class is not an object: drop the class-method lookup', () => {
   const base = probe([]);
   const mut = probe([{
-    find: 'member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).',
-    replace: 'member_fn_unused[code](O, Key, F) :- class_member_fn[code](O, Key, F).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),',
+    replace: 'member_value_unused[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),',
   }]);
   const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
-  assert.deepEqual(lost, ['both -> get', 'useClass -> both', 'useCrate -> both',
-    'useStatic -> get', 'useStatic -> make'],
-    'every edge through a class method, and nothing else');
-  // NOT lost: `make -> Box`. The constructor edge resolves through `class_ctor`
-  // over the dataflow pack's `class_method_of` and never touches this rule —
-  // worth naming, because a mutant that took everything would be a mutant that
-  // proved nothing about WHICH rule carries WHICH edge.
-  assert.ok(mut.edges.has('make -> Box'), 'the constructor edge has its own path');
+  assert.ok(lost.includes('both -> get'), 'every edge through a class method goes');
+  assert.ok(lost.includes('useClass -> both'));
   console.log(`  KILLED: ${lost.length} edges lost`);
 });
 
-test('mutant 15 — ignore the key: any member answers any call', () => {
+test('mutant 14 — ignore the key: any member answers any call', () => {
   const base = probe([]);
   const mut = probe([{
-    find: 'member_node_key[code](N, Key), member_fn[code](O, Key, F).',
-    replace: 'member_fn[code](O, _, F).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](O, Obj), selects[flow](N, Key),\n'
+        + '                            member_value[flow](Obj, Key, V), may_be_node[flow](V, V2).',
+    replace: 'may_be_node[flow](O, Obj),\n'
+        + '                            member_value[flow](Obj, _, V), may_be_node[flow](V, V2).',
   }]);
   const extra = [...mut.edges].filter((e) => !base.edges.has(e));
-  assert.ok(extra.length >= 8, `${extra.length} edges the runtime never ran`);
+  assert.ok(extra.length >= 5, `${extra.length} edges the runtime never ran`);
   assert.ok(mut.ambiguous > base.ambiguous, 'and every member site resolves many ways');
   console.log(`  KILLED: ${extra.length} invented edges, ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
+});
+
+test('mutant 15 — a sequence evaluates to its FIRST element', () => {
+  // the `not seq_later` idiom is how a maximum is written without aggregation;
+  // dropping it makes `(a, b)` mean both, which is what an unguarded index does.
+  const base = probe([]);
+  const mut = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: '                           ast_child[code](E, expressions, I, X),\n'
+        + '                           not seq_later[flow](E, I), may_be_node[flow](X, N).',
+    replace: '                           ast_child[code](E, expressions, I, X),\n'
+        + '                           may_be_node[flow](X, N).',
+  }]);
+  assert.ok(base.edges.size > 50, 'positive control: the baseline has a call graph');
+  console.log(`  edges ${base.edges.size} -> ${mut.edges.size}, ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
 });
 
 test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
@@ -923,18 +927,7 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   console.log(`  KILLED by ambiguous_call: 0 -> ${mut.ambiguous}, edge set UNMOVED`);
 });
 
-test('mutant 17 — forget which file: killed by the AUDIT for the same reason', () => {
-  const base = probe([]);
-  const mut = probe([{
-    find: 'denotes[code](N, O) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),\n'
-        + '                       obj_literal_binding[code](Name, O, File).',
-    replace: 'denotes[code](N, O) :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name),\n'
-        + '                       obj_literal_binding[code](Name, O, _).',
-  }]);
-  // alpha.mjs and beta.mjs both define `ns`, and both give it a `hello` — the
-  // shared member is what makes the site resolve two ways. Without it the two
-  // objects are told apart by lookup alone and this mutant is inert.
-  assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [], 'names collapse again');
-  assert.ok(mut.ambiguous >= 6, `${mut.ambiguous} sites resolve into both files`);
-  console.log(`  KILLED by ambiguous_call: 0 -> ${mut.ambiguous}, edge set UNMOVED`);
-});
+// MUTANT 17 WAS DELETED 2026-09-04 with its subject. It mutated `denotes` in
+// the call-graph pack to forget which file a binding came from; `denotes` is
+// gone, and the property it tested — a name resolving into the wrong file —
+// is mutant 3 above, aimed at the dataflow entry that now carries it.

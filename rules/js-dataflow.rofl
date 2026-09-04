@@ -270,6 +270,17 @@ may_be_node[flow](M, M) :- ast_node[code](M, object_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, class_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _, _).
 
+-- ENTRY 6b — A FUNCTION DECLARATION IS REACHED BY ITS NAME. `function f(){}`
+-- binds `f` without a declarator, so entry 3 — which reads an initialiser —
+-- cannot see it, and every name of a declared function evaluated to nothing.
+-- Found by a sequence: `(0, curried)(n)` reaches `curried` and stopped there.
+-- DUPLICATION DECLARED: `fn_binding` in rules/js-callgraph.rofl says the same
+-- thing for the call graph's own tier 1. Same class as `param_bind`, and it
+-- retires the same way — by that tier going through the value question.
+may_be_node[flow](E, F) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                           ast_node[code](F, function_declaration, File, _),
+                           ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+
 -- ENTRY 7 — an object property IS its value.
 may_be_node[flow](P, N) :- ast_node[code](P, object_property, _, _),
                            ast_child[code](P, value, 0, X), may_be_node[flow](X, N).
@@ -332,3 +343,32 @@ super_of[flow](CD, SD) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
 may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
                             class_method_of[flow](CD, M), ast_within[code](M, S),
                             super_of[flow](CD, SD).
+
+-- ---------------------------------------------------------------------------
+-- TWO MORE EXPRESSION FORMS, and the first one is the interesting one.
+--
+-- A SEQUENCE EVALUATES TO ITS LAST ELEMENT — `(a, b, c)` is `c`. "Last" is a
+-- MAXIMUM over the index column, and this kernel has no aggregation, so it is
+-- written the way a maximum is written here: as the absence of a later one.
+-- The negation is stratified because `seq_later` does not depend on `seq_last`,
+-- and the pair is worth reading as the general shape — `max` is `not exists a
+-- bigger`, and it costs one extra relation rather than a language feature.
+seq_later[flow](E, I) :- ast_node[code](E, sequence_expression, _, _),
+                         ast_child[code](E, expressions, I, _),
+                         ast_child[code](E, expressions, J, _), I < J.
+
+may_be_node[flow](E, N) :- ast_node[code](E, sequence_expression, _, _),
+                           ast_child[code](E, expressions, I, X),
+                           not seq_later[flow](E, I), may_be_node[flow](X, N).
+may_be_lit[flow](E, V)  :- ast_node[code](E, sequence_expression, _, _),
+                           ast_child[code](E, expressions, I, X),
+                           not seq_later[flow](E, I), may_be_lit[flow](X, V).
+
+-- A CONDITIONAL MAY BE EITHER BRANCH, and this is the may-set earning its name:
+-- `c ? f : g` is f OR g, both rows, and no flow sensitivity is needed to say so
+-- because the relation was never claiming to know which. A must-analysis would
+-- have to decide; this one does not have to.
+may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
+                           ast_child[code](E, consequent, 0, X), may_be_node[flow](X, N).
+may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
+                           ast_child[code](E, alternate, 0, X), may_be_node[flow](X, N).

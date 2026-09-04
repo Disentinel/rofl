@@ -169,6 +169,29 @@ handled(js, member_expression, s_member_on_super,          callgraph, r_denotes)
 handled(js, member_expression, s_member_on_new,            callgraph, r_denotes).
 handled(js, member_expression, s_member_on_object_literal, callgraph, r_denotes).
 
+-- THE SYNTACTIC WRAPPERS, 2026-09-04, and all of them by ONE rule rather than
+-- five: `resolves[code](C, F) :- callee_of(C, N), may_be_node[flow](N, F),
+-- fn_node(F)` asks what the callee expression may BE instead of recognising how
+-- it is spelled. The dataflow layer already sees through a cast, an assertion,
+-- a sequence and a conditional, so the call graph did not have to learn any of
+-- them — and the next wrapper the grammar grows will need no rule here either.
+handled(js, tsnon_null_expression,  s_non_null,     callgraph, r_value_callee).
+handled(js, tsas_expression,        s_ts_as,        callgraph, r_value_callee).
+handled(js, sequence_expression,    s_sequence,     callgraph, r_value_callee).
+handled(js, conditional_expression, s_conditional,  callgraph, r_value_callee).
+handled(js, call_expression,          s_call_result, callgraph, r_value_callee).
+handled(js, optional_call_expression, s_call_result, callgraph, r_value_callee).
+
+-- AND ONE WAIVER, WITH A MEASUREMENT BEHIND IT. `s_parenthesized` has no site
+-- and never will: babel does not emit ParenthesizedExpression under this
+-- parser configuration, so `(f)(1)` reaches the classifier as a plain
+-- identifier callee. The shape was declared from the GRAMMAR and the parser is
+-- not the grammar — the same gap docs/modelling-a-language.md records as
+-- `babel is not the language`. If the scanner ever turns that option on, a site
+-- appears and this waiver goes stale, which is the property a reason should
+-- have.
+ignored(js, parenthesized_expression, s_parenthesized, callgraph, a_babel_emits_no_parenthesized_node).
+
 -- ---------------------------------------------------------------------------
 -- TYPED REASONS, only where the default `not_yet` would be a LIE. Same
 -- convention as facts/js-kinds.rofl: every other not_modelled shape takes

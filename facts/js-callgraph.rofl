@@ -27,6 +27,8 @@ node_kind(js, member_expression).
 node_kind(js, optional_member_expression).
 node_kind(js, optional_call_expression).
 node_kind(js, new_expression).
+-- a TS cast in the callee position, named by the classifier since 2026-09-04
+node_kind(js, tsas_expression).
 node_kind(js, this_expression).
 node_kind(js, super).
 node_kind(js, array_expression).
@@ -134,6 +136,16 @@ shape_because(js, s_identifier,            callgraph, not_yet).
 -- corpus rather than the grammar HERE, which is the opposite of the shape
 -- vocabulary above, and the two audits are what keep the difference honest.
 shape_because(js, s_computed_literal_key,  callgraph, not_yet).
+
+-- `s_non_null` IS TICKED AND STILL HAS RESIDUE, which is what this table is
+-- for and `unknown_because` is not: the cell is modelled — `notNull!(n)`
+-- resolves through the value layer — while `maybe!(n)` does not, because
+-- `maybe` is an AMBIENT declaration and an ambient declaration has no value in
+-- the program by definition. That is out_of_scope rather than not_yet: the
+-- implementation is elsewhere, not undone. Note the division of labour the two
+-- tables have: `shape_because` describes the RESIDUE OF A SHAPE and may stand
+-- beside a tick; `unknown_because` describes an UNMODELLED CELL and may not.
+shape_because(js, s_non_null,              callgraph, out_of_scope).
 -- knowable at parse time, and absent from the fact vocabulary: see
 -- `template_literal` above. NOT runtime_dependent.
 shape_because(js, s_computed_template_key, callgraph, not_yet).
@@ -159,14 +171,8 @@ shape_because(js, s_computed_template_key, callgraph, not_yet).
 -- different programme, not a missing rule.
 shape_because(js, s_member_on_literal,     callgraph, out_of_scope).
 shape_because(js, s_member_on_other,       callgraph, not_yet).
-shape_because(js, s_call_result,           callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
 shape_because(js, s_super,                 callgraph, not_yet).
-shape_because(js, s_non_null,              callgraph, not_yet).
-shape_because(js, s_sequence,              callgraph, not_yet).
-shape_because(js, s_conditional,           callgraph, not_yet).
-shape_because(js, s_ts_as,                 callgraph, not_yet).
-shape_because(js, s_parenthesized,         callgraph, not_yet).
 shape_because(js, s_dynamic_import,        callgraph, not_yet).
 
 -- the receiver is a host literal — see array_expression above

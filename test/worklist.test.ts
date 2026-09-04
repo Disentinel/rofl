@@ -115,16 +115,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'both dataflow items are done, so the call-graph residue is next');
 });
 
-test('the queue covers the model: 93 open cells, 20 claimed by name, 73 swept', () => {
+test('the queue covers the model: 86 open cells, 13 claimed by name, 73 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 93, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 86, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 14);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [36, 14, 22]);
+  assert.deepEqual(per('callgraph'), [29, 13, 20]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
 
@@ -149,7 +149,7 @@ test('MUTANT 1 — a claim on a kind nobody declares', () => {
   // `claim` rather than as a relation of its own. CLAUDE.md records what the
   // other choice costs: a new relation over the same arguments reopened the
   // whole vocabulary hole and nobody noticed.
-  const w = world({ extra: 'claim(queued, js, no_such_kind, none, callgraph, w_cg_syntactic_wrappers).' });
+  const w = world({ extra: 'claim(queued, js, no_such_kind, none, callgraph, w_cg_member_family).' });
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1, 'the inherited check bites');
   assert.equal(w.n('queue_stale[audit](W, K, S, L)'), 1, 'and the queue says it points at nothing open');
 });
@@ -158,7 +158,7 @@ test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
   // `s_member_on_this` exists, `dataflow` exists, and the CELL does not: the
   // shape axis applies to callgraph only. A pair of legal names is not a legal
   // cell, which is the check a per-argument vocabulary test would miss.
-  const w = world({ extra: 'claim(queued, js, member_expression, s_member_on_this, dataflow, w_cg_syntactic_wrappers).' });
+  const w = world({ extra: 'claim(queued, js, member_expression, s_member_on_this, dataflow, w_cg_member_family).' });
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1);
 });
 
@@ -193,14 +193,14 @@ test('MUTANT 7 — an item with no order and no state', () => {
 
 test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep', () => {
   const base = world();
-  const w = world({ find: 'claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).' });
+  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).' });
   // EVERY LIE-DETECTOR STAYS QUIET. The cell is still open, still owned — by
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 22);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 23, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 13);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 20);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 21, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 12);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });
