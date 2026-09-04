@@ -15,7 +15,7 @@
 // That boundary is why no kernel change was needed for any of this.
 
 import { Rofl } from '../../src/api.ts';
-import { type Term, mka, mkv, mki, mks } from '../../src/unify.ts';
+import { type Term, mka, mkv, mki, mks, mkf } from '../../src/unify.ts';
 import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
 import { canonClause } from '../../src/reflect.ts';
 import * as fs from 'node:fs';
@@ -82,6 +82,12 @@ function unquote(raw: string): string {
 
 export class Unsupported extends Error {}
 
+/** ring 1 names an operator; the host writes the symbol the kernel uses. */
+const OPS: ReadonlyMap<string, string> = new Map([
+  ['eq', '='], ['ne', '!='], ['lt', '<'], ['le', '<='], ['gt', '>'], ['ge', '>='],
+  ['is', 'is'], ['plus', '+'], ['minus', '-'], ['star', '*'], ['slash', '/'], ['mod', 'mod'],
+]);
+
 function term(t: J, src: string, wild: Map<number, number>): Term {
   const at = (a: J[]) => src.slice(a[0].v, a[1].v + 1);
   let a: J[] | null;
@@ -100,21 +106,30 @@ function term(t: J, src: string, wild: Map<number, number>): Term {
   }
   if ((a = fn(t, 'int'))) return mki(parseInt(at(a), 10));
   if ((a = fn(t, 'str'))) return mks(unquote(src.slice(a[0].v + 1, a[1].v)));
+  if ((a = fn(t, 'comp'))) {
+    return mkf(src.slice(a[0].v, a[1].v + 1), unlist(a[2]).map((x) => term(x, src, wild)));
+  }
+  if ((a = fn(t, 'op'))) {
+    const sym = OPS.get((a[0] as { name: string }).name);
+    if (sym === undefined) throw new Unsupported('operator ' + JSON.stringify(a[0]));
+    return mkf(sym, [term(a[1], src, wild), term(a[2], src, wild)]);
+  }
   throw new Unsupported('term: ' + JSON.stringify(t).slice(0, 60));
 }
 
 function lit(t: J, src: string, wild: Map<number, number>): Lit {
   const a = fn(t, 'node');
-  if (!a) throw new Unsupported('literal');
-  const [relT, perspT, argsT] = a;
+  if (!a || a.length !== 4) throw new Unsupported('literal');
+  const [relT, perspT, argsT, tenseT] = a;
   const ra = fn(relT, 'atom')!;
-  const bk = fn(perspT, 'book');
+  const bk = fn(perspT, 'book'), bv = fn(perspT, 'bookvar');
+  const span = (x: J[]) => src.slice(x[0].v, x[1].v + 1);
   return {
-    rel: src.slice(ra[0].v, ra[1].v + 1),
-    persp: bk ? mka(src.slice(bk[0].v, bk[1].v + 1)) : mka('main'),
-    perspExplicit: !!bk,
+    rel: span(ra),
+    persp: bk ? mka(span(bk)) : bv ? mkv(span(bv)) : mka('main'),
+    perspExplicit: !!(bk || bv),
     args: unlist(argsT).map((x) => term(x, src, wild)),
-    temporal: 'now',
+    temporal: (tenseT as { name: string }).name as Lit['temporal'],
   };
 }
 
@@ -122,6 +137,11 @@ function bodyElem(t: J, src: string, wild: Map<number, number>): BodyElem {
   let a: J[] | null;
   if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], src, wild) };
   if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], src, wild) };
+  if ((a = fn(t, 'bi'))) {
+    const sym = OPS.get((a[0] as { name: string }).name);
+    if (sym === undefined) throw new Unsupported('builtin ' + JSON.stringify(a[0]));
+    return { t: 'bi', op: sym, l: term(a[1], src, wild), r: term(a[2], src, wild) };
+  }
   throw new Unsupported('body element');
 }
 

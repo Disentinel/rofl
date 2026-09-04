@@ -17,18 +17,29 @@ as canonical clauses:
 
 | outcome | count |
 |---|---|
-| identical to the host parser | 13 |
-| refused, with the offset named | 10 |
-| **silently divergent** | **0** |
+| **identical to the host parser** | **23** |
+| refused, with the offset named | 0 |
+| silently divergent | 0 |
 
-Every file is now either byte-identical or refused with the offset named. The
-test pins the silent count at a **ceiling of zero**, because that is the only
+**All of them.** The test in CI sweeps a smaller set — files at or under 1200
+bytes, 10 of 10 identical — because the cost per file grows with the file:
+measured 2026-09-04, 7.1 s at 900 B, 14.5 s at 1200 B, 30.9 s at 1600 B and
+72.7 s at 2500 B, against a whole suite of about 117 s. Raise `SWEEP_CAP` in
+`test/example-ring1.test.ts` to reproduce the 2.5 KiB number.
+
+The silent count is pinned at a **ceiling of zero**, because that is the only
 category where ring 1 returns a *different program* without saying so.
 
-Covered: comments, facts, rules, `not`, perspective brackets, and terms that
-are atoms, variables, integers or strings. Not covered: builtins and
-arithmetic, temporal markers, compound terms, wildcards as distinct from
-variables.
+Covered: comments, facts, rules, `not`, perspective brackets holding an atom
+**or a variable**, temporal markers, builtins and arithmetic with precedence
+and parentheses, compound terms, clause-local wildcards, and string literals
+with C-style escapes.
+
+**Not covered, on purpose: a negative integer literal.** `X - 1` and `X, -1`
+are genuinely ambiguous; the host resolves them by parsing greedily from the
+left, and a chart reports both. Matching that needs its own pass, and refusing
+loudly is the right interim answer — it also keeps the "refused and located"
+gate alive with a real subject rather than a planted one.
 
 ## The five silent divergences were one host bug
 
@@ -85,3 +96,31 @@ what spaces, tabs and carriage returns need.
 ## Running it
 
     node --test --test-reporter=spec test/example-ring1.test.ts
+
+## Two more defects found by building the grammar out
+
+**A quote inside a comment opened a string.** The first lexer paired quotes
+across the whole file and found comments separately — a chicken and egg, since
+a comment is only a comment outside a string and a string only starts outside a
+comment. Two corpus files carry a quoted phrase in prose and both were refused
+at the comment rather than at anything real. The fix is what a hand-written
+lexer does: one left-to-right walk carrying a state (`code`, `str`, `esc`,
+`cmt`), which is positive recursion with the character tests as its only
+negation.
+
+**The first dash of a comment is still in `code`.** So `--` produced a spurious
+minus token and *all 23 files* were refused — after eight hand-written cases
+had all passed. A test set that only grows by hand is blind to exactly this:
+the failure needed a real file with a comment in it, and every one of them has
+one.
+
+## Two shapes worth naming
+
+**A keyword operator spans its whole word.** `nexttok` is keyed on a token's
+*end*, so returning the *start* of `is`, `mod`, `init`, `now` or `next` leaves
+the next lookup with no boundary to stand on, and the clause silently fails to
+form. Three separate rules had it.
+
+**The literal is built from parts.** Three kinds of book times two tenses would
+be six near-copies of one rule; `relbook` and `lit0` factor them so each
+decision is written once.

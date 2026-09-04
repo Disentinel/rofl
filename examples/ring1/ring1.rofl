@@ -6,11 +6,16 @@
 -- promoter as ranges, and keywords are matched CHARACTER BY CHARACTER
 -- against `str_char`, which needs no kernel change at all.
 --
--- What this covers: comments, facts, rules, `not`, perspective brackets,
--- and terms that are atoms, variables, integers or strings. What it does
--- not: builtins, arithmetic, temporal markers, compound terms, wildcards
--- as distinct from variables. Coverage over the corpus is MEASURED by
--- test/example-ring1.test.ts rather than claimed here.
+-- What this covers: comments, facts, rules, `not`, perspective brackets with
+-- an atom OR a variable, temporal markers, builtins and arithmetic with
+-- precedence and parentheses, compound terms, clause-local wildcards, and
+-- string literals with C-style escapes. What it does NOT cover is one thing:
+-- a NEGATIVE INTEGER LITERAL, left out on purpose because `X - 1` and `X, -1`
+-- are genuinely ambiguous and the host resolves them by parsing greedily from
+-- the left, which a chart does not do.
+--
+-- Coverage over the corpus is MEASURED by test/example-ring1.test.ts rather
+-- than claimed here.
 
 edb(src).
 edb(cls).
@@ -22,41 +27,50 @@ at(I2)     :- at(I), len(N), I2 is I + 1, I2 < N.
 ch(I, C)   :- at(I), src(S), C is str_char(S, I).
 kind(I, K) :- ch(I, C), cls(C, K).
 
--- ------------------------------------------------------------------- strings
--- A quote opens a span; the span runs to the next quote that is not escaped.
--- Escapes are out of scope for this cut and are reported by the coverage test
--- rather than silently mishandled.
-quote_at(I) :- kind(I, quote).
+-- ------------------------------------------------------- the scanner state
+-- A QUOTE INSIDE A COMMENT USED TO OPEN A STRING. The first version paired
+-- quotes across the whole file and detected comments separately, which is a
+-- chicken and egg: a comment is only a comment outside a string, and a string
+-- only starts outside a comment. Measured cost: examples/cram/flight_log.rofl
+-- and examples/jopa/calibration.rofl both carry a quoted phrase in prose, and
+-- both were refused at the comment rather than at anything real.
+--
+-- The fix is what a hand-written lexer does: ONE LEFT-TO-RIGHT WALK carrying a
+-- state. `st(I, S)` is the state BEFORE reading position I, and the walk is
+-- positive recursion with the character tests as its only negation, so there
+-- is no cycle at all.
+st(0, code) :- at(0).
+st(I2, S2) :- st(I, S), I2 is I + 1, at(I2), step(I, S, S2).
 
--- PAIRING WITHOUT NEGATION THROUGH ITSELF. The first attempt read `opener(I)
--- :- quote_at(I), not inside_string(I).` with `inside_string` defined from
--- `opener`, and the round evaluator refused the whole program: a negative
--- cycle, reported as `round 4 settled nothing while ... remained`. The repair
--- is to alternate POSITIVELY - the first quote opens, and the quote after a
--- closer opens - which needs no negation at all inside the recursion.
-earlier_quote(I) :- quote_at(I), quote_at(J), J < I.
-quote_between(I, J) :- quote_at(I), quote_at(J), quote_at(K), I < K, K < J.
-next_quote(I, J) :- quote_at(I), quote_at(J), I < J, not quote_between(I, J).
+opens_str(I) :- kind(I, quote).
+opens_cmt(I) :- kind(I, dash), I1 is I + 1, kind(I1, dash).
 
-opener(I) :- quote_at(I), not earlier_quote(I).
-closer(I, J) :- opener(I), next_quote(I, J).
-opener(K) :- closer(I, J), next_quote(J, K).
+step(I, code, str)  :- opens_str(I).
+step(I, code, cmt)  :- opens_cmt(I), not opens_str(I).
+step(I, code, code) :- at(I), not opens_str(I), not opens_cmt(I).
 
-in_str_span(K) :- opener(I), closer(I, J), at(K), I <= K, K <= J.
+-- a backslash escapes the next character, so it cannot close the string
+step(I, str, esc)  :- kind(I, backslash).
+step(I, str, code) :- kind(I, quote).
+step(I, str, str)  :- at(I), not kind(I, quote), not kind(I, backslash).
+step(I, esc, str)  :- at(I).
 
--- ------------------------------------------------------------------ comments
-dashdash(I)   :- kind(I, dash), I1 is I + 1, kind(I1, dash), not in_str_span(I).
-line_of(I, I) :- dashdash(I).
-line_of(I, J2) :- line_of(I, J), J2 is J + 1, at(J2), not kind(J2, nl).
-in_comment(K) :- line_of(I, K).
+step(I, cmt, code) :- kind(I, nl).
+step(I, cmt, cmt)  :- at(I), not kind(I, nl).
 
-live(I) :- at(I), not in_comment(I).
+code_at(I) :- st(I, code).
+
+-- ------------------------------------------------------------ string tokens
+str_open(I)  :- st(I, code), kind(I, quote).
+str_close(J) :- st(J, str), kind(J, quote).
+close_between(I, J) :- str_open(I), str_close(J), str_close(K), I < K, K < J.
+strtok(I, J) :- str_open(I), str_close(J), I < J, not close_between(I, J).
 
 -- -------------------------------------------------------------------- tokens
 -- word tokens
-wordch(I) :- kind(I, lower), live(I), not in_str_span(I).
-wordch(I) :- kind(I, upper), live(I), not in_str_span(I).
-wordch(I) :- kind(I, digit), live(I), not in_str_span(I).
+wordch(I) :- kind(I, lower), code_at(I).
+wordch(I) :- kind(I, upper), code_at(I).
+wordch(I) :- kind(I, digit), code_at(I).
 
 prevword(I)   :- at(I), 0 < I, J is I - 1, wordch(J).
 word_start(I) :- wordch(I), not prevword(I).
@@ -64,19 +78,17 @@ wext(I, I)    :- word_start(I).
 wext(I, J2)   :- wext(I, J), J2 is J + 1, wordch(J2).
 word(I, J)    :- wext(I, J), J2 is J + 1, not wordch(J2).
 
--- string tokens: the whole span including both quotes
-strtok(I, J) :- opener(I), closer(I, J).
-
 -- punctuation tokens
-punct(I, lpar)   :- kind(I, lpar),   live(I), not in_str_span(I).
-punct(I, rpar)   :- kind(I, rpar),   live(I), not in_str_span(I).
-punct(I, lbrack) :- kind(I, lbrack), live(I), not in_str_span(I).
-punct(I, rbrack) :- kind(I, rbrack), live(I), not in_str_span(I).
-punct(I, comma)  :- kind(I, comma),  live(I), not in_str_span(I).
-punct(I, dot)    :- kind(I, dot),    live(I), not in_str_span(I).
+punct(I, lpar)   :- kind(I, lpar), code_at(I).
+punct(I, rpar)   :- kind(I, rpar), code_at(I).
+punct(I, lbrack) :- kind(I, lbrack), code_at(I).
+punct(I, rbrack) :- kind(I, rbrack), code_at(I).
+punct(I, comma)  :- kind(I, comma), code_at(I).
+punct(I, dot)    :- kind(I, dot), code_at(I).
+punct(I, at)     :- kind(I, at),  code_at(I).
 
 -- the neck `:-` is one token
-neck(I, J) :- kind(I, colon), live(I), not in_str_span(I), J is I + 1, kind(J, dash).
+neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
 
 tok(I, J) :- word(I, J).
 tok(I, J) :- strtok(I, J).
@@ -105,36 +117,122 @@ vartok(I, J)   :- word(I, J), kind(I, upper).
 inttok(I, J)   :- word(I, J), kind(I, digit).
 p(I, K)        :- punct(I, K).
 
--- `not` matched character by character: no kernel change, no token text
-kw_not(I) :- word(I, J), I1 is I + 1, I2 is I + 2, J = I2,
-             ch(I, "n"), ch(I1, "o"), ch(I2, "t").
+-- Keywords, matched CHARACTER BY CHARACTER against `str_char`. No kernel
+-- change is needed for this and no token ever carries its text.
+kw_not(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "t").
+kw_is(I)   :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "s").
+kw_mod(I)  :- word(I, J), J is I + 2, ch(I, "m"), K is I+1, ch(K, "o"), ch(J, "d").
+kw_init(I) :- word(I, J), J is I + 3, ch(I, "i"), K is I+1, ch(K, "n"),
+              L is I+2, ch(L, "i"), ch(J, "t").
+kw_now(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "w").
+kw_next(I) :- word(I, J), J is I + 3, ch(I, "n"), K is I+1, ch(K, "e"),
+              L is I+2, ch(L, "x"), ch(J, "t").
+
+keyword(I) :- kw_not(I).
+keyword(I) :- kw_is(I).
+keyword(I) :- kw_mod(I).
+
+-- ------------------------------------------------------------------ operators
+-- Two-character operators first; their second character must not also become
+-- a token of its own, which is what `consumed` is for.
+-- `consumed` must read the TWO-CHARACTER operators ONLY. Deriving it from
+-- `optok` and then negating it inside `optok` is a negative cycle, and the
+-- round evaluator refused the whole program for it: `round 4 settled nothing
+-- while ... remained`. Splitting the two-character forms into their own
+-- relation puts the negation between two strata instead of inside one.
+op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, le) :- kind(I, lt),   J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, ge) :- kind(I, gt),   J is I + 1, kind(J, eq), code_at(I).
+consumed(J) :- op2(I, J, Op).
+
+optok(I, J, Op) :- op2(I, J, Op).
+optok(I, I, eq) :- kind(I, eq), code_at(I), not consumed(I).
+optok(I, I, lt) :- kind(I, lt), code_at(I), not consumed(I).
+optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I).
+-- A KEYWORD OPERATOR SPANS ITS WHOLE WORD. `nexttok` is keyed on a token's
+-- END, so returning the START of a two- or three-letter word leaves the next
+-- lookup with no boundary to stand on and the clause silently fails to form.
+optok(I, J, is) :- kw_is(I), word(I, J).
+
+arithtok(I, I, plus)  :- kind(I, plus),  code_at(I).
+arithtok(I, I, star)  :- kind(I, star),  code_at(I).
+arithtok(I, I, slash) :- kind(I, slash), code_at(I).
+arithtok(I, J, mod)   :- kw_mod(I), word(I, J).
+-- A LONE DASH IN CODE IS MINUS, and the two exclusions are both load-bearing.
+-- `--` opens a comment, but the scanner's state BEFORE the first dash is still
+-- `code`, so without `not opens_cmt(I)` every comment in the corpus began with
+-- a spurious minus token and all 23 files were refused - measured, after eight
+-- hand-written cases all passed. `:-` is the neck, and the colon before the
+-- dash is what tells them apart.
+arithtok(I, I, minus) :- kind(I, dash), code_at(I), not opens_cmt(I),
+                         I1 is I - 1, not kind(I1, colon).
+
+addop(I, J, Op) :- arithtok(I, J, Op), plusminus(Op).
+mulop(I, J, Op) :- arithtok(I, J, Op), timesdiv(Op).
+plusminus(plus).  plusminus(minus).
+timesdiv(star).   timesdiv(slash).  timesdiv(mod).
+
+tok(I, J) :- optok(I, J, Op).
+tok(I, J) :- arithtok(I, J, Op).
 
 -- ---------------------------------------------------------------------- terms
-term(I, J, atom(I, J)) :- identtok(I, J), not kw_not(I).
+term(I, J, atom(I, J)) :- identtok(I, J), not keyword(I).
 term(I, J, var(I, J))  :- vartok(I, J).
 term(I, J, int(I, J))  :- inttok(I, J).
 term(I, J, str(I, J))  :- strtok(I, J).
+-- compound: f(args)
+term(I, C, comp(I, J, A)) :- identtok(I, J), not keyword(I),
+                             nexttok(J, K), p(K, lpar),
+                             nexttok(K, S), args(S, E, A),
+                             nexttok(E, C), p(C, rpar).
 
 args(I, J, cons(T, nil)) :- term(I, J, T).
 args(I, J2, cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
                             nexttok(K, I2), args(I2, J2, R).
 
--- ------------------------------------------------------------------- literals
--- rel(args)                       book defaults to main
-lit(I, C, node(atom(I, J), main, A)) :-
-  identtok(I, J), not kw_not(I), nexttok(J, K), p(K, lpar),
-  nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
+-- ---------------------------------------------------------- arithmetic, typed
+-- Left-associative BY CONSTRUCTION: the right operand of each level is the
+-- level below, so `a - b - c` has exactly one parse and the chart reports no
+-- ambiguity. Getting this wrong would show up as a silent divergence, which
+-- the corpus oracle pins at zero.
+prim(I, J, T) :- term(I, J, T).
+prim(I, C, T) :- p(I, lpar), nexttok(I, S), expr(S, E, T), nexttok(E, C), p(C, rpar).
 
--- rel[book](args)
-lit(I, C, node(atom(I, J), book(B, B2), A)) :-
-  identtok(I, J), not kw_not(I), nexttok(J, K), p(K, lbrack),
-  nexttok(K, B), identtok(B, B2), nexttok(B2, R), p(R, rbrack),
-  nexttok(R, K2), p(K2, lpar),
-  nexttok(K2, S), args(S, E, A), nexttok(E, C), p(C, rpar).
+mul(I, J, T) :- prim(I, J, T).
+mul(I, C, op(Op, L, R)) :- mul(I, J, L), nexttok(J, K), mulop(K, K2, Op),
+                           nexttok(K2, S), prim(S, C, R).
+
+expr(I, J, T) :- mul(I, J, T).
+expr(I, C, op(Op, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
+                            nexttok(K2, S), mul(S, C, R).
+
+-- ------------------------------------------------------------------- literals
+-- The literal is built from PARTS so that book and tense do not multiply into
+-- a rule per combination: three books times two tenses would be six copies.
+relbook(I, J, atom(I, J), main) :- identtok(I, J), not keyword(I).
+relbook(I, R, atom(I, J), book(B, B2)) :-
+  identtok(I, J), not keyword(I), nexttok(J, K), p(K, lbrack),
+  nexttok(K, B), identtok(B, B2), nexttok(B2, R), p(R, rbrack).
+relbook(I, R, atom(I, J), bookvar(B, B2)) :-
+  identtok(I, J), not keyword(I), nexttok(J, K), p(K, lbrack),
+  nexttok(K, B), vartok(B, B2), nexttok(B2, R), p(R, rbrack).
+
+lit0(I, C, node(R, Bk, A)) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
+                              nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
+
+tmark(I, E, init) :- p(I, at), nexttok(I, J), kw_init(J), word(J, E).
+tmark(I, E, now)  :- p(I, at), nexttok(I, J), kw_now(J), word(J, E).
+tmark(I, E, next) :- p(I, at), nexttok(I, J), kw_next(J), word(J, E).
+
+tensed(C)  :- lit0(I, C, L), nexttok(C, K), tmark(K, C2, T).
+lit(I, C, node(R, Bk, A, now)) :- lit0(I, C, node(R, Bk, A)), not tensed(C).
+lit(I, C2, node(R, Bk, A, T))  :- lit0(I, C, node(R, Bk, A)), nexttok(C, K), tmark(K, C2, T).
 
 -- ---------------------------------------------------------------- body & rule
 belem(I, C, pos(L)) :- lit(I, C, L).
 belem(I, C, neg(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
+belem(I, C, bi(Op, L, R)) :- expr(I, J, L), nexttok(J, K1), optok(K1, K2, Op),
+                             nexttok(K2, S), expr(S, C, R).
 
 body(I, C, cons(B, nil)) :- belem(I, C, B).
 body(I, C2, cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),

@@ -23,11 +23,16 @@ import { parseProgram } from '../src/parser.ts';
 import { canonClause } from '../src/reflect.ts';
 import { parse, canon, roflStr, world, IncompleteParse } from '../examples/ring1/demo.ts';
 
-// The sweep is capped at 2.5 KiB per file to keep it off the critical path of
-// `npm test`: at 8 KiB it took 75 s, which is more than half the whole suite.
-// The numbers below are a FLOOR and a CEILING measured at that cap.
-const SAME_FLOOR = 13;
+// The sweep is capped to keep it off the critical path of `npm test`. Measured
+// 2026-09-04, after the grammar grew: 900 B is 7.1 s over 6 files, 1200 B is
+// 14.5 s over 10, 1600 B is 30.9 s over 16, and 2500 B is 72.7 s over 23 — the
+// cost per file grows with the file, because the chart does. At 2.5 KiB the
+// answer is 23 of 23 IDENTICAL, which examples/ring1/README.md records and
+// which this line can be raised to reproduce.
+const SAME_FLOOR = 10;
 const SILENT_CEILING = 0;
+
+const SWEEP_CAP = 1200;
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const hostCanon = (src: string) => parseProgram(src).map(canonClause).sort().join('\n');
@@ -48,19 +53,22 @@ test('the chart counts ambiguity instead of hiding it', () => {
 });
 
 test('a construct the grammar does not cover is REFUSED and located', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'examples/counter.rofl'), 'utf8');
-  assert.throws(() => parse(src), (e: unknown) => {
+  // A NEGATIVE INTEGER LITERAL is the one thing left uncovered, and it is left
+  // uncovered on purpose rather than for lack of a rule: `X - 1` and `X, -1`
+  // are genuinely ambiguous, the host resolves them by parsing greedily from
+  // the left, and a chart would report both. Matching that needs its own pass;
+  // refusing loudly is the right interim answer, and it keeps this gate alive
+  // with a real subject instead of a planted one.
+  assert.throws(() => parse('p(-5).'), (e: unknown) => {
     assert.ok(e instanceof IncompleteParse);
-    // it stops exactly at the temporal marker, which this cut does not parse
-    assert.match((e as Error).message, /@init/);
+    assert.match((e as Error).message, /offset 0/);
     return true;
   });
 });
 
 test('a file whose FIRST clause fails is refused too, not returned empty', () => {
   // The walk never starts, so `stuck_at` is empty; only coverage catches it.
-  const src = 'p(X) :- q(X), N is 1 + 2.\np(a).\n';
-  assert.throws(() => parse(src), IncompleteParse);
+  assert.throws(() => parse('p(-5).\nq(a).\n'), IncompleteParse);
 });
 
 test('an unfinished evaluation is not a parse', () => {
@@ -82,7 +90,7 @@ test('corpus floor: ring 1 parses real files identically, and refuses the rest l
   const files = (fs.readdirSync(ROOT, { recursive: true } as any) as string[])
     .filter((f) => typeof f === 'string' && f.endsWith('.rofl') && !f.includes('node_modules'))
     .map((f) => path.join(ROOT, f))
-    .filter((f) => fs.statSync(f).size <= 2500)
+    .filter((f) => fs.statSync(f).size <= SWEEP_CAP)
     .sort();
   let same = 0, refused = 0, silent = 0;
   for (const f of files) {

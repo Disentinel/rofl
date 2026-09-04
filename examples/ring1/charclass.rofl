@@ -84,3 +84,12 @@ cls(":", colon).
 cls("-", dash).
 cls("\"", quote).
 cls("\n", nl).
+cls("\\", backslash).
+cls("@", at).
+cls("=", eq).
+cls("!", bang).
+cls("<", lt).
+cls(">", gt).
+cls("+", plus).
+cls("*", star).
+cls("/", slash).
