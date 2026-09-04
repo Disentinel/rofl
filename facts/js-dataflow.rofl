@@ -20,6 +20,10 @@ node_kind(js, class_declaration).
 node_kind(js, parenthesized_expression).
 node_kind(js, tsas_expression).
 node_kind(js, tsnon_null_expression).
+node_kind(js, object_method).
+node_kind(js, class_method).
+node_kind(js, optional_call_expression).
+node_kind(js, return_statement).
 
 -- THE VALUE CORE, 2026-09-04 (queue item w_df_value_core). Everything above
 -- moves a value between names; these are the cells that say what a value IS.
@@ -43,3 +47,19 @@ handled(js, array_expression,   dataflow, r_value_core).
 handled(js, parenthesized_expression, dataflow, r_value_core).
 handled(js, tsas_expression,          dataflow, r_value_core).
 handled(js, tsnon_null_expression,    dataflow, r_value_core).
+
+-- ---------------------------------------------------------------------------
+-- ACROSS A CALL (queue item w_df_function_forms). `r_call_flow` is the
+-- argument-into-parameter and return-value half of rules/js-dataflow.rofl.
+--
+-- `new_expression` is NOT ticked: its arguments reach the constructor's
+-- parameters like any other call, but the VALUE of `new C()` is an instance and
+-- this layer has no notion of one. That is the same cell `w_cg_new_expression`
+-- is about, seen from the other side.
+handled(js, function_declaration,      dataflow, r_call_flow).
+handled(js, function_expression,       dataflow, r_call_flow).
+handled(js, arrow_function_expression, dataflow, r_call_flow).
+handled(js, object_method,             dataflow, r_call_flow).
+handled(js, class_method,              dataflow, r_call_flow).
+handled(js, optional_call_expression,  dataflow, r_call_flow).
+handled(js, return_statement,          dataflow, r_call_flow).

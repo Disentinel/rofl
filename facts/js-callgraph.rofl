@@ -134,7 +134,9 @@ shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 -- knowable at parse time, and absent from the fact vocabulary: see
 -- `template_literal` above. NOT runtime_dependent.
 shape_because(js, s_computed_template_key, callgraph, not_yet).
-shape_because(js, s_member_on_call,        callgraph, not_yet).
+-- RETIRED 2026-09-04 with the value core: `mkBox(n).peek()` resolves through
+-- the callee's RETURN, so this shape has no residue left and `shape_stale`
+-- said so. It was the cell the queue recorded as waiting on the dataflow layer.
 shape_because(js, s_member_on_new,         callgraph, not_yet).
 shape_because(js, s_member_on_super,       callgraph, not_yet).
 shape_because(js, s_member_on_object_literal, callgraph, not_yet).

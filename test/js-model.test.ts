@@ -798,7 +798,7 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // parameter tier closed two, `denotes` five more, the value core one, and the
   // fixture grew five functions that make those tiers' defects observable.
   assert.equal(oracleEdges.size, 48, 'the oracle saw the call graph docs/modelling-a-language.md records');
-  assert.equal(missed, 3, 'and the model misses three of its edges');
+  assert.equal(missed, 1, 'and the model misses one of its edges — the constructor');
   console.log(`      oracle ${oracleEdges.size} edges | model ${model.size} | misses attributed to: `
             + [...missedShapes].sort().join(', '));
 
@@ -811,10 +811,12 @@ test('the shape verdicts for member_expression match what the runtime missed', a
 
   // EVERY REMAINING MISS ON THIS KIND IS EXACTLY A not_modelled ROW.
   const agreed = missedHere.filter((s) => notModelled.has(s));
-  // `s_computed_dynamic_key` is still here and its remaining site is `useDyn`,
-  // whose key is a PARAMETER — the value core answers a const in the same file
-  // and cannot yet answer an argument. That is w_df_function_forms.
-  assert.deepEqual(agreed, ['s_computed_dynamic_key', 's_member_on_call']);
+  // EMPTY, and that is the whole arc of this file in one line: the shapes of
+  // `member_expression` used to hold six of eleven missed edges, then two, and
+  // now none. The single remaining miss is `new Box(1)` — a TRANSFER form that
+  // is not a callee shape at all, which is why it cannot appear on this list
+  // however good the shape model gets.
+  assert.deepEqual(agreed, []);
 
   // THE MISS THAT USED TO BE INSIDE A `modelled` SHAPE IS GONE, and recording
   // what it was matters more than the zero. `useClass -> both` is `inst.both()`,

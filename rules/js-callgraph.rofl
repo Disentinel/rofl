@@ -367,6 +367,13 @@ denotes[code](N, CD) :- ast_node[code](N, identifier, File, _), ast_name[code](N
 denotes[code](T, CD) :- ast_node[code](T, this_expression, _, _),
                         class_member_fn[code](CD, _, M), ast_within[code](M, T).
 
+-- ENTRY 5 — WHATEVER THE DATAFLOW LAYER CAN VALUE. This is the entry that
+-- needed another layer to exist: `mkBox(n).peek()` has an object on the left
+-- that is not a name at all, so no amount of syntax reaches it. `may_be_node`
+-- answers it through the callee's RETURN, which is why the queue recorded this
+-- cell as waiting on w_df_function_forms rather than as unmodelled.
+denotes[code](E, O) :- may_be_node[flow](E, O), obj_node[code](O).
+
 -- ENTRY 4 — RECURSION, and it is the whole reason this is a relation and not a
 -- fifth rule: `deep.layer.dig()` is `.dig` looked up in whatever `deep.layer`
 -- denotes, and `deep.layer` is `.layer` looked up in whatever `deep` denotes.

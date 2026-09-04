@@ -85,8 +85,6 @@ work(w_cg_call_result, "f()() and f?.()(): the callee is a return value, so this
 work_order(w_cg_call_result, 8).
 work_state(w_cg_call_result, open).
 work_needs(w_cg_call_result, w_df_function_forms).
-claim(queued, js, call_expression,          s_call_result, callgraph, w_cg_call_result).
-claim(queued, js, optional_call_expression, s_call_result, callgraph, w_cg_call_result).
 claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
 claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_call_result).
 
@@ -111,15 +109,9 @@ claim(queued, js, this_expression,   none, dataflow, w_df_value_core).
 -- next: `param_bind` already exists in rules/js-callgraph.rofl, where tier 3
 -- built argument-to-parameter flow to resolve a callback. That is a DATAFLOW
 -- fact living in the call-graph pack, and this item is where it belongs.
-work(w_df_function_forms, "parameters and returns; param_bind already exists in the callgraph pack and belongs here").
+work(w_df_function_forms, "PART DONE 2026-09-04: arguments into parameters and return values; new_expression left, and param_bind still duplicates half of this in the callgraph pack").
 work_order(w_df_function_forms, 3).
 work_state(w_df_function_forms, open).
-claim(queued, js, function_declaration,       none, dataflow, w_df_function_forms).
-claim(queued, js, function_expression,        none, dataflow, w_df_function_forms).
-claim(queued, js, arrow_function_expression,  none, dataflow, w_df_function_forms).
-claim(queued, js, object_method,              none, dataflow, w_df_function_forms).
-claim(queued, js, class_method,               none, dataflow, w_df_function_forms).
-claim(queued, js, optional_call_expression,   none, dataflow, w_df_function_forms).
 claim(queued, js, new_expression,             none, dataflow, w_df_function_forms).
 
 -- 9 — value movement through control constructs. This is the item that will

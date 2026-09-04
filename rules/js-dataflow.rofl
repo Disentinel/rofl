@@ -134,3 +134,73 @@ may_be_node[flow](E, N) :- ast_node[code](E, K, _, _), value_transparent(K),
 -- all. A site with no row is not `no value` — it is `nothing here says so`.
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).
+
+-- ===========================================================================
+-- ACROSS A CALL — 2026-09-04, queue item w_df_function_forms
+--
+-- THE HONEST STATEMENT FIRST, BECAUSE IT BREAKS THE LAYER PICTURE: to know what
+-- an argument gives a parameter you must know WHICH FUNCTION the call reaches,
+-- and to resolve a callee you must know what its expression MAY BE. The call
+-- graph and the value flow are ONE FIXPOINT, not two floors stacked. So the
+-- rules below read `resolves[code]` from rules/js-callgraph.rofl while that
+-- file reads `may_be_lit[flow]` from here, and neither can be computed first.
+-- The kernel takes it for the same reason it took tier 3's smaller cycle: the
+-- recursion is positive and the negations both packs stand on sit outside it.
+--
+-- Loaded alone this half is simply silent — nothing concludes `resolves`, so
+-- nothing fires — which is the correct behaviour for a pack whose partner is
+-- absent, and is why test/js-ast.test.ts can still exercise the old cell.
+
+edb(fn_kind_v).
+fn_kind_v(function_declaration).
+fn_kind_v(function_expression).
+fn_kind_v(arrow_function_expression).
+fn_kind_v(object_method).
+fn_kind_v(class_method).
+fn_kind_v(class_private_method).
+
+edb(call_like_v).
+call_like_v(call_expression).
+call_like_v(optional_call_expression).
+call_like_v(new_expression).
+
+fn_node_v[flow](F) :- ast_node[code](F, K, _, _), fn_kind_v(K).
+
+-- THE NEAREST ENCLOSING FUNCTION, over ANY node rather than over call sites.
+-- DUPLICATION DECLARED: rules/js-callgraph.rofl computes the same thing under
+-- `nearest_fn`, restricted to sites. Two computations of one relation is a
+-- smell and consolidating them is a separate change, because the call graph's
+-- copy is the target of a mutant that would lose its anchor.
+encloses_v[flow](F, X) :- fn_node_v[flow](F), ast_within[code](F, X).
+closer_v[flow](F, X)   :- encloses_v[flow](F, X), encloses_v[flow](G, X),
+                          ast_within[code](F, G), F != G.
+nearest_v[flow](F, X)  :- encloses_v[flow](F, X), not closer_v[flow](F, X).
+
+-- ARGUMENT INTO PARAMETER. The INDEX is the content — argument 0 and argument 1
+-- are different facts about the program, which is why the scanner carries it.
+arg_at[flow](C, I, A)      :- ast_node[code](C, K, _, _), call_like_v(K),
+                              ast_child[code](C, arguments, I, A).
+param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
+                              ast_name[code](P, Name).
+
+-- WHERE A PARAMETER IS READ. Over-approximation declared: any identifier of
+-- that name anywhere under F, so a nested function redeclaring the name is
+-- claimed here and should not be. Shadowing is the scope layer's cell.
+param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
+                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name),
+                               ast_within[code](F, U).
+
+may_be_lit[flow](U, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V),
+                           param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),
+                           param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+
+-- WHAT A CALL EVALUATES TO. `return E` inside F makes F's value E's value, and
+-- a call that resolves to F may be whatever F returns. This is the rule
+-- `f().g()` waits on: the call is not a name, so nothing about it could be
+-- looked up until the layer could say what it EVALUATES to.
+returns[flow](F, E) :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R),
+                       ast_child[code](R, argument, 0, E).
+
+may_be_lit[flow](C, V)  :- resolves[code](C, F), returns[flow](F, E), may_be_lit[flow](E, V).
+may_be_node[flow](C, N) :- resolves[code](C, F), returns[flow](F, E), may_be_node[flow](E, N).

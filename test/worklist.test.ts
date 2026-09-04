@@ -115,18 +115,18 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'item 1 is done and three call-graph items are blocked on dataflow');
 });
 
-test('the queue covers the model: 105 open cells, 37 claimed by name, 68 swept', () => {
+test('the queue covers the model: 101 open cells, 29 claimed by name, 72 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 105, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 101, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 13);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [38, 21, 17]);
-  assert.deepEqual(per('dataflow'), [29, 16, 13]);
-  assert.deepEqual(per('modules'), [38, 0, 38]);
+  assert.deepEqual(per('callgraph'), [39, 19, 20]);
+  assert.deepEqual(per('dataflow'), [23, 10, 13]);
+  assert.deepEqual(per('modules'), [39, 0, 39]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -198,9 +198,9 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 17);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 18, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 20);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 20);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 21, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 18);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });
