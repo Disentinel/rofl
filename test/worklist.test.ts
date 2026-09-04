@@ -115,16 +115,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'both dataflow items are done, so the call-graph residue is next');
 });
 
-test('the queue covers the model: 96 open cells, 24 claimed by name, 72 swept', () => {
+test('the queue covers the model: 93 open cells, 20 claimed by name, 73 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 96, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 93, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 14);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [39, 18, 21]);
+  assert.deepEqual(per('callgraph'), [36, 14, 22]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
 
@@ -172,7 +172,7 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the defect docs/modelling-a-language.md fears by name: a filled matrix
   // looks finished. Here the model contradicts the claim of completion.
   const w = world({ find: 'work_state(w_cg_member_family, open).', replace: 'work_state(w_cg_member_family, done).' });
-  assert.equal(w.n('false_done[audit](W, K, S, L)'), 9, 'one row per cell it did not close');
+  assert.equal(w.n('false_done[audit](W, K, S, L)'), 5, 'one row per cell it did not close');
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
@@ -198,9 +198,9 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 21);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 22, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 17);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 22);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 23, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 13);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });

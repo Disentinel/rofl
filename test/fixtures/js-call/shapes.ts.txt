@@ -32,6 +32,15 @@ export class Sub extends Base {
   m(): number { return super.m(); }
 }
 
+// TWO SITES ADDED AS A MEASUREMENT, 2026-09-04. The grammar allows a member on
+// a fresh instance and a member on an inline object literal; the corpus did
+// not contain either, so whether the rules already cover them was a GUESS. A
+// site turns the guess into a row. Neither needs a rule if `new C()` reaches
+// the class and an object literal is its own value — and if it does need one,
+// that is worth knowing before the cell is filled from an argument.
+export function onNew(n: number): number { return new Base().m() + n; }
+export function onLit(n: number): number { return ({ a(m: number) { return m; } }).a(n); }
+
 function curried(n: number) { return (m: number) => m + n; }
 export function chained(n: number): number { return curried(n)(n); }
 export function seq(n: number): number { return (0, curried)(n)(n); }

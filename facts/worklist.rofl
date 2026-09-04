@@ -39,11 +39,7 @@ work_order(w_cg_member_family, 4).
 work_state(w_cg_member_family, open).
 work_needs(w_cg_member_family, w_df_value_core).
 claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_super,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_array,          callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_new,            callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_object_literal, callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_literal,        callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_computed_literal_key,     callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg_member_family).

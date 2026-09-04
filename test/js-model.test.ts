@@ -535,12 +535,12 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   //   the kinds that split: 82 + 15 = 97
   const coarse = counts(r);
   const f = fine(r);
-  console.log('      PREDICTED  coarse 82 | fine 98 = modelled 23 + waived 5 + not_modelled 70');
+  console.log('      PREDICTED  coarse 82 | fine 98 = modelled 26 + waived 5 + not_modelled 67');
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
   assert.equal(coarse.cell, 82, 'predicted 82 coarse cells');
-  assert.deepEqual(f, { cell: 98, modelled: 23, waived: 5, not_modelled: 70 },
-    'predicted 98 fine cells = 23 + 5 + 70');
+  assert.deepEqual(f, { cell: 98, modelled: 26, waived: 5, not_modelled: 67 },
+    'predicted 98 fine cells = 26 + 5 + 67');
   assert.equal(f.cell - coarse.cell, 16, 'predicted delta: 31 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -579,9 +579,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 70, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 67, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 70, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 67, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 4,
     'two dynamic-import cells at kind level, two computed-callee cells at shape level');
 
@@ -616,9 +616,13 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // THREE ticked, not one: `denotes` closed member-on-member and this on
   // 2026-09-04, and the cell that used to read `one rule, twelve holes` now
   // reads three and ten. The kind-level tick is still coarser than all of them.
-  assert.deepEqual(modelled, ['s_member_on_ident', 's_member_on_member', 's_member_on_this'],
-    'three shapes have a rule: tier 2 and the two `denotes` closed');
-  assert.equal(missing.length, 10, 'and ten do not');
+  // SIX ticked now. `super` cost a rule; `new C().m()` and `({...}).a()` cost
+  // nothing at all — they were unmodelled because the corpus had no site, and
+  // adding one showed the rules had covered them all along.
+  assert.deepEqual(modelled, ['s_member_on_ident', 's_member_on_member', 's_member_on_new',
+    's_member_on_object_literal', 's_member_on_super', 's_member_on_this'],
+    'six shapes have a rule: tier 2, and five `denotes` closed');
+  assert.equal(missing.length, 7, 'and seven do not');
 
   // ...and the kind-level tick that used to stand for all thirteen is not
   // silently honoured and not silently dropped: it is a ROW.
@@ -627,7 +631,7 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   assert.ok(r.holds('coarser_claim[audit](js, member_expression, callgraph, r_call_edge)'),
             'and it is reported as coarser than the cell it names');
   assert.equal(n(r, 'coarser_claim[audit](A, B, L, R)'), 6,
-    'six of the twelve kind-level call-graph ticks name a kind the axis splits');
+    'six of the kind-level call-graph ticks name a kind the axis splits');
 
   // every one of the twelve carries a TYPED reason, and the taxonomy is spent
   // where it is honest: one irreducible, one out of scope, ten unfinished
@@ -639,8 +643,12 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
     byReason.set(rr, [...(byReason.get(rr) ?? []), s]);
   }
   assert.deepEqual(byReason.get('runtime_dependent'), ['s_computed_dynamic_key']);
-  assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array']);
-  assert.equal(byReason.get('not_yet')?.length, 8);
+  // TWO out_of_scope now: `[1,2].map()` and `"str".toUpperCase()` are both
+  // methods on a built-in PROTOTYPE, which is the standard library and not the
+  // program. Same verdict, same reason, and inventing a prototype model is a
+  // different programme rather than a missing rule.
+  assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array', 's_member_on_literal']);
+  assert.equal(byReason.get('not_yet')?.length, 4);
 });
 
 // ---------------------------------------------------------------------------
@@ -723,8 +731,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 110, 'positive control: the corpus is the one the census was taken on');
-  assert.equal(tally.size, 17, 'positive control: 17 distinct shapes, as docs/modelling-a-language.md records');
+  assert.equal(sites, 112, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(tally.size, 19, 'positive control: 19 distinct shapes; two sites added 2026-09-04');
 
   console.log(`      census (${sites} call sites, ${tally.size} shapes):`);
   for (const [s, k] of [...tally].sort((a, b) => b[1] - a[1])) {
@@ -744,8 +752,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   console.log(`      declared but not in this corpus (${unseen.length} of ${declared.size} pairs):`);
   console.log('        ' + unseen.join(' '));
   assert.equal(declared.size, 31);
-  assert.equal(pairs.size, 17, 'every measured shape has exactly one callee kind in this corpus');
-  assert.equal(unseen.length, 14);
+  assert.equal(pairs.size, 19, 'every measured shape has exactly one callee kind in this corpus');
+  assert.equal(unseen.length, 12);
 
   // and the one shape that CANNOT be a cell, declared rather than left silent:
   // the catch-all is reached by the ABSENCE of a kind in any table, so it
@@ -910,7 +918,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 29, '21 kind-level claims + 8 shape claims with no cell under them');
+  assert.equal(f.modelled, 32, '21 kind-level claims + 11 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',
@@ -918,6 +926,9 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/identifier/s_identifier/callgraph',
     'js/member_expression/s_member_on_ident/callgraph',
     'js/member_expression/s_member_on_member/callgraph',
+    'js/member_expression/s_member_on_new/callgraph',
+    'js/member_expression/s_member_on_object_literal/callgraph',
+    'js/member_expression/s_member_on_super/callgraph',
     'js/member_expression/s_member_on_this/callgraph',
     'js/new_expression/s_construct/callgraph',
     'js/optional_member_expression/s_optional_member/callgraph',
@@ -1030,8 +1041,8 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   // beside the twelve not_modelled shapes it was hiding.
   assert.ok(r.holds('verdict[audit](js, member_expression, none, callgraph, modelled)'),
     'the kind-level tick is honoured again, which is exactly what the axis removed');
-  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 10,
-    'while the ten holes are still there');
+  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 7,
+    'while the seven holes are still there');
 
   // SURVIVOR, reported: the partition still SUMS. Every new cell gets a
   // verdict, so the arithmetic that catches a missing default is blind to a
@@ -1104,8 +1115,11 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of thirteen'
   assert.equal(finePartitions(f), false, '23 + 5 + 60 = 88 verdicts over 86 cells');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/member_expression/s_member_on_member/callgraph',
+    'js/member_expression/s_member_on_new/callgraph',
+    'js/member_expression/s_member_on_object_literal/callgraph',
+    'js/member_expression/s_member_on_super/callgraph',
     'js/member_expression/s_member_on_this/callgraph',
-  ], 'the two shapes the deletion took a rule away from');
+  ], 'the five shapes the deletion took a rule away from');
   assert.deepEqual({
     lost: n(r, 'lost_cell[audit](A, B, L)'), invented: n(r, 'invented_cell[audit](A, B, L)'),
     double_cell: n(r, 'double_cell[audit](A, B, L)'), orphan_shape: n(r, 'orphan_shape[audit](A, B, S)'),
@@ -1124,9 +1138,11 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of thirteen'
     'member_expression/s_member_on_array',
     'member_expression/s_member_on_call',
     'member_expression/s_member_on_member',
+    'member_expression/s_member_on_new',
+    'member_expression/s_member_on_object_literal',
     'member_expression/s_member_on_super',
     'member_expression/s_member_on_this',
-  ], 'the eight shapes the corpus really produces and the mutant no longer declares');
+  ], 'the ten shapes the corpus really produces and the mutant no longer declares');
   console.log(`      KILLED by the census alone: ${undeclared.length} measured shapes go undeclared`
             + ' while every in-model audit stays green');
 });

@@ -160,6 +160,15 @@ handled(js, member_expression,          s_member_on_member, callgraph, r_denotes
 handled(js, member_expression,          s_member_on_this,   callgraph, r_denotes).
 handled(js, optional_member_expression, s_optional_member,  callgraph, r_denotes).
 
+-- THREE MORE, 2026-09-04, and only one of them cost a rule. `s_member_on_super`
+-- needed `super_of` in the dataflow pack — `super` denotes the class ABOVE the
+-- one you are in. `s_member_on_new` and `s_member_on_object_literal` needed
+-- nothing at all: they were unmodelled because the CORPUS had no site, and two
+-- sites in shapes.ts showed the rules had covered them all along.
+handled(js, member_expression, s_member_on_super,          callgraph, r_denotes).
+handled(js, member_expression, s_member_on_new,            callgraph, r_denotes).
+handled(js, member_expression, s_member_on_object_literal, callgraph, r_denotes).
+
 -- ---------------------------------------------------------------------------
 -- TYPED REASONS, only where the default `not_yet` would be a LIE. Same
 -- convention as facts/js-kinds.rofl: every other not_modelled shape takes
@@ -177,6 +186,13 @@ unknown_because(js, optional_member_expression, s_computed_dynamic_key, callgrap
 -- the receiver is a host literal and its methods belong to the runtime rather
 -- than to any corpus this analyser can be pointed at
 unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scope).
+-- ...and `"str".toUpperCase()` for exactly the same reason, added 2026-09-04.
+-- Both receivers answer through a BUILT-IN PROTOTYPE, which is the standard
+-- library and not the program under analysis. Modelling it is a different
+-- programme — it needs a model of the language's own objects — rather than a
+-- rule this layer is missing, and the two tables agree: the frontier's
+-- `shape_because` in facts/js-callgraph.rofl says out_of_scope too.
+unknown_because(js, member_expression, s_member_on_literal, callgraph, out_of_scope).
 
 -- ---------------------------------------------------------------------------
 -- WHICH LAYER EACH VALUE BELONGS TO. The column is shared across layers and

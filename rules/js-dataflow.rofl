@@ -313,3 +313,22 @@ may_be_node[flow](E, CD) :- ast_node[code](E, identifier, File, _), ast_name[cod
 may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, File, _),
                             ast_child[code](E, callee, 0, CE), ast_name[code](CE, Name),
                             class_named[flow](CD, Name, File).
+
+-- ---------------------------------------------------------------------------
+-- `super` — the receiver that is a DIFFERENT class from the one you are in.
+--
+-- `class Sub extends Base { m() { return super.m() } }` calls Base's `m`, not
+-- its own, and that is the whole content: `this` denotes the class you are in,
+-- `super` denotes the one above. One relation and one entry, and the member
+-- lookup that already exists does the rest.
+--
+-- SCOPE-BLIND LIKE ITS NEIGHBOURS: the superclass is found by NAME in the same
+-- file, so a class extending an imported one reaches nothing. That is the same
+-- boundary `class_named` already draws and it is not widened here.
+super_of[flow](CD, SD) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
+                          ast_child[code](CD, super_class, 0, SC), ast_name[code](SC, Name),
+                          class_named[flow](SD, Name, File).
+
+may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
+                            class_method_of[flow](CD, M), ast_within[code](M, S),
+                            super_of[flow](CD, SD).

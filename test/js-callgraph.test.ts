@@ -693,7 +693,11 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
   const stale = mut.binds('shape_stale[audit](S)', 'S');
-  assert.ok(stale.length > 10, `the stale-verdict audit fires on ${stale.length} shapes`);
+  // TEN, not eleven-or-more: every shape whose excuse this mutant strands is a
+  // shape that still HAS one, and three of those excuses were retired as the
+  // model closed their cells. The threshold moves DOWN as the model improves,
+  // so it is pinned rather than bounded.
+  assert.equal(stale.length, 10, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });

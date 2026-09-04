@@ -140,10 +140,24 @@ shape_because(js, s_computed_template_key, callgraph, not_yet).
 -- RETIRED 2026-09-04 with the value core: `mkBox(n).peek()` resolves through
 -- the callee's RETURN, so this shape has no residue left and `shape_stale`
 -- said so. It was the cell the queue recorded as waiting on the dataflow layer.
-shape_because(js, s_member_on_new,         callgraph, not_yet).
-shape_because(js, s_member_on_super,       callgraph, not_yet).
-shape_because(js, s_member_on_object_literal, callgraph, not_yet).
-shape_because(js, s_member_on_literal,     callgraph, not_yet).
+-- RETIRED 2026-09-04: `super.m()` resolves — `super` inside a class method
+-- denotes the SUPERCLASS, which is one relation over the class's `super_class`
+-- child. `shape_stale[audit]` named this row the moment the rule landed, for
+-- the fourth time this session.
+-- RETIRED 2026-09-04, AND NEITHER NEEDED A RULE. `new C().m()` and
+-- `({a(){}}).a()` were `not_yet` because the corpus had no site for them, and
+-- whether the rules covered them was a guess. Two sites in shapes.ts turned the
+-- guess into a row: both resolve through `may_be_node` exactly as predicted —
+-- a fresh instance reaches its class, an object literal is its own value.
+-- `shape_stale[audit]` then named both. The excuse was about the CORPUS and
+-- read as if it were about the MODEL, which is the difference a site settles
+-- and an argument cannot.
+-- `"str".toUpperCase()` and the like: the receiver is a primitive and the
+-- method lives on its PROTOTYPE, which is the standard library rather than the
+-- program. Same verdict as `s_member_on_array` and for the same reason — this
+-- model has no notion of a built-in prototype, and inventing one is a
+-- different programme, not a missing rule.
+shape_because(js, s_member_on_literal,     callgraph, out_of_scope).
 shape_because(js, s_member_on_other,       callgraph, not_yet).
 shape_because(js, s_call_result,           callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
