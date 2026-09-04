@@ -135,7 +135,10 @@ shape_because(js, s_identifier,            callgraph, not_yet).
 -- `shape_unexplained[audit]` demands a reason again. The verdict follows the
 -- corpus rather than the grammar HERE, which is the opposite of the shape
 -- vocabulary above, and the two audits are what keep the difference honest.
-shape_because(js, s_computed_literal_key,  callgraph, not_yet).
+-- the residue is an AMBIENT receiver: `bag['fixed']` where `bag` is a
+-- `declare const` with no initialiser, so there is no value in the program to
+-- find. Out of scope rather than not_yet — the implementation is elsewhere.
+shape_because(js, s_computed_literal_key,  callgraph, out_of_scope).
 
 -- `s_non_null` IS TICKED AND STILL HAS RESIDUE, which is what this table is
 -- for and `unknown_because` is not: the cell is modelled — `notNull!(n)`

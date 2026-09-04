@@ -461,6 +461,19 @@ shape_stale[audit](S)         :- shape_because(js, S, callgraph, _), shape_seen[
 -- a verdict the corpus does not exercise. Expected, not an error.
 shape_unexercised[audit](S)   :- shape_because(js, S, callgraph, _), not shape_seen[audit](S).
 shape_irreducible[audit](S)   :- shape_reason[audit](S, R), unknown_type(R, irreducible).
+
+-- COVERAGE THAT EXISTS AND WAS NEVER RECORDED. Added 2026-09-04 after finding
+-- `s_member_on_call` fully resolving while its cell read `not_modelled` — the
+-- rules did the work and nobody ticked the box. `shape_stale` catches the
+-- opposite direction (a reason with no residue left) and there was nothing
+-- watching this one, so the matrix could under-report coverage indefinitely
+-- while every gate stayed green.
+--
+-- ANY resolved site is enough, not `fully resolved`: a shape whose sites
+-- partly resolve is a PARTIAL cell, and a partial cell is `handled` with a
+-- residue reason beside it — the pattern `s_non_null` already follows.
+unrecorded_coverage[audit](K, S) :- resolved_shape[audit](S), shape_of(js, K, S),
+                                    verdict[audit](js, K, S, callgraph, not_modelled).
 shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours).
 
 -- WHAT MODELLING THIS CELL DRAGGED IN. The kinds the call-graph layer must

@@ -38,20 +38,20 @@ work(w_cg_member_family,
 work_order(w_cg_member_family, 4).
 work_state(w_cg_member_family, open).
 work_needs(w_cg_member_family, w_df_value_core).
-claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_array,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_computed_literal_key,     callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg_member_family).
 
 -- 3 — the same family through the optional-chaining kind. Held apart because
 -- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow
 -- fact wearing a call-graph shape.
-work(w_cg_optional_member, "optional_member_expression: a?.b() and its computed keys").
+-- NOTHING WORKABLE LEFT, and the queue says so rather than offering it: the
+-- literal-key cell is ticked and the template-key one is blocked on the
+-- scanner's contract. The item stays open because the cell is open; it is not
+-- done and it is not offerable, and those are different states.
+work(w_cg_optional_member, "optional_member_expression: only the template key is left, and it waits on the scanner").
 work_order(w_cg_optional_member, 5).
 work_state(w_cg_optional_member, open).
 work_needs(w_cg_optional_member, w_df_value_core).
-claim(queued, js, optional_member_expression, s_computed_literal_key,   callgraph, w_cg_optional_member).
 claim(queued, js, optional_member_expression, s_computed_template_key,  callgraph, w_cg_optional_member).
 
 -- 4 — the one miss that is not a callee shape at all: `new Box(1)` is a
@@ -157,3 +157,14 @@ work(w_df_instance_vs_class, "an instance is not its class: statics and instance
 work_order(w_df_instance_vs_class, 14).
 work_state(w_df_instance_vs_class, open).
 claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).
+
+-- ===========================================================================
+-- BLOCKERS THAT ARE NOT WORK ITEMS, declared 2026-09-04 when the queue gained
+-- the vocabulary for them. Both are the same cause: a template literal's text
+-- lives in `TemplateElement.value`, which is `{raw, cooked}` — a nested OBJECT
+-- — and scanners/js_ast.ts emits only SCALAR own properties. So `o[`fixed`]()`
+-- is knowable at parse time and not derivable from the facts we have, which is
+-- neither `not_yet` in the ordinary sense nor anything a rule can fix. It moves
+-- when the scanner's contract moves.
+cell_blocked(member_expression,          s_computed_template_key, callgraph, scanner_contract).
+cell_blocked(optional_member_expression, s_computed_template_key, callgraph, scanner_contract).

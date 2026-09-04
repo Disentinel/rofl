@@ -203,8 +203,21 @@ ignored(js, parenthesized_expression, s_parenthesized, callgraph, a_babel_emits_
 -- nothing else on the list may borrow the reason: `a.b.c()` is merely
 -- unfinished, and `o[`fixed`]()` is knowable at parse time and blocked on the
 -- scanner's scalar-only contract, which is ours.
-unknown_because(js, member_expression,          s_computed_dynamic_key, callgraph, runtime_dependent).
-unknown_because(js, optional_member_expression, s_computed_dynamic_key, callgraph, runtime_dependent).
+-- THESE TWO CELLS WERE TICKED 2026-09-04 AND THEIR REASON MOVED. `o[k]()` used
+-- to be `runtime_dependent` at CELL level — the one irreducible verdict this
+-- layer spent — and the value layer then resolved two of its three sites: a
+-- const key in the same file, and a literal passed as an argument. A cell with
+-- resolved sites is `handled`; what stays unknowable is the RESIDUE, and the
+-- residue is where `runtime_dependent` belongs. `bag[key]` with an ambient
+-- `key` is still irreducible and is recorded as such in facts/js-callgraph.rofl.
+--
+-- This is f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable
+-- coming true, and it was found by an audit rather than by remembering.
+handled(js, member_expression,          s_computed_dynamic_key, callgraph, r_value_key).
+handled(js, optional_member_expression, s_computed_dynamic_key, callgraph, r_value_key).
+handled(js, member_expression,          s_computed_literal_key, callgraph, r_value_key).
+handled(js, optional_member_expression, s_computed_literal_key, callgraph, r_value_key).
+handled(js, member_expression,          s_member_on_call,       callgraph, r_denotes).
 
 -- the receiver is a host literal and its methods belong to the runtime rather
 -- than to any corpus this analyser can be pointed at

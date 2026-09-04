@@ -41,7 +41,54 @@ work_state_kind(done).
 -- THE OPEN QUEUE, DERIVED. An IRREDUCIBLE unknown is not work: `import(pathVar)`
 -- names a module that does not exist until the expression runs, and no amount
 -- of modelling recovers it. `our_unknown` is exactly the half that is ours.
-open_cell[audit](K, S, L) :- our_unknown[audit](js, K, S, L).
+-- WHICH UNKNOWNS ARE WORK, which is NOT the same question the model answers.
+-- `unknown_type` splits a reason into `irreducible` (the program's) and `ours`,
+-- and that is right for the matrix. It is wrong for a plan: `out_of_scope` is a
+-- DECISION ALREADY TAKEN and `budget_exhausted` is a statement about resources,
+-- and neither is a thing anybody is going to do. Both were being handed out as
+-- work — three cells of it — until this was measured.
+--
+-- Silence is not an option here either: a reason in the taxonomy that the plan
+-- has no opinion about raises `reason_unclassified`, so adding a reason forces
+-- a decision about whether it means work.
+edb(reason_is_work).
+edb(reason_not_work).
+reason_is_work(not_yet).
+reason_not_work(out_of_scope).
+reason_not_work(budget_exhausted).
+
+reason_unclassified[audit](R) :- unknown_type(R, ours),
+                                 not reason_is_work(R), not reason_not_work(R).
+
+open_cell[audit](K, S, L) :- our_unknown[audit](js, K, S, L),
+                             reason[audit](js, K, S, L, R), reason_is_work(R).
+
+-- ---------------------------------------------------------------------------
+-- A BLOCKER THAT IS NOT A WORK ITEM. `work_needs` says an item waits on another
+-- item, and that was the only kind of waiting the plan could express — so a
+-- cell blocked by the SCANNER's fact vocabulary, or by an ambient declaration
+-- with no value in the program, looked exactly like a cell nobody had got to.
+-- The queue then handed it out, which is the defect this closes: an item is
+-- offered only when something about it is actually workable.
+edb(cell_blocked).   -- cell_blocked(Kind, Shape, Layer, Cause)
+edb(blocker_kind).
+
+-- the scanner's four-relation contract carries only SCALAR own properties, so a
+-- construct whose text lives in a nested object is not in the fact vocabulary
+blocker_kind(scanner_contract).
+-- a `declare const` has no initialiser: there is no value in the program
+blocker_kind(ambient_declaration).
+-- the grammar allows the form and the parser never emits it
+blocker_kind(no_possible_site).
+-- somebody has to choose before anybody can build
+blocker_kind(decision_owed).
+
+blocked_cell[audit](K, S, L) :- cell_blocked(K, S, L, _).
+workable(K, S, L)            :- open_cell[audit](K, S, L), not blocked_cell[audit](K, S, L).
+
+-- and the two ways a blocker can be nonsense
+blocker_unknown[audit](K, S, L, C) :- cell_blocked(K, S, L, C), not blocker_kind(C).
+blocker_stale[audit](K, S, L)      :- cell_blocked(K, S, L, _), not open_cell[audit](K, S, L).
 
 -- ---------------------------------------------------------------------------
 -- CLAIMED, SWEPT, AND THE THREE WAYS A PLAN CAN LIE
@@ -126,7 +173,25 @@ needs_cycle[audit](W)      :- needs_reach(W, W).
 -- WHAT TO DO NEXT, as a query rather than as a habit. An item whose premise is
 -- not done is not next, however low its number — which is the whole reason the
 -- relation above exists rather than a comment asking the reader to remember.
-takeable(W)         :- work_state(W, open), not blocked[audit](W).
+-- READY MEANS SOMETHING IS ACTUALLY WORKABLE. Three ways an open item can be:
+-- a named claim on a workable cell, a sweep with workable residue, or no cells
+-- at all — `w_controlflow_layer` claims none because the layer does not exist
+-- yet, and that is the honest shape for it rather than a reason to skip it.
+claims_cell(W)      :- claim(queued, js, _, _, _, W).
+has_workable(W)     :- claim(queued, js, K, S, L, W), workable(K, S, L).
+sweep_workable(W)   :- work_sweeps(W, L), workable(K, S, L), not claimed(K, S, L).
+unclaimed_item(W)   :- work(W, _), not claims_cell(W), not work_sweeps(W, _).
+
+takeable(W)         :- work_state(W, open), not blocked[audit](W), has_workable(W).
+takeable(W)         :- work_state(W, open), not blocked[audit](W), sweep_workable(W).
+takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_item(W).
+
+-- AND THE ITEM THE QUEUE IS NOW SILENT ABOUT, said out loud. Two causes and
+-- they want opposite responses: every open cell is blocked (wait, or attack the
+-- blocker), or every cell it claims is already CLOSED — in which case the item
+-- is done and nobody said so. A queue that skips an item without saying why is
+-- the silence this whole pack exists against.
+nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W).
 earlier_takeable(N) :- takeable(W), work_order(W, M), M < N.
 next_work[audit](W) :- takeable(W), work_order(W, N), not earlier_takeable(N).
 in_flight[audit](W) :- work_state(W, taken).

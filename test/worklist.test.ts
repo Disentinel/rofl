@@ -73,6 +73,9 @@ const LIES = [
   'work_sweeps_nolayer[audit](W, L)',
   'needs_unknown[audit](W, O)',
   'needs_cycle[audit](W)',
+  'reason_unclassified[audit](R)',
+  'blocker_unknown[audit](K, S, L, C)',
+  'blocker_stale[audit](K, S, L)',
 ];
 
 test('the five-pack world loads and the plan tells no lie', () => {
@@ -115,29 +118,34 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'both dataflow items are done, so the call-graph residue is next');
 });
 
-test('the queue covers the model: 86 open cells, 13 claimed by name, 73 swept', () => {
+test('the queue covers the model: 79 open cells, 11 claimed by name, 68 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 86, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 79, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 14);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [29, 13, 20]);
+  assert.deepEqual(per('callgraph'), [23, 9, 18]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
-  assert.deepEqual(per('modules'), [39, 0, 39]);
+  assert.deepEqual(per('modules'), [38, 0, 38]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
   // notice a cell quietly moving between the two halves.
+  // THREE, not five. The two computed-key cells LEFT this list on 2026-09-04:
+  // the value layer resolved two of their three sites, so the cells are
+  // `handled` and what remains unknowable is the RESIDUE, recorded in
+  // `shape_because`. `runtime_dependent` was a verdict about a SHAPE and the
+  // shape turned out to contain decidable sites — which is the finding
+  // f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable
+  // coming true, found by `unrecorded_coverage[audit]` rather than remembered.
   assert.deepEqual(w.binds('irreducible_unknown[audit](A, K, S, L)', 'K', 'S', 'L'), [
     'import_expression/computed/modules',
     'import_expression/none/callgraph',
     'import_expression/none/dataflow',
-    'member_expression/s_computed_dynamic_key/callgraph',
-    'optional_member_expression/s_computed_dynamic_key/callgraph',
-  ], 'a dynamic import specifier and a computed key: nobody is ever assigned these');
+  ], 'a dynamic import specifier: nobody is ever assigned these');
 });
 
 // ===========================================================================
@@ -172,7 +180,7 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the defect docs/modelling-a-language.md fears by name: a filled matrix
   // looks finished. Here the model contradicts the claim of completion.
   const w = world({ find: 'work_state(w_cg_member_family, open).', replace: 'work_state(w_cg_member_family, done).' });
-  assert.equal(w.n('false_done[audit](W, K, S, L)'), 5, 'one row per cell it did not close');
+  assert.equal(w.n('false_done[audit](W, K, S, L)'), 2, 'one row per cell it did not close');
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
@@ -193,14 +201,14 @@ test('MUTANT 7 — an item with no order and no state', () => {
 
 test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep', () => {
   const base = world();
-  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).' });
+  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).' });
   // EVERY LIE-DETECTOR STAYS QUIET. The cell is still open, still owned — by
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 20);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 21, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 12);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 18);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 19, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 8);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });
@@ -230,4 +238,45 @@ test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () =>
   const cyc = world({ extra: 'work_needs(w_controlflow_layer, w_cg_syntactic_wrappers).\nwork_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
   assert.ok(cyc.n('needs_cycle[audit](W)') >= 2, 'both ends of the loop are named');
   console.log(`  KILLED: needs_unknown 1, needs_cycle ${cyc.n('needs_cycle[audit](W)')}`);
+});
+
+test('a cell can be blocked by something that is not a work item', () => {
+  const w = world();
+  // TWO TEMPLATE-KEY CELLS, blocked on the SCANNER's contract rather than on
+  // another item: a template literal's text lives in `TemplateElement.value`,
+  // which is a nested object, and the scanner emits only scalar own properties.
+  // `work_needs` could not say this — it only points at other work — so the
+  // queue used to hand these out as if nobody had got to them.
+  assert.deepEqual(w.binds('cell_blocked(K, S, L, C)', 'S', 'C'), [
+    's_computed_template_key/scanner_contract',
+    's_computed_template_key/scanner_contract',
+  ]);
+  assert.equal(w.n('open_cell[audit](K, S, L)') - w.n('workable(K, S, L)'), 2,
+    'blocked cells are open and not workable');
+
+  // AND THE ITEM THEY BELONG TO IS SKIPPED WITH A REASON, not silently:
+  assert.deepEqual(w.binds('nothing_workable[audit](W)', 'W'), ['w_cg_optional_member']);
+  assert.ok(!w.binds('next_work[audit](W)', 'W').includes('w_cg_optional_member'));
+});
+
+test('a decision already taken is not work', () => {
+  const w = world();
+  // `unknown_type` calls `out_of_scope` ours rather than the program's, which
+  // is right for the matrix and wrong for a plan: it is a decision already
+  // taken. Three cells were being offered as work on that reading.
+  assert.deepEqual(w.binds('reason_is_work(R)', 'R'), ['not_yet']);
+  assert.deepEqual(w.binds('reason_not_work(R)', 'R'), ['budget_exhausted', 'out_of_scope']);
+  assert.equal(w.n('reason_unclassified[audit](R)'), 0, 'every ours-reason has an opinion');
+
+  // planted: a new reason in the taxonomy with no opinion about it
+  const mut = world({ extra: 'unknown_type(some_new_reason, ours).' });
+  assert.deepEqual(mut.binds('reason_unclassified[audit](R)', 'R'), ['some_new_reason'],
+    'adding a reason forces a decision about whether it means work');
+});
+
+test('MUTANT 11 — a blocker on a cell that is no longer open', () => {
+  const mut = world({ extra: 'cell_blocked(js_no_such, none, callgraph, scanner_contract).' });
+  assert.equal(mut.n('blocker_stale[audit](K, S, L)'), 1, 'a blocker outliving its cell');
+  const bad = world({ extra: 'cell_blocked(member_expression, s_member_on_other, callgraph, vibes).' });
+  assert.deepEqual(bad.binds('blocker_unknown[audit](K, S, L, C)', 'C'), ['vibes']);
 });
