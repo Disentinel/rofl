@@ -23,6 +23,10 @@ work_order(w_mod_partial_cell, 1).
 work_state(w_mod_partial_cell, done).
 work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matrix_calls_that_a_stale_excuse).
 work_spawned(w_cg_member_family, f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable).
+-- ...and three more the catch-all split found, none of them foreseen.
+work_spawned(w_cg_member_family, f_a_catch_all_shape_is_a_bucket_of_verdicts).
+work_spawned(w_cg_member_family, f_a_may_set_over_branches_is_an_over_approximation_the_oracle_cannot_see).
+work_spawned(w_cg_member_family, f_two_reason_relations_over_one_fact_have_now_bitten_twice).
 
 -- ===========================================================================
 -- 2 — THE CALL GRAPH'S BIGGEST RESIDUE. Six of the nine edges the execution
@@ -33,13 +37,29 @@ work_spawned(w_cg_member_family, f_runtime_dependent_is_a_verdict_about_a_shape_
 -- reason nobody is ever expected to work on. Both are constant propagation,
 -- which is dataflow. See
 -- f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable.
+-- NOTHING WORKABLE LEFT, and NOT `done` — the queue refused that. Marking it
+-- done while it still claimed the blocked template-key cell raised
+-- `false_done[audit]` immediately, and the audit is right: an item that owns an
+-- open cell has not finished, whatever was accomplished around it. The correct
+-- state is the same one `w_cg_optional_member` is already in — open, with
+-- `nothing_workable[audit]` naming it — because the two template-key cells are
+-- siblings blocked on the same scanner contract. That distinction is the whole
+-- reason `nothing_workable` has two causes wanting opposite responses.
 work(w_cg_member_family,
-     "PART DONE 2026-09-04: `denotes` closed member-on-member, this and optional; the computed keys need constant propagation").
+     "the catch-all split into eight named object positions, six modelled; only the blocked template key is left").
 work_order(w_cg_member_family, 4).
 work_state(w_cg_member_family, open).
 work_needs(w_cg_member_family, w_df_value_core).
-claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg_member_family).
+
+-- WHAT THE SPLIT HANDED ON. `s_member_on_other` was one cell reading `not_yet`
+-- and it held four different answers; naming them turned two of the four into
+-- claims on OTHER items, which is the queue doing what it is for. Neither is
+-- member-expression work and neither would ever have surfaced as its own row
+-- while the bucket existed.
+claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_control_forms).
+claim(queued, js, member_expression, s_member_on_template, callgraph, w_env_api_surface).
+claim(queued, js, member_expression, s_member_on_literal,  callgraph, w_env_api_surface).
 
 -- 3 — the same family through the optional-chaining kind. Held apart because
 -- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow

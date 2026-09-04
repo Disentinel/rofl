@@ -64,4 +64,35 @@ export function useAs(n: number): number {
   return (curried as (m: number) => (k: number) => number)(n)(n);
 }
 
+// FOUR MORE OBJECT POSITIONS, and these are here rather than in alpha.mjs for
+// a reason that is about the ORACLE. `(x as T).m()` and `x!.m()` cannot be
+// spelt in a runnable .mjs at all. `(await p).m()` and `` `s`.m() `` CAN be,
+// and they must not be: neither resolves today — the first waits on the
+// control-form item and the second answers through the String prototype, which
+// is the standard library — so a runnable site would show up as an edge the
+// runtime takes and the model misses, which is UNSOUND. A shape whose residue
+// is known and owned belongs in the corpus the oracle does not run.
+// EVERY RECEIVER BELOW IS A REAL VALUE, and that is the whole care taken here.
+// The first draft wrote `declare const held: Holder | null` and asked whether
+// `held!.pick()` resolves — it does not, and the refusal would have been about
+// an ambient declaration carrying no value rather than about the model. The
+// same trap caught the `(cast as T)` probe an hour earlier and `maybe!()` in
+// this very file a day earlier. A site measures the model only when everything
+// except the construct under study already works.
+const holder = { pick(n: number): number { return n; } };
+type Holder = typeof holder;
+async function mkHolder(): Promise<Holder> { return holder; }
+
+export function onCast(n: number): number { return (holder as Holder).pick(n); }
+export function onNonNull(n: number): number { return holder!.pick(n); }
+// `mkHolder()` alone DOES reach `holder` through the return rule, so the only
+// thing standing between this site and an edge is the `await` wrapper — which
+// is `w_df_control_forms`, and this site is what will show it landing.
+export async function onAwait(n: number): Promise<number> {
+  return (await mkHolder()).pick(n);
+}
+// The receiver here is a String, not a value in this program: `concat` answers
+// through the built-in prototype. Its residue is the standard library.
+export function onTemplate(n: number): string { return `k${n}`.concat('!'); }
+
 export async function dyn(p: string) { return import(p); }

@@ -231,6 +231,36 @@ function useArr(n) {
   return [n, n].join('-');
 }
 
+// ---- FOUR OBJECT POSITIONS THAT USED TO SHARE ONE CATCH-ALL SHAPE. Measured
+// 2026-09-04: `(c ? a : b).m()` resolved and `(a || b).m()` did not, on the
+// same corpus in the same run, and both reported `s_member_on_other` — one
+// bucket, one verdict, two opposite truths. These four sites are what makes
+// each of them its own row. They RUN, so the oracle sees the edges and an
+// over-approximation here is caught rather than argued.
+const boxA = { pick(n) { trace(); return n + 1; } };
+const boxB = { pick(n) { trace(); return n + 2; } };
+
+export function useCond(n) {
+  trace();
+  return (n > 0 ? boxA : boxB).pick(n);
+}
+
+export function useSeq(n) {
+  trace();
+  return (0, boxA).pick(n);
+}
+
+export function useOr(n) {
+  trace();
+  return (boxA || boxB).pick(n);
+}
+
+export function useAssign(n) {
+  trace();
+  let held;
+  return (held = boxB).pick(n);
+}
+
 // ---- IIFE at the top level: the caller is the module, not a function
 const seeded = (function seed() {
   trace();
@@ -262,6 +292,10 @@ export function main() {
     useStatic(1),
     useOpt(1),
     useArr(1),
+    useCond(1),
+    useSeq(1),
+    useOr(1),
+    useAssign(1),
     run(1),
     seeded,
   ];

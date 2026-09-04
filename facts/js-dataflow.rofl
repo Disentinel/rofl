@@ -81,3 +81,15 @@ handled(js, this_expression,            dataflow, r_member_value).
 -- name `C` both reach the class node; the instance/class conflation that buys
 -- is declared in rules/js-dataflow.rofl and queued as w_df_instance_vs_class.
 handled(js, new_expression, dataflow, r_construct).
+
+-- BRANCHING VALUE FORMS, 2026-09-04. `a || b`, `a && b` and `a ?? b` are the
+-- same may-set union as a conditional's two branches — measured, not assumed:
+-- `(box || other).get()` resolved to nothing while `(flag ? box : other).get()`
+-- resolved, on the same corpus in the same run, and both reported the SAME
+-- callee shape. The two forms mean the same thing to a reader and one of them
+-- was invisible.
+--
+-- The callgraph cell for this kind stays open on purpose: the value rule is
+-- what is claimed here, and `(a || b)()` as a CALL callee has no site in the
+-- corpus, so a callgraph tick would be a claim nothing could check.
+handled(js, logical_expression, dataflow, r_value_logical).

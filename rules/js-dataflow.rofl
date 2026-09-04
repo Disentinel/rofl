@@ -372,3 +372,49 @@ may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, consequent, 0, X), may_be_node[flow](X, N).
 may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, alternate, 0, X), may_be_node[flow](X, N).
+
+-- ...and the same for a literal, which the branch rules above did not have.
+-- The asymmetry was invisible while no site needed it: `o[c ? "a" : "b"]()` is
+-- a computed key whose two possible values are both known at parse time, and
+-- without these two rows it reads as `s_computed_dynamic_key` — the one shape
+-- allowed to spend `runtime_dependent`. A may-set that carries nodes and not
+-- literals sends a decidable site to the irreducible verdict.
+may_be_lit[flow](E, V)  :- ast_node[code](E, conditional_expression, _, _),
+                           ast_child[code](E, consequent, 0, X), may_be_lit[flow](X, V).
+may_be_lit[flow](E, V)  :- ast_node[code](E, conditional_expression, _, _),
+                           ast_child[code](E, alternate, 0, X), may_be_lit[flow](X, V).
+
+-- ---------------------------------------------------------------------------
+-- A LOGICAL OPERATOR IS A CONDITIONAL WITH THE CONDITION SPELT AS AN OPERAND.
+-- `a || b` is `a` when a is truthy and `b` otherwise; `a && b` is `a` when a is
+-- falsy and `b` otherwise; `a ?? b` is `a` unless a is nullish. In all three
+-- BOTH operands are possible values and neither is excluded by anything this
+-- layer can see, so the may-set is the union — the same answer as a
+-- conditional's two branches, and for the same reason.
+--
+-- Measured before it was written: `(box || other).get(n)` resolved to nothing,
+-- and `(flag ? box : other).get(n)` resolved, on the same corpus, in the same
+-- run. The two forms mean the same thing to a reader and one of them was
+-- invisible.
+may_be_node[flow](E, N) :- ast_node[code](E, logical_expression, _, _),
+                           ast_child[code](E, left, 0, X), may_be_node[flow](X, N).
+may_be_node[flow](E, N) :- ast_node[code](E, logical_expression, _, _),
+                           ast_child[code](E, right, 0, X), may_be_node[flow](X, N).
+may_be_lit[flow](E, V)  :- ast_node[code](E, logical_expression, _, _),
+                           ast_child[code](E, left, 0, X), may_be_lit[flow](X, V).
+may_be_lit[flow](E, V)  :- ast_node[code](E, logical_expression, _, _),
+                           ast_child[code](E, right, 0, X), may_be_lit[flow](X, V).
+
+-- ---------------------------------------------------------------------------
+-- AN ASSIGNMENT'S VALUE IS ITS RIGHT-HAND SIDE — and only for a PLAIN one.
+-- `(x = o).m()` is `o.m()`; `(x += o).m()` is not, because the value is the sum
+-- and this layer knows nothing about sums. The `operator` guard is the whole
+-- difference and it is the same lesson the era layer paid for one commit ago:
+-- the KIND is not the operation, the operator attribute is.
+plain_assign[flow](E) :- ast_node[code](E, assignment_expression, _, _),
+                         ast_attr[code](E, operator, "=").
+
+may_be_node[flow](E, N) :- plain_assign[flow](E),
+                           ast_child[code](E, right, 0, X), may_be_node[flow](X, N).
+may_be_lit[flow](E, V)  :- plain_assign[flow](E),
+                           ast_child[code](E, right, 0, X), may_be_lit[flow](X, V).

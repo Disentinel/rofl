@@ -116,6 +116,20 @@ shape_of(js, member_expression, s_member_on_array).
 shape_of(js, member_expression, s_member_on_new).
 shape_of(js, member_expression, s_member_on_object_literal).
 shape_of(js, member_expression, s_member_on_literal).
+-- EIGHT SPLIT OUT OF THE CATCH-ALL, 2026-09-04. `s_member_on_other` carried
+-- every object position the classifier did not name, and a probe with one site
+-- per position showed the bucket holding FOUR different answers at once: four
+-- forms that already resolved, two that needed one value rule each, one owned
+-- by the control-form item and one that is the standard library. A single cell
+-- reported `not_yet` for all of them.
+shape_of(js, member_expression, s_member_on_conditional).
+shape_of(js, member_expression, s_member_on_sequence).
+shape_of(js, member_expression, s_member_on_logical).
+shape_of(js, member_expression, s_member_on_assignment).
+shape_of(js, member_expression, s_member_on_await).
+shape_of(js, member_expression, s_member_on_template).
+shape_of(js, member_expression, s_member_on_cast).
+shape_of(js, member_expression, s_member_on_non_null).
 shape_of(js, member_expression, s_member_on_other).
 shape_of(js, member_expression, s_computed_literal_key).
 shape_of(js, member_expression, s_computed_dynamic_key).
@@ -168,6 +182,21 @@ handled(js, optional_member_expression, s_optional_member,  callgraph, r_denotes
 handled(js, member_expression, s_member_on_super,          callgraph, r_denotes).
 handled(js, member_expression, s_member_on_new,            callgraph, r_denotes).
 handled(js, member_expression, s_member_on_object_literal, callgraph, r_denotes).
+
+-- SIX MORE, 2026-09-04, and the split is what made the verdicts differ.
+-- FOUR NEEDED NOTHING BUT A NAME — the value layer already saw through a
+-- conditional, a sequence and both TypeScript wrappers, so the sites resolved
+-- the moment the classifier stopped lumping them together.
+handled(js, member_expression, s_member_on_conditional, callgraph, r_denotes).
+handled(js, member_expression, s_member_on_sequence,    callgraph, r_denotes).
+handled(js, member_expression, s_member_on_cast,        callgraph, r_denotes).
+handled(js, member_expression, s_member_on_non_null,    callgraph, r_denotes).
+-- TWO COST ONE VALUE RULE EACH, in rules/js-dataflow.rofl. `a || b` is the
+-- same may-set as `c ? a : b` and was invisible next to it; `(x = o)` has the
+-- value of its right-hand side, and ONLY for a plain `=` — the operator guard
+-- is the difference between an assignment and a sum.
+handled(js, member_expression, s_member_on_logical,     callgraph, r_value_logical).
+handled(js, member_expression, s_member_on_assignment,  callgraph, r_value_assign).
 
 -- THE SYNTACTIC WRAPPERS, 2026-09-04, and all of them by ONE rule rather than
 -- five: `resolves[code](C, F) :- callee_of(C, N), may_be_node[flow](N, F),
@@ -230,6 +259,30 @@ unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scop
 -- `scope_unowned[audit]` names both, and it names them until they are settled.
 unknown_because(js, member_expression, s_member_on_literal, callgraph, not_yet).
 
+-- TWO OF THE SPLIT ARE OPEN AND EACH IS OWNED SOMEWHERE ELSE, which is the
+-- point of splitting them out rather than leaving them in a bucket whose
+-- verdict would have to be one word for both.
+--
+-- `(await p).m()` — `mkHolder()` on its own DOES reach the object through the
+-- return rule, so the only thing between this site and an edge is the `await`
+-- wrapper. That is `w_df_control_forms` in the queue, not a member question.
+unknown_because(js, member_expression, s_member_on_await, callgraph, not_yet).
+-- `` `k${n}`.concat() `` — the receiver is a String and `concat` answers
+-- through the built-in prototype. Not a value in this program at all; it is
+-- the standard library, which is `w_env_api_surface`.
+unknown_because(js, member_expression, s_member_on_template, callgraph, not_yet).
+
+-- AND THE CATCH-ALL ITSELF IS NOW EMPTY, WHICH IS ITS JOB. Every object
+-- position the probe found has a name of its own, so `s_member_on_other` holds
+-- nothing — and it must not read `not_yet`, because there is no form to model:
+-- the shape is the CATCHER, and a catcher with something in it is news rather
+-- than a backlog item. `catch_all_occupied[audit]` in rules/js-callgraph.rofl
+-- is that news, and this waiver is what stops the queue offering work whose
+-- subject nobody has seen. The pair is the same construction `s_unclassified`
+-- already has one level up, and it is the honest version of the `absent` that
+-- `s_parenthesized` showed means two different things.
+ignored(js, member_expression, s_member_on_other, callgraph, a_catch_all_empty_by_design).
+
 -- ---------------------------------------------------------------------------
 -- WHICH LAYER EACH VALUE BELONGS TO. The column is shared across layers and
 -- its vocabulary is not: every value below is a CALLEE shape, and a callee
@@ -251,6 +304,14 @@ shape_in(s_member_on_literal, callgraph).
 shape_in(s_member_on_member, callgraph).
 shape_in(s_member_on_new, callgraph).
 shape_in(s_member_on_object_literal, callgraph).
+shape_in(s_member_on_conditional, callgraph).
+shape_in(s_member_on_sequence, callgraph).
+shape_in(s_member_on_logical, callgraph).
+shape_in(s_member_on_assignment, callgraph).
+shape_in(s_member_on_await, callgraph).
+shape_in(s_member_on_template, callgraph).
+shape_in(s_member_on_cast, callgraph).
+shape_in(s_member_on_non_null, callgraph).
 shape_in(s_member_on_other, callgraph).
 shape_in(s_member_on_super, callgraph).
 shape_in(s_member_on_this, callgraph).

@@ -145,6 +145,11 @@ kind_needs(js, tstype_parameter_instantiation, type_syntax).
 kind_needs(js, tsunion_type,                type_syntax).
 kind_needs(js, tsfunction_type,             type_syntax).
 kind_needs(js, tsnull_keyword,              type_syntax).
+-- ...and two more the CALL-GRAPH corpus produced the day it gained a type
+-- alias, which is the frontier gate doing its job on a corpus this table's
+-- author did not shape.
+kind_needs(js, tstype_alias_declaration,    type_syntax).
+kind_needs(js, tstype_query,                type_syntax).
 kind_needs(js, decorator,                   decorators).
 
 -- ---------------------------------------------------------------------------

@@ -117,16 +117,23 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('cell[audit](A, K, bare, callgraph)'), 0, 'no phantom cell');
   assert.equal(w.n('unearned_axis[audit](A, L)'), 0, 'both layers earn the column');
 
+  // `w_cg_member_family` appears four times: one finding it was created for and
+  // three the catch-all split found. An item that spawns nothing is either
+  // trivial or was not looked at.
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
-    ['w_cg_member_family', 'w_env_ledger_form', 'w_env_scan_failed',
+    ['w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
+     'w_env_ledger_form', 'w_env_scan_failed',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
-    'both dataflow items are done, so the call-graph residue is next');
+  // `w_cg_member_family` stood here until 2026-09-04: splitting its catch-all
+  // left it with nothing but the blocked template key, so it is skipped with a
+  // reason and the next offer moves on.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_call_result'],
+    'the member family has nothing workable left, so the call result is next');
 });
 
-test('the queue covers the model: 80 open cells, 11 claimed by name, 69 swept', () => {
+test('the queue covers the model: 83 open cells, 17 claimed by name, 70 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 80, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 83, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it: four items the era slice
   // found, plus the kernel item they wait on, entered so the dependency is a
   // row rather than a sentence in a comment.
@@ -136,9 +143,13 @@ test('the queue covers the model: 80 open cells, 11 claimed by name, 69 swept', 
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [24, 9, 19]);
+  // callgraph 24 -> 25 and claimed 9 -> 11: the catch-all split closed six
+  // cells and opened two that are now claimed BY NAME by the items that own
+  // them — the control-form item and the standard-library one — which is the
+  // queue handing work on rather than a bucket absorbing it.
+  assert.deepEqual(per('callgraph'), [26, 11, 19]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
-  assert.deepEqual(per('modules'), [38, 0, 38]);
+  assert.deepEqual(per('modules'), [39, 0, 39]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -188,8 +199,12 @@ test('MUTANT 3 — a sweep marked done while its layer still has open cells', ()
 test('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the defect docs/modelling-a-language.md fears by name: a filled matrix
   // looks finished. Here the model contradicts the claim of completion.
+  // ONE row now, not two: the split closed every cell this item owned except
+  // the blocked template key. And this is not only a mutant — the same row
+  // fired for real when the item was marked done in facts/worklist.rofl, which
+  // is how the state was corrected to `open` with `nothing_workable`.
   const w = world({ find: 'work_state(w_cg_member_family, open).', replace: 'work_state(w_cg_member_family, done).' });
-  assert.equal(w.n('false_done[audit](W, K, S, L)'), 2, 'one row per cell it did not close');
+  assert.equal(w.n('false_done[audit](W, K, S, L)'), 1, 'one row per cell it did not close');
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
@@ -210,16 +225,22 @@ test('MUTANT 7 — an item with no order and no state', () => {
 
 test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep', () => {
   const base = world();
-  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).' });
+  // THE ANCHOR MOVED 2026-09-04. It used to delete the claim on
+  // `s_member_on_other`, which no longer exists as an open cell — the catch-all
+  // was split and then waived. Its successor is one of the cells the split
+  // handed to another item, which is the same construction: a claim by name
+  // whose deletion leaves the cell open, owned by the layer's bucket, and
+  // every lie-detector quiet.
+  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_control_forms).' });
   // EVERY LIE-DETECTOR STAYS QUIET. The cell is still open, still owned — by
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
   assert.equal(base.n('sweeper(K, S, callgraph)'), 19);
   assert.equal(w.n('sweeper(K, S, callgraph)'), 20, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 8);
+  assert.equal(w.n('claimed(K, S, callgraph)'), 10);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
-    + ' swept 15 -> 16 is the whole signal');
+    + ' swept 19 -> 20 is the whole signal');
 });
 
 test('MUTANT 9 — a dependency the plan does not honour', () => {
@@ -227,7 +248,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_member_family']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_call_result']);
   // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
   // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
   // hold. That is the relation doing its job on a real premise rather than on a
@@ -240,7 +261,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // done — which is the whole content of the relation
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
   assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_call_result'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
@@ -268,7 +289,11 @@ test('a cell can be blocked by something that is not a work item', () => {
     'blocked cells are open and not workable');
 
   // AND THE ITEM THEY BELONG TO IS SKIPPED WITH A REASON, not silently:
-  assert.deepEqual(w.binds('nothing_workable[audit](W)', 'W'), ['w_cg_optional_member']);
+  // BOTH member items now, and they are siblings: the two template-key cells
+  // are blocked on the same scanner contract, and neither item has anything
+  // else left to do.
+  assert.deepEqual(w.binds('nothing_workable[audit](W)', 'W'),
+    ['w_cg_member_family', 'w_cg_optional_member']);
   assert.ok(!w.binds('next_work[audit](W)', 'W').includes('w_cg_optional_member'));
 });
 

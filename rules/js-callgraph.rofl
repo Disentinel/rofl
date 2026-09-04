@@ -101,6 +101,25 @@ obj_kind_class(object_expression,          o_object_literal).
 obj_kind_class(string_literal,             o_literal).
 obj_kind_class(numeric_literal,            o_literal).
 
+-- EIGHT KINDS THAT USED TO SHARE THE CATCH-ALL, split because they do not
+-- share a VERDICT. Measured on a probe corpus with one site per kind, all in
+-- one run: `conditional`, `sequence`, the two TypeScript wrappers and the
+-- parenthesis already RESOLVED and needed nothing but a name; `logical` and
+-- `assignment` needed one value rule each, now in rules/js-dataflow.rofl;
+-- `await` belongs to the control-form item and `template` answers through the
+-- String prototype, which is the standard library and a different programme.
+-- One bucket carrying four different answers reports the same `not_yet` for a
+-- form that works and a form nobody has started, which is the defect
+-- `s_parenthesized` already paid for one layer down.
+obj_kind_class(conditional_expression,     o_conditional).
+obj_kind_class(sequence_expression,        o_sequence).
+obj_kind_class(logical_expression,         o_logical).
+obj_kind_class(assignment_expression,      o_assignment).
+obj_kind_class(await_expression,           o_await).
+obj_kind_class(template_literal,           o_template).
+obj_kind_class(tsas_expression,            o_cast).
+obj_kind_class(tsnon_null_expression,      o_non_null).
+
 obj_kind_known(K)           :- obj_kind_class(K, _).
 obj_class[code](C, Cl)      :- callee_obj_kind[code](C, K), obj_kind_class(K, Cl).
 obj_class[code](C, o_other) :- callee_obj_kind[code](C, K), not obj_kind_known(K).
@@ -115,6 +134,14 @@ member_shape(o_array,          s_member_on_array).
 member_shape(o_new,            s_member_on_new).
 member_shape(o_object_literal, s_member_on_object_literal).
 member_shape(o_literal,        s_member_on_literal).
+member_shape(o_conditional,    s_member_on_conditional).
+member_shape(o_sequence,       s_member_on_sequence).
+member_shape(o_logical,        s_member_on_logical).
+member_shape(o_assignment,     s_member_on_assignment).
+member_shape(o_await,          s_member_on_await).
+member_shape(o_template,       s_member_on_template).
+member_shape(o_cast,           s_member_on_cast).
+member_shape(o_non_null,       s_member_on_non_null).
 member_shape(o_other,          s_member_on_other).
 
 -- A COMPUTED callee is the one place the taxonomy's `runtime_dependent` is
@@ -157,6 +184,15 @@ shape_known[code](C, S) :- static_member[code](C, _), not optional_member[code](
 has_shape[code](C)             :- shape_known[code](C, _).
 shape[code](C, S)              :- shape_known[code](C, S).
 shape[code](C, s_unclassified) :- call_site[code](C, _), not has_shape[code](C).
+
+-- ...AND THE SAME NEWS ONE LEVEL DOWN. `s_member_on_other` is the object-kind
+-- catcher, waived in facts/js-shapes.rofl as empty by design, and that waiver
+-- is only honest while it IS empty. A member callee whose object is a form
+-- `obj_kind_class` does not name — a function expression, a boolean literal, a
+-- regular expression, a class expression — lands here, and the row says so with
+-- the kind named so the split can continue rather than the bucket growing.
+catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
+                                callee_obj_kind[code](C, K).
 
 -- and the two ways totality can fail, each a positive row
 shaped[code](C)         :- shape[code](C, _).

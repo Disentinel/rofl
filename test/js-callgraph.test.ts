@@ -320,7 +320,17 @@ test('resolution: identifier, IIFE, and a local namespace object', () => {
   assert.ok(e.has('<top> -> seed'), 'tier 1b: an IIFE resolves to its own callee');
   assert.ok(e.has('useNs -> hello'), 'tier 2: object literal, shorthand method');
   assert.ok(e.has('useNs -> bye'), 'tier 2: object literal, property holding a function');
-  assert.deepEqual(m.binds('ambiguous_call[audit](C, F, G)', 'C'), [], 'no site resolves two ways');
+  // TWO SITES RESOLVE TWO WAYS, and both are branches. This assertion read
+  // `[]` until 2026-09-04, which was a fact about the CORPUS and not a
+  // requirement: `(n > 0 ? boxA : boxB).pick(n)` and `(boxA || boxB).pick(n)`
+  // are may-sets over two operands, so two answers is the rule doing exactly
+  // what its own comment says — "a must-analysis would have to decide; this one
+  // does not have to". Asserted by SHAPE rather than by node id, because the
+  // ids carry a per-file hash and would pin the fixture's byte layout.
+  const ambiguousShapes = [...new Set(m.binds('ambiguous_call[audit](C, F, G)', 'C')
+    .flatMap((c) => m.binds(`shape[code](${c}, S)`, 'S')))].sort();
+  assert.deepEqual(ambiguousShapes, ['s_member_on_conditional', 's_member_on_logical'],
+    'every site that resolves two ways is a branch, and no other kind of site does');
   // the file-agnostic view agrees with the file-scoped one on this corpus
   const named = new Set(m.binds('calls_named[code](A, B)', 'A', 'B'));
   for (const e of modelEdges(m)) assert.ok(named.has(e.replace('<top>', 'top')), `calls_named lost ${e}`);
@@ -405,7 +415,8 @@ test('TIER 4: one question — what object does this expression denote?', () => 
   // edge that must never appear.
   assert.ok(edges.has('useTrap -> pickB'), 'the value, not the name');
   assert.ok(!edges.has('useTrap -> pickA'), 'and never the name');
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 0, 'no site resolves two ways');
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 4,
+    'two branch sites, each reported in both orderings of its pair');
 });
 
 test('argument position is content: which function is in which slot', () => {
@@ -425,7 +436,7 @@ test('argument position is content: which function is in which slot', () => {
 test('every unresolved shape carries a typed verdict, and it type-checks', () => {
   const m = build();
   const residue = m.binds('unresolved_shape[audit](S)', 'S');
-  assert.equal(residue.length, 7, `positive control: ${residue.length} shapes with a residue`);
+  assert.equal(residue.length, 9, `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -523,7 +534,7 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // kinds the rules actually TOUCH — measured by kind_undeclared going 17 -> 0
   // — plus 4 the call graph must answer for and does not touch at all: the
   // control transfers that are not CallExpressions.
-  assert.equal(dKinds, 25, 'kinds the matrix did not know existed');
+  assert.equal(dKinds, 26, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -663,9 +674,9 @@ test('mutant 3 — forget which file a function was declared in', () => {
     replace: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, _, _), ast_name[code](E, Name),\n'
         + '                           ast_node[code](F, function_declaration, _, _),',
   }]);
-  assert.equal(base.ambiguous, 0, 'baseline: no site resolves two ways');
-  assert.ok(mut.ambiguous > 0, `mutant resolves ${mut.ambiguous} sites two ways`);
-  console.log(`  KILLED: ambiguous resolutions 0 -> ${mut.ambiguous}`);
+  assert.equal(base.ambiguous, 4, 'baseline: only the two branch sites');
+  assert.ok(mut.ambiguous > 4, `mutant resolves ${mut.ambiguous} sites two ways`);
+  console.log(`  KILLED: ambiguous resolutions 4 -> ${mut.ambiguous}`);
 });
 
 test('mutant 4 — drop the argument index: which value lands in which slot', () => {
@@ -702,16 +713,17 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 50, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 58, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
   const stale = mut.binds('shape_stale[audit](S)', 'S');
-  // TEN, not eleven-or-more: every shape whose excuse this mutant strands is a
-  // shape that still HAS one, and three of those excuses were retired as the
-  // model closed their cells. The threshold moves DOWN as the model improves,
-  // so it is pinned rather than bounded.
-  assert.equal(stale.length, 7, `the stale-verdict audit fires on ${stale.length} shapes`);
+  // Every shape whose excuse this mutant strands is a shape that still HAS one.
+  // The number moves in BOTH directions and is pinned rather than bounded: it
+  // falls as the model closes cells and retires their excuses, and it rises
+  // when a split gives a residue a row of its own — 7 -> 9 on 2026-09-04, when
+  // `s_member_on_await` and `s_member_on_template` came out of the catch-all.
+  assert.equal(stale.length, 9, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
@@ -922,9 +934,56 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   // precisely this reason, and it still cannot make the oracle see it.
   assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [],
     'the oracle is structurally blind here — if this ever fails, say so');
-  assert.equal(base.ambiguous, 0);
-  assert.ok(mut.ambiguous >= 4, `every this-site now resolves two ways: ${mut.ambiguous}`);
-  console.log(`  KILLED by ambiguous_call: 0 -> ${mut.ambiguous}, edge set UNMOVED`);
+  assert.equal(base.ambiguous, 4, 'the two branch sites, and nothing else');
+  assert.ok(mut.ambiguous >= 8, `every this-site now resolves two ways: ${mut.ambiguous}`);
+  console.log(`  KILLED by ambiguous_call: 4 -> ${mut.ambiguous}, edge set UNMOVED`);
+});
+
+test('mutant 18 — a catch-all that is waived as empty must be able to fill', () => {
+  // `s_member_on_other` is waived in facts/js-shapes.rofl as EMPTY BY DESIGN:
+  // every object position the classifier meets has a name of its own, so the
+  // catcher holds nothing and `not_yet` would be a backlog item for a form
+  // nobody has seen. A waiver nobody re-checks is how a table stops matching
+  // the grammar, so the waiver ships with the gate that watches it.
+  const base = build();
+  assert.equal(base.n('catch_all_occupied[audit](K)'), 0, 'baseline: the catcher is empty');
+
+  const mut = build([{
+    find: 'obj_kind_class(logical_expression,         o_logical).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.deepEqual(mut.binds('catch_all_occupied[audit](K)', 'K'), ['logical_expression'],
+    'the kind is NAMED, so the split can continue rather than the bucket growing');
+  console.log('  KILLED: catch_all_occupied 0 -> 1, and it names the kind');
+});
+
+test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot see it', () => {
+  // The two branch sites resolve two ways EACH, which is the may-set doing
+  // what it says. At runtime only one branch is taken, so the model has an
+  // edge the execution never produces — a genuine over-approximation, in the
+  // BASELINE and not in a mutant.
+  //
+  // The oracle reports 0 misses and 0 extras anyway, and the reason is the one
+  // mutant 16 already names for `Box.get` / `Crate.get`: a V8 frame carries the
+  // LAST DOT-SEGMENT of a name, so `boxA.pick` and `boxB.pick` are both `pick`
+  // and the two edges are spelled identically. This test states the wrong
+  // answer rather than leaving the silence to look like agreement.
+  const m = build();
+  const pairs = m.q('ambiguous_call[audit](C, F, G)');
+  assert.equal(pairs.length, 4, 'two sites, both orderings');
+  for (const [, f, g] of pairs) {
+    const nf = m.binds(`fn_name[code](${f}, N)`, 'N');
+    const ng = m.binds(`fn_name[code](${g}, N)`, 'N');
+    assert.deepEqual(nf, ng,
+      'the two targets share a name, which is exactly why the oracle collapses them');
+  }
+  // ...and the collapse is visible in the model's own by-name view: two nodes,
+  // one named edge. If somebody later adds an ambiguous site whose targets have
+  // DIFFERENT names, the loop above goes red and the oracle becomes able to see
+  // an over-approximation it cannot see today — which is news, not breakage.
+  const named = new Set(m.binds('calls_named[code](A, B)', 'A', 'B'));
+  assert.ok(named.has('useCond -> pick'));
+  assert.ok(named.has('useOr -> pick'));
 });
 
 // MUTANT 17 WAS DELETED 2026-09-04 with its subject. It mutated `denotes` in

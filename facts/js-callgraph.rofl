@@ -40,6 +40,11 @@ node_kind(js, arrow_function_expression).
 node_kind(js, class_method).
 node_kind(js, conditional_expression).
 node_kind(js, sequence_expression).
+-- 2026-09-04: the rules read it as a callee object and the VALUE layer now
+-- unions its two operands, so it is part of this layer's vocabulary.
+-- `unrecorded_vocabulary[audit]` caught it — a kind the rules touch and
+-- `node_kind` did not declare — the same run it was first mentioned.
+node_kind(js, logical_expression).
 node_kind(js, tsnon_null_expression).
 -- the PROPERTY of a computed callee is read by the rules too, so its kinds are
 -- part of the layer's vocabulary
@@ -81,6 +86,7 @@ unknown_because(js, optional_member_expression, callgraph, not_yet).
 unknown_because(js, conditional_expression,  callgraph, not_yet).
 unknown_because(js, sequence_expression,     callgraph, not_yet).
 unknown_because(js, tsnon_null_expression,   callgraph, not_yet).
+unknown_because(js, logical_expression,      callgraph, not_yet).
 -- the receiver is a host literal and its methods belong to the runtime, not to
 -- any corpus this analyser can be pointed at
 unknown_because(js, array_expression,        callgraph, out_of_scope).
@@ -178,6 +184,18 @@ shape_because(js, s_computed_template_key, callgraph, not_yet).
 -- built-in prototypes is a real question with a real answer; `scope_unowned`
 -- keeps it on the table until somebody with the authority answers it.
 shape_because(js, s_member_on_literal,     callgraph, not_yet).
+-- TWO NEW RESIDUES from the 2026-09-04 split of the object-position catch-all,
+-- and each is owned by a DIFFERENT item, which is why they are two rows and
+-- not one bucket: `(await p).m()` waits on the control-form work and
+-- `` `s`.m() `` answers through the String prototype.
+shape_because(js, s_member_on_await,       callgraph, not_yet).
+shape_because(js, s_member_on_template,    callgraph, not_yet).
+-- `s_member_on_other` KEEPS ITS ROW even though the matrix now waives the
+-- cell, and the distinction is the one this file's header draws: the frontier
+-- reason describes the RESIDUE OF A SHAPE, and the catcher has a residue the
+-- moment anything lands in it. `unresolved_shape[audit]` reads this relation,
+-- not the matrix, so removing the row would make an occupied catcher silent
+-- exactly when it matters.
 shape_because(js, s_member_on_other,       callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
 shape_because(js, s_super,                 callgraph, not_yet).
