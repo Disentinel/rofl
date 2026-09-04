@@ -260,12 +260,26 @@ orphan_reason[audit](Lang, K, L) :- orphan[audit](unknown_because, Lang, K, L).
 edb(axis).
 edb(axis_applies).
 edb(shape_of).
+-- WHICH LAYER A REFINEMENT VALUE BELONGS TO. Added 2026-09-04, and the reason
+-- is a defect rather than a design: `import_declaration x modules` was `handled`
+-- AND carried two live excuses — the rule resolves a relative specifier while a
+-- bare one is out of scope and a subpath one is not done — so `stale_reason`
+-- reported three FALSE rows in the only world that holds all the fact packs.
+-- The cell is PARTIAL and a matrix keyed by kind cannot say so. That is the
+-- member_expression limit arriving in a second layer.
+--
+-- ONE COLUMN, PER-LAYER VOCABULARIES. A callee shape really does say nothing
+-- about a module graph, exactly as facts/js-shapes.rofl argues — so the column
+-- is shared and its VALUES are not. `shape_in` is what stops a specifier shape
+-- minting a phantom cell in the call graph, and it is why declaring the modules
+-- refinement costs one premise rather than a fifth argument.
+edb(shape_in).
 
 -- A kind the axis SPLITS. A kind with no declared shape is ATOMIC for this
 -- axis even in a layer where the axis applies, and it keeps exactly one cell.
 -- Without this the refinement would delete `if_statement x callgraph` — a cell
 -- somebody deliberately waived — from the table entirely.
-shape_kind[audit](Lang, K) :- shape_of(Lang, K, _).
+shape_kind[audit](Lang, K, Lay) :- shape_of(Lang, K, S), shape_in(S, Lay).
 
 -- THE CELL, AT THREE AXES. Same name, one more argument. This kernel keys a
 -- relation by NAME and unifies by ARITY, so `cell[audit]/3` above keeps
@@ -281,8 +295,8 @@ cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
                                     not axis_applies(shape, Lay).
 cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
                                     axis_applies(shape, Lay),
-                                    not shape_kind[audit](Lang, K).
-cell[audit](Lang, K, Shape, Lay) :- shape_of(Lang, K, Shape), layer(Lay),
+                                    not shape_kind[audit](Lang, K, Lay).
+cell[audit](Lang, K, Shape, Lay) :- shape_of(Lang, K, Shape), shape_in(Shape, Lay),
                                     axis_applies(shape, Lay).
 
 -- THE REFINEMENT IS A PARTITION OF THE COARSE MATRIX, and both directions are
@@ -335,10 +349,10 @@ shaped_because[audit](Lang, K, none, Lay, R) :- unknown_because(Lang, K, Lay, R)
                                                 cell[audit](Lang, K, none, Lay).
 
 coarser_claim[audit](Lang, K, Lay, R) :- handled(Lang, K, Lay, R),
-                                         shape_kind[audit](Lang, K),
+                                         shape_kind[audit](Lang, K, Lay),
                                          axis_applies(shape, Lay).
 coarser_claim[audit](Lang, K, Lay, R) :- ignored(Lang, K, Lay, R),
-                                         shape_kind[audit](Lang, K),
+                                         shape_kind[audit](Lang, K, Lay),
                                          axis_applies(shape, Lay).
 
 -- THE DEFAULT SURVIVES THE REFINEMENT, which is the one property that may not

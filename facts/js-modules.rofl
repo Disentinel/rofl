@@ -122,25 +122,67 @@ shape_verdict(computed,     runtime_dependent).
 -- reason missing for something that happens, and a reason recorded for
 -- something that never does.
 --
+-- THE REFINEMENT, ADDED 2026-09-04, AND WHY THE COARSE ROWS BELOW ARE GONE.
+-- These three were written as facts about a KIND, and all three were true at
+-- once while the same kind was also `handled` — because the rule really does
+-- resolve a relative specifier while a bare one is out of scope and a subpath
+-- one is not done. A matrix keyed by kind reads that as an excuse outliving its
+-- cause: `stale_reason[audit]` fired three FALSE rows in the only world that
+-- loads every fact pack, and no test built that world. The cell was PARTIAL,
+-- which is the member_expression limit arriving in a second layer.
+--
+-- The refinement is the SPECIFIER, and it is not invented here: rules/
+-- js-modules.rofl already derives `src_shape` over exactly these four forms.
+-- The values ride the shared refinement column and `shape_in` keeps them out of
+-- the call graph, where a specifier means nothing.
+axis_applies(shape, modules).
+
+-- THE VALUES ARE THE ONES THE MODEL ALREADY DERIVES. `src_shape` in
+-- rules/js-modules.rofl classifies every specifier as relative, node_builtin,
+-- bare or subpath, and `shape_verdict` below already maps each to a verdict.
+-- The first draft of this block invented a parallel `sp_*` vocabulary and was
+-- wrong for the reason this repository keeps paying for: a second name for a
+-- thing that already has one is a table that can disagree with itself.
+shape_of(js, import_declaration, relative).
+shape_of(js, import_declaration, node_builtin).
+shape_of(js, import_declaration, bare).
+shape_of(js, import_declaration, subpath).
+shape_of(js, import_expression,  relative).
+shape_of(js, import_expression,  node_builtin).
+-- NOT bare and NOT subpath for a dynamic import: `reason_unexercised[audit]`
+-- said no when both were declared, because this corpus contains neither and a
+-- reason recorded for something that never happens is decoration.
+-- only a dynamic import can have a specifier that is not text at all
+shape_of(js, import_expression,  computed).
+
+shape_in(relative,     modules).
+shape_in(node_builtin, modules).
+shape_in(bare,         modules).
+shape_in(subpath,      modules).
+shape_in(computed,     modules).
+
 -- out_of_scope: a bare specifier is a package name and resolving it means
 -- walking node_modules, reading package.json "exports", and following the
 -- conditions map. 1.5% of this repository's imports; deliberately out.
-unknown_because(js, import_declaration, modules, out_of_scope).
+unknown_because(js, import_declaration, bare, modules, out_of_scope).
 
 -- not_yet: `#foo` needs the importing package's package.json "imports" map.
 -- Zero occurrences in this repository and it still needs a verdict, because
 -- the denominator is babel's grammar rather than the corpus.
-unknown_because(js, import_declaration, modules, not_yet).
+unknown_because(js, import_declaration, subpath, modules, not_yet).
 
--- runtime_dependent: THE irreducible cell. `import(pathVar)` names a module
--- that does not exist until the expression is evaluated. One site in the
--- whole 802-import corpus, and no module-graph rule recovers it.
-unknown_because(js, import_expression, modules, runtime_dependent).
+-- runtime_dependent: THE irreducible cell, and now it is a cell rather than a
+-- kind. `import(pathVar)` names a module that does not exist until the
+-- expression is evaluated; `import("./x.js")` is an ordinary edge, and before
+-- the refinement those two shared one row.
+unknown_because(js, import_expression, computed, modules, runtime_dependent).
 
 -- ---------------------------------------------------------------------------
 -- THE CELLS, CLAIMED.
-handled(js, import_declaration,          modules, r_import_decl_module_edge).
-handled(js, import_expression,           modules, r_dynamic_import_literal).
+handled(js, import_declaration, relative,     modules, r_import_decl_module_edge).
+handled(js, import_declaration, node_builtin, modules, r_import_decl_module_edge).
+handled(js, import_expression,  relative,     modules, r_dynamic_import_literal).
+handled(js, import_expression,  node_builtin, modules, r_dynamic_import_literal).
 handled(js, import_specifier,            modules, r_named_binding).
 handled(js, import_default_specifier,    modules, r_default_binding).
 handled(js, import_namespace_specifier,  modules, r_namespace_binding).

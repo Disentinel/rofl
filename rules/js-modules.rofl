@@ -293,11 +293,16 @@ shape_without_verdict[audit](computed) :- site_source_computed[code](_),
 -- ...and every unresolved shape must carry a recorded reason, in BOTH
 -- directions: a reason missing for something that happens is under-reporting,
 -- and a reason recorded for something that never happens is decoration.
+-- BOTH SIDES NOW CARRY THE SHAPE. Until 2026-09-04 the reason was recorded per
+-- KIND, so a reason filed for `import_declaration` satisfied this check for
+-- EVERY shape of it — which is how one kind came to hold a rule and two live
+-- excuses at once, and made `stale_reason[audit]` report a false positive. The
+-- join is on (kind, shape) now, which is strictly narrower.
 reason_missing[audit](K, Sh, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
                                    shape_verdict(Sh, R), R != resolves,
-                                   not unknown_because(js, K, modules, R).
+                                   not unknown_because(js, K, Sh, modules, R).
 
-reason_unexercised[audit](K, R) :- unknown_because(js, K, modules, R),
+reason_unexercised[audit](K, R) :- unknown_because(js, K, Sh, modules, R),
                                    not reason_earned[audit](K, R).
 reason_earned[audit](K, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
                               shape_verdict(Sh, R).

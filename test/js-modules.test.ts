@@ -466,12 +466,12 @@ const GATES: { goal: string; why: string; plant: BuildOpts }[] = [
   {
     goal: 'reason_missing[audit](K, Sh, R)',
     why: 'an unresolved shape with no recorded reason',
-    plant: { facts: (s) => s.replace('unknown_because(js, import_declaration, modules, out_of_scope).', '') },
+    plant: { facts: (s) => s.replace('unknown_because(js, import_declaration, bare, modules, out_of_scope).', '') },
   },
   {
     goal: 'reason_unexercised[audit](K, R)',
     why: 'a reason recorded for something that never happens',
-    plant: { facts: (s) => s + '\nunknown_because(js, import_declaration, modules, budget_exhausted).\n' },
+    plant: { facts: (s) => s + '\nunknown_because(js, import_declaration, bare, modules, budget_exhausted).\n' },
   },
   {
     goal: 'resolve_gap[audit](I, Sh)',

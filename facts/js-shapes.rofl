@@ -154,3 +154,36 @@ unknown_because(js, optional_member_expression, s_computed_dynamic_key, callgrap
 -- the receiver is a host literal and its methods belong to the runtime rather
 -- than to any corpus this analyser can be pointed at
 unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scope).
+
+-- ---------------------------------------------------------------------------
+-- WHICH LAYER EACH VALUE BELONGS TO. The column is shared across layers and
+-- its vocabulary is not: every value below is a CALLEE shape, and a callee
+-- shape is a fact about a call. facts/js-modules.rofl declares its own values
+-- for the same column, and `shape_in` is what keeps the two sets from minting
+-- each other's cells.
+shape_in(s_call_result, callgraph).
+shape_in(s_computed_dynamic_key, callgraph).
+shape_in(s_computed_literal_key, callgraph).
+shape_in(s_computed_template_key, callgraph).
+shape_in(s_conditional, callgraph).
+shape_in(s_dynamic_import, callgraph).
+shape_in(s_identifier, callgraph).
+shape_in(s_iife, callgraph).
+shape_in(s_member_on_array, callgraph).
+shape_in(s_member_on_call, callgraph).
+shape_in(s_member_on_ident, callgraph).
+shape_in(s_member_on_literal, callgraph).
+shape_in(s_member_on_member, callgraph).
+shape_in(s_member_on_new, callgraph).
+shape_in(s_member_on_object_literal, callgraph).
+shape_in(s_member_on_other, callgraph).
+shape_in(s_member_on_super, callgraph).
+shape_in(s_member_on_this, callgraph).
+shape_in(s_new_result, callgraph).
+shape_in(s_non_null, callgraph).
+shape_in(s_optional_member, callgraph).
+shape_in(s_parenthesized, callgraph).
+shape_in(s_sequence, callgraph).
+shape_in(s_super, callgraph).
+shape_in(s_ts_as, callgraph).
+shape_in(s_unclassified, callgraph).

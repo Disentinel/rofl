@@ -18,9 +18,9 @@ claim_kind(queued).
 -- 1 — THE MATRIX ITSELF IS WRONG ABOUT A PARTIAL CELL. Before more cells are
 -- filled, because it decides at what granularity they are filled at all.
 work(w_mod_partial_cell,
-     "import_declaration x modules is handled AND carries two live excuses; stale_reason fires three false rows in the five-pack world").
+     "DONE 2026-09-04: the modules layer gained a specifier refinement, the three false stale_reason rows are gone").
 work_order(w_mod_partial_cell, 1).
-work_state(w_mod_partial_cell, open).
+work_state(w_mod_partial_cell, done).
 work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matrix_calls_that_a_stale_excuse).
 
 -- ===========================================================================

@@ -83,25 +83,38 @@ test('the five-pack world loads and the plan tells no lie', () => {
   assert.equal(w.n('bad_reason[audit](A, K, L, R)'), 0);
 });
 
-test('THE THREE ROWS NO SUBSET WORLD CONTAINS', () => {
+test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   const w = world();
-  // A correct audit reporting a false positive: all three excuses are ALIVE and
-  // the cells they sit on are `handled`, because the coverage is PARTIAL and a
-  // matrix keyed by kind cannot say so. Deleting them would be the error.
-  assert.deepEqual(w.binds('stale_reason[audit](A, K, L, R)', 'K', 'L', 'R'), [
-    'import_declaration/modules/not_yet',
-    'import_declaration/modules/out_of_scope',
-    'import_expression/modules/runtime_dependent',
-  ]);
-  // and the queue names who owns them, so the number above is not orphaned
+  // WHAT THIS WORLD SAID WHEN IT WAS FIRST BUILT: three rows of
+  // `stale_reason[audit]` — import_declaration/modules at out_of_scope and
+  // not_yet, import_expression/modules at runtime_dependent — a correct audit
+  // reporting a false positive, because all three excuses were ALIVE while the
+  // cells they sat on were `handled`. The coverage was PARTIAL and a matrix
+  // keyed by kind cannot say so. Deleting the rows would have been the error.
+  assert.deepEqual(w.binds('stale_reason[audit](A, K, L, R)', 'K', 'L', 'R'), []);
+  assert.deepEqual(w.binds('stale_reason[audit](A, K, S, L, R)', 'K', 'L', 'R'), []);
+
+  // WHAT CLOSED THEM: the specifier refinement. The same three statements are
+  // still made and each now names the shape it is true of, which is the only
+  // difference between an excuse and a frontier.
+  assert.deepEqual(w.binds('shaped_because[audit](A, K, S, modules, R)', 'K', 'S', 'R'), [
+    'import_declaration/bare/out_of_scope',
+    'import_declaration/subpath/not_yet',
+    'import_expression/computed/runtime_dependent',
+  ], 'the values are the ones rules/js-modules.rofl already derives, not a second vocabulary');
+  // and the refinement did not leak into the layer where a specifier is
+  // meaningless — that is what `shape_in` is for
+  assert.equal(w.n('cell[audit](A, K, bare, callgraph)'), 0, 'no phantom cell');
+  assert.equal(w.n('unearned_axis[audit](A, L)'), 0, 'both layers earn the column');
+
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'), ['w_mod_partial_cell']);
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_mod_partial_cell'],
-    'the granularity defect is taken before more cells are filled');
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
+    'item 1 is done, so the queue hands over the call graph residue');
 });
 
-test('the queue covers the model: 108 open cells, 48 claimed by name, 60 swept', () => {
+test('the queue covers the model: 110 open cells, 48 claimed by name, 62 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 108, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 110, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 13);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
@@ -110,12 +123,13 @@ test('the queue covers the model: 108 open cells, 48 claimed by name, 60 swept',
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
   assert.deepEqual(per('callgraph'), [39, 24, 15]);
   assert.deepEqual(per('dataflow'), [35, 24, 11]);
-  assert.deepEqual(per('modules'), [34, 0, 34]);
+  assert.deepEqual(per('modules'), [36, 0, 36]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
   // notice a cell quietly moving between the two halves.
   assert.deepEqual(w.binds('irreducible_unknown[audit](A, K, S, L)', 'K', 'S', 'L'), [
+    'import_expression/computed/modules',
     'import_expression/none/callgraph',
     'import_expression/none/dataflow',
     'member_expression/s_computed_dynamic_key/callgraph',

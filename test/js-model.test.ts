@@ -525,7 +525,7 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   assert.equal(n(r, 'axis(A)'), 1);
   assert.equal(n(r, 'axis_applies(A, L)'), 1, 'callgraph only — see facts/js-shapes.rofl');
   assert.equal(n(r, 'shape_of(A, B, S)'), 30);
-  assert.equal(n(r, 'shape_kind[audit](A, B)'), 15, 'kinds the axis splits');
+  assert.equal(n(r, 'shape_kind[audit](A, B, L)'), 15, 'kinds the axis splits, per layer');
 
   // PREDICTED ON PAPER, then measured:
   //   coarse 41 kinds x 2 layers                                   = 82
@@ -842,7 +842,7 @@ const NONE_NOT_APPLICABLE =
 const NONE_UNSPLIT =
   'cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),\n' +
   '                                    axis_applies(shape, Lay),\n' +
-  '                                    not shape_kind[audit](Lang, K).\n';
+  '                                    not shape_kind[audit](Lang, K, Lay).\n';
 
 // ---------------------------------------------------------------------------
 // SHAPE MUTANT 1 — applicability really cuts. KILLED.
@@ -900,14 +900,17 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
   assert.ok(r.holds('layer(modules)'));
   const f = fine(r);
   showFine('mutant 2 (shape applies to modules)', f);
-  // PREDICTED: coarse 41 x 3 = 123; fine 41 (dataflow) + 56 (callgraph)
-  // + 56 (modules) = 153. Every one of the 30 new SHAPED cells at modules is
-  // not_modelled with the default reason — 30 rows of arithmetic, 0 questions.
+  // REAIMED 2026-09-04. Until `shape_in` existed this minted 30 SHAPED cells
+  // at modules — a callee shape multiplied into a layer where it means nothing,
+  // 30 rows of pure arithmetic. It cannot any more: the column is shared and
+  // its VALUES are per-layer, so a layer that declares the axis without
+  // declaring any value of its own gets only the 41 unrefined `none` cells.
+  // The phantom is what the guard removed; the unearned row is what remains.
   assert.equal(counts(r).cell, 123, 'predicted 123 coarse');
-  assert.equal(f.cell, 153, 'predicted 153 fine');
-  assert.equal(f.cell - before.cell, 56);
-  assert.equal(n(r, 'reason[audit](A, B, S, modules, R)'), 56,
-               'every modules cell defaults; not one is answered');
+  assert.equal(f.cell, 138, '97 + 41 unrefined none-cells, and NOT one shaped cell');
+  assert.equal(f.cell - before.cell, 41);
+  assert.equal(n(r, 'cell[audit](A, K, s_member_on_this, modules)'), 0,
+               'no callee shape leaks into the module layer');
 
   // AND SOMETHING SAYS SO. The axis earns a layer only where refining it makes
   // the model say something different about two shapes of the SAME kind.
@@ -915,22 +918,24 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
     .map((x) => `${x.bindings['A']}/${x.bindings['L']}`).sort(), ['shape/modules']);
   assert.ok(r.holds('axis_earns[audit](shape, callgraph)'), 'and callgraph still earns it');
   assert.equal(n(shapeWorld(), 'unearned_axis[audit](A, L)'), 0, 'silent on the pristine tree');
-  console.log('      KILLED: cells 97 -> 153, unearned_axis[audit](shape, modules)');
+  console.log('      KILLED: cells 97 -> 138 (none-cells only), unearned_axis[audit](shape, modules)');
 });
 
 test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft declared', () => {
   // This one is not hypothetical: the draft of facts/js-shapes.rofl carried
   // `axis_applies(shape, dataflow)` on the argument that a callee's shape
   // matters to data flow too. It may well, one day; nothing models it today,
-  // so the row buys 15 more cells and no answers.
+  // so the row bought 15 more cells and no answers. SINCE `shape_in` it buys
+  // NOTHING AT ALL — the values are per-layer, so the row is inert as well as
+  // unearned, and the audit is the only thing left that notices it.
   const r = shapeWorld({ extra: 'axis_applies(shape, dataflow).\n' });
   assert.ok(r.holds('axis_applies(shape, dataflow)'), 'positive control');
   const f = fine(r);
   showFine('mutant 2b (shape applies to dataflow)', f);
-  assert.equal(f.cell, 112, 'predicted 97 + 15');
+  assert.equal(f.cell, 97, 'not one cell moves: no shape declares itself in dataflow');
   assert.deepEqual(r.query('unearned_axis[audit](A, L)').rows
     .map((x) => `${x.bindings['A']}/${x.bindings['L']}`).sort(), ['shape/dataflow']);
-  console.log('      KILLED: the brief\'s own draft row is refused, 97 -> 112 cells and 0 answers');
+  console.log('      KILLED: the brief\'s own draft row is refused — inert AND unearned');
 });
 
 // ---------------------------------------------------------------------------
@@ -967,7 +972,7 @@ test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
 test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   const rules = ruleMut(
     '                                    axis_applies(shape, Lay),\n' +
-    '                                    not shape_kind[audit](Lang, K).\n',
+    '                                    not shape_kind[audit](Lang, K, Lay).\n',
     '                                    axis_applies(shape, Lay).\n');
   assert.ok(rules.length < RULES.length, 'the mutation did not apply');
   assert.doesNotMatch(rules, /not shape_kind\[audit\]/);
