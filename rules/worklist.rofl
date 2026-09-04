@@ -57,6 +57,24 @@ reason_is_work(not_yet).
 reason_not_work(out_of_scope).
 reason_not_work(budget_exhausted).
 
+-- SCOPE IS THE OWNER'S WORD, NOT THE MODEL'S — and not mine. `out_of_scope`
+-- takes a cell OUT of the work queue, so writing one is deciding that nobody
+-- will ever do it, and that decision belongs to whoever owns the programme.
+-- Paid for on 2026-09-04: I wrote four of them in one session on my own
+-- judgement, each plausible, and every one of them quietly removed real work
+-- from the queue. Plausible is exactly the failure mode — an obviously wrong
+-- exclusion would have been caught.
+--
+-- So an `out_of_scope` cell with no recorded decision is a ROW, and it stays a
+-- row until somebody with the authority writes `scope_decided`. Note what this
+-- does NOT do: it does not overturn the verdict. The cell stays out of the
+-- offered work — an unsettled exclusion is not automatically work either — but
+-- it is never silent, which is the whole difference.
+edb(scope_decided).   -- scope_decided(Kind, Shape, Layer)  -- the owner said so
+
+scope_unowned[audit](K, S, L) :- reason[audit](js, K, S, L, out_of_scope),
+                                 not scope_decided(K, S, L).
+
 reason_unclassified[audit](R) :- unknown_type(R, ours),
                                  not reason_is_work(R), not reason_not_work(R).
 

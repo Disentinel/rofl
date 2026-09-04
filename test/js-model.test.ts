@@ -648,12 +648,13 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
     assert.ok(rr, `${s} carries no reason`);
     byReason.set(rr, [...(byReason.get(rr) ?? []), s]);
   }
-  // TWO out_of_scope now: `[1,2].map()` and `"str".toUpperCase()` are both
-  // methods on a built-in PROTOTYPE, which is the standard library and not the
-  // program. Same verdict, same reason, and inventing a prototype model is a
-  // different programme rather than a missing rule.
-  assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array', 's_member_on_literal']);
-  assert.equal(byReason.get('not_yet')?.length, 2);
+  // ONE out_of_scope, not two. `"str".toUpperCase()` went back to `not_yet` on
+  // 2026-09-04: I had matched it to its neighbour's exclusion, and scope is the
+  // owner's word. The neighbour keeps the verdict it came with — changing
+  // somebody else's recorded decision on a guess is the same overreach the
+  // other way — and `scope_unowned[audit]` names both until they are settled.
+  assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array']);
+  assert.equal(byReason.get('not_yet')?.length, 3);
 });
 
 // ---------------------------------------------------------------------------

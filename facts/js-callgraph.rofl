@@ -137,18 +137,21 @@ shape_because(js, s_identifier,            callgraph, not_yet).
 -- vocabulary above, and the two audits are what keep the difference honest.
 -- the residue is an AMBIENT receiver: `bag['fixed']` where `bag` is a
 -- `declare const` with no initialiser, so there is no value in the program to
--- find. Out of scope rather than not_yet — the implementation is elsewhere.
-shape_because(js, s_computed_literal_key,  callgraph, out_of_scope).
+-- find. REVERTED TO not_yet 2026-09-04: I had written out_of_scope, and scope
+-- is the owner's word rather than mine. Reading a `.d.ts` is undone, not
+-- excluded, until somebody with the authority says otherwise.
+shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 
 -- `s_non_null` IS TICKED AND STILL HAS RESIDUE, which is what this table is
 -- for and `unknown_because` is not: the cell is modelled — `notNull!(n)`
 -- resolves through the value layer — while `maybe!(n)` does not, because
--- `maybe` is an AMBIENT declaration and an ambient declaration has no value in
--- the program by definition. That is out_of_scope rather than not_yet: the
--- implementation is elsewhere, not undone. Note the division of labour the two
--- tables have: `shape_because` describes the RESIDUE OF A SHAPE and may stand
--- beside a tick; `unknown_because` describes an UNMODELLED CELL and may not.
-shape_because(js, s_non_null,              callgraph, out_of_scope).
+-- `maybe` is an AMBIENT declaration with no value in the program. REVERTED TO
+-- not_yet for the same reason as above: an ambient declaration's type is
+-- readable in principle, so this is undone rather than excluded, and excluding
+-- it is not my call. Note the division of labour the two tables have:
+-- `shape_because` describes the RESIDUE OF A SHAPE and may stand beside a
+-- tick; `unknown_because` describes an UNMODELLED CELL and may not.
+shape_because(js, s_non_null,              callgraph, not_yet).
 -- knowable at parse time, and absent from the fact vocabulary: see
 -- `template_literal` above. NOT runtime_dependent.
 shape_because(js, s_computed_template_key, callgraph, not_yet).
@@ -168,11 +171,13 @@ shape_because(js, s_computed_template_key, callgraph, not_yet).
 -- read as if it were about the MODEL, which is the difference a site settles
 -- and an argument cannot.
 -- `"str".toUpperCase()` and the like: the receiver is a primitive and the
--- method lives on its PROTOTYPE, which is the standard library rather than the
--- program. Same verdict as `s_member_on_array` and for the same reason — this
--- model has no notion of a built-in prototype, and inventing one is a
--- different programme, not a missing rule.
-shape_because(js, s_member_on_literal,     callgraph, out_of_scope).
+-- method lives on its PROTOTYPE. REVERTED TO not_yet 2026-09-04. I had matched
+-- it to `s_member_on_array`'s out_of_scope, and that was overreach twice over:
+-- scope is the owner's word, and `s_member_on_array` carries a verdict I did
+-- not write and cannot confirm either. Whether this model ever describes
+-- built-in prototypes is a real question with a real answer; `scope_unowned`
+-- keeps it on the table until somebody with the authority answers it.
+shape_because(js, s_member_on_literal,     callgraph, not_yet).
 shape_because(js, s_member_on_other,       callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
 shape_because(js, s_super,                 callgraph, not_yet).

@@ -78,6 +78,11 @@ const LIES = [
   'blocker_stale[audit](K, S, L)',
 ];
 
+/** `scope_unowned` is NOT in that list: it is expected to be non-empty. It
+ *  names the exclusions nobody with the authority has confirmed, and an empty
+ *  list would mean either every scope question is settled or the audit stopped
+ *  looking. The rows are pinned instead. */
+
 test('the five-pack world loads and the plan tells no lie', () => {
   const w = world();
   for (const lie of LIES) assert.equal(w.n(lie), 0, lie);
@@ -118,16 +123,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'both dataflow items are done, so the call-graph residue is next');
 });
 
-test('the queue covers the model: 79 open cells, 11 claimed by name, 68 swept', () => {
+test('the queue covers the model: 80 open cells, 11 claimed by name, 69 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 79, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 80, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 14);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [23, 9, 18]);
+  assert.deepEqual(per('callgraph'), [24, 9, 19]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
   assert.deepEqual(per('modules'), [38, 0, 38]);
 
@@ -206,8 +211,8 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 18);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 19, 'specificity leaked into the bucket');
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 19);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 20, 'specificity leaked into the bucket');
   assert.equal(w.n('claimed(K, S, callgraph)'), 8);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
@@ -279,4 +284,21 @@ test('MUTANT 11 — a blocker on a cell that is no longer open', () => {
   assert.equal(mut.n('blocker_stale[audit](K, S, L)'), 1, 'a blocker outliving its cell');
   const bad = world({ extra: 'cell_blocked(member_expression, s_member_on_other, callgraph, vibes).' });
   assert.deepEqual(bad.binds('blocker_unknown[audit](K, S, L, C)', 'C'), ['vibes']);
+});
+
+test('an exclusion nobody owns is a row, not a silence', () => {
+  const w = world();
+  // `out_of_scope` takes a cell OUT of the work queue, so writing one decides
+  // that nobody will ever do it — the owner's call, not the model's and not
+  // mine. Four were written on my own judgement in one session before this was
+  // caught; each was plausible, which is exactly the failure mode.
+  assert.deepEqual(w.binds('scope_unowned[audit](K, S, L)', 'K', 'S', 'L'), [
+    'array_expression/none/callgraph',
+    'import_declaration/bare/modules',
+    'member_expression/s_member_on_array/callgraph',
+  ], 'three exclusions stand on nobody recorded — two of them predate this branch');
+
+  // and the audit really can go quiet, so a green reading would mean something
+  const settled = world({ extra: 'scope_decided(array_expression, none, callgraph).' });
+  assert.equal(settled.n('scope_unowned[audit](K, S, L)'), 2, 'one owner decision, one row fewer');
 });

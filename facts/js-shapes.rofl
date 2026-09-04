@@ -222,13 +222,13 @@ handled(js, member_expression,          s_member_on_call,       callgraph, r_den
 -- the receiver is a host literal and its methods belong to the runtime rather
 -- than to any corpus this analyser can be pointed at
 unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scope).
--- ...and `"str".toUpperCase()` for exactly the same reason, added 2026-09-04.
--- Both receivers answer through a BUILT-IN PROTOTYPE, which is the standard
--- library and not the program under analysis. Modelling it is a different
--- programme — it needs a model of the language's own objects — rather than a
--- rule this layer is missing, and the two tables agree: the frontier's
--- `shape_because` in facts/js-callgraph.rofl says out_of_scope too.
-unknown_because(js, member_expression, s_member_on_literal, callgraph, out_of_scope).
+-- ...and `"str".toUpperCase()`, which answers through the same built-in
+-- prototype. REVERTED TO not_yet 2026-09-04: I wrote out_of_scope here and
+-- scope is the owner's word. The neighbour above carries out_of_scope from
+-- before this branch and is left exactly as it was — changing somebody else's
+-- recorded decision on a guess is the same overreach in the other direction.
+-- `scope_unowned[audit]` names both, and it names them until they are settled.
+unknown_because(js, member_expression, s_member_on_literal, callgraph, not_yet).
 
 -- ---------------------------------------------------------------------------
 -- WHICH LAYER EACH VALUE BELONGS TO. The column is shared across layers and
