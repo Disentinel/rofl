@@ -288,3 +288,28 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _, _).
 may_be_node[flow](T, CD) :- ast_node[code](T, this_expression, _, _),
                             class_method_of[flow](CD, M), ast_within[code](M, T).
+
+-- ===========================================================================
+-- CONSTRUCTION — the rest of w_df_function_forms
+--
+-- `new C()` and the name `C` both reach the class node, and the model does NOT
+-- tell an instance from its class. DECLARED, because the difference is real:
+-- a static method belongs to the class and an ordinary method to an instance,
+-- so this conflation would accept `inst.staticOne()` and `C.instanceOne()`.
+-- It is not fixed here for a reason this repository keeps running into — the
+-- corpus contains no site that could show the difference, so a split would be
+-- a distinction no gate can see. It is queued as `w_df_instance_vs_class`
+-- rather than silently done or silently ignored.
+class_named[flow](CD, Name, File) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
+                                     ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
+
+-- the name of a class denotes the class
+may_be_node[flow](E, CD) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                            class_named[flow](CD, Name, File).
+
+-- and so does an expression that constructs one. THE ABSTRACTION IS THE
+-- CONFLATION ABOVE: an instance is represented by the class it came from,
+-- which is exactly enough to answer `.m` and not enough to refuse a static.
+may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, File, _),
+                            ast_child[code](E, callee, 0, CE), ast_name[code](CE, Name),
+                            class_named[flow](CD, Name, File).

@@ -92,6 +92,14 @@ function useCall(n) {
 
 // ---- this.m() inside a class, and `new C()`
 class Box {
+  // a STATIC method: reached on the class itself, not on an instance. It also
+  // constructs, so one site exercises the class lookup, the constructor edge
+  // and a return value that is an instance.
+  static make(n) {
+    trace();
+    return new Box(n);
+  }
+
   constructor(v) {
     trace();
     this.v = v;
@@ -109,6 +117,10 @@ function useClass(n) {
   trace();
   const b = new Box(1);
   return b.both(n);
+}
+function useStatic(n) {
+  trace();
+  return Box.make(n).get(n);
 }
 
 // ---- a SECOND class with the SAME method names. `this.get()` inside Box must
@@ -247,6 +259,7 @@ export function main() {
     useFirst(1),
     feedCb(1),
     useCrate(1),
+    useStatic(1),
     useOpt(1),
     useArr(1),
     run(1),

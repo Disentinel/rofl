@@ -71,7 +71,10 @@ handled(js, member_expression,         callgraph, r_call_edge).
 -- default that is never contradicted is indistinguishable from an oversight.
 unknown_because(js, this_expression,         callgraph, not_yet).
 unknown_because(js, super,                   callgraph, not_yet).
-unknown_because(js, new_expression,          callgraph, not_yet).
+-- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
+-- by the refinement column, so a KIND-level reason has no cell to sit on. The
+-- residue that remains is `s_new_result` — `(new C())()` — and it takes the
+-- default reason like every other unmodelled shape.
 unknown_because(js, optional_member_expression, callgraph, not_yet).
 unknown_because(js, conditional_expression,  callgraph, not_yet).
 unknown_because(js, sequence_expression,     callgraph, not_yet).

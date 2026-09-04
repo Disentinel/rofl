@@ -185,7 +185,14 @@ fn_name[code](F, N) :- ast_node[code](F, function_expression, _, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
 fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
                        ast_child[code](F, key, 0, K), ast_name[code](K, N).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+-- ...except a CONSTRUCTOR, which does not answer to the word `constructor` at
+-- run time: V8 reports the frame as `new Box`, and the rule below gives it the
+-- CLASS's name. Without this exclusion the constructor edge is derived twice —
+-- once correctly and once as `-> constructor`, an edge no execution produces.
+-- Measured the moment the constructor edge landed: over-approximation 0 to 2.
+ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
+                          ast_attr[code](F, kind, "constructor").
+fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), ast_name[code](K, N).
 fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, F),
@@ -379,6 +386,18 @@ resolves[code](C, F) :- callee_of[code](C, N), member_node[code](N),
                         ast_child[code](N, object, 0, Obj), denotes[code](Obj, O),
                         member_node_key[code](N, Key), member_fn[code](O, Key, F).
 
+-- THE CONSTRUCTOR EDGE. `new Box(1)` is the one edge the execution oracle saw
+-- from the beginning and no callee shape could ever carry, because it is not a
+-- CallExpression: the shape axis classifies what stands in the callee position,
+-- and here there is no callee position at all. It took a value question to
+-- answer — which class does this expression construct — and that is why the
+-- queue had it after the dataflow items rather than beside its neighbours.
+class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
+                           ast_attr[code](M, kind, "constructor").
+
+resolves[code](X, M) :- transfer_site[code](X, new_expression),
+                        may_be_node[flow](X, CD), class_ctor[code](CD, M).
+
 -- A site resolving two ways is an over-approximation that must be VISIBLE,
 -- not averaged away.
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
@@ -412,6 +431,10 @@ passes_function[code](C, I, F, Name) :- call_arg[code](C, I, A), ast_name[code](
 -- 6. THE FRONTIER, AS A POSITIVE RELATION
 
 resolved_site[code](C)      :- resolves[code](C, _).
+-- ...and the same restricted to CALL sites. `resolves` covers transfer sites
+-- since the constructor edge landed, so `resolved_site` no longer partitions
+-- the call sites on its own — the totality identity needs the narrower half.
+resolved_call[code](C)      :- resolved_site[code](C), call_site[code](C, _).
 unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
 unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
 
@@ -429,8 +452,14 @@ edb(shape_because).
 -- nothing to point at as the reason.
 frontier_at[code](F, S) :- nearest_fn[code](F, C), unresolved_call[code](C, S).
 frontier_at[code](R, S) :- top_call[code](C, R), unresolved_call[code](C, S).
-frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K).
-frontier_at[code](R, K) :- top_site[code](X, R), transfer_site[code](X, K).
+-- ...and a transfer site that RESOLVES is no longer frontier. Until the
+-- constructor edge existed every transfer site was residue by construction, so
+-- the negation had nothing to do and was left out; with a rule that can resolve
+-- one, leaving it out would keep an excuse alive beside the answer.
+frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K),
+                           not resolved_site[code](X).
+frontier_at[code](R, K) :- top_site[code](X, R), transfer_site[code](X, K),
+                           not resolved_site[code](X).
 
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
 frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
@@ -441,7 +470,8 @@ frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R
 -- one of them calls the imported `trace` — into "the exact site the runtime
 -- transferred from is on the list".
 frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File, Line).
-frontier_line[code](File, Line, K) :- transfer_site[code](X, K), ast_node[code](X, _, File, Line).
+frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
+                                      ast_node[code](X, _, File, Line).
 
 -- the CLOSED vocabulary of shapes, read off the classification tables rather
 -- than listed again: the denominator is the grammar, so a shape the corpus

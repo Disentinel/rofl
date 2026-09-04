@@ -61,10 +61,9 @@ claim(queued, js, optional_member_expression, s_computed_template_key,  callgrap
 -- 4 — the one miss that is not a callee shape at all: `new Box(1)` is a
 -- transfer site of a different node kind, which the callee-shape axis cannot
 -- see by construction.
-work(w_cg_new_expression, "new_expression: the constructor edge the oracle sees and the shape axis cannot").
+work(w_cg_new_expression, "DONE 2026-09-04: the constructor edge, through a second role of the kind on the refinement column").
 work_order(w_cg_new_expression, 6).
-work_state(w_cg_new_expression, open).
-claim(queued, js, new_expression, s_new_result, callgraph, w_cg_new_expression).
+work_state(w_cg_new_expression, done).
 
 -- 5 — syntactic wrappers around a callee. Mechanical: unwrap and ask again.
 -- Grouped because one rule shape closes all five, which is the test of whether
@@ -106,10 +105,9 @@ work_state(w_df_value_core, done).
 -- next: `param_bind` already exists in rules/js-callgraph.rofl, where tier 3
 -- built argument-to-parameter flow to resolve a callback. That is a DATAFLOW
 -- fact living in the call-graph pack, and this item is where it belongs.
-work(w_df_function_forms, "PART DONE 2026-09-04: arguments into parameters and return values; new_expression left, and param_bind still duplicates half of this in the callgraph pack").
+work(w_df_function_forms, "DONE 2026-09-04: arguments into parameters, return values, construction. param_bind still duplicates half of this in the callgraph pack").
 work_order(w_df_function_forms, 3).
-work_state(w_df_function_forms, open).
-claim(queued, js, new_expression,             none, dataflow, w_df_function_forms).
+work_state(w_df_function_forms, done).
 
 -- 9 — value movement through control constructs. This is the item that will
 -- ask for the control-flow layer, which is why that one sits right after it.
@@ -152,3 +150,15 @@ work(w_mod_sweep, "modules residue: kinds that cannot appear in a module graph")
 work_order(w_mod_sweep, 13).
 work_state(w_mod_sweep, open).
 work_sweeps(w_mod_sweep, modules).
+
+-- 14 — RAISED BY THE WORK IT CAME OUT OF, and deliberately not done in it.
+-- `new C()` and the name `C` both reach the class node, so the model does not
+-- tell an instance from its class: it would accept `inst.staticOne()` and
+-- `C.instanceOne()`. The corpus contains no site that could show the
+-- difference, so splitting them today is a distinction no gate can see — which
+-- is exactly the shape this session has been bitten by twice. It needs a
+-- fixture case first, and then it is small.
+work(w_df_instance_vs_class, "an instance is not its class: statics and instance methods are one lookup today").
+work_order(w_df_instance_vs_class, 14).
+work_state(w_df_instance_vs_class, open).
+claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).

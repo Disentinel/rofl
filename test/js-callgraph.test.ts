@@ -107,15 +107,21 @@ function buildFresh(mutations: Mutation[]): Model {
     assert.equal(res.ok, true, `${f} facts rejected:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   }
   for (const f of FACT_FILES) load(read(path.join(ROOT, f)), f);
-  for (const f of RULE_FILES) {
+  // ONE LOAD, NOT FOUR. Every `load` re-evaluates, and since the call graph and
+  // the value flow became one fixpoint that evaluation is the expensive part —
+  // loading the four packs separately paid for the cycle three times over.
+  // Concatenating them pays once. Measured: about 17s of world construction
+  // down to about 9s, with byte-identical answers.
+  const texts = RULE_FILES.map((f) => {
     let text = read(path.join(ROOT, f));
     for (const m of mutations) {
       if ((m.file ?? 'rules/js-callgraph.rofl') !== f) continue;
       assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
       text = text.replace(m.find, m.replace);
     }
-    load(text, f);
-  }
+    return text;
+  });
+  load(texts.join('\n'), RULE_FILES.join(' + '));
 
   const q = (lit: string): string[][] => {
     const res = r.query(lit);
@@ -424,7 +430,7 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // derives nothing satisfies every "is it explained" check trivially, and
   // only this identity notices that the sites went somewhere.
   const sites = m.n('call_site[code](C, F)');
-  const resolved = m.n('resolved_site[code](C)');
+  const resolved = m.n('resolved_call[code](C)');
   const residueSites = new Set(m.q('unresolved_call[code](C, S)').map(([c]) => c)).size;
   assert.equal(resolved + residueSites, sites,
     `${resolved} resolved + ${residueSites} unresolved != ${sites} call sites`);
@@ -582,10 +588,14 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
     }
     console.log(`    ${key.padEnd(24)} ${e.file}:${e.line}  <-  ${[...new Set(items)].sort().join(', ')}`);
   }
-  // `new Box(1)` is not a call site at all: the constructor edge is missed
-  // because new_expression is an unmodelled TRANSFER form, not a callee shape.
-  assert.equal(kindReasons.get('new_expression'), 'not_yet', 'the constructor edge has a verdict');
-  assert.ok(missed.some((e) => e.endsWith('-> Box')), 'and the oracle really did see it');
+  // `new Box(1)` WAS the standing example of a miss no callee shape could
+  // carry, because it is not a CallExpression at all. It is derived now, and
+  // the assertion is inverted rather than deleted: the edge the oracle sees is
+  // the edge the model has, and it is reached through a value question — which
+  // class does this expression construct — not through a shape.
+  assert.ok(!missed.some((e) => e.endsWith('-> Box')), 'the constructor edge is no longer missed');
+  assert.ok(model.has('useClass -> Box'), 'and the model really does derive it');
+  assert.equal(missed.length, 0, 'every edge the runtime took is derived');
 
   // over-approximation is expected and must be COUNTED, not waved through
   assert.ok(extra.length <= 2, `over-approximation grew to ${extra.length}: ${extra.join(', ')}`);
@@ -730,11 +740,20 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
     find: 'transfer_kind(new_expression).',
     replace: 'transfer_kind(no_such_kind).',
   }]));
+  // RE-AIMED 2026-09-04. The subject moved: a transfer site that RESOLVES is
+  // no longer frontier, so the baseline has nothing to attribute at the
+  // constructor site — it has an edge instead. What the mutant destroys now is
+  // the EDGE, and the oracle sees the loss directly.
   const ctor = o.list.find((e) => e.callee === 'Box');
   assert.ok(ctor, 'positive control: the oracle saw the constructor edge');
   const key = `${ctor!.file}:${ctor!.line}`;
-  assert.ok((base.get(key) ?? []).includes('new_expression'), 'the baseline attributes it');
-  assert.deepEqual(blind.get(key), undefined, 'the mutant has nothing at that site');
+  assert.deepEqual(base.get(key), undefined, 'the baseline resolves it, so it is not frontier');
+  assert.ok(modelEdges(build()).has('useClass -> Box'), 'the baseline derives the edge');
+  assert.ok(!modelEdges(build([{
+    find: 'transfer_kind(new_expression).',
+    replace: 'transfer_kind(no_such_kind).',
+  }])).has('useClass -> Box'), 'and the mutant loses it');
+  assert.deepEqual(blind.get(key), undefined, 'the mutant has nothing at that site either');
   // and the damage is LOCAL: every other missed edge is still attributed, so
   // the mutant is killed by the constructor site and not by a global collapse
   // PINNED, not bounded: this number FALLS as the model closes misses — it was
@@ -858,8 +877,14 @@ test('mutant 14 — a class is not an object: drop the class lookup', () => {
     replace: 'member_fn_unused[code](O, Key, F) :- class_member_fn[code](O, Key, F).',
   }]);
   const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
-  assert.deepEqual(lost, ['both -> get', 'useClass -> both', 'useCrate -> both'],
+  assert.deepEqual(lost, ['both -> get', 'useClass -> both', 'useCrate -> both',
+    'useStatic -> get', 'useStatic -> make'],
     'every edge through a class method, and nothing else');
+  // NOT lost: `make -> Box`. The constructor edge resolves through `class_ctor`
+  // over the dataflow pack's `class_method_of` and never touches this rule —
+  // worth naming, because a mutant that took everything would be a mutant that
+  // proved nothing about WHICH rule carries WHICH edge.
+  assert.ok(mut.edges.has('make -> Box'), 'the constructor edge has its own path');
   console.log(`  KILLED: ${lost.length} edges lost`);
 });
 

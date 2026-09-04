@@ -111,21 +111,21 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
 
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
     ['w_cg_member_family', 'w_mod_partial_cell']);
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_function_forms'],
-    'the value core is done; the call-graph items unblock as their premises land');
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
+    'both dataflow items are done, so the call-graph residue is next');
 });
 
-test('the queue covers the model: 97 open cells, 25 claimed by name, 72 swept', () => {
+test('the queue covers the model: 96 open cells, 24 claimed by name, 72 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 97, 'the queue is the model\'s open set');
-  assert.equal(w.n('work(W, Note)'), 13);
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 96, 'the queue is the model\'s open set');
+  assert.equal(w.n('work(W, Note)'), 14);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [39, 19, 20]);
-  assert.deepEqual(per('dataflow'), [19, 6, 13]);
+  assert.deepEqual(per('callgraph'), [39, 18, 21]);
+  assert.deepEqual(per('dataflow'), [18, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
@@ -149,7 +149,7 @@ test('MUTANT 1 — a claim on a kind nobody declares', () => {
   // `claim` rather than as a relation of its own. CLAUDE.md records what the
   // other choice costs: a new relation over the same arguments reopened the
   // whole vocabulary hole and nobody noticed.
-  const w = world({ extra: 'claim(queued, js, no_such_kind, none, dataflow, w_df_function_forms).' });
+  const w = world({ extra: 'claim(queued, js, no_such_kind, none, callgraph, w_cg_syntactic_wrappers).' });
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1, 'the inherited check bites');
   assert.equal(w.n('queue_stale[audit](W, K, S, L)'), 1, 'and the queue says it points at nothing open');
 });
@@ -158,13 +158,13 @@ test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
   // `s_member_on_this` exists, `dataflow` exists, and the CELL does not: the
   // shape axis applies to callgraph only. A pair of legal names is not a legal
   // cell, which is the check a per-argument vocabulary test would miss.
-  const w = world({ extra: 'claim(queued, js, member_expression, s_member_on_this, dataflow, w_df_function_forms).' });
+  const w = world({ extra: 'claim(queued, js, member_expression, s_member_on_this, dataflow, w_cg_syntactic_wrappers).' });
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1);
 });
 
 test('MUTANT 3 — a sweep marked done while its layer still has open cells', () => {
   const w = world({ find: 'work_state(w_df_sweep, open).', replace: 'work_state(w_df_sweep, done).' });
-  assert.equal(w.n('unqueued[audit](K, S, L)'), 13,
+  assert.equal(w.n('unqueued[audit](K, S, L)'), 12,
     'the residue goes straight back on the unqueued list');
 });
 
@@ -176,7 +176,7 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
-  const w = world({ extra: 'claim(queued, js, new_expression, s_new_result, callgraph, w_cg_member_family).' });
+  const w = world({ extra: 'claim(queued, js, tsas_expression, s_ts_as, callgraph, w_cg_member_family).' });
   assert.equal(w.n('double_owned[audit](K, S, L, A, B)'), 2, 'both orderings of the pair');
 });
 
@@ -193,14 +193,14 @@ test('MUTANT 7 — an item with no order and no state', () => {
 
 test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep', () => {
   const base = world();
-  const w = world({ find: 'claim(queued, js, new_expression, s_new_result, callgraph, w_cg_new_expression).' });
+  const w = world({ find: 'claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).' });
   // EVERY LIE-DETECTOR STAYS QUIET. The cell is still open, still owned — by
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 20);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 21, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 18);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 21);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 22, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 17);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });
@@ -210,22 +210,24 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_function_forms']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_member_family']);
   // ONE dependency is live now — the value core is done, so the two items that
   // waited on it are takeable and only `w_cg_call_result` still waits.
-  assert.equal(base.n('blocked[audit](W)'), 1, 'the call-result item waits on returns');
+  assert.equal(base.n('blocked[audit](W)'), 0, 'every premise has landed');
 
-  // with the dependency dropped, the queue hands out the item regardless of
-  // whether its premise exists
-  const mut = world({ find: 'work_needs(w_cg_call_result, w_df_function_forms).', replace: '' });
-  assert.equal(mut.n('blocked[audit](W)'), base.n('blocked[audit](W)') - 1);
+  // ADDING one makes the queue refuse to hand out an item whose premise is not
+  // done — which is the whole content of the relation
+  const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
+  assert.equal(mut.n('blocked[audit](W)'), 1);
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
+    'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
 
 test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
-  const unknown = world({ extra: 'work_needs(w_df_function_forms, w_no_such_item).' });
+  const unknown = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_no_such_item).' });
   assert.equal(unknown.n('needs_unknown[audit](W, O)'), 1);
-  const cyc = world({ extra: 'work_needs(w_df_function_forms, w_cg_call_result).' });
+  const cyc = world({ extra: 'work_needs(w_controlflow_layer, w_cg_syntactic_wrappers).\nwork_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
   assert.ok(cyc.n('needs_cycle[audit](W)') >= 2, 'both ends of the loop are named');
   console.log(`  KILLED: needs_unknown 1, needs_cycle ${cyc.n('needs_cycle[audit](W)')}`);
 });

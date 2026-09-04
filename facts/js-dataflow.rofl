@@ -76,3 +76,8 @@ handled(js, member_expression,          dataflow, r_member_value).
 handled(js, optional_member_expression, dataflow, r_member_value).
 handled(js, object_property,            dataflow, r_member_value).
 handled(js, this_expression,            dataflow, r_member_value).
+
+-- CONSTRUCTION (queue item w_df_function_forms, finished). `new C()` and the
+-- name `C` both reach the class node; the instance/class conflation that buys
+-- is declared in rules/js-dataflow.rofl and queued as w_df_instance_vs_class.
+handled(js, new_expression, dataflow, r_construct).

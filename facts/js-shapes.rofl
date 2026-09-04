@@ -85,6 +85,17 @@ shape_of(js, tsnon_null_expression,     s_non_null).
 shape_of(js, call_expression,           s_call_result).
 shape_of(js, optional_call_expression,  s_call_result).
 shape_of(js, new_expression,            s_new_result).
+-- THE SECOND ROLE OF THE SAME KIND, added 2026-09-04 with the constructor edge.
+-- `s_new_result` is `new C()` standing in the CALLEE position — `(new C())()`.
+-- `s_construct` is `new C()` doing what it usually does: constructing. Two
+-- roles, one kind, and the refinement column is what tells them apart — which
+-- is the same reading the modules layer already gave it, where the values are
+-- specifier shapes rather than callee shapes. Without this there is nowhere to
+-- record the constructor edge at all: the kind is split, so it has no unrefined
+-- cell, and the coarse `unknown_because` it used to carry became unreachable.
+shape_of(js, new_expression,            s_construct).
+shape_in(s_construct, callgraph).
+handled(js, new_expression, s_construct, callgraph, r_construct).
 shape_of(js, import,                    s_dynamic_import).
 shape_of(js, sequence_expression,       s_sequence).
 shape_of(js, parenthesized_expression,  s_parenthesized).
