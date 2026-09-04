@@ -38,6 +38,7 @@ const SILENT_CEILING = 0;
 const SWEEP_CAP = 1200;
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 const hostCanon = (src: string) => parseProgram(src).map(canonClause).sort().join('\n');
 
 test('ring 1 agrees with the host parser, clause for clause', () => {
@@ -148,4 +149,44 @@ test('ring 1 parses from the image exactly as it does from source', () => {
   const fromImg = canon(parse(src, fromImage(image())).clauses);
   assert.equal(fromImg, fromSrc);
   assert.equal(fromImg, hostCanon(src));
+});
+
+// --- the tower ------------------------------------------------------------
+//
+// L0 reads terms and facts and promotes `r/3` into rules — 178 lines, and the
+// point is that there is no third job. L1 is a grammar in that dense form. L2
+// is the full grammar in ordinary ROFL, read by L1. No image is required at
+// any step; the image is a 4.1x speed-up and nothing else.
+
+test('L0 loads the dense form to exactly the rules its source describes', async () => {
+  const { loadDense } = await import('../examples/ring1/l0.ts');
+  const { dense } = await import('../examples/ring1/dense.ts');
+  const { Rofl } = await import('../src/api.ts');
+
+  const src = read('examples', 'ring1', 'l1.rofl');
+  const reflection = (r: InstanceType<typeof Rofl>) =>
+    (JSON.parse(r.save()).facts as { rel: string; args: unknown }[])
+      .filter((f) => ['rule', 'concludes', 'conclusion_lit', 'premise_lit'].includes(f.rel))
+      .map((f) => f.rel + JSON.stringify(f.args)).sort().join('\n');
+
+  const viaSource = new Rofl();
+  viaSource.load(read('boot.rofl'), { budget: 200_000_000 });
+  viaSource.load(src, { budget: 200_000_000 });
+
+  const viaDense = new Rofl();
+  viaDense.load(read('boot.rofl'), { budget: 200_000_000 });
+  const n = loadDense(viaDense, dense(parseProgram(src)));
+
+  assert.ok(n.rules > 90, `expected the grammar's rules, got ${n.rules}`);
+  // THE ORACLE, and it is free and exact: the same reflection either way.
+  assert.equal(reflection(viaDense), reflection(viaSource));
+});
+
+test('l1.dense.rofl is REPRODUCIBLE from l1.rofl', async () => {
+  const { dense } = await import('../examples/ring1/dense.ts');
+  // The committed dense form is a GENERATED artifact, and this is what keeps
+  // it one. Unlike an image it is 11 KiB of readable facts, so the gate is a
+  // diff a person can also perform by eye.
+  assert.equal(dense(parseProgram(read('examples', 'ring1', 'l1.rofl'))),
+               read('examples', 'ring1', 'l1.dense.rofl'));
 });

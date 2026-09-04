@@ -1,0 +1,255 @@
+-- l1.rofl — L1: the grammar that L2 is written in.
+--
+-- Derived from ring1.rofl (L2) by removing exactly what L2's own source does
+-- not use: perspective brackets, temporal markers, wildcards, `* / mod`, and
+-- parenthesised expressions. Measured: L2's source uses 17 surface features
+-- and this covers those 17.
+--
+-- A token is a PAIR OF INDICES and never text: the kernel has no
+-- substring-by-range destructor and extending a string is concatenation,
+-- which the finiteness proof forbids. Names therefore travel to the host
+-- promoter as ranges, and keywords are matched CHARACTER BY CHARACTER
+-- against `str_char`, which needs no kernel change at all.
+--
+-- What this covers: comments, facts, rules, `not`, perspective brackets with
+-- an atom OR a variable, temporal markers, builtins and arithmetic with
+-- precedence and parentheses, compound terms, clause-local wildcards, and
+-- string literals with C-style escapes. What it does NOT cover is one thing:
+-- a NEGATIVE INTEGER LITERAL, left out on purpose because `X - 1` and `X, -1`
+-- are genuinely ambiguous and the host resolves them by parsing greedily from
+-- the left, which a chart does not do.
+--
+-- Coverage over the corpus is MEASURED by test/example-ring1.test.ts rather
+-- than claimed here.
+
+edb(src).
+edb(cls).
+
+-- ---------------------------------------------------------------- characters
+len(N)     :- src(S), N is str_len(S).
+at(0)      :- len(N), 0 < N.
+at(I2)     :- at(I), len(N), I2 is I + 1, I2 < N.
+ch(I, C)   :- at(I), src(S), C is str_char(S, I).
+kind(I, K) :- ch(I, C), cls(C, K).
+
+-- ------------------------------------------------------- the scanner state
+-- A QUOTE INSIDE A COMMENT USED TO OPEN A STRING. The first version paired
+-- quotes across the whole file and detected comments separately, which is a
+-- chicken and egg: a comment is only a comment outside a string, and a string
+-- only starts outside a comment. Measured cost: examples/cram/flight_log.rofl
+-- and examples/jopa/calibration.rofl both carry a quoted phrase in prose, and
+-- both were refused at the comment rather than at anything real.
+--
+-- The fix is what a hand-written lexer does: ONE LEFT-TO-RIGHT WALK carrying a
+-- state. `st(I, S)` is the state BEFORE reading position I, and the walk is
+-- positive recursion with the character tests as its only negation, so there
+-- is no cycle at all.
+st(0, code) :- at(0).
+st(I2, S2) :- st(I, S), I2 is I + 1, at(I2), step(I, S, S2).
+
+opens_str(I) :- kind(I, quote).
+opens_cmt(I) :- kind(I, dash), I1 is I + 1, kind(I1, dash).
+
+step(I, code, str)  :- opens_str(I).
+step(I, code, cmt)  :- opens_cmt(I), not opens_str(I).
+step(I, code, code) :- at(I), not opens_str(I), not opens_cmt(I).
+
+-- a backslash escapes the next character, so it cannot close the string
+step(I, str, esc)  :- kind(I, backslash).
+step(I, str, code) :- kind(I, quote).
+step(I, str, str)  :- at(I), not kind(I, quote), not kind(I, backslash).
+step(I, esc, str)  :- at(I).
+
+step(I, cmt, code) :- kind(I, nl).
+step(I, cmt, cmt)  :- at(I), not kind(I, nl).
+
+code_at(I) :- st(I, code).
+
+-- ------------------------------------------------------------ string tokens
+str_open(I)  :- st(I, code), kind(I, quote).
+str_close(J) :- st(J, str), kind(J, quote).
+close_between(I, J) :- str_open(I), str_close(J), str_close(K), I < K, K < J.
+strtok(I, J) :- str_open(I), str_close(J), I < J, not close_between(I, J).
+
+-- -------------------------------------------------------------------- tokens
+-- word tokens
+wordch(I) :- kind(I, lower), code_at(I).
+wordch(I) :- kind(I, upper), code_at(I).
+wordch(I) :- kind(I, digit), code_at(I).
+
+prevword(I)   :- at(I), 0 < I, J is I - 1, wordch(J).
+word_start(I) :- wordch(I), not prevword(I).
+wext(I, I)    :- word_start(I).
+wext(I, J2)   :- wext(I, J), J2 is J + 1, wordch(J2).
+word(I, J)    :- wext(I, J), J2 is J + 1, not wordch(J2).
+
+-- punctuation tokens
+punct(I, lpar)   :- kind(I, lpar), code_at(I).
+punct(I, rpar)   :- kind(I, rpar), code_at(I).
+punct(I, comma)  :- kind(I, comma), code_at(I).
+punct(I, dot)    :- kind(I, dot), code_at(I).
+
+-- the neck `:-` is one token
+neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
+
+tok(I, J) :- word(I, J).
+tok(I, J) :- strtok(I, J).
+tok(I, I) :- punct(I, K).
+tok(I, J) :- neck(I, J).
+
+-- ------------------------------------------------------------- the tok chain
+tokstart(I) :- tok(I, J).
+
+-- THE FIRST VERSION OF THIS WAS CUBIC AND IT KILLED THE PARSE. `follows` over
+-- all pairs of token boundaries plus `blocked` over all triples costs O(n^3)
+-- in tokens; on rules/strata.rofl - 123 tokens, 2207 characters - the
+-- evaluation came back PARTIAL with hole(space_exhausted), and the parse
+-- returned zero clauses and no complaint. Walking forward one character at a
+-- time instead is linear per token: `scan(J, K)` is "K is reachable from
+-- boundary J without meeting a token start".
+scan(J, K)  :- tok(I, J), K is J + 1, at(K).
+scan(J, K2) :- scan(J, K), not tokstart(K), K2 is K + 1, at(K2).
+nexttok(J, K) :- scan(J, K), tokstart(K).
+first_tok(I)     :- tokstart(I), not preceded(I).
+preceded(I)      :- nexttok(J, I).
+
+-- ---------------------------------------------------------------- token kinds
+identtok(I, J) :- word(I, J), kind(I, lower).
+vartok(I, J)   :- word(I, J), kind(I, upper).
+inttok(I, J)   :- word(I, J), kind(I, digit).
+p(I, K)        :- punct(I, K).
+
+-- Keywords, matched CHARACTER BY CHARACTER against `str_char`. No kernel
+-- change is needed for this and no token ever carries its text.
+kw_not(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "t").
+kw_is(I)   :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "s").
+kw_init(I) :- word(I, J), J is I + 3, ch(I, "i"), K is I+1, ch(K, "n"),
+              L is I+2, ch(L, "i"), ch(J, "t").
+kw_now(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "w").
+kw_next(I) :- word(I, J), J is I + 3, ch(I, "n"), K is I+1, ch(K, "e"),
+              L is I+2, ch(L, "x"), ch(J, "t").
+
+keyword(I) :- kw_not(I).
+keyword(I) :- kw_is(I).
+
+-- ------------------------------------------------------------------ operators
+-- Two-character operators first; their second character must not also become
+-- a token of its own, which is what `consumed` is for.
+-- `consumed` must read the TWO-CHARACTER operators ONLY. Deriving it from
+-- `optok` and then negating it inside `optok` is a negative cycle, and the
+-- round evaluator refused the whole program for it: `round 4 settled nothing
+-- while ... remained`. Splitting the two-character forms into their own
+-- relation puts the negation between two strata instead of inside one.
+op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, le) :- kind(I, lt),   J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, ge) :- kind(I, gt),   J is I + 1, kind(J, eq), code_at(I).
+consumed(J) :- op2(I, J, Op).
+
+optok(I, J, Op) :- op2(I, J, Op).
+optok(I, I, eq) :- kind(I, eq), code_at(I), not consumed(I).
+optok(I, I, lt) :- kind(I, lt), code_at(I), not consumed(I).
+optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I).
+-- A KEYWORD OPERATOR SPANS ITS WHOLE WORD. `nexttok` is keyed on a token's
+-- END, so returning the START of a two- or three-letter word leaves the next
+-- lookup with no boundary to stand on and the clause silently fails to form.
+optok(I, J, is) :- kw_is(I), word(I, J).
+
+arithtok(I, I, plus)  :- kind(I, plus),  code_at(I).
+-- A LONE DASH IN CODE IS MINUS, and the two exclusions are both load-bearing.
+-- `--` opens a comment, but the scanner's state BEFORE the first dash is still
+-- `code`, so without `not opens_cmt(I)` every comment in the corpus began with
+-- a spurious minus token and all 23 files were refused - measured, after eight
+-- hand-written cases all passed. `:-` is the neck, and the colon before the
+-- dash is what tells them apart.
+arithtok(I, I, minus) :- kind(I, dash), code_at(I), not opens_cmt(I),
+                         I1 is I - 1, not kind(I1, colon).
+
+addop(I, J, Op) :- arithtok(I, J, Op), plusminus(Op).
+plusminus(plus).  plusminus(minus).
+
+tok(I, J) :- optok(I, J, Op).
+tok(I, J) :- arithtok(I, J, Op).
+
+-- ---------------------------------------------------------------------- terms
+term(I, J, atom(I, J)) :- identtok(I, J), not keyword(I).
+term(I, J, var(I, J))  :- vartok(I, J).
+term(I, J, int(I, J))  :- inttok(I, J).
+term(I, J, str(I, J))  :- strtok(I, J).
+-- compound: f(args)
+term(I, C, comp(I, J, A)) :- identtok(I, J), not keyword(I),
+                             nexttok(J, K), p(K, lpar),
+                             nexttok(K, S), args(S, E, A),
+                             nexttok(E, C), p(C, rpar).
+
+args(I, J, cons(T, nil)) :- term(I, J, T).
+args(I, J2, cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
+                            nexttok(K, I2), args(I2, J2, R).
+
+-- ---------------------------------------------------------- arithmetic, typed
+-- Left-associative BY CONSTRUCTION: the right operand of each level is the
+-- level below, so `a - b - c` has exactly one parse and the chart reports no
+-- ambiguity. Getting this wrong would show up as a silent divergence, which
+-- the corpus oracle pins at zero.
+prim(I, J, T) :- term(I, J, T).
+
+expr(I, J, T) :- prim(I, J, T).
+expr(I, C, op(Op, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
+                            nexttok(K2, S), prim(S, C, R).
+
+-- ------------------------------------------------------------------- literals
+-- The literal is built from PARTS so that book and tense do not multiply into
+-- a rule per combination: three books times two tenses would be six copies.
+relbook(I, J, atom(I, J), main) :- identtok(I, J), not keyword(I).
+lit0(I, C, node(R, Bk, A)) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
+                              nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
+
+lit(I, C, node(R, Bk, A, now)) :- lit0(I, C, node(R, Bk, A)).
+
+-- ---------------------------------------------------------------- body & rule
+belem(I, C, pos(L)) :- lit(I, C, L).
+belem(I, C, neg(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
+belem(I, C, bi(Op, L, R)) :- expr(I, J, L), nexttok(J, K1), optok(K1, K2, Op),
+                             nexttok(K2, S), expr(S, C, R).
+
+body(I, C, cons(B, nil)) :- belem(I, C, B).
+body(I, C2, cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),
+                            nexttok(K, I2), body(I2, C2, R).
+
+clause_at(I, D, L, nil) :- lit(I, C, L), nexttok(C, D), p(D, dot).
+clause_at(I, D, H, B)   :- lit(I, C, H), nexttok(C, K), neck(K, K2),
+                           nexttok(K2, S), body(S, E, B), nexttok(E, D), p(D, dot).
+
+-- TOP LEVEL. The chart sees every sub-parse - `tag(Y, "hot")` inside a rule
+-- body is a well-formed fact on its own - so a clause counts only if it starts
+-- where the previous one ended. This is the chain, and the AMBIGUITY IT DROPS
+-- IS COUNTABLE rather than silently resolved: `clause_at` minus `parsed` is
+-- exactly the set of sub-parses, and the coverage test prints it.
+top(I)  :- first_tok(I).
+top(I2) :- top(I), clause_at(I, D, H, B), nexttok(D, I2).
+
+parsed(I, D, H, B) :- top(I), clause_at(I, D, H, B).
+
+-- what the chart saw and the chain rejected
+subparse(I, D) :- clause_at(I, D, H, B), not top(I).
+
+-- ------------------------------------------------------------- completeness
+-- WITHOUT THIS THE PARSER LIES. The top-level chain walks clause to clause, so
+-- the first construct the grammar does not cover ends the walk and every later
+-- clause simply never appears - measured on examples/counter.rofl and
+-- rules/strata.rofl, where the host reads 3 and 10 clauses and ring 1 returned
+-- ZERO with no error of any kind. A prefix that looks like a whole file is the
+-- silent under-report this repository exists to refuse.
+--
+-- `stuck_at(I)` names the token where the walk stopped, so the host can refuse
+-- the parse and say where, instead of handing back what it managed.
+parses_at(I) :- clause_at(I, D, H, B).
+stuck_at(I)  :- top(I), not parses_at(I).
+
+-- `stuck_at` catches a walk that STOPPED. It does not catch a walk that never
+-- STARTED - measured on rules/strata.rofl, which returned zero clauses, zero
+-- stuck and no error, because when the first clause fails there is nothing for
+-- the chain to stand on. The invariant that catches both is coverage: every
+-- token must lie inside some accepted clause.
+covered(K)   :- parsed(I, D, H, B), tokstart(K), I <= K, K <= D.
+uncovered(K) :- tokstart(K), not covered(K).
+

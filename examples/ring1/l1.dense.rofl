@@ -1,0 +1,103 @@
+edb(src).
+edb(cls).
+r(r1, l(len, [v("N")]), [l(src, [v("S")]), b("is", v("N"), f(str_len, [v("S")]))]).
+r(r2, l(at, [0]), [l(len, [v("N")]), b("<", 0, v("N"))]).
+r(r3, l(at, [v("I2")]), [l(at, [v("I")]), l(len, [v("N")]), b("is", v("I2"), f("+", [v("I"), 1])), b("<", v("I2"), v("N"))]).
+r(r4, l(ch, [v("I"), v("C")]), [l(at, [v("I")]), l(src, [v("S")]), b("is", v("C"), f(str_char, [v("S"), v("I")]))]).
+r(r5, l(kind, [v("I"), v("K")]), [l(ch, [v("I"), v("C")]), l(cls, [v("C"), v("K")])]).
+r(r6, l(st, [0, code]), [l(at, [0])]).
+r(r7, l(st, [v("I2"), v("S2")]), [l(st, [v("I"), v("S")]), b("is", v("I2"), f("+", [v("I"), 1])), l(at, [v("I2")]), l(step, [v("I"), v("S"), v("S2")])]).
+r(r8, l(opens_str, [v("I")]), [l(kind, [v("I"), quote])]).
+r(r9, l(opens_cmt, [v("I")]), [l(kind, [v("I"), dash]), b("is", v("I1"), f("+", [v("I"), 1])), l(kind, [v("I1"), dash])]).
+r(r10, l(step, [v("I"), code, str]), [l(opens_str, [v("I")])]).
+r(r11, l(step, [v("I"), code, cmt]), [l(opens_cmt, [v("I")]), n(l(opens_str, [v("I")]))]).
+r(r12, l(step, [v("I"), code, code]), [l(at, [v("I")]), n(l(opens_str, [v("I")])), n(l(opens_cmt, [v("I")]))]).
+r(r13, l(step, [v("I"), str, esc]), [l(kind, [v("I"), backslash])]).
+r(r14, l(step, [v("I"), str, code]), [l(kind, [v("I"), quote])]).
+r(r15, l(step, [v("I"), str, str]), [l(at, [v("I")]), n(l(kind, [v("I"), quote])), n(l(kind, [v("I"), backslash]))]).
+r(r16, l(step, [v("I"), esc, str]), [l(at, [v("I")])]).
+r(r17, l(step, [v("I"), cmt, code]), [l(kind, [v("I"), nl])]).
+r(r18, l(step, [v("I"), cmt, cmt]), [l(at, [v("I")]), n(l(kind, [v("I"), nl]))]).
+r(r19, l(code_at, [v("I")]), [l(st, [v("I"), code])]).
+r(r20, l(str_open, [v("I")]), [l(st, [v("I"), code]), l(kind, [v("I"), quote])]).
+r(r21, l(str_close, [v("J")]), [l(st, [v("J"), str]), l(kind, [v("J"), quote])]).
+r(r22, l(close_between, [v("I"), v("J")]), [l(str_open, [v("I")]), l(str_close, [v("J")]), l(str_close, [v("K")]), b("<", v("I"), v("K")), b("<", v("K"), v("J"))]).
+r(r23, l(strtok, [v("I"), v("J")]), [l(str_open, [v("I")]), l(str_close, [v("J")]), b("<", v("I"), v("J")), n(l(close_between, [v("I"), v("J")]))]).
+r(r24, l(wordch, [v("I")]), [l(kind, [v("I"), lower]), l(code_at, [v("I")])]).
+r(r25, l(wordch, [v("I")]), [l(kind, [v("I"), upper]), l(code_at, [v("I")])]).
+r(r26, l(wordch, [v("I")]), [l(kind, [v("I"), digit]), l(code_at, [v("I")])]).
+r(r27, l(prevword, [v("I")]), [l(at, [v("I")]), b("<", 0, v("I")), b("is", v("J"), f("-", [v("I"), 1])), l(wordch, [v("J")])]).
+r(r28, l(word_start, [v("I")]), [l(wordch, [v("I")]), n(l(prevword, [v("I")]))]).
+r(r29, l(wext, [v("I"), v("I")]), [l(word_start, [v("I")])]).
+r(r30, l(wext, [v("I"), v("J2")]), [l(wext, [v("I"), v("J")]), b("is", v("J2"), f("+", [v("J"), 1])), l(wordch, [v("J2")])]).
+r(r31, l(word, [v("I"), v("J")]), [l(wext, [v("I"), v("J")]), b("is", v("J2"), f("+", [v("J"), 1])), n(l(wordch, [v("J2")]))]).
+r(r32, l(punct, [v("I"), lpar]), [l(kind, [v("I"), lpar]), l(code_at, [v("I")])]).
+r(r33, l(punct, [v("I"), rpar]), [l(kind, [v("I"), rpar]), l(code_at, [v("I")])]).
+r(r34, l(punct, [v("I"), comma]), [l(kind, [v("I"), comma]), l(code_at, [v("I")])]).
+r(r35, l(punct, [v("I"), dot]), [l(kind, [v("I"), dot]), l(code_at, [v("I")])]).
+r(r36, l(neck, [v("I"), v("J")]), [l(kind, [v("I"), colon]), l(code_at, [v("I")]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), dash])]).
+r(r37, l(tok, [v("I"), v("J")]), [l(word, [v("I"), v("J")])]).
+r(r38, l(tok, [v("I"), v("J")]), [l(strtok, [v("I"), v("J")])]).
+r(r39, l(tok, [v("I"), v("I")]), [l(punct, [v("I"), v("K")])]).
+r(r40, l(tok, [v("I"), v("J")]), [l(neck, [v("I"), v("J")])]).
+r(r41, l(tokstart, [v("I")]), [l(tok, [v("I"), v("J")])]).
+r(r42, l(scan, [v("J"), v("K")]), [l(tok, [v("I"), v("J")]), b("is", v("K"), f("+", [v("J"), 1])), l(at, [v("K")])]).
+r(r43, l(scan, [v("J"), v("K2")]), [l(scan, [v("J"), v("K")]), n(l(tokstart, [v("K")])), b("is", v("K2"), f("+", [v("K"), 1])), l(at, [v("K2")])]).
+r(r44, l(nexttok, [v("J"), v("K")]), [l(scan, [v("J"), v("K")]), l(tokstart, [v("K")])]).
+r(r45, l(first_tok, [v("I")]), [l(tokstart, [v("I")]), n(l(preceded, [v("I")]))]).
+r(r46, l(preceded, [v("I")]), [l(nexttok, [v("J"), v("I")])]).
+r(r47, l(identtok, [v("I"), v("J")]), [l(word, [v("I"), v("J")]), l(kind, [v("I"), lower])]).
+r(r48, l(vartok, [v("I"), v("J")]), [l(word, [v("I"), v("J")]), l(kind, [v("I"), upper])]).
+r(r49, l(inttok, [v("I"), v("J")]), [l(word, [v("I"), v("J")]), l(kind, [v("I"), digit])]).
+r(r50, l(p, [v("I"), v("K")]), [l(punct, [v("I"), v("K")])]).
+r(r51, l(kw_not, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 2])), l(ch, [v("I"), s("n")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("o")]), l(ch, [v("J"), s("t")])]).
+r(r52, l(kw_is, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 1])), l(ch, [v("I"), s("i")]), l(ch, [v("J"), s("s")])]).
+r(r53, l(kw_init, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 3])), l(ch, [v("I"), s("i")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("n")]), b("is", v("L"), f("+", [v("I"), 2])), l(ch, [v("L"), s("i")]), l(ch, [v("J"), s("t")])]).
+r(r54, l(kw_now, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 2])), l(ch, [v("I"), s("n")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("o")]), l(ch, [v("J"), s("w")])]).
+r(r55, l(kw_next, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 3])), l(ch, [v("I"), s("n")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("e")]), b("is", v("L"), f("+", [v("I"), 2])), l(ch, [v("L"), s("x")]), l(ch, [v("J"), s("t")])]).
+r(r56, l(keyword, [v("I")]), [l(kw_not, [v("I")])]).
+r(r57, l(keyword, [v("I")]), [l(kw_is, [v("I")])]).
+r(r58, l(op2, [v("I"), v("J"), ne]), [l(kind, [v("I"), bang]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r59, l(op2, [v("I"), v("J"), le]), [l(kind, [v("I"), lt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r60, l(op2, [v("I"), v("J"), ge]), [l(kind, [v("I"), gt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r61, l(consumed, [v("J")]), [l(op2, [v("I"), v("J"), v("Op")])]).
+r(r62, l(optok, [v("I"), v("J"), v("Op")]), [l(op2, [v("I"), v("J"), v("Op")])]).
+r(r63, l(optok, [v("I"), v("I"), eq]), [l(kind, [v("I"), eq]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
+r(r64, l(optok, [v("I"), v("I"), lt]), [l(kind, [v("I"), lt]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
+r(r65, l(optok, [v("I"), v("I"), gt]), [l(kind, [v("I"), gt]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
+r(r66, l(optok, [v("I"), v("J"), is]), [l(kw_is, [v("I")]), l(word, [v("I"), v("J")])]).
+r(r67, l(arithtok, [v("I"), v("I"), plus]), [l(kind, [v("I"), plus]), l(code_at, [v("I")])]).
+r(r68, l(arithtok, [v("I"), v("I"), minus]), [l(kind, [v("I"), dash]), l(code_at, [v("I")]), n(l(opens_cmt, [v("I")])), b("is", v("I1"), f("-", [v("I"), 1])), n(l(kind, [v("I1"), colon]))]).
+r(r69, l(addop, [v("I"), v("J"), v("Op")]), [l(arithtok, [v("I"), v("J"), v("Op")]), l(plusminus, [v("Op")])]).
+plusminus(plus).
+plusminus(minus).
+r(r70, l(tok, [v("I"), v("J")]), [l(optok, [v("I"), v("J"), v("Op")])]).
+r(r71, l(tok, [v("I"), v("J")]), [l(arithtok, [v("I"), v("J"), v("Op")])]).
+r(r72, l(term, [v("I"), v("J"), f(atom, [v("I"), v("J")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")]))]).
+r(r73, l(term, [v("I"), v("J"), f(var, [v("I"), v("J")])]), [l(vartok, [v("I"), v("J")])]).
+r(r74, l(term, [v("I"), v("J"), f(int, [v("I"), v("J")])]), [l(inttok, [v("I"), v("J")])]).
+r(r75, l(term, [v("I"), v("J"), f(str, [v("I"), v("J")])]), [l(strtok, [v("I"), v("J")])]).
+r(r76, l(term, [v("I"), v("C"), f(comp, [v("I"), v("J"), v("A")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")])), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
+r(r77, l(args, [v("I"), v("J"), f(cons, [v("T"), nil])]), [l(term, [v("I"), v("J"), v("T")])]).
+r(r78, l(args, [v("I"), v("J2"), f(cons, [v("T"), v("R")])]), [l(term, [v("I"), v("J"), v("T")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(args, [v("I2"), v("J2"), v("R")])]).
+r(r79, l(prim, [v("I"), v("J"), v("T")]), [l(term, [v("I"), v("J"), v("T")])]).
+r(r80, l(expr, [v("I"), v("J"), v("T")]), [l(prim, [v("I"), v("J"), v("T")])]).
+r(r81, l(expr, [v("I"), v("C"), f(op, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K")]), l(addop, [v("K"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(prim, [v("S"), v("C"), v("R")])]).
+r(r82, l(relbook, [v("I"), v("J"), f(atom, [v("I"), v("J")]), main]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")]))]).
+r(r83, l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])]), [l(relbook, [v("I"), v("J"), v("R"), v("Bk")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
+r(r84, l(lit, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A"), now])]), [l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])])]).
+r(r85, l(belem, [v("I"), v("C"), f(pos, [v("L")])]), [l(lit, [v("I"), v("C"), v("L")])]).
+r(r86, l(belem, [v("I"), v("C"), f(neg, [v("L")])]), [l(kw_not, [v("I")]), l(word, [v("I"), v("J")]), l(nexttok, [v("J"), v("K")]), l(lit, [v("K"), v("C"), v("L")])]).
+r(r87, l(belem, [v("I"), v("C"), f(bi, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K1")]), l(optok, [v("K1"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(expr, [v("S"), v("C"), v("R")])]).
+r(r88, l(body, [v("I"), v("C"), f(cons, [v("B"), nil])]), [l(belem, [v("I"), v("C"), v("B")])]).
+r(r89, l(body, [v("I"), v("C2"), f(cons, [v("B"), v("R")])]), [l(belem, [v("I"), v("C"), v("B")]), l(nexttok, [v("C"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(body, [v("I2"), v("C2"), v("R")])]).
+r(r90, l(clause_at, [v("I"), v("D"), v("L"), nil]), [l(lit, [v("I"), v("C"), v("L")]), l(nexttok, [v("C"), v("D")]), l(p, [v("D"), dot])]).
+r(r91, l(clause_at, [v("I"), v("D"), v("H"), v("B")]), [l(lit, [v("I"), v("C"), v("H")]), l(nexttok, [v("C"), v("K")]), l(neck, [v("K"), v("K2")]), l(nexttok, [v("K2"), v("S")]), l(body, [v("S"), v("E"), v("B")]), l(nexttok, [v("E"), v("D")]), l(p, [v("D"), dot])]).
+r(r92, l(top, [v("I")]), [l(first_tok, [v("I")])]).
+r(r93, l(top, [v("I2")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")]), l(nexttok, [v("D"), v("I2")])]).
+r(r94, l(parsed, [v("I"), v("D"), v("H"), v("B")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
+r(r95, l(subparse, [v("I"), v("D")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")]), n(l(top, [v("I")]))]).
+r(r96, l(parses_at, [v("I")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
+r(r97, l(stuck_at, [v("I")]), [l(top, [v("I")]), n(l(parses_at, [v("I")]))]).
+r(r98, l(covered, [v("K")]), [l(parsed, [v("I"), v("D"), v("H"), v("B")]), l(tokstart, [v("K")]), b("<=", v("I"), v("K")), b("<=", v("K"), v("D"))]).
+r(r99, l(uncovered, [v("K")]), [l(tokstart, [v("K")]), n(l(covered, [v("K")]))]).
