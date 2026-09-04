@@ -111,6 +111,26 @@ function useClass(n) {
   return b.both(n);
 }
 
+// ---- a SECOND class with the SAME method names. `this.get()` inside Box must
+// resolve to Box.get and not to Crate.get: with one class in the file the two
+// readings are indistinguishable, which is what made an unscoped `this` rule
+// survive its own mutant.
+class Crate {
+  get(n) {
+    trace();
+    return n * 2;
+  }
+  both(n) {
+    trace();
+    return this.get(n);
+  }
+}
+function useCrate(n) {
+  trace();
+  const c = new Crate();
+  return c.both(n);
+}
+
 // ---- computed callee: dynamic key, then literal key
 const table = {
   pick(n) {
@@ -226,6 +246,7 @@ export function main() {
     useHigher(1),
     useFirst(1),
     feedCb(1),
+    useCrate(1),
     useOpt(1),
     useArr(1),
     run(1),

@@ -27,12 +27,10 @@ work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matr
 -- 2 — THE CALL GRAPH'S BIGGEST RESIDUE. Six of the nine edges the execution
 -- oracle still catches us missing live in these eleven shapes of ONE kind.
 work(w_cg_member_family,
-     "member_expression: o.m() resolves, the other eleven shapes do not").
+     "PART DONE 2026-09-04: `denotes` closed member-on-member, this and optional; the rest need a receiver the five entries cannot answer").
 work_order(w_cg_member_family, 2).
 work_state(w_cg_member_family, open).
-claim(queued, js, member_expression, s_member_on_member,         callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).
-claim(queued, js, member_expression, s_member_on_this,           callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_super,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_array,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_new,            callgraph, w_cg_member_family).
@@ -48,7 +46,6 @@ claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg
 work(w_cg_optional_member, "optional_member_expression: a?.b() and its computed keys").
 work_order(w_cg_optional_member, 3).
 work_state(w_cg_optional_member, open).
-claim(queued, js, optional_member_expression, s_optional_member,        callgraph, w_cg_optional_member).
 claim(queued, js, optional_member_expression, s_computed_literal_key,   callgraph, w_cg_optional_member).
 claim(queued, js, optional_member_expression, s_computed_template_key,  callgraph, w_cg_optional_member).
 

@@ -347,6 +347,32 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
   assert.deepEqual(m.binds('shape_verdict[audit](s_identifier, V)', 'V'), ['has_residue']);
 });
 
+test('TIER 4: one question — what object does this expression denote?', () => {
+  const m = build();
+  const edges = modelEdges(m);
+
+  // FIVE SPELLINGS, ONE RULE. Each of these was a separate shape with its own
+  // `not_yet`, and none of them needed a resolution rule of its own once the
+  // OBJECT half is answered by a relation instead of by a pattern.
+  for (const [e, why] of [
+    ['useNs -> hello', 'o.m() — an identifier bound to an object literal'],
+    ['useDeep -> dig', 'a.b.c() — the recursion, at depth two'],
+    ['both -> get', 'this.m() — inside a class method'],
+    ['useClass -> both', 'inst.m() — an identifier bound to `new C()`'],
+    ['useLit -> pick', "o['k']() — a computed key that is a literal"],
+    ['useOpt -> hello', 'o?.m() — which needed no rule at all'],
+  ] as [string, string][]) {
+    assert.ok(edges.has(e), `${e} (${why})`);
+  }
+
+  // AND THE REFUSALS, which are the same rule declining rather than a special
+  // case: `o[k]()` with a variable key reaches no `member_node_key` row, and a
+  // receiver the five entries cannot answer reaches no `denotes` row.
+  assert.ok(!edges.has('useDyn -> pick'), 'a computed key that is a variable');
+  assert.ok(!edges.has('useTrap -> pickB'), 'and the trap it exists for');
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 0, 'no site resolves two ways');
+});
+
 test('argument position is content: which function is in which slot', () => {
   const m = build();
   const passed = [...new Set(m.binds('passes_function[code](C, I, F, N)', 'I', 'N'))].sort();
@@ -678,8 +704,12 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
   assert.deepEqual(blind.get(key), undefined, 'the mutant has nothing at that site');
   // and the damage is LOCAL: every other missed edge is still attributed, so
   // the mutant is killed by the constructor site and not by a global collapse
+  // PINNED, not bounded: this number FALLS as the model closes misses — it was
+  // above five when eleven edges were missing and is four now that four are —
+  // so a threshold would quietly stop meaning anything. An equality makes the
+  // next person state the new number on purpose.
   const stillOk = o.list.filter((e) => e.callee !== 'Box' && blind.has(`${e.file}:${e.line}`)).length;
-  assert.ok(stillOk > 5, `${stillOk} other sites keep their attribution`);
+  assert.equal(stillOk, 4, `${stillOk} other sites keep their attribution`);
   console.log(`  KILLED: the new-expression site loses its verdict while ${stillOk} others keep theirs`);
 });
 
@@ -752,4 +782,92 @@ test('mutant 11 — delete tier 3: the higher-order edges are its doing', () => 
     'exactly the parameter-callee edges, and nothing else, depend on tier 3');
   assert.equal(mut.bindings, 0, 'and no binding survives');
   console.log(`  KILLED (liveness): ${lost.length} edges lost, ${lost.join(', ')}`);
+});
+
+// ---------------------------------------------------------------------------
+// TIER 4's MUTANTS. Four die on the oracle's edge set. TWO DO NOT, AND THE
+// REASON IS THE ORACLE ITSELF: V8 reports a frame as the last dot-segment of
+// its name, so `Box.get` and `Crate.get` are both `get` and an edge set cannot
+// tell them apart. Those two are killed by `ambiguous_call[audit]`, which
+// counts a SITE resolving two ways and never looks at a name.
+
+test('mutant 12 — a computed key that is a literal stops being a key', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: "member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),\n"
+        + "                                 ast_child[code](N, property, 0, P), ast_value[code](P, Key).",
+    replace: '',
+  }]);
+  assert.ok(base.edges.has('useLit -> pick'));
+  assert.ok(!mut.edges.has('useLit -> pick'), "o['pick']() is o.pick() and the mutant forgets it");
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 13 — drop the recursion: a.b.c() loses its middle', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'denotes[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),',
+    replace: 'denotes_unused[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),',
+  }]);
+  assert.ok(base.edges.has('useDeep -> dig'));
+  assert.ok(!mut.edges.has('useDeep -> dig'), 'depth two needs the relation to call itself');
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 14 — a class is not an object: drop the class lookup', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).',
+    replace: 'member_fn_unused[code](O, Key, F) :- class_member_fn[code](O, Key, F).',
+  }]);
+  const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
+  assert.deepEqual(lost, ['both -> get', 'useClass -> both', 'useCrate -> both'],
+    'every edge through a class method, and nothing else');
+  console.log(`  KILLED: ${lost.length} edges lost`);
+});
+
+test('mutant 15 — ignore the key: any member answers any call', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'member_node_key[code](N, Key), member_fn[code](O, Key, F).',
+    replace: 'member_fn[code](O, _, F).',
+  }]);
+  const extra = [...mut.edges].filter((e) => !base.edges.has(e));
+  assert.ok(extra.length >= 10, `${extra.length} edges the runtime never ran`);
+  assert.ok(mut.ambiguous > base.ambiguous, 'and every member site resolves many ways');
+  console.log(`  KILLED: ${extra.length} invented edges, ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
+});
+
+test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'class_member_fn[code](CD, _, M), ast_within[code](M, T).',
+    replace: 'class_member_fn[code](CD, _, _).',
+  }]);
+  // THE EDGE SET DOES NOT MOVE, and that is a fact about V8's naming rather
+  // than about the mutant: `Box.get` and `Crate.get` both report as `get`, so
+  // `Box.both -> Crate.get` is spelled exactly like the edge that should be
+  // there. The fixture carries two classes with the same method names for
+  // precisely this reason, and it still cannot make the oracle see it.
+  assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [],
+    'the oracle is structurally blind here — if this ever fails, say so');
+  assert.equal(base.ambiguous, 0);
+  assert.ok(mut.ambiguous >= 4, `every this-site now resolves two ways: ${mut.ambiguous}`);
+  console.log(`  KILLED by ambiguous_call: 0 -> ${mut.ambiguous}, edge set UNMOVED`);
+});
+
+test('mutant 17 — forget which file: killed by the AUDIT for the same reason', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'denotes[code](N, O) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),\n'
+        + '                       obj_literal_binding[code](Name, O, File).',
+    replace: 'denotes[code](N, O) :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name),\n'
+        + '                       obj_literal_binding[code](Name, O, _).',
+  }]);
+  // alpha.mjs and beta.mjs both define `ns`, and both give it a `hello` — the
+  // shared member is what makes the site resolve two ways. Without it the two
+  // objects are told apart by lookup alone and this mutant is inert.
+  assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [], 'names collapse again');
+  assert.ok(mut.ambiguous >= 6, `${mut.ambiguous} sites resolve into both files`);
+  console.log(`  KILLED by ambiguous_call: 0 -> ${mut.ambiguous}, edge set UNMOVED`);
 });

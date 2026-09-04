@@ -112,16 +112,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'item 1 is done, so the queue hands over the call graph residue');
 });
 
-test('the queue covers the model: 110 open cells, 48 claimed by name, 62 swept', () => {
+test('the queue covers the model: 107 open cells, 45 claimed by name, 62 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 110, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 107, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 13);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [39, 24, 15]);
+  assert.deepEqual(per('callgraph'), [36, 21, 15]);
   assert.deepEqual(per('dataflow'), [35, 24, 11]);
   assert.deepEqual(per('modules'), [36, 0, 36]);
 
@@ -169,7 +169,7 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the defect docs/modelling-a-language.md fears by name: a filled matrix
   // looks finished. Here the model contradicts the claim of completion.
   const w = world({ find: 'work_state(w_cg_member_family, open).', replace: 'work_state(w_cg_member_family, done).' });
-  assert.equal(w.n('false_done[audit](W, K, S, L)'), 11, 'one row per cell it did not close');
+  assert.equal(w.n('false_done[audit](W, K, S, L)'), 9, 'one row per cell it did not close');
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
@@ -197,7 +197,7 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // and the ONLY thing that moved is the number this test pins
   assert.equal(base.n('sweeper(K, S, callgraph)'), 15);
   assert.equal(w.n('sweeper(K, S, callgraph)'), 16, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 23);
+  assert.equal(w.n('claimed(K, S, callgraph)'), 20);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
 });

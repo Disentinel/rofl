@@ -292,6 +292,99 @@ resolves[code](C, G) :- shape[code](C, s_identifier), callee_of[code](C, N),
                         ast_name[code](N, Name), nearest_fn[code](Fn, C),
                         param_bind[code](Fn, Name, G).
 
+-- TIER 4: WHAT OBJECT DOES THIS EXPRESSION DENOTE?
+--
+-- The shape census lists `o.m()`, `a.b.c()`, `this.m()`, `f().g()`, `o[k]()`,
+-- `new C().m()` as six different shapes, and tier 2 answered exactly one of
+-- them. Writing five more resolution rules would have been the obvious move and
+-- it is the wrong one: THEY ARE NOT SIX QUESTIONS. Every one of them is
+--
+--     resolve the OBJECT half, then look the KEY up in it
+--
+-- and they differ only in how the object half is spelled. So the rule is one
+-- rule, and the shapes become ENTRY POINTS into a single relation that answers
+-- `what does this expression denote`. That is also why this closes shapes the
+-- corpus does not contain — `new C().m()` has no site here and needs no rule of
+-- its own once `new C()` denotes the class.
+--
+-- WHAT AN OBJECT IS, for this layer: a node that can answer `.k`. Two kinds do,
+-- and they are not alike in the language but are identical in this question.
+obj_node[code](O) :- ast_node[code](O, object_expression, _, _).
+obj_node[code](O) :- ast_node[code](O, class_declaration, _, _).
+
+class_binding[code](CD, Name, File) :- ast_node[code](CD, class_declaration, File, _),
+                                       ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
+class_member_fn[code](CD, Key, M) :- ast_node[code](CD, class_declaration, _, _),
+                                     ast_child[code](CD, body, 0, B),
+                                     ast_child[code](B, body, _, M),
+                                     ast_node[code](M, class_method, _, _),
+                                     ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+
+member_fn[code](O, Key, F) :- obj_member_fn[code](O, Key, F).
+member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).
+
+-- THE KEY, and the computed/static distinction collapses HERE rather than in
+-- the shape table: `o.pick` and `o["pick"]` select the same member and differ
+-- only in where the text is. `o[k]` with a variable k has no key at all and
+-- therefore never reaches this relation — which is the same refusal the shape
+-- axis records as `runtime_dependent`, arriving as an absence instead of a
+-- special case.
+member_node[code](N)          :- ast_node[code](N, K, _, _), member_kind(K).
+member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, false),
+                                 ast_child[code](N, property, 0, P), ast_name[code](P, Key).
+member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),
+                                 ast_child[code](N, property, 0, P), ast_value[code](P, Key).
+
+-- ENTRY 1 — an identifier bound to an object literal. This is tier 2's premise,
+-- lifted out of the resolution rule so the other four can share it.
+denotes[code](N, O) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),
+                       obj_literal_binding[code](Name, O, File).
+
+-- ENTRY 2 — an identifier bound to `new C()`. `const b = new Box(1); b.both()`
+-- was a miss the oracle caught, and it is NOT the constructor edge: this rule
+-- says what `b` IS, and says nothing about `new Box(1)` being a call.
+new_binding[code](Name, CD, File) :- ast_node[code](D, variable_declarator, File, _),
+                                     ast_child[code](D, id, 0, I), ast_name[code](I, Name),
+                                     ast_child[code](D, init, 0, X),
+                                     ast_node[code](X, new_expression, _, _),
+                                     ast_child[code](X, callee, 0, CE), ast_name[code](CE, CName),
+                                     class_binding[code](CD, CName, File).
+denotes[code](N, CD) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),
+                        new_binding[code](Name, CD, File).
+
+-- ENTRY 3 — `this` inside a class method denotes that class.
+--
+-- DECLARED OVER-APPROXIMATION, because the premise is `anywhere under the
+-- method` and JavaScript disagrees in one case: an arrow function inherits
+-- `this` and an ordinary nested `function () {}` REBINDS it. So a `this` inside
+-- a nested function expression is claimed here and should not be. The corpus
+-- contains no such site, which is exactly why the rule is written with the
+-- over-approximation VISIBLE rather than with a premise nothing exercises.
+denotes[code](T, CD) :- ast_node[code](T, this_expression, _, _),
+                        class_member_fn[code](CD, _, M), ast_within[code](M, T).
+
+-- ENTRY 4 — RECURSION, and it is the whole reason this is a relation and not a
+-- fifth rule: `deep.layer.dig()` is `.dig` looked up in whatever `deep.layer`
+-- denotes, and `deep.layer` is `.layer` looked up in whatever `deep` denotes.
+-- One rule, any depth.
+obj_member_obj[code](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                   ast_child[code](O, properties, _, P),
+                                   ast_node[code](P, object_property, _, _),
+                                   ast_child[code](P, key, 0, K), ast_name[code](K, Key),
+                                   ast_child[code](P, value, 0, V), obj_node[code](V).
+denotes[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),
+                        denotes[code](Obj, O), member_node_key[code](N, Key),
+                        obj_member_obj[code](O, Key, O2).
+
+-- THE ONE RESOLUTION RULE the five entries feed. Note what is NOT here: the
+-- shape. A rule keyed by shape would have to be repeated per shape and would
+-- silently stop covering a shape nobody thought of; keyed by the QUESTION, it
+-- covers every spelling the entries can reach, including ones this corpus has
+-- no site for.
+resolves[code](C, F) :- callee_of[code](C, N), member_node[code](N),
+                        ast_child[code](N, object, 0, Obj), denotes[code](Obj, O),
+                        member_node_key[code](N, Key), member_fn[code](O, Key, F).
+
 -- A site resolving two ways is an over-approximation that must be VISIBLE,
 -- not averaged away.
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.

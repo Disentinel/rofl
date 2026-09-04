@@ -137,6 +137,18 @@ handled(js, function_expression,       s_iife,             callgraph, r_call_edg
 handled(js, arrow_function_expression, s_iife,             callgraph, r_call_edge).
 handled(js, member_expression,         s_member_on_ident,  callgraph, r_call_edge).
 
+-- THREE MORE TICKED 2026-09-04, by ONE rule rather than three. `denotes` in
+-- rules/js-callgraph.rofl answers `what object does this expression denote`,
+-- and the shapes below are entry points into it rather than separate cases:
+-- `a.b.c()` is the relation calling itself, `this.m()` is a class method's
+-- receiver, `o?.m()` needed no rule at all because the member kinds were
+-- already both in the vocabulary. `r_denotes` is a NEW rule id and not
+-- `r_call_edge`, because a cell's rule id is what a reader follows to find out
+-- WHY the cell is ticked, and these three are ticked by different reasoning.
+handled(js, member_expression,          s_member_on_member, callgraph, r_denotes).
+handled(js, member_expression,          s_member_on_this,   callgraph, r_denotes).
+handled(js, optional_member_expression, s_optional_member,  callgraph, r_denotes).
+
 -- ---------------------------------------------------------------------------
 -- TYPED REASONS, only where the default `not_yet` would be a LIE. Same
 -- convention as facts/js-kinds.rofl: every other not_modelled shape takes

@@ -119,23 +119,27 @@ shape_because(js, s_computed_dynamic_key,  callgraph, runtime_dependent).
 
 -- ours, and on the queue
 shape_because(js, s_identifier,            callgraph, not_yet).
--- `ns.method()` resolves only when ns is a LOCAL OBJECT LITERAL; every other
--- receiver — an import, a parameter, a class instance, a host global — is
--- residue, and this shape therefore carries both a rule and a reason.
-shape_because(js, s_member_on_ident,       callgraph, not_yet).
+-- FOUR REASONS RETIRED 2026-09-04, AND THE AUDIT IS WHAT DEMANDED IT.
+-- `s_member_on_ident`, `s_member_on_member`, `s_member_on_this` and
+-- `s_optional_member` used to say `not_yet` and every site of all four now
+-- resolves through `denotes` — so `shape_stale[audit]`, the check for an excuse
+-- outliving its cause, named them by name the moment tier 4 landed. Deleting
+-- them is not optimism: an excuse for a shape whose sites all resolve is
+-- decoration, and if a corpus ever brings back a receiver the entries do not
+-- reach — an import, a parameter, a host global — the residue returns and
+-- `shape_unexplained[audit]` demands a reason again. The verdict follows the
+-- corpus rather than the grammar HERE, which is the opposite of the shape
+-- vocabulary above, and the two audits are what keep the difference honest.
 shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 -- knowable at parse time, and absent from the fact vocabulary: see
 -- `template_literal` above. NOT runtime_dependent.
 shape_because(js, s_computed_template_key, callgraph, not_yet).
-shape_because(js, s_member_on_member,      callgraph, not_yet).
 shape_because(js, s_member_on_call,        callgraph, not_yet).
-shape_because(js, s_member_on_this,        callgraph, not_yet).
 shape_because(js, s_member_on_new,         callgraph, not_yet).
 shape_because(js, s_member_on_super,       callgraph, not_yet).
 shape_because(js, s_member_on_object_literal, callgraph, not_yet).
 shape_because(js, s_member_on_literal,     callgraph, not_yet).
 shape_because(js, s_member_on_other,       callgraph, not_yet).
-shape_because(js, s_optional_member,       callgraph, not_yet).
 shape_because(js, s_call_result,           callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
 shape_because(js, s_super,                 callgraph, not_yet).
