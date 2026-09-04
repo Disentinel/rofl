@@ -22,14 +22,22 @@ work(w_mod_partial_cell,
 work_order(w_mod_partial_cell, 1).
 work_state(w_mod_partial_cell, done).
 work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matrix_calls_that_a_stale_excuse).
+work_spawned(w_cg_member_family, f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable).
 
 -- ===========================================================================
 -- 2 — THE CALL GRAPH'S BIGGEST RESIDUE. Six of the nine edges the execution
 -- oracle still catches us missing live in these eleven shapes of ONE kind.
+-- BLOCKED, and the blocker was found by a question rather than by the plan:
+-- `o[k]()` refuses even when k is a const in the same file or a literal passed
+-- at the only call site, and the shape carries `runtime_dependent` — the one
+-- reason nobody is ever expected to work on. Both are constant propagation,
+-- which is dataflow. See
+-- f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable.
 work(w_cg_member_family,
-     "PART DONE 2026-09-04: `denotes` closed member-on-member, this and optional; the rest need a receiver the five entries cannot answer").
-work_order(w_cg_member_family, 2).
+     "PART DONE 2026-09-04: `denotes` closed member-on-member, this and optional; the computed keys need constant propagation").
+work_order(w_cg_member_family, 4).
 work_state(w_cg_member_family, open).
+work_needs(w_cg_member_family, w_df_value_core).
 claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_super,          callgraph, w_cg_member_family).
 claim(queued, js, member_expression, s_member_on_array,          callgraph, w_cg_member_family).
@@ -44,8 +52,9 @@ claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg
 -- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow
 -- fact wearing a call-graph shape.
 work(w_cg_optional_member, "optional_member_expression: a?.b() and its computed keys").
-work_order(w_cg_optional_member, 3).
+work_order(w_cg_optional_member, 5).
 work_state(w_cg_optional_member, open).
+work_needs(w_cg_optional_member, w_df_value_core).
 claim(queued, js, optional_member_expression, s_computed_literal_key,   callgraph, w_cg_optional_member).
 claim(queued, js, optional_member_expression, s_computed_template_key,  callgraph, w_cg_optional_member).
 
@@ -53,7 +62,7 @@ claim(queued, js, optional_member_expression, s_computed_template_key,  callgrap
 -- transfer site of a different node kind, which the callee-shape axis cannot
 -- see by construction.
 work(w_cg_new_expression, "new_expression: the constructor edge the oracle sees and the shape axis cannot").
-work_order(w_cg_new_expression, 4).
+work_order(w_cg_new_expression, 6).
 work_state(w_cg_new_expression, open).
 claim(queued, js, new_expression, s_new_result, callgraph, w_cg_new_expression).
 
@@ -61,7 +70,7 @@ claim(queued, js, new_expression, s_new_result, callgraph, w_cg_new_expression).
 -- Grouped because one rule shape closes all five, which is the test of whether
 -- they really are one thing.
 work(w_cg_syntactic_wrappers, "(f)(), f as T (), f!(), (a, f)(), c ? f : g () — unwrap the callee and recurse").
-work_order(w_cg_syntactic_wrappers, 5).
+work_order(w_cg_syntactic_wrappers, 7).
 work_state(w_cg_syntactic_wrappers, open).
 claim(queued, js, parenthesized_expression, s_parenthesized, callgraph, w_cg_syntactic_wrappers).
 claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).
@@ -73,19 +82,26 @@ claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syn
 -- layer having return values at all. Ordered after the call graph's own work
 -- and before dataflow only to say that the dependency runs the other way.
 work(w_cg_call_result, "f()() and f?.()(): the callee is a return value, so this waits on dataflow returns").
-work_order(w_cg_call_result, 6).
+work_order(w_cg_call_result, 8).
 work_state(w_cg_call_result, open).
+work_needs(w_cg_call_result, w_df_function_forms).
 claim(queued, js, call_expression,          s_call_result, callgraph, w_cg_call_result).
 claim(queued, js, optional_call_expression, s_call_result, callgraph, w_cg_call_result).
 claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
 claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_call_result).
 
 -- ===========================================================================
+-- REORDERED 2026-09-04. The dataflow items moved AHEAD of the call-graph
+-- residue, and not out of preference: `work_needs` now records that three
+-- call-graph items cannot start without them, so leaving dataflow at the back
+-- meant the queue would hand out an item and then refuse it. The order follows
+-- the dependency the model already carries.
+--
 -- THE DATAFLOW LAYER IS A STUB and it is the layer with the cheapest oracle —
 -- run the program. Four cells are ticked: call arguments, assignment, the
 -- declarator initialiser. Everything a value can actually BE is open.
 work(w_df_value_core, "identifier, member, literals, object and array expressions: what a value IS before it moves").
-work_order(w_df_value_core, 7).
+work_order(w_df_value_core, 2).
 work_state(w_df_value_core, open).
 claim(queued, js, identifier,        none, dataflow, w_df_value_core).
 claim(queued, js, member_expression, none, dataflow, w_df_value_core).
@@ -101,7 +117,7 @@ claim(queued, js, this_expression,   none, dataflow, w_df_value_core).
 -- built argument-to-parameter flow to resolve a callback. That is a DATAFLOW
 -- fact living in the call-graph pack, and this item is where it belongs.
 work(w_df_function_forms, "parameters and returns; param_bind already exists in the callgraph pack and belongs here").
-work_order(w_df_function_forms, 8).
+work_order(w_df_function_forms, 3).
 work_state(w_df_function_forms, open).
 claim(queued, js, function_declaration,       none, dataflow, w_df_function_forms).
 claim(queued, js, function_expression,        none, dataflow, w_df_function_forms).

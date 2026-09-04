@@ -71,6 +71,8 @@ const LIES = [
   'work_stateless[audit](W)',
   'work_bad_state[audit](W, S)',
   'work_sweeps_nolayer[audit](W, L)',
+  'needs_unknown[audit](W, O)',
+  'needs_cycle[audit](W)',
 ];
 
 test('the five-pack world loads and the plan tells no lie', () => {
@@ -107,9 +109,10 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('cell[audit](A, K, bare, callgraph)'), 0, 'no phantom cell');
   assert.equal(w.n('unearned_axis[audit](A, L)'), 0, 'both layers earn the column');
 
-  assert.deepEqual(w.binds('work_spawned(W, F)', 'W'), ['w_mod_partial_cell']);
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
-    'item 1 is done, so the queue hands over the call graph residue');
+  assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
+    ['w_cg_member_family', 'w_mod_partial_cell']);
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_value_core'],
+    'item 1 is done and three call-graph items are blocked on dataflow');
 });
 
 test('the queue covers the model: 107 open cells, 45 claimed by name, 62 swept', () => {
@@ -200,4 +203,27 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   assert.equal(w.n('claimed(K, S, callgraph)'), 20);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');
+});
+
+test('MUTANT 9 — a dependency the plan does not honour', () => {
+  // THE DEFECT THIS RELATION WAS ADDED FOR, planted: `w_cg_call_result` says in
+  // its note that it waits on dataflow returns, and for three commits it sat
+  // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
+  const base = world();
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_value_core']);
+  assert.ok(base.n('blocked[audit](W)') >= 3, 'three call-graph items wait on dataflow');
+
+  // with the dependencies dropped, the queue hands out the lowest number
+  // regardless of whether its premise exists
+  const mut = world({ find: 'work_needs(w_cg_member_family, w_df_value_core).', replace: '' });
+  assert.equal(mut.n('blocked[audit](W)'), base.n('blocked[audit](W)') - 1);
+  console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
+});
+
+test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
+  const unknown = world({ extra: 'work_needs(w_df_value_core, w_no_such_item).' });
+  assert.equal(unknown.n('needs_unknown[audit](W, O)'), 1);
+  const cyc = world({ extra: 'work_needs(w_df_value_core, w_cg_member_family).' });
+  assert.ok(cyc.n('needs_cycle[audit](W)') >= 2, 'both ends of the loop are named');
+  console.log(`  KILLED: needs_unknown 1, needs_cycle ${cyc.n('needs_cycle[audit](W)')}`);
 });

@@ -30,6 +30,7 @@ edb(work_order).    -- work_order(Item, N)          the order to take them in
 edb(work_state).    -- work_state(Item, State)      open | taken | done
 edb(work_sweeps).   -- work_sweeps(Item, Layer)     owns the layer's residue
 edb(work_spawned).  -- work_spawned(Item, Finding)  a problem this item found
+edb(work_needs).    -- work_needs(Item, Other)      Other must be done first
 edb(work_state_kind).
 
 work_state_kind(open).
@@ -108,9 +109,26 @@ work_bad_state[audit](W, S)   :- work_state(W, S), not work_state_kind(S).
 work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
 
 -- ---------------------------------------------------------------------------
--- WHAT TO DO NEXT, as a query rather than as a habit
-earlier_open(N)     :- work_state(W, open), work_order(W, M), M < N.
-next_work[audit](W) :- work_state(W, open), work_order(W, N), not earlier_open(N).
+-- DEPENDENCIES, ADDED 2026-09-04 BECAUSE THREE OF THEM WERE ALREADY REAL AND
+-- LIVED ONLY IN PROSE. `w_cg_call_result` said `waits on dataflow returns` in
+-- its note and sat AHEAD of the dataflow items in the order; two computed-key
+-- cells wait on constant propagation, which is dataflow as well. A note is not
+-- a fact: nothing could refuse to hand out an item whose premise is missing.
+blocked[audit](W)   :- work_needs(W, O), not work_state(O, done).
+
+-- and the two ways a dependency can be nonsense, each a positive row
+needs_unknown[audit](W, O) :- work_needs(W, O), not work(O, _).
+needs_reach(A, B)          :- work_needs(A, B).
+needs_reach(A, C)          :- needs_reach(A, B), work_needs(B, C).
+needs_cycle[audit](W)      :- needs_reach(W, W).
+
+-- ---------------------------------------------------------------------------
+-- WHAT TO DO NEXT, as a query rather than as a habit. An item whose premise is
+-- not done is not next, however low its number — which is the whole reason the
+-- relation above exists rather than a comment asking the reader to remember.
+takeable(W)         :- work_state(W, open), not blocked[audit](W).
+earlier_takeable(N) :- takeable(W), work_order(W, M), M < N.
+next_work[audit](W) :- takeable(W), work_order(W, N), not earlier_takeable(N).
 in_flight[audit](W) :- work_state(W, taken).
 
 -- WHAT AN ITEM HAS COST SO FAR, in problems found. The plan and the ledger are
