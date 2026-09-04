@@ -684,13 +684,26 @@ function corpus(m: ShapeMut = {}): Rofl {
   load('facts/js-kinds.rofl', FACTS);
   load('facts/js-callgraph.rofl', CG);
   load('facts/js-shapes.rofl', m.shapes ?? SHAPES);
-  load('rules/js-structure.rofl', read('rules/js-structure.rofl'));
-  load('rules/js-dataflow.rofl', read('rules/js-dataflow.rofl'));
-  load('rules/js-model.rofl', m.rules ?? RULES);
-  load('rules/js-callgraph.rofl', read('rules/js-callgraph.rofl'));
+  // ONE LOAD, NOT FOUR. Every `load` re-evaluates, and since the call graph and
+  // the value flow became one fixpoint that evaluation is the expensive part —
+  // four separate calls pay for the cycle three times over. Measured on
+  // test/js-callgraph.test.ts, where the same change took the file from 370s to
+  // 188s with byte-identical answers.
+  load('rules/*', [
+    read('rules/js-structure.rofl'),
+    read('rules/js-dataflow.rofl'),
+    m.rules ?? RULES,
+    read('rules/js-callgraph.rofl'),
+  ].join('\n'));
   r.evaluate(20_000_000);
   return r;
 }
+
+/** The unmutated corpus, built once. Four tests here ask for it and each was
+ *  paying the full construction; the mutated ones are still built per test,
+ *  because the mutation is the point. */
+let CORPUS: Rofl | undefined;
+const baseCorpus = (): Rofl => (CORPUS ??= corpus());
 
 /** the (kind, shape) pairs the rules DERIVE from the corpus, and the census */
 function measuredShapes(r: Rofl): { pairs: Set<string>; tally: Map<string, number> } {
@@ -707,7 +720,7 @@ function measuredShapes(r: Rofl): { pairs: Set<string>; tally: Map<string, numbe
 }
 
 test('the declared shapes agree with the census the rules produce on the corpus', () => {
-  const c = corpus();
+  const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
   assert.equal(sites, 110, 'positive control: the corpus is the one the census was taken on');
@@ -756,7 +769,7 @@ test('the declared shapes agree with the census the rules produce on the corpus'
 // that disagrees with a running program is bookkeeping.
 
 test('the shape verdicts for member_expression match what the runtime missed', async () => {
-  const c = corpus();
+  const c = baseCorpus();
   const model = new Set<string>();
   for (const row of c.query('calls_in[code](File, A, B)').rows) {
     const [file, a, b] = ['File', 'A', 'B'].map((v) => unq(row.bindings[v]));
@@ -1100,7 +1113,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of thirteen'
   }, { lost: 0, invented: 0, double_cell: 0, orphan_shape: 0, unearned: 0, bad_reason: 0 });
 
   // THE CENSUS IS THE ONLY THING THAT SAYS NO, and it says it by name.
-  const { pairs } = measuredShapes(corpus());
+  const { pairs } = measuredShapes(baseCorpus());
   const declared = new Set(r.query('shape_of(js, K, S)').rows
     .map((x) => `${x.bindings['K']}/${x.bindings['S']}`));
   const undeclared = [...pairs].filter((p) => !declared.has(p)).sort();
