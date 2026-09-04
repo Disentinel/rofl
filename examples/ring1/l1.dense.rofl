@@ -56,15 +56,15 @@ r(r53, l(kw_init, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", 
 r(r54, l(kw_now, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 2])), l(ch, [v("I"), s("n")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("o")]), l(ch, [v("J"), s("w")])]).
 r(r55, l(kw_next, [v("I")]), [l(word, [v("I"), v("J")]), b("is", v("J"), f("+", [v("I"), 3])), l(ch, [v("I"), s("n")]), b("is", v("K"), f("+", [v("I"), 1])), l(ch, [v("K"), s("e")]), b("is", v("L"), f("+", [v("I"), 2])), l(ch, [v("L"), s("x")]), l(ch, [v("J"), s("t")])]).
 r(r56, l(keyword, [v("I")]), [l(kw_not, [v("I")])]).
-r(r57, l(keyword, [v("I")]), [l(kw_is, [v("I")])]).
-r(r58, l(op2, [v("I"), v("J"), ne]), [l(kind, [v("I"), bang]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
-r(r59, l(op2, [v("I"), v("J"), le]), [l(kind, [v("I"), lt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
-r(r60, l(op2, [v("I"), v("J"), ge]), [l(kind, [v("I"), gt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
-r(r61, l(consumed, [v("J")]), [l(op2, [v("I"), v("J"), v("Op")])]).
+r(r57, l(op2, [v("I"), v("J"), ne]), [l(kind, [v("I"), bang]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r58, l(op2, [v("I"), v("J"), le]), [l(kind, [v("I"), lt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r59, l(op2, [v("I"), v("J"), ge]), [l(kind, [v("I"), gt]), b("is", v("J"), f("+", [v("I"), 1])), l(kind, [v("J"), eq]), l(code_at, [v("I")])]).
+r(r60, l(consumed, [v("J")]), [l(op2, [v("I"), v("J"), v("Op")])]).
+r(r61, l(starts_op2, [v("I")]), [l(op2, [v("I"), v("J"), v("Op")])]).
 r(r62, l(optok, [v("I"), v("J"), v("Op")]), [l(op2, [v("I"), v("J"), v("Op")])]).
-r(r63, l(optok, [v("I"), v("I"), eq]), [l(kind, [v("I"), eq]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
-r(r64, l(optok, [v("I"), v("I"), lt]), [l(kind, [v("I"), lt]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
-r(r65, l(optok, [v("I"), v("I"), gt]), [l(kind, [v("I"), gt]), l(code_at, [v("I")]), n(l(consumed, [v("I")]))]).
+r(r63, l(optok, [v("I"), v("I"), eq]), [l(kind, [v("I"), eq]), l(code_at, [v("I")]), n(l(consumed, [v("I")])), n(l(starts_op2, [v("I")]))]).
+r(r64, l(optok, [v("I"), v("I"), lt]), [l(kind, [v("I"), lt]), l(code_at, [v("I")]), n(l(consumed, [v("I")])), n(l(starts_op2, [v("I")]))]).
+r(r65, l(optok, [v("I"), v("I"), gt]), [l(kind, [v("I"), gt]), l(code_at, [v("I")]), n(l(consumed, [v("I")])), n(l(starts_op2, [v("I")]))]).
 r(r66, l(optok, [v("I"), v("J"), is]), [l(kw_is, [v("I")]), l(word, [v("I"), v("J")])]).
 r(r67, l(arithtok, [v("I"), v("I"), plus]), [l(kind, [v("I"), plus]), l(code_at, [v("I")])]).
 r(r68, l(arithtok, [v("I"), v("I"), minus]), [l(kind, [v("I"), dash]), l(code_at, [v("I")]), n(l(opens_cmt, [v("I")])), b("is", v("I1"), f("-", [v("I"), 1])), n(l(kind, [v("I1"), colon]))]).

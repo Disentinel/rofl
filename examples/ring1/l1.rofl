@@ -129,8 +129,13 @@ kw_now(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "w
 kw_next(I) :- word(I, J), J is I + 3, ch(I, "n"), K is I+1, ch(K, "e"),
               L is I+2, ch(L, "x"), ch(J, "t").
 
+-- ONLY `not` IS A KEYWORD IN TERM POSITION. `is` and `mod` are operators, and
+-- the host recognises them ONLY where an operator can stand - so `optok(I, J,
+-- is)` has `is` as an ordinary ATOM in an argument. Excluding all three from
+-- `term` meant ring 1 COULD NOT PARSE ITS OWN SOURCE, which is the defect
+-- self-application was supposed to find and did, the first time L1 was pointed
+-- at L2. `not` stays excluded because it opens a negated literal.
 keyword(I) :- kw_not(I).
-keyword(I) :- kw_is(I).
 
 -- ------------------------------------------------------------------ operators
 -- Two-character operators first; their second character must not also become
@@ -144,11 +149,17 @@ op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
 op2(I, J, le) :- kind(I, lt),   J is I + 1, kind(J, eq), code_at(I).
 op2(I, J, ge) :- kind(I, gt),   J is I + 1, kind(J, eq), code_at(I).
 consumed(J) :- op2(I, J, Op).
+-- AND THE FIRST CHARACTER TOO. `consumed` marks the SECOND character of a
+-- two-character operator, so guarding a lone `<` with it checks the wrong
+-- index and `<=` was read as `<` followed by a stray `=` - both parses
+-- survived and the clause count came out 137 against the host's 131. Found
+-- by pointing L1 at L2's own source, which is full of `<=`.
+starts_op2(I) :- op2(I, J, Op).
 
 optok(I, J, Op) :- op2(I, J, Op).
-optok(I, I, eq) :- kind(I, eq), code_at(I), not consumed(I).
-optok(I, I, lt) :- kind(I, lt), code_at(I), not consumed(I).
-optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I).
+optok(I, I, eq) :- kind(I, eq), code_at(I), not consumed(I), not starts_op2(I).
+optok(I, I, lt) :- kind(I, lt), code_at(I), not consumed(I), not starts_op2(I).
+optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I), not starts_op2(I).
 -- A KEYWORD OPERATOR SPANS ITS WHOLE WORD. `nexttok` is keyed on a token's
 -- END, so returning the START of a two- or three-letter word leaves the next
 -- lookup with no boundary to stand on and the clause silently fails to form.
