@@ -1,14 +1,15 @@
 -- Character classes: DATA, generated, not a decision about the grammar.
 --
--- ONE ROW CARRIES A LITERAL NEWLINE, and it has to. A ROFL escape means
--- `take the next character literally`, so "\n" is the LETTER n and not a
--- line feed -- measured, and it silently made `cls(n, nl)` true, which
--- ended every comment at the first n in it. A real line feed written
--- between the quotes does work and passes scripts/text_check.ts, which
--- allows TAB and LF. A literal CR would NOT pass (it is reported as a
--- lone CR), so no other control character appears here: everything
--- unclassified is simply not a token character, which is what spaces,
--- tabs and carriage returns need.
+-- The line feed is written with an escape here. Until 2026-09-04 it could
+-- not be: an escape meant `take the next character literally`, so the
+-- sequence was the LETTER n and this row silently declared n to be a
+-- newline, which ended every comment at the first n inside it. C-style
+-- escapes landed the same day and the row now says what it looks like it
+-- says.
+--
+-- No other control character appears: everything unclassified is simply
+-- not a token character, which is what spaces, tabs and carriage returns
+-- need.
 edb(cls).
 cls("a", lower).
 cls("b", lower).
@@ -82,5 +83,4 @@ cls(".", dot).
 cls(":", colon).
 cls("-", dash).
 cls("\"", quote).
-cls("
-", nl).      -- the quotes really do enclose a line feed
+cls("\n", nl).

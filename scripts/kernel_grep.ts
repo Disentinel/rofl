@@ -32,7 +32,15 @@ const KERNEL_RELS = [
 // kernel WRITES: one row per atom the alternating fixpoint leaves undefined.
 const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown'];
 // Language syntax tokens the parser must know (keywords, not relations).
-const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main'];
+// The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
+// they are here for the same reason `is` and `mod` are: the parser dispatches
+// on them by name and they denote no relation, no perspective and no subject
+// matter. THE WIDENING IS REAL AND IS NAMED: a one-letter relation called `n`,
+// `t` or `r` would now pass this check as a string literal in src/. That is
+// accepted because the alternative — assembling the table from character codes
+// so no identifier-shaped literal appears — hides the language's own vocabulary
+// from the reader of the file that defines it.
+const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n', 't', 'r'];
 // Kernel constants (mode atoms, hole reasons).
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
   'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator'];

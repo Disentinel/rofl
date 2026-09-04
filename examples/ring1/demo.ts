@@ -60,13 +60,22 @@ function unlist(t: J): J[] {
   }
 }
 
-/** A ROFL string literal's own escaping, undone: backslash takes the next
- *  character literally. Must match src/parser.ts exactly. */
+/** A ROFL string literal's own escaping, undone. MUST MATCH src/parser.ts's
+ *  ESCAPES table exactly — this is a second implementation of the same
+ *  decision, and the corpus oracle in test/example-ring1.test.ts is what
+ *  keeps the two honest. */
+const UNESCAPE: ReadonlyMap<string, string> = new Map([
+  ['n', '\n'], ['t', '\t'], ['r', '\r'], ['\\', '\\'], ['"', '"'],
+]);
+
 function unquote(raw: string): string {
   let out = '';
   for (let i = 0; i < raw.length; i++) {
-    if (raw[i] === '\\' && i + 1 < raw.length) { out += raw[i + 1]; i++; }
-    else out += raw[i];
+    if (raw[i] === '\\' && i + 1 < raw.length) {
+      const r = UNESCAPE.get(raw[i + 1]);
+      if (r === undefined) throw new Unsupported(`unknown escape \\${raw[i + 1]}`);
+      out += r; i++;
+    } else out += raw[i];
   }
   return out;
 }

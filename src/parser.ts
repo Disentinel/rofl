@@ -26,6 +26,28 @@ interface Tok { t: string; v: string; line: number; }
 
 const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?'];
 
+/** THE ESCAPE TABLE, and the two decisions in it.
+ *
+ *  UNTIL 2026-09-04 an escape meant "take the next character literally", so
+ *  `"\\n"` was the LETTER n and NO escape produced a line feed. That was a trap
+ *  (it silently declared `n` to be a newline in a character-class table) and a
+ *  real gap: a CARRIAGE RETURN was inexpressible, because a literal CR is
+ *  refused by scripts/text_check.ts as a lone CR and no escape made one.
+ *
+ *  The change was free and measured before it was made: the corpus held 88
+ *  escape sequences over 69 files and every one was `\\"` or `\\\\` — zero `\\n`,
+ *  `\\t`, `\\r`, `\\0`, `\\x` or `\\u` — so not one existing string changed meaning.
+ *
+ *  AN UNKNOWN ESCAPE IS AN ERROR, not a silent backslash-drop. Dropping it is
+ *  the silently-wrong class this repository exists to refuse, and refusing
+ *  costs nothing today (the corpus contains none) while catching every typo
+ *  from here on. The table stays small on purpose: no `\\xNN`, no `\\uNNNN`,
+ *  and no `\\0` — a NUL in a value is not something this language needs and
+ *  the text gate exists to keep NULs out. */
+const ESCAPES: ReadonlyMap<string, string> = new Map([
+  ['n', '\n'], ['t', '\t'], ['r', '\r'], ['\\', '\\'], ['"', '"'],
+]);
+
 export function tokenize(src: string): Tok[] {
   const toks: Tok[] = [];
   let i = 0, line = 1;
@@ -41,8 +63,15 @@ export function tokenize(src: string): Tok[] {
     if (c === '"') {
       let j = i + 1, out = '';
       while (j < n && src[j] !== '"') {
-        if (src[j] === '\\' && j + 1 < n) { out += src[j + 1]; j += 2; }
-        else { out += src[j]; j++; }
+        if (src[j] === '\\') {
+          const e = src[j + 1];
+          const r = e === undefined ? undefined : ESCAPES.get(e);
+          if (r === undefined) {
+            throw new ParseError(`line ${line}: unknown escape '\\${e ?? ''}' in a string; `
+              + `the escapes are ${[...ESCAPES.keys()].map((k) => `\\${k}`).join(' ')}`);
+          }
+          out += r; j += 2;
+        } else { if (src[j] === '\n') line++; out += src[j]; j++; }
       }
       if (j >= n) throw new ParseError(`line ${line}: unterminated string`);
       toks.push({ t: 'str', v: out, line });
@@ -276,8 +305,32 @@ class P {
  *
  *  An escape here means "take the next character literally", so exactly two
  *  characters need one and a newline is written as itself. */
+/** Refused by `escapeString`. Separate from `ParseError` because nothing has
+ *  been parsed: the text simply cannot be WRITTEN as a legal source file. */
+export class UnwritableString extends Error {}
+
 export function escapeString(s: string): string {
-  return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  let out = '"';
+  for (const ch of s) {
+    // A character with no named escape is written as ITSELF, which is right
+    // for anything printable and wrong for a control byte: the round trip
+    // would still hold, and scripts/text_check.ts would refuse the file it
+    // landed in. Refusing here names the character; the alternative is a
+    // string that parses back perfectly out of a file nobody can commit.
+    const cp = ch.codePointAt(0)!;
+    if ((cp < 0x20 && ch !== '\n' && ch !== '\t' && ch !== '\r') || cp === 0x7f) {
+      throw new UnwritableString(
+        `U+${cp.toString(16).padStart(4, '0').toUpperCase()} has no escape and cannot be `
+        + `written literally: scripts/text_check.ts refuses that byte in a source file`);
+    }
+    if (ch === '\\') out += '\\\\';
+    else if (ch === '"') out += '\\"';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\t') out += '\\t';
+    else if (ch === '\r') out += '\\r';
+    else out += ch;
+  }
+  return out + '"';
 }
 
 export function parseProgram(src: string): Clause[] {

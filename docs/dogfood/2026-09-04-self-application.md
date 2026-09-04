@@ -232,3 +232,60 @@ and unwritten.
 And the criterion has one step left in it: a fact is itself
 `$fact(Rel, Book, Args)`, so a ring 0 reading **one** form — a term, asserted —
 would be smaller still. That is S-expressions.
+
+---
+
+# Addendum: escapes are C-style, and the change was a no-op
+
+Decided by the owner and landed the same hour. The number that made it safe was
+measured **before** the change: the corpus held **88 escape sequences over 69
+files, and every one was a quote or a backslash** — zero `n`, `t`, `r`, `0`,
+`x`, `u` — so C-style could not alter one existing string.
+
+The oracle is the same one the two earlier host-to-rules migrations used: the
+canonical clauses of all 69 files, md5 `31b3b8bb…` before and after, byte for
+byte.
+
+The table is five entries — `\n \t \r \\ \"` — and deliberately no `\xNN`, no
+`\uNNNN`, no `\0`. **An unknown escape is now an error**, which is the one
+backward-incompatible part and the point: dropping the backslash leaves the
+program running with a value nobody wrote, and the corpus contains none, so
+refusing costs nothing today and catches every typo from here on.
+
+Beyond closing the trap, this closes a real gap: **a carriage return is now
+expressible.** It was not — a literal CR is refused by `text_check` as a lone
+CR, and no escape produced one, so CRLF data could not be written at all.
+
+## Round-tripping is not the same as being writable
+
+The first sweep reported **37 of 37 round-tripping exactly**, and that green was
+hiding something the check could not look at. `escapeString` writes a character
+with no named escape as *itself*, so a NUL came back through the parser
+perfectly — the pair really is inverse — while the source text it produced
+carried a raw control byte that `text_check` refuses.
+
+The property tested was **inversion**; the property that mattered was
+**writability**, and a value can round-trip out of a file nobody can commit.
+The repair is in the escaper, not the test: it now refuses a character it
+cannot write legally and names it. And `test/escapes.test.ts` sweeps the whole
+boundary — every byte of C0 plus SPACE plus DEL, one at a time — asserting the
+writable set **by name** as exactly TAB, LF, CR and SPACE, and comparing the
+escaper against `text_check`'s own predicate byte for byte: **zero
+disagreements over 34 bytes**.
+
+## A test about escaping, written with escaping, is wrong twice
+
+Three failures in one hour, all the same shape and all mine. Generating the
+character-class table through Python put four backslashes where two were meant,
+so the file declared a two-character sequence to be the quote class. Writing the
+escape test through a heredoc produced literal backslash-quote pairs and the
+file would not lex. And a shell heredoc for the boundary sweep was **refused by
+the tool itself for containing a literal DEL** — the exact byte the sweep was
+about.
+
+When the subject of a file is escaping and its notation is also escaping, a
+mistake in the notation looks exactly like a finding about the subject, and no
+reading of the source separates them. `test/escapes.test.ts` therefore contains
+**not one backslash in its own literals**: every sequence is assembled from
+character codes. An instrument must not be built out of the material it
+measures.
