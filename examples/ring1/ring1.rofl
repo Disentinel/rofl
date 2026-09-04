@@ -177,3 +177,27 @@ stuck_at(I)  :- top(I), not parses_at(I).
 -- token must lie inside some accepted clause.
 covered(K)   :- parsed(I, D, H, B), tokstart(K), I <= K, K <= D.
 uncovered(K) :- tokstart(K), not covered(K).
+
+-- ------------------------------------------------------------------ wildcards
+-- ALL FIVE SILENT DIVERGENCES WERE THIS ONE THING, and it was not cosmetic. The
+-- host mints a FRESH NAME per wildcard, clause-local - `_$0`, `_$1` - so two
+-- underscores in one clause are two different variables. Read as an ordinary
+-- variable named `_` they become the SAME variable, which forces a join the
+-- author never wrote: `ast_child[code](P, _, _, C)` would demand that the
+-- second and third arguments be equal. The clause count matched exactly on all
+-- five files, which is why the oracle saw it and a count-based check would not.
+--
+-- The rank is computed AFTER parsing, off `parsed`, so the clause span is
+-- known and there is no cycle through `term`.
+wildtok(I) :- vartok(I, J), I = J, ch(I, "_").
+
+wild_in(C0, I)        :- parsed(C0, D, H, B), wildtok(I), C0 <= I, I <= D.
+wild_between(C0,J,I)  :- wild_in(C0, J), wild_in(C0, I), wild_in(C0, K), J < K, K < I.
+prev_wild(C0, I, J)   :- wild_in(C0, I), wild_in(C0, J), J < I, not wild_between(C0, J, I).
+has_prev_wild(C0, I)  :- prev_wild(C0, I, J).
+
+wild_rank(C0, I, 0)   :- wild_in(C0, I), not has_prev_wild(C0, I).
+wild_rank(C0, I, N2)  :- prev_wild(C0, I, J), wild_rank(C0, J, N), N2 is N + 1.
+
+-- what the promoter reads: this wildcard token is the Nth of its clause
+wild(I, N) :- wild_rank(C0, I, N).

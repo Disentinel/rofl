@@ -16,7 +16,7 @@
 
 import { Rofl } from '../../src/api.ts';
 import { type Term, mka, mkv, mki, mks } from '../../src/unify.ts';
-import type { Clause, Lit, BodyElem } from '../../src/parser.ts';
+import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
 import { canonClause } from '../../src/reflect.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -28,16 +28,9 @@ export const BOOT = 'boot.rofl';
 export const CHARCLASS = 'examples/ring1/charclass.rofl';
 export const RING1 = 'examples/ring1/ring1.rofl';
 
-/** THE CORRECT ROFL STRING ESCAPER, and it is not JSON's.
- *
- *  A ROFL escape means "take the next character literally" (src/parser.ts), so
- *  `"\n"` is the LETTER n and there is no escape that produces a line feed —
- *  a newline in a string is written as itself. Only the quote and the
- *  backslash need escaping. Using JSON.stringify here fed ring 1 a source in
- *  which every newline had become an `n`, which ended every comment at the
- *  first `n` inside it and cost an hour. */
-export const roflStr = (s: string) =>
-  '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+/** Re-exported from the parser, where it lives beside the unescaping it
+ *  inverts. Kept as a name here because the demo and its test both use it. */
+export const roflStr = escapeString;
 
 const BUDGET = 200_000_000;
 
@@ -80,17 +73,28 @@ function unquote(raw: string): string {
 
 export class Unsupported extends Error {}
 
-function term(t: J, src: string): Term {
+function term(t: J, src: string, wild: Map<number, number>): Term {
   const at = (a: J[]) => src.slice(a[0].v, a[1].v + 1);
   let a: J[] | null;
   if ((a = fn(t, 'atom'))) return mka(at(a));
-  if ((a = fn(t, 'var'))) return mkv(at(a));
+  if ((a = fn(t, 'var'))) {
+    const name = at(a);
+    // A bare `_` is a FRESH variable, numbered per clause, exactly as
+    // src/parser.ts numbers it. Reading it as a variable called `_` merges
+    // every wildcard in the clause into one and silently adds a join.
+    if (name === '_') {
+      const n = wild.get(a[0].v);
+      if (n === undefined) throw new Unsupported('wildcard without a rank');
+      return mkv(`_$${n}`);
+    }
+    return mkv(name);
+  }
   if ((a = fn(t, 'int'))) return mki(parseInt(at(a), 10));
   if ((a = fn(t, 'str'))) return mks(unquote(src.slice(a[0].v + 1, a[1].v)));
   throw new Unsupported('term: ' + JSON.stringify(t).slice(0, 60));
 }
 
-function lit(t: J, src: string): Lit {
+function lit(t: J, src: string, wild: Map<number, number>): Lit {
   const a = fn(t, 'node');
   if (!a) throw new Unsupported('literal');
   const [relT, perspT, argsT] = a;
@@ -100,15 +104,15 @@ function lit(t: J, src: string): Lit {
     rel: src.slice(ra[0].v, ra[1].v + 1),
     persp: bk ? mka(src.slice(bk[0].v, bk[1].v + 1)) : mka('main'),
     perspExplicit: !!bk,
-    args: unlist(argsT).map((x) => term(x, src)),
+    args: unlist(argsT).map((x) => term(x, src, wild)),
     temporal: 'now',
   };
 }
 
-function bodyElem(t: J, src: string): BodyElem {
+function bodyElem(t: J, src: string, wild: Map<number, number>): BodyElem {
   let a: J[] | null;
-  if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], src) };
-  if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], src) };
+  if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], src, wild) };
+  if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], src, wild) };
   throw new Unsupported('body element');
 }
 
@@ -158,12 +162,15 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   const uncovered = (snap.facts as J[]).filter((f) => f.rel === 'uncovered')
     .map((f) => f.args[0].v as number).sort((a, b) => a - b);
 
+  const wild = new Map<number, number>();
+  for (const f of (snap.facts as J[])) if (f.rel === 'wild') wild.set(f.args[0].v, f.args[1].v);
+
   const out: Clause[] = [];
   const unsupported: string[] = [];
   for (const f of rows.sort((x, y) => x.args[0].v - y.args[0].v)) {
     const [, , headT, bodyT] = f.args;
     try {
-      out.push({ head: lit(headT, src), body: unlist(bodyT).map((b) => bodyElem(b, src)) });
+      out.push({ head: lit(headT, src, wild), body: unlist(bodyT).map((b) => bodyElem(b, src, wild)) });
     } catch (e) {
       if (e instanceof Unsupported) unsupported.push(e.message);
       else throw e;

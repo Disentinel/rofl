@@ -17,15 +17,35 @@ as canonical clauses:
 
 | outcome | count |
 |---|---|
-| identical to the host parser | 8 |
+| identical to the host parser | 13 |
 | refused, with the offset named | 10 |
-| **silently divergent** | **5** |
+| **silently divergent** | **0** |
+
+Every file is now either byte-identical or refused with the offset named. The
+test pins the silent count at a **ceiling of zero**, because that is the only
+category where ring 1 returns a *different program* without saying so.
 
 Covered: comments, facts, rules, `not`, perspective brackets, and terms that
 are atoms, variables, integers or strings. Not covered: builtins and
 arithmetic, temporal markers, compound terms, wildcards as distinct from
-variables. The five silent divergences are the next thing to fix — they are
-the only category where ring 1 returns a *different program* without saying so.
+variables.
+
+## The five silent divergences were one host bug
+
+All five were wildcards, and the fix was in `src/parser.ts`, not here. The host
+numbers `_` per clause — `_$0`, `_$1` — so two underscores in one clause are two
+different variables; read as an ordinary variable named `_` they merge, which
+adds a join the author never wrote. Ring 1 numbering them 0, 1, 2 then still
+disagreed, because **the host was numbering them 1, 3, 5**: a positive body
+literal is parsed twice (once as an expression, then rewound and parsed as a
+literal), and the rewind restored `pos` but not `freshCounter`. A variable's
+name was therefore a function of how often the parser backtracked over it
+rather than of the program — and `ruleIdOf` is a content hash over the
+canonical clause *including variable names*.
+
+A chart parser has no backtracking, which is why it could see this and the
+host could not. This is the "divergences on cases the author never held in
+mind" that a second independent implementation was predicted to buy.
 
 ## Three silent-empty modes, each found by walking into it
 

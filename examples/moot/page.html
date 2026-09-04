@@ -250,13 +250,13 @@
     requirement chain is <code>whynot</code>'s own; nothing in MOOT arranges it.</p>
 
   <pre class="tight">whynot live[main](f_new_checkout):
-  rule r09d4c1fc: live[main](?F)@now :- ordered[main](?F,?C,?_$1)@now, usable[main](?C)@now
+  rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
     failed premise: usable[main](c_new_checkout_1)
       rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
         failed premise: ok_from[main](c_new_checkout_1,1)
           rule re44c5a95: ok_from[main](?C,?K)@now :- req_at[main](?C,?K,?G)@now, live[main](?G)@now, ?K1 is +(?K,1), ok_from[main](?C,?K1)@now
             failed premise: live[main](f_payments_v2)
-              rule r09d4c1fc: live[main](?F)@now :- ordered[main](?F,?C,?_$1)@now, usable[main](?C)@now
+              rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
                 failed premise: usable[main](c_payments_v2_1)
                   rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
                     failed premise: not dead_clause[main](c_payments_v2_1) -- blocked: dead_clause[main](c_payments_v2_1) holds

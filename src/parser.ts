@@ -210,7 +210,16 @@ class P {
     }
     // Otherwise parse an expression; if a comparison/'is' operator follows it
     // is a builtin, else it must have been a plain literal rel(args).
+    // THE COUNTER IS PART OF THE POSITION. A positive body literal is parsed
+    // TWICE - once as an expression, then rewound and parsed again as a
+    // literal - and each pass consumes the wildcards, so a rewind that
+    // restores `pos` and not `freshCounter` numbered them 1, 3, 5 instead of
+    // 0, 1, 2. That made a variable's NAME a function of how often the parser
+    // backtracked over it rather than of the program, and `ruleIdOf` is a
+    // content hash over the canonical clause INCLUDING variable names. Found
+    // by ring 1, which has no backtracking and therefore disagreed.
     const save = this.pos;
+    const saveFresh = this.freshCounter;
     const e = this.expr();
     const nxt = this.peek();
     if (CMP_OPS.has(nxt.t)) {
@@ -226,6 +235,7 @@ class P {
     // reinterpret as literal
     if (e.k === 'f' && /^[a-z]/.test(e.name)) {
       this.pos = save;
+      this.freshCounter = saveFresh;
       return { t: 'pos', lit: this.literal() };
     }
     this.err(`expected a literal or builtin`);
@@ -255,6 +265,19 @@ class P {
     while (this.peek().t !== 'eof') out.push(this.clause());
     return out;
   }
+}
+
+/** Text -> a ROFL string literal, and the exact inverse of what `tokenize`
+ *  does above. It lives HERE, beside the unescaping, because the two are one
+ *  decision and keeping them apart is what sent a caller to `JSON.stringify`:
+ *  JSON's `\n` is a LINE FEED, this language's `\n` is the LETTER n, so a
+ *  source handed through JSON arrives with every newline replaced by a letter
+ *  and fails in a way that reads like a grammar gap.
+ *
+ *  An escape here means "take the next character literally", so exactly two
+ *  characters need one and a newline is written as itself. */
+export function escapeString(s: string): string {
+  return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 }
 
 export function parseProgram(src: string): Clause[] {

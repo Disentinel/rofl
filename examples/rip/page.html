@@ -384,25 +384,25 @@ risky(S, A)    :- respond(S, A, _, S2), not will_settle(S2).</pre>
   <pre class="tight">unknown[main](will_settle(w(ship,0,1,1,1,0,2)))  &lt;= r70d8af2b @tick 0
   action[main](w(ship,0,1,1,1,0,2),call) [axiom]
   not risky[main](w(ship,0,1,1,1,0,2),call) [undefined]
-    unknown[main](risky(w(ship,0,1,1,1,0,2),call))  &lt;= r25915533 @tick 0
+    unknown[main](risky(w(ship,0,1,1,1,0,2),call))  &lt;= r776fe94e @tick 0
       respond[main](w(ship,0,1,1,1,0,2),call,fail,w(ship,1,1,1,1,0,1)) [axiom]
       not will_settle[main](w(ship,1,1,1,1,0,1)) [undefined]
         unknown[main](will_settle(w(ship,1,1,1,1,0,1)))  &lt;= r70d8af2b @tick 0
           action[main](w(ship,1,1,1,1,0,1),call) [axiom]
           not risky[main](w(ship,1,1,1,1,0,1),call) [undefined]
-            unknown[main](risky(w(ship,1,1,1,1,0,1),call))  &lt;= r25915533 @tick 0
+            unknown[main](risky(w(ship,1,1,1,1,0,1),call))  &lt;= r776fe94e @tick 0
               respond[main](w(ship,1,1,1,1,0,1),call,fail,w(ship,2,1,1,1,0,0)) [axiom]
               not will_settle[main](w(ship,2,1,1,1,0,0)) [undefined]
                 unknown[main](will_settle(w(ship,2,1,1,1,0,0)))  &lt;= r70d8af2b @tick 0
                   action[main](w(ship,2,1,1,1,0,0),check) [axiom]
                   not risky[main](w(ship,2,1,1,1,0,0),check) [undefined]
-                    unknown[main](risky(w(ship,2,1,1,1,0,0),check))  &lt;= r25915533 @tick 0
+                    unknown[main](risky(w(ship,2,1,1,1,0,0),check))  &lt;= r776fe94e @tick 0
                       respond[main](w(ship,2,1,1,1,0,0),check,none,w(track,2,1,1,1,0,0)) [axiom]
                       not will_settle[main](w(track,2,1,1,1,0,0)) [undefined]
                         unknown[main](will_settle(w(track,2,1,1,1,0,0)))  &lt;= r70d8af2b @tick 0
                           action[main](w(track,2,1,1,1,0,0),call) [axiom]
                           not risky[main](w(track,2,1,1,1,0,0),call) [undefined]
-                            unknown[main](risky(w(track,2,1,1,1,0,0),call))  &lt;= r25915533 @tick 0
+                            unknown[main](risky(w(track,2,1,1,1,0,0),call))  &lt;= r776fe94e @tick 0
                               respond[main](w(track,2,1,1,1,0,0),call,silence,w(track,2,1,1,1,0,0)) [axiom]
                               not will_settle[main](w(track,2,1,1,1,0,0)) [undefined]
                                 unknown[main](will_settle(w(track,2,1,1,1,0,0))) [cycle]

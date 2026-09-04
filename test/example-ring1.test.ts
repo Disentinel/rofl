@@ -26,8 +26,8 @@ import { parse, canon, roflStr, world, IncompleteParse } from '../examples/ring1
 // The sweep is capped at 2.5 KiB per file to keep it off the critical path of
 // `npm test`: at 8 KiB it took 75 s, which is more than half the whole suite.
 // The numbers below are a FLOOR and a CEILING measured at that cap.
-const SAME_FLOOR = 8;
-const SILENT_CEILING = 5;
+const SAME_FLOOR = 13;
+const SILENT_CEILING = 0;
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const hostCanon = (src: string) => parseProgram(src).map(canonClause).sort().join('\n');
@@ -96,6 +96,6 @@ test('corpus floor: ring 1 parses real files identically, and refuses the rest l
   // those are files where ring 1 returns a different program without saying so.
   console.log(`    ring 1 over ${files.length} files: ${same} identical, ${refused} refused, ${silent} silent`);
   assert.ok(same >= SAME_FLOOR, `expected at least ${SAME_FLOOR} identical, got ${same}`);
-  assert.ok(silent <= SILENT_CEILING, `silent divergences rose to ${silent}; the ceiling is ${SILENT_CEILING}`);
+  assert.ok(silent <= SILENT_CEILING, `silent divergences rose to ${silent}; the ceiling is ${SILENT_CEILING} — every file must be either byte-identical or loudly refused`);
   assert.ok(refused + same + silent === files.length);
 });
