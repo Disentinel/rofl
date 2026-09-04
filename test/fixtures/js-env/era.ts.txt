@@ -1,0 +1,23 @@
+// era.ts.txt — SCANNED, NEVER RUN. The half of the era table that is not on
+// the ecmascript timeline at all: TypeScript syntax reaches an environment
+// through `env_extra` rather than through a year, and this file is what makes
+// that path carry real sites instead of a claim.
+//
+// THE DECORATOR IS NOT HERE, and its absence is a fact about the SCANNER
+// rather than about this fixture. scanners/js_ast.ts parses with
+// `plugins: ['typescript']` and nothing else, so `@logged` is a hard parse
+// ERROR — not a missing node, a refused file. `decorator` is nonetheless in
+// the declared `node_kind` vocabulary, so the era table gates a kind this
+// configuration can never produce. That is recorded as
+// `feature_unscannable(decorators, a_parser_plugin_not_enabled)` rather than
+// left to look like a corpus gap, which is the same distinction
+// `parenthesized_expression` already forced in the call-graph corpus.
+export function widen(n: number, s: string): number {
+  const cast = (n as number) + 1;
+  const shouted: string = s!;
+  return cast + shouted.length;
+}
+
+export class Service {
+  run(): string { return 'ran'; }
+}

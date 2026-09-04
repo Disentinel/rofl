@@ -118,7 +118,8 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('unearned_axis[audit](A, L)'), 0, 'both layers earn the column');
 
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
-    ['w_cg_member_family', 'w_mod_partial_cell']);
+    ['w_cg_member_family', 'w_env_ledger_form', 'w_env_scan_failed',
+     'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
   assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
     'both dataflow items are done, so the call-graph residue is next');
 });
@@ -126,7 +127,10 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
 test('the queue covers the model: 80 open cells, 11 claimed by name, 69 swept', () => {
   const w = world();
   assert.equal(w.n('open_cell[audit](K, S, L)'), 80, 'the queue is the model\'s open set');
-  assert.equal(w.n('work(W, Note)'), 14);
+  // 14 before the environment layer, 19 after it: four items the era slice
+  // found, plus the kernel item they wait on, entered so the dependency is a
+  // row rather than a sentence in a comment.
+  assert.equal(w.n('work(W, Note)'), 19);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -224,14 +228,18 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
   assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_member_family']);
-  // ONE dependency is live now — the value core is done, so the two items that
-  // waited on it are takeable and only `w_cg_call_result` still waits.
-  assert.equal(base.n('blocked[audit](W)'), 0, 'every premise has landed');
+  // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
+  // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
+  // hold. That is the relation doing its job on a real premise rather than on a
+  // planted one — the queue will not offer the ledger form until the leak audit
+  // can see a variable on the right of a crossing.
+  assert.equal(base.n('blocked[audit](W)'), 1, 'exactly the one held on purpose');
+  assert.deepEqual(base.binds('blocked[audit](W)', 'W'), ['w_env_ledger_form']);
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
-  assert.equal(mut.n('blocked[audit](W)'), 1);
+  assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
   assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_member_family'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);

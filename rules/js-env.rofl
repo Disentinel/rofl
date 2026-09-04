@@ -1,0 +1,185 @@
+-- js-env.rofl — the environment layer: is this program valid HERE, and what
+-- exactly stops being valid THERE.
+--
+-- Reads `ast_node[code]` (the scanner) and the table in facts/js-env.rofl, and
+-- nothing else. It does not need the call graph, the value flow or the shape
+-- axis, which is why it is its own pack: the expensive mutual fixpoint between
+-- `resolves` and `may_be_*` has nothing to say about whether `a?.b` parses in
+-- es5, and paying for it to find out would be a cost with no premise behind it.
+--
+-- ---------------------------------------------------------------------------
+-- WHY THE ENVIRONMENT IS A COLUMN HERE AND NOT THE PERSPECTIVE, measured
+-- rather than preferred.
+--
+-- The form this layer WANTS is the owner's: `unsupported[node18](Site, Feat)`,
+-- two books whose disagreement is the answer — the sentence
+-- rules/js-resolve.rofl already writes for module resolution and states in so
+-- many words ("the two rows are not a contradiction, they are two books").
+-- It is not written that way today because of ONE open defect,
+-- `f_the_leak_audit_now_fires_on_a_ledger_polymorphic_head`, and the block was
+-- measured on this exact question before this file was written:
+--
+--   uses[E](X) :- env_reg(E), thing[code](X).            leak[audit] = 3
+--     ... the same, plus authority(node18, js_env)
+--         and imports(node18, code) for every environment  leak[audit] = 3
+--   bad[audit](E, X) :- env_reg(E), thing[code](X), ...   leak[audit] = 1
+--     ... plus collects(audit) + imports(audit, code)      leak[audit] = 0
+--
+-- The three rows are all `<something> -> $var("E")`: `flow` is computed from
+-- the RULE and not from the instantiated facts, so registering each
+-- environment as a ledger does not reach them — arm two is the control that
+-- says so. The rule is therefore: A VARIABLE LEDGER ON THE LEFT of a crossing
+-- is gathered by `collects`; ON THE RIGHT it has no instrument, which is the
+-- other half of `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`.
+-- js-resolve stays clean because every one of its `[E]` heads reads only `[E]`
+-- and its per-environment facts come from a SCANNER; a derived per-environment
+-- conclusion is the case that has no green form yet.
+--
+-- WHAT CHANGES WHEN THAT DEFECT IS FIXED: the head of `unsupported`, `valid`
+-- and `lost` loses its first argument and gains a bracket. Nothing else here
+-- moves, and no fact file does. The column is a placeholder for a bracket, and
+-- writing it down as one is the difference between a deferral and a drift.
+
+-- The crossing this file performs: its audits read the scanner's book. Named
+-- on both ends, so `imports` is the right instrument and `collects` is not
+-- needed — no rule below reads a variable ledger. rules/js-model.rofl declares
+-- the same row for its own audits; a fact is idempotent and the declaration
+-- belongs where the crossing is, not in whichever pack happens to load first.
+imports(audit, code).
+
+-- ---------------------------------------------------------------------------
+-- 1. WHAT AN ENVIRONMENT GIVES. Two rules, because there are two ways to have
+--    a feature: be at or past the edition that introduced it, or carry it
+--    outside the timeline altogether.
+env_has[audit](E, F) :- environment(E), env_rank(E, R), feature_since(F, S), S <= R.
+env_has[audit](E, F) :- environment(E), env_extra(E, F).
+
+-- ---------------------------------------------------------------------------
+-- 2. WHAT THE PROGRAM USES. One rule over the whole vocabulary: a node of a
+--    gated kind is a use of that kind's feature, at that node's coordinates.
+uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L), kind_needs(L, K, F).
+
+-- ...and the same question one level down, because the KIND IS NOT ALWAYS THE
+-- FEATURE. `a ** b` and `a * b` are one kind; `a ?? b` and `a && b` are one
+-- kind; `a ??= b` and `a += b` are one kind. Gating on the kind alone reports a
+-- file full of es2021 operators as pure es5, and no count anywhere would show
+-- it — the kinds are all present and all baseline. This rule is what makes the
+-- operator visible, and it needs no new scanner contract: `ast_attr` already
+-- carries every scalar own property.
+uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+                     attr_needs(L, K, Key, V, F), ast_attr[code](N, Key, V).
+
+used_feature[audit](F)  :- uses[audit](_, F).
+
+-- ---------------------------------------------------------------------------
+-- 3. THE VERDICT. `unsupported` is the whole answer and everything below is a
+--    projection of it — a site using a feature the environment does not have.
+unsupported[audit](E, N, F) :- environment(E), uses[audit](N, F), not env_has[audit](E, F).
+
+-- ...at a coordinate a human can find. The scanner records the line, so the
+-- report can point at the source rather than at an internal node id.
+unsupported_at[audit](E, File, Line, F) :- unsupported[audit](E, N, F),
+                                           ast_node[code](N, _, File, Line).
+
+-- The same projection for the two other reports. `query` takes ONE literal, so
+-- a join written at the call site is not a query at all — putting the
+-- coordinate in the relation is what makes the report askable rather than
+-- assemblable, and these three are the layer's actual product.
+uses_at[audit](File, Line, F)  :- uses[audit](N, F), ast_node[code](N, _, File, Line).
+uses_kind[audit](K, F)         :- uses[audit](N, F), ast_node[code](N, K, _, _).
+unsupported_in[audit](E, File, F) :- unsupported_at[audit](E, File, _, F).
+
+-- «Валидна ли эта программа в окружении X?» — total over the files scanned,
+-- so a file with nothing wrong in it produces a POSITIVE row rather than an
+-- absence. An answer that is only ever a silence cannot be told from a model
+-- that did not run.
+file_broken[audit](E, File) :- unsupported[audit](E, N, _), ast_node[code](N, _, File, _).
+valid[audit](E, File)     :- environment(E), ast_file[code](_, File), not file_broken[audit](E, File).
+invalid[audit](E, File)   :- environment(E), ast_file[code](_, File), file_broken[audit](E, File).
+
+-- ---------------------------------------------------------------------------
+-- 4. «А что именно перестанет быть валидным?» — the difference between two
+--    environments, attributed to a site and a feature. This is the row the
+--    whole layer exists for: not "es5 is worse" but "THIS site, THIS feature,
+--    and here is the line".
+lost[audit](From, To, N, F) :- unsupported[audit](To, N, F),
+                               env_rank(To, RT), env_rank(From, RF), RT < RF,
+                               not unsupported[audit](From, N, F).
+
+lost_feature[audit](From, To, F) :- lost[audit](From, To, _, F).
+lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),
+                                           ast_node[code](N, _, File, Line).
+
+-- ---------------------------------------------------------------------------
+-- 5. THE GATES. Each is a statement this layer makes about ITSELF, and each
+--    must be able to say no; test/js-env.test.ts plants a defect for every one
+--    and asserts the row appears.
+
+-- A KIND IN THE VOCABULARY THAT NOBODY DECIDED ABOUT. The scanner's vocabulary
+-- grows; this is the row that makes a new kind arrive loudly instead of
+-- silently counting as baseline.
+kind_gated(L, K)             :- kind_needs(L, K, _).
+kind_unaccounted[audit](L, K) :- env_lang(L), node_kind(L, K),
+                                 not kind_gated(L, K), not kind_baseline(L, K).
+
+-- A KIND DECLARED BOTH GATED AND BASELINE. Harmless to the answer — the gate
+-- still fires — and a lie about what was decided, which is worse than a wrong
+-- answer because it reads as a decision.
+kind_double_booked[audit](L, K) :- kind_gated(L, K), kind_baseline(L, K).
+
+-- A FEATURE `kind_needs` NAMES AND `feature` DOES NOT DECLARE. A typo here is
+-- invisible to every other check: the kind counts as gated, the feature is in
+-- no environment, and the site reports unsupported EVERYWHERE — a red that
+-- looks like a finding and is a spelling mistake.
+feature_undeclared[audit](F) :- kind_needs(_, _, F), not feature(F).
+
+-- A DECLARED FEATURE NO ENVIRONMENT HAS. Either a year outside every
+-- environment's range or a feature nobody carries; either way `unsupported` is
+-- trivially total for it and the model is saying no for the wrong reason.
+feature_unreachable[audit](F) :- feature(F), not any_env_has[audit](F).
+any_env_has[audit](F)        :- env_has[audit](_, F).
+
+-- A DECLARED FEATURE NO SITE USES. Not an error — the vocabulary is allowed to
+-- be wider than the corpus — but it is the number that says how much of this
+-- table the corpus actually exercises, and a table that drifts entirely out of
+-- the corpus should be visible rather than merely large.
+feature_unexercised[audit](F) :- feature(F), not used_feature[audit](F),
+                                 not unscannable(F).
+unscannable(F)                :- feature_unscannable(F, _).
+
+-- A FEATURE WAIVED AS UNSCANNABLE THAT THE CORPUS NEVERTHELESS PRODUCES. The
+-- waiver above is the one place this layer says "expect nothing here forever",
+-- and a waiver nobody re-checks is how a fixed instrument keeps being called
+-- broken. The day the scanner's plugin list grows, this row appears.
+unscannable_seen[audit](F) :- unscannable(F), used_feature[audit](F).
+
+-- A KIND THE CORPUS PRODUCES THAT THE ERA TABLE CLASSIFIES NEITHER WAY. This is
+-- the layer's FRONTIER and it is expected to be non-zero: `node_kind` is an
+-- authored vocabulary and babel has 252 concrete types, so the corpus reaches
+-- kinds nobody has decided about yet. The number is the point — it says how far
+-- the table is from the corpus, and a table drifting away from it should be
+-- visible rather than merely large. `kind_unaccounted` above asks the same
+-- question of the DECLARED vocabulary, where the answer must be zero.
+kind_ungoverned[audit](K) :- ast_node[code](_, K, _, _), env_lang(L),
+                             not kind_gated(L, K), not kind_baseline(L, K).
+
+-- AN ENVIRONMENT WITH NO PLACE ON THE SCALE. `env_has` would give it its
+-- `env_extra` rows and nothing else, so it would report almost everything
+-- unsupported and look like a very old environment rather than a broken row.
+env_unranked[audit](E) :- environment(E), not has_rank(E).
+has_rank(E)                  :- env_rank(E, _).
+
+-- AN ENVIRONMENT THAT DISTINGUISHES NOTHING. Two environments agreeing on
+-- every site in the corpus are one environment as far as any measurement here
+-- can tell, and a comparison between them is decoration.
+--
+-- NO RANK PREMISE, and that was measured. The first form required
+-- `env_rank(A, RA), env_rank(B, RB), RA < RB` — and two environments given the
+-- SAME rank, which is precisely the indistinct case, then failed `RA < RB` and
+-- were never considered at all. The mutant that gives es2016 the year 2015
+-- survived it. `lost` already carries the ordering, so asking it in both
+-- directions is the whole test and the ranks are none of this rule's business.
+env_separates[audit](A, B)      :- lost_feature[audit](A, B, _).
+env_pair_indistinct[audit](A, B) :- environment(A), environment(B), A != B,
+                                    not env_separates[audit](A, B),
+                                    not env_separates[audit](B, A).

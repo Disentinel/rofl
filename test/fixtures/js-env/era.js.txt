@@ -1,0 +1,69 @@
+// era.js.txt — SCANNED, NEVER RUN. One site per gated syntax feature, so that
+// every `kind_needs` row in facts/js-env.rofl is verified by something the
+// scanner really emits rather than by the table agreeing with itself.
+//
+// THE `.txt` TAIL IS LOAD-BEARING, for the same reason it is on
+// test/fixtures/js-call/shapes.ts.txt: tsconfig's include covers `test/**`
+// and a fixture whose job is to hold one of everything cannot also be a file
+// the project compiles and runs.
+//
+// It is a SEPARATE CORPUS from test/fixtures/js-call on purpose. That corpus
+// answers a different question — which call edges the runtime really takes —
+// and its counts are pinned test by test; growing it to exercise `for-of`
+// would move numbers that have nothing to do with syntax eras.
+import defaultExport from './other.js';
+import { named } from './other.js';
+import * as everything from './other.js';
+export * from './other.js';
+
+const arrow = (n) => n + 1;
+
+function* counter() { yield 1; yield 2; }
+
+class Base { greet() { return 'base'; } }
+class Sub extends Base { greet() { return super.greet() + '!'; } }
+
+const shorthand = {
+  method(n) { return n; },
+  tag: 'plain',
+};
+
+function templates(who) {
+  return `hello ${who}` + String.raw`raw ${who}`;
+}
+
+function loop(xs) {
+  let total = 0;
+  for (const x of xs) { total += x; }
+  return total;
+}
+
+async function fetchThing(url) {
+  const mod = await import(url);
+  return mod?.value ?? mod?.get?.();
+}
+
+// THE KIND IS NOT ALWAYS THE FEATURE. Every line below is a `binary_expression`,
+// a `logical_expression` or an `assignment_expression` — kinds that are as old
+// as the language — and the era each one belongs to is carried by the OPERATOR
+// attribute and by nothing else. `attr_needs` in facts/js-env.rofl is the
+// refinement that makes these visible; without it a file using `??=` reads as
+// pure es5.
+// TWO STRING LITERALS WHOSE VALUE IS AN OPERATOR. `attr_needs` joins on the
+// KEY as well as the value, and without these two lines that join is
+// unmeasured: no other attribute in the corpus happens to carry `**` or `??`,
+// so a rule that forgot the key would be indistinguishable from one that
+// keeps it. Measured — the mutant that drops the key SURVIVED until these
+// existed, which is the difference between a gate and a decoration.
+const powerSign = '**';
+const nullishSign = '??';
+
+function operators(a, b) {
+  let acc = a ** b;      // ES2016
+  acc ??= b;             // ES2021
+  acc ||= a;             // ES2021
+  acc &&= b;             // ES2021
+  return acc + (a ?? b); // ?? is ES2020, + is not
+}
+
+export { arrow, counter, Sub, shorthand, templates, loop, fetchThing, operators, powerSign, nullishSign, defaultExport, named, everything };

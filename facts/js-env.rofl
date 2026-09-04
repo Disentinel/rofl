@@ -1,0 +1,213 @@
+-- js-env.rofl — WHICH ENVIRONMENT IS THIS PROGRAM VALID IN, and what exactly
+-- stops being valid in an older one.
+--
+-- The question this file's table answers is the owner's, in his words: «Валидна
+-- ли эта программа в окружении node22? А если node18? А что именно перестанет
+-- быть валидным?» It is answered on the SYNTAX axis only. That is deliberate
+-- and it is the cheap half: every row below is over the node-kind vocabulary
+-- the model already declares, and not one byte of it comes from a `.d.ts`. The
+-- API-surface half (`fs.cp`, `Array.prototype.at`) needs generated packs and is
+-- a separate slice.
+--
+-- ONE SCALE, NOT TWO. A feature carries the YEAR of the edition that
+-- introduced it and an environment carries the year it implements up to, so
+-- "does this environment have this feature" is one integer comparison and
+-- there is no edition/environment join table to keep in agreement. A feature
+-- that is not on the ecmascript timeline at all (TypeScript syntax, a stage-3
+-- proposal) carries NO year and reaches an environment only through
+-- `env_extra` — which is why the two mechanisms are both here and neither is
+-- a special case of the other.
+--
+-- WHAT IS NOT MODELLED HERE, said rather than silently absent:
+--
+--   * WITHDRAWAL. `feature_since` has no `feature_until` twin, because no
+--     JavaScript SYNTAX this vocabulary contains was ever removed — going down
+--     the version order is the only direction that loses anything, and `since`
+--     alone covers it. The API half is where withdrawal first has a real row,
+--     and building the relation before that row exists would put a capability
+--     in the tree that no demo exercises (CLAUDE.md).
+--   * REMEDY. «Что заменить чтобы снова стало валидным?» is unanswered for
+--     syntax on purpose: replacing `a?.b` in an es5 world is a TRANSFORM, and
+--     this model has no term for a transform. For the API half a remedy IS a
+--     substitution (`fs.cp` -> `fs.copyFile`) and `replaced_by/2` arrives with
+--     it. Answering three of four questions and saying which one is missing is
+--     the honest report.
+-- ---------------------------------------------------------------------------
+-- WHY THIS IS NOT `layer(era)`. Every other question in this model is a LAYER
+-- over the (language, kind) matrix, and adding one is one fact — which is the
+-- experiment facts/js-kinds.rofl exists to run. The era question is not one of
+-- them, and the reason is that it would be TWO ACCOUNTING MECHANISMS OVER ONE
+-- COLUMN: `unaccounted[audit]` asks whether every kind has a `handled` or an
+-- `ignored` row per layer, and `kind_unaccounted[audit]` in rules/js-env.rofl
+-- asks whether every kind has a `kind_needs` or a `kind_baseline` row. They
+-- would answer the same question in two vocabularies, and the repository has
+-- already paid for that shape once — `orphan_claim[audit]` was written by hand
+-- for two relations and a third silently reopened the hole.
+--
+-- The distinction that decides it: a LAYER is a thing the model can say about a
+-- kind (does it carry a value, does it make a call edge), and the answer is
+-- per (kind, layer). An ERA is a thing the WORLD says about a kind, the same
+-- answer in every layer, and it is not ours to model differently per layer.
+-- So the era axis rides on `node_kind` and accounts for itself, and
+-- `layer/1` stays the vocabulary of what WE model.
+edb(environment).
+edb(env_rank).
+edb(env_extra).
+edb(env_lang).
+edb(feature).
+edb(feature_since).
+edb(kind_needs).
+edb(attr_needs).
+edb(kind_baseline).
+edb(feature_unscannable).
+
+-- The language whose vocabulary is gated. One fact, and the day Python gets
+-- an environment model it is one more — the same shape as `layer/1`.
+env_lang(js).
+
+-- ---------------------------------------------------------------------------
+-- THE ENVIRONMENTS. Four, chosen so that every gated feature is on the wrong
+-- side of at least one of them; an environment nothing distinguishes is a row
+-- that cannot make the model say no.
+environment(es5).     env_rank(es5, 2009).
+environment(es2015).  env_rank(es2015, 2015).
+environment(es2016).  env_rank(es2016, 2016).
+environment(es2020).  env_rank(es2020, 2020).
+environment(ts5).     env_rank(ts5, 2022).
+
+-- TypeScript is es2022 PLUS syntax that is on no ecmascript timeline. It is
+-- not a later edition and modelling it as one would be a lie the integer
+-- comparison could not detect.
+env_extra(ts5, type_syntax).
+env_extra(ts5, decorators).
+
+-- ---------------------------------------------------------------------------
+-- THE FEATURES. `feature_since(F, Year)` places F on the ecmascript timeline;
+-- a feature with no such row is reachable only through `env_extra`.
+feature(arrow_functions).     feature_since(arrow_functions, 2015).
+feature(classes).             feature_since(classes, 2015).
+feature(template_literals).   feature_since(template_literals, 2015).
+feature(for_of).              feature_since(for_of, 2015).
+feature(generators).          feature_since(generators, 2015).
+feature(modules).             feature_since(modules, 2015).
+feature(shorthand_methods).   feature_since(shorthand_methods, 2015).
+feature(exponentiation).      feature_since(exponentiation, 2016).
+feature(async_await).         feature_since(async_await, 2017).
+feature(optional_chaining).   feature_since(optional_chaining, 2020).
+feature(dynamic_import).      feature_since(dynamic_import, 2020).
+feature(nullish_coalescing).  feature_since(nullish_coalescing, 2020).
+feature(logical_assignment).  feature_since(logical_assignment, 2021).
+feature(type_syntax).
+feature(decorators).
+
+-- ---------------------------------------------------------------------------
+-- THE GATE, kind by kind. Every kind in the vocabulary must appear either here
+-- or in `kind_baseline` below; `kind_unaccounted[audit]` reports the ones that
+-- appear in neither, which is the closed-vocabulary discipline this repository
+-- already applies to `handled`/`ignored`.
+kind_needs(js, arrow_function_expression,   arrow_functions).
+kind_needs(js, class_declaration,           classes).
+kind_needs(js, class_method,                classes).
+kind_needs(js, super,                       classes).
+kind_needs(js, class_body,                  classes).
+kind_needs(js, template_literal,            template_literals).
+kind_needs(js, tagged_template_expression,  template_literals).
+kind_needs(js, template_element,            template_literals).
+kind_needs(js, for_of_statement,            for_of).
+kind_needs(js, yield_expression,            generators).
+kind_needs(js, import_declaration,          modules).
+kind_needs(js, import_specifier,            modules).
+kind_needs(js, import_default_specifier,    modules).
+kind_needs(js, import_namespace_specifier,  modules).
+kind_needs(js, export_named_declaration,    modules).
+kind_needs(js, export_all_declaration,      modules).
+kind_needs(js, export_specifier,            modules).
+kind_needs(js, object_method,               shorthand_methods).
+kind_needs(js, await_expression,            async_await).
+kind_needs(js, optional_member_expression,  optional_chaining).
+kind_needs(js, optional_call_expression,    optional_chaining).
+kind_needs(js, import_expression,           dynamic_import).
+kind_needs(js, import,                      dynamic_import).
+kind_needs(js, tsas_expression,             type_syntax).
+kind_needs(js, tsnon_null_expression,       type_syntax).
+-- `ts_string_keyword` is the spelling in facts/js-kinds.rofl, which is a
+-- SYNTHETIC fixture with no corpus behind it. The scanner snake-cases babel's
+-- own type names, so what a scanned file really carries is `tsstring_keyword`
+-- — no underscore after `ts`. Both are gated: the first so the declared
+-- vocabulary is accounted for, the rest because they are what the corpus
+-- actually produces.
+kind_needs(js, ts_string_keyword,           type_syntax).
+kind_needs(js, tsstring_keyword,            type_syntax).
+kind_needs(js, tsnumber_keyword,            type_syntax).
+kind_needs(js, tstype_annotation,           type_syntax).
+kind_needs(js, tstype_reference,            type_syntax).
+kind_needs(js, tstype_parameter_instantiation, type_syntax).
+kind_needs(js, tsunion_type,                type_syntax).
+kind_needs(js, tsfunction_type,             type_syntax).
+kind_needs(js, tsnull_keyword,              type_syntax).
+kind_needs(js, decorator,                   decorators).
+
+-- ---------------------------------------------------------------------------
+-- THE WAIVERS: kinds valid in every environment this file names. It is a LIST
+-- and not a default for the reason `unaccounted[audit]` exists — a default
+-- makes a kind nobody thought about indistinguishable from a kind somebody
+-- decided was baseline, and the first new kind the scanner emits would arrive
+-- silently declared safe.
+kind_baseline(js, identifier).
+kind_baseline(js, member_expression).
+kind_baseline(js, call_expression).
+kind_baseline(js, new_expression).
+kind_baseline(js, this_expression).
+kind_baseline(js, array_expression).
+kind_baseline(js, object_expression).
+kind_baseline(js, object_property).
+kind_baseline(js, function_declaration).
+kind_baseline(js, function_expression).
+kind_baseline(js, variable_declarator).
+kind_baseline(js, assignment_expression).
+kind_baseline(js, conditional_expression).
+kind_baseline(js, sequence_expression).
+kind_baseline(js, parenthesized_expression).
+kind_baseline(js, return_statement).
+kind_baseline(js, if_statement).
+kind_baseline(js, block_statement).
+kind_baseline(js, expression_statement).
+kind_baseline(js, variable_declaration).
+kind_baseline(js, program).
+kind_baseline(js, file).
+kind_baseline(js, comment_line).
+kind_baseline(js, comment_block).
+kind_baseline(js, string_literal).
+kind_baseline(js, numeric_literal).
+kind_baseline(js, boolean_literal).
+
+-- THE KIND IS BASELINE AND THE OPERATOR IS NOT. `a ** b`, `a ?? b` and
+-- `a ??= b` are a `binary_expression`, a `logical_expression` and an
+-- `assignment_expression` — three kinds older than any gate here — and the era
+-- each belongs to is carried by the `operator` attribute alone. Baseline is
+-- therefore the truth about the KIND, and `attr_needs` below is the refinement
+-- that keeps it from being the whole answer.
+kind_baseline(js, binary_expression).
+kind_baseline(js, unary_expression).
+kind_baseline(js, logical_expression).
+
+-- ---------------------------------------------------------------------------
+-- THE GATE, ATTRIBUTE BY ATTRIBUTE. Same shape as `kind_needs`, keyed on a
+-- scalar attribute the scanner already records, so no new scanner contract is
+-- needed to see the operators that carry an era.
+attr_needs(js, binary_expression,     operator, "**",  exponentiation).
+attr_needs(js, logical_expression,    operator, "??",  nullish_coalescing).
+attr_needs(js, assignment_expression, operator, "??=", logical_assignment).
+attr_needs(js, assignment_expression, operator, "||=", logical_assignment).
+attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
+
+-- ---------------------------------------------------------------------------
+-- A FEATURE THIS SCANNER CANNOT SEE, declared so that its permanent absence
+-- from every corpus reads as a fact about the instrument and not as a gap in
+-- the fixtures. scanners/js_ast.ts parses with `plugins: ['typescript']`, and
+-- a decorator under that configuration is not a missing node but a REFUSED
+-- FILE — `@logged` raises MissingOneOfPlugins and nothing is scanned at all.
+-- The same distinction `parenthesized_expression` forced in the call-graph
+-- corpus, arrived at from the other side: there babel emits no node, here
+-- babel refuses the source.
+feature_unscannable(decorators, a_parser_plugin_not_enabled).

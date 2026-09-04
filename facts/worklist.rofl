@@ -168,3 +168,67 @@ claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).
 -- when the scanner's contract moves.
 cell_blocked(member_expression,          s_computed_template_key, callgraph, scanner_contract).
 cell_blocked(optional_member_expression, s_computed_template_key, callgraph, scanner_contract).
+
+-- ===========================================================================
+-- 15-18 — THE ENVIRONMENT LAYER'S OWN RESIDUE, added 2026-09-04 when
+-- rules/js-env.rofl landed. The layer answers three of the owner's four
+-- questions on the syntax axis; each item below is one of the things it
+-- cannot do yet, and each is entered because the work found it rather than
+-- because it was foreseen.
+
+-- 15. THE ONE THING THE HOST HAS TO DO. A file the scanner REFUSES contributes
+-- no facts at all, so `valid[audit]` neither accepts nor refuses it: a corpus
+-- can lose a file silently and every count stays plausible. No rule can derive
+-- the absence of everything, so this moves only when the scanner reports its
+-- own failures. It is ordered first of the four because every other answer
+-- this layer gives is conditional on it.
+work(w_env_scan_failed, "scan_failed[code](File, Reason) from the host: a refused file must be invalid, not absent").
+work_order(w_env_scan_failed, 15).
+work_state(w_env_scan_failed, open).
+work_spawned(w_env_scan_failed, f_a_refused_file_is_absent_not_invalid).
+
+-- 16. POSITION. `await` at the top level of a module is ES2022 and the same
+-- word inside an async function is ES2017, and they are THE SAME NODE KIND.
+-- The era table gates on a kind and on one scalar attribute, so it reports the
+-- older era for both and test/js-env.test.ts pins that wrong answer. The fix
+-- is a third gate shape keyed on an ANCESTOR rather than on the node —
+-- `ast_within` is already there — and it is the first place this layer needs
+-- to know where a node is rather than what it is.
+work(w_env_positional_features, "gate on position as well as kind: top-level await is ES2022, nested await is ES2017").
+work_order(w_env_positional_features, 16).
+work_state(w_env_positional_features, open).
+
+-- 17. THE API SURFACE. `fs.cp` and `Array.prototype.at` are the half of the
+-- question that syntax cannot answer, and unlike the syntax half it needs
+-- GENERATED packs — measured in Disentinel/grafema, whose hand-written
+-- `lang-defs` package declared an `extends` field its loader never read and
+-- had no consumer at all, while the effects database it actually shipped is
+-- split by RUNTIME and has no version axis whatsoever. It also brings the one
+-- question left unanswered here: a remedy for an API is a SUBSTITUTION
+-- (`replaced_by/2`) where a remedy for syntax is a transform, and this model
+-- has no term for a transform.
+work(w_env_api_surface, "the API half: provides/replaced_by generated from .d.ts, starting with node: builtins").
+work_order(w_env_api_surface, 17).
+work_state(w_env_api_surface, open).
+
+-- 18. THE FORM THE OWNER ASKED FOR. `unsupported[node18](Site, Feature)`
+-- instead of an environment column, blocked by one measured defect and by
+-- nothing else. The diff is the head of three rules. It waits on the leak
+-- audit learning to see a variable ledger on the RIGHT of a crossing, which is
+-- a KERNEL question and is deliberately held in the backlog — so this item is
+-- `work_needs`-blocked rather than merely unstarted, and the queue will not
+-- offer it until that is true.
+work(w_env_ledger_form, "move the verdict into the environment's own ledger: unsupported[node18](Site, Feature)").
+work_order(w_env_ledger_form, 18).
+work_state(w_env_ledger_form, open).
+work_needs(w_env_ledger_form, w_leak_variable_on_the_right).
+work_spawned(w_env_ledger_form, f_a_derived_per_environment_conclusion_has_no_green_form).
+
+-- ...and the kernel item it waits on, entered so that `needs_unknown[audit]`
+-- stays empty and the dependency is a row rather than a sentence in a comment.
+-- It is ordered LAST because it is the owner's to schedule, not mine: seven
+-- tests are already red on it and he has said to hold it.
+work(w_leak_variable_on_the_right, "leak[audit] cannot see a variable ledger on the RIGHT of a crossing; collects covers only the left").
+work_order(w_leak_variable_on_the_right, 19).
+work_state(w_leak_variable_on_the_right, open).
+work_spawned(w_leak_variable_on_the_right, f_the_leak_audit_now_fires_on_a_ledger_polymorphic_head).
