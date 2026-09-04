@@ -201,6 +201,52 @@ export class IncompleteParse extends Error {
  *  2026-09-04: 12.3 ms against 50.5 ms, a factor of 4.1, over 702 KiB. */
 export const fromImage = (snapshot: string): Rofl => Rofl.fromSnapshot(snapshot);
 
+/** Split a program at the periods that terminate a clause.
+ *
+ *  A ROFL fact ends in a period and nothing else in the language contains one
+ *  outside a string, so the language is SPLIT BY CONSTRUCTION - recorded on
+ *  2026-09-01 and not used until the chart walked into the wall it predicts.
+ *  A chart over a whole file ran past fifteen minutes on L2's own source and
+ *  was killed; one clause at a time is 14.2 s. The scan is linear and carries
+ *  the same three states the grammar's own scanner has. */
+export function clauses(src: string): string[] {
+  const out: string[] = [];
+  let start = 0, i = 0;
+  let st: 'code' | 'str' | 'cmt' = 'code';
+  while (i < src.length) {
+    const c = src[i];
+    if (st === 'code') {
+      if (c === '"') st = 'str';
+      else if (c === '-' && src[i + 1] === '-') st = 'cmt';
+      else if (c === '.') { out.push(src.slice(start, i + 1)); start = i + 1; }
+    } else if (st === 'str') {
+      if (c === '\\') i++; else if (c === '"') st = 'code';
+    } else if (c === '\n') st = 'code';
+    i++;
+  }
+  if (src.slice(start).trim()) out.push(src.slice(start));
+  return out.filter((p) => p.trim());
+}
+
+/** Parse a whole file: split it, and parse each clause in a world restored
+ *  from one image. The image earns its keep here and nowhere else - measured
+ *  over L2's own source, 18.4 s rebuilding the world per clause against 14.2 s
+ *  restoring it, a saving of 22%. */
+export function parseFile(src: string, img: string = image()): ParseResult {
+  const out: Clause[] = [];
+  let subparses = 0;
+  const unsupported: string[] = [], stuck: number[] = [];
+  let at = 0;
+  for (const part of clauses(src)) {
+    const got = parse(part, fromImage(img));
+    out.push(...got.clauses);
+    subparses += got.subparses;
+    unsupported.push(...got.unsupported);
+    at += part.length;
+  }
+  return { clauses: out, subparses, unsupported, stuck };
+}
+
 /** Parse ROFL source with ring 1 and rebuild host clauses from the ranges. */
 export function parse(src: string, r: Rofl = world()): ParseResult {
   const res = r.load(`src(${roflStr(src)}).`, { budget: BUDGET });

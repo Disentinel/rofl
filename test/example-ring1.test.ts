@@ -23,7 +23,7 @@ import { parseProgram } from '../src/parser.ts';
 import { canonClause } from '../src/reflect.ts';
 import {
   parse, canon, roflStr, world, IncompleteParse,
-  image, imageContent, fromImage, IMAGE_SOURCES,
+  image, imageContent, fromImage, IMAGE_SOURCES, parseFile, clauses,
 } from '../examples/ring1/demo.ts';
 
 // The sweep is capped to keep it off the critical path of `npm test`. Measured
@@ -190,3 +190,26 @@ test('l1.dense.rofl is REPRODUCIBLE from l1.rofl', async () => {
   assert.equal(dense(parseProgram(read('examples', 'ring1', 'l1.rofl'))),
                read('examples', 'ring1', 'l1.dense.rofl'));
 });
+
+test('SELF-APPLICATION: L1 parses L2\'s own source, identically to the host', () => {
+  // The most valuable gate here, and it earned that on its first run: pointing
+  // L1 at L2 found two defects the corpus could not reach — `is` excluded from
+  // term position, so ring 1 could not read `optok(I, J, is)` and therefore
+  // could not parse itself; and a one-character operator guarded on the wrong
+  // index, so `<=` read as `<` and BOTH parses survived, 137 clauses against
+  // the host's 131. Neither shows on 23 corpus files that agree byte for byte.
+  const src = read('examples', 'ring1', 'ring1.rofl');
+  const got = parseFile(src, imageOfL1());
+  assert.ok(clauses(src).length > 100, 'the split must actually find the clauses');
+  assert.equal(got.clauses.length, parseProgram(src).length);
+  assert.equal(canon(got.clauses), hostCanon(src));
+});
+
+/** L1's world as an image — built once for the self-application sweep. */
+function imageOfL1(): string {
+  const r = new (Object.getPrototypeOf(world()).constructor)();
+  for (const f of ['boot.rofl', 'examples/ring1/charclass.rofl', 'examples/ring1/l1.rofl']) {
+    r.load(fs.readFileSync(path.join(ROOT, f), 'utf8'), { budget: 400_000_000 });
+  }
+  return r.save();
+}
