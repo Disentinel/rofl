@@ -356,38 +356,21 @@ new_binding[code](Name, CD, File) :- ast_node[code](D, variable_declarator, File
 denotes[code](N, CD) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name),
                         new_binding[code](Name, CD, File).
 
--- ENTRY 3 — `this` inside a class method denotes that class.
---
--- DECLARED OVER-APPROXIMATION, because the premise is `anywhere under the
--- method` and JavaScript disagrees in one case: an arrow function inherits
--- `this` and an ordinary nested `function () {}` REBINDS it. So a `this` inside
--- a nested function expression is claimed here and should not be. The corpus
--- contains no such site, which is exactly why the rule is written with the
--- over-approximation VISIBLE rather than with a premise nothing exercises.
-denotes[code](T, CD) :- ast_node[code](T, this_expression, _, _),
-                        class_member_fn[code](CD, _, M), ast_within[code](M, T).
+-- ENTRIES 3 AND 4 WENT HOME 2026-09-04. `this` inside a class method, and the
+-- recursion through a member of something that already denotes, were both
+-- DATAFLOW facts written here because here is where they were first needed —
+-- the same way `param_bind` was. rules/js-dataflow.rofl answers both now
+-- (`may_be_node` entries 6 and 8), and entry 5 below projects them, so the
+-- deletion cost nothing: `useDeep -> dig` and `both -> get` are still derived,
+-- through one relation instead of two copies of it.
 
--- ENTRY 5 — WHATEVER THE DATAFLOW LAYER CAN VALUE. This is the entry that
--- needed another layer to exist: `mkBox(n).peek()` has an object on the left
--- that is not a name at all, so no amount of syntax reaches it. `may_be_node`
--- answers it through the callee's RETURN, which is why the queue recorded this
--- cell as waiting on w_df_function_forms rather than as unmodelled.
+-- ENTRY 5 — WHATEVER THE DATAFLOW LAYER CAN VALUE, which after the move above
+-- is most of it: an object literal reached through a name, a member of one at
+-- any depth, `this` in a class method, and a call's return value. This one rule
+-- is what makes the deletion above free.
 denotes[code](E, O) :- may_be_node[flow](E, O), obj_node[code](O).
 
--- ENTRY 4 — RECURSION, and it is the whole reason this is a relation and not a
--- fifth rule: `deep.layer.dig()` is `.dig` looked up in whatever `deep.layer`
--- denotes, and `deep.layer` is `.layer` looked up in whatever `deep` denotes.
--- One rule, any depth.
-obj_member_obj[code](O, Key, V) :- ast_node[code](O, object_expression, _, _),
-                                   ast_child[code](O, properties, _, P),
-                                   ast_node[code](P, object_property, _, _),
-                                   ast_child[code](P, key, 0, K), ast_name[code](K, Key),
-                                   ast_child[code](P, value, 0, V), obj_node[code](V).
-denotes[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),
-                        denotes[code](Obj, O), member_node_key[code](N, Key),
-                        obj_member_obj[code](O, Key, O2).
-
--- THE ONE RESOLUTION RULE the five entries feed. Note what is NOT here: the
+-- THE ONE RESOLUTION RULE the entries feed. Note what is NOT here: the
 -- shape. A rule keyed by shape would have to be repeated per shape and would
 -- silently stop covering a shape nobody thought of; keyed by the QUESTION, it
 -- covers every spelling the entries can reach, including ones this corpus has

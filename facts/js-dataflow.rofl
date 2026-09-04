@@ -24,6 +24,10 @@ node_kind(js, object_method).
 node_kind(js, class_method).
 node_kind(js, optional_call_expression).
 node_kind(js, return_statement).
+node_kind(js, member_expression).
+node_kind(js, optional_member_expression).
+node_kind(js, object_property).
+node_kind(js, this_expression).
 
 -- THE VALUE CORE, 2026-09-04 (queue item w_df_value_core). Everything above
 -- moves a value between names; these are the cells that say what a value IS.
@@ -63,3 +67,12 @@ handled(js, object_method,             dataflow, r_call_flow).
 handled(js, class_method,              dataflow, r_call_flow).
 handled(js, optional_call_expression,  dataflow, r_call_flow).
 handled(js, return_statement,          dataflow, r_call_flow).
+
+-- READING A PROPERTY OFF A VALUE, and `this` (queue item w_df_value_core,
+-- finished). `r_member_value` is the member_value / selects / this half of
+-- rules/js-dataflow.rofl. All three used to be answered privately inside the
+-- call graph's `denotes`; they are dataflow facts and they came home.
+handled(js, member_expression,          dataflow, r_member_value).
+handled(js, optional_member_expression, dataflow, r_member_value).
+handled(js, object_property,            dataflow, r_member_value).
+handled(js, this_expression,            dataflow, r_member_value).

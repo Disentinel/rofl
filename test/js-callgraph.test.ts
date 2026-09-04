@@ -65,7 +65,10 @@ const FACT_FILES = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'];
 // ---------------------------------------------------------------------------
 // the model, with an optional textual mutation applied to the rules
 
-type Mutation = { find: string; replace: string };
+/** A mutation names the file it applies to, because the rules it targets no
+ *  longer all live in one pack: the value questions moved to
+ *  rules/js-dataflow.rofl and the mutants aimed at them had to follow. */
+type Mutation = { find: string; replace: string; file?: string };
 
 interface Model {
   q: (lit: string) => string[][];
@@ -106,11 +109,10 @@ function buildFresh(mutations: Mutation[]): Model {
   for (const f of FACT_FILES) load(read(path.join(ROOT, f)), f);
   for (const f of RULE_FILES) {
     let text = read(path.join(ROOT, f));
-    if (f === 'rules/js-callgraph.rofl') {
-      for (const m of mutations) {
-        assert.ok(text.includes(m.find), `mutation anchor absent: ${m.find}`);
-        text = text.replace(m.find, m.replace);
-      }
+    for (const m of mutations) {
+      if ((m.file ?? 'rules/js-callgraph.rofl') !== f) continue;
+      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
+      text = text.replace(m.find, m.replace);
     }
     load(text, f);
   }
@@ -836,10 +838,13 @@ test('mutant 12 — a computed key that is a literal stops being a key', () => {
 });
 
 test('mutant 13 — drop the recursion: a.b.c() loses its middle', () => {
+  // RE-AIMED 2026-09-04: the recursion moved to the dataflow pack, where it is
+  // a fact about values rather than about callees. The mutant follows it.
   const base = probe([]);
   const mut = probe([{
-    find: 'denotes[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),',
-    replace: 'denotes_unused[code](N, O2) :- member_node[code](N), ast_child[code](N, object, 0, Obj),',
+    file: 'rules/js-dataflow.rofl',
+    find: 'may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),',
+    replace: 'may_be_node_unused[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),',
   }]);
   assert.ok(base.edges.has('useDeep -> dig'));
   assert.ok(!mut.edges.has('useDeep -> dig'), 'depth two needs the relation to call itself');
@@ -873,8 +878,9 @@ test('mutant 15 — ignore the key: any member answers any call', () => {
 test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
   const base = probe([]);
   const mut = probe([{
-    find: 'class_member_fn[code](CD, _, M), ast_within[code](M, T).',
-    replace: 'class_member_fn[code](CD, _, _).',
+    file: 'rules/js-dataflow.rofl',
+    find: 'class_method_of[flow](CD, M), ast_within[code](M, T).',
+    replace: 'class_method_of[flow](CD, _).',
   }]);
   // THE EDGE SET DOES NOT MOVE, and that is a fact about V8's naming rather
   // than about the mutant: `Box.get` and `Crate.get` both report as `get`, so

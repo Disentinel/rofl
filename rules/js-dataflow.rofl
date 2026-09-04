@@ -204,3 +204,87 @@ returns[flow](F, E) :- ast_node[code](R, return_statement, _, _), nearest_v[flow
 
 may_be_lit[flow](C, V)  :- resolves[code](C, F), returns[flow](F, E), may_be_lit[flow](E, V).
 may_be_node[flow](C, N) :- resolves[code](C, F), returns[flow](F, E), may_be_node[flow](E, N).
+
+-- ===========================================================================
+-- READING A PROPERTY OFF A VALUE — the rest of w_df_value_core
+--
+-- This is the question the call graph has been answering privately. `denotes`
+-- there carries an object-literal lookup, a class lookup and a `this` rule, and
+-- every one of them is a DATAFLOW fact that happened to be written where it was
+-- first needed — the same way `param_bind` was. They come home here, and the
+-- call graph keeps only the projection it actually asks for.
+--
+-- WHAT AN OBJECT IS, for a value question: a node that can answer `.k`. An
+-- object literal and a class are not alike in the language and are identical to
+-- this question, which is the whole reason one relation covers both.
+obj_like[flow](O) :- ast_node[code](O, object_expression, _, _).
+obj_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
+obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).
+
+-- MEMBER VALUE, over BOTH — a shorthand method, a property holding anything,
+-- and a class method. Note what is NOT here: any judgement about what the value
+-- IS. `member_value` says the member exists and names the node it holds; asking
+-- what that node may be is `may_be_*`'s job, one step later.
+member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                 ast_child[code](O, properties, _, M),
+                                 ast_node[code](M, object_method, _, _),
+                                 ast_child[code](M, key, 0, K), ast_name[code](K, Key), V = M.
+member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                 ast_child[code](O, properties, _, P),
+                                 ast_node[code](P, object_property, _, _),
+                                 ast_child[code](P, key, 0, K), ast_name[code](K, Key),
+                                 ast_child[code](P, value, 0, V).
+member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                  ast_child[code](B, body, _, M),
+                                  ast_node[code](M, class_method, _, _),
+                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+
+-- THE KEY AN EXPRESSION SELECTS. Static and computed collapse here for the same
+-- reason they collapsed in the call graph: `o.pick` and `o[k]` differ only in
+-- where the text is, and `may_be_lit` is what closes the distance. A key nobody
+-- can value reaches no row, which is the refusal arriving as an absence.
+member_kind_v(member_expression).
+member_kind_v(optional_member_expression).
+edb(member_kind_v).
+
+member_node_v[flow](N)      :- ast_node[code](N, K, _, _), member_kind_v(K).
+selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, false),
+                               ast_child[code](N, property, 0, P), ast_name[code](P, Key).
+selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, true),
+                               ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).
+
+-- ENTRY 6 — a member expression may be whatever the member it selects may be.
+-- RECURSIVE THROUGH may_be_node: `deep.layer.dig` is `.dig` in whatever
+-- `deep.layer` may be, and `deep.layer` is `.layer` in whatever `deep` may be.
+may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
+                            may_be_node[flow](O, Obj), selects[flow](N, Key),
+                            member_value[flow](Obj, Key, V), may_be_node[flow](V, V2).
+may_be_lit[flow](N, L)   :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
+                            may_be_node[flow](O, Obj), selects[flow](N, Key),
+                            member_value[flow](Obj, Key, V), may_be_lit[flow](V, L).
+
+-- A METHOD IS A VALUE. `member_value` names the method node, and a method is
+-- not in `node_value_kind` because a method is not an expression — so without
+-- this it would be a member with no value and `o.m` would evaluate to nothing.
+may_be_node[flow](M, M) :- ast_node[code](M, object_method, _, _).
+may_be_node[flow](M, M) :- ast_node[code](M, class_method, _, _).
+may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _, _).
+
+-- ENTRY 7 — an object property IS its value.
+may_be_node[flow](P, N) :- ast_node[code](P, object_property, _, _),
+                           ast_child[code](P, value, 0, X), may_be_node[flow](X, N).
+may_be_lit[flow](P, V)  :- ast_node[code](P, object_property, _, _),
+                           ast_child[code](P, value, 0, X), may_be_lit[flow](X, V).
+
+-- ENTRY 8 — `this` inside a class method is that class.
+--
+-- DECLARED OVER-APPROXIMATION: the premise is `anywhere under the method`, and
+-- an ordinary nested `function () {}` REBINDS this while an arrow inherits it.
+-- A `this` inside a nested function expression is claimed here and should not
+-- be; no corpus site exercises it, and the rule is written with the
+-- over-approximation VISIBLE rather than with a premise nothing tests.
+class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                ast_child[code](B, body, _, M),
+                                ast_node[code](M, class_method, _, _).
+may_be_node[flow](T, CD) :- ast_node[code](T, this_expression, _, _),
+                            class_method_of[flow](CD, M), ast_within[code](M, T).

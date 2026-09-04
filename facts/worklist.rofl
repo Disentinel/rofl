@@ -98,12 +98,9 @@ claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_ca
 -- THE DATAFLOW LAYER IS A STUB and it is the layer with the cheapest oracle —
 -- run the program. Four cells are ticked: call arguments, assignment, the
 -- declarator initialiser. Everything a value can actually BE is open.
-work(w_df_value_core, "PART DONE 2026-09-04: may_be_lit/may_be_node cover literals, identifiers, objects and arrays; member, property and this remain").
+work(w_df_value_core, "DONE 2026-09-04: literals, identifiers, objects, arrays, member lookup, object properties and `this`").
 work_order(w_df_value_core, 2).
-work_state(w_df_value_core, open).
-claim(queued, js, member_expression, none, dataflow, w_df_value_core).
-claim(queued, js, object_property,   none, dataflow, w_df_value_core).
-claim(queued, js, this_expression,   none, dataflow, w_df_value_core).
+work_state(w_df_value_core, done).
 
 -- 8 — parameters and returns. NOTE, because it is the argument for doing this
 -- next: `param_bind` already exists in rules/js-callgraph.rofl, where tier 3
@@ -124,7 +121,6 @@ claim(queued, js, yield_expression,          none, dataflow, w_df_control_forms)
 claim(queued, js, conditional_expression,    none, dataflow, w_df_control_forms).
 claim(queued, js, for_of_statement,          none, dataflow, w_df_control_forms).
 claim(queued, js, sequence_expression,       none, dataflow, w_df_control_forms).
-claim(queued, js, optional_member_expression, none, dataflow, w_df_control_forms).
 
 -- ===========================================================================
 -- 10 — THE THIRD LAYER, WHICH DOES NOT EXIST YET. `layer(controlflow).` is one
