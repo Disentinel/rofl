@@ -124,3 +124,44 @@ form. Three separate rules had it.
 **The literal is built from parts.** Three kinds of book times two tenses would
 be six near-copies of one rule; `relbook` and `lit0` factor them so each
 decision is written once.
+
+## The image
+
+Ring 1 compiled ahead of time. `image()` builds it; `fromImage()` restores it.
+
+| | |
+|---|---|
+| size | 702 KiB |
+| load from source | 50.5 ms |
+| restore the image | 12.3 ms |
+| **ratio** | **4.1×** |
+
+**It is deliberately not committed.** An image moves the thing a reviewer reads
+from a `.rofl` file to 700 KiB of JSON nobody opens, and that class is already
+recorded here — so it stays a *cache* built on demand, and committing one is a
+separate decision that needs the gate below standing first.
+
+### What cutting ring 0 without an image would do
+
+Measured, with the 60-line terms-and-facts reader:
+
+| file | facts | rules | reduced ring 0 |
+|---|---|---|---|
+| `charclass.rofl` | 83 | 0 | **loads** |
+| `ring1.rofl` | 7 | 126 | refused at the first `:-` |
+| `boot.rofl` | 7 | 21 | refused at the first `:-` |
+
+The data survives and every rule dies — `boot.rofl` included, so the system does
+not degrade, it does not start. Hand-encoding those rules as reflection rows
+instead would be **827 rows**: 104 for `boot.rofl` and 723 for the grammar, each
+`conclusion_lit` carrying a nested `$lit`/`$cons`/`$var` term. That number is the
+price of not having an image, and it is why the image comes first.
+
+### The gate compares content, not bytes
+
+Rebuild and compare — but **not on raw bytes**, and the reason was measured
+rather than assumed. Loading the same three files in a different order leaves
+`facts`, `wits`, `firings`, `tickLog` and `tick` byte-identical and changes one
+section: `evals`, which logs *how* the image was built rather than what is in
+it. `canonicalState()` agrees across both orders. A gate on raw bytes would go
+red on a reordered list, and a gate red on an honest checkout gets switched off.

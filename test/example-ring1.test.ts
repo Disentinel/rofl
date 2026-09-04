@@ -21,7 +21,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
 import { canonClause } from '../src/reflect.ts';
-import { parse, canon, roflStr, world, IncompleteParse } from '../examples/ring1/demo.ts';
+import {
+  parse, canon, roflStr, world, IncompleteParse,
+  image, imageContent, fromImage, IMAGE_SOURCES,
+} from '../examples/ring1/demo.ts';
 
 // The sweep is capped to keep it off the critical path of `npm test`. Measured
 // 2026-09-04, after the grammar grew: 900 B is 7.1 s over 6 files, 1200 B is
@@ -106,4 +109,43 @@ test('corpus floor: ring 1 parses real files identically, and refuses the rest l
   assert.ok(same >= SAME_FLOOR, `expected at least ${SAME_FLOOR} identical, got ${same}`);
   assert.ok(silent <= SILENT_CEILING, `silent divergences rose to ${silent}; the ceiling is ${SILENT_CEILING} — every file must be either byte-identical or loudly refused`);
   assert.ok(refused + same + silent === files.length);
+});
+
+// --- the image ------------------------------------------------------------
+//
+// Ring 1 compiled ahead of time. The image is a CACHE and never a source of
+// truth, and the gate that keeps it one is here: rebuild it and compare.
+
+test('the image restores to the same world its sources build', () => {
+  const img = image();
+  assert.equal(imageContent(fromImage(img).save()), imageContent(img));
+});
+
+test('the image is REPRODUCIBLE from source, and the comparison is not on bytes', () => {
+  // Two builds of the same recipe agree exactly.
+  assert.equal(imageContent(image()), imageContent(image()));
+  // And the reason the oracle is `imageContent` rather than the raw snapshot is
+  // measured, not assumed: loading the same three files in a different order
+  // leaves every fact, witness and firing identical and changes `evals`, which
+  // is a log of HOW the image was built. A gate on raw bytes would go red on a
+  // reordered list, and a gate red on an honest checkout gets switched off.
+  const a = image();
+  const shuffled = (() => {
+    const r = new (Object.getPrototypeOf(world()).constructor)();
+    for (const f of [IMAGE_SOURCES[0], IMAGE_SOURCES[2], IMAGE_SOURCES[1]]) {
+      r.load(fs.readFileSync(path.join(ROOT, f), 'utf8'), { budget: 200_000_000 });
+    }
+    return r.save();
+  })();
+  assert.notEqual(shuffled, a, 'if the raw bytes agreed, this gate would be measuring nothing');
+  assert.equal(imageContent(shuffled), imageContent(a));
+});
+
+test('ring 1 parses from the image exactly as it does from source', () => {
+  const src = 'edb(flow).\n-- a comment\n'
+            + 'reach[book](X, Z) :- flow(X, Y), not dead(Y), tag(Y, "hot").\n';
+  const fromSrc = canon(parse(src).clauses);
+  const fromImg = canon(parse(src, fromImage(image())).clauses);
+  assert.equal(fromImg, fromSrc);
+  assert.equal(fromImg, hostCanon(src));
 });

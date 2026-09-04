@@ -34,6 +34,36 @@ export const roflStr = escapeString;
 
 const BUDGET = 200_000_000;
 
+/** The three files an image is built from, in the order that builds it. The
+ *  ORDER IS PART OF THE RECIPE: measured 2026-09-04, shuffling it changes the
+ *  snapshot's bytes while leaving the canonical state identical, because the
+ *  `evals` section records HOW the image was built rather than what is in it. */
+export const IMAGE_SOURCES = [BOOT, CHARCLASS, RING1];
+
+/** Build the image: ring 1 compiled ahead of time, as an object file.
+ *
+ *  It is deliberately NOT committed. An image moves the thing a reviewer reads
+ *  from a .rofl file to 700 KiB of JSON nobody opens, and this repository has
+ *  already recorded that class — so the image stays a CACHE built on demand,
+ *  and committing one is a separate decision that needs the gate below to be
+ *  standing first. */
+export function image(): string {
+  return world().save();
+}
+
+/** What a reproducibility gate must compare: everything EXCEPT `evals`.
+ *
+ *  Raw bytes are the wrong oracle and the reason was measured rather than
+ *  guessed: `evals` is a log of the load calls, so it differs when the same
+ *  three files are loaded in a different order while `facts`, `wits`,
+ *  `firings`, `tickLog` and `tick` are byte-identical. A gate on raw bytes
+ *  would go red on a reordered list and be switched off. */
+export function imageContent(snapshot: string): string {
+  const j = JSON.parse(snapshot);
+  delete j.evals;
+  return JSON.stringify(j);
+}
+
 export function world(): Rofl {
   const r = new Rofl();
   for (const f of [BOOT, CHARCLASS, RING1]) {
@@ -166,6 +196,10 @@ export class IncompleteParse extends Error {
     this.offsets = offsets;
   }
 }
+
+/** Restore ring 1 from an image instead of parsing its source. Measured
+ *  2026-09-04: 12.3 ms against 50.5 ms, a factor of 4.1, over 702 KiB. */
+export const fromImage = (snapshot: string): Rofl => Rofl.fromSnapshot(snapshot);
 
 /** Parse ROFL source with ring 1 and rebuild host clauses from the ranges. */
 export function parse(src: string, r: Rofl = world()): ParseResult {
