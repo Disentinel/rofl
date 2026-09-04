@@ -56,6 +56,7 @@ const onDisk = (f: string) => (STATIC_FILES.includes(f) ? f + '.txt' : f);
 
 const RULE_FILES = [
   'rules/js-structure.rofl',
+  'rules/js-dataflow.rofl',
   'rules/js-model.rofl',
   'rules/js-callgraph.rofl',
 ];
@@ -368,8 +369,16 @@ test('TIER 4: one question — what object does this expression denote?', () => 
   // AND THE REFUSALS, which are the same rule declining rather than a special
   // case: `o[k]()` with a variable key reaches no `member_node_key` row, and a
   // receiver the five entries cannot answer reaches no `denotes` row.
-  assert.ok(!edges.has('useDyn -> pick'), 'a computed key that is a variable');
-  assert.ok(!edges.has('useTrap -> pickB'), 'and the trap it exists for');
+  assert.ok(!edges.has('useDyn -> pick'), 'a key that is a PARAMETER — that needs argument flow');
+
+  // THE TRAP NOW RESOLVES, AND RESOLVING IT IS THE CORRECT ANSWER.
+  // `const pickA = "pickB"; two[pickA]()` runs pickB, and the model says
+  // pickB — because the dataflow layer answers what `pickA` MAY BE rather than
+  // what it is spelled. The trap was never about refusing the site; it was
+  // about refusing to read the NAME as the key, and `useTrap -> pickA` is the
+  // edge that must never appear.
+  assert.ok(edges.has('useTrap -> pickB'), 'the value, not the name');
+  assert.ok(!edges.has('useTrap -> pickA'), 'and never the name');
   assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 0, 'no site resolves two ways');
 });
 
@@ -604,7 +613,13 @@ test('mutant 2 — ignore `computed`: the frontier collapses into a false resolu
   // reads the computed callee as `two.pickA` resolves to the WRONG function.
   assert.ok(mut.edges.has('useTrap -> pickA'), 'the mutant invents an edge no execution can produce');
   assert.ok(!base.edges.has('useTrap -> pickA'), 'the baseline refuses');
-  assert.ok(mut.residue < base.residue, 'and the frontier shrank, which is how it looks like progress');
+  // THE RESIDUE NO LONGER SHRINKS, and that is a fact about the baseline
+  // rather than about the mutant: since the value core landed, this site
+  // RESOLVES in the baseline too. So the mutant no longer looks like progress —
+  // it now derives the wrong edge BESIDE the right one, and that is what
+  // `ambiguous_call` is for.
+  assert.ok(mut.ambiguous > base.ambiguous,
+    'the site resolves two ways: the name and the value');
   console.log(`  KILLED: residue ${base.residue} -> ${mut.residue}, edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
@@ -709,7 +724,7 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
   // so a threshold would quietly stop meaning anything. An equality makes the
   // next person state the new number on purpose.
   const stillOk = o.list.filter((e) => e.callee !== 'Box' && blind.has(`${e.file}:${e.line}`)).length;
-  assert.equal(stillOk, 4, `${stillOk} other sites keep their attribution`);
+  assert.equal(stillOk, 3, `${stillOk} other sites keep their attribution`);
   console.log(`  KILLED: the new-expression site loses its verdict while ${stillOk} others keep theirs`);
 });
 
@@ -795,11 +810,12 @@ test('mutant 12 — a computed key that is a literal stops being a key', () => {
   const base = probe([]);
   const mut = probe([{
     find: "member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),\n"
-        + "                                 ast_child[code](N, property, 0, P), ast_value[code](P, Key).",
+        + "                                 ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).",
     replace: '',
   }]);
   assert.ok(base.edges.has('useLit -> pick'));
   assert.ok(!mut.edges.has('useLit -> pick'), "o['pick']() is o.pick() and the mutant forgets it");
+  assert.ok(!mut.edges.has('useTrap -> pickB'), 'and the const-key case goes with it — one rule, both');
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 

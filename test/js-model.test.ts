@@ -685,6 +685,7 @@ function corpus(m: ShapeMut = {}): Rofl {
   load('facts/js-callgraph.rofl', CG);
   load('facts/js-shapes.rofl', m.shapes ?? SHAPES);
   load('rules/js-structure.rofl', read('rules/js-structure.rofl'));
+  load('rules/js-dataflow.rofl', read('rules/js-dataflow.rofl'));
   load('rules/js-model.rofl', m.rules ?? RULES);
   load('rules/js-callgraph.rofl', read('rules/js-callgraph.rofl'));
   r.evaluate(20_000_000);
@@ -793,11 +794,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
     for (const i of frontier.get(`${file}:${e.line}`) ?? []) missedShapes.add(i);
   }
   const missed = missedEdges.size;
-  // 43 and 4, not the 37 and 11 this file pinned when it was written: the
-  // parameter tier closed two, `denotes` closed five more, and the fixture grew
-  // the three functions that make the parameter tier's defects observable.
+  // 48 and 3, not the 37 and 11 this file pinned when it was written: the
+  // parameter tier closed two, `denotes` five more, the value core one, and the
+  // fixture grew five functions that make those tiers' defects observable.
   assert.equal(oracleEdges.size, 48, 'the oracle saw the call graph docs/modelling-a-language.md records');
-  assert.equal(missed, 4, 'and the model misses four of its edges');
+  assert.equal(missed, 3, 'and the model misses three of its edges');
   console.log(`      oracle ${oracleEdges.size} edges | model ${model.size} | misses attributed to: `
             + [...missedShapes].sort().join(', '));
 
@@ -810,6 +811,9 @@ test('the shape verdicts for member_expression match what the runtime missed', a
 
   // EVERY REMAINING MISS ON THIS KIND IS EXACTLY A not_modelled ROW.
   const agreed = missedHere.filter((s) => notModelled.has(s));
+  // `s_computed_dynamic_key` is still here and its remaining site is `useDyn`,
+  // whose key is a PARAMETER — the value core answers a const in the same file
+  // and cannot yet answer an argument. That is w_df_function_forms.
   assert.deepEqual(agreed, ['s_computed_dynamic_key', 's_member_on_call']);
 
   // THE MISS THAT USED TO BE INSIDE A `modelled` SHAPE IS GONE, and recording

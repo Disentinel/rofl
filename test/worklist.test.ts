@@ -30,7 +30,7 @@ const ROOT = new URL('../', import.meta.url);
 const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
-  'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/findings.rofl'];
+  'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string }
@@ -115,18 +115,18 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'item 1 is done and three call-graph items are blocked on dataflow');
 });
 
-test('the queue covers the model: 107 open cells, 45 claimed by name, 62 swept', () => {
+test('the queue covers the model: 105 open cells, 37 claimed by name, 68 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 107, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 105, 'the queue is the model\'s open set');
   assert.equal(w.n('work(W, Note)'), 13);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
   const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
     w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  assert.deepEqual(per('callgraph'), [36, 21, 15]);
-  assert.deepEqual(per('dataflow'), [35, 24, 11]);
-  assert.deepEqual(per('modules'), [36, 0, 36]);
+  assert.deepEqual(per('callgraph'), [38, 21, 17]);
+  assert.deepEqual(per('dataflow'), [29, 16, 13]);
+  assert.deepEqual(per('modules'), [38, 0, 38]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -164,7 +164,7 @@ test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
 
 test('MUTANT 3 — a sweep marked done while its layer still has open cells', () => {
   const w = world({ find: 'work_state(w_df_sweep, open).', replace: 'work_state(w_df_sweep, done).' });
-  assert.equal(w.n('unqueued[audit](K, S, L)'), 11,
+  assert.equal(w.n('unqueued[audit](K, S, L)'), 13,
     'the residue goes straight back on the unqueued list');
 });
 
@@ -198,8 +198,8 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 15);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 16, 'specificity leaked into the bucket');
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 17);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 18, 'specificity leaked into the bucket');
   assert.equal(w.n('claimed(K, S, callgraph)'), 20);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
     + ' swept 15 -> 16 is the whole signal');

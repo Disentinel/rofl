@@ -1,0 +1,45 @@
+-- facts/js-dataflow.rofl — the value core's vocabulary and its claims.
+--
+-- SEPARATE FROM facts/js-kinds.rofl ON PURPOSE, and the audit is what taught
+-- me: the first draft put these `handled` rows in the base file, where the
+-- kinds they name are not declared, and `orphan_claim[audit]` said so — a claim
+-- about a cell that does not exist. Each layer's pack declares the vocabulary
+-- it names, exactly as facts/js-callgraph.rofl does for the twenty-four kinds
+-- the call graph dragged in. A claim and the kind it is about travel together
+-- or neither is checkable.
+
+node_kind(js, string_literal).
+node_kind(js, numeric_literal).
+node_kind(js, boolean_literal).
+node_kind(js, identifier).
+node_kind(js, object_expression).
+node_kind(js, array_expression).
+node_kind(js, function_expression).
+node_kind(js, arrow_function_expression).
+node_kind(js, class_declaration).
+node_kind(js, parenthesized_expression).
+node_kind(js, tsas_expression).
+node_kind(js, tsnon_null_expression).
+
+-- THE VALUE CORE, 2026-09-04 (queue item w_df_value_core). Everything above
+-- moves a value between names; these are the cells that say what a value IS.
+-- `r_value_core` is rules/js-dataflow.rofl's may_be_lit / may_be_node.
+--
+-- FIVE OF THE EIGHT THE ITEM CLAIMED. `member_expression`, `object_property`
+-- and `this_expression` are NOT ticked and are not oversights: reading a
+-- property off a value is a second question (the call graph answers a narrow
+-- case of it in `denotes`), and `this` outside a class method has no answer
+-- this layer can give. They stay open with the default reason.
+handled(js, string_literal,     dataflow, r_value_core).
+handled(js, numeric_literal,    dataflow, r_value_core).
+handled(js, identifier,         dataflow, r_value_core).
+handled(js, object_expression,  dataflow, r_value_core).
+handled(js, array_expression,   dataflow, r_value_core).
+
+-- and the three transparent wrappers, which `w_df_control_forms` claimed and
+-- this item closed by accident: a parenthesis, a cast and a non-null assertion
+-- change nothing about a value, so they are one rule over a table rather than
+-- three cells of work. The queue notices — a claim on a shut cell is a row.
+handled(js, parenthesized_expression, dataflow, r_value_core).
+handled(js, tsas_expression,          dataflow, r_value_core).
+handled(js, tsnon_null_expression,    dataflow, r_value_core).

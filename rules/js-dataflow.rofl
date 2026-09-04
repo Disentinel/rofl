@@ -29,3 +29,108 @@ var_flow[code](From, To)    :- decl_reads[code](D, From), decl_binds[code](D, To
 -- and its transitive closure, because a chain is what a dataflow trace is
 var_reaches[code](A, B)     :- var_flow[code](A, B).
 var_reaches[code](A, C)     :- var_reaches[code](A, B), var_flow[code](B, C).
+
+-- ===========================================================================
+-- THE VALUE CORE — 2026-09-04, queue item w_df_value_core
+--
+-- Everything above moves values between NAMES and never says what a value IS.
+-- That is why the layer had three ticks and thirty-five open cells: three ways
+-- to move a thing, and no notion of the thing.
+--
+-- WHAT A VALUE IS HERE, and the choice is the whole design:
+--
+--   may_be_lit[flow](E, Text)  — E may evaluate to this literal, as written
+--   may_be_node[flow](E, N)    — E may evaluate to the object, function or
+--                                class AT NODE N — the thing itself, by identity
+--
+-- TWO CARRIERS AND NO THIRD, and in particular NO `unknown`. In a relational
+-- language the absence of a row already means `nothing here says so`, and
+-- adding a value to spell it would force every rule downstream to handle a
+-- case the engine handles by not firing. This is the same argument that keeps
+-- `not_modelled` a DERIVED default in the coverage model rather than a fact
+-- somebody writes.
+--
+-- IT IS A MAY-SET AND THE NAME SAYS SO. Two rows mean `either of these`, never
+-- `exactly these two`: a value the rules cannot see leaves no row, so the set
+-- is an UNDER-approximation and a reader may add an edge on it but may never
+-- conclude an absence from it. That is exactly the direction the call graph
+-- needs — a missing row costs an edge, which the execution oracle measures as
+-- an under-report — and exactly the direction a `this is definitely not X`
+-- rule must never be written in.
+--
+-- THE DOMAIN IS FINITE BY CONSTRUCTION, which is what makes this safe to put
+-- in rules at all: a literal's text and a node's identity both come FROM the
+-- parsed program, so no rule here can manufacture a value the tree does not
+-- already contain. Nothing widens, nothing needs a join, and the fixpoint
+-- terminates for the same reason the string destructors do.
+
+-- ENTRY 1 — a literal is its own value. `ast_value` is the scanner's `value`
+-- attribute under the name rules/js-structure.rofl gives it.
+edb(literal_kind).
+literal_kind(string_literal).
+literal_kind(numeric_literal).
+literal_kind(boolean_literal).
+
+may_be_lit[flow](E, V) :- ast_node[code](E, K, _, _), literal_kind(K), ast_value[code](E, V).
+
+-- ENTRY 2 — an object, function or class expression is its own node. The
+-- expression IS the thing; there is nothing to look up.
+edb(node_value_kind).
+node_value_kind(object_expression).
+node_value_kind(array_expression).
+node_value_kind(function_expression).
+node_value_kind(arrow_function_expression).
+node_value_kind(class_declaration).
+node_value_kind(class_expression).
+
+may_be_node[flow](E, E) :- ast_node[code](E, K, _, _), node_value_kind(K).
+
+-- ENTRY 3 — a name may be whatever its binder's initialiser may be.
+--
+-- FILE-SCOPED AND NOT BLOCK-SCOPED, declared: two `const k` in two functions of
+-- one file are one name here, so a name bound twice carries both values. That
+-- is the same over-approximation the call graph's tier 1 declares for function
+-- bindings, it is honest for a MAY-set, and closing it is the scope layer's
+-- job rather than this one's.
+binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File, _),
+                                     ast_child[code](D, id, 0, I), ast_name[code](I, Name),
+                                     ast_child[code](D, init, 0, Init).
+
+may_be_lit[flow](E, V)  :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                           binder[code](_, Name, Init, File), may_be_lit[flow](Init, V).
+may_be_node[flow](E, N) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                           binder[code](_, Name, Init, File), may_be_node[flow](Init, N).
+
+-- ENTRY 4 — assignment. `x = "a"` makes `x` may-be "a" WHEREVER x appears in
+-- the file, which is the flow-insensitive reading and is stated rather than
+-- hidden: this layer has no notion of before and after, so it cannot say that
+-- the value at line 10 is not the value at line 3. A flow-SENSITIVE reading
+-- needs the control-flow layer, which does not exist yet, and that dependency
+-- is the reason `w_controlflow_layer` sits in the queue at all.
+assigns[code](Name, Src, File) :- ast_node[code](A, assignment_expression, File, _),
+                                  ast_child[code](A, left, 0, L), ast_name[code](L, Name),
+                                  ast_child[code](A, right, 0, Src).
+
+may_be_lit[flow](E, V)  :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                           assigns[code](Name, Src, File), may_be_lit[flow](Src, V).
+may_be_node[flow](E, N) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
+                           assigns[code](Name, Src, File), may_be_node[flow](Src, N).
+
+-- ENTRY 5 — the transparent wrappers. A parenthesis, a TS cast and a non-null
+-- assertion change nothing about the value, which is exactly why the call
+-- graph lists them as separate SHAPES and this layer does not: they are one
+-- rule over a table of kinds.
+edb(value_transparent).
+value_transparent(parenthesized_expression).
+value_transparent(tsas_expression).
+value_transparent(tsnon_null_expression).
+
+may_be_lit[flow](E, V)  :- ast_node[code](E, K, _, _), value_transparent(K),
+                           ast_child[code](E, expression, 0, X), may_be_lit[flow](X, V).
+may_be_node[flow](E, N) :- ast_node[code](E, K, _, _), value_transparent(K),
+                           ast_child[code](E, expression, 0, X), may_be_node[flow](X, N).
+
+-- WHAT THE LAYER CAN SAY ABOUT ITSELF: an expression the rules can value at
+-- all. A site with no row is not `no value` — it is `nothing here says so`.
+valued[flow](E) :- may_be_lit[flow](E, _).
+valued[flow](E) :- may_be_node[flow](E, _).

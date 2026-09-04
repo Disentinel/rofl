@@ -332,8 +332,12 @@ member_fn[code](O, Key, F) :- class_member_fn[code](O, Key, F).
 member_node[code](N)          :- ast_node[code](N, K, _, _), member_kind(K).
 member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, false),
                                  ast_child[code](N, property, 0, P), ast_name[code](P, Key).
+-- ...and the computed branch now asks the DATAFLOW layer what the key may be,
+-- which makes the literal case and the const case ONE rule. `o["pick"]()` and
+-- `const k = "pick"; o[k]()` differ only in how far the value travelled, and
+-- `may_be_lit` is what closes that distance. Requires rules/js-dataflow.rofl.
 member_node_key[code](N, Key) :- member_node[code](N), ast_attr[code](N, computed, true),
-                                 ast_child[code](N, property, 0, P), ast_value[code](P, Key).
+                                 ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).
 
 -- ENTRY 1 — an identifier bound to an object literal. This is tier 2's premise,
 -- lifted out of the resolution rule so the other four can share it.
