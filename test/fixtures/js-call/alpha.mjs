@@ -156,6 +156,37 @@ function useHigher(n) {
   return apply2(leaf, mid, n);
 }
 
+// ---- higher order where ONLY THE FIRST parameter is called. `apply2` calls
+// both of its function parameters, so it cannot tell an argument index apart
+// from its neighbour: leaf and mid both run either way. Here `mid` is passed
+// and never called, so a model that ignores the argument index — or that binds
+// a parameter without asking which call site targets the function — derives
+// `applyFirst -> mid`, an edge the runtime never ran.
+function applyFirst(f, g, n) {
+  trace();
+  return f(n);
+}
+function useFirst(n) {
+  trace();
+  return applyFirst(leaf, mid, n);
+}
+
+// ---- a SECOND function whose first parameter is called, handed a DIFFERENT
+// function. The parameter is deliberately named `f`, the same as apply2's, so
+// two defects become observable that `apply2` alone cannot show: a model that
+// resolves a parameter callee by NAME without asking which function encloses
+// the call mixes the two bindings, and a model that binds a parameter without
+// asking which call site targets the function does the same. Either derives
+// `useCb -> leaf`, which the runtime never ran.
+function useCb(f, n) {
+  trace();
+  return f(n);
+}
+function feedCb(n) {
+  trace();
+  return useCb(mid, n);
+}
+
 // ---- optional member callee
 function useOpt(n) {
   trace();
@@ -193,6 +224,8 @@ export function main() {
     useLit(1),
     useTrap(1),
     useHigher(1),
+    useFirst(1),
+    feedCb(1),
     useOpt(1),
     useArr(1),
     run(1),

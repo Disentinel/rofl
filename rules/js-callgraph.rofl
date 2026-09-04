@@ -259,6 +259,39 @@ resolves[code](C, F) :- shape[code](C, s_member_on_ident), callee_of[code](C, N)
                         obj_literal_binding[code](ObjName, OL, File),
                         obj_member_fn[code](OL, Key, F).
 
+-- TIER 3: an identifier callee naming a PARAMETER, resolved through the value
+-- the caller passed at that index. This is the hole that lives INSIDE a shape
+-- the model claims to handle, and no shape census can show it: the axis is
+-- syntactic and `f(n)` where `f` is a parameter is spelled exactly like `f(n)`
+-- where `f` is a declaration. The execution oracle found it — `apply2 -> leaf`
+-- and `apply2 -> mid` were two of eleven under-reported edges — and the frontier
+-- attributed them to `s_identifier`, which is why they were worth closing first.
+--
+-- IT IS A CYCLE, and that is the whole reason this needed measuring before it
+-- was written: `param_bind` reads `resolves` to know which function a call site
+-- goes to, and `resolves` reads `param_bind` to answer a parameter callee. The
+-- kernel takes it — the recursion is positive, the negations it stands on
+-- (`not closer`, `not has_shape`) sit outside the cycle, and the fixpoint
+-- settles. A kill set — `not rebound` inside the cycle — is refused under
+-- stratified semantics and admitted under `semantics(well_founded)` at about
+-- five times the cost; neither is needed here, because binding a parameter to
+-- every function that reaches it is the sound direction for a call graph.
+--
+-- CONTEXT-INSENSITIVE, declared: a function called twice with two different
+-- callbacks binds its parameter to BOTH, at every site. That is an
+-- over-approximation of the same family as tier 1's scope blindness, and it is
+-- visible rather than averaged away — `ambiguous_call[audit]` reports a site
+-- resolving two ways, and the oracle comparison counts an edge the runtime
+-- never ran. A context-sensitive version is a different analysis, not a fix.
+param_bind[code](F, PName, G) :- resolves[code](C, F),
+                                 passes_function[code](C, I, G, _),
+                                 ast_child[code](F, params, I, P),
+                                 ast_name[code](P, PName).
+
+resolves[code](C, G) :- shape[code](C, s_identifier), callee_of[code](C, N),
+                        ast_name[code](N, Name), nearest_fn[code](Fn, C),
+                        param_bind[code](Fn, Name, G).
+
 -- A site resolving two ways is an over-approximation that must be VISIBLE,
 -- not averaged away.
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.

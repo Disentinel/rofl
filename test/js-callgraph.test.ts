@@ -315,10 +315,47 @@ test('two files, one name `run`: resolution is file-scoped', () => {
   assert.ok(runSites > 20, `positive control: ${runSites} resolutions`);
 });
 
+test('TIER 3: an identifier callee that names a PARAMETER', () => {
+  const m = build();
+  const edges = modelEdges(m);
+
+  // The hole this closes lives INSIDE a shape the model claims to handle, so
+  // no shape census could show it: `f(n)` where `f` is a parameter is spelled
+  // exactly like `f(n)` where `f` is a declaration. The execution oracle is
+  // what found it — two of eleven under-reported edges — and it is the oracle
+  // that says it is closed.
+  for (const e of ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf', 'useCb -> mid']) {
+    assert.ok(edges.has(e), `the parameter callee did not resolve: ${e}`);
+  }
+
+  // THE TWO EDGES A SLOPPIER VERSION INVENTS, asserted as absences because a
+  // parameter analysis that is right about what it derives and wrong about
+  // what it excludes is over-approximation wearing the shape of coverage.
+  // `applyFirst` is handed `mid` and never calls it; `useCb` names its
+  // parameter `f`, the same as apply2's, and is handed a different function.
+  assert.ok(!edges.has('applyFirst -> mid'), 'a function passed is not a function called');
+  assert.ok(!edges.has('useCb -> leaf'), 'two parameters named `f` are two different bindings');
+
+  // the binding table itself: five rows, one per (function, parameter, value)
+  const bound = m.binds('param_bind[code](F, N, G)', 'N');
+  assert.equal(bound.length, 5, `param_bind holds ${bound.length} rows`);
+
+  // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
+  // `s_identifier` is not stale: an identifier naming an IMPORT still does not
+  // resolve, so the residue is smaller and not gone. A verdict that outlived
+  // its cause would be caught by `shape_stale[audit]`, asserted empty above.
+  assert.deepEqual(m.binds('shape_verdict[audit](s_identifier, V)', 'V'), ['has_residue']);
+});
+
 test('argument position is content: which function is in which slot', () => {
   const m = build();
-  const passed = m.binds('passes_function[code](C, I, F, N)', 'I', 'N');
-  assert.deepEqual(passed, ['0 -> leaf', '1 -> mid'], 'apply2(leaf, mid) — in that order');
+  const passed = [...new Set(m.binds('passes_function[code](C, I, F, N)', 'I', 'N'))].sort();
+  // `mid` rides in slot 1 out of `apply2`/`applyFirst` and in slot 0 out of
+  // `useCb`, so the index is NOT recoverable from the name. Before `useCb`
+  // existed the two were in bijection here, and a model that carried only the
+  // name would have produced the same table.
+  assert.deepEqual(passed, ['0 -> leaf', '0 -> mid', '1 -> mid'],
+    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid) — each in its own slot');
 });
 
 // ===========================================================================
@@ -504,7 +541,10 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
 // ===========================================================================
 // 8. THE MUTANT SET — one mutant is liveness, a set is coverage
 
-interface Probe { edges: Set<string>; residue: number; shapes: number; ambiguous: number; passed: string[] }
+interface Probe {
+  edges: Set<string>; residue: number; shapes: number; ambiguous: number;
+  passed: string[]; bindings: number;
+}
 function probe(mutations: Mutation[]): Probe {
   const m = build(mutations);
   return {
@@ -512,7 +552,8 @@ function probe(mutations: Mutation[]): Probe {
     residue: m.n('unresolved_call[code](C, S)'),
     shapes: m.n('shape[code](C, S)'),
     ambiguous: m.n('ambiguous_call[audit](C, F, G)'),
-    passed: m.binds('passes_function[code](C, I, F, N)', 'I', 'N'),
+    passed: [...new Set(m.binds('passes_function[code](C, I, F, N)', 'I', 'N'))].sort(),
+    bindings: m.n('param_bind[code](F, N, G)'),
   };
 }
 
@@ -558,8 +599,8 @@ test('mutant 4 — drop the argument index: which function is in which slot', ()
     find: 'call_arg[code](C, I, A)       :- call_site[code](C, _), ast_child[code](C, arguments, I, A).',
     replace: 'call_arg[code](C, 0, A)       :- call_site[code](C, _), ast_child[code](C, arguments, _, A).',
   }]);
-  assert.deepEqual(base.passed, ['0 -> leaf', '1 -> mid']);
-  assert.deepEqual(mut.passed, ['0 -> leaf', '0 -> mid'], 'both functions collapse into slot 0');
+  assert.deepEqual(base.passed, ['0 -> leaf', '0 -> mid', '1 -> mid']);
+  assert.deepEqual(mut.passed, ['0 -> leaf', '0 -> mid'], 'every function collapses into slot 0');
   console.log(`  KILLED: ${base.passed.join(', ')} -> ${mut.passed.join(', ')}`);
 });
 
@@ -640,4 +681,75 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
   const stillOk = o.list.filter((e) => e.callee !== 'Box' && blind.has(`${e.file}:${e.line}`)).length;
   assert.ok(stillOk > 5, `${stillOk} other sites keep their attribution`);
   console.log(`  KILLED: the new-expression site loses its verdict while ${stillOk} others keep theirs`);
+});
+
+
+// ---------------------------------------------------------------------------
+// TIER 3's OWN MUTANTS. The first three were written by asking where the
+// oracle is structurally UNABLE to look, and against the fixture as it stood
+// they proved the answer was "at all of this": `apply2(leaf, mid)` calls both
+// of its function parameters, so the edge set is identical whether the model
+// carries the argument index, ignores it, or binds every parameter of every
+// function to every function passed anywhere. Three of four survived, and the
+// remedy was the FIXTURE rather than the assertions — `applyFirst`, which is
+// handed `mid` and never calls it, and `useCb`, whose parameter shares a name
+// with apply2's and is handed a different function. Both defects now cost an
+// edge the runtime never ran, which is the one thing the oracle can see.
+
+test('mutant 8 — drop the argument index inside the binding: slot becomes name', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'passes_function[code](C, I, G, _),\n                                 ast_child[code](F, params, I, P)',
+    replace: 'passes_function[code](C, _, G, _),\n                                 ast_child[code](F, params, _, P)',
+  }]);
+  assert.ok(!base.edges.has('applyFirst -> mid'), 'baseline: a function passed is not called');
+  assert.ok(mut.edges.has('applyFirst -> mid'), 'the mutant calls the function in the other slot');
+  assert.ok(mut.ambiguous > base.ambiguous, 'and every parameter site now resolves two ways');
+  console.log(`  KILLED: bindings ${base.bindings} -> ${mut.bindings}, `
+    + `ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
+});
+
+test('mutant 9 — sever the cycle: bind parameters without asking who is called', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'param_bind[code](F, PName, G) :- resolves[code](C, F),',
+    replace: 'param_bind[code](F, PName, G) :- fn_node[code](F), call_site[code](C, _),',
+  }]);
+  // this is the mutant that says what the recursion is FOR: without `resolves`
+  // in the body, every function's parameters bind to every function passed at
+  // that index anywhere in the corpus.
+  assert.ok(mut.bindings > base.bindings * 10, `bindings ${base.bindings} -> ${mut.bindings}`);
+  assert.ok(mut.edges.has('useCb -> leaf'), 'the mutant hands useCb a function nobody passed it');
+  assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
+  console.log(`  KILLED: bindings ${base.bindings} -> ${mut.bindings}, `
+    + `edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 10 — resolve a parameter callee by name alone', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'ast_name[code](N, Name), nearest_fn[code](Fn, C),\n                        param_bind[code](Fn, Name, G).',
+    replace: 'ast_name[code](N, Name), param_bind[code](_, Name, G).',
+  }]);
+  // THE COUNT IS BLIND HERE AND THE EDGES ARE NOT: the binding table is
+  // untouched — the mutant changes who may READ a binding, not how many exist
+  // — so a check that watched `param_bind` would have slept through.
+  assert.equal(mut.bindings, base.bindings, 'the binding table does not move');
+  assert.ok(mut.edges.has('useCb -> leaf'), 'the mutant mixes two parameters that share a name');
+  assert.ok(mut.edges.has('applyFirst -> mid'), 'and hands applyFirst the value it never calls');
+  console.log(`  KILLED: bindings unchanged at ${mut.bindings}, edges `
+    + `${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 11 — delete tier 3: the higher-order edges are its doing', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'param_bind[code](F, PName, G) :- resolves[code](C, F),',
+    replace: 'param_bind_unused[code](F, PName, G) :- resolves[code](C, F),',
+  }]);
+  const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
+  assert.deepEqual(lost, ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf', 'useCb -> mid'],
+    'exactly the parameter-callee edges, and nothing else, depend on tier 3');
+  assert.equal(mut.bindings, 0, 'and no binding survives');
+  console.log(`  KILLED (liveness): ${lost.length} edges lost, ${lost.join(', ')}`);
 });

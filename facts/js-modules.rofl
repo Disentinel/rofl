@@ -33,12 +33,25 @@ node_kind(js, export_all_declaration).
 -- WHAT THE HOST SUPPLIES, DECLARED (docs/modelling-a-language.md, rule 2).
 --
 -- A dirty emitter is allowed if the contamination is DECLARED and therefore
--- countable. These two are, and the honest reading of the first one is a
--- statement about the KERNEL rather than about JavaScript: the builtins are
--- `=`, `!=`, `is`, `<`, `<=`, `>`, `>=`, so there is no way to take a string
--- apart inside a rule. Path resolution is string surgery. Until the kernel has
--- a string primitive, every language model that resolves anything needs the
--- host to cut the string first.
+-- countable. These two are, and the first one is a statement about the KERNEL
+-- rather than about JavaScript: path resolution is string surgery, and when
+-- this row was written no rule could take a string apart at all.
+--
+-- **CORRECTED 2026-09-04: THE RETIREMENT CONDITION BELOW IS MET AND THIS ROW
+-- STILL STANDS.** `src/reflect.ts` carries `str_char/2`, `str_len/1`,
+-- `str_pre/2`, `str_seg/3` and `str_segs/2`, all reachable through `is`, so
+-- three of the four relations declared here are now spellable in a rule
+-- (`str_char0` is `str_char` at 0; `str_scheme` is `str_pre` on a colon) and
+-- the sentence this comment used to make about the builtin vocabulary was
+-- false. Whether to retire the loan is a DECISION and not a repair — the
+-- resolver moved to the host as an OBSERVATION, so re-deriving these in rules
+-- re-arms a second model nobody has decided to keep — and it is recorded as
+-- `f_the_str_algebra_loan_reached_its_retirement_condition_unnoticed`. What is
+-- not in doubt is that the comment may not go on asserting the old vocabulary.
+--
+-- Note what this says about the audit: nothing goes red when a loan becomes
+-- RETIRABLE, only when one is undeclared. The shape layer has exactly this
+-- detector — `shape_stale[audit]` — and `host_emitter` has none.
 --
 -- Neither emitter carries import semantics: `str_*` would split a shopping
 -- list the same way, and `fs_*` reports what is on disk. What they are NOT

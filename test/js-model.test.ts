@@ -702,7 +702,7 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = corpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 83, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(sites, 93, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 17, 'positive control: 17 distinct shapes, as docs/modelling-a-language.md records');
 
   console.log(`      census (${sites} call sites, ${tally.size} shapes):`);
@@ -786,8 +786,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
     for (const i of frontier.get(`${file}:${e.line}`) ?? []) missedShapes.add(i);
   }
   const missed = missedEdges.size;
-  assert.equal(oracleEdges.size, 37, 'the oracle saw the call graph docs/modelling-a-language.md records');
-  assert.equal(missed, 11, 'and the model missed eleven of its edges');
+  // 43 and 9, not the 37 and 11 this file pinned when it was written: the
+  // parameter tier closed two of the misses and the fixture grew the three
+  // functions that make its defects observable.
+  assert.equal(oracleEdges.size, 43, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  assert.equal(missed, 9, 'and the model missed nine of its edges');
   console.log(`      oracle ${oracleEdges.size} edges | model ${model.size} | misses attributed to: `
             + [...missedShapes].sort().join(', '));
 
