@@ -1,0 +1,161 @@
+-- facts/worklist.rofl — THE PLAN. Order, state, and which cells each item owns.
+--
+-- Everything else about the queue is derived (rules/worklist.rofl). This file
+-- carries only what no model can compute: what we intend to do next, and in
+-- which order. Seeded 2026-09-04 from a measurement rather than from memory —
+-- 108 open cells across three layers, dumped by loading every fact pack into
+-- one world, which is a world no test had built before.
+--
+-- READ THE QUEUE, DO NOT READ THIS FILE:
+--     ? next_work[audit](W)          what to take
+--     ? unqueued[audit](K, S, L)     work the plan is silent about
+--     ? queue_stale[audit](W, K, L)  an item pointing at a shut cell
+--     ? false_done[audit](W, K, L)   a claim of completion the model denies
+
+claim_kind(queued).
+
+-- ===========================================================================
+-- 1 — THE MATRIX ITSELF IS WRONG ABOUT A PARTIAL CELL. Before more cells are
+-- filled, because it decides at what granularity they are filled at all.
+work(w_mod_partial_cell,
+     "import_declaration x modules is handled AND carries two live excuses; stale_reason fires three false rows in the five-pack world").
+work_order(w_mod_partial_cell, 1).
+work_state(w_mod_partial_cell, open).
+work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matrix_calls_that_a_stale_excuse).
+
+-- ===========================================================================
+-- 2 — THE CALL GRAPH'S BIGGEST RESIDUE. Six of the nine edges the execution
+-- oracle still catches us missing live in these eleven shapes of ONE kind.
+work(w_cg_member_family,
+     "member_expression: o.m() resolves, the other eleven shapes do not").
+work_order(w_cg_member_family, 2).
+work_state(w_cg_member_family, open).
+claim(queued, js, member_expression, s_member_on_member,         callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_call,           callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_this,           callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_super,          callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_array,          callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_new,            callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_object_literal, callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_literal,        callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_member_on_other,          callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_computed_literal_key,     callgraph, w_cg_member_family).
+claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg_member_family).
+
+-- 3 — the same family through the optional-chaining kind. Held apart because
+-- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow
+-- fact wearing a call-graph shape.
+work(w_cg_optional_member, "optional_member_expression: a?.b() and its computed keys").
+work_order(w_cg_optional_member, 3).
+work_state(w_cg_optional_member, open).
+claim(queued, js, optional_member_expression, s_optional_member,        callgraph, w_cg_optional_member).
+claim(queued, js, optional_member_expression, s_computed_literal_key,   callgraph, w_cg_optional_member).
+claim(queued, js, optional_member_expression, s_computed_template_key,  callgraph, w_cg_optional_member).
+
+-- 4 — the one miss that is not a callee shape at all: `new Box(1)` is a
+-- transfer site of a different node kind, which the callee-shape axis cannot
+-- see by construction.
+work(w_cg_new_expression, "new_expression: the constructor edge the oracle sees and the shape axis cannot").
+work_order(w_cg_new_expression, 4).
+work_state(w_cg_new_expression, open).
+claim(queued, js, new_expression, s_new_result, callgraph, w_cg_new_expression).
+
+-- 5 — syntactic wrappers around a callee. Mechanical: unwrap and ask again.
+-- Grouped because one rule shape closes all five, which is the test of whether
+-- they really are one thing.
+work(w_cg_syntactic_wrappers, "(f)(), f as T (), f!(), (a, f)(), c ? f : g () — unwrap the callee and recurse").
+work_order(w_cg_syntactic_wrappers, 5).
+work_state(w_cg_syntactic_wrappers, open).
+claim(queued, js, parenthesized_expression, s_parenthesized, callgraph, w_cg_syntactic_wrappers).
+claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).
+claim(queued, js, tsnon_null_expression,    s_non_null,      callgraph, w_cg_syntactic_wrappers).
+claim(queued, js, sequence_expression,      s_sequence,      callgraph, w_cg_syntactic_wrappers).
+claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syntactic_wrappers).
+
+-- 6 — `f()()` needs to know what f RETURNS, so it is blocked on the dataflow
+-- layer having return values at all. Ordered after the call graph's own work
+-- and before dataflow only to say that the dependency runs the other way.
+work(w_cg_call_result, "f()() and f?.()(): the callee is a return value, so this waits on dataflow returns").
+work_order(w_cg_call_result, 6).
+work_state(w_cg_call_result, open).
+claim(queued, js, call_expression,          s_call_result, callgraph, w_cg_call_result).
+claim(queued, js, optional_call_expression, s_call_result, callgraph, w_cg_call_result).
+claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
+claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_call_result).
+
+-- ===========================================================================
+-- THE DATAFLOW LAYER IS A STUB and it is the layer with the cheapest oracle —
+-- run the program. Four cells are ticked: call arguments, assignment, the
+-- declarator initialiser. Everything a value can actually BE is open.
+work(w_df_value_core, "identifier, member, literals, object and array expressions: what a value IS before it moves").
+work_order(w_df_value_core, 7).
+work_state(w_df_value_core, open).
+claim(queued, js, identifier,        none, dataflow, w_df_value_core).
+claim(queued, js, member_expression, none, dataflow, w_df_value_core).
+claim(queued, js, string_literal,    none, dataflow, w_df_value_core).
+claim(queued, js, numeric_literal,   none, dataflow, w_df_value_core).
+claim(queued, js, object_expression, none, dataflow, w_df_value_core).
+claim(queued, js, object_property,   none, dataflow, w_df_value_core).
+claim(queued, js, array_expression,  none, dataflow, w_df_value_core).
+claim(queued, js, this_expression,   none, dataflow, w_df_value_core).
+
+-- 8 — parameters and returns. NOTE, because it is the argument for doing this
+-- next: `param_bind` already exists in rules/js-callgraph.rofl, where tier 3
+-- built argument-to-parameter flow to resolve a callback. That is a DATAFLOW
+-- fact living in the call-graph pack, and this item is where it belongs.
+work(w_df_function_forms, "parameters and returns; param_bind already exists in the callgraph pack and belongs here").
+work_order(w_df_function_forms, 8).
+work_state(w_df_function_forms, open).
+claim(queued, js, function_declaration,       none, dataflow, w_df_function_forms).
+claim(queued, js, function_expression,        none, dataflow, w_df_function_forms).
+claim(queued, js, arrow_function_expression,  none, dataflow, w_df_function_forms).
+claim(queued, js, object_method,              none, dataflow, w_df_function_forms).
+claim(queued, js, class_method,               none, dataflow, w_df_function_forms).
+claim(queued, js, optional_call_expression,   none, dataflow, w_df_function_forms).
+claim(queued, js, new_expression,             none, dataflow, w_df_function_forms).
+
+-- 9 — value movement through control constructs. This is the item that will
+-- ask for the control-flow layer, which is why that one sits right after it.
+work(w_df_control_forms, "await, yield, ?:, for-of and the wrappers: a value crossing a control construct").
+work_order(w_df_control_forms, 9).
+work_state(w_df_control_forms, open).
+claim(queued, js, await_expression,          none, dataflow, w_df_control_forms).
+claim(queued, js, yield_expression,          none, dataflow, w_df_control_forms).
+claim(queued, js, conditional_expression,    none, dataflow, w_df_control_forms).
+claim(queued, js, for_of_statement,          none, dataflow, w_df_control_forms).
+claim(queued, js, sequence_expression,       none, dataflow, w_df_control_forms).
+claim(queued, js, parenthesized_expression,  none, dataflow, w_df_control_forms).
+claim(queued, js, tsas_expression,           none, dataflow, w_df_control_forms).
+claim(queued, js, tsnon_null_expression,     none, dataflow, w_df_control_forms).
+claim(queued, js, optional_member_expression, none, dataflow, w_df_control_forms).
+
+-- ===========================================================================
+-- 10 — THE THIRD LAYER, WHICH DOES NOT EXIST YET. `layer(controlflow).` is one
+-- fact and the programme's central claim is that it lights up every place the
+-- model then needs describing. It claims no cell BECAUSE THERE ARE NONE UNTIL
+-- IT RUNS, which is the honest shape of this item and the reason it is ordered
+-- after the layer that will demand it.
+work(w_controlflow_layer, "add layer(controlflow) — one fact — and answer whatever it enumerates").
+work_order(w_controlflow_layer, 10).
+work_state(w_controlflow_layer, open).
+
+-- ===========================================================================
+-- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
+-- that cannot participate in a layer at all and close as waivers with a reason.
+-- Each is a BUCKET WITH AN OWNER, which is what stops `unqueued` from being
+-- both empty and a lie. A sweep marked done while its layer still has open
+-- cells puts them straight back on the unqueued list.
+work(w_cg_sweep,  "callgraph residue: kinds that make no call edge, waived with a reason").
+work_order(w_cg_sweep, 11).
+work_state(w_cg_sweep, open).
+work_sweeps(w_cg_sweep, callgraph).
+
+work(w_df_sweep,  "dataflow residue: kinds that carry no runtime value").
+work_order(w_df_sweep, 12).
+work_state(w_df_sweep, open).
+work_sweeps(w_df_sweep, dataflow).
+
+work(w_mod_sweep, "modules residue: kinds that cannot appear in a module graph").
+work_order(w_mod_sweep, 13).
+work_state(w_mod_sweep, open).
+work_sweeps(w_mod_sweep, modules).

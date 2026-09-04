@@ -1,0 +1,120 @@
+-- rules/worklist.rofl — THE PLAN, DERIVED FROM WHAT THE MODEL KNOWS ABOUT ITSELF
+--
+-- The queue is not a list somebody keeps. `rules/js-model.rofl` already answers
+-- which cells are open and whose fault each unknown is; a plan adds exactly
+-- three things — ORDER, STATE, and the link from an item to the problems it
+-- spawned — and those are the only things authored here. Everything else is
+-- derived, so the plan cannot drift from the model: closing a cell moves the
+-- queue with no edit, and an item claiming a cell the model says is shut is red.
+--
+-- WHY THE CLAIM IS `claim(queued, ...)` AND NOT A RELATION OF ITS OWN.
+-- CLAUDE.md records the incident by name: `orphan_claim[audit]` was written by
+-- hand for `handled` and `ignored`, and ONE new authored relation over the same
+-- arguments silently reopened the whole vocabulary hole. The remedy landed
+-- afterwards — `claim/6` is extensional and `orphan[audit]` audits every ledger
+-- at once — so a fourth ledger costs ONE fact, `claim_kind(queued)`, and
+-- INHERITS the check instead of copying it. A queue item pointing at a kind,
+-- shape or layer nobody declares is caught by a rule written before this file
+-- existed. Measured rather than assumed: test/worklist.test.ts plants one.
+--
+-- THE GRANULARITY IS THE MODEL'S FINEST, NOT A NEW ONE. `cell[audit]/4` carries
+-- the shape column, with `none` for a kind the axis does not split, so the queue
+-- is keyed at shape level where a layer has shapes and at kind level where it
+-- does not — without this file deciding anything about axes.
+--
+-- WHAT THIS LEDGER MAY NOT DO: tick a cell. `verdict[audit]` reads `handled`
+-- and `ignored` only, so QUEUEING WORK IS NOT DOING IT, by construction.
+
+edb(work).          -- work(Item, Note)             an item, and what it is
+edb(work_order).    -- work_order(Item, N)          the order to take them in
+edb(work_state).    -- work_state(Item, State)      open | taken | done
+edb(work_sweeps).   -- work_sweeps(Item, Layer)     owns the layer's residue
+edb(work_spawned).  -- work_spawned(Item, Finding)  a problem this item found
+edb(work_state_kind).
+
+work_state_kind(open).
+work_state_kind(taken).
+work_state_kind(done).
+
+-- ---------------------------------------------------------------------------
+-- THE OPEN QUEUE, DERIVED. An IRREDUCIBLE unknown is not work: `import(pathVar)`
+-- names a module that does not exist until the expression runs, and no amount
+-- of modelling recovers it. `our_unknown` is exactly the half that is ours.
+open_cell[audit](K, S, L) :- our_unknown[audit](js, K, S, L).
+
+-- ---------------------------------------------------------------------------
+-- CLAIMED, SWEPT, AND THE THREE WAYS A PLAN CAN LIE
+--
+-- A cell is claimed by name, or swept in bulk by an item that owns whatever the
+-- named items leave behind in its layer. The bucket is EXPLICIT rather than
+-- implied: a layer with no sweeping item reports its residue as unqueued, which
+-- is the honest reading of `nobody has said who does these`.
+claimed(K, S, L) :- claim(queued, js, K, S, L, _).
+-- a DONE sweeper stops sweeping, so a bucket marked finished with cells still
+-- open reports them as unqueued again. That is wider than `false_done`, which
+-- can only see cells claimed by name.
+sweeper(K, S, L) :- work_sweeps(W, L), not work_state(W, done),
+                    open_cell[audit](K, S, L), not claimed(K, S, L).
+
+-- LIE 1: an open cell nobody has queued — the plan is silent about real work.
+unqueued[audit](K, S, L) :- open_cell[audit](K, S, L), not claimed(K, S, L),
+                            not sweeper(K, S, L).
+
+-- LIE 2: an item claiming a cell the model does not report as open, either
+-- because somebody else closed it or because it was never open. A DONE item is
+-- exempt: closing the cell is what done MEANS.
+-- THE SHAPE COLUMN IS IN THE HEAD ON PURPOSE. The first draft projected it
+-- away, and eleven distinct shapes of one kind collapsed into a single row —
+-- an audit that under-reports by exactly the amount of refinement the model
+-- has. Caught by a mutant that expected eleven rows and got one.
+queue_stale[audit](W, K, S, L) :- claim(queued, js, K, S, L, W), not work_state(W, done),
+                                  not open_cell[audit](K, S, L).
+
+-- LIE 3: two items owning one cell. Not caught by anything above — measured as
+-- a surviving mutant before this rule was written — and it matters because the
+-- queue is what says who is doing what: two owners is nobody.
+double_owned[audit](K, S, L, A, B) :- claim(queued, js, K, S, L, A),
+                                      claim(queued, js, K, S, L, B), A != B.
+
+-- LIE 4, AND IT IS THE ONE docs/modelling-a-language.md FEARS BY NAME — a
+-- filled matrix looks finished. An item marked done whose cell the model still
+-- reports open is a claim of completion the model itself contradicts.
+false_done[audit](W, K, S, L) :- work_state(W, done), claim(queued, js, K, S, L, W),
+                                 open_cell[audit](K, S, L).
+
+-- ---------------------------------------------------------------------------
+-- WHERE THIS PACK CANNOT LOOK, STATED RATHER THAN DISCOVERED LATER.
+--
+-- A SWEEP ABSORBS A LOST CLAIM. Measured as a surviving mutant: deleting
+-- `claim(queued, js, new_expression, s_new_result, callgraph, ...)` outright
+-- moved NO audit, because the layer's sweeping item immediately owns whatever
+-- is unclaimed. That is what a bucket is FOR, so it is not a defect in the
+-- rule — it is a defect in what the rule can see, and no rule here can close it
+-- without history the store does not keep.
+--
+-- The detector is therefore a NUMBER, and it lives in test/worklist.test.ts:
+-- how many cells each sweep absorbs is pinned, so specificity leaking into a
+-- bucket moves a figure somebody has to re-state on purpose. `sweeper/3` is
+-- exported for exactly that and for no other reason.
+
+-- ordinary hygiene of an authored table, each direction a positive row
+ordered(W)                    :- work_order(W, _).
+stated_state(W)               :- work_state(W, _).
+work_unstated[audit](W)       :- claim(queued, js, _, _, _, W), not work(W, _).
+work_unstated[audit](W)       :- work_sweeps(W, _), not work(W, _).
+work_unordered[audit](W)      :- work(W, _), not ordered(W).
+work_stateless[audit](W)      :- work(W, _), not stated_state(W).
+work_bad_state[audit](W, S)   :- work_state(W, S), not work_state_kind(S).
+work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
+
+-- ---------------------------------------------------------------------------
+-- WHAT TO DO NEXT, as a query rather than as a habit
+earlier_open(N)     :- work_state(W, open), work_order(W, M), M < N.
+next_work[audit](W) :- work_state(W, open), work_order(W, N), not earlier_open(N).
+in_flight[audit](W) :- work_state(W, taken).
+
+-- WHAT AN ITEM HAS COST SO FAR, in problems found. The plan and the ledger are
+-- separate files and this rule is the only thing joining them, so it fires only
+-- in a world holding both — which is why the test loads both rather than one.
+spawned_by[audit](W, F)   :- work_spawned(W, F), finding(F, _).
+spawn_orphan[audit](W, F) :- work_spawned(W, F), not finding(F, _).
