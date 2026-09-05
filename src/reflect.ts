@@ -7,6 +7,7 @@ import {
   type Term, type Subst, type ArithFail, mka, mks, mkv, mkf, mki, canonTerm, fnv1a,
   walk, evalArith, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO,
 } from './unify.ts';
+import { tokenize } from './parser.ts';
 import type { Clause, Lit, BodyElem, Temporal } from './parser.ts';
 import { type FactStore } from './store.ts';
 
@@ -270,6 +271,7 @@ export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is'] as const;
  *  INPUTS, and `bootstrapKernel` reads it to write the modes. */
 export const STR_ARITY: ReadonlyMap<string, number> = new Map([
   ['str_char', 2], ['str_len', 1], ['str_pre', 2], ['str_seg', 3], ['str_segs', 2],
+  ['str_sub', 3], ['atom_of', 1],
 ]);
 
 /** Three refusals, kept apart because they demand three different repairs --
@@ -287,9 +289,15 @@ export const STR_ARITY: ReadonlyMap<string, number> = new Map([
 export const STR_TYPE = 3;
 export const STR_INDEX = 4;
 export const STR_SEP = 5;
+/** A string `atom_of` cannot turn into an atom, because the program could not
+ *  have written that atom. Its own code because its repair is its own: the
+ *  data reached a name that is not a name, and the fix is upstream of the
+ *  operation rather than a guard beside it. */
+export const ATOM_NAME = 6;
 export const STR_TYPE_REASON = 'str_type_error';
 export const STR_INDEX_REASON = 'str_index_error';
 export const STR_SEP_REASON = 'str_empty_separator';
+export const ATOM_NAME_REASON = 'atom_unwritable';
 
 /** The atom a failure code is reported as, in one place, so the evaluator's
  *  hole emitter does not grow a branch per operation. */
@@ -298,6 +306,7 @@ export function holeReasonOf(code: number): string {
   if (code === STR_TYPE) return STR_TYPE_REASON;
   if (code === STR_INDEX) return STR_INDEX_REASON;
   if (code === STR_SEP) return STR_SEP_REASON;
+  if (code === ATOM_NAME) return ATOM_NAME_REASON;
   return ARITH_TYPE_REASON;
 }
 
@@ -373,6 +382,57 @@ export function evalStrOp(t: Term, s: Subst, fail?: ArithFail): Term | null | un
     if (i < 0 || i >= cp.length) { if (fail) fail.code = STR_INDEX; return null; }
     return mks(cp[i]);
   }
+  // THE TWO OPERATIONS SELF-APPLICATION NEEDED, added 2026-09-04.
+  //
+  // `str_sub(S, I, L)` is the substring by RANGE the five original destructors
+  // could not express: `str_char` answers one character, `str_seg` and
+  // `str_pre` cut on a separator that has to occur where the cut is wanted,
+  // and no composition of them lengthens a string. A rules-side tokenizer
+  // therefore knew WHERE every name was and could never say WHAT it said.
+  //
+  // `atom_of(S)` crosses the last sort boundary: an atom made from a string.
+  // Without it a rules-written parser can build the whole reflected term and
+  // not the NAME inside it, so it produces a description of a rule that a host
+  // must interpret rather than a rule.
+  //
+  // BOTH ARE DESTRUCTORS BY THE RECORDED CRITERION and the proof is unchanged:
+  // the substrings of a program's strings are finite (L(L+1)/2 of them), so a
+  // range-substring adds no term the universe did not already contain, and an
+  // atom built from one of finitely many strings is one of finitely many
+  // atoms. Neither can be fed back to grow without bound, which is what
+  // separates them from concatenation.
+  if (t.name === 'str_sub') {
+    const cp = [...str];
+    const i = intOperand(t.args[1], s, fail);
+    if (i === null) return null;
+    const len = intOperand(t.args[2], s, fail);
+    if (len === null) return null;
+    // A LENGTH RUNNING PAST THE END IS AN INDEX ERROR, not a short answer.
+    // Truncating silently is how a tokenizer ends up with a name that is right
+    // for every input the author tried; the repair is a premise, exactly as it
+    // is for `str_char`.
+    if (i < 0 || len < 0 || i + len > cp.length) { if (fail) fail.code = STR_INDEX; return null; }
+    return mks(cp.slice(i, i + len).join(''));
+  }
+  if (t.name === 'atom_of') {
+    // AN ATOM IT PRODUCES MUST BE ONE A PROGRAM COULD HAVE WRITTEN, and the
+    // oracle for that is the TOKENIZER ITSELF rather than a regex beside it —
+    // a hand-written twin of a rule that already exists is the defect this
+    // repository has paid for twice. Swept 2026-09-04: without this, `atom_of`
+    // made atoms with an empty name, a space in the middle, a leading capital
+    // (which reads back as a VARIABLE) and one spelled like an integer. None
+    // of those can be written in source, so each was a term the language could
+    // hold and never state. `$kernel` is deliberately still allowed: it is
+    // writable today, so this opens no door that was shut.
+    let toks;
+    try { toks = tokenize(str); } catch { if (fail) fail.code = ATOM_NAME; return null; }
+    if (toks.length !== 2 || toks[0].t !== 'ident' || toks[0].v !== str) {
+      if (fail) fail.code = ATOM_NAME; return null;
+    }
+    return mka(str);
+  }
+  // Everything below takes a SEPARATOR as its second operand; the operations
+  // that do not have already returned.
   const sep = strOperand(t.args[1], s, fail);
   if (sep === null) return null;
   if (sep === '') { if (fail) fail.code = STR_SEP; return null; }

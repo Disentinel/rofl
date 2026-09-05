@@ -291,6 +291,8 @@ test('every destructor carries a mode, and boot.rofl\'s unmoded[audit] stays emp
     c(N) :- s(S), N is str_segs(S, "-").
     d(T) :- s(S), T is str_seg(S, "-", 0).
     e(P) :- s(S), P is str_pre(S, "-").
+    f(T) :- s(S), T is str_sub(S, 0, 1).
+    g(A) :- s(S), T is str_sub(S, 0, 1), A is atom_of(T).
   `).ok, true);
 
   // THE ASSERTION
@@ -298,10 +300,22 @@ test('every destructor carries a mode, and boot.rofl\'s unmoded[audit] stays emp
   // ...and it is not empty for want of input: the audit joins `uses_builtin`
   // against `mode`, and both sides carry all five operations. An audit whose
   // left side were empty would be just as green and would mean nothing.
-  assert.deepEqual(col(r, 'uses_builtin(R, B)', 'B').filter((b) => b.includes('str_')),
-    ['"str_char"', '"str_len"', '"str_pre"', '"str_seg"', '"str_segs"']);
-  assert.deepEqual(col(r, 'mode(B, M)', 'B').filter((b) => b.includes('str_')),
-    ['"str_char"', '"str_len"', '"str_pre"', '"str_seg"', '"str_segs"']);
+  // THE FILTER USED TO BE `includes('str_')` AND THAT WAS THE WRONG CRITERION:
+  // it was borrowed from the names the five original destructors happened to
+  // share, so when `atom_of` arrived on 2026-09-04 the check could not see it
+  // at all — a new operation could have shipped with no mode and this test
+  // would have stayed green. Both sides are now asserted WHOLE.
+  // Deduped, because the question is WHICH operations both sides carry, not
+  // how many rules of boot.rofl happen to use `is`. `!=` and `is` are
+  // boot.rofl's own; the seven after them are this program's.
+  const set = (q: string, v: string) => [...new Set(col(r, q, v))].sort();
+  assert.deepEqual(set('uses_builtin(R, B)', 'B'),
+    ['"!="', '"atom_of"', '"is"', '"str_char"', '"str_len"', '"str_pre"',
+     '"str_seg"', '"str_segs"', '"str_sub"']);
+  assert.deepEqual(set('mode(B, M)', 'B'),
+    ['"!="', '"<"', '"<="', '"="', '">"', '">="', '"atom_of"', '"is"',
+     '"str_char"', '"str_len"', '"str_pre"', '"str_seg"', '"str_segs"',
+     '"str_sub"']);
   // the mode is not decoration either: it states the direction the evaluator
   // actually enforces -- inputs bound where the premise stands, output bound
   // by it -- and `str_seg` takes three inputs
@@ -310,10 +324,12 @@ test('every destructor carries a mode, and boot.rofl\'s unmoded[audit] stays emp
   // the audit above while telling a reader the opposite of the truth.
   assert.deepEqual(col(r, 'mode(B, M)', 'M').filter((m) => m.startsWith('$cons(out')).sort(), [
     '$cons(out,$cons(in,$cons(in,$cons(in,$nil))))',            // str_seg
+    '$cons(out,$cons(in,$cons(in,$cons(in,$nil))))',            // str_sub
     '$cons(out,$cons(in,$cons(in,$nil)))',                      // str_char
     '$cons(out,$cons(in,$cons(in,$nil)))',                      // str_pre
     '$cons(out,$cons(in,$cons(in,$nil)))',                      // str_segs
     '$cons(out,$cons(in,$nil))',                                // str_len
+    '$cons(out,$cons(in,$nil))',                                // atom_of
     '$cons(out,$cons(in,$nil))',                                // `is` itself
   ].sort());
   // the reflection records the OPERATION, not only the `is` that carries it

@@ -43,7 +43,8 @@ const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown'];
 const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n', 't', 'r'];
 // Kernel constants (mode atoms, hole reasons).
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
-  'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator'];
+  'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator',
+  'atom_unwritable'];
 // Builtin OPERATION names -- the term-level operations a rule may call, the
 // same category as `is` and `mod` in SYNTAX above and NOT relations: no store
 // key is ever one of these, and no rule may conclude into one. The five string
@@ -57,7 +58,15 @@ const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'a
 // names no relation, no perspective and no subject matter. What would make a
 // name domain code is a relation of boot.rofl or of an appendix program,
 // which is exactly what FORBIDDEN below still refuses.
-const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs'];
+// `str_sub` and `atom_of` joined them on 2026-09-04, and the reason is the
+// same one this comment already gives: they are operations on the term
+// algebra and they name no relation. `atom_of` is the one that deserves a
+// second look, because it PRODUCES an atom and an atom can be a relation
+// name - but it produces a TERM, and a term only becomes an executable
+// rule through the reflection rows, which `breach[audit]` and the write
+// protection on conclusion_lit already watch.
+const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs',
+                  'str_sub', 'atom_of'];
 // Implementation tokens: tokenizer tags, term/premise kind tags, snapshot
 // field names, REPL command words. Not relation names; listed exhaustively.
 const IMPL = [

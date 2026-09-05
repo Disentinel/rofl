@@ -73,31 +73,33 @@ plusminus(plus).
 plusminus(minus).
 r(r70, l(tok, [v("I"), v("J")]), [l(optok, [v("I"), v("J"), v("Op")])]).
 r(r71, l(tok, [v("I"), v("J")]), [l(arithtok, [v("I"), v("J"), v("Op")])]).
-r(r72, l(term, [v("I"), v("J"), f(atom, [v("I"), v("J")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")]))]).
-r(r73, l(term, [v("I"), v("J"), f(var, [v("I"), v("J")])]), [l(vartok, [v("I"), v("J")])]).
-r(r74, l(term, [v("I"), v("J"), f(int, [v("I"), v("J")])]), [l(inttok, [v("I"), v("J")])]).
-r(r75, l(term, [v("I"), v("J"), f(str, [v("I"), v("J")])]), [l(strtok, [v("I"), v("J")])]).
-r(r76, l(term, [v("I"), v("C"), f(comp, [v("I"), v("J"), v("A")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")])), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
-r(r77, l(args, [v("I"), v("J"), f(cons, [v("T"), nil])]), [l(term, [v("I"), v("J"), v("T")])]).
-r(r78, l(args, [v("I"), v("J2"), f(cons, [v("T"), v("R")])]), [l(term, [v("I"), v("J"), v("T")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(args, [v("I2"), v("J2"), v("R")])]).
-r(r79, l(prim, [v("I"), v("J"), v("T")]), [l(term, [v("I"), v("J"), v("T")])]).
-r(r80, l(expr, [v("I"), v("J"), v("T")]), [l(prim, [v("I"), v("J"), v("T")])]).
-r(r81, l(expr, [v("I"), v("C"), f(op, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K")]), l(addop, [v("K"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(prim, [v("S"), v("C"), v("R")])]).
-r(r82, l(relbook, [v("I"), v("J"), f(atom, [v("I"), v("J")]), main]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")]))]).
-r(r83, l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])]), [l(relbook, [v("I"), v("J"), v("R"), v("Bk")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
-r(r84, l(lit, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A"), now])]), [l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])])]).
-r(r85, l(belem, [v("I"), v("C"), f(pos, [v("L")])]), [l(lit, [v("I"), v("C"), v("L")])]).
-r(r86, l(belem, [v("I"), v("C"), f(neg, [v("L")])]), [l(kw_not, [v("I")]), l(word, [v("I"), v("J")]), l(nexttok, [v("J"), v("K")]), l(lit, [v("K"), v("C"), v("L")])]).
-r(r87, l(belem, [v("I"), v("C"), f(bi, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K1")]), l(optok, [v("K1"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(expr, [v("S"), v("C"), v("R")])]).
-r(r88, l(body, [v("I"), v("C"), f(cons, [v("B"), nil])]), [l(belem, [v("I"), v("C"), v("B")])]).
-r(r89, l(body, [v("I"), v("C2"), f(cons, [v("B"), v("R")])]), [l(belem, [v("I"), v("C"), v("B")]), l(nexttok, [v("C"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(body, [v("I2"), v("C2"), v("R")])]).
-r(r90, l(clause_at, [v("I"), v("D"), v("L"), nil]), [l(lit, [v("I"), v("C"), v("L")]), l(nexttok, [v("C"), v("D")]), l(p, [v("D"), dot])]).
-r(r91, l(clause_at, [v("I"), v("D"), v("H"), v("B")]), [l(lit, [v("I"), v("C"), v("H")]), l(nexttok, [v("C"), v("K")]), l(neck, [v("K"), v("K2")]), l(nexttok, [v("K2"), v("S")]), l(body, [v("S"), v("E"), v("B")]), l(nexttok, [v("E"), v("D")]), l(p, [v("D"), dot])]).
-r(r92, l(top, [v("I")]), [l(first_tok, [v("I")])]).
-r(r93, l(top, [v("I2")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")]), l(nexttok, [v("D"), v("I2")])]).
-r(r94, l(parsed, [v("I"), v("D"), v("H"), v("B")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
-r(r95, l(subparse, [v("I"), v("D")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")]), n(l(top, [v("I")]))]).
-r(r96, l(parses_at, [v("I")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
-r(r97, l(stuck_at, [v("I")]), [l(top, [v("I")]), n(l(parses_at, [v("I")]))]).
-r(r98, l(covered, [v("K")]), [l(parsed, [v("I"), v("D"), v("H"), v("B")]), l(tokstart, [v("K")]), b("<=", v("I"), v("K")), b("<=", v("K"), v("D"))]).
-r(r99, l(uncovered, [v("K")]), [l(tokstart, [v("K")]), n(l(covered, [v("K")]))]).
+r(r72, l(tok_text, [v("I"), v("J"), v("S")]), [l(tok, [v("I"), v("J")]), l(src, [v("Src")]), b("is", v("L"), f("+", [f("-", [v("J"), v("I")]), 1])), b("is", v("S"), f(str_sub, [v("Src"), v("I"), v("L")]))]).
+r(r73, l(tok_name, [v("I"), v("J"), v("A")]), [l(identtok, [v("I"), v("J")]), l(tok_text, [v("I"), v("J"), v("S")]), b("is", v("A"), f(atom_of, [v("S")]))]).
+r(r74, l(term, [v("I"), v("J"), f(atom, [v("A")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")])), l(tok_name, [v("I"), v("J"), v("A")])]).
+r(r75, l(term, [v("I"), v("J"), f(var, [v("S")])]), [l(vartok, [v("I"), v("J")]), l(tok_text, [v("I"), v("J"), v("S")])]).
+r(r76, l(term, [v("I"), v("J"), f(int, [v("S")])]), [l(inttok, [v("I"), v("J")]), l(tok_text, [v("I"), v("J"), v("S")])]).
+r(r77, l(term, [v("I"), v("J"), f(str, [v("S")])]), [l(strtok, [v("I"), v("J")]), l(tok_text, [v("I"), v("J"), v("S")])]).
+r(r78, l(term, [v("I"), v("C"), f(comp, [v("N"), v("A")])]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")])), l(tok_name, [v("I"), v("J"), v("N")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
+r(r79, l(args, [v("I"), v("J"), f(cons, [v("T"), nil])]), [l(term, [v("I"), v("J"), v("T")])]).
+r(r80, l(args, [v("I"), v("J2"), f(cons, [v("T"), v("R")])]), [l(term, [v("I"), v("J"), v("T")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(args, [v("I2"), v("J2"), v("R")])]).
+r(r81, l(prim, [v("I"), v("J"), v("T")]), [l(term, [v("I"), v("J"), v("T")])]).
+r(r82, l(expr, [v("I"), v("J"), v("T")]), [l(prim, [v("I"), v("J"), v("T")])]).
+r(r83, l(expr, [v("I"), v("C"), f(op, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K")]), l(addop, [v("K"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(prim, [v("S"), v("C"), v("R")])]).
+r(r84, l(relbook, [v("I"), v("J"), f(atom, [v("A")]), main]), [l(identtok, [v("I"), v("J")]), n(l(keyword, [v("I")])), l(tok_name, [v("I"), v("J"), v("A")])]).
+r(r85, l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])]), [l(relbook, [v("I"), v("J"), v("R"), v("Bk")]), l(nexttok, [v("J"), v("K")]), l(p, [v("K"), lpar]), l(nexttok, [v("K"), v("S")]), l(args, [v("S"), v("E"), v("A")]), l(nexttok, [v("E"), v("C")]), l(p, [v("C"), rpar])]).
+r(r86, l(lit, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A"), now])]), [l(lit0, [v("I"), v("C"), f(node, [v("R"), v("Bk"), v("A")])])]).
+r(r87, l(belem, [v("I"), v("C"), f(pos, [v("L")])]), [l(lit, [v("I"), v("C"), v("L")])]).
+r(r88, l(belem, [v("I"), v("C"), f(neg, [v("L")])]), [l(kw_not, [v("I")]), l(word, [v("I"), v("J")]), l(nexttok, [v("J"), v("K")]), l(lit, [v("K"), v("C"), v("L")])]).
+r(r89, l(belem, [v("I"), v("C"), f(bi, [v("Op"), v("L"), v("R")])]), [l(expr, [v("I"), v("J"), v("L")]), l(nexttok, [v("J"), v("K1")]), l(optok, [v("K1"), v("K2"), v("Op")]), l(nexttok, [v("K2"), v("S")]), l(expr, [v("S"), v("C"), v("R")])]).
+r(r90, l(body, [v("I"), v("C"), f(cons, [v("B"), nil])]), [l(belem, [v("I"), v("C"), v("B")])]).
+r(r91, l(body, [v("I"), v("C2"), f(cons, [v("B"), v("R")])]), [l(belem, [v("I"), v("C"), v("B")]), l(nexttok, [v("C"), v("K")]), l(p, [v("K"), comma]), l(nexttok, [v("K"), v("I2")]), l(body, [v("I2"), v("C2"), v("R")])]).
+r(r92, l(clause_at, [v("I"), v("D"), v("L"), nil]), [l(lit, [v("I"), v("C"), v("L")]), l(nexttok, [v("C"), v("D")]), l(p, [v("D"), dot])]).
+r(r93, l(clause_at, [v("I"), v("D"), v("H"), v("B")]), [l(lit, [v("I"), v("C"), v("H")]), l(nexttok, [v("C"), v("K")]), l(neck, [v("K"), v("K2")]), l(nexttok, [v("K2"), v("S")]), l(body, [v("S"), v("E"), v("B")]), l(nexttok, [v("E"), v("D")]), l(p, [v("D"), dot])]).
+r(r94, l(top, [v("I")]), [l(first_tok, [v("I")])]).
+r(r95, l(top, [v("I2")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")]), l(nexttok, [v("D"), v("I2")])]).
+r(r96, l(parsed, [v("I"), v("D"), v("H"), v("B")]), [l(top, [v("I")]), l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
+r(r97, l(subparse, [v("I"), v("D")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")]), n(l(top, [v("I")]))]).
+r(r98, l(parses_at, [v("I")]), [l(clause_at, [v("I"), v("D"), v("H"), v("B")])]).
+r(r99, l(stuck_at, [v("I")]), [l(top, [v("I")]), n(l(parses_at, [v("I")]))]).
+r(r100, l(covered, [v("K")]), [l(parsed, [v("I"), v("D"), v("H"), v("B")]), l(tokstart, [v("K")]), b("<=", v("I"), v("K")), b("<=", v("K"), v("D"))]).
+r(r101, l(uncovered, [v("K")]), [l(tokstart, [v("K")]), n(l(covered, [v("K")]))]).

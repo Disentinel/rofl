@@ -181,13 +181,30 @@ plusminus(plus).  plusminus(minus).
 tok(I, J) :- optok(I, J, Op).
 tok(I, J) :- arithtok(I, J, Op).
 
+-- --------------------------------------------------------------- the names
+-- WHERE THE RANGES BECOME NAMES, and until 2026-09-04 they could not: the
+-- kernel had no substring-by-range destructor and no string-to-atom, so a
+-- token knew WHERE it was and never WHAT it said, and the host had to slice
+-- the source for every name. `str_sub` and `atom_of` moved that here.
+--
+-- The consequence is not brevity. The promoter used to know TWELVE shapes of
+-- this grammar's tree; now it knows the atoms these rules put in it, so the
+-- bottom of the tower stopped depending on the levels above it.
+tok_text(I, J, S) :- tok(I, J), src(Src), L is J - I + 1, S is str_sub(Src, I, L).
+-- ONLY AN IDENT BECOMES AN ATOM. Run over every token, `atom_of` is asked
+-- for a name from a bracket, a neck, a quoted string and a capitalised
+-- variable, and each is a loud `atom_unwritable` hole - which is how the
+-- new guard announced that it was being called on the wrong things, the
+-- first time it ran.
+tok_name(I, J, A) :- identtok(I, J), tok_text(I, J, S), A is atom_of(S).
+
 -- ---------------------------------------------------------------------- terms
-term(I, J, atom(I, J)) :- identtok(I, J), not keyword(I).
-term(I, J, var(I, J))  :- vartok(I, J).
-term(I, J, int(I, J))  :- inttok(I, J).
-term(I, J, str(I, J))  :- strtok(I, J).
+term(I, J, atom(A)) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+term(I, J, var(S))     :- vartok(I, J), tok_text(I, J, S).
+term(I, J, int(S))     :- inttok(I, J), tok_text(I, J, S).
+term(I, J, str(S))     :- strtok(I, J), tok_text(I, J, S).
 -- compound: f(args)
-term(I, C, comp(I, J, A)) :- identtok(I, J), not keyword(I),
+term(I, C, comp(N, A)) :- identtok(I, J), not keyword(I), tok_name(I, J, N),
                              nexttok(J, K), p(K, lpar),
                              nexttok(K, S), args(S, E, A),
                              nexttok(E, C), p(C, rpar).
@@ -210,7 +227,7 @@ expr(I, C, op(Op, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
 -- ------------------------------------------------------------------- literals
 -- The literal is built from PARTS so that book and tense do not multiply into
 -- a rule per combination: three books times two tenses would be six copies.
-relbook(I, J, atom(I, J), main) :- identtok(I, J), not keyword(I).
+relbook(I, J, atom(A), main) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
 lit0(I, C, node(R, Bk, A)) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
                               nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
 

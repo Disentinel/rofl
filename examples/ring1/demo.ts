@@ -118,59 +118,60 @@ const OPS: ReadonlyMap<string, string> = new Map([
   ['is', 'is'], ['plus', '+'], ['minus', '-'], ['star', '*'], ['slash', '/'], ['mod', 'mod'],
 ]);
 
-function term(t: J, src: string, wild: Map<number, number>): Term {
-  const at = (a: J[]) => src.slice(a[0].v, a[1].v + 1);
+/** THE PROMOTER NO LONGER READS THE SOURCE.
+ *
+ *  Until 2026-09-04 every one of these branches sliced `src` to find out what a
+ *  range said, and the host therefore knew TWELVE shapes of this grammar's
+ *  tree. `str_sub` and `atom_of` moved that into the rules: a term now arrives
+ *  carrying its own name, and what is left here is a copy. That is the
+ *  decoupling the tower needed — L0 stopped depending on the levels above it. */
+function term(t: J, wild: Map<number, number>): Term {
   let a: J[] | null;
-  if ((a = fn(t, 'atom'))) return mka(at(a));
-  if ((a = fn(t, 'var'))) {
-    const name = at(a);
-    // A bare `_` is a FRESH variable, numbered per clause, exactly as
-    // src/parser.ts numbers it. Reading it as a variable called `_` merges
-    // every wildcard in the clause into one and silently adds a join.
-    if (name === '_') {
-      const n = wild.get(a[0].v);
-      if (n === undefined) throw new Unsupported('wildcard without a rank');
-      return mkv(`_$${n}`);
-    }
-    return mkv(name);
+  if ((a = fn(t, 'atom'))) return a[0] as Term;
+  if ((a = fn(t, 'var'))) return mkv((a[0] as { v: string }).v);
+  if ((a = fn(t, 'wild'))) {
+    // A bare `_` is a FRESH variable, numbered per clause exactly as
+    // src/parser.ts numbers it; the rank is positional, so this is the one
+    // term that still travels as an index.
+    const n = wild.get((a[0] as { v: number }).v);
+    if (n === undefined) throw new Unsupported('wildcard without a rank');
+    return mkv(`_$${n}`);
   }
-  if ((a = fn(t, 'int'))) return mki(parseInt(at(a), 10));
-  if ((a = fn(t, 'str'))) return mks(unquote(src.slice(a[0].v + 1, a[1].v)));
+  if ((a = fn(t, 'int'))) return mki(parseInt((a[0] as { v: string }).v, 10));
+  if ((a = fn(t, 'str'))) return mks(unquote((a[0] as { v: string }).v.slice(1, -1)));
   if ((a = fn(t, 'comp'))) {
-    return mkf(src.slice(a[0].v, a[1].v + 1), unlist(a[2]).map((x) => term(x, src, wild)));
+    return mkf((a[0] as { name: string }).name, unlist(a[1]).map((x) => term(x, wild)));
   }
   if ((a = fn(t, 'op'))) {
     const sym = OPS.get((a[0] as { name: string }).name);
     if (sym === undefined) throw new Unsupported('operator ' + JSON.stringify(a[0]));
-    return mkf(sym, [term(a[1], src, wild), term(a[2], src, wild)]);
+    return mkf(sym, [term(a[1], wild), term(a[2], wild)]);
   }
   throw new Unsupported('term: ' + JSON.stringify(t).slice(0, 60));
 }
 
-function lit(t: J, src: string, wild: Map<number, number>): Lit {
+function lit(t: J, wild: Map<number, number>): Lit {
   const a = fn(t, 'node');
   if (!a || a.length !== 4) throw new Unsupported('literal');
   const [relT, perspT, argsT, tenseT] = a;
-  const ra = fn(relT, 'atom')!;
   const bk = fn(perspT, 'book'), bv = fn(perspT, 'bookvar');
-  const span = (x: J[]) => src.slice(x[0].v, x[1].v + 1);
   return {
-    rel: span(ra),
-    persp: bk ? mka(span(bk)) : bv ? mkv(span(bv)) : mka('main'),
+    rel: (fn(relT, 'atom')![0] as { name: string }).name,
+    persp: bk ? (bk[0] as Term) : bv ? mkv((bv[0] as { v: string }).v) : mka('main'),
     perspExplicit: !!(bk || bv),
-    args: unlist(argsT).map((x) => term(x, src, wild)),
+    args: unlist(argsT).map((x) => term(x, wild)),
     temporal: (tenseT as { name: string }).name as Lit['temporal'],
   };
 }
 
-function bodyElem(t: J, src: string, wild: Map<number, number>): BodyElem {
+function bodyElem(t: J, wild: Map<number, number>): BodyElem {
   let a: J[] | null;
-  if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], src, wild) };
-  if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], src, wild) };
+  if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], wild) };
+  if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], wild) };
   if ((a = fn(t, 'bi'))) {
     const sym = OPS.get((a[0] as { name: string }).name);
     if (sym === undefined) throw new Unsupported('builtin ' + JSON.stringify(a[0]));
-    return { t: 'bi', op: sym, l: term(a[1], src, wild), r: term(a[2], src, wild) };
+    return { t: 'bi', op: sym, l: term(a[1], wild), r: term(a[2], wild) };
   }
   throw new Unsupported('body element');
 }
@@ -279,7 +280,7 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   for (const f of rows.sort((x, y) => x.args[0].v - y.args[0].v)) {
     const [, , headT, bodyT] = f.args;
     try {
-      out.push({ head: lit(headT, src, wild), body: unlist(bodyT).map((b) => bodyElem(b, src, wild)) });
+      out.push({ head: lit(headT, wild), body: unlist(bodyT).map((b) => bodyElem(b, wild)) });
     } catch (e) {
       if (e instanceof Unsupported) unsupported.push(e.message);
       else throw e;
