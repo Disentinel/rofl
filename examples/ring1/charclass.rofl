@@ -89,6 +89,7 @@ cls("\n", nl).
 -- refuses, so `p({a}).` produced `p[main](a)@now` while src/parser.ts said
 -- `expected a term, got '{'`. Coverage was over TOKENS, and a character that
 -- makes no token has no token to be uncovered.
+cls("$", dollar).
 cls(" ", space).
 cls("\t", space).
 cls("\r", space).

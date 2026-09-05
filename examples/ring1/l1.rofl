@@ -78,7 +78,25 @@ wordch(I) :- kind(I, upper), code_at(I).
 wordch(I) :- kind(I, digit), code_at(I).
 
 prevword(I)   :- at(I), 0 < I, J is I - 1, wordch(J).
-word_start(I) :- wordch(I), not prevword(I).
+word_start(I) :- wordch(I), not prevword(I), not dollar_before(I).
+-- AND A `$` SWALLOWS WHAT FOLLOWS IT. Without this both `$cons` and `cons`
+-- were word starts - `$` is no `wordch`, so the letter after it had no word
+-- character before it - and the chart returned the inner one as a SECOND
+-- clause. The host has this for free by consuming left to right; a chart has
+-- to say it.
+dollar_before(I) :- at(I), 0 < I, J is I - 1, kind(J, dollar), code_at(J).
+-- `$` STARTS A NAME AND NEVER CONTINUES ONE, which is src/parser.ts's rule to
+-- the letter: every reflected name the kernel builds - $lit, $cons, $var, $nil,
+-- $not, $builtin, $fact and the tense atoms - carries the marker first and
+-- nowhere else, so admitting it in leading position makes the reflection
+-- readable from the language that produces it while leaving `_$0`, the parser's
+-- own name for an anonymous variable, unwritable by hand.
+--
+-- MEASURED BEFORE IT WAS WRITTEN: ring 1 refused `p($kernel).` outright while
+-- the host read it, and `$kernel` stands in boot.rofl - so the front end could
+-- never have parsed the kernel's own program. The new character-level coverage
+-- is what made that loud instead of odd.
+word_start(I) :- kind(I, dollar), code_at(I).
 wext(I, I)    :- word_start(I).
 wext(I, J2)   :- wext(I, J), J2 is J + 1, wordch(J2).
 word(I, J)    :- wext(I, J), J2 is J + 1, not wordch(J2).
@@ -115,6 +133,7 @@ preceded(I)      :- nexttok(J, I).
 
 -- ---------------------------------------------------------------- token kinds
 identtok(I, J) :- word(I, J), kind(I, lower).
+identtok(I, J) :- word(I, J), kind(I, dollar).
 vartok(I, J)   :- word(I, J), kind(I, upper).
 inttok(I, J)   :- word(I, J), kind(I, digit).
 p(I, K)        :- punct(I, K).
@@ -199,8 +218,8 @@ tok_text(I, J, S) :- tok(I, J), src(Src), L is J - I + 1, S is str_sub(Src, I, L
 tok_name(I, J, A) :- identtok(I, J), tok_text(I, J, S), A is atom_of(S).
 
 -- ---------------------------------------------------------------------- terms
-term(I, J, atom(A)) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
-term(I, J, var(S))     :- vartok(I, J), tok_text(I, J, S).
+term(I, J, A) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+term(I, J, $var(S))    :- vartok(I, J), tok_text(I, J, S).
 term(I, J, int(S))     :- inttok(I, J), tok_text(I, J, S).
 term(I, J, str(S))     :- strtok(I, J), tok_text(I, J, S).
 -- compound: f(args)
@@ -209,8 +228,8 @@ term(I, C, comp(N, A)) :- identtok(I, J), not keyword(I), tok_name(I, J, N),
                              nexttok(K, S), args(S, E, A),
                              nexttok(E, C), p(C, rpar).
 
-args(I, J, cons(T, nil)) :- term(I, J, T).
-args(I, J2, cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
+args(I, J, $cons(T, $nil)) :- term(I, J, T).
+args(I, J2, $cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
                             nexttok(K, I2), args(I2, J2, R).
 
 -- ---------------------------------------------------------- arithmetic, typed
@@ -221,29 +240,31 @@ args(I, J2, cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
 prim(I, J, T) :- term(I, J, T).
 
 expr(I, J, T) :- prim(I, J, T).
-expr(I, C, op(Op, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
+expr(I, C, op(OpS, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
+                             tok_text(K, K2, OpS),
                             nexttok(K2, S), prim(S, C, R).
 
 -- ------------------------------------------------------------------- literals
 -- The literal is built from PARTS so that book and tense do not multiply into
 -- a rule per combination: three books times two tenses would be six copies.
-relbook(I, J, atom(A), main) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
-lit0(I, C, node(R, Bk, A)) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
+relbook(I, J, A, $bare) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+lit0(I, C, R, Bk, A) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
                               nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
 
-lit(I, C, node(R, Bk, A, now)) :- lit0(I, C, node(R, Bk, A)).
+lit(I, C, $lit(R, Bk, A, $now)) :- lit0(I, C, R, Bk, A).
 
 -- ---------------------------------------------------------------- body & rule
-belem(I, C, pos(L)) :- lit(I, C, L).
-belem(I, C, neg(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
-belem(I, C, bi(Op, L, R)) :- expr(I, J, L), nexttok(J, K1), optok(K1, K2, Op),
+belem(I, C, L)       :- lit(I, C, L).
+belem(I, C, $not(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
+belem(I, C, $builtin(OpS, $cons(L, $cons(R, $nil)))) :-
+  expr(I, J, L), nexttok(J, K1), optok(K1, K2, Op), tok_text(K1, K2, OpS),
                              nexttok(K2, S), expr(S, C, R).
 
-body(I, C, cons(B, nil)) :- belem(I, C, B).
-body(I, C2, cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),
+body(I, C, $cons(B, $nil)) :- belem(I, C, B).
+body(I, C2, $cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),
                             nexttok(K, I2), body(I2, C2, R).
 
-clause_at(I, D, L, nil) :- lit(I, C, L), nexttok(C, D), p(D, dot).
+clause_at(I, D, L, $nil) :- lit(I, C, L), nexttok(C, D), p(D, dot).
 clause_at(I, D, H, B)   :- lit(I, C, H), nexttok(C, K), neck(K, K2),
                            nexttok(K2, S), body(S, E, B), nexttok(E, D), p(D, dot).
 

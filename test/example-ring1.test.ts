@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
-import { canonClause } from '../src/reflect.ts';
+import { canonClause, resolveClauseBooks } from '../src/reflect.ts';
 import {
   parse, canon, roflStr, world, IncompleteParse,
   image, imageContent, fromImage, IMAGE_SOURCES, parseFile, clauses,
@@ -225,6 +225,42 @@ test('l1.dense.rofl is REPRODUCIBLE from l1.rofl', async () => {
   // diff a person can also perform by eye.
   assert.equal(dense(parseProgram(read('examples', 'ring1', 'l1.rofl'))),
                read('examples', 'ring1', 'l1.dense.rofl'));
+});
+
+test('perspExplicit survives, and canon cannot see it', () => {
+  // THE BIT THE ORACLE IS BLIND TO. Ring 1 emits the kernel's reified `$lit`,
+  // and that form has no room for "was `[book]` written?" — `unreifyLit` sets
+  // `perspExplicit: true` unconditionally, which is right for a rule read back
+  // out of the store, where resolution has already happened. Here it has not,
+  // and `resolveBook` reads the bit: a kernel-book relation written WITHOUT a
+  // bracket moves to `$kernel`, one written `[main]` is left alone and reported
+  // through `undefined_premise[audit]` rather than silently corrected.
+  //
+  // `canonClause` prints the perspective but NOT the bit, so every corpus file
+  // could agree byte for byte with this wrong. Ring 1 carries it as `$bare`.
+  // THE BRACKET GOES AFTER THE RELATION — `p[book](args)` — which is worth
+  // writing down because getting it wrong is invisible: a program that does not
+  // parse refuses for the wrong reason and a test asserting a refusal passes.
+  const cases = [
+    ['p(a).', [false]],
+    ['p[main](a).', [true]],
+    ['p[k](a) :- q(b), r[j](c).', [true, false, true]],
+    ['concludes(R, X) :- q(R, X).', [false, false]],
+  ] as const;
+  for (const [src, want] of cases) {
+    const mine = parse(src).clauses[0];
+    const host = parseProgram(src)[0];
+    const bits = (c: typeof host) => [c.head, ...c.body.filter((b) => b.t !== 'bi').map((b) => (b as { lit: typeof c.head }).lit)]
+      .map((l) => l.perspExplicit);
+    assert.deepEqual(bits(mine), [...want], `ring 1 on ${src}`);
+    assert.deepEqual(bits(host), [...want], `positive control: the host on ${src}`);
+    // and canon agrees anyway, which is the point: it cannot discriminate
+    assert.equal(canon([mine]), canon([host]));
+  }
+  // THE CONSEQUENCE, end to end: the bit decides which book a kernel relation
+  // lands in, and the two spellings must stay distinguishable.
+  assert.notEqual(canonClause(resolveClauseBooks(parse('concludes(R, X) :- q(R, X).').clauses[0])),
+                  canonClause(resolveClauseBooks(parse('concludes[main](R, X) :- q(R, X).').clauses[0])));
 });
 
 test('SELF-APPLICATION: L1 parses L2\'s own source, identically to the host', () => {

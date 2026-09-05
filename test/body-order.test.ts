@@ -119,9 +119,27 @@ test('permuting a body does not change the answer, over every permutation', () =
 });
 
 test('MUTANTS: where this gate cannot look', () => {
-  // (1) a negation whose only free variable is the PERSPECTIVE, not an argument
-  const p = new Rofl().load('[k] q(1).\nbook(k).\np(X) :- q(X), not [P] r(X).\n', { budget: B });
-  assert.equal(p.ok, false, 'a free perspective variable in a negation is the same ambiguity');
+  // (1) a negation whose only free variable is the PERSPECTIVE, not an argument.
+  //     WRITTEN WRONG THE FIRST TIME and it passed anyway: `[k] q(1).` puts the
+  //     bracket BEFORE the relation, which does not parse at all, so `ok:false`
+  //     said nothing about perspectives. The syntax is `rel[book](args)`.
+  //     AND THE FIRST VERSION EXPECTED THE WRONG ANSWER once it did parse: a
+  //     book variable occurring ONLY inside the negation is a wildcard by
+  //     another name — `not r[P](X)` asks whether r(X) holds in ANY book — and
+  //     that is the same rule that leaves `not r(X, _)` alone. The ambiguous
+  //     case is a book variable SHARED with a second element.
+  const solo = 'q[k](1).\np(X) :- q[k](X), not r[P](X).\n';
+  assert.doesNotThrow(() => parseProgram(solo), 'positive control: the fixture must PARSE');
+  assert.equal(new Rofl().load(solo, { budget: B }).ok, true,
+    'a book variable confined to its own negation is existential, like a wildcard');
+  const shared = 'q[k](1).\np(X) :- q[k](X), not r[P](X), not s[P](X).\n';
+  const p = new Rofl().load(shared, { budget: B });
+  assert.equal(p.ok, false, 'a book variable shared by two negations is bound by neither');
+  assert.match(p.diagnostics.join(' '), /\bP\b/, 'and the refusal names it');
+  //     and when a positive premise DOES bind the book, the plan waits for it
+  const bound = 'q[k](1).\ns[k](1).\np(X) :- q[k](X), not r[P](X), s[P](X).\n';
+  assert.equal(new Rofl().load(bound, { budget: B }).ok, true,
+    'a book bound by a later positive premise is waited for, not refused');
 
   // (2) a one-element body has no order to get wrong — the plan must not choke
   const one = parseProgram('p(X) :- q(X).\n')[0];

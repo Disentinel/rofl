@@ -17,7 +17,7 @@
 import { Rofl } from '../../src/api.ts';
 import { type Term, mka, mkv, mki, mks, mkf } from '../../src/unify.ts';
 import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
-import { canonClause } from '../../src/reflect.ts';
+import { canonClause, unreifyTerm } from '../../src/reflect.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -79,17 +79,6 @@ type J = any;
 const fn = (t: J, name: string): J[] | null =>
   t && t.k === 'f' && t.name === name ? t.args : null;
 
-/** `$cons`-list to array. */
-function unlist(t: J): J[] {
-  const out: J[] = [];
-  for (let c = t; ; ) {
-    const a = fn(c, 'cons');
-    if (!a) return out;
-    out.push(a[0]);
-    c = a[1];
-  }
-}
-
 /** A ROFL string literal's own escaping, undone. MUST MATCH src/parser.ts's
  *  ESCAPES table exactly — this is a second implementation of the same
  *  decision, and the corpus oracle in test/example-ring1.test.ts is what
@@ -112,23 +101,29 @@ function unquote(raw: string): string {
 
 export class Unsupported extends Error {}
 
-/** ring 1 names an operator; the host writes the symbol the kernel uses. */
-const OPS: ReadonlyMap<string, string> = new Map([
-  ['eq', '='], ['ne', '!='], ['lt', '<'], ['le', '<='], ['gt', '>'], ['ge', '>='],
-  ['is', 'is'], ['plus', '+'], ['minus', '-'], ['star', '*'], ['slash', '/'], ['mod', 'mod'],
-]);
-
-/** THE PROMOTER NO LONGER READS THE SOURCE.
+/** WHAT THE HOST STILL KNOWS ABOUT THIS GRAMMAR IS SIX LEAF SHAPES, and they
+ *  are exactly the terms the LANGUAGE FORBIDS A RULE TO BUILD.
  *
- *  Until 2026-09-04 every one of these branches sliced `src` to find out what a
- *  range said, and the host therefore knew TWELVE shapes of this grammar's
- *  tree. `str_sub` and `atom_of` moved that into the rules: a term now arrives
- *  carrying its own name, and what is left here is a copy. That is the
- *  decoupling the tower needed — L0 stopped depending on the levels above it. */
-function term(t: J, wild: Map<number, number>): Term {
+ *  Ring 1 now emits the kernel's own reflected vocabulary for everything
+ *  structural — `$lit`, `$not`, `$builtin`, `$cons`, `$nil`, `$var` — so the
+ *  promoter no longer knows `node`, `pos`, `neg`, `bi`, `cons`, `book`,
+ *  `bookvar`, `var` or `atom`. Nine shapes gone.
+ *
+ *  THE SIX THAT REMAIN CANNOT GO, and that is a measurement rather than a plan
+ *  for later: a functor whose name is a variable is a SYNTAX ERROR, there is no
+ *  univ (every non-arithmetic operation is a destructor), joining two strings
+ *  is `arith_type_error`, and `_$0` is a concatenation. Building a term out of
+ *  a name and a list is a CONSTRUCTOR, and the finiteness proof is what forbids
+ *  it — the same principle that bans concatenation. So the residue is
+ *  principled: `comp` and `op` need a functor built from a name, `str` needs an
+ *  unescaped string built from an escaped one, `int` and `negint` need a number
+ *  built from digits, and `wild` needs a name built from a rank. */
+const LEAVES = ['comp', 'op', 'str', 'int', 'negint', 'wild'] as const;
+
+/** Replace this grammar's six leaves with real terms. Everything else in the
+ *  tree is already the kernel's reified form, so `unreifyTerm` finishes it. */
+function leaf(t: J, wild: Map<number, number>): Term {
   let a: J[] | null;
-  if ((a = fn(t, 'atom'))) return a[0] as Term;
-  if ((a = fn(t, 'var'))) return mkv((a[0] as { v: string }).v);
   if ((a = fn(t, 'wild'))) {
     // A bare `_` is a FRESH variable, numbered per clause exactly as
     // src/parser.ts numbers it; the rank is positional, so this is the one
@@ -138,47 +133,73 @@ function term(t: J, wild: Map<number, number>): Term {
     return mkv(`_$${n}`);
   }
   if ((a = fn(t, 'int'))) return mki(parseInt((a[0] as { v: string }).v, 10));
-  // The digits arrive without their sign, so the host applies it. A LOAN AND
-  // NOT A CHOICE: building the negative from the text would be reading the
-  // source again, and negating in the rules would be arithmetic on a number
-  // the rules do not have — they have the range the digits occupy.
+  // The digits arrive without their sign, so the host applies it: the text of
+  // the whole span would break on `- 1`, which the host reads as -1.
   if ((a = fn(t, 'negint'))) return mki(-parseInt((a[0] as { v: string }).v, 10));
   if ((a = fn(t, 'str'))) return mks(unquote((a[0] as { v: string }).v.slice(1, -1)));
   if ((a = fn(t, 'comp'))) {
-    return mkf((a[0] as { name: string }).name, unlist(a[1]).map((x) => term(x, wild)));
+    return mkf((a[0] as { name: string }).name, unlistK(a[1]).map((x) => term(x, wild)));
   }
   if ((a = fn(t, 'op'))) {
-    const sym = OPS.get((a[0] as { name: string }).name);
-    if (sym === undefined) throw new Unsupported('operator ' + JSON.stringify(a[0]));
-    return mkf(sym, [term(a[1], wild), term(a[2], wild)]);
+    // The SYMBOL travels now, not a name for it, so the table of names the host
+    // used to keep is gone: ring 1 reads the operator's text with `str_sub`.
+    return mkf((a[0] as { v: string }).v, [term(a[1], wild), term(a[2], wild)]);
   }
   throw new Unsupported('term: ' + JSON.stringify(t).slice(0, 60));
 }
 
+function term(t: J, wild: Map<number, number>): Term {
+  for (const k of LEAVES) if (fn(t, k)) return leaf(t, wild);
+  // `$var` AT THE TOP MEANS RING 1 SAYS VARIABLE, and it does not collide with
+  // a source term that happens to be written `$var("X")`: that one arrives
+  // through the compound production as `comp`, because the grammar reads it as
+  // a functor with an argument. The kernel's non-injective `reifyTerm` is the
+  // reason this distinction has to be made here rather than assumed away.
+  if (fn(t, '$var')) return unreifyTerm(t as Term);
+  if (t && t.k === 'f') return mkf(t.name, (t.args as J[]).map((x) => term(x, wild)));
+  return t as Term;
+}
+
+/** `$cons`/`$nil` to an array. The kernel's own `unlist` does this, and it is
+ *  re-implemented here for one reason: it takes a `Term` and these trees carry
+ *  the six leaf shapes until `term` has run over them. */
+function unlistK(t: J): J[] {
+  const out: J[] = [];
+  for (let c = t; c && c.k === 'f' && c.name === '$cons'; c = c.args[1]) out.push(c.args[0]);
+  return out;
+}
+
+/** `$lit(Rel, Persp, Args, Tense)`, with ONE convention the reified form has no
+ *  room for: `$bare` where no `[book]` was written. The kernel's own `$lit`
+ *  cannot carry it — `unreifyLit` sets `perspExplicit: true` unconditionally,
+ *  which is right for a rule read back out of the store, since resolution has
+ *  already happened by then. Here it has not, and `resolveBook` reads the bit:
+ *  a kernel-book relation written WITHOUT a bracket is moved to `$kernel`, one
+ *  written `[main]` is left alone and reported. `canonClause` does not print
+ *  the bit, so the corpus oracle cannot see it — hence the separate gate. */
 function lit(t: J, wild: Map<number, number>): Lit {
-  const a = fn(t, 'node');
+  const a = fn(t, '$lit');
   if (!a || a.length !== 4) throw new Unsupported('literal');
   const [relT, perspT, argsT, tenseT] = a;
-  const bk = fn(perspT, 'book'), bv = fn(perspT, 'bookvar');
+  const bare = perspT && perspT.k === 'a' && perspT.name === '$bare';
   return {
-    rel: (fn(relT, 'atom')![0] as { name: string }).name,
-    persp: bk ? (bk[0] as Term) : bv ? mkv((bv[0] as { v: string }).v) : mka('main'),
-    perspExplicit: !!(bk || bv),
-    args: unlist(argsT).map((x) => term(x, wild)),
-    temporal: (tenseT as { name: string }).name as Lit['temporal'],
+    rel: (relT as { name: string }).name,
+    persp: bare ? mka('main') : term(perspT, wild),
+    perspExplicit: !bare,
+    args: unlistK(argsT).map((x) => term(x, wild)),
+    temporal: (tenseT as { name: string }).name.slice(1) as Lit['temporal'],
   };
 }
 
 function bodyElem(t: J, wild: Map<number, number>): BodyElem {
   let a: J[] | null;
-  if ((a = fn(t, 'pos'))) return { t: 'pos', lit: lit(a[0], wild) };
-  if ((a = fn(t, 'neg'))) return { t: 'neg', lit: lit(a[0], wild) };
-  if ((a = fn(t, 'bi'))) {
-    const sym = OPS.get((a[0] as { name: string }).name);
-    if (sym === undefined) throw new Unsupported('builtin ' + JSON.stringify(a[0]));
-    return { t: 'bi', op: sym, l: term(a[1], wild), r: term(a[2], wild) };
+  if ((a = fn(t, '$not'))) return { t: 'neg', lit: lit(a[0], wild) };
+  if ((a = fn(t, '$builtin'))) {
+    const [l, r] = unlistK(a[1]);
+    const op = (a[0] as { v: string }).v as (BodyElem & { t: 'bi' })['op'];
+    return { t: 'bi', op, l: term(l, wild), r: term(r, wild) };
   }
-  throw new Unsupported('body element');
+  return { t: 'pos', lit: lit(t, wild) };
 }
 
 export interface ParseResult {
@@ -295,7 +316,7 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   for (const f of rows.sort((x, y) => x.args[0].v - y.args[0].v)) {
     const [, , headT, bodyT] = f.args;
     try {
-      out.push({ head: lit(headT, wild), body: unlist(bodyT).map((b) => bodyElem(b, wild)) });
+      out.push({ head: lit(headT, wild), body: unlistK(bodyT).map((b) => bodyElem(b, wild)) });
     } catch (e) {
       if (e instanceof Unsupported) unsupported.push(e.message);
       else throw e;
