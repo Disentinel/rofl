@@ -57,22 +57,58 @@ test('the chart counts ambiguity instead of hiding it', () => {
 });
 
 test('a construct the grammar does not cover is REFUSED and located', () => {
-  // A NEGATIVE INTEGER LITERAL is the one thing left uncovered, and it is left
-  // uncovered on purpose rather than for lack of a rule: `X - 1` and `X, -1`
-  // are genuinely ambiguous, the host resolves them by parsing greedily from
-  // the left, and a chart would report both. Matching that needs its own pass;
-  // refusing loudly is the right interim answer, and it keeps this gate alive
-  // with a real subject instead of a planted one.
-  assert.throws(() => parse('p(-5).'), (e: unknown) => {
+  // THE SUBJECT MOVED TWICE, and each move is the gate working rather than
+  // rotting. It was a temporal marker, then a negative integer literal; both
+  // stopped being uncovered, and a gate whose subject is covered goes green for
+  // the wrong reason. The subject now is a character the grammar has no class
+  // for — `{`, which src/parser.ts refuses with `expected a term, got '{'`.
+  //
+  // It is a better subject than either because it cannot be covered by adding a
+  // production: the class of characters ROFL does not use is open, and the
+  // grammar's answer to all of them is the same refusal.
+  assert.throws(() => parse('p({a}).'), (e: unknown) => {
     assert.ok(e instanceof IncompleteParse);
-    assert.match((e as Error).message, /offset 0/);
+    // located AT THE BRACE, not at the start of the clause
+    assert.match((e as Error).message, /offset 2/);
     return true;
   });
 });
 
+test('a stray character was a PERMISSIVE divergence, which no corpus can catch', () => {
+  // Ring 1 used to parse `p({a}).` to `p[main](a)@now` while the host refused
+  // it. The corpus oracle compares files the HOST ACCEPTS, so a program ring 1
+  // accepts and the host does not is outside what it can look at — and that is
+  // the direction that produces a wrong program rather than no program.
+  //
+  // The cause was one level below the grammar: coverage quantified over
+  // `tokstart`, and an unclassified character makes no token. `stray` states
+  // the same invariant over CHARACTERS.
+  for (const src of ['p({a}).', 'p(#a).', 'p(a) :- q(a) ~ r(a).']) {
+    assert.throws(() => parse(src), IncompleteParse, `ring 1 accepted ${src}`);
+    assert.throws(() => parseProgram(src), Error, `positive control: the host must refuse ${src} too`);
+  }
+  // NEGATIVE CONTROL: whitespace is unclassified in the same sense and must NOT
+  // be stray, or every file would be refused. Tab and carriage return included,
+  // since those were in the same bucket as the brace until this was written.
+  assert.equal(parse('p(a).\tq(b).\r\np(c).').clauses.length, 3);
+});
+
+test('a negative integer literal, where the host reads one', () => {
+  // MEASURED before the production was written: 24 of them in the 71 .rofl
+  // files, in goof, npc, sensors and slop. The host reads a dash as a negative
+  // sign only in PRIMARY position — `expr` takes it as a binary operator after
+  // a left operand — so this is a positional rule, and a chart states it as a
+  // production instead of resolving it by scanning greedily.
+  assert.equal(canon(parse('p(-5).').clauses), canon(parseProgram('p(-5).')));
+  assert.equal(canon(parse('p(X) :- q(Y), X is Y - 1.').clauses),
+               canon(parseProgram('p(X) :- q(Y), X is Y - 1.')));
+  // the discriminating pair: the same dash, read two ways by position
+  assert.equal(canon(parse('p(-5, -6).').clauses), canon(parseProgram('p(-5, -6).')));
+});
+
 test('a file whose FIRST clause fails is refused too, not returned empty', () => {
   // The walk never starts, so `stuck_at` is empty; only coverage catches it.
-  assert.throws(() => parse('p(-5).\nq(a).\n'), IncompleteParse);
+  assert.throws(() => parse('p({a}).\nq(a).\n'), IncompleteParse);
 });
 
 test('an unfinished evaluation is not a parse', () => {

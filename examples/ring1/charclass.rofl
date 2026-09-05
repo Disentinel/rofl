@@ -84,6 +84,14 @@ cls(":", colon).
 cls("-", dash).
 cls("\"", quote).
 cls("\n", nl).
+-- WHITESPACE IS NOW NAMED rather than left unclassified. It shared the
+-- unclassified bucket with `{`, `#` and every other character the host
+-- refuses, so `p({a}).` produced `p[main](a)@now` while src/parser.ts said
+-- `expected a term, got '{'`. Coverage was over TOKENS, and a character that
+-- makes no token has no token to be uncovered.
+cls(" ", space).
+cls("\t", space).
+cls("\r", space).
 cls("\\", backslash).
 cls("@", at).
 cls("=", eq).

@@ -209,6 +209,17 @@ term(I, J, atom(A)) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
 term(I, J, var(S))     :- vartok(I, J), tok_text(I, J, S), not wildtok(I).
 term(I, I, wild(I))    :- wildtok(I).
 term(I, J, int(S))     :- inttok(I, J), tok_text(I, J, S).
+-- A NEGATIVE INTEGER LITERAL, read exactly where src/parser.ts reads one: in
+-- PRIMARY position, a dash whose next token is an integer. `expr` takes a dash
+-- as a binary operator only AFTER a left operand, so a dash reaching a term has
+-- none - which is the host's positional rule restated as a production instead
+-- of as a greedy scan. The digits travel alone and the promoter negates, rather
+-- than the text of the whole span travelling: the host is token-based, so it
+-- reads `- 1` as -1 too, and a span carrying the space would not parse.
+-- Measured before it was written: 24 negative literals in the 71 .rofl files,
+-- in goof, npc, sensors, slop and three more.
+term(I, K, negint(S))  :- arithtok(I, I, minus), nexttok(I, J), inttok(J, K),
+                          tok_text(J, K, S).
 term(I, J, str(S))     :- strtok(I, J), tok_text(I, J, S).
 -- compound: f(args)
 term(I, C, comp(N, A)) :- identtok(I, J), not keyword(I), tok_name(I, J, N),
@@ -305,6 +316,22 @@ stuck_at(I)  :- top(I), not parses_at(I).
 -- token must lie inside some accepted clause.
 covered(K)   :- parsed(I, D, H, B), tokstart(K), I <= K, K <= D.
 uncovered(K) :- tokstart(K), not covered(K).
+
+-- AND COVERAGE OVER TOKENS CANNOT SEE A CHARACTER THAT MAKES NO TOKEN.
+-- Measured: `p({a}).` parsed to `p[main](a)@now` while the host refused it with
+-- `expected a term, got '{'`, and `p(#a).` did the same - a divergence in the
+-- PERMISSIVE direction, which the corpus oracle cannot catch because it only
+-- compares files the host accepts. The brace and the hash were unclassified,
+-- an unclassified character makes no token, and `uncovered` quantifies over
+-- `tokstart`. So the invariant has to be stated over CHARACTERS.
+in_tok(K) :- tok(I, J), at(K), I <= K, K <= J.
+white(K)  :- kind(K, space).
+white(K)  :- kind(K, nl).
+-- The two dashes of a comment stand in `code` state - the scanner only enters
+-- `cmt` after them - so they belong to no token and are not stray either.
+white(K)  :- opens_cmt(K).
+white(K)  :- opens_cmt(K1), K is K1 + 1.
+stray(K)  :- code_at(K), not white(K), not in_tok(K).
 
 -- ------------------------------------------------------------------ wildcards
 -- ALL FIVE SILENT DIVERGENCES WERE THIS ONE THING, and it was not cosmetic. The

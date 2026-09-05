@@ -138,6 +138,11 @@ function term(t: J, wild: Map<number, number>): Term {
     return mkv(`_$${n}`);
   }
   if ((a = fn(t, 'int'))) return mki(parseInt((a[0] as { v: string }).v, 10));
+  // The digits arrive without their sign, so the host applies it. A LOAN AND
+  // NOT A CHOICE: building the negative from the text would be reading the
+  // source again, and negating in the rules would be arithmetic on a number
+  // the rules do not have — they have the range the digits occupy.
+  if ((a = fn(t, 'negint'))) return mki(-parseInt((a[0] as { v: string }).v, 10));
   if ((a = fn(t, 'str'))) return mks(unquote((a[0] as { v: string }).v.slice(1, -1)));
   if ((a = fn(t, 'comp'))) {
     return mkf((a[0] as { name: string }).name, unlist(a[1]).map((x) => term(x, wild)));
@@ -276,6 +281,11 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   // Coverage is the invariant that catches BOTH a walk that stopped and a walk
   // that never started; `stuck` only locates the first kind.
   const uncovered = facts('uncovered').map((f) => f.args[0].v as number).sort((a, b) => a - b);
+  // A CHARACTER THAT MAKES NO TOKEN is invisible to `uncovered`, which
+  // quantifies over token starts. `stray` states the same invariant over
+  // characters, and it is what refuses `p({a}).` — which ring 1 used to parse
+  // to `p[main](a)@now` while src/parser.ts refused it.
+  const stray = facts('stray').map((f) => f.args[0].v as number).sort((a, b) => a - b);
 
   const wild = new Map<number, number>();
   for (const f of facts('wild')) wild.set(f.args[0].v, f.args[1].v);
@@ -291,7 +301,9 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
       else throw e;
     }
   }
-  if (uncovered.length) throw new IncompleteParse(stuck.length ? stuck : uncovered, src);
+  if (uncovered.length || stray.length) {
+    throw new IncompleteParse(stuck.length ? stuck : uncovered.length ? uncovered : stray, src);
+  }
   return { clauses: out, subparses, unsupported, stuck };
 }
 
