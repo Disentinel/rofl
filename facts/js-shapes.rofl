@@ -198,6 +198,19 @@ handled(js, member_expression, s_member_on_non_null,    callgraph, r_denotes).
 handled(js, member_expression, s_member_on_logical,     callgraph, r_value_logical).
 handled(js, member_expression, s_member_on_assignment,  callgraph, r_value_assign).
 
+-- `super()` THE CALL, 2026-09-04 (queue item w_cg_call_result). The callee's
+-- value is the parent class and what it reaches is that class's constructor,
+-- walking up the extends chain past any class that declares none. The residue
+-- — a chain with no explicit constructor anywhere — is `no_source_target` and
+-- is recorded on the FRONTIER in facts/js-callgraph.rofl, which is where a
+-- reason may stand beside a tick.
+handled(js, super, s_super, callgraph, r_super_ctor).
+
+-- ...and the dynamic-import shape WAIVED, because this parser cannot produce a
+-- site for it at all. The reason is in facts/js-callgraph.rofl beside the
+-- frontier row it replaces.
+ignored(js, import, s_dynamic_import, callgraph, a_babel_emits_no_import_callee).
+
 -- THE SYNTACTIC WRAPPERS, 2026-09-04, and all of them by ONE rule rather than
 -- five: `resolves[code](C, F) :- callee_of(C, N), may_be_node[flow](N, F),
 -- fn_node(F)` asks what the callee expression may BE instead of recognising how

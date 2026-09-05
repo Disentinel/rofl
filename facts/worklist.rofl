@@ -95,12 +95,33 @@ claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syn
 -- 6 — `f()()` needs to know what f RETURNS, so it is blocked on the dataflow
 -- layer having return values at all. Ordered after the call graph's own work
 -- and before dataflow only to say that the dependency runs the other way.
-work(w_cg_call_result, "f()() and f?.()(): the callee is a return value, so this waits on dataflow returns").
+-- DONE 2026-09-04, and neither cell went the way the note predicted. `s_super`
+-- is the CALL `super()`, not a return value: it reaches the nearest ancestor's
+-- explicit constructor, and V8 was measured first because `super()` SKIPS a
+-- synthesised frame while `new C()` CREATES one — two constructions that reach
+-- a constructor and disagree about the caller. `s_dynamic_import` turned out to
+-- be unreachable rather than unmodelled: this parser emits `import_expression`
+-- and never a callee of kind `import`, so it is waived like
+-- `s_parenthesized`. The residue that remains is `no_source_target` — a
+-- `super()` whose whole chain declares no constructor — and it is theirs, not
+-- ours.
+work(w_cg_call_result, "DONE 2026-09-04: super() reaches the nearest ancestor's constructor; the dynamic-import shape is unreachable and waived").
 work_order(w_cg_call_result, 8).
-work_state(w_cg_call_result, open).
+work_state(w_cg_call_result, done).
 work_needs(w_cg_call_result, w_df_function_forms).
 claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
 claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_call_result).
+work_spawned(w_cg_call_result, f_body_order_changes_the_answer_and_whynot_cannot_see_it).
+work_spawned(w_cg_call_result, f_a_synthesised_constructor_has_a_frame_and_no_node).
+work_spawned(w_cg_call_result, f_the_corpus_had_no_class_that_inherited_anything).
+
+-- 20 — THE KERNEL DEFECT THE ABOVE FOUND, entered so the dependency is a row.
+-- Ordered last for the same reason as the leak item: it is a language question
+-- and the owner schedules it.
+work(w_body_order_is_load_bearing, "a negated literal evaluated before its variables are bound: body order changes the answer, and whynot disagrees with the evaluator").
+work_order(w_body_order_is_load_bearing, 20).
+work_state(w_body_order_is_load_bearing, open).
+work_spawned(w_body_order_is_load_bearing, f_body_order_changes_the_answer_and_whynot_cannot_see_it).
 
 -- ===========================================================================
 -- REORDERED 2026-09-04. The dataflow items moved AHEAD of the call-graph

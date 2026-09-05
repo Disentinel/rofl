@@ -377,6 +377,22 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, CD), class_ctor[code](CD, M).
 
+-- `super()` — the CALL, not `super.m()`. The callee node is `super`, whose
+-- value is the parent class, and what it reaches is that class's constructor:
+-- its own if it has one, otherwise the nearest ancestor's, because a class with
+-- no constructor synthesises one that forwards. `ctor_of[flow]` does that walk
+-- and rules/js-dataflow.rofl records the measurement that says it is the right
+-- one — V8 reports `C -> A` for a `super()` that passes through a
+-- constructor-less B, skipping the synthesised frame entirely.
+--
+-- THE `new` RULE ABOVE DELIBERATELY DOES NOT USE THE WALK. The same measurement
+-- shows `new Cask()` behaving the OTHER way: V8 creates a frame named after the
+-- class and makes it the CALLER, so a model that resolved the site to the
+-- ancestor's constructor would name the wrong caller and disagree with every
+-- execution. That is a separate question with no node to point at.
+resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
+                        may_be_node[flow](N, SD), ctor_of[flow](SD, M).
+
 -- THE GENERAL CALLEE RULE. Everything above resolves a callee by recognising
 -- its SPELLING — an identifier, a member, an IIFE. This one asks the value
 -- question instead: whatever the callee expression may BE, if it is a function,

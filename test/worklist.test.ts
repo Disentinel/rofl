@@ -121,23 +121,26 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // three the catch-all split found. An item that spawns nothing is either
   // trivial or was not looked at.
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
-    ['w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
+    ['w_body_order_is_load_bearing',
+     'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
+     'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
      'w_env_ledger_form', 'w_env_scan_failed',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
-  // `w_cg_member_family` stood here until 2026-09-04: splitting its catch-all
-  // left it with nothing but the blocked template key, so it is skipped with a
-  // reason and the next offer moves on.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_call_result'],
-    'the member family has nothing workable left, so the call result is next');
+  // Two items have come off the front since: `w_cg_member_family` was skipped
+  // once its catch-all split left only the blocked template key, and
+  // `w_cg_call_result` is done — `super()` modelled, the dynamic-import shape
+  // waived as unreachable.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_control_forms'],
+    'the two call-graph items are settled, so the control forms are next');
 });
 
-test('the queue covers the model: 83 open cells, 17 claimed by name, 70 swept', () => {
+test('the queue covers the model: 81 open cells, 17 claimed by name, 70 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 83, 'the queue is the model\'s open set');
-  // 14 before the environment layer, 19 after it: four items the era slice
-  // found, plus the kernel item they wait on, entered so the dependency is a
-  // row rather than a sentence in a comment.
-  assert.equal(w.n('work(W, Note)'), 19);
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 81, 'the queue is the model\'s open set');
+  // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
+  // kernel defect of its own. Every one of the six was entered because the work
+  // found it, not because it was foreseen.
+  assert.equal(w.n('work(W, Note)'), 20);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -147,7 +150,7 @@ test('the queue covers the model: 83 open cells, 17 claimed by name, 70 swept', 
   // cells and opened two that are now claimed BY NAME by the items that own
   // them — the control-form item and the standard-library one — which is the
   // queue handing work on rather than a bucket absorbing it.
-  assert.deepEqual(per('callgraph'), [26, 11, 19]);
+  assert.deepEqual(per('callgraph'), [24, 11, 19]);
   assert.deepEqual(per('dataflow'), [18, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
 
@@ -248,7 +251,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_call_result']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_control_forms']);
   // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
   // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
   // hold. That is the relation doing its job on a real premise rather than on a
@@ -261,7 +264,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // done — which is the whole content of the relation
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
   assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_call_result'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_df_control_forms'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

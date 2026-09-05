@@ -89,7 +89,10 @@ test('the model loads under boot.rofl with every kernel audit empty', () => {
   // and `unknown_because` are read positively and populated by nobody but the
   // author, so without their `edb` declarations the kernel would read the
   // empty table as a misspelling. This is that declaration, exercised.
-  assert.equal(n(r, 'unknown_type(R, T)'), 4);
+  // 5 since 2026-09-04: `no_source_target` joined `runtime_dependent` on the
+  // irreducible side — a target the LANGUAGE synthesises, statically known and
+  // with no node to reach.
+  assert.equal(n(r, 'unknown_type(R, T)'), 5);
 });
 
 // ---------------------------------------------------------------------------
@@ -539,8 +542,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
   assert.equal(coarse.cell, 84, 'predicted 84 coarse cells');
-  assert.deepEqual(f, { cell: 108, modelled: 43, waived: 7, not_modelled: 58 },
-    'predicted 108 fine cells = 43 + 7 + 58');
+  assert.deepEqual(f, { cell: 108, modelled: 44, waived: 8, not_modelled: 56 },
+    'predicted 108 fine cells = 44 + 8 + 56');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -579,9 +582,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 58, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 56, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 58, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 56, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -754,7 +757,7 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 138, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(sites, 145, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 28,
     'positive control: 28 distinct shapes; eight object positions split out of the catch-all 2026-09-04');
 
@@ -847,10 +850,10 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // 48 and 3, not the 37 and 11 this file pinned when it was written: the
   // parameter tier closed two, `denotes` five more, the value core one, and the
   // fixture grew five functions that make those tiers' defects observable.
-  // 52 until 2026-09-04, when four RUNNING sites were added for object
-  // positions split out of the catch-all: each contributes the edge into it
-  // from `main` and the edge out of it to the receiver's method.
-  assert.equal(oracleEdges.size, 60, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 52 until 2026-09-04, when the corpus gained four object positions split out
+  // of the catch-all (+8) and a three-level class chain for `super()` (+4:
+  // main->useSuper, useSuper->Cask, Cask->Barrel, useSuper->hold).
+  assert.equal(oracleEdges.size, 64, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -945,7 +948,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 49, '21 kind-level claims + 28 shape claims with no cell under them');
+  assert.equal(f.modelled, 50, '21 kind-level claims + 29 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',
@@ -953,6 +956,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/conditional_expression/s_conditional/callgraph',
     'js/function_expression/s_iife/callgraph',
     'js/identifier/s_identifier/callgraph',
+    'js/import/s_dynamic_import/callgraph',
     'js/member_expression/s_computed_dynamic_key/callgraph',
     'js/member_expression/s_computed_literal_key/callgraph',
     'js/member_expression/s_member_on_assignment/callgraph',
@@ -976,6 +980,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/optional_member_expression/s_optional_member/callgraph',
     'js/parenthesized_expression/s_parenthesized/callgraph',
     'js/sequence_expression/s_sequence/callgraph',
+    'js/super/s_super/callgraph',
     'js/tsas_expression/s_ts_as/callgraph',
     'js/tsnon_null_expression/s_non_null/callgraph',
   ]);
@@ -1116,9 +1121,10 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
             'positive control: the waiver it would have swallowed is still asserted');
   // both callgraph waivers go, not one: `ts_string_keyword x callgraph` is
   // deleted by the same branch
-  // 5, not 4: the catch-all waiver added 2026-09-04 is a SHAPED cell, and this
-  // branch deletes unsplit `none` cells, so it cannot reach it.
-  assert.equal(f.waived, 5, 'and the waived count really did drop, from 7');
+  // 6, not 4: two waivers added 2026-09-04 are SHAPED cells — the empty
+  // catch-all and the unreachable dynamic-import shape — and this branch
+  // deletes unsplit `none` cells, so it cannot reach either.
+  assert.equal(f.waived, 6, 'and the waived count really did drop, from 8');
   console.log('      KILLED: lost_cell names 27, including a deliberately waived cell');
 });
 

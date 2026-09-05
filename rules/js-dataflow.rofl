@@ -239,6 +239,37 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
                                   ast_node[code](M, class_method, _, _),
                                   ast_child[code](M, key, 0, K), ast_name[code](K, Key).
 
+-- AND WHAT THE CLASS INHERITS. A method declared on an ancestor is reachable on
+-- an instance of the subclass, and the rule above sees only a class's OWN body,
+-- so `new Cask(n).hold(n)` — `hold` declared two levels up — resolved to
+-- nothing. FOUND BY ADDING THE `super()` FIXTURE rather than by reading: the
+-- inheritance chain that exercise needed made the gap produce a site, and the
+-- site made it a row. Before that the corpus had no class extending another
+-- with a method to inherit, so the hole was invisible to every count.
+--
+-- `not own_key[flow]` is SHADOWING and it is what makes this a lookup rather
+-- than a union: a subclass that declares `hold` answers with its own, and the
+-- ancestor's is not also an answer. The negation is stratified — `own_key`
+-- reads the class body directly and does not depend on `member_value`.
+own_key[flow](CD, Key)         :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                  ast_child[code](B, body, _, M),
+                                  ast_node[code](M, class_method, _, _),
+                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+--
+-- THE NEGATION GOES LAST, AND THAT IS NOT STYLE. Written with `not own_key`
+-- BEFORE the literal that binds `Key`, this rule silently under-derives: the
+-- chain Cask -> Keg -> Barrel stops one level short, because `Cask` declares a
+-- `constructor` and the negation, evaluated with `Key` still unbound, reads as
+-- "Cask has no own key AT ALL". Isolated to ten lines: the same rule with the
+-- two literals swapped answers `b c k` one way and `b k` the other, over
+-- identical facts. `whynot` reports NO FAILING PREMISE for the missing row —
+-- it binds the goal's arguments first, so it evaluates the negation with `Key`
+-- bound and disagrees with the evaluator. Recorded as a kernel finding; until
+-- it is fixed, ORDER IS LOAD-BEARING HERE.
+member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
+                                  member_value[flow](SD, Key, V),
+                                  not own_key[flow](CD, Key).
+
 -- THE KEY AN EXPRESSION SELECTS. Static and computed collapse here for the same
 -- reason they collapsed in the call graph: `o.pick` and `o[k]` differ only in
 -- where the text is, and `may_be_lit` is what closes the distance. A key nobody
@@ -339,6 +370,37 @@ may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, File, _),
 super_of[flow](CD, SD) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
                           ast_child[code](CD, super_class, 0, SC), ast_name[code](SC, Name),
                           class_named[flow](SD, Name, File).
+
+-- ---------------------------------------------------------------------------
+-- WHICH CONSTRUCTOR A CLASS ANSWERS WITH, and it is not always its own.
+-- `class B extends A {}` has no constructor node at all — the language
+-- synthesises one that forwards to A's — so a rule that looked only at B's own
+-- body would say the chain ends there.
+--
+-- MEASURED BEFORE IT WAS WRITTEN, because the two constructions that reach a
+-- constructor DO NOT AGREE and no reading of the spec would have told me which
+-- shape to give this. With `class A { constructor(){} }`, `class B extends A {}`
+-- and `class C extends B { constructor(){ super(); } }`, V8's own CallSite
+-- frames report:
+--
+--     super() inside C   ->   C -> A        the synthesised B frame is SKIPPED
+--     new Cask()         ->   Cask -> ...   the synthesised frame IS created,
+--                                           and it is the CALLER
+--
+-- So the walk below is exactly right for `super()` and is deliberately NOT
+-- wired into the `new` rule, which stays on the explicit constructor; the
+-- caller a synthesised `new` frame should be attributed to is a separate
+-- question with no node to point at, recorded as a finding and queued.
+--
+-- The negation is stratified: `has_own_ctor` reads `own_ctor`, which reads the
+-- class body and nothing else, so it does not depend on `ctor_of`.
+own_ctor[flow](CD, M)  :- class_method_of[flow](CD, M),
+                          ast_attr[code](M, kind, "constructor").
+has_own_ctor[flow](CD) :- own_ctor[flow](CD, _).
+
+ctor_of[flow](CD, M)   :- own_ctor[flow](CD, M).
+ctor_of[flow](CD, M)   :- super_of[flow](CD, SD), not has_own_ctor[flow](CD),
+                          ctor_of[flow](SD, M).
 
 may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
                             class_method_of[flow](CD, M), ast_within[code](M, S),

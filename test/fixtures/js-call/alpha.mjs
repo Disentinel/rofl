@@ -143,6 +143,37 @@ function useCrate(n) {
   return c.both(n);
 }
 
+// ---- `super()`, THE CALL. Three levels on purpose: `Keg` has no constructor
+// of its own, so `super()` inside `Cask` must reach `Barrel`'s and skip the
+// synthesised one. MEASURED FIRST, with a throwaway runnable file, because the
+// two constructions that reach a constructor do not agree and no reading of the
+// spec would have said which: V8 reports `Cask -> Barrel` here, SKIPPING the
+// synthesised `Keg` frame, while `new C()` on a constructor-less class CREATES
+// a frame named after the class and makes it the caller. The first is modelled;
+// the second is a finding.
+class Barrel {
+  constructor(v) {
+    trace();
+    this.v = v;
+  }
+  hold(n) {
+    trace();
+    return this.v + n;
+  }
+}
+class Keg extends Barrel {}
+class Cask extends Keg {
+  constructor(v) {
+    trace();
+    super(v);
+  }
+}
+function useSuper(n) {
+  trace();
+  const c = new Cask(n);
+  return c.hold(n);
+}
+
 // ---- computed callee: dynamic key, then literal key
 const table = {
   pick(n) {
@@ -296,6 +327,7 @@ export function main() {
     useSeq(1),
     useOr(1),
     useAssign(1),
+    useSuper(1),
     run(1),
     seeded,
   ];

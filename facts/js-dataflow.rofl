@@ -93,3 +93,18 @@ handled(js, new_expression, dataflow, r_construct).
 -- what is claimed here, and `(a || b)()` as a CALL callee has no site in the
 -- corpus, so a callgraph tick would be a claim nothing could check.
 handled(js, logical_expression, dataflow, r_value_logical).
+
+-- THE CLASS AS A VALUE GREW THREE ANSWERS AND THE CELL STAYS OPEN, 2026-09-04.
+-- The dataflow layer now says which methods a class has, which constructor it
+-- answers with (its own or the nearest ancestor's), and which members it
+-- inherits with a subclass's own declaration shadowing — the last of those
+-- found by ADDING A FIXTURE rather than by reading, since the corpus had no
+-- class extending another with a method to inherit.
+--
+-- AND NONE OF THAT TICKS THE CELL. `handled(js, class_declaration, dataflow,
+-- r_class_chain)` was written here and `queue_stale[audit]` named it in one
+-- run: `w_df_instance_vs_class` claims this very cell for a gap that is still
+-- open — `new C()` and the name `C` both reach the class node, so an instance
+-- is not told from its class. A kind-level cell at a layer with no refinement
+-- column is ALL of that layer's answers about the kind, and three new ones do
+-- not make it complete. The queue was the thing that knew.

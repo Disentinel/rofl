@@ -173,6 +173,16 @@ verdict[audit](Lang, K, L, not_modelled) :- cell[audit](Lang, K, L),
 -- them is a property of the SUBJECT rather than of us:
 edb(unknown_type).
 unknown_type(runtime_dependent, irreducible).
+-- A SECOND IRREDUCIBLE REASON, added 2026-09-04 and NOT a scope call: the
+-- target exists and is statically known, and no source declares it, because
+-- the LANGUAGE synthesises it. `super()` whose whole ancestor chain has no
+-- explicit constructor reaches a function that has no node to point at, and no
+-- amount of rule-writing produces one — manufacturing a term for it is the
+-- defect this repository already refused once. It is `theirs` rather than
+-- `ours` for the same reason `runtime_dependent` is, and it is DIFFERENT from
+-- it: this one is decided at parse time, so borrowing `runtime_dependent`
+-- would have said something false about when the answer exists.
+unknown_type(no_source_target,  irreducible).
 unknown_type(not_yet,           ours).
 unknown_type(budget_exhausted,  ours).
 unknown_type(out_of_scope,      ours).

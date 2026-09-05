@@ -198,8 +198,23 @@ shape_because(js, s_member_on_template,    callgraph, not_yet).
 -- exactly when it matters.
 shape_because(js, s_member_on_other,       callgraph, not_yet).
 shape_because(js, s_new_result,            callgraph, not_yet).
-shape_because(js, s_super,                 callgraph, not_yet).
-shape_because(js, s_dynamic_import,        callgraph, not_yet).
+-- MODELLED 2026-09-04 with a residue that is not ours. `super()` reaches the
+-- nearest ancestor's explicit constructor — measured against V8, which reports
+-- `Cask -> Barrel` through a constructor-less `Keg`, skipping the synthesised
+-- frame — and the site that stays is one whose whole chain has no explicit
+-- constructor at all. There is no node for the function it calls.
+shape_because(js, s_super,                 callgraph, no_source_target).
+-- UNREACHABLE UNDER THIS PARSER, waived rather than left as backlog and
+-- measured rather than assumed: `s_dynamic_import` is the shape of a callee
+-- whose KIND is `import` (babel's `Import` node), and scanners/js_ast.ts parses
+-- with `plugins: ['typescript']`, under which `import(p)` arrives as a single
+-- `import_expression` and never as a call whose callee is `Import`. Over the
+-- whole corpus `callee_kind` takes ten values and `import` is not among them,
+-- so no corpus this scanner produces can fill the cell. The CONSTRUCT is not
+-- unmodelled — `import_expression x callgraph` carries `runtime_dependent` at
+-- kind level, which is the honest verdict about which module a computed
+-- specifier loads. This is `s_parenthesized` again: `absent` means unreachable
+-- here, not undone, and only one of the two is closable.
 
 -- the receiver is a host literal — see array_expression above
 shape_because(js, s_member_on_array,       callgraph, out_of_scope).

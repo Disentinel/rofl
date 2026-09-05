@@ -457,13 +457,19 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   assert.deepEqual(m.binds('shape_stale[audit](S)', 'S'), [],
     'no excuse outliving its cause');
 
-  // `runtime_dependent` is the ONLY reason that is a property of the subject
-  // rather than of us, and it is spent exactly once.
-  assert.deepEqual(m.binds('shape_irreducible[audit](S)', 'S'), ['s_computed_dynamic_key']);
+  // TWO reasons are properties of the SUBJECT rather than of us, and the second
+  // arrived 2026-09-04: `runtime_dependent` for a computed key that does not
+  // exist until the program runs, and `no_source_target` for a `super()` whose
+  // whole ancestor chain declares no constructor — the target is decided at
+  // parse time and the language synthesises it, so there is no node to reach
+  // and no rule that would produce one. Borrowing `runtime_dependent` for it
+  // would have said something false about WHEN the answer exists.
+  assert.deepEqual(m.binds('shape_irreducible[audit](S)', 'S'),
+    ['s_computed_dynamic_key', 's_super']);
   const ours = m.binds('shape_ours[audit](S)', 'S');
-  assert.equal(ours.length + 1, residue.length, 'irreducible + ours partitions the residue');
+  assert.equal(ours.length + 2, residue.length, 'irreducible + ours partitions the residue');
 
-  console.log('  frontier: ' + residue.length + ' shapes with a residue, 1 irreducible, '
+  console.log('  frontier: ' + residue.length + ' shapes with a residue, 2 irreducible, '
     + ours.length + ' ours');
   console.log('  unexercised verdicts (grammar, not corpus): '
     + m.binds('shape_unexercised[audit](S)', 'S').join(', '));
@@ -713,7 +719,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 58, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 61, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -984,6 +990,81 @@ test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot s
   const named = new Set(m.binds('calls_named[code](A, B)', 'A', 'B'));
   assert.ok(named.has('useCond -> pick'));
   assert.ok(named.has('useOr -> pick'));
+});
+
+test('mutant 19 — `super()` loses its rule: the call, not the member', () => {
+  const base = probe([]);
+  const mut = probe([{
+    find: 'resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),\n'
+        + '                        may_be_node[flow](N, SD), ctor_of[flow](SD, M).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.ok(base.edges.has('Cask -> Barrel'), 'baseline: super() reaches the ancestor constructor');
+  assert.ok(!mut.edges.has('Cask -> Barrel'), 'and the mutant loses exactly that edge');
+  // `super.m()` is a DIFFERENT rule and must survive: the member form reads the
+  // parent explicitly and never needed the constructor walk, so the edge it
+  // produces is untouched by this mutation.
+  assert.ok(base.edges.has('Sub -> m') === mut.edges.has('Sub -> m'),
+    'the member form of super is a different rule and does not move');
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 20 — the constructor walk stops at the first class', () => {
+  // `Keg` declares no constructor, so `super()` inside `Cask` must pass through
+  // it to `Barrel`. V8 does exactly that — measured — and without the inherited
+  // clause the model stops one level short and says nothing at all.
+  const base = probe([]);
+  const mut = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'ctor_of[flow](CD, M)   :- super_of[flow](CD, SD), not has_own_ctor[flow](CD),\n'
+        + '                          ctor_of[flow](SD, M).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.ok(base.edges.has('Cask -> Barrel'));
+  assert.ok(!mut.edges.has('Cask -> Barrel'), 'the walk is what crosses the constructor-less class');
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 21 — a class stops inheriting its ancestors\' methods', () => {
+  const base = probe([]);
+  const mut = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),\n'
+        + '                                  member_value[flow](SD, Key, V),\n'
+        + '                                  not own_key[flow](CD, Key).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.ok(base.edges.has('useSuper -> hold'), 'baseline: an inherited method is reachable');
+  assert.ok(!mut.edges.has('useSuper -> hold'), 'and the mutant loses it');
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+});
+
+test('mutant 22 — THE ORDER OF A NEGATED LITERAL, and it is not style', () => {
+  // This mutant only swaps two premises. In Datalog that must change nothing,
+  // and here it changes the answer: with `not own_key` BEFORE the literal that
+  // binds `Key`, the negation is evaluated with `Key` unbound and reads as
+  // "Cask has no own key at all" — which is false, Cask declares a constructor
+  // — so the chain stops one level short and `hold` never reaches the instance.
+  //
+  // IT IS PINNED HERE ON PURPOSE. The defect is the kernel's
+  // (f_body_order_changes_the_answer_and_whynot_cannot_see_it, queued as
+  // w_body_order_is_load_bearing); the day it is fixed THIS MUTANT STOPS
+  // KILLING, and that is the signal that the workaround comment in
+  // rules/js-dataflow.rofl can go.
+  const base = probe([]);
+  const mut = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),\n'
+        + '                                  member_value[flow](SD, Key, V),\n'
+        + '                                  not own_key[flow](CD, Key).',
+    replace: 'member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),\n'
+        + '                                  not own_key[flow](CD, Key),\n'
+        + '                                  member_value[flow](SD, Key, V).',
+  }]);
+  assert.ok(base.edges.has('useSuper -> hold'));
+  assert.ok(!mut.edges.has('useSuper -> hold'),
+    'REORDERING ALONE loses the edge — if this ever passes, the kernel was fixed');
+  console.log(`  KILLED by literal ORDER alone: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
 // MUTANT 17 WAS DELETED 2026-09-04 with its subject. It mutated `denotes` in
