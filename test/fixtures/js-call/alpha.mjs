@@ -174,6 +174,62 @@ function useSuper(n) {
   return c.hold(n);
 }
 
+// ---- VALUES CROSSING A CONTROL CONSTRUCT: for-of over an array, for-of over
+// a generator, and await. All three RUN, so the oracle judges them.
+//
+// THE LOOP VARIABLES ARE NAMED `chosen`, `drawn` and `awaited`, not `f`, and
+// that is the same discipline this file's header states for FUNCTION names.
+// `const f = await mkAlef()` was the first draft, and `binder` is FILE-scoped by
+// design — the tier-1 scope blindness the rules declare — so every parameter
+// named `f` in this file picked up `alef`. Three call sites went ambiguous and
+// the oracle would have called the extra edges over-approximation. The model
+// was behaving exactly as documented; the FIXTURE was the thing that broke a
+// convention, and a name collision in a corpus is not a measurement.
+//
+// The generator arm is the one worth reading twice: `for (const f of pick())`
+// walks what `pick` YIELDS, not what it returns, and those are two different
+// facts about one function. A model that reused the return rule here would see
+// nothing at all and report a smaller call graph that looks correct.
+function alef(n) {
+  trace();
+  return n + 1;
+}
+function bet(n) {
+  trace();
+  return n + 2;
+}
+
+function* pick() {
+  trace();
+  yield alef;
+  yield bet;
+}
+
+function useForOfArray(n) {
+  trace();
+  let total = 0;
+  for (const chosen of [alef, bet]) { total += chosen(n); }
+  return total;
+}
+
+function useForOfGen(n) {
+  trace();
+  let total = 0;
+  for (const drawn of pick()) { total += drawn(n); }
+  return total;
+}
+
+async function mkAlef() {
+  trace();
+  return alef;
+}
+
+async function useAwait(n) {
+  trace();
+  const awaited = await mkAlef();
+  return awaited(n);
+}
+
 // ---- computed callee: dynamic key, then literal key
 const table = {
   pick(n) {
@@ -304,7 +360,7 @@ export function run(n) {
   return mid(n);
 }
 
-export function main() {
+export async function main() {
   trace();
   return [
     outer(1),
@@ -328,6 +384,9 @@ export function main() {
     useOr(1),
     useAssign(1),
     useSuper(1),
+    useForOfArray(1),
+    useForOfGen(1),
+    await useAwait(1),
     run(1),
     seeded,
   ];

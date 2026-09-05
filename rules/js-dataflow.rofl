@@ -447,6 +447,63 @@ may_be_lit[flow](E, V)  :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, alternate, 0, X), may_be_lit[flow](X, V).
 
 -- ---------------------------------------------------------------------------
+-- AWAIT IS TRANSPARENT TO THIS LAYER, and that is a claim about the MAY-SET
+-- rather than a claim about promises. `await X` yields whatever the promise X
+-- settles to, and this layer has no term for a promise at all — but the two
+-- cases it can reach both come out right: `await v` on a plain value is `v`,
+-- and `await f()` where `f` is an `async function` reaches f's returns, which
+-- is exactly what `may_be_node` already gives a call. The case it is wrong
+-- about — a promise CONSTRUCTED and awaited later — reaches the Promise class,
+-- and nothing in a corpus this analyser is pointed at declares that, so the
+-- over-approximation has nowhere to land. It is the sound direction: a may-set
+-- that lost the value would report a smaller call graph and look correct.
+may_be_node[flow](E, N) :- ast_node[code](E, await_expression, _, _),
+                           ast_child[code](E, argument, 0, X), may_be_node[flow](X, N).
+may_be_lit[flow](E, V)  :- ast_node[code](E, await_expression, _, _),
+                           ast_child[code](E, argument, 0, X), may_be_lit[flow](X, V).
+
+-- ---------------------------------------------------------------------------
+-- WHAT A GENERATOR YIELDS, which is not what it returns. `returns[flow]` reads
+-- `return_statement`; this reads `yield_expression`, and the two are different
+-- facts about the same function — `for (const x of gen())` walks the YIELDS and
+-- never touches the return value.
+--
+-- THE YIELD EXPRESSION'S OWN VALUE IS NOT MODELLED, deliberately and with a
+-- reason: `const sent = yield v` evaluates to whatever the CONSUMER passes to
+-- `.next(sent)`, so it is a value crossing a protocol between two functions,
+-- travelling in the opposite direction from every other edge here. Modelling it
+-- needs a term for the generator protocol, not one more rule.
+yields[flow](F, E) :- ast_node[code](Y, yield_expression, _, _), nearest_v[flow](F, Y),
+                      ast_child[code](Y, argument, 0, E).
+
+-- ---------------------------------------------------------------------------
+-- FOR-OF: the loop variable takes the elements of what is iterated.
+for_of_src[flow](S, X)     :- ast_node[code](S, for_of_statement, _, _),
+                              ast_child[code](S, right, 0, X).
+for_of_name[flow](S, Name) :- ast_node[code](S, for_of_statement, _, _),
+                              ast_child[code](S, left, 0, D),
+                              ast_child[code](D, declarations, 0, V),
+                              ast_child[code](V, id, 0, I), ast_name[code](I, Name).
+for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
+                                ast_node[code](U, identifier, _, _), ast_name[code](U, Name),
+                                ast_child[code](S, body, 0, B), ast_within[code](B, U).
+
+-- WHAT AN ITERABLE HANDS OUT, one element at a time. Two sources and they are
+-- reached differently on purpose: an array is a VALUE, so the first rule goes
+-- through `may_be_node` and covers both `for (x of [a, b])` and a variable
+-- holding that array; a generator is a CALL, so the second reads the call site
+-- directly — `may_be_node` of a call gives its RETURNS, and a generator's
+-- return value is not what for-of walks.
+iter_elem[flow](X, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
+                         ast_child[code](A, elements, _, E).
+iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
+
+may_be_node[flow](U, N) :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
+                           iter_elem[flow](X, E), may_be_node[flow](E, N).
+may_be_lit[flow](U, V)  :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
+                           iter_elem[flow](X, E), may_be_lit[flow](E, V).
+
+-- ---------------------------------------------------------------------------
 -- A LOGICAL OPERATOR IS A CONDITIONAL WITH THE CONDITION SPELT AS AN OPERAND.
 -- `a || b` is `a` when a is truthy and `b` otherwise; `a && b` is `a` when a is
 -- falsy and `b` otherwise; `a ?? b` is `a` unless a is nullish. In all three

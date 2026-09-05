@@ -94,6 +94,34 @@ handled(js, new_expression, dataflow, r_construct).
 -- corpus, so a callgraph tick would be a claim nothing could check.
 handled(js, logical_expression, dataflow, r_value_logical).
 
+-- VALUES CROSSING A CONTROL CONSTRUCT, 2026-09-04 (queue item
+-- w_df_control_forms). Four of the item's five cells; the fifth is below.
+--
+-- `conditional_expression` and `sequence_expression` needed no rule at all —
+-- both were modelled when the value core landed and neither cell was ever
+-- ticked, so the matrix under-reported its own coverage for a day. That is the
+-- defect `unrecorded_coverage[audit]` reports at the CALLGRAPH layer and
+-- nothing reports at this one; the two ticks are the fix and the missing audit
+-- is a finding.
+handled(js, conditional_expression, dataflow, r_value_branch).
+handled(js, sequence_expression,    dataflow, r_value_branch).
+-- `await` is transparent, which is a claim about the may-set and not about
+-- promises; rules/js-dataflow.rofl states which case it is wrong about.
+handled(js, await_expression,       dataflow, r_await_transparent).
+-- for-of binds its variable to what the source hands out, and an array and a
+-- generator are reached differently on purpose.
+handled(js, for_of_statement,       dataflow, r_for_of).
+
+-- ...AND `yield_expression` STAYS OPEN, with the reason named rather than
+-- taking the default. `yields[flow]` models what a generator hands to its
+-- consumer, which is what for-of walks — but the value of the `yield`
+-- EXPRESSION itself is whatever the consumer passes to `.next(v)`, travelling
+-- in the opposite direction from every other edge in this layer. It is real
+-- work and it is not this item's: it needs a term for the generator protocol,
+-- which also covers `gen.next(v)`, `yield*` and a generator's return value.
+-- Queued as w_df_generator_protocol.
+unknown_because(js, yield_expression, dataflow, not_yet).
+
 -- THE CLASS AS A VALUE GREW THREE ANSWERS AND THE CELL STAYS OPEN, 2026-09-04.
 -- The dataflow layer now says which methods a class has, which constructor it
 -- answers with (its own or the nearest ancestor's), and which members it

@@ -147,14 +147,36 @@ work_state(w_df_function_forms, done).
 
 -- 9 — value movement through control constructs. This is the item that will
 -- ask for the control-flow layer, which is why that one sits right after it.
-work(w_df_control_forms, "await, yield, ?:, for-of and the wrappers: a value crossing a control construct").
+-- DONE 2026-09-04, four cells of five. Two of them - `conditional_expression`
+-- and `sequence_expression` - needed NO RULE: they were modelled when the value
+-- core landed and nobody ticked them, so the matrix under-reported its own
+-- coverage for a day with every gate green. `await` is transparent, `for-of`
+-- binds its variable to what the source hands out, and the fifth cell went to
+-- an item of its own rather than being ticked half-true.
+work(w_df_control_forms, "DONE 2026-09-04: await transparent, for-of over an array and over a generator; conditional and sequence were already modelled and unticked").
 work_order(w_df_control_forms, 9).
-work_state(w_df_control_forms, open).
+work_state(w_df_control_forms, done).
 claim(queued, js, await_expression,          none, dataflow, w_df_control_forms).
-claim(queued, js, yield_expression,          none, dataflow, w_df_control_forms).
 claim(queued, js, conditional_expression,    none, dataflow, w_df_control_forms).
 claim(queued, js, for_of_statement,          none, dataflow, w_df_control_forms).
 claim(queued, js, sequence_expression,       none, dataflow, w_df_control_forms).
+claim(queued, js, member_expression, s_member_on_await, callgraph, w_df_control_forms).
+work_spawned(w_df_control_forms, f_a_value_can_travel_back_up_a_generator_and_nothing_here_says_so).
+work_spawned(w_df_control_forms, f_a_fixture_name_collision_is_not_a_measurement).
+work_spawned(w_df_control_forms, f_nothing_watches_unrecorded_coverage_below_the_call_graph).
+work_spawned(w_df_control_forms, f_a_generators_first_resume_is_attributed_to_a_builtin_frame).
+work_spawned(w_df_control_forms, f_an_unawaited_async_entry_point_looked_like_over_approximation).
+
+-- 21 - THE FIFTH CELL, handed on rather than ticked half-true. The value of a
+-- `yield` EXPRESSION is whatever the consumer passes to `.next(v)`: a value
+-- travelling in the opposite direction from every other edge in the dataflow
+-- layer. It needs a term for the generator protocol, and that term also covers
+-- `gen.next(v)` as a call site, `yield*` delegation and a generator's own
+-- return value - which is why it is an item and not a rule.
+work(w_df_generator_protocol, "the value a generator RECEIVES: yield's own value, gen.next(v), yield*, and a generator's return").
+work_order(w_df_generator_protocol, 21).
+work_state(w_df_generator_protocol, open).
+claim(queued, js, yield_expression,          none, dataflow, w_df_generator_protocol).
 
 -- ===========================================================================
 -- 10 — THE THIRD LAYER, WHICH DOES NOT EXIST YET. `layer(controlflow).` is one

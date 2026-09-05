@@ -542,8 +542,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
   assert.equal(coarse.cell, 84, 'predicted 84 coarse cells');
-  assert.deepEqual(f, { cell: 108, modelled: 44, waived: 8, not_modelled: 56 },
-    'predicted 108 fine cells = 44 + 8 + 56');
+  assert.deepEqual(f, { cell: 108, modelled: 45, waived: 8, not_modelled: 55 },
+    'predicted 108 fine cells = 45 + 8 + 55');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -582,9 +582,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 56, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 55, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 56, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 55, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -593,15 +593,16 @@ test('the three verdicts still partition the cell space with a third axis', () =
   // `s_member_on_this` was the example here until `denotes` ticked it, which is
   // the healthy direction for an example to rot in. `s_member_on_call` is the
   // one that still needs a return value it cannot have yet.
-  // the example rots upward as cells close, which is the healthy direction.
-  // `s_member_on_other` stood here until 2026-09-04 and cannot any more: the
-  // catch-all was split into eight named object positions and then WAIVED as
-  // empty by design, so it has no `not_modelled` verdict left to explain. Its
-  // successor is `s_member_on_await`, whose residue is real and owned by the
-  // control-form item.
-  const why = r.why('verdict[audit](js, member_expression, s_member_on_await, callgraph, not_modelled)');
+  // THE EXAMPLE ROTS UPWARD AS CELLS CLOSE, which is the healthy direction, and
+  // it has now rotted twice in two days. `s_member_on_other` stood here until
+  // the catch-all was split and waived; `s_member_on_await` replaced it and
+  // lasted one commit, because `await` became transparent to the value layer
+  // and the site resolved. The successor is `s_member_on_template`, whose
+  // residue is the String prototype — the standard library, which is a
+  // different programme and will outlast several of these.
+  const why = r.why('verdict[audit](js, member_expression, s_member_on_template, callgraph, not_modelled)');
   assert.equal(why.ok, true);
-  assert.match(why.text, /cell\[audit\]\(js,member_expression,s_member_on_await,callgraph\)/);
+  assert.match(why.text, /cell\[audit\]\(js,member_expression,s_member_on_template,callgraph\)/);
   const wn = r.whynot('verdict[audit](js, member_expression, s_member_on_this, callgraph, not_modelled)');
   assert.equal(wn.holds, false);
   assert.match(wn.text, /blocked: shaped_handled\[audit\]\(js,member_expression,s_member_on_this,callgraph/);
@@ -635,14 +636,17 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // was ONE cell reading `not_yet` over four different answers: four object
   // positions the value layer already saw through and that needed nothing but a
   // name, and two that cost one value rule each in rules/js-dataflow.rofl.
+  // SIXTEEN. `s_member_on_await` closed 2026-09-04 without a member rule being
+  // touched: `await` became transparent to the value layer and the site
+  // resolved, which is a cell being ticked by work done for another item.
   assert.deepEqual(modelled, ['s_computed_dynamic_key', 's_computed_literal_key',
-    's_member_on_assignment', 's_member_on_call', 's_member_on_cast',
-    's_member_on_conditional', 's_member_on_ident', 's_member_on_logical',
-    's_member_on_member', 's_member_on_new', 's_member_on_non_null',
-    's_member_on_object_literal', 's_member_on_sequence', 's_member_on_super',
-    's_member_on_this'],
-    'fifteen shapes have a rule');
-  assert.equal(missing.length, 5, 'and five do not');
+    's_member_on_assignment', 's_member_on_await', 's_member_on_call',
+    's_member_on_cast', 's_member_on_conditional', 's_member_on_ident',
+    's_member_on_logical', 's_member_on_member', 's_member_on_new',
+    's_member_on_non_null', 's_member_on_object_literal', 's_member_on_sequence',
+    's_member_on_super', 's_member_on_this'],
+    'sixteen shapes have a rule');
+  assert.equal(missing.length, 4, 'and four do not');
   // ...and one is NEITHER, which is the third verdict earning its place here:
   // the catch-all is waived, because a catcher with nothing in it is the
   // desired state and `not_yet` would be a backlog item for a form nobody has
@@ -674,7 +678,7 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // somebody else's recorded decision on a guess is the same overreach the
   // other way — and `scope_unowned[audit]` names both until they are settled.
   assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array']);
-  assert.equal(byReason.get('not_yet')?.length, 4);
+  assert.equal(byReason.get('not_yet')?.length, 3);
 });
 
 // ---------------------------------------------------------------------------
@@ -757,7 +761,7 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 145, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(sites, 160, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 28,
     'positive control: 28 distinct shapes; eight object positions split out of the catch-all 2026-09-04');
 
@@ -815,7 +819,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   const alpha: any = await import(new URL('alpha.mjs', dir).href);
   const beta: any = await import(new URL('beta.mjs', dir).href);
   const t: any = await import(new URL('trace.mjs', dir).href);
-  alpha.main();
+  // AWAITED since 2026-09-04: `main` became async when the corpus gained an
+  // `await` site, and calling it without awaiting left everything after that
+  // await unexecuted — the oracle then reported three edges missing that the
+  // model has, and they looked like over-approximation.
+  await alpha.main();
   beta.bmain();
 
   // POSITIVE CONTROL FIRST. Every claim below is of the form "the model missed
@@ -851,9 +859,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // parameter tier closed two, `denotes` five more, the value core one, and the
   // fixture grew five functions that make those tiers' defects observable.
   // 52 until 2026-09-04, when the corpus gained four object positions split out
-  // of the catch-all (+8) and a three-level class chain for `super()` (+4:
-  // main->useSuper, useSuper->Cask, Cask->Barrel, useSuper->hold).
-  assert.equal(oracleEdges.size, 64, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // of the catch-all (+8), a three-level class chain for `super()` (+4) and the
+  // control forms (+9: for-of over an array and over a generator, each reaching
+  // two functions, await through an async call, and the generator's own body —
+  // whose caller frame V8 names `next`, not the enclosing function).
+  assert.equal(oracleEdges.size, 73, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -948,7 +958,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 50, '21 kind-level claims + 29 shape claims with no cell under them');
+  assert.equal(f.modelled, 51, '21 kind-level claims + 30 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',
@@ -960,6 +970,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/member_expression/s_computed_dynamic_key/callgraph',
     'js/member_expression/s_computed_literal_key/callgraph',
     'js/member_expression/s_member_on_assignment/callgraph',
+    'js/member_expression/s_member_on_await/callgraph',
     'js/member_expression/s_member_on_call/callgraph',
     'js/member_expression/s_member_on_cast/callgraph',
     'js/member_expression/s_member_on_conditional/callgraph',
@@ -1092,8 +1103,8 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   // beside the twelve not_modelled shapes it was hiding.
   assert.ok(r.holds('verdict[audit](js, member_expression, none, callgraph, modelled)'),
     'the kind-level tick is honoured again, which is exactly what the axis removed');
-  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 5,
-    'while the five holes are still there');
+  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 4,
+    'while the four holes are still there');
 
   // SURVIVOR, reported: the partition still SUMS. Every new cell gets a
   // verdict, so the arithmetic that catches a missing default is blind to a
@@ -1171,6 +1182,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'js/member_expression/s_computed_dynamic_key/callgraph',
     'js/member_expression/s_computed_literal_key/callgraph',
     'js/member_expression/s_member_on_assignment/callgraph',
+    'js/member_expression/s_member_on_await/callgraph',
     'js/member_expression/s_member_on_call/callgraph',
     'js/member_expression/s_member_on_cast/callgraph',
     'js/member_expression/s_member_on_conditional/callgraph',
@@ -1183,7 +1195,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'js/member_expression/s_member_on_sequence/callgraph',
     'js/member_expression/s_member_on_super/callgraph',
     'js/member_expression/s_member_on_this/callgraph',
-  ], 'the fifteen cells the deletion took a claim away from — fourteen ticks and the waived catch-all');
+  ], 'the sixteen cells the deletion took a claim away from — fifteen ticks and the waived catch-all');
   assert.deepEqual({
     lost: n(r, 'lost_cell[audit](A, B, L)'), invented: n(r, 'invented_cell[audit](A, B, L)'),
     double_cell: n(r, 'double_cell[audit](A, B, L)'), orphan_shape: n(r, 'orphan_shape[audit](A, B, S)'),

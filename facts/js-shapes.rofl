@@ -276,10 +276,11 @@ unknown_because(js, member_expression, s_member_on_literal, callgraph, not_yet).
 -- point of splitting them out rather than leaving them in a bucket whose
 -- verdict would have to be one word for both.
 --
--- `(await p).m()` — `mkHolder()` on its own DOES reach the object through the
--- return rule, so the only thing between this site and an edge is the `await`
--- wrapper. That is `w_df_control_forms` in the queue, not a member question.
-unknown_because(js, member_expression, s_member_on_await, callgraph, not_yet).
+-- `(await p).m()` CLOSED 2026-09-04 by the item that owned it: `await` became
+-- transparent to the value layer and the site resolved with no member rule
+-- touched. `shape_stale[audit]` named the excuse the same run, which is the
+-- healthy direction for an excuse to rot in.
+handled(js, member_expression, s_member_on_await, callgraph, r_await_transparent).
 -- `` `k${n}`.concat() `` — the receiver is a String and `concat` answers
 -- through the built-in prototype. Not a value in this program at all; it is
 -- the standard library, which is `w_env_api_surface`.

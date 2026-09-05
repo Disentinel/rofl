@@ -181,7 +181,11 @@ async function runOracle(dir: string): Promise<OracleRun> {
   const alpha: any = await import(path.join(dir, 'alpha.mjs'));
   const beta: any = await import(path.join(dir, 'beta.mjs'));
   const t: any = await import(path.join(dir, 'trace.mjs'));
-  alpha.main();
+  // AWAITED since 2026-09-04: `main` became async when the corpus gained an
+  // `await` site, and calling it without awaiting left everything after that
+  // await unexecuted — the oracle then reported three edges missing that the
+  // model has, and they looked like over-approximation.
+  await alpha.main();
   beta.bmain();
   const edges = new Set<string>();
   const list: OracleEdge[] = [];
@@ -329,8 +333,9 @@ test('resolution: identifier, IIFE, and a local namespace object', () => {
   // ids carry a per-file hash and would pin the fixture's byte layout.
   const ambiguousShapes = [...new Set(m.binds('ambiguous_call[audit](C, F, G)', 'C')
     .flatMap((c) => m.binds(`shape[code](${c}, S)`, 'S')))].sort();
-  assert.deepEqual(ambiguousShapes, ['s_member_on_conditional', 's_member_on_logical'],
-    'every site that resolves two ways is a branch, and no other kind of site does');
+  assert.deepEqual(ambiguousShapes,
+    ['s_identifier', 's_member_on_conditional', 's_member_on_logical'],
+    'a site resolves two ways only through a branch or a loop variable');
   // the file-agnostic view agrees with the file-scoped one on this corpus
   const named = new Set(m.binds('calls_named[code](A, B)', 'A', 'B'));
   for (const e of modelEdges(m)) assert.ok(named.has(e.replace('<top>', 'top')), `calls_named lost ${e}`);
@@ -415,8 +420,10 @@ test('TIER 4: one question — what object does this expression denote?', () => 
   // edge that must never appear.
   assert.ok(edges.has('useTrap -> pickB'), 'the value, not the name');
   assert.ok(!edges.has('useTrap -> pickA'), 'and never the name');
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 4,
-    'two branch sites, each reported in both orderings of its pair');
+  // FOUR sites now, not two: the two branch receivers, plus the two for-of
+  // loop variables, which are may-sets over what the iterable hands out.
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8,
+    'four sites, each reported in both orderings of its pair');
 });
 
 test('argument position is content: which function is in which slot', () => {
@@ -436,7 +443,7 @@ test('argument position is content: which function is in which slot', () => {
 test('every unresolved shape carries a typed verdict, and it type-checks', () => {
   const m = build();
   const residue = m.binds('unresolved_shape[audit](S)', 'S');
-  assert.equal(residue.length, 9, `positive control: ${residue.length} shapes with a residue`);
+  assert.equal(residue.length, 8, `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -616,8 +623,16 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   assert.ok(model.has('useClass -> Box'), 'and the model really does derive it');
   assert.equal(missed.length, 0, 'every edge the runtime took is derived');
 
-  // over-approximation is expected and must be COUNTED, not waved through
-  assert.ok(extra.length <= 2, `over-approximation grew to ${extra.length}: ${extra.join(', ')}`);
+  // OVER-APPROXIMATION IS NAMED, not bounded. A count tolerates whatever fits
+  // under it; a list says which edge and why, and goes red when a different one
+  // appears. The one entry is MEASURED rather than argued: V8 attributes a
+  // generator body's first resume to the built-in `%GeneratorPrototype%.next`,
+  // so `for (const x of pick())` produces the oracle edge `next -> pick` and
+  // never `useForOfGen -> pick`. The model's edge is right about the SOURCE and
+  // the oracle's is right about the FRAMES; they name different things, and the
+  // difference is the oracle's naming rather than a rule's mistake.
+  assert.deepEqual(extra, ['useForOfGen -> pick'],
+    `over-approximation is exactly the generator frame: ${extra.join(', ')}`);
 });
 
 // ===========================================================================
@@ -680,9 +695,9 @@ test('mutant 3 — forget which file a function was declared in', () => {
     replace: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, _, _), ast_name[code](E, Name),\n'
         + '                           ast_node[code](F, function_declaration, _, _),',
   }]);
-  assert.equal(base.ambiguous, 4, 'baseline: only the two branch sites');
-  assert.ok(mut.ambiguous > 4, `mutant resolves ${mut.ambiguous} sites two ways`);
-  console.log(`  KILLED: ambiguous resolutions 4 -> ${mut.ambiguous}`);
+  assert.equal(base.ambiguous, 8, 'baseline: the branch receivers and the loop variables');
+  assert.ok(mut.ambiguous > 8, `mutant resolves ${mut.ambiguous} sites two ways`);
+  console.log(`  KILLED: ambiguous resolutions 8 -> ${mut.ambiguous}`);
 });
 
 test('mutant 4 — drop the argument index: which value lands in which slot', () => {
@@ -719,7 +734,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 61, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 67, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -727,9 +742,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // Every shape whose excuse this mutant strands is a shape that still HAS one.
   // The number moves in BOTH directions and is pinned rather than bounded: it
   // falls as the model closes cells and retires their excuses, and it rises
-  // when a split gives a residue a row of its own — 7 -> 9 on 2026-09-04, when
-  // `s_member_on_await` and `s_member_on_template` came out of the catch-all.
-  assert.equal(stale.length, 9, `the stale-verdict audit fires on ${stale.length} shapes`);
+  // when a split gives a residue a row of its own — 7 -> 9 when
+  // `s_member_on_await` and `s_member_on_template` came out of the catch-all,
+  // then 9 -> 8 when `await` turned transparent and retired the first of them.
+  assert.equal(stale.length, 8, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
@@ -940,9 +956,9 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   // precisely this reason, and it still cannot make the oracle see it.
   assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [],
     'the oracle is structurally blind here — if this ever fails, say so');
-  assert.equal(base.ambiguous, 4, 'the two branch sites, and nothing else');
-  assert.ok(mut.ambiguous >= 8, `every this-site now resolves two ways: ${mut.ambiguous}`);
-  console.log(`  KILLED by ambiguous_call: 4 -> ${mut.ambiguous}, edge set UNMOVED`);
+  assert.equal(base.ambiguous, 8, 'the branch sites and the loop variables, and nothing else');
+  assert.ok(mut.ambiguous >= 12, `every this-site now resolves two ways: ${mut.ambiguous}`);
+  console.log(`  KILLED by ambiguous_call: 8 -> ${mut.ambiguous}, edge set UNMOVED`);
 });
 
 test('mutant 18 — a catch-all that is waived as empty must be able to fill', () => {
@@ -975,8 +991,17 @@ test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot s
   // and the two edges are spelled identically. This test states the wrong
   // answer rather than leaving the silence to look like agreement.
   const m = build();
-  const pairs = m.q('ambiguous_call[audit](C, F, G)');
-  assert.equal(pairs.length, 4, 'two sites, both orderings');
+  // RESTRICTED TO THE BRANCH SITES 2026-09-04. The for-of loop variables also
+  // resolve two ways, and there the runtime takes BOTH — a loop runs every
+  // element — so those pairs are not over-approximation at all and their
+  // targets are `alef` and `bet`, two different names. The blind spot is
+  // specifically the branch: one arm is taken, the other is not, and both
+  // targets are called `pick`.
+  const branchSites = new Set(m.binds('ambiguous_call[audit](C, F, G)', 'C')
+    .filter((c) => m.binds(`shape[code](${c}, S)`, 'S')
+      .some((sh) => sh.startsWith('s_member_on_'))));
+  const pairs = m.q('ambiguous_call[audit](C, F, G)').filter(([c]) => branchSites.has(c));
+  assert.equal(pairs.length, 4, 'two branch sites, both orderings');
   for (const [, f, g] of pairs) {
     const nf = m.binds(`fn_name[code](${f}, N)`, 'N');
     const ng = m.binds(`fn_name[code](${g}, N)`, 'N');

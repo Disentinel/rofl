@@ -188,7 +188,9 @@ shape_because(js, s_member_on_literal,     callgraph, not_yet).
 -- and each is owned by a DIFFERENT item, which is why they are two rows and
 -- not one bucket: `(await p).m()` waits on the control-form work and
 -- `` `s`.m() `` answers through the String prototype.
-shape_because(js, s_member_on_await,       callgraph, not_yet).
+-- `s_member_on_await` RETIRED 2026-09-04: `await` is transparent to the value
+-- layer now, the site resolves, and a reason with no residue is what
+-- `shape_stale[audit]` exists to catch.
 shape_because(js, s_member_on_template,    callgraph, not_yet).
 -- `s_member_on_other` KEEPS ITS ROW even though the matrix now waives the
 -- cell, and the distinction is the one this file's header draws: the frontier

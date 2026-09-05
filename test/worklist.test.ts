@@ -124,23 +124,26 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     ['w_body_order_is_load_bearing',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
+     'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
+     'w_df_control_forms', 'w_df_control_forms',
      'w_env_ledger_form', 'w_env_scan_failed',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
-  // Two items have come off the front since: `w_cg_member_family` was skipped
-  // once its catch-all split left only the blocked template key, and
-  // `w_cg_call_result` is done — `super()` modelled, the dynamic-import shape
-  // waived as unreachable.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_control_forms'],
-    'the two call-graph items are settled, so the control forms are next');
+  // Three items have come off the front since: `w_cg_member_family` skipped
+  // once its catch-all split left only the blocked template key,
+  // `w_cg_call_result` done, and `w_df_control_forms` done — four of its five
+  // cells, with the fifth handed to an item of its own rather than ticked
+  // half-true.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer'],
+    'the dataflow control forms are settled, so the control-flow LAYER is next');
 });
 
-test('the queue covers the model: 81 open cells, 17 claimed by name, 70 swept', () => {
+test('the queue covers the model: 76 open cells, 17 claimed by name, 70 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 81, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 76, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
   // found it, not because it was foreseen.
-  assert.equal(w.n('work(W, Note)'), 20);
+  assert.equal(w.n('work(W, Note)'), 21);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -150,8 +153,8 @@ test('the queue covers the model: 81 open cells, 17 claimed by name, 70 swept', 
   // cells and opened two that are now claimed BY NAME by the items that own
   // them — the control-form item and the standard-library one — which is the
   // queue handing work on rather than a bucket absorbing it.
-  assert.deepEqual(per('callgraph'), [24, 11, 19]);
-  assert.deepEqual(per('dataflow'), [18, 6, 12]);
+  assert.deepEqual(per('callgraph'), [23, 11, 19]);
+  assert.deepEqual(per('dataflow'), [14, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
@@ -228,13 +231,12 @@ test('MUTANT 7 — an item with no order and no state', () => {
 
 test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep', () => {
   const base = world();
-  // THE ANCHOR MOVED 2026-09-04. It used to delete the claim on
-  // `s_member_on_other`, which no longer exists as an open cell — the catch-all
-  // was split and then waived. Its successor is one of the cells the split
-  // handed to another item, which is the same construction: a claim by name
-  // whose deletion leaves the cell open, owned by the layer's bucket, and
-  // every lie-detector quiet.
-  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_control_forms).' });
+  // THE ANCHOR HAS MOVED TWICE IN TWO DAYS, and both times for the same happy
+  // reason: it must name a claim on an OPEN cell, and the cells keep closing.
+  // `s_member_on_other` was split and waived; `s_member_on_await` closed when
+  // `await` became transparent. `s_member_on_template` answers through the
+  // String prototype and will outlast the next few anchors.
+  const w = world({ find: 'claim(queued, js, member_expression, s_member_on_template, callgraph, w_env_api_surface).' });
   // EVERY LIE-DETECTOR STAYS QUIET. The cell is still open, still owned — by
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
@@ -251,7 +253,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_control_forms']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer']);
   // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
   // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
   // hold. That is the relation doing its job on a real premise rather than on a
@@ -264,7 +266,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // done — which is the whole content of the relation
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
   assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_df_control_forms'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
