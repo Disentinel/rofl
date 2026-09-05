@@ -392,3 +392,89 @@ work(w_leak_variable_on_the_right, "leak[audit] cannot see a variable ledger on 
 work_order(w_leak_variable_on_the_right, 19).
 work_state(w_leak_variable_on_the_right, open).
 work_spawned(w_leak_variable_on_the_right, f_the_leak_audit_now_fires_on_a_ledger_polymorphic_head).
+
+-- ===========================================================================
+-- 28-32 — THE FIVE LAYERS THE SWEEP DID NOT REACH, entered 2026-09-05 at the
+-- owner's instruction (exceptions, scope, types, alias, effects). They are
+-- ITEMS, not layers. `layer(L)` is one fact and it costs 64 cells at today's
+-- vocabulary, so declaring five of them would open 320 cells in one commit and
+-- pre-commit the answer to the question each item exists to ask. An item can
+-- decide to become a layer; a layer cannot decide to become an item.
+--
+-- THREE OF THE FIVE OWN NO CELL, and that is the honest report rather than an
+-- omission: the matrix indexes (kind x layer), so a gap that lives in the RULES
+-- rather than in a kind has nowhere to appear. Recorded as
+-- f_a_blindness_can_have_no_cell.
+
+-- 28. EXCEPTIONS, THE TRANSITIVE HALF. Item 25 is the local edge: a value from
+-- `throw` to the `catch` that receives it, and a call that leaves by throwing.
+-- What no rule says is what PROPAGATES: `f` calls `g` which throws, `f` has no
+-- handler, so `f` throws too. That is a transitive closure over the call graph
+-- with the handlers as its stopping condition, and this queue has already split
+-- a transitive question out of its local one once, for exactly this reason
+-- (w_cf_reachability out of `may_not_run`). It owns no cell: every kind it
+-- touches is claimed by item 25 or by w_cf_abrupt_transfer, because propagation
+-- is a property of the EDGE and cells are indexed by node kind.
+work(w_exn_propagation, "which calls may throw: the transitive closure of throw over the call graph, stopped by handlers").
+work_order(w_exn_propagation, 28).
+work_state(w_exn_propagation, open).
+work_needs(w_exn_propagation, w_exception_flow).
+
+-- 29. SCOPE, AND IT HAS ALREADY COST US ONCE. `binder[flow]` is FILE-scoped by
+-- construction: one name, one binding, per file. Shadowing, block scope, the
+-- temporal dead zone and parameter scope are all invisible, and this is not
+-- hypothetical - a `const chosen` renamed to `f` in a for-of head collided with
+-- three parameters named `f` in the same fixture and took `ambiguous_call` from
+-- 4 to 14 in one edit. The blindness is declared tier 1 in
+-- docs/modelling-a-language.md and no gate can see it: under the four layers we
+-- have, `block_statement x dataflow` reads `waived / a_a_statement_carries_no_value`,
+-- which is TRUE of values and FALSE of bindings. A scope layer would reopen a
+-- waived cell and nothing audits for that.
+work(w_scope_binding, "the binder is one flat file scope: shadowing, blocks, the TDZ and parameter scope are invisible").
+work_order(w_scope_binding, 29).
+work_state(w_scope_binding, open).
+work_spawned(w_scope_binding, f_a_blindness_can_have_no_cell).
+
+-- 30. ALIASING AND THE STORE. `member_value[flow]` reads members off class
+-- bodies and object literals - the SYNTACTIC members - and there is no model of
+-- a write. `obj.x = f` followed by `obj.x()` resolves to nothing, and the cell
+-- that ought to say so, `member_expression x dataflow`, reads `modelled`,
+-- because a kind-level cell cannot distinguish a read from a write. The cell it
+-- CAN claim is the assignment itself, which is open and today swept.
+work(w_alias_store, "obj.x = f: there is no store, so a property written is not a property read").
+work_order(w_alias_store, 30).
+work_state(w_alias_store, open).
+claim(queued, js, assignment_expression, none, callgraph, w_alias_store).
+
+-- 31. TYPES, DELIBERATELY SHALLOW. Not a checker: the only question this model
+-- asks of a type is which PROTOTYPE a value has, so that `xs.at(-1)` can be
+-- attributed to `Array.prototype.at` and gated by era. That is the half of
+-- item 17 that syntax cannot answer, which is why 17 now waits on this rather
+-- than the other way round. It waits in turn on the frame: ten of the seventeen
+-- kinds in `vocabulary_gap[audit]` are TypeScript type nodes, and a type
+-- surface that cannot name `ts_type_annotation` is reading the corpus blind.
+work(w_type_surface, "a shallow type: which prototype a value has, enough to attribute xs.at to Array.prototype.at").
+work_order(w_type_surface, 31).
+work_state(w_type_surface, open).
+work_needs(w_type_surface, w_vocabulary_frame).
+work_needs(w_env_api_surface, w_type_surface).
+
+-- 32. EFFECTS, AND THE TAXONOMY IS NOT OURS TO INVENT. The owner asked whether
+-- a standard one exists. It does, and in two versions that disagree usefully -
+-- see f_the_effect_taxonomy_already_exists_and_it_is_a_lattice. The one to take
+-- is Koka's basic set, because it is closed, named and ORDERED: `total`, `exn`,
+-- `div`, `ndet`, `alloc`, `read`, `write`, `io`, with `pure = <div, exn>` and
+-- `io = <st, div, exn, ndet>`. An order with a bottom and a top is the thing a
+-- model can use; a flat list of labels is not.
+--
+-- IT IS BLOCKED ON THREE OF ITS OWN MEMBERS and that is why the dependency
+-- rows are worth writing down: `exn` is item 28, `read`/`write` are item 30,
+-- and `ndet` plus `io` are item 17 - which is to say the effect layer is not a
+-- new question at all, it is the JOIN of four questions already queued.
+work(w_effect_layer, "the effect axis over Koka's basic set: total, exn, div, ndet, read, write, io").
+work_order(w_effect_layer, 32).
+work_state(w_effect_layer, open).
+work_needs(w_effect_layer, w_exn_propagation).
+work_needs(w_effect_layer, w_alias_store).
+work_needs(w_effect_layer, w_env_api_surface).
+work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_lattice).

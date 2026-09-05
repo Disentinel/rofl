@@ -134,9 +134,10 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
+     'w_effect_layer',
      'w_env_ledger_form', 'w_env_scan_failed',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell',
-     'w_vocabulary_frame']);
+     'w_scope_binding', 'w_vocabulary_frame']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
   // fifty cells — so what is left at the head is arithmetic, the call-graph
@@ -145,13 +146,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'the third layer is declared, so the sweeps are what is left');
 });
 
-test('the queue covers the model: 90 open cells, 31 claimed by name, 70 swept', () => {
+test('the queue covers the model: 90 open cells, 32 claimed by name, 58 swept', () => {
   const w = world();
   assert.equal(w.n('open_cell[audit](K, S, L)'), 90, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
-  // found it, not because it was foreseen.
-  assert.equal(w.n('work(W, Note)'), 27);
+  // found it, not because it was foreseen. 27 -> 32 on 2026-09-05: the five
+  // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
+  // five layers would have opened 320 cells and answered the question each item
+  // exists to ask.
+  assert.equal(w.n('work(W, Note)'), 32);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -161,7 +165,9 @@ test('the queue covers the model: 90 open cells, 31 claimed by name, 70 swept', 
   // cells and opened two that are now claimed BY NAME by the items that own
   // them — the control-form item and the standard-library one — which is the
   // queue handing work on rather than a bucket absorbing it.
-  assert.deepEqual(per('callgraph'), [23, 11, 19]);
+  // ...and 11 -> 12 on 2026-09-05, when the aliasing item claimed the
+  // assignment: `obj.x = f` is a call-graph fact and it had been swept.
+  assert.deepEqual(per('callgraph'), [23, 12, 18]);
   assert.deepEqual(per('dataflow'), [16, 8, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
@@ -254,11 +260,11 @@ test('MUTANT 8 — THE ONE THAT LIVES: a deleted claim vanishes into the sweep',
   // the layer's bucket instead of by the item that was supposed to do it.
   for (const lie of LIES) assert.equal(w.n(lie), 0, `${lie} caught it after all — update this test`);
   // and the ONLY thing that moved is the number this test pins
-  assert.equal(base.n('sweeper(K, S, callgraph)'), 19);
-  assert.equal(w.n('sweeper(K, S, callgraph)'), 20, 'specificity leaked into the bucket');
-  assert.equal(w.n('claimed(K, S, callgraph)'), 10);
+  assert.equal(base.n('sweeper(K, S, callgraph)'), 18);
+  assert.equal(w.n('sweeper(K, S, callgraph)'), 19, 'specificity leaked into the bucket');
+  assert.equal(w.n('claimed(K, S, callgraph)'), 11);
   console.log('  ALIVE by construction: a bucket cannot tell a lost claim from an unclaimed cell;'
-    + ' swept 19 -> 20 is the whole signal');
+    + ' swept 18 -> 19 is the whole signal');
 });
 
 test('MUTANT 9 — a dependency the plan does not honour', () => {
@@ -267,13 +273,16 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
   assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_sweep']);
-  // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
-  // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
-  // hold. That is the relation doing its job on a real premise rather than on a
-  // planted one — the queue will not offer the ledger form until the leak audit
-  // can see a variable on the right of a crossing.
-  assert.equal(base.n('blocked[audit](W)'), 1, 'exactly the one held on purpose');
-  assert.deepEqual(base.binds('blocked[audit](W)', 'W'), ['w_env_ledger_form']);
+  // FIVE dependencies are live now and every one is DELIBERATE. One is the
+  // kernel question the owner has said to hold (`w_env_ledger_form` on
+  // `w_leak_variable_on_the_right`); the other four are the chain the five new
+  // layers made explicit — effects is the JOIN of exceptions, aliasing and the
+  // API surface, and the API surface cannot attribute `xs.at` without a type.
+  // That the chain is four deep and acyclic is itself the check: it was written
+  // as prose in three item comments before it was written as rows.
+  assert.equal(base.n('blocked[audit](W)'), 5, 'one held on purpose, four real premises');
+  assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
+    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_exn_propagation', 'w_type_surface']);
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
@@ -281,7 +290,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // which is now DONE, so the dependency was satisfied and blocked nothing. It
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
-  assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
+  assert.equal(mut.n('blocked[audit](W)'), 6, 'the planted one on top of the five real ones');
   assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_sweep'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
