@@ -110,6 +110,16 @@ export const DECLS: Decl[] = [
   { id: 'header', key: { kind: 'file' }, cat: 'PLUMB', when: 'n/a',
     anchor: '// engine.ts — seminaive fixpoint',
     what: 'header, imports, types, constants' },
+  // ADDED 2026-09-05, and POLICY rather than mechanism because it decides what
+  // a sentence MEANS: `not p(X, K)` asks whether ANY p exists with K free and
+  // asks about one p with K bound, and until this function existed the reading
+  // was whichever the author's comma produced. It answers "where may a
+  // negation stand", which is a decision; the solving that follows it is the
+  // mechanism. `before-A` because a rule is planned once, when it is
+  // classified, and never again.
+  { id: 'planBody', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+    anchor: 'export function planBody(',
+    what: 'where a negation may stand: held back until its shared variables are bound, so literal order cannot change the answer' },
   { id: 'evaluation', key: { kind: 'def', name: 'Evaluation' }, cat: 'PLUMB', when: 'n/a',
     anchor: 'export class Evaluation {',
     what: 'class fields and constructor' },
@@ -263,6 +273,8 @@ export const DECLS: Decl[] = [
  *  kept — `constructor` appears three times and the count is information. */
 export const ABSORBED: Record<string, string[]> = {
   header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
+  // the one closure inside `planBody` the walker counts as a definition
+  planBody: ['note'],
   evaluation: ['constructor'],
   negPhase: ['negLevel'],
   activate: ['propagate', 'fireRule', 'fireRuleFront'],

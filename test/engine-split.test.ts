@@ -86,7 +86,10 @@ test('the split is keyed by names, not by line numbers', () => {
   // eight red tests.
   const declared = JSON.stringify(DECLS);
   assert.equal(/"(from|to)":\s*\d/.test(declared), false, 'a line number is back in the table');
-  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 29);
+  // 29 -> 30: `planBody`, declared as its own block rather than absorbed into
+  // the header, because it is a DECISION and an absorbed definition inherits a
+  // category nobody chose — which is what this control exists to catch.
+  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 30);
   assert.equal(DECLS.filter((d) => d.key.kind === 'part').length, 12);
   assert.equal(DECLS.filter((d) => d.key.kind === 'file').length, 1);
   // the 12 parts cut exactly four methods, and that is the declared loan
@@ -168,7 +171,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', () => {
+test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -182,7 +185,12 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   // `N is str_len(S), N < 5` worked, and `str_len(7) < 5` produced no rows and
   // NO hole while `N is str_len(7)` produced `str_type_error` — the same
   // inability, one audible and one mute.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 851);
+  // 851 -> 901 (+50): `planBody`, which decides where a negation may stand so
+  // that literal order cannot change the answer, plus the two call sites that
+  // solve the plan instead of the written body. THE WHOLE +50 IS POLICY AND
+  // PLUMB: `mech` below does not move by a line, which is the claim rather
+  // than the constant — a rule about what a sentence MEANS adds no machinery.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 901);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -199,6 +207,10 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   // lives in the reason atom declared in reflect.ts; this branch only enforces
   // it. codeKept moved by the same +17 with NO reached/kept gap, because the
   // whole edit sits inside evalBuiltin, which the monotone core keeps entire.
+  // UNCHANGED at 550 across the negation-order fix, and this is the negative
+  // control on that classification: `planBody` answers "where may a negation
+  // stand", which is a decision, and the solving that follows it was already
+  // here. If this number had moved, the POL declaration would be wrong.
   assert.equal(rows(W, 'block(engine_ts, L, mech)'), 550);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
@@ -206,30 +218,35 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   // fixpoint's MECH block. They are the `edb(unknown)` declaration becoming a
   // CHARGED write, which lands in the admissibility block below — a POL block,
   // before-A. Measured off the block table rather than reasoned from the diff.
-  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 126);
-  // unchanged: the wall added no policy that needs a store-shape fact
-  assert.equal(rows(W, 'block(engine_ts, L, pol_star)'), 92);
+  // 126 -> 174 (+48): the whole of `planBody`, declared POL in the block table.
+  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 174);
+  // 92 -> 93 (+1): `classify` reads the plan instead of the written body, and
+  // that block is the range-restriction analysis — POL*, since it needs the
+  // rules themselves rather than only a program's text.
+  assert.equal(rows(W, 'block(engine_ts, L, pol_star)'), 93);
   // 71 -> 82 (+11): DEFAULT_SPACE in the constants block, the three fields
   // (space, rows, peakRows) and the constructor option that reads it
   // 82 -> 83 (+1): the import line for `KERNEL_PERSP` and `isKernelLedger`.
   // The eighth line of the ring, and the only one outside MECH — which is the
   // arithmetic that makes the +8 total and the +7 mechanism agree.
-  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 83);
+  // 83 -> 84 (+1): `ERule` carries `plan`, the body in the order it is solved.
+  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 84);
   // the number the rewrite question is about: 216 -> 218, the same +2 as `pol`
   // UNCHANGED by the ring, and that is the claim rather than the constant:
   // `policy/1` is `pol` + `pol_star`, 126 + 92, and neither moved. A ring the
   // evaluator enforces before it consults any rule is not policy about a
   // program, so if this number HAD moved the classification above would be
   // wrong. It is the negative control on the +7 landing in MECH.
-  assert.equal(rows(W, 'policy(engine_ts, L)'), 218);
+  // 218 -> 267 (+49): 48 of planBody plus the one line in `classify`.
+  assert.equal(rows(W, 'policy(engine_ts, L)'), 267);
   // NEGATIVE CONTROL: the join really is discriminating. A category nothing
   // carries must return nothing, or the rule is one that always says yes.
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
   assert.equal(S.byCat['MECH'].code, 550);
-  assert.equal(S.total.code, 851);
-  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 218);
+  assert.equal(S.total.code, 901);
+  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 267);
 });
 
 test('policy splits by WHEN the answer is needed, and most of it is needed too early', () => {
@@ -237,16 +254,19 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
   assert.equal(rows(W, 'policy_when(engine_ts, L, after_a)'), 31);
   // 119 -> 121 (+2): the same two lines as `pol` above, and they are before-A
   // because the admissibility block they land in runs before a rule fires
-  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 121);
+  // 121 -> 170 (+49): a rule is planned once, when it is classified, and never
+  // again — so every line of the negation-order fix is needed before phase A.
+  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 170);
   assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 66);
-  assert.equal(31 + 121 + 66, rows(W, 'policy(engine_ts, L)'));
+  assert.equal(31 + 170 + 66, rows(W, 'policy(engine_ts, L)'));
   // MECH and PLUMB lines carry a tense too, and it must NOT leak into the
   // policy total: the relation is defined over `policy`, not over `block`.
   assert.equal(rows(W, 'policy_when(engine_ts, L, na)'), 0);
 });
 
 test('the scanner asserts: the structure is in the store, not in a print', () => {
-  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 42);
+  // 42 -> 43: one more block, and the tiling still has no gap.
+  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 43);
   assert.equal(rows(W, 'part_of(K, M)'), 12);
   assert.equal(rows(W, 'cut_method(M)'), 4);
   assert.equal(rows(W, 'target(engine_ts, F)'), 1);
@@ -263,20 +283,21 @@ test('the contamination is declared, dated and COUNTABLE', () => {
   // admissible when the contamination is declared as something that goes away
   // with the language model, and what makes that safe is that it can be
   // queried. So it is queried.
-  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 96);
-  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 42, 'one per block: the MECH/POL verdict');
-  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 42, 'one per block: the before-A verdict');
+  // 96 -> 98: the two hand judgements the new block carries, cat and tense.
+  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 98);
+  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 43, 'one per block: the MECH/POL verdict');
+  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 43, 'one per block: the before-A verdict');
   assert.equal(rows(W, 'dirty(engine_split, part, U, R)'), 12, 'the slices inside a method');
   // the two loans retire on different events and are counted apart
-  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 84);
+  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 86);
   assert.equal(rows(W, 'dirty(engine_split, K, U, split_the_method)'), 12);
   // ZERO IS THE TARGET, and it is a query, not a promise
-  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 42);
+  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 43);
   // NEGATIVE CONTROL: the loan table is not a rule that says yes to anything
   assert.equal(rows(W, 'dirty(engine_split, K, U, someday)'), 0);
   assert.equal(rows(W, 'dirty(some_other_scanner, K, U, R)'), 0);
   // and the table is generated from the declarations, so it cannot go stale
-  assert.equal(contamination().length, 96);
+  assert.equal(contamination().length, 98);
 });
 
 // ---------------------------------------------------------------------------
@@ -331,8 +352,8 @@ test('the report renders and carries its own headline', () => {
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
   assert.match(text, /MECH\s+550 code/);
-  assert.match(text, /TOTAL\s+851 code/);
-  assert.match(text, /before-A\s+121 code lines/);
+  assert.match(text, /TOTAL\s+901 code/);
+  assert.match(text, /before-A\s+170 code lines/);
 });
 
 test('the definition index reads src/engine.ts, and it is not a grep', () => {

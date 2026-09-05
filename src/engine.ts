@@ -37,12 +37,17 @@ export class StratificationError extends Error {
 }
 
 export interface ERule extends DRule {
-  safe: boolean;          // materializable bottom-up in written premise order
+  safe: boolean;          // materializable bottom-up in the planned premise order
   hasNeg: boolean;
   posRels: string[];
   hasDemandPrem: boolean; // some positive premise targets a demand-backed relation
   triggerRels: Set<string>;
+  /** The body in the order it is SOLVED, which is `planBody`'s answer and not
+   *  necessarily the order it was written in. The reflected clause keeps the
+   *  written order, so rule ids and canonical text do not move. */
+  plan: BodyElem[];
 }
+
 
 export interface StagedFact {
   key: string; rel: string; persp: string; args: Term[];
@@ -141,6 +146,104 @@ const PENDING_NEG: PremRef = { t: 'neg', key: '' };
 const PENDING_BI: PremRef = { t: 'bi', desc: '' };
 
 interface FrontInfo { keys: Set<string>; rels: Set<string>; }
+
+/** WHERE A NEGATION MAY STAND, and why the answer cannot be `anywhere`.
+ *
+ *  `not p(X, K)` is read by `negHolds` as `no fact matches`, so with K unbound
+ *  it says `X has no key at all` and with K bound it says `X does not have
+ *  THIS key`. Those are different sentences, and until this function existed
+ *  the one a rule meant was decided by where its author put the comma:
+ *  measured on `par(b,c). par(c,k). own_key(k,k). own_key(c,q).`, the same
+ *  rule gave three rows with the negation second and five with it last.
+ *
+ *  THE NEGATION IS THEREFORE PLACED RATHER THAN READ. Positive premises and
+ *  builtins are consumed in the order they were written; a negation is held
+ *  back until every variable it shares with the rest of the rule is bound, and
+ *  emitted at the first point where that is true. Holding back only negations
+ *  keeps the written order wherever it is already legal — MEASURED over 1965
+ *  rules in 71 .rofl files, the plan differs from the written order in 0 of
+ *  them — and leaves the position of a BUILTIN alone, which is a separate
+ *  choice with a separate meaning (see below).
+ *
+ *  A VARIABLE OCCURRING IN NO OTHER ELEMENT IS A WILDCARD BY ANOTHER NAME.
+ *  `not own_key(X, _)` is existential by construction — a wildcard has no
+ *  second occurrence, so `there is no such fact` is the only reading — and so
+ *  is `not p(Y, Y)` with Y nowhere else. 46 negations here are of that kind
+ *  and they are none of this function's business. A variable shared with a
+ *  second element is the ambiguous case, and there are 0 of those.
+ *
+ *  `stuck` is the first element that can never become ready. The load door
+ *  refuses a clause that has one; the evaluator marks such a rule unsafe,
+ *  which routes it to demand unfolding where the GOAL supplies the bindings —
+ *  the same reading `whynot` gives, which is what the two disagreed about. */
+export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null; stuckVars: string[]; headGround: boolean } {
+  // Which elements each variable occurs in: -1 is the head, otherwise the
+  // body index. A variable confined to ONE negative literal is existential.
+  const seenIn = new Map<string, Set<number>>();
+  const note = (t: Term, where: number) => {
+    for (const v of varsOf(t)) {
+      let s = seenIn.get(v);
+      if (!s) { s = new Set(); seenIn.set(v, s); }
+      s.add(where);
+    }
+  };
+  for (const a of c.head.args) note(a, -1);
+  note(c.head.persp, -1);
+  c.body.forEach((b, i) => {
+    if (b.t === 'bi') { note(b.l, i); note(b.r, i); }
+    else { for (const a of b.lit.args) note(a, i); note(b.lit.persp, i); }
+  });
+
+  const bound = new Set<string>();
+  const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
+  const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
+  const negReady = (b: BodyElem & { t: 'neg' }, i: number): boolean =>
+    [...b.lit.args.flatMap((a) => [...varsOf(a)]), ...varsOf(b.lit.persp)]
+      .every((v) => bound.has(v) || (seenIn.get(v)!.size === 1 && seenIn.get(v)!.has(i)));
+
+  // ONLY NEGATIONS MOVE. Positive premises and builtins are consumed in the
+  // order they were written, ready or not, because THEIR position is a choice
+  // an author already has and this repository already documents: examples/yak
+  // fragment 09 turns on exactly it — `risky(X, Y) :- Y = pair(X, Z), who(X),
+  // tag(X, Z).` is not range-restricted AS WRITTEN and is therefore unfolded
+  // top-down, against the same three premises reordered, which materialises
+  // bottom-up. Letting the plan wait for `=` would silently take that choice
+  // away and make the fragment's two programs one program.
+  //
+  // I MEASURED THAT WIDENING AT ZERO AND THE MEASUREMENT HAD A HOLE: it walked
+  // 71 .rofl files, and this pair lives in a TypeScript string. Restricting
+  // the plan to negations closes the class by construction instead of by scan.
+  const plan: BodyElem[] = [];
+  const pending: number[] = [];
+  const flush = () => {
+    for (;;) {
+      const at = pending.findIndex((i) => negReady(c.body[i] as BodyElem & { t: 'neg' }, i));
+      if (at < 0) return;
+      plan.push(c.body[pending[at]]);
+      pending.splice(at, 1);
+    }
+  };
+  c.body.forEach((b, i) => {
+    if (b.t === 'neg') { pending.push(i); flush(); return; }
+    if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); }
+    else if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
+    else if (b.op === 'is') { if (groundIn(b.r)) bindAll(b.l); }
+    plan.push(b);
+    flush();
+  });
+
+  const headGround = c.head.args.every(groundIn) && groundIn(c.head.persp);
+  if (pending.length === 0) return { plan, stuck: null, stuckVars: [], headGround };
+  const stuck = c.body[pending[0]];
+  // The variables that name the ambiguity: unbound where the plan stopped, and
+  // occurring somewhere else in the rule, which is what makes them bindable in
+  // principle and therefore a question about order rather than an existential.
+  const stuckVars = (stuck as BodyElem & { t: 'neg' }).lit.args
+    .flatMap((a) => [...varsOf(a)])
+    .concat([...varsOf((stuck as BodyElem & { t: 'neg' }).lit.persp)])
+    .filter((v) => !bound.has(v) && (seenIn.get(v)!.size > 1 || !seenIn.get(v)!.has(pending[0])));
+  return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
+}
 
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
@@ -252,12 +355,19 @@ export class Evaluation {
 
   private classify(r: DRule): ERule {
     const bound = new Set<string>();
-    let safe = true;
+    const { plan, stuck } = planBody(r.clause);
+    // A body that cannot be ordered has a negation whose meaning depends on
+    // where it was written. `addClause` refuses such a clause at the door;
+    // one that arrives through a hand-edited snapshot is marked unsafe here,
+    // which is not a strategy choice made to hide it — it is the one place the
+    // bindings come from somewhere other than the written order, namely the
+    // goal, and `unsafe(R)` is already what the audits report.
+    let safe = stuck === null;
     let hasNeg = false;
     const posRels: string[] = [];
     const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
     const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
-    for (const b of r.clause.body) {
+    for (const b of plan) {
       if (b.t === 'pos') {
         posRels.push(b.lit.rel);
         for (const a of b.lit.args) bindAll(a);
@@ -279,7 +389,7 @@ export class Evaluation {
     }
     const h = r.clause.head;
     if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;
-    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set() };
+    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan };
   }
 
   // -------------------------------------------------------------------------
@@ -945,12 +1055,12 @@ export class Evaluation {
   }
 
   private fireRule(r: ERule, frontAt: { pos: number; keys: Set<string> } | null, out: FrontInfo): void {
-    const sols = this.solveBody(r.clause.body, new Map(), 0, frontAt, r.id);
+    const sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id);
     for (const sol of sols) this.conclude(r, sol, out);
   }
 
   private fireRuleFront(r: ERule, cur: FrontInfo, out: FrontInfo): void {
-    r.clause.body.forEach((b, i) => {
+    r.plan.forEach((b, i) => {
       if (b.t !== 'pos') return;
       if (!cur.rels.has(b.lit.rel)) return;
       this.fireRule(r, { pos: i, keys: cur.keys }, out);

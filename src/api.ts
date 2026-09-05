@@ -9,7 +9,7 @@ import {
   factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
 } from './reflect.ts';
-import { Evaluation, StratificationError, BudgetExhausted, type StagedFact, sigOf } from './engine.ts';
+import { Evaluation, StratificationError, BudgetExhausted, planBody, type StagedFact, sigOf } from './engine.ts';
 import { RoundEvaluation } from './rounds.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
@@ -50,6 +50,44 @@ export interface EvalOpts {
   retainTicks?: number;
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
+}
+
+/** REFUSED AT THE DOOR: a negation whose meaning depends on where it stands.
+ *
+ *  `not p(X, K)` says `X has no p at all` with K unbound and `X has no p with
+ *  THIS K` with K bound, and until `planBody` existed the reading was decided
+ *  by the comma. Planning fixes the reading for every rule that has one; this
+ *  refuses the rules that have neither, rather than picking one for the author.
+ *
+ *  ONLY A STUCK NEGATION IS REFUSED. A builtin that can never be ground is
+ *  stuck too and keeps its long-standing verdict — unsafe, and unfolded on
+ *  demand — because that case was already checked and already announced, and
+ *  widening a refusal is not this change's business.
+ *
+ *  MEASURED BEFORE IT WAS WRITTEN, over 1965 rules in 71 .rofl files: 0 are
+ *  refused by this. 46 negations leave a variable unbound and every one of
+ *  them is confined to its own literal, which is a wildcard by another name
+ *  and reads existentially by construction; 9 more are bound by a builtin,
+ *  which the plan waits for. So the door costs nothing today and exists for
+ *  the rule nobody has written yet. */
+function checkOrderable(c: Clause): string | null {
+  const { stuck, stuckVars, headGround } = planBody(c);
+  if (!stuck || stuck.t !== 'neg') return null;
+  // ONLY A RULE THAT WOULD OTHERWISE PASS SILENTLY. A rule whose head is not
+  // range-restricted is already unsafe, already reported by the audit that
+  // computes range restriction in ROFL, and already unfolded top-down where
+  // the goal binds. Refusing it here would add nothing and would take away the
+  // one thing that check needs: a program that violates it and loads, so the
+  // audit has something to find. That is not hypothetical — test/head-vars
+  // loads `negonly(Q) :- not tag(Q).` on purpose, and the first version of
+  // this door refused it and took the oracle down with it.
+  if (!headGround) return null;
+  const vars = stuckVars.map((v) => v.startsWith('_$') ? '_' : v).join(', ');
+  return `rule ${canonClause(c)}: no premise binds ${vars} before `
+    + `'not ${stuck.lit.rel}/${stuck.lit.args.length}', so what the negation asks `
+    + `would depend on where it is written -- unbound it asks whether ANY such fact exists, `
+    + `bound it asks about that one. Bind ${vars} in a positive premise, or write `
+    + `'_' if the existential reading is what is meant.`;
 }
 
 export class Rofl {
@@ -349,6 +387,8 @@ export class Rofl {
     if (badWho) return badWho;
     const badArity = this.checkArity(c);
     if (badArity) return badArity;
+    const badOrder = checkOrderable(c);
+    if (badOrder) return badOrder;
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
@@ -738,10 +778,17 @@ export class Rofl {
     const failures = new Map<string, Lit | null>();
     const note = (k: string, sub: Lit | null) => { if (!failures.has(k)) failures.set(k, sub); };
     let nodes = 0;
+    // THE SAME ORDER THE EVALUATOR SOLVES IN, and the two disagreed about
+    // exactly this. `whynot` is top-down, so the goal has already bound the
+    // head's arguments and its negation was read with them bound while the
+    // bottom-up run read the same negation with them free — which is how the
+    // one instrument that explains absence came to answer `no failing premise
+    // found` about a fact the evaluator had refused to derive.
+    const body = planBody(rn).plan;
     const explore = (k: number, s: Subst): void => {
       if (nodes++ > 2000) return;
-      if (k >= rn.body.length) return; // a derivation branch survives (demand)
-      const b = rn.body[k];
+      if (k >= body.length) return; // a derivation branch survives (demand)
+      const b = body[k];
       if (b.t === 'pos') {
         const mm = ev.matchPremise(b.lit, s, 0, null);
         if (mm.length === 0) note(ev.resolvedLitKey(b.lit, s), instantiate(b.lit, s));

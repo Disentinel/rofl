@@ -51,20 +51,27 @@ test('locals resolve lexically, so two loops sharing a name are not a dependency
     'the demand block really does read the list the decode block built');
 });
 
-test('the before-A blocks form a DAG, and there are eight of them now', () => {
+test('the before-A blocks form a DAG, and there are nine of them now', () => {
   const cyclic = sccs(BEFORE_A, IND).filter((c) => c.length > 1);
-  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the eight');
+  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the nine');
   // six when this was written; `stratumCone` made it seven and `scheduleToken`
-  // — the seam the round evaluator overrides — makes it eight. The ladder
-  // absorbed each without a cycle, which is the claim under test.
-  assert.equal(BEFORE_A.length, 8);
+  // — the seam the round evaluator overrides — makes it eight; `planBody`,
+  // which decides where a negation may stand, makes it nine and lands BELOW
+  // `classify`, since classify now reads the plan. The ladder absorbed each
+  // without a cycle, which is the claim under test.
+  assert.equal(BEFORE_A.length, 9);
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
 test('the ladder: four rungs, and safety is the bottom one', () => {
   const layout = tiers(BEFORE_A, IND).map((layer) => layer.map(nm).sort());
+  // MEASURED, and it corrected me. I expected `classify` to sit ABOVE
+  // `planBody`, since classify calls it — and the graph does not see that edge,
+  // because it induces edges from `this.<method>(` calls and `planBody` is a
+  // free function. So the two share the bottom rung. The dependency is real and
+  // this instrument is blind to it; recorded rather than asserted away.
   assert.deepEqual(layout, [
-    ['classify', 'readStrata'],                      // range restriction; the stratum MAX (a sink here)
+    ['classify', 'planBody', 'readStrata'],          // range restriction; where a negation may stand; the stratum MAX
     ['prepare', 'scheduleToken', 'stratumCone'],     // reserved head; the stratum cone; the schedule token
     ['demandSet'],                                   // the demand set — reads `safe`
     ['runGate', 'runWellFounded'],                   // what runs at all; well-founded admissibility
