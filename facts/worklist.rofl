@@ -184,9 +184,28 @@ claim(queued, js, yield_expression,          none, dataflow, w_df_generator_prot
 -- model then needs describing. It claims no cell BECAUSE THERE ARE NONE UNTIL
 -- IT RUNS, which is the honest shape of this item and the reason it is ordered
 -- after the layer that will demand it.
-work(w_controlflow_layer, "add layer(controlflow) — one fact — and answer whatever it enumerates").
+-- DONE 2026-09-04, and the claim held literally. `layer(controlflow).` opened
+-- FIFTY cells and put FORTY-FIVE of them on `unqueued[audit]` before the facts
+-- file had a second line — measured, not argued, and recorded at the top of
+-- facts/js-controlflow.rofl. What the layer answers is six kinds by two
+-- mechanisms; what it waives is `await` and `yield`, which transfer control and
+-- come BACK; what it leaves open is `return`, which needs statement order.
+work(w_controlflow_layer, "DONE 2026-09-04: layer(controlflow) is one fact, it opened 50 cells, and six kinds are answered by two mechanisms").
 work_order(w_controlflow_layer, 10).
-work_state(w_controlflow_layer, open).
+work_state(w_controlflow_layer, done).
+work_spawned(w_controlflow_layer, f_one_fact_opened_fifty_cells_and_the_claim_was_never_run).
+work_spawned(w_controlflow_layer, f_over_approximation_had_two_causes_wearing_one_label).
+work_spawned(w_controlflow_layer, f_no_world_that_could_fail_the_leak_audit_had_ever_been_asked).
+work_spawned(w_controlflow_layer, f_the_plan_had_no_check_that_its_order_is_an_order).
+
+-- 22 — WHAT THE THIRD LAYER LEFT OPEN. Everything after a `return` in the same
+-- block is unreachable, and this layer has no term for statement ORDER — every
+-- rule in it reads a parent/child position, never a sequence. `throw`, `break`
+-- and `continue` join it the day the corpus grows one.
+work(w_cf_abrupt_transfer, "unreachable after return/throw/break/continue: the layer needs statement order within a block").
+work_order(w_cf_abrupt_transfer, 22).
+work_state(w_cf_abrupt_transfer, open).
+claim(queued, js, return_statement, none, controlflow, w_cf_abrupt_transfer).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
@@ -208,6 +227,15 @@ work(w_mod_sweep, "modules residue: kinds that cannot appear in a module graph")
 work_order(w_mod_sweep, 13).
 work_state(w_mod_sweep, open).
 work_sweeps(w_mod_sweep, modules).
+
+-- ...and the fourth sweep, which the third layer created the moment it was
+-- declared. Its residue is the largest of the four because most kinds transfer
+-- no control at all — an identifier, a literal, a property — and that is
+-- arithmetic rather than judgement, which is exactly what a sweep is for.
+work(w_cf_sweep, "controlflow residue: kinds that transfer no control").
+work_order(w_cf_sweep, 23).
+work_state(w_cf_sweep, open).
+work_sweeps(w_cf_sweep, controlflow).
 
 -- 14 — RAISED BY THE WORK IT CAME OUT OF, and deliberately not done in it.
 -- `new C()` and the name `C` both reach the class node, so the model does not

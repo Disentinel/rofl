@@ -173,6 +173,15 @@ work_stateless[audit](W)      :- work(W, _), not stated_state(W).
 work_bad_state[audit](W, S)   :- work_state(W, S), not work_state_kind(S).
 work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
 
+-- TWO ITEMS AT ONE POSITION. `next_work` picks the takeable item with no
+-- earlier takeable one, so a duplicated order is not an error the model can
+-- feel — it simply hands out whichever the join reaches first, and the plan
+-- stops being an ORDER while still looking like one. FOUND BY HAND on
+-- 2026-09-04, with awk over the fact file, when the fourth sweep was given a
+-- number another item already had: exactly the kind of check that should never
+-- have needed a shell pipeline in a repository where the plan is derived.
+order_collision[audit](A, B, N) :- work_order(A, N), work_order(B, N), A != B.
+
 -- ---------------------------------------------------------------------------
 -- DEPENDENCIES, ADDED 2026-09-04 BECAUSE THREE OF THEM WERE ALREADY REAL AND
 -- LIVED ONLY IN PROSE. `w_cg_call_result` said `waits on dataflow returns` in

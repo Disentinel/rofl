@@ -575,7 +575,14 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // function that is instrumented and legitimately silent, and it is named
   // here rather than tolerated — if it ever reports, the trap has stopped
   // trapping, and if anything else falls silent, that goes red too.
-  const NEVER_CALLED = ['pickA'];
+  // TWO functions are instrumented and legitimately silent, and they are silent
+  // for COMPLETELY DIFFERENT REASONS — which is the distinction the third layer
+  // was added to make. `pickA` is a VALUE decoy: `const pickA = "pickB"` means
+  // `two[pickA]()` runs pickB, and the model does not derive an edge to pickA
+  // at all. `unreached` is a CONTROL decoy: the model DOES derive
+  // `useGuard -> unreached`, correctly, and the program branches around it.
+  // Listing them together as "expected exceptions" would lose exactly that.
+  const NEVER_CALLED = ['pickA', 'unreached'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -631,8 +638,16 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // never `useForOfGen -> pick`. The model's edge is right about the SOURCE and
   // the oracle's is right about the FRAMES; they name different things, and the
   // difference is the oracle's naming rather than a rule's mistake.
-  assert.deepEqual(extra, ['useForOfGen -> pick'],
-    `over-approximation is exactly the generator frame: ${extra.join(', ')}`);
+  // TWO ENTRIES, TWO CAUSES, and the list is what keeps them apart. The first
+  // is the oracle's naming: V8 attributes a generator body's first resume to
+  // `%GeneratorPrototype%.next`, so the oracle edge is `next -> pick`. The
+  // second is CONTROL FLOW: the model derives `useGuard -> unreached` correctly
+  // and the program branches around it — `may_not_run[code]` in
+  // rules/js-controlflow.rofl names `unreached` for exactly this reason, and
+  // test/js-controlflow.test.ts asserts that every silent callee is covered.
+  // Under a bound these two would have been one number.
+  assert.deepEqual(extra, ['useForOfGen -> pick', 'useGuard -> unreached'],
+    `over-approximation, by cause: ${extra.join(', ')}`);
 });
 
 // ===========================================================================
@@ -734,7 +749,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 67, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 70, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

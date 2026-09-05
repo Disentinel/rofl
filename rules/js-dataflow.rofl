@@ -537,3 +537,20 @@ may_be_node[flow](E, N) :- plain_assign[flow](E),
                            ast_child[code](E, right, 0, X), may_be_node[flow](X, N).
 may_be_lit[flow](E, V)  :- plain_assign[flow](E),
                            ast_child[code](E, right, 0, X), may_be_lit[flow](X, V).
+
+-- ===========================================================================
+-- THE CROSSINGS THIS LAYER PERFORMS, DECLARED — and they had never been
+-- declared, because no test had ever asked. `leak[audit]` was asserted at zero
+-- in two worlds that do not load this file and in a third that does not either;
+-- the first world to load rules/js-dataflow.rofl AND look was
+-- test/js-controlflow.test.ts on 2026-09-04, and it found five rows that had
+-- been standing since the value layer was written.
+--
+-- All five are real and all five are intended:
+--   code  -> flow   every rule here reads the scanner's tree and writes a value
+--   main  -> flow   ...and reads the unperspectived tables that classify kinds
+--                   (`node_value_kind`, `value_transparent`, `literal_kind`)
+--   $kernel -> flow the `edb` declarations above are kernel reflection
+imports(flow, code).
+imports(flow, main).
+imports(flow, $kernel).

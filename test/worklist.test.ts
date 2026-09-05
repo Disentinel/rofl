@@ -29,8 +29,14 @@ import { Rofl } from '../src/api.ts';
 const ROOT = new URL('../', import.meta.url);
 const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 
+// `facts/js-controlflow.rofl` joined 2026-09-04 and it is not optional: it
+// carries `layer(controlflow).`, and without it the plan's claim on
+// `return_statement x controlflow` points at a cell that does not exist —
+// `queue_stale[audit]` said so on the first run, which is the plan and the
+// model disagreeing about which world they are in.
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
-  'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl', 'facts/findings.rofl'];
+  'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl',
+  'facts/js-controlflow.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string }
@@ -124,26 +130,26 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     ['w_body_order_is_load_bearing',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
+     'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
      'w_env_ledger_form', 'w_env_scan_failed',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
-  // Three items have come off the front since: `w_cg_member_family` skipped
-  // once its catch-all split left only the blocked template key,
-  // `w_cg_call_result` done, and `w_df_control_forms` done — four of its five
-  // cells, with the fifth handed to an item of its own rather than ticked
-  // half-true.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer'],
-    'the dataflow control forms are settled, so the control-flow LAYER is next');
+  // FOUR items have come off the front, and the last of them was the one this
+  // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
+  // fifty cells — so what is left at the head is arithmetic, the call-graph
+  // residue sweep.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_sweep'],
+    'the third layer is declared, so the sweeps are what is left');
 });
 
-test('the queue covers the model: 76 open cells, 17 claimed by name, 70 swept', () => {
+test('the queue covers the model: 113 open cells, 18 claimed by name, 106 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 76, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 113, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
   // found it, not because it was foreseen.
-  assert.equal(w.n('work(W, Note)'), 21);
+  assert.equal(w.n('work(W, Note)'), 23);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -156,6 +162,10 @@ test('the queue covers the model: 76 open cells, 17 claimed by name, 70 swept', 
   assert.deepEqual(per('callgraph'), [23, 11, 19]);
   assert.deepEqual(per('dataflow'), [14, 6, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
+  // THE FOURTH LAYER, thirty-seven cells old. One claimed by name — `return`,
+  // which needs statement order — and thirty-six swept, because most kinds
+  // transfer no control at all and that is arithmetic.
+  assert.deepEqual(per('controlflow'), [37, 1, 36]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -253,7 +263,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_sweep']);
   // ONE dependency is live now and it is DELIBERATE: `w_env_ledger_form` waits
   // on `w_leak_variable_on_the_right`, a kernel question the owner has said to
   // hold. That is the relation doing its job on a real premise rather than on a
@@ -264,9 +274,12 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
-  const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
+  // THE PLANTED DEPENDENCY MOVED 2026-09-04: it pointed at `w_controlflow_layer`,
+  // which is now DONE, so the dependency was satisfied and blocked nothing. It
+  // has to name an item that is still open to plant anything at all.
+  const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.equal(mut.n('blocked[audit](W)'), 2, 'the planted one on top of the real one');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_controlflow_layer'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_sweep'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
@@ -274,7 +287,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
 test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
   const unknown = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_no_such_item).' });
   assert.equal(unknown.n('needs_unknown[audit](W, O)'), 1);
-  const cyc = world({ extra: 'work_needs(w_controlflow_layer, w_cg_syntactic_wrappers).\nwork_needs(w_cg_syntactic_wrappers, w_controlflow_layer).' });
+  const cyc = world({ extra: 'work_needs(w_cf_abrupt_transfer, w_cg_syntactic_wrappers).\nwork_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.ok(cyc.n('needs_cycle[audit](W)') >= 2, 'both ends of the loop are named');
   console.log(`  KILLED: needs_unknown 1, needs_cycle ${cyc.n('needs_cycle[audit](W)')}`);
 });

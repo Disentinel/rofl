@@ -1,0 +1,156 @@
+-- js-controlflow.rofl — THE THIRD LAYER, and it exists to answer a question the
+-- call graph cannot: not WHICH function a site reaches, but WHETHER the site
+-- runs at all.
+--
+-- WHY THIS LAYER EARNS ITS CELLS. The call-graph acceptance measures the model
+-- against a running program and reports two error directions: an edge the
+-- runtime took and the model missed (UNSOUND), and an edge the model derived
+-- and the runtime never took (over-approximation). The second list has been a
+-- flat one, and it conflates two completely different things — an edge the
+-- oracle CANNOT SEE because of how V8 names frames, and an edge that really was
+-- not taken because the program branched around it. Only the second is control
+-- flow, and until this layer existed nothing could tell them apart.
+--
+-- IT WRITES INTO [code], like the call graph and the modules layer, and not
+-- into a ledger of its own. The dataflow layer has `[flow]` because it answers
+-- a different KIND of question — what a value may be, rather than what the
+-- syntax is — and everything here is a fact about a position in the tree.
+
+-- ---------------------------------------------------------------------------
+-- 1. A POSITION THAT ONLY RUNS SOMETIMES. One row per (parent, arm), and the
+--    vocabulary is closed: `guard_kind` below is what this layer claims to know
+--    about, and `guard_unmodelled[audit]` reports a kind that branches and is
+--    not in it.
+edb(guard_kind).            -- guard_kind(Kind, Field)   an arm that may be skipped
+guard_kind(if_statement,               consequent).
+guard_kind(if_statement,               alternate).
+guard_kind(conditional_expression,     consequent).
+guard_kind(conditional_expression,     alternate).
+-- `a && b` and `a || b` and `a ?? b` evaluate the RIGHT operand only sometimes;
+-- the left always runs. This is the same operator-carries-the-meaning lesson
+-- the era layer paid for, arriving where it does not matter: all three
+-- short-circuit, so the KIND is enough here and no `operator` guard is needed.
+guard_kind(logical_expression,         right).
+-- a loop body may run zero times
+guard_kind(for_of_statement,           body).
+
+guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+                         ast_child[code](P, Field, 0, A).
+
+-- ...and everything inside such an arm inherits the condition.
+guarded[code](A) :- guard_arm[code](_, A).
+guarded[code](N) :- guard_arm[code](_, A), ast_within[code](A, N).
+
+-- ---------------------------------------------------------------------------
+-- 2. WHAT IT SAYS ABOUT CALLS. A site inside a guarded position may not run,
+--    and a function every one of whose call sites is guarded may never be
+--    entered at all.
+--
+-- THE NEGATION IS LAST, and that is not style: written before the literal that
+-- binds `F`, it would be evaluated with `F` unbound and read as "nothing
+-- unguarded resolves anywhere". Measured yesterday on `member_value`, recorded
+-- as f_body_order_changes_the_answer_and_whynot_cannot_see_it, and the reason
+-- the order is worth a comment on every rule of this shape until the kernel is
+-- fixed.
+guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
+reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
+may_not_run[code](F)       :- resolves[code](_, F), not reached_unguarded[code](F).
+
+-- ONE LEVEL, DECLARED. A function called unguarded from a function that itself
+-- may never run is NOT reported: this asks about the site, not about the walk.
+-- The transitive form is a reachability question and it wants the layer to have
+-- an entry point first — `main` is one here only by convention, and a model
+-- that guessed at entry points would be answering a question nobody asked.
+-- `may_not_run_transitive` is deliberately absent rather than approximated.
+
+-- ---------------------------------------------------------------------------
+-- 3. THE GATES.
+
+-- A KIND THAT TRANSFERS CONTROL AND IS NOT ACCOUNTED FOR. The first draft had
+-- ONE relation, `branching_kind`, and the gate named five kinds in its first
+-- run: `await`, `yield`, `return`, and both optional forms. They are not one
+-- thing, and putting them in one bucket would have given four different
+-- mechanisms one verdict — the defect `s_member_on_other` already paid for.
+--
+--   SKIP AN ARM        an if/conditional arm, a `&&` right side, a loop body:
+--                      the arm may be skipped and everything in it with it.
+--                      Modelled, above.
+--   SHORT-CIRCUIT      `a?.b()`: nothing is skipped by POSITION — the whole
+--                      node stops evaluating when the object is nullish, so
+--                      the guarded thing is the site itself, not a child.
+--                      Modelled, below.
+--   SUSPEND            `await`, `yield`: control leaves and COMES BACK. The
+--                      code after them runs; it merely runs later. Waived —
+--                      this layer asks whether a site runs, and the answer for
+--                      a suspension is yes.
+--   ABRUPT             `return` (and `throw`, `break`, `continue` when the
+--                      corpus grows them): everything after it in the same
+--                      block is unreachable. REAL and NOT MODELLED: it is a
+--                      question about statement ORDER within a block, which
+--                      nothing in this layer expresses yet.
+edb(transfer_mechanism).    -- transfer_mechanism(Kind, Mechanism)
+transfer_mechanism(if_statement,               skip_arm).
+transfer_mechanism(conditional_expression,     skip_arm).
+transfer_mechanism(logical_expression,         skip_arm).
+transfer_mechanism(for_of_statement,           skip_arm).
+transfer_mechanism(optional_call_expression,   short_circuit).
+transfer_mechanism(optional_member_expression, short_circuit).
+transfer_mechanism(await_expression,           suspend).
+transfer_mechanism(yield_expression,           suspend).
+transfer_mechanism(return_statement,           abrupt).
+
+edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
+mechanism_modelled(skip_arm).
+mechanism_modelled(short_circuit).
+edb(mechanism_waived).      -- mechanism_waived(M, Reason)
+mechanism_waived(suspend, a_control_returns_so_the_site_still_runs).
+
+-- THREE STATES, NOT TWO. The first draft had modelled and waived, and `abrupt`
+-- was neither — so `mechanism_unanswered[audit]` stood at one, permanently, for
+-- a mechanism nobody had forgotten. AN AUDIT THAT IS RED ON AN HONEST TREE GETS
+-- SWITCHED OFF, and this repository has paid for that once already. Declaring
+-- the openness with its OWNER keeps the row queryable and the audit at zero,
+-- which is the same move `cell_blocked` makes for a cell nobody can take.
+edb(mechanism_open).        -- mechanism_open(M, WorkItem)
+mechanism_open(abrupt, w_cf_abrupt_transfer).
+
+mechanism_known(M) :- mechanism_modelled(M).
+mechanism_known(M) :- mechanism_waived(M, _).
+mechanism_known(M) :- mechanism_open(M, _).
+
+-- A MECHANISM WITH NO OPINION AT ALL: not modelled, not waived, not declared
+-- open. A kind carrying one is silently read as unconditional — the WRONG
+-- direction, since it makes the guarded set too small and `may_not_run` too
+-- narrow, and a may-set that is too narrow is a claim rather than a hedge.
+mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(M).
+
+-- ...and the same question one level down: a kind carrying a MODELLED mechanism
+-- that no rule of this layer actually reaches.
+guard_named[code](K)       :- guard_kind(K, _).
+guard_named[code](K)       :- short_circuit_kind(K).
+guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
+                              ast_node[code](_, K, _, _), not guard_named[code](K).
+
+-- ---------------------------------------------------------------------------
+-- SHORT-CIRCUIT. `a?.b()` does not skip a CHILD — it stops the whole chain when
+-- the object is nullish, so the site itself is conditional, and so is anything
+-- further along the same member chain.
+edb(short_circuit_kind).
+short_circuit_kind(optional_call_expression).
+short_circuit_kind(optional_member_expression).
+
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _, _).
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _, _),
+                    ast_within[code](P, N).
+
+-- AN ARM DECLARED FOR A FIELD THE SCANNER NEVER EMITS UNDER THAT KIND — a typo
+-- in `guard_kind` is otherwise invisible: the row simply matches nothing and
+-- the guarded set is quietly smaller.
+guard_arm_seen[code](K, Field) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+                                  ast_child[code](P, Field, 0, _).
+guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _, _),
+                                  not guard_arm_seen[code](K, F).
+
+-- A GUARDED SITE AT A COORDINATE, so the report can point at the source and the
+-- acceptance can join it against what the runtime did.
+guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File, Line).

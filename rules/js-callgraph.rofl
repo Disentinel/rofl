@@ -546,3 +546,12 @@ callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _, _)
 callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _, _).
 callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _, _).
 kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
+
+-- THE CALL GRAPH READS THE VALUE LAYER, which is the whole shape of this model
+-- since resolution collapsed into one rule: `resolves` asks what the callee
+-- expression may BE. Declared here rather than in rules/js-dataflow.rofl,
+-- because the crossing belongs to the reader.
+imports(code, flow).
+-- ...and the audits over both. `imports(audit, code)` is in rules/js-model.rofl;
+-- this is its twin for the ledger the value questions live in.
+imports(audit, flow).

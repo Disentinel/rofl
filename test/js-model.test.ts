@@ -761,7 +761,7 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 160, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(sites, 166, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 28,
     'positive control: 28 distinct shapes; eight object positions split out of the catch-all 2026-09-04');
 
@@ -862,8 +862,10 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // of the catch-all (+8), a three-level class chain for `super()` (+4) and the
   // control forms (+9: for-of over an array and over a generator, each reaching
   // two functions, await through an async call, and the generator's own body —
-  // whose caller frame V8 names `next`, not the enclosing function).
-  assert.equal(oracleEdges.size, 73, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // whose caller frame V8 names `next`, not the enclosing function), and the
+  // guarded pair (+2: main->useGuard and useGuard->guardedElse; `unreached` is
+  // the one the program branches around and the oracle never sees it).
+  assert.equal(oracleEdges.size, 75, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.

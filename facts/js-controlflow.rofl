@@ -1,0 +1,46 @@
+-- js-controlflow.rofl — THE THIRD LAYER, ADDED AS ONE FACT.
+--
+-- `layer(controlflow).` is the whole declaration, and the programme's central
+-- claim is that the model then lights up every place it needs describing. That
+-- claim had never been run. It was, before this file had a second line:
+--
+--     layer(L)                              3  ->    4
+--     cell[audit](A, K, S, L)             179  ->  229
+--     open_cell[audit](K, S, L)            76  ->  121
+--     unqueued[audit](K, S, L)              0  ->   45
+--
+-- Fifty cells from one fact, forty-five of them work the plan was silent about,
+-- each named by kind. Nothing had to be enumerated by hand and nothing could be
+-- forgotten, which is the property the matrix exists for.
+--
+-- The rest of this file is the answer to what that fact enumerated.
+layer(controlflow).
+
+-- ---------------------------------------------------------------------------
+-- WHAT THE LAYER ANSWERS. Six kinds, and the split is by MECHANISM rather than
+-- by kind — rules/js-controlflow.rofl carries the vocabulary and the audits
+-- that keep it closed.
+handled(js, if_statement,               controlflow, r_guard_arm).
+handled(js, conditional_expression,     controlflow, r_guard_arm).
+handled(js, logical_expression,         controlflow, r_guard_arm).
+handled(js, for_of_statement,           controlflow, r_guard_arm).
+handled(js, optional_call_expression,   controlflow, r_short_circuit).
+handled(js, optional_member_expression, controlflow, r_short_circuit).
+
+-- ---------------------------------------------------------------------------
+-- WHAT IT WAIVES, with the reason. `await` and `yield` transfer control and do
+-- NOT guard anything: control comes back, and the code after them runs — later,
+-- but it runs. This layer asks whether a site runs at all, and for a suspension
+-- the answer is yes. Filing them as guards would have made `may_not_run`
+-- report functions that always run.
+ignored(js, await_expression, controlflow, a_control_returns_so_the_site_still_runs).
+ignored(js, yield_expression, controlflow, a_control_returns_so_the_site_still_runs).
+
+-- ---------------------------------------------------------------------------
+-- WHAT IT LEAVES OPEN, and it is one kind with a real question behind it.
+-- Everything after a `return` in the same block is unreachable, which is a fact
+-- about statement ORDER within a block — and nothing in this layer expresses
+-- order at all. It is `not_yet` in the ordinary sense: real work, owned by
+-- w_cf_abrupt_transfer, and `mechanism_open(abrupt, ...)` in the rules is the
+-- machine-readable half of this sentence.
+unknown_because(js, return_statement, controlflow, not_yet).

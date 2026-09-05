@@ -230,6 +230,38 @@ async function useAwait(n) {
   return awaited(n);
 }
 
+// ---- A CALL THE PROGRAM BRANCHES AROUND. `unreached` is instrumented and
+// never runs, and the reason is CONTROL FLOW rather than value: the model
+// derives `useGuard -> unreached` correctly — the site is there and it resolves
+// — and the runtime never takes it. That edge is over-approximation the call
+// graph cannot explain and rules/js-controlflow.rofl can, which is the whole
+// argument for the third layer being worth its cells.
+//
+// It is the SECOND deliberately silent function here. `pickA` is the other, and
+// the two are silent for completely different reasons — `pickA` because a value
+// points elsewhere, this one because a branch is not taken — so the census
+// distinguishes them rather than listing both as expected exceptions.
+//
+// THE `else` IS NOT DECORATION. `guard_arm_unseen[audit]` named
+// `if_statement/alternate` the first run this fixture had an `if` at all: the
+// arm was declared in the vocabulary and no corpus site exercised the rule that
+// reads it. `guardedElse` is that site, and it is the contrast that makes the
+// pair worth having — one guarded call the run takes, one it does not, and
+// `may_not_run` names BOTH because it is a may-set and does not know which.
+function unreached(n) {
+  trace();
+  return n - 1;
+}
+function guardedElse(n) {
+  trace();
+  return n * 2;
+}
+function useGuard(n) {
+  trace();
+  if (n < 0) { return unreached(n); }
+  else { return guardedElse(n); }
+}
+
 // ---- computed callee: dynamic key, then literal key
 const table = {
   pick(n) {
@@ -386,6 +418,7 @@ export async function main() {
     useSuper(1),
     useForOfArray(1),
     useForOfGen(1),
+    useGuard(1),
     await useAwait(1),
     run(1),
     seeded,
