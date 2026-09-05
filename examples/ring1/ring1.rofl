@@ -344,7 +344,15 @@ uncovered(K) :- tokstart(K), not covered(K).
 -- compares files the host accepts. The brace and the hash were unclassified,
 -- an unclassified character makes no token, and `uncovered` quantifies over
 -- `tokstart`. So the invariant has to be stated over CHARACTERS.
-in_tok(K) :- tok(I, J), at(K), I <= K, K <= J.
+-- A SPAN WALK, not a cross join. `tok(I, J), at(K), I <= K, K <= J` asks the
+-- evaluator for every (token, character) pair and throws away all but the ones
+-- inside — 30 tokens times 82 characters on one clause. Walking each token's
+-- own span is linear in the file. MEASURED, arms interleaved in one process:
+-- 88.0 ms with the cross join, 85.0 with this, 81.4 with no character coverage
+-- at all — so the invariant costs 7.4% and this pays half of it back.
+spanto(I, I)  :- tok(I, J).
+spanto(I, K2) :- spanto(I, K), tok(I, J), K < J, K2 is K + 1.
+in_tok(K)     :- spanto(I, K).
 white(K)  :- kind(K, space).
 white(K)  :- kind(K, nl).
 -- The two dashes of a comment stand in `code` state - the scanner only enters

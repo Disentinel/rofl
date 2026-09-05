@@ -40,6 +40,11 @@ const SWEEP_CAP = 1200;
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 const hostCanon = (src: string) => parseProgram(src).map(canonClause).sort().join('\n');
+/** Every .rofl file in the tree, absolute, sorted. */
+const roflFiles = (): string[] => (fs.readdirSync(ROOT, { recursive: true } as any) as string[])
+  .filter((f) => typeof f === 'string' && f.endsWith('.rofl') && !f.includes('node_modules'))
+  .map((f) => path.join(ROOT, f))
+  .sort();
 
 test('ring 1 agrees with the host parser, clause for clause', () => {
   const src = 'edb(flow).\n-- a comment\n'
@@ -126,32 +131,58 @@ test('an unfinished evaluation is not a parse', () => {
     'the planted budget must actually cut the evaluation, or this gate is asleep');
 });
 
-test('corpus floor: ring 1 parses real files identically, and refuses the rest loudly', () => {
-  const files = (fs.readdirSync(ROOT, { recursive: true } as any) as string[])
-    .filter((f) => typeof f === 'string' && f.endsWith('.rofl') && !f.includes('node_modules'))
-    .map((f) => path.join(ROOT, f))
-    .filter((f) => fs.statSync(f).size <= SWEEP_CAP)
-    .sort();
-  let same = 0, refused = 0, silent = 0;
-  for (const f of files) {
+test('corpus floor: ring 1 agrees on every SHAPE it is given, not every byte', () => {
+  // THE UNIT OF COVERAGE IS A CONSTRUCT, NOT A FILE. The old gate parsed whole
+  // files as one chart, which is why it was capped at 1200 bytes and saw 10 of
+  // the 70 files the host parses. Two measurements moved it:
+  //
+  //   * a clause is the unit — `clauses()` agrees with the host on all 70 files
+  //     — so the cost is linear in clauses instead of cubic in file size;
+  //   * the corpus holds 6855 clauses and only 932 DISTINCT SHAPES, where a
+  //     shape is the canonical clause with every leaf replaced by its sort.
+  //     Parsing 144 facts of one shape says what parsing one of them says.
+  //
+  // So the cap is now a number of SHAPES, and every file contributes to the
+  // pool. Measured 2026-09-05: about 90 ms a clause, so 200 shapes is ~18 s.
+  const SHAPES = 200;
+  const shapeOf = (c: ReturnType<typeof parseProgram>[number]) => canonClause(c)
+    .replace(/"(\\.|[^"])*"/g, 'S').replace(/\b-?[0-9]+\b/g, 'N')
+    .replace(/\?[A-Za-z_0-9$]+/g, 'V').replace(/[a-z_][a-z_0-9]*/g, 'a');
+  const pool = new Map<string, { src: string; want: string; file: string }>();
+  for (const f of roflFiles()) {
     const src = fs.readFileSync(f, 'utf8');
+    let host: ReturnType<typeof parseProgram>;
+    try { host = parseProgram(src); } catch { continue; }
+    const parts = clauses(src);
+    if (parts.length !== host.length) continue;   // the splitter gate owns this
+    for (let i = 0; i < parts.length; i++) {
+      const k = shapeOf(host[i]);
+      if (!pool.has(k)) pool.set(k, { src: parts[i], want: canonClause(host[i]), file: path.basename(f) });
+    }
+  }
+  // SHORTEST FIRST, so the bound buys the most shapes it can: a long
+  // representative costs more and says no more than a short one of the same
+  // shape does.
+  const chosen = [...pool.values()].sort((a, b) => a.src.length - b.src.length).slice(0, SHAPES);
+  assert.equal(pool.size > 900, true, `expected the corpus's shape pool, got ${pool.size}`);
+
+  const img = image();
+  let same = 0, refused = 0; const silent: string[] = [];
+  for (const c of chosen) {
     try {
-      if (canon(parse(src).clauses) === hostCanon(src)) same++; else silent++;
+      const got = parse(c.src, fromImage(img)).clauses.map(canonClause).join('\n');
+      if (got === c.want) same++;
+      else silent.push(`${c.file}: want ${c.want.slice(0, 60)} | got ${got.slice(0, 60)}`);
     } catch (e) { if (e instanceof IncompleteParse) refused++; else throw e; }
   }
-  // A FLOOR, not a target: it is expected to rise as the grammar grows, and a
-  // fall means a regression. The silent count is the one that must not grow —
-  // those are files where ring 1 returns a different program without saying so.
-  console.log(`    ring 1 over ${files.length} files: ${same} identical, ${refused} refused, ${silent} silent`);
-  assert.ok(same >= SAME_FLOOR, `expected at least ${SAME_FLOOR} identical, got ${same}`);
-  assert.ok(silent <= SILENT_CEILING, `silent divergences rose to ${silent}; the ceiling is ${SILENT_CEILING} — every file must be either byte-identical or loudly refused`);
-  assert.ok(refused + same + silent === files.length);
+  console.log(`    ring 1 over ${chosen.length} of ${pool.size} shapes: ${same} identical, ${refused} refused, ${silent.length} silent`);
+  // A SILENT DIVERGENCE IS THE ONLY UNACCEPTABLE CATEGORY: a refusal names its
+  // offset, an agreement is an agreement, and a different program returned
+  // without a word is the failure this whole exercise exists to refuse.
+  assert.deepEqual(silent, []);
+  assert.equal(same + refused, chosen.length);
+  assert.ok(same >= SHAPES - 5, `expected nearly every shape to agree, got ${same} of ${chosen.length}`);
 });
-
-// --- the image ------------------------------------------------------------
-//
-// Ring 1 compiled ahead of time. The image is a CACHE and never a source of
-// truth, and the gate that keeps it one is here: rebuild it and compare.
 
 test('the image restores to the same world its sources build', () => {
   const img = image();
@@ -167,15 +198,23 @@ test('the image is REPRODUCIBLE from source, and the comparison is not on bytes'
   // is a log of HOW the image was built. A gate on raw bytes would go red on a
   // reordered list, and a gate red on an honest checkout gets switched off.
   const a = image();
-  const shuffled = (() => {
-    const r = new (Object.getPrototypeOf(world()).constructor)();
-    for (const f of [IMAGE_SOURCES[0], IMAGE_SOURCES[2], IMAGE_SOURCES[1]]) {
-      r.load(fs.readFileSync(path.join(ROOT, f), 'utf8'), { budget: 200_000_000 });
-    }
-    return r.save();
-  })();
-  assert.notEqual(shuffled, a, 'if the raw bytes agreed, this gate would be measuring nothing');
-  assert.equal(imageContent(shuffled), imageContent(a));
+  const build = (order: string[], budget: number) => {
+    const r = new (Object.getPrototypeOf(world()).constructor)({ reuse: false });
+    for (const f of order) r.load(fs.readFileSync(path.join(ROOT, f), 'utf8'), { budget });
+    return r.save() as string;
+  };
+  // Reordering the recipe leaves the CONTENT identical — the claim this gate is
+  // about, and it still holds.
+  assert.equal(imageContent(build([...IMAGE_SOURCES].reverse(), 200_000_000)), imageContent(a));
+  // THE NEGATIVE CONTROL MOVED, and the reason is worth writing down. It used to
+  // be the reordering itself: with THREE sources, a reversed list produced
+  // different bytes. With two it does not — measured — because what `evals`
+  // records is the per-load evaluation, and the third load was what made the log
+  // differ, not the order as such. The discriminator is therefore the BUDGET,
+  // which is precisely what `evals` carries: different bytes, identical content.
+  const cheaper = build([...IMAGE_SOURCES], 150_000_000);
+  assert.notEqual(cheaper, a, 'if the raw bytes agreed, this gate would be measuring nothing');
+  assert.equal(imageContent(cheaper), imageContent(a));
 });
 
 test('ring 1 parses from the image exactly as it does from source', () => {
@@ -225,6 +264,33 @@ test('l1.dense.rofl is REPRODUCIBLE from l1.rofl', async () => {
   // diff a person can also perform by eye.
   assert.equal(dense(parseProgram(read('examples', 'ring1', 'l1.rofl'))),
                read('examples', 'ring1', 'l1.dense.rofl'));
+});
+
+test('the splitter agrees with the host on EVERY .rofl file, not a sample', () => {
+  // A COVERAGE GATE THAT COSTS NOTHING, and it exists because the expensive one
+  // could not be widened. The corpus sweep is capped at 2.5 KiB for time, which
+  // is 23 of the 70 files the host parses and a small share of the 6868 clauses
+  // — so the unit ring 1 works in was checked on a third of the corpus.
+  //
+  // The splitter needs no chart: it is a linear walk carrying the same three
+  // states the grammar's scanner has. Comparing its clause COUNT against the
+  // host parser is therefore free, and it runs over everything.
+  //
+  // IT WENT RED ON ITS FIRST RUN. boot.rofl ends with a comment block, and a
+  // tail with no terminating period was being pushed as a part: 29 against 28.
+  // A tail is two different things — an unfinished clause, which must be handed
+  // on so the parse refuses and says where, and comments and whitespace, which
+  // are not a clause at all.
+  let checked = 0;
+  for (const f of roflFiles()) {
+    const src = fs.readFileSync(f, 'utf8');
+    let host: ReturnType<typeof parseProgram>;
+    try { host = parseProgram(src); } catch { continue; }   // the host's own refusals are not this gate's subject
+    assert.equal(clauses(src).length, host.length, `${f}: the splitter and the host disagree on how many clauses this file has`);
+    checked++;
+  }
+  // POSITIVE CONTROL: the walk really ran over the corpus, not over an empty list.
+  assert.ok(checked > 60, `expected the whole corpus, checked ${checked} files`);
 });
 
 test('perspExplicit survives, and canon cannot see it', () => {

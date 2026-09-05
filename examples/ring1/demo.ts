@@ -34,11 +34,19 @@ export const roflStr = escapeString;
 
 const BUDGET = 200_000_000;
 
-/** The three files an image is built from, in the order that builds it. The
- *  ORDER IS PART OF THE RECIPE: measured 2026-09-04, shuffling it changes the
- *  snapshot's bytes while leaving the canonical state identical, because the
- *  `evals` section records HOW the image was built rather than what is in it. */
-export const IMAGE_SOURCES = [BOOT, CHARCLASS, RING1];
+/** The files an image is built from, in the order that builds it. The ORDER IS
+ *  PART OF THE RECIPE: measured 2026-09-04, shuffling it changes the snapshot's
+ *  bytes while leaving the canonical state identical, because the `evals`
+ *  section records HOW the image was built rather than what is in it.
+ *
+ *  boot.rofl IS NOT AMONG THEM. The grammar reads none of its relations — the
+ *  audits, the stratum table and the inquiry vocabulary are about programs, and
+ *  this world's only program is a parser. Measured 2026-09-05, arms interleaved
+ *  in one process: 88.5 ms a clause with it and 80.4 without, 9.1%, and the
+ *  parse is byte-identical either way. It is still loaded by `world()`, which
+ *  is what the tower's own gates read, so nothing that audits the grammar loses
+ *  its subject. */
+export const IMAGE_SOURCES = [CHARCLASS, RING1];
 
 /** Build the image: ring 1 compiled ahead of time, as an object file.
  *
@@ -48,7 +56,12 @@ export const IMAGE_SOURCES = [BOOT, CHARCLASS, RING1];
  *  and committing one is a separate decision that needs the gate below to be
  *  standing first. */
 export function image(): string {
-  return world().save();
+  const r = new Rofl({ reuse: false });
+  for (const f of IMAGE_SOURCES) {
+    const res = r.load(read(f), { budget: BUDGET });
+    if (!res.ok) throw new Error(`${f}: ${res.diagnostics.join('; ')}`);
+  }
+  return r.save();
 }
 
 /** What a reproducibility gate must compare: everything EXCEPT `evals`.
@@ -226,7 +239,11 @@ export class IncompleteParse extends Error {
 
 /** Restore ring 1 from an image instead of parsing its source. Measured
  *  2026-09-04: 12.3 ms against 50.5 ms, a factor of 4.1, over 702 KiB. */
-export const fromImage = (snapshot: string): Rofl => Rofl.fromSnapshot(snapshot);
+/** `reuse` is OFF: the source fact changes on every clause, so every relation
+ *  downstream of it is refingerprinted and the plan buys nothing it does not
+ *  first pay for. Measured 3.7% of a clause. */
+export const fromImage = (snapshot: string): Rofl =>
+  Rofl.fromSnapshot(snapshot, { reuse: false });
 
 /** Split a program at the periods that terminate a clause.
  *
@@ -239,20 +256,31 @@ export const fromImage = (snapshot: string): Rofl => Rofl.fromSnapshot(snapshot)
 export function clauses(src: string): string[] {
   const out: string[] = [];
   let start = 0, i = 0;
+  let code = false;   // has anything in CODE state been seen since `start`?
   let st: 'code' | 'str' | 'cmt' = 'code';
   while (i < src.length) {
     const c = src[i];
     if (st === 'code') {
-      if (c === '"') st = 'str';
-      else if (c === '-' && src[i + 1] === '-') st = 'cmt';
-      else if (c === '.') { out.push(src.slice(start, i + 1)); start = i + 1; }
+      if (c === '"') { st = 'str'; code = true; }
+      else if (c === '-' && src[i + 1] === '-') { st = 'cmt'; i++; }
+      else if (c === '.') { out.push(src.slice(start, i + 1)); start = i + 1; code = false; }
+      else if (c !== ' ' && c !== '\t' && c !== '\r' && c !== '\n') code = true;
     } else if (st === 'str') {
       if (c === '\\') i++; else if (c === '"') st = 'code';
     } else if (c === '\n') st = 'code';
     i++;
   }
-  if (src.slice(start).trim()) out.push(src.slice(start));
-  return out.filter((p) => p.trim());
+  // A TAIL WITH NO TERMINATING PERIOD IS TWO DIFFERENT THINGS and the first
+  // version pushed both. An unfinished clause must be handed on, so the parse
+  // refuses and says where; a tail of COMMENTS AND WHITESPACE must be dropped,
+  // because it is not a clause and the file did not end mid-sentence.
+  //
+  // MEASURED: boot.rofl ends with a comment block, and the splitter reported 29
+  // parts against the host parser's 28 clauses. Found by sweeping the whole
+  // corpus instead of the files at or under 2.5 KiB — the cap that existed for
+  // speed was also hiding this.
+  if (code) out.push(src.slice(start));
+  return out;
 }
 
 /** Parse a whole file: split it, and parse each clause in a world restored
