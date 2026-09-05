@@ -751,11 +751,55 @@ export class Store implements FactStore {
 
   /** Deep copy (used for load rollback and excise). The copy is fact-for-fact
    *  the original, so the fingerprints that describe it carry over — that is
-   *  what lets excise re-evaluate only the cone its subtraction touches. */
+   *  what lets excise re-evaluate only the cone its subtraction touches.
+   *
+   *  STRUCTURAL, NOT SERIALISED. This was `Store.restore(this.snapshot())`
+   *  until it was measured: a copy taken to be thrown away went out through
+   *  JSON.stringify and came back through JSON.parse plus a re-`add` of every
+   *  fact, which rebuilds every key and every run. `Rofl.load` takes one of
+   *  these on EVERY load, only to keep it in case a clause is rejected, and it
+   *  was 13 ms of a 108 ms parse in examples/ring1.
+   *
+   *  WHAT IS COPIED AND WHY. A `FactRec` is copied rather than shared because
+   *  `add` mutates `base` in place on an existing record — a base assertion
+   *  overriding a derived copy — so a shared record would let a write to one
+   *  store reach the other, which is exactly what a rollback backup must not
+   *  allow. A `Witness` is never mutated after it is built, so the Maps that
+   *  hold them are rebuilt and the witnesses themselves are shared. Argument
+   *  indexes are dropped rather than copied, as the serialising copy also
+   *  dropped them: `byPat` is rebuilt on demand and a copy nobody reads from
+   *  would pay for a structure it never amortises.
+   *
+   *  `dirty` is set rather than carried, which is what `restore` did. */
   clone(): Store {
-    const s = Store.restore(this.snapshot());
+    const s = new Store();
+    s.tick = this.tick;
+    s.tickLog = [...this.tickLog];
+    for (const [k, w] of this.witnesses) s.witnesses.set(k, w);
+    for (const [k, sigs] of this.firings) s.firings.set(k, new Map(sigs));
+    for (const [t, e] of this.evalLog) s.evalLog.set(t, { ...e });
+    // IN KEY ORDER, which is what `restore` did by re-adding a sorted
+    // snapshot, and what test/store-conformance.test.ts pins as the shape of a
+    // fork — the SQLite port pays 2.9x per fact to renumber its rows into it.
+    // The runs are filled the way `add` fills them, arrivals unabsorbed, so
+    // this copy is the serialising one fact for fact and run for run.
+    const loose = new Set<string>();
+    for (const byP of this.idx.values()) for (const run of byP.values()) {
+      for (const k of run.loose) loose.add(k);
+    }
+    for (const k of [...this.facts.keys()].sort()) {
+      const r = this.facts.get(k)!;
+      s.facts.set(k, { ...r });
+      let byP = s.idx.get(r.rel);
+      if (!byP) { byP = new Map(); s.idx.set(r.rel, byP); }
+      let run = byP.get(r.persp);
+      if (!run) { run = newRun(); byP.set(r.persp, run); }
+      run.arrived.push(k);
+      if (loose.has(k)) run.loose.push(k);
+    }
     s.derivedKeys = new Map(this.derivedKeys);
     s.derivedSchedule = this.derivedSchedule;
+    s.dirty = true;
     return s;
   }
 }
