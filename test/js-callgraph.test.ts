@@ -582,7 +582,16 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // at all. `unreached` is a CONTROL decoy: the model DOES derive
   // `useGuard -> unreached`, correctly, and the program branches around it.
   // Listing them together as "expected exceptions" would lose exactly that.
-  const NEVER_CALLED = ['pickA', 'unreached'];
+  // THREE now, and the three are three different reasons — which is exactly the
+  // distinction the layers were built to draw. `pickA` is a VALUE decoy: the
+  // model never derives an edge to it, because `two[pickA]()` reads the value
+  // and reaches `pickB`. `unreached` is a GUARD: the model derives the edge and
+  // the program branches around it — `may_not_run[code]` covers it.
+  // `after` is an ABRUPT transfer: it sits after a `throw` in the same block,
+  // and nothing covers it, because statement order is the control-flow layer's
+  // declared gap (`w_cf_abrupt_transfer`). Listing them together would lose all
+  // three distinctions; test/js-controlflow.test.ts asserts each by name.
+  const NEVER_CALLED = ['after', 'pickA', 'unreached'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -646,7 +655,16 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // rules/js-controlflow.rofl names `unreached` for exactly this reason, and
   // test/js-controlflow.test.ts asserts that every silent callee is covered.
   // Under a bound these two would have been one number.
-  assert.deepEqual(extra, ['useForOfGen -> pick', 'useGuard -> unreached'],
+  // THREE ENTRIES, THREE CAUSES, and the list is the only thing keeping them
+  // apart. `useForOfGen -> pick` is the ORACLE's naming: V8 attributes a
+  // generator body's first resume to `%GeneratorPrototype%.next`. `useGuard ->
+  // unreached` is a GUARD the program does not take, and `may_not_run[code]`
+  // covers it. `useTry -> after` is an ABRUPT transfer — a `throw` earlier in
+  // the same block — and it is the control-flow layer's declared gap, owned by
+  // `w_cf_abrupt_transfer`. Under the old `extra.length <= 2` bound the third
+  // would simply have pushed the number to three and nobody would have been
+  // asked which one it was.
+  assert.deepEqual(extra, ['useForOfGen -> pick', 'useGuard -> unreached', 'useTry -> after'],
     `over-approximation, by cause: ${extra.join(', ')}`);
 });
 
@@ -749,7 +767,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 70, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 77, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

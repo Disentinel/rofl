@@ -1,0 +1,138 @@
+-- js-statements.rofl — THE CONSTRUCTS THE VOCABULARY HAD NEVER NAMED.
+--
+-- MEASURED 2026-09-05, and it is why this file exists rather than a few rows
+-- appended somewhere: one probe file holding the ordinary control constructs
+-- emitted 51 node kinds and THIRTY of them were undeclared. The matrix had four
+-- layers, 229 cells and every audit at zero, while `try`, `catch`, `throw`,
+-- `switch`, `while`, `for`, `break` and `continue` were not in it at all.
+--
+-- `unaccounted[audit]` compares DECLARED kinds against layers, so an undeclared
+-- kind is not a hole in the matrix — it is outside the frame. The instrument
+-- that can see it is `vocabulary_gap[audit]` in rules/js-model.rofl, added the
+-- same day: a kind the CORPUS produces that the vocabulary does not declare.
+-- Its count is the honest frontier of the whole model.
+--
+-- WHAT IS DECLARED HERE and what is not, decided rather than swept in: the
+-- control constructs, because the control-flow layer claims to know about
+-- control and cannot be silent about `try`. What is left outside is the
+-- structural and type-shaped residue — `program`, `file`, `comment_line`,
+-- `template_element`, the `ts*` type nodes — and it stays in
+-- `vocabulary_gap[audit]` with a queue item rather than being declared to make
+-- a number go to zero.
+
+-- BRANCHING AND LOOPING
+node_kind(js, while_statement).
+node_kind(js, do_while_statement).
+node_kind(js, for_statement).
+node_kind(js, for_in_statement).
+node_kind(js, switch_statement).
+node_kind(js, switch_case).
+
+-- ABRUPT TRANSFERS
+node_kind(js, throw_statement).
+node_kind(js, break_statement).
+node_kind(js, continue_statement).
+
+-- THE EXCEPTION MACHINERY. `try_statement` and `catch_clause` are the reason
+-- this file was written at all: an exception is control flow, and a layer that
+-- knows what a branch is and not what a throw is knows half of it.
+node_kind(js, try_statement).
+node_kind(js, catch_clause).
+
+-- STRUCTURE THE CONTROL LAYER HAS TO WALK. A block is where statement ORDER
+-- lives, and order is what `abrupt` needs; an expression statement and a
+-- variable declaration are the two ways a call reaches a block.
+node_kind(js, block_statement).
+node_kind(js, expression_statement).
+node_kind(js, variable_declaration).
+
+-- ===========================================================================
+-- AND THE VERDICTS THEY OPENED. Fourteen kinds times four layers is fifty-six
+-- cells, and this is the sweep for them: mostly waivers with a reason, and two
+-- rows that are not.
+
+-- ---------------------------------------------------------------------------
+-- CALLGRAPH. A statement is neither a callee nor a transfer site — the call
+-- inside one is a `call_expression`, which the layer already answers for.
+ignored(js, while_statement,       callgraph, a_a_statement_is_not_a_callee).
+ignored(js, do_while_statement,    callgraph, a_a_statement_is_not_a_callee).
+ignored(js, for_statement,         callgraph, a_a_statement_is_not_a_callee).
+ignored(js, for_in_statement,      callgraph, a_a_statement_is_not_a_callee).
+ignored(js, switch_statement,      callgraph, a_a_statement_is_not_a_callee).
+ignored(js, switch_case,           callgraph, a_a_statement_is_not_a_callee).
+ignored(js, throw_statement,       callgraph, a_a_statement_is_not_a_callee).
+ignored(js, break_statement,       callgraph, a_a_statement_is_not_a_callee).
+ignored(js, continue_statement,    callgraph, a_a_statement_is_not_a_callee).
+ignored(js, try_statement,         callgraph, a_a_statement_is_not_a_callee).
+ignored(js, catch_clause,          callgraph, a_a_statement_is_not_a_callee).
+ignored(js, block_statement,       callgraph, a_a_statement_is_not_a_callee).
+ignored(js, expression_statement,  callgraph, a_a_statement_is_not_a_callee).
+ignored(js, variable_declaration,  callgraph, a_a_statement_is_not_a_callee).
+
+-- ---------------------------------------------------------------------------
+-- DATAFLOW. A statement carries no value — with ONE exception that is not a
+-- waiver at all and is the reason this block is written out rather than
+-- generated: `catch (e)` BINDS a variable, and `e` is the thrown value. That is
+-- a real dataflow edge nothing models, and it travels along the exception path
+-- rather than along the syntax, which is why it belongs with the exception work
+-- and not here.
+ignored(js, while_statement,       dataflow, a_a_statement_carries_no_value).
+ignored(js, do_while_statement,    dataflow, a_a_statement_carries_no_value).
+ignored(js, for_statement,         dataflow, a_a_statement_carries_no_value).
+ignored(js, for_in_statement,      dataflow, a_a_statement_carries_no_value).
+ignored(js, switch_statement,      dataflow, a_a_statement_carries_no_value).
+ignored(js, switch_case,           dataflow, a_a_statement_carries_no_value).
+ignored(js, break_statement,       dataflow, a_a_statement_carries_no_value).
+ignored(js, continue_statement,    dataflow, a_a_statement_carries_no_value).
+ignored(js, try_statement,         dataflow, a_a_statement_carries_no_value).
+ignored(js, block_statement,       dataflow, a_a_statement_carries_no_value).
+ignored(js, expression_statement,  dataflow, a_a_statement_carries_no_value).
+ignored(js, variable_declaration,  dataflow, a_the_declarator_carries_it).
+-- `throw e` moves a value from the throw site to whichever `catch` receives it,
+-- and no rule here connects the two.
+unknown_because(js, throw_statement, dataflow, not_yet).
+unknown_because(js, catch_clause,    dataflow, not_yet).
+
+-- ---------------------------------------------------------------------------
+-- MODULES. None of them can appear in a module graph.
+ignored(js, while_statement,       modules, a_not_a_module_construct).
+ignored(js, do_while_statement,    modules, a_not_a_module_construct).
+ignored(js, for_statement,         modules, a_not_a_module_construct).
+ignored(js, for_in_statement,      modules, a_not_a_module_construct).
+ignored(js, switch_statement,      modules, a_not_a_module_construct).
+ignored(js, switch_case,           modules, a_not_a_module_construct).
+ignored(js, throw_statement,       modules, a_not_a_module_construct).
+ignored(js, break_statement,       modules, a_not_a_module_construct).
+ignored(js, continue_statement,    modules, a_not_a_module_construct).
+ignored(js, try_statement,         modules, a_not_a_module_construct).
+ignored(js, catch_clause,          modules, a_not_a_module_construct).
+ignored(js, block_statement,       modules, a_not_a_module_construct).
+ignored(js, expression_statement,  modules, a_not_a_module_construct).
+ignored(js, variable_declaration,  modules, a_not_a_module_construct).
+
+-- ---------------------------------------------------------------------------
+-- CONTROLFLOW. This is the layer they were declared FOR, so most of them are
+-- answered rather than waived.
+handled(js, while_statement,    controlflow, r_guard_arm).
+handled(js, for_statement,      controlflow, r_guard_arm).
+handled(js, for_in_statement,   controlflow, r_guard_arm).
+handled(js, switch_statement,   controlflow, r_guard_arm).
+handled(js, switch_case,        controlflow, r_guard_arm).
+handled(js, try_statement,      controlflow, r_guard_arm).
+handled(js, catch_clause,       controlflow, r_guard_arm).
+-- ...one waived on a fact about the language rather than about our effort: a
+-- `do` body runs BEFORE the test, so it guards nothing.
+ignored(js, do_while_statement, controlflow, a_body_that_always_runs_guards_nothing).
+-- ...three structural containers, which carry the positions the layer reads and
+-- transfer nothing themselves.
+ignored(js, block_statement,      controlflow, a_a_container_transfers_nothing).
+ignored(js, expression_statement, controlflow, a_a_container_transfers_nothing).
+ignored(js, variable_declaration, controlflow, a_a_container_transfers_nothing).
+-- ...and three abrupt transfers, which are the layer's declared gap. Each makes
+-- the statements AFTER it in the same block unreachable, and this layer reads
+-- parent/child positions and has no term for order. `after` in
+-- test/fixtures/js-call/alpha.mjs is the witness: it never runs, the model
+-- derives the edge to it, and nothing here explains the silence.
+unknown_because(js, throw_statement,    controlflow, not_yet).
+unknown_because(js, break_statement,    controlflow, not_yet).
+unknown_because(js, continue_statement, controlflow, not_yet).

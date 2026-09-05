@@ -465,4 +465,32 @@ imports(code, main).
 -- [audit] READS [code]. Twenty-nine rules: every gate in this layer reads the
 -- scanner's facts and writes its verdict. An audit that could not read the
 -- book it audits would have nothing to say.
+-- ---------------------------------------------------------------------------
+-- THE FRAME ITSELF. Every audit above compares a DECLARED kind against a layer,
+-- so a kind nobody declared is not a hole in the matrix — it is outside it.
+-- That made the vocabulary a model of the CORPUS rather than of the language,
+-- and nothing said so.
+--
+-- MEASURED 2026-09-05, and the number is the point: one probe file containing
+-- the ordinary control constructs emitted 51 node kinds, of which THIRTY were
+-- undeclared — `try`, `catch`, `throw`, `switch`, `while`, `for`, `break`,
+-- `continue` among them. The matrix had four layers, 229 cells and every audit
+-- at zero while the language's whole exception machinery was invisible to it.
+--
+-- This is the one audit that cannot be satisfied by writing more rows: it grows
+-- when the CORPUS grows, and its job is to make the vocabulary a decision
+-- rather than a habit. A kind it names is either declared, or the decision not
+-- to is recorded somewhere a reader can find.
+-- `ast_node` is DECLARED edb here, and the declaration is load-bearing rather
+-- than tidy: this file is loaded in worlds with no corpus at all — the shape
+-- fixture, the coverage mutants — and without it the kernel reads the empty
+-- table as a misspelled premise and `undefined_premise[audit]` goes to two.
+-- That is the same reason `unknown_type` and `unknown_because` carry one.
+edb(ast_node).
+edb(lang_of_corpus).
+lang_of_corpus(js).
+
+vocabulary_gap[audit](Lang, K) :- ast_node[code](_, K, _, _),
+                                  lang_of_corpus(Lang), not node_kind(Lang, K).
+
 imports(audit, code).

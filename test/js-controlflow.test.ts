@@ -32,7 +32,8 @@ const FILES: [string, string][] = [
   ['shapes.ts', FIX + 'shapes.ts.txt'],
 ];
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
-               'facts/js-modules.rofl', 'facts/js-shapes.rofl'];
+               'facts/js-modules.rofl', 'facts/js-shapes.rofl',
+               'facts/js-statements.rofl'];
 const RULES = ['rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
                'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl'];
 
@@ -102,9 +103,16 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // gets a cell at the new layer without anybody listing them.
   const before = without.n('cell[audit](A, K, S, L)');
   const after = withIt.n('cell[audit](A, K, S, L)');
-  assert.equal(before, 179, 'positive control: the matrix before the fact');
-  assert.equal(after, 229, 'one fact, fifty cells');
-  assert.equal(after - before, 50, 'fifty cells from one line');
+  // THE INVARIANT, not the constant: one layer fact adds exactly ONE CELL PER
+  // DECLARED KIND. Pinning 50 was pinning the vocabulary of the day it was
+  // first run — the control constructs were declared the next morning and the
+  // delta became 64 without the claim changing at all. The identity is what the
+  // programme actually asserts; the two numbers below are a positive control
+  // that the worlds are the ones the identity was measured on.
+  assert.equal(after - before, withIt.n('node_kind(A, K)'),
+    'one fact, one cell per declared kind');
+  assert.equal(before, 221, 'positive control: the matrix before the fact');
+  assert.equal(after, 285, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -214,7 +222,11 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // THREE functions, and the runtime enters two of them. A may-set that named
   // only the one that stayed silent would be a MUST-analysis wearing this
   // relation's name, and it would be wrong the first time a loop ran zero times.
-  assert.deepEqual([...mayNotRun].sort(), ['bet', 'guardedElse', 'unreached']);
+  // FIVE now, not three: the control constructs added on 2026-09-05 brought a
+  // `while` body and a `catch` handler, and both are arms that may be skipped.
+  // The runtime enters four of the five.
+  assert.deepEqual([...mayNotRun].sort(),
+    ['bet', 'guardedElse', 'loopBody', 'rescue', 'unreached']);
 
   const dir = new URL('test/fixtures/js-call/', new URL('../', import.meta.url));
   const alpha: any = await import(new URL('alpha.mjs', dir).href);
@@ -242,7 +254,17 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // not derive an edge to it at all, because `two[pickA]()` reads the VALUE of
   // `pickA` and reaches `pickB`. A silence the call graph already avoids
   // claiming needs no control-flow excuse.
-  const unexplained = silent.filter((f) => !mayNotRun.has(f));
+  // ONE NAMED EXCEPTION, and it is the layer's own declared gap with a witness.
+  // `after` is called immediately after a `throw` in the same block: the model
+  // derives the edge correctly, the runtime never takes it, and `may_not_run`
+  // does NOT cover it — because the reason is statement ORDER and every rule in
+  // this layer reads a parent/child position. `w_cf_abrupt_transfer` owns it.
+  // It is listed here rather than tolerated by a count, so that the day the
+  // abrupt work lands this assertion goes red and says the gap is closed.
+  const ABRUPT_GAP = ['after'];
+  const unexplained = silent.filter((f) => !mayNotRun.has(f) && !ABRUPT_GAP.includes(f));
+  assert.deepEqual(silent.filter((f) => ABRUPT_GAP.includes(f)), ABRUPT_GAP,
+    'the abrupt-transfer witness is still silent — if it is not, the gap closed');
   console.log(`  derived ${derived.size} callees, ${silent.length} never entered: ${silent.join(', ')}`);
   assert.deepEqual(unexplained, [],
     'a function the model calls, the runtime never entered, and nothing explains');

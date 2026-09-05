@@ -44,3 +44,81 @@ ignored(js, yield_expression, controlflow, a_control_returns_so_the_site_still_r
 -- w_cf_abrupt_transfer, and `mechanism_open(abrupt, ...)` in the rules is the
 -- machine-readable half of this sentence.
 unknown_because(js, return_statement, controlflow, not_yet).
+
+-- ===========================================================================
+-- THE SWEEP (queue item w_cf_sweep). Forty cells, and the point of doing it by
+-- hand rather than by default is that NINE OF THEM ARE NOT RESIDUE. A default
+-- would have called all forty `not_yet` and been wrong about thirty-one; a
+-- blanket waiver would have been wrong about nine.
+
+-- ---------------------------------------------------------------------------
+-- THIRTY-ONE THAT REALLY TRANSFER NOTHING. A literal, a name, a pattern, a
+-- specifier: control does not branch at any of them, and the reason is the same
+-- sentence for all of them, which is what makes this part arithmetic.
+ignored(js, identifier,                  controlflow, a_no_control_transfer).
+ignored(js, string_literal,              controlflow, a_no_control_transfer).
+ignored(js, numeric_literal,             controlflow, a_no_control_transfer).
+ignored(js, boolean_literal,             controlflow, a_no_control_transfer).
+ignored(js, template_literal,            controlflow, a_no_control_transfer).
+ignored(js, tagged_template_expression,  controlflow, a_no_control_transfer).
+ignored(js, array_expression,            controlflow, a_no_control_transfer).
+ignored(js, object_expression,           controlflow, a_no_control_transfer).
+ignored(js, object_property,             controlflow, a_no_control_transfer).
+ignored(js, assignment_expression,       controlflow, a_no_control_transfer).
+ignored(js, sequence_expression,         controlflow, a_no_control_transfer).
+ignored(js, parenthesized_expression,    controlflow, a_no_control_transfer).
+ignored(js, this_expression,             controlflow, a_no_control_transfer).
+ignored(js, new_expression,              controlflow, a_no_control_transfer).
+ignored(js, variable_declarator,         controlflow, a_no_control_transfer).
+ignored(js, class_declaration,           controlflow, a_no_control_transfer).
+ignored(js, decorator,                   controlflow, a_no_control_transfer).
+ignored(js, import_declaration,          controlflow, a_no_control_transfer).
+ignored(js, import_specifier,            controlflow, a_no_control_transfer).
+ignored(js, import_default_specifier,    controlflow, a_no_control_transfer).
+ignored(js, import_namespace_specifier,  controlflow, a_no_control_transfer).
+ignored(js, export_named_declaration,    controlflow, a_no_control_transfer).
+ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
+ignored(js, tsas_expression,             controlflow, a_no_control_transfer).
+ignored(js, tsnon_null_expression,       controlflow, a_no_control_transfer).
+ignored(js, ts_string_keyword,           controlflow, a_type_only_no_runtime_value).
+-- ...and one that DOES transfer and comes straight back, which is the same
+-- waiver `await` already carries: a dynamic import suspends, and the site runs.
+ignored(js, import_expression,           controlflow, a_control_returns_so_the_site_still_runs).
+ignored(js, import,                      controlflow, a_control_returns_so_the_site_still_runs).
+
+-- ---------------------------------------------------------------------------
+-- NINE THAT ARE NOT RESIDUE, and each carries the reason it is open rather than
+-- the default. They fall into three questions, and none of the three is
+-- member-expression-sized: each is an item.
+--
+-- FIVE FUNCTION FORMS — a body is a CONTROL REGION, entered only by a call, and
+-- everything in it runs only if the function is entered. This layer answers one
+-- level (`may_not_run` asks whether a function's own call sites are guarded)
+-- and deliberately not the walk: the transitive question wants an ENTRY POINT,
+-- and a model that guessed at entry points would answer something nobody asked.
+-- Queued as w_cf_reachability.
+unknown_because(js, function_declaration,        controlflow, not_yet).
+unknown_because(js, function_expression,         controlflow, not_yet).
+unknown_because(js, arrow_function_expression,   controlflow, not_yet).
+unknown_because(js, class_method,                controlflow, not_yet).
+unknown_because(js, object_method,               controlflow, not_yet).
+
+-- TWO CALL FORMS — a call transfers control INTO the callee and may leave by
+-- throwing rather than returning. The first half is the call graph's; the
+-- second is exception propagation, which nothing here models. Queued as
+-- w_exception_flow.
+unknown_because(js, call_expression, controlflow, not_yet).
+unknown_because(js, super,           controlflow, not_yet).
+
+-- TWO MEMBER FORMS — a property read is not a transfer UNLESS the property is
+-- an accessor, and a getter is a call wearing a read's syntax. Telling them
+-- apart needs the property to be known as an accessor, which is a fact about
+-- the object and not about the site. Queued with the call forms.
+unknown_because(js, member_expression, controlflow, not_yet).
+-- ...AND ITS OPTIONAL TWIN CANNOT SAY THIS, which is a real loss and worth the
+-- sentence. `optional_member_expression` is already MODELLED at this layer for
+-- its short-circuit, and a kind-level cell at a layer with no refinement column
+-- is one word — so `o?.p` where `p` is an accessor is a control transfer this
+-- model cannot report without un-ticking the one it already has. Written as a
+-- claim it raised `queue_stale[audit]` immediately, which is the matrix
+-- refusing to hold two verdicts for one cell.

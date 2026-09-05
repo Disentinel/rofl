@@ -31,11 +31,28 @@ guard_kind(conditional_expression,     alternate).
 -- the era layer paid for, arriving where it does not matter: all three
 -- short-circuit, so the KIND is enough here and no `operator` guard is needed.
 guard_kind(logical_expression,         right).
--- a loop body may run zero times
+-- A LOOP BODY MAY RUN ZERO TIMES — except one. `do { } while (c)` runs its body
+-- BEFORE testing, so it guards nothing at all, and putting it here would make
+-- `may_not_run` report functions that always run. The distinction is in the
+-- spec and not in the shape: all five loops look identical in the tree.
 guard_kind(for_of_statement,           body).
+guard_kind(for_statement,              body).
+guard_kind(for_in_statement,           body).
+guard_kind(while_statement,            body).
+-- A CASE BODY is skipped unless the switch selects it, and `consequent` is an
+-- ARRAY here — which is why `guard_arm` below reads any index rather than 0.
+guard_kind(switch_case,                consequent).
+-- THE EXCEPTION MACHINERY, and only one of its three parts is a guard. The
+-- `block` always runs; the `finalizer` always runs; the HANDLER runs only if
+-- something inside the block threw. Filing the block as guarded would have said
+-- that the ordinary path is conditional, which is the wrong way round.
+guard_kind(try_statement,              handler).
 
+-- ANY INDEX, not zero. A singular field is index 0 and reads the same; an array
+-- field — `switch_case`'s `consequent` — has one arm per statement, and reading
+-- only index 0 would have guarded the first statement of a case and no other.
 guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
-                         ast_child[code](P, Field, 0, A).
+                         ast_child[code](P, Field, _, A).
 
 -- ...and everything inside such an arm inherits the condition.
 guarded[code](A) :- guard_arm[code](_, A).
@@ -98,12 +115,30 @@ transfer_mechanism(optional_member_expression, short_circuit).
 transfer_mechanism(await_expression,           suspend).
 transfer_mechanism(yield_expression,           suspend).
 transfer_mechanism(return_statement,           abrupt).
+transfer_mechanism(throw_statement,            abrupt).
+transfer_mechanism(break_statement,            abrupt).
+transfer_mechanism(continue_statement,         abrupt).
+transfer_mechanism(while_statement,            skip_arm).
+transfer_mechanism(for_statement,              skip_arm).
+transfer_mechanism(for_in_statement,           skip_arm).
+transfer_mechanism(switch_statement,           skip_arm).
+transfer_mechanism(switch_case,                skip_arm).
+transfer_mechanism(try_statement,              skip_arm).
+transfer_mechanism(catch_clause,               skip_arm).
+-- A FIFTH MECHANISM, and it exists so that `do_while_statement` is not filed
+-- under either of the two that would be wrong. Its body runs at least once, so
+-- it guards nothing — and it is not a suspension either, because control never
+-- leaves. Waived with the reason spelled out rather than left out of the table,
+-- because a loop kind missing from `transfer_mechanism` reads as "nobody
+-- looked" and this one was looked at.
+transfer_mechanism(do_while_statement,         loop_at_least_once).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
 mechanism_modelled(short_circuit).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(suspend, a_control_returns_so_the_site_still_runs).
+mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
 -- THREE STATES, NOT TWO. The first draft had modelled and waived, and `abrupt`
 -- was neither — so `mechanism_unanswered[audit]` stood at one, permanently, for
@@ -128,6 +163,14 @@ mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(
 -- that no rule of this layer actually reaches.
 guard_named[code](K)       :- guard_kind(K, _).
 guard_named[code](K)       :- short_circuit_kind(K).
+-- `catch_clause` carries `skip_arm` and is reached as the ARM of a
+-- `try_statement` rather than by a `guard_kind` row of its own — the guard is
+-- the try's `handler` field, and the clause is what sits in it. Named here so
+-- the closed-vocabulary gate does not report a kind the rules really do cover.
+guard_named[code](catch_clause).
+-- ...and the same for the switch: `switch_statement` transfers control by
+-- selecting a case, and the arm that may be skipped belongs to `switch_case`.
+guard_named[code](switch_statement).
 guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
                               ast_node[code](_, K, _, _), not guard_named[code](K).
 

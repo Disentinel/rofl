@@ -262,6 +262,61 @@ function useGuard(n) {
   else { return guardedElse(n); }
 }
 
+// ---- CONTROL CONSTRUCTS THE CORPUS HAD NEVER CONTAINED. Measured 2026-09-05:
+// one probe file emitted 51 node kinds and THIRTY of them were undeclared, of
+// which fifteen were control-shaped — `try`, `catch`, `throw`, `switch`,
+// `while`, `for`, `break`, `continue`. The vocabulary was a model of THIS
+// corpus rather than of the language, and `unaccounted[audit]` cannot see a
+// kind nobody declared: it compares declared kinds against layers, so an
+// undeclared one is not a hole, it is outside the frame.
+//
+// These run, so the oracle judges them. `thrower` and `rescue` are the pair
+// that matters: a throw is an abrupt transfer, `after` is unreachable, and the
+// catch clause is what makes `rescue` reachable at all.
+function thrower(n) {
+  trace();
+  throw new Error(String(n));
+}
+function after(n) {
+  trace();
+  return n;
+}
+function rescue(n) {
+  trace();
+  return n + 1;
+}
+function useTry(n) {
+  trace();
+  try {
+    thrower(n);
+    return after(n);
+  } catch (e) {
+    void e;
+    return rescue(n);
+  } finally {
+    void 0;
+  }
+}
+
+function loopBody(n) {
+  trace();
+  return n;
+}
+function useLoops(n) {
+  trace();
+  let total = 0;
+  let i = 0;
+  while (i < 2) { total += loopBody(i); i += 1; }
+  do { total += 1; } while (false);
+  for (let j = 0; j < 2; j += 1) { if (j === 0) { continue; } total += 1; }
+  for (const k in { a: 1 }) { total += k.length; }
+  switch (n) {
+    case 1: total += 1; break;
+    default: total += 2;
+  }
+  return total;
+}
+
 // ---- computed callee: dynamic key, then literal key
 const table = {
   pick(n) {
@@ -419,6 +474,8 @@ export async function main() {
     useForOfArray(1),
     useForOfGen(1),
     useGuard(1),
+    useTry(1),
+    useLoops(1),
     await useAwait(1),
     run(1),
     seeded,

@@ -182,6 +182,22 @@ kind_baseline(js, program).
 kind_baseline(js, file).
 kind_baseline(js, comment_line).
 kind_baseline(js, comment_block).
+
+-- THE CONTROL CONSTRUCTS, declared in the vocabulary 2026-09-05 and baseline
+-- here: every one of them is as old as the language, so none gates an era. The
+-- era layer's frontier gate named all thirteen the run they appeared, which is
+-- a corpus this table was not written for doing exactly what it is for.
+kind_baseline(js, while_statement).
+kind_baseline(js, do_while_statement).
+kind_baseline(js, for_statement).
+kind_baseline(js, for_in_statement).
+kind_baseline(js, switch_statement).
+kind_baseline(js, switch_case).
+kind_baseline(js, throw_statement).
+kind_baseline(js, break_statement).
+kind_baseline(js, continue_statement).
+kind_baseline(js, try_statement).
+kind_baseline(js, catch_clause).
 kind_baseline(js, string_literal).
 kind_baseline(js, numeric_literal).
 kind_baseline(js, boolean_literal).

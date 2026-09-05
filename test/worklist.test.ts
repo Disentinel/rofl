@@ -36,7 +36,7 @@ const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 // model disagreeing about which world they are in.
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
   'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl',
-  'facts/js-controlflow.rofl', 'facts/findings.rofl'];
+  'facts/js-statements.rofl', 'facts/js-controlflow.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string }
@@ -128,13 +128,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // trivial or was not looked at.
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
     ['w_body_order_is_load_bearing',
+     'w_cf_sweep', 'w_cf_sweep',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
      'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
      'w_env_ledger_form', 'w_env_scan_failed',
-     'w_leak_variable_on_the_right', 'w_mod_partial_cell']);
+     'w_leak_variable_on_the_right', 'w_mod_partial_cell',
+     'w_vocabulary_frame']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
   // fifty cells — so what is left at the head is arithmetic, the call-graph
@@ -143,13 +145,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'the third layer is declared, so the sweeps are what is left');
 });
 
-test('the queue covers the model: 113 open cells, 18 claimed by name, 106 swept', () => {
+test('the queue covers the model: 90 open cells, 31 claimed by name, 70 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 113, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 90, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
   // found it, not because it was foreseen.
-  assert.equal(w.n('work(W, Note)'), 23);
+  assert.equal(w.n('work(W, Note)'), 27);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -160,12 +162,13 @@ test('the queue covers the model: 113 open cells, 18 claimed by name, 106 swept'
   // them — the control-form item and the standard-library one — which is the
   // queue handing work on rather than a bucket absorbing it.
   assert.deepEqual(per('callgraph'), [23, 11, 19]);
-  assert.deepEqual(per('dataflow'), [14, 6, 12]);
+  assert.deepEqual(per('dataflow'), [16, 8, 12]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
-  // THE FOURTH LAYER, thirty-seven cells old. One claimed by name — `return`,
-  // which needs statement order — and thirty-six swept, because most kinds
-  // transfer no control at all and that is arithmetic.
-  assert.deepEqual(per('controlflow'), [37, 1, 36]);
+  // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
+  // control constructs were declared, and the sweep closed forty of them with a
+  // reason. The twelve that are left are all claimed BY NAME and none is swept:
+  // a sweep that finds twelve cells worth an item is not a bucket.
+  assert.deepEqual(per('controlflow'), [12, 12, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot

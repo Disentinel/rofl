@@ -205,7 +205,16 @@ work_spawned(w_controlflow_layer, f_the_plan_had_no_check_that_its_order_is_an_o
 work(w_cf_abrupt_transfer, "unreachable after return/throw/break/continue: the layer needs statement order within a block").
 work_order(w_cf_abrupt_transfer, 22).
 work_state(w_cf_abrupt_transfer, open).
-claim(queued, js, return_statement, none, controlflow, w_cf_abrupt_transfer).
+-- IT HAS A WITNESS NOW, which it did not when it was entered. `after` in
+-- test/fixtures/js-call/alpha.mjs is called after a `throw` in the same block:
+-- the model derives the edge, the runtime never takes it, and
+-- `may_not_run[code]` does NOT cover it — because the reason is order, and this
+-- layer reads positions. An open item with a corpus site is a different thing
+-- from one with an argument.
+claim(queued, js, return_statement,   none, controlflow, w_cf_abrupt_transfer).
+claim(queued, js, throw_statement,    none, controlflow, w_cf_abrupt_transfer).
+claim(queued, js, break_statement,    none, controlflow, w_cf_abrupt_transfer).
+claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
@@ -232,10 +241,70 @@ work_sweeps(w_mod_sweep, modules).
 -- declared. Its residue is the largest of the four because most kinds transfer
 -- no control at all — an identifier, a literal, a property — and that is
 -- arithmetic rather than judgement, which is exactly what a sweep is for.
-work(w_cf_sweep, "controlflow residue: kinds that transfer no control").
+-- DONE 2026-09-05, and the number is the argument against calling a sweep
+-- arithmetic: FORTY cells, TWENTY-EIGHT genuine residue, TWELVE not. A default
+-- would have said `not_yet` about all forty and been wrong about twenty-eight;
+-- a blanket waiver would have been wrong about twelve. The twelve fall into
+-- four questions and each got an item of its own rather than a bucket.
+work(w_cf_sweep, "DONE 2026-09-05: 40 cells, 28 waived with a reason, 12 that were not residue split into four items").
 work_order(w_cf_sweep, 23).
-work_state(w_cf_sweep, open).
+work_state(w_cf_sweep, done).
 work_sweeps(w_cf_sweep, controlflow).
+work_spawned(w_cf_sweep, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
+work_spawned(w_cf_sweep, f_a_sweep_is_where_the_residue_stops_being_residue).
+
+-- 24 — A BODY IS A CONTROL REGION. `may_not_run` asks whether a function's own
+-- call sites are guarded and stops there; whether the CALLER runs is the
+-- transitive question, and it wants an entry point. Guessing at entry points
+-- would answer something nobody asked, so the walk is declared absent rather
+-- than approximated.
+work(w_cf_reachability, "transitive reachability: a function called unguarded from one that may never run").
+work_order(w_cf_reachability, 24).
+work_state(w_cf_reachability, open).
+claim(queued, js, function_declaration,      none, controlflow, w_cf_reachability).
+claim(queued, js, function_expression,       none, controlflow, w_cf_reachability).
+claim(queued, js, arrow_function_expression, none, controlflow, w_cf_reachability).
+claim(queued, js, class_method,              none, controlflow, w_cf_reachability).
+claim(queued, js, object_method,             none, controlflow, w_cf_reachability).
+
+-- 25 — THE EXCEPTION PATH, and it is the owner's observation that put it here:
+-- an exception IS control flow. The TRANSFER is modelled — `try`, `catch` and
+-- the handler arm are in rules/js-controlflow.rofl — and two halves are not.
+-- A call may leave by THROWING rather than returning, which no rule says; and
+-- `throw e` moves a value into whichever `catch` receives it, which travels
+-- along the exception path rather than along the syntax and is the first
+-- dataflow edge here that does.
+work(w_exception_flow, "what a call may throw and where it lands: the value from throw to catch, and a call as an exit").
+work_order(w_exception_flow, 25).
+work_state(w_exception_flow, open).
+claim(queued, js, call_expression,  none, controlflow, w_exception_flow).
+claim(queued, js, super,            none, controlflow, w_exception_flow).
+claim(queued, js, throw_statement,  none, dataflow,    w_exception_flow).
+claim(queued, js, catch_clause,     none, dataflow,    w_exception_flow).
+
+-- 26 — A GETTER IS A CALL WEARING A READ'S SYNTAX. `o.p` transfers control iff
+-- `p` is an accessor, and telling them apart is a fact about the OBJECT rather
+-- than about the site — so it needs the value layer to know which properties
+-- are accessors, which it does not record.
+work(w_cf_accessor, "a property read that is a call: accessors make o.p a control transfer").
+work_order(w_cf_accessor, 26).
+work_state(w_cf_accessor, open).
+claim(queued, js, member_expression, none, controlflow, w_cf_accessor).
+-- The optional twin is NOT claimed: its cell is already ticked for the
+-- short-circuit, and a kind-level cell cannot carry two verdicts. See the note
+-- in facts/js-controlflow.rofl — `queue_stale[audit]` said so on the first run.
+
+-- 27 — THE FRAME. `vocabulary_gap[audit]` stands at seventeen: kinds the corpus
+-- produces that `node_kind` does not declare. They are the structural residue
+-- (`program`, `file`, `comment_line`, `template_element`, `class_body`), two
+-- ordinary expression kinds (`binary_expression`, `unary_expression`) and ten
+-- TypeScript type nodes. Declaring a kind costs four cells, so this is a
+-- DECISION about how wide the model is and not a chore — which is why it is an
+-- item and why the audit reports a number rather than nothing.
+work(w_vocabulary_frame, "seventeen kinds the corpus produces and the vocabulary does not declare").
+work_order(w_vocabulary_frame, 27).
+work_state(w_vocabulary_frame, open).
+work_spawned(w_vocabulary_frame, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
 
 -- 14 — RAISED BY THE WORK IT CAME OUT OF, and deliberately not done in it.
 -- `new C()` and the name `C` both reach the class node, so the model does not
