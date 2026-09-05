@@ -547,7 +547,12 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // kinds the rules actually TOUCH — measured by kind_undeclared going 17 -> 0
   // — plus 4 the call graph must answer for and does not touch at all: the
   // control transfers that are not CallExpressions.
-  assert.equal(dKinds, 26, 'kinds the matrix did not know existed');
+  // 26 -> 29 on 2026-09-05: `boolean_literal`, `class_declaration` and
+  // `return_statement` now carry a call-graph verdict from THIS pack, so this
+  // pack declares them. `orphan_claim[audit]` is what demanded it — the rows
+  // were written where the verdict belongs and their kinds were declared in
+  // the dataflow pack, so in this world they claimed cells that did not exist.
+  assert.equal(dKinds, 29, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -1010,6 +1015,33 @@ test('mutant 18 — a catch-all that is waived as empty must be able to fill', (
   assert.deepEqual(mut.binds('catch_all_occupied[audit](K)', 'K'), ['logical_expression'],
     'the kind is NAMED, so the split can continue rather than the bucket growing');
   console.log('  KILLED: catch_all_occupied 0 -> 1, and it names the kind');
+});
+
+test('mutant 19 — the OTHER catch-all, the one that had no gate for three days', () => {
+  // `s_unclassified` is the CALLEE-position bucket and `s_member_on_other` is
+  // the OBJECT-position copy of it. Mutant 18 above watches the copy; until
+  // 2026-09-05 nothing watched the original, and the two are twenty lines apart
+  // in the same file. That is a gate inheriting the scope of its incident, and
+  // the incident was the object split.
+  //
+  // WHAT THE BUCKET ACTUALLY HELD, measured by sweeping the boundary rather
+  // than sampling it — every declared expression kind put in callee position,
+  // one at a time: TWELVE kinds, and three of them ALREADY RESOLVED. So its
+  // single `not_yet` was false about a quarter of its contents.
+  const base = build();
+  assert.equal(base.n('unnamed_callee[audit](K)'), 0, 'baseline: nothing unnamed in this corpus');
+
+  const mut = build([{
+    find: 'callee_shape(conditional_expression,    s_conditional).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.deepEqual(mut.binds('unnamed_callee[audit](K)', 'K'), ['conditional_expression'],
+    'the kind is NAMED, which is the whole difference from a bucket');
+  // and the site is still shaped — it fell INTO the catch-all rather than out
+  // of the classification, which is what makes the defect invisible without
+  // this audit
+  assert.equal(mut.n('unshaped[audit](C)'), 0, 'totality survives; only the name is lost');
+  console.log('  KILLED: unnamed_callee 0 -> 1, and unshaped stays 0');
 });
 
 test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot see it', () => {

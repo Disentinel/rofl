@@ -86,10 +86,39 @@ unknown_because(js, optional_member_expression, callgraph, not_yet).
 unknown_because(js, conditional_expression,  callgraph, not_yet).
 unknown_because(js, sequence_expression,     callgraph, not_yet).
 unknown_because(js, tsnon_null_expression,   callgraph, not_yet).
-unknown_because(js, logical_expression,      callgraph, not_yet).
+-- MODELLED, AND IT ALREADY WAS. Measured 2026-09-05 in the callee-position
+-- boundary sweep: `(f || g)()` resolves to BOTH arms — a correct two-element
+-- may-set through the value layer's union rule — while the callee bucket that
+-- held the site said `not_yet`. The rule that does it is the wrapper rule that
+-- covers the whole syntactic family; nothing new was written for this row.
+handled(js, logical_expression, callgraph, r_call_edge).
 -- the receiver is a host literal and its methods belong to the runtime, not to
 -- any corpus this analyser can be pointed at
 unknown_because(js, array_expression,        callgraph, out_of_scope).
+
+-- ===========================================================================
+-- WHAT THE LANGUAGE DECIDES, and the sweep of 2026-09-05 is where these were
+-- settled. A verdict of `not_yet` about a site that can NEVER resolve is not
+-- caution, it is a queue entry nobody can ever discharge — and telling the two
+-- apart takes knowing JavaScript rather than looking at the tree, which is the
+-- same lesson `do { } while (c)` taught the control-flow sweep the day before.
+-- DECLARED HERE TOO, and the audit is what asked for it: these three carry a
+-- verdict from THIS file and their `node_kind` rows live in the dataflow pack,
+-- so in the world test/js-callgraph.test.ts builds the claims pointed at cells
+-- that do not exist and `orphan_claim[audit]` named all three by name. A file
+-- that makes a claim about a kind declares the kind.
+node_kind(js, boolean_literal).
+node_kind(js, class_declaration).
+node_kind(js, return_statement).
+
+ignored(js, boolean_literal,   callgraph, a_a_literal_is_never_callable).
+-- ...and the two that are not call sites at all. `return e` carries a value the
+-- VALUE layer reads (that is how `f()()` resolves); it transfers control to a
+-- caller that is already on the graph. A class is reached by `new C()`, whose
+-- cell carries the constructor edge — the class node is the TARGET of an edge,
+-- never the site of one.
+ignored(js, return_statement,   callgraph, a_not_a_call_site).
+ignored(js, class_declaration,  callgraph, a_the_constructor_is_the_target).
 
 -- A LITERAL AS A COMPUTED KEY. `string_literal` and `numeric_literal` are read
 -- for their KIND, which is all a shape needs, and their value is on the facts
@@ -199,7 +228,11 @@ shape_because(js, s_member_on_template,    callgraph, not_yet).
 -- not the matrix, so removing the row would make an occupied catcher silent
 -- exactly when it matters.
 shape_because(js, s_member_on_other,       callgraph, not_yet).
-shape_because(js, s_new_result,            callgraph, not_yet).
+-- RETIRED 2026-09-05 by measurement: `(new Maker())()` where the constructor
+-- RETURNS a function resolves to that function, through the same wrapper rule.
+-- The shape had carried `not_yet` since it was named and no site had ever been
+-- built that could contradict it — the corpus had no constructor with a return.
+handled(js, new_expression, s_new_result, callgraph, r_call_edge).
 -- MODELLED 2026-09-04 with a residue that is not ours. `super()` reaches the
 -- nearest ancestor's explicit constructor — measured against V8, which reports
 -- `Cask -> Barrel` through a constructor-less `Keg`, skipping the synthesised

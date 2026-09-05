@@ -222,10 +222,23 @@ claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
 -- Each is a BUCKET WITH AN OWNER, which is what stops `unqueued` from being
 -- both empty and a lie. A sweep marked done while its layer still has open
 -- cells puts them straight back on the unqueued list.
-work(w_cg_sweep,  "callgraph residue: kinds that make no call edge, waived with a reason").
+-- DONE 2026-09-05, and the ratio is worse for the word `residue` than the
+-- control-flow sweep's was: EIGHTEEN cells, and only FOUR were residue.
+-- Measured, not classified by shape — the boundary was swept by putting every
+-- declared expression kind in callee position one at a time.
+--   3 were ALREADY MODELLED and the matrix under-reported them: logical
+--     (2 edges, a correct may-set), assignment (1) and `(new C())()` (1).
+--   2 close by the LANGUAGE rather than by work: `(true)()` is never callable.
+--   2 are not call sites at all: a return, a class declaration.
+--  11 were not residue and went to items — six to the module boundary the call
+--     graph does not cross, three to the calls that have no call site, one to
+--     scope and one to the generator protocol.
+work(w_cg_sweep,  "DONE 2026-09-05: 18 cells, 4 residue, 3 already modelled, 11 handed to items").
 work_order(w_cg_sweep, 11).
-work_state(w_cg_sweep, open).
+work_state(w_cg_sweep, done).
 work_sweeps(w_cg_sweep, callgraph).
+work_spawned(w_cg_sweep, f_the_callee_catch_all_had_no_audit_for_three_days).
+work_spawned(w_cg_sweep, f_the_call_graph_stops_at_the_module_boundary).
 
 work(w_df_sweep,  "dataflow residue: kinds that carry no runtime value").
 work_order(w_df_sweep, 12).
@@ -328,6 +341,12 @@ claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).
 -- when the scanner's contract moves.
 cell_blocked(member_expression,          s_computed_template_key, callgraph, scanner_contract).
 cell_blocked(optional_member_expression, s_computed_template_key, callgraph, scanner_contract).
+-- THE THIRD CELL WITH THE SAME CAUSE, added 2026-09-05 when the call-graph
+-- sweep left it as the one cell nobody owned. The kind's own call-graph
+-- question is `o[`k`]()` — the key is fixed at parse time and the text is not
+-- in the fact vocabulary. Same contract, same cause, and it belongs beside its
+-- two siblings rather than in a bucket that no longer exists.
+cell_blocked(template_literal,           none,                    callgraph, scanner_contract).
 
 -- ===========================================================================
 -- 15-18 — THE ENVIRONMENT LAYER'S OWN RESIDUE, added 2026-09-04 when
@@ -478,3 +497,68 @@ work_needs(w_effect_layer, w_exn_propagation).
 work_needs(w_effect_layer, w_alias_store).
 work_needs(w_effect_layer, w_env_api_surface).
 work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_lattice).
+
+-- ===========================================================================
+-- 33-34 — WHAT THE CALL-GRAPH SWEEP FOUND, 2026-09-05. Eleven of its eighteen
+-- cells were not residue, and they are two questions rather than eleven.
+
+-- 33. THE CALL GRAPH STOPS AT THE MODULE BOUNDARY, and no gate could see it.
+-- Measured: with BOTH files scanned into one store, `helper()` against
+-- `import { helper } from './beta.mjs'` resolves to NOTHING — and so do the
+-- default and namespace forms. The reason the acceptance is green anyway is
+-- that the fixture corpus contains NO CROSS-FILE CALL AT ALL: alpha.mjs
+-- imports only the tracer, beta.mjs is a second root, so the execution oracle
+-- has nothing to be unsound about. A capability nobody has, in a corpus that
+-- could not notice — the same shape as the leak audit that had no world.
+-- The modules layer already resolves specifiers to files; nothing joins that
+-- to `denotes`, which is the whole of this item.
+work(w_cg_module_boundary, "a call graph that stops at the file: an imported name resolves to nothing").
+work_order(w_cg_module_boundary, 33).
+work_state(w_cg_module_boundary, open).
+claim(queued, js, import_declaration,          none, callgraph, w_cg_module_boundary).
+claim(queued, js, import_specifier,            none, callgraph, w_cg_module_boundary).
+claim(queued, js, import_default_specifier,    none, callgraph, w_cg_module_boundary).
+claim(queued, js, import_namespace_specifier,  none, callgraph, w_cg_module_boundary).
+claim(queued, js, export_named_declaration,    none, callgraph, w_cg_module_boundary).
+claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
+
+-- 34. THE CALLS THAT HAVE NO CALL SITE. `call_kind` is the closed pair
+-- {call_expression, optional_call_expression}, so every totality audit this
+-- file owns quantifies over a set that three real calls are outside of:
+-- ``tag`x` `` calls `tag` (measured: the node is in the tree, the call site
+-- table has no row for it, and `unshaped[audit]` is 0 because it cannot see
+-- past `call_site`); `for (x of it)` calls `it[Symbol.iterator]()` and
+-- `.next()`; `@dec class` calls `dec`, and that one is additionally blocked by
+-- the parser plugin being off. `await p` calling `p.then` is the fourth and is
+-- the reason its kind cell stays open even though the CALLEE position
+-- `(await f())()` resolves — one kind-level cell cannot hold two answers.
+-- THE PRECEDENT IS IN THE RULE FILE ALREADY: `transfer_kind(new_expression)`
+-- exists because "a model built only on CallExpression misses that edge with
+-- nothing to point at". The argument was written and applied once.
+work(w_cg_invisible_calls, "calls with no call site: a tagged template, a for-of iterator, a decorator, a thenable").
+work_order(w_cg_invisible_calls, 34).
+work_state(w_cg_invisible_calls, open).
+claim(queued, js, tagged_template_expression, none, callgraph, w_cg_invisible_calls).
+claim(queued, js, for_of_statement,           none, callgraph, w_cg_invisible_calls).
+claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
+claim(queued, js, decorator,                  none, callgraph, w_cg_invisible_calls).
+
+-- ...and the two the sweep handed to items that already existed. `this()` is a
+-- question about what `this` denotes, which is scope; `(yield v)()` is the
+-- consumer's value arriving in the middle of a suspended body, which is the
+-- generator protocol's other direction.
+claim(queued, js, this_expression,  none, callgraph, w_scope_binding).
+claim(queued, js, yield_expression, none, callgraph, w_df_generator_protocol).
+
+-- 35 — THE CONTRACT UNDER ALL THREE BLOCKED CELLS. `cell_blocked` says a cell
+-- waits on the scanner and names no item, so two items sit in
+-- `nothing_workable[audit]` with their blocker written only in prose. It is
+-- one sentence: scanners/js_ast.ts emits SCALAR own properties, and
+-- `TemplateElement.value` is `{raw, cooked}`, a nested object — so ``o[`k`]()``
+-- is fixed at parse time and not derivable from any fact we have. Entered
+-- because the call-graph sweep left `template_literal x callgraph` as the one
+-- cell nobody owned, and the honest owner is the contract rather than a bucket.
+work(w_scanner_nested_values, "the scanner emits scalar own properties only, so a template's text never becomes a fact").
+work_order(w_scanner_nested_values, 35).
+work_state(w_scanner_nested_values, open).
+claim(queued, js, template_literal, none, callgraph, w_scanner_nested_values).

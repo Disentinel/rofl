@@ -194,6 +194,23 @@ shape[code](C, s_unclassified) :- call_site[code](C, _), not has_shape[code](C).
 catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
                                 callee_obj_kind[code](C, K).
 
+-- ...AND THE SAME NEWS ONE LEVEL UP, WHICH IS WHERE IT SHOULD HAVE BEEN FIRST.
+-- `s_unclassified` is the OTHER catch-all — the callee-position one, the
+-- original of which `s_member_on_other` is the copy — and until 2026-09-05 no
+-- audit asked what was in it. The gate above was written when the OBJECT
+-- bucket was split and it inherited the scope of that incident exactly: it
+-- names the kinds under `s_member_on_other` and is structurally unable to look
+-- at the bucket one level up.
+--
+-- MEASURED by sweeping the boundary rather than sampling it — every declared
+-- expression kind placed in callee position, one at a time — the callee bucket
+-- held TWELVE kinds: array, assignment, await, boolean, import_expression,
+-- logical, numeric, object, string, template, this and yield. Three of them
+-- already RESOLVED (assignment 1 edge, await 1, logical 2, the last a correct
+-- two-element may-set), so the bucket's single `not_yet` was false about a
+-- quarter of its contents.
+unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_kind[code](C, K).
+
 -- and the two ways totality can fail, each a positive row
 shaped[code](C)         :- shape[code](C, _).
 unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C).
