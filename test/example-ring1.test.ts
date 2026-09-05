@@ -144,6 +144,12 @@ test('corpus floor: ring 1 agrees on every SHAPE it is given, not every byte', (
   //
   // So the cap is now a number of SHAPES, and every file contributes to the
   // pool. Measured 2026-09-05: about 90 ms a clause, so 200 shapes is ~18 s.
+  //
+  // THE WHOLE POOL WAS RUN ONCE, off the critical path, and the answer is
+  // 932 of 932 IDENTICAL, 0 refused, 0 silent, in 419 s — the long tail is
+  // slow because the longest representative is 3734 bytes, not because it is
+  // hard. So what this gate samples is a bound on TIME, not on confidence:
+  // the full number exists and is reproducible with SHAPES = 932.
   const SHAPES = 200;
   const shapeOf = (c: ReturnType<typeof parseProgram>[number]) => canonClause(c)
     .replace(/"(\\.|[^"])*"/g, 'S').replace(/\b-?[0-9]+\b/g, 'N')
