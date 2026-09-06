@@ -274,7 +274,13 @@ export const ABSORBED: Record<string, string[]> = {
   // chose. It is MECH: it counts and it throws, and the DECISION it enforces
   // (the number, and where the number is read) lives in the constants block.
   bumpSteps: ['chargeRow'],
-  solveBody: ['recordPrem', 'resolvedLitKey', 'anonLitKey'],
+  // `evalOrder` joined 2026-09-05 and it belongs HERE rather than with the
+  // budget it was first typed next to: it decides the order solveBody walks a
+  // body in, which is the same subject as solving one. MECH — a deterministic
+  // permutation with no number in it; the DECISION it enforces (that a negated
+  // literal is judged only once its variables are bound) is the language's,
+  // not this file's.
+  solveBody: ['evalOrder', 'recordPrem', 'resolvedLitKey', 'anonLitKey'],
   indexProbe: ['scanRel'],
   evalBuiltin: ['arithHole'],
   strataToken: ['extendAssumption', 'sameRecs', 'sigOf'],

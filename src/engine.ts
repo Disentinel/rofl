@@ -277,6 +277,14 @@ export class Evaluation {
         }
       }
     }
+    // NOT CHECKED HERE, and the attempt is worth the comment. A variable free
+    // in a negation is meaningless — `not p(X, Y)` with Y unbound asks whether
+    // p is EMPTY — and adding it to this walk looked like the fix. It is not:
+    // `safe` in this file does not mean "legal", it means "can run bottom-up",
+    // and an unsafe rule is not rejected but made DEMAND-BACKED (line 214). So
+    // the check would move such a rule from one evaluation strategy to another
+    // and leave the wrong answer exactly where it was. Measured before
+    // reverting. The hole is real and is queued as w_negation_range_restriction.
     const h = r.clause.head;
     if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;
     return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set() };
@@ -1058,14 +1066,16 @@ export class Evaluation {
   solveBody(body: BodyElem[], s0: Subst, depth: number,
             frontAt: { pos: number; keys: Set<string> } | null = null,
             ruleId: string | null = null): Sol[] {
-    let acc: Sol[] = [{ s: s0, prems: [] }];
+    const order = this.evalOrder(body);
+    let acc: Sol[] = [{ s: s0, prems: new Array(body.length) }];
     // What THIS frame has charged against `this.rows`. A nested frame (demand
     // unfolding through matchPremise) charges its own, and the sum is what the
     // evaluation is carrying at this instant -- which is the quantity the wall
     // is about, since every one of those frames is holding its array alive.
     let held = 0;
     try {
-      for (let i = 0; i < body.length; i++) {
+      for (let k = 0; k < order.length; k++) {
+        const i = order[k];
         const b = body[i];
         const next: Sol[] = [];
         for (const a of acc) {
@@ -1088,24 +1098,30 @@ export class Evaluation {
             if (ruleId !== null) this.arithHole(ruleId, SPACE_REASON);
             throw new BudgetExhausted(SPACE_REASON, ruleId);
           }
+          // `prems` is indexed by the ORIGINAL body position, not by the
+          // order this loop visits them in, so `body[i] describes prems[i]`
+          // below stays true whatever `evalOrder` decided.
+          const at = (p: PremRef[], ref: PremRef): PremRef[] => {
+            const c = p.slice(); c[i] = ref; return c;
+          };
           if (b.t === 'pos') {
             const only = frontAt && frontAt.pos === i ? frontAt.keys : null;
             for (const m of this.matchPremise(b.lit, a.s, depth, only)) {
-              next.push({ s: m.s, prems: [...a.prems, m.ref] });
+              next.push({ s: m.s, prems: at(a.prems, m.ref) });
             }
           } else if (b.t === 'neg') {
             if (this.negHolds(b.lit, a.s, depth)) {
-              next.push({ s: a.s, prems: [...a.prems, PENDING_NEG] });
+              next.push({ s: a.s, prems: at(a.prems, PENDING_NEG) });
             }
           } else {
             const s2 = this.evalBuiltin(b, a.s, ruleId);
-            if (s2) next.push({ s: s2, prems: [...a.prems, PENDING_BI] });
+            if (s2) next.push({ s: s2, prems: at(a.prems, PENDING_BI) });
           }
         }
         // This position's result is now held and the accumulator it consumed
         // is not -- except at i === 0, where that accumulator is the seed this
         // frame was called with and was never charged.
-        const grew = next.length - (i === 0 ? 0 : acc.length);
+        const grew = next.length - (k === 0 ? 0 : acc.length);
         this.rows += grew;
         held += grew;
         if (this.rows > this.peakRows) this.peakRows = this.rows;
@@ -1122,6 +1138,62 @@ export class Evaluation {
     }
     // One premise per body element, in order, so body[i] describes prems[i].
     return acc.map((a) => ({ s: a.s, prems: a.prems.map((p, i) => this.recordPrem(body[i], p, a.s)) }));
+  }
+
+  /** THE ORDER A BODY IS EVALUATED IN, which is not always the order it is
+   *  written in. Positives and builtins keep their written positions — the cost
+   *  of a join is a property of that order and it is chosen deliberately — and
+   *  each NEGATIVE literal is deferred to the earliest point where every
+   *  variable in it is bound.
+   *
+   *  WHY, MEASURED IN TEN LINES: the same rule over the same facts answered
+   *  differently depending on where the `not` was typed.
+   *
+   *      val(X,K) :- par(X,Y), not own(X,K), val(Y,K).   ->  c/deep k/deep
+   *      val(X,K) :- par(X,Y), val(Y,K), not own(X,K).   ->  c/deep k/deep b/deep
+   *
+   *  With `K` still unbound, `not own(X, K)` does not ask "does X own K", it
+   *  asks "does X own ANYTHING" — a different question, silently. Both spellings
+   *  are safe by the standard definition, because safety is a property of the
+   *  body as a SET, and nothing refused either. The repository had already paid
+   *  for this once: rules/js-dataflow.rofl carries a paragraph explaining that
+   *  ORDER IS LOAD-BEARING HERE, and a prototype chain that stopped one level
+   *  short until the literals were swapped by hand.
+   *
+   *  A safe rule always admits such an order, because every variable of a
+   *  negation appears in some positive literal. When one does not — a genuinely
+   *  unsafe rule — the leftover negatives run last, in their written order, so
+   *  the behaviour for those is exactly what it was.
+   *
+   *  `whynot` shares this path, which is the other half of the defect: it bound
+   *  the goal's arguments first and so evaluated the negation with the variable
+   *  bound, disagreeing with the evaluator about the same rule. They now agree
+   *  because there is one order rather than two. */
+  private evalOrder(body: BodyElem[]): number[] {
+    const varsIn = (b: BodyElem): Set<string> => {
+      if (b.t === 'bi') return varsOf(b.l, varsOf(b.r));
+      let acc = varsOf(b.lit.persp);
+      for (const a of b.lit.args) acc = varsOf(a, acc);
+      return acc;
+    };
+    const out: number[] = [];
+    const held: number[] = [];
+    const bound = new Set<string>();
+    const ready = (i: number) => [...varsIn(body[i])].every((v) => bound.has(v));
+    const take = (i: number) => { out.push(i); for (const v of varsIn(body[i])) bound.add(v); };
+    for (let i = 0; i < body.length; i++) {
+      if (body[i].t === 'neg' && !ready(i)) { held.push(i); continue; }
+      take(i);
+      // a deferred negation may have become answerable, and one release can
+      // free another only through the positives, so a single pass suffices here
+      for (let k = 0; k < held.length; k++) {
+        if (ready(held[k])) { out.push(held.splice(k, 1)[0]); k--; }
+      }
+    }
+    // whatever is still held has a variable no positive literal binds: an
+    // unsafe rule, and it keeps the behaviour it had
+    for (const i of held) out.push(i);
+    return out;
   }
 
   /** Write a premise as provenance records it: under the substitution the

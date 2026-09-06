@@ -118,7 +118,12 @@ test('the five heaviest read paths, by name', () => {
     'relPersp encloses_v = 28704',
     'relPersp ast_node = 24960',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
-  assert.equal(c.total, 508763, 'total rows handed out by the store in one fixpoint');
+  // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
+  // and all five names above unmoved. The kernel now defers a negative literal
+  // until its variables are bound, so it is judged against a smaller
+  // accumulator: the same answers for slightly fewer questions. A correctness
+  // fix that made the evaluation cheaper is worth pinning as such.
+  assert.equal(c.total, 508688, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the

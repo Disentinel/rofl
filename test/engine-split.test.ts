@@ -168,7 +168,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', () => {
+test('the split: mechanism is 577 of 878 code lines, policy 218 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -182,7 +182,12 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   // `N is str_len(S), N < 5` worked, and `str_len(7) < 5` produced no rows and
   // NO hole while `N is str_len(7)` produced `str_type_error` — the same
   // inability, one audible and one mute.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 851);
+  // 851 -> 878 (+27): `evalOrder`, which defers a negated literal until its
+  // variables are bound. ALL TWENTY-SEVEN ARE MECHANISM and `pol` did not move
+  // by a line — the same shape as the comparison sink before it, and the right
+  // shape for a correctness fix in the evaluator: it decides nothing, it
+  // enforces what the language already meant.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 878);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -199,7 +204,7 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   // lives in the reason atom declared in reflect.ts; this branch only enforces
   // it. codeKept moved by the same +17 with NO reached/kept gap, because the
   // whole edit sits inside evalBuiltin, which the monotone core keeps entire.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 550);
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 577);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -227,8 +232,8 @@ test('the split: mechanism is 550 of 851 code lines, policy 218 — by query', (
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
-  assert.equal(S.byCat['MECH'].code, 550);
-  assert.equal(S.total.code, 851);
+  assert.equal(S.byCat['MECH'].code, 577);
+  assert.equal(S.total.code, 878);
   assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 218);
 });
 
@@ -330,8 +335,8 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+550 code/);
-  assert.match(text, /TOTAL\s+851 code/);
+  assert.match(text, /MECH\s+577 code/);
+  assert.match(text, /TOTAL\s+878 code/);
   assert.match(text, /before-A\s+121 code lines/);
 });
 

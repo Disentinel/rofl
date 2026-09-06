@@ -1204,6 +1204,16 @@ test('mutant 22 — THE ORDER OF A NEGATED LITERAL, and it is not style', () => 
   // w_body_order_is_load_bearing); the day it is fixed THIS MUTANT STOPS
   // KILLING, and that is the signal that the workaround comment in
   // rules/js-dataflow.rofl can go.
+  // THE KERNEL WAS FIXED, 2026-09-05, and this test was the signal by
+  // construction: it stopped killing. `Evaluation.evalOrder` now defers a
+  // negative literal to the earliest point where every variable in it is
+  // bound, so the two spellings below are the same program — which is what
+  // Datalog says they always were.
+  //
+  // IT IS KEPT AND INVERTED rather than deleted. A defect that was fixed once
+  // can return, and the assertion that says so is the same two spellings with
+  // the expectation the other way round: they must now agree EDGE FOR EDGE,
+  // not merely on the one edge that used to vanish.
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1214,10 +1224,12 @@ test('mutant 22 — THE ORDER OF A NEGATED LITERAL, and it is not style', () => 
         + '                                  not own_key[flow](CD, Key),\n'
         + '                                  member_value[flow](SD, Key, V).',
   }]);
-  assert.ok(base.edges.has('useSuper -> hold'));
-  assert.ok(!mut.edges.has('useSuper -> hold'),
-    'REORDERING ALONE loses the edge — if this ever passes, the kernel was fixed');
-  console.log(`  KILLED by literal ORDER alone: edges ${base.edges.size} -> ${mut.edges.size}`);
+  assert.ok(base.edges.has('useSuper -> hold'), 'positive control: the inherited edge is there');
+  assert.ok(mut.edges.has('useSuper -> hold'),
+    'the edge survives the swap — this is the kernel fix, asserted');
+  assert.deepEqual([...mut.edges].sort(), [...base.edges].sort(),
+    'and the two spellings agree edge for edge, not just on the one that used to go');
+  console.log(`  NO LONGER KILLS, and that is the acceptance: ${base.edges.size} edges either way`);
 });
 
 // MUTANT 17 WAS DELETED 2026-09-04 with its subject. It mutated `denotes` in

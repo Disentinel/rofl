@@ -118,9 +118,11 @@ work_spawned(w_cg_call_result, f_the_corpus_had_no_class_that_inherited_anything
 -- 20 — THE KERNEL DEFECT THE ABOVE FOUND, entered so the dependency is a row.
 -- Ordered last for the same reason as the leak item: it is a language question
 -- and the owner schedules it.
-work(w_body_order_is_load_bearing, "a negated literal evaluated before its variables are bound: body order changes the answer, and whynot disagrees with the evaluator").
+work(w_body_order_is_load_bearing, "DONE 2026-09-05: evalOrder defers a negated literal until its variables are bound; the two spellings are one program again").
 work_order(w_body_order_is_load_bearing, 20).
-work_state(w_body_order_is_load_bearing, open).
+work_state(w_body_order_is_load_bearing, done).
+work_spawned(w_body_order_is_load_bearing, f_a_static_call_through_the_class_name_is_invisible_to_the_census).
+work_spawned(w_body_order_is_load_bearing, f_the_safe_flag_is_a_strategy_not_a_verdict).
 work_spawned(w_body_order_is_load_bearing, f_body_order_changes_the_answer_and_whynot_cannot_see_it).
 
 -- ===========================================================================
@@ -695,3 +697,17 @@ work(w_vocabulary_home, "node_kind rows live in five packs; facts/js-kinds.rofl 
 work_order(w_vocabulary_home, 38).
 work_state(w_vocabulary_home, open).
 work_spawned(w_vocabulary_home, f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it).
+
+-- 39 — RANGE RESTRICTION FOR NEGATION, entered 2026-09-05 by the work that
+-- fixed the ORDER half beside it. A variable appearing only inside `not p(...)`
+-- is accepted: `not r(X, Y)` with Y bound nowhere does not ask what it looks
+-- like it asks, it asks whether `r` is EMPTY. Measured on three shapes, all
+-- accepted. The obvious fix - fail it in `classify` - was tried and REVERTED,
+-- because `safe` in src/engine.ts does not mean legal: an unsafe rule is not
+-- rejected, it is made DEMAND-BACKED, so the check would move such a rule from
+-- one evaluation strategy to another and leave the wrong answer where it was.
+-- The diagnostic belongs where `unsafe/1` and `malformed/2` already live.
+work(w_negation_range_restriction, "a variable bound only inside a negation is accepted, and asks whether the relation is empty").
+work_order(w_negation_range_restriction, 39).
+work_state(w_negation_range_restriction, open).
+work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_verdict).

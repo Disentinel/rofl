@@ -279,8 +279,16 @@ own_key[flow](CD, Key)         :- obj_like[flow](CD), ast_child[code](CD, body, 
 -- two literals swapped answers `b c k` one way and `b k` the other, over
 -- identical facts. `whynot` reports NO FAILING PREMISE for the missing row —
 -- it binds the goal's arguments first, so it evaluates the negation with `Key`
--- bound and disagrees with the evaluator. Recorded as a kernel finding; until
--- it is fixed, ORDER IS LOAD-BEARING HERE.
+-- bound and disagrees with the evaluator. Recorded as a kernel finding.
+--
+-- FIXED IN THE KERNEL 2026-09-05. `Evaluation.evalOrder` defers a negative
+-- literal to the earliest point where every variable in it is bound, so the two
+-- spellings above are one program again and mutant 22 in
+-- test/js-callgraph.test.ts - which existed to STOP KILLING on this day - now
+-- asserts they agree edge for edge. THE ORDER BELOW IS KEPT AS WRITTEN
+-- ANYWAY: it is the order a reader follows, and after 2026-09-05 it is also the
+-- order the cost work chose. What changed is that it is no longer LOAD-BEARING,
+-- and a rule written the other way would answer the same.
 member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
                                   member_value[flow](SD, Key, V),
                                   not own_key[flow](CD, Key).
