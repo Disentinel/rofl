@@ -95,3 +95,64 @@ unknown_because(js, import_expression, callgraph, runtime_dependent).
 -- The shape axis therefore loads on top of this file together with
 -- facts/js-callgraph.rofl, which is where the kinds it splits are declared.
 -- Two worlds, and test/js-model.test.ts builds both.
+
+-- ===========================================================================
+-- THE FRAME, decided 2026-09-06 — queue item w_vocabulary_frame.
+--
+-- `vocabulary_gap[audit]` stood at SEVENTEEN on an honest checkout: kinds the
+-- scanner emits that `node_kind` does not declare. Measured, they are not one
+-- list but THREE, and calling them one is what made the item look like a chore
+-- rather than the decision its own note said it was.
+
+-- ---------------------------------------------------------------------------
+-- NOT CONSTRUCTS. Two are the scanner's own roots and one is trivia. No layer
+-- can have an opinion about any of them; declaring them would produce twelve
+-- waivers that describe the SCANNER rather than the language, and a waiver that
+-- describes the instrument is noise in a matrix that exists to describe JS.
+not_a_construct(file).
+not_a_construct(program).
+not_a_construct(comment_line).
+
+-- ---------------------------------------------------------------------------
+-- FOUR REAL CONSTRUCTS, declared and answered. `binary_expression` was already
+-- LOAD-BEARING before it was declared — facts/js-env.rofl carries
+-- `kind_baseline(js, binary_expression)` and `attr_needs(js, binary_expression,
+-- operator, "**", exponentiation)`, so the era layer has been reasoning about a
+-- kind the vocabulary did not contain. That is the sharpest instance of what
+-- this audit exists to catch.
+-- ...and the four `node_kind` rows are NOT here either, for the second half of
+-- the same reason. This file is the minimal world test/js-model.test.ts uses to
+-- test the MATRIX MACHINERY — boot plus these facts and nothing else — so a
+-- kind declared here with its verdicts elsewhere adds cells that world can never
+-- answer: `not_modelled` went 14 -> 22 and every pin in that file moved. The
+-- convention in force is `a file that makes a claim declares the kind`, and this
+-- file makes no claim about these four. See the four layer packs.
+
+-- THE SIXTEEN VERDICTS ARE NOT HERE. `orphan_claim[audit]` reported eight of
+-- them within one run: a claim about a cell that does not exist, because a
+-- world that declares `layer(callgraph)` and not `layer(modules)` has no cell
+-- for a modules verdict — and this file is loaded in every world. A verdict
+-- belongs in the pack that DECLARES ITS LAYER, which is the sentence
+-- w_vocabulary_home is about and the reason the kind rows get copied.
+-- See facts/js-callgraph.rofl, js-dataflow.rofl, js-modules.rofl and
+-- js-controlflow.rofl for the four rows each of these kinds carries.
+
+-- ---------------------------------------------------------------------------
+-- TEN TYPE NODES, DEFERRED WITH AN OWNER. This is the decision the item was
+-- about. Declaring them costs FORTY cells that no rule can close, because what
+-- a type MEANS in this model is w_type_surface's question and that item is
+-- blocked behind the API surface. Deferring is not silence: the row names the
+-- kind and the owner, `frame_owner_unknown[audit]` refuses an owner that is not
+-- an item, and `frame_owner_done[audit]` refuses one that has already closed —
+-- so the day w_type_surface lands, these have to be dealt with or the audit
+-- says so.
+frame_deferred(tsfunction_type,                w_type_surface).
+frame_deferred(tsnull_keyword,                 w_type_surface).
+frame_deferred(tsnumber_keyword,               w_type_surface).
+frame_deferred(tsstring_keyword,               w_type_surface).
+frame_deferred(tstype_alias_declaration,       w_type_surface).
+frame_deferred(tstype_annotation,              w_type_surface).
+frame_deferred(tstype_parameter_instantiation, w_type_surface).
+frame_deferred(tstype_query,                   w_type_surface).
+frame_deferred(tstype_reference,               w_type_surface).
+frame_deferred(tsunion_type,                   w_type_surface).

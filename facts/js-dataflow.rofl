@@ -204,3 +204,17 @@ handled(js, yield_expression, dataflow, r_generator_protocol).
 -- because it now HAS a value. Asserted by a site the runtime takes, not
 -- claimed: UNSOUND stayed 0 when it was added.
 handled(js, yield_expression, s_yield_result, callgraph, r_generator_protocol).
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, dataflow, a_a_primitive_is_not_a_node).
+ignored(js, unary_expression, dataflow, a_a_primitive_is_not_a_node).
+ignored(js, class_body, dataflow, a_a_statement_carries_no_value).
+ignored(js, template_element, dataflow, a_a_quasi_is_not_an_expression).

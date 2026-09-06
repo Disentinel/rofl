@@ -282,3 +282,17 @@ checked(js, call_expression, callgraph, r_call_edge, o_run_with_stack, 2).
 -- correcting one level up.
 shape_because(js, s_member_on_ident, callgraph, no_source_target).
 shape_because(js, s_member_on_new,   callgraph, no_source_target).
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, callgraph, a_a_primitive_is_never_a_callee).
+ignored(js, unary_expression, callgraph, a_a_primitive_is_never_a_callee).
+ignored(js, class_body, callgraph, a_a_statement_is_not_a_callee).
+ignored(js, template_element, callgraph, a_a_primitive_is_never_a_callee).

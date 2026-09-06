@@ -591,7 +591,7 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // pack declares them. `orphan_claim[audit]` is what demanded it — the rows
   // were written where the verdict belongs and their kinds were declared in
   // the dataflow pack, so in this world they claimed cells that did not exist.
-  assert.equal(dKinds, 29, 'kinds the matrix did not know existed');
+  assert.equal(dKinds, 33, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);

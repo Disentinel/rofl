@@ -426,17 +426,29 @@ claim(queued, js, member_expression, none, controlflow, w_cf_accessor).
 -- short-circuit, and a kind-level cell cannot carry two verdicts. See the note
 -- in facts/js-controlflow.rofl — `queue_stale[audit]` said so on the first run.
 
--- 27 — THE FRAME. `vocabulary_gap[audit]` stands at seventeen: kinds the corpus
--- produces that `node_kind` does not declare. They are the structural residue
--- (`program`, `file`, `comment_line`, `template_element`, `class_body`), two
--- ordinary expression kinds (`binary_expression`, `unary_expression`) and ten
--- TypeScript type nodes. Declaring a kind costs four cells, so this is a
--- DECISION about how wide the model is and not a chore — which is why it is an
--- item and why the audit reports a number rather than nothing.
-work(w_vocabulary_frame, "seventeen kinds the corpus produces and the vocabulary does not declare").
+-- 27 — THE FRAME, decided 2026-09-06. `vocabulary_gap[audit]` stood at
+-- seventeen on an honest checkout, and the item's own note called it a DECISION
+-- rather than a chore. Measured, the seventeen are not one list but THREE, and
+-- treating them as one is what made it look like seventeen waivers:
+--
+--   3  NOT CONSTRUCTS   file, program, comment_line — the scanner's own roots
+--                       and trivia. No layer can have an opinion; twelve cells
+--                       describing the SCANNER is noise in a matrix about JS.
+--   4  REAL AND ANSWERED binary_expression, unary_expression, class_body,
+--                       template_element — sixteen cells, all waived with a
+--                       reason about the LANGUAGE rather than about our effort.
+--   10 DEFERRED         the TypeScript type nodes, forty cells that no rule can
+--                       close because what a type MEANS here is item 31's
+--                       question. `frame_deferred(K, W)` names the owner.
+--
+-- `binary_expression` was already LOAD-BEARING before it was declared: the era
+-- layer carries `kind_baseline` and an `attr_needs` row for `**` on a kind the
+-- vocabulary did not contain. That is the sharpest thing this audit has caught.
+work(w_vocabulary_frame, "DONE 2026-09-06: 3 not constructs, 4 declared and answered, 10 deferred to w_type_surface; the audit is at zero").
 work_order(w_vocabulary_frame, 27).
-work_state(w_vocabulary_frame, open).
+work_state(w_vocabulary_frame, done).
 work_spawned(w_vocabulary_frame, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
+work_spawned(w_vocabulary_frame, f_a_gate_with_nowhere_to_record_the_decision_stays_red).
 
 -- 14 — RAISED BY THE WORK IT CAME OUT OF, and deliberately not done in it.
 -- `new C()` and the name `C` both reach the class node, so the model does not

@@ -135,3 +135,17 @@ handled(js, member_expression, controlflow, r_accessor).
 -- model cannot report without un-ticking the one it already has. Written as a
 -- claim it raised `queue_stale[audit]` immediately, which is the matrix
 -- refusing to hold two verdicts for one cell.
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, controlflow, a_no_control_transfer).
+ignored(js, unary_expression, controlflow, a_no_control_transfer).
+ignored(js, class_body, controlflow, a_a_container_transfers_nothing).
+ignored(js, template_element, controlflow, a_no_control_transfer).

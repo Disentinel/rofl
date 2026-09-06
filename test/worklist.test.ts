@@ -39,7 +39,7 @@ const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.
   'facts/js-statements.rofl', 'facts/js-controlflow.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
-interface Mut { find?: string; replace?: string; extra?: string }
+interface Mut { find?: string; replace?: string; extra?: string; file?: string }
 
 function world(m: Mut = {}) {
   const r = new Rofl();
@@ -48,10 +48,22 @@ function world(m: Mut = {}) {
     assert.equal(res.ok, true, `${what} rejected:\n${res.diagnostics.slice(0, 3).join('\n')}`);
   };
   load(read('boot.rofl'), 'boot.rofl');
-  for (const f of FACTS) load(read(f), f);
-  for (const f of RULES) load(read(f), f);
+  // FACT AND RULE FILES ARE MUTABLE TOO since 2026-09-06: the frame's three
+  // answers live in `facts/js-kinds.rofl` and the gap rule in
+  // `rules/js-model.rofl`, and a harness that could only mutate the plan
+  // reported six anchor errors as six kills.
+  const patch = (f: string) => {
+    let text = read(f);
+    if (m.file === f && m.find !== undefined) {
+      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
+      text = text.replace(m.find, m.replace ?? '');
+    }
+    return text;
+  };
+  for (const f of FACTS) load(patch(f), f);
+  for (const f of RULES) load(patch(f), f);
   let plan = read('facts/worklist.rofl');
-  if (m.find !== undefined) {
+  if (m.find !== undefined && m.file === undefined) {
     assert.ok(plan.includes(m.find), `mutation anchor absent: ${m.find}`);
     plan = plan.replace(m.find, m.replace ?? '');
   }
@@ -82,6 +94,12 @@ const LIES = [
   'reason_unclassified[audit](R)',
   'blocker_unknown[audit](K, S, L, C)',
   'blocker_stale[audit](K, S, L)',
+  // ADDED 2026-09-06 with w_vocabulary_frame. A kind can now be deferred OUT of
+  // the frame with an owner, and a deferral is a decision addressed to someone:
+  // an owner that is not an item is addressed to nobody, and an owner that has
+  // already closed is a decision that outlived its reason.
+  'frame_owner_unknown[audit](K, W)',
+  'frame_owner_done[audit](K, W)',
 ];
 
 /** `scope_unowned` is NOT in that list: it is expected to be non-empty. It
@@ -162,7 +180,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_negation_range_restriction', 'w_scope_binding',
      'w_unconsumed_attribute',
-     'w_vocabulary_frame', 'w_vocabulary_home']);
+     'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
   // fifty cells — so what is left at the head is arithmetic, the call-graph
@@ -189,7 +207,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ...and the accessor closed the control-flow layer entirely, so the head
   // leaves it for the first time: the FRAME — seventeen kinds the corpus
   // produces that the vocabulary does not declare.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_vocabulary_frame'],
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_exn_propagation'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
@@ -420,7 +438,10 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // THE HEAD MOVED THREE TIMES ON 2026-09-06: w_cf_abrupt_transfer,
   // w_cf_reachability and w_exception_flow, all closed, so the next by order is
   // `w_cf_accessor`.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_vocabulary_frame']);
+  // THE HEAD MOVED AGAIN 2026-09-06: the frame is decided, so the next by order
+  // is the transitive half of the exception path — unblocked when its premise,
+  // w_exception_flow, closed earlier the same day.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_exn_propagation']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -436,9 +457,12 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // local edge is done. The premise it waited on is the one that also took back
   // its witness: `useTry -> after` had been attributed to the transitive item
   // and belongs to the local one.
-  assert.equal(base.n('blocked[audit](W)'), 4, 'one held on purpose, three real premises');
+  // ...AND FOUR BECAME THREE the same day: `w_env_api_surface` waited on the
+  // frame, and the frame is decided. Two of the three that remain are the type
+  // chain and one is the kernel question the owner is holding.
+  assert.equal(base.n('blocked[audit](W)'), 3, 'one held on purpose, two real premises');
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
-    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_type_surface']);
+    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form']);
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
@@ -456,13 +480,13 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and re-aimed again for the same reason: the head moved on. It is planted
   // on the CURRENT head and on the item the closing work spawned, which is the
   // only pair that keeps saying what the relation exists to say.
-  const mut = world({ extra: 'work_needs(w_vocabulary_frame, w_cf_completion).' });
-  assert.equal(mut.n('blocked[audit](W)'), 5, 'the planted one on top of the four real ones');
+  const mut = world({ extra: 'work_needs(w_exn_propagation, w_cf_completion).' });
+  assert.equal(mut.n('blocked[audit](W)'), 4, 'the planted one on top of the three real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
   // relation doing exactly one thing — skipping — which is what makes it
   // checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_exn_propagation'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_scope_binding'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

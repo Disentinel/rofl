@@ -514,7 +514,38 @@ edb(ast_node).
 edb(lang_of_corpus).
 lang_of_corpus(js).
 
+-- THREE CLASSES, NOT TWO, measured 2026-09-06 on the seventeen this audit was
+-- reporting. The comment above already promised the remedy — "a kind it names
+-- is either declared, or the decision not to is recorded somewhere a reader can
+-- find" — and there was nowhere to record it, so the audit sat at seventeen on
+-- an honest checkout for a day. A gate red on an honest tree gets switched off.
+--
+-- 1. NOT A CONSTRUCT AT ALL. `file` and `program` are the SCANNER'S OWN ROOTS
+-- and `comment_line` is trivia; no layer can have an opinion about any of them,
+-- and giving them cells would be twelve waivers describing the scanner rather
+-- than the language. The audit's criterion was borrowed from what the scanner
+-- EMITS; the question is what the language CONTAINS.
+edb(not_a_construct).
+
+-- 2. OUTSIDE THE FRAME, WITH AN OWNER — the same move `mechanism_open` makes
+-- for a mechanism and `catch_from_call` for a value, and the third time this
+-- session that splitting a frontier from a defect is what takes an audit to
+-- zero honestly. A deferred kind is a DECISION with a name attached, not a
+-- silence.
+edb(frame_deferred).        -- frame_deferred(Kind, WorkItem)
+
 vocabulary_gap[audit](Lang, K) :- ast_node[code](_, K, _, _),
-                                  lang_of_corpus(Lang), not node_kind(Lang, K).
+                                  lang_of_corpus(Lang), not node_kind(Lang, K),
+                                  not not_a_construct(K), not frame_deferred(K, _).
+
+-- ...AND BOTH EXCLUSIONS HAVE TO BE HONEST THEMSELVES, or this is a hole with a
+-- vocabulary in front of it. A misspelling in either list silently readmits the
+-- kind to nothing: it is neither declared nor excluded by the row that meant to
+-- exclude it, and the gap audit is the only thing that would have said so.
+not_a_construct_unseen[audit](K) :- not_a_construct(K), not ast_node[code](_, K, _, _).
+frame_deferred_unseen[audit](K)  :- frame_deferred(K, _), not ast_node[code](_, K, _, _).
+double_excluded[audit](K)        :- not_a_construct(K), frame_deferred(K, _).
+declared_and_excluded[audit](K)  :- node_kind(_, K), not_a_construct(K).
+declared_and_deferred[audit](K)  :- node_kind(_, K), frame_deferred(K, _).
 
 imports(audit, code).

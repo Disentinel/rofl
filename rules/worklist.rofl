@@ -167,6 +167,11 @@ false_done[audit](W, K, S, L) :- work_state(W, done), claim(queued, js, K, S, L,
 ordered(W)                    :- work_order(W, _).
 stated_state(W)               :- work_state(W, _).
 work_unstated[audit](W)       :- claim(queued, js, _, _, _, W), not work(W, _).
+-- ...and the same question for a kind deferred out of the frame: the deferral
+-- names an OWNER, and an owner that is not an item is a decision addressed to
+-- nobody. Same shape as `held_unknown`, which catches a hold naming nothing.
+frame_owner_unknown[audit](K, W) :- frame_deferred(K, W), not work(W, _).
+frame_owner_done[audit](K, W)    :- frame_deferred(K, W), work_state(W, done).
 work_unstated[audit](W)       :- work_sweeps(W, _), not work(W, _).
 work_unordered[audit](W)      :- work(W, _), not ordered(W).
 work_stateless[audit](W)      :- work(W, _), not stated_state(W).

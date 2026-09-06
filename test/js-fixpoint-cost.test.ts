@@ -116,7 +116,7 @@ test('the five heaviest read paths, by name', () => {
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
     'argMatches ast_within pos=[0] = 83421',
-    'relPersp authority = 67455',
+    'relPersp authority = 67662',
     'argMatches encloses_v pos=[1] = 40780',
     'relPersp encloses_v = 39873',
     'relPersp ast_node = 34684',
@@ -138,13 +138,17 @@ test('the five heaviest read paths, by name', () => {
   // transitive walk itself contributes ~0.5%, measured by name below. Five
   // heaviest paths growing together at the corpus's own rate is a bigger
   // fixture; a NEW name, or one growing alone, is a badly ordered body.
+  // 694 018 -> 705 690 (+1.7%) with the frame's four kinds: the vocabulary grew
+  // and the matrix machinery in this world grew with it. Four kinds, zero new
+  // rules, and the only path that moved is `relPersp authority` — the ledger
+  // read, which is what a bigger fact set costs.
   // 601 774 -> 678 174 -> 694 018 across the day (+15.3% in total), the same
   // five names in the same order throughout, each up 13.8%-18.1%, against facts
   // +16.1% and firings +16.9%. FOUR items closed in one session and every one
   // needed a fixture the corpus did not have, so alpha.mjs grew by twenty-eight
   // functions and the fixpoint grew with it. NONE of it is rule cost — see the
   // note below on what this gate can see.
-  assert.equal(c.total, 694018, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 705690, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -162,10 +166,13 @@ test('the five heaviest read paths, by name', () => {
   // expensive and this number will not move. The layer's own cost has no gate;
   // saying so is the honest state, and the number here means what its own world
   // says it means.
+  // 34 559 -> 34 623, +64: four `node_kind` rows and their sixteen `ignored`
+  // verdicts, times the matrix rules that read them. The only iteration today
+  // whose firings moved for a reason that is NOT the corpus.
   // 28 676 -> 29 575 -> 33 267 across the day, and by the same reasoning ALL of
   // it is fixtures: `reachable`, `always_throws` and the entry surface do not
   // run in this world either. The corpus grew 12% and this fixpoint grew 12% —
   // the check doing exactly its job on the half it can see, and saying nothing
   // whatever about the half it cannot (w_cost_gate_per_layer, 41).
-  assert.equal(c.firings, 34559, 'derivations: 25513 before the generator fixture');
+  assert.equal(c.firings, 34623, 'derivations: 25513 before the generator fixture');
 });

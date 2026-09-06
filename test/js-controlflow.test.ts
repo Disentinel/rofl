@@ -117,8 +117,14 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // layer — three before the fact, four after. The identity above is what the
   // programme asserts; these two are the positive control that the worlds are
   // the ones it was measured on, and they move whenever the vocabulary does.
-  assert.equal(before, 224, 'positive control: the matrix before the fact');
-  assert.equal(after, 289, 'positive control: and after');
+  // 224/289 -> 236/305 on 2026-09-06: FOUR kinds entered the vocabulary when the
+  // frame was decided (binary_expression, unary_expression, class_body,
+  // template_element), three more were declared NOT CONSTRUCTS and ten DEFERRED
+  // — and neither of those two classes costs a cell, which is the whole point of
+  // having three answers instead of one. Twelve before, sixteen after: the
+  // identity above is what the programme asserts and it holds through all of it.
+  assert.equal(before, 236, 'positive control: the matrix before the fact');
+  assert.equal(after, 305, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -502,6 +508,90 @@ const ACC: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
 ];
 
 for (const g of ACC) test(`${g.name} — an accessor is a call`, () => g.expect(build(g.mut), base()));
+
+// ---------------------------------------------------------------------------
+// 3e. THE FRAME (w_vocabulary_frame): three ways a kind can be accounted for.
+//
+// SIX MUTANTS, SIX KILLED, and the harness needed two repairs before any of that
+// was true — both the same shape, both caught by implausibility rather than by
+// the harness itself. The first run reported six kills that were ANCHOR ERRORS,
+// because the probe mutated only rule files and every anchor here is in
+// `facts/js-kinds.rofl`. The second reported one survivor, because its oracle
+// read `unqueued[audit]` — defined in `rules/worklist.rofl`, which that world
+// does not load. THIS test lives here rather than in test/worklist.test.ts for
+// the third instance of the same lesson: the plan world has NO CORPUS, so
+// `vocabulary_gap` is empty in it no matter what the vocabulary says.
+const FRAME: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'f1 an excluded kind is misspelled',
+    mut: [{ find: 'not_a_construct(comment_line).', replace: 'not_a_construct(coment_line).',
+            file: 'facts/js-kinds.rofl' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('vocabulary_gap[audit](L, K)').map(([, k]) => k), ['comment_line'],
+        'the kind is readmitted to nothing');
+      assert.deepEqual(m.q('not_a_construct_unseen[audit](K)').flat(), ['coment_line'],
+        '...and the typo is named, so the report is not just a number');
+    },
+  },
+  {
+    name: 'f2 a deferred kind is misspelled',
+    mut: [{ find: 'frame_deferred(tsunion_type,                   w_type_surface).',
+            replace: 'frame_deferred(tsunoin_type,                   w_type_surface).',
+            file: 'facts/js-kinds.rofl' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('vocabulary_gap[audit](L, K)').map(([, k]) => k), ['tsunion_type']);
+      assert.deepEqual(m.q('frame_deferred_unseen[audit](K)').flat(), ['tsunoin_type']);
+    },
+  },
+  {
+    name: 'f3 a kind is declared AND excluded',
+    mut: [{ find: 'not_a_construct(file).',
+            replace: 'not_a_construct(file).\nnot_a_construct(class_body).',
+            file: 'facts/js-kinds.rofl' }],
+    // THE GAP AUDIT CANNOT SEE THIS, and that is the point of the pair: either
+    // row silences it, so a contradiction reads as an answer.
+    expect: (m) => {
+      assert.deepEqual(m.q('declared_and_excluded[audit](K)').flat(), ['class_body']);
+      assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0, 'and the gap audit stays silent');
+    },
+  },
+  {
+    name: 'f4 a kind is declared AND deferred',
+    mut: [{ find: 'frame_deferred(tsnull_keyword,                 w_type_surface).',
+            replace: 'frame_deferred(tsnull_keyword,                 w_type_surface).\n'
+                   + 'frame_deferred(unary_expression, w_type_surface).',
+            file: 'facts/js-kinds.rofl' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('declared_and_deferred[audit](K)').flat(), ['unary_expression']);
+      assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0);
+    },
+  },
+  {
+    name: 'f5 a declared kind loses one of its four verdicts',
+    // THE ANCHOR MOVED WITHIN THE SAME ITERATION, and the move is the lesson:
+    // all sixteen verdicts were first written into facts/js-kinds.rofl, and
+    // `orphan_claim[audit]` reported eight of them — a claim about a cell that
+    // does not exist, because that file is loaded in worlds that declare only
+    // some of the layers. A verdict belongs in the pack that DECLARES ITS LAYER.
+    mut: [{ find: 'ignored(js, class_body, callgraph, a_a_statement_is_not_a_callee).',
+            replace: '', file: 'facts/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(m.q('verdict[audit](js, class_body, none, callgraph, V)').flat(),
+        ['not_modelled']);
+      assert.deepEqual(b.q('verdict[audit](js, class_body, none, callgraph, V)').flat(),
+        ['waived'], 'positive control');
+    },
+  },
+  {
+    name: 'f6 the two exclusions stop being read',
+    mut: [{ find: ',\n                                  not not_a_construct(K), not frame_deferred(K, _).',
+            replace: '.', file: 'rules/js-model.rofl' }],
+    expect: (m) => assert.equal(m.n('vocabulary_gap[audit](L, K)'), 13,
+      'three not-constructs and ten deferred type nodes come back at once'),
+  },
+];
+
+for (const g of FRAME) test(`${g.name} — the frame`, () => g.expect(build(g.mut), base()));
 
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
   // Asked of the rule before it was believed, which is the question that pays.
