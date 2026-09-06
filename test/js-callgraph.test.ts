@@ -443,7 +443,13 @@ test('argument position is content: which function is in which slot', () => {
 test('every unresolved shape carries a typed verdict, and it type-checks', () => {
   const m = build();
   const residue = m.binds('unresolved_shape[audit](S)', 'S');
-  assert.equal(residue.length, 8, `positive control: ${residue.length} shapes with a residue`);
+  // 8 -> 10 on 2026-09-05: `s_member_on_ident` and `s_member_on_new` each
+  // gained one unresolved site, and the gain IS the fix. `Vat.poured()` and
+  // `new Vat().tapped()` are TypeErrors that used to resolve; the receiver now
+  // decides which half of a class it can see, so they resolve to nothing and
+  // land in the frontier with `no_source_target` — the same atom `super()`
+  // earned for a target the program does not contain.
+  assert.equal(residue.length, 10, `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -471,12 +477,18 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // parse time and the language synthesises it, so there is no node to reach
   // and no rule that would produce one. Borrowing `runtime_dependent` for it
   // would have said something false about WHEN the answer exists.
+  // TWO BECAME FOUR on 2026-09-05, and the two new ones carry the SAME atom for
+  // the same reason: `Vat.poured()` and `new Vat().tapped()` name a function the
+  // program does not contain. `super()` earned `no_source_target` for a target
+  // the LANGUAGE synthesises; these earn it for a target that exists nowhere at
+  // all. Both are "there is no node to reach", which is what the atom says, and
+  // `not_yet` would have been a queue entry nobody can ever discharge.
   assert.deepEqual(m.binds('shape_irreducible[audit](S)', 'S'),
-    ['s_computed_dynamic_key', 's_super']);
+    ['s_computed_dynamic_key', 's_member_on_ident', 's_member_on_new', 's_super']);
   const ours = m.binds('shape_ours[audit](S)', 'S');
-  assert.equal(ours.length + 2, residue.length, 'irreducible + ours partitions the residue');
+  assert.equal(ours.length + 4, residue.length, 'irreducible + ours partitions the residue');
 
-  console.log('  frontier: ' + residue.length + ' shapes with a residue, 2 irreducible, '
+  console.log('  frontier: ' + residue.length + ' shapes with a residue, 4 irreducible, '
     + ours.length + ' ours');
   console.log('  unexercised verdicts (grammar, not corpus): '
     + m.binds('shape_unexercised[audit](S)', 'S').join(', '));
@@ -782,7 +794,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  assert.equal(sites - resolved, 77, `${sites - resolved} call sites vanished from the frontier`);
+  // 77 -> 86: the instance-vs-class fixture added five call sites, two of them
+  // meant never to resolve and one — `super.hold(n)` — that resolves and shows
+  // the third face of the same question was already modelled.
+  assert.equal(sites - resolved, 86, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -793,7 +808,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // when a split gives a residue a row of its own — 7 -> 9 when
   // `s_member_on_await` and `s_member_on_template` came out of the catch-all,
   // then 9 -> 8 when `await` turned transparent and retired the first of them.
-  assert.equal(stale.length, 8, `the stale-verdict audit fires on ${stale.length} shapes`);
+  // 8 -> 10 when the receiver split gave `s_member_on_ident` and
+  // `s_member_on_new` a residue of their own, and a reason with it.
+  assert.equal(stale.length, 10, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
@@ -940,11 +957,17 @@ test('mutant 11 — a computed key stops being a key at all', () => {
 
 test('mutant 12 — drop the recursion: a.b.c() loses its middle', () => {
   const base = probe([]);
-  const mut = probe([{
+  // THREE ENTRIES, NOT ONE, since the lookup split by receiver role on
+  // 2026-09-05: the head is identical in all three rules and `String.replace`
+  // with a STRING argument replaces the FIRST occurrence — the pitfall this
+  // repository has now paid for three times. Applying it three times renames
+  // them one at a time, and the anchor assertion holds until all three are gone.
+  const kill = {
     file: 'rules/js-dataflow.rofl',
     find: 'may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),',
     replace: 'may_be_node_unused[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),',
-  }]);
+  };
+  const mut = probe([kill, kill, kill]);
   assert.ok(base.edges.has('useDeep -> dig'));
   assert.ok(!mut.edges.has('useDeep -> dig'), 'depth two needs the relation to call itself');
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
@@ -967,10 +990,16 @@ test('mutant 14 — ignore the key: any member answers any call', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
-    find: 'may_be_node[flow](O, Obj), selects[flow](N, Key),\n'
-        + '                            member_value[flow](Obj, Key, V), may_be_node[flow](V, V2).',
-    replace: 'may_be_node[flow](O, Obj),\n'
-        + '                            member_value[flow](Obj, _, V), may_be_node[flow](V, V2).',
+    find: 'class_member_proto[flow](Obj, Key, V), may_be_node[flow](V, V2),',
+    replace: 'class_member_proto[flow](Obj, _, V), may_be_node[flow](V, V2),',
+  }, {
+    file: 'rules/js-dataflow.rofl',
+    find: 'member_plain[flow](Obj, Key, V), may_be_node[flow](V, V2).',
+    replace: 'member_plain[flow](Obj, _, V), may_be_node[flow](V, V2).',
+  }, {
+    file: 'rules/js-dataflow.rofl',
+    find: 'class_member_static[flow](Obj, Key, V), may_be_node[flow](V, V2).',
+    replace: 'class_member_static[flow](Obj, _, V), may_be_node[flow](V, V2).',
   }]);
   const extra = [...mut.edges].filter((e) => !base.edges.has(e));
   assert.ok(extra.length >= 5, `${extra.length} edges the runtime never ran`);
@@ -1028,6 +1057,27 @@ test('mutant 18 — a catch-all that is waived as empty must be able to fill', (
   assert.deepEqual(mut.binds('catch_all_occupied[audit](K)', 'K'), ['logical_expression'],
     'the kind is NAMED, so the split can continue rather than the bucket growing');
   console.log('  KILLED: catch_all_occupied 0 -> 1, and it names the kind');
+});
+
+test('mutant 23 — the receiver stops deciding: a static answers on an instance', () => {
+  // THE GATE THIS ITEM ADDED, planted. Put the undifferentiated lookup back —
+  // one rule over `member_value` instead of three over the split — and the two
+  // edges the runtime answers with a TypeError come back BY NAME in the
+  // over-approximation list. That list is what makes this a measurement: a
+  // count would have said "5" and asked nobody which two.
+  const base = probe([]);
+  const mut = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'class_member_proto[flow](Obj, Key, V), may_be_node[flow](V, V2),\n'
+        + '                            not class_receiver[flow](O).',
+    replace: 'member_value[flow](Obj, Key, V), may_be_node[flow](V, V2).',
+  }]);
+  const invented = [...mut.edges].filter((e) => !base.edges.has(e)).sort();
+  assert.deepEqual(invented, ['useMethodOnClass -> poured', 'useStaticOnInstance -> tapped'],
+    'both TypeError sites resolve again, and the list names them');
+  assert.equal(base.edges.size + 2, mut.edges.size);
+  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size},`
+    + ' named: ' + invented.join(', '));
 });
 
 test('mutant 19 — the OTHER catch-all, the one that had no gate for three days', () => {

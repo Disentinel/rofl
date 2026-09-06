@@ -142,6 +142,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
+     'w_df_instance_vs_class',
      'w_effect_layer',
      'w_env_ledger_form', 'w_env_scan_failed', 'w_join_planner',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell',
@@ -155,16 +156,22 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ALL FOUR SWEEPS ARE DONE as of 2026-09-05, so the head of the queue is a
   // named question for the first time since the plan was seeded: what a
   // class-shaped node DENOTES — `new C()` against `C`, and `super`.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_instance_vs_class'],
+  // ...and the first named question is DONE, so the head is the one thing only
+  // the host can supply: a file the scanner refuses contributes no facts, so
+  // `valid[audit]` neither accepts nor refuses it.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed'],
     'the sweeps are finished; the head is judgement again');
 });
 
-test('the queue covers the model: 48 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 46 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
   // is the first time since the plan was seeded that no cell is absorbed.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 48, 'the queue is the model\'s open set');
+  // 48 -> 46: the receiver split closed `class_declaration x dataflow`, and
+  // `super x dataflow` turned out to need no rule at all — a site was all it
+  // was missing.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 46, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -192,7 +199,7 @@ test('the queue covers the model: 48 open cells, every one owned by name, none s
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
   // layers now have no bucket at all.
-  assert.deepEqual(per('dataflow'), [14, 18, 0]);
+  assert.deepEqual(per('dataflow'), [12, 16, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -301,8 +308,8 @@ test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
   const planted: [string, string][] = [
     ['claim(queued, js, member_expression, s_member_on_template, callgraph, w_env_api_surface).',
      'member_expression/s_member_on_template'],
-    ['claim(queued, js, super, none, dataflow, w_df_instance_vs_class).',
-     'super/none'],
+    ['claim(queued, js, class_method,              none, controlflow, w_cf_reachability).',
+     'class_method/none'],
     ['claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).',
      'call_expression/none'],
     ['claim(queued, js, return_statement,   none, controlflow, w_cf_abrupt_transfer).',
@@ -321,7 +328,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_instance_vs_class']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -341,7 +348,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.equal(mut.n('blocked[audit](W)'), 7, 'the planted one on top of the six real ones');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_df_instance_vs_class'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

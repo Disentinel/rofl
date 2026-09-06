@@ -302,9 +302,51 @@ selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, compute
 -- ENTRY 6 — a member expression may be whatever the member it selects may be.
 -- RECURSIVE THROUGH may_be_node: `deep.layer.dig` is `.dig` in whatever
 -- `deep.layer` may be, and `deep.layer` is `.layer` in whatever `deep` may be.
+--
+-- AND THE RECEIVER DECIDES WHICH HALF OF A CLASS IT CAN SEE, added 2026-09-05.
+-- `Vat.poured()` and `new Vat().tapped()` are both TypeErrors at runtime and
+-- both resolved here, because `new Vat()` and the name `Vat` reach the SAME
+-- class node and `member_value` returns the whole body. The fixture that shows
+-- it was written first and the two false edges appeared by name in the
+-- over-approximation list — `useMethodOnClass -> poured` and
+-- `useStaticOnInstance -> tapped` — which is the only reason this is a fix
+-- rather than a guess.
+--
+-- THE FACT WAS ALWAYS THERE. scanners/js_ast.ts emits `ast_attr(M, static,
+-- true|false)` for every class method and not one rule had ever read it. Same
+-- shape as the flags the census keeps finding: information on the store that
+-- nothing consumes cannot go red, so its absence is unobservable.
+class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M),
+                                         ast_attr[code](M, static, true).
+class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
+                                         ast_attr[code](M, static, false).
+-- an object literal's members carry no `static` attribute at all, so neither of
+-- the two above reaches them and they need their own row rather than a negation
+member_plain[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                 member_value[flow](O, Key, V).
+
+-- WHICH ROLE THE RECEIVER IS IN, syntactically and narrowly: a bare name that
+-- IS a class name in this file denotes the CLASS OBJECT; anything else that
+-- reaches a class node is an instance of it. DECLARED LIMITATION: `const A =
+-- Vat; A.tapped()` reads as an instance and loses the static. Widening it needs
+-- the value layer to carry the two roles apart rather than the syntax, which is
+-- a bigger change than the defect being fixed.
+class_receiver[flow](E) :- class_named[flow](_, Name, File), ident_in[code](E, Name, File).
+
+-- THE THREE LOOKUPS. The negation goes LAST, for the reason spelled out over
+-- the prototype chain above: with `O` still unbound it reads as "no receiver
+-- anywhere is a class", and the rule silently derives nothing.
+may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
+                            class_receiver[flow](O),
+                            may_be_node[flow](O, Obj), selects[flow](N, Key),
+                            class_member_static[flow](Obj, Key, V), may_be_node[flow](V, V2).
 may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
                             may_be_node[flow](O, Obj), selects[flow](N, Key),
-                            member_value[flow](Obj, Key, V), may_be_node[flow](V, V2).
+                            class_member_proto[flow](Obj, Key, V), may_be_node[flow](V, V2),
+                            not class_receiver[flow](O).
+may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
+                            may_be_node[flow](O, Obj), selects[flow](N, Key),
+                            member_plain[flow](Obj, Key, V), may_be_node[flow](V, V2).
 may_be_lit[flow](N, L)   :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
                             may_be_node[flow](O, Obj), selects[flow](N, Key),
                             member_value[flow](Obj, Key, V), may_be_lit[flow](V, L).

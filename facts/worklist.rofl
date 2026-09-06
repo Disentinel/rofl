@@ -338,17 +338,25 @@ work_spawned(w_vocabulary_frame, f_the_vocabulary_was_a_model_of_the_corpus_not_
 -- difference, so splitting them today is a distinction no gate can see — which
 -- is exactly the shape this session has been bitten by twice. It needs a
 -- fixture case first, and then it is small.
-work(w_df_instance_vs_class, "an instance is not its class: statics and instance methods are one lookup today").
+-- DONE 2026-09-05. The fixture came first, as the item demanded: two false
+-- edges named in the over-approximation list before a rule existed, and gone
+-- after. `ast_attr(M, static, ...)` had been on the store since the scanner was
+-- written and nothing read it. The third face needed no rule at all - `super`
+-- already had a value and the corpus simply had no site for it.
+-- ONE LIMITATION DECLARED rather than hidden: the receiver's role is decided
+-- SYNTACTICALLY, so `const A = Vat; A.tapped()` reads as an instance and loses
+-- the static. Recorded as f_the_receiver_role_is_syntactic_and_an_alias_loses_it.
+work(w_df_instance_vs_class, "DONE 2026-09-05: the receiver decides which half of a class it sees; super needed no rule").
 work_order(w_df_instance_vs_class, 14).
-work_state(w_df_instance_vs_class, open).
-claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).
+work_state(w_df_instance_vs_class, done).
+work_spawned(w_df_instance_vs_class, f_the_receiver_role_is_syntactic_and_an_alias_loses_it).
 -- THE THIRD FACE OF THE SAME CONFUSION, folded in by the dataflow sweep rather
 -- than given an item of its own: `super` has no value, so `super.m` cannot be
 -- looked up through `member_value` even though `super_of[flow]` is right there.
 -- The call graph resolves `super()` by a dedicated rule that does not go
 -- through the value layer at all. All three are one question — what a
 -- class-shaped node DENOTES — and they want one fixture.
-claim(queued, js, super, none, dataflow, w_df_instance_vs_class).
+
 
 -- ===========================================================================
 -- BLOCKERS THAT ARE NOT WORK ITEMS, declared 2026-09-04 when the queue gained

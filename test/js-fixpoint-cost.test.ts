@@ -104,18 +104,25 @@ test('the five heaviest read paths, by name', () => {
   // 2 246 605 rows -> 460 839, and the whole callgraph test file 507 s -> 140 s.
   // The heaviest single path before that was `argMatches ast_node pos=[1]` at
   // 876 391 rows on its own — 39% of the evaluation, one premise.
+  // MOVED 2026-09-05 and the list is what says HOW. The instance-vs-class
+  // fixture added a class, five functions and five call sites — facts +8.2%,
+  // firings +8.8% — and every one of the five names below rose between 7.9%
+  // and 8.8%, in the same order. THE SAME FIVE, GROWING TOGETHER, is the
+  // signature of a bigger corpus; a new name, or one growing alone, would be
+  // the signature of a badly ordered body. The total rose 10.4%, the extra ~2%
+  // being the member lookup itself, which is now three rules where it was one.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 55363',
-    'relPersp authority = 45603',
-    'argMatches encloses_v pos=[1] = 27299',
-    'relPersp encloses_v = 26392',
-    'relPersp ast_node = 23049',
+    'argMatches ast_within pos=[0] = 60027',
+    'relPersp authority = 49212',
+    'argMatches encloses_v pos=[1] = 29611',
+    'relPersp encloses_v = 28704',
+    'relPersp ast_node = 24960',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
-  assert.equal(c.total, 460839, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 508763, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
   // execution oracle with UNSOUND 0 and the same named over-approximations —
   // so this is 4.9x fewer questions for one more relation, not a smaller model.
-  assert.equal(c.firings, 23444, 'derivations: 22855 before the reorder, plus ident_in');
+  assert.equal(c.firings, 25513, 'derivations: 23444 before the instance-vs-class fixture');
 });

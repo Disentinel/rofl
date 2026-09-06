@@ -167,11 +167,59 @@ class Cask extends Keg {
     trace();
     super(v);
   }
+  // `super.hold` is a member READ on a receiver that is a different class from
+  // the one you are in — the third face of what a class-shaped node denotes,
+  // and the only one the corpus had no site for.
+  pour(n) {
+    trace();
+    return super.hold(n);
+  }
 }
 function useSuper(n) {
   trace();
   const c = new Cask(n);
   return c.hold(n);
+}
+function useSuperMember(n) {
+  trace();
+  return new Cask(n).pour(n);
+}
+
+// ---- AN INSTANCE IS NOT ITS CLASS. `new Vat()` and the name `Vat` both reach
+// the class node today, so the model accepts all four sites below while the
+// runtime accepts only two. The two it refuses are wrapped so the fixture still
+// runs to the end: a TypeError here would truncate the oracle, and a truncated
+// oracle reads as over-approximation, which this file has already been bitten
+// by once (main went async and nobody awaited it).
+class Vat {
+  static tapped(n) {
+    trace();
+    return n + 1;
+  }
+  poured(n) {
+    trace();
+    return n + 2;
+  }
+}
+function useStaticOnClass(n) {
+  trace();
+  return Vat.tapped(n);        // legal: a static, on the class
+}
+function useMethodOnInstance(n) {
+  trace();
+  return new Vat().poured(n);  // legal: an instance method, on an instance
+}
+function useStaticOnInstance(n) {
+  trace();
+  try {
+    return new Vat().tapped(n);  // TypeError: a static is not on the instance
+  } catch { return 0; }
+}
+function useMethodOnClass(n) {
+  trace();
+  try {
+    return Vat.poured(n);        // TypeError: an instance method is not on the class
+  } catch { return 0; }
 }
 
 // ---- VALUES CROSSING A CONTROL CONSTRUCT: for-of over an array, for-of over
@@ -471,6 +519,11 @@ export async function main() {
     useOr(1),
     useAssign(1),
     useSuper(1),
+    useSuperMember(1),
+    useStaticOnClass(1),
+    useMethodOnInstance(1),
+    useStaticOnInstance(1),
+    useMethodOnClass(1),
     useForOfArray(1),
     useForOfGen(1),
     useGuard(1),

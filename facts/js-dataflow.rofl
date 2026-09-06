@@ -157,3 +157,25 @@ handled(js, boolean_literal, dataflow, r_value_literal).
 -- dynamic import arrives as a single `import_expression` and never as `Import`.
 -- No corpus this scanner produces can fill the cell.
 ignored(js, import, dataflow, a_babel_emits_no_import_callee).
+
+-- ===========================================================================
+-- WHAT A CLASS-SHAPED NODE DENOTES, 2026-09-05 — queue item w_df_instance_vs_class.
+--
+-- THE FIXTURE CAME FIRST, because the item said so: the corpus had no site
+-- that could show the difference, and a split nothing can see is the shape this
+-- session has been bitten by twice. `Vat` with a static `tapped` and an
+-- instance `poured`, and four sites — two legal, two that are TypeErrors and
+-- are wrapped so the run reaches the end. The two false edges appeared BY NAME
+-- in the over-approximation list before a rule was written, and disappeared
+-- after: `useMethodOnClass -> poured` and `useStaticOnInstance -> tapped`.
+--
+-- THE FACT WAS ON THE STORE ALL ALONG. `ast_attr(M, static, true|false)` is
+-- emitted for every class method and no rule had ever read it.
+handled(js, class_declaration, dataflow, r_class_receiver).
+
+-- AND THE THIRD FACE WAS ALREADY MODELLED, which only a site could show.
+-- `super.hold(n)` — a member read on a receiver that is a different class from
+-- the one you are in — resolves, and the runtime takes the edge: UNSOUND stayed
+-- 0 and over-approximation stayed 3 when the site was added. The value was
+-- there; the corpus had no site. Sixth instance of the matrix under-reporting.
+handled(js, super, dataflow, r_member_value).

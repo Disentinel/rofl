@@ -265,3 +265,20 @@ shape_because(js, s_unclassified,          callgraph, not_yet).
 -- runnable JS. The fixture count is the executed pair — the number the oracle
 -- actually ran.
 checked(js, call_expression, callgraph, r_call_edge, o_run_with_stack, 2).
+
+-- TWO SHAPES GAINED A RESIDUE ON 2026-09-05, and the residue is the fix rather
+-- than a regression. `Vat.poured()` and `new Vat().tapped()` are TypeErrors —
+-- an instance method reached through the class, a static reached through an
+-- instance — and until the receiver decided which half of a class it can see,
+-- both RESOLVED. They now resolve to nothing, which puts one unresolved site
+-- into each of these two shapes and `shape_unexplained[audit]` demanded a
+-- reason for both.
+--
+-- THE REASON IS THE ONE ALREADY IN THE TAXONOMY and it fits exactly: the same
+-- atom `super()` earned when its whole chain declares no constructor. There is
+-- no node for the function these sites name, because the program names a
+-- function that does not exist. `not_yet` would be a queue entry nobody can
+-- ever discharge, which is the mistake the call-graph sweep spent a day
+-- correcting one level up.
+shape_because(js, s_member_on_ident, callgraph, no_source_target).
+shape_because(js, s_member_on_new,   callgraph, no_source_target).

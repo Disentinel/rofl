@@ -769,7 +769,9 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const c = baseCorpus();
   const sites = n(c, 'call_site[code](C, F)');
   const { pairs, tally } = measuredShapes(c);
-  assert.equal(sites, 179, 'positive control: the corpus is the one the census was taken on');
+  // 179 -> 198 on 2026-09-05: the instance-vs-class fixture. Five call sites
+  // are its own; the rest come from the class it added being exercised.
+  assert.equal(sites, 198, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 28,
     'positive control: 28 distinct shapes; eight object positions split out of the catch-all 2026-09-04');
 
@@ -873,7 +875,12 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // whose caller frame V8 names `next`, not the enclosing function), and the
   // guarded pair (+2: main->useGuard and useGuard->guardedElse; `unreached` is
   // the one the program branches around and the oracle never sees it).
-  assert.equal(oracleEdges.size, 80, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 80 -> 90 on 2026-09-05 with the instance-vs-class fixture: the four
+  // receiver-role sites, `super.hold` and the functions around them. TWO of the
+  // ten the model derives are NOT here on purpose — `Vat.poured()` and
+  // `new Vat().tapped()` are TypeErrors, the runtime never enters them, and
+  // that absence is the whole acceptance for this item.
+  assert.equal(oracleEdges.size, 90, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
