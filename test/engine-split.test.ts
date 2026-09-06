@@ -239,6 +239,19 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   // wrong. It is the negative control on the +7 landing in MECH.
   // 218 -> 267 (+49): 48 of planBody plus the one line in `classify`.
   assert.equal(rows(W, 'policy(engine_ts, L)'), 267);
+  // AND THE SPLIT THAT SAYS WHAT CAN MOVE. `decides` is policy whose judgement
+  // lives in this code; `enforces` is policy that reads a judgement the rules
+  // already derived and acts on it — `checkUnstratified` reads `unstratified/1`
+  // out of the store, which is policy-as-data by construction, and still counts
+  // as nine policy lines. A metric that called all 267 movable would stall at
+  // 46 and look like failure; this is the number the work is actually against.
+  assert.equal(rows(W, 'decides(engine_ts, L)'), 221);
+  assert.equal(rows(W, 'enforces(engine_ts, L)'), 46);
+  assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
+               rows(W, 'policy(engine_ts, L)'), 'every policy line has a role');
+  // NEGATIVE CONTROL: the join discriminates — a role nothing carries is empty.
+  assert.equal(rows(W, 'block(engine_ts, L, mech)') > 0, true);
+  assert.equal(rows(W, 'role_of(K, wishful)'), 0);
   // NEGATIVE CONTROL: the join really is discriminating. A category nothing
   // carries must return nothing, or the rule is one that always says yes.
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
@@ -284,12 +297,15 @@ test('the contamination is declared, dated and COUNTABLE', () => {
   // with the language model, and what makes that safe is that it can be
   // queried. So it is queried.
   // 96 -> 98: the two hand judgements the new block carries, cat and tense.
-  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 98);
+  // 98 -> 115 (+17): the ROLE of every policy block — decides or enforces —
+  // which is the judgement that says whether it can move into .rofl at all.
+  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 115);
+  assert.equal(rows(W, 'dirty(engine_split, role, U, R)'), 17, 'one per POL or POL* block');
   assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 43, 'one per block: the MECH/POL verdict');
   assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 43, 'one per block: the before-A verdict');
   assert.equal(rows(W, 'dirty(engine_split, part, U, R)'), 12, 'the slices inside a method');
   // the two loans retire on different events and are counted apart
-  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 86);
+  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 103);
   assert.equal(rows(W, 'dirty(engine_split, K, U, split_the_method)'), 12);
   // ZERO IS THE TARGET, and it is a query, not a promise
   assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 43);
@@ -297,7 +313,7 @@ test('the contamination is declared, dated and COUNTABLE', () => {
   assert.equal(rows(W, 'dirty(engine_split, K, U, someday)'), 0);
   assert.equal(rows(W, 'dirty(some_other_scanner, K, U, R)'), 0);
   // and the table is generated from the declarations, so it cannot go stale
-  assert.equal(contamination().length, 98);
+  assert.equal(contamination().length, 115);
 });
 
 // ---------------------------------------------------------------------------

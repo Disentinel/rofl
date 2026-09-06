@@ -102,6 +102,14 @@ export interface Decl {
    *  scanners join on (`policy_ladder.FROM_BLOCK`, `bootstrap_dag.TIER_COST`) */
   anchor: string;
   what: string;
+  /** WHO DECIDES. `decides` — the judgement lives in this code. `enforces` —
+   *  the judgement is already a fact the rules derived and this code reads it
+   *  and acts. The distinction is the whole difference between policy that can
+   *  MOVE into .rofl and policy that cannot, and the category alone does not
+   *  carry it: `checkUnstratified` reads `unstratified/1` out of the store,
+   *  which is policy-as-data already, and still counts as 9 policy lines.
+   *  A HAND JUDGEMENT, declared as a loan like `cat` and `tense`. */
+  role?: 'decides' | 'enforces';
 }
 
 export interface Block extends Decl { from: number; to: number; }
@@ -117,34 +125,34 @@ export const DECLS: Decl[] = [
   // negation stand", which is a decision; the solving that follows it is the
   // mechanism. `before-A` because a rule is planned once, when it is
   // classified, and never again.
-  { id: 'planBody', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'planBody', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'export function planBody(',
     what: 'where a negation may stand: held back until its shared variables are bound, so literal order cannot change the answer' },
   { id: 'evaluation', key: { kind: 'def', name: 'Evaluation' }, cat: 'PLUMB', when: 'n/a',
     anchor: 'export class Evaluation {',
     what: 'class fields and constructor' },
 
-  { id: 'prepare', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'prepare', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'prepare(): void {',
     what: 'decode rules; refuse the ones concluding into a reserved relation. The condition is `reserved(Rel)`, already a fact' },
-  { id: 'demandSet', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
+  { id: 'demandSet', role: 'decides', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
     cat: 'POL*', when: 'before-A', anchor: 'this.rules = kept;',
     what: 'the demand-backed set and its positive-premise closure, then the trigger relations. Two rules, given `unsafe(R)` — MEASURED by demandAsRules()' },
-  { id: 'classify', key: { kind: 'def' }, cat: 'POL*', when: 'before-A',
+  { id: 'classify', role: 'decides', key: { kind: 'def' }, cat: 'POL*', when: 'before-A',
     anchor: 'private classify(r: DRule): ERule {',
     what: 'range-restriction analysis: a left-to-right fold over the body tracking bound variables. Needs per-premise variable-occurrence facts the reflection does not carry' },
 
   { id: 'run', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'run(): EvalOutcome {',
     what: 'plan, clearDerived, counters' },
-  { id: 'runGate', key: { kind: 'part', of: 'run', at: '// A relation served from the previous evaluation' },
+  { id: 'runGate', role: 'decides', key: { kind: 'part', of: 'run', at: '// A relation served from the previous evaluation' },
     cat: 'POL', when: 'before-A', anchor: '// A relation served from the previous evaluation',
     what: 'which rules run at all: the reuse skip, the monotone/negation split, whether the program has negation' },
   { id: 'runDriver', key: { kind: 'part', of: 'run', at: 'try {' },
     cat: 'MECH', when: 'n/a', anchor: 'try {',
     what: 'the phase driver, budget handling, exceptions, store bookkeeping' },
 
-  { id: 'readsProvenance', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'readsProvenance', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'readsProvenance(): boolean {',
     what: 'does any rule read derived_by — one rule over premise_pos' },
   { id: 'reused', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
@@ -154,22 +162,22 @@ export const DECLS: Decl[] = [
   { id: 'planReuse', key: { kind: 'def' }, cat: 'MECH', when: 'end-of-run',
     anchor: 'private planReuse(): ReusePlan {',
     what: 'the schedule token: a hash of the whole stratum table' },
-  { id: 'reads', key: { kind: 'part', of: 'planReuse', at: 'const byHead = new Map<string, ERule[]>();' },
+  { id: 'reads', role: 'decides', key: { kind: 'part', of: 'planReuse', at: 'const byHead = new Map<string, ERule[]>();' },
     cat: 'POL', when: 'end-of-run', anchor: 'const byHead = new Map<string, ERule[]>();',
     what: 'reads(A,B) over every rule concluding A — `dep` without the tense filter' },
-  { id: 'opaqueSet', key: { kind: 'part', of: 'planReuse', at: '// (1) relations whose contents' },
+  { id: 'opaqueSet', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (1) relations whose contents' },
     cat: 'POL*', when: 'end-of-run', anchor: '// (1) relations whose contents',
     what: 'the opaque set: needs premise tense and a store-shape fact (does this relation hold non-base facts)' },
-  { id: 'opaqueClosure', key: { kind: 'part', of: 'planReuse', at: 'for (;;) {' },
+  { id: 'opaqueClosure', role: 'decides', key: { kind: 'part', of: 'planReuse', at: 'for (;;) {' },
     cat: 'POL', when: 'end-of-run', anchor: 'for (;;) {',
     what: 'opaque, closed upward through reads' },
-  { id: 'cone', key: { kind: 'part', of: 'planReuse', at: '// (2) dependency cone' },
+  { id: 'cone', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (2) dependency cone' },
     cat: 'POL', when: 'end-of-run', anchor: '// (2) dependency cone',
     what: 'the dependency cone: transitive closure, the shape boot.rofl computes twice already' },
   { id: 'fingerprint', key: { kind: 'part', of: 'planReuse', at: '// (3) fingerprint' },
     cat: 'MECH', when: 'end-of-run', anchor: '// (3) fingerprint',
     what: 'FNV over every fact key of a relation. A fold over a relation extension: no rule can do it, and §8 forbids the aggregate that would' },
-  { id: 'hits', key: { kind: 'part', of: 'planReuse', at: '// (4) hits' },
+  { id: 'hits', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (4) hits' },
     cat: 'POL', when: 'end-of-run', anchor: '// (4) hits',
     what: 'hits, the global schedule gate, and the shrink fixpoint over the cone' },
 
@@ -181,11 +189,11 @@ export const DECLS: Decl[] = [
   // second. Re-measured on the changed kernel: 25-50 ms, flat, at every budget
   // from 2500 to 5e6. It is POLICY by the same test as the rest — reachability
   // over `concludes` and `premise_pos`, both already emitted.
-  { id: 'stratumCone', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'stratumCone', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'private stratumCone(mono: ERule[]): Set<string> {',
     what: 'the stratum cone: which monotone rules may not run before the program is judged' },
 
-  { id: 'checkUnstratified', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'checkUnstratified', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private checkUnstratified(',
     what: 'reject iff unstratified/1 is non-empty — already policy-as-data, the house precedent' },
   // ADDED 2026-08-31: the seam the round evaluator overrides. It was one line
@@ -199,7 +207,7 @@ export const DECLS: Decl[] = [
   { id: 'readStrata', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
     anchor: 'readStrata(): Map<string, number> {',
     what: 'MAX over stratum/2. EXPRESSIBLE — two rules, measured by maxStratumAsRules() — but they need negation, and this answer is what schedules negation. Expressible, not portable' },
-  { id: 'negPhase', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'negPhase', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private negPhase(',
     what: 'which phase a rule runs in, including the @next rule that must run last' },
   { id: 'strataPlan', key: { kind: 'def' }, cat: 'PLUMB', when: 'n/a',
@@ -212,19 +220,19 @@ export const DECLS: Decl[] = [
   { id: 'assumptionOf', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private assumptionOf(): Assumption {',
     what: 'snapshot the store as a round assumption' },
-  { id: 'roundRules', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'roundRules', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private roundRules(): ERule[] {',
     what: 'which rules a round runs — the one relation excluded under the alternation' },
   { id: 'wfsRound', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private wfsRound(',
     what: 'one round of the alternation' },
-  { id: 'runWellFounded', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'runWellFounded', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'private runWellFounded(): void {',
     what: 'admissibility: no demand-backed relation may be assumed; edb(unknown) so boot can read it' },
   { id: 'alternation', key: { kind: 'part', of: 'runWellFounded', at: 'this.store.clearDerived();' },
     cat: 'MECH', when: 'n/a', anchor: 'this.store.clearDerived();',
     what: 'the alternating fixpoint itself, the gap between the two limits, the unknown rows and their redirected witnesses. Each round assumes the PREVIOUS round output: not a function of the program text' },
-  { id: 'negRels', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = new Set<string>();' },
+  { id: 'negRels', role: 'decides', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = new Set<string>();' },
     cat: 'POL', when: 'after-A', anchor: 'const negRels = new Set<string>();',
     what: 'the negated relations, straight off premise_neg' },
   { id: 'readBackGuard', key: { kind: 'part', of: 'runWellFounded', at: 'const before = new Set(this.store.allFactKeys());' },
@@ -325,6 +333,11 @@ export function contamination(decls: Decl[] = DECLS): Dirty[] {
   for (const d of decls) {
     out.push({ kind: 'cat', unit: d.id, retires: 'language_model' });
     out.push({ kind: 'tense', unit: d.id, retires: 'language_model' });
+    // One more per POLICY block, and it is the judgement the whole exercise
+    // turns on: does this code DECIDE, or does it read a decision the rules
+    // already made and enforce it? Declared rather than inferred, because a
+    // regex over `this.store.relAll` got four of seventeen wrong.
+    if (d.role) out.push({ kind: 'role', unit: d.id, retires: 'language_model' });
     if (d.key.kind === 'part') out.push({ kind: 'part', unit: d.id, retires: 'split_the_method' });
   }
   return out;
@@ -523,6 +536,7 @@ export function facts(s: SplitResult = split(), source?: string): string {
     out.push(`block_at(engine_ts, ${b.id}, ${b.from}, ${b.to}).`);
     out.push(`cat_of(${b.id}, ${ATOM[b.cat]}).`);
     out.push(`when_of(${b.id}, ${TENSE[b.when]}).`);
+    if (b.role) out.push(`role_of(${b.id}, ${b.role}).`);
     if (b.key.kind === 'part') out.push(`part_of(${b.id}, ${b.key.of}).`);
     for (let n = b.from; n <= b.to; n++) {
       if (isCode(src[n - 1] ?? '')) out.push(`code_line(engine_ts, ${n}, ${b.id}).`);
