@@ -14,9 +14,18 @@
 // positive premise can bind — range restriction, computed inside ROFL over
 // ROFL's own reflection.
 //
-// That answer has an exact host oracle: `Evaluation.rules[].safe` is the same
-// property computed in TypeScript. The tests below compare the two SETS, on a
-// program built to contain both kinds of rule.
+// That answer has an exact oracle: `Evaluation.rules[].safe`. The tests below
+// compare the two SETS, on a program built to contain both kinds of rule.
+//
+// WHAT THE ORACLE IS CHANGED UNDER THIS FILE ON 2026-09-06, and saying so is
+// the point. `safe` WAS the same property computed in TypeScript, a fold over
+// the body in `classify`. It is now safety.rofl's answer, read back — so this
+// file no longer compares ROFL against TypeScript. It compares two INDEPENDENT
+// ROFL programs written months apart, this walker and safety.rofl, which is a
+// weaker claim than it used to make and still a real one: they share no clause
+// and agree rule for rule. The TypeScript fold they were both measured against
+// is in the history, and the corpus agreement that let it go is in
+// test/rofl-safety.test.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

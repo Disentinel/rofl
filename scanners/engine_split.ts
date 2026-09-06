@@ -138,9 +138,16 @@ export const DECLS: Decl[] = [
   { id: 'demandSet', role: 'decides', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
     cat: 'POL*', when: 'before-A', anchor: 'this.rules = kept;',
     what: 'the demand-backed set and its positive-premise closure, then the trigger relations. Two rules, given `unsafe(R)` — MEASURED by demandAsRules()' },
-  { id: 'classify', role: 'decides', key: { kind: 'def' }, cat: 'POL*', when: 'before-A',
-    anchor: 'private classify(r: DRule): ERule {',
-    what: 'range-restriction analysis: a left-to-right fold over the body tracking bound variables. Needs per-premise variable-occurrence facts the reflection does not carry' },
+  // 2026-09-06: RANGE RESTRICTION LEFT. What stands here is the reading of an
+  // answer plus the ONE judgement safety.rofl does not model -- a body whose
+  // negation cannot be ordered -- so the block keeps its POL mark and loses its
+  // star: nothing here waits on a fact family that does not exist.
+  { id: 'classify', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+    anchor: 'private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {',
+    what: 'read safety.rofl\'s verdict, and refuse a body whose negation cannot be ordered -- the one case the rules do not model' },
+  { id: 'safetyAnswer', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
+    anchor: 'private safetyAnswer(',
+    what: 'ask safety.rofl which rules are not range-restricted: copy the reflection into a store of its own, seed the variable occurrences a term walk produces, run the program there, memoise by rule set' },
 
   { id: 'run', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'run(): EvalOutcome {',
@@ -283,7 +290,7 @@ export const DECLS: Decl[] = [
 export const ABSORBED: Record<string, string[]> = {
   header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
   // the one closure inside `planBody` the walker counts as a definition
-  planBody: ['note', 'policyProgram'],
+  planBody: ['note', 'kernelProgram', 'policyStore'],
 
   evaluation: ['constructor'],
   negPhase: ['negLevel'],

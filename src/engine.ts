@@ -4,7 +4,7 @@
 // stratum-0 rules); the kernel contains no stratification checker.
 
 import {
-  type Term, type Subst, type ArithFail, mka, mkf, mki, canonTerm, canonVars, resolve, unify, walk,
+  type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
 import { parseProgram, type Lit, type BodyElem, type Clause } from './parser.ts';
@@ -13,7 +13,7 @@ import {
   V, IFACE, RESERVED, STR_TYPE, decodeRules, type DRule, factTerm, relOfFactTerm, canonBodyElem, canonLit,
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
-  atomTerm, wellFoundedDeclared, POLICY_SRC, encodeRule, resolveClauseBooks,
+  atomTerm, wellFoundedDeclared, POLICY_SRC, SAFETY_SRC, encodeRule, resolveClauseBooks,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -245,24 +245,58 @@ export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null;
   return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
 }
 
-/** The kernel's own program, encoded once. `bootstrapKernel` installs facts
+interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
+
+/** A program the kernel ships, encoded once. `bootstrapKernel` installs facts
  *  into every store; this installs nothing anywhere — the rows are held here
- *  and copied into a scratch store when a question is asked. */
-let policyRows: { rel: string; args: Term[] }[] | null = null;
-function policyProgram(): { rel: string; args: Term[] }[] {
-  if (policyRows === null) {
-    const out: { rel: string; args: Term[] }[] = [];
-    for (const c0 of parseProgram(POLICY_SRC)) {
+ *  and copied into a scratch store when a question is asked. A FACT keeps the
+ *  perspective its own book resolves to; a RULE becomes reflection under the
+ *  kernel's, which is where the readers look for it. */
+const encoded = new Map<string, PolicyRow[]>();
+function kernelProgram(src: string): PolicyRow[] {
+  let rows = encoded.get(src);
+  if (rows === undefined) {
+    rows = [];
+    for (const c0 of parseProgram(src)) {
       const c = resolveClauseBooks(c0);
-      if (c.body.length === 0) out.push({ rel: c.head.rel, args: c.head.args });
-      else for (const f of encodeRule(c).facts) out.push({ rel: f.rel, args: f.args });
+      if (c.body.length === 0) rows.push({ rel: c.head.rel, args: c.head.args, persp: c.head.persp });
+      else for (const f of encodeRule(c).facts) rows.push({ rel: f.rel, args: f.args, persp: null });
     }
-    policyRows = out;
+    encoded.set(src, rows);
   }
-  return policyRows;
+  return rows;
 }
 
 const POLICY_BUDGET = 20_000_000;
+
+/** The answer to `is this rule range-restricted`, remembered per PROGRAM. The
+ *  key is the rule set itself — an id is a content hash — so two evaluations of
+ *  the same program ask once, and one rule changing anywhere asks again. */
+const safetyMemo = new Map<string, Set<string>>();
+const MEMO_CAP = 64;
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
+// The four SLOTS safety.rofl asks a groundness question about. Atoms, not
+// relation names: they name a place in a rule, the way `in` and `out` name a
+// place in a mode.
+const HEAD_SLOT = 'head';
+const POS_SLOT = 'pos';
+const LEFT_SLOT = 'left';
+const RIGHT_SLOT = 'right';
+
+/** A scratch store holding one of the kernel's own programs and nothing else.
+ *  The caller copies in whatever reflection its question needs. */
+function policyStore(src: string): Store {
+  const pol = new Store();
+  for (const f of kernelProgram(src)) {
+    // A RESERVED relation is auto-perspectived on read, so its rows belong to
+    // the kernel's book; a fact of the program's own vocabulary belongs to the
+    // book the clause resolved to, and reading it anywhere else finds nothing.
+    const persp = f.persp !== null && f.persp.k === 'a' && !RESERVED.has(f.rel)
+      ? f.persp.name : KERNEL_PERSP;
+    pol.add(f.rel, persp, f.args, { scope: 'timeless', base: true });
+  }
+  return pol;
+}
 
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
@@ -298,8 +332,20 @@ export class Evaluation {
   // One sink, reused: `is` reads it immediately after every null it gets.
   private arithFail: ArithFail = { code: ARITH_UNBOUND };
 
-  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term } = {}) {
+  /** THE BOOTSTRAP RUNG. A store holding one of the kernel's OWN programs is
+   *  evaluated with `bootstrap: true`, and the flag says one thing: do not ask
+   *  safety.rofl whether these rules are range-restricted, because asking means
+   *  constructing an Evaluation and that is this constructor. The assumption it
+   *  stands on — that every rule the kernel ships is range-restricted — is not
+   *  taken on trust: test/kernel-policy-program.test.ts runs safety.rofl over
+   *  the reflection of BOTH kernel programs, its own included, and requires the
+   *  answer to be empty. That is the program checking itself, which is the only
+   *  form of self-application available at the bottom of a tower. */
+  private bootstrap: boolean;
+
+  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
+    this.bootstrap = opts.bootstrap ?? false;
     this.budget = opts.budget ?? 100_000;
     this.space = opts.space ?? DEFAULT_SPACE;
     this.naive = opts.naive ?? false;
@@ -313,13 +359,14 @@ export class Evaluation {
     this.wellFounded = wellFoundedDeclared(this.store);
     const { rules, diagnostics } = decodeRules(this.store);
     this.diags.push(...diagnostics);
+    const unsafe = this.safetyAnswer(rules);
     const kept: ERule[] = [];
     for (const r of rules) {
       if (RESERVED.has(r.clause.head.rel)) {
         this.diags.push(`rule ${r.id} concludes into a kernel relation; not executable`);
         continue;
       }
-      kept.push(this.classify(r));
+      kept.push(this.classify(r, unsafe));
     }
     this.rules = kept;
     // A relation is demand-backed (unfolded at call sites) when some @now
@@ -372,43 +419,77 @@ export class Evaluation {
     }
   }
 
-  private classify(r: DRule): ERule {
-    const bound = new Set<string>();
+  private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {
     const { plan, stuck } = planBody(r.clause);
-    // A body that cannot be ordered has a negation whose meaning depends on
-    // where it was written. `addClause` refuses such a clause at the door;
-    // one that arrives through a hand-edited snapshot is marked unsafe here,
-    // which is not a strategy choice made to hide it — it is the one place the
-    // bindings come from somewhere other than the written order, namely the
-    // goal, and `unsafe(R)` is already what the audits report.
-    let safe = stuck === null;
+    // TWO WAYS A RULE IS UNSAFE, and only one of them is written here.
+    //
+    // RANGE RESTRICTION — does the body bind everything the head names — is
+    // safety.rofl's, asked once per program in `safetyAnswer` below. It used to
+    // be a 25-line fold over the body tracking a bound set, and the two were
+    // measured against each other over the whole corpus (74 files, 3555 rules,
+    // zero disagreements) and over a mutant set of 22, one per branch of the
+    // fold that is now gone.
+    //
+    // A BODY THAT CANNOT BE ORDERED is not modelled there and stays here. Its
+    // negation's meaning depends on where it was written; `addClause` refuses
+    // such a clause at the door, and one arriving through a hand-edited
+    // snapshot is marked unsafe. Measured over the same 3555 rules: it never
+    // fires, which is why the rules can be silent about it and why this line
+    // cannot be deleted on that evidence.
+    const safe = stuck === null && !unsafe.has(r.id);
     let hasNeg = false;
     const posRels: string[] = [];
-    const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
-    const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
     for (const b of plan) {
-      if (b.t === 'pos') {
-        posRels.push(b.lit.rel);
-        for (const a of b.lit.args) bindAll(a);
-        bindAll(b.lit.persp);
-      } else if (b.t === 'neg') {
-        hasNeg = true;
-      } else {
-        if (b.op === '=') {
-          if (groundIn(b.l)) bindAll(b.r);
-          else if (groundIn(b.r)) bindAll(b.l);
-          else safe = false;
-        } else if (b.op === 'is') {
-          if (groundIn(b.r)) bindAll(b.l);
-          else safe = false;
-        } else {
-          if (!groundIn(b.l) || !groundIn(b.r)) safe = false;
-        }
+      if (b.t === 'pos') posRels.push(b.lit.rel);
+      else if (b.t === 'neg') hasNeg = true;
+    }
+    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan };
+  }
+
+  /** ASK safety.rofl WHICH RULES ARE NOT RANGE-RESTRICTED. The program runs in
+   *  a store of its own over a copy of the reflection, plus the two relations
+   *  the reflection does not carry flat: `premise_var(R, K, Slot, I, Name)` and
+   *  `slot_arity(R, K, Slot, N)`. Walking a term for its variables is the
+   *  host's whole share of this and it decides nothing — a term carries an
+   *  arbitrary functor and Datalog cannot destructure one it does not name. */
+  private safetyAnswer(rules: DRule[]): ReadonlySet<string> {
+    if (this.bootstrap || rules.length === 0) return EMPTY_SET;
+    const memoKey = fnv1a(rules.map((r) => r.id).join('|'));
+    const hit = safetyMemo.get(memoKey);
+    if (hit !== undefined) return hit;
+
+    const pol = policyStore(SAFETY_SRC);
+    for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise]) {
+      for (const f of this.store.relAll(rel)) {
+        pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
       }
     }
-    const h = r.clause.head;
-    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;
-    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan };
+    for (const r of rules) {
+      const rid = mka(r.id);
+      const slot = (k: number, name: string, ts: Term[]) => {
+        const vs = new Set<string>();
+        for (const t of ts) varsOf(t, vs);
+        let i = 0;
+        for (const v of vs) {
+          pol.add(IFACE.premise_var, MAIN, [rid, mki(k), mka(name), mki(++i), mks(v)],
+            { scope: 'timeless', base: true });
+        }
+        pol.add(IFACE.slot_arity, MAIN, [rid, mki(k), mka(name), mki(i)],
+          { scope: 'timeless', base: true });
+      };
+      slot(0, HEAD_SLOT, [...r.clause.head.args, r.clause.head.persp]);
+      r.clause.body.forEach((b, i) => {
+        if (b.t === 'pos') slot(i + 1, POS_SLOT, [...b.lit.args, b.lit.persp]);
+        else if (b.t === 'bi') { slot(i + 1, LEFT_SLOT, [b.l]); slot(i + 1, RIGHT_SLOT, [b.r]); }
+      });
+    }
+    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET, bootstrap: true }).run();
+
+    const out = new Set<string>();
+    for (const f of pol.relAll(IFACE.unsafe_rule)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+    if (safetyMemo.size >= MEMO_CAP) safetyMemo.clear();
+    safetyMemo.set(memoKey, out);
+    return out;
   }
 
   // -------------------------------------------------------------------------
@@ -716,10 +797,7 @@ export class Evaluation {
     reads: Map<string, Set<string>>; rels: Set<string>;
     cone: Map<string, Set<string>>; opaqueClosed: Set<string>;
   } {
-    const pol = new Store();
-    for (const f of policyProgram()) {
-      pol.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
-    }
+    const pol = policyStore(POLICY_SRC);
     for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) {
       for (const f of this.store.relAll(rel)) {
         pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
@@ -728,7 +806,7 @@ export class Evaluation {
     for (const rel of seed ?? []) {
       pol.add(IFACE.opaque_seed, MAIN, [mka(rel)], { scope: 'timeless', base: true });
     }
-    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET }).run();
+    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET, bootstrap: true }).run();
 
     const pairs = (rel: string): Map<string, Set<string>> => {
       const m = new Map<string, Set<string>>();

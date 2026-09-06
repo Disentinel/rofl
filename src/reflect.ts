@@ -103,6 +103,14 @@ export const IFACE = {
   // that the reflection does not carry flat.
   rule_reads: 'rule_reads', rule_relation: 'rule_relation',
   cone: 'cone', opaque_closed: 'opaque_closed', opaque_seed: 'opaque_seed',
+  // safety.rofl, the second of the kernel's own programs. `unsafe_rule` is its
+  // answer -- range restriction, the judgement `classify` used to fold by hand;
+  // `premise_var` and `slot_arity` travel the other way, seeded by the host,
+  // because a term carries an arbitrary functor and Datalog cannot destructure
+  // one it does not name.
+  unsafe_rule: 'unsafe_rule',
+  premise_var: 'premise_var',
+  slot_arity: 'slot_arity',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -1048,3 +1056,90 @@ export function factMetaFacts(rel: string, persp: string, args: Term[], tick: nu
     { rel: V.asserted_by, args: [f, mka(who ?? ANON_WHO), mki(tick)] },
   ];
 }
+
+/** THE KERNEL'S SECOND PROGRAM, and the same arrangement as POLICY_SRC above:
+ *  safety.rofl is the SOURCE, this is the copy, and
+ *  test/kernel-policy-program.test.ts is the gate that keeps them identical.
+ *
+ *  It computes RANGE RESTRICTION -- the judgement `Evaluation.classify` used to
+ *  fold by hand -- and it is asked in a store of its own, over a copy of the
+ *  reflection plus two seeded relations the reflection does not carry flat.
+ *  Measured against the host fold it replaces: 74 files of the corpus, 3555
+ *  rules, zero disagreements, and a mutant set of 22 covering every branch. */
+export const SAFETY_SRC = `-- safety.rofl -- RANGE RESTRICTION, computed over the reflection.
+--
+-- The kernel's \`Evaluation.classify\` decides, for every rule, whether the body
+-- binds everything the head names -- a left-to-right fold over the body
+-- tracking bound variables, \`src/engine.ts\`, and the one judgement every other
+-- before-A policy here rests on. This program is that judgement as rules.
+--
+-- TWO INPUTS THE REFLECTION DOES NOT CARRY FLAT, seeded by the host the way
+-- \`opaque_seed\` is:
+--
+--   premise_var(R, K, Slot, I, Name)  the I'th variable of a slot, in order
+--   slot_arity(R, K, Slot, N)         how many variables that slot has
+--
+-- with Slot one of \`pos\` (a positive premise: its arguments and its
+-- perspective), \`left\` and \`right\` (the two operands of a builtin) or \`head\`,
+-- and K the premise's position, 1-based, 0 for the head. Walking a term is
+-- mechanism -- a term carries an arbitrary functor and Datalog cannot
+-- destructure one it does not name -- and the walk decides nothing.
+--
+-- WHAT IT DOES NOT MODEL, named rather than discovered: the host also refuses a
+-- body whose negation cannot be ordered (\`planBody(...).stuck\`). Measured over
+-- 3555 rules of the corpus that case never arises, because the load door
+-- refuses such a clause; a store hand-edited to carry one would disagree.
+--
+-- NO NEGATION STANDS INSIDE THE FOLD. "every variable of this operand is
+-- already bound" is the one universal the analysis needs, and it is stated
+-- POSITIVELY by walking the operand's variables by index: \`ground_upto\` reaches
+-- the slot's arity only when every step of the walk found its variable bound.
+-- That keeps the program stratified, so the default evaluator answers it — the
+-- first version asked the same question with \`not unbound(...)\` inside a cycle
+-- and needed the alternating fixpoint, which cost 2443 ms on the grammar
+-- against 107 ms for boot.rofl.
+
+edb(premise_var).
+edb(slot_arity).
+
+-- THE SLOTS A GROUNDNESS QUESTION IS ASKED ABOUT, read off the premise's shape
+-- rather than off its variables: an operand with no variable at all is ground,
+-- and \`premise_var\` leaves it no row to say so. Only the two operands of a
+-- builtin are ever asked -- a positive premise BINDS, it is not tested -- and
+-- deleting a \`slot(R, K, pos)\` clause changed no answer on any mutant, which
+-- is how that clause was found to be dead and removed.
+slot(R, K, left)  :- premise_lit(R, K, $builtin(_, _)).
+slot(R, K, right) :- premise_lit(R, K, $builtin(_, _)).
+
+-- THE FOLD. What a premise binds, and what stands bound before a position.
+binds_at(R, K, V) :- premise_var(R, K, pos, _, V).
+binds_at(R, K, V) :- premise_lit(R, K, $builtin("is", _)), ground(R, K, right),
+                     premise_var(R, K, left, _, V).
+binds_at(R, K, V) :- premise_lit(R, K, $builtin("=", _)), ground(R, K, left),
+                     premise_var(R, K, right, _, V).
+binds_at(R, K, V) :- premise_lit(R, K, $builtin("=", _)), ground(R, K, right),
+                     premise_var(R, K, left, _, V).
+bound_before(R, K, V) :- binds_at(R, J, V), K is J + 1, has_premise(R, K).
+bound_before(R, K, V) :- bound_before(R, J, V), K is J + 1, has_premise(R, K).
+
+ground_upto(R, K, S, 0) :- slot(R, K, S).
+ground_upto(R, K, S, I) :- ground_upto(R, K, S, J), I is J + 1,
+                           premise_var(R, K, S, I, V), bound_before(R, K, V).
+ground(R, K, S) :- ground_upto(R, K, S, N), slot_arity(R, K, S, N).
+
+-- THE VERDICT, one clause per way a body can fail to restrict its head.
+-- Guarded by \`analysed\`: the store holds the reflection OF THIS PROGRAM as
+-- well, and a rule the seed never described has no slot arities to reach.
+analysed(R) :- slot_arity(R, 0, head, _).
+binds(R, V) :- binds_at(R, _, V).
+eq_or_is("=").
+eq_or_is("is").
+op_used(Op) :- premise_lit(_, _, $builtin(Op, _)).
+cmp_op(Op)  :- op_used(Op), not eq_or_is(Op).
+unsafe_rule(R) :- premise_var(R, 0, head, _, V), not binds(R, V).
+unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("is", _)), not ground(R, K, right).
+unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("=", _)), not ground(R, K, left),
+                  not ground(R, K, right).
+unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), not ground(R, K, left).
+unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), not ground(R, K, right).
+`;

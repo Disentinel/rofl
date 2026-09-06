@@ -38,7 +38,13 @@ const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
   // own so no user program's counts or budget move. `opaque_seed` travels the
   // other way: the host writes it, because the seed needs a premise's tense and
   // a store-shape fact the reflection does not carry flat.
-  'rule_reads', 'rule_relation', 'cone', 'opaque_closed', 'opaque_seed'];
+  'rule_reads', 'rule_relation', 'cone', 'opaque_closed', 'opaque_seed',
+  // safety.rofl, the kernel's second program: `unsafe_rule` is what it answers
+  // and `premise_var`/`slot_arity` are what the host seeds it with. The four
+  // SLOT atoms it names a place in a rule with -- `head`, `pos`, `left`,
+  // `right` -- are in CONSTANTS below, beside the mode atoms `in` and `out`,
+  // which is the same category: a place, not a relation.
+  'unsafe_rule', 'premise_var', 'slot_arity'];
 // Language syntax tokens the parser must know (keywords, not relations).
 // The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
 // they are here for the same reason `is` and `mod` are: the parser dispatches
@@ -52,7 +58,8 @@ const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n',
 // Kernel constants (mode atoms, hole reasons).
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
   'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator',
-  'atom_unwritable'];
+  'atom_unwritable',
+  'head', 'left', 'right'];
 // Builtin OPERATION names -- the term-level operations a rule may call, the
 // same category as `is` and `mod` in SYNTAX above and NOT relations: no store
 // key is ever one of these, and no rule may conclude into one. The five string

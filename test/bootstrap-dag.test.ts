@@ -51,7 +51,7 @@ test('locals resolve lexically, so two loops sharing a name are not a dependency
     'the demand block really does read the list the decode block built');
 });
 
-test('the before-A blocks form a DAG, and there are ten of them now', () => {
+test('the before-A blocks form a DAG, and there are eleven of them now', () => {
   const cyclic = sccs(BEFORE_A, IND).filter((c) => c.length > 1);
   assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the ten');
   // six when this was written; `stratumCone` made it seven and `scheduleToken`
@@ -60,11 +60,11 @@ test('the before-A blocks form a DAG, and there are ten of them now', () => {
   // `classify`, since classify now reads the plan. The ladder absorbed each
   // without a cycle, which is the claim under test; `policyAnswer` — the whole
   // of what asks the kernel's own program — makes it ten.
-  assert.equal(BEFORE_A.length, 10);
+  assert.equal(BEFORE_A.length, 11);
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
-test('the ladder: four rungs, and safety is the bottom one', () => {
+test('the ladder: five rungs, and range restriction is the bottom one', () => {
   const layout = tiers(BEFORE_A, IND).map((layer) => layer.map(nm).sort());
   // MEASURED, and it corrected me. I expected `classify` to sit ABOVE
   // `planBody`, since classify calls it — and the graph does not see that edge,
@@ -80,9 +80,16 @@ test('the ladder: four rungs, and safety is the bottom one', () => {
   // to this instrument and means nothing about the negation planner. Left as
   // measured: an instrument that reports what the code says beats one edited
   // until it says what I meant.
+  // FIVE RUNGS SINCE 2026-09-06, and the new one is where the self-application
+  // sits. `prepare` used to share a rung with the two asking methods; it now
+  // stands alone above them, because it calls `safetyAnswer` to get a verdict
+  // and `classify` to spend it. That is the ladder reporting a real change:
+  // asking a program is a step, and the step has to happen between deciding
+  // and using.
   assert.deepEqual(layout, [
-    ['classify', 'planBody', 'readStrata'],          // range restriction; where a negation may stand; the stratum MAX
-    ['policyAnswer', 'prepare', 'scheduleToken', 'stratumCone'],  // asking the kernel's program; reserved head; the stratum cone; the schedule token
+    ['classify', 'planBody', 'readStrata'],          // the verdict, read; where a negation may stand; the stratum MAX
+    ['policyAnswer', 'safetyAnswer', 'scheduleToken', 'stratumCone'],  // the two kernel programs, asked; the stratum cone; the schedule token
+    ['prepare'],                                     // reserved head, and the two above spent
     ['demandSet'],                                   // the demand set — reads `safe`
     ['runGate', 'runWellFounded'],                   // what runs at all; well-founded admissibility
   ]);
@@ -100,7 +107,7 @@ test('the layering survives the one line that sits on a block boundary', () => {
   const six2 = moved.filter((b) => b.when === 'before-A');
   const ind2 = inducedEdges(g2, six2);
   assert.deepEqual(sccs(six2, ind2).filter((c) => c.length > 1), [], 'cyclic under the other cut');
-  assert.equal(tiers(six2, ind2).length, 4, 'still four rungs');
+  assert.equal(tiers(six2, ind2).length, 5, 'still five rungs');
 });
 
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached
@@ -159,18 +166,27 @@ test('the emitted surface is read out of src/, and it is not empty', () => {
   }
 });
 
-test('the price of tier 0 is five fact families that do not exist', () => {
+test('tier 0 is paid, and it cost four families fewer than this table predicted', () => {
+  // WHAT THIS TEST USED TO ASSERT: that five fact families did not exist and
+  // that range restriction could not leave the host without them. Tier 0 landed
+  // 2026-09-06 and the prediction was wrong in a way worth keeping rather than
+  // deleting. FOUR of the five were never needed — `premise_kind`, `head_var`,
+  // `builtin_at` and `builtin_operand` are all readable off the reified
+  // `premise_lit`, whose constructors ARE the kind and whose payload carries
+  // the operator and both operands. The fifth, `premise_var`, was needed and
+  // arrived at arity FIVE rather than four, carrying an index, because a
+  // universal ("every variable of this operand is bound") has to be walked
+  // positionally to stay out of a negative cycle.
   const em = emitted();
-  // THE DISCRIMINATING CHECK: these are the names the safety fold would read,
-  // and none of them is emitted. If the extractor claimed otherwise it would be
-  // finding names that are not there, which is the failure worth catching.
-  for (const rel of ['premise_var', 'head_var', 'builtin_at', 'builtin_operand', 'premise_kind']) {
-    assert.equal(em.has(rel), false, `${rel} is emitted after all — the price is wrong`);
+  for (const rel of ['head_var', 'builtin_at', 'builtin_operand', 'premise_kind']) {
+    assert.equal(em.has(rel), false, `${rel} exists after all — it was predicted and never built`);
   }
+  assert.ok(em.get('premise_var')?.has(5), 'premise_var/5, seeded into the policy store');
+  assert.ok(em.get('slot_arity')?.has(4), 'slot_arity/4, its companion');
   const cost = tierCost();
   const t0 = cost.find((t) => t.tier === 0)!;
-  assert.equal(t0.missing.length, 5, t0.missing.join('; '));
-  assert.equal(t0.have.length, 1, 'has_premise/2 already carries the premise index');
+  assert.deepEqual(t0.missing, [], 'nothing tier 0 reads is missing any more');
+  assert.equal(t0.have.length, 5, t0.have.join('; '));
   // and every rung above it is expressible over what is already there
   for (const t of cost.filter((x) => x.tier > 0)) {
     assert.deepEqual(t.missing, [], `tier ${t.tier} ${t.block}`);

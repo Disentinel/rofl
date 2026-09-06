@@ -16,10 +16,52 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { Evaluation } from '../src/engine.ts';
 import { parseProgram } from '../src/parser.ts';
+import { POLICY_SRC, SAFETY_SRC } from '../src/reflect.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FILE = fs.readFileSync(path.join(ROOT, 'policy.rofl'), 'utf8');
+const SAFETY = fs.readFileSync(path.join(ROOT, 'safety.rofl'), 'utf8');
+
+test('THE GATE THIS FILE CLAIMED TO BE, and was not', () => {
+  // Two comments — one in src/reflect.ts, one at the top of this file — said
+  // the copy in the kernel was kept honest by "the gate that keeps them
+  // identical, which test/kernel-policy-program.test.ts is". Measured
+  // 2026-09-06: no test in this repository read POLICY_SRC at all. The two were
+  // in fact identical, so nothing was broken; what was missing was the reason
+  // to believe it. This is that reason.
+  assert.equal(POLICY_SRC, FILE, 'policy.rofl and src/reflect.ts have drifted');
+  assert.equal(SAFETY_SRC, SAFETY, 'safety.rofl and src/reflect.ts have drifted');
+  // PLANTED DEFECT: the comparison must be able to fail. A one-character edit
+  // — the kind a hand-merge makes — has to be visible to it.
+  assert.notEqual(POLICY_SRC, FILE.replace('rule_reads', 'rule_read'));
+  assert.notEqual(SAFETY_SRC, SAFETY.replace('slot_arity', 'slot_arty'));
+});
+
+test('SELF-APPLICATION: safety.rofl judges both kernel programs, its own rules included', () => {
+  // THE BOTTOM RUNG OF THE TOWER. `Evaluation` asks safety.rofl whether a
+  // program's rules are range-restricted, and a store holding one of the
+  // kernel's OWN programs is evaluated with `bootstrap: true` — it does not
+  // ask, because asking means constructing an Evaluation. What that rung
+  // stands on is an assumption: every rule the kernel ships is safe. Here the
+  // assumption is CHECKED, by the very program it lets run.
+  const r = new Rofl();
+  assert.ok(r.load(FILE).ok);
+  assert.ok(r.load(SAFETY).ok);
+  const ev = new Evaluation(r.store);
+  assert.deepEqual(ev.rules.filter((x) => !x.safe).map((x) => x.canon), [],
+    'a rule the kernel ships is not range-restricted, and the bootstrap assumes it is');
+  // CONTROL: it looked, and it can say no. Without this an empty answer would
+  // be a fact about the probe.
+  assert.ok(ev.rules.length > 20, `${ev.rules.length} rules judged`);
+  const r2 = new Rofl();
+  assert.ok(r2.load(FILE).ok);
+  assert.ok(r2.load(SAFETY).ok);
+  assert.ok(r2.load('planted(A, Z) :- rule_relation(A).\n').ok);
+  assert.deepEqual(new Evaluation(r2.store).rules.filter((x) => !x.safe).map((x) => x.canon),
+    ['planted[main](?A,?Z)@now :- rule_relation[main](?A)@now']);
+});
 
 test('policy.rofl is a program, and it is the one the acceptance measured', () => {
   // NOT YET CARRIED BY THE KERNEL, and the price of carrying it is measured

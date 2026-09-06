@@ -108,9 +108,16 @@ test('THE ORDER: the relation ladder is finer than the block ladder', () => {
   // BY NAME, NOT BY RANGE (2026-09-01): these were '107-118:1-2', '214-224:3-5',
   // '509-521:3-5' and '677-692:1-4', which asserted where src/engine.ts sits.
   assert.deepEqual(glued, ['prepare:1-2', 'runGate:3-5', 'runWellFounded:1-4', 'stratumCone:3-5']);
-  // 12 relations over 4 block rungs, but 5 distinct relation depths
+  // 12 relations over 4 block rungs, but 5 distinct relation depths.
+  // 2026-09-06: FOUR BECAME FIVE, and the finer reading did not move. The
+  // block ladder gained a rung when `prepare` started asking safety.rofl for a
+  // verdict and spending it through `classify` — asking is a step between
+  // deciding and using. The relation ladder never had a reason to change: the
+  // relations are the same and so is what they read. So the two readings now
+  // agree on the NUMBER of rungs while still disagreeing on the grouping, which
+  // is the claim this test has always been about.
   assert.equal(new Set(POLICY_RELS.map((r) => depth.get(r))).size, 5);
-  assert.equal(new Set(POLICY_RELS.map((r) => blocks.get(r)!.tier)).size, 4);
+  assert.equal(new Set(POLICY_RELS.map((r) => blocks.get(r)!.tier)).size, 5);
 });
 
 test('THE ORDER: the block ladder inverts the cone and the demand set', () => {

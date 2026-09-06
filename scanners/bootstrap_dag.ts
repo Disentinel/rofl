@@ -410,13 +410,24 @@ export interface TierCost {
 
 /** What each rung reads. Names only — whether each is emitted is looked up. */
 export const TIER_COST: TierCost[] = [
-  { tier: 0, anchor: 'private classify(r: DRule): ERule {', label: 'range restriction', needs: [
+  // TIER 0 HAS LANDED, and what it cost is not what this table predicted.
+  // Four of the five families it named were never needed: the reified
+  // `premise_lit(R, K, Lit)` already carries a premise's KIND (`$lit`, `$not`,
+  // `$builtin` are different constructors), the operator, and both operands, so
+  // `premise_kind`, `builtin_at`, `builtin_operand` and `head_var` are all
+  // readable off a term a rule can match. The one that WAS needed arrived with
+  // a different shape than predicted -- five arguments, not four -- because
+  // "every variable of this operand is bound" has to be walked BY INDEX to stay
+  // stratified, and it arrived SEEDED by the host rather than emitted into the
+  // program's store, for the reason `opaque_seed` is: a term carries an
+  // arbitrary functor and Datalog cannot destructure one it does not name.
+  { tier: 0, anchor: 'private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {',
+    label: 'range restriction (safety.rofl)', needs: [
     { rel: 'has_premise', arity: 2, why: 'the premise INDEX: safety is a fold in written order' },
-    { rel: 'premise_kind', arity: 3, why: 'pos | neg | bi AT an index — premise_pos/2 carries no index' },
-    { rel: 'premise_var', arity: 4, why: '(rule, index, argument position, variable) — which variable stands where' },
-    { rel: 'head_var', arity: 3, why: 'the same for the head, including its perspective slot' },
-    { rel: 'builtin_at', arity: 3, why: 'the operator AT an index — uses_builtin/2 carries neither index nor operands' },
-    { rel: 'builtin_operand', arity: 4, why: '(rule, index, side, variable): `=` binds either way, `is` binds left from right' },
+    { rel: 'premise_lit', arity: 3, why: 'the premise itself, reified: its kind, its operator and both operands' },
+    { rel: 'conclusion_lit', arity: 3, why: 'the head, reified: its arguments and its perspective slot' },
+    { rel: 'premise_var', arity: 5, why: '(rule, index, slot, I, name) — the I-th variable of a slot, in order' },
+    { rel: 'slot_arity', arity: 4, why: 'how many variables a slot has, so a positive walk can reach the end of it' },
   ] },
   { tier: 1, anchor: 'prepare(): void {', label: 'refuse a reserved head', needs: [
     { rel: 'rule', arity: 1, why: 'the rules to consider' },

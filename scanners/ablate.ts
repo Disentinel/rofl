@@ -76,11 +76,15 @@ export const HOOKS: Hook[] = [
       + '    this.demandRels = new Map();\n'
       + '    if (ABLATE !== \'b2\') for (const rel of [...unfoldable].sort()) {' },
 
-  { id: 'b3', note: '170-206 range restriction, identically satisfied',
-    anchor: '    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;',
-    replace: '    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;\n'
-      + '    if (!safe) HIT(\'b3\');\n'
-      + '    if (ABLATE === \'b3\') safe = true;' },
+  // RANGE RESTRICTION, and it is no longer a fold in the host: safety.rofl
+  // answers it and `classify` reads the answer. The ablation is unchanged in
+  // what it does -- make every rule safe and see what moves -- and it now
+  // ablates a verdict rather than a computation.
+  { id: 'b3', note: 'range restriction (safety.rofl), identically satisfied',
+    anchor: '    const safe = stuck === null && !unsafe.has(r.id);',
+    replace: '    const safe0 = stuck === null && !unsafe.has(r.id);\n'
+      + '    if (!safe0) HIT(\'b3\');\n'
+      + '    const safe = ABLATE === \'b3\' ? true : safe0;' },
 
   { id: 'b4-skip', note: '214-224 the reuse skip stops skipping',
     anchor: '    const safeRules = this.rules.filter((r) => r.safe && !plan.hits.has(r.clause.head.rel));',
@@ -313,7 +317,7 @@ export const CANARIES = ['examples/wtf/', 'examples/rip/', 'examples/loot/'];
 
 const LABEL: Record<string, string> = {
   b1: '107-118 refuse a reserved head', b2: '119-169 demand set',
-  b3: '170-206 range restriction', b4: '214-224 reuse skip + rejection gate',
+  b3: 'range restriction (safety.rofl)', b4: '214-224 reuse skip + rejection gate',
   b5: '498-523 stratum MAX', b6: '632-647 wf admissibility',
 };
 
