@@ -16,6 +16,16 @@
 -- scanner can now tell `f(a, b)` from `f(b, a)`, which this cell does not
 -- need and the next one will.
 ident[code](N, Name)        :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name).
+-- ...AND THE SAME JOIN CARRYING ITS FILE, added 2026-09-05 for a reason that is
+-- entirely about COST and not at all about meaning. Eight rules below used to
+-- spell `ast_node[code](E, identifier, File, _), ast_name[code](E, Name)` as
+-- their FIRST two literals, which enumerates every identifier in the corpus and
+-- only then filters by name. Measured: that one premise handed out 876 391 of
+-- the fixpoint's 2 246 605 rows — 39% of the whole evaluation — because the
+-- engine reads a body left to right and has no join planner. Written as one
+-- relation the store can index on (Name, File), the same eight rules ask a
+-- selective question instead of a scan.
+ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
 
 -- a declarator binds Name (its `id`) and reads Src (its `init`), both identifiers
 decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
@@ -96,10 +106,10 @@ binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name),
                                      ast_child[code](D, init, 0, Init).
 
-may_be_lit[flow](E, V)  :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                           binder[code](_, Name, Init, File), may_be_lit[flow](Init, V).
-may_be_node[flow](E, N) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                           binder[code](_, Name, Init, File), may_be_node[flow](Init, N).
+may_be_lit[flow](E, V)  :- binder[code](_, Name, Init, File), may_be_lit[flow](Init, V),
+                           ident_in[code](E, Name, File).
+may_be_node[flow](E, N) :- binder[code](_, Name, Init, File), may_be_node[flow](Init, N),
+                           ident_in[code](E, Name, File).
 
 -- ENTRY 4 — assignment. `x = "a"` makes `x` may-be "a" WHEREVER x appears in
 -- the file, which is the flow-insensitive reading and is stated rather than
@@ -111,10 +121,10 @@ assigns[code](Name, Src, File) :- ast_node[code](A, assignment_expression, File,
                                   ast_child[code](A, left, 0, L), ast_name[code](L, Name),
                                   ast_child[code](A, right, 0, Src).
 
-may_be_lit[flow](E, V)  :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                           assigns[code](Name, Src, File), may_be_lit[flow](Src, V).
-may_be_node[flow](E, N) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                           assigns[code](Name, Src, File), may_be_node[flow](Src, N).
+may_be_lit[flow](E, V)  :- assigns[code](Name, Src, File), may_be_lit[flow](Src, V),
+                           ident_in[code](E, Name, File).
+may_be_node[flow](E, N) :- assigns[code](Name, Src, File), may_be_node[flow](Src, N),
+                           ident_in[code](E, Name, File).
 
 -- ENTRY 5 — the transparent wrappers. A parenthesis, a TS cast and a non-null
 -- assertion change nothing about the value, which is exactly why the call
@@ -125,9 +135,9 @@ value_transparent(parenthesized_expression).
 value_transparent(tsas_expression).
 value_transparent(tsnon_null_expression).
 
-may_be_lit[flow](E, V)  :- ast_node[code](E, K, _, _), value_transparent(K),
+may_be_lit[flow](E, V)  :- value_transparent(K), ast_node[code](E, K, _, _),
                            ast_child[code](E, expression, 0, X), may_be_lit[flow](X, V).
-may_be_node[flow](E, N) :- ast_node[code](E, K, _, _), value_transparent(K),
+may_be_node[flow](E, N) :- value_transparent(K), ast_node[code](E, K, _, _),
                            ast_child[code](E, expression, 0, X), may_be_node[flow](X, N).
 
 -- WHAT THE LAYER CAN SAY ABOUT ITSELF: an expression the rules can value at
@@ -186,9 +196,14 @@ param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, 
 -- WHERE A PARAMETER IS READ. Over-approximation declared: any identifier of
 -- that name anywhere under F, so a nested function redeclaring the name is
 -- claimed here and should not be. Shadowing is the scope layer's cell.
+-- ORDERED FOR COST, and the order is the whole rule: `param_of` binds F and
+-- Name, `ast_within` with F bound hands back what is under that function, and
+-- `ident` is then a two-bound probe. The other way round it asked for every
+-- identifier of that name in the corpus first — measured at 168 rows a call
+-- for a parameter named `n`, 1110 times.
 param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
-                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name),
-                               ast_within[code](F, U).
+                               ast_within[code](F, U),
+                               ident[code](U, Name).
 
 may_be_lit[flow](U, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V),
                            param_of[flow](F, I, Name), param_use[flow](F, Name, U).
@@ -308,9 +323,9 @@ may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _, _).
 -- DUPLICATION DECLARED: `fn_binding` in rules/js-callgraph.rofl says the same
 -- thing for the call graph's own tier 1. Same class as `param_bind`, and it
 -- retires the same way — by that tier going through the value question.
-may_be_node[flow](E, F) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                           ast_node[code](F, function_declaration, File, _),
-                           ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+may_be_node[flow](E, F) :- ast_node[code](F, function_declaration, File, _),
+                           ast_child[code](F, id, 0, I), ast_name[code](I, Name),
+                           ident_in[code](E, Name, File).
 
 -- ENTRY 7 — an object property IS its value.
 may_be_node[flow](P, N) :- ast_node[code](P, object_property, _, _),
@@ -346,8 +361,8 @@ class_named[flow](CD, Name, File) :- obj_like[flow](CD), ast_node[code](CD, _, F
                                      ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
 
 -- the name of a class denotes the class
-may_be_node[flow](E, CD) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),
-                            class_named[flow](CD, Name, File).
+may_be_node[flow](E, CD) :- class_named[flow](CD, Name, File),
+                            ident_in[code](E, Name, File).
 
 -- and so does an expression that constructs one. THE ABSTRACTION IS THE
 -- CONFLATION ABOVE: an instance is represented by the class it came from,
@@ -485,8 +500,8 @@ for_of_name[flow](S, Name) :- ast_node[code](S, for_of_statement, _, _),
                               ast_child[code](D, declarations, 0, V),
                               ast_child[code](V, id, 0, I), ast_name[code](I, Name).
 for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
-                                ast_node[code](U, identifier, _, _), ast_name[code](U, Name),
-                                ast_child[code](S, body, 0, B), ast_within[code](B, U).
+                                ast_child[code](S, body, 0, B), ast_within[code](B, U),
+                                ident[code](U, Name).
 
 -- WHAT AN ITERABLE HANDS OUT, one element at a time. Two sources and they are
 -- reached differently on purpose: an array is a VALUE, so the first rule goes

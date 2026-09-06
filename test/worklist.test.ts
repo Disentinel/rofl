@@ -136,7 +136,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
      'w_effect_layer',
-     'w_env_ledger_form', 'w_env_scan_failed',
+     'w_env_ledger_form', 'w_env_scan_failed', 'w_join_planner',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_scope_binding', 'w_vocabulary_frame']);
   // FOUR items have come off the front, and the last of them was the one this
@@ -158,7 +158,7 @@ test('the queue covers the model: 85 open cells, 34 claimed by name, 51 swept', 
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 35);
+  assert.equal(w.n('work(W, Note)'), 36);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -299,9 +299,10 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // API surface, and the API surface cannot attribute `xs.at` without a type.
   // That the chain is four deep and acyclic is itself the check: it was written
   // as prose in three item comments before it was written as rows.
-  assert.equal(base.n('blocked[audit](W)'), 5, 'one held on purpose, four real premises');
+  assert.equal(base.n('blocked[audit](W)'), 6, 'one held on purpose, five real premises');
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
-    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_exn_propagation', 'w_type_surface']);
+    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_exn_propagation',
+     'w_join_planner', 'w_type_surface']);
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
@@ -309,7 +310,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // which is now DONE, so the dependency was satisfied and blocked nothing. It
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
-  assert.equal(mut.n('blocked[audit](W)'), 6, 'the planted one on top of the five real ones');
+  assert.equal(mut.n('blocked[audit](W)'), 7, 'the planted one on top of the six real ones');
   assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_df_sweep'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);

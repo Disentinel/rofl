@@ -260,7 +260,9 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
 
-encloses[code](F, C)   :- fn_node[code](F), site[code](C), ast_within[code](F, C).
+-- ORDERED FOR COST: `ast_within` with F bound is a probe, `site` with C bound
+-- is a hash hit; the other way round every function scanned all 184 sites.
+encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C).
 -- F is not the nearest if some OTHER enclosing G sits inside it. `F != G`
 -- is carried explicitly so the rule does not silently depend on ast_within
 -- being irreflexive.

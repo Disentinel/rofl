@@ -562,3 +562,19 @@ work(w_scanner_nested_values, "the scanner emits scalar own properties only, so 
 work_order(w_scanner_nested_values, 35).
 work_state(w_scanner_nested_values, open).
 claim(queued, js, template_literal, none, callgraph, w_scanner_nested_values).
+
+-- 36 — THE JOIN PLANNER. A body is evaluated left to right, so the cost of a
+-- rule is a property of the order a human wrote it in. Measured 2026-09-05:
+-- one badly-ordered premise was 39% of the whole fixpoint, and reordering nine
+-- bodies by hand took it from 24.7 s to 4.9 s with byte-identical answers.
+-- The hand fix does not generalise - the next rule has the same trap - and the
+-- gate that now watches for it (test/js-fixpoint-cost.test.ts) reports the
+-- offender rather than preventing it. THE REMEDY IS A PLANNER that orders
+-- literals by boundness at match time, and it carries the risk the other half
+-- of this defect already names: under negation, order changes the ANSWER, so a
+-- planner may not reorder across a negative literal. Same item, both hats.
+work(w_join_planner, "order body literals by boundness at match time: cost is currently a property of how a human typed the rule").
+work_order(w_join_planner, 36).
+work_state(w_join_planner, open).
+work_needs(w_join_planner, w_body_order_is_load_bearing).
+work_spawned(w_join_planner, f_the_engine_has_no_join_planner).

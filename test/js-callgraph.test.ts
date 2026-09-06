@@ -728,10 +728,20 @@ test('mutant 3 — forget which file a function was declared in', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
-    find: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, File, _), ast_name[code](E, Name),\n'
-        + '                           ast_node[code](F, function_declaration, File, _),',
-    replace: 'may_be_node[flow](E, F) :- ast_node[code](E, identifier, _, _), ast_name[code](E, Name),\n'
-        + '                           ast_node[code](F, function_declaration, _, _),',
+    // RE-AIMED AGAIN 2026-09-05 when the body was reordered for cost. The
+    // planted defect is the same one — drop the File column so a name reaches
+    // a declaration in ANY file — only the surviving literal moved.
+    // THE ANCHOR MUST NAME THE WHOLE RULE. `ident_in` now appears in five
+    // bodies and `String.replace` with a STRING argument replaces the FIRST
+    // occurrence — the pitfall already recorded in this repository, which
+    // planted the defect in the binder rule and left this one untouched. The
+    // mutant read GREEN, which is the direction that gets believed.
+    find: 'may_be_node[flow](E, F) :- ast_node[code](F, function_declaration, File, _),\n'
+        + '                           ast_child[code](F, id, 0, I), ast_name[code](I, Name),\n'
+        + '                           ident_in[code](E, Name, File).',
+    replace: 'may_be_node[flow](E, F) :- ast_node[code](F, function_declaration, _, _),\n'
+        + '                           ast_child[code](F, id, 0, I), ast_name[code](I, Name),\n'
+        + '                           ident_in[code](E, Name, _).',
   }]);
   assert.equal(base.ambiguous, 8, 'baseline: the branch receivers and the loop variables');
   assert.ok(mut.ambiguous > 8, `mutant resolves ${mut.ambiguous} sites two ways`);
@@ -887,11 +897,14 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
+    // RE-AIMED 2026-09-05 with the cost reordering: `ast_within` moved ahead of
+    // `ident`, and dropping it is still exactly the defect — a parameter read
+    // from anywhere instead of from inside its own function.
     find: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
-        + '                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name),\n'
-        + '                               ast_within[code](F, U).',
+        + '                               ast_within[code](F, U),\n'
+        + '                               ident[code](U, Name).',
     replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
-        + '                               ast_node[code](U, identifier, _, _), ast_name[code](U, Name).',
+        + '                               ident[code](U, Name).',
   }]);
   assert.ok(mut.edges.has('useCb -> leaf'), 'two parameters named `f` become one');
   assert.ok(!base.edges.has('useCb -> leaf'));
