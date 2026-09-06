@@ -28,7 +28,7 @@ import { parse } from '@babel/parser';
 import { Rofl } from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
 import { type Term } from '../src/unify.ts';
-import { scan, AST_RELATIONS } from '../scanners/js_ast.ts';
+import { scan, AST_RELATIONS, AST_REFUSAL } from '../scanners/js_ast.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FIX = path.join(ROOT, 'test', 'fixtures', 'js');
@@ -204,6 +204,18 @@ test('the scanner emits EXACTLY the four contract relations, into [code]', () =>
   assert.deepEqual(seen, ['ast_attr', 'ast_child', 'ast_file', 'ast_node'],
     'a fifth relation here is a judgement wearing a relation name');
   assert.deepEqual([...AST_RELATIONS].sort(), seen, 'the exported list and the output must agree');
+
+  // ...AND THE CONTRACT IS TWO DISJOINT SETS, since 2026-09-05. A file the
+  // parser refuses used to THROW, which is loud for one file and silent for a
+  // corpus — whoever catches it per file to keep going loses that file with
+  // every count still plausible. It now emits `ast_parse_error` and NOTHING
+  // ELSE, so the model can say the file is invalid rather than never mention
+  // it. The two sets never mix: four on success, one on refusal.
+  const refused = scan('class S { @log m() {} }', { file: 'refused.js' });
+  assert.deepEqual([...new Set(rows(refused.facts).map((r) => r.rel))], [AST_REFUSAL],
+    'a refusal emits the refusal and no partial tree');
+  assert.equal(refused.nodes, 0);
+  assert.ok(!seen.includes(AST_REFUSAL), 'and a successful scan never emits it');
 
   // POSITIVE CONTROL for the assertion above: a set of four is only meaningful
   // because all four are actually populated.

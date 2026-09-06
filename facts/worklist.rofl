@@ -392,9 +392,19 @@ cell_blocked(template_literal,           none,                    dataflow,  sca
 -- the absence of everything, so this moves only when the scanner reports its
 -- own failures. It is ordered first of the four because every other answer
 -- this layer gives is conditional on it.
-work(w_env_scan_failed, "scan_failed[code](File, Reason) from the host: a refused file must be invalid, not absent").
+-- DONE 2026-09-05, and the positive control overturned the premise on the way.
+-- The item said a refused file is lost SILENTLY; scanning a corpus with one
+-- unparseable file reported `scanned 2`, exit 0, and wrote a fact file for the
+-- broken one carrying `src_parse_error`. The capability EXISTED - in
+-- scanners/js.ts, with a test asserting it by name - and had never reached
+-- scanners/js_ast.ts, which is the scanner every rule in the language model
+-- reads. Nothing reads `src_parse_error` either. The name proposed here,
+-- `scan_failed`, was dropped for `ast_parse_error`: a second name for a thing
+-- that already has one is a table that can disagree with itself.
+work(w_env_scan_failed, "DONE 2026-09-05: ast_parse_error from the scanner, and a refused file is invalid in every environment").
 work_order(w_env_scan_failed, 15).
-work_state(w_env_scan_failed, open).
+work_state(w_env_scan_failed, done).
+work_spawned(w_env_scan_failed, f_the_refusal_was_a_fact_in_the_other_scanner_already).
 work_spawned(w_env_scan_failed, f_a_refused_file_is_absent_not_invalid).
 
 -- 16. POSITION. `await` at the top level of a module is ES2022 and the same

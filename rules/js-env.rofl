@@ -94,8 +94,32 @@ unsupported_in[audit](E, File, F) :- unsupported_at[audit](E, File, _, F).
 -- absence. An answer that is only ever a silence cannot be told from a model
 -- that did not run.
 file_broken[audit](E, File) :- unsupported[audit](E, N, _), ast_node[code](N, _, File, _).
-valid[audit](E, File)     :- environment(E), ast_file[code](_, File), not file_broken[audit](E, File).
-invalid[audit](E, File)   :- environment(E), ast_file[code](_, File), file_broken[audit](E, File).
+
+-- A FILE THE SCANNER REFUSED, added 2026-09-05 and it is the whole of
+-- `w_env_scan_failed`. `valid` used to quantify over `ast_file`, which exists
+-- only for a file that PARSED — so a refused file was neither valid nor
+-- invalid, it was absent, and a corpus could lose one with every count still
+-- plausible. No rule can derive the absence of everything; the host has to say
+-- so, and now it does.
+--
+-- `edb` because the language model is loaded in corpus-free worlds, where an
+-- empty scanner table would otherwise read as a misspelled premise. Same
+-- correction `ast_node` needed on 2026-09-05.
+edb(ast_parse_error).
+
+-- THE DENOMINATOR IS EVERY FILE THE SCANNER REPORTED ON, not every file it
+-- managed to parse. That distinction is the defect.
+scanned_file[audit](File) :- ast_file[code](_, File).
+scanned_file[audit](File) :- ast_parse_error[code](File, _).
+
+-- ...and a file it refused is broken in EVERY environment, because the question
+-- «is this valid under node18» has an answer for it and the answer is no. It is
+-- not `unsupported` — that names a feature and a site, and here there are
+-- neither.
+file_broken[audit](E, File) :- environment(E), ast_parse_error[code](File, _).
+
+valid[audit](E, File)     :- environment(E), scanned_file[audit](File), not file_broken[audit](E, File).
+invalid[audit](E, File)   :- environment(E), scanned_file[audit](File), file_broken[audit](E, File).
 
 -- ---------------------------------------------------------------------------
 -- 4. «А что именно перестанет быть валидным?» — the difference between two

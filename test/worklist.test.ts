@@ -144,7 +144,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_df_control_forms', 'w_df_control_forms',
      'w_df_instance_vs_class',
      'w_effect_layer',
-     'w_env_ledger_form', 'w_env_scan_failed', 'w_join_planner',
+     'w_env_ledger_form', 'w_env_scan_failed', 'w_env_scan_failed', 'w_join_planner',
      'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_scope_binding', 'w_vocabulary_frame', 'w_vocabulary_home']);
   // FOUR items have come off the front, and the last of them was the one this
@@ -159,7 +159,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ...and the first named question is DONE, so the head is the one thing only
   // the host can supply: a file the scanner refuses contributes no facts, so
   // `valid[audit]` neither accepts nor refuses it.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed'],
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_env_positional_features'],
     'the sweeps are finished; the head is judgement again');
 });
 
@@ -328,7 +328,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_env_positional_features']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -348,7 +348,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.equal(mut.n('blocked[audit](W)'), 7, 'the planted one on top of the six real ones');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_env_scan_failed'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_env_positional_features'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

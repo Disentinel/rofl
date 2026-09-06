@@ -52,6 +52,14 @@ export interface AstFacts {
  *  a judgement wearing a relation's clothes. */
 export const AST_RELATIONS = ['ast_node', 'ast_child', 'ast_attr', 'ast_file'] as const;
 
+/** The relation a REFUSAL emits, and it is deliberately NOT in the list above.
+ *  The contract is two disjoint sets rather than one of five: a scan emits the
+ *  four, or it emits this one, and never both. Keeping them apart is what lets
+ *  `the scanner emits EXACTLY the four contract relations` stay the assertion
+ *  it was — a fifth relation on the success path really would be a judgement
+ *  wearing a relation name. */
+export const AST_REFUSAL = 'ast_parse_error' as const;
+
 /** Position and identity properties: recorded elsewhere in the contract, or
  *  not recorded at all. `type` is the Kind argument of ast_node, `loc`/`start`/
  *  `end`/`range` are collapsed to Line, and the *Comments back-references
@@ -96,7 +104,29 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
   const prefix = idPrefix(file);
-  const ast = parse(src, { sourceType: 'module', plugins: ['typescript'] });
+
+  // A REFUSAL IS A FACT, NOT AN EXCEPTION — and the sibling scanner has said so
+  // since it was written. scanners/js.ts catches the same error and emits
+  // `src_parse_error[code](Path, Message)`, with a test asserting it by name;
+  // this one threw, and it is the scanner the whole language model runs on. So
+  // the discipline existed, was tested, and was applied to one of the two
+  // scanners. See f_the_refusal_was_a_fact_in_the_other_scanner_already.
+  //
+  // A THROW IS NOT THE SAFE DIRECTION HERE. It is loud for a caller that scans
+  // one file and silent for a corpus: whoever catches it per file to keep going
+  // loses that file with every count still plausible, which is the whole reason
+  // `w_env_scan_failed` was queued. As a fact the file becomes INVALID in every
+  // environment rather than absent from all of them.
+  let ast;
+  try {
+    ast = parse(src, { sourceType: 'module', plugins: ['typescript'] });
+  } catch (e) {
+    const msg = (e as Error).message.slice(0, 120);
+    return {
+      facts: [`ast_parse_error[${persp}](${q(file)}, ${q(msg)}).`],
+      nodes: 0, kinds: new Set<string>(), root: '', prefix,
+    };
+  }
 
   const facts: string[] = [];
   const kinds = new Set<string>();

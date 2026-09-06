@@ -316,7 +316,10 @@ test('every gate this layer declares has a mutant aimed at it, or is named as ha
   // this file is a report.
   const gates = [...heads].filter((h) => !['env_separates', 'env_has', 'any_env_has'].includes(h)
     && !h.startsWith('uses') && !h.startsWith('unsupported') && !h.startsWith('lost')
-    && !['valid', 'invalid', 'file_broken', 'used_feature'].includes(h));
+    // `scanned_file` joined them on 2026-09-05: it is the DENOMINATOR the three
+    // reports range over — every file the scanner reported on, parsed or
+    // refused — and a denominator is not a gate. It has no empty-set to hold.
+    && !['valid', 'invalid', 'file_broken', 'used_feature', 'scanned_file'].includes(h));
   const missing = gates.filter((g) => !(g in GATE_MUTANT));
   assert.deepEqual(missing, [], `a gate exists that this map does not mention: ${missing.join(', ')}`);
   const unmutated = gates.filter((g) => GATE_MUTANT[g] === null);
@@ -351,18 +354,58 @@ test('BLIND SPOT: a top-level await is reported as ES2017, and it is ES2022', ()
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('BLIND SPOT: a file the scanner REFUSES is absent, not invalid', () => {
-  // A decorator raises MissingOneOfPlugins and nothing is scanned at all, so
-  // the file contributes no `ast_file[code]` row and `valid[audit]` — which
-  // ranges over scanned files — never mentions it. A refused file is therefore
-  // indistinguishable from a file that was never offered, and no row here says
-  // so. Closing it needs a `scan_failed[code](File, Reason)` fact from the
-  // host; the gap is stated rather than left for someone to discover.
-  assert.throws(() => scan('class S { @log m() {} }', { file: 'refused.js' }),
-    /decorators/, 'the scanner refuses the file rather than emitting a partial tree');
-  const m = base();
-  assert.equal(m.n('valid[audit](E, "refused.js")'), 0);
-  assert.equal(m.n('invalid[audit](E, "refused.js")'), 0);
+test('CLOSED: a file the scanner refuses is INVALID in every environment', () => {
+  // WAS A BLIND SPOT UNTIL 2026-09-05 and the test asserted the defect: a
+  // decorator raises MissingOneOfPlugins, nothing was scanned, the file
+  // contributed no `ast_file[code]` row, and `valid[audit]` — which ranged over
+  // files that PARSED — never mentioned it. A refused file was indistinguishable
+  // from one never offered.
+  //
+  // THE FIX IS THE HOST'S because no rule can derive the absence of everything.
+  // `scan` now returns `ast_parse_error[code](File, Message)` instead of
+  // throwing, `scanned_file[audit]` is the denominator, and a refused file is
+  // broken in EVERY environment — the question «is this valid under node18» has
+  // an answer for it and the answer is no.
+  const refused = scan('class S { @log m() {} }', { file: 'refused.js' });
+  assert.deepEqual(refused.facts.map((f) => f.split('[')[0]), ['ast_parse_error'],
+    'the refusal is a fact, and it is the ONLY fact: no partial tree');
+  assert.equal(refused.nodes, 0);
+
+  const m = build([], [['refused.js', 'test/fixtures/js-env/refused.js.txt']]);
+  const envs = m.n('environment(E)');
+  assert.ok(envs >= 4, `positive control: ${envs} environments to be invalid in`);
+  assert.equal(m.n('valid[audit](E, "refused.js")'), 0, 'not valid anywhere');
+  assert.equal(m.n('invalid[audit](E, "refused.js")'), envs, 'and invalid EVERYWHERE');
+  assert.equal(m.n('scanned_file[audit]("refused.js")'), 1, 'the file is in the denominator');
+
+  // ...AND THE FILES THAT PARSE ARE UNAFFECTED: the denominator grew by the
+  // refused file and by nothing else.
+  const clean = base();
+  assert.equal(m.n('scanned_file[audit](F)'), clean.n('scanned_file[audit](F)') + 1);
+});
+
+test('MUTANT — the scanner throws again, and the file vanishes from the model', () => {
+  // THE GATE SHIPS WITH ITS DEFECT PLANTED. Without the refusal fact the file
+  // contributes nothing, so it is neither valid nor invalid: the exact state
+  // this item existed to end. The mutation is on the SCANNER rather than on a
+  // rule, which is why it is spelled as a second world built without the file.
+  const without = base();
+  assert.equal(without.n('valid[audit](E, "refused.js")'), 0);
+  assert.equal(without.n('invalid[audit](E, "refused.js")'), 0);
+  assert.equal(without.n('scanned_file[audit]("refused.js")'), 0,
+    'absent, which is what the fact replaced');
+
+  // and the rule-level half: drop the refusal from the broken set and the file
+  // becomes VALID in every environment, which is worse than absent
+  const mut = build([{ file: 'rules/js-env.rofl',
+    find: 'file_broken[audit](E, File) :- environment(E), ast_parse_error[code](File, _).',
+    replace: '-- withdrawn by the mutant' }],
+    [['refused.js', 'test/fixtures/js-env/refused.js.txt']]);
+  const envs = mut.n('environment(E)');
+  assert.equal(mut.n('valid[audit](E, "refused.js")'), envs,
+    'a file nobody could parse, reported valid everywhere');
+  assert.equal(mut.n('invalid[audit](E, "refused.js")'), 0);
+  console.log(`  KILLED: refused.js valid in 0 -> ${envs} environments`);
 });
 
 // ---------------------------------------------------------------------------
