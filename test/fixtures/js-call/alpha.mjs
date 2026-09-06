@@ -185,6 +185,72 @@ function useSuperMember(n) {
   return new Cask(n).pour(n);
 }
 
+// ---- THE GENERATOR PROTOCOL, and the value travels the OTHER WAY. Every other
+// edge in the value layer runs from a definition outwards; the value of a
+// `yield` EXPRESSION arrives from the consumer's `.next(v)`, into the middle of
+// a suspended body. Measured against V8 before any rule was written:
+//   `g.next(pickedA)` makes `yield` evaluate to `pickedA`, and calling it works;
+//   `yield* inner()` passes the sent value THROUGH to inner's own yield, and
+//   the delegating expression evaluates to inner's RETURN value.
+function pickedA(n) {
+  trace();
+  return n + 1;
+}
+function pickedB(n) {
+  trace();
+  return n + 2;
+}
+function* chooser() {
+  trace();
+  // NOT `chosen` and NOT `f`: both are taken elsewhere in this file — `chosen`
+  // by a for-of head at line 305, `f` by three parameters — and `binder` is
+  // FILE-scoped. Until this rule existed a yield expression had no value, so
+  // the collision carried nothing; giving it one made an old blindness produce
+  // three edges the runtime never takes. The rule did not create the defect, it
+  // gave the defect something to carry.
+  const sentIn = yield 'ready';
+  return sentIn(1);
+}
+function useSent(n) {
+  trace();
+  // NOT `g`: `binder` is file-scoped, so a second `const g` below would make
+  // both generators receive both sent values and manufacture two edges the
+  // runtime never takes. The fixture's own header warns about this and it
+  // still caught me — `next_send` went to six rows before the rename.
+  const gs = chooser();
+  gs.next();
+  return gs.next(pickedA).value + n;
+}
+// ...and the CALL-GRAPH half of the same question: a yield expression in
+// CALLEE position. It has a value now, so it should resolve — asserted by a
+// site rather than claimed.
+function* callsSent() {
+  trace();
+  return (yield 'go')(3);
+}
+function useYieldCallee(n) {
+  trace();
+  const gy = callsSent();
+  gy.next();
+  return gy.next(pickedA).value + n;
+}
+
+function* innerGen() {
+  trace();
+  const sentDeep = yield 'i';
+  return sentDeep(2);
+}
+function* outerGen() {
+  trace();
+  return yield* innerGen();
+}
+function useDelegated(n) {
+  trace();
+  const gd = outerGen();
+  gd.next();
+  return gd.next(pickedB).value + n;
+}
+
 // ---- AN INSTANCE IS NOT ITS CLASS. `new Vat()` and the name `Vat` both reach
 // the class node today, so the model accepts all four sites below while the
 // runtime accepts only two. The two it refuses are wrapped so the fixture still
@@ -520,6 +586,9 @@ export async function main() {
     useAssign(1),
     useSuper(1),
     useSuperMember(1),
+    useSent(1),
+    useDelegated(1),
+    useYieldCallee(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

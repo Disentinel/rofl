@@ -111,23 +111,26 @@ test('the five heaviest read paths, by name', () => {
   // signature of a bigger corpus; a new name, or one growing alone, would be
   // the signature of a badly ordered body. The total rose 10.4%, the extra ~2%
   // being the member lookup itself, which is now three rules where it was one.
+  // MOVED AGAIN 2026-09-05 with the generator-protocol fixture: facts +8.7%,
+  // firings +9.1%, and every one of the five names below up between 8.9% and
+  // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 60027',
-    'relPersp authority = 49212',
-    'argMatches encloses_v pos=[1] = 29611',
-    'relPersp encloses_v = 28704',
-    'relPersp ast_node = 24960',
+    'argMatches ast_within pos=[0] = 65410',
+    'relPersp authority = 53703',
+    'argMatches encloses_v pos=[1] = 32544',
+    'relPersp encloses_v = 31637',
+    'relPersp ast_node = 27339',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
   // until its variables are bound, so it is judged against a smaller
   // accumulator: the same answers for slightly fewer questions. A correctness
   // fix that made the evaluation cheaper is worth pinning as such.
-  assert.equal(c.total, 508688, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 565624, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
   // execution oracle with UNSOUND 0 and the same named over-approximations —
   // so this is 4.9x fewer questions for one more relation, not a smaller model.
-  assert.equal(c.firings, 25513, 'derivations: 23444 before the instance-vs-class fixture');
+  assert.equal(c.firings, 27830, 'derivations: 25513 before the generator fixture');
 });

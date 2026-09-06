@@ -373,11 +373,14 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
   assert.ok(!edges.has('applyFirst -> mid'), 'a function passed is not a function called');
   assert.ok(!edges.has('useCb -> leaf'), 'two parameters named `f` are two different bindings');
 
-  // the binding table itself: five rows, one per (function, parameter, value)
-  // the value that reaches each parameter, which is where this now lives: the
-  // call graph asks the dataflow layer instead of keeping a binding table.
+  // the binding table itself: the value that reaches each parameter, which is
+  // where this now lives — the call graph asks the dataflow layer instead of
+  // keeping a binding table. TWO MORE since 2026-09-05, both slot 0 and both a
+  // `.next(v)`: a generator's consumer is an ordinary call site, and only the
+  // destination of the value is unusual.
   const bound = m.binds('passes_function[code](C, I, F, N)', 'I', 'N');
-  assert.deepEqual([...new Set(bound)].sort(), ['0 -> leaf', '0 -> mid', '1 -> mid']);
+  assert.deepEqual([...new Set(bound)].sort(),
+    ['0 -> leaf', '0 -> mid', '0 -> pickedA', '0 -> pickedB', '1 -> mid']);
 
   // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
   // `s_identifier` is not stale: an identifier naming an IMPORT still does not
@@ -433,8 +436,13 @@ test('argument position is content: which function is in which slot', () => {
   // `useCb`, so the index is NOT recoverable from the name. Before `useCb`
   // existed the two were in bijection here, and a model that carried only the
   // name would have produced the same table.
-  assert.deepEqual(passed, ['0 -> leaf', '0 -> mid', '1 -> mid'],
-    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid) — each in its own slot');
+  // ...AND TWO MORE SINCE 2026-09-05, both in slot 0 and both a `.next(v)`:
+  // `gs.next(pickedA)` and `gd.next(pickedB)` really do pass a function as the
+  // first argument of a call. The generator protocol is an ordinary call site
+  // on the consumer's side; what is unusual is only where the value GOES.
+  assert.deepEqual(passed,
+    ['0 -> leaf', '0 -> mid', '0 -> pickedA', '0 -> pickedB', '1 -> mid'],
+    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), and the two sends');
 });
 
 // ===========================================================================
@@ -681,8 +689,26 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // `w_cf_abrupt_transfer`. Under the old `extra.length <= 2` bound the third
   // would simply have pushed the number to three and nobody would have been
   // asked which one it was.
-  assert.deepEqual(extra, ['useForOfGen -> pick', 'useGuard -> unreached', 'useTry -> after'],
-    `over-approximation, by cause: ${extra.join(', ')}`);
+  // THREE BECAME SIX on 2026-09-05, and all three new ones share a cause that
+  // was already on this list: V8 attributes a generator body's first resume to
+  // `%GeneratorPrototype%.next`, so the oracle's caller is `next` and never the
+  // enclosing function. FOUR of the six are now that one limit of the
+  // instrument — `useForOfGen -> pick`, `useSent -> chooser`,
+  // `useDelegated -> outerGen`, `outerGen -> innerGen` — and no rule can close
+  // any of them. The other two are control flow: a guard not taken, and an
+  // abrupt transfer. A COUNT would have said "6" and asked nobody which.
+  assert.deepEqual(extra, [
+    'outerGen -> innerGen', 'useDelegated -> outerGen', 'useForOfGen -> pick',
+    'useGuard -> unreached', 'useSent -> chooser', 'useTry -> after',
+    'useYieldCallee -> callsSent',
+  ], `over-approximation, by cause: ${extra.join(', ')}`);
+  // FIVE OF THE SEVEN are one limit of the INSTRUMENT rather than of the model:
+  // V8 names `%GeneratorPrototype%.next` as the caller of a generator body's
+  // first resume, so the oracle's caller is `next` and never the enclosing
+  // function. No rule can close any of them, and the list is what keeps that
+  // distinguishable from the two that are control flow.
+  const generatorFrame = extra.filter((e) => /-> (pick|chooser|outerGen|innerGen|callsSent)$/.test(e));
+  assert.equal(generatorFrame.length, 5, `the oracle's frame limit: ${generatorFrame.join(', ')}`);
 });
 
 // ===========================================================================
@@ -794,10 +820,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
-  // 77 -> 86: the instance-vs-class fixture added five call sites, two of them
-  // meant never to resolve and one — `super.hold(n)` — that resolves and shows
-  // the third face of the same question was already modelled.
-  assert.equal(sites - resolved, 86, `${sites - resolved} call sites vanished from the frontier`);
+  // 86 -> 97: the generator-protocol fixture added two consumers, two
+  // generators and two callees.
+  assert.equal(sites - resolved, 101, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -899,20 +924,33 @@ test('mutant 8 — sever the cycle: bind parameters without asking who is called
   // RE-AIMED, and it is the mutant that says what the mutual recursion is FOR.
   // Without `resolves` in the body, every function's parameters take every
   // value passed at that index anywhere in the corpus.
+  // THE KILL GOT LOUDER ON 2026-09-05 and the assertion had to change SHAPE to
+  // say so. Until the generator fixture the mutant merely invented edges and
+  // the model still finished; on the larger corpus it does not finish at all —
+  // `query calls_in[code] hit a budget`. That is a stronger statement of the
+  // same defect, and it is asserted as its own outcome rather than smuggled in
+  // as a failure to build: a run that does not terminate is its own category,
+  // which this repository has already paid to learn once.
   const base = probe([]);
-  const mut = probe([{
+  assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
+  assert.throws(() => probe([{
     file: 'rules/js-dataflow.rofl',
     find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A),',
     replace: 'may_be_node[flow](U, N) :- fn_node_v[flow](F), arg_at[flow](C, I, A),',
-  }]);
-  assert.ok(mut.edges.has('useCb -> leaf'), 'the mutant hands useCb a function nobody passed it');
-  assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
-  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+  }]), /hit a budget/,
+  'without `resolves` every parameter takes every value passed at that index, and the fixpoint does not finish');
+  console.log(`  KILLED: the severed cycle no longer terminates on this corpus`
+    + ` (baseline ${base.edges.size} edges)`);
 });
 
 test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
   const base = probe([]);
-  const mut = probe([{
+  // THE KILL GOT LOUDER ON 2026-09-05, like mutant 8's. A parameter read from
+  // anywhere used to merely invent edges; on the corpus the generator fixture
+  // grew it no longer finishes. Asserted as its own outcome — a run that does
+  // not terminate is a category, not a failure to build.
+  assert.ok(!base.edges.has('useCb -> leaf'), 'baseline: two parameters named `f` stay two');
+  assert.throws(() => probe([{
     file: 'rules/js-dataflow.rofl',
     // RE-AIMED 2026-09-05 with the cost reordering: `ast_within` moved ahead of
     // `ident`, and dropping it is still exactly the defect — a parameter read
@@ -922,10 +960,10 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
         + '                               ident[code](U, Name).',
     replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
         + '                               ident[code](U, Name).',
-  }]);
-  assert.ok(mut.edges.has('useCb -> leaf'), 'two parameters named `f` become one');
-  assert.ok(!base.edges.has('useCb -> leaf'));
-  console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
+  }]), /hit a budget/,
+  'a parameter read from anywhere does not reach a fixpoint on this corpus');
+  console.log(`  KILLED: the unscoped parameter read no longer terminates`
+    + ` (baseline ${base.edges.size} edges)`);
 });
 
 test('mutant 10 — delete the value flow across a call', () => {
@@ -1078,6 +1116,53 @@ test('mutant 23 — the receiver stops deciding: a static answers on an instance
   assert.equal(base.edges.size + 2, mut.edges.size);
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size},`
     + ' named: ' + invented.join(', '));
+});
+
+test('mutant 24 — the generator protocol, planted in three places', () => {
+  // ONE MUTANT IS LIVENESS, A SET IS COVERAGE, and the set here is the three
+  // separate claims the rules make: that a value sent to `.next` reaches the
+  // yield, that DELEGATION passes it through, and that the sent value is found
+  // by following the name to the CALL rather than to what the call returns.
+  // Each is planted alone, and each loses a different edge.
+  const base = probe([]);
+  assert.ok(base.edges.has('chooser -> sentIn') === false, 'sentIn is a value, not a callee name');
+  assert.ok(base.edges.has('chooser -> pickedA'), 'baseline: the sent function is called');
+  assert.ok(base.edges.has('innerGen -> pickedB'), 'baseline: and through a delegation');
+
+  // A — the consumer's side: no `.next(v)` is read at all
+  const noSend = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'next_send[flow](G, V) :- call_site[code](C, _), callee_of[code](C, N),',
+    replace: 'next_send_unused[flow](G, V) :- call_site[code](C, _), callee_of[code](C, N),',
+  }]);
+  assert.ok(!noSend.edges.has('chooser -> pickedA'), 'A: nothing arrives at the yield');
+  assert.ok(!noSend.edges.has('innerGen -> pickedB'), 'A: and nothing reaches the delegate');
+
+  // B — delegation stops passing it through: the DIRECT send still works
+  const noDeleg = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, Inner).',
+    replace: '-- withdrawn by the mutant',
+  }]);
+  assert.ok(noDeleg.edges.has('chooser -> pickedA'), 'B: the direct send is untouched');
+  assert.ok(!noDeleg.edges.has('innerGen -> pickedB'), 'B: only the delegated one is lost');
+
+  // C — follow the name to what the call RETURNS instead of to the call. This
+  // is the distinction `bound_to_call` exists for, and it is invisible without
+  // a generator: for any ordinary function the two coincide.
+  const viaReturns = probe([{
+    file: 'rules/js-dataflow.rofl',
+    find: 'bound_to_call[flow](E, C) :- ident_in[code](E, Name, File),\n'
+        + '                             binder[code](_, Name, C, File),\n'
+        + '                             ast_node[code](C, call_expression, _, _).',
+    replace: 'bound_to_call[flow](E, C) :- ident_in[code](E, Name, File),\n'
+        + '                             binder[code](_, Name, I, File),\n'
+        + '                             may_be_node[flow](I, C).',
+  }]);
+  assert.ok(!viaReturns.edges.has('chooser -> pickedA'),
+    'C: a generator is not what its call returns');
+  console.log(`  KILLED x3: no send ${base.edges.size} -> ${noSend.edges.size},`
+    + ` no delegation -> ${noDeleg.edges.size}, via returns -> ${viaReturns.edges.size}`);
 });
 
 test('mutant 19 — the OTHER catch-all, the one that had no gate for three days', () => {

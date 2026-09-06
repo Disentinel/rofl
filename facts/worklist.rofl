@@ -175,10 +175,21 @@ work_spawned(w_df_control_forms, f_an_unawaited_async_entry_point_looked_like_ov
 -- layer. It needs a term for the generator protocol, and that term also covers
 -- `gen.next(v)` as a call site, `yield*` delegation and a generator's own
 -- return value - which is why it is an item and not a rule.
-work(w_df_generator_protocol, "the value a generator RECEIVES: yield's own value, gen.next(v), yield*, and a generator's return").
+-- DONE 2026-09-05. Measured against V8 before a rule existed, and the fixture
+-- came first because the corpus had no `.next(v)` at all: UNSOUND went 0 -> 2
+-- with the two sites added, and back to 0 with the rules. THE FILE-SCOPED
+-- BINDER BIT AGAIN, twice in one iteration - `const g` in two consumers, and a
+-- `const f` inside a generator colliding with three parameters named `f`. The
+-- new rule did not create that defect; it gave an old blindness something to
+-- carry, which is how a yield expression having a value at all made three
+-- false edges appear.
+-- BOTH CLAIMS ARE GONE rather than kept: the dataflow cell is `handled`, and
+-- the call-graph one was SPLIT — `(yield 'go')(3)` is `s_yield_result` now, so
+-- the unrefined cell the claim named no longer exists and `orphan[audit]` said
+-- so in one run.
+work(w_df_generator_protocol, "DONE 2026-09-05: what a generator RECEIVES - next(v) into the yield, through a delegation, and inner's return").
 work_order(w_df_generator_protocol, 21).
-work_state(w_df_generator_protocol, open).
-claim(queued, js, yield_expression,          none, dataflow, w_df_generator_protocol).
+work_state(w_df_generator_protocol, done).
 
 -- ===========================================================================
 -- 10 — THE THIRD LAYER, WHICH DOES NOT EXIST YET. `layer(controlflow).` is one
@@ -625,7 +636,6 @@ claim(queued, js, tagged_template_expression, none, dataflow, w_cg_invisible_cal
 -- consumer's value arriving in the middle of a suspended body, which is the
 -- generator protocol's other direction.
 claim(queued, js, this_expression,  none, callgraph, w_scope_binding).
-claim(queued, js, yield_expression, none, callgraph, w_df_generator_protocol).
 
 -- 35 — THE CONTRACT UNDER ALL THREE BLOCKED CELLS. `cell_blocked` says a cell
 -- waits on the scanner and names no item, so two items sit in

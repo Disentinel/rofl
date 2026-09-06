@@ -94,6 +94,12 @@ shape_of(js, new_expression,            s_new_result).
 -- record the constructor edge at all: the kind is split, so it has no unrefined
 -- cell, and the coarse `unknown_because` it used to carry became unreachable.
 shape_of(js, new_expression,            s_construct).
+-- ADDED 2026-09-05 with the generator protocol. A yield expression in CALLEE
+-- position is its own shape and it RESOLVES, so the kind is split and its
+-- verdict moves to the shape — the same construction `new_expression` has, and
+-- for the same reason: the kind means two different things at this layer.
+shape_of(js, yield_expression,          s_yield_result).
+shape_in(s_yield_result, callgraph).
 shape_in(s_construct, callgraph).
 handled(js, new_expression, s_construct, callgraph, r_construct).
 shape_of(js, import,                    s_dynamic_import).

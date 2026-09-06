@@ -120,7 +120,8 @@ handled(js, for_of_statement,       dataflow, r_for_of).
 -- work and it is not this item's: it needs a term for the generator protocol,
 -- which also covers `gen.next(v)`, `yield*` and a generator's return value.
 -- Queued as w_df_generator_protocol.
-unknown_because(js, yield_expression, dataflow, not_yet).
+-- RETIRED 2026-09-05: the cell is `handled` and `stale_reason[audit]` named
+-- this row the moment it was — an excuse outliving its cause.
 
 -- THE CLASS AS A VALUE GREW THREE ANSWERS AND THE CELL STAYS OPEN, 2026-09-04.
 -- The dataflow layer now says which methods a class has, which constructor it
@@ -179,3 +180,27 @@ handled(js, class_declaration, dataflow, r_class_receiver).
 -- 0 and over-approximation stayed 3 when the site was added. The value was
 -- there; the corpus had no site. Sixth instance of the matrix under-reporting.
 handled(js, super, dataflow, r_member_value).
+
+-- ===========================================================================
+-- THE GENERATOR PROTOCOL, 2026-09-05 — queue item w_df_generator_protocol.
+--
+-- `yield_expression x dataflow` carried `not_yet` with a reason that named its
+-- own difficulty: the value of a `yield` EXPRESSION arrives from the consumer's
+-- `.next(v)`, travelling from a call site into the middle of a suspended body,
+-- which is the opposite direction from every other edge in this layer. Both
+-- directions are now modelled — what a generator YIELDS was already there, and
+-- what it RECEIVES is the other half.
+--
+-- MEASURED AGAINST V8 FIRST, and all three claims came from the run rather than
+-- from the spec: `g.next(f)` makes the yield evaluate to `f`; `yield* inner()`
+-- passes the sent value THROUGH to inner's own yield; and the delegating
+-- expression evaluates to what inner RETURNED, which is the one place a
+-- generator's `return` is read at all.
+handled(js, yield_expression, dataflow, r_generator_protocol).
+
+-- ...AND THE CALL-GRAPH HALF FALLS OUT OF THE SAME RULE, which `false_done`
+-- was right to insist on: the item owned both cells and only one had been
+-- ticked. A yield expression in CALLEE position - `(yield 'go')(3)` - resolves
+-- because it now HAS a value. Asserted by a site the runtime takes, not
+-- claimed: UNSOUND stayed 0 when it was added.
+handled(js, yield_expression, s_yield_result, callgraph, r_generator_protocol).

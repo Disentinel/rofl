@@ -72,6 +72,12 @@ callee_shape(sequence_expression,       s_sequence).
 callee_shape(parenthesized_expression,  s_parenthesized).
 callee_shape(tsas_expression,           s_ts_as).
 callee_shape(conditional_expression,    s_conditional).
+-- ADDED 2026-09-05 by the item that gave a yield expression a value. The callee
+-- sweep measured `yield_expression` as one of the twelve occupants of the
+-- catch-all and handed it to `w_df_generator_protocol`; the corpus now holds
+-- `(yield 'go')(3)` and it RESOLVES, so the shape comes out of the bucket with
+-- an answer rather than an excuse.
+callee_shape(yield_expression,          s_yield_result).
 
 -- member callees need two more bits: `computed`, and the object's kind.
 edb(member_kind).

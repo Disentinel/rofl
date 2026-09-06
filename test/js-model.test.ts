@@ -527,8 +527,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   assert.equal(n(r, 'layer(L)'), 2);
   assert.equal(n(r, 'axis(A)'), 1);
   assert.equal(n(r, 'axis_applies(A, L)'), 1, 'callgraph only — see facts/js-shapes.rofl');
-  assert.equal(n(r, 'shape_of(A, B, S)'), 39);
-  assert.equal(n(r, 'shape_kind[audit](A, B, L)'), 15, 'kinds the axis splits, per layer');
+  assert.equal(n(r, 'shape_of(A, B, S)'), 40);
+  assert.equal(n(r, 'shape_kind[audit](A, B, L)'), 16, 'kinds the axis splits, per layer');
 
   // PREDICTED ON PAPER, then measured:
   //   coarse 41 kinds x 2 layers                                   = 82
@@ -771,9 +771,11 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const { pairs, tally } = measuredShapes(c);
   // 179 -> 198 on 2026-09-05: the instance-vs-class fixture. Five call sites
   // are its own; the rest come from the class it added being exercised.
-  assert.equal(sites, 198, 'positive control: the corpus is the one the census was taken on');
-  assert.equal(tally.size, 28,
-    'positive control: 28 distinct shapes; eight object positions split out of the catch-all 2026-09-04');
+  // 198 -> 223 on 2026-09-05: the generator-protocol fixture — three
+  // generators, three consumers and the `.next` sites they call.
+  assert.equal(sites, 223, 'positive control: the corpus is the one the census was taken on');
+  assert.equal(tally.size, 29,
+    'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
   console.log(`      census (${sites} call sites, ${tally.size} shapes):`);
   for (const [s, k] of [...tally].sort((a, b) => b[1] - a[1])) {
@@ -792,8 +794,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   const unseen = [...declared].filter((p) => !pairs.has(p)).sort();
   console.log(`      declared but not in this corpus (${unseen.length} of ${declared.size} pairs):`);
   console.log('        ' + unseen.join(' '));
-  assert.equal(declared.size, 39);
-  assert.equal(pairs.size, 28, 'every measured shape has exactly one callee kind in this corpus');
+  assert.equal(declared.size, 40);
+  assert.equal(pairs.size, 29, 'every measured shape has exactly one callee kind in this corpus');
   assert.equal(unseen.length, 11);
 
   // and the one shape that CANNOT be a cell, declared rather than left silent:
@@ -807,8 +809,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // is a transfer role and is not in them, so it is declared in `shape_of` and
   // absent here. The refinement column now carries values from two
   // classifications, and only one of them has a closed vocabulary relation.
-  assert.equal(vocab.size, 34);
-  assert.equal(shaped.size, 34);
+  assert.equal(vocab.size, 35);
+  assert.equal(shaped.size, 35);
 });
 
 // ---------------------------------------------------------------------------
@@ -880,7 +882,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // ten the model derives are NOT here on purpose — `Vat.poured()` and
   // `new Vat().tapped()` are TypeErrors, the runtime never enters them, and
   // that absence is the whole acceptance for this item.
-  assert.equal(oracleEdges.size, 90, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 90 -> 96 with the generator fixture. FIVE of the model's extras over this
+  // number are ONE limit of the instrument: V8 names `%GeneratorPrototype%.next`
+  // as the caller of a generator body's first resume, never the enclosing
+  // function, so those edges exist for the model and not for the oracle.
+  assert.equal(oracleEdges.size, 96, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -959,7 +965,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // PREDICTED 97 -> 82: every cell falls back to `none`, so the three-axis
   // matrix must become the two-axis one exactly.
   assert.equal(f.cell, 90, 'predicted 90');
-  assert.equal(n(r, 'shape_of(A, B, S)'), 39, 'the shapes are still declared — only the layer changed');
+  assert.equal(n(r, 'shape_of(A, B, S)'), 40, 'the shapes are still declared — only the layer changed');
 
   // ROW FOR ROW, not by count: this is the strongest statement the refinement
   // can make about itself. With the axis switched off it must be the identity.
@@ -1111,8 +1117,8 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 4 (none beside a shape)', f);
-  assert.equal(f.cell, 129, 'predicted 114 + 15, one per splitting kind');
-  assert.equal(n(r, 'double_cell[audit](A, B, L)'), 15, 'and each is named');
+  assert.equal(f.cell, 130, 'predicted 114 + 16, one per splitting kind');
+  assert.equal(n(r, 'double_cell[audit](A, B, L)'), 16, 'and each is named');
   assert.ok(r.holds('double_cell[audit](js, member_expression, callgraph)'));
 
   // THE DAMAGE, and the reason the count alone is not the point: the coarse
@@ -1140,8 +1146,8 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 5a (no unsplit-none branch)', f);
-  assert.equal(f.cell, 84, 'predicted 114 - 30');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 30, 'a coarse cell with nothing under it');
+  assert.equal(f.cell, 85, 'predicted 114 - 29');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 29, 'a coarse cell with nothing under it');
   // the loss is exactly the kinds the axis does not split, at the layer where
   // it applies — and one of them is a cell somebody deliberately WAIVED, which
   // would have vanished from the table with its reason
@@ -1245,6 +1251,12 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'member_expression/s_member_on_template',
     'member_expression/s_member_on_this',
   ], 'the eighteen shapes the corpus really produces and the mutant no longer declares');
+  // STILL EIGHTEEN, and all of them one family: `s_yield_result` joined the
+  // corpus on 2026-09-05 and was DECLARED in the same commit, so it never
+  // reached this list. That is the census working — a measured shape either
+  // gets a `shape_of` row or appears here by name.
+  assert.ok(undeclared.every((p2) => p2.startsWith('member_expression/')),
+    'every undeclared shape is a member position, which is the one family left');
   console.log(`      KILLED by the census alone: ${undeclared.length} measured shapes go undeclared`
             + ' while every in-model audit stays green');
 });

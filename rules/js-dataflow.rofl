@@ -533,13 +533,64 @@ may_be_lit[flow](E, V)  :- ast_node[code](E, await_expression, _, _),
 -- facts about the same function — `for (const x of gen())` walks the YIELDS and
 -- never touches the return value.
 --
--- THE YIELD EXPRESSION'S OWN VALUE IS NOT MODELLED, deliberately and with a
--- reason: `const sent = yield v` evaluates to whatever the CONSUMER passes to
--- `.next(sent)`, so it is a value crossing a protocol between two functions,
--- travelling in the opposite direction from every other edge here. Modelling it
--- needs a term for the generator protocol, not one more rule.
 yields[flow](F, E) :- ast_node[code](Y, yield_expression, _, _), nearest_v[flow](F, Y),
                       ast_child[code](Y, argument, 0, E).
+
+-- ---------------------------------------------------------------------------
+-- ...AND THE OTHER HALF, 2026-09-05: THE VALUE A GENERATOR RECEIVES.
+--
+-- `const sent = yield v` evaluates to whatever the CONSUMER passes to
+-- `.next(sent)`. Every other edge in this layer runs from a definition
+-- outwards; this one arrives from a call site into the middle of a suspended
+-- body, which is why it was left out with a note rather than guessed at.
+--
+-- MEASURED AGAINST V8 BEFORE ANY OF IT WAS WRITTEN:
+--   g.next(pickedA)        the yield evaluates to `pickedA`, and calling it works
+--   yield* inner()         the sent value passes THROUGH to inner's own yield,
+--                          and the delegating expression is inner's RETURN
+--   for (x of gen())       never sends anything, so nothing arrives
+--
+-- WHICH CALL A NAME WAS BOUND TO, and it needs its own relation: `may_be_node`
+-- of an identifier bound to a call gives that call's RETURNS, which for a
+-- generator is the wrong object entirely — `const g = chooser()` makes `g` the
+-- generator, not what `chooser` returns.
+bound_to_call[flow](E, C) :- ident_in[code](E, Name, File),
+                             binder[code](_, Name, C, File),
+                             ast_node[code](C, call_expression, _, _).
+
+-- THE CONSUMER'S SIDE: `g.next(v)` where `g` is bound to a call of generator G.
+next_send[flow](G, V) :- call_site[code](C, _), callee_of[code](C, N),
+                         -- the KEY IS A STRING, not an atom: `selects` reads
+                         -- `ast_name`, and this cost a run to find out
+                         selects[flow](N, "next"),
+                         ast_child[code](N, object, 0, O), bound_to_call[flow](O, GC),
+                         resolves[code](GC, G),
+                         ast_child[code](C, arguments, 0, V).
+
+-- DELEGATION PASSES IT THROUGH. `yield* inner()` inside G means a value sent to
+-- G's `.next` reaches inner's yields — measured, not assumed.
+delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _, _),
+                                 ast_attr[code](Y, delegate, true),
+                                 nearest_v[flow](Outer, Y),
+                                 ast_child[code](Y, argument, 0, A),
+                                 resolves[code](A, Inner).
+next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, Inner).
+
+-- ...and what a yield expression may then BE. Only a non-delegating one: the
+-- value of `yield* inner()` is not what the consumer sent, it is what inner
+-- RETURNED, which is the rule after this.
+may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
+                           ast_node[code](Y, yield_expression, _, _),
+                           ast_attr[code](Y, delegate, false),
+                           may_be_node[flow](V, X).
+
+-- THE DELEGATING EXPRESSION IS THE INNER GENERATOR'S RETURN VALUE, which is the
+-- one place a generator's `return` is read at all: `for-of` walks the yields and
+-- never touches it.
+may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _, _),
+                           ast_attr[code](Y, delegate, true),
+                           ast_child[code](Y, argument, 0, A), resolves[code](A, Inner),
+                           returns[flow](Inner, E), may_be_node[flow](E, X).
 
 -- ---------------------------------------------------------------------------
 -- FOR-OF: the loop variable takes the elements of what is iterated.
