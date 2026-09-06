@@ -93,6 +93,10 @@ feature(modules).             feature_since(modules, 2015).
 feature(shorthand_methods).   feature_since(shorthand_methods, 2015).
 feature(exponentiation).      feature_since(exponentiation, 2016).
 feature(async_await).         feature_since(async_await, 2017).
+-- THE SAME WORD IN TWO ERAS, added 2026-09-05. `await` inside an async function
+-- is ES2017; the same node at the top level of a module is ES2022, and no
+-- attribute of the node itself says which. See `outside_attr_needs` below.
+feature(top_level_await).     feature_since(top_level_await, 2022).
 feature(optional_chaining).   feature_since(optional_chaining, 2020).
 feature(dynamic_import).      feature_since(dynamic_import, 2020).
 feature(nullish_coalescing).  feature_since(nullish_coalescing, 2020).
@@ -232,3 +236,21 @@ attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
 -- corpus, arrived at from the other side: there babel emits no node, here
 -- babel refuses the source.
 feature_unscannable(decorators, a_parser_plugin_not_enabled).
+
+
+-- ===========================================================================
+-- THE THIRD GATE SHAPE: WHAT IS *NOT* AROUND A NODE.
+--
+-- `outside_attr_needs(Lang, Kind, Key, Value, Feature)`: a node of Kind with NO
+-- ancestor carrying Key=Value needs Feature. One row today and the shape earns
+-- its keep by being a table rather than a rule - the next positional feature is
+-- a line here, not an edit to rules/js-env.rofl.
+--
+-- WHY THE ASYNC ATTRIBUTE RATHER THAN A LIST OF FUNCTION KINDS: `ast_attr(F,
+-- async, Bool)` is emitted for every function form the scanner knows -
+-- declaration, expression, arrow, class method, object method - so reading it
+-- needs no kind class and cannot fall out of date when a sixth form appears.
+-- And an `await` inside a NON-async function is a syntax error, so "has an
+-- async ancestor" and "is inside a function at all" coincide for this feature.
+edb(outside_attr_needs).
+outside_attr_needs(js, await_expression, async, true, top_level_await).

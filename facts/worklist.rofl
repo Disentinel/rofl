@@ -414,9 +414,20 @@ work_spawned(w_env_scan_failed, f_a_refused_file_is_absent_not_invalid).
 -- is a third gate shape keyed on an ANCESTOR rather than on the node —
 -- `ast_within` is already there — and it is the first place this layer needs
 -- to know where a node is rather than what it is.
-work(w_env_positional_features, "gate on position as well as kind: top-level await is ES2022, nested await is ES2017").
+-- DONE 2026-09-05. A third gate table, `outside_attr_needs(Lang, Kind, Key,
+-- Value, Feature)`: a node of Kind with NO ancestor carrying Key=Value needs
+-- Feature. It reads `ast_attr(F, async, true)`, which the scanner emits for
+-- every function form, so it needs no kind class and no new contract - the same
+-- move `attr_needs` made when it read the operator instead of inventing a table.
+-- The blind-spot test that PINNED the wrong answer became the acceptance, with
+-- a mutant that removes the ancestor test and watches every await become
+-- top-level. AND THE WORK FOUND A LIVE DEFECT BESIDE IT, measured on the honest
+-- tree: `feature_undeclared[audit]` read `kind_needs` alone while three tables
+-- feed it, so a typo in `attr_needs` was silent while taking `invalid` 8 -> 9.
+work(w_env_positional_features, "DONE 2026-09-05: outside_attr_needs gates on what is NOT around a node; the era vocabulary audits read all three tables").
 work_order(w_env_positional_features, 16).
-work_state(w_env_positional_features, open).
+work_state(w_env_positional_features, done).
+work_spawned(w_env_positional_features, f_the_feature_vocabulary_audit_read_one_of_three_tables).
 
 -- 17. THE API SURFACE. `fs.cp` and `Array.prototype.at` are the half of the
 -- question that syntax cannot answer, and unlike the syntax half it needs
@@ -452,6 +463,13 @@ work(w_leak_variable_on_the_right, "leak[audit] cannot see a variable ledger on 
 work_order(w_leak_variable_on_the_right, 19).
 work_state(w_leak_variable_on_the_right, open).
 work_spawned(w_leak_variable_on_the_right, f_the_leak_audit_now_fires_on_a_ledger_polymorphic_head).
+work_spawned(w_leak_variable_on_the_right, f_a_hold_written_as_an_ordinal_expires_when_the_queue_grows).
+
+-- HELD BY THE OWNER, 2026-09-05, and stated as a row because the ordinal above
+-- stopped meaning it. Order 19 was chosen when 19 was LAST; the queue is now 38
+-- items long and the plan began offering this one as ordinary work. Vadim's
+-- words: «Нет, давай полиморфную голову пока подержим в бэклоге».
+held(w_leak_variable_on_the_right, vadim).
 
 -- ===========================================================================
 -- 28-32 — THE FIVE LAYERS THE SWEEP DID NOT REACH, entered 2026-09-05 at the

@@ -37,6 +37,11 @@ const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const ERA: [string, string][] = [
   ['era.js', 'test/fixtures/js-env/era.js.txt'],
   ['era.ts', 'test/fixtures/js-env/era.ts.txt'],
+  // A THIRD FILE rather than three more lines in the first, because era.js is
+  // asserted to fail es2020 for EXACTLY ONE reason and that reason is an
+  // operator. A positional feature there would have made that assertion
+  // two-valued and destroyed what it demonstrates.
+  ['era-position.js', 'test/fixtures/js-env/era-position.js.txt'],
 ];
 
 const FACTS = 'facts/js-env.rofl';
@@ -133,11 +138,11 @@ test('every self-audit of the era table is empty on the era corpus', () => {
 test('the verdict is total over the files scanned, and only ts5 takes both', () => {
   const m = base();
   assert.deepEqual([...m.set('valid[audit](E, File)')].sort(),
-    ['ts5 era.js', 'ts5 era.ts'],
+    ['ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts'],
     'ts5 is the only environment carrying both the timeline and the extras');
   // total: every (environment, file) pair is decided, none is silent
-  assert.equal(m.n('valid[audit](E, F)') + m.n('invalid[audit](E, F)'), 5 * 2,
-    'five environments times two files, each decided exactly once');
+  assert.equal(m.n('valid[audit](E, F)') + m.n('invalid[audit](E, F)'), 5 * 3,
+    'five environments times three files, each decided exactly once');
 });
 
 test('era.js fails in es2020 for exactly one reason, and it is an OPERATOR', () => {
@@ -319,7 +324,11 @@ test('every gate this layer declares has a mutant aimed at it, or is named as ha
     // `scanned_file` joined them on 2026-09-05: it is the DENOMINATOR the three
     // reports range over — every file the scanner reported on, parsed or
     // refused — and a denominator is not a gate. It has no empty-set to hold.
-    && !['valid', 'invalid', 'file_broken', 'used_feature', 'scanned_file'].includes(h));
+    // `within_attr` the same day, for the reason `env_has` is excluded above:
+    // it lives in [audit] because it READS [audit], and it is the ancestor test
+    // the third gate table negates — a helper, not a report.
+    && !['valid', 'invalid', 'file_broken', 'used_feature', 'scanned_file',
+      'within_attr'].includes(h));
   const missing = gates.filter((g) => !(g in GATE_MUTANT));
   assert.deepEqual(missing, [], `a gate exists that this map does not mention: ${missing.join(', ')}`);
   const unmutated = gates.filter((g) => GATE_MUTANT[g] === null);
@@ -336,22 +345,68 @@ test('every gate this layer declares has a mutant aimed at it, or is named as ha
 // 4. WHERE THIS CHECK IS STRUCTURALLY UNABLE TO LOOK. Not mutants — assertions
 //    that the model gives the WRONG answer, pinned so the frontier is a number.
 
-test('BLIND SPOT: a top-level await is reported as ES2017, and it is ES2022', () => {
+test('CLOSED: a top-level await is ES2022, and the same word inside async is ES2017', () => {
+  // WAS A BLIND SPOT UNTIL 2026-09-05 and this test asserted the WRONG answer:
+  // es2020 accepted a file that needs es2022, because `await` is one node kind
+  // with one set of attributes either way and neither gate table could see a
+  // POSITION. The fix is a third table, `outside_attr_needs`, keyed on what is
+  // NOT around the node: an await with no `async: true` ancestor.
   const dir = fs.mkdtempSync(path.join(ROOT, 'node_modules', '.era-'));
   const f = path.join(dir, 'tla.js');
   fs.writeFileSync(f, 'const x = await Promise.resolve(1);\nexport { x };\n');
   try {
     const m = build([], [['tla.js', path.relative(ROOT, f)]]);
     const feats = new Set(m.q('uses_at[audit]("tla.js", Line, F)').map(([, f2]) => f2));
-    assert.ok(feats.has('async_await'), 'the await is seen');
-    // THE WRONG ANSWER, pinned: es2020 accepts a file that needs es2022.
-    assert.ok(m.set('valid[audit](E, File)').has('es2020 tla.js'),
-      'es2020 accepts top-level await, and a real es2020 runtime would not');
-    // The cause is positional and this layer has no term for a position: the
-    // node kind is `await_expression` either way, and whether its nearest
-    // function ancestor exists is what decides the era.
-    assert.equal(feats.has('top_level_await'), false, 'no such feature exists here, by construction');
+    assert.ok(feats.has('async_await'), 'the await operator is still ES2017');
+    assert.ok(feats.has('top_level_await'), 'and its POSITION is ES2022');
+    assert.ok(!m.set('valid[audit](E, File)').has('es2020 tla.js'),
+      'es2020 no longer accepts a file a real es2020 runtime would refuse');
+    assert.ok(m.set('invalid[audit](E, File)').has('es2020 tla.js'));
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+
+  // AND THE OTHER HALF, which a one-sided test would miss: the era fixture
+  // holds BOTH positions — a top-level await and `await import(url)` inside an
+  // async function — and only the first is ES2022. A rule that answered
+  // `top_level_await` for every await would pass the assertions above.
+  const base = build();
+  assert.equal(base.n('uses_at[audit]("era-position.js", Line, top_level_await)'), 1,
+    'exactly one of the fixture\'s two awaits is at the top level');
+  assert.equal(base.n('uses_at[audit]("era-position.js", Line, async_await)'), 2,
+    'positive control: both awaits are seen, so the 1 above is a distinction');
+});
+
+test('MUTANT — the position stops mattering, and es2020 accepts es2022 again', () => {
+  const base = build();
+  const mut = build([{ file: RULES,
+    find: '                     not within_attr[audit](N, Key, V).',
+    replace: '                     ast_node[code](N, K, _, _).' }]);
+  assert.equal(base.n('uses_at[audit]("era-position.js", Line, top_level_await)'), 1);
+  assert.equal(mut.n('uses_at[audit]("era-position.js", Line, top_level_await)'), 2,
+    'without the ancestor test every await is top-level');
+  console.log(`  KILLED: top_level_await sites 1 -> 2`);
+});
+
+test('MUTANT — a misspelled feature in the SECOND gate table, which used to be silent', () => {
+  // MEASURED ON THE HONEST TREE BEFORE THE FIX. `feature_undeclared[audit]` was
+  // written against `kind_needs` alone, and its own comment says "a typo here
+  // is invisible to every other check" — which was true of the table it reads
+  // and false of the two beside it. With the typo planted in `attr_needs`:
+  // feature_undeclared 0, and yet `unsupported` 132 -> 135 and `invalid` 8 -> 9,
+  // so a file became invalid in one more environment because of a spelling
+  // mistake. The only audit that moved was `feature_unexercised` (0 -> 1),
+  // which this layer explicitly calls NOT AN ERROR and which names the WRONG
+  // atom — the one that is still declared, not the one that is not.
+  //
+  // `gate_feature` is now the single place every gate table feeds, and the
+  // audits read it. This is the cheaper half of the remedy CLAUDE.md names: one
+  // arm per table in ONE place, rather than the schema derived from the rules.
+  const typo = build([{ file: FACTS,
+    find: 'attr_needs(js, binary_expression,     operator, "**",  exponentiation).',
+    replace: 'attr_needs(js, binary_expression,     operator, "**",  exponenshiation).' }]);
+  assert.deepEqual(typo.q('feature_undeclared[audit](F)').map(([f]) => f), ['exponenshiation'],
+    'the typo is NAMED, which is the whole difference from a count moving');
+  assert.equal(build().n('feature_undeclared[audit](F)'), 0, 'and the honest tree is silent');
+  console.log('  KILLED: feature_undeclared 0 -> 1, naming exponenshiation');
 });
 
 test('CLOSED: a file the scanner refuses is INVALID in every environment', () => {

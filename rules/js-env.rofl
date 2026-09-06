@@ -69,6 +69,30 @@ uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L), kind_needs(L, K, F
 uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
                      attr_needs(L, K, Key, V, F), ast_attr[code](N, Key, V).
 
+-- ...AND THE SAME QUESTION ONE LEVEL OUT, because THE NODE IS NOT ALWAYS THE
+-- SITE. `await` at the top level of a module is ES2022 and the same word inside
+-- an async function is ES2017, and they are the SAME NODE KIND with the SAME
+-- attributes. Neither table above can tell them apart, so the layer reported the
+-- older era for both and test/js-env.test.ts pinned that wrong answer as a
+-- declared blind spot for a day.
+--
+-- WHAT DECIDES IT IS AN ANCESTOR, and the fact is already on the store:
+-- `ast_attr(F, async, true)` marks every function form the scanner emits, so
+-- this needs no kind class and no new scanner contract - the same argument that
+-- made `attr_needs` read the operator instead of inventing a table.
+--
+-- THE ORDER IS FOR COST, deliberately: leading with the two-row table binds Key
+-- and V, so `ast_attr` is probed by (Key, V) - `async=true` is rare - and only
+-- then does `ast_within` walk down from those few nodes. The other way round it
+-- would enumerate every containment pair in the corpus. And the negation goes
+-- LAST, with N bound, for the reason spelled out over the prototype chain in
+-- rules/js-dataflow.rofl.
+within_attr[audit](N, Key, V) :- outside_attr_needs(_, _, Key, V, _),
+                                 ast_attr[code](A, Key, V), ast_within[code](A, N).
+uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+                     outside_attr_needs(L, K, Key, V, F),
+                     not within_attr[audit](N, Key, V).
+
 used_feature[audit](F)  :- uses[audit](_, F).
 
 -- ---------------------------------------------------------------------------
@@ -142,6 +166,37 @@ lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),
 -- A KIND IN THE VOCABULARY THAT NOBODY DECIDED ABOUT. The scanner's vocabulary
 -- grows; this is the row that makes a new kind arrive loudly instead of
 -- silently counting as baseline.
+-- ---------------------------------------------------------------------------
+-- ONE PLACE EVERY GATE TABLE FEEDS, added 2026-09-05 because the audits below
+-- had been written against `kind_needs` ALONE and there are now three tables.
+--
+-- MEASURED BEFORE IT WAS WRITTEN, on the honest tree: misspell the feature in
+-- one `attr_needs` row and `feature_undeclared[audit]` - the audit whose own
+-- comment says "a typo here is invisible to every other check" - reports ZERO,
+-- because it reads a relation the typo is not in. The damage is not zero
+-- either: `unsupported` goes 132 -> 135 and `invalid` 8 -> 9, so a file becomes
+-- invalid in one more environment because of a spelling mistake. The one audit
+-- that moves is `feature_unexercised`, 0 -> 1, which this file explicitly calls
+-- NOT AN ERROR, names the wrong atom, and does not mention the typo at all.
+--
+-- THIS IS NOT THE REMEDY CLAUDE.md ASKS FOR. That one derives the check ONCE
+-- from the rules - `premise_pos` is queryable and a relation carrying a Kind
+-- and a Feature is a schema, not a family of twins. This is the cheaper half:
+-- one arm per table in ONE place, so the next table author adds a line where
+-- the pattern is visible rather than reopening every audit silently.
+gate_feature(L, K, F) :- kind_needs(L, K, F).
+gate_feature(L, K, F) :- attr_needs(L, K, _, _, F).
+gate_feature(L, K, F) :- outside_attr_needs(L, K, _, _, F).
+
+-- ...AND `kind_gated` IS NOT ONE OF ITS CONSUMERS, which the audit caught the
+-- moment it was: wiring it to `gate_feature` made `binary_expression`,
+-- `logical_expression` and `assignment_expression` both gated and baseline, and
+-- `kind_double_booked[audit]` reported all three. It is right. THE TWO
+-- QUESTIONS ARE DIFFERENT: `gate_feature` asks which FEATURES any table names,
+-- which is a vocabulary question; `kind_gated` asks whether a kind's era is
+-- decided by the KIND ITSELF, and for `a ** b` it is not — the kind is as old
+-- as the language and only the operator is ES2016. Conflating them says three
+-- baseline kinds were decided twice.
 kind_gated(L, K)             :- kind_needs(L, K, _).
 kind_unaccounted[audit](L, K) :- env_lang(L), node_kind(L, K),
                                  not kind_gated(L, K), not kind_baseline(L, K).
@@ -155,7 +210,7 @@ kind_double_booked[audit](L, K) :- kind_gated(L, K), kind_baseline(L, K).
 -- invisible to every other check: the kind counts as gated, the feature is in
 -- no environment, and the site reports unsupported EVERYWHERE — a red that
 -- looks like a finding and is a spelling mistake.
-feature_undeclared[audit](F) :- kind_needs(_, _, F), not feature(F).
+feature_undeclared[audit](F) :- gate_feature(_, _, F), not feature(F).
 
 -- A DECLARED FEATURE NO ENVIRONMENT HAS. Either a year outside every
 -- environment's range or a feature nobody carries; either way `unsupported` is

@@ -144,8 +144,9 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_df_control_forms', 'w_df_control_forms',
      'w_df_instance_vs_class',
      'w_effect_layer',
-     'w_env_ledger_form', 'w_env_scan_failed', 'w_env_scan_failed', 'w_join_planner',
-     'w_leak_variable_on_the_right', 'w_mod_partial_cell',
+     'w_env_ledger_form', 'w_env_positional_features',
+     'w_env_scan_failed', 'w_env_scan_failed', 'w_join_planner',
+     'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_scope_binding', 'w_vocabulary_frame', 'w_vocabulary_home']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
@@ -159,8 +160,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ...and the first named question is DONE, so the head is the one thing only
   // the host can supply: a file the scanner refuses contributes no facts, so
   // `valid[audit]` neither accepts nor refuses it.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_env_positional_features'],
+  // ...and the head reached the item the OWNER IS HOLDING on 2026-09-05, which
+  // is what turned the hold into a row. `w_leak_variable_on_the_right` was given
+  // order 19 with the comment "ordered LAST because it is the owner's to
+  // schedule"; the queue grew to 38 items, so 19 became the middle and the plan
+  // started handing out work he had said to hold. A position is a fact about a
+  // sequence, not about a person.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_body_order_is_load_bearing'],
     'the sweeps are finished; the head is judgement again');
+  assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
+  assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
 test('the queue covers the model: 46 open cells, every one owned by name, none swept', () => {
@@ -328,7 +337,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_env_positional_features']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_body_order_is_load_bearing']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -348,7 +357,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.equal(mut.n('blocked[audit](W)'), 7, 'the planted one on top of the six real ones');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_env_positional_features'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_body_order_is_load_bearing'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
@@ -373,6 +382,20 @@ test('the layer list is the owner\'s, and a rule says so', () => {
     'and it is NAMED, so the diff says which one');
   console.log(`  KILLED: layer_unauthorised 0 -> 1, and the matrix grew by`
     + ` ${mut.n('cell[audit](A, K, S, L)') - base.n('cell[audit](A, K, S, L)')} cells on one line`);
+});
+
+test('MUTANT — a hold on an item nobody declared, and a hold withdrawn', () => {
+  // THE HOLD IS A ROW BECAUSE THE ORDINAL STOPPED SAYING IT, and a row can be
+  // wrong in two ways that a position cannot: it can name nothing, and it can
+  // be missing. Both are planted.
+  const ghost = world({ extra: 'held(w_no_such_item, vadim).' });
+  assert.deepEqual(ghost.binds('held_unknown[audit](W)', 'W'), ['w_no_such_item']);
+
+  const free = world({ find: 'held(w_leak_variable_on_the_right, vadim).' });
+  assert.deepEqual(free.binds('next_work[audit](W)', 'W'), ['w_leak_variable_on_the_right'],
+    'withdraw the hold and the queue hands out the kernel question he deferred');
+  console.log('  KILLED: held_unknown 0 -> 1; and without the hold the head is'
+    + ' w_leak_variable_on_the_right, seven tests red on it');
 });
 
 test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {

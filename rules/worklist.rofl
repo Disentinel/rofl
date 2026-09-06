@@ -209,9 +209,28 @@ has_workable(W)     :- claim(queued, js, K, S, L, W), workable(K, S, L).
 sweep_workable(W)   :- work_sweeps(W, L), workable(K, S, L), not claimed(K, S, L).
 unclaimed_item(W)   :- work(W, _), not claims_cell(W), not work_sweeps(W, _).
 
-takeable(W)         :- work_state(W, open), not blocked[audit](W), has_workable(W).
-takeable(W)         :- work_state(W, open), not blocked[audit](W), sweep_workable(W).
-takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_item(W).
+-- HELD BY THE OWNER, and it is a ROW because ORDER STOPPED SAYING IT.
+-- `w_leak_variable_on_the_right` was given order 19 with the comment "ordered
+-- LAST because it is the owner's to schedule, not mine" - and the queue grew to
+-- 38 items, so 19 is now the middle and the plan started handing out work he
+-- had said to hold. A position is a fact about a sequence, not about a person;
+-- when the sequence grows the position means something else, silently.
+--
+-- The same shape as every other repair in this file: `work_needs` exists
+-- because a dependency written in prose cannot refuse, and this exists because
+-- a hold written as an ordinal cannot either. `held_by` names WHO, so the row
+-- says what it is rather than only that it is.
+edb(held).
+held_by(W, Who)     :- held(W, Who).
+on_hold(W)          :- held(W, _).
+held_unknown[audit](W) :- held(W, _), not work(W, _).
+
+takeable(W)         :- work_state(W, open), not blocked[audit](W), has_workable(W),
+                       not on_hold(W).
+takeable(W)         :- work_state(W, open), not blocked[audit](W), sweep_workable(W),
+                       not on_hold(W).
+takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_item(W),
+                       not on_hold(W).
 
 -- AND THE ITEM THE QUEUE IS NOW SILENT ABOUT, said out loud. Two causes and
 -- they want opposite responses: every open cell is blocked (wait, or attack the
