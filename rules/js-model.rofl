@@ -110,6 +110,30 @@ orphan_claim[audit](Lang, K, L)  :- orphan[audit](ignored, Lang, K, L).
 -- than as a bare count
 cell[audit](Lang, K, L)        :- node_kind(Lang, K), layer(L).
 
+-- ===========================================================================
+-- THE LAYER LIST IS THE OWNER'S, AND THAT IS NOW A ROW RATHER THAN A PROMISE.
+--
+-- Decided by Vadim 2026-09-05: the four layers standing in the ledger today
+-- are authorised; a new one needs his explicit word, one at a time. The reason
+-- is arithmetic and it is the whole shape of this programme — `layer(L)` is ONE
+-- FACT and it opens `node_kind` cells, 59 at today's vocabulary. Five candidate
+-- layers sit in the queue; declaring them would take the matrix from 285 cells
+-- to 580 in five lines. So the total size of the work is set by this list and
+-- by nothing else, and it is not a modelling decision.
+--
+-- WHY A RULE AND NOT A SENTENCE IN A COMMENT: an unattended loop works the
+-- queue, and the queue contains items whose natural next move is to declare a
+-- layer. A promise cannot refuse; a positive row can. `layer_unauthorised`
+-- fires on any layer nobody signed off, and every gate that asserts the audits
+-- are empty will carry it.
+edb(layer_authorised).
+layer_authorised(callgraph).
+layer_authorised(dataflow).
+layer_authorised(modules).
+layer_authorised(controlflow).
+
+layer_unauthorised[audit](L) :- layer(L), not layer_authorised(L).
+
 -- WHERE THE LANGUAGES AGREE — and the first version of this was a TAUTOLOGY.
 -- It read `handled(A, _, L, Rule), handled(B, _, L, Rule), A != B` and reported
 -- eight rows of convergence, of which all four named rules EXISTED NOWHERE: I

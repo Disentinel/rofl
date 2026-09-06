@@ -315,6 +315,28 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
 
+test('the layer list is the owner\'s, and a rule says so', () => {
+  // DECIDED BY VADIM 2026-09-05. `layer(L)` is one fact and it opens one cell
+  // per declared kind — 59 today — so the five candidate layers in the queue
+  // would take the matrix from 285 cells to 580 in five lines. The total size
+  // of this programme is set by that list and by nothing else.
+  //
+  // IT IS A ROW RATHER THAN A PROMISE because an unattended loop works this
+  // queue, and several of its items would naturally end in a new layer. A
+  // comment cannot refuse.
+  const base = world();
+  assert.equal(base.n('layer_unauthorised[audit](L)'), 0, 'the four standing layers are signed off');
+  assert.deepEqual(base.binds('layer_authorised(L)', 'L').sort(),
+    ['callgraph', 'controlflow', 'dataflow', 'modules']);
+
+  // planted: the loop declares a layer on its own authority
+  const mut = world({ extra: 'layer(taint).' });
+  assert.deepEqual(mut.binds('layer_unauthorised[audit](L)', 'L'), ['taint'],
+    'and it is NAMED, so the diff says which one');
+  console.log(`  KILLED: layer_unauthorised 0 -> 1, and the matrix grew by`
+    + ` ${mut.n('cell[audit](A, K, S, L)') - base.n('cell[audit](A, K, S, L)')} cells on one line`);
+});
+
 test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
   const unknown = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_no_such_item).' });
   assert.equal(unknown.n('needs_unknown[audit](W, O)'), 1);
