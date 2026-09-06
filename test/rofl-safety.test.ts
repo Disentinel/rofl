@@ -263,6 +263,15 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
     if (l.trimEnd().endsWith('.')) { parts.push(cur); cur = ''; }
   }
   assert.ok(parts.length > 15, `${parts.length} clauses parsed out of the program`);
+  // THE SCHEDULE DECLARATION IS NOT ANALYSIS and this is the wrong instrument
+  // for it: deleting one `stratum(...)` fact of twenty changes which phase one
+  // relation settles in, which these mutants are far too small to notice. It
+  // is covered exactly, by re-peeling the program and comparing —
+  // test/kernel-policy-program.test.ts, 'safety.rofl declares its own
+  // schedule'. Named rather than assumed, because a gate named in prose and
+  // not written is the defect this repository recorded one iteration ago.
+  const analysis = parts.filter((p) => !p.startsWith('stratum('));
+  assert.equal(parts.length - analysis.length, 20, 'the schedule, declared as facts');
 
   // Each mutant's store, built once: the sweep runs the whole program against
   // every one of them for every deletion, and building the stores again each
@@ -276,15 +285,15 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
   const whole = stores.map((st) => answerSig(st, PROG));
 
   const survivors: string[] = [];
-  for (let i = 0; i < parts.length; i++) {
-    const prog = rowsOf(parts.filter((_, j) => j !== i).join('\n'));
+  for (let i = 0; i < analysis.length; i++) {
+    const prog = rowsOf(parts.filter((p) => p !== analysis[i]).join('\n'));
     let died = false;
     for (let m = 0; m < stores.length; m++) {
       let sig;
       try { sig = answerSig(stores[m], prog); } catch { died = true; break; }
       if (sig !== whole[m]) { died = true; break; }
     }
-    if (!died) survivors.push(parts[i].replace(/\s+/g, ' '));
+    if (!died) survivors.push(analysis[i].replace(/\s+/g, ' '));
   }
   // THE MEASUREMENT, not a pass/fail dressed as one. The two survivors are the
   // `edb` declarations, and they survive for a reason that is structural rather

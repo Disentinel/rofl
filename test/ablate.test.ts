@@ -92,25 +92,30 @@ test('END-TO-END: ablating the stratum table changes what one program derives', 
     // ...and the reachability counter says the block had something to decide
     assert.ok((base.hits ?? {})['b5'] >= 1, 'b5 never fired, so the ablation proves nothing');
 
-    // AND ON THE DEFAULT PATH THE SAME ABLATION IS INERT, which is the whole
-    // of what rounds bought: the schedule is peeled off the decoded rules
-    // before a rule fires, so there is no table for b5 to withdraw. Same
-    // tripwire, same kernel, same ablation, opposite cell.
+    // AND ON THE DEFAULT PATH THE SAME ABLATION DOES NOT MOVE THIS PROGRAM.
+    // The outer schedule is peeled off the decoded rules before a rule fires,
+    // so the table is not what orders the program's own negation phases.
     //
-    // MEASURED, and it is stronger than "the answer does not move": the
-    // counter shows b5 is not REACHED at all. `readStrata` survives on two
-    // paths only — the alternating fixpoint, and the `strataPlan()` test
-    // accessor — so on a two-valued program under rounds it is dead code
-    // rather than an input that happens not to matter. The stock arm above is
-    // the positive control for that zero: the same counter, same kernel, same
-    // tripwire, fires there.
+    // WHAT CHANGED ON 2026-09-06, and it is worth more than the assertion it
+    // replaces. This used to read `b5 is never REACHED at all` — `readStrata`
+    // was dead code on a two-valued program under rounds. It is not dead any
+    // more, and not because anything about rounds changed: the kernel now
+    // evaluates its OWN program in a store of its own, that inner evaluation
+    // is the strata one, and safety.rofl declares its own `stratum` table for
+    // it to read. So the table is live on every path now — it schedules the
+    // kernel's questions rather than the program's answers.
+    //
+    // The cell is still A, and that is a claim about THIS TRIPWIRE and not
+    // about the table's importance: measured over the corpus the same day,
+    // withdrawing the kernel program's schedule moved `mono_rule` on 3 of 65
+    // programs. This one does not expose it.
     const rBase = runConfig(dir, '', 60_000, only, 'rounds').recs[0];
     const rAb = runConfig(dir, 'b5', 60_000, only, 'rounds').recs[0];
     assert.ok(rBase && rAb, 'both round configurations produced a record');
-    assert.equal(classify(rBase, rAb).cell, 'A', 'rounds read no table, so nothing moves');
+    assert.equal(classify(rBase, rAb).cell, 'A', 'this program does not move');
     assert.equal(rBase.facts, rAb.facts);
-    assert.ok(((rBase.hits ?? {})['b5'] ?? 0) === 0,
-      'b5 is never reached under rounds; the stock arm above proves the counter works');
+    assert.ok(((rBase.hits ?? {})['b5'] ?? 0) >= 1,
+      'b5 is reached under rounds now — the kernel reads a table for its own program');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

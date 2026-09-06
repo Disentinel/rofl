@@ -129,3 +129,45 @@ trigger_of(P, X) :- demand_rel(P), concludes(R, P), conclusion_tense(R, now),
 neg_relation(A)      :- analysed(R), premise_neg(R, A).
 provenance_reader(R) :- analysed(R), premise_pos(R, derived_by).
 provenance_reader(R) :- analysed(R), premise_neg(R, derived_by).
+
+-- ---------------------------------------------------------------------------
+-- THIS PROGRAM'S OWN SCHEDULE, declared as facts.
+--
+-- MEASURED 2026-09-06 AND IT WAS A LIVE DEFECT. The kernel evaluates its own
+-- program in a store of its own, and that store holds no `stratum` table --
+-- so the evaluator ran EVERY negation in one final pass, which is exactly the
+-- failure `examples/wtf` was written to demonstrate. Compared against the
+-- round evaluator, which peels its schedule off the rules instead of reading a
+-- table, the two disagreed on 3 of 65 corpus programs, and the relation that
+-- moved was `mono_rule` -- which feeds the stratum cone the kernel then acts
+-- on. Nothing downstream had visibly changed answer yet; the answer was
+-- schedule-dependent, which is enough.
+--
+-- `stratum/1` is read by the kernel and written by the PROGRAM (README, the
+-- stratification interface), so a program declaring its own is the documented
+-- arrangement rather than a workaround. The numbers are the ROUNDS
+-- `peelRounds` takes off these rules, which is coarser than a negation-only
+-- stratification and valid for the same reason: a phase runs only when every
+-- phase below it has reached fixpoint. The gate in
+-- test/kernel-policy-program.test.ts re-peels and compares, so this table
+-- cannot go stale behind a new clause.
+stratum(analysed, 1).
+stratum(slot, 1).
+stratum(binds_at, 1).
+stratum(bound_before, 1).
+stratum(ground_upto, 1).
+stratum(ground, 1).
+stratum(binds, 1).
+stratum(op_used, 1).
+stratum(cmp_op, 1).
+stratum(blocked_head, 1).
+stratum(has_neg_rule, 1).
+stratum(neg_relation, 1).
+stratum(provenance_reader, 1).
+stratum(unsafe_rule, 2).
+stratum(executable, 2).
+stratum(demand_rel, 2).
+stratum(trigger_of, 2).
+stratum(mono_rule, 3).
+stratum(stratum_cone, 3).
+stratum(late_rule, 3).

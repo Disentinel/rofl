@@ -18,7 +18,9 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { Evaluation } from '../src/engine.ts';
 import { parseProgram } from '../src/parser.ts';
-import { POLICY_SRC, SAFETY_SRC } from '../src/reflect.ts';
+import { POLICY_SRC, SAFETY_SRC, resolveClauseBooks, encodeRule, RESERVED, KERNEL_PERSP, MAIN } from '../src/reflect.ts';
+import { Store } from '../src/store.ts';
+import { peelRounds } from '../src/rounds.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FILE = fs.readFileSync(path.join(ROOT, 'policy.rofl'), 'utf8');
@@ -61,6 +63,45 @@ test('SELF-APPLICATION: safety.rofl judges both kernel programs, its own rules i
   assert.ok(r2.load('planted(A, Z) :- rule_relation(A).\n').ok);
   assert.deepEqual(new Evaluation(r2.store).rules.filter((x) => !x.safe).map((x) => x.canon),
     ['planted[main](?A,?Z)@now :- rule_relation[main](?A)@now']);
+});
+
+test('safety.rofl declares its own schedule, and the peel agrees with it', () => {
+  // THE STORE THE KERNEL ANSWERS IN HOLDS NO STRATUM TABLE, so the evaluator
+  // would run every negation in one final pass — the failure examples/wtf
+  // exists to demonstrate. Measured 2026-09-06 against the round evaluator,
+  // which peels its schedule off the rules rather than reading a table: the
+  // two disagreed on 3 of 65 corpus programs, on `mono_rule`. The program
+  // declares its own strata now, which is the documented arrangement
+  // (`stratum` is read by the kernel and written by the program), and THIS is
+  // the gate that keeps the declaration from going stale behind a new clause.
+  const pol = new Store();
+  const declared = new Map<string, number>();
+  for (const c0 of parseProgram(SAFETY)) {
+    const c = resolveClauseBooks(c0);
+    if (c.body.length === 0) {
+      if (c.head.rel === 'stratum' && c.head.args[0].k === 'a' && c.head.args[1].k === 'i') {
+        declared.set(c.head.args[0].name, c.head.args[1].v);
+      }
+      pol.add(c.head.rel, RESERVED.has(c.head.rel) ? KERNEL_PERSP : MAIN, c.head.args,
+        { scope: 'timeless', base: true });
+    } else {
+      for (const f of encodeRule(c).facts) {
+        pol.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
+      }
+    }
+  }
+  const ev = new Evaluation(pol, { reuse: false, budget: 20_000_000, bootstrap: true });
+  const peel = peelRounds(ev.rules);
+  const heads = new Set(ev.rules.map((r) => r.clause.head.rel));
+  const peeled = new Map<string, number>();
+  for (const [rel, n] of peel.round) if (heads.has(rel)) peeled.set(rel, n);
+  assert.equal(peel.stalled, false, 'the kernel\'s own program must not stall');
+  assert.deepEqual([...declared.entries()].sort(), [...peeled.entries()].sort(),
+    'the declared schedule and the peel have drifted apart');
+  // CONTROLS: it is not one flat layer, and it covers every relation the
+  // program concludes.
+  assert.ok(peel.rounds >= 3, `${peel.rounds} rounds — a flat peel proves nothing`);
+  assert.equal(declared.size, heads.size);
 });
 
 test('policy.rofl is a program, and it is the one the acceptance measured', () => {
