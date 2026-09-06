@@ -240,9 +240,15 @@ work_sweeps(w_cg_sweep, callgraph).
 work_spawned(w_cg_sweep, f_the_callee_catch_all_had_no_audit_for_three_days).
 work_spawned(w_cg_sweep, f_the_call_graph_stops_at_the_module_boundary).
 
-work(w_df_sweep,  "dataflow residue: kinds that carry no runtime value").
+-- DONE 2026-09-05, and the interesting number is ZERO NEW ITEMS. Twelve cells:
+-- one already modelled and never recorded (a boolean IS a value and always
+-- was), one unreachable under this parser, one blocked on the scanner contract,
+-- and NINE that went to items the two earlier sweeps had already created. The
+-- control-flow sweep spawned four items, the call-graph sweep two, this one
+-- none - the first measured deceleration in this queue.
+work(w_df_sweep,  "DONE 2026-09-05: 12 cells, 1 already modelled, 2 closed with a reason, 9 to items that existed").
 work_order(w_df_sweep, 12).
-work_state(w_df_sweep, open).
+work_state(w_df_sweep, done).
 work_sweeps(w_df_sweep, dataflow).
 
 work(w_mod_sweep, "modules residue: kinds that cannot appear in a module graph").
@@ -330,6 +336,13 @@ work(w_df_instance_vs_class, "an instance is not its class: statics and instance
 work_order(w_df_instance_vs_class, 14).
 work_state(w_df_instance_vs_class, open).
 claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).
+-- THE THIRD FACE OF THE SAME CONFUSION, folded in by the dataflow sweep rather
+-- than given an item of its own: `super` has no value, so `super.m` cannot be
+-- looked up through `member_value` even though `super_of[flow]` is right there.
+-- The call graph resolves `super()` by a dedicated rule that does not go
+-- through the value layer at all. All three are one question — what a
+-- class-shaped node DENOTES — and they want one fixture.
+claim(queued, js, super, none, dataflow, w_df_instance_vs_class).
 
 -- ===========================================================================
 -- BLOCKERS THAT ARE NOT WORK ITEMS, declared 2026-09-04 when the queue gained
@@ -347,6 +360,10 @@ cell_blocked(optional_member_expression, s_computed_template_key, callgraph, sca
 -- in the fact vocabulary. Same contract, same cause, and it belongs beside its
 -- two siblings rather than in a bucket that no longer exists.
 cell_blocked(template_literal,           none,                    callgraph, scanner_contract).
+-- ...and its value half, same contract: a template's text is `{raw, cooked}`
+-- and the scanner emits scalar own properties, so `may_be_lit` can never carry
+-- the string a template literal evaluates to.
+cell_blocked(template_literal,           none,                    dataflow,  scanner_contract).
 
 -- ===========================================================================
 -- 15-18 — THE ENVIRONMENT LAYER'S OWN RESIDUE, added 2026-09-04 when
@@ -521,6 +538,18 @@ claim(queued, js, import_default_specifier,    none, callgraph, w_cg_module_boun
 claim(queued, js, import_namespace_specifier,  none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_named_declaration,    none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
+-- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
+-- 2026-09-05. It is ONE missing join and not two: `const h = helper; h()`
+-- resolves to nothing for exactly the reason the call graph stops at the file,
+-- and the item was named `w_cg_` only because the call-graph sweep found it
+-- first. Measured with both files in one store, with a same-file control that
+-- resolves normally two lines away.
+claim(queued, js, import_declaration,          none, dataflow, w_cg_module_boundary).
+claim(queued, js, import_specifier,            none, dataflow, w_cg_module_boundary).
+claim(queued, js, import_default_specifier,    none, dataflow, w_cg_module_boundary).
+claim(queued, js, import_namespace_specifier,  none, dataflow, w_cg_module_boundary).
+claim(queued, js, export_named_declaration,    none, dataflow, w_cg_module_boundary).
+claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_boundary).
 
 -- 34. THE CALLS THAT HAVE NO CALL SITE. `call_kind` is the closed pair
 -- {call_expression, optional_call_expression}, so every totality audit this
@@ -542,6 +571,10 @@ claim(queued, js, tagged_template_expression, none, callgraph, w_cg_invisible_ca
 claim(queued, js, for_of_statement,           none, callgraph, w_cg_invisible_calls).
 claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
 claim(queued, js, decorator,                  none, callgraph, w_cg_invisible_calls).
+-- ...and their value halves: what a decorator or a tagged template EVALUATES
+-- to is what the call returns, and the call has no site to hang a return on.
+claim(queued, js, decorator,                  none, dataflow, w_cg_invisible_calls).
+claim(queued, js, tagged_template_expression, none, dataflow, w_cg_invisible_calls).
 
 -- ...and the two the sweep handed to items that already existed. `this()` is a
 -- question about what `this` denotes, which is scope; `(yield v)()` is the
@@ -562,6 +595,10 @@ work(w_scanner_nested_values, "the scanner emits scalar own properties only, so 
 work_order(w_scanner_nested_values, 35).
 work_state(w_scanner_nested_values, open).
 claim(queued, js, template_literal, none, callgraph, w_scanner_nested_values).
+-- ...and the value half, found by the dataflow sweep as the one cell nobody
+-- owned. A blocked cell still needs an owner: `cell_blocked` says WHY the work
+-- cannot start, `claim` says whose it is when it can.
+claim(queued, js, template_literal, none, dataflow, w_scanner_nested_values).
 
 -- 36 — THE JOIN PLANNER. A body is evaluated left to right, so the cost of a
 -- rule is a property of the order a human wrote it in. Measured 2026-09-05:

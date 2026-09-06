@@ -145,13 +145,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // residue sweep.
   // FIVE off the front now: the call-graph sweep finished on 2026-09-05 and the
   // head moved to the next sweep along. Two of the four layers are swept.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_df_sweep'],
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_mod_sweep'],
     'the third layer is declared, so the sweeps are what is left');
 });
 
-test('the queue covers the model: 85 open cells, 34 claimed by name, 51 swept', () => {
+test('the queue covers the model: 83 open cells, 43 claimed by name, 39 swept', () => {
   const w = world();
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 85, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 83, 'the queue is the model\'s open set');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
   // found it, not because it was foreseen. 27 -> 32 on 2026-09-05: the five
@@ -174,7 +174,11 @@ test('the queue covers the model: 85 open cells, 34 claimed by name, 51 swept', 
   // residue and closed here, 3 were already modelled and 11 went to items. A
   // layer with no sweeper is a layer whose every open cell has a named owner.
   assert.deepEqual(per('callgraph'), [18, 25, 0]);
-  assert.deepEqual(per('dataflow'), [16, 8, 12]);
+  // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
+  // items — one already modelled and never recorded, two closed with a reason,
+  // nine onto items the two earlier sweeps had already made. Three of four
+  // layers now have no bucket at all.
+  assert.deepEqual(per('dataflow'), [14, 18, 0]);
   assert.deepEqual(per('modules'), [39, 0, 39]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
@@ -222,8 +226,11 @@ test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
 });
 
 test('MUTANT 3 — a sweep marked done while its layer still has open cells', () => {
-  const w = world({ find: 'work_state(w_df_sweep, open).', replace: 'work_state(w_df_sweep, done).' });
-  assert.equal(w.n('unqueued[audit](K, S, L)'), 12,
+  // RE-AIMED 2026-09-05 to the last sweep still open: the call-graph and
+  // dataflow buckets are both closed, so their `open` state no longer exists to
+  // mutate. `w_mod_sweep` absorbs 39 cells and every one comes straight back.
+  const w = world({ find: 'work_state(w_mod_sweep, open).', replace: 'work_state(w_mod_sweep, done).' });
+  assert.equal(w.n('unqueued[audit](K, S, L)'), 39,
     'the residue goes straight back on the unqueued list');
 });
 
@@ -276,14 +283,18 @@ test('MUTANT 8 — THE ONE THAT LIVED, AND DIED WHEN ITS BUCKET CLOSED', () => {
   assert.deepEqual(shut.binds('unqueued[audit](K, S, L)', 'K', 'S'),
     ['member_expression/s_member_on_template']);
 
-  // ON A LAYER WHOSE SWEEP IS STILL OPEN: it still lives, and the only signal
-  // is the count. `w_df_instance_vs_class` claims a dataflow cell by name.
-  const open = world({ find: 'claim(queued, js, class_declaration, none, dataflow, w_df_instance_vs_class).' });
-  for (const lie of LIES) assert.equal(open.n(lie), 0, `${lie} caught it after all — update this test`);
-  assert.equal(base.n('sweeper(K, S, dataflow)'), 12);
-  assert.equal(open.n('sweeper(K, S, dataflow)'), 13, 'specificity leaked into the bucket');
-  console.log('  KILLED on callgraph (sweep done, unqueued 1);'
-    + ' ALIVE on dataflow (sweep open, swept 12 -> 13)');
+  // ON A LAYER WHOSE SWEEP IS STILL OPEN it still lives, and by 2026-09-05
+  // there was no claim left to DELETE on such a layer — modules has 39 swept
+  // cells and not one claimed by name. So the mutation runs the other way:
+  // ADD a claim, and watch the only thing that moves be the count. Removing it
+  // again is the original defect, and it is equally silent.
+  const named = world({ extra: 'claim(queued, js, identifier, none, modules, w_mod_sweep).' });
+  for (const lie of LIES) assert.equal(named.n(lie), 0, `${lie} caught it after all — update this test`);
+  assert.equal(base.n('sweeper(K, S, modules)'), 39, 'every modules cell is in the bucket');
+  assert.equal(named.n('sweeper(K, S, modules)'), 38, 'and naming one is the whole visible difference');
+  assert.equal(base.n('claimed(K, S, modules)'), 0);
+  console.log('  KILLED on callgraph and dataflow (sweeps done, unqueued 1);'
+    + ' ALIVE on modules (swept 39 <-> 38 is the only signal)');
 });
 
 test('MUTANT 9 — a dependency the plan does not honour', () => {
@@ -291,7 +302,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_df_sweep']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_mod_sweep']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -311,7 +322,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // has to name an item that is still open to plant anything at all.
   const mut = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
   assert.equal(mut.n('blocked[audit](W)'), 7, 'the planted one on top of the six real ones');
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_df_sweep'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_mod_sweep'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });
@@ -356,12 +367,15 @@ test('a cell can be blocked by something that is not a work item', () => {
   // THREE, since 2026-09-05: the call-graph sweep left `template_literal x
   // callgraph` as the one cell nobody owned, and its cause is the same
   // contract — ``o[`k`]()`` is fixed at parse time and its text is not a fact.
+  // FOUR since the dataflow sweep: the template literal is blocked at BOTH
+  // layers by one contract — its text is `{raw, cooked}` and never a fact.
   assert.deepEqual(w.binds('cell_blocked(K, S, L, C)', 'S', 'C'), [
+    'none/scanner_contract',
     'none/scanner_contract',
     's_computed_template_key/scanner_contract',
     's_computed_template_key/scanner_contract',
   ]);
-  assert.equal(w.n('open_cell[audit](K, S, L)') - w.n('workable(K, S, L)'), 3,
+  assert.equal(w.n('open_cell[audit](K, S, L)') - w.n('workable(K, S, L)'), 4,
     'blocked cells are open and not workable');
 
   // AND THE ITEM THEY BELONG TO IS SKIPPED WITH A REASON, not silently:

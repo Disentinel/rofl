@@ -136,3 +136,24 @@ unknown_because(js, yield_expression, dataflow, not_yet).
 -- is not told from its class. A kind-level cell at a layer with no refinement
 -- column is ALL of that layer's answers about the kind, and three new ones do
 -- not make it complete. The queue was the thing that knew.
+
+-- ===========================================================================
+-- THE DATAFLOW SWEEP, 2026-09-05. Twelve cells in the bucket, and the number
+-- that matters is not how many were residue but how many raised a NEW question:
+-- ZERO. The control-flow sweep spawned four items, the call-graph sweep two,
+-- and this one none — every cell that is not residue landed on an item that
+-- already existed. That is the first measured deceleration in this queue.
+
+-- ALREADY MODELLED AND NEVER RECORDED, the third instance of the matrix
+-- under-reporting its own coverage. `literal_kind(boolean_literal)` has been in
+-- rules/js-dataflow.rofl since the value core landed; `const b = true` derives
+-- `may_be_lit[flow](E, true)` at the literal, the binder and the use — three
+-- rows, measured. Nothing was written for this cell; it was already true.
+handled(js, boolean_literal, dataflow, r_value_literal).
+
+-- UNREACHABLE UNDER THIS PARSER, and the same argument as its call-graph twin
+-- rather than a new one: babel's `Import` node is what `import` names, and
+-- scanners/js_ast.ts parses with `plugins: ['typescript']`, under which a
+-- dynamic import arrives as a single `import_expression` and never as `Import`.
+-- No corpus this scanner produces can fill the cell.
+ignored(js, import, dataflow, a_babel_emits_no_import_callee).
