@@ -144,6 +144,80 @@ guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
 reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
 may_not_run[code](F)       :- resolves[code](_, F), not reached_unguarded[code](F).
 
+-- ---------------------------------------------------------------------------
+-- TRANSITIVE REACHABILITY, 2026-09-06 — queue item w_cf_reachability.
+--
+-- `may_not_run` is LOCAL: it asks whether a function's own call sites are
+-- guarded and stops there. Whether the CALLER runs is the transitive question,
+-- and the item's note said guessing at entry points would answer something
+-- nobody asked, so the walk was declared absent rather than approximated.
+--
+-- THE MEASUREMENT SAID SOMETHING SHARPER THAN THE NOTE, and it decided the
+-- design. Written without an entry point the question is not merely
+-- under-determined, it is UNSTRATIFIED and the kernel refuses the program:
+--
+--     live(F) :- resolves(C, F), not guarded(C), nearest_v(G, C), not dead(G).
+--     dead(F) :- resolves(_, F), not live(F).
+--     -> "round 5 settled nothing while dead_fn, live_call remained"
+--
+-- An entry point is not a convenience here. It is what turns a cycle through
+-- negation into a positive least fixpoint, and the refusal is the rule that
+-- says so — measured before a line of this was written.
+--
+-- AND IT NEED NOT BE GUESSED. A module's EXPORT SURFACE is its entry surface,
+-- and the store already carries it. That is a fact about the language rather
+-- than about this corpus, which is the whole difference between a seed and an
+-- approximation. `export_all_declaration` is deliberately NOT here: it
+-- re-exports someone else's names and introduces no local entry.
+edb(export_kind).
+export_kind(export_named_declaration).
+export_kind(export_default_declaration).
+
+fn_node[code](F) :- fn_name[code](F, _).
+in_fn[code](N)   :- nearest_v[flow](_, N).
+
+-- THE SURFACE IS CONTAINMENT, NOT A PATH. `export function f(){}` puts the
+-- function under `declaration`; `export const g = () => {}` puts it under
+-- declaration/declarations/init; `export default function h(){}` is a third
+-- kind entirely. Enumerating the three paths is the shape this repository has
+-- twice paid to stop writing. `not in_fn` is what keeps it precise: a closure
+-- nested inside an exported function has an enclosing function and is NOT part
+-- of the surface, while a method of an exported class has none and IS — anyone
+-- who imports the class can call it.
+exported_fn[code](F) :- export_kind(K), ast_node[code](E, K, _, _),
+                        ast_within[code](E, F), fn_node[code](F), not in_fn[code](F).
+entry_point[code](F) :- exported_fn[code](F).
+
+reachable[code](F) :- entry_point[code](F).
+-- ...and a call at the top level of a module, which runs on import and has no
+-- enclosing function to be reached from.
+reachable[code](F) :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
+reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
+                      not guarded[code](C).
+
+-- STILL A MAY-SET, and the name says which one. `may_not_run` asks about a
+-- function's own sites; this asks whether anything that reaches it runs at all.
+may_not_be_reached[code](F) :- resolves[code](_, F), not reachable[code](F).
+
+-- AN EXPORT KIND THE SCANNER NEVER EMITS — the third instance of the same typo
+-- hole, after `guard_arm_unseen` and `stmt_seq_unseen`. A misspelling here
+-- silently shrinks the entry surface, and a smaller seed reports live functions
+-- as maybe-dead, which is the dangerous direction.
+export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _, _).
+
+-- A FILE WITH FUNCTIONS AND NO ENTRY POINT AT ALL. Every function in it comes
+-- back `may_not_be_reached`, and that is an artefact of the SEED rather than a
+-- finding about the program — a script with no exports is ordinary JavaScript.
+-- Named rather than derived silently, because a whole file reported dead looks
+-- exactly like a discovery.
+-- `has_entry` is [code] and not [audit] on purpose: it is the denominator the
+-- gate below ranges over, and a denominator is not a gate. The same distinction
+-- `scanned_file` earned in the era layer, and the meta-gate that demands a
+-- mutant per audit head is what forced it to be stated here too.
+has_entry[code](File)       :- entry_point[code](F), ast_node[code](F, _, File, _).
+no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File, _),
+                               not has_entry[code](File).
+
 -- ONE LEVEL, DECLARED. A function called unguarded from a function that itself
 -- may never run is NOT reported: this asks about the site, not about the walk.
 -- The transitive form is a reachability question and it wants the layer to have

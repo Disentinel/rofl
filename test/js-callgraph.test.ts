@@ -187,6 +187,9 @@ async function runOracle(dir: string): Promise<OracleRun> {
   // model has, and they looked like over-approximation.
   await alpha.main();
   beta.bmain();
+  // the default export is an ENTRY POINT and nothing in beta.mjs calls it, so
+  // the consumer is what makes it run — here, as in any importing module.
+  beta.default(2);
   const edges = new Set<string>();
   const list: OracleEdge[] = [];
   for (const e of t.oracle.edges()) {
@@ -625,7 +628,13 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // and they are listed here because this assertion is about instrumentation,
   // not about explanation. Listing all five together would lose every
   // distinction; test/js-controlflow.test.ts asserts each by name.
-  const NEVER_CALLED = ['after', 'neverCased', 'neverReached', 'pickA', 'unreached'];
+  // SEVEN on 2026-09-06 with the reachability fixture: `sleeper` sits behind a
+  // guard arm and `dormant` behind `sleeper`, so neither runs. They are the
+  // chain w_cf_reachability was closed on — the LOCAL rule covers `sleeper` and
+  // only the transitive one covers `dormant`, which is the whole content of
+  // that item and is asserted by name in test/js-controlflow.test.ts.
+  const NEVER_CALLED = ['after', 'dormant', 'neverCased', 'neverReached', 'pickA',
+                        'sleeper', 'unreached'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -718,9 +727,19 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // closed and this edge stayed, because `after` follows a CALL that always
   // throws, not a statement. It is w_exn_propagation's, and only closing the
   // other item made the difference measurable.
+  // NINE BECAME ELEVEN the same day, and the two new ones are ONE CHAIN rather
+  // than two facts: `useDormant -> sleeper` is a guard the program does not take,
+  // and `sleeper -> dormant` is the edge behind it — unguarded, correctly
+  // derived, and never taken because its caller never runs. That second entry
+  // is the whole reason w_cf_reachability exists; `may_not_run` cannot explain
+  // it and `may_not_be_reached` can. FIVE of the eleven are now control flow the
+  // model over-approximates on purpose, four are the V8 generator-frame limit,
+  // one is exception propagation, and one is `useTry -> after`. A count would
+  // have said "11".
   assert.deepEqual(extra, [
-    'outerGen -> innerGen', 'useAbrupt -> neverReached', 'useCased -> neverCased',
-    'useDelegated -> outerGen', 'useForOfGen -> pick',
+    'outerGen -> innerGen', 'sleeper -> dormant',
+    'useAbrupt -> neverReached', 'useCased -> neverCased',
+    'useDelegated -> outerGen', 'useDormant -> sleeper', 'useForOfGen -> pick',
     'useGuard -> unreached', 'useSent -> chooser', 'useTry -> after',
     'useYieldCallee -> callsSent',
   ], `over-approximation, by cause: ${extra.join(', ')}`);
@@ -846,7 +865,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // generators and two callees.
   // 101 -> 105 on 2026-09-06: the abrupt-transfer fixture added four functions,
   // each with a `trace()` call and each called once.
-  assert.equal(sites - resolved, 105, `${sites - resolved} call sites vanished from the frontier`);
+  // 105 -> 110 the same day: the reachability fixture added three more in
+  // alpha.mjs and two in beta.mjs, on the same pattern.
+  assert.equal(sites - resolved, 110, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

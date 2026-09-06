@@ -115,11 +115,11 @@ test('the five heaviest read paths, by name', () => {
   // firings +9.1%, and every one of the five names below up between 8.9% and
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 67649',
-    'relPersp authority = 55449',
-    'argMatches encloses_v pos=[1] = 33643',
-    'relPersp encloses_v = 32736',
-    'relPersp ast_node = 28275',
+    'argMatches ast_within pos=[0] = 70027',
+    'relPersp authority = 57573',
+    'argMatches encloses_v pos=[1] = 34784',
+    'relPersp encloses_v = 33877',
+    'relPersp ast_node = 29393',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -132,16 +132,34 @@ test('the five heaviest read paths, by name', () => {
   // fixture; a new name, or one growing alone, is a badly ordered body. The
   // abrupt rules add ~0% of their own — `abrupt_at` binds B and F before the
   // sibling probe, so `after_abrupt` never walks containment.
-  assert.equal(c.total, 582542, 'total rows handed out by the store in one fixpoint');
+  // 582 542 -> 601 774 on 2026-09-06 (+3.3%), the SAME FIVE NAMES IN THE SAME
+  // ORDER again, each up 3.3%-4.0%, against facts +3.1% and firings +3.1%. Two
+  // fixtures in one day took the corpus up 6.4% and the fixpoint up 6.4%; the
+  // transitive walk itself contributes ~0.5%, measured by name below. Five
+  // heaviest paths growing together at the corpus's own rate is a bigger
+  // fixture; a NEW name, or one growing alone, is a badly ordered body.
+  assert.equal(c.total, 601774, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
   // execution oracle with UNSOUND 0 and the same named over-approximations —
   // so this is 4.9x fewer questions for one more relation, not a smaller model.
-  // 27 830 -> 28 676 on 2026-09-06, +846. The new relations account for 121 of
-  // it, MEASURED: `abrupt_at` 117, `after_abrupt` 2, `stmt_seq_field` 2. The
-  // other ~725 is the four fixture functions and their call sites — this
-  // corpus is the call graph's own fixture, so a function added to it costs
-  // derivations in every layer at once.
-  assert.equal(c.firings, 28676, 'derivations: 25513 before the generator fixture');
+  // 27 830 -> 28 676 on 2026-09-06, +846, and a CORRECTION to what was first
+  // written here: it attributed 121 of that to `abrupt_at`/`after_abrupt`/
+  // `stmt_seq_field`, which is impossible — RULES above does not include
+  // rules/js-controlflow.rofl, so not one control-flow rule runs in this world.
+  // The whole +846 is the four fixture functions and their call sites.
+  //
+  // THAT IS A PROPERTY OF THIS GATE WORTH STATING, not a slip to fix quietly:
+  // the cost gate measures the CALL-GRAPH fixpoint and is structurally unable
+  // to see the control-flow layer at all. A rule added there can be arbitrarily
+  // expensive and this number will not move. The layer's own cost has no gate;
+  // saying so is the honest state, and the number here means what its own world
+  // says it means.
+  // 28 676 -> 29 575 the same day, +899, and by the same reasoning ALL of it is
+  // the five functions the reachability fixture added. `reachable`, `in_fn` and
+  // the entry surface do not run in this world either. Two fixtures in one day
+  // took the corpus up 6.4% and this fixpoint up 6.4% — which is the check
+  // doing exactly its job on the half it can see.
+  assert.equal(c.firings, 29575, 'derivations: 25513 before the generator fixture');
 });

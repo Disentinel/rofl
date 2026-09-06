@@ -76,6 +76,7 @@ ignored(js, import_specifier,            controlflow, a_no_control_transfer).
 ignored(js, import_default_specifier,    controlflow, a_no_control_transfer).
 ignored(js, import_namespace_specifier,  controlflow, a_no_control_transfer).
 ignored(js, export_named_declaration,    controlflow, a_no_control_transfer).
+ignored(js, export_default_declaration,  controlflow, a_no_control_transfer).
 ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
 ignored(js, tsas_expression,             controlflow, a_no_control_transfer).
 ignored(js, tsnon_null_expression,       controlflow, a_no_control_transfer).
@@ -91,16 +92,20 @@ ignored(js, import,                      controlflow, a_control_returns_so_the_s
 -- member-expression-sized: each is an item.
 --
 -- FIVE FUNCTION FORMS — a body is a CONTROL REGION, entered only by a call, and
--- everything in it runs only if the function is entered. This layer answers one
--- level (`may_not_run` asks whether a function's own call sites are guarded)
--- and deliberately not the walk: the transitive question wants an ENTRY POINT,
--- and a model that guessed at entry points would answer something nobody asked.
--- Queued as w_cf_reachability.
-unknown_because(js, function_declaration,        controlflow, not_yet).
-unknown_because(js, function_expression,         controlflow, not_yet).
-unknown_because(js, arrow_function_expression,   controlflow, not_yet).
-unknown_because(js, class_method,                controlflow, not_yet).
-unknown_because(js, object_method,               controlflow, not_yet).
+-- everything in it runs only if the function is entered. Answered 2026-09-06 by
+-- w_cf_reachability. This paragraph used to say the walk was declared absent
+-- because "the transitive question wants an ENTRY POINT, and a model that
+-- guessed at entry points would answer something nobody asked" — and the
+-- measurement that closed it said something sharper: written WITHOUT an entry
+-- point the question is not under-determined, it is UNSTRATIFIED, and the
+-- kernel refuses the program outright. The entry point is what makes the
+-- question askable, and it is not guessed: a module's EXPORT SURFACE is its
+-- entry surface, which is a fact about the language and already on the store.
+handled(js, function_declaration,        controlflow, r_reachability).
+handled(js, function_expression,         controlflow, r_reachability).
+handled(js, arrow_function_expression,   controlflow, r_reachability).
+handled(js, class_method,                controlflow, r_reachability).
+handled(js, object_method,               controlflow, r_reachability).
 
 -- TWO CALL FORMS — a call transfers control INTO the callee and may leave by
 -- throwing rather than returning. The first half is the call graph's; the

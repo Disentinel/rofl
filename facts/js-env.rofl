@@ -125,6 +125,7 @@ kind_needs(js, import_default_specifier,    modules).
 kind_needs(js, import_namespace_specifier,  modules).
 kind_needs(js, export_named_declaration,    modules).
 kind_needs(js, export_all_declaration,      modules).
+kind_needs(js, export_default_declaration,  modules).
 kind_needs(js, export_specifier,            modules).
 kind_needs(js, object_method,               shorthand_methods).
 kind_needs(js, await_expression,            async_await).

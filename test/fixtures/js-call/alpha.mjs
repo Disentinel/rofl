@@ -424,6 +424,33 @@ function neverCased(n) {
   trace();
   return n;
 }
+
+// TRANSITIVE REACHABILITY — queue item w_cf_reachability, and the fixture came
+// first for the same reason it did for the abrupt work: the corpus had no site
+// that could show the difference. Every function `may_not_run` names today is a
+// LEAF — measured, all seven call nothing — so the transitive closure added
+// exactly zero names to the local answer.
+//
+// THE CHAIN THAT MAKES IT VISIBLE: `dormant` is called ONCE, from `sleeper`, at
+// a site nothing guards. The local rule therefore says `dormant` runs. It never
+// does, because `sleeper`'s only call site is a guard arm the program does not
+// take. The names are deliberately unique across the corpus — a file-scoped
+// binder has cost three of the last four iterations an over-approximation.
+function dormant(n) {
+  trace();
+  return n;
+}
+function sleeper(n) {
+  trace();
+  return dormant(n);
+}
+function useDormant(n) {
+  trace();
+  if (n < 0) {
+    return sleeper(n);
+  }
+  return n;
+}
 function useCased(n) {
   trace();
   switch (n) {
@@ -627,6 +654,7 @@ export async function main() {
     useYieldCallee(1),
     useAbrupt(1),
     useCased(1),
+    useDormant(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

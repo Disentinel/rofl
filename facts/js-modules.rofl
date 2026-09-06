@@ -28,6 +28,13 @@ node_kind(js, import_namespace_specifier).
 -- Named so the audit can see them, ignored so the silence is not an option.
 node_kind(js, export_named_declaration).
 node_kind(js, export_all_declaration).
+-- ...and the THIRD export form, declared 2026-09-06. It carries no specifier,
+-- so it was outside the sentence above and outside this pack's whole subject —
+-- and it was emitted by the scanner with no cell anywhere, which is exactly what
+-- `vocabulary_gap[audit]` reported the moment a default export entered the
+-- corpus. It is here rather than in the control-flow pack that needed it,
+-- because a kind belongs with its family and not with its first consumer.
+node_kind(js, export_default_declaration).
 
 -- ---------------------------------------------------------------------------
 -- WHAT THE HOST SUPPLIES, DECLARED (docs/modelling-a-language.md, rule 2).
@@ -213,6 +220,9 @@ handled(js, import_namespace_specifier,  modules, r_namespace_binding).
 -- does, which is why a sweep reads them.
 unknown_because(js, export_named_declaration, modules, not_yet).
 unknown_because(js, export_all_declaration,   modules, not_yet).
+-- ...and the default form is open for the SAME reason and owned by the same
+-- item: this layer has one edge kind, and `export default` is not it.
+unknown_because(js, export_default_declaration, modules, not_yet).
 
 -- ---------------------------------------------------------------------------
 -- THE EVIDENCE. Not a claim: the number of fixture import sites whose

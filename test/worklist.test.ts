@@ -120,6 +120,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.deepEqual(w.binds('shaped_because[audit](A, K, S, modules, R)', 'K', 'S', 'R'), [
     'call_expression/none/not_yet',
     'export_all_declaration/none/not_yet',
+    // ...and the DEFAULT form joined on 2026-09-06, entered by
+    // `vocabulary_gap[audit]` the moment a default export appeared in the
+    // corpus. It is open for the same reason as its two siblings and owned by
+    // the same item: this layer has ONE edge kind and `export default` is not it.
+    'export_default_declaration/none/not_yet',
     'export_named_declaration/none/not_yet',
     'import_declaration/bare/out_of_scope',
     'import_declaration/subpath/not_yet',
@@ -137,11 +142,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     ['w_body_order_is_load_bearing', 'w_body_order_is_load_bearing',
      'w_body_order_is_load_bearing',
      'w_cf_abrupt_transfer', 'w_cf_abrupt_transfer',
+     'w_cf_reachability', 'w_cf_reachability',
      'w_cf_sweep', 'w_cf_sweep',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
      'w_cg_sweep', 'w_cg_sweep',
      'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
+     'w_cost_gate_per_layer',
      'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
      'w_df_control_forms', 'w_df_control_forms',
      'w_df_instance_vs_class',
@@ -169,16 +176,18 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // schedule"; the queue grew to 38 items, so 19 became the middle and the plan
   // started handing out work he had said to hold. A position is a fact about a
   // sequence, not about a person.
-  // ...and the abrupt item closed on 2026-09-06, taking four cells with it. The
-  // head is the OTHER control-flow question — whether a function's callers run
-  // at all, which `may_not_run` deliberately does not ask.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cf_reachability'],
+  // ...and the abrupt item closed on 2026-09-06, taking four cells with it, and
+  // the reachability item closed the same day taking five more. The head is the
+  // EXCEPTION PATH — the owner's own observation that an exception is control
+  // flow, and the first dataflow edge here that travels along it rather than
+  // along the syntax.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_exception_flow'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 40 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 38 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -186,12 +195,17 @@ test('the queue covers the model: 40 open cells, every one owned by name, none s
   // 48 -> 46: the receiver split closed `class_declaration x dataflow`, and
   // `super x dataflow` turned out to need no rule at all — a site was all it
   // was missing.
+  // 40 -> 38 the same day, and the two moves in it point OPPOSITE ways:
+  // `r_reachability` closed FIVE function-form cells at controlflow, and one new
+  // kind (`export_default_declaration`) opened THREE — callgraph, dataflow and
+  // modules, all claimed by the items that already own its siblings. A single
+  // number would have said "down two" and hidden both.
   // 44 -> 40 on 2026-09-06: `r_abrupt` closed return, throw, break and continue
   // at controlflow, and the item that closed them SPAWNED a successor
   // (w_cf_completion) that claims no cell — the gap lives in the rules, not in
   // any (kind, layer) coordinate, which is the shape f_a_blindness_can_have_no_cell
   // already names.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 40, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 38, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -199,7 +213,7 @@ test('the queue covers the model: 40 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 40);
+  assert.equal(w.n('work(W, Note)'), 41);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -214,16 +228,16 @@ test('the queue covers the model: 40 open cells, every one owned by name, none s
   // THEN THE SWEEP RAN and the bucket went to ZERO: 18 cells, of which 4 were
   // residue and closed here, 3 were already modelled and 11 went to items. A
   // layer with no sweeper is a layer whose every open cell has a named owner.
-  assert.deepEqual(per('callgraph'), [17, 24, 0]);
+  assert.deepEqual(per('callgraph'), [18, 25, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
   // layers now have no bucket at all.
-  assert.deepEqual(per('dataflow'), [11, 15, 0]);
+  assert.deepEqual(per('dataflow'), [12, 16, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
-  assert.deepEqual(per('modules'), [4, 4, 0]);
+  assert.deepEqual(per('modules'), [5, 5, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -231,7 +245,9 @@ test('the queue covers the model: 40 open cells, every one owned by name, none s
   // 12 -> 8 on 2026-09-06: the four abrupt kinds are modelled, and their claims
   // stay on the DONE item so `false_done[audit]` keeps guarding that they really
   // did close — claimed stays at 12 while open drops to 8.
-  assert.deepEqual(per('controlflow'), [8, 12, 0]);
+  // 8 -> 3 on 2026-09-06: `r_reachability` answered all five function forms.
+  // Three cells left at the layer that was swept two days ago.
+  assert.deepEqual(per('controlflow'), [3, 12, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -323,27 +339,44 @@ test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
   //
   // ALL FOUR SWEEPS CLOSED ON 2026-09-05 and with them the last bucket. A
   // deleted claim now has nowhere to fall: `unqueued[audit]` names the cell, at
-  // EVERY layer, which is why the mutation is run four times instead of once —
-  // one mutant is liveness, a set is coverage, and the set here is the layers.
+  // EVERY layer, which is why the mutation is run once per layer instead of
+  // once — one mutant is liveness, a set is coverage, and the set here is the
+  // layers.
+  //
+  // THE ANCHORS ARE DERIVED, NOT WRITTEN, since 2026-09-06 — and that is the
+  // real repair. Hard-coded, this list decayed THREE TIMES IN TWO ITERATIONS:
+  // each closing item turned its own claim into a claim on a CLOSED cell, where
+  // deleting it correctly derives nothing, so the mutant went red for a reason
+  // that had nothing to do with the plan being wrong. It failed in the SAFE
+  // direction every time and cost a debugging round every time. A mutant
+  // anchored to whichever row happened to be open expires when that row closes;
+  // one that ASKS THE MODEL for an open claim at each layer cannot.
   const base = world();
   assert.equal(base.n('unqueued[audit](K, S, L)'), 0, 'baseline: every open cell is owned');
 
-  const planted: [string, string][] = [
-    ['claim(queued, js, member_expression, s_member_on_template, callgraph, w_env_api_surface).',
-     'member_expression/s_member_on_template'],
-    ['claim(queued, js, class_method,              none, controlflow, w_cf_reachability).',
-     'class_method/none'],
-    ['claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).',
-     'call_expression/none'],
-    // RE-AIMED 2026-09-06. This row used to plant the deletion of
-    // `w_cf_abrupt_transfer`'s claim on return_statement/controlflow — and that
-    // item is DONE, so its cell is closed and deleting the claim now derives
-    // nothing, correctly. The four rows were meant to be one per layer and this
-    // one had drifted into a second controlflow row anyway; it is dataflow now,
-    // which is what makes the set a cover rather than a repetition.
-    ['claim(queued, js, template_literal, none, dataflow, w_scanner_nested_values).',
-     'template_literal/none'],
-  ];
+  const plan = read('facts/worklist.rofl');
+  const LAYERS = ['callgraph', 'dataflow', 'modules', 'controlflow'];
+  const planted: [string, string][] = [];
+  for (const layer of LAYERS) {
+    // an open cell at this layer, and the claim that owns it
+    const owned = base.binds(`claim(queued, js, K, S, ${layer}, W)`, 'K', 'S', 'W')
+      .filter((row) => {
+        const [k, sh] = row.split('/');
+        return base.n(`open_cell[audit](${k}, ${sh}, ${layer})`) === 1;
+      });
+    assert.ok(owned.length > 0, `no open claimed cell at ${layer} to plant against`);
+    // find the source line for the first one — the plan is the file, so the
+    // mutation is textual, but WHICH line is a question for the model.
+    const [k, sh, w] = owned[0].split('/');
+    const line = plan.split('\n').find((l) => {
+      const t = l.replace(/\s+/g, ' ').trim();
+      return t.startsWith('claim(queued, js,') && t.includes(` ${k},`)
+        && t.includes(` ${sh},`) && t.includes(` ${layer},`) && t.includes(`${w})`);
+    });
+    assert.ok(line, `no source line for claim ${k}/${sh}/${layer}/${w}`);
+    planted.push([line!, `${k}/${sh}`]);
+  }
+
   for (const [find, expect] of planted) {
     const w = world({ find });
     assert.equal(w.n('unqueued[audit](K, S, L)'), 1, `a lost claim is invisible again: ${find}`);
@@ -357,9 +390,9 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  // THE HEAD MOVED 2026-09-06: `w_cf_abrupt_transfer` closed, and the next item
-  // by order whose premises are done is `w_cf_reachability`.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cf_reachability']);
+  // THE HEAD MOVED TWICE ON 2026-09-06: `w_cf_abrupt_transfer` then
+  // `w_cf_reachability`, both closed, so the next by order is `w_exception_flow`.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_exception_flow']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new

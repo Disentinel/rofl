@@ -254,6 +254,18 @@ work_order(w_cf_completion, 40).
 work_state(w_cf_completion, open).
 work_needs(w_cf_completion, w_cf_abrupt_transfer).
 
+-- 41 — NO COST GATE OUTSIDE THE CALL GRAPH. test/js-fixpoint-cost.test.ts loads
+-- four rule packs and NOT rules/js-controlflow.rofl, so two iterations of rules
+-- — `abrupt_at`, `after_abrupt`, a transitive closure and an entry surface —
+-- have been added to a layer no cost number watches. Every figure reported for
+-- those two iterations was about the shared CORPUS. Widening that test is the
+-- wrong fix: the call-graph fixpoint is what it was built to watch and mixing
+-- layers in would blur the signal it has. A SECOND number is what is missing.
+work(w_cost_gate_per_layer, "the fixpoint cost gate watches the call graph only; the control-flow and era layers have no cost number at all").
+work_order(w_cost_gate_per_layer, 41).
+work_state(w_cost_gate_per_layer, open).
+work_spawned(w_cost_gate_per_layer, f_the_cost_gate_cannot_see_the_layer_i_kept_attributing_to_it).
+
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
 -- that cannot participate in a layer at all and close as waivers with a reason.
@@ -316,14 +328,28 @@ work_sweeps(w_cf_sweep, controlflow).
 work_spawned(w_cf_sweep, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
 work_spawned(w_cf_sweep, f_a_sweep_is_where_the_residue_stops_being_residue).
 
--- 24 — A BODY IS A CONTROL REGION. `may_not_run` asks whether a function's own
--- call sites are guarded and stops there; whether the CALLER runs is the
--- transitive question, and it wants an entry point. Guessing at entry points
--- would answer something nobody asked, so the walk is declared absent rather
--- than approximated.
-work(w_cf_reachability, "transitive reachability: a function called unguarded from one that may never run").
+-- 24 — A BODY IS A CONTROL REGION, and the walk is done as of 2026-09-06.
+-- `may_not_run` asks whether a function's own call sites are guarded and stops
+-- there; whether the CALLER runs is the transitive question.
+--
+-- THIS NOTE USED TO SAY the walk was declared absent because guessing at entry
+-- points would answer something nobody asked. The measurement replaced that
+-- with a fact: the entry-free formulation is UNSTRATIFIED and the kernel
+-- refuses it — `round 5 settled nothing while dead_fn, live_call remained`. An
+-- entry point is not a convenience, it is what turns a cycle through negation
+-- into a positive least fixpoint. And it need not be guessed, because a
+-- module's export surface is its entry surface.
+--
+-- THE CORPUS HAD NO WITNESS EITHER, measured before anything was written: all
+-- seven functions `may_not_run` named were LEAVES, so the transitive closure
+-- added exactly zero names. `dormant`/`sleeper`/`useDormant` are the chain that
+-- makes the difference visible. Second item running whose fixture had to come
+-- before its rule.
+work(w_cf_reachability, "DONE 2026-09-06: entry surface = export surface; r_reachability answers all five function forms").
 work_order(w_cf_reachability, 24).
-work_state(w_cf_reachability, open).
+work_state(w_cf_reachability, done).
+work_spawned(w_cf_reachability, f_the_entry_point_is_what_makes_the_question_stratified).
+work_spawned(w_cf_reachability, f_the_denominator_was_empty_so_the_probe_could_not_fail).
 claim(queued, js, function_declaration,      none, controlflow, w_cf_reachability).
 claim(queued, js, function_expression,       none, controlflow, w_cf_reachability).
 claim(queued, js, arrow_function_expression, none, controlflow, w_cf_reachability).
@@ -617,6 +643,7 @@ claim(queued, js, import_specifier,            none, callgraph, w_cg_module_boun
 claim(queued, js, import_default_specifier,    none, callgraph, w_cg_module_boundary).
 claim(queued, js, import_namespace_specifier,  none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_named_declaration,    none, callgraph, w_cg_module_boundary).
+claim(queued, js, export_default_declaration,  none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
 -- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
 -- 2026-09-05. It is ONE missing join and not two: `const h = helper; h()`
@@ -629,6 +656,7 @@ claim(queued, js, import_specifier,            none, dataflow, w_cg_module_bound
 claim(queued, js, import_default_specifier,    none, dataflow, w_cg_module_boundary).
 claim(queued, js, import_namespace_specifier,  none, dataflow, w_cg_module_boundary).
 claim(queued, js, export_named_declaration,    none, dataflow, w_cg_module_boundary).
+claim(queued, js, export_default_declaration,  none, dataflow, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_boundary).
 
 -- 34. THE CALLS THAT HAVE NO CALL SITE. `call_kind` is the closed pair
@@ -715,6 +743,7 @@ work(w_mod_beyond_the_import, "the module graph has one edge kind: a re-export, 
 work_order(w_mod_beyond_the_import, 37).
 work_state(w_mod_beyond_the_import, open).
 claim(queued, js, export_named_declaration, none,    modules, w_mod_beyond_the_import).
+claim(queued, js, export_default_declaration, none, modules, w_mod_beyond_the_import).
 claim(queued, js, export_all_declaration,   none,    modules, w_mod_beyond_the_import).
 claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).
 claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_import).

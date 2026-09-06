@@ -775,7 +775,9 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // generators, three consumers and the `.next` sites they call.
   // 223 -> 231 on 2026-09-06: the abrupt-transfer fixture — four functions,
   // each with a `trace()` call, plus the four sites that call them.
-  assert.equal(sites, 231, 'positive control: the corpus is the one the census was taken on');
+  // 231 -> 240 the same day: the reachability fixture, on the same pattern, in
+  // both files (alpha's dormant chain and beta's default export).
+  assert.equal(sites, 240, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -894,7 +896,12 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // model and never taken by the runtime, which is exactly what `may_not_run`
   // now explains. A fixture whose new functions all showed up here would have
   // proved nothing.
-  assert.equal(oracleEdges.size, 98, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 98 -> 99 on 2026-09-06. FIVE functions were added and the oracle sees ONE
+  // new edge, which is again the fixture's whole point: `bdefault -> bdeep` runs
+  // because the consumer calls the default export, while `useDormant -> sleeper`
+  // and `sleeper -> dormant` are derived and never taken. A fixture whose new
+  // functions all appeared here would have proved nothing.
+  assert.equal(oracleEdges.size, 99, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.

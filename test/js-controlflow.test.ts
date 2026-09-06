@@ -111,8 +111,14 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // that the worlds are the ones the identity was measured on.
   assert.equal(after - before, withIt.n('node_kind(A, K)'),
     'one fact, one cell per declared kind');
-  assert.equal(before, 221, 'positive control: the matrix before the fact');
-  assert.equal(after, 285, 'positive control: and after');
+  // 221/285 -> 224/289 on 2026-09-06: ONE kind entered the vocabulary
+  // (`export_default_declaration`, reported by `vocabulary_gap[audit]` the
+  // moment a default export entered the corpus), and it costs one cell per
+  // layer — three before the fact, four after. The identity above is what the
+  // programme asserts; these two are the positive control that the worlds are
+  // the ones it was measured on, and they move whenever the vocabulary does.
+  assert.equal(before, 224, 'positive control: the matrix before the fact');
+  assert.equal(after, 289, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -218,6 +224,34 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
     },
   },
   {
+    name: 'g7 an export kind the scanner never emits',
+    targets: 'export_kind_unseen[audit]',
+    mut: [{ find: 'export_kind(export_default_declaration).',
+            replace: 'export_kind(export_defualt_declaration).' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('export_kind_unseen[audit](K)').flat(), ['export_defualt_declaration']);
+      // ...and the typo COSTS the answer in the DANGEROUS direction: a smaller
+      // entry surface reports LIVE functions as maybe-dead. `bdeep` is behind
+      // the corpus's only default export and nothing else calls it.
+      const dead = (w: World) => new Set(w.q('may_not_be_reached[code](F)')
+        .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
+      assert.equal(dead(m).has('bdeep'), true, 'a live function reported unreachable');
+      assert.equal(dead(base()).has('bdeep'), false, 'positive control: it is live in the base');
+    },
+  },
+  {
+    name: 'g8 a file with functions and no entry point at all',
+    targets: 'no_entry_point[audit]',
+    // withdraw the whole entry surface: every file still has functions, so all
+    // three report, and the relation says WHICH — a count could not.
+    mut: [{ find: 'entry_point[code](F) :- exported_fn[code](F).', replace: '' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('no_entry_point[audit](File)').flat().sort(),
+        ['alpha.mjs', 'beta.mjs', 'shapes.ts']);
+      assert.equal(base().n('no_entry_point[audit](File)'), 0, 'positive control');
+    },
+  },
+  {
     name: 'g6 a statement-sequence field the scanner never emits',
     targets: 'stmt_seq_unseen[audit]',
     mut: [{ find: 'stmt_seq_field(consequent).', replace: 'stmt_seq_field(conseqeunt).' }],
@@ -253,6 +287,98 @@ test('every gate this layer declares has a mutant aimed at it', () => {
 // ---------------------------------------------------------------------------
 // 3. WHAT THE LAYER SAYS ABOUT THE RUN. This is why it earns its cells.
 
+// ---------------------------------------------------------------------------
+// 3b. THE TRANSITIVE WALK, and the four clauses it rests on.
+//
+// Six directed mutants were run and six died. Two are recorded here rather than
+// kept, because they die on a WEAKER signal than the answer: dropping the
+// top-level seed loses only `seed` (110 reachable instead of 111), and dropping
+// `not in_fn` from the export surface takes entry points 27 -> 28 while the
+// dead set does not move at all — a nested closure inside an exported function
+// becomes an entry point and changes nothing, so that clause's precision is
+// defended by a count and not by an answer. Saying so is cheaper than a mutant
+// that asserts a count nobody reads.
+const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void }[] = [
+  {
+    name: 'r1 the export surface stops being a seed',
+    mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
+    expect: (m) => assert.equal(m.n('reachable[code](F)'), 1,
+      'without the seed the walk has nowhere to start: one top-level call'),
+  },
+  {
+    name: 'r2 the walk stops after one step',
+    mut: [{ find: `reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
+                      not guarded[code](C).`, replace: '' }],
+    expect: (m, b) => {
+      assert.equal(m.n('reachable[code](F)'), m.n('entry_point[code](F)') + 1,
+        'only the entry points and the top-level call remain');
+      assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
+    },
+  },
+  {
+    name: 'r3 the walk crosses a guard',
+    mut: [{ find: `reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
+                      not guarded[code](C).`,
+            replace: 'reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F).' }],
+    expect: (m) => assert.equal(m.n('may_not_be_reached[code](F)'), 0,
+      'everything becomes reachable and the relation says nothing at all'),
+  },
+  {
+    name: 'r4 every function is an entry point',
+    mut: [{ find: 'entry_point[code](F) :- exported_fn[code](F).',
+            replace: 'entry_point[code](F) :- fn_node[code](F).' }],
+    expect: (m) => assert.equal(m.n('may_not_be_reached[code](F)'), 0,
+      'a seed that is everything answers nothing — the failure mode the item feared'),
+  },
+];
+
+for (const g of REACH) test(`${g.name} — reachable[code]`, () => g.expect(build(g.mut), base()));
+
+test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
+  // Asked of the rule before it was believed, which is the question that pays.
+  // Five shapes were built; four are covered and the fourth is covered for a
+  // reason worth naming — `valHelper`, reached only through `const ref = fn`,
+  // is found because the VALUE layer resolves the alias, so this walk inherits
+  // dataflow's reach for free.
+  //
+  // THE ONE THAT IS BLIND: a function passed to a host API and called by it.
+  // `[1].map(cbBody)` never produces a call site the model can see, so `cbBody`
+  // is not reachable and everything behind it is reported maybe-dead. That is
+  // the DANGEROUS direction — a live function called dead — and no rule here can
+  // close it: it needs a model of what `Array.prototype.map` does with its
+  // argument, which is `w_env_api_surface`.
+  //
+  // Asserted rather than described, so the day the API surface lands this goes
+  // red and says the limit is gone.
+  const extra = `
+function cbHelper(n) { return n; }
+function cbBody(n) { return cbHelper(n); }
+export function useCbHost() { return [1].map(cbBody); }
+`;
+  const r = new Rofl();
+  const load = (name: string, text: string) => {
+    const res = r.load(text);
+    assert.ok(res.ok, `${name} REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
+  };
+  load('boot.rofl', read('boot.rofl'));
+  for (const [logical, disk] of FILES) {
+    const src = read(disk) + (logical === 'alpha.mjs' ? extra : '');
+    assert.ok(r.assert(scan(src, { file: logical }).facts.join('\n')).ok);
+  }
+  for (const f of [...FACTS, 'facts/js-controlflow.rofl']) load(f, read(f));
+  load('rules/*', RULES.map(read).join('\n'));
+  r.evaluate(20_000_000);
+  const rows = r.query('may_not_be_reached[code](F)').rows;
+  const names = new Set(rows.flatMap((row) => {
+    const f = row.bindings.F ?? '';
+    return r.query(`fn_name[code](${f}, N)`).rows.map((x) => unq(x.bindings.N ?? ''));
+  }));
+  assert.equal(names.has('cbHelper'), true,
+    'a live function is reported maybe-dead: the host-callback limit is still open');
+  assert.equal(names.has('cbBody'), false,
+    'positive control: cbBody itself is not even in the denominator, nothing calls it');
+});
+
 test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on purpose', async () => {
   const m = base();
   const mayNotRun = new Set(m.q('may_not_run[code](F)')
@@ -268,8 +394,18 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // own statement list — `neverReached` after a plain return, `neverCased` after
   // a return inside a switch case, whose statements live under `consequent` and
   // were invisible to the first draft of the rule.
+  // EIGHT on 2026-09-06 with the reachability fixture: `sleeper`'s only call
+  // site is a guard arm, so the LOCAL rule already covers it. `dormant` — the
+  // function behind it — is NOT here, and its absence is the whole point of
+  // w_cf_reachability: nothing guards the call to `dormant`, so `may_not_run`
+  // says it runs. Only the transitive relation says otherwise.
   assert.deepEqual([...mayNotRun].sort(),
-    ['bet', 'guardedElse', 'loopBody', 'neverCased', 'neverReached', 'rescue', 'unreached']);
+    ['bet', 'guardedElse', 'loopBody', 'neverCased', 'neverReached', 'rescue',
+     'sleeper', 'unreached']);
+  const reached = new Set(m.q('may_not_be_reached[code](F)')
+    .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
+  assert.deepEqual([...reached].filter((f) => !mayNotRun.has(f)), ['dormant'],
+    'the transitive relation adds exactly the function the local one claims runs');
 
   const dir = new URL('test/fixtures/js-call/', new URL('../', import.meta.url));
   const alpha: any = await import(new URL('alpha.mjs', dir).href);
@@ -277,6 +413,9 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   const t: any = await import(new URL('trace.mjs', dir).href);
   await alpha.main();
   beta.bmain();
+  // the default export is an ENTRY POINT and nothing in beta.mjs calls it, so
+  // the consumer is what makes it run — here, as in any importing module.
+  beta.default(2);
   const ran = t.oracle.measured ? new Set(t.oracle.measured()) : new Set(
     t.oracle.edges().map((e: any) => e.callee));
 
@@ -310,7 +449,11 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // queue item that happened to be open is a guess, and it survives until
   // something forces it to be measured. Closing the item was that force.
   const EXN_GAP = ['after'];
-  const unexplained = silent.filter((f) => !mayNotRun.has(f) && !EXN_GAP.includes(f));
+  // ...and the acceptance reads the TRANSITIVE relation, because `dormant` is
+  // silent and only that one explains it. The local set is asserted above and
+  // stays the layer's published answer; this is the stronger relation doing the
+  // work, which is the same lesson the switch-case field taught one item ago.
+  const unexplained = silent.filter((f) => !reached.has(f) && !EXN_GAP.includes(f));
   assert.deepEqual(silent.filter((f) => EXN_GAP.includes(f)), EXN_GAP,
     'the propagation witness is still silent — if it is not, w_exn_propagation moved');
   console.log(`  derived ${derived.size} callees, ${silent.length} never entered: ${silent.join(', ')}`);

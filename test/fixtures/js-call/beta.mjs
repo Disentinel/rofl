@@ -34,6 +34,26 @@ function buseNs(n) {
   return ns.bhello(n) + ns.hello(n);
 }
 
+// A DEFAULT EXPORT, added 2026-09-06 because `export_kind_unseen[audit]` went
+// red on an honest checkout the moment `export_default_declaration` was declared
+// as part of the entry surface: the vocabulary named a form the corpus did not
+// contain. This is the third form of export the entry-surface rule has to reach
+// (named function, exported const, default) and the only one nothing here used.
+// `bdeep` is behind it so the seed is actually TESTED — a default export nobody
+// calls anything from would be reached by the rule and prove nothing. And
+// nothing IN THIS FILE calls `bdefault`, deliberately: if `bmain` called it the
+// entry surface would be irrelevant to the answer and the mutant that misspells
+// the export kind would stay silent. The consumer calls it — which is what a
+// default export is for, and what the runtime harness does.
+function bdeep(n) {
+  trace();
+  return n * 2;
+}
+export default function bdefault(n) {
+  trace();
+  return bdeep(n);
+}
+
 export function bmain() {
   trace();
   return run(5) + buseNs(1);
