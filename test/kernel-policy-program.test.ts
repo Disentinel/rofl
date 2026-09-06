@@ -33,7 +33,14 @@ test('policy.rofl is a program, and it is the one the acceptance measured', () =
   // That cost was not knowable before it was tried, and it is the owner's to
   // weigh against what carrying policy buys.
   assert.ok(FILE.length > 500, `policy.rofl is ${FILE.length} bytes`);
-  assert.equal(parseProgram(FILE).length, 2, 'two clauses today');
+  // Seven clauses today: two for `rule_reads`, two for `rule_relation`, two
+  // for `cone` and two for `opaque_closed` minus the `edb` declaration that is
+  // a fact rather than a rule. The number is here so that adding one is a
+  // deliberate act rather than a diff nobody reads.
+  const cs = parseProgram(FILE);
+  assert.equal(cs.length, 9, 'the program, clause by clause');
+  assert.deepEqual([...new Set(cs.map((c) => c.head.rel))].sort(),
+    ['cone', 'edb', 'opaque_closed', 'rule_reads', 'rule_relation']);
 });
 
 test('it RUNS, and answers about the program it is loaded beside', () => {

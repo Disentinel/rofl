@@ -26,3 +26,23 @@
 -- +kernel-policy 64, +the ring 1 grammar 248. Agree on every one.
 rule_reads(A, B) :- concludes(R, A), premise_pos(R, B).
 rule_reads(A, B) :- concludes(R, A), premise_neg(R, B).
+
+-- EVERY RELATION THE RULES MENTION, on either side. `planReuse` builds this as
+-- `rels` while it walks; here it falls out of what is already derived.
+rule_relation(A) :- concludes(R, A).
+rule_relation(B) :- rule_reads(A, B).
+
+-- THE DEPENDENCY CONE: the reflexive-transitive closure of `rule_reads`. The
+-- host runs a `for(;;)` growing sets until nothing moves, which is what a
+-- fixpoint engine does for a living — this is the same answer, stated.
+cone(A, A) :- rule_relation(A).
+cone(A, C) :- cone(A, B), rule_reads(B, C).
+
+-- OPAQUE, CLOSED UPWARD THROUGH READS. A relation that reads an opaque one is
+-- opaque: the evaluation cannot promise to reproduce what it holds. The SEED
+-- stays with the host for now — it needs a premise's tense and a store-shape
+-- fact ("does this relation hold non-base rows"), and the reflection carries
+-- neither flat. That is the whole difference between POL and POL*.
+edb(opaque_seed).
+opaque_closed(A) :- opaque_seed(A).
+opaque_closed(A) :- rule_reads(A, B), opaque_closed(B).
