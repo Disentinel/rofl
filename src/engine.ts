@@ -571,6 +571,15 @@ export class Evaluation {
       a.push(r);
     }
     // reads(A) = every relation A's rules look at, positively or negatively
+    //
+    // THIS IS `rule_reads(A, B)` IN policy.rofl, and the two agree set for set
+    // — measured on five programs, 35 to 248 pairs, before anything was cut.
+    // It is still walked here because the plan is made BEFORE the evaluation
+    // that would derive it: planning off an empty relation does not mean `no
+    // reuse`, it means fingerprints computed from an empty graph, which
+    // evaluation 2 then reuses against. The reuse gate caught exactly that.
+    // Spending the rules version needs the policy program evaluated FIRST —
+    // the two-stage bootstrap — which is the next step and not this one.
     const rels = new Set<string>(byHead.keys());
     const reads = new Map<string, Set<string>>();
     for (const [rel, rs] of byHead) {

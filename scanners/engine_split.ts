@@ -326,7 +326,7 @@ export const ABSORBED: Record<string, string[]> = {
 //          MECH slice and a POL slice is a method doing two things.
 export type Loan = 'language_model' | 'split_the_method';
 
-export interface Dirty { kind: 'cat' | 'tense' | 'part'; unit: string; retires: Loan; }
+export interface Dirty { kind: 'cat' | 'tense' | 'part' | 'role'; unit: string; retires: Loan; }
 
 export function contamination(decls: Decl[] = DECLS): Dirty[] {
   const out: Dirty[] = [];
