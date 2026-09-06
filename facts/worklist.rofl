@@ -251,9 +251,15 @@ work_order(w_df_sweep, 12).
 work_state(w_df_sweep, done).
 work_sweeps(w_df_sweep, dataflow).
 
-work(w_mod_sweep, "modules residue: kinds that cannot appear in a module graph").
+-- DONE 2026-09-05, the last of the four. 39 cells: 34 residue, 2 already
+-- modelled and never recorded (the specifier text is a string literal, every
+-- binding is an identifier), 1 unreachable under this parser, and 2 to a new
+-- item. Plus TWO CELLS FROM OUTSIDE THE BUCKET corrected on the way - a waiver
+-- whose own comment described undone work, which is open work counted as
+-- settled and which no audit can see.
+work(w_mod_sweep, "DONE 2026-09-05: 39 cells, 34 residue, 2 already modelled, and a false waiver corrected beside them").
 work_order(w_mod_sweep, 13).
-work_state(w_mod_sweep, open).
+work_state(w_mod_sweep, done).
 work_sweeps(w_mod_sweep, modules).
 
 -- ...and the fourth sweep, which the third layer created the moment it was
@@ -615,3 +621,41 @@ work_order(w_join_planner, 36).
 work_state(w_join_planner, open).
 work_needs(w_join_planner, w_body_order_is_load_bearing).
 work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
+
+-- 37 — THE MODULE GRAPH HAS ONE EDGE KIND, and the sweep of the last bucket is
+-- what put it in one sentence. rules/js-modules.rofl models the import
+-- declaration and the dynamic import, and NOTHING ELSE about how modules
+-- connect to each other. Three faces, measured on one probe:
+--   `export { q } from './y'` and `export * from './z'` produce ZERO import
+--     sites while three ordinary imports in the same file produce three. Both
+--     DEPEND and FLOW by the file's own definition. Their cells had been
+--     WAIVED with a reason whose own comment called the work undone.
+--   `require('./x')` parses as an ordinary call under `sourceType: 'module'`,
+--     so the model can see it and says nothing. Whether CommonJS is in scope
+--     is the owner's call, and `bare` beside it already carries his
+--     `out_of_scope` - so this one is FLAGGED rather than assumed.
+--   `import x from 'pkg/sub'` carries `not_yet` on the subpath shape: the
+--     specifier resolves through a package's `exports` map, which is the same
+--     on-disk question as `bare`. ALSO THE OWNER'S to scope, and named here so
+--     it is not silently done or silently dropped.
+work(w_mod_beyond_the_import, "the module graph has one edge kind: a re-export, a require and a subpath specifier are all outside it").
+work_order(w_mod_beyond_the_import, 37).
+work_state(w_mod_beyond_the_import, open).
+claim(queued, js, export_named_declaration, none,    modules, w_mod_beyond_the_import).
+claim(queued, js, export_all_declaration,   none,    modules, w_mod_beyond_the_import).
+claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).
+claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_import).
+
+-- 38 — THE VOCABULARY'S OWN HOME. `facts/js-kinds.rofl` is named for the kind
+-- vocabulary and holds a minority of it; the rest is spread over four layer
+-- packs, each having declared what it needed first. Two sweeps in two days
+-- wrote verdicts about kinds their own pack had not declared, and
+-- `orphan_claim[audit]` reported 3 and then 31. Both were closed by
+-- re-declaring - which is correct, and is also how a 59-kind vocabulary comes
+-- to be written out four times. The choice is the owner's: move every
+-- `node_kind` to the pack whose name promises them and load it everywhere, or
+-- keep `a file that makes a claim declares the kind` and accept the copies.
+work(w_vocabulary_home, "node_kind rows live in five packs; facts/js-kinds.rofl is named for them and holds a minority").
+work_order(w_vocabulary_home, 38).
+work_state(w_vocabulary_home, open).
+work_spawned(w_vocabulary_home, f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it).

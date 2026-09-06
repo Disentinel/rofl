@@ -193,8 +193,26 @@ handled(js, import_namespace_specifier,  modules, r_namespace_binding).
 -- by every definition — a re-export both DEPENDS and FLOWS — and they are not
 -- imports. They are named here so that the gap is a row rather than a silence;
 -- the work is one more rule over the same `source` child and it is not done.
-ignored(js, export_named_declaration, modules, a_reexport_is_a_separate_cell).
-ignored(js, export_all_declaration,   modules, a_reexport_is_a_separate_cell).
+-- RECLASSIFIED 2026-09-05 BY THE SWEEP, and the correction is about the CLASS
+-- of the verdict rather than about the cell. These two were `ignored` - a
+-- waiver, which says the language offers nothing here to model - while the
+-- comment directly above them said "module-graph edges by every definition"
+-- and "the work is one more rule over the same `source` child and it is not
+-- done". That is `not_yet`: open work counted as settled, which flatters the
+-- coverage number by exactly two cells and hides them from `open_cell`.
+--
+-- MEASURED before changing it, on a probe holding both forms: `export { q }
+-- from './y'` and `export * from './z'` produce ZERO import sites while three
+-- ordinary imports in the same file produce three. The nodes are in the tree
+-- and the layer does not look at them.
+--
+-- THE TELL GENERALISES: a waiver whose own comment describes undone work is a
+-- waiver in the wrong class, and no audit can see it - `bad_reason` checks the
+-- atom is in the vocabulary and both atoms were, `stale_reason` checks a reason
+-- outliving its cause and this one had not. Only reading the sentence beside it
+-- does, which is why a sweep reads them.
+unknown_because(js, export_named_declaration, modules, not_yet).
+unknown_because(js, export_all_declaration,   modules, not_yet).
 
 -- ---------------------------------------------------------------------------
 -- THE EVIDENCE. Not a claim: the number of fixture import sites whose
@@ -205,3 +223,117 @@ ignored(js, export_all_declaration,   modules, a_reexport_is_a_separate_cell).
 --   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
 checked(js, import_declaration, modules, r_import_decl_module_edge, o_node_resolver, 15).
 checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resolver, 2).
+
+
+-- ===========================================================================
+-- THE MODULES SWEEP, 2026-09-05, and it is the last bucket. Thirty-nine cells,
+-- and the pattern of the previous three held for a fourth time: measuring first
+-- changed the answer for five of them.
+--
+--   2  ALREADY MODELLED AND NEVER RECORDED. `site_source` reads
+--      `ast_node(Src, string_literal, _, _), ast_value(Src, S)` - the specifier
+--      TEXT is the whole input to resolution - and the three binding rules read
+--      `ast_name` off an identifier. Both kinds are load-bearing here and both
+--      cells said nothing. Fourth and fifth instance of the matrix
+--      under-reporting its own coverage.
+--   1  unreachable under this parser: `import` is babel's `Import` node.
+--   2  went to an item, plus a third that was already open.
+--  34  residue, below.
+--
+-- AND TWO CELLS THAT WERE NOT IN THE BUCKET AT ALL, corrected here because a
+-- sweep that walks past a false verdict in its own layer is the silence this
+-- repository forbids. See the reclassification below.
+ignored(js, array_expression,             modules, a_not_a_module_construct).
+ignored(js, arrow_function_expression,    modules, a_not_a_module_construct).
+ignored(js, assignment_expression,        modules, a_not_a_module_construct).
+ignored(js, await_expression,             modules, a_not_a_module_construct).
+ignored(js, boolean_literal,              modules, a_not_a_module_construct).
+ignored(js, class_declaration,            modules, a_not_a_module_construct).
+ignored(js, class_method,                 modules, a_not_a_module_construct).
+ignored(js, conditional_expression,       modules, a_not_a_module_construct).
+ignored(js, decorator,                    modules, a_not_a_module_construct).
+ignored(js, for_of_statement,             modules, a_not_a_module_construct).
+ignored(js, function_declaration,         modules, a_not_a_module_construct).
+ignored(js, function_expression,          modules, a_not_a_module_construct).
+ignored(js, if_statement,                 modules, a_not_a_module_construct).
+ignored(js, logical_expression,           modules, a_not_a_module_construct).
+ignored(js, member_expression,            modules, a_not_a_module_construct).
+ignored(js, new_expression,               modules, a_not_a_module_construct).
+ignored(js, numeric_literal,              modules, a_not_a_module_construct).
+ignored(js, object_expression,            modules, a_not_a_module_construct).
+ignored(js, object_method,                modules, a_not_a_module_construct).
+ignored(js, object_property,              modules, a_not_a_module_construct).
+ignored(js, optional_call_expression,     modules, a_not_a_module_construct).
+ignored(js, optional_member_expression,   modules, a_not_a_module_construct).
+ignored(js, parenthesized_expression,     modules, a_not_a_module_construct).
+ignored(js, return_statement,             modules, a_not_a_module_construct).
+ignored(js, sequence_expression,          modules, a_not_a_module_construct).
+ignored(js, super,                        modules, a_not_a_module_construct).
+ignored(js, tagged_template_expression,   modules, a_not_a_module_construct).
+ignored(js, template_literal,             modules, a_not_a_module_construct).
+ignored(js, this_expression,              modules, a_not_a_module_construct).
+ignored(js, ts_string_keyword,            modules, a_not_a_module_construct).
+ignored(js, tsas_expression,              modules, a_not_a_module_construct).
+ignored(js, tsnon_null_expression,        modules, a_not_a_module_construct).
+ignored(js, variable_declarator,          modules, a_not_a_module_construct).
+ignored(js, yield_expression,             modules, a_not_a_module_construct).
+
+-- ...AND THE SAME UNREACHABLE KIND, a third time. `import` is babel's `Import`
+-- node and `plugins: ['typescript']` never emits it; the argument is identical
+-- at all three layers and is written out rather than left to the default.
+ignored(js, import, modules, a_babel_emits_no_import_callee).
+
+-- ...AND THE TWO THE LAYER ACTUALLY RUNS ON. Neither was ever recorded, and
+-- both are read by name in rules/js-modules.rofl: the specifier text is a
+-- string literal (`site_source`), and every binding a module introduces is an
+-- identifier (`r_named_binding`, `r_default_binding`, `r_namespace_binding`).
+handled(js, string_literal, modules, r_import_decl_module_edge).
+handled(js, identifier,     modules, r_named_binding).
+
+-- ...and the one construct that IS a module edge and is not an import.
+-- `require('./x')` parses as an ordinary call under `sourceType: 'module'`, so
+-- the model can SEE it and says nothing. Whether CommonJS belongs in scope at
+-- all is the owner's call - `bare` next to it already carries his
+-- `out_of_scope` - and until he says, it is honest work rather than a waiver.
+unknown_because(js, call_expression, modules, not_yet).
+
+
+-- ===========================================================================
+-- DECLARED HERE BECAUSE THIS PACK NOW JUDGES THEM, and `orphan_claim[audit]`
+-- said so in one run: 31 kinds carried a modules verdict written above
+-- while their `node_kind` rows live in the callgraph, dataflow and statements
+-- packs, so in the world test/js-modules.test.ts builds the claims pointed at
+-- cells that do not exist. Same correction as facts/js-callgraph.rofl made the
+-- day before, and the SECOND time, which is what makes it a class rather than
+-- a slip - see f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it.
+node_kind(js, array_expression).
+node_kind(js, arrow_function_expression).
+node_kind(js, await_expression).
+node_kind(js, boolean_literal).
+node_kind(js, class_declaration).
+node_kind(js, class_method).
+node_kind(js, conditional_expression).
+node_kind(js, decorator).
+node_kind(js, for_of_statement).
+node_kind(js, function_expression).
+node_kind(js, identifier).
+node_kind(js, import).
+node_kind(js, logical_expression).
+node_kind(js, member_expression).
+node_kind(js, new_expression).
+node_kind(js, numeric_literal).
+node_kind(js, object_expression).
+node_kind(js, object_method).
+node_kind(js, object_property).
+node_kind(js, optional_call_expression).
+node_kind(js, optional_member_expression).
+node_kind(js, parenthesized_expression).
+node_kind(js, return_statement).
+node_kind(js, sequence_expression).
+node_kind(js, string_literal).
+node_kind(js, super).
+node_kind(js, tagged_template_expression).
+node_kind(js, template_literal).
+node_kind(js, this_expression).
+node_kind(js, tsas_expression).
+node_kind(js, tsnon_null_expression).
