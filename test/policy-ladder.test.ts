@@ -108,23 +108,28 @@ test('THE ORDER: the relation ladder is finer than the block ladder', () => {
   // BY NAME, NOT BY RANGE (2026-09-01): these were '107-118:1-2', '214-224:3-5',
   // '509-521:3-5' and '677-692:1-4', which asserted where src/engine.ts sits.
   assert.deepEqual(glued, ['prepare:1-2', 'runGate:3-5', 'runWellFounded:1-4', 'stratumCone:3-5']);
-  // 12 relations over 4 block rungs, but 5 distinct relation depths.
-  // 2026-09-06: FOUR BECAME FIVE, and the finer reading did not move. The
-  // block ladder gained a rung when `prepare` started asking safety.rofl for a
-  // verdict and spending it through `classify` — asking is a step between
-  // deciding and using. The relation ladder never had a reason to change: the
-  // relations are the same and so is what they read. So the two readings now
-  // agree on the NUMBER of rungs while still disagreeing on the grouping, which
-  // is the claim this test has always been about.
+  // 12 relations over 4 block rungs, but 5 distinct relation depths. The
+  // count went to five when `prepare` started asking safety.rofl for a verdict
+  // and back to four when the demand set and the stratum cone became readings
+  // of the same answer and landed on the same rung. The RELATION reading has
+  // not moved once across either change: the relations are the same and so is
+  // what they read, which is the case for measuring in relations.
   assert.equal(new Set(POLICY_RELS.map((r) => depth.get(r))).size, 5);
-  assert.equal(new Set(POLICY_RELS.map((r) => blocks.get(r)!.tier)).size, 5);
+  assert.equal(new Set(POLICY_RELS.map((r) => blocks.get(r)!.tier)).size, 4);
 });
 
-test('THE ORDER: the block ladder inverts the cone and the demand set', () => {
+test('THE ORDER: the block ladder no longer inverts the cone and the demand set', () => {
   const { depth } = relationDepth(W.r);
   const blocks = blockTier();
-  // the blocks say the cone comes FIRST...
-  assert.ok(blocks.get('mono_rule')!.tier < blocks.get('demand_rel')!.tier);
+  // THE INVERSION IS GONE, and it went away for a reason worth keeping. The
+  // blocks used to say the cone came strictly BEFORE the demand set, because
+  // one was a `for(;;)` inside `stratumCone` and the other a `for(;;)` inside
+  // `prepare`, and the data flowed one way between the two line ranges. Both
+  // are readings of one answer now, they land on the same rung, and the block
+  // reading agrees with the relation reading it used to contradict. A
+  // disagreement between two units is not always a fact about the units: this
+  // one was a fact about where the code happened to sit.
+  assert.equal(blocks.get('mono_rule')!.tier, blocks.get('demand_rel')!.tier);
   // ...the relations say the cone's own head is level with the demand set and
   // everything downstream of it comes after
   assert.equal(depth.get('mono_rule'), depth.get('demand_rel'));

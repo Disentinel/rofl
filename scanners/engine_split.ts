@@ -118,6 +118,16 @@ export const DECLS: Decl[] = [
   { id: 'header', key: { kind: 'file' }, cat: 'PLUMB', when: 'n/a',
     anchor: '// engine.ts — seminaive fixpoint',
     what: 'header, imports, types, constants' },
+  // THE MACHINERY FOR ASKING A KERNEL PROGRAM, moved above `planBody` on
+  // 2026-09-06 so that it stops inflating a POL block and stops inducing a
+  // ladder edge (`POLICY_BUDGET` sat inside planBody's line range for no
+  // reason but the order of definitions). It is MECHANISM: encoding a program
+  // once, building a scratch store for it, and the memo that keeps the answer
+  // per rule set. Nothing here decides anything -- what it carries is the two
+  // programs' text, and the text is in policy.rofl and safety.rofl.
+  { id: 'asking', key: { kind: 'def', name: 'kernelProgram' }, cat: 'MECH', when: 'n/a',
+    anchor: 'function kernelProgram(src: string): PolicyRow[] {',
+    what: 'encode a kernel program once, build the store that answers it, remember the answer per rule set' },
   // ADDED 2026-09-05, and POLICY rather than mechanism because it decides what
   // a sentence MEANS: `not p(X, K)` asks whether ANY p exists with K free and
   // asks about one p with K bound, and until this function existed the reading
@@ -135,9 +145,13 @@ export const DECLS: Decl[] = [
   { id: 'prepare', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'prepare(): void {',
     what: 'decode rules; refuse the ones concluding into a reserved relation. The condition is `reserved(Rel)`, already a fact' },
-  { id: 'demandSet', role: 'decides', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
-    cat: 'POL*', when: 'before-A', anchor: 'this.rules = kept;',
-    what: 'the demand-backed set and its positive-premise closure, then the trigger relations. Two rules, given `unsafe(R)` — MEASURED by demandAsRules()' },
+  // 2026-09-06: the growing-set fixpoint and the memoised closure are gone.
+  // WHICH relations are demand-backed, and what a premise triggers, are
+  // safety.rofl's answers; grouping the rules that define one is this code's.
+  // The star goes with them -- the block waited on nothing that did not exist.
+  { id: 'demandSet', role: 'enforces', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
+    cat: 'POL', when: 'before-A', anchor: 'this.rules = kept;',
+    what: 'group the rules of each demand-backed relation and spread the trigger sets, both read off safety.rofl\'s answer' },
   // 2026-09-06: RANGE RESTRICTION LEFT. What stands here is the reading of an
   // answer plus the ONE judgement safety.rofl does not model -- a body whose
   // negation cannot be ordered -- so the block keeps its POL mark and loses its
@@ -159,9 +173,9 @@ export const DECLS: Decl[] = [
     cat: 'MECH', when: 'n/a', anchor: 'try {',
     what: 'the phase driver, budget handling, exceptions, store bookkeeping' },
 
-  { id: 'readsProvenance', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'readsProvenance', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'readsProvenance(): boolean {',
-    what: 'does any rule read derived_by — one rule over premise_pos' },
+    what: 'does any rule read derived_by, read off safety.rofl\'s answer' },
   { id: 'reused', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private reused(',
     what: 'record predicate over the reuse plan' },
@@ -197,9 +211,9 @@ export const DECLS: Decl[] = [
   // second. Re-measured on the changed kernel: 25-50 ms, flat, at every budget
   // from 2500 to 5e6. It is POLICY by the same test as the rest — reachability
   // over `concludes` and `premise_pos`, both already emitted.
-  { id: 'stratumCone', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'stratumCone', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'private stratumCone(mono: ERule[]): Set<string> {',
-    what: 'the stratum cone: which monotone rules may not run before the program is judged' },
+    what: 'the monotone rules held back until the program is judged: safety.rofl derives late_rule and this intersects it with the wave it was handed' },
 
   { id: 'checkUnstratified', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private checkUnstratified(',
@@ -240,9 +254,11 @@ export const DECLS: Decl[] = [
   { id: 'alternation', key: { kind: 'part', of: 'runWellFounded', at: 'this.store.clearDerived();' },
     cat: 'MECH', when: 'n/a', anchor: 'this.store.clearDerived();',
     what: 'the alternating fixpoint itself, the gap between the two limits, the unknown rows and their redirected witnesses. Each round assumes the PREVIOUS round output: not a function of the program text' },
-  { id: 'negRels', role: 'decides', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = new Set<string>();' },
-    cat: 'POL', when: 'after-A', anchor: 'const negRels = new Set<string>();',
-    what: 'the negated relations, straight off premise_neg' },
+  // 2026-09-06: the two nested loops over every body are gone; safety.rofl
+  // derives `neg_relation` and this reads it, which is `enforces`.
+  { id: 'negRels', role: 'enforces', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = this.answer.negRels;' },
+    cat: 'POL', when: 'after-A', anchor: 'const negRels = this.answer.negRels;',
+    what: 'the negated relations, read off safety.rofl\'s answer' },
   { id: 'readBackGuard', key: { kind: 'part', of: 'runWellFounded', at: 'const before = new Set(this.store.allFactKeys());' },
     cat: 'MECH', when: 'n/a', anchor: 'const before = new Set(this.store.allFactKeys());',
     what: 'the read-back guard, by store diff across an extra pass' },
@@ -290,7 +306,8 @@ export const DECLS: Decl[] = [
 export const ABSORBED: Record<string, string[]> = {
   header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
   // the one closure inside `planBody` the walker counts as a definition
-  planBody: ['note', 'kernelProgram', 'policyStore'],
+  planBody: ['note'],
+  asking: ['policyStore'],
 
   evaluation: ['constructor'],
   negPhase: ['negLevel'],

@@ -64,34 +64,31 @@ test('the before-A blocks form a DAG, and there are eleven of them now', () => {
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
-test('the ladder: five rungs, and range restriction is the bottom one', () => {
+test('the ladder: four rungs, and the asking sits at the bottom', () => {
   const layout = tiers(BEFORE_A, IND).map((layer) => layer.map(nm).sort());
-  // MEASURED, and it corrected me. I expected `classify` to sit ABOVE
-  // `planBody`, since classify calls it — and the graph does not see that edge,
-  // because it induces edges from `this.<method>(` calls and `planBody` is a
-  // free function. So the two share the bottom rung. The dependency is real and
-  // this instrument is blind to it; recorded rather than asserted away.
-  // MEASURED AGAIN, and it corrected me a second time. I expected
-  // `policyAnswer` on the bottom rung — it calls no method of `this` at all —
-  // and the graph puts it one rung up, on a single edge to `planBody` keyed
-  // `local decl@265:POLICY_BUDGET`. That is the module constant the policy run
-  // spends, and it sits inside `planBody`'s line range only because a block
-  // runs to the next anchor and swallows what follows it. So the edge is real
-  // to this instrument and means nothing about the negation planner. Left as
-  // measured: an instrument that reports what the code says beats one edited
-  // until it says what I meant.
-  // FIVE RUNGS SINCE 2026-09-06, and the new one is where the self-application
-  // sits. `prepare` used to share a rung with the two asking methods; it now
-  // stands alone above them, because it calls `safetyAnswer` to get a verdict
-  // and `classify` to spend it. That is the ladder reporting a real change:
-  // asking a program is a step, and the step has to happen between deciding
-  // and using.
+  // MEASURED, and it corrected me twice more. FIVE RUNGS BECAME FOUR on
+  // 2026-09-06, from two changes pulling opposite ways.
+  //
+  // `policyAnswer` and `safetyAnswer` fell to the BOTTOM rung, because the
+  // edge that used to hold them up was an artefact: `POLICY_BUDGET` sat inside
+  // `planBody`'s line range for no reason but the order of definitions in the
+  // file. The asking machinery is declared its own block now and stands above
+  // `planBody`, and the edge is gone with it — which is what "left as measured
+  // rather than edited until it agrees with me" was waiting for.
+  //
+  // `demandSet` and `stratumCone` ROSE to share a rung above `prepare`,
+  // because both are readings of the answer `prepare` asked for. The rung the
+  // asking used to occupy is now the rung the SPENDING occupies.
+  //
+  // `classify` sits at the bottom with `planBody` even though it calls it: the
+  // graph induces edges from `this.<method>(` calls and `planBody` is a free
+  // function. That blindness is old, real, and still recorded rather than
+  // asserted away.
   assert.deepEqual(layout, [
-    ['classify', 'planBody', 'readStrata'],          // the verdict, read; where a negation may stand; the stratum MAX
-    ['policyAnswer', 'safetyAnswer', 'scheduleToken', 'stratumCone'],  // the two kernel programs, asked; the stratum cone; the schedule token
-    ['prepare'],                                     // reserved head, and the two above spent
-    ['demandSet'],                                   // the demand set — reads `safe`
-    ['runGate', 'runWellFounded'],                   // what runs at all; well-founded admissibility
+    ['classify', 'planBody', 'policyAnswer', 'readStrata', 'safetyAnswer'],
+    ['prepare', 'scheduleToken'],       // reserved head, and the answer asked for
+    ['demandSet', 'stratumCone'],       // the two readings of it
+    ['runGate', 'runWellFounded'],      // what runs at all; well-founded admissibility
   ]);
 });
 
@@ -107,7 +104,7 @@ test('the layering survives the one line that sits on a block boundary', () => {
   const six2 = moved.filter((b) => b.when === 'before-A');
   const ind2 = inducedEdges(g2, six2);
   assert.deepEqual(sccs(six2, ind2).filter((c) => c.length > 1), [], 'cyclic under the other cut');
-  assert.equal(tiers(six2, ind2).length, 5, 'still five rungs');
+  assert.equal(tiers(six2, ind2).length, 4, 'still four rungs');
 });
 
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached

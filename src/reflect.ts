@@ -111,6 +111,14 @@ export const IFACE = {
   unsafe_rule: 'unsafe_rule',
   premise_var: 'premise_var',
   slot_arity: 'slot_arity',
+  // and what safety.rofl computes FROM that verdict: the late set, the
+  // demand-backed relations, what a premise triggers, what is negated
+  // anywhere, and who reads provenance.
+  late_rule: 'late_rule',
+  demand_rel: 'demand_rel',
+  trigger_of: 'trigger_of',
+  neg_relation: 'neg_relation',
+  provenance_reader: 'provenance_reader',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -1066,12 +1074,15 @@ export function factMetaFacts(rel: string, persp: string, args: Term[], tick: nu
  *  reflection plus two seeded relations the reflection does not carry flat.
  *  Measured against the host fold it replaces: 74 files of the corpus, 3555
  *  rules, zero disagreements, and a mutant set of 22 covering every branch. */
-export const SAFETY_SRC = `-- safety.rofl -- RANGE RESTRICTION, computed over the reflection.
+export const SAFETY_SRC = `-- safety.rofl -- WHAT THE KERNEL KNOWS ABOUT A PROGRAM'S RULES, as rules.
 --
--- The kernel's \`Evaluation.classify\` decides, for every rule, whether the body
+-- It opens with RANGE RESTRICTION, which is the judgement everything after it
+-- rests on: \`Evaluation.classify\` decides, for every rule, whether the body
 -- binds everything the head names -- a left-to-right fold over the body
--- tracking bound variables, \`src/engine.ts\`, and the one judgement every other
--- before-A policy here rests on. This program is that judgement as rules.
+-- tracking bound variables. That is the first half of this file. The second
+-- half is what the kernel then computes FROM that verdict: which rules may not
+-- run before the program is judged, which relations are demand-backed, what a
+-- premise can trigger, what is negated anywhere, and who reads provenance.
 --
 -- TWO INPUTS THE REFLECTION DOES NOT CARRY FLAT, seeded by the host the way
 -- \`opaque_seed\` is:
@@ -1142,4 +1153,56 @@ unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("=", _)), not ground(R
                   not ground(R, K, right).
 unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), not ground(R, K, left).
 unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), not ground(R, K, right).
+
+-- ---------------------------------------------------------------------------
+-- WHAT RESTS ON THE VERDICT.
+--
+-- Everything below reads \`unsafe_rule\`, and every one of them was a fold, a
+-- \`for(;;)\` or a memoised recursion in src/engine.ts. They are not new: they
+-- are stated in rules/kernel-policy.rofl, where they were measured against the
+-- host rule for rule by scanners/policy_ladder.ts, which carries a \`--break\`
+-- control so the comparison is known to be capable of moving. The one
+-- difference is that \`unsafe\` was an INJECTED INPUT there and is derived here.
+--
+-- EVERY CLAUSE IS GUARDED BY \`analysed\`, because this store also holds the
+-- reflection of THIS program. The seed exists for exactly the rules the kernel
+-- asked about, so \`slot_arity(R, 0, head, _)\` is an exact membership test, and
+-- the guard reaches the rest through \`executable\`.
+
+blocked_head(R) :- analysed(R), concludes(R, Rel), reserved(Rel).
+executable(R)   :- analysed(R), not blocked_head(R).
+has_neg_rule(R) :- analysed(R), premise_neg(R, _).
+mono_rule(R)    :- executable(R), not has_neg_rule(R), not unsafe_rule(R).
+
+-- THE STRATUM CONE: the monotone rules that may not run before the program is
+-- judged -- the ones concluding the stratum table, and anything reading what
+-- they conclude. \`stratum\` is named as a constant because it is the one table
+-- the kernel schedules by.
+stratum_cone(stratum).
+stratum_cone(Rel) :- concludes(R, Rel), mono_rule(R), premise_pos(R, Q),
+                     stratum_cone(Q).
+late_rule(R)      :- concludes(R, Rel), mono_rule(R), stratum_cone(Rel).
+
+-- THE DEMAND-BACKED SET: a relation is unfolded at call sites when a rule
+-- defining it in the present tense is not range-restricted, or when it reads
+-- one that is. A \`@next\` head never unfolds -- it stages instead of matching.
+demand_rel(Rel) :- concludes(R, Rel), conclusion_tense(R, now), executable(R),
+                   unsafe_rule(R).
+demand_rel(Rel) :- concludes(R, Rel), conclusion_tense(R, now), executable(R),
+                   premise_pos(R, Q), demand_rel(Q).
+
+-- WHAT A POSITIVE PREMISE CAN TRIGGER: itself, and -- when it is demand-backed
+-- -- whatever the rules defining it read, transitively. The host computed this
+-- with a memoised recursion carrying a \`seen\` set, which stops at a cycle
+-- rather than closing over it; this is the closure, and where the two differ
+-- the difference is measured rather than assumed.
+trigger_of(P, P) :- analysed(R), premise_pos(R, P).
+trigger_of(P, X) :- demand_rel(P), concludes(R, P), conclusion_tense(R, now),
+                    executable(R), premise_pos(R, Q), trigger_of(Q, X).
+
+-- THE RELATIONS SOME RULE NEGATES, and WHICH RULES READ PROVENANCE. Two flat
+-- questions the host answered with a nested loop over every body.
+neg_relation(A)      :- analysed(R), premise_neg(R, A).
+provenance_reader(R) :- analysed(R), premise_pos(R, derived_by).
+provenance_reader(R) :- analysed(R), premise_neg(R, derived_by).
 `;

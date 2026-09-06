@@ -81,6 +81,12 @@ function seed(pol: Store, store: Store): void {
   }
 }
 
+/** The relations the kernel reads back out of this program. The coverage
+ *  sweep below compares ALL of them, not just the verdict: a clause that only
+ *  the demand set can see is invisible to a comparison of `unsafe_rule`. */
+const ANSWERED = ['unsafe_rule', 'demand_rel', 'late_rule', 'trigger_of',
+  'neg_relation', 'provenance_reader'];
+
 /** Ask safety.rofl, in a store of its own, over a copy of the reflection. */
 function ask(store: Store, prog: Row[]): Set<string> {
   const pol = new Store();
@@ -88,16 +94,35 @@ function ask(store: Store, prog: Row[]): Set<string> {
     pol.add(f.rel, f.fact && !RESERVED.has(f.rel) ? MAIN : KERNEL_PERSP, f.args,
       { scope: 'timeless', base: true });
   }
-  for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise]) {
+  for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise,
+    V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg, V.reserved]) {
     for (const f of store.relAll(rel)) {
       pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
     }
   }
   seed(pol, store);
-  new Evaluation(pol, { reuse: false, budget: 20_000_000 }).run();
+  new Evaluation(pol, { reuse: false, budget: 20_000_000, bootstrap: true }).run();
   const out = new Set<string>();
   for (const f of pol.relAll('unsafe_rule')) if (f.args[0].k === 'a') out.add(f.args[0].name);
   return out;
+}
+
+/** Everything the program answers, as one comparable string. */
+function answerSig(store: Store, prog: Row[]): string {
+  const pol = new Store();
+  for (const f of prog) {
+    pol.add(f.rel, f.fact && !RESERVED.has(f.rel) ? MAIN : KERNEL_PERSP, f.args,
+      { scope: 'timeless', base: true });
+  }
+  for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise,
+    V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg, V.reserved]) {
+    for (const f of store.relAll(rel)) {
+      pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
+    }
+  }
+  seed(pol, store);
+  new Evaluation(pol, { reuse: false, budget: 20_000_000, bootstrap: true }).run();
+  return ANSWERED.map((rel) => `${rel}=${pol.relAll(rel).map((f) => f.key).sort().join(',')}`).join('\n');
 }
 
 const PROG = rowsOf(SAFETY);
@@ -169,6 +194,33 @@ const MUTANTS: [string, string, 'safe' | 'unsafe'][] = [
 ];
 const BASE = 'edge(x, y).\ntag(y).\n';
 
+/** THE SECOND FAMILY. The clauses that read the verdict — the demand set, the
+ *  stratum cone, the trigger closure — are invisible to a program with no
+ *  unsafe rule in it, and every mutant above was written to have exactly one.
+ *  These carry demand instead. */
+const ANSWER_MUTANTS: [string, string][] = [
+  ['a demand-backed relation and its reader',
+    'd(A, Y) :- edge(A, _), Y > 0.\nu(A) :- d(A, _), edge(A, _).'],
+  ['a cycle through two demand-backed relations',
+    'a(A, Y) :- edge(A, _), b(A), Y > 0.\nb(A) :- a(A, _).\nc(A) :- b(A).'],
+  ['a @next head, which never unfolds',
+    'n(A, Y) @next :- edge(A, _), Y > 0.\nm(A) :- n(A, _).'],
+  ['a rule reading provenance',
+    'w(x) :- derived_by(_, _, _).'],
+  ['a negation over a demand-backed relation',
+    'd(A, Y) :- edge(A, _), Y > 0.\nz(A) :- edge(A, _), not d(A, 1).'],
+  ['a monotone rule in the stratum cone',
+    'stratum(r, 1).\nk(A) :- edge(A, _), stratum(A, _).'],
+  // Added because the coverage sweep said nothing could see two clauses. A
+  // NEGATED rule that would otherwise reach the stratum cone is the only thing
+  // `has_neg_rule` changes; a rule that negates `derived_by` is the only thing
+  // the second `provenance_reader` clause changes.
+  ['a negated rule that would otherwise enter the stratum cone',
+    'stratum(r, 1).\nk(A) :- edge(A, _), stratum(A, _), not tag(A).'],
+  ['a rule that NEGATES provenance rather than reading it',
+    'v(A) :- edge(A, _), not derived_by(A, r, 0).'],
+];
+
 function verdicts(rule: string, prog: Row[]) {
   const r = new Rofl();
   r.load(BOOT);
@@ -212,14 +264,25 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
   }
   assert.ok(parts.length > 15, `${parts.length} clauses parsed out of the program`);
 
+  // Each mutant's store, built once: the sweep runs the whole program against
+  // every one of them for every deletion, and building the stores again each
+  // time is the difference between ten seconds and two minutes.
+  const stores = [...MUTANTS, ...ANSWER_MUTANTS].map(([, rule]) => {
+    const r = new Rofl();
+    r.load(BOOT);
+    assert.ok(r.load(BASE + rule + '\n').ok, `the door refused ${rule}`);
+    return r.store;
+  });
+  const whole = stores.map((st) => answerSig(st, PROG));
+
   const survivors: string[] = [];
   for (let i = 0; i < parts.length; i++) {
     const prog = rowsOf(parts.filter((_, j) => j !== i).join('\n'));
     let died = false;
-    for (const [, rule] of MUTANTS) {
-      let v;
-      try { v = verdicts(rule, prog); } catch { died = true; break; }
-      if (!v.same) { died = true; break; }
+    for (let m = 0; m < stores.length; m++) {
+      let sig;
+      try { sig = answerSig(stores[m], prog); } catch { died = true; break; }
+      if (sig !== whole[m]) { died = true; break; }
     }
     if (!died) survivors.push(parts[i].replace(/\s+/g, ' '));
   }
@@ -228,5 +291,14 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
   // than accidental: their only reader is `undefined_premise[audit]` in
   // boot.rofl, and the isolated store this program runs in does not hold
   // boot.rofl. Nothing else in the program can be deleted unnoticed.
-  assert.deepEqual(survivors, ['edb(premise_var).', 'edb(slot_arity).']);
+  // THREE SURVIVORS, each for a reason that is structural rather than a gap
+  // in the sample. The two `edb` declarations are read by
+  // `undefined_premise[audit]` in boot.rofl, which this isolated store does not
+  // hold. `blocked_head` guards against a rule whose head is a kernel
+  // relation, and the LOAD DOOR refuses that first with its own message — the
+  // clause protects a store that arrived some other way, and no mutant loaded
+  // through the door can reach it. Everything else in the program, both
+  // halves, is seen by some mutant.
+  assert.deepEqual(survivors, ['edb(premise_var).', 'edb(slot_arity).',
+    'blocked_head(R) :- analysed(R), concludes(R, Rel), reserved(Rel).']);
 });

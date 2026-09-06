@@ -70,11 +70,14 @@ export const HOOKS: Hook[] = [
     replace: '      if (RESERVED.has(r.clause.head.rel)) HIT(\'b1\');\n'
       + '      if (RESERVED.has(r.clause.head.rel) && ABLATE !== \'b1\') {' },
 
-  { id: 'b2', note: '119-169 the demand-backed set, identically empty',
-    anchor: '    this.demandRels = new Map();\n    for (const rel of [...unfoldable].sort()) {',
-    replace: '    if (unfoldable.size > 0) HIT(\'b2\');\n'
+  // THE DEMAND-BACKED SET is safety.rofl's answer now, so what is ablated is
+  // the READING of it rather than the fixpoint that used to stand here. Same
+  // ablation: the map stays empty and the run goes on without it.
+  { id: 'b2', note: 'the demand-backed set, identically empty',
+    anchor: '    this.demandRels = new Map();\n    for (const rel of [...this.answer.demandRels].sort()) {',
+    replace: '    if (this.answer.demandRels.size > 0) HIT(\'b2\');\n'
       + '    this.demandRels = new Map();\n'
-      + '    if (ABLATE !== \'b2\') for (const rel of [...unfoldable].sort()) {' },
+      + '    if (ABLATE !== \'b2\') for (const rel of [...this.answer.demandRels].sort()) {' },
 
   // RANGE RESTRICTION, and it is no longer a fold in the host: safety.rofl
   // answers it and `classify` reads the answer. The ablation is unchanged in

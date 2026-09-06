@@ -44,7 +44,8 @@ const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
   // SLOT atoms it names a place in a rule with -- `head`, `pos`, `left`,
   // `right` -- are in CONSTANTS below, beside the mode atoms `in` and `out`,
   // which is the same category: a place, not a relation.
-  'unsafe_rule', 'premise_var', 'slot_arity'];
+  'unsafe_rule', 'premise_var', 'slot_arity',
+  'late_rule', 'demand_rel', 'trigger_of', 'neg_relation', 'provenance_reader'];
 // Language syntax tokens the parser must know (keywords, not relations).
 // The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
 // they are here for the same reason `is` and `mod` are: the parser dispatches

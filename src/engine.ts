@@ -147,6 +147,75 @@ const PENDING_BI: PremRef = { t: 'bi', desc: '' };
 
 interface FrontInfo { keys: Set<string>; rels: Set<string>; }
 
+interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
+
+/** A program the kernel ships, encoded once. `bootstrapKernel` installs facts
+ *  into every store; this installs nothing anywhere — the rows are held here
+ *  and copied into a scratch store when a question is asked. A FACT keeps the
+ *  perspective its own book resolves to; a RULE becomes reflection under the
+ *  kernel's, which is where the readers look for it. */
+const encoded = new Map<string, PolicyRow[]>();
+function kernelProgram(src: string): PolicyRow[] {
+  let rows = encoded.get(src);
+  if (rows === undefined) {
+    rows = [];
+    for (const c0 of parseProgram(src)) {
+      const c = resolveClauseBooks(c0);
+      if (c.body.length === 0) rows.push({ rel: c.head.rel, args: c.head.args, persp: c.head.persp });
+      else for (const f of encodeRule(c).facts) rows.push({ rel: f.rel, args: f.args, persp: null });
+    }
+    encoded.set(src, rows);
+  }
+  return rows;
+}
+
+const POLICY_BUDGET = 20_000_000;
+
+/** The answer to `is this rule range-restricted`, remembered per PROGRAM. The
+ *  key is the rule set itself — an id is a content hash — so two evaluations of
+ *  the same program ask once, and one rule changing anywhere asks again. */
+const MEMO_CAP = 64;
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
+
+/** WHAT safety.rofl ANSWERS ABOUT A PROGRAM'S RULES. One ask, six answers:
+ *  every one of them was a fold, a `for(;;)` or a memoised recursion here, and
+ *  every one reads the same seed, which is why they travel together. */
+interface RuleAnswer {
+  unsafe: ReadonlySet<string>;
+  demandRels: ReadonlySet<string>;
+  trigger: ReadonlyMap<string, ReadonlySet<string>>;
+  late: ReadonlySet<string>;
+  negRels: ReadonlySet<string>;
+  readsProvenance: boolean;
+}
+const EMPTY_ANSWER: RuleAnswer = {
+  unsafe: EMPTY_SET, demandRels: EMPTY_SET, trigger: new Map(),
+  late: EMPTY_SET, negRels: EMPTY_SET, readsProvenance: false,
+};
+const safetyMemo = new Map<string, RuleAnswer>();
+// The four SLOTS safety.rofl asks a groundness question about. Atoms, not
+// relation names: they name a place in a rule, the way `in` and `out` name a
+// place in a mode.
+const HEAD_SLOT = 'head';
+const POS_SLOT = 'pos';
+const LEFT_SLOT = 'left';
+const RIGHT_SLOT = 'right';
+
+/** A scratch store holding one of the kernel's own programs and nothing else.
+ *  The caller copies in whatever reflection its question needs. */
+function policyStore(src: string): Store {
+  const pol = new Store();
+  for (const f of kernelProgram(src)) {
+    // A RESERVED relation is auto-perspectived on read, so its rows belong to
+    // the kernel's book; a fact of the program's own vocabulary belongs to the
+    // book the clause resolved to, and reading it anywhere else finds nothing.
+    const persp = f.persp !== null && f.persp.k === 'a' && !RESERVED.has(f.rel)
+      ? f.persp.name : KERNEL_PERSP;
+    pol.add(f.rel, persp, f.args, { scope: 'timeless', base: true });
+  }
+  return pol;
+}
+
 /** WHERE A NEGATION MAY STAND, and why the answer cannot be `anywhere`.
  *
  *  `not p(X, K)` is read by `negHolds` as `no fact matches`, so with K unbound
@@ -245,59 +314,6 @@ export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null;
   return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
 }
 
-interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
-
-/** A program the kernel ships, encoded once. `bootstrapKernel` installs facts
- *  into every store; this installs nothing anywhere — the rows are held here
- *  and copied into a scratch store when a question is asked. A FACT keeps the
- *  perspective its own book resolves to; a RULE becomes reflection under the
- *  kernel's, which is where the readers look for it. */
-const encoded = new Map<string, PolicyRow[]>();
-function kernelProgram(src: string): PolicyRow[] {
-  let rows = encoded.get(src);
-  if (rows === undefined) {
-    rows = [];
-    for (const c0 of parseProgram(src)) {
-      const c = resolveClauseBooks(c0);
-      if (c.body.length === 0) rows.push({ rel: c.head.rel, args: c.head.args, persp: c.head.persp });
-      else for (const f of encodeRule(c).facts) rows.push({ rel: f.rel, args: f.args, persp: null });
-    }
-    encoded.set(src, rows);
-  }
-  return rows;
-}
-
-const POLICY_BUDGET = 20_000_000;
-
-/** The answer to `is this rule range-restricted`, remembered per PROGRAM. The
- *  key is the rule set itself — an id is a content hash — so two evaluations of
- *  the same program ask once, and one rule changing anywhere asks again. */
-const safetyMemo = new Map<string, Set<string>>();
-const MEMO_CAP = 64;
-const EMPTY_SET: ReadonlySet<string> = new Set<string>();
-// The four SLOTS safety.rofl asks a groundness question about. Atoms, not
-// relation names: they name a place in a rule, the way `in` and `out` name a
-// place in a mode.
-const HEAD_SLOT = 'head';
-const POS_SLOT = 'pos';
-const LEFT_SLOT = 'left';
-const RIGHT_SLOT = 'right';
-
-/** A scratch store holding one of the kernel's own programs and nothing else.
- *  The caller copies in whatever reflection its question needs. */
-function policyStore(src: string): Store {
-  const pol = new Store();
-  for (const f of kernelProgram(src)) {
-    // A RESERVED relation is auto-perspectived on read, so its rows belong to
-    // the kernel's book; a fact of the program's own vocabulary belongs to the
-    // book the clause resolved to, and reading it anywhere else finds nothing.
-    const persp = f.persp !== null && f.persp.k === 'a' && !RESERVED.has(f.rel)
-      ? f.persp.name : KERNEL_PERSP;
-    pol.add(f.rel, persp, f.args, { scope: 'timeless', base: true });
-  }
-  return pol;
-}
-
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
   // interface, so an adapter over a third-party engine evaluates the same
@@ -343,6 +359,10 @@ export class Evaluation {
    *  form of self-application available at the bottom of a tower. */
   private bootstrap: boolean;
 
+  /** What safety.rofl said about this program's rules, asked once in
+   *  `prepare`. Empty on a bootstrap evaluation, which asks nothing. */
+  private answer: RuleAnswer = EMPTY_ANSWER;
+
   constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
     this.bootstrap = opts.bootstrap ?? false;
@@ -359,19 +379,19 @@ export class Evaluation {
     this.wellFounded = wellFoundedDeclared(this.store);
     const { rules, diagnostics } = decodeRules(this.store);
     this.diags.push(...diagnostics);
-    const unsafe = this.safetyAnswer(rules);
+    this.answer = this.safetyAnswer(rules);
     const kept: ERule[] = [];
     for (const r of rules) {
       if (RESERVED.has(r.clause.head.rel)) {
         this.diags.push(`rule ${r.id} concludes into a kernel relation; not executable`);
         continue;
       }
-      kept.push(this.classify(r, unsafe));
+      kept.push(this.classify(r, this.answer.unsafe));
     }
     this.rules = kept;
-    // A relation is demand-backed (unfolded at call sites) when some @now
-    // rule defining it is unsafe, or transitively depends on a demand-backed
-    // relation through a positive premise. @next rules never unfold.
+    // WHICH RELATIONS ARE DEMAND-BACKED IS safety.rofl'S ANSWER; grouping the
+    // rules that define one is this method's. What used to stand here was the
+    // same closure written as a `for(;;)` over a growing set.
     const nowRulesByRel = new Map<string, ERule[]>();
     for (const r of kept) {
       if (r.clause.head.temporal === 'next') continue;
@@ -379,43 +399,15 @@ export class Evaluation {
       if (!arr) { arr = []; nowRulesByRel.set(r.clause.head.rel, arr); }
       arr.push(r);
     }
-    const unfoldable = new Set<string>();
-    for (const [rel, rs] of nowRulesByRel) if (rs.some((r) => !r.safe)) unfoldable.add(rel);
-    for (;;) {
-      let grew = false;
-      for (const [rel, rs] of nowRulesByRel) {
-        if (unfoldable.has(rel)) continue;
-        for (const r of rs) {
-          if (r.posRels.some((x) => unfoldable.has(x))) { unfoldable.add(rel); grew = true; break; }
-        }
-      }
-      if (!grew) break;
-    }
     this.demandRels = new Map();
-    for (const rel of [...unfoldable].sort()) {
-      this.demandRels.set(rel, nowRulesByRel.get(rel)!);
+    for (const rel of [...this.answer.demandRels].sort()) {
+      const rs = nowRulesByRel.get(rel);
+      if (rs !== undefined) this.demandRels.set(rel, rs);
     }
-    // demand closure per relation, then trigger relations per rule
-    const closure = new Map<string, Set<string>>();
-    const closeRel = (rel: string, seen: Set<string>): Set<string> => {
-      const cached = closure.get(rel);
-      if (cached) return cached;
-      const out = new Set<string>([rel]);
-      if (!seen.has(rel)) {
-        seen.add(rel);
-        for (const dr of this.demandRels.get(rel) ?? []) {
-          for (const b of dr.clause.body) {
-            if (b.t === 'pos') for (const x of closeRel(b.lit.rel, seen)) out.add(x);
-          }
-        }
-      }
-      closure.set(rel, out);
-      return out;
-    };
     for (const r of kept) {
       r.hasDemandPrem = r.posRels.some((x) => this.demandRels.has(x));
       r.triggerRels = new Set();
-      for (const p of r.posRels) for (const x of closeRel(p, new Set())) r.triggerRels.add(x);
+      for (const p of r.posRels) for (const x of this.answer.trigger.get(p) ?? [p]) r.triggerRels.add(x);
     }
   }
 
@@ -452,14 +444,15 @@ export class Evaluation {
    *  `slot_arity(R, K, Slot, N)`. Walking a term for its variables is the
    *  host's whole share of this and it decides nothing — a term carries an
    *  arbitrary functor and Datalog cannot destructure one it does not name. */
-  private safetyAnswer(rules: DRule[]): ReadonlySet<string> {
-    if (this.bootstrap || rules.length === 0) return EMPTY_SET;
+  private safetyAnswer(rules: DRule[]): RuleAnswer {
+    if (this.bootstrap || rules.length === 0) return EMPTY_ANSWER;
     const memoKey = fnv1a(rules.map((r) => r.id).join('|'));
     const hit = safetyMemo.get(memoKey);
     if (hit !== undefined) return hit;
 
     const pol = policyStore(SAFETY_SRC);
-    for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise]) {
+    for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise,
+      V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg, V.reserved]) {
       for (const f of this.store.relAll(rel)) {
         pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
       }
@@ -485,11 +478,30 @@ export class Evaluation {
     }
     new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET, bootstrap: true }).run();
 
-    const out = new Set<string>();
-    for (const f of pol.relAll(IFACE.unsafe_rule)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+    const atoms = (rel: string): Set<string> => {
+      const out = new Set<string>();
+      for (const f of pol.relAll(rel)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+      return out;
+    };
+    const trigger = new Map<string, Set<string>>();
+    for (const f of pol.relAll(IFACE.trigger_of)) {
+      const a = f.args[0]; const b = f.args[1];
+      if (a.k !== 'a' || b.k !== 'a') continue;
+      let to = trigger.get(a.name);
+      if (!to) { to = new Set(); trigger.set(a.name, to); }
+      to.add(b.name);
+    }
+    const answer: RuleAnswer = {
+      unsafe: atoms(IFACE.unsafe_rule),
+      demandRels: atoms(IFACE.demand_rel),
+      trigger,
+      late: atoms(IFACE.late_rule),
+      negRels: atoms(IFACE.neg_relation),
+      readsProvenance: pol.relCount(IFACE.provenance_reader) > 0,
+    };
     if (safetyMemo.size >= MEMO_CAP) safetyMemo.clear();
-    safetyMemo.set(memoKey, out);
-    return out;
+    safetyMemo.set(memoKey, answer);
+    return answer;
   }
 
   // -------------------------------------------------------------------------
@@ -619,12 +631,7 @@ export class Evaluation {
    *  "reads THIS tick's provenance" is not a question the rule text answers.
    *  Reading any of it counts as reading all of it. */
   readsProvenance(): boolean {
-    for (const r of this.rules) {
-      for (const b of r.clause.body) {
-        if (b.t !== 'bi' && b.lit.rel === V.derived_by) return true;
-      }
-    }
-    return false;
+    return this.answer.readsProvenance;
   }
 
   /** A record the plan keeps: a fact of a reused relation, or the provenance
@@ -839,16 +846,8 @@ export class Evaluation {
    *  every gate here, because the second wave propagates over BOTH waves and
    *  a reader left behind is refilled from the stratum front. */
   private stratumCone(mono: ERule[]): Set<string> {
-    const rels = new Set<string>([IFACE.stratum]);
-    for (;;) {
-      let grew = false;
-      for (const r of mono) {
-        if (rels.has(r.clause.head.rel)) continue;
-        if (r.posRels.some((x) => rels.has(x))) { rels.add(r.clause.head.rel); grew = true; }
-      }
-      if (!grew) break;
-    }
-    return new Set(mono.filter((r) => rels.has(r.clause.head.rel)).map((r) => r.id));
+    const late = this.answer.late;
+    return new Set(mono.filter((r) => late.has(r.id)).map((r) => r.id));
   }
 
   private checkUnstratified(programHasNegation: boolean): void {
@@ -1136,10 +1135,7 @@ export class Evaluation {
     // makes every undefined atom read as false, `not has_win_move(a)` succeed,
     // and the pass re-derive the very atoms the alternation left undefined.
     // The guard below caught that, on the first program it was pointed at.
-    const negRels = new Set<string>();
-    for (const r of this.rules) {
-      for (const b of r.clause.body) if (b.t === 'neg') negRels.add(b.lit.rel);
-    }
+    const negRels = this.answer.negRels;
     const before = new Set(this.store.allFactKeys());
     this.assume = extendAssumption(generous, added);
     this.active = [];
