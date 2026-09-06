@@ -777,7 +777,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // each with a `trace()` call, plus the four sites that call them.
   // 231 -> 240 the same day: the reachability fixture, on the same pattern, in
   // both files (alpha's dormant chain and beta's default export).
-  assert.equal(sites, 240, 'positive control: the corpus is the one the census was taken on');
+  // 240 -> 274: the exception fixtures, thirteen functions and their sites.
+  assert.equal(sites, 274, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -901,7 +902,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // because the consumer calls the default export, while `useDormant -> sleeper`
   // and `sleeper -> dormant` are derived and never taken. A fixture whose new
   // functions all appeared here would have proved nothing.
-  assert.equal(oracleEdges.size, 99, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 99 -> 115. The exception fixtures add thirteen functions and SIXTEEN oracle
+  // edges, and the ones that are MISSING are again the point: `Lit -> unlit`
+  // never runs because `super(n)` throws first, and `useTry -> after` never runs
+  // because `thrower` does. Both are derived, both are now explained.
+  assert.equal(oracleEdges.size, 115, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.

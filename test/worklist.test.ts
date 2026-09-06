@@ -153,8 +153,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_df_control_forms', 'w_df_control_forms',
      'w_df_instance_vs_class',
      'w_effect_layer',
+
      'w_env_ledger_form', 'w_env_positional_features',
-     'w_env_scan_failed', 'w_env_scan_failed', 'w_join_planner',
+     'w_env_scan_failed', 'w_env_scan_failed',
+     'w_exception_flow', 'w_exception_flow', 'w_exception_flow',
+     'w_join_planner',
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_negation_range_restriction', 'w_scope_binding',
      'w_vocabulary_frame', 'w_vocabulary_home']);
@@ -181,13 +184,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // EXCEPTION PATH — the owner's own observation that an exception is control
   // flow, and the first dataflow edge here that travels along it rather than
   // along the syntax.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_exception_flow'],
+  // ...and the exception path closed too, so the head is the ACCESSOR: `o.p`
+  // transfers control iff `p` is a getter, which is a fact about the object.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cf_accessor'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 38 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 34 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -195,6 +200,9 @@ test('the queue covers the model: 38 open cells, every one owned by name, none s
   // 48 -> 46: the receiver split closed `class_declaration x dataflow`, and
   // `super x dataflow` turned out to need no rule at all — a site was all it
   // was missing.
+  // 38 -> 34 the same day again: w_exception_flow closed four — call_expression
+  // and super at controlflow, throw_statement and catch_clause at dataflow.
+  // Three items closed in one session and the open set fell by ten.
   // 40 -> 38 the same day, and the two moves in it point OPPOSITE ways:
   // `r_reachability` closed FIVE function-form cells at controlflow, and one new
   // kind (`export_default_declaration`) opened THREE — callgraph, dataflow and
@@ -205,7 +213,7 @@ test('the queue covers the model: 38 open cells, every one owned by name, none s
   // (w_cf_completion) that claims no cell — the gap lives in the rules, not in
   // any (kind, layer) coordinate, which is the shape f_a_blindness_can_have_no_cell
   // already names.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 38, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 34, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -233,7 +241,7 @@ test('the queue covers the model: 38 open cells, every one owned by name, none s
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
   // layers now have no bucket at all.
-  assert.deepEqual(per('dataflow'), [12, 16, 0]);
+  assert.deepEqual(per('dataflow'), [10, 16, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -247,7 +255,9 @@ test('the queue covers the model: 38 open cells, every one owned by name, none s
   // did close — claimed stays at 12 while open drops to 8.
   // 8 -> 3 on 2026-09-06: `r_reachability` answered all five function forms.
   // Three cells left at the layer that was swept two days ago.
-  assert.deepEqual(per('controlflow'), [3, 12, 0]);
+  // 3 -> 1 on 2026-09-06: a call is an exit, so call_expression and super are
+  // answered. ONE cell left at this layer — the accessor.
+  assert.deepEqual(per('controlflow'), [1, 12, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -390,9 +400,10 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
   const base = world();
-  // THE HEAD MOVED TWICE ON 2026-09-06: `w_cf_abrupt_transfer` then
-  // `w_cf_reachability`, both closed, so the next by order is `w_exception_flow`.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_exception_flow']);
+  // THE HEAD MOVED THREE TIMES ON 2026-09-06: w_cf_abrupt_transfer,
+  // w_cf_reachability and w_exception_flow, all closed, so the next by order is
+  // `w_cf_accessor`.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cf_accessor']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -403,10 +414,14 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // SIX BECAME FIVE on 2026-09-05: `w_join_planner` waited on the negation half
   // of the same defect, and the negation half is done — a planner may now
   // reorder, because the kernel already refuses to judge a negation early.
-  assert.equal(base.n('blocked[audit](W)'), 5, 'one held on purpose, four real premises');
+  // FIVE BECAME FOUR on 2026-09-06: `w_exn_propagation` waited on
+  // `w_exception_flow` — the local edge before the transitive closure — and the
+  // local edge is done. The premise it waited on is the one that also took back
+  // its witness: `useTry -> after` had been attributed to the transitive item
+  // and belongs to the local one.
+  assert.equal(base.n('blocked[audit](W)'), 4, 'one held on purpose, three real premises');
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
-    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_exn_propagation',
-     'w_type_surface']);
+    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form', 'w_type_surface']);
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation
@@ -421,13 +436,16 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // because a count is pinned beside it. It is planted on the HEAD now, and on
   // the item the closing work spawned, so the mutation asserts the thing the
   // relation exists for: the head itself is skipped when its premise is open.
-  const mut = world({ extra: 'work_needs(w_cf_reachability, w_cf_completion).' });
-  assert.equal(mut.n('blocked[audit](W)'), 6, 'the planted one on top of the five real ones');
+  // ...and re-aimed again for the same reason: the head moved on. It is planted
+  // on the CURRENT head and on the item the closing work spawned, which is the
+  // only pair that keeps saying what the relation exists to say.
+  const mut = world({ extra: 'work_needs(w_cf_accessor, w_cf_completion).' });
+  assert.equal(mut.n('blocked[audit](W)'), 5, 'the planted one on top of the four real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
   // relation doing exactly one thing — skipping — which is what makes it
   // checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_exception_flow'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_vocabulary_frame'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

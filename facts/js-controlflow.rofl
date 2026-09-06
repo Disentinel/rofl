@@ -108,11 +108,16 @@ handled(js, class_method,                controlflow, r_reachability).
 handled(js, object_method,               controlflow, r_reachability).
 
 -- TWO CALL FORMS — a call transfers control INTO the callee and may leave by
--- throwing rather than returning. The first half is the call graph's; the
--- second is exception propagation, which nothing here models. Queued as
--- w_exception_flow.
-unknown_because(js, call_expression, controlflow, not_yet).
-unknown_because(js, super,           controlflow, not_yet).
+-- THROWING rather than returning. Answered 2026-09-06 by w_exception_flow.
+-- `always_throws` is decidable from syntax in exactly one case (no `return`
+-- anywhere, a `throw` at the top level of the body), and a call to such a
+-- function is an abrupt transfer for the rest of ITS OWN function — a `try`
+-- stops it, and so does the function boundary, beyond which propagation is
+-- w_exn_propagation's question. `super` is the same rule reached through
+-- `ctor_of[flow]`, because a super call resolves to the CLASS and not to the
+-- body that runs.
+handled(js, call_expression, controlflow, r_call_is_an_exit).
+handled(js, super,           controlflow, r_call_is_an_exit).
 
 -- TWO MEMBER FORMS — a property read is not a transfer UNLESS the property is
 -- an accessor, and a getter is a call wearing a read's syntax. Telling them

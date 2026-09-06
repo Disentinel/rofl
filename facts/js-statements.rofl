@@ -89,9 +89,15 @@ ignored(js, block_statement,       dataflow, a_a_statement_carries_no_value).
 ignored(js, expression_statement,  dataflow, a_a_statement_carries_no_value).
 ignored(js, variable_declaration,  dataflow, a_the_declarator_carries_it).
 -- `throw e` moves a value from the throw site to whichever `catch` receives it,
--- and no rule here connects the two.
-unknown_because(js, throw_statement, dataflow, not_yet).
-unknown_because(js, catch_clause,    dataflow, not_yet).
+-- and until 2026-09-06 no rule here connected the two. `caught_value[flow]`
+-- does, and it is the first edge in this layer that travels along the EXCEPTION
+-- PATH rather than along the syntax — every other rule reads a binder, an
+-- argument position or a member key, while a catch parameter is bound by
+-- something that happens elsewhere in the block. The value that crosses a CALL
+-- edge is named as a frontier (`catch_from_call[flow]`) with w_exn_propagation
+-- as its owner, so the audit beside it can stay at zero honestly.
+handled(js, throw_statement, dataflow, r_exception_value).
+handled(js, catch_clause,    dataflow, r_exception_value).
 
 -- ---------------------------------------------------------------------------
 -- MODULES. None of them can appear in a module graph.

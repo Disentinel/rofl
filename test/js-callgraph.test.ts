@@ -633,8 +633,11 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // chain w_cf_reachability was closed on — the LOCAL rule covers `sleeper` and
   // only the transitive one covers `dormant`, which is the whole content of
   // that item and is asserted by name in test/js-controlflow.test.ts.
+  // EIGHT on 2026-09-06 with the exception fixtures: `unlit` follows `super(n)`
+  // into a constructor that always throws. `after` is on this list for the same
+  // reason it always was — and for the FIRST TIME the layer explains it.
   const NEVER_CALLED = ['after', 'dormant', 'neverCased', 'neverReached', 'pickA',
-                        'sleeper', 'unreached'];
+                        'sleeper', 'unlit', 'unreached'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -736,7 +739,12 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // model over-approximates on purpose, four are the V8 generator-frame limit,
   // one is exception propagation, and one is `useTry -> after`. A count would
   // have said "11".
+  // TWELVE on 2026-09-06, and the new one is the exception fixture's own point:
+  // `Lit -> unlit` is derived from syntax, and the runtime never takes it
+  // because `super(n)` enters a constructor that always throws. It joins the
+  // control-flow half of this list, which `may_not_run` now explains.
   assert.deepEqual(extra, [
+    'Lit -> unlit',
     'outerGen -> innerGen', 'sleeper -> dormant',
     'useAbrupt -> neverReached', 'useCased -> neverCased',
     'useDelegated -> outerGen', 'useDormant -> sleeper', 'useForOfGen -> pick',
@@ -867,7 +875,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // each with a `trace()` call and each called once.
   // 105 -> 110 the same day: the reachability fixture added three more in
   // alpha.mjs and two in beta.mjs, on the same pattern.
-  assert.equal(sites - resolved, 110, `${sites - resolved} call sites vanished from the frontier`);
+  // 110 -> 127: the exception fixtures — thirteen functions across both halves,
+  // each with its `trace()` call.
+  assert.equal(sites - resolved, 127, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

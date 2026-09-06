@@ -131,6 +131,70 @@ stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 -- first three are w_cf_completion; the fourth is w_exn_propagation, and it is
 -- the one that corrected this item's own witness.
 
+-- ---------------------------------------------------------------------------
+-- A CALL IS AN EXIT, 2026-09-06 — queue item w_exception_flow, and it corrects
+-- an attribution this file made TWO ITERATIONS AGO. When w_cf_abrupt_transfer
+-- closed, `useTry -> after` was moved from that item to w_exn_propagation (28,
+-- the TRANSITIVE closure) on the reasoning that `after` follows a call that
+-- throws. Measured now: `thrower`'s own body contains the throw, with no
+-- handler and no return, so nothing has to propagate anywhere. It is item 25's
+-- half — a call that leaves by THROWING rather than returning — and the
+-- transitive item was one step too far. Ninth measurement in this session to
+-- correct an attribution, and the first to correct one of my own corrections.
+--
+-- A SOUND UNDER-APPROXIMATION, and the soundness is the whole design. "F always
+-- throws" is completion analysis in general (w_cf_completion), but one case is
+-- decidable from syntax alone: NO `return` anywhere in the body, and a `throw`
+-- at the TOP LEVEL of it. Then control cannot leave the body by returning
+-- (there is no return), cannot fall off the end (the top-level throw is reached
+-- or an inner throw fires first), and cannot skip past the throw. The error
+-- direction is the safe one: a function that does always throw but has a return
+-- somewhere is simply not named, so a call to it stays live.
+has_return[code](F)    :- fn_node[code](F), ast_node[code](R, return_statement, _, _),
+                          ast_within[code](F, R).
+top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
+                          ast_child[code](B, body, _, S),
+                          ast_node[code](S, throw_statement, _, _).
+always_throws[code](F) :- top_throw[code](F), not has_return[code](F).
+
+throwing_call[code](C) :- call_site[code](C, _), resolves[code](C, F),
+                          always_throws[code](F).
+-- A SECOND ARM WAS WRITTEN AND REMOVED, and the mutant is why. `super(...)`
+-- looked like it needed a hop through `ctor_of[flow]`, because a super call
+-- names the CLASS and not the body that runs. Measured: `resolves` already
+-- returns the `class_method` for a super call, so the arm never fired — the
+-- mutant that deleted it changed NOTHING, on any relation. A rule no corpus
+-- exercises cannot go red, so shipping it would have been a capability
+-- invisible to every gate here, which is the failure this repository names by
+-- name. `super x controlflow` is answered by the arm above.
+
+-- ...AND A TRY STOPS IT. The call is an abrupt transfer for the statement list
+-- it sits in, and for every list further out UNTIL a `try` catches it: code
+-- after the try runs precisely because the handler caught the throw. Without
+-- this clause the rule would report everything after a `try` as unreachable,
+-- which is the failure mode `may_not_run` was built to avoid — a may-set that
+-- is too WIDE stops being a hedge and becomes a false claim.
+try_stops[code](C, T) :- throwing_call[code](C), ast_node[code](T, try_statement, _, _),
+                         ast_within[code](T, C).
+try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
+
+-- ...AND SO DOES THE FUNCTION BOUNDARY, which the first draft omitted and the
+-- corpus caught in one run: without `ast_within(G, S)` the walk up from a
+-- throwing call reached the CLASS DECLARATION and then the module's own
+-- statement list, so everything after `class Lit` in alpha.mjs was reported
+-- unreachable — `after_abrupt` 3 -> 37, `reachable` 110 -> 38. An exit leaves
+-- the CURRENT function; whether it leaves the caller too is the transitive
+-- question, and w_exn_propagation owns it. The boundary between the two items
+-- is exactly the boundary this literal draws.
+--
+-- ORDERED FOR COST: `throwing_call` is a handful of rows and binds C, so
+-- `nearest_v` is a probe and `ast_within` is walked UP from a few nodes rather
+-- than over every containment pair.
+abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
+                            ast_within[code](G, S), ast_within[code](S, C),
+                            stmt_seq_field(F), ast_child[code](B, F, I, S),
+                            not try_stops[code](C, S).
+
 -- A STATEMENT AFTER AN ABRUPT TRANSFER NEVER RUNS, which is stronger than what
 -- `guarded` says — `guarded` is a MAY-not-run and this is a NEVER. The weaker
 -- word is used deliberately: the layer's vocabulary is the may-set, every

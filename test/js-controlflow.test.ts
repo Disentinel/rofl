@@ -152,7 +152,11 @@ test('the layer answers, waives and defers, and nothing falls through', () => {
   // ...and the deferral that is still typed and still open belongs to another
   // layer's question entirely — a positive control that `not_yet` did not go
   // extinct along with this item.
-  assert.deepEqual(m.q('reason[audit](js, catch_clause, none, dataflow, R)').flat(),
+  // THE CONTROL MOVED TWICE. It named `throw_statement x dataflow`, then
+  // `catch_clause x dataflow` — and w_exception_flow closed BOTH on 2026-09-06.
+  // A positive control that keeps landing on cells this loop is about to answer
+  // is a control chasing the work; `decorator` is in nobody's queue path.
+  assert.deepEqual(m.q('reason[audit](js, decorator, none, dataflow, R)').flat(),
     ['not_yet']);
 });
 
@@ -263,8 +267,11 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
       // byte-identical either way; only `after_abrupt`, which says NEVER rather
       // than MAY, distinguishes the two worlds. The weaker consumer is
       // structurally unable to check the stronger relation's field vocabulary.
-      assert.equal(m.n('after_abrupt[code](S)'), 1, 'the switch-case answer is gone');
-      assert.equal(base().n('after_abrupt[code](S)'), 2, 'positive control: it was there');
+      // 2 -> 4 on 2026-09-06: `abrupt_at` gained a second source (a call that
+      // always throws), so the field typo now costs one of four rather than one
+      // of two. The DELTA is the assertion; the totals are the control.
+      assert.equal(m.n('after_abrupt[code](S)'), 3, 'the switch-case answer is gone');
+      assert.equal(base().n('after_abrupt[code](S)'), 4, 'positive control: it was there');
       const names = (w: World) => new Set(w.q('may_not_run[code](F)')
         .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
       assert.deepEqual([...names(m)].sort(), [...names(base())].sort(),
@@ -334,6 +341,100 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
 
 for (const g of REACH) test(`${g.name} — reachable[code]`, () => g.expect(build(g.mut), base()));
 
+// ---------------------------------------------------------------------------
+// 3c. A CALL IS AN EXIT (w_exception_flow), and the mutant set is the story.
+//
+// SEVEN MUTANTS, and the first run killed THREE. The four survivors all said the
+// same thing — the corpus had no case that could tell the difference — so four
+// fixtures were written and every one of them died on the second run. That is
+// the sequence this repository asks for: a survivor is a missing witness before
+// it is a missing rule.
+//
+// ONE SURVIVED FOR A DIFFERENT REASON AND IT IS THE ONE WORTH KEEPING IN MIND.
+// `m6` (read the try's `handler` where the rule reads its `block`) died on the
+// first run and then SURVIVED the second, because the `rethrown` fixture added
+// a throw inside a handler and the two errors swapped places — one row lost,
+// one row gained, the COUNT unmoved. The harness was comparing counts. Naming
+// the rows killed it again: base is `caught<-559`, the mutant is `inner<-526`.
+// A fixture can blind a mutant, and only a named row notices.
+const EXIT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'e1 a function with a return is called one that always throws',
+    mut: [{ find: 'always_throws[code](F) :- top_throw[code](F), not has_return[code](F).',
+            replace: 'always_throws[code](F) :- top_throw[code](F).' }],
+    expect: (m, b) => {
+      assert.equal(m.n('always_throws[code](F)'), b.n('always_throws[code](F)') + 1);
+      assert.equal(names(m).has('alsoRuns'), true, 'a live function goes dead');
+      assert.equal(names(b).has('alsoRuns'), false, 'positive control');
+    },
+  },
+  {
+    name: 'e2 a throw anywhere is read as a throw at the top level',
+    mut: [{ find: `top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
+                          ast_child[code](B, body, _, S),
+                          ast_node[code](S, throw_statement, _, _).`,
+            replace: `top_throw[code](F)     :- fn_node[code](F), ast_within[code](F, S),
+                          ast_node[code](S, throw_statement, _, _).` }],
+    expect: (m, b) => {
+      assert.equal(names(m).has('stillRuns'), true, 'a nested throw is read as unconditional');
+      assert.equal(names(b).has('stillRuns'), false, 'positive control');
+    },
+  },
+  {
+    name: 'e3 a try no longer stops the exit',
+    mut: [{ find: ',\n                            not try_stops[code](C, S).', replace: '.' }],
+    expect: (m, b) => {
+      assert.equal(names(m).has('afterTheTry'), true, 'code after a catching try goes dead');
+      assert.equal(names(b).has('afterTheTry'), false, 'positive control');
+    },
+  },
+  {
+    name: 'e4 the exit escapes its own function',
+    mut: [{ find: `abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
+                            ast_within[code](G, S), ast_within[code](S, C),`,
+            replace: 'abrupt_at[code](B, F, I) :- throwing_call[code](C), ast_within[code](S, C),' }],
+    expect: (m, b) => {
+      // the walk reaches the module's own statement list and kills the rest of it
+      assert.ok(m.n('after_abrupt[code](S)') > b.n('after_abrupt[code](S)') * 5,
+        `after_abrupt ${b.n('after_abrupt[code](S)')} -> ${m.n('after_abrupt[code](S)')}`);
+      assert.equal(names(m).has('apply2'), true, 'a function nothing throws near goes dead');
+    },
+  },
+  {
+    name: 'e5 every call is an exit, whatever the callee does',
+    mut: [{ find: 'resolves[code](C, F),\n                          always_throws[code](F).',
+            replace: 'resolves[code](C, F).' }],
+    expect: (m, b) => assert.ok(m.n('throwing_call[code](C)') > b.n('throwing_call[code](C)') * 20,
+      `throwing_call ${b.n('throwing_call[code](C)')} -> ${m.n('throwing_call[code](C)')}`),
+  },
+  {
+    name: 'e6 the handler is read as the block the try guards',
+    mut: [{ find: 'ast_child[code](T, block, 0, B).', replace: 'ast_child[code](T, handler, 0, B).',
+            file: 'rules/js-dataflow.rofl' }],
+    // NAMED, not counted: this mutant survives a count. See the note above.
+    expect: (m, b) => assert.notDeepEqual(caught(m), caught(b),
+      'the pair changes identity while the count does not'),
+  },
+  {
+    name: 'e7 a throw inside a handler is offered to its own clause',
+    mut: [{ find: 'thrown_in[flow](T, V)    :- try_block[flow](T, B), ast_within[code](B, Th),',
+            replace: 'thrown_in[flow](T, V)    :- ast_node[code](T, try_statement, _, _), ast_within[code](T, Th),',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.equal(caught(m).length, caught(b).length + 1, 'a rethrow becomes its own source');
+      assert.equal(m.n('catch_from_call[flow](P)'), b.n('catch_from_call[flow](P)') - 1);
+    },
+  },
+];
+
+const names = (w: World) => new Set(w.q('may_not_run[code](F)')
+  .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
+const caught = (w: World) => w.q('caught_value[flow](P, V)')
+  .map(([p, v]) => `${w.q(`ast_name[code](${p}, N)`)[0]?.[0] ?? p}<-${w.q(`ast_node[code](${v}, K, F, L)`)[0]?.[2] ?? v}`)
+  .sort();
+
+for (const g of EXIT) test(`${g.name} — a call is an exit`, () => g.expect(build(g.mut), base()));
+
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
   // Asked of the rule before it was believed, which is the question that pays.
   // Five shapes were built; four are covered and the fourth is covered for a
@@ -399,9 +500,15 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // function behind it — is NOT here, and its absence is the whole point of
   // w_cf_reachability: nothing guards the call to `dormant`, so `may_not_run`
   // says it runs. Only the transitive relation says otherwise.
+  // ELEVEN on 2026-09-06 with the exception fixtures, and the three new names
+  // are three different reasons: `after` follows a call that always throws (the
+  // gap this layer carried since it landed), `unlit` follows `super(n)` into a
+  // constructor that always throws, and `label` is called only from inside a
+  // catch arm — a guard, so the LOCAL rule covers it and the runtime enters it
+  // anyway, which is what a may-set is for.
   assert.deepEqual([...mayNotRun].sort(),
-    ['bet', 'guardedElse', 'loopBody', 'neverCased', 'neverReached', 'rescue',
-     'sleeper', 'unreached']);
+    ['after', 'bet', 'guardedElse', 'label', 'loopBody', 'neverCased',
+     'neverReached', 'rescue', 'sleeper', 'unlit', 'unreached']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   assert.deepEqual([...reached].filter((f) => !mayNotRun.has(f)), ['dormant'],

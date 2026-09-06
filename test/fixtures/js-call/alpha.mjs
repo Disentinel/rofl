@@ -436,6 +436,137 @@ function neverCased(n) {
 // does, because `sleeper`'s only call site is a guard arm the program does not
 // take. The names are deliberately unique across the corpus — a file-scoped
 // binder has cost three of the last four iterations an over-approximation.
+// THE EXCEPTION PATH — queue item w_exception_flow, and BOTH halves needed a
+// fixture. The corpus had exactly one function that cannot return normally
+// (`thrower`) and exactly one catch clause with a parameter, which only voided
+// it, so the value half had nothing to be tested against at all.
+//
+// A CONSTRUCTOR THAT ALWAYS THROWS, so `super(...)` is an exit too: `super`
+// resolves to the CLASS and not to the body that runs, and `ctor_of[flow]`
+// walks the extends chain. `unlit` sits after the `super(n)` call in the same
+// statement list and can never run.
+function unlit(n) {
+  trace();
+  return n;
+}
+class Fuse {
+  constructor(n) {
+    trace();
+    throw new Error('fuse ' + n);
+  }
+}
+class Lit extends Fuse {
+  constructor(n) {
+    trace();
+    super(n);
+    unlit(n);
+  }
+}
+function useFuse(n) {
+  trace();
+  try {
+    return new Lit(n);
+  } catch {
+    return 0;
+  }
+}
+
+// THREE FUNCTIONS THAT DO NOT ALWAYS THROW, and they exist because three
+// mutants SURVIVED against the corpus without them — the soundness conditions
+// were untested, not satisfied. Each is called with a statement behind it that
+// really runs, so the oracle judges the claim rather than the rule judging
+// itself.
+function stillRuns(n) {
+  trace();
+  return n;
+}
+function nestedThrow(n) {
+  // no `return` anywhere, but the throw is NOT top-level: for n >= 0 this
+  // returns undefined. Reading a throw anywhere as top-level kills `stillRuns`.
+  trace();
+  if (n < 0) {
+    throw new Error('nested ' + n);
+  }
+}
+function useNested(n) {
+  trace();
+  nestedThrow(n);
+  return stillRuns(n);
+}
+function alsoRuns(n) {
+  trace();
+  return n;
+}
+function topThrowWithReturn(n) {
+  // a top-level throw AND a return, so it can leave normally. Dropping the
+  // no-return condition kills `alsoRuns`.
+  trace();
+  if (n >= 0) {
+    return n;
+  }
+  throw new Error('neg ' + n);
+}
+function useWithReturn(n) {
+  trace();
+  topThrowWithReturn(n);
+  return alsoRuns(n);
+}
+// ...and a throw inside a HANDLER, which its own clause does not catch. Reading
+// the try as a whole instead of its `block` field offers the rethrow to `inner`
+// as a candidate for itself.
+function risky(n) {
+  trace();
+  return n;
+}
+function rethrown(n) {
+  trace();
+  try {
+    return risky(n);
+  } catch (rethrowCaught) {
+    // NOT named `inner`: alpha.mjs already declares `function inner(y)` and the
+    // binder is FILE-scoped, so `String(inner)` read as passing that FUNCTION at
+    // argument position 0 and the argument-position census gained `0 -> inner`.
+    // Fourth iteration in five that this limitation has cost a fixture name, and
+    // the first where the gate that caught it named the row rather than a count.
+    throw new Error('re ' + String(rethrowCaught));
+  }
+}
+
+// ...and a statement AFTER a try whose block throws, which RUNS because the
+// handler caught it. Without it the `try_stops` clause had no witness at all —
+// `useTry`'s try IS its whole body, so nothing followed it and the mutant that
+// deleted the clause survived.
+function afterTheTry(n) {
+  trace();
+  return n;
+}
+function useCaught(n) {
+  trace();
+  try {
+    thrower(n);
+  } catch {
+    void 0;
+  }
+  return afterTheTry(n);
+}
+
+// ...and the VALUE a throw delivers. `caught` is bound by something that
+// happens elsewhere in the block, which no other rule in the value layer has
+// ever had to express. It is passed on to a call so the edge is observable
+// rather than merely derived.
+function label(e) {
+  trace();
+  return String(e);
+}
+function useThrownValue(n) {
+  trace();
+  try {
+    throw new Error('tagged ' + n);
+  } catch (caught) {
+    return label(caught);
+  }
+}
+
 function dormant(n) {
   trace();
   return n;
@@ -655,6 +786,12 @@ export async function main() {
     useAbrupt(1),
     useCased(1),
     useDormant(1),
+    useFuse(1),
+    useThrownValue(1),
+    useNested(1),
+    useWithReturn(1),
+    rethrown(1),
+    useCaught(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

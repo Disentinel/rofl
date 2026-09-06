@@ -670,3 +670,54 @@ may_be_lit[flow](E, V)  :- plain_assign[flow](E),
 imports(flow, code).
 imports(flow, main).
 imports(flow, $kernel).
+
+-- ---------------------------------------------------------------------------
+-- THE VALUE A `throw` DELIVERS TO A `catch`, 2026-09-06 — queue item
+-- w_exception_flow, and it is the first edge in this layer that travels along
+-- the EXCEPTION PATH rather than along the syntax. Every other rule here reads
+-- a binder, a parameter position or a member key; a catch parameter is bound by
+-- something that happens somewhere else in the block.
+--
+-- THE CORPUS HAD ONE CATCH WITH A PARAMETER AND IT ONLY VOIDED IT, so there was
+-- nothing to test against and the fixture came first — the third item running
+-- for which that was true.
+catch_of[flow](T, H)     :- ast_node[code](T, try_statement, _, _),
+                            ast_child[code](T, handler, 0, H).
+catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _, _),
+                            ast_child[code](H, param, 0, P).
+-- THE GUARDED BLOCK, not the handler and not the finalizer. `try` carries all
+-- three under different fields, and a throw inside the HANDLER is not caught by
+-- the same clause — reading `ast_within(T, Th)` instead of `ast_within(B, Th)`
+-- would have said it was.
+try_block[flow](T, B)    :- ast_node[code](T, try_statement, _, _),
+                            ast_child[code](T, block, 0, B).
+thrown_in[flow](T, V)    :- try_block[flow](T, B), ast_within[code](B, Th),
+                            ast_node[code](Th, throw_statement, _, _),
+                            ast_child[code](Th, argument, 0, V).
+
+-- A MAY-SET, and it over-approximates in one named way: a throw inside a NESTED
+-- try is delivered to the inner handler and this rule offers it to the outer one
+-- as well. That is the safe direction for a value layer — an extra candidate,
+-- never a missing one — and it is the shape `w_cf_completion` would settle.
+caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            thrown_in[flow](T, V).
+may_be_node[flow](P, V)  :- caught_value[flow](P, V).
+
+-- A CATCH PARAMETER WITH NO LEXICAL THROW IS TWO DIFFERENT THINGS, and the
+-- first draft called both a defect — which put the audit at 1 on an honest
+-- checkout, the failure mode this repository has already paid for once. The
+-- corpus's own `catch (e)` in `useTry` receives what `thrower()` throws, and
+-- that is a FRONTIER with an owner, not a hole: the value crosses a call edge
+-- and w_exn_propagation owns crossing it. Declaring the openness so the audit
+-- can stay at zero is the same move `mechanism_open` makes for a mechanism.
+call_in_try[flow](T)     :- try_block[flow](T, B), ast_within[code](B, C),
+                            call_site[code](C, _).
+catch_from_call[flow](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            not thrown_in[flow](T, _), call_in_try[flow](T).
+
+-- ...and THIS is the hole: a handler that binds a name where nothing in the
+-- guarded block can throw at all — no `throw`, no call. The parameter has no
+-- source under any reading, which is a dead handler rather than a limit of the
+-- model, and it is the one of the two worth going red for.
+catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                             not thrown_in[flow](T, _), not call_in_try[flow](T).

@@ -363,9 +363,23 @@ claim(queued, js, object_method,             none, controlflow, w_cf_reachabilit
 -- `throw e` moves a value into whichever `catch` receives it, which travels
 -- along the exception path rather than along the syntax and is the first
 -- dataflow edge here that does.
-work(w_exception_flow, "what a call may throw and where it lands: the value from throw to catch, and a call as an exit").
+-- CLOSED 2026-09-06, and it took back a witness that had been given away. When
+-- w_cf_abrupt_transfer closed, `useTry -> after` was re-attributed to
+-- w_exn_propagation (28, the TRANSITIVE half) because `after` follows a call
+-- that throws. Measured here: `thrower`'s own body carries the throw, with no
+-- handler and no return, so nothing propagates anywhere — it is THIS item's
+-- half, a call that leaves by throwing, and the transitive item was one step
+-- too far. Ninth attribution corrected by measurement this session and the
+-- first to correct one of my own corrections.
+--
+-- BOTH HALVES NEEDED A FIXTURE. The corpus held one function that cannot
+-- return normally and one catch clause with a parameter that only voided it.
+work(w_exception_flow, "DONE 2026-09-06: r_call_is_an_exit + r_exception_value; 4 cells, and `after` explained at last").
 work_order(w_exception_flow, 25).
-work_state(w_exception_flow, open).
+work_state(w_exception_flow, done).
+work_spawned(w_exception_flow, f_a_call_that_exits_stops_at_the_function_boundary).
+work_spawned(w_exception_flow, f_a_fixture_can_blind_a_mutant_and_a_count_cannot_tell).
+work_spawned(w_exception_flow, f_the_arm_written_from_the_language_not_from_the_store).
 claim(queued, js, call_expression,  none, controlflow, w_exception_flow).
 claim(queued, js, super,            none, controlflow, w_exception_flow).
 claim(queued, js, throw_statement,  none, dataflow,    w_exception_flow).
