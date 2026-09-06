@@ -51,15 +51,16 @@ test('locals resolve lexically, so two loops sharing a name are not a dependency
     'the demand block really does read the list the decode block built');
 });
 
-test('the before-A blocks form a DAG, and there are nine of them now', () => {
+test('the before-A blocks form a DAG, and there are ten of them now', () => {
   const cyclic = sccs(BEFORE_A, IND).filter((c) => c.length > 1);
-  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the nine');
+  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the ten');
   // six when this was written; `stratumCone` made it seven and `scheduleToken`
   // — the seam the round evaluator overrides — makes it eight; `planBody`,
   // which decides where a negation may stand, makes it nine and lands BELOW
   // `classify`, since classify now reads the plan. The ladder absorbed each
-  // without a cycle, which is the claim under test.
-  assert.equal(BEFORE_A.length, 9);
+  // without a cycle, which is the claim under test; `policyAnswer` — the whole
+  // of what asks the kernel's own program — makes it ten.
+  assert.equal(BEFORE_A.length, 10);
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
@@ -70,9 +71,18 @@ test('the ladder: four rungs, and safety is the bottom one', () => {
   // because it induces edges from `this.<method>(` calls and `planBody` is a
   // free function. So the two share the bottom rung. The dependency is real and
   // this instrument is blind to it; recorded rather than asserted away.
+  // MEASURED AGAIN, and it corrected me a second time. I expected
+  // `policyAnswer` on the bottom rung — it calls no method of `this` at all —
+  // and the graph puts it one rung up, on a single edge to `planBody` keyed
+  // `local decl@265:POLICY_BUDGET`. That is the module constant the policy run
+  // spends, and it sits inside `planBody`'s line range only because a block
+  // runs to the next anchor and swallows what follows it. So the edge is real
+  // to this instrument and means nothing about the negation planner. Left as
+  // measured: an instrument that reports what the code says beats one edited
+  // until it says what I meant.
   assert.deepEqual(layout, [
     ['classify', 'planBody', 'readStrata'],          // range restriction; where a negation may stand; the stratum MAX
-    ['prepare', 'scheduleToken', 'stratumCone'],     // reserved head; the stratum cone; the schedule token
+    ['policyAnswer', 'prepare', 'scheduleToken', 'stratumCone'],  // asking the kernel's program; reserved head; the stratum cone; the schedule token
     ['demandSet'],                                   // the demand set — reads `safe`
     ['runGate', 'runWellFounded'],                   // what runs at all; well-founded admissibility
   ]);

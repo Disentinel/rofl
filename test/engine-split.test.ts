@@ -89,8 +89,8 @@ test('the split is keyed by names, not by line numbers', () => {
   // 29 -> 30: `planBody`, declared as its own block rather than absorbed into
   // the header, because it is a DECISION and an absorbed definition inherits a
   // category nobody chose — which is what this control exists to catch.
-  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 30);
-  assert.equal(DECLS.filter((d) => d.key.kind === 'part').length, 12);
+  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 31);
+  assert.equal(DECLS.filter((d) => d.key.kind === 'part').length, 9);
   assert.equal(DECLS.filter((d) => d.key.kind === 'file').length, 1);
   // the 12 parts cut exactly four methods, and that is the declared loan
   const cut = new Set(DECLS.flatMap((d) => (d.key.kind === 'part' ? [d.key.of] : [])));
@@ -171,7 +171,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', () => {
+test('the split: mechanism is 598 of 928 code lines, policy 246 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -190,7 +190,12 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   // solve the plan instead of the written body. THE WHOLE +50 IS POLICY AND
   // PLUMB: `mech` below does not move by a line, which is the claim rather
   // than the constant — a rule about what a sentence MEANS adds no machinery.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 901);
+  // 901 -> 928 (+27): `policyAnswer` — copy the reflection into a store of its
+  // own, run policy.rofl there, unpack four relations — minus three walks and
+  // two `for(;;)` loops it replaces. ASKING A PROGRAM IS LONGER THAN COMPUTING
+  // THE ANSWER, and that is the finding, not an accident: the decision left the
+  // host (it is nine clauses of policy.rofl now) and the line count went up.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 928);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -211,7 +216,11 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   // control on that classification: `planBody` answers "where may a negation
   // stand", which is a decision, and the solving that follows it was already
   // here. If this number had moved, the POL declaration would be wrong.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 550);
+  // 550 -> 598 (+48): all of `policyAnswer`. It is a FIXED cost — the same
+  // method answers any question policy.rofl can be asked — so the next decision
+  // moved should lower `decides` without moving this at all. That is the
+  // prediction this number exists to refute.
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 598);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -219,11 +228,14 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   // CHARGED write, which lands in the admissibility block below — a POL block,
   // before-A. Measured off the block table rather than reasoned from the diff.
   // 126 -> 174 (+48): the whole of `planBody`, declared POL in the block table.
-  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 174);
+  // 174 -> 151 (-23): `reads`, `opaqueClosure` and `cone` are policy.rofl now.
+  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 151);
   // 92 -> 93 (+1): `classify` reads the plan instead of the written body, and
   // that block is the range-restriction analysis — POL*, since it needs the
   // rules themselves rather than only a program's text.
-  assert.equal(rows(W, 'block(engine_ts, L, pol_star)'), 93);
+  // 93 -> 95: `opaqueSet` keeps the seed and gains the two lines that hand it
+  // to the program and take the closure back.
+  assert.equal(rows(W, 'block(engine_ts, L, pol_star)'), 95);
   // 71 -> 82 (+11): DEFAULT_SPACE in the constants block, the three fields
   // (space, rows, peakRows) and the constructor option that reads it
   // 82 -> 83 (+1): the import line for `KERNEL_PERSP` and `isKernelLedger`.
@@ -238,14 +250,17 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   // program, so if this number HAD moved the classification above would be
   // wrong. It is the negative control on the +7 landing in MECH.
   // 218 -> 267 (+49): 48 of planBody plus the one line in `classify`.
-  assert.equal(rows(W, 'policy(engine_ts, L)'), 267);
+  assert.equal(rows(W, 'policy(engine_ts, L)'), 246);
   // AND THE SPLIT THAT SAYS WHAT CAN MOVE. `decides` is policy whose judgement
   // lives in this code; `enforces` is policy that reads a judgement the rules
   // already derived and acts on it — `checkUnstratified` reads `unstratified/1`
   // out of the store, which is policy-as-data by construction, and still counts
   // as nine policy lines. A metric that called all 267 movable would stall at
   // 46 and look like failure; this is the number the work is actually against.
-  assert.equal(rows(W, 'decides(engine_ts, L)'), 221);
+  // 221 -> 200. And the number that matters more, because it counts JUDGEMENTS
+  // rather than typing: the host held 12 decisions and holds 9.
+  assert.equal(rows(W, 'decides(engine_ts, L)'), 200);
+  assert.equal(DECLS.filter((d) => d.role === 'decides').length, 9);
   assert.equal(rows(W, 'enforces(engine_ts, L)'), 46);
   assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
                rows(W, 'policy(engine_ts, L)'), 'every policy line has a role');
@@ -257,9 +272,9 @@ test('the split: mechanism is 550 of 901 code lines, policy 267 — by query', (
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
-  assert.equal(S.byCat['MECH'].code, 550);
-  assert.equal(S.total.code, 901);
-  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 267);
+  assert.equal(S.byCat['MECH'].code, 598);
+  assert.equal(S.total.code, 928);
+  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 246);
 });
 
 test('policy splits by WHEN the answer is needed, and most of it is needed too early', () => {
@@ -269,9 +284,10 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
   // because the admissibility block they land in runs before a rule fires
   // 121 -> 170 (+49): a rule is planned once, when it is classified, and never
   // again — so every line of the negation-order fix is needed before phase A.
-  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 170);
-  assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 66);
-  assert.equal(31 + 170 + 66, rows(W, 'policy(engine_ts, L)'));
+  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 184);
+  // 66 -> 31: the reuse plan's three decisions left for policy.rofl.
+  assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 31);
+  assert.equal(31 + 184 + 31, rows(W, 'policy(engine_ts, L)'));
   // MECH and PLUMB lines carry a tense too, and it must NOT leak into the
   // policy total: the relation is defined over `policy`, not over `block`.
   assert.equal(rows(W, 'policy_when(engine_ts, L, na)'), 0);
@@ -279,8 +295,10 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
 
 test('the scanner asserts: the structure is in the store, not in a print', () => {
   // 42 -> 43: one more block, and the tiling still has no gap.
-  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 43);
-  assert.equal(rows(W, 'part_of(K, M)'), 12);
+  // 43 -> 41: three block declarations removed with the code they named, one
+  // added for the asking.
+  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 41);
+  assert.equal(rows(W, 'part_of(K, M)'), 9);
   assert.equal(rows(W, 'cut_method(M)'), 4);
   assert.equal(rows(W, 'target(engine_ts, F)'), 1);
   // the emitted text is a program, and it parses: `world()` throws otherwise.
@@ -299,21 +317,21 @@ test('the contamination is declared, dated and COUNTABLE', () => {
   // 96 -> 98: the two hand judgements the new block carries, cat and tense.
   // 98 -> 115 (+17): the ROLE of every policy block — decides or enforces —
   // which is the judgement that says whether it can move into .rofl at all.
-  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 115);
-  assert.equal(rows(W, 'dirty(engine_split, role, U, R)'), 17, 'one per POL or POL* block');
-  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 43, 'one per block: the MECH/POL verdict');
-  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 43, 'one per block: the before-A verdict');
-  assert.equal(rows(W, 'dirty(engine_split, part, U, R)'), 12, 'the slices inside a method');
+  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 105);
+  assert.equal(rows(W, 'dirty(engine_split, role, U, R)'), 14, 'one per POL or POL* block');
+  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 41, 'one per block: the MECH/POL verdict');
+  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 41, 'one per block: the before-A verdict');
+  assert.equal(rows(W, 'dirty(engine_split, part, U, R)'), 9, 'the slices inside a method');
   // the two loans retire on different events and are counted apart
-  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 103);
-  assert.equal(rows(W, 'dirty(engine_split, K, U, split_the_method)'), 12);
+  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 96);
+  assert.equal(rows(W, 'dirty(engine_split, K, U, split_the_method)'), 9);
   // ZERO IS THE TARGET, and it is a query, not a promise
-  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 43);
+  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 41);
   // NEGATIVE CONTROL: the loan table is not a rule that says yes to anything
   assert.equal(rows(W, 'dirty(engine_split, K, U, someday)'), 0);
   assert.equal(rows(W, 'dirty(some_other_scanner, K, U, R)'), 0);
   // and the table is generated from the declarations, so it cannot go stale
-  assert.equal(contamination().length, 115);
+  assert.equal(contamination().length, 105);
 });
 
 // ---------------------------------------------------------------------------
@@ -367,9 +385,9 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+550 code/);
-  assert.match(text, /TOTAL\s+901 code/);
-  assert.match(text, /before-A\s+170 code lines/);
+  assert.match(text, /MECH\s+598 code/);
+  assert.match(text, /TOTAL\s+928 code/);
+  assert.match(text, /before-A\s+184 code lines/);
 });
 
 test('the definition index reads src/engine.ts, and it is not a grep', () => {

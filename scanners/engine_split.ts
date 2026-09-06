@@ -162,24 +162,25 @@ export const DECLS: Decl[] = [
   { id: 'planReuse', key: { kind: 'def' }, cat: 'MECH', when: 'end-of-run',
     anchor: 'private planReuse(): ReusePlan {',
     what: 'the schedule token: a hash of the whole stratum table' },
-  { id: 'reads', role: 'decides', key: { kind: 'part', of: 'planReuse', at: 'const byHead = new Map<string, ERule[]>();' },
-    cat: 'POL', when: 'end-of-run', anchor: 'const byHead = new Map<string, ERule[]>();',
-    what: 'reads(A,B) over every rule concluding A — `dep` without the tense filter' },
   { id: 'opaqueSet', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (1) relations whose contents' },
     cat: 'POL*', when: 'end-of-run', anchor: '// (1) relations whose contents',
     what: 'the opaque set: needs premise tense and a store-shape fact (does this relation hold non-base facts)' },
-  { id: 'opaqueClosure', role: 'decides', key: { kind: 'part', of: 'planReuse', at: 'for (;;) {' },
-    cat: 'POL', when: 'end-of-run', anchor: 'for (;;) {',
-    what: 'opaque, closed upward through reads' },
-  { id: 'cone', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (2) dependency cone' },
-    cat: 'POL', when: 'end-of-run', anchor: '// (2) dependency cone',
-    what: 'the dependency cone: transitive closure, the shape boot.rofl computes twice already' },
   { id: 'fingerprint', key: { kind: 'part', of: 'planReuse', at: '// (3) fingerprint' },
     cat: 'MECH', when: 'end-of-run', anchor: '// (3) fingerprint',
     what: 'FNV over every fact key of a relation. A fold over a relation extension: no rule can do it, and §8 forbids the aggregate that would' },
   { id: 'hits', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (4) hits' },
     cat: 'POL', when: 'end-of-run', anchor: '// (4) hits',
     what: 'hits, the global schedule gate, and the shrink fixpoint over the cone' },
+
+  // ADDED 2026-09-05. `reads`, `opaqueClosure` and `cone` USED TO STAND HERE
+  // and are gone from this file because their code is gone from engine.ts:
+  // they are policy.rofl now, and `policyAnswer` below is the whole of what
+  // asks for them. Three decisions left the host in one move; the LINES did
+  // not fall with them, because asking a program and unpacking its answer is
+  // longer than computing it, which is the finding that move produced.
+  { id: 'policyAnswer', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
+    anchor: 'private policyAnswer(',
+    what: 'ask the kernel\'s own program: copy the reflection into a store of its own, run policy.rofl there, and unpack rule_reads, rule_relation, cone and opaque_closed' },
 
   // ADDED 2026-08-31, by another agent, and it is the fix for a defect this
   // classification's own probe found: on a negative cycle boot.rofl's stratum
@@ -282,7 +283,8 @@ export const DECLS: Decl[] = [
 export const ABSORBED: Record<string, string[]> = {
   header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
   // the one closure inside `planBody` the walker counts as a definition
-  planBody: ['note'],
+  planBody: ['note', 'policyProgram'],
+
   evaluation: ['constructor'],
   negPhase: ['negLevel'],
   activate: ['propagate', 'fireRule', 'fireRuleFront'],

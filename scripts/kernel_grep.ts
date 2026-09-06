@@ -30,7 +30,15 @@ const KERNEL_RELS = [
 // `semantics` is read the same way — the PROGRAM writes it to choose the
 // three-valued semantics — and `unknown` is the one relation of the pair the
 // kernel WRITES: one row per atom the alternating fixpoint leaves undefined.
-const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown'];
+const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
+  // THE KERNEL'S OWN PROGRAM, policy.rofl, whose text is carried in
+  // src/reflect.ts. Its relation names appear in kernel source for the same
+  // reason `stratum` does — the kernel reads them from a program — and the
+  // program that writes them is the kernel's own, evaluated in a store of its
+  // own so no user program's counts or budget move. `opaque_seed` travels the
+  // other way: the host writes it, because the seed needs a premise's tense and
+  // a store-shape fact the reflection does not carry flat.
+  'rule_reads', 'rule_relation', 'cone', 'opaque_closed', 'opaque_seed'];
 // Language syntax tokens the parser must know (keywords, not relations).
 // The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
 // they are here for the same reason `is` and `mod` are: the parser dispatches

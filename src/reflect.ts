@@ -95,6 +95,14 @@ export function isKernelLedger(p: string): boolean {
 export const IFACE = {
   stratum: 'stratum', unstratified: 'unstratified',
   semantics: 'semantics', unknown: 'unknown',
+  // DERIVED BY THE KERNEL'S OWN PROGRAM, policy.rofl, in a store of its own.
+  // They sit here rather than in `V` for the same reason `stratum` does: these
+  // are relations the kernel READS FROM A PROGRAM, and the program that writes
+  // them happens to be the kernel's. `opaque_seed` travels the other way — the
+  // host writes it, because it needs a premise's tense and a store-shape fact
+  // that the reflection does not carry flat.
+  rule_reads: 'rule_reads', rule_relation: 'rule_relation',
+  cone: 'cone', opaque_closed: 'opaque_closed', opaque_seed: 'opaque_seed',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -826,6 +834,69 @@ export function decodeRules(store: FactStore): { rules: DRule[]; diagnostics: st
 
 // ---------------------------------------------------------------------------
 // kernel bootstrap: reserved table, builtin modes, edb marks
+
+/** THE KERNEL'S OWN PROGRAM, and a copy of policy.rofl.
+ *
+ *  src/ carries no `fs` — only src/repl.ts does — so the kernel cannot read its
+ *  own program off disk and the source lives here as text. That makes
+ *  policy.rofl the SOURCE and this the copy, honest only with the gate that
+ *  keeps them identical: test/kernel-policy-program.test.ts.
+ *
+ *  IT IS NOT INSTALLED INTO ANY PROGRAM'S STORE. Measured 2026-09-05: doing so
+ *  turned 18 tests red against a baseline of 8, and the reason was not the
+ *  tests — the kernel's program costs IN PROPORTION to the program it describes,
+ *  so a program's own budget would pay for the kernel's questions about it. It
+ *  runs in a store of its own instead, which agrees with the walk it replaces
+ *  and leaves the program's store untouched to the fact. */
+export const POLICY_SRC = `-- policy.rofl — THE KERNEL'S OWN PROGRAM, carried as data rather than code.
+--
+-- Every rule here was a decision the evaluator made in TypeScript. The owner
+-- chose 2026-09-05 that the kernel SHIPS this program itself, the way
+-- \`bootstrapKernel\` already ships 59 facts into every store: a rule that is not
+-- loaded is not a conservative answer, it is a wrong one, and 22 of the 95
+-- worlds in this repository never load boot.rofl.
+--
+-- SO THIS FILE IS THE SOURCE AND src/reflect.ts CARRIES A COPY. That is the
+-- shape \`examples/ring1/l1.dense.rofl\` already has — a program in two forms,
+-- one readable and one the machine installs — and it is only honest with the
+-- gate that keeps them identical, which test/kernel-policy-program.test.ts is.
+--
+-- The relations conclude into \`[$kernel]\` because they are what the kernel
+-- knows ABOUT a program, like \`concludes\` and \`premise_pos\` they are built
+-- from. A program's own \`reads(E, types)\` — examples/wtf has one — lives in
+-- \`[main]\` and never meets them.
+
+-- WHICH RELATIONS A RELATION'S RULES LOOK AT, positively or negatively.
+-- This is \`dep\` from rules/strata.rofl WITHOUT its \`conclusion_tense(R, now)\`
+-- filter: the reuse plan must see across the tick boundary, because a \`@next\`
+-- conclusion is still something the rule read to produce.
+--
+-- Measured set for set against the host's own walk over \`Evaluation.rules\`,
+-- 2026-09-05: boot.rofl alone 35 pairs, +strata 52, +findings 51,
+-- +kernel-policy 64, +the ring 1 grammar 248. Agree on every one.
+rule_reads(A, B) :- concludes(R, A), premise_pos(R, B).
+rule_reads(A, B) :- concludes(R, A), premise_neg(R, B).
+
+-- EVERY RELATION THE RULES MENTION, on either side. \`planReuse\` builds this as
+-- \`rels\` while it walks; here it falls out of what is already derived.
+rule_relation(A) :- concludes(R, A).
+rule_relation(B) :- rule_reads(A, B).
+
+-- THE DEPENDENCY CONE: the reflexive-transitive closure of \`rule_reads\`. The
+-- host runs a \`for(;;)\` growing sets until nothing moves, which is what a
+-- fixpoint engine does for a living — this is the same answer, stated.
+cone(A, A) :- rule_relation(A).
+cone(A, C) :- cone(A, B), rule_reads(B, C).
+
+-- OPAQUE, CLOSED UPWARD THROUGH READS. A relation that reads an opaque one is
+-- opaque: the evaluation cannot promise to reproduce what it holds. The SEED
+-- stays with the host for now — it needs a premise's tense and a store-shape
+-- fact ("does this relation hold non-base rows"), and the reflection carries
+-- neither flat. That is the whole difference between POL and POL*.
+edb(opaque_seed).
+opaque_closed(A) :- opaque_seed(A).
+opaque_closed(A) :- rule_reads(A, B), opaque_closed(B).
+`;
 
 export function bootstrapKernel(store: FactStore): void {
   const rels = [...RESERVED].sort();

@@ -7,13 +7,13 @@ import {
   type Term, type Subst, type ArithFail, mka, mkf, mki, canonTerm, canonVars, resolve, unify, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
-import type { Lit, BodyElem, Clause } from './parser.ts';
-import { type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
+import { parseProgram, type Lit, type BodyElem, type Clause } from './parser.ts';
+import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
 import {
   V, IFACE, RESERVED, STR_TYPE, decodeRules, type DRule, factTerm, relOfFactTerm, canonBodyElem, canonLit,
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
-  atomTerm, wellFoundedDeclared,
+  atomTerm, wellFoundedDeclared, POLICY_SRC, encodeRule, resolveClauseBooks,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -244,6 +244,25 @@ export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null;
     .filter((v) => !bound.has(v) && (seenIn.get(v)!.size > 1 || !seenIn.get(v)!.has(pending[0])));
   return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
 }
+
+/** The kernel's own program, encoded once. `bootstrapKernel` installs facts
+ *  into every store; this installs nothing anywhere — the rows are held here
+ *  and copied into a scratch store when a question is asked. */
+let policyRows: { rel: string; args: Term[] }[] | null = null;
+function policyProgram(): { rel: string; args: Term[] }[] {
+  if (policyRows === null) {
+    const out: { rel: string; args: Term[] }[] = [];
+    for (const c0 of parseProgram(POLICY_SRC)) {
+      const c = resolveClauseBooks(c0);
+      if (c.body.length === 0) out.push({ rel: c.head.rel, args: c.head.args });
+      else for (const f of encodeRule(c).facts) out.push({ rel: f.rel, args: f.args });
+    }
+    policyRows = out;
+  }
+  return policyRows;
+}
+
+const POLICY_BUDGET = 20_000_000;
 
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
@@ -570,35 +589,27 @@ export class Evaluation {
       if (!a) { a = []; byHead.set(r.clause.head.rel, a); }
       a.push(r);
     }
-    // reads(A) = every relation A's rules look at, positively or negatively
-    //
-    // THIS IS `rule_reads(A, B)` IN policy.rofl, and the two agree set for set
-    // — measured on five programs, 35 to 248 pairs, before anything was cut.
-    // It is still walked here because the plan is made BEFORE the evaluation
-    // that would derive it: planning off an empty relation does not mean `no
-    // reuse`, it means fingerprints computed from an empty graph, which
-    // evaluation 2 then reuses against. The reuse gate caught exactly that.
-    // Spending the rules version needs the policy program evaluated FIRST —
-    // the two-stage bootstrap — which is the next step and not this one.
-    const rels = new Set<string>(byHead.keys());
-    const reads = new Map<string, Set<string>>();
-    for (const [rel, rs] of byHead) {
-      const out = new Set<string>();
-      for (const r of rs) {
-        for (const b of r.clause.body) {
-          if (b.t !== 'bi') { out.add(b.lit.rel); rels.add(b.lit.rel); }
-        }
-      }
-      reads.set(rel, out);
-    }
     // Every firing emits a provenance record, so a rule that READS provenance
-    // is triggered by derivations anywhere in the program, not only by the
-    // ones in its own cone — the one relation the cone argument below cannot
-    // account for. No program in this repository does it; one that does gets
-    // the old behaviour and nothing else changes.
+    // is triggered by derivations anywhere in the program, not only by the ones
+    // in its own cone — the one relation the cone argument below cannot account
+    // for. Asked BEFORE the policy store is built, so a program that reads
+    // provenance pays for none of it.
     if (this.readsProvenance()) return { hits, keys };
 
-    // (1) relations whose contents this evaluation cannot promise to reproduce
+    // ASKED, NOT COMPUTED, and the asking is `policyAnswer` below — a method of
+    // its own so that what DECIDES and what merely fetches do not share a
+    // block. Measured 2026-09-05: leaving them together read as 38 more lines
+    // of policy, because a census counts the block and the block had gained
+    // forty lines of unpacking that decide nothing.
+    const first = this.policyAnswer(null);
+    const rels = new Set<string>([...byHead.keys(), ...first.rels]);
+    const reads = first.reads;
+
+    // (1) relations whose contents this evaluation cannot promise to reproduce.
+    //     THE SEED STAYS HERE: it reads a premise's TENSE and asks whether a
+    //     relation holds non-base rows, and the reflection carries neither
+    //     flat. That is what this block's POL* mark has always meant. The
+    //     CLOSURE over it is the program's.
     const opaque = new Set<string>();
     for (const rel of rels) {
       const rs = byHead.get(rel);
@@ -609,13 +620,9 @@ export class Evaluation {
         if (this.store.relAll(rel).some((f) => !f.base && !f.frozen)) opaque.add(rel);
         continue;
       }
-      // A demand-backed relation materialises as a side effect of matching at
-      // OTHER rules' call sites; skipping its own rules would not stop that,
-      // and keeping its facts would not reproduce which ones got materialised.
-      if (this.demandRels.has(rel)) { opaque.add(rel); continue; }
-      // Anything not written in the current tick's present tense: a '@next'
-      // head stages instead of materialising, and an '@init' premise reads a
-      // different answer once the clock has moved.
+      // A rule that stages '@next', or reads across the tick boundary, cannot
+      // promise its relation either: the head stages instead of materialising,
+      // and an '@init' premise reads a different answer once the clock moved.
       for (const r of rs) {
         if (r.clause.head.temporal !== 'now'
             || r.clause.body.some((b) => b.t !== 'bi' && b.lit.temporal !== 'now')) {
@@ -623,29 +630,15 @@ export class Evaluation {
         }
       }
     }
-    for (;;) {
-      let grew = false;
-      for (const [rel, rd] of reads) {
-        if (opaque.has(rel)) continue;
-        for (const x of rd) if (opaque.has(x)) { opaque.add(rel); grew = true; break; }
-      }
-      if (!grew) break;
-    }
 
-    // (2) dependency cone of every relation, to fixpoint. Opaque ones get a
-    //     cone too: step (4) needs to know what a relation this evaluation is
-    //     going to re-derive reads, and that question is asked of all of them.
-    const cone = new Map<string, Set<string>>();
-    for (const rel of rels) cone.set(rel, new Set<string>([rel, ...(reads.get(rel) ?? [])]));
-    for (;;) {
-      let grew = false;
-      for (const c of cone.values()) {
-        for (const x of [...c]) {
-          for (const y of reads.get(x) ?? []) if (!c.has(y)) { c.add(y); grew = true; }
-        }
-      }
-      if (!grew) break;
-    }
+    // The CLOSURE over the seed is the program's; only the seed is the host's.
+    for (const rel of this.policyAnswer(opaque).opaqueClosed) opaque.add(rel);
+
+    // (2) dependency cone of every relation. Opaque ones get one too: step (4)
+    //     needs to know what a relation this evaluation re-derives reads, and
+    //     that question is asked of all of them.
+    const cone = first.cone;
+    for (const rel of rels) if (!cone.has(rel)) cone.set(rel, new Set([rel]));
 
     // (3) fingerprint: the inputs, plus the rules that transform them, plus
     //     the clock a witness would be stamped with
@@ -700,6 +693,63 @@ export class Evaluation {
       if (!shrank) break;
     }
     return { hits, keys };
+  }
+
+
+  /** ASK THE KERNEL'S OWN PROGRAM. policy.rofl derives `rule_reads`,
+   *  `rule_relation`, `cone` and `opaque_closed`; this copies the caller's
+   *  reflection into a store of its own, runs the program there and unpacks the
+   *  answer. It decides NOTHING — every judgement it returns is written in
+   *  policy.rofl, in ROFL, where a reader can argue with it.
+   *
+   *  A STORE OF ITS OWN, and that is not tidiness. Installing the program into
+   *  the caller's store works and was measured: 18 tests red against a baseline
+   *  of 8, because the kernel's program costs IN PROPORTION to the program it
+   *  describes, so a program's budget would pay for the kernel's questions
+   *  about it. Here it costs 2 to 8 ms outside that budget and the caller's
+   *  store is untouched to the fact.
+   *
+   *  Measured set for set against the walks it replaces: `rule_reads` 35, 52,
+   *  51, 64 and 248 pairs over five programs; `cone` 99 pairs over 32
+   *  relations, 132 over 39, and 2586 OVER 114 with the ring 1 grammar. */
+  private policyAnswer(seed: ReadonlySet<string> | null): {
+    reads: Map<string, Set<string>>; rels: Set<string>;
+    cone: Map<string, Set<string>>; opaqueClosed: Set<string>;
+  } {
+    const pol = new Store();
+    for (const f of policyProgram()) {
+      pol.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
+    }
+    for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) {
+      for (const f of this.store.relAll(rel)) {
+        pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
+      }
+    }
+    for (const rel of seed ?? []) {
+      pol.add(IFACE.opaque_seed, MAIN, [mka(rel)], { scope: 'timeless', base: true });
+    }
+    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET }).run();
+
+    const pairs = (rel: string): Map<string, Set<string>> => {
+      const m = new Map<string, Set<string>>();
+      for (const f of pol.relAll(rel)) {
+        const a = f.args[0], b = f.args[1];
+        if (a.k !== 'a' || b.k !== 'a') continue;
+        let out = m.get(a.name);
+        if (!out) { out = new Set(); m.set(a.name, out); }
+        out.add(b.name);
+      }
+      return m;
+    };
+    const names = (rel: string): Set<string> => {
+      const out = new Set<string>();
+      for (const f of pol.relAll(rel)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+      return out;
+    };
+    return {
+      reads: pairs(IFACE.rule_reads), rels: names(IFACE.rule_relation),
+      cone: pairs(IFACE.cone), opaqueClosed: names(IFACE.opaque_closed),
+    };
   }
 
   /** The monotone rules that may not run before the program is judged: the
