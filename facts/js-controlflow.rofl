@@ -120,10 +120,14 @@ handled(js, call_expression, controlflow, r_call_is_an_exit).
 handled(js, super,           controlflow, r_call_is_an_exit).
 
 -- TWO MEMBER FORMS — a property read is not a transfer UNLESS the property is
--- an accessor, and a getter is a call wearing a read's syntax. Telling them
--- apart needs the property to be known as an accessor, which is a fact about
--- the object and not about the site. Queued with the call forms.
-unknown_because(js, member_expression, controlflow, not_yet).
+-- an accessor, and a getter is a call wearing a read's syntax. Answered
+-- 2026-09-06 by w_cf_accessor, and the note that stood here said telling them
+-- apart "needs the property to be known as an accessor, which is a fact about
+-- the object and not about the site" — true, and the fact was already on the
+-- store: the scanner emits `ast_attr(M, kind, "get")` for every method and the
+-- value layer already reads that attribute for `"constructor"`. Nothing had
+-- ever asked it for `"get"`.
+handled(js, member_expression, controlflow, r_accessor).
 -- ...AND ITS OPTIONAL TWIN CANNOT SAY THIS, which is a real loss and worth the
 -- sentence. `optional_member_expression` is already MODELLED at this layer for
 -- its short-circuit, and a kind-level cell at a layer with no refinement column

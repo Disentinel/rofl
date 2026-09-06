@@ -159,6 +159,59 @@ always_throws[code](F) :- top_throw[code](F), not has_return[code](F).
 
 throwing_call[code](C) :- call_site[code](C, _), resolves[code](C, F),
                           always_throws[code](F).
+-- ---------------------------------------------------------------------------
+-- AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX, 2026-09-06 — queue item
+-- w_cf_accessor, the LAST open cell at this layer.
+--
+-- THE ITEM'S NOTE SAID THE VALUE LAYER DOES NOT RECORD WHICH PROPERTIES ARE
+-- ACCESSORS. Measured: the scanner emits `ast_attr(M, kind, "get"|"set")` for
+-- every method, the value layer already reads that exact attribute for
+-- `"constructor"` in `own_ctor`, and nothing had ever asked it for `"get"`.
+-- Fourth design note in four items to lose to one probe, and the third time
+-- this session the answer was a fact that had been on the store all along.
+--
+-- WHY IT BELONGS TO THIS LAYER RATHER THAN THE VALUE ONE: `o.p` on an accessor
+-- TRANSFERS CONTROL, and the value question — what the getter returns — is a
+-- different and harder one this does not answer. The value layer currently
+-- reads `o.p` as the getter METHOD itself, which is wrong about the value and
+-- silent about the transfer; naming the transfer is what this cell asks for.
+edb(accessor_kind).
+accessor_kind("get").
+accessor_kind("set").
+
+accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
+                                  accessor_kind(K), ast_attr[code](M, kind, K).
+-- ORDERED FOR COST: `accessor_of` is a handful of rows and binds Obj and Key,
+-- so the receiver walk is a probe rather than a scan of every member read.
+accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
+                             selects[flow](N, Key), ast_child[code](N, object, 0, O),
+                             may_be_node[flow](O, Obj).
+
+-- ...AND IT COMPOSES WITH THE ITEM BEFORE IT. A getter that always throws makes
+-- the READ an exit, with no call syntax anywhere at the site. This arm is the
+-- reason the accessor question is worth answering at this layer at all: without
+-- it the transfer would be a fact nothing consumes, which is the shape this
+-- repository keeps finding on its own store.
+throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
+
+-- ...AND THE CALL GRAPH HAS TO SAY SO, which the first version did not and the
+-- EXECUTION ORACLE caught within one run: UNSOUND went 0 -> 2, the first
+-- unsoundness of the session, naming `useGauge -> get broken` and
+-- `useGauge -> get reading`. The runtime enters both getters and the model
+-- derived no edge to either, because `gauge.broken` is not a `call_site` under
+-- any spelling. A transfer the control-flow layer names and the call graph
+-- denies is half a model, and the half that is wrong is the one every consumer
+-- reads. The member_expression cells at the call-graph layer are already
+-- `handled`; this makes that claim true of one more site rather than changing a
+-- verdict.
+resolves[code](N, M) :- accessor_read[code](N, M).
+-- ...and it has to be a SITE, or the edge has no caller. `nearest_fn` ranges
+-- over `site[code]`, and `site` is `call_site` plus `transfer_site` — the latter
+-- keyed by KIND, so declaring `member_expression` a transfer kind would make
+-- every property read in the corpus a transfer site. The arm is on `site`
+-- directly and carries only the reads that really do run a function: two, here.
+site[code](N) :- accessor_read[code](N, _).
+
 -- A SECOND ARM WAS WRITTEN AND REMOVED, and the mutant is why. `super(...)`
 -- looked like it needed a hop through `ctor_of[flow]`, because a super call
 -- names the CLASS and not the body that runs. Measured: `resolves` already
@@ -321,6 +374,7 @@ transfer_mechanism(logical_expression,         skip_arm).
 transfer_mechanism(for_of_statement,           skip_arm).
 transfer_mechanism(optional_call_expression,   short_circuit).
 transfer_mechanism(optional_member_expression, short_circuit).
+transfer_mechanism(member_expression,          accessor_call).
 transfer_mechanism(await_expression,           suspend).
 transfer_mechanism(yield_expression,           suspend).
 transfer_mechanism(return_statement,           abrupt).
@@ -345,6 +399,7 @@ transfer_mechanism(do_while_statement,         loop_at_least_once).
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
 mechanism_modelled(short_circuit).
+mechanism_modelled(accessor_call).
 mechanism_modelled(abrupt).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(suspend, a_control_returns_so_the_site_still_runs).
@@ -387,6 +442,12 @@ guard_named[code](catch_clause).
 -- ...and the same for the switch: `switch_statement` transfers control by
 -- selecting a case, and the arm that may be skipped belongs to `switch_case`.
 guard_named[code](switch_statement).
+-- ...and `member_expression`, which carries `accessor_call` and is reached by
+-- `accessor_read` rather than by a `guard_kind` row: an accessor read transfers
+-- control INTO a getter, it does not skip an arm. Named here for the same
+-- reason `catch_clause` is — so the closed-vocabulary gate does not report a
+-- kind the rules really do cover.
+guard_named[code](member_expression).
 guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
                               ast_node[code](_, K, _, _), not guard_named[code](K).
 

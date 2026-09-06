@@ -265,6 +265,25 @@ work(w_cost_gate_per_layer, "the fixpoint cost gate watches the call graph only;
 work_order(w_cost_gate_per_layer, 41).
 work_state(w_cost_gate_per_layer, open).
 work_spawned(w_cost_gate_per_layer, f_the_cost_gate_cannot_see_the_layer_i_kept_attributing_to_it).
+work_spawned(w_cost_gate_per_layer, f_an_instruments_world_is_part_of_its_claim).
+
+-- 42 — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS. Four design notes in
+-- four items said a fact was missing that was already on the store, and the
+-- shape is always the same: the note was written while looking at the RULES,
+-- and the store is a different artifact produced by a scanner nobody is reading
+-- at that moment. `ast_attr(M, kind, "get")` was the fourth — the same key was
+-- consumed for `"constructor"` and for nothing else.
+--
+-- The census already knows which relations the rules read. An audit over
+-- ATTRIBUTE KEYS AND VALUES the scanner emits that no rule consumes would have
+-- named `kind` (three of four values), `static` before 2026-09-05, and the
+-- sibling index. Same schema move CLAUDE.md names — derive the check once from
+-- the rules rather than noticing it per case — and the third instance of that
+-- schema this session.
+work(w_unconsumed_attribute, "an attribute key the scanner emits that no rule reads: four design notes lost to facts already on the store").
+work_order(w_unconsumed_attribute, 42).
+work_state(w_unconsumed_attribute, open).
+work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
@@ -385,13 +404,23 @@ claim(queued, js, super,            none, controlflow, w_exception_flow).
 claim(queued, js, throw_statement,  none, dataflow,    w_exception_flow).
 claim(queued, js, catch_clause,     none, dataflow,    w_exception_flow).
 
--- 26 — A GETTER IS A CALL WEARING A READ'S SYNTAX. `o.p` transfers control iff
--- `p` is an accessor, and telling them apart is a fact about the OBJECT rather
--- than about the site — so it needs the value layer to know which properties
--- are accessors, which it does not record.
-work(w_cf_accessor, "a property read that is a call: accessors make o.p a control transfer").
+-- 26 — A GETTER IS A CALL WEARING A READ'S SYNTAX, and the LAST cell at the
+-- control-flow layer. The note said it needs the value layer to know which
+-- properties are accessors, "which it does not record". Measured: the scanner
+-- emits `ast_attr(M, kind, "get"|"set")` for every method, and `own_ctor` in
+-- rules/js-dataflow.rofl already reads that same attribute for `"constructor"`.
+-- The fact was on the store; nothing had asked. FOURTH design note in four
+-- items to lose to one probe, and the third time this session the answer was a
+-- fact nobody consumed.
+--
+-- THE CORPUS HELD ZERO ACCESSORS — the `kind` tally across all three files was
+-- `method` and `constructor` and nothing else — so the fixture came first for
+-- the fourth item running.
+work(w_cf_accessor, "DONE 2026-09-06: r_accessor; a read that runs a getter, and an exit when the getter throws").
 work_order(w_cf_accessor, 26).
-work_state(w_cf_accessor, open).
+work_state(w_cf_accessor, done).
+work_spawned(w_cf_accessor, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
+work_spawned(w_cf_accessor, f_an_instruments_world_is_part_of_its_claim).
 claim(queued, js, member_expression, none, controlflow, w_cf_accessor).
 -- The optional twin is NOT claimed: its cell is already ticked for the
 -- short-circuit, and a kind-level cell cannot carry two verdicts. See the note

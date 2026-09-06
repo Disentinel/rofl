@@ -267,11 +267,12 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
       // byte-identical either way; only `after_abrupt`, which says NEVER rather
       // than MAY, distinguishes the two worlds. The weaker consumer is
       // structurally unable to check the stronger relation's field vocabulary.
-      // 2 -> 4 on 2026-09-06: `abrupt_at` gained a second source (a call that
-      // always throws), so the field typo now costs one of four rather than one
-      // of two. The DELTA is the assertion; the totals are the control.
-      assert.equal(m.n('after_abrupt[code](S)'), 3, 'the switch-case answer is gone');
-      assert.equal(base().n('after_abrupt[code](S)'), 4, 'positive control: it was there');
+      // 2 -> 4 -> 5 on 2026-09-06: `abrupt_at` gained two more sources the same
+      // day (a call that always throws, then an accessor read whose getter
+      // does), so the field typo now costs one of five. The DELTA is the
+      // assertion; the totals are the control and they move with the corpus.
+      assert.equal(m.n('after_abrupt[code](S)'), 4, 'the switch-case answer is gone');
+      assert.equal(base().n('after_abrupt[code](S)'), 5, 'positive control: it was there');
       const names = (w: World) => new Set(w.q('may_not_run[code](F)')
         .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
       assert.deepEqual([...names(m)].sort(), [...names(base())].sort(),
@@ -435,6 +436,73 @@ const caught = (w: World) => w.q('caught_value[flow](P, V)')
 
 for (const g of EXIT) test(`${g.name} — a call is an exit`, () => g.expect(build(g.mut), base()));
 
+// ---------------------------------------------------------------------------
+// 3d. AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX (w_cf_accessor).
+//
+// SIX MUTANTS, FIVE KILLED ON THE FIRST RUN, and the survivor is the shape this
+// loop has now met twice: `a4` drops the RECEIVER check — `o` may be the object
+// that owns the accessor — and it changed nothing, because only one object in
+// the corpus owned a property called `broken`, so any read of that key was the
+// accessor whether the check was there or not. A clause defended by reasoning
+// rather than by measurement, exactly like the `super` arm removed one item
+// earlier — except that one was dead and this one is load-bearing. `shim`, a
+// second object with a PLAIN property of the same name, is what tells them
+// apart, and the mutant dies on a named function: `alsoReads`.
+const ACC: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'c1 the accessor vocabulary loses `get`',
+    mut: [{ find: 'accessor_kind("get").', replace: '' }],
+    expect: (m, b) => {
+      assert.equal(m.n('accessor_read[code](N, M)'), 0);
+      assert.equal(names(m).has('unreadable'), false, 'the read stops being an exit');
+      assert.equal(names(b).has('unreadable'), true, 'positive control');
+    },
+  },
+  {
+    name: 'c2 every member is read as an accessor',
+    mut: [{ find: 'accessor_kind(K), ast_attr[code](M, kind, K).',
+            replace: 'ast_attr[code](M, kind, _).' }],
+    expect: (m, b) => assert.ok(m.n('accessor_of[flow](O, K, M)') > b.n('accessor_of[flow](O, K, M)') * 10,
+      `accessor_of ${b.n('accessor_of[flow](O, K, M)')} -> ${m.n('accessor_of[flow](O, K, M)')}`),
+  },
+  {
+    name: 'c3 the arm that makes a throwing getter an exit is deleted',
+    mut: [{ find: 'throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).',
+            replace: '' }],
+    // PLANTED BEFORE THE ARM SHIPPED, which is the rule this loop adopted one
+    // item ago: an arm nothing exercises cannot go red, so the mutant that
+    // deletes it is what says whether it is coverage or decoration.
+    expect: (m, b) => {
+      assert.equal(names(m).has('unreadable'), false);
+      assert.equal(names(b).has('unreadable'), true, 'positive control');
+    },
+  },
+  {
+    name: 'c4 the receiver is not checked',
+    mut: [{ find: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
+                             selects[flow](N, Key), ast_child[code](N, object, 0, O),
+                             may_be_node[flow](O, Obj).`,
+            replace: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
+                             selects[flow](N, Key).` }],
+    expect: (m, b) => {
+      assert.equal(names(m).has('alsoReads'), true, 'a plain property of the same name reads as an accessor');
+      assert.equal(names(b).has('alsoReads'), false, 'positive control');
+    },
+  },
+  {
+    name: 'c5 the mechanism is unanswered',
+    mut: [{ find: 'mechanism_modelled(accessor_call).', replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('mechanism_unanswered[audit](M)').flat(), ['accessor_call']),
+  },
+  {
+    name: 'c6 the kind is not named as reached',
+    mut: [{ find: 'guard_named[code](member_expression).', replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('guard_unmodelled[audit](K)').flat(), ['member_expression']),
+  },
+];
+
+for (const g of ACC) test(`${g.name} — an accessor is a call`, () => g.expect(build(g.mut), base()));
+
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
   // Asked of the rule before it was believed, which is the question that pays.
   // Five shapes were built; four are covered and the fourth is covered for a
@@ -506,9 +574,14 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // constructor that always throws, and `label` is called only from inside a
   // catch arm — a guard, so the LOCAL rule covers it and the runtime enters it
   // anyway, which is what a may-set is for.
+  // TWELVE with the accessor fixture: `unreadable` follows `void gauge.broken`,
+  // a READ with no call syntax anywhere at the site whose getter always throws.
+  // That name is the whole content of w_cf_accessor, and it is here rather than
+  // in a count because the site looks like a property access.
   assert.deepEqual([...mayNotRun].sort(),
     ['after', 'bet', 'guardedElse', 'label', 'loopBody', 'neverCased',
-     'neverReached', 'rescue', 'sleeper', 'unlit', 'unreached']);
+     'neverReached', 'reading', 'rescue', 'sleeper', 'unlit', 'unreached',
+     'unreadable']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   assert.deepEqual([...reached].filter((f) => !mayNotRun.has(f)), ['dormant'],
@@ -523,8 +596,13 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // the default export is an ENTRY POINT and nothing in beta.mjs calls it, so
   // the consumer is what makes it run — here, as in any importing module.
   beta.default(2);
-  const ran = t.oracle.measured ? new Set(t.oracle.measured()) : new Set(
-    t.oracle.edges().map((e: any) => e.callee));
+  // NORMALISED, for the same reason the two call-graph acceptances are: V8 names
+  // a getter's frame `get broken` and the model names the node `broken`. Without
+  // this the getter reads as a function the model calls and the runtime never
+  // entered — a silence with no explanation — when the runtime entered it twice.
+  const strip = (n: string) => n.replace(/^(get|set) /, '');
+  const ran = t.oracle.measured ? new Set([...t.oracle.measured()].map(strip)) : new Set(
+    t.oracle.edges().map((e: any) => strip(e.callee)));
 
   // THE ACCEPTANCE: everything the model derives an edge to, and the runtime
   // never entered, must be either a may-not-run (control flow explains it) or

@@ -532,6 +532,57 @@ function rethrown(n) {
   }
 }
 
+// AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX — queue item w_cf_accessor, and
+// the corpus contained ZERO accessors: the `kind` attribute the scanner emits
+// for every method held only `method` and `constructor`. Fourth item running
+// whose fixture had to precede its rule.
+//
+// `gauge.broken` is a READ that runs a function, and that function always
+// throws, so `unreadable` never runs — which composes the accessor rule with the
+// call-is-an-exit rule from the item before it. Names checked against the whole
+// fixture set first; the file-scoped binder has cost four of the last five
+// iterations.
+function unreadable(n) {
+  trace();
+  return n;
+}
+const gauge = {
+  get broken() {
+    trace();
+    throw new Error('gauge');
+  },
+  get reading() {
+    trace();
+    return 7;
+  },
+};
+function useGauge(n) {
+  trace();
+  try {
+    void gauge.broken;
+    return unreadable(n);
+  } catch {
+    return gauge.reading + n;
+  }
+}
+
+// ...and a SECOND object with a plain property of the SAME NAME, because the
+// mutant that dropped the receiver check SURVIVED without it: with one object
+// owning `broken`, any read of that key is the accessor and the check is
+// defended by reasoning rather than by measurement. Same shape as the `super`
+// arm removed one item earlier. `alsoReads` runs, and only the receiver check
+// says so.
+function alsoReads(n) {
+  trace();
+  return n;
+}
+const shim = { broken: 3 };
+function useShim(n) {
+  trace();
+  void shim.broken;
+  return alsoReads(n);
+}
+
 // ...and a statement AFTER a try whose block throws, which RUNS because the
 // handler caught it. Without it the `try_stops` clause had no witness at all —
 // `useTry`'s try IS its whole body, so nothing followed it and the mutant that
@@ -792,6 +843,8 @@ export async function main() {
     useWithReturn(1),
     rethrown(1),
     useCaught(1),
+    useGauge(1),
+    useShim(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

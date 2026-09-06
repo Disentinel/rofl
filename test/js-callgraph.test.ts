@@ -54,11 +54,19 @@ const ALL_FILES = [...RUN_FILES, ...STATIC_FILES];
  *  its real extension, and that is what reaches the facts. */
 const onDisk = (f: string) => (STATIC_FILES.includes(f) ? f + '.txt' : f);
 
+// rules/js-controlflow.rofl JOINED 2026-09-06, and it is the THIRD instrument
+// in this suite found measuring "the model" in a world narrower than the claim
+// — after test/js-fixpoint-cost.test.ts and the corpus world in
+// test/js-model.test.ts. The omission was invisible while the control-flow layer
+// derived no CALL edges; an accessor read is one, and the oracle said so within
+// a run: `SILENT UNDER-REPORT: useGauge -> get broken`. A missing pack subtracts
+// rows, and a subtracted row fails in the safe direction.
 const RULE_FILES = [
   'rules/js-structure.rofl',
   'rules/js-dataflow.rofl',
   'rules/js-model.rofl',
   'rules/js-callgraph.rofl',
+  'rules/js-controlflow.rofl',
 ];
 const FACT_FILES = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'];
 
@@ -197,8 +205,16 @@ async function runOracle(dir: string): Promise<OracleRun> {
     // main()/bmain(), not an edge the fixture contains
     const base = path.basename(e.file);
     if (!RUN_FILES.includes(base)) continue;
-    edges.add(`${e.caller} -> ${e.callee}`);
-    list.push({ caller: e.caller, callee: e.callee, line: e.line, file: base });
+    // V8 NAMES A GETTER'S FRAME `get broken`, not `broken` — the third place the
+    // oracle's frame naming differs from the model's node naming, after
+    // `%GeneratorPrototype%.next` and the synthesised constructor frame. It is
+    // a fact about the INSTRUMENT, so it is normalised here rather than worked
+    // around in a rule: the node is the same node, and a model that renamed its
+    // functions to match a stack trace would be wrong about the program in
+    // order to agree with the tool.
+    const callee = e.callee.replace(/^(get|set) /, '');
+    edges.add(`${e.caller} -> ${callee}`);
+    list.push({ caller: e.caller, callee, line: e.line, file: base });
   }
   return { edges, list, measured: t.oracle.measured(), raw: t.oracle.edges().length };
 }
@@ -636,8 +652,15 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // EIGHT on 2026-09-06 with the exception fixtures: `unlit` follows `super(n)`
   // into a constructor that always throws. `after` is on this list for the same
   // reason it always was — and for the FIRST TIME the layer explains it.
-  const NEVER_CALLED = ['after', 'dormant', 'neverCased', 'neverReached', 'pickA',
-                        'sleeper', 'unlit', 'unreached'];
+  // ELEVEN on 2026-09-06 with the accessor fixture, and TWO of the three new
+  // names are not silent at all — `broken` and `reading` are GETTERS, so V8
+  // attributes their frames to the property access and the oracle never sees a
+  // caller. That is the same limit of the instrument the generator frames have,
+  // in a second place, and it is listed rather than counted so the two causes
+  // stay apart. `unreadable` is the real silence: `void gauge.broken` throws.
+  const NEVER_CALLED = ['after', 'broken', 'dormant', 'neverCased', 'neverReached',
+                        'pickA', 'reading', 'sleeper', 'unlit', 'unreached',
+                        'unreadable'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -743,11 +766,16 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // `Lit -> unlit` is derived from syntax, and the runtime never takes it
   // because `super(n)` enters a constructor that always throws. It joins the
   // control-flow half of this list, which `may_not_run` now explains.
+  // THIRTEEN on 2026-09-06 with the accessor fixture, and the new one is that
+  // item's own point: `useGauge -> unreadable` is derived and never taken,
+  // because the getter read on the line before it throws. It is the third
+  // control-flow entry whose cause is an EXIT rather than a branch.
   assert.deepEqual(extra, [
     'Lit -> unlit',
     'outerGen -> innerGen', 'sleeper -> dormant',
     'useAbrupt -> neverReached', 'useCased -> neverCased',
     'useDelegated -> outerGen', 'useDormant -> sleeper', 'useForOfGen -> pick',
+    'useGauge -> unreadable',
     'useGuard -> unreached', 'useSent -> chooser', 'useTry -> after',
     'useYieldCallee -> callsSent',
   ], `over-approximation, by cause: ${extra.join(', ')}`);
@@ -877,7 +905,11 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // alpha.mjs and two in beta.mjs, on the same pattern.
   // 110 -> 127: the exception fixtures — thirteen functions across both halves,
   // each with its `trace()` call.
-  assert.equal(sites - resolved, 127, `${sites - resolved} call sites vanished from the frontier`);
+  // 127 -> 133: the accessor fixtures, on the same pattern.
+  // 133 -> 131 the same day: two accessor READS became resolved sites when the
+  // control-flow pack joined this world, so the frontier is two smaller without
+  // the corpus changing. A number that falls because the model got better.
+  assert.equal(sites - resolved, 131, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

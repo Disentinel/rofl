@@ -735,11 +735,20 @@ function corpus(m: ShapeMut = {}): Rofl {
   // four separate calls pay for the cycle three times over. Measured on
   // test/js-callgraph.test.ts, where the same change took the file from 370s to
   // 188s with byte-identical answers.
+  // rules/js-controlflow.rofl JOINED 2026-09-06, and the reason is a defect this
+  // world had from the day the layer landed: the acceptance below claims "the
+  // model derives every edge the runtime took", and the world it measured was
+  // missing a whole layer of the model. It went unnoticed while that layer
+  // derived no call edges — and the moment one arrived (an accessor read IS a
+  // call), UNSOUND went 0 -> 2 against a world that could not have derived it.
+  // SECOND instrument in this suite found measuring "the model" in a world
+  // narrower than the claim; the first was test/js-fixpoint-cost.test.ts.
   load('rules/*', [
     read('rules/js-structure.rofl'),
     read('rules/js-dataflow.rofl'),
     m.rules ?? RULES,
     read('rules/js-callgraph.rofl'),
+    read('rules/js-controlflow.rofl'),
   ].join('\n'));
   r.evaluate(20_000_000);
   return r;
@@ -778,7 +787,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // 231 -> 240 the same day: the reachability fixture, on the same pattern, in
   // both files (alpha's dormant chain and beta's default export).
   // 240 -> 274: the exception fixtures, thirteen functions and their sites.
-  assert.equal(sites, 274, 'positive control: the corpus is the one the census was taken on');
+  // 274 -> 284: the accessor fixtures.
+  assert.equal(sites, 284, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -865,7 +875,15 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   for (const e of t.oracle.edges()) {
     const file = e.file.split('/').pop();
     if (file !== 'alpha.mjs' && file !== 'beta.mjs') continue;
-    const edge = `${e.caller} -> ${e.callee}`;
+    // V8 NAMES A GETTER'S FRAME `get broken`, not `broken` — the third place the
+    // oracle's frame naming differs from the model's node naming, after
+    // `%GeneratorPrototype%.next` and the synthesised constructor frame. The
+    // prefix is stripped here rather than worked around in a rule, because it is
+    // a fact about the INSTRUMENT: the node is the same node, and a model that
+    // renamed its functions to match a stack trace would be wrong about the
+    // program to agree with the tool.
+    const callee = e.callee.replace(/^(get|set) /, '');
+    const edge = `${e.caller} -> ${callee}`;
     oracleEdges.add(edge);
     if (model.has(edge)) continue;
     missedEdges.add(edge);
@@ -906,7 +924,8 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // edges, and the ones that are MISSING are again the point: `Lit -> unlit`
   // never runs because `super(n)` throws first, and `useTry -> after` never runs
   // because `thrower` does. Both are derived, both are now explained.
-  assert.equal(oracleEdges.size, 115, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 115 -> 120 with the accessor fixtures.
+  assert.equal(oracleEdges.size, 120, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.

@@ -115,11 +115,11 @@ test('the five heaviest read paths, by name', () => {
   // firings +9.1%, and every one of the five names below up between 8.9% and
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 80393',
-    'relPersp authority = 64674',
-    'argMatches encloses_v pos=[1] = 39313',
-    'relPersp encloses_v = 38406',
-    'relPersp ast_node = 33241',
+    'argMatches ast_within pos=[0] = 83421',
+    'relPersp authority = 67455',
+    'argMatches encloses_v pos=[1] = 40780',
+    'relPersp encloses_v = 39873',
+    'relPersp ast_node = 34684',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -138,12 +138,13 @@ test('the five heaviest read paths, by name', () => {
   // transitive walk itself contributes ~0.5%, measured by name below. Five
   // heaviest paths growing together at the corpus's own rate is a bigger
   // fixture; a NEW name, or one growing alone, is a badly ordered body.
-  // 601 774 -> 678 174 (+12.7%), the same five names in the same order, each up
-  // 11.6%-14.8%, against facts +11.9% and firings +12.5%. Three items closed in
-  // one session and each needed a fixture the corpus did not have, so alpha.mjs
-  // grew by twenty-one functions and the fixpoint grew with it. NONE of it is
-  // rule cost — see the note below on what this gate can see.
-  assert.equal(c.total, 678174, 'total rows handed out by the store in one fixpoint');
+  // 601 774 -> 678 174 -> 694 018 across the day (+15.3% in total), the same
+  // five names in the same order throughout, each up 13.8%-18.1%, against facts
+  // +16.1% and firings +16.9%. FOUR items closed in one session and every one
+  // needed a fixture the corpus did not have, so alpha.mjs grew by twenty-eight
+  // functions and the fixpoint grew with it. NONE of it is rule cost — see the
+  // note below on what this gate can see.
+  assert.equal(c.total, 694018, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -166,5 +167,5 @@ test('the five heaviest read paths, by name', () => {
   // run in this world either. The corpus grew 12% and this fixpoint grew 12% —
   // the check doing exactly its job on the half it can see, and saying nothing
   // whatever about the half it cannot (w_cost_gate_per_layer, 41).
-  assert.equal(c.firings, 33267, 'derivations: 25513 before the generator fixture');
+  assert.equal(c.firings, 34559, 'derivations: 25513 before the generator fixture');
 });
