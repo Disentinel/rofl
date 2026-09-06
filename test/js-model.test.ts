@@ -773,7 +773,9 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // are its own; the rest come from the class it added being exercised.
   // 198 -> 223 on 2026-09-05: the generator-protocol fixture — three
   // generators, three consumers and the `.next` sites they call.
-  assert.equal(sites, 223, 'positive control: the corpus is the one the census was taken on');
+  // 223 -> 231 on 2026-09-06: the abrupt-transfer fixture — four functions,
+  // each with a `trace()` call, plus the four sites that call them.
+  assert.equal(sites, 231, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -886,7 +888,13 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // number are ONE limit of the instrument: V8 names `%GeneratorPrototype%.next`
   // as the caller of a generator body's first resume, never the enclosing
   // function, so those edges exist for the model and not for the oracle.
-  assert.equal(oracleEdges.size, 96, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 96 -> 98 on 2026-09-06. The abrupt fixture adds FOUR functions and only TWO
+  // oracle edges, and the two that are missing are the point of the fixture:
+  // `useAbrupt -> neverReached` and `useCased -> neverCased` are derived by the
+  // model and never taken by the runtime, which is exactly what `may_not_run`
+  // now explains. A fixture whose new functions all showed up here would have
+  // proved nothing.
+  assert.equal(oracleEdges.size, 98, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.

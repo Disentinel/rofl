@@ -612,11 +612,20 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // model never derives an edge to it, because `two[pickA]()` reads the value
   // and reaches `pickB`. `unreached` is a GUARD: the model derives the edge and
   // the program branches around it — `may_not_run[code]` covers it.
-  // `after` is an ABRUPT transfer: it sits after a `throw` in the same block,
-  // and nothing covers it, because statement order is the control-flow layer's
-  // declared gap (`w_cf_abrupt_transfer`). Listing them together would lose all
-  // three distinctions; test/js-controlflow.test.ts asserts each by name.
-  const NEVER_CALLED = ['after', 'pickA', 'unreached'];
+  // `after` is silent for a THIRD reason, and this comment named the wrong one
+  // until 2026-09-06: it said abrupt transfer, owned by `w_cf_abrupt_transfer`.
+  // That item closed, and the measurement that closed it found no statement
+  // anywhere in this corpus sitting after an abrupt transfer in the same list.
+  // `after` follows a CALL to `thrower`, which always throws — propagation
+  // across a call edge, which no syntactic rule reaches, and w_exn_propagation
+  // owns it.
+  // FIVE now: `neverReached` and `neverCased` are the real abrupt witnesses,
+  // written to close that item, and they ARE covered — `may_not_run[code]`
+  // names both. They are silent-but-wired for the same reason `unreached` is,
+  // and they are listed here because this assertion is about instrumentation,
+  // not about explanation. Listing all five together would lose every
+  // distinction; test/js-controlflow.test.ts asserts each by name.
+  const NEVER_CALLED = ['after', 'neverCased', 'neverReached', 'pickA', 'unreached'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -697,8 +706,21 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // `useDelegated -> outerGen`, `outerGen -> innerGen` — and no rule can close
   // any of them. The other two are control flow: a guard not taken, and an
   // abrupt transfer. A COUNT would have said "6" and asked nobody which.
+  // SEVEN BECAME NINE on 2026-09-06, and BOTH new ones are the point of the
+  // fixture that added them rather than a regression: `useAbrupt ->
+  // neverReached` and `useCased -> neverCased` are edges the model derives from
+  // syntax and the runtime never takes, because the callee sits after a
+  // `return` in the same statement list. They belong with `useGuard ->
+  // unreached` — control flow the model over-approximates ON PURPOSE — and
+  // `may_not_run[code]` now names both, which test/js-controlflow.test.ts
+  // asserts by name. AND ONE ENTRY ON THIS LIST CHANGED OWNER WITHOUT MOVING:
+  // `useTry -> after` was attributed to `w_cf_abrupt_transfer` above; that item
+  // closed and this edge stayed, because `after` follows a CALL that always
+  // throws, not a statement. It is w_exn_propagation's, and only closing the
+  // other item made the difference measurable.
   assert.deepEqual(extra, [
-    'outerGen -> innerGen', 'useDelegated -> outerGen', 'useForOfGen -> pick',
+    'outerGen -> innerGen', 'useAbrupt -> neverReached', 'useCased -> neverCased',
+    'useDelegated -> outerGen', 'useForOfGen -> pick',
     'useGuard -> unreached', 'useSent -> chooser', 'useTry -> after',
     'useYieldCallee -> callsSent',
   ], `over-approximation, by cause: ${extra.join(', ')}`);
@@ -822,7 +844,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // rather than bounded — a threshold would quietly stop meaning anything.
   // 86 -> 97: the generator-protocol fixture added two consumers, two
   // generators and two callees.
-  assert.equal(sites - resolved, 101, `${sites - resolved} call sites vanished from the frontier`);
+  // 101 -> 105 on 2026-09-06: the abrupt-transfer fixture added four functions,
+  // each with a `trace()` call and each called once.
+  assert.equal(sites - resolved, 105, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

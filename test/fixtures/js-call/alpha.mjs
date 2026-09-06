@@ -399,6 +399,42 @@ function rescue(n) {
   trace();
   return n + 1;
 }
+// ---- STATEMENT ORDER: a call the parser sees and the runtime never reaches.
+// THE CORPUS HAD NO SITE FOR THIS. Measured before writing the rule: zero
+// statements anywhere in this file sit syntactically after a return, throw,
+// break or continue in the same block, so `w_cf_abrupt_transfer` had nothing to
+// be tested against — and the witness the queue had attached to it, `after`
+// below, is unreachable for a DIFFERENT reason (thrower always throws, which is
+// exception propagation, not order).
+function neverReached(n) {
+  trace();
+  return n;
+}
+function useAbrupt(n) {
+  trace();
+  return n + 1;
+  neverReached(n);
+}
+
+// ...and the SECOND witness, which exists because the rule was asked where it
+// could not look before it was believed. A switch case holds its statements
+// under `consequent`, not `body`, so the first draft — keyed on `body` — was
+// blind to exactly this shape and no audit in the layer said a word.
+function neverCased(n) {
+  trace();
+  return n;
+}
+function useCased(n) {
+  trace();
+  switch (n) {
+    case 1:
+      return n + 1;
+      neverCased(n);
+    default:
+      return n;
+  }
+}
+
 function useTry(n) {
   trace();
   try {
@@ -589,6 +625,8 @@ export async function main() {
     useSent(1),
     useDelegated(1),
     useYieldCallee(1),
+    useAbrupt(1),
+    useCased(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

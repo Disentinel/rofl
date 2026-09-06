@@ -37,13 +37,12 @@ ignored(js, await_expression, controlflow, a_control_returns_so_the_site_still_r
 ignored(js, yield_expression, controlflow, a_control_returns_so_the_site_still_runs).
 
 -- ---------------------------------------------------------------------------
--- WHAT IT LEAVES OPEN, and it is one kind with a real question behind it.
--- Everything after a `return` in the same block is unreachable, which is a fact
--- about statement ORDER within a block — and nothing in this layer expresses
--- order at all. It is `not_yet` in the ordinary sense: real work, owned by
--- w_cf_abrupt_transfer, and `mechanism_open(abrupt, ...)` in the rules is the
--- machine-readable half of this sentence.
-unknown_because(js, return_statement, controlflow, not_yet).
+-- WHAT IT LEFT OPEN AND NO LONGER DOES, 2026-09-06 — w_cf_abrupt_transfer.
+-- Everything after a `return` in the same statement list is unreachable, which
+-- is a fact about ORDER, and until this date nothing in this layer expressed
+-- order at all. `ast_child(B, F, I, S)` had carried the index since the scanner
+-- was written and no rule had ever read it; `r_abrupt` reads it now.
+handled(js, return_statement, controlflow, r_abrupt).
 
 -- ===========================================================================
 -- THE SWEEP (queue item w_cf_sweep). Forty cells, and the point of doing it by

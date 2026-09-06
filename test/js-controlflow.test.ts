@@ -130,9 +130,23 @@ test('the layer answers, waives and defers, and nothing falls through', () => {
   assert.equal(verdicts.get('if_statement'), 'modelled');
   assert.equal(verdicts.get('optional_call_expression'), 'modelled');
   assert.equal(verdicts.get('await_expression'), 'waived');
-  assert.equal(verdicts.get('return_statement'), 'not_modelled');
-  // the deferral is TYPED, not a default
-  assert.deepEqual(m.q('reason[audit](js, return_statement, none, controlflow, R)').flat(),
+  // MOVED 2026-09-06 (w_cf_abrupt_transfer). This assertion used to read
+  // not_modelled/not_yet and was the ledger half of the layer's declared gap.
+  // It is kept as the same pair, flipped, so the closure is visible in the diff
+  // rather than deleted out of the suite.
+  assert.equal(verdicts.get('return_statement'), 'modelled');
+  // ...and the rule id is named, not just the verdict. `reason[audit]` is
+  // DEFINED ONLY FOR not_modelled cells — a modelled cell carries its answer in
+  // `handled`, which is where the assertion had to move when the verdict
+  // flipped. Both halves are pinned so a silent regression to `not_yet` cannot
+  // pass by leaving one of them true.
+  assert.deepEqual(m.q('handled(js, return_statement, controlflow, R)').flat(),
+    ['r_abrupt']);
+  assert.equal(m.n('reason[audit](js, return_statement, none, controlflow, R)'), 0);
+  // ...and the deferral that is still typed and still open belongs to another
+  // layer's question entirely — a positive control that `not_yet` did not go
+  // extinct along with this item.
+  assert.deepEqual(m.q('reason[audit](js, catch_clause, none, dataflow, R)').flat(),
     ['not_yet']);
 });
 
@@ -184,7 +198,11 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
   {
     name: 'g4 a mechanism with no opinion at all',
     targets: 'mechanism_unanswered[audit]',
-    mut: [{ find: 'mechanism_open(abrupt, w_cf_abrupt_transfer).', replace: '' }],
+    // RE-AIMED 2026-09-06: `abrupt` used to be the one `mechanism_open` row and
+    // deleting it was the mutant. It is modelled now and `mechanism_open` is
+    // empty, so the same hole is opened from the other side — a mechanism that
+    // is answered nowhere at all.
+    mut: [{ find: 'mechanism_modelled(abrupt).', replace: '' }],
     expect: (m) => assert.deepEqual(m.q('mechanism_unanswered[audit](M)').flat(), ['abrupt']),
   },
   {
@@ -197,6 +215,26 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
       const base0 = base().n('guarded[code](N)');
       assert.ok(m.n('guarded[code](N)') > base0,
         'the guarded set grows when a suspension is filed as a skip');
+    },
+  },
+  {
+    name: 'g6 a statement-sequence field the scanner never emits',
+    targets: 'stmt_seq_unseen[audit]',
+    mut: [{ find: 'stmt_seq_field(consequent).', replace: 'stmt_seq_field(conseqeunt).' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('stmt_seq_unseen[audit](F)').flat(), ['conseqeunt']);
+      // ...and the typo COSTS a real answer — but NOT one `may_not_run` can see,
+      // which is the measurement this mutant was written to record. A switch
+      // case's statements are already `guarded` as a skip-arm, so the may-set is
+      // byte-identical either way; only `after_abrupt`, which says NEVER rather
+      // than MAY, distinguishes the two worlds. The weaker consumer is
+      // structurally unable to check the stronger relation's field vocabulary.
+      assert.equal(m.n('after_abrupt[code](S)'), 1, 'the switch-case answer is gone');
+      assert.equal(base().n('after_abrupt[code](S)'), 2, 'positive control: it was there');
+      const names = (w: World) => new Set(w.q('may_not_run[code](F)')
+        .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
+      assert.deepEqual([...names(m)].sort(), [...names(base())].sort(),
+        'and may_not_run cannot tell — the arm already covered it');
     },
   },
 ];
@@ -225,8 +263,13 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // FIVE now, not three: the control constructs added on 2026-09-05 brought a
   // `while` body and a `catch` handler, and both are arms that may be skipped.
   // The runtime enters four of the five.
+  // SEVEN on 2026-09-06: `r_abrupt` reads statement ORDER, and the two new names
+  // are the only two callees in the corpus that sit after a `return` in their
+  // own statement list — `neverReached` after a plain return, `neverCased` after
+  // a return inside a switch case, whose statements live under `consequent` and
+  // were invisible to the first draft of the rule.
   assert.deepEqual([...mayNotRun].sort(),
-    ['bet', 'guardedElse', 'loopBody', 'rescue', 'unreached']);
+    ['bet', 'guardedElse', 'loopBody', 'neverCased', 'neverReached', 'rescue', 'unreached']);
 
   const dir = new URL('test/fixtures/js-call/', new URL('../', import.meta.url));
   const alpha: any = await import(new URL('alpha.mjs', dir).href);
@@ -254,17 +297,22 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // not derive an edge to it at all, because `two[pickA]()` reads the VALUE of
   // `pickA` and reaches `pickB`. A silence the call graph already avoids
   // claiming needs no control-flow excuse.
-  // ONE NAMED EXCEPTION, and it is the layer's own declared gap with a witness.
-  // `after` is called immediately after a `throw` in the same block: the model
-  // derives the edge correctly, the runtime never takes it, and `may_not_run`
-  // does NOT cover it — because the reason is statement ORDER and every rule in
-  // this layer reads a parent/child position. `w_cf_abrupt_transfer` owns it.
-  // It is listed here rather than tolerated by a count, so that the day the
-  // abrupt work lands this assertion goes red and says the gap is closed.
-  const ABRUPT_GAP = ['after'];
-  const unexplained = silent.filter((f) => !mayNotRun.has(f) && !ABRUPT_GAP.includes(f));
-  assert.deepEqual(silent.filter((f) => ABRUPT_GAP.includes(f)), ABRUPT_GAP,
-    'the abrupt-transfer witness is still silent — if it is not, the gap closed');
+  // ONE NAMED EXCEPTION, and the interesting part is that its OWNER CHANGED.
+  // This block used to read `w_cf_abrupt_transfer` and predicted, in as many
+  // words, that "the day the abrupt work lands this assertion goes red and says
+  // the gap is closed". The abrupt work landed on 2026-09-06 and this stayed
+  // green, because the prediction was wrong about the cause: `after` is called
+  // immediately after a `throw`, but not in the same statement list — it is
+  // called INSIDE `thrower`'s caller, after a call that never returns. That is
+  // exception PROPAGATION across a call edge, which no rule reading syntax
+  // positions can reach, and `w_exn_propagation` owns it.
+  // The correction is the finding, not the relabelling: a gap attributed to the
+  // queue item that happened to be open is a guess, and it survives until
+  // something forces it to be measured. Closing the item was that force.
+  const EXN_GAP = ['after'];
+  const unexplained = silent.filter((f) => !mayNotRun.has(f) && !EXN_GAP.includes(f));
+  assert.deepEqual(silent.filter((f) => EXN_GAP.includes(f)), EXN_GAP,
+    'the propagation witness is still silent — if it is not, w_exn_propagation moved');
   console.log(`  derived ${derived.size} callees, ${silent.length} never entered: ${silent.join(', ')}`);
   assert.deepEqual(unexplained, [],
     'a function the model calls, the runtime never entered, and nothing explains');

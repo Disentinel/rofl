@@ -115,22 +115,33 @@ test('the five heaviest read paths, by name', () => {
   // firings +9.1%, and every one of the five names below up between 8.9% and
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 65410',
-    'relPersp authority = 53703',
-    'argMatches encloses_v pos=[1] = 32544',
-    'relPersp encloses_v = 31637',
-    'relPersp ast_node = 27339',
+    'argMatches ast_within pos=[0] = 67649',
+    'relPersp authority = 55449',
+    'argMatches encloses_v pos=[1] = 33643',
+    'relPersp encloses_v = 32736',
+    'relPersp ast_node = 28275',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
   // until its variables are bound, so it is judged against a smaller
   // accumulator: the same answers for slightly fewer questions. A correctness
   // fix that made the evaluation cheaper is worth pinning as such.
-  assert.equal(c.total, 565624, 'total rows handed out by the store in one fixpoint');
+  // 565 624 -> 582 542 on 2026-09-06 (+3.0%), against facts and firings both up
+  // and ALL FIVE NAMES THE SAME IN THE SAME ORDER, each up 2.9%-3.4%. Five
+  // heaviest paths growing together at the corpus's own rate is a bigger
+  // fixture; a new name, or one growing alone, is a badly ordered body. The
+  // abrupt rules add ~0% of their own — `abrupt_at` binds B and F before the
+  // sibling probe, so `after_abrupt` never walks containment.
+  assert.equal(c.total, 582542, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
   // execution oracle with UNSOUND 0 and the same named over-approximations —
   // so this is 4.9x fewer questions for one more relation, not a smaller model.
-  assert.equal(c.firings, 27830, 'derivations: 25513 before the generator fixture');
+  // 27 830 -> 28 676 on 2026-09-06, +846. The new relations account for 121 of
+  // it, MEASURED: `abrupt_at` 117, `after_abrupt` 2, `stmt_seq_field` 2. The
+  // other ~725 is the four fixture functions and their call sites — this
+  // corpus is the call graph's own fixture, so a function added to it costs
+  // derivations in every layer at once.
+  assert.equal(c.firings, 28676, 'derivations: 25513 before the generator fixture');
 });

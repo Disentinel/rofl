@@ -211,23 +211,48 @@ work_spawned(w_controlflow_layer, f_over_approximation_had_two_causes_wearing_on
 work_spawned(w_controlflow_layer, f_no_world_that_could_fail_the_leak_audit_had_ever_been_asked).
 work_spawned(w_controlflow_layer, f_the_plan_had_no_check_that_its_order_is_an_order).
 
--- 22 — WHAT THE THIRD LAYER LEFT OPEN. Everything after a `return` in the same
--- block is unreachable, and this layer has no term for statement ORDER — every
--- rule in it reads a parent/child position, never a sequence. `throw`, `break`
--- and `continue` join it the day the corpus grows one.
-work(w_cf_abrupt_transfer, "unreachable after return/throw/break/continue: the layer needs statement order within a block").
+-- 22 — WHAT THE THIRD LAYER LEFT OPEN, and closed on 2026-09-06. Everything
+-- after a `return` in the same statement list is unreachable; this layer had no
+-- term for ORDER, though `ast_child(B, F, I, S)` had carried the index since the
+-- scanner was written and nothing had ever read it.
+--
+-- THE ITEM'S OWN WITNESS WAS WRONG, and finding that out was most of the work.
+-- The note here used to name `after` in test/fixtures/js-call/alpha.mjs. The
+-- first measurement of the closing work counted statements sitting after an
+-- abrupt transfer in the same list across the whole corpus and got ZERO — so
+-- the item had nothing to be tested against, and `after` is silent for a
+-- DIFFERENT reason: it follows a call to `thrower`, which always throws. That
+-- is propagation across a call edge, and w_exn_propagation owns it. Confirmed
+-- afterwards by construction: a synthetic `usePast` calling a never-returning
+-- function leaves the callee uncovered by every rule of this layer.
+-- A gap attributed to whichever item happened to be open is a guess, and it
+-- survives until closing the item forces it to be measured.
+work(w_cf_abrupt_transfer, "DONE 2026-09-06: r_abrupt reads the sibling index; 4 kinds modelled, witness re-attributed to w_exn_propagation").
 work_order(w_cf_abrupt_transfer, 22).
-work_state(w_cf_abrupt_transfer, open).
--- IT HAS A WITNESS NOW, which it did not when it was entered. `after` in
--- test/fixtures/js-call/alpha.mjs is called after a `throw` in the same block:
--- the model derives the edge, the runtime never takes it, and
--- `may_not_run[code]` does NOT cover it — because the reason is order, and this
--- layer reads positions. An open item with a corpus site is a different thing
--- from one with an argument.
+work_state(w_cf_abrupt_transfer, done).
+work_spawned(w_cf_abrupt_transfer, f_a_gap_is_attributed_to_whichever_item_is_open).
+work_spawned(w_cf_abrupt_transfer, f_the_weaker_consumer_cannot_check_the_stronger_relation).
+-- THE CLAIMS STAY ON A DONE ITEM ON PURPOSE. They record which cells this item
+-- closed, and `false_done[audit]` then guards that every one of them really IS
+-- closed — deleting them would remove a live gate to tidy up a finished row.
 claim(queued, js, return_statement,   none, controlflow, w_cf_abrupt_transfer).
 claim(queued, js, throw_statement,    none, controlflow, w_cf_abrupt_transfer).
 claim(queued, js, break_statement,    none, controlflow, w_cf_abrupt_transfer).
 claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
+
+-- 40 — WHAT ITEM 22 COULD NOT LOOK AT, and the four shapes are its own mutant
+-- set rather than an argument. `r_abrupt` reads SIBLINGS, so an abrupt transfer
+-- that completes an enclosing region is invisible to it: a `return` inside a
+-- nested block, a `return` in BOTH arms of an `if`, a `return` under a label.
+-- All three were built and all three came back BLIND — the callee after them
+-- stayed out of `may_not_run` while `after_abrupt` stood still at 2.
+-- This is completion analysis (does this statement complete normally?), which
+-- is one recursive relation over statement kinds and NOT a fifth mechanism: the
+-- mechanism table already says `abrupt`, and the missing part is the closure.
+work(w_cf_completion, "abrupt transfer only reaches siblings: a return in a nested block, in both if arms, or under a label completes the enclosing region and no rule sees it").
+work_order(w_cf_completion, 40).
+work_state(w_cf_completion, open).
+work_needs(w_cf_completion, w_cf_abrupt_transfer).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds

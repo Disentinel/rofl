@@ -128,11 +128,14 @@ ignored(js, do_while_statement, controlflow, a_body_that_always_runs_guards_noth
 ignored(js, block_statement,      controlflow, a_a_container_transfers_nothing).
 ignored(js, expression_statement, controlflow, a_a_container_transfers_nothing).
 ignored(js, variable_declaration, controlflow, a_a_container_transfers_nothing).
--- ...and three abrupt transfers, which are the layer's declared gap. Each makes
--- the statements AFTER it in the same block unreachable, and this layer reads
--- parent/child positions and has no term for order. `after` in
--- test/fixtures/js-call/alpha.mjs is the witness: it never runs, the model
--- derives the edge to it, and nothing here explains the silence.
-unknown_because(js, throw_statement,    controlflow, not_yet).
-unknown_because(js, break_statement,    controlflow, not_yet).
-unknown_because(js, continue_statement, controlflow, not_yet).
+-- ...and three abrupt transfers, answered on 2026-09-06 by `r_abrupt`: each
+-- makes the statements AFTER it in the same statement list unreachable.
+-- THE WITNESS THIS COMMENT USED TO NAME WAS THE WRONG ONE. It said `after` in
+-- test/fixtures/js-call/alpha.mjs, and the measurement that opened this work
+-- found ZERO statements in the whole corpus sitting after an abrupt transfer —
+-- `after` is silent because `thrower` always throws, which is exception
+-- PROPAGATION across a call edge (w_exn_propagation) and not statement order at
+-- all. `useAbrupt`/`neverReached` were added as the real witness.
+handled(js, throw_statement,    controlflow, r_abrupt).
+handled(js, break_statement,    controlflow, r_abrupt).
+handled(js, continue_statement, controlflow, r_abrupt).

@@ -69,6 +69,77 @@ guarded[code](N) :- guard_arm[code](_, A), ast_within[code](A, N).
 -- as f_body_order_changes_the_answer_and_whynot_cannot_see_it, and the reason
 -- the order is worth a comment on every rule of this shape until the kernel is
 -- fixed.
+-- ---------------------------------------------------------------------------
+-- STATEMENT ORDER, 2026-09-05 — queue item w_cf_abrupt_transfer, and the last
+-- mechanism in the table that had no rule.
+--
+-- Every other rule in this layer reads a parent/child POSITION: an arm of an
+-- `if`, the body of a loop. This one needs the ORDER of siblings, and the order
+-- has been on the store since the scanner was written — `ast_child(B, body, I,
+-- S)` carries the index. Nothing had ever read it.
+--
+-- MEASURED BEFORE WRITING, and it corrected the queue: the corpus contained
+-- ZERO statements sitting syntactically after a return, throw, break or
+-- continue in the same block, so this item had nothing to be tested against and
+-- a fixture had to come first. See also the witness correction below.
+edb(abrupt_kind).
+abrupt_kind(return_statement).
+abrupt_kind(throw_statement).
+abrupt_kind(break_statement).
+abrupt_kind(continue_statement).
+
+-- WHERE THIS RULE COULD NOT LOOK, asked of the rule before it was believed and
+-- answered by the scanner rather than by reading it: a SWITCH CASE holds its
+-- statements under `consequent`, not `body`. `case 1: g(); break; h();` left
+-- `h` unguarded, and no audit here said a word — the rule simply matched
+-- nothing. The field is vocabulary now instead of a constant inside one rule,
+-- which is the move this repository already made for guard arms.
+edb(stmt_seq_field).
+stmt_seq_field(body).
+stmt_seq_field(consequent).
+
+abrupt_at[code](B, F, I) :- abrupt_kind(K), ast_node[code](S, K, _, _),
+                            stmt_seq_field(F), ast_child[code](B, F, I, S).
+
+-- ORDERED FOR COST: `abrupt_at` is a handful of rows and binds B and F, so the
+-- second literal is a probe rather than a walk over every containment pair.
+-- THE FIELD IS CARRIED, not re-quantified: an abrupt in a case's `consequent`
+-- must not reach a statement in the same node's `body`.
+after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+
+-- A SEQUENCE FIELD THE SCANNER NEVER EMITS — the same typo hole `guard_arm_unseen`
+-- closes for arms, and the one this rule was carrying invisibly until the switch
+-- case was measured.
+stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
+
+-- THE MUTANT SET, run before the item was closed. Five directed at the rule:
+-- dropping `I < J`, reversing it, losing one `abrupt_kind`, dropping the
+-- containment closure — all four killed. The fifth SURVIVED and its survival is
+-- structural rather than a corpus gap: replacing `F` with `_` on both sides,
+-- so an abrupt in one field could reach a statement in another, changes nothing
+-- HERE and cannot change anything in JavaScript, because no node kind carries
+-- two multi-child fields at once — `switch_case` has only `consequent`, every
+-- block-like kind only `body`. Carrying F is defence against a future scanner,
+-- not against the language, and saying so is cheaper than a mutant that will
+-- never go red.
+--
+-- ...and then the question that actually paid: WHERE IS THIS RULE STRUCTURALLY
+-- UNABLE TO LOOK. Four shapes were built and all four came back blind, because
+-- this rule reads SIBLINGS and each of them completes an enclosing region
+-- instead: a `return` in a nested block, a `return` in both arms of an `if`, a
+-- `return` under a label, and a call to a function that never returns. The
+-- first three are w_cf_completion; the fourth is w_exn_propagation, and it is
+-- the one that corrected this item's own witness.
+
+-- A STATEMENT AFTER AN ABRUPT TRANSFER NEVER RUNS, which is stronger than what
+-- `guarded` says — `guarded` is a MAY-not-run and this is a NEVER. The weaker
+-- word is used deliberately: the layer's vocabulary is the may-set, every
+-- consumer reads it that way, and a second stronger relation would need its own
+-- consumers before it could be checked. The over-coverage is in the safe
+-- direction and is what `may_not_run` is documented to be.
+guarded[code](S) :- after_abrupt[code](S).
+guarded[code](N) :- after_abrupt[code](S), ast_within[code](S, N).
+
 guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
 reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
 may_not_run[code](F)       :- resolves[code](_, F), not reached_unguarded[code](F).
@@ -136,6 +207,7 @@ transfer_mechanism(do_while_statement,         loop_at_least_once).
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
 mechanism_modelled(short_circuit).
+mechanism_modelled(abrupt).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(suspend, a_control_returns_so_the_site_still_runs).
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
@@ -147,7 +219,11 @@ mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 -- the openness with its OWNER keeps the row queryable and the audit at zero,
 -- which is the same move `cell_blocked` makes for a cell nobody can take.
 edb(mechanism_open).        -- mechanism_open(M, WorkItem)
-mechanism_open(abrupt, w_cf_abrupt_transfer).
+-- EMPTY SINCE 2026-09-06, and kept declared: `abrupt` was the only row and it
+-- moved to `mechanism_modelled` when w_cf_abrupt_transfer landed. The relation
+-- stays because the THREE-STATE shape is the point — the next mechanism that is
+-- neither answered nor waived needs somewhere honest to sit, and re-deriving
+-- that lesson costs more than one `edb` line.
 
 mechanism_known(M) :- mechanism_modelled(M).
 mechanism_known(M) :- mechanism_waived(M, _).
@@ -163,6 +239,8 @@ mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(
 -- that no rule of this layer actually reaches.
 guard_named[code](K)       :- guard_kind(K, _).
 guard_named[code](K)       :- short_circuit_kind(K).
+-- ...and the four abrupt kinds, reached by `abrupt_at` rather than by an arm.
+guard_named[code](K)       :- abrupt_kind(K).
 -- `catch_clause` carries `skip_arm` and is reached as the ARM of a
 -- `try_statement` rather than by a `guard_kind` row of its own — the guard is
 -- the try's `handler` field, and the clause is what sits in it. Named here so
