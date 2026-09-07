@@ -28,7 +28,11 @@
     "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl",
     "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts",
-    "noparser": "node --experimental-strip-types scripts/parser_optional.ts"
+    "noparser": "node --experimental-strip-types scripts/parser_optional.ts",
+    "forkpar": "node --experimental-strip-types bench/fork_parallel.ts",
+    "forkstages": "node --experimental-strip-types bench/fork_stages.ts",
+    "forkclone": "node --experimental-strip-types bench/fork_clone_cost.ts",
+    "forkctl": "node --experimental-strip-types bench/fork_control.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
