@@ -186,13 +186,17 @@ of the two-stage bootstrap stands.
    structural clone landed.
 4. **The eight baseline failures**, with the `leak: 1`-in-four-places
    hypothesis above as the first thing to test.
-5. **Two files loaded together both writing `[main]`** —
-   `f_two_files_writing_one_book_is_scoping_not_naming`. Decided in shape,
-   not built: it is an AUDIT ROW, not a scope and not a refusal, because the
-   union is usually what was wanted and the damage (a silently widened
-   negation under `not`) is a property of the whole program, invisible in
-   either file. `perspExplicit` already records whether the bracket was
-   written and `src/reflect.ts:680` already uses it once.
+5. ~~**Two files loaded together both writing `[main]`**~~ — BUILT 2026-09-07
+   as `widened[audit](Rel, P)` at the end of `boot.rofl`, exercised by
+   `examples/aka` §9 and gated by `test/widened-negation.test.ts`. Three
+   rules, no kernel change: "more than one loader" is `asserted_by`'s
+   second argument with `$kernel` subtracted, and the negation's BOOK comes
+   from `premise_lit(R, _, $not($lit(Rel, P, _, _)))`. `perspExplicit` was
+   NOT needed — it belongs to the file-local-default half, which the finding
+   deliberately did not choose. 0 rows over 19 example worlds; the liveness
+   case is constructed, because the corpus has no collision of this kind.
+   See `f_the_loader_the_kernel_records_is_the_author_not_the_file` and
+   `f_no_two_files_in_this_corpus_ever_widened_a_negation`.
 
 ## 6. Ledger
 
@@ -206,7 +210,7 @@ f_arrival_order_is_not_meaning_and_the_fork_now_preserves_it
 f_a_forks_key_order_is_an_accident_of_restore              (addressed)
 f_a_ledger_is_where_you_reason_not_who_you_are_about
 f_a_book_name_that_carries_its_owner_belongs_to_the_host   (DISMISSED — premise dissolved)
-f_two_files_writing_one_book_is_scoping_not_naming         (open, shape decided)
+f_two_files_writing_one_book_is_scoping_not_naming         (ADDRESSED 2026-09-07)
 f_the_join_width_is_the_only_quantity_that_can_explode
 f_i_measured_the_world_build_and_called_it_the_parse
 f_half_a_ring1_parse_concludes_nothing_and_one_rule_was_a_fifth_of_it

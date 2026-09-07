@@ -152,6 +152,16 @@ const FORBIDDEN = [
   'collected',
   'malformed', 'breach', 'leak', 'forged', 'unmoded',
   'undefined_premise',
+  // THE LIST WAS BEHIND boot.rofl BY THREE NAMES, and the omission is the
+  // shape this repository already records as "a gate inherits the scope of its
+  // INCIDENT": the list was written when boot.rofl ended at
+  // `undefined_premise`, and every relation appended after it — the authorship
+  // block's `demands_authorship`/`unattributed`, and the widened-negation
+  // block's three — was outside a check that names its members one by one.
+  // None of the five appears as a code identifier in src/ today, so adding
+  // them costs nothing and closes the hole for the next one.
+  'demands_authorship', 'unattributed',
+  'negated_under', 'loader', 'widened',
   'reading', 'corroborated', 'outlier', 'close', 'temp',
   'counter', 'emit', 'cfg', 'delta', 'step', 'move',
 ];
