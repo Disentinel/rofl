@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Rofl } from '../src/api.ts';
+import { Rofl, sameKeySet} from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
 import { canonClause } from '../src/reflect.ts';
 
@@ -307,4 +307,27 @@ test('budgeted query on a heavy program returns partial and emits hole', () => {
   assert.equal(q.partial, true, 'partial result, not a hang');
   assert.ok(q.rows.length > 0, 'partial result still returned');
   assert.ok(r.query('hole(Q, R)').rows.length >= 1, 'hole emitted');
+});
+
+// THE GATE FOR `sameKeySet`, and it is alive: put the old comparison back --
+// `a.length === b.length && a.every((k, i) => k === b[i])` with only ONE side
+// sorted -- and the second case below goes red. It was green for months
+// because two unrelated sorts upstream happened to hand it ordered input; see
+// the note over `sameKeySet` for what reversing one of them does to
+// examples/tm.rofl.
+test('quiescence compares sets, not sequences', () => {
+  assert.equal(sameKeySet([], []), true, 'two empty ticks are quiescent');
+  // BOTH DIRECTIONS, and the second one is the original defect's own shape:
+  // it sorted the left operand and compared it against the right one as it
+  // arrived. A single direction leaves one half of the mutant space alive --
+  // measured: with only the left case here, planting `const y = b` (sort one
+  // side only) left the suite GREEN.
+  assert.equal(sameKeySet(['b', 'a'], ['a', 'b']), true,
+    'the same facts in a different arrival order are the same tick');
+  assert.equal(sameKeySet(['a', 'b'], ['b', 'a']), true,
+    'and the same when it is the RIGHT side that arrived out of order');
+  assert.equal(sameKeySet(['a', 'b'], ['a', 'c']), false, 'a different fact is a different tick');
+  assert.equal(sameKeySet(['a'], ['a', 'b']), false, 'a longer next tick is not quiescent');
+  assert.equal(sameKeySet(['a', 'a'], ['a', 'b']), false,
+    'equal length and equal first element is not enough');
 });

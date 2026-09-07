@@ -227,18 +227,61 @@ Stated in the field's own tiers rather than invented ones:
 
 ## 5. Ordered work, with what each is worth
 
-1. **Buffer-and-merge derived insertions (I1).** Up to 5.4× on the layer the engine generates most of. Contained; no semantic change.
-2. **Cache the meta-layer against the rule set (I2).** ~15 s off a program the size of `examples/spat/`; the invalidation key is exact because `dep`/`reach` are provably immune to data changes.
-3. **Copy-on-write forks.** Turns `clone()` from linear-in-store into constant, which is what IFFY and DITTO need to be usable at all.
-4. **Compact fact representation.** The 40–70×/fact memory gap is the ceiling on everything else. Interning relation names and perspectives, and storing small-arity tuples as typed arrays rather than term objects, is where the order of magnitude lives.
-5. **A storage port with an external backend.** Only after 1–4: an external store cannot rescue a representation that is 40× too heavy, and a real backend's MVCC snapshot would also settle item 3 for free.
+**Re-ranked 2026-09-07.** Items 1 and 2 have landed. Items 3, 4 and 5 were
+ordered on a cost for `clone()` that the structural clone made stale by 55–150×
+and on a motivating workload that turns out not to exist — see the two
+corrections at the end of this document. The list below is the ordering those
+measurements produce; the old numbering is kept in brackets so the change is
+legible rather than silent.
 
-Index selection, native compilation and parallelism — the techniques that buy the
-field its numbers — are all **premature here**. Automatic index selection is worth
-up to 2× and 6× less memory *than maximal indexing*; a well-engineered interpreter
-is only 2–6× off generated C++; parallelism yields <25 % CPU utilisation on the
-workload shapes this kernel targets. None of them touches a 40× representation
-gap or a 5.4× insertion-order penalty.
+1. ~~**Buffer-and-merge derived insertions (I1).**~~ **LANDED** — the
+   arrival-order spread closed completely (see §1) and delivered about 2× end
+   to end against 40× on its own axis.
+2. ~~**Cache the meta-layer against the rule set (I2).**~~ **LANDED**, and
+   since superseded: the schedule moved into the evaluator and `boot.rofl`'s
+   `reach` is gone (see `LIMITS.md`).
+3. **[was 4] Compact fact representation.** Interned names and perspectives,
+   small-arity tuples as typed arrays rather than term objects, and a numeric
+   fact identity in place of the string key. **This is now the only item on the
+   list that more than one other thing waits on**, and that is what promotes
+   it: it closes the 40–70×/fact memory gap; it raises the ceiling on fork
+   parallelism, which is allocation-bound and not core-bound (measured: 5.74×
+   on pure arithmetic, 3.78× on pure `JSON.parse`, 3.11× on a real fork
+   search); and it is the precondition for sharing a base world through a
+   `SharedArrayBuffer`, which holds bytes and cannot hold a graph of objects
+   with string keys.
+4. **[was 5] A storage port with an external backend.** Unchanged in reasoning:
+   an external store cannot rescue a representation that is too heavy, so it
+   follows the item above rather than preceding it.
+5. **[was 3] Copy-on-write forks.** **Demoted, on three measurements.** The
+   `clone()` figure it rested on predates the structural clone and is stale by
+   55–150× (0.15–0.40 µs/fact re-measured, so a realistic 100k fork is on the
+   order of 40 ms and not 2.2 s). Its stated motivation — "what IFFY and DITTO
+   need to be usable at all" — does not survive a census: **IFFY does not
+   fork.** Its arms are a column (`arm[draft](A)` is `edb`), all in one store
+   and one fixpoint, and it is the one place here that priced a fork and chose
+   against it. And a free clone buys almost nothing anyway: of an 88 ms fork
+   branch, `fromSnapshot` is 17%, `clone()` is **1%**, the fixpoint is 80%.
+   **What survives is the memory argument** — a structural clone is still a
+   full copy in RAM, so N concurrent branches are N worlds — which is why
+   `f_fork_copies_the_whole_store` stays open. Note also that a cheaper fork
+   and a worker pool pull against each other: the smaller a branch, the larger
+   the pool's fixed setup as a share of it.
+
+Index selection and native compilation remain **premature here** for the reasons
+below. Automatic index selection is worth up to 2× and 6× less memory *than
+maximal indexing*; a well-engineered interpreter is only 2–6× off generated C++.
+
+**Parallelism is no longer simply "premature"; it is measured, and it splits.**
+Inside one fixpoint it is bounded by structure: strata are sequential, rounds
+within a stratum are sequential, and one ring 1 clause carries 8 hard barriers
+and 74 soft ones. Its ceiling is 4.47× on the join with unbounded cores — but
+the parse's serial half (image restore plus the completion check) means a
+*perfect* parallel fixpoint is **1.73× end to end**. Across independent worlds
+it is real and needs no engine change: a worker pool over fork branches measures
+**3.11× on 8 cores** — and, per item 3, is limited by allocation rather than by
+cores or synchronisation. The largest such workload in this repository is the
+test suite, not any demo.
 
 ---
 

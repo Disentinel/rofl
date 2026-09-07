@@ -91,6 +91,32 @@ function checkOrderable(c: Clause): string | null {
     + `'_' if the existential reading is what is meant.`;
 }
 
+/** Do two key lists name the same SET of facts?
+ *
+ *  FOUND BY BREAKING SOMETHING ELSE, 2026-09-07, and the shape is worth more
+ *  than the line. Quiescence used to compare a SORTED array of the tick's base
+ *  facts against an UNSORTED array of the staged next-tick facts, element by
+ *  element. It was correct only because two other places happen to sort on the
+ *  way out (`src/rounds.ts` and `Evaluation.run`), so the comparison was
+ *  reading an order that neither of its own operands promises.
+ *
+ *  MEASURED by reversing one of those sorts: `examples/tm.rofl`, the 3-state
+ *  busy beaver that halts in 13 ticks, stops being detected as quiescent, runs
+ *  to its 100-tick cap and grows 1391 -> 3509 facts. A program that terminated
+ *  stops terminating, with no error and no hole -- and that is exactly what a
+ *  concurrent stager would produce, which is how the order-dependence census
+ *  (`scanners/order_census.ts`) walked into it.
+ *
+ *  So: sort both, or neither. An equality that is only true under an ordering
+ *  its callers do not guarantee is a coincidence wearing a comparison. */
+export function sameKeySet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const x = [...a].sort();
+  const y = [...b].sort();
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+  return true;
+}
+
 /** WHAT A QUESTION MAY ARRIVE AS. Text, or the literal itself.
  *
  *  A query used to be text and only text, and that made `parseLiteral` -- and
@@ -978,9 +1004,14 @@ export class Rofl {
     opts.onFixpoint?.(this);
     const staged = this.lastStaged;
     const curBase = this.store.allFacts()
-      .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key).sort();
+      .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key);
     const stagedKeys = staged.map((f) => f.key);
-    if (curBase.length === stagedKeys.length && curBase.every((k, i) => k === stagedKeys[i])) {
+    // Quiescence is a question about two SETS -- does the next tick hold
+    // exactly what this one holds -- and it is answered by `sameKeySet`
+    // rather than inline, so neither side may borrow an order the other
+    // happens to arrive in. `stagedKeys` is left in arrival order because
+    // `tickLog` below records it and `canonicalState` reads that.
+    if (sameKeySet(curBase, stagedKeys)) {
       return { advanced: false, quiescent: true, partial: false };
     }
     this.store.advanceTick(staged.map(({ rel, persp, args }) => ({ rel, persp, args })),
