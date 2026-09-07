@@ -154,7 +154,7 @@ export function codeLines(file: string): Set<number> {
 }
 
 export const TASKS = fs.existsSync(TASKS_DIR)
-  ? fs.readdirSync(TASKS_DIR).filter((f) => f.endsWith('.ts')).sort()
+  ? fs.readdirSync(TASKS_DIR).filter((f) => /^t\d+-/.test(f)).sort()
   : [];
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]).includes('necessity');
