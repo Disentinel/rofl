@@ -890,17 +890,41 @@ claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_bound
 -- THE PRECEDENT IS IN THE RULE FILE ALREADY: `transfer_kind(new_expression)`
 -- exists because "a model built only on CallExpression misses that edge with
 -- nothing to point at". The argument was written and applied once.
-work(w_cg_invisible_calls, "calls with no call site: a tagged template, a for-of iterator, a decorator, a thenable").
+-- ONE OF THE FOUR IS ANSWERED, 2026-09-07, and the INSTRUMENT decided which.
+-- Asked of the runtime on a throwaway fixture before a rule was written:
+--
+--   tag`x`           V8 reports `useTag -> tag`   -- the enclosing function
+--   for (x of it)    `useForOf -> [Symbol.iterator]` and `useForOf -> next`
+--   await thenable   `<top> -> then`              -- the PROMISE MACHINERY
+--
+-- so the tagged template and the for-of are checkable and the AWAIT IS NOT: a
+-- model deriving `useAwait -> then` would be contradicted by the oracle, not
+-- confirmed by it, because the caller frame is outside the fixture entirely.
+-- That is a property of the form rather than of the model, and it is why this
+-- item now says three different things instead of one.
+--
+-- The tagged template closed at BOTH layers for one arm: a transfer site plus
+-- the value layer's existing `resolves` carry. The for-of needs a custom
+-- iterable the corpus does not have and whose method key is `Symbol.iterator`,
+-- a computed member the scanner cannot reduce to a literal. The decorator
+-- produces no node at all with the parser plugin off.
+work(w_cg_invisible_calls, "calls with no call site: the tagged template is DONE (r_tag_call); a for-of iterator needs a custom iterable whose key the scanner cannot reduce, a decorator has no node, and an await's `.then` is invisible to the ORACLE - measured, not argued").
 work_order(w_cg_invisible_calls, 34).
 work_state(w_cg_invisible_calls, open).
-claim(queued, js, tagged_template_expression, none, callgraph, w_cg_invisible_calls).
+work_spawned(w_cg_invisible_calls, f_the_instrument_decides_which_invisible_call_can_be_closed).
+work_spawned(w_cg_invisible_calls, f_a_guard_over_a_runnable_corpus_has_no_site_to_bite_on).
+work_spawned(w_cg_invisible_calls, f_a_fixture_for_one_construct_smuggled_in_two_kinds).
+-- The tagged template's two claims are GONE rather than kept beside a done
+-- note, and the difference matters: `queue_stale[audit]` says a claim on a shut
+-- cell under an OPEN item is a lie, and it said so within one run. A claim
+-- survives a closed cell only when the ITEM is done, which is what
+-- `false_done[audit]` then guards.
 claim(queued, js, for_of_statement,           none, callgraph, w_cg_invisible_calls).
 claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
 claim(queued, js, decorator,                  none, callgraph, w_cg_invisible_calls).
 -- ...and their value halves: what a decorator or a tagged template EVALUATES
 -- to is what the call returns, and the call has no site to hang a return on.
 claim(queued, js, decorator,                  none, dataflow, w_cg_invisible_calls).
-claim(queued, js, tagged_template_expression, none, dataflow, w_cg_invisible_calls).
 
 -- ...and the two the sweep handed to items that already existed. `this()` is a
 -- question about what `this` denotes, which is scope; `(yield v)()` is the

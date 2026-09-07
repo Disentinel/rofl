@@ -95,4 +95,18 @@ export async function onAwait(n: number): Promise<number> {
 // through the built-in prototype. Its residue is the standard library.
 export function onTemplate(n: number): string { return `k${n}`.concat('!'); }
 
+// A TAG THAT IS NOT A FUNCTION, and it is here rather than in a runnable file
+// for the reason this file exists: `` stampObj`x` `` throws at runtime, so no
+// executable fixture can hold it, and without it the `fn_node` guard on the
+// tagged-template rule has nothing to bite on — the mutant that drops it
+// derives a byte-identical world. `stampObj` is a REAL VALUE and not an ambient
+// declaration, which is the care this file's header already demands: the site
+// measures the guard only when everything except the guard already works.
+const stampObj = { at: 1 };
+// ...and NO `: unknown` return annotation, for the same reason the tag in
+// alpha.mjs has no rest parameter: it would introduce `tsunknown_keyword`,
+// which this vocabulary does not declare. The gate caught both on the first
+// full run, which is the gate doing its job and the fixture doing too much.
+export function onTagObject(n: number) { return stampObj`k${n}`; }
+
 export async function dyn(p: string) { return import(p); }

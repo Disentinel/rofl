@@ -174,7 +174,15 @@ node_kind(js, await_expression).
 node_kind(js, for_of_statement).
 node_kind(js, decorator).
 
-unknown_because(js, tagged_template_expression, callgraph, not_yet).
+-- ...AND ONE OF THE FOUR IS ANSWERED, 2026-09-07. `` tag`x` `` is a TRANSFER
+-- SITE now, the same shape `new C()` took, and the tag resolves through the
+-- value layer like any other callee. The other three stay, and the reason each
+-- stays is measured against the RUNTIME rather than argued: a `for-of` is
+-- checkable and needs a custom iterable the corpus does not have; an `await`
+-- on a thenable is NOT — V8 attributes the `.then` call to the promise
+-- machinery, so a model deriving it would be contradicted by the oracle — and a
+-- decorator produces no node at all with the parser plugin off.
+handled(js, tagged_template_expression,     callgraph, r_tag_call).
 unknown_because(js, await_expression,           callgraph, not_yet).
 unknown_because(js, for_of_statement,           callgraph, not_yet).
 unknown_because(js, decorator,                  callgraph, not_yet).
@@ -358,7 +366,10 @@ ignored(js, tsunion_type,                   callgraph, a_type_only_no_runtime_va
 -- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
 -- declared.
 kind_absent_ok(decorator, a_no_corpus_site).
-kind_absent_ok(tagged_template_expression, a_no_corpus_site).
+-- `tagged_template_expression` stood here until 2026-09-07 and the corpus grew
+-- three sites — two runnable and one in shapes.ts that exists so the `fn_node`
+-- guard has something to bite on. `kind_absent_stale[audit]` is what would have
+-- said so if the author had not.
 
 -- ...and the two kinds those verdicts are about are declared HERE too, which
 -- `orphan_claim[audit]` demanded within one run: a world loading this pack

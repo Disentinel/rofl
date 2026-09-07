@@ -107,7 +107,23 @@ export function bviaTwin(n) {
   return viaTwin(n) + twin(n);
 }
 
+// A SECOND `mark`, and a second tagged template. One tag in the corpus leaves
+// the value join unconstrained by the data: any rule that resolved a tag by its
+// NAME rather than by what the name denotes IN THIS FILE would derive the same
+// single edge. Two functions of one name in two files is what makes that
+// column observable — the fourth time in this loop the missing property was a
+// deliberate name collision.
+function mark(strings) {
+  trace();
+  return strings.length;
+}
+
+export function bTag(n) {
+  trace();
+  return mark`x ${n}`;
+}
+
 export function bmain() {
   trace();
-  return run(5) + buseNs(1) + bcross(1) + bviaNs(1) + bviaStar(1) + bviaTwin(1);
+  return run(5) + buseNs(1) + bcross(1) + bviaNs(1) + bviaStar(1) + bviaTwin(1) + bTag(1);
 }

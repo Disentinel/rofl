@@ -32,9 +32,19 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
                            ident_in[code](E, Name, File), sees_binder[code](E, D).`,
             replace: `may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
                            ident_in[code](E, Name, File).`, file: 'rules/js-dataflow.rofl' }],
-    expect: (m, b) => assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
-      b.n('ambiguous_call[audit](C, F, G)') + 4,
-      'the two `const c` become one name again and both `hold`s answer both sites'),
+    expect: (m, b) => {
+      // +4 -> +10 on 2026-09-07, and the six new ones are a SECOND collision the
+      // tagged-template fixture brought with it: `const f = mark`a`` in `useTag`
+      // and the parameter `f` in `apply2`, `applyFirst` and `useCb`. Named
+      // rather than counted, because a count that grew for a reason nobody
+      // looked at is the thing this file exists to prevent.
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 10,
+        'the two `const c` become one name again and both `hold`s answer both sites');
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['apply2 -> stamped', 'applyFirst -> stamped', 'useCb -> stamped'],
+        'and a module-scope `const f` answers every parameter named `f`');
+    },
   },
   {
     name: 't2 a top-level binder is invisible inside a function',
@@ -67,10 +77,11 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // computed site reach the other's key.
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
-        ['useKeyA -> keyTwo', 'useKeyB -> keyOne'],
+        ['apply2 -> stamped', 'applyFirst -> stamped', 'useCb -> stamped',
+         'useKeyA -> keyTwo', 'useKeyB -> keyOne'],
         'every binder visible everywhere: each computed key reaches the other site');
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 16,
-        'and the collisions the region rule closed come back: 8 -> 16');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 22,
+        'and the collisions the region rule closed come back: 8 -> 22');
     },
   },
   {
@@ -257,8 +268,8 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
       // exports to this lookup. The MUTANT number does not move — 29 is what is
       // left when no module object reaches `member_plain` at all — and that the
       // two numbers move independently is the reason both are pinned.
-      assert.equal(b.n('member_plain[flow](O, K, V)'), 77);
-      assert.equal(m.n('member_plain[flow](O, K, V)'), 29, 'the module\'s exports leave the lookup');
+      assert.equal(b.n('member_plain[flow](O, K, V)'), 82);
+      assert.equal(m.n('member_plain[flow](O, K, V)'), 30, 'the module\'s exports leave the lookup');
     },
   },
   {
@@ -283,9 +294,9 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(), [
         'bviaNs -> leaf', 'bviaNs -> main', 'bviaNs -> run', 'bviaNs -> useAssign',
         'bviaNs -> useBin', 'bviaNs -> useCond', 'bviaNs -> useOr', 'bviaNs -> usePanel',
-        'bviaNs -> useRack', 'bviaNs -> useSeq', 'bviaNs -> useShelf',
+        'bviaNs -> useRack', 'bviaNs -> useSeq', 'bviaNs -> useShelf', 'bviaNs -> useTag',
       ]);
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 140, 'and the site resolves every way: 8 -> 140');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 164, 'and the site resolves every way: 8 -> 164');
     },
   },
   {
@@ -405,8 +416,8 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
         ['beta.mjs: twin@beta.mjs | twin@delta.mjs',
          'beta.mjs: twin@delta.mjs | twin@beta.mjs'],
         'the imported `twin` now means both the re-exported one and beta\'s own');
-      assert.equal(reexports(b).length, 13);
-      assert.equal(reexports(m).length, 35, 'gamma re-exports every function in the corpus');
+      assert.equal(reexports(b).length, 14);
+      assert.equal(reexports(m).length, 38, 'gamma re-exports every function in the corpus');
     },
   },
   {
@@ -426,14 +437,14 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
     // the fact, by name, and the day something imports from beta this mutant
     // starts costing an edge as well.
     expect: (m, b) => {
-      assert.deepEqual(betaExports(b), ['bcross@beta.mjs', 'bmain@beta.mjs', 'bviaNs@beta.mjs',
-        'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
+      assert.deepEqual(betaExports(b), ['bTag@beta.mjs', 'bcross@beta.mjs', 'bmain@beta.mjs',
+        'bviaNs@beta.mjs', 'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
         'beta.mjs exports what beta.mjs declares');
       assert.deepEqual(betaExports(m).filter((x) => !betaExports(b).includes(x)),
         ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs', 'run@alpha.mjs',
          'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs', 'useCond@alpha.mjs',
          'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs', 'useSeq@alpha.mjs',
-         'useShelf@alpha.mjs'],
+         'useShelf@alpha.mjs', 'useTag@alpha.mjs'],
         'beta.mjs re-exports everything it imports, through both of its sources');
     },
   },
@@ -471,7 +482,7 @@ test('a re-export carries names and not the default, and the receiver keeps its 
   assert.deepEqual(reexports(m), ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs',
     'run@alpha.mjs', 'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs',
     'useCond@alpha.mjs', 'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs',
-    'useSeq@alpha.mjs', 'useShelf@alpha.mjs'],
+    'useSeq@alpha.mjs', 'useShelf@alpha.mjs', 'useTag@alpha.mjs'],
     'gamma re-exports the NAMED exports of both its sources, and nothing else');
   // ...AND NOT THE DEFAULT, which `export *` deliberately leaves behind. This is
   // asserted rather than assumed because `exports_default[code]` is a separate

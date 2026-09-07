@@ -53,10 +53,12 @@ function world(m: Mut = {}): Rofl {
 // at the wrong arity. Every `n(r, 'x[audit](…)') === 0` here depended on the
 // difference and could not see it. See src/api.ts.
 /** the bindings of one variable, sorted — a named row rather than a count */
-const binds = (r: Rofl, q: string, v: string): string[] => {
+const binds = (r: Rofl, q: string, ...vs: string[]): string[] => {
   const res = r.query(q);
   assert.equal(res.unpopulatable, false, `query ${q}: nothing in this world can populate it`);
-  return res.rows.map((x) => String(x.bindings[v]).replace(/^"|"$/g, '')).sort();
+  return res.rows
+    .map((x) => vs.map((v) => String(x.bindings[v]).replace(/^"|"$/g, '')).join('/'))
+    .sort();
 };
 
 const n = (r: Rofl, q: string): number => {
@@ -607,8 +609,10 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // the seven import/export forms and the only one that needed two fixture
   // files — a module reachable only through the re-export, and a name that
   // collides with the importing file's own.
-  assert.deepEqual(f, { cell: 156, modelled: 56, waived: 26, not_modelled: 74 },
-    'predicted 156 fine cells = 56 + 26 + 74');
+  // 56 -> 57 on 2026-09-07: `tagged_template_expression` at callgraph — a call
+  // the grammar gives no call site, answered as a TRANSFER SITE like `new`.
+  assert.deepEqual(f, { cell: 156, modelled: 57, waived: 26, not_modelled: 73 },
+    'predicted 156 fine cells = 57 + 26 + 73');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -649,12 +653,12 @@ test('the three verdicts still partition the cell space with a third axis', () =
   // the reason is total over not_modelled, exactly as at two axes
   // 75 -> 74 on 2026-09-07: `export_all_declaration x callgraph` is modelled,
   // so the cell that carried a reason no longer needs one.
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 74, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 73, 'one reason per not_modelled cell');
   // 75 -> 74 with the reason above: the two halves of the split partition the
   // not_modelled cells, so they move together with `reason[audit]` and this line
   // is what says the split is still TOTAL rather than merely smaller.
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 74, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 73, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -847,26 +851,58 @@ test('every declared kind either appears in the corpus or says why not', () => {
   // 6 -> 5 on 2026-09-07: a THIRD excuse retired the day the corpus grew the
   // kind it excused — `export_all_declaration` has two sites now, and
   // `kind_absent_stale[audit]` is what would have said so if the author had not.
-  assert.equal(n(r, 'kind_absent_ok(K, R)'), 5, 'positive control: five rows reach this world');
+  // 5 -> 4 on 2026-09-07: a FOURTH excuse retired the day the corpus grew the
+  // kind it excused — `tagged_template_expression` has three sites now, two
+  // runnable and one in shapes.ts that exists so a guard has something to bite.
+  assert.equal(n(r, 'kind_absent_ok(K, R)'), 4, 'positive control: four rows reach this world');
   assert.ok(r.holds('kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit)'),
     'and the spelling the scanner cannot emit says so by name');
 });
 
 test('MUTANT: an excuse withdrawn names the kind, and a misspelled one names it twice', () => {
   // TWO MUTANTS IN ONE TEST because they are the same defect from either side.
-  const gone = corpus({
-    cg: CG.replace('kind_absent_ok(tagged_template_expression, a_no_corpus_site).', ''),
-  });
-  assert.deepEqual(binds(gone, 'kind_unexercised[audit](A, K)', 'K'), ['tagged_template_expression'],
+  //
+  // THE ANCHOR IS DERIVED, 2026-09-07, and it is the SIXTH time in this
+  // repository that a mutant named a row somebody later retired. It said
+  // `tagged_template_expression` until the corpus grew three tagged templates
+  // and the excuse went with them; before that it had been re-aimed twice. The
+  // excuse LIST is a query — `kind_absent_ok(K, R)` — so the mutant now takes
+  // whichever row that world actually has and withdraws THAT one. The same move
+  // as the queue-head plant and the unpopulatable file list: derive the anchor
+  // and it cannot expire.
+  // THE ANCHOR IS READ OUT OF THE PACK THIS TEST MUTATES, not out of the world:
+  // an excuse the world reports may be written in facts/js-kinds.rofl, and
+  // replacing a line that is not in this string returns the string unchanged —
+  // a mutant that mutates nothing, passing in the safe direction. The first
+  // derived draft did exactly that, and this control is what said so.
+  // ...AND THE PACK IS DERIVED TOO, because the count of excuses in any ONE of
+  // them falls as the corpus grows: facts/js-callgraph.rofl was down to a
+  // single row within the hour, and the first derived draft asked for two.
+  const packs: [string, (t: string) => Parameters<typeof corpus>[0]][] = [
+    [CG, (t) => ({ cg: t })],
+    [FACTS, (t) => ({ facts: t })],
+  ];
+  const found = packs
+    .map(([text, into]) => ({ text, into, rows: [...text.matchAll(/^kind_absent_ok\((\w+), (\w+)\)\.$/gm)] }))
+    .find((x) => x.rows.length > 0);
+  assert.ok(found, 'no pack this test can mutate declares an excuse to withdraw');
+  const [, victim, reason] = found.rows[0];
+  const line = `kind_absent_ok(${victim}, ${reason}).`;
+  // POSITIVE CONTROL FOR THE PLANT: a `String.replace` that matches nothing
+  // returns the original, so a mutant that mutated nothing would pass in the
+  // safe direction. The first derived draft did exactly that — it read the
+  // excuse out of the WORLD, which reports rows from packs this test does not
+  // mutate — and this line is what said so.
+  assert.notEqual(found.text.replace(line, ''), found.text, 'the plant found its line');
+  const gone = corpus(found.into(found.text.replace(line, '')));
+  assert.deepEqual(binds(gone, 'kind_unexercised[audit](A, K)', 'K'), [victim],
     'a declared kind with no node and no reason is named');
 
-  const typo = corpus({
-    cg: CG.replace('kind_absent_ok(decorator, a_no_corpus_site).',
-                   'kind_absent_ok(decorater, a_no_corpus_site).'),
-  });
-  assert.deepEqual(binds(typo, 'kind_unexercised[audit](A, K)', 'K'), ['decorator'],
+  const other = victim;
+  const typo = corpus(found.into(found.text.replace(line, `kind_absent_ok(${other}X, ${reason}).`)));
+  assert.deepEqual(binds(typo, 'kind_unexercised[audit](A, K)', 'K'), [other],
     'the kind is unexcused again');
-  assert.deepEqual(binds(typo, 'kind_absent_undeclared[audit](K)', 'K'), ['decorater'],
+  assert.deepEqual(binds(typo, 'kind_absent_undeclared[audit](K)', 'K'), [other + 'X'],
     'AND the excuse names something nobody declares — the guard the excuse list needs itself');
 });
 
@@ -947,7 +983,10 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // `trace()` calls.
   // 351 -> 360: the re-export fixtures — gamma.mjs has no function, delta.mjs
   // has one, and beta.mjs grew `twin` and `bviaTwin`, each with its `trace()`.
-  assert.equal(sites, 360, 'positive control: the corpus is the one the census was taken on');
+  // 360 -> 368: the tagged-template fixtures — `mark`, `stamped`, `useTag`,
+  // beta's second `mark` and `bTag`, each with its `trace()` call, plus the
+  // non-function tag in shapes.ts.
+  assert.equal(sites, 368, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -1097,7 +1136,10 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // `bviaTwin -> twin`, `bviaStar -> crossed` and `bmain -> bviaStar`, and the
   // second of those is the one the item was about — a name reached only through
   // another module's `export *`.
-  assert.equal(oracleEdges.size, 157, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 157 -> 162 on 2026-09-07: `main -> useTag`, `useTag -> mark`,
+  // `useTag -> stamped`, `bmain -> bTag`, `bTag -> mark` — and the third of
+  // those is the value half, which is why the fixture's tag returns a function.
+  assert.equal(oracleEdges.size, 162, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -1192,7 +1234,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 62, '32 kind-level claims + 30 shape claims with no cell under them');
+  assert.equal(f.modelled, 63, '33 kind-level claims + 30 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',

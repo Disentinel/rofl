@@ -36,6 +36,13 @@ callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _, 
 -- attributable, which is the difference between a gap and a silence.
 edb(transfer_kind).
 transfer_kind(new_expression).
+-- ...AND THE SAME ARGUMENT A SECOND TIME, 2026-09-07. `` tag`x` `` calls `tag`
+-- and the grammar gives that call no CallExpression node either, so it was
+-- outside every totality audit this file owns — `unshaped[audit]` reads 0
+-- because it cannot see past `call_site`. A transfer site does not resolve it;
+-- it makes the miss ATTRIBUTABLE, which is the difference between a gap and a
+-- silence, and that sentence was written here for `new` and applied once.
+transfer_kind(tagged_template_expression).
 transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
 
 -- what an enclosing function can be asked about: a call site or a transfer site
@@ -417,6 +424,20 @@ resolves[code](X, M) :- transfer_site[code](X, new_expression),
 -- execution. That is a separate question with no node to point at.
 resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
+
+-- THE TAG OF A TAGGED TEMPLATE, which is a callee in every sense but the
+-- grammar's: `` tag`x` `` evaluates `tag` and calls it with the strings and the
+-- substitutions. There is no `callee` child to read — the field is `tag` — and
+-- once that is said the value layer answers the rest, so this is one line and
+-- no new mechanism, like the namespace import and the alias store before it.
+--
+-- AND THE VALUE HALF COMES WITH IT, which is why this closes two cells. A
+-- tagged template EVALUATES to what the tag returns, and `may_be_node` already
+-- carries a call's value through `resolves[code]` — so `` const f = mark`a` ``
+-- followed by `f()` reaches what `mark` returns with nothing added here.
+resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
+                        ast_child[code](X, tag, 0, T),
+                        may_be_node[flow](T, F), fn_node[code](F).
 
 -- THE GENERAL CALLEE RULE. Everything above resolves a callee by recognising
 -- its SPELLING — an identifier, a member, an IIFE. This one asks the value

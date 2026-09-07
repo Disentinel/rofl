@@ -145,11 +145,11 @@ test('the five heaviest read paths, by name', () => {
   // rules. A delta alone would have reported "+6.7%" for both and said nothing
   // about which half either time.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 113358',
-    'relPersp authority = 87984',
-    'argMatches encloses_v pos=[1] = 55505',
-    'relPersp encloses_v = 52910',
-    'relPersp ast_node = 51930',
+    'argMatches ast_within pos=[0] = 116871',
+    'relPersp authority = 91377',
+    'argMatches encloses_v pos=[1] = 57088',
+    'relPersp encloses_v = 54493',
+    'relPersp ast_node = 53955',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -231,7 +231,23 @@ test('the five heaviest read paths, by name', () => {
   // retired excuses and one `unknown_because` that became `handled` are fewer
   // matrix rows, and the new arms derive nothing where no `export *` exists —
   // the same "invisible without a site" shape the excuse itself recorded.
-  assert.equal(c.total, 995305, 'total rows handed out by the store in one fixpoint');
+  // 995 305 -> 1 030 494 on 2026-09-07 with the TAGGED TEMPLATE, axes from the
+  // diff (rules/js-callgraph.rofl and facts/js-callgraph.rofl, against the three
+  // fixture files the iteration touched):
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   995 305 / 59 250 fir  1 026 857 / 60 966 fir
+  //     tag rules    998 536 / 59 249 fir  1 031 137 / 61 005 fir
+  //
+  // and the (HEAD, HEAD) corner reproduces the number this line used to assert,
+  // to the row — which is the control the previous iteration had to invent
+  // after a 401-row gap said an axis was missing. The rules cost +0.32% of rows
+  // and MINUS ONE firing: the arm itself derives nothing where no tagged
+  // template exists, and what moves is the matrix, where one `unknown_because`
+  // became a `handled` and one `kind_absent_ok` was retired. The fixture costs
+  // +3.1% and 1714 firings — five functions with their `trace()` calls, and a
+  // non-function tag in the file the oracle does not run.
+  assert.equal(c.total, 1031137, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -287,5 +303,14 @@ test('the five heaviest read paths, by name', () => {
   // 58 046 -> 59 250, +1204, and by the reasoning above nearly all of it is the
   // corpus: two fixture files and three functions with their call sites are
   // +1136, the rules +68.
-  assert.equal(c.firings, 59250, 'derivations: 58 046 before the re-export');
+  // 59 250 -> 61 005, +1755, and the split is in the 2x2 above: the fixture is
+  // +1716 and the rules +39, of which the arm's own share is negative.
+  //
+  // THE TABLE WAS RE-MEASURED after the fixture lost its rest parameter and its
+  // `unknown` annotation, because a 2x2 taken before a corpus change describes a
+  // corpus that no longer exists — and the difference showed up as this very
+  // pin, 1 030 494 against the 1 031 137 the suite reported. The (HEAD, HEAD)
+  // corner reproduces 995 305 in both measurements, which is what says the
+  // AXES were right and only the corpus under them had moved.
+  assert.equal(c.firings, 61005, 'derivations: 59 250 before the tagged template');
 });

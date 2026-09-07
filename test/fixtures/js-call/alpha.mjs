@@ -1065,6 +1065,44 @@ export function run(n) {
   return mid(n);
 }
 
+// A CALL WITH NO CALL SITE (w_cg_invisible_calls). `` mark`a ${n} b` `` calls
+// `mark` and the grammar gives that call no CallExpression node to hang it on —
+// the same shape `new C()` had, and the same remedy: a TRANSFER SITE, so the
+// miss is attributable rather than silent.
+//
+// MEASURED BEFORE THE RULE, against the runtime, because the instrument's reach
+// is the thing that decides which of these four forms can be closed at all:
+// V8 reports `useTag -> mark`, with the enclosing function as the caller, so
+// this one is checkable. A `for-of` is too — both `[Symbol.iterator]` and
+// `next` come back attributed to the enclosing function. An `await` on a
+// thenable is NOT: V8 reports `<top> -> then`, because the promise machinery
+// makes the call, so a model deriving `useAwait -> then` would be contradicted
+// by the oracle rather than confirmed by it.
+//
+// THE TAG RETURNS A FUNCTION on purpose. The value half of this cell is that a
+// tagged template EVALUATES to what the tag returns, and `may_be_node` already
+// carries a call's value through `resolves` — so calling the result is what
+// gives that half a site instead of a claim.
+function stamped(n) {
+  trace();
+  return n * 3;
+}
+
+// NO REST PARAMETER, deliberately: `(strings, ...subs)` is how a tag is usually
+// written and it introduces `rest_element`, a node kind this model's vocabulary
+// does not declare — `vocabulary_gap[audit]` said so on the first full run. A
+// fixture for one construct must not smuggle in a second.
+function mark(strings, sub) {
+  trace();
+  return stamped;
+}
+
+export function useTag(n) {
+  trace();
+  const f = mark`a ${n} b`;
+  return f(n);
+}
+
 export async function main() {
   trace();
   return [
@@ -1113,6 +1151,7 @@ export async function main() {
     useMethodOnInstance(1),
     useStaticOnInstance(1),
     useMethodOnClass(1),
+    useTag(1),
     useForOfArray(1),
     useForOfGen(1),
     useGuard(1),

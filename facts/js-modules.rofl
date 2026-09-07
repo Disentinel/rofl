@@ -408,5 +408,7 @@ kind_absent_ok(import, a_babel_emits_no_import_callee).
 -- the kind and would carry no reason for its absence.
 -- `kind_unexercised[audit]` named the missing copies within one run.
 kind_absent_ok(decorator, a_no_corpus_site).
-kind_absent_ok(tagged_template_expression, a_no_corpus_site).
+-- ...and the tagged template's copy went with the one in facts/js-callgraph.rofl
+-- on 2026-09-07: the kind has three corpus sites now, so every copy of the
+-- excuse had to go. The home rule from the direction of retirement, twice.
 kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).

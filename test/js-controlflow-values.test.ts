@@ -278,3 +278,122 @@ test('the exception path is now sourced, and what is left has an owner', () => {
 });
 
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 3l. A CALL WITH NO CALL SITE (w_cg_invisible_calls): a tagged template.
+//
+// `call_kind` is the closed pair {call_expression, optional_call_expression},
+// so `` tag`x` `` — which calls `tag` — was outside every totality audit the
+// call-graph file owns: `unshaped[audit]` reads 0 because it cannot see past
+// `call_site`. The precedent was already in that file, written for `new C()`
+// and applied once: a TRANSFER SITE does not resolve the call, it makes the
+// miss attributable, and the difference between a gap and a silence is the
+// whole point of the frontier.
+//
+// FOUR FORMS WERE CLAIMED BY THAT ITEM AND THE INSTRUMENT DECIDES WHICH CAN BE
+// CLOSED, which is why the runtime was asked BEFORE any rule was written.
+// Measured on a throwaway three-form fixture:
+//
+//   tag`x`            V8 reports `useTag -> tag`      — the enclosing function
+//   for (x of it)     `useForOf -> [Symbol.iterator]` and `useForOf -> next`
+//   await thenable    `<top> -> then`                 — the PROMISE MACHINERY
+//
+// so a model deriving `useAwait -> then` would be CONTRADICTED by the oracle
+// rather than confirmed by it: the caller frame is not in the fixture at all.
+// That is a property of the form, not of the model, and it is the reason the
+// item splits rather than closing whole.
+//
+// THE VALUE HALF COMES FREE AND IS EXERCISED RATHER THAN CLAIMED. `may_be_node`
+// already carries a call's value through `resolves[code]`, so `mark` returning
+// a function and `const f = mark`a`; f()` gives that half a site — g1 takes
+// `useTag -> stamped` away with the other two edges, which is what says the
+// second cell is earned.
+const TAG: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'g1 the tag arm is deleted',
+    mut: [{ find: `resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
+                        ast_child[code](X, tag, 0, T),
+                        may_be_node[flow](T, F), fn_node[code](F).`,
+            replace: '', file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['bTag -> mark', 'useTag -> mark', 'useTag -> stamped'],
+        'both tags, and the function the tag RETURNS');
+      // THE CONJUNCT THAT KEEPS THIS APART FROM g2, which loses the same three:
+      // the SITE is still declared here, only the resolution goes.
+      assert.equal(m.n('transfer_site[code](X, K)'), 22, 'the transfer sites are untouched');
+      // ...and one more call goes unresolved: `f()` in useTag has no value to
+      // call once the tagged template stops evaluating to the tag's return.
+      assert.equal(b.n('unresolved_call[code](C, S)'), 180);
+      assert.equal(m.n('unresolved_call[code](C, S)'), 181);
+    },
+  },
+  {
+    name: 'g2 the kind stops being a transfer site',
+    mut: [{ find: 'transfer_kind(tagged_template_expression).', replace: '',
+            file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['bTag -> mark', 'useTag -> mark', 'useTag -> stamped']);
+      assert.deepEqual(b.q('transfer_site[code](X, K)')
+        .reduce((acc: Record<string, number>, [, k]) => ((acc[k] = (acc[k] ?? 0) + 1), acc), {}),
+        { new_expression: 19, tagged_template_expression: 3 });
+      assert.equal(m.n('transfer_site[code](X, K)'), 19,
+        'the sites themselves are gone, which is what tells this from g1');
+    },
+  },
+  {
+    name: 'g4 the tag stops having to be a function',
+    mut: [{ find: '                        may_be_node[flow](T, F), fn_node[code](F).',
+            replace: '                        may_be_node[flow](T, F).',
+            file: 'rules/js-callgraph.rofl' }],
+    // WHERE THE EDGE SET CANNOT LOOK, and the fixture that fixed it. This
+    // mutant moved NOTHING at all on the first measurement: every tag in a
+    // RUNNABLE file denotes a function, because a tagged template with any
+    // other tag throws. The guard had no site to bite on, and shapes.ts —
+    // scanned, never run — is where a site like that can live. `stampObj` is a
+    // real value rather than an ambient declaration, which is the care that
+    // file's own header demands.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [],
+        'no edge moves: an object has no name, so no edge can carry it');
+      assert.equal(b.n('resolves[code](C, F)'), 201);
+      assert.equal(m.n('resolves[code](C, F)'), 202, 'and the row is the only witness');
+      const extra = new Set(m.q('resolves[code](C, F)').map(([c, f]) => `${c}|${f}`));
+      for (const [c, f] of b.q('resolves[code](C, F)')) extra.delete(`${c}|${f}`);
+      const kindOf = (id: string) => m.q(`ast_node[code](${id}, K, File, L)`)[0];
+      assert.deepEqual([...extra].map((x) => {
+        const [c, f] = x.split('|');
+        return `${kindOf(c)?.[0]}@${kindOf(c)?.[1]} -> ${kindOf(f)?.[0]}@${kindOf(f)?.[1]}`;
+      }), ['tagged_template_expression@shapes.ts -> object_expression@shapes.ts']);
+    },
+  },
+];
+
+// g3 — READING THE `quasi` WHERE THE `tag` BELONGS — WAS MEASURED AND DROPPED,
+// and the reason is worth more than the mutant. It loses exactly the three
+// edges g1 loses, leaves `transfer_site` at 22 exactly as g1 does, and takes
+// `resolves` from 201 to 198 exactly as g1 does: the two are one mutant. It is
+// not a gap in the corpus this time but a property of the grammar — a tagged
+// template has exactly two children and only one of them can denote a function,
+// so "read the wrong child" and "delete the arm" are the same statement. A
+// third mutant with no oracle of its own would have looked like coverage.
+
+for (const g of TAG) test(`${g.name} — a call with no call site`, () => g.expect(build(g.mut), base()));
+
+test('the tag is called, and what it returns is called too', () => {
+  const m = base();
+  // THE POSITIVE HALF, and both cells are in it. `useTag -> mark` is the call
+  // the grammar hides; `useTag -> stamped` is the value it evaluates to.
+  for (const e of ['useTag -> mark', 'bTag -> mark', 'useTag -> stamped', 'bmain -> bTag']) {
+    assert.ok(edges(m).has(e), `the tagged template did not reach: ${e}`);
+  }
+  // AND THE COLLISION RESOLVES PER FILE. Two functions named `mark`, one in
+  // each of the two files that use a tag, and neither answers for the other —
+  // which is the only thing that makes the value join's file column observable.
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  assert.deepEqual(m.q('transfer_site[code](X, K)')
+    .filter(([, k]) => k === 'tagged_template_expression')
+    .map(([x]) => m.q(`ast_node[code](${x}, K, File, L)`)[0]?.[1]).sort(),
+    ['alpha.mjs', 'beta.mjs', 'shapes.ts']);
+});

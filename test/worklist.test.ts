@@ -184,6 +184,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_cf_reachability', 'w_cf_reachability',
      'w_cf_sweep', 'w_cf_sweep',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
+     'w_cg_invisible_calls', 'w_cg_invisible_calls', 'w_cg_invisible_calls',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
      'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
      'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
@@ -260,7 +261,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 17 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 15 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -297,7 +298,10 @@ test('the queue covers the model: 17 open cells, every one owned by name, none s
   // import/export forms, and the one that needed two fixture files rather than
   // a line — a module reachable only through the re-export, and a name that
   // collides with the importing file's own.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 17, 'the queue is the model\'s open set');
+  // 17 -> 15 on 2026-09-07: the tagged template at both layers — a call the
+  // grammar gives no call site, answered as a TRANSFER SITE, with the value
+  // half coming free through `resolves`.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 15, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -323,14 +327,20 @@ test('the queue covers the model: 17 open cells, every one owned by name, none s
   // 18 -> 17 on 2026-09-07: `this_expression`, closed by `r_this_host`.
   // 17 -> 16 on 2026-09-07: `assignment_expression`, closed by `r_member_write`.
   // 10 -> 9 on 2026-09-07: `export_all_declaration`, closed by `r_reexported_name`.
-  assert.deepEqual(per('callgraph'), [9, 19, 0]);
+  // 9 -> 8 the same day: `tagged_template_expression`, closed by `r_tag_call`.
+  // And CLAIMED falls with it, 19 -> 18: the claim was retired rather than left
+  // beside an open item, because `queue_stale[audit]` calls that a lie.
+  assert.deepEqual(per('callgraph'), [8, 18, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
   // layers now have no bucket at all.
   // 4 -> 3 on 2026-09-07, the same kind at the value layer: a re-exported name
   // is a name that denotes another module's function.
-  assert.deepEqual(per('dataflow'), [3, 10, 0]);
+  // 3 -> 2, and claimed 10 -> 9: the tagged template's value half, which needed
+  // no rule at all — `may_be_node` already carries a call's value through
+  // `resolves`, so the cell closed when the call-graph arm landed.
+  assert.deepEqual(per('dataflow'), [2, 9, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.

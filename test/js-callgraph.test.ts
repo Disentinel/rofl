@@ -975,7 +975,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 164 -> 168 on 2026-09-07: the re-export fixtures — `twin` twice, `bviaTwin`
   // and `bviaStar`, each with its `trace()` call, less the sites the re-export
   // binding now resolves.
-  assert.equal(sites - resolved, 168, `${sites - resolved} call sites vanished from the frontier`);
+  // 168 -> 171 the same day: the tagged-template fixtures — `mark` twice,
+  // `stamped`, `useTag` and `bTag` with their `trace()` calls, less the sites
+  // the tag arm now resolves.
+  assert.equal(sites - resolved, 171, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

@@ -291,3 +291,12 @@ node_kind(js, export_all_declaration).
 -- be stale here and in the two other packs that declare the kind — the home
 -- rule again, from the direction of retirement rather than of addition.
 handled(js, export_all_declaration,     dataflow, r_reexported_name).
+
+-- AND THE TAGGED TEMPLATE'S VALUE HALF, 2026-09-07, which is the same rule
+-- read from the other side: `` mark`a` `` EVALUATES to what `mark` returns,
+-- because `may_be_node` already carries a call's value through `resolves[code]`
+-- and the tag arm puts a tagged template into `resolves`. Nothing was written
+-- at this layer at all — the cell closes because the call-graph arm landed, and
+-- the fixture calls the result so the claim has a site.
+node_kind(js, tagged_template_expression).
+handled(js, tagged_template_expression, dataflow, r_tag_call).
