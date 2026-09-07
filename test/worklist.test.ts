@@ -201,10 +201,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_join_planner',
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_mutant_anchor_decay',
-     'w_mutant_costs_a_world',
+     'w_mutant_costs_a_world', 'w_mutant_costs_a_world',
      'w_negation_range_restriction',
      'w_note_is_not_evidence',
      'w_query_names_nothing', 'w_query_names_nothing', 'w_query_names_nothing',
+     'w_query_names_nothing',
      // THREE for w_scope_binding: the blindness that had no cell, the corpus
      // bent around the file-scoped binder, and the declared over-approximation
      // that was a defect with a comment on it.

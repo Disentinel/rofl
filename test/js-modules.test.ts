@@ -180,9 +180,21 @@ function build(opts: BuildOpts = {}): Rofl {
   return r;
 }
 
-const count = (r: Rofl, goal: string): number => r.query(goal).rows.length;
+// `unpopulatable` is the kernel refusing to let an empty answer stand for a
+// relation nothing in this world can populate — a typo, a rename, a wrong arity
+// or a wrong ledger. ADDED 2026-09-07 when the gate in
+// test/query-unpopulatable.test.ts stopped being a hand-written list of five
+// files and started deriving its own: this file and test/js-resolve.test.ts had
+// been building model worlds and querying them unguarded since the field
+// existed, and the list had never named them.
+const ask = (r: Rofl, goal: string) => {
+  const res = r.query(goal);
+  assert.equal(res.unpopulatable, false, `query ${goal}: nothing in this world can populate it`);
+  return res;
+};
+const count = (r: Rofl, goal: string): number => ask(r, goal).rows.length;
 const bind = (r: Rofl, goal: string, ...vars: string[]): string[] =>
-  r.query(goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join('|')).sort();
+  ask(r, goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join('|')).sort();
 
 const MODEL_R = build();
 

@@ -172,14 +172,42 @@ test('a relation big enough to overflow a spread still answers', () => {
 test('MUTANT: a hole in the LIST is a hole in the gate — every guarded helper reads it', () => {
   // THE GATE IS A FIELD AND A FIELD IS ONLY AS GOOD AS ITS READERS. This is
   // where the check is structurally unable to look, so it is asserted from the
-  // outside: the helpers that build a model world must all consult it, and a
-  // new test file that queries `r.query` directly inherits nothing.
-  const files = ['test/js-callgraph.test.ts', 'test/js-controlflow.test.ts',
-                 'test/js-model.test.ts', 'test/js-env.test.ts', 'test/worklist.test.ts'];
+  // outside: whatever calls `r.query` must consult it, and a new test file that
+  // queries directly inherits nothing.
+  //
+  // AND IT CAUGHT A REAL MOVE 2026-09-07, which is worth more than the list it
+  // replaced. The named list held `test/js-controlflow.test.ts`; that file's
+  // world construction was extracted into `test/js-corpus-world.ts` so three
+  // files could share it, the guard went with the construction, and the gate
+  // went red naming the file it no longer described. A HAND-WRITTEN LIST GOES
+  // STALE ON A REFACTOR — the same class as a mutant anchored to a row somebody
+  // may retire — so it is DERIVED now: every file that calls `.query(` is found
+  // by reading the directory, and each must read the field.
   const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-  for (const f of files) {
-    const text = fs.readFileSync(path.join(ROOT, f), 'utf8');
-    assert.ok(text.includes('unpopulatable'),
-      `${f} builds a model world and does not read unpopulatable`);
+  const dir = path.join(ROOT, 'test');
+  // THE DERIVATION HAS TO NAME THE RIGHT SET, and the first attempt did not:
+  // "every file that calls `.query(`" swept in twenty kernel tests that ask a
+  // two-fact program about a relation it deliberately does not have, where an
+  // empty answer IS the subject. The set that matters is files that build a
+  // world of the JS MODEL — they load its vocabulary, or they import the shared
+  // construction — and that is a property of the file, not a list.
+  const model: string[] = [];
+  for (const f of fs.readdirSync(dir).sort()) {
+    if (!f.endsWith('.ts')) continue;
+    const text = fs.readFileSync(path.join(dir, f), 'utf8');
+    const buildsAModelWorld = text.includes('facts/js-kinds.rofl')
+                           || text.includes('./js-corpus-world.ts');
+    // ...AND ASKS THE STORE ITSELF. A file that goes through the shared
+    // construction never calls `query` and inherits its guard; a file that
+    // counts the store's reads without querying has nothing to guard. Both
+    // appeared in the first draft of this sweep and neither is a hole.
+    if (buildsAModelWorld && /\.query\(/.test(text)) model.push(f);
   }
+  // POSITIVE CONTROL: the sweep found files, so the loop below judges something.
+  // A directory read that matched nothing would pass in silence.
+  assert.ok(model.length >= 5, `only ${model.length} files build a model world and query it`);
+  const blind = model.filter((f) =>
+    !fs.readFileSync(path.join(dir, f), 'utf8').includes('unpopulatable'));
+  assert.deepEqual(blind, [],
+    'a file builds a model world and never asks whether its literals can be populated');
 });

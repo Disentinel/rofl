@@ -221,9 +221,18 @@ function build(opts: BuildOpts = {}): Rofl {
   return r;
 }
 
-const count = (r: Rofl, goal: string): number => r.query(goal).rows.length;
+// See the note in test/js-modules.test.ts: `unpopulatable` is the kernel
+// refusing to let an empty answer stand for a relation nothing in this world can
+// populate, and this file had been querying a model world unguarded since the
+// field existed — found the day the gate started deriving its own list.
+const ask = (r: Rofl, goal: string) => {
+  const res = r.query(goal);
+  assert.equal(res.unpopulatable, false, `query ${goal}: nothing in this world can populate it`);
+  return res;
+};
+const count = (r: Rofl, goal: string): number => ask(r, goal).rows.length;
 const col = (r: Rofl, goal: string, ...vars: string[]): string[] =>
-  r.query(goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join(' | ')).sort();
+  ask(r, goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join(' | ')).sort();
 
 const W = build();
 
@@ -569,9 +578,16 @@ const MUTANTS: Mutant[] = [
     plant: { rules: (s) => s.replace(/^resolve_divergence\[audit\]/gm, 'muted_resolve_divergence[audit]') },
     damage: (r) => {
       const n = count(r, 'uncompared[audit](S, E)');
-      const d = count(r, 'resolve_divergence[audit](S, R, H, E)');
-      return n > 0 ? `resolve_divergence ${BASE.divergence} -> ${d}, and uncompared reports ${n} site(s) ` +
-        'nobody compares any more' : null;
+      // NOT `count` HERE, and the guard is what said so. This mutant RENAMES the
+      // relation away, so in the mutated world it does not exist — and `count`
+      // now refuses an unpopulatable literal, correctly. The stronger statement
+      // was available all along and was being made as `0 rows`: the comparison
+      // did not stop finding divergences, it stopped EXISTING.
+      const gone = r.query('resolve_divergence[audit](S, R, H, E)').unpopulatable === true;
+      return n > 0 && gone
+        ? `resolve_divergence is GONE (was ${BASE.divergence}), and uncompared reports ${n} site(s) `
+          + 'nobody compares any more'
+        : null;
     },
   },
   {

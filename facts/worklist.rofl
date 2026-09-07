@@ -314,6 +314,7 @@ work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_const
 work(w_mutant_costs_a_world, "a mutant pays for a whole fixpoint; the nine-load waste is fixed, the kernel's incrementality is not").
 work_order(w_mutant_costs_a_world, 43).
 work_state(w_mutant_costs_a_world, open).
+work_spawned(w_mutant_costs_a_world, f_a_worlds_cost_is_the_fixpoint_and_a_file_is_a_core).
 work_spawned(w_mutant_costs_a_world, f_nine_loads_ran_the_fixpoint_nine_times).
 
 -- ===========================================================================
@@ -719,6 +720,7 @@ work_state(w_query_names_nothing, done).
 work_spawned(w_query_names_nothing, f_a_query_that_names_nothing_answers_like_a_query_that_finds_nothing).
 work_spawned(w_query_names_nothing, f_the_probe_for_one_item_found_the_defect_in_the_instrument).
 work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_undeclared_size_limit).
+work_spawned(w_query_names_nothing, f_a_hand_written_list_goes_stale_on_a_refactor).
 
 work(w_note_is_not_evidence, "a work item's note asserting an absence is a claim about the store and carries no query, so six notes in a row were believed and refuted; give a note a witness, which needs a checker world that has the corpus (f_a_witness_has_no_world)").
 work_order(w_note_is_not_evidence, 47).
