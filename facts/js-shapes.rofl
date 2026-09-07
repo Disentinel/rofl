@@ -343,3 +343,10 @@ shape_in(s_sequence, callgraph).
 shape_in(s_super, callgraph).
 shape_in(s_ts_as, callgraph).
 shape_in(s_unclassified, callgraph).
+
+-- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the
+-- `node_kind` rows are: a world loading this pack and not the other declares
+-- the kind and would carry no reason for its absence.
+-- `kind_unexercised[audit]` named the missing copies within one run.
+kind_absent_ok(import, a_babel_emits_no_import_callee).
+kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).

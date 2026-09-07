@@ -144,10 +144,10 @@ test('the five heaviest read paths, by name', () => {
   // about which half either time.
   assert.deepEqual(c.top, [
     'argMatches ast_within pos=[0] = 109052',
-    'relPersp authority = 82116',
+    'relPersp authority = 82242',
     'argMatches encloses_v pos=[1] = 53441',
     'relPersp encloses_v = 50846',
-    'relPersp ast_node = 45374',
+    'relPersp ast_node = 48615',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -181,7 +181,14 @@ test('the five heaviest read paths, by name', () => {
   // 735 786 -> 880 854 (+19.7%) on 2026-09-07, the same five names in the same
   // order, each up 18.6%-20.6%. See the 2x2 above for what is rules and what is
   // corpus; unusually for this loop, both halves are real.
-  assert.equal(c.total, 939563, 'total rows handed out by the store in one fixpoint');
+  // 939 563 -> 937 097 on 2026-09-07, DOWN 2 466 while FIRINGS ROSE 195 — the
+  // two numbers moving in opposite directions, which no iteration here had done
+  // before. Ten kinds and forty verdicts are more facts to derive (+484) and
+  // more matrix rules firing over them; the rows FALL because two of the five
+  // heaviest paths are `relPersp` reads whose accumulators the extra vocabulary
+  // reorders. Pinned rather than explained further: the gate's job is to name
+  // the path that moved, and `relPersp ast_node` +7.1% is the one that did.
+  assert.equal(c.total, 937097, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -226,5 +233,13 @@ test('the five heaviest read paths, by name', () => {
   // apportioned: the 2x2 above holds the corpus fixed and swaps only
   // rules/js-dataflow.rofl. An arm that joins standing relations is nearly free;
   // a layer that relates every use to every binder that can reach it is not.
-  assert.equal(c.firings, 56448, 'derivations: 50 098 before the alias store');
+  // AND THE 2x2 WAS BLIND TO THIS ITERATION BY CONSTRUCTION, which is worth
+  // more than the number. The four builds swap `rules/js-dataflow.rofl` and
+  // `alpha.mjs`, because those are the two files the LAST iteration touched;
+  // this one touched neither — the work was in the fact packs and in
+  // rules/js-model.rofl — so all four cells came back byte-identical and the
+  // instrument reported nothing. A measurement whose axes are hard-coded
+  // measures the shape of the previous change. The axes have to be chosen per
+  // iteration, from the diff.
+  assert.equal(c.firings, 56643, 'derivations: 56 448 before the type-node vocabulary');
 });

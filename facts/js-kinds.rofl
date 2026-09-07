@@ -138,21 +138,56 @@ not_a_construct(comment_line).
 -- js-controlflow.rofl for the four rows each of these kinds carries.
 
 -- ---------------------------------------------------------------------------
--- TEN TYPE NODES, DEFERRED WITH AN OWNER. This is the decision the item was
--- about. Declaring them costs FORTY cells that no rule can close, because what
--- a type MEANS in this model is w_type_surface's question and that item is
--- blocked behind the API surface. Deferring is not silence: the row names the
--- kind and the owner, `frame_owner_unknown[audit]` refuses an owner that is not
--- an item, and `frame_owner_done[audit]` refuses one that has already closed —
--- so the day w_type_surface lands, these have to be dealt with or the audit
--- says so.
-frame_deferred(tsfunction_type,                w_type_surface).
-frame_deferred(tsnull_keyword,                 w_type_surface).
-frame_deferred(tsnumber_keyword,               w_type_surface).
-frame_deferred(tsstring_keyword,               w_type_surface).
-frame_deferred(tstype_alias_declaration,       w_type_surface).
-frame_deferred(tstype_annotation,              w_type_surface).
-frame_deferred(tstype_parameter_instantiation, w_type_surface).
-frame_deferred(tstype_query,                   w_type_surface).
-frame_deferred(tstype_reference,               w_type_surface).
-frame_deferred(tsunion_type,                   w_type_surface).
+-- THE TEN TYPE NODES ARE DECLARED, 2026-09-07, and the deferral that stood here
+-- was wrong about which question they belong to.
+--
+-- WHAT IT SAID: "Declaring them costs FORTY cells that no rule can close,
+-- because what a type MEANS in this model is w_type_surface's question and that
+-- item is blocked behind the API surface."
+--
+-- WHAT A TYPE NODE MEANS AT THESE FOUR LAYERS IS NOT THAT QUESTION AT ALL. A
+-- `tstype_annotation` carries no runtime value, is never a callee, transfers no
+-- control, and is not a module construct — four exact facts about the LANGUAGE,
+-- the same class as `binary_expression`'s four, and the reason atom
+-- `a_type_only_no_runtime_value` had already been invented for exactly them.
+-- The deferral confused A NODE IN TYPE POSITION with THE TYPE OF A VALUE. They
+-- share a word and nothing else: `xs.at(-1)` needs to know that `xs` is an
+-- Array, and no `tstype_annotation` anywhere says so.
+--
+-- SEVENTH DESIGN NOTE IN THIS LOOP REFUTED BY A PROBE, and the first one where
+-- what was refuted was my own pricing of a decision rather than a claim about
+-- the store: forty unanswerable cells were the reason for the deferral, and
+-- forty answerable cells is what they were.
+--
+-- The `node_kind` rows are in the four layer packs, with their verdicts, for
+-- the same reason the frame's four are: a file that makes a claim declares the
+-- kind, and a verdict belongs in the pack that declares its layer.
+
+-- ---------------------------------------------------------------------------
+-- DECLARED AND NEVER PRODUCED, WITH THE REASON WRITTEN DOWN.
+--
+-- `kind_unexercised[audit]` demands a row here for a kind this vocabulary
+-- declares and this corpus does not contain. It is NOT an error — a vocabulary
+-- may be wider than any one corpus, exactly as `feature_unexercised` may be —
+-- but the reason has to be sayable, and writing it is what found the first
+-- entry below.
+kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit).
+-- ...and the other SEVEN rows are not here, for the reason `orphan_claim` gives
+-- about a verdict and `kind_absent_undeclared[audit]` gave about these within
+-- one run: a row belongs in the pack that DECLARES its kind, or a world loading
+-- one pack and not the other carries an excuse for something it has never heard
+-- of. See the four layer packs.
+--
+-- THE FIRST ROW IS THE ONE THAT PAID FOR THE AUDIT. `ts_string_keyword` is not
+-- a kind: the scanner snake-cases babel's `TSStringKeyword` to
+-- `tsstring_keyword`, with no underscore after `ts`, so nothing will ever
+-- produce this spelling. It has carried four verdicts across four packs since
+-- the vocabulary was written, all of them about a kind that does not exist,
+-- while the REAL spelling sat in the deferral list — so a reader asking whether
+-- TypeScript's string keyword was handled found a row saying yes. It stays,
+-- because two mutants in test/js-model.test.ts use it as a kind with a verdict
+-- and it is honestly declared now; what changed is that its status is a ROW
+-- instead of a comment in a different file. facts/js-env.rofl had already
+-- noticed and routed around it, gating both spellings with a note calling this
+-- one "a SYNTHETIC fixture with no corpus behind it" — a known oddity nobody
+-- had anywhere to record.

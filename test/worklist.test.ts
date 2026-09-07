@@ -208,6 +208,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      // bent around the file-scoped binder, and the declared over-approximation
      // that was a defect with a comment on it.
      'w_scope_binding', 'w_scope_binding', 'w_scope_binding',
+     'w_type_surface', 'w_type_surface', 'w_type_surface',
      'w_unconsumed_attribute',
      'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home',
      'w_wire_the_witness_gate']);
@@ -241,10 +242,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // binder's region and which function binds `this` — so the head moves to the
   // ALIAS STORE: what `o.x = f` writes, which is the first item here that needs
   // the model to hold a mutable location rather than a syntactic path.
-  // ...and w_alias_store closed on 2026-09-07 with no store in it, so the head
-  // is the TYPE SURFACE — the first item that asks the model a question syntax
-  // cannot answer at all: which prototype a value has.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_type_surface'],
+  // ...and w_type_surface closed the same day, as TWO items: the ten TypeScript
+  // type-node kinds are answered, and the prototype question left as
+  // w_prototype_of_a_value with the measurement that gave it no site. The head
+  // moves to the MODULE BOUNDARY — which is where the frontier actually is: 152
+  // of the 167 unresolved call sites are a bare identifier naming an import.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_module_boundary'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
@@ -287,7 +290,7 @@ test('the queue covers the model: 31 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 48);
+  assert.equal(w.n('work(W, Note)'), 49);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -488,7 +491,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and again: the transitive half closed the same day its premise did, so
   // the head is the SCOPE question — `binder[flow]` is file-scoped by
   // construction, which has cost this loop five fixture renames.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_type_surface']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_module_boundary']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -535,7 +538,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // `next_work[audit]` itself would never expire. Entered as a note here rather
   // than built, because the plant is authored TEXT and the head is a derived
   // row; closing that gap is a change to how mutants are written.
-  const mut = world({ extra: 'work_needs(w_type_surface, w_cf_completion).' });
+  const mut = world({ extra: 'work_needs(w_cg_module_boundary, w_cf_completion).' });
   assert.equal(mut.n('blocked[audit](W)'), 4, 'the planted one on top of the three real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
@@ -544,7 +547,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and the head becomes the next item BY ORDER that is not itself blocked:
   // 32 is `w_effect_layer`, which waits on two premises of its own, so the
   // queue hands out 33. Two kinds of skip in one answer.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_module_boundary'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_invisible_calls'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

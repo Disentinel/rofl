@@ -548,4 +548,50 @@ double_excluded[audit](K)        :- not_a_construct(K), frame_deferred(K, _).
 declared_and_excluded[audit](K)  :- node_kind(_, K), not_a_construct(K).
 declared_and_deferred[audit](K)  :- node_kind(_, K), frame_deferred(K, _).
 
+-- ...AND THE THIRD LIST HAD NO SUCH CHECK, which is the hole the two rules above
+-- describe and do not cover. `not_a_construct` and `frame_deferred` are guarded
+-- against a misspelling; `node_kind` — the list that says what the model CLAIMS
+-- to describe — was not. Measured 2026-09-07: eight declared kinds produce no
+-- node in this corpus, and one of them, `ts_string_keyword`, is a spelling the
+-- scanner CANNOT produce. It carries four verdicts across four packs, all of
+-- them about a kind that does not exist, while the real `tsstring_keyword` sat
+-- in the deferral list — so a reader checking whether TypeScript's string
+-- keyword was handled found a row saying yes.
+--
+-- IT IS NOT AN ERROR TO DECLARE A KIND THE CORPUS LACKS. The vocabulary is
+-- allowed to be wider than any one corpus, exactly as `feature_unexercised` in
+-- the era layer is allowed to be non-empty. So this audit does not forbid it; it
+-- demands that the reason be WRITTEN DOWN, which is the move that has taken
+-- three audits to zero honestly in this loop. Writing the reason for
+-- `ts_string_keyword` is what exposes it as a synthetic fixture rather than a
+-- kind, because there is no honest sentence that does not say so.
+--
+-- THE GUARD IS `A CORPUS WAS SCANNED`, AND THE FIRST DRAFT GOT IT WRONG in a
+-- way worth keeping: it used `lang_of_corpus(Lang)`, which READS LIKE a corpus
+-- test and is a CONSTANT — `lang_of_corpus(js).` is an edb row three lines
+-- above. It guarded nothing, and the mutant written to prove the guard was
+-- load-bearing is what said so: the guarded world reported eight kinds where it
+-- had to report none. A premise that names the right noun is not a premise that
+-- asks the right question.
+--
+-- WITHOUT A GUARD this audit is red in the one place it means nothing: the
+-- matrix-machinery world loads no corpus at all, so every declared kind is
+-- unexercised there by construction.
+edb(kind_absent_ok).        -- kind_absent_ok(Kind, Reason)
+
+scanned[audit](Lang) :- lang_of_corpus(Lang), ast_node[code](_, _, _, _).
+
+kind_unexercised[audit](Lang, K) :- node_kind(Lang, K), scanned[audit](Lang),
+                                    not ast_node[code](_, K, _, _),
+                                    not kind_absent_ok(K, _).
+-- and the excuse cannot outlive its cause
+kind_absent_stale[audit](K) :- kind_absent_ok(K, _), ast_node[code](_, K, _, _).
+-- `kind_absent_undeclared` needs NO corpus guard and DOES need the same home
+-- rule every verdict here obeys: a `kind_absent_ok` row belongs in the pack
+-- that declares its kind. Three rows were written in facts/js-kinds.rofl for
+-- kinds facts/js-modules.rofl declares, and this audit named all three in the
+-- first run — the same defect `orphan_claim` catches for a verdict, arriving
+-- through a third relation.
+kind_absent_undeclared[audit](K) :- kind_absent_ok(K, _), not node_kind(_, K).
+
 imports(audit, code).

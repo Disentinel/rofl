@@ -141,8 +141,10 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // `catch { return null; }` arrived with the propagation fixtures, and
   // `vocabulary_gap[audit]` named it within one run — the SECOND time in two
   // iterations that gate caught a kind one of my own fixtures introduced.
-  assert.equal(before, 239, 'positive control: the matrix before the fact');
-  assert.equal(after, 309, 'positive control: and after');
+  // 239 -> 269 on 2026-09-07: ten type-node kinds x three declared layers,
+  // before the control-flow fact adds the fourth.
+  assert.equal(before, 269, 'positive control: the matrix before the fact');
+  assert.equal(after, 349, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -559,12 +561,21 @@ const FRAME: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   },
   {
     name: 'f2 a deferred kind is misspelled',
-    mut: [{ find: 'frame_deferred(tsunion_type,                   w_type_surface).',
-            replace: 'frame_deferred(tsunoin_type,                   w_type_surface).',
+    // RE-AIMED 2026-09-07 AND THE RE-AIMING IS THE POINT. This used to MUTATE a
+    // `frame_deferred` row, and every one of them was retired the day the ten
+    // type nodes were declared — so the mutant expired with its anchor, exactly
+    // as w_mutant_anchor_decay says a mutant anchored to a row somebody may
+    // legitimately delete always will. It PLANTS its own deferral now: the
+    // machinery is exercised whether or not the ledger currently defers
+    // anything, and today it defers nothing.
+    mut: [{ find: 'not_a_construct(file).',
+            replace: 'not_a_construct(file).\nframe_deferred(tsunoin_type, w_type_surface).',
             file: 'facts/js-kinds.rofl' }],
     expect: (m) => {
-      assert.deepEqual(m.q('vocabulary_gap[audit](L, K)').map(([, k]) => k), ['tsunion_type']);
-      assert.deepEqual(m.q('frame_deferred_unseen[audit](K)').flat(), ['tsunoin_type']);
+      assert.deepEqual(m.q('frame_deferred_unseen[audit](K)').flat(), ['tsunoin_type'],
+        'a deferral for a spelling the scanner never emits is named');
+      assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0,
+        'and the real kind is declared, so the gap audit stays silent');
     },
   },
   {
@@ -581,9 +592,9 @@ const FRAME: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   },
   {
     name: 'f4 a kind is declared AND deferred',
-    mut: [{ find: 'frame_deferred(tsnull_keyword,                 w_type_surface).',
-            replace: 'frame_deferred(tsnull_keyword,                 w_type_surface).\n'
-                   + 'frame_deferred(unary_expression, w_type_surface).',
+    // Planted rather than appended to an existing row, for the same reason f2 is.
+    mut: [{ find: 'not_a_construct(file).',
+            replace: 'not_a_construct(file).\nframe_deferred(unary_expression, w_type_surface).',
             file: 'facts/js-kinds.rofl' }],
     expect: (m) => {
       assert.deepEqual(m.q('declared_and_deferred[audit](K)').flat(), ['unary_expression']);
@@ -610,8 +621,12 @@ const FRAME: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     name: 'f6 the two exclusions stop being read',
     mut: [{ find: ',\n                                  not not_a_construct(K), not frame_deferred(K, _).',
             replace: '.', file: 'rules/js-model.rofl' }],
-    expect: (m) => assert.equal(m.n('vocabulary_gap[audit](L, K)'), 13,
-      'three not-constructs and ten deferred type nodes come back at once'),
+    // 13 -> 3 on 2026-09-07: the ten deferred type nodes are DECLARED now, so
+    // only the three not-constructs are held out by an exclusion at all. The
+    // deferral list is empty and its machinery is exercised by f2 and f4, which
+    // plant a row instead of mutating one.
+    expect: (m) => assert.equal(m.n('vocabulary_gap[audit](L, K)'), 3,
+      'the three not-constructs come back'),
   },
 ];
 

@@ -743,18 +743,44 @@ work_spawned(w_alias_store, f_the_store_was_never_the_missing_thing).
 work_spawned(w_alias_store, f_a_delete_mutant_belongs_on_every_literal_not_only_on_the_arm).
 claim(queued, js, assignment_expression, none, callgraph, w_alias_store).
 
--- 31. TYPES, DELIBERATELY SHALLOW. Not a checker: the only question this model
--- asks of a type is which PROTOTYPE a value has, so that `xs.at(-1)` can be
--- attributed to `Array.prototype.at` and gated by era. That is the half of
--- item 17 that syntax cannot answer, which is why 17 now waits on this rather
--- than the other way round. It waits in turn on the frame: ten of the seventeen
--- kinds in `vocabulary_gap[audit]` are TypeScript type nodes, and a type
--- surface that cannot name `ts_type_annotation` is reading the corpus blind.
-work(w_type_surface, "a shallow type: which prototype a value has, enough to attribute xs.at to Array.prototype.at").
+-- 31. TYPE NODES, DONE — AND THE ITEM WAS TWO ITEMS, which the first probe
+-- against the store said and the note did not. It read: "the only question this
+-- model asks of a type is which PROTOTYPE a value has, so that `xs.at(-1)` can
+-- be attributed to `Array.prototype.at`", and it owned ten deferred TypeScript
+-- kinds on the strength of that sentence.
+--
+-- MEASURED 2026-09-07, both halves, in the corpus world:
+--   * the ten kinds are real and present — `tstype_annotation` 53 nodes,
+--     `tsnumber_keyword` 44 — and what each MEANS at the four declared layers is
+--     a fact about the language, not about prototypes. Forty cells, all
+--     `ignored`, closed here.
+--   * the prototype question has ZERO SITES. Of 167 unresolved call sites, 152
+--     are a bare identifier (an IMPORT — w_cg_module_boundary's residue) and
+--     only 13 are member calls; of those, NONE has a literal receiver, so there
+--     is no `"s".toUpperCase()` and no `[1,2].at(-1)` anywhere in the corpus.
+--     Building it now would be a capability nothing exercises, which this
+--     repository forbids by name.
+-- A NODE IN TYPE POSITION AND THE TYPE OF A VALUE SHARE A WORD AND NOTHING ELSE.
+work(w_type_surface, "DONE 2026-09-07: the ten TypeScript type-node kinds are declared and answered at all four layers; the prototype question was a different item and is w_prototype_of_a_value").
 work_order(w_type_surface, 31).
-work_state(w_type_surface, open).
+work_state(w_type_surface, done).
+work_spawned(w_type_surface, f_a_node_in_type_position_is_not_the_type_of_a_value).
+work_spawned(w_type_surface, f_the_declared_list_had_no_misspelling_guard).
+work_spawned(w_type_surface, f_a_measurement_with_hard_coded_axes_measures_the_last_change).
+
+-- 49. WHICH PROTOTYPE A VALUE HAS — the half of item 31 that had no site.
+-- Measured on the day it was split out: 167 unresolved call sites, 13 of them
+-- member calls, and NOT ONE with a receiver the model values as a literal. The
+-- corpus has no `xs.at(-1)`, no `"s".toUpperCase()`, no `arr.map(f)`. Writing a
+-- prototype table before a site exists is the thing CLAUDE.md forbids by name,
+-- so this waits for a corpus that asks the question rather than for a decision.
+work(w_prototype_of_a_value, "which prototype a value has, enough to attribute xs.at to Array.prototype.at and gate it by era - NO SITE IN THE CORPUS, measured 2026-09-07: 13 member calls unresolved, zero with a literal receiver").
+work_order(w_prototype_of_a_value, 49).
+work_state(w_prototype_of_a_value, open).
 work_needs(w_type_surface, w_vocabulary_frame).
-work_needs(w_env_api_surface, w_type_surface).
+-- RE-POINTED 2026-09-07: item 31 split, and what 17 waits on is the PROTOTYPE
+-- half, not the type-node vocabulary that closed.
+work_needs(w_env_api_surface, w_prototype_of_a_value).
 
 -- 32. EFFECTS, AND THE TAXONOMY IS NOT OURS TO INVENT. The owner asked whether
 -- a standard one exists. It does, and in two versions that disagree usefully -

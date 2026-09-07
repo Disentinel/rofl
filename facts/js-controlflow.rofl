@@ -156,3 +156,27 @@ ignored(js, binary_expression, controlflow, a_no_control_transfer).
 ignored(js, unary_expression, controlflow, a_no_control_transfer).
 ignored(js, class_body, controlflow, a_a_container_transfers_nothing).
 ignored(js, template_element, controlflow, a_no_control_transfer).
+
+-- TEN TYPE NODES, 2026-09-07 (w_type_surface). Erased before anything runs,
+-- so there is no point at which control could reach one.
+node_kind(js, tsfunction_type).
+node_kind(js, tsnull_keyword).
+node_kind(js, tsnumber_keyword).
+node_kind(js, tsstring_keyword).
+node_kind(js, tstype_alias_declaration).
+node_kind(js, tstype_annotation).
+node_kind(js, tstype_parameter_instantiation).
+node_kind(js, tstype_query).
+node_kind(js, tstype_reference).
+node_kind(js, tsunion_type).
+
+ignored(js, tsfunction_type,                controlflow, a_type_only_no_runtime_value).
+ignored(js, tsnull_keyword,                 controlflow, a_type_only_no_runtime_value).
+ignored(js, tsnumber_keyword,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tsstring_keyword,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_alias_declaration,       controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_annotation,              controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_parameter_instantiation, controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_query,                   controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_reference,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tsunion_type,                   controlflow, a_type_only_no_runtime_value).

@@ -368,3 +368,44 @@ ignored(js, binary_expression, modules, a_not_a_module_construct).
 ignored(js, unary_expression, modules, a_not_a_module_construct).
 ignored(js, class_body, modules, a_not_a_module_construct).
 ignored(js, template_element, modules, a_not_a_module_construct).
+
+-- TEN TYPE NODES, 2026-09-07 (w_type_surface). A type-only import still emits
+-- an import_declaration, and THAT is what carries the module edge; the type
+-- nodes under it contribute nothing of their own.
+node_kind(js, tsfunction_type).
+node_kind(js, tsnull_keyword).
+node_kind(js, tsnumber_keyword).
+node_kind(js, tsstring_keyword).
+node_kind(js, tstype_alias_declaration).
+node_kind(js, tstype_annotation).
+node_kind(js, tstype_parameter_instantiation).
+node_kind(js, tstype_query).
+node_kind(js, tstype_reference).
+node_kind(js, tsunion_type).
+
+ignored(js, tsfunction_type,                modules, a_not_a_module_construct).
+ignored(js, tsnull_keyword,                 modules, a_not_a_module_construct).
+ignored(js, tsnumber_keyword,               modules, a_not_a_module_construct).
+ignored(js, tsstring_keyword,               modules, a_not_a_module_construct).
+ignored(js, tstype_alias_declaration,       modules, a_not_a_module_construct).
+ignored(js, tstype_annotation,              modules, a_not_a_module_construct).
+ignored(js, tstype_parameter_instantiation, modules, a_not_a_module_construct).
+ignored(js, tstype_query,                   modules, a_not_a_module_construct).
+ignored(js, tstype_reference,               modules, a_not_a_module_construct).
+ignored(js, tsunion_type,                   modules, a_not_a_module_construct).
+
+-- DECLARED HERE AND ABSENT FROM THE CORPUS, with the reason written down;
+-- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
+-- declared.
+kind_absent_ok(export_all_declaration, a_no_corpus_site).
+kind_absent_ok(import, a_babel_emits_no_import_callee).
+kind_absent_ok(import_default_specifier, a_no_corpus_site).
+kind_absent_ok(import_namespace_specifier, a_no_corpus_site).
+
+-- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the
+-- `node_kind` rows are: a world loading this pack and not the other declares
+-- the kind and would carry no reason for its absence.
+-- `kind_unexercised[audit]` named the missing copies within one run.
+kind_absent_ok(decorator, a_no_corpus_site).
+kind_absent_ok(tagged_template_expression, a_no_corpus_site).
+kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
