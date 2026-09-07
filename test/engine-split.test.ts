@@ -346,7 +346,7 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // may stand, the opaque seed, the fingerprint hits, and the run gate.
   assert.equal(rows(W, 'decides(engine_ts, L)'), 84);
   assert.equal(DECLS.filter((d) => d.role === 'decides').length, 4);
-  assert.equal(rows(W, 'enforces(engine_ts, L)'), 85);
+  assert.equal(rows(W, 'enforces(engine_ts, L)'), 89);
   assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
                rows(W, 'policy(engine_ts, L)'), 'every policy line has a role');
   // NEGATIVE CONTROL: the join discriminates — a role nothing carries is empty.

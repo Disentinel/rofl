@@ -2399,6 +2399,10 @@ finding_note(f_the_canonical_witness_is_derivable_from_the_data,
 finding(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, defect).
 recorded(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, "2026-09-07").
 demands(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, kernel_test).
+-- SETTLED as a duplicate: recorded independently by the order-dependence
+-- census in the same session as f_quiescence_compared_a_sorted_list_against_an_unsorted_one,
+-- which carries the fix and the gate. Two agents found one defect.
+dismissed(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, duplicate_of_the_past_tense_id).
 finding_note(f_quiescence_compares_a_sorted_list_against_an_unsorted_one,
   "THE ONE REAL ORDER DEFECT THE CENSUS FOUND, and it is four lines. src/api.ts:955-958 decides a tick is quiescent by comparing the CURRENT base layer against the staged facts ELEMENT BY ELEMENT: `curBase` is built with an explicit `.sort()`, `stagedKeys` is `staged.map(f => f.key)` with no sort at all. It works only because src/rounds.ts:304 and src/engine.ts:603 happen to sort the staged map keys on the way out, so the sortedness of one file's comparison is a property of another file's implementation and nothing states it. MEASURED by reversing that one sort: examples/tm.rofl - the 3-state busy beaver, which halts in 13 ticks - stops being detected as quiescent, runs to its 100-tick cap, and grows from 1391 facts to 3509; test/phase4.test.ts:97 goes red on `res.quiescent`. That is a CHANGED ANSWER, not a changed record: a run that terminated no longer terminates. It is also the one finding that bears directly on a parallel port, because a host that stages concurrently would produce exactly this list in exactly this state. THE FIX is to compare sets rather than sequences, or to sort `stagedKeys` where it is built - and the test is the mutant: reverse the staged order in the evaluator and quiescence must still be detected.").
 

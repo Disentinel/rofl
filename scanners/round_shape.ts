@@ -169,7 +169,7 @@ export function peelOf(rules: ERule[]): void {
 
 /** The stage split of ONE clause parse, on THIS machine, so the round shape
  *  above can be turned into an end-to-end ceiling instead of a fixpoint-only
- *  one. Re-measured rather than quoted: HANDOFF's split was taken on a 4-core
+ *  one. Re-measured rather than quoted: the recorded split was taken on a 4-core
  *  Xeon and every absolute there is a property of that machine.
  *
  *  The four stages are `examples/ring1/demo.ts:315`'s own steps. Only `load`
