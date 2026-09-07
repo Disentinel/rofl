@@ -176,6 +176,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_env_ledger_form', 'w_env_positional_features',
      'w_env_scan_failed', 'w_env_scan_failed',
      'w_exception_flow', 'w_exception_flow', 'w_exception_flow',
+     'w_exn_propagation',
      'w_join_planner',
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
      'w_negation_range_restriction', 'w_scope_binding',
@@ -207,7 +208,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ...and the accessor closed the control-flow layer entirely, so the head
   // leaves it for the first time: the FRAME — seventeen kinds the corpus
   // produces that the vocabulary does not declare.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_exn_propagation'],
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_scope_binding'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
@@ -245,7 +246,7 @@ test('the queue covers the model: 33 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 42);
+  assert.equal(w.n('work(W, Note)'), 43);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -441,7 +442,10 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // THE HEAD MOVED AGAIN 2026-09-06: the frame is decided, so the next by order
   // is the transitive half of the exception path — unblocked when its premise,
   // w_exception_flow, closed earlier the same day.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_exn_propagation']);
+  // ...and again: the transitive half closed the same day its premise did, so
+  // the head is the SCOPE question — `binder[flow]` is file-scoped by
+  // construction, which has cost this loop five fixture renames.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_scope_binding']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -480,13 +484,13 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and re-aimed again for the same reason: the head moved on. It is planted
   // on the CURRENT head and on the item the closing work spawned, which is the
   // only pair that keeps saying what the relation exists to say.
-  const mut = world({ extra: 'work_needs(w_exn_propagation, w_cf_completion).' });
+  const mut = world({ extra: 'work_needs(w_scope_binding, w_cf_completion).' });
   assert.equal(mut.n('blocked[audit](W)'), 4, 'the planted one on top of the three real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
   // relation doing exactly one thing — skipping — which is what makes it
   // checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_scope_binding'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_alias_store'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

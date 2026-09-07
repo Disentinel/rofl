@@ -123,8 +123,12 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // — and neither of those two classes costs a cell, which is the whole point of
   // having three answers instead of one. Twelve before, sixteen after: the
   // identity above is what the programme asserts and it holds through all of it.
-  assert.equal(before, 236, 'positive control: the matrix before the fact');
-  assert.equal(after, 305, 'positive control: and after');
+  // 236/305 -> 239/309: `null_literal` entered the vocabulary when
+  // `catch { return null; }` arrived with the propagation fixtures, and
+  // `vocabulary_gap[audit]` named it within one run — the SECOND time in two
+  // iterations that gate caught a kind one of my own fixtures introduced.
+  assert.equal(before, 239, 'positive control: the matrix before the fact');
+  assert.equal(after, 309, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -334,8 +338,14 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     mut: [{ find: `reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
                       not guarded[code](C).`,
             replace: 'reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F).' }],
-    expect: (m) => assert.equal(m.n('may_not_be_reached[code](F)'), 0,
-      'everything becomes reachable and the relation says nothing at all'),
+    // ONE NAME SURVIVES the guard being ignored, and it is the right one:
+    // `lateThrow` is called only from `boom`, and `boom` is returned rather
+    // than called. That is unreachability with no guard anywhere in it, so no
+    // amount of ignoring guards can reach it — which makes it a better
+    // statement than the zero this asserted before the propagation fixtures.
+    expect: (m) => assert.deepEqual(m.q('may_not_be_reached[code](F)')
+      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)), ['lateThrow'],
+      'the only thing left is unreachable for a reason that is not a guard'),
   },
   {
     name: 'r4 every function is an entry point',
@@ -593,6 +603,108 @@ const FRAME: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
 
 for (const g of FRAME) test(`${g.name} — the frame`, () => g.expect(build(g.mut), base()));
 
+// ---------------------------------------------------------------------------
+// 3f. WHAT PROPAGATES (w_exn_propagation), and the seven clauses it rests on.
+//
+// SEVEN MUTANTS. Five died on the first run and the two survivors said the same
+// thing they have said all session — the corpus had no case that could tell the
+// difference. `makeThrower`/`boom` and the `midThrow` chain were written for
+// exactly those two, and all seven die now, every one on a NAMED row.
+const PROP: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'x1 the closure step is deleted',
+    mut: [{ find: `may_throw[code](F) :- may_throw[code](G), resolves[code](C, G), nearest_v[flow](F, C),
+                      not caught_here[code](C).`, replace: '' }],
+    expect: (m, b) => assert.deepEqual(
+      thrower(b).filter((f) => !thrower(m).includes(f)),
+      ['Lit', 'boom', 'main', 'midThrow', 'useNested', 'useWithReturn'],
+      'six names exist only because a throw travels an edge'),
+  },
+  {
+    name: 'x2 a try no longer stops propagation',
+    mut: [{ find: ', nearest_v[flow](F, C),\n                      not caught_here[code](C).',
+            replace: ', nearest_v[flow](F, C).' }],
+    expect: (m, b) => assert.deepEqual(
+      thrower(m).filter((f) => !thrower(b).includes(f)),
+      ['useCaught', 'useFuse', 'useGauge', 'useTry', 'useTwoHops'],
+      'every function that CATCHES is reported as throwing'),
+  },
+  {
+    name: 'x3 a try catches what a nested function calls',
+    mut: [{ find: `caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
+                              nearest_v[flow](F, N).`,
+            replace: 'caught_here[code](N)       :- in_try_block[code](TS, N).' }],
+    // `boom` is written inside a try block and RUNS ELSEWHERE. Without the
+    // enclosing-function equality the model calls its throw caught.
+    expect: (m, b) => assert.deepEqual(
+      thrower(b).filter((f) => !thrower(m).includes(f)), ['boom']),
+  },
+  {
+    name: 'x4 the handler is read as the block the try guards',
+    mut: [{ find: 'ast_child[code](TS, block, 0, B), ast_within[code](B, N).',
+            replace: 'ast_child[code](TS, handler, 0, B), ast_within[code](B, N).' }],
+    expect: (m, b) => {
+      assert.deepEqual(thrower(b).filter((f) => !thrower(m).includes(f)), ['rethrown'],
+        'a throw in a handler stops being reported');
+      assert.ok(thrower(m).length > thrower(b).length - 1, 'and five catchers start being');
+    },
+  },
+  {
+    name: 'x5 the value no longer travels the call edge',
+    mut: [{ find: `caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            try_block[flow](T, B), ast_within[code](B, C),
+                            resolves[code](C, G), thrown_by[flow](G, V).`, replace: '' }],
+    expect: (m, b) => {
+      assert.equal(caught(m).length, 1, 'only the lexically-thrown value is left');
+      assert.equal(caught(b).length, 3, 'positive control');
+      assert.equal(m.n('catch_from_host[flow](P)'), 3,
+        'and all three catches read as host-sourced, which is the frontier reopening');
+    },
+  },
+  {
+    name: 'x6 the value closure step is deleted',
+    mut: [{ find: `thrown_by[flow](F, V) :- thrown_by[flow](G, V), resolves[code](C, G),
+                         nearest_v[flow](F, C), not caught_here[code](C).`, replace: '' }],
+    // `midThrow` has no throw of its own, so only the transitive arm reaches it.
+    expect: (m, b) => assert.deepEqual(
+      caught(b).filter((c) => !caught(m).includes(c)).map((c) => c.split('<-')[0]),
+      ['twoHop']),
+  },
+  {
+    name: 'x7 the host class collapses into the call class',
+    mut: [{ find: 'catch_from_host[flow](P) :- catch_from_call[flow](P), not caught_value[flow](P, _).',
+            replace: 'catch_from_host[flow](P) :- catch_from_call[flow](P).',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.equal(m.n('catch_from_host[flow](P)'), b.n('catch_from_call[flow](P)'));
+      assert.ok(b.n('catch_from_host[flow](P)') < b.n('catch_from_call[flow](P)'),
+        'positive control: the two classes really are different sizes');
+    },
+  },
+];
+
+const thrower = (w: World) => w.q('may_throw[code](F)')
+  .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort();
+
+for (const g of PROP) test(`${g.name} — what propagates`, () => g.expect(build(g.mut), base()));
+
+test('the exception path is now sourced, and what is left has an owner', () => {
+  const m = base();
+  // THREE CLASSES, and the third did not exist until the second was answered.
+  // `catch_from_call` was declared a FRONTIER with w_exn_propagation as owner
+  // one item ago; the owner landed and `caught_value` names the value. What the
+  // call edge still cannot source is `rethrown`'s handler, whose block calls
+  // only `risky` — nothing there can throw, so only the HOST can deliver a
+  // value, and that is w_env_api_surface's question.
+  assert.deepEqual(caught(m).map((c) => c.split('<-')[0]).sort(),
+    ['caught', 'e', 'twoHop']);
+  assert.equal(m.n('catch_unsourced[audit](P)'), 0, 'no handler is sourceless');
+  const host = m.q('catch_from_host[flow](P)')
+    .flatMap(([p]) => m.q(`ast_name[code](${p}, N)`).map(([n]) => n));
+  assert.deepEqual(host, ['rethrowCaught'],
+    'one handler left, and the reason is named rather than counted');
+});
+
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
   // Asked of the rule before it was believed, which is the question that pays.
   // Five shapes were built; four are covered and the fourth is covered for a
@@ -674,8 +786,15 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
      'unreadable']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
-  assert.deepEqual([...reached].filter((f) => !mayNotRun.has(f)), ['dormant'],
-    'the transitive relation adds exactly the function the local one claims runs');
+  // TWO now, and they are two different shapes of the same relation. `dormant`
+  // is called UNGUARDED from a function that may never run — the chain
+  // w_cf_reachability was closed on. `lateThrow` is called unguarded from
+  // `boom`, and `boom` is RETURNED rather than called, so nothing reaches it at
+  // all: unreachability with no guard anywhere in it. The local rule says both
+  // run; only the walk says otherwise, and it says so for two distinct reasons.
+  assert.deepEqual([...reached].filter((f) => !mayNotRun.has(f)).sort(),
+    ['dormant', 'lateThrow'],
+    'the transitive relation adds exactly the functions the local one claims run');
 
   const dir = new URL('test/fixtures/js-call/', new URL('../', import.meta.url));
   const alpha: any = await import(new URL('alpha.mjs', dir).href);

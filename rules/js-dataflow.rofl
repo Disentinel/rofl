@@ -703,21 +703,34 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).
 may_be_node[flow](P, V)  :- caught_value[flow](P, V).
 
--- A CATCH PARAMETER WITH NO LEXICAL THROW IS TWO DIFFERENT THINGS, and the
--- first draft called both a defect — which put the audit at 1 on an honest
+-- A CATCH PARAMETER WITH NO LEXICAL THROW IS THREE DIFFERENT THINGS, and the
+-- first draft called them all a defect — which put the audit at 1 on an honest
 -- checkout, the failure mode this repository has already paid for once. The
--- corpus's own `catch (e)` in `useTry` receives what `thrower()` throws, and
--- that is a FRONTIER with an owner, not a hole: the value crosses a call edge
--- and w_exn_propagation owns crossing it. Declaring the openness so the audit
--- can stay at zero is the same move `mechanism_open` makes for a mechanism.
+-- split was made on 2026-09-06 with TWO classes and gained a third the same day
+-- when w_exn_propagation answered the middle one, which is what a frontier with
+-- an owner is supposed to do when its owner lands.
 call_in_try[flow](T)     :- try_block[flow](T, B), ast_within[code](B, C),
                             call_site[code](C, _).
+-- 1. SOURCED THROUGH A CALL EDGE, and ANSWERED rather than deferred since
+-- w_exn_propagation: `useTry`'s `catch (e)` receives what `thrower()` throws,
+-- and `caught_value` now names the value. The relation stays because the
+-- DISTINCTION is still worth reporting — a value that arrives along the call
+-- graph is a different kind of answer from one the same block threw.
 catch_from_call[flow](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             not thrown_in[flow](T, _), call_in_try[flow](T).
+-- 2. ...AND THE ONE THE CALL EDGE CANNOT SOURCE. `rethrown`'s block calls only
+-- `risky`, which the model says cannot throw — so the only thing that can
+-- deliver a value there is the HOST: a TypeError, a RangeError, an allocation
+-- failure. That is w_env_api_surface's question and this row is where it is
+-- recorded, so the audit below stays exact instead of absorbing it.
+catch_from_host[flow](P) :- catch_from_call[flow](P), not caught_value[flow](P, _).
 
 -- ...and THIS is the hole: a handler that binds a name where nothing in the
 -- guarded block can throw at all — no `throw`, no call. The parameter has no
 -- source under any reading, which is a dead handler rather than a limit of the
 -- model, and it is the one of the two worth going red for.
+-- 3. AND THIS IS STILL THE HOLE: a handler that binds a name where nothing in
+-- the guarded block can throw AND nothing is even called. No source under any
+-- reading, host included — a dead handler rather than a limit of the model.
 catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
                              not thrown_in[flow](T, _), not call_in_try[flow](T).

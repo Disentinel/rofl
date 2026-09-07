@@ -258,6 +258,13 @@ ignored(js, arrow_function_expression,    modules, a_not_a_module_construct).
 ignored(js, assignment_expression,        modules, a_not_a_module_construct).
 ignored(js, await_expression,             modules, a_not_a_module_construct).
 ignored(js, boolean_literal,              modules, a_not_a_module_construct).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+ignored(js, null_literal,                 modules, a_not_a_module_construct).
 ignored(js, class_declaration,            modules, a_not_a_module_construct).
 ignored(js, class_method,                 modules, a_not_a_module_construct).
 ignored(js, conditional_expression,       modules, a_not_a_module_construct).

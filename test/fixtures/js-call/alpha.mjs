@@ -583,6 +583,52 @@ function useShim(n) {
   return alsoReads(n);
 }
 
+// TWO SHAPES THE PROPAGATION RULES NEEDED — queue item w_exn_propagation, and
+// both were written because a mutant SURVIVED without them, not because the
+// rules looked thin.
+//
+// 1. A TRY CATCHES WHAT RUNS IN ITS OWN FUNCTION. `boom` calls `lateThrow` from
+// inside a try BLOCK textually, and `boom` is a different function — it runs
+// when somebody calls it, which is later and elsewhere. Reading containment
+// without the enclosing-function check reports that call caught and `boom` as
+// unable to throw.
+function lateThrow(n) {
+  trace();
+  throw new Error('late ' + n);
+}
+function makeThrower(n) {
+  trace();
+  try {
+    return function boom() {
+      trace();
+      return lateThrow(n);
+    };
+  } catch {
+    return null;
+  }
+}
+
+// 2. A VALUE THAT CROSSES TWO CALL EDGES. `midThrow` has no throw of its own,
+// so `thrown_by` reaches it only through its own transitive arm — the corpus's
+// other catch receives a value from a function that throws DIRECTLY, and one
+// hop cannot tell the two rules apart.
+function deepThrow(n) {
+  trace();
+  throw new Error('deep ' + n);
+}
+function midThrow(n) {
+  trace();
+  return deepThrow(n);
+}
+function useTwoHops(n) {
+  trace();
+  try {
+    return midThrow(n);
+  } catch (twoHop) {
+    return String(twoHop).length;
+  }
+}
+
 // ...and a statement AFTER a try whose block throws, which RUNS because the
 // handler caught it. Without it the `try_stops` clause had no witness at all —
 // `useTry`'s try IS its whole body, so nothing followed it and the mutant that
@@ -845,6 +891,8 @@ export async function main() {
     useCaught(1),
     useGauge(1),
     useShim(1),
+    makeThrower(1),
+    useTwoHops(1),
     useStaticOnClass(1),
     useMethodOnInstance(1),
     useStaticOnInstance(1),

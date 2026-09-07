@@ -115,11 +115,11 @@ test('the five heaviest read paths, by name', () => {
   // firings +9.1%, and every one of the five names below up between 8.9% and
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 83421',
-    'relPersp authority = 67662',
-    'argMatches encloses_v pos=[1] = 40780',
-    'relPersp encloses_v = 39873',
-    'relPersp ast_node = 34684',
+    'argMatches ast_within pos=[0] = 87165',
+    'relPersp authority = 70101',
+    'argMatches encloses_v pos=[1] = 42678',
+    'relPersp encloses_v = 41570',
+    'relPersp ast_node = 36010',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -138,6 +138,8 @@ test('the five heaviest read paths, by name', () => {
   // transitive walk itself contributes ~0.5%, measured by name below. Five
   // heaviest paths growing together at the corpus's own rate is a bigger
   // fixture; a NEW name, or one growing alone, is a badly ordered body.
+  // 705 690 -> 735 786 (+4.3%) with the propagation fixtures: seven functions,
+  // and the day's total is 601 774 -> 735 786 (+22.3%) over six closed items.
   // 694 018 -> 705 690 (+1.7%) with the frame's four kinds: the vocabulary grew
   // and the matrix machinery in this world grew with it. Four kinds, zero new
   // rules, and the only path that moved is `relPersp authority` — the ledger
@@ -148,7 +150,7 @@ test('the five heaviest read paths, by name', () => {
   // needed a fixture the corpus did not have, so alpha.mjs grew by twenty-eight
   // functions and the fixpoint grew with it. NONE of it is rule cost — see the
   // note below on what this gate can see.
-  assert.equal(c.total, 705690, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 735786, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -166,6 +168,9 @@ test('the five heaviest read paths, by name', () => {
   // expensive and this number will not move. The layer's own cost has no gate;
   // saying so is the honest state, and the number here means what its own world
   // says it means.
+  // 34 623 -> 35 938, +1315, and back to being corpus: seven fixture functions
+  // and their call sites. The propagation rules themselves run in a world this
+  // gate does not load.
   // 34 559 -> 34 623, +64: four `node_kind` rows and their sixteen `ignored`
   // verdicts, times the matrix rules that read them. The only iteration today
   // whose firings moved for a reason that is NOT the corpus.
@@ -174,5 +179,5 @@ test('the five heaviest read paths, by name', () => {
   // run in this world either. The corpus grew 12% and this fixpoint grew 12% —
   // the check doing exactly its job on the half it can see, and saying nothing
   // whatever about the half it cannot (w_cost_gate_per_layer, 41).
-  assert.equal(c.firings, 34623, 'derivations: 25513 before the generator fixture');
+  assert.equal(c.firings, 35938, 'derivations: 25513 before the generator fixture');
 });

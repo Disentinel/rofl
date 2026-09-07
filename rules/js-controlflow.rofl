@@ -212,6 +212,54 @@ resolves[code](N, M) :- accessor_read[code](N, M).
 -- directly and carries only the reads that really do run a function: two, here.
 site[code](N) :- accessor_read[code](N, _).
 
+-- ---------------------------------------------------------------------------
+-- WHAT PROPAGATES, 2026-09-06 — queue item w_exn_propagation, the transitive
+-- half of the exception path and the item that took `useTry -> after` back and
+-- forth twice before the measurement settled it.
+--
+-- FIRST ITEM IN FIVE THAT NEEDED NO NEW FIXTURE. Measured before a line was
+-- written: seven throw sites, six of them not caught by a try in their own
+-- function, and the closure over the call graph adds FOUR names —
+-- `nestedThrow -> useNested -> main`, `topThrowWithReturn -> useWithReturn`,
+-- `Fuse -> Lit`. The corpus grew the chain by accident while three earlier
+-- items were writing their own witnesses, which is the first time this session
+-- the queue's own note was simply right.
+--
+-- A TRY CATCHES WHAT RUNS IN ITS OWN FUNCTION, and the `nearest_v` equality is
+-- not decoration: `try { const f = () => g(); } catch {}` has `g()` inside the
+-- try's block TEXTUALLY, and it runs when `f` is called, which is later and
+-- elsewhere. Without the equality the model would report that call caught.
+try_of[code](TS, F)        :- ast_node[code](TS, try_statement, _, _), nearest_v[flow](F, TS).
+in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
+                              ast_child[code](TS, block, 0, B), ast_within[code](B, N).
+caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
+                              nearest_v[flow](F, N).
+
+-- A THROW THAT LEAVES ITS FUNCTION. Note `rethrown`: its throw sits in a
+-- HANDLER, and a clause does not catch what its own handler throws — the
+-- `block` field is what `in_try_block` reads, which is the same distinction
+-- `thrown_in[flow]` had to make one item ago.
+throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
+                            nearest_v[flow](F, T), not caught_here[code](T).
+
+-- ORDERED FOR COST: `may_throw` is a handful of rows and binds G, so `resolves`
+-- is probed by callee rather than enumerated.
+may_throw[code](F) :- throws_outright[code](F).
+may_throw[code](F) :- may_throw[code](G), resolves[code](C, G), nearest_v[flow](F, C),
+                      not caught_here[code](C).
+
+-- ...AND THE VALUE TRAVELS WITH IT, which is what closes the frontier item 25
+-- had to declare. `catch_from_call[flow]` named a catch parameter whose source
+-- crosses a call edge and handed it to THIS item; the arm below is the answer,
+-- and the audit beside it can now say something instead of deferring.
+thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _, _), nearest_v[flow](F, T),
+                         not caught_here[code](T), ast_child[code](T, argument, 0, V).
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), resolves[code](C, G),
+                         nearest_v[flow](F, C), not caught_here[code](C).
+caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            try_block[flow](T, B), ast_within[code](B, C),
+                            resolves[code](C, G), thrown_by[flow](G, V).
+
 -- A SECOND ARM WAS WRITTEN AND REMOVED, and the mutant is why. `super(...)`
 -- looked like it needed a hop through `ctor_of[flow]`, because a super call
 -- names the CLASS and not the body that runs. Measured: `resolves` already

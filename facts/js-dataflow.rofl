@@ -151,6 +151,13 @@ handled(js, for_of_statement,       dataflow, r_for_of).
 -- `may_be_lit[flow](E, true)` at the literal, the binder and the use — three
 -- rows, measured. Nothing was written for this cell; it was already true.
 handled(js, boolean_literal, dataflow, r_value_literal).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+handled(js, null_literal, dataflow, r_value_literal).
 
 -- UNREACHABLE UNDER THIS PARSER, and the same argument as its call-graph twin
 -- rather than a new one: babel's `Import` node is what `import` names, and

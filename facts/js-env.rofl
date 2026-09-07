@@ -214,6 +214,9 @@ kind_baseline(js, boolean_literal).
 -- therefore the truth about the KIND, and `attr_needs` below is the refinement
 -- that keeps it from being the whole answer.
 kind_baseline(js, binary_expression).
+-- `null` is as old as the language; `kind_unaccounted[audit]` asked for this
+-- row the same run `null_literal` entered the vocabulary.
+kind_baseline(js, null_literal).
 kind_baseline(js, unary_expression).
 kind_baseline(js, logical_expression).
 

@@ -591,7 +591,7 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // pack declares them. `orphan_claim[audit]` is what demanded it — the rows
   // were written where the verdict belongs and their kinds were declared in
   // the dataflow pack, so in this world they claimed cells that did not exist.
-  assert.equal(dKinds, 33, 'kinds the matrix did not know existed');
+  assert.equal(dKinds, 34, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -658,9 +658,14 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // caller. That is the same limit of the instrument the generator frames have,
   // in a second place, and it is listed rather than counted so the two causes
   // stay apart. `unreadable` is the real silence: `void gauge.broken` throws.
-  const NEVER_CALLED = ['after', 'broken', 'dormant', 'neverCased', 'neverReached',
-                        'pickA', 'reading', 'sleeper', 'unlit', 'unreached',
-                        'unreadable'];
+  // THIRTEEN on 2026-09-06 with the propagation fixtures. `boom` is RETURNED
+  // rather than called — the shape the transitive walk needed to be tested
+  // against — and `lateThrow` is silent because `boom` is. Both are wired and
+  // both stay silent for a reason no guard explains, which `may_not_be_reached`
+  // now covers and `may_not_run` does not.
+  const NEVER_CALLED = ['after', 'boom', 'broken', 'dormant', 'lateThrow',
+                        'neverCased', 'neverReached', 'pickA', 'reading',
+                        'sleeper', 'unlit', 'unreached', 'unreadable'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
     'exactly the decoy is instrumented and unreported');
@@ -770,8 +775,13 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // item's own point: `useGauge -> unreadable` is derived and never taken,
   // because the getter read on the line before it throws. It is the third
   // control-flow entry whose cause is an EXIT rather than a branch.
+  // FOURTEEN on 2026-09-06, and the new one is the propagation fixture's point:
+  // `boom -> lateThrow` is derived from syntax and never taken, because `boom`
+  // is RETURNED rather than called. It is the first entry on this list whose
+  // cause is neither a guard nor an exit but plain unreachability, and
+  // `may_not_be_reached` is the only relation that explains it.
   assert.deepEqual(extra, [
-    'Lit -> unlit',
+    'Lit -> unlit', 'boom -> lateThrow',
     'outerGen -> innerGen', 'sleeper -> dormant',
     'useAbrupt -> neverReached', 'useCased -> neverCased',
     'useDelegated -> outerGen', 'useDormant -> sleeper', 'useForOfGen -> pick',
@@ -909,7 +919,8 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 133 -> 131 the same day: two accessor READS became resolved sites when the
   // control-flow pack joined this world, so the frontier is two smaller without
   // the corpus changing. A number that falls because the model got better.
-  assert.equal(sites - resolved, 131, `${sites - resolved} call sites vanished from the frontier`);
+  // 131 -> 137 on 2026-09-06: the propagation fixtures, seven functions.
+  assert.equal(sites - resolved, 138, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

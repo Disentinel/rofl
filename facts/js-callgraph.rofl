@@ -112,6 +112,13 @@ node_kind(js, class_declaration).
 node_kind(js, return_statement).
 
 ignored(js, boolean_literal,   callgraph, a_a_literal_is_never_callable).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+ignored(js, null_literal,      callgraph, a_a_literal_is_never_callable).
 -- ...and the two that are not call sites at all. `return e` carries a value the
 -- VALUE layer reads (that is how `f()()` resolves); it transfers control to a
 -- caller that is already on the graph. A class is reached by `new C()`, whose

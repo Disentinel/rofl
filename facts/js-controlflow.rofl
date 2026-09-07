@@ -58,6 +58,13 @@ ignored(js, identifier,                  controlflow, a_no_control_transfer).
 ignored(js, string_literal,              controlflow, a_no_control_transfer).
 ignored(js, numeric_literal,             controlflow, a_no_control_transfer).
 ignored(js, boolean_literal,             controlflow, a_no_control_transfer).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+ignored(js, null_literal,                controlflow, a_no_control_transfer).
 ignored(js, template_literal,            controlflow, a_no_control_transfer).
 ignored(js, tagged_template_expression,  controlflow, a_no_control_transfer).
 ignored(js, array_expression,            controlflow, a_no_control_transfer).

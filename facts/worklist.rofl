@@ -285,6 +285,24 @@ work_order(w_unconsumed_attribute, 42).
 work_state(w_unconsumed_attribute, open).
 work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
 
+-- 43 — A MUTANT COSTS A WHOLE WORLD, and test/js-controlflow.test.ts now holds
+-- TWENTY-THREE of them. Each one rebuilds the corpus fixpoint from scratch
+-- (~16 s at the corpus's current size), so that one file takes about nine
+-- minutes and grows linearly with every item this loop closes. The owner's
+-- standing instruction is that iteration speed must RISE; this is the one
+-- number in the loop that is falling, and it is falling for a good reason —
+-- the mutant sets are what makes the gates measurable — which is exactly why
+-- it needs an answer other than writing fewer mutants.
+--
+-- The construction cannot be shared BETWEEN mutants, because the mutation is
+-- the point. What can be shared is everything a mutant does not touch: a
+-- mutation of `facts/js-kinds.rofl` cannot change the AST facts, and those are
+-- most of the fixpoint. Whether the kernel can accept a store and re-evaluate
+-- only what a changed rule reaches is a KERNEL question, not a test one.
+work(w_mutant_costs_a_world, "23 mutants x one full fixpoint each: the control-flow test file takes nine minutes and grows with every closed item").
+work_order(w_mutant_costs_a_world, 43).
+work_state(w_mutant_costs_a_world, open).
+
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds
 -- that cannot participate in a layer at all and close as waivers with a reason.
@@ -612,10 +630,27 @@ held(w_leak_variable_on_the_right, vadim).
 -- (w_cf_reachability out of `may_not_run`). It owns no cell: every kind it
 -- touches is claimed by item 25 or by w_cf_abrupt_transfer, because propagation
 -- is a property of the EDGE and cells are indexed by node kind.
-work(w_exn_propagation, "which calls may throw: the transitive closure of throw over the call graph, stopped by handlers").
+--
+-- CLOSED 2026-09-06, and it is the FIRST ITEM IN FIVE THAT NEEDED NO NEW
+-- FIXTURE. Measured before a line was written: seven throw sites, six not
+-- caught by a try in their own function, and the closure adds exactly four
+-- names — `nestedThrow -> useNested -> main`, `topThrowWithReturn ->
+-- useWithReturn`, `Fuse -> Lit`. The corpus grew that chain by accident while
+-- three earlier items wrote their own witnesses, which is the first time this
+-- session the queue's own note was simply right.
+--
+-- AND IT ANSWERED THE FRONTIER ITEM 25 HANDED IT. `catch_from_call[flow]` was
+-- declared as a deferral with this item as owner; `caught_value` now names the
+-- value `useTry`'s `catch (e)` receives from `thrower`. What is left is a THIRD
+-- class the split did not have — `catch_from_host[flow]`, a handler whose block
+-- calls only functions that cannot throw, so the value can come only from the
+-- host. Owned by w_env_api_surface, and the audit stays exact rather than
+-- absorbing it.
+work(w_exn_propagation, "DONE 2026-09-06: may_throw and thrown_by close over the call graph; the catch_from_call frontier is answered").
 work_order(w_exn_propagation, 28).
-work_state(w_exn_propagation, open).
+work_state(w_exn_propagation, done).
 work_needs(w_exn_propagation, w_exception_flow).
+work_spawned(w_exn_propagation, f_a_frontier_with_an_owner_pays_out_when_the_owner_lands).
 
 -- 29. SCOPE, AND IT HAS ALREADY COST US ONCE. `binder[flow]` is FILE-scoped by
 -- construction: one name, one binding, per file. Shadowing, block scope, the
