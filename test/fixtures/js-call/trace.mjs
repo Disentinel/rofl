@@ -42,8 +42,21 @@ const measured = new Set();
  *  THE BRACKETS SAY THE WHOLE THING IS ONE KEY, so they are stripped first and
  *  the dot rule then names the property: `[Symbol.iterator]` -> `iterator`,
  *  which is what the model calls it too — every other method is named by its
- *  key rather than by its receiver, and a computed key is still a key. */
-function frameName(cs) {
+ *  key rather than by its receiver, and a computed key is still a key.
+ *
+ *  RE-SWEPT 2026-09-07 on V8 12.4 (node 20) and V8 14.0 (node 24): the raw
+ *  names are IDENTICAL on both, shape for shape — including `new Sub()`,
+ *  which reports `Sub` only when the subclass declares its own constructor —
+ *  so the table above is a property of V8 across four major versions rather
+ *  than of one.
+ *
+ *  `frameName` IS EXPORTED so the transformation can be gated without an
+ *  engine in the loop: test/js-callgraph.test.ts pins raw string -> name,
+ *  which is ours, while the oracle test pins the invariant that no name this
+ *  file reports carries a bracket or a dot — which is what `iterator]`
+ *  violated, and the only half of the two that a second engine could argue
+ *  with. */
+export function frameName(cs) {
   let n = null;
   try { n = cs.getFunctionName() ?? cs.getMethodName(); } catch { n = null; }
   if (!n) return '<top>';

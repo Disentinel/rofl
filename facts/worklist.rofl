@@ -909,13 +909,21 @@ claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_bound
 -- iterable the corpus does not have and whose method key is `Symbol.iterator`,
 -- a computed member the scanner cannot reduce to a literal. The decorator
 -- produces no node at all with the parser plugin off.
-work(w_cg_invisible_calls, "calls with no call site: the tagged template is DONE (r_tag_call); a for-of iterator needs a custom iterable whose key the scanner cannot reduce, a decorator has no node, and an await's `.then` is invisible to the ORACLE - measured, not argued").
+work(w_cg_invisible_calls, "calls with no call site: the tagged template is DONE (r_tag_call) and so is the for-of iterator protocol (r_iterator_protocol); a decorator has no node, and an await's `.then` is invisible to the ORACLE - measured, not argued").
 work_order(w_cg_invisible_calls, 34).
 work_state(w_cg_invisible_calls, open).
 work_spawned(w_cg_invisible_calls, f_the_instrument_decides_which_invisible_call_can_be_closed).
 work_spawned(w_cg_invisible_calls, f_a_guard_over_a_runnable_corpus_has_no_site_to_bite_on).
 work_spawned(w_cg_invisible_calls, f_a_fixture_for_one_construct_smuggled_in_two_kinds).
 work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by_the_scanner).
+-- ...AND THE FOR-OF LANDED, 2026-09-07, as `r_iterator_protocol`. The design
+-- fork is worth more than the rule: a for-of is ONE node and TWO calls, and
+-- `ambiguous_call[audit]` reads a site with two answers as an
+-- over-approximation that must be visible. That reading is right for a callee
+-- POSITION and wrong here, because both calls happen — so only the
+-- `[Symbol.iterator]` hop goes through `resolves` and the `next` hop goes
+-- straight into `calls`. Measured both ways: through `resolves` it takes
+-- `ambiguous_call` from 8 to 9.
 -- AND THE FOR-OF NOTE ABOVE WAS WRONG WITHIN THE HOUR, measured 2026-09-07:
 -- the scanner sees the WHOLE protocol key. `{ [Symbol.iterator]() {} }` comes
 -- out as an `object_method` with `computed=true` whose `key` child is a
@@ -932,7 +940,10 @@ work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by
 -- cell under an OPEN item is a lie, and it said so within one run. A claim
 -- survives a closed cell only when the ITEM is done, which is what
 -- `false_done[audit]` then guards.
-claim(queued, js, for_of_statement,           none, callgraph, w_cg_invisible_calls).
+-- ...AND THE FOR-OF'S CLAIM IS GONE THE SAME WAY THE TAGGED TEMPLATE'S WENT,
+-- 2026-09-07: `queue_stale[audit]` reads a claim on a shut cell under an open
+-- item as a lie and says so within one run, so closing the cell and retiring
+-- the claim are one edit rather than two.
 claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
 claim(queued, js, decorator,                  none, callgraph, w_cg_invisible_calls).
 -- ...and their value halves: what a decorator or a tagged template EVALUATES
@@ -1030,3 +1041,33 @@ work(w_negation_range_restriction, "a variable bound only inside a negation is a
 work_order(w_negation_range_restriction, 39).
 work_state(w_negation_range_restriction, open).
 work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_verdict).
+
+-- 40 — A COMPUTED KEY THAT IS A BARE IDENTIFIER IS NAMED BY ITS SPELLING.
+-- Entered 2026-09-07 by the work that wrote `key_name`, and it is a defect in
+-- that relation's FIRST arm rather than in the one the comment guards.
+-- `key_name(K, N) :- ast_name(K, N)` fires on the key node whatever position
+-- it is in, so `{ [someVar]() {} }` — where the key node IS the identifier —
+-- gets the name `someVar`, which is the name of the VARIABLE and not of the
+-- property. The second arm's `Symbol` guard says this must not happen and only
+-- covers keys that are member expressions. Behaviour predates the relation:
+-- every reader used `ast_name` on the key directly, so this is an
+-- over-approximation inherited rather than introduced, and it is unmeasurable
+-- in the corpus today — measured 2026-09-07, the corpus contains exactly ONE
+-- computed key and it is `[Symbol.iterator]`.
+-- WHAT THE FIX NEEDS is the `computed` attribute, which the scanner already
+-- emits: a key is named by its spelling only when it is NOT computed. What
+-- makes it work rather than a comment is a SITE, and the site cannot go in a
+-- runnable fixture — a method the model must not name is a method the oracle
+-- would see run under a name nobody derived.
+-- AND THE SAME NARROWING IS THE COST HALF, which is why they are one item.
+-- `key_name` reads `ast_name(K, N)` for K in ANY position, so it derives 1 200
+-- rows over a corpus with 1 200 named nodes and roughly a hundred keys. The
+-- 2x2 in test/js-fixpoint-cost.test.ts attributes most of this iteration's
+-- +0.55% rules cost to it. A key is `ast_child(_, key, 0, K)`, which is one
+-- premise, and adding it answers the naming question and the cost question at
+-- once — but it CHANGES THE MODEL for a computed identifier key, so it needs
+-- the site above before it can be measured rather than argued.
+work(w_computed_key_names, "a computed key that is a bare identifier is named by the variable's spelling, the guard that forbids it covers only member-expression keys, and the same arm ranges over every named node rather than over keys").
+work_order(w_computed_key_names, 40).
+work_state(w_computed_key_names, open).
+work_spawned(w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).

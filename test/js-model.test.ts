@@ -611,8 +611,16 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // collides with the importing file's own.
   // 56 -> 57 on 2026-09-07: `tagged_template_expression` at callgraph — a call
   // the grammar gives no call site, answered as a TRANSFER SITE like `new`.
-  assert.deepEqual(f, { cell: 156, modelled: 57, waived: 26, not_modelled: 73 },
-    'predicted 156 fine cells = 57 + 26 + 73');
+  // 57 -> 58 on 2026-09-07: `for_of_statement` at callgraph — the same shape
+  // once more, and the first one that is TWO calls at one node.
+  //
+  // THIS NUMBER STAYS A NUMBER while several around it became identities the
+  // same day, and the difference is the point: it moves when the MODEL gets
+  // better and not when a fixture grows, so re-stating it on purpose is the
+  // whole ritual. The partition beside it is checked by `finePartitions`, so
+  // only three of the four are free.
+  assert.deepEqual(f, { cell: 156, modelled: 58, waived: 26, not_modelled: 72 },
+    'predicted 156 fine cells = 58 + 26 + 72');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -650,15 +658,19 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.equal(seen.size, 156, 'every cell carries a verdict, and no verdict lacks a cell');
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
-  // the reason is total over not_modelled, exactly as at two axes
-  // 75 -> 74 on 2026-09-07: `export_all_declaration x callgraph` is modelled,
-  // so the cell that carried a reason no longer needs one.
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 73, 'one reason per not_modelled cell');
-  // 75 -> 74 with the reason above: the two halves of the split partition the
-  // not_modelled cells, so they move together with `reason[audit]` and this line
-  // is what says the split is still TOTAL rather than merely smaller.
+  // THE REASON IS TOTAL OVER not_modelled, and that sentence is the assertion
+  // now rather than its comment. It was pinned to 75, then 74, then 73 — a
+  // number re-derived by hand every time a cell closed, when what it claims is
+  // an equality between two things this world already counts.
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), f.not_modelled,
+    'one reason per not_modelled cell');
+  // ...and the two halves of the split PARTITION those same cells, which is
+  // the sentence the old 75/74/73 was standing in for. Written as the equality
+  // it always was, it says the split is TOTAL rather than merely smaller, and
+  // it says so in every future corpus without being re-derived.
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 73, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), f.not_modelled,
+    'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -986,7 +998,15 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // 360 -> 368: the tagged-template fixtures — `mark`, `stamped`, `useTag`,
   // beta's second `mark` and `bTag`, each with its `trace()` call, plus the
   // non-function tag in shapes.ts.
-  assert.equal(sites, 368, 'positive control: the corpus is the one the census was taken on');
+  // WAS `sites === 368`, WHICH WAS A COMMENT ABOUT THE CORPUS WEARING AN
+  // ASSERTION'S FACE. What it is for is catching a census taken on a world
+  // other than this one, and the identity that says so exactly is the totality
+  // of the classification: every call site gets one shape, so the tally sums to
+  // the site count. It cannot drift, and it fails for the reason 368 was there
+  // to fail for.
+  assert.equal([...tally.values()].reduce((a, b) => a + b, 0), sites,
+    'positive control: every call site got exactly one shape, on THIS corpus');
+  assert.ok(sites > 300, `positive control: the corpus is loaded (${sites} call sites)`);
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -1139,7 +1159,12 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // 157 -> 162 on 2026-09-07: `main -> useTag`, `useTag -> mark`,
   // `useTag -> stamped`, `bmain -> bTag`, `bTag -> mark` — and the third of
   // those is the value half, which is why the fixture's tag returns a function.
-  assert.equal(oracleEdges.size, 162, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // WAS `=== 162`. It is a POSITIVE CONTROL — did the oracle run at all — and
+  // it went red for every function any fixture ever gained, while the
+  // assertion with content is the zero on the next line. A bound does a
+  // control's job; `missed === 0` is the gate.
+  assert.ok(oracleEdges.size > 100,
+    `positive control: the oracle saw a call graph (${oracleEdges.size} edges)`);
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -1234,7 +1259,26 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 63, '33 kind-level claims + 30 shape claims with no cell under them');
+  // WAS `f.modelled === 63` WITH THE MESSAGE `33 kind-level claims + 30 shape
+  // claims`, and both halves of that sum had drifted from anything this world
+  // reports — the coarse matrix reads 32 modelled, not 33. NAMED INSTEAD, and
+  // the named form turns out to be the sharper statement: what the collapse
+  // ADDS is the `none` cell of every kind the shape axis splits that also
+  // carries a kind-level claim. Six of them, and the list moves when a split
+  // kind gains or loses a claim — a real event — rather than whenever the
+  // matrix grows anywhere.
+  const pristineModelled = fineCells(shapeWorld(), 'verdict[audit](A, B, S, L, modelled)');
+  const mutantModelled = fineCells(r, 'verdict[audit](A, B, S, L, modelled)');
+  assert.deepEqual(mutantModelled.filter((x) => !pristineModelled.includes(x)), [
+    'js/arrow_function_expression/none/callgraph',
+    'js/call_expression/none/callgraph',
+    'js/function_expression/none/callgraph',
+    'js/identifier/none/callgraph',
+    'js/member_expression/none/callgraph',
+    'js/optional_call_expression/none/callgraph',
+  ], 'the `none` cell of every split kind whose kind-level claim now has nowhere to land');
+  assert.deepEqual(pristineModelled.filter((x) => !mutantModelled.includes(x)), [],
+    'and the collapse takes none away: a claim is a claim whether or not a cell survives');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',

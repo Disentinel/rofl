@@ -52,7 +52,7 @@ const FILES: [string, string][] = [
 const RULES = ['rules/js-structure.rofl', 'rules/js-dataflow.rofl',
   'rules/js-model.rofl', 'rules/js-callgraph.rofl'];
 
-interface Cost { total: number; top: string[]; facts: number; firings: number }
+interface Cost { total: number; top: string[]; share: [string, number][]; facts: number; firings: number }
 
 /** Build the call-graph world with the store's three read paths counted.
  *
@@ -83,9 +83,11 @@ function cost(): Cost {
 
   let total = 0;
   for (const n of tally.values()) total += n;
-  const top = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} = ${v}`);
+  const five = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const top = five.map(([k, v]) => `${k} = ${v}`);
+  const share = five.map(([k, v]) => [k, (100 * v) / total] as [string, number]);
   const store = st as unknown as { facts: Map<string, unknown>; firings: Map<string, unknown> };
-  return { total, top, facts: store.facts.size, firings: store.firings.size };
+  return { total, top, share, facts: store.facts.size, firings: store.firings.size };
 }
 
 test('the cost of one fixpoint is deterministic', () => {
@@ -144,13 +146,45 @@ test('the five heaviest read paths, by name', () => {
   // fixture costs +5.7% and +6293. The scope layer cost +25% firings for its
   // rules. A delta alone would have reported "+6.7%" for both and said nothing
   // about which half either time.
-  assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 116871',
-    'relPersp authority = 91377',
-    'argMatches encloses_v pos=[1] = 57088',
-    'relPersp encloses_v = 54493',
-    'relPersp ast_node = 53955',
-  ], 'a new name here is a body ordered so a big relation is enumerated first');
+  // NAMES AND SHARES, 2026-09-07, and the raw counts are gone. Every comment in
+  // this block says the same thing about them — `the same five, growing
+  // together, is the signature of a bigger corpus; a new name, or one growing
+  // alone, would be the signature of a badly ordered body` — and a raw count
+  // cannot express `together` at all: it went red for the corpus every time and
+  // the reader had to divide by hand to find out whether anything was wrong.
+  // A SHARE OF THE TOTAL SAYS IT DIRECTLY. Measured across the whole 2x2 below,
+  // which moves both the rules and the corpus:
+  //
+  //     ast_within[0]   11.16 .. 11.33 %      encloses_v (persp)  5.22 .. 5.28 %
+  //     authority        8.81 ..  8.89 %      ast_node            5.20 .. 5.24 %
+  //     encloses_v[1]    5.46 ..  5.54 %
+  //
+  // so the band below is about four times the spread the instrument itself
+  // shows, and a path growing 20% ALONE moves its share by two points — an
+  // order of magnitude outside it. What a raw count caught, this catches; what
+  // it did not catch was anything at all.
+  const SHARE: [string, number][] = [
+    ['argMatches ast_within pos=[0]', 11.2],
+    ['relPersp authority', 8.9],
+    ['argMatches encloses_v pos=[1]', 5.5],
+    ['relPersp encloses_v', 5.25],
+    ['relPersp ast_node', 5.2],
+  ];
+  assert.deepEqual(c.share.map(([k]) => k), SHARE.map(([k]) => k),
+    'a new name here is a body ordered so a big relation is enumerated first');
+  for (const [i, [name, want]] of SHARE.entries()) {
+    const got = c.share[i][1];
+    assert.ok(Math.abs(got - want) < 0.4,
+      `${name}: ${got.toFixed(2)}% of the total, and it has been ${want}% — this path grew alone`);
+  }
+  // ...AND THE COST PER FACT, which is the quantity this file's own header
+  // identifies as the tell: firings scale with the corpus, and cost-per-fact
+  // scaling with the STORE is the signature of a scan in the hot path. It is
+  // the one number here that a bigger fixture cannot move on its own.
+  // 6.537 at iteration 26; 6.419 now, so this iteration made the fixpoint
+  // cheaper per fact while making the corpus bigger.
+  assert.ok(c.total / c.facts < 6.7,
+    `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
   // until its variables are bound, so it is judged against a smaller
@@ -247,7 +281,7 @@ test('the five heaviest read paths, by name', () => {
   // became a `handled` and one `kind_absent_ok` was retired. The fixture costs
   // +3.1% and 1714 firings — five functions with their `trace()` calls, and a
   // non-function tag in the file the oracle does not run.
-  assert.equal(c.total, 1031137, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 1080424, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -312,5 +346,22 @@ test('the five heaviest read paths, by name', () => {
   // pin, 1 030 494 against the 1 031 137 the suite reported. The (HEAD, HEAD)
   // corner reproduces 995 305 in both measurements, which is what says the
   // AXES were right and only the corpus under them had moved.
-  assert.equal(c.firings, 61005, 'derivations: 59 250 before the tagged template');
+  // 1 031 137 -> 1 080 424 on 2026-09-07 with the ITERATOR PROTOCOL. Axes from
+  // this diff, and there are FOUR files on the rules axis because the iteration
+  // touched three rule packs and a fact pack — rules/js-structure.rofl,
+  // rules/js-dataflow.rofl, rules/js-callgraph.rofl and facts/js-callgraph.rofl
+  // — against alpha.mjs and shapes.ts.txt on the corpus axis:
+  //
+  //                        iter-26 corpus         this corpus
+  //     iter-26 rules 1 031 137 / 61 005 fir  1 074 015 / 64 322 fir
+  //     iterator rules 1 036 789 / 62 181 fir  1 080 424 / 65 576 fir
+  //
+  // and the (iter-26, iter-26) corner reproduces the number this line used to
+  // assert TO THE ROW, which is the control that caught a missing axis two
+  // iterations ago. The rules cost +0.55% of rows and 1 176 firings — the
+  // for-of arms, and `key_name`, which is the expensive half: its first arm
+  // ranges over every named node rather than over keys, and w_computed_key_names
+  // owns narrowing it. The fixture costs +4.16% and 3 317, which is the ordinary
+  // shape. Cost per fact FELL, 6.537 -> 6.419.
+  assert.equal(c.firings, 65576, 'derivations: 61 005 before the iterator protocol');
 });

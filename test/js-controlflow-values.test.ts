@@ -320,12 +320,22 @@ const TAG: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
         ['bTag -> mark', 'useTag -> mark', 'useTag -> stamped'],
         'both tags, and the function the tag RETURNS');
       // THE CONJUNCT THAT KEEPS THIS APART FROM g2, which loses the same three:
-      // the SITE is still declared here, only the resolution goes.
-      assert.equal(m.n('transfer_site[code](X, K)'), 22, 'the transfer sites are untouched');
+      // the SITE is still declared here, only the resolution goes. WRITTEN AS
+      // AN EQUALITY BETWEEN THE TWO WORLDS rather than as the number 22, which
+      // moved every time any transfer kind gained a site anywhere.
+      assert.equal(m.n('transfer_site[code](X, K)'), b.n('transfer_site[code](X, K)'),
+        'the transfer sites are untouched');
       // ...and one more call goes unresolved: `f()` in useTag has no value to
       // call once the tagged template stops evaluating to the tag's return.
-      assert.equal(b.n('unresolved_call[code](C, S)'), 180);
-      assert.equal(m.n('unresolved_call[code](C, S)'), 181);
+      // NAMED RATHER THAN COUNTED: the pair 180/181 said `one more` in a way
+      // that had to be re-derived every time the corpus grew a call.
+      const unresolved = (w: World) => new Set(w.q('unresolved_call[code](C, S)').map(([c]) => c));
+      const gainedSites = [...unresolved(m)].filter((c) => !unresolved(b).has(c))
+        .map((c) => { const n = m.q(`ast_node[code](${c}, K, File, L)`)[0]; return `${n?.[0]}@${n?.[1]}`; });
+      assert.deepEqual(gainedSites, ['call_expression@alpha.mjs'],
+        'one site stops resolving: `f()` in useTag, whose value was the tag\'s return');
+      assert.deepEqual([...unresolved(b)].filter((c) => !unresolved(m).has(c)), [],
+        'and none starts');
     },
   },
   {
@@ -335,10 +345,17 @@ const TAG: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
         ['bTag -> mark', 'useTag -> mark', 'useTag -> stamped']);
-      assert.deepEqual(b.q('transfer_site[code](X, K)')
-        .reduce((acc: Record<string, number>, [, k]) => ((acc[k] = (acc[k] ?? 0) + 1), acc), {}),
-        { new_expression: 19, tagged_template_expression: 3 });
-      assert.equal(m.n('transfer_site[code](X, K)'), 19,
+      // THE CENSUS AS A DIFFERENCE, 2026-09-07. It used to be the baseline's
+      // whole table written out — `{ new_expression: 19, tagged_template: 3 }` —
+      // so declaring a THIRD transfer kind reddened it for a reason that had
+      // nothing to do with tags. What g2 claims is that one kind leaves the
+      // census entirely and the others are untouched.
+      const byKind = (w: World) => w.q('transfer_site[code](X, K)')
+        .reduce((acc: Record<string, number>, [, k]) => ((acc[k] = (acc[k] ?? 0) + 1), acc), {});
+      const bk = byKind(b);
+      const { tagged_template_expression: tags, ...rest } = bk;
+      assert.ok(tags > 0, 'positive control: the baseline has tagged templates');
+      assert.deepEqual(byKind(m), rest,
         'the sites themselves are gone, which is what tells this from g1');
     },
   },
@@ -357,8 +374,8 @@ const TAG: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [],
         'no edge moves: an object has no name, so no edge can carry it');
-      assert.equal(b.n('resolves[code](C, F)'), 201);
-      assert.equal(m.n('resolves[code](C, F)'), 202, 'and the row is the only witness');
+      assert.equal(m.n('resolves[code](C, F)') - b.n('resolves[code](C, F)'), 1,
+        'exactly one row appears, and the row is the only witness');
       const extra = new Set(m.q('resolves[code](C, F)').map(([c, f]) => `${c}|${f}`));
       for (const [c, f] of b.q('resolves[code](C, F)')) extra.delete(`${c}|${f}`);
       const kindOf = (id: string) => m.q(`ast_node[code](${id}, K, File, L)`)[0];
@@ -396,4 +413,199 @@ test('the tag is called, and what it returns is called too', () => {
     .filter(([, k]) => k === 'tagged_template_expression')
     .map(([x]) => m.q(`ast_node[code](${x}, K, File, L)`)[0]?.[1]).sort(),
     ['alpha.mjs', 'beta.mjs', 'shapes.ts']);
+});
+
+
+// ---------------------------------------------------------------------------
+// 3m. THE SAME ITEM, THE OTHER HALF (w_cg_invisible_calls): the FOR-OF.
+//
+// `for (const x of E)` calls `E[Symbol.iterator]()` and then `next()` on
+// whatever that returned. TWO calls, ONE node, and the grammar shows neither —
+// so it is the tagged template's shape and then one step further.
+//
+// THE RUNTIME WAS ASKED FIRST, as it was for the tag: V8 attributes BOTH calls
+// to the enclosing function, which is what makes this half of the item
+// checkable where the `await`'s `.then` is not. It also reports the first
+// callee as `[Symbol.iterator]`, a shape the oracle's own last-dot rule had
+// never seen and was corrupting to `iterator]`.
+//
+// THE DESIGN FORK IS WHAT h1 MEASURES, and it is the non-obvious part.
+// `ambiguous_call[audit]` reads a site with two answers as an
+// over-approximation that must be VISIBLE — right for a callee POSITION,
+// wrong here, because a for-of makes two calls and both are true. So only the
+// `[Symbol.iterator]` hop goes through `resolves`; the `next` hop goes
+// straight into `calls`. Routed both ways and measured: through `resolves` it
+// takes `ambiguous_call` from 8 to 9. h1 deletes the `resolves` arm and
+// `useIterable -> bump` SURVIVES — which is the fork stated as a row rather
+// than as a paragraph.
+//
+// TWO OF THE SIX MUTANTS ARE GUARDS WITH NOTHING TO BITE ON IN A RUNNABLE
+// FILE, and both got a site in shapes.ts rather than a comment — the same
+// remedy `stampObj` was written for one item earlier, and the reason that
+// question is worth asking of every guard: the first measurement of h5 and h6
+// derived a byte-identical world.
+const ITER: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'h1 the resolves arm for the first hop is deleted',
+    mut: [{ find: 'resolves[code](X, M) :- for_of_iterates[code](X, M).', replace: '',
+            file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      // BOTH first hops go and the SECOND HOP STAYS. `useIterable -> bump` is
+      // derived from `for_of_iterates` directly, so it does not depend on the
+      // arm that publishes the first hop as a callee — which is the whole
+      // content of the fork above.
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['onIterObject -> iterator', 'useIterable -> iterator']);
+      assert.ok(edges(m).has('useIterable -> bump'), 'the `next` hop does not go through `resolves`');
+      assert.equal(m.n('transfer_site[code](X, K)'), b.n('transfer_site[code](X, K)'),
+        'the sites are untouched, which is the column h2 owns');
+      assert.equal(b.n('resolves[code](C, F)') - m.n('resolves[code](C, F)'), 2,
+        'one row per for-of whose iterable this program declares');
+    },
+  },
+  {
+    name: 'h2 the kind stops being a transfer site',
+    mut: [{ find: 'transfer_kind(for_of_statement).', replace: '',
+            file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['onIterObject -> iterator', 'useIterable -> bump', 'useIterable -> iterator'],
+        'no site, so neither hop');
+      // ...and the SITES are what tells this from h4, which loses the same
+      // three edges by taking the NAME away instead.
+      const kinds = (w: World) => w.q('transfer_site[code](X, K)')
+        .reduce((acc: Record<string, number>, [, k]) => ((acc[k] = (acc[k] ?? 0) + 1), acc), {});
+      const { for_of_statement: loops, ...others } = kinds(b);
+      assert.ok(loops > 0, 'positive control: the baseline declares for-of sites');
+      assert.deepEqual(kinds(m), others, 'the kind leaves the census and the others do not');
+      assert.equal(m.n('for_of_iterates[code](X, M)'), 0);
+    },
+  },
+  {
+    name: 'h3 the calls arm for `next` is deleted',
+    mut: [{ find: `calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
+                             returns[flow](M, E), may_be_node[flow](E, IterObj),
+                             member_value[flow](IterObj, "next", V),
+                             may_be_node[flow](V, Next), fn_node[code](Next).`,
+            replace: '', file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['useIterable -> bump'], 'the second hop, and only the second');
+      // the mirror of h1's column: the first hop is a `resolves` and this one
+      // is not, so deleting it moves `calls` and leaves `resolves` alone.
+      assert.equal(m.n('resolves[code](C, F)'), b.n('resolves[code](C, F)'),
+        'and `resolves` does not move');
+      assert.equal(b.n('calls[code](A, B)') - m.n('calls[code](A, B)'), 1);
+    },
+  },
+  {
+    name: 'h4 a computed well-known symbol stops being a name',
+    mut: [{ find: `key_name[code](K, N)   :- ast_node[code](K, member_expression, _, _),
+                          ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
+                          ast_child[code](K, property, 0, P), ast_name[code](P, N).`,
+            replace: '', file: 'rules/js-structure.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['onIterObject -> iterator', 'useIterable -> bump', 'useIterable -> iterator']);
+      // THE SAME THREE EDGES AS h2, AND A DIFFERENT ORACLE, which is what
+      // earns it a place beside h2 rather than duplicating it: the sites are
+      // all still there and it is the NAME that went. Four relations read a
+      // key and all four were blind to a computed one; this is the row that
+      // says so.
+      assert.equal(m.n('transfer_site[code](X, K)'), b.n('transfer_site[code](X, K)'),
+        'every site survives');
+      assert.ok(b.n('fn_name[code](F, "iterator")') > 0, 'positive control');
+      assert.equal(m.n('fn_name[code](F, "iterator")'), 0, 'the method has no name at all');
+      assert.equal(b.n('member_value[flow](O, K, V)') - m.n('member_value[flow](O, K, V)'),
+        b.n('fn_name[code](F, "iterator")'), '...and no key either, one per protocol method');
+    },
+  },
+  {
+    name: 'h5 the `Symbol` guard on a computed key is dropped',
+    mut: [{ find: 'ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),',
+            replace: '', file: 'rules/js-structure.rofl' }],
+    // A GUARD WITH NOTHING TO BITE ON, MEASURED BEFORE IT WAS GIVEN ONE. The
+    // corpus contained exactly ONE computed key — the protocol's own — so
+    // dropping the guard moved no answer anywhere. `aliasedKey` in shapes.ts
+    // is a computed key whose object is NOT `Symbol`, and it is in the scanned
+    // file rather than a runnable one because a method the model must not name
+    // is a method the oracle would see run under a name nobody derived.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [],
+        'no edge moves: nothing calls it, and that is not what the guard is about');
+      assert.equal(b.n('fn_name[code](F, "spot")'), 0, 'the model does not know that name');
+      assert.equal(m.n('fn_name[code](F, "spot")'), 1, '...and the mutant invents it');
+      assert.equal(m.n('member_value[flow](O, K, V)') - b.n('member_value[flow](O, K, V)'), 1,
+        'one member appears, under a name that is the variable and not the property');
+      // AND THE SHAPE OF THE COST IS THE SECOND THING IT SAYS, which a total
+      // could not: without the `Symbol` test the arm matches every member
+      // expression in the corpus, and all but ONE of the rows it adds are not
+      // in key position at all.
+      const rows = (w: World) => new Set(w.q('key_name[code](K, N)').map((r) => r.join('|')));
+      const inKeyPosition = new Set(b.q('ast_child[code](P, key, 0, K)').map(([, k]) => k));
+      const added = [...rows(m)].filter((r) => !rows(b).has(r)).map((r) => r.split('|')[0]);
+      assert.equal(added.filter((k) => inKeyPosition.has(k)).length, 1,
+        'exactly one of the new rows is a key at all — the site in shapes.ts');
+      assert.ok(added.length > 10,
+        `and the arm reaches ${added.length} member expressions that are not keys`);
+    },
+  },
+  {
+    name: 'h6 the `next` value stops having to be a function',
+    mut: [{ find: '                             may_be_node[flow](V, Next), fn_node[code](Next).',
+            replace: '                             may_be_node[flow](V, Next).',
+            file: 'rules/js-callgraph.rofl' }],
+    // THE OTHER GUARD WITH NO SITE, and the same remedy as `stampObj`: an
+    // iterable whose `next` is an OBJECT throws at run time, so no executable
+    // fixture can hold it. `{ next: 1 }` would have looked like the same site
+    // and measured nothing — a numeric literal is not a `node_value_kind`, so
+    // `may_be_node` never reaches it and the premise BEFORE the guard is what
+    // would have failed.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [],
+        'no EDGE moves: the callee is an object, and an object has no name');
+      assert.equal(m.n('calls[code](A, B)') - b.n('calls[code](A, B)'), 1,
+        'and the raw edge is the only witness');
+    },
+  },
+];
+
+// TWO MUTANTS WERE MEASURED AND DROPPED, and the measurements are worth more
+// than the mutants would have been.
+//
+//   READING `left` WHERE `right` BELONGS loses exactly the three edges h4
+//   loses and moves `resolves`, `calls` and `for_of_iterates` by exactly as
+//   much — and unlike h4 it moves nothing else, so its signature is h4's with
+//   the naming rows taken out. A for-of has two children and only one of them
+//   can denote the iterable; "read the wrong child" and "take the name away"
+//   are the same statement about this grammar. Same finding as `g3` above, one
+//   construct later.
+//
+//   DEREFERENCING THE MEMBER'S VALUE — replacing the final `may_be_node` with
+//   the member's own value — loses `useIterable -> bump` and moves `calls`
+//   203 -> 202, which is h3 exactly. `{ next: bump }` holds an IDENTIFIER and
+//   there is one hop between it and the function, so "delete the arm" and
+//   "stop taking the hop" cannot be told apart here. A third mutant with no
+//   oracle of its own would have looked like coverage.
+
+for (const g of ITER) test(`${g.name} — the iterator protocol`, () => g.expect(build(g.mut), base()));
+
+test('both hops of the for-of are called, and the four sites are not four answers', () => {
+  const m = base();
+  for (const e of ['useIterable -> iterator', 'useIterable -> bump', 'onIterObject -> iterator']) {
+    assert.ok(edges(m).has(e), `the iterator protocol did not reach: ${e}`);
+  }
+  // NOTHING NEW IS AMBIGUOUS, which is the fork holding: two callees from one
+  // statement are two `calls` rows and one `resolves` row.
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8);
+  // FOUR SITES, TWO ANSWERS, and the two that stay silent are not residue of
+  // the same class as anything else on the frontier: iterating an array
+  // literal or a generator calls a BUILT-IN `[Symbol.iterator]`, a function
+  // that is not in this program, so there is no node for a rule to name.
+  const loops = m.q('transfer_site[code](X, K)').filter(([, k]) => k === 'for_of_statement')
+    .map(([x]) => ({ x, fn: m.q(`nearest_fn[code](F, ${x})`).flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n))[0] }));
+  const answered = new Set(m.q('for_of_iterates[code](X, M)').map(([x]) => x));
+  assert.deepEqual(loops.map((l) => `${l.fn}${answered.has(l.x) ? '' : ' (built-in)'}`).sort(),
+    ['onIterObject', 'useForOfArray (built-in)', 'useForOfGen (built-in)', 'useIterable'],
+    'by the function that holds the loop, and whether its iterable is in the program');
 });

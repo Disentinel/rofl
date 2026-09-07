@@ -245,6 +245,27 @@ async function runOracle(dir: string): Promise<OracleRun> {
   return { edges, list, measured: t.oracle.measured(), raw: t.oracle.edges().length };
 }
 
+/** the name a KEY stands for, which is `key_name[code]` in
+ *  rules/js-structure.rofl written a fifth time — and the fifth place a
+ *  computed key was invisible.
+ *
+ *  MEASURED 2026-09-07: `{ [Symbol.iterator]() {} }` has a `MemberExpression`
+ *  where every other key has an `Identifier`, so `node.key?.name` is
+ *  `undefined` and the census named the method `<anon>` while the runtime
+ *  reported `iterator`. The census's own header says it must speak the same
+ *  names as the runtime; a fourth reader of a key had the same blind spot as
+ *  the three the model fixed, and this one is in the INSTRUMENT rather than in
+ *  the rules, so no audit over the rules could ever have named it.
+ *
+ *  Guarded on `Symbol` for the reason the rule is: `obj[someVar]` has no
+ *  static name and neither of us may invent one. */
+function keyName(key: any): string | undefined {
+  if (!key || typeof key !== 'object') return undefined;
+  if (key.type === 'Identifier') return key.name;
+  if (key.type === 'MemberExpression' && key.object?.name === 'Symbol') return key.property?.name;
+  return undefined;
+}
+
 /** Which functions in a fixture CAN report? A direct babel walk — no ROFL
  *  rule, no scanner fact — so "the oracle saw nothing here" can be told apart
  *  from "the oracle was never wired up here". */
@@ -266,7 +287,7 @@ function census(dir: string, files: string[]): { instrumented: Set<string>; sile
         // function that had in fact reported — the census must speak the same
         // names as the runtime or it measures nothing.
         const name = node.kind === 'constructor' ? (className ?? 'constructor')
-          : node.id?.name ?? node.key?.name ?? nameHint ?? '<anon>';
+          : node.id?.name ?? keyName(node.key) ?? nameHint ?? '<anon>';
         const stmts = node.body?.type === 'BlockStatement' ? node.body.body : [];
         const wired = stmts.some((s: any) => s.type === 'ExpressionStatement'
           && s.expression?.type === 'CallExpression'
@@ -642,6 +663,51 @@ test('the price of the cell: what modelling the call graph dragged into the matr
 // ===========================================================================
 // 7. THE ORACLE — both error directions, counted separately
 
+// THE INSTRUMENT'S OWN NAMING RULE, GATED. `frameName` in trace.mjs turns what
+// V8 puts on a CallSite into the name this model uses, and until 2026-09-07 it
+// had no test at all — the rule was a comment claiming `V8 gives Box.get,
+// Object.hello, new Box`, and a sweep of sixteen shapes found that this V8
+// gives none of those. The same sweep caught the rule CORRUPTING a shape it had
+// never seen: `[Symbol.iterator]` came out `iterator]`, because the last-dot
+// rule ran on a bracketed key.
+//
+// WHAT IS PINNED HERE IS THE TRANSFORMATION AND NOT THE ENGINE, and the
+// distinction is the reason this is a table of STRINGS rather than a fixture of
+// call sites. The raw column is a measurement — identical on V8 12.4 and V8
+// 14.0, re-swept the same day — and the arrow is ours. CI runs this suite under
+// bun as well, where the raw names are JavaScriptCore's; a test that called the
+// shapes for real would pin an engine and go red for being right.
+test("the oracle's frame naming: what V8 spells, and what it becomes", async () => {
+  const t: any = await import(path.join(FIX, 'trace.mjs'));
+  const call = (raw: string | null) =>
+    t.frameName({ getFunctionName: () => raw, getMethodName: () => null });
+  const SWEEP: [string, string | null, string][] = [
+    ['function / arrow / object method / class method / static', 'plainFn', 'plainFn'],
+    ['async / generator / named or anonymous fn expression', 'theName', 'theName'],
+    ['a bound function, which reports its target', 'plainFn', 'plainFn'],
+    ['new Box(), and there is no `new ` prefix to strip', 'Box', 'Box'],
+    ['a getter, whose accessor word the oracle normalises elsewhere', 'get acc', 'get acc'],
+    ["a key that CONTAINS a dot, obj['a.b'] — the rule earns its keep", 'dotted.a.b', 'b'],
+    ['a computed key, the shape the rule was corrupting', '[Symbol.iterator]', 'iterator'],
+    ['an arrow passed to a host API, which V8 will not name', null, '<top>'],
+  ];
+  for (const [shape, raw, want] of SWEEP) assert.equal(call(raw), want, shape);
+  // THE REGRESSION, STATED AS ITSELF rather than left implicit in the row
+  // above: without the bracket strip the last-dot rule returns `iterator]`, a
+  // name no model has and no assertion in this file would have questioned.
+  assert.notEqual(call('[Symbol.iterator]'), 'iterator]');
+  // `getMethodName` is a real fallback and is reached — V8 leaves
+  // `getFunctionName` null on a frame it can only name through its receiver.
+  assert.equal(t.frameName({ getFunctionName: () => null, getMethodName: () => 'hello' }), 'hello');
+  // ...and a CallSite that throws is `<top>` rather than a crash. The try is
+  // load-bearing on a frame the engine refuses to describe, and nothing else
+  // here exercises it.
+  assert.equal(t.frameName({
+    getFunctionName: () => { throw new Error('no name'); },
+    getMethodName: () => 'x',
+  }), '<top>');
+});
+
 test('execution oracle: what ran, what the model derived, and the gap', async () => {
   const m = build();
   const model = modelEdges(m);
@@ -650,6 +716,17 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // POSITIVE CONTROL, first: an oracle that measured nothing is a fact about
   // the oracle. Both the raw frame count and the census must be non-trivial.
   assert.ok(o.raw >= 30, `oracle recorded ${o.raw} frames — did it run at all?`);
+  // ...AND NO NAME IT REPORTS IS HALF-NORMALISED. The bracketed computed key
+  // reached this instrument as `[Symbol.iterator]` and left it as `iterator]`
+  // for as long as the last-dot rule was the whole rule, and every assertion in
+  // this file would have gone on passing: a name nothing matches simply looks
+  // like a function that never ran. This is the engine-independent half of the
+  // naming rule — whatever V8 or JSC spells, what comes out of `frameName` is
+  // an identifier, `<top>`, or an accessor word and an identifier.
+  const halfNormalised = [...o.measured, ...o.list.map((e) => e.caller)]
+    .filter((n) => /[[\].]/.test(n));
+  assert.deepEqual([...new Set(halfNormalised)].sort(), [],
+    'a frame name the normalisation did not finish');
   const { instrumented, silent } = census(FIX, RUN_FILES);
   assert.ok(instrumented.size >= 25, `census: only ${instrumented.size} instrumented functions`);
   assert.deepEqual([...silent].sort(), [], 'every fixture function can report');
@@ -978,7 +1055,14 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 168 -> 171 the same day: the tagged-template fixtures — `mark` twice,
   // `stamped`, `useTag` and `bTag` with their `trace()` calls, less the sites
   // the tag arm now resolves.
-  assert.equal(sites - resolved, 171, `${sites - resolved} call sites vanished from the frontier`);
+  // 171 -> 172 the same day with the ITERATOR PROTOCOL, and it is the smallest
+  // move the frontier has made for a fixture: `bump`, the `[Symbol.iterator]`
+  // method, `useIterable` and shapes.ts's `onIterObject` bring four `trace()`
+  // calls and a call from `main`, and all five RESOLVE — an imported name and a
+  // declared function. What is left over is the one site inside `useIterable`
+  // that the loop body adds. The protocol's own two calls are not call sites at
+  // all, which is the entire reason the item exists.
+  assert.equal(sites - resolved, 172, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -1052,15 +1136,57 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
     replace: 'transfer_kind(no_such_kind).',
   }])).has('useClass -> Box'), 'and the mutant loses it');
   assert.deepEqual(blind.get(key), undefined, 'the mutant has nothing at that site either');
-  // and the damage is LOCAL: every other missed edge is still attributed, so
-  // the mutant is killed by the constructor site and not by a global collapse
-  // PINNED, not bounded: this number FALLS as the model closes misses — it was
-  // above five when eleven edges were missing and is four now that four are —
-  // so a threshold would quietly stop meaning anything. An equality makes the
-  // next person state the new number on purpose.
-  const stillOk = o.list.filter((e) => e.callee !== 'Box' && blind.has(`${e.file}:${e.line}`)).length;
-  assert.equal(stillOk, 0, `${stillOk} other sites keep their attribution`);
-  console.log(`  KILLED: the new-expression site loses its verdict while ${stillOk} others keep theirs`);
+  // and the damage is LOCAL — stated 2026-09-07 as a DIFFERENCE rather than as
+  // a zero, and the change is a correction rather than a re-pin. The absolute
+  // said `no oracle edge outside the constructor sits on a frontier line in the
+  // blinded world`, which was 0 only for as long as no frontier line happened
+  // to be a line V8 also reports a call on. The FOR-OF ended that in the
+  // BASELINE and not in the mutant: `for (const x of [..])` and
+  // `for (const x of pick())` are transfer sites whose `[Symbol.iterator]` is a
+  // BUILT-IN, so they resolve to nothing and correctly say so, and both calls
+  // in each loop body are reported by V8 at the loop's own line. Those four are
+  // attributed with the mutation and without it.
+  //
+  // The claim that mutant 7 is actually making is that the blinded world
+  // attributes nothing the baseline does not, and that was never what an
+  // equality against zero measured. Named rather than counted, for the reason
+  // the over-approximation list above is named: a number tolerates whatever
+  // fits under it.
+  const attributed = (f: Map<string, string[]>) => [...new Set(o.list
+    .filter((e) => e.callee !== 'Box' && f.has(`${e.file}:${e.line}`))
+    .map((e) => `${e.caller} -> ${e.callee} @ ${e.file}:${e.line}`))].sort();
+  const pair = (x: string) => x.split(' @ ')[0];
+  const at = (x: string) => x.split(' @ ')[1];
+  // FOUR OF THEM IN BOTH WORLDS, and they are the two OTHER for-of loops:
+  // `for (const x of [..])` and `for (const x of pick())` are transfer sites
+  // whose `[Symbol.iterator]` is a BUILT-IN, so they resolve to nothing and
+  // correctly say so, and V8 reports both calls in each loop body at the loop's
+  // own line. Written as pairs plus the item declared at the line, because the
+  // LINE moves whenever anything above it in the fixture does.
+  assert.deepEqual(attributed(blind).map(pair), [
+    'useForOfArray -> alef', 'useForOfArray -> bet',
+    'useForOfGen -> alef', 'useForOfGen -> bet',
+  ], 'the two for-of loops whose iterable is a built-in, and nothing else');
+  assert.deepEqual([...new Set(attributed(blind).map((x) => blind.get(at(x))?.join()))],
+    ['for_of_statement'], 'and each is attributed to the loop rather than to a call');
+  assert.deepEqual(attributed(blind).filter((x) => !attributed(base).includes(x)), [],
+    'the mutant attributes nothing the baseline does not');
+
+  // ...AND IT ATTRIBUTES ONE THING LESS, which is the sentence in this test's
+  // own name and was NOT what the old `stillOk === 0` measured. Un-declaring
+  // the kind does not merely lose the constructor edge: it removes the model's
+  // ability to SAY a transfer happened at all, so a `new` whose site does NOT
+  // resolve stops being frontier too. That site is where `useMethodOnInstance`
+  // calls a method on a fresh instance — the baseline declares
+  // `new_expression` at the line and the blinded world declares nothing, which
+  // is the gate going blind rather than going wrong.
+  const wentBlind = attributed(base).filter((x) => !attributed(blind).includes(x));
+  assert.deepEqual(wentBlind.map(pair), ['useMethodOnInstance -> poured']);
+  assert.deepEqual(wentBlind.map((x) => base.get(at(x))), [['new_expression']]);
+  assert.deepEqual(wentBlind.map((x) => blind.get(at(x))), [undefined],
+    'the line the baseline could explain, the mutant cannot');
+  console.log('  KILLED: the new-expression site loses its edge AND its verdict, while '
+    + `${attributed(blind).length} for-of attributions are untouched`);
 });
 
 

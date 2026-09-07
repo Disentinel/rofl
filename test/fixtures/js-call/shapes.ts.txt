@@ -109,4 +109,35 @@ const stampObj = { at: 1 };
 // full run, which is the gate doing its job and the fixture doing too much.
 export function onTagObject(n: number) { return stampObj`k${n}`; }
 
+// AN ITERABLE WHOSE `next` IS NOT CALLABLE, and it is here for exactly the
+// reason `stampObj` is. `for (const x of oneShot)` throws at run time — the
+// protocol demands a callable `next` — so no executable fixture can hold it,
+// and without a site the `fn_node` guard on the for-of's SECOND hop derives a
+// byte-identical world when it is deleted. Measured 2026-09-07 before this was
+// written: six mutants aimed at the iterator protocol, and that guard was one
+// of the two survivors.
+//
+// THE VALUE IS AN OBJECT LITERAL AND NOT A NUMBER, which is the whole care.
+// `{ next: 1 }` would have looked like the same site and measured nothing: a
+// numeric literal is not in `node_value_kind`, so `may_be_node` never reaches
+// it and the premise BEFORE the guard is what would have failed. The guard is
+// only exercised when everything up to it succeeds.
+const oneShot = { [Symbol.iterator]() { return { next: { at: 1 } }; } };
+export function onIterObject(n: number): number {
+  let s = 0;
+  for (const x of oneShot) s += n;
+  return s;
+}
+
+// A COMPUTED KEY THAT IS NOT A WELL-KNOWN SYMBOL, and the second survivor of
+// that set. `key_name` in rules/js-structure.rofl reads a computed key through
+// a `Symbol` guard, because `obj[Anything.else]` names a property this model
+// cannot know — and the corpus contained exactly ONE computed key, the
+// protocol's own, so dropping the guard changed no answer anywhere. It is not
+// spellable in a runnable fixture for a duller reason than the others: it
+// would run perfectly well, and a method the model must NOT name is a method
+// the oracle would then see run under a name nobody derived.
+const wellKnown = { spot: 'pick' };
+export const aliasedKey = { [wellKnown.spot](n: number): number { return n; } };
+
 export async function dyn(p: string) { return import(p); }

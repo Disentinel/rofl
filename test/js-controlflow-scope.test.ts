@@ -263,13 +263,30 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
     // lookups guard their receiver, so a `program` node passes none of them.
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> crossed']);
-      // 60 -> 77 when gamma.mjs and delta.mjs joined the corpus: a module object
-      // is another file's `program`, so every module the corpus scans adds its
-      // exports to this lookup. The MUTANT number does not move — 29 is what is
-      // left when no module object reaches `member_plain` at all — and that the
-      // two numbers move independently is the reason both are pinned.
-      assert.equal(b.n('member_plain[flow](O, K, V)'), 82);
-      assert.equal(m.n('member_plain[flow](O, K, V)'), 30, 'the module\'s exports leave the lookup');
+      // WAS TWO COUNTS (82 and 30) AND IS NOW THE EQUATION THEY WERE STANDING
+      // IN FOR, 2026-09-07. Both moved every time the corpus grew an object or
+      // a module, and neither said which rows had gone: the deleted arm reads
+      // `module_object(P, _), member_value(P, Key, V)`, so what it removes is
+      // exactly the member_plain rows whose receiver is a module object. That
+      // is checkable as a set, and a set does not need re-stating when a
+      // fixture gains a method.
+      const plain = (w: World) => new Set(w.q('member_plain[flow](O, K, V)')
+        .map(([o, k, v]) => `${o}|${k}|${v}`));
+      const modules = new Set(b.q('module_object[flow](P, F)').map(([p]) => p));
+      const lost = [...plain(b)].filter((r) => !plain(m).has(r));
+      assert.ok(lost.length > 0, 'positive control: the arm derives something');
+      assert.deepEqual(lost.filter((r) => !modules.has(r.split('|')[0])), [],
+        'every row the mutant loses has a module object as its receiver');
+      assert.deepEqual([...plain(m)].filter((r) => !plain(b).has(r)), [],
+        'and it gains none');
+      // ...and the OTHER direction, which a count could not express at all:
+      // every module-object member the baseline knows about is one of the rows
+      // that went. A row surviving here would mean a second arm derives it, and
+      // that is worth being told about rather than absorbed into a number.
+      const viaModule = [...modules].flatMap((p) => b.q(`member_value[flow](${p}, K, V)`)
+        .map(([k, v]) => `${p}|${k}|${v}`)).sort();
+      assert.deepEqual(viaModule.filter((r) => !lost.includes(r)), [],
+        'no module member survives the deletion by another route');
     },
   },
   {
@@ -291,12 +308,31 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
     // is exactly ONE default export per module and TWENTY-NINE named ones, so
     // confusing the two turns one binding into every export alpha.mjs has.
     expect: (m, b) => {
-      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(), [
-        'bviaNs -> leaf', 'bviaNs -> main', 'bviaNs -> run', 'bviaNs -> useAssign',
-        'bviaNs -> useBin', 'bviaNs -> useCond', 'bviaNs -> useOr', 'bviaNs -> usePanel',
-        'bviaNs -> useRack', 'bviaNs -> useSeq', 'bviaNs -> useShelf', 'bviaNs -> useTag',
-      ]);
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 164, 'and the site resolves every way: 8 -> 164');
+      // WAS A LIST OF TWELVE NAMES TYPED OUT, AND IS NOW THE CLAIM ITSELF:
+      // the site gains an edge to every function alpha.mjs exports BY NAME and
+      // did not already reach. Written out, the list went red for every
+      // function the fixture ever gained — which is a fact about alpha.mjs and
+      // not about this mutant.
+      const named = exportsOf(b, 'alpha.mjs')
+        .map((x) => `bviaNs -> ${x.split('@')[0]}`);
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        [...new Set(named.filter((e) => !edges(b).has(e)))].sort(),
+        'one binding becomes every named export alpha.mjs has');
+      assert.ok(named.length > 1, 'positive control: alpha.mjs exports more than one name');
+      // AND THE AMBIGUITY IS AN IDENTITY RATHER THAN A NUMBER. 164 was
+      // k*(k-1) for whatever k the corpus happened to make the site resolve to,
+      // so it moved with every export added anywhere. What the mutant does is
+      // make ONE site resolve every way at once, and that is exactly what the
+      // identity says.
+      const before = new Set(b.q('ambiguous_call[audit](C, F, G)').map((r) => r.join('|')));
+      const gained = m.q('ambiguous_call[audit](C, F, G)').filter((r) => !before.has(r.join('|')));
+      const sites = new Set(gained.map(([c]) => c));
+      assert.equal(sites.size, 1, 'a single call site accounts for all of it');
+      const site = [...sites][0];
+      const k = m.n(`resolves[code](${site}, F)`);
+      assert.ok(k > 2, `positive control: the site resolves ${k} ways`);
+      assert.equal(gained.length, k * (k - 1),
+        'every ordered pair of resolutions at that one site, and nothing else');
     },
   },
   {
@@ -368,12 +404,22 @@ test('an imported name, and the module the corpus does not have', () => {
 // third time in this loop that a surviving mutant was repaired by a name
 // collision rather than by a sharper assertion.
 const fileOf = (w: World, id: string) => w.q(`ast_node[code](${id}, K, F, L)`)[0]?.[1] ?? '?';
+/** every named export of one module, tagged with the module the function lives
+ *  in. ONE HELPER RATHER THAN TWO LITERAL LISTS, 2026-09-07: the expectations
+ *  below used to enumerate alpha.mjs's exports by hand, so adding one function
+ *  to a fixture reddened four assertions that had nothing to say about it. What
+ *  each of them actually claims is a set EQUATION between one module's exports
+ *  and another's, and an equation moves on both sides at once. */
+const exportsOf = (w: World, file: string) => w.q(`exports_name[code](F, N, "${file}")`)
+  .map(([f, n]) => `${n}@${fileOf(w, f)}`).sort();
+/** the modules a file's `import`/`export *` specifiers resolve to */
+const targetsOf = (w: World, file: string) => [...new Set(
+  w.q(`module_source[code](E, S, "${file}")`)
+    .flatMap(([, src]) => w.q(`import_target[code]("${src}", T)`).map(([t]) => t)))].sort();
 /** every name gamma re-exports, tagged with the module the function lives in */
-const reexports = (w: World) => w.q('exports_name[code](F, N, "gamma.mjs")')
-  .map(([f, n]) => `${n}@${fileOf(w, f)}`).sort();
+const reexports = (w: World) => exportsOf(w, 'gamma.mjs');
 /** every export of beta.mjs, the file that RE-EXPORTS NOTHING and imports four times */
-const betaExports = (w: World) => w.q('exports_name[code](F, N, "beta.mjs")')
-  .map(([f, n]) => `${n}@${fileOf(w, f)}`).sort();
+const betaExports = (w: World) => exportsOf(w, 'beta.mjs');
 /** each ambiguous call site as `caller-file: name@file | name@file` */
 const ambRows = (w: World) => w.q('ambiguous_call[audit](C, F, G)').map(([c, f, g]) =>
   `${fileOf(w, c)}: ${w.q(`fn_name[code](${f}, N)`)[0]?.[0]}@${fileOf(w, f)}`
@@ -416,8 +462,23 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
         ['beta.mjs: twin@beta.mjs | twin@delta.mjs',
          'beta.mjs: twin@delta.mjs | twin@beta.mjs'],
         'the imported `twin` now means both the re-exported one and beta\'s own');
-      assert.equal(reexports(b).length, 14);
-      assert.equal(reexports(m).length, 38, 'gamma re-exports every function in the corpus');
+      // WAS TWO LENGTHS (14 and 38) AND IS NOW THE SENTENCE IN THE MUTANT'S
+      // OWN NAME: `from EVERY module, not the one it names`. Both lengths moved
+      // whenever any fixture gained an export, and neither said WHICH module a
+      // name had come from — which is the only thing this mutant changes.
+      const carriedFrom = (w: World) => [...new Set(reexports(w).map((x) => x.split('@')[1]))].sort();
+      assert.deepEqual(carriedFrom(b), targetsOf(b, 'gamma.mjs'),
+        'the baseline carries names from exactly the modules gamma names');
+      // ...and `every module` is read off the corpus rather than listed: any
+      // file that declares a name somebody exports. shapes.ts is on it, which
+      // the hand-written version of this expectation got wrong on the first
+      // try — the length 38 had been hiding a fourth module for as long as it
+      // was a length.
+      const anywhere = [...new Set(FILES.map(([logical]) => logical)
+        .flatMap((f) => exportsOf(b, f)).map((x) => x.split('@')[1]))].sort();
+      assert.deepEqual(carriedFrom(m), anywhere,
+        'and the mutant from every module in the corpus that exports anything');
+      assert.ok(reexports(m).length > reexports(b).length, 'positive control: it really is more');
     },
   },
   {
@@ -440,11 +501,14 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
       assert.deepEqual(betaExports(b), ['bTag@beta.mjs', 'bcross@beta.mjs', 'bmain@beta.mjs',
         'bviaNs@beta.mjs', 'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
         'beta.mjs exports what beta.mjs declares');
-      assert.deepEqual(betaExports(m).filter((x) => !betaExports(b).includes(x)),
-        ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs', 'run@alpha.mjs',
-         'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs', 'useCond@alpha.mjs',
-         'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs', 'useSeq@alpha.mjs',
-         'useShelf@alpha.mjs', 'useTag@alpha.mjs'],
+      // WAS FOURTEEN NAMES TYPED OUT AND IS NOW `everything it imports`, read
+      // off the BASELINE — which is what keeps it from being circular: the
+      // sources' own export sets are derived in the unmutated world, and only
+      // beta's is read from the mutated one.
+      const imported = [...new Set(targetsOf(b, 'beta.mjs').flatMap((t) => exportsOf(b, t)))]
+        .filter((x) => !betaExports(b).includes(x)).sort();
+      assert.ok(imported.length > 0, 'positive control: beta imports from modules that export');
+      assert.deepEqual(betaExports(m).filter((x) => !betaExports(b).includes(x)), imported,
         'beta.mjs re-exports everything it imports, through both of its sources');
     },
   },
@@ -479,10 +543,15 @@ test('a re-export carries names and not the default, and the receiver keeps its 
   // straight from alpha.mjs and `viaStar` only through gamma's `export *` — so
   // the two paths are told apart by which local name resolves.
   assert.ok(edges(m).has('bviaStar -> crossed'), 'the re-exported name reaches its function');
-  assert.deepEqual(reexports(m), ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs',
-    'run@alpha.mjs', 'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs',
-    'useCond@alpha.mjs', 'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs',
-    'useSeq@alpha.mjs', 'useShelf@alpha.mjs', 'useTag@alpha.mjs'],
+  // `AND NOTHING ELSE` IS THE WHOLE CLAIM, so it is written as an equation
+  // against the sources rather than as the fourteen names the corpus happens to
+  // make it today. The two sides read DIFFERENT arms of `exports_name` — the
+  // sources' rows come from their own `export` declarations and gamma's from
+  // the re-export arm — so this is a composition check and not a tautology, and
+  // r1 through r4 each still break it.
+  const sources = targetsOf(m, 'gamma.mjs');
+  assert.deepEqual(sources, ['alpha.mjs', 'delta.mjs'], 'the two modules gamma names');
+  assert.deepEqual(reexports(m), [...new Set(sources.flatMap((t) => exportsOf(m, t)))].sort(),
     'gamma re-exports the NAMED exports of both its sources, and nothing else');
   // ...AND NOT THE DEFAULT, which `export *` deliberately leaves behind. This is
   // asserted rather than assumed because `exports_default[code]` is a separate

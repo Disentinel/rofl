@@ -1,173 +1,152 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-07 by the session that ran iterations 23–27. The tree is **mid
-iteration 27 and is RED**: the rules are finished and measured, the tests and
-the ledger are not. Everything below is measured unless it says otherwise.
+Written 2026-09-07 by the session that finished iteration 27 and converted the
+pins. The tree is **green** apart from the seven pre-existing failures named
+below. Everything here is measured unless it says otherwise.
 
 ## Where the loop is
 
-Branch `modeljs`. Last **green** commit is `dc93db3` (iteration 26); everything
-after it in the working tree is iteration 27 and is described here.
+Branch `modeljs`. Iteration 27 — `w_cg_invisible_calls`, the FOR-OF half — is
+landed: the iterator protocol derives, the cell is closed, the claim is retired.
 
-Coverage as of `dc93db3`, measured in the five-pack world (the one
-`test/worklist.test.ts` builds — the only world that loads every layer):
+Coverage in the five-pack world (the one `test/worklist.test.ts` builds — the
+only world that loads every layer):
 
 ```
-KIND × LAYER   320 cells = modelled 104 + waived 178 + not_modelled 38
-  answered (modelled | waived):  282 / 320 = 88.1%
-  MODELLED only:                 104 / 320 = 32.5%
+KIND × LAYER   320 cells = modelled 105 + waived 178 + not_modelled 37
+  answered (modelled | waived):  283 / 320 = 88.4%
+  MODELLED only:                 105 / 320 = 32.8%
 
-  callgraph    80: modelled 27, waived 34, not_modelled 19  -> 76%
+  callgraph    80: modelled 28, waived 34, not_modelled 18  -> 78%
   controlflow  80: modelled 25, waived 50, not_modelled  5  -> 94%
   dataflow     80: modelled 45, waived 30, not_modelled  5  -> 94%
   modules      80: modelled  7, waived 64, not_modelled  9  -> 89%
 
-of the 36 unanswered fine cells: 3 irreducible, 33 ours, of which 15 open work
+open_cell[audit] 14, EVERY ONE OWNED BY NAME — `sweeper` is 0 at all four
+layers. 3 irreducible. 50 work items. `next_work[audit]` = w_cg_invisible_calls
 ```
 
 Read those three numbers as three different claims. `waived` means "this kind
 cannot participate in this layer, and here is the reason" — a real answer with
-an audit behind it, but not a model. And the denominator is the vocabulary this
-model declares (80 kinds), not JavaScript: `f_two_published_reductions_compose`
-in the ledger counts the same thing as 146 structural classes × 7 layers.
+an audit behind it, but not a model. The denominator is the vocabulary this
+model declares (80 kinds), not JavaScript.
 
-## Iteration 27 — what is in the tree right now
+## What iteration 27 delivered
 
-Item: `w_cg_invisible_calls` (order 34), the FOR-OF half. Calls with no call
-site. The tagged template closed in iteration 25; `await`'s `.then` is
-permanently unverifiable (see below); the decorator has no node.
+**`r_iterator_protocol`** — `for (x of E)` is a TRANSFER SITE, and the model now
+derives both calls the grammar hides: `E[Symbol.iterator]()` and then `next()`.
 
-### Done and measured
+**THE DESIGN FORK, and it is the part to carry forward.** A for-of is ONE node
+and TWO calls. `ambiguous_call[audit]` reads a site with two answers as an
+over-approximation that must be visible — exactly right for a callee POSITION,
+exactly wrong here, because both calls happen. So only the first hop goes
+through `resolves`; the second goes straight into `calls`, where two callees
+from one statement is an ordinary fact. Measured both ways: through `resolves`
+it takes `ambiguous_call` 8 → 9. Mutant `h1` makes the fork observable rather
+than leaving it in a comment — delete the `resolves` arm and
+`useIterable -> bump` SURVIVES.
 
-1. **`test/fixtures/js-call/trace.mjs` — `frameName` strips a bracketed name.**
-   Swept sixteen function shapes on Node 22 first, because the comment claimed
-   `V8 gives Box.get, Object.hello, new Box` and this V8 gives none of those:
+**`key_name[code]`** in `rules/js-structure.rofl` — the name a key stands for,
+written once where four rules had `ast_name` on a key and all four were blind to
+a computed one. A FIFTH reader was in the test harness: the babel census in
+`test/js-callgraph.test.ts` computes `node.key?.name` and named the method
+`<anon>`. No audit over the rules could ever have found that one.
 
-   | shape | V8 says | old last-dot rule |
-   |---|---|---|
-   | function / arrow / method / static / async / generator / bound / inherited | the bare name | unchanged |
-   | `new Box()`, `new Sub()` | `Box`, `Sub` (no `new ` prefix) | unchanged |
-   | a getter | `get acc` | unchanged |
-   | `obj['a.b'] = fn` | `dotted.a.b` | `b` — still qualified, rule earns its keep |
-   | a computed key | `[Symbol.iterator]` | **`iterator]` — corrupted** |
-   | arrow passed to a host API | `null` | `<top>` |
+**`frameName` is gated.** The V8 sweep that refuted the instrument's own comment
+is two tests now, split by which half is ours: a table of raw string → name
+(engine-free, so bun cannot argue with it) and a live invariant that no name the
+oracle reports carries a bracket or a dot — which is what `iterator]` violated.
+Re-swept on V8 12.4 and V8 14.0: identical, shape for shape.
 
-   So the rule fires on exactly two shapes today and was wrong on one of them.
-   Brackets are stripped first now: `[Symbol.iterator]` → `iterator`.
+**Six mutants, all killed, two dropped with the measurement** (section 3m of
+`test/js-controlflow-values.test.ts`). Two of the six survived the first run and
+BOTH were guards; both got a site in `shapes.ts.txt`. Read that section before
+writing another guard — one of the two sites had to be rewritten because the
+obvious spelling (`{ next: 1 }`) fails a premise BEFORE the guard, so the mutant
+would have derived a byte-identical world for the second time.
 
-2. **`rules/js-structure.rofl` — `key_name[code](K, N)`,** the name a key stands
-   for, written ONCE. Four relations read `ast_name` on a key (`fn_name` ×2,
-   `member_value` ×3) and all four found nothing for a computed key, so the
-   method had no name and no key at the same time. Guarded on `Symbol`
-   deliberately: `obj[someVar]` has no static name and this must not invent one.
-   `fn_name` and `member_value` read `key_name` now.
+## THE PINS WERE CONVERTED — read this before writing one
 
-3. **`rules/js-callgraph.rofl` — the iterator protocol.**
-   `transfer_kind(for_of_statement)`, then `for_of_iterates` + a `resolves` arm
-   for the first hop, and a **`calls` arm for the second**.
+Adding one fixture function used to red-line about twenty assertions, of which
+roughly four had anything to say. That is
+`f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus`, and the conversion
+is done rather than queued. **The rule now:**
 
-   **THE DESIGN DECISION, and it is the non-obvious part.** A for-of is ONE node
-   and TWO real calls. `ambiguous_call[audit]` reads a site with two answers as
-   an over-approximation that must be visible — right for a callee POSITION,
-   wrong here, because both calls happen. So only the `[Symbol.iterator]` hop
-   goes through `resolves`; the `next` hop goes straight into `calls`, where two
-   callees from one statement is an ordinary fact. Measured both ways: through
-   `resolves` it takes `ambiguous_call` 8 → 9.
-
-4. **`test/fixtures/js-call/alpha.mjs` — `bump`, `counter`, `useIterable`,**
-   called from `main()`. The runtime reports `useIterable -> iterator` and
-   `useIterable -> bump`, both attributed to the enclosing function.
-
-Measured in the corpus world with the rules in place:
-
-```
-useIterable -> iterator   YES
-useIterable -> bump       YES
-edges 193 | ambiguous_call 8 | transfer_site 25 | unresolved_call 183
-resolves 203 | for_of_iterates 1 | hole []
-transfer by kind: for_of_statement 3, new_expression 19, tagged_template_expression 3
-corpus kinds 74 | vocabulary_gap 0 | kind_absent_stale 0
-```
-
-### Left to do
-
-- **A mutant set for the for-of.** Delete-mutant per literal; suggested targets:
-  the `resolves` arm; `transfer_kind(for_of_statement)` (distinguished by
-  `transfer_site` 25 → 22); the `calls` arm for `next`; the `Symbol` guard on
-  `key_name`; the final `may_be_node` on the member's value. Two mutants losing
-  the same row are ONE mutant until each has its own oracle — say so and drop
-  one, with the measurement, rather than keeping a third that looks like cover.
-  Put them in `test/js-controlflow-values.test.ts` (smallest of the three
-  corpus-world files) beside section 3l.
-- **A test for `frameName`,** if you want the sweep to be a gate rather than a
-  comment. It has no test today; the sweep above is reproducible in ~10 lines.
-- **Close the cells**: `for_of_statement × callgraph` in `facts/js-callgraph.rofl`
-  (`unknown_because` → `handled(js, for_of_statement, callgraph, r_iterator_protocol)`),
-  retire its `claim` in `facts/worklist.rofl` (an open item may not claim a shut
-  cell — `queue_stale[audit]` says so within one run), update the item's note.
-- **Findings** for: the V8 naming sweep refuting the instrument's own comment;
-  four relations reading a key and all four blind to a computed one; the
-  one-node-two-calls design fork.
-- **Pins.** Expect ~15 to move across `test/js-callgraph.test.ts`,
-  `test/js-controlflow*.test.ts`, `test/js-model.test.ts`,
-  `test/js-fixpoint-cost.test.ts`, `test/worklist.test.ts`. This is the
-  mechanical two-thirds; the fastest route is one full suite, then set each
-  number from the reported `actual` **and write one line saying why it moved**.
+- **A number that moves when the CORPUS grows is measuring the corpus.** Write
+  the identity or the named set it was standing in for:
+  - `reason[audit] === f.not_modelled`, not `73`.
+  - the shape tally sums to the call-site count, not `368`.
+  - `every name alpha.mjs exports`, not twelve names typed out.
+  - `m.n(rel) === b.n(rel)` between the mutant world and the baseline, not `22`.
+  - `k*(k-1)` at one site, not `164`.
+  - the five heaviest read paths as NAMES + SHARES of the total — measured
+    stable to ±0.1 pp across BOTH axes of the 2×2 — not raw counts.
+- **A number that moves when the MODEL changes stays a number**, and re-stating
+  it on purpose is the ritual working. There are three: the fine matrix
+  (`58 + 26 + 72`), `open_cell[audit]` (14), and the fixpoint total/firings.
+- One conversion **found a defect the number had hidden**: `gamma re-exports
+  every function in the corpus` was pinned as the length `38`, and writing it as
+  a set showed it includes `shapes.ts` — a fourth module the length had been
+  absorbing silently for as long as it was a length.
+- And `mutant 7` in `test/js-callgraph.test.ts` was **asserting the opposite of
+  its own comment** and had been green by luck. What it actually says is that
+  un-declaring the kind removes the model's ability to SAY a transfer happened:
+  a `new` whose site does not resolve stops being frontier too. Named now.
 
 ## The rituals that are not optional here
 
-- **`npm test` is the loop** (node only; bun is CI's business). ~13 min, 47 min
-  CPU across four lanes. Attest every full run with a tree fingerprint AND a
-  positive control — `bash` snippet in `CLAUDE.md`; a run over a moving tree is
-  discarded, and that has caught a bad baseline once.
-- **Eight pre-existing failures** are expected and unrelated: `example-goof` ×2,
-  `example-heck`, `example-loot`, `example-npc` ×2, `example-sus`, `example-yak`.
-  Any ninth is yours.
+- **`npm test` is the loop** (node only; bun is CI's business). ~4 min on this
+  machine, 15 min CPU across four lanes.
+- **Attest every full run** with a tree fingerprint AND a positive control —
+  snippet in `CLAUDE.md`. **Extend its `find` to `*.mjs` and `*.txt`**: the
+  fixtures are neither `.ts` nor `.rofl`, so as written it could not see
+  `alpha.mjs` or `shapes.ts.txt` change under a running suite.
+- **Seven pre-existing failures**, not eight: `example-goof` ×2, `example-heck`,
+  `example-loot`, `example-npc` ×2, `example-sus`. The previous handoff also
+  listed `example-yak`; it passes here, on a faster machine. Any eighth is yours.
 - **After every push, read the CI job log for your commit** — local green is not
-  green. Fetch it immediately before writing the commit message, not at the
-  start: the one time that order was reversed the numbers were right and the
-  process was not, and it is recorded as a finding.
+  green. Fetch it immediately before writing the commit message.
 - **The 2×2 cost matrix** with axes taken from THIS diff, and its own control:
-  the (HEAD, HEAD) corner must reproduce the number pinned in
-  `test/js-fixpoint-cost.test.ts` exactly (**1 031 137 rows / 61 005 firings**).
-  A 401-row gap once said an axis was missing. Re-measure it if the corpus
-  changes afterwards.
-- **Run the kind census beside the oracle probe**, not at the end. A fixture
-  that introduces a second node kind (`rest_element` from `...args`,
-  `tsunknown_keyword` from `: unknown`) goes red twelve minutes later at the end
-  of a full suite, and the census is a one-second query.
+  the (last-green, last-green) corner must reproduce the number pinned in
+  `test/js-fixpoint-cost.test.ts`. It did, to the row, with FOUR files on the
+  rules axis — three rule packs and a fact pack.
+- **Run the kind census beside the oracle probe**, not at the end.
 
-## What this session learned the hard way
+## Environment
 
-- **Ask the runtime before writing a rule.** Iteration 25's whole shape was
-  decided by a 30-second oracle probe. `await thenable` reports `<top> -> then`
-  because the promise machinery makes the call, so a model deriving it would be
-  contradicted by the oracle rather than confirmed — a property of the FORM.
-  Third instance of the same limit (getters, generators): a call the HOST makes
-  on the program's behalf has no caller in the program.
-- **A fixture must be reachable ONLY through the construct it tests, and must
-  introduce ONLY that construct.**
-- **A column the corpus never varies can be deleted for free.** Three surviving
-  mutants in a row were killed by a deliberate NAME COLLISION, not by a sharper
-  assertion.
-- **A guard whose violation cannot RUN belongs in `shapes.ts`** (scanned, never
-  executed). `fn_node` on the tag rule derived a byte-identical world until an
-  object literal was used as a tag there.
-- **Derive anchors, never write them.** Six mutants had been re-aimed after
-  naming a row somebody retired. The queue-head plant, the unpopulatable file
-  list, the excuse mutant and the reflection sweep are all derived now.
-- **Twelve design notes in `facts/worklist.rofl` have been refuted by the first
-  probe.** They are all mine. Treat every note as a hypothesis with a name.
+- Developed on node 24.13; CI uses node 22. The V8 naming sweep is identical on
+  20, 22 and 24, so nothing in the oracle depends on the version.
+- `npm test` asks `os.availableParallelism()`. If a second agent works on the
+  same machine in another worktree, both ask for every core and oversubscribe.
+  Pass `--test-concurrency` explicitly while iterating.
+
+## What to do next
+
+`next_work[audit]` still names `w_cg_invisible_calls`, and it now holds only
+cells that **cannot close on the instrument this loop has**: `await_expression ×
+callgraph` (V8 attributes the `.then` to the promise machinery, so a model
+deriving it would be contradicted rather than confirmed) and `decorator` at both
+layers (no node at all with the parser plugin off). Say that rather than closing
+it.
+
+**`w_computed_key_names` (40) is new and is the sharpest open thing.** One
+premise — `ast_child(_, key, 0, K)` plus the `computed` attribute the scanner
+already emits — answers both halves at once: `key_name`'s first arm names a
+computed identifier key after the VARIABLE's spelling, which its own comment
+forbids, and the same arm ranges over every named node rather than over keys,
+which is most of this iteration's +0.55% rules cost. It needs a SITE first, and
+the site cannot go in a runnable fixture — a method the model must not name is a
+method the oracle would see run under a name nobody derived.
 
 ## Commands
 
 ```
-npm test                                            # the loop, ~13 min
-npm run findings                                    # the backlog, reacted to every session
+npm test                                            # the loop, ~4 min
+npm run findings                                    # the backlog
 npx tsc -p tsconfig.json
 npm run grepcheck && npm run textcheck && npm run flagcheck
-node --experimental-strip-types scripts/witness_check.ts   # also a test now
-node --experimental-strip-types --test --test-reporter=spec test/<one>.test.ts
+node --experimental-strip-types scripts/witness_check.ts
+node --experimental-strip-types --test --test-concurrency=4 test/<one>.test.ts
 ```
 
 ## Standing constraints from the owner
@@ -177,5 +156,4 @@ node --experimental-strip-types --test --test-reporter=spec test/<one>.test.ts
   a new one is not, ever, without being asked for.
 - Never assign the `out_of_scope` verdict — that judgement is the owner's.
 - bun is ignored locally; CI runs it.
-- Iteration speed must RISE. The suite is 862 s → 718 s since iteration 24; if
-  mutants get heavier every time, something is wrong.
+- Iteration speed must RISE.

@@ -172,97 +172,33 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('cell[audit](A, K, bare, callgraph)'), 0, 'no phantom cell');
   assert.equal(w.n('unearned_axis[audit](A, L)'), 0, 'both layers earn the column');
 
-  // `w_cg_member_family` appears four times: one finding it was created for and
-  // three the catch-all split found. An item that spawns nothing is either
-  // trivial or was not looked at.
-  assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
-    ['w_alias_store', 'w_alias_store',
-     'w_body_order_is_load_bearing', 'w_body_order_is_load_bearing',
-     'w_body_order_is_load_bearing',
-     'w_cf_abrupt_transfer', 'w_cf_abrupt_transfer',
-     'w_cf_accessor', 'w_cf_accessor',
-     'w_cf_reachability', 'w_cf_reachability',
-     'w_cf_sweep', 'w_cf_sweep',
-     'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
-     'w_cg_invisible_calls', 'w_cg_invisible_calls', 'w_cg_invisible_calls',
-     'w_cg_invisible_calls',
-     'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
-     'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
-     'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
-     'w_cg_sweep', 'w_cg_sweep',
-     'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
-     'w_cost_gate_per_layer', 'w_cost_gate_per_layer',
-     'w_df_control_forms', 'w_df_control_forms', 'w_df_control_forms',
-     'w_df_control_forms', 'w_df_control_forms',
-     'w_df_instance_vs_class',
-     'w_effect_layer',
-
-     'w_env_ledger_form', 'w_env_positional_features',
-     'w_env_scan_failed', 'w_env_scan_failed',
-     'w_exception_flow', 'w_exception_flow', 'w_exception_flow',
-     'w_exn_propagation',
-     'w_join_planner',
-     'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
-     'w_mutant_anchor_decay', 'w_mutant_anchor_decay',
-     'w_mutant_costs_a_world', 'w_mutant_costs_a_world', 'w_mutant_costs_a_world',
-     'w_mutant_costs_a_world', 'w_mutant_costs_a_world',
-     'w_negation_range_restriction',
-     'w_note_is_not_evidence',
-     'w_query_names_nothing', 'w_query_names_nothing', 'w_query_names_nothing',
-     'w_query_names_nothing',
-     // THREE for w_scope_binding: the blindness that had no cell, the corpus
-     // bent around the file-scoped binder, and the declared over-approximation
-     // that was a defect with a comment on it.
-     'w_scope_binding', 'w_scope_binding', 'w_scope_binding',
-     'w_type_surface', 'w_type_surface', 'w_type_surface',
-     'w_unconsumed_attribute',
-     'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home',
-     'w_wire_the_witness_gate', 'w_wire_the_witness_gate']);
-  // FOUR items have come off the front, and the last of them was the one this
-  // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
-  // fifty cells — so what is left at the head is arithmetic, the call-graph
-  // residue sweep.
-  // FIVE off the front now: the call-graph sweep finished on 2026-09-05 and the
-  // head moved to the next sweep along. Two of the four layers are swept.
-  // ALL FOUR SWEEPS ARE DONE as of 2026-09-05, so the head of the queue is a
-  // named question for the first time since the plan was seeded: what a
-  // class-shaped node DENOTES — `new C()` against `C`, and `super`.
-  // ...and the first named question is DONE, so the head is the one thing only
-  // the host can supply: a file the scanner refuses contributes no facts, so
-  // `valid[audit]` neither accepts nor refuses it.
-  // ...and the head reached the item the OWNER IS HOLDING on 2026-09-05, which
-  // is what turned the hold into a row. `w_leak_variable_on_the_right` was given
-  // order 19 with the comment "ordered LAST because it is the owner's to
-  // schedule"; the queue grew to 38 items, so 19 became the middle and the plan
-  // started handing out work he had said to hold. A position is a fact about a
-  // sequence, not about a person.
-  // ...and the abrupt item closed on 2026-09-06, taking four cells with it, and
-  // the reachability item closed the same day taking five more. The head is the
-  // EXCEPTION PATH — the owner's own observation that an exception is control
-  // flow, and the first dataflow edge here that travels along it rather than
-  // along the syntax.
-  // ...and the accessor closed the control-flow layer entirely, so the head
-  // leaves it for the first time: the FRAME — seventeen kinds the corpus
-  // produces that the vocabulary does not declare.
-  // ...and w_scope_binding closed on 2026-09-07 — both halves, the lexical
-  // binder's region and which function binds `this` — so the head moves to the
-  // ALIAS STORE: what `o.x = f` writes, which is the first item here that needs
-  // the model to hold a mutable location rather than a syntactic path.
-  // ...and w_type_surface closed the same day, as TWO items: the ten TypeScript
-  // type-node kinds are answered, and the prototype question left as
-  // w_prototype_of_a_value with the measurement that gave it no site. The head
-  // moves to the MODULE BOUNDARY — which is where the frontier actually is: 152
-  // of the 167 unresolved call sites are a bare identifier naming an import.
-  // ...and the module boundary closed on 2026-09-07 with the last of its seven
-  // forms, so the head is the INVISIBLE CALLS — the calls that have no call
-  // site at all: a tagged template, a for-of iterator protocol, a decorator.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_cg_invisible_calls'],
-    'the sweeps are finished; the head is judgement again');
-  assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
-  assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
+  // WAS THE WHOLE BAG WRITTEN OUT — ninety-odd ids, one per spawned finding —
+  // and it went red every time anybody recorded a finding under any item,
+  // which is a fact about the ledger growing and not about the plan. The
+  // sentence it was standing in for is in its own comment: `an item that
+  // spawns nothing is either trivial or was not looked at`. So the EXCEPTIONS
+  // are named and the rest is derived; `spawn_orphan[audit]` in LIES above
+  // already checks that every spawned finding exists.
+  const items = new Set(w.binds('work(W, N)', 'W'));
+  const spawners = new Set(w.binds('work_spawned(W, F)', 'W'));
+  assert.deepEqual([...items].filter((i) => !spawners.has(i)).sort(), [
+    // each of these closed on a single measurement with nothing left over, or
+    // is a sweep whose findings were recorded against the items it fed
+    'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
+    'w_cg_syntactic_wrappers', 'w_df_function_forms', 'w_df_generator_protocol',
+    'w_df_sweep', 'w_df_value_core', 'w_env_api_surface', 'w_mod_beyond_the_import',
+    'w_mod_sweep', 'w_prototype_of_a_value', 'w_scanner_nested_values',
+    'w_scope_shadowing',
+  ], 'an item that spawns nothing is either trivial or was not looked at');
+  assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
+    'and nothing spawns a finding without being an item — the other direction');
+  // `w_cg_member_family` is the shape the bag was kept for: FOUR findings, one
+  // it was created for and three the catch-all split found. Kept as a spot
+  // check, because a per-item count is stable where the whole bag was not.
+  assert.equal(w.n('work_spawned(w_cg_member_family, F)'), 4);
 });
 
-test('the queue covers the model: 15 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 14 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -302,7 +238,15 @@ test('the queue covers the model: 15 open cells, every one owned by name, none s
   // 17 -> 15 on 2026-09-07: the tagged template at both layers — a call the
   // grammar gives no call site, answered as a TRANSFER SITE, with the value
   // half coming free through `resolves`.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 15, 'the queue is the model\'s open set');
+  // 15 -> 14 on 2026-09-07: the FOR-OF at callgraph, and only there — the value
+  // half of a for-of was never open, because what a loop evaluates to is not a
+  // question the dataflow layer asks. The tagged template closed two cells and
+  // this closed one, which is what a form with no value has.
+  //
+  // THIS NUMBER STAYS A NUMBER. It moves when the model answers something, not
+  // when a fixture grows, so re-stating it on purpose is the ritual doing its
+  // job rather than transcription.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 14, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -310,7 +254,12 @@ test('the queue covers the model: 15 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 49);
+  // 49 -> 50 on 2026-09-07: w_computed_key_names, entered by the work that
+  // wrote `key_name` — a computed key that is a bare identifier is named by the
+  // variable's spelling, and the guard that forbids it covers only the other
+  // shape of computed key. Found by asking where the guard cannot look, and
+  // left open because the corpus contains no site for it.
+  assert.equal(w.n('work(W, Note)'), 50);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -331,7 +280,10 @@ test('the queue covers the model: 15 open cells, every one owned by name, none s
   // 9 -> 8 the same day: `tagged_template_expression`, closed by `r_tag_call`.
   // And CLAIMED falls with it, 19 -> 18: the claim was retired rather than left
   // beside an open item, because `queue_stale[audit]` calls that a lie.
-  assert.deepEqual(per('callgraph'), [8, 18, 0]);
+  // 8 -> 7 and claimed 18 -> 17 on 2026-09-07: `for_of_statement`, closed by
+  // `r_iterator_protocol`, with its claim retired in the same edit for the
+  // reason the tagged template's was.
+  assert.deepEqual(per('callgraph'), [7, 17, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
