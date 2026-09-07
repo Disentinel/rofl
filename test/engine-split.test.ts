@@ -54,7 +54,7 @@ const W = world(S);
 
 test('every key resolves, in order, and no definition is unaccounted for', () => {
   assert.deepEqual(S.drift, []);
-  // and the resolution is total: 44 blocks, tiling by construction
+  // and the resolution is total: 42 blocks, tiling by construction
   assert.equal(BLOCKS.length, DECLS.length);
   assert.equal(BLOCKS[0].from, 1);
   assert.equal(BLOCKS[BLOCKS.length - 1].to, SRC.length);
@@ -93,10 +93,7 @@ test('the split is keyed by names, not by line numbers', () => {
   // 29 -> 30: `planBody`, declared as its own block rather than absorbed into
   // the header, because it is a DECISION and an absorbed definition inherits a
   // category nobody chose — which is what this control exists to catch.
-  // 33 -> 34: `planVersions`, keyed on `orderReady` — the block's first
-  // definition — because a block id is an atom and the id that names what the
-  // block IS is not the name of the line it opens on.
-  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 34);
+  assert.equal(DECLS.filter((d) => d.key.kind === 'def').length, 33);
   assert.equal(DECLS.filter((d) => d.key.kind === 'part').length, 9);
   assert.equal(DECLS.filter((d) => d.key.kind === 'file').length, 1);
   // the 12 parts cut exactly four methods, and that is the declared loan
@@ -167,7 +164,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
   //     the region did not change shape. Harmless here, and stated so that
   //     nobody reads this gate as an ordering check.
   const reordered = ABSORBED['activate'];
-  assert.deepEqual(reordered, ['propagate', 'fireRule', 'pickVersion', 'fireRuleFront'],
+  assert.deepEqual(reordered, ['propagate', 'fireRule', 'fireRuleFront'],
     'the absorbed list is ORDERED by line, so a genuine move would surface as a mismatch');
 });
 
@@ -178,7 +175,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', () => {
+test('the split: mechanism is 693 of 959 code lines, policy 169 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -224,10 +221,12 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // terms match, so a per-argument loop allocated a Map per argument.
   // 952 -> 954 (+2): two import lines, where the kernel's own programs stopped
   // being source text it parses and became a compiled form it reads.
-  // 953 -> 1043 (+90): one body order per semi-naive version, plus the
-  // per-relation split of the round's front that makes a leading delta
-  // affordable at all.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 1043);
+  // 953 -> 959 (+6): the round's front was ONE key set, so a premise given a
+  // window and no bound argument walked the whole derived layer to find one
+  // relation's facts. `FrontInfo` now carries `byRel` beside `keys` and
+  // `noteFront` maintains it. Plumbing, not policy: the branch that iterates
+  // the window already filtered by relation, so no answer moves.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 959);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -267,12 +266,7 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // 694 -> 693 (-1): `matchPremise`'s per-argument unify loop is one
   // `unifyAll` call now, and the arity guard went into it. Mechanism, not
   // policy — the line decided nothing.
-  // 693 -> 716 (+23): `pickVersion`, which decides per FIRING whether the
-  // round's delta is smaller than what the shared plan's first position
-  // scans, plus the per-relation split of the front. Mechanism and not
-  // policy, and the split says so: what may be reordered is decided in
-  // `planVersions` below; this only compares two counts and picks.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 716);
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 693);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -286,8 +280,7 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // meant "waiting on a fact family that does not exist", and the two families
   // it waited for now exist as seeds.
   // 181 -> 152: four blocks shrank to readings, and the asking machinery left.
-  // 152 -> 210 (+58): the whole of the per-version planner, in its own block.
-  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 210);
+  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 152);
   // 92 -> 93 (+1): `classify` reads the plan instead of the written body, and
   // that block is the range-restriction analysis — POL*, since it needs the
   // rules themselves rather than only a program's text.
@@ -311,10 +304,8 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // rung that stops the kernel asking a program about the program that answers.
   // 86 -> 89: three lines of the answer field and its comment.
   // 89 -> 91: the two imports land in the header block.
-  // 91 -> 100 (+9): `ERule` carries `verPlans`, `VerPlan` is a type of its
-  // own, and the round's front gained a per-relation index plus the one-line
-  // helper that maintains it -- all header, all declaration.
-  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 100);
+  // 91 -> 97 (+6): `FrontInfo.byRel` and `noteFront`, see the code_line note.
+  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 97);
   // the number the rewrite question is about: 216 -> 218, the same +2 as `pol`
   // UNCHANGED by the ring, and that is the claim rather than the constant:
   // `policy/1` is `pol` + `pol_star`, 126 + 92, and neither moved. A ring the
@@ -325,10 +316,7 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // 246 -> 244: `classify` is shorter by the fold and longer by the comment
   // that says which of the two unsafeties is still written here.
   // 244 -> 169.
-  // 169 -> 227 (+58): `policy/1` is `pol` + `pol_star`, and all 58 land in
-  // `pol` -- the per-version planner needs nothing the reflection does not
-  // carry flat, so it is not starred.
-  assert.equal(rows(W, 'policy(engine_ts, L)'), 227);
+  assert.equal(rows(W, 'policy(engine_ts, L)'), 169);
   // AND THE SPLIT THAT SAYS WHAT CAN MOVE. `decides` is policy whose judgement
   // lives in this code; `enforces` is policy that reads a judgement the rules
   // already derived and acts on it — `checkUnstratified` reads `unstratified/1`
@@ -351,11 +339,9 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // block because it sat below it in the file, and it is declared MECH and
   // moved above it now. Four decisions remain in the host: where a negation
   // may stand, the opaque seed, the fingerprint hits, and the run gate.
-  // 84 -> 141 (+57): the per-version planner is a fourth block that DECIDES,
-  // and it is the largest of them. 85 -> 86 (+1) for enforces: one line.
-  assert.equal(rows(W, 'decides(engine_ts, L)'), 141);
-  assert.equal(DECLS.filter((d) => d.role === 'decides').length, 5);
-  assert.equal(rows(W, 'enforces(engine_ts, L)'), 86);
+  assert.equal(rows(W, 'decides(engine_ts, L)'), 84);
+  assert.equal(DECLS.filter((d) => d.role === 'decides').length, 4);
+  assert.equal(rows(W, 'enforces(engine_ts, L)'), 85);
   assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
                rows(W, 'policy(engine_ts, L)'), 'every policy line has a role');
   // NEGATIVE CONTROL: the join discriminates — a role nothing carries is empty.
@@ -366,15 +352,9 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
-  // THE 2026-09-07 SHIFT: one body order per semi-naive version. 953 -> 1043
-  // (+90) in total; MECH 693 -> 716 (+23), which is `pickVersion` (the half of
-  // the decision that needs the store as it stands, so it is asked per firing)
-  // plus the front's per-relation index; POL 169 -> 227 (+58), which is the
-  // whole of `planVersions` and its two admissibility tests. It is policy for
-  // planBody's reason -- it decides -- even though what it decides is speed.
-  assert.equal(S.byCat['MECH'].code, 716);
-  assert.equal(S.total.code, 1043);
-  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 227);
+  assert.equal(S.byCat['MECH'].code, 693);
+  assert.equal(S.total.code, 959);
+  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 169);
 });
 
 test('policy splits by WHEN the answer is needed, and most of it is needed too early', () => {
@@ -386,12 +366,10 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
   // 121 -> 170 (+49): a rule is planned once, when it is classified, and never
   // again — so every line of the negation-order fix is needed before phase A.
   // 184 -> 182: classify's fold is gone; its verdict-reading is not.
-  // 115 -> 173 (+58): a VERSION's order is planned once too, in the same
-  // `classify` call, so every line of the per-version planner is before-A.
-  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 173);
+  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 115);
   // 66 -> 31: the reuse plan's three decisions left for policy.rofl.
   assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 31);
-  assert.equal(23 + 173 + 31, rows(W, 'policy(engine_ts, L)'));
+  assert.equal(23 + 115 + 31, rows(W, 'policy(engine_ts, L)'));
   // MECH and PLUMB lines carry a tense too, and it must NOT leak into the
   // policy total: the relation is defined over `policy`, not over `block`.
   assert.equal(rows(W, 'policy_when(engine_ts, L, na)'), 0);
@@ -403,9 +381,7 @@ test('the scanner asserts: the structure is in the store, not in a print', () =>
   // added for the asking.
   // 41 -> 42: `safetyAnswer`, which asks the second kernel program.
   // 42 -> 43: the asking machinery is a block of its own now.
-  // 43 -> 44: the per-version planner, which answers a different question
-  // from planBody and is therefore not an absorption into it.
-  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 44);
+  assert.equal(rows(W, 'block_at(engine_ts, K, F, T)'), 43);
   assert.equal(rows(W, 'part_of(K, M)'), 9);
   assert.equal(rows(W, 'cut_method(M)'), 4);
   assert.equal(rows(W, 'target(engine_ts, F)'), 1);
@@ -426,24 +402,22 @@ test('the contamination is declared, dated and COUNTABLE', () => {
   // 98 -> 115 (+17): the ROLE of every policy block — decides or enforces —
   // which is the judgement that says whether it can move into .rofl at all.
   // 105 -> 107: one more block, so one more cat judgement and one more tense.
-  // 109 -> 112: the per-version planner's three hand judgements — cat, tense
-  // and role — since it is a POL block and every POL block carries all three.
-  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 112);
-  assert.equal(rows(W, 'dirty(engine_split, role, U, R)'), 15, 'one per POL or POL* block');
-  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 44, 'one per block: the MECH/POL verdict');
-  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 44, 'one per block: the before-A verdict');
+  assert.equal(rows(W, 'dirty(engine_split, K, U, R)'), 109);
+  assert.equal(rows(W, 'dirty(engine_split, role, U, R)'), 14, 'one per POL or POL* block');
+  assert.equal(rows(W, 'dirty(engine_split, cat, U, R)'), 43, 'one per block: the MECH/POL verdict');
+  assert.equal(rows(W, 'dirty(engine_split, tense, U, R)'), 43, 'one per block: the before-A verdict');
   assert.equal(rows(W, 'dirty(engine_split, part, U, R)'), 9, 'the slices inside a method');
   // the two loans retire on different events and are counted apart
   // 96 -> 98: the cat and tense judgements of the new block.
-  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 103);
+  assert.equal(rows(W, 'dirty(engine_split, K, U, language_model)'), 100);
   assert.equal(rows(W, 'dirty(engine_split, K, U, split_the_method)'), 9);
   // ZERO IS THE TARGET, and it is a query, not a promise
-  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 44);
+  assert.equal(rows(W, 'hand_judged(engine_ts, K)'), 43);
   // NEGATIVE CONTROL: the loan table is not a rule that says yes to anything
   assert.equal(rows(W, 'dirty(engine_split, K, U, someday)'), 0);
   assert.equal(rows(W, 'dirty(some_other_scanner, K, U, R)'), 0);
   // and the table is generated from the declarations, so it cannot go stale
-  assert.equal(contamination().length, 112);
+  assert.equal(contamination().length, 109);
 });
 
 // ---------------------------------------------------------------------------
@@ -497,9 +471,9 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+716 code/);
-  assert.match(text, /TOTAL\s+1043 code/);
-  assert.match(text, /before-A\s+173 code lines/);
+  assert.match(text, /MECH\s+693 code/);
+  assert.match(text, /TOTAL\s+959 code/);
+  assert.match(text, /before-A\s+115 code lines/);
 });
 
 test('the definition index reads src/engine.ts, and it is not a grep', () => {

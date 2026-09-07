@@ -51,7 +51,7 @@ test('locals resolve lexically, so two loops sharing a name are not a dependency
     'the demand block really does read the list the decode block built');
 });
 
-test('the before-A blocks form a DAG, and there are twelve of them now', () => {
+test('the before-A blocks form a DAG, and there are eleven of them now', () => {
   const cyclic = sccs(BEFORE_A, IND).filter((c) => c.length > 1);
   assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the ten');
   // six when this was written; `stratumCone` made it seven and `scheduleToken`
@@ -59,9 +59,8 @@ test('the before-A blocks form a DAG, and there are twelve of them now', () => {
   // which decides where a negation may stand, makes it nine and lands BELOW
   // `classify`, since classify now reads the plan. The ladder absorbed each
   // without a cycle, which is the claim under test; `policyAnswer` — the whole
-  // of what asks the kernel's own program — makes it ten; `planVersions`,
-  // which decides where a round's delta may lead, makes it twelve.
-  assert.equal(BEFORE_A.length, 12);
+  // of what asks the kernel's own program — makes it ten.
+  assert.equal(BEFORE_A.length, 11);
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
@@ -85,15 +84,9 @@ test('the ladder: four rungs, and the asking sits at the bottom', () => {
   // graph induces edges from `this.<method>(` calls and `planBody` is a free
   // function. That blindness is old, real, and still recorded rather than
   // asserted away.
-  //
-  // `planVersions` (2026-09-07) lands on the SECOND rung and not beside
-  // `planBody` on the first, and the reason is the same blindness recorded
-  // above read the other way: it takes the shared plan as an ARGUMENT, so the
-  // graph sees a real data edge from `classify`, where `planBody` is called as
-  // a free function and shows none. Left as measured.
   assert.deepEqual(layout, [
     ['classify', 'planBody', 'policyAnswer', 'readStrata', 'safetyAnswer'],
-    ['planVersions', 'prepare', 'scheduleToken'],   // reserved head, the answer asked for, the per-version orders
+    ['prepare', 'scheduleToken'],       // reserved head, and the answer asked for
     ['demandSet', 'stratumCone'],       // the two readings of it
     ['runGate', 'runWellFounded'],      // what runs at all; well-founded admissibility
   ]);
@@ -117,11 +110,10 @@ test('the layering survives the one line that sits on a block boundary', () => {
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached
 // from `conclude`, so it is inside the minimal monotone core rather than
 // beside it. Each counter below says why it moved.
-test('the minimal tier 0: 17 methods, 289 code lines', () => {
+test('the minimal tier 0: 16 methods, 266 code lines', () => {
   const mc = minimalCore();
   // 18 -> 19: chargeRow, reached from conclude, which activate() reaches
-  // 19 -> 20: pickVersion, reached from fireRule
-  assert.equal(mc.all.size, 20, 'call-graph reachability from activate()');
+  assert.equal(mc.all.size, 19, 'call-graph reachability from activate()');
   // 280 -> 306 (+26): the wall's lines inside the reachable set
   // 306 -> 330 (+7): the kernel-ledger ring, and it is three separate places
   // because a perspective can reach a `$` book by three different routes —
@@ -132,14 +124,11 @@ test('the minimal tier 0: 17 methods, 289 code lines', () => {
   // 330 -> 329 (-1): `matchPremise`'s per-argument unify loop became one
   // `unifyAll` call, which checks the arity itself, so the separate length
   // guard went with it. One line fewer, no method and no condition removed.
-  // 329 -> 352 (+23): the per-version selection and the per-relation front.
-  assert.equal(mc.codeAll, 352);
+  assert.equal(mc.codeAll, 329);
   // 15 -> 16: chargeRow is in the KEPT set too — a monotone core still
   // concludes facts, and a core that concludes cannot be allowed to conclude
   // without limit, which is the whole point of the second budget
-  // 16 -> 17: pickVersion is KEPT too — a monotone core is still semi-naive,
-  // and choosing which order a version fires in is part of firing it
-  assert.equal(mc.kept.size, 17);
+  assert.equal(mc.kept.size, 16);
   // 306 - 280 = 26 but 244 - 219 = 25, and the missing line is the reason
   // both numbers are here: solveDemandRule gained its own charge and is
   // REACHED but not KEPT, so exactly one of the 26 lines falls outside
@@ -153,11 +142,7 @@ test('the minimal tier 0: 17 methods, 289 code lines', () => {
   // from the core this test is about.
   // 267 -> 266 (-1): the same line as `codeAll` above — `matchPremise` is in
   // the kept set, so its lost length guard is lost here too.
-  // 266 -> 289 (+23): and this time the two counters move together, because
-  // every one of the 23 new lines is reachable from the monotone core AND
-  // kept by it. The pair earns its keep by being able to disagree, not by
-  // disagreeing every time.
-  assert.equal(mc.codeKept, 289);
+  assert.equal(mc.codeKept, 266);
   // the three that drop out, and why each is a branch a monotone core skips
   for (const m of ['negHolds', 'solveDemandRule', 'renameClause']) {
     assert.equal(mc.kept.has(m), false, m);

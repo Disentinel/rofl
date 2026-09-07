@@ -28,50 +28,31 @@
 // it, and the work of a firing is the SUM of the widths. A fan-out above one
 // at an early position multiplies every position after it — that is the whole
 // of cardinality explosion, and it is a property of body ORDER, which is what
-// `planBody` exists to choose and (measured over the corpus) never changes for
-// the SHARED plan. It does change per semi-naive VERSION: `planVersions` gives
-// the version whose delta arrives at body position i its own order, and the
-// positions counted below are positions of whichever order actually ran.
+// `planBody` exists to choose and (measured over the corpus) never changes.
 
 import * as fs from 'node:fs';
 import { Evaluation, type ERule } from '../src/engine.ts';
-import type { Lit, BodyElem } from '../src/unify.ts';
+import type { Lit } from '../src/unify.ts';
 import { image, fromImage, parse } from '../examples/ring1/demo.ts';
 
 interface Pos { calls: number; out: number; kind: string; rel: string }
-interface Rule { rel: string; fires: number; concl: number; fresh: number; pos: Map<number, Pos>;
-                 versioned: boolean }
+interface Rule { rel: string; fires: number; concl: number; fresh: number; pos: Map<number, Pos> }
 
 const rules = new Map<string, Rule>();
-let cur: { r: ERule; plan: BodyElem[]; m: Rule } | null = null;
+let cur: { r: ERule; m: Rule } | null = null;
 
 function ruleOf(r: ERule): Rule {
   let m = rules.get(r.id);
-  if (!m) { m = { rel: r.clause.head.rel, fires: 0, concl: 0, fresh: 0, pos: new Map(), versioned: false }; rules.set(r.id, m); }
+  if (!m) { m = { rel: r.clause.head.rel, fires: 0, concl: 0, fresh: 0, pos: new Map() }; rules.set(r.id, m); }
   return m;
 }
 
 /** Which body position this literal stands at, by IDENTITY. The plan holds the
  *  very objects `solveBody` walks, so `===` is exact where a name would not be:
- *  the same relation can stand at two positions of one body.
- *
- *  THE PLAN IS THE ONE THAT RAN, NOT THE RULE'S. A rule now carries one order
- *  per semi-naive version (`planVersions`), and the position asked for here is
- *  a position of whichever order this firing used. Reading the SHARED plan
- *  instead would break the identity the whole model rests on -- `width(R, 0)`
- *  equals `fires(R)`, because position 0 is entered once per firing with a
- *  single empty solution -- since a version's leading literal stands second in
- *  the shared plan. Measured while this was wrong: `nexttok` reported
- *  fires 29, width(0) 36 and width(1) 40, which is impossible for a nested
- *  loop join and is what a mis-attributed position looks like.
- *
- *  THE PRICE IS `slot`. For a rule with a version plan, `slot(R, I, Kind, Rel)`
- *  names the literal the SHARED plan puts at I, and some firings entered that
- *  position through a different one. `versioned(R)` marks those rules so a
- *  reader is not misled; the widths themselves are exact either way. */
-function posOf(plan: BodyElem[], lit: Lit): number {
-  for (let i = 0; i < plan.length; i++) {
-    const b = plan[i];
+ *  the same relation can stand at two positions of one body. */
+function posOf(r: ERule, lit: Lit): number {
+  for (let i = 0; i < r.plan.length; i++) {
+    const b = r.plan[i];
     if ((b.t === 'pos' || b.t === 'neg') && b.lit === lit) return i;
   }
   return -1;
@@ -107,24 +88,20 @@ export function measure(src: string): void {
     negHolds: proto.negHolds, conclude: proto.conclude,
   };
 
-  proto.fireRule = function (this: unknown, r: ERule,
-                             frontAt: { pos: number; keys: Set<string> } | null, ...rest: unknown[]) {
+  proto.fireRule = function (this: unknown, r: ERule, ...rest: unknown[]) {
     const outer = cur;
     const m = ruleOf(r); m.fires++;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vp = frontAt === null ? null : (this as any).pickVersion(r, frontAt);
-    if (vp !== null) m.versioned = true;
-    cur = { r, plan: vp === null ? r.plan : vp.plan, m };
-    try { return orig.fireRule.call(this, r, frontAt, ...rest); } finally { cur = outer; }
+    cur = { r, m };
+    try { return orig.fireRule.call(this, r, ...rest); } finally { cur = outer; }
   };
   proto.matchPremise = function (this: { }, lit: Lit, ...rest: unknown[]) {
     const res = orig.matchPremise.call(this, lit, ...rest) as unknown[];
-    if (cur) note(posOf(cur.plan, lit), 'pos', lit.rel, res.length);
+    if (cur) note(posOf(cur.r, lit), 'pos', lit.rel, res.length);
     return res;
   };
   proto.negHolds = function (this: { }, lit: Lit, ...rest: unknown[]) {
     const res = orig.negHolds.call(this, lit, ...rest) as boolean;
-    if (cur) note(posOf(cur.plan, lit), 'neg', lit.rel, res ? 1 : 0);
+    if (cur) note(posOf(cur.r, lit), 'neg', lit.rel, res ? 1 : 0);
     return res;
   };
   proto.conclude = function (this: { store: { factCount(): number } }, r: ERule, ...rest: unknown[]) {
@@ -153,19 +130,14 @@ function emit(): string {
   L.push('-- width(Rule, I, N)   accumulator elements reaching body position I,');
   L.push('--                     summed over every firing');
   L.push('-- yield(Rule, I, N)   matches those calls produced in total');
-  L.push('-- slot(Rule, I, Kind, Rel)   the literal the SHARED plan puts at I');
-  L.push('-- versioned(Rule)     this rule ran at least one firing under a body');
-  L.push('--                     order of its own (planVersions), so some firing');
-  L.push('--                     entered position I through a different literal');
-  L.push('--                     than `slot` names. The widths are exact anyway.');
+  L.push('-- slot(Rule, I, Kind, Rel)');
   L.push('');
   const ordered = [...rules.entries()]
     .filter(([, m]) => m.fires > 0)
     .sort((a, b) => sum(b[1]) - sum(a[1]));
   for (const [id, m] of ordered) {
     const r = q(id);
-    L.push(`fires(${r}, ${m.fires}).  conc(${r}, ${m.concl}).  fresh(${r}, ${m.fresh}).  head(${r}, ${m.rel}).`
-           + (m.versioned ? `  versioned(${r}).` : ''));
+    L.push(`fires(${r}, ${m.fires}).  conc(${r}, ${m.concl}).  fresh(${r}, ${m.fresh}).  head(${r}, ${m.rel}).`);
     for (const [i, p] of [...m.pos.entries()].sort((a, b) => a[0] - b[0])) {
       L.push(`  width(${r}, ${i}, ${p.calls}).  yield(${r}, ${i}, ${p.out}).  slot(${r}, ${i}, ${p.kind}, ${p.rel}).`);
     }

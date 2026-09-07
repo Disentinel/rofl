@@ -69,10 +69,6 @@ order_defect(R)    :- reducible(R, I, N), N > 100.
 -- an order that was wrong for ONE version no longer has to be carried by the
 -- rest. Measured 2026-09-07 on the same clause: total width 6385 -> 5952, and
 -- of the five rules it moves, `spanto` goes 185 -> 79, `punct` 204 -> 105 and
--- `nexttok` 169 -> 76 with the SOURCE UNCHANGED. A rule marked `versioned`
--- ran at least one firing under an order of its own, so `slot` names what the
--- shared plan puts at I and not necessarily what that firing entered through.
-versioned_defect(R) :- order_defect(R), versioned(R).
 
 -- ---------------------------------------------------------------------------
 -- SECOND: work that produces what is already there.
