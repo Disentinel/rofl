@@ -78,7 +78,16 @@ export function imageContent(snapshot: string): string {
 }
 
 export function world(): Rofl {
-  const r = new Rofl();
+  // REUSE OFF, AND IT IS NOT A TUNING KNOB HERE. `fromImage` below has always
+  // passed it; this world did not, and the difference was measured on
+  // 2026-09-06: one clause costs 217 ms with the cache and 42 ms without, for
+  // 639 FIRINGS EITHER WAY and a store of 3737 FACTS EITHER WAY. The cache
+  // saves nothing on a parse because the source characters change and every
+  // relation is downstream of them, so every fingerprint misses -- and a miss
+  // still pays for the fingerprint, which materialises each relation whole
+  // (`store.relAll` costs 84 us on 1000 facts and 6361 us on 40000).
+  // rules/parse-cost.rofl derives the whole chain; `npm run whyslow` prints it.
+  const r = new Rofl({ reuse: false });
   for (const f of [BOOT, CHARCLASS, RING1]) {
     const res = r.load(read(f), { budget: BUDGET });
     if (!res.ok) throw new Error(`${f}: ${res.diagnostics.join('; ')}`);

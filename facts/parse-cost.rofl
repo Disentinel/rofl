@@ -5,7 +5,7 @@
 -- Taken on node v22.22.2.
 
 -- THE SAME CLAUSE, PARSED TWICE: with the derived-reuse cache and without.
-cache(on, ms, 217).
+cache(on, ms, 203).
 cache(on, firings, 639).
 cache(on, facts, 3737).
 cache(off, ms, 42).
@@ -13,18 +13,18 @@ cache(off, firings, 639).
 cache(off, facts, 3737).
 
 -- ONE CLAUSE AT FIVE LENGTHS, cache off: bytes, ms, firings, store facts.
-sweep(14, 23, 316, 3091).
-sweep(35, 46, 805, 4069).
-sweep(125, 227, 3115, 8689).
-sweep(253, 765, 6979, 16417).
-sweep(509, 3505, 17011, 36481).
+sweep(14, 22, 316, 3091).
+sweep(35, 53, 805, 4069).
+sweep(125, 242, 3115, 8689).
+sweep(253, 784, 6979, 16417).
+sweep(509, 3475, 17011, 36481).
 
 -- THE STORE'S TWO PRIMITIVES, microseconds per call, against a relation
 -- of 1000 facts and one of 40000. Rounded: a rule cannot read a float.
-primitive(store_add, 1000, 934).
-primitive(store_add, 40000, 1354).
-primitive(rel_all, 1000, 83564).
-primitive(rel_all, 40000, 6360969).
+primitive(store_add, 1000, 933).
+primitive(store_add, 40000, 1458).
+primitive(rel_all, 1000, 45312).
+primitive(rel_all, 40000, 5784086).
 -- (nanoseconds, so the integers stay integers)
 
 -- WHERE THE CODE CALLS THEM. Read off src/engine.ts by name, not by line:
