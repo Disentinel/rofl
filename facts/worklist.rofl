@@ -299,9 +299,22 @@ work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_const
 -- mutation of `facts/js-kinds.rofl` cannot change the AST facts, and those are
 -- most of the fixpoint. Whether the kernel can accept a store and re-evaluate
 -- only what a changed rule reaches is a KERNEL question, not a test one.
-work(w_mutant_costs_a_world, "23 mutants x one full fixpoint each: the control-flow test file takes nine minutes and grows with every closed item").
+-- MEASURED AND MOSTLY CLOSED 2026-09-07, and the cause was not the mutants.
+-- `r.load()` re-evaluates, so a world built from nine loads ran the fixpoint
+-- NINE TIMES: scan 69 ms, assert 150 ms, seven fact loads 4.9 s, one rules load
+-- 11.5 s, and `evaluate()` 0 ms — the zero being the tell. One load of
+-- everything, with the AST facts asserted AFTER the rules, is 41% cheaper with
+-- byte-identical answers over fifteen relations. Two files, 9 min -> 6m55s and
+-- ~9 min -> 4m44s.
+--
+-- WHAT IS LEFT IS THE KERNEL QUESTION and it stays open: a mutant still pays
+-- for a whole fixpoint, and most of that fixpoint is AST facts no mutation of a
+-- rule pack can touch. Whether the kernel can re-evaluate only what a changed
+-- rule reaches is worth its own item rather than a note here.
+work(w_mutant_costs_a_world, "a mutant pays for a whole fixpoint; the nine-load waste is fixed, the kernel's incrementality is not").
 work_order(w_mutant_costs_a_world, 43).
 work_state(w_mutant_costs_a_world, open).
+work_spawned(w_mutant_costs_a_world, f_nine_loads_ran_the_fixpoint_nine_times).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds

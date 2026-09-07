@@ -49,29 +49,42 @@ function build(muts: Mut[] = [], omitLayer = false): World {
     const res = r.load(text);
     assert.ok(res.ok, `${name} REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   };
-  load('boot.rofl', read('boot.rofl'));
+  // ONE LOAD, AND THE FACTS LAST. Measured 2026-09-07 because this file's cost
+  // became the loop's slowest number: `r.load()` RE-EVALUATES, and this world
+  // was calling it nine times — boot, seven fact packs, then the rules — so the
+  // fixpoint ran nine times to produce one answer. `r.evaluate()` at the end
+  // then measured 0 ms, which is the tell.
+  //
+  //    nine loads, facts asserted first     16.9 s
+  //    one load of the packs, facts first   12.3 s   (-27%)
+  //    ONE load of everything, facts AFTER  10.0 s   (-41%)
+  //
+  // Asserting the AST facts after the rules are in place is what makes the last
+  // one work: with an empty store the rule load is nearly free, and the single
+  // real fixpoint happens at `evaluate`. FIFTEEN relations were compared
+  // between the old construction and this one and came back byte-identical —
+  // `calls_in`, `resolves`, `may_throw`, `may_not_run`, `may_not_be_reached`,
+  // `caught_value`, `after_abrupt`, `guarded`, `cell`, `verdict`,
+  // `vocabulary_gap`, `may_be_node`, `accessor_read`, `reachable`,
+  // `ambiguous_call` — with a positive control that a changed store DOES
+  // compare unequal. The first control was blind (it added a node of a declared
+  // kind and watched a relation keyed by kind) and was replaced rather than
+  // believed.
+  const packs = ['boot.rofl', ...FACTS, 'facts/js-controlflow.rofl', ...RULES]
+    .filter((f) => !(omitLayer && f === 'facts/js-controlflow.rofl'))
+    .map((f) => {
+      let text = read(f);
+      for (const m of muts) if ((m.file ?? 'rules/js-controlflow.rofl') === f) {
+        assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
+        text = text.replace(m.find, m.replace);
+      }
+      return text;
+    });
+  load('all packs', packs.join('\n'));
   for (const [logical, disk] of FILES) {
     const res = r.assert(scan(read(disk), { file: logical }).facts.join('\n'));
     assert.ok(res.ok, `${logical} facts REJECTED:\n${res.diagnostics.slice(0, 4).join('\n')}`);
   }
-  for (const f of [...FACTS, 'facts/js-controlflow.rofl']) {
-    if (omitLayer && f === 'facts/js-controlflow.rofl') continue;
-    let text = read(f);
-    for (const m of muts) if (m.file === f) {
-      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
-      text = text.replace(m.find, m.replace);
-    }
-    load(f, text);
-  }
-  const rules = RULES.map((f) => {
-    let text = read(f);
-    for (const m of muts) if ((m.file ?? 'rules/js-controlflow.rofl') === f) {
-      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
-      text = text.replace(m.find, m.replace);
-    }
-    return text;
-  }).join('\n');
-  load('rules/*', rules);
   r.evaluate(20_000_000);
 
   const q = (lit: string): string[][] => {

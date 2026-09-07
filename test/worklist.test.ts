@@ -179,6 +179,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_exn_propagation',
      'w_join_planner',
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
+     'w_mutant_costs_a_world',
      'w_negation_range_restriction', 'w_scope_binding',
      'w_unconsumed_attribute',
      'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home']);

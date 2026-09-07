@@ -107,29 +107,45 @@ function buildFresh(mutations: Mutation[]): Model {
     const res = r.load(text);
     assert.equal(res.ok, true, `${what} rejected:\n${res.diagnostics.join('\n')}`);
   };
-  load(read(path.join(ROOT, 'boot.rofl')), 'boot.rofl');
+  // ONE LOAD, NOT FOUR — and then ONE LOAD, NOT EIGHT, and then THE FACTS LAST.
+  // The first version of this comment (2026-09-05) said: every `load`
+  // re-evaluates, so loading the four rule packs separately paid for the cycle
+  // three times over; concatenating them took world construction from ~17s to
+  // ~9s. TRUE, AND IT STOPPED ONE STEP SHORT TWICE. Boot and the fact packs are
+  // `load` calls too, and they were still separate; and the AST facts were
+  // ASSERTED FIRST, so every one of those loads re-ran the fixpoint over the
+  // whole corpus. Measured again 2026-09-07, on the control-flow world which
+  // has the same shape:
+  //
+  //    nine loads, facts asserted first     16.9 s
+  //    one load of the packs, facts first   12.3 s   (-27%)
+  //    ONE load of everything, facts AFTER  10.0 s   (-41%)
+  //
+  // `r.evaluate()` at the end measured 0 ms in the first two, which is the tell:
+  // the work had already been done, repeatedly. Fifteen relations compared
+  // between the constructions came back byte-identical, with a positive control
+  // that a changed store DOES compare unequal.
+  const texts = [
+    read(path.join(ROOT, 'boot.rofl')),
+    ...FACT_FILES.map((f) => read(path.join(ROOT, f))),
+    ...RULE_FILES.map((f) => {
+      let text = read(path.join(ROOT, f));
+      for (const m of mutations) {
+        if ((m.file ?? 'rules/js-callgraph.rofl') !== f) continue;
+        assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
+        text = text.replace(m.find, m.replace);
+      }
+      return text;
+    }),
+  ];
+  load(texts.join('\n'), 'boot + facts + rules');
 
   for (const f of ALL_FILES) {
     const s = scan(read(path.join(FIX, onDisk(f))), { file: f });
     const res = r.assert(s.facts.join('\n'));
     assert.equal(res.ok, true, `${f} facts rejected:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   }
-  for (const f of FACT_FILES) load(read(path.join(ROOT, f)), f);
-  // ONE LOAD, NOT FOUR. Every `load` re-evaluates, and since the call graph and
-  // the value flow became one fixpoint that evaluation is the expensive part —
-  // loading the four packs separately paid for the cycle three times over.
-  // Concatenating them pays once. Measured: about 17s of world construction
-  // down to about 9s, with byte-identical answers.
-  const texts = RULE_FILES.map((f) => {
-    let text = read(path.join(ROOT, f));
-    for (const m of mutations) {
-      if ((m.file ?? 'rules/js-callgraph.rofl') !== f) continue;
-      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
-      text = text.replace(m.find, m.replace);
-    }
-    return text;
-  });
-  load(texts.join('\n'), RULE_FILES.join(' + '));
+  r.evaluate(20_000_000);
 
   const q = (lit: string): string[][] => {
     const res = r.query(lit);
@@ -1029,26 +1045,40 @@ test('mutant 8 — sever the cycle: bind parameters without asking who is called
   // same defect, and it is asserted as its own outcome rather than smuggled in
   // as a failure to build: a run that does not terminate is its own category,
   // which this repository has already paid to learn once.
+  // ...AND THE STRONGER STATEMENT CAME BACK ON 2026-09-07, because "does not
+  // finish" was never a statement about the PROGRAM. `r.load()` evaluates under
+  // its own default budget; the world construction here now loads every pack
+  // once and calls `evaluate(20_000_000)` explicitly, and under a budget that is
+  // STATED rather than defaulted this mutant terminates and invents EIGHT edges
+  // by name — `useCb -> leaf` among them, which is precisely what the
+  // paragraph above says the defect does. The comment that read "on the larger
+  // corpus it does not finish at all" was reading a budget as a property of the
+  // corpus. Naming the edges is the assertion this test wanted all along.
   const base = probe([]);
   assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
-  assert.throws(() => probe([{
+  const mut = probe([{
     file: 'rules/js-dataflow.rofl',
     find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A),',
     replace: 'may_be_node[flow](U, N) :- fn_node_v[flow](F), arg_at[flow](C, I, A),',
-  }]), /hit a budget/,
-  'without `resolves` every parameter takes every value passed at that index, and the fixpoint does not finish');
-  console.log(`  KILLED: the severed cycle no longer terminates on this corpus`
-    + ` (baseline ${base.edges.size} edges)`);
+  }]);
+  const invented = [...mut.edges].filter((e) => !base.edges.has(e));
+  assert.ok(mut.edges.has('useCb -> leaf'),
+    'without `resolves` every parameter takes every value passed at that index');
+  assert.equal([...base.edges].filter((e) => !mut.edges.has(e)).length, 0,
+    'and it only ADDS: an over-approximation loses nothing');
+  console.log(`  KILLED: the severed cycle invents ${invented.length} edges`
+    + ` (baseline ${base.edges.size})`);
 });
 
 test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
   const base = probe([]);
-  // THE KILL GOT LOUDER ON 2026-09-05, like mutant 8's. A parameter read from
-  // anywhere used to merely invent edges; on the corpus the generator fixture
-  // grew it no longer finishes. Asserted as its own outcome — a run that does
-  // not terminate is a category, not a failure to build.
+  // THE KILL GOT LOUDER ON 2026-09-05, like mutant 8's — and on 2026-09-07 it
+  // turned out both had gone QUIETER. "Does not finish" was `r.load()`'s default
+  // budget running out, not the program diverging; under a stated budget this
+  // mutant terminates and the edges it invents can be named, which is the
+  // sharper claim. See mutant 8 for the measurement.
   assert.ok(!base.edges.has('useCb -> leaf'), 'baseline: two parameters named `f` stay two');
-  assert.throws(() => probe([{
+  const mut = probe([{
     file: 'rules/js-dataflow.rofl',
     // RE-AIMED 2026-09-05 with the cost reordering: `ast_within` moved ahead of
     // `ident`, and dropping it is still exactly the defect — a parameter read
@@ -1058,10 +1088,12 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
         + '                               ident[code](U, Name).',
     replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
         + '                               ident[code](U, Name).',
-  }]), /hit a budget/,
-  'a parameter read from anywhere does not reach a fixpoint on this corpus');
-  console.log(`  KILLED: the unscoped parameter read no longer terminates`
-    + ` (baseline ${base.edges.size} edges)`);
+  }]);
+  assert.ok(mut.edges.has('useCb -> leaf'),
+    'a parameter read from anywhere merges two parameters that share a name');
+  console.log(`  KILLED: the unscoped parameter read invents `
+    + `${[...mut.edges].filter((e) => !base.edges.has(e)).length} edges`
+    + ` (baseline ${base.edges.size})`);
 });
 
 test('mutant 10 — delete the value flow across a call', () => {
