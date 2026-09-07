@@ -243,7 +243,12 @@ function lowerBound(arr: string[], key: string): number {
  *   3. `argMatches` may answer in ANY order and may over-answer: its one
  *      consumer unifies over the candidates and totally sorts what survives
  *      (see `matchPremise`). It may NOT under-answer.
- *   4. `clone` is a fork, not a view: writes to one must not reach the other.
+ *   4. `clone` is a fork, not a view: writes to one must not reach the other,
+ *      and it answers `allFacts` in the ORIGINAL's arrival order. Decided
+ *      2026-09-07: the order is not part of the language's meaning — reversing
+ *      it globally moves no fixpoint, no canonical state and no golden byte —
+ *      so the reference preserves rather than sorts, which is also the
+ *      cheapest thing any adapter can do.
  *
  *  NOT IN THE PORT, deliberately: `facts`, `witnesses` and `firings`. They are
  *  the in-memory store's own tables, and every kernel read of them has moved
@@ -778,17 +783,25 @@ export class Store implements FactStore {
     for (const [k, w] of this.witnesses) s.witnesses.set(k, w);
     for (const [k, sigs] of this.firings) s.firings.set(k, new Map(sigs));
     for (const [t, e] of this.evalLog) s.evalLog.set(t, { ...e });
-    // IN KEY ORDER, which is what `restore` did by re-adding a sorted
-    // snapshot, and what test/store-conformance.test.ts pins as the shape of a
-    // fork — the SQLite port pays 2.9x per fact to renumber its rows into it.
+    // IN THE ORIGINAL'S ARRIVAL ORDER, decided 2026-09-07 after it was
+    // measured. This walked `[...facts.keys()].sort()` because the serialising
+    // clone it replaced went through `restore`, which re-adds a sorted
+    // snapshot — so key order was never chosen, it was whatever `restore`
+    // happened to do, promoted to a conformance requirement by one test. The
+    // price was real: the SQLite port renumbered every row to match it, 16.2
+    // of the fork's 20.7 us per fact. MEASURED before removing it: with
+    // `allFacts` globally REVERSED the full suite moves 5 tests and all five
+    // assert the order itself — not one fixpoint, canonical state or golden
+    // byte differs, because the only kernel reader of arrival order is
+    // `assumptionOf`, and `negHolds` reads that array as an existence check.
     // The runs are filled the way `add` fills them, arrivals unabsorbed, so
-    // this copy is the serialising one fact for fact and run for run.
+    // this copy is the serialising one fact for fact and run for run, and
+    // `relPersp`/`relAll` are unaffected either way: `absorb` sorts on read.
     const loose = new Set<string>();
     for (const byP of this.idx.values()) for (const run of byP.values()) {
       for (const k of run.loose) loose.add(k);
     }
-    for (const k of [...this.facts.keys()].sort()) {
-      const r = this.facts.get(k)!;
+    for (const [k, r] of this.facts) {
       s.facts.set(k, { ...r });
       let byP = s.idx.get(r.rel);
       if (!byP) { byP = new Map(); s.idx.set(r.rel, byP); }

@@ -280,7 +280,7 @@ test('the seminaive front is a SEEK and not a scan', () => {
   } finally { s.close(); }
 });
 
-test('clone is a fork, and its arrival order is the reference fork\'s', () => {
+test('clone is a fork, and its arrival order is the ORIGINAL\'s', () => {
   const mem = build(GAME, null);
   const ext = new SqliteStore();
   const opened: SqliteStore[] = [];
@@ -302,23 +302,22 @@ test('clone is a fork, and its arrival order is the reference fork\'s', () => {
     const extFork = ext.clone(); opened.push(extFork);
     assert.equal(extFork.canonicalState(), refFork.canonicalState(), 'forks agree on state');
 
-    // ARRIVAL ORDER SURVIVES THE FORK, which is what the renumbering is for:
-    // `Store.clone` goes through `restore`, which re-adds in KEY order, so a
-    // faithful fork's `allFacts` is in key order and not the original's
-    // insertion order.
+    // A FORK PRESERVES THE ORIGINAL'S ARRIVAL ORDER, which is the property
+    // this test asserted the wrong half of until 2026-09-07. It read `a fork
+    // IS in key order`, and key order was nobody's decision: `Store.clone`
+    // went through `restore`, `restore` re-adds a sorted snapshot, and that
+    // accident was pinned here as a conformance requirement. The port then
+    // renumbered every row to meet it -- 16.2 of the fork's 20.7 us per fact,
+    // measured at 200000 facts against `VACUUM INTO`'s own 2.92. Both sides
+    // now preserve, so the two agree AND the cheapest fork is the conformant
+    // one. What the oracle actually wants is the agreement; the order itself
+    // is the reference's to choose.
     const keys = (s: FactStore) => s.allFacts().map((f) => f.key);
     assert.deepEqual(keys(extFork), keys(refFork), 'and on arrival order');
-    assert.deepEqual(keys(refFork), refFork.allFactKeys(), 'positive control: a fork IS in key order');
-    assert.notDeepEqual(keys(ext), ext.allFactKeys(),
-      'positive control: the UNFORKED store is not, so the check above is not vacuous');
-
-    // THE OPT-OUT, measured rather than asserted away. Skipping the
-    // renumbering makes the fork 2.9x cheaper -- MEASURED at 200000 facts,
-    // load ~6 on this machine: VACUUM INTO alone 2.92 us/fact, which beats the
-    // in-memory clone's 7.1, against 20.7 us/fact with the renumbering -- and
-    // gives up exactly one thing, which this pins down.
-    const fast = ext.clone({ renumber: false }); opened.push(fast);
-    assert.equal(fast.canonicalState(), refFork.canonicalState(), 'the cheap fork is still conformant on state');
-    assert.notDeepEqual(keys(fast), keys(refFork), 'and arrival order is precisely what it gives up');
+    assert.deepEqual(keys(refFork), keys(mem.store), 'a fork is in its ORIGINAL\'s arrival order');
+    const portFork = ext.clone(); opened.push(portFork);
+    assert.deepEqual(keys(portFork), keys(ext), 'and so is the port\'s');
+    assert.notDeepEqual(keys(mem.store), mem.store.allFactKeys(),
+      'positive control: that order is NOT key order, so preserving it is a real claim');
   } finally { for (const o of opened) o.close(); ext.close(); }
 });

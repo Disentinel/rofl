@@ -706,20 +706,21 @@ export class SqliteStore implements FactStore {
    *  store cannot have: its `clone` is snapshot -> parse -> re-add, and every
    *  fact is rebuilt term by term on the way through.
    *
-   *  ONE CORRECTION IS NOT OPTIONAL. `Store.clone` goes through `restore`,
-   *  which re-adds facts in SORTED KEY ORDER, so a cloned in-memory store's
-   *  arrival order is key order and not the original's. A page copy preserves
-   *  `seq` instead, so the clone would disagree with the reference about
-   *  `allFacts()` — which the evaluator reads. Renumbering by key restores it.
-   *  Cheap, and invisible until something reads arrival order, which is
-   *  precisely the kind of divergence the conformance oracle exists to catch. */
-  clone(opts: { renumber?: boolean } = {}): SqliteStore {
+   *  NOTHING IS CORRECTED ON THE WAY OUT, and it took a decision to say so.
+   *  A page copy preserves `seq`, so this fork answers `allFacts()` in the
+   *  ORIGINAL'S arrival order — and until 2026-09-07 that was a divergence,
+   *  because `Store.clone` re-added in sorted key order and a `renumberByKey`
+   *  pass here paid 16.2 of the fork's 20.7 us per fact to match it. The key
+   *  order was never anyone's choice: it was what `restore` happened to do,
+   *  pinned by one test. The reference now preserves arrival order too, so the
+   *  cheapest thing this port can do is also the conformant one — 2.92 us per
+   *  fact, `VACUUM INTO` and nothing else. */
+  clone(): SqliteStore {
     this.commit();          // VACUUM cannot run inside a transaction
     const dest = tempPath();
     this.db.exec(`VACUUM INTO '${dest.replace(/'/g, "''")}'`);
     const s = new SqliteStore(dest);
     s.adoptDir(path.dirname(dest));
-    if (opts.renumber !== false) this.renumberByKey(s);
     s.tick = this.tick;
     s.tickLog = [...this.tickLog];
     s.evalLog = new Map(this.evalLog);
@@ -728,56 +729,6 @@ export class SqliteStore implements FactStore {
     s.dirty = true;              // as `restore` leaves it
     s.partialEval = false;       // as a fresh store starts
     return s;
-  }
-
-  /** Put a fork's arrival order back into key order, which is what the
-   *  reference store's own fork has.
-   *
-   *  WHY IT IS NEEDED AT ALL. `Store.clone` goes through `restore`, which
-   *  re-adds every fact in SORTED KEY ORDER, so a cloned in-memory store's
-   *  arrival order IS key order and not the original's. A page copy preserves
-   *  `seq`, so without this the fork disagrees with the reference about
-   *  `allFacts()`.
-   *
-   *  WHAT IT COSTS, and the number decides something. MEASURED on this
-   *  machine, 200000 arity-2 facts, load ~6: `VACUUM INTO` alone is 583 ms =
-   *  2.92 us/fact, which BEATS the in-memory clone's 7.1 us/fact by 2.4x —
-   *  the port's fourth constraint, met. This renumbering is 3242 ms = 16.21
-   *  us/fact on top, 78% of the fork, and it turns a 2.4x win into a 2.9x
-   *  loss (20.7 us/fact as shipped).
-   *
-   *  SO WHY IS IT STILL THE DEFAULT. Because what it buys is a contract and
-   *  what it costs is only speed, and the two are not comparable by me. The
-   *  arrival order it restores is, as far as this repository can tell,
-   *  UNOBSERVABLE: mutant M3 in test/store-conformance.test.ts sorts
-   *  `allFacts` and the end-to-end oracle agrees anyway, on a stratified
-   *  program and on a well-founded one, because `negHolds` reads that array as
-   *  an existence check. But "no current path reads it" is a fact about today's
-   *  evaluator, not a property of the port, and an adapter that quietly
-   *  diverges from the reference on a property nobody is watching is exactly
-   *  the failure the conformance oracle exists to prevent. `clone({ renumber:
-   *  false })` is the documented opt-out, with both numbers attached.
-   *
-   *  THROUGH A TEMP TABLE, and the first version was not: `UPDATE f SET seq =
-   *  (SELECT n FROM (SELECT ... ROW_NUMBER() ...) WHERE k = f.key)` re-runs the
-   *  whole window computation for EVERY row. MEASURED at load 15-20, that form
-   *  took 3.4 s at 2000 facts, 9.3 s at 4000 and 31 s at 8000 — the per-fact
-   *  cost rising as the store grew, which is the shape of a quadratic. */
-  private renumberByKey(s: SqliteStore): void {
-    s.db.exec(`
-      CREATE TEMP TABLE ord (k TEXT PRIMARY KEY, n INTEGER);
-      INSERT INTO ord SELECT key, ROW_NUMBER() OVER (ORDER BY key) FROM f;
-      UPDATE f SET seq = (SELECT n FROM ord WHERE ord.k = f.key);
-      DROP TABLE ord;
-      CREATE TEMP TABLE ordw (k TEXT PRIMARY KEY, n INTEGER);
-      INSERT INTO ordw SELECT key, ROW_NUMBER() OVER (ORDER BY key) FROM w;
-      UPDATE w SET seq = (SELECT n FROM ordw WHERE ordw.k = w.key);
-      DROP TABLE ordw;
-    `);
-    const mx = s.db.prepare('SELECT MAX(seq) AS m FROM f').get() as unknown as { m: number | null };
-    s.seq = mx?.m ?? 0;
-    const mw = s.db.prepare('SELECT MAX(seq) AS m FROM w').get() as unknown as { m: number | null };
-    s.wseq = mw?.m ?? 0;
   }
 
   /** Close the connection and remove the backing file. A clone leaves one
