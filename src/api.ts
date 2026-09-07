@@ -14,7 +14,18 @@ import { RoundEvaluation } from './rounds.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
-export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; }
+/** `unpopulatable` separates the two empty answers a query used to give with
+ *  one voice: NO ROWS (the relation exists and nothing satisfies the literal)
+ *  and NO SUCH RELATION AT THIS ARITY (nothing in this world can ever put a
+ *  row there). Both are `rows: []` with no error, so an assertion that a
+ *  relation is EMPTY — the shape of nearly every audit gate above this kernel —
+ *  is satisfied by a typo, by a rename, and by a literal written at the wrong
+ *  arity. `undefined_premise[audit]` in boot.rofl says exactly this about a
+ *  RULE's premise; a query is not a rule, so nothing said it about a query.
+ *
+ *  It is a field rather than an error because an empty world is a legitimate
+ *  thing to ask about — a caller decides whether unpopulatable is a defect. */
+export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; }
 
 /** whynot's demonstration bounds. `depth` counts levels of literal
  *  explanation: 1 is the single-step form (name the failing premises and
@@ -24,6 +35,10 @@ export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: strin
 export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; }
 
 const DEFAULT_BUDGET = 100_000;
+/** How large a relation `query` will enumerate to learn its arity. Small
+ *  enough that the scan is free on every query; the cost of the bound is that
+ *  a big BASE relation asked at the wrong arity goes unreported. */
+const ARITY_SCAN_MAX = 64;
 const DEFAULT_WHYNOT_DEPTH = 6;
 const DEFAULT_WHYNOT_NODES = 64;
 
@@ -541,6 +556,47 @@ export class Rofl {
         partial = true;
       } else throw e;
     }
+    // WHAT COULD EVER PUT A ROW HERE. Rule heads and stored facts both carry an
+    // arity; a bare `edb(Rel)` does not, so a declared-but-empty table counts as
+    // populatable and only a relation nothing declares, concludes or holds — or
+    // a literal at an arity none of those use — is reported. The knowledge is
+    // already in this file: `explainFailure` filters the same rules and compares
+    // the same lengths to tell whynot there is nothing to explain.
+    const arities = new Set<number>();
+    const persps = new Set<string>();
+    let anyPersp = false;   // some rule concludes into a ledger named by a VARIABLE
+    for (const r of ev.rules) {
+      if (r.clause.head.rel !== lit.rel) continue;
+      arities.add(r.clause.head.args.length);
+      if (isGround(r.clause.head.persp)) persps.add(canonTerm(r.clause.head.persp));
+      else anyPersp = true;
+    }
+    // THE STORE IS ASKED THE TWO CHEAP QUESTIONS AND NOT THE EXPENSIVE ONE.
+    // `perspectivesOf` and a key lookup are O(1)-ish; enumerating a relation is
+    // not, and this runs on EVERY query — `ast_node` carries a hundred thousand
+    // rows in the model's own world. So a base relation's ARITY is only read
+    // when the relation is small enough that reading it is free, and the honest
+    // consequence is stated rather than hidden: a LARGE relation asked at the
+    // wrong arity is not caught. Every relation a rule concludes is caught
+    // whatever its size, because a rule head carries its own arity.
+    for (const p of this.store.perspectivesOf(lit.rel)) persps.add(p);
+    if (arities.size === 0 && this.store.relCount(lit.rel) <= ARITY_SCAN_MAX) {
+      for (const f of this.store.relAll(lit.rel)) arities.add(f.args.length);
+    }
+    const declared = this.store.has(factKey(V.edb, MAIN, [mka(lit.rel)]));
+    // THE PERSPECTIVE IS PART OF THE NAME HERE, and it is the half a check keyed
+    // on the relation alone cannot see: `stale_reason[flow]` and
+    // `stale_reason[audit]` are one relation and two ledgers, and asking the
+    // wrong one is empty and errorless exactly like asking a name that does not
+    // exist. Only a GROUND perspective is judged, and only against positive
+    // knowledge — a rule that concludes into a ledger named by a variable makes
+    // every ledger possible, and a table nothing has written to yet says nothing
+    // about which ledger it will land in.
+    const wrongBook = isGround(lit.persp) && persps.size > 0 && !anyPersp
+                      && !persps.has(canonTerm(lit.persp));
+    const known = arities.size > 0 || persps.size > 0 || declared;
+    const unpopulatable = !known || (arities.size > 0 && !arities.has(lit.args.length)) || wrongBook;
+
     const rows = new Map<string, QueryRow>();
     for (const m of ms) {
       const bindings: Record<string, string> = {};
@@ -548,7 +604,7 @@ export class Rofl {
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       if (!rows.has(rtext)) rows.set(rtext, { text: rtext, bindings });
     }
-    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial };
+    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable };
   }
 
   holds(text: string): boolean {

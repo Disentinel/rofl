@@ -48,7 +48,15 @@ function world(m: Mut = {}): Rofl {
   return r;
 }
 
-const n = (r: Rofl, q: string): number => r.query(q).rows.length;
+// `unpopulatable` is the kernel refusing to let an empty answer stand for a
+// relation nothing in this world can populate — a typo, a rename, or a literal
+// at the wrong arity. Every `n(r, 'x[audit](…)') === 0` here depended on the
+// difference and could not see it. See src/api.ts.
+const n = (r: Rofl, q: string): number => {
+  const res = r.query(q);
+  assert.equal(res.unpopulatable, false, `query ${q}: nothing in this world can populate it`);
+  return res.rows.length;
+};
 
 /** cells as sortable strings, so two relations can be compared row for row */
 const cells = (r: Rofl, q: string): string[] =>

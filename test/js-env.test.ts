@@ -96,6 +96,7 @@ function build(muts: Mut[] = [], extraSources: [string, string][] = []): World {
     const res = r.query(lit);
     assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
     assert.equal(res.partial, false, `query ${lit} hit a budget`);
+    assert.equal(res.unpopulatable, false, `query ${lit}: nothing in this world can populate it`);
     const seen = new Set<string>();
     const order = [...lit.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map((m) => m[1])
       .filter((v) => (seen.has(v) ? false : (seen.add(v), true)));

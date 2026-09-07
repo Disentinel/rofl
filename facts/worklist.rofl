@@ -713,6 +713,13 @@ work_order(w_mutant_anchor_decay, 45).
 work_state(w_mutant_anchor_decay, open).
 work_spawned(w_mutant_anchor_decay, f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes).
 
+work(w_query_names_nothing, "DONE 2026-09-07: a query answered NO ROWS and NO SUCH RELATION alike, so every `audit is empty` assertion was satisfiable by a typo, a rename, a wrong arity or a wrong ledger; `unpopulatable` in src/api.ts tells them apart").
+work_order(w_query_names_nothing, 46).
+work_state(w_query_names_nothing, done).
+work_spawned(w_query_names_nothing, f_a_query_that_names_nothing_answers_like_a_query_that_finds_nothing).
+work_spawned(w_query_names_nothing, f_the_probe_for_one_item_found_the_defect_in_the_instrument).
+work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_undeclared_size_limit).
+
 -- 30. ALIASING AND THE STORE. `member_value[flow]` reads members off class
 -- bodies and object literals - the SYNTACTIC members - and there is no model of
 -- a write. `obj.x = f` followed by `obj.x()` resolves to nothing, and the cell

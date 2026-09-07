@@ -432,7 +432,13 @@ export class Store implements FactStore {
     if (!byP) return [];
     const persps = [...byP.keys()].sort();
     const out: FactRec[] = [];
-    for (const p of persps) out.push(...this.relPersp(rel, p));
+    // ONE FACT AT A TIME, and it is not style. `out.push(...arr)` passes every
+    // element as an ARGUMENT, so a relation big enough overflows the call stack
+    // — measured 2026-09-07 on `edb`, which carries a row per declared table and
+    // per asserted base relation: `RangeError: Maximum call stack size exceeded`
+    // raised from this line by a caller that had merely asked what the store
+    // holds. A spread over an unbounded array is a size limit nobody declared.
+    for (const p of persps) for (const f of this.relPersp(rel, p)) out.push(f);
     return out;
   }
 

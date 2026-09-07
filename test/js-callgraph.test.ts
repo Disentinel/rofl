@@ -151,6 +151,11 @@ function buildFresh(mutations: Mutation[]): Model {
     const res = r.query(lit);
     assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
     assert.equal(res.partial, false, `query ${lit} hit a budget`);
+    // A QUERY THAT NAMES NOTHING RETURNS THE SAME EMPTY ANSWER AS A QUERY THAT
+    // FINDS NOTHING — so every `assert … 0` in this file was satisfiable by a
+    // typo, a rename, or a literal at the wrong arity. `unpopulatable` is the
+    // kernel separating the two (src/api.ts).
+    assert.equal(res.unpopulatable, false, `query ${lit}: nothing in this world can populate it`);
     const vars = [...lit.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map((m) => m[1]);
     const seen = new Set<string>();
     const order = vars.filter((v) => (seen.has(v) ? false : (seen.add(v), true)));
@@ -162,6 +167,7 @@ function buildFresh(mutations: Mutation[]): Model {
     binds: (lit, ...vars) => {
       const res = r.query(lit);
       assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
+      assert.equal(res.unpopulatable, false, `query ${lit}: nothing in this world can populate it`);
       return res.rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '')).join(' -> ')).sort();
     },
   };
@@ -578,6 +584,7 @@ function matrix(withCallgraph: boolean): { cells: number; kinds: number; unaccou
   const n = (lit: string) => {
     const res = r.query(lit);
     assert.equal(res.error, undefined, `${lit}: ${res.error}`);
+    assert.equal(res.unpopulatable, false, `${lit}: nothing in this world can populate it`);
     return res.rows.length;
   };
   return {
@@ -824,7 +831,12 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
 
 interface Probe {
   edges: Set<string>; residue: number; shapes: number; ambiguous: number;
-  passed: string[]; bindings: number;
+  // `bindings: number` LEFT WITH `param_bind`. That relation moved into
+  // rules/js-dataflow.rofl and then out of existence entirely when the value
+  // layer absorbed it; this field went on querying the dead name in all
+  // twenty-six probes and no assertion ever read it. Found by `unpopulatable`
+  // (src/api.ts) on 2026-09-07, which is the first thing here that could see it.
+  passed: string[];
 }
 function probe(mutations: Mutation[]): Probe {
   const m = build(mutations);
@@ -834,7 +846,6 @@ function probe(mutations: Mutation[]): Probe {
     shapes: m.n('shape[code](C, S)'),
     ambiguous: m.n('ambiguous_call[audit](C, F, G)'),
     passed: [...new Set(m.binds('passes_function[code](C, I, F, N)', 'I', 'N'))].sort(),
-    bindings: m.n('param_bind[code](F, N, G)'),
   };
 }
 

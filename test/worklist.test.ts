@@ -70,10 +70,21 @@ function world(m: Mut = {}) {
   if (m.extra) plan += '\n' + m.extra;
   load(plan, 'facts/worklist.rofl');
   r.evaluate(8_000_000);
+  // EVERY ASSERTION IN THIS FILE IS `THIS AUDIT IS EMPTY`, and an empty answer
+  // used to have two causes with one voice: nothing satisfies the literal, and
+  // nothing in this world could ever put a row under that name at that arity.
+  // `unpopulatable` (src/api.ts) is the kernel telling them apart, and it found
+  // one of these on the day it was added — `stale_reason[audit]` was asserted
+  // empty at arity FIVE against a relation defined at four.
+  const ask = (q: string) => {
+    const res = r.query(q);
+    assert.equal(res.unpopulatable, false, `query ${q}: nothing in this world can populate it`);
+    return res;
+  };
   return {
-    n: (q: string) => r.query(q).rows.length,
+    n: (q: string) => ask(q).rows.length,
     binds: (q: string, ...vs: string[]) =>
-      r.query(q).rows.map((row) => vs.map((v) => row.bindings[v]).join('/')).sort(),
+      ask(q).rows.map((row) => vs.map((v) => row.bindings[v]).join('/')).sort(),
   };
 }
 
@@ -126,7 +137,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // cells they sat on were `handled`. The coverage was PARTIAL and a matrix
   // keyed by kind cannot say so. Deleting the rows would have been the error.
   assert.deepEqual(w.binds('stale_reason[audit](A, K, L, R)', 'K', 'L', 'R'), []);
-  assert.deepEqual(w.binds('stale_reason[audit](A, K, S, L, R)', 'K', 'L', 'R'), []);
+  // THE SECOND LINE HERE WAS A DECORATION UNTIL 2026-09-07 and had been one
+  // since it was written: `stale_reason[audit]` is defined at arity FOUR in
+  // rules/js-model.rofl and was asked at FIVE, so it returned no rows because
+  // no relation of that shape exists, not because none is stale. It read as a
+  // green gate and could not go red. The refined form of the same question is
+  // `shaped_because[audit]`, which the block below already asserts row by row;
+  // the shaped half of `stale_reason` does not exist, so the honest thing is to
+  // stop pretending it is being checked. Found by `unpopulatable` (src/api.ts).
+
 
   // WHAT CLOSED THEM: the specifier refinement. The same three statements are
   // still made and each now names the shape it is true of, which is the only
@@ -182,6 +201,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_mutant_anchor_decay',
      'w_mutant_costs_a_world',
      'w_negation_range_restriction',
+     'w_query_names_nothing', 'w_query_names_nothing', 'w_query_names_nothing',
      // THREE for w_scope_binding: the blindness that had no cell, the corpus
      // bent around the file-scoped binder, and the declared over-approximation
      // that was a defect with a comment on it.
@@ -259,7 +279,7 @@ test('the queue covers the model: 32 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 45);
+  assert.equal(w.n('work(W, Note)'), 46);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
