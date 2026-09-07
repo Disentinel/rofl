@@ -1,0 +1,48 @@
+//! A Rust implementation of the ROFL evaluator.
+//!
+//! The contract is three lines long and mechanically checkable:
+//!
+//! ```text
+//! snapshot in  ->  evaluate  ->  canonicalState out
+//! ```
+//!
+//! `facts/port-corpus/` is the oracle (`scripts/port_corpus.ts`), and every
+//! module here cites the JS file and line it ports.
+
+pub mod dense;
+pub mod engine;
+pub mod reflect;
+pub mod seed;
+pub mod store;
+pub mod term;
+
+use engine::{Eval, Halt, Mode};
+use reflect::{bootstrap_kernel, Vocab};
+use term::Heap;
+
+pub struct Loaded {
+    pub eval: Eval,
+    pub dangling: usize,
+}
+
+/// `Rofl.fromSnapshot(seed)` then `evaluate()` — the whole corpus contract.
+pub fn load(json: &str, budget: i64) -> Result<Loaded, String> {
+    let mut h = Heap::default();
+    let v = Vocab::new(&mut h);
+    let r = seed::restore(&mut h, &v, json)?;
+    let mut store = r.store;
+    bootstrap_kernel(&mut h, &v, &mut store);
+    let eval = Eval::new(h, store, budget, Mode::Rounds, false);
+    Ok(Loaded {
+        eval,
+        dangling: r.dangling,
+    })
+}
+
+pub fn describe(e: &Halt) -> String {
+    match e {
+        Halt::Budget(r, _) => format!("wall: {r}"),
+        Halt::Strat(m, _) => m.clone(),
+        Halt::Bug(m) => format!("defect: {m}"),
+    }
+}
