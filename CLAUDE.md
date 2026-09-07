@@ -205,6 +205,57 @@ The rest of the repository already works this way — an oracle enumerates its o
 call sites, a gate ships with a planted defect, a witness is a query anyone can
 run. Coordination between agents was the last place still running on promises.
 
+## Model the task in ROFL before arguing about it — a model can say "none"
+
+**Before reasoning in prose about a question this system could hold as facts,
+model it: scanner -> facts -> rules -> report.** The reasoning belongs in the
+RULES, not in the scanner and not in the summary. This is not decoration and it
+is not only for the domain; it is the cheapest way to find out what the question
+actually constrains.
+
+**What the model gives that prose and grep cannot: a negative over a
+population.** A grep says "no textual tell here"; it can never say "none". A
+paragraph says "I looked and did not find"; the reader cannot check the looking.
+A derived relation says `299 of 345 defined functions provably cannot reach the
+key-spelling machinery`, and anyone can re-run it. Every strong result on this
+branch has that shape — `nDiffer` 0 across nine worlds, `widened[audit]` 0 over
+nineteen with both premises shown to have inputs, the intersection of
+variable-perspective reads and kernel-book relations EMPTY with a positive
+control on each half.
+
+**And the model makes the CRITERION executable.** A filter's danger is that its
+criterion is invisible while you look through it. A rule body is the criterion,
+written down and runnable, so the next reader argues with the rule rather than
+with a conclusion.
+
+**Paid for repeatedly, and here are the two clearest.** Asked for a model of the
+join instead of more profiling, `scanners/eval_cost.ts` found in one run what an
+hour of profiling had not: half a ring 1 parse concludes nothing, and one rule
+was a fifth of it. And a ten-minute model of the kernel's own call graph
+(`src_call` facts plus a transitive closure) answered a coupling question that a
+textual census had answered with a floor it admitted to — and reframed it, by
+showing the key spelling sits on the PUBLIC API surface rather than inside the
+store.
+
+**Three costs, all observed:**
+
+- **A model is itself a filter.** A name-matched call graph conflates an
+  imported `canonTerm` with a local one and cannot see a call through a
+  callback. It over-answers where a resolved graph would not. Say which of the
+  two your model is before quoting it against something else.
+- **A coarse model and a textual census BRACKET the answer** — one has a floor,
+  the other a ceiling — so their agreement is worth more than either alone, and
+  neither replaces the other.
+- **Do not build the model in the process it measures.** The recorded trap:
+  `parse(src, fromImage(image()))` evaluates its argument inside the timed
+  window, so seven of the eight heaviest rules came out as the kernel checking
+  itself, which was an artefact of measuring the build.
+
+**The anti-pattern is a model nothing is asked of.** If no rule reads the facts
+a scanner writes, it is a report with extra steps. `rules/eval-cost.rofl`,
+`rules/parse-cost.rofl` and `rules/findings.rofl` are the shape: facts that are
+generated, rules that are argued with, and a `why` for every row.
+
 ## Run the witness query before writing the witness down
 
 `witness(F, Query, N)` states a finding's premise as something anyone can
