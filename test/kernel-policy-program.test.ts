@@ -18,7 +18,11 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { Evaluation } from '../src/engine.ts';
 import { parseProgram } from '../src/parser.ts';
-import { POLICY_SRC, SAFETY_SRC, resolveClauseBooks, encodeRule, RESERVED, KERNEL_PERSP, MAIN } from '../src/reflect.ts';
+import { resolveClauseBooks, encodeRule, RESERVED, KERNEL_PERSP, MAIN } from '../src/reflect.ts';
+import { POLICY_DENSE, SAFETY_DENSE } from '../src/kernel-dense.ts';
+import { denseClauses } from '../src/dense.ts';
+import { renderDense } from '../scripts/build_kernel_dense.ts';
+import { canonClause } from '../src/reflect.ts';
 import { Store } from '../src/store.ts';
 import { peelRounds } from '../src/rounds.ts';
 
@@ -30,15 +34,43 @@ test('THE GATE THIS FILE CLAIMED TO BE, and was not', () => {
   // Two comments — one in src/reflect.ts, one at the top of this file — said
   // the copy in the kernel was kept honest by "the gate that keeps them
   // identical, which test/kernel-policy-program.test.ts is". Measured
-  // 2026-09-06: no test in this repository read POLICY_SRC at all. The two were
-  // in fact identical, so nothing was broken; what was missing was the reason
-  // to believe it. This is that reason.
-  assert.equal(POLICY_SRC, FILE, 'policy.rofl and src/reflect.ts have drifted');
-  assert.equal(SAFETY_SRC, SAFETY, 'safety.rofl and src/reflect.ts have drifted');
+  // 2026-09-06: no test in this repository read the constant at all. The two
+  // were in fact identical, so nothing was broken; what was missing was the
+  // reason to believe it. This is that reason.
+  //
+  // WHAT IT COMPARES CHANGED THE SAME DAY, and the gate got stronger for it.
+  // The kernel used to carry these programs as SOURCE TEXT and parse them; it
+  // carries them COMPILED now, in the dense form, so the check is no longer
+  // "the two texts are equal" but "compiling the source gives the shipped
+  // program". That covers the compiler as well as the copy.
+  assert.equal(POLICY_DENSE, renderDense('policy.rofl'),
+    'policy.rofl and src/kernel-dense.ts have drifted — run npm run build:dense');
+  assert.equal(SAFETY_DENSE, renderDense('safety.rofl'),
+    'safety.rofl and src/kernel-dense.ts have drifted — run npm run build:dense');
   // PLANTED DEFECT: the comparison must be able to fail. A one-character edit
   // — the kind a hand-merge makes — has to be visible to it.
-  assert.notEqual(POLICY_SRC, FILE.replace('rule_reads', 'rule_read'));
-  assert.notEqual(SAFETY_SRC, SAFETY.replace('slot_arity', 'slot_arty'));
+  assert.notEqual(POLICY_DENSE, POLICY_DENSE.replace('rule_reads', 'rule_read'));
+  assert.notEqual(SAFETY_DENSE, SAFETY_DENSE.replace('slot_arity', 'slot_arty'));
+});
+
+test('the compiled program IS the source program, clause for clause', () => {
+  // The gate above compares TEXT, which catches a stale build and would also
+  // pass if the writer and the reader were wrong in the same way. This reads
+  // both back as CLAUSES and compares them canonically, which is the property
+  // that actually matters: what the kernel runs is what policy.rofl says.
+  //
+  // It found a defect on the day it was written. `denseClauses` used a plain
+  // fact's arguments RAW instead of decoding them, so `eq_or_is("=")` came
+  // back as the functor `s("=")` — and seven corpus programs then computed a
+  // different `trigger_of`. examples/ring1/l0.ts had carried that bug since it
+  // was written; a grammar's facts are atoms and integers, so the tower never
+  // reached the case.
+  for (const [file, shipped] of [['policy.rofl', POLICY_DENSE], ['safety.rofl', SAFETY_DENSE]] as const) {
+    const source = parseProgram(fs.readFileSync(path.join(ROOT, file), 'utf8')).map(canonClause);
+    const compiled = denseClauses(shipped).map(canonClause);
+    assert.deepEqual(compiled, source, `${file}: the compiled program is not the source program`);
+    assert.ok(source.length > 8, `${file}: ${source.length} clauses — a vacuous comparison`);
+  }
 });
 
 test('SELF-APPLICATION: safety.rofl judges both kernel programs, its own rules included', () => {

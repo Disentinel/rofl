@@ -175,7 +175,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 694 of 952 code lines, policy 169 — by query', () => {
+test('the split: mechanism is 694 of 954 code lines, policy 169 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -214,7 +214,9 @@ test('the split: mechanism is 694 of 952 code lines, policy 169 — by query', (
   // them is unpacking five relations out of an answer that was already being
   // asked for. The deletions outweigh the unpacking, which is the first time
   // that has been true in this branch.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 952);
+  // 952 -> 954 (+2): two import lines, where the kernel's own programs stopped
+  // being source text it parses and became a compiled form it reads.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 954);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -288,7 +290,8 @@ test('the split: mechanism is 694 of 952 code lines, policy 169 — by query', (
   // 84 -> 86 (+2): the `bootstrap` field and the option that sets it -- the
   // rung that stops the kernel asking a program about the program that answers.
   // 86 -> 89: three lines of the answer field and its comment.
-  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 89);
+  // 89 -> 91: the two imports land in the header block.
+  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 91);
   // the number the rewrite question is about: 216 -> 218, the same +2 as `pol`
   // UNCHANGED by the ring, and that is the claim rather than the constant:
   // `policy/1` is `pol` + `pol_star`, 126 + 92, and neither moved. A ring the
@@ -336,7 +339,7 @@ test('the split: mechanism is 694 of 952 code lines, policy 169 — by query', (
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
   assert.equal(S.byCat['MECH'].code, 694);
-  assert.equal(S.total.code, 952);
+  assert.equal(S.total.code, 954);
   assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 169);
 });
 
@@ -455,7 +458,7 @@ test('the report renders and carries its own headline', () => {
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
   assert.match(text, /MECH\s+694 code/);
-  assert.match(text, /TOTAL\s+952 code/);
+  assert.match(text, /TOTAL\s+954 code/);
   assert.match(text, /before-A\s+115 code lines/);
 });
 

@@ -55,7 +55,14 @@ const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
 // accepted because the alternative — assembling the table from character codes
 // so no identifier-shaped literal appears — hides the language's own vocabulary
 // from the reader of the file that defines it.
-const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n', 't', 'r'];
+// `l` and `b` joined on 2026-09-06 and they are the DENSE FORM'S tags, read by
+// src/dense.ts: `l(rel, [args])` is a literal and `b(op, l, r)` a builtin, the
+// same category as `v`, `s`, `f` and `n` already here. The widening is the one
+// this comment already names -- a one-letter relation called `l` or `b` would
+// now pass as a string literal in src/ -- and it is accepted for the same
+// reason: the alternative hides the dense language's vocabulary from the file
+// that reads it.
+const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n', 't', 'r', 'l', 'b'];
 // Kernel constants (mode atoms, hole reasons).
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
   'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator',

@@ -7,13 +7,15 @@ import {
   type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
-import { parseProgram, type Lit, type BodyElem, type Clause } from './parser.ts';
+import { type Lit, type BodyElem, type Clause } from './parser.ts';
+import { denseClauses } from './dense.ts';
+import { POLICY_DENSE, SAFETY_DENSE } from './kernel-dense.ts';
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
 import {
   V, IFACE, RESERVED, STR_TYPE, decodeRules, type DRule, factTerm, relOfFactTerm, canonBodyElem, canonLit,
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
-  atomTerm, wellFoundedDeclared, POLICY_SRC, SAFETY_SRC, encodeRule, resolveClauseBooks,
+  atomTerm, wellFoundedDeclared, encodeRule, resolveClauseBooks,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -149,7 +151,10 @@ interface FrontInfo { keys: Set<string>; rels: Set<string>; }
 
 interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
 
-/** A program the kernel ships, encoded once. `bootstrapKernel` installs facts
+/** A program the kernel ships, encoded once. It arrives in the DENSE form --
+ *  facts and one-fact rules, read by src/dense.ts -- and not as source text,
+ *  so that running the kernel's own policy does not require the surface
+ *  parser. Measured 2026-09-06: it did, for 168 of the parser's 262 lines. `bootstrapKernel` installs facts
  *  into every store; this installs nothing anywhere — the rows are held here
  *  and copied into a scratch store when a question is asked. A FACT keeps the
  *  perspective its own book resolves to; a RULE becomes reflection under the
@@ -159,7 +164,7 @@ function kernelProgram(src: string): PolicyRow[] {
   let rows = encoded.get(src);
   if (rows === undefined) {
     rows = [];
-    for (const c0 of parseProgram(src)) {
+    for (const c0 of denseClauses(src)) {
       const c = resolveClauseBooks(c0);
       if (c.body.length === 0) rows.push({ rel: c.head.rel, args: c.head.args, persp: c.head.persp });
       else for (const f of encodeRule(c).facts) rows.push({ rel: f.rel, args: f.args, persp: null });
@@ -450,7 +455,7 @@ export class Evaluation {
     const hit = safetyMemo.get(memoKey);
     if (hit !== undefined) return hit;
 
-    const pol = policyStore(SAFETY_SRC);
+    const pol = policyStore(SAFETY_DENSE);
     for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise,
       V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg, V.reserved]) {
       for (const f of this.store.relAll(rel)) {
@@ -804,7 +809,7 @@ export class Evaluation {
     reads: Map<string, Set<string>>; rels: Set<string>;
     cone: Map<string, Set<string>>; opaqueClosed: Set<string>;
   } {
-    const pol = policyStore(POLICY_SRC);
+    const pol = policyStore(POLICY_DENSE);
     for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) {
       for (const f of this.store.relAll(rel)) {
         pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
