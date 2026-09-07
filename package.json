@@ -22,7 +22,9 @@
     "dagcheck": "node --experimental-strip-types scanners/bootstrap_dag.ts",
     "ablate": "node --experimental-strip-types scanners/ablate.ts",
     "laddercheck": "node --experimental-strip-types scanners/policy_ladder.ts",
-    "necessity": "node --experimental-strip-types scanners/necessity.ts"
+    "necessity": "node --experimental-strip-types scanners/necessity.ts",
+    "parsecost": "node --experimental-strip-types scanners/parse_cost.ts",
+    "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
