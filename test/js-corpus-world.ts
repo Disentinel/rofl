@@ -30,6 +30,8 @@ const FIX = 'test/fixtures/js-call/';
 const FILES: [string, string][] = [
   ['alpha.mjs', FIX + 'alpha.mjs'],
   ['beta.mjs', FIX + 'beta.mjs'],
+  ['gamma.mjs', FIX + 'gamma.mjs'],
+  ['delta.mjs', FIX + 'delta.mjs'],
   ['shapes.ts', FIX + 'shapes.ts.txt'],
 ];
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
@@ -111,9 +113,17 @@ export const edges = (w: World) => new Set(w.q('calls_in[code](File, A, B)').map
 export const names = (w: World) => new Set(w.q('may_not_run[code](F)')
   .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
 
-/** each catch parameter and the file its value came from */
+/** each catch parameter and the file its value came from.
+ *
+ *  THE COLUMN WAS THE LINE NUMBER until 2026-09-07, and no assertion noticed:
+ *  every caller splits on `<-` and reads the LEFT half, or compares two of
+ *  these lists for length or inequality. `q` returns one cell per capital-letter
+ *  variable IN THE ORDER THE LITERAL WRITES THEM — `(id, K, F, L)` is three
+ *  variables, not four, because the node id is lower-case — so `[2]` is `L`.
+ *  The fourth wrong destructure of a positional result in this repository, and
+ *  the first inside a helper three test files import. */
 export const caught = (w: World) => w.q('caught_value[flow](P, V)')
-  .map(([p, v]) => `${w.q(`ast_name[code](${p}, N)`)[0]?.[0] ?? p}<-${w.q(`ast_node[code](${v}, K, F, L)`)[0]?.[2] ?? v}`)
+  .map(([p, v]) => `${w.q(`ast_name[code](${p}, N)`)[0]?.[0] ?? p}<-${w.q(`ast_node[code](${v}, K, F, L)`)[0]?.[1] ?? v}`)
   .sort();
 
 export { build, base, read, ROOT, FILES, FACTS, RULES, unq };

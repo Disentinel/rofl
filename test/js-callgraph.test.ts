@@ -40,8 +40,12 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const FIX = path.join(ROOT, 'test', 'fixtures', 'js-call');
 const read = (p: string) => fs.readFileSync(p, 'utf8');
 
-/** scanned AND executed */
-const RUN_FILES = ['alpha.mjs', 'beta.mjs'];
+/** scanned AND executed. `gamma.mjs` declares NO function — it is two
+ *  `export *` lines — so it contributes nothing to the census and no frame to
+ *  the oracle; it is here because it IS executed, as the module beta imports.
+ *  `delta.mjs` is executed for the same reason at one more remove: nothing
+ *  imports it, and gamma's second `export *` is its only path into the run. */
+const RUN_FILES = ['alpha.mjs', 'beta.mjs', 'gamma.mjs', 'delta.mjs'];
 /** scanned only: TS-only and exotic grammar shapes a runnable .mjs cannot spell */
 const STATIC_FILES = ['shapes.ts'];
 const ALL_FILES = [...RUN_FILES, ...STATIC_FILES];
@@ -968,7 +972,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // site that now RESOLVES across the file boundary.
   // 162 -> 164: `adefault` and `bviaNs` and their `trace()` calls, less the two
   // sites the namespace and default bindings now resolve.
-  assert.equal(sites - resolved, 164, `${sites - resolved} call sites vanished from the frontier`);
+  // 164 -> 168 on 2026-09-07: the re-export fixtures — `twin` twice, `bviaTwin`
+  // and `bviaStar`, each with its `trace()` call, less the sites the re-export
+  // binding now resolves.
+  assert.equal(sites - resolved, 168, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

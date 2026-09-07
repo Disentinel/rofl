@@ -286,5 +286,8 @@ node_kind(js, import_namespace_specifier).
 node_kind(js, import_default_specifier).
 node_kind(js, export_default_declaration).
 node_kind(js, export_all_declaration).
-kind_absent_ok(export_all_declaration, a_no_corpus_site).
-unknown_because(js, export_all_declaration, dataflow, not_yet).
+-- THE EXCUSE IS GONE BECAUSE THE SITE ARRIVED: gamma.mjs re-exports two
+-- modules, so `kind_absent_ok(export_all_declaration, a_no_corpus_site)` would
+-- be stale here and in the two other packs that declare the kind — the home
+-- rule again, from the direction of retirement rather than of addition.
+handled(js, export_all_declaration,     dataflow, r_reexported_name).

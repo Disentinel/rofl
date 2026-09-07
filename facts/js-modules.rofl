@@ -397,7 +397,10 @@ ignored(js, tsunion_type,                   modules, a_not_a_module_construct).
 -- DECLARED HERE AND ABSENT FROM THE CORPUS, with the reason written down;
 -- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
 -- declared.
-kind_absent_ok(export_all_declaration, a_no_corpus_site).
+-- `export_all_declaration` had `kind_absent_ok` here until 2026-09-07; the
+-- corpus grew two of them and every copy of the excuse had to go. The modules
+-- layer's own cell stays open — w_mod_beyond_the_import owns it, and a name
+-- crossing a file is not the same question as a specifier reaching a disk.
 kind_absent_ok(import, a_babel_emits_no_import_callee).
 
 -- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the

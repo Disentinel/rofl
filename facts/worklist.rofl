@@ -709,10 +709,11 @@ work_order(w_scope_shadowing, 44).
 work_state(w_scope_shadowing, open).
 work_needs(w_scope_shadowing, w_scope_binding).
 
-work(w_mutant_anchor_decay, "a mutant that plants a dependency on the queue's HEAD names a literal item, so it expires the moment that item closes - four re-aimings and counting; the head is a derived row and the plant is authored text").
+work(w_mutant_anchor_decay, "DONE 2026-09-07: the plant is computed from `takeable(W)` ordered by `work_order`, so it names the CURRENT head and the LAST takeable item and expires never - five re-aimings were what it cost to stop writing the anchor by hand").
 work_order(w_mutant_anchor_decay, 45).
-work_state(w_mutant_anchor_decay, open).
+work_state(w_mutant_anchor_decay, done).
 work_spawned(w_mutant_anchor_decay, f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes).
+work_spawned(w_mutant_anchor_decay, f_the_anchor_was_authored_text_and_the_thing_it_named_was_a_query).
 
 work(w_query_names_nothing, "DONE 2026-09-07: a query answered NO ROWS and NO SUCH RELATION alike, so every `audit is empty` assertion was satisfiable by a typo, a rename, a wrong arity or a wrong ledger; `unpopulatable` in src/api.ts tells them apart").
 work_order(w_query_names_nothing, 46).
@@ -826,17 +827,24 @@ work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_la
 -- beta's `bdefault` is called by the harness and a form the harness calls is
 -- not a form the model can be checked on.
 --
--- WHAT IS LEFT IS ONE FORM AND IT IS A DIFFERENT SHAPE. `export * from './x'`
--- re-exports every name of another module, so checking it needs a THIRD file
--- importing from the re-exporting one. That is a real fixture rather than a
--- line, and this corpus is three modules for a reason.
-work(w_cg_module_boundary, "an imported name is the function the other module exports - six of the seven forms answered at both layers; `export *` is the one left, and it needs a RE-EXPORT CONSUMER, which is a module that imports from the re-exporting one").
+-- THE LAST FORM COST TWO FILES AND NOT ONE. `export * from './x'` needs a
+-- module that re-exports and a second module that imports FROM it, which is
+-- gamma.mjs; that is enough to carry the names and NOT enough to check the
+-- specifier, because beta.mjs imports alpha.mjs directly and the resolver had
+-- already seen `./alpha.mjs`. delta.mjs is imported by nothing at all, so the
+-- only declaration in the corpus that names it is gamma's second `export *` —
+-- a fixture must be reachable ONLY through the construct it tests.
+work(w_cg_module_boundary, "DONE 2026-09-07: r_imported_name and r_reexported_name; all seven import/export forms answered at both layers, with the last one needing a module reachable only through the re-export and a name that collides with the importing file's own").
 work_order(w_cg_module_boundary, 33).
-work_state(w_cg_module_boundary, open).
+work_state(w_cg_module_boundary, done).
 work_spawned(w_cg_module_boundary, f_the_kernel_refused_exactly_and_nobody_read_the_refusal).
 work_spawned(w_cg_module_boundary, f_the_boundary_had_no_site_to_cross).
 work_spawned(w_cg_module_boundary, f_a_form_the_harness_calls_is_not_a_form_the_model_is_checked_on).
 work_spawned(w_cg_module_boundary, f_a_probes_own_filter_is_the_third_way_it_lies).
+work_spawned(w_cg_module_boundary, f_a_fixture_must_be_reachable_only_through_the_construct_it_tests).
+work_spawned(w_cg_module_boundary, f_the_third_surviving_mutant_in_a_row_wanted_a_name_collision).
+work_spawned(w_cg_module_boundary, f_sharing_a_relation_between_two_forms_moves_the_guard_to_every_reader).
+work_spawned(w_cg_module_boundary, f_the_two_by_two_had_no_control_and_a_missing_axis_was_silent).
 claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
 -- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
 -- 2026-09-05. It is ONE missing join and not two: `const h = helper; h()`

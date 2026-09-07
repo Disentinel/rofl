@@ -45,7 +45,9 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const FIX = 'test/fixtures/js-call';
 const FILES: [string, string][] = [
-  ['alpha.mjs', 'alpha.mjs'], ['beta.mjs', 'beta.mjs'], ['shapes.ts', 'shapes.ts.txt'],
+  ['alpha.mjs', 'alpha.mjs'], ['beta.mjs', 'beta.mjs'], ['gamma.mjs', 'gamma.mjs'],
+  ['delta.mjs', 'delta.mjs'],
+  ['shapes.ts', 'shapes.ts.txt'],
 ];
 const RULES = ['rules/js-structure.rofl', 'rules/js-dataflow.rofl',
   'rules/js-model.rofl', 'rules/js-callgraph.rofl'];
@@ -143,11 +145,11 @@ test('the five heaviest read paths, by name', () => {
   // rules. A delta alone would have reported "+6.7%" for both and said nothing
   // about which half either time.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 111254',
-    'relPersp authority = 84735',
-    'argMatches encloses_v pos=[1] = 54505',
-    'relPersp encloses_v = 51910',
-    'relPersp ast_node = 50025',
+    'argMatches ast_within pos=[0] = 113358',
+    'relPersp authority = 87984',
+    'argMatches encloses_v pos=[1] = 55505',
+    'relPersp encloses_v = 52910',
+    'relPersp ast_node = 51930',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -211,7 +213,25 @@ test('the five heaviest read paths, by name', () => {
   // running where an arm joining relations that already stand is nearly free and
   // the corpus is what costs — which is the shape to expect, and the reason the
   // scope layer's +25% was worth stopping for.
-  assert.equal(c.total, 965160, 'total rows handed out by the store in one fixpoint');
+  // 965 160 -> 995 305 on 2026-09-07 with the RE-EXPORT, axes from the diff
+  // again — this time rules/js-dataflow.rofl AND facts/js-callgraph.rofl, plus
+  // all three fixture files the iteration touched:
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   965 160 / 58 046 fir   994 330 / 59 182 fir
+  //     reexport rl  964 871 / 58 052 fir   995 305 / 59 250 fir
+  //
+  // AND THE 2x2 GOT A POSITIVE CONTROL OF ITS OWN, which is the part worth
+  // keeping: the (HEAD, HEAD) cell must reproduce the number pinned here, and
+  // the FIRST run of it came back 964 759 — 401 rows short, because the authored
+  // axis named only the rule file while the iteration had also changed a FACT
+  // pack. A 2x2 whose HEAD corner does not reproduce the pin is measuring an
+  // axis it did not declare, and it says so before the conclusion is drawn.
+  // The rules cost is NEGATIVE on the HEAD corpus (-289 rows, +6 firings): two
+  // retired excuses and one `unknown_because` that became `handled` are fewer
+  // matrix rows, and the new arms derive nothing where no `export *` exists —
+  // the same "invisible without a site" shape the excuse itself recorded.
+  assert.equal(c.total, 995305, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -264,5 +284,8 @@ test('the five heaviest read paths, by name', () => {
   // instrument reported nothing. A measurement whose axes are hard-coded
   // measures the shape of the previous change. The axes have to be chosen per
   // iteration, from the diff.
-  assert.equal(c.firings, 58046, 'derivations: 57 335 before the other two specifiers');
+  // 58 046 -> 59 250, +1204, and by the reasoning above nearly all of it is the
+  // corpus: two fixture files and three functions with their call sites are
+  // +1136, the rules +68.
+  assert.equal(c.firings, 59250, 'derivations: 58 046 before the re-export');
 });

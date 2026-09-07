@@ -163,29 +163,50 @@ const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void 
                            exports_name[code](F, Name, Target),
                            ident_in[code](E, Local, File).`,
             replace: '', file: 'rules/js-dataflow.rofl' }],
+    // TWO EDGES SINCE 2026-09-07, and the second one is the arm's reach rather
+    // than a second arm: `bviaStar` binds through a RE-EXPORT, and a re-export
+    // changes which module `exports_name` answers for — the binding is still
+    // this rule. Deleting it takes the direct import and the re-exported one
+    // together, which is what says the two paths share a binder.
     expect: (m, b) => assert.deepEqual(
-      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
-      'the only cross-file call edge this model has ever derived'),
+      [...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['bcross -> crossed', 'bviaStar -> crossed'],
+      'every cross-file call edge this model derives goes through this one arm'),
   },
   {
     name: 'i2 the LOCAL name is read where the IMPORTED name belongs',
     mut: [{ find: 'exports_name[code](F, Name, Target),',
             replace: 'exports_name[code](F, Local, Target),',
             file: 'rules/js-dataflow.rofl' }],
-    // `import { crossed as farSide }` is aliased FOR THIS MUTANT: with
+    // `import { crossed as leaf }` is aliased FOR THIS MUTANT: with
     // `{ crossed }` the two names are one string and the confusion is invisible.
-    expect: (m, b) => assert.deepEqual(
-      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
-      'no module exports `farSide`, so the edge goes'),
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['bcross -> crossed', 'bviaStar -> crossed'],
+        'no module exports the local name, so both cross-file edges go');
+      // ...AND ONE ARRIVES, which is the sharper half and was not asserted until
+      // 2026-09-07: alpha.mjs really does export a `leaf`, so reading the local
+      // name where the imported one belongs does not merely fail — it binds
+      // beta's `leaf` to the WRONG function, silently and in the same file.
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), ['bcross -> leaf'],
+        'the alias collides with a real export of the module it points at');
+    },
   },
   {
     name: 'i3 the IMPORTED name is read where the LOCAL name belongs',
     mut: [{ find: '                           ident_in[code](E, Local, File).',
             replace: '                           ident_in[code](E, Name, File).',
             file: 'rules/js-dataflow.rofl' }],
-    expect: (m, b) => assert.deepEqual(
-      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
-      'beta.mjs contains no identifier `crossed`, so the edge goes'),
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['bcross -> crossed', 'bviaStar -> crossed'],
+        'beta.mjs contains no identifier `crossed`, so both edges go');
+      // AND IT BINDS SOMETHING ELSE WRONG, which the corpus could not say until
+      // `twin` existed twice: beta.mjs DOES contain an identifier `twin` — its
+      // own declaration — so reading the imported name where the local one
+      // belongs makes beta's own call to its own `twin` mean delta's as well.
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 10, 'the collision resolves both ways: 8 -> 10');
+    },
   },
   {
     name: 'i4 an import binds in every file, not the one it is written in',
@@ -231,7 +252,12 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
     // lookups guard their receiver, so a `program` node passes none of them.
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> crossed']);
-      assert.equal(b.n('member_plain[flow](O, K, V)'), 60);
+      // 60 -> 77 when gamma.mjs and delta.mjs joined the corpus: a module object
+      // is another file's `program`, so every module the corpus scans adds its
+      // exports to this lookup. The MUTANT number does not move — 29 is what is
+      // left when no module object reaches `member_plain` at all — and that the
+      // two numbers move independently is the reason both are pinned.
+      assert.equal(b.n('member_plain[flow](O, K, V)'), 77);
       assert.equal(m.n('member_plain[flow](O, K, V)'), 29, 'the module\'s exports leave the lookup');
     },
   },
@@ -303,10 +329,165 @@ test('an imported name, and the module the corpus does not have', () => {
   // — it is the instrument — so it can never resolve, and saying so once per
   // MODULE beats saying nothing 152 times per USE.
   assert.deepEqual(m.q('import_outside_corpus[audit](S, F)').map(([s, f]) => `${f}: ${s}`).sort(),
-    ['alpha.mjs: ./trace.mjs', 'beta.mjs: ./trace.mjs']);
-  assert.deepEqual(m.q('import_target[code](S, F)'), [['./alpha.mjs', 'alpha.mjs']],
-    'exactly one specifier in this corpus names a file the corpus has');
+    ['alpha.mjs: ./trace.mjs', 'beta.mjs: ./trace.mjs', 'delta.mjs: ./trace.mjs']);
+  // THREE SPECIFIERS NAME A FILE THE CORPUS HAS, and one of the three is named
+  // by no import at all: `./delta.mjs` appears only in gamma's `export *`. That
+  // is what makes the export-all arm of `module_source` load-bearing, and it is
+  // the row mutant r4 takes away.
+  assert.deepEqual(m.q('import_target[code](S, F)'),
+    [['./alpha.mjs', 'alpha.mjs'], ['./delta.mjs', 'delta.mjs'], ['./gamma.mjs', 'gamma.mjs']]);
 });
+
+// ---------------------------------------------------------------------------
+// 3k. A RE-EXPORT (w_cg_module_boundary, last form): `export * from './x'`.
+//
+// THE ONE IMPORT/EXPORT FORM THAT NEEDS A WHOLE FILE rather than a line —
+// checking it takes a module that re-exports and a second module that imports
+// FROM the re-exporting one — and then a SECOND file, for a reason the first
+// round of mutants measured rather than predicted. gamma.mjs re-exporting
+// alpha.mjs derives the right edge and kills exactly one of the four mutants
+// below, because beta.mjs imports alpha.mjs DIRECTLY: `./alpha.mjs` is already
+// a module the resolver has seen, so a rule that never learned an `export *`
+// names a source loses nothing, and a rule that re-exports every module's names
+// produces twenty wrong facts and not one wrong answer.
+//
+// TWO PROPERTIES OF THE CORPUS FIXED BOTH, and they are the same property twice:
+// delta.mjs is reachable ONLY through the re-export (nothing imports it), and
+// the name it exports COLLIDES with one beta.mjs declares itself. That is the
+// third time in this loop that a surviving mutant was repaired by a name
+// collision rather than by a sharper assertion.
+const fileOf = (w: World, id: string) => w.q(`ast_node[code](${id}, K, F, L)`)[0]?.[1] ?? '?';
+/** every name gamma re-exports, tagged with the module the function lives in */
+const reexports = (w: World) => w.q('exports_name[code](F, N, "gamma.mjs")')
+  .map(([f, n]) => `${n}@${fileOf(w, f)}`).sort();
+/** every export of beta.mjs, the file that RE-EXPORTS NOTHING and imports four times */
+const betaExports = (w: World) => w.q('exports_name[code](F, N, "beta.mjs")')
+  .map(([f, n]) => `${n}@${fileOf(w, f)}`).sort();
+/** each ambiguous call site as `caller-file: name@file | name@file` */
+const ambRows = (w: World) => w.q('ambiguous_call[audit](C, F, G)').map(([c, f, g]) =>
+  `${fileOf(w, c)}: ${w.q(`fn_name[code](${f}, N)`)[0]?.[0]}@${fileOf(w, f)}`
+  + ` | ${w.q(`fn_name[code](${g}, N)`)[0]?.[0]}@${fileOf(w, g)}`).sort();
+
+const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'r1 the re-export arm is deleted',
+    mut: [{ find: `exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
+                                     module_source[code](E, Src, File),
+                                     import_target[code](Src, Target),
+                                     exports_name[code](F, Name, Target).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaStar -> crossed'],
+        'the name imported only through gamma.mjs stops resolving');
+      assert.deepEqual(reexports(m), [], 'and gamma exports nothing of its own');
+      // THE CONJUNCT THAT KEEPS THIS APART FROM r4, which loses the same edge:
+      // the SPECIFIER still names a module here, only the names do not travel.
+      assert.equal(m.q('import_target[code](S, T)').length, 3,
+        'every specifier still resolves — this mutant is about names, not modules');
+    },
+  },
+  {
+    name: 'r2 the re-export takes names from EVERY module, not the one it names',
+    mut: [{ find: `                                     import_target[code](Src, Target),
+                                     exports_name[code](F, Name, Target).`,
+            replace: `                                     import_target[code](Src, _),
+                                     exports_name[code](F, Name, _).`,
+            file: 'rules/js-dataflow.rofl' }],
+    // WHERE THE EDGE SET CANNOT LOOK, measured before this assertion existed:
+    // this mutant loses NO edge and gains none. `twin` is declared in delta.mjs
+    // and in beta.mjs, so both candidates carry the same NAME and `calls_in` —
+    // which is keyed by name — reports one string either way. Only the pair of
+    // functions the site resolves to says the module was ignored.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [], 'no edge moves');
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), [], 'in either direction');
+      assert.deepEqual(ambRows(m).filter((r) => !ambRows(b).includes(r)),
+        ['beta.mjs: twin@beta.mjs | twin@delta.mjs',
+         'beta.mjs: twin@delta.mjs | twin@beta.mjs'],
+        'the imported `twin` now means both the re-exported one and beta\'s own');
+      assert.equal(reexports(b).length, 13);
+      assert.equal(reexports(m).length, 35, 'gamma re-exports every function in the corpus');
+    },
+  },
+  {
+    name: 'r3 an IMPORT is read as a re-export',
+    mut: [{ find: `exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
+                                     module_source[code](E, Src, File),`,
+            replace: `exports_name[code](F, Name, File) :- module_source[code](E, Src, File),`,
+            file: 'rules/js-dataflow.rofl' }],
+    // THE COST OF SHARING `module_source` BETWEEN THE TWO FORMS, made visible.
+    // It holds of an import and of an export-all alike, so the kind literal
+    // beside it is the only thing that stops every importing file from
+    // re-exporting what it imports.
+    //
+    // AND THE CORPUS CANNOT TURN THIS INTO A WRONG ANSWER, which is said here
+    // rather than hidden behind a green line: nothing imports from beta.mjs, so
+    // thirteen facts that should not exist reach no call site. The oracle is
+    // the fact, by name, and the day something imports from beta this mutant
+    // starts costing an edge as well.
+    expect: (m, b) => {
+      assert.deepEqual(betaExports(b), ['bcross@beta.mjs', 'bmain@beta.mjs', 'bviaNs@beta.mjs',
+        'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
+        'beta.mjs exports what beta.mjs declares');
+      assert.deepEqual(betaExports(m).filter((x) => !betaExports(b).includes(x)),
+        ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs', 'run@alpha.mjs',
+         'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs', 'useCond@alpha.mjs',
+         'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs', 'useSeq@alpha.mjs',
+         'useShelf@alpha.mjs'],
+        'beta.mjs re-exports everything it imports, through both of its sources');
+    },
+  },
+  {
+    name: 'r4 the SPECIFIER of an export-all is not a module source',
+    mut: [{ find: `module_source[code](N, Src, File) :- ast_node[code](N, export_all_declaration, File, _),
+                                     ast_child[code](N, source, 0, S), ast_value[code](S, Src).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    // THE MUTANT THAT SURVIVED THE FIRST CORPUS, and the reason is worth more
+    // than the kill: with gamma re-exporting only alpha.mjs, every specifier an
+    // `export *` names was ALSO named by an ordinary import somewhere, so the
+    // resolver reached the same set of modules without this arm. delta.mjs is
+    // imported by nothing, so `./delta.mjs` is a specifier that exists here and
+    // in no other declaration in the corpus.
+    expect: (m, b) => {
+      assert.deepEqual(b.q('import_target[code](S, T)'),
+        [['./alpha.mjs', 'alpha.mjs'], ['./delta.mjs', 'delta.mjs'], ['./gamma.mjs', 'gamma.mjs']]);
+      assert.deepEqual(m.q('import_target[code](S, T)'),
+        [['./alpha.mjs', 'alpha.mjs'], ['./gamma.mjs', 'gamma.mjs']],
+        'the module only a re-export names stops being resolvable');
+      assert.deepEqual(reexports(m), [], 'so gamma re-exports nothing at all');
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaStar -> crossed']);
+    },
+  },
+];
+
+for (const g of REEXPORT) test(`${g.name} — re-export`, () => g.expect(build(g.mut), base()));
+
+test('a re-export carries names and not the default, and the receiver keeps its own', () => {
+  const m = base();
+  // THE POSITIVE HALF. `crossed` is imported TWICE under two names — `leaf`
+  // straight from alpha.mjs and `viaStar` only through gamma's `export *` — so
+  // the two paths are told apart by which local name resolves.
+  assert.ok(edges(m).has('bviaStar -> crossed'), 'the re-exported name reaches its function');
+  assert.deepEqual(reexports(m), ['crossed@alpha.mjs', 'leaf@alpha.mjs', 'main@alpha.mjs',
+    'run@alpha.mjs', 'twin@delta.mjs', 'useAssign@alpha.mjs', 'useBin@alpha.mjs',
+    'useCond@alpha.mjs', 'useOr@alpha.mjs', 'usePanel@alpha.mjs', 'useRack@alpha.mjs',
+    'useSeq@alpha.mjs', 'useShelf@alpha.mjs'],
+    'gamma re-exports the NAMED exports of both its sources, and nothing else');
+  // ...AND NOT THE DEFAULT, which `export *` deliberately leaves behind. This is
+  // asserted rather than assumed because `exports_default[code]` is a separate
+  // relation with no re-export arm at all, and its absence is the rule.
+  assert.deepEqual(m.q('exports_default[code](F, File)').map(([, f]) => f).sort(),
+    ['alpha.mjs', 'beta.mjs'], 'gamma re-exports alpha, and alpha\'s default stays alpha\'s');
+  // THE COLLISION RESOLVES THE RIGHT WAY ROUND: two functions named `twin`, one
+  // reached through gamma and one declared in the calling file, and neither
+  // answers for the other.
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  assert.deepEqual(m.q('imports_name[code](L, N, S, "beta.mjs")')
+    .map(([l, n, s]) => `${l}=${n}@${s}`).sort(),
+    ['leaf=crossed@./alpha.mjs', 'trace=trace@./trace.mjs', 'viaStar=crossed@./gamma.mjs',
+     'viaTwin=twin@./gamma.mjs']);
+});
+
 
 test('the kernel refuses, and somebody reads the refusal', () => {
   // THE GATE THIS ITERATION EARNED. `str_pre(S, Sep)` is the part before the
@@ -564,7 +745,7 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // executed, so every callee it names is silent for a reason that has nothing
   // to do with control flow — the first draft of this assertion listed five of
   // them and looked like a real hole.
-  const RUN = ['alpha.mjs', 'beta.mjs'];
+  const RUN = ['alpha.mjs', 'beta.mjs', 'gamma.mjs', 'delta.mjs'];
   const derived = new Set(m.q('calls_in[code](File, A, B)')
     .filter(([file]) => RUN.includes(file)).map(([, , b]) => b));
   const silent = [...derived].filter((f) => !ran.has(f)).sort();

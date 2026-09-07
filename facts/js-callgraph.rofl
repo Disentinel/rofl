@@ -98,13 +98,9 @@ handled(js, assignment_expression,           callgraph, r_member_write).
 handled(js, import_declaration,              callgraph, r_imported_name).
 handled(js, import_specifier,                callgraph, r_imported_name).
 handled(js, export_named_declaration,        callgraph, r_imported_name).
--- ...and the four forms this corpus cannot exercise keep their reason. A
--- default export, a namespace import, a default-specifier import and
--- `export *` are each a different binding rule, and NONE of them appears in a
--- position where the answer could be checked: `bdefault` is called by the
--- harness, not by an importing module. Declaring them answered would be a
--- claim no site backs.
-unknown_because(js, export_all_declaration,     callgraph, not_yet).
+-- ...and the four forms this corpus could not exercise are now zero. The last
+-- of them, `export *`, was answered on 2026-09-07 and is recorded at line 394
+-- with the other three, where the kind is declared.
 unknown_because(js, super,                   callgraph, not_yet).
 -- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
 -- by the refinement column, so a KIND-level reason has no cell to sit on. The
@@ -381,8 +377,10 @@ node_kind(js, import_default_specifier).
 node_kind(js, import_namespace_specifier).
 node_kind(js, export_default_declaration).
 node_kind(js, export_all_declaration).
--- three of the four produce no node in this corpus, and say so
-kind_absent_ok(export_all_declaration, a_no_corpus_site).
+-- ALL FOUR HAVE A SITE NOW. `kind_absent_ok(export_all_declaration, ...)` stood
+-- here until 2026-09-07 and `kind_absent_stale[audit]` is what takes it away:
+-- gamma.mjs is two `export *` lines, so the kind that had no corpus site has
+-- two, and an excuse that outlives its reason is a lie the matrix can catch.
 
 -- THE OTHER TWO SPECIFIERS AND THE DEFAULT EXPORT, 2026-09-07. A namespace
 -- import binds the module object — the other file's `program` node — and a
@@ -392,3 +390,9 @@ kind_absent_ok(export_all_declaration, a_no_corpus_site).
 handled(js, import_namespace_specifier, callgraph, r_imported_name).
 handled(js, import_default_specifier,   callgraph, r_imported_name).
 handled(js, export_default_declaration, callgraph, r_imported_name).
+-- ...AND THE RE-EXPORT, 2026-09-07, under its own rule name because it is its
+-- own rule: `export * from './x'` makes x's NAMES this module's, and the arm
+-- recurses on `exports_name` so a chain of them works at any depth. The site
+-- is gamma.mjs, which declares no function and re-exports two modules, one of
+-- which nothing else imports.
+handled(js, export_all_declaration,     callgraph, r_reexported_name).

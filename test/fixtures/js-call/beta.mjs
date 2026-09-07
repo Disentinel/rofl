@@ -16,6 +16,15 @@ import { crossed as leaf } from './alpha.mjs';
 // which imports nothing from here, so no cycle is created.
 import * as alphaNs from './alpha.mjs';
 import adefault from './alpha.mjs';
+// ...and the SAME function reached through a RE-EXPORT. `crossed` is imported
+// twice under two names on purpose: `leaf` comes straight from alpha.mjs and
+// `viaStar` only through gamma.mjs's `export *`, so a rule that cannot follow a
+// re-export loses one and keeps the other.
+import { crossed as viaStar } from './gamma.mjs';
+// ...and a name reached through the SAME re-export that beta.mjs also declares
+// itself, one line below. `twin` is delta.mjs's, `twin` is also beta's, and the
+// two are told apart only by the file each is declared in.
+import { twin as viaTwin } from './gamma.mjs';
 
 export function run(n) {
   trace();
@@ -78,7 +87,27 @@ export function bviaNs(n) {
   return alphaNs.crossed(n) + adefault(n);
 }
 
+export function bviaStar(n) {
+  trace();
+  return viaStar(n);
+}
+
+// THE COLLIDING DECLARATION. Two call sites in one function: the first goes
+// through gamma's `export *` to delta.mjs, the second stays here. Both callees
+// are named `twin`, so the EDGE is one string either way — which is precisely
+// why a rule that re-exports the wrong module cannot be caught by the edge set
+// and is caught by which function each site resolves to.
+export function twin(n) {
+  trace();
+  return n - 40;
+}
+
+export function bviaTwin(n) {
+  trace();
+  return viaTwin(n) + twin(n);
+}
+
 export function bmain() {
   trace();
-  return run(5) + buseNs(1) + bcross(1) + bviaNs(1);
+  return run(5) + buseNs(1) + bcross(1) + bviaNs(1) + bviaStar(1) + bviaTwin(1);
 }
