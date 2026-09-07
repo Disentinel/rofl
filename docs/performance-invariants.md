@@ -490,3 +490,83 @@ than assumed. Full account in
   in the task module both arms share.
 - **No change to `src/`.** Worker orchestration is a host concern and lives in
   `runtime/fork_pool.ts` and `runtime/fork_worker.ts`.
+
+## Correction, 2026-09-07: tier 2 is 1.02–1.13×, and the estimate above was taken on the synthetic fact
+
+"The memory decision, in three tiers" prices tier 2 — *intern names and
+perspectives, typed tuples for small arity* — at **2–3×**. Tier 2 was built and
+measured. Full account in `docs/dogfood/2026-09-07-tier-2-interning.md`; the
+load-bearing results:
+
+- **Interning the relation and perspective STRINGS measures exactly zero**, on
+  all seven programs. The probe is not blind: de-sharing the same names costs
+  **41–64 bytes per fact**, so the ceiling exists and the parser plus V8 were
+  already sitting on it. This is the doc's own marginal — *46 extra characters
+  of name cost 30 bytes per fact* — read forward.
+- **What pays is one atom OBJECT per name**, in `mka` (`src/unify.ts`):
+  **2.3–10.0%** of the live heap, paired and 21 of 21. Interning integers and
+  strings adds 1.2–3.2% more and was not kept — their value space is the data's,
+  and bounding it would bound how much of a corpus can be shared.
+- **Hash-consing terms inside `Store.add` made every program 15–21% BIGGER.**
+  Two causes worth carrying: the replaced term is still reachable from the
+  parse, so the store adds rather than saves; and a table keyed by canonical
+  renderings retains one string per distinct value, which for a functor is as
+  long as the thing it indexes.
+- **The 2–3× came from an arity-1 synthetic**, where args are 106 of 332 bytes.
+  On real programs the boxed-`Term[]` argument representation retains
+  **8.4–27.7%** of the live heap (188–345 B/fact, measured by replacing every
+  fact's args with one shared empty array), so the whole of tier 2 done ideally
+  — including a typed tuple, which cannot be built without changing
+  `FactRec.args`'s TYPE — is about **1.4×**.
+
+### The marginal byte, which is the number an extrapolation needs
+
+A demo's average charges every fact a share of the program. `bench/mem_scale.ts`
+measures one rule over a flat EDB at 20,000 and 40,000 base facts:
+
+| | before | after |
+|---|---|---|
+| marginal per STORED fact | 638 B | **566 B** |
+| marginal per BASE fact | 3191 B | **2831 B** |
+| base facts in a 16 GB heap | 5.4M | **6.1M** |
+
+Assumptions: heap only; this rule shape (one derived fact and one `derived_by`
+row per base fact); pointer compression on, so a heap past 4 GB is a regime this
+does not reach; no `retainTicks`.
+
+### And 87% of what it saves is the `[$kernel]` book, not the data
+
+Same program over data with all-distinct symbols (nothing shareable) versus a
+hundred-symbol vocabulary: **72.1 B/fact saved on distinct data, 82.8 on
+repeated** — so the data's own repetition is 13% of the saving and the program's
+vocabulary plus the kernel book is 87%. The kernel book is 60% of the stored
+facts on that program and 59–77% across five demos. **For a workload of enormous
+data over a program of ordinary size, that is the worst possible split**, and it
+points at a `derived_by` retention policy — a policy question, not a
+representation one — as worth several times what interning is.
+
+### Cost, and it is on the BUILD path
+
+Paired A/B, load average 6.2–6.7: **build (load + evaluate) 0–8% slower**,
+program-dependent (`spat` free, `goof` 7/8 pairs slower); **query unchanged** —
+`mka` is called by the parser and the reflection, never by the matching path.
+A suite re-raises a world about a thousand times a run, so that cost is real.
+
+### What this does to §5 item 3 and to the Rust decision
+
+Item 3 stays first — nothing else is ranked above it — but its **value is
+1.02–1.13× measured and ~1.4× ideally, not 2–3×**, and it does not raise the
+allocation ceiling on fork parallelism by anything like the amount §5 implies.
+`f_js_is_the_prototype_rust_is_the_scale` is unaffected and better supported: the
+remaining factor of forty is not reachable from inside this representation.
+
+The coupling census that priced the port is `scanners/key_coupling.ts`
+(`npm run keycoupling`). **153 sites in `src/`, of which 37 are semantic rather
+than mechanical** — the places where the key's spelling and its lexicographic
+collation are in the recorded answer. The sharpest is one line: `Store.witnessOf`
+picks the LEAST firing signature, and a signature is built out of premise fact
+KEYS, so the canonical witness of every derived fact is a function of how a key
+is spelled. Order-independence of the whole record became a theorem at `e7932b1`
+**over a fixed key spelling**. A native store with an integer fact id can be
+byte-identical on `canonicalState` only if it carries that spelling as an
+ORDERING FUNCTION it never materialises.

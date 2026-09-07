@@ -29,7 +29,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Store } from '../src/store.ts';
-import { mka } from '../src/unify.ts';
+import { mka, atomCacheSize } from '../src/unify.ts';
 
 /** Facts, 40 000 of them, cost about 12 MB either way — big enough that the
  *  per-fact difference clears the noise of a heap reading, small enough that
@@ -99,4 +99,49 @@ test('the scale rejects a fact it should reject', { skip: SKIP }, () => {
 test('the parked stores are still whole', { skip: SKIP }, () => {
   assert.equal(parked.length, 4);
   for (const s of parked) assert.equal(s.facts.size, N);
+});
+
+// ---------------------------------------------------------------------------
+// THE ATOM CACHE, and why it needs a test at all.
+//
+// `mka` returns one object per atom name (src/unify.ts). Measured 2026-09-07
+// on seven programs, that is 2.3 to 10.0 per cent of the live heap. NO
+// CORRECTNESS GATE HERE CAN SEE IT: three mutants were run against the order
+// census, the store conformance suite and two golden-bearing tests — the cache
+// switched off, the sharing it rests on broken, and its bound removed — and all
+// three SURVIVED green. Two equal atoms that are different objects derive
+// exactly the same facts, which is the whole reason the sharing is safe and the
+// whole reason nothing notices when it stops.
+//
+// So the two properties are asserted directly. The first holds the sharing in
+// place; the second holds the BOUND in place, which is the difference between a
+// cache and a leak in a host that loads and excises programs for as long as it
+// runs. Nothing may depend on atom identity for meaning — that is what makes
+// clearing the cache on overflow harmless — so this file asserts identity as a
+// MEMORY property and never as a semantic one.
+
+test('equal atoms are one object, so a program pays for each name once', () => {
+  // ACROSS OTHER NAMES, not merely consecutively: a table that held one entry
+  // would pass the consecutive form and share nothing, which is exactly what
+  // the cap-of-one mutant does.
+  const a = mka('some_relation_name');
+  for (let i = 0; i < 64; i++) mka(`between_${i}`);
+  const b = mka('some_relation_name');
+  assert.equal(a, b, 'mka must return the same object for the same name');
+  assert.notEqual(mka('x_one'), mka('x_two'), 'and different objects for different names');
+  assert.deepEqual(mka('x_one'), { k: 'a', name: 'x_one' }, 'without changing what an atom IS');
+});
+
+test('the atom cache is bounded — it is a cache, not an intern table', () => {
+  const { cap } = atomCacheSize();
+  for (let i = 0; i < cap * 2 + 5; i++) mka(`bounded_probe_${i}`);
+  const { size } = atomCacheSize();
+  assert.ok(size <= cap,
+    `${size} atoms held against a cap of ${cap}. An atom table that only grows is ` +
+    `a leak in a long-running host: no store event prunes it, because a term is ` +
+    `not reference-counted and remove/clearDerived/advanceTick/excise cannot say ` +
+    `whether a name still has a holder. The bound is the only thing that does.`);
+  // and it still works after an overflow, which is the property that makes
+  // clearing safe rather than merely bounded
+  assert.equal(mka('after_overflow'), mka('after_overflow'));
 });
