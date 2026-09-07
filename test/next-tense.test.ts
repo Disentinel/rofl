@@ -161,7 +161,13 @@ test('the kernel publishes the head tense, and it is readable by a rule', () => 
   // the tense reaches a relation NAME through an ordinary join, which is
   // exactly what boot.rofl does with it
   assert.equal(r.load('staged_rel(Rel) :- concludes(R, Rel), conclusion_tense(R, next).').ok, true);
-  assert.deepEqual(rows(r, 'staged_rel(Rel)'), ['Rel = later']);
+  // boot.rofl stages two relations of its own -- `imports` and `collects`, the
+  // ledger declarations it carries across the boundary so that a licence does
+  // not expire at midnight -- so the answer here is a SET and not a singleton.
+  // Named rather than filtered out: if a third joins them the join is what
+  // should say so.
+  assert.deepEqual(rows(r, 'staged_rel(Rel)'),
+    ['Rel = collects', 'Rel = imports', 'Rel = later']);
 });
 
 // ---------------------------------------------------------------------------

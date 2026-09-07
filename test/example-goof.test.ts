@@ -77,7 +77,29 @@ test('a rule uniform in the ledger is no leak, and the audit still bites', () =>
   // is the sentence that can, said at the ledger that actually gathers --
   // `proposition[main](P) :- axiom[G](P)` pools all nine axiom sets into one
   // language, which is half the thesis.
-  assert.deepEqual(pairs(r, 'leak[audit](A, B)', 'A', 'B'), []);
+  //
+  // TWO ROWS STAND, AND THEY ARE NOT THIS TEST'S SUBJECT. goof.rofl names one
+  // of them in its own words -- "ONE ROW IS LEFT REPORTING HERE, AND IT IS A
+  // GAP IN THE LANGUAGE. `leak[audit](main, $var(\"G\"))`: a rule reads [main]
+  // -- the arithmetic and structural helpers nobody gave a book to -- and
+  // writes the ledger VARIABLE. The crossing's DESTINATION is unnameable" --
+  // and the second is that same walk one hop further back, since boot.rofl's
+  // `flow($kernel, main)` reaches [main] and [main] reaches the variable.
+  // `imports($var("G"), main).` would silence both and is WRONG: it licenses
+  // by the spelling of the variable, so renaming ?G to ?H would revoke it.
+  // Finding `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`,
+  // which `demands(..., decision)`; examples/npc carries the same row.
+  //
+  // Pinned rather than expected away: green on an honest checkout, red the
+  // moment the SET changes -- including if it goes empty because the audit
+  // stopped looking.
+  assert.deepEqual(pairs(r, 'leak[audit](A, B)', 'A', 'B'),
+    [['$kernel', '$var("G")'], ['main', '$var("G")']]);
+  // and what the DECLARATION is worth is the difference between that set and
+  // the one without it: the three walks out of a ledger variable are silent.
+  assert.deepEqual(pairs(r, 'gathered(A, B)', 'A', 'B').filter(([a]) => a.startsWith('$var')),
+    [['$var("G")', '$var("G")'], ['$var("G")', 'audit'], ['$var("G")', 'main'],
+      ['$var("H")', '$var("G")'], ['$var("H")', 'audit'], ['$var("H")', 'main']]);
   assert.ok(r.holds('collected[audit](main)'),
     'the collection declaration was EXERCISED, not merely written');
   const reads = r.query('reads_from(R, A)').rows.map((x) => x.bindings['A']);
@@ -142,16 +164,31 @@ test('substituting the ledger away derives the same facts, at nine times the rul
   //
   // `collects` cannot help the expansion, and should not: every source there
   // is a NAMED ledger, so the honest declaration for the expanded program is
-  // 72 `imports` facts. That is the trade this test measures, now in a second
-  // currency -- the expansion multiplies rules by ten AND turns one true
-  // sentence about [main] into 72 about pairs of books.
+  // an `imports` fact per pair. That is the trade this test measures, now in a
+  // second currency -- the expansion multiplies rules by ten AND turns one
+  // true sentence about [main] into 108 about pairs of ledgers.
   const exLeaks = ex.query('leak[audit](A, B)').rows
     .map((x) => [x.bindings['A'], x.bindings['B']]);
-  assert.equal(exLeaks.length, 81, 'nine books times eight others plus [audit]');
+  // 108 and not 81, and the 27 in the difference are the ones an earlier count
+  // of "nine books times eight others plus [audit]" left out: [main] is an
+  // endpoint too, in both directions (9 + 9), and boot.rofl's [$kernel]
+  // reaches every book through it (9). Those last two groups are the expanded
+  // form of the two rows the polymorphic program leaves standing above.
+  assert.equal(exLeaks.length, 108);
   assert.equal(exLeaks.filter(([, b]) => b === 'audit').length, 9);
-  assert.equal(new Set(exLeaks.map(([a]) => a)).size, 9, 'every book is a source');
-  assert.deepEqual(exLeaks.filter(([a, b]) => a.startsWith('$') || b.startsWith('$')), [],
+  assert.equal(exLeaks.filter(([a, b]) => a !== 'main' && b === 'main').length, 9,
+    'every book reaches [main] -- the walk `collects(main)` covers, spelled out');
+  assert.equal(exLeaks.filter(([a]) => a === 'main').length, 9);
+  assert.equal(exLeaks.filter(([a]) => a === '$kernel').length, 9);
+  assert.equal(new Set(exLeaks.map(([a]) => a)).size, 11,
+    'every book is a source, and so are [main] and [$kernel]');
+  // POLYMORPHIC, not merely `$`-prefixed. `$kernel` is a NAMED ledger with an
+  // `authority` fact -- boot.rofl's own book -- and it is an endpoint of nine
+  // of the rows above; a `startsWith('$')` test called it an artefact and was
+  // wrong about which of the two things `$` means here.
+  assert.deepEqual(exLeaks.filter(([a, b]) => a.startsWith('$var') || b.startsWith('$var')), [],
     'nothing polymorphic survives the expansion, so nothing here is an artefact');
+  assert.ok(ex.holds('perspective($kernel)'), 'and the one `$` left is a REGISTERED ledger');
   assert.deepEqual(new Evaluation(ex.store).rules.filter((x) => !x.safe).map((x) => x.canon), []);
   const exp = expandRules(RULES, BOOKS);
   assert.equal(exp.before, 28);

@@ -52,6 +52,27 @@ const WATCH = [
   'any_option', 'contender', 'preempted', 'does', 'uncovered', 'tie',
 ];
 
+/** THE ONE ROW THE AUDIT REPORTS, PINNED RATHER THAN EXPECTED AWAY.
+ *
+ *  npc.rofl says it in its own words, beside the declarations: "NOT DECLARED,
+ *  and left reporting on purpose: `world -> $var("A")`. A rule reads [world]
+ *  and writes an agent's OWN journal under the ledger variable, so the
+ *  crossing's DESTINATION is unnameable." `collects(X)` is the mirror image --
+ *  it says "X gathers from books it does not name" -- and there is no sentence
+ *  in this language for a NAMELESS READER of a NAMED book. The one line that
+ *  silences it, `imports($var("A"), world).`, is writable and wrong: it
+ *  licenses by the SPELLING OF THE VARIABLE, so renaming ?A to ?B in the rule
+ *  would revoke it.
+ *
+ *  That is finding `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`
+ *  and it `demands(..., decision)` -- an owner's call about the language, not a
+ *  repair. examples/goof carries the same row for the same reason. Until it is
+ *  taken, the row is pinned HERE: the gate stays green on an honest checkout
+ *  (a gate red on one gets switched off, and then its absence is invisible)
+ *  and goes red the moment the SET changes -- a second leak, or this one
+ *  quietly disappearing because the audit stopped looking. */
+const LEAK = [{ A: 'world', B: '$var("A")' }];
+
 // one settled world at tick 1, one run, one run with the learned rule
 const base = head();
 publish(base, START);
@@ -92,10 +113,10 @@ test('every rule is range-restricted, nothing is demand-evaluated, nothing is un
   assert.deepEqual(h.unstratified, []);
 });
 
-test("boot.rofl's own audits over NPC's reflection are all empty", () => {
+test("boot.rofl's own audits over NPC's reflection are all what npc.rofl says", () => {
   const h = hygiene(base, WATCH);
   assert.deepEqual(h.audits, {
-    malformed: 0, breach: 0, leak: 0, forged: 0, unmoded: 0, undefined_premise: 0,
+    malformed: 0, breach: 0, leak: LEAK.length, forged: 0, unmoded: 0, undefined_premise: 0,
   });
   // and empty because TWO declarations were written, not because the audit
   // stopped looking: `imports(audit, choice)` for the named walk, and
@@ -105,6 +126,7 @@ test("boot.rofl's own audits over NPC's reflection are all empty", () => {
   assert.ok(base.holds('sees(audit, choice)'), 'the named crossing is declared');
   assert.ok(base.holds('collected[audit](mind)'),
     'the collection declaration was EXERCISED, not merely written');
+  assert.deepEqual(rows(base, 'leak[audit](A, B)'), LEAK);
 });
 
 test('the verdicts land in the strata boot.rofl computed, not in an assumed order', () => {
@@ -145,7 +167,10 @@ test('one polymorphic carry rule carries ten separate journals, and leaks nothin
   // is tick-scoped and would vanish here, taking the licence with it and
   // putting the leak back at tick 1 with nothing in the file changed.
   assert.ok(r.holds('collected[audit](mind)'), 'the declaration survived the tick');
-  assert.deepEqual(rows(r, 'leak[audit](A, B)'), []);
+  // the SAME one row as at load, and no more: what the tick may not do is add
+  // a leak by losing a licence, which is what it did until boot.rofl carried
+  // `imports` and `collects` across the boundary (test/bridges.test.ts 13-18).
+  assert.deepEqual(rows(r, 'leak[audit](A, B)'), LEAK);
   // and the journals are genuinely separate: npc_3 saw npc_5, npc_1 did not
   assert.ok(!r.holds('saw[npc_1](npc_5, warden, 4, 5, hurt, 0)'));
 });

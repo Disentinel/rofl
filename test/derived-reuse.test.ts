@@ -445,7 +445,24 @@ test('a new relation moves `undefined_premise` and leaves `flows_to` alone; a ne
     perspective: r.store.derivedKeys.get('perspective'),
   });
   const base = snap();
-  for (const [k, v] of Object.entries(base)) assert.ok(v, `${k} is reusable to begin with`);
+  for (const [k, v] of Object.entries(base)) {
+    if (k === 'sees') continue;
+    assert.ok(v, `${k} is reusable to begin with`);
+  }
+  // AND THE ONE THAT IS NOT, WITH THE PRICE NAMED. boot.rofl carries its
+  // ledger declarations across the tick — `imports(P, Q) @next :- imports(P, Q)`
+  // — and a rule that stages '@next' cannot promise its relation, so `imports`
+  // is opaque and everything reading it goes with it. Measured, and it is
+  // exactly six relations and no program relation among them: `sees`,
+  // `crossing`, `leak`, `gathered`, `collects_from`, `collected`. `flows_to`
+  // is NOT one of them, which is the one that would have cost something: it is
+  // the transitive closure and it stays reusable.
+  assert.equal(base.sees, undefined,
+    'the carried declaration makes `sees` opaque, and that is the price of it');
+  for (const rel of ['crossing', 'leak', 'gathered', 'collects_from', 'collected']) {
+    assert.equal(r.store.derivedKeys.get(rel), undefined, `${rel} goes with it`);
+  }
+  assert.ok(r.store.derivedKeys.get('flows_to'), 'and the closure does NOT');
 
   // a fact of an EXISTING relation: nothing in the meta layer may move. The
   // relation already carries its `edb` mark, and the fact declares nothing.
@@ -462,14 +479,16 @@ test('a new relation moves `undefined_premise` and leaves `flows_to` alone; a ne
     'undefined_premise saw the declaration');
   assert.equal(withRel.flows_to, base.flows_to, 'flows_to is immune to data');
   assert.equal(withRel.flow, base.flow, 'flow is immune to data');
-  assert.equal(withRel.sees, base.sees, 'visibility is immune to relations');
+  assert.equal(withRel.perspective, base.perspective, 'visibility is immune to relations');
 
-  // a fact in a NEW perspective: `sees`/`perspective` move, `flows_to` still not.
+  // a fact in a NEW perspective: `perspective` moves, `flows_to` still not.
+  // (`sees` used to carry this half and can no longer: it has no fingerprint
+  // at all now, and an equality between two `undefined`s is not a measurement.)
   must(r.assert('zzz_fresh[side](2).'), 'side');
   r.evaluate();
   const withPersp = snap();
-  assert.notEqual(withPersp.sees, withRel.sees, 'sees saw the perspective');
-  assert.notEqual(withPersp.perspective, withRel.perspective, 'perspective saw it too');
+  assert.notEqual(withPersp.perspective, withRel.perspective, 'perspective saw the perspective');
+  assert.equal(withPersp.sees, undefined, 'and `sees` is still opaque, not merely equal');
   assert.equal(withPersp.flows_to, base.flows_to, 'flows_to is still immune');
   assert.equal(withPersp.undefined_premise, withRel.undefined_premise,
     'the relation was already declared');

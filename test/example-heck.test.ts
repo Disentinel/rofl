@@ -23,6 +23,7 @@ import {
   judge, chanceryWorld, docketFacts, codexFacts, parseCodex, CODEX,
   foldChaos, foldUncapped, remedy, hygiene, rows, col,
 } from '../examples/heck/demo.ts';
+import { Rofl } from '../src/api.ts';
 import { REJECTED } from '../runtime/semirings.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -42,10 +43,37 @@ test('heck: every boot.rofl audit over HECK is empty', () => {
   for (const { goal, count } of hygiene(r)) {
     assert.equal(count, 0, `${goal} should be empty, got ${count}`);
   }
-  // the [audit] and [chancery] heads read [main]; leak/2 being empty means the
-  // kernel emitted a bridge_decl for each, which is the whole check
-  assert.ok(rows(r, 'bridge_decl(R, F, T)').length > 0,
-    'the verdict rules really do cross a ledger boundary');
+  // THE POSITIVE CONTROL, and it had to be rewritten. It used to read
+  // `bridge_decl(R, F, T)` — a row `src/reflect.ts` emitted for every rule
+  // whose head named a ledger and whose body read another — and argued that a
+  // non-empty table meant the verdict rules really do cross a boundary.
+  // Nothing emits `bridge_decl` any more (see test/bridges.test.ts, MUTANT 8),
+  // so the assertion had become a query for a relation that cannot be
+  // populated, permanently red and about nothing. The control it was making is
+  // still the right one and is made here directly: the crossings exist, and
+  // the zero above is the doing of two lines somebody TYPED.
+  const hops = rows(r, 'flow(A, B)').filter((x) => x['A'] !== x['B'])
+    .map((x) => `${x['A']} -> ${x['B']}`).sort();
+  assert.deepEqual(hops, ['$kernel -> audit', '$kernel -> main', 'main -> audit',
+    'main -> chancery'], 'the verdict rules really do cross a ledger boundary');
+  assert.ok(r.holds('imports(chancery, main)'), 'and the crossing is DECLARED');
+
+  // and the declaration is load-bearing: strike that one line from heck.rofl
+  // and the walk it licenses is reported by name. A silence nothing can break
+  // is not a result.
+  const HECK_SRC = read('examples', 'heck', 'heck.rofl');
+  const DECL = 'imports(chancery, main).';
+  assert.ok(HECK_SRC.includes(DECL + '\n'), 'the mutant is not vacuous');
+  const stripped = new Rofl();
+  assert.equal(stripped.load(read('boot.rofl')).ok, true);
+  assert.equal(stripped.load(HECK_SRC.replace(DECL + '\n', '')).ok, true);
+  assert.equal(stripped.load(codexFacts(CDX)).ok, true);
+  // TWO rows, not one, and the second is the transitive half: `sees` is the
+  // closure of `imports`, so the struck line was also carrying
+  // `sees(chancery, $kernel)` through [main]. One declaration, two walks.
+  assert.deepEqual(rows(stripped, 'leak[audit](A, B)')
+    .map((x) => `${x['A']} -> ${x['B']}`).sort(),
+  ['$kernel -> chancery', 'main -> chancery']);
 });
 
 // ---------------------------------------------------------------------------

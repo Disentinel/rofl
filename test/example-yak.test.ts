@@ -82,6 +82,9 @@ test('03 metadep — the closure is immune to data, the edb reader is not', () =
   /** Did that relation's reuse fingerprint move on that mutation? */
   const moved = (line: string, rel: string) =>
     new RegExp(`\\b${rel}=\\d+\\*`).test(line);
+  /** Has that relation no reuse fingerprint at all? */
+  const opaque = (line: string, rel: string) =>
+    new RegExp(`\\b${rel}=\\d+!`).test(line);
   const [base, existing, newRel, newPersp, authored] = lines;
   // THE RULE-SHAPED HALF. This was `dep`, `dep_neg` and `reach` until boot.rofl
   // stopped deriving them; `flow`/`flows_to` is the closure that remains, over
@@ -100,9 +103,23 @@ test('03 metadep — the closure is immune to data, the edb reader is not', () =
   // is why the fragment prints it.
   assert.equal(moved(existing, 'undefined_premise'), false, 'an existing relation moves nothing');
   assert.equal(moved(newRel, 'undefined_premise'), true, 'a new relation moves the edb reader');
-  assert.equal(moved(newRel, 'sees'), false, 'and does not move visibility');
-  assert.ok(val(newPersp, 'sees') > val(newRel, 'sees'), 'a new perspective moves sees');
-  assert.equal(moved(newPersp, 'sees'), true);
+  assert.equal(moved(newRel, 'perspective'), false, 'and does not move visibility');
+  assert.ok(val(newPersp, 'perspective') > val(newRel, 'perspective'),
+    'a new perspective moves the perspective table');
+  assert.equal(moved(newPersp, 'perspective'), true);
+  // AND THE THIRD STATE, which is the point of the `!` this fragment gained.
+  // `sees` used to carry the half above and cannot any more: boot.rofl carries
+  // its import graph across the tick, a rule that stages '@next' cannot
+  // promise its relation, and so `sees` has NO fingerprint on any line. Read
+  // with two states it would have looked immune to everything -- the exact
+  // opposite of the truth -- and its fact count still moves, which is checked
+  // here so the two halves cannot drift apart.
+  for (const l of [base, existing, newRel, newPersp, authored]) {
+    assert.equal(opaque(l, 'sees'), true, 'sees has no reuse key on any line');
+    assert.equal(moved(l, 'sees'), false, 'and therefore never shows one moving');
+  }
+  assert.ok(val(newPersp, 'sees') > val(newRel, 'sees'),
+    'while the relation itself is very much alive: a new perspective grows it');
   assert.equal(val(authored, 'forged'), 1, 'an authored fact fires the forgery audit');
   assert.equal(moved(existing, 'forged'), true, 'forged is per-fact: nothing about it is cacheable');
 });
@@ -297,10 +314,24 @@ test('hygiene — MOOT condemns a dead audit and spares the retained one', () =>
   // sees(X, Q).`, the transitive step. The closure of the import graph had
   // never once been exercised by a program that loads only boot.rofl. The
   // count is 5 where it was 7.
+  //
+  // AND IT IS 6 AGAIN, for a reason that is the mirror of the one above.
+  // boot.rofl now carries its ledger declarations across the tick —
+  // `collects(X) @next :- collects(X).` — and in a store where no program has
+  // written a `collects` fact that clause can never fire, so it joins the
+  // three `collects`-shaped rules that were already on this list. A bare
+  // boot.rofl declares no collection, exactly as it declares no
+  // `demands_authorship`; the carry rule is dead here for the same reason its
+  // subject is unreachable here, and alive the moment a program says
+  // `collects(X)`. The `imports` half is NOT on the list, because boot.rofl
+  // writes three import rows of its own.
   assert.match(t, /unreachable relations: collected collects collects_from demands_authorship gathered unattributed/);
   assert.doesNotMatch(t, /unreachable relations:[a-z_ ]*\bimports\b/,
     'imports is populated by boot.rofl now — a licence nobody writes is what this list is for');
-  assert.match(t, /rules that can never fire in this store: 5/);
+  assert.match(t, /rules that can never fire in this store: 6/);
+  assert.match(t, /concluding collects/);
+  assert.doesNotMatch(t, /concluding imports/,
+    'the import half of the carry DOES fire: boot.rofl declares three of them');
   assert.match(t, /concluding unattributed/);
   assert.doesNotMatch(t, /concluding forged/,
     'the forgery audit is no longer dead — that is the whole repair');
