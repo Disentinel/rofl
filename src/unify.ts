@@ -8,11 +8,70 @@ export type Term =
   | { k: 'a'; name: string }                    // atom
   | { k: 'f'; name: string; args: Term[] };     // functor(term, ...)
 
+/** ONE ATOM OBJECT PER NAME, up to a bound.
+ *
+ *  An atom is the kernel's symbol: a relation name reified by `factTerm`, a
+ *  perspective, a rule id, a constant written in a program. The same handful of
+ *  names is therefore built over and over — `derived_by` alone reifies the
+ *  relation and the perspective of every conclusion — and each build used to
+ *  cost one more object. Measured on seven programs (docs/performance-
+ *  invariants.md, tier 2): sharing them takes 2.3 to 10.0 per cent off the
+ *  live heap — paired A/B, 21 of 21 — and it is the largest single share of
+ *  what interning buys anywhere.
+ *
+ *  IT MUST BE HERE, NOT IN THE STORE, and that was measured too. Interning
+ *  inside `Store.add` was tried first and it made every program BIGGER — 15 to
+ *  21 per cent — for two reasons that only show up on a scale: the term the
+ *  store replaces is still reachable from the rule or the parse that built it,
+ *  so the copy is added rather than saved; and a table keyed by canonical
+ *  renderings retains one string per distinct value, which for functors is as
+ *  long as the thing it indexes. A constructor cannot make the duplicate in
+ *  the first place, and a table keyed by the atom's own name retains a string
+ *  the atom is holding anyway.
+ *
+ *  NOTHING MAY DEPEND ON THE IDENTITY, and nothing does: no code in `src/`
+ *  writes to a term, and every comparison goes through `unify` or `canonTerm`.
+ *  That is what makes this a CACHE rather than an identity table, which in turn
+ *  is what lets it be bounded.
+ *
+ *  THE BOUND IS THE LIFETIME ANSWER. An intern table that only grows is a leak
+ *  in a host that loads and excises programs for as long as it runs, and no
+ *  store event can prune this one: a term is not reference-counted, and
+ *  `remove`, `clearDerived`, `advanceTick` and `excise` all drop facts without
+ *  being able to say whether an atom still has a holder. So the table is capped
+ *  and cleared whole when it overflows. Sharing then restarts, which costs
+ *  memory and breaks nothing, because two equal atoms that are different
+ *  objects are exactly what this file did before. The programs in this
+ *  repository use 265 to 645 distinct atoms; the cap is twelve times the
+ *  largest of them and bounds the table's own cost at well under a megabyte.
+ *
+ *  Integers and strings are deliberately NOT shared. They measured a further
+ *  1.2 to 3.2 per cent together — a quarter of what the atoms are worth — and
+ *  their value space is the DATA's rather than the program's, so a bound on
+ *  them would be a bound on how much of a data set can be shared, which is a
+ *  worse thing to have to explain than the 2 per cent it buys. */
+const ATOM_CAP = 8192;
+const atomCache = new Map<string, Term>();
+
 export const mkv = (name: string): Term => ({ k: 'v', name });
 export const mki = (v: number): Term => ({ k: 'i', v });
 export const mks = (v: string): Term => ({ k: 's', v });
-export const mka = (name: string): Term => ({ k: 'a', name });
+export const mka = (name: string): Term => {
+  const hit = atomCache.get(name);
+  if (hit !== undefined) return hit;
+  const t: Term = { k: 'a', name };
+  if (atomCache.size >= ATOM_CAP) atomCache.clear();
+  atomCache.set(name, t);
+  return t;
+};
 export const mkf = (name: string, args: Term[]): Term => ({ k: 'f', name, args });
+
+/** How many atom names the cache is holding, and its cap. For the memory
+ *  census and for the test that holds the bound in place — a cache that can
+ *  grow without limit is the defect this reports, so it is readable rather
+ *  than private. */
+export const atomCacheSize = (): { size: number; cap: number } =>
+  ({ size: atomCache.size, cap: ATOM_CAP });
 
 // A substitution maps variable names to terms.
 export type Subst = Map<string, Term>;

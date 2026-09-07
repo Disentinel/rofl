@@ -1427,7 +1427,7 @@ export class Evaluation {
   private recordPrem(b: BodyElem, ref: PremRef, s: Subst): PremRef {
     if (b.t === 'bi') {
       const [l, r] = canonVars([resolve(b.l, s), resolve(b.r, s)]);
-      return { t: 'bi', desc: `${canonTerm(l)} ${b.op} ${canonTerm(r)}` };
+      return { t: 'bi', desc: [canonTerm(l), ' ', b.op, ' ', canonTerm(r)].join('') };
     }
     if (b.t === 'neg') return { t: 'neg', key: this.anonLitKey(b.lit, s) };
     // positive: a materialized demand result and a store hit both carry a
@@ -1438,13 +1438,13 @@ export class Evaluation {
 
   resolvedLitKey(lit: Lit, s: Subst): string {
     const p = walk(lit.persp, s);
-    return `${lit.rel}[${canonTerm(p)}](${lit.args.map((a) => canonTerm(resolve(a, s))).join(',')})`;
+    return [lit.rel, '[', canonTerm(p), '](', lit.args.map((a) => canonTerm(resolve(a, s))).join(','), ')'].join('');
   }
 
   /** resolvedLitKey with the variables that remain free named positionally. */
   anonLitKey(lit: Lit, s: Subst): string {
     const ts = canonVars([walk(lit.persp, s), ...lit.args.map((a) => resolve(a, s))]);
-    return `${lit.rel}[${canonTerm(ts[0])}](${ts.slice(1).map(canonTerm).join(',')})`;
+    return [lit.rel, '[', canonTerm(ts[0]), '](', ts.slice(1).map(canonTerm).join(','), ')'].join('');
   }
 
   /** The facts a positive premise has to look at.
