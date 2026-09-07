@@ -45,7 +45,19 @@ const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
   // `right` -- are in CONSTANTS below, beside the mode atoms `in` and `out`,
   // which is the same category: a place, not a relation.
   'unsafe_rule', 'premise_var', 'slot_arity',
-  'late_rule', 'demand_rel', 'trigger_of', 'neg_relation', 'provenance_reader'];
+  'late_rule', 'demand_rel', 'trigger_of', 'neg_relation', 'provenance_reader',
+  // THE FLOOR-SEALING DECLARATION, 2026-09-07. `sealed/1` is written by the
+  // PROGRAM and read by the kernel, exactly like `semantics/1` three lines
+  // above it: a floor saying that one of the three bodies of metadata the
+  // kernel keeps ABOUT it is no longer published. It is here rather than in
+  // KERNEL_RELS because the kernel never writes it.
+  //
+  // THE WIDENING IS ONE NAME AND IT IS PRICED: a program relation called
+  // `sealed` would now pass this check as a string literal in src/. Measured
+  // over the tree before adding it -- `sealed` occurs 0 times as a relation in
+  // any .rofl file -- so the collision costs nothing today and the name is on
+  // the record for whoever meets it next.
+  'sealed'];
 // Language syntax tokens the parser must know (keywords, not relations).
 // The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
 // they are here for the same reason `is` and `mod` are: the parser dispatches
@@ -67,7 +79,20 @@ const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n',
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
   'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator',
   'atom_unwritable',
-  'head', 'left', 'right'];
+  // THE ONE HOLE REASON THAT IS NOT A FAILURE. The other seven say the kernel
+  // tried and could not finish; this one says the PROGRAM asked it to stop
+  // keeping something, so the answer is missing on purpose. It needs its own
+  // atom for the reason `space_exhausted` needed one: the repairs point in
+  // opposite directions, and told `budget_exhausted` a caller raises the
+  // budget, which does nothing here.
+  'reflection_sealed',
+  'head', 'left', 'right',
+  // THE THREE BODIES `sealed/1` NAMES. Same category as the four slot atoms
+  // beside them and the mode atoms above: they name a PLACE in what the kernel
+  // keeps, not a relation, and no store key is ever one of them. The widening
+  // is three names; measured over the tree, `rules`, `assertions` and
+  // `provenance` occur 0 times as relation names in any .rofl file.
+  'rules', 'assertions', 'provenance'];
 // Builtin OPERATION names -- the term-level operations a rule may call, the
 // same category as `is` and `mod` in SYNTAX above and NOT relations: no store
 // key is ever one of these, and no rule may conclude into one. The five string

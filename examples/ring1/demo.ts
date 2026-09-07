@@ -17,7 +17,7 @@
 import { Rofl } from '../../src/api.ts';
 import { type Term, canonTerm, mka, mkv, mki, mks, mkf } from '../../src/unify.ts';
 import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
-import { V, canonClause, unreifyTerm } from '../../src/reflect.ts';
+import { V, canonClause, unreifyTerm, SEALED_REASON } from '../../src/reflect.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -350,7 +350,21 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   // The match cost NOTHING either way; `hole` is empty and `matchPremise` over
   // it timed at 0.00 ms. The saving is the evaluator that was never needed.
   const ev = r.evaluate(BUDGET);
-  const holes = r.store.relAll(V.hole).map((f) => f.args.map(canonTerm).join(' '));
+  // A STANDING REFUSAL IS NOT A FAILED EVALUATION, and the two are one
+  // relation. `ring1.rofl` seals its own rule reflection, so this world carries
+  // `hole($sealed(rules), reflection_sealed)` from load onward; read
+  // unfiltered, every parse in this file would refuse itself. Filtering by
+  // REASON is what keeps the check alive rather than switching it off: the
+  // seven reasons that mean the kernel could not finish still stop a parse, and
+  // the one that means the program declined to keep something does not.
+  //
+  // THE PRICE IS NAMED: a check that filters is weaker than one that does not,
+  // and the standing hole makes every `is there a hole` test in this world
+  // trivially true. That is why the reason atom is load-bearing and not
+  // decoration -- without it the two sentences are indistinguishable.
+  const holes = r.store.relAll(V.hole)
+    .filter((f) => !(f.args[1].k === 'a' && f.args[1].name === SEALED_REASON))
+    .map((f) => f.args.map(canonTerm).join(' '));
   if (ev.partial || holes.length) {
     throw new IncompleteParse([0], `evaluation did not finish: ${holes.join('; ') || 'partial'} — `);
   }

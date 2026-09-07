@@ -16,6 +16,7 @@ import {
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
   atomTerm, wellFoundedDeclared, encodeRule, resolveClauseBooks,
+  sealedBodies, SEALED_PROVENANCE,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -387,6 +388,11 @@ export class Evaluation {
    *  `prepare`. Empty on a bootstrap evaluation, which asks nothing. */
   private answer: RuleAnswer = EMPTY_ANSWER;
 
+  /** Has the program sealed its provenance? Read off the store in `prepare`,
+   *  the way `wellFounded` is, because both are declarations about how this
+   *  world is kept rather than facts about its subject. */
+  private noProvenance = false;
+
   constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
     this.bootstrap = opts.bootstrap ?? false;
@@ -401,9 +407,19 @@ export class Evaluation {
   /** Decode rules from the store and classify them. Read-only. */
   prepare(): void {
     this.wellFounded = wellFoundedDeclared(this.store);
+    this.noProvenance = sealedBodies(this.store).has(SEALED_PROVENANCE);
     const { rules, diagnostics } = decodeRules(this.store);
     this.diags.push(...diagnostics);
     this.answer = this.safetyAnswer(rules);
+    // A RULE THAT READS WHAT THE PROGRAM SEALED IS TOLD SO. The standing
+    // `hole($sealed(provenance), reflection_sealed)` is the world's refusal and
+    // it is already in the store; this names the rule that is going to read an
+    // empty relation because of it. It is a diagnostic and not a rejection: the
+    // program is not wrong, it is asking a question this world has declared it
+    // will not answer, and `examples/loot` §5 is a real rule of that shape.
+    if (this.noProvenance && this.answer.readsProvenance) {
+      this.diags.push(`provenance is sealed; rules reading '${V.derived_by}' will match nothing`);
+    }
     const kept: ERule[] = [];
     for (const r of rules) {
       if (RESERVED.has(r.clause.head.rel)) {
@@ -1278,7 +1294,14 @@ export class Evaluation {
       // support is always new -- so charging here bounds the fact count too.
       this.chargeRow(r.id);
       const dbArgs = [factTerm(h.rel, persp, args), mka(r.id), mki(this.store.tick)];
-      const dbNew = this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+      // SEALED PROVENANCE IS NOT WRITTEN, not written-and-pruned. Pruning at a
+      // boundary was refused on this branch because a query arrives after the
+      // boundary and no rule-level gate can see it; a DECLARATION is known
+      // before the first firing, which is the difference that makes this
+      // gateable at all. `derived_by` stays a queryable fact wherever it is
+      // written -- nothing here turns it into a log line.
+      const dbNew = !this.noProvenance
+        && this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
       if (dbNew) {
         const dbKey = factKey(V.derived_by, KERNEL_PERSP, dbArgs);
         noteFront(out, V.derived_by, dbKey);
@@ -1583,7 +1606,9 @@ export class Evaluation {
         if (newFiring) {
           this.chargeRow(r.id);
           const dbArgs = [factTerm(call.rel, persp.name, args), mka(r.id), mki(this.store.tick)];
-          this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+          if (!this.noProvenance) {
+            this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+          }
         }
         if (isNew) noteFront(this.curFront, call.rel, key);
         out.push({ s: sol.s, ref: { t: 'fact', key } });

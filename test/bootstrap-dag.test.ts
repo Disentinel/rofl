@@ -110,7 +110,7 @@ test('the layering survives the one line that sits on a block boundary', () => {
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached
 // from `conclude`, so it is inside the minimal monotone core rather than
 // beside it. Each counter below says why it moved.
-test('the minimal tier 0: 16 methods, 266 code lines', () => {
+test('the minimal tier 0: 16 methods, 267 code lines', () => {
   const mc = minimalCore();
   // 18 -> 19: chargeRow, reached from conclude, which activate() reaches
   assert.equal(mc.all.size, 19, 'call-graph reachability from activate()');
@@ -124,7 +124,9 @@ test('the minimal tier 0: 16 methods, 266 code lines', () => {
   // 330 -> 329 (-1): `matchPremise`'s per-argument unify loop became one
   // `unifyAll` call, which checks the arity itself, so the separate length
   // guard went with it. One line fewer, no method and no condition removed.
-  assert.equal(mc.codeAll, 329);
+  // 329 -> 332 (+3): `sealed(Body)` reaches the monotone core through the door
+  // that withholds a sealed floor's reflection.
+  assert.equal(mc.codeAll, 332);
   // 15 -> 16: chargeRow is in the KEPT set too — a monotone core still
   // concludes facts, and a core that concludes cannot be allowed to conclude
   // without limit, which is the whole point of the second budget
@@ -142,7 +144,7 @@ test('the minimal tier 0: 16 methods, 266 code lines', () => {
   // from the core this test is about.
   // 267 -> 266 (-1): the same line as `codeAll` above — `matchPremise` is in
   // the kept set, so its lost length guard is lost here too.
-  assert.equal(mc.codeKept, 266);
+  assert.equal(mc.codeKept, 267);
   // the three that drop out, and why each is a branch a monotone core skips
   for (const m of ['negHolds', 'solveDemandRule', 'renameClause']) {
     assert.equal(mc.kept.has(m), false, m);

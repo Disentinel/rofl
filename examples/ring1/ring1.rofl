@@ -17,6 +17,27 @@
 -- Coverage over the corpus is MEASURED by test/example-ring1.test.ts rather
 -- than claimed here.
 
+-- THE GRAMMAR SEALS ITS OWN RULE REFLECTION, and this line is the tower's
+-- floor declaration. Everything below it is a parser: 126 rules that nobody
+-- audits and nobody reflects on, forked once per clause of every file parsed
+-- (examples/ring1/demo.ts, `parseFile`). MEASURED on the image: 461 of 2450
+-- facts are the four rows this withholds, 18.8% of what the fork copies, and
+-- the parse is byte-identical without them -- ablated cold, with `safetyMemo`
+-- forced to miss, against the canonical clauses.
+--
+-- IT MUST STAND BEFORE THE FIRST RULE. `addClause` reads the declaration off
+-- the store as each clause arrives, so boot.rofl -- loaded first by `world()`
+-- -- keeps its reflection whole and only the floor above it is sealed. That
+-- order IS the mechanism rather than an artefact of it.
+--
+-- WHAT IT COSTS, written here because it is a real loss: boot.rofl's
+-- `malformed`, `leak` and `unmoded` audits can no longer see these 126 rules,
+-- and `rule_known` no longer counts them. They do not go quietly -- the kernel
+-- writes `hole($sealed(rules), reflection_sealed)` into the store, so an audit
+-- that comes back empty here stands beside a fact saying why, and a query for
+-- one of the four relations refuses instead of answering nothing.
+sealed(rules).
+
 edb(src).
 edb(cls).
 
