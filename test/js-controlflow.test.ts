@@ -851,6 +851,108 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
 
 const edges = (w: World) => new Set(w.q('calls_in[code](File, A, B)').map(([, a, b]) => `${a} -> ${b}`));
 
+// ---------------------------------------------------------------------------
+// 3h. THE ALIAS STORE (w_alias_store): a member WRITTEN is a member read.
+//
+// THE ITEM'S NOTE SAID A STORE WAS NEEDED — "there is no store, so a property
+// written is not a property read" — and the store was never the missing thing.
+// Entry 4 of rules/js-dataflow.rofl has read an assignment to an IDENTIFIER
+// flow-insensitively since the value layer was written; this is that same
+// reading one step over. Measured before a rule existed: `selects[flow]`
+// ALREADY fires on the member on the left, `may_be_node` ALREADY answers the
+// object half, and the right-hand side is already valued. SIXTH design note in
+// this loop to lose to one probe.
+const ALIAS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'a1 the write arm is deleted',
+    mut: [{ find: `member_value[flow](O, Key, V) :- plain_assign[flow](A), ast_child[code](A, left, 0, L),
+                                 selects[flow](L, Key),
+                                 ast_child[code](L, object, 0, Obj),
+                                 may_be_node[flow](Obj, O),
+                                 ast_child[code](A, right, 0, V).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['useBin -> stocked', 'useRack -> slotted', 'useShelf -> shelved']),
+  },
+  {
+    name: 'a2 a COMPOUND assignment counts as a write',
+    mut: [{ find: 'member_value[flow](O, Key, V) :- plain_assign[flow](A), ast_child[code](A, left, 0, L),',
+            replace: 'member_value[flow](O, Key, V) :- ast_node[code](A, assignment_expression, _, _), ast_child[code](A, left, 0, L),',
+            file: 'rules/js-dataflow.rofl' }],
+    // KILLED ON A VALUE, NOT ON AN EDGE, and it is the only one in this set that
+    // is: `rack.tally = 4; rack.tally += 5;` is 9 at runtime and the model must
+    // claim neither 9 nor 5 — `+=` evaluates to a SUM and this layer knows
+    // nothing about sums. Dropping the guard makes it claim 5.
+    expect: (m, b) => {
+      assert.deepEqual(tallyValues(b), ['4'], 'the plain write, and only it');
+      assert.deepEqual(tallyValues(m), ['4', '5'], 'the sum is read as the value written');
+    },
+  },
+  {
+    name: 'a3 the RECEIVER stops deciding',
+    mut: [{ find: `                                 ast_child[code](L, object, 0, Obj),
+                                 may_be_node[flow](Obj, O),
+                                 ast_child[code](A, right, 0, V).`,
+            replace: `                                 obj_like[flow](O),
+                                 ast_child[code](A, right, 0, V).`,
+            file: 'rules/js-dataflow.rofl' }],
+    // `rack` and `shelf` are two objects with the same WRITTEN key, which is
+    // what makes this visible at all: with one object the mutant is a no-op.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['useRack -> shelved', 'useShelf -> slotted']);
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 12, 'and each site resolves two ways: 8 -> 12');
+    },
+  },
+  {
+    name: 'a4 the LEFT is read as the value written',
+    mut: [{ find: '                                 ast_child[code](A, right, 0, V).',
+            replace: '                                 ast_child[code](A, left, 0, V).',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['useBin -> stocked', 'useRack -> slotted', 'useShelf -> shelved']),
+  },
+  {
+    name: 'a5 the key is read as a raw property name',
+    mut: [{ find: '                                 selects[flow](L, Key),',
+            replace: '                                 ast_child[code](L, property, 0, PK), ast_name[code](PK, Key),',
+            file: 'rules/js-dataflow.rofl' }],
+    // `selects[flow]` is what carries a COMPUTED key whose expression has a
+    // literal value, and `bin.nest[slotKey] = stocked` is the one site that
+    // needs it. A raw property name reads `slotKey` and writes the wrong key.
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['useBin -> stocked']),
+  },
+];
+
+/** the values the model says `tally` may hold, wherever it is selected */
+const tallyValues = (w: World) => [...new Set(w.q('selects[flow](N, "tally")')
+  .flatMap(([n]) => w.q(`may_be_lit[flow](${n}, V)`).map(([v]) => v)))].sort();
+
+for (const g of ALIAS) test(`${g.name} — alias store`, () => g.expect(build(g.mut), base()));
+
+test('a member WRITTEN is a member read, and the receiver decides', () => {
+  // THE POSITIVE HALF. Three edges the model could not derive before, each
+  // reaching a different way: a plain write of a function declaration, the same
+  // key written on a SECOND object, and — the case the rule was ASKED about
+  // rather than told — a COMPUTED write through a CHAINED receiver, which needs
+  // no extra arm because `selects` already reads a computed key with a literal
+  // value and `may_be_node` already resolves `bin.nest`.
+  const m = base();
+  for (const e of ['useRack -> slotted', 'useShelf -> shelved', 'useBin -> stocked']) {
+    assert.ok(edges(m).has(e), `the write did not reach the read: ${e}`);
+  }
+  // AND THE RECEIVER REALLY DECIDES, across files: `bag['fixed']` in shapes.ts
+  // and `rack.fixed` in alpha.mjs are one key on two objects, and neither
+  // answers for the other.
+  assert.ok(!edges(m).has('useRack -> shelved') && !edges(m).has('useShelf -> slotted'),
+    'one key on two objects is two answers');
+  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+});
+
+
 for (const g of SCOPE) test(`${g.name} — scope`, () => g.expect(build(g.mut), base()));
 
 test('which function binds `this`, named row by row', () => {

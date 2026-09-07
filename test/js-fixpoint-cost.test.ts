@@ -130,12 +130,24 @@ test('the five heaviest read paths, by name', () => {
   // firings +71.8% — because it ranged a use over every NODE in the region; the
   // rule now says `ident_in`, which is what a use is, and fifteen relations are
   // identical between the two forms with a positive control.
+  // MOVED 2026-09-07 with the alias store, and the 2x2 says the OPPOSITE of the
+  // scope layer's — same instrument, same four builds, one iteration apart:
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   880 811 / 50 098 fir   931 113 / 56 391 fir
+  //     alias rules  882 031 / 50 111 fir   939 563 / 56 448 fir
+  //
+  // the RULE costs +0.14% of rows and THIRTEEN firings, because the arm reads
+  // three relations that were already standing and adds no mechanism; the
+  // fixture costs +5.7% and +6293. The scope layer cost +25% firings for its
+  // rules. A delta alone would have reported "+6.7%" for both and said nothing
+  // about which half either time.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 105013',
-    'relPersp authority = 77544',
-    'argMatches encloses_v pos=[1] = 51504',
-    'relPersp encloses_v = 48909',
-    'relPersp ast_node = 42840',
+    'argMatches ast_within pos=[0] = 109052',
+    'relPersp authority = 82116',
+    'argMatches encloses_v pos=[1] = 53441',
+    'relPersp encloses_v = 50846',
+    'relPersp ast_node = 45374',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -169,7 +181,7 @@ test('the five heaviest read paths, by name', () => {
   // 735 786 -> 880 854 (+19.7%) on 2026-09-07, the same five names in the same
   // order, each up 18.6%-20.6%. See the 2x2 above for what is rules and what is
   // corpus; unusually for this loop, both halves are real.
-  assert.equal(c.total, 880854, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 939563, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -210,5 +222,9 @@ test('the five heaviest read paths, by name', () => {
   // else in this pack. Saying that here is the honest form of the owner's rule
   // that iterations must get faster — the number rose, the cause is named, and
   // the avoidable half of it was measured and removed.
-  assert.equal(c.firings, 50098, 'derivations: 35 938 before the scope layer');
+  // 50 098 -> 56 448, and THIRTEEN of the 6 350 are the rules. Measured, not
+  // apportioned: the 2x2 above holds the corpus fixed and swaps only
+  // rules/js-dataflow.rofl. An arm that joins standing relations is nearly free;
+  // a layer that relates every use to every binder that can reach it is not.
+  assert.equal(c.firings, 56448, 'derivations: 50 098 before the alias store');
 });

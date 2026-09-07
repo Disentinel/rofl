@@ -906,6 +906,72 @@ export function useAssign(n) {
   return (held = boxB).pick(n);
 }
 
+// ---- obj.x = f : A PROPERTY WRITTEN IS A PROPERTY READ (w_alias_store)
+//
+// The corpus had NO `obj.x = f` at all — thirteen assignments, eleven to an
+// identifier and two `this.v = v` writing a number — so the item's own gap
+// could not produce a single site to look at. Measured before a rule was
+// written: `selects[flow]` ALREADY fires on the member on the left,
+// `may_be_node` ALREADY answers the object half, and the value is already
+// valued on the right. Nothing was missing but the arm that joins them.
+//
+// `fixed` COLLIDES WITH `bag['fixed']` IN shapes.ts ON PURPOSE — two objects,
+// two files, one key. The RECEIVER is what decides, and a lookup that forgot it
+// would answer both.
+function slotted(n) {
+  trace();
+  return n + 7;
+}
+function shelved(n) {
+  trace();
+  return n + 8;
+}
+
+const rack = {
+  fixed(k) {
+    trace();
+    return k + 1;
+  },
+};
+rack.spare = slotted;
+// a LITERAL written, then compounded: the model may say `tally` is 4 and must
+// not say it is 5, because `+=` evaluates to a SUM and this layer knows nothing
+// about sums. It is 9 at runtime and the model claims neither.
+rack.tally = 4;
+rack.tally += 5;
+
+// a SECOND object with the SAME written key, so a rule that drops the receiver
+// makes each site reach both functions instead of its own.
+const shelf = {};
+shelf.spare = shelved;
+
+export function useRack(n) {
+  trace();
+  return rack.fixed(n) + rack.spare(n) + rack.tally;
+}
+export function useShelf(n) {
+  trace();
+  return shelf.spare(n);
+}
+
+// WHERE THE RULE WAS ASKED WHETHER IT COULD LOOK, rather than told. A COMPUTED
+// write through a CHAINED receiver, both at once. Neither half is a second
+// rule: `selects[flow]` already reads a computed key whose expression has a
+// literal value, and `may_be_node` already resolves `bin.nest` by the same
+// member lookup this arm feeds. So this is a positive control on the arm's
+// REACH — if it goes red, the arm is narrower than it reads.
+function stocked(n) {
+  trace();
+  return n + 9;
+}
+const bin = { nest: {} };
+const slotKey = 'deepSlot';
+bin.nest[slotKey] = stocked;
+export function useBin(n) {
+  trace();
+  return bin.nest[slotKey](n);
+}
+
 // ---- WHICH FUNCTION BINDS `this` (w_scope_binding, 2026-09-07)
 //
 // `this` is not a lexical binder, and which construct BINDS it is decided
@@ -1036,6 +1102,9 @@ export async function main() {
     useLoops(1),
     await useAwait(1),
     usePanel(1),
+    useRack(1),
+    useShelf(1),
+    useBin(1),
     run(1),
     seeded,
   ];

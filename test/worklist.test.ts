@@ -176,7 +176,8 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // three the catch-all split found. An item that spawns nothing is either
   // trivial or was not looked at.
   assert.deepEqual(w.binds('work_spawned(W, F)', 'W'),
-    ['w_body_order_is_load_bearing', 'w_body_order_is_load_bearing',
+    ['w_alias_store', 'w_alias_store',
+     'w_body_order_is_load_bearing', 'w_body_order_is_load_bearing',
      'w_body_order_is_load_bearing',
      'w_cf_abrupt_transfer', 'w_cf_abrupt_transfer',
      'w_cf_accessor', 'w_cf_accessor',
@@ -238,13 +239,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // binder's region and which function binds `this` — so the head moves to the
   // ALIAS STORE: what `o.x = f` writes, which is the first item here that needs
   // the model to hold a mutable location rather than a syntactic path.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_alias_store'],
+  // ...and w_alias_store closed on 2026-09-07 with no store in it, so the head
+  // is the TYPE SURFACE — the first item that asks the model a question syntax
+  // cannot answer at all: which prototype a value has.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_type_surface'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 32 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 31 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -271,7 +275,9 @@ test('the queue covers the model: 32 open cells, every one owned by name, none s
   // 33 -> 32 on 2026-09-07: `this_expression x callgraph` closed, the last cell
   // w_scope_binding owned, and `false_done[audit]` is what said the item was not
   // finished while it stood open.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 32, 'the queue is the model\'s open set');
+  // 32 -> 31 on 2026-09-07: `assignment_expression x callgraph`, closed by
+  // `r_member_write` — a member written is a member read.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 31, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -295,7 +301,8 @@ test('the queue covers the model: 32 open cells, every one owned by name, none s
   // residue and closed here, 3 were already modelled and 11 went to items. A
   // layer with no sweeper is a layer whose every open cell has a named owner.
   // 18 -> 17 on 2026-09-07: `this_expression`, closed by `r_this_host`.
-  assert.deepEqual(per('callgraph'), [17, 25, 0]);
+  // 17 -> 16 on 2026-09-07: `assignment_expression`, closed by `r_member_write`.
+  assert.deepEqual(per('callgraph'), [16, 25, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -479,7 +486,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and again: the transitive half closed the same day its premise did, so
   // the head is the SCOPE question — `binder[flow]` is file-scoped by
   // construction, which has cost this loop five fixture renames.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_alias_store']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_type_surface']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -526,13 +533,16 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // `next_work[audit]` itself would never expire. Entered as a note here rather
   // than built, because the plant is authored TEXT and the head is a derived
   // row; closing that gap is a change to how mutants are written.
-  const mut = world({ extra: 'work_needs(w_alias_store, w_cf_completion).' });
+  const mut = world({ extra: 'work_needs(w_type_surface, w_cf_completion).' });
   assert.equal(mut.n('blocked[audit](W)'), 4, 'the planted one on top of the three real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
   // relation doing exactly one thing — skipping — which is what makes it
   // checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_type_surface'],
+  // ...and the head becomes the next item BY ORDER that is not itself blocked:
+  // 32 is `w_effect_layer`, which waits on two premises of its own, so the
+  // queue hands out 33. Two kinds of skip in one answer.
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_cg_module_boundary'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

@@ -337,7 +337,9 @@ test('the shape census — the frontier, as a table', () => {
   // so the KEY EXPRESSION is not a literal and the shape is dynamic — while the
   // value layer resolves both, which is the point of the pair. A shape counts
   // how the site is SPELLED; whether it resolves is a different table.
-  assert.equal(tally.get('s_computed_dynamic_key'), 5, 'five computed callees with a non-literal key');
+  // 5 -> 6 on 2026-09-07: `bin.nest[slotKey](n)` — the read side of the
+  // computed write the alias arm was asked to reach.
+  assert.equal(tally.get('s_computed_dynamic_key'), 6, 'six computed callees with a non-literal key');
   assert.equal(tally.get('s_computed_literal_key'), 2, 'two computed callees with a literal key');
   assert.ok((tally.get('s_unclassified') ?? 0) === 0, 'nothing unclassified in this corpus');
 });
@@ -955,7 +957,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 137 -> 138 -> 153 on 2026-09-07: the binder fixture added one site and the
   // scope-and-`this` fixture fifteen — seven functions and an object literal
   // with three methods, each carrying its `trace()`.
-  assert.equal(sites - resolved, 153, `${sites - resolved} call sites vanished from the frontier`);
+  // 153 -> 160 on 2026-09-07: the alias fixture — six functions and three
+  // objects, each function carrying its `trace()`.
+  assert.equal(sites - resolved, 160, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

@@ -295,6 +295,43 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
                                   ast_node[code](M, class_method, _, _),
                                   ast_child[code](M, key, 0, K), ast_name[code](K, Key).
 
+-- A MEMBER WRITTEN IS A MEMBER READ — `obj.x = f`, and then `obj.x()`.
+--
+-- WHAT THE QUEUE ITEM SAID, and it is the sixth design note in this loop to
+-- lose to one probe: "there is no store, so a property written is not a
+-- property read". THE STORE WAS NEVER THE MISSING THING. Entry 4 above already
+-- reads an assignment to an IDENTIFIER flow-insensitively — `x = "a"` makes `x`
+-- may-be "a" wherever x appears in the file — and this is that same reading one
+-- step over. It needs no notion of before and after for exactly the same
+-- reason, and it inherits the same declared imprecision: a property written
+-- late is answered early, and every write to the same key is an alternative
+-- rather than a replacement. That is a MAY-set, which is what this layer is.
+--
+-- MEASURED FIRST, and every piece was already standing: `selects[flow]` fires
+-- on the member on the LEFT (it ranges over `member_node_v`, not over callee
+-- positions), `may_be_node` answers the object half — including a `this`, which
+-- is why `this.v = v` lands here too — and the right-hand side is already
+-- valued. The arm joins them and adds no mechanism.
+--
+-- `plain_assign` IS LOAD-BEARING: `rack.tally += 5` evaluates to a SUM, and
+-- this layer knows nothing about sums, so the compound forms contribute no
+-- value rather than the wrong one.
+--
+-- ORDERED FOR COST: `plain_assign` is the smallest relation in the body and it
+-- binds A, so nothing here enumerates the member nodes of the corpus.
+-- AND ONE LITERAL WAS MEASURED DEAD BEFORE IT SHIPPED. The first draft led with
+-- `member_node_v[flow](L)` to say "the left is a member expression"; deleting it
+-- moved not one row, because `selects[flow]` is ITSELF defined over
+-- `member_node_v` and says the same thing while binding Key. Written from a
+-- model of what the rule needs rather than from the relations that exist —
+-- the same shape as the `super` arm deleted five items ago, caught the same way,
+-- by planting a delete-mutant on every literal rather than only on the arm.
+member_value[flow](O, Key, V) :- plain_assign[flow](A), ast_child[code](A, left, 0, L),
+                                 selects[flow](L, Key),
+                                 ast_child[code](L, object, 0, Obj),
+                                 may_be_node[flow](Obj, O),
+                                 ast_child[code](A, right, 0, V).
+
 -- AND WHAT THE CLASS INHERITS. A method declared on an ancestor is reachable on
 -- an instance of the subclass, and the rule above sees only a class's OWN body,
 -- so `new Cask(n).hold(n)` — `hold` declared two levels up — resolved to

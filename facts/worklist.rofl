@@ -726,9 +726,11 @@ work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_und
 -- that ought to say so, `member_expression x dataflow`, reads `modelled`,
 -- because a kind-level cell cannot distinguish a read from a write. The cell it
 -- CAN claim is the assignment itself, which is open and today swept.
-work(w_alias_store, "obj.x = f: there is no store, so a property written is not a property read").
+work(w_alias_store, "DONE 2026-09-07: r_member_write; a member written is a member read, and no store was needed - the layer is already flow-insensitive for an assignment to an identifier").
 work_order(w_alias_store, 30).
-work_state(w_alias_store, open).
+work_state(w_alias_store, done).
+work_spawned(w_alias_store, f_the_store_was_never_the_missing_thing).
+work_spawned(w_alias_store, f_a_delete_mutant_belongs_on_every_literal_not_only_on_the_arm).
 claim(queued, js, assignment_expression, none, callgraph, w_alias_store).
 
 -- 31. TYPES, DELIBERATELY SHALLOW. Not a checker: the only question this model

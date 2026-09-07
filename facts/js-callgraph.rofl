@@ -83,6 +83,13 @@ handled(js, member_expression,         callgraph, r_call_edge).
 -- enclosing non-arrow function, and entries 8 and 8b answer for a class method
 -- and for an object method.
 handled(js, this_expression,                 callgraph, r_this_host).
+-- CLOSED 2026-09-07 by w_alias_store. An assignment reaches the call graph two
+-- ways and only one of them was answered: as a RECEIVER, `(x = o).m()`, which
+-- `plain_assign[flow]` has valued since the catch-all split; and as a WRITE,
+-- `obj.x = f` followed by `obj.x()`, which nothing modelled. The second is a
+-- `member_value[flow]` arm in rules/js-dataflow.rofl and needs no store — the
+-- layer is already flow-insensitive for an assignment to an identifier.
+handled(js, assignment_expression,           callgraph, r_member_write).
 unknown_because(js, super,                   callgraph, not_yet).
 -- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
 -- by the refinement column, so a KIND-level reason has no cell to sit on. The
