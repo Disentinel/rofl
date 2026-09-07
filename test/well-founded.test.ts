@@ -245,12 +245,26 @@ function firings(r: Rofl, key: string): string[] {
 
 /** Rows that exist in one run and cannot exist in the other: the declaration
  *  itself, the `unknown` input mark, and the stratum table the alternation
- *  does not build (with the provenance of each). Everything else must match. */
+ *  does not build (with the provenance of each). Everything else must match.
+ *
+ *  THE FILTER WAS KEYED ON THE SHAPE THE DECLARATION TAKES, and that stopped
+ *  being enough on 2026-09-07. boot.rofl's `loader(Rel, P, Who)` projects an
+ *  asserted fact's RELATION NAME into an ordinary argument, so the declaration
+ *  reappears as `loader[main](semantics, main, user)` — a key that mentions
+ *  neither `semantics[` nor `$fact(semantics,`. Exactly two rows, both of them
+ *  about the declaration and neither about the program; they are excluded by
+ *  name here rather than by widening the filter to every key containing the
+ *  word, because a wider filter would hide a real difference the day one
+ *  exists. The next relation that projects a relation name into an argument
+ *  will need its own line, and the failure is loud. */
 function comparable(r: Rofl): string[] {
   return r.store.allFactKeys()
     .filter((k) => !k.startsWith('stratum[') && !k.startsWith('semantics[')
       && k !== 'edb[main](semantics)' && k !== 'edb[main](unknown)'
-      && !k.includes('$fact(semantics,') && !k.includes('$fact(stratum,'))
+      && !k.includes('$fact(semantics,') && !k.includes('$fact(stratum,')
+      && !k.startsWith('loader[main](semantics,') && !k.startsWith('loader[main](stratum,')
+      && !k.includes('$fact(loader,main,$cons(semantics,')
+      && !k.includes('$fact(loader,main,$cons(stratum,'))
     .sort();
 }
 

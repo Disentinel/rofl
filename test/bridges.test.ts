@@ -142,12 +142,18 @@ test('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and
   // `demands_authorship` — plus this file's own derived `rule_known`,
   // `crossing`, `gathered` and `collects_from`. Eight rules need that; one
   // reads nothing but the kernel's book and has left this set.
+  //
+  // NINE SINCE 2026-09-07, and the ninth is `widened[audit]`, which reads
+  // `negated_under` and `loader` — both derived into [main] — and reads the
+  // kernel's book only THROUGH them. So it joins the [main] side of this count
+  // and not the [$kernel] side, and the two halves below still separate for
+  // the reason the paragraph above gives.
   const reads = (book: string) => new Set(r.query(`reads_from(R, ${book})`).rows
     .filter((x) => r.holds(`writes_to(${x.bindings['R']}, audit)`))
     .map((x) => x.bindings['R']));
   const fromMain = reads('main');
   const fromKernel = reads('$kernel');
-  assert.equal(fromMain.size, 8, `eight audit rules read [main], got ${fromMain.size}`);
+  assert.equal(fromMain.size, 9, `nine audit rules read [main], got ${fromMain.size}`);
   // MUTANT / THE OTHER HALF, which is the point of splitting one sentence into
   // two: the rules that vanished from the count above did not vanish from the
   // program. Asserting only the 8 would pass just as well if the kernel's book

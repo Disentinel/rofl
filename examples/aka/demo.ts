@@ -110,6 +110,39 @@ export const AUTHOR_WHO: Record<string, string> = {
   integration: 'integration_team', finance: 'finance_ops', sales: 'sales_ops',
 };
 
+/** TWO FILES INTO ONE BOOK, AND THE NEGATION THAT QUIETLY GREW — the shape
+ *  `widened[audit]` in boot.rofl reports, exercised on this demo's real path.
+ *
+ *  The integration team ships a file that suppresses ONE of its own bridges
+ *  and reads its own suppression list back with `not suppressed[recon](B)`.
+ *  Finance ships a second file that suppresses another id into the SAME book.
+ *  Nothing is overwritten — Datalog accumulates and the union is the whole
+ *  point of a shared ledger — but integration's negation now ranges over
+ *  finance's row, so `b1`, an integration bridge nobody in integration
+ *  touched, silently leaves `in_play`. Neither file is wrong on its own and
+ *  neither one can see it.
+ *
+ *  `[recon]` is granted to nobody BY NAME in aka.rofl, so the two authors are
+ *  granted it in writing first, by the analyst, who holds [main] where
+ *  `authority` rows live. Without that line the planted world is a forgery
+ *  story rather than a scoping one and `forged[audit]` answers instead — which
+ *  is the point of granting it: this is what an audit has to say about two
+ *  writers who are BOTH entitled to be there.
+ *
+ *  `both = false` is the control: the same rule, the same negation, the same
+ *  suppressed id, ONE loader. */
+export function widenedWorld(both = true): Rofl {
+  const r = world();
+  must(r.load('authority(recon, integration_team). authority(recon, finance_ops).',
+    { who: 'analyst' }), 'grants over [recon]');
+  must(r.load(`suppressed[recon](b4).
+    in_play[recon](B) :- bridge[recon](B, _, _, _, _), not suppressed[recon](B).`,
+  { who: 'integration_team' }), 'integration\'s file');
+  if (both) must(r.load('suppressed[recon](b1).', { who: 'finance_ops' }), 'finance\'s file');
+  r.evaluate();
+  return r;
+}
+
 // ---------------------------------------------------------------------------
 // small helpers over query results
 
@@ -590,7 +623,7 @@ function main(): void {
   rule('1. the model loads, and boot.rofl audits it');
   for (const audit of ['unstratified(X)', 'malformed[audit](R)', 'breach[audit](R)',
     'leak[audit](A, B)', 'forged[audit](F)', 'unmoded[audit](R)',
-    'undefined_premise[audit](R, Rel)']) {
+    'undefined_premise[audit](R, Rel)', 'widened[audit](Rel, P)']) {
     console.log(`  ? ${audit.padEnd(34)} -> ${r.query(audit).rows.length} rows`);
   }
   const ev = new Evaluation(r.store);
@@ -857,6 +890,31 @@ function main(): void {
   }
   console.log('    Naming the head perspective is the whole fix, and it is what every rule');
   console.log('    in aka.rofl does.');
+
+  console.log('\n  and the audit for the other seam — two FILES, one book, and a negation');
+  console.log('  that grew without either file saying so:\n');
+  const alone = widenedWorld(false);
+  const both = widenedWorld(true);
+  console.log('    $ [integration_team]  suppressed[recon](b4).');
+  console.log('    $ [integration_team]  in_play[recon](B) :- bridge[recon](B,_,_,_,_),');
+  console.log('    $                                          not suppressed[recon](B).');
+  console.log(`      in_play[recon] -> ${col(alone, 'in_play[recon](B)', 'B').sort().join(' ')}`
+    + `   (${col(alone, 'in_play[recon](B)', 'B').length} bridges)`);
+  console.log('    $ [finance_ops]       suppressed[recon](b1).');
+  console.log(`      in_play[recon] -> ${col(both, 'in_play[recon](B)', 'B').sort().join(' ')}`
+    + `      (${col(both, 'in_play[recon](B)', 'B').length} bridges)`);
+  console.log('\n    Nothing was overwritten and nothing is corrupt: the two suppression');
+  console.log('    lists are a union, which is what a shared book is FOR. What changed is');
+  console.log('    that integration\'s `not suppressed` now ranges over finance\'s row, so');
+  console.log('    b1 — an integration bridge nobody in integration touched — is gone.');
+  console.log('    Both authors are entitled to write there, so this is not a forgery:');
+  for (const q of ['forged[audit](F)', 'leak[audit](A, B)', 'widened[audit](Rel, P)']) {
+    console.log(`      ? ${q.padEnd(26)} -> ${both.query(q).rows.length} rows`);
+  }
+  console.log('');
+  console.log(indent(both.why('widened[audit](suppressed, recon)').text, 6));
+  console.log('\n    The control is the same file loaded by ONE author:');
+  console.log(`      ? widened[audit](Rel, P)   -> ${alone.query('widened[audit](Rel, P)').rows.length} rows`);
 
   // -- 10. as of another quarter -------------------------------------------
   rule('10. the same books, the quarter before');
