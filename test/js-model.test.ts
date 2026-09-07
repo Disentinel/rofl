@@ -34,7 +34,35 @@ interface Mut {
   extra?: string;
 }
 
+/** THE UNMUTATED MODEL IS BUILT ONCE AND FORKED. Twenty-two of the call sites
+ *  below take the rules unmutated — ten of them take nothing else either —
+ *  and each one used to re-load boot.rofl, the model and the kind facts and
+ *  re-run the fixpoint to reach the same 2355 facts. Measured 2026-09-07:
+ *  71.7 ms to build, 0.58 ms to fork and 10.6 ms for the fork's fixpoint.
+ *
+ *  INJECTING `extra` AFTER THE FIXPOINT IS THE SAME WORLD, not an incremental
+ *  approximation of it: `store.clone()` marks the copy dirty and `ensure`
+ *  recomputes the derived layer, so a fact loaded late reaches the same least
+ *  model as one loaded early. Checked rather than argued — `a fork carries the
+ *  base and nothing else` at the foot of this file compares `canonicalState()`
+ *  against a world built the old way, for the plain case and the injected one.
+ *
+ *  A MUTATED `rules` still builds from scratch, because it is a different
+ *  program and there is nothing to share. */
+let BASE: Rofl | undefined;
+
 function world(m: Mut = {}): Rofl {
+  if (m.rules !== undefined) return build(m);
+  const r = (BASE ??= build({})).fork();
+  if (m.extra) {
+    const res = r.load(m.extra, { who: 'tester' });
+    assert.ok(res.ok, `<injected> REJECTED:\n${res.diagnostics.join('\n')}`);
+  }
+  r.evaluate(1_000_000);
+  return r;
+}
+
+function build(m: Mut): Rofl {
   const r = new Rofl();
   const load = (name: string, text: string, who?: string) => {
     const res = r.load(text, who ? { who } : {});
@@ -1071,4 +1099,48 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of thirteen'
   ], 'the eight shapes the corpus really produces and the mutant no longer declares');
   console.log(`      KILLED by the census alone: ${undeclared.length} measured shapes go undeclared`
             + ' while every in-model audit stays green');
+});
+
+/** ARRIVAL ORDER, and the instrument matters: `allFactKeys()` SORTS, so an
+ *  assertion on it cannot see the order a clone fills its runs in. Measured
+ *  2026-09-07 with a mutant — `run.arrived.unshift` instead of `push` — which
+ *  every `allFactKeys` comparison in this repository slept through and which
+ *  `allFacts()` catches at once. `allFacts()` is documented as arrival order
+ *  and is deliberately unsorted. */
+const arrival = (r: Rofl): string[] => r.store.allFacts().map((f) => f.key);
+
+test('a fork carries the base and nothing else, and injecting late is the same world', () => {
+  // THE PREMISE OF `world()` ABOVE, asserted rather than assumed, and the only
+  // reason the shared base is sound. Three claims, each with its own control.
+  const fresh = build({});
+
+  // 1. A FORK IS THE BASE. Byte for byte on `canonicalState`, and element for
+  //    element on arrival order, which `store.clone()` preserves.
+  assert.equal(world().store.canonicalState(), fresh.store.canonicalState());
+  assert.deepEqual(arrival(world()), arrival(fresh));
+
+  // 2. INJECTING AFTER THE FIXPOINT REACHES THE SAME LEAST MODEL as injecting
+  //    before it. This is what makes the `extra` call sites shareable, and it
+  //    is the half that could plausibly have been false.
+  const EX = 'handled(js, yield_expression, dataflow, r_yield_flow).\n';
+  assert.equal(world({ extra: EX }).store.canonicalState(),
+               build({ extra: EX }).store.canonicalState());
+  // positive control: the injection is not a no-op the comparison would pass
+  // for the wrong reason.
+  assert.notEqual(build({ extra: EX }).store.canonicalState(), fresh.store.canonicalState());
+
+  // 3. ONE CASE'S WRITE DOES NOT REACH THE NEXT. The template's fact count and
+  //    canonical state must not move when a fork is written into and queried.
+  const before = BASE!.store.factCount();
+  const state = BASE!.store.canonicalState();
+  const used = world({ extra: EX });
+  // The control is on the STATE, not on the count: injecting `handled` adds a
+  // fact and retires the `not_modelled` verdicts that stood without it, so the
+  // count is free to fall. Measured, not guessed — the first spelling of this
+  // line asserted a bigger store and went red.
+  assert.notEqual(used.store.canonicalState(), state,
+    'positive control: the injection must have written');
+  assert.equal(BASE!.store.factCount(), before, 'the shared base moved under a fork\'s write');
+  assert.equal(BASE!.store.canonicalState(), state);
+  assert.equal(world().store.canonicalState(), fresh.store.canonicalState());
 });

@@ -127,10 +127,28 @@ function answerSig(store: Store, prog: Row[]): string {
 
 const PROG = rowsOf(SAFETY);
 
-function hostUnsafe(r: Rofl): Set<string> {
+/** The host's own verdict, and the rule COUNT that goes with it, from ONE
+ *  `Evaluation`. This returned only the set and the corpus loop then wrote
+ *  `new Evaluation(r.store).rules.length` on the next line, which decodes
+ *  every rule out of the reflection and re-plans every body a second time to
+ *  learn a number the first one already knew. */
+function hostUnsafe(r: Rofl): { unsafe: Set<string>; rules: number } {
   const ev = new Evaluation(r.store);
-  return new Set(ev.rules.filter((x) => !x.safe).map((x) => x.id));
+  return { unsafe: new Set(ev.rules.filter((x) => !x.safe).map((x) => x.id)), rules: ev.rules.length };
 }
+
+/** boot.rofl in a world of its own, LOADED ONCE AND FORKED. The corpus sweep
+ *  below opens one world per file and every one of them starts from the same
+ *  boot.rofl; measured 2026-09-07, that load is 4.40 ms and a fork of the
+ *  world it makes is 0.111 ms, 40x. A fork, not a shared world: each file's
+ *  program is then loaded into it, and `store.clone()` copies every record so
+ *  no file can see the file before it. The gate at the foot of this file
+ *  asserts both halves. */
+let BOOTED: Rofl | undefined;
+const booted = (): Rofl => {
+  if (BOOTED === undefined) { BOOTED = new Rofl(); BOOTED.load(BOOT); }
+  return BOOTED.fork();
+};
 
 test('the corpus: every .rofl file this repository holds, rule for rule', () => {
   const files: string[] = [];
@@ -147,12 +165,11 @@ test('the corpus: every .rofl file this repository holds, rule for rule', () => 
   let agree = 0; let refused = 0; let rules = 0; let unsafe = 0;
   const disagreed: string[] = [];
   for (const f of files) {
-    const r = new Rofl();
-    r.load(BOOT);
+    const r = booted();
     if (!r.load(fs.readFileSync(f, 'utf8')).ok) { refused++; continue; }
-    const host = hostUnsafe(r);
+    const { unsafe: host, rules: n } = hostUnsafe(r);
     const rofl = ask(r.store, PROG);
-    rules += new Evaluation(r.store).rules.length;
+    rules += n;
     unsafe += host.size;
     const same = host.size === rofl.size && [...host].every((x) => rofl.has(x));
     if (same) agree++; else disagreed.push(path.relative(ROOT, f));
@@ -222,8 +239,7 @@ const ANSWER_MUTANTS: [string, string][] = [
 ];
 
 function verdicts(rule: string, prog: Row[]) {
-  const r = new Rofl();
-  r.load(BOOT);
+  const r = booted();
   const res = r.load(BASE + rule + '\n');
   assert.ok(res.ok, `the door refused the mutant: ${JSON.stringify(res.diagnostics)}`);
   const ev = new Evaluation(r.store);
@@ -277,8 +293,7 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
   // every one of them for every deletion, and building the stores again each
   // time is the difference between ten seconds and two minutes.
   const stores = [...MUTANTS, ...ANSWER_MUTANTS].map(([, rule]) => {
-    const r = new Rofl();
-    r.load(BOOT);
+    const r = booted();
     assert.ok(r.load(BASE + rule + '\n').ok, `the door refused ${rule}`);
     return r.store;
   });
@@ -310,4 +325,61 @@ test('COVERAGE: deleting a clause of safety.rofl, and what the mutants still mis
   // halves, is seen by some mutant.
   assert.deepEqual(survivors, ['edb(premise_var).', 'edb(slot_arity).',
     'blocked_head(R) :- analysed(R), concludes(R, Rel), reserved(Rel).']);
+});
+
+/** ARRIVAL ORDER, and the instrument matters: `allFactKeys()` SORTS, so an
+ *  assertion on it cannot see the order a clone fills its runs in. Measured
+ *  2026-09-07 with a mutant — `run.arrived.unshift` instead of `push` — which
+ *  every `allFactKeys` comparison in this repository slept through and which
+ *  `allFacts()` catches at once. `allFacts()` is documented as arrival order
+ *  and is deliberately unsorted. */
+const arrival = (r: Rofl): string[] => r.store.allFacts().map((f) => f.key);
+
+test('the shared boot world is forked, not shared: one file cannot see the last', () => {
+  // THE PREMISE OF `booted()`, asserted rather than assumed. The corpus sweep
+  // opens one world per file out of a single loaded boot.rofl, and that is
+  // only sound if a fork is the same world a fresh load makes and if loading a
+  // program into one fork leaves the template and every later fork untouched.
+  const fresh = new Rofl();
+  fresh.load(BOOT);
+
+  // 1. A FORK IS A FRESH BOOT, on both oracles this repository owns.
+  assert.equal(booted().store.canonicalState(), fresh.store.canonicalState());
+  assert.deepEqual(arrival(booted()), arrival(fresh));
+
+  // 2. A WRITE STAYS IN THE FORK. The template's fact count must not move, and
+  //    the next fork must not carry the program the last one loaded.
+  const before = BOOTED!.store.factCount();
+  const state = BOOTED!.store.canonicalState();
+  const used = booted();
+  assert.ok(used.load(BASE + 'mfork(A) :- edge(A, _).\n').ok);
+  assert.ok(used.store.factCount() > before, 'positive control: the load must have written');
+  assert.equal(BOOTED!.store.factCount(), before, 'the template moved under a fork\'s load');
+  assert.equal(BOOTED!.store.canonicalState(), state);
+  assert.equal(booted().store.canonicalState(), fresh.store.canonicalState());
+
+  // 3. AND THE VERDICT DOES NOT DEPEND ON WHICH FORK ASKED. Two mutants down
+  //    two forks agree with the same two down two fresh boots.
+  for (const rule of ['mA(A, Z) :- edge(A, _).', 'mB(A, B) :- edge(A, B).']) {
+    const a = booted(); assert.ok(a.load(BASE + rule + '\n').ok);
+    const b = new Rofl(); b.load(BOOT); assert.ok(b.load(BASE + rule + '\n').ok);
+    assert.deepEqual([...hostUnsafe(a).unsafe].sort(), [...hostUnsafe(b).unsafe].sort());
+    assert.equal(a.store.canonicalState(), b.store.canonicalState());
+  }
+
+  // 4. THE RECORD, NOT ONLY THE SET. Asked of this gate rather than of the
+  //    change: where is it structurally unable to look? The three claims above
+  //    all compare which FACTS a store holds, so a `clone` that copied the map
+  //    and shared the RECORDS would pass every one of them — and `store.add`
+  //    writes `existing.base = true` in place, while `advanceTick` writes
+  //    `rec.frozen = true`, so an aliased record is a real hazard rather than
+  //    a hypothetical one. Re-asserting a DERIVED fact of the fork as a base
+  //    fact must not promote the template's copy of it.
+  const drv = BOOTED!.store.allFacts().find((f) => !f.base);
+  assert.ok(drv !== undefined, 'positive control: boot.rofl must derive something');
+  const alias = booted();
+  alias.store.add(drv.rel, drv.persp, drv.args, { scope: drv.scope, base: true });
+  assert.equal(alias.store.get(drv.key)!.base, true, 'positive control: the fork must have promoted it');
+  assert.equal(BOOTED!.store.get(drv.key)!.base, false,
+    'a write through a shared record promoted the template\'s fact');
 });
