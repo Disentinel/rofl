@@ -9,6 +9,7 @@ import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
   factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
+  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels,
 } from './reflect.ts';
 import { Evaluation, StratificationError, BudgetExhausted, planBody, type StagedFact, sigOf } from './engine.ts';
 import { RoundEvaluation } from './rounds.ts';
@@ -495,7 +496,10 @@ export class Rofl {
       // stratum rule: tick 0 answered in 150 ms, tick 1 ran for minutes and
       // grew `stratum` past 2700 facts. A semantics that can be lost at a tick
       // boundary is worse than one that is never offered.
-      const scope = RESERVED.has(h.rel) || h.rel === IFACE.semantics
+      // `sealed` joins `semantics` here for the reason given beside it: a
+      // declaration about HOW the world is kept must not be droppable at a
+      // tick boundary, or the world quietly starts keeping again.
+      const scope = RESERVED.has(h.rel) || h.rel === IFACE.semantics || h.rel === IFACE.sealed
         ? 'timeless' as const : 'tick' as const;
       this.store.add(h.rel, persp, h.args, { scope, base: true });
       if (!RESERVED.has(h.rel)) {
@@ -505,8 +509,22 @@ export class Rofl {
       // The trail is the kernel's own writing about this call, so it goes in
       // the kernel's book — not in the ledger the fact went to, and not in the
       // default one. `in_perspective` is what carries the fact's own ledger.
+      const withheld = sealedRels(sealedBodies(this.store));
       for (const m of factMetaFacts(h.rel, persp, h.args, this.store.tick, who)) {
+        if (withheld.has(m.rel)) continue;
         this.store.add(m.rel, KERNEL_PERSP, m.args, { scope: 'timeless', base: true });
+      }
+      // THE REFUSAL, WRITTEN DOWN AT THE MOMENT THE DECLARATION ARRIVES. A
+      // sealed body's rows are missing on purpose, and a question about them
+      // must REFUSE rather than answer empty — an empty audit and a clean one
+      // are the same two characters. `hole` is the kernel's existing word for
+      // "this is not an answer" and it is a FACT, so the refusal is itself
+      // queryable, `why`-able and visible to any audit already reading the
+      // kernel's book. Frozen, so re-evaluation cannot clear it.
+      if (h.rel === IFACE.sealed && h.args.length === ARITY.sealed
+          && h.args[0].k === 'a' && SEALED_BODY.has(h.args[0].name)) {
+        this.store.add(V.hole, KERNEL_PERSP, [mkf(SEALED_HOLE, [h.args[0]]), mka(SEALED_REASON)],
+          { scope: 'timeless', base: true, frozen: true });
       }
       this.store.dirty = true;
       return null;
@@ -522,7 +540,15 @@ export class Rofl {
       }
     }
     const enc = encodeRule(c);
+    // A SEALED BODY IS WITHHELD HERE AND NOWHERE ELSE. `encodeRule` still
+    // computes every row -- it is the kernel's one statement of what a rule is,
+    // and a second, shorter version of it would be a second thing to keep true
+    // -- and the door decides which of them the store keeps. The executable
+    // rows and the ones the kernel's own two programs read are not in any body
+    // and cannot be withheld by any declaration.
+    const drop = sealedRels(sealedBodies(this.store));
     for (const f of enc.facts) {
+      if (drop.has(f.rel)) continue;
       this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
     }
     this.store.dirty = true;
@@ -610,6 +636,20 @@ export class Rofl {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
     try { lit = this.asked(text); } catch (e) { return { rows: [], partial: false, error: (e as Error).message }; }
+    // ASKING A SEALED BODY REFUSES. This is the half a rule-level gate cannot
+    // reach and the reason the declaration exists rather than a retention
+    // setting: a RULE is known before the first firing, a QUERY arrives
+    // afterwards, and this branch already recorded five live call sites that
+    // ask `derived_by` of a past tick as a query and are invisible to any
+    // gate the tick boundary could carry. A declaration is visible to both.
+    // The refusal is a `hole` row AND `partial: true`, so a caller reading
+    // either one already honours it -- `examples/ring1/demo.ts` reads the
+    // rows, `Rofl.run` reads the flag, and neither needed a new word.
+    if (sealedRels(sealedBodies(this.store)).has(lit.rel)) {
+      this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(SEALED_REASON)],
+        { scope: 'timeless', base: true, frozen: true });
+      return { rows: [], partial: true };
+    }
     let partial = false;
     try {
       partial = this.ensure(budget, holeId).partial;

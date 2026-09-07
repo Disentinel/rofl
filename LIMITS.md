@@ -140,7 +140,7 @@ the rest are v0 implementation boundaries.
   are not assertable directly; only rules stage into the next tick.
 - **Frozen provenance is never garbage-collected.** Long multi-tick runs
   accumulate `derived_by` history (that is what makes the diverging-TM
-  partial trace queryable); there is no compaction.
+  partial trace queryable); there is no compaction. One exception, appended below.
 - **`undefined_premise` is a dictionary check, not a coverage check.** It
   compares the relation *names* a rule reads positively against the names
   something concludes or `edb` marks. It says nothing about a relation that
@@ -155,3 +155,20 @@ the rest are v0 implementation boundaries.
 
 - **No aggregation, no optimization passes, no syntax sugar, no GPU anything**
   (spec §8). Resisted.
+
+## Appended 2026-09-07 — what `sealed(provenance)` changes
+
+*(At the end of the file on purpose: `facts/spec.rofl` anchors duties here by
+line number, and a block inserted above unfounds every citation below it.)*
+
+The entry above — *frozen provenance is never garbage-collected* — has one
+exception now, and it is a declaration rather than a setting. A program that
+writes `sealed(provenance).` gets no `derived_by` rows at all: not written and
+later pruned, which is the distinction that makes it gateable. A retention
+policy was refused on this branch because a RULE that reads provenance is known
+before the first firing while a QUERY arrives after the tick boundary, so no
+boundary gate can see one; a declaration is visible to both. Every question
+about `derived_by` in such a world REFUSES — `hole($sealed(provenance),
+reflection_sealed)` stands in the store and a query returns `partial: true` —
+instead of answering empty, and a rule that reads provenance there is named in
+a diagnostic. Nothing else prunes provenance and no host setting can.

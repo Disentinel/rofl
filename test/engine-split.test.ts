@@ -227,7 +227,14 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // 953 -> 1043 (+90): one body order per semi-naive version, plus the
   // per-relation split of the round's front that makes a leading delta
   // affordable at all.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 1043);
+  // 1043 -> 1052 (+9): `sealed`. A program may declare that the kernel stop
+  // publishing one of the three bodies of metadata it keeps ABOUT that program,
+  // and the evaluator's share of it is four things: one field, one line reading
+  // the declaration off the store in `prepare`, two lines naming a rule that
+  // reads what its own program sealed, and two guards on the `derived_by`
+  // writes. +2 PLUMB (the field and the import), +4 POL (the reading and the
+  // diagnostic are a JUDGEMENT about a program), +3 MECH (the guards).
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 1052);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -272,7 +279,11 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // scans, plus the per-relation split of the front. Mechanism and not
   // policy, and the split says so: what may be reordered is decided in
   // `planVersions` below; this only compares two counts and picks.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 716);
+  // 716 -> 719 (+3): the two `derived_by` guards that honour `sealed
+  // (provenance)`, plus the field. Mechanism and not policy, and the split is
+  // the reason to say so: WHETHER provenance is kept is decided by the
+  // PROGRAM, in one clause of its own source; these lines only obey it.
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 719);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -287,7 +298,9 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // it waited for now exist as seeds.
   // 181 -> 152: four blocks shrank to readings, and the asking machinery left.
   // 152 -> 210 (+58): the whole of the per-version planner, in its own block.
-  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 210);
+  // 210 -> 214 (+4): reading the declaration in `prepare` and naming a rule
+  // that reads what its own program sealed. A judgement about a rule set.
+  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 214);
   // 92 -> 93 (+1): `classify` reads the plan instead of the written body, and
   // that block is the range-restriction analysis — POL*, since it needs the
   // rules themselves rather than only a program's text.
@@ -314,7 +327,9 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // 91 -> 100 (+9): `ERule` carries `verPlans`, `VerPlan` is a type of its
   // own, and the round's front gained a per-relation index plus the one-line
   // helper that maintains it -- all header, all declaration.
-  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 100);
+  // 100 -> 102 (+2): the `noProvenance` field and the import that brings
+  // `sealedBodies` in. Declaration, like every other line in this block.
+  assert.equal(rows(W, 'block(engine_ts, L, plumb)'), 102);
   // the number the rewrite question is about: 216 -> 218, the same +2 as `pol`
   // UNCHANGED by the ring, and that is the claim rather than the constant:
   // `policy/1` is `pol` + `pol_star`, 126 + 92, and neither moved. A ring the
@@ -328,7 +343,11 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // 169 -> 227 (+58): `policy/1` is `pol` + `pol_star`, and all 58 land in
   // `pol` -- the per-version planner needs nothing the reflection does not
   // carry flat, so it is not starred.
-  assert.equal(rows(W, 'policy(engine_ts, L)'), 227);
+  // 227 -> 231 (+4): reading `sealed` off the store and naming a rule that
+  // reads what its own program sealed. Both are before-A and both are `pol`
+  // rather than `pol_star`: the declaration is a flat fact of the program's
+  // own text, which is exactly what the star means the absence of.
+  assert.equal(rows(W, 'policy(engine_ts, L)'), 231);
   // AND THE SPLIT THAT SAYS WHAT CAN MOVE. `decides` is policy whose judgement
   // lives in this code; `enforces` is policy that reads a judgement the rules
   // already derived and acts on it — `checkUnstratified` reads `unstratified/1`
@@ -355,7 +374,12 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // and it is the largest of them. 85 -> 86 (+1) for enforces: one line.
   assert.equal(rows(W, 'decides(engine_ts, L)'), 141);
   assert.equal(DECLS.filter((d) => d.role === 'decides').length, 5);
-  assert.equal(rows(W, 'enforces(engine_ts, L)'), 86);
+  // 86 -> 90 (+4), and `decides` does not move, which is the classification
+  // rather than the constant: WHETHER a body is sealed is decided in the
+  // program's own source, one clause of it, and these four lines read that
+  // decision and act on it. That is what `enforces` means, and it is the same
+  // shape as `checkUnstratified` reading `unstratified/1` out of the store.
+  assert.equal(rows(W, 'enforces(engine_ts, L)'), 90);
   assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
                rows(W, 'policy(engine_ts, L)'), 'every policy line has a role');
   // NEGATIVE CONTROL: the join discriminates — a role nothing carries is empty.
@@ -372,9 +396,10 @@ test('the split: mechanism is 716 of 1043 code lines, policy 227 — by query', 
   // plus the front's per-relation index; POL 169 -> 227 (+58), which is the
   // whole of `planVersions` and its two admissibility tests. It is policy for
   // planBody's reason -- it decides -- even though what it decides is speed.
-  assert.equal(S.byCat['MECH'].code, 716);
-  assert.equal(S.total.code, 1043);
-  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 227);
+  // 716 -> 719, 1043 -> 1052, 227 -> 231: `sealed`, split as above.
+  assert.equal(S.byCat['MECH'].code, 719);
+  assert.equal(S.total.code, 1052);
+  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 231);
 });
 
 test('policy splits by WHEN the answer is needed, and most of it is needed too early', () => {
@@ -388,10 +413,13 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
   // 184 -> 182: classify's fold is gone; its verdict-reading is not.
   // 115 -> 173 (+58): a VERSION's order is planned once too, in the same
   // `classify` call, so every line of the per-version planner is before-A.
-  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 173);
+  // 173 -> 177 (+4): a program's `sealed` declaration is read in `prepare`,
+  // which runs before a single rule fires, and the diagnostic it may raise is
+  // about the rule set rather than about any firing.
+  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 177);
   // 66 -> 31: the reuse plan's three decisions left for policy.rofl.
   assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 31);
-  assert.equal(23 + 173 + 31, rows(W, 'policy(engine_ts, L)'));
+  assert.equal(23 + 177 + 31, rows(W, 'policy(engine_ts, L)'));
   // MECH and PLUMB lines carry a tense too, and it must NOT leak into the
   // policy total: the relation is defined over `policy`, not over `block`.
   assert.equal(rows(W, 'policy_when(engine_ts, L, na)'), 0);
@@ -497,9 +525,9 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+716 code/);
-  assert.match(text, /TOTAL\s+1043 code/);
-  assert.match(text, /before-A\s+173 code lines/);
+  assert.match(text, /MECH\s+719 code/);
+  assert.match(text, /TOTAL\s+1052 code/);
+  assert.match(text, /before-A\s+177 code lines/);
 });
 
 test('the definition index reads src/engine.ts, and it is not a grep', () => {

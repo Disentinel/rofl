@@ -133,7 +133,11 @@ test('the minimal tier 0: 17 methods, 289 code lines', () => {
   // `unifyAll` call, which checks the arity itself, so the separate length
   // guard went with it. One line fewer, no method and no condition removed.
   // 329 -> 352 (+23): the per-version selection and the per-relation front.
-  assert.equal(mc.codeAll, 352);
+  // 352 -> 355 (+3): `sealed(provenance)`. `conclude` and the demand unfolder
+  // each guard their `derived_by` write with the declaration the program made,
+  // and both are inside the reachable set. No new method, so `all.size` does
+  // not move: it is two conditions, not a component.
+  assert.equal(mc.codeAll, 355);
   // 15 -> 16: chargeRow is in the KEPT set too — a monotone core still
   // concludes facts, and a core that concludes cannot be allowed to conclude
   // without limit, which is the whole point of the second budget
@@ -157,7 +161,14 @@ test('the minimal tier 0: 17 methods, 289 code lines', () => {
   // every one of the 23 new lines is reachable from the monotone core AND
   // kept by it. The pair earns its keep by being able to disagree, not by
   // disagreeing every time.
-  assert.equal(mc.codeKept, 289);
+  // 289 -> 290 (+1) while codeAll went 352 -> 355 (+3), AND THE PAIR
+  // DISAGREED AGAIN for the third time, exactly as designed. `sealed
+  // (provenance)` guards two `derived_by` writes: `conclude`'s cost one line
+  // (an assignment became a two-line conjunction) and it is KEPT, while
+  // `solveDemandRule`'s cost two (a statement became an if-block) and it is
+  // REACHED but not kept, because a monotone core unfolds no demand rule. A
+  // single counter would have reported +3 in both places.
+  assert.equal(mc.codeKept, 290);
   // the three that drop out, and why each is a branch a monotone core skips
   for (const m of ['negHolds', 'solveDemandRule', 'renameClause']) {
     assert.equal(mc.kept.has(m), false, m);

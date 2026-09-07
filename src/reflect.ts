@@ -119,6 +119,11 @@ export const IFACE = {
   trigger_of: 'trigger_of',
   neg_relation: 'neg_relation',
   provenance_reader: 'provenance_reader',
+  // WRITTEN BY THE PROGRAM, READ BY THE KERNEL, like `semantics` above it: a
+  // floor declaring that one of the three bodies of metadata the kernel keeps
+  // about it is no longer published. See SEALED_BODY below for what each names
+  // and for the ablation that decided which rows may be in it.
+  sealed: 'sealed',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -155,6 +160,9 @@ export const ARITY: Readonly<Record<string, number>> = {
   mode: 2, premise_lit: 3, premise_neg: 2, premise_pos: 2,
   reads_from: 2, reserved: 1, rule: 1, uses_builtin: 2, writes_to: 2,
   semantics: 1, stratum: 2, unknown: 1, unstratified: 1,
+  // read by `sealedBodies` below, which destructures `args[0]` — the same
+  // crash gate every other row of this table is here for.
+  sealed: 1,
 };
 
 /** The one value `semantics/1` is read for. Any other argument is a fact the
@@ -256,6 +264,94 @@ export const ARITH_ZERO_REASON = 'arith_zero_divisor';
  *  (`premise_lit(Id, K, Lit)`) without the hole carrying it — and one hole per
  *  rule, not one per offending substitution. */
 export const RULE_HOLE = '$rule';
+
+/** A FLOOR THAT STOPS PUBLISHING WHAT IT IS, and the one reason a hole can
+ *  carry that is not a failure.
+ *
+ *  The other seven reasons all say the kernel TRIED and could not finish: a
+ *  budget ran out, an expression had no value. This one says the program ASKED
+ *  the kernel to stop keeping something, so the answer is missing on purpose.
+ *  It needs its own atom for exactly the reason `space_exhausted` needed one:
+ *  told `budget_exhausted`, a caller raises the budget, and that is the wrong
+ *  move here — the repair is to remove the declaration, or to accept that this
+ *  question has no answer in this world.
+ *
+ *  IT IS THE REFUSAL, NOT THE SAVING. Withholding the rows is what a host flag
+ *  would do, and this repository has already recorded what a flag is worth: a
+ *  guarantee that can be switched off, and a check nobody will notice is off.
+ *  MEASURED on this branch — plant a leak, a forgery, an unmoded builtin and
+ *  an undefined premise, then drop the rows the audit reads: `leak[audit]` 3
+ *  -> 0, `forged[audit]` 1 -> 0, `unmoded[audit]` 1 -> 0,
+ *  `undefined_premise[audit]` 1 -> 0, with ZERO diagnostics anywhere. Four
+ *  audits went from biting to reporting nothing, and nothing said so. The
+ *  standing `hole` is what says so. */
+export const SEALED_REASON = 'reflection_sealed';
+/** Hole id marker for a sealed body: `hole($sealed(Body), reflection_sealed)`. */
+export const SEALED_HOLE = '$sealed';
+
+/** THE THREE BODIES A PROGRAM MAY SEAL, and why they are one relation with an
+ *  argument rather than three relations.
+ *
+ *  Each is something the kernel writes ABOUT a program rather than FOR running
+ *  it, and each scales with a different thing — the rules, the data, the
+ *  derivations — which is why they are separately declarable. What they share
+ *  is the failure they have in common: dropped, every one of them turns a
+ *  QUESTION into an EMPTY ANSWER rather than into a refusal, and an empty
+ *  audit reads exactly like a clean one.
+ *
+ *  `rules` names the four rows nothing in `src/` and neither of the kernel's
+ *  own two programs reads — measured by ablation over seven worlds, cold (the
+ *  `safetyMemo` cleared), against the program's whole non-reflection answer.
+ *  The other five per-rule rows are NOT here and the measurement is why:
+ *  `has_premise` is read by safety.rofl's `bound_before` and dropping it makes
+ *  every arithmetic premise un-ground, every rule using one unsafe, and the
+ *  ring 1 parse exhaust its budget; `concludes`, `premise_pos`, `premise_neg`
+ *  and `conclusion_tense` are copied into the kernel's own policy stores
+ *  (src/engine.ts:628, :982). A floor cannot seal what the floor it runs on
+ *  reads.
+ *
+ *  `assertions` is the per-FACT half, which scales with the data rather than
+ *  the program. `provenance` is `derived_by`, one row per conclusion.
+ *
+ *  A NAME THIS TABLE DOES NOT KNOW IS DATA, NOT AN ERROR — the same contract
+ *  `semantics/1` has, and for the same reason: a declaration the kernel does
+ *  not act on must not become a load failure. */
+export const SEALED_RULES = 'rules';
+export const SEALED_ASSERTIONS = 'assertions';
+export const SEALED_PROVENANCE = 'provenance';
+
+export const SEALED_BODY: ReadonlyMap<string, readonly string[]> = new Map([
+  [SEALED_RULES, [V.has_conclusion, V.reads_from, V.writes_to, V.uses_builtin]],
+  [SEALED_ASSERTIONS, [V.in_perspective, V.asserted_by]],
+  [SEALED_PROVENANCE, [V.derived_by]],
+]);
+
+/** Which bodies this store's program has sealed. Read the way
+ *  `wellFoundedDeclared` reads `semantics`: off the store, at the moment it is
+ *  asked, so a declaration arriving with a later load takes effect from there
+ *  and the rules already encoded keep the rows they were encoded with. That
+ *  ORDER IS THE MECHANISM, not an artefact: boot.rofl loaded first keeps its
+ *  reflection whole and the floor above it seals its own, which is what `a
+ *  floor declares the floor below opaque` has to mean when both live in one
+ *  store. */
+export function sealedBodies(store: FactStore): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const f of store.relAll(IFACE.sealed)) {
+    if (f.args.length !== ARITY.sealed) continue;
+    if (f.args[0].k === 'a' && SEALED_BODY.has(f.args[0].name)) out.add(f.args[0].name);
+  }
+  return out;
+}
+
+/** The relations those bodies withhold. Empty set when nothing is sealed, which
+ *  is every program in this repository except the one that exercises it. */
+export function sealedRels(bodies: ReadonlySet<string>): ReadonlySet<string> {
+  if (bodies.size === 0) return EMPTY_RELS;
+  const out = new Set<string>();
+  for (const b of bodies) for (const r of SEALED_BODY.get(b)!) out.add(r);
+  return out;
+}
+const EMPTY_RELS: ReadonlySet<string> = new Set<string>();
 
 export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is'] as const;
 
