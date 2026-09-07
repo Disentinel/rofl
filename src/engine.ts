@@ -7,7 +7,7 @@ import {
   type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
-import { type Lit, type BodyElem, type Clause } from './parser.ts';
+import { type Lit, type BodyElem, type Clause } from './unify.ts';
 import { denseClauses } from './dense.ts';
 import { POLICY_DENSE, SAFETY_DENSE } from './kernel-dense.ts';
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';

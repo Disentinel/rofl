@@ -159,8 +159,14 @@ export const TASKS = fs.existsSync(TASKS_DIR)
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]).includes('necessity');
 if (isMain) {
-  const files = ['src/api.ts', 'src/engine.ts', 'src/parser.ts', 'src/reflect.ts',
-    'src/rounds.ts', 'src/store.ts', 'src/unify.ts', 'src/semiring.ts', 'src/repl.ts'];
+  // ENUMERATED, NOT LISTED. A hand-written file list was here until 2026-09-07
+  // and it was already wrong: `src/dense.ts` and `src/kernel-dense.ts` had
+  // shipped a day earlier and the census reported on src/ without them, in
+  // the safe-looking direction (a smaller total, no red anywhere). That is the
+  // same defect as an audit written per relation — the gate's scope is frozen
+  // at the moment it was written, and the next file reopens it silently.
+  const files = fs.readdirSync('src').filter((f) => f.endsWith('.ts'))
+    .map((f) => `src/${f}`).sort();
   const code = new Map(files.map((f) => [f, codeLines(f)]));
   const cov = new Map<string, Map<string, Set<number>>>();
   for (const t of TASKS) cov.set(t, coveredLines(path.join(TASKS_DIR, t)));
@@ -177,16 +183,16 @@ if (isMain) {
   const T = TASKS.map((t) => t.replace(/^t\d+-|\.ts$/g, ''));
   console.log('CODE LINES OF src/ REACHED, by task. `all` is their union.');
   console.log();
-  console.log(`${'file'.padEnd(15)} ${'code'.padStart(5)} ${T.map((t) => t.slice(0, 8).padStart(9)).join('')} ${'all'.padStart(6)} ${'never'.padStart(6)}`);
+  console.log(`${'file'.padEnd(20)} ${'code'.padStart(5)} ${T.map((t) => t.slice(0, 8).padStart(9)).join('')} ${'all'.padStart(6)} ${'never'.padStart(6)}`);
   let tc = 0; let ta = 0; const per = TASKS.map(() => 0);
   for (const f of files) {
     const c = code.get(f)!.size;
     const cols = TASKS.map((t, i) => { const n = hit(t, f); per[i] += n; return String(n).padStart(9); }).join('');
     const a = union(TASKS, f);
     tc += c; ta += a;
-    console.log(`${f.padEnd(15)} ${String(c).padStart(5)} ${cols} ${String(a).padStart(6)} ${String(c - a).padStart(6)}`);
+    console.log(`${f.padEnd(20)} ${String(c).padStart(5)} ${cols} ${String(a).padStart(6)} ${String(c - a).padStart(6)}`);
   }
-  console.log(`${'TOTAL'.padEnd(15)} ${String(tc).padStart(5)} ${per.map((n) => String(n).padStart(9)).join('')} ${String(ta).padStart(6)} ${String(tc - ta).padStart(6)}`);
+  console.log(`${'TOTAL'.padEnd(20)} ${String(tc).padStart(5)} ${per.map((n) => String(n).padStart(9)).join('')} ${String(ta).padStart(6)} ${String(tc - ta).padStart(6)}`);
   console.log();
   const t1 = TASKS[0];
   console.log(`THE MINIMAL TASK, ${t1.replace(/\.ts$/, '')} — load a program, evaluate it, ask it a question —`);

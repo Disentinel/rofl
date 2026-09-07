@@ -186,3 +186,34 @@ export function termFromJson(j: any): Term {
     default: throw new Error('bad term json');
   }
 }
+
+// ---------------------------------------------------------------------------
+// THE STRUCTURES BUILT OUT OF TERMS.
+//
+// A literal and a clause are the kernel's own data, not a parse artifact: the
+// evaluator, the reflector and the dense reader all build them without any
+// text going past. They lived in `parser.ts` because that is where the first
+// one was constructed, and that single line of history made the PARSER look
+// mandatory to every module that only wanted the shape — five files in `src/`
+// imported the grammar to name a record. They live here, in the leaf that
+// already owns `Term`, so that a host which never reads ROFL source (a
+// compiled program, a dense program, an embedder building clauses in its own
+// language) can drop the grammar as a FILE and not merely as a code path.
+// ---------------------------------------------------------------------------
+
+export type Temporal = 'init' | 'now' | 'next';
+
+export interface Lit {
+  rel: string;
+  persp: Term;            // atom or variable
+  perspExplicit: boolean; // was [p] written in the source?
+  args: Term[];
+  temporal: Temporal;
+}
+
+export type BodyElem =
+  | { t: 'pos'; lit: Lit }
+  | { t: 'neg'; lit: Lit }
+  | { t: 'bi'; op: string; l: Term; r: Term };
+
+export interface Clause { head: Lit; body: BodyElem[]; }

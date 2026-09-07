@@ -25,7 +25,8 @@
     "necessity": "node --experimental-strip-types scanners/necessity.ts",
     "parsecost": "node --experimental-strip-types scanners/parse_cost.ts",
     "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl",
-    "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts"
+    "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts",
+    "noparser": "node --experimental-strip-types scripts/parser_optional.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",

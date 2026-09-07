@@ -26,7 +26,7 @@
 // surface syntax is needed only where a person types.
 
 import { type Term, mka, mkv, mki, mks, mkf } from './unify.ts';
-import type { Clause, Lit, BodyElem } from './parser.ts';
+import type { Clause, Lit, BodyElem } from './unify.ts';
 
 export class DenseError extends Error {}
 

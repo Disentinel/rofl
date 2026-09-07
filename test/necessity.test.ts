@@ -13,14 +13,18 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TASKS, coveredLines, codeLines } from '../scanners/necessity.ts';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const TASKS_DIR = path.join(ROOT, 'scanners', 'tasks');
-const FILES = ['src/api.ts', 'src/engine.ts', 'src/parser.ts', 'src/reflect.ts',
-  'src/rounds.ts', 'src/store.ts', 'src/unify.ts', 'src/semiring.ts', 'src/repl.ts'];
+// Enumerated rather than listed, for the reason given in the scanner: a
+// hand-written list freezes the census at the day it was written, and it had
+// already missed two files that shipped after it.
+const FILES = fs.readdirSync(path.join(ROOT, 'src'))
+  .filter((f) => f.endsWith('.ts')).map((f) => `src/${f}`).sort();
 
 test('every task runs, and each one reaches the kernel', () => {
   assert.ok(TASKS.length >= 8, `${TASKS.length} tasks — the set has shrunk`);

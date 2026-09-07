@@ -1,7 +1,8 @@
 // api.ts — load, assert, retract, ?, why, whynot, excise, ticks, snapshots.
 
 import { type Term, mka, mkv, mkf, mki, canonTerm, resolve, walk, isGround, varsOf, type Subst } from './unify.ts';
-import { parseProgram, parseLiteral, type Clause, type Lit } from './parser.ts';
+import { parseProgram, parseLiteral } from './parser.ts';
+import type { Clause, Lit } from './unify.ts';
 const KERNEL_CLAIM = '$kernel_authority';
 import { Store, factKey, type FactRec, type FactStore } from './store.ts';
 import {

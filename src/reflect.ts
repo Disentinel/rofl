@@ -7,8 +7,8 @@ import {
   type Term, type Subst, type ArithFail, mka, mks, mkv, mkf, mki, canonTerm, fnv1a,
   walk, evalArith, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO,
 } from './unify.ts';
-import { tokenize } from './parser.ts';
-import type { Clause, Lit, BodyElem, Temporal } from './parser.ts';
+import { tokenize } from './tokens.ts';
+import type { Clause, Lit, BodyElem, Temporal } from './unify.ts';
 import { type FactStore } from './store.ts';
 
 /** §2 kernel vocabulary: reserved, write-protected relations. */
