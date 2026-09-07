@@ -51,6 +51,29 @@ barren(R) :- fires(R, F), F > 0, conc(R, 0).
 -- actually reached, which is the accumulator that had to exist.
 wasted(R, N) :- barren(R), width(R, _, N).
 
+-- AND `wasted` OVERSTATES ITS OWN PRIZE, which is worth deriving rather than
+-- remembering. Position 0 is entered ONCE PER FIRING with a single empty
+-- solution, so `width(R, 0)` EQUALS `fires(R)` identically and no permutation
+-- of any body can move it. The width that ORDER can reduce is everything
+-- above position 0. Measured 2026-09-07 on one ring 1 clause: 3799 of 7561
+-- elements stand at position 0, and of the 3042 held by the 77 barren rules
+-- only 663 are reducible - so ranking by `wasted` promises four and a half
+-- times what body order can deliver. Ranking by `reducible` instead puts a
+-- rule that CONCLUDES at the top, which `barren` cannot see at all.
+reducible(R, I, N) :- width(R, I, N), 0 < I.
+order_defect(R)    :- reducible(R, I, N), N > 100.
+
+-- AND `order_defect` IS NOW PARTLY ADDRESSED BY THE EVALUATOR ITSELF, which
+-- changes what a reading of it means. `planVersions` gives each semi-naive
+-- version of a rule its own body order where the delta can legally lead, so
+-- an order that was wrong for ONE version no longer has to be carried by the
+-- rest. Measured 2026-09-07 on the same clause: total width 6385 -> 5952, and
+-- of the five rules it moves, `spanto` goes 185 -> 79, `punct` 204 -> 105 and
+-- `nexttok` 169 -> 76 with the SOURCE UNCHANGED. A rule marked `versioned`
+-- ran at least one firing under an order of its own, so `slot` names what the
+-- shared plan puts at I and not necessarily what that firing entered through.
+versioned_defect(R) :- order_defect(R), versioned(R).
+
 -- ---------------------------------------------------------------------------
 -- SECOND: work that produces what is already there.
 --

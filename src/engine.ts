@@ -48,7 +48,34 @@ export interface ERule extends DRule {
    *  necessarily the order it was written in. The reflected clause keeps the
    *  written order, so rule ids and canonical text do not move. */
   plan: BodyElem[];
+  /** One entry per position of `plan`: the order to solve the body in when
+   *  THAT position is the one carrying the round's delta, or null to use
+   *  `plan`. See `planVersions`. */
+  verPlans: (VerPlan | null)[];
 }
+
+/** A body order chosen for ONE semi-naive version of a rule.
+ *
+ *  `propagate` re-fires a rule once per body position whose relation the front
+ *  carries, and each of those firings is a different join: one position reads a
+ *  delta and the rest read the whole relation. They are different joins and
+ *  they can want different orders — which is why Souffle puts the choice in its
+ *  surface syntax (`.plan 1: (2,1)` schedules version 1 only). Here the shared
+ *  `plan` is the fallback and an entry of `verPlans` is the exception.
+ *
+ *  `pos` is the delta literal's index IN `plan` (this object's own array), not
+ *  in the rule's shared plan: `solveBody` compares it against its own loop
+ *  counter, and naming the wrong one degrades the window into a full scan
+ *  (right answers, no speed-up) or, if it names a different literal, drops
+ *  facts. Both failure modes are tested in test/version-plan.test.ts.
+ *
+ *  `perm[j]` is where element `plan[j]` stands in the rule's SHARED plan.
+ *  Provenance is recorded against the shared order through it: `sol.prems`
+ *  comes back in the order the body was solved, and the firing signature is
+ *  built from that list, so two versions solving the same derivation in two
+ *  orders would otherwise record it as two supports of one fact — visible in
+ *  `canonicalState` as a support count and as a witness's premise list. */
+export interface VerPlan { plan: BodyElem[]; pos: number; perm: number[] }
 
 
 export interface StagedFact {
@@ -147,7 +174,31 @@ interface Sol { s: Subst; prems: PremRef[]; }
 const PENDING_NEG: PremRef = { t: 'neg', key: '' };
 const PENDING_BI: PremRef = { t: 'bi', desc: '' };
 
-interface FrontInfo { keys: Set<string>; rels: Set<string>; }
+/** The round's delta. `keys` is every fact key derived last round; `byRel`
+ *  is the SAME keys split by relation, and the split is what makes a delta
+ *  usable as the leading position of a join.
+ *
+ *  `matchPremise` given a window with no bound argument cannot use an index,
+ *  so it iterates the window itself -- and iterating the WHOLE front to find
+ *  the handful of facts of one relation is a scan of the derived layer wearing
+ *  a delta's name. Splitting it costs one map lookup per fact concluded and
+ *  changes no answer: the branch that iterates the window already filtered by
+ *  `f.rel === lit.rel`, and the branch that intersects an index probe already
+ *  probed a single relation. What moves is only the size of the thing walked. */
+interface FrontInfo { keys: Set<string>; byRel: Map<string, Set<string>>; }
+
+/** The empty substitution, shared. `indexProbe` only reads what it is given
+ *  and `pickVersion` asks it once per firing, so allocating a Map there was
+ *  one allocation per firing to answer a question about no bindings at all. */
+const NO_SUBST: Subst = new Map();
+
+/** Record one derived fact in a front. */
+function noteFront(f: FrontInfo, rel: string, key: string): void {
+  f.keys.add(key);
+  let s = f.byRel.get(rel);
+  if (!s) { s = new Set(); f.byRel.set(rel, s); }
+  s.add(key);
+}
 
 interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
 
@@ -319,6 +370,124 @@ export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null;
   return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
 }
 
+/** Can this order be RUN as written: is every builtin's input bound where it
+ *  stands, and does the body still bind the head?
+ *
+ *  `planBody` deliberately does NOT ask this. The written position of a
+ *  builtin is a choice an author already has, and the comment above says why
+ *  taking it away would collapse two programs into one. A REORDERING gets no
+ *  such latitude, because moving a builtin past its binder is not a different
+ *  reading of the rule, it is a silent loss: a comparison reached with an
+ *  unbound side returns null and yields nothing, and `is` with an unbound
+ *  right side derives nothing and does not even raise a hole (ARITH_UNBOUND is
+ *  the one code `evalBuiltin` swallows, so that an ordinary rule whose
+ *  arithmetic runs later is not reported as broken).
+ *
+ *  So this is the mode half of the same safety analysis `planBody` runs for
+ *  negations, and a candidate order that fails it is refused rather than
+ *  forced. It is conservative on `=` with neither side ground -- legal, since
+ *  `evalBuiltin` unifies -- because a rule written that way is exactly the one
+ *  examples/yak fragment 09 turns on, and it is not a rule to experiment with
+ *  behind an author's back. */
+export function orderReady(c: Clause, plan: BodyElem[]): boolean {
+  const bound = new Set<string>();
+  const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
+  const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
+  for (const b of plan) {
+    if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); }
+    else if (b.t === 'neg') continue;             // planBody placed it, or said stuck
+    else if (b.op === '=') {
+      if (groundIn(b.l)) bindAll(b.r);
+      else if (groundIn(b.r)) bindAll(b.l);
+      else return false;
+    } else if (b.op === 'is') {
+      if (!groundIn(b.r)) return false;
+      bindAll(b.l);
+    } else if (!groundIn(b.l) || !groundIn(b.r)) return false;
+  }
+  return c.head.args.every(groundIn) && groundIn(c.head.persp);
+}
+
+/** Does every position of this order have something to join ON?
+ *
+ *  A position whose literal shares no variable with anything before it is a
+ *  CARTESIAN PRODUCT with the accumulator: its fan-out multiplies the whole
+ *  width instead of filtering it, which is this repository's recorded defect
+ *  `multiply early, filter late` in its purest form. The written order of a
+ *  rule is usually a chain -- each literal is reached with a key already bound
+ *  -- and moving a literal from the END of that chain to the FRONT breaks it,
+ *  because the literals that used to bind its key now stand behind it.
+ *
+ *  MEASURED, and this is the reason the check exists rather than a prediction:
+ *  with only the cardinality guard below, leading with the delta still cost
+ *  `args` 195 accumulator elements and `prim` 139 on one ring 1 clause. Both
+ *  are five-literal chains whose last literal shares no variable with the
+ *  first, so the delta led and the old leader became a full scan under it.
+ *  Requiring connectivity refuses exactly those and keeps the ones where the
+ *  delta binds the next position. */
+export function connected(plan: BodyElem[]): boolean {
+  const bound = new Set<string>();
+  const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
+  for (let i = 0; i < plan.length; i++) {
+    const b = plan[i];
+    if (b.t === 'pos') {
+      const vs = [...b.lit.args.flatMap((a) => [...varsOf(a)]), ...varsOf(b.lit.persp)];
+      // A literal with no variables at all is a lookup, not a product.
+      if (i > 0 && vs.length > 0 && !vs.some((v) => bound.has(v))) return false;
+      bindAll(b.lit.persp); for (const a of b.lit.args) bindAll(a);
+    } else if (b.t === 'bi') {
+      if (b.op === '=' ) { if (![...varsOf(b.l)].every((v) => bound.has(v))) bindAll(b.l); bindAll(b.r); }
+      else if (b.op === 'is') bindAll(b.l);
+    }
+  }
+  return true;
+}
+
+/** ONE ORDER PER SEMI-NAIVE VERSION, where the delta can legally lead.
+ *
+ *  The heuristic is one line and it is the only one this function has: put the
+ *  literal that reads the delta FIRST. Everything else keeps its relative
+ *  order, negations are re-placed by `planBody` exactly as they are for the
+ *  shared plan, and the result is kept only if it passes the SAME safety
+ *  analysis -- no stuck negation, head still bound, every builtin ready where
+ *  it lands. A version whose preferred order fails any of those gets null and
+ *  falls back to the shared plan; forcing it is how a reordering turns into a
+ *  wrong answer.
+ *
+ *  A rule whose shared plan is not itself run-ready gets nothing at all. That
+ *  is not squeamishness: such a rule's behaviour (which holes it raises, which
+ *  solutions it silently drops) is a property of the order it was written in,
+ *  and this function's business is speed, not meaning. */
+export function planVersions(c: Clause, plan: BodyElem[]): (VerPlan | null)[] {
+  const none: (VerPlan | null)[] = plan.map(() => null);
+  if (!orderReady(c, plan)) return none;
+  // Positions are identified by OBJECT, because one relation can stand at two
+  // positions of one body and `solveBody`'s window is about a position. A body
+  // that shares an element object between two positions would make `perm`
+  // ambiguous; there is no such body here and this refuses one rather than
+  // guessing.
+  const idx = new Map<BodyElem, number>();
+  for (let j = 0; j < plan.length; j++) {
+    if (idx.has(plan[j])) return none;
+    idx.set(plan[j], j);
+  }
+  const out: (VerPlan | null)[] = [];
+  for (let i = 0; i < plan.length; i++) {
+    const b = plan[i];
+    // Position 0 already leads; a negation or a builtin never carries a front.
+    if (i === 0 || b.t !== 'pos') { out.push(null); continue; }
+    const body = [b, ...plan.filter((_, j) => j !== i)];
+    const res = planBody({ ...c, body });
+    if (res.stuck !== null || !res.headGround || !orderReady(c, res.plan)) { out.push(null); continue; }
+    if (!connected(res.plan)) { out.push(null); continue; }
+    const pos = res.plan.indexOf(b);
+    const perm = res.plan.map((x) => idx.get(x) ?? -1);
+    if (pos < 0 || perm.length !== plan.length || perm.some((k) => k < 0)) { out.push(null); continue; }
+    out.push({ plan: res.plan, pos, perm });
+  }
+  return out;
+}
+
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
   // interface, so an adapter over a third-party engine evaluates the same
@@ -344,7 +513,7 @@ export class Evaluation {
   private active: ERule[] = [];
   private staged = new Map<string, StagedFact>();
   private renameCounter = 0;
-  private curFront: FrontInfo = { keys: new Set(), rels: new Set() };
+  private curFront: FrontInfo = { keys: new Set(), byRel: new Map() };
   /** Three-valued: the program declared `semantics(well_founded)`. */
   wellFounded = false;
   /** The round's frozen assumption, or null for ordinary two-valued negation
@@ -440,7 +609,8 @@ export class Evaluation {
       if (b.t === 'pos') posRels.push(b.lit.rel);
       else if (b.t === 'neg') hasNeg = true;
     }
-    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan };
+    const verPlans = safe ? planVersions(r.clause, plan) : plan.map(() => null);
+    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan, verPlans };
   }
 
   /** ASK safety.rofl WHICH RULES ARE NOT RANGE-RESTRICTED. The program runs in
@@ -1169,7 +1339,7 @@ export class Evaluation {
     const sorted = [...rules].sort((a, b) => (a.canon < b.canon ? -1 : 1));
     this.active.push(...sorted);
     this.active.sort((a, b) => (a.canon < b.canon ? -1 : 1));
-    const front: FrontInfo = { keys: new Set(), rels: new Set() };
+    const front: FrontInfo = { keys: new Set(), byRel: new Map() };
     this.curFront = front;
     for (const r of sorted) this.fireRule(r, null, front);
     this.propagate(front);
@@ -1178,12 +1348,12 @@ export class Evaluation {
   private propagate(front: FrontInfo): void {
     while (front.keys.size > 0) {
       const cur = front;
-      const next: FrontInfo = { keys: new Set(), rels: new Set() };
+      const next: FrontInfo = { keys: new Set(), byRel: new Map() };
       this.curFront = next;
       for (const r of this.active) {
         if (this.naive) { this.fireRule(r, null, next); continue; }
         let relevant = false;
-        for (const rel of r.triggerRels) if (cur.rels.has(rel)) { relevant = true; break; }
+        for (const rel of r.triggerRels) if (cur.byRel.has(rel)) { relevant = true; break; }
         if (!relevant) continue;
         if (r.hasDemandPrem) this.fireRule(r, null, next);
         else this.fireRuleFront(r, cur, next);
@@ -1193,15 +1363,75 @@ export class Evaluation {
   }
 
   private fireRule(r: ERule, frontAt: { pos: number; keys: Set<string> } | null, out: FrontInfo): void {
-    const sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id);
-    for (const sol of sols) this.conclude(r, sol, out);
+    // WHICH ORDER THIS VERSION USES. `frontAt.pos` arrives naming a position of
+    // the SHARED plan -- that is what `fireRuleFront` walks -- and is the key
+    // into `verPlans`. What goes down into `solveBody` is that version's own
+    // plan and the delta literal's index INSIDE IT, which are two different
+    // numbers whenever the orders differ.
+    const vp = frontAt === null ? null : this.pickVersion(r, frontAt);
+    if (vp === null) {
+      const sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id);
+      for (const sol of sols) this.conclude(r, sol, out);
+      return;
+    }
+    const sols = this.solveBody(vp.plan, new Map(), 0, { pos: vp.pos, keys: frontAt!.keys }, r.id);
+    for (const sol of sols) {
+      // Provenance is the SHARED order's, always. `sol.prems[j]` describes
+      // `vp.plan[j]`; `perm` says where that element stands in `r.plan`. Skip
+      // this and the same derivation found by two versions signs itself two
+      // different ways, and one fact grows a second support out of nothing.
+      const prems = new Array<PremRef>(sol.prems.length);
+      for (let j = 0; j < sol.prems.length; j++) prems[vp.perm[j]] = sol.prems[j];
+      this.conclude(r, { s: sol.s, prems }, out);
+    }
+  }
+
+  /** WHETHER THIS VERSION SHOULD LEAD WITH ITS DELTA, decided per firing.
+   *
+   *  It cannot be decided in `prepare`, and that is the measured result rather
+   *  than a design preference. Leading with the delta unconditionally was run
+   *  over one ring 1 clause: it takes 106, 98 and 93 accumulator elements off
+   *  `spanto`, `punct` and `nexttok` -- the rules a SHARED order could not
+   *  satisfy -- and puts 401 back on `args`, 260 on `lit0` and 138 on `prim`,
+   *  for 6385 -> 8485 overall. The quantity that separates the two lists is a
+   *  CARDINALITY: leading with the delta is worth it exactly when the delta is
+   *  smaller than what the shared plan's first position scans, and neither
+   *  number exists until the fixpoint is running. (Souffle's scheduler gets the
+   *  same numbers by profiling a previous run.)
+   *
+   *  So the comparison is made here, where both are cheap: the delta's size is
+   *  the window handed in, and the scan's size is one index probe against the
+   *  shared plan's leading literal under no bindings -- its constant arguments
+   *  are the only ones bound there, which is exactly what the probe reads. */
+  private pickVersion(r: ERule, frontAt: { pos: number; keys: Set<string> }): VerPlan | null {
+    const vp = r.verPlans[frontAt.pos] ?? null;
+    if (vp === null) return null;
+    const lead = r.plan[0];
+    if (lead.t !== 'pos') return null;
+    const perspT = lead.lit.persp;
+    const probe = this.indexProbe(lead.lit, NO_SUBST, perspT.k === 'a' ? perspT.name : null);
+    // WHAT THE SHARED PLAN'S FIRST POSITION ACTUALLY SCANS, or nothing. An
+    // index probe answers it; with no ground argument to probe on, the whole
+    // relation is the answer. What is left is a literal that HAS a constant
+    // argument and no index to read it with -- `p(I, at)`, where the relation
+    // is 34 facts and the constant selects one -- and there `relCount` is not
+    // an estimate, it is wrong by the selectivity of the constant, in the
+    // direction that takes a version plan it should not. Measured: that case
+    // alone cost `tmark` 20 elements a rule and `relbook` 12. So it declines
+    // to guess: an unknown scan keeps the shared plan.
+    let scan: number;
+    if (probe !== null) scan = probe.length;
+    else if (lead.lit.args.every((a) => !isGround(a))) scan = this.store.relCount(lead.lit.rel);
+    else return null;
+    return frontAt.keys.size < scan ? vp : null;
   }
 
   private fireRuleFront(r: ERule, cur: FrontInfo, out: FrontInfo): void {
     r.plan.forEach((b, i) => {
       if (b.t !== 'pos') return;
-      if (!cur.rels.has(b.lit.rel)) return;
-      this.fireRule(r, { pos: i, keys: cur.keys }, out);
+      const keys = cur.byRel.get(b.lit.rel);
+      if (keys === undefined) return;
+      this.fireRule(r, { pos: i, keys }, out);
     });
   }
 
@@ -1261,10 +1491,10 @@ export class Evaluation {
       const dbNew = this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
       if (dbNew) {
         const dbKey = factKey(V.derived_by, KERNEL_PERSP, dbArgs);
-        out.keys.add(dbKey); out.rels.add(V.derived_by);
+        noteFront(out, V.derived_by, dbKey);
       }
     }
-    if (isNew) { out.keys.add(key); out.rels.add(h.rel); }
+    if (isNew) noteFront(out, h.rel, key);
   }
 
   private bumpSteps(): void {
@@ -1565,7 +1795,7 @@ export class Evaluation {
           const dbArgs = [factTerm(call.rel, persp.name, args), mka(r.id), mki(this.store.tick)];
           this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
         }
-        if (isNew) { this.curFront.keys.add(key); this.curFront.rels.add(call.rel); }
+        if (isNew) noteFront(this.curFront, call.rel, key);
         out.push({ s: sol.s, ref: { t: 'fact', key } });
       } else {
         out.push({ s: sol.s, ref: { t: 'bi', desc: 'open ' + this.resolvedLitKey(call, sol.s) } });
@@ -1702,8 +1932,7 @@ export class Evaluation {
       this.chargeRow(ruleId, false);
       // onto the front, so a rule reading `hole` sees it in THIS fixpoint and
       // not only in the next evaluation
-      this.curFront.keys.add(factKey(V.hole, KERNEL_PERSP, args));
-      this.curFront.rels.add(V.hole);
+      noteFront(this.curFront, V.hole, factKey(V.hole, KERNEL_PERSP, args));
     }
   }
 

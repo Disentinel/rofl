@@ -40,7 +40,11 @@ kind(I, K) :- ch(I, C), cls(C, K).
 -- positive recursion with the character tests as its only negation, so there
 -- is no cycle at all.
 st(0, code) :- at(0).
-st(I2, S2) :- st(I, S), I2 is I + 1, at(I2), step(I, S, S2).
+-- `step` BEFORE the position it is about. `step(I, S, S2)` reads only I and S,
+-- both already bound by `st(I, S)`, and it is the premise that fails: on a
+-- 34-byte clause 101 states enter and 34 leave. Asking `at(I2)` first pays the
+-- successor check on all 101. MEASURED: 271 accumulator elements against 237.
+st(I2, S2) :- st(I, S), step(I, S, S2), I2 is I + 1, at(I2).
 
 opens_str(I) :- kind(I, quote).
 opens_cmt(I) :- kind(I, dash), I1 is I + 1, kind(I1, dash).
@@ -61,18 +65,54 @@ step(I, cmt, cmt)  :- at(I), not kind(I, nl).
 code_at(I) :- st(I, code).
 
 -- ------------------------------------------------------------ string tokens
-str_open(I)  :- st(I, code), kind(I, quote).
+-- QUOTES ARE RARE AND `code` IS NEARLY EVERYTHING. Written `st(I, code),
+-- kind(I, quote)` this builds one solution per code position and throws all of
+-- them away at the second premise on a clause with no string in it: 135
+-- accumulator elements for zero conclusions, against 68 this way. `str_close`
+-- below is left as it stands - there both premises are rare, and swapping it
+-- measured at zero.
+str_open(I)  :- kind(I, quote), st(I, code).
 str_close(J) :- st(J, str), kind(J, quote).
 close_between(I, J) :- str_open(I), str_close(J), str_close(K), I < K, K < J.
 strtok(I, J) :- str_open(I), str_close(J), I < J, not close_between(I, J).
 
 -- -------------------------------------------------------------------- tokens
 -- word tokens
-wordch(I) :- kind(I, lower), code_at(I).
-wordch(I) :- kind(I, upper), code_at(I).
-wordch(I) :- kind(I, digit), code_at(I).
+--
+-- THE GROWING RELATION LEADS, and this is the opposite of the rule of thumb
+-- that says put the rarest premise first. `code_at` holds one fact per code
+-- position and `kind(I, lower)` nine on a 34-byte clause, so "rarest first"
+-- names `kind`. Written that way the three rules cost 377 + 272 + 68
+-- accumulator elements; written this way, 135 each. The reason is semi-naive
+-- evaluation: `st` is a left-to-right walk that yields ONE fact a round, so
+-- every round hands this rule a `code_at` delta of one - and a delta only
+-- narrows the position it stands at. With `kind` first the rule rescans all
+-- nine letters per round and probes `code_at` nine times; with `code_at`
+-- first it starts from the single new position. MEASURED: 7106 -> 6794 total
+-- width for the three lines.
+--
+-- It does NOT generalise to `punct` below, and that was measured too: the same
+-- swap there costs 95 elements, because `kind(I, comma)` holds two facts to
+-- `code_at`'s thirty-four and the scan it saves is smaller than the one it
+-- adds. The rule is therefore "lead with the relation whose delta the round
+-- actually carries, when it is not much bigger than the other" - not "lead
+-- with the rarest".
+wordch(I) :- code_at(I), kind(I, lower).
+wordch(I) :- code_at(I), kind(I, upper).
+wordch(I) :- code_at(I), kind(I, digit).
 
-prevword(I)   :- at(I), 0 < I, J is I - 1, wordch(J).
+-- READ FROM THE WORD CHARACTER, NOT FROM EVERY POSITION - `dollar_before`'s
+-- defect, in the rule two lines above the comment that records it. Written as
+-- `at(I), 0 < I, J is I - 1, wordch(J)` this asks EVERY position of the source
+-- whether a word character stands behind it: 49 firings, 516 solutions off
+-- `at`, and 500 of them thrown away by `wordch` at the last premise for 15
+-- conclusions. Inverting `J is I - 1` to `I is J + 1` frees the rare premise
+-- to lead and drops the whole accumulator to one element per word character;
+-- the `0 < I` guard goes with it, since `wordch(J)` already gives J >= 0.
+-- MEASURED with scanners/eval_cost.ts: 549 accumulator elements against 94,
+-- 6.0% of the parse's entire join work, for the same 15 conclusions and a
+-- byte-identical parse.
+prevword(I)   :- wordch(J), I is J + 1, at(I).
 word_start(I) :- wordch(I), not prevword(I), not dollar_before(I).
 -- AND A `$` SWALLOWS WHAT FOLLOWS IT. Without this both `$cons` and `cons`
 -- were word starts - `$` is no `wordch`, so the letter after it had no word
@@ -273,22 +313,34 @@ prim(I, J, T) :- term(I, J, T).
 prim(I, C, T) :- p(I, lpar), nexttok(I, S), expr(S, E, T), nexttok(E, C), p(C, rpar).
 
 mul(I, J, T) :- prim(I, J, T).
-mul(I, C, op(OpS, L, R)) :- mul(I, J, L), nexttok(J, K), mulop(K, K2, Op),
-                            tok_text(K, K2, OpS), nexttok(K2, S), prim(S, C, R).
+-- THE OPERATOR LEADS ALL THREE INFIX RULES (`mul`, `expr`, and `belem`'s
+-- builtin form). `mul(I, J, L), nexttok(J, K), mulop(K, K2, Op)` builds every
+-- parse of a left operand and its following token before asking whether that
+-- token is an operator at all - 71, 71 and 95 accumulator elements for zero
+-- conclusions on a clause with no arithmetic in it, against 29 each.
+mul(I, C, op(OpS, L, R)) :- mulop(K, K2, Op), tok_text(K, K2, OpS), nexttok(J, K),
+                            mul(I, J, L), nexttok(K2, S), prim(S, C, R).
 
 expr(I, J, T) :- mul(I, J, T).
-expr(I, C, op(OpS, L, R)) :- expr(I, J, L), nexttok(J, K), addop(K, K2, Op),
-                             tok_text(K, K2, OpS), nexttok(K2, S), mul(S, C, R).
+expr(I, C, op(OpS, L, R)) :- addop(K, K2, Op), tok_text(K, K2, OpS), nexttok(J, K),
+                             expr(I, J, L), nexttok(K2, S), mul(S, C, R).
 
 -- ------------------------------------------------------------------- literals
 -- The literal is built from PARTS so that book and tense do not multiply into
 -- a rule per combination: three books times two tenses would be six copies.
 relbook(I, J, A, $bare) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+-- THE BRACKET IS THE RARE THING, so it leads both bracketed forms. Reading
+-- `identtok(I, J), ... nexttok(J, K), p(K, lbrack)` walks every name in the
+-- clause and its following token before discovering there is no `[` at all -
+-- 61 accumulator elements for zero conclusions on a clause with no book
+-- bracket, against 4 with `p(K, lbrack)` first. `nexttok(J, K)` is read with K
+-- bound and J free, which it can be: nothing here is arithmetic, so this is a
+-- permutation of a body and not a rewrite of one.
 relbook(I, R, A, BA) :-
-  identtok(I, J), not keyword(I), tok_name(I, J, A), nexttok(J, K), p(K, lbrack),
+  p(K, lbrack), nexttok(J, K), identtok(I, J), not keyword(I), tok_name(I, J, A),
   nexttok(K, B), identtok(B, B2), tok_name(B, B2, BA), nexttok(B2, R), p(R, rbrack).
 relbook(I, R, A, $var(BS)) :-
-  identtok(I, J), not keyword(I), tok_name(I, J, A), nexttok(J, K), p(K, lbrack),
+  p(K, lbrack), nexttok(J, K), identtok(I, J), not keyword(I), tok_name(I, J, A),
   nexttok(K, B), vartok(B, B2), tok_text(B, B2, BS), nexttok(B2, R), p(R, rbrack).
 
 lit0(I, C, R, Bk, A) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
@@ -306,7 +358,7 @@ lit(I, C2, $lit(R, Bk, A, T))   :- lit0(I, C, R, Bk, A), nexttok(C, K), tmark(K,
 belem(I, C, L)       :- lit(I, C, L).
 belem(I, C, $not(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
 belem(I, C, $builtin(OpS, $cons(L, $cons(R, $nil)))) :-
-  expr(I, J, L), nexttok(J, K1), optok(K1, K2, Op), tok_text(K1, K2, OpS),
+  optok(K1, K2, Op), tok_text(K1, K2, OpS), nexttok(J, K1), expr(I, J, L),
   nexttok(K2, S), expr(S, C, R).
 
 body(I, C, $cons(B, $nil)) :- belem(I, C, B).
@@ -373,7 +425,12 @@ white(K)  :- kind(K, nl).
 -- `cmt` after them - so they belong to no token and are not stray either.
 white(K)  :- opens_cmt(K).
 white(K)  :- opens_cmt(K1), K is K1 + 1.
-stray(K)  :- code_at(K), not white(K), not in_tok(K).
+-- THE SHARPER NEGATION FIRST. Both are ready as soon as K is bound, so the
+-- order is free, and `not in_tok` refuses far more than `not white` does. What
+-- reaches the SECOND negation is the whole of the difference: 12 elements this
+-- way, 56 the other way round. MEASURED: 125 accumulator elements against 81,
+-- for the same (empty) answer.
+stray(K)  :- code_at(K), not in_tok(K), not white(K).
 
 -- ------------------------------------------------------------------ wildcards
 -- ALL FIVE SILENT DIVERGENCES WERE THIS ONE THING, and it was not cosmetic. The

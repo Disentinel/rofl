@@ -2,7 +2,7 @@
 --
 -- A model of ONE ring 1 clause parse, measured from inside the join.
 -- The reasoning over these rows is rules/eval-cost.rofl; nothing here
--- concludes anything. Taken on node v22.22.2.
+-- concludes anything. Taken on node v24.13.0.
 
 -- fires(Rule, N)      how many times solveBody was entered for it
 -- conc(Rule, N)       head facts built
@@ -10,42 +10,22 @@
 -- width(Rule, I, N)   accumulator elements reaching body position I,
 --                     summed over every firing
 -- yield(Rule, I, N)   matches those calls produced in total
--- slot(Rule, I, Kind, Rel)
+-- slot(Rule, I, Kind, Rel)   the literal the SHARED plan puts at I
+-- versioned(Rule)     this rule ran at least one firing under a body
+--                     order of its own (planVersions), so some firing
+--                     entered position I through a different literal
+--                     than `slot` names. The widths are exact anyway.
 
-fires("rfbcce4b8", 49).  conc("rfbcce4b8", 15).  fresh("rfbcce4b8", 15).  head("rfbcce4b8", prevword).
-  width("rfbcce4b8", 0, 49).  yield("rfbcce4b8", 0, 516).  slot("rfbcce4b8", 0, pos, at).
-  width("rfbcce4b8", 3, 500).  yield("rfbcce4b8", 3, 15).  slot("rfbcce4b8", 3, pos, wordch).
-fires("r7b71bd47", 68).  conc("r7b71bd47", 10).  fresh("r7b71bd47", 9).  head("r7b71bd47", wordch).
-  width("r7b71bd47", 0, 68).  yield("r7b71bd47", 0, 309).  slot("r7b71bd47", 0, pos, kind).
-  width("r7b71bd47", 1, 309).  yield("r7b71bd47", 1, 10).  slot("r7b71bd47", 1, pos, code_at).
-fires("r2d479732", 68).  conc("r2d479732", 6).  fresh("r2d479732", 6).  head("r2d479732", wordch).
-  width("r2d479732", 0, 68).  yield("r2d479732", 0, 204).  slot("r2d479732", 0, pos, kind).
-  width("r2d479732", 1, 204).  yield("r2d479732", 1, 6).  slot("r2d479732", 1, pos, code_at).
-fires("r59808c04", 102).  conc("r59808c04", 33).  fresh("r59808c04", 33).  head("r59808c04", st).
-  width("r59808c04", 0, 102).  yield("r59808c04", 0, 101).  slot("r59808c04", 0, pos, st).
-  width("r59808c04", 2, 101).  yield("r59808c04", 2, 68).  slot("r59808c04", 2, pos, at).
-  width("r59808c04", 3, 68).  yield("r59808c04", 3, 33).  slot("r59808c04", 3, pos, step).
-fires("r9941dc95", 68).  conc("r9941dc95", 4).  fresh("r9941dc95", 4).  head("r9941dc95", punct).
-  width("r9941dc95", 0, 68).  yield("r9941dc95", 0, 136).  slot("r9941dc95", 0, pos, kind).
-  width("r9941dc95", 1, 136).  yield("r9941dc95", 1, 4).  slot("r9941dc95", 1, pos, code_at).
-fires("rd3ce696d", 30).  conc("rd3ce696d", 11).  fresh("rd3ce696d", 7).  head("rd3ce696d", spanto).
-  width("rd3ce696d", 0, 30).  yield("rd3ce696d", 0, 155).  slot("rd3ce696d", 0, pos, spanto).
-  width("rd3ce696d", 1, 155).  yield("rd3ce696d", 1, 49).  slot("rd3ce696d", 1, pos, tok).
-fires("r0130583d", 68).  conc("r0130583d", 3).  fresh("r0130583d", 3).  head("r0130583d", punct).
-  width("r0130583d", 0, 68).  yield("r0130583d", 0, 102).  slot("r0130583d", 0, pos, kind).
-  width("r0130583d", 1, 102).  yield("r0130583d", 1, 3).  slot("r0130583d", 1, pos, code_at).
-fires("r18778fa9", 68).  conc("r18778fa9", 3).  fresh("r18778fa9", 3).  head("r18778fa9", punct).
-  width("r18778fa9", 0, 68).  yield("r18778fa9", 0, 102).  slot("r18778fa9", 0, pos, kind).
-  width("r18778fa9", 1, 102).  yield("r18778fa9", 1, 3).  slot("r18778fa9", 1, pos, code_at).
-fires("r8e6ff329", 27).  conc("r8e6ff329", 9).  fresh("r8e6ff329", 5).  head("r8e6ff329", args).
-  width("r8e6ff329", 0, 27).  yield("r8e6ff329", 0, 60).  slot("r8e6ff329", 0, pos, term).
-  width("r8e6ff329", 1, 60).  yield("r8e6ff329", 1, 51).  slot("r8e6ff329", 1, pos, nexttok).
+fires("r0ad056e0", 102).  conc("r0ad056e0", 33).  fresh("r0ad056e0", 33).  head("r0ad056e0", st).
+  width("r0ad056e0", 0, 102).  yield("r0ad056e0", 0, 101).  slot("r0ad056e0", 0, pos, st).
+  width("r0ad056e0", 1, 101).  yield("r0ad056e0", 1, 34).  slot("r0ad056e0", 1, pos, step).
+  width("r0ad056e0", 3, 34).  yield("r0ad056e0", 3, 33).  slot("r0ad056e0", 3, pos, at).
+fires("r8e6ff329", 27).  conc("r8e6ff329", 9).  fresh("r8e6ff329", 5).  head("r8e6ff329", args).  versioned("r8e6ff329").
+  width("r8e6ff329", 0, 27).  yield("r8e6ff329", 0, 57).  slot("r8e6ff329", 0, pos, term).
+  width("r8e6ff329", 1, 57).  yield("r8e6ff329", 1, 51).  slot("r8e6ff329", 1, pos, nexttok).
   width("r8e6ff329", 2, 51).  yield("r8e6ff329", 2, 17).  slot("r8e6ff329", 2, pos, p).
   width("r8e6ff329", 3, 17).  yield("r8e6ff329", 3, 14).  slot("r8e6ff329", 3, pos, nexttok).
   width("r8e6ff329", 4, 14).  yield("r8e6ff329", 4, 9).  slot("r8e6ff329", 4, pos, args).
-fires("r5a68bcbe", 29).  conc("r5a68bcbe", 20).  fresh("r5a68bcbe", 20).  head("r5a68bcbe", nexttok).
-  width("r5a68bcbe", 0, 29).  yield("r5a68bcbe", 0, 140).  slot("r5a68bcbe", 0, pos, scan).
-  width("r5a68bcbe", 1, 140).  yield("r5a68bcbe", 1, 20).  slot("r5a68bcbe", 1, pos, tokstart).
 fires("r9a1e8a37", 101).  conc("r9a1e8a37", 1).  fresh("r9a1e8a37", 1).  head("r9a1e8a37", neck).
   width("r9a1e8a37", 0, 101).  yield("r9a1e8a37", 0, 59).  slot("r9a1e8a37", 0, pos, kind).
   width("r9a1e8a37", 1, 59).  yield("r9a1e8a37", 1, 1).  slot("r9a1e8a37", 1, pos, code_at).
@@ -80,13 +60,15 @@ fires("r32236dd6", 135).  conc("r32236dd6", 0).  fresh("r32236dd6", 0).  head("r
   width("r32236dd6", 0, 135).  yield("r32236dd6", 0, 9).  slot("r32236dd6", 0, pos, word).
 fires("r2cb93654", 135).  conc("r2cb93654", 0).  fresh("r2cb93654", 0).  head("r2cb93654", kw_next).
   width("r2cb93654", 0, 135).  yield("r2cb93654", 0, 9).  slot("r2cb93654", 0, pos, word).
-fires("ra1533a18", 68).  conc("ra1533a18", 0).  fresh("ra1533a18", 0).  head("ra1533a18", str_open).
-  width("ra1533a18", 0, 68).  yield("ra1533a18", 0, 67).  slot("ra1533a18", 0, pos, st).
-  width("ra1533a18", 1, 67).  yield("ra1533a18", 1, 0).  slot("ra1533a18", 1, pos, kind).
-fires("rc9c3a989", 1).  conc("rc9c3a989", 0).  fresh("rc9c3a989", 0).  head("rc9c3a989", stray).
-  width("rc9c3a989", 0, 1).  yield("rc9c3a989", 0, 34).  slot("rc9c3a989", 0, pos, code_at).
-  width("rc9c3a989", 1, 68).  yield("rc9c3a989", 1, 34).  slot("rc9c3a989", 1, pos, white).
-  width("rc9c3a989", 2, 56).  yield("rc9c3a989", 2, 28).  slot("rc9c3a989", 2, pos, in_tok).
+fires("r176c28a9", 68).  conc("r176c28a9", 0).  fresh("r176c28a9", 0).  head("r176c28a9", wordch).
+  width("r176c28a9", 0, 68).  yield("r176c28a9", 0, 67).  slot("r176c28a9", 0, pos, code_at).
+  width("r176c28a9", 1, 67).  yield("r176c28a9", 1, 0).  slot("r176c28a9", 1, pos, kind).
+fires("r21dc599d", 68).  conc("r21dc599d", 10).  fresh("r21dc599d", 9).  head("r21dc599d", wordch).
+  width("r21dc599d", 0, 68).  yield("r21dc599d", 0, 67).  slot("r21dc599d", 0, pos, code_at).
+  width("r21dc599d", 1, 67).  yield("r21dc599d", 1, 10).  slot("r21dc599d", 1, pos, kind).
+fires("r7a1db846", 68).  conc("r7a1db846", 6).  fresh("r7a1db846", 6).  head("r7a1db846", wordch).
+  width("r7a1db846", 0, 68).  yield("r7a1db846", 0, 67).  slot("r7a1db846", 0, pos, code_at).
+  width("r7a1db846", 1, 67).  yield("r7a1db846", 1, 6).  slot("r7a1db846", 1, pos, kind).
 fires("r20f2ac91", 35).  conc("r20f2ac91", 0).  fresh("r20f2ac91", 0).  head("r20f2ac91", prim).
   width("r20f2ac91", 0, 35).  yield("r20f2ac91", 0, 60).  slot("r20f2ac91", 0, pos, p).
   width("r20f2ac91", 1, 60).  yield("r20f2ac91", 1, 18).  slot("r20f2ac91", 1, pos, nexttok).
@@ -102,6 +84,15 @@ fires("ra5885800", 102).  conc("ra5885800", 0).  fresh("ra5885800", 0).  head("r
 fires("r57986772", 102).  conc("r57986772", 0).  fresh("r57986772", 0).  head("r57986772", kw_now).
   width("r57986772", 0, 102).  yield("r57986772", 0, 9).  slot("r57986772", 0, pos, word).
   width("r57986772", 2, 3).  yield("r57986772", 2, 0).  slot("r57986772", 2, pos, ch).
+fires("r9941dc95", 68).  conc("r9941dc95", 4).  fresh("r9941dc95", 4).  head("r9941dc95", punct).  versioned("r9941dc95").
+  width("r9941dc95", 0, 68).  yield("r9941dc95", 0, 37).  slot("r9941dc95", 0, pos, kind).
+  width("r9941dc95", 1, 37).  yield("r9941dc95", 1, 4).  slot("r9941dc95", 1, pos, code_at).
+fires("r0130583d", 68).  conc("r0130583d", 3).  fresh("r0130583d", 3).  head("r0130583d", punct).  versioned("r0130583d").
+  width("r0130583d", 0, 68).  yield("r0130583d", 0, 36).  slot("r0130583d", 0, pos, kind).
+  width("r0130583d", 1, 36).  yield("r0130583d", 1, 3).  slot("r0130583d", 1, pos, code_at).
+fires("r18778fa9", 68).  conc("r18778fa9", 3).  fresh("r18778fa9", 3).  head("r18778fa9", punct).  versioned("r18778fa9").
+  width("r18778fa9", 0, 68).  yield("r18778fa9", 0, 36).  slot("r18778fa9", 0, pos, kind).
+  width("r18778fa9", 1, 36).  yield("r18778fa9", 1, 3).  slot("r18778fa9", 1, pos, code_at).
 fires("racaf661d", 68).  conc("racaf661d", 1).  fresh("racaf661d", 1).  head("racaf661d", punct).
   width("racaf661d", 0, 68).  yield("racaf661d", 0, 34).  slot("racaf661d", 0, pos, kind).
   width("racaf661d", 1, 34).  yield("racaf661d", 1, 1).  slot("racaf661d", 1, pos, code_at).
@@ -113,21 +104,22 @@ fires("r1cc1f7e5", 101).  conc("r1cc1f7e5", 0).  fresh("r1cc1f7e5", 0).  head("r
   width("r1cc1f7e5", 0, 101).  yield("r1cc1f7e5", 0, 0).  slot("r1cc1f7e5", 0, pos, kind).
 fires("re0bee51d", 101).  conc("re0bee51d", 0).  fresh("re0bee51d", 0).  head("re0bee51d", op2).
   width("re0bee51d", 0, 101).  yield("re0bee51d", 0, 0).  slot("re0bee51d", 0, pos, kind).
-fires("re59dbf44", 29).  conc("re59dbf44", 0).  fresh("re59dbf44", 0).  head("re59dbf44", belem).
-  width("re59dbf44", 0, 29).  yield("re59dbf44", 0, 33).  slot("re59dbf44", 0, pos, expr).
-  width("re59dbf44", 1, 33).  yield("re59dbf44", 1, 33).  slot("re59dbf44", 1, pos, nexttok).
-  width("re59dbf44", 2, 33).  yield("re59dbf44", 2, 0).  slot("re59dbf44", 2, pos, optok).
+fires("r41b18b98", 49).  conc("r41b18b98", 15).  fresh("r41b18b98", 15).  head("r41b18b98", prevword).
+  width("r41b18b98", 0, 49).  yield("r41b18b98", 0, 45).  slot("r41b18b98", 0, pos, wordch).
+  width("r41b18b98", 2, 45).  yield("r41b18b98", 2, 15).  slot("r41b18b98", 2, pos, at).
 fires("r97dff681", 67).  conc("r97dff681", 0).  fresh("r97dff681", 0).  head("r97dff681", opens_cmt).
   width("r97dff681", 0, 67).  yield("r97dff681", 0, 25).  slot("r97dff681", 0, pos, kind).
   width("r97dff681", 2, 25).  yield("r97dff681", 2, 0).  slot("r97dff681", 2, pos, kind).
-fires("r7bcf6c30", 29).  conc("r7bcf6c30", 0).  fresh("r7bcf6c30", 0).  head("r7bcf6c30", expr).
-  width("r7bcf6c30", 0, 29).  yield("r7bcf6c30", 0, 21).  slot("r7bcf6c30", 0, pos, expr).
-  width("r7bcf6c30", 1, 21).  yield("r7bcf6c30", 1, 21).  slot("r7bcf6c30", 1, pos, nexttok).
-  width("r7bcf6c30", 2, 21).  yield("r7bcf6c30", 2, 0).  slot("r7bcf6c30", 2, pos, addop).
-fires("rc1685235", 29).  conc("rc1685235", 0).  fresh("rc1685235", 0).  head("rc1685235", mul).
-  width("rc1685235", 0, 29).  yield("rc1685235", 0, 21).  slot("rc1685235", 0, pos, mul).
-  width("rc1685235", 1, 21).  yield("rc1685235", 1, 21).  slot("rc1685235", 1, pos, nexttok).
-  width("rc1685235", 2, 21).  yield("rc1685235", 2, 0).  slot("rc1685235", 2, pos, mulop).
+fires("r510d053b", 1).  conc("r510d053b", 0).  fresh("r510d053b", 0).  head("r510d053b", stray).
+  width("r510d053b", 0, 1).  yield("r510d053b", 0, 34).  slot("r510d053b", 0, pos, code_at).
+  width("r510d053b", 1, 68).  yield("r510d053b", 1, 34).  slot("r510d053b", 1, pos, in_tok).
+  width("r510d053b", 2, 12).  yield("r510d053b", 2, 6).  slot("r510d053b", 2, pos, white).
+fires("rd3ce696d", 30).  conc("rd3ce696d", 11).  fresh("rd3ce696d", 7).  head("rd3ce696d", spanto).  versioned("rd3ce696d").
+  width("rd3ce696d", 0, 30).  yield("rd3ce696d", 0, 49).  slot("rd3ce696d", 0, pos, spanto).
+  width("rd3ce696d", 1, 49).  yield("rd3ce696d", 1, 49).  slot("rd3ce696d", 1, pos, tok).
+fires("r5a68bcbe", 29).  conc("r5a68bcbe", 20).  fresh("r5a68bcbe", 20).  head("r5a68bcbe", nexttok).  versioned("r5a68bcbe").
+  width("r5a68bcbe", 0, 29).  yield("r5a68bcbe", 0, 47).  slot("r5a68bcbe", 0, pos, scan).
+  width("r5a68bcbe", 1, 47).  yield("r5a68bcbe", 1, 20).  slot("r5a68bcbe", 1, pos, tokstart).
 fires("re042a7ec", 35).  conc("re042a7ec", 34).  fresh("re042a7ec", 33).  head("re042a7ec", at).
   width("re042a7ec", 0, 35).  yield("re042a7ec", 0, 35).  slot("re042a7ec", 0, pos, at).
   width("re042a7ec", 1, 35).  yield("re042a7ec", 1, 35).  slot("re042a7ec", 1, pos, len).
@@ -159,22 +151,10 @@ fires("rb7809cfd", 68).  conc("rb7809cfd", 0).  fresh("rb7809cfd", 0).  head("rb
   width("rb7809cfd", 0, 68).  yield("rb7809cfd", 0, 0).  slot("rb7809cfd", 0, pos, kind).
 fires("r40d99fbb", 68).  conc("r40d99fbb", 0).  fresh("r40d99fbb", 0).  head("r40d99fbb", str_close).
   width("r40d99fbb", 0, 68).  yield("r40d99fbb", 0, 0).  slot("r40d99fbb", 0, pos, st).
+fires("r00737bd0", 68).  conc("r00737bd0", 0).  fresh("r00737bd0", 0).  head("r00737bd0", str_open).
+  width("r00737bd0", 0, 68).  yield("r00737bd0", 0, 0).  slot("r00737bd0", 0, pos, kind).
 fires("r86ecf094", 68).  conc("r86ecf094", 0).  fresh("r86ecf094", 0).  head("r86ecf094", word_start).
   width("r86ecf094", 0, 68).  yield("r86ecf094", 0, 0).  slot("r86ecf094", 0, pos, kind).
-fires("r97558567", 68).  conc("r97558567", 0).  fresh("r97558567", 0).  head("r97558567", wordch).
-  width("r97558567", 0, 68).  yield("r97558567", 0, 0).  slot("r97558567", 0, pos, kind).
-fires("rb36fd830", 4).  conc("rb36fd830", 0).  fresh("rb36fd830", 0).  head("rb36fd830", relbook).
-  width("rb36fd830", 0, 4).  yield("rb36fd830", 0, 12).  slot("rb36fd830", 0, pos, identtok).
-  width("rb36fd830", 1, 24).  yield("rb36fd830", 1, 12).  slot("rb36fd830", 1, pos, keyword).
-  width("rb36fd830", 2, 12).  yield("rb36fd830", 2, 12).  slot("rb36fd830", 2, pos, tok_name).
-  width("rb36fd830", 3, 12).  yield("rb36fd830", 3, 9).  slot("rb36fd830", 3, pos, nexttok).
-  width("rb36fd830", 4, 9).  yield("rb36fd830", 4, 0).  slot("rb36fd830", 4, pos, p).
-fires("re60a6def", 4).  conc("re60a6def", 0).  fresh("re60a6def", 0).  head("re60a6def", relbook).
-  width("re60a6def", 0, 4).  yield("re60a6def", 0, 12).  slot("re60a6def", 0, pos, identtok).
-  width("re60a6def", 1, 24).  yield("re60a6def", 1, 12).  slot("re60a6def", 1, pos, keyword).
-  width("re60a6def", 2, 12).  yield("re60a6def", 2, 12).  slot("re60a6def", 2, pos, tok_name).
-  width("re60a6def", 3, 12).  yield("re60a6def", 3, 9).  slot("re60a6def", 3, pos, nexttok).
-  width("re60a6def", 4, 9).  yield("re60a6def", 4, 0).  slot("re60a6def", 4, pos, p).
 fires("r746a050d", 2).  conc("r746a050d", 6).  fresh("r746a050d", 6).  head("r746a050d", scan).
   width("r746a050d", 0, 2).  yield("r746a050d", 0, 26).  slot("r746a050d", 0, pos, scan).
   width("r746a050d", 1, 52).  yield("r746a050d", 1, 26).  slot("r746a050d", 1, pos, tokstart).
@@ -245,6 +225,12 @@ fires("r08c91b9d", 34).  conc("r08c91b9d", 6).  fresh("r08c91b9d", 6).  head("r0
 fires("r8e63bdee", 4).  conc("r8e63bdee", 9).  fresh("r8e63bdee", 9).  head("r8e63bdee", word).
   width("r8e63bdee", 0, 4).  yield("r8e63bdee", 0, 15).  slot("r8e63bdee", 0, pos, wext).
   width("r8e63bdee", 2, 30).  yield("r8e63bdee", 2, 15).  slot("r8e63bdee", 2, pos, wordch).
+fires("r55758f16", 29).  conc("r55758f16", 0).  fresh("r55758f16", 0).  head("r55758f16", belem).
+  width("r55758f16", 0, 29).  yield("r55758f16", 0, 0).  slot("r55758f16", 0, pos, optok).
+fires("rf09035ec", 29).  conc("rf09035ec", 0).  fresh("rf09035ec", 0).  head("rf09035ec", expr).
+  width("rf09035ec", 0, 29).  yield("rf09035ec", 0, 0).  slot("rf09035ec", 0, pos, addop).
+fires("r2cd2d0c9", 29).  conc("r2cd2d0c9", 0).  fresh("r2cd2d0c9", 0).  head("r2cd2d0c9", mul).
+  width("r2cd2d0c9", 0, 29).  yield("r2cd2d0c9", 0, 0).  slot("r2cd2d0c9", 0, pos, mulop).
 fires("rb4d706bf", 16).  conc("rb4d706bf", 3).  fresh("rb4d706bf", 3).  head("rb4d706bf", tok_name).
   width("rb4d706bf", 0, 16).  yield("rb4d706bf", 0, 9).  slot("rb4d706bf", 0, pos, identtok).
   width("rb4d706bf", 1, 9).  yield("rb4d706bf", 1, 3).  slot("rb4d706bf", 1, pos, tok_text).
@@ -319,6 +305,10 @@ fires("r22476205", 1).  conc("r22476205", 0).  fresh("r22476205", 0).  head("r22
 fires("ra31bd560", 1).  conc("ra31bd560", 1).  fresh("ra31bd560", 1).  head("ra31bd560", subparse).
   width("ra31bd560", 0, 1).  yield("ra31bd560", 0, 2).  slot("ra31bd560", 0, pos, clause_at).
   width("ra31bd560", 1, 4).  yield("ra31bd560", 1, 2).  slot("ra31bd560", 1, pos, top).
+fires("rad27970c", 4).  conc("rad27970c", 0).  fresh("rad27970c", 0).  head("rad27970c", relbook).
+  width("rad27970c", 0, 4).  yield("rad27970c", 0, 0).  slot("rad27970c", 0, pos, p).
+fires("r641c3ae3", 4).  conc("r641c3ae3", 0).  fresh("r641c3ae3", 0).  head("r641c3ae3", relbook).
+  width("r641c3ae3", 0, 4).  yield("r641c3ae3", 0, 0).  slot("r641c3ae3", 0, pos, p).
 fires("rc9c83bd2", 3).  conc("rc9c83bd2", 12).  fresh("rc9c83bd2", 12).  head("rc9c83bd2", args).
   width("rc9c83bd2", 0, 3).  yield("rc9c83bd2", 0, 12).  slot("rc9c83bd2", 0, pos, term).
 fires("r2a89f81d", 3).  conc("r2a89f81d", 0).  fresh("r2a89f81d", 0).  head("r2a89f81d", arithtok).
@@ -407,6 +397,6 @@ fires("rdf45b57f", 1).  conc("rdf45b57f", 0).  fresh("rdf45b57f", 0).  head("rdf
   width("rdf45b57f", 0, 1).  yield("rdf45b57f", 0, 0).  slot("rdf45b57f", 0, pos, wild_in).
 
 total_rules(140).
-total_width(7561).
+total_width(5952).
 total_conc(717).
 total_fresh(706).
