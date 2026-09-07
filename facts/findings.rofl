@@ -4,6 +4,35 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-08 by the Rust port of the evaluator (rust/, branch
+-- wip/rust). All four are measured; three are open on purpose and name work
+-- the port did not take.
+
+finding(f_key_spelling_reaches_the_answer_at_two_sites, insight).
+recorded(f_key_spelling_reaches_the_answer_at_two_sites, "2026-09-08").
+finding_note(f_key_spelling_reaches_the_answer_at_two_sites,
+  "the constraint a numeric fact identity has to satisfy turned out to be NARROWER than it reads: a fact key is spelled in canonicalState line order and in witnessOf least-signature, and NOWHERE ELSE that an observer can reach - measured with a mutant set over all 27 port-corpus cases (rust/mutants.sh), where M2 (witnessOf takes the first firing rather than the least) is killed on 27 of 27 and M1 (relPersp answers in ARRIVAL order rather than canonical key order) SURVIVES on 27 of 27, as does M6 (the run comparator deliberately reversed); the reason is the one this repository already recorded for the storage port - matchPremise sorts what survives unification and canonicalState sorts its own keys - so the per-(relation,perspective) run order is a documented promise nothing observable rests on, and a second engine can therefore keep the ordering as a COMPARATOR and never as a field; what that bought in the Rust port: 264 bytes per fact on examples/spat against 883 for the JS reference on the same world and the same instrument (11567 facts, node heapUsed after three collections vs live allocator bytes)").
+demands(f_key_spelling_reaches_the_answer_at_two_sites, doc).
+
+finding(f_oracle_is_blind_to_run_order_and_to_staging, pitfall).
+recorded(f_oracle_is_blind_to_run_order_and_to_staging, "2026-09-08").
+demands(f_oracle_is_blind_to_run_order_and_to_staging, kernel_test).
+finding_note(f_oracle_is_blind_to_run_order_and_to_staging,
+  "the port corpus oracle - byte-identical canonicalState over 27 seeds - was measured against a set of ten mutants rather than one, and it kills TWO of them: the canonical witness pick (M2, 27 of 27) and a wrong run comparator only where that comparator is the sole path (M6 survives, because it is not); the eight that survive say what it cannot see, and three of those are holes rather than freedoms - the per-group key order (M1, M6), '@next' STAGING in its entirety (M7: a rule staging into the next tick contributes no line to canonicalState, so an engine that dropped staging completely would pass all 27), and JavaScript UTF-16 string order versus UTF-8 byte order (M8: no corpus string carries a character above U+FFFF, so the two agree everywhere the corpus looks); the other five are genuine freedoms the port contract already grants (an index may decline, may over-answer, may not under-answer - M3, M4, M5, and the two phase-A waves, M9, and planBody moving no negation on any of the 1965 corpus rules, M10); what this demands is a corpus case with a '@next' head plus a tick advance, because seven of the 27 cases HAVE '@next' rules and not one of them can fail on staging").
+
+finding(f_second_engine_needs_safety_rofl_and_not_policy_rofl, insight).
+recorded(f_second_engine_needs_safety_rofl_and_not_policy_rofl, "2026-09-08").
+finding_note(f_second_engine_needs_safety_rofl_and_not_policy_rofl,
+  "a reimplementer has to run ONE of the kernel's two own programs and not both, which is worth stating because both arrive together in src/kernel-dense.ts and both look mandatory: safety.rofl is load-bearing - dropping it (returning the empty RuleAnswer) turns exactly sensors, tm and tm_diverge red, 3 of 27, which are precisely the three cases carrying an unsafe or demand-backed rule (measured beforehand by rust/tools/probe.ts, so the prediction and the control agree); policy.rofl is NOT - it feeds only planReuse, whose hits are empty by construction on a store that arrives through Store.restore because derivedKeys is not part of a snapshot, and the Rust port implements none of it and is byte-identical on all 27; the practical consequence is that the dense reader plus safety.rofl is the whole bootstrap a second host must carry, and the reuse machinery can be left for a host that evaluates the same store twice").
+addressed_by(f_second_engine_needs_safety_rofl_and_not_policy_rofl, "rust/rofl/src/engine.rs").
+
+finding(f_numeric_identity_cannot_reclaim_under_the_alternation, pitfall).
+recorded(f_numeric_identity_cannot_reclaim_under_the_alternation, "2026-09-08").
+demands(f_numeric_identity_cannot_reclaim_under_the_alternation, kernel_test).
+finding_note(f_numeric_identity_cannot_reclaim_under_the_alternation,
+  "the one place the Rust port is WORSE than the JS reference on memory, and it is a consequence of the numeric fact identity rather than of an oversight: a witness premise is a fact ID here and a fact KEY there, so a record the alternating fixpoint has dropped must stay readable for its key to be spellable, and clearDerived therefore cannot reclaim the record arena; measured on examples/rip, the corpus's only semantics(well_founded) world - 1201 bytes per fact against 886 for the JS reference (0.74x), with 131072 record slots standing for 5678 live facts, while every other case in the corpus is 1.3x to 3.7x BETTER; the other 26 never notice because clearDerived runs once, at the start, over a store whose facts are all base; two repairs are visible and neither was taken - carry a stable structural key inside PremRef (which gives back the bytes a numeric identity was meant to save), or compact the arena and remap every held ID at the round boundary, which is safe only because no live witness points at a dead fact AT THAT MOMENT and would have to be proved so rather than assumed").
+
+
 -- Recorded 2026-08-30 while building examples/slop (SLOP). Both are open on
 -- purpose: the first is a design conclusion the semiring layer should carry
 -- in its own documentation, the second names a hole in an existing audit.

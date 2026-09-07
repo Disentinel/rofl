@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = ["rofl"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
