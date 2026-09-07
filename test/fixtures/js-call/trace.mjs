@@ -18,13 +18,36 @@ const seen = new Set();
  *  two apart is the census's job, not this file's. */
 const measured = new Set();
 
-/** V8 gives `Box.get`, `Object.hello`, `new Box`; the declared name is the
- *  last dot-segment. Documented as lossy: two same-named functions on
- *  different objects collapse, so fixture names are kept unique. */
+/** The declared name, as V8 reports it. Documented as lossy: two same-named
+ *  functions on different objects collapse, so fixture names are kept unique.
+ *
+ *  SWEPT 2026-09-07 rather than assumed, because this comment said `V8 gives
+ *  Box.get, Object.hello, new Box` and that is not what this V8 gives. Sixteen
+ *  shapes measured on Node 22, and the qualified names are nearly all gone:
+ *
+ *    function / arrow / object method / class method / static / async /
+ *    generator / inherited / bound / named or anonymous fn expression
+ *                                              -> the bare name, no dots
+ *    new Box(), new Sub()                      -> `Box`, `Sub`; no `new ` prefix
+ *    a getter                                  -> `get acc`
+ *    a key that CONTAINS a dot, obj['a.b']     -> `dotted.a.b`  (still qualified)
+ *    a computed key                            -> `[Symbol.iterator]`
+ *    an arrow passed to a host API             -> null, so `<top>`
+ *
+ *  So the last-dot rule fires on exactly two shapes today. On `dotted.a.b` it
+ *  is doing its job. On `[Symbol.iterator]` it was CORRUPTING the name to
+ *  `iterator]` — a case it was never designed for, arriving at a rule written
+ *  for a V8 that no longer names things that way.
+ *
+ *  THE BRACKETS SAY THE WHOLE THING IS ONE KEY, so they are stripped first and
+ *  the dot rule then names the property: `[Symbol.iterator]` -> `iterator`,
+ *  which is what the model calls it too — every other method is named by its
+ *  key rather than by its receiver, and a computed key is still a key. */
 function frameName(cs) {
   let n = null;
   try { n = cs.getFunctionName() ?? cs.getMethodName(); } catch { n = null; }
   if (!n) return '<top>';
+  if (n.startsWith('[') && n.endsWith(']')) n = n.slice(1, -1);
   const dot = n.lastIndexOf('.');
   return dot < 0 ? n : n.slice(dot + 1);
 }

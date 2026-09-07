@@ -1065,6 +1065,38 @@ export function run(n) {
   return mid(n);
 }
 
+// THE ITERATOR PROTOCOL, which is two calls and no call site for either
+// (w_cg_invisible_calls). `for (x of counter)` calls `counter[Symbol.iterator]()`
+// and then `next()` on whatever that returned, and the grammar shows neither.
+//
+// MEASURED AGAINST THE RUNTIME FIRST: V8 attributes BOTH to the enclosing
+// function, so unlike an `await`'s `.then` this one is checkable. It also
+// reports the first as `[Symbol.iterator]`, a shape trace.mjs's last-dot rule
+// had never seen and was corrupting to `iterator]`.
+//
+// `bump` IS A PLAIN NAME ON PURPOSE. The second hop goes through
+// `member_value` on the object the iterator method RETURNS, so the callee must
+// be a function this corpus can name — an inline arrow would be a second
+// construct in a fixture for one.
+function bump() {
+  trace();
+  return { value: 1, done: true };
+}
+
+const counter = {
+  [Symbol.iterator]() {
+    trace();
+    return { next: bump };
+  },
+};
+
+export function useIterable(n) {
+  trace();
+  let s = 0;
+  for (const x of counter) s += n;
+  return s;
+}
+
 // A CALL WITH NO CALL SITE (w_cg_invisible_calls). `` mark`a ${n} b` `` calls
 // `mark` and the grammar gives that call no CallExpression node to hang it on —
 // the same shape `new C()` had, and the same remedy: a TRANSFER SITE, so the
@@ -1152,6 +1184,7 @@ export async function main() {
     useStaticOnInstance(1),
     useMethodOnClass(1),
     useTag(1),
+    useIterable(1),
     useForOfArray(1),
     useForOfGen(1),
     useGuard(1),

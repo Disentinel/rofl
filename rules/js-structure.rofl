@@ -31,4 +31,24 @@ ast_within[code](P, D) :- ast_within[code](P, X), ast_in[code](X, D).
 
 -- the two attributes worth a name of their own
 ast_name[code](N, V)   :- ast_attr[code](N, name, V).
+
+-- THE NAME A KEY STANDS FOR, wherever a key appears — an object method, an
+-- object property, a class method. Written once here rather than four times
+-- because it grew a second case on 2026-09-07 and the four copies would have
+-- been four chances to add it three times.
+--
+-- A COMPUTED WELL-KNOWN SYMBOL IS A NAME. `{ [Symbol.iterator]() {} }` puts a
+-- `member_expression` where every other key has an identifier, so every
+-- relation reading `ast_name` on a key found nothing: the method had no name in
+-- `fn_name` and no key in `member_value`, and an edge to it was derivable and
+-- unreportable at once. The property is the name — `iterator` — which is what
+-- V8 says with the brackets off and what this model calls every other method.
+--
+-- GUARDED ON `Symbol` DELIBERATELY: `obj[someVar]` has no static name and this
+-- must not invent one. The well-known symbols are the only computed keys whose
+-- text the LANGUAGE fixes rather than a value.
+key_name[code](K, N)   :- ast_name[code](K, N).
+key_name[code](K, N)   :- ast_node[code](K, member_expression, _, _),
+                          ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
+                          ast_child[code](K, property, 0, P), ast_name[code](P, N).
 ast_value[code](N, V)  :- ast_attr[code](N, value, V).

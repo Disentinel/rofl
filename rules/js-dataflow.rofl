@@ -284,16 +284,16 @@ obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, M),
                                  ast_node[code](M, object_method, _, _),
-                                 ast_child[code](M, key, 0, K), ast_name[code](K, Key), V = M.
+                                 ast_child[code](M, key, 0, K), key_name[code](K, Key), V = M.
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, P),
                                  ast_node[code](P, object_property, _, _),
-                                 ast_child[code](P, key, 0, K), ast_name[code](K, Key),
+                                 ast_child[code](P, key, 0, K), key_name[code](K, Key),
                                  ast_child[code](P, value, 0, V).
 member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                   ast_child[code](B, body, _, M),
                                   ast_node[code](M, class_method, _, _),
-                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+                                  ast_child[code](M, key, 0, K), key_name[code](K, Key).
 
 -- A MEMBER WRITTEN IS A MEMBER READ — `obj.x = f`, and then `obj.x()`.
 --

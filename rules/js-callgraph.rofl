@@ -43,6 +43,8 @@ transfer_kind(new_expression).
 -- it makes the miss ATTRIBUTABLE, which is the difference between a gap and a
 -- silence, and that sentence was written here for `new` and applied once.
 transfer_kind(tagged_template_expression).
+-- ...and a THIRD, which is the first one that is two calls at one node.
+transfer_kind(for_of_statement).
 transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
 
 -- what an enclosing function can be asked about: a call site or a transfer site
@@ -249,8 +251,10 @@ fn_name[code](F, N) :- ast_node[code](F, function_declaration, _, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
 fn_name[code](F, N) :- ast_node[code](F, function_expression, _, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
+-- `key_name` and not `ast_name`, so a computed well-known symbol is a name
+-- here too — rules/js-structure.rofl says once what a key stands for.
 fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
-                       ast_child[code](F, key, 0, K), ast_name[code](K, N).
+                       ast_child[code](F, key, 0, K), key_name[code](K, N).
 -- ...except a CONSTRUCTOR, which does not answer to the word `constructor` at
 -- run time: V8 reports the frame as `new Box`, and the rule below gives it the
 -- CLASS's name. Without this exclusion the constructor edge is derived twice —
@@ -259,7 +263,7 @@ fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
 ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
-                       ast_child[code](F, key, 0, K), ast_name[code](K, N).
+                       ast_child[code](F, key, 0, K), key_name[code](K, N).
 fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
@@ -438,6 +442,38 @@ resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
 resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
                         may_be_node[flow](T, F), fn_node[code](F).
+
+-- THE ITERATOR PROTOCOL. `for (x of E)` calls `E[Symbol.iterator]()` and then
+-- `next()` on whatever that returned, and the grammar shows neither. Both are
+-- attributed by V8 to the enclosing function — measured before this was
+-- written — so unlike an `await`'s `.then` the model can be held to them.
+--
+-- ONLY THE FIRST HOP IS A `resolves`, AND THE SECOND DELIBERATELY IS NOT.
+-- `ambiguous_call[audit]` reads a site with two answers as an
+-- over-approximation that must be visible, which is exactly right for a callee
+-- POSITION and exactly wrong here: a for-of makes two calls and both are true,
+-- so routing the second through `resolves` would turn a correct model into an
+-- audit row. The second hop goes straight to `calls`, which is where "who calls
+-- whom" lives and where two callees from one statement is an ordinary fact.
+-- Measured both ways: through `resolves` it takes `ambiguous_call` 8 -> 9.
+for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
+                               ast_child[code](X, right, 0, R),
+                               may_be_node[flow](R, Obj),
+                               member_value[flow](Obj, "iterator", M), fn_node[code](M).
+resolves[code](X, M) :- for_of_iterates[code](X, M).
+
+-- ...and the iterator object's `next`, which the loop calls and no syntax
+-- names. `returns[flow]` carries what the method gave back and `member_value`
+-- reads that object's members — both already standing, so this is a join and
+-- not a mechanism.
+-- `member_value` NAMES THE NODE A MEMBER HOLDS, which for `{ next: bump }` is
+-- the IDENTIFIER and not the function — the relation's own comment says it does
+-- not judge what the value IS. So the last step is `may_be_node` again, exactly
+-- as every other consumer of a member does it.
+calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
+                             returns[flow](M, E), may_be_node[flow](E, IterObj),
+                             member_value[flow](IterObj, "next", V),
+                             may_be_node[flow](V, Next), fn_node[code](Next).
 
 -- THE GENERAL CALLEE RULE. Everything above resolves a callee by recognising
 -- its SPELLING — an identifier, a member, an IIFE. This one asks the value
