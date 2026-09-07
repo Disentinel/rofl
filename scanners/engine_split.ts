@@ -138,6 +138,22 @@ export const DECLS: Decl[] = [
   { id: 'planBody', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'export function planBody(',
     what: 'where a negation may stand: held back until its shared variables are bound, so literal order cannot change the answer' },
+  // ADDED 2026-09-07, and a block of its own rather than an absorption into
+  // planBody, because it answers a DIFFERENT question. `planBody` decides what
+  // a sentence means (where a negation may stand); this decides how fast one
+  // body order is for one semi-naive VERSION of a rule, which is a cost
+  // judgement and changes no answer. It is POLICY all the same -- it decides,
+  // and the criteria (a delta may lead only where it joins with what follows,
+  // and only where the safety analysis is satisfied) are exactly the kind of
+  // judgement this table exists to count. `before-A` for planBody's reason: a
+  // rule is planned once, when it is classified. The CARDINALITY half of the
+  // decision cannot live here at all -- it needs numbers that do not exist
+  // until the fixpoint runs -- and sits in `pickVersion`, absorbed into
+  // `activate` below, which is where the firing is.
+  { id: 'planVersions', role: 'decides', key: { kind: 'def', name: 'orderReady' },
+    cat: 'POL', when: 'before-A',
+    anchor: 'export function orderReady(',
+    what: 'one body order per semi-naive version: where the round\'s delta may lead, and where it must not' },
   { id: 'evaluation', key: { kind: 'def', name: 'Evaluation' }, cat: 'PLUMB', when: 'n/a',
     anchor: 'export class Evaluation {',
     what: 'class fields and constructor' },
@@ -304,14 +320,21 @@ export const DECLS: Decl[] = [
  *  exactly the event the pin was standing in for. Ordered by line, duplicates
  *  kept — `constructor` appears three times and the count is information. */
 export const ABSORBED: Record<string, string[]> = {
-  header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
+  header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor', 'noteFront'],
   // the one closure inside `planBody` the walker counts as a definition
   planBody: ['note'],
+  // `connected` and `planVersions` are the rest of the per-version planner;
+  // `orderReady` opens the block, so it is the key and not an absorption.
+  planVersions: ['connected', 'planVersions'],
   asking: ['policyStore'],
 
   evaluation: ['constructor'],
   negPhase: ['negLevel'],
-  activate: ['propagate', 'fireRule', 'fireRuleFront'],
+  // `pickVersion` is the half of the per-version decision that cannot be made
+  // in `prepare`: whether the delta is smaller than what the shared plan's
+  // first position scans is a question about the store as it stands, so it is
+  // asked per firing, next to the firing.
+  activate: ['propagate', 'fireRule', 'pickVersion', 'fireRuleFront'],
   // `chargeRow` is the SPACE wall, and it sits with the step budget because
   // the two are one subject: what an evaluation is allowed to spend. Declared
   // here rather than given a block of its own so that the block table keeps
