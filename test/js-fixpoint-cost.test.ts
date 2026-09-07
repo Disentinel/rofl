@@ -143,11 +143,11 @@ test('the five heaviest read paths, by name', () => {
   // rules. A delta alone would have reported "+6.7%" for both and said nothing
   // about which half either time.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 109052',
-    'relPersp authority = 82242',
-    'argMatches encloses_v pos=[1] = 53441',
-    'relPersp encloses_v = 50846',
-    'relPersp ast_node = 48615',
+    'argMatches ast_within pos=[0] = 110050',
+    'relPersp authority = 83502',
+    'argMatches encloses_v pos=[1] = 53925',
+    'relPersp encloses_v = 51330',
+    'relPersp ast_node = 49275',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -188,7 +188,19 @@ test('the five heaviest read paths, by name', () => {
   // heaviest paths are `relPersp` reads whose accumulators the extra vocabulary
   // reorders. Pinned rather than explained further: the gate's job is to name
   // the path that moved, and `relPersp ast_node` +7.1% is the one that did.
-  assert.equal(c.total, 937097, 'total rows handed out by the store in one fixpoint');
+  // 937 097 -> 946 277 on 2026-09-07, and THE AXES WERE CHOSEN FROM THE DIFF
+  // this time — `rules/js-dataflow.rofl` plus BOTH fixture files, because the
+  // module-boundary work touched beta.mjs and the hard-coded pair would have
+  // missed it exactly as it missed the whole of the previous iteration:
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   934 665 / 56 772 fir   944 477 / 57 275 fir
+  //     import rules 936 060 / 56 815 fir   946 277 / 57 335 fir
+  //
+  // the RULES cost +0.15% of rows and 43 firings — five relations that lead
+  // with `imports_name`, which has three rows — and the FIXTURE costs +1.05%
+  // and 503. Same shape as the alias arm and the opposite of the scope layer.
+  assert.equal(c.total, 946277, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -241,5 +253,5 @@ test('the five heaviest read paths, by name', () => {
   // instrument reported nothing. A measurement whose axes are hard-coded
   // measures the shape of the previous change. The axes have to be chosen per
   // iteration, from the diff.
-  assert.equal(c.firings, 56643, 'derivations: 56 448 before the type-node vocabulary');
+  assert.equal(c.firings, 57335, 'derivations: 56 643 before the module boundary');
 });

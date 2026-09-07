@@ -226,6 +226,14 @@ ignored(js, unary_expression, dataflow, a_a_primitive_is_not_a_node).
 ignored(js, class_body, dataflow, a_a_statement_carries_no_value).
 ignored(js, template_element, dataflow, a_a_quasi_is_not_an_expression).
 
+-- THE MODULE BOUNDARY, 2026-09-07 (w_cg_module_boundary). An imported name MAY
+-- BE the function the exporting module declares under that name; the export
+-- declaration names a value rather than carrying one of its own. Entry 9 in
+-- rules/js-dataflow.rofl.
+handled(js, import_declaration,       dataflow, r_imported_name).
+handled(js, import_specifier,         dataflow, r_imported_name).
+handled(js, export_named_declaration, dataflow, r_imported_name).
+
 -- TEN TYPE NODES, 2026-09-07 (w_type_surface). A type annotation is erased
 -- before anything runs, so it holds no value for this layer to carry. NOT the
 -- same question as `which prototype does this VALUE have`, which is where the
@@ -256,3 +264,11 @@ ignored(js, tsunion_type,                   dataflow, a_type_only_no_runtime_val
 -- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
 -- declared.
 kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
+
+-- ...and the two kinds those verdicts are about are declared HERE too, which
+-- `orphan_claim[audit]` demanded within one run: a world loading this pack
+-- and not facts/js-modules.rofl carried a claim about a cell it had no kind
+-- for. Third time this convention has bitten in one session — a row belongs
+-- in the pack that declares its subject, and a verdict declares the kind.
+node_kind(js, import_specifier).
+node_kind(js, export_named_declaration).

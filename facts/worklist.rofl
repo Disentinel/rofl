@@ -816,14 +816,21 @@ work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_la
 -- could not notice — the same shape as the leak audit that had no world.
 -- The modules layer already resolves specifiers to files; nothing joins that
 -- to `denotes`, which is the whole of this item.
-work(w_cg_module_boundary, "a call graph that stops at the file: an imported name resolves to nothing").
+-- PARTLY DONE 2026-09-07. `r_imported_name` answers the three forms this
+-- corpus can exercise, at both layers, and their six claims are gone with the
+-- cells. WHAT IS LEFT IS FOUR FORMS WITH NO CHECKABLE SITE: three of them
+-- (`export *`, a namespace import, a default-specifier import) produce no
+-- node in this corpus at all and carry a `kind_absent_ok` row saying so; the
+-- fourth, `export default`, has exactly one node and NO IMPORTING CONSUMER —
+-- `bdefault` is called by the harness. Each is a different binding rule and
+-- declaring any of them answered would be a claim no site backs.
+work(w_cg_module_boundary, "an imported name is the function the other module exports - DONE for the three forms the corpus exercises; four forms remain with no checkable site").
 work_order(w_cg_module_boundary, 33).
 work_state(w_cg_module_boundary, open).
-claim(queued, js, import_declaration,          none, callgraph, w_cg_module_boundary).
-claim(queued, js, import_specifier,            none, callgraph, w_cg_module_boundary).
+work_spawned(w_cg_module_boundary, f_the_kernel_refused_exactly_and_nobody_read_the_refusal).
+work_spawned(w_cg_module_boundary, f_the_boundary_had_no_site_to_cross).
 claim(queued, js, import_default_specifier,    none, callgraph, w_cg_module_boundary).
 claim(queued, js, import_namespace_specifier,  none, callgraph, w_cg_module_boundary).
-claim(queued, js, export_named_declaration,    none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_default_declaration,  none, callgraph, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
 -- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
@@ -832,11 +839,8 @@ claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boun
 -- and the item was named `w_cg_` only because the call-graph sweep found it
 -- first. Measured with both files in one store, with a same-file control that
 -- resolves normally two lines away.
-claim(queued, js, import_declaration,          none, dataflow, w_cg_module_boundary).
-claim(queued, js, import_specifier,            none, dataflow, w_cg_module_boundary).
 claim(queued, js, import_default_specifier,    none, dataflow, w_cg_module_boundary).
 claim(queued, js, import_namespace_specifier,  none, dataflow, w_cg_module_boundary).
-claim(queued, js, export_named_declaration,    none, dataflow, w_cg_module_boundary).
 claim(queued, js, export_default_declaration,  none, dataflow, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_boundary).
 

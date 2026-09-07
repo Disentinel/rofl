@@ -90,6 +90,24 @@ handled(js, this_expression,                 callgraph, r_this_host).
 -- `member_value[flow]` arm in rules/js-dataflow.rofl and needs no store — the
 -- layer is already flow-insensitive for an assignment to an identifier.
 handled(js, assignment_expression,           callgraph, r_member_write).
+-- THE MODULE BOUNDARY, 2026-09-07 (w_cg_module_boundary). An imported name may
+-- be the function the other module exports under that name — a VALUE fact in
+-- rules/js-dataflow.rofl, read here through `may_be_node` like every other
+-- receiver, so the call graph gains no mechanism of its own. The export side is
+-- the same question read backwards.
+handled(js, import_declaration,              callgraph, r_imported_name).
+handled(js, import_specifier,                callgraph, r_imported_name).
+handled(js, export_named_declaration,        callgraph, r_imported_name).
+-- ...and the four forms this corpus cannot exercise keep their reason. A
+-- default export, a namespace import, a default-specifier import and
+-- `export *` are each a different binding rule, and NONE of them appears in a
+-- position where the answer could be checked: `bdefault` is called by the
+-- harness, not by an importing module. Declaring them answered would be a
+-- claim no site backs.
+unknown_because(js, import_default_specifier,   callgraph, not_yet).
+unknown_because(js, import_namespace_specifier, callgraph, not_yet).
+unknown_because(js, export_default_declaration, callgraph, not_yet).
+unknown_because(js, export_all_declaration,     callgraph, not_yet).
 unknown_because(js, super,                   callgraph, not_yet).
 -- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
 -- by the refinement column, so a KIND-level reason has no cell to sit on. The
@@ -348,3 +366,25 @@ ignored(js, tsunion_type,                   callgraph, a_type_only_no_runtime_va
 -- declared.
 kind_absent_ok(decorator, a_no_corpus_site).
 kind_absent_ok(tagged_template_expression, a_no_corpus_site).
+
+-- ...and the two kinds those verdicts are about are declared HERE too, which
+-- `orphan_claim[audit]` demanded within one run: a world loading this pack
+-- and not facts/js-modules.rofl carried a claim about a cell it had no kind
+-- for. Third time this convention has bitten in one session — a row belongs
+-- in the pack that declares its subject, and a verdict declares the kind.
+node_kind(js, import_specifier).
+node_kind(js, export_named_declaration).
+
+-- ...and the four unexercised import/export forms, declared here because their
+-- `unknown_because` rows are here. FOURTH time in one session that a verdict
+-- written without its kind produced an `orphan_claim` — the convention is
+-- that the pack carrying a verdict declares BOTH the kind and the layer, and
+-- writing it down here is cheaper than rediscovering it a fifth time.
+node_kind(js, import_default_specifier).
+node_kind(js, import_namespace_specifier).
+node_kind(js, export_default_declaration).
+node_kind(js, export_all_declaration).
+-- three of the four produce no node in this corpus, and say so
+kind_absent_ok(import_default_specifier, a_no_corpus_site).
+kind_absent_ok(import_namespace_specifier, a_no_corpus_site).
+kind_absent_ok(export_all_declaration, a_no_corpus_site).

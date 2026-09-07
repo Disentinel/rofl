@@ -548,7 +548,9 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // 45 -> 55 js on 2026-09-07: the ten TypeScript type-node kinds, declared
   // rather than deferred, because what a type NODE means at these layers is a
   // fact about the language and not the prototype question.
-  assert.equal(n(r, 'node_kind(A, B)'), 60, '55 js + 5 py');
+  // 55 -> 57 js on 2026-09-07: `import_specifier` and `export_named_declaration`
+  // are declared in this pack now, because their verdicts are.
+  assert.equal(n(r, 'node_kind(A, B)'), 66, '61 js + 5 py');
   assert.equal(n(r, 'layer(L)'), 2);
   assert.equal(n(r, 'axis(A)'), 1);
   assert.equal(n(r, 'axis_applies(A, L)'), 1, 'callgraph only — see facts/js-shapes.rofl');
@@ -566,7 +568,7 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   console.log('      PREDICTED  coarse 82 | fine 98 = modelled 37 + waived 6 + not_modelled 55');
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
-  assert.equal(coarse.cell, 120, 'predicted 120 coarse cells');
+  assert.equal(coarse.cell, 132, 'predicted 132 coarse cells');
   // 108 -> 114 on 2026-09-05: the call-graph pack declares `boolean_literal`,
   // `class_declaration` and `return_statement`, because it now carries a
   // verdict about each and `orphan_claim[audit]` refuses a claim whose kind
@@ -595,8 +597,11 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // showed and for the same reason: this world loads the callgraph pack and not
   // the dataflow one, and a verdict lives in the pack that declares its layer.
   // A fact about THIS WORLD, measured rather than assumed.
-  assert.deepEqual(f, { cell: 144, modelled: 49, waived: 26, not_modelled: 69 },
-    'predicted 144 fine cells = 49 + 26 + 69');
+  // +2 kinds x 2 layers on 2026-09-07, and THREE of the four are answered:
+  // the module boundary closed `import_declaration`, `import_specifier` and
+  // `export_named_declaration` at callgraph, of which this world sees two.
+  assert.deepEqual(f, { cell: 156, modelled: 52, waived: 26, not_modelled: 78 },
+    'predicted 156 fine cells = 52 + 26 + 78');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -631,13 +636,13 @@ test('the three verdicts still partition the cell space with a third axis', () =
     const k = `${row.bindings['A']}/${row.bindings['B']}/${row.bindings['S']}/${row.bindings['L']}`;
     seen.set(k, [...(seen.get(k) ?? []), row.bindings['V']]);
   }
-  assert.equal(seen.size, 144, 'every cell carries a verdict, and no verdict lacks a cell');
+  assert.equal(seen.size, 156, 'every cell carries a verdict, and no verdict lacks a cell');
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 69, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 78, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 69, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 78, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -824,7 +829,7 @@ test('every declared kind either appears in the corpus or says why not', () => {
   // something. THREE rows in THIS world and eight across the tree — a row lives
   // in the pack that declares its kind, and this world loads two of the four.
   // Saying `eight` here would be measuring a world this test does not build.
-  assert.equal(n(r, 'kind_absent_ok(K, R)'), 5, 'positive control: five of the eight are declared in this world');
+  assert.equal(n(r, 'kind_absent_ok(K, R)'), 8, 'positive control: eight rows reach this world');
   assert.ok(r.holds('kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit)'),
     'and the spelling the scanner cannot emit says so by name');
 });
@@ -920,7 +925,9 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // literal with three methods, and the `trace()` call each of them carries.
   // 328 -> 342 on 2026-09-07: the alias-store fixture — six functions, three
   // objects and the `trace()` each of them carries.
-  assert.equal(sites, 342, 'positive control: the corpus is the one the census was taken on');
+  // 342 -> 346: the cross-file import fixture — `crossed`, `bcross` and their
+  // `trace()` calls.
+  assert.equal(sites, 346, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -1064,7 +1071,9 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // 141 -> 148 on 2026-09-07 with the alias fixtures, and three of the seven
   // are the item's own witness: `useRack -> slotted`, `useShelf -> shelved`
   // and `useBin -> stocked` were MISSED before the write arm existed.
-  assert.equal(oracleEdges.size, 148, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 148 -> 150, and one of the two is the point: `bcross -> crossed` is the
+  // first cross-file call edge this model has ever derived.
+  assert.equal(oracleEdges.size, 150, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -1142,7 +1151,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   showFine('mutant 1 (axis applies nowhere)', f);
   // PREDICTED 97 -> 82: every cell falls back to `none`, so the three-axis
   // matrix must become the two-axis one exactly.
-  assert.equal(f.cell, 120, 'predicted 120');
+  assert.equal(f.cell, 132, 'predicted 132');
   assert.equal(n(r, 'shape_of(A, B, S)'), 40, 'the shapes are still declared — only the layer changed');
 
   // ROW FOR ROW, not by count: this is the strongest statement the refinement
@@ -1159,7 +1168,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 55, '25 kind-level claims + 30 shape claims with no cell under them');
+  assert.equal(f.modelled, 58, '28 kind-level claims + 30 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',
@@ -1221,9 +1230,9 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
   // its VALUES are per-layer, so a layer that declares the axis without
   // declaring any value of its own gets only the 41 unrefined `none` cells.
   // The phantom is what the guard removed; the unearned row is what remains.
-  assert.equal(counts(r).cell, 180, 'predicted 180 coarse');
-  assert.equal(f.cell, 204, '144 + 60 unrefined none-cells, and NOT one shaped cell');
-  assert.equal(f.cell - before.cell, 60);
+  assert.equal(counts(r).cell, 198, 'predicted 198 coarse');
+  assert.equal(f.cell, 222, '156 + 66 unrefined none-cells, and NOT one shaped cell');
+  assert.equal(f.cell - before.cell, 66);
   assert.equal(n(r, 'cell[audit](A, K, s_member_on_this, modules)'), 0,
                'no callee shape leaks into the module layer');
 
@@ -1247,7 +1256,7 @@ test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft de
   assert.ok(r.holds('axis_applies(shape, dataflow)'), 'positive control');
   const f = fine(r);
   showFine('mutant 2b (shape applies to dataflow)', f);
-  assert.equal(f.cell, 144, 'not one cell moves: no shape declares itself in dataflow');
+  assert.equal(f.cell, 156, 'not one cell moves: no shape declares itself in dataflow');
   assert.deepEqual(r.query('unearned_axis[audit](A, L)').rows
     .map((x) => `${x.bindings['A']}/${x.bindings['L']}`).sort(), ['shape/dataflow']);
   console.log('      KILLED: the brief\'s own draft row is refused — inert AND unearned');
@@ -1263,7 +1272,7 @@ test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
             'positive control: the injected fact reached the store');
   const f = fine(r);
   showFine('mutant 3 (shape over a ghost kind)', f);
-  assert.equal(f.cell, 145, 'predicted 144 + 1: the ghost gets a cell of its own');
+  assert.equal(f.cell, 157, 'predicted 156 + 1: the ghost gets a cell of its own');
   assert.deepEqual(r.query('orphan_shape[audit](L, K, S)').rows
     .map((x) => `${x.bindings['K']}/${x.bindings['S']}`), ['no_such_kind/s_identifier']);
   assert.deepEqual(cells(r, 'invented_cell[audit](A, B, C)'), ['js/no_such_kind/callgraph'],
@@ -1295,7 +1304,7 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 4 (none beside a shape)', f);
-  assert.equal(f.cell, 160, 'predicted 144 + 16, one per splitting kind');
+  assert.equal(f.cell, 172, 'predicted 156 + 16, one per splitting kind');
   assert.equal(n(r, 'double_cell[audit](A, B, L)'), 16, 'and each is named');
   assert.ok(r.holds('double_cell[audit](js, member_expression, callgraph)'));
 
@@ -1324,8 +1333,8 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 5a (no unsplit-none branch)', f);
-  assert.equal(f.cell, 100, 'predicted 144 - 44');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 44, 'a coarse cell with nothing under it');
+  assert.equal(f.cell, 106, 'predicted 156 - 50');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 50, 'a coarse cell with nothing under it');
   // the loss is exactly the kinds the axis does not split, at the layer where
   // it applies — and one of them is a cell somebody deliberately WAIVED, which
   // would have vanished from the table with its reason
@@ -1347,8 +1356,8 @@ test('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 5b (no not-applicable-none branch)', f);
-  assert.equal(f.cell, 84, 'predicted 144 - 60: the dataflow layer disappears');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 60);
+  assert.equal(f.cell, 90, 'predicted 156 - 66: the dataflow layer disappears');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 66);
   assert.equal(n(r, 'cell[audit](A, B, S, dataflow)'), 0, 'positive control: it is the dataflow half');
   console.log('      KILLED: lost_cell names all 45 dataflow cells');
 });
@@ -1369,7 +1378,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
   assert.equal(n(r, 'shape_of(js, member_expression, S)'), 1);
   const f = fine(r);
   showFine('mutant 6 (one shape for member_expression)', f);
-  assert.equal(f.cell, 124, 'predicted 144 - 20');
+  assert.equal(f.cell, 136, 'predicted 156 - 20');
 
   // WHEN THIS WAS WRITTEN EVERY AUDIT INSIDE THE MODEL WAS SILENT: the matrix
   // came out smaller, complete, partitioned and wrong, and only the census

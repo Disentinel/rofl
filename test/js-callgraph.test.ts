@@ -623,7 +623,10 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // the dataflow pack, so in this world they claimed cells that did not exist.
   // 34 -> 44 on 2026-09-07: the ten TypeScript type-node kinds, declared in
   // this pack rather than deferred.
-  assert.equal(dKinds, 44, 'kinds the matrix did not know existed');
+  // 44 -> 50 on 2026-09-07: `import_specifier`, `export_named_declaration` and
+  // the four unexercised import/export forms, declared in this pack because
+  // their verdicts are.
+  assert.equal(dKinds, 50, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -961,7 +964,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // with three methods, each carrying its `trace()`.
   // 153 -> 160 on 2026-09-07: the alias fixture — six functions and three
   // objects, each function carrying its `trace()`.
-  assert.equal(sites - resolved, 160, `${sites - resolved} call sites vanished from the frontier`);
+  // 160 -> 162: `crossed` and `bcross` and their `trace()` calls, less the one
+  // site that now RESOLVES across the file boundary.
+  assert.equal(sites - resolved, 162, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

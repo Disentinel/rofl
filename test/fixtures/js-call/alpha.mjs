@@ -1041,6 +1041,15 @@ const seeded = (function seed() {
   return 7;
 })();
 
+// ---- IMPORTED BY beta.mjs, which is the corpus's FIRST cross-file import
+// (w_cg_module_boundary, 2026-09-07). Before this the only import anywhere was
+// `trace` from './trace.mjs' — a module the corpus does not scan — so the
+// boundary had no site where crossing it was even possible.
+export function crossed(n) {
+  trace();
+  return n + 11;
+}
+
 // ---- the name that also exists in beta.mjs
 export function run(n) {
   trace();

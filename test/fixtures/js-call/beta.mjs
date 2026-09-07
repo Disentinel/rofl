@@ -2,6 +2,14 @@
 // resolution that forgets which file it is in reports edges that no execution
 // can produce, and this is the pair that shows it.
 import { trace } from './trace.mjs';
+// the OTHER kind of import: a module this corpus DOES scan, so the name can be
+// followed to the function it denotes. ALIASED on purpose — with `{ crossed }`
+// the local and the imported name are one string, and a rule that confuses
+// them cannot be caught. AND THE ALIAS IS `leaf`, WHICH ALPHA ALSO DECLARES,
+// because an import bound to a name unique in the corpus leaves the FILE
+// column of `ident_in` unconstrained by the data — the mutant that drops it
+// survived until this name collided on purpose.
+import { crossed as leaf } from './alpha.mjs';
 
 export function run(n) {
   trace();
@@ -54,7 +62,12 @@ export default function bdefault(n) {
   return bdeep(n);
 }
 
+export function bcross(n) {
+  trace();
+  return leaf(n);
+}
+
 export function bmain() {
   trace();
-  return run(5) + buseNs(1);
+  return run(5) + buseNs(1) + bcross(1);
 }

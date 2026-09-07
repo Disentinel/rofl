@@ -867,6 +867,97 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
 const edges = (w: World) => new Set(w.q('calls_in[code](File, A, B)').map(([, a, b]) => `${a} -> ${b}`));
 
 // ---------------------------------------------------------------------------
+// 3i. THE MODULE BOUNDARY (w_cg_module_boundary): an imported name.
+//
+// MEASURED BEFORE ANY RULE, and three things came back that the note did not
+// say. The corpus had exactly TWO import declarations, both `./trace.mjs`, and
+// that module is deliberately not scanned — it is the instrument — so 152 of
+// the 167 unresolved sites were ONE imported name used once per instrumented
+// function, and the boundary had no site where crossing it was possible.
+// `rules/js-modules.rofl` loaded into this world derives NOTHING: it resolves
+// against host facts about the disk that this corpus does not supply. And the
+// scanner already carried every part of the binding.
+const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'i1 the imported-name arm is deleted',
+    mut: [{ find: `may_be_node[flow](E, F) :- imports_name[code](Local, Name, Src, File),
+                           import_target[code](Src, Target),
+                           exports_name[code](F, Name, Target),
+                           ident_in[code](E, Local, File).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
+      'the only cross-file call edge this model has ever derived'),
+  },
+  {
+    name: 'i2 the LOCAL name is read where the IMPORTED name belongs',
+    mut: [{ find: 'exports_name[code](F, Name, Target),',
+            replace: 'exports_name[code](F, Local, Target),',
+            file: 'rules/js-dataflow.rofl' }],
+    // `import { crossed as farSide }` is aliased FOR THIS MUTANT: with
+    // `{ crossed }` the two names are one string and the confusion is invisible.
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
+      'no module exports `farSide`, so the edge goes'),
+  },
+  {
+    name: 'i3 the IMPORTED name is read where the LOCAL name belongs',
+    mut: [{ find: '                           ident_in[code](E, Local, File).',
+            replace: '                           ident_in[code](E, Name, File).',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['bcross -> crossed'],
+      'beta.mjs contains no identifier `crossed`, so the edge goes'),
+  },
+  {
+    name: 'i4 an import binds in every file, not the one it is written in',
+    mut: [{ find: '                           ident_in[code](E, Local, File).',
+            replace: '                           ident_in[code](E, Local, _).',
+            file: 'rules/js-dataflow.rofl' }],
+    // WHERE THIS MUTANT COULD NOT LOOK UNTIL THE FIXTURE SAID SO: with one
+    // importer the file column is unconstrained by anything, so the mutation is
+    // invisible. alpha.mjs declares `crossed` and does not import it, which is
+    // what makes the dropped column produce a row that should not exist.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(), [
+        'apply2 -> crossed', 'applyFirst -> crossed', 'hello -> crossed',
+        'inner -> crossed', 'inner2 -> crossed', 'mid -> crossed',
+      ], "every alpha.mjs call to its own `leaf` reaches beta's import as well");
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 22, 'and each site resolves two ways: 8 -> 22');
+    },
+  },
+];
+
+for (const g of IMPORTS) test(`${g.name} — module boundary`, () => g.expect(build(g.mut), base()));
+
+test('an imported name, and the module the corpus does not have', () => {
+  const m = base();
+  // THE POSITIVE HALF: the first cross-file call edge this model has derived.
+  assert.ok(edges(m).has('bcross -> crossed'), 'beta.mjs reaches into alpha.mjs');
+  // ...AND THE FRONTIER IS NAMED RATHER THAN SILENT. `trace` is imported by
+  // every instrumented file from a module the corpus deliberately does not scan
+  // — it is the instrument — so it can never resolve, and saying so once per
+  // MODULE beats saying nothing 152 times per USE.
+  assert.deepEqual(m.q('import_outside_corpus[audit](S, F)').map(([s, f]) => `${f}: ${s}`).sort(),
+    ['alpha.mjs: ./trace.mjs', 'beta.mjs: ./trace.mjs']);
+  assert.deepEqual(m.q('import_target[code](S, F)'), [['./alpha.mjs', 'alpha.mjs']],
+    'exactly one specifier in this corpus names a file the corpus has');
+});
+
+test('the kernel refuses, and somebody reads the refusal', () => {
+  // THE GATE THIS ITERATION EARNED. `str_pre(S, Sep)` is the part before the
+  // first separator, not the first N characters, and the first draft of
+  // `module_basename` passed `2` where a separator belongs. The kernel refused
+  // it EXACTLY — `hole($rule(...), str_type_error)`, naming the rule — and the
+  // rule stayed silently empty for as long as it took to probe it by hand,
+  // because no world the model is measured in read `hole`. `unpopulatable`
+  // cannot see this: the relation exists, the arity is right, the ledger is
+  // right, and the ANSWER is empty for a reason only the hole records.
+  assert.deepEqual(base().q('hole(H, R)'), [], 'no rule in this model was refused');
+});
+
+
+// ---------------------------------------------------------------------------
 // 3h. THE ALIAS STORE (w_alias_store): a member WRITTEN is a member read.
 //
 // THE ITEM'S NOTE SAID A STORE WAS NEEDED — "there is no store, so a property

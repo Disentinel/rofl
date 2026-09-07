@@ -501,6 +501,78 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _, _).
 may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
 
+-- ENTRY 9 — AN IMPORTED NAME (w_cg_module_boundary).
+--
+-- WHAT THE QUEUE ITEM SAID: "a call graph that stops at the file: an imported
+-- name resolves to nothing". True, and MEASURED FIRST, because seven notes in a
+-- row have been wrong about what was missing. Three things came back:
+--
+--   * the corpus had exactly TWO import declarations, both `./trace.mjs`, and
+--     that module is deliberately NOT scanned — it is the instrument. So the
+--     boundary had no site where crossing it was possible at all, and 152 of
+--     the 167 unresolved call sites are one imported name, `trace`, used once
+--     per instrumented function.
+--   * `rules/js-modules.rofl` loaded into the call-graph world derives NOTHING
+--     here — `resolved_import` 0, `dangling_import` 0, and `calls_in` and
+--     `unresolved_call` byte-identical with and without it. That layer resolves
+--     against HOST facts about the disk, which this corpus does not supply.
+--   * the scanner already carries every part of the binding: an
+--     `import_specifier` with an `imported` and a `local` child, and the
+--     declaration's `source` value.
+--
+-- SO THE ANSWER IS A VALUE FACT, not a call-graph mechanism: an imported name
+-- MAY BE the function the other module exports under that name, and the call
+-- graph reads it through `may_be_node` like every other receiver.
+imports_name[code](Local, Name, Src, File) :-
+    ast_node[code](D, import_declaration, File, _),
+    ast_child[code](D, source, 0, S), ast_value[code](S, Src),
+    ast_child[code](D, specifiers, _, Sp),
+    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local),
+    ast_child[code](Sp, imported, 0, I), ast_name[code](I, Name).
+
+-- ONE ROW PER FILE, from the `program` node. `ast_node[code](_, _, File, _)`
+-- would enumerate a hundred thousand facts to learn three strings.
+corpus_file[code](File) :- ast_node[code](_, program, File, _).
+
+-- WHAT SYNTAX CAN DO OF MODULE RESOLUTION, AND NO MORE. A relative specifier
+-- with a single path segment names a file by its basename, and the host has
+-- already told the model each file's logical name. `./sub/x.mjs` has three
+-- segments and is not answered here; a bare specifier is a package and is not
+-- a file at all. Both are the modules layer's question and it needs facts about
+-- the DISK that no AST can see — `a_no_ast_can_see_the_disk` is already the
+-- reason atom for exactly that.
+--
+-- `str_pre(S, Sep)` IS THE PART BEFORE THE FIRST SEPARATOR, not the first N
+-- characters, and the first draft here passed `2` where a separator belongs.
+-- The kernel refused it EXACTLY — `hole($rule(...), str_type_error)`, naming
+-- the rule — and the rule stayed silently empty, because no world the model is
+-- measured in read `hole`. It does now.
+module_basename[code](Src, Base) :- imports_name[code](_, _, Src, _),
+                                    Head is str_pre(Src, "/"), Head = ".",
+                                    N is str_segs(Src, "/"), N = 2,
+                                    Base is str_seg(Src, "/", 1).
+import_target[code](Src, File) :- module_basename[code](Src, Base),
+                                  corpus_file[code](File), File = Base.
+
+-- WHAT A MODULE EXPORTS UNDER A NAME. `export function f()` only — a re-export
+-- and a default are different questions and neither is claimed here.
+exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File, _),
+                                     ast_child[code](E, declaration, 0, F),
+                                     fn_kind_v(K), ast_node[code](F, K, _, _),
+                                     ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+
+may_be_node[flow](E, F) :- imports_name[code](Local, Name, Src, File),
+                           import_target[code](Src, Target),
+                           exports_name[code](F, Name, Target),
+                           ident_in[code](E, Local, File).
+
+-- AND THE OTHER HALF IS A FRONTIER WITH A NAME, not a silence: an import whose
+-- module this corpus does not contain. `trace` is the one row, and it is one
+-- row rather than 152 because the QUESTION is about the module, not about each
+-- use of the name.
+import_outside_corpus[audit](Src, File) :- imports_name[code](_, _, Src, File),
+                                           not import_target[code](Src, _).
+
 -- ENTRY 8b — `this` inside an OBJECT LITERAL'S OWN METHOD is that object.
 --
 -- The half the old premise could not have: an object method binds `this` to its
