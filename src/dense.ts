@@ -139,7 +139,7 @@ function denseTerm(t: Term): Term {
   throw new DenseError('dense term');
 }
 
-function denseLit(t: Term): Lit {
+function litOf(t: Term): Lit {
   const a = fn(t, 'l');
   if (!a) throw new DenseError('dense literal');
   return {
@@ -151,11 +151,27 @@ function denseLit(t: Term): Lit {
 
 function denseElem(t: Term): BodyElem {
   let a: Term[] | null;
-  if ((a = fn(t, 'n'))) return { t: 'neg', lit: denseLit(a[0]) };
+  if ((a = fn(t, 'n'))) return { t: 'neg', lit: litOf(a[0]) };
   if ((a = fn(t, 'b'))) {
     return { t: 'bi', op: (a[0] as { v: string }).v, l: denseTerm(a[1]), r: denseTerm(a[2]) };
   }
-  return { t: 'pos', lit: denseLit(t) };
+  return { t: 'pos', lit: litOf(t) };
+}
+
+/** ONE LITERAL, for a host that asks without a parser. A question in the dense
+ *  form is just a fact: `close(v("A"), v("B")).` -- so this is `denseClauses`
+ *  of a single row, and the answer is its head. `Rofl.query`, `holds`, `why`,
+ *  `whynot`, `retract` and `excise` all take a literal where they take a
+ *  string, which is what makes the surface parser optional for asking as well
+ *  as for loading. */
+export function denseLit(src: string): Lit {
+  const rows = denseFacts(src);
+  // `r/3` is the RULE form and its body may be empty, so counting body
+  // elements does not tell a fact from a rule -- the tag does.
+  if (rows.length !== 1 || (rows[0].rel === 'r' && rows[0].args.length === 3)) {
+    throw new DenseError('a dense question is exactly one fact');
+  }
+  return denseClauses(src)[0].head;
 }
 
 /** A dense program as clauses: an `r/3` row is a rule, everything else a fact.
@@ -165,7 +181,7 @@ export function denseClauses(src: string): Clause[] {
   const out: Clause[] = [];
   for (const row of denseFacts(src)) {
     if (row.rel === 'r' && row.args.length === 3) {
-      out.push({ head: denseLit(row.args[1]), body: unlist(row.args[2]).map(denseElem) });
+      out.push({ head: litOf(row.args[1]), body: unlist(row.args[2]).map(denseElem) });
     } else {
       // THE ARGUMENTS OF A FACT GO THROUGH THE SAME DECODING as a rule's.
       // examples/ring1/l0.ts does not, and the tower never noticed because a

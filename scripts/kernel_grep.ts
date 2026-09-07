@@ -107,6 +107,10 @@ const IMPL = [
   'user',
   // rule id prefix ('r' + content hash)
   'r',
+  // JAVASCRIPT'S OWN TYPE TAG, from `typeof q === 'string'`: a question may
+  // arrive as text or as the literal itself, and that is the discrimination.
+  // Same category as 'a', 'i', 'f' above -- a host tag, naming no relation.
+  'string',
   // WHICH EVALUATOR a `Rofl` runs (src/api.ts `evaluator`). Neither is a
   // relation name — the stratification relation is `stratum`, and it is in
   // IFACE_RELS above, where this check still guards it. Listed because the

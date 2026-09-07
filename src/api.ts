@@ -90,6 +90,20 @@ function checkOrderable(c: Clause): string | null {
     + `'_' if the existential reading is what is meant.`;
 }
 
+/** WHAT A QUESTION MAY ARRIVE AS. Text, or the literal itself.
+ *
+ *  A query used to be text and only text, and that made `parseLiteral` -- and
+ *  through it the whole 262-line surface parser -- mandatory for any host that
+ *  wanted to ASK anything, even one whose programs arrive compiled. Measured
+ *  2026-09-06: a host that restores a snapshot and asks in text still entered
+ *  102 lines of the parser, all of them for the question.
+ *
+ *  So a literal is accepted where a string is. Nothing about the text path
+ *  changes -- it parses and then does what it always did -- and a host without
+ *  a parser can build the literal from the dense form (`denseLit` in
+ *  src/dense.ts) or by hand, because a literal is DATA. */
+export type Ask = string | Lit;
+
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
   // The declared type stays concrete because `Evaluation` is declared over
@@ -153,6 +167,12 @@ export class Rofl {
 
   save(): string {
     return this.store.snapshot();
+  }
+
+  /** A question as a literal, however it arrived. `resolveBook` is idempotent,
+   *  so a literal that already names its book keeps it. */
+  private asked(q: Ask): Lit {
+    return resolveBook(typeof q === 'string' ? parseLiteral(q) : q);
   }
 
   // -------------------------------------------------------------------------
@@ -483,9 +503,9 @@ export class Rofl {
   }
 
   /** Retract a base fact (god-mode API; used by tests and the REPL). */
-  retract(text: string): { ok: boolean; diagnostics: string[] } {
+  retract(text: Ask): { ok: boolean; diagnostics: string[] } {
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, diagnostics: [(e as Error).message] }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, diagnostics: [(e as Error).message] }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) {
       return { ok: false, diagnostics: ['retract needs a ground fact'] };
     }
@@ -557,12 +577,12 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // queries
 
-  query(text: string, opts: { budget?: number } = {}): QueryResult {
+  query(text: Ask, opts: { budget?: number } = {}): QueryResult {
     this.qn++;
     const holeId = mkf('$q', [mki(this.qn)]);
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { rows: [], partial: false, error: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { rows: [], partial: false, error: (e as Error).message }; }
     let partial = false;
     try {
       partial = this.ensure(budget, holeId).partial;
@@ -591,17 +611,17 @@ export class Rofl {
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial };
   }
 
-  holds(text: string): boolean {
+  holds(text: Ask): boolean {
     return this.query(text).rows.length > 0;
   }
 
   // -------------------------------------------------------------------------
   // why / whynot / excise
 
-  why(text: string, opts: { budget?: number } = {}): { ok: boolean; text: string } {
+  why(text: Ask, opts: { budget?: number } = {}): { ok: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, text: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, text: (e as Error).message }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) return { ok: false, text: 'why needs a ground literal' };
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
       if (e instanceof StratificationError) return { ok: false, text: e.message + '\n' + e.demo };
@@ -684,7 +704,7 @@ export class Rofl {
     return out;
   }
 
-  whynot(text: string, opts: WhynotOpts = {}): { holds: boolean; text: string } {
+  whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
       if (e instanceof StratificationError) return { holds: false, text: e.message + '\n' + e.demo };
@@ -700,11 +720,12 @@ export class Rofl {
     return { holds: r.holds, text: r.text };
   }
 
-  private whynotStruct(text: string, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {
-    const lit = resolveBook(parseLiteral(text));
+  private whynotStruct(text: Ask, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {
+    const lit = this.asked(text);
     const ms = ev.matchPremise(lit, new Map(), 0, null);
     if (ms.length > 0) {
-      return { holds: true, text: `${text.trim()} holds; nothing to demonstrate` };
+      const shown = typeof text === 'string' ? text.trim() : ev.resolvedLitKey(lit, new Map());
+      return { holds: true, text: `${shown} holds; nothing to demonstrate` };
     }
     const lines: string[] = [`whynot ${ev.resolvedLitKey(lit, new Map())}:`];
     ctx.path.add(this.cycleKey(lit));
@@ -830,10 +851,10 @@ export class Rofl {
   }
 
   /** excise: clean re-evaluation on EDB \ {fact}; the diff IS the blast radius. */
-  excise(text: string, opts: { budget?: number } = {}): { ok: boolean; removed: string[]; added: string[]; error?: string } {
+  excise(text: Ask, opts: { budget?: number } = {}): { ok: boolean; removed: string[]; added: string[]; error?: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, removed: [], added: [], error: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, removed: [], added: [], error: (e as Error).message }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) {
       return { ok: false, removed: [], added: [], error: 'excise needs a ground fact' };
     }
