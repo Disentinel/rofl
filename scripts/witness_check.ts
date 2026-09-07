@@ -59,20 +59,25 @@ if (ws.length === 0) { console.log('no witnesses recorded'); process.exit(0); }
 // already decides this for rule premises (`undefined_premise[audit]`); the same
 // test applies here. Measured before the guard existed: a witness on
 // `zzz_no_such_relation(X)` wanting 0 rows came back `ok`.
-const known = new Set<string>([
-  ...rows('concludes(R, Rel)').map((x: any) => str(x.bindings.Rel)),
-  ...rows('edb(Rel)').map((x: any) => str(x.bindings.Rel)),
-]);
-/** the leading relation name of a query: `breach[audit](R)` -> `breach` */
-const relOf = (q: string) => (q.trim().match(/^([a-z_][A-Za-z0-9_]*)/) ?? [])[1] ?? '';
+//
+// THE HAND-WRITTEN COPY IS GONE, 2026-09-07. It read `concludes` and `edb` here
+// and compared the LEADING NAME, which is the weaker half of what the kernel
+// already knows: it could not see a witness written at the wrong ARITY, nor one
+// naming the wrong LEDGER — and this repository's whole idiom is `rel[persp]`.
+// `query()` now reports `unpopulatable` and judges all three. That is the
+// remedy CLAUDE.md names by name: derive the check once from the rules instead
+// of copying it per call site.
 
 let stale = 0, broken = 0;
 console.log(`  ${ws.length} witnesses, asked against boot.rofl + the ledger\n`);
 for (const w of ws.sort((a, b) => a.id < b.id ? -1 : 1)) {
   let got: number; let err = '';
-  const rel = relOf(w.q);
-  if (!known.has(rel)) { got = -1; err = `no relation '${rel}' is concluded or edb`; }
-  else try { got = rows(w.q).length; } catch (e: any) { got = -1; err = e.message.slice(0, 40); }
+  try {
+    const res = r.query(w.q);
+    if (res.error) { got = -1; err = res.error.slice(0, 40); }
+    else if (res.unpopulatable) { got = -1; err = 'nothing in this world can populate that literal'; }
+    else got = res.rows.length;
+  } catch (e: any) { got = -1; err = e.message.slice(0, 40); }
   const ok = err ? false : (w.floor ? got >= w.want : got === w.want);
   if (err) broken++; else if (!ok) stale++;
   const mark = err ? 'BROKEN ' : ok ? '  ok   ' : ' STALE ';

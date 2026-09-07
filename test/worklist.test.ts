@@ -202,13 +202,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_mutant_anchor_decay',
      'w_mutant_costs_a_world',
      'w_negation_range_restriction',
+     'w_note_is_not_evidence',
      'w_query_names_nothing', 'w_query_names_nothing', 'w_query_names_nothing',
      // THREE for w_scope_binding: the blindness that had no cell, the corpus
      // bent around the file-scoped binder, and the declared over-approximation
      // that was a defect with a comment on it.
      'w_scope_binding', 'w_scope_binding', 'w_scope_binding',
      'w_unconsumed_attribute',
-     'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home']);
+     'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home',
+     'w_wire_the_witness_gate']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
   // fifty cells — so what is left at the head is arithmetic, the call-graph
@@ -285,7 +287,7 @@ test('the queue covers the model: 31 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 46);
+  assert.equal(w.n('work(W, Note)'), 48);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.

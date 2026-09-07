@@ -720,6 +720,16 @@ work_spawned(w_query_names_nothing, f_a_query_that_names_nothing_answers_like_a_
 work_spawned(w_query_names_nothing, f_the_probe_for_one_item_found_the_defect_in_the_instrument).
 work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_undeclared_size_limit).
 
+work(w_note_is_not_evidence, "a work item's note asserting an absence is a claim about the store and carries no query, so six notes in a row were believed and refuted; give a note a witness, which needs a checker world that has the corpus (f_a_witness_has_no_world)").
+work_order(w_note_is_not_evidence, 47).
+work_state(w_note_is_not_evidence, open).
+work_spawned(w_note_is_not_evidence, f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes).
+
+work(w_wire_the_witness_gate, "scripts/witness_check.ts exits non-zero on a stale witness and nothing runs it - not CI, not npm, not a test; wiring it changes the closed list of gates, which is the closed list doing its job").
+work_order(w_wire_the_witness_gate, 48).
+work_state(w_wire_the_witness_gate, open).
+work_spawned(w_wire_the_witness_gate, f_the_witness_gate_is_wired_to_nothing).
+
 -- 30. ALIASING AND THE STORE. `member_value[flow]` reads members off class
 -- bodies and object literals - the SYNTACTIC members - and there is no model of
 -- a write. `obj.x = f` followed by `obj.x()` resolves to nothing, and the cell
