@@ -106,9 +106,6 @@ export function canonVars(ts: Term[]): Term[] {
   return ts.map(go);
 }
 
-export function termEq(a: Term, b: Term): boolean {
-  return canonTerm(a) === canonTerm(b);
-}
 
 /** Why `evalArith` could not produce a number. The first is NOT an error: a
  *  variable that is not bound yet is the ordinary state of a builtin that
