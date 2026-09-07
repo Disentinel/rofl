@@ -751,10 +751,11 @@ work_order(w_note_is_not_evidence, 47).
 work_state(w_note_is_not_evidence, open).
 work_spawned(w_note_is_not_evidence, f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes).
 
-work(w_wire_the_witness_gate, "scripts/witness_check.ts exits non-zero on a stale witness and nothing runs it - not CI, not npm, not a test; wiring it changes the closed list of gates, which is the closed list doing its job").
+work(w_wire_the_witness_gate, "DONE 2026-09-07: test/witness-check.test.ts runs it, so a stale witness is CI's business rather than a thing somebody has to remember; the script keeps its CLI over the same two exported functions").
 work_order(w_wire_the_witness_gate, 48).
-work_state(w_wire_the_witness_gate, open).
+work_state(w_wire_the_witness_gate, done).
 work_spawned(w_wire_the_witness_gate, f_the_witness_gate_is_wired_to_nothing).
+work_spawned(w_wire_the_witness_gate, f_a_gate_that_depends_on_remembering_is_not_a_gate).
 
 -- 30. ALIASING AND THE STORE. `member_value[flow]` reads members off class
 -- bodies and object literals - the SYNTACTIC members - and there is no model of
@@ -914,6 +915,18 @@ work_state(w_cg_invisible_calls, open).
 work_spawned(w_cg_invisible_calls, f_the_instrument_decides_which_invisible_call_can_be_closed).
 work_spawned(w_cg_invisible_calls, f_a_guard_over_a_runnable_corpus_has_no_site_to_bite_on).
 work_spawned(w_cg_invisible_calls, f_a_fixture_for_one_construct_smuggled_in_two_kinds).
+work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by_the_scanner).
+-- AND THE FOR-OF NOTE ABOVE WAS WRONG WITHIN THE HOUR, measured 2026-09-07:
+-- the scanner sees the WHOLE protocol key. `{ [Symbol.iterator]() {} }` comes
+-- out as an `object_method` with `computed=true` whose `key` child is a
+-- `member_expression` over two named identifiers, `Symbol` and `iterator`. A
+-- rule does not need the key reduced to a literal, it needs the SHAPE, and the
+-- shape is all there. What actually blocks the for-of is NAMING, on both sides
+-- of the comparison at once: the model has no `fn_name` for a computed method,
+-- so an edge to it carries no callee name, and the oracle's `frameName` takes
+-- the last dot-segment of `[Symbol.iterator]` and reports `iterator]`. Twelfth
+-- note in this loop refuted by the first probe, and the first refuted by a
+-- probe run against a note written the same day.
 -- The tagged template's two claims are GONE rather than kept beside a done
 -- note, and the difference matters: `queue_stale[audit]` says a claim on a shut
 -- cell under an OPEN item is a lie, and it said so within one run. A claim

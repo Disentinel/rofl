@@ -185,6 +185,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_cf_sweep', 'w_cf_sweep',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_invisible_calls', 'w_cg_invisible_calls', 'w_cg_invisible_calls',
+     'w_cg_invisible_calls',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
      'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
      'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
@@ -216,7 +217,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_type_surface', 'w_type_surface', 'w_type_surface',
      'w_unconsumed_attribute',
      'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home',
-     'w_wire_the_witness_gate']);
+     'w_wire_the_witness_gate', 'w_wire_the_witness_gate']);
   // FOUR items have come off the front, and the last of them was the one this
   // whole plan was built to reach: `w_controlflow_layer` is done — one fact,
   // fifty cells — so what is left at the head is arithmetic, the call-graph
