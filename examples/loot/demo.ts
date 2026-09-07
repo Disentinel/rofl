@@ -359,7 +359,18 @@ export function install(r: Rofl, b: Book, opts: { budget?: number; record?: bool
   const budget = opts.budget ?? THINKING;
   const res = r.load(b.rules, { budget });
   if ((opts.record ?? true) && res.ok) {
-    must(r.load(`imports(mind, ${b.id}).`, { budget }), `${b.id} imports`);
+    // TWO declarations, one per direction, and the second was missing until
+    // 2026-09-07. `imports(mind, P)` says the head has read that book. But a
+    // pack's rules read the WORLD -- `venom_sign[codex_of_thorns](T) :-
+    // beast[world](T), glows[world](T)` is one of them, writing into the
+    // book's own ledger from what the extractor published -- and that crossing
+    // is `world -> codex_of_thorns`, which nothing declared. `leak[audit]`
+    // reported it from the moment the codex was read, and the audits over a
+    // world with books in it were red for it. Installing a book is the act
+    // that lets its rules read the world the reader stands in, so this is the
+    // line that says so, at the moment that act happens.
+    must(r.load(`imports(mind, ${b.id}). imports(${b.id}, world).`, { budget }),
+      `${b.id} imports`);
   }
   return { ok: res.ok, partial: r.store.partialEval, diagnostics: res.diagnostics };
 }
@@ -525,9 +536,14 @@ export function unload(r: Rofl, pack: string): Unload {
   for (const f of r.store.relAll('pack_rule')) {
     if (f.persp === pack) r.store.remove(f.key);
   }
+  // BOTH directions: `install` writes `imports(mind, P)` and `imports(P, world)`,
+  // so forgetting a book that is remembered on either side of an arrow would
+  // leave a licence standing for rules that are gone. This loop used to read
+  // `args[1]` alone and would have left the second one behind.
   for (const f of r.store.relAll('imports')) {
-    const b = f.args[1];
-    if (b && b.k === 'a' && b.name === pack) r.store.remove(f.key);
+    const [from, to] = f.args;
+    const names = (t: typeof from) => t !== undefined && t.k === 'a' && t.name === pack;
+    if (names(from) || names(to)) r.store.remove(f.key);
   }
   r.store.dirty = true;
   r.evaluate(BUDGET);

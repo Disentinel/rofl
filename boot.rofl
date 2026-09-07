@@ -389,3 +389,46 @@ widened[audit](Rel, P) :- negated_under(Rel, P),
 -- is derived from a co-written `p` — is a widening this rule does not report,
 -- because the premise names `q` and the writers are `p`'s. Both are the same
 -- boundary: this audit is about the ONE relation the negation names.
+
+-- ============ the ledger declarations outlive the tick, appended ===========
+--
+-- BARE boot.rofl, NOTHING ELSE LOADED, ONE TICK: `leak[audit]` reports THREE
+-- ROWS, and all three are this file's own crossings — `$kernel -> audit`,
+-- `$kernel -> main`, `main -> audit` — the very walks the three `imports`
+-- facts above declare. The declarations are gone by then. `src/api.ts` gives
+-- an asserted fact `scope: 'tick'` unless its relation is RESERVED or is
+-- `semantics` or `sealed`; `imports` and `collects` are neither, because they
+-- are host data and not kernel vocabulary, so they are dropped at the boundary
+-- with everything else the tick held. The audit then reports every crossing
+-- the program ever declared, on a program nobody changed.
+--
+-- MEASURED OVER THE CORPUS, 55 programs (every `examples/*` world, every
+-- `rules/*.rofl` and `facts/*.rofl` layer, `safety.rofl`, `policy.rofl`), each
+-- loaded on this file and evaluated, then advanced one tick and evaluated
+-- again: `leak[audit]` 17 rows at load and 237 after the tick. Forty-three of
+-- the 55 have no leak at load and a leak after it. The floor is 3 — this
+-- file's own — and it is charged to every program in the tree.
+--
+-- THE FIX IS THE LANGUAGE'S OWN AND NOT THE HOST'S. `src/api.ts` could add two
+-- names to the timeless list beside `semantics` and `sealed`, and the comment
+-- there gives the right reason for that class ("a declaration about HOW the
+-- world is kept must not be droppable at a tick boundary, or the world quietly
+-- starts keeping again"). It is refused here: `imports` and `collects` are
+-- boot.rofl's vocabulary, the kernel is closed against domain names on
+-- purpose, and a program can already say this in one line. So it is said here,
+-- once, for every program that loads this file.
+--
+-- examples/npc PAID FOR THIS BY HAND and wrote the reason down: "a plain
+-- `collects(mind).` is tick-scoped and would vanish here, taking the licence
+-- with it and putting the leak back at tick 1 with nothing in the file
+-- changed." Two identical clauses are one rule — the id is a content hash —
+-- so npc's copies now coincide with these and cost nothing; examples/sus did
+-- NOT write them, and its `imports` table was empty from tick 1 onward.
+--
+-- WHAT THIS IS NOT. It does not make a declaration permanent against the
+-- author: a retraction inside a tick still takes effect, and what is carried
+-- is whatever holds when the boundary is reached. It carries a licence and
+-- never a crossing, so it cannot silence a walk that was not declared — the
+-- control is `crossing` itself, which is derived fresh each tick from `flow`.
+imports(P, Q)      @next :- imports(P, Q).
+collects(X)        @next :- collects(X).

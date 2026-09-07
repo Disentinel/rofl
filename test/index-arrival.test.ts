@@ -67,6 +67,48 @@ const ms = (f: () => void): number => {
   return Number(process.hrtime.bigint() - t) / 1e6;
 };
 
+/** The ratio of two timings, each taken as the MINIMUM of `reps` runs, with
+ *  the two sides INTERLEAVED.
+ *
+ *  WHY, and it is finding `f_the_paired_timing_test_still_flakes`. §4 below
+ *  used to time each side once. The pairing was already the fix for an earlier
+ *  defect — a ratio does not sharpen as the engine gets faster, where an
+ *  absolute bound does — but one shot per side leaves the whole exposure in
+ *  place: a GC pause or a scheduler slice lands in ONE half and the ratio
+ *  moves by whatever that pause cost. Observed at 7.99x under suite load and
+ *  1.41x alone, on a tree nobody had changed.
+ *
+ *  A MINIMUM IS THE ESTIMATOR A BUSY MACHINE CANNOT INFLATE. Load, GC and
+ *  preemption only ever ADD time to a run; none of them can make one finish
+ *  faster than the work in it. So over k runs the smallest is the closest
+ *  reading of the work, and the noise is in the runs that are thrown away —
+ *  where a single shot has to keep whatever it drew. Interleaving is the
+ *  second half: a load spike lasting longer than one run is then charged to
+ *  both sides, so it cancels in the ratio instead of landing on one.
+ *
+ *  It is not free of every failure: a machine so slow that EVERY run of one
+ *  side is inflated still moves the ratio, and that is the case a bound of 3
+ *  against a property whose true value is about 1 is sized for. What it
+ *  removes is the single-sample one, which is the one that was firing. */
+type Trial = () => number;   // runs one repetition and returns ITS OWN elapsed ms
+
+/** `ms` wrapped as a trial, for the ordinary case where the whole call is the
+ *  work. A trial that needs setup between repetitions times only the part it
+ *  means to — which is why this takes a number back rather than timing the
+ *  closure itself, and the drop test below is exactly that case. */
+const trial = (f: () => void): Trial => () => ms(f);
+
+function ratioOfMins(a: Trial, b: Trial, reps = 5): [number, number, number] {
+  let bestA = Infinity, bestB = Infinity;
+  for (let i = 0; i < reps; i++) {
+    // alternate which side goes first, so a warm-up or cool-down gradient
+    // across the pair is not always charged to the same one
+    if (i % 2 === 0) { bestA = Math.min(bestA, a()); bestB = Math.min(bestB, b()); }
+    else { bestB = Math.min(bestB, b()); bestA = Math.min(bestA, a()); }
+  }
+  return [bestB / Math.max(bestA, 0.001), bestA, bestB];
+}
+
 // ---------------------------------------------------------------------------
 // §1 arrival order is not observable
 
@@ -308,17 +350,53 @@ test('shuffled arrival costs about what ascending arrival costs', () => {
   fill(up.slice(0, 2000));   // warm the paths so the first case pays no JIT tax
   fill(mixed.slice(0, 2000));
 
-  const tUp = ms(() => fill(up));
-  const tMixed = ms(() => fill(mixed));
-  const ratio = tMixed / Math.max(tUp, 1);
+  const [ratio, tUp, tMixed] = ratioOfMins(trial(() => fill(up)), trial(() => fill(mixed)));
   console.log(`  arrival: ascending ${tUp.toFixed(0)} ms, shuffled ${tMixed.toFixed(0)} ms `
-    + `(${(tUp * 1000 / n).toFixed(1)} vs ${(tMixed * 1000 / n).toFixed(1)} µs/fact, ${ratio.toFixed(2)}×)`);
+    + `(${(tUp * 1000 / n).toFixed(1)} vs ${(tMixed * 1000 / n).toFixed(1)} µs/fact, `
+    + `${ratio.toFixed(2)}×, min of 5)`);
   // Measured before the arrival buffer existed: 24× here, 5.4× on the machine
   // performance-invariants.md was written on. Measured after: at or below 1×,
   // because a shuffled batch is sorted once instead of memmoved n times. The
   // bound is loose enough for a loaded CI box and still fails a return to
   // per-fact insertion on the slowest of them.
   assert.ok(ratio < 3, `shuffled arrival cost ${ratio.toFixed(2)}× ascending; I1 has regressed`);
+});
+
+test('the instrument can still see the defect it was built for', () => {
+  // A BOUND NOTHING CAN CROSS IS NOT A BOUND. The test above reads about 1×
+  // and would read about 1× if `fill` had quietly stopped storing anything, so
+  // the same instrument is pointed at the behaviour it is guarding against:
+  // per-fact insertion into a sorted array, which is what the store did before
+  // the arrival buffer. Nothing here touches the store — it is 30 lines of
+  // array handling — so this control cannot rot with the implementation, and
+  // it is measured with the SAME `ratioOfMins`, so a flaky instrument would
+  // show up here rather than only in the guard.
+  //
+  // Measured on this machine at n = 64000, min of 2, over six runs three of
+  // them under six spinning processes: 8.6× to 10.2×, ascending 15-18 ms
+  // against shuffled 147-158 ms. Single shots of the same pair reach 22×; the
+  // minimum is lower BECAUSE it throws away the unlucky runs, which is the
+  // whole point of it and is why this control is stated as a floor of 3 rather
+  // than as a number. The recorded figure when the defect was live was 24×.
+  const n = 64000;
+  const insertSorted = (order: number[]): string[] => {
+    const keys: string[] = [];
+    for (const i of order) {
+      const k = factKey(REL, P1, [pad(i)]);
+      let lo = 0, hi = keys.length;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (keys[mid] < k) lo = mid + 1; else hi = mid; }
+      keys.splice(lo, 0, k);        // the memmove this file exists to have removed
+    }
+    return keys;
+  };
+  const up = [...Array(n).keys()];
+  const mixed = shuffled(n);
+  insertSorted(up.slice(0, 1000));   // warm
+  const [ratio, tUp, tMixed] = ratioOfMins(trial(() => insertSorted(up)),
+    trial(() => insertSorted(mixed)), 2);
+  console.log(`  control (per-fact insertion): ascending ${tUp.toFixed(0)} ms, `
+    + `shuffled ${tMixed.toFixed(0)} ms (${ratio.toFixed(2)}×, min of 2)`);
+  assert.ok(ratio > 3, `the guard's bound of 3 is unreachable: the control read ${ratio.toFixed(2)}×`);
 });
 
 test('dropping a derived layer costs about what building it cost', () => {
@@ -334,11 +412,22 @@ test('dropping a derived layer costs about what building it cost', () => {
     return s;
   };
   build();   // warm
-  const s = build();
-  const tBuild = ms(build);
-  const tDrop = ms(() => s.clearDerived());
-  assert.equal(s.relCount(REL), 0, 'the layer went');
-  const ratio = tDrop / Math.max(tBuild, 1);
-  console.log(`  derived layer: build ${tBuild.toFixed(0)} ms, drop ${tDrop.toFixed(0)} ms (${ratio.toFixed(2)}×)`);
+  // MIN OF REPEATS HERE TOO, and the drop needs a fresh layer each time: a
+  // cleared store drops nothing the second time round. So the drop's trial
+  // builds a layer OUTSIDE its own timed window and times only `clearDerived`
+  // — which is what `Trial` exists for. Timing the rebuild along with it would
+  // have charged a whole build to the drop, and the ratio would have read
+  // about 1.5 for a reason that has nothing to do with removal.
+  let dropped = 0;
+  const [ratio, tBuild, tDrop] = ratioOfMins(trial(build), () => {
+    const layer = build();
+    const t = ms(() => layer.clearDerived());
+    assert.equal(layer.relCount(REL), 0, 'the layer went');
+    dropped++;
+    return t;
+  });
+  assert.equal(dropped, 5, 'the drop really ran once per repetition');
+  console.log(`  derived layer: build ${tBuild.toFixed(0)} ms, drop ${tDrop.toFixed(0)} ms `
+    + `(${ratio.toFixed(2)}×, min of 5)`);
   assert.ok(ratio < 3, `dropping cost ${ratio.toFixed(2)}× building; the batch removal has regressed`);
 });

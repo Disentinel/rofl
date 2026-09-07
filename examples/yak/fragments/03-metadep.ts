@@ -43,8 +43,16 @@ export function run(): string[] {
     const parts = META.map((m) => {
       now[m] = r.store.derivedKeys.get(m);
       const n = [...r.store.facts.values()].filter((f) => f.rel === m).length;
-      const moved = Object.keys(prev).length > 0 && now[m] !== prev[m] ? '*' : ' ';
-      return `${m}=${n}${moved}`;
+      // THREE STATES, NOT TWO, and the third arrived on 2026-09-08. A
+      // relation with NO key is not a relation whose key held still: it is
+      // one the plan refuses to reuse at all. `sees` became that when
+      // boot.rofl started carrying `imports` across the tick — a rule that
+      // stages '@next' cannot promise its relation — and printed with two
+      // states it would have read as "immune to everything", which is the
+      // opposite of the truth. `!` is what an absent fingerprint looks like.
+      const mark = now[m] === undefined ? '!'
+        : Object.keys(prev).length > 0 && now[m] !== prev[m] ? '*' : ' ';
+      return `${m}=${n}${mark}`;
     }).join(' ');
     prev = now;
     return parts;
@@ -68,12 +76,16 @@ export function run(): string[] {
   r.assert('claim(x).', { who: 'someone' }); r.evaluate();
   out.push(`+ fact with an author    : ${snap(r)}`);
   out.push('');
-  out.push('`*` marks a relation whose reuse fingerprint MOVED on that mutation.');
+  out.push('`*` marks a relation whose reuse fingerprint MOVED on that mutation;');
+  out.push('`!` marks one that has no fingerprint at all -- never reused, so never');
+  out.push('stale, and never a saving either.');
   out.push('flow / flows_to never move: rule-shaped, and the closure over the rule');
   out.push('signatures is exactly the shape `reach` was. undefined_premise moves when');
   out.push('a relation is first DECLARED, because it reads the edb marks, which is the');
-  out.push('shape `stratum` had. sees / perspective move with a perspective, forged');
-  out.push('with every authored fact. Three keys, three widths -- and none of the four');
+  out.push('shape `stratum` had. perspective moves with a perspective, forged');
+  out.push('with every authored fact, and sees -- which used to carry the perspective');
+  out.push('half of this table -- is opaque now that boot.rofl carries the import');
+  out.push('graph across the tick. Three keys, three widths -- and none of the four');
   out.push('relations this was originally measured on still exists.');
   return out;
 }

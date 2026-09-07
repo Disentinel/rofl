@@ -412,3 +412,208 @@ test('MUTANT 12 — the audited program can still write its OWN `imports`', () =
   assert.equal(anon.query('forged[audit](F)').rows.length, 0,
     'KNOWN HOLE: unsigned, the same line draws no reaction at all');
 });
+
+// ---------------------------------------------------------------------------
+// THE DECLARATIONS AND THE CLOCK (mutants 13-18)
+//
+// The defect: `src/api.ts` gives an asserted fact `scope: 'tick'` unless its
+// relation is RESERVED or is `semantics` or `sealed`. `imports` and `collects`
+// are neither — they are boot.rofl's host data, not kernel vocabulary — so
+// every ledger declaration in the tree was dropped at the first tick boundary
+// and the audit then reported every crossing the program had declared.
+//
+// MEASURED BEFORE THE FIX, on a BARE boot.rofl with nothing else loaded and
+// one tick: `leak[audit]` 3 rows, and all three are this file's own crossings.
+// Over the corpus — 55 programs, each loaded on boot.rofl, evaluated, advanced
+// one tick and evaluated again — 17 leak rows at load and 237 after the tick.
+// The remedy is two clauses at the end of boot.rofl, and the mutants below ask
+// what they cover rather than only that they work.
+
+const CARRY_IMPORTS = 'imports(P, Q)      @next :- imports(P, Q).';
+const CARRY_COLLECTS = 'collects(X)        @next :- collects(X).';
+
+/** A store advanced N ticks with a budget big enough for the reflection. */
+function ticked(boot: string, program: string, n = 1): Rofl {
+  const r = load(boot, program);
+  for (let i = 0; i < n; i++) r.tickAdvance({ budget: 200_000 });
+  r.evaluate(200_000);
+  return r;
+}
+
+test('MUTANT 13 — bare boot.rofl leaks its OWN three crossings without the carry', () => {
+  // TARGET: "a licence expires at the tick boundary." The incident itself, and
+  // the subject is this file rather than any program: boot.rofl declares three
+  // crossings and audits them, so with the carry struck it reddens on itself.
+  const withCarry = ticked(BOOT, '');
+  assert.deepEqual(leaks(withCarry), []);
+  assert.equal(withCarry.query('imports(P, Q)').rows.length, 3,
+    'positive control: the three declarations are still standing after the tick');
+
+  const mutant = ticked(bootWithout(CARRY_IMPORTS), '');
+  assert.equal(mutant.query('imports(P, Q)').rows.length, 0,
+    'the mutant MUTATED: the declaration table is empty after the tick');
+  assert.deepEqual(leaks(mutant),
+    ['$kernel -> audit', '$kernel -> main', 'main -> audit'],
+    "boot.rofl's own declared crossings, reported on a program nobody wrote");
+  // and the crossings themselves are unchanged: what the mutant removed is the
+  // licence, not the walk, so `crossing` is the same set on both sides
+  assert.deepEqual(crossings(mutant), leaks(mutant));
+  assert.deepEqual(crossings(withCarry), []);
+});
+
+test('MUTANT 14 — the two carries are independent, and each covers its own half', () => {
+  // TARGET: "one clause is doing both jobs." Two declarations, two clauses;
+  // striking either must leave the OTHER half silent, or the set is really one
+  // mutant wearing two names.
+  const PROG = `
+    authority(secret, spy). authority(report, press). authority(pool, curator).
+    imports(report, secret).
+    collects(pool).
+    datum[secret](x).
+    digest[report](X)  :- datum[secret](X).
+    pooled[pool](X)    :- private[P](X).
+    private[spy](x).
+  `;
+  assert.deepEqual(leaks(ticked(BOOT, PROG)), [], 'both declarations survive the tick');
+
+  const noImports = ticked(bootWithout(CARRY_IMPORTS), PROG);
+  assert.equal(noImports.query('collects(X)').rows.length, 1,
+    'the mutant MUTATED only its half: `collects` still stands');
+  assert.ok(leaks(noImports).includes('secret -> report'), 'the imports half is gone');
+  assert.equal(leaks(noImports).filter((s) => s.includes('pool')).length, 0,
+    'and the collects half is untouched');
+
+  const noCollects = ticked(bootWithout(CARRY_COLLECTS), PROG);
+  assert.equal(noCollects.query('imports(P, Q)').rows.length, 4,
+    'the mutant MUTATED only its half: `imports` still stands');
+  assert.equal(noCollects.query('collects(X)').rows.length, 0);
+  assert.ok(leaks(noCollects).some((s) => s.endsWith('-> pool')),
+    `the collects half is gone: ${JSON.stringify(leaks(noCollects))}`);
+  assert.equal(leaks(noCollects).includes('secret -> report'), false,
+    'and the imports half is untouched');
+});
+
+test('MUTANT 15 — the carry carries a LICENCE and never a CROSSING', () => {
+  // WHERE IT COULD NOT LOOK: every check above reads a ZERO after the tick,
+  // and an audit that stopped looking would read the same zero. So: an
+  // UNDECLARED crossing must still be reported after the boundary, and a
+  // declaration RETRACTED before the boundary must not be carried past it.
+  const undeclared = ticked(BOOT, `
+    authority(secret, spy). authority(report, press).
+    datum[secret](x).
+    digest[report](X) :- datum[secret](X).
+  `);
+  assert.deepEqual(leaks(undeclared), ['secret -> report'],
+    'the audit still bites after a tick; the carry is not an off switch');
+
+  const revoked = load(BOOT, `
+    authority(secret, spy). authority(report, press).
+    imports(report, secret).
+    datum[secret](x).
+    digest[report](X) :- datum[secret](X).
+  `);
+  assert.deepEqual(leaks(revoked), [], 'declared, and silent');
+  assert.equal(revoked.retract('imports(report, secret)').ok, true);
+  revoked.tickAdvance({ budget: 200_000 });
+  revoked.evaluate(200_000);
+  assert.equal(revoked.query('imports(report, secret)').rows.length, 0,
+    'what is carried is what HOLDS at the boundary, not what was ever written');
+  assert.deepEqual(leaks(revoked), ['secret -> report']);
+});
+
+test('MUTANT 16 — the declaration survives every tick, not only the first', () => {
+  // WHERE IT COULD NOT LOOK: a carry that installed the fact once and then
+  // lost it would pass a one-tick probe exactly. Four ticks, checked at each.
+  const r = load(BOOT, `
+    authority(secret, spy). authority(report, press).
+    imports(report, secret).
+    datum[secret](x)@init.
+    datum[secret](X)@next :- datum[secret](X).
+    digest[report](X)     :- datum[secret](X).
+  `);
+  for (let t = 1; t <= 4; t++) {
+    r.tickAdvance({ budget: 200_000 });
+    r.evaluate(200_000);
+    assert.equal(r.query('imports(report, secret)').rows.length, 1, `tick ${t}: declared`);
+    assert.ok(r.holds('digest[report](x)'), `tick ${t}: positive control, content still travels`);
+    assert.deepEqual(leaks(r), [], `tick ${t}: and the walk is still licensed`);
+  }
+});
+
+test('MUTANT 17 — a declaration written AFTER a tick is carried like any other', () => {
+  // WHERE IT COULD NOT LOOK: every probe above declares at load, in tick 0.
+  // A carry keyed on the load rather than on the fact would pass all of them.
+  const r = load(BOOT, `
+    authority(secret, spy). authority(report, press).
+    datum[secret](x)@init.
+    datum[secret](X)@next :- datum[secret](X).
+    digest[report](X)     :- datum[secret](X).
+  `);
+  r.tickAdvance({ budget: 200_000 });
+  r.evaluate(200_000);
+  assert.deepEqual(leaks(r), ['secret -> report'], 'undeclared in tick 1');
+  assert.equal(r.assert('imports(report, secret).').ok, true);
+  r.evaluate(200_000);
+  assert.deepEqual(leaks(r), [], 'declared in tick 1');
+  r.tickAdvance({ budget: 200_000 });
+  r.evaluate(200_000);
+  assert.deepEqual(leaks(r), [], 'and still declared in tick 2');
+});
+
+test('MUTANT 18 — every program in the tree audits the same at load and after a tick', () => {
+  // THE NEGATIVE OVER A POPULATION, which no probe above can give: 55 programs
+  // — every `examples/*` world, every `rules/*.rofl` and `facts/*.rofl` layer,
+  // `safety.rofl` and `policy.rofl` — loaded on boot.rofl, evaluated, advanced
+  // one tick and evaluated again. Before the carry: 17 leak rows at load, 237
+  // after. The claim is not "zero" and must not become one: 17 rows stand at
+  // load, and they are of two kinds. Some are deliberate and named elsewhere —
+  // examples/goof and examples/npc carry the language gap recorded as
+  // `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`. The rest
+  // are an artefact of THIS sweep and not of the tree: it loads each
+  // `rules/js-*.rofl` layer on its own, and `imports(audit, code)` lives in
+  // `rules/js-model.rofl`, so a layer measured alone is missing the
+  // declaration its stack supplies. Loaded together the js stack reads 0 (and
+  // read 10 after a tick before this fix). The claim here is narrower than
+  // either and is the one that holds for every world: THE CLOCK CHANGES
+  // NOTHING.
+  const dirs: string[][] = [];
+  const push = (name: string, files: string[]) => { if (files.length) dirs.push([name, ...files]); };
+  for (const d of fs.readdirSync(path.join(ROOT, 'examples'))) {
+    const full = path.join(ROOT, 'examples', d);
+    if (fs.statSync(full).isDirectory()) {
+      push(d, fs.readdirSync(full).filter((f) => f.endsWith('.rofl') && !f.includes('dense'))
+        .map((f) => path.join(full, f)));
+    } else if (d.endsWith('.rofl')) push(d, [full]);
+  }
+  for (const layer of ['rules', 'facts']) {
+    for (const f of fs.readdirSync(path.join(ROOT, layer))) {
+      if (f.endsWith('.rofl')) push(`${layer}/${f}`, [path.join(ROOT, layer, f)]);
+    }
+  }
+  push('safety.rofl', [path.join(ROOT, 'safety.rofl')]);
+  push('policy.rofl', [path.join(ROOT, 'policy.rofl')]);
+  assert.ok(dirs.length >= 50, `positive control: the sweep found ${dirs.length} programs`);
+
+  const moved: string[] = [];
+  let atLoad = 0, afterTick = 0;
+  for (const [name, ...files] of dirs) {
+    const r = new Rofl();
+    assert.equal(r.load(BOOT).ok, true, `${name}: boot.rofl`);
+    for (const f of files) {
+      assert.equal(r.load(fs.readFileSync(f, 'utf8')).ok, true, `${name}: ${path.basename(f)}`);
+    }
+    r.evaluate(2_000_000);
+    const before = leaks(r);
+    r.tickAdvance({ budget: 2_000_000 });
+    r.evaluate(2_000_000);
+    const after = leaks(r);
+    atLoad += before.length; afterTick += after.length;
+    if (before.join('|') !== after.join('|')) {
+      moved.push(`${name}: ${before.length} -> ${after.length}`);
+    }
+  }
+  assert.deepEqual(moved, [], 'no program may gain or lose a leak by advancing its clock');
+  assert.equal(atLoad, afterTick);
+  assert.ok(atLoad > 0,
+    'positive control: the sweep is not measuring an audit that never fires anywhere');
+});
