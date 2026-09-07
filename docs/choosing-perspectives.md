@@ -97,6 +97,45 @@ evidence, from engineering's viewpoint"), the entity is conflated. Split it:
 Four entities, each with one natural perspective. The slot never has to carry
 two meanings.
 
+## The sharp test: do you reason inside the view, or only record it?
+
+Added 2026-09-07, after a long detour that this one question would have cut
+short. The checklist's first item — *can two contradictory facts legitimately
+coexist under different X* — is the criterion, but it is easier to apply in
+this form:
+
+> **Need to reason INSIDE someone's view — derive consequences, keep
+> incompatible conclusions from exploding — and it is a book. Need only to
+> record and compare what was said — and the speaker is an argument.**
+
+`examples/goof` is the first case: nine mathematicians, nine ledgers, because
+nine geometries derive incompatible theorems from incompatible axioms and the
+whole point is that the store does not explode.
+
+Alice and bob calling each other names is the second:
+
+```prolog
+claimed[claims](alice, "bob is a jerk").
+claimed[claims](bob, "alice is a bitch").
+```
+
+These do not contradict — they are different facts about different subjects —
+so there is nothing to keep apart, and `alice` belongs in a column. One book.
+
+**Why this is not `mega-main`.** The anti-pattern below is real and this
+passes close to it. What separates them is *who the column holds*: mega-main
+puts the **writers** in a column, which dissolves the boundary `authority`
+and `leak[audit]` exist to police. Here the writer is the registry that keeps
+`[claims]` — one nameable principal — and `forged[audit]` guards it exactly
+as before. Nothing is lost because there was never a boundary between
+alice-as-writer and bob-as-writer to lose.
+
+**And composition never arises.** "Alice's book about tells" is not a
+compound context needing a compound name; it is a mis-modelled entity. Either
+you reason inside alice's view (she is a book, `tells` is a relation or a
+column) or you do not (one book, everything is data). The two cases are
+different *situations*, not two halves of one composite.
+
 ## Litmus checklist
 
 Before putting X in the perspective slot, check:
