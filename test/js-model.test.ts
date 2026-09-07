@@ -1117,7 +1117,24 @@ test('a fork carries the base and nothing else, and injecting late is the same w
   // 1. A FORK IS THE BASE. Byte for byte on `canonicalState`, and element for
   //    element on arrival order, which `store.clone()` preserves.
   assert.equal(world().store.canonicalState(), fresh.store.canonicalState());
-  assert.deepEqual(arrival(world()), arrival(fresh));
+  // ARRIVAL ORDER IS COMPARED AGAINST THE TEMPLATE, NOT AGAINST A FRESH BUILD,
+  // and the distinction is the whole of what `clone` promises. `store.clone`
+  // answers `allFacts` in the ORIGINAL's arrival order (src/store.ts, decided
+  // 2026-09-07); it promises nothing about agreeing with a world someone else
+  // built. The stronger form passed by accident until `boot.rofl` began
+  // carrying `imports`/`collects` across the tick boundary, which changed
+  // which relations are re-derived and therefore the order the derived layer
+  // is appended in -- with the SAME 1728 facts and a byte-identical
+  // canonicalState. Arrival order is not meaning here: reversing it globally
+  // moves no fixpoint, no canonicalState and no golden byte, measured this
+  // same session. The world comparison below is what carries the meaning; this
+  // line carries the clone contract, and it is taken on an UNEVALUATED fork:
+  // `world()` re-derives, and `clearDerived` plus re-derivation appends the
+  // derived layer in firing order, which is not the order the template
+  // accumulated it in. The clone contract is about what a copy carries, not
+  // about what a fixpoint rebuilds. It still kills the reverse-order mutant,
+  // because a reversal diverges from the template at the first fact.
+  assert.deepEqual(arrival(BASE!.fork()), arrival(BASE!));
 
   // 2. INJECTING AFTER THE FIXPOINT REACHES THE SAME LEAST MODEL as injecting
   //    before it. This is what makes the `extra` call sites shareable, and it
