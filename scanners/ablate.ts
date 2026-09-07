@@ -70,17 +70,24 @@ export const HOOKS: Hook[] = [
     replace: '      if (RESERVED.has(r.clause.head.rel)) HIT(\'b1\');\n'
       + '      if (RESERVED.has(r.clause.head.rel) && ABLATE !== \'b1\') {' },
 
-  { id: 'b2', note: '119-169 the demand-backed set, identically empty',
-    anchor: '    this.demandRels = new Map();\n    for (const rel of [...unfoldable].sort()) {',
-    replace: '    if (unfoldable.size > 0) HIT(\'b2\');\n'
+  // THE DEMAND-BACKED SET is safety.rofl's answer now, so what is ablated is
+  // the READING of it rather than the fixpoint that used to stand here. Same
+  // ablation: the map stays empty and the run goes on without it.
+  { id: 'b2', note: 'the demand-backed set, identically empty',
+    anchor: '    this.demandRels = new Map();\n    for (const rel of [...this.answer.demandRels].sort()) {',
+    replace: '    if (this.answer.demandRels.size > 0) HIT(\'b2\');\n'
       + '    this.demandRels = new Map();\n'
-      + '    if (ABLATE !== \'b2\') for (const rel of [...unfoldable].sort()) {' },
+      + '    if (ABLATE !== \'b2\') for (const rel of [...this.answer.demandRels].sort()) {' },
 
-  { id: 'b3', note: '170-206 range restriction, identically satisfied',
-    anchor: '    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;',
-    replace: '    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;\n'
-      + '    if (!safe) HIT(\'b3\');\n'
-      + '    if (ABLATE === \'b3\') safe = true;' },
+  // RANGE RESTRICTION, and it is no longer a fold in the host: safety.rofl
+  // answers it and `classify` reads the answer. The ablation is unchanged in
+  // what it does -- make every rule safe and see what moves -- and it now
+  // ablates a verdict rather than a computation.
+  { id: 'b3', note: 'range restriction (safety.rofl), identically satisfied',
+    anchor: '    const safe = stuck === null && !unsafe.has(r.id);',
+    replace: '    const safe0 = stuck === null && !unsafe.has(r.id);\n'
+      + '    if (!safe0) HIT(\'b3\');\n'
+      + '    const safe = ABLATE === \'b3\' ? true : safe0;' },
 
   { id: 'b4-skip', note: '214-224 the reuse skip stops skipping',
     anchor: '    const safeRules = this.rules.filter((r) => r.safe && !plan.hits.has(r.clause.head.rel));',
@@ -313,7 +320,7 @@ export const CANARIES = ['examples/wtf/', 'examples/rip/', 'examples/loot/'];
 
 const LABEL: Record<string, string> = {
   b1: '107-118 refuse a reserved head', b2: '119-169 demand set',
-  b3: '170-206 range restriction', b4: '214-224 reuse skip + rejection gate',
+  b3: 'range restriction (safety.rofl)', b4: '214-224 reuse skip + rejection gate',
   b5: '498-523 stratum MAX', b6: '632-647 wf admissibility',
 };
 

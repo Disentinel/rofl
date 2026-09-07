@@ -4,16 +4,19 @@
 // stratum-0 rules); the kernel contains no stratification checker.
 
 import {
-  type Term, type Subst, type ArithFail, mka, mkf, mki, canonTerm, canonVars, resolve, unify, walk,
+  type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, unifyAll, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
-import type { Lit, BodyElem, Clause } from './parser.ts';
-import { type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
+import { type Lit, type BodyElem, type Clause } from './unify.ts';
+import { denseClauses } from './dense.ts';
+import { POLICY_DENSE, SAFETY_DENSE } from './kernel-dense.ts';
+import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
 import {
   V, IFACE, RESERVED, STR_TYPE, decodeRules, type DRule, factTerm, relOfFactTerm, canonBodyElem, canonLit,
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
-  atomTerm, wellFoundedDeclared,
+  atomTerm, wellFoundedDeclared, encodeRule, resolveClauseBooks,
+  sealedBodies, SEALED_PROVENANCE,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -37,12 +40,17 @@ export class StratificationError extends Error {
 }
 
 export interface ERule extends DRule {
-  safe: boolean;          // materializable bottom-up in written premise order
+  safe: boolean;          // materializable bottom-up in the planned premise order
   hasNeg: boolean;
   posRels: string[];
   hasDemandPrem: boolean; // some positive premise targets a demand-backed relation
   triggerRels: Set<string>;
+  /** The body in the order it is SOLVED, which is `planBody`'s answer and not
+   *  necessarily the order it was written in. The reflected clause keeps the
+   *  written order, so rule ids and canonical text do not move. */
+  plan: BodyElem[];
 }
+
 
 export interface StagedFact {
   key: string; rel: string; persp: string; args: Term[];
@@ -140,7 +148,196 @@ interface Sol { s: Subst; prems: PremRef[]; }
 const PENDING_NEG: PremRef = { t: 'neg', key: '' };
 const PENDING_BI: PremRef = { t: 'bi', desc: '' };
 
-interface FrontInfo { keys: Set<string>; rels: Set<string>; }
+/** The round's delta. `keys` is every fact key derived last round; `byRel`
+ *  is the SAME keys split by relation, and the split is what makes a delta
+ *  usable as the leading position of a join.
+ *
+ *  `matchPremise` given a window with no bound argument cannot use an index,
+ *  so it iterates the window itself -- and iterating the WHOLE front to find
+ *  the handful of facts of one relation is a scan of the derived layer wearing
+ *  a delta's name. Splitting it costs one map lookup per fact concluded and
+ *  changes no answer: the branch that iterates the window already filtered by
+ *  `f.rel === lit.rel`, and the branch that intersects an index probe already
+ *  probed a single relation. What moves is only the size of the thing walked. */
+interface FrontInfo { keys: Set<string>; byRel: Map<string, Set<string>>; }
+
+/** Record one derived fact in a front. */
+function noteFront(f: FrontInfo, rel: string, key: string): void {
+  f.keys.add(key);
+  let s = f.byRel.get(rel);
+  if (!s) { s = new Set(); f.byRel.set(rel, s); }
+  s.add(key);
+}
+
+interface PolicyRow { rel: string; args: Term[]; persp: Term | null; }
+
+/** A program the kernel ships, encoded once. It arrives in the DENSE form --
+ *  facts and one-fact rules, read by src/dense.ts -- and not as source text,
+ *  so that running the kernel's own policy does not require the surface
+ *  parser. Measured 2026-09-06: it did, for 168 of the parser's 262 lines. `bootstrapKernel` installs facts
+ *  into every store; this installs nothing anywhere — the rows are held here
+ *  and copied into a scratch store when a question is asked. A FACT keeps the
+ *  perspective its own book resolves to; a RULE becomes reflection under the
+ *  kernel's, which is where the readers look for it. */
+const encoded = new Map<string, PolicyRow[]>();
+function kernelProgram(src: string): PolicyRow[] {
+  let rows = encoded.get(src);
+  if (rows === undefined) {
+    rows = [];
+    for (const c0 of denseClauses(src)) {
+      const c = resolveClauseBooks(c0);
+      if (c.body.length === 0) rows.push({ rel: c.head.rel, args: c.head.args, persp: c.head.persp });
+      else for (const f of encodeRule(c).facts) rows.push({ rel: f.rel, args: f.args, persp: null });
+    }
+    encoded.set(src, rows);
+  }
+  return rows;
+}
+
+const POLICY_BUDGET = 20_000_000;
+
+/** The answer to `is this rule range-restricted`, remembered per PROGRAM. The
+ *  key is the rule set itself — an id is a content hash — so two evaluations of
+ *  the same program ask once, and one rule changing anywhere asks again. */
+const MEMO_CAP = 64;
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
+
+/** WHAT safety.rofl ANSWERS ABOUT A PROGRAM'S RULES. One ask, six answers:
+ *  every one of them was a fold, a `for(;;)` or a memoised recursion here, and
+ *  every one reads the same seed, which is why they travel together. */
+interface RuleAnswer {
+  unsafe: ReadonlySet<string>;
+  demandRels: ReadonlySet<string>;
+  trigger: ReadonlyMap<string, ReadonlySet<string>>;
+  late: ReadonlySet<string>;
+  negRels: ReadonlySet<string>;
+  readsProvenance: boolean;
+}
+const EMPTY_ANSWER: RuleAnswer = {
+  unsafe: EMPTY_SET, demandRels: EMPTY_SET, trigger: new Map(),
+  late: EMPTY_SET, negRels: EMPTY_SET, readsProvenance: false,
+};
+const safetyMemo = new Map<string, RuleAnswer>();
+// The four SLOTS safety.rofl asks a groundness question about. Atoms, not
+// relation names: they name a place in a rule, the way `in` and `out` name a
+// place in a mode.
+const HEAD_SLOT = 'head';
+const POS_SLOT = 'pos';
+const LEFT_SLOT = 'left';
+const RIGHT_SLOT = 'right';
+
+/** A scratch store holding one of the kernel's own programs and nothing else.
+ *  The caller copies in whatever reflection its question needs. */
+function policyStore(src: string): Store {
+  const pol = new Store();
+  for (const f of kernelProgram(src)) {
+    // A RESERVED relation is auto-perspectived on read, so its rows belong to
+    // the kernel's book; a fact of the program's own vocabulary belongs to the
+    // book the clause resolved to, and reading it anywhere else finds nothing.
+    const persp = f.persp !== null && f.persp.k === 'a' && !RESERVED.has(f.rel)
+      ? f.persp.name : KERNEL_PERSP;
+    pol.add(f.rel, persp, f.args, { scope: 'timeless', base: true });
+  }
+  return pol;
+}
+
+/** WHERE A NEGATION MAY STAND, and why the answer cannot be `anywhere`.
+ *
+ *  `not p(X, K)` is read by `negHolds` as `no fact matches`, so with K unbound
+ *  it says `X has no key at all` and with K bound it says `X does not have
+ *  THIS key`. Those are different sentences, and until this function existed
+ *  the one a rule meant was decided by where its author put the comma:
+ *  measured on `par(b,c). par(c,k). own_key(k,k). own_key(c,q).`, the same
+ *  rule gave three rows with the negation second and five with it last.
+ *
+ *  THE NEGATION IS THEREFORE PLACED RATHER THAN READ. Positive premises and
+ *  builtins are consumed in the order they were written; a negation is held
+ *  back until every variable it shares with the rest of the rule is bound, and
+ *  emitted at the first point where that is true. Holding back only negations
+ *  keeps the written order wherever it is already legal — MEASURED over 1965
+ *  rules in 71 .rofl files, the plan differs from the written order in 0 of
+ *  them — and leaves the position of a BUILTIN alone, which is a separate
+ *  choice with a separate meaning (see below).
+ *
+ *  A VARIABLE OCCURRING IN NO OTHER ELEMENT IS A WILDCARD BY ANOTHER NAME.
+ *  `not own_key(X, _)` is existential by construction — a wildcard has no
+ *  second occurrence, so `there is no such fact` is the only reading — and so
+ *  is `not p(Y, Y)` with Y nowhere else. 46 negations here are of that kind
+ *  and they are none of this function's business. A variable shared with a
+ *  second element is the ambiguous case, and there are 0 of those.
+ *
+ *  `stuck` is the first element that can never become ready. The load door
+ *  refuses a clause that has one; the evaluator marks such a rule unsafe,
+ *  which routes it to demand unfolding where the GOAL supplies the bindings —
+ *  the same reading `whynot` gives, which is what the two disagreed about. */
+export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null; stuckVars: string[]; headGround: boolean } {
+  // Which elements each variable occurs in: -1 is the head, otherwise the
+  // body index. A variable confined to ONE negative literal is existential.
+  const seenIn = new Map<string, Set<number>>();
+  const note = (t: Term, where: number) => {
+    for (const v of varsOf(t)) {
+      let s = seenIn.get(v);
+      if (!s) { s = new Set(); seenIn.set(v, s); }
+      s.add(where);
+    }
+  };
+  for (const a of c.head.args) note(a, -1);
+  note(c.head.persp, -1);
+  c.body.forEach((b, i) => {
+    if (b.t === 'bi') { note(b.l, i); note(b.r, i); }
+    else { for (const a of b.lit.args) note(a, i); note(b.lit.persp, i); }
+  });
+
+  const bound = new Set<string>();
+  const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
+  const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
+  const negReady = (b: BodyElem & { t: 'neg' }, i: number): boolean =>
+    [...b.lit.args.flatMap((a) => [...varsOf(a)]), ...varsOf(b.lit.persp)]
+      .every((v) => bound.has(v) || (seenIn.get(v)!.size === 1 && seenIn.get(v)!.has(i)));
+
+  // ONLY NEGATIONS MOVE. Positive premises and builtins are consumed in the
+  // order they were written, ready or not, because THEIR position is a choice
+  // an author already has and this repository already documents: examples/yak
+  // fragment 09 turns on exactly it — `risky(X, Y) :- Y = pair(X, Z), who(X),
+  // tag(X, Z).` is not range-restricted AS WRITTEN and is therefore unfolded
+  // top-down, against the same three premises reordered, which materialises
+  // bottom-up. Letting the plan wait for `=` would silently take that choice
+  // away and make the fragment's two programs one program.
+  //
+  // I MEASURED THAT WIDENING AT ZERO AND THE MEASUREMENT HAD A HOLE: it walked
+  // 71 .rofl files, and this pair lives in a TypeScript string. Restricting
+  // the plan to negations closes the class by construction instead of by scan.
+  const plan: BodyElem[] = [];
+  const pending: number[] = [];
+  const flush = () => {
+    for (;;) {
+      const at = pending.findIndex((i) => negReady(c.body[i] as BodyElem & { t: 'neg' }, i));
+      if (at < 0) return;
+      plan.push(c.body[pending[at]]);
+      pending.splice(at, 1);
+    }
+  };
+  c.body.forEach((b, i) => {
+    if (b.t === 'neg') { pending.push(i); flush(); return; }
+    if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); }
+    else if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
+    else if (b.op === 'is') { if (groundIn(b.r)) bindAll(b.l); }
+    plan.push(b);
+    flush();
+  });
+
+  const headGround = c.head.args.every(groundIn) && groundIn(c.head.persp);
+  if (pending.length === 0) return { plan, stuck: null, stuckVars: [], headGround };
+  const stuck = c.body[pending[0]];
+  // The variables that name the ambiguity: unbound where the plan stopped, and
+  // occurring somewhere else in the rule, which is what makes them bindable in
+  // principle and therefore a question about order rather than an existential.
+  const stuckVars = (stuck as BodyElem & { t: 'neg' }).lit.args
+    .flatMap((a) => [...varsOf(a)])
+    .concat([...varsOf((stuck as BodyElem & { t: 'neg' }).lit.persp)])
+    .filter((v) => !bound.has(v) && (seenIn.get(v)!.size > 1 || !seenIn.get(v)!.has(pending[0])));
+  return { plan, stuck, stuckVars: [...new Set(stuckVars)].sort(), headGround };
+}
 
 export class Evaluation {
   // THE PORT, not an implementation. Every read here goes through the
@@ -167,7 +364,7 @@ export class Evaluation {
   private active: ERule[] = [];
   private staged = new Map<string, StagedFact>();
   private renameCounter = 0;
-  private curFront: FrontInfo = { keys: new Set(), rels: new Set() };
+  private curFront: FrontInfo = { keys: new Set(), byRel: new Map() };
   /** Three-valued: the program declared `semantics(well_founded)`. */
   wellFounded = false;
   /** The round's frozen assumption, or null for ordinary two-valued negation
@@ -176,8 +373,29 @@ export class Evaluation {
   // One sink, reused: `is` reads it immediately after every null it gets.
   private arithFail: ArithFail = { code: ARITH_UNBOUND };
 
-  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term } = {}) {
+  /** THE BOOTSTRAP RUNG. A store holding one of the kernel's OWN programs is
+   *  evaluated with `bootstrap: true`, and the flag says one thing: do not ask
+   *  safety.rofl whether these rules are range-restricted, because asking means
+   *  constructing an Evaluation and that is this constructor. The assumption it
+   *  stands on — that every rule the kernel ships is range-restricted — is not
+   *  taken on trust: test/kernel-policy-program.test.ts runs safety.rofl over
+   *  the reflection of BOTH kernel programs, its own included, and requires the
+   *  answer to be empty. That is the program checking itself, which is the only
+   *  form of self-application available at the bottom of a tower. */
+  private bootstrap: boolean;
+
+  /** What safety.rofl said about this program's rules, asked once in
+   *  `prepare`. Empty on a bootstrap evaluation, which asks nothing. */
+  private answer: RuleAnswer = EMPTY_ANSWER;
+
+  /** Has the program sealed its provenance? Read off the store in `prepare`,
+   *  the way `wellFounded` is, because both are declarations about how this
+   *  world is kept rather than facts about its subject. */
+  private noProvenance = false;
+
+  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
+    this.bootstrap = opts.bootstrap ?? false;
     this.budget = opts.budget ?? 100_000;
     this.space = opts.space ?? DEFAULT_SPACE;
     this.naive = opts.naive ?? false;
@@ -189,20 +407,31 @@ export class Evaluation {
   /** Decode rules from the store and classify them. Read-only. */
   prepare(): void {
     this.wellFounded = wellFoundedDeclared(this.store);
+    this.noProvenance = sealedBodies(this.store).has(SEALED_PROVENANCE);
     const { rules, diagnostics } = decodeRules(this.store);
     this.diags.push(...diagnostics);
+    this.answer = this.safetyAnswer(rules);
+    // A RULE THAT READS WHAT THE PROGRAM SEALED IS TOLD SO. The standing
+    // `hole($sealed(provenance), reflection_sealed)` is the world's refusal and
+    // it is already in the store; this names the rule that is going to read an
+    // empty relation because of it. It is a diagnostic and not a rejection: the
+    // program is not wrong, it is asking a question this world has declared it
+    // will not answer, and `examples/loot` §5 is a real rule of that shape.
+    if (this.noProvenance && this.answer.readsProvenance) {
+      this.diags.push(`provenance is sealed; rules reading '${V.derived_by}' will match nothing`);
+    }
     const kept: ERule[] = [];
     for (const r of rules) {
       if (RESERVED.has(r.clause.head.rel)) {
         this.diags.push(`rule ${r.id} concludes into a kernel relation; not executable`);
         continue;
       }
-      kept.push(this.classify(r));
+      kept.push(this.classify(r, this.answer.unsafe));
     }
     this.rules = kept;
-    // A relation is demand-backed (unfolded at call sites) when some @now
-    // rule defining it is unsafe, or transitively depends on a demand-backed
-    // relation through a positive premise. @next rules never unfold.
+    // WHICH RELATIONS ARE DEMAND-BACKED IS safety.rofl'S ANSWER; grouping the
+    // rules that define one is this method's. What used to stand here was the
+    // same closure written as a `for(;;)` over a growing set.
     const nowRulesByRel = new Map<string, ERule[]>();
     for (const r of kept) {
       if (r.clause.head.temporal === 'next') continue;
@@ -210,84 +439,109 @@ export class Evaluation {
       if (!arr) { arr = []; nowRulesByRel.set(r.clause.head.rel, arr); }
       arr.push(r);
     }
-    const unfoldable = new Set<string>();
-    for (const [rel, rs] of nowRulesByRel) if (rs.some((r) => !r.safe)) unfoldable.add(rel);
-    for (;;) {
-      let grew = false;
-      for (const [rel, rs] of nowRulesByRel) {
-        if (unfoldable.has(rel)) continue;
-        for (const r of rs) {
-          if (r.posRels.some((x) => unfoldable.has(x))) { unfoldable.add(rel); grew = true; break; }
-        }
-      }
-      if (!grew) break;
-    }
     this.demandRels = new Map();
-    for (const rel of [...unfoldable].sort()) {
-      this.demandRels.set(rel, nowRulesByRel.get(rel)!);
+    for (const rel of [...this.answer.demandRels].sort()) {
+      const rs = nowRulesByRel.get(rel);
+      if (rs !== undefined) this.demandRels.set(rel, rs);
     }
-    // demand closure per relation, then trigger relations per rule
-    const closure = new Map<string, Set<string>>();
-    const closeRel = (rel: string, seen: Set<string>): Set<string> => {
-      const cached = closure.get(rel);
-      if (cached) return cached;
-      const out = new Set<string>([rel]);
-      if (!seen.has(rel)) {
-        seen.add(rel);
-        for (const dr of this.demandRels.get(rel) ?? []) {
-          for (const b of dr.clause.body) {
-            if (b.t === 'pos') for (const x of closeRel(b.lit.rel, seen)) out.add(x);
-          }
-        }
-      }
-      closure.set(rel, out);
-      return out;
-    };
     for (const r of kept) {
       r.hasDemandPrem = r.posRels.some((x) => this.demandRels.has(x));
       r.triggerRels = new Set();
-      for (const p of r.posRels) for (const x of closeRel(p, new Set())) r.triggerRels.add(x);
+      for (const p of r.posRels) for (const x of this.answer.trigger.get(p) ?? [p]) r.triggerRels.add(x);
     }
   }
 
-  private classify(r: DRule): ERule {
-    const bound = new Set<string>();
-    let safe = true;
+  private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {
+    const { plan, stuck } = planBody(r.clause);
+    // TWO WAYS A RULE IS UNSAFE, and only one of them is written here.
+    //
+    // RANGE RESTRICTION — does the body bind everything the head names — is
+    // safety.rofl's, asked once per program in `safetyAnswer` below. It used to
+    // be a 25-line fold over the body tracking a bound set, and the two were
+    // measured against each other over the whole corpus (74 files, 3555 rules,
+    // zero disagreements) and over a mutant set of 22, one per branch of the
+    // fold that is now gone.
+    //
+    // A BODY THAT CANNOT BE ORDERED is not modelled there and stays here. Its
+    // negation's meaning depends on where it was written; `addClause` refuses
+    // such a clause at the door, and one arriving through a hand-edited
+    // snapshot is marked unsafe. Measured over the same 3555 rules: it never
+    // fires, which is why the rules can be silent about it and why this line
+    // cannot be deleted on that evidence.
+    const safe = stuck === null && !unsafe.has(r.id);
     let hasNeg = false;
     const posRels: string[] = [];
-    const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
-    const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
-    for (const b of r.clause.body) {
-      if (b.t === 'pos') {
-        posRels.push(b.lit.rel);
-        for (const a of b.lit.args) bindAll(a);
-        bindAll(b.lit.persp);
-      } else if (b.t === 'neg') {
-        hasNeg = true;
-      } else {
-        if (b.op === '=') {
-          if (groundIn(b.l)) bindAll(b.r);
-          else if (groundIn(b.r)) bindAll(b.l);
-          else safe = false;
-        } else if (b.op === 'is') {
-          if (groundIn(b.r)) bindAll(b.l);
-          else safe = false;
-        } else {
-          if (!groundIn(b.l) || !groundIn(b.r)) safe = false;
-        }
+    for (const b of plan) {
+      if (b.t === 'pos') posRels.push(b.lit.rel);
+      else if (b.t === 'neg') hasNeg = true;
+    }
+    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set(), plan };
+  }
+
+  /** ASK safety.rofl WHICH RULES ARE NOT RANGE-RESTRICTED. The program runs in
+   *  a store of its own over a copy of the reflection, plus the two relations
+   *  the reflection does not carry flat: `premise_var(R, K, Slot, I, Name)` and
+   *  `slot_arity(R, K, Slot, N)`. Walking a term for its variables is the
+   *  host's whole share of this and it decides nothing — a term carries an
+   *  arbitrary functor and Datalog cannot destructure one it does not name. */
+  private safetyAnswer(rules: DRule[]): RuleAnswer {
+    if (this.bootstrap || rules.length === 0) return EMPTY_ANSWER;
+    const memoKey = fnv1a(rules.map((r) => r.id).join('|'));
+    const hit = safetyMemo.get(memoKey);
+    if (hit !== undefined) return hit;
+
+    const pol = policyStore(SAFETY_DENSE);
+    for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise,
+      V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg, V.reserved]) {
+      for (const f of this.store.relAll(rel)) {
+        pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
       }
     }
-    // NOT CHECKED HERE, and the attempt is worth the comment. A variable free
-    // in a negation is meaningless — `not p(X, Y)` with Y unbound asks whether
-    // p is EMPTY — and adding it to this walk looked like the fix. It is not:
-    // `safe` in this file does not mean "legal", it means "can run bottom-up",
-    // and an unsafe rule is not rejected but made DEMAND-BACKED (line 214). So
-    // the check would move such a rule from one evaluation strategy to another
-    // and leave the wrong answer exactly where it was. Measured before
-    // reverting. The hole is real and is queued as w_negation_range_restriction.
-    const h = r.clause.head;
-    if (!h.args.every(groundIn) || !groundIn(h.persp)) safe = false;
-    return { ...r, safe, hasNeg, posRels, hasDemandPrem: false, triggerRels: new Set() };
+    for (const r of rules) {
+      const rid = mka(r.id);
+      const slot = (k: number, name: string, ts: Term[]) => {
+        const vs = new Set<string>();
+        for (const t of ts) varsOf(t, vs);
+        let i = 0;
+        for (const v of vs) {
+          pol.add(IFACE.premise_var, MAIN, [rid, mki(k), mka(name), mki(++i), mks(v)],
+            { scope: 'timeless', base: true });
+        }
+        pol.add(IFACE.slot_arity, MAIN, [rid, mki(k), mka(name), mki(i)],
+          { scope: 'timeless', base: true });
+      };
+      slot(0, HEAD_SLOT, [...r.clause.head.args, r.clause.head.persp]);
+      r.clause.body.forEach((b, i) => {
+        if (b.t === 'pos') slot(i + 1, POS_SLOT, [...b.lit.args, b.lit.persp]);
+        else if (b.t === 'bi') { slot(i + 1, LEFT_SLOT, [b.l]); slot(i + 1, RIGHT_SLOT, [b.r]); }
+      });
+    }
+    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET, bootstrap: true }).run();
+
+    const atoms = (rel: string): Set<string> => {
+      const out = new Set<string>();
+      for (const f of pol.relAll(rel)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+      return out;
+    };
+    const trigger = new Map<string, Set<string>>();
+    for (const f of pol.relAll(IFACE.trigger_of)) {
+      const a = f.args[0]; const b = f.args[1];
+      if (a.k !== 'a' || b.k !== 'a') continue;
+      let to = trigger.get(a.name);
+      if (!to) { to = new Set(); trigger.set(a.name, to); }
+      to.add(b.name);
+    }
+    const answer: RuleAnswer = {
+      unsafe: atoms(IFACE.unsafe_rule),
+      demandRels: atoms(IFACE.demand_rel),
+      trigger,
+      late: atoms(IFACE.late_rule),
+      negRels: atoms(IFACE.neg_relation),
+      readsProvenance: pol.relCount(IFACE.provenance_reader) > 0,
+    };
+    if (safetyMemo.size >= MEMO_CAP) safetyMemo.clear();
+    safetyMemo.set(memoKey, answer);
+    return answer;
   }
 
   // -------------------------------------------------------------------------
@@ -417,12 +671,7 @@ export class Evaluation {
    *  "reads THIS tick's provenance" is not a question the rule text answers.
    *  Reading any of it counts as reading all of it. */
   readsProvenance(): boolean {
-    for (const r of this.rules) {
-      for (const b of r.clause.body) {
-        if (b.t !== 'bi' && b.lit.rel === V.derived_by) return true;
-      }
-    }
-    return false;
+    return this.answer.readsProvenance;
   }
 
   /** A record the plan keeps: a fact of a reused relation, or the provenance
@@ -468,26 +717,27 @@ export class Evaluation {
       if (!a) { a = []; byHead.set(r.clause.head.rel, a); }
       a.push(r);
     }
-    // reads(A) = every relation A's rules look at, positively or negatively
-    const rels = new Set<string>(byHead.keys());
-    const reads = new Map<string, Set<string>>();
-    for (const [rel, rs] of byHead) {
-      const out = new Set<string>();
-      for (const r of rs) {
-        for (const b of r.clause.body) {
-          if (b.t !== 'bi') { out.add(b.lit.rel); rels.add(b.lit.rel); }
-        }
-      }
-      reads.set(rel, out);
-    }
     // Every firing emits a provenance record, so a rule that READS provenance
-    // is triggered by derivations anywhere in the program, not only by the
-    // ones in its own cone — the one relation the cone argument below cannot
-    // account for. No program in this repository does it; one that does gets
-    // the old behaviour and nothing else changes.
+    // is triggered by derivations anywhere in the program, not only by the ones
+    // in its own cone — the one relation the cone argument below cannot account
+    // for. Asked BEFORE the policy store is built, so a program that reads
+    // provenance pays for none of it.
     if (this.readsProvenance()) return { hits, keys };
 
-    // (1) relations whose contents this evaluation cannot promise to reproduce
+    // ASKED, NOT COMPUTED, and the asking is `policyAnswer` below — a method of
+    // its own so that what DECIDES and what merely fetches do not share a
+    // block. Measured 2026-09-05: leaving them together read as 38 more lines
+    // of policy, because a census counts the block and the block had gained
+    // forty lines of unpacking that decide nothing.
+    const first = this.policyAnswer(null);
+    const rels = new Set<string>([...byHead.keys(), ...first.rels]);
+    const reads = first.reads;
+
+    // (1) relations whose contents this evaluation cannot promise to reproduce.
+    //     THE SEED STAYS HERE: it reads a premise's TENSE and asks whether a
+    //     relation holds non-base rows, and the reflection carries neither
+    //     flat. That is what this block's POL* mark has always meant. The
+    //     CLOSURE over it is the program's.
     const opaque = new Set<string>();
     for (const rel of rels) {
       const rs = byHead.get(rel);
@@ -498,13 +748,9 @@ export class Evaluation {
         if (this.store.relAll(rel).some((f) => !f.base && !f.frozen)) opaque.add(rel);
         continue;
       }
-      // A demand-backed relation materialises as a side effect of matching at
-      // OTHER rules' call sites; skipping its own rules would not stop that,
-      // and keeping its facts would not reproduce which ones got materialised.
-      if (this.demandRels.has(rel)) { opaque.add(rel); continue; }
-      // Anything not written in the current tick's present tense: a '@next'
-      // head stages instead of materialising, and an '@init' premise reads a
-      // different answer once the clock has moved.
+      // A rule that stages '@next', or reads across the tick boundary, cannot
+      // promise its relation either: the head stages instead of materialising,
+      // and an '@init' premise reads a different answer once the clock moved.
       for (const r of rs) {
         if (r.clause.head.temporal !== 'now'
             || r.clause.body.some((b) => b.t !== 'bi' && b.lit.temporal !== 'now')) {
@@ -512,29 +758,15 @@ export class Evaluation {
         }
       }
     }
-    for (;;) {
-      let grew = false;
-      for (const [rel, rd] of reads) {
-        if (opaque.has(rel)) continue;
-        for (const x of rd) if (opaque.has(x)) { opaque.add(rel); grew = true; break; }
-      }
-      if (!grew) break;
-    }
 
-    // (2) dependency cone of every relation, to fixpoint. Opaque ones get a
-    //     cone too: step (4) needs to know what a relation this evaluation is
-    //     going to re-derive reads, and that question is asked of all of them.
-    const cone = new Map<string, Set<string>>();
-    for (const rel of rels) cone.set(rel, new Set<string>([rel, ...(reads.get(rel) ?? [])]));
-    for (;;) {
-      let grew = false;
-      for (const c of cone.values()) {
-        for (const x of [...c]) {
-          for (const y of reads.get(x) ?? []) if (!c.has(y)) { c.add(y); grew = true; }
-        }
-      }
-      if (!grew) break;
-    }
+    // The CLOSURE over the seed is the program's; only the seed is the host's.
+    for (const rel of this.policyAnswer(opaque).opaqueClosed) opaque.add(rel);
+
+    // (2) dependency cone of every relation. Opaque ones get one too: step (4)
+    //     needs to know what a relation this evaluation re-derives reads, and
+    //     that question is asked of all of them.
+    const cone = first.cone;
+    for (const rel of rels) if (!cone.has(rel)) cone.set(rel, new Set([rel]));
 
     // (3) fingerprint: the inputs, plus the rules that transform them, plus
     //     the clock a witness would be stamped with
@@ -591,6 +823,60 @@ export class Evaluation {
     return { hits, keys };
   }
 
+
+  /** ASK THE KERNEL'S OWN PROGRAM. policy.rofl derives `rule_reads`,
+   *  `rule_relation`, `cone` and `opaque_closed`; this copies the caller's
+   *  reflection into a store of its own, runs the program there and unpacks the
+   *  answer. It decides NOTHING — every judgement it returns is written in
+   *  policy.rofl, in ROFL, where a reader can argue with it.
+   *
+   *  A STORE OF ITS OWN, and that is not tidiness. Installing the program into
+   *  the caller's store works and was measured: 18 tests red against a baseline
+   *  of 8, because the kernel's program costs IN PROPORTION to the program it
+   *  describes, so a program's budget would pay for the kernel's questions
+   *  about it. Here it costs 2 to 8 ms outside that budget and the caller's
+   *  store is untouched to the fact.
+   *
+   *  Measured set for set against the walks it replaces: `rule_reads` 35, 52,
+   *  51, 64 and 248 pairs over five programs; `cone` 99 pairs over 32
+   *  relations, 132 over 39, and 2586 OVER 114 with the ring 1 grammar. */
+  private policyAnswer(seed: ReadonlySet<string> | null): {
+    reads: Map<string, Set<string>>; rels: Set<string>;
+    cone: Map<string, Set<string>>; opaqueClosed: Set<string>;
+  } {
+    const pol = policyStore(POLICY_DENSE);
+    for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) {
+      for (const f of this.store.relAll(rel)) {
+        pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
+      }
+    }
+    for (const rel of seed ?? []) {
+      pol.add(IFACE.opaque_seed, MAIN, [mka(rel)], { scope: 'timeless', base: true });
+    }
+    new Evaluation(pol, { reuse: false, budget: POLICY_BUDGET, bootstrap: true }).run();
+
+    const pairs = (rel: string): Map<string, Set<string>> => {
+      const m = new Map<string, Set<string>>();
+      for (const f of pol.relAll(rel)) {
+        const a = f.args[0], b = f.args[1];
+        if (a.k !== 'a' || b.k !== 'a') continue;
+        let out = m.get(a.name);
+        if (!out) { out = new Set(); m.set(a.name, out); }
+        out.add(b.name);
+      }
+      return m;
+    };
+    const names = (rel: string): Set<string> => {
+      const out = new Set<string>();
+      for (const f of pol.relAll(rel)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+      return out;
+    };
+    return {
+      reads: pairs(IFACE.rule_reads), rels: names(IFACE.rule_relation),
+      cone: pairs(IFACE.cone), opaqueClosed: names(IFACE.opaque_closed),
+    };
+  }
+
   /** The monotone rules that may not run before the program is judged: the
    *  ones concluding the stratum table, and -- read off the rule graph, not
    *  off a list -- anything reading what they conclude. Nothing in the first
@@ -600,16 +886,8 @@ export class Evaluation {
    *  every gate here, because the second wave propagates over BOTH waves and
    *  a reader left behind is refilled from the stratum front. */
   private stratumCone(mono: ERule[]): Set<string> {
-    const rels = new Set<string>([IFACE.stratum]);
-    for (;;) {
-      let grew = false;
-      for (const r of mono) {
-        if (rels.has(r.clause.head.rel)) continue;
-        if (r.posRels.some((x) => rels.has(x))) { rels.add(r.clause.head.rel); grew = true; }
-      }
-      if (!grew) break;
-    }
-    return new Set(mono.filter((r) => rels.has(r.clause.head.rel)).map((r) => r.id));
+    const late = this.answer.late;
+    return new Set(mono.filter((r) => late.has(r.id)).map((r) => r.id));
   }
 
   private checkUnstratified(programHasNegation: boolean): void {
@@ -721,7 +999,7 @@ export class Evaluation {
       let s2: Subst | null = perspT.k === 'a'
         ? (perspT.name === f.persp ? s : null)
         : unify(perspT, mka(f.persp), s);
-      for (let i = 0; i < f.args.length && s2; i++) s2 = unify(lit.args[i], f.args[i], s2);
+      if (s2) s2 = unifyAll(lit.args, f.args, s2);
       if (s2) return false;
     }
     return true;
@@ -897,10 +1175,7 @@ export class Evaluation {
     // makes every undefined atom read as false, `not has_win_move(a)` succeed,
     // and the pass re-derive the very atoms the alternation left undefined.
     // The guard below caught that, on the first program it was pointed at.
-    const negRels = new Set<string>();
-    for (const r of this.rules) {
-      for (const b of r.clause.body) if (b.t === 'neg') negRels.add(b.lit.rel);
-    }
+    const negRels = this.answer.negRels;
     const before = new Set(this.store.allFactKeys());
     this.assume = extendAssumption(generous, added);
     this.active = [];
@@ -929,7 +1204,7 @@ export class Evaluation {
     const sorted = [...rules].sort((a, b) => (a.canon < b.canon ? -1 : 1));
     this.active.push(...sorted);
     this.active.sort((a, b) => (a.canon < b.canon ? -1 : 1));
-    const front: FrontInfo = { keys: new Set(), rels: new Set() };
+    const front: FrontInfo = { keys: new Set(), byRel: new Map() };
     this.curFront = front;
     for (const r of sorted) this.fireRule(r, null, front);
     this.propagate(front);
@@ -938,12 +1213,12 @@ export class Evaluation {
   private propagate(front: FrontInfo): void {
     while (front.keys.size > 0) {
       const cur = front;
-      const next: FrontInfo = { keys: new Set(), rels: new Set() };
+      const next: FrontInfo = { keys: new Set(), byRel: new Map() };
       this.curFront = next;
       for (const r of this.active) {
         if (this.naive) { this.fireRule(r, null, next); continue; }
         let relevant = false;
-        for (const rel of r.triggerRels) if (cur.rels.has(rel)) { relevant = true; break; }
+        for (const rel of r.triggerRels) if (cur.byRel.has(rel)) { relevant = true; break; }
         if (!relevant) continue;
         if (r.hasDemandPrem) this.fireRule(r, null, next);
         else this.fireRuleFront(r, cur, next);
@@ -953,15 +1228,16 @@ export class Evaluation {
   }
 
   private fireRule(r: ERule, frontAt: { pos: number; keys: Set<string> } | null, out: FrontInfo): void {
-    const sols = this.solveBody(r.clause.body, new Map(), 0, frontAt, r.id);
+    const sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id);
     for (const sol of sols) this.conclude(r, sol, out);
   }
 
   private fireRuleFront(r: ERule, cur: FrontInfo, out: FrontInfo): void {
-    r.clause.body.forEach((b, i) => {
+    r.plan.forEach((b, i) => {
       if (b.t !== 'pos') return;
-      if (!cur.rels.has(b.lit.rel)) return;
-      this.fireRule(r, { pos: i, keys: cur.keys }, out);
+      const keys = cur.byRel.get(b.lit.rel);
+      if (keys === undefined) return;
+      this.fireRule(r, { pos: i, keys }, out);
     });
   }
 
@@ -1018,13 +1294,20 @@ export class Evaluation {
       // support is always new -- so charging here bounds the fact count too.
       this.chargeRow(r.id);
       const dbArgs = [factTerm(h.rel, persp, args), mka(r.id), mki(this.store.tick)];
-      const dbNew = this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+      // SEALED PROVENANCE IS NOT WRITTEN, not written-and-pruned. Pruning at a
+      // boundary was refused on this branch because a query arrives after the
+      // boundary and no rule-level gate can see it; a DECLARATION is known
+      // before the first firing, which is the difference that makes this
+      // gateable at all. `derived_by` stays a queryable fact wherever it is
+      // written -- nothing here turns it into a log line.
+      const dbNew = !this.noProvenance
+        && this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
       if (dbNew) {
         const dbKey = factKey(V.derived_by, KERNEL_PERSP, dbArgs);
-        out.keys.add(dbKey); out.rels.add(V.derived_by);
+        noteFront(out, V.derived_by, dbKey);
       }
     }
-    if (isNew) { out.keys.add(key); out.rels.add(h.rel); }
+    if (isNew) noteFront(out, h.rel, key);
   }
 
   private bumpSteps(): void {
@@ -1208,7 +1491,7 @@ export class Evaluation {
   private recordPrem(b: BodyElem, ref: PremRef, s: Subst): PremRef {
     if (b.t === 'bi') {
       const [l, r] = canonVars([resolve(b.l, s), resolve(b.r, s)]);
-      return { t: 'bi', desc: `${canonTerm(l)} ${b.op} ${canonTerm(r)}` };
+      return { t: 'bi', desc: [canonTerm(l), ' ', b.op, ' ', canonTerm(r)].join('') };
     }
     if (b.t === 'neg') return { t: 'neg', key: this.anonLitKey(b.lit, s) };
     // positive: a materialized demand result and a store hit both carry a
@@ -1219,13 +1502,13 @@ export class Evaluation {
 
   resolvedLitKey(lit: Lit, s: Subst): string {
     const p = walk(lit.persp, s);
-    return `${lit.rel}[${canonTerm(p)}](${lit.args.map((a) => canonTerm(resolve(a, s))).join(',')})`;
+    return [lit.rel, '[', canonTerm(p), '](', lit.args.map((a) => canonTerm(resolve(a, s))).join(','), ')'].join('');
   }
 
   /** resolvedLitKey with the variables that remain free named positionally. */
   anonLitKey(lit: Lit, s: Subst): string {
     const ts = canonVars([walk(lit.persp, s), ...lit.args.map((a) => resolve(a, s))]);
-    return `${lit.rel}[${canonTerm(ts[0])}](${ts.slice(1).map(canonTerm).join(',')})`;
+    return [lit.rel, '[', canonTerm(ts[0]), '](', ts.slice(1).map(canonTerm).join(','), ')'].join('');
   }
 
   /** The facts a positive premise has to look at.
@@ -1326,10 +1609,12 @@ export class Evaluation {
       // is untouched: it takes the `perspT.k === 'a'` branch and never reaches
       // this test.
       if (perspT.k !== 'a' && isKernelLedger(f.persp)) continue;
+      // ONE COPY PER CANDIDATE, NOT ONE PER ARGUMENT. `unify` copies the
+      // substitution before it knows whether the terms match, so this loop
+      // used to allocate a Map per ARGUMENT of every fact it looked at.
       let s2: Subst | null = perspT.k === 'a' ? s : unify(perspT, mka(f.persp), s);
       if (!s2) continue;
-      if (f.args.length !== lit.args.length) continue;
-      for (let i = 0; i < f.args.length && s2; i++) s2 = unify(lit.args[i], f.args[i], s2);
+      s2 = unifyAll(lit.args, f.args, s2);
       if (!s2) continue;
       if (!seen.has(f.key)) { seen.add(f.key); out.push({ s: s2, ref: { t: 'fact', key: f.key } }); }
     }
@@ -1370,7 +1655,7 @@ export class Evaluation {
     if (h.rel !== call.rel || h.args.length !== call.args.length) return [];
     let s2: Subst | null = unify(h.persp, walk(call.persp, s), s);
     if (!s2) return [];
-    for (let i = 0; i < h.args.length && s2; i++) s2 = unify(h.args[i], call.args[i], s2);
+    s2 = unifyAll(h.args, call.args, s2);
     if (!s2) return [];
     const sols = this.solveBody(rn.body, s2, depth + 1, null, r.id);
     const out: { s: Subst; ref: PremRef }[] = [];
@@ -1385,9 +1670,11 @@ export class Evaluation {
         if (newFiring) {
           this.chargeRow(r.id);
           const dbArgs = [factTerm(call.rel, persp.name, args), mka(r.id), mki(this.store.tick)];
-          this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+          if (!this.noProvenance) {
+            this.store.add(V.derived_by, KERNEL_PERSP, dbArgs, { scope: 'timeless', base: false });
+          }
         }
-        if (isNew) { this.curFront.keys.add(key); this.curFront.rels.add(call.rel); }
+        if (isNew) noteFront(this.curFront, call.rel, key);
         out.push({ s: sol.s, ref: { t: 'fact', key } });
       } else {
         out.push({ s: sol.s, ref: { t: 'bi', desc: 'open ' + this.resolvedLitKey(call, sol.s) } });
@@ -1524,8 +1811,7 @@ export class Evaluation {
       this.chargeRow(ruleId, false);
       // onto the front, so a rule reading `hole` sees it in THIS fixpoint and
       // not only in the next evaluation
-      this.curFront.keys.add(factKey(V.hole, KERNEL_PERSP, args));
-      this.curFront.rels.add(V.hole);
+      noteFront(this.curFront, V.hole, factKey(V.hole, KERNEL_PERSP, args));
     }
   }
 

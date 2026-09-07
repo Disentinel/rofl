@@ -30,12 +30,69 @@ const KERNEL_RELS = [
 // `semantics` is read the same way — the PROGRAM writes it to choose the
 // three-valued semantics — and `unknown` is the one relation of the pair the
 // kernel WRITES: one row per atom the alternating fixpoint leaves undefined.
-const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown'];
+const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
+  // THE KERNEL'S OWN PROGRAM, policy.rofl, whose text is carried in
+  // src/reflect.ts. Its relation names appear in kernel source for the same
+  // reason `stratum` does — the kernel reads them from a program — and the
+  // program that writes them is the kernel's own, evaluated in a store of its
+  // own so no user program's counts or budget move. `opaque_seed` travels the
+  // other way: the host writes it, because the seed needs a premise's tense and
+  // a store-shape fact the reflection does not carry flat.
+  'rule_reads', 'rule_relation', 'cone', 'opaque_closed', 'opaque_seed',
+  // safety.rofl, the kernel's second program: `unsafe_rule` is what it answers
+  // and `premise_var`/`slot_arity` are what the host seeds it with. The four
+  // SLOT atoms it names a place in a rule with -- `head`, `pos`, `left`,
+  // `right` -- are in CONSTANTS below, beside the mode atoms `in` and `out`,
+  // which is the same category: a place, not a relation.
+  'unsafe_rule', 'premise_var', 'slot_arity',
+  'late_rule', 'demand_rel', 'trigger_of', 'neg_relation', 'provenance_reader',
+  // THE FLOOR-SEALING DECLARATION, 2026-09-07. `sealed/1` is written by the
+  // PROGRAM and read by the kernel, exactly like `semantics/1` three lines
+  // above it: a floor saying that one of the three bodies of metadata the
+  // kernel keeps ABOUT it is no longer published. It is here rather than in
+  // KERNEL_RELS because the kernel never writes it.
+  //
+  // THE WIDENING IS ONE NAME AND IT IS PRICED: a program relation called
+  // `sealed` would now pass this check as a string literal in src/. Measured
+  // over the tree before adding it -- `sealed` occurs 0 times as a relation in
+  // any .rofl file -- so the collision costs nothing today and the name is on
+  // the record for whoever meets it next.
+  'sealed'];
 // Language syntax tokens the parser must know (keywords, not relations).
-const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main'];
+// The last three are the ESCAPE LETTERS of a string literal (2026-09-04), and
+// they are here for the same reason `is` and `mod` are: the parser dispatches
+// on them by name and they denote no relation, no perspective and no subject
+// matter. THE WIDENING IS REAL AND IS NAMED: a one-letter relation called `n`,
+// `t` or `r` would now pass this check as a string literal in src/. That is
+// accepted because the alternative — assembling the table from character codes
+// so no identifier-shaped literal appears — hides the language's own vocabulary
+// from the reader of the file that defines it.
+// `l` and `b` joined on 2026-09-06 and they are the DENSE FORM'S tags, read by
+// src/dense.ts: `l(rel, [args])` is a literal and `b(op, l, r)` a builtin, the
+// same category as `v`, `s`, `f` and `n` already here. The widening is the one
+// this comment already names -- a one-letter relation called `l` or `b` would
+// now pass as a string literal in src/ -- and it is accepted for the same
+// reason: the alternative hides the dense language's vocabulary from the file
+// that reads it.
+const SYNTAX = ['init', 'now', 'next', 'async', 'not', 'is', 'mod', 'main', 'n', 't', 'r', 'l', 'b'];
 // Kernel constants (mode atoms, hole reasons).
 const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'arith_zero_divisor', 'any', 'in', 'out',
-  'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator'];
+  'well_founded', 'str_type_error', 'str_index_error', 'str_empty_separator',
+  'atom_unwritable',
+  // THE ONE HOLE REASON THAT IS NOT A FAILURE. The other seven say the kernel
+  // tried and could not finish; this one says the PROGRAM asked it to stop
+  // keeping something, so the answer is missing on purpose. It needs its own
+  // atom for the reason `space_exhausted` needed one: the repairs point in
+  // opposite directions, and told `budget_exhausted` a caller raises the
+  // budget, which does nothing here.
+  'reflection_sealed',
+  'head', 'left', 'right',
+  // THE THREE BODIES `sealed/1` NAMES. Same category as the four slot atoms
+  // beside them and the mode atoms above: they name a PLACE in what the kernel
+  // keeps, not a relation, and no store key is ever one of them. The widening
+  // is three names; measured over the tree, `rules`, `assertions` and
+  // `provenance` occur 0 times as relation names in any .rofl file.
+  'rules', 'assertions', 'provenance'];
 // Builtin OPERATION names -- the term-level operations a rule may call, the
 // same category as `is` and `mod` in SYNTAX above and NOT relations: no store
 // key is ever one of these, and no rule may conclude into one. The five string
@@ -49,7 +106,15 @@ const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'a
 // names no relation, no perspective and no subject matter. What would make a
 // name domain code is a relation of boot.rofl or of an appendix program,
 // which is exactly what FORBIDDEN below still refuses.
-const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs'];
+// `str_sub` and `atom_of` joined them on 2026-09-04, and the reason is the
+// same one this comment already gives: they are operations on the term
+// algebra and they name no relation. `atom_of` is the one that deserves a
+// second look, because it PRODUCES an atom and an atom can be a relation
+// name - but it produces a TERM, and a term only becomes an executable
+// rule through the reflection rows, which `breach[audit]` and the write
+// protection on conclusion_lit already watch.
+const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs',
+                  'str_sub', 'atom_of'];
 // Implementation tokens: tokenizer tags, term/premise kind tags, snapshot
 // field names, REPL command words. Not relation names; listed exhaustively.
 const IMPL = [
@@ -67,6 +132,10 @@ const IMPL = [
   'user',
   // rule id prefix ('r' + content hash)
   'r',
+  // JAVASCRIPT'S OWN TYPE TAG, from `typeof q === 'string'`: a question may
+  // arrive as text or as the literal itself, and that is the discrimination.
+  // Same category as 'a', 'i', 'f' above -- a host tag, naming no relation.
+  'string',
   // WHICH EVALUATOR a `Rofl` runs (src/api.ts `evaluator`). Neither is a
   // relation name — the stratification relation is `stratum`, and it is in
   // IFACE_RELS above, where this check still guards it. Listed because the
@@ -83,6 +152,16 @@ const FORBIDDEN = [
   'collected',
   'malformed', 'breach', 'leak', 'forged', 'unmoded',
   'undefined_premise',
+  // THE LIST WAS BEHIND boot.rofl BY THREE NAMES, and the omission is the
+  // shape this repository already records as "a gate inherits the scope of its
+  // INCIDENT": the list was written when boot.rofl ended at
+  // `undefined_premise`, and every relation appended after it — the authorship
+  // block's `demands_authorship`/`unattributed`, and the widened-negation
+  // block's three — was outside a check that names its members one by one.
+  // None of the five appears as a code identifier in src/ today, so adding
+  // them costs nothing and closes the hole for the next one.
+  'demands_authorship', 'unattributed',
+  'negated_under', 'loader', 'widened',
   'reading', 'corroborated', 'outlier', 'close', 'temp',
   'counter', 'emit', 'cfg', 'delta', 'step', 'move',
 ];

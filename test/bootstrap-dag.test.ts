@@ -51,23 +51,44 @@ test('locals resolve lexically, so two loops sharing a name are not a dependency
     'the demand block really does read the list the decode block built');
 });
 
-test('the before-A blocks form a DAG, and there are eight of them now', () => {
+test('the before-A blocks form a DAG, and there are eleven of them now', () => {
   const cyclic = sccs(BEFORE_A, IND).filter((c) => c.length > 1);
-  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the eight');
+  assert.deepEqual(cyclic.map((c) => c.map(nm)), [], 'a cycle among the ten');
   // six when this was written; `stratumCone` made it seven and `scheduleToken`
-  // — the seam the round evaluator overrides — makes it eight. The ladder
-  // absorbed each without a cycle, which is the claim under test.
-  assert.equal(BEFORE_A.length, 8);
+  // — the seam the round evaluator overrides — makes it eight; `planBody`,
+  // which decides where a negation may stand, makes it nine and lands BELOW
+  // `classify`, since classify now reads the plan. The ladder absorbed each
+  // without a cycle, which is the claim under test; `policyAnswer` — the whole
+  // of what asks the kernel's own program — makes it ten.
+  assert.equal(BEFORE_A.length, 11);
   assert.ok(IND.length >= 10, `${IND.length} induced edges`);
 });
 
-test('the ladder: four rungs, and safety is the bottom one', () => {
+test('the ladder: four rungs, and the asking sits at the bottom', () => {
   const layout = tiers(BEFORE_A, IND).map((layer) => layer.map(nm).sort());
+  // MEASURED, and it corrected me twice more. FIVE RUNGS BECAME FOUR on
+  // 2026-09-06, from two changes pulling opposite ways.
+  //
+  // `policyAnswer` and `safetyAnswer` fell to the BOTTOM rung, because the
+  // edge that used to hold them up was an artefact: `POLICY_BUDGET` sat inside
+  // `planBody`'s line range for no reason but the order of definitions in the
+  // file. The asking machinery is declared its own block now and stands above
+  // `planBody`, and the edge is gone with it — which is what "left as measured
+  // rather than edited until it agrees with me" was waiting for.
+  //
+  // `demandSet` and `stratumCone` ROSE to share a rung above `prepare`,
+  // because both are readings of the answer `prepare` asked for. The rung the
+  // asking used to occupy is now the rung the SPENDING occupies.
+  //
+  // `classify` sits at the bottom with `planBody` even though it calls it: the
+  // graph induces edges from `this.<method>(` calls and `planBody` is a free
+  // function. That blindness is old, real, and still recorded rather than
+  // asserted away.
   assert.deepEqual(layout, [
-    ['classify', 'readStrata'],                      // range restriction; the stratum MAX (a sink here)
-    ['prepare', 'scheduleToken', 'stratumCone'],     // reserved head; the stratum cone; the schedule token
-    ['demandSet'],                                   // the demand set — reads `safe`
-    ['runGate', 'runWellFounded'],                   // what runs at all; well-founded admissibility
+    ['classify', 'planBody', 'policyAnswer', 'readStrata', 'safetyAnswer'],
+    ['prepare', 'scheduleToken'],       // reserved head, and the answer asked for
+    ['demandSet', 'stratumCone'],       // the two readings of it
+    ['runGate', 'runWellFounded'],      // what runs at all; well-founded admissibility
   ]);
 });
 
@@ -89,7 +110,7 @@ test('the layering survives the one line that sits on a block boundary', () => {
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached
 // from `conclude`, so it is inside the minimal monotone core rather than
 // beside it. Each counter below says why it moved.
-test('the minimal tier 0: 16 methods, 267 code lines', () => {
+test('the minimal tier 0: 16 methods, 294 code lines', () => {
   const mc = minimalCore();
   // 18 -> 19: chargeRow, reached from conclude, which activate() reaches
   // 19 -> 20 on 2026-09-05: `evalOrder`, the body's evaluation order.
@@ -110,10 +131,16 @@ test('the minimal tier 0: 16 methods, 267 code lines', () => {
   // refuses to BIND a perspective variable to one (1), and `negHolds` refuses
   // the same under the alternation's frozen assumption (1). No new method, so
   // `all.size` does not move: the ring is three conditions, not a component.
-  // 330 -> 357 (+27): `evalOrder` and the five lines its caller gained. The
-  // whole +27 is here and NOT in `codeKept` below, which is the pair of
-  // counters doing what they are for — see the note under it.
-  assert.equal(mc.codeAll, 357);
+  // 330 -> 329 (-1): `matchPremise`'s per-argument unify loop became one
+  // `unifyAll` call, which checks the arity itself, so the separate length
+  // guard went with it. One line fewer, no method and no condition removed.
+  // 329 -> 332 (+3): `sealed(Body)` reaches the monotone core through the door
+  // that withholds a sealed floor's reflection.
+  // 332 -> 359 (+27) on 2026-09-07, when the two kernels were merged: the
+  // modeljs branch's `evalOrder` and the five lines its caller gained. The
+  // whole +27 is here; see the note under `codeKept` for why the two counters
+  // move together this time.
+  assert.equal(mc.codeAll, 359);
   // 15 -> 16: chargeRow is in the KEPT set too — a monotone core still
   // concludes facts, and a core that concludes cannot be allowed to conclude
   // without limit, which is the whole point of the second budget
@@ -134,11 +161,14 @@ test('the minimal tier 0: 16 methods, 267 code lines', () => {
   // core has no negative premise to evaluate. A single counter would have
   // reported +7 in both places and hidden that one of the seven is unreachable
   // from the core this test is about.
-  // 267 -> 294 (+27), and this time the two counters move TOGETHER — 357 - 330
-  // is also 27. The note above explains why they usually differ: a line reached
-  // from activate() but not kept by a monotone core falls out of exactly one of
-  // them. Here nothing falls out, because ordering a body is not a branch a
-  // monotone core skips — it is how every body is solved.
+  // 267 -> 266 (-1): the same line as `codeAll` above — `matchPremise` is in
+  // the kept set, so its lost length guard is lost here too.
+  // 267 -> 294 (+27), and this time the two counters move TOGETHER — 359 - 332
+  // is also 27. They usually differ: a line reached from activate() but not
+  // kept by a monotone core falls out of exactly one of them. Here nothing
+  // falls out, because ordering a body is not a branch a monotone core skips —
+  // it is how every body is solved. The reasoning is the modeljs branch's own,
+  // carried across the 2026-09-07 kernel merge with the number it belongs to.
   assert.equal(mc.codeKept, 294);
   // the three that drop out, and why each is a branch a monotone core skips
   for (const m of ['negHolds', 'solveDemandRule', 'renameClause']) {
@@ -165,18 +195,27 @@ test('the emitted surface is read out of src/, and it is not empty', () => {
   }
 });
 
-test('the price of tier 0 is five fact families that do not exist', () => {
+test('tier 0 is paid, and it cost four families fewer than this table predicted', () => {
+  // WHAT THIS TEST USED TO ASSERT: that five fact families did not exist and
+  // that range restriction could not leave the host without them. Tier 0 landed
+  // 2026-09-06 and the prediction was wrong in a way worth keeping rather than
+  // deleting. FOUR of the five were never needed — `premise_kind`, `head_var`,
+  // `builtin_at` and `builtin_operand` are all readable off the reified
+  // `premise_lit`, whose constructors ARE the kind and whose payload carries
+  // the operator and both operands. The fifth, `premise_var`, was needed and
+  // arrived at arity FIVE rather than four, carrying an index, because a
+  // universal ("every variable of this operand is bound") has to be walked
+  // positionally to stay out of a negative cycle.
   const em = emitted();
-  // THE DISCRIMINATING CHECK: these are the names the safety fold would read,
-  // and none of them is emitted. If the extractor claimed otherwise it would be
-  // finding names that are not there, which is the failure worth catching.
-  for (const rel of ['premise_var', 'head_var', 'builtin_at', 'builtin_operand', 'premise_kind']) {
-    assert.equal(em.has(rel), false, `${rel} is emitted after all — the price is wrong`);
+  for (const rel of ['head_var', 'builtin_at', 'builtin_operand', 'premise_kind']) {
+    assert.equal(em.has(rel), false, `${rel} exists after all — it was predicted and never built`);
   }
+  assert.ok(em.get('premise_var')?.has(5), 'premise_var/5, seeded into the policy store');
+  assert.ok(em.get('slot_arity')?.has(4), 'slot_arity/4, its companion');
   const cost = tierCost();
   const t0 = cost.find((t) => t.tier === 0)!;
-  assert.equal(t0.missing.length, 5, t0.missing.join('; '));
-  assert.equal(t0.have.length, 1, 'has_premise/2 already carries the premise index');
+  assert.deepEqual(t0.missing, [], 'nothing tier 0 reads is missing any more');
+  assert.equal(t0.have.length, 5, t0.have.join('; '));
   // and every rung above it is expressible over what is already there
   for (const t of cost.filter((x) => x.tier > 0)) {
     assert.deepEqual(t.missing, [], `tier ${t.tier} ${t.block}`);

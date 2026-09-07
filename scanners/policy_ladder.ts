@@ -56,7 +56,7 @@ export const BROKEN = PACK.replace(
 export const FROM_BLOCK: Record<string, string> = {
   blocked_head: 'prepare(): void {',
   executable: 'prepare(): void {',
-  has_neg_rule: 'private classify(r: DRule): ERule {',
+  has_neg_rule: 'private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {',
   mono_rule: 'private stratumCone(mono: ERule[]): Set<string> {',
   stratum_cone: 'private stratumCone(mono: ERule[]): Set<string> {',
   late_rule: 'private stratumCone(mono: ERule[]): Set<string> {',

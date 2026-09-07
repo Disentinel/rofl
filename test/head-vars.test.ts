@@ -14,9 +14,18 @@
 // positive premise can bind — range restriction, computed inside ROFL over
 // ROFL's own reflection.
 //
-// That answer has an exact host oracle: `Evaluation.rules[].safe` is the same
-// property computed in TypeScript. The tests below compare the two SETS, on a
-// program built to contain both kinds of rule.
+// That answer has an exact oracle: `Evaluation.rules[].safe`. The tests below
+// compare the two SETS, on a program built to contain both kinds of rule.
+//
+// WHAT THE ORACLE IS CHANGED UNDER THIS FILE ON 2026-09-06, and saying so is
+// the point. `safe` WAS the same property computed in TypeScript, a fold over
+// the body in `classify`. It is now safety.rofl's answer, read back — so this
+// file no longer compares ROFL against TypeScript. It compares two INDEPENDENT
+// ROFL programs written months apart, this walker and safety.rofl, which is a
+// weaker claim than it used to make and still a real one: they share no clause
+// and agree rule for rule. The TypeScript fold they were both measured against
+// is in the history, and the corpus agreement that let it go is in
+// test/rofl-safety.test.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,6 +56,25 @@ prem_walk(R, A, Rest) :- prem_walk(R, $cons(A, Rest), _).
 prem_walk(R, A, Rest) :- prem_walk(R, $lit(_, _, $cons(A, Rest), _), _).
 prem_walk(R, A, Rest) :- prem_walk(R, $builtin(_, $cons(A, Rest)), _).
 prem_walk(R, A, $nil) :- prem_walk(R, $var(A), _).
+-- A REIFIED TERM STANDING AS AN ARGUMENT IS DATA, and the walker has to say so
+-- functor by functor. Everything reached from here came through the seed rule
+-- above, which matches only a POSITIVE premise -- so a $not met here is a term
+-- somebody wrote in an argument position, never a negated premise, and
+-- descending it does not weaken the negonly case below. $fact and the first
+-- two slots of $lit joined on 2026-09-07, when boot.rofl's widened[audit]
+-- block became the first rules in the file to bind a head variable from
+-- INSIDE a term: asserted_by($fact(Rel, P, _), Who, _) and
+-- premise_lit(R, _, $not($lit(Rel, P, _, _))). Without these five lines the
+-- walker called both rules unsafe and safety.rofl called them safe -- and
+-- safety.rofl is right, because the host seeds its premise_var and a Datalog
+-- program can only destructure a functor it names. That asymmetry is the
+-- limit src/reflect.ts already records; these lines pay it down by naming the
+-- functors the reflection actually uses.
+prem_walk(R, A, $nil) :- prem_walk(R, $not(A), _).
+prem_walk(R, A, $nil) :- prem_walk(R, $fact(A, _, _), _).
+prem_walk(R, A, $nil) :- prem_walk(R, $fact(_, A, _), _).
+prem_walk(R, A, $nil) :- prem_walk(R, $lit(A, _, _, _), _).
+prem_walk(R, A, $nil) :- prem_walk(R, $lit(_, A, _, _), _).
 prem_var(R, Name)     :- prem_walk(R, $var(Name), _).
 prem_var(R, Name)     :- prem_walk(R, _, $var(Name)).
 -- 'X is Expr' binds X: the mode table says the left operand is the output

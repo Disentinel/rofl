@@ -1,83 +1,25 @@
-// parser.ts — text → clause objects. Clause objects are a transient parse
-// artifact; the evaluator's source of truth is the reflected store (reflect.ts).
+// parser.ts — THE GRAMMAR: source text → clause objects. Clause objects are a
+// transient parse artifact; the evaluator's source of truth is the reflected
+// store (reflect.ts), and the clause TYPES live with the terms in unify.ts.
+//
+// Nothing in the kernel enters this file. It is reached only by a host that
+// reads ROFL source: measured 2026-09-07, the dense task touches 8 of its 174
+// code lines and all 8 are declarations executed when the module is evaluated
+// — no body of the grammar runs. What the kernel itself needs out of reading
+// is the LEXIS, and that is `tokens.ts`.
 
-import { type Term, mkv, mki, mks, mka, mkf } from './unify.ts';
+import { type Term, type Lit, type BodyElem, type Clause, type Temporal, mkv, mki, mks, mka, mkf } from './unify.ts';
 
-export type Temporal = 'init' | 'now' | 'next';
+// The clause structures live in `unify.ts` with the terms they are built out
+// of; they are re-exported here because a parser is where a caller expects to
+// find the shape of what it returns.
+export type { Temporal, Lit, BodyElem, Clause } from './unify.ts';
 
-export interface Lit {
-  rel: string;
-  persp: Term;            // atom or variable
-  perspExplicit: boolean; // was [p] written in the source?
-  args: Term[];
-  temporal: Temporal;
-}
-
-export type BodyElem =
-  | { t: 'pos'; lit: Lit }
-  | { t: 'neg'; lit: Lit }
-  | { t: 'bi'; op: string; l: Term; r: Term };
-
-export interface Clause { head: Lit; body: BodyElem[]; }
-
-export class ParseError extends Error {}
-
-interface Tok { t: string; v: string; line: number; }
-
-const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?'];
-
-export function tokenize(src: string): Tok[] {
-  const toks: Tok[] = [];
-  let i = 0, line = 1;
-  const n = src.length;
-  while (i < n) {
-    const c = src[i];
-    if (c === '\n') { line++; i++; continue; }
-    if (c === ' ' || c === '\t' || c === '\r') { i++; continue; }
-    if (c === '-' && src[i + 1] === '-') { // comment to end of line
-      while (i < n && src[i] !== '\n') i++;
-      continue;
-    }
-    if (c === '"') {
-      let j = i + 1, out = '';
-      while (j < n && src[j] !== '"') {
-        if (src[j] === '\\' && j + 1 < n) { out += src[j + 1]; j += 2; }
-        else { out += src[j]; j++; }
-      }
-      if (j >= n) throw new ParseError(`line ${line}: unterminated string`);
-      toks.push({ t: 'str', v: out, line });
-      i = j + 1;
-      continue;
-    }
-    if (/[0-9]/.test(c)) {
-      let j = i;
-      while (j < n && /[0-9]/.test(src[j])) j++;
-      toks.push({ t: 'int', v: src.slice(i, j), line });
-      i = j;
-      continue;
-    }
-    // `$` is a name character in LEADING position only. Every reflected name
-    // the kernel builds ($lit, $cons, $var, $nil, $not, $builtin, $fact, and
-    // the tense atoms $now/$init/$next) has the marker first and nothing else,
-    // so admitting it there — and nowhere else — makes the reflection readable
-    // from the language that produces it, without letting `_$0` (the parser's
-    // own name for an anonymous variable, minted below) be written by hand.
-    if (/[A-Za-z_$]/.test(c)) {
-      let j = i + 1; // first char already classified; for `$` it is not a continuation char
-      while (j < n && /[A-Za-z0-9_]/.test(src[j])) j++;
-      const w = src.slice(i, j);
-      toks.push({ t: /[A-Z_]/.test(c) ? 'var' : 'ident', v: w, line });
-      i = j;
-      continue;
-    }
-    let matched = '';
-    for (const p of PUNCT) if (src.startsWith(p, i) && p.length > matched.length) matched = p;
-    if (matched) { toks.push({ t: matched, v: matched, line }); i += matched.length; continue; }
-    throw new ParseError(`line ${line}: unexpected character '${c}'`);
-  }
-  toks.push({ t: 'eof', v: '', line });
-  return toks;
-}
+// The lexis lives in `tokens.ts`: it is the one part of reading that the
+// kernel itself needs (`atom_of` asks it what a writable name is), while this
+// grammar is entered only by a host that reads ROFL source text.
+import { type Tok, ParseError, tokenize } from './tokens.ts';
+export { ParseError, UnwritableString, tokenize, escapeString } from './tokens.ts';
 
 const CMP_OPS = new Set(['=', '!=', '<', '<=', '>', '>=']);
 
@@ -210,7 +152,16 @@ class P {
     }
     // Otherwise parse an expression; if a comparison/'is' operator follows it
     // is a builtin, else it must have been a plain literal rel(args).
+    // THE COUNTER IS PART OF THE POSITION. A positive body literal is parsed
+    // TWICE - once as an expression, then rewound and parsed again as a
+    // literal - and each pass consumes the wildcards, so a rewind that
+    // restores `pos` and not `freshCounter` numbered them 1, 3, 5 instead of
+    // 0, 1, 2. That made a variable's NAME a function of how often the parser
+    // backtracked over it rather than of the program, and `ruleIdOf` is a
+    // content hash over the canonical clause INCLUDING variable names. Found
+    // by ring 1, which has no backtracking and therefore disagreed.
     const save = this.pos;
+    const saveFresh = this.freshCounter;
     const e = this.expr();
     const nxt = this.peek();
     if (CMP_OPS.has(nxt.t)) {
@@ -226,6 +177,7 @@ class P {
     // reinterpret as literal
     if (e.k === 'f' && /^[a-z]/.test(e.name)) {
       this.pos = save;
+      this.freshCounter = saveFresh;
       return { t: 'pos', lit: this.literal() };
     }
     this.err(`expected a literal or builtin`);
@@ -256,6 +208,7 @@ class P {
     return out;
   }
 }
+
 
 export function parseProgram(src: string): Clause[] {
   return new P(tokenize(src)).program();

@@ -296,7 +296,7 @@ test('the store retains every witness, in canonical order, and round-trips it', 
   assert.notDeepEqual(premises, ['a[main](1)', 'b[main](1)', 'e[main](1)'],
     'and not by the order the rules fired — see the note on THREE_WAYS');
   // the canonical head — what `why` renders — is still one of them
-  assert.ok(wits.some((w) => w.ruleId === r.store.witnesses.get(key)!.ruleId));
+  assert.ok(wits.some((w) => w.ruleId === r.store.witnessOf(key)!.ruleId));
 
   const r2 = Rofl.fromSnapshot(r.save());
   assert.deepEqual(r2.store.witnessesOf(key), wits, 'the forest survives snapshot/restore');

@@ -141,7 +141,7 @@ enforced by `scripts/kernel_grep.ts` in CI.
 | `mode(Builtin, ModeList)` | 2 | declared directionality of builtins, kernel-emitted at boot |
 | `reserved(Rel)` | 1 | this table itself, queryable |
 | `authority(Persp, Who)` | 2 | who may assert; kernel registers each perspective on first use as `authority(P, $kernel)` |
-| `hole(QueryId, Reason)` | 2 | inability marker — the kernel could not finish, said so rather than returning an empty answer that reads like an honest no. Ids: `$q(N)`, `$tick(T)`, `$load(N)`, `$rule(Id)`. Reasons: `budget_exhausted` and `space_exhausted` when an evaluation runs out of steps or of rows it may hold; `arith_type_error` and `arith_zero_divisor` for an `is` whose expression could not be evaluated (see *Arithmetic that cannot be evaluated* below); and `str_type_error`, `str_index_error`, `str_empty_separator` for a string destructor given an operand it cannot take |
+| `hole(QueryId, Reason)` | 2 | inability marker — the kernel could not finish, said so rather than returning an empty answer that reads like an honest no. Ids: `$q(N)`, `$tick(T)`, `$load(N)`, `$rule(Id)`. Reasons: `budget_exhausted` and `space_exhausted` when an evaluation runs out of steps or of rows it may hold; `arith_type_error` and `arith_zero_divisor` for an `is` whose expression could not be evaluated (see *Arithmetic that cannot be evaluated* below); and `str_type_error`, `str_index_error`, `str_empty_separator` for a string destructor given an operand it cannot take; and `reflection_sealed`, the one reason that is not a failure — the program declared `sealed(Body)` and the kernel stopped keeping that body, so the answer is missing on purpose. Id `$sealed(Body)` for the standing declaration, `$q(N)` for a query that asked a sealed body |
 | `edb(Rel)` | 1 | relation has base facts (also emitted for all reserved relations at boot) |
 
 **Read interface (not reserved):** the kernel *reads* `stratum(Rel,N)` and
@@ -442,3 +442,36 @@ the primary path. *Boot's audits empty plus a finite `whynot`* lost the
 loading at all, since a program whose peel stalls never reaches a query — and
 the finite-failure demonstration is asked of `flows_to`, the transitive closure
 that remains.
+
+## The floor-sealing declaration
+
+*(Appended at the end of the file on purpose: `facts/spec.rofl` anchors
+duties here by line number, and a block inserted above unfounds every
+citation below it — measured, 17 of them. boot.rofl carries the same note
+for the same reason.)*
+
+A third is on the same footing, and it decides what the kernel KEEPS rather
+than how it runs: the program writes **`sealed(Body)`** to declare that one of
+the three bodies of metadata the kernel maintains about it is no longer
+published. `sealed(rules)` withholds `has_conclusion`, `reads_from`,
+`writes_to` and `uses_builtin`; `sealed(assertions)` withholds
+`in_perspective` and `asserted_by`; `sealed(provenance)` withholds
+`derived_by`. Nothing else may be sealed, and the boundary is measured rather
+than chosen: `rules/floor-census.rofl` derives it from an ablation over every
+reflection relation plus a census of who reads each one, and
+`test/sealed.test.ts` asserts that the derived set equals the kernel's table.
+The relations the evaluator reads to RUN a program (`rule`, `conclusion_lit`,
+`premise_lit`) and the ones the kernel's own two programs read about it
+(`has_premise`, `concludes`, `premise_pos`, `premise_neg`,
+`conclusion_tense`) are not in any body and no declaration reaches them.
+
+The declaration is READ, never inferred, and that is the point of it: dropping
+rows because nothing currently reads them makes a later audit return empty and
+look correct. So the kernel writes `hole($sealed(Body), reflection_sealed)`
+when the declaration arrives, and a `?` query of a withheld relation returns
+`partial: true` with a `hole` rather than an empty answer — asking a sealed
+floor REFUSES. A body name the kernel does not know is data, not an error, the
+same contract `semantics/1` has. `examples/ring1/ring1.rofl` exercises it: the
+grammar seals its own rule reflection, which is 456 of 2450 facts in the image
+the parser forks once per clause, and boot.rofl's `malformed`, `leak` and
+`unmoded` audits over those 126 rules lose their subject and say so.

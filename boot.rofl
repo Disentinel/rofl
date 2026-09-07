@@ -318,3 +318,74 @@ imports(main, $kernel).
 -- declaring it never stops the audit saying no about a ledger that HAS a
 -- name — `rules/js-*.rofl` crosses `code -> audit`, and that one still needs
 -- `imports(audit, code)` written out.
+
+-- ============ the widened negation, appended below the cited region ========
+--
+-- TWO FILES LOADED INTO ONE STORE BOTH WRITE `[main]`, AND MEAN DIFFERENT
+-- THINGS BY IT (finding `f_two_files_writing_one_book_is_scoping_not_naming`).
+-- Datalog accumulates, so the union is not corruption and is usually what was
+-- wanted. What it silently changes is a NEGATION: file A's `not p(X)` now
+-- ranges over file B's `p` facts, and nothing anywhere says so. The damage is
+-- a property of the WHOLE program and is invisible in either file alone, and
+-- the union has legitimate exceptions — so by this file's own criterion
+-- (forbid where there is no legitimate exception, report where there is) it is
+-- an audit ROW and not a refusal and not a scope.
+--
+-- `negated_under` is the book-aware half. `safety.rofl` already derives
+-- `neg_relation(A)` — what is negated ANYWHERE — and that is book-blind, which
+-- is exactly the distinction being drawn here: a relation negated in [red] and
+-- co-written in [blue] is two unrelated facts. The perspective is carried in
+-- the reified premise and nowhere else, so the literal is destructured, the
+-- way `safety.rofl` already destructures `$builtin`.
+negated_under(Rel, P) :- premise_lit(R, _, $not($lit(Rel, P, _, _))).
+
+-- WHAT "MORE THAN ONE LOADER" MEANS IN TERMS THE KERNEL ALREADY RECORDS, and
+-- the answer is `asserted_by`'s second argument and nothing else. There is no
+-- load identity in the store — `src/api.ts` counts loads (`$load(N)` appears
+-- only as a `hole` id) and the count reaches no fact — so the finest grain
+-- available is the PRINCIPAL a load named. That grain is stated as a limit
+-- rather than hidden: two files loaded with no `who` are both `user`, which
+-- `src/reflect.ts` defines as "whoever loaded a file and did not say who they
+-- are", and by that definition they are ONE writer. The audit is therefore
+-- exactly as sharp as the host's discipline about `who`, and it says nothing
+-- at all about the 22 (rel, book) pairs in this repository's demos that take
+-- facts from more than one load under a single name (measured 2026-09-07 over
+-- 19 example worlds).
+--
+-- THE RING IS NOT ONE OF THE FILES, and subtracting it is not an exemption
+-- list. boot.rofl is loaded once per store, as the first load, and claims the
+-- kernel ring in its first clause; a second claim is refused and `src/api.ts`
+-- refuses a caller-supplied `$` principal, so no program can join `$kernel`
+-- to widen its own writer set. What the subtraction protects is the decision
+-- already recorded in `src/reflect.ts` (KERNEL_BOOK): `edb`, `authority`,
+-- `mode` and `reserved` are CO-WRITTEN ON PURPOSE — the kernel writes some
+-- rows and the program writes the rest, `undefined_premise` reads `not edb`
+-- once and must see both — and forcing that apart was already measured to
+-- turn every honest program red. Measured here too: without the subtraction
+-- the audit reports 13 rows over those same 19 worlds, ALL of them `edb` or
+-- `imports` in [main] and every one of them `$kernel` plus exactly one
+-- program. With it, 0. Subtracting the principal rather than exempting the
+-- relation is deliberate: `$kernel` plus alice plus bob is still two files,
+-- and an exemption keyed on the relation would have gone quiet on it.
+loader(Rel, P, Who)   :- asserted_by($fact(Rel, P, _), Who, _), Who != $kernel.
+
+widened[audit](Rel, P) :- negated_under(Rel, P),
+                          loader(Rel, P, W1), loader(Rel, P, W2), W1 != W2.
+
+-- Required result, appended to the list above:
+--   ? widened[audit](Rel, P) -> empty in this repository (measured over 19
+--     example worlds). Deliberately NOT phrased as a guarantee: it is a
+--     REPORT, like `unattributed` and `collected`, because a co-written table
+--     under two named authors is a thing an author may legitimately want. No
+--     waiver table is shipped, and that is this file's own test applied to
+--     itself — a declaration that licenses nothing in the corpus derives no
+--     row and is a decoration. If one is ever needed it is `collects`-shaped:
+--     `edb(co_written).` plus `not co_written(Rel)` on the rule.
+--
+-- WHAT THIS CANNOT SEE, stated because the gate is otherwise wrong in the safe
+-- direction. Only ASSERTED base facts carry `asserted_by`, so a relation two
+-- files DERIVE into is outside it (`retracted[recon]` in examples/aka is that
+-- shape). And a negation reached through a rule chain — `not q(X)` where `q`
+-- is derived from a co-written `p` — is a widening this rule does not report,
+-- because the premise names `q` and the writers are `p`'s. Both are the same
+-- boundary: this audit is about the ONE relation the negation names.

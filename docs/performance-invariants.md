@@ -227,18 +227,61 @@ Stated in the field's own tiers rather than invented ones:
 
 ## 5. Ordered work, with what each is worth
 
-1. **Buffer-and-merge derived insertions (I1).** Up to 5.4× on the layer the engine generates most of. Contained; no semantic change.
-2. **Cache the meta-layer against the rule set (I2).** ~15 s off a program the size of `examples/spat/`; the invalidation key is exact because `dep`/`reach` are provably immune to data changes.
-3. **Copy-on-write forks.** Turns `clone()` from linear-in-store into constant, which is what IFFY and DITTO need to be usable at all.
-4. **Compact fact representation.** The 40–70×/fact memory gap is the ceiling on everything else. Interning relation names and perspectives, and storing small-arity tuples as typed arrays rather than term objects, is where the order of magnitude lives.
-5. **A storage port with an external backend.** Only after 1–4: an external store cannot rescue a representation that is 40× too heavy, and a real backend's MVCC snapshot would also settle item 3 for free.
+**Re-ranked 2026-09-07.** Items 1 and 2 have landed. Items 3, 4 and 5 were
+ordered on a cost for `clone()` that the structural clone made stale by 55–150×
+and on a motivating workload that turns out not to exist — see the two
+corrections at the end of this document. The list below is the ordering those
+measurements produce; the old numbering is kept in brackets so the change is
+legible rather than silent.
 
-Index selection, native compilation and parallelism — the techniques that buy the
-field its numbers — are all **premature here**. Automatic index selection is worth
-up to 2× and 6× less memory *than maximal indexing*; a well-engineered interpreter
-is only 2–6× off generated C++; parallelism yields <25 % CPU utilisation on the
-workload shapes this kernel targets. None of them touches a 40× representation
-gap or a 5.4× insertion-order penalty.
+1. ~~**Buffer-and-merge derived insertions (I1).**~~ **LANDED** — the
+   arrival-order spread closed completely (see §1) and delivered about 2× end
+   to end against 40× on its own axis.
+2. ~~**Cache the meta-layer against the rule set (I2).**~~ **LANDED**, and
+   since superseded: the schedule moved into the evaluator and `boot.rofl`'s
+   `reach` is gone (see `LIMITS.md`).
+3. **[was 4] Compact fact representation.** Interned names and perspectives,
+   small-arity tuples as typed arrays rather than term objects, and a numeric
+   fact identity in place of the string key. **This is now the only item on the
+   list that more than one other thing waits on**, and that is what promotes
+   it: it closes the 40–70×/fact memory gap; it raises the ceiling on fork
+   parallelism, which is allocation-bound and not core-bound (measured: 5.74×
+   on pure arithmetic, 3.78× on pure `JSON.parse`, 3.11× on a real fork
+   search); and it is the precondition for sharing a base world through a
+   `SharedArrayBuffer`, which holds bytes and cannot hold a graph of objects
+   with string keys.
+4. **[was 5] A storage port with an external backend.** Unchanged in reasoning:
+   an external store cannot rescue a representation that is too heavy, so it
+   follows the item above rather than preceding it.
+5. **[was 3] Copy-on-write forks.** **Demoted, on three measurements.** The
+   `clone()` figure it rested on predates the structural clone and is stale by
+   55–150× (0.15–0.40 µs/fact re-measured, so a realistic 100k fork is on the
+   order of 40 ms and not 2.2 s). Its stated motivation — "what IFFY and DITTO
+   need to be usable at all" — does not survive a census: **IFFY does not
+   fork.** Its arms are a column (`arm[draft](A)` is `edb`), all in one store
+   and one fixpoint, and it is the one place here that priced a fork and chose
+   against it. And a free clone buys almost nothing anyway: of an 88 ms fork
+   branch, `fromSnapshot` is 17%, `clone()` is **1%**, the fixpoint is 80%.
+   **What survives is the memory argument** — a structural clone is still a
+   full copy in RAM, so N concurrent branches are N worlds — which is why
+   `f_fork_copies_the_whole_store` stays open. Note also that a cheaper fork
+   and a worker pool pull against each other: the smaller a branch, the larger
+   the pool's fixed setup as a share of it.
+
+Index selection and native compilation remain **premature here** for the reasons
+below. Automatic index selection is worth up to 2× and 6× less memory *than
+maximal indexing*; a well-engineered interpreter is only 2–6× off generated C++.
+
+**Parallelism is no longer simply "premature"; it is measured, and it splits.**
+Inside one fixpoint it is bounded by structure: strata are sequential, rounds
+within a stratum are sequential, and one ring 1 clause carries 8 hard barriers
+and 74 soft ones. Its ceiling is 4.47× on the join with unbounded cores — but
+the parse's serial half (image restore plus the completion check) means a
+*perfect* parallel fixpoint is **1.73× end to end**. Across independent worlds
+it is real and needs no engine change: a worker pool over fork branches measures
+**3.11× on 8 cores** — and, per item 3, is limited by allocation rather than by
+cores or synchronisation. The largest such workload in this repository is the
+test suite, not any demo.
 
 ---
 
@@ -373,3 +416,157 @@ realistic one. The correction came from an agent that was handed the wrong
 number, measured 21.5 against it, and added a control in the same run rather
 than reporting whichever figure was more convenient.
 
+
+## Correction, 2026-09-07: the clone figures above predate the structural clone
+
+Everything in "the clone figure was taken on the cheapest possible fact" — the
+21.7–22.5 µs/fact, the 2.2 seconds for a realistic 100k-fact fork, the half hour
+for a thousand-fork search, and the ranking of copy-on-write at §5 item 3 that
+rests on them — was measured when `store.clone()` was `snapshot() → JSON →
+restore()`. Commit `3cff6f4` replaced it with a **structural** copy that walks
+the fact map directly (`src/store.ts:779`). A figure taken through the
+serialising path is not a figure about this one.
+
+Re-measured with a bare-store control in the same run (`npm run forkclone`), on
+an 8-vCPU Apple M4 Pro (Virtual) at load average 8.9, on stores that carry
+derived facts, witnesses and firings:
+
+| store | facts (derived / witnesses) | `clone()` | save+restore | ratio |
+|---|---|---|---|---|
+| bare ground facts | 15,060 | 0.11 µs/fact | 3.04 µs/fact | 28.6× |
+| bare ground facts | 120,060 | 0.26 | 3.48 | 13.6× |
+| realistic | 7,504 (6,480 / 3,240) | **0.15** | 3.05 | 20.1× |
+| realistic | 38,304 (36,080 / 18,040) | **0.40** | 3.56 | 9.0× |
+
+A 4-core Xeon at 2.1 GHz against an 8-vCPU M4 Pro is worth a factor of a few;
+the gap here is 55–150×. So a realistic 100k-fact fork is on the order of **40
+ms** of clone, not 2.2 s — but note that the per-fact cost is **not flat**: it
+rises 1.7–2.6× between 7.5k and 38k facts, so 40 ms is a floor rather than an
+estimate.
+
+**What this does to §5 item 3.** The TIME argument for copy-on-write is weak
+again. The MEMORY argument is untouched — a structural clone is still a full
+copy in RAM and bytes per fact is still the ceiling — which is where the
+previously settled reading already said it belonged. And a stage split of a real
+fork branch (`npm run forkstages`) says how much a free fork could be worth at
+all: of an 88 ms branch, `Rofl.fromSnapshot` is 17%, one `store.clone()` is 1%,
+and the fixpoint is 80%. A free fork moves that branch to about 75 ms.
+**Item 3 should be re-ranked below the memory tiers.**
+
+## The coarse grain, measured 2026-09-07: independent forks on worker threads
+
+I4 says strata are sequential and parallelism lives only inside one. That leaves
+the coarse grain — a FORK is an independent world — and it was measured rather
+than assumed. Full account in
+`docs/dogfood/2026-09-07-fork-parallelism.md`; the load-bearing results:
+
+- **There is no thousand-fork search in this repository.** The largest is
+  `test/kernel-arity.test.ts` at ~800 worlds; the largest that is both
+  many-branch and expensive per branch is `examples/wtf`'s order sweep at 41.
+  **IFFY does not fork at all** — its arms are a column in one world — and its
+  own numbers say why (2.1× fewer facts per arm than per fork). Nothing in the
+  repository prunes; two sites are sequential by construction
+  (`examples/wtf/demo.ts:632`, `examples/loot/demo.ts:655`).
+- **The boundary is cheap and it is per WORKER, not per branch**, because every
+  branch of a fork search starts from the same world. 2.5 MB round-trips in
+  0.32 ms; a branch descriptor in 0.037 ms; a 762 KB answer per branch is
+  within the noise. Pool setup is the binding term, and stated
+  load-independently it is **2.8–6.2 branch-equivalents**, so break-even is
+  **N > ~7 branches** at P=8 and zero for a persistent pool.
+- **Measured speedup on 8 vCPUs: 2.12× at 41 branches, 3.11× at 164, ~3.8×
+  run-phase-only** — paired, B beat A in 6/6 pairs at each.
+- **Where the rest went, with two controls on the same pool in the same
+  sitting:** pure arithmetic 5.74×, pure allocation (`JSON.parse` of the same
+  2.5 MB) 3.78×, the real search 3.11×. **The ceiling is allocation, not
+  cores and not synchronisation** — the branches share nothing. That points at
+  the memory tiers again: a compact fact representation would raise the parallel
+  ceiling as a side effect.
+- **Determinism was the gate, not a tradeoff**: `canonicalState()` per branch,
+  byte for byte, against the sequential arm, plus the aggregate. Green
+  throughout. Nine mutants, 6 killed; the three survivors are all blind spots of
+  the instrument rather than of the pool — `canonicalState` sorts so arrival
+  order is invisible; the gate compares answers so a worker's engine
+  configuration is invisible; and a differential cannot see a common-mode fault
+  in the task module both arms share.
+- **No change to `src/`.** Worker orchestration is a host concern and lives in
+  `runtime/fork_pool.ts` and `runtime/fork_worker.ts`.
+
+## Correction, 2026-09-07: tier 2 is 1.02–1.13×, and the estimate above was taken on the synthetic fact
+
+"The memory decision, in three tiers" prices tier 2 — *intern names and
+perspectives, typed tuples for small arity* — at **2–3×**. Tier 2 was built and
+measured. Full account in `docs/dogfood/2026-09-07-tier-2-interning.md`; the
+load-bearing results:
+
+- **Interning the relation and perspective STRINGS measures exactly zero**, on
+  all seven programs. The probe is not blind: de-sharing the same names costs
+  **41–64 bytes per fact**, so the ceiling exists and the parser plus V8 were
+  already sitting on it. This is the doc's own marginal — *46 extra characters
+  of name cost 30 bytes per fact* — read forward.
+- **What pays is one atom OBJECT per name**, in `mka` (`src/unify.ts`):
+  **2.3–10.0%** of the live heap, paired and 21 of 21. Interning integers and
+  strings adds 1.2–3.2% more and was not kept — their value space is the data's,
+  and bounding it would bound how much of a corpus can be shared.
+- **Hash-consing terms inside `Store.add` made every program 15–21% BIGGER.**
+  Two causes worth carrying: the replaced term is still reachable from the
+  parse, so the store adds rather than saves; and a table keyed by canonical
+  renderings retains one string per distinct value, which for a functor is as
+  long as the thing it indexes.
+- **The 2–3× came from an arity-1 synthetic**, where args are 106 of 332 bytes.
+  On real programs the boxed-`Term[]` argument representation retains
+  **8.4–27.7%** of the live heap (188–345 B/fact, measured by replacing every
+  fact's args with one shared empty array), so the whole of tier 2 done ideally
+  — including a typed tuple, which cannot be built without changing
+  `FactRec.args`'s TYPE — is about **1.4×**.
+
+### The marginal byte, which is the number an extrapolation needs
+
+A demo's average charges every fact a share of the program. `bench/mem_scale.ts`
+measures one rule over a flat EDB at 20,000 and 40,000 base facts:
+
+| | before | after |
+|---|---|---|
+| marginal per STORED fact | 638 B | **566 B** |
+| marginal per BASE fact | 3191 B | **2831 B** |
+| base facts in a 16 GB heap | 5.4M | **6.1M** |
+
+Assumptions: heap only; this rule shape (one derived fact and one `derived_by`
+row per base fact); pointer compression on, so a heap past 4 GB is a regime this
+does not reach; no `retainTicks`.
+
+### And 87% of what it saves is the `[$kernel]` book, not the data
+
+Same program over data with all-distinct symbols (nothing shareable) versus a
+hundred-symbol vocabulary: **72.1 B/fact saved on distinct data, 82.8 on
+repeated** — so the data's own repetition is 13% of the saving and the program's
+vocabulary plus the kernel book is 87%. The kernel book is 60% of the stored
+facts on that program and 59–77% across five demos. **For a workload of enormous
+data over a program of ordinary size, that is the worst possible split**, and it
+points at a `derived_by` retention policy — a policy question, not a
+representation one — as worth several times what interning is.
+
+### Cost, and it is on the BUILD path
+
+Paired A/B, load average 6.2–6.7: **build (load + evaluate) 0–8% slower**,
+program-dependent (`spat` free, `goof` 7/8 pairs slower); **query unchanged** —
+`mka` is called by the parser and the reflection, never by the matching path.
+A suite re-raises a world about a thousand times a run, so that cost is real.
+
+### What this does to §5 item 3 and to the Rust decision
+
+Item 3 stays first — nothing else is ranked above it — but its **value is
+1.02–1.13× measured and ~1.4× ideally, not 2–3×**, and it does not raise the
+allocation ceiling on fork parallelism by anything like the amount §5 implies.
+`f_js_is_the_prototype_rust_is_the_scale` is unaffected and better supported: the
+remaining factor of forty is not reachable from inside this representation.
+
+The coupling census that priced the port is `scanners/key_coupling.ts`
+(`npm run keycoupling`). **153 sites in `src/`, of which 37 are semantic rather
+than mechanical** — the places where the key's spelling and its lexicographic
+collation are in the recorded answer. The sharpest is one line: `Store.witnessOf`
+picks the LEAST firing signature, and a signature is built out of premise fact
+KEYS, so the canonical witness of every derived fact is a function of how a key
+is spelled. Order-independence of the whole record became a theorem at `e7932b1`
+**over a fixed key spelling**. A native store with an integer fact id can be
+byte-identical on `canonicalState` only if it carries that spelling as an
+ORDERING FUNCTION it never materialises.

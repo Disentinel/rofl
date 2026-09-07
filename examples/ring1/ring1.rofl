@@ -1,0 +1,478 @@
+-- ring1.rofl — the ROFL front end, written in ROFL.
+--
+-- A token is a PAIR OF INDICES and never text: the kernel has no
+-- substring-by-range destructor and extending a string is concatenation,
+-- which the finiteness proof forbids. Names therefore travel to the host
+-- promoter as ranges, and keywords are matched CHARACTER BY CHARACTER
+-- against `str_char`, which needs no kernel change at all.
+--
+-- What this covers: comments, facts, rules, `not`, perspective brackets with
+-- an atom OR a variable, temporal markers, builtins and arithmetic with
+-- precedence and parentheses, compound terms, clause-local wildcards, and
+-- string literals with C-style escapes. What it does NOT cover is one thing:
+-- a NEGATIVE INTEGER LITERAL, left out on purpose because `X - 1` and `X, -1`
+-- are genuinely ambiguous and the host resolves them by parsing greedily from
+-- the left, which a chart does not do.
+--
+-- Coverage over the corpus is MEASURED by test/example-ring1.test.ts rather
+-- than claimed here.
+
+-- THE GRAMMAR SEALS ITS OWN RULE REFLECTION, and this line is the tower's
+-- floor declaration. Everything below it is a parser: 126 rules that nobody
+-- audits and nobody reflects on, forked once per clause of every file parsed
+-- (examples/ring1/demo.ts, `parseFile`). MEASURED on the image: 461 of 2450
+-- facts are the four rows this withholds, 18.8% of what the fork copies, and
+-- the parse is byte-identical without them -- ablated cold, with `safetyMemo`
+-- forced to miss, against the canonical clauses.
+--
+-- IT MUST STAND BEFORE THE FIRST RULE. `addClause` reads the declaration off
+-- the store as each clause arrives, so boot.rofl -- loaded first by `world()`
+-- -- keeps its reflection whole and only the floor above it is sealed. That
+-- order IS the mechanism rather than an artefact of it.
+--
+-- WHAT IT COSTS, written here because it is a real loss: boot.rofl's
+-- `malformed`, `leak` and `unmoded` audits can no longer see these 126 rules,
+-- and `rule_known` no longer counts them. They do not go quietly -- the kernel
+-- writes `hole($sealed(rules), reflection_sealed)` into the store, so an audit
+-- that comes back empty here stands beside a fact saying why, and a query for
+-- one of the four relations refuses instead of answering nothing.
+sealed(rules).
+
+edb(src).
+edb(cls).
+
+-- ---------------------------------------------------------------- characters
+len(N)     :- src(S), N is str_len(S).
+at(0)      :- len(N), 0 < N.
+at(I2)     :- at(I), len(N), I2 is I + 1, I2 < N.
+ch(I, C)   :- at(I), src(S), C is str_char(S, I).
+kind(I, K) :- ch(I, C), cls(C, K).
+
+-- ------------------------------------------------------- the scanner state
+-- A QUOTE INSIDE A COMMENT USED TO OPEN A STRING. The first version paired
+-- quotes across the whole file and detected comments separately, which is a
+-- chicken and egg: a comment is only a comment outside a string, and a string
+-- only starts outside a comment. Measured cost: examples/cram/flight_log.rofl
+-- and examples/jopa/calibration.rofl both carry a quoted phrase in prose, and
+-- both were refused at the comment rather than at anything real.
+--
+-- The fix is what a hand-written lexer does: ONE LEFT-TO-RIGHT WALK carrying a
+-- state. `st(I, S)` is the state BEFORE reading position I, and the walk is
+-- positive recursion with the character tests as its only negation, so there
+-- is no cycle at all.
+st(0, code) :- at(0).
+-- `step` BEFORE the position it is about. `step(I, S, S2)` reads only I and S,
+-- both already bound by `st(I, S)`, and it is the premise that fails: on a
+-- 34-byte clause 101 states enter and 34 leave. Asking `at(I2)` first pays the
+-- successor check on all 101. MEASURED: 271 accumulator elements against 237.
+st(I2, S2) :- st(I, S), step(I, S, S2), I2 is I + 1, at(I2).
+
+opens_str(I) :- kind(I, quote).
+opens_cmt(I) :- kind(I, dash), I1 is I + 1, kind(I1, dash).
+
+step(I, code, str)  :- opens_str(I).
+step(I, code, cmt)  :- opens_cmt(I), not opens_str(I).
+step(I, code, code) :- at(I), not opens_str(I), not opens_cmt(I).
+
+-- a backslash escapes the next character, so it cannot close the string
+step(I, str, esc)  :- kind(I, backslash).
+step(I, str, code) :- kind(I, quote).
+step(I, str, str)  :- at(I), not kind(I, quote), not kind(I, backslash).
+step(I, esc, str)  :- at(I).
+
+step(I, cmt, code) :- kind(I, nl).
+step(I, cmt, cmt)  :- at(I), not kind(I, nl).
+
+code_at(I) :- st(I, code).
+
+-- ------------------------------------------------------------ string tokens
+-- QUOTES ARE RARE AND `code` IS NEARLY EVERYTHING. Written `st(I, code),
+-- kind(I, quote)` this builds one solution per code position and throws all of
+-- them away at the second premise on a clause with no string in it: 135
+-- accumulator elements for zero conclusions, against 68 this way. `str_close`
+-- below is left as it stands - there both premises are rare, and swapping it
+-- measured at zero.
+str_open(I)  :- kind(I, quote), st(I, code).
+str_close(J) :- st(J, str), kind(J, quote).
+close_between(I, J) :- str_open(I), str_close(J), str_close(K), I < K, K < J.
+strtok(I, J) :- str_open(I), str_close(J), I < J, not close_between(I, J).
+
+-- -------------------------------------------------------------------- tokens
+-- word tokens
+--
+-- THE GROWING RELATION LEADS, and this is the opposite of the rule of thumb
+-- that says put the rarest premise first. `code_at` holds one fact per code
+-- position and `kind(I, lower)` nine on a 34-byte clause, so "rarest first"
+-- names `kind`. Written that way the three rules cost 377 + 272 + 68
+-- accumulator elements; written this way, 135 each. The reason is semi-naive
+-- evaluation: `st` is a left-to-right walk that yields ONE fact a round, so
+-- every round hands this rule a `code_at` delta of one - and a delta only
+-- narrows the position it stands at. With `kind` first the rule rescans all
+-- nine letters per round and probes `code_at` nine times; with `code_at`
+-- first it starts from the single new position. MEASURED: 7106 -> 6794 total
+-- width for the three lines.
+--
+-- It does NOT generalise to `punct` below, and that was measured too: the same
+-- swap there costs 95 elements, because `kind(I, comma)` holds two facts to
+-- `code_at`'s thirty-four and the scan it saves is smaller than the one it
+-- adds. The rule is therefore "lead with the relation whose delta the round
+-- actually carries, when it is not much bigger than the other" - not "lead
+-- with the rarest".
+wordch(I) :- code_at(I), kind(I, lower).
+wordch(I) :- code_at(I), kind(I, upper).
+wordch(I) :- code_at(I), kind(I, digit).
+
+-- READ FROM THE WORD CHARACTER, NOT FROM EVERY POSITION - `dollar_before`'s
+-- defect, in the rule two lines above the comment that records it. Written as
+-- `at(I), 0 < I, J is I - 1, wordch(J)` this asks EVERY position of the source
+-- whether a word character stands behind it: 49 firings, 516 solutions off
+-- `at`, and 500 of them thrown away by `wordch` at the last premise for 15
+-- conclusions. Inverting `J is I - 1` to `I is J + 1` frees the rare premise
+-- to lead and drops the whole accumulator to one element per word character;
+-- the `0 < I` guard goes with it, since `wordch(J)` already gives J >= 0.
+-- MEASURED with scanners/eval_cost.ts: 549 accumulator elements against 94,
+-- 6.0% of the parse's entire join work, for the same 15 conclusions and a
+-- byte-identical parse.
+prevword(I)   :- wordch(J), I is J + 1, at(I).
+word_start(I) :- wordch(I), not prevword(I), not dollar_before(I).
+-- AND A `$` SWALLOWS WHAT FOLLOWS IT. Without this both `$cons` and `cons`
+-- were word starts - `$` is no `wordch`, so the letter after it had no word
+-- character before it - and the chart returned the inner one as a SECOND
+-- clause. The host has this for free by consuming left to right; a chart has
+-- to say it.
+-- READ FROM THE `$`, NOT FROM EVERY POSITION, and the order is the whole of
+-- it. Written as `at(I), 0 < I, J is I - 1, kind(J, dollar), code_at(J)` this
+-- rule starts at EVERY position of the source and asks each one whether a `$`
+-- stands behind it -- an accumulator as wide as the input, filtered to nothing
+-- at the fourth premise, since most clauses hold no `$` at all. MEASURED with
+-- scanners/eval_cost.ts: 1881 accumulator elements against 101, and 20% of the
+-- whole parse's join work for zero conclusions. Starting from the RARE thing
+-- and computing the position forward costs one element per `$`. End to end,
+-- three interleaved arms on an 88-byte clause: 89.5 ms against 72.8, 19%.
+--
+-- `planBody` cannot do this for us, and it is worth saying why: the arithmetic
+-- pins the order. `J is I - 1` needs I bound, so `at(I)` had to lead; only
+-- INVERTING it to `I is J + 1` frees the rare premise to go first, and that is
+-- a rewrite of the rule rather than a permutation of its body.
+dollar_before(I) :- kind(J, dollar), code_at(J), I is J + 1, at(I).
+-- `$` STARTS A NAME AND NEVER CONTINUES ONE, which is src/parser.ts's rule to
+-- the letter: every reflected name the kernel builds - $lit, $cons, $var, $nil,
+-- $not, $builtin, $fact and the tense atoms - carries the marker first and
+-- nowhere else, so admitting it in leading position makes the reflection
+-- readable from the language that produces it while leaving `_$0`, the parser's
+-- own name for an anonymous variable, unwritable by hand.
+--
+-- MEASURED BEFORE IT WAS WRITTEN: ring 1 refused `p($kernel).` outright while
+-- the host read it, and `$kernel` stands in boot.rofl - so the front end could
+-- never have parsed the kernel's own program. The new character-level coverage
+-- is what made that loud instead of odd.
+word_start(I) :- kind(I, dollar), code_at(I).
+wext(I, I)    :- word_start(I).
+wext(I, J2)   :- wext(I, J), J2 is J + 1, wordch(J2).
+word(I, J)    :- wext(I, J), J2 is J + 1, not wordch(J2).
+
+-- punctuation tokens
+punct(I, lpar)   :- kind(I, lpar), code_at(I).
+punct(I, rpar)   :- kind(I, rpar), code_at(I).
+punct(I, lbrack) :- kind(I, lbrack), code_at(I).
+punct(I, rbrack) :- kind(I, rbrack), code_at(I).
+punct(I, comma)  :- kind(I, comma), code_at(I).
+punct(I, dot)    :- kind(I, dot), code_at(I).
+punct(I, at)     :- kind(I, at),  code_at(I).
+
+-- the neck `:-` is one token
+neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
+
+tok(I, J) :- word(I, J).
+tok(I, J) :- strtok(I, J).
+tok(I, I) :- punct(I, K).
+tok(I, J) :- neck(I, J).
+
+-- ------------------------------------------------------------- the tok chain
+tokstart(I) :- tok(I, J).
+
+-- THE FIRST VERSION OF THIS WAS CUBIC AND IT KILLED THE PARSE. `follows` over
+-- all pairs of token boundaries plus `blocked` over all triples costs O(n^3)
+-- in tokens; on rules/strata.rofl - 123 tokens, 2207 characters - the
+-- evaluation came back PARTIAL with hole(space_exhausted), and the parse
+-- returned zero clauses and no complaint. Walking forward one character at a
+-- time instead is linear per token: `scan(J, K)` is "K is reachable from
+-- boundary J without meeting a token start".
+scan(J, K)  :- tok(I, J), K is J + 1, at(K).
+scan(J, K2) :- scan(J, K), not tokstart(K), K2 is K + 1, at(K2).
+nexttok(J, K) :- scan(J, K), tokstart(K).
+first_tok(I)     :- tokstart(I), not preceded(I).
+preceded(I)      :- nexttok(J, I).
+
+-- ---------------------------------------------------------------- token kinds
+identtok(I, J) :- word(I, J), kind(I, lower).
+identtok(I, J) :- word(I, J), kind(I, dollar).
+vartok(I, J)   :- word(I, J), kind(I, upper).
+inttok(I, J)   :- word(I, J), kind(I, digit).
+p(I, K)        :- punct(I, K).
+
+-- Keywords, matched CHARACTER BY CHARACTER against `str_char`. No kernel
+-- change is needed for this and no token ever carries its text.
+kw_not(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "t").
+kw_is(I)   :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "s").
+kw_mod(I)  :- word(I, J), J is I + 2, ch(I, "m"), K is I+1, ch(K, "o"), ch(J, "d").
+kw_init(I) :- word(I, J), J is I + 3, ch(I, "i"), K is I+1, ch(K, "n"),
+              L is I+2, ch(L, "i"), ch(J, "t").
+kw_now(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "w").
+kw_next(I) :- word(I, J), J is I + 3, ch(I, "n"), K is I+1, ch(K, "e"),
+              L is I+2, ch(L, "x"), ch(J, "t").
+
+-- ONLY `not` IS A KEYWORD IN TERM POSITION. `is` and `mod` are operators, and
+-- the host recognises them ONLY where an operator can stand - so `optok(I, J,
+-- is)` has `is` as an ordinary ATOM in an argument. Excluding all three from
+-- `term` meant ring 1 COULD NOT PARSE ITS OWN SOURCE, which is the defect
+-- self-application was supposed to find and did, the first time L1 was pointed
+-- at L2. `not` stays excluded because it opens a negated literal.
+keyword(I) :- kw_not(I).
+
+-- ------------------------------------------------------------------ operators
+-- Two-character operators first; their second character must not also become
+-- a token of its own, which is what `consumed` is for.
+-- `consumed` must read the TWO-CHARACTER operators ONLY. Deriving it from
+-- `optok` and then negating it inside `optok` is a negative cycle, and the
+-- round evaluator refused the whole program for it: `round 4 settled nothing
+-- while ... remained`. Splitting the two-character forms into their own
+-- relation puts the negation between two strata instead of inside one.
+op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, le) :- kind(I, lt),   J is I + 1, kind(J, eq), code_at(I).
+op2(I, J, ge) :- kind(I, gt),   J is I + 1, kind(J, eq), code_at(I).
+consumed(J) :- op2(I, J, Op).
+-- AND THE FIRST CHARACTER TOO. `consumed` marks the SECOND character of a
+-- two-character operator, so guarding a lone `<` with it checks the wrong
+-- index and `<=` was read as `<` followed by a stray `=` - both parses
+-- survived and the clause count came out 137 against the host's 131. Found
+-- by pointing L1 at L2's own source, which is full of `<=`.
+starts_op2(I) :- op2(I, J, Op).
+
+optok(I, J, Op) :- op2(I, J, Op).
+optok(I, I, eq) :- kind(I, eq), code_at(I), not consumed(I), not starts_op2(I).
+optok(I, I, lt) :- kind(I, lt), code_at(I), not consumed(I), not starts_op2(I).
+optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I), not starts_op2(I).
+-- A KEYWORD OPERATOR SPANS ITS WHOLE WORD. `nexttok` is keyed on a token's
+-- END, so returning the START of a two- or three-letter word leaves the next
+-- lookup with no boundary to stand on and the clause silently fails to form.
+optok(I, J, is) :- kw_is(I), word(I, J).
+
+arithtok(I, I, plus)  :- kind(I, plus),  code_at(I).
+arithtok(I, I, star)  :- kind(I, star),  code_at(I).
+arithtok(I, I, slash) :- kind(I, slash), code_at(I).
+arithtok(I, J, mod)   :- kw_mod(I), word(I, J).
+-- A LONE DASH IN CODE IS MINUS, and the two exclusions are both load-bearing.
+-- `--` opens a comment, but the scanner's state BEFORE the first dash is still
+-- `code`, so without `not opens_cmt(I)` every comment in the corpus began with
+-- a spurious minus token and all 23 files were refused - measured, after eight
+-- hand-written cases all passed. `:-` is the neck, and the colon before the
+-- dash is what tells them apart.
+arithtok(I, I, minus) :- kind(I, dash), code_at(I), not opens_cmt(I),
+                         I1 is I - 1, not kind(I1, colon).
+
+addop(I, J, Op) :- arithtok(I, J, Op), plusminus(Op).
+mulop(I, J, Op) :- arithtok(I, J, Op), timesdiv(Op).
+plusminus(plus).  plusminus(minus).
+timesdiv(star).   timesdiv(slash).  timesdiv(mod).
+
+tok(I, J) :- optok(I, J, Op).
+tok(I, J) :- arithtok(I, J, Op).
+
+-- --------------------------------------------------------------- the names
+-- WHERE THE RANGES BECOME NAMES, and until 2026-09-04 they could not: the
+-- kernel had no substring-by-range destructor and no string-to-atom, so a
+-- token knew WHERE it was and never WHAT it said, and the host had to slice
+-- the source for every name. `str_sub` and `atom_of` moved that here.
+--
+-- The consequence is not brevity. The promoter used to know TWELVE shapes of
+-- this grammar's tree; now it knows the atoms these rules put in it, so the
+-- bottom of the tower stopped depending on the levels above it.
+tok_text(I, J, S) :- tok(I, J), src(Src), L is J - I + 1, S is str_sub(Src, I, L).
+-- ONLY AN IDENT BECOMES AN ATOM. Run over every token, `atom_of` is asked
+-- for a name from a bracket, a neck, a quoted string and a capitalised
+-- variable, and each is a loud `atom_unwritable` hole - which is how the
+-- new guard announced that it was being called on the wrong things, the
+-- first time it ran.
+tok_name(I, J, A) :- identtok(I, J), tok_text(I, J, S), A is atom_of(S).
+
+-- ---------------------------------------------------------------------- terms
+term(I, J, A) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+-- A WILDCARD KEEPS ITS INDEX and an ordinary variable keeps its name. The
+-- rank of `_` is clause-local and positional, so text alone cannot carry it.
+term(I, J, $var(S))    :- vartok(I, J), tok_text(I, J, S), not wildtok(I).
+term(I, I, wild(I))    :- wildtok(I).
+term(I, J, int(S))     :- inttok(I, J), tok_text(I, J, S).
+-- A NEGATIVE INTEGER LITERAL, read exactly where src/parser.ts reads one: in
+-- PRIMARY position, a dash whose next token is an integer. `expr` takes a dash
+-- as a binary operator only AFTER a left operand, so a dash reaching a term has
+-- none - which is the host's positional rule restated as a production instead
+-- of as a greedy scan. The digits travel alone and the promoter negates, rather
+-- than the text of the whole span travelling: the host is token-based, so it
+-- reads `- 1` as -1 too, and a span carrying the space would not parse.
+-- Measured before it was written: 24 negative literals in the 71 .rofl files,
+-- in goof, npc, sensors, slop and three more.
+term(I, K, negint(S))  :- arithtok(I, I, minus), nexttok(I, J), inttok(J, K),
+                          tok_text(J, K, S).
+term(I, J, str(S))     :- strtok(I, J), tok_text(I, J, S).
+-- compound: f(args)
+term(I, C, comp(N, A)) :- identtok(I, J), not keyword(I), tok_name(I, J, N),
+                             nexttok(J, K), p(K, lpar),
+                             nexttok(K, S), args(S, E, A),
+                             nexttok(E, C), p(C, rpar).
+
+args(I, J, $cons(T, $nil)) :- term(I, J, T).
+args(I, J2, $cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
+                            nexttok(K, I2), args(I2, J2, R).
+
+-- ---------------------------------------------------------- arithmetic, typed
+-- Left-associative BY CONSTRUCTION: the right operand of each level is the
+-- level below, so `a - b - c` has exactly one parse and the chart reports no
+-- ambiguity. Getting this wrong would show up as a silent divergence, which
+-- the corpus oracle pins at zero.
+prim(I, J, T) :- term(I, J, T).
+prim(I, C, T) :- p(I, lpar), nexttok(I, S), expr(S, E, T), nexttok(E, C), p(C, rpar).
+
+mul(I, J, T) :- prim(I, J, T).
+-- THE OPERATOR LEADS ALL THREE INFIX RULES (`mul`, `expr`, and `belem`'s
+-- builtin form). `mul(I, J, L), nexttok(J, K), mulop(K, K2, Op)` builds every
+-- parse of a left operand and its following token before asking whether that
+-- token is an operator at all - 71, 71 and 95 accumulator elements for zero
+-- conclusions on a clause with no arithmetic in it, against 29 each.
+mul(I, C, op(OpS, L, R)) :- mulop(K, K2, Op), tok_text(K, K2, OpS), nexttok(J, K),
+                            mul(I, J, L), nexttok(K2, S), prim(S, C, R).
+
+expr(I, J, T) :- mul(I, J, T).
+expr(I, C, op(OpS, L, R)) :- addop(K, K2, Op), tok_text(K, K2, OpS), nexttok(J, K),
+                             expr(I, J, L), nexttok(K2, S), mul(S, C, R).
+
+-- ------------------------------------------------------------------- literals
+-- The literal is built from PARTS so that book and tense do not multiply into
+-- a rule per combination: three books times two tenses would be six copies.
+relbook(I, J, A, $bare) :- identtok(I, J), not keyword(I), tok_name(I, J, A).
+-- THE BRACKET IS THE RARE THING, so it leads both bracketed forms. Reading
+-- `identtok(I, J), ... nexttok(J, K), p(K, lbrack)` walks every name in the
+-- clause and its following token before discovering there is no `[` at all -
+-- 61 accumulator elements for zero conclusions on a clause with no book
+-- bracket, against 4 with `p(K, lbrack)` first. `nexttok(J, K)` is read with K
+-- bound and J free, which it can be: nothing here is arithmetic, so this is a
+-- permutation of a body and not a rewrite of one.
+relbook(I, R, A, BA) :-
+  p(K, lbrack), nexttok(J, K), identtok(I, J), not keyword(I), tok_name(I, J, A),
+  nexttok(K, B), identtok(B, B2), tok_name(B, B2, BA), nexttok(B2, R), p(R, rbrack).
+relbook(I, R, A, $var(BS)) :-
+  p(K, lbrack), nexttok(J, K), identtok(I, J), not keyword(I), tok_name(I, J, A),
+  nexttok(K, B), vartok(B, B2), tok_text(B, B2, BS), nexttok(B2, R), p(R, rbrack).
+
+lit0(I, C, R, Bk, A) :- relbook(I, J, R, Bk), nexttok(J, K), p(K, lpar),
+                         nexttok(K, S), args(S, E, A), nexttok(E, C), p(C, rpar).
+
+tmark(I, E, $init) :- p(I, at), nexttok(I, J), kw_init(J), word(J, E).
+tmark(I, E, $now)  :- p(I, at), nexttok(I, J), kw_now(J), word(J, E).
+tmark(I, E, $next) :- p(I, at), nexttok(I, J), kw_next(J), word(J, E).
+
+tensed(C) :- lit0(I, C, R, Bk, A), nexttok(C, K), tmark(K, C2, T).
+lit(I, C, $lit(R, Bk, A, $now)) :- lit0(I, C, R, Bk, A), not tensed(C).
+lit(I, C2, $lit(R, Bk, A, T))   :- lit0(I, C, R, Bk, A), nexttok(C, K), tmark(K, C2, T).
+
+-- ---------------------------------------------------------------- body & rule
+belem(I, C, L)       :- lit(I, C, L).
+belem(I, C, $not(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
+belem(I, C, $builtin(OpS, $cons(L, $cons(R, $nil)))) :-
+  optok(K1, K2, Op), tok_text(K1, K2, OpS), nexttok(J, K1), expr(I, J, L),
+  nexttok(K2, S), expr(S, C, R).
+
+body(I, C, $cons(B, $nil)) :- belem(I, C, B).
+body(I, C2, $cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),
+                            nexttok(K, I2), body(I2, C2, R).
+
+clause_at(I, D, L, $nil) :- lit(I, C, L), nexttok(C, D), p(D, dot).
+clause_at(I, D, H, B)   :- lit(I, C, H), nexttok(C, K), neck(K, K2),
+                           nexttok(K2, S), body(S, E, B), nexttok(E, D), p(D, dot).
+
+-- TOP LEVEL. The chart sees every sub-parse - `tag(Y, "hot")` inside a rule
+-- body is a well-formed fact on its own - so a clause counts only if it starts
+-- where the previous one ended. This is the chain, and the AMBIGUITY IT DROPS
+-- IS COUNTABLE rather than silently resolved: `clause_at` minus `parsed` is
+-- exactly the set of sub-parses, and the coverage test prints it.
+top(I)  :- first_tok(I).
+top(I2) :- top(I), clause_at(I, D, H, B), nexttok(D, I2).
+
+parsed(I, D, H, B) :- top(I), clause_at(I, D, H, B).
+
+-- what the chart saw and the chain rejected
+subparse(I, D) :- clause_at(I, D, H, B), not top(I).
+
+-- ------------------------------------------------------------- completeness
+-- WITHOUT THIS THE PARSER LIES. The top-level chain walks clause to clause, so
+-- the first construct the grammar does not cover ends the walk and every later
+-- clause simply never appears - measured on examples/counter.rofl and
+-- rules/strata.rofl, where the host reads 3 and 10 clauses and ring 1 returned
+-- ZERO with no error of any kind. A prefix that looks like a whole file is the
+-- silent under-report this repository exists to refuse.
+--
+-- `stuck_at(I)` names the token where the walk stopped, so the host can refuse
+-- the parse and say where, instead of handing back what it managed.
+parses_at(I) :- clause_at(I, D, H, B).
+stuck_at(I)  :- top(I), not parses_at(I).
+
+-- `stuck_at` catches a walk that STOPPED. It does not catch a walk that never
+-- STARTED - measured on rules/strata.rofl, which returned zero clauses, zero
+-- stuck and no error, because when the first clause fails there is nothing for
+-- the chain to stand on. The invariant that catches both is coverage: every
+-- token must lie inside some accepted clause.
+covered(K)   :- parsed(I, D, H, B), tokstart(K), I <= K, K <= D.
+uncovered(K) :- tokstart(K), not covered(K).
+
+-- AND COVERAGE OVER TOKENS CANNOT SEE A CHARACTER THAT MAKES NO TOKEN.
+-- Measured: `p({a}).` parsed to `p[main](a)@now` while the host refused it with
+-- `expected a term, got '{'`, and `p(#a).` did the same - a divergence in the
+-- PERMISSIVE direction, which the corpus oracle cannot catch because it only
+-- compares files the host accepts. The brace and the hash were unclassified,
+-- an unclassified character makes no token, and `uncovered` quantifies over
+-- `tokstart`. So the invariant has to be stated over CHARACTERS.
+-- A SPAN WALK, not a cross join. `tok(I, J), at(K), I <= K, K <= J` asks the
+-- evaluator for every (token, character) pair and throws away all but the ones
+-- inside — 30 tokens times 82 characters on one clause. Walking each token's
+-- own span is linear in the file. MEASURED, arms interleaved in one process:
+-- 88.0 ms with the cross join, 85.0 with this, 81.4 with no character coverage
+-- at all — so the invariant costs 7.4% and this pays half of it back.
+spanto(I, I)  :- tok(I, J).
+spanto(I, K2) :- spanto(I, K), tok(I, J), K < J, K2 is K + 1.
+in_tok(K)     :- spanto(I, K).
+white(K)  :- kind(K, space).
+white(K)  :- kind(K, nl).
+-- The two dashes of a comment stand in `code` state - the scanner only enters
+-- `cmt` after them - so they belong to no token and are not stray either.
+white(K)  :- opens_cmt(K).
+white(K)  :- opens_cmt(K1), K is K1 + 1.
+-- THE SHARPER NEGATION FIRST. Both are ready as soon as K is bound, so the
+-- order is free, and `not in_tok` refuses far more than `not white` does. What
+-- reaches the SECOND negation is the whole of the difference: 12 elements this
+-- way, 56 the other way round. MEASURED: 125 accumulator elements against 81,
+-- for the same (empty) answer.
+stray(K)  :- code_at(K), not in_tok(K), not white(K).
+
+-- ------------------------------------------------------------------ wildcards
+-- ALL FIVE SILENT DIVERGENCES WERE THIS ONE THING, and it was not cosmetic. The
+-- host mints a FRESH NAME per wildcard, clause-local - `_$0`, `_$1` - so two
+-- underscores in one clause are two different variables. Read as an ordinary
+-- variable named `_` they become the SAME variable, which forces a join the
+-- author never wrote: `ast_child[code](P, _, _, C)` would demand that the
+-- second and third arguments be equal. The clause count matched exactly on all
+-- five files, which is why the oracle saw it and a count-based check would not.
+--
+-- The rank is computed AFTER parsing, off `parsed`, so the clause span is
+-- known and there is no cycle through `term`.
+wildtok(I) :- vartok(I, J), I = J, ch(I, "_").
+
+wild_in(C0, I)        :- parsed(C0, D, H, B), wildtok(I), C0 <= I, I <= D.
+wild_between(C0,J,I)  :- wild_in(C0, J), wild_in(C0, I), wild_in(C0, K), J < K, K < I.
+prev_wild(C0, I, J)   :- wild_in(C0, I), wild_in(C0, J), J < I, not wild_between(C0, J, I).
+has_prev_wild(C0, I)  :- prev_wild(C0, I, J).
+
+wild_rank(C0, I, 0)   :- wild_in(C0, I), not has_prev_wild(C0, I).
+wild_rank(C0, I, N2)  :- prev_wild(C0, I, J), wild_rank(C0, J, N), N2 is N + 1.
+
+-- what the promoter reads: this wildcard token is the Nth of its clause
+wild(I, N) :- wild_rank(C0, I, N).

@@ -348,7 +348,7 @@ test('why trees and query answers are the same on both paths', () => {
     assert.deepEqual(a, b, `query ${q}`);
     assert.ok(a.length > 0, `query ${q} answered nothing; it proves nothing`);
   }
-  for (const k of [...hot.store.witnesses.keys()].sort()) {
+  for (const k of [...hot.store.allWitnesses().keys()].sort()) {
     assert.equal(hot.store.canonicalState().length > 0, true);
     assert.deepEqual(hot.store.witnessesOf(k), cold.store.witnessesOf(k), `support of ${k}`);
   }

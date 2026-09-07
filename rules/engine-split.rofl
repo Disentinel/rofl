@@ -27,6 +27,16 @@ policy(File, L)         :- block(File, L, pol).
 policy(File, L)         :- block(File, L, pol_star).
 mechanism(File, L)      :- block(File, L, mech).
 
+-- WHO DECIDES, and it is the difference between policy that can MOVE into
+-- .rofl and policy that cannot. `decides` means the judgement lives in the
+-- host; `enforces` means the rules already derived it and the host reads the
+-- answer and acts on it. The category alone cannot tell them apart -
+-- `checkUnstratified` reads `unstratified/1` straight out of the store, which
+-- is policy-as-data by construction, and still counts as nine policy lines.
+-- Measured 2026-09-05: 221 decides against 46 enforces, of 267 policy.
+decides(File, L)        :- policy(File, L), code_line(File, L, K), role_of(K, decides).
+enforces(File, L)       :- policy(File, L), code_line(File, L, K), role_of(K, enforces).
+
 -- WHEN the answer is needed, relative to the kernel's one in-band policy slot.
 -- Only policy lines carry a tense worth reporting: a MECH block's `when` is
 -- either n/a or describes when the mechanism runs, not when a decision is due.

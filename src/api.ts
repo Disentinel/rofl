@@ -1,15 +1,17 @@
 // api.ts — load, assert, retract, ?, why, whynot, excise, ticks, snapshots.
 
 import { type Term, mka, mkv, mkf, mki, canonTerm, resolve, walk, isGround, varsOf, type Subst } from './unify.ts';
-import { parseProgram, parseLiteral, type Clause, type Lit } from './parser.ts';
+import { parseProgram, parseLiteral } from './parser.ts';
+import type { Clause, Lit } from './unify.ts';
 const KERNEL_CLAIM = '$kernel_authority';
 import { Store, factKey, type FactRec, type FactStore } from './store.ts';
 import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
   factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
+  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels,
 } from './reflect.ts';
-import { Evaluation, StratificationError, BudgetExhausted, type StagedFact, sigOf } from './engine.ts';
+import { Evaluation, StratificationError, BudgetExhausted, planBody, type StagedFact, sigOf } from './engine.ts';
 import { RoundEvaluation } from './rounds.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
@@ -66,6 +68,84 @@ export interface EvalOpts {
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
 }
+
+/** REFUSED AT THE DOOR: a negation whose meaning depends on where it stands.
+ *
+ *  `not p(X, K)` says `X has no p at all` with K unbound and `X has no p with
+ *  THIS K` with K bound, and until `planBody` existed the reading was decided
+ *  by the comma. Planning fixes the reading for every rule that has one; this
+ *  refuses the rules that have neither, rather than picking one for the author.
+ *
+ *  ONLY A STUCK NEGATION IS REFUSED. A builtin that can never be ground is
+ *  stuck too and keeps its long-standing verdict — unsafe, and unfolded on
+ *  demand — because that case was already checked and already announced, and
+ *  widening a refusal is not this change's business.
+ *
+ *  MEASURED BEFORE IT WAS WRITTEN, over 1965 rules in 71 .rofl files: 0 are
+ *  refused by this. 46 negations leave a variable unbound and every one of
+ *  them is confined to its own literal, which is a wildcard by another name
+ *  and reads existentially by construction; 9 more are bound by a builtin,
+ *  which the plan waits for. So the door costs nothing today and exists for
+ *  the rule nobody has written yet. */
+function checkOrderable(c: Clause): string | null {
+  const { stuck, stuckVars, headGround } = planBody(c);
+  if (!stuck || stuck.t !== 'neg') return null;
+  // ONLY A RULE THAT WOULD OTHERWISE PASS SILENTLY. A rule whose head is not
+  // range-restricted is already unsafe, already reported by the audit that
+  // computes range restriction in ROFL, and already unfolded top-down where
+  // the goal binds. Refusing it here would add nothing and would take away the
+  // one thing that check needs: a program that violates it and loads, so the
+  // audit has something to find. That is not hypothetical — test/head-vars
+  // loads `negonly(Q) :- not tag(Q).` on purpose, and the first version of
+  // this door refused it and took the oracle down with it.
+  if (!headGround) return null;
+  const vars = stuckVars.map((v) => v.startsWith('_$') ? '_' : v).join(', ');
+  return `rule ${canonClause(c)}: no premise binds ${vars} before `
+    + `'not ${stuck.lit.rel}/${stuck.lit.args.length}', so what the negation asks `
+    + `would depend on where it is written -- unbound it asks whether ANY such fact exists, `
+    + `bound it asks about that one. Bind ${vars} in a positive premise, or write `
+    + `'_' if the existential reading is what is meant.`;
+}
+
+/** Do two key lists name the same SET of facts?
+ *
+ *  FOUND BY BREAKING SOMETHING ELSE, 2026-09-07, and the shape is worth more
+ *  than the line. Quiescence used to compare a SORTED array of the tick's base
+ *  facts against an UNSORTED array of the staged next-tick facts, element by
+ *  element. It was correct only because two other places happen to sort on the
+ *  way out (`src/rounds.ts` and `Evaluation.run`), so the comparison was
+ *  reading an order that neither of its own operands promises.
+ *
+ *  MEASURED by reversing one of those sorts: `examples/tm.rofl`, the 3-state
+ *  busy beaver that halts in 13 ticks, stops being detected as quiescent, runs
+ *  to its 100-tick cap and grows 1391 -> 3509 facts. A program that terminated
+ *  stops terminating, with no error and no hole -- and that is exactly what a
+ *  concurrent stager would produce, which is how the order-dependence census
+ *  (`scanners/order_census.ts`) walked into it.
+ *
+ *  So: sort both, or neither. An equality that is only true under an ordering
+ *  its callers do not guarantee is a coincidence wearing a comparison. */
+export function sameKeySet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const x = [...a].sort();
+  const y = [...b].sort();
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+  return true;
+}
+
+/** WHAT A QUESTION MAY ARRIVE AS. Text, or the literal itself.
+ *
+ *  A query used to be text and only text, and that made `parseLiteral` -- and
+ *  through it the whole 262-line surface parser -- mandatory for any host that
+ *  wanted to ASK anything, even one whose programs arrive compiled. Measured
+ *  2026-09-06: a host that restores a snapshot and asks in text still entered
+ *  102 lines of the parser, all of them for the question.
+ *
+ *  So a literal is accepted where a string is. Nothing about the text path
+ *  changes -- it parses and then does what it always did -- and a host without
+ *  a parser can build the literal from the dense form (`denseLit` in
+ *  src/dense.ts) or by hand, because a literal is DATA. */
+export type Ask = string | Lit;
 
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
@@ -130,6 +210,38 @@ export class Rofl {
 
   save(): string {
     return this.store.snapshot();
+  }
+
+  /** A COPY OF THIS WORLD, TAKEN STRUCTURALLY RATHER THAN THROUGH TEXT.
+   *
+   *  `fromSnapshot(save())` is the same world and the same field settings, and
+   *  it goes out through `JSON.stringify` and back through `JSON.parse` plus a
+   *  re-`add` of every row. `store.clone()` is the copy without the text, and
+   *  the difference is not small: measured 2026-09-07 over the ring 1 image
+   *  (2453 base facts, no witnesses, no firings) `fromSnapshot` is 3.09 ms of
+   *  which `JSON.parse` alone is 1.71, against 0.20 ms to clone the same store
+   *  — 15x, and it is why `parseFile` restores its image ONCE.
+   *
+   *  THE FIGURE IS ABOUT THIS STORE, not about cloning in general.
+   *  docs/performance-invariants.md records 21.7-22.5 us/fact for a clone of a
+   *  store carrying rules, derived facts and provenance, against 5.6-7.2 for a
+   *  bare one; an image is base facts only, so it is the cheap end by
+   *  construction, and a fork of a WORKED world will not be 0.08 us/fact.
+   *
+   *  A fork, not a view: `clone` copies each record, so a write to either side
+   *  is invisible to the other, which is what `excise` below has always needed
+   *  and what a per-clause front end needs for the same reason. */
+  fork(): Rofl {
+    const r = new Rofl({ naive: this.naive, reuse: this.reuse,
+      evaluator: this.evaluator, retainTicks: this.retainTicks });
+    r.store = this.store.clone();
+    return r;
+  }
+
+  /** A question as a literal, however it arrived. `resolveBook` is idempotent,
+   *  so a literal that already names its book keeps it. */
+  private asked(q: Ask): Lit {
+    return resolveBook(typeof q === 'string' ? parseLiteral(q) : q);
   }
 
   // -------------------------------------------------------------------------
@@ -364,6 +476,8 @@ export class Rofl {
     if (badWho) return badWho;
     const badArity = this.checkArity(c);
     if (badArity) return badArity;
+    const badOrder = checkOrderable(c);
+    if (badOrder) return badOrder;
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
@@ -423,7 +537,10 @@ export class Rofl {
       // stratum rule: tick 0 answered in 150 ms, tick 1 ran for minutes and
       // grew `stratum` past 2700 facts. A semantics that can be lost at a tick
       // boundary is worse than one that is never offered.
-      const scope = RESERVED.has(h.rel) || h.rel === IFACE.semantics
+      // `sealed` joins `semantics` here for the reason given beside it: a
+      // declaration about HOW the world is kept must not be droppable at a
+      // tick boundary, or the world quietly starts keeping again.
+      const scope = RESERVED.has(h.rel) || h.rel === IFACE.semantics || h.rel === IFACE.sealed
         ? 'timeless' as const : 'tick' as const;
       this.store.add(h.rel, persp, h.args, { scope, base: true });
       if (!RESERVED.has(h.rel)) {
@@ -433,8 +550,22 @@ export class Rofl {
       // The trail is the kernel's own writing about this call, so it goes in
       // the kernel's book — not in the ledger the fact went to, and not in the
       // default one. `in_perspective` is what carries the fact's own ledger.
+      const withheld = sealedRels(sealedBodies(this.store));
       for (const m of factMetaFacts(h.rel, persp, h.args, this.store.tick, who)) {
+        if (withheld.has(m.rel)) continue;
         this.store.add(m.rel, KERNEL_PERSP, m.args, { scope: 'timeless', base: true });
+      }
+      // THE REFUSAL, WRITTEN DOWN AT THE MOMENT THE DECLARATION ARRIVES. A
+      // sealed body's rows are missing on purpose, and a question about them
+      // must REFUSE rather than answer empty — an empty audit and a clean one
+      // are the same two characters. `hole` is the kernel's existing word for
+      // "this is not an answer" and it is a FACT, so the refusal is itself
+      // queryable, `why`-able and visible to any audit already reading the
+      // kernel's book. Frozen, so re-evaluation cannot clear it.
+      if (h.rel === IFACE.sealed && h.args.length === ARITY.sealed
+          && h.args[0].k === 'a' && SEALED_BODY.has(h.args[0].name)) {
+        this.store.add(V.hole, KERNEL_PERSP, [mkf(SEALED_HOLE, [h.args[0]]), mka(SEALED_REASON)],
+          { scope: 'timeless', base: true, frozen: true });
       }
       this.store.dirty = true;
       return null;
@@ -450,7 +581,15 @@ export class Rofl {
       }
     }
     const enc = encodeRule(c);
+    // A SEALED BODY IS WITHHELD HERE AND NOWHERE ELSE. `encodeRule` still
+    // computes every row -- it is the kernel's one statement of what a rule is,
+    // and a second, shorter version of it would be a second thing to keep true
+    // -- and the door decides which of them the store keeps. The executable
+    // rows and the ones the kernel's own two programs read are not in any body
+    // and cannot be withheld by any declaration.
+    const drop = sealedRels(sealedBodies(this.store));
     for (const f of enc.facts) {
+      if (drop.has(f.rel)) continue;
       this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
     }
     this.store.dirty = true;
@@ -458,9 +597,9 @@ export class Rofl {
   }
 
   /** Retract a base fact (god-mode API; used by tests and the REPL). */
-  retract(text: string): { ok: boolean; diagnostics: string[] } {
+  retract(text: Ask): { ok: boolean; diagnostics: string[] } {
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, diagnostics: [(e as Error).message] }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, diagnostics: [(e as Error).message] }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) {
       return { ok: false, diagnostics: ['retract needs a ground fact'] };
     }
@@ -532,12 +671,26 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // queries
 
-  query(text: string, opts: { budget?: number } = {}): QueryResult {
+  query(text: Ask, opts: { budget?: number } = {}): QueryResult {
     this.qn++;
     const holeId = mkf('$q', [mki(this.qn)]);
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { rows: [], partial: false, error: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { rows: [], partial: false, error: (e as Error).message }; }
+    // ASKING A SEALED BODY REFUSES. This is the half a rule-level gate cannot
+    // reach and the reason the declaration exists rather than a retention
+    // setting: a RULE is known before the first firing, a QUERY arrives
+    // afterwards, and this branch already recorded five live call sites that
+    // ask `derived_by` of a past tick as a query and are invisible to any
+    // gate the tick boundary could carry. A declaration is visible to both.
+    // The refusal is a `hole` row AND `partial: true`, so a caller reading
+    // either one already honours it -- `examples/ring1/demo.ts` reads the
+    // rows, `Rofl.run` reads the flag, and neither needed a new word.
+    if (sealedRels(sealedBodies(this.store)).has(lit.rel)) {
+      this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(SEALED_REASON)],
+        { scope: 'timeless', base: true, frozen: true });
+      return { rows: [], partial: true };
+    }
     let partial = false;
     try {
       partial = this.ensure(budget, holeId).partial;
@@ -607,17 +760,17 @@ export class Rofl {
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable };
   }
 
-  holds(text: string): boolean {
+  holds(text: Ask): boolean {
     return this.query(text).rows.length > 0;
   }
 
   // -------------------------------------------------------------------------
   // why / whynot / excise
 
-  why(text: string, opts: { budget?: number } = {}): { ok: boolean; text: string } {
+  why(text: Ask, opts: { budget?: number } = {}): { ok: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, text: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, text: (e as Error).message }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) return { ok: false, text: 'why needs a ground literal' };
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
       if (e instanceof StratificationError) return { ok: false, text: e.message + '\n' + e.demo };
@@ -700,7 +853,7 @@ export class Rofl {
     return out;
   }
 
-  whynot(text: string, opts: WhynotOpts = {}): { holds: boolean; text: string } {
+  whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
       if (e instanceof StratificationError) return { holds: false, text: e.message + '\n' + e.demo };
@@ -716,11 +869,12 @@ export class Rofl {
     return { holds: r.holds, text: r.text };
   }
 
-  private whynotStruct(text: string, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {
-    const lit = resolveBook(parseLiteral(text));
+  private whynotStruct(text: Ask, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {
+    const lit = this.asked(text);
     const ms = ev.matchPremise(lit, new Map(), 0, null);
     if (ms.length > 0) {
-      return { holds: true, text: `${text.trim()} holds; nothing to demonstrate` };
+      const shown = typeof text === 'string' ? text.trim() : ev.resolvedLitKey(lit, new Map());
+      return { holds: true, text: `${shown} holds; nothing to demonstrate` };
     }
     const lines: string[] = [`whynot ${ev.resolvedLitKey(lit, new Map())}:`];
     ctx.path.add(this.cycleKey(lit));
@@ -794,10 +948,17 @@ export class Rofl {
     const failures = new Map<string, Lit | null>();
     const note = (k: string, sub: Lit | null) => { if (!failures.has(k)) failures.set(k, sub); };
     let nodes = 0;
+    // THE SAME ORDER THE EVALUATOR SOLVES IN, and the two disagreed about
+    // exactly this. `whynot` is top-down, so the goal has already bound the
+    // head's arguments and its negation was read with them bound while the
+    // bottom-up run read the same negation with them free — which is how the
+    // one instrument that explains absence came to answer `no failing premise
+    // found` about a fact the evaluator had refused to derive.
+    const body = planBody(rn).plan;
     const explore = (k: number, s: Subst): void => {
       if (nodes++ > 2000) return;
-      if (k >= rn.body.length) return; // a derivation branch survives (demand)
-      const b = rn.body[k];
+      if (k >= body.length) return; // a derivation branch survives (demand)
+      const b = body[k];
       if (b.t === 'pos') {
         const mm = ev.matchPremise(b.lit, s, 0, null);
         if (mm.length === 0) note(ev.resolvedLitKey(b.lit, s), instantiate(b.lit, s));
@@ -839,10 +1000,10 @@ export class Rofl {
   }
 
   /** excise: clean re-evaluation on EDB \ {fact}; the diff IS the blast radius. */
-  excise(text: string, opts: { budget?: number } = {}): { ok: boolean; removed: string[]; added: string[]; error?: string } {
+  excise(text: Ask, opts: { budget?: number } = {}): { ok: boolean; removed: string[]; added: string[]; error?: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
-    try { lit = resolveBook(parseLiteral(text)); } catch (e) { return { ok: false, removed: [], added: [], error: (e as Error).message }; }
+    try { lit = this.asked(text); } catch (e) { return { ok: false, removed: [], added: [], error: (e as Error).message }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) {
       return { ok: false, removed: [], added: [], error: 'excise needs a ground fact' };
     }
@@ -853,8 +1014,7 @@ export class Rofl {
       if (e instanceof StratificationError) return { ok: false, removed: [], added: [], error: e.message };
       throw e;
     }
-    const scratch = new Rofl({ naive: this.naive, reuse: this.reuse, evaluator: this.evaluator });
-    scratch.store = this.store.clone();
+    const scratch = this.fork();
     scratch.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
     for (const rel of [V.in_perspective, V.asserted_by]) {
@@ -940,9 +1100,14 @@ export class Rofl {
     opts.onFixpoint?.(this);
     const staged = this.lastStaged;
     const curBase = this.store.allFacts()
-      .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key).sort();
+      .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key);
     const stagedKeys = staged.map((f) => f.key);
-    if (curBase.length === stagedKeys.length && curBase.every((k, i) => k === stagedKeys[i])) {
+    // Quiescence is a question about two SETS -- does the next tick hold
+    // exactly what this one holds -- and it is answered by `sameKeySet`
+    // rather than inline, so neither side may borrow an order the other
+    // happens to arrive in. `stagedKeys` is left in arrival order because
+    // `tickLog` below records it and `canonicalState` reads that.
+    if (sameKeySet(curBase, stagedKeys)) {
       return { advanced: false, quiescent: true, partial: false };
     }
     this.store.advanceTick(staged.map(({ rel, persp, args }) => ({ rel, persp, args })),

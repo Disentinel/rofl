@@ -8,11 +8,70 @@ export type Term =
   | { k: 'a'; name: string }                    // atom
   | { k: 'f'; name: string; args: Term[] };     // functor(term, ...)
 
+/** ONE ATOM OBJECT PER NAME, up to a bound.
+ *
+ *  An atom is the kernel's symbol: a relation name reified by `factTerm`, a
+ *  perspective, a rule id, a constant written in a program. The same handful of
+ *  names is therefore built over and over — `derived_by` alone reifies the
+ *  relation and the perspective of every conclusion — and each build used to
+ *  cost one more object. Measured on seven programs (docs/performance-
+ *  invariants.md, tier 2): sharing them takes 2.3 to 10.0 per cent off the
+ *  live heap — paired A/B, 21 of 21 — and it is the largest single share of
+ *  what interning buys anywhere.
+ *
+ *  IT MUST BE HERE, NOT IN THE STORE, and that was measured too. Interning
+ *  inside `Store.add` was tried first and it made every program BIGGER — 15 to
+ *  21 per cent — for two reasons that only show up on a scale: the term the
+ *  store replaces is still reachable from the rule or the parse that built it,
+ *  so the copy is added rather than saved; and a table keyed by canonical
+ *  renderings retains one string per distinct value, which for functors is as
+ *  long as the thing it indexes. A constructor cannot make the duplicate in
+ *  the first place, and a table keyed by the atom's own name retains a string
+ *  the atom is holding anyway.
+ *
+ *  NOTHING MAY DEPEND ON THE IDENTITY, and nothing does: no code in `src/`
+ *  writes to a term, and every comparison goes through `unify` or `canonTerm`.
+ *  That is what makes this a CACHE rather than an identity table, which in turn
+ *  is what lets it be bounded.
+ *
+ *  THE BOUND IS THE LIFETIME ANSWER. An intern table that only grows is a leak
+ *  in a host that loads and excises programs for as long as it runs, and no
+ *  store event can prune this one: a term is not reference-counted, and
+ *  `remove`, `clearDerived`, `advanceTick` and `excise` all drop facts without
+ *  being able to say whether an atom still has a holder. So the table is capped
+ *  and cleared whole when it overflows. Sharing then restarts, which costs
+ *  memory and breaks nothing, because two equal atoms that are different
+ *  objects are exactly what this file did before. The programs in this
+ *  repository use 265 to 645 distinct atoms; the cap is twelve times the
+ *  largest of them and bounds the table's own cost at well under a megabyte.
+ *
+ *  Integers and strings are deliberately NOT shared. They measured a further
+ *  1.2 to 3.2 per cent together — a quarter of what the atoms are worth — and
+ *  their value space is the DATA's rather than the program's, so a bound on
+ *  them would be a bound on how much of a data set can be shared, which is a
+ *  worse thing to have to explain than the 2 per cent it buys. */
+const ATOM_CAP = 8192;
+const atomCache = new Map<string, Term>();
+
 export const mkv = (name: string): Term => ({ k: 'v', name });
 export const mki = (v: number): Term => ({ k: 'i', v });
 export const mks = (v: string): Term => ({ k: 's', v });
-export const mka = (name: string): Term => ({ k: 'a', name });
+export const mka = (name: string): Term => {
+  const hit = atomCache.get(name);
+  if (hit !== undefined) return hit;
+  const t: Term = { k: 'a', name };
+  if (atomCache.size >= ATOM_CAP) atomCache.clear();
+  atomCache.set(name, t);
+  return t;
+};
 export const mkf = (name: string, args: Term[]): Term => ({ k: 'f', name, args });
+
+/** How many atom names the cache is holding, and its cap. For the memory
+ *  census and for the test that holds the bound in place — a cache that can
+ *  grow without limit is the defect this reports, so it is readable rather
+ *  than private. */
+export const atomCacheSize = (): { size: number; cap: number } =>
+  ({ size: atomCache.size, cap: ATOM_CAP });
 
 // A substitution maps variable names to terms.
 export type Subst = Map<string, Term>;
@@ -62,6 +121,38 @@ function unifyInto(a: Term, b: Term, s: Subst): boolean {
   return false;
 }
 
+/** Unify two argument lists against ONE copy of the substitution.
+ *
+ *  WHY THIS EXISTS, and it is the whole of it: `unify` copies the
+ *  substitution BEFORE it knows whether the terms match, so a caller that
+ *  unified a literal argument by argument paid one `new Map(s)` PER ARGUMENT
+ *  — and threw every one of them away when the candidate failed, which is
+ *  what a candidate does most of the time. Measured 2026-09-07 on the ring 1
+ *  grammar, where the evaluator matches premises against a store the parse
+ *  itself is filling: the garbage collector was the single largest entry in
+ *  the CPU profile at 18 per cent, ahead of every function in the kernel.
+ *
+ *  One copy per candidate instead of one per argument. The contract is
+ *  `unify`'s: `s` is never mutated, and a failure returns null having changed
+ *  nothing the caller can see.
+ *
+ *  AND THE TIME IT BUYS IS SMALL, said here rather than left to be assumed: on
+ *  the ring 1 grammar it is inside the noise, and on a clause wide enough for
+ *  the join to matter it is 2 per cent, consistent in direction over
+ *  interleaved arms. The reason is measured too — the evaluator examines 1.4
+ *  candidate facts per premise match, because the argument index answers
+ *  before a scan can start, so there are few doomed candidates to stop
+ *  allocating for. It is kept for being less work and one call instead of a
+ *  loop at three sites, not for a number. A companion filter that skipped the
+ *  copy for candidates that cannot match was written, measured at zero, and
+ *  removed: forty lines of kernel that no workload here can turn red. */
+export function unifyAll(a: Term[], b: Term[], s: Subst): Subst | null {
+  if (a.length !== b.length) return null;
+  const out = new Map(s);
+  for (let i = 0; i < a.length; i++) if (!unifyInto(a[i], b[i], out)) return null;
+  return out;
+}
+
 export function isGround(t: Term): boolean {
   if (t.k === 'v') return false;
   if (t.k === 'f') return t.args.every(isGround);
@@ -106,9 +197,6 @@ export function canonVars(ts: Term[]): Term[] {
   return ts.map(go);
 }
 
-export function termEq(a: Term, b: Term): boolean {
-  return canonTerm(a) === canonTerm(b);
-}
 
 /** Why `evalArith` could not produce a number. The first is NOT an error: a
  *  variable that is not bound yet is the ordinary state of a builtin that
@@ -189,3 +277,34 @@ export function termFromJson(j: any): Term {
     default: throw new Error('bad term json');
   }
 }
+
+// ---------------------------------------------------------------------------
+// THE STRUCTURES BUILT OUT OF TERMS.
+//
+// A literal and a clause are the kernel's own data, not a parse artifact: the
+// evaluator, the reflector and the dense reader all build them without any
+// text going past. They lived in `parser.ts` because that is where the first
+// one was constructed, and that single line of history made the PARSER look
+// mandatory to every module that only wanted the shape — five files in `src/`
+// imported the grammar to name a record. They live here, in the leaf that
+// already owns `Term`, so that a host which never reads ROFL source (a
+// compiled program, a dense program, an embedder building clauses in its own
+// language) can drop the grammar as a FILE and not merely as a code path.
+// ---------------------------------------------------------------------------
+
+export type Temporal = 'init' | 'now' | 'next';
+
+export interface Lit {
+  rel: string;
+  persp: Term;            // atom or variable
+  perspExplicit: boolean; // was [p] written in the source?
+  args: Term[];
+  temporal: Temporal;
+}
+
+export type BodyElem =
+  | { t: 'pos'; lit: Lit }
+  | { t: 'neg'; lit: Lit }
+  | { t: 'bi'; op: string; l: Term; r: Term };
+
+export interface Clause { head: Lit; body: BodyElem[]; }

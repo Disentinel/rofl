@@ -7,7 +7,8 @@ import {
   type Term, type Subst, type ArithFail, mka, mks, mkv, mkf, mki, canonTerm, fnv1a,
   walk, evalArith, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO,
 } from './unify.ts';
-import type { Clause, Lit, BodyElem, Temporal } from './parser.ts';
+import { tokenize } from './tokens.ts';
+import type { Clause, Lit, BodyElem, Temporal } from './unify.ts';
 import { type FactStore } from './store.ts';
 
 /** §2 kernel vocabulary: reserved, write-protected relations. */
@@ -94,6 +95,35 @@ export function isKernelLedger(p: string): boolean {
 export const IFACE = {
   stratum: 'stratum', unstratified: 'unstratified',
   semantics: 'semantics', unknown: 'unknown',
+  // DERIVED BY THE KERNEL'S OWN PROGRAM, policy.rofl, in a store of its own.
+  // They sit here rather than in `V` for the same reason `stratum` does: these
+  // are relations the kernel READS FROM A PROGRAM, and the program that writes
+  // them happens to be the kernel's. `opaque_seed` travels the other way — the
+  // host writes it, because it needs a premise's tense and a store-shape fact
+  // that the reflection does not carry flat.
+  rule_reads: 'rule_reads', rule_relation: 'rule_relation',
+  cone: 'cone', opaque_closed: 'opaque_closed', opaque_seed: 'opaque_seed',
+  // safety.rofl, the second of the kernel's own programs. `unsafe_rule` is its
+  // answer -- range restriction, the judgement `classify` used to fold by hand;
+  // `premise_var` and `slot_arity` travel the other way, seeded by the host,
+  // because a term carries an arbitrary functor and Datalog cannot destructure
+  // one it does not name.
+  unsafe_rule: 'unsafe_rule',
+  premise_var: 'premise_var',
+  slot_arity: 'slot_arity',
+  // and what safety.rofl computes FROM that verdict: the late set, the
+  // demand-backed relations, what a premise triggers, what is negated
+  // anywhere, and who reads provenance.
+  late_rule: 'late_rule',
+  demand_rel: 'demand_rel',
+  trigger_of: 'trigger_of',
+  neg_relation: 'neg_relation',
+  provenance_reader: 'provenance_reader',
+  // WRITTEN BY THE PROGRAM, READ BY THE KERNEL, like `semantics` above it: a
+  // floor declaring that one of the three bodies of metadata the kernel keeps
+  // about it is no longer published. See SEALED_BODY below for what each names
+  // and for the ablation that decided which rows may be in it.
+  sealed: 'sealed',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -130,6 +160,9 @@ export const ARITY: Readonly<Record<string, number>> = {
   mode: 2, premise_lit: 3, premise_neg: 2, premise_pos: 2,
   reads_from: 2, reserved: 1, rule: 1, uses_builtin: 2, writes_to: 2,
   semantics: 1, stratum: 2, unknown: 1, unstratified: 1,
+  // read by `sealedBodies` below, which destructures `args[0]` — the same
+  // crash gate every other row of this table is here for.
+  sealed: 1,
 };
 
 /** The one value `semantics/1` is read for. Any other argument is a fact the
@@ -232,6 +265,94 @@ export const ARITH_ZERO_REASON = 'arith_zero_divisor';
  *  rule, not one per offending substitution. */
 export const RULE_HOLE = '$rule';
 
+/** A FLOOR THAT STOPS PUBLISHING WHAT IT IS, and the one reason a hole can
+ *  carry that is not a failure.
+ *
+ *  The other seven reasons all say the kernel TRIED and could not finish: a
+ *  budget ran out, an expression had no value. This one says the program ASKED
+ *  the kernel to stop keeping something, so the answer is missing on purpose.
+ *  It needs its own atom for exactly the reason `space_exhausted` needed one:
+ *  told `budget_exhausted`, a caller raises the budget, and that is the wrong
+ *  move here — the repair is to remove the declaration, or to accept that this
+ *  question has no answer in this world.
+ *
+ *  IT IS THE REFUSAL, NOT THE SAVING. Withholding the rows is what a host flag
+ *  would do, and this repository has already recorded what a flag is worth: a
+ *  guarantee that can be switched off, and a check nobody will notice is off.
+ *  MEASURED on this branch — plant a leak, a forgery, an unmoded builtin and
+ *  an undefined premise, then drop the rows the audit reads: `leak[audit]` 3
+ *  -> 0, `forged[audit]` 1 -> 0, `unmoded[audit]` 1 -> 0,
+ *  `undefined_premise[audit]` 1 -> 0, with ZERO diagnostics anywhere. Four
+ *  audits went from biting to reporting nothing, and nothing said so. The
+ *  standing `hole` is what says so. */
+export const SEALED_REASON = 'reflection_sealed';
+/** Hole id marker for a sealed body: `hole($sealed(Body), reflection_sealed)`. */
+export const SEALED_HOLE = '$sealed';
+
+/** THE THREE BODIES A PROGRAM MAY SEAL, and why they are one relation with an
+ *  argument rather than three relations.
+ *
+ *  Each is something the kernel writes ABOUT a program rather than FOR running
+ *  it, and each scales with a different thing — the rules, the data, the
+ *  derivations — which is why they are separately declarable. What they share
+ *  is the failure they have in common: dropped, every one of them turns a
+ *  QUESTION into an EMPTY ANSWER rather than into a refusal, and an empty
+ *  audit reads exactly like a clean one.
+ *
+ *  `rules` names the four rows nothing in `src/` and neither of the kernel's
+ *  own two programs reads — measured by ablation over seven worlds, cold (the
+ *  `safetyMemo` cleared), against the program's whole non-reflection answer.
+ *  The other five per-rule rows are NOT here and the measurement is why:
+ *  `has_premise` is read by safety.rofl's `bound_before` and dropping it makes
+ *  every arithmetic premise un-ground, every rule using one unsafe, and the
+ *  ring 1 parse exhaust its budget; `concludes`, `premise_pos`, `premise_neg`
+ *  and `conclusion_tense` are copied into the kernel's own policy stores
+ *  (src/engine.ts:628, :982). A floor cannot seal what the floor it runs on
+ *  reads.
+ *
+ *  `assertions` is the per-FACT half, which scales with the data rather than
+ *  the program. `provenance` is `derived_by`, one row per conclusion.
+ *
+ *  A NAME THIS TABLE DOES NOT KNOW IS DATA, NOT AN ERROR — the same contract
+ *  `semantics/1` has, and for the same reason: a declaration the kernel does
+ *  not act on must not become a load failure. */
+export const SEALED_RULES = 'rules';
+export const SEALED_ASSERTIONS = 'assertions';
+export const SEALED_PROVENANCE = 'provenance';
+
+export const SEALED_BODY: ReadonlyMap<string, readonly string[]> = new Map([
+  [SEALED_RULES, [V.has_conclusion, V.reads_from, V.writes_to, V.uses_builtin]],
+  [SEALED_ASSERTIONS, [V.in_perspective, V.asserted_by]],
+  [SEALED_PROVENANCE, [V.derived_by]],
+]);
+
+/** Which bodies this store's program has sealed. Read the way
+ *  `wellFoundedDeclared` reads `semantics`: off the store, at the moment it is
+ *  asked, so a declaration arriving with a later load takes effect from there
+ *  and the rules already encoded keep the rows they were encoded with. That
+ *  ORDER IS THE MECHANISM, not an artefact: boot.rofl loaded first keeps its
+ *  reflection whole and the floor above it seals its own, which is what `a
+ *  floor declares the floor below opaque` has to mean when both live in one
+ *  store. */
+export function sealedBodies(store: FactStore): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const f of store.relAll(IFACE.sealed)) {
+    if (f.args.length !== ARITY.sealed) continue;
+    if (f.args[0].k === 'a' && SEALED_BODY.has(f.args[0].name)) out.add(f.args[0].name);
+  }
+  return out;
+}
+
+/** The relations those bodies withhold. Empty set when nothing is sealed, which
+ *  is every program in this repository except the one that exercises it. */
+export function sealedRels(bodies: ReadonlySet<string>): ReadonlySet<string> {
+  if (bodies.size === 0) return EMPTY_RELS;
+  const out = new Set<string>();
+  for (const b of bodies) for (const r of SEALED_BODY.get(b)!) out.add(r);
+  return out;
+}
+const EMPTY_RELS: ReadonlySet<string> = new Set<string>();
+
 export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is'] as const;
 
 /** STRING DESTRUCTORS: taking a string apart, and why a kernel that refuses
@@ -270,6 +391,7 @@ export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is'] as const;
  *  INPUTS, and `bootstrapKernel` reads it to write the modes. */
 export const STR_ARITY: ReadonlyMap<string, number> = new Map([
   ['str_char', 2], ['str_len', 1], ['str_pre', 2], ['str_seg', 3], ['str_segs', 2],
+  ['str_sub', 3], ['atom_of', 1],
 ]);
 
 /** Three refusals, kept apart because they demand three different repairs --
@@ -287,9 +409,15 @@ export const STR_ARITY: ReadonlyMap<string, number> = new Map([
 export const STR_TYPE = 3;
 export const STR_INDEX = 4;
 export const STR_SEP = 5;
+/** A string `atom_of` cannot turn into an atom, because the program could not
+ *  have written that atom. Its own code because its repair is its own: the
+ *  data reached a name that is not a name, and the fix is upstream of the
+ *  operation rather than a guard beside it. */
+export const ATOM_NAME = 6;
 export const STR_TYPE_REASON = 'str_type_error';
 export const STR_INDEX_REASON = 'str_index_error';
 export const STR_SEP_REASON = 'str_empty_separator';
+export const ATOM_NAME_REASON = 'atom_unwritable';
 
 /** The atom a failure code is reported as, in one place, so the evaluator's
  *  hole emitter does not grow a branch per operation. */
@@ -298,6 +426,7 @@ export function holeReasonOf(code: number): string {
   if (code === STR_TYPE) return STR_TYPE_REASON;
   if (code === STR_INDEX) return STR_INDEX_REASON;
   if (code === STR_SEP) return STR_SEP_REASON;
+  if (code === ATOM_NAME) return ATOM_NAME_REASON;
   return ARITH_TYPE_REASON;
 }
 
@@ -373,6 +502,57 @@ export function evalStrOp(t: Term, s: Subst, fail?: ArithFail): Term | null | un
     if (i < 0 || i >= cp.length) { if (fail) fail.code = STR_INDEX; return null; }
     return mks(cp[i]);
   }
+  // THE TWO OPERATIONS SELF-APPLICATION NEEDED, added 2026-09-04.
+  //
+  // `str_sub(S, I, L)` is the substring by RANGE the five original destructors
+  // could not express: `str_char` answers one character, `str_seg` and
+  // `str_pre` cut on a separator that has to occur where the cut is wanted,
+  // and no composition of them lengthens a string. A rules-side tokenizer
+  // therefore knew WHERE every name was and could never say WHAT it said.
+  //
+  // `atom_of(S)` crosses the last sort boundary: an atom made from a string.
+  // Without it a rules-written parser can build the whole reflected term and
+  // not the NAME inside it, so it produces a description of a rule that a host
+  // must interpret rather than a rule.
+  //
+  // BOTH ARE DESTRUCTORS BY THE RECORDED CRITERION and the proof is unchanged:
+  // the substrings of a program's strings are finite (L(L+1)/2 of them), so a
+  // range-substring adds no term the universe did not already contain, and an
+  // atom built from one of finitely many strings is one of finitely many
+  // atoms. Neither can be fed back to grow without bound, which is what
+  // separates them from concatenation.
+  if (t.name === 'str_sub') {
+    const cp = [...str];
+    const i = intOperand(t.args[1], s, fail);
+    if (i === null) return null;
+    const len = intOperand(t.args[2], s, fail);
+    if (len === null) return null;
+    // A LENGTH RUNNING PAST THE END IS AN INDEX ERROR, not a short answer.
+    // Truncating silently is how a tokenizer ends up with a name that is right
+    // for every input the author tried; the repair is a premise, exactly as it
+    // is for `str_char`.
+    if (i < 0 || len < 0 || i + len > cp.length) { if (fail) fail.code = STR_INDEX; return null; }
+    return mks(cp.slice(i, i + len).join(''));
+  }
+  if (t.name === 'atom_of') {
+    // AN ATOM IT PRODUCES MUST BE ONE A PROGRAM COULD HAVE WRITTEN, and the
+    // oracle for that is the TOKENIZER ITSELF rather than a regex beside it —
+    // a hand-written twin of a rule that already exists is the defect this
+    // repository has paid for twice. Swept 2026-09-04: without this, `atom_of`
+    // made atoms with an empty name, a space in the middle, a leading capital
+    // (which reads back as a VARIABLE) and one spelled like an integer. None
+    // of those can be written in source, so each was a term the language could
+    // hold and never state. `$kernel` is deliberately still allowed: it is
+    // writable today, so this opens no door that was shut.
+    let toks;
+    try { toks = tokenize(str); } catch { if (fail) fail.code = ATOM_NAME; return null; }
+    if (toks.length !== 2 || toks[0].t !== 'ident' || toks[0].v !== str) {
+      if (fail) fail.code = ATOM_NAME; return null;
+    }
+    return mka(str);
+  }
+  // Everything below takes a SEPARATOR as its second operand; the operations
+  // that do not have already returned.
   const sep = strOperand(t.args[1], s, fail);
   if (sep === null) return null;
   if (sep === '') { if (fail) fail.code = STR_SEP; return null; }
@@ -767,6 +947,7 @@ export function decodeRules(store: FactStore): { rules: DRule[]; diagnostics: st
 // ---------------------------------------------------------------------------
 // kernel bootstrap: reserved table, builtin modes, edb marks
 
+
 export function bootstrapKernel(store: FactStore): void {
   const rels = [...RESERVED].sort();
   for (const r of rels) {
@@ -917,3 +1098,15 @@ export function factMetaFacts(rel: string, persp: string, args: Term[], tick: nu
     { rel: V.asserted_by, args: [f, mka(who ?? ANON_WHO), mki(tick)] },
   ];
 }
+
+/* THE KERNEL'S TWO PROGRAMS USED TO STAND HERE, as 223 lines of ROFL source
+ * carried in template literals and parsed at runtime by `parseProgram`. That
+ * made the 262-line surface parser load-bearing for the evaluator itself:
+ * measured 2026-09-06 with the coverage census, a host that loads only dense
+ * facts still entered 195 of the parser's lines, and 168 of them were this.
+ *
+ * They are COMPILED now -- src/kernel-dense.ts, generated from policy.rofl and
+ * safety.rofl by scripts/build_kernel_dense.ts, read by src/dense.ts. The
+ * .rofl files remain the source; test/kernel-policy-program.test.ts checks
+ * that compiling them gives what is shipped, and separately that what is
+ * shipped reads back as the same clauses. */

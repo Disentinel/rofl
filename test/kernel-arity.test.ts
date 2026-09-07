@@ -67,7 +67,11 @@ const lit = (rel: string, k: number) => (k === 0 ? rel : `${rel}(${args(k)})`);
 
 test('the sweep: no kernel name at any width in any configuration crashes the host', () => {
   const names = Object.keys(ARITY).sort();
-  assert.equal(names.length, 25, 'the table covers the whole kernel vocabulary');
+  // 25 -> 26: `sealed/1`, the floor-sealing declaration. It is READ by the
+  // kernel and destructured positionally (`sealedBodies` in src/reflect.ts
+  // tests `args[0].k`), which is exactly what every other row of this table is
+  // here for, so the sweep must cover it at every width like the rest.
+  assert.equal(names.length, 26, 'the table covers the whole kernel vocabulary');
   const crashes: string[] = [];
   let refusals = 0;
   for (const cfg of CONFIGS) {

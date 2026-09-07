@@ -102,6 +102,14 @@ export interface Decl {
    *  scanners join on (`policy_ladder.FROM_BLOCK`, `bootstrap_dag.TIER_COST`) */
   anchor: string;
   what: string;
+  /** WHO DECIDES. `decides` — the judgement lives in this code. `enforces` —
+   *  the judgement is already a fact the rules derived and this code reads it
+   *  and acts. The distinction is the whole difference between policy that can
+   *  MOVE into .rofl and policy that cannot, and the category alone does not
+   *  carry it: `checkUnstratified` reads `unstratified/1` out of the store,
+   *  which is policy-as-data already, and still counts as 9 policy lines.
+   *  A HAND JUDGEMENT, declared as a loan like `cat` and `tense`. */
+  role?: 'decides' | 'enforces';
 }
 
 export interface Block extends Decl { from: number; to: number; }
@@ -110,33 +118,64 @@ export const DECLS: Decl[] = [
   { id: 'header', key: { kind: 'file' }, cat: 'PLUMB', when: 'n/a',
     anchor: '// engine.ts — seminaive fixpoint',
     what: 'header, imports, types, constants' },
+  // THE MACHINERY FOR ASKING A KERNEL PROGRAM, moved above `planBody` on
+  // 2026-09-06 so that it stops inflating a POL block and stops inducing a
+  // ladder edge (`POLICY_BUDGET` sat inside planBody's line range for no
+  // reason but the order of definitions). It is MECHANISM: encoding a program
+  // once, building a scratch store for it, and the memo that keeps the answer
+  // per rule set. Nothing here decides anything -- what it carries is the two
+  // programs' text, and the text is in policy.rofl and safety.rofl.
+  { id: 'asking', key: { kind: 'def', name: 'kernelProgram' }, cat: 'MECH', when: 'n/a',
+    anchor: 'function kernelProgram(src: string): PolicyRow[] {',
+    what: 'encode a kernel program once, build the store that answers it, remember the answer per rule set' },
+  // ADDED 2026-09-05, and POLICY rather than mechanism because it decides what
+  // a sentence MEANS: `not p(X, K)` asks whether ANY p exists with K free and
+  // asks about one p with K bound, and until this function existed the reading
+  // was whichever the author's comma produced. It answers "where may a
+  // negation stand", which is a decision; the solving that follows it is the
+  // mechanism. `before-A` because a rule is planned once, when it is
+  // classified, and never again.
+  { id: 'planBody', role: 'decides', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+    anchor: 'export function planBody(',
+    what: 'where a negation may stand: held back until its shared variables are bound, so literal order cannot change the answer' },
   { id: 'evaluation', key: { kind: 'def', name: 'Evaluation' }, cat: 'PLUMB', when: 'n/a',
     anchor: 'export class Evaluation {',
     what: 'class fields and constructor' },
 
-  { id: 'prepare', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'prepare', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'prepare(): void {',
     what: 'decode rules; refuse the ones concluding into a reserved relation. The condition is `reserved(Rel)`, already a fact' },
-  { id: 'demandSet', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
-    cat: 'POL*', when: 'before-A', anchor: 'this.rules = kept;',
-    what: 'the demand-backed set and its positive-premise closure, then the trigger relations. Two rules, given `unsafe(R)` — MEASURED by demandAsRules()' },
-  { id: 'classify', key: { kind: 'def' }, cat: 'POL*', when: 'before-A',
-    anchor: 'private classify(r: DRule): ERule {',
-    what: 'range-restriction analysis: a left-to-right fold over the body tracking bound variables. Needs per-premise variable-occurrence facts the reflection does not carry' },
+  // 2026-09-06: the growing-set fixpoint and the memoised closure are gone.
+  // WHICH relations are demand-backed, and what a premise triggers, are
+  // safety.rofl's answers; grouping the rules that define one is this code's.
+  // The star goes with them -- the block waited on nothing that did not exist.
+  { id: 'demandSet', role: 'enforces', key: { kind: 'part', of: 'prepare', at: 'this.rules = kept;' },
+    cat: 'POL', when: 'before-A', anchor: 'this.rules = kept;',
+    what: 'group the rules of each demand-backed relation and spread the trigger sets, both read off safety.rofl\'s answer' },
+  // 2026-09-06: RANGE RESTRICTION LEFT. What stands here is the reading of an
+  // answer plus the ONE judgement safety.rofl does not model -- a body whose
+  // negation cannot be ordered -- so the block keeps its POL mark and loses its
+  // star: nothing here waits on a fact family that does not exist.
+  { id: 'classify', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+    anchor: 'private classify(r: DRule, unsafe: ReadonlySet<string>): ERule {',
+    what: 'read safety.rofl\'s verdict, and refuse a body whose negation cannot be ordered -- the one case the rules do not model' },
+  { id: 'safetyAnswer', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
+    anchor: 'private safetyAnswer(',
+    what: 'ask safety.rofl which rules are not range-restricted: copy the reflection into a store of its own, seed the variable occurrences a term walk produces, run the program there, memoise by rule set' },
 
   { id: 'run', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'run(): EvalOutcome {',
     what: 'plan, clearDerived, counters' },
-  { id: 'runGate', key: { kind: 'part', of: 'run', at: '// A relation served from the previous evaluation' },
+  { id: 'runGate', role: 'decides', key: { kind: 'part', of: 'run', at: '// A relation served from the previous evaluation' },
     cat: 'POL', when: 'before-A', anchor: '// A relation served from the previous evaluation',
     what: 'which rules run at all: the reuse skip, the monotone/negation split, whether the program has negation' },
   { id: 'runDriver', key: { kind: 'part', of: 'run', at: 'try {' },
     cat: 'MECH', when: 'n/a', anchor: 'try {',
     what: 'the phase driver, budget handling, exceptions, store bookkeeping' },
 
-  { id: 'readsProvenance', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'readsProvenance', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'readsProvenance(): boolean {',
-    what: 'does any rule read derived_by — one rule over premise_pos' },
+    what: 'does any rule read derived_by, read off safety.rofl\'s answer' },
   { id: 'reused', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private reused(',
     what: 'record predicate over the reuse plan' },
@@ -144,24 +183,25 @@ export const DECLS: Decl[] = [
   { id: 'planReuse', key: { kind: 'def' }, cat: 'MECH', when: 'end-of-run',
     anchor: 'private planReuse(): ReusePlan {',
     what: 'the schedule token: a hash of the whole stratum table' },
-  { id: 'reads', key: { kind: 'part', of: 'planReuse', at: 'const byHead = new Map<string, ERule[]>();' },
-    cat: 'POL', when: 'end-of-run', anchor: 'const byHead = new Map<string, ERule[]>();',
-    what: 'reads(A,B) over every rule concluding A — `dep` without the tense filter' },
-  { id: 'opaqueSet', key: { kind: 'part', of: 'planReuse', at: '// (1) relations whose contents' },
+  { id: 'opaqueSet', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (1) relations whose contents' },
     cat: 'POL*', when: 'end-of-run', anchor: '// (1) relations whose contents',
     what: 'the opaque set: needs premise tense and a store-shape fact (does this relation hold non-base facts)' },
-  { id: 'opaqueClosure', key: { kind: 'part', of: 'planReuse', at: 'for (;;) {' },
-    cat: 'POL', when: 'end-of-run', anchor: 'for (;;) {',
-    what: 'opaque, closed upward through reads' },
-  { id: 'cone', key: { kind: 'part', of: 'planReuse', at: '// (2) dependency cone' },
-    cat: 'POL', when: 'end-of-run', anchor: '// (2) dependency cone',
-    what: 'the dependency cone: transitive closure, the shape boot.rofl computes twice already' },
   { id: 'fingerprint', key: { kind: 'part', of: 'planReuse', at: '// (3) fingerprint' },
     cat: 'MECH', when: 'end-of-run', anchor: '// (3) fingerprint',
     what: 'FNV over every fact key of a relation. A fold over a relation extension: no rule can do it, and §8 forbids the aggregate that would' },
-  { id: 'hits', key: { kind: 'part', of: 'planReuse', at: '// (4) hits' },
+  { id: 'hits', role: 'decides', key: { kind: 'part', of: 'planReuse', at: '// (4) hits' },
     cat: 'POL', when: 'end-of-run', anchor: '// (4) hits',
     what: 'hits, the global schedule gate, and the shrink fixpoint over the cone' },
+
+  // ADDED 2026-09-05. `reads`, `opaqueClosure` and `cone` USED TO STAND HERE
+  // and are gone from this file because their code is gone from engine.ts:
+  // they are policy.rofl now, and `policyAnswer` below is the whole of what
+  // asks for them. Three decisions left the host in one move; the LINES did
+  // not fall with them, because asking a program and unpacking its answer is
+  // longer than computing it, which is the finding that move produced.
+  { id: 'policyAnswer', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
+    anchor: 'private policyAnswer(',
+    what: 'ask the kernel\'s own program: copy the reflection into a store of its own, run policy.rofl there, and unpack rule_reads, rule_relation, cone and opaque_closed' },
 
   // ADDED 2026-08-31, by another agent, and it is the fix for a defect this
   // classification's own probe found: on a negative cycle boot.rofl's stratum
@@ -171,11 +211,11 @@ export const DECLS: Decl[] = [
   // second. Re-measured on the changed kernel: 25-50 ms, flat, at every budget
   // from 2500 to 5e6. It is POLICY by the same test as the rest — reachability
   // over `concludes` and `premise_pos`, both already emitted.
-  { id: 'stratumCone', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'stratumCone', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'private stratumCone(mono: ERule[]): Set<string> {',
-    what: 'the stratum cone: which monotone rules may not run before the program is judged' },
+    what: 'the monotone rules held back until the program is judged: safety.rofl derives late_rule and this intersects it with the wave it was handed' },
 
-  { id: 'checkUnstratified', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'checkUnstratified', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private checkUnstratified(',
     what: 'reject iff unstratified/1 is non-empty — already policy-as-data, the house precedent' },
   // ADDED 2026-08-31: the seam the round evaluator overrides. It was one line
@@ -189,7 +229,7 @@ export const DECLS: Decl[] = [
   { id: 'readStrata', key: { kind: 'def' }, cat: 'MECH', when: 'before-A',
     anchor: 'readStrata(): Map<string, number> {',
     what: 'MAX over stratum/2. EXPRESSIBLE — two rules, measured by maxStratumAsRules() — but they need negation, and this answer is what schedules negation. Expressible, not portable' },
-  { id: 'negPhase', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'negPhase', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private negPhase(',
     what: 'which phase a rule runs in, including the @next rule that must run last' },
   { id: 'strataPlan', key: { kind: 'def' }, cat: 'PLUMB', when: 'n/a',
@@ -202,21 +242,23 @@ export const DECLS: Decl[] = [
   { id: 'assumptionOf', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private assumptionOf(): Assumption {',
     what: 'snapshot the store as a round assumption' },
-  { id: 'roundRules', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
+  { id: 'roundRules', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'after-A',
     anchor: 'private roundRules(): ERule[] {',
     what: 'which rules a round runs — the one relation excluded under the alternation' },
   { id: 'wfsRound', key: { kind: 'def' }, cat: 'MECH', when: 'n/a',
     anchor: 'private wfsRound(',
     what: 'one round of the alternation' },
-  { id: 'runWellFounded', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
+  { id: 'runWellFounded', role: 'enforces', key: { kind: 'def' }, cat: 'POL', when: 'before-A',
     anchor: 'private runWellFounded(): void {',
     what: 'admissibility: no demand-backed relation may be assumed; edb(unknown) so boot can read it' },
   { id: 'alternation', key: { kind: 'part', of: 'runWellFounded', at: 'this.store.clearDerived();' },
     cat: 'MECH', when: 'n/a', anchor: 'this.store.clearDerived();',
     what: 'the alternating fixpoint itself, the gap between the two limits, the unknown rows and their redirected witnesses. Each round assumes the PREVIOUS round output: not a function of the program text' },
-  { id: 'negRels', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = new Set<string>();' },
-    cat: 'POL', when: 'after-A', anchor: 'const negRels = new Set<string>();',
-    what: 'the negated relations, straight off premise_neg' },
+  // 2026-09-06: the two nested loops over every body are gone; safety.rofl
+  // derives `neg_relation` and this reads it, which is `enforces`.
+  { id: 'negRels', role: 'enforces', key: { kind: 'part', of: 'runWellFounded', at: 'const negRels = this.answer.negRels;' },
+    cat: 'POL', when: 'after-A', anchor: 'const negRels = this.answer.negRels;',
+    what: 'the negated relations, read off safety.rofl\'s answer' },
   { id: 'readBackGuard', key: { kind: 'part', of: 'runWellFounded', at: 'const before = new Set(this.store.allFactKeys());' },
     cat: 'MECH', when: 'n/a', anchor: 'const before = new Set(this.store.allFactKeys());',
     what: 'the read-back guard, by store diff across an extra pass' },
@@ -262,7 +304,13 @@ export const DECLS: Decl[] = [
  *  exactly the event the pin was standing in for. Ordered by line, duplicates
  *  kept — `constructor` appears three times and the count is information. */
 export const ABSORBED: Record<string, string[]> = {
-  header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor'],
+  // `noteFront` records a derived fact in the round's front; it sits in the
+  // header block because `FrontInfo` does, and it is plumbing either way.
+  header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor', 'noteFront'],
+  // the one closure inside `planBody` the walker counts as a definition
+  planBody: ['note'],
+  asking: ['policyStore'],
+
   evaluation: ['constructor'],
   negPhase: ['negLevel'],
   activate: ['propagate', 'fireRule', 'fireRuleFront'],
@@ -312,13 +360,18 @@ export const ABSORBED: Record<string, string[]> = {
 //          MECH slice and a POL slice is a method doing two things.
 export type Loan = 'language_model' | 'split_the_method';
 
-export interface Dirty { kind: 'cat' | 'tense' | 'part'; unit: string; retires: Loan; }
+export interface Dirty { kind: 'cat' | 'tense' | 'part' | 'role'; unit: string; retires: Loan; }
 
 export function contamination(decls: Decl[] = DECLS): Dirty[] {
   const out: Dirty[] = [];
   for (const d of decls) {
     out.push({ kind: 'cat', unit: d.id, retires: 'language_model' });
     out.push({ kind: 'tense', unit: d.id, retires: 'language_model' });
+    // One more per POLICY block, and it is the judgement the whole exercise
+    // turns on: does this code DECIDE, or does it read a decision the rules
+    // already made and enforce it? Declared rather than inferred, because a
+    // regex over `this.store.relAll` got four of seventeen wrong.
+    if (d.role) out.push({ kind: 'role', unit: d.id, retires: 'language_model' });
     if (d.key.kind === 'part') out.push({ kind: 'part', unit: d.id, retires: 'split_the_method' });
   }
   return out;
@@ -517,6 +570,7 @@ export function facts(s: SplitResult = split(), source?: string): string {
     out.push(`block_at(engine_ts, ${b.id}, ${b.from}, ${b.to}).`);
     out.push(`cat_of(${b.id}, ${ATOM[b.cat]}).`);
     out.push(`when_of(${b.id}, ${TENSE[b.when]}).`);
+    if (b.role) out.push(`role_of(${b.id}, ${b.role}).`);
     if (b.key.kind === 'part') out.push(`part_of(${b.id}, ${b.key.of}).`);
     for (let n = b.from; n <= b.to; n++) {
       if (isCode(src[n - 1] ?? '')) out.push(`code_line(engine_ts, ${n}, ${b.id}).`);

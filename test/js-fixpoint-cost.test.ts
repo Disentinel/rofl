@@ -94,6 +94,16 @@ test('the cost of one fixpoint is deterministic', () => {
   // POSITIVE CONTROL FIRST, because a number that cannot change certifies
   // everything: two builds of the same world must agree exactly, or the pin
   // below is measuring the machine rather than the program.
+  // A DISCARDED FIRST BUILD, 2026-09-07, and it is the control certifying its
+  // own conditions rather than a warm-up for speed. `safetyMemo` in
+  // src/engine.ts is a MODULE-LEVEL map: the first evaluation of a given rule
+  // set in a process asks the kernel's own safety program and every later one
+  // reads the answer back. So `cost()` measured 1 124 558 rows the first time
+  // and 1 116 976 every time after — a 7 582-row difference that is the safety
+  // answer being computed once, and a positive control comparing build 1 with
+  // build 2 was reporting the memo rather than the program. Both builds below
+  // are warm, which is also the state every other world in this suite is in.
+  cost();
   const a = cost();
   const b = cost();
   assert.equal(a.total, b.total, 'two identical worlds hand out the same rows');
@@ -288,7 +298,19 @@ test('the five heaviest read paths, by name', () => {
   // became a `handled` and one `kind_absent_ok` was retired. The fixture costs
   // +3.1% and 1714 firings — five functions with their `trace()` calls, and a
   // non-function tag in the file the oracle does not run.
-  assert.equal(c.total, 1096015, 'total rows handed out by the store in one fixpoint');
+  // 1 096 015 -> 1 116 976 and 67 405 -> 67 502 on 2026-09-07, and NEITHER is
+  // this branch's doing: the two kernels were merged, and the number this gate
+  // reports is a property of the ENGINE as much as of the program. The answers
+  // did not move — 40 relations were compared row for row across the two
+  // kernels over this same corpus, 43 933 rows, identical, with a positive
+  // control that removing one rule row makes 10 of the 40 differ. What moved is
+  // how many rows the store hands out to produce them, and the facts count with
+  // it (168 328 -> 172 730), which is the new kernel's own reflection.
+  //
+  // AND THE FIVE READ PATHS DID NOT MOVE AT ALL, which is the first dividend of
+  // pinning them as SHARES the day before: a kernel swap is exactly the change
+  // a raw count could not survive and a share does not notice.
+  assert.equal(c.total, 1116976, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -377,5 +399,5 @@ test('the five heaviest read paths, by name', () => {
   // calls, which is the shape this gate reports honestly and the reason its own
   // header says it is structurally unable to see the control-flow layer.
   // Cost per fact 6.419 -> 6.354, down again.
-  assert.equal(c.firings, 67405, 'derivations: 65 576 before the suspension fixture');
+  assert.equal(c.firings, 67502, 'derivations: 67 405 on the pre-merge kernel');
 });
