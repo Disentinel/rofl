@@ -15,9 +15,9 @@
 // That boundary is why no kernel change was needed for any of this.
 
 import { Rofl } from '../../src/api.ts';
-import { type Term, mka, mkv, mki, mks, mkf } from '../../src/unify.ts';
+import { type Term, canonTerm, mka, mkv, mki, mks, mkf } from '../../src/unify.ts';
 import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
-import { canonClause, unreifyTerm } from '../../src/reflect.ts';
+import { V, canonClause, unreifyTerm } from '../../src/reflect.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -295,14 +295,25 @@ export function clauses(src: string): string[] {
 /** Parse a whole file: split it, and parse each clause in a world restored
  *  from one image. The image earns its keep here and nowhere else - measured
  *  over L2's own source, 18.4 s rebuilding the world per clause against 14.2 s
- *  restoring it, a saving of 22%. */
+ *  restoring it, a saving of 22%.
+ *
+ *  RESTORED ONCE, FORKED PER CLAUSE. This called `fromImage(img)` in the loop,
+ *  which re-parsed 545 KiB of JSON and re-`add`ed 2453 facts for every clause
+ *  of the file, to arrive at the same world every time. The image is a
+ *  constant, so the world it names is one world and each clause needs a COPY
+ *  of it. Measured 2026-09-07 on the ring 1 image: `fromImage` 3.09 ms, of
+ *  which `JSON.parse` alone is 1.71, against 0.20 ms for `fork`. The two are
+ *  the same world by both oracles the repository owns -- `canonicalState` and
+ *  `snapshot` are byte-identical, and `allFactKeys` agrees element for element,
+ *  which is the arrival order the fork was taught to preserve on 2026-09-07. */
 export function parseFile(src: string, img: string = image()): ParseResult {
   const out: Clause[] = [];
   let subparses = 0;
   const unsupported: string[] = [], stuck: number[] = [];
   let at = 0;
+  const base = fromImage(img);
   for (const part of clauses(src)) {
-    const got = parse(part, fromImage(img));
+    const got = parse(part, base.fork());
     out.push(...got.clauses);
     subparses += got.subparses;
     unsupported.push(...got.unsupported);
@@ -320,8 +331,26 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   // clauses, zero stuck and zero uncovered, because the walls were hit before
   // any of those relations was computed. `hole` is the kernel's own word for
   // "this answer is not an answer", and a front end must not paper over it.
+  //
+  // AND `ev.partial` DOES NOT SUBSUME IT. Measured 2026-09-07 with a positive
+  // control -- `q(7).  p(X) :- q(Y), X is str_len(Y).` -- which finishes its
+  // fixpoint, returns `partial: false`, and leaves
+  // `hole($rule(...), str_type_error)` standing. An `is` that cannot be
+  // evaluated is an INABILITY, not a wall, so the evaluator records it and
+  // carries on; a front end reading only `partial` would report an empty parse
+  // for a grammar rule that silently failed. The check stays.
+  //
+  // ASK THE STORE, NOT THE EVALUATOR. This was `r.query('hole(R, Reason)')`,
+  // and the query is the same answer at 300x the price: `Rofl.query` builds a
+  // FRESH `Evaluation` for every call, and that constructor decodes all 140
+  // rules out of the reflection and re-runs `planBody` over every body before
+  // it looks at a single fact. Measured 2026-09-07, arms interleaved ABAB in
+  // one process over a finished clause: query 0.676 ms median, `relAll` 0.002
+  // -- 5.3% of a clause here, 11% on the machine the stage split was taken on.
+  // The match cost NOTHING either way; `hole` is empty and `matchPremise` over
+  // it timed at 0.00 ms. The saving is the evaluator that was never needed.
   const ev = r.evaluate(BUDGET);
-  const holes = r.query('hole(R, Reason)', { budget: BUDGET }).rows.map((x) => x.text);
+  const holes = r.store.relAll(V.hole).map((f) => f.args.map(canonTerm).join(' '));
   if (ev.partial || holes.length) {
     throw new IncompleteParse([0], `evaluation did not finish: ${holes.join('; ') || 'partial'} — `);
   }

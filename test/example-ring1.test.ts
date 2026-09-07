@@ -131,6 +131,41 @@ test('an unfinished evaluation is not a parse', () => {
     'the planted budget must actually cut the evaluation, or this gate is asleep');
 });
 
+test('a HOLE with a finished fixpoint is not a parse either, and `partial` cannot see it', () => {
+  // MODE 3 HAS TWO DOORS AND ONLY ONE OF THEM WAS PINNED. The test above plants
+  // a budget, which sets `partial`; this plants the OTHER door, and it is the
+  // one `partial` is blind to. Measured 2026-09-07 by deleting the hole check
+  // from `parse` and running the whole node suite: NOTHING WENT RED. So the
+  // check that catches this was load-bearing and unguarded, which is the state
+  // this repository calls a gate that is asleep.
+  //
+  // The planted rule asks for the length of an INTEGER. `str_len` on a non-string
+  // is an INABILITY, not a wall: src/engine.ts's `arithHole` records
+  // `hole($rule(...), str_type_error)` and the evaluation carries on to its
+  // fixpoint, so `evaluate()` returns `partial: false` with a hole standing.
+  const img = image();
+  const src = 'p(a).';
+
+  // control: the same source, the same world, parses.
+  assert.equal(canon(parse(src, fromImage(img)).clauses), canon(parseProgram(src)));
+
+  const r = fromImage(img);
+  const res = r.load('holed(N) :- at(I), N is str_len(I).');
+  assert.ok(res.ok, res.diagnostics.join('; '));
+
+  // the state itself, asserted before the refusal that depends on it: a
+  // finished evaluation AND a hole. Without this line the test could pass
+  // because the parse threw for some other reason.
+  const probe = fromImage(img);
+  assert.ok(probe.load('holed(N) :- at(I), N is str_len(I).').ok);
+  probe.load(`src(${roflStr(src)}).`);
+  const ev = probe.evaluate(200_000_000);
+  assert.equal(ev.partial, false, '`partial` must be false, or this plants the OTHER door');
+  assert.ok(probe.store.relCount('hole') > 0, 'the planted rule must actually hole');
+
+  assert.throws(() => parse(src, r), IncompleteParse);
+});
+
 test('corpus floor: ring 1 agrees on every SHAPE it is given, not every byte', () => {
   // THE UNIT OF COVERAGE IS A CONSTRUCT, NOT A FILE. The old gate parsed whole
   // files as one chart, which is why it was capped at 1200 bytes and saw 10 of

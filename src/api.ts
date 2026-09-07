@@ -170,6 +170,32 @@ export class Rofl {
     return this.store.snapshot();
   }
 
+  /** A COPY OF THIS WORLD, TAKEN STRUCTURALLY RATHER THAN THROUGH TEXT.
+   *
+   *  `fromSnapshot(save())` is the same world and the same field settings, and
+   *  it goes out through `JSON.stringify` and back through `JSON.parse` plus a
+   *  re-`add` of every row. `store.clone()` is the copy without the text, and
+   *  the difference is not small: measured 2026-09-07 over the ring 1 image
+   *  (2453 base facts, no witnesses, no firings) `fromSnapshot` is 3.09 ms of
+   *  which `JSON.parse` alone is 1.71, against 0.20 ms to clone the same store
+   *  — 15x, and it is why `parseFile` restores its image ONCE.
+   *
+   *  THE FIGURE IS ABOUT THIS STORE, not about cloning in general.
+   *  docs/performance-invariants.md records 21.7-22.5 us/fact for a clone of a
+   *  store carrying rules, derived facts and provenance, against 5.6-7.2 for a
+   *  bare one; an image is base facts only, so it is the cheap end by
+   *  construction, and a fork of a WORKED world will not be 0.08 us/fact.
+   *
+   *  A fork, not a view: `clone` copies each record, so a write to either side
+   *  is invisible to the other, which is what `excise` below has always needed
+   *  and what a per-clause front end needs for the same reason. */
+  fork(): Rofl {
+    const r = new Rofl({ naive: this.naive, reuse: this.reuse,
+      evaluator: this.evaluator, retainTicks: this.retainTicks });
+    r.store = this.store.clone();
+    return r;
+  }
+
   /** A question as a literal, however it arrived. `resolveBook` is idempotent,
    *  so a literal that already names its book keeps it. */
   private asked(q: Ask): Lit {
@@ -866,8 +892,7 @@ export class Rofl {
       if (e instanceof StratificationError) return { ok: false, removed: [], added: [], error: e.message };
       throw e;
     }
-    const scratch = new Rofl({ naive: this.naive, reuse: this.reuse, evaluator: this.evaluator });
-    scratch.store = this.store.clone();
+    const scratch = this.fork();
     scratch.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
     for (const rel of [V.in_perspective, V.asserted_by]) {
