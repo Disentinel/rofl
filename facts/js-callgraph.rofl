@@ -76,7 +76,13 @@ handled(js, member_expression,         callgraph, r_call_edge).
 -- WHAT IS NOT MODELLED, WITH A TYPED REASON. js-model's default for a cell
 -- nobody touched is already `not_yet`; these are written out anyway, because a
 -- default that is never contradicted is indistinguishable from an oversight.
-unknown_because(js, this_expression,         callgraph, not_yet).
+-- CLOSED 2026-09-07 by w_scope_binding, and the cell was open for a REASON
+-- rather than by omission: `this` reaches the call graph as a receiver, and a
+-- receiver attributed to a function that does not bind `this` resolves the
+-- wrong member. `this_host[flow]` in rules/js-dataflow.rofl names the nearest
+-- enclosing non-arrow function, and entries 8 and 8b answer for a class method
+-- and for an object method.
+handled(js, this_expression,                 callgraph, r_this_host).
 unknown_because(js, super,                   callgraph, not_yet).
 -- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
 -- by the refinement column, so a KIND-level reason has no cell to sit on. The

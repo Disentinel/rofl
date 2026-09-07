@@ -179,8 +179,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_exn_propagation',
      'w_join_planner',
      'w_leak_variable_on_the_right', 'w_leak_variable_on_the_right', 'w_mod_partial_cell',
+     'w_mutant_anchor_decay',
      'w_mutant_costs_a_world',
-     'w_negation_range_restriction', 'w_scope_binding',
+     'w_negation_range_restriction',
+     // THREE for w_scope_binding: the blindness that had no cell, the corpus
+     // bent around the file-scoped binder, and the declared over-approximation
+     // that was a defect with a comment on it.
+     'w_scope_binding', 'w_scope_binding', 'w_scope_binding',
      'w_unconsumed_attribute',
      'w_vocabulary_frame', 'w_vocabulary_frame', 'w_vocabulary_home']);
   // FOUR items have come off the front, and the last of them was the one this
@@ -209,13 +214,17 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // ...and the accessor closed the control-flow layer entirely, so the head
   // leaves it for the first time: the FRAME — seventeen kinds the corpus
   // produces that the vocabulary does not declare.
-  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_scope_binding'],
+  // ...and w_scope_binding closed on 2026-09-07 — both halves, the lexical
+  // binder's region and which function binds `this` — so the head moves to the
+  // ALIAS STORE: what `o.x = f` writes, which is the first item here that needs
+  // the model to hold a mutable location rather than a syntactic path.
+  assert.deepEqual(w.binds('next_work[audit](W)', 'W'), ['w_alias_store'],
     'the sweeps are finished; the head is judgement again');
   assert.deepEqual(w.binds('held(W, Who)', 'W', 'Who'), ['w_leak_variable_on_the_right/vadim']);
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 33 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 32 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -239,7 +248,10 @@ test('the queue covers the model: 33 open cells, every one owned by name, none s
   // (w_cf_completion) that claims no cell — the gap lives in the rules, not in
   // any (kind, layer) coordinate, which is the shape f_a_blindness_can_have_no_cell
   // already names.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 33, 'the queue is the model\'s open set');
+  // 33 -> 32 on 2026-09-07: `this_expression x callgraph` closed, the last cell
+  // w_scope_binding owned, and `false_done[audit]` is what said the item was not
+  // finished while it stood open.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 32, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -247,7 +259,7 @@ test('the queue covers the model: 33 open cells, every one owned by name, none s
   // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
   // five layers would have opened 320 cells and answered the question each item
   // exists to ask.
-  assert.equal(w.n('work(W, Note)'), 43);
+  assert.equal(w.n('work(W, Note)'), 45);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -262,7 +274,8 @@ test('the queue covers the model: 33 open cells, every one owned by name, none s
   // THEN THE SWEEP RAN and the bucket went to ZERO: 18 cells, of which 4 were
   // residue and closed here, 3 were already modelled and 11 went to items. A
   // layer with no sweeper is a layer whose every open cell has a named owner.
-  assert.deepEqual(per('callgraph'), [18, 25, 0]);
+  // 18 -> 17 on 2026-09-07: `this_expression`, closed by `r_this_host`.
+  assert.deepEqual(per('callgraph'), [17, 25, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -446,7 +459,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and again: the transitive half closed the same day its premise did, so
   // the head is the SCOPE question — `binder[flow]` is file-scoped by
   // construction, which has cost this loop five fixture renames.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_scope_binding']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_alias_store']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -485,13 +498,21 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and re-aimed again for the same reason: the head moved on. It is planted
   // on the CURRENT head and on the item the closing work spawned, which is the
   // only pair that keeps saying what the relation exists to say.
-  const mut = world({ extra: 'work_needs(w_scope_binding, w_cf_completion).' });
+  // ...and re-aimed a THIRD time on 2026-09-07, for the third time for the same
+  // reason. The decay is now measured rather than described: this mutant has
+  // expired every time the head closed, four heads running, always in the safe
+  // direction. What it needs is an anchor that is not an ITEM NAME at all — the
+  // head of the queue is derivable, and a mutant that plants a dependency on
+  // `next_work[audit]` itself would never expire. Entered as a note here rather
+  // than built, because the plant is authored TEXT and the head is a derived
+  // row; closing that gap is a change to how mutants are written.
+  const mut = world({ extra: 'work_needs(w_alias_store, w_cf_completion).' });
   assert.equal(mut.n('blocked[audit](W)'), 4, 'the planted one on top of the three real ones');
   // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
   // is order 40 and the queue does not promote it for being needed. That is the
   // relation doing exactly one thing — skipping — which is what makes it
   // checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_alias_store'],
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), ['w_type_surface'],
     'and the blocked item is skipped rather than handed out');
   console.log(`  KILLED: blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
 });

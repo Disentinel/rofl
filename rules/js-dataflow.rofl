@@ -97,19 +97,60 @@ may_be_node[flow](E, E) :- ast_node[code](E, K, _, _), node_value_kind(K).
 
 -- ENTRY 3 — a name may be whatever its binder's initialiser may be.
 --
--- FILE-SCOPED AND NOT BLOCK-SCOPED, declared: two `const k` in two functions of
--- one file are one name here, so a name bound twice carries both values. That
--- is the same over-approximation the call graph's tier 1 declares for function
--- bindings, it is honest for a MAY-set, and closing it is the scope layer's
--- job rather than this one's.
+-- FILE-SCOPED UNTIL 2026-09-07, and the sentence that stood here said so: two
+-- `const k` in two functions of one file were one name, so a name bound twice
+-- carried both values, declared as honest over-approximation for a may-set.
+--
+-- IT HAD NO WITNESS, AND THE REASON IS THE FINDING. `binder` is bound twice in
+-- this corpus — `const c = new Crate()` in `useCrate` and `const c = new
+-- Cask(n)` in `useSuper` — and the collision derived nothing wrong for as long
+-- as the two classes SHARED NO METHOD NAME. Five fixture renames over the
+-- preceding week were made specifically to dodge this limitation, so the corpus
+-- had been bent around the defect until the defect could not be seen. Giving
+-- `Crate` a `hold` to match `Barrel`'s took `ambiguous_call[audit]` from 8 to
+-- 12 in one method.
 binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File, _),
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name),
                                      ast_child[code](D, init, 0, Init).
 
-may_be_lit[flow](E, V)  :- binder[code](_, Name, Init, File), may_be_lit[flow](Init, V),
-                           ident_in[code](E, Name, File).
-may_be_node[flow](E, N) :- binder[code](_, Name, Init, File), may_be_node[flow](Init, N),
-                           ident_in[code](E, Name, File).
+-- A BINDER'S REGION is the function it sits in, or the FILE when it sits in
+-- none. A use sees a binder when the binder's region contains the use — which
+-- is what makes two `const c` in two functions two names again.
+binder_region[code](D, R)    :- binder[code](D, _, _, _), nearest_v[flow](R, D).
+binder_at_top[code](D)       :- binder[code](D, _, _, _), not binder_region[code](D, _).
+--
+-- `ident_in[code](E, _, _)` IS A COST LITERAL AND NOTHING ELSE, and it is here
+-- because the first version of this paragraph nearly doubled the fixpoint. A
+-- USE is an identifier; the two consumers below both join `sees_binder` against
+-- `ident_in`, so ranging E over every node under the region materialised a
+-- (node x binder) product that no rule could ever read. Measured as a 2x2 over
+-- {HEAD rules, these rules} x {HEAD corpus, this corpus}, so the rules and the
+-- fixture are separated rather than argued about:
+--
+--     wide E: rules alone   facts +51.8%  firings +71.8%
+--     narrow: rules alone   facts +18.2%  firings +25.0%
+--
+-- Fifteen relations compared row-for-row between the two forms and IDENTICAL,
+-- with a positive control (removing `object_method` from `this_binds_kind`
+-- moves seven of them). The cheaper form is the same model.
+sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E),
+                                ident_in[code](E, _, _).
+-- ...and a top-level binder is visible everywhere in its own file, which is the
+-- honest reading: `const seeded = run(1)` at module scope really is in scope
+-- inside every function below it.
+sees_binder[code](E, D)      :- binder_at_top[code](D), binder[code](D, _, _, File),
+                                ident_in[code](E, _, File).
+
+-- WHAT THIS DOES NOT DO, stated rather than discovered later: SHADOWING. Two
+-- binders of one name where one region contains the other are both visible at a
+-- use inside the inner one, and nothing here prefers the nearer. That needs
+-- block regions and a nearest-wins rule, it needs its own fixture, and it is
+-- w_scope_shadowing. The direction is the safe one — an extra candidate in a
+-- may-set — and it is the same shape `class_receiver` declares one file over.
+may_be_lit[flow](E, V)  :- binder[code](D, Name, Init, File), may_be_lit[flow](Init, V),
+                           ident_in[code](E, Name, File), sees_binder[code](E, D).
+may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
+                           ident_in[code](E, Name, File), sees_binder[code](E, D).
 
 -- ENTRY 4 — assignment. `x = "a"` makes `x` may-be "a" WHEREVER x appears in
 -- the file, which is the flow-insensitive reading and is stated rather than
@@ -383,18 +424,56 @@ may_be_node[flow](P, N) :- ast_node[code](P, object_property, _, _),
 may_be_lit[flow](P, V)  :- ast_node[code](P, object_property, _, _),
                            ast_child[code](P, value, 0, X), may_be_lit[flow](X, V).
 
--- ENTRY 8 — `this` inside a class method is that class.
+-- ENTRY 8 — `this`, AND WHICH FUNCTION BINDS IT.
 --
--- DECLARED OVER-APPROXIMATION: the premise is `anywhere under the method`, and
--- an ordinary nested `function () {}` REBINDS this while an arrow inherits it.
--- A `this` inside a nested function expression is claimed here and should not
--- be; no corpus site exercises it, and the rule is written with the
--- over-approximation VISIBLE rather than with a premise nothing tests.
+-- WHAT THIS REPLACED, because the correction is the content: the first version
+-- read `anywhere under the method`, and said so — a declared over-approximation
+-- with the note that no corpus site exercised it. That note was the defect. An
+-- ordinary nested `function () {}` REBINDS `this`; an arrow does not. Under the
+-- old premise a `this` inside a nested function or inside an object literal's
+-- own method was claimed for the enclosing CLASS, and the corpus contained no
+-- such site to say so — the same shape as every other blindness this loop has
+-- found by writing the fixture first.
+--
+-- THE SCOPE QUESTION, EXACTLY: `this` is not a lexical binder, but WHICH
+-- construct binds it is decided lexically, and the answer is the nearest
+-- enclosing function that is not an arrow. That is why this paragraph is the
+-- last cell `w_scope_binding` owned: `this_expression x callgraph` could not be
+-- closed while the receiver could be attributed to a function that does not
+-- bind it.
+edb(this_binds_kind).
+this_binds_kind(function_declaration).
+this_binds_kind(function_expression).
+this_binds_kind(object_method).
+this_binds_kind(class_method).
+this_binds_kind(class_private_method).
+-- NOT arrow_function_expression, and that ABSENCE is the whole rule.
+
+this_binder[flow](F)    :- ast_node[code](F, K, _, _), this_binds_kind(K).
+-- ORDERED FOR COST: `this_expression` binds T first (a handful of nodes), then
+-- `ast_within` with the CONTAINED node bound hands back that node's ancestors
+-- rather than every function's contents.
+this_over[flow](F, T)   :- ast_node[code](T, this_expression, _, _),
+                           ast_within[code](F, T), this_binder[flow](F).
+this_nearer[flow](F, T) :- this_over[flow](F, T), this_over[flow](G, T),
+                           ast_within[code](F, G), F != G.
+this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
+
 class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                 ast_child[code](B, body, _, M),
                                 ast_node[code](M, class_method, _, _).
-may_be_node[flow](T, CD) :- ast_node[code](T, this_expression, _, _),
-                            class_method_of[flow](CD, M), ast_within[code](M, T).
+may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
+
+-- ENTRY 8b — `this` inside an OBJECT LITERAL'S OWN METHOD is that object.
+--
+-- The half the old premise could not have: an object method binds `this` to its
+-- object, and nothing here said so, so a `this` in an object method nested in a
+-- class method answered with the CLASS. Narrowing entry 8 without adding this
+-- would have turned a wrong answer into no answer at all.
+obj_method_of[flow](O, M) :- ast_node[code](O, object_expression, _, _),
+                             ast_child[code](O, properties, _, M),
+                             ast_node[code](M, object_method, _, _).
+may_be_node[flow](T, O) :- obj_method_of[flow](O, M), this_host[flow](M, T).
 
 -- ===========================================================================
 -- CONSTRUCTION — the rest of w_df_function_forms

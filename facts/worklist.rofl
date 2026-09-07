@@ -675,10 +675,43 @@ work_spawned(w_exn_propagation, f_a_frontier_with_an_owner_pays_out_when_the_own
 -- have, `block_statement x dataflow` reads `waived / a_a_statement_carries_no_value`,
 -- which is TRUE of values and FALSE of bindings. A scope layer would reopen a
 -- waived cell and nothing audits for that.
-work(w_scope_binding, "the binder is one flat file scope: shadowing, blocks, the TDZ and parameter scope are invisible").
+-- CLOSED 2026-09-07 for the FUNCTION half, and the measurement that opened it
+-- is the finding. `ambiguous_call[audit]` stood at eight and not one of the
+-- eight was scope: two `pick|pick` are two object methods, two `alef|bet` are a
+-- correct for-of may-set. The item's own story had no witness — because the
+-- corpus had been BENT AROUND the defect. Five fixture renames in seven
+-- iterations of this loop were made specifically to dodge the file-scoped
+-- binder, so the one live collision (`const c` = Crate in one function, Cask in
+-- another) derived nothing wrong only because the two classes shared no method
+-- name. One method closed that gap and the audit went 8 -> 12.
+--
+-- `binder_region` / `sees_binder` give a use the binders whose REGION contains
+-- it — the enclosing function, or the file for a module-level binder. Five
+-- mutants, five killed, each on a named row; two needed fixtures of their own
+-- (a literal binder colliding across functions, and a closure reading an outer
+-- const, which is what tells `contains` from `is`).
+work(w_scope_binding, "DONE 2026-09-07: a use sees the binders whose region contains it, and `this` is bound by the nearest enclosing non-arrow function; shadowing is w_scope_shadowing").
 work_order(w_scope_binding, 29).
-work_state(w_scope_binding, open).
+work_state(w_scope_binding, done).
 work_spawned(w_scope_binding, f_a_blindness_can_have_no_cell).
+work_spawned(w_scope_binding, f_the_corpus_was_bent_around_the_defect_until_it_could_not_be_seen).
+work_spawned(w_scope_binding, f_a_declared_over_approximation_is_a_defect_with_a_comment_on_it).
+
+-- 44 — SHADOWING, THE HALF THAT IS LEFT. Two binders of one name where one
+-- region CONTAINS the other are both visible at a use inside the inner one, and
+-- nothing prefers the nearer. Block scope, the temporal dead zone and parameter
+-- scope are all in here. The direction is the safe one — an extra candidate in
+-- a may-set — and it needs block regions plus a nearest-wins rule, which is a
+-- different shape from the containment rule that closed the function half.
+work(w_scope_shadowing, "an inner binder does not hide an outer one: block regions, nearest-wins, the TDZ and parameter scope").
+work_order(w_scope_shadowing, 44).
+work_state(w_scope_shadowing, open).
+work_needs(w_scope_shadowing, w_scope_binding).
+
+work(w_mutant_anchor_decay, "a mutant that plants a dependency on the queue's HEAD names a literal item, so it expires the moment that item closes - four re-aimings and counting; the head is a derived row and the plant is authored text").
+work_order(w_mutant_anchor_decay, 45).
+work_state(w_mutant_anchor_decay, open).
+work_spawned(w_mutant_anchor_decay, f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes).
 
 -- 30. ALIASING AND THE STORE. `member_value[flow]` reads members off class
 -- bodies and object literals - the SYNTACTIC members - and there is no model of

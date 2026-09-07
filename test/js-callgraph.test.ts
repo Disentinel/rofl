@@ -326,7 +326,12 @@ test('the shape census — the frontier, as a table', () => {
   console.log('  shape census (' + m.n('call_site[code](C, F)') + ' call sites):');
   for (const [s, n] of rows) console.log(`    ${String(n).padStart(3)}  ${s}`);
   // s_identifier dominates because every instrumented function calls trace()
-  assert.equal(tally.get('s_computed_dynamic_key'), 3, 'three computed callees with a non-literal key');
+  // 3 -> 5 on 2026-09-07 with the scope fixtures: `useKeyA` and `useKeyB` each
+  // write `two[keyPick]()` where `keyPick` is a local `const` holding a string,
+  // so the KEY EXPRESSION is not a literal and the shape is dynamic — while the
+  // value layer resolves both, which is the point of the pair. A shape counts
+  // how the site is SPELLED; whether it resolves is a different table.
+  assert.equal(tally.get('s_computed_dynamic_key'), 5, 'five computed callees with a non-literal key');
   assert.equal(tally.get('s_computed_literal_key'), 2, 'two computed callees with a literal key');
   assert.ok((tally.get('s_unclassified') ?? 0) === 0, 'nothing unclassified in this corpus');
 });
@@ -936,7 +941,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // control-flow pack joined this world, so the frontier is two smaller without
   // the corpus changing. A number that falls because the model got better.
   // 131 -> 137 on 2026-09-06: the propagation fixtures, seven functions.
-  assert.equal(sites - resolved, 138, `${sites - resolved} call sites vanished from the frontier`);
+  // 137 -> 138 -> 153 on 2026-09-07: the binder fixture added one site and the
+  // scope-and-`this` fixture fifteen — seven functions and an object literal
+  // with three methods, each carrying its `trace()`.
+  assert.equal(sites - resolved, 153, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -1192,10 +1200,16 @@ test('mutant 15 — a sequence evaluates to its FIRST element', () => {
 
 test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
   const base = probe([]);
+  // THE ANCHOR MOVED 2026-09-07 and the mutant moved with it. The rule this
+  // used to break read `this` as the class of ANY enclosing class method, and
+  // the mutant widened it to any class at all. `this_host[flow]` now names the
+  // nearest enclosing non-arrow function, so the SAME defect — a `this` that
+  // does not know which function binds it — is spelled by deleting the
+  // nearest-wins literal. Rewritten rather than deleted: it is the same claim.
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
-    find: 'class_method_of[flow](CD, M), ast_within[code](M, T).',
-    replace: 'class_method_of[flow](CD, _).',
+    find: 'this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).',
+    replace: 'this_host[flow](F, T)   :- this_over[flow](F, T).',
   }]);
   // THE EDGE SET DOES NOT MOVE, and that is a fact about V8's naming rather
   // than about the mutant: `Box.get` and `Crate.get` both report as `get`, so
@@ -1205,7 +1219,8 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [],
     'the oracle is structurally blind here — if this ever fails, say so');
   assert.equal(base.ambiguous, 8, 'the branch sites and the loop variables, and nothing else');
-  assert.ok(mut.ambiguous >= 12, `every this-site now resolves two ways: ${mut.ambiguous}`);
+  assert.equal(mut.ambiguous, 10,
+    `a this-site inside a nested object method resolves two ways: ${mut.ambiguous}`);
   console.log(`  KILLED by ambiguous_call: 8 -> ${mut.ambiguous}, edge set UNMOVED`);
 });
 

@@ -560,8 +560,12 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // declares its layer (`orphan_claim[audit]` said so when they were all in
   // facts/js-kinds.rofl). In the full corpus world all sixteen read `waived` —
   // measured, not assumed.
-  assert.deepEqual(f, { cell: 124, modelled: 47, waived: 16, not_modelled: 61 },
-    'predicted 124 fine cells = 47 + 16 + 61');
+  // modelled 47 -> 48 on 2026-09-07: `this_expression x callgraph` closed with
+  // `r_this_host`, the last cell `w_scope_binding` owned. One cell moves from
+  // not_modelled to modelled and the total is unchanged, which is what closing
+  // a cell in a fixed vocabulary looks like.
+  assert.deepEqual(f, { cell: 124, modelled: 48, waived: 16, not_modelled: 60 },
+    'predicted 124 fine cells = 48 + 16 + 60');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -600,9 +604,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // the reason is total over not_modelled, exactly as at two axes
-  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 61, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, S, L, R)'), 60, 'one reason per not_modelled cell');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
-             + n(r, 'our_unknown[audit](A, B, S, L)'), 61, 'the split is a work queue');
+             + n(r, 'our_unknown[audit](A, B, S, L)'), 60, 'the split is a work queue');
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
     'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
 
@@ -798,7 +802,10 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   // both files (alpha's dormant chain and beta's default export).
   // 240 -> 274: the exception fixtures, thirteen functions and their sites.
   // 274 -> 284: the accessor fixtures.
-  assert.equal(sites, 296, 'positive control: the corpus is the one the census was taken on');
+  // 284 -> 296 -> 328 on 2026-09-07: the two computed-key sites of the binder
+  // fixture, then the scope-and-`this` fixture — seven functions, an object
+  // literal with three methods, and the `trace()` call each of them carries.
+  assert.equal(sites, 328, 'positive control: the corpus is the one the census was taken on');
   assert.equal(tally.size, 29,
     'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
 
@@ -935,7 +942,11 @@ test('the shape verdicts for member_expression match what the runtime missed', a
   // never runs because `super(n)` throws first, and `useTry -> after` never runs
   // because `thrower` does. Both are derived, both are now explained.
   // 115 -> 120 with the accessor fixtures.
-  assert.equal(oracleEdges.size, 124, 'the oracle saw the call graph docs/modelling-a-language.md records');
+  // 120 -> 124 -> 141 on 2026-09-07 with the scope fixtures. Every one of the
+  // seventeen is TAKEN at runtime, which is what `missed == 0` below still
+  // says: `usePanel -> show`, `show -> relay`, `relay -> read`, `relay -> tag`,
+  // `drift -> via`, `via -> read` and the rest of the chain.
+  assert.equal(oracleEdges.size, 141, 'the oracle saw the call graph docs/modelling-a-language.md records');
   // ZERO. Every edge the runtime took is derived, and none the model derived
   // was never run. The constructor edge — the standing example of a miss no
   // callee shape could carry — closed with `w_cg_new_expression`.
@@ -1030,7 +1041,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // relation — and here it is caught by the refined rule DERIVED FROM THE CELL
   // rather than by another hand-written vocabulary check, which is the remedy
   // rules/js-model.rofl's own header asks for.
-  assert.equal(f.modelled, 53, '23 kind-level claims + 30 shape claims with no cell under them');
+  assert.equal(f.modelled, 54, '24 kind-level claims + 30 shape claims with no cell under them');
   assert.equal(finePartitions(f), false, 'more verdicts than cells once the axis is gone');
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/arrow_function_expression/s_iife/callgraph',

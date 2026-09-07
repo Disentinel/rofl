@@ -718,6 +718,163 @@ test('the exception path is now sourced, and what is left has an owner', () => {
     'one handler left, and the reason is named rather than counted');
 });
 
+// ---------------------------------------------------------------------------
+// 3g. SCOPE (w_scope_binding): a use sees a binder its region contains.
+//
+// THE BLINDNESS HAD BEEN MANAGED BY AVOIDING IT, which is why every gate was
+// green. `binder` is file-scoped: `const c = new Crate()` in `useCrate` and
+// `const c = new Cask(n)` in `useSuper` were ONE name, and the collision
+// derived nothing wrong only because the two classes shared no method name.
+// Five fixture renames over the preceding week were made specifically to dodge
+// this limitation — the corpus had been bent around the defect until the defect
+// could not be seen. Giving `Crate` a `hold` to match `Barrel`'s took
+// `ambiguous_call[audit]` from 8 to 12 in one method, and the region rule took
+// it back to 8 with the collision still there.
+const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 't1 the visibility check is dropped from may_be_node',
+    mut: [{ find: `may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
+                           ident_in[code](E, Name, File), sees_binder[code](E, D).`,
+            replace: `may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
+                           ident_in[code](E, Name, File).`, file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+      b.n('ambiguous_call[audit](C, F, G)') + 4,
+      'the two `const c` become one name again and both `hold`s answer both sites'),
+  },
+  {
+    name: 't2 a top-level binder is invisible inside a function',
+    mut: [{ find: `sees_binder[code](E, D)      :- binder_at_top[code](D), binder[code](D, _, _, File),
+                                ident_in[code](E, _, File).`, replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      const lost = [...edges(b)].filter((e) => !edges(m).has(e));
+      assert.ok(lost.includes('useArrow -> dbl'),
+        `a module-scope const stops reaching the functions below it: ${lost.slice(0, 4)}`);
+      assert.ok(lost.length > 15, `${lost.length} edges lost`);
+    },
+  },
+  {
+    name: 't3 every binder is treated as top-level',
+    mut: [{ find: 'binder_at_top[code](D)       :- binder[code](D, _, _, _), not binder_region[code](D, _).',
+            replace: 'binder_at_top[code](D)       :- binder[code](D, _, _, _).',
+            file: 'rules/js-dataflow.rofl' }],
+    // MEASURED IN THIS WORLD, not in a probe's. A scratch harness without
+    // rules/js-controlflow.rofl reported `calls_in` EMPTY here — the fixpoint
+    // not finishing inside the budget — and the assertion was almost written
+    // that way. In the world this file builds it finishes and invents edges
+    // instead, which is the fourth time this session an instrument's world
+    // turned out to be part of its claim.
+    // AND THE ROWS ARE NAMED, not counted. Written first as `extra.length > 5`
+    // from a number measured in a probe world; the real world invents exactly
+    // TWO edges, and a bound that happened to sit above them would have been
+    // green while saying nothing. `keyPick` is bound to "keyOne" in one
+    // function and to "keyTwo" in another, so a top-level binder lets each
+    // computed site reach the other's key.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['useKeyA -> keyTwo', 'useKeyB -> keyOne'],
+        'every binder visible everywhere: each computed key reaches the other site');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 16,
+        'and the collisions the region rule closed come back: 8 -> 16');
+    },
+  },
+  {
+    name: 't4 the visibility check is dropped from may_be_lit',
+    mut: [{ find: `may_be_lit[flow](E, V)  :- binder[code](D, Name, Init, File), may_be_lit[flow](Init, V),
+                           ident_in[code](E, Name, File), sees_binder[code](E, D).`,
+            replace: `may_be_lit[flow](E, V)  :- binder[code](D, Name, Init, File), may_be_lit[flow](Init, V),
+                           ident_in[code](E, Name, File).`, file: 'rules/js-dataflow.rofl' }],
+    // the LITERAL half needed its own witness: every colliding binder in the
+    // corpus carried a node, not a string, until `keyPick` was written.
+    expect: (m, b) => assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+      b.n('ambiguous_call[audit](C, F, G)') + 4,
+      'two computed keys named `keyPick` become one and each site reaches both methods'),
+  },
+  {
+    name: 't5 a region sees only itself, not what it contains',
+    mut: [{ find: `sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E),
+                                ident_in[code](E, _, _).`,
+            replace: `sees_binder[code](E, D)      :- binder_region[code](D, R), nearest_v[flow](R, E),
+                                ident_in[code](E, _, _).`,
+            file: 'rules/js-dataflow.rofl' }],
+    // A CLOSURE is what tells `contains` from `is`: `inner2` is a different
+    // region from `closureRead`, and asking for the NEAREST enclosing function
+    // loses the outer `const` entirely.
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['inner2 -> leaf']),
+  },
+  // THE `this` HALF, and it is the same question in a form that is not lexical
+  // BINDING but is still lexical SCOPE: which construct binds `this`. The rule
+  // it replaced read `anywhere under the class method` and said so in a comment
+  // that called its own over-approximation harmless because no corpus site
+  // exercised it — the exact shape this loop keeps finding, a defect that
+  // cannot go red because nothing exercises it.
+  {
+    name: 't6 drop `not this_nearer`: every enclosing this-binder answers',
+    mut: [{ find: 'this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).',
+            replace: 'this_host[flow](F, T)   :- this_over[flow](F, T).',
+            file: 'rules/js-dataflow.rofl' }],
+    // KILLED BY THE AUDIT AND NOT BY THE EDGE LIST, and that is measured rather
+    // than arranged: `knob.read` and `Panel.read` are two functions with one
+    // name, so `relay -> read` is the same string whichever one is meant. The
+    // site resolving TWO ways is what `ambiguous_call[audit]` counts.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), []);
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 10,
+        'the `this` in `relay` answers with the object AND the class: 8 -> 10');
+    },
+  },
+  {
+    name: 't7 an object method does not bind `this`',
+    mut: [{ find: 'this_binds_kind(object_method).\n', replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    // `tag` is on `knob` and not on `Panel`, which is the only reason this one
+    // is visible at all: with `read` alone the wrong host silently swaps which
+    // function the edge means and the name does not move.
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['relay -> tag'],
+      "`this` in an object method walks out to the class method around it"),
+  },
+  {
+    name: 't8 an arrow binds `this`',
+    mut: [{ find: 'this_binds_kind(class_private_method).',
+            replace: 'this_binds_kind(class_private_method).\nthis_binds_kind(arrow_function_expression).',
+            file: 'rules/js-dataflow.rofl' }],
+    // the ABSENCE of one row in an edb list is the whole rule, so the mutant
+    // that adds it back is the one that says the absence is load-bearing.
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['via -> read'],
+      'an arrow that inherits `this` stops reaching the class it inherited it from'),
+  },
+];
+
+const edges = (w: World) => new Set(w.q('calls_in[code](File, A, B)').map(([, a, b]) => `${a} -> ${b}`));
+
+for (const g of SCOPE) test(`${g.name} — scope`, () => g.expect(build(g.mut), base()));
+
+test('which function binds `this`, named row by row', () => {
+  // THE POSITIVE HALF, because a set of mutants says what a check can catch and
+  // says nothing about what it currently reports. Ten `this` nodes, ten hosts,
+  // and the three interesting ones are the last three: `relay` twice (an object
+  // method binds its own `this`, inside a class method), `show` once (the class
+  // method's own), and `drift` for a `this` written inside an ARROW — the arrow
+  // is not the host, which is the one row that would be wrong under any rule
+  // that treated every function form alike.
+  const m = base();
+  const name = (id: string) => {
+    const n = m.q(`fn_name[code](${id}, N)`).map(([x]) => x);
+    return n.length ? n.sort().join('/') : id;
+  };
+  assert.deepEqual(m.q('this_host[flow](F, T)').map(([f]) => name(f)).sort(),
+    ['Barrel', 'Box', 'both', 'both', 'drift', 'get', 'hold', 'relay', 'relay', 'show']);
+  // AND THE DENOMINATOR, without which the list above cannot fail in the
+  // direction that matters: twelve (node, enclosing this-binder) pairs, ten
+  // hosts — so two `this` nodes really do have more than one candidate and the
+  // `not this_nearer` literal really is choosing between them.
+  assert.equal(m.n('this_over[flow](F, T)'), 12,
+    'two of the twelve are the outer candidates the nearest-wins rule discards');
+});
+
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
   // Asked of the rule before it was believed, which is the question that pays.
   // Five shapes were built; four are covered and the fourth is covered for a

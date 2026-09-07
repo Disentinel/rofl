@@ -114,12 +114,28 @@ test('the five heaviest read paths, by name', () => {
   // MOVED AGAIN 2026-09-05 with the generator-protocol fixture: facts +8.7%,
   // firings +9.1%, and every one of the five names below up between 8.9% and
   // 10.2%, in the same order. Same five growing together = a bigger corpus.
+  // MOVED 2026-09-07 with the SCOPE layer, and for the first time in this loop
+  // the movement is mostly RULES rather than corpus — which is what a 2x2 says
+  // and a single number cannot. Measured over {HEAD rules, scope rules} x
+  // {HEAD corpus, this corpus}, four builds, same machine, same minute:
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   735 447 / 35 935 fir   841 324 / 40 045 fir
+  //     scope rules  776 100 / 44 917 fir   880 854 / 50 098 fir
+  //
+  // so the fixture costs ~14% and the rules ~5.5% of rows, while on FIRINGS the
+  // split reverses: +11% fixture against +25% rules. Rows-handed-out and
+  // derivations are different questions and this iteration is the first to pull
+  // them apart. The first draft of `sees_binder` was far worse — facts +51.8%,
+  // firings +71.8% — because it ranged a use over every NODE in the region; the
+  // rule now says `ident_in`, which is what a use is, and fifteen relations are
+  // identical between the two forms with a positive control.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 87165',
-    'relPersp authority = 70101',
-    'argMatches encloses_v pos=[1] = 42678',
-    'relPersp encloses_v = 41570',
-    'relPersp ast_node = 36010',
+    'argMatches ast_within pos=[0] = 105013',
+    'relPersp authority = 77544',
+    'argMatches encloses_v pos=[1] = 51504',
+    'relPersp encloses_v = 48909',
+    'relPersp ast_node = 42840',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -150,7 +166,10 @@ test('the five heaviest read paths, by name', () => {
   // needed a fixture the corpus did not have, so alpha.mjs grew by twenty-eight
   // functions and the fixpoint grew with it. NONE of it is rule cost — see the
   // note below on what this gate can see.
-  assert.equal(c.total, 735786, 'total rows handed out by the store in one fixpoint');
+  // 735 786 -> 880 854 (+19.7%) on 2026-09-07, the same five names in the same
+  // order, each up 18.6%-20.6%. See the 2x2 above for what is rules and what is
+  // corpus; unusually for this loop, both halves are real.
+  assert.equal(c.total, 880854, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -179,5 +198,17 @@ test('the five heaviest read paths, by name', () => {
   // run in this world either. The corpus grew 12% and this fixpoint grew 12% —
   // the check doing exactly its job on the half it can see, and saying nothing
   // whatever about the half it cannot (w_cost_gate_per_layer, 41).
-  assert.equal(c.firings, 35938, 'derivations: 25513 before the generator fixture');
+  // 35 938 -> 50 098 on 2026-09-07, +39.4%, and THIS IS THE NUMBER THE LOOP IS
+  // SUPPOSED TO WATCH. Unlike every previous iteration it is not the corpus:
+  // +4 110 firings are the Panel and key fixtures and +8 982 are the scope
+  // rules themselves, which derive `ident_in`, `binder_region`, `sees_binder`
+  // and the `this` host relations over the whole tree. It was +33 274 before
+  // `sees_binder` was narrowed from every node to every identifier — a 27%
+  // reduction in derivations for a model that is row-for-row the same.
+  // A scope layer costs derivations by construction: it relates every USE to
+  // every binder that can reach it, which is a bigger relation than anything
+  // else in this pack. Saying that here is the honest form of the owner's rule
+  // that iterations must get faster — the number rose, the cause is named, and
+  // the avoidable half of it was measured and removed.
+  assert.equal(c.firings, 50098, 'derivations: 35 938 before the scope layer');
 });

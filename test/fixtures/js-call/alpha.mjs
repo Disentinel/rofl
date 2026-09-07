@@ -132,6 +132,21 @@ class Crate {
     trace();
     return n * 2;
   }
+  // NAME COLLIDES WITH `Barrel.hold` ON PURPOSE, added 2026-09-07 for
+  // w_scope_binding. `useCrate` binds `const c = new Crate()` and `useSuper`
+  // binds `const c = new Cask(n)` — two classes, one name, two functions — and
+  // the collision was SILENT for as long as the two classes shared no method
+  // name. It shares one now, so a file-scoped binder makes `c.hold(n)` in each
+  // function reach BOTH classes' `hold`.
+  //
+  // THE RUNTIME ORACLE CANNOT JUDGE THIS ONE, and that is worth saying: V8
+  // names a frame by the function's name, both methods are called `hold`, so
+  // `useCrate -> hold` and `useSuper -> hold` are the same string either way.
+  // `ambiguous_call[audit]` can, because it names NODES.
+  hold(n) {
+    trace();
+    return n + 1;
+  }
   both(n) {
     trace();
     return this.get(n);
@@ -140,7 +155,7 @@ class Crate {
 function useCrate(n) {
   trace();
   const c = new Crate();
-  return c.both(n);
+  return c.both(n) + c.hold(n);
 }
 
 // ---- `super()`, THE CALL. Three levels on purpose: `Keg` has no constructor
@@ -742,6 +757,20 @@ function useLit(n) {
 // whose NAME is one method and whose VALUE is another. A model that reads
 // `two[pickA]` as `two.pickA` resolves to the wrong function and looks right.
 const two = {
+  // TWO EXTRA METHODS, added 2026-09-07 for w_scope_binding's literal half.
+  // `useKeyA`/`useKeyB` bind `keyPick` to two different strings in two
+  // functions and use it as a computed key; they select THESE rather than
+  // `pickA`/`pickB` on purpose, because `pickA` is the value decoy that must
+  // stay instrumented-and-never-called, and a first draft that selected it
+  // destroyed that assertion.
+  keyOne(n) {
+    trace();
+    return n;
+  },
+  keyTwo(n) {
+    trace();
+    return n + 1;
+  },
   pickA(n) {
     trace();
     return n;
@@ -755,6 +784,43 @@ const pickA = 'pickB';
 function useTrap(n) {
   trace();
   return two[pickA](n);
+}
+
+// TWO SHAPES THE SCOPE RULE NEEDED, added 2026-09-07 because two mutants
+// SURVIVED without them — the same sequence every item this week has run.
+//
+// 1. A LITERAL BINDER COLLIDING ACROSS FUNCTIONS. `keyPick` is bound in two
+// functions with two different strings and used as a COMPUTED KEY, so without
+// the visibility check on `may_be_lit` each site reads both keys and each call
+// reaches both methods. The value half of the fix had no witness at all until
+// this: every colliding binder in the corpus carried a node, not a literal.
+function useKeyA(n) {
+  trace();
+  const keyPick = 'keyOne';
+  return two[keyPick](n);
+}
+function useKeyB(n) {
+  trace();
+  const keyPick = 'keyTwo';
+  return two[keyPick](n);
+}
+
+// 2. A CLOSURE READING AN OUTER BINDER. `inner2` is a different region from
+// `closureRead`, so a rule that asked for the NEAREST enclosing function would
+// not see `chosenFn` at all and would lose the edge. `ast_within` is what makes
+// a region see what it CONTAINS rather than only itself, and nothing in the
+// corpus exercised that until a nested function read an outer `const`.
+function closureRead(n) {
+  trace();
+  // `leaf`, not `pickB`: `pickB` is a METHOD of `two` and not a name at module
+  // scope at all. The first draft used it, `node --check` passed it (syntax
+  // only), and the corpus threw ReferenceError the moment `main()` ran — which
+  // is why a fixture edit is followed by RUNNING main, not by parsing it.
+  const chosenFn = leaf;
+  return function inner2() {
+    trace();
+    return chosenFn(n);
+  };
 }
 
 // ---- higher order: which function lands in which argument slot
@@ -840,6 +906,69 @@ export function useAssign(n) {
   return (held = boxB).pick(n);
 }
 
+// ---- WHICH FUNCTION BINDS `this` (w_scope_binding, 2026-09-07)
+//
+// `this` is not a lexical binder, and which construct BINDS it is decided
+// lexically all the same: the nearest enclosing function that is not an arrow.
+// The corpus had no site that could tell that apart from "anywhere under the
+// class method", which is what the rule used to say, in a comment that called
+// its own over-approximation harmless because nothing exercised it.
+//
+// THE NAMES COLLIDE ON PURPOSE. `Panel.read` and `knob.read` are two different
+// functions with one name, so a `this` attributed to the wrong host still
+// produces a frame V8 spells `read` — the execution oracle cannot see this one
+// at all, and `ambiguous_call[audit]` and the resolution rows can, because they
+// name NODES.
+class Panel {
+  read(n) {
+    trace();
+    return n * 3;
+  }
+
+  // an OBJECT METHOD binds `this` to its own object, even nested inside a class
+  // method. `relay` reaches `knob.read`; the `this.read(n)` on the last line is
+  // `show`'s own and reaches `Panel.read`. One statement, two hosts.
+  show(n) {
+    trace();
+    const knob = {
+      read(k) {
+        trace();
+        return k + 100;
+      },
+      // `tag` exists on `knob` and NOT on `Panel`, and that asymmetry is the
+      // only thing that can be SEEN when the host is wrong: with both objects
+      // owning `read`, V8 spells either answer `read` and so does the model's
+      // edge list. One member the class does not have makes a wrong host lose
+      // an edge by name instead of silently swapping which function it means.
+      tag(k) {
+        trace();
+        return k - 1;
+      },
+      relay(k) {
+        trace();
+        return this.read(k) + this.tag(k);
+      },
+    };
+    return knob.relay(n) + this.read(n);
+  }
+
+  // an ARROW does NOT bind `this`: `via`'s `this` is `drift`'s, so this reaches
+  // `Panel.read`. Declaring the arrow a binder makes the edge vanish.
+  drift(n) {
+    trace();
+    const via = () => {
+      trace();
+      return this.read(n);
+    };
+    return via();
+  }
+}
+export function usePanel(n) {
+  trace();
+  const p = new Panel();
+  return p.show(n) + p.drift(n);
+}
+
 // ---- IIFE at the top level: the caller is the module, not a function
 const seeded = (function seed() {
   trace();
@@ -891,6 +1020,9 @@ export async function main() {
     useCaught(1),
     useGauge(1),
     useShim(1),
+    useKeyA(1),
+    useKeyB(1),
+    closureRead(1)(),
     makeThrower(1),
     useTwoHops(1),
     useStaticOnClass(1),
@@ -903,6 +1035,7 @@ export async function main() {
     useTry(1),
     useLoops(1),
     await useAwait(1),
+    usePanel(1),
     run(1),
     seeded,
   ];
