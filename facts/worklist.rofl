@@ -1071,3 +1071,21 @@ work(w_computed_key_names, "a computed key that is a bare identifier is named by
 work_order(w_computed_key_names, 40).
 work_state(w_computed_key_names, open).
 work_spawned(w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).
+
+-- 41 — A SUSPENSION MAY NOT RESUME. Entered and closed 2026-09-07, and it was
+-- never on the queue: the control-flow layer WAIVED `suspend` with the reason
+-- `a_control_returns_so_the_site_still_runs`, so the cell read `waived` and no
+-- audit had anything to say. The waiver is a claim about the PROGRAM — control
+-- comes back only if the awaited thing settles and only if a consumer asks a
+-- generator for another value — and every await in the corpus settled, so it
+-- had never been exercised.
+-- FOUND BY MEASURING THE MECHANICS RATHER THAN BY THE QUEUE: an awaited
+-- thenable`s `then` runs one microtask turn later on a stack of depth ONE, and
+-- a foreign microtask planted between the two halves of one `await` runs
+-- between them. A fixture that suspends forever then put `afterStall` in front
+-- of the acceptance gate within a single run.
+work(w_cf_suspension, "the code after an await or a yield may not run, because control returns only if the promise settles or the consumer asks again").
+work_order(w_cf_suspension, 41).
+work_state(w_cf_suspension, done).
+work_spawned(w_cf_suspension, f_a_suspension_is_a_scheduling_fact_and_the_waiver_assumed_it).
+work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string_operation).

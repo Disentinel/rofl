@@ -359,6 +359,44 @@ async function useAwait(n) {
   return awaited(n);
 }
 
+// A SUSPENSION THAT NEVER RESUMES (w_cf_suspension). The control-flow layer
+// WAIVED `suspend` until this fixture existed, with the reason
+// `a_control_returns_so_the_site_still_runs`, and its comment said the code
+// after an `await` runs, it merely runs later.
+// That is true of an await whose promise SETTLES, and every await this corpus
+// had was one — so the reason had never been exercised, and it is a claim about
+// the program rather than about the language.
+//
+// MEASURED BEFORE THIS WAS WRITTEN: `useStall` reports, `afterStall` never
+// does, and the process still exits with the suspended call outstanding. An
+// async function suspended forever holds nothing open, so this site costs the
+// harness nothing.
+//
+// CALLED WITHOUT BEING AWAITED, which is what makes it safe: `main` collects it
+// into the array with every other call and never waits on it. Awaiting it would
+// hang the suite forever, and that is the one way to get this fixture wrong.
+//
+// THE EXECUTOR IS A NAMED DECLARATION, not an arrow, for a reason the census
+// enforces: every function in a runnable fixture must be able to report, and an
+// anonymous `() => {}` cannot carry a `trace()` without being named something
+// the oracle and the census disagree about.
+function neverSettle(_resolve) {
+  trace();
+}
+
+const unsettled = new Promise(neverSettle);
+
+function afterStall(n) {
+  trace();
+  return n;
+}
+
+export async function useStall(n) {
+  trace();
+  await unsettled;
+  return afterStall(n);
+}
+
 // ---- A CALL THE PROGRAM BRANCHES AROUND. `unreached` is instrumented and
 // never runs, and the reason is CONTROL FLOW rather than value: the model
 // derives `useGuard -> unreached` correctly — the site is there and it resolves
@@ -1191,6 +1229,7 @@ export async function main() {
     useTry(1),
     useLoops(1),
     await useAwait(1),
+    useStall(1),
     usePanel(1),
     useRack(1),
     useShelf(1),

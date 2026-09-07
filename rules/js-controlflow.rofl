@@ -107,6 +107,37 @@ abrupt_at[code](B, F, I) :- abrupt_kind(K), ast_node[code](S, K, _, _),
 -- must not reach a statement in the same node's `body`.
 after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
 
+-- A SUSPENSION IS A POINT AFTER WHICH THE REST MAY NOT RUN, and until
+-- 2026-09-07 this layer WAIVED the question with the reason
+-- `a_control_returns_so_the_site_still_runs`. That reason is a claim about the
+-- PROGRAM, not about the language: control comes back only if the awaited thing
+-- settles and only if a generator is asked for another value. Every await in
+-- the corpus settled, so the waiver had never been exercised — and a fixture
+-- that suspends forever put a function the model says runs, and the runtime
+-- never entered, in front of the acceptance gate within one run.
+--
+-- DERIVED FROM `transfer_mechanism`, NOT COPIED. The vocabulary already files
+-- `await_expression` and `yield_expression` under `suspend`, and a second hand
+-- written list is the defect `orphan_claim` paid for: the next kind filed under
+-- `suspend` is covered here without anybody remembering.
+--
+-- IT IS NOT AN `abrupt_at` ARM, and the distinction is the whole point of
+-- having two relations. After a `return` the rest NEVER runs; after an `await`
+-- the rest runs unless the promise never settles. Both land in `guarded`, which
+-- this layer documents as a MAY-not-run, but writing a suspension as abrupt
+-- would put a NEVER in a relation whose own comment says it is weakening a
+-- never into a may.
+--
+-- CONFINED TO THE SUSPENDING FUNCTION, exactly as the throwing-call arm below
+-- is: without `nearest_v` an `await` inside a function would guard every
+-- statement after that function's own declaration at module level, which is a
+-- suspension of the module and is not what happened.
+suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
+                             nearest_v[flow](G, X), ast_within[code](G, S),
+                             ast_within[code](S, X),
+                             stmt_seq_field(F), ast_child[code](B, F, I, S).
+after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+
 -- A SEQUENCE FIELD THE SCANNER NEVER EMITS — the same typo hole `guard_arm_unseen`
 -- closes for arms, and the one this rule was carrying invisibly until the switch
 -- case was measured.
@@ -304,6 +335,10 @@ abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
 -- direction and is what `may_not_run` is documented to be.
 guarded[code](S) :- after_abrupt[code](S).
 guarded[code](N) :- after_abrupt[code](S), ast_within[code](S, N).
+-- ...and the same two arms for a SUSPENSION, which is a may rather than a never
+-- and therefore belongs in this relation more exactly than the abrupt does.
+guarded[code](S) :- after_suspend[code](S).
+guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).
 
 guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
 reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
@@ -449,8 +484,11 @@ mechanism_modelled(skip_arm).
 mechanism_modelled(short_circuit).
 mechanism_modelled(accessor_call).
 mechanism_modelled(abrupt).
+-- SUSPEND JOINED 2026-09-07, and it left the waiver rather than the table: the
+-- reason `a_control_returns_so_the_site_still_runs` asserted that the promise
+-- settles, which this layer cannot know and never checked.
+mechanism_modelled(suspend).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
-mechanism_waived(suspend, a_control_returns_so_the_site_still_runs).
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
 -- THREE STATES, NOT TWO. The first draft had modelled and waived, and `abrupt`
@@ -482,6 +520,13 @@ guard_named[code](K)       :- guard_kind(K, _).
 guard_named[code](K)       :- short_circuit_kind(K).
 -- ...and the four abrupt kinds, reached by `abrupt_at` rather than by an arm.
 guard_named[code](K)       :- abrupt_kind(K).
+-- ...and the two SUSPENSION kinds, reached by `suspend_at` on the same pattern.
+-- DERIVED FROM `transfer_mechanism` rather than listed, which is what caught
+-- the incomplete change: declaring `mechanism_modelled(suspend)` without this
+-- line put both kinds in `guard_unmodelled[audit]` within one run, and that is
+-- the audit doing exactly what it was written for — a mechanism claimed as
+-- answered by a rule nothing connects to the kinds that carry it.
+guard_named[code](K)       :- transfer_mechanism(K, suspend).
 -- `catch_clause` carries `skip_arm` and is reached as the ARM of a
 -- `try_statement` rather than by a `guard_kind` row of its own — the guard is
 -- the try's `handler` field, and the clause is what sits in it. Named here so

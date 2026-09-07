@@ -784,10 +784,29 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // a READ with no call syntax anywhere at the site whose getter always throws.
   // That name is the whole content of w_cf_accessor, and it is here rather than
   // in a count because the site looks like a property access.
+  // FIFTEEN on 2026-09-07 with the SUSPENSION, and the three new names are one
+  // answer and two consequences of it.
+  //
+  // `afterStall` is the item: it is called after `await unsettled`, a promise
+  // nothing ever resolves, and the runtime never enters it. Before this the
+  // layer WAIVED suspensions with the reason `control returns so the site still
+  // runs` — a claim about the program, not the language — and this very
+  // assertion is where it went red: a function the model calls, the runtime
+  // never entered, and nothing explained.
+  //
+  // `alef` and `pickedB` ARE ENTERED BY THE RUNTIME and are on this list on
+  // purpose, which is what makes it a may-set rather than a claim. `alef`'s one
+  // remaining unguarded site is `return awaited(n)` in `useAwait`, which sits
+  // after `await mkAlef()`; `pickedB`'s is after a `yield`. Both would be
+  // unreachable if the promise never settled or the consumer never asked for
+  // another value, and neither is something this layer can decide. Over-covering
+  // in the safe direction is what `may_not_run` is documented to be — the
+  // dangerous direction is a live function reported dead by a set that is too
+  // NARROW.
   assert.deepEqual([...mayNotRun].sort(),
-    ['after', 'bet', 'guardedElse', 'label', 'loopBody', 'neverCased',
-     'neverReached', 'reading', 'rescue', 'sleeper', 'unlit', 'unreached',
-     'unreadable']);
+    ['after', 'afterStall', 'alef', 'bet', 'guardedElse', 'label', 'loopBody',
+     'neverCased', 'neverReached', 'pickedB', 'reading', 'rescue', 'sleeper',
+     'unlit', 'unreached', 'unreadable']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   // TWO now, and they are two different shapes of the same relation. `dormant`

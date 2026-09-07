@@ -224,6 +224,25 @@ async function runOracle(dir: string): Promise<OracleRun> {
   // the default export is an ENTRY POINT and nothing in beta.mjs calls it, so
   // the consumer is what makes it run — here, as in any importing module.
   beta.default(2);
+  // V8 NAMES A GETTER'S FRAME `get broken`, not `broken` — the third place the
+  // oracle's frame naming differs from the model's node naming, after
+  // `%GeneratorPrototype%.next` and the synthesised constructor frame. It is
+  // a fact about the INSTRUMENT, so it is normalised here rather than worked
+  // around in a rule: the node is the same node, and a model that renamed its
+  // functions to match a stack trace would be wrong about the program in
+  // order to agree with the tool.
+  //
+  // ONE FUNCTION, BOTH OUTPUTS, since 2026-09-07 — and until then it was one
+  // function and ONE output. `edges` was normalised and `measured` was handed
+  // back raw, so the census compared its own `broken` against the oracle's
+  // `get broken`, they never matched, and two getters were reported as
+  // instrumented-and-permanently-silent. THE LEDGER THEN EXPLAINED THAT: three
+  // findings say V8 attributes a getter's frame to the property access so the
+  // oracle never sees a caller. Measured 2026-09-07, that is false — the
+  // oracle records `useGauge -> get broken` and `useGauge -> get reading`, with
+  // the enclosing function as the caller, exactly like any other call. The
+  // limit of the instrument was a missing `.replace()` on one of two doors.
+  const norm = (n: string) => n.replace(/^(get|set) /, '');
   const edges = new Set<string>();
   const list: OracleEdge[] = [];
   for (const e of t.oracle.edges()) {
@@ -231,18 +250,14 @@ async function runOracle(dir: string): Promise<OracleRun> {
     // main()/bmain(), not an edge the fixture contains
     const base = path.basename(e.file);
     if (!RUN_FILES.includes(base)) continue;
-    // V8 NAMES A GETTER'S FRAME `get broken`, not `broken` — the third place the
-    // oracle's frame naming differs from the model's node naming, after
-    // `%GeneratorPrototype%.next` and the synthesised constructor frame. It is
-    // a fact about the INSTRUMENT, so it is normalised here rather than worked
-    // around in a rule: the node is the same node, and a model that renamed its
-    // functions to match a stack trace would be wrong about the program in
-    // order to agree with the tool.
-    const callee = e.callee.replace(/^(get|set) /, '');
+    const callee = norm(e.callee);
     edges.add(`${e.caller} -> ${callee}`);
     list.push({ caller: e.caller, callee, line: e.line, file: base });
   }
-  return { edges, list, measured: t.oracle.measured(), raw: t.oracle.edges().length };
+  return {
+    edges, list, raw: t.oracle.edges().length,
+    measured: new Set([...t.oracle.measured() as Set<string>].map(norm)),
+  };
 }
 
 /** the name a KEY stands for, which is `key_name[code]` in
@@ -453,7 +468,12 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
   // destination of the value is unusual.
   const bound = m.binds('passes_function[code](C, I, F, N)', 'I', 'N');
   assert.deepEqual([...new Set(bound)].sort(),
-    ['0 -> leaf', '0 -> mid', '0 -> pickedA', '0 -> pickedB', '1 -> mid']);
+    // `0 -> neverSettle` joined 2026-09-07: `new Promise(neverSettle)` passes a
+    // function to a HOST constructor, which is a higher-order fact whether or
+    // not this model knows what `Promise` does with it — `passes_function`
+    // records the passing and deliberately does not fold it into `calls`.
+    ['0 -> leaf', '0 -> mid', '0 -> neverSettle', '0 -> pickedA', '0 -> pickedB',
+     '1 -> mid']);
 
   // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
   // `s_identifier` is not stale: an identifier naming an IMPORT still does not
@@ -514,7 +534,7 @@ test('argument position is content: which function is in which slot', () => {
   // first argument of a call. The generator protocol is an ordinary call site
   // on the consumer's side; what is unusual is only where the value GOES.
   assert.deepEqual(passed,
-    ['0 -> leaf', '0 -> mid', '0 -> pickedA', '0 -> pickedB', '1 -> mid'],
+    ['0 -> leaf', '0 -> mid', '0 -> neverSettle', '0 -> pickedA', '0 -> pickedB', '1 -> mid'],
     'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), and the two sends');
 });
 
@@ -768,19 +788,42 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
   // EIGHT on 2026-09-06 with the exception fixtures: `unlit` follows `super(n)`
   // into a constructor that always throws. `after` is on this list for the same
   // reason it always was — and for the FIRST TIME the layer explains it.
-  // ELEVEN on 2026-09-06 with the accessor fixture, and TWO of the three new
-  // names are not silent at all — `broken` and `reading` are GETTERS, so V8
+  // ELEVEN on 2026-09-06 with the accessor fixture, and the comment that stood
+  // here was WRONG for a day. It said `broken` and `reading` are GETTERS, so V8
   // attributes their frames to the property access and the oracle never sees a
-  // caller. That is the same limit of the instrument the generator frames have,
-  // in a second place, and it is listed rather than counted so the two causes
-  // stay apart. `unreadable` is the real silence: `void gauge.broken` throws.
+  // caller — the same limit of the instrument the generator frames have.
+  //
+  // MEASURED 2026-09-07 AND IT IS NOTHING OF THE KIND. The oracle records
+  // `useGauge -> get broken` and `useGauge -> get reading`, with the enclosing
+  // function as the caller, exactly like any other call. They looked silent
+  // because `runOracle` normalised the `get ` prefix off the EDGES and handed
+  // `measured` back raw, so this census compared its own `broken` against the
+  // oracle's `get broken`. One function, two doors, `.replace()` on one of
+  // them. THE LEDGER HAD THEN EXPLAINED THE ARTEFACT: a recorded finding
+  // generalises getters, generators and `await` into `a call the HOST makes on
+  // the program's behalf has no caller in the program`, and one of its three
+  // instances was a missing string operation. The generator frame is real —
+  // V8 names the caller `next` — and `await` is real and different again; the
+  // getter was never an instance of anything.
+  //
+  // `unreadable` is the real silence in that fixture: `void gauge.broken`
+  // throws before it can report.
   // THIRTEEN on 2026-09-06 with the propagation fixtures. `boom` is RETURNED
   // rather than called — the shape the transitive walk needed to be tested
   // against — and `lateThrow` is silent because `boom` is. Both are wired and
   // both stay silent for a reason no guard explains, which `may_not_be_reached`
   // now covers and `may_not_run` does not.
-  const NEVER_CALLED = ['after', 'boom', 'broken', 'dormant', 'lateThrow',
-                        'neverCased', 'neverReached', 'pickA', 'reading',
+  // THIRTEEN -> ELEVEN on 2026-09-07: `broken` and `reading` were never on this
+  // list on merit — see above.
+  // ELEVEN -> TWELVE the same day, and the new one is a fourteenth REASON
+  // rather than another instance of an old one. `afterStall` is called after
+  // `await unsettled`, a promise nothing ever resolves, so the suspension never
+  // resumes and the statement after it never executes. It is not a guard, not
+  // an abrupt transfer, and not a value decoy — it is the code after a
+  // suspension, which this layer waived until the day this name appeared, and
+  // `may_not_run[code]` covers it now.
+  const NEVER_CALLED = ['after', 'afterStall', 'boom', 'dormant', 'lateThrow',
+                        'neverCased', 'neverReached', 'pickA',
                         'sleeper', 'unlit', 'unreached', 'unreadable'];
   const silentButWired = [...instrumented].filter((n) => !o.measured.has(n)).sort();
   assert.deepEqual(silentButWired, NEVER_CALLED,
@@ -902,7 +945,14 @@ test('execution oracle: what ran, what the model derived, and the gap', async ()
     'useAbrupt -> neverReached', 'useCased -> neverCased',
     'useDelegated -> outerGen', 'useDormant -> sleeper', 'useForOfGen -> pick',
     'useGauge -> unreadable',
-    'useGuard -> unreached', 'useSent -> chooser', 'useTry -> after',
+    'useGuard -> unreached', 'useSent -> chooser',
+    // A FIFTEENTH CAUSE, 2026-09-07, and it is a new one rather than another
+    // instance: `useStall` awaits a promise nothing resolves, so the call to
+    // `afterStall` is WRITTEN, correctly derived, and never taken. Not a guard,
+    // not an abrupt transfer, not the instrument's naming — the suspension
+    // simply never resumes, and `may_not_run[code]` says so since this layer
+    // stopped waiving `suspend`.
+    'useStall -> afterStall', 'useTry -> after',
     'useYieldCallee -> callsSent',
   ], `over-approximation, by cause: ${extra.join(', ')}`);
   // FIVE OF THE SEVEN are one limit of the INSTRUMENT rather than of the model:
@@ -1055,6 +1105,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 168 -> 171 the same day: the tagged-template fixtures — `mark` twice,
   // `stamped`, `useTag` and `bTag` with their `trace()` calls, less the sites
   // the tag arm now resolves.
+  // 172 -> 175 the same day with the SUSPENSION fixture: `neverSettle`,
+  // `afterStall` and `useStall` bring three `trace()` calls, and the call from
+  // `main` and the call to `afterStall` both resolve. `new Promise(...)` is a
+  // transfer site rather than a call site, so it is not on this count at all.
   // 171 -> 172 the same day with the ITERATOR PROTOCOL, and it is the smallest
   // move the frontier has made for a fixture: `bump`, the `[Symbol.iterator]`
   // method, `useIterable` and shapes.ts's `onIterObject` bring four `trace()`
@@ -1062,7 +1116,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // declared function. What is left over is the one site inside `useIterable`
   // that the loop body adds. The protocol's own two calls are not call sites at
   // all, which is the entire reason the item exists.
-  assert.equal(sites - resolved, 172, `${sites - resolved} call sites vanished from the frontier`);
+  assert.equal(sites - resolved, 175, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

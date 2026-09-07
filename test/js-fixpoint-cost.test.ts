@@ -170,12 +170,19 @@ test('the five heaviest read paths, by name', () => {
     ['relPersp encloses_v', 5.25],
     ['relPersp ast_node', 5.2],
   ];
-  assert.deepEqual(c.share.map(([k]) => k), SHARE.map(([k]) => k),
+  // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
+  // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
+  // and 5.24% of the total — a gap the instrument cannot resolve, so they swap
+  // places on an ordinary corpus change and the assertion goes red about
+  // nothing. The claim in its own message is `a NEW NAME here`, which is
+  // membership; the share is what says a path grew.
+  assert.deepEqual(c.share.map(([k]) => k).sort(), SHARE.map(([k]) => k).sort(),
     'a new name here is a body ordered so a big relation is enumerated first');
-  for (const [i, [name, want]] of SHARE.entries()) {
-    const got = c.share[i][1];
-    assert.ok(Math.abs(got - want) < 0.4,
-      `${name}: ${got.toFixed(2)}% of the total, and it has been ${want}% — this path grew alone`);
+  const got = new Map(c.share);
+  for (const [name, want] of SHARE) {
+    const now = got.get(name)!;
+    assert.ok(Math.abs(now - want) < 0.4,
+      `${name}: ${now.toFixed(2)}% of the total, and it has been ${want}% — this path grew alone`);
   }
   // ...AND THE COST PER FACT, which is the quantity this file's own header
   // identifies as the tell: firings scale with the corpus, and cost-per-fact
@@ -281,7 +288,7 @@ test('the five heaviest read paths, by name', () => {
   // became a `handled` and one `kind_absent_ok` was retired. The fixture costs
   // +3.1% and 1714 firings — five functions with their `trace()` calls, and a
   // non-function tag in the file the oracle does not run.
-  assert.equal(c.total, 1080424, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 1096015, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -363,5 +370,12 @@ test('the five heaviest read paths, by name', () => {
   // ranges over every named node rather than over keys, and w_computed_key_names
   // owns narrowing it. The fixture costs +4.16% and 3 317, which is the ordinary
   // shape. Cost per fact FELL, 6.537 -> 6.419.
-  assert.equal(c.firings, 65576, 'derivations: 61 005 before the iterator protocol');
+  // 1 080 424 -> 1 096 015 and 65 576 -> 67 405 on 2026-09-07 with the
+  // SUSPENSION fixture. This world does NOT load rules/js-controlflow.rofl, so
+  // not one line of the rule that closed the item runs in it — the whole move
+  // is the corpus, three functions and a `new Promise` with their `trace()`
+  // calls, which is the shape this gate reports honestly and the reason its own
+  // header says it is structurally unable to see the control-flow layer.
+  // Cost per fact 6.419 -> 6.354, down again.
+  assert.equal(c.firings, 67405, 'derivations: 65 576 before the suspension fixture');
 });

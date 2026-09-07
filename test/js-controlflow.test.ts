@@ -77,7 +77,16 @@ test('the layer answers, waives and defers, and nothing falls through', () => {
   const verdicts = new Map(m.q('verdict[audit](js, K, none, controlflow, V)').map(([k, v]) => [k, v]));
   assert.equal(verdicts.get('if_statement'), 'modelled');
   assert.equal(verdicts.get('optional_call_expression'), 'modelled');
-  assert.equal(verdicts.get('await_expression'), 'waived');
+  // MOVED 2026-09-07 (w_cf_suspension): `waived` -> `modelled`, and the pair is
+  // flipped rather than deleted so the closure is visible in the diff. The
+  // waiver's reason — `a_control_returns_so_the_site_still_runs` — asserted that
+  // the awaited thing settles, which this layer cannot decide and never
+  // checked, and a fixture that suspends forever reddened the acceptance gate
+  // within one run.
+  assert.equal(verdicts.get('await_expression'), 'modelled');
+  assert.equal(verdicts.get('yield_expression'), 'modelled', 'both kinds, one rule');
+  assert.deepEqual(m.q('handled(js, await_expression, controlflow, R)').flat(), ['r_suspension']);
+  assert.equal(m.n('reason[audit](js, await_expression, none, controlflow, R)'), 0);
   // MOVED 2026-09-06 (w_cf_abrupt_transfer). This assertion used to read
   // not_modelled/not_yet and was the ledger half of the layer's declared gap.
   // It is kept as the same pair, flipped, so the closure is visible in the diff
@@ -386,3 +395,127 @@ const EXIT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
 for (const g of EXIT) test(`${g.name} — a call is an exit`, () => g.expect(build(g.mut), base()));
 
 // ---------------------------------------------------------------------------
+
+
+// ---------------------------------------------------------------------------
+// A SUSPENSION IS A POINT AFTER WHICH THE REST MAY NOT RUN.
+//
+// This layer WAIVED `suspend` until 2026-09-07, with the reason
+// `a_control_returns_so_the_site_still_runs`. That is a claim about the
+// PROGRAM: control comes back only if the awaited thing settles and only if a
+// consumer asks a generator for another value, and neither is decidable here.
+// Every await in the corpus settled, so the reason had never been exercised.
+//
+// THE SITE CAME FIRST AND THE GATE WENT RED BEFORE A RULE EXISTED. `useStall`
+// awaits a promise nothing resolves and then calls `afterStall`; the acceptance
+// in test/js-controlflow-scope.test.ts reported `a function the model calls,
+// the runtime never entered, and nothing explains`. Measured before that: the
+// runtime enters `useStall`, never enters `afterStall`, and the process still
+// exits — an async function suspended forever holds nothing open, which is what
+// makes the fixture safe to put in a suite.
+/** `may_not_run` by name, sorted — `names` returns a Set and every
+ *  comparison below is a set difference. */
+const mnr = (w: World) => [...names(w)].sort();
+const SUSPEND_AT = `suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
+                             nearest_v[flow](G, X), ast_within[code](G, S),
+                             ast_within[code](S, X),
+                             stmt_seq_field(F), ast_child[code](B, F, I, S).`;
+const SUSPEND: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 's1 the guarded arms for a suspension are deleted',
+    mut: [{ find: `guarded[code](S) :- after_suspend[code](S).
+guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).` , replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)),
+        ['afterStall', 'alef', 'pickedB'], 'the answer and its two safe over-covers');
+      // THE COLUMN THAT KEEPS THIS APART FROM DELETING `suspend_at` ITSELF: the
+      // rows are still derived here, only nothing reads them.
+      assert.equal(m.n('suspend_at[code](B, F, I)'), b.n('suspend_at[code](B, F, I)'));
+      assert.equal(m.n('after_suspend[code](S)'), b.n('after_suspend[code](S)'));
+      assert.ok(b.n('guarded[code](S)') > m.n('guarded[code](S)'));
+    },
+  },
+  {
+    name: 's3 the order test is reversed',
+    mut: [{ find: 'ast_child[code](B, F, J, S), I < J.',
+            replace: 'ast_child[code](B, F, J, S), J < I.' }],
+    // EVERYTHING BEFORE THE SUSPENSION INSTEAD OF AFTER IT, which is not a
+    // smaller answer but a different and much larger one: a function body's
+    // first statements are guarded by an await further down.
+    expect: (m, b) => {
+      assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)).sort(),
+        ['after', 'neverReached', 'unlit', 'unreadable']);
+      assert.ok(mnr(m).filter((n) => !mnr(b).includes(n)).length > 8,
+        'and a dozen functions that always run are reported may-not');
+      assert.ok(m.n('guarded[code](S)') > b.n('guarded[code](S)') * 4,
+        `guarded ${b.n('guarded[code](S)')} -> ${m.n('guarded[code](S)')}`);
+    },
+  },
+  {
+    name: 's4 the suspension is not confined to its own function',
+    mut: [{ find: `nearest_v[flow](G, X), ast_within[code](G, S),
+                             ast_within[code](S, X),`,
+            replace: `ast_within[code](S, X),` }],
+    // WHERE THE RULE COULD NOT LOOK, asked of it before it was believed. Without
+    // the confinement an `await` INSIDE a function guards every statement after
+    // that function's own declaration at module level — a suspension of the
+    // MODULE, which is not what happened. The throwing-call arm of `abrupt_at`
+    // carries the same literal for the same reason.
+    expect: (m, b) => {
+      assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)), [], 'nothing is lost');
+      assert.ok(mnr(m).filter((n) => !mnr(b).includes(n)).length > 50,
+        'the whole module after the first async function goes may-not-run');
+      assert.ok(m.n('after_suspend[code](S)') > b.n('after_suspend[code](S)') * 20,
+        `after_suspend ${b.n('after_suspend[code](S)')} -> ${m.n('after_suspend[code](S)')}`);
+    },
+  },
+  {
+    name: 's5 only `await` suspends and `yield` is forgotten',
+    mut: [{ find: 'suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),',
+            replace: 'suspend_at[code](B, F, I) :- ast_node[code](X, await_expression, _, _),' }],
+    // THE MUTANT THAT SAYS THE DERIVATION EARNS ITS KEEP. The rule reads
+    // `transfer_mechanism(K, suspend)` rather than naming a kind, so the
+    // vocabulary decides which kinds suspend and the next kind filed under
+    // `suspend` is covered without anybody remembering. Hard-coding `await`
+    // loses the generator half and exactly one name with it.
+    expect: (m, b) => {
+      assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)), ['pickedB'],
+        'the name behind a `yield` rather than behind an `await`');
+      assert.ok(b.n('suspend_at[code](B, F, I)') > m.n('suspend_at[code](B, F, I)') * 2);
+    },
+  },
+];
+
+// TWO MUTANTS WERE MEASURED AND NOT KEPT, and both measurements say something.
+//
+//   DELETING `suspend_at` ITSELF loses exactly the three names s1 loses. It is
+//   the producer where s1 is the consumer, and no query over this corpus can
+//   tell them apart — the difference is that the RELATION stops existing, which
+//   the kernel reports as `unpopulatable` rather than as a missing row. That is
+//   a fact about the kernel and not about the model, so it belongs in the note
+//   rather than in a second mutant with a borrowed oracle.
+//
+//   NOT CARRYING THE SEQUENCE FIELD — `suspend_at[code](B, _, I)` against
+//   `ast_child[code](B, _, J, S)`, so a suspension in one field could reach a
+//   statement in another — SURVIVES, byte for byte. The same mutant against
+//   `after_abrupt` survived for the same structural reason and it is recorded
+//   there: no node kind in this grammar carries two statement-sequence fields
+//   whose contents could reach each other, so the literal is load-bearing
+//   against a language that does not exist. Kept in the rule for the reason it
+//   is kept there, and named here so the next reader does not re-measure it.
+
+for (const g of SUSPEND) test(`${g.name} — a suspension may not resume`, () => g.expect(build(g.mut), base()));
+
+test('the suspension is answered, and the layer waives nothing it cannot decide', () => {
+  const m = base();
+  // THE POSITIVE HALF. `afterStall` is called after an await on a promise
+  // nothing resolves; the runtime never enters it and the model now says so.
+  assert.ok(mnr(m).includes('afterStall'), 'the code after a suspension may not run');
+  // ...and BOTH kinds carry it, which is what the vocabulary buys: the rule
+  // names no kind at all.
+  assert.deepEqual(m.q('transfer_mechanism(K, suspend)').map(([k]) => k).sort(),
+    ['await_expression', 'yield_expression']);
+  assert.equal(m.n('mechanism_unanswered[audit](M)'), 0);
+  assert.equal(m.n('guard_unmodelled[audit](K)'), 0,
+    'declaring the mechanism modelled without wiring its kinds is what this audit caught');
+});

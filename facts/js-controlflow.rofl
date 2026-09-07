@@ -28,13 +28,24 @@ handled(js, optional_call_expression,   controlflow, r_short_circuit).
 handled(js, optional_member_expression, controlflow, r_short_circuit).
 
 -- ---------------------------------------------------------------------------
--- WHAT IT WAIVES, with the reason. `await` and `yield` transfer control and do
--- NOT guard anything: control comes back, and the code after them runs — later,
--- but it runs. This layer asks whether a site runs at all, and for a suspension
--- the answer is yes. Filing them as guards would have made `may_not_run`
--- report functions that always run.
-ignored(js, await_expression, controlflow, a_control_returns_so_the_site_still_runs).
-ignored(js, yield_expression, controlflow, a_control_returns_so_the_site_still_runs).
+-- WHAT IT USED TO WAIVE, AND THE WAIVER WAS A CLAIM ABOUT THE PROGRAM. Until
+-- 2026-09-07 this file read:
+--
+--   `await` and `yield` transfer control and do NOT guard anything: control
+--   comes back, and the code after them runs — later, but it runs. Filing them
+--   as guards would have made `may_not_run` report functions that always run.
+--
+-- The last sentence is TRUE and is not a reason to refuse: `may_not_run` is a
+-- may-set whose own comment says it over-covers on purpose, and the dangerous
+-- direction is the set being too NARROW. The first sentence is the defect —
+-- control comes back only if the awaited thing SETTLES and only if a consumer
+-- asks a generator for another value, and neither is something this layer can
+-- decide. Every await in the corpus settled, so the reason had never been
+-- exercised; a fixture that suspends forever put `afterStall` — a function the
+-- model calls and the runtime never enters — in front of the acceptance gate
+-- within one run.
+handled(js, await_expression, controlflow, r_suspension).
+handled(js, yield_expression, controlflow, r_suspension).
 
 -- ---------------------------------------------------------------------------
 -- WHAT IT LEFT OPEN AND NO LONGER DOES, 2026-09-06 — w_cf_abrupt_transfer.
@@ -88,10 +99,17 @@ ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
 ignored(js, tsas_expression,             controlflow, a_no_control_transfer).
 ignored(js, tsnon_null_expression,       controlflow, a_no_control_transfer).
 ignored(js, ts_string_keyword,           controlflow, a_type_only_no_runtime_value).
--- ...and one that DOES transfer and comes straight back, which is the same
--- waiver `await` already carries: a dynamic import suspends, and the site runs.
-ignored(js, import_expression,           controlflow, a_control_returns_so_the_site_still_runs).
-ignored(js, import,                      controlflow, a_control_returns_so_the_site_still_runs).
+-- ...AND TWO THAT INHERITED A REASON THAT TURNED OUT TO BE FALSE. They read
+-- `a_control_returns_so_the_site_still_runs` — `await`'s waiver — under a
+-- comment saying `a dynamic import suspends, and the site runs`. When that
+-- waiver was refuted on 2026-09-07 these two were re-read rather than
+-- re-labelled, and the borrowed reason was wrong about the construct as well:
+-- `import(p)` does NOT suspend. It evaluates to a promise, like any other
+-- expression that produces a value; whatever suspends is the `await` around it,
+-- and this layer models that now. So the honest reason is the one every other
+-- value-producing form here carries.
+ignored(js, import_expression,           controlflow, a_no_control_transfer).
+ignored(js, import,                      controlflow, a_no_control_transfer).
 
 -- ---------------------------------------------------------------------------
 -- NINE THAT ARE NOT RESIDUE, and each carries the reason it is open rather than

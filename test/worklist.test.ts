@@ -259,7 +259,10 @@ test('the queue covers the model: 14 open cells, every one owned by name, none s
   // variable's spelling, and the guard that forbids it covers only the other
   // shape of computed key. Found by asking where the guard cannot look, and
   // left open because the corpus contains no site for it.
-  assert.equal(w.n('work(W, Note)'), 50);
+  // 50 -> 51 on 2026-09-07: w_cf_suspension, entered and closed in one sitting
+  // and never on the queue — the cell read `waived`, so no audit had anything
+  // to say about it until the waiver's reason was measured.
+  assert.equal(w.n('work(W, Note)'), 51);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
