@@ -609,3 +609,109 @@ test('both hops of the for-of are called, and the four sites are not four answer
     ['onIterObject', 'useForOfArray (built-in)', 'useForOfGen (built-in)', 'useIterable'],
     'by the function that holds the loop, and whether its iterable is in the program');
 });
+
+
+// ---------------------------------------------------------------------------
+// 3n. A TEMPLATE AS A COMPUTED KEY (w_scanner_nested_values, done).
+//
+// FOUR CELLS SAT BLOCKED FOR THREE SESSIONS BEHIND A SENTENCE THAT WAS TRUE.
+// `cell_blocked(..., scanner_contract)` said a template literal's text lives in
+// `TemplateElement.value`, a nested object, and the scanner emits scalar own
+// properties only — so ``o[`k`]()`` is knowable at parse time and not derivable
+// from any fact we have. Every clause of that was correct, the note even ended
+// `it moves when the scanner's contract moves`, and nobody had measured how far
+// it was from moving.
+//
+// MEASURED: 223 files, 422 482 nodes, every own property that is neither a
+// node nor an array of nodes nor a scalar. With babel's `extra` scratch
+// declared out, the scalars-only contract excluded EXACTLY ONE property in the
+// whole of JavaScript as babel presents it, and it was this one. The scanner
+// flattens a nested object of scalars now — a general rule, not a case for
+// templates — and NO RULE WAS NEEDED AT THE CALL GRAPH: `selects[flow]` already
+// reads a computed key through `may_be_lit`.
+const TMPL_ARM = `interpolated[code](T)  :- ast_child[code](T, expressions, _, _).
+may_be_lit[flow](T, V) :- ast_node[code](T, template_literal, _, _),
+                          not interpolated[code](T),
+                          ast_child[code](T, quasis, 0, Q),
+                          ast_attr[code](Q, value_cooked, V).`;
+const lits = (w: World) => w.q('ast_node[code](T, template_literal, F, L)')
+  .flatMap(([t]) => w.q(`may_be_lit[flow](${t}, V)`).map(([v]) => v)).sort();
+
+const TMPL: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'j1 the template arm is deleted',
+    mut: [{ find: TMPL_ARM, replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['tmplKey -> pick', 'useTmplKey -> pickTmpl'],
+        'the runnable site and the scanned one, and nothing else');
+      // ...and the SHAPE goes back to carrying a residue, which is the ledger
+      // half of the same fact: `shape_stale[audit]` named the old excuse the
+      // moment every site resolved.
+      assert.deepEqual(b.q('shape_verdict[audit](s_computed_template_key, V)'), [['fully_resolved']]);
+      assert.deepEqual(m.q('shape_verdict[audit](s_computed_template_key, V)'), [['has_residue']]);
+      assert.equal(b.n('selects[flow](N, K)') - m.n('selects[flow](N, K)'), 2);
+    },
+  },
+  {
+    name: 'j2 the raw text is read where the cooked text belongs',
+    mut: [{ find: 'ast_attr[code](Q, value_cooked, V).',
+            replace: 'ast_attr[code](Q, value_raw, V).', file: 'rules/js-dataflow.rofl' }],
+    // A GUARD WITH NOWHERE TO BITE, MEASURED BEFORE IT WAS GIVEN A SITE. `raw`
+    // and `cooked` differ EXACTLY where an escape appears, and every template
+    // in the corpus was escape-free — so this mutant derived a byte-identical
+    // world. `escaped` in alpha.mjs is one template with one escape in it, and
+    // it runs, so it goes in the runnable fixture rather than in shapes.ts.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), [], 'no edge moves');
+      assert.deepEqual(lits(b), ['abc', 'pick', 'pickTmpl'], '`\\u0062` is a `b`');
+      assert.deepEqual(lits(m), ['a\\\\u0062c', 'pick', 'pickTmpl'],
+        'and raw is the six characters as written');
+    },
+  },
+  {
+    name: 'j3 an interpolated template claims its first chunk',
+    mut: [{ find: '                          not interpolated[code](T),\n', replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    // THE MUTANT THAT GAINS RATHER THAN LOSES, and it is the direction this
+    // layer cares about: `` `a${n}b` `` evaluates to a string this model cannot
+    // name, and a value layer that answers `a ` is worse than one that stays
+    // silent. NO EDGE MOVES — nothing in the corpus selects a member by an
+    // interpolated key — so the edge set is structurally unable to see it, and
+    // the oracle is the value rows by name.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), []);
+      assert.deepEqual(lits(m).filter((v) => !lits(b).includes(v)).sort(),
+        ['a ', 'k', 'k', 'x '], 'four chunks of interpolated templates, each a wrong answer');
+    },
+  },
+];
+
+// ONE MUTANT WAS MEASURED AND DOCUMENTED RATHER THAN KEPT. Reading `quasis, _`
+// where the rule reads `quasis, 0` — so any chunk could answer, not the first —
+// derives a byte-identical world, and it is unkillable BY CONSTRUCTION rather
+// than for want of a corpus: a template has exactly one more quasi than it has
+// expressions, so a template with no expressions has exactly ONE quasi and the
+// index cannot select anything else. Same shape as the sequence-field mutant
+// against `after_abrupt`, which survives for the same kind of reason, and it is
+// named here so the next reader does not re-measure it.
+
+for (const g of TMPL) test(`${g.name} — a template as a computed key`, () => g.expect(build(g.mut), base()));
+
+test('a template with no interpolation is a string written the other way', () => {
+  const m = base();
+  // THE POSITIVE HALF, and both sites are in it: one that RUNS, so the oracle
+  // judges it, and one in the scanned-only file, so the classifier does.
+  assert.ok(edges(m).has('useTmplKey -> pickTmpl'), 'the runnable site resolves');
+  assert.ok(edges(m).has('tmplKey -> pick'), 'and the scanned one does too');
+  // ...AND THE SHAPE HAS NO RESIDUE LEFT, which is what took its excuse away.
+  assert.deepEqual(m.q('shape_verdict[audit](s_computed_template_key, V)'), [['fully_resolved']]);
+  assert.deepEqual(m.q('shape_stale[audit](S)'), [], 'and no excuse outlived it');
+  // AN INTERPOLATED TEMPLATE STILL EVALUATES TO NOTHING THIS LAYER CAN NAME,
+  // asserted rather than assumed: the corpus has four of them and not one
+  // carries a value.
+  const interp = m.q('ast_node[code](T, template_literal, F, L)')
+    .filter(([t]) => m.n(`ast_child[code](${t}, expressions, _, _)`) > 0);
+  assert.ok(interp.length >= 3, `positive control: ${interp.length} interpolated templates`);
+  for (const [t] of interp) assert.equal(m.n(`may_be_lit[flow](${t}, V)`), 0);
+});

@@ -48,9 +48,15 @@ work_spawned(w_cg_member_family, f_two_reason_relations_over_one_fact_have_now_b
 work(w_cg_member_family,
      "the catch-all split into eight named object positions, six modelled; only the blocked template key is left").
 work_order(w_cg_member_family, 4).
-work_state(w_cg_member_family, open).
+-- DONE 2026-09-08. The last cell this item owned was the TEMPLATE KEY, blocked
+-- on the scanner's contract; the contract moved, the cell closed, and an item
+-- with no claims left is finished rather than offerable. The queue said so
+-- itself within one run: with the claim retired and the state still `open`,
+-- `next_work[audit]` handed this item out as the head of the queue with
+-- nothing in it — which is the second of the two causes `nothing_workable`
+-- was written to tell apart, arriving as a live row instead of a comment.
+work_state(w_cg_member_family, done).
 work_needs(w_cg_member_family, w_df_value_core).
-claim(queued, js, member_expression, s_computed_template_key,    callgraph, w_cg_member_family).
 
 -- WHAT THE SPLIT HANDED ON. `s_member_on_other` was one cell reading `not_yet`
 -- and it held four different answers; naming them turned two of the four into
@@ -70,9 +76,11 @@ claim(queued, js, member_expression, s_member_on_literal,  callgraph, w_env_api_
 -- done and it is not offerable, and those are different states.
 work(w_cg_optional_member, "optional_member_expression: only the template key is left, and it waits on the scanner").
 work_order(w_cg_optional_member, 5).
-work_state(w_cg_optional_member, open).
+-- DONE 2026-09-08, with its sibling and for the same reason: its note said
+-- `only the template key is left, and it waits on the scanner`, and the
+-- scanner stopped making it wait.
+work_state(w_cg_optional_member, done).
 work_needs(w_cg_optional_member, w_df_value_core).
-claim(queued, js, optional_member_expression, s_computed_template_key,  callgraph, w_cg_optional_member).
 
 -- 4 — the one miss that is not a callee shape at all: `new Box(1)` is a
 -- transfer site of a different node kind, which the callee-shape axis cannot
@@ -533,25 +541,21 @@ work_spawned(w_df_instance_vs_class, f_the_receiver_role_is_syntactic_and_an_ali
 
 
 -- ===========================================================================
--- BLOCKERS THAT ARE NOT WORK ITEMS, declared 2026-09-04 when the queue gained
--- the vocabulary for them. Both are the same cause: a template literal's text
--- lives in `TemplateElement.value`, which is `{raw, cooked}` — a nested OBJECT
--- — and scanners/js_ast.ts emits only SCALAR own properties. So `o[`fixed`]()`
--- is knowable at parse time and not derivable from the facts we have, which is
--- neither `not_yet` in the ordinary sense nor anything a rule can fix. It moves
--- when the scanner's contract moves.
-cell_blocked(member_expression,          s_computed_template_key, callgraph, scanner_contract).
-cell_blocked(optional_member_expression, s_computed_template_key, callgraph, scanner_contract).
--- THE THIRD CELL WITH THE SAME CAUSE, added 2026-09-05 when the call-graph
--- sweep left it as the one cell nobody owned. The kind's own call-graph
--- question is `o[`k`]()` — the key is fixed at parse time and the text is not
--- in the fact vocabulary. Same contract, same cause, and it belongs beside its
--- two siblings rather than in a bucket that no longer exists.
-cell_blocked(template_literal,           none,                    callgraph, scanner_contract).
--- ...and its value half, same contract: a template's text is `{raw, cooked}`
--- and the scanner emits scalar own properties, so `may_be_lit` can never carry
--- the string a template literal evaluates to.
-cell_blocked(template_literal,           none,                    dataflow,  scanner_contract).
+-- FOUR BLOCKERS RETIRED 2026-09-08, AND THE CAUSE WAS OURS ALL ALONG. They
+-- read `cell_blocked(..., scanner_contract)` under a note that ended `it moves
+-- when the scanner's contract moves`, and nobody had measured how far the
+-- contract was from moving. Measured: over 223 files and 422 482 nodes, with
+-- babel's `extra` scratch declared out, the scalars-only contract excluded
+-- EXACTLY ONE property in the whole language — `TemplateElement.value`, whose
+-- members are all scalars. One general rule in the scanner (a nested object of
+-- scalars is flattened) and the four cells opened; no rule was needed at the
+-- call graph at all, because `selects[flow]` already reads a computed key
+-- through `may_be_lit`.
+--
+-- THE SHAPE OF THE MISTAKE IS THE ONE THIS REPOSITORY KEEPS RECORDING: a
+-- blocker was attributed to the first component looked at, written down
+-- accurately, and then read as a constraint rather than as a setting. It
+-- survived three sessions because the sentence was TRUE.
 
 -- ===========================================================================
 -- 15-18 — THE ENVIRONMENT LAYER'S OWN RESIDUE, added 2026-09-04 when
@@ -964,14 +968,16 @@ claim(queued, js, this_expression,  none, callgraph, w_scope_binding).
 -- is fixed at parse time and not derivable from any fact we have. Entered
 -- because the call-graph sweep left `template_literal x callgraph` as the one
 -- cell nobody owned, and the honest owner is the contract rather than a bucket.
+-- DONE 2026-09-08. The contract now flattens a nested object whose members are
+-- all scalars, which is one general rule rather than a case for templates, and
+-- the measurement that justified it is in the retired blocker note above: the
+-- exclusion was one property wide. Both cells closed; the claims go with them,
+-- because `queue_stale[audit]` calls a claim on a shut cell under an open item
+-- a lie and `false_done[audit]` guards the other direction.
 work(w_scanner_nested_values, "the scanner emits scalar own properties only, so a template's text never becomes a fact").
 work_order(w_scanner_nested_values, 35).
-work_state(w_scanner_nested_values, open).
-claim(queued, js, template_literal, none, callgraph, w_scanner_nested_values).
--- ...and the value half, found by the dataflow sweep as the one cell nobody
--- owned. A blocked cell still needs an owner: `cell_blocked` says WHY the work
--- cannot start, `claim` says whose it is when it can.
-claim(queued, js, template_literal, none, dataflow, w_scanner_nested_values).
+work_state(w_scanner_nested_values, done).
+work_spawned(w_scanner_nested_values, f_the_contract_excluded_one_property_in_the_whole_language).
 
 -- 36 — THE JOIN PLANNER. A body is evaluated left to right, so the cost of a
 -- rule is a property of the order a human wrote it in. Measured 2026-09-05:

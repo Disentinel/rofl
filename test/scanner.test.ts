@@ -10,6 +10,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { extractFacts } from '../scanners/js.ts';
+import { scan } from '../scanners/js_ast.ts';
+import { parse } from '@babel/parser';
 import { materialize, SCANNER_WHO, PREAMBLE_FILE } from '../scanners/materialize.ts';
 
 const BOOT = fs.readFileSync(new URL('../boot.rofl', import.meta.url), 'utf8');
@@ -136,4 +138,60 @@ test('kernel integration: facts load under [code], rules derive, provenance audi
   const forged = r.query('forged[audit](F)');
   assert.equal(forged.rows.length, 1);
   assert.match(forged.rows[0].text, /evil\.js/);
+});
+
+
+// ---------------------------------------------------------------------------
+// THE FOUR-RELATION CONTRACT, and the one property it used to drop.
+//
+// `ast_attr` carried every SCALAR own property and nothing else, so a nested
+// object was silently absent — and a sentence recording that blocked four cells
+// of the coverage matrix for three sessions with the note "it moves when the
+// scanner's contract moves". Nobody had measured how far it was from moving.
+//
+// MEASURED 2026-09-08 over 223 files and 422 482 nodes, every own property that
+// is neither a node, nor an array of nodes, nor a scalar: with babel's `extra`
+// declared out, the answer is ONE — `TemplateElement.value`, `{raw, cooked}`,
+// both scalars. So the contract carries a nested object of scalars now, one
+// `ast_attr` per member, and the rule is general rather than a case for
+// templates.
+
+test('a nested object of scalars is flattened, one attribute per member', () => {
+  const facts = scan('export const t = `ab`;\n', { file: 't.js' }).facts;
+  const attrs = facts.filter((f) => f.startsWith('ast_attr'));
+  assert.ok(attrs.some((f) => /value_raw, "ab"\)/.test(f)), `no value_raw: ${attrs.join(' ')}`);
+  assert.ok(attrs.some((f) => /value_cooked, "ab"\)/.test(f)), `no value_cooked: ${attrs.join(' ')}`);
+  // COOKED AND RAW DIFFER EXACTLY WHERE AN ESCAPE APPEARS, which is the only
+  // place the choice between them is observable — and rules/js-dataflow.rofl
+  // chooses `cooked`, because that is what the program evaluates to.
+  const esc = scan('export const t = `a\\u0062c`;\n', { file: 't.js' }).facts;
+  assert.ok(esc.some((f) => /value_cooked, "abc"\)/.test(f)), 'cooked resolves the escape');
+  assert.ok(esc.some((f) => /value_raw, "a\\\\u0062c"\)/.test(f)), 'raw keeps it as written');
+});
+
+test('babel`s `extra` is declared out, and the declaration is load-bearing', () => {
+  // `(a || b)` and a numeric literal both carry `extra` — `{parenthesized,
+  // parenStart}` and `{rawValue, raw}` — and both are all-scalar, so the
+  // flattening rule above would sweep them in without the SKIP_KEYS entry.
+  const src = 'export const v = (1 || 2);\n';
+  // POSITIVE CONTROL FIRST: babel really does attach `extra` here, or the
+  // assertion below is about nothing. This is the check the first draft of the
+  // measurement got wrong — it excluded `extra` from its own walk and then
+  // reported that the contract dropped exactly one property.
+  const ast = parse(src, { sourceType: 'module' }) as unknown as Record<string, unknown>;
+  let seen = 0;
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== 'object') return;
+    if (Array.isArray(n)) { n.forEach(walk); return; }
+    const o = n as Record<string, unknown>;
+    if (typeof o['type'] !== 'string') return;
+    if (o['extra'] && typeof o['extra'] === 'object') seen++;
+    for (const k of Object.keys(o)) if (k !== 'loc' && k !== 'extra') walk(o[k]);
+  };
+  walk(ast);
+  assert.ok(seen >= 2, `positive control: babel attached \`extra\` to ${seen} nodes`);
+
+  const facts = scan(src, { file: 't.js' }).facts;
+  assert.deepEqual(facts.filter((f) => /ast_attr\[code\]\([^,]+, extra_/.test(f)), [],
+    'babel`s formatting scratch does not become a fact about the program');
 });

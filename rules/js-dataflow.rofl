@@ -83,6 +83,31 @@ literal_kind(boolean_literal).
 
 may_be_lit[flow](E, V) :- ast_node[code](E, K, _, _), literal_kind(K), ast_value[code](E, V).
 
+-- A TEMPLATE WITH NO INTERPOLATION IS A STRING WRITTEN THE OTHER WAY, and
+-- until 2026-09-08 this model could not say so. The text lives in
+-- `TemplateElement.value`, a nested object, and scanners/js_ast.ts emitted
+-- scalar own properties only — a sentence that blocked FOUR cells under the
+-- cause `scanner_contract` with the note `it moves when the scanner`s contract
+-- moves`. Measured before moving it: over 223 files and 422 482 nodes, with
+-- babel`s `extra` scratch declared out, that contract excluded exactly ONE
+-- property in the whole language. So the contract moved, and this is a join
+-- rather than a mechanism.
+--
+-- `cooked` AND NOT `raw`. `raw` is the source text with its escapes still in
+-- it; what a template EVALUATES to is the cooked form. They differ exactly
+-- where an escape appears, which is the only place the choice is observable —
+-- and a key written `` obj[`a\tb`] `` selects a tab, not a backslash and a t.
+--
+-- NO ARM FOR AN INTERPOLATED TEMPLATE, deliberately: `` `a${n}b` `` evaluates
+-- to a string this layer cannot name, and `may_be_lit` carrying a partial one
+-- would be a wrong answer where silence is the right one. Same reasoning as
+-- `plain_assign` refusing a compound assignment because it evaluates to a sum.
+interpolated[code](T)  :- ast_child[code](T, expressions, _, _).
+may_be_lit[flow](T, V) :- ast_node[code](T, template_literal, _, _),
+                          not interpolated[code](T),
+                          ast_child[code](T, quasis, 0, Q),
+                          ast_attr[code](Q, value_cooked, V).
+
 -- ENTRY 2 — an object, function or class expression is its own node. The
 -- expression IS the thing; there is nothing to look up.
 edb(node_value_kind).

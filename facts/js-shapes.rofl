@@ -185,6 +185,12 @@ handled(js, optional_member_expression, s_optional_member,  callgraph, r_denotes
 -- one you are in. `s_member_on_new` and `s_member_on_object_literal` needed
 -- nothing at all: they were unmodelled because the CORPUS had no site, and two
 -- sites in shapes.ts showed the rules had covered them all along.
+-- A TEMPLATE AS A COMPUTED KEY, closed 2026-09-08 when the scanner's contract
+-- grew one property. No rule was written for it: `selects[flow]` already reads
+-- a computed key through `may_be_lit`, and a template with no interpolation is
+-- a string written the other way. Both member kinds close on the same arm.
+handled(js, member_expression,          s_computed_template_key, callgraph, r_template_key).
+handled(js, optional_member_expression, s_computed_template_key, callgraph, r_template_key).
 handled(js, member_expression, s_member_on_super,          callgraph, r_denotes).
 handled(js, member_expression, s_member_on_new,            callgraph, r_denotes).
 handled(js, member_expression, s_member_on_object_literal, callgraph, r_denotes).

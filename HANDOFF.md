@@ -1,69 +1,97 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-07 by the session that finished iteration 27 and converted the
-pins. The tree is **green** apart from the seven pre-existing failures named
-below. Everything here is measured unless it says otherwise.
+Written 2026-09-08 by the nightly loop. The tree is **green** apart from the
+seven pre-existing failures named below. Everything here is measured unless it
+says otherwise.
 
 ## Where the loop is
 
-Branch `modeljs`. Iteration 27 — `w_cg_invisible_calls`, the FOR-OF half — is
-landed: the iterator protocol derives, the cell is closed, the claim is retired.
+Branch `modeljs`. The kernel from `nextver` is merged (4.8x faster per world,
+40 relations identical row for row). Iterations 27, 28 and 29 are landed.
 
-Coverage in the five-pack world (the one `test/worklist.test.ts` builds — the
-only world that loads every layer):
+Coverage in the five-pack world (`test/worklist.test.ts`):
 
 ```
-KIND × LAYER   320 cells = modelled 105 + waived 178 + not_modelled 37
-  answered (modelled | waived):  283 / 320 = 88.4%
-  MODELLED only:                 105 / 320 = 32.8%
+KIND x LAYER   320 cells = modelled 109 + waived 176 + not_modelled 35
+  answered (modelled | waived):  285 / 320 = 89.1%
+  MODELLED only:                 109 / 320 = 34.1%
 
-  callgraph    80: modelled 28, waived 34, not_modelled 18  -> 78%
-  controlflow  80: modelled 25, waived 50, not_modelled  5  -> 94%
-  dataflow     80: modelled 45, waived 30, not_modelled  5  -> 94%
-  modules      80: modelled  7, waived 64, not_modelled  9  -> 89%
-
-open_cell[audit] 14, EVERY ONE OWNED BY NAME — `sweeper` is 0 at all four
-layers. 3 irreducible. 50 work items. `next_work[audit]` = w_cg_invisible_calls
+open_cell[audit] 10, every one owned BY NAME — `sweeper` 0 at all four layers,
+`cell_blocked` EMPTY for the first time. 51 work items.
+  callgraph  open 4, claimed 14      dataflow  open 1, claimed 8
+  modules    open 5, claimed 5       controlflow open 0, claimed 12
 ```
 
-Read those three numbers as three different claims. `waived` means "this kind
-cannot participate in this layer, and here is the reason" — a real answer with
-an audit behind it, but not a model. The denominator is the vocabulary this
-model declares (80 kinds), not JavaScript.
+## What the last three iterations delivered
 
-## What iteration 27 delivered
+**27 — the for-of iterator protocol** (`r_iterator_protocol`). One node, two
+calls. Only the first hop goes through `resolves`; the second goes straight to
+`calls`, because `ambiguous_call[audit]` reads two answers at a site as an
+over-approximation and here both calls are true. Measured both ways: through
+`resolves` it takes `ambiguous_call` 8 -> 9.
 
-**`r_iterator_protocol`** — `for (x of E)` is a TRANSFER SITE, and the model now
-derives both calls the grammar hides: `E[Symbol.iterator]()` and then `next()`.
+**28 — a suspension may not resume** (`r_suspension`). The layer WAIVED
+`suspend` with the reason `a_control_returns_so_the_site_still_runs`, which is
+a claim about the PROGRAM: control returns only if the promise settles. A
+fixture that suspends forever reddened the acceptance gate before a rule
+existed. Also: one of the three recorded "host calls" was a missing `.replace()`
+in the oracle harness, not a limit of V8.
 
-**THE DESIGN FORK, and it is the part to carry forward.** A for-of is ONE node
-and TWO calls. `ambiguous_call[audit]` reads a site with two answers as an
-over-approximation that must be visible — exactly right for a callee POSITION,
-exactly wrong here, because both calls happen. So only the first hop goes
-through `resolves`; the second goes straight into `calls`, where two callees
-from one statement is an ordinary fact. Measured both ways: through `resolves`
-it takes `ambiguous_call` 8 → 9. Mutant `h1` makes the fork observable rather
-than leaving it in a comment — delete the `resolves` arm and
-`useIterable -> bump` SURVIVES.
+**29 — the scanner's contract** (`r_template_key`, `r_template_lit`). See below.
 
-**`key_name[code]`** in `rules/js-structure.rofl` — the name a key stands for,
-written once where four rules had `ast_name` on a key and all four were blind to
-a computed one. A FIFTH reader was in the test harness: the babel census in
-`test/js-callgraph.test.ts` computes `node.key?.name` and named the method
-`<anon>`. No audit over the rules could ever have found that one.
+## THE PATTERN THAT HAS NOW PAID FOUR TIMES
 
-**`frameName` is gated.** The V8 sweep that refuted the instrument's own comment
-is two tests now, split by which half is ours: a table of raw string → name
-(engine-free, so bun cannot argue with it) and a live invariant that no name the
-oracle reports carries a bracket or a dot — which is what `iterator]` violated.
-Re-swept on V8 12.4 and V8 14.0: identical, shape for shape.
+Every one of these was a sentence that was TRUE, written down accurately, and
+then read as a constraint rather than as a setting:
 
-**Six mutants, all killed, two dropped with the measurement** (section 3m of
-`test/js-controlflow-values.test.ts`). Two of the six survived the first run and
-BOTH were guards; both got a site in `shapes.ts.txt`. Read that section before
-writing another guard — one of the two sites had to be rewritten because the
-obvious spelling (`{ next: 1 }`) fails a premise BEFORE the guard, so the mutant
-would have derived a byte-identical world for the second time.
+- a getter's "V8 attributes the frame to the property access" — a missing
+  `.replace()` on one of two doors out of the same function;
+- a waiver's "control returns so the site still runs" — true of an await that
+  settles, and the corpus had only those;
+- "a dynamic import suspends" — it does not; it evaluates to a promise;
+- "the scanner emits scalar own properties only, so a template's text never
+  becomes a fact" — true, and the contract excluded EXACTLY ONE property in the
+  whole of JavaScript. Four cells sat behind it for three sessions.
+
+**So: when the model says it cannot, go and measure how far it is from being
+able to.** The measurement is usually a thirty-second probe and it has been
+wrong four times out of four.
+
+## What iteration 29 measured
+
+`cell_blocked(..., scanner_contract)` blocked four cells with the note *it moves
+when the scanner's contract moves*, and nobody had measured the distance.
+Measured over **223 files and 422 482 nodes**, every own property that is
+neither a node, nor an array of nodes, nor a scalar:
+
+```
+with babel's `extra` set aside:  TemplateElement.value  {raw,cooked}  allScalar
+                                 ...and nothing else
+```
+
+**One property in the whole language.** The scanner flattens a nested object of
+scalars now — a general rule, not a case for templates — and no rule was needed
+at the call graph at all, because `selects[flow]` already reads a computed key
+through `may_be_lit`. Four cells closed, `s_computed_template_key` went
+`has_residue` -> `fully_resolved`, and three work items were marked done.
+
+**`extra` IS DECLARED OUT, and the declaration is load-bearing.** It was already
+excluded by falling through a branch that emits nothing — the right thing for
+the wrong reason — and the general rule would have swept it in: measured, 235
+nodes in the fixtures alone, carrying `parenStart` (a byte offset) into a model
+of the language.
+
+**A SITE CAN MEASURE THE WRONG THING.** The corpus already had a template-key
+site, `` bag[`fixed`](n) `` in shapes.ts, and it could not have measured the
+fix: `bag` is an ambient declaration with no value, so the call cannot resolve
+however good the key is. Fourth instance of the trap that file's own header
+names. Re-pointed at a real object and moved below its declaration; the runnable
+half went to alpha.mjs, because a site whose residue is closed belongs where the
+oracle judges it.
+
+**Two mutants survive by construction and are named rather than re-measured:**
+reading any quasi instead of the first (a template with no expressions has
+exactly one), and the sequence-field carry on `after_abrupt`/`suspend_at`.
 
 ## THE PINS WERE CONVERTED — read this before writing one
 
@@ -101,9 +129,10 @@ is done rather than queued. **The rule now:**
   snippet in `CLAUDE.md`. **Extend its `find` to `*.mjs` and `*.txt`**: the
   fixtures are neither `.ts` nor `.rofl`, so as written it could not see
   `alpha.mjs` or `shapes.ts.txt` change under a running suite.
-- **Seven pre-existing failures**, not eight: `example-goof` ×2, `example-heck`,
-  `example-loot`, `example-npc` ×2, `example-sus`. The previous handoff also
-  listed `example-yak`; it passes here, on a faster machine. Any eighth is yours.
+- **Seven pre-existing failures**: `example-goof` x2, `example-heck`,
+  `example-loot`, `example-npc` x2, `example-sus`. Any eighth is yours.
+  `example-yak` passes here and fails on Linux, and the cause is measured: it
+  pins BSD `grep -I -c` output (nothing at all) where GNU prints `0`.
 - **After every push, read the CI job log for your commit** — local green is not
   green. Fetch it immediately before writing the commit message.
 - **The 2×2 cost matrix** with axes taken from THIS diff, and its own control:
@@ -122,21 +151,30 @@ is done rather than queued. **The rule now:**
 
 ## What to do next
 
-`next_work[audit]` still names `w_cg_invisible_calls`, and it now holds only
-cells that **cannot close on the instrument this loop has**: `await_expression ×
-callgraph` (V8 attributes the `.then` to the promise machinery, so a model
-deriving it would be contradicted rather than confirmed) and `decorator` at both
-layers (no node at all with the parser plugin off). Say that rather than closing
-it.
+`next_work[audit]` names the head. Ten open cells remain and every one is owned
+by name; `cell_blocked` is empty, so nothing is waiting on a contract.
 
-**`w_computed_key_names` (40) is new and is the sharpest open thing.** One
-premise — `ast_child(_, key, 0, K)` plus the `computed` attribute the scanner
-already emits — answers both halves at once: `key_name`'s first arm names a
-computed identifier key after the VARIABLE's spelling, which its own comment
-forbids, and the same arm ranges over every named node rather than over keys,
-which is most of this iteration's +0.55% rules cost. It needs a SITE first, and
-the site cannot go in a runnable fixture — a method the model must not name is a
-method the oracle would see run under a name nobody derived.
+**The standing question for the owner** (do not decide it): whether to declare a
+fifth `layer(scheduling)`. The mechanics are measured — `await thenable` calls
+`.then` one microtask turn later on a stack of depth ONE and foreign microtasks
+run between the two halves of one await, while for-of, getters and generator
+resumption are synchronous and nothing interleaves — but a scheduling layer's
+cells would be answered almost entirely by BUILTINS (`setTimeout`,
+`Promise.prototype.then`), and the queue already knows that chain:
+`w_prototype_of_a_value` (49) -> `w_env_api_surface` (17), which
+`w_effect_layer` declares it needs. Declaring the layer first would open 80
+cells whose honest verdict is *blocked on the standard library*.
+
+A PERSPECTIVE, by contrast, costs nothing extra and is checkable today —
+`await`, `for-of` and the generator are all in the corpus. Note that
+`docs/choosing-perspectives.md` is NARROWER than the practice: `[code]` and
+`[flow]` are PLANES, not ledgers with rival writers, and they would fail the
+doc's own first litmus. That gap is worth a finding of its own.
+
+**`w_computed_key_names` (40)** is still the sharpest open thing that needs no
+builtin surface: `key_name`'s first arm names a computed identifier key after
+the VARIABLE's spelling, which its own comment forbids, and the same arm ranges
+over every named node rather than over keys.
 
 ## Commands
 

@@ -107,6 +107,13 @@ handled(js, conditional_expression, dataflow, r_value_branch).
 handled(js, sequence_expression,    dataflow, r_value_branch).
 -- `await` is transparent, which is a claim about the may-set and not about
 -- promises; rules/js-dataflow.rofl states which case it is wrong about.
+-- A TEMPLATE WITH NO INTERPOLATION EVALUATES TO ITS COOKED TEXT, closed
+-- 2026-09-08 when the scanner's contract grew one property. An INTERPOLATED
+-- template still evaluates to a string this layer cannot name, and no arm
+-- claims otherwise — the cell says the kind participates, not that every
+-- instance of it is answered, which is the same reading `member_expression`
+-- has carried since tier 2.
+handled(js, template_literal,       dataflow, r_template_lit).
 handled(js, await_expression,       dataflow, r_await_transparent).
 -- for-of binds its variable to what the source hands out, and an array and a
 -- generator are reached differently on purpose.

@@ -89,7 +89,11 @@ function independentWalk(src: string, file: string): Sig {
   const ast = parse(src, { sourceType: 'module', plugins: ['typescript'] }) as unknown as Record<string, unknown>;
   const nodes: string[] = [], children: string[] = [], attrs: string[] = [];
 
-  const positional = ['loc', 'start', 'end', 'range', 'type'];
+  // `extra` JOINED THE SKIP LIST 2026-09-08, and this walk carries the change
+  // because it is the contract's independent statement of itself: babel's
+  // `extra` is formatting scratch — `parenStart` is a byte offset — and the
+  // flattening rule below would otherwise sweep it in.
+  const positional = ['loc', 'start', 'end', 'range', 'type', 'extra'];
   const carried = (k: string): boolean => !positional.includes(k) && !/Comments$/.test(k);
   const nodeish = (x: unknown): boolean =>
     !!x && typeof x === 'object' && !Array.isArray(x) &&
@@ -118,6 +122,19 @@ function independentWalk(src: string, file: string): Sig {
         recur(v as Record<string, unknown>);
       } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
         attrs.push(`${kindOf(x)}|${snake(k)}|${value(v)}`);
+      } else if (typeof v === 'object' && !Array.isArray(v)) {
+        // A NESTED OBJECT OF SCALARS IS FLATTENED, one attribute per member.
+        // The contract grew this on 2026-09-08 after measuring that it excluded
+        // exactly ONE property in the whole language — `TemplateElement.value`.
+        const inner = v as Record<string, unknown>;
+        const keys = Object.keys(inner).filter(carried);
+        const flat = keys.every((ik) => ['string', 'number', 'boolean'].includes(typeof inner[ik]));
+        if (flat) {
+          for (const ik of keys) {
+            attrs.push(`${kindOf(x)}|${snake(k)}_${snake(ik)}`
+              + `|${value(inner[ik] as string | number | boolean)}`);
+          }
+        }
       }
     }
   };

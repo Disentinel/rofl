@@ -19,12 +19,6 @@ export function tsShapes(n: number): number {
   return maybe!(n) + bag[key](n) + bag['fixed'](n);
 }
 
-// A computed callee whose key is a template with no expressions. The value is
-// fixed at parse time, and the scanner's four-relation contract cannot carry
-// it: TemplateElement.value is `{raw, cooked}`, a nested OBJECT, and only
-// scalar own properties become ast_attr facts. So this site is knowable and
-// not derivable, which is `not_yet` and emphatically NOT runtime_dependent.
-export function tmplKey(n: number): number { return bag[`fixed`](n); }
 
 class Base { m(): number { return 1; } }
 export class Sub extends Base {
@@ -82,6 +76,19 @@ export function useAs(n: number): number {
 const holder = { pick(n: number): number { return n; } };
 type Holder = typeof holder;
 async function mkHolder(): Promise<Holder> { return holder; }
+
+// A computed callee whose key is a TEMPLATE with no expressions. The value is
+// fixed at parse time, and until 2026-09-08 the scanner's four-relation
+// contract could not carry it: TemplateElement.value is `{raw, cooked}`, a
+// nested OBJECT, and only scalar own properties became ast_attr facts.
+//
+// THE CONTRACT MOVED and this site had to move with it. It used to read
+// `` bag[`fixed`](n) ``, and `bag` is an AMBIENT DECLARATION carrying no value
+// — so the call could not resolve however good the key was, and the site
+// measured the receiver rather than the key. That is the trap this file's own
+// header names, for the fourth time. `holder` is a real object with a real
+// method, so what is under study here is the KEY and nothing else.
+export function tmplKey(n: number): number { return holder[`pick`](n); }
 
 export function onCast(n: number): number { return (holder as Holder).pick(n); }
 export function onNonNull(n: number): number { return holder!.pick(n); }

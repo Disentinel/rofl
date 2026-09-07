@@ -65,7 +65,16 @@ export const AST_REFUSAL = 'ast_parse_error' as const;
  *  `end`/`range` are collapsed to Line, and the *Comments back-references
  *  (leadingComments / trailingComments / innerComments) are babel's duplicate
  *  view of nodes already reachable through `File.comments`. */
-const SKIP_KEYS = new Set(['loc', 'start', 'end', 'range', 'type']);
+// `extra` IS DECLARED HERE RATHER THAN DROPPED BY ACCIDENT, 2026-09-08. It was
+// already excluded — as an object it fell through to the branch below that
+// emits nothing — and that is the wrong reason to exclude the right thing. It
+// is babel's own scratch space and not a property of the program: `parenStart`
+// is a byte offset, `trailingComma` is a comma, `raw`/`rawValue` are the
+// source text of a literal the model already has by value. Measured over the
+// fixtures: without this line the rule below would emit `extra_*` attributes
+// on 235 nodes, so the declaration is what keeps the contract's extension
+// aimed at the language.
+const SKIP_KEYS = new Set(['loc', 'start', 'end', 'range', 'type', 'extra']);
 const skipKey = (k: string): boolean => SKIP_KEYS.has(k) || k.endsWith('Comments');
 
 const isNode = (v: unknown): boolean =>
@@ -158,11 +167,37 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
         facts.push(`ast_child[${persp}](${me}, ${field}, 0, ${child}).`);
       } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
         facts.push(`ast_attr[${persp}](${me}, ${field}, ${scalarTerm(v)}).`);
+      } else if (typeof v === 'object' && !Array.isArray(v)) {
+        // A NESTED OBJECT WHOSE MEMBERS ARE ALL SCALARS IS FLATTENED, one key
+        // per member, `<field>_<member>`. Added 2026-09-08 after measuring what
+        // the scalars-only contract actually excluded rather than believing the
+        // sentence that recorded it: over 223 files and 422 482 nodes, with
+        // `extra` declared above, the answer is ONE property in the whole of
+        // JavaScript as babel presents it — `TemplateElement.value`, which is
+        // `{raw, cooked}` and all-scalar.
+        //
+        // That property was the named cause of FOUR blocked cells, recorded as
+        // `cell_blocked(..., scanner_contract)` with the note "it moves when
+        // the scanner's contract moves". It moves here, and the rule is general
+        // rather than a case for templates: a nested object of scalars is a
+        // record of scalars, and the four-relation contract can carry it.
+        //
+        // A nested object holding anything NON-scalar is still dropped, and
+        // nothing in the measured corpus is one — so the hole that remains is
+        // declared and empty rather than known and populated.
+        const inner = v as Record<string, unknown>;
+        const keys = Object.keys(inner).filter((ik) => !skipKey(ik));
+        const flat = keys.every((ik) => {
+          const iv = inner[ik];
+          return typeof iv === 'string' || typeof iv === 'number' || typeof iv === 'boolean';
+        });
+        if (flat) {
+          for (const ik of keys) {
+            facts.push(`ast_attr[${persp}](${me}, ${field}_${atomise(ik)}, `
+              + `${scalarTerm(inner[ik] as string | number | boolean)}).`);
+          }
+        }
       }
-      // An object property that is neither a node nor a scalar — `extra`,
-      // `TemplateElement.value` — has no place in a four-relation contract of
-      // scalars and nodes, and is dropped. That is a KNOWN hole, not an
-      // oversight: it costs the raw text of every template chunk.
     }
     return me;
   };

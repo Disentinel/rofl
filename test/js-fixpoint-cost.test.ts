@@ -310,7 +310,29 @@ test('the five heaviest read paths, by name', () => {
   // AND THE FIVE READ PATHS DID NOT MOVE AT ALL, which is the first dividend of
   // pinning them as SHARES the day before: a kernel swap is exactly the change
   // a raw count could not survive and a share does not notice.
-  assert.equal(c.total, 1116976, 'total rows handed out by the store in one fixpoint');
+  // 1 116 976 -> 1 137 169 and 67 502 -> 70 262 on 2026-09-08 with the SCANNER
+  // CONTRACT. Axes from this diff, and the scanner is ON the rules axis — which
+  // the control caught: with only the .rofl packs swapped, the (prev, prev)
+  // corner read 1 125 026 against a pin of 1 116 976, and an 8 050-row gap said
+  // an axis was missing for the second time in this repository's history. It
+  // was `scanners/js_ast.ts`, which is CODE and had to be swapped by writing
+  // the previous revision beside it and importing both.
+  //
+  // AND THE REMAINING GAP NAMED ITSELF. With the scanner on the axis the corner
+  // still read 1 124 558 — exactly 7 582 rows high, which is the `safetyMemo`
+  // figure measured during the kernel merge. The matrix was building every cell
+  // COLD while this pin is measured WARM; warming both rule sets first closes
+  // it to the row.
+  //
+  //                        prev corpus            this corpus
+  //     prev rules   1 116 976 / 67 502 fir  1 133 374 / 70 232 fir
+  //     contract     1 120 368 / 67 510 fir  1 137 169 / 70 262 fir
+  //
+  // The rules axis — the flattening branch, the template arm and four fact rows
+  // — costs +0.30% of rows and EIGHT firings, because the arm joins relations
+  // that were already standing and the scanner's own work is 96 new facts. The
+  // fixture costs +1.47% and 2 730. Cost per fact FELL again, 6.467 -> 6.358.
+  assert.equal(c.total, 1137169, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -399,5 +421,5 @@ test('the five heaviest read paths, by name', () => {
   // calls, which is the shape this gate reports honestly and the reason its own
   // header says it is structurally unable to see the control-flow layer.
   // Cost per fact 6.419 -> 6.354, down again.
-  assert.equal(c.firings, 67502, 'derivations: 67 405 on the pre-merge kernel');
+  assert.equal(c.firings, 70262, 'derivations: 67 502 before the scanner contract');
 });

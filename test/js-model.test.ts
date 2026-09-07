@@ -619,8 +619,14 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // better and not when a fixture grows, so re-stating it on purpose is the
   // whole ritual. The partition beside it is checked by `finePartitions`, so
   // only three of the four are free.
-  assert.deepEqual(f, { cell: 156, modelled: 58, waived: 26, not_modelled: 72 },
-    'predicted 156 fine cells = 58 + 26 + 72');
+  // 58 -> 61 on 2026-09-08, THREE cells at once and none of them a rule: the
+  // scanner's contract grew one property — measured as the only one it
+  // excluded in the whole language — and `template_literal` at callgraph plus
+  // `s_computed_template_key` on both member kinds closed behind it. The call
+  // graph needed nothing: `selects[flow]` already read a computed key through
+  // `may_be_lit`.
+  assert.deepEqual(f, { cell: 156, modelled: 61, waived: 26, not_modelled: 69 },
+    'predicted 156 fine cells = 61 + 26 + 69');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -725,14 +731,20 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // SIXTEEN. `s_member_on_await` closed 2026-09-04 without a member rule being
   // touched: `await` became transparent to the value layer and the site
   // resolved, which is a cell being ticked by work done for another item.
+  // SEVENTEEN since 2026-09-08: `s_computed_template_key` joined when the
+  // scanner's contract grew one property, and it needed no rule of its own —
+  // `selects[flow]` already read a computed key through `may_be_lit`.
   assert.deepEqual(modelled, ['s_computed_dynamic_key', 's_computed_literal_key',
+    's_computed_template_key',
     's_member_on_assignment', 's_member_on_await', 's_member_on_call',
     's_member_on_cast', 's_member_on_conditional', 's_member_on_ident',
     's_member_on_logical', 's_member_on_member', 's_member_on_new',
     's_member_on_non_null', 's_member_on_object_literal', 's_member_on_sequence',
     's_member_on_super', 's_member_on_this'],
-    'sixteen shapes have a rule');
-  assert.equal(missing.length, 4, 'and four do not');
+    'seventeen shapes have a rule');
+  // FOUR -> THREE on 2026-09-08: the template key stopped being a hole when
+  // the scanner's contract grew one property.
+  assert.equal(missing.length, 3, 'and three do not');
   // ...and one is NEITHER, which is the third verdict earning its place here:
   // the catch-all is waived, because a catcher with nothing in it is the
   // desired state and `not_yet` would be a backlog item for a form nobody has
@@ -764,7 +776,10 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // somebody else's recorded decision on a guess is the same overreach the
   // other way — and `scope_unowned[audit]` names both until they are settled.
   assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array']);
-  assert.equal(byReason.get('not_yet')?.length, 3);
+  // THREE -> TWO on 2026-09-08: `s_computed_template_key` carried `not_yet`
+  // and stopped, so what is left under `ours and unfinished` is the literal
+  // key's own residue and `s_member_on_literal`.
+  assert.equal(byReason.get('not_yet')?.length, 2);
 });
 
 // ---------------------------------------------------------------------------
@@ -1289,6 +1304,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/import/s_dynamic_import/callgraph',
     'js/member_expression/s_computed_dynamic_key/callgraph',
     'js/member_expression/s_computed_literal_key/callgraph',
+    'js/member_expression/s_computed_template_key/callgraph',
     'js/member_expression/s_member_on_assignment/callgraph',
     'js/member_expression/s_member_on_await/callgraph',
     'js/member_expression/s_member_on_call/callgraph',
@@ -1309,6 +1325,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
     'js/optional_call_expression/s_call_result/callgraph',
     'js/optional_member_expression/s_computed_dynamic_key/callgraph',
     'js/optional_member_expression/s_computed_literal_key/callgraph',
+    'js/optional_member_expression/s_computed_template_key/callgraph',
     'js/optional_member_expression/s_optional_member/callgraph',
     'js/parenthesized_expression/s_parenthesized/callgraph',
     'js/sequence_expression/s_sequence/callgraph',
@@ -1424,8 +1441,8 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   // beside the twelve not_modelled shapes it was hiding.
   assert.ok(r.holds('verdict[audit](js, member_expression, none, callgraph, modelled)'),
     'the kind-level tick is honoured again, which is exactly what the axis removed');
-  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 4,
-    'while the four holes are still there');
+  assert.equal(n(r, 'verdict[audit](js, member_expression, S, callgraph, not_modelled)'), 3,
+    'while the three holes are still there');
 
   // SURVIVOR, reported: the partition still SUMS. Every new cell gets a
   // verdict, so the arithmetic that catches a missing default is blind to a
@@ -1502,6 +1519,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
   assert.deepEqual(fineCells(r, 'orphan_claim[audit](A, B, S, L)'), [
     'js/member_expression/s_computed_dynamic_key/callgraph',
     'js/member_expression/s_computed_literal_key/callgraph',
+    'js/member_expression/s_computed_template_key/callgraph',
     'js/member_expression/s_member_on_assignment/callgraph',
     'js/member_expression/s_member_on_await/callgraph',
     'js/member_expression/s_member_on_call/callgraph',
@@ -1516,7 +1534,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'js/member_expression/s_member_on_sequence/callgraph',
     'js/member_expression/s_member_on_super/callgraph',
     'js/member_expression/s_member_on_this/callgraph',
-  ], 'the sixteen cells the deletion took a claim away from — fifteen ticks and the waived catch-all');
+  ], 'the seventeen cells the deletion took a claim away from — sixteen ticks and the waived catch-all');
   assert.deepEqual({
     lost: n(r, 'lost_cell[audit](A, B, L)'), invented: n(r, 'invented_cell[audit](A, B, L)'),
     double_cell: n(r, 'double_cell[audit](A, B, L)'), orphan_shape: n(r, 'orphan_shape[audit](A, B, S)'),

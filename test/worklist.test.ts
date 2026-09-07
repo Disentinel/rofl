@@ -187,8 +187,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers', 'w_df_function_forms', 'w_df_generator_protocol',
     'w_df_sweep', 'w_df_value_core', 'w_env_api_surface', 'w_mod_beyond_the_import',
-    'w_mod_sweep', 'w_prototype_of_a_value', 'w_scanner_nested_values',
-    'w_scope_shadowing',
+    'w_mod_sweep', 'w_prototype_of_a_value', 'w_scope_shadowing',
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
     'and nothing spawns a finding without being an item — the other direction');
@@ -198,7 +197,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('work_spawned(w_cg_member_family, F)'), 4);
 });
 
-test('the queue covers the model: 14 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 10 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -246,7 +245,13 @@ test('the queue covers the model: 14 open cells, every one owned by name, none s
   // THIS NUMBER STAYS A NUMBER. It moves when the model answers something, not
   // when a fixture grows, so re-stating it on purpose is the ritual doing its
   // job rather than transcription.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 14, 'the queue is the model\'s open set');
+  // 14 -> 10 on 2026-09-08: the SCANNER'S CONTRACT moved, and it moved four
+  // cells at once — `template_literal` at callgraph and at dataflow, and
+  // `s_computed_template_key` on both member kinds. All four had been blocked
+  // for three sessions behind a sentence that was true and unmeasured: the
+  // scalars-only contract excluded exactly ONE property in the whole language.
+  // The biggest single fall this number has had, and none of it was a rule.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 10, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -262,6 +267,9 @@ test('the queue covers the model: 14 open cells, every one owned by name, none s
   // 50 -> 51 on 2026-09-07: w_cf_suspension, entered and closed in one sitting
   // and never on the queue — the cell read `waived`, so no audit had anything
   // to say about it until the waiver's reason was measured.
+  // 51, unchanged: no item was entered, and three were marked DONE —
+  // w_scanner_nested_values with its cells, and w_cg_member_family and
+  // w_cg_optional_member, whose last claims went with them.
   assert.equal(w.n('work(W, Note)'), 51);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
@@ -286,7 +294,10 @@ test('the queue covers the model: 14 open cells, every one owned by name, none s
   // 8 -> 7 and claimed 18 -> 17 on 2026-09-07: `for_of_statement`, closed by
   // `r_iterator_protocol`, with its claim retired in the same edit for the
   // reason the tagged template's was.
-  assert.deepEqual(per('callgraph'), [7, 17, 0]);
+  // 7 -> 4 and claimed 17 -> 14 on 2026-09-08: the template key on both member
+  // kinds and `template_literal` itself, closed by a scanner contract that grew
+  // one property, with no rule at the call graph at all.
+  assert.deepEqual(per('callgraph'), [4, 14, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -296,7 +307,9 @@ test('the queue covers the model: 14 open cells, every one owned by name, none s
   // 3 -> 2, and claimed 10 -> 9: the tagged template's value half, which needed
   // no rule at all — `may_be_node` already carries a call's value through
   // `resolves`, so the cell closed when the call-graph arm landed.
-  assert.deepEqual(per('dataflow'), [2, 9, 0]);
+  // 2 -> 1 and claimed 9 -> 8: the value half of the same move — a template
+  // with no interpolation evaluates to its cooked text.
+  assert.deepEqual(per('dataflow'), [1, 8, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -341,7 +354,14 @@ test('MUTANT 1 — a claim on a kind nobody declares', () => {
   // `claim` rather than as a relation of its own. CLAUDE.md records what the
   // other choice costs: a new relation over the same arguments reopened the
   // whole vocabulary hole and nobody noticed.
-  const w = world({ extra: 'claim(queued, js, no_such_kind, none, callgraph, w_cg_member_family).' });
+  // THE OWNER IS DERIVED. It named `w_cg_member_family` until 2026-09-08, when
+  // that item's last cell closed and it was marked done — and `queue_stale`
+  // exempts a done item by design, so the second assertion below went quietly
+  // to zero. The mutant is about a claim naming a kind nobody declares; whose
+  // claim it is has never been the subject.
+  const someOpen = world().binds('work_state(W, open)', 'W')[0];
+  assert.ok(someOpen, 'positive control: some item is open');
+  const w = world({ extra: `claim(queued, js, no_such_kind, none, callgraph, ${someOpen}).` });
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1, 'the inherited check bites');
   assert.equal(w.n('queue_stale[audit](W, K, S, L)'), 1, 'and the queue says it points at nothing open');
 });
@@ -377,8 +397,25 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the blocked template key. And this is not only a mutant — the same row
   // fired for real when the item was marked done in facts/worklist.rofl, which
   // is how the state was corrected to `open` with `nothing_workable`.
-  const w = world({ find: 'work_state(w_cg_member_family, open).', replace: 'work_state(w_cg_member_family, done).' });
-  assert.equal(w.n('false_done[audit](W, K, S, L)'), 1, 'one row per cell it did not close');
+  // THE ANCHOR IS DERIVED, 2026-09-08, and the reason is that it decayed. It
+  // named `w_cg_member_family`, whose last open cell was the template key —
+  // and when the scanner's contract moved, that cell closed, the item was
+  // marked done for real, and the mutant went quietly dead: planting `done` on
+  // an item with no open cells produces no row at all. Six anchors in this
+  // repository have now been re-aimed after naming something somebody retired
+  // (w_mutant_anchor_decay), so this one asks the base world which item is
+  // still open AND still owns an open cell, and plants `done` on that.
+  const base = world();
+  const owner = base.binds('claim(queued, js, K, S, L, W)', 'K', 'S', 'L', 'W')
+    .map((row) => { const [k, sh, l, wi] = row.split('/'); return { k, sh, l, wi }; })
+    .find((c) => base.n(`open_cell[audit](${c.k}, ${c.sh}, ${c.l})`) === 1
+               && base.n(`work_state(${c.wi}, open)`) === 1);
+  assert.ok(owner, 'positive control: some open item still owns an open cell');
+  const w = world({ find: `work_state(${owner!.wi}, open).`,
+                    replace: `work_state(${owner!.wi}, done).` });
+  assert.ok(w.n('false_done[audit](W, K, S, L)') >= 1,
+    `one row per cell ${owner!.wi} did not close`);
+  assert.equal(base.n('false_done[audit](W, K, S, L)'), 0, 'and none on the honest tree');
 });
 
 test('MUTANT 5 — two items owning one cell', () => {
@@ -607,35 +644,57 @@ test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () =>
 
 test('a cell can be blocked by something that is not a work item', () => {
   const w = world();
-  // TWO TEMPLATE-KEY CELLS, blocked on the SCANNER's contract rather than on
-  // another item: a template literal's text lives in `TemplateElement.value`,
-  // which is a nested object, and the scanner emits only scalar own properties.
-  // `work_needs` could not say this — it only points at other work — so the
-  // queue used to hand these out as if nobody had got to them.
-  // THREE, since 2026-09-05: the call-graph sweep left `template_literal x
-  // callgraph` as the one cell nobody owned, and its cause is the same
-  // contract — ``o[`k`]()`` is fixed at parse time and its text is not a fact.
-  // FOUR since the dataflow sweep: the template literal is blocked at BOTH
-  // layers by one contract — its text is `{raw, cooked}` and never a fact.
-  assert.deepEqual(w.binds('cell_blocked(K, S, L, C)', 'S', 'C'), [
-    'none/scanner_contract',
-    'none/scanner_contract',
-    's_computed_template_key/scanner_contract',
-    's_computed_template_key/scanner_contract',
-  ]);
-  assert.equal(w.n('open_cell[audit](K, S, L)') - w.n('workable(K, S, L)'), 4,
-    'blocked cells are open and not workable');
+  // THE HONEST TREE HAS NO BLOCKED CELL SINCE 2026-09-08, and that is why this
+  // test now PLANTS one. It used to assert the four template-key rows, blocked
+  // on the scanner's contract because a template literal's text lived in
+  // `TemplateElement.value`, a nested object the scalars-only contract dropped.
+  // The contract was measured — one property in the whole language — and moved,
+  // all four cells closed, and the three items that owned nothing else were
+  // marked done.
+  //
+  // A CHECK WHOSE SUBJECT HAS GONE IS A GREEN LINE THAT CANNOT GO RED, which
+  // this repository has paid for once already (`stale_reason[audit]` asked at
+  // the wrong arity read as a passing gate for weeks). So the state is asserted
+  // as a STATE — nothing is blocked, nothing is unworkable — and the machinery
+  // is exercised on a planted row instead of on the corpus's accidents.
+  assert.deepEqual(w.binds('cell_blocked(K, S, L, C)', 'S', 'C'), [],
+    'no cell is blocked on the honest tree');
+  assert.deepEqual(w.binds('nothing_workable[audit](W)', 'W'), [],
+    'and no item is skipped for having nothing to do');
+  assert.equal(w.n('open_cell[audit](K, S, L)') - w.n('workable(K, S, L)'), 0,
+    'every open cell is workable');
 
-  // AND THE ITEM THEY BELONG TO IS SKIPPED WITH A REASON, not silently:
-  // BOTH member items now, and they are siblings: the two template-key cells
-  // are blocked on the same scanner contract, and neither item has anything
-  // else left to do.
-  // THREE since 2026-09-05: `w_scanner_nested_values` is the item entered FOR
-  // the contract, and it owns nothing but a cell that contract blocks — which
-  // is the correct state for an item whose whole content is a blocker.
-  assert.deepEqual(w.binds('nothing_workable[audit](W)', 'W'),
-    ['w_cg_member_family', 'w_cg_optional_member', 'w_scanner_nested_values']);
-  assert.ok(!w.binds('next_work[audit](W)', 'W').includes('w_cg_optional_member'));
+  // THE PLANT, derived rather than named: take an open cell that some open item
+  // claims, declare it blocked by a cause that is not a work item, and the
+  // queue must (1) stop counting it workable and (2) name its owner as skipped
+  // WITH A REASON rather than passing over it in silence.
+  // EVERY open cell the chosen item owns is blocked, not just one: an item is
+  // skipped only when NOTHING about it is workable, so blocking one cell of two
+  // would prove the opposite of what this test claims. The first draft asked
+  // for an item owning exactly one open cell and there is none — the plant has
+  // to be shaped by what the plan actually holds.
+  const cells = w.binds('claim(queued, js, K, S, L, W)', 'W', 'K', 'S', 'L')
+    .map((row) => { const [wi, k, sh, l] = row.split('/'); return { wi, k, sh, l }; })
+    .filter((c) => w.n(`open_cell[audit](${c.k}, ${c.sh}, ${c.l})`) === 1
+                && w.n(`work_state(${c.wi}, open)`) === 1);
+  assert.ok(cells.length > 0, 'positive control: some open item owns an open cell');
+  const wi = cells[0].wi;
+  const mine = cells.filter((c) => c.wi === wi);
+  const b = world({ extra: mine
+    .map((c) => `cell_blocked(${c.k}, ${c.sh}, ${c.l}, scanner_contract).`).join('\n') });
+  assert.equal(b.n('cell_blocked(K, S, L, C)'), mine.length);
+  assert.equal(b.n('open_cell[audit](K, S, L)') - b.n('workable(K, S, L)'), mine.length,
+    'a blocked cell is open and not workable');
+  assert.deepEqual(b.binds('nothing_workable[audit](W)', 'W'), [wi],
+    'and the item it belongs to is skipped WITH A REASON, not silently');
+  assert.ok(!b.binds('next_work[audit](W)', 'W').includes(wi),
+    'so the queue does not hand out work nobody can start');
+  // ...AND THE CAUSE MUST BE DECLARED. A blocker naming an unknown cause is a
+  // blocker addressed to nobody, which is the same defect `held_unknown` and
+  // `frame_owner_unknown` catch one relation over.
+  const bad = world({ extra: `cell_blocked(${mine[0].k}, ${mine[0].sh}, ${mine[0].l}, no_such_cause).` });
+  assert.equal(bad.n('blocker_unknown[audit](K, S, L, C)'), 1,
+    'an undeclared cause is named rather than believed');
 });
 
 test('a decision already taken is not work', () => {

@@ -550,7 +550,10 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // decides which half of a class it can see, so they resolve to nothing and
   // land in the frontier with `no_source_target` — the same atom `super()`
   // earned for a target the program does not contain.
-  assert.equal(residue.length, 10, `positive control: ${residue.length} shapes with a residue`);
+  // 10 -> 9 on 2026-09-08: `s_computed_template_key` left the residue entirely
+  // when the scanner's contract grew one property, and `shape_stale[audit]`
+  // named its excuse the same run.
+  assert.equal(residue.length, 9, `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -1116,7 +1119,11 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // declared function. What is left over is the one site inside `useIterable`
   // that the loop body adds. The protocol's own two calls are not call sites at
   // all, which is the entire reason the item exists.
-  assert.equal(sites - resolved, 175, `${sites - resolved} call sites vanished from the frontier`);
+  // 175 -> 176 on 2026-09-08: the template-key fixtures add three `trace()`
+  // calls and two calls that RESOLVE, plus `escaped`, which is a value and no
+  // call at all — one site over, and the template key itself is not a call site
+  // but the member around it is.
+  assert.equal(sites - resolved, 176, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -1129,7 +1136,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // then 9 -> 8 when `await` turned transparent and retired the first of them.
   // 8 -> 10 when the receiver split gave `s_member_on_ident` and
   // `s_member_on_new` a residue of their own, and a reason with it.
-  assert.equal(stale.length, 10, `the stale-verdict audit fires on ${stale.length} shapes`);
+  assert.equal(stale.length, 9, `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
@@ -1257,39 +1264,67 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
 // edge the runtime never ran, which is the one thing the oracle can see.
 
 test('mutant 8 — sever the cycle: bind parameters without asking who is called', () => {
-  // RE-AIMED, and it is the mutant that says what the mutual recursion is FOR.
-  // Without `resolves` in the body, every function's parameters take every
+  // RE-AIMED TWICE, and the second time named the WALL instead of guessing at
+  // it. Without `resolves` in the body, every function's parameters take every
   // value passed at that index anywhere in the corpus.
-  // THE KILL GOT LOUDER ON 2026-09-05 and the assertion had to change SHAPE to
-  // say so. Until the generator fixture the mutant merely invented edges and
-  // the model still finished; on the larger corpus it does not finish at all —
-  // `query calls_in[code] hit a budget`. That is a stronger statement of the
-  // same defect, and it is asserted as its own outcome rather than smuggled in
-  // as a failure to build: a run that does not terminate is its own category,
-  // which this repository has already paid to learn once.
-  // ...AND THE STRONGER STATEMENT CAME BACK ON 2026-09-07, because "does not
-  // finish" was never a statement about the PROGRAM. `r.load()` evaluates under
-  // its own default budget; the world construction here now loads every pack
-  // once and calls `evaluate(20_000_000)` explicitly, and under a budget that is
-  // STATED rather than defaulted this mutant terminates and invents EIGHT edges
-  // by name — `useCb -> leaf` among them, which is precisely what the
-  // paragraph above says the defect does. The comment that read "on the larger
-  // corpus it does not finish at all" was reading a budget as a property of the
-  // corpus. Naming the edges is the assertion this test wanted all along.
-  const base = probe([]);
-  assert.ok(!base.edges.has('useCb -> leaf'), 'the baseline asks which call site targets useCb');
-  const mut = probe([{
-    file: 'rules/js-dataflow.rofl',
-    find: 'may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A),',
-    replace: 'may_be_node[flow](U, N) :- fn_node_v[flow](F), arg_at[flow](C, I, A),',
-  }]);
-  const invented = [...mut.edges].filter((e) => !base.edges.has(e));
-  assert.ok(mut.edges.has('useCb -> leaf'),
-    'without `resolves` every parameter takes every value passed at that index');
-  assert.equal([...base.edges].filter((e) => !mut.edges.has(e)).length, 0,
-    'and it only ADDS: an over-approximation loses nothing');
-  console.log(`  KILLED: the severed cycle invents ${invented.length} edges`
-    + ` (baseline ${base.edges.size})`);
+  //
+  // 2026-09-05: the assertion changed shape from `invents edges` to `does not
+  // finish`, because on the larger corpus the mutant stopped terminating.
+  // 2026-09-07: it changed back — `r.load()` was evaluating under a DEFAULTED
+  // budget, and under a stated one the mutant terminated and invented eight
+  // edges by name. The note recorded the lesson: a budget was being read as a
+  // property of the corpus.
+  // 2026-09-08: the corpus grew four fixtures and it stopped terminating again,
+  // and the same lesson had a second floor under it. `evaluate` was raised from
+  // 20 M to 60 M to 400 M and the world came back partial in 2.9 s EVERY TIME,
+  // with zero rows; the query budget was raised to 1.5 B and nothing moved at
+  // 0.0 s. It is not steps. ASKED THE KERNEL RATHER THAN THE BUDGET, and it
+  // answers by name: `hole(Q, space_exhausted)` — the ROW wall, the second
+  // budget added so that an evaluation running out of MEMORY says so instead of
+  // being killed.
+  //
+  // That is the sharpest statement this mutant has ever made. An
+  // over-approximation that binds every parameter to every argument does not
+  // merely invent edges or merely take longer: it stops fitting, and the kernel
+  // has a word for that. The baseline emits NO hole at all, which is the
+  // control that keeps `space_exhausted` from being a property of the corpus.
+  //
+  // IT BUILDS ITS OWN WORLD, and that is not duplication for its own sake: the
+  // shared builder asserts `partial === false` on every query, which is right
+  // for every other test here and is exactly what this one is about.
+  const worldOf = (mutate: boolean): Rofl => {
+    const r = new Rofl();
+    const texts = [
+      read(path.join(ROOT, 'boot.rofl')),
+      ...FACT_FILES.map((f) => read(path.join(ROOT, f))),
+      ...RULE_FILES.map((f) => {
+        const text = read(path.join(ROOT, f));
+        return mutate && f === 'rules/js-dataflow.rofl'
+          ? text.replace('may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A),',
+                         'may_be_node[flow](U, N) :- fn_node_v[flow](F), arg_at[flow](C, I, A),')
+          : text;
+      }),
+    ];
+    assert.equal(r.load(texts.join('\n')).ok, true);
+    for (const f of ALL_FILES) {
+      assert.equal(r.assert(scan(read(path.join(FIX, onDisk(f))), { file: f }).facts.join('\n')).ok, true);
+    }
+    r.evaluate(20_000_000);
+    return r;
+  };
+  const holes = (r: Rofl): string[] =>
+    [...new Set(r.query('hole(Q, R)').rows.map((row) => row.bindings['R']))].sort();
+
+  const base = worldOf(false);
+  assert.deepEqual(holes(base), [], 'positive control: the honest tree fits, and emits no hole');
+  assert.equal(base.query('calls_in[code](File, A, B)').partial, false);
+
+  const mut = worldOf(true);
+  assert.deepEqual(holes(mut), ['budget_exhausted', 'space_exhausted'],
+    'the severed cycle runs out of ROWS, and the kernel says which wall by name');
+  assert.equal(mut.query('calls_in[code](File, A, B)').partial, true,
+    'and every answer out of that world is marked partial');
+  console.log('  KILLED: the severed cycle stops FITTING — hole(space_exhausted)');
 });
 
 test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {

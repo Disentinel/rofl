@@ -359,6 +359,39 @@ async function useAwait(n) {
   return awaited(n);
 }
 
+// A COMPUTED KEY WRITTEN AS A TEMPLATE. `` keyed[`pickTmpl`](n) `` is fixed at
+// parse time and was NOT DERIVABLE until 2026-09-08: the text lived in
+// `TemplateElement.value`, a nested object, and the scanner emitted scalar own
+// properties only. Four cells were blocked on that with the cause
+// `scanner_contract`.
+//
+// IT IS HERE AND NOT IN shapes.ts, and that is the whole care. The corpus
+// already had a site — `` bag[`fixed`](n) `` in shapes.ts — and it measures
+// NOTHING about this construct, because `bag` is an ambient declaration
+// carrying no value, so the call cannot resolve however good the key is. That
+// file`s own header names the trap: a site measures the model only when
+// everything except the construct under study already works. This one runs, so
+// the oracle judges it too.
+const keyed = {
+  pickTmpl(n) {
+    trace();
+    return n;
+  },
+};
+
+export function useTmplKey(n) {
+  trace();
+  return keyed[`pickTmpl`](n);
+}
+
+// ...AND ONE WITH AN ESCAPE IN IT, which is the only place `cooked` and `raw`
+// differ and therefore the only site that can tell the two apart. Measured
+// before it was written: with every template in the corpus escape-free, the
+// mutant that reads `raw` where the rule reads `cooked` derived a byte-identical
+// world. `\u0062` is a `b`, so this template's cooked text is `abc` and its raw
+// text is the six characters as written.
+export const escaped = `a\u0062c`;
+
 // A SUSPENSION THAT NEVER RESUMES (w_cf_suspension). The control-flow layer
 // WAIVED `suspend` until this fixture existed, with the reason
 // `a_control_returns_so_the_site_still_runs`, and its comment said the code
@@ -1230,6 +1263,7 @@ export async function main() {
     useLoops(1),
     await useAwait(1),
     useStall(1),
+    useTmplKey(1),
     usePanel(1),
     useRack(1),
     useShelf(1),

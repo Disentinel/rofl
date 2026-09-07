@@ -1,4 +1,12 @@
-node_modules/
+# NO TRAILING SLASH, and the slash is what let one in on 2026-09-07: a
+# `node_modules/` pattern matches a DIRECTORY only, and a worktree set up
+# with `ln -s ../rofl/node_modules` puts a SYMLINK of that name in the tree.
+# `git add -A` took it, it rode into a merge commit, and the next checkout
+# of this branch would have pointed a fresh clone's dependencies at a path
+# on one laptop. Same shape as every other gate here that inherited the
+# form of its first incident: the rule was written for the thing's usual
+# shape rather than for its name.
+node_modules
 dist/
 *.snapshot.json
 facts/generated/

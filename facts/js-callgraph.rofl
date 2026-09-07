@@ -153,13 +153,21 @@ ignored(js, class_declaration,  callgraph, a_the_constructor_is_the_target).
 
 -- A LITERAL AS A COMPUTED KEY. `string_literal` and `numeric_literal` are read
 -- for their KIND, which is all a shape needs, and their value is on the facts
--- when a later tier wants it. `template_literal` is the one that is NOT
--- recoverable: TemplateElement.value is `{raw, cooked}` and the contract emits
--- scalar own properties only, so the chunk's text never becomes a fact. The
--- key is knowable and not derivable, which is ours and unfinished.
+-- when a later tier wants it.
+--
+-- `template_literal` USED TO BE THE ONE THAT WAS NOT RECOVERABLE, and the
+-- paragraph here said so: TemplateElement.value is `{raw, cooked}` and the
+-- contract emitted scalar own properties only, so the chunk's text never
+-- became a fact. That was TRUE and it was never measured. Measured 2026-09-08
+-- across 223 files and 422 482 nodes, with babel's `extra` scratch declared
+-- out: the scalars-only contract excluded exactly ONE property in the whole of
+-- JavaScript as babel presents it, and it was this one. A nested object of
+-- scalars is a record of scalars and a four-relation contract can carry it, so
+-- the scanner flattens one now and `` o[`k`]() `` selects its key through the
+-- `selects[flow]` arm that was already standing.
 handled(js, string_literal,  callgraph, r_call_edge).
 handled(js, numeric_literal, callgraph, r_call_edge).
-unknown_because(js, template_literal, callgraph, not_yet).
+handled(js, template_literal, callgraph, r_template_key).
 
 -- ===========================================================================
 -- CONTROL TRANSFERS THAT ARE NOT CALL EXPRESSIONS.
@@ -240,9 +248,10 @@ shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 -- `shape_because` describes the RESIDUE OF A SHAPE and may stand beside a
 -- tick; `unknown_because` describes an UNMODELLED CELL and may not.
 shape_because(js, s_non_null,              callgraph, not_yet).
--- knowable at parse time, and absent from the fact vocabulary: see
--- `template_literal` above. NOT runtime_dependent.
-shape_because(js, s_computed_template_key, callgraph, not_yet).
+-- RETIRED 2026-09-08, and `shape_stale[audit]` is what named it: every site of
+-- `s_computed_template_key` resolves now, so the excuse outlived its cause. It
+-- read `knowable at parse time, and absent from the fact vocabulary`, which was
+-- true of the contract and not of the language.
 -- RETIRED 2026-09-04 with the value core: `mkBox(n).peek()` resolves through
 -- the callee's RETURN, so this shape has no residue left and `shape_stale`
 -- said so. It was the cell the queue recorded as waiting on the dataflow layer.
