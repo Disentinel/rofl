@@ -373,3 +373,77 @@ realistic one. The correction came from an agent that was handed the wrong
 number, measured 21.5 against it, and added a control in the same run rather
 than reporting whichever figure was more convenient.
 
+
+## Correction, 2026-09-07: the clone figures above predate the structural clone
+
+Everything in "the clone figure was taken on the cheapest possible fact" — the
+21.7–22.5 µs/fact, the 2.2 seconds for a realistic 100k-fact fork, the half hour
+for a thousand-fork search, and the ranking of copy-on-write at §5 item 3 that
+rests on them — was measured when `store.clone()` was `snapshot() → JSON →
+restore()`. Commit `3cff6f4` replaced it with a **structural** copy that walks
+the fact map directly (`src/store.ts:779`). A figure taken through the
+serialising path is not a figure about this one.
+
+Re-measured with a bare-store control in the same run (`npm run forkclone`), on
+an 8-vCPU Apple M4 Pro (Virtual) at load average 8.9, on stores that carry
+derived facts, witnesses and firings:
+
+| store | facts (derived / witnesses) | `clone()` | save+restore | ratio |
+|---|---|---|---|---|
+| bare ground facts | 15,060 | 0.11 µs/fact | 3.04 µs/fact | 28.6× |
+| bare ground facts | 120,060 | 0.26 | 3.48 | 13.6× |
+| realistic | 7,504 (6,480 / 3,240) | **0.15** | 3.05 | 20.1× |
+| realistic | 38,304 (36,080 / 18,040) | **0.40** | 3.56 | 9.0× |
+
+A 4-core Xeon at 2.1 GHz against an 8-vCPU M4 Pro is worth a factor of a few;
+the gap here is 55–150×. So a realistic 100k-fact fork is on the order of **40
+ms** of clone, not 2.2 s — but note that the per-fact cost is **not flat**: it
+rises 1.7–2.6× between 7.5k and 38k facts, so 40 ms is a floor rather than an
+estimate.
+
+**What this does to §5 item 3.** The TIME argument for copy-on-write is weak
+again. The MEMORY argument is untouched — a structural clone is still a full
+copy in RAM and bytes per fact is still the ceiling — which is where the
+previously settled reading already said it belonged. And a stage split of a real
+fork branch (`npm run forkstages`) says how much a free fork could be worth at
+all: of an 88 ms branch, `Rofl.fromSnapshot` is 17%, one `store.clone()` is 1%,
+and the fixpoint is 80%. A free fork moves that branch to about 75 ms.
+**Item 3 should be re-ranked below the memory tiers.**
+
+## The coarse grain, measured 2026-09-07: independent forks on worker threads
+
+I4 says strata are sequential and parallelism lives only inside one. That leaves
+the coarse grain — a FORK is an independent world — and it was measured rather
+than assumed. Full account in
+`docs/dogfood/2026-09-07-fork-parallelism.md`; the load-bearing results:
+
+- **There is no thousand-fork search in this repository.** The largest is
+  `test/kernel-arity.test.ts` at ~800 worlds; the largest that is both
+  many-branch and expensive per branch is `examples/wtf`'s order sweep at 41.
+  **IFFY does not fork at all** — its arms are a column in one world — and its
+  own numbers say why (2.1× fewer facts per arm than per fork). Nothing in the
+  repository prunes; two sites are sequential by construction
+  (`examples/wtf/demo.ts:632`, `examples/loot/demo.ts:655`).
+- **The boundary is cheap and it is per WORKER, not per branch**, because every
+  branch of a fork search starts from the same world. 2.5 MB round-trips in
+  0.32 ms; a branch descriptor in 0.037 ms; a 762 KB answer per branch is
+  within the noise. Pool setup is the binding term, and stated
+  load-independently it is **2.8–6.2 branch-equivalents**, so break-even is
+  **N > ~7 branches** at P=8 and zero for a persistent pool.
+- **Measured speedup on 8 vCPUs: 2.12× at 41 branches, 3.11× at 164, ~3.8×
+  run-phase-only** — paired, B beat A in 6/6 pairs at each.
+- **Where the rest went, with two controls on the same pool in the same
+  sitting:** pure arithmetic 5.74×, pure allocation (`JSON.parse` of the same
+  2.5 MB) 3.78×, the real search 3.11×. **The ceiling is allocation, not
+  cores and not synchronisation** — the branches share nothing. That points at
+  the memory tiers again: a compact fact representation would raise the parallel
+  ceiling as a side effect.
+- **Determinism was the gate, not a tradeoff**: `canonicalState()` per branch,
+  byte for byte, against the sequential arm, plus the aggregate. Green
+  throughout. Nine mutants, 6 killed; the three survivors are all blind spots of
+  the instrument rather than of the pool — `canonicalState` sorts so arrival
+  order is invisible; the gate compares answers so a worker's engine
+  configuration is invisible; and a differential cannot see a common-mode fault
+  in the task module both arms share.
+- **No change to `src/`.** Worker orchestration is a host concern and lives in
+  `runtime/fork_pool.ts` and `runtime/fork_worker.ts`.
