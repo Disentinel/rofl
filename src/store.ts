@@ -300,7 +300,6 @@ export interface FactStore {
 export class Store implements FactStore {
   tick = 0;
   facts = new Map<string, FactRec>();
-  witnesses = new Map<string, Witness>();       // fact key -> canonical (first) witness
   firings = new Map<string, Map<string, Witness>>(); // fact key -> firing signature -> witness
   tickLog: string[] = [];
   dirty = true;          // derived layer out of date w.r.t. base facts
@@ -372,7 +371,6 @@ export class Store implements FactStore {
     const rec = this.facts.get(key);
     if (!rec) return false;
     this.facts.delete(key);
-    this.witnesses.delete(key);
     this.firings.delete(key);
     const run = this.idx.get(rec.rel)?.get(rec.persp);
     if (run) {
@@ -399,7 +397,6 @@ export class Store implements FactStore {
       const rec = this.facts.get(key);
       if (!rec) continue;
       this.facts.delete(key);
-      this.witnesses.delete(key);
       this.firings.delete(key);
       gone.add(key);
       let ps = touched.get(rec.rel);
@@ -591,15 +588,27 @@ export class Store implements FactStore {
     this.partialEval = false;
   }
 
-  /** Record a firing supporting a fact. Every firing keeps its witness (the
-   *  support hypergraph); `witnesses` keeps the first one, which is what a
-   *  derivation tree renders. Returns true if this signature was new. */
+  /** Record a firing supporting a fact. Returns true if this signature was new.
+   *
+   *  THERE IS NO STORED CANONICAL PICK, and that is the whole of this change.
+   *  Until 2026-09-07 this also kept `witnesses.set(key, w)` for the FIRST
+   *  firing to arrive, and that one line was the only place in the kernel
+   *  where the evaluation's SCHEDULE reached the record. Measured by the
+   *  order-dependence census (`scanners/order_census.ts`): across thirteen
+   *  order mutants over nine worlds, the fact set and the firing set are
+   *  byte-identical every time and only that pick moves. So the support
+   *  hypergraph is a function of the data and the choice among its edges was
+   *  a function of the run.
+   *
+   *  `witnessOf` now takes the LEAST signature instead, which is a function of
+   *  the data as well, so the whole record is. Nothing is discarded either
+   *  way: every firing was already kept here and still is. What changes is
+   *  which of them `why` renders by default. */
   support(key: string, sig: string, w: Witness): boolean {
     let sigs = this.firings.get(key);
     if (!sigs) { sigs = new Map(); this.firings.set(key, sigs); }
     if (sigs.has(sig)) return false;
     sigs.set(sig, w);
-    if (!this.witnesses.has(key)) this.witnesses.set(key, w);
     return true;
   }
 
@@ -646,17 +655,13 @@ export class Store implements FactStore {
     // removal takes the witness with the fact, and a batch removal is still
     // a removal.
     const keptWitnessKeys = new Set(staged.map((f) => factKey(f.rel, f.persp, f.args)));
-    const heldW: [string, Witness][] = [];
     const heldF: [string, Map<string, Witness>][] = [];
     for (const k of toDrop) {
       if (!keptWitnessKeys.has(k)) continue;
-      const w = this.witnesses.get(k);
       const f = this.firings.get(k);
-      if (w) heldW.push([k, w]);
       if (f) heldF.push([k, f]);
     }
     this.removeMany(toDrop);
-    for (const [k, w] of heldW) this.witnesses.set(k, w);
     for (const [k, f] of heldF) this.firings.set(k, f);
     // A separate batch, and disjoint from the one above: nothing on the frozen
     // layer is tick-scoped, so no staged fact's witness is at risk here.
@@ -685,12 +690,29 @@ export class Store implements FactStore {
   factCount(): number { return this.facts.size; }
 
   /** The canonical (first) witness of a fact, or none. */
-  witnessOf(key: string): Witness | undefined { return this.witnesses.get(key); }
+  /** The canonical witness: the firing with the least signature. Linear, and
+   *  the length it walks is the number of DERIVATIONS of one fact -- measured
+   *  at 1.0 to 1.9 across this repository's programs, so a scan is the right
+   *  shape and a second map would be a cache of a one-element answer. */
+  witnessOf(key: string): Witness | undefined {
+    const sigs = this.firings.get(key);
+    if (sigs === undefined) return undefined;
+    let best: string | undefined;
+    for (const sig of sigs.keys()) if (best === undefined || sig < best) best = sig;
+    return best === undefined ? undefined : sigs.get(best);
+  }
 
   /** A detached copy of the whole witness table. A copy rather than the map
    *  itself, because the caller keeps it across a `clearDerived` that empties
    *  the live one. */
-  allWitnesses(): Map<string, Witness> { return new Map(this.witnesses); }
+  allWitnesses(): Map<string, Witness> {
+    const out = new Map<string, Witness>();
+    for (const key of this.firings.keys()) {
+      const w = this.witnessOf(key);
+      if (w !== undefined) out.set(key, w);
+    }
+    return out;
+  }
 
   /** Canonical serialization of everything an observer can distinguish. */
   canonicalState(): string {
@@ -700,9 +722,9 @@ export class Store implements FactStore {
       const r = this.facts.get(k)!;
       lines.push(`${k} ${r.scope} ${r.base ? 'base' : 'drv'}${r.frozen ? ' frozen' : ''} support=${this.supportCount(k)}`);
     }
-    const wkeys = [...this.witnesses.keys()].sort();
+    const wkeys = [...this.firings.keys()].sort();
     for (const k of wkeys) {
-      const w = this.witnesses.get(k)!;
+      const w = this.witnessOf(k)!;
       lines.push(`wit ${k} <- ${w.ruleId}@${w.tick} [${w.prems.map((p) => p.t + ':' + (p.t === 'bi' ? p.desc : p.key)).join('; ')}]`);
     }
     lines.push(...this.tickLog);
@@ -714,8 +736,11 @@ export class Store implements FactStore {
       const r = this.facts.get(k)!;
       return { rel: r.rel, persp: r.persp, args: r.args.map(termToJson), scope: r.scope, base: r.base, frozen: r.frozen };
     });
-    const wits = [...this.witnesses.keys()].sort().map((k) => {
-      const w = this.witnesses.get(k)!;
+    // The `wits` block is kept in the format and DERIVED on the way out --
+    // `firings` below carries every signature, so it is the source and this is
+    // a rendering of it. `restore` ignores it for the same reason.
+    const wits = [...this.firings.keys()].sort().map((k) => {
+      const w = this.witnessOf(k)!;
       return { key: k, ruleId: w.ruleId, tick: w.tick, prems: w.prems };
     });
     const firings = [...this.firings.keys()].sort().map((k) => {
@@ -741,7 +766,7 @@ export class Store implements FactStore {
     for (const f of d.facts) {
       s.add(f.rel, f.persp, f.args.map(termFromJson), { scope: f.scope, base: f.base, frozen: f.frozen });
     }
-    for (const w of d.wits ?? []) s.witnesses.set(w.key, { ruleId: w.ruleId, tick: w.tick, prems: w.prems });
+    // d.wits is not read: it is a rendering of d.firings, which follows.
     for (const f of d.firings ?? []) {
       const sigs = new Map<string, Witness>();
       for (const e of f.sup ?? []) sigs.set(e.sig, { ruleId: e.ruleId, tick: e.tick, prems: e.prems });
@@ -780,7 +805,6 @@ export class Store implements FactStore {
     const s = new Store();
     s.tick = this.tick;
     s.tickLog = [...this.tickLog];
-    for (const [k, w] of this.witnesses) s.witnesses.set(k, w);
     for (const [k, sigs] of this.firings) s.firings.set(k, new Map(sigs));
     for (const [t, e] of this.evalLog) s.evalLog.set(t, { ...e });
     // IN THE ORIGINAL'S ARRIVAL ORDER, decided 2026-09-07 after it was

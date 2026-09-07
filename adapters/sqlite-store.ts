@@ -503,14 +503,24 @@ export class SqliteStore implements FactStore {
       .map((r) => ({ ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] }));
   }
 
+  /** The least signature among the fact's firings, which is what the reference
+   *  store answers since the canonical pick stopped being the first ARRIVAL.
+   *  Read off `fi` rather than `w`: `w` records arrival order, and arrival
+   *  order is precisely what must no longer decide this. */
   witnessOf(key: string): Witness | undefined {
-    const r = this.prep('SELECT ruleId, tick, prems FROM w WHERE key = ?').get(key) as
-      { ruleId: string; tick: number; prems: string } | undefined;
+    const r = this.prep('SELECT ruleId, tick, prems FROM fi WHERE key = ? ORDER BY sig LIMIT 1')
+      .get(key) as { ruleId: string; tick: number; prems: string } | undefined;
     return r ? { ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] } : undefined;
   }
 
   allWitnesses(): Map<string, Witness> {
-    const rows = this.prep('SELECT key, ruleId, tick, prems FROM w ORDER BY seq')
+    // One row per key, the least signature, keys in arrival order -- `w` still
+    // carries that order and `fi` carries the choice, so the two are joined.
+    const rows = this.prep(
+      'SELECT f.key AS key, f.ruleId AS ruleId, f.tick AS tick, f.prems AS prems FROM fi f'
+      + ' JOIN (SELECT key, MIN(sig) AS sig FROM fi GROUP BY key) m'
+      + ' ON f.key = m.key AND f.sig = m.sig'
+      + ' JOIN w ON w.key = f.key ORDER BY w.seq')
       .all() as unknown as { key: string; ruleId: string; tick: number; prems: string }[];
     const out = new Map<string, Witness>();
     for (const r of rows) out.set(r.key, { ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] });

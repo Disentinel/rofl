@@ -172,10 +172,16 @@ test('the oracle can say no', () => {
   const rounds = build(prog, true).r.store;
   assert.equal(rounds.canonicalState(), stock.canonicalState(), 'unperturbed, they agree');
 
-  const keys = [...rounds.witnesses.keys()].sort();
+  // The perturbation is applied to the FIRING, because since 2026-09-07 the
+  // canonical witness is not stored: it is the least signature among a fact's
+  // firings, so the firing is the only thing there is to forge. Same probe,
+  // one level down, and it now also covers the derivation of the pick.
+  const keys = [...rounds.firings.keys()].sort();
   assert.ok(keys.length > 0, 'no witnesses to perturb — the probe would prove nothing');
-  const w = rounds.witnesses.get(keys[0])!;
-  rounds.witnesses.set(keys[0], { ...w, ruleId: 'r_never_fired' });
+  const sigs = rounds.firings.get(keys[0])!;
+  const sig = [...sigs.keys()].sort()[0];
+  const w = sigs.get(sig)!;
+  sigs.set(sig, { ...w, ruleId: 'r_never_fired' });
   assert.notEqual(rounds.canonicalState(), stock.canonicalState(),
     'a forged attribution passed the comparison: the oracle does not see provenance');
 });
