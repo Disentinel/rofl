@@ -2606,3 +2606,266 @@ addressed_by(f_three_rules_that_read_a_term_broke_two_hand_kept_shape_assumption
 addressed_by(f_three_rules_that_read_a_term_broke_two_hand_kept_shape_assumptions, "test/well-founded.test.ts").
 finding_note(f_three_rules_that_read_a_term_broke_two_hand_kept_shape_assumptions,
   "ADDING THREE RULES TO boot.rofl COST FOUR TEST FAILURES IN TWO FILES THAT KNEW NOTHING ABOUT THEM, and both were the same mistake in different clothes: a check whose criterion was written against the SHAPES boot.rofl happened to contain at the time. Neither is a defect in the new rules and neither was a re-baseline; both are holes that were there and had nothing to trip them.\nONE. test/head-vars.test.ts carries a walker that computes range restriction inside ROFL and compares it against safety.rofl rule for rule. Its `prem_walk` descends `$cons`, `$lit`'s ARGUMENT LIST, and `$builtin`, and nothing else -- so a head variable bound from inside any other functor is invisible to it. `loader(Rel, P, Who) :- asserted_by($fact(Rel, P, _), Who, _)` and `negated_under(Rel, P) :- premise_lit(R, _, $not($lit(Rel, P, _, _)))` are the first rules in boot.rofl to do that, and the walker called them UNSAFE while safety.rofl called them safe. safety.rofl is right, and the asymmetry is the one src/reflect.ts already records: `premise_var` is SEEDED BY THE HOST because a term carries an arbitrary functor and a Datalog program can only destructure one it names. Fixed by naming the three the reflection actually uses -- `$not`, `$fact`, and `$lit`'s relation and perspective slots -- five lines, and the demo's two genuinely unsafe rules are still flagged by name, which is the control that matters. THE GENERAL FORM: a pure-ROFL reader of the reflection is complete only up to the functors it enumerates, and every new reified shape silently narrows it.\nTWO. test/well-founded.test.ts compares the stratified and well-founded models of examples/wtf fact for fact, minus the rows that CANNOT match because one arm was handed `semantics(well_founded).` and the other was not. That exclusion was keyed on the shapes the declaration takes -- a key starting `semantics[`, or containing `$fact(semantics,`. `loader(Rel, P, Who)` projects an asserted fact's RELATION NAME into an ordinary argument, so the declaration came back as `loader[main](semantics, main, user)` and its provenance row, matching neither pattern. Exactly two rows, both about the declaration, neither about the program. Excluded by name rather than by widening the filter to every key containing the word, because a wider filter hides a real difference the day one exists.\nWHY THIS IS WORTH A FINDING RATHER THAN A DIFF: both checks are of the class this repository already writes about -- a gate inheriting the scope of its INCIDENT -- and both failed in the direction that LOOKS like the new work is wrong. A new relation that reads a term, or that projects a relation name into an argument, is the perturbation that finds them, and there is no third instrument here that would have found either one first.").
+
+-- ---------------------------------------------------------------------------
+-- 2026-09-07: THE BACKLOG SWEEP, APPLIED. Four agents read all 219 open
+-- findings against the tree and returned verdict tables; this block is those
+-- verdicts turned into dispositions. Nothing above this line was edited --
+-- a ledger records what turned out to be wrong as well as what turned out to
+-- be right, so a stale finding keeps its note and gains a `dismissed`.
+--
+-- WHAT WAS CHECKED BEFORE APPLYING, because a wrongly-closed finding loses
+-- real work permanently and a closed ledger is where nobody looks again: a
+-- random sample of 24 of the 134 ADDRESSED verdicts (six per chunk, drawn by
+-- seeded shuffle) was re-verified against the tree independently of the
+-- report's evidence column, plus every one of the 7 STALE verdicts, since a
+-- dismissal is the disposition that cannot be undone by reading. 23 of 24
+-- confirmed and all 7 STALE confirmed. See
+-- f_the_sweeps_only_error_was_the_disposition_and_not_the_fact.
+--
+-- THE SEPARATION THIS BLOCK KEEPS: `addressed_by` says THE DEMAND WAS
+-- SATISFIED and names the artifact that satisfies it; `dismissed` says THE
+-- DEMAND WENT AWAY and names why. Five findings the sweep called ADDRESSED
+-- carry neither a `demands` clause nor any nameable artifact -- they are
+-- journal entries whose content stands -- and conflating those with a
+-- satisfied demand would write a false record, so they are dismissed by name.
+-- ---------------------------------------------------------------------------
+
+
+-- STALE (7): the premise dissolved or the proposal was superseded. Each was
+-- re-verified in the tree; none of them is "nobody got round to it".
+dismissed(f_fork_copies_the_whole_store, premise_refuted_clone_is_linear).
+dismissed(f_admission_test_near_its_own_timeout, remeasured_the_margin_is_no_longer_thin).
+dismissed(f_expressible_is_not_portable_the_discriminator_is_when, stale_by_its_own_same_day_correction).
+dismissed(f_the_matrix_collapses_threefold_and_the_tail_does_not, superseded_by_the_alias_collapse_recount).
+dismissed(f_a_store_size_veto_is_blind_to_the_very_explosion_it_was_proposed_for, proposal_abandoned_store_size_never_shipped).
+dismissed(f_ring_zero_under_the_irreducibility_criterion_is_sixty_lines, superseded_by_the_droppable_grammar_design).
+dismissed(f_carrying_policy_with_the_kernel_works_and_reprices_every_count, superseded_by_the_isolated_policy_store).
+
+-- JOURNALED (5): no `demands` clause, and no artifact does the thing, because
+-- there is no thing to do -- a practice lesson whose content stands. Dismissed
+-- rather than addressed, so the ledger does not claim an artifact that does
+-- not exist.
+dismissed(f_the_budget_alarm_was_load_not_cost, journaled_no_demand_and_no_artifact_to_name).
+dismissed(f_i_briefed_before_reading_my_own_backlog, journaled_no_demand_and_no_artifact_to_name).
+dismissed(f_the_budget_marker_lags_the_frame_that_earns_it, journaled_no_demand_and_no_artifact_to_name).
+dismissed(f_normalised_goldens_must_be_compared_as_sets, journaled_no_demand_and_no_artifact_to_name).
+dismissed(f_fixing_a_limit_breaks_its_documentation, journaled_no_demand_and_no_artifact_to_name).
+
+-- ADDRESSED (128): the demand was satisfied and the artifact is named. The
+-- 134th ADDRESSED verdict, f_quiescence_compares_a_sorted_list_against_an
+-- _unsorted_one, was already settled as a duplicate before this block.
+addressed_by(f_semiring_fold_is_structural_not_semantic, "examples/slop/README.md").
+addressed_by(f_infinite_is_decidable_not_enumerable, "src/semiring.ts").
+addressed_by(f_infinite_is_decidable_not_enumerable, "runtime/semirings.ts").
+addressed_by(f_engine_needs_a_storage_tier, "adapters/sqlite-store.ts").
+addressed_by(f_engine_needs_a_storage_tier, "test/store-conformance.test.ts").
+addressed_by(f_semiring_convergence_is_instance_contract, "src/semiring.ts").
+addressed_by(f_semiring_convergence_is_instance_contract, "runtime/semirings.ts").
+addressed_by(f_semiring_convergence_is_instance_contract, "test/semiring.test.ts").
+addressed_by(f_spat_is_the_cheap_afk, "examples/spat/README.md").
+addressed_by(f_universal_needs_suffix_indexing, "docs/dogfood/2026-08-30-honk-huh.md").
+addressed_by(f_semiring_needs_parameterized_evaluator, "src/semiring.ts").
+addressed_by(f_semiring_needs_parameterized_evaluator, "runtime/semirings.ts").
+addressed_by(f_semiring_table_lacks_closure, "src/semiring.ts").
+addressed_by(f_witness_forest_dropped, "src/store.ts").
+addressed_by(f_witness_forest_dropped, "src/semiring.ts").
+addressed_by(f_memory_per_fact_is_the_real_ceiling, "docs/performance-invariants.md").
+addressed_by(f_memory_per_fact_is_the_real_ceiling, "adapters/sqlite-store.ts").
+addressed_by(f_measured_ceiling_and_throughput, "docs/performance-invariants.md").
+addressed_by(f_fork_time_argument_died_with_the_insert_fix, "examples/iffy/").
+addressed_by(f_fork_time_argument_died_with_the_insert_fix, "examples/ditto/").
+addressed_by(f_memory_ceiling_survived_every_speed_fix, "docs/performance-invariants.md").
+addressed_by(f_interning_alone_does_not_buy_the_order_of_magnitude, "docs/performance-invariants.md").
+addressed_by(f_i_measured_the_cheapest_fact_and_generalised, "docs/performance-invariants.md").
+addressed_by(f_a_skipped_test_is_an_absent_test, "package.json").
+addressed_by(f_a_skipped_test_is_an_absent_test, "test/key-bytes.test.ts").
+addressed_by(f_the_fork_ledger_needed_one_reading_not_three, "docs/performance-invariants.md").
+addressed_by(f_the_guessed_repair_was_half_the_repair, "boot.rofl").
+addressed_by(f_the_guessed_repair_was_half_the_repair, "src/reflect.ts").
+addressed_by(f_a_variable_exemption_is_per_rule_not_per_name, "test/persp-var.test.ts").
+addressed_by(f_three_fork_rates_reconciled_by_naming_the_subject, "scripts/measurement_check.ts").
+addressed_by(f_syntax_should_evoke_the_neighbouring_languages, "docs/time-and-continuity.md").
+addressed_by(f_syntax_should_evoke_the_neighbouring_languages, "src/parser.ts").
+addressed_by(f_boot_rofl_is_itself_cyclic, "test/semiring.test.ts").
+addressed_by(f_cycle_alone_does_not_pump, "examples/heck/demo.ts").
+addressed_by(f_cycle_alone_does_not_pump, "src/semiring.ts").
+addressed_by(f_a_mutant_that_no_test_can_see, "test/semiring.test.ts").
+addressed_by(f_moot_shadowed_needs_a_third_guard, "examples/moot/moot.rofl").
+addressed_by(f_a_probe_that_only_tightens_proves_nothing, "test/next-tense.test.ts").
+addressed_by(f_a_probe_that_only_tightens_proves_nothing, "boot.rofl").
+addressed_by(f_a_probe_that_only_tightens_proves_nothing, "src/reflect.ts").
+addressed_by(f_an_expressible_veto_belongs_in_the_model, "docs/time-and-continuity.md").
+addressed_by(f_the_assertion_trail_is_dated, "boot.rofl").
+addressed_by(f_the_assertion_trail_is_dated, "src/reflect.ts").
+addressed_by(f_the_fold_now_agrees_with_the_renderer, "src/semiring.ts").
+addressed_by(f_do_not_un_buy_what_the_project_bought, "docs/time-and-continuity.md").
+addressed_by(f_reconstruction_is_not_a_cheap_substitute, "docs/time-and-continuity.md").
+addressed_by(f_afk_waits_for_storage, "adapters/sqlite-store.ts").
+addressed_by(f_a_type_error_is_not_a_false_premise, "src/reflect.ts").
+addressed_by(f_a_type_error_is_not_a_false_premise, "test/arith-hole.test.ts").
+addressed_by(f_i_test_whether_it_works_not_how_it_is_evaded, "docs/time-and-continuity.md").
+addressed_by(f_i_test_whether_it_works_not_how_it_is_evaded, "boot.rofl").
+addressed_by(f_collects_is_the_sentence_nobody_could_write, "boot.rofl").
+addressed_by(f_the_reified_read_is_affordable_when_narrowed, "boot.rofl").
+addressed_by(f_a_count_of_call_sites_expires_while_you_quote_it, "adapters/sqlite-store.ts").
+addressed_by(f_the_third_value_is_earned_not_subtracted, "test/well-founded.test.ts").
+addressed_by(f_the_conformance_oracle_is_blind_to_three_of_five, "CLAUDE.md").
+addressed_by(f_the_conformance_oracle_is_blind_to_three_of_five, "test/store-conformance.test.ts").
+addressed_by(f_rules_as_facts_is_the_foundation_i_did_not_list, "safety.rofl").
+addressed_by(f_rules_as_facts_is_the_foundation_i_did_not_list, "policy.rofl").
+addressed_by(f_rules_as_facts_is_the_foundation_i_did_not_list, "rules/kernel-policy.rofl").
+addressed_by(f_the_kernel_now_audits_its_own_specification, "scanners/spec.ts").
+addressed_by(f_the_kernel_now_audits_its_own_specification, "facts/spec.rofl").
+addressed_by(f_the_kernel_now_audits_its_own_specification, "rules/spec-coverage.rofl").
+addressed_by(f_a_census_test_breaks_on_ordinary_growth, "test/spec-coverage.test.ts").
+addressed_by(f_a_brief_requirement_must_bind_its_author_same_session, "scanners/ablate.ts").
+addressed_by(f_rip_is_the_alternating_fixpoints_first_paying_customer, "examples/rip/README.md").
+addressed_by(f_rip_is_the_alternating_fixpoints_first_paying_customer, "examples/rip/rip.rofl").
+addressed_by(f_rip_is_the_alternating_fixpoints_first_paying_customer, "test/example-rip.test.ts").
+addressed_by(f_stratum_is_negation_depth_not_the_dependency_ladder, "scanners/policy_ladder.ts").
+addressed_by(f_stratum_is_negation_depth_not_the_dependency_ladder, "test/policy-ladder.test.ts").
+addressed_by(f_the_stratum_counter_can_be_a_pair_instead, "src/rounds.ts").
+addressed_by(f_provenance_records_the_path_but_not_as_facts, "src/rounds.ts").
+addressed_by(f_policy_cannot_be_a_table_because_it_decides_who_runs, "policy.rofl").
+addressed_by(f_policy_cannot_be_a_table_because_it_decides_who_runs, "safety.rofl").
+addressed_by(f_policy_cannot_be_a_table_because_it_decides_who_runs, "src/engine.ts").
+addressed_by(f_a_rule_has_two_faces_and_the_audit_reads_the_wrong_one, "src/reflect.ts").
+addressed_by(f_a_rule_has_two_faces_and_the_audit_reads_the_wrong_one, "src/api.ts").
+addressed_by(f_a_rule_has_two_faces_and_the_audit_reads_the_wrong_one, "test/second-door.test.ts").
+addressed_by(f_the_demand_constraint_is_real_and_now_enforced, "test/round-eval-demand.test.ts").
+addressed_by(f_the_demos_are_unchanged_except_one_oracle_pinned_to_wording, "examples/npc/demo.ts").
+addressed_by(f_the_demos_are_unchanged_except_one_oracle_pinned_to_wording, "src/api.ts").
+addressed_by(f_the_split_scanner_prints_where_it_should_assert, "scanners/engine_split.ts").
+addressed_by(f_the_split_scanner_prints_where_it_should_assert, "rules/engine-split.rofl").
+addressed_by(f_the_saving_is_the_meta_layer_not_the_scheduler, "boot.rofl").
+addressed_by(f_the_saving_is_the_meta_layer_not_the_scheduler, "src/rounds.ts").
+addressed_by(f_editing_the_spec_to_match_the_code_destroys_the_measurement, "facts/spec.rofl").
+addressed_by(f_editing_the_spec_to_match_the_code_destroys_the_measurement, "START.md").
+addressed_by(f_a_language_model_needs_its_coverage_audit_first, "rules/js-model.rofl").
+addressed_by(f_a_language_model_needs_its_coverage_audit_first, "test/js-model.test.ts").
+addressed_by(f_grafema_already_solved_the_language_model_problem, "docs/modelling-a-language.md").
+addressed_by(f_a_declared_dirty_scanner_is_a_dated_loan, "rules/engine-split.rofl").
+addressed_by(f_a_declared_dirty_scanner_is_a_dated_loan, "docs/modelling-a-language.md").
+addressed_by(f_modelling_a_language_is_a_programme_not_a_task, "docs/modelling-a-language.md").
+addressed_by(f_the_model_is_an_abstract_interpreter_not_an_interpreter, "docs/modelling-a-language.md").
+addressed_by(f_the_language_model_exists_and_the_prize_is_the_desugaring, "docs/modelling-a-language.md").
+addressed_by(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, "scanners/engine_split.ts").
+addressed_by(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, "test/engine-split.test.ts").
+addressed_by(f_adding_a_layer_really_is_one_fact, "facts/js-kinds.rofl").
+addressed_by(f_adding_a_layer_really_is_one_fact, "rules/js-model.rofl").
+addressed_by(f_adding_a_layer_really_is_one_fact, "test/js-model.test.ts").
+addressed_by(f_an_audit_over_who_records_claims_and_authenticates_nobody, "boot.rofl").
+addressed_by(f_an_audit_over_who_records_claims_and_authenticates_nobody, "src/reflect.ts").
+addressed_by(f_an_execution_oracle_sees_reachability_not_edges, "rules/js-dataflow.rofl").
+addressed_by(f_the_alias_collapse_is_refuted_it_is_1_27_not_3, "docs/modelling-a-language.md").
+addressed_by(f_convergence_was_a_tautology_over_my_own_typing, "rules/js-model.rofl").
+addressed_by(f_convergence_was_a_tautology_over_my_own_typing, "test/js-model.test.ts").
+addressed_by(f_the_test_suite_caught_none_of_the_catalogue, "docs/failure-modes.md").
+addressed_by(f_the_vocabulary_check_does_not_generalise_and_reflection_is_the_fix, "rules/js-model.rofl").
+addressed_by(f_the_widened_gate_caught_a_live_unplanted_defect_within_minutes, "CLAUDE.md").
+addressed_by(f_the_widened_gate_caught_a_live_unplanted_defect_within_minutes, "scripts/text_check.ts").
+addressed_by(f_the_widened_gate_caught_a_live_unplanted_defect_within_minutes, "test/js-modules.test.ts").
+addressed_by(f_a_gate_inherits_the_scope_of_its_incident_not_of_its_class, "CLAUDE.md").
+addressed_by(f_depends_and_flows_needed_a_third_relation_and_the_marker_lies, "docs/modelling-a-language.md").
+addressed_by(f_depends_and_flows_needed_a_third_relation_and_the_marker_lies, "test/js-model.test.ts").
+addressed_by(f_the_matrix_cannot_hold_the_frontier_that_is_not_a_kind_times_a_layer, "docs/modelling-a-language.md").
+addressed_by(f_the_matrix_cannot_hold_the_frontier_that_is_not_a_kind_times_a_layer, "rules/js-model.rofl").
+addressed_by(f_a_separator_is_where_an_invisible_byte_survives_every_gate, "scripts/text_check.ts").
+addressed_by(f_a_separator_is_where_an_invisible_byte_survives_every_gate, "CLAUDE.md").
+addressed_by(f_a_separator_is_where_an_invisible_byte_survives_every_gate, "test/js-modules.test.ts").
+addressed_by(f_the_model_misses_thirty_percent_of_executed_edges_and_names_every_one, "docs/modelling-a-language.md").
+addressed_by(f_the_model_misses_thirty_percent_of_executed_edges_and_names_every_one, "rules/js-callgraph.rofl").
+addressed_by(f_a_natural_ownership_rule_made_the_kernel_non_deterministic, "src/reflect.ts").
+addressed_by(f_a_natural_ownership_rule_made_the_kernel_non_deterministic, "test/phase4.test.ts").
+addressed_by(f_a_silent_join_failure_wearing_the_shape_of_a_finding, "src/reflect.ts").
+addressed_by(f_a_silent_join_failure_wearing_the_shape_of_a_finding, "test/example-loot.test.ts").
+addressed_by(f_a_silent_join_failure_wearing_the_shape_of_a_finding, "test/example-ring1.test.ts").
+addressed_by(f_a_wall_that_cannot_afford_to_say_it_hit_the_wall, "src/engine.ts").
+addressed_by(f_a_wall_that_cannot_afford_to_say_it_hit_the_wall, "test/budget-space.test.ts").
+addressed_by(f_demanding_a_reason_per_counter_caught_a_false_reason, "test/engine-split.test.ts").
+addressed_by(f_every_cell_the_call_graph_added_was_arithmetic_and_none_was_judgement, "docs/modelling-a-language.md").
+addressed_by(f_every_cell_the_call_graph_added_was_arithmetic_and_none_was_judgement, "rules/js-model.rofl").
+addressed_by(f_every_cell_the_call_graph_added_was_arithmetic_and_none_was_judgement, "test/js-model.test.ts").
+addressed_by(f_every_operation_that_can_fail_must_be_able_to_say_so_everywhere, "src/engine.ts").
+addressed_by(f_every_operation_that_can_fail_must_be_able_to_say_so_everywhere, "test/comparison-sink.test.ts").
+addressed_by(f_four_of_fifteen_mutants_came_from_probing_for_blind_zones, "CLAUDE.md").
+addressed_by(f_i_answered_the_adjacent_question_and_used_the_harder_ones_name, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_i_measured_the_wrong_denominator_for_ring_zero, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_my_brief_carried_a_wrong_axis_row_and_the_executor_refused_it, "facts/js-shapes.rofl").
+addressed_by(f_node_returns_a_warm_cache_answer_with_an_empty_trace, "scanners/js_resolve.ts").
+addressed_by(f_ring_zero_shrinks_by_a_quarter_and_that_is_the_wrong_ledger, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_string_destructors_are_free_and_constructors_are_not, "src/reflect.ts").
+addressed_by(f_string_destructors_are_free_and_constructors_are_not, "test/string-destructors.test.ts").
+addressed_by(f_the_bracket_inversion_returned_mirrored, "src/engine.ts").
+addressed_by(f_the_bracket_inversion_returned_mirrored, "test/rings.test.ts").
+addressed_by(f_the_case_for_string_destructors_moved_and_the_old_case_weakened, "src/reflect.ts").
+addressed_by(f_the_case_for_string_destructors_moved_and_the_old_case_weakened, "test/string-destructors.test.ts").
+addressed_by(f_the_environment_is_a_ledger_and_two_of_them_disagree_in_three_places, "rules/js-resolve.rofl").
+addressed_by(f_the_environment_is_a_ledger_and_two_of_them_disagree_in_three_places, "test/js-resolve.test.ts").
+addressed_by(f_the_four_numbers_changed_the_plan_and_that_is_what_they_were_for, "src/reflect.ts").
+addressed_by(f_the_four_numbers_changed_the_plan_and_that_is_what_they_were_for, "src/engine.ts").
+addressed_by(f_the_four_numbers_changed_the_plan_and_that_is_what_they_were_for, "boot.rofl").
+addressed_by(f_the_owner_decomposition_relocates_two_of_eleven_misses_out_of_semantics, "rules/js-callgraph.rofl").
+addressed_by(f_the_partition_stops_being_a_detector_when_a_third_axis_arrives, "rules/js-model.rofl").
+addressed_by(f_the_partition_stops_being_a_detector_when_a_third_axis_arrives, "test/js-model.test.ts").
+addressed_by(f_the_queue_now_refuses_unproven_work, "rules/findings.rofl").
+addressed_by(f_the_queue_now_refuses_unproven_work, "scripts/witness_check.ts").
+addressed_by(f_the_queue_now_refuses_unproven_work, "CLAUDE.md").
+addressed_by(f_the_rule_syntax_is_provably_sugar, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_the_rule_syntax_is_provably_sugar, "src/engine.ts").
+addressed_by(f_three_of_five_queued_items_died_to_the_baseline_question, "README.md").
+addressed_by(f_a_builtins_position_is_a_choice_and_my_scan_could_not_see_it, "src/engine.ts").
+addressed_by(f_a_count_gate_that_reads_the_world_instead_of_the_change, "src/engine.ts").
+addressed_by(f_a_door_that_refuses_takes_away_the_program_the_audit_needs, "src/api.ts").
+addressed_by(f_a_front_end_has_three_ways_to_return_a_prefix_and_none_is_a_grammar_bug, "examples/ring1/ring1.rofl").
+addressed_by(f_a_front_end_has_three_ways_to_return_a_prefix_and_none_is_a_grammar_bug, "test/example-ring1.test.ts").
+addressed_by(f_a_front_end_has_three_ways_to_return_a_prefix_and_none_is_a_grammar_bug, "examples/ring1/README.md").
+addressed_by(f_a_mutant_written_in_the_wrong_syntax_passes_for_the_wrong_reason, "test/body-order.test.ts").
+addressed_by(f_a_negative_control_can_stop_discriminating_when_the_recipe_changes, "test/example-ring1.test.ts").
+addressed_by(f_a_rofl_escape_takes_the_next_character_and_no_escape_makes_a_newline, "src/tokens.ts").
+addressed_by(f_a_test_about_escaping_written_with_escaping_is_wrong_twice, "test/escapes.test.ts").
+addressed_by(f_a_test_about_escaping_written_with_escaping_is_wrong_twice, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_a_witness_over_a_growing_ledger_drifts_by_construction, "scripts/witness_check.ts").
+addressed_by(f_a_witness_over_a_growing_ledger_drifts_by_construction, "facts/findings.rofl").
+addressed_by(f_an_image_gate_must_compare_content_and_not_bytes, "test/example-ring1.test.ts").
+addressed_by(f_an_image_moves_the_audit_surface_off_readable_source, "test/example-ring1.test.ts").
+addressed_by(f_atom_of_could_make_atoms_nobody_can_write, "src/reflect.ts").
+addressed_by(f_changing_the_escape_semantics_is_free_today_and_will_not_stay_free, "src/tokens.ts").
+addressed_by(f_cutting_ring_zero_without_an_image_stops_the_system_rather_than_shrinking_it, "examples/ring1/README.md").
+addressed_by(f_eight_hand_written_cases_passed_while_every_real_file_failed, "examples/ring1/ring1.rofl").
+addressed_by(f_escapes_are_c_style_now_and_the_change_was_a_no_op, "src/tokens.ts").
+addressed_by(f_escapes_are_c_style_now_and_the_change_was_a_no_op, "test/escapes.test.ts").
+addressed_by(f_every_move_needs_the_same_missing_mechanism_a_present_policy_program, "policy.rofl").
+addressed_by(f_every_move_needs_the_same_missing_mechanism_a_present_policy_program, "src/engine.ts").
+addressed_by(f_every_move_needs_the_same_missing_mechanism_a_present_policy_program, "src/kernel-dense.ts").
+addressed_by(f_i_pitched_a_decoupling_and_delivered_a_smaller_one, "examples/ring1/demo.ts").
+addressed_by(f_ring_one_agrees_on_every_construct_the_corpus_contains, "test/example-ring1.test.ts").
+addressed_by(f_ring_one_agrees_with_the_host_parser_on_eight_of_twenty_three, "examples/ring1/").
+addressed_by(f_ring_one_agrees_with_the_host_parser_on_eight_of_twenty_three, "examples/ring1/README.md").
+addressed_by(f_ring_one_now_agrees_with_the_host_on_every_file_it_sweeps, "examples/ring1/README.md").
+addressed_by(f_round_tripping_is_not_the_same_as_being_writable, "src/tokens.ts").
+addressed_by(f_round_tripping_is_not_the_same_as_being_writable, "docs/dogfood/2026-09-04-self-application.md").
+addressed_by(f_self_application_found_two_defects_on_the_first_pointing, "examples/ring1/ring1.rofl").
+addressed_by(f_str_sub_and_atom_of_are_in_and_the_boundary_is_swept, "src/reflect.ts").
+addressed_by(f_str_sub_and_atom_of_are_in_and_the_boundary_is_swept, "test/string-destructors.test.ts").
+addressed_by(f_str_sub_and_atom_of_are_in_and_the_boundary_is_swept, "test/str-ops.test.ts").
+addressed_by(f_the_chart_is_quadratic_and_that_is_what_blocks_the_step, "examples/ring1/demo.ts").
+addressed_by(f_the_chart_is_quadratic_and_that_is_what_blocks_the_step, "test/example-ring1.test.ts").
+addressed_by(f_the_chart_was_cubic_and_the_space_wall_made_it_look_green, "examples/ring1/ring1.rofl").
+addressed_by(f_the_clause_is_the_unit_and_the_ledger_said_so_first, "examples/ring1/demo.ts").
+addressed_by(f_the_escaper_belongs_beside_the_unescaper, "src/tokens.ts").
+addressed_by(f_the_escaper_belongs_beside_the_unescaper, "examples/ring1/demo.ts").
+addressed_by(f_the_full_decoupling_is_blocked_by_the_concatenation_ban, "examples/ring1/ring1.rofl").
+addressed_by(f_the_full_decoupling_is_blocked_by_the_concatenation_ban, "examples/ring1/demo.ts").
+addressed_by(f_the_isolated_policy_store_agrees_and_costs_nothing_the_program_can_see, "src/engine.ts").
+addressed_by(f_the_isolated_policy_store_agrees_and_costs_nothing_the_program_can_see, "test/kernel-policy-program.test.ts").
+addressed_by(f_the_tower_stands_and_its_bottom_step_is_one_hundred_and_seventy_eight_lines, "examples/ring1/l0.ts").
+addressed_by(f_the_tower_stands_and_its_bottom_step_is_one_hundred_and_seventy_eight_lines, "test/example-ring1.test.ts").
+addressed_by(f_the_wildcard_number_was_a_backtracking_artifact, "src/parser.ts").
+
+finding(f_the_sweeps_only_error_was_the_disposition_and_not_the_fact, insight).
+recorded(f_the_sweeps_only_error_was_the_disposition_and_not_the_fact, "2026-09-07").
+demands(f_the_sweeps_only_error_was_the_disposition_and_not_the_fact, doc).
+finding_note(f_the_sweeps_only_error_was_the_disposition_and_not_the_fact,
+  "A NUMBER FOR AN LLM-RUN BACKLOG AUDIT, measured while applying one. Four agents swept 219 open findings against the tree, 55/55/55/54, and returned ADDRESSED 134, STALE 7, NEEDS OWNER 22, STILL OPEN 55, UNCLEAR 1. Before applying any of it: a random sample of 24 ADDRESSED verdicts, six per chunk by seeded shuffle, was re-verified against the tree WITHOUT reading the report's evidence column first, and all 7 STALE verdicts were verified too because a dismissal is the disposition nobody re-reads. TWENTY-THREE OF TWENTY-FOUR CONFIRMED, SEVEN OF SEVEN STALE CONFIRMED. A second, adversarial pass over the four evidence cells that ARGUED a case rather than pointing at a file - `superseded rather than patched`, `superseded upward`, `condition now met` - confirmed all four, though one needed the finding's last sentence read to see that the question it posed had in fact been answered by the mechanism that replaced it. AND A MECHANICAL CHECK OVER ALL 134: every backticked path in every ADDRESSED evidence cell was extracted and stat-ed, and ZERO named a file that does not exist. The claims were about the right tree.\nTHE ONE FAILURE WAS NOT A FALSE CLAIM ABOUT THE WORLD, IT WAS THE WRONG RELATION. Five of the 134 ADDRESSED carry no `demands` clause and name no artifact, because there is nothing to build - a practice lesson, a re-measurement, an observation about doc maintenance. `addressed_by` on one of those writes a false record twice over: it asserts an artifact that does not exist and it erases the difference between THE DEMAND WAS SATISFIED and THE DEMAND WENT AWAY. They are dismissed by name instead. THE SWEEP SAW THIS ABOUT ITSELF AND SAID SO IN ITS OWN SUMMARY - `I've flagged each of those explicitly as no demand so the owner can downgrade them to a plain dismissed if they'd rather keep the distinction sharp` - and two of the four reports independently downgraded verdicts of their own from ADDRESSED to STALE on review, on the grounds that nothing was built and the proposal was abandoned. So the auditor's judgement about ARTEFACTS was reliable at the sample rate and its judgement about WHICH RELATION TO WRITE was the part that needed a second reader, and it knew which was which.\nTHE OPERATIONAL RULE THAT FOLLOWS, and it is the transferable half: ASK A SWEEP FOR THE FACT AND KEEP THE DISPOSITION. `Is the demanded artifact in the tree, at what path` is a question with an oracle - open the file - and 23/24 plus 134/134 paths says an agent answers it well. `Which of addressed_by and dismissed does this deserve` is a judgement about what the ledger MEANS, it has no oracle, and it is where every error in this run lived. A brief that asks for both gets the first for free and the second unchecked.\nAND AN AUDIT'S ANSWER HAS A SHELF LIFE MEASURED IN HOURS HERE. Between the sweep starting and its verdicts being applied - one working day - THREE of its 219 ids had already been settled by commits it could not have seen, two of them ids it had classified NEEDS OWNER because the owner had not yet ruled (`f_the_canonical_witness_is_derivable_from_the_data`, settled by the least-signature commit; `f_two_files_writing_one_book_is_scoping_not_naming`, settled by the scoping merge), and FOUR new open findings had been recorded that no chunk covered. A sweep is a photograph, so the applier has to diff the ids before writing, and cross-checking the 219 against the ledger is also what proves no verdict names a typo'd id.").
