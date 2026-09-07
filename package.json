@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --expose-gc --experimental-strip-types --test --test-reporter=spec test/*.test.ts",
+    "test": "node --expose-gc --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec test/*.test.ts",
     "test:bun": "bun test --timeout 60000",
     "grepcheck": "node --experimental-strip-types scripts/kernel_grep.ts",
     "textcheck": "node --experimental-strip-types scripts/text_check.ts",

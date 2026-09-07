@@ -307,15 +307,38 @@ work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_const
 -- byte-identical answers over fifteen relations. Two files, 9 min -> 6m55s and
 -- ~9 min -> 4m44s.
 --
--- WHAT IS LEFT IS THE KERNEL QUESTION and it stays open: a mutant still pays
--- for a whole fixpoint, and most of that fixpoint is AST facts no mutation of a
--- rule pack can touch. Whether the kernel can re-evaluate only what a changed
--- rule reaches is worth its own item rather than a note here.
-work(w_mutant_costs_a_world, "a mutant pays for a whole fixpoint; the nine-load waste is fixed, the kernel's incrementality is not").
+-- AND THE KERNEL QUESTION IS ANSWERED, 2026-09-07, with a NO that is worth
+-- more than the capability would have been. The kernel is ALREADY incremental:
+-- `planReuse` fingerprints every derived relation's dependency cone, and
+-- re-evaluating an unchanged store costs 203 ms against a 15 900 ms scratch
+-- fixpoint. What it costs when a RULE changes is the canonical witness.
+-- Deleting one rule of `may_be_node` holds the schedule and leaves 176 of 245
+-- fingerprints unchanged; step (4) then cuts 176 to 74, because nothing
+-- re-derived may read anything reused — a reused premise is complete from the
+-- first firing and the canonical witness is the first firing in canonical
+-- order. With that closure the in-place path is 21.4 s against a 15.6 s scratch
+-- build, a LOSS. Without it, 5.2 s to apply and 4.7 s to restore — 9.9 s
+-- against 15.6, so 1.6x and not 3x — with facts and support byte-identical, 52
+-- of 65 141 witnesses naming a different equally-true derivation, and THE BASE
+-- NOT RETURNING TO ITSELF after the restore. That last part disqualifies it: a
+-- harness whose base drifts measures every later mutant against a different
+-- world. A strata-aware closure recovers nothing (74 either way — this model is
+-- essentially one stratum), and a rule that is the ONLY one of its relation is
+-- worse still: the relation leaves the stratum table, the schedule token moves,
+-- and reuse is globally off, 0 of 244.
+--
+-- WHAT DID PAY WAS THE LANE NOBODY TRIED. `node --test` defaults to
+-- `availableParallelism() - 1`, which is 3 of 4 cores here, and the suite burns
+-- 43 minutes of CPU: 862 s at three lanes, 707 s at four, same 1109/1101/8.
+-- One line, no semantics touched, -18%.
+work(w_mutant_costs_a_world, "DONE 2026-09-07: the nine-load waste is fixed, the kernel's incrementality EXISTS and is not worth its price - 1.6x on a base that no longer restores to itself; the suite took the fourth core instead").
 work_order(w_mutant_costs_a_world, 43).
-work_state(w_mutant_costs_a_world, open).
+work_state(w_mutant_costs_a_world, done).
 work_spawned(w_mutant_costs_a_world, f_a_worlds_cost_is_the_fixpoint_and_a_file_is_a_core).
 work_spawned(w_mutant_costs_a_world, f_nine_loads_ran_the_fixpoint_nine_times).
+work_spawned(w_mutant_costs_a_world, f_the_kernel_was_already_incremental_and_the_witness_is_what_it_costs).
+work_spawned(w_mutant_costs_a_world, f_a_reflection_list_written_by_hand_missed_the_relation_the_kernel_grew).
+work_spawned(w_mutant_costs_a_world, f_the_default_was_one_core_short_and_nobody_had_tried_the_flag).
 
 -- ===========================================================================
 -- THE SWEEPS. Everything above is judgement; the residue is arithmetic — kinds

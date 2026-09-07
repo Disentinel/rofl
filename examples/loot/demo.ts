@@ -16,7 +16,7 @@ import { Evaluation } from '../../src/engine.ts';
 import { peelRounds } from '../../src/rounds.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import { parseProgram } from '../../src/parser.ts';
-import { ruleIdOf, canonClause } from '../../src/reflect.ts';
+import { ruleIdOf, canonClause, KERNEL_BOOK } from '../../src/reflect.ts';
 import {
   countingSemiring, tropicalSemiring, unitFiringCost, renderCount,
   provenanceSemiring, type Polynomial, type Count,
@@ -484,11 +484,27 @@ export function quarantine(r: Rofl, b: Book, opts: { budget?: number } = {}): Tr
 // rule away from the other, so the removal is over rules the pack owns ALONE.
 // ===========================================================================
 
-const REFLECTION = [
-  'rule', 'has_conclusion', 'conclusion_lit', 'concludes', 'writes_to',
-  'has_premise', 'premise_lit', 'premise_pos', 'premise_neg', 'reads_from',
-  'bridge_decl', 'uses_builtin',
-];
+// THE SWEEP IS DERIVED FROM THE KERNEL'S OWN SET, not copied beside it.
+//
+// It WAS a hand-written list of twelve relations, and the kernel's
+// `KERNEL_BOOK` carries thirteen that a rule id keys: `conclusion_tense` was
+// not among the twelve, so every forgotten rule left one row behind — a rule
+// that is gone except for the tense of a conclusion it no longer has. Measured
+// 2026-09-07 in this demo's own world: after `unload('grimoire_of_ash')`,
+// `rule`, `concludes`, `has_premise` and `premise_lit` are clean for the
+// forgotten id and `conclusion_tense` has one row.
+//
+// NOTHING WENT RED, which is why it lasted: boot.rofl's old
+// `stratum(Rel, 0) :- conclusion_tense(R, next)` floor was removed, so today no
+// rule reads the relation and the leftover is inert. The test one file over
+// says in as many words that "an unloaded rule leaves no orphan reflection
+// behind", and it was one row wrong.
+//
+// The set includes relations a rule id does NOT key — `derived_by` is keyed by
+// a FACT, `in_perspective` and `asserted_by` by a fact term — and they are
+// harmless here for a reason worth stating rather than relying on: the guard
+// below wants the first argument to be an ATOM equal to the id, and a fact term
+// is not an atom. So the sweep is over the whole book and selects by shape.
 
 export function ownersOf(r: Rofl, ruleId: string): string[] {
   return rows(r, `pack_rule[P](P, ${ruleId})`).map((x) => x.P).sort();
@@ -499,7 +515,7 @@ export function ownersOf(r: Rofl, ruleId: string): string[] {
  *  have to name are not writable in ROFL source syntax (README.md says so). */
 export function forgetRule(r: Rofl, ruleId: string): number {
   let n = 0;
-  for (const rel of REFLECTION) {
+  for (const rel of KERNEL_BOOK) {
     for (const f of r.store.relAll(rel)) {
       const a = f.args[0];
       if (a && a.k === 'a' && a.name === ruleId) { r.store.remove(f.key); n++; }
