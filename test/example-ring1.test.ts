@@ -21,6 +21,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
 import { canonClause, resolveClauseBooks } from '../src/reflect.ts';
+import type { Rofl } from '../src/api.ts';
 import {
   parse, canon, roflStr, world, IncompleteParse,
   image, imageContent, fromImage, IMAGE_SOURCES, parseFile, clauses,
@@ -207,11 +208,20 @@ test('corpus floor: ring 1 agrees on every SHAPE it is given, not every byte', (
   const chosen = [...pool.values()].sort((a, b) => a.src.length - b.src.length).slice(0, SHAPES);
   assert.equal(pool.size > 900, true, `expected the corpus's shape pool, got ${pool.size}`);
 
+  // RESTORED ONCE, FORKED PER SHAPE — the same move `parseFile` already makes
+  // per clause, for the same reason. `fromImage` re-parses 545 KiB of JSON and
+  // re-`add`s 2453 facts to arrive at a world the image already names;
+  // `fork()` copies the store structurally. Measured 2026-09-07 on this image:
+  // 3.09 ms against 0.20, and over 200 shapes that is 0.6 s of a 3.6 s test.
+  // The two are the same world by both oracles this repository owns, asserted
+  // in `a forked world is the image's world, and a write to it stays there`
+  // below rather than assumed here.
   const img = image();
+  const base = fromImage(img);
   let same = 0, refused = 0; const silent: string[] = [];
   for (const c of chosen) {
     try {
-      const got = parse(c.src, fromImage(img)).clauses.map(canonClause).join('\n');
+      const got = parse(c.src, base.fork()).clauses.map(canonClause).join('\n');
       if (got === c.want) same++;
       else silent.push(`${c.file}: want ${c.want.slice(0, 60)} | got ${got.slice(0, 60)}`);
     } catch (e) { if (e instanceof IncompleteParse) refused++; else throw e; }
@@ -223,6 +233,48 @@ test('corpus floor: ring 1 agrees on every SHAPE it is given, not every byte', (
   assert.deepEqual(silent, []);
   assert.equal(same + refused, chosen.length);
   assert.ok(same >= SHAPES - 5, `expected nearly every shape to agree, got ${same} of ${chosen.length}`);
+});
+
+/** ARRIVAL ORDER, and the instrument matters: `allFactKeys()` SORTS, so an
+ *  assertion on it cannot see the order a clone fills its runs in. Measured
+ *  2026-09-07 with a mutant — `run.arrived.unshift` instead of `push` — which
+ *  every `allFactKeys` comparison in this repository slept through and which
+ *  `allFacts()` catches at once. `allFacts()` is documented as arrival order
+ *  and is deliberately unsorted. */
+const arrival = (r: Rofl): string[] => r.store.allFacts().map((f) => f.key);
+
+test('a forked world is the image\'s world, and a write to it stays there', () => {
+  // THE PREMISE OF EVERY BUILD-ONCE-FORK-PER-CASE IN THIS SUITE, asserted
+  // instead of assumed. The corpus sweep above and `parseFile` both hand each
+  // case a FORK of one restored world; that is only sound if a fork is
+  // indistinguishable from a fresh restore and if one case's writes cannot
+  // reach the next. Both halves are checked, and the second is checked with a
+  // write that a parse really performs — the `src` fact plus everything the
+  // grammar derives from it.
+  const img = image();
+  const template = fromImage(img);
+
+  // 1. A FORK IS THE SAME WORLD. Byte for byte on the repository's own oracle,
+  //    and on arrival order, which `store.clone()` was taught to preserve.
+  assert.equal(template.fork().store.canonicalState(), fromImage(img).store.canonicalState());
+  assert.deepEqual(arrival(template.fork()), arrival(fromImage(img)));
+
+  // 2. A WRITE TO A FORK STAYS THERE. The template's fact count must not move,
+  //    and the NEXT fork must not see the previous one's source.
+  const before = template.store.factCount();
+  const state = template.store.canonicalState();
+  const used = template.fork();
+  assert.equal(canon(parse('p(a).', used).clauses), canon(parseProgram('p(a).')));
+  assert.ok(used.store.factCount() > before, 'positive control: the parse must have written');
+  assert.equal(template.store.factCount(), before, 'the template moved under a fork\'s write');
+  assert.equal(template.store.canonicalState(), state);
+  assert.equal(template.fork().store.relCount('src'), 0, 'a fresh fork saw the last one\'s source');
+
+  // 3. AND THE ANSWER DOES NOT DEPEND ON WHICH FORK ASKED. Two clauses through
+  //    two forks of one template agree with two clauses through two restores.
+  const viaFork = ['q(b).', 'r(c).'].map((s) => canon(parse(s, template.fork()).clauses));
+  const viaImage = ['q(b).', 'r(c).'].map((s) => canon(parse(s, fromImage(img)).clauses));
+  assert.deepEqual(viaFork, viaImage);
 });
 
 test('the image restores to the same world its sources build', () => {
@@ -370,25 +422,8 @@ test('perspExplicit survives, and canon cannot see it', () => {
                   canonClause(resolveClauseBooks(parse('concludes[main](R, X) :- q(R, X).').clauses[0])));
 });
 
-test('SELF-APPLICATION: L1 parses L2\'s own source, identically to the host', () => {
-  // The most valuable gate here, and it earned that on its first run: pointing
-  // L1 at L2 found two defects the corpus could not reach — `is` excluded from
-  // term position, so ring 1 could not read `optok(I, J, is)` and therefore
-  // could not parse itself; and a one-character operator guarded on the wrong
-  // index, so `<=` read as `<` and BOTH parses survived, 137 clauses against
-  // the host's 131. Neither shows on 23 corpus files that agree byte for byte.
-  const src = read('examples', 'ring1', 'ring1.rofl');
-  const got = parseFile(src, imageOfL1());
-  assert.ok(clauses(src).length > 100, 'the split must actually find the clauses');
-  assert.equal(got.clauses.length, parseProgram(src).length);
-  assert.equal(canon(got.clauses), hostCanon(src));
-});
-
-/** L1's world as an image — built once for the self-application sweep. */
-function imageOfL1(): string {
-  const r = new (Object.getPrototypeOf(world()).constructor)();
-  for (const f of ['boot.rofl', 'examples/ring1/charclass.rofl', 'examples/ring1/l1.rofl']) {
-    r.load(fs.readFileSync(path.join(ROOT, f), 'utf8'), { budget: 400_000_000 });
-  }
-  return r.save();
-}
+// SELF-APPLICATION — `L1 parses L2's own source` — MOVED, not deleted, and it
+// is one file over in `test/example-ring1-self.test.ts`. It was 14.1 s of the
+// 18.9 s this file cost, and `node --test` parallelises by FILE, so the only
+// way to spread it over the cores the suite already has is to give it a file.
+// The test's text is unchanged there; so is what it asserts.

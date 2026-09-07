@@ -95,7 +95,15 @@ what spaces, tabs and carriage returns need.
 
 ## Running it
 
-    node --test --test-reporter=spec test/example-ring1.test.ts
+    node --test --test-reporter=spec test/example-ring1.test.ts \
+                                   test/example-ring1-self.test.ts
+
+Two files, and the split is a scheduling fact rather than a taste.
+`node --test` parallelises BY FILE, so the self-application sweep — 14.1 s
+of the 18.9 s the one file cost, measured 2026-09-07 — was a pole no idle
+core could shorten, and it finished last in every instrumented run of the
+suite. It is `test/example-ring1-self.test.ts` now, character for
+character; everything else stayed put.
 
 ## Two more defects found by building the grammar out
 

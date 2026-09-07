@@ -67,6 +67,13 @@ const FACT_FILES = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'];
 type Mutation = { find: string; replace: string };
 
 interface Model {
+  /** the world behind this model. Exposed for ONE reason: the isolation gate
+   *  at the foot of this file has to check that `build()` hands out a FORK,
+   *  and a gate that re-derives the property from `store.clone()` instead of
+   *  exercising the call path is measuring the kernel, not the change —
+   *  measured 2026-09-07 with a mutant that dropped the `.fork()` from
+   *  `build()`, which such a gate slept through. */
+  world: Rofl;
   q: (lit: string) => string[][];
   n: (lit: string) => number;
   binds: (lit: string, ...vars: string[]) => string[];
@@ -76,7 +83,28 @@ interface Model {
  *  comparison is against V8 frame names, which are neither. */
 const unq = (s: string) => (s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s);
 
+/** THE UNMUTATED WORLD IS A CONSTANT, SO IT IS BUILT ONCE AND FORKED.
+ *
+ *  Twelve of the fifteen call sites below ask for `build()` with no mutation,
+ *  and each one used to re-scan three fixtures with babel, re-load boot.rofl,
+ *  two fact files and three rule files, and re-run the whole fixpoint to
+ *  arrive at the same 25 544 facts. Measured 2026-09-07 on this file's own
+ *  recipe: `buildWorld()` 511.9 ms, `fork()` 4.9 ms, and the fork's first
+ *  query re-runs the fixpoint for 37.8 ms — 512 against 43, a factor of 12.
+ *
+ *  A FORK, NOT A SHARED WORLD. `Rofl.query` is not read-only — `ensure`
+ *  evaluates into the store and a sealed or budget-cut query writes a `hole`
+ *  row — so handing every test the same object would let one test observe
+ *  another's writes. `store.clone()` copies each record, and the isolation is
+ *  asserted rather than assumed by the two gates at the foot of this file. */
+let UNMUTATED: Rofl | undefined;
+
 function build(mutations: Mutation[] = []): Model {
+  if (mutations.length === 0) return model((UNMUTATED ??= buildWorld()).fork());
+  return model(buildWorld(mutations));
+}
+
+function buildWorld(mutations: Mutation[] = []): Rofl {
   const r = new Rofl();
   const load = (text: string, what: string) => {
     const res = r.load(text);
@@ -100,7 +128,10 @@ function build(mutations: Mutation[] = []): Model {
     }
     load(text, f);
   }
+  return r;
+}
 
+function model(r: Rofl): Model {
   const q = (lit: string): string[][] => {
     const res = r.query(lit);
     assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
@@ -111,6 +142,7 @@ function build(mutations: Mutation[] = []): Model {
     return res.rows.map((row) => order.map((v) => unq(row.bindings[v] ?? '')));
   };
   return {
+    world: r,
     q,
     n: (lit) => q(lit).length,
     binds: (lit, ...vars) => {
@@ -640,4 +672,41 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
   const stillOk = o.list.filter((e) => e.callee !== 'Box' && blind.has(`${e.file}:${e.line}`)).length;
   assert.ok(stillOk > 5, `${stillOk} other sites keep their attribution`);
   console.log(`  KILLED: the new-expression site loses its verdict while ${stillOk} others keep theirs`);
+});
+
+test('the unmutated world is FORKED per test, not shared between them', () => {
+  // THE PREMISE OF `build()`, and it needs its own gate because the seventeen
+  // tests above cannot supply one: measured 2026-09-07 with a mutant that made
+  // `store.clone()` return the store itself, every one of them stayed green.
+  // They all only READ, so a shared world is invisible to them right up until
+  // a test writes — and `Rofl.query` does write, since `ensure` evaluates into
+  // the store and a sealed or budget-cut query records a `hole` row.
+  //
+  // IT GOES THROUGH `build()`, not through `store.clone()`. The first spelling
+  // of this gate forked `UNMUTATED` by hand and compared the two worlds; it
+  // proved a property of the kernel and slept through a mutant that deleted
+  // the `.fork()` from `build()` itself, which is the line this file owns.
+  const fresh = buildWorld();
+  const first = build().world;
+
+  // 1. A FORK IS THE WORLD IT WAS TAKEN FROM, on the canonical state and on
+  //    arrival order. `allFactKeys()` sorts, so it cannot see the second and
+  //    `allFacts()` is what carries it.
+  assert.equal(first.store.canonicalState(), fresh.store.canonicalState());
+  assert.deepEqual(first.store.allFacts().map((f) => f.key),
+                   fresh.store.allFacts().map((f) => f.key));
+
+  // 2. TWO CALLS ARE TWO WORLDS, and a write through one is invisible to the
+  //    next — checked in that order, so the second world is built AFTER the
+  //    write and could only be clean by being a separate store.
+  const before = first.store.factCount();
+  assert.ok(first.assert('call_site(mine, probe, 1, 1).').ok);
+  assert.equal(first.query('call_site(mine, F, L, C)').rows.length, 1,
+    'positive control: the write must have landed');
+  assert.ok(first.store.factCount() > before);
+  const second = build().world;
+  assert.notEqual(second, first, 'build() handed out the same object twice');
+  assert.equal(second.query('call_site(mine, F, L, C)').rows.length, 0,
+    'a later build() saw an earlier one\'s write');
+  assert.equal(second.store.canonicalState(), fresh.store.canonicalState());
 });

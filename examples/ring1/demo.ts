@@ -304,8 +304,17 @@ export function clauses(src: string): string[] {
  *  of it. Measured 2026-09-07 on the ring 1 image: `fromImage` 3.09 ms, of
  *  which `JSON.parse` alone is 1.71, against 0.20 ms for `fork`. The two are
  *  the same world by both oracles the repository owns -- `canonicalState` and
- *  `snapshot` are byte-identical, and `allFactKeys` agrees element for element,
- *  which is the arrival order the fork was taught to preserve on 2026-09-07. */
+ *  `snapshot` are byte-identical.
+ *
+ *  AND THE ARRIVAL-ORDER HALF OF THAT SENTENCE CITED THE WRONG INSTRUMENT. It
+ *  read: `allFactKeys` agrees element for element, which is the arrival order
+ *  the fork was taught to preserve. It does agree, and it says NOTHING about
+ *  order -- `allFactKeys()` is `[...facts.keys()].sort()`. Measured 2026-09-07
+ *  with a mutant that fills the clone's fact map in reverse: every
+ *  `allFactKeys` comparison in this repository slept through it, and
+ *  `allFacts()`, which is documented as arrival order and deliberately
+ *  unsorted, killed it at once. The gate that states the property now lives in
+ *  test/example-ring1.test.ts and reads `allFacts()`. */
 export function parseFile(src: string, img: string = image()): ParseResult {
   const out: Clause[] = [];
   let subparses = 0;
