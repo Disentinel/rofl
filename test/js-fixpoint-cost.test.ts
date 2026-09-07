@@ -143,11 +143,11 @@ test('the five heaviest read paths, by name', () => {
   // rules. A delta alone would have reported "+6.7%" for both and said nothing
   // about which half either time.
   assert.deepEqual(c.top, [
-    'argMatches ast_within pos=[0] = 110050',
-    'relPersp authority = 83502',
-    'argMatches encloses_v pos=[1] = 53925',
-    'relPersp encloses_v = 51330',
-    'relPersp ast_node = 49275',
+    'argMatches ast_within pos=[0] = 111254',
+    'relPersp authority = 84735',
+    'argMatches encloses_v pos=[1] = 54505',
+    'relPersp encloses_v = 51910',
+    'relPersp ast_node = 50025',
   ], 'a new name here is a body ordered so a big relation is enumerated first');
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -200,7 +200,18 @@ test('the five heaviest read paths, by name', () => {
   // the RULES cost +0.15% of rows and 43 firings — five relations that lead
   // with `imports_name`, which has three rows — and the FIXTURE costs +1.05%
   // and 503. Same shape as the alias arm and the opposite of the scope layer.
-  assert.equal(c.total, 946277, 'total rows handed out by the store in one fixpoint');
+  // 946 277 -> 965 160, axes again from the diff (rules/js-dataflow.rofl and
+  // BOTH fixture files):
+  //
+  //                        HEAD corpus            this corpus
+  //     HEAD rules   950 290 / 57 328 fir   961 986 / 57 949 fir
+  //     specifier rl 951 525 / 57 400 fir   965 160 / 58 046 fir
+  //
+  // rules +0.13% of rows and 72 firings; fixture +1.23% and 621. Third iteration
+  // running where an arm joining relations that already stand is nearly free and
+  // the corpus is what costs — which is the shape to expect, and the reason the
+  // scope layer's +25% was worth stopping for.
+  assert.equal(c.total, 965160, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -253,5 +264,5 @@ test('the five heaviest read paths, by name', () => {
   // instrument reported nothing. A measurement whose axes are hard-coded
   // measures the shape of the previous change. The axes have to be chosen per
   // iteration, from the diff.
-  assert.equal(c.firings, 57335, 'derivations: 56 643 before the module boundary');
+  assert.equal(c.firings, 58046, 'derivations: 57 335 before the other two specifiers');
 });

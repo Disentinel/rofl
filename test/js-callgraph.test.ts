@@ -966,7 +966,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // objects, each function carrying its `trace()`.
   // 160 -> 162: `crossed` and `bcross` and their `trace()` calls, less the one
   // site that now RESOLVES across the file boundary.
-  assert.equal(sites - resolved, 162, `${sites - resolved} call sites vanished from the frontier`);
+  // 162 -> 164: `adefault` and `bviaNs` and their `trace()` calls, less the two
+  // sites the namespace and default bindings now resolve.
+  assert.equal(sites - resolved, 164, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

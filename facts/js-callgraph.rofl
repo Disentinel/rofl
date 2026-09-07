@@ -104,9 +104,6 @@ handled(js, export_named_declaration,        callgraph, r_imported_name).
 -- position where the answer could be checked: `bdefault` is called by the
 -- harness, not by an importing module. Declaring them answered would be a
 -- claim no site backs.
-unknown_because(js, import_default_specifier,   callgraph, not_yet).
-unknown_because(js, import_namespace_specifier, callgraph, not_yet).
-unknown_because(js, export_default_declaration, callgraph, not_yet).
 unknown_because(js, export_all_declaration,     callgraph, not_yet).
 unknown_because(js, super,                   callgraph, not_yet).
 -- RETIRED 2026-09-04: the constructor edge is modelled, and the kind is split
@@ -385,6 +382,13 @@ node_kind(js, import_namespace_specifier).
 node_kind(js, export_default_declaration).
 node_kind(js, export_all_declaration).
 -- three of the four produce no node in this corpus, and say so
-kind_absent_ok(import_default_specifier, a_no_corpus_site).
-kind_absent_ok(import_namespace_specifier, a_no_corpus_site).
 kind_absent_ok(export_all_declaration, a_no_corpus_site).
+
+-- THE OTHER TWO SPECIFIERS AND THE DEFAULT EXPORT, 2026-09-07. A namespace
+-- import binds the module object — the other file's `program` node — and a
+-- default import binds the one unnamed export. `export default` had a node
+-- and NO CONSUMER until alpha.mjs got one that beta.mjs imports; a form the
+-- harness calls is not a form the model can be checked on.
+handled(js, import_namespace_specifier, callgraph, r_imported_name).
+handled(js, import_default_specifier,   callgraph, r_imported_name).
+handled(js, export_default_declaration, callgraph, r_imported_name).

@@ -930,6 +930,92 @@ const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void 
 
 for (const g of IMPORTS) test(`${g.name} — module boundary`, () => g.expect(build(g.mut), base()));
 
+// 3j. THE OTHER TWO SPECIFIERS (w_cg_module_boundary, continued). A NAMESPACE
+// import binds the whole module, and the module object is a node the store
+// already had: the other file's `program`. A DEFAULT import binds the one
+// unnamed export, whose syntactic name is NOT the name the importer uses.
+const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'n1 the namespace binding is deleted',
+    mut: [{ find: `may_be_node[flow](E, P) :- imports_ns[code](Local, Src, File), import_target[code](Src, Target),
+                           module_object[flow](P, Target), ident_in[code](E, Local, File).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> crossed']),
+  },
+  {
+    name: 'n2 a module namespace is not a plain object',
+    mut: [{ find: `member_plain[flow](P, Key, V) :- module_object[flow](P, _),
+                                 member_value[flow](P, Key, V).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    // THE SAME EDGE AS n1 AND A DIFFERENT ROW, which is what keeps them two
+    // mutants: `member_value` still names the export, and all three member
+    // lookups guard their receiver, so a `program` node passes none of them.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> crossed']);
+      assert.equal(b.n('member_plain[flow](O, K, V)'), 60);
+      assert.equal(m.n('member_plain[flow](O, K, V)'), 29, 'the module\'s exports leave the lookup');
+    },
+  },
+  {
+    name: 'n3 the default binding is deleted',
+    mut: [{ find: `may_be_node[flow](E, F) :- imports_default[code](Local, Src, File),
+                           import_target[code](Src, Target),
+                           exports_default[code](F, Target),
+                           ident_in[code](E, Local, File).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(
+      [...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> adefault']),
+  },
+  {
+    name: 'n4 a default export is read as a NAMED one',
+    mut: [{ find: 'exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, File, _),',
+            replace: 'exports_default[code](F, File) :- ast_node[code](E, export_named_declaration, File, _),',
+            file: 'rules/js-dataflow.rofl' }],
+    // THE LOUDEST OF THE FIVE, and it is loud for a reason worth naming: there
+    // is exactly ONE default export per module and TWENTY-NINE named ones, so
+    // confusing the two turns one binding into every export alpha.mjs has.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(), [
+        'bviaNs -> leaf', 'bviaNs -> main', 'bviaNs -> run', 'bviaNs -> useAssign',
+        'bviaNs -> useBin', 'bviaNs -> useCond', 'bviaNs -> useOr', 'bviaNs -> usePanel',
+        'bviaNs -> useRack', 'bviaNs -> useSeq', 'bviaNs -> useShelf',
+      ]);
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 140, 'and the site resolves every way: 8 -> 140');
+    },
+  },
+  {
+    name: 'n5 the two specifier KINDS are confused',
+    mut: [{ find: '    ast_node[code](Sp, import_namespace_specifier, _, _),',
+            replace: '    ast_node[code](Sp, import_default_specifier, _, _),',
+            file: 'rules/js-dataflow.rofl' }],
+    // n1 LOSES THE SAME EDGE, so the edge cannot be what tells them apart: this
+    // one binds the wrong NAME to the module object, and the row says so.
+    expect: (m, b) => {
+      assert.deepEqual(b.q('imports_ns[code](L, S, F)'), [['alphaNs', './alpha.mjs', 'beta.mjs']]);
+      assert.deepEqual(m.q('imports_ns[code](L, S, F)'), [['adefault', './alpha.mjs', 'beta.mjs']],
+        'the namespace rule binds the DEFAULT import\'s name');
+    },
+  },
+];
+
+for (const g of SPECIFIERS) test(`${g.name} — specifiers`, () => g.expect(build(g.mut), base()));
+
+test('a namespace, a default, and the export that finally has a consumer', () => {
+  const m = base();
+  for (const e of ['bviaNs -> crossed', 'bviaNs -> adefault']) {
+    assert.ok(edges(m).has(e), `the specifier did not bind: ${e}`);
+  }
+  // `export default` HAD A NODE AND NO CONSUMER since beta.mjs was written:
+  // `bdefault` is called by the harness, which is not an edge the model can be
+  // checked against. alpha.mjs has one now that beta imports, so the binding
+  // rule has a site — and BOTH defaults are still named by the relation.
+  assert.deepEqual(m.q('exports_default[code](F, File)').map(([, f]) => f).sort(),
+    ['alpha.mjs', 'beta.mjs']);
+  assert.deepEqual(m.q('imports_default[code](L, S, F)'), [['adefault', './alpha.mjs', 'beta.mjs']]);
+});
+
+
 test('an imported name, and the module the corpus does not have', () => {
   const m = base();
   // THE POSITIVE HALF: the first cross-file call edge this model has derived.

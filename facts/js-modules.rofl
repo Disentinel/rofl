@@ -399,8 +399,6 @@ ignored(js, tsunion_type,                   modules, a_not_a_module_construct).
 -- declared.
 kind_absent_ok(export_all_declaration, a_no_corpus_site).
 kind_absent_ok(import, a_babel_emits_no_import_callee).
-kind_absent_ok(import_default_specifier, a_no_corpus_site).
-kind_absent_ok(import_namespace_specifier, a_no_corpus_site).
 
 -- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the
 -- `node_kind` rows are: a world loading this pack and not the other declares

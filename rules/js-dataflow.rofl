@@ -410,6 +410,14 @@ class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
 -- the two above reaches them and they need their own row rather than a negation
 member_plain[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  member_value[flow](O, Key, V).
+-- ...AND A MODULE NAMESPACE IS PLAIN IN EXACTLY THIS SENSE, 2026-09-07. It has
+-- no `static` attribute on anything and no prototype half, so the two class
+-- arms cannot reach it and the object-literal arm is the one it belongs in.
+-- Measured, not assumed: without this row `alphaNs.crossed(n)` resolves to
+-- nothing even though `member_value` names the export, because all three
+-- lookups guard their receiver and a `program` node passes none of the guards.
+member_plain[flow](P, Key, V) :- module_object[flow](P, _),
+                                 member_value[flow](P, Key, V).
 
 -- WHICH ROLE THE RECEIVER IS IN, syntactically and narrowly: a bare name that
 -- IS a class name in this file denotes the CLASS OBJECT; anything else that
@@ -564,6 +572,50 @@ exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration,
 may_be_node[flow](E, F) :- imports_name[code](Local, Name, Src, File),
                            import_target[code](Src, Target),
                            exports_name[code](F, Name, Target),
+                           ident_in[code](E, Local, File).
+
+-- A NAMESPACE IMPORT BINDS THE MODULE ITSELF, and the module object is a node
+-- the store already has: the other file's `program`. Then `alphaNs.crossed(n)`
+-- is an ordinary member lookup on it — `member_value` over the exports — and
+-- the call graph needs nothing new for the second time in two iterations.
+--
+-- NEITHER SPECIFIER CARRIES AN `imported` CHILD, which is why `imports_name`
+-- above correctly does not fire for them: a namespace binds no single name, and
+-- a default's imported name is implicit. Measured from the scanner's output
+-- rather than assumed — and the first probe that asked hid the answer behind
+-- its own filter, which is the third time in this loop a probe has done that.
+imports_ns[code](Local, Src, File) :-
+    ast_node[code](D, import_declaration, File, _),
+    ast_child[code](D, source, 0, S), ast_value[code](S, Src),
+    ast_child[code](D, specifiers, _, Sp),
+    ast_node[code](Sp, import_namespace_specifier, _, _),
+    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
+
+module_object[flow](P, File) :- ast_node[code](P, program, File, _).
+
+may_be_node[flow](E, P) :- imports_ns[code](Local, Src, File), import_target[code](Src, Target),
+                           module_object[flow](P, Target), ident_in[code](E, Local, File).
+member_value[flow](P, Name, F) :- module_object[flow](P, Target),
+                                  exports_name[code](F, Name, Target).
+
+-- A DEFAULT IMPORT BINDS THE ONE UNNAMED EXPORT. `export default function f()`
+-- carries a name in the syntax and it is NOT the name the importer uses, which
+-- is the whole reason this is a separate rule rather than a case of the named
+-- one: `import adefault from './alpha.mjs'` would work spelled any other way.
+imports_default[code](Local, Src, File) :-
+    ast_node[code](D, import_declaration, File, _),
+    ast_child[code](D, source, 0, S), ast_value[code](S, Src),
+    ast_child[code](D, specifiers, _, Sp),
+    ast_node[code](Sp, import_default_specifier, _, _),
+    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
+
+exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, File, _),
+                                  ast_child[code](E, declaration, 0, F),
+                                  fn_kind_v(K), ast_node[code](F, K, _, _).
+
+may_be_node[flow](E, F) :- imports_default[code](Local, Src, File),
+                           import_target[code](Src, Target),
+                           exports_default[code](F, Target),
                            ident_in[code](E, Local, File).
 
 -- AND THE OTHER HALF IS A FRONTIER WITH A NAME, not a silence: an import whose

@@ -185,7 +185,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
      'w_cf_sweep', 'w_cf_sweep',
      'w_cg_call_result', 'w_cg_call_result', 'w_cg_call_result',
      'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family', 'w_cg_member_family',
-     'w_cg_module_boundary', 'w_cg_module_boundary',
+     'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary', 'w_cg_module_boundary',
      'w_cg_sweep', 'w_cg_sweep',
      'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer', 'w_controlflow_layer',
      'w_cost_gate_per_layer', 'w_cost_gate_per_layer',
@@ -254,7 +254,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('held_unknown[audit](W)'), 0, 'a hold names an item that exists');
 });
 
-test('the queue covers the model: 25 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: 19 open cells, every one owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -285,7 +285,9 @@ test('the queue covers the model: 25 open cells, every one owned by name, none s
   // `r_member_write` — a member written is a member read.
   // 31 -> 25 on 2026-09-07: the module boundary answered three import/export
   // kinds at BOTH layers — the first item in this loop to close six at once.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 25, 'the queue is the model\'s open set');
+  // 25 -> 19 the same day: the second module-boundary pass took three more
+  // forms at both layers, each for one line of fixture.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 19, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -310,12 +312,12 @@ test('the queue covers the model: 25 open cells, every one owned by name, none s
   // layer with no sweeper is a layer whose every open cell has a named owner.
   // 18 -> 17 on 2026-09-07: `this_expression`, closed by `r_this_host`.
   // 17 -> 16 on 2026-09-07: `assignment_expression`, closed by `r_member_write`.
-  assert.deepEqual(per('callgraph'), [13, 22, 0]);
+  assert.deepEqual(per('callgraph'), [10, 19, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
   // layers now have no bucket at all.
-  assert.deepEqual(per('dataflow'), [7, 13, 0]);
+  assert.deepEqual(per('dataflow'), [4, 10, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.

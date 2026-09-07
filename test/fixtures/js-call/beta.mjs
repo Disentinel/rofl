@@ -10,6 +10,12 @@ import { trace } from './trace.mjs';
 // column of `ident_in` unconstrained by the data — the mutant that drops it
 // survived until this name collided on purpose.
 import { crossed as leaf } from './alpha.mjs';
+// THE TWO SPECIFIER FORMS THE CORPUS HAD NEVER CONTAINED. A NAMESPACE import
+// binds the whole module as an object, so `alphaNs.crossed` is a member lookup
+// on it; a DEFAULT import binds one unnamed export. Both point at alpha.mjs,
+// which imports nothing from here, so no cycle is created.
+import * as alphaNs from './alpha.mjs';
+import adefault from './alpha.mjs';
 
 export function run(n) {
   trace();
@@ -67,7 +73,12 @@ export function bcross(n) {
   return leaf(n);
 }
 
+export function bviaNs(n) {
+  trace();
+  return alphaNs.crossed(n) + adefault(n);
+}
+
 export function bmain() {
   trace();
-  return run(5) + buseNs(1) + bcross(1);
+  return run(5) + buseNs(1) + bcross(1) + bviaNs(1);
 }

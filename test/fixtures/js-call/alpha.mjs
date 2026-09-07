@@ -1041,6 +1041,15 @@ const seeded = (function seed() {
   return 7;
 })();
 
+// ---- THE DEFAULT EXPORT, WITH A CONSUMER (w_cg_module_boundary, 2026-09-07).
+// beta.mjs already had `export default function bdefault`, and NOTHING IMPORTED
+// IT — the harness calls it, which is not an edge the model can be checked
+// against. This one is imported, so the binding rule has a site.
+export default function adefault(n) {
+  trace();
+  return n + 13;
+}
+
 // ---- IMPORTED BY beta.mjs, which is the corpus's FIRST cross-file import
 // (w_cg_module_boundary, 2026-09-07). Before this the only import anywhere was
 // `trace` from './trace.mjs' — a module the corpus does not scan — so the

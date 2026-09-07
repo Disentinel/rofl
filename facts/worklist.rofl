@@ -816,22 +816,25 @@ work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_la
 -- could not notice — the same shape as the leak audit that had no world.
 -- The modules layer already resolves specifiers to files; nothing joins that
 -- to `denotes`, which is the whole of this item.
--- PARTLY DONE 2026-09-07. `r_imported_name` answers the three forms this
--- corpus can exercise, at both layers, and their six claims are gone with the
--- cells. WHAT IS LEFT IS FOUR FORMS WITH NO CHECKABLE SITE: three of them
--- (`export *`, a namespace import, a default-specifier import) produce no
--- node in this corpus at all and carry a `kind_absent_ok` row saying so; the
--- fourth, `export default`, has exactly one node and NO IMPORTING CONSUMER —
--- `bdefault` is called by the harness. Each is a different binding rule and
--- declaring any of them answered would be a claim no site backs.
-work(w_cg_module_boundary, "an imported name is the function the other module exports - DONE for the three forms the corpus exercises; four forms remain with no checkable site").
+-- PARTLY DONE 2026-09-07, and the second pass took THREE more forms that the
+-- first pass had called uncheckable. Two of them needed one line of fixture
+-- each — `import * as alphaNs` and `import adefault` in beta.mjs, both
+-- pointing at a module that imports nothing from beta, so no cycle — and the
+-- third needed alpha.mjs to grow a DEFAULT EXPORT WITH A CONSUMER, because
+-- beta's `bdefault` is called by the harness and a form the harness calls is
+-- not a form the model can be checked on.
+--
+-- WHAT IS LEFT IS ONE FORM AND IT IS A DIFFERENT SHAPE. `export * from './x'`
+-- re-exports every name of another module, so checking it needs a THIRD file
+-- importing from the re-exporting one. That is a real fixture rather than a
+-- line, and this corpus is three modules for a reason.
+work(w_cg_module_boundary, "an imported name is the function the other module exports - six of the seven forms answered at both layers; `export *` is the one left, and it needs a RE-EXPORT CONSUMER, which is a module that imports from the re-exporting one").
 work_order(w_cg_module_boundary, 33).
 work_state(w_cg_module_boundary, open).
 work_spawned(w_cg_module_boundary, f_the_kernel_refused_exactly_and_nobody_read_the_refusal).
 work_spawned(w_cg_module_boundary, f_the_boundary_had_no_site_to_cross).
-claim(queued, js, import_default_specifier,    none, callgraph, w_cg_module_boundary).
-claim(queued, js, import_namespace_specifier,  none, callgraph, w_cg_module_boundary).
-claim(queued, js, export_default_declaration,  none, callgraph, w_cg_module_boundary).
+work_spawned(w_cg_module_boundary, f_a_form_the_harness_calls_is_not_a_form_the_model_is_checked_on).
+work_spawned(w_cg_module_boundary, f_a_probes_own_filter_is_the_third_way_it_lies).
 claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
 -- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
 -- 2026-09-05. It is ONE missing join and not two: `const h = helper; h()`
@@ -839,9 +842,6 @@ claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boun
 -- and the item was named `w_cg_` only because the call-graph sweep found it
 -- first. Measured with both files in one store, with a same-file control that
 -- resolves normally two lines away.
-claim(queued, js, import_default_specifier,    none, dataflow, w_cg_module_boundary).
-claim(queued, js, import_namespace_specifier,  none, dataflow, w_cg_module_boundary).
-claim(queued, js, export_default_declaration,  none, dataflow, w_cg_module_boundary).
 claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_boundary).
 
 -- 34. THE CALLS THAT HAVE NO CALL SITE. `call_kind` is the closed pair

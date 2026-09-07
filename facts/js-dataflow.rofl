@@ -272,3 +272,19 @@ kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
 -- in the pack that declares its subject, and a verdict declares the kind.
 node_kind(js, import_specifier).
 node_kind(js, export_named_declaration).
+
+-- THE OTHER TWO SPECIFIERS AND THE DEFAULT EXPORT, 2026-09-07. A namespace
+-- import binds the module object — the other file's `program` node — and a
+-- default import binds the one unnamed export. `export default` had a node
+-- and NO CONSUMER until alpha.mjs got one that beta.mjs imports; a form the
+-- harness calls is not a form the model can be checked on.
+handled(js, import_namespace_specifier, dataflow, r_imported_name).
+handled(js, import_default_specifier,   dataflow, r_imported_name).
+handled(js, export_default_declaration, dataflow, r_imported_name).
+-- ...and the kinds, declared here because their verdicts are.
+node_kind(js, import_namespace_specifier).
+node_kind(js, import_default_specifier).
+node_kind(js, export_default_declaration).
+node_kind(js, export_all_declaration).
+kind_absent_ok(export_all_declaration, a_no_corpus_site).
+unknown_because(js, export_all_declaration, dataflow, not_yet).
