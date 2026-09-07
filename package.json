@@ -24,6 +24,8 @@
     "laddercheck": "node --experimental-strip-types scanners/policy_ladder.ts",
     "necessity": "node --experimental-strip-types scanners/necessity.ts",
     "parsecost": "node --experimental-strip-types scanners/parse_cost.ts",
+    "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
+    "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl",
     "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts",
     "noparser": "node --experimental-strip-types scripts/parser_optional.ts"

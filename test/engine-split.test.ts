@@ -175,7 +175,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 694 of 954 code lines, policy 169 — by query', () => {
+test('the split: mechanism is 693 of 953 code lines, policy 169 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -214,9 +214,14 @@ test('the split: mechanism is 694 of 954 code lines, policy 169 — by query', (
   // them is unpacking five relations out of an answer that was already being
   // asked for. The deletions outweigh the unpacking, which is the first time
   // that has been true in this branch.
+  // 954 -> 953 (-1): `matchPremise` unified a literal argument by argument and
+  // now hands both lists to `unifyAll`, which checks the arity itself — so the
+  // separate length guard went with the loop. See src/unify.ts for why the
+  // copy moved: `unify` copies the substitution before it knows whether the
+  // terms match, so a per-argument loop allocated a Map per argument.
   // 952 -> 954 (+2): two import lines, where the kernel's own programs stopped
   // being source text it parses and became a compiled form it reads.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 954);
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 953);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -253,7 +258,10 @@ test('the split: mechanism is 694 of 954 code lines, policy 169 — by query', (
   // `planBody` so the absorption cannot come back. That is 32 lines of
   // mechanism that were being counted as policy. The rest is `safetyAnswer`
   // unpacking five relations instead of one.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 694);
+  // 694 -> 693 (-1): `matchPremise`'s per-argument unify loop is one
+  // `unifyAll` call now, and the arity guard went into it. Mechanism, not
+  // policy — the line decided nothing.
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 693);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -338,8 +346,8 @@ test('the split: mechanism is 694 of 954 code lines, policy 169 — by query', (
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
-  assert.equal(S.byCat['MECH'].code, 694);
-  assert.equal(S.total.code, 954);
+  assert.equal(S.byCat['MECH'].code, 693);
+  assert.equal(S.total.code, 953);
   assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 169);
 });
 
@@ -457,8 +465,8 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+694 code/);
-  assert.match(text, /TOTAL\s+954 code/);
+  assert.match(text, /MECH\s+693 code/);
+  assert.match(text, /TOTAL\s+953 code/);
   assert.match(text, /before-A\s+115 code lines/);
 });
 

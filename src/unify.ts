@@ -62,6 +62,38 @@ function unifyInto(a: Term, b: Term, s: Subst): boolean {
   return false;
 }
 
+/** Unify two argument lists against ONE copy of the substitution.
+ *
+ *  WHY THIS EXISTS, and it is the whole of it: `unify` copies the
+ *  substitution BEFORE it knows whether the terms match, so a caller that
+ *  unified a literal argument by argument paid one `new Map(s)` PER ARGUMENT
+ *  — and threw every one of them away when the candidate failed, which is
+ *  what a candidate does most of the time. Measured 2026-09-07 on the ring 1
+ *  grammar, where the evaluator matches premises against a store the parse
+ *  itself is filling: the garbage collector was the single largest entry in
+ *  the CPU profile at 18 per cent, ahead of every function in the kernel.
+ *
+ *  One copy per candidate instead of one per argument. The contract is
+ *  `unify`'s: `s` is never mutated, and a failure returns null having changed
+ *  nothing the caller can see.
+ *
+ *  AND THE TIME IT BUYS IS SMALL, said here rather than left to be assumed: on
+ *  the ring 1 grammar it is inside the noise, and on a clause wide enough for
+ *  the join to matter it is 2 per cent, consistent in direction over
+ *  interleaved arms. The reason is measured too — the evaluator examines 1.4
+ *  candidate facts per premise match, because the argument index answers
+ *  before a scan can start, so there are few doomed candidates to stop
+ *  allocating for. It is kept for being less work and one call instead of a
+ *  loop at three sites, not for a number. A companion filter that skipped the
+ *  copy for candidates that cannot match was written, measured at zero, and
+ *  removed: forty lines of kernel that no workload here can turn red. */
+export function unifyAll(a: Term[], b: Term[], s: Subst): Subst | null {
+  if (a.length !== b.length) return null;
+  const out = new Map(s);
+  for (let i = 0; i < a.length; i++) if (!unifyInto(a[i], b[i], out)) return null;
+  return out;
+}
+
 export function isGround(t: Term): boolean {
   if (t.k === 'v') return false;
   if (t.k === 'f') return t.args.every(isGround);

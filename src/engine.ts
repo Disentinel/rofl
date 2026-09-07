@@ -4,7 +4,7 @@
 // stratum-0 rules); the kernel contains no stratification checker.
 
 import {
-  type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, walk,
+  type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, unifyAll, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
 import { type Lit, type BodyElem, type Clause } from './unify.ts';
@@ -964,7 +964,7 @@ export class Evaluation {
       let s2: Subst | null = perspT.k === 'a'
         ? (perspT.name === f.persp ? s : null)
         : unify(perspT, mka(f.persp), s);
-      for (let i = 0; i < f.args.length && s2; i++) s2 = unify(lit.args[i], f.args[i], s2);
+      if (s2) s2 = unifyAll(lit.args, f.args, s2);
       if (s2) return false;
     }
     return true;
@@ -1502,10 +1502,12 @@ export class Evaluation {
       // is untouched: it takes the `perspT.k === 'a'` branch and never reaches
       // this test.
       if (perspT.k !== 'a' && isKernelLedger(f.persp)) continue;
+      // ONE COPY PER CANDIDATE, NOT ONE PER ARGUMENT. `unify` copies the
+      // substitution before it knows whether the terms match, so this loop
+      // used to allocate a Map per ARGUMENT of every fact it looked at.
       let s2: Subst | null = perspT.k === 'a' ? s : unify(perspT, mka(f.persp), s);
       if (!s2) continue;
-      if (f.args.length !== lit.args.length) continue;
-      for (let i = 0; i < f.args.length && s2; i++) s2 = unify(lit.args[i], f.args[i], s2);
+      s2 = unifyAll(lit.args, f.args, s2);
       if (!s2) continue;
       if (!seen.has(f.key)) { seen.add(f.key); out.push({ s: s2, ref: { t: 'fact', key: f.key } }); }
     }
@@ -1546,7 +1548,7 @@ export class Evaluation {
     if (h.rel !== call.rel || h.args.length !== call.args.length) return [];
     let s2: Subst | null = unify(h.persp, walk(call.persp, s), s);
     if (!s2) return [];
-    for (let i = 0; i < h.args.length && s2; i++) s2 = unify(h.args[i], call.args[i], s2);
+    s2 = unifyAll(h.args, call.args, s2);
     if (!s2) return [];
     const sols = this.solveBody(rn.body, s2, depth + 1, null, r.id);
     const out: { s: Subst; ref: PremRef }[] = [];

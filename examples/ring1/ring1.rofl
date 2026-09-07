@@ -79,7 +79,21 @@ word_start(I) :- wordch(I), not prevword(I), not dollar_before(I).
 -- character before it - and the chart returned the inner one as a SECOND
 -- clause. The host has this for free by consuming left to right; a chart has
 -- to say it.
-dollar_before(I) :- at(I), 0 < I, J is I - 1, kind(J, dollar), code_at(J).
+-- READ FROM THE `$`, NOT FROM EVERY POSITION, and the order is the whole of
+-- it. Written as `at(I), 0 < I, J is I - 1, kind(J, dollar), code_at(J)` this
+-- rule starts at EVERY position of the source and asks each one whether a `$`
+-- stands behind it -- an accumulator as wide as the input, filtered to nothing
+-- at the fourth premise, since most clauses hold no `$` at all. MEASURED with
+-- scanners/eval_cost.ts: 1881 accumulator elements against 101, and 20% of the
+-- whole parse's join work for zero conclusions. Starting from the RARE thing
+-- and computing the position forward costs one element per `$`. End to end,
+-- three interleaved arms on an 88-byte clause: 89.5 ms against 72.8, 19%.
+--
+-- `planBody` cannot do this for us, and it is worth saying why: the arithmetic
+-- pins the order. `J is I - 1` needs I bound, so `at(I)` had to lead; only
+-- INVERTING it to `I is J + 1` frees the rare premise to go first, and that is
+-- a rewrite of the rule rather than a permutation of its body.
+dollar_before(I) :- kind(J, dollar), code_at(J), I is J + 1, at(I).
 -- `$` STARTS A NAME AND NEVER CONTINUES ONE, which is src/parser.ts's rule to
 -- the letter: every reflected name the kernel builds - $lit, $cons, $var, $nil,
 -- $not, $builtin, $fact and the tense atoms - carries the marker first and
