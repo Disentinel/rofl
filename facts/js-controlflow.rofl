@@ -377,3 +377,51 @@ handled(js, private_name,           controlflow, r_accessor).
 -- inside it to count as module-level entry points, and `reachable[code]`'s
 -- `not in_fn` arm already says so without a rule about this kind.
 ignored(js, static_block,           controlflow, a_a_static_block_runs_when_the_class_is_defined).
+
+-- ---------------------------------------------------------------------------
+-- FOUR KINDS WHOSE SURFACE IS A BINDING AND WHOSE SEMANTICS IS A CALL
+-- (w_destructuring_hides_a_call, 2026-09-08). Three of the four were
+-- `not_modelled` / `not_yet` and `object_pattern` had carried
+-- `a_no_control_transfer` since the forty-cell sweep, borrowed from
+-- `array_expression` where it is true.
+--
+-- WHAT THE ITEM WAITED ON WAS THE WRONG THING, and that is the result worth
+-- keeping. It was blocked on `w_env_api_surface` because naming the receiver's
+-- iterator reads as a standard-library question. MEASURED against the surface
+-- that item generated, with a positive control on the same query shape:
+-- `lib_member(P, K, R)` carries 130 rows over eight prototypes, and
+-- `lib_member(P, "iterator", R)`, `lib_member(P, "Symbol.iterator", R)` and
+-- `lib_member(P, "next", R)` are each ZERO — the surface is keyed by NAME and a
+-- well-known symbol is not a name.
+--
+-- THE REAL DISCRIMINATOR IS THE RECEIVER. Ten cases run against V8's own stack:
+-- an array pattern, an array spread and a spread argument over a PLAIN ARRAY run
+-- no user code at all, and an object spread over a PLAIN OBJECT runs none
+-- either — while the same four syntaxes over a source that owns a getter or a
+-- `[Symbol.iterator]` each transfer control, and V8 attributes both the iterator
+-- and its `next` to the ENCLOSING function exactly as it does for `for-of`. So
+-- the question was never the standard library: it was that every destructuring
+-- site in this corpus read a plain source, and no receiver here could
+-- contradict the sentence.
+--
+-- TWO RULES AND NOT ONE, and `spread_element` carries both. In `properties` a
+-- spread copies keys and runs getters; in `elements` or `arguments` it exhausts
+-- an iterator. Those are two mechanisms, and this layer's own doctrine is that
+-- mechanisms sharing a bucket get one verdict between them.
+handled(js, object_pattern,  controlflow, r_destructure_accessor).
+handled(js, rest_element,    controlflow, r_destructure_accessor).
+handled(js, spread_element,  controlflow, r_destructure_accessor).
+handled(js, spread_element,  controlflow, r_destructure_iterator).
+handled(js, array_pattern,   controlflow, r_destructure_iterator).
+
+-- ...AND ALL FOUR CELLS ARE `checked`, which is the first time this layer can
+-- say so. The oracle is the same execution oracle the call graph uses — V8's own
+-- stack, read by test/fixtures/js-call/trace.mjs, which reads no rule and no
+-- scanner fact — and the fixture sites are counted per kind and per mechanism.
+-- Every one of these edges is in the model AND in the oracle, with `missed`
+-- empty over the whole corpus.
+checked(js, object_pattern,  controlflow, r_destructure_accessor, o_run_with_stack, 2).
+checked(js, rest_element,    controlflow, r_destructure_accessor, o_run_with_stack, 1).
+checked(js, spread_element,  controlflow, r_destructure_accessor, o_run_with_stack, 1).
+checked(js, spread_element,  controlflow, r_destructure_iterator, o_run_with_stack, 2).
+checked(js, array_pattern,   controlflow, r_destructure_iterator, o_run_with_stack, 1).
