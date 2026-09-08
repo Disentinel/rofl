@@ -1,0 +1,14 @@
+// def.ts — A DEFAULT EXPORT THAT NAMES NOTHING, and nothing else.
+//
+// `export default 42` offers the external name `default` and there is no
+// internal name anywhere in the program to put in the other column: babel
+// gives the ExportDefaultDeclaration a `declaration` child with no `id`.
+// exp.ts carries the NAMED half; the two cannot live in one module, because
+// the grammar allows one default export per file — which is also the invariant
+// `default_conflict[audit]` states.
+//
+// IT IMPORTS NOTHING AND IS IMPORTED BY NOTHING, for the same reason exp.ts
+// imports nothing: every module-site relation in test/js-modules.test.ts is
+// asserted set for set against node's own resolver, and a file that adds no
+// site adds nothing to either side of that comparison.
+export default 42;

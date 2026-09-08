@@ -79,3 +79,17 @@ export type { T1 as ReT1 } from './types.ts';
 export { type T4 as ReT4 } from './types3.ts';
 export type * from './types4.ts';
 export {} from './side.ts';
+
+// ==========================================================================
+// THE DEFAULT EXPORT, 2026-09-08 (w_mod_beyond_the_import). The third export
+// form and the only one with no specifier node: it carries `export_kind`
+// "value" and NO `source` child of any kind, so it is a NAME and not an edge,
+// and every module-site relation above must stay exactly where it was.
+//
+// THE NAMED half of the pair. `def.ts` carries the anonymous half, on a
+// separate module because a module may hold at most one default export — so
+// the two arms of `default_internal` / `default_anonymous` cannot be shown to
+// matter separately inside one file.
+export default function reDefault() {
+  return internal;
+}

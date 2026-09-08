@@ -176,6 +176,29 @@ unknown_because(js, import_declaration, bare, modules, out_of_scope).
 -- not_yet: `#foo` needs the importing package's package.json "imports" map.
 -- Zero occurrences in this repository and it still needs a verdict, because
 -- the denominator is babel's grammar rather than the corpus.
+--
+-- THE REASON WAS RE-MEASURED 2026-09-08 (w_mod_beyond_the_import) AND THE NOTE
+-- BESIDE IT WAS WRONG TWICE. facts/worklist.rofl called this "the same on-disk
+-- question as `bare`" and named a package's `exports` map. Put to node's own
+-- resolver from the fixture tree, the two shapes land on OPPOSITE SIDES of the
+-- scanned root:
+--
+--   "#sub"          -> sub/c.ts                         INSIDE the scanned tree
+--   "@babel/parser" -> <repo>/node_modules/...          OUTSIDE it
+--
+-- `#sub` resolves through the IMPORTING package's own package.json `imports`
+-- map — a file the fs emitter already walks and already reports as
+-- `fs_file_in(".", "package.json", "package.json")` — and never enters
+-- node_modules at all. `bare` is a walk up through node_modules and a
+-- conditions map; this is a lookup in one file that is already on the disk the
+-- model can see. What it still lacks is that file's CONTENT: the host's two
+-- declared loans are the string algebra and the file tree, and a JSON object is
+-- neither, so closing this cell means a third blind emitter plus a walk that can
+-- START at the package root instead of at the importing file's directory.
+-- That is a decision about the host contract, so the cell stays open with the
+-- reason it actually has. Assert-checked in test/js-modules.test.ts so the
+-- correction is runnable rather than prose, and recorded as
+-- f_the_subpath_specifier_resolves_inside_the_tree_and_the_bare_one_does_not.
 unknown_because(js, import_declaration, subpath, modules, not_yet).
 
 -- runtime_dependent: THE irreducible cell, and now it is a cell rather than a
@@ -270,7 +293,35 @@ handled(js, export_all_declaration,   modules, r_reexport_edge).
 -- section 4b's question and the one export form with no specifier node to hang
 -- it on. Left open rather than waived, because `a_not_a_module_construct` would
 -- be false of a declaration that does introduce an export name.
-unknown_because(js, export_default_declaration, modules, not_yet).
+-- CLOSED 2026-09-08 (w_mod_beyond_the_import), and the cell that closed is the
+-- NAMING half exactly as the note above predicted. Section 4c of
+-- rules/js-modules.rofl: `default_external` is `"default"` — the string
+-- section 4 already writes for an ImportDefaultSpecifier's `imported` name, so
+-- the two ends of the pair meet on one spelling — and `default_internal` is the
+-- `declaration` child's `id`, WHEN IT HAS ONE.
+--
+-- RE-MEASURED FIRST, over eight spellings rather than the one the note quotes,
+-- and they split FOUR AND FOUR: `function named`, `class Named`, `interface I`
+-- and `export default q` name something; their two anonymous twins, `42` and an
+-- arrow do not. So the internal column is PARTIAL by the grammar,
+-- `default_anonymous` is its written-down complement, and
+-- `default_unaccounted[audit]` says the pair is total.
+--
+-- AND THE FOUR THAT NAME SOMETHING NEEDED TWO ARMS. `export default function
+-- named() {}` carries the name on the declaration's `id` CHILD; `export default
+-- q` IS the name, because babel gives an Identifier a `name` attribute and no
+-- `id` child at all. A rule reading `id` alone reports the second form
+-- ANONYMOUS — the safe-looking direction, and wrong about a name that really is
+-- in this module, which is exactly the distinction section 5c draws.
+--
+-- AND ONE OF THE EIGHT IS AN ERASURE HOLE THIS PACK DOES NOT CLOSE.
+-- `export default interface I {}` is legal TypeScript, is erased entirely, and
+-- carries `export_kind` "value" — so both markers section 4b reads are wrong
+-- about it and the only discriminator is the `declaration` child's KIND, which
+-- is not in this vocabulary. `vocabulary_gap[audit]` is the row that would say
+-- so; declaring the kind opens a cell at every layer and is not this pack's
+-- call. Recorded as f_the_default_export_has_an_erasure_marker_that_lies.
+handled(js, export_default_declaration, modules, r_default_export_name).
 
 -- ---------------------------------------------------------------------------
 -- THE EVIDENCE. Not a claim: the number of fixture import sites whose
@@ -290,6 +341,18 @@ checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resol
 -- except which nodes it collects.
 checked(js, export_named_declaration, modules, r_reexport_edge, o_node_resolver, 5).
 checked(js, export_all_declaration,   modules, r_reexport_edge, o_node_resolver, 2).
+
+-- ...AND THE DEFAULT EXPORT, AGAINST A DIFFERENT ORACLE, 2026-09-08. The node
+-- resolver cannot answer for this form and it is not a failure of the oracle:
+-- a default export has no specifier to resolve, so the question is not WHICH
+-- FILE but WHICH NAME THIS MODULE OFFERS — and the instrument that answers that
+-- is node itself IMPORTING the module and reading the namespace object. Run on
+-- the cross-module corpus rather than on the js-mod tree, because
+-- test/fixtures/js-call RUNS and test/fixtures/js-mod is TypeScript that node
+-- will not load; `o_node_module_namespace` reads `Object.keys(ns)` and
+-- `ns.default.name` and no ROFL fact at all. The number is re-derived from the
+-- oracle's own enumeration in test/js-modules.test.ts rather than counted here.
+checked(js, export_default_declaration, modules, r_default_export_name, o_node_module_namespace, 2).
 
 
 -- ===========================================================================
@@ -405,6 +468,24 @@ handled(js, identifier,     modules, r_named_binding).
 -- the model can SEE it and says nothing. Whether CommonJS belongs in scope at
 -- all is the owner's call - `bare` next to it already carries his
 -- `out_of_scope` - and until he says, it is honest work rather than a waiver.
+--
+-- RE-MEASURED 2026-09-08 (w_mod_beyond_the_import) AND THERE IS NO SITE. Every
+-- `.ts`, `.mjs`, `.js` and `.ts.txt` file in this repository was parsed — 265
+-- of them, 2 unparseable — and walked for a CallExpression whose callee is the
+-- identifier `require`: ZERO, in the whole tree and in both scanned corpora.
+-- So this cell is not merely unscoped, it has nothing to be measured on, which
+-- is the first of the three questions HANDOFF.md asks of a survivor: it waits
+-- on a CORPUS as well as on a decision, and the corpus half is ours.
+--
+-- AND THE GATES CANNOT SEE IT EITHER, which is the part worth carrying. Every
+-- frontier relation in section 6 of rules/js-modules.rofl is keyed on
+-- `module_site`, and a `require` call is not one — so a site the layer declines
+-- to model moves no row of `unaccounted_site[audit]`, `site_without_kind[audit]`
+-- or `reason_missing[audit]`, and the oracle in test/js-modules.test.ts
+-- enumerates four node types and would not see it. That is
+-- f_two_enumerations_with_one_blind_spot_agree_about_nothing arriving one level
+-- up, and it is asserted on a probe holding a real `require` site rather than
+-- argued: recorded as f_a_require_site_moves_no_row_of_the_frontier.
 unknown_because(js, call_expression, modules, not_yet).
 
 

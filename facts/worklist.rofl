@@ -1059,11 +1059,76 @@ work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
 -- model enumerate the SAME NUMBER of sites — and both enumerations were blind
 -- to the same node types, so it was green over a set that excluded seven real
 -- places. Recorded as f_two_enumerations_with_one_blind_spot_agree_about_nothing.
-work(w_mod_beyond_the_import, "PARTLY DONE 2026-09-08: `export ... from` is a module site at last (r_reexport_edge) and `reexport_offers` joins the resolver to the export side; `require`, the subpath specifier and the default form stay open and the first two are the owner's to scope").
+-- THE SECOND HALF, 2026-09-08, and it closed the third of the three cells and
+-- SETTLED THE OPEN FINDING. What is left is two cells whose reasons are now
+-- measured instead of inherited, and both of them are the owner's to scope.
+--
+-- THE DEFAULT FORM CLOSED ON THE NAMING HALF, exactly where the note above
+-- predicted, and the measurement widened first: scanned over EIGHT spellings
+-- rather than the one, they split FOUR AND FOUR on whether an internal name
+-- exists at all, so the column is PARTIAL by the grammar and
+-- `default_anonymous` is its written-down complement.
+-- AND THE FOUR THAT DO NAME SOMETHING NEED TWO ARMS, which one probe would not
+-- have shown: `export default function named() {}` carries the name on the
+-- declaration's `id` CHILD, and `export default q` IS the name — babel gives an
+-- Identifier a `name` attribute and no `id` child at all. A rule reading `id`
+-- alone reports the second form ANONYMOUS, which is the safe-looking direction
+-- and is wrong about a name that really is in this module. Three fixture files
+-- with one default export each, because the grammar allows one per module and
+-- the three arms cannot otherwise be separated.
+-- `default_external` is always `"default"`, the string section 4 already writes
+-- for an ImportDefaultSpecifier's `imported` name, so the two ends of the pair
+-- meet on ONE spelling; `default_unaccounted[audit]` says the pair is total.
+--
+-- AND IT GOT AN EXECUTION ORACLE, which the resolver could not be. A default
+-- export has no specifier to resolve, so the question is not WHICH FILE but
+-- WHICH NAME THIS MODULE OFFERS — and node answers that by IMPORTING the
+-- module: `o_node_module_namespace` reads `Object.keys(ns)` and
+-- `ns.default.name` over test/fixtures/js-call, which RUNS, and agrees set for
+-- set with `default_internal`. It is checked in BOTH directions, because a set
+-- comparison cannot see a module that offers no default being given one.
+--
+-- THE OPEN FINDING IS SETTLED AND THE GUARD IS NOT TRANSPLANTABLE. The
+-- dataflow layer's `not reexport_decl` cannot be copied into section 4b, and
+-- the reason is the GRAMMAR: measured against babel 8, `export * as ns;` is a
+-- SYNTAX ERROR, so every ExportNamespaceSpecifier sits under a declaration
+-- with a `source` and the narrowing would empty that kind's landed cell in
+-- EVERY program rather than deleting one row here. The row is kept and the
+-- silence is closed instead — section 5c's `export_internal_in` says which
+-- module an internal name lives in, in one rule with two arms, and
+-- `export_internal_elsewhere` names the four rows the finding was about, two
+-- of which are type-only and therefore outside `reexport_offers`.
+--
+-- THE TWO CELLS THAT STAY, with the reason each actually has:
+--   `call_expression` — RE-MEASURED AND THERE IS NO SITE. 265 files parsed,
+--     2 unparseable, walked for a CallExpression whose callee is `require`:
+--     ZERO in the tree and in both scanned corpora. And on a probe holding a
+--     real one, `module_site` 24 -> 24 with `unaccounted_site`,
+--     `site_without_kind`, `reason_missing` and `resolve_gap` all 0 -> 0: this
+--     layer's whole frontier is keyed on `module_site`, so a module construct
+--     outside it moves no row of it. That is
+--     f_two_enumerations_with_one_blind_spot_agree_about_nothing one level up.
+--   `import_declaration x subpath` — THE RECORDED REASON WAS WRONG TWICE. The
+--     note above called it the same on-disk question as `bare` and named a
+--     package's `exports` map. Put to node's own resolver: `#sub` resolves to
+--     sub/c.ts INSIDE the scanned tree and `@babel/parser` resolves into
+--     node_modules OUTSIDE it. It is the IMPORTING package's own `imports`
+--     map, in a file the fs emitter already walks. What it needs is that
+--     file's CONTENT — a third blind host loan beside the string algebra and
+--     the file tree — plus a walk that can start at the package root. Real
+--     work with a shape, not a resemblance to `bare`.
+-- NEITHER IS GIVEN A VERDICT HERE. `out_of_scope` is the owner's word and the
+-- only ours-reason that takes a cell out of the queue; both stay `not_yet`
+-- with the measurement beside them, and both measurements are assertions in
+-- test/js-modules.test.ts rather than prose.
+work(w_mod_beyond_the_import, "PARTLY DONE 2026-09-08: the re-export edge, then the default export's naming half against an execution oracle; `require` has no site in the whole tree and the subpath specifier needs a third host loan, and both stay the owner's to scope").
 work_state(w_mod_beyond_the_import, open).
 work_spawned(w_mod_beyond_the_import, f_two_enumerations_with_one_blind_spot_agree_about_nothing).
 work_spawned(w_mod_beyond_the_import, f_a_reexports_local_name_is_not_a_name_in_this_module).
 work_spawned(w_mod_beyond_the_import, f_a_null_child_is_not_an_absent_one).
+work_spawned(w_mod_beyond_the_import, f_the_default_export_has_an_erasure_marker_that_lies).
+work_spawned(w_mod_beyond_the_import, f_the_subpath_specifier_resolves_inside_the_tree_and_the_bare_one_does_not).
+work_spawned(w_mod_beyond_the_import, f_a_require_site_moves_no_row_of_the_frontier).
 -- ...and the two claims go with their cells, because `queue_stale[audit]` calls
 -- a claim on a shut cell under an open item a lie and said so within one run.
 -- The default form's claim STAYS, and its reason is measured rather than
@@ -1071,7 +1136,10 @@ work_spawned(w_mod_beyond_the_import, f_a_null_child_is_not_an_absent_one).
 -- named() {}` emits no `source` child of any kind, so it is not an edge — what
 -- is left of that cell is the naming half, which is section 4b's question and
 -- the one export form with no specifier node to hang it on.
-claim(queued, js, export_default_declaration, none, modules, w_mod_beyond_the_import).
+-- ...AND IT GOES THE SAME WAY 2026-09-08, for the same reason the other two
+-- did: section 4c answers the naming half, so a claim on a shut cell would be
+-- the lie `queue_stale[audit]` reports within one run. The two that remain are
+-- the ones with no verdict this item may write.
 claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).
 claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_import).
 

@@ -864,3 +864,335 @@ test('adding layer(modules) grows the matrix by exactly one cell per node kind',
   assert.equal(withLayer - before, kinds, 'one fact, one cell per kind, and no rule changed');
   assert.ok(kinds > 0, 'the vocabulary is not empty');
 });
+
+// ===========================================================================
+// 6. THE DEFAULT EXPORT — the naming half, and the one export form with no
+//    specifier node (w_mod_beyond_the_import, 2026-09-08).
+//
+// `export default` carries no `source` child of any kind, so nothing in
+// sections 1-3 moves and nothing here is an edge. What it does is OFFER A
+// NAME, and the oracle for a name a module offers is not the resolver — it is
+// node IMPORTING the module and reading the namespace object.
+//
+// `query` takes ONE literal, so every join below is written out in the host.
+
+const rowsOf = (r: Rofl, goal: string, ...vars: string[]): string[][] =>
+  ask(r, goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? ''));
+
+/** every default export in the tree, as `file offers default <- what`. A named
+ *  set whose elements carry no line and no node id, so a declaration appended
+ *  anywhere in any fixture moves none of them. */
+const defaults = (r: Rofl): string[] => {
+  const anon = new Set(rowsOf(r, 'default_anonymous[code](E)', 'E').map(([e]) => e as string));
+  return rowsOf(r, 'default_export_file[code](F, E)', 'F', 'E').map(([f, e]) => {
+    const named = rowsOf(r, `default_internal[code](${e}, N)`, 'N').map(([n]) => n);
+    return `${f} default <- ${anon.has(e as string) ? '<anonymous>' : named.join('+')}`;
+  }).sort();
+};
+
+test('DEFAULT: a module offers `default`, and only sometimes an internal name', () => {
+  assert.deepEqual(defaults(MODEL_R), [
+    // the `id` arm: babel gives the `declaration` child an `id`
+    'exp.ts default <- reDefault',
+    // ...the arm where the declaration IS the name, which a rule reading `id`
+    // alone reports anonymous and which is not anonymous at all
+    'defid.ts default <- q',
+    // ...and the one that really names nothing. Three files rather than three
+    // lines because the grammar allows ONE default export per module, so the
+    // three arms cannot be separated inside one file.
+    'def.ts default <- <anonymous>',
+  ].sort(), 'every default export in the tree, and which of the three arms answers');
+
+  // THE EXTERNAL NAME IS ONE STRING FOR EVERY SITE, and it is the same string
+  // section 4 writes for an ImportDefaultSpecifier's `imported` name — so the
+  // two ends of `import d from './m'` / `export default …` meet rather than
+  // agreeing by coincidence.
+  assert.deepEqual([...new Set(bind(MODEL_R, 'default_external[code](E, X)', 'X'))], ['default']);
+  assert.ok(bind(MODEL_R, 'spec_imported[code](Sp, M)', 'M').includes('default'),
+    'and the import half spells it the same way');
+
+  // ...AND NOT AN EDGE, which is the measurement that kept this cell out of
+  // section 5b: no default declaration has a `source` child of any kind.
+  const sites = rowsOf(MODEL_R, 'export_default_site[code](E)', 'E');
+  assert.ok(sites.length > 0, 'positive control: the tree has default exports');
+  for (const [e] of sites) {
+    assert.equal(count(MODEL_R, `site_source_node[code](${e}, S)`), 0, 'a default export is not a module site');
+    assert.equal(count(MODEL_R, `module_site[code](${e}, K)`), 0);
+  }
+
+  // the gates read zero on the model as written
+  for (const g of ['default_unaccounted[audit](E)', 'default_internal_conflict[audit](E, A, B)',
+                   'default_conflict[audit](F, A, B)']) {
+    assert.equal(count(MODEL_R, g), 0, g);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// THE EXECUTION ORACLE for the naming half. node imports the module and says
+// what it offers; nothing here reads a ROFL fact, and nothing in the model
+// reads node. test/fixtures/js-call is used rather than test/fixtures/js-mod
+// because it RUNS — the js-mod tree is TypeScript that node will not load.
+
+const CALL_FIX = path.join(fs.realpathSync(new URL('.', REPO).pathname), 'test/fixtures/js-call');
+
+// READ OFF THE DISK, NOT TYPED OUT, and that is
+// f_two_enumerations_with_one_blind_spot_agree_about_nothing applied to this
+// probe before it could earn its own instance. A hand-written module list is a
+// decision about WHICH MODULES COUNT that the model world and the oracle would
+// share, and a fifth fixture would then be invisible to both at once.
+//
+// WHAT THE TWO STILL SHARE is exactly this directory, and nothing else: the
+// model keys on the node kind `export_default_declaration` and the oracle keys
+// on `ns.default`, which is why the assertion below can fail. `export { f as
+// default }` offers the same name through an ExportSpecifier — the oracle sees
+// it and `default_export_file` does not — so the two doors are asserted apart
+// rather than assumed equal.
+const RUNNABLE = fs.readdirSync(CALL_FIX).filter((f) => f.endsWith('.mjs')).sort();
+
+/** the modules layer over the runnable corpus. Section 4c reads no `source`,
+ *  no fs fact and no string fact, so this world needs neither host emitter. */
+function runnableWorld(): Rofl {
+  const r = new Rofl();
+  const res = r.load([readRepo('boot.rofl'), STRUCTURE, KINDS, MODEL, FACTS, RULES].join('\n'));
+  assert.ok(res.ok, `packs load: ${res.diagnostics.slice(0, 3).join(' | ')}`);
+  for (const f of RUNNABLE) {
+    const a = r.assert(scan(fs.readFileSync(path.join(CALL_FIX, f), 'utf8'), { file: f }).facts.join('\n'));
+    assert.ok(a.ok, `${f} facts REJECTED: ${a.diagnostics.slice(0, 3).join(' | ')}`);
+  }
+  r.evaluate(20_000_000);
+  return r;
+}
+
+test('DEFAULT ORACLE: node imports the module and says what it offers', async () => {
+  const w = runnableWorld();
+  const model = defaults(w);
+
+  // THE ORACLE, and it enumerates its own modules rather than taking the
+  // model's list — a module the model never saw would show here as an oracle
+  // row with no model row, which is the direction that matters.
+  const oracle: string[] = [];
+  for (const f of RUNNABLE) {
+    const ns = await import(path.join(CALL_FIX, f)) as Record<string, unknown>;
+    if (!Object.prototype.hasOwnProperty.call(ns, 'default')) continue;
+    const d = ns['default'];
+    oracle.push(`${f} default <- ${typeof d === 'function' && d.name ? d.name : '<anonymous>'}`);
+  }
+  console.log('\n  oracle (node module namespace):', oracle.sort().join(', '));
+  console.log('  model  (default_internal):     ', model.join(', '));
+
+  // POSITIVE CONTROL FIRST: an empty comparison is a fact about the probe.
+  assert.ok(oracle.length > 0, 'node found default exports at all');
+  assert.deepEqual(model, oracle.sort(),
+    'set for set: every module node says offers `default`, under the same internal name');
+
+  // ...and the `checked` ledger is RE-DERIVED from what the oracle enumerated
+  // rather than remembered from an earlier run.
+  assert.deepEqual(
+    MODEL_R.query('checked(js, export_default_declaration, modules, R, o_node_module_namespace, N)')
+      .rows.map((row) => Number(row.bindings['N'] ?? -1)),
+    [oracle.length], 'the ledger number is the oracle enumeration');
+
+  // AND THE OTHER DIRECTION, which the set comparison cannot see on its own: a
+  // module that offers no default must not be given one. `export * from
+  // './delta.mjs'` deliberately does not carry a default across.
+  const silent = RUNNABLE.filter((f) => !oracle.some((o) => o.startsWith(f)));
+  assert.ok(silent.length > 0, 'positive control: some corpus module has no default export');
+  for (const f of silent) assert.equal(count(w, `default_export_file[code]("${f}", E)`), 0, `${f} offers no default`);
+});
+
+// ===========================================================================
+// 7. WHERE AN INTERNAL NAME LIVES — the settlement of
+//    f_a_reexports_local_name_is_not_a_name_in_this_module.
+
+test('an internal name has a HOME, and for a re-export it is the other module', () => {
+  // THE ROW THE FINDING WAS ABOUT, as a named set: `helper` is c.ts's name and
+  // exp.ts has no such binding. Four of the nine export bindings in this tree
+  // name something in another module, and TWO OF THE FOUR ARE TYPE-ONLY —
+  // which is why this is not `reexport_offers` under another name.
+  assert.deepEqual(bind(MODEL_R, 'export_internal_elsewhere[code](F, X, T)', 'F', 'X', 'T'), [
+    'exp.ts|ReT1|types.ts',
+    'exp.ts|ReT4|types3.ts',
+    'exp.ts|everything|b.ts',
+    'exp.ts|reHelper|c.ts',
+  ].sort());
+
+  // ...and every OTHER binding in the file is at home, which is the half a
+  // relation that only reported the hazard could not say.
+  const home = rowsOf(MODEL_R, 'export_binding[code](E, Sp, X, L)', 'Sp', 'X')
+    .flatMap(([sp, x]) => rowsOf(MODEL_R, `export_internal_in[code](${sp}, T)`, 'T').map(([t]) => `${x}|${t}`));
+  assert.deepEqual(home.filter((h) => h.endsWith('|exp.ts')).sort(), [
+    'AlsoErasedOut|exp.ts', 'ErasedOut|exp.ts', 'alsoExternal|exp.ts',
+    'external|exp.ts', 'shorthand|exp.ts',
+  ], 'the five names exp.ts really does declare');
+
+  // THE GRAMMAR IS WHY THE DATAFLOW LAYER'S GUARD IS NOT TRANSPLANTABLE, and it
+  // is measured rather than argued: `export * as ns;` is a SYNTAX ERROR, so
+  // every ExportNamespaceSpecifier in any program whatever sits under a
+  // declaration with a `source`. Excluding those from section 4b would empty
+  // that kind's landed cell EVERYWHERE, not only in this tree.
+  const ns = rowsOf(MODEL_R, 'ast_node[code](Sp, export_namespace_specifier, F, L)', 'Sp');
+  assert.ok(ns.length > 0, 'positive control: the fixture has a namespace specifier');
+  for (const [sp] of ns) {
+    assert.equal(count(MODEL_R, `reexport_spec[code](E, ${sp})`), 1,
+      'a namespace specifier is ALWAYS under a re-export');
+  }
+
+  assert.equal(count(MODEL_R, 'export_internal_homeless[audit](Sp)'), 0,
+    'every bound specifier is placed in a module or declared unplaceable');
+  assert.equal(count(MODEL_R, 'export_internal_unplaced[code](Sp, Sh)'), 0,
+    'and on this tree nothing is unplaceable: every re-export resolves');
+});
+
+// ===========================================================================
+// 8. THE TWO CELLS THAT STAY OPEN, with the measurement that keeps them open.
+
+test('OPEN CELL require(): the model can see it and no gate in this layer can', () => {
+  // MEASURED, not assumed. A `require` call is a CallExpression whose callee is
+  // the identifier `require`, so the scanner emits it and the model can see it;
+  // and every frontier relation in section 6 is keyed on `module_site`, which it
+  // is not. This is f_two_enumerations_with_one_blind_spot_agree_about_nothing
+  // one level up: a gate cannot report a construct it does not enumerate.
+  const r = build();
+  const frontier = (): string => JSON.stringify({
+    sites: count(r, 'module_site[code](I, K)'),
+    unaccounted: count(r, 'unaccounted_site[audit](I)'),
+    withoutKind: count(r, 'site_without_kind[audit](I)'),
+    reasonMissing: count(r, 'reason_missing[audit](K, Sh, R)'),
+    resolveGap: count(r, 'resolve_gap[audit](I, Sh)'),
+  });
+  const before = frontier();
+
+  const a = r.assert(scan('const cjs = require("./b.ts");\nexport const use = cjs;\n',
+    { file: 'cjs.ts' }).facts.join('\n'));
+  assert.ok(a.ok, `probe REJECTED: ${a.diagnostics.slice(0, 3).join(' | ')}`);
+  r.evaluate(20_000_000);
+
+  // POSITIVE CONTROL: the probe really did enter the store, and the model
+  // really does see the call and its callee.
+  const calls = rowsOf(r, 'ast_node[code](N, call_expression, "cjs.ts", L)', 'N');
+  assert.equal(calls.length, 1, 'the require call is in the store as a call_expression');
+  const callee = rowsOf(r, `ast_child[code](${calls[0]?.[0]}, callee, 0, C)`, 'C')
+    .flatMap(([c]) => rowsOf(r, `ast_name[code](${c}, Nm)`, 'Nm').map(([n]) => n));
+  assert.deepEqual(callee, ['require'], 'and its callee is the identifier `require`');
+
+  const after = frontier();
+  console.log(`\n  a real require() site, and this layer's own frontier before/after:\n    ${before}\n    ${after}`);
+  assert.equal(after, before,
+    'a module edge this layer declines to model moves NO row of its own frontier');
+});
+
+test('OPEN CELL #sub: the subpath specifier resolves INSIDE the tree and the bare one does not', () => {
+  // THE RECORDED REASON WAS WRONG TWICE and this is what corrects it:
+  // facts/worklist.rofl called the subpath shape "the same on-disk question as
+  // `bare`" and named a package's `exports` map. It is the IMPORTING package's
+  // own `imports` map, in a file the fs emitter already walks, and node lands
+  // the two shapes on opposite sides of the scanned root.
+  const where = (spec: string): string => {
+    try {
+      const abs = createRequire(path.join(ROOT, 'a.ts')).resolve(spec);
+      const rel = path.relative(ROOT, abs).split(path.sep).join('/');
+      return rel.startsWith('..') || path.isAbsolute(rel) || rel.includes('node_modules/')
+        ? 'OUTSIDE' : 'INSIDE ' + rel;
+    } catch (e) { return 'THROWS ' + ((e as { code?: string }).code ?? 'ERR'); }
+  };
+  assert.deepEqual(['#sub', '@babel/parser'].map((s) => `${s} -> ${where(s)}`), [
+    '#sub -> INSIDE sub/c.ts',
+    '@babel/parser -> OUTSIDE',
+  ], 'the subpath resolves within the scanned tree; the bare specifier leaves it');
+
+  // ...and the file that answers it is already a fact this model holds. What is
+  // missing is that file's CONTENT, which is a third host loan and a decision
+  // about the contract rather than a rule nobody wrote.
+  assert.equal(count(MODEL_R, 'fs_file_in[code](".", "package.json", P)'), 1,
+    'the importing package`s package.json is on the disk the model can see');
+
+  // both shapes are still declined, and both declines are still declared
+  const declined = rowsOf(MODEL_R, 'unresolved_import[code](I, Sh)', 'I', 'Sh')
+    .flatMap(([i, sh]) => rowsOf(MODEL_R, `site_source[code](${i}, S)`, 'S').map(([s]) => `${sh}|${s}`));
+  assert.deepEqual(declined.filter((x) => x.startsWith('subpath|') || x.startsWith('bare|')).sort(),
+    ['bare|@babel/parser', 'subpath|#sub']);
+});
+
+// ===========================================================================
+// 9. THE MUTANTS FOR SECTIONS 4c AND 5c.
+
+const LATE_MUTANTS: Mutant[] = [
+  {
+    name: '14. the default export is named after an `exported` child, as a specifier is',
+    targets: 'that the default form has NO specifier and NO `exported` child. A rule written from '
+      + 'section 4b`s shape derives nothing at all, and the module stops offering a name.',
+    plant: { rules: (s) => s.replace('default_external[code](E, "default") :- export_default_site[code](E).',
+      'default_external[code](E, X) :- export_default_site[code](E), ast_child[code](E, exported, 0, N), ast_name[code](N, X).') },
+    damage: (r) => count(r, 'default_external[code](E, X)') === 0
+      ? 'no module offers `default` any more, and the import half`s `default` binds to nothing' : null,
+  },
+  {
+    name: '15. the internal name is read off the export node, not off the declaration`s `id`',
+    targets: '`default_internal`, and the measurement it rests on — the name is on the DECLARATION`s '
+      + '`id` child, one level below the export node.',
+    plant: { rules: (s) => s.replace(`default_internal[code](E, N) :- default_declaration[code](E, D),
+                                ast_child[code](D, id, 0, I), ast_name[code](I, N).`,
+      `default_internal[code](E, N) :- default_declaration[code](E, D),
+                                ast_child[code](E, id, 0, I), ast_name[code](I, N).`) },
+    damage: (r) => {
+      const d = defaults(r);
+      return d.includes('exp.ts default <- <anonymous>')
+        ? `a named default export is reported anonymous: ${d.join(', ')}` : null;
+    },
+  },
+  {
+    name: '15b. the declaration that IS the name is read the way a function declaration is',
+    targets: 'the second arm of `default_internal`. babel gives an Identifier a `name` attribute '
+      + 'and NO `id` child, so one arm cannot answer for both shapes — and the form it gets wrong '
+      + 'is reported ANONYMOUS, which is the safe-looking direction.',
+    plant: { rules: (s) => s.replace(`default_internal[code](E, N) :- default_declaration[code](E, D),
+                                ast_node[code](D, identifier, _, _), ast_name[code](D, N).`, '') },
+    damage: (r) => {
+      const d = defaults(r);
+      return d.includes('defid.ts default <- <anonymous>')
+        ? `\`export default q\` is reported as naming nothing: ${d.join(', ')}` : null;
+    },
+  },
+  {
+    name: '16. every default export is assumed to have an internal name',
+    targets: '`default_anonymous` and the totality of the pair — `export default 42` names nothing, '
+      + 'and without the written-down complement the site falls out of the bottom.',
+    plant: { rules: (s) => s.replace(`default_anonymous[code](E)    :- default_declaration[code](E, _),
+                                 not has_default_internal[code](E).`, '') },
+    damage: (r) => {
+      const n = count(r, 'default_unaccounted[audit](E)');
+      return n > 0 ? `default_unaccounted reports ${n} row(s) — a site that names nothing and is not declared to` : null;
+    },
+  },
+  {
+    name: '17. a re-export`s internal name is looked up in the re-exporting module',
+    targets: 'the settlement of f_a_reexports_local_name_is_not_a_name_in_this_module: the second '
+      + 'arm of `export_internal_in` is what makes `helper` c.ts`s name rather than exp.ts`s.',
+    plant: { rules: (s) => s.replace('export_internal_in[code](Sp, T) :- reexport_spec[code](E, Sp), resolved_import[code](E, T).',
+      'export_internal_in[code](Sp, F) :- reexport_spec[code](E, Sp), site_file[code](E, F).') },
+    damage: (r) => count(r, 'export_internal_elsewhere[code](F, X, T)') === 0
+      ? 'the model now says every name exp.ts offers is a name exp.ts declares, `helper` included' : null,
+  },
+  {
+    name: '18. a local export list is treated as a re-export',
+    targets: '`local_export_site`, the FIRST arm — without the negation a plain `export { a as b }` '
+      + 'has no module to live in and the totality gate is what says so.',
+    plant: { rules: (s) => s.replace('local_export_site[code](E) :- export_site[code](E), not reexport_site[code](E, reexport_named).',
+      'local_export_site[code](E) :- export_site[code](E), reexport_site[code](E, reexport_named).') },
+    damage: (r) => {
+      const n = count(r, 'export_internal_homeless[audit](Sp)');
+      return n > 0 ? `export_internal_homeless reports ${n} specifier(s) with no module to live in` : null;
+    },
+  },
+];
+
+for (const m of LATE_MUTANTS) {
+  test(`MUTANT ${m.name}`, () => {
+    if (m.plant.rules) assert.notEqual(m.plant.rules(RULES), RULES, 'the mutation applied to the rule text');
+    const r = build(m.plant);
+    const d = m.damage(r);
+    console.log(`\n    targets: ${m.targets}`);
+    console.log(`    verdict: ${d === null ? 'SURVIVED — the gate does not cover this' : 'KILLED — ' + d}`);
+    assert.ok(d !== null, `mutant SURVIVED: ${m.name}`);
+  });
+}
