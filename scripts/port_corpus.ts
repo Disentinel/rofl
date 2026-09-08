@@ -13,6 +13,17 @@
 // build, so an implementation in any language has an exact oracle per case
 // rather than a description of one.
 //
+// TICKED CASES, AND WHY THEY EXIST. The first version of this corpus ran
+// `evaluate` once per case and stopped. A Rust engine built against it passed
+// all 27 byte for byte -- and its own mutant set then showed the oracle was
+// BLIND to `@next` staging: deleting the staging path entirely survived,
+// because seven cases carried `@next` rules and not one of them advanced a
+// tick. So a second family is emitted for every world that has a `@next` rule
+// of its own (beyond the two boot.rofl carries): the same seed, `ticks` ticks
+// of `tickAdvance`, and the canonical state at the end. A case that cannot
+// fail is not an oracle, and this is the cheapest thing that makes staging
+// observable from outside.
+//
 // usage: node --experimental-strip-types scripts/port_corpus.ts [--out DIR]
 
 import { Rofl } from '../src/api.ts';
@@ -48,7 +59,8 @@ fs.mkdirSync(out, { recursive: true });
 for (const f of fs.readdirSync(out)) fs.rmSync(path.join(out, f));
 
 const index: string[] = [];
-let ok = 0, skipped = 0;
+const TICKS = 3;
+let ok = 0, skipped = 0, ticked = 0;
 for (const [name, files] of worlds()) {
   let seed: string, want: string, facts: number, partial: boolean;
   try {
@@ -80,10 +92,46 @@ for (const [name, files] of worlds()) {
   }
   fs.writeFileSync(path.join(out, `${name}.seed.json`), seed);
   fs.writeFileSync(path.join(out, `${name}.expected.txt`), want);
-  index.push(`${name}\t${facts}\t${seed.length}\t${want.length}\t${partial ? 'partial' : 'complete'}`);
+  index.push(`${name}\t${facts}\t${seed.length}\t${want.length}\t${partial ? 'partial' : 'complete'}\t0`);
   ok++;
+
+  // THE TICKED TWIN. Only for a world with a `@next` rule of its own: every
+  // program has two, which are boot.rofl's carries of `imports` and
+  // `collects`, and a case whose only staging is the kernel's own would
+  // exercise the boundary without exercising the program.
+  try {
+    const probe = Rofl.fromSnapshot(seed);
+    probe.evaluate();
+    const nextRules = probe.query('conclusion_tense(R, next)').rows.length;
+    if (nextRules <= 2) continue;
+
+    const t = Rofl.fromSnapshot(seed);
+    let ran = 0;
+    for (let i = 0; i < TICKS; i++) {
+      const res = t.tickAdvance();
+      if (res.partial) break;
+      ran++;
+      if (res.quiescent) break;          // a settled world ticks no further
+    }
+    const tWant = t.store.canonicalState();
+
+    // The same admission test the plain case gets: the REFERENCE must
+    // reproduce this from the seed, or it is not an oracle anyone else can be
+    // held to.
+    const check = Rofl.fromSnapshot(seed);
+    for (let i = 0; i < ran; i++) check.tickAdvance();
+    if (check.store.canonicalState() !== tWant) throw new Error('ticked reference does not round-trip');
+
+    const tname = `${name}.t${ran}`;
+    fs.writeFileSync(path.join(out, `${tname}.seed.json`), seed);
+    fs.writeFileSync(path.join(out, `${tname}.expected.txt`), tWant);
+    index.push(`${tname}\t${t.store.allFactKeys().length}\t${seed.length}\t${tWant.length}\tticked\t${ran}`);
+    ticked++;
+  } catch (e) {
+    console.log(`  skip ${name}.tN`.padEnd(22) + (e as Error).message.slice(0, 60));
+  }
 }
 fs.writeFileSync(path.join(out, 'INDEX.tsv'),
-  '-- name\tfacts\tseed_bytes\texpected_bytes\tevaluation\n' + index.join('\n') + '\n');
-console.log(`\nport corpus: ${ok} cases, ${skipped} skipped -> ${path.relative(ROOT, out)}`);
+  '-- name\tfacts\tseed_bytes\texpected_bytes\tevaluation\tticks\n' + index.join('\n') + '\n');
+console.log(`\nport corpus: ${ok} plain + ${ticked} ticked = ${ok + ticked} cases, ${skipped} skipped -> ${path.relative(ROOT, out)}`);
 console.log(index.map((l) => '  ' + l.split('\t').slice(0, 2).join('  ')).join('\n'));

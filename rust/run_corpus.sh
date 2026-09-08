@@ -9,10 +9,12 @@ OUT="${TMPDIR:-/tmp}/rofl-rust-corpus"
 mkdir -p "$OUT"
 pass=0; fail=0
 printf '%-14s %-6s %8s %10s %s\n' case verdict facts diff reason
-while IFS=$'\t' read -r name facts _ _ _; do
+while IFS=$'\t' read -r name facts _ _ _ ticks; do
   [ "${name:0:2}" = "--" ] && continue
+  # "0" is non-empty, so ${ticks:+...} would hand a plain case --ticks 0.
+  TICKARG=""; [ "${ticks:-0}" != "0" ] && TICKARG="--ticks $ticks"
   got="$OUT/$name.out"; err="$OUT/$name.err"
-  "$BIN" ${BYTES:+--bytes} "$DIR/$name.seed.json" > "$got" 2> "$err"
+  "$BIN" ${BYTES:+--bytes} $TICKARG "$DIR/$name.seed.json" > "$got" 2> "$err"
   rc=$?
   if [ $rc -ne 0 ]; then
     printf '%-14s %-6s %8s %10s %s\n' "$name" FAIL "$facts" - "$(grep -v '^[a-z_]*\s' "$err" | head -1)"
