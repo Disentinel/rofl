@@ -41,7 +41,9 @@
     "boundary": "node --experimental-strip-types scanners/store_boundary.ts",
     "booklocality": "node --experimental-strip-types scanners/book_locality.ts",
     "storetrace": "node --experimental-strip-types scanners/store_trace.ts && node --experimental-strip-types scanners/store_trace.ts --noreuse",
-    "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts"
+    "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts",
+    "perminv": "node --experimental-strip-types scanners/permission_inventory.ts",
+    "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",

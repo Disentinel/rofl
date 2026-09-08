@@ -110,15 +110,14 @@ imports(mind, choice).
 -- ledger over.
 imports(audit, mind).
 
--- NOT DECLARED, and left reporting on purpose: `world -> $var("A")`. A rule
--- reads [world] and writes an agent's OWN journal under the ledger variable,
--- so the crossing's DESTINATION is unnameable. `collects(X)` says "X gathers
--- from books it does not name" and is the mirror image. The sentence this
--- section said the language lacked -- "an unnamed reader may read a named
--- book" -- now exists as `exports(A, anyone)`, declared by the SOURCE because the
--- source is the only named party. The workaround it refused,
--- `imports($var("A"), world).`, was refused rightly: it licenses by the
--- SPELLING OF THE VARIABLE, so renaming ?A to ?B would revoke it.
+-- THE NAMELESS READER: `world -> $var("A")`. A rule reads [world] and writes
+-- an agent's OWN journal under the ledger variable, so this crossing's
+-- DESTINATION is unnameable. What that needs, and why the SOURCE declares it:
+-- docs/books-and-permission.md 2.1. (This section used to record that the
+-- language lacked the sentence, and that `imports($var("A"), world).` was the
+-- wrong workaround because it licenses the SPELLING of a variable -- rename ?A
+-- to ?B and the licence withdraws in silence. That is still true of the
+-- workaround; the gap itself is closed.)
 exports(world, anyone).
 
 

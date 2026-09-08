@@ -411,7 +411,6 @@ imports(audit, quarantine).
 --
 -- AND the gather `imports` cannot name. The audit rules read a grimoire under
 -- the ledger VARIABLE — one book per source, named at runtime by whoever wrote
--- it — and `$var("P")` has no `authority` fact, so it can never be the From of
--- an import. Narrow: `collects_from` requires `not perspective(A)`, so the
--- three named crossings above still need the three lines above.
+-- it. Why that needs `collects` and why it does not weaken the three named
+-- crossings above: docs/books-and-permission.md 2.1.
 collects(audit).

@@ -153,11 +153,8 @@ imports(coverage, checks).
 -- A) :- duty[P](O, K, F, L, A).` reads a VARIABLE ledger: seven documents each
 -- keep their duties in their own book ([boot], [decided], [limits], [perf],
 -- [readme], [spec], [wfs]), and the point of the relation is that it does not
--- care which. `$var("P")` has no `authority` fact and can never be the From of
--- an import, so `collects` is the only sentence available — and it is true:
--- this ledger deliberately gathers from books it does not name.
---
--- Narrow: `collects_from` requires `not perspective(A)`, so the two named
--- crossings above still need the two `imports` lines above, and would still be
--- reported without them.
+-- care which. `collects` is the only sentence available for that, and it is
+-- true here: this ledger deliberately gathers from books it does not name.
+-- Why `imports` cannot say it, and why declaring this does not weaken the two
+-- named crossings above: docs/books-and-permission.md 2.1.
 collects(coverage).

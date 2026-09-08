@@ -74,10 +74,8 @@ imports(audit, claim).
 -- which is the point, since two rules would be two chances to extract the
 -- two sides differently -- and the comparison rules read [S] and write
 -- [main]. So [main] gathers from a ledger it does not name, and no
--- `imports(main, From)` can say so: `imports` relates two REGISTERED
--- perspectives and `$var("S")` has no `authority` fact and never will.
--- `collects(main)` says it once, at the ledger that does the gathering, and
--- `collected[audit](main)` then reports that the declaration was exercised.
+-- `imports(main, From)` can say so; docs/books-and-permission.md 2.1 has why.
+-- `collects(main)` says it once, at the ledger that does the gathering.
 collects(main).
 
 side(before).

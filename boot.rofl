@@ -177,14 +177,15 @@ undefined_premise[audit](R, Rel) :- premise_pos(R, Rel),
 -- costs nothing.
 --
 -- ANONYMITY. Every asserted fact now carries `asserted_by`; a call that named
--- no author is signed `$anon` (src/reflect.ts). That closes the hole where an
+-- no author is signed `user` (`ANON_WHO`, src/reflect.ts -- it was `$anon`
+-- when this paragraph was written). That closes the hole where an
 -- unsigned fact had no row at all and so lay outside every audit that reads
 -- one — measured: a forgery signed `mallory` gave `forged[audit]` = 1, the
 -- same forgery unsigned gave 0, with no diagnostic anywhere. Anonymity was
 -- the cheaper attack than impersonation, which inverts what a trail is for.
 --
 -- The obvious next step is NOT taken, and the reason is a measurement rather
--- than a preference. Withholding `authority(P, $anon)` would make anonymity a
+-- than a preference. Withholding `authority(P, user)` would make anonymity a
 -- forgery outright and needs no rule at all; it is refused because the honest
 -- corpus is anonymous end to end — a bare boot+sensors world holds 9 asserted
 -- facts and, before the change, 0 authors — so `forged[audit]` would be red
@@ -309,7 +310,7 @@ imports(main, $kernel).
 -- HERE while standing as a blanket, permanent licence for every polymorphic
 -- read into [audit] in every program that ever loads this file, including
 -- audits nobody has written yet. Measured, too: with it here, every store in
--- the repository carries a `collects` fact signed `$anon`, which is a row in
+-- the repository carries a `collects` fact signed `user`, which is a row in
 -- somebody else's provenance query that nobody put there.
 --
 -- So it belongs to the LAYER that writes such a rule, next to the rule, where
@@ -508,3 +509,24 @@ exported[audit](A)    :- exported_to(A, _).
 -- stay at leak 0 -- rather than reasoned about, and removed rather than kept
 -- for symmetry.
 gathered(A, B)        :- sees(X, A), exported_to(X, B).
+
+-- ============ where the whole model is written down, appended =============
+--
+-- APPENDED, NOT PUT AT THE TOP, and the reason is this file's own rule:
+-- `facts/spec.rofl` anchors nine duties at lines 154-163 by LINE NUMBER, so a
+-- comment inserted higher up silently unfounds every one of them. Ten lines at
+-- the head of this file was the first draft of this pointer and it moved all
+-- nine. Appending costs nothing.
+--
+-- THE BOOK-AND-PERMISSION MODEL IN ONE PLACE: docs/books-and-permission.md.
+-- What a book is; every relation of the family with WHO MAY WRITE IT and WHAT
+-- IT PERMITS; what each audit catches and what it STRUCTURALLY CANNOT SEE; the
+-- standing model; and the open decisions as ONE list. It is DERIVED from this
+-- file -- scanners/permission_inventory.ts emits the structure,
+-- rules/permission-model.rofl derives the family from a single anchor
+-- (`perspective`), and test/permission-doc.test.ts re-derives both sides live
+-- and goes red if a relation is added here without a row there.
+--
+-- The comments above stay where they are. Each says why THIS rule has THIS
+-- shape and what was measured before it was written, which is the half a
+-- general document cannot carry and the half that rots slowest.
