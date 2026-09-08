@@ -32,23 +32,102 @@ unsafe impl GlobalAlloc for Counting {
 #[global_allocator]
 static A: Counting = Counting;
 
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut path: Option<String> = None;
-    let mut budget = 100_000i64;
-    let mut want_bytes = false;
+const USAGE: &str =
+    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--ticks N] [SEED.json]";
+
+/// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
+/// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
+/// "3", and the run succeeded on the seed named "3"... except that the harness
+/// passes the seed LAST, so the flag was simply overwritten and the binary
+/// evaluated one tick and printed a clean, wrong answer. Seven ticked cases
+/// then failed on CONTENT, which reads as an engine bug; had the harness
+/// passed the flag after the path they would have failed as "file not found",
+/// which reads as a harness bug. Neither says "this binary does not implement
+/// the flag you handed it", and that is the only true statement.
+///
+/// This is the same shape as a gate that is silently not running (CLAUDE.md,
+/// "a gate inherits the scope of its INCIDENT"): an unrecognised instruction
+/// that produces a PASS is indistinguishable from an implementation that
+/// works. So an argument that is not understood ends the process before
+/// anything is read, evaluated or printed.
+#[derive(Debug)]
+struct Args {
+    path: Option<String>,
+    budget: i64,
+    ticks: u32,
+    want_bytes: bool,
+    /// Print `derivations` (scripts/derivations.ts) instead of
+    /// `canonicalState`. Two oracles, one binary: the loose contract is what a
+    /// second engine owes and the strict one is kept beside it, because a
+    /// contract is loosened by measuring what the loosening costs.
+    derivations: bool,
+}
+
+fn parse_args(args: &[String]) -> Result<Args, String> {
+    let mut a = Args {
+        path: None,
+        budget: 100_000,
+        ticks: 0,
+        want_bytes: false,
+        derivations: false,
+    };
     let mut i = 0;
+    // A flag's value is fetched through this, so a trailing `--ticks` with
+    // nothing after it is an error and not a panic on `args[i]`.
+    fn value<'a>(args: &'a [String], i: &mut usize, flag: &str) -> Result<&'a str, String> {
+        *i += 1;
+        args.get(*i)
+            .map(|s| s.as_str())
+            .ok_or_else(|| format!("{flag} needs a value"))
+    }
     while i < args.len() {
         match args[i].as_str() {
             "--budget" => {
-                i += 1;
-                budget = args[i].parse().unwrap();
+                let v = value(args, &mut i, "--budget")?;
+                a.budget = v
+                    .parse()
+                    .map_err(|_| format!("--budget: not an integer: {v}"))?;
             }
-            "--bytes" => want_bytes = true,
-            a => path = Some(a.to_string()),
+            "--ticks" => {
+                let v = value(args, &mut i, "--ticks")?;
+                a.ticks = v
+                    .parse()
+                    .map_err(|_| format!("--ticks: not an integer: {v}"))?;
+            }
+            "--bytes" => a.want_bytes = true,
+            "--derivations" => a.derivations = true,
+            "--help" | "-h" => return Err(USAGE.to_string()),
+            f if f.starts_with('-') && f != "-" => {
+                return Err(format!("unknown flag: {f}"));
+            }
+            p => {
+                if let Some(had) = &a.path {
+                    return Err(format!("two seeds given: {had} and {p}"));
+                }
+                a.path = Some(p.to_string());
+            }
         }
         i += 1;
     }
+    Ok(a)
+}
+
+fn main() {
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    let Args {
+        path,
+        budget,
+        ticks,
+        want_bytes,
+        derivations,
+    } = match parse_args(&argv) {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("{e}");
+            eprintln!("{USAGE}");
+            std::process::exit(64);
+        }
+    };
     let mut src = String::new();
     match path {
         Some(p) => src = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}")),
@@ -69,10 +148,20 @@ fn main() {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
     }
     let t1 = std::time::Instant::now();
-    let out = l.eval.run();
+    // `--ticks N` IS N CALLS TO `tickAdvance` AND NOTHING ELSE, which is what
+    // the corpus generator does (scripts/port_corpus.ts): each call runs the
+    // standing tick to fixpoint through `ensure` and then advances if the tick
+    // is not quiescent, so no separate `evaluate()` belongs here. A quiescent
+    // or partial call is a no-op that still counts, exactly as the generator's
+    // replay counts it.
+    let out = if ticks == 0 {
+        l.eval.run().map(|_| ())
+    } else {
+        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ()))
+    };
     let t_eval = t1.elapsed();
     match out {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
             eprintln!("evaluation refused: {}", rofl::describe(&e));
             std::process::exit(3);
@@ -80,7 +169,11 @@ fn main() {
     }
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
-    let cs = l.eval.store.canonical_state(&l.eval.h);
+    let cs = if derivations {
+        l.eval.store.derivations(&l.eval.h)
+    } else {
+        l.eval.store.canonical_state(&l.eval.h)
+    };
     print!("{cs}");
     if want_bytes {
         let n = l.eval.store.fact_count();
@@ -105,5 +198,74 @@ fn main() {
         eprintln!("eval_ms\t{:.2}", t_eval.as_secs_f64() * 1000.0);
         eprintln!("steps\t{}", l.eval.steps);
         eprintln!("peak_rows\t{}", l.eval.peak_rows);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_args;
+
+    fn v(a: &[&str]) -> Vec<String> {
+        a.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// SWEEP THE BOUNDARY, DO NOT WIDEN THE GUESS (CLAUDE.md). Both halves
+    /// are asserted: what is refused AND what is still accepted, so a refusal
+    /// that grew teeth on the wrong thing prints by name rather than passing.
+    ///
+    /// AND THE REFUSAL IS CHECKED BY ITS REASON, not merely by `is_err`. The
+    /// first version of this test passed every bad flag WITH a seed after it,
+    /// so deleting the unknown-flag arm entirely left it green: `--ticks3`
+    /// became a path, `s.json` became a second path, and "two seeds given" is
+    /// an error too. A mutant found that (rust/mutants.sh, T13). A test that
+    /// is green for the wrong reason is the same failure as a gate that is
+    /// silently not running, which is the failure this whole flag exists to
+    /// prevent.
+    #[test]
+    fn an_argument_that_is_not_understood_ends_the_run() {
+        for bad in [
+            "--ticks3",
+            "--tick",
+            "--Ticks",
+            "--",
+            "-t",
+            "--bytes=1",
+            "--budget=5",
+            "--derivation",
+        ] {
+            // Alone, so that nothing else can supply the error.
+            let e = parse_args(&v(&[bad])).expect_err("accepted a bad flag");
+            assert!(e.contains("unknown flag"), "{bad} refused for: {e}");
+            assert!(e.contains(bad), "{bad} refused without naming itself: {e}");
+            // And with a seed after it, which is how a harness passes one.
+            assert!(parse_args(&v(&[bad, "s.json"])).is_err(), "accepted {bad}");
+        }
+        for (args, why) in [
+            (vec!["--ticks"], "needs a value"),
+            (vec!["--ticks", "x"], "not an integer"),
+            (vec!["--budget"], "needs a value"),
+            (vec!["a.json", "b.json"], "two seeds given"),
+        ] {
+            let e = parse_args(&v(&args)).expect_err("accepted");
+            assert!(e.contains(why), "{args:?} refused for: {e}");
+        }
+        assert!(parse_args(&v(&["--help"])).is_err(), "--help is not a run");
+    }
+
+    #[test]
+    fn everything_the_harness_passes_is_still_accepted() {
+        let a = parse_args(&v(&["--bytes", "--derivations", "--ticks", "3", "s.json"])).unwrap();
+        assert!(a.want_bytes);
+        assert!(a.derivations);
+        assert_eq!(a.ticks, 3);
+        assert_eq!(a.path.as_deref(), Some("s.json"));
+        let b = parse_args(&v(&["--budget", "7", "s.json"])).unwrap();
+        assert_eq!(b.budget, 7);
+        assert_eq!(b.ticks, 0);
+        // No seed at all is stdin, which is how `probe.ts` drives it.
+        assert!(parse_args(&v(&[])).unwrap().path.is_none());
+        // A lone "-" is a path, not a flag: a name that starts with a dash is
+        // refused, and this is the one that must not be.
+        assert_eq!(parse_args(&v(&["-"])).unwrap().path.as_deref(), Some("-"));
     }
 }

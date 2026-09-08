@@ -15,27 +15,34 @@ function heap(): number {
   g(); g(); g();
   return process.memoryUsage().heapUsed;
 }
-const names = fs.readFileSync(path.join(DIR, 'INDEX.tsv'), 'utf8').trim().split('\n')
-  .slice(1).map((l) => l.split('\t')[0]);
+// THE SIXTH COLUMN IS PART OF THE CASE. A ticked twin shares its seed with the
+// plain case and differs only in how many `tickAdvance` calls stand between the
+// seed and the reading, so a measurement that ignored `ticks` would report the
+// plain world twice under two names -- and the ticked family's density would be
+// a copy of the plain one wearing a `.t3` suffix. Both sides read it: this one
+// here, `rust/bytes_table.sh` from the column this emits.
+const cases = fs.readFileSync(path.join(DIR, 'INDEX.tsv'), 'utf8').trim().split('\n')
+  .slice(1).map((l) => { const c = l.split('\t'); return { name: c[0], ticks: Number(c[5] ?? 0) }; });
 
-function build(n: string): Rofl {
+function build(n: string, ticks: number): Rofl {
   const r = Rofl.fromSnapshot(fs.readFileSync(path.join(DIR, `${n}.seed.json`), 'utf8'));
-  r.evaluate();
+  if (ticks === 0) r.evaluate();
+  else for (let i = 0; i < ticks; i++) r.tickAdvance();
   return r;
 }
 // warm the module graph and the memoised kernel answers outside every reading
-build('boot_only');
+build('boot_only', 0);
 
 const held: Rofl[] = [];
-console.log(['case', 'facts', 'bytes', 'bytesPerFact', 'loadEvalMs'].join('\t'));
-for (const n of names) {
+console.log(['case', 'facts', 'bytes', 'bytesPerFact', 'loadEvalMs', 'ticks'].join('\t'));
+for (const { name: n, ticks } of cases) {
   const before = heap();
   const t0 = performance.now();
-  const r = build(n);
+  const r = build(n, ticks);
   const ms = performance.now() - t0;
   const after = heap();
   held.push(r);
   const f = r.store.factCount();
-  console.log([n, f, after - before, ((after - before) / f).toFixed(1), ms.toFixed(1)].join('\t'));
+  console.log([n, f, after - before, ((after - before) / f).toFixed(1), ms.toFixed(1), ticks].join('\t'));
 }
 if (held.length === 0) throw new Error('unreachable');

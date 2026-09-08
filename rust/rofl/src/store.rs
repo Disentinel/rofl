@@ -351,6 +351,23 @@ struct WitNode {
     next: u32,
 }
 
+/// The frozen-layer retention policy: asked of one record and its arguments,
+/// answers whether to keep it. `Rofl.frozenRetention` (src/api.ts:1024) is the
+/// only producer; the store never builds one, because it knows what none of
+/// those records mean.
+pub type KeepFrozen<'a> = &'a dyn Fn(&FactRec, &[Term]) -> bool;
+
+/// The three fields `advanceTick` needs of a staged fact: the head it is to
+/// install. The rule and the premises stay on the evaluator's side, because
+/// the store is told what to install and never why — `Rofl.tickAdvance` writes
+/// the witness and the `derived_by` row itself, after the boundary
+/// (src/api.ts:1061).
+pub struct StagedHead<'a> {
+    pub rel: Sym,
+    pub persp: Sym,
+    pub args: &'a [Term],
+}
+
 /// A firing as the readers see it: no allocation, and the premises are the
 /// arena's own slice.
 pub struct WitView<'a> {
@@ -897,6 +914,94 @@ impl Store {
         self.partial_eval = false;
     }
 
+    /// `advanceTick` (src/store.ts:643): end the current tick — freeze
+    /// provenance, drop the tick-scoped layer, install the staged next-tick
+    /// base facts, advance the clock.
+    ///
+    /// IT FREEZES BEFORE IT INCREMENTS, so the tick being ended is `self.tick`
+    /// as this is entered and `keep_frozen` is asked in that world
+    /// (src/api.ts:1017). `keep_frozen` is asked about every record on the
+    /// frozen layer — including records frozen by EARLIER ticks, so one can
+    /// age out — and everything it rejects is dropped instead of kept. The
+    /// store knows what none of those records mean: the policy is the
+    /// caller's, and it lives beside the evaluator predicate it depends on.
+    pub fn advance_tick(
+        &mut self,
+        h: &Heap,
+        staged: &[StagedHead<'_>],
+        keep_frozen: Option<KeepFrozen<'_>>,
+    ) {
+        let mut stale: Vec<FactId> = Vec::new();
+        for id in 0..self.facts.recs.len() as FactId {
+            let r = self.facts.recs[id as usize];
+            // `rec.base || rec.scope !== 'timeless'` — the frozen layer is the
+            // DERIVED TIMELESS records and nothing else.
+            if r.dead() || r.base() || r.tick_scope() {
+                continue;
+            }
+            if let Some(keep) = keep_frozen {
+                if !keep(&r, self.facts.args(id)) {
+                    stale.push(id);
+                    continue;
+                }
+            }
+            self.facts.recs[id as usize].add_flags(F_FROZEN);
+        }
+        let to_drop: Vec<FactId> = (0..self.facts.recs.len() as FactId)
+            .filter(|&i| {
+                let r = &self.facts.recs[i as usize];
+                !r.dead() && r.tick_scope()
+            })
+            .collect();
+        // A STAGED FACT'S PROVENANCE IS READ OUT BEFORE THE DROP AND PUT BACK
+        // AFTER IT (src/store.ts:658). Removal takes the witness with the
+        // fact, and a batch removal is still a removal — so the chain head and
+        // its length are held here and restored below. The length is held
+        // because `remove_many` decrements `wits_live` per node it walks, and
+        // a count that is not put back would make `compact_wits` shrink the
+        // arena to the wrong size.
+        let mut held: Vec<(FactId, u32, usize)> = Vec::new();
+        for s in staged {
+            let Some(id) = self.find(s.rel, s.persp, s.args) else {
+                continue;
+            };
+            if !self.facts.recs[id as usize].tick_scope() {
+                continue;
+            }
+            let head = self.wit_head[id as usize];
+            if head == EMPTY {
+                continue;
+            }
+            let mut n = 0usize;
+            let mut c = head;
+            while c != EMPTY {
+                n += 1;
+                c = self.wits[c as usize].next;
+            }
+            held.push((id, head, n));
+        }
+        self.remove_many(&to_drop);
+        // A separate batch, and disjoint from the one above: nothing on the
+        // frozen layer is tick-scoped, so no staged fact's witness is at risk.
+        if !stale.is_empty() {
+            self.remove_many(&stale);
+        }
+        self.tick += 1;
+        for s in staged {
+            self.add(h, s.rel, s.persp, s.args, F_BASE | F_TICK);
+        }
+        // The chains go back AFTER the re-add and not before it: `add` asserts
+        // that a revived record's chain is empty, which is the invariant that
+        // makes revival exactly the fresh-record path. Nothing between the
+        // drop and here reads these heads, so the two orders are the same
+        // store and only one of them keeps the assertion honest.
+        for (id, head, n) in held {
+            self.wit_head[id as usize] = head;
+            self.wits_live += n;
+        }
+        self.dirty = true;
+    }
+
     /// Firing nodes a removal orphaned. The alternating fixpoint clears the
     /// derived layer once per round, so without this the arena would carry
     /// every round's provenance for the life of the evaluation.
@@ -1040,12 +1145,7 @@ impl Store {
     /// `factKey` (src/store.ts:47), written into a buffer the caller owns.
     pub fn write_key(&self, h: &Heap, id: FactId, out: &mut String) {
         let r = &self.facts.recs[id as usize];
-        out.push_str(h.name(r.rel));
-        out.push('[');
-        out.push_str(h.name(r.persp));
-        out.push_str("](");
-        write_arg_list(h, self.args(id), out);
-        out.push(')');
+        write_fact_key(h, r.rel, r.persp, self.args(id), out);
     }
 
     pub fn key(&self, h: &Heap, id: FactId) -> String {
@@ -1126,6 +1226,70 @@ impl Store {
         out
     }
 
+    /// `derivations` (scripts/derivations.ts): THE CONTRACT, as consequences
+    /// of derivation rather than as bytes.
+    ///
+    /// It differs from `canonical_state` in both directions, deliberately.
+    /// STRONGER on provenance: every firing of every fact, where
+    /// `canonical_state` renders one witness (the least signature) and a
+    /// count — which derivations exist is a consequence of the program, which
+    /// one an engine renders first is not. WEAKER on presentation: no line
+    /// depends on the order this store keeps its facts in, and the sort is
+    /// done HERE, at export, over strings the reader compares — so a key is
+    /// spelled because two engines need a common name for the same fact, and
+    /// not because anything stores or orders by it.
+    ///
+    /// What that buys a store like this one: `Tuples::sortkey`, `absorb`'s
+    /// merge into `KeyRun::canon`, and the whole `cmp_args` fast path exist
+    /// only to keep a total spelling order without materialising a key, and
+    /// nothing in this function reads any of them.
+    pub fn derivations(&self, h: &Heap) -> String {
+        let mut keyed: Vec<(String, FactId)> = Vec::with_capacity(self.n_live);
+        for id in 0..self.facts.recs.len() as FactId {
+            if self.alive(id) {
+                keyed.push((self.key(h, id), id));
+            }
+        }
+        keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
+        let mut out = String::with_capacity(self.n_live * 128);
+        out.push_str("tick ");
+        out.push_str(&self.tick.to_string());
+        let mut sigs: Vec<String> = Vec::new();
+        for (k, id) in &keyed {
+            let r = &self.facts.recs[*id as usize];
+            out.push_str("\nf ");
+            out.push_str(k);
+            out.push(' ');
+            out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
+            out.push(' ');
+            out.push_str(if r.base() { "base" } else { "drv" });
+            if r.frozen() {
+                out.push_str(" frozen");
+            }
+            sigs.clear();
+            let mut c = self.wit_head[*id as usize];
+            while c != EMPTY {
+                let mut s = String::new();
+                self.write_sig(h, &self.view(c), &mut s);
+                sigs.push(s);
+                c = self.wits[c as usize].next;
+            }
+            sigs.sort_by(|a, b| cmp_js(a, b));
+            for s in &sigs {
+                out.push_str("\n  d ");
+                out.push_str(s);
+            }
+        }
+        let mut tl: Vec<&String> = self.tick_log.iter().collect();
+        tl.sort_by(|a, b| cmp_js(a, b));
+        for l in tl {
+            out.push_str("\nt ");
+            out.push_str(l);
+        }
+        out.push('\n');
+        out
+    }
+
     // ------------------------------------------------------------- measure
 
     /// Bytes this store holds, by table. Reported per fact beside the JS
@@ -1193,6 +1357,23 @@ fn pat_sig(h: &Heap, pos: &[usize], args: &[Term]) -> Option<Box<[Term]>> {
         out.push(a);
     }
     Some(out.into())
+}
+
+/// `factKey` (src/store.ts:47) for a head that may not be a record yet.
+///
+/// THE ONE PLACE A KEY IS SPELLED. `Store.write_key` is this with a `FactId`
+/// resolved to its three parts, and staging calls it directly because a
+/// `@next` conclusion has no record until the boundary installs it. The module
+/// note says the spelling is kept as an ORDER and never as a field; that holds
+/// only while there is a single spelling, so staging borrows this one rather
+/// than growing a second.
+pub fn write_fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term], out: &mut String) {
+    out.push_str(h.name(rel));
+    out.push('[');
+    out.push_str(h.name(persp));
+    out.push_str("](");
+    write_arg_list(h, args, out);
+    out.push(')');
 }
 
 pub fn write_arg_list(h: &Heap, args: &[Term], out: &mut String) {

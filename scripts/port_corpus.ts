@@ -27,6 +27,7 @@
 // usage: node --experimental-strip-types scripts/port_corpus.ts [--out DIR]
 
 import { Rofl } from '../src/api.ts';
+import { derivations } from './derivations.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -62,7 +63,7 @@ const index: string[] = [];
 const TICKS = 3;
 let ok = 0, skipped = 0, ticked = 0;
 for (const [name, files] of worlds()) {
-  let seed: string, want: string, facts: number, partial: boolean;
+  let seed: string, want: string, deriv: string, facts: number, partial: boolean;
   try {
     const direct = new Rofl(); direct.load(boot);
     for (const f of files) {
@@ -72,6 +73,7 @@ for (const [name, files] of worlds()) {
     const ev = direct.evaluate();
     partial = ev.partial;
     want = direct.store.canonicalState();
+    deriv = derivations(direct.store);
     facts = direct.store.allFactKeys().length;
 
     const seedR = new Rofl(); seedR.load(boot);
@@ -92,6 +94,13 @@ for (const [name, files] of worlds()) {
   }
   fs.writeFileSync(path.join(out, `${name}.seed.json`), seed);
   fs.writeFileSync(path.join(out, `${name}.expected.txt`), want);
+  // THE CONTRACT, beside the byte-exact state. `expected.txt` is
+  // `canonicalState` and holds a second engine to this one's key spelling and
+  // collation; `derivations.txt` holds it to the CONSEQUENCES -- which facts
+  // hold and which derivations produced them -- and to nothing else. See
+  // scripts/derivations.ts for why the second is the one a columnar store
+  // that spills to disk can be held to.
+  fs.writeFileSync(path.join(out, `${name}.derivations.txt`), deriv + '\n');
   index.push(`${name}\t${facts}\t${seed.length}\t${want.length}\t${partial ? 'partial' : 'complete'}\t0`);
   ok++;
 
@@ -125,6 +134,7 @@ for (const [name, files] of worlds()) {
     const tname = `${name}.t${ran}`;
     fs.writeFileSync(path.join(out, `${tname}.seed.json`), seed);
     fs.writeFileSync(path.join(out, `${tname}.expected.txt`), tWant);
+    fs.writeFileSync(path.join(out, `${tname}.derivations.txt`), derivations(t.store) + '\n');
     index.push(`${tname}\t${t.store.allFactKeys().length}\t${seed.length}\t${tWant.length}\tticked\t${ran}`);
     ticked++;
   } catch (e) {
