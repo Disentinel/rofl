@@ -225,6 +225,26 @@ ignored(js, import, dataflow, a_babel_emits_no_import_callee).
 -- emitted for every class method and no rule had ever read it.
 handled(js, class_declaration, dataflow, r_class_receiver).
 
+-- ...AND ITS EXPRESSION TWIN, 2026-09-08 (w_class_expression). Same rule, same
+-- row, and the item's premise was that the model already had an opinion here:
+-- `obj_like[flow]` and `node_value_kind` both name `class_expression` and both
+-- have since before this cell existed. WHAT THE OPINION DERIVED WAS NOTHING,
+-- and only a site could show it — `member_value` named the methods of a class
+-- expression correctly and no receiver could ever reach them, because
+-- `class_named[flow]` read the class's `id` CHILD and a class expression's
+-- binding is not its `id`.
+--
+-- ALL THREE FACES, the same three `class_declaration` earned above and each
+-- with a site in test/fixtures/js-call/shapes.ts.txt:
+--   instance   `new Crank().turn(n)`     -> turn      (prototype half)
+--   class      `Gantry.rated(n)`         -> rated     (static half)
+--   ancestor   `class Davit extends Crank` -> `this.turn` reaches Crank's
+-- The static/instance split is the sharp one: without the arm, `Gantry.rated`
+-- is not a `class_receiver` at all and the lookup answers with the PROTOTYPE
+-- half — an instance method returned for a static read, which is a TypeError at
+-- run time and was the exact defect `class_receiver` was written to stop.
+handled(js, class_expression, dataflow, r_class_receiver).
+
 -- AND THE THIRD FACE WAS ALREADY MODELLED, which only a site could show.
 -- `super.hold(n)` — a member read on a receiver that is a different class from
 -- the one you are in — resolves, and the runtime takes the edge: UNSOUND stayed

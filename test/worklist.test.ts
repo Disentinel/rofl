@@ -188,7 +188,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // not one nobody looked at — it is one nobody has STARTED, which this list
     // cannot tell apart and does not pretend to.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
-    'w_cg_syntactic_wrappers', 'w_class_expression', 'w_class_fields',
+    'w_cg_syntactic_wrappers', 'w_class_fields',
     'w_decorator_replaces_its_target', 'w_df_function_forms',
     'w_df_generator_protocol', 'w_df_sweep', 'w_df_value_core', 'w_directives',
     // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:
@@ -196,7 +196,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // entered but not started looks identical to one nobody looked at, and the
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
-    'w_meta_property', 'w_mod_beyond_the_import',
+    // `w_class_expression` and `w_meta_property` LEFT THIS LIST 2026-09-08 for
+    // the same reason the two before them did: both were taken and both
+    // spawned. `w_meta_property` is still OPEN and still on this side of the
+    // ledger's other lists — spawning is what says an item was looked at, not
+    // what says it is finished.
+    'w_mod_beyond_the_import',
     'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
     // `w_update_and_literals` LEFT THIS LIST 2026-09-08, the same way the two
     // before it did: it was taken and it spawned two findings, one of them in
@@ -609,9 +614,15 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // landed in one afternoon and a count would have said only that the number
   // moved. `blocked` is a claim about WHICH items are held, and holding the
   // wrong one is the failure this test exists to catch.
+  // FOUR BECAME FIVE on 2026-09-08: `w_meta_property` waits on
+  // `w_env_api_surface` for HALF OF ONE CELL — `import.meta.resolve("./x")` is a
+  // call edge into the host, and the other half of the same cell,
+  // `new new.target()`, waits on nothing but a notion of call MODE this model
+  // does not have. A dependency that covers part of an item is still a
+  // dependency the plan must honour.
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
     ['w_destructuring_hides_a_call', 'w_effect_layer', 'w_env_api_surface',
-     'w_env_ledger_form'],
+     'w_env_ledger_form', 'w_meta_property'],
     'one held on purpose by the owner, three real premises');
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not

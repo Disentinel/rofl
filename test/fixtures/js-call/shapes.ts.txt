@@ -465,7 +465,7 @@ class Decorated {
   accessor slot = 4;
 }
 export { Decorated, decoOnce, decoApplied, decoFactory };
-// ===========================================================================
+// ====================================================================
 // THREE VALUE FORMS THE VOCABULARY NEVER NAMED (w_update_and_literals,
 // 2026-09-08): `i++`, `1n` and `/re/g`. Every position below exists to make
 // one of the four layers say something, and each one was chosen AFTER the
@@ -536,3 +536,87 @@ const MATCHER = /ab+c/gi;
 export function regexpForms(s: string): number {
   return MATCHER.test(s) || /x[0-9]/.test(s) ? 1 : 0;
 }
+=======
+// ===========================================================================
+// CLASS EXPRESSIONS, 2026-09-08 (w_class_expression), and the item's premise
+// was that the model ALREADY had an opinion here — `obj_like[flow]` and
+// `node_value_kind` both name `class_expression` — so the first job was to
+// find out what that opinion DERIVES rather than to write a rule.
+//
+// MEASURED FIRST, on a probe carrying each form beside its control in one
+// file. `new DeclaredClass().hold()` resolves; `new (class {})().hold()` and
+// `new (class Inner {})().hold()` resolve to NOTHING, and both sites come back
+// as unresolved `s_member_on_ident`. The cause is one relation: `class_named`
+// reads a class's `id` CHILD, and a class expression either has no `id` at all
+// or has one that is not the name it is used under — `const W = class Hoist {}`
+// binds `W` on the outside and `Hoist` only inside its own body.
+//
+// The controls in that probe are load-bearing and are here too: a function
+// expression and an arrow bound the same way behave identically at the modules
+// layer, which is what says the `export const X = <expr>` silence is NOT a
+// class-expression question.
+// NO `: unknown` AND NO `as never` ANYWHERE BELOW, for the reason line 113 of
+// this file already gives about the tag: a TS keyword kind nobody has governed
+// lands in `kind_ungoverned[audit]` in the era layer. Measured, not foreseen —
+// the first draft of this block carried both and test/js-env.test.ts named
+// `tsnever_keyword` and `tsunknown_keyword` within one run.
+const Crank = class { turn(n: number): number { return n; } };
+// `Winch` CARRIES A CONSTRUCTOR so that the two naming rules can DISAGREE at a
+// site. V8 names this frame `Hoist` — the class's own `id` — and names an
+// anonymous one after its binding; without the negation in `anon_class` the
+// model would derive both `Hoist` and `Winch` here and one of them is an edge
+// no execution produces.
+const Winch = class Hoist {
+  constructor(n: number) { this.span = n; }
+  lift(n: number): number { return n; }
+  inner() { return Hoist; }
+};
+const Gantry = class {
+  // NO DECLARED FIELD: `load: number` is a `class_property`, which is ES2022 and
+  // is `w_class_fields`'s kind to put in this corpus, not this item's.
+  constructor(n: number) { this.load = n; }
+  static rated(n: number): number { return n; }
+  bear(n: number): number { return n; }
+};
+
+export function onAnonClassExpr(n: number): number { return new Crank().turn(n); }
+export function onNamedClassExpr(n: number): number { return new Winch(n).lift(n); }
+// THE STATIC AND THE INSTANCE HALVES, which is why the fix belongs in
+// `class_named` and not in the `new` rule alone: `class_receiver[flow]` decides
+// which half of a class a receiver can see, and it reads the same relation.
+// Without the class-expression arm `Gantry.rated(n)` reads the PROTOTYPE half
+// and answers with an instance method, which is a TypeError at runtime.
+export function onClassExprStatic(n: number): number { return Gantry.rated(n); }
+export function onClassExprCtor(n: number): number { return new Gantry(n).bear(n); }
+// ...and the heritage clause, which reaches the same relation a third way.
+class Davit extends Crank { twice(n: number): number { return this.turn(n) + n; } }
+export function onExtendsClassExpr(n: number): number { return new Davit().twice(n); }
+
+// THE CONTROL-FLOW HALF, and it is the half that says a class expression is
+// not inert. `class_declaration x controlflow` carries
+// `a_no_control_transfer`, and for a HERITAGE CLAUSE that reason is false:
+// `class extends mountOf() {}` calls `mountOf` when the class is EVALUATED,
+// which for an expression is wherever the expression stands. Measured on a
+// probe before this site existed — `calls_in` carried `top -> baseOf` for
+// exactly this shape — and the same probe showed a computed method key
+// (`[keyOf()]() {}`) attributed to the METHOD it keys rather than to the
+// enclosing scope, which is w_computed_key_names' defect reached through a
+// class expression rather than this item's.
+function mountOf() { return Crank; }
+export const Bracket = class extends mountOf() {
+  fasten(n: number): number { return n; }
+};
+
+// META PROPERTY, 2026-09-08 (w_meta_property). ONE NODE KIND AND TWO
+// CONSTRUCTS, and the scanner DOES tell them apart — measured, not assumed:
+// every `meta_property` node carries NO `ast_attr` at all and two identifier
+// children, `meta` and `property`, so `new.target` is (meta="new",
+// property="target") and `import.meta` is (meta="import", property="meta").
+//
+// `import.meta.url` IS A READ AND NOT A CALL, deliberately. `import.meta`
+// standing in a CALLEE-object position classifies as `o_other`, and
+// facts/js-shapes.rofl waives that shape as `a_catch_all_empty_by_design`; a
+// call here would make that waiver false for a reason that has nothing to do
+// with this item. The residue is named in facts/worklist.rofl instead.
+export function constructionMode(n: number) { return new.target ? n : null; }
+export const moduleHere = import.meta.url;

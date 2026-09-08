@@ -87,6 +87,19 @@ uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
 -- would enumerate every containment pair in the corpus. And the negation goes
 -- LAST, with N bound, for the reason spelled out over the prototype chain in
 -- rules/js-dataflow.rofl.
+-- ...AND THE SAME QUESTION ONE LEVEL IN (w_meta_property, 2026-09-08), because
+-- THE KIND IS NOT ALWAYS THE FEATURE and neither is an attribute of it.
+-- `new.target` is ES2015 and `import.meta` is ES2020 and both are a
+-- `meta_property`; what tells them apart is the node's own `meta` CHILD, which
+-- is an identifier named `new` or `import`. Measured before this rule: a
+-- `meta_property` node carries no `ast_attr` at all, so `attr_needs` above is
+-- structurally unable to look, and `outside_attr_needs` reads an ANCESTOR while
+-- the difference is inside. facts/js-env.rofl carries the table and the
+-- measurement.
+uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+                     child_needs(L, K, Field, Name, F),
+                     ast_child[code](N, Field, 0, C), ast_name[code](C, Name).
+
 within_attr[audit](N, Key, V) :- outside_attr_needs(_, _, Key, V, _),
                                  ast_attr[code](A, Key, V), ast_within[code](A, N).
 uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
@@ -187,6 +200,7 @@ lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),
 gate_feature(L, K, F) :- kind_needs(L, K, F).
 gate_feature(L, K, F) :- attr_needs(L, K, _, _, F).
 gate_feature(L, K, F) :- outside_attr_needs(L, K, _, _, F).
+gate_feature(L, K, F) :- child_needs(L, K, _, _, F).
 
 -- ...AND `kind_gated` IS NOT ONE OF ITS CONSUMERS, which the audit caught the
 -- moment it was: wiring it to `gate_feature` made `binary_expression`,
@@ -198,6 +212,15 @@ gate_feature(L, K, F) :- outside_attr_needs(L, K, _, _, F).
 -- as the language and only the operator is ES2016. Conflating them says three
 -- baseline kinds were decided twice.
 kind_gated(L, K)             :- kind_needs(L, K, _).
+-- ...AND `child_needs` IS ONE OF ITS CONSUMERS, which is the opposite of the
+-- decision taken for `attr_needs` one paragraph up, for a reason the same
+-- paragraph gives. `kind_gated` asks whether a kind's era is decided at all
+-- rather than by which table: `binary_expression` is BASELINE and only its
+-- operator is gated, so wiring it here would double-book it. `meta_property`
+-- has no baseline form — every spelling of it is at least ES2015 — so leaving
+-- it out would put it in `kind_unaccounted[audit]`, which is the row that
+-- exists to say nobody decided. It is decided; it is decided by a child.
+kind_gated(L, K)             :- child_needs(L, K, _, _, _).
 kind_unaccounted[audit](L, K) :- env_lang(L), node_kind(L, K),
                                  not kind_gated(L, K), not kind_baseline(L, K).
 

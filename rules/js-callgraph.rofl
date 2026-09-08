@@ -300,6 +300,37 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
 
+-- ...AND A CLASS WITH NO `id` TAKES THE NAME OF ITS BINDING, which is the
+-- LANGUAGE'S OWN inference and not a convenience (w_class_expression,
+-- 2026-09-08). The rule above reads the `id` child, so `const G = class {
+-- constructor(){} }` gave its constructor NO NAME AT ALL — and `calls_in`
+-- joins `fn_name` on both ends, so the constructor edge would have been
+-- derived by `resolves` and then dropped on the way to the graph, which is the
+-- worst of the two failures available: present in one relation and absent from
+-- the one an oracle is compared against.
+--
+-- MEASURED ON THIS ENGINE rather than recalled, because the two class
+-- expression forms DO NOT AGREE and no reading of the spec would have said
+-- which way round:
+--
+--     const A = class { constructor(){} }         A.name "A"     frame `A`
+--     const W = class Hoist { constructor(){} }   W.name "Hoist" frame `Hoist`
+--     class D { constructor(){} }                 D.name "D"     frame `D`
+--
+-- So the binding wins only when there is no `id`, and this arm carries that
+-- negation instead of firing beside the one above and naming the class twice.
+class_has_id[code](CD) :- ast_node[code](CD, class_expression, _, _),
+                          ast_child[code](CD, id, 0, _).
+anon_class[code](CD)   :- ast_node[code](CD, class_expression, _, _),
+                          not class_has_id[code](CD).
+fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+                       ast_attr[code](F, kind, "constructor"),
+                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       anon_class[code](CD),
+                       ast_node[code](D, variable_declarator, _, _),
+                       ast_child[code](D, init, 0, CD),
+                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+
 -- ORDERED FOR COST: `ast_within` with F bound is a probe, `site` with C bound
 -- is a hash hit; the other way round every function scanned all 184 sites.
 -- A DECORATOR IS INSIDE THE THING IT DECORATES AND DOES NOT RUN THERE, which

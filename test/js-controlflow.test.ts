@@ -299,17 +299,18 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
   {
     name: 'r1 the export surface stops being a seed',
     mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
-    // BY NAME SINCE 2026-09-08, and the rename is the measurement. This read
-    // `=== 1, one top-level call` until `top_call` was corrected to key on
-    // `site` instead of `call_site` — a transfer site at module scope had been
-    // resolving a callee and drawing no edge — and the second name is what that
-    // correction admits: `decoOnce`, reached by a CLASS-LEVEL DECORATOR, which
-    // is un-enclosed by construction because a class at module scope has no
-    // enclosing function. A count would have said `2` and left a reader to
-    // guess whether the walk had gained a start or lost a boundary.
+    // NAMED RATHER THAN COUNTED, AND THE NAMES CAME FROM TWO BRANCHES. This read
+    // `=== 1, one top-level call` until two separate corrections landed the same
+    // day: `top_call` was keyed on `call_site` where it belonged on `site`, so a
+    // transfer site at module scope resolved a callee and drew no edge —
+    // `decoOnce`, reached by a CLASS-LEVEL decorator, which is un-enclosed by
+    // construction — and `w_class_expression` added a heritage clause,
+    // `export const Bracket = class extends mountOf() {}`, which calls when the
+    // module is evaluated. A count would have said `3` and left a reader to
+    // guess whether the walk had gained two starts or lost a boundary.
     expect: (m) => assert.deepEqual(
       m.q('reachable[code](F)').map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)[0] ?? f).sort(),
-      ['decoOnce', 'seed'],
+      ['decoOnce', 'mountOf', 'seed'],
       'without the seed the walk starts only where the grammar forces it to'),
   },
   {
@@ -317,8 +318,13 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     mut: [{ find: `reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
                       not guarded[code](C).`, replace: '' }],
     expect: (m, b) => {
-      assert.equal(m.n('reachable[code](F)'), m.n('entry_point[code](F)') + 1,
-        'only the entry points and the top-level call remain');
+      // NAMED RATHER THAN OFFSET 2026-09-08, for the same reason as r1 above:
+      // the `+ 1` was the corpus's one top-level call and there are two now.
+      const eps = new Set(m.q('entry_point[code](F)').map(([f]) => f));
+      assert.deepEqual(m.q('reachable[code](F)').filter(([f]) => !eps.has(f))
+        .map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n).sort().join('/')).sort(),
+        ['mountOf', 'seed'],
+        'only the entry points and the TOP-LEVEL calls remain');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },
   },
@@ -682,26 +688,22 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
-    // EIGHT JOINED 2026-09-08 FROM TWO BRANCHES AT ONCE, and the merge is a
-    // union that could be computed because this is a SET. Three are decorator
-    // functions at module level (`decoApplied`, `decoFactory`, `decoOnce`) and
-    // three came with the literals work (`bumpedInUpdate`, `readLimit`,
-    // `seenUpdate`); every one says what `seenEmpty` said first — without
-    // `ast_within(LS, S)` the walk does not stop at the label, it runs to the
-    // MODULE, so every name added at module scope appears here. Two branches
-    // added six between them and six appeared.
-    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
-      ['afterBlock',
-       'beyondLabel',
-       'beyondPlainBreak',
-       'bumpedInUpdate',
-       'decoApplied',
-       'decoFactory',
-       'decoOnce',
-       'pastInnerLabel',
-       'readLimit',
-       'seenEmpty',
-       'seenUpdate']),
+    // A SUPERSET RATHER THAN AN EQUALITY, 2026-09-08. The five names below are
+    // the CLAIM — the walk leaves the labelled statement, and `seenEmpty` says
+    // it leaves the FUNCTION — and the rest of what a boundary-less walk sweeps
+    // up is whatever the module happens to declare after the last abrupt
+    // statement in shapes.ts. That is a fact about the corpus, and it moved the
+    // day w_class_expression appended a block: eight more names, all of them
+    // methods and constructors of the new fixture and not one of them about
+    // labels. The five are named; the corpus is not counted.
+    expect: (m, b) => {
+      const added = afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n));
+      for (const n of ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']) {
+        assert.ok(added.includes(n), `the boundary-less walk reaches ${n}`);
+      }
+      assert.ok(!afterAbrupt(b).includes('seenEmpty'),
+        'positive control: with the literal in place the walk stays in its own function');
+    },
   },
   {
     name: 'l3 the name join is dropped',

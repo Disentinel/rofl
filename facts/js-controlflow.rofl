@@ -189,6 +189,54 @@ handled(js, function_declaration,        controlflow, r_reachability).
 handled(js, function_expression,         controlflow, r_reachability).
 handled(js, arrow_function_expression,   controlflow, r_reachability).
 handled(js, class_method,                controlflow, r_reachability).
+
+-- ...AND `class_expression`, 2026-09-08 (w_class_expression), which gets
+-- `handled` rather than the `a_no_control_transfer` its DECLARATION twin
+-- carries thirty lines above — and the difference is measured, not stylistic.
+--
+-- TWO THINGS A CLASS EXPRESSION DOES AT THIS LAYER, both with a site in
+-- test/fixtures/js-call/shapes.ts.txt:
+--
+--   THE ENTRY SURFACE. `export const Bracket = class { fasten(n) {...} }` puts
+--   `fasten` on it. `exported_fn` walks CONTAINMENT and asks `not in_fn`, and a
+--   method of an exported class expression has no enclosing function — so it is
+--   an entry point on exactly the same footing as a method of an exported class
+--   declaration. Measured: `entry_point[code]` contains `fasten`, and `turn` —
+--   a method of a class expression bound to a module-local `const` — is
+--   correctly NOT on it.
+--
+--   THE HERITAGE CLAUSE RUNS. `class extends mountOf() {}` calls `mountOf` when
+--   the class expression is EVALUATED, which for an expression is wherever the
+--   expression stands. Measured: `calls_in` carries `shapes.ts top -> mountOf`.
+--   So `a_no_control_transfer` would have been FALSE for this kind, which is the
+--   same correction `object_pattern` earned in this file the same week and the
+--   reason that one is re-read rather than re-labelled. The declaration twin has
+--   the identical exposure and its row is NOT changed here — it belongs to
+--   whoever owns that cell, and it is recorded as a finding instead —
+--   f_a_heritage_clause_runs_and_a_class_is_waived_as_transferring_nothing.
+handled(js, class_expression,            controlflow, r_reachability).
+node_kind(js, class_expression).
+
+-- `meta_property` IS INERT AT THIS LAYER, 2026-09-08 (w_meta_property), and
+-- this is the ONE of its four cells that one verdict can honestly cover — which
+-- is the item's whole question, since `new.target` and `import.meta` are two
+-- constructs sharing a node kind.
+--
+-- MEASURED RATHER THAN ARGUED, because `a_no_control_transfer` is the reason
+-- this file has already had to withdraw once. A `meta_property` node has
+-- exactly two children and both are identifiers — `meta` and `property` — so
+-- there is nothing inside it that could be a `site[code]`, no callee position,
+-- no accessor read and no expression to evaluate. Both forms are LEAVES: the
+-- syntax is two tokens joined by a dot and neither token is a lookup.
+--
+-- WHAT IT DOES NOT WAIVE, and the difference matters: `new.target` DISTINGUISHES
+-- TWO WAYS OF ENTERING a function — `f()` gives undefined and `new f()` gives
+-- the constructor — and this model has no notion of call MODE at all, so a
+-- function with two entry modes has one body and one answer here. That is a
+-- real gap and it is a VALUE gap, which is why the dataflow cell is left open
+-- and owned rather than waived beside this one.
+ignored(js, meta_property,               controlflow, a_no_control_transfer).
+node_kind(js, meta_property).
 handled(js, object_method,               controlflow, r_reachability).
 
 -- TWO CALL FORMS — a call transfers control INTO the callee and may leave by

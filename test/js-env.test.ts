@@ -182,9 +182,53 @@ test('what is lost going down a version names the site, the feature and the line
     // `bigint` and `namespace_reexport` joined 2026-09-08 with the twenty-three
     // kinds the vocabulary took on; both are ES2020, so both are lost going
     // down to es2015 and neither changes what es2020 itself refuses.
-    ['async_await', 'bigint', 'dynamic_import', 'exponentiation',
+    // ...and `import_meta` joined 2026-09-08 (w_meta_property). It is ES2020 —
+    // the SAME node kind as `new.target`, which is ES2015 — so it is lost going
+    // down to es2015 and es2020 still accepts it, which is why the site could go
+    // in era.js without making the one-reason assertion above two-valued.
+    ['async_await', 'bigint', 'dynamic_import', 'exponentiation', 'import_meta',
      'namespace_reexport', 'nullish_coalescing', 'optional_chaining'],
-    'the five things era.js would lose on an es2015 runtime');
+    'the named set era.js would lose on an es2015 runtime');
+});
+
+// ONE NODE KIND, TWO FEATURES, TWO YEARS (w_meta_property, 2026-09-08). This is
+// the assertion the fourth gate table exists for, and it is a NAMED SET on both
+// sides: the kind is one, the features it carries are two, and their years
+// differ by five. Neither `kind_needs` nor `attr_needs` could have produced it.
+test('one node kind carries two features five years apart', () => {
+  const m = base();
+  assert.deepEqual([...m.set('uses_kind[audit](meta_property, F)')].sort(),
+    ['import_meta', 'new_target'],
+    'a meta_property is EITHER new.target (2015) or import.meta (2020)');
+  // and the years are the model's, not this test's
+  assert.deepEqual(m.q('feature_since(new_target, Y)').flat(), ['2015']);
+  assert.deepEqual(m.q('feature_since(import_meta, Y)').flat(), ['2020']);
+  // ...and es2015 refuses exactly the LATER one at exactly the site that spells
+  // it, which is the difference a kind-keyed table could not have expressed.
+  assert.deepEqual([...m.set('unsupported_in[audit](es2015, File, import_meta)')],
+    ['era.js']);
+  assert.deepEqual([...m.set('unsupported_in[audit](es2015, File, new_target)')], [],
+    'es2015 HAS new.target, and the two used to be one row');
+  // POSITIVE CONTROL on the instrument: the same query shape does return rows.
+  assert.ok(m.n('unsupported_in[audit](es2015, File, F)') > 0);
+});
+
+// WHERE `attr_needs` IS STRUCTURALLY UNABLE TO LOOK, measured rather than
+// asserted from the rule text: the refinement that separates `**` from `*` keys
+// on an `ast_attr`, and a `meta_property` node has NONE. So the fourth table is
+// not a preference over the second — the second could not have been used.
+test('a meta_property carries no attribute for attr_needs to key on', () => {
+  const m = base();
+  const metas = m.q('ast_node[code](N, meta_property, F, L)').map(([n]) => n);
+  assert.ok(metas.length >= 2, `positive control: ${metas.length} meta_property nodes`);
+  const attrs = m.q('ast_attr[code](N, K, V)');
+  assert.ok(attrs.length > 100, `positive control: ${attrs.length} attributes in this corpus`);
+  assert.deepEqual(attrs.filter(([n]) => metas.includes(n)), [],
+    'not one attribute on any meta_property node in the era corpus');
+  // ...and what IS there is the child the fourth table reads.
+  assert.deepEqual(metas.map((n) => m.q(`ast_child[code](${n}, meta, 0, C)`)
+    .flatMap(([c]) => m.q(`ast_name[code](${c}, X)`).flat())).flat().sort(),
+    ['import', 'new']);
 });
 
 test('the provenance of a refusal names the table row, not just the answer', () => {
@@ -322,6 +366,55 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
             replace: 'attr_needs(L, K, _, V, F), ast_attr[code](N, _, V).' }],
     expect: (m) => assert.ok(m.n('uses[audit](N, F)') > 67,
       'forgetting the key over-approximates: any attribute whose VALUE is `**` now counts'),
+  },
+  // FOUR AIMED AT THE FOURTH TABLE (w_meta_property, 2026-09-08). The first two
+  // ask whether the split is load-bearing at all; the last two ask where the
+  // rule that reads it is structurally able to be wrong.
+  {
+    name: 'm13 the later half of a two-feature kind is deleted',
+    targets: 'child_needs is load-bearing: without the import.meta row the kind is half-gated',
+    mut: [{ find: 'child_needs(js, meta_property, meta, "import", import_meta).', replace: '' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('feature_unexercised[audit](F)').flat(), ['import_meta'],
+        'a declared feature no site carries');
+      assert.deepEqual([...m.set('uses_kind[audit](meta_property, F)')], ['new_target'],
+        'THE WRONG ANSWER a kind-only table gave: the 2020 spelling is invisible');
+    },
+  },
+  {
+    name: 'm14 both halves are given the older year',
+    targets: 'the YEAR carries the answer — this is the state of the table before this item',
+    mut: [{ find: 'feature_since(import_meta, 2020).', replace: 'feature_since(import_meta, 2015).' }],
+    expect: (m) => {
+      assert.equal(m.set('lost_feature[audit](A, B, F)').has('es2020 es2015 import_meta'), false,
+        'es2015 no longer loses import.meta, which is what the single kind_needs row said');
+    },
+  },
+  {
+    name: 'm15 the child rule forgets which FIELD it reads',
+    targets: 'child_needs joins on the field name as well as the child name',
+    mut: [{ file: RULES,
+            find: "child_needs(L, K, Field, Name, F),\n                     ast_child[code](N, Field, 0, C), ast_name[code](C, Name).",
+            replace: "child_needs(L, K, _, Name, F),\n                     ast_child[code](N, _, 0, C), ast_name[code](C, Name)." }],
+    expect: (m) => {
+      // `import.meta` is (meta="import", property="meta"). Dropping the field
+      // lets the `property` child answer the `meta` row, so `new.target` — whose
+      // property is `target` — is unaffected while `import.meta` gains nothing…
+      // …and the row keyed on "new" now matches nothing extra either. What DOES
+      // move is that a node needs only SOME child with the name, which is a
+      // strictly wider rule: assert it is wider rather than guessing the number.
+      assert.ok(m.n('uses[audit](N, F)') >= 68, 'the join is looser, never tighter');
+      assert.ok(m.set('uses_kind[audit](meta_property, F)').size >= 2);
+    },
+  },
+  {
+    name: 'm16 a child-gated kind stops counting as gated',
+    targets: 'kind_gated reads child_needs — without that arm the kind is UNACCOUNTED',
+    mut: [{ file: RULES,
+            find: 'kind_gated(L, K)             :- child_needs(L, K, _, _, _).',
+            replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('kind_unaccounted[audit](L, K)'), [['js', 'meta_property']],
+      'a kind decided by a child reads as a kind nobody decided about'),
   },
 ];
 

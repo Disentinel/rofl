@@ -1188,11 +1188,61 @@ claim(queued, js, static_block,                none, modules,      w_class_field
 -- 52 - class_expression.
 work(w_class_expression, "class_expression is READ by obj_like[flow] and node_value_kind and was declared nowhere: the model had an opinion the matrix could not report").
 work_order(w_class_expression, 52).
-work_state(w_class_expression, open).
-claim(queued, js, class_expression,            none, callgraph,    w_class_expression).
-claim(queued, js, class_expression,            none, dataflow,     w_class_expression).
-claim(queued, js, class_expression,            none, controlflow,  w_class_expression).
-claim(queued, js, class_expression,            none, modules,      w_class_expression).
+-- DONE 2026-09-08. Four cells answered: two `handled` and two waivers, and each
+-- of the four is the OPPOSITE of what consistency with `class_declaration`
+-- would have written for at least one of them.
+--
+-- THE ANSWER TO THE QUESTION THE ITEM ASKED. The model already named the kind
+-- in `obj_like[flow]` and in `node_value_kind`, so what did that opinion
+-- DERIVE? NOTHING. Measured on a probe with each form beside its control:
+-- `new Declared().hold()` resolved, `new (class {})().hold()` and
+-- `new (class Hoist {})().hold()` resolved to nothing, both reported as
+-- unresolved `s_member_on_ident`. `member_value[flow]` named the methods
+-- correctly the whole time and no receiver could reach them.
+--
+-- ONE RELATION WAS THE WHOLE GAP. `class_named[flow]` reads a class's `id`
+-- CHILD, and a class expression's BINDING is not its `id`. All four of its
+-- consumers — the two `may_be_node` arms, `class_receiver` and `super_of` —
+-- ask which NAME reaches this class, so one arm fixed the constructor edge, the
+-- static/instance split and the heritage clause at once.
+--
+-- AND A SECOND RULE ABOUT A NAME, which `calls_in` is what exposed: an
+-- anonymous class expression's constructor had NO `fn_name`, so the edge was
+-- derived by `resolves` and then dropped on the way to the graph. Measured on
+-- this engine, because the two forms disagree — `const A = class {}` gives
+-- `A.name "A"` and a frame `A`, `const W = class Hoist {}` gives `W.name
+-- "Hoist"` and a frame `Hoist`.
+--
+-- THE CONTROL-FLOW CELL IS `handled` AND ITS DECLARATION TWIN IS WAIVED, which
+-- is a disagreement rather than an oversight: `class extends mountOf() {}` calls
+-- `mountOf` when the class is EVALUATED, and `calls_in` carries `top ->
+-- mountOf`, so `a_no_control_transfer` is FALSE for this kind. The declaration
+-- twin has the identical exposure and its row is left alone — see
+-- f_a_heritage_clause_runs_and_a_class_is_waived_as_transferring_nothing.
+--
+-- AND THE MODULES CELL IS WAIVED WITH ITS OWN CONTROL. `export const C = class
+-- {}` puts no name in `exports_name[code]` — and neither does `export const f =
+-- function () {}` nor `export const g = () => 2`, while `export function h() {}`
+-- beside them does. So the silence is the `export const X = <expr>` FORM and not
+-- a fact about classes, which is what makes the waiver earned instead of
+-- borrowed. That gap is named below rather than left to be rediscovered.
+work_state(w_class_expression, done).
+work_spawned(w_class_expression, f_a_class_is_reached_by_its_binding_and_a_class_expression_is_where_the_two_come_apart).
+work_spawned(w_class_expression, f_an_edge_can_be_resolved_and_still_dropped_because_the_model_cannot_name_it).
+work_spawned(w_class_expression, f_a_heritage_clause_runs_and_a_class_is_waived_as_transferring_nothing).
+
+-- WHAT THIS ITEM HANDED ON, both measured and neither this item's cell:
+--   * `export const X = <expr>` exports no NAME the model can see, for any
+--     expression — class, function or arrow. A modules-layer question about a
+--     DECLARATION FORM rather than about any kind this matrix has a cell for.
+--   * a class expression that is NOT a declarator initialiser — `f(class {})`,
+--     `ns.C = class {}`, `return class {}` — reaches no name at all. That is the
+--     residue `node_value_kind(class_expression)` still exists for, and it is
+--     why mutant m6 in test/js-class-expression.test.ts SURVIVES: the row is
+--     unkillable in this corpus for want of a SITE, not for want of a rule.
+-- Neither is a (kind, layer) cell this matrix has, so neither becomes a claim:
+-- a claim on a cell that is shut raises `queue_stale[audit]`, and a claim on a
+-- cell nobody has is not expressible. They are prose on purpose.
 
 -- 53 - update_expression, big_int_literal, reg_exp_literal.
 -- TEN OF TWELVE CLOSED 2026-09-08, and the two that are not are handed to the
@@ -1272,10 +1322,63 @@ claim(queued, js, reg_exp_literal,             none, callgraph,    w_env_api_sur
 -- 54 - meta_property.
 work(w_meta_property, "new.target and import.meta: one node kind and two questions").
 work_order(w_meta_property, 54).
+-- PARTLY DONE 2026-09-08, and the item stays OPEN with three of its four cells
+-- unanswered ON PURPOSE. Closing them would need one verdict to cover two
+-- constructs, and the measurement says they are two.
+--
+-- THE SCANNER DISTINGUISHES THEM AND NOTHING ABOVE IT DID. Measured: a
+-- `meta_property` node carries ZERO `ast_attr` rows of any key and exactly two
+-- identifier children, `meta` and `property` — so `new.target` is
+-- (meta="new", property="target") and `import.meta` is
+-- (meta="import", property="meta"). The distinction was on the store the whole
+-- time and no relation read it, which is the shape this loop keeps finding.
+--
+-- WHAT WAS ANSWERED, AND IT IS NOT ONE OF THE FOUR LAYERS. The ERA table said
+-- `kind_needs(js, meta_property, meta_property)` with `feature_since(...,
+-- 2015)`, and that is WRONG FOR HALF THE KIND: `new.target` is ES2015 and
+-- `import.meta` is ES2020. Neither refinement the era layer already had could
+-- split it — `attr_needs` reads an attribute and there is none, and
+-- `outside_attr_needs` reads an ANCESTOR while the difference is inside — so a
+-- FOURTH gate table, `child_needs(Lang, Kind, Field, Name, Feature)`, was
+-- written beside them. `uses_kind[audit](meta_property, F)` now returns two
+-- features five years apart from one node kind, and es2015 refuses exactly the
+-- later one.
+--
+-- ONE CELL CLOSED. `controlflow` is waived, and the reason is measured rather
+-- than borrowed from the neighbours: a `meta_property` contains exactly its two
+-- identifiers and neither is a `site[code]`, with a positive control that the
+-- containment query does return sites for a node that has one. Both forms are
+-- LEAVES — two tokens joined by a dot, and neither token is a lookup.
 work_state(w_meta_property, open).
+-- ...and it waits on the standard library BY NAME for half of one cell, which
+-- is the dependency `unresolved_call` on `import.meta.resolve` would sit in.
+work_needs(w_meta_property, w_env_api_surface).
+work_spawned(w_meta_property, f_one_node_kind_two_features_and_the_era_table_could_not_look_at_a_child).
+
+-- THE THREE THAT STAY OPEN, each with the measurement that keeps it open.
+--
+-- callgraph: BOTH forms stand in a callee-object position and the model buckets
+--   them as `o_other`. `import.meta.resolve("./x")` is a real call edge into the
+--   HOST, which is w_env_api_surface's programme, and `new new.target()` is a
+--   transfer site whose value is the construction mode. A waiver here would
+--   claim there is no call-graph question and there are two. NOTE: no site for
+--   either is in the corpus, deliberately — facts/js-shapes.rofl waives
+--   `s_member_on_other` as `a_catch_all_empty_by_design` and a site would make
+--   that waiver false for a reason belonging to another item.
 claim(queued, js, meta_property,               none, callgraph,    w_meta_property).
+-- dataflow: `may_be_node[flow]` is EMPTY for both, measured against 1 125 valued
+--   expressions in the same world. `import.meta` is a host object with no node
+--   in any program; `new.target` is the CONSTRUCTION MODE, and this model has no
+--   relation for call mode at all — a function reached by both `f()` and
+--   `new f()` has one body and one answer here. The second half is the sharper
+--   one and it is this item's own.
 claim(queued, js, meta_property,               none, dataflow,     w_meta_property).
-claim(queued, js, meta_property,               none, controlflow,  w_meta_property).
+-- modules: `import.meta` IS a module construct — the module's own metadata — and
+--   `new.target` is not, so `a_not_a_module_construct` is true of exactly half
+--   the kind. THE CELL IS KEYED BY KIND AND THE QUESTION IS NOT, and the shape
+--   axis that could split it applies to `callgraph` only (facts/js-shapes.rofl).
+--   Left open rather than half-waived; see
+--   f_one_node_kind_two_features_and_the_era_table_could_not_look_at_a_child.
 claim(queued, js, meta_property,               none, modules,      w_meta_property).
 
 -- 55 - export_specifier, export_namespace_specifier.

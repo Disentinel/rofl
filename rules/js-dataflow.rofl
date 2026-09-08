@@ -1076,6 +1076,45 @@ may_be_node[flow](T, O) :- obj_method_of[flow](O, M), this_host[flow](M, T).
 class_named[flow](CD, Name, File) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
                                      ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
 
+-- ...AND A CLASS EXPRESSION ANSWERS TO ITS BINDING, NOT TO ITS OWN `id`
+-- (w_class_expression, 2026-09-08). This relation is not `.name`: every one of
+-- its four consumers — the two `may_be_node` arms below, `class_receiver` and
+-- `super_of` — asks WHICH NAME REACHES THIS CLASS IN THIS FILE, and for a
+-- declaration the `id` is that name only because a declaration's id is also its
+-- binding. A class expression separates the two: `const C = class {}` has no
+-- `id` at all, and `const W = class Hoist {}` binds `W` on the outside while
+-- `Hoist` is in scope only inside the class's own body.
+--
+-- MEASURED BEFORE THE RULE, with the control in the same file, which is the
+-- only reason this is a fix rather than a guess: `new Declared().hold()`
+-- resolved and `new (class {})().hold()` and `new (class Hoist {})().hold()`
+-- resolved to NOTHING, both reported as unresolved `s_member_on_ident`. So the
+-- model's opinion about `class_expression` — `obj_like` and `node_value_kind`
+-- both name the kind — reached `member_value` and stopped one relation short of
+-- anything that could USE it.
+--
+-- THE `id` ARM IS NOT REPLACED AND MUST NOT BE. A named class expression is
+-- reached by BOTH names inside its own file, and `Hoist` is the one V8 reports:
+-- measured on this engine, `const W = class Hoist {}` gives `W.name === "Hoist"`
+-- and a `new W()` frame reads `Hoist`, while `const C = class {}` gives
+-- `C.name === "C"`.
+--
+-- AND THE `id` ARM OVER-APPROXIMATES FOR THIS FORM, which is measured and left
+-- standing rather than hidden. `class_named` is consumed through
+-- `ident_in[code]`, which is FILE-scoped, while `sees_binder[code]` above is
+-- scoped properly — so `Hoist` written in a function that is not the class's
+-- own body reaches the class here and would reach nothing at run time. Probed:
+-- a `function leak() { return Hoist; }` beside the class derives
+-- `may_be_node(Hoist, <the class>)`. Narrowing it is the same widening
+-- `class_receiver` already defers — the scope layer knows the answer and this
+-- relation does not ask it — and it is recorded as a finding rather than
+-- patched here, because a class expression is the first form where the two
+-- disagree at all.
+class_named[flow](CD, Name, File) :- ast_node[code](CD, class_expression, File, _),
+                                     ast_node[code](D, variable_declarator, File, _),
+                                     ast_child[code](D, init, 0, CD),
+                                     ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+
 -- the name of a class denotes the class
 may_be_node[flow](E, CD) :- class_named[flow](CD, Name, File),
                             ident_in[code](E, Name, File).
