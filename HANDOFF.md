@@ -1,8 +1,13 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iteration 33). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iteration 34). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
+
+**Iteration 34 ran THREE ITEMS IN PARALLEL, in three git worktrees**, on the
+owner's ask. Read `f_a_ledger_keyed_by_name_merges_and_a_pin_keyed_by_nothing_does_not`
+and the four findings beside it before doing it again; the short version is at
+the bottom of this file under *Running items in parallel*.
 
 ## Where the loop is
 
@@ -10,14 +15,28 @@ Branch `modeljs`. The vocabulary now takes on **the language** rather than its
 own list, by the owner's decision on 2026-09-08.
 
 ```
-KIND x LAYER   416 cells = modelled 111 + waived 178 + not_modelled 127
-  answered (modelled | waived):  289 / 416 = 69.5%
+KIND x LAYER   416 cells = modelled 126 + waived 193 + not_modelled 97
+  answered (modelled | waived):  319 / 416 = 76.7%
 
-open_cell[audit] 102, every one owned BY NAME, sweeper 0 at all four layers.
-61 work items.
-  callgraph  open 27, claimed 37     dataflow    open 24, claimed 31
-  modules    open 28, claimed 28     controlflow open 23, claimed 35
+open_cell[audit] 70, every one owned BY NAME, sweeper 0 at all four layers.
+63 work items.
+  callgraph  open 18, claimed 33     dataflow    open 15, claimed 27
+  modules    open 19, claimed 24     controlflow open 18, claimed 32
 ```
+
+**102 -> 70 open cells in one afternoon**, from three branches at once:
+`w_destructuring_rest_and_spread` (50), `w_export_specifier_forms` (55),
+`w_labelled_control` (56) and eight of the twelve cells of `w_inert_statements`
+(57). The four `with_statement` cells stay **open and unblocked** — the work is
+a one-word scanner change and what it waits on is a decision about name
+resolution.
+
+**Two items were ADDED, and one of them reopened a closed cell**:
+`w_destructuring_hides_a_call` (60), because
+`ignored(js, object_pattern, controlflow, a_no_control_transfer)` was measured
+FALSE the day after it was written — `const {taken} = withGetter` runs the
+getter — and `w_open_cell_should_be_an_identity` (61), because the number above
+is the last pin in the queue tests that is a number.
 
 **89% became 69% and that is the number becoming TRUE.** It used to say "89% of
 what we declare"; twenty-three kinds of core ES entered the vocabulary and none
@@ -290,3 +309,38 @@ node --experimental-strip-types --test --test-concurrency=4 test/<one>.test.ts
 - Never assign the `out_of_scope` verdict — that judgement is the owner's.
 - bun is ignored locally; CI runs it.
 - Iteration speed must RISE.
+
+
+## Running items in parallel
+
+Tried on 2026-09-08 with three agents in three worktrees off one commit. It
+works, and what makes it work is not what was expected.
+
+**The ledger is the part that parallelises.** `facts/worklist.rofl` and
+`facts/js-kinds.rofl` were edited by all three branches and git merged them with
+**zero conflicts** across three merges — rows addressed by NAME, in per-item
+blocks. Nine conflict hunks on 3 384 added lines, eight of them two branches
+appending at the same tail.
+
+**The pins are the part that does not**, and only the ones written as NUMBERS.
+A named set that two branches grow merges as a union, which is computable; a
+count that two branches move is right on each branch and wrong in the merge,
+with nothing in the conflict to say what the third number is.
+
+**Choosing items for disjoint files is worthless.** The three were picked one per
+rules pack, deliberately and out of worklist order. Thirteen files ended up
+touched by more than one branch and six by all three. Pick items for real-world
+weight or dependency order instead.
+
+**Brief them with these four rules**, which is what the three were given:
+1. Do not touch `test/js-model.test.ts`, `test/worklist.test.ts` counts, or
+   `test/js-fixpoint-cost.test.ts` — the integrator fixes those once.
+2. **Oracles must be named sets, never counts.** This is the whole of it.
+3. Do not run the full suite; run the targeted files. Agents share the machine.
+4. Prefer a new fixture file; if you must append to `alpha.mjs`, append at the end.
+
+**Budget the integration, not the authoring.** Merging cost nine hunks and ten
+failing tests, of which six were pins and **four were real** — and three of the
+four were defects that PREDATED the parallel work and were found by a fresh
+reader leaning on a claim somebody else had written. That is the strongest
+argument for doing it again.

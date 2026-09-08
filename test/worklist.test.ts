@@ -197,7 +197,8 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
     'w_meta_property', 'w_mod_beyond_the_import',
-    'w_mod_sweep', 'w_plugin_gated_kinds', 'w_scope_shadowing',
+    'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
+    'w_scope_shadowing',
     'w_update_and_literals',
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
@@ -298,7 +299,10 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // runs the getter, so a destructuring pattern hides a call the way an
   // accessor does, and `accessor_read` is structurally unable to see it because
   // none of these nodes is a `member_expression`.
-  assert.equal(w.n('work(W, Note)'), 62);
+  // ...AND 62 -> 63 the same day: `w_open_cell_should_be_an_identity`, entered
+  // because the open-cell assertion above is the last pin in this file that is
+  // a number, and three parallel branches moved it at once.
+  assert.equal(w.n('work(W, Note)'), 63);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
