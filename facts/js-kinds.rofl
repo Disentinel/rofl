@@ -316,6 +316,14 @@ node_kind(js, interpreter_directive).
 -- w_inert_statements rather than blocked or waived. See that item in
 -- facts/worklist.rofl for what the work actually is.
 kind_absent_ok(with_statement, a_a_module_is_strict_and_with_is_a_syntax_error).
-kind_absent_ok(directive, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(directive_literal, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(interpreter_directive, a_declared_for_the_denominator_and_queued).
+-- ...AND THE LAST THREE ARE GONE, 2026-09-08 (w_directives), named by
+-- `kind_absent_stale[audit]` on the first run with the fixtures in and no
+-- verdict yet written. `directive`, `directive_literal` and
+-- `interpreter_directive` have corpus sites now: delta.mjs opens with a
+-- hashbang and a program-level `'use strict'`, and shapes.ts.txt ends with a
+-- function-body directive prologue of two strings. THE FIXTURES ARE IN TWO
+-- FILES BECAUSE NEITHER FORM CAN BE APPENDED - a hashbang is legal on line 1
+-- and nowhere else (line 2 is `Unexpected token (2:0)` and the whole file
+-- becomes an `ast_parse_error`, measured), and a string is a Directive only
+-- while it is the head of a body. See facts/js-statements.rofl for the twelve
+-- verdicts they opened.

@@ -218,3 +218,154 @@ ignored(js, empty_statement,    dataflow,  a_a_statement_carries_no_value).
 ignored(js, debugger_statement, dataflow,  a_a_statement_carries_no_value).
 ignored(js, empty_statement,    modules,   a_not_a_module_construct).
 ignored(js, debugger_statement, modules,   a_not_a_module_construct).
+
+-- ===========================================================================
+-- THE DIRECTIVES, 2026-09-08 — queue item w_directives. Three kinds, twelve
+-- cells, and the item's own question was whether the SCANNER emits them at all.
+--
+-- IT DOES, AND THAT WAS MEASURED FIRST. babel does not put a directive in
+-- `body`: a `'use strict'` at the head of a Program or a function body is a
+-- `Directive` node wrapping a `DirectiveLiteral`, hung off a SEPARATE
+-- `directives` array, and a `#!` is an `InterpreterDirective` on the Program's
+-- `interpreter` field. scanners/js_ast.ts walks every own property of every
+-- node, so all three arrive intact with their values — `ast_value[code]` holds
+-- `"use strict"` and `"/usr/bin/env node"`. Nothing was being dropped, which is
+-- the opposite of what the item expected to find and is why the first thing
+-- done was a scan rather than a rule.
+--
+-- ...AND NO RULE IN THE MODEL CAN REACH ONE. This is the negative the four
+-- waivers below rest on, and it is a query rather than a reading: the reified
+-- rule bodies say which KINDS any rule names (`slot_atom(ast_node, 2, K)`, 52
+-- of them across the eight js rule packs, structure through vocabulary) and
+-- which FIELDS any rule reads out of `ast_child` (`slot_atom(ast_child, 2, F)`,
+-- 34). `directive`,
+-- `directive_literal` and `interpreter_directive` are in neither list, and
+-- neither are the fields `directives` and `interpreter`. Both halves have a
+-- positive control — `string_literal` is in the first, `body` in the second —
+-- so the emptiness is a fact about the model and not about the query. That is
+-- ONE measurement covering all twelve cells, where twelve membership tests
+-- would each have been an empty answer with nothing behind it.
+--
+-- THE FIXTURES ARE IN TWO FILES BECAUSE NEITHER CONSTRUCT CAN BE APPENDED. A
+-- hashbang is legal on line 1 of a file and nowhere else — the same text on
+-- line 2 is `Unexpected token (2:0)` and the scan returns `ast_parse_error`,
+-- measured — and a string is a Directive only while it is the head of a body.
+-- delta.mjs therefore carries the hashbang and the PROGRAM-level directive on
+-- its first two lines, and shapes.ts.txt carries the FUNCTION-BODY pair at its
+-- end. Measured in the same place: a string at the head of a bare block or an
+-- `if` block is NOT a directive (babel emits an `expression_statement`), and a
+-- string after any other statement is not one either.
+
+-- ---------------------------------------------------------------------------
+-- CALLGRAPH. None of the seven directive nodes in the corpus appears in
+-- `site[code]` (546 rows) or on either side of `resolves[code]` (304), and a
+-- directive has no callee position to hold one: its only child is a
+-- `directive_literal`, whose only content is a string.
+ignored(js, directive,             callgraph, a_not_a_call_site).
+ignored(js, directive_literal,     callgraph, a_not_a_call_site).
+ignored(js, interpreter_directive, callgraph, a_not_a_call_site).
+
+-- ---------------------------------------------------------------------------
+-- DATAFLOW, and this is the one cell where a waiver would have been WRONG for
+-- the obvious reason. Two of these kinds DO carry a value: `ast_value[code]`
+-- holds `"use strict"` for a `directive_literal` and `"/usr/bin/env node"` for
+-- an `interpreter_directive`, so `a_a_statement_carries_no_value` — the atom
+-- every statement above takes — is false about them.
+--
+-- WHAT IS TRUE IS NARROWER AND MEASURABLE: the value is in no position an
+-- expression can read. Neither node is in `valued[flow]` (2 170 rows),
+-- `may_be_lit[flow]` (963) or `may_be_node[flow]` (1 272); a `directive_literal`
+-- hangs off `value` of a `directive`, which hangs off `directives`, and nothing
+-- binds, passes, returns or keys it. The parser reads the text — that is what
+-- makes the enclosing code strict — and the program cannot.
+--
+-- AND THE MUTANT REFUTED THE FIRST DRAFT OF THIS PARAGRAPH, which said the
+-- waiver was STRUCTURAL — that the row could not be derived. It can. Adding
+-- `literal_kind(directive_literal)` to rules/js-dataflow.rofl moves `may_be_lit`
+-- by exactly THREE and `valued[flow]` by three, one per `directive_literal` in
+-- the corpus, because the scanner records the value and the rule only asks for
+-- a kind and an `ast_value`. `node_value_kind(directive_literal)` does the same
+-- to `may_be_node`.
+--
+-- WHAT DOES NOT MOVE IS EVERY ANSWER: `calls_in`, `resolves`, `may_not_run`,
+-- `prototype_of` and `stdlib_member` are identical row for row under both
+-- mutants. So the waiver is not `the model cannot say it` but `nothing in the
+-- model would read it` — a value with no consumer, which is the same partially
+-- surviving shape as the bigint mutant in test/js-update-and-literals.test.ts
+-- and is asserted the same way, so a future change that gives the row a
+-- consumer goes red here instead of passing quietly.
+ignored(js, directive,             dataflow, a_a_value_the_grammar_reads_and_no_expression_can).
+ignored(js, directive_literal,     dataflow, a_a_value_the_grammar_reads_and_no_expression_can).
+ignored(js, interpreter_directive, dataflow, a_a_value_the_grammar_reads_and_no_expression_can).
+
+-- ---------------------------------------------------------------------------
+-- CONTROLFLOW, and `'use strict'` is the one construct in this item with a REAL
+-- SEMANTIC EFFECT, on the whole enclosing scope. The waiver is therefore the
+-- one that had to be earned rather than assumed, and it was earned three times
+-- over — `a_no_control_transfer` is the atom this layer has already had to
+-- withdraw once (`object_pattern`), so an unmeasured second use of it would
+-- have been the same mistake twice.
+--
+--   1. THE FORM TRANSFERS NOTHING, in any mode. None of the three kinds is in
+--      `transfer_mechanism` (26 rows), `guard_kind` (13) or `abrupt_kind` (4),
+--      and none of the seven nodes is `guarded[code]` (428), a `guard_arm` or
+--      `after_abrupt[code]` (19). A directive completes normally and the next
+--      statement runs.
+--
+--      AND THE MOST AGGRESSIVE FALSE CLAIM AVAILABLE AT THIS LAYER CHANGES
+--      NOTHING: `abrupt_kind(directive)` — which would say a directive kills
+--      every statement after it — leaves `after_abrupt` at 19 and `guarded` at
+--      428, unmoved. The reason is the shape of the tree rather than a rule's
+--      caution: `abrupt_at` requires the node to sit at an INDEX of a
+--      `stmt_seq_field`, which is `body` or `consequent`, and a directive sits
+--      in `directives`. The model cannot place a directive in statement order
+--      at all, so it cannot be abrupt in it. That is a survivor and it is
+--      asserted as one — the day `directives` becomes a statement sequence,
+--      this waiver needs re-reading.
+--
+--      THE LAYER IS NOT BLIND TO THE NODE, THOUGH, and the discriminating
+--      mutant says so: `guard_kind(directive, value)` moves `guarded` 428 -> 431.
+--      So the absence of these rows is a DECISION about the language and not an
+--      incapacity of the layer, which is the difference `a_no_control_transfer`
+--      has to carry to be worth writing.
+--
+--   2. WHAT STRICT MODE CHANGES IS NOT MODELLED FOR ANY CONSTRUCT. Its two
+--      effects that reach this layer are implicit throws (an assignment to an
+--      undeclared name is a ReferenceError) and the `this` of a plain call
+--      (`undefined` instead of the global object). `may_throw[code]` is seeded
+--      by `throws_outright`, which reads a `throw_statement` and nothing else,
+--      so no implicit throw of any kind is in this model; and `this_host[flow]`
+--      attributes a `this` to its binding function while `may_be_node` gives it
+--      a value only inside a CLASS, so a plain function's `this` has no value
+--      here either. A directive can only change an answer this layer computes,
+--      and it computes neither.
+--
+--   3. AND IT COULD NOT SHOW IN THIS CORPUS ANYWAY. scanners/js_ast.ts parses
+--      every file as `sourceType: 'module'` and module code is strict already —
+--      measured by RUNNING one, not read from the spec: a module with no
+--      directive anywhere throws `ReferenceError` on an assignment to an
+--      undeclared name, while a `new Function` body, sloppy by construction,
+--      assigns. So every `'use strict'` this scanner can see is a no-op.
+--
+-- Point 1 is the waiver; points 2 and 3 are why it is not hiding anything, and
+-- they are recorded as f_use_strict_changes_two_things_this_model_has_neither_of.
+ignored(js, directive,             controlflow, a_no_control_transfer).
+ignored(js, directive_literal,     controlflow, a_no_control_transfer).
+ignored(js, interpreter_directive, controlflow, a_no_control_transfer).
+
+-- ---------------------------------------------------------------------------
+-- MODULES. None of the three appears in `import_site[code]` (11 rows),
+-- `export_site[code]` (100), `binding[code]` (10), `export_binding[code]` (9),
+-- `src_shape[code]` (22) or `site_kind[code]` (11), each of which is populated
+-- in the same run.
+--
+-- THE HASHBANG IS THE ONE WITH A CASE TO ANSWER, and answering it is what makes
+-- this row a waiver rather than a copy: `#!` says the file is meant to be RUN
+-- as a program, which sounds like a statement about the module graph. It is not
+-- one this layer can use — the graph is built from specifiers and this model
+-- already treats every file's top level as evaluated, so the hashbang adds no
+-- edge, no binding and no entry the model did not have. delta.mjs carries one
+-- and its row in `src_shape`/`import_site` is unchanged by it.
+ignored(js, directive,             modules, a_not_a_module_construct).
+ignored(js, directive_literal,     modules, a_not_a_module_construct).
+ignored(js, interpreter_directive, modules, a_not_a_module_construct).

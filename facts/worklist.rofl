@@ -1533,9 +1533,45 @@ claim(queued, js, with_statement,              none, controlflow,  w_inert_state
 claim(queued, js, with_statement,              none, modules,      w_inert_statements).
 
 -- 58 - directive, directive_literal, interpreter_directive.
+-- DONE 2026-09-08. Twelve cells, twelve waivers, and the item's own premise was
+-- the first thing refuted: it asks whether the scanner drops directives and it
+-- does not. babel hangs a directive prologue off a `directives` ARRAY and a
+-- hashbang off `interpreter`, scanners/js_ast.ts walks every own property, so
+-- all three kinds arrive with their values on the store. Nothing needed fixing
+-- in the scanner; the question was what the model does with facts it has.
+--
+-- THE NEGATIVE THAT CARRIES ALL TWELVE IS ONE QUERY, not twelve. The kernel
+-- reifies rule bodies, so `slot_atom(ast_node, 2, K)` is the set of node kinds
+-- any rule NAMES (52 across the eight js rule packs) and `slot_atom(ast_child, 2, F)`
+-- the set of fields any rule READS (34). None of `directive`,
+-- `directive_literal`, `interpreter_directive` is in the first; neither
+-- `directives` nor `interpreter` is in the second; `string_literal` and `body`
+-- are the positive controls. Twelve empty membership queries would each have
+-- been a fact about the query.
+--
+-- FOUR THINGS MEASURED THAT THE PLAN DID NOT EXPECT:
+--   * `abrupt_kind(directive)` - the most aggressive false claim this layer can
+--     make - moves NOTHING. `abrupt_at` wants a node at an index of a
+--     `stmt_seq_field` (`body` or `consequent`) and a directive is in
+--     `directives`, so the model cannot place one in statement order at all.
+--     A survivor, and asserted as one.
+--   * ...but `guard_kind(directive, value)` moves `guarded` 428 -> 431, so the
+--     layer is not blind to the node and the waiver is a decision.
+--   * `literal_kind(directive_literal)` DERIVES three `may_be_lit` rows. The
+--     first draft of the fact pack said it derived none; the mutant refuted the
+--     comment before it was committed. No answer moves - a value with no
+--     consumer rather than a value the model cannot compute.
+--   * AND THE ERA TABLE IS WRONG ABOUT THE HASHBANG. See the finding: `#!` is
+--     the ES2023 Hashbang Grammar and `kind_baseline(js, interpreter_directive)`
+--     says es5 takes it; stating the true year puts the feature in
+--     `feature_unreachable[audit]` because the scale stops at ts5/2022. The row
+--     stays, annotated, because both answers are false and only an `es2023` on
+--     the scale fixes it - which is the owner's.
 work(w_directives, "'use strict' and the hashbang: directives are a real construct and the scanner emits them").
 work_order(w_directives, 58).
-work_state(w_directives, open).
+work_state(w_directives, done).
+work_spawned(w_directives, f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it).
+work_spawned(w_directives, f_use_strict_changes_two_things_this_model_has_neither_of).
 claim(queued, js, directive,                   none, callgraph,    w_directives).
 claim(queued, js, directive,                   none, dataflow,     w_directives).
 claim(queued, js, directive,                   none, controlflow,  w_directives).

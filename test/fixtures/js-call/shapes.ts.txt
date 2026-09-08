@@ -730,3 +730,21 @@ export class Outer {
 // `plated["#edge"]`.
 const plated = { '#edge': 'a string key, not a private name' };
 export function reachesPlated(): string { return plated['#edge']; }
+
+// A DIRECTIVE IS NOT AN EXPRESSION STATEMENT (w_directives, 2026-09-08), and
+// this is the FUNCTION-BODY half of the fixture — delta.mjs carries the
+// program-level one and the hashbang, because both of those have to be at the
+// top of a file. babel puts a directive prologue in a `directives` ARRAY on the
+// body and NOT in `body`, so every rule in this model that walks statements is
+// structurally unable to see one.
+//
+// THE SECOND STRING IS A DIRECTIVE TOO. A directive prologue is any run of
+// string-literal statements at the head of a body; `'use strict'` is only the
+// one the language assigns a meaning to, and `'use rofl'` is the control that
+// says the model must not be reading the TEXT. Both are `directive_literal`
+// nodes carrying an `ast_value`, and nothing in the model reads either.
+export function strictBody(n: number): number {
+  'use strict';
+  'use rofl';
+  return n + 1;
+}
