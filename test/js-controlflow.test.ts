@@ -62,8 +62,8 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // 269 -> 272 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares three layers plus the one the fact
   // opens.
-  assert.equal(before, 272, 'positive control: the matrix before the fact');
-  assert.equal(after, 353, 'positive control: and after');
+  assert.equal(before, 341, 'positive control: the matrix before the fact');
+  assert.equal(after, 445, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.

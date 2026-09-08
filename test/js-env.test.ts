@@ -42,6 +42,9 @@ const ERA: [string, string][] = [
   // operator. A positional feature there would have made that assertion
   // two-valued and destroyed what it demonstrates.
   ['era-position.js', 'test/fixtures/js-env/era-position.js.txt'],
+  // A FOURTH, 2026-09-08, and for the same reason as the third: class fields
+  // are ES2022 and era.js is asserted to fail es2020 for EXACTLY ONE reason.
+  ['era-fields.js', 'test/fixtures/js-env/era-fields.js.txt'],
 ];
 
 const FACTS = 'facts/js-env.rofl';
@@ -138,12 +141,22 @@ test('every self-audit of the era table is empty on the era corpus', () => {
 
 test('the verdict is total over the files scanned, and only ts5 takes both', () => {
   const m = base();
+  // FOUR FILES since 2026-09-08: era-fields.js joined for class fields, which
+  // are ES2022 and could not go in era.js without making its one-reason
+  // assertion two-valued.
   assert.deepEqual([...m.set('valid[audit](E, File)')].sort(),
-    ['ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts'],
+    ['ts5 era-fields.js', 'ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts'],
     'ts5 is the only environment carrying both the timeline and the extras');
   // total: every (environment, file) pair is decided, none is silent
-  assert.equal(m.n('valid[audit](E, F)') + m.n('invalid[audit](E, F)'), 5 * 3,
-    'five environments times three files, each decided exactly once');
+  // THE PRODUCT AND NOT THE NUMBER, 2026-09-08, and the first draft of this line
+  // was `5 * 3` written out. Both factors are facts this world holds — the
+  // environments are rows and the files are the corpus — so the identity is
+  // exact and stays exact when a fourth file joins, which one just did.
+  const envs = m.n('environment(E)');
+  const files = new Set(m.q('scanned_file[audit](F)').map(([f]) => f)).size || ERA.length;
+  assert.equal(m.n('valid[audit](E, F)') + m.n('invalid[audit](E, F)'), envs * files,
+    'every environment decides every file exactly once');
+  assert.ok(envs >= 5 && files >= 4, `positive control: ${envs} environments, ${files} files`);
 });
 
 test('era.js fails in es2020 for exactly one reason, and it is an OPERATOR', () => {
@@ -166,7 +179,11 @@ test('what is lost going down a version names the site, the feature and the line
   assert.ok(rows.every((r) => /:\d+$/.test(r)), `every loss carries a line: ${rows[0]}`);
   const feats = new Set(rows.map((r) => r.split(' ')[0]));
   assert.deepEqual([...feats].sort(),
-    ['async_await', 'dynamic_import', 'exponentiation', 'nullish_coalescing', 'optional_chaining'],
+    // `bigint` and `namespace_reexport` joined 2026-09-08 with the twenty-three
+    // kinds the vocabulary took on; both are ES2020, so both are lost going
+    // down to es2015 and neither changes what es2020 itself refuses.
+    ['async_await', 'bigint', 'dynamic_import', 'exponentiation',
+     'namespace_reexport', 'nullish_coalescing', 'optional_chaining'],
     'the five things era.js would lose on an es2015 runtime');
 });
 

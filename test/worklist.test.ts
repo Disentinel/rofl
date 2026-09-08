@@ -182,12 +182,19 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   const items = new Set(w.binds('work(W, N)', 'W'));
   const spawners = new Set(w.binds('work_spawned(W, F)', 'W'));
   assert.deepEqual([...items].filter((i) => !spawners.has(i)).sort(), [
-    // each of these closed on a single measurement with nothing left over, or
-    // is a sweep whose findings were recorded against the items it fed
+    // TEN JOINED 2026-09-08, all of them entered the same day: the vocabulary
+    // took on twenty-three kinds in one edit and each group got an item to own
+    // its cells. An item that has spawned nothing on the day it was ENTERED is
+    // not one nobody looked at — it is one nobody has STARTED, which this list
+    // cannot tell apart and does not pretend to.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
-    'w_cg_syntactic_wrappers', 'w_df_function_forms', 'w_df_generator_protocol',
-    'w_df_sweep', 'w_df_value_core', 'w_env_api_surface', 'w_mod_beyond_the_import',
-    'w_mod_sweep', 'w_scope_shadowing',
+    'w_cg_syntactic_wrappers', 'w_class_expression', 'w_class_fields',
+    'w_destructuring_rest_and_spread', 'w_df_function_forms', 'w_df_generator_protocol',
+    'w_df_sweep', 'w_df_value_core', 'w_directives',
+    'w_env_api_surface', 'w_export_specifier_forms', 'w_inert_statements',
+    'w_labelled_control', 'w_meta_property', 'w_mod_beyond_the_import',
+    'w_mod_sweep', 'w_plugin_gated_kinds', 'w_scope_shadowing',
+    'w_update_and_literals',
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
     'and nothing spawns a finding without being an item — the other direction');
@@ -251,7 +258,7 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // for three sessions behind a sentence that was true and unmeasured: the
   // scalars-only contract excluded exactly ONE property in the whole language.
   // The biggest single fall this number has had, and none of it was a rule.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 10, 'the queue is the model\'s open set');
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 102, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -270,7 +277,7 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 51, unchanged: no item was entered, and three were marked DONE —
   // w_scanner_nested_values with its cells, and w_cg_member_family and
   // w_cg_optional_member, whose last claims went with them.
-  assert.equal(w.n('work(W, Note)'), 51);
+  assert.equal(w.n('work(W, Note)'), 61);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -297,7 +304,7 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 7 -> 4 and claimed 17 -> 14 on 2026-09-08: the template key on both member
   // kinds and `template_literal` itself, closed by a scanner contract that grew
   // one property, with no rule at the call graph at all.
-  assert.deepEqual(per('callgraph'), [4, 14, 0]);
+  assert.deepEqual(per('callgraph'), [27, 37, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -309,11 +316,11 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // `resolves`, so the cell closed when the call-graph arm landed.
   // 2 -> 1 and claimed 9 -> 8: the value half of the same move — a template
   // with no interpolation evaluates to its cooked text.
-  assert.deepEqual(per('dataflow'), [1, 8, 0]);
+  assert.deepEqual(per('dataflow'), [24, 31, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
-  assert.deepEqual(per('modules'), [5, 5, 0]);
+  assert.deepEqual(per('modules'), [28, 28, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -326,7 +333,7 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 3 -> 1 -> ZERO on 2026-09-06: a call is an exit, then a read that runs a
   // getter. THE FIRST LAYER OF THE FOUR TO BE COMPLETELY ANSWERED — every kind
   // in the vocabulary has a verdict at controlflow and none of them is open.
-  assert.deepEqual(per('controlflow'), [0, 12, 0]);
+  assert.deepEqual(per('controlflow'), [23, 35, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -485,7 +492,13 @@ test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
     planted.push([line!, `${k}/${sh}`]);
   }
 
-  assert.deepEqual(complete, ['controlflow'],
+  // EMPTY SINCE 2026-09-08, and this is the sharpest thing the vocabulary edit
+  // did. `controlflow` was the ONE layer with no open cell — the plan's own
+  // finish line, reached on 2026-09-06 — and declaring twenty-three kinds
+  // re-opened it, because every one of them has a control-flow question nobody
+  // has answered. The list going back to empty is not a regression: the layer
+  // was finished over a vocabulary that was not the language, and it says so.
+  assert.deepEqual(complete, [],
     'the layers with no open cell left — the plan\'s own finish line, named');
   assert.equal(planted.length, LAYERS.length - complete.length,
     'every layer that still has work got a mutant');

@@ -102,6 +102,14 @@ feature(optional_chaining).   feature_since(optional_chaining, 2020).
 feature(dynamic_import).      feature_since(dynamic_import, 2020).
 feature(nullish_coalescing).  feature_since(nullish_coalescing, 2020).
 feature(logical_assignment).  feature_since(logical_assignment, 2021).
+-- FOUR MORE, 2026-09-08, with the twenty-three kinds the vocabulary took on.
+-- Each has a year and each is reachable: ts5 ranks 2022, which is why
+-- `import_attributes` (ES2025) is NOT here - a feature no environment can
+-- have would sit in `feature_unreachable[audit]` for ever.
+feature(class_fields).        feature_since(class_fields, 2022).
+feature(meta_property).       feature_since(meta_property, 2015).
+feature(bigint).              feature_since(bigint, 2020).
+feature(namespace_reexport).  feature_since(namespace_reexport, 2020).
 feature(type_syntax).
 feature(decorators).
 
@@ -112,6 +120,20 @@ feature(decorators).
 -- already applies to `handled`/`ignored`.
 kind_needs(js, arrow_function_expression,   arrow_functions).
 kind_needs(js, object_pattern,              destructuring).
+kind_needs(js, array_pattern,             destructuring).
+kind_needs(js, assignment_pattern,        destructuring).
+kind_needs(js, rest_element,              destructuring).
+kind_needs(js, spread_element,            destructuring).
+kind_needs(js, class_expression,          classes).
+kind_needs(js, export_specifier,          modules).
+kind_needs(js, class_property,            class_fields).
+kind_needs(js, class_private_property,    class_fields).
+kind_needs(js, class_private_method,      class_fields).
+kind_needs(js, private_name,              class_fields).
+kind_needs(js, static_block,              class_fields).
+kind_needs(js, meta_property,             meta_property).
+kind_needs(js, big_int_literal,           bigint).
+kind_needs(js, export_namespace_specifier, namespace_reexport).
 kind_needs(js, class_declaration,           classes).
 kind_needs(js, class_method,                classes).
 kind_needs(js, super,                       classes).
@@ -165,6 +187,18 @@ kind_needs(js, decorator,                   decorators).
 -- makes a kind nobody thought about indistinguishable from a kind somebody
 -- decided was baseline, and the first new kind the scanner emits would arrive
 -- silently declared safe.
+-- NINE MORE ARE BASELINE, 2026-09-08: every one of them is ES5 or earlier, so
+-- no environment on this scale can refuse them and `kind_unaccounted[audit]`
+-- is satisfied by a fact rather than by a feature nobody needs.
+kind_baseline(js, update_expression).
+kind_baseline(js, reg_exp_literal).
+kind_baseline(js, labeled_statement).
+kind_baseline(js, empty_statement).
+kind_baseline(js, debugger_statement).
+kind_baseline(js, with_statement).
+kind_baseline(js, directive).
+kind_baseline(js, directive_literal).
+kind_baseline(js, interpreter_directive).
 kind_baseline(js, identifier).
 kind_baseline(js, member_expression).
 kind_baseline(js, call_expression).

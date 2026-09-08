@@ -1,61 +1,35 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iteration 32). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iteration 33). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
 ## Where the loop is
 
-Branch `modeljs`. The kernel from `nextver` is merged (4.8x faster per world,
-40 relations identical row for row). Iterations 27, 28 and 29 are landed.
-
-Coverage in the five-pack world (`test/worklist.test.ts`):
+Branch `modeljs`. The vocabulary now takes on **the language** rather than its
+own list, by the owner's decision on 2026-09-08.
 
 ```
-KIND x LAYER   320 cells = modelled 109 + waived 176 + not_modelled 35
-  answered (modelled | waived):  285 / 320 = 89.1%
-  MODELLED only:                 109 / 320 = 34.1%
+KIND x LAYER   416 cells = modelled 111 + waived 178 + not_modelled 127
+  answered (modelled | waived):  289 / 416 = 69.5%
 
-open_cell[audit] 10, every one owned BY NAME — `sweeper` 0 at all four layers,
-`cell_blocked` EMPTY for the first time. 51 work items.
-  callgraph  open 4, claimed 14      dataflow  open 1, claimed 8
-  modules    open 5, claimed 5       controlflow open 0, claimed 12
+open_cell[audit] 102, every one owned BY NAME, sweeper 0 at all four layers.
+61 work items.
+  callgraph  open 27, claimed 37     dataflow    open 24, claimed 31
+  modules    open 28, claimed 28     controlflow open 23, claimed 35
 ```
 
-## What the last three iterations delivered
+**89% became 69% and that is the number becoming TRUE.** It used to say "89% of
+what we declare"; twenty-three kinds of core ES entered the vocabulary and none
+of them is answered. **A finished layer re-opened**: `controlflow` had no open
+cell since 2026-09-06 and has 23 again, because a layer finished over a
+vocabulary that is not the language was finished over the wrong denominator.
 
-**27 — the for-of iterator protocol** (`r_iterator_protocol`). One node, two
-calls. Only the first hop goes through `resolves`; the second goes straight to
-`calls`, because `ambiguous_call[audit]` reads two answers at a site as an
-over-approximation and here both calls are true. Measured both ways: through
-`resolves` it takes `ambiguous_call` 8 -> 9.
-
-**28 — a suspension may not resume** (`r_suspension`). The layer WAIVED
-`suspend` with the reason `a_control_returns_so_the_site_still_runs`, which is
-a claim about the PROGRAM: control returns only if the promise settles. A
-fixture that suspends forever reddened the acceptance gate before a rule
-existed. Also: one of the three recorded "host calls" was a missing `.replace()`
-in the oracle harness, not a limit of V8.
-
-**29 — the scanner's contract** (`r_template_key`, `r_template_lit`). See below.
-
-## THE PATTERN THAT HAS NOW PAID FOUR TIMES
-
-Every one of these was a sentence that was TRUE, written down accurately, and
-then read as a constraint rather than as a setting:
-
-- a getter's "V8 attributes the frame to the property access" — a missing
-  `.replace()` on one of two doors out of the same function;
-- a waiver's "control returns so the site still runs" — true of an await that
-  settles, and the corpus had only those;
-- "a dynamic import suspends" — it does not; it evaluates to a promise;
-- "the scanner emits scalar own properties only, so a template's text never
-  becomes a fact" — true, and the contract excluded EXACTLY ONE property in the
-  whole of JavaScript. Four cells sat behind it for three sessions.
-
-**So: when the model says it cannot, go and measure how far it is from being
-able to.** The measurement is usually a thirty-second probe and it has been
-wrong four times out of four.
+**Three kinds were NOT taken on, each for a measured reason**:
+`class_accessor_property` (the scanner returns no node without the decorators
+plugin), `import_attribute` (ES2025, and the era scale tops out at ts5/2022, so
+the feature would be permanently unreachable), `export_default_specifier` (a
+Babel proposal no environment claims). All three wait on the decorator work.
 
 ## What iteration 32 measured — destructuring, and the denominator
 

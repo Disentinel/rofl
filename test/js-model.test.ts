@@ -14,6 +14,16 @@
 // audit that stays empty because a probe never landed is a fact about the
 // probe. Killed/slept is recorded per mutant in the comment above it.
 
+// ---------------------------------------------------------------------------
+// THE NUMBERS IN THIS FILE MOVED IN ONE STEP ON 2026-09-08, and one sentence
+// explains all of them: the vocabulary took on TWENTY-THREE KINDS at the
+// owner's decision, so the coverage denominator became the LANGUAGE rather than
+// the model's own list. The small world's 28 cells are 74; the shape world's
+// 158 are 204. NOT ONE of the new cells is answered and none pretends to be —
+// they are `not_modelled`/`not_yet` with an owner in facts/worklist.rofl,
+// because a verdict written without a site is what CLAUDE.md forbids by name.
+// A matrix that got wider without getting better is the honest report.
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -120,7 +130,7 @@ test('the three verdicts partition the cell space, exactly and without overlap',
   const r = world();
   const c = counts(r);
   show('pristine', c);
-  assert.deepEqual(c, { cell: 28, modelled: 9, waived: 5, not_modelled: 14 });
+  assert.deepEqual(c, { cell: 74, modelled: 9, waived: 5, not_modelled: 60 });
   assert.equal(partitions(c), true);
 
   // disjointness, per cell rather than by arithmetic: nothing carries two
@@ -131,7 +141,7 @@ test('the three verdicts partition the cell space, exactly and without overlap',
     const k = `${row.bindings['A']}/${row.bindings['B']}/${row.bindings['C']}`;
     seen.set(k, [...(seen.get(k) ?? []), row.bindings['V']]);
   }
-  assert.equal(seen.size, 28, 'every cell carries a verdict, and no verdict lacks a cell');
+  assert.equal(seen.size, 74, 'every cell carries a verdict, and no verdict lacks a cell');
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
   assert.equal(n(r, 'double_claimed[audit](A, B, C)'), 0);
   assert.equal(n(r, 'orphan_claim[audit](A, B, C)'), 0);
@@ -172,7 +182,7 @@ test('MUTANT 1: deleting the default rule breaks the partition, and only it', ()
   assert.equal(c.not_modelled, 0);
   // the model falls back to answering by absence: `unaccounted` still knows,
   // and that is exactly the silence the default verdict was added to end
-  assert.equal(n(r, 'unaccounted[audit](A, B, C)'), 14);
+  assert.equal(n(r, 'unaccounted[audit](A, B, C)'), 60);
   assert.equal(n(r, 'reason[audit](A, B, C, R)'), 0, 'no verdict, no reason: the queue empties');
 });
 
@@ -183,7 +193,7 @@ test('unaccounted and verdict(..., not_modelled) agree row for row', () => {
   const r = world();
   const a = cells(r, 'unaccounted[audit](A, B, C)');
   const b = cells(r, 'verdict[audit](A, B, C, not_modelled)');
-  assert.equal(a.length, 14, 'a cross-check between two empty relations proves nothing');
+  assert.equal(a.length, 60, 'a cross-check between two empty relations proves nothing');
   assert.deepEqual(a, b);
   // one row named, so the agreement is not just an agreement of counts
   assert.ok(a.includes('js/import_expression/callgraph'));
@@ -219,7 +229,7 @@ test('every not_modelled cell carries a reason, and the split is a work queue', 
   const ours = cells(r, 'our_unknown[audit](A, B, C)');
   console.log(`      ${irr.length} irreducible, ${ours.length} ours, of ${irr.length + ours.length} unknowns`);
   assert.deepEqual(irr, ['js/import_expression/callgraph', 'js/import_expression/dataflow']);
-  assert.equal(ours.length, 12);
+  assert.equal(ours.length, 58);
   assert.equal(irr.length + ours.length, counts(r).not_modelled,
                'a typed unknown that is in neither bucket is invisible to the queue');
   assert.deepEqual(irr.filter((x) => ours.includes(x)), [], 'the two buckets are disjoint');
@@ -231,7 +241,7 @@ test('every not_modelled cell carries a reason, and the split is a work queue', 
   // ...and an authored reason REPLACES the default rather than joining it
   assert.ok(r.holds('reason[audit](js, import_expression, dataflow, runtime_dependent)'));
   assert.ok(!r.holds('reason[audit](js, import_expression, dataflow, not_yet)'));
-  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 14, 'one reason per not_modelled cell');
+  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 60, 'one reason per not_modelled cell');
 });
 
 // ---------------------------------------------------------------------------
@@ -247,8 +257,8 @@ test('MUTANT 3: a reason whose atom is in no taxonomy is reported', () => {
   // the half that would have gone unnoticed: the cell is still not_modelled,
   // still carries a reason, and is now in NEITHER count
   const c = counts(r);
-  assert.equal(c.not_modelled, 14);
-  assert.equal(n(r, 'irreducible_unknown[audit](A, B, C)') + n(r, 'our_unknown[audit](A, B, C)'), 13,
+  assert.equal(c.not_modelled, 60);
+  assert.equal(n(r, 'irreducible_unknown[audit](A, B, C)') + n(r, 'our_unknown[audit](A, B, C)'), 59,
                'an untyped reason drops a cell out of the work queue silently');
   // control: the well-typed neighbours are unaffected
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, C)'), 2);
@@ -267,7 +277,7 @@ test('MUTANT 4: a reason declared for a cell that is no longer not_modelled', ()
   assert.ok(r.holds('stale_reason[audit](js, call_expression, dataflow, not_yet)'));
   // it does NOT leak into the queue: a reason is only a reason for a cell the
   // model has no rule for
-  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 14);
+  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 60);
   assert.equal(partitions(counts(r)), true);
 
   // and the same relation on a WAIVED cell, which is the other half of "not
@@ -287,7 +297,7 @@ test('MUTANT 5: waiving every cell does not report success', () => {
   const every = base.query('cell[audit](A, B, C)').rows
     .map((x) => `ignored(${x.bindings['A']}, ${x.bindings['B']}, ${x.bindings['C']}, a_plausible_reason).`)
     .join('\n');
-  assert.equal(every.split('\n').length, 28, 'positive control: 28 waivers were generated');
+  assert.equal(every.split('\n').length, 74, 'positive control: 28 waivers were generated');
 
   const r = world({ extra: every + '\n' });
   const c = counts(r);
@@ -298,7 +308,7 @@ test('MUTANT 5: waiving every cell does not report success', () => {
   assert.equal(n(r, 'reason[audit](A, B, C, R)'), 0);
   // ...and the model still does not say the matrix is done. Three separate
   // things say so, and this is the point of the design:
-  assert.equal(c.waived, 28, 'a waiver moves a cell between buckets, never out of sight');
+  assert.equal(c.waived, 74, 'a waiver moves a cell between buckets, never out of sight');
   assert.equal(n(r, 'double_claimed[audit](A, B, C)'), 9,
                'the nine modelled cells are now claimed both ways, and it is reported');
   assert.equal(partitions(c), false, '9 + 28 + 0 != 28: the partition names the contradiction too');
@@ -327,11 +337,11 @@ test('MUTANT 6: without orphan_reason the claim evaporates silently', () => {
   assert.ok(r.holds('unknown_because(js, call_expression, no_such_layer, not_yet)'));
   // nothing objects, and nothing moves: the same silence as the `handled` typo
   // that this file's header records
-  assert.deepEqual(counts(r), { cell: 28, modelled: 9, waived: 5, not_modelled: 14 });
+  assert.deepEqual(counts(r), { cell: 74, modelled: 9, waived: 5, not_modelled: 60 });
   assert.equal(n(r, 'bad_reason[audit](A, B, C, R)'), 0, 'the atom is well typed, so this is quiet');
   assert.equal(n(r, 'stale_reason[audit](A, B, C, R)'), 0,
                'and stale_reason demands the cell exist, so it stays quiet on purpose');
-  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 14, 'the orphan reason reaches no cell at all');
+  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 60, 'the orphan reason reaches no cell at all');
 });
 
 test('MUTANT 6: orphan_reason objects to both halves of the vocabulary', () => {
@@ -345,7 +355,7 @@ test('MUTANT 6: orphan_reason objects to both halves of the vocabulary', () => {
   assert.equal(n(world(), 'orphan_reason[audit](A, B, C)'), 0);
   // and the counts are still unmoved — the objection is the ONLY signal, which
   // is why its absence was the defect
-  assert.deepEqual(counts(r), { cell: 28, modelled: 9, waived: 5, not_modelled: 14 });
+  assert.deepEqual(counts(r), { cell: 74, modelled: 9, waived: 5, not_modelled: 60 });
 });
 
 // ---------------------------------------------------------------------------
@@ -369,19 +379,19 @@ test('MUTANT 7: an orphan claim breaks the partition, and orphan_claim names it'
             'positive control: the injected fact reached the store');
   const ck = counts(k);
   show('mutant 7 (ghost kind)', ck);
-  assert.deepEqual(ck, { cell: 28, modelled: 10, waived: 5, not_modelled: 14 });
+  assert.deepEqual(ck, { cell: 74, modelled: 10, waived: 5, not_modelled: 60 });
   assert.equal(partitions(ck), false, '10 + 5 + 14 = 29 verdicts over 28 cells');
   assert.deepEqual(cells(k, 'orphan_claim[audit](A, B, C)'), ['js/no_such_kind_at_all/dataflow']);
   // the relation named for the gap is blind to it: a claim about a cell that
   // does not exist subtracts nothing from `unaccounted`
-  assert.equal(n(k, 'unaccounted[audit](A, B, C)'), 14);
+  assert.equal(n(k, 'unaccounted[audit](A, B, C)'), 60);
 
   // and a ghost LAYER on `ignored`, which is the other half of the vocabulary
   const l = world({ extra: 'ignored(js, call_expression, no_such_layer, a_reason).\n' });
   assert.ok(l.holds('ignored(js, call_expression, no_such_layer, a_reason)'));
   const cl = counts(l);
   show('mutant 7 (ghost layer)', cl);
-  assert.deepEqual(cl, { cell: 28, modelled: 9, waived: 6, not_modelled: 14 });
+  assert.deepEqual(cl, { cell: 74, modelled: 9, waived: 6, not_modelled: 60 });
   assert.equal(partitions(cl), false);
   assert.deepEqual(cells(l, 'orphan_claim[audit](A, B, C)'), ['js/call_expression/no_such_layer']);
 });
@@ -401,13 +411,13 @@ test('PROBE (survivor): two reasons for one cell are accepted, and hide in the c
   // the cell exists and is not_modelled, so `bad_reason` and `stale_reason`
   // are both correct to stay quiet. The contradiction — a cell that is both
   // out of scope and merely over budget — has no relation to report it.
-  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 15);
+  assert.equal(n(r, 'reason[audit](A, B, C, R)'), 61);
   assert.equal(n(r, 'bad_reason[audit](A, B, C, R)'), 0);
   assert.equal(n(r, 'stale_reason[audit](A, B, C, R)'), 0);
   assert.equal(n(r, 'orphan_reason[audit](A, B, C)'), 0);
   // and the split still sums, because both buckets project the reason away:
   // the defect is invisible to the number a reader would look at
-  assert.equal(n(r, 'irreducible_unknown[audit](A, B, C)') + n(r, 'our_unknown[audit](A, B, C)'), 14);
+  assert.equal(n(r, 'irreducible_unknown[audit](A, B, C)') + n(r, 'our_unknown[audit](A, B, C)'), 60);
   // (this arm is also where `budget_exhausted` and `out_of_scope` are
   // exercised at all — facts/js-kinds.rofl declares that gap rather than
   // inventing a row to fill it)
@@ -423,14 +433,14 @@ test('adding a layer is ONE FACT, and the default verdict says so in rows', () =
   show('before layer(scope)', before);
   show('after  layer(scope)', after);
   const kinds = n(r, 'node_kind(A, B)');
-  assert.equal(kinds, 14);
+  assert.equal(kinds, 37);
   assert.equal(after.cell, before.cell + kinds, 'one new cell per kind');
   assert.equal(after.not_modelled, before.not_modelled + kinds);
   assert.equal(after.modelled, before.modelled, 'no existing claim moved');
   assert.equal(after.waived, before.waived);
   assert.equal(partitions(after), true);
   // every new cell defaults, and the default is `ours` — the queue grew by 14
-  assert.equal(n(r, 'our_unknown[audit](A, B, C)'), 26);
+  assert.equal(n(r, 'our_unknown[audit](A, B, C)'), 95);
   assert.ok(r.holds('reason[audit](py, import_from, scope, not_yet)'));
 
   // CONTROL, from the same experiment in docs/modelling-a-language.md: it is
@@ -446,10 +456,10 @@ test('the numbers docs/modelling-a-language.md quotes, restated for the tree as 
   // same by coincidence, which is exactly the kind of thing an ad-hoc run
   // cannot notice and a pinned test can.
   const r = world();
-  assert.equal(n(r, 'node_kind(A, B)'), 14);
+  assert.equal(n(r, 'node_kind(A, B)'), 37);
   assert.equal(n(r, 'layer(L)'), 2);
   assert.equal(n(r, 'modelled[audit](A, B, C)') + n(r, 'waived[audit](A, B, C)'), 14);
-  assert.equal(n(r, 'unaccounted[audit](A, B, C)'), 14);
+  assert.equal(n(r, 'unaccounted[audit](A, B, C)'), 60);
   // the relations that were already here, still answering
   assert.equal(n(r, 'unverified[audit](A, B, C, D)'), 8);
   assert.equal(n(r, 'converges[audit](A, B, C, D)'), 0);
@@ -554,7 +564,7 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // are declared in this pack now, because their verdicts are.
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(n(r, 'node_kind(A, B)'), 67, '62 js + 5 py');
+  assert.equal(n(r, 'node_kind(A, B)'), 90, '62 js + 5 py');
   assert.equal(n(r, 'layer(L)'), 2);
   assert.equal(n(r, 'axis(A)'), 1);
   assert.equal(n(r, 'axis_applies(A, L)'), 1, 'callgraph only — see facts/js-shapes.rofl');
@@ -572,7 +582,7 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   console.log('      PREDICTED  coarse 82 | fine 98 = modelled 37 + waived 6 + not_modelled 55');
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
-  assert.equal(coarse.cell, 134, 'predicted 134 coarse cells');
+  assert.equal(coarse.cell, 180, 'predicted 134 coarse cells');
   // 108 -> 114 on 2026-09-05: the call-graph pack declares `boolean_literal`,
   // `class_declaration` and `return_statement`, because it now carries a
   // verdict about each and `orphan_claim[audit]` refuses a claim whose kind
@@ -632,8 +642,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // layers, and both are answered — the value layer by `r_destructure` and the
   // call graph for nothing, because a destructured name is a callee like any
   // other once the value layer can say what it denotes.
-  assert.deepEqual(f, { cell: 158, modelled: 62, waived: 26, not_modelled: 70 },
-    'predicted 158 fine cells = 62 + 26 + 70');
+  assert.deepEqual(f, { cell: 204, modelled: 62, waived: 26, not_modelled: 116 },
+    'predicted 204 fine cells = 62 + 26 + 116');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -670,7 +680,7 @@ test('the three verdicts still partition the cell space with a third axis', () =
   }
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(seen.size, 158, 'every cell carries a verdict, and no verdict lacks a cell');
+  assert.equal(seen.size, 204, 'every cell carries a verdict, and no verdict lacks a cell');
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // THE REASON IS TOTAL OVER not_modelled, and that sentence is the assertion
@@ -890,7 +900,7 @@ test('every declared kind either appears in the corpus or says why not', () => {
   // 5 -> 4 on 2026-09-07: a FOURTH excuse retired the day the corpus grew the
   // kind it excused — `tagged_template_expression` has three sites now, two
   // runnable and one in shapes.ts that exists so a guard has something to bite.
-  assert.equal(n(r, 'kind_absent_ok(K, R)'), 4, 'positive control: four rows reach this world');
+  assert.equal(n(r, 'kind_absent_ok(K, R)'), 27, 'positive control: four rows reach this world');
   assert.ok(r.holds('kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit)'),
     'and the spelling the scanner cannot emit says so by name');
 });
@@ -1268,7 +1278,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   // matrix must become the two-axis one exactly.
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(f.cell, 134, 'predicted 134');
+  assert.equal(f.cell, 180, 'predicted 134');
   assert.equal(n(r, 'shape_of(A, B, S)'), 40, 'the shapes are still declared — only the layer changed');
 
   // ROW FOR ROW, not by count: this is the strongest statement the refinement
@@ -1368,9 +1378,9 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
   // its VALUES are per-layer, so a layer that declares the axis without
   // declaring any value of its own gets only the 41 unrefined `none` cells.
   // The phantom is what the guard removed; the unearned row is what remains.
-  assert.equal(counts(r).cell, 201, 'predicted 201 coarse');
-  assert.equal(f.cell, 225, '158 + 67 unrefined none-cells, and NOT one shaped cell');
-  assert.equal(f.cell - before.cell, 67);
+  assert.equal(counts(r).cell, 270, 'predicted 201 coarse');
+  assert.equal(f.cell, 294, '158 + 67 unrefined none-cells, and NOT one shaped cell');
+  assert.equal(f.cell - before.cell, 90);
   assert.equal(n(r, 'cell[audit](A, K, s_member_on_this, modules)'), 0,
                'no callee shape leaks into the module layer');
 
@@ -1396,7 +1406,7 @@ test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft de
   showFine('mutant 2b (shape applies to dataflow)', f);
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(f.cell, 158, 'not one cell moves: no shape declares itself in dataflow');
+  assert.equal(f.cell, 204, 'not one cell moves: no shape declares itself in dataflow');
   assert.deepEqual(r.query('unearned_axis[audit](A, L)').rows
     .map((x) => `${x.bindings['A']}/${x.bindings['L']}`).sort(), ['shape/dataflow']);
   console.log('      KILLED: the brief\'s own draft row is refused — inert AND unearned');
@@ -1414,7 +1424,7 @@ test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
   showFine('mutant 3 (shape over a ghost kind)', f);
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(f.cell, 159, 'predicted 158 + 1: the ghost gets a cell of its own');
+  assert.equal(f.cell, 205, 'predicted 158 + 1: the ghost gets a cell of its own');
   assert.deepEqual(r.query('orphan_shape[audit](L, K, S)').rows
     .map((x) => `${x.bindings['K']}/${x.bindings['S']}`), ['no_such_kind/s_identifier']);
   assert.deepEqual(cells(r, 'invented_cell[audit](A, B, C)'), ['js/no_such_kind/callgraph'],
@@ -1448,7 +1458,7 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   showFine('mutant 4 (none beside a shape)', f);
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(f.cell, 174, 'predicted 158 + 16, one per splitting kind');
+  assert.equal(f.cell, 220, 'predicted 158 + 16, one per splitting kind');
   assert.equal(n(r, 'double_cell[audit](A, B, L)'), 16, 'and each is named');
   assert.ok(r.holds('double_cell[audit](js, member_expression, callgraph)'));
 
@@ -1479,8 +1489,8 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
   showFine('mutant 5a (no unsplit-none branch)', f);
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(f.cell, 107, 'predicted 158 - 51');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 51, 'a coarse cell with nothing under it');
+  assert.equal(f.cell, 130, 'predicted 158 - 51');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 74, 'a coarse cell with nothing under it');
   // the loss is exactly the kinds the axis does not split, at the layer where
   // it applies — and one of them is a cell somebody deliberately WAIVED, which
   // would have vanished from the table with its reason
@@ -1503,8 +1513,8 @@ test('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole
   const f = fine(r);
   showFine('mutant 5b (no not-applicable-none branch)', f);
   // +1 on 2026-09-08 with `object_pattern`.
-  assert.equal(f.cell, 91, 'predicted 158 - 67: the dataflow layer disappears');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 67);
+  assert.equal(f.cell, 114, 'predicted 158 - 67: the dataflow layer disappears');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 90);
   assert.equal(n(r, 'cell[audit](A, B, S, dataflow)'), 0, 'positive control: it is the dataflow half');
   console.log('      KILLED: lost_cell names all 45 dataflow cells');
 });
@@ -1526,7 +1536,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
   const f = fine(r);
   showFine('mutant 6 (one shape for member_expression)', f);
   // +2 on 2026-09-08 with `object_pattern`.
-  assert.equal(f.cell, 138, 'predicted 158 - 20');
+  assert.equal(f.cell, 184, 'predicted 158 - 20');
 
   // WHEN THIS WAS WRITTEN EVERY AUDIT INSIDE THE MODEL WAS SILENT: the matrix
   // came out smaller, complete, partitioned and wrong, and only the census

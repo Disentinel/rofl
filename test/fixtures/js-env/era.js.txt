@@ -24,6 +24,15 @@ const arrow = (n) => n + 1;
 // file exists to prevent.
 const { named: renamed } = { named: 1 };
 
+// THREE MORE, 2026-09-08, with the twenty-three kinds the vocabulary took on.
+// All three are ES2020 or earlier, which is why they are HERE and class fields
+// are not: this file is asserted to fail es2020 for EXACTLY ONE reason and that
+// reason is an operator, so a 2022 feature would have made that assertion
+// two-valued — the same care era-position.js was split out for.
+const big = 1n;                        // bigint, ES2020
+function withTarget() { return new.target; }   // meta_property, ES2015
+export * as everythingElse from './other.js';  // namespace_reexport, ES2020
+
 function* counter() { yield 1; yield 2; }
 
 class Base { greet() { return 'base'; } }

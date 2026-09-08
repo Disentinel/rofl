@@ -191,3 +191,91 @@ kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit).
 -- noticed and routed around it, gating both spellings with a note calling this
 -- one "a SYNTHETIC fixture with no corpus behind it" — a known oddity nobody
 -- had anywhere to record.
+
+-- ==========================================================================
+-- THE DENOMINATOR IS THE LANGUAGE, 2026-09-08, by the owner`s decision.
+--
+-- Until today the coverage matrix answered `89% of what we declare`, and the
+-- owner asked which features of the LANGUAGE are not covered. Measured by
+-- diffing babel`s concrete node types against this vocabulary: 93 core ES
+-- kinds, 76 declared, 30 missing - of which seven are the scanner`s own roots,
+-- deprecated aliases or proposals nobody ships.
+--
+-- ALL TWENTY-THREE REAL ONES ARE DECLARED HERE AND NONE IS ANSWERED. That is
+-- the point: a verdict written without a site is the thing CLAUDE.md forbids
+-- by name, so every cell these open is `not_modelled`/`not_yet` with an OWNER
+-- in facts/worklist.rofl. The matrix stops flattering itself, `unqueued`
+-- stays empty, and the work arrives one measured construct at a time.
+--
+-- THREE ARE NOT HERE AND EACH HAS A MEASURED REASON, not a preference:
+--   class_accessor_property  the scanner returns NO node for `accessor a = 1`
+--                            without the decorators plugin - measured
+--   import_attribute         scannable, but `import attributes` is ES2025 and
+--                            the highest environment on the scale is ts5 at
+--                            2022, so the feature would be unreachable
+--   export_default_specifier `export v from` is a Babel proposal and NO
+--                            environment in the table claims it, not even ts5
+-- ==========================================================================
+
+-- w_destructuring_rest_and_spread
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+-- w_class_fields
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+-- w_class_expression
+node_kind(js, class_expression).
+-- w_update_and_literals
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+-- w_meta_property
+node_kind(js, meta_property).
+-- w_export_specifier_forms
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+-- w_labelled_control
+node_kind(js, labeled_statement).
+-- w_inert_statements
+node_kind(js, empty_statement).
+node_kind(js, debugger_statement).
+node_kind(js, with_statement).
+-- w_directives
+node_kind(js, directive).
+node_kind(js, directive_literal).
+node_kind(js, interpreter_directive).
+
+-- NONE OF THEM IS IN THE CORPUS YET, and `kind_unexercised[audit]` demands a
+-- row saying so. The reason is the same for all twenty-three and it is not an
+-- excuse: they are declared to make the denominator the language, and each
+-- one`s fixture arrives with the item that claims its cells. The day a corpus
+-- produces one, `kind_absent_stale[audit]` names it and the row must go.
+
+kind_absent_ok(array_pattern, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(assignment_pattern, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(rest_element, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(spread_element, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(class_property, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(class_private_property, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(class_private_method, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(private_name, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(static_block, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(class_expression, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(update_expression, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(big_int_literal, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(reg_exp_literal, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(meta_property, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(export_specifier, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(export_namespace_specifier, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(labeled_statement, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(empty_statement, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(debugger_statement, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(with_statement, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(directive, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(directive_literal, a_declared_for_the_denominator_and_queued).
+kind_absent_ok(interpreter_directive, a_declared_for_the_denominator_and_queued).

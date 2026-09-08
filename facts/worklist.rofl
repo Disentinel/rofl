@@ -1112,3 +1112,172 @@ work_order(w_cf_suspension, 41).
 work_state(w_cf_suspension, done).
 work_spawned(w_cf_suspension, f_a_suspension_is_a_scheduling_fact_and_the_waiver_assumed_it).
 work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string_operation).
+
+-- ==========================================================================
+-- THE VOCABULARY TOOK ON TWENTY-THREE KINDS, 2026-09-08, and every cell they
+-- open is claimed here. NONE is answered and none pretends to be: a verdict
+-- without a site is the thing CLAUDE.md forbids by name, so these are ordinary
+-- open cells with owners, and `unqueued[audit]` stays empty because the plan
+-- names them rather than because the matrix stopped counting them.
+--
+-- THE ORDER IS BY WHAT REAL CODE CONTAINS. Destructuring first - it is how
+-- modern JavaScript binds, and the probe that opened this work lost two call
+-- edges to it. Class fields next. The inert statements and the directives last,
+-- because a layer having no opinion about them is the likely answer and a
+-- likely answer is the cheapest kind to be wrong about.
+-- ==========================================================================
+
+
+-- 50 - array_pattern, assignment_pattern, rest_element, spread_element.
+work(w_destructuring_rest_and_spread, "array and assignment patterns, rest and spread: object_pattern landed with a rule, and the other four forms of the same family have no site yet").
+work_order(w_destructuring_rest_and_spread, 50).
+work_state(w_destructuring_rest_and_spread, open).
+claim(queued, js, array_pattern,               none, callgraph,    w_destructuring_rest_and_spread).
+claim(queued, js, array_pattern,               none, dataflow,     w_destructuring_rest_and_spread).
+claim(queued, js, array_pattern,               none, controlflow,  w_destructuring_rest_and_spread).
+claim(queued, js, array_pattern,               none, modules,      w_destructuring_rest_and_spread).
+claim(queued, js, assignment_pattern,          none, callgraph,    w_destructuring_rest_and_spread).
+claim(queued, js, assignment_pattern,          none, dataflow,     w_destructuring_rest_and_spread).
+claim(queued, js, assignment_pattern,          none, controlflow,  w_destructuring_rest_and_spread).
+claim(queued, js, assignment_pattern,          none, modules,      w_destructuring_rest_and_spread).
+claim(queued, js, rest_element,                none, callgraph,    w_destructuring_rest_and_spread).
+claim(queued, js, rest_element,                none, dataflow,     w_destructuring_rest_and_spread).
+claim(queued, js, rest_element,                none, controlflow,  w_destructuring_rest_and_spread).
+claim(queued, js, rest_element,                none, modules,      w_destructuring_rest_and_spread).
+claim(queued, js, spread_element,              none, callgraph,    w_destructuring_rest_and_spread).
+claim(queued, js, spread_element,              none, dataflow,     w_destructuring_rest_and_spread).
+claim(queued, js, spread_element,              none, controlflow,  w_destructuring_rest_and_spread).
+claim(queued, js, spread_element,              none, modules,      w_destructuring_rest_and_spread).
+
+-- 51 - class_property, class_private_property, class_private_method, private_name, static_block.
+work(w_class_fields, "class fields, private names and static blocks - ES2022 class syntax the vocabulary never named").
+work_order(w_class_fields, 51).
+work_state(w_class_fields, open).
+claim(queued, js, class_property,              none, callgraph,    w_class_fields).
+claim(queued, js, class_property,              none, dataflow,     w_class_fields).
+claim(queued, js, class_property,              none, controlflow,  w_class_fields).
+claim(queued, js, class_property,              none, modules,      w_class_fields).
+claim(queued, js, class_private_property,      none, callgraph,    w_class_fields).
+claim(queued, js, class_private_property,      none, dataflow,     w_class_fields).
+claim(queued, js, class_private_property,      none, controlflow,  w_class_fields).
+claim(queued, js, class_private_property,      none, modules,      w_class_fields).
+claim(queued, js, class_private_method,        none, callgraph,    w_class_fields).
+claim(queued, js, class_private_method,        none, dataflow,     w_class_fields).
+claim(queued, js, class_private_method,        none, controlflow,  w_class_fields).
+claim(queued, js, class_private_method,        none, modules,      w_class_fields).
+claim(queued, js, private_name,                none, callgraph,    w_class_fields).
+claim(queued, js, private_name,                none, dataflow,     w_class_fields).
+claim(queued, js, private_name,                none, controlflow,  w_class_fields).
+claim(queued, js, private_name,                none, modules,      w_class_fields).
+claim(queued, js, static_block,                none, callgraph,    w_class_fields).
+claim(queued, js, static_block,                none, dataflow,     w_class_fields).
+claim(queued, js, static_block,                none, controlflow,  w_class_fields).
+claim(queued, js, static_block,                none, modules,      w_class_fields).
+
+-- 52 - class_expression.
+work(w_class_expression, "class_expression is READ by obj_like[flow] and node_value_kind and was declared nowhere: the model had an opinion the matrix could not report").
+work_order(w_class_expression, 52).
+work_state(w_class_expression, open).
+claim(queued, js, class_expression,            none, callgraph,    w_class_expression).
+claim(queued, js, class_expression,            none, dataflow,     w_class_expression).
+claim(queued, js, class_expression,            none, controlflow,  w_class_expression).
+claim(queued, js, class_expression,            none, modules,      w_class_expression).
+
+-- 53 - update_expression, big_int_literal, reg_exp_literal.
+work(w_update_and_literals, "i++, 1n and /re/g: three value forms the vocabulary never named").
+work_order(w_update_and_literals, 53).
+work_state(w_update_and_literals, open).
+claim(queued, js, update_expression,           none, callgraph,    w_update_and_literals).
+claim(queued, js, update_expression,           none, dataflow,     w_update_and_literals).
+claim(queued, js, update_expression,           none, controlflow,  w_update_and_literals).
+claim(queued, js, update_expression,           none, modules,      w_update_and_literals).
+claim(queued, js, big_int_literal,             none, callgraph,    w_update_and_literals).
+claim(queued, js, big_int_literal,             none, dataflow,     w_update_and_literals).
+claim(queued, js, big_int_literal,             none, controlflow,  w_update_and_literals).
+claim(queued, js, big_int_literal,             none, modules,      w_update_and_literals).
+claim(queued, js, reg_exp_literal,             none, callgraph,    w_update_and_literals).
+claim(queued, js, reg_exp_literal,             none, dataflow,     w_update_and_literals).
+claim(queued, js, reg_exp_literal,             none, controlflow,  w_update_and_literals).
+claim(queued, js, reg_exp_literal,             none, modules,      w_update_and_literals).
+
+-- 54 - meta_property.
+work(w_meta_property, "new.target and import.meta: one node kind and two questions").
+work_order(w_meta_property, 54).
+work_state(w_meta_property, open).
+claim(queued, js, meta_property,               none, callgraph,    w_meta_property).
+claim(queued, js, meta_property,               none, dataflow,     w_meta_property).
+claim(queued, js, meta_property,               none, controlflow,  w_meta_property).
+claim(queued, js, meta_property,               none, modules,      w_meta_property).
+
+-- 55 - export_specifier, export_namespace_specifier.
+work(w_export_specifier_forms, "export { a as b } and export * as ns: the two export forms with no node in this vocabulary").
+work_order(w_export_specifier_forms, 55).
+work_state(w_export_specifier_forms, open).
+claim(queued, js, export_specifier,            none, callgraph,    w_export_specifier_forms).
+claim(queued, js, export_specifier,            none, dataflow,     w_export_specifier_forms).
+claim(queued, js, export_specifier,            none, controlflow,  w_export_specifier_forms).
+claim(queued, js, export_specifier,            none, modules,      w_export_specifier_forms).
+claim(queued, js, export_namespace_specifier,  none, callgraph,    w_export_specifier_forms).
+claim(queued, js, export_namespace_specifier,  none, dataflow,     w_export_specifier_forms).
+claim(queued, js, export_namespace_specifier,  none, controlflow,  w_export_specifier_forms).
+claim(queued, js, export_namespace_specifier,  none, modules,      w_export_specifier_forms).
+
+-- 56 - labeled_statement.
+work(w_labelled_control, "a labelled statement, and break/continue to a label - the one new statement form that really does transfer control").
+work_order(w_labelled_control, 56).
+work_state(w_labelled_control, open).
+claim(queued, js, labeled_statement,           none, callgraph,    w_labelled_control).
+claim(queued, js, labeled_statement,           none, dataflow,     w_labelled_control).
+claim(queued, js, labeled_statement,           none, controlflow,  w_labelled_control).
+claim(queued, js, labeled_statement,           none, modules,      w_labelled_control).
+
+-- 57 - empty_statement, debugger_statement, with_statement.
+work(w_inert_statements, "empty, debugger and with: three statements no layer is likely to have an opinion about, and `with` cannot appear in a module at all").
+work_order(w_inert_statements, 57).
+work_state(w_inert_statements, open).
+claim(queued, js, empty_statement,             none, callgraph,    w_inert_statements).
+claim(queued, js, empty_statement,             none, dataflow,     w_inert_statements).
+claim(queued, js, empty_statement,             none, controlflow,  w_inert_statements).
+claim(queued, js, empty_statement,             none, modules,      w_inert_statements).
+claim(queued, js, debugger_statement,          none, callgraph,    w_inert_statements).
+claim(queued, js, debugger_statement,          none, dataflow,     w_inert_statements).
+claim(queued, js, debugger_statement,          none, controlflow,  w_inert_statements).
+claim(queued, js, debugger_statement,          none, modules,      w_inert_statements).
+claim(queued, js, with_statement,              none, callgraph,    w_inert_statements).
+claim(queued, js, with_statement,              none, dataflow,     w_inert_statements).
+claim(queued, js, with_statement,              none, controlflow,  w_inert_statements).
+claim(queued, js, with_statement,              none, modules,      w_inert_statements).
+
+-- 58 - directive, directive_literal, interpreter_directive.
+work(w_directives, "'use strict' and the hashbang: directives are a real construct and the scanner emits them").
+work_order(w_directives, 58).
+work_state(w_directives, open).
+claim(queued, js, directive,                   none, callgraph,    w_directives).
+claim(queued, js, directive,                   none, dataflow,     w_directives).
+claim(queued, js, directive,                   none, controlflow,  w_directives).
+claim(queued, js, directive,                   none, modules,      w_directives).
+claim(queued, js, directive_literal,           none, callgraph,    w_directives).
+claim(queued, js, directive_literal,           none, dataflow,     w_directives).
+claim(queued, js, directive_literal,           none, controlflow,  w_directives).
+claim(queued, js, directive_literal,           none, modules,      w_directives).
+claim(queued, js, interpreter_directive,       none, callgraph,    w_directives).
+claim(queued, js, interpreter_directive,       none, dataflow,     w_directives).
+claim(queued, js, interpreter_directive,       none, controlflow,  w_directives).
+claim(queued, js, interpreter_directive,       none, modules,      w_directives).
+
+-- 59 - THREE KINDS THE VOCABULARY DID NOT TAKE ON, each for a MEASURED
+-- reason rather than a preference, and all three wait on the same two things:
+-- a parser plugin and an environment.
+--   class_accessor_property   the scanner returns NO node at all for
+--                             `accessor a = 1` without the decorators plugin
+--   import_attribute          scannable today, but `import attributes` is
+--                             ES2025 and the highest environment on the scale
+--                             is ts5 at 2022, so the feature would sit in
+--                             `feature_unreachable[audit]` for ever
+--   export_default_specifier  `export v from` is a Babel proposal and NO
+--                             environment claims it, not even ts5
+-- The first two land with the decorator work, which needs the same plugin and
+-- will need the same question asked of the environment scale.
+work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: two need a parser plugin and two need an environment the scale does not have").
+work_order(w_plugin_gated_kinds, 59).
+work_state(w_plugin_gated_kinds, open).

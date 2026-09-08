@@ -368,7 +368,7 @@ test('the five heaviest read paths, by name', () => {
   // eight kinds and again over everything `may_be_node` reaches — costs a
   // hundredfold more. Both are one rule. The fixture costs +2.69% and 2 681,
   // which is where a new KIND lands. Cost per fact fell again, 6.336 -> 6.226.
-  assert.equal(c.total, 1194681, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 1199900, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -457,5 +457,12 @@ test('the five heaviest read paths, by name', () => {
   // calls, which is the shape this gate reports honestly and the reason its own
   // header says it is structurally unable to see the control-flow layer.
   // Cost per fact 6.419 -> 6.354, down again.
-  assert.equal(c.firings, 75999, 'derivations: 72 195 before destructuring');
+  // 75 999 -> 76 459 and the total 1 194 681 -> 1 199 900 on 2026-09-08 with the
+  // VOCABULARY EDIT, and NONE of it is a rule: twenty-three kinds were declared
+  // and not one is answered. What costs is the MATRIX — `cell`, `verdict` and
+  // `reason` over 416 cells where there were 320 — the coverage machinery
+  // reasoning about ninety-six more coordinates. Cost per fact 6.226 -> 6.219:
+  // the fixpoint did not get denser, it got wider, exactly as the denominator
+  // did.
+  assert.equal(c.firings, 76459, 'derivations: 75 999 before the vocabulary edit');
 });
