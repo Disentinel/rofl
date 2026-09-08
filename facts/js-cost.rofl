@@ -12,10 +12,6 @@
 -- yield(Rule, I, N)   matches those calls produced in total
 -- slot(Rule, I, Kind, Rel)
 
-fires("r14e719c9", 29).  conc("r14e719c9", 653).  fresh("r14e719c9", 161).  head("r14e719c9", has_return).
-  width("r14e719c9", 0, 29).  yield("r14e719c9", 0, 6931).  slot("r14e719c9", 0, pos, fn_node).
-  width("r14e719c9", 1, 6931).  yield("r14e719c9", 1, 1718888).  slot("r14e719c9", 1, pos, ast_node).
-  width("r14e719c9", 2, 1718888).  yield("r14e719c9", 2, 653).  slot("r14e719c9", 2, pos, ast_within).
 fires("r46bc5731", 72).  conc("r46bc5731", 2295).  fresh("r46bc5731", 1946).  head("r46bc5731", closer_v).
   width("r46bc5731", 0, 72).  yield("r46bc5731", 0, 624533).  slot("r46bc5731", 0, pos, encloses_v).
   width("r46bc5731", 1, 624533).  yield("r46bc5731", 1, 440279).  slot("r46bc5731", 1, pos, encloses_v).
@@ -252,6 +248,10 @@ fires("r3e40cef4", 85).  conc("r3e40cef4", 0).  fresh("r3e40cef4", 0).  head("r3
   width("r3e40cef4", 2, 3360).  yield("r3e40cef4", 2, 1890).  slot("r3e40cef4", 2, pos, ast_within).
   width("r3e40cef4", 3, 1890).  yield("r3e40cef4", 3, 1890).  slot("r3e40cef4", 3, pos, private_member).
   width("r3e40cef4", 4, 1890).  yield("r3e40cef4", 4, 0).  slot("r3e40cef4", 4, pos, ast_within).
+fires("r3b3eb62b", 29).  conc("r3b3eb62b", 653).  fresh("r3b3eb62b", 161).  head("r3b3eb62b", has_return).
+  width("r3b3eb62b", 0, 29).  yield("r3b3eb62b", 0, 7192).  slot("r3b3eb62b", 0, pos, ast_node).
+  width("r3b3eb62b", 1, 7192).  yield("r3b3eb62b", 1, 3219).  slot("r3b3eb62b", 1, pos, ast_within).
+  width("r3b3eb62b", 2, 3219).  yield("r3b3eb62b", 2, 653).  slot("r3b3eb62b", 2, pos, fn_node).
 fires("r2bf533a9", 3).  conc("r2bf533a9", 3027).  fresh("r2bf533a9", 1009).  head("r2bf533a9", selects).
   width("r2bf533a9", 0, 3).  yield("r2bf533a9", 0, 3402).  slot("r2bf533a9", 0, pos, member_node_v).
   width("r2bf533a9", 1, 3402).  yield("r2bf533a9", 1, 3147).  slot("r2bf533a9", 1, pos, ast_attr).
@@ -1476,6 +1476,6 @@ fires("r0764bf3c", 1).  conc("r0764bf3c", 0).  fresh("r0764bf3c", 0).  head("r07
   width("r0764bf3c", 0, 1).  yield("r0764bf3c", 0, 0).  slot("r0764bf3c", 0, pos, super_of).
 
 total_rules(436).
-total_width(5331063).
+total_width(3615655).
 total_conc(639219).
 total_fresh(399799).

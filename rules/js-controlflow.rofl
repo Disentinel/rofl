@@ -320,8 +320,16 @@ abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
 -- or an inner throw fires first), and cannot skip past the throw. The error
 -- direction is the safe one: a function that does always throw but has a return
 -- somewhere is simply not named, so a call to it stays live.
-has_return[code](F)    :- fn_node[code](F), ast_node[code](R, return_statement, _, _),
-                          ast_within[code](F, R).
+-- THE RETURNS FIRST, and the order is the whole cost. Written the other way —
+-- `fn_node(F)` then `ast_node(R, return_statement, _, _)` — F and R are
+-- independent, so every function is laid beside every return before
+-- `ast_within` filters: measured from inside the join by scanners/js_cost.ts on
+-- sixteen files of eslint/lib, 1 718 888 accumulator elements reaching the
+-- third position to produce 653 conclusions, which is 32.4 percent of the
+-- whole fixpoint's width. Reordered, the returns come first and `ast_within`
+-- is asked with R already bound, so it looks up the containers of one node.
+has_return[code](F)    :- ast_node[code](R, return_statement, _, _),
+                          ast_within[code](F, R), fn_node[code](F).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_child[code](B, body, _, S),
                           ast_node[code](S, throw_statement, _, _).
