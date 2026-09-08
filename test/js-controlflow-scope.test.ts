@@ -458,7 +458,15 @@ const AMBIGUOUS_ROWS = ['alpha.mjs: alef@alpha.mjs | bet@alpha.mjs',
    'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
    'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
    'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
-   'alpha.mjs: squared@alpha.mjs | cubed@alpha.mjs'];
+   'alpha.mjs: squared@alpha.mjs | cubed@alpha.mjs',
+   // FOUR MORE ON 2026-09-08 (w_decorator_replaces_its_target): a DECORATED
+   // MEMBER answers both the method the class declares and the replacement its
+   // decorator returned, which is the may-set behaving as declared - a
+   // decorator MAY return its argument unchanged, and `@decoOnce` does.
+   'shapes.ts: bitted@shapes.ts | tightened@shapes.ts',
+   'shapes.ts: crimped@shapes.ts | seized@shapes.ts',
+   'shapes.ts: seized@shapes.ts | crimped@shapes.ts',
+   'shapes.ts: tightened@shapes.ts | bitted@shapes.ts'];
 
 const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
   {
@@ -784,11 +792,15 @@ test('which function binds `this`, named row by row', () => {
   // constructors and `twice` is a `this.turn(n)` in a class that extends a class
   // expression. A class expression binds `this` exactly as a declaration does,
   // which is what makes them ordinary rows rather than a new question.
+  // TWO MORE ON 2026-09-08 (w_decorator_replaces_its_target), both ordinary:
+  // `hauls` reads `this.sling` — an auto-accessor — and `tucked` reads
+  // `this.#tucked`. Neither is a new way of binding `this`; they are two more
+  // methods in a class, which is what makes them a union and not a question.
   assert.deepEqual(m.q('this_host[flow](F, T)').map(([f]) => name(f)).sort(),
     ['Barrel', 'Box', 'Gantry', 'Hoist', 'both', 'both',
-    'class_private_method', 'class_private_method', 'drift', 'get', 'hold',
+    'class_private_method', 'class_private_method', 'drift', 'get', 'hauls', 'hold',
     'make', 'read', 'relay', 'relay', 'show', 'static_block',
-    'static_block', 'twice', 'value', 'value', 'value', 'value', 'value']);
+    'static_block', 'tucked', 'twice', 'value', 'value', 'value', 'value', 'value']);
   // AND THE DENOMINATOR. Written as a bound and not a number on 2026-09-08: it
   // was `this_over === 12`, which moves whenever the corpus grows a method — and
   // it moved in each of three branches on the same afternoon — while the CLAIM

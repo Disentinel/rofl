@@ -130,12 +130,23 @@ test('the layer answers, waives and defers, and nothing falls through', () => {
   // ...and the deferral that is still typed and still open belongs to another
   // layer's question entirely — a positive control that `not_yet` did not go
   // extinct along with this item.
-  // THE CONTROL MOVED TWICE. It named `throw_statement x dataflow`, then
-  // `catch_clause x dataflow` — and w_exception_flow closed BOTH on 2026-09-06.
-  // A positive control that keeps landing on cells this loop is about to answer
-  // is a control chasing the work; `decorator` is in nobody's queue path.
-  assert.deepEqual(m.q('reason[audit](js, decorator, none, dataflow, R)').flat(),
-    ['not_yet']);
+  // THE CONTROL MOVED THREE TIMES AND IS NOT A CELL ANY MORE. It named
+  // `throw_statement x dataflow`, then `catch_clause x dataflow` — both closed
+  // by w_exception_flow on 2026-09-06 — and then `decorator x dataflow`, with
+  // the sentence "`decorator` is in nobody's queue path". THAT WAS FALSE WHEN IT
+  // WAS WRITTEN: facts/worklist.rofl already carried
+  // `claim(queued, js, decorator, none, dataflow,
+  // w_decorator_replaces_its_target)`, and that item closed the cell on
+  // 2026-09-08. Every open cell in this model is claimed by name — `unqueued`
+  // is empty and the queue's own audits say so — so there is NO cell that is in
+  // nobody's queue path, and a control aimed at one is aimed at the work.
+  //
+  // WHAT THE CONTROL IS ACTUALLY FOR is that `not_yet` has not gone extinct
+  // along with this item, and that is a FLOOR over the whole matrix rather than
+  // a name. It cannot chase the work, because the work would have to close
+  // every unknown in the language to move it.
+  assert.ok(m.n('reason[audit](js, K, S, L, not_yet)') > 0,
+    'not_yet went extinct — every unknown is explained, or the default broke');
 });
 
 // ---------------------------------------------------------------------------
@@ -313,7 +324,7 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     // merge from three branches was a union anyone could compute.
     expect: (m) => assert.deepEqual(m.q('reachable[code](F)')
       .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
-      ['decoOnce', 'forge', 'hammered', 'mountOf', 'sealed', 'seed'],
+      ['decoFerrule', 'decoOnce', 'forge', 'hammered', 'mountOf', 'sealed', 'seed'],
       'without the seed the walk starts only where the grammar forces it to'),
   },
   {
@@ -328,7 +339,7 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
       assert.deepEqual(m.q('reachable[code](F)')
         .filter(([f]) => m.n(`entry_point[code](${f})`) === 0)
         .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
-        ['mountOf', 'sealed', 'seed'],
+        ['decoFerrule', 'mountOf', 'sealed', 'seed'],
         'only the entry points and the TOP-LEVEL calls remain');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },

@@ -462,3 +462,34 @@ handled(js, class_private_method,   dataflow, r_call_flow).
 -- a class body. Without `class_receiver[flow]` saying so, `this.mintMark` in the
 -- static block is looked up through the instance half and misses a static field.
 handled(js, static_block,           dataflow, r_static_block_this).
+
+-- ==========================================================================
+-- WHAT A DECORATOR DOES TO THE THING IT DECORATES, 2026-09-08 — queue item
+-- w_decorator_replaces_its_target (62). The kinds are re-declared here because
+-- a file that makes a claim declares the kind; `orphan_claim[audit]` has
+-- reported the omission within one run three separate times in this queue.
+node_kind(js, decorator).
+node_kind(js, class_accessor_property).
+
+-- A DECORATOR IS A CALL WHOSE RESULT REPLACES ITS TARGET, and this layer's
+-- share of that is the RESULT. `@decoFerrule class Swage {}` binds `Swage` to
+-- what `decoFerrule` returned, so a read of the name evaluates to the
+-- replacement — and `may_be_node` already carried what a call returns through
+-- `resolves[code]`, so `r_decorator_replacement` is a join over a relation the
+-- call half of this construct had already made true.
+--
+-- MEASURED BEFORE THE RULE, and it is why the corpus grew: `may_be_node` of
+-- BOTH decorator nodes then in the fixture was EMPTY, because `decoOnce` and
+-- `decoApplied` return a PARAMETER and a decorator call has no argument nodes
+-- in the grammar for `arg_at` to bind. A rule written against those two sites
+-- would have derived nothing while looking finished.
+handled(js, decorator,              dataflow, r_decorator_replacement).
+
+-- AN AUTO-ACCESSOR IS A FIELD AT THIS LAYER — one row in `class_field_kind`
+-- and not a rule, because `o.sling` evaluates to the initialiser exactly as a
+-- plain field does. THE CELL WAS OPEN FOR WANT OF A SITE: the corpus had held
+-- `accessor slot = 4` since decorators landed and nothing read it, so
+-- `member_value` had no key for it and no rule could be judged. `Thimble.sling`
+-- holds a function and `hauls` calls it, which is what makes the row visible at
+-- the call graph too.
+handled(js, class_accessor_property, dataflow, r_field_value).

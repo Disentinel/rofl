@@ -27,9 +27,28 @@ import type { Mut, World } from './js-corpus-world.ts';
 const CG = 'rules/js-callgraph.rofl';
 const CF = 'rules/js-controlflow.rofl';
 
-/** the edges this fixture is about, and only those */
+/** the edges THIS fixture block is about, and only those.
+ *
+ *  NARROWED FROM `/deco/i` ON 2026-09-08, and the reason is the rule this
+ *  repository already writes down: a set whose membership is a PREFIX is a
+ *  count in disguise the moment somebody adds a sibling. Item 62
+ *  (w_decorator_replaces_its_target) put three more decorators in the same
+ *  fixture file, and `/deco/i` swept all of them in — every claim below stayed
+ *  true and three assertions went red for somebody else's work, which is a
+ *  SCOPE that pins another branch's file. These three names are this block's
+ *  own and nothing outside it can move them. */
 const decoEdges = (w: World) =>
-  [...edges(w)].filter((e) => /deco/i.test(e)).sort();
+  [...edges(w)].filter((e) => /deco(Once|Applied|Factory)\b/.test(e)).sort();
+
+/** the decorator SITES of this block, named by the identifier each one spells:
+ *  `@decoOnce` is `decoOnce` and `@decoFactory('m')` is `decoFactory`. A NAMED
+ *  SET rather than the count this used to be, for the same reason — and it is
+ *  read STRUCTURALLY, off `ast_name` under the site, so it survives the mutants
+ *  below that take resolution away rather than the site. */
+const ownSites = (w: World) => w.q('transfer_site[code](X, decorator)')
+  .flatMap(([x]) => w.q(`ast_within[code](${x}, I)`)
+    .flatMap(([i]) => w.q(`ast_name[code](${i}, N)`).map(([n]) => n)))
+  .filter((n) => n === 'decoOnce' || n === 'decoFactory').sort();
 
 // ---------------------------------------------------------------------------
 // 1. WHAT THE MODEL DERIVES
@@ -51,8 +70,8 @@ test('a decorator is a call, and one arm reaches both of its shapes', () => {
   // ...AND THE FACTORY'S OWN CALL IS STILL THERE beside the invisible one,
   // because that one IS in the grammar. Two calls, one syntax.
   assert.ok(m.n('call_site[code](C, F)') > 0, 'positive control');
-  assert.equal(m.n('transfer_site[code](X, decorator)'), 2,
-    'two decorators in the corpus: one on the class, one on a method');
+  assert.deepEqual(ownSites(m), ['decoFactory', 'decoOnce'],
+    'two decorators in this block: one on the class, one on a method');
 });
 
 test('the layer answers the decorator as a transfer, and names its mechanism', () => {
@@ -77,7 +96,8 @@ test('MUTANT 1 — the decorator is not a transfer site at all', () => {
   assert.deepEqual(decoEdges(m), ['top -> decoFactory'],
     'the visible factory call survives; both invisible calls go');
   // ITS OWN SIGNATURE: the sites themselves are gone, which mutant 2 leaves.
-  assert.equal(m.n('transfer_site[code](X, decorator)'), 0);
+  assert.deepEqual(ownSites(m), []);
+  assert.equal(m.n('transfer_site[code](X, decorator)'), 0, 'and no other block has one either');
 });
 
 test('MUTANT 2 — the site stands and nothing resolves it', () => {
@@ -88,7 +108,7 @@ test('MUTANT 2 — the site stands and nothing resolves it', () => {
   assert.deepEqual(decoEdges(m), ['top -> decoFactory']);
   // ...and the difference from mutant 1, stated rather than implied: the sites
   // are still there, so the frontier grows instead of the vocabulary shrinking.
-  assert.equal(m.n('transfer_site[code](X, decorator)'), 2);
+  assert.deepEqual(ownSites(m), ['decoFactory', 'decoOnce']);
 });
 
 test('MUTANT 3 — a decorator runs inside the thing it decorates', () => {
@@ -121,7 +141,7 @@ test('MUTANT 5 — top_call goes back to call_site', () => {
   assert.deepEqual(decoEdges(m), ['top -> decoFactory']);
   // ITS OWN SIGNATURE, and the one that separates it from mutants 1 and 2: the
   // sites stand AND they resolve — the resolutions simply reach no edge.
-  assert.equal(m.n('transfer_site[code](X, decorator)'), 2);
+  assert.deepEqual(ownSites(m), ['decoFactory', 'decoOnce']);
   assert.equal(m.n('resolves[code](X, F)') - base().n('resolves[code](X, F)'), 0,
     'resolution is untouched; only the attribution of an un-enclosed site is lost');
 });

@@ -950,13 +950,14 @@ claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_bound
 -- iterable the corpus does not have and whose method key is `Symbol.iterator`,
 -- a computed member the scanner cannot reduce to a literal. The decorator
 -- produces no node at all with the parser plugin off.
-work(w_cg_invisible_calls, "calls with no call site: the tagged template is DONE (r_tag_call) and so is the for-of iterator protocol (r_iterator_protocol); a decorator has no node, and an await's `.then` is invisible to the ORACLE - measured, not argued").
+work(w_cg_invisible_calls, "DONE 2026-09-08: three of the four invisible calls have rules - r_tag_call, r_iterator_protocol, r_decorator_call - and the fourth is not one of them: an await's `.then` is a standard-library method with no node, re-pointed at w_env_api_surface with the measurement written down").
 work_order(w_cg_invisible_calls, 34).
-work_state(w_cg_invisible_calls, open).
+work_state(w_cg_invisible_calls, done).
 work_spawned(w_cg_invisible_calls, f_the_instrument_decides_which_invisible_call_can_be_closed).
 work_spawned(w_cg_invisible_calls, f_a_guard_over_a_runnable_corpus_has_no_site_to_bite_on).
 work_spawned(w_cg_invisible_calls, f_a_fixture_for_one_construct_smuggled_in_two_kinds).
 work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by_the_scanner).
+work_spawned(w_cg_invisible_calls, f_an_invisible_call_is_two_different_blockers_and_only_one_is_ours).
 -- ...AND THE FOR-OF LANDED, 2026-09-07, as `r_iterator_protocol`. The design
 -- fork is worth more than the rule: a for-of is ONE node and TWO calls, and
 -- `ambiguous_call[audit]` reads a site with two answers as an
@@ -985,7 +986,32 @@ work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by
 -- 2026-09-07: `queue_stale[audit]` reads a claim on a shut cell under an open
 -- item as a lie and says so within one run, so closing the cell and retiring
 -- the claim are one edit rather than two.
-claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
+-- ...AND THE AWAIT IS NOT ONE OF THESE. It was claimed here because it looked
+-- like the others — a call the grammar does not show — and MEASURING the corpus
+-- rather than the grammar says it is a different question, so the claim moves to
+-- `w_env_api_surface` by name rather than sitting under an item that cannot
+-- finish it. What was measured, 2026-09-08, over the whole corpus:
+--
+--   * FOUR `await_expression` nodes. Two have a value for their argument
+--     (`mkAlef()` reaches the `alef` declaration, `mkHolder()` an object
+--     literal); `await unsettled` and the one in `main`'s array reach nothing.
+--   * `member_value[flow](O, "then", V)` is EMPTY, and that is a fact about the
+--     corpus rather than about the query: `member_value[flow](O, "next", V)`
+--     returns two rows and the relation carries 140 distinct keys, none of them
+--     `then`. So there is no user-written thenable anywhere and the `.then`
+--     every one of these four awaits would call is `Promise.prototype.then`.
+--   * `builtin_prototype` names six prototypes and `promise` is not among them,
+--     and `stdlib_member[audit]` — the relation that exists to collect exactly
+--     this residue — names six sites, none of them an await.
+--
+-- So the callee is a standard-library method with NO NODE IN THE PROGRAM, which
+-- is `w_env_api_surface`'s question and the same one `w_prototype_of_a_value`
+-- already declares it needs. The oracle limit recorded in alpha.mjs stands
+-- beside it and is not the same claim: V8 attributes a thenable's `.then` to
+-- `<top>` because the promise machinery makes the call, so even a corpus that
+-- HAD a user thenable would be modelling something the instrument contradicts.
+-- Two independent reasons, and only the first is what the queue can act on.
+claim(queued, js, await_expression,           none, callgraph, w_env_api_surface).
 -- `decorator` LEFT THIS ITEM ON 2026-09-08, closed by `r_decorator_call` while
 -- the plugin work was going on. It was correctly claimed here — a decorator IS
 -- an invisible call, which is what this item is about — and the claim is
@@ -1717,9 +1743,36 @@ work_state(w_open_cell_should_be_an_identity, open).
 -- that both accessors are language-created, so no transfer into USER code
 -- happens - which is exactly what makes the other two cells about the value
 -- layer rather than about the call graph.
-work(w_decorator_replaces_its_target, "a decorator returns a replacement and the value layer still answers the original: the call is modelled, the result is not").
+-- DONE 2026-09-08, and the three cells closed for two different reasons that
+-- the item had already told apart. `r_decorator_replacement` in
+-- rules/js-dataflow.rofl says a decorated NAME and a decorated METHOD evaluate
+-- to what the decorator returned; `class_field_kind(class_accessor_property)`
+-- is one ROW that puts an auto-accessor into `field_of`, which answers both of
+-- its cells at once.
+--
+-- THE FIXTURE CAME FIRST FOR BOTH, and in both cases because MEASURING said the
+-- existing sites could decide nothing:
+--
+--   * `may_be_node` of BOTH decorator nodes in the corpus was EMPTY.
+--     `decoOnce` and `decoApplied` return a PARAMETER, and a decorator call has
+--     no argument nodes in the grammar at all, so `arg_at` has nothing to bind.
+--     A replacement rule written against those two would have derived nothing
+--     while looking finished.
+--   * `accessor slot = 4` had been in the corpus since decorators landed and
+--     nothing read it, which is what the note below already said.
+--
+-- MEASURED AFTER: over the whole corpus the edge set gains exactly three edges
+-- and loses none - `usesSwage -> spliced`, `usesThimble -> crimped`,
+-- `hauls -> slung` - and `accessor_read` does not move, which is the check that
+-- the accessor row cannot manufacture a getter call by accident.
+--
+-- WHAT IS LEFT AND IS NOT THIS ITEM: a decorator returns a DIFFERENT SHAPE for
+-- every position it can occupy - a value for a class or a method, an
+-- initialiser transformer for a field, a `{get, set, init}` triple for an
+-- auto-accessor - so the two arms here cover the two positions whose return IS
+-- the replacement and refuse the other two on purpose. Recorded as
+-- f_a_decorator_returns_a_different_shape_for_every_position.
+work(w_decorator_replaces_its_target, "DONE 2026-09-08: r_decorator_replacement gives a decorated name and a decorated method the decorator's return, and an auto-accessor becomes a field").
 work_order(w_decorator_replaces_its_target, 62).
-work_state(w_decorator_replaces_its_target, open).
-claim(queued, js, decorator,                   none, dataflow,     w_decorator_replaces_its_target).
-claim(queued, js, class_accessor_property,     none, callgraph,    w_decorator_replaces_its_target).
-claim(queued, js, class_accessor_property,     none, dataflow,     w_decorator_replaces_its_target).
+work_state(w_decorator_replaces_its_target, done).
+work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_shape_for_every_position).

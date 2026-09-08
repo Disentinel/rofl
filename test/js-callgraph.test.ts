@@ -446,9 +446,18 @@ test('resolution: identifier, IIFE, and a local namespace object', () => {
   // ids carry a per-file hash and would pin the fixture's byte layout.
   const ambiguousShapes = [...new Set(m.binds('ambiguous_call[audit](C, F, G)', 'C')
     .flatMap((c) => m.binds(`shape[code](${c}, S)`, 'S')))].sort();
+  // ...AND A THIRD CAUSE JOINED THEM ON 2026-09-08
+  // (w_decorator_replaces_its_target): a DECORATED MEMBER. `@decoCrimp seized()`
+  // makes `member_value` carry both the method and its replacement, so
+  // `new Thimble().seized(n)` (s_member_on_new) and `Thimble.tightened(n)`
+  // (s_member_on_ident) each answer twice. That is the may-set behaving as
+  // declared rather than a defect — a decorator MAY return its argument
+  // unchanged, which is what `@decoOnce` does — and it is a different cause
+  // from a branch, so the sentence below names all three.
   assert.deepEqual(ambiguousShapes,
-    ['s_identifier', 's_member_on_conditional', 's_member_on_logical'],
-    'a site resolves two ways only through a branch or a loop variable');
+    ['s_identifier', 's_member_on_conditional', 's_member_on_ident',
+     's_member_on_logical', 's_member_on_new'],
+    'a site resolves two ways through a branch, a loop variable or a decorated member');
   // the file-agnostic view agrees with the file-scoped one on this corpus
   const named = new Set(m.binds('calls_named[code](A, B)', 'A', 'B'));
   for (const e of modelEdges(m)) assert.ok(named.has(e.replace('<top>', 'top')), `calls_named lost ${e}`);
@@ -566,6 +575,9 @@ test('TIER 4: one question — what object does this expression denote?', () => 
   assert.deepEqual(ambCallers, [
     'shaped: cubed | squared', 'useCond: pick | pick', 'useForOfArray: alef | bet',
     'useForOfGen: alef | bet', 'useOr: pick | pick',
+    // ...and two DECORATED MEMBERS since 2026-09-08: each answers both the
+    // method the class declares and the replacement its decorator returned.
+    'usesThimble: bitted | tightened', 'usesThimble: crimped | seized',
   ], 'each site reported in both orderings of its pair, and the pairs named');
 });
 
@@ -1799,11 +1811,19 @@ test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot s
   // targets are `alef` and `bet`, two different names. The blind spot is
   // specifically the branch: one arm is taken, the other is not, and both
   // targets are called `pick`.
+  //
+  // THE FILTER WAS A PREFIX AND A PREFIX IS NOT A NAME, corrected 2026-09-08.
+  // `sh.startsWith('s_member_on_')` swept in every member receiver that ever
+  // becomes ambiguous, and the moment a decorated member did — where the two
+  // targets have DIFFERENT names and there is no blind spot at all — this test
+  // failed for a claim it does not make. The two branch shapes are spelled out.
+  const branchShapes = new Set(['s_member_on_conditional', 's_member_on_logical']);
   const branchSites = new Set(m.binds('ambiguous_call[audit](C, F, G)', 'C')
-    .filter((c) => m.binds(`shape[code](${c}, S)`, 'S')
-      .some((sh) => sh.startsWith('s_member_on_'))));
+    .filter((c) => m.binds(`shape[code](${c}, S)`, 'S').some((sh) => branchShapes.has(sh))));
   const pairs = m.q('ambiguous_call[audit](C, F, G)').filter(([c]) => branchSites.has(c));
-  assert.equal(pairs.length, 4, 'two branch sites, both orderings');
+  assert.deepEqual([...new Set(pairs.map(([c]) => m.binds(`shape[code](${c}, S)`, 'S')[0]))].sort(),
+    [...branchShapes].sort(), 'exactly the two branch receivers, each in both orderings');
+  assert.ok(pairs.length > 0, 'positive control');
   for (const [, f, g] of pairs) {
     const nf = m.binds(`fn_name[code](${f}, N)`, 'N');
     const ng = m.binds(`fn_name[code](${g}, N)`, 'N');

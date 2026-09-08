@@ -412,7 +412,12 @@ const ambiguous = (w: World) => [...new Set(w.q('ambiguous_call[audit](C, F, G)'
 }))].sort();
 const AMBIGUOUS = ['shaped: cubed | squared', 'useCond: pick | pick',
                    'useForOfArray: alef | bet', 'useForOfGen: alef | bet',
-                   'useOr: pick | pick'];
+                   'useOr: pick | pick',
+                   // ...and two DECORATED MEMBERS since 2026-09-08
+                   // (w_decorator_replaces_its_target): each answers both the
+                   // method the class declares and the replacement its
+                   // decorator returned.
+                   'usesThimble: bitted | tightened', 'usesThimble: crimped | seized'];
 
 test('the tag is called, and what it returns is called too', () => {
   const m = base();
@@ -1466,6 +1471,11 @@ test('class fields, private names and static blocks, answered and measured', () 
     'Coin reads Coin.#edge', 'Coin reads Coin.#face', 'Coin reads Coin.#mark',
     'Coin reads Coin.#rim', 'Coin reads Coin.#tally',
     'Inner reads Inner.#tag', 'Outer reads Outer.#tag',
+    // ...and one more since 2026-09-08 (w_decorator_replaces_its_target):
+    // `#tucked` is a DECORATED private method, and it is in this fixture as the
+    // negative control for `decorated_member` — a private member must never
+    // reach `member_value` under its bare name.
+    'Thimble reads Thimble.#tucked',
   ]);
 
   // THE CALL GRAPH. `Coin.forge` is a STATIC field read through the class name,
@@ -1678,8 +1688,13 @@ selects[flow](N, Key)       :- member_node_v[flow](N),
             replace: '', file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
       assert.deepEqual(unresolvedInFields(m), ['s_member_on_this'], 'one site stops resolving');
-      assert.deepEqual(privateCallsResolved(m), ['#rim'], 'and it is `this.#mark(n)`');
-      assert.deepEqual(privateCallsResolved(b), ['#mark', '#rim'], 'positive control');
+      // `#tucked` JOINED BOTH LISTS on 2026-09-08 and it is on neither side of
+      // this mutant's question: it is a private METHOD, so it resolves through
+      // `private_binds` directly and the field arm this mutation deletes never
+      // touched it. What the mutant still says is exactly what it said —
+      // `#mark` leaves and `#rim` stays.
+      assert.deepEqual(privateCallsResolved(m), ['#rim', '#tucked'], 'and it is `this.#mark(n)`');
+      assert.deepEqual(privateCallsResolved(b), ['#mark', '#rim', '#tucked'], 'positive control');
     },
   },
   {
