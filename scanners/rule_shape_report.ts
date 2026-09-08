@@ -1,16 +1,16 @@
-// scanners/negation_report.ts — RENDER the negation-shape model. Decides
-// nothing: every number below is one query against rules/negation-shape.rofl,
+// scanners/rule_shape_report.ts — RENDER the rule-shape model. Decides
+// nothing: every number below is one query against rules/rule-shape.rofl,
 // and each is printed with the query that produced it so it can be re-run and
 // argued with.
 //
-//   npm run negshape
+//   npm run ruleshape
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Rofl } from '../src/api.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const r = new Rofl();
-for (const f of ['boot.rofl', 'facts/negation-shape.rofl', 'rules/negation-shape.rofl']) {
+for (const f of ['boot.rofl', 'facts/rule-shape.rofl', 'rules/rule-shape.rofl']) {
   const res = r.load(readFileSync(join(ROOT, f), 'utf8'));
   if (!res.ok) { console.error(`${f} REJECTED:\n${res.diagnostics.join('\n')}`); process.exit(1); }
 }

@@ -1,6 +1,9 @@
--- rules/negation-shape.rofl — CAN THIS BOOK STAY ON DISK?
+-- rules/rule-shape.rofl — WHAT A BODY ASKS THE STORE FOR.
 --
--- Over facts from scanners/negation_shape.ts. The scanner emits positions and
+-- Two questions: can this book stay on disk (negations), and does this body
+-- pay a cross product (positive premises). One fold answers both.
+--
+-- Over facts from scanners/rule_shape.ts. The scanner emits positions and
 -- counts and decides nothing; the criterion is here, as rule bodies, so the
 -- next reader argues with a rule rather than with a conclusion.
 --
@@ -142,3 +145,28 @@ neg_rel_g(Rel, B, G) :- neg_site(_, _, Rel, B, G).
 g_lookup(G, Rel, B)  :- neg_rel_g(Rel, B, G), cold_lookup(Rel, B).
 g_cached(G, Rel, B)  :- neg_rel_g(Rel, B, G), cold_cached(Rel, B).
 g_hot(G, Rel, B)     :- neg_rel_g(Rel, B, G), must_be_hot(Rel, B).
+
+-- ============================================================ the join side ==
+-- A CROSS PRODUCT IS A PROPERTY OF THE WRITTEN ORDER, and the engine will not
+-- rescue it: `planBody` moves only negations, and says why in its own comment —
+-- a positive premise's position is a choice the author already has, and
+-- examples/yak fragment 09 is built on a rule meaning two different things
+-- depending on it. So the order written is the order paid for, and the repair
+-- is to TELL the author, not to reorder behind them.
+--
+-- The signature is exactly: a positive premise, not the first one, that names
+-- at least one variable and shares none of them with anything bound before it.
+-- Every row of it is then laid beside every row of what stands.
+cross_product(S)   :- pos_site(S, _, _, _, _), pos_nvars(S, N), N > 0,
+                      not pos_first(S), not pos_shares(S).
+
+-- A premise naming NO variable is a lookup and never a product, however it is
+-- ordered. Counted apart so the two are not conflated in a total.
+pos_ground(S)      :- pos_nvars(S, 0).
+pos_joined(S)      :- pos_shares(S).
+
+-- The rule, not the site, is what a reader repairs.
+rule_cross(R)      :- pos_site(S, R, _, _, _), cross_product(S).
+rule_cross_at(R, Rel) :- pos_site(S, R, Rel, _, _), cross_product(S).
+g_cross(G, S)      :- pos_site(S, _, _, _, G), cross_product(S).
+g_pos(G, S)        :- pos_site(S, _, _, _, G).

@@ -1,4 +1,18 @@
-// scanners/negation_shape.ts — WHAT DOES A NEGATION ACTUALLY ASK FOR?
+// scanners/rule_shape.ts — WHAT DOES A BODY ACTUALLY ASK THE STORE FOR?
+//
+// Two questions over one fold, because they are the same fold and a second
+// implementation of it is how two answers drift apart.
+//
+//   NEGATIONS — what is bound when the plan reaches a `not`, which decides
+//   whether a book can stay on disk (see below).
+//   POSITIVE PREMISES — whether each one shares a variable with anything bound
+//   before it. One that shares nothing is a CROSS PRODUCT by construction: the
+//   engine consumes positive premises in the order written (`planBody`,
+//   src/engine.ts:298, "ONLY NEGATIONS MOVE"), so `fn_node(F), ast_node(R, ...)`
+//   lays every R beside every F and only then filters. Measured on the JS model
+//   of branch modeljs: 272 functions against 291 return statements is 79152
+//   intermediate rows for a few hundred answers, and the same three premises
+//   reordered peak at 291 with the answer identical to the digit.
 //
 // The owner's question, and it decides whether most of a graph can stay on
 // disk: he touches ten services out of seven hundred, the rest belong to other
@@ -21,7 +35,7 @@
 // This scanner does not decide that. It emits, per negative premise, which
 // argument positions stand ground at the point the plan reaches it, which are
 // existential, and whether the book itself is a variable.
-// `rules/negation-shape.rofl` classifies; `npm run negshape` renders.
+// `rules/rule-shape.rofl` classifies; `npm run ruleshape` renders.
 //
 // THE FOLD IS A SECOND IMPLEMENTATION AND IS TREATED AS ONE. Binding order is
 // `planBody`'s judgement, and this file re-walks it to learn what was bound
@@ -66,8 +80,34 @@ function programs(): { group: string; path: string }[] {
   return out;
 }
 
+/** One cross-product premise, named the way a reader repairs it: the file, the
+ *  relation the rule concludes, and the relation the premise reads. Rule ids
+ *  are hashes and line numbers move, so neither is part of the identity — the
+ *  line-anchor trap this repository has recorded twice. */
+export interface Cross { group: string; file: string; head: string; premise: string; }
+
+export interface Analysis {
+  facts: string[];
+  clauses: number;
+  rules: number;
+  negSites: number;
+  posSites: number;
+  /** disagreements between this fold and `planBody`'s own `headGround` */
+  disagreements: number;
+  cross: Cross[];
+}
+
+/** THE WHOLE MEASUREMENT, as a function, so `test/rule-shape.test.ts` can
+ *  re-derive it from source rather than reading `facts/rule-shape.rofl`. A gate
+ *  that reads generated facts is green by construction the moment somebody adds
+ *  a rule without re-running the scanner — the shape `kernel_grep`'s hand-copied
+ *  list already fell into, and the one `test/permission-doc.test.ts` was built
+ *  to avoid. */
+export function analyse(): Analysis {
 const facts: string[] = [];
+const cross: Cross[] = [];
 let sites = 0;
+let posSites = 0;
 let clauses = 0;
 let rules = 0;
 let disagreements = 0;
@@ -118,6 +158,7 @@ for (const { group, path } of programs()) {
 
     // The fold, in PLAN order. Mirrors src/engine.ts:319-326.
     const bound = new Set<string>();
+    let firstPos = true;
     const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
     const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
 
@@ -152,7 +193,31 @@ for (const { group, path } of programs()) {
         facts.push(`neg_left_run(${q(site)}, ${leftRun}).`);
         continue;
       }
-      if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); }
+      if (b.t === 'pos') {
+        // THE JOIN SIDE. A positive premise that shares no variable with
+        // anything already bound is a cross product: every row of it against
+        // every row of what stands, and the filter comes later or not at all.
+        // `first` is not a cross product — there is nothing for it to share
+        // with — and a premise carrying no variables at all is a lookup.
+        const i = bodyIndex.get(b)!;
+        const site = `${rid}@${i}`;
+        const vs = new Set<string>();
+        for (const a of b.lit.args) for (const v of varsOf(a)) vs.add(v);
+        for (const v of varsOf(b.lit.persp)) vs.add(v);
+        posSites++;
+        facts.push(`pos_site(${q(site)}, ${q(rid)}, ${q(b.lit.rel)}, ${q(bookOf(b.lit))}, ${q(group)}).`);
+        facts.push(`pos_nvars(${q(site)}, ${vs.size}).`);
+        if (firstPos) facts.push(`pos_first(${q(site)}).`);
+        let shares = false;
+        for (const v of vs) if (bound.has(v)) { shares = true; break; }
+        if (shares) facts.push(`pos_shares(${q(site)}).`);
+        if (!shares && !firstPos && vs.size > 0) {
+          cross.push({ group, file: rel, head: c.head.rel, premise: b.lit.rel });
+        }
+        firstPos = false;
+        for (const a of b.lit.args) bindAll(a);
+        bindAll(b.lit.persp);
+      }
       else if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
       else if (b.op === 'is') { if (groundIn(b.r)) bindAll(b.l); }
     }
@@ -168,27 +233,47 @@ for (const { group, path } of programs()) {
   }
 }
 
-const out = [
-  '-- facts/negation-shape.rofl — GENERATED by scanners/negation_shape.ts.',
-  '-- Do not edit. `npm run negshape` rebuilds it.',
-  '--',
-  '-- neg_site(Site, Rule, Rel, Book, Group)  a negative premise, where it reads',
-  '-- neg_arity(Site, N)                      how many arguments it has',
-  '-- neg_nbound(Site, K)                     how many stood GROUND when the plan reached it',
-  '-- neg_left_run(Site, K)                   length of the leading run of ground positions',
-  '-- neg_bound/exist/free(Site, Pos)         per position: ground, existential, or neither',
-  '-- neg_persp_var(Site)                     the BOOK itself is a variable',
-  '-- concl(Rule, Rel, Book, Group, File)     a rule, and what it concludes where',
-  '-- reads(Rule, Rel, Book)                  a premise of that rule, and its book',
-  '-- base_clause(Rel, Book)                  a fact asserted with no body',
-  'edb(neg_site).      edb(neg_arity).   edb(neg_nbound).  edb(neg_left_run).',
-  'edb(neg_bound).     edb(neg_exist).   edb(neg_free).    edb(neg_persp_var).',
-  'edb(concl).         edb(base_clause).  edb(reads).',
-  '',
-  ...facts,
-].join('\n') + '\n';
-writeFileSync(join(ROOT, 'facts/negation-shape.rofl'), out);
-console.log(
-  `clauses ${clauses}, rules ${rules}, negative premises ${sites}; ` +
-  `fold disagreements with planBody: ${disagreements}`,
-);
+  return { facts, clauses, rules, negSites: sites, posSites, disagreements, cross };
+}
+
+export function render(a: Analysis): string {
+  return [
+    '-- facts/rule-shape.rofl — GENERATED by scanners/rule_shape.ts.',
+    '-- Do not edit. `npm run ruleshape` rebuilds it.',
+    '--',
+    '-- neg_site(Site, Rule, Rel, Book, Group)  a negative premise, where it reads',
+    '-- neg_arity(Site, N)                      how many arguments it has',
+    '-- neg_nbound(Site, K)                     how many stood GROUND when the plan reached it',
+    '-- neg_left_run(Site, K)                   length of the leading run of ground positions',
+    '-- neg_bound/exist/free(Site, Pos)         per position: ground, existential, or neither',
+    '-- neg_persp_var(Site)                     the BOOK itself is a variable',
+    '-- pos_site(Site, Rule, Rel, Book, Group)  a POSITIVE premise, in plan order',
+    '-- pos_nvars(Site, N)                      how many distinct variables it names',
+    '-- pos_first(Site)                         it is the first positive premise',
+    '-- pos_shares(Site)                        it shares a variable with what is bound',
+    '-- concl(Rule, Rel, Book, Group, File)     a rule, and what it concludes where',
+    '-- reads(Rule, Rel, Book)                  a premise of that rule, and its book',
+    '-- base_clause(Rel, Book)                  a fact asserted with no body',
+    'edb(neg_site).      edb(neg_arity).   edb(neg_nbound).  edb(neg_left_run).',
+    'edb(neg_bound).     edb(neg_exist).   edb(neg_free).    edb(neg_persp_var).',
+    'edb(concl).         edb(base_clause).  edb(reads).',
+    'edb(pos_site).      edb(pos_nvars).   edb(pos_first).   edb(pos_shares).',
+    '',
+    ...a.facts,
+  ].join('\n') + '\n';
+}
+
+function isMain(): boolean {
+  const entry = process.argv[1];
+  return entry !== undefined && import.meta.url === new URL(`file://${entry}`).href;
+}
+
+if (isMain()) {
+  const a = analyse();
+  writeFileSync(join(ROOT, 'facts/rule-shape.rofl'), render(a));
+  console.log(
+    `clauses ${a.clauses}, rules ${a.rules}, negative premises ${a.negSites}, ` +
+    `positive premises ${a.posSites}, cross products ${a.cross.length}; ` +
+    `fold disagreements with planBody: ${a.disagreements}`,
+  );
+}
