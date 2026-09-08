@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iteration 34). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iterations 35-36). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -15,14 +15,21 @@ Branch `modeljs`. The vocabulary now takes on **the language** rather than its
 own list, by the owner's decision on 2026-09-08.
 
 ```
-KIND x LAYER   416 cells = modelled 126 + waived 193 + not_modelled 97
-  answered (modelled | waived):  319 / 416 = 76.7%
+KIND x LAYER   420 cells = modelled 145 + waived 212 + not_modelled 63
+  answered (modelled | waived):  357 / 420 = 85.0%
 
-open_cell[audit] 70, every one owned BY NAME, sweeper 0 at all four layers.
-63 work items.
-  callgraph  open 18, claimed 33     dataflow    open 15, claimed 27
-  modules    open 19, claimed 24     controlflow open 18, claimed 32
+open_cell[audit] 36, every one owned BY NAME, sweeper 0 at all four layers.
+64 work items.
+  callgraph  open 11, claimed 32     dataflow    open  7, claimed 27
+  modules    open 10, claimed 23     controlflow open  8, claimed 30
 ```
+
+**70 -> 36 open cells in one afternoon, from FOUR branches at once**: ES2022
+class syntax (`w_class_fields`, 20 cells), `w_update_and_literals`,
+`w_class_expression`, `w_meta_property`, and decorators
+(`w_plugin_gated_kinds`) in the main tree. Every layer fell together, and the
+CLAIMED figures barely moved — the tell that these are cells being ANSWERED
+rather than re-owned.
 
 **102 -> 70 open cells in one afternoon**, from three branches at once:
 `w_destructuring_rest_and_spread` (50), `w_export_specifier_forms` (55),
@@ -332,12 +339,29 @@ rules pack, deliberately and out of worklist order. Thirteen files ended up
 touched by more than one branch and six by all three. Pick items for real-world
 weight or dependency order instead.
 
-**Brief them with these four rules**, which is what the three were given:
+**Brief them with these four rules**, which is what four agents were given
+across two runs:
 1. Do not touch `test/js-model.test.ts`, `test/worklist.test.ts` counts, or
    `test/js-fixpoint-cost.test.ts` — the integrator fixes those once.
-2. **Oracles must be named sets, never counts.** This is the whole of it.
+2. **Oracles must be named sets, never counts** — and a "named set" has three
+   ways of not being one, all three found by running merges:
+   - a COUNT two branches both move (right on each branch, wrong in the merge);
+   - a SCOPE that pins another branch's file (`the kinds rules/js-modules.rofl
+     names` went red for somebody else's work);
+   - a set whose ELEMENTS embed a coordinate (`BIG_TOTAL@shapes.ts:480` — a
+     fixture appended earlier moved all of them by 38 while every claim stayed
+     true). Ask whether an element would change if somebody edited a part of
+     the file the assertion is not about.
+   A set defined by a RANK (`the five heaviest`) is a fourth: put the cut where
+   the data has a measured gap instead.
 3. Do not run the full suite; run the targeted files. Agents share the machine.
 4. Prefer a new fixture file; if you must append to `alpha.mjs`, append at the end.
+
+**Resolve merges with a script, but grep for all THREE markers.** One
+`=======` survived a scripted resolution, babel refused the whole fixture, and
+2 432 nodes left the corpus in one step — which read as 106 unrelated failures
+across nine files, none of them saying "a fixture is gone". `scripts/text_check.ts`
+now rejects markers and `test/js-ast.test.ts` asserts every fixture scans.
 
 **Budget the integration, not the authoring.** Merging cost nine hunks and ten
 failing tests, of which six were pins and **four were real** — and three of the

@@ -328,7 +328,7 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
       assert.deepEqual(m.q('reachable[code](F)')
         .filter(([f]) => m.n(`entry_point[code](${f})`) === 0)
         .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
-        ['decoOnce', 'forge', 'mountOf', 'sealed', 'seed'],
+        ['mountOf', 'sealed', 'seed'],
         'only the entry points and the TOP-LEVEL calls remain');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },

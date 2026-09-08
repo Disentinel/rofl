@@ -290,7 +290,10 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // flow) and `class_accessor_property` entered the vocabulary with four cells
   // of its own, two of them open. A number that only ever falls is a number
   // measuring effort rather than the model.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 71, 'the queue is the model\'s open set');
+  // 71 -> 36 ON ONE AFTERNOON, closed by four branches that could not see each
+  // other: ES2022 class syntax (20 cells), the two export forms, the update and
+  // literal forms, class expressions, meta properties and decorators.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 36, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -354,7 +357,11 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // cells carries an owner, which is what the zero on the right says.
   // claimed 33 -> 34: `decorator` closed here and `class_accessor_property`
   // arrived with a claim, so the open figure holds still while both moved.
-  assert.deepEqual(per('callgraph'), [18, 33, 0]);
+  // AND ALL FOUR LAYERS FELL TOGETHER ON 2026-09-08, from four branches that
+  // could not see one another: callgraph 18 -> 11, dataflow 16 -> 7, modules
+  // 19 -> 10, controlflow 18 -> 8. The claimed figures barely move, which is
+  // the tell that these are cells being ANSWERED rather than re-owned.
+  assert.deepEqual(per('callgraph'), [11, 32, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -371,7 +378,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
   // 15 -> 16 open: `class_accessor_property`'s value cell, owned by
   // `w_decorator_replaces_its_target` along with the decorator's own.
-  assert.deepEqual(per('dataflow'), [16, 28, 0]);
+  assert.deepEqual(per('dataflow'), [7, 27, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -380,7 +387,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // eight cells, and the destructuring family answered the rest by measurement
   // rather than by definition — a pattern DIRECTLY under an export declaration
   // moves no row of this layer, which is a verdict that had to be exercised.
-  assert.deepEqual(per('modules'), [19, 24, 0]);
+  assert.deepEqual(per('modules'), [10, 23, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -398,7 +405,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // when the vocabulary became the language, and four `with_statement` cells
   // stayed OPEN AND UNBLOCKED — the work is a one-word scanner change and what
   // it waits on is a decision about name resolution, not a blocker.
-  assert.deepEqual(per('controlflow'), [18, 32, 0]);
+  assert.deepEqual(per('controlflow'), [8, 30, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot

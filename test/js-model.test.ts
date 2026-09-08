@@ -649,8 +649,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // layers, and both are answered — the value layer by `r_destructure` and the
   // call graph for nothing, because a destructured name is a callee like any
   // other once the value layer can say what it denotes.
-  assert.deepEqual(f, { cell: 206, modelled: 69, waived: 26, not_modelled: 111 },
-    'predicted 206 fine cells = 69 + 26 + 111');
+  assert.deepEqual(f, { cell: 206, modelled: 73, waived: 29, not_modelled: 104 },
+    'predicted 206 fine cells = 73 + 29 + 104');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -1075,8 +1075,8 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   assert.equal([...tally.values()].reduce((a, b) => a + b, 0), sites,
     'positive control: every call site got exactly one shape, on THIS corpus');
   assert.ok(sites > 300, `positive control: the corpus is loaded (${sites} call sites)`);
-  assert.equal(tally.size, 29,
-    'positive control: 29 distinct shapes; s_yield_result joined 2026-09-05');
+  assert.equal(tally.size, 30,
+    'positive control: 30 distinct shapes; s_member_on_literal joined 2026-09-08');
 
   console.log(`      census (${sites} call sites, ${tally.size} shapes):`);
   for (const [s, k] of [...tally].sort((a, b) => b[1] - a[1])) {
@@ -1096,8 +1096,10 @@ test('the declared shapes agree with the census the rules produce on the corpus'
   console.log(`      declared but not in this corpus (${unseen.length} of ${declared.size} pairs):`);
   console.log('        ' + unseen.join(' '));
   assert.equal(declared.size, 40);
-  assert.equal(pairs.size, 29, 'every measured shape has exactly one callee kind in this corpus');
-  assert.equal(unseen.length, 11);
+  assert.equal(pairs.size, 30, 'every measured shape has exactly one callee kind in this corpus');
+  // 11 -> 10: `s_member_on_literal` was declared and unseen, and the literals
+  // work gave it a site.
+  assert.equal(unseen.length, 10);
 
   // and the one shape that CANNOT be a cell, declared rather than left silent:
   // the catch-all is reached by the ABSENCE of a kind in any table, so it
@@ -1612,6 +1614,9 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     .map((x) => `${x.bindings['K']}/${x.bindings['S']}`));
   const undeclared = [...pairs].filter((p) => !declared.has(p)).sort();
   assert.deepEqual(undeclared, [
+    // `s_member_on_literal` JOINED 2026-09-08 with w_update_and_literals: a
+    // regexp literal and a bigint literal are member receivers whose method is
+    // in a library this model does not have.
     'member_expression/s_computed_dynamic_key',
     'member_expression/s_computed_literal_key',
     'member_expression/s_computed_template_key',
@@ -1621,6 +1626,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'member_expression/s_member_on_call',
     'member_expression/s_member_on_cast',
     'member_expression/s_member_on_conditional',
+    'member_expression/s_member_on_literal',
     'member_expression/s_member_on_logical',
     'member_expression/s_member_on_member',
     'member_expression/s_member_on_new',
@@ -1630,7 +1636,7 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
     'member_expression/s_member_on_super',
     'member_expression/s_member_on_template',
     'member_expression/s_member_on_this',
-  ], 'the eighteen shapes the corpus really produces and the mutant no longer declares');
+  ], 'the nineteen shapes the corpus really produces and the mutant no longer declares');
   // STILL EIGHTEEN, and all of them one family: `s_yield_result` joined the
   // corpus on 2026-09-05 and was DECLARED in the same commit, so it never
   // reached this list. That is the census working — a measured shape either

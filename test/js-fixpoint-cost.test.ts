@@ -83,9 +83,21 @@ function cost(): Cost {
 
   let total = 0;
   for (const n of tally.values()) total += n;
-  const five = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const top = five.map(([k, v]) => `${k} = ${v}`);
-  const share = five.map(([k, v]) => [k, (100 * v) / total] as [string, number]);
+  const ranked = [...tally].sort((a, b) => b[1] - a[1]);
+  const top = ranked.slice(0, 5).map(([k, v]) => `${k} = ${v}`);
+  // BY THRESHOLD AND NOT BY RANK, 2026-09-08. `slice(0, 5)` made the SET
+  // membership depend on an ordering the instrument cannot resolve: measured
+  // this day, the third through sixth paths sit at 6.08, 6.03, 5.97 and 5.84 per
+  // cent, so which of them is fifth is decided by hundredths, and the assertion
+  // went red reporting `a new name` when nothing had grown — exactly the defect
+  // this file already recorded one place further down the list, where the fourth
+  // and fifth were 5.25 and 5.24.
+  //
+  // FIVE PER CENT IS WHERE THE MEASURED GAP IS: six paths between 5.84 and
+  // 10.05, then nothing until 4.47. A threshold with a 1.4-point gap under it is
+  // a stable set where a rank is not.
+  const share = ranked.map(([k, v]) => [k, (100 * v) / total] as [string, number])
+    .filter(([, pct]) => pct >= 5);
   const store = st as unknown as { facts: Map<string, unknown>; firings: Map<string, unknown> };
   return { total, top, share, facts: store.facts.size, firings: store.firings.size };
 }
@@ -111,7 +123,7 @@ test('the cost of one fixpoint is deterministic', () => {
   console.log(`  rows handed out: ${a.total}  (facts ${a.facts}, firings ${a.firings})`);
 });
 
-test('the five heaviest read paths, by name', () => {
+test('every read path above five per cent, by name', () => {
   const c = cost();
   // MEASURED 2026-09-05 after eight bodies in rules/js-dataflow.rofl and one in
   // rules/js-callgraph.rofl were reordered to lead with the literal that binds:
@@ -201,11 +213,12 @@ test('the five heaviest read paths, by name', () => {
   // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
   // rather than explained.
   const SHARE: [string, number][] = [
-    ['argMatches ast_within pos=[0]', 7.83],
-    ['relPersp authority', 9.63],
-    ['argMatches encloses_v pos=[1]', 5.84],
-    ['relPersp encloses_v', 5.65],
-    ['relPersp ast_node', 6.09],
+    ['relPersp authority', 10.05],
+    ['argMatches ast_within pos=[0]', 7.99],
+    ['argMatches ast_node pos=[1]', 6.08],
+    ['argMatches encloses_v pos=[1]', 6.03],
+    ['relPersp ast_node', 5.97],
+    ['relPersp encloses_v', 5.84],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -214,7 +227,7 @@ test('the five heaviest read paths, by name', () => {
   // nothing. The claim in its own message is `a NEW NAME here`, which is
   // membership; the share is what says a path grew.
   assert.deepEqual(c.share.map(([k]) => k).sort(), SHARE.map(([k]) => k).sort(),
-    'a new name here is a body ordered so a big relation is enumerated first');
+    'a new path above five per cent is a body ordered so a big relation is enumerated first');
   const got = new Map(c.share);
   for (const [name, want] of SHARE) {
     const now = got.get(name)!;
@@ -243,7 +256,10 @@ test('the five heaviest read paths, by name', () => {
   // WHAT THE NUMBER STILL CATCHES is a scan appearing in the hot path with the
   // corpus held still — the left-hand column — and that is now the reading to
   // take. 6.6 -> 7.4.
-  assert.ok(c.total / c.facts < 7.4,
+  // 7.4 -> 8.0. The 2x2 above says the corpus did it, as it did last time: the
+  // four branches' fixtures are class bodies and nested patterns, and the
+  // heaviest read path is still the CONTAINMENT walk.
+  assert.ok(c.total / c.facts < 8.0,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -431,7 +447,21 @@ test('the five heaviest read paths, by name', () => {
   // iteration in this file's history where a rule change made the fixpoint
   // CHEAPER, and the honest note is that the mechanism is not established —
   // see the share block above.
-  assert.equal(c.total, 1411085, 'total rows handed out by the store in one fixpoint');
+  // 1 411 085 -> 1 602 097 on 2026-09-08 when four parallel branches merged.
+  // Axes from the merged diff, control OK:
+  //
+  //                        prev corpus              this corpus
+  //     prev rules   1 476 984 / 76 509 fir   1 609 092 / 72 183 fir
+  //     these rules  1 438 293 / 76 447 fir   1 602 097 / 72 154 fir
+  //
+  // THE RULES ARE WORTH -2.6% OF ROWS AGAIN, on a day that added ES2022 class
+  // syntax, class expressions, meta properties, two literal forms and the
+  // decorator arms. The corpus is worth +11%. FIRINGS FELL 76 509 -> 72 154
+  // while the corpus grew by nine hundred facts, and that is the number worth
+  // reading: fewer derivations over more input is what a GUARD does — the
+  // decorator enclosure guard and `guard_kind(for_statement, update)` both
+  // withdraw facts that everything downstream was deriving over.
+  assert.equal(c.total, 1602097, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -538,5 +568,5 @@ test('the five heaviest read paths, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 76173, 'derivations, against 76 509 before the decorator work');
+  assert.equal(c.firings, 72154, 'derivations, against 76 509 before four branches merged');
 });
