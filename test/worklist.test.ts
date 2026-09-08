@@ -197,10 +197,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
     'w_meta_property', 'w_mod_beyond_the_import',
-    'w_mod_sweep',
-    'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
+    'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
+    // `w_update_and_literals` LEFT THIS LIST 2026-09-08, the same way the two
+    // before it did: it was taken and it spawned two findings, one of them in
+    // the SCANNER (a bigint matched none of the four branches) and one in a
+    // neighbour's already-ticked cell (a for-update was never a guard arm).
     'w_scope_shadowing',
-    'w_update_and_literals',
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
     'and nothing spawns a finding without being an item — the other direction');

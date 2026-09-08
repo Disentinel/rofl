@@ -1195,21 +1195,79 @@ claim(queued, js, class_expression,            none, controlflow,  w_class_expre
 claim(queued, js, class_expression,            none, modules,      w_class_expression).
 
 -- 53 - update_expression, big_int_literal, reg_exp_literal.
-work(w_update_and_literals, "i++, 1n and /re/g: three value forms the vocabulary never named").
+-- TEN OF TWELVE CLOSED 2026-09-08, and the two that are not are handed to the
+-- item that can take them rather than waived under this one.
+--
+-- THE ITEM'S SHARPEST RESULT IS IN THE SCANNER AND NOT IN A LAYER.
+-- `BigIntLiteral.value` is a native `bigint`, which matched NONE of the four
+-- branches in scanners/js_ast.ts — not a node, not a node array, not a
+-- string/number/boolean scalar, not a nested object — so it fell through all of
+-- them and emitted nothing. `const b = 1n` reached the store as an `ast_node`
+-- with ZERO `ast_attr` rows: the only literal in JavaScript whose value the
+-- scanner dropped, while the contract line at the top of that file says `every
+-- scalar own property`. `extra.raw` holds the text `1n` and `extra` is declared
+-- out on purpose, so nothing else carried it either. Two words of TypeScript
+-- and one shared `isScalar` predicate; the finding is that nothing could have
+-- reported it, because a dropped attribute is indistinguishable from a node
+-- that has none.
+--
+-- THE CONTROL-FLOW HALF WAS A DEFECT IN A NEIGHBOUR. A C-style `for` has four
+-- children and `guard_kind` had ONE of them. Measured on the single C-style
+-- `for` this corpus already contained (alpha.mjs:845): `guard_arm` named its
+-- body, `guarded[code]` was EMPTY for the `j += 1`, so the model positively
+-- asserted that a for-update runs — and `for (i = 0; i < 0; i++)` runs it zero
+-- times. A CALL written there was `reached_unguarded` and therefore kept OUT of
+-- `may_not_run`, which is the narrow direction this layer documents as the
+-- dangerous one. The slot had been unexamined because the form that inhabits it
+-- was not in the vocabulary: `i++`.
+--
+-- THE CALLGRAPH QUESTION THE ITEM ASKED — does a regexp literal resolve a
+-- member call — HAS THE ANSWER "NO, AND IT WAS NOT EVEN NAMED". Measured before
+-- any row was written: `/x[0-9]/.test(s)`, `MATCHER.test(s)` and
+-- `255n.toString(16)` were all `unresolved_call` with `prototype_of[flow]`
+-- EMPTY, so `stdlib_member[audit]` — the relation that exists to collect this
+-- residue — could not see them, and `stdlib_member` stood at 3 rows naming only
+-- a template and two arrays. Two `kind_prototype` rows and two
+-- `builtin_prototype` rows put all three in it. That NAMES the residue and
+-- resolves nothing, which is why the two callgraph cells are re-pointed at
+-- `w_env_api_surface` below instead of being waived here: every method on a
+-- regexp or a bigint is in a library this model does not have, and an `ignored`
+-- would be a blocker wearing a waiver's face.
+--
+-- `update_expression` AT DATAFLOW IS THE ONE WAIVER THE MEASUREMENT EARNED.
+-- The value is ToNumeric(operand) plus at most one, and a known literal operand
+-- does not help — `"5"++` is the NUMBER 5 — which is `plain_assign`'s own
+-- reason for refusing `x += y`. The WRITE half was measured rather than argued:
+-- `assigns[code]` has exactly one arm, over `assignment_expression`, so `let
+-- counter = 0; counter++` leaves `counter` carrying only its initialiser; and
+-- across the five rule packs there are ZERO negations over a value relation
+-- (`not may_be_lit`, `not may_be_node`, `not valued`, `not assigns`, `not
+-- var_flow`), with a positive control of eight negations over other relations
+-- in the same grep. So the missing write is an absence in a may-set and can
+-- never become a positive false claim.
+work(w_update_and_literals, "DONE 2026-09-08: 1n reached the store with no value at all (a bigint matched none of the scanner's four branches), a for-update was never a guard arm, and a regexp literal is the one literal whose value is an object").
 work_order(w_update_and_literals, 53).
-work_state(w_update_and_literals, open).
+work_state(w_update_and_literals, done).
+work_spawned(w_update_and_literals, f_a_bigint_matched_none_of_the_four_branches).
+work_spawned(w_update_and_literals, f_a_for_update_was_never_a_guard_arm).
 claim(queued, js, update_expression,           none, callgraph,    w_update_and_literals).
 claim(queued, js, update_expression,           none, dataflow,     w_update_and_literals).
 claim(queued, js, update_expression,           none, controlflow,  w_update_and_literals).
 claim(queued, js, update_expression,           none, modules,      w_update_and_literals).
-claim(queued, js, big_int_literal,             none, callgraph,    w_update_and_literals).
 claim(queued, js, big_int_literal,             none, dataflow,     w_update_and_literals).
 claim(queued, js, big_int_literal,             none, controlflow,  w_update_and_literals).
 claim(queued, js, big_int_literal,             none, modules,      w_update_and_literals).
-claim(queued, js, reg_exp_literal,             none, callgraph,    w_update_and_literals).
 claim(queued, js, reg_exp_literal,             none, dataflow,     w_update_and_literals).
 claim(queued, js, reg_exp_literal,             none, controlflow,  w_update_and_literals).
 claim(queued, js, reg_exp_literal,             none, modules,      w_update_and_literals).
+-- THE TWO THAT ARE NOT THIS ITEM'S. Both cells are the standard library and
+-- nothing else: the receiver's prototype is known, the method is not a node in
+-- this program, and `w_env_api_surface` is the item that supplies the missing
+-- half — it already owns `s_member_on_template` and `s_member_on_literal` at
+-- the top of this file for exactly the same reason. `stdlib_member[audit]`
+-- names all three sites now, so the in-tray is a query rather than a sentence.
+claim(queued, js, big_int_literal,             none, callgraph,    w_env_api_surface).
+claim(queued, js, reg_exp_literal,             none, callgraph,    w_env_api_surface).
 
 -- 54 - meta_property.
 work(w_meta_property, "new.target and import.meta: one node kind and two questions").

@@ -595,7 +595,24 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // 10 -> 9 on 2026-09-08: `s_computed_template_key` left the residue entirely
   // when the scanner's contract grew one property, and `shape_stale[audit]`
   // named its excuse the same run.
-  assert.equal(residue.length, 9, `positive control: ${residue.length} shapes with a residue`);
+  // 9 -> 10 on 2026-09-08 (w_update_and_literals): `s_member_on_literal` has a
+  // residue for the first time, because `/x[0-9]/.test(s)` and
+  // `255n.toString(16)` put a LITERAL RECEIVER in the corpus. Its verdict was
+  // already written — `shape_because(js, s_member_on_literal, callgraph,
+  // not_yet)` under `w_env_api_surface` — so the shape gained sites and not an
+  // excuse.
+  //
+  // AND IT IS A NAMED SET NOW RATHER THAN A COUNT. This number has moved five
+  // times in four days and every move was a different fact about the model;
+  // `assert.equal(residue.length, 9)` says which of them happened only to
+  // whoever re-derives it, and two branches moving it merge to a number that is
+  // right on neither (f_a_ledger_keyed_by_name_merges_and_a_pin_keyed_by_
+  // nothing_does_not).
+  assert.deepEqual(residue, [
+    's_computed_dynamic_key', 's_computed_literal_key', 's_identifier',
+    's_member_on_array', 's_member_on_ident', 's_member_on_literal',
+    's_member_on_new', 's_member_on_template', 's_non_null', 's_super',
+  ], `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
   // resolved sites + unresolved sites = all call sites. A frontier that
@@ -1243,7 +1260,17 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // then 9 -> 8 when `await` turned transparent and retired the first of them.
   // 8 -> 10 when the receiver split gave `s_member_on_ident` and
   // `s_member_on_new` a residue of their own, and a reason with it.
-  assert.equal(stale.length, 9, `the stale-verdict audit fires on ${stale.length} shapes`);
+  // ...AND 9 -> 10 on 2026-09-08, for the second reason in that list rather
+  // than a new one: `s_member_on_literal` gained a residue when a literal
+  // receiver entered the corpus, so its standing excuse is now strandable too.
+  // WRITTEN AS THE SET, for the reason the sentence above gives — a number that
+  // moves in both directions for four different reasons is a number nobody can
+  // check.
+  assert.deepEqual(stale, [
+    's_computed_dynamic_key', 's_computed_literal_key', 's_identifier',
+    's_member_on_array', 's_member_on_ident', 's_member_on_literal',
+    's_member_on_new', 's_member_on_template', 's_non_null', 's_super',
+  ], `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });

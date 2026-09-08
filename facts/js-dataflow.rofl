@@ -362,3 +362,44 @@ handled(js, export_namespace_specifier, dataflow, r_namespace_reexport).
 -- the fixture calls the result so the claim has a site.
 node_kind(js, tagged_template_expression).
 handled(js, tagged_template_expression, dataflow, r_tag_call).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). Two of the three cells are answered and the third
+-- is a WAIVER the measurement earned rather than the pattern suggested.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+-- A BIGINT IS A LITERAL AND THE SCANNER WAS DROPPING IT. `literal_kind` gains
+-- one row; the work was in scanners/js_ast.ts, where `BigIntLiteral.value` —
+-- a native `bigint` — matched none of the four branches and produced an
+-- `ast_node` with no attributes at all. `BIG_TOTAL` in shapes.ts.txt travels
+-- through `binder`, so the row is exercised through the value layer and not
+-- only at the literal.
+handled(js, big_int_literal,   dataflow, r_value_core).
+
+-- A REGEXP LITERAL IS THE ONLY LITERAL WHOSE VALUE IS AN OBJECT, so it joins
+-- `node_value_kind` beside `object_expression` rather than `literal_kind`
+-- beside the bigint. `MATCHER` denotes the literal node through `binder`, and
+-- `prototype_of` reads `regexp` off the kind.
+handled(js, reg_exp_literal,   dataflow, r_value_core).
+
+-- ...AND THE WAIVER. `i++` is a READ AND A WRITE of one binding, and this
+-- layer can carry neither half.
+--
+-- THE VALUE: an update evaluates to ToNumeric(operand), plus one for the
+-- prefix form. `may_be_lit` carries a literal AS WRITTEN, and even a known
+-- literal operand does not give the answer — `"5"++` is the NUMBER 5, not the
+-- string this layer would hand back. That is `plain_assign`'s reason for
+-- refusing `x += y`, arriving at a second kind.
+--
+-- THE WRITE: `assigns[code]` has exactly one arm, over `assignment_expression`,
+-- so `let counter = 0; counter++` leaves `counter` carrying only its
+-- initialiser. MEASURED that this costs no false claim rather than argued:
+-- across the five rule packs there are ZERO occurrences of a value relation
+-- under negation — no `not may_be_lit`, `not may_be_node`, `not valued`, `not
+-- assigns`, `not binder`, `not var_flow` — so a missing write is an ABSENCE in
+-- a may-set and never a positive assertion. The one negation in this file,
+-- `binder_at_top`, reads a REGION and not a value.
+ignored(js, update_expression, dataflow, a_a_computed_primitive_and_a_write_with_no_value).
