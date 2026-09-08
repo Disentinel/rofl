@@ -1249,6 +1249,193 @@ export function useTag(n) {
   return f(n);
 }
 
+
+// ===========================================================================
+// THE OTHER FOUR FORMS OF THE DESTRUCTURING FAMILY (w_destructuring_rest_and_spread).
+// `object_pattern` landed one iteration ago; `array_pattern`,
+// `assignment_pattern`, `rest_element` and `spread_element` had no site at all.
+//
+// ONE SITE PER QUESTION, and the questions are deliberately kept apart: a
+// fixture that answers two is a fixture no mutant can attribute.
+
+// ---------------------------------------------------------------------------
+// AN ARRAY PATTERN BINDS BY POSITION, which is the whole difference from an
+// object pattern: `{ a }` names its member and `[a]` counts to it.
+//
+// THE TWO LOCALS ARE READ IN TWO DIFFERENT FUNCTIONS ON PURPOSE. Read in one
+// function they would derive the SAME EDGE SET whether the rule matched the
+// index or ranged over every element, and the mutant that drops the index
+// would survive on a corpus that looks like it tests it.
+function chiselled(n) {
+  trace();
+  return n + 1;
+}
+
+function planed(n) {
+  trace();
+  return n + 2;
+}
+
+const bench = [chiselled, planed];
+const [firstTool, secondTool] = bench;
+
+export function useFirstSlot(n) {
+  trace();
+  return firstTool(n);
+}
+
+export function useSecondSlot(n) {
+  trace();
+  return secondTool(n);
+}
+
+// ...AND ONE PATTERN DIRECTLY UNDER AN `export`, which is what makes the
+// MODULES verdict for this family measured rather than asserted. The layer's
+// only entry points are `import_site`'s two kinds; a destructuring form under
+// an export declaration must therefore move no row of it, and this is the site
+// that lets anyone check.
+export const [exportedTool] = bench;
+
+// ---------------------------------------------------------------------------
+// A DEFAULTED PARAMETER IS INVISIBLE TWICE OVER. `param_of[flow]` reads
+// `ast_name` off the params child, and an `assignment_pattern` has no name —
+// so a defaulted parameter had no index at all: neither the DEFAULT reached
+// the body, nor did an argument PASSED at that position.
+//
+// TWO CALL SITES, one omitting the argument and one supplying it, because they
+// are two different arms and one site cannot tell them apart.
+function squared(n) {
+  trace();
+  return n * n;
+}
+
+function cubed(n) {
+  trace();
+  return n * n * n;
+}
+
+function shaped(n, shape = squared) {
+  trace();
+  return shape(n);
+}
+
+export function useDefaultParam(n) {
+  trace();
+  return shaped(n);
+}
+
+export function usePassedParam(n) {
+  trace();
+  return shaped(n, cubed);
+}
+
+// ---------------------------------------------------------------------------
+// ...AND THE CONTROL-FLOW HALF OF THE SAME KIND, which is the half that makes
+// `assignment_pattern` more than a dataflow join: the default expression RUNS
+// ONLY IF the argument is absent. It is an arm skipped by a condition, exactly
+// like a `?:` alternate, and `guard_kind` is the table that says so.
+//
+// `fallbackMaker` IS CALLED NOWHERE ELSE, which is what lets `may_not_run`
+// report it: a function every one of whose call sites is guarded.
+function fallbackMaker(n) {
+  trace();
+  return n + 5;
+}
+
+function withMade(n, made = fallbackMaker(n)) {
+  trace();
+  return made;
+}
+
+export function useMade(n) {
+  trace();
+  return withMade(n);
+}
+
+// ---------------------------------------------------------------------------
+// AN OBJECT REST BINDS A FRESH OBJECT CARRYING EVERY KEY THE PATTERN DID NOT
+// TAKE. The value it binds has no node of its own in the source, so the model
+// gives it the `rest_element` node's identity — the rest node IS the object.
+//
+// `caliper` IS TAKEN BY NAME AND `spanner` IS NOT, which is the only way the
+// exclusion is observable: a rule that forgot it would answer `restOfKit
+// .caliper` too, and shapes.ts holds the site that asks.
+function spanner(n) {
+  trace();
+  return n + 7;
+}
+
+function caliper(n) {
+  trace();
+  return n + 9;
+}
+
+const kit = { caliper, spanner };
+const { caliper: takenCaliper, ...restOfKit } = kit;
+
+export function useObjectRest(n) {
+  trace();
+  return restOfKit.spanner(n);
+}
+
+export function useTakenFromRest(n) {
+  trace();
+  return takenCaliper(n);
+}
+
+// ---------------------------------------------------------------------------
+// AN OBJECT SPREAD COPIES THE KEYS OF WHAT IT SPREADS, so a member of the
+// result is a member of the source — which is the same join `member_value`
+// already does for a plain property, reached through one more node.
+const merged = { ...kit };
+
+export function useObjectSpread(n) {
+  trace();
+  return merged.spanner(n);
+}
+
+// ---------------------------------------------------------------------------
+// A SPREAD ARGUMENT DESTROYS THE POSITIONAL CORRESPONDENCE THE VALUE LAYER
+// JOINS ON, and this is the site that measures it. `arg_at`/`param_of` pair
+// argument I with parameter I; a spread contributes as many arguments as the
+// iterable has elements, so EVERY ARGUMENT AFTER IT lands somewhere the index
+// in the tree does not name.
+//
+// `bench` has two elements, so `cubed` is the THIRD argument at run time and
+// `pair`'s second parameter is `planed`. A model reading the tree indices says
+// the second parameter may be `cubed`, which is false — a may-set is allowed
+// to be silent and is not allowed to be wrong.
+function pair(a, b) {
+  trace();
+  return a(1) + b(1);
+}
+
+export function useSpreadOnly(n) {
+  trace();
+  return pair(...bench) + n;
+}
+
+export function useSpreadThenArg(n) {
+  trace();
+  return pair(...bench, cubed) + n;
+}
+
+// ...AND A SPREAD THAT IS NOT FIRST, which is what says the expansion is keyed
+// on the spread's POSITION rather than on its presence. At run time
+// `duo(cubed, ...bench)` binds `x` to `cubed` and `y` to `chiselled`: the
+// argument before the spread keeps its index and the spread's element 0 lands
+// at index 1. An arm that expanded from element 0 whatever the position would
+// say `x` may be `chiselled`, which is false.
+function duo(x, y) {
+  trace();
+  return x(1) + y(1);
+}
+
+export function useArgThenSpread(n) {
+  trace();
+  return duo(cubed, ...bench) + n;
+}
+
 export async function main() {
   trace();
   return [
@@ -1313,6 +1500,17 @@ export async function main() {
     useRack(1),
     useShelf(1),
     useBin(1),
+    useFirstSlot(1),
+    useSecondSlot(1),
+    useDefaultParam(1),
+    usePassedParam(1),
+    useMade(1),
+    useObjectRest(1),
+    useTakenFromRest(1),
+    useObjectSpread(1),
+    useSpreadOnly(1),
+    useSpreadThenArg(1),
+    useArgThenSpread(1),
     run(1),
     seeded,
   ];

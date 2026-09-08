@@ -178,3 +178,22 @@ export function outside(n: number): number {
 }
 
 export async function dyn(p: string) { return import(p); }
+
+// A REST BINDING AND THE KEY IT DID NOT TAKE. `const { bolted: usedBolted,
+// ...leftovers } = fastenings` gives `leftovers` every key EXCEPT `bolted`, so
+// `leftovers.riveted` is a function and `leftovers.bolted` is `undefined`.
+//
+// THE SECOND SITE IS WHY THIS IS HERE AND NOT IN alpha.mjs: calling
+// `leftovers.bolted(n)` throws at run time, so no executable fixture can hold
+// it — and it is the ONLY thing that can tell a rest rule that excludes the
+// taken keys from one that copies them all. The exclusion is the whole content
+// of the relation and it is unobservable on a runnable corpus.
+function bolted(n: number): number { return n; }
+function riveted(n: number): number { return n; }
+
+const fastenings = { bolted, riveted };
+const { bolted: usedBolted, ...leftovers } = fastenings;
+
+export function pullsRest(n: number): number { return leftovers.riveted(n); }
+export function pullsTaken(n: number): number { return usedBolted(n); }
+export function pullsExcluded(n: number): number { return leftovers.bolted(n); }

@@ -175,6 +175,32 @@ handled(js, template_literal, callgraph, r_template_key).
 -- cost nothing but the row.
 handled(js, object_pattern,   callgraph, r_destructure).
 
+-- ...AND THE OTHER FOUR OF THE FAMILY, 2026-09-08. Three of them cost nothing
+-- here for the same reason `object_pattern` did — a name is a callee whatever
+-- bound it — and every one is measured by an EDGE the oracle confirms:
+--
+--   array_pattern       useFirstSlot -> chiselled, useSecondSlot -> planed,
+--                       and the two locals are read in two different functions
+--                       precisely so the index is observable in the edge SET.
+--   assignment_pattern  shaped -> squared (the default) and shaped -> cubed
+--                       (an argument passed at the same position).
+--   rest_element        useObjectRest -> spanner, and NOT the key the pattern
+--                       took: shapes.ts asks for it and the model is silent.
+--   spread_element      useObjectSpread -> spanner through an object spread,
+--                       and pair -> chiselled / pair -> planed through a spread
+--                       ARGUMENT — which is the one that needed a rule, because
+--                       `arg_at` had been pairing tree index with parameter
+--                       index across a spread and derived `pair -> cubed`, an
+--                       edge the running fixture contradicts.
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+handled(js, array_pattern,      callgraph, r_destructure_index).
+handled(js, assignment_pattern, callgraph, r_param_default).
+handled(js, rest_element,       callgraph, r_object_rest).
+handled(js, spread_element,     callgraph, r_spread).
+
 -- ===========================================================================
 -- CONTROL TRANSFERS THAT ARE NOT CALL EXPRESSIONS.
 --

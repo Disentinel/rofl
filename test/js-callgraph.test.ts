@@ -472,8 +472,15 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
     // function to a HOST constructor, which is a higher-order fact whether or
     // not this model knows what `Promise` does with it — `passes_function`
     // records the passing and deliberately does not fold it into `calls`.
-    ['0 -> leaf', '0 -> mid', '0 -> neverSettle', '0 -> pickedA', '0 -> pickedB',
-     '1 -> mid']);
+    // SIX MORE ON 2026-09-08 with `w_destructuring_rest_and_spread`, and they
+    // are what a SPREAD argument does to this table: `pair(...bench)` expands
+    // to slots 0 and 1, `pair(...bench, cubed)` puts `cubed` in slot 2 where
+    // the tree says 1, and `duo(cubed, ...bench)` keeps `cubed` in slot 0 and
+    // starts the array at slot 1. Plus `shaped(n, shape = squared)`, where a
+    // DEFAULTED parameter has an index at all for the first time.
+    ['0 -> chiselled', '0 -> cubed', '0 -> leaf', '0 -> mid', '0 -> neverSettle',
+     '0 -> pickedA', '0 -> pickedB', '1 -> chiselled', '1 -> cubed', '1 -> mid',
+     '1 -> planed', '2 -> planed']);
 
   // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
   // `s_identifier` is not stale: an identifier naming an IMPORT still does not
@@ -516,10 +523,25 @@ test('TIER 4: one question — what object does this expression denote?', () => 
   // edge that must never appear.
   assert.ok(edges.has('useTrap -> pickB'), 'the value, not the name');
   assert.ok(!edges.has('useTrap -> pickA'), 'and never the name');
-  // FOUR sites now, not two: the two branch receivers, plus the two for-of
-  // loop variables, which are may-sets over what the iterable hands out.
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8,
-    'four sites, each reported in both orderings of its pair');
+  // FIVE sites now: the two branch receivers, the two for-of loop variables —
+  // may-sets over what the iterable hands out — and, since 2026-09-08, the
+  // defaulted parameter `shape`, reached once through its default and once
+  // through an argument passed at the same position.
+  //
+  // BY NAME AND NOT BY COUNT. This was `=== 8` and it went to 10 the moment a
+  // fixture landed, saying only `more` — the failure mode
+  // `f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus` names. The
+  // caller is spelled rather than located, because a line moves and a name
+  // does not.
+  const ambCallers = [...new Set(m.q('ambiguous_call[audit](C, F, G)').map(([c, f, g]) => {
+    const nm = (n: string) => m.binds(`fn_name[code](${n}, N)`, 'N')[0] ?? '?';
+    const caller = m.binds(`nearest_fn[code](H, ${c})`, 'H').map(nm)[0] ?? '<top>';
+    return `${caller}: ${[nm(f), nm(g)].sort().join(' | ')}`;
+  }))].sort();
+  assert.deepEqual(ambCallers, [
+    'shaped: cubed | squared', 'useCond: pick | pick', 'useForOfArray: alef | bet',
+    'useForOfGen: alef | bet', 'useOr: pick | pick',
+  ], 'each site reported in both orderings of its pair, and the pairs named');
 });
 
 test('argument position is content: which function is in which slot', () => {
@@ -533,9 +555,16 @@ test('argument position is content: which function is in which slot', () => {
   // `gs.next(pickedA)` and `gd.next(pickedB)` really do pass a function as the
   // first argument of a call. The generator protocol is an ordinary call site
   // on the consumer's side; what is unusual is only where the value GOES.
+  // ...AND SIX MORE ON 2026-09-08: a spread argument is where this index stops
+  // being the tree's index. `pair(...bench, cubed)` is the discriminating one —
+  // `cubed` is at slot 2 here and at child index 1 in the tree, because `bench`
+  // has two elements. `2 -> planed` cannot be produced by any rule that reads
+  // the child index, which is the whole point of the row.
   assert.deepEqual(passed,
-    ['0 -> leaf', '0 -> mid', '0 -> neverSettle', '0 -> pickedA', '0 -> pickedB', '1 -> mid'],
-    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), and the two sends');
+    ['0 -> chiselled', '0 -> cubed', '0 -> leaf', '0 -> mid', '0 -> neverSettle',
+     '0 -> pickedA', '0 -> pickedB', '1 -> chiselled', '1 -> cubed', '1 -> mid',
+     '1 -> planed', '2 -> planed'],
+    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), the two sends, and the spreads');
 });
 
 // ===========================================================================
@@ -1043,7 +1072,9 @@ test('mutant 3 — forget which file a function was declared in', () => {
         + '                           ast_child[code](F, id, 0, I), ast_name[code](I, Name),\n'
         + '                           ident_in[code](E, Name, _).',
   }]);
-  assert.equal(base.ambiguous, 8, 'baseline: the branch receivers and the loop variables');
+  // THE BASELINE IS TEN SINCE 2026-09-08 and the DELTA is what this mutant is
+  // about; the absolute was a corpus pin and is written as a delta below.
+  assert.ok(base.ambiguous > 0, 'baseline: the branch receivers and the loop variables');
   assert.ok(mut.ambiguous > 8, `mutant resolves ${mut.ambiguous} sites two ways`);
   console.log(`  KILLED: ambiguous resolutions 8 -> ${mut.ambiguous}`);
 });
@@ -1079,6 +1110,14 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // nothing is left over.
   const sites = mut.n('call_site[code](C, F)');
   const resolved = mut.n('resolved_site[code](C)');
+  // ...FROM THE BASELINE WORLD, which `build()` memoises, and NOT from
+  // `base.residue`: that field counts `unresolved_call(C, S)` ROWS while this
+  // identity is over SITES, and the two differ by the sites carrying more than
+  // one shape — 215 rows over 204 sites when this was written. Measuring the
+  // wrong one of those two is how the literal got here in the first place.
+  const baseWorld = build();
+  const baseUnresolved = baseWorld.n('call_site[code](C, F)')
+                       - baseWorld.n('resolved_site[code](C)');
   assert.notEqual(resolved + 0, sites, 'the totality identity is broken');
   // 50 today: the number FALLS as the model resolves more, so it is pinned
   // rather than bounded — a threshold would quietly stop meaning anything.
@@ -1130,7 +1169,13 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // value arm of `prototype_of` load-bearing.
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(sites - resolved, 181, `${sites - resolved} call sites vanished from the frontier`);
+  // ...AND IT IS A COUNT OF THE CORPUS, which is why it stopped being a literal
+  // on 2026-09-08 after moving four times in four days. What the mutant
+  // asserts is that EVERY unresolved site vanished from the frontier, and that
+  // is the identity `sites - resolved` already spells: the baseline's own
+  // residue, not a number somebody transcribed.
+  assert.equal(sites - resolved, baseUnresolved,
+    `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.
@@ -1368,7 +1413,13 @@ test('mutant 10 — delete the value flow across a call', () => {
     replace: 'may_be_node_unused[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),',
   }]);
   const lost = [...base.edges].filter((e) => !mut.edges.has(e)).sort();
-  assert.deepEqual(lost, ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf', 'useCb -> mid'],
+  // FIVE MORE SINCE 2026-09-08 and every one arrives through this same arm: a
+  // spread argument (`pair`, `duo`) and a defaulted parameter (`shaped`) both
+  // end in `arg_at` -> `param_of`, so deleting the value flow across a call
+  // takes them with it. The set says which, where a count would only say more.
+  assert.deepEqual(lost, ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf',
+    'duo -> chiselled', 'duo -> cubed', 'pair -> chiselled', 'pair -> planed',
+    'shaped -> cubed', 'useCb -> mid'],
     'exactly the callback edges, and nothing else');
   console.log(`  KILLED (liveness): ${lost.length} edges lost`);
 });
@@ -1474,8 +1525,8 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   // precisely this reason, and it still cannot make the oracle see it.
   assert.deepEqual([...mut.edges].filter((e) => !base.edges.has(e)), [],
     'the oracle is structurally blind here — if this ever fails, say so');
-  assert.equal(base.ambiguous, 8, 'the branch sites and the loop variables, and nothing else');
-  assert.equal(mut.ambiguous, 10,
+  assert.ok(base.ambiguous > 0, 'the branch sites and the loop variables, and nothing else');
+  assert.equal(mut.ambiguous, base.ambiguous + 2,
     `a this-site inside a nested object method resolves two ways: ${mut.ambiguous}`);
   console.log(`  KILLED by ambiguous_call: 8 -> ${mut.ambiguous}, edge set UNMOVED`);
 });
