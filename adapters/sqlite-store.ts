@@ -471,6 +471,10 @@ export class SqliteStore implements FactStore {
     }
     this.removeMany(drop);
     this.partialEval = false;
+    // The same flag the in-memory store sets here, and for the same reason:
+    // `ensure` skips a clean store, so dropping the derived layer without
+    // marking it makes the next evaluation a silent no-op.
+    this.dirty = true;
   }
 
   // -------------------------------------------------------------------------

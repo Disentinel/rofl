@@ -52,6 +52,25 @@ export interface EvalOpts {
   retainTicks?: number;
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
+  /** The materialization wall, in rows (`DEFAULT_SPACE`, 500 000).
+   *
+   *  ON THE CONSTRUCTOR AND NOT ON `evaluate`, and the split is the kernel's
+   *  own: `budget_exhausted` and `space_exhausted` are separate atoms because
+   *  they demand OPPOSITE repairs (src/reflect.ts:249) — told the first, a
+   *  caller raises the budget and finishes; told the second, raising is
+   *  precisely the move that turns a refusal into a corpse. A budget is a
+   *  patience, asked per call. A space is what the machine can hold, which is
+   *  a property of the session and not of the question.
+   *
+   *  IT WAS UNREACHABLE UNTIL NOW. `Evaluation` has read `opts.space` since it
+   *  was written, and nothing ever put it there — so the wall was a hard
+   *  500 000 for every caller, and the advice the kernel gives about it could
+   *  not be acted on in either direction. Measured on the JS model over a real
+   *  tree: 32 files stop at that wall and complete at five million, so a
+   *  workload this engine is FOR does not fit the default. Raise it knowing
+   *  what the kernel says: the wall is protecting you from a cross product,
+   *  and `test/rule-shape.test.ts` names the rules that can produce one. */
+  space?: number;
 }
 
 /** REFUSED AT THE DOOR: a negation whose meaning depends on where it stands.
@@ -163,6 +182,8 @@ export class Rofl {
    *  for ever. See `frozenRetention` for what the number means and for the
    *  second gate that can override it. */
   retainTicks: number | undefined;
+  /** See `EvalOpts.space`; undefined leaves the kernel's default. */
+  private readonly space: number | undefined;
   diagnostics: string[] = [];
   private qn = 0;
   private loadn = 0;
@@ -181,6 +202,7 @@ export class Rofl {
     this.reuse = opts.reuse ?? true;
     this.evaluator = opts.evaluator ?? 'rounds';
     this.retainTicks = opts.retainTicks;
+    this.space = opts.space;
     this.store = new Store();
     bootstrapKernel(this.store);
   }
@@ -218,7 +240,7 @@ export class Rofl {
    *  and what a per-clause front end needs for the same reason. */
   fork(): Rofl {
     const r = new Rofl({ naive: this.naive, reuse: this.reuse,
-      evaluator: this.evaluator, retainTicks: this.retainTicks });
+      evaluator: this.evaluator, retainTicks: this.retainTicks, space: this.space });
     r.store = this.store.clone();
     return r;
   }
@@ -610,7 +632,7 @@ export class Rofl {
    *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
    *  through `ensure`/`prepared` and must not be able to disagree about it. */
   private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId };
+    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space };
     return this.evaluator === 'strata'
       ? new Evaluation(this.store, opts)
       : new RoundEvaluation(this.store, opts);
