@@ -1,0 +1,144 @@
+-- rules/negation-shape.rofl — CAN THIS BOOK STAY ON DISK?
+--
+-- Over facts from scanners/negation_shape.ts. The scanner emits positions and
+-- counts and decides nothing; the criterion is here, as rule bodies, so the
+-- next reader argues with a rule rather than with a conclusion.
+--
+-- THE QUESTION. A negation asserts an absence, and an absence cannot be proven
+-- from a partial view — so `docs/medium-and-large.md` concluded that a body of
+-- facts may move only when nothing is negated under it, and that `main`, being
+-- negated everywhere, pins everything. That is right for a REMOTE book, where
+-- answering costs a round trip and the fixpoint would have to cross machines.
+--
+-- It is too strong for a COLD LOCAL one, and `planBody` (src/engine.ts:294) is
+-- why: a negative premise is admitted only when every variable of it is already
+-- BOUND, or is EXISTENTIAL to that literal, and `addClause` refuses a body that
+-- cannot be so ordered — measured over 3555 rules, never fired. So a negation
+-- is a question about a KEY. `not p(a, b)` asks about one fact; `not p(a, Z)`
+-- asks whether anything sits under the prefix `a`. Neither needs `p` resident,
+-- and both are answerable by the mapped store the storage evaluation measured
+-- at 0.165 us a probe.
+--
+-- WHAT STILL NEEDS THE WHOLE RELATION, and it is the only shape that does:
+-- nothing bound at all — `not p(Z)`, "is p empty". That is `neg_unkeyed`, and
+-- counting it is the point of this file.
+
+-- ------------------------------------------------------------- the shape ---
+-- A negation is a POINT query when every argument stands ground, a PREFIX
+-- query when some do, and a SCAN when none do. Arity and count come from the
+-- scanner because counting is mechanism; which of the three that makes it is
+-- the judgement, and it is here.
+neg_point(S)      :- neg_nbound(S, N), neg_arity(S, N).
+neg_keyed(S)      :- neg_bound(S, _).
+neg_unkeyed(S)    :- neg_site(S, _, _, _, _), not neg_keyed(S).
+neg_prefix(S)     :- neg_keyed(S), not neg_point(S).
+
+-- A BYTE-ORDERED STORE WANTS MORE THAN "some position is bound": it answers a
+-- LEFT-CONTIGUOUS prefix as a range scan and anything else as a filter. The
+-- store we have indexes by an arbitrary binding mask (`KeyRun.byPat`), so this
+-- distinction costs nothing here and decides whether LMDB could hold a cold
+-- book without an extra index. Reported, not required.
+neg_contiguous(S) :- neg_left_run(S, K), neg_nbound(S, K), neg_keyed(S).
+neg_scattered(S)  :- neg_keyed(S), not neg_contiguous(S).
+
+-- ---------------------------------------------------------- the blockers ---
+-- THE BOOK ITSELF AS A VARIABLE. `not p[?B](x)` ranges over every book there
+-- is, so no book can be absent while it runs. This is a different blocker from
+-- the scan and is counted apart, because the repair is different: a scan wants
+-- the rule rewritten, a book variable wants the rule to name its book.
+neg_book_free(S)  :- neg_persp_var(S).
+
+-- A negation whose shape alone keeps everything resident.
+pins_everything(S) :- neg_unkeyed(S).
+pins_everything(S) :- neg_book_free(S).
+
+-- What a cold book needs from the shape side, and nothing more.
+cold_ok_shape(S)  :- neg_site(S, _, _, _, _), not pins_everything(S).
+
+-- ---------------------------------------------------- derived versus base ---
+-- SHAPE IS HALF THE CONDITION. `not p(a, b)` asks whether that fact is
+-- DERIVABLE, not whether it is stored, so a keyed lookup settles it only when
+-- `p` in that book is base — scanned, asserted, never concluded. If some rule
+-- concludes into it, that rule has to have run before the absence means
+-- anything, and the book is only as cold as those rules are.
+--
+-- This is the half that fits the owner's shape: six hundred and ninety of his
+-- seven hundred services belong to other teams and other languages. Their
+-- facts are a scanner's output. He reads them; they do not read him.
+concl_into(Rel, B)      :- concl(_, Rel, B, _, _).
+neg_rel(Rel, B)         :- neg_site(_, _, Rel, B, _).
+neg_rel_base(Rel, B)    :- neg_rel(Rel, B), not concl_into(Rel, B).
+neg_rel_derived(Rel, B) :- neg_rel(Rel, B), concl_into(Rel, B).
+
+-- A relation negated in one book and concluded into it by a rule that lives in
+-- a different FILE is the case where cold residency depends on which files are
+-- loaded — the interesting middle, and the one a residency policy would have
+-- to reason about rather than answer statically.
+neg_rel_written_by(Rel, B, File) :- neg_rel(Rel, B), concl(_, Rel, B, _, File).
+
+-- ------------------------------------------------------------ the verdict ---
+-- A SITE is cold-safe when its shape is keyed, its book is named, and the
+-- relation it reads is base in that book. Everything else is named by which of
+-- the three it fails, because a count of failures that cannot say WHICH is not
+-- a measurement anyone can act on.
+cold_safe(S)      :- neg_site(S, _, Rel, B, _), cold_ok_shape(S), neg_rel_base(Rel, B).
+needs_rules(S)    :- neg_site(S, _, Rel, B, _), cold_ok_shape(S), neg_rel_derived(Rel, B).
+
+-- ------------------------------------------------- the same, but by group ---
+-- THE JOIN LIVES HERE AND NOT IN THE RENDERER, and it is not a matter of
+-- taste: `Rofl.query` takes ONE literal, and a comma-separated conjunction
+-- comes back `ok` with zero rows rather than refusing. Every per-group number
+-- in the first draft of the renderer was a confident zero produced that way.
+-- A join written as a rule cannot fail that way, and `why` can explain it.
+--
+-- The three populations answer to different constraints: `kernel` is the
+-- program the evaluator runs on itself, `examples` are demonstrations OF
+-- reasoning — so nearly everything in them is derived on purpose — and
+-- `rules/` is the analysis pack, the closest thing this tree holds to the
+-- workload a cold-book policy is for.
+g_point(G, S)    :- neg_site(S, _, _, _, G), neg_point(S).
+g_prefix(G, S)   :- neg_site(S, _, _, _, G), neg_prefix(S).
+g_scan(G, S)     :- neg_site(S, _, _, _, G), neg_unkeyed(S).
+g_bookvar(G, S)  :- neg_site(S, _, _, _, G), neg_book_free(S).
+g_base(G, S)     :- neg_site(S, _, _, _, G), cold_safe(S).
+g_derived(G, S)  :- neg_site(S, _, _, _, G), needs_rules(S).
+g_site(G, S)     :- neg_site(S, _, _, _, G).
+
+-- ------------------------------------- when "derived" is not a blocker ----
+-- `neg_rel_derived` counts relations something concludes into, and on this
+-- tree that is most of them — which reads as bad news and is not yet news at
+-- all. A book whose own rules derive its own relations FROM ITS OWN FACTS can
+-- be evaluated once and then left cold: the derivation is a function of the
+-- book, so its result caches with the book. What breaks that is a rule writing
+-- into the book while READING somewhere else, because then the book's content
+-- depends on what else is loaded.
+--
+-- THE KERNEL'S BOOK IS NOT "SOMEWHERE ELSE". `[$kernel]` holds the reflection
+-- of whatever program is running; it is present wherever the kernel is and can
+-- never be cold, so reading it does not make a rule depend on another BOOK in
+-- the sense that matters here. Stated rather than assumed, because silently
+-- exempting a book is how an audit goes quiet.
+-- The book names arrive from the scanner as STRINGS, so the kernel's book is
+-- `"$kernel"` here and not the atom `$kernel`. Written the wrong way once and
+-- the exemption silently never applied; `!=` between an atom and a string is
+-- true, so the mistake makes the rule MORE permissive rather than empty, which
+-- is the direction that does not announce itself.
+rule_leaves(R, B)       :- concl(R, _, B, _, _), reads(R, _, B2), B2 != B, B2 != "$kernel".
+rule_self_contained(R, B) :- concl(R, _, B, _, _), not rule_leaves(R, B).
+
+-- A negated relation is CACHEABLE COLD when every rule concluding into it
+-- stays inside the book. One rule that leaves is enough to disqualify it, so
+-- the negative is the one that has to be derived.
+rel_has_leaver(Rel, B)  :- neg_rel(Rel, B), concl(R, Rel, B, _, _), rule_leaves(R, B).
+neg_rel_cacheable(Rel, B) :- neg_rel_derived(Rel, B), not rel_has_leaver(Rel, B).
+neg_rel_hot(Rel, B)     :- neg_rel_derived(Rel, B), rel_has_leaver(Rel, B).
+
+-- The three-way verdict per relation, which is what a residency policy reads.
+cold_lookup(Rel, B)     :- neg_rel_base(Rel, B).
+cold_cached(Rel, B)     :- neg_rel_cacheable(Rel, B).
+must_be_hot(Rel, B)     :- neg_rel_hot(Rel, B).
+
+neg_rel_g(Rel, B, G) :- neg_site(_, _, Rel, B, G).
+g_lookup(G, Rel, B)  :- neg_rel_g(Rel, B, G), cold_lookup(Rel, B).
+g_cached(G, Rel, B)  :- neg_rel_g(Rel, B, G), cold_cached(Rel, B).
+g_hot(G, Rel, B)     :- neg_rel_g(Rel, B, G), must_be_hot(Rel, B).
