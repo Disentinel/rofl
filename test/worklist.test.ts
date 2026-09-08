@@ -187,7 +187,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers', 'w_df_function_forms', 'w_df_generator_protocol',
     'w_df_sweep', 'w_df_value_core', 'w_env_api_surface', 'w_mod_beyond_the_import',
-    'w_mod_sweep', 'w_prototype_of_a_value', 'w_scope_shadowing',
+    'w_mod_sweep', 'w_scope_shadowing',
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
     'and nothing spawns a finding without being an item — the other direction');

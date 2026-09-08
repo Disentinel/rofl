@@ -634,6 +634,9 @@ may_be_lit[flow](T, V) :- ast_node[code](T, template_literal, _, _),
                           not interpolated[code](T),
                           ast_child[code](T, quasis, 0, Q),
                           ast_attr[code](Q, value_cooked, V).`;
+/** the residue that is the standard library, as `prototype.method` */
+const stdlib = (w: World) => w.q('stdlib_member[audit](C, P, K)').map(([, p, k]) => `${p}.${k}`).sort();
+
 const lits = (w: World) => w.q('ast_node[code](T, template_literal, F, L)')
   .flatMap(([t]) => w.q(`may_be_lit[flow](${t}, V)`).map(([v]) => v)).sort();
 
@@ -714,4 +717,97 @@ test('a template with no interpolation is a string written the other way', () =>
     .filter(([t]) => m.n(`ast_child[code](${t}, expressions, _, _)`) > 0);
   assert.ok(interp.length >= 3, `positive control: ${interp.length} interpolated templates`);
   for (const [t] of interp) assert.equal(m.n(`may_be_lit[flow](${t}, V)`), 0);
+});
+
+
+// ---------------------------------------------------------------------------
+// 3o. WHICH PROTOTYPE A VALUE HAS (w_prototype_of_a_value, 49).
+//
+// THE ITEM SAID THERE WAS NO SITE AND THE MODEL SAYS THERE ARE TWELVE. Its note
+// read `NO SITE IN THE CORPUS, measured 2026-09-07: 13 member calls unresolved,
+// zero with a literal receiver`, and it asked `may_be_lit` — does the model
+// carry this receiver as a VALUE. A prototype is not a value question:
+// `[1, 2, 3].join(",")` needs nothing carried, because the receiver is an
+// `array_expression` and the KIND is the answer.
+//
+// Re-measured 2026-09-08, every unresolved member call with its receiver named:
+// one template with `.concat` (the String prototype), one array literal with
+// `.join` (the Array prototype), SIX `.next` on a generator object whose
+// `may_be_node` is empty in all six (the value half of the generator protocol,
+// a different item), and two on a class that is IN this program (not a
+// prototype question at all).
+const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'q1 the KIND arm is deleted',
+    mut: [{ find: 'prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).\n',
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      // A TEMPLATE LITERAL IS IN NEITHER `literal_kind` NOR `node_value_kind`,
+      // so the value layer never carries one and only the kind arm reaches it.
+      // That is the whole reason the two arms are two.
+      assert.deepEqual(stdlib(b).filter((x) => !stdlib(m).includes(x)), ['string.concat']);
+      assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)') * 2);
+    },
+  },
+  {
+    name: 'q2 the VALUE arm is deleted',
+    mut: [{ find: `prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
+                            ast_node[code](N, K, _, _).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    // AND THIS MUTANT HAD NO SITE UNTIL THE FIXTURE GAINED ONE. Measured first:
+    // `useArr` calls `.join` on an array written IN PLACE, which the kind arm
+    // answers alone, so deleting the value arm moved `prototype_of` 327 -> 226
+    // and lost no answer whatever — 101 rows nothing read. `useBoundArr` binds
+    // the array to a name, so its receiver's kind is reachable only through
+    // `may_be_node`, and the arm becomes load-bearing rather than decoration.
+    expect: (m, b) => {
+      assert.deepEqual(stdlib(b), ['array.join', 'array.join', 'string.concat'],
+        'two arrays — one written in place and one reached through a binder');
+      assert.deepEqual(stdlib(m), ['array.join', 'string.concat'],
+        'and the bound one is the row this arm carries');
+      assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)'));
+    },
+  },
+];
+
+// THREE MUTANTS WERE MEASURED AND SURVIVE, and naming them is the point of a
+// SET — silence about a blind spot is the defect a set exists to prevent.
+//
+//   DROPPING `builtin_prototype(P)` from the audit, and ADDING `object` to that
+//   list, are the same statement twice and both derive a byte-identical world.
+//   They would need an unresolved member call whose receiver's prototype is
+//   `object` or `function`, and there is none: a member on an object literal is
+//   answered by `member_value`, so it resolves and never reaches this audit.
+//
+//   DROPPING `unresolved_call[code](C, _)` is UNKILLABLE BY CONSTRUCTION rather
+//   than for want of a corpus, and it is the interesting one. It would need a
+//   member call that RESOLVES and whose receiver has a builtin prototype — and
+//   in a model with no standard library, a call on an array or a string cannot
+//   resolve. The guard becomes falsifiable exactly when `w_env_api_surface`
+//   lands, which makes this audit a forward marker for that item rather than a
+//   check with a dead premise.
+
+for (const g of PROTO) test(`${g.name} — which prototype a value has`, () => g.expect(build(g.mut), base()));
+
+test('the residue that is the standard library is a row, not a comment', () => {
+  const m = base();
+  // rules/js-callgraph.rofl has carried `the String prototype, which is the
+  // standard library and a different programme` as PROSE since the shape split.
+  // A sentence in a comment cannot go red and cannot be counted.
+  assert.deepEqual(stdlib(m), ['array.join', 'array.join', 'string.concat']);
+  // ...AND IT RESOLVES NOTHING, which is asserted rather than assumed: every
+  // site it names is still on the frontier, and the audit moved no edge.
+  for (const [c] of m.q('stdlib_member[audit](C, P, K)')) {
+    assert.equal(m.n(`unresolved_call[code](${c}, S)`), 1, 'named, and still residue');
+  }
+  // THE SIX `.next` CALLS ARE NOT ON THIS LIST, and that is the boundary
+  // between this item and the generator protocol: `may_be_node` is empty for
+  // all six receivers, so there is no kind to read a prototype from.
+  const nextCalls = m.q('unresolved_call[code](C, S)')
+    .filter(([c]) => m.q(`callee_of[code](${c}, N)`)
+      .some(([n]) => m.q(`ast_child[code](${n}, property, 0, P)`)
+        .some(([p]) => m.n(`ast_name[code](${p}, "next")`) === 1)));
+  assert.equal(nextCalls.length, 6, 'positive control: the generator cluster is still there');
+  assert.deepEqual(nextCalls.filter(([c]) => m.n(`stdlib_member[audit](${c}, P, K)`) > 0), [],
+    'and none of them has a prototype this relation can name');
 });

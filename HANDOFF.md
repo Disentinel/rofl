@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop. The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iteration 30). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -56,6 +56,41 @@ then read as a constraint rather than as a setting:
 **So: when the model says it cannot, go and measure how far it is from being
 able to.** The measurement is usually a thirty-second probe and it has been
 wrong four times out of four.
+
+## What iteration 30 measured
+
+`w_prototype_of_a_value` (49) carried **`NO SITE IN THE CORPUS`** and it was a
+measurement of something else: it asked `may_be_lit` — does the model carry the
+receiver as a VALUE — and a prototype does not need a value.
+`[1, 2, 3].join(",")` needs nothing carried, because the receiver is an
+`array_expression` and the KIND is the answer.
+
+Re-measured by NAMING every site instead of counting them, and thirteen turned
+out to be four different questions:
+
+```
+template_literal .concat    1    the String prototype       <- the sites the
+array_expression .join      1    the Array prototype           note denied
+identifier       .next      6    a generator object, may_be_node EMPTY for all
+                                 six - the generator protocol, another item
+new_expression / identifier 2    a class IN this program, not a prototype
+```
+
+`prototype_of[flow]` derives it in two arms — from the kind, and through
+`may_be_node` — and `stdlib_member[audit]` turns *the residue is the standard
+library* from a comment into three rows. It resolves nothing and is not meant
+to: it moves the residue into `w_env_api_surface`'s in-tray, the item that waits
+on this one BY NAME. **The rules cost more than the fixture for the first time
+in this loop** (+1.11% of rows against +0.96%), which is what a new RELATION
+costs as against a new site.
+
+**A THIRD KIND OF SURVIVING MUTANT, worth carrying forward.** Dropping
+`unresolved_call` from that audit is unkillable BY THE MODEL'S OWN
+INCOMPLETENESS — it needs a member call that RESOLVES on a builtin receiver,
+which cannot exist without a standard library — so it becomes falsifiable
+exactly when `w_env_api_surface` lands. Beside "no site in this corpus" and
+"unkillable by the grammar", ask of every survivor: **is it waiting on a corpus,
+on the grammar, or on another item?**
 
 ## What iteration 29 measured
 

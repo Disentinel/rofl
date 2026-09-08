@@ -173,12 +173,19 @@ test('the five heaviest read paths, by name', () => {
   // shows, and a path growing 20% ALONE moves its share by two points — an
   // order of magnitude outside it. What a raw count caught, this catches; what
   // it did not catch was anything at all.
+  // RE-STATED 2026-09-08, and the pin fired for the right reason with the wrong
+  // diagnosis in its message. All five shares fell, TOGETHER, by roughly the
+  // same proportion — which is the denominator growing, not a path growing
+  // alone. `prototype_of[flow]` is a new relation with 335 rows and its own
+  // read paths, so the total moved for a MODEL change and these are re-stated
+  // on purpose. The five NAMES are unchanged, which is the claim this list
+  // actually makes; the band still catches one path pulling away from the rest.
   const SHARE: [string, number][] = [
-    ['argMatches ast_within pos=[0]', 11.2],
-    ['relPersp authority', 8.9],
-    ['argMatches encloses_v pos=[1]', 5.5],
-    ['relPersp encloses_v', 5.25],
-    ['relPersp ast_node', 5.2],
+    ['argMatches ast_within pos=[0]', 10.65],
+    ['relPersp authority', 8.6],
+    ['argMatches encloses_v pos=[1]', 5.2],
+    ['relPersp encloses_v', 5.0],
+    ['relPersp ast_node', 5.05],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -200,7 +207,7 @@ test('the five heaviest read paths, by name', () => {
   // the one number here that a bigger fixture cannot move on its own.
   // 6.537 at iteration 26; 6.419 now, so this iteration made the fixpoint
   // cheaper per fact while making the corpus bigger.
-  assert.ok(c.total / c.facts < 6.7,
+  assert.ok(c.total / c.facts < 6.6,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -332,7 +339,22 @@ test('the five heaviest read paths, by name', () => {
   // — costs +0.30% of rows and EIGHT firings, because the arm joins relations
   // that were already standing and the scanner's own work is 96 new facts. The
   // fixture costs +1.47% and 2 730. Cost per fact FELL again, 6.467 -> 6.358.
-  assert.equal(c.total, 1137169, 'total rows handed out by the store in one fixpoint');
+  // 1 137 169 -> 1 160 843 and 70 262 -> 72 195 on 2026-09-08 with
+  // `prototype_of[flow]` and the residue audit. Axes from this diff, control OK
+  // to the row:
+  //
+  //                        prev corpus            this corpus
+  //     prev rules   1 137 169 / 70 262 fir  1 148 081 / 71 852 fir
+  //     prototype    1 149 828 / 70 596 fir  1 160 843 / 72 195 fir
+  //
+  // AND THE RULES COST MORE THAN THE FIXTURE FOR THE FIRST TIME IN THIS LOOP:
+  // +1.11% of rows against the corpus's +0.96%. That is what a new RELATION
+  // costs as against a new site, and it is the number the owner's standing rule
+  // asks to be watched. `prototype_of` ranges over every node of eight kinds
+  // and again over everything `may_be_node` reaches, which is a wider relation
+  // than an arm joining two standing ones. Cost per fact still fell,
+  // 6.358 -> 6.336, because the corpus grew with it.
+  assert.equal(c.total, 1160843, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -421,5 +443,5 @@ test('the five heaviest read paths, by name', () => {
   // calls, which is the shape this gate reports honestly and the reason its own
   // header says it is structurally unable to see the control-flow layer.
   // Cost per fact 6.419 -> 6.354, down again.
-  assert.equal(c.firings, 70262, 'derivations: 67 502 before the scanner contract');
+  assert.equal(c.firings, 72195, 'derivations: 70 262 before prototype_of');
 });

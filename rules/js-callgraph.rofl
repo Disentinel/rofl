@@ -529,6 +529,22 @@ resolved_call[code](C)      :- resolved_site[code](C), call_site[code](C, _).
 unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
 unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
 
+-- THE RESIDUE THAT IS THE STANDARD LIBRARY, NAMED RATHER THAN DESCRIBED.
+-- rules/js-callgraph.rofl has said `the String prototype, which is the standard
+-- library and a different programme` in a comment since the shape split, and
+-- facts/js-callgraph.rofl says the same about a literal receiver. A sentence in
+-- a comment cannot go red and cannot be counted. This is the same statement as
+-- a row: a call this model does not resolve, whose RECEIVER has a builtin
+-- prototype, and whose method is therefore not a node in this program.
+--
+-- IT RESOLVES NOTHING and is not meant to. It moves the residue from prose into
+-- `w_env_api_surface`'s in-tray, which is the item that waits on
+-- `prototype_of[flow]` by name.
+stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                                   ast_child[code](N, object, 0, O),
+                                   prototype_of[flow](O, P), builtin_prototype(P),
+                                   selects[flow](N, Key).
+
 -- The verdict ledger for SHAPES. It is separate from js-model's
 -- `unknown_because`, which is keyed by node KIND, because a kind's verdict
 -- cannot express partial coverage: `member_expression` has a rule (tier 2)

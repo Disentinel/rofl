@@ -208,6 +208,62 @@ may_be_node[flow](E, N) :- value_transparent(K), ast_node[code](E, K, _, _),
 
 -- WHAT THE LAYER CAN SAY ABOUT ITSELF: an expression the rules can value at
 -- all. A site with no row is not `no value` — it is `nothing here says so`.
+-- ---------------------------------------------------------------------------
+-- WHICH PROTOTYPE A VALUE HAS (w_prototype_of_a_value, 49).
+--
+-- THE ITEM SAID THERE WAS NO SITE AND THE MODEL SAYS THERE ARE TWELVE. Its note
+-- read `NO SITE IN THE CORPUS, measured 2026-09-07: 13 member calls unresolved,
+-- zero with a literal receiver`, and that measurement asked `may_be_lit` — does
+-- the model carry this receiver as a VALUE. A prototype is not a value question.
+-- `[1, 2, 3].join(",")` needs nothing carried at all: the receiver is an
+-- `array_expression` and the KIND is the answer. Re-measured 2026-09-08, every
+-- unresolved member call with its receiver named:
+--
+--   template_literal .concat   1     the String prototype
+--   array_expression .join     1     the Array prototype
+--   identifier       .next     6     a generator object, and `may_be_node` is
+--                                    EMPTY for all six - the value half of the
+--                                    generator protocol, not this question
+--   new_expression / identifier 2    a class IN this program; not a prototype
+--                                    question at all
+--
+-- So the site count for this relation is TWO, the six `.next` calls belong to a
+-- different item, and `no site in the corpus` was true of the question it was
+-- asked and false of the question the item names.
+--
+-- FROM THE KIND, AND SEPARATELY THROUGH THE VALUE LAYER. The first arm answers
+-- a receiver written in place; the second answers one reached through a binder,
+-- an assignment or a return, and it costs nothing because `may_be_node` is
+-- already standing. A template literal is in NEITHER `literal_kind` nor
+-- `node_value_kind`, so only the first arm reaches it — which is why the arm on
+-- the kind exists rather than being folded into the value one.
+edb(kind_prototype).   -- kind_prototype(Kind, Prototype)
+kind_prototype(array_expression,          array).
+kind_prototype(string_literal,            string).
+kind_prototype(template_literal,          string).
+kind_prototype(numeric_literal,           number).
+kind_prototype(boolean_literal,           boolean).
+kind_prototype(object_expression,         object).
+kind_prototype(function_expression,       function).
+kind_prototype(arrow_function_expression, function).
+
+prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
+prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
+                            ast_node[code](N, K, _, _).
+
+-- WHOSE PROTOTYPE IS THE STANDARD LIBRARY'S. `object` and `function` are NOT on
+-- this list and the omission is the point: a member on an object literal is
+-- answered by `member_value`, and a member on a function is `.call`/`.bind`,
+-- which is a question about the language rather than a gap in this model. The
+-- four that remain are the ones whose methods live in a library this model does
+-- not have — which is what `w_env_api_surface` is for, and it waits on this
+-- relation by name.
+edb(builtin_prototype).
+builtin_prototype(array).
+builtin_prototype(string).
+builtin_prototype(number).
+builtin_prototype(boolean).
+
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).
 

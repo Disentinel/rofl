@@ -1123,7 +1123,10 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // calls and two calls that RESOLVE, plus `escaped`, which is a value and no
   // call at all — one site over, and the template key itself is not a call site
   // but the member around it is.
-  assert.equal(sites - resolved, 176, `${sites - resolved} call sites vanished from the frontier`);
+  // 176 -> 178 on 2026-09-08: `useBoundArr` and its `trace()`, plus the
+  // `.join` and `.length` chain on a bound array — the site that makes the
+  // value arm of `prototype_of` load-bearing.
+  assert.equal(sites - resolved, 178, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

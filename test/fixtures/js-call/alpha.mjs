@@ -359,6 +359,24 @@ async function useAwait(n) {
   return awaited(n);
 }
 
+// A RECEIVER REACHED THROUGH A BINDER, whose PROTOTYPE is the answer
+// (w_prototype_of_a_value). `useArr` already calls `.join` on an array written
+// in place, and that site is answered by the KIND alone — so the arm of
+// `prototype_of` that goes through the value layer had no consumer and derived
+// 101 rows nothing read. Measured before this was written: deleting that arm
+// moved `prototype_of` 327 -> 226 and lost no answer at all.
+//
+// `nums` IS THE WHOLE DIFFERENCE. The array is bound to a name and the member
+// call is on the name, so the receiver's kind is reachable only through
+// `may_be_node` — which is what makes the second arm load-bearing rather than
+// decoration.
+const nums = [1, 2, 3];
+
+export function useBoundArr(n) {
+  trace();
+  return nums.join(',').length + n;
+}
+
 // A COMPUTED KEY WRITTEN AS A TEMPLATE. `` keyed[`pickTmpl`](n) `` is fixed at
 // parse time and was NOT DERIVABLE until 2026-09-08: the text lived in
 // `TemplateElement.value`, a nested object, and the scanner emitted scalar own
@@ -1264,6 +1282,7 @@ export async function main() {
     await useAwait(1),
     useStall(1),
     useTmplKey(1),
+    useBoundArr(1),
     usePanel(1),
     useRack(1),
     useShelf(1),
