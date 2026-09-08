@@ -37,7 +37,8 @@
     "forkstages": "node --experimental-strip-types bench/fork_stages.ts",
     "forkclone": "node --experimental-strip-types bench/fork_clone_cost.ts",
     "forkctl": "node --experimental-strip-types bench/fork_control.ts",
-    "portcorpus": "node --experimental-strip-types scripts/port_corpus.ts"
+    "portcorpus": "node --experimental-strip-types scripts/port_corpus.ts",
+    "boundary": "node --experimental-strip-types scanners/store_boundary.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
