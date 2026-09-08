@@ -23,6 +23,7 @@
 // storage question, the second is whether Medium can run at all.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as os from 'node:os';
 import { Rofl } from '../src/api.ts';
 import { scan } from './js_ast.ts';
 
@@ -65,19 +66,27 @@ function main(): void {
   let dir: string | null = null;
   let slices = [8, 16, 32, 64, 128, 256];
   let withRules = true;
-  let budget = 2_000_000_000;
+  let budget = 4_000_000_000;
+  let space = 20_000_000;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--slices') slices = (argv[++i] ?? '').split(',').map(Number);
     else if (a === '--no-rules') withRules = false;
     else if (a === '--budget') budget = Number(argv[++i]);
+    else if (a === '--space') space = Number(argv[++i]);
     else if (!a.startsWith('--') && dir === null) dir = a;
     else { console.error('usage: js_volume.ts <dir> [--slices a,b,c] [--no-rules] [--budget N]'); process.exit(2); }
   }
   if (!dir) { console.error('usage: js_volume.ts <dir> [--slices a,b,c] [--no-rules] [--budget N]'); process.exit(2); }
 
   const files = sources(path.resolve(dir));
-  console.log(`${files.length} source files under ${dir}, rules ${withRules ? 'ON' : 'OFF'}\n`);
+  // A MEASUREMENT MUST CERTIFY ITS OWN CONDITIONS (CLAUDE.md). The first
+  // version of this curve was taken with fifteen stray node processes alive and
+  // a load average of 36, which is not a condition any timing survives.
+  const load = () => Number(os.loadavg()[0].toFixed(2));
+  const loadStart = load();
+  console.log(`${files.length} source files under ${dir}, rules ${withRules ? 'ON' : 'OFF'}, `
+    + `space ${space}, load at start ${loadStart}\n`);
   console.log(
     `${'files'.padStart(6)}${'lines'.padStart(9)}${'ast facts'.padStart(11)}${'derived'.padStart(10)}` +
     `${'f/line'.padStart(8)}${'mult'.padStart(7)}${'scan s'.padStart(9)}${'assert s'.padStart(10)}` +
@@ -103,7 +112,7 @@ function main(): void {
     const scanS = (Date.now() - t0) / 1e3;
 
     const h0 = heap();
-    const r = new Rofl();
+    const r = new Rofl({ space });
     const packs = ['boot.rofl', ...FACTS, ...(withRules ? RULES : [])].map(read);
     if (!r.load(packs.join('\n')).ok) { console.error('packs REJECTED'); process.exit(1); }
 
@@ -127,6 +136,8 @@ function main(): void {
       (res.partial ? '  PARTIAL' : '') + (failed ? `  ${failed} unparsed` : ''),
     );
   }
+  console.log(`\nload at end ${load()} (started ${loadStart}) — a curve taken while the`
+    + ` machine changed under it is not a curve`);
 }
 
 main();
