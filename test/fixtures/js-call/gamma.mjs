@@ -18,3 +18,23 @@ export * from './alpha.mjs';
 // names a module still knows `./alpha.mjs`; nothing imports delta.mjs, so
 // `./delta.mjs` exists as a specifier here and nowhere else.
 export * from './delta.mjs';
+
+// ---- THE NAMESPACE RE-EXPORT (w_export_specifier_forms, 2026-09-08).
+//
+// `export * as deltaNs from './delta.mjs'` is ES2020 and it is NOT an
+// ExportAllDeclaration — MEASURED from the scanner rather than recalled, babel
+// parses it as an ExportNamedDeclaration whose one specifier is an
+// ExportNamespaceSpecifier, with the source on the DECLARATION and an
+// `exported` child and NO `local` child on the specifier. There is no local
+// name for `* as ns` at all, which is what makes it a different question from
+// `export { a as b }` rather than a spelling of it.
+//
+// THE SOURCE IS alpha.mjs AND NOT delta.mjs, and that is the opposite of what
+// this file's other two lines want — deliberately, and measured. `./delta.mjs`
+// is a specifier that exists in `export * from './delta.mjs'` and NOWHERE ELSE
+// in the corpus, which is the whole property mutant r4 in
+// test/js-controlflow-scope.test.ts rests on: delete the export-all's arm of
+// `module_source` and delta stops being resolvable. Written against delta, this
+// line gives that specifier a second declaration and r4 stops costing anything.
+// A fixture for one construct must not blunt the mutant for another.
+export * as alphaAll from './alpha.mjs';

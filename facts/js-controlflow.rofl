@@ -124,6 +124,34 @@ ignored(js, import_namespace_specifier,  controlflow, a_no_control_transfer).
 ignored(js, export_named_declaration,    controlflow, a_no_control_transfer).
 ignored(js, export_default_declaration,  controlflow, a_no_control_transfer).
 ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
+
+-- THE TWO EXPORT SPECIFIER FORMS, 2026-09-08 (w_export_specifier_forms), and
+-- they get OPPOSITE verdicts — which is the whole reason the item is two kinds
+-- and not one.
+--
+-- `export { f }` and `export { f as g }` PUT f ON THE ENTRY SURFACE, and until
+-- this iteration nothing did: `exported_fn` walks the CONTAINMENT of an export
+-- declaration, and a specifier list contains two identifiers and no function.
+-- MEASURED on a probe whose three functions were exported only that way:
+-- `exported_fn` 0, `entry_point` 0, `reachable` 0, `no_entry_point[audit]`
+-- firing on the file, and `may_not_be_reached` naming `helper` — a function
+-- that same file exports AND calls. The positive control, the identical three
+-- functions written `export function`, gives all three as entry points and an
+-- empty `may_not_be_reached`. So this cell was not merely unmodelled; it was
+-- WRONG in the dangerous direction, and the site is
+-- test/fixtures/js/export-surface.js.
+node_kind(js, export_specifier).
+handled(js, export_specifier, controlflow, r_export_entry_surface).
+
+-- ...AND THE NAMESPACE FORM INTRODUCES NO LOCAL ENTRY, which is the same
+-- sentence `export_all_declaration` carries three lines up and it is MEASURED
+-- rather than inherited: the scanner emits an `exported` child for an
+-- ExportNamespaceSpecifier and NO `local` child at all, so there is no name in
+-- this module for the entry surface to reach. What `export * as ns from './m'`
+-- offers is m's own export surface under one name, and that is m's entry
+-- surface, derived where m is.
+node_kind(js, export_namespace_specifier).
+ignored(js, export_namespace_specifier, controlflow, a_no_local_binding_to_enter).
 ignored(js, tsas_expression,             controlflow, a_no_control_transfer).
 ignored(js, tsnon_null_expression,       controlflow, a_no_control_transfer).
 ignored(js, ts_string_keyword,           controlflow, a_type_only_no_runtime_value).

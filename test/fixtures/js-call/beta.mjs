@@ -125,5 +125,48 @@ export function bTag(n) {
 
 export function bmain() {
   trace();
-  return run(5) + buseNs(1) + bcross(1) + bviaNs(1) + bviaStar(1) + bviaTwin(1) + bTag(1);
+  return run(5) + buseNs(1) + bcross(1) + bviaNs(1) + bviaStar(1) + bviaTwin(1) + bTag(1)
+    + bviaRename(1) + bviaNsReexport(1);
 }
+
+// ---- THE TWO EXPORT FORMS WITH NO NODE IN THE VOCABULARY, CONSUMED
+// (w_export_specifier_forms, 2026-09-08). Both are imported here because a
+// re-export nobody imports is a declaration the model can read and no oracle
+// can judge — the lesson `bdefault` cost when it sat in this file uncalled.
+//
+// `exposed` is alpha's `renamed` under its EXTERNAL name: the local and the
+// exported name are different strings, so a rule reading the wrong child of the
+// ExportSpecifier resolves to nothing and the runtime disagrees.
+import { exposed } from './alpha.mjs';
+// ...and `alphaAll` is alpha.mjs's whole module object, reached through gamma's
+// `export * as` — a namespace this file never imported directly, so the only
+// road to it is the re-export. `alphaAll.leaf` is a deliberate collision with
+// the local `leaf` four imports above, which is alpha's `crossed` under an
+// alias: same name, two different functions, and only the function the site
+// resolves to says which one the namespace produced.
+import { alphaAll } from './gamma.mjs';
+
+export function bviaRename(n) {
+  trace();
+  return exposed(n);
+}
+
+export function bviaNsReexport(n) {
+  trace();
+  return alphaAll.leaf(n);
+}
+
+// ...AND A RE-EXPORT WITH A SPECIFIER, which is the form `export_local` in
+// rules/js-dataflow.rofl refuses BY NAME and had no site to refuse. `export { X
+// } from './m'` re-exports another module's binding: its `local` child is a
+// name in THAT module and there is no local function for it here — so the
+// correct number of `exports_name` rows this line produces is ZERO, and the
+// guard is what produces zero rather than one.
+//
+// THE LOCAL NAME IS `twin` ON PURPOSE, and this file DECLARES a `twin` twenty
+// lines up. Without the collision the guard costs nothing measurable: a `local`
+// naming no function here derives nothing whether it is read or not, and the
+// mutant survives on the corpus rather than on the rule. With it, dropping the
+// guard makes beta.mjs claim to export its OWN `twin` under a name that at
+// runtime stands for delta's.
+export { twin as viaDelta } from './gamma.mjs';

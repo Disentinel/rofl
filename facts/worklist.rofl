@@ -1215,15 +1215,33 @@ claim(queued, js, meta_property,               none, modules,      w_meta_proper
 -- 55 - export_specifier, export_namespace_specifier.
 work(w_export_specifier_forms, "export { a as b } and export * as ns: the two export forms with no node in this vocabulary").
 work_order(w_export_specifier_forms, 55).
-work_state(w_export_specifier_forms, open).
-claim(queued, js, export_specifier,            none, callgraph,    w_export_specifier_forms).
-claim(queued, js, export_specifier,            none, dataflow,     w_export_specifier_forms).
-claim(queued, js, export_specifier,            none, controlflow,  w_export_specifier_forms).
-claim(queued, js, export_specifier,            none, modules,      w_export_specifier_forms).
-claim(queued, js, export_namespace_specifier,  none, callgraph,    w_export_specifier_forms).
-claim(queued, js, export_namespace_specifier,  none, dataflow,     w_export_specifier_forms).
-claim(queued, js, export_namespace_specifier,  none, controlflow,  w_export_specifier_forms).
-claim(queued, js, export_namespace_specifier,  none, modules,      w_export_specifier_forms).
+-- DONE 2026-09-08. All eight cells answered: seven `handled` and one waiver,
+-- and the waiver is the one the measurement earned rather than the one the
+-- pattern suggested.
+--
+-- THE ANSWER TO THE QUESTION THE ITEM ASKED. Does the model resolve
+-- `export { internal as external }` to `internal` or to `external`? To NEITHER.
+-- Measured on a two-file probe before a rule was written: `exports_name`'s only
+-- arm reads the declaration's `declaration` child, an `export { }` list has
+-- none, and the probe returned exactly one row — the ordinary `export function
+-- plain` beside it — while the cross-file call `usesShown -> hidden` was absent
+-- from `calls_in` with its site reported as an unresolved `s_identifier`. The
+-- model was SILENT, not wrong-named. That is the safe direction.
+--
+-- AND AT ONE LAYER IT WAS NOT SILENT AND NOT SAFE. A module whose whole export
+-- surface is a specifier list had an EMPTY entry surface — `exported_fn` walks
+-- the CONTAINMENT of an export declaration and a specifier list contains two
+-- identifiers and no function — so `no_entry_point[audit]` fired on the file and
+-- `may_not_be_reached` named a function that file exports AND calls. A smaller
+-- seed reports live functions as maybe-dead, which is the direction
+-- `export_kind_unseen[audit]` already exists to catch, arriving through a FORM
+-- rather than through a misspelling.
+--
+-- THE ONE WAIVER: `export_namespace_specifier` at CONTROLFLOW. Measured from the
+-- scanner rather than inherited from `export_all_declaration`'s row — an
+-- ExportNamespaceSpecifier carries an `exported` child and NO `local` child at
+-- all, so there is no name in this module for the entry surface to reach.
+work_state(w_export_specifier_forms, done).
 
 -- 56 - labeled_statement.
 -- DONE 2026-09-08. THE ITEM'S NOTE CALLED IT "the one new statement form that

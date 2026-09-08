@@ -1515,3 +1515,30 @@ export async function main() {
     seeded,
   ];
 }
+
+// ---- THE RENAMING EXPORT (w_export_specifier_forms, 2026-09-08).
+//
+// `export { renamed as exposed }` is the one export form whose EXTERNAL name is
+// not its internal one, and until this line the corpus had none: every export
+// in these four files is `export function f`, where the two names are the same
+// string — so a rule reading the specifier's `local` child and a rule reading
+// its `exported` child derive the same row and no mutant can tell them apart.
+//
+// MEASURED FIRST, on a two-file probe, because the item's own brief allowed
+// either answer: with `export { hidden as shown }` beside `export function
+// plain`, `exports_name` derived exactly ONE row — `plain` — and the cross-file
+// call `usesShown -> hidden` was absent from `calls_in` with its site reported
+// as an unresolved `s_identifier`. So the model was SILENT rather than
+// wrong-named. That is the safe direction, and it is still a name a module
+// offers that nothing here could follow.
+//
+// NOTHING IN THIS FILE CALLS IT, deliberately, and for the reason beta.mjs
+// gives for `bdefault`: if `main` called it, the entry surface would be
+// irrelevant to the answer and the CONTROL-FLOW half of this cell would have no
+// site at all. beta.mjs's `bviaRename` is the only caller, through the external
+// name.
+function renamed(n) {
+  trace();
+  return n + 17;
+}
+export { renamed as exposed };

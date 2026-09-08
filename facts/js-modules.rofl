@@ -194,6 +194,21 @@ handled(js, import_specifier,            modules, r_named_binding).
 handled(js, import_default_specifier,    modules, r_default_binding).
 handled(js, import_namespace_specifier,  modules, r_namespace_binding).
 
+-- ...AND THE EXPORT HALF, 2026-09-08 (w_export_specifier_forms). Section 4b of
+-- rules/js-modules.rofl. The cell is the NAMING question and not the edge
+-- question: `export_binding` says which external name a module offers and which
+-- internal name it stands for, and reads no `source`. The edge a re-export
+-- makes is `export_named_declaration`'s cell, still `not_yet` below and still
+-- w_mod_beyond_the_import's.
+-- The two kinds are also declared in facts/js-kinds.rofl's denominator block;
+-- the copy is here because the convention in force is that a pack declaring a
+-- CLAIM declares the kind, so a world loading this pack and not that one has a
+-- cell for the row below rather than an `orphan_claim[audit]`.
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+handled(js, export_specifier,            modules, r_export_binding).
+handled(js, export_namespace_specifier,  modules, r_export_namespace_binding).
+
 -- ...AND THE CELLS DELIBERATELY OUT.
 --
 -- `export { q } from './d'` and `export * from './d'` are module-graph edges
