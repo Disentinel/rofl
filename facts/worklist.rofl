@@ -1792,9 +1792,31 @@ work_state(w_plugin_gated_kinds, open).
 -- `assignment_pattern` IS NOT HERE and that is the discriminating half: it was
 -- closable with the machinery this layer already has, because its transfer is
 -- an arm skipped by a condition rather than a call the syntax hides.
+-- DONE 2026-09-08, and the item was blocked on THE WRONG THING. It waited on
+-- `w_env_api_surface` because naming the receiver`s iterator reads as a
+-- standard-library question. MEASURED against the surface that item generated,
+-- with a positive control: `lib_member(P, K, R)` carries 130 rows over eight
+-- prototypes and `lib_member(P, "iterator", R)` is ZERO, as are the
+-- `"Symbol.iterator"` and `"next"` spellings — the surface is keyed by NAME and
+-- a well-known symbol is not a name. So the dependency could never have lifted
+-- this item and `work_needs` is REMOVED rather than ticked off.
+--
+-- WHAT ACTUALLY BLOCKED IT WAS THE CORPUS. Ten cases run against V8`s stack:
+-- over a PLAIN array or a PLAIN object all four syntaxes run NO USER CODE, and
+-- every destructuring site in this corpus read a plain source — so nothing here
+-- could contradict `a_no_control_transfer` and the layer stood on a sentence.
+-- Over a source owning a getter or a `[Symbol.iterator]` each one transfers, and
+-- both hops are attributed to the enclosing function exactly as `for-of`'s are.
+-- The machinery was ALREADY THERE: `accessor_of[flow]` names the getter and
+-- `member_value[flow](Obj, "iterator", M)` names the iterator, which is what
+-- `for_of_iterates` has read since 2026-09-07.
+--
+-- `assignment_pattern` STAYS THE DISCRIMINATING HALF and it stayed right: its
+-- transfer is an arm skipped by a condition and it needed `guard_kind`, while
+-- these four needed the call graph. What was wrong was the reason the others
+-- were held back, not the line drawn between them.
 work(w_destructuring_hides_a_call, "an array pattern, an object rest and every spread position transfer control into user code - an iterator or a getter - and the layer`s reason atom for all four says they transfer nothing").
-work_state(w_destructuring_hides_a_call, open).
-work_needs(w_destructuring_hides_a_call, w_env_api_surface).
+work_state(w_destructuring_hides_a_call, done).
 claim(queued, js, object_pattern,              none, controlflow,  w_destructuring_hides_a_call).
 claim(queued, js, array_pattern,               none, controlflow,  w_destructuring_hides_a_call).
 claim(queued, js, rest_element,                none, controlflow,  w_destructuring_hides_a_call).

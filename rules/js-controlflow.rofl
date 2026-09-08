@@ -393,6 +393,131 @@ resolves[code](N, M) :- accessor_read[code](N, M).
 site[code](N) :- accessor_read[code](N, _).
 
 -- ---------------------------------------------------------------------------
+-- A DESTRUCTURING FORM HIDES A CALL, 2026-09-08 — queue item
+-- w_destructuring_hides_a_call, and it is `accessor_call` wearing two other
+-- syntaxes plus the iterator protocol wearing three.
+--
+-- WHAT UNBLOCKED IT WAS NOT WHAT THE ITEM WAITED ON. It waited on
+-- `w_env_api_surface` on the ground that naming the receiver's iterator is a
+-- standard-library question. MEASURED against the surface that item generated,
+-- with a positive control: `lib_member(P, K, R)` carries 130 rows over eight
+-- prototypes, and `lib_member(P, "iterator", R)`, `lib_member(P,
+-- "Symbol.iterator", R)` and `lib_member(P, "next", R)` are each ZERO. The
+-- surface is keyed by NAME and a well-known symbol is not a name, so the
+-- blocker was never lifted — it was the WRONG BLOCKER.
+--
+-- THE RECEIVER DECIDES, NOT THE SYNTAX, and that is the measurement this item
+-- turns on. Ten cases run against V8's own stack (the same instrument
+-- test/js-callgraph.ts uses, nothing here reads a rule):
+--
+--   { notch } = dial            dial has `get notch`     -> get notch RAN
+--   { plain, ...rest } = dial   two getters left over    -> BOTH RAN
+--   { ...dial }                 an object spread         -> BOTH RAN
+--   [first] = spool             spool has [Symbol.iterator] -> iterator, next RAN
+--   [...spool] / f(...spool)    the same                 -> iterator, next RAN
+--   [...[a, b]] / [x] = [a]     a PLAIN ARRAY            -> NO USER CODE RAN
+--   { ...{ a: 1 } }             a PLAIN OBJECT           -> NO USER CODE RAN
+--
+-- So the four kinds transfer control when and only when the SOURCE carries user
+-- code, which is exactly the condition `accessor_of[flow]` and
+-- `member_value[flow](Obj, "iterator", M)` already decide. Every existing
+-- destructuring site in this corpus reads a plain array or a plain object, which
+-- is why the layer could stand for a week saying they transfer nothing and no
+-- oracle contradicted it: the fixtures had no receiver that could.
+--
+-- AND THE SECOND HOP IS ATTRIBUTABLE, measured the same way: with the fixture's
+-- `{ next: namedFn }` shape V8 names the ENCLOSING function as the caller of
+-- both the iterator and `next`, for an array pattern, an array spread and a
+-- spread argument alike — identical to `for-of`, which is the baseline the same
+-- probe ran beside them. So the model can be held to these edges by execution.
+
+-- (1) THE GETTER SIDE. Three kinds read an object's KEYS, and a key backed by a
+-- getter is a call — the same sentence `accessor_read` was written for, with a
+-- binding rather than a member read in front of it.
+-- THE SOURCE A PATTERN READS, and it is DERIVED rather than declared `edb`:
+-- every other table in this file with that declaration is authored data, and a
+-- relation a rule concludes has no business claiming nobody derives it.
+--
+-- ONLY THE DECLARATOR FORM: a pattern in a
+-- PARAMETER position reads whatever the argument was, which is a call-site
+-- question this arm deliberately does not answer, so a parameter pattern
+-- derives nothing here and is silent rather than wrong.
+pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
+                                 ast_child[code](D, id, 0, P),
+                                 ast_child[code](D, init, 0, Init).
+
+pattern_accessor[code](P, M) :- ast_node[code](P, object_pattern, _, _),
+                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
+                                pattern_takes[code](P, Key), accessor_of[flow](Obj, Key, M).
+-- ...and an object REST runs every getter the pattern did NOT take. The
+-- exclusion is the whole content of the arm, exactly as it is for the
+-- `member_value` arm this one mirrors in rules/js-dataflow.rofl.
+pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
+                                ast_child[code](D, id, 0, P),
+                                ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                                accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
+-- ...and an object SPREAD runs every getter of what it spreads. `{ ...o, k: v }`
+-- overrides a key and still READS it first, so there is no exclusion here and
+-- the asymmetry with the arm above is the language's rather than an omission.
+pattern_accessor[code](S, M) :- ast_node[code](O, object_expression, _, _),
+                                ast_child[code](O, properties, _, S),
+                                ast_node[code](S, spread_element, _, _),
+                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
+                                accessor_of[flow](Obj, Key, M).
+
+-- (2) THE ITERABLE SIDE, and it is `for_of_iterates` at three more nodes.
+-- WHICH SPREADS ITERATE, keyed by the FIELD the node sits in rather than by its
+-- kind, because `spread_element` is one kind doing two different things: in
+-- `properties` it copies keys and in `elements`/`arguments` it exhausts an
+-- iterator. A rule keyed on the kind alone would say `{ ...o }` calls an
+-- iterator, which the ten-case probe above measures as false.
+edb(spread_iterable_field).
+spread_iterable_field(elements).
+spread_iterable_field(arguments).
+spread_iterated[code](S) :- ast_node[code](S, spread_element, _, _),
+                            spread_iterable_field(F), ast_child[code](_, F, _, S).
+
+pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
+                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
+                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+pattern_iterates[code](S, M) :- spread_iterated[code](S),
+                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
+                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+
+-- ---------------------------------------------------------------------------
+-- HOW THE TWO SIDES REACH THE CALL GRAPH, AND THEY REACH IT DIFFERENTLY. The
+-- reason is the one `for_of_iterates` already recorded: `ambiguous_call[audit]`
+-- reads a site with two answers as an over-approximation that must be visible,
+-- which is right for a callee POSITION and wrong for a node that makes SEVERAL
+-- calls all of which are true.
+--
+--   an ITERABLE position has exactly one `[Symbol.iterator]` per receiver, so
+--   two answers there really are two candidate receivers -> `resolves`, which
+--   also buys the module-scope case through `top_call` for nothing;
+--   an OBJECT position runs one getter PER KEY, so a rest over two getters is
+--   two true calls at one node -> `calls` directly, with the top-level arm
+--   written out because `const { ... } = kit` at module scope is the shape this
+--   corpus already has and `nearest_fn` cannot reach it.
+site[code](N)          :- pattern_accessor[code](N, _).
+calls[code](Caller, M) :- pattern_accessor[code](N, M), nearest_fn[code](Caller, N).
+calls[code](R, M)      :- pattern_accessor[code](N, M), top_call[code](N, R).
+
+-- `site` ON BOTH SIDES, and it is not bookkeeping: `nearest_fn` ranges over
+-- `site[code]`, so a `resolves` row at a node nothing calls a site resolves a
+-- callee and draws NO EDGE. Measured — the first version of this rule omitted
+-- the line below, `pattern_iterates` stood at three rows and the execution
+-- oracle reported six missing edges.
+site[code](N)          :- pattern_iterates[code](N, _).
+resolves[code](N, M)   :- pattern_iterates[code](N, M).
+-- ...and the iterator object's `next`, which no syntax names — the same join
+-- `for_of_iterates` makes, on the same three relations, because it is the same
+-- protocol reached through a different door.
+calls[code](Caller, Next) :- pattern_iterates[code](X, M), nearest_fn[code](Caller, X),
+                             returns[flow](M, E), may_be_node[flow](E, IterObj),
+                             member_value[flow](IterObj, "next", V),
+                             may_be_node[flow](V, Next), fn_node[code](Next).
+
+-- ---------------------------------------------------------------------------
 -- WHAT PROPAGATES, 2026-09-06 — queue item w_exn_propagation, the transitive
 -- half of the exception path and the item that took `useTry -> after` back and
 -- forth twice before the measurement settled it.
@@ -686,6 +811,25 @@ transfer_mechanism(decorator,                  definition_time_call).
 -- constructed: the STATIC initialiser ran and the instance one did not.
 transfer_mechanism(class_property,             per_construction).
 transfer_mechanism(class_private_property,     per_construction).
+-- AN EIGHTH MECHANISM, 2026-09-08 (w_destructuring_hides_a_call), and it is the
+-- first time a KIND in this table carries TWO. `spread_element` in `properties`
+-- copies keys and runs getters — `accessor_call`, the mechanism already here —
+-- and in `elements` or `arguments` it exhausts an iterator, which is a call into
+-- a method the receiver names and neither an accessor nor an arm skipped by a
+-- condition. One row per (kind, mechanism) is what lets the table say that
+-- rather than making a reader pick which half to write down.
+--
+-- `for_of_statement` IS HERE FOR THE SAME REASON and its row is a correction:
+-- it has carried `skip_arm` alone since the layer opened, which is true of its
+-- BODY and silent about `E[Symbol.iterator]()`, a call `for_of_iterates` has
+-- modelled at the call-graph layer since 2026-09-07 with no row in this table
+-- to say so.
+transfer_mechanism(object_pattern,             accessor_call).
+transfer_mechanism(rest_element,               accessor_call).
+transfer_mechanism(spread_element,             accessor_call).
+transfer_mechanism(array_pattern,              iterator_call).
+transfer_mechanism(spread_element,             iterator_call).
+transfer_mechanism(for_of_statement,           iterator_call).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
@@ -706,6 +850,10 @@ mechanism_modelled(definition_time_call).
 -- open: `field_init` reads the two kinds by mechanism and puts the initialiser
 -- in `guard_arm`, so there is a rule between the mechanism and the kinds.
 mechanism_modelled(per_construction).
+-- ITERATOR_CALL JOINED 2026-09-08 (w_destructuring_hides_a_call), answered
+-- rather than open: `pattern_iterates` reads the two pattern kinds by KIND and
+-- `for_of_iterates` reads the loop, so every kind carrying it has a rule.
+mechanism_modelled(iterator_call).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
@@ -772,6 +920,21 @@ guard_named[code](member_expression).
 -- control INTO the decorator function, it does not skip an arm, so it is
 -- reached through the call graph rather than by a `guard_kind` row.
 guard_named[code](decorator).
+-- ...and the THREE KINDS THAT READ AN OBJECT'S KEYS, 2026-09-08. Each is
+-- reached by `pattern_accessor` rather than by a `guard_kind` row, for the same
+-- reason `member_expression` is: a hidden getter call transfers control INTO the
+-- getter and skips no arm. Written out one per kind rather than derived from
+-- `transfer_mechanism(K, accessor_call)`, because a derived line would also
+-- cover `member_expression` and silence the mutant that guards the row above.
+guard_named[code](object_pattern).
+guard_named[code](rest_element).
+guard_named[code](spread_element).
+-- ...and the ITERABLE side, derived from the mechanism on the pattern
+-- `label_boundary` and `per_construction` set: declaring
+-- `mechanism_modelled(iterator_call)` without a rule that reaches
+-- `array_pattern`, `spread_element` and `for_of_statement` reddens
+-- `guard_unmodelled[audit]` instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, iterator_call).
 guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
                               ast_node[code](_, K, _, _), not guard_named[code](K).
 

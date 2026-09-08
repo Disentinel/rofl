@@ -1511,6 +1511,21 @@ export async function main() {
     useSpreadOnly(1),
     useSpreadThenArg(1),
     useArgThenSpread(1),
+    usePatternGetter(1),
+    usePatternOtherSource(1),
+    usePatternRest(1),
+    useSpreadGetter(1),
+    useArrayPatternIter(1),
+    useSpreadIter(1),
+    useSpreadArgIter(1),
+    useObjectSpreadOfIterable(1),
+    usePatternPlainKey(1),
+    usePatternGetter(1),
+    usePatternRest(1),
+    useSpreadGetter(1),
+    useArrayPatternIter(1),
+    useSpreadIter(1),
+    useSpreadArgIter(1),
     run(1),
     seeded,
   ];
@@ -1542,3 +1557,136 @@ function renamed(n) {
   return n + 17;
 }
 export { renamed as exposed };
+
+
+// ---------------------------------------------------------------------------
+// A DESTRUCTURING FORM HIDES A CALL (w_destructuring_hides_a_call, 2026-09-08),
+// and the fixture exists because the CORPUS COULD NOT DECIDE THE QUESTION.
+//
+// Every destructuring site above this line reads a plain array or a plain
+// object — `bench`, `kit` — and a plain source runs NO USER CODE AT ALL, which
+// is measured against V8's stack beside the positive cases rather than assumed.
+// So `a_no_control_transfer` was contradicted by nothing any oracle here could
+// see, and the layer stood on a sentence for a week. THE RECEIVER decides, not
+// the syntax, and until now no receiver here could say so.
+//
+// ONE RECEIVER PER SIDE, ON PURPOSE. `dial` serves the object forms and
+// `counter` — the object `useIterable` has looped over since the iterator
+// protocol landed — serves all three iterable ones. One source and three
+// syntaxes is what says the transfer belongs to the SOURCE; reusing a receiver
+// that predates this item says it in the strongest available way.
+function latched(n) {
+  trace();
+  return n + 31;
+}
+
+const dial = {
+  plain: latched,
+  get notch() {
+    trace();
+    return 1;
+  },
+  get spare() {
+    trace();
+    return 2;
+  },
+};
+
+// 1. AN OBJECT PATTERN runs the getter of every key it names AND NOT THE OTHERS.
+// `plain` is taken beside `notch` for that second half: without a plain key in
+// the same pattern, a rule reading `member_value` instead of `accessor_of`
+// derives exactly what the right one does and no mutant can tell them apart.
+export function usePatternGetter(n) {
+  trace();
+  const { notch, plain: fromDial } = dial;
+  return notch + n;
+}
+
+// 2. A SECOND SOURCE OWNING A GETTER, so the RECEIVER check is load-bearing.
+// `gauge` predates this item; with `dial` alone, any pattern naming `notch` is
+// dial's whether the receiver is checked or not — the same survivor the accessor
+// item paid for once already and answered with `shim`.
+export function usePatternOtherSource(n) {
+  trace();
+  const { reading } = gauge;
+  return reading + n;
+}
+
+// 3. AN OBJECT REST runs every getter the pattern did NOT take. The pattern
+// takes `notch`, so the rest reads `spare` and only `spare` — the one site that
+// tells the exclusion apart from a rule that copied every key. `restDial` is
+// never read: a member of it is a plain data property at run time and an
+// accessor to `member_value`, and this fixture must not stand on that.
+export function usePatternRest(n) {
+  trace();
+  const { notch, ...restDial } = dial;
+  return latched(n) + notch;
+}
+
+// 4. AN OBJECT SPREAD runs every getter of what it spreads, with no exclusion —
+// `{ ...o, k: v }` overrides a key and still reads it first.
+export function useSpreadGetter(n) {
+  trace();
+  const copy = { ...dial };
+  return copy.plain(n);
+}
+
+// 5. THE SAME SYNTAX AT MODULE SCOPE, which is a different EDGE and not a
+// different rule: nothing encloses it, so `nearest_fn` cannot attribute it and
+// only the `top_call` arm can. `<top> -> spare` is the whole content of that
+// arm, and without this line it would be an arm nothing exercises.
+const { spare: topSpare } = dial;
+
+// 6. AN ARRAY PATTERN calls `counter[Symbol.iterator]()` and then `next` on what
+// that returned, and V8 attributes BOTH to the enclosing function — measured
+// with `for-of` as the baseline in the same probe, on the same receiver.
+export function useArrayPatternIter(n) {
+  trace();
+  const [firstOfCounter] = counter;
+  return n;
+}
+
+// 7. AN ARRAY SPREAD, the same protocol at a different node.
+export function useSpreadIter(n) {
+  trace();
+  const drained = [...counter];
+  return n + drained.length;
+}
+
+// 8. A SPREAD ARGUMENT, the third node for the same protocol. `counter`'s
+// iterator is done on its first `next`, so `joins` is called with no arguments
+// at all — which is also the shape that says `arg_at` cannot pair a spread's
+// elements with parameters here.
+function joins(a) {
+  trace();
+  return 0;
+}
+
+export function useSpreadArgIter(n) {
+  trace();
+  return joins(...counter) + n;
+}
+
+// 9. ...AND THE SITE THAT TELLS THE TWO SPREAD POSITIONS APART. `{ ...counter }`
+// spreads an ITERABLE into an OBJECT: measured, it copies the symbol key and
+// calls NO iterator. A rule keyed on the kind `spread_element` rather than on
+// the FIELD it sits in would claim `counter[Symbol.iterator]()` runs here, and
+// this is the only site in the corpus that can say it does not.
+export function useObjectSpreadOfIterable(n) {
+  trace();
+  const shallow = { ...counter };
+  return n;
+}
+
+// 10. ...AND THE DECOY THAT MAKES THE RECEIVER CHECK LOAD-BEARING, which is
+// `shim` doing for a pattern exactly what it already does for `accessor_read`.
+// `shim.broken` is a plain 3 and `gauge.broken` is a getter, so a rule that
+// looked up the key WITHOUT checking whose object it is would claim this
+// pattern runs `gauge`'s getter. It runs nothing, and the oracle says so.
+// RENAMED rather than shorthand: the local would otherwise be a file-scoped
+// `broken`, and this file's binder is file-scoped.
+export function usePatternPlainKey(n) {
+  trace();
+  const { broken: fromShim } = shim;
+  return fromShim + n;
+}

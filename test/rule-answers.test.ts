@@ -165,12 +165,22 @@ test('the corpus: every .rofl file, five answers, rule for rule', () => {
   // CONTROL, and the reason the mutants below exist: the whole corpus carries
   // eight demand-backed relations. Agreement on it is mostly agreement about
   // emptiness, which is why it is not the only measurement here.
-  // SEVEN -> EIGHT on 2026-09-07 with the kernel merge, and the eighth is named
+  // SEVEN -> EIGHT on 2026-09-07 with the kernel merge, and the eighth was named
   // rather than counted: `earlier_takeable` in rules/worklist.rofl, the queue's
-  // own ordering relation, which this corpus had never seen because the plan
-  // pack lived on the other branch. The other seven are `close`, `corroborated`
-  // and `temp` in examples/sensors.rofl and `move`/`step` in the two tm files.
-  assert.equal(demandSeen, 8);
+  // own ordering relation. The other seven are `close`, `corroborated` and
+  // `temp` in examples/sensors.rofl and `move`/`step` in the two tm files.
+  //
+  // EIGHT -> SEVEN on 2026-09-08, and the eighth is gone rather than moved:
+  // `work_order` became a derivation over `work_needs` and `earlier_takeable`
+  // — which existed only to say `some takeable item has a smaller number` —
+  // went with it. The relations that replaced it (`unblocks`,
+  // `unblocking_work`, `any_unblocker`) are not demand-backed.
+  //
+  // AND THIS ASSERTION IS WHY THE NUMBER IS WORTH KEEPING. It went red on the
+  // commit that removed the relation and stayed red through a merge, because
+  // that commit's author — me — did not run the full suite after it. A count
+  // over the WHOLE corpus is the one shape that notices a relation leaving it.
+  assert.equal(demandSeen, 7);
   assert.ok(refused <= 2, `${refused} files would not load`);
 });
 

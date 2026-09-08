@@ -527,9 +527,19 @@ const ITER: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
                           ast_child[code](K, property, 0, P), ast_name[code](P, N).`,
             replace: '', file: 'rules/js-structure.rofl' }],
     expect: (m, b) => {
-      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-        ['onIterObject -> iterator', 'useIterable -> bump', 'useIterable -> iterator']);
-      // THE SAME THREE EDGES AS h2, AND A DIFFERENT ORACLE, which is what
+      // NINE EDGES SINCE 2026-09-08 AND THEY ARE ONE CLAIM, not three plus six.
+      // `w_destructuring_hides_a_call` gave the SAME receiver three more doors —
+      // an array pattern, an array spread and a spread argument — and every one
+      // reaches the method through `member_value(Obj, "iterator", M)`, so taking
+      // the NAME away closes all four doors at once. That is the strongest
+      // available statement that the four rules read one protocol.
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(), [
+        'onIterObject -> iterator',
+        'useArrayPatternIter -> bump', 'useArrayPatternIter -> iterator',
+        'useIterable -> bump', 'useIterable -> iterator',
+        'useSpreadArgIter -> bump', 'useSpreadArgIter -> iterator',
+        'useSpreadIter -> bump', 'useSpreadIter -> iterator']);
+      // THE SAME EDGES AS h2, AND A DIFFERENT ORACLE, which is what
       // earns it a place beside h2 rather than duplicating it: the sites are
       // all still there and it is the NAME that went. Four relations read a
       // key and all four were blind to a computed one; this is the row that
@@ -538,8 +548,19 @@ const ITER: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
         'every site survives');
       assert.ok(b.n('fn_name[code](F, "iterator")') > 0, 'positive control');
       assert.equal(m.n('fn_name[code](F, "iterator")'), 0, 'the method has no name at all');
+      // ...AND NO KEY EITHER, stated as an identity over the KEY rather than
+      // over the method. It read `one per protocol method` and that stopped
+      // being true on 2026-09-08: two methods are spelled `[Symbol.iterator]`
+      // and there are THREE keys of that name, because `{ ...counter }` copies
+      // one onto a third object through the object-spread arm in
+      // rules/js-dataflow.rofl. The mutant takes the spelling away, so what goes
+      // is every key of it, propagated copies included — which the old form
+      // could not say and the new one says without a number.
+      assert.equal(m.n('member_value[flow](O, "iterator", V)'), 0);
       assert.equal(b.n('member_value[flow](O, K, V)') - m.n('member_value[flow](O, K, V)'),
-        b.n('fn_name[code](F, "iterator")'), '...and no key either, one per protocol method');
+        b.n('member_value[flow](O, "iterator", V)'), 'every key of that spelling');
+      assert.ok(b.n('member_value[flow](O, "iterator", V)') > b.n('fn_name[code](F, "iterator")'),
+        'and there are more keys than methods, because a spread copies one');
     },
   },
   {
@@ -890,6 +911,26 @@ const DESTR_ARM = `may_be_node[flow](E, N) :- destructures[code](D, Local, Key, 
 const bound = (w: World) => w.q('destructures[code](D, L, K, F)')
   .map(([, l, k]) => `${l}<-${k}`).sort();
 
+/** every declarator that is a `scoped_binder` BECAUSE it destructures, named by
+ *  the locals it binds and joined with `+` when it binds several.
+ *
+ *  A NAMED SET WHERE A COUNT STOOD, replaced 2026-09-08. Two mutants asserted
+ *  `b.n(scoped_binder) - m.n(scoped_binder) === 2`, and the 2 was the number of
+ *  destructuring declarators in the corpus on the day it was written — a count
+ *  of the CORPUS, which every fixture moves and which is right on each branch of
+ *  a parallel merge and wrong in the merge. The claim underneath is which
+ *  declarators stop being visible, and that is a set of names. */
+const patternBinders = (w: World) => {
+  const of = new Map<string, string[]>();
+  const add = (d: string, l: string) => of.set(d, [...(of.get(d) ?? []), l]);
+  for (const [d, l] of w.q('destructures[code](D, L, K, F)')) add(d, l);
+  for (const [d, l] of w.q('destructures_at[code](D, L, I, F)')) add(d, l);
+  for (const [d, , l] of w.q('rest_binds[code](D, R, L, F)')) add(d, l);
+  return w.q('scoped_binder[code](D, F)').map(([d]) => of.get(d))
+    .filter((x): x is string[] => x !== undefined)
+    .map((ls) => [...new Set(ls)].sort().join('+')).sort();
+};
+
 const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
   {
     name: 'e1 the value arm is deleted',
@@ -918,7 +959,15 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
         ['pullsTaken -> bolted', 'scoped -> fetched',
          'useDestructured -> pulled', 'useTakenFromRest -> caliper']);
       assert.deepEqual(bound(m), [], 'nothing is bound from a pattern any more');
-      assert.equal(b.n('scoped_binder[code](D, F)') - m.n('scoped_binder[code](D, F)'), 2);
+      // ...AND THE DECLARATORS THEMSELVES STOP BEING VISIBLE, by name. What
+      // survives is exactly the three that are ALSO reached by another arm —
+      // the two array patterns through `destructures_at` and the three rests
+      // through `rest_binds`, which keep the rest's own local and lose the keys
+      // the pattern took beside it.
+      assert.deepEqual(patternBinders(m),
+        ['exportedTool', 'firstOfCounter', 'firstTool+secondTool',
+         'leftovers', 'restDial', 'restOfKit']);
+      assert.ok(patternBinders(b).includes('fromDial+notch'), 'positive control');
     },
   },
   {
@@ -938,10 +987,18 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
         ['pullsTaken -> bolted', 'scoped -> fetched',
          'useDestructured -> pulled', 'useTakenFromRest -> caliper']);
-      assert.deepEqual(bound(b),
-        ['inner<-fetchIt', 'taken<-pulled', 'takenCaliper<-caliper', 'usedBolted<-bolted']);
-      assert.deepEqual(bound(m),
-        ['bolted<-usedBolted', 'caliper<-takenCaliper', 'fetchIt<-inner', 'pulled<-taken'],
+      // SIX OF THE TEN ARE RENAMES AND FOUR ARE SHORTHAND, and the shorthand
+      // ones are what the comment above is about: `notch<-notch` and
+      // `reading<-reading` read the same either way round, so a corpus of only
+      // those would let this mutant live. The renames are the discrimination.
+      assert.deepEqual(bound(b), [
+        'fromDial<-plain', 'fromShim<-broken', 'inner<-fetchIt',
+        'notch<-notch', 'notch<-notch', 'reading<-reading', 'taken<-pulled',
+        'takenCaliper<-caliper', 'topSpare<-spare', 'usedBolted<-bolted']);
+      assert.deepEqual(bound(m), [
+        'bolted<-usedBolted', 'broken<-fromShim', 'caliper<-takenCaliper',
+        'fetchIt<-inner', 'notch<-notch', 'notch<-notch', 'plain<-fromDial',
+        'pulled<-taken', 'reading<-reading', 'spare<-topSpare'],
         'read backwards');
     },
   },
@@ -969,15 +1026,19 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // THE HALF THE REFACTOR BOUGHT, and the column that tells it from e2: the
     // names are still bound, and they are visible to nobody.
     expect: (m, b) => {
-      // TWO AND NOT FOUR, which is the discrimination this mutant buys for
-      // free: the two declarators the rest fixtures added are ALSO
-      // `scoped_binder` through `rest_binds`, so deleting the `destructures`
-      // arm alone leaves them visible. e2, which stops the pattern being a
-      // pattern at all, loses all four.
+      // WHICH DECLARATORS SURVIVE IS THE DISCRIMINATION, and it is a set rather
+      // than the count that stood here: the ones reached by ANOTHER arm keep
+      // their whole binding — `notch+restDial` still names both, because
+      // `rest_binds` puts the declarator in `scoped_binder` and `destructures`
+      // is what named the key. e2, which stops the pattern being a pattern at
+      // all, keeps only `restDial` of that pair, and loses `fromDial+notch`,
+      // `fromShim`, `inner`, `reading`, `taken` and `topSpare` outright.
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
         ['scoped -> fetched', 'useDestructured -> pulled']);
       assert.deepEqual(bound(m), bound(b), 'the names are bound and unreachable');
-      assert.equal(b.n('scoped_binder[code](D, F)') - m.n('scoped_binder[code](D, F)'), 2);
+      assert.deepEqual(patternBinders(m),
+        ['exportedTool', 'firstOfCounter', 'firstTool+secondTool',
+         'leftovers+usedBolted', 'notch+restDial', 'restOfKit+takenCaliper']);
     },
   },
 ];
@@ -1002,8 +1063,16 @@ test('destructuring binds through the member, and only inside its region', () =>
   // object pattern in each file to carry a REST beside a taken key, and the
   // same rule binds their named halves. The set is written out rather than
   // counted for exactly this reason — a length would have absorbed them.
-  assert.deepEqual(bound(m),
-    ['inner<-fetchIt', 'taken<-pulled', 'takenCaliper<-caliper', 'usedBolted<-bolted'],
+  // TEN SINCE 2026-09-08: `w_destructuring_hides_a_call` put five more object
+  // patterns in alpha.mjs — two getter sources, a plain-property decoy and one at
+  // module scope — and four of the new rows are SHORTHAND, where the local and
+  // the key are the same word. The set is written out rather than counted for
+  // exactly this reason, and the shorthand rows are the ones mutant e4 cannot
+  // use.
+  assert.deepEqual(bound(m), [
+    'fromDial<-plain', 'fromShim<-broken', 'inner<-fetchIt',
+    'notch<-notch', 'notch<-notch', 'reading<-reading', 'taken<-pulled',
+    'takenCaliper<-caliper', 'topSpare<-spare', 'usedBolted<-bolted'],
     'local on the left, member key on the right');
   // ...AND THE KIND IS IN THE VOCABULARY NOW, which is what took the matrix
   // from reporting nothing about it to reporting four cells.
@@ -1065,7 +1134,8 @@ const FAMILY: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
         ['useFirstSlot -> chiselled', 'useSecondSlot -> planed']);
       assert.deepEqual(boundAt(m), [], 'and nothing is bound by position any more');
-      assert.deepEqual(boundAt(b), ['exportedTool<-0', 'firstTool<-0', 'secondTool<-1']);
+      assert.deepEqual(boundAt(b),
+        ['exportedTool<-0', 'firstOfCounter<-0', 'firstTool<-0', 'secondTool<-1']);
     },
   },
   {
@@ -1115,8 +1185,9 @@ const FAMILY: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
         ['pullsExcluded -> bolted']);
-      assert.deepEqual(restKeys(b), ['riveted', 'spanner']);
-      assert.deepEqual(restKeys(m), ['bolted', 'caliper', 'riveted', 'spanner']);
+      assert.deepEqual(restKeys(b), ['plain', 'riveted', 'spanner', 'spare']);
+      assert.deepEqual(restKeys(m),
+        ['bolted', 'caliper', 'notch', 'plain', 'riveted', 'spanner', 'spare']);
     },
   },
   {
@@ -1152,8 +1223,17 @@ const FAMILY: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
                                  ast_node[code](S, spread_element, _, _),
                                  ast_child[code](S, argument, 0, A), may_be_node[flow](A, Src),
                                  member_value[flow](Src, Key, V).`, replace: '' }],
-    expect: (m, b) => assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-      ['useObjectSpread -> spanner']),
+    // TWO SITES SINCE 2026-09-08 and they are two different questions about the
+    // same node: `useObjectSpread -> spanner` is a spread of a plain object and
+    // `useSpreadGetter -> latched` is a spread of one that owns getters, where
+    // the VALUE half is this arm and the TRANSFER half is `pattern_accessor` in
+    // rules/js-controlflow.rofl. Deleting this arm loses the value and leaves
+    // the two getter calls standing, which is what says they are separate.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['useObjectSpread -> spanner', 'useSpreadGetter -> latched']);
+      assert.ok(edges(m).has('useSpreadGetter -> notch'), 'the hidden calls are another rule');
+    },
   },
   {
     name: 'h10 an argument after a spread keeps its tree index',
@@ -1249,8 +1329,9 @@ test('the four remaining destructuring forms, answered and measured', () => {
   assert.equal(edges(m).has('pair -> cubed'), false, 'an argument after a spread claims nothing');
   assert.equal(edges(m).has('pullsExcluded -> bolted'), false, 'a rest excludes what the pattern took');
 
-  assert.deepEqual(boundAt(m), ['exportedTool<-0', 'firstTool<-0', 'secondTool<-1']);
-  assert.deepEqual(restKeys(m), ['riveted', 'spanner']);
+  assert.deepEqual(boundAt(m),
+    ['exportedTool<-0', 'firstOfCounter<-0', 'firstTool<-0', 'secondTool<-1']);
+  assert.deepEqual(restKeys(m), ['plain', 'riveted', 'spanner', 'spare']);
   assert.equal(names(m).has('fallbackMaker'), true, 'a default expression may not run');
 
   // THE KINDS ARE IN THE CORPUS NOW, which is what took `kind_absent_ok` from
@@ -1310,11 +1391,28 @@ test('the modules layer has no opinion about a destructuring form, measured', ()
   // under an export declaration. Without it `a_not_a_module_construct` would be
   // untestable by construction — a kind that never met an `export` cannot show
   // that meeting one changes nothing.
-  const underExport = m.q('ast_node[code](P, array_pattern, F, L)')
+  //
+  // THE QUERY DID NOT MEAN WHAT THE COMMENT SAYS, corrected 2026-09-08. It was
+  // CONTAINMENT — `ast_within(export, pattern)` — which is also true of every
+  // pattern written inside an EXPORTED FUNCTION, and it read `=== 1` and passed
+  // only because no exported function in the corpus destructured anything. One
+  // did the moment `export function useArrayPatternIter` landed, and the
+  // assertion went red about a fixture that has nothing to do with its subject.
+  // `directly under` means no function stands between, so that is what it asks
+  // now, and the two are told apart by NAME rather than by a count.
+  const patternName = (p: string) => m.q(`ast_within[code](${p}, C)`)
+    .map(([c]) => m.q(`ast_name[code](${c}, N)`)[0]?.[0]).filter(Boolean).join('+');
+  const inExport = m.q('ast_node[code](P, array_pattern, F, L)')
     .filter(([p]) => m.q('ast_node[code](E, export_named_declaration, F2, L2)')
       .some(([e]) => m.n(`ast_within[code](${e}, ${p})`) === 1));
-  assert.equal(underExport.length, 1, 'exactly one pattern under an export');
-  assert.ok(m.n('ast_node[code](P, array_pattern, F, L)') > 1,
+  const directly = inExport.filter(([p]) => m.q('fn_name[code](F, N)')
+    .every(([f]) => m.n(`ast_within[code](${f}, ${p})`) === 0));
+  assert.deepEqual(directly.map(([p]) => patternName(p)), ['exportedTool'],
+    'exactly one pattern DIRECTLY under an export, and it is the one written for this');
+  assert.deepEqual(inExport.filter((r) => !directly.includes(r)).map(([p]) => patternName(p)),
+    ['firstOfCounter'],
+    '...and the other is inside an exported FUNCTION, which is a different claim');
+  assert.ok(m.n('ast_node[code](P, array_pattern, F, L)') > 2,
     'positive control: patterns that are NOT under an export exist too');
 });
 
@@ -1350,6 +1448,22 @@ test('a destructuring form hides a call, measured by running one', () => {
   withDefault();                                      // 7. a default, omitted
   withDefault(9);                                     //    and supplied
 
+  // ...AND THE THREE NEGATIVE CASES, added 2026-09-08 when the item was worked.
+  // The seven above are all POSITIVE, so they measure that these syntaxes CAN
+  // transfer and say nothing about when. These three say the discriminator is
+  // the RECEIVER: over a plain array and a plain object the very same syntaxes
+  // run no user code at all — which is why every destructuring site that was in
+  // the corpus before this item could stand under `a_no_control_transfer` with
+  // no oracle able to contradict it.
+  // TAKEN BEFORE THE THREE, or the comparison is with itself and passes on any
+  // program whatever — the first draft of this control read `ran.length` after
+  // them and asserted nothing at all.
+  const beforePlain = ran.length;
+  const plainArr = [1, 2];
+  const [firstPlain] = plainArr;                      // 8. an array pattern
+  const plainCopy = [...plainArr];                    // 9. an array spread
+  const plainObj = { ...{ k: 1 } };                   // 10. an object spread
+
   // SIX TRANSFERS OUT OF SEVEN CASES, named rather than counted.
   assert.deepEqual(ran, [
     'array_pattern:iterator',       // [, second] = iterable
@@ -1364,18 +1478,33 @@ test('a destructuring form hides a call, measured by running one', () => {
   // an arm skipped by a condition, which `guard_kind` already models — and it
   // is why `assignment_pattern` is the one of the four this layer could close.
   assert.equal(ran.filter((w) => w === 'assignment_pattern:default').length, 1);
-  // ...and the other three transfer into a function the model cannot NAME,
-  // because naming it needs the receiver's iterator or its getter — a standard
-  // library this model does not have. Same shape as `accessor_call`, which the
-  // layer does model, and structurally out of `accessor_read`'s reach because
-  // none of these is a `member_expression`.
+  // ...AND THE OTHER THREE WERE HELD BACK FOR THE WRONG REASON, corrected
+  // 2026-09-08 by w_destructuring_hides_a_call. What stood here said they
+  // "transfer into a function the model cannot NAME, because naming it needs the
+  // receiver's iterator or its getter — a standard library this model does not
+  // have". The first half is right and the second is false twice over:
+  //   * MEASURED against the surface `w_env_api_surface` generated, with a
+  //     positive control, `lib_member(P, "iterator", R)` is ZERO under every
+  //     spelling — that surface is keyed by NAME and could never have answered
+  //     this, so the dependency was the wrong one rather than an unmet one;
+  //   * and the receivers in these seven cases are USER CODE, which
+  //     `accessor_of[flow]` and `member_value[flow](Obj, "iterator", M)` have
+  //     named since the accessor and for-of items. `pattern_accessor` and
+  //     `pattern_iterates` in rules/js-controlflow.rofl are the two rules, and
+  //     test/js-destructuring-transfer.test.ts holds their mutants.
+  // A STANDARD-LIBRARY RECEIVER IS STILL BEYOND IT — `[...[1, 2]]` iterates
+  // `Array.prototype[Symbol.iterator]`, which has no node here — and the three
+  // cases below say that costs nothing, because that iterator runs NO USER CODE
+  // and there is no edge to lose.
   assert.deepEqual([...new Set(ran)].sort(), [
     'array_pattern:iterator', 'assignment_pattern:default',
     'object_pattern:getter', 'rest_element:getter',
   ]);
+  assert.equal(ran.length, beforePlain, 'a plain array and a plain object run NOTHING');
   // the bindings are read so that no engine can elide the constructs above
   assert.deepEqual([second, taken, spreadCopy.taken, arrCopy.length, a, (rest as any).b],
     [2, 1, 1, 2, 1, 1]);
+  assert.deepEqual([firstPlain, plainCopy.length, plainObj.k], [1, 2, 1]);
 });
 
 // ---------------------------------------------------------------------------
