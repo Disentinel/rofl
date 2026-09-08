@@ -115,11 +115,11 @@ imports(audit, mind).
 -- so the crossing's DESTINATION is unnameable. `collects(X)` says "X gathers
 -- from books it does not name" and is the mirror image. The sentence this
 -- section said the language lacked -- "an unnamed reader may read a named
--- book" -- now exists as `publishes(A)`, declared by the SOURCE because the
+-- book" -- now exists as `exports(A, anyone)`, declared by the SOURCE because the
 -- source is the only named party. The workaround it refused,
 -- `imports($var("A"), world).`, was refused rightly: it licenses by the
 -- SPELLING OF THE VARIABLE, so renaming ?A to ?B would revoke it.
-publishes(world).
+exports(world, anyone).
 
 
 -- The simulator republishes these every tick, so at load time they are

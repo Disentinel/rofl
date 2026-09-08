@@ -512,15 +512,15 @@ knot(trefoil).
 -- refused and the refusal was right: it licenses by the SPELLING OF THE
 -- VARIABLE, so renaming ?G to ?H revokes a licence nothing about the program
 -- changed. What was missing was a sentence for the other side, and boot.rofl
--- now has it: `publishes(A)` says A's content may travel to a reader that has
--- no name to be granted. The declaration is the SOURCE's, because the source
+-- now has it: `exports(A, anyone)` says A's content may travel to a reader that
+-- has no name to be granted. The declaration is the SOURCE's, because the source
 -- is the only named party -- exactly the argument that makes `collects` the
 -- gatherer's.
 --
 -- ONE declaration clears both rows: the two-hop walk is discharged by the
--- source-side transitive clause, so `publishes($kernel)` is not needed and
+-- source-side transitive clause, so `exports($kernel, anyone)` is not needed and
 -- this demo never licenses the kernel's book.
-publishes(main).
+exports(main, anyone).
 --
 -- @rules
 

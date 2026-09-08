@@ -153,7 +153,7 @@ test('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and
     .map((x) => x.bindings['R']));
   const fromMain = reads('main');
   const fromKernel = reads('$kernel');
-  // TEN SINCE 2026-09-08: `published[audit]` reads `published_to`, which is
+  // TEN SINCE 2026-09-08: `exported[audit]` reads `exported_to`, which is
   // derived into [main] from `publishes` and `flow`, so the publication
   // instrument lands on the [main] side of this count exactly as
   // `widened[audit]` did the day before.

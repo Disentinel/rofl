@@ -433,11 +433,11 @@ widened[audit](Rel, P) :- negated_under(Rel, P),
 imports(P, Q)      @next :- imports(P, Q).
 collects(X)        @next :- collects(X).
 
--- And `publishes` is the third of the same kind, carried for the same reason
--- and found the same way: without this line npc reports 20 infinite counts at
--- tick 0 and 21 at tick 3, because the declaration expired at the boundary and
--- the leak it discharges came back. `f_a_ledger_declaration_expires_at_the_tick_boundary`.
-publishes(A)       @next :- publishes(A).
+-- And `exports` is the third of the same kind, carried for the same reason and
+-- found the same way: without this line npc reports 20 infinite counts at tick
+-- 0 and 21 at tick 3, because the declaration expired at the boundary and the
+-- leak it discharges came back. `f_a_ledger_declaration_expires_at_the_tick_boundary`.
+exports(A, W)      @next :- exports(A, W).
 
 -- ============ the nameless reader, appended below the cited region =========
 --
@@ -456,10 +456,26 @@ publishes(A)       @next :- publishes(A).
 -- variable and the licence withdraws in silence. A licence that is an accident
 -- wearing the clothes of a decision is worse than no licence.
 --
--- WHO DECLARES IT. `collects(X)` is declared by the gatherer, because the
--- gatherer is the only named party. Here the reader is the nameless one, so the
--- declaration belongs to the SOURCE: `publishes(A)` says A's content may travel
--- to a reader that has no name to be granted.
+-- WHO DECLARES IT, AND WHY IT IS `exports` AND NOT A NEW WORD. `collects(X)` is
+-- declared by the gatherer, because the gatherer is the only named party. Here
+-- the reader is the nameless one, so the declaration belongs to the SOURCE.
+-- That is EXPORT: `imports(To, From)` is the reader's declared intent and
+-- `exports(From, To)` is the permission from the side being taken from, which
+-- `f_export_precedes_import_so_the_check_belongs_at_load` already names and
+-- which is authenticated where a reader's declaration is not -- only a holder
+-- of `authority` over A can write a fact into A's book.
+--
+-- `exports(A, anyone)` is the NAMELESS-READER case of that one relation, not a
+-- second mechanism: when the reader has a name the second argument carries it,
+-- and when it cannot have one the reader is `anyone`. THE NAMED HALF IS NOT
+-- BUILT HERE and stays the owner's open decision, together with whether the
+-- check becomes a load-time REFUSAL rather than an audit row.
+--
+-- AND `anyone` IS NOT A BLANKET, deliberately: `not perspective(B)` below keeps
+-- it to readers that have no name to be granted, so a crossing into a
+-- REGISTERED book still needs `imports`. Widening it to cover named readers
+-- would turn one declaration into an off switch for a book's outgoing
+-- crossings, and that is a decision rather than a generalisation.
 --
 -- TRANSITIVE ON THE SOURCE SIDE, AND ONLY OVER WALKS THAT WERE LICENSED.
 -- `collects` carries `gathered(A, B) :- collects_from(X, A), flows_to(X, B)`
@@ -467,7 +483,7 @@ publishes(A)       @next :- publishes(A).
 -- that reached a publisher travels on to that publisher's nameless readers,
 -- because publishing is a statement about what the book HOLDS and a book holds
 -- what it imported. The clause is needed and measured: goof leaks
--- `$kernel -> $var("G")` as a TWO-HOP walk through main, and `publishes(main)`
+-- `$kernel -> $var("G")` as a TWO-HOP walk through main, and `exports(main, anyone)`
 -- alone left it standing.
 --
 -- THE PREMISE IS `sees(X, A)` AND NOT `flows_to(A, X)`, AND THE DIFFERENCE IS
@@ -483,12 +499,12 @@ publishes(A)       @next :- publishes(A).
 -- reader has no licences to travel under and no name to travel as, so nothing
 -- can be carried onward from it. A clause for that would license a hop whose
 -- far end this rule cannot see.
-edb(publishes).
-published_to(A, B)    :- publishes(A), flow(A, B), A != B, not perspective(B).
-published[audit](A)   :- published_to(A, _).
+edb(exports).
+exported_to(A, B)     :- exports(A, anyone), flow(A, B), A != B, not perspective(B).
+exported[audit](A)    :- exported_to(A, _).
 -- ONE CLAUSE, NOT TWO. `gathered(A, B) :- published_to(A, B).` was written
 -- first and is DEAD: `sees(P, P) :- perspective(P)` is reflexive, so the clause
 -- below already gives it with X = A. Measured by removing it -- goof and npc
 -- stay at leak 0 -- rather than reasoned about, and removed rather than kept
 -- for symmetry.
-gathered(A, B)        :- sees(X, A), published_to(X, B).
+gathered(A, B)        :- sees(X, A), exported_to(X, B).

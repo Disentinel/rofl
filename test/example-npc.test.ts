@@ -63,7 +63,7 @@ const WATCH = [
  *  ?A to ?B would revoke it.
  *
  *  `publishes(A)` is that missing sentence, declared by the SOURCE because the
- *  source is the only named party. npc declares `publishes(world).` and the row
+ *  source is the only named party. npc declares `exports(world, anyone).` and the row
  *  is gone -- for a stated reason, which is why this stays an exact set rather
  *  than becoming an `ok(length === 0)`: it goes red if a second leak appears
  *  AND if this one comes back, and the emptiness has to keep being earned by a

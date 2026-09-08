@@ -325,8 +325,8 @@ test('hygiene — MOOT condemns a dead audit and spares the retained one', () =>
   // subject is unreachable here, and alive the moment a program says
   // `collects(X)`. The `imports` half is NOT on the list, because boot.rofl
   // writes three import rows of its own.
-  // `published` and `published_to` join for the same reason, 2026-09-08.
-  assert.match(t, /unreachable relations: collected collects collects_from demands_authorship gathered published published_to publishes unattributed/);
+  // `published` and `exported_to` join for the same reason, 2026-09-08.
+  assert.match(t, /unreachable relations: collected collects collects_from demands_authorship exported exported_to exports gathered unattributed/);
   assert.doesNotMatch(t, /unreachable relations:[a-z_ ]*\bimports\b/,
     'imports is populated by boot.rofl now — a licence nobody writes is what this list is for');
   assert.match(t, /rules that can never fire in this store: 10/);

@@ -87,7 +87,7 @@ test('a rule uniform in the ledger is no leak, and the audit no longer bites', (
   //
   // `publishes(A)` is the sentence that was missing -- the mirror of
   // `collects`, declared by the SOURCE because the source is the only named
-  // party. ONE declaration, `publishes(main).`, clears both rows: the two-hop
+  // party. ONE declaration, `exports(main, anyone).`, clears both rows: the two-hop
   // walk goes to the source-side transitive clause, so this demo never has to
   // license the kernel's book. Finding
   // `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`.
@@ -96,7 +96,7 @@ test('a rule uniform in the ledger is no leak, and the audit no longer bites', (
   // DECLARED reason, and this goes red if the audit stops looking as much as
   // if a new walk appears.
   assert.deepEqual(pairs(r, 'leak[audit](A, B)', 'A', 'B'), []);
-  assert.ok(r.holds('published[audit](main)'),
+  assert.ok(r.holds('exported[audit](main)'),
     'the publication declaration was EXERCISED, not merely written');
   // and what the DECLARATION is worth is the difference between that set and
   // the one without it: the three walks out of a ledger variable are silent.
