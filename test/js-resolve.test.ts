@@ -287,10 +287,27 @@ test('census: every place is enumerated, every place is spoken about', () => {
   assert.ok(tries > 20, `node was actually made to search: ${tries} candidates`);
   assert.ok(answers > 0 && failed > 0 && unasked > 0, 'all three verdicts occur');
 
-  // the `checked` rows are a count, and a count that nobody re-derives rots
+  // THE `checked` ROWS ARE A COUNT, AND A COUNT THAT NOBODY RE-DERIVES ROTS —
+  // so they are compared PER KIND against what the referee actually joined.
+  // Until 2026-09-08 this compared the import_declaration row against the total
+  // number of literal places, which happened to be equal only because every
+  // place with a literal specifier was an import; `checked_site_kind[audit]`
+  // was added with the re-export forms so the identity is per kind and stays
+  // true when a third kind of place exists.
+  const perKind = new Map<string, number>();
+  for (const row of ask(W, 'checked_site_kind[audit](K, S)').rows) {
+    const k = row.bindings['K'] ?? '?';
+    perKind.set(k, (perKind.get(k) ?? 0) + 1);
+  }
   const decl = col(W, 'checked(js, K, modules, R, o_node_resolver_traced, N)', 'K', 'N');
   console.log('  checked rows:', decl.join(' ; '));
-  assert.deepEqual(decl, [`import_declaration | ${literal}`, `import_expression | ${computed}`]);
+  console.log('  places the referee joined, by kind:',
+    [...perKind].map(([k, v]) => `${k} ${v}`).sort().join(', '));
+  assert.deepEqual(decl, [...perKind.entries()].map(([k, n]) => `${k} | ${n}`).sort(),
+    'every `checked` row states the number of places of that kind the referee compared');
+  assert.equal([...perKind.values()].reduce((a, b) => a + b, 0), places,
+    'and they sum to every place, so no kind is missing a row');
+  assert.ok(perKind.size >= 4, `all four site kinds occur: ${[...perKind.keys()].sort().join(', ')}`);
 });
 
 test('every declared mechanism occurs, and every mechanism that occurs is declared', () => {

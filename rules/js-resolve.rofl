@@ -209,8 +209,20 @@ env_undeclared[audit](Env) :- env_ran(Env), not env_declared(Env).
 model_site_known[audit](S) :- model_site[audit](S, _).
 site_unseen_by_model[audit](S) :- resolve_place[code](S), not model_site_known[audit](S).
 
+-- `module_site` AND NOT `import_site`, corrected 2026-09-08. The rule model
+-- grew two more kinds of place — a re-export names a module and node resolves
+-- its specifier by exactly the import's rules — and a gate reading the narrower
+-- relation would have gone on comparing two enumerations that were blind to the
+-- same forms, which is agreement about a set neither side contained.
 host_saw[audit](I) :- model_site[audit](_, I).
-site_unseen_by_host[audit](I) :- import_site[code](I, _), not host_saw[audit](I).
+site_unseen_by_host[audit](I) :- module_site[code](I, _), not host_saw[audit](I).
+
+-- WHICH KIND OF PLACE THE REFEREE ACTUALLY COMPARED. The `checked` ledger is
+-- keyed on the kind and the observer's own enumeration is not, so without this
+-- the ledger's per-kind counts can only be checked against a total — and a
+-- number nobody re-derives rots. The join is through `model_site`, so a place
+-- the two enumerations did not agree on is absent here rather than counted.
+checked_site_kind[audit](K, S) :- model_site[audit](S, I), site_kind[code](I, K).
 
 -- ...and the key itself. (file, line, specifier) is a key only as long as no
 -- two sites share all three; if that stops holding, the join above silently

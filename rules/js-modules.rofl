@@ -54,26 +54,49 @@ edb(shape_verdict).     -- shape_verdict(Shape, Reason)
 edb(unknown_because).   -- unknown_because(Lang, Kind, Layer, Reason)
 
 -- ---------------------------------------------------------------------------
--- 1. IMPORT SITES
+-- 1. THE PLACES A MODULE SPECIFIER OCCURS
 --
--- Two node kinds carry a module specifier. `export { q } from './d'` is a
--- third and is NOT modelled here — see facts/js-modules.rofl for the verdict.
+-- FOUR NODE KINDS, not two, and until 2026-09-08 this section said two.
+-- w_mod_beyond_the_import is the item that closes the gap, and the measurement
+-- that opened it is in facts/worklist.rofl: on this fixture tree
+-- `export * as everything from './b.ts'` and `export * from './types2.ts'`
+-- produced ZERO sites while fifteen ordinary imports produced fifteen. The
+-- nodes were in the tree; this section did not look at them.
 
 import_site[code](I, static_import)  :- ast_node[code](I, import_declaration, _, _).
 import_site[code](I, dynamic_import) :- ast_node[code](I, import_expression, _, _).
 
+-- A RE-EXPORT IS A SITE BECAUSE IT HAS A `source`, NOT BECAUSE OF ITS KIND.
+-- `export { a as b }` and `export { a as b } from './d'` are the SAME node
+-- kind — measured from the scanner, both `export_named_declaration` — and only
+-- the second names another module. So the discriminator is the child, and a
+-- rule keyed on the kind alone would make every local export list a module
+-- edge to nowhere.
+reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declaration, _, _),
+                                          ast_child[code](E, source, 0, _).
+reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declaration, _, _),
+                                          ast_child[code](E, source, 0, _).
+
+-- ...AND THE UNION, which is what every rule below the specifier question
+-- reads. `import_site` keeps its meaning — section 4 binds LOCAL names and a
+-- re-export introduces none — so the two relations are not merged.
+module_site[code](N, K) :- import_site[code](N, K).
+module_site[code](N, K) :- reexport_site[code](N, K).
+
 site_kind[code](I, import_declaration) :- ast_node[code](I, import_declaration, _, _).
 site_kind[code](I, import_expression)  :- ast_node[code](I, import_expression, _, _).
+site_kind[code](E, export_named_declaration) :- reexport_site[code](E, reexport_named).
+site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).
 
 -- the importing file, straight off the node the site is
-site_file[code](I, F) :- import_site[code](I, _), ast_node[code](I, _, F, _).
+site_file[code](I, F) :- module_site[code](I, _), ast_node[code](I, _, F, _).
 
 -- the line, so a site can be named the way a person names one and the oracle
 -- probe can key on (file, line, specifier) without seeing a node id
-site_line[code](I, L) :- import_site[code](I, _), ast_node[code](I, _, _, L).
+site_line[code](I, L) :- module_site[code](I, _), ast_node[code](I, _, _, L).
 
 -- the source expression, whatever it turns out to be
-site_source_node[code](I, Src) :- import_site[code](I, _), ast_child[code](I, source, 0, Src).
+site_source_node[code](I, Src) :- module_site[code](I, _), ast_child[code](I, source, 0, Src).
 
 -- ...and its VALUE, when it is a string literal
 site_source[code](I, S) :- site_source_node[code](I, Src),
@@ -349,6 +372,86 @@ evaluates[code](F, T) :- no_specifiers[code](I), not decl_type_only[code](I),
                          resolved_import[code](I, T), site_file[code](I, F).
 
 -- ---------------------------------------------------------------------------
+-- 5b. THE RE-EXPORT EDGE — the same three relations, reached through a
+--     DIFFERENT set of markers, and that is why it is its own section.
+--
+-- `depends` needed nothing: it reads `resolved_import` and `site_file`, both of
+-- which section 1 now feeds from `module_site`, so a re-export became a
+-- dependency edge the moment the site existed. FLOWS and EVALUATES did need
+-- rules, because the two erasure markers sit on different nodes for an export
+-- than for an import and one of the four forms has no specifier to carry one.
+--
+-- MEASURED FROM THE SCANNER on a probe holding all six forms, rather than
+-- recalled — and the fourth line is the one a specifier-only reader gets wrong:
+--
+--   export { a as b } from './m'      decl "value", ExportSpecifier "value"
+--   export * from './m'               ExportAllDeclaration "value", NO specifier
+--   export * as ns from './m'         decl "value", ExportNamespaceSpecifier with
+--                                       NO exportKind attribute at all
+--   export type { T as U } from './m' decl "type",  ExportSpecifier "VALUE"
+--   export { type T as U } from './m' decl "value", ExportSpecifier "type"
+--   export type * from './m'          ExportAllDeclaration "type", NO specifier
+--
+-- So the export-all forms carry their marker on the DECLARATION and have no
+-- specifier to look at, and the named forms carry it in both places with
+-- neither implying the other — which is section 5's trap arriving a second time
+-- through a different grammar. Both negations are separately mutated.
+
+reexport_spec[code](E, Sp) :- reexport_site[code](E, reexport_named),
+                              ast_child[code](E, specifiers, _, Sp).
+
+-- a re-exported name that survives to runtime. `export_decl_type_only` and
+-- `export_spec_type_only` are section 4b's, read off `export_kind` and blind to
+-- the kind of node they are asked about, so they hold of an ExportAll-
+-- Declaration too and this section does not need a second pair.
+reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),
+                                    not export_decl_type_only[code](E),
+                                    not export_spec_type_only[code](Sp).
+
+reexport_value[code](E) :- reexport_value_spec[code](E, _).
+reexport_value[code](E) :- reexport_site[code](E, reexport_all),
+                           not export_decl_type_only[code](E).
+
+has_reexport_spec[code](E)      :- reexport_spec[code](E, _).
+no_reexport_specifiers[code](E) :- reexport_site[code](E, reexport_named),
+                                   not has_reexport_spec[code](E).
+
+flows[code](F, T) :- reexport_value[code](E),
+                     resolved_import[code](E, T), site_file[code](E, F).
+
+-- `export {} from './side.ts'` IS THE SIDE-EFFECT IMPORT'S TWIN, and it is the
+-- reason this arm exists rather than being folded into `flows`. MEASURED at
+-- run time on node 24 rather than argued from the specification: a module whose
+-- only mention of `./side.mjs` is `export {} from './side.mjs'` prints
+-- side.mjs's own `console.log` when it is imported. Nothing flows across the
+-- edge and the file runs, which is exactly the pair DEPENDS and FLOWS cannot
+-- tell apart.
+evaluates[code](F, T) :- no_reexport_specifiers[code](E), not export_decl_type_only[code](E),
+                         resolved_import[code](E, T), site_file[code](E, F).
+
+-- THE JOIN, and it is the sentence this item exists for. The resolver says
+-- which FILE a specifier names; the specifier says which name in that file the
+-- external one stands for. Neither half is new — section 3 walked the disk and
+-- section 4b read `local` and `exported` — and putting them together is one
+-- rule, so a name this module offers now reaches the module it comes FROM.
+--
+-- WHAT IT DELIBERATELY DOES NOT SAY. `export * from './m'` offers every name
+-- `m` exports and this layer does not know what those are: an export list is a
+-- fact about the OTHER file's body, which is `exports_name[code]` in
+-- rules/js-dataflow.rofl and not a module-graph question. The edge is here; the
+-- names that ride it are there.
+-- AND `"*"` IN THE INTERNAL COLUMN IS NOT A SPECIAL CASE HERE, which is the
+-- one thing that kept this to a single rule. `export * as ns from './m'` offers
+-- the MODULE and not a name in it, and section 4b already writes `"*"` for
+-- exactly that — as section 4 does for an ImportNamespaceSpecifier's imported
+-- name. So `spec_internal` answers for both specifier forms and this rule reads
+-- it rather than splitting on the node kind a second time.
+reexport_offers[code](F, External, T, Internal) :-
+    reexport_value_spec[code](E, Sp),
+    spec_external[code](Sp, External), spec_internal[code](Sp, Internal),
+    resolved_import[code](E, T), site_file[code](E, F).
+
+-- ---------------------------------------------------------------------------
 -- 6. THE FRONTIER, AS A POSITIVE RELATION
 --
 -- Every site is resolved or unresolved-with-a-shape. Nothing falls out of the
@@ -360,7 +463,7 @@ unresolved_import[code](I, computed) :- site_source_computed[code](I).
 accounted[audit](I) :- resolved_site[code](I).
 accounted[audit](I) :- unresolved_import[code](I, _).
 
-unaccounted_site[audit](I) :- import_site[code](I, _), not accounted[audit](I).
+unaccounted_site[audit](I) :- module_site[code](I, _), not accounted[audit](I).
 
 -- ---------------------------------------------------------------------------
 -- 7. THE AUDIT — the model checked against itself.
@@ -375,6 +478,16 @@ unaccounted_site[audit](I) :- import_site[code](I, _), not accounted[audit](I).
 -- nothing would say the model had promised otherwise.
 resolve_gap[audit](I, Sh) :- unresolved_import[code](I, Sh), shape_verdict(Sh, resolves),
                              not dangling_import[code](I, _).
+
+-- A SITE WHOSE KIND NO RULE NAMES. `reason_missing`, `reason_unexercised` and
+-- the `checked` ledger are all keyed on `site_kind`, so a site outside it
+-- leaves the frontier bookkeeping without moving a single row of it — which is
+-- the exact shape of the defect w_mod_beyond_the_import closed: the re-export
+-- forms were outside `import_site`, so no gate in this section could see them
+-- and every one of them read zero. Written as the complement of a positive
+-- relation for the same reason `unaccounted_site` is.
+has_site_kind[audit](I)     :- site_kind[code](I, _).
+site_without_kind[audit](I) :- module_site[code](I, _), not has_site_kind[audit](I).
 
 -- shape must be a FUNCTION of the specifier: exactly one, never two
 shape_conflict[audit](I, A, B) :- site_shape[code](I, A), site_shape[code](I, B), A != B.

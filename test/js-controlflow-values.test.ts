@@ -1266,16 +1266,23 @@ test('the modules layer has no opinion about a destructuring form, measured', ()
   // them, and it holds — but the enumeration pins somebody else's file, so it
   // moves whenever they work. The loop is the part that measures; this list is
   // the part that has to be re-read.
+  // ELEVEN SINCE 2026-09-08: `export_all_declaration` arrived from
+  // w_mod_beyond_the_import, which made a re-export a module site. Fourth
+  // element added from another branch, and the note above still holds — the
+  // CLAIM is the loop below and it is untouched; the enumeration pins somebody
+  // else's file and has to be re-read whenever they work.
   assert.deepEqual([...named].sort(), [
-    '_', 'export_named_declaration', 'export_namespace_specifier',
-    'export_specifier', 'import_declaration', 'import_default_specifier',
-    'import_expression', 'import_namespace_specifier', 'import_specifier',
-    'string_literal',
+    '_', 'export_all_declaration', 'export_named_declaration',
+    'export_namespace_specifier', 'export_specifier', 'import_declaration',
+    'import_default_specifier', 'import_expression',
+    'import_namespace_specifier', 'import_specifier', 'string_literal',
   ], 'every kind the modules pack names, and not one of them is a pattern');
   // THE WILDCARD IS NOT A HOLE, and it was read rather than assumed: both `_`
   // occurrences are `site_file` and `site_line`, and each carries
-  // `import_site[code](I, _)` on the SAME node in the same body, so neither
-  // ranges over anything an import site is not.
+  // `module_site[code](I, _)` on the SAME node in the same body, so neither
+  // ranges over anything a module site is not. (`import_site` until
+  // 2026-09-08; the premise is the union of the import and re-export halves
+  // now and the argument is word for word the same.)
   for (const k of ['array_pattern', 'assignment_pattern', 'rest_element', 'spread_element',
                    'object_pattern']) assert.equal(named.has(k), false);
 

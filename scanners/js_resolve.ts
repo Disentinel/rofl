@@ -279,7 +279,23 @@ export interface Site {
   line: number;
   /** null where the specifier is not a string literal */
   spec: string | null;
+  /** the AST node type, snake_cased, so a caller can group the sites the way
+   *  the ledger's `checked` rows are keyed without re-parsing */
+  kind: string;
 }
+
+/** FOUR NODE TYPES, not two, since 2026-09-08 (w_mod_beyond_the_import). A
+ *  re-export names another module and node resolves its specifier by exactly
+ *  the same rules as an import's — nothing below the collection changes. Until
+ *  the modules layer derived those sites, `site_unseen_by_host[audit]` compared
+ *  two enumerations that were both blind to the same four forms, so the referee
+ *  agreed about a set it did not contain. */
+const SITE_KIND: Record<string, string> = {
+  ImportDeclaration: 'import_declaration',
+  ImportExpression: 'import_expression',
+  ExportNamedDeclaration: 'export_named_declaration',
+  ExportAllDeclaration: 'export_all_declaration',
+};
 
 export function sitesOf(root: string, files: string[]): Site[] {
   const out: Site[] = [];
@@ -291,11 +307,16 @@ export function sitesOf(root: string, files: string[]): Site[] {
       if (Array.isArray(n)) { for (const x of n) walk(x); return; }
       const o = n as Record<string, unknown> & { type?: string; loc?: { start?: { line?: number } } };
       if (typeof o.type !== 'string') return;
-      if (o.type === 'ImportDeclaration' || o.type === 'ImportExpression') {
-        const src = o['source'] as { type?: string; value?: string } | undefined;
-        const spec = src?.type === 'StringLiteral' ? (src.value ?? null) : null;
+      const kind = SITE_KIND[o.type];
+      const src = o['source'] as { type?: string; value?: string } | null | undefined;
+      // A SITE IS A NODE WITH A `source`, AND `null` IS NOT ONE. Measured:
+      // babel gives a LOCAL export list `source: null` rather than omitting the
+      // key, so `export { a as b }` and `export { a as b } from './d'` differ by
+      // the VALUE of that key and not by its presence. An import always has one.
+      if (kind !== undefined && src !== undefined && src !== null) {
+        const spec = src.type === 'StringLiteral' ? (src.value ?? null) : null;
         const line = o.loc?.start?.line ?? 0;
-        out.push({ key: `${f}:${line}:${spec ?? '<computed>'}`, file: f, line, spec });
+        out.push({ key: `${f}:${line}:${spec ?? '<computed>'}`, file: f, line, spec, kind });
       }
       for (const k of Object.keys(o)) if (k !== 'loc') walk(o[k]);
     };

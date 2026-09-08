@@ -202,7 +202,7 @@ const MODEL_R = build();
 // 1. THE CENSUS
 
 test('census: every import site is accounted for, and the buckets partition', () => {
-  const sites = count(MODEL_R, 'import_site[code](I, K)');
+  const sites = count(MODEL_R, 'module_site[code](I, K)');
   const literal = count(MODEL_R, 'site_source[code](I, S)');
   const computed = count(MODEL_R, 'site_source_computed[code](I)');
   const shaped = count(MODEL_R, 'site_shape[code](I, Sh)');
@@ -228,6 +228,16 @@ test('census: every import site is accounted for, and the buckets partition', ()
   // above are not the trivially-true ones
   assert.ok(sites >= 15 && files >= 10 && unresolved >= 3, `nontrivial: ${sites}/${files}/${unresolved}`);
   assert.equal(byShape.size, 4, 'all four literal shapes occur in the fixtures');
+
+  // ...AND THE PARTITION OF THE SITES THEMSELVES, 2026-09-08. `module_site` is
+  // the union of two relations now and this is what says so: the import half
+  // and the re-export half sum to it with nothing in both and nothing outside.
+  // Written as a partition rather than as two counts because a site that fell
+  // out of `import_site` into `reexport_site` would move neither total.
+  const imports = count(MODEL_R, 'import_site[code](I, K)');
+  const reexports = count(MODEL_R, 'reexport_site[code](I, K)');
+  assert.equal(imports + reexports, sites, 'a site is an import or a re-export, and not both');
+  assert.ok(reexports > 0, 'positive control: the re-export half is populated');
 });
 
 test('DEPENDS is potential, FLOWS is actual, EVALUATES is the third thing', () => {
@@ -259,6 +269,70 @@ test('DEPENDS is potential, FLOWS is actual, EVALUATES is the third thing', () =
   assert.ok(has(depends, 'a.ts', 'side.ts'), 'side-effect import DEPENDS');
   assert.ok(!has(flows, 'a.ts', 'side.ts'), 'side-effect import has no value to flow');
   assert.ok(has(evaluates, 'a.ts', 'side.ts'), 'side-effect import IS evaluated');
+});
+
+// ---------------------------------------------------------------------------
+// THE RE-EXPORT EDGE (w_mod_beyond_the_import, 2026-09-08)
+//
+// exp.ts is the one file in this tree that imports NOTHING, which is what makes
+// the assertion below a statement about re-exports and about nothing else: an
+// edge out of exp.ts can only have come from an `export ... from`.
+
+/** every edge OUT of exp.ts, as `relation target`, which is the whole cell.
+ *  A named set and not a count, and its elements carry no line number, so a
+ *  declaration appended anywhere in the file moves none of them. */
+const expEdges = (r: Rofl): string[] => [
+  ...bind(r, 'depends[code]("exp.ts", T)', 'T').map((t) => `depends ${t}`),
+  ...bind(r, 'flows[code]("exp.ts", T)', 'T').map((t) => `flows ${t}`),
+  ...bind(r, 'evaluates[code]("exp.ts", T)', 'T').map((t) => `evaluates ${t}`),
+].sort();
+
+test('a re-export is a module edge, and the three relations still separate', () => {
+  // THE MEASUREMENT THIS CLOSES, re-taken on this tree before the rule was
+  // written: `import_site` 17, `depends` 10, and exp.ts in NEITHER — while two
+  // declarations in it carried a `source` child the scanner had already emitted.
+  assert.deepEqual(expEdges(MODEL_R), [
+    // `export { helper as reHelper } from './c.ts'` — a value crosses
+    'depends c.ts', 'evaluates c.ts', 'flows c.ts',
+    // `export * as everything from './b.ts'` — the namespace re-export
+    'depends b.ts', 'evaluates b.ts', 'flows b.ts',
+    // `export * from './types2.ts'` — the plain export-all
+    'depends types2.ts', 'evaluates types2.ts', 'flows types2.ts',
+    // `export {} from './side.ts'` — a source with no specifiers. MEASURED at
+    // run time: node evaluates the target and nothing crosses.
+    'depends side.ts', 'evaluates side.ts',
+    // `export type { T1 as ReT1 } from './types.ts'` — the DECLARATION marker
+    'depends types.ts',
+    // `export { type T4 as ReT4 } from './types3.ts'` — the SPECIFIER marker
+    'depends types3.ts',
+    // `export type * from './types4.ts'` — the export-all's own marker, on a
+    // declaration that has no specifier to carry one
+    'depends types4.ts',
+  ].sort(), 'every edge out of the one file in this tree that imports nothing');
+});
+
+test('the JOIN: a re-exported name reaches the module it comes FROM', () => {
+  // The two halves both already existed — section 3 walks the disk, section 4b
+  // reads `local` and `exported` — and this is the row that puts them together.
+  const offers = bind(MODEL_R, 'reexport_offers[code](F, X, T, L)', 'F', 'X', 'T', 'L');
+  console.log('\n  reexport_offers:', offers.join(' ; '));
+  assert.deepEqual(offers, [
+    // the external name is NOT the internal one, and the internal one is a name
+    // in the OTHER file: `helper` is c.ts's, and exp.ts has no such binding
+    'exp.ts|reHelper|c.ts|helper',
+    // `"*"` in the internal column is the module itself, which is the spelling
+    // section 4 already uses for an ImportNamespaceSpecifier
+    'exp.ts|everything|b.ts|*',
+  ].sort());
+
+  // ...and the erased ones are ABSENT, which is the half a rule that joined on
+  // the source alone would get wrong: three more re-export specifiers exist in
+  // the same file and not one of them offers a name at run time.
+  const offered = new Set(offers.map((o) => o.split('|')[1]));
+  for (const gone of ['ReT1', 'ReT4']) assert.equal(offered.has(gone), false, `${gone} is erased`);
+  // positive control on the filter: those names really are export bindings
+  const bound = new Set(bind(MODEL_R, 'export_binding[code](E, Sp, X, L)', 'X'));
+  for (const gone of ['ReT1', 'ReT4']) assert.ok(bound.has(gone), `${gone} IS a binding`);
 });
 
 test('all four specifier kinds bind a local name to an imported one', () => {
@@ -293,7 +367,22 @@ type Verdict =
   | { k: 'external'; where: string } | { k: 'computed' } | { k: 'throws'; code: string };
 
 /** The oracle enumerates its OWN sites. Taking the site list from the model
- *  would make a site the model never saw impossible to report as a miss. */
+ *  would make a site the model never saw impossible to report as a miss.
+ *
+ *  FOUR NODE TYPES SINCE 2026-09-08 (w_mod_beyond_the_import), and the walk had
+ *  to grow with the model rather than after it: the model started deriving
+ *  re-export sites, and an oracle that still enumerated two node types would
+ *  have reported five real places as sites the model invented. What makes the
+ *  extension honest rather than convenient is that node's resolver needs no
+ *  change at all — `createRequire().resolve` answers a re-export's specifier
+ *  exactly as it answers an import's, so only the collection differs. */
+const SITE_KIND: Record<string, string> = {
+  ImportDeclaration: 'import_declaration',
+  ImportExpression: 'import_expression',
+  ExportNamedDeclaration: 'export_named_declaration',
+  ExportAllDeclaration: 'export_all_declaration',
+};
+
 function oracleSites(root: string, files: string[]): OracleSite[] {
   const out: OracleSite[] = [];
   for (const f of files) {
@@ -304,12 +393,19 @@ function oracleSites(root: string, files: string[]): OracleSite[] {
       if (Array.isArray(n)) { for (const x of n) walk(x); return; }
       const o = n as Record<string, unknown> & { type?: string; loc?: { start?: { line?: number } } };
       if (typeof o.type !== 'string') return;
-      if (o.type === 'ImportDeclaration' || o.type === 'ImportExpression') {
-        const src = o['source'] as { type?: string; value?: string } | undefined;
+      const kind = SITE_KIND[o.type];
+      const src = o['source'] as { type?: string; value?: string } | undefined;
+      // A SITE IS A NODE WITH A `source`, and `null` is not one — measured, and
+      // the first draft here read `!== undefined` and collected 28 export
+      // declarations where five have a specifier. babel gives a LOCAL export
+      // list `source: null` rather than omitting the key, so
+      // `export { a as b }` and `export { a as b } from './d'` differ by the
+      // VALUE of that key and not by its presence. An import always has one.
+      if (kind !== undefined && (src !== undefined && src !== null)) {
         out.push({
           file: f, line: o.loc?.start?.line ?? 0,
           spec: src?.type === 'StringLiteral' ? (src.value ?? null) : null,
-          kind: o.type === 'ImportDeclaration' ? 'import_declaration' : 'import_expression',
+          kind,
         });
       }
       for (const k of Object.keys(o)) if (k !== 'loc') walk(o[k]);
@@ -349,7 +445,7 @@ function modelVerdicts(r: Rofl): Map<string, string> {
   const key = (i: string): string => `${fileOf.get(i) ?? '?'}:${line.get(i) ?? '?'}:${specOf.get(i) ?? '<computed>'}`;
 
   const out = new Map<string, string>();
-  for (const row of r.query('import_site[code](I, K)').rows) out.set(key(row.bindings['I'] ?? ''), 'nothing');
+  for (const row of r.query('module_site[code](I, K)').rows) out.set(key(row.bindings['I'] ?? ''), 'nothing');
   for (const row of r.query('unresolved_import[code](I, Sh)').rows)
     out.set(key(row.bindings['I'] ?? ''), `declined ${row.bindings['Sh'] ?? '?'}`);
   for (const row of r.query('resolved_builtin[code](I, S)').rows)
@@ -403,7 +499,7 @@ test('ORACLE: node resolves; the model resolves; set for set, both directions', 
   // POSITIVE CONTROL FIRST. An empty comparison is a fact about the probe
   // until it is shown to be a fact about the model.
   assert.ok(c.sitesSeen > 0, 'the oracle saw import sites at all');
-  assert.equal(c.sitesSeen, count(MODEL_R, 'import_site[code](I, K)'),
+  assert.equal(c.sitesSeen, count(MODEL_R, 'module_site[code](I, K)'),
     'oracle and model enumerate the SAME NUMBER of sites — a site the model never saw would show here');
   assert.ok(c.agree.length > 0, 'the comparison found agreements, so it is capable of comparing');
 
@@ -430,6 +526,22 @@ test('ORACLE: node resolves; the model resolves; set for set, both directions', 
   assert.equal(declared.length, 2, 'bare and subpath, both declared, both real');
   assert.ok(declared.some((u) => u.line.includes('@babel/parser') && u.shape === 'bare'));
   assert.ok(declared.some((u) => u.line.includes('#sub') && u.shape === 'subpath'));
+});
+
+test('the `checked` ledger is RE-DERIVED from the oracle, per site kind', () => {
+  // A number nobody re-derives rots, and these four are numbers: they say how
+  // many sites of each kind were put to node's own resolver. Deriving them here
+  // is what makes them a claim about this run rather than a memory of an
+  // earlier one — and it is how the two new rows were arrived at rather than
+  // counted by hand.
+  const seen = new Map<string, number>();
+  for (const s of oracleSites(ROOT, FILES)) seen.set(s.kind, (seen.get(s.kind) ?? 0) + 1);
+  const ledger = new Map<string, number>();
+  for (const row of MODEL_R.query('checked(js, K, modules, R, o_node_resolver, N)').rows)
+    ledger.set(row.bindings['K'] ?? '?', Number(row.bindings['N'] ?? -1));
+  console.log('\n  oracle by kind:', [...seen].map(([k, v]) => `${k} ${v}`).sort().join(', '));
+  assert.deepEqual([...ledger.entries()].sort(), [...seen.entries()].sort(),
+    'every kind the oracle enumerated has a `checked` row, with the count it enumerated');
 });
 
 test('MUTANT 6: an oracle pointed at an empty directory reports NOTHING TO SEE, not agreement', () => {
@@ -495,6 +607,15 @@ const GATES: { goal: string; why: string; plant: BuildOpts }[] = [
     why: 'a claim about a cell that does not exist',
     plant: { facts: (s) => s + '\nhandled(js, no_such_kind, modules, r_nothing).\n' },
   },
+  {
+    goal: 'site_without_kind[audit](I)',
+    why: 'a site whose kind no rule names leaves the frontier bookkeeping silently',
+    // this is the DEFECT w_mod_beyond_the_import closed, planted: a site kind
+    // in `module_site` that `site_kind` does not name. Before the item, the
+    // re-export forms were outside `import_site` entirely and no gate here
+    // could see them — every one of these eight read zero.
+    plant: { rules: (s) => s.replace('site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).', '') },
+  },
 ];
 
 test('every audit gate reads ZERO on the model as written', () => {
@@ -537,7 +658,7 @@ const MUTANTS: Mutant[] = [
     damage: (r) => {
       const flows = bind(r, 'flows[code](F, T)', 'F', 'T');
       return flows.includes('a.ts|types.ts')
-        ? `flows now contains a.ts -> types.ts (${flows.length} edges, was 6)` : null;
+        ? `flows now contains a.ts -> types.ts (${flows.length} edges)` : null;
     },
   },
   {
@@ -550,7 +671,7 @@ const MUTANTS: Mutant[] = [
     damage: (r) => {
       const flows = bind(r, 'flows[code](F, T)', 'F', 'T');
       return flows.includes('a.ts|types2.ts')
-        ? `flows now contains a.ts -> types2.ts (${flows.length} edges, was 6)` : null;
+        ? `flows now contains a.ts -> types2.ts (${flows.length} edges)` : null;
     },
   },
   {
@@ -607,6 +728,115 @@ const MUTANTS: Mutant[] = [
       return c.sitesSeen === 0 && c.under.length === 0 && c.wrong.length === 0
         ? 'zero sites seen — indistinguishable from a pass except by the sitesSeen guard'
         : null;
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // THE RE-EXPORT EDGE (w_mod_beyond_the_import, 2026-09-08). Six mutants, and
+  // the first of them is the DEFECT THIS ITEM CLOSED, planted back: it is the
+  // one that says the oracle can now see what it could not see before.
+  //
+  // ONE MUTANT SURVIVES BY CONSTRUCTION AND IS NAMED RATHER THAN RUN: dropping
+  // `ast_child[code](E, source, 0, _)` from the `reexport_all` arm changes
+  // nothing, because an ExportAllDeclaration ALWAYS has a source — `export *`
+  // with no `from` is not grammatical. The same premise on the `reexport_named`
+  // arm is mutant 7 and is load-bearing, which is the whole reason the two arms
+  // are written out separately instead of over a shared `export_kind` guard.
+  {
+    name: '7. every export list is a module site, source child or not',
+    targets: 'that the discriminator is the `source` CHILD and not the node kind. '
+      + '`export { a as b }` and `export { a as b } from \'./d\'` are the same kind.',
+    plant: {
+      rules: (s) => s.replace(
+        'reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declaration, _, _),\n                                          ast_child[code](E, source, 0, _).',
+        'reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declaration, _, _).'),
+    },
+    damage: (r) => {
+      const n = count(r, 'unaccounted_site[audit](I)');
+      return n > 0
+        ? `unaccounted_site reports ${n} local export list(s) with no specifier to resolve` : null;
+    },
+  },
+  {
+    name: '8. a re-export is not a module site at all — the defect this item closed',
+    targets: 'the acceptance direction. Before this item the model derived NO site for '
+      + '`export ... from`, and no gate in this file could say so because the oracle '
+      + 'enumerated only the two import node types. It enumerates four now.',
+    plant: { rules: (s) => s.replace('module_site[code](N, K) :- reexport_site[code](N, K).', '') },
+    damage: (r) => {
+      const parts: string[] = [];
+      if (expEdges(r).length === 0) parts.push('exp.ts has no outgoing edge of any kind');
+      const c = compare(ROOT, FILES, r);
+      const absent = c.under.filter((u) => u.line.includes('ABSENT FROM MODEL'));
+      if (absent.length > 0) parts.push(`the oracle reports ${absent.length} UNDECLARED under-report(s), `
+        + `e.g. ${absent[0]?.line}`);
+      assert.ok(expEdges(MODEL_R).length > 0, 'positive control: the baseline has the edges');
+      return parts.length === 2 ? parts.join('; ') : null;
+    },
+  },
+  {
+    name: '9. the DECLARATION-level erasure marker is ignored on a re-export',
+    targets: '`export type { T1 as ReT1 } from`, where babel leaves the SPECIFIER saying "value" — '
+      + 'the half a specifier-only reader gets exactly backwards, arriving through the export grammar.',
+    plant: {
+      rules: (s) => s.replace(
+        'reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),\n'
+        + '                                    not export_decl_type_only[code](E),\n',
+        'reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),\n'),
+    },
+    damage: (r) => expEdges(r).includes('flows types.ts')
+      ? 'flows now contains exp.ts -> types.ts, an edge erased before anything runs' : null,
+  },
+  {
+    name: '10. the INLINE erasure marker is ignored on a re-export',
+    targets: '`export { type T4 as ReT4 } from`, on a declaration whose own marker says "value".',
+    plant: {
+      rules: (s) => s.replace(
+        'reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),\n'
+        + '                                    not export_decl_type_only[code](E),\n'
+        + '                                    not export_spec_type_only[code](Sp).',
+        'reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),\n'
+        + '                                    not export_decl_type_only[code](E).'),
+    },
+    damage: (r) => expEdges(r).includes('flows types3.ts')
+      ? 'flows now contains exp.ts -> types3.ts' : null,
+  },
+  {
+    name: '11. the export-all carries its erasure marker and nobody reads it',
+    targets: '`export type * from`, the one erased form with NO specifier to carry a marker — '
+      + 'so the negation the other two forms share cannot answer for it.',
+    plant: {
+      rules: (s) => s.replace('reexport_value[code](E) :- reexport_site[code](E, reexport_all),\n                           not export_decl_type_only[code](E).',
+        'reexport_value[code](E) :- reexport_site[code](E, reexport_all).'),
+    },
+    damage: (r) => expEdges(r).includes('flows types4.ts')
+      ? 'flows now contains exp.ts -> types4.ts' : null,
+  },
+  {
+    name: '12. a source with no specifiers does not evaluate its target',
+    targets: 'the EVALUATES arm that FLOWS cannot reach — `export {} from \'./side.ts\'`, whose '
+      + 'runtime behaviour was measured on node rather than read off the specification.',
+    plant: {
+      rules: (s) => s.replace('evaluates[code](F, T) :- no_reexport_specifiers[code](E), not export_decl_type_only[code](E),\n                         resolved_import[code](E, T), site_file[code](E, F).', ''),
+    },
+    damage: (r) => {
+      const e = expEdges(r);
+      return !e.includes('evaluates side.ts') && e.includes('depends side.ts')
+        ? 'side.ts is still a dependency of exp.ts and the model no longer says it runs' : null;
+    },
+  },
+  {
+    name: '13. the JOIN reads `exported` for both columns',
+    targets: 'that `reexport_offers` says where a name COMES FROM. Every re-export outside this '
+      + 'fixture has the two names equal, so without the rename the mutant derives the same rows.',
+    plant: {
+      rules: (s) => s.replace('    spec_external[code](Sp, External), spec_internal[code](Sp, Internal),',
+        '    spec_external[code](Sp, External), spec_external[code](Sp, Internal),'),
+    },
+    damage: (r) => {
+      const offers = bind(r, 'reexport_offers[code](F, X, T, L)', 'F', 'X', 'T', 'L');
+      return offers.includes('exp.ts|reHelper|c.ts|reHelper') && !offers.includes('exp.ts|reHelper|c.ts|helper')
+        ? 'the model now says c.ts exports `reHelper`, a name that exists only in exp.ts' : null;
     },
   },
 ];

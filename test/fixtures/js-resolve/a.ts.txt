@@ -16,3 +16,15 @@ import { gone } from './nope.ts';
 
 const which = 'b';
 export const later = import('./' + which + '.ts');
+
+// ...AND THE TWO RE-EXPORT FORMS, appended 2026-09-08 (w_mod_beyond_the_import) so that
+// the observer's fourfold enumeration is EXERCISED rather than merely written.
+// It goes at the END because every assertion in this file names a site by
+// (file, line, specifier) and a line inserted above would move ten of them.
+// Both specifiers resolve identically under both environments, so they add two
+// places to compare and no new divergence — the divergent set stays the three
+// above. Both FORMS are here because `sitesOf` maps the node type to the kind
+// the `checked` ledger is keyed on, and a map with an unexercised entry is the
+// same kind of decoration a reason nothing earns is.
+export { b as reB } from './b.ts';
+export * from './sub/deep.ts';

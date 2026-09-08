@@ -56,3 +56,26 @@ export * as everything from './b.ts';
 // It is here so that "a declaration with no specifiers" is a case the export
 // binding rules meet rather than a case they were never shown.
 export * from './types2.ts';
+
+// ==========================================================================
+// THE FOUR RE-EXPORT FORMS THAT CARRY A MODULE EDGE, 2026-09-08
+// (w_mod_beyond_the_import). Everything above this line is the NAMING half of
+// a re-export; these four are the EDGE half, and each one has a target no
+// other declaration in this tree reaches, so its verdict is separable.
+//
+//   ./c.ts       depends + flows + evaluates   a value crosses
+//   ./types.ts   depends only                  the DECLARATION says type
+//   ./types3.ts  depends only                  the SPECIFIER says type
+//   ./types4.ts  depends only                  a type-only `export *`
+//   ./side.ts    depends + evaluates, no flows a source with no specifiers
+//
+// THE LAST ONE IS MEASURED AT RUN TIME, not read off the specification: on node
+// 24, a module whose only mention of `./side.mjs` is `export {} from
+// './side.mjs'` prints side.mjs's own output when it is imported. That is the
+// side-effect import's twin and it is the pair DEPENDS and FLOWS cannot tell
+// apart, arriving through the export grammar.
+export { helper as reHelper } from './c.ts';
+export type { T1 as ReT1 } from './types.ts';
+export { type T4 as ReT4 } from './types3.ts';
+export type * from './types4.ts';
+export {} from './side.ts';

@@ -1036,12 +1036,43 @@ work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
 --     specifier resolves through a package's `exports` map, which is the same
 --     on-disk question as `bare`. ALSO THE OWNER'S to scope, and named here so
 --     it is not silently done or silently dropped.
-work(w_mod_beyond_the_import, "the module graph has one edge kind: a re-export, a require and a subpath specifier are all outside it").
+-- TWO OF THE FIVE CELLS CLOSED 2026-09-08, and the item stays open because the
+-- other three are the OWNER'S to scope and were flagged as such above.
+--
+-- RE-MEASURED FIRST, on the tree this layer is tested against and not on the
+-- note: `import_site` 17, `depends` 10, and exp.ts — which carries
+-- `export * as everything from './b.ts'` and `export * from './types2.ts'` —
+-- appearing in NEITHER. The two declarations' `source` children were already in
+-- the store. After: `module_site` 24, `depends` 16, six targets out of exp.ts.
+--
+-- IT REALLY WAS A JOIN AND NOT A MECHANISM. `depends` needed nothing at all —
+-- it reads `resolved_import` and `site_file`, and both follow `module_site`
+-- once the union exists — so making the site was the whole of the edge.
+-- `reexport_offers` is the other half the brief predicted: the resolver says
+-- which FILE, section 4b says which NAME, and putting them together is one
+-- rule. What did need rules of its own is FLOWS and EVALUATES, because the
+-- erasure markers sit on different nodes for an export than for an import and
+-- one of the four forms has no specifier to carry one.
+--
+-- THE GATE THAT COULD NOT SEE ANY OF IT, and this is the part worth keeping:
+-- the strongest assertion in test/js-modules.test.ts is that the oracle and the
+-- model enumerate the SAME NUMBER of sites — and both enumerations were blind
+-- to the same node types, so it was green over a set that excluded seven real
+-- places. Recorded as f_two_enumerations_with_one_blind_spot_agree_about_nothing.
+work(w_mod_beyond_the_import, "PARTLY DONE 2026-09-08: `export ... from` is a module site at last (r_reexport_edge) and `reexport_offers` joins the resolver to the export side; `require`, the subpath specifier and the default form stay open and the first two are the owner's to scope").
 work_order(w_mod_beyond_the_import, 37).
 work_state(w_mod_beyond_the_import, open).
-claim(queued, js, export_named_declaration, none,    modules, w_mod_beyond_the_import).
+work_spawned(w_mod_beyond_the_import, f_two_enumerations_with_one_blind_spot_agree_about_nothing).
+work_spawned(w_mod_beyond_the_import, f_a_reexports_local_name_is_not_a_name_in_this_module).
+work_spawned(w_mod_beyond_the_import, f_a_null_child_is_not_an_absent_one).
+-- ...and the two claims go with their cells, because `queue_stale[audit]` calls
+-- a claim on a shut cell under an open item a lie and said so within one run.
+-- The default form's claim STAYS, and its reason is measured rather than
+-- inherited: scanned beside the six re-export forms, `export default function
+-- named() {}` emits no `source` child of any kind, so it is not an edge — what
+-- is left of that cell is the naming half, which is section 4b's question and
+-- the one export form with no specifier node to hang it on.
 claim(queued, js, export_default_declaration, none, modules, w_mod_beyond_the_import).
-claim(queued, js, export_all_declaration,   none,    modules, w_mod_beyond_the_import).
 claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).
 claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_import).
 

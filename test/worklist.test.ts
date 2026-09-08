@@ -154,15 +154,17 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // sweep's whole finding: `require()` is a module edge the layer cannot see,
   // and the two re-export forms were WAIVED — a verdict class that says the
   // language offers nothing to model — beside a comment calling the work undone.
+  // TWO OF THE SEVEN LEFT ON 2026-09-08 (w_mod_beyond_the_import), which is the
+  // set shrinking rather than a pin rotting: `export_named_declaration` and
+  // `export_all_declaration` are `handled` by `r_reexport_edge` now — a
+  // re-export is a `module_site`, and `depends`/`flows`/`evaluates` follow.
+  // The DEFAULT form stays, and its reason is measured rather than inherited
+  // from its siblings: scanned beside the six re-export forms,
+  // `export default function f() {}` emits no `source` child of any kind, so
+  // it is not an edge. What is left of that cell is the naming half.
   assert.deepEqual(w.binds('shaped_because[audit](A, K, S, modules, R)', 'K', 'S', 'R'), [
     'call_expression/none/not_yet',
-    'export_all_declaration/none/not_yet',
-    // ...and the DEFAULT form joined on 2026-09-06, entered by
-    // `vocabulary_gap[audit]` the moment a default export appeared in the
-    // corpus. It is open for the same reason as its two siblings and owned by
-    // the same item: this layer has ONE edge kind and `export default` is not it.
     'export_default_declaration/none/not_yet',
-    'export_named_declaration/none/not_yet',
     'import_declaration/bare/out_of_scope',
     'import_declaration/subpath/not_yet',
     'import_expression/computed/runtime_dependent',
@@ -205,7 +207,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // spawned. `w_meta_property` is still OPEN and still on this side of the
     // ledger's other lists — spawning is what says an item was looked at, not
     // what says it is finished.
-    'w_mod_beyond_the_import',
+    // ...and `w_mod_beyond_the_import` LEFT IT 2026-09-08 the same way: two of
+    // its five cells were taken and it spawned three, one of which is a
+    // question about a NEIGHBOUR'S landed cell — `export_binding` reports a
+    // re-export's `local` as a name in the re-exporting module, which the
+    // dataflow layer already guards against and this one does not.
     'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
     // `w_update_and_literals` LEFT THIS LIST 2026-09-08, the same way the two
     // before it did: it was taken and it spawned two findings, one of them in
