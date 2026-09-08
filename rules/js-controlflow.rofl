@@ -163,6 +163,88 @@ stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 -- the one that corrected this item's own witness.
 
 -- ---------------------------------------------------------------------------
+-- A LABEL IS A BOUNDARY AN ORDINARY BREAK CANNOT CROSS, 2026-09-08 — queue item
+-- w_labelled_control.
+--
+-- MEASURED BEFORE A LINE OF THIS WAS WRITTEN, on a fixture built for the
+-- purpose because the corpus held ZERO labels: with `break outer` in the inner
+-- of two nested loops, the callees `after_abrupt[code]` named were
+--
+--   after neverCased neverReached pastBlockBreak pastBreak pastContinue
+--   pastDebugger pastEmpty pastInnerBreak pastPlainBreak unlit unreadable
+--
+-- ...and that list is not a memory of a world that has gone: deleting the arm
+-- below reproduces it exactly, which is mutant l1 in
+-- test/js-controlflow.test.ts. Written down once from the pre-rule world, it
+-- would have been a witness with no world the moment the fixture grew — and it
+-- did grow twice while this item was open.
+--
+-- `pastBreak` and `pastContinue` are there and `pastLabelledBreak`,
+-- `pastLabelledContinue` and `pastLabelledBlock` are not. So THE MODEL WAS
+-- TREATING A LABELLED BREAK AS AN ORDINARY ONE: it killed the siblings in the
+-- break's own statement list, which a plain `break` does too, and stopped. The
+-- whole content of a label — leaving a statement further out — was invisible.
+--
+-- AND ONE OF THE THREE WAS NOT MERELY MISSING FROM `after_abrupt`. A labelled
+-- LOOP body is a `guard_kind` arm, so `pastLabelledBreak` was in `guarded`
+-- anyway and the may-set was already hedging. A labelled BLOCK is not a loop,
+-- not an arm and not a switch: `pastLabelledBlock` was in NEITHER `guarded` nor
+-- `may_not_run`, so the model positively asserted that a statement runs which
+-- the only path through its own block skips. A may-set that is too narrow is a
+-- claim rather than a hedge, and this was the narrow direction.
+--
+-- THE LABEL IS READ, NOT THE KEYWORD. `label_ref` is the join that makes the
+-- negative control possible: an unlabelled `break` has no `label` child, so it
+-- derives nothing here and `beyondPlainBreak` stays out. A rule written over
+-- `break_statement` would have stopped telling the two forms apart.
+label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _, _),
+                             ast_child[code](LS, label, 0, I), ast_attr[code](I, name, N).
+-- DERIVED FROM `abrupt_kind` rather than from a second hand-written list of the
+-- two kinds that carry a label, which is the defect `orphan_claim` paid for.
+-- It costs nothing in precision: measured over the fixtures, `break` and
+-- `continue` are the only kinds in the language with a `label` CHILD at all —
+-- `return` and `throw` carry `argument`, and `labeled_statement` carries its own
+-- `label` and is not an abrupt kind.
+label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
+                             ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).
+-- THE TARGET IS UNIQUE AND THE GRAMMAR IS WHY, not a tie-break of ours. Two
+-- labels of the same name nested one inside the other are a SyntaxError
+-- ("Label 'outer' has already been declared"), so at most one `labeled_statement`
+-- with a given name can contain a given reference; and `outer: f(); outer: g();`
+-- is legal precisely because neither contains the other.
+label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
+                             ast_within[code](LS, X).
+
+-- ...AND THE WALK STOPS AT THE LABEL, which is the precision the item is about.
+-- `S` ranges over the statements BETWEEN the reference and its target, so the
+-- statements after the labelled statement itself — `beyondLabel`, `afterBlock` —
+-- are never reached: their parent list is outside `LS` and `ast_within(LS, S)`
+-- excludes it. NO FUNCTION-BOUNDARY LITERAL IS NEEDED here, unlike the
+-- suspension and throwing-call arms, and again the grammar is the reason: a
+-- label is not in scope inside a nested function, so `outer: for (...) { const
+-- f = () => { break outer; }; }` does not parse and no store can hold it.
+--
+-- ORDERED FOR COST, on the pattern this file already uses for `throwing_call`
+-- and `accessor_of`: `label_target` is a handful of rows and binds BOTH X and
+-- LS, so the two containment literals are probes from a named node rather than
+-- a scan over every containment pair in the corpus.
+abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
+                             ast_within[code](S, X), stmt_seq_field(F),
+                             ast_child[code](B, F, I, S).
+
+-- WHERE THIS ARM IS STRUCTURALLY UNABLE TO LOOK, asked of it before it was
+-- believed and answered with a shape rather than a hope: `if (c) break outer;`
+-- puts a GUARD between the reference and the target, and everything after the
+-- `if` in the enclosing lists is then reported by a relation whose own comment
+-- says NEVER when the honest word is MAY. That is not new with this arm — the
+-- `throwing_call` arm below has walked up through guard arms since 2026-09-06 —
+-- and it is recorded rather than repeated silently, as
+-- f_after_abrupt_says_never_and_the_walking_arms_say_may. Both
+-- consumers of `after_abrupt` reach it through `guarded`, which is a MAY-set, so
+-- nothing downstream reads the stronger word. The fixture for this item breaks
+-- unconditionally so that its own witness does not depend on the looser reading.
+
+-- ---------------------------------------------------------------------------
 -- A CALL IS AN EXIT, 2026-09-06 — queue item w_exception_flow, and it corrects
 -- an attribution this file made TWO ITERATIONS AGO. When w_cf_abrupt_transfer
 -- closed, `useTry -> after` was moved from that item to w_exn_propagation (28,
@@ -478,6 +560,15 @@ transfer_mechanism(catch_clause,               skip_arm).
 -- because a loop kind missing from `transfer_mechanism` reads as "nobody
 -- looked" and this one was looked at.
 transfer_mechanism(do_while_statement,         loop_at_least_once).
+-- A SIXTH MECHANISM, 2026-09-08 (w_labelled_control), and it is a sixth rather
+-- than `abrupt` because a `labeled_statement` does not transfer control — it
+-- RECEIVES one. Filing it under `abrupt` would say that everything after a
+-- label in the same block is unreachable, which is false of every label in the
+-- language; filing it under `skip_arm` would say its body may be skipped, which
+-- is false too. What it does is BOUND a transfer some other statement performs,
+-- and the layer's own doctrine is that four mechanisms in one bucket get one
+-- verdict between them.
+transfer_mechanism(labeled_statement,          label_boundary).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
@@ -488,6 +579,11 @@ mechanism_modelled(abrupt).
 -- reason `a_control_returns_so_the_site_still_runs` asserted that the promise
 -- settles, which this layer cannot know and never checked.
 mechanism_modelled(suspend).
+-- LABEL_BOUNDARY JOINED 2026-09-08 (w_labelled_control) and it arrived answered
+-- rather than open: `label_target` reads the labelled statement by kind and the
+-- extra `abrupt_at` arm walks to it, so there is a rule between the mechanism
+-- and the kind that carries it.
+mechanism_modelled(label_boundary).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
@@ -527,6 +623,11 @@ guard_named[code](K)       :- abrupt_kind(K).
 -- the audit doing exactly what it was written for — a mechanism claimed as
 -- answered by a rule nothing connects to the kinds that carry it.
 guard_named[code](K)       :- transfer_mechanism(K, suspend).
+-- ...and the LABEL, on the same pattern and for the same reason: derived from
+-- the mechanism, so declaring `mechanism_modelled(label_boundary)` without a
+-- rule that reaches `labeled_statement` reddens `guard_unmodelled[audit]`
+-- instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, label_boundary).
 -- `catch_clause` carries `skip_arm` and is reached as the ARM of a
 -- `try_statement` rather than by a `guard_kind` row of its own — the guard is
 -- the try's `handler` field, and the clause is what sits in it. Named here so

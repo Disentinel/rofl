@@ -272,10 +272,24 @@ kind_absent_ok(reg_exp_literal, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(meta_property, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(export_specifier, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(export_namespace_specifier, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(labeled_statement, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(empty_statement, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(debugger_statement, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(with_statement, a_declared_for_the_denominator_and_queued).
+-- THREE ROWS LEFT ON 2026-09-08 (w_labelled_control, w_inert_statements) and
+-- `kind_absent_stale[audit]` is what took them: the fixture at the end of
+-- test/fixtures/js-call/shapes.ts.txt puts a label, a `;` and a `debugger` in
+-- the corpus, so `labeled_statement`, `empty_statement` and `debugger_statement`
+-- are exercised and an excuse for their absence is a row about a world that no
+-- longer exists.
+-- `with_statement` KEEPS ITS ROW and its reason is now a MEASUREMENT rather than
+-- a queue position. scanners/js_ast.ts parses every file with
+-- `sourceType: 'module'`; a module is strict; babel answers `'with' in strict
+-- mode. (1:0)` and the scan returns `ast_parse_error` with ZERO ast_node facts,
+-- so a `with` does not merely fail to appear — it DELETES the file it is in from
+-- the corpus. Measured the same day: the same source under
+-- `sourceType: 'script'` parses and emits `WithStatement`, so the blocker is a
+-- setting of this scanner and not a property of the parser — which is why the
+-- four `with_statement` cells are left OPEN AND UNBLOCKED under
+-- w_inert_statements rather than blocked or waived. See that item in
+-- facts/worklist.rofl for what the work actually is.
+kind_absent_ok(with_statement, a_a_module_is_strict_and_with_is_a_syntax_error).
 kind_absent_ok(directive, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(directive_literal, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(interpreter_directive, a_declared_for_the_denominator_and_queued).

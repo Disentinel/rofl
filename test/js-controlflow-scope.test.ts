@@ -829,10 +829,30 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // in the safe direction is what `may_not_run` is documented to be — the
   // dangerous direction is a live function reported dead by a set that is too
   // NARROW.
+  // TWENTY-NINE ON 2026-09-08 with the labelled-control and inert-statement
+  // fixtures (w_labelled_control, w_inert_statements). THIRTEEN NEW NAMES AND
+  // NOT ONE OF THEM IS A NEW KIND OF ANSWER — every one is a call placed in a
+  // position under study so that a statement, which has no name, can be read
+  // back by the name of what it calls. Four say something only a label can:
+  // `pastLabelledBreak`, `pastLabelledContinue`, `pastLabelledBlock` and
+  // `pastConditionalLabelledBreak` follow a transfer that leaves a statement
+  // further out than the reference's own list. `pastLabelledBlock` is the one
+  // that was WRONG rather than missing: a labelled block is not a loop body and
+  // not an arm, so before the rule the model said it runs.
+  //
+  // The rest are the fixture's own controls, and they are here because a loop
+  // body is a guard arm — `beyondPlainBreak`, `pastInnerLabel` and
+  // `pastPlainBreak` are in this may-set on grounds that have nothing to do with
+  // labels, and `after_abrupt`, which says NEVER, is what tells them apart. That
+  // distinction is asserted in test/js-controlflow.test.ts, where the label work
+  // lives.
   assert.deepEqual([...mayNotRun].sort(),
-    ['after', 'afterStall', 'alef', 'bet', 'guardedElse', 'label', 'loopBody',
-     'neverCased', 'neverReached', 'pickedB', 'reading', 'rescue', 'sleeper',
-     'unlit', 'unreached', 'unreadable']);
+    ['after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'guardedElse',
+     'label', 'loopBody', 'neverCased', 'neverReached', 'pastBlockBreak',
+     'pastBreak', 'pastConditionalLabelledBreak', 'pastContinue', 'pastDebugger',
+     'pastEmpty', 'pastInnerBreak', 'pastInnerLabel', 'pastLabelledBlock',
+     'pastLabelledBreak', 'pastLabelledContinue', 'pastPlainBreak', 'pickedB',
+     'reading', 'rescue', 'sleeper', 'unlit', 'unreached', 'unreadable']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   // TWO now, and they are two different shapes of the same relation. `dormant`

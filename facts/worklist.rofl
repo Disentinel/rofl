@@ -1223,26 +1223,85 @@ claim(queued, js, export_namespace_specifier,  none, controlflow,  w_export_spec
 claim(queued, js, export_namespace_specifier,  none, modules,      w_export_specifier_forms).
 
 -- 56 - labeled_statement.
-work(w_labelled_control, "a labelled statement, and break/continue to a label - the one new statement form that really does transfer control").
+-- DONE 2026-09-08. THE ITEM'S NOTE CALLED IT "the one new statement form that
+-- really does transfer control" AND THAT WAS THE HALF WORTH MEASURING. Measured
+-- first, on a fixture built because the corpus held ZERO labels: with
+-- `break outer` in the inner of two nested loops, `after_abrupt[code]` named
+-- `pastBreak` and `pastContinue` - the siblings in the reference's OWN
+-- statement list, which an unlabelled break kills too - and named none of
+-- `pastLabelledBreak`, `pastLabelledContinue`, `pastLabelledBlock`. So the
+-- control-flow layer WAS TREATING A LABELLED BREAK AS AN ORDINARY ONE, and the
+-- one thing a label is for was invisible.
+--
+-- ONE OF THE THREE WAS NOT MERELY MISSING. A labelled LOOP body is a
+-- `guard_kind` arm, so `pastLabelledBreak` was in `guarded` on other grounds
+-- and the may-set was already hedging. A labelled BLOCK is not a loop, not an
+-- arm and not a switch: `pastLabelledBlock` was in NEITHER `guarded` NOR
+-- `may_not_run`, so the model positively said a statement runs which the only
+-- path through its own block skips. That is the narrow direction, which this
+-- layer documents as the dangerous one.
+--
+-- `r_labelled_boundary` reads the LABEL and not the keyword - `label_ref` joins
+-- through the `label` child, which an unlabelled break does not have - so
+-- `beyondPlainBreak` stays out, and the walk stops at the `labeled_statement`,
+-- so `beyondLabel` and `afterBlock` stay out too. `label_boundary` is a SIXTH
+-- mechanism rather than a sixth kind filed under `abrupt`, because a label
+-- receives a transfer instead of performing one.
+work(w_labelled_control, "DONE 2026-09-08: r_labelled_boundary; a labelled statement, and break/continue to a label - the one new statement form that really does transfer control").
 work_order(w_labelled_control, 56).
-work_state(w_labelled_control, open).
+work_state(w_labelled_control, done).
+work_spawned(w_labelled_control, f_a_labelled_break_was_read_as_an_ordinary_one).
 claim(queued, js, labeled_statement,           none, callgraph,    w_labelled_control).
 claim(queued, js, labeled_statement,           none, dataflow,     w_labelled_control).
 claim(queued, js, labeled_statement,           none, controlflow,  w_labelled_control).
 claim(queued, js, labeled_statement,           none, modules,      w_labelled_control).
 
 -- 57 - empty_statement, debugger_statement, with_statement.
-work(w_inert_statements, "empty, debugger and with: three statements no layer is likely to have an opinion about, and `with` cannot appear in a module at all").
+-- EIGHT OF TWELVE CLOSED 2026-09-08, and the four that are not are the item.
+-- Their claims are the only ones left below: a closed cell whose claim stays
+-- queued under an item that is not done is `queue_stale[audit]`, and the
+-- convention this file already follows (see w_cf_accessor's optional twin) is
+-- that the claim goes when the cell does.
+--
+-- THE NOTE SAID "no layer is LIKELY to have an opinion" AND THE CONTROL-FLOW
+-- LAYER HAS ONE. Measured with the fixture in the corpus: of four
+-- `empty_statement` nodes THREE are `guarded[code]`, TWO are a `guard_arm`
+-- (`while (total < 0) ;` and an `if` consequent) and ONE is `after_abrupt`;
+-- of two `debugger_statement` nodes one is guarded and one is after an abrupt
+-- transfer. An inert statement OCCUPIES a conditional position; it does not
+-- CREATE one, which is the claim the cell asks about, and the two are different
+-- sentences. The other three layers were asked the same way and answered zero
+-- with a positive control on every query - see facts/js-statements.rofl.
+--
+-- `with_statement` IS OPEN AND THE REASON IS MEASURED RATHER THAN ARGUED.
+-- scanners/js_ast.ts calls babel with `sourceType: 'module'` and nothing else;
+-- a module is strict; `with (o) { p(); }` comes back
+--
+--     ast_parse_error[code]("with_mod.js", "'with' in strict mode. (1:0)")
+--
+-- with `nodes = 0` and an EMPTY kind set. The refusal is total, so a `with`
+-- anywhere in a fixture does not merely fail to produce a node - it deletes
+-- that whole file from the corpus. THAT IS A SETTING AND NOT A CONSTRAINT, and
+-- the distance was measured rather than assumed, which is the correction
+-- f_the_contract_excluded_one_property_in_the_whole_language paid for one
+-- component over: the SAME source under `sourceType: 'script'` parses and emits
+-- `WithStatement`, and under `sourceType: 'unambiguous'` babel chooses `script`
+-- for it while choosing `module` for ALL FIVE existing corpus files - measured
+-- file by file, so the change would leave the present corpus byte-identical.
+--
+-- SO THE CELLS ARE WORKABLE AND ARE LEFT UNBLOCKED ON PURPOSE. What they are
+-- waiting for is not a parser but a decision plus the analysis that comes with
+-- it: `with` REDIRECTS NAME RESOLUTION at run time, so every identifier in its
+-- body may name a property of the object instead of the binder the value layer
+-- resolves it to. `sees_binder`, `may_be_node` and every call edge that rests
+-- on them would be reporting a binding the language does not guarantee. That is
+-- an unsoundness at the dataflow and call-graph layers, not an inert statement,
+-- and it is why this is left as work rather than waived at four layers on the
+-- strength of the word "inert". See f_with_is_a_scanner_setting_and_a_scoping_hazard.
+work(w_inert_statements, "empty and debugger are answered at four layers each; `with` is open because the scanner parses every file as a module - a setting, measured - and because it redirects name resolution").
 work_order(w_inert_statements, 57).
 work_state(w_inert_statements, open).
-claim(queued, js, empty_statement,             none, callgraph,    w_inert_statements).
-claim(queued, js, empty_statement,             none, dataflow,     w_inert_statements).
-claim(queued, js, empty_statement,             none, controlflow,  w_inert_statements).
-claim(queued, js, empty_statement,             none, modules,      w_inert_statements).
-claim(queued, js, debugger_statement,          none, callgraph,    w_inert_statements).
-claim(queued, js, debugger_statement,          none, dataflow,     w_inert_statements).
-claim(queued, js, debugger_statement,          none, controlflow,  w_inert_statements).
-claim(queued, js, debugger_statement,          none, modules,      w_inert_statements).
+work_spawned(w_inert_statements, f_with_is_a_scanner_setting_and_a_scoping_hazard).
 claim(queued, js, with_statement,              none, callgraph,    w_inert_statements).
 claim(queued, js, with_statement,              none, dataflow,     w_inert_statements).
 claim(queued, js, with_statement,              none, controlflow,  w_inert_statements).

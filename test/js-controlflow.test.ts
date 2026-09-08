@@ -15,8 +15,28 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { parse } from '@babel/parser';
+import { scan } from '../scanners/js_ast.ts';
 import { build, base, edges, names, caught, read, FILES, FACTS, RULES } from './js-corpus-world.ts';
 import type { Mut, World } from './js-corpus-world.ts';
+
+/** the functions NAMED by a call sitting in a statement `after_abrupt` reports.
+ *
+ *  A STATEMENT HAS NO NAME, so every assertion about statement order in this
+ *  file used to be a count — and a count of statements is a measurement of the
+ *  corpus, which took `after_abrupt` from 5 to 19 the day a labelled-control
+ *  fixture landed without a single one of those assertions having anything to
+ *  say. The pattern alpha.mjs already established for the fixtures themselves is
+ *  the remedy: put a distinctly named call in the position under study and read
+ *  the CALLEE's name back through `resolves`. */
+const afterAbrupt = (w: World): string[] => {
+  const out: string[] = [];
+  for (const [s] of w.q('after_abrupt[code](S)'))
+    for (const c of [s, ...w.q(`ast_within[code](${s}, C)`).map((r) => r[0])])
+      for (const [f] of w.q(`resolves[code](${c}, F)`))
+        for (const [n] of w.q(`fn_name[code](${f}, N)`)) out.push(n);
+  return [...new Set(out)].sort();
+};
 
 
 // ---------------------------------------------------------------------------
@@ -229,10 +249,15 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
       // structurally unable to check the stronger relation's field vocabulary.
       // 2 -> 4 -> 5 on 2026-09-06: `abrupt_at` gained two more sources the same
       // day (a call that always throws, then an accessor read whose getter
-      // does), so the field typo now costs one of five. The DELTA is the
-      // assertion; the totals are the control and they move with the corpus.
-      assert.equal(m.n('after_abrupt[code](S)'), 4, 'the switch-case answer is gone');
-      assert.equal(base().n('after_abrupt[code](S)'), 5, 'positive control: it was there');
+      // does), so the field typo now costs one of five.
+      // CONVERTED TO A NAME 2026-09-08, and the conversion is the rule this
+      // repository already wrote down: a pair of totals moves whenever ANY
+      // fixture lands — the labelled-control work took them 5 -> 19 without
+      // touching a switch — so what they were standing in for is written out
+      // instead. `neverCased` is the corpus's one callee behind a return inside
+      // a switch case, and it is exactly what the field typo costs.
+      assert.deepEqual(afterAbrupt(base()).filter((n) => !afterAbrupt(m).includes(n)),
+        ['neverCased'], 'the switch-case answer, and only it, is gone');
       const names = (w: World) => new Set(w.q('may_not_run[code](F)')
         .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
       assert.deepEqual([...names(m)].sort(), [...names(base())].sort(),
@@ -446,11 +471,31 @@ guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).` , replace: 
     // smaller answer but a different and much larger one: a function body's
     // first statements are guarded by an await further down.
     expect: (m, b) => {
+      // TWO NAMES JOINED 2026-09-08 with the inert-statement fixture, and they
+      // are the same claim as the four that were here: `pastEmpty` and
+      // `pastDebugger` sit after a `return` in their own statement lists, so
+      // reversing the order test loses them along with the rest. What makes them
+      // worth having is the position of the statements BETWEEN — a bare `;` and
+      // a `debugger` — which is the only site in the corpus proving an inert
+      // statement consumes an index like any other.
       assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)).sort(),
-        ['after', 'neverReached', 'unlit', 'unreadable']);
-      assert.ok(mnr(m).filter((n) => !mnr(b).includes(n)).length > 8,
-        'and a dozen functions that always run are reported may-not');
-      assert.ok(m.n('guarded[code](S)') > b.n('guarded[code](S)') * 4,
+        ['after', 'neverReached', 'pastDebugger', 'pastEmpty', 'unlit', 'unreadable']);
+      // ...AND THE OTHER DIRECTION IS THE POINT, WRITTEN AS NAMES. The reversal
+      // is not a smaller answer, it is a different and much larger one: every
+      // one of these always runs, and is reported may-not because a suspension
+      // FURTHER DOWN its own statement list now guards what comes before it.
+      // `thrower` and `mkAlef` are the plainest — both are called from the first
+      // statement of a body whose await is on a later line.
+      // WAS A COUNT (`> 8`) AND A RATIO (`guarded x 4`) UNTIL 2026-09-08, and
+      // both were measuring the corpus: the labelled-control fixture took
+      // `guarded` 320 -> 345 in the base while the mutant world grew by less, so
+      // a ratio chosen when the corpus was smaller went red without the mutant's
+      // behaviour changing at all.
+      assert.deepEqual([...new Set(mnr(m).filter((n) => !mnr(b).includes(n)))],
+        ['broken', 'callsSent', 'chooser', 'iterator', 'mark', 'mkAlef',
+         'nestedThrow', 'outerGen', 'pick', 'read', 'seenEmpty', 'tag', 'thrower',
+         'topThrowWithReturn']);
+      assert.ok(m.n('guarded[code](S)') > b.n('guarded[code](S)'),
         `guarded ${b.n('guarded[code](S)')} -> ${m.n('guarded[code](S)')}`);
     },
   },
@@ -521,4 +566,262 @@ test('the suspension is answered, and the layer waives nothing it cannot decide'
   assert.equal(m.n('mechanism_unanswered[audit](M)'), 0);
   assert.equal(m.n('guard_unmodelled[audit](K)'), 0,
     'declaring the mechanism modelled without wiring its kinds is what this audit caught');
+});
+
+// ---------------------------------------------------------------------------
+// 5. A LABEL IS A BOUNDARY AN ORDINARY BREAK CANNOT CROSS — queue item
+//    w_labelled_control, 2026-09-08.
+//
+// THE CORPUS HELD ZERO LABELS UNTIL THIS ITEM, so what the layer did with
+// `break outer` was a guess, and the fixture came before the rule for the sixth
+// item running. What the guess would have been is recorded here as the FIRST
+// assertion rather than in a comment: the ordinary sibling arm covers a
+// labelled break exactly as it covers a plain one, and everything a label is
+// FOR was invisible.
+
+const LABEL_ARM = `abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
+                             ast_within[code](S, X), stmt_seq_field(F),
+                             ast_child[code](B, F, I, S).`;
+const LABEL_REF = `label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
+                             ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).`;
+const LABEL_TGT = `label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
+                             ast_within[code](LS, X).`;
+
+test('a labelled transfer leaves the statement the label names, and nothing further', () => {
+  const m = base();
+  // WHAT ONLY A LABEL REACHES. Each of these three is a call whose statement is
+  // a SIBLING OF THE LOOP the break leaves, one statement list further out than
+  // the reference's own — the position an unlabelled break cannot affect.
+  for (const n of ['pastLabelledBreak', 'pastLabelledContinue', 'pastLabelledBlock'])
+    assert.ok(afterAbrupt(m).includes(n), `${n}: a labelled transfer left its list`);
+  // ...AND THE WALK STOPS AT THE LABEL. `beyondLabel` and `afterBlock` follow
+  // the labelled statement itself and run; a walk that did not stop would take
+  // them, which is exactly what mutant l2 below does.
+  for (const n of ['beyondLabel', 'afterBlock'])
+    assert.equal(afterAbrupt(m).includes(n), false, `${n}: after the label, and it runs`);
+  // ...AND AN UNLABELLED BREAK STILL LEAVES ONE LOOP. `plainBreak` carries an
+  // unreferenced `unused:` label directly above it, so the only thing keeping
+  // `beyondPlainBreak` out is the `label` CHILD the reference does not have.
+  assert.equal(afterAbrupt(m).includes('beyondPlainBreak'), false,
+    'an unlabelled break leaves the inner loop and nothing else');
+  assert.ok(afterAbrupt(m).includes('pastPlainBreak'),
+    'positive control: its own statement list is still killed');
+  // ...AND THE TARGET IS THE LABEL NAMED, NOT THE NEAREST. `twoLabels` breaks to
+  // the INNER of two differently named labels, so `pastInnerLabel` runs.
+  assert.equal(afterAbrupt(m).includes('pastInnerLabel'), false,
+    '`break linner` leaves the inner loop, so the outer body continues');
+  assert.ok(afterAbrupt(m).includes('pastInnerBreak'), 'positive control');
+
+  // THE VERDICT AND ITS RULE, both pinned, so a silent regression to `not_yet`
+  // cannot pass by leaving one of them true.
+  const verdicts = new Map(m.q('verdict[audit](js, K, none, controlflow, V)').map(([k, v]) => [k, v]));
+  assert.equal(verdicts.get('labeled_statement'), 'modelled');
+  assert.deepEqual(m.q('handled(js, labeled_statement, controlflow, R)').flat(),
+    ['r_labelled_boundary']);
+  assert.equal(m.n('reason[audit](js, labeled_statement, none, controlflow, R)'), 0);
+  // ...and the mechanism is a SIXTH one rather than `labeled_statement` filed
+  // under `abrupt`: a label receives a transfer instead of performing one.
+  assert.deepEqual(m.q('transfer_mechanism(labeled_statement, M)').flat(), ['label_boundary']);
+  assert.deepEqual(m.q('transfer_mechanism(K, label_boundary)').flat(), ['labeled_statement']);
+});
+
+test('a labelled BLOCK is where the may-set was too narrow, not merely imprecise', () => {
+  const m = base();
+  // THE SHARPEST ROW OF THE ITEM. A labelled loop body is a `guard_kind` arm, so
+  // `pastLabelledBreak` was in `guarded` on other grounds and the may-set was
+  // already hedging — the label bought precision. A labelled BLOCK is not a
+  // loop, not an arm and not a switch, so before this rule the model said
+  // `pastLabelledBlock` RUNS, and the only path through its own block skips it.
+  // A may-set too wide is a hedge; too narrow is a claim.
+  assert.ok(mnr(m).includes('pastLabelledBlock'));
+  const without = build([{ find: LABEL_ARM, replace: '' }]);
+  assert.equal(mnr(without).includes('pastLabelledBlock'), false,
+    'positive control: without the arm the model asserts it runs');
+  assert.ok(mnr(without).includes('pastLabelledBreak'),
+    '...while the loop case was covered by the guard arm either way');
+});
+
+// SEVEN MUTANTS, EACH WITH ITS OWN ORACLE. Two of them needed sites that did
+// not exist and were built for them, because with one label per function a rule
+// that joins on the NAME and a rule that takes any enclosing label are the same
+// rule: `twoLabels` breaks to the inner of two differently named labels, and
+// `plainBreak` carries an unreferenced label over an unlabelled break.
+const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'l1 the labelled arm is gone',
+    mut: [{ find: LABEL_ARM, replace: '' }],
+    expect: (m, b) => assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)),
+      ['pastConditionalLabelledBreak', 'pastLabelledBlock', 'pastLabelledBreak',
+       'pastLabelledContinue'],
+      'the four positions only a label reaches, and nothing else'),
+  },
+  {
+    name: 'l2 the walk does not stop at the label',
+    mut: [{ find: LABEL_ARM, replace: LABEL_ARM.replace('ast_within[code](LS, S),\n', '') }],
+    // WITHOUT `ast_within(LS, S)` the walk runs to the module: `beyondLabel` and
+    // `afterBlock` follow the labelled statement, `pastInnerLabel` follows the
+    // inner label inside the outer loop, `beyondPlainBreak` is reached from a
+    // break that names nothing there, and `seenEmpty` is in a different function
+    // entirely — which is the tell that the boundary is not merely imprecise
+    // without this literal, it is absent.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']),
+  },
+  {
+    name: 'l3 the name join is dropped',
+    mut: [{ find: LABEL_TGT,
+            replace: LABEL_TGT.replace('label_name[code](LS, N)', 'label_name[code](LS, _)') }],
+    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+      ['pastInnerLabel'], 'any enclosing label becomes the target, so the outer body dies too'),
+  },
+  {
+    name: 'l4 the label child is not required',
+    mut: [{ find: LABEL_REF,
+            replace: `label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
+                             label_name[code](_, N).` }],
+    // ...and this is the one `plainBreak`'s unreferenced `unused:` label exists
+    // for: an unlabelled break now names every label there is, so it leaves a
+    // statement it cannot leave. `pastInnerLabel` comes along because the same
+    // mutation loses the name join too — the pair is what tells l3 and l4 apart.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+      ['beyondPlainBreak', 'pastInnerLabel']),
+  },
+  {
+    name: 'l5 only break carries a label',
+    mut: [{ find: LABEL_REF,
+            replace: LABEL_REF.replace('abrupt_kind(K), ast_node[code](X, K, _, _)',
+                                       'ast_node[code](X, break_statement, _, _)') }],
+    // DERIVING FROM `abrupt_kind` RATHER THAN LISTING THE TWO KINDS is what this
+    // measures: hard-code `break_statement` and `continue outer` stops being a
+    // transfer, which is the defect `orphan_claim` paid for arriving one relation
+    // over.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)),
+      ['pastLabelledContinue']),
+  },
+  {
+    name: 'l6 the mechanism loses the rule row that reaches its kind',
+    mut: [{ find: 'guard_named[code](K)       :- transfer_mechanism(K, label_boundary).',
+            replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('guard_unmodelled[audit](K)').flat(), ['labeled_statement']),
+  },
+  {
+    name: 'l7 the mechanism is answered nowhere at all',
+    mut: [{ find: 'mechanism_modelled(label_boundary).', replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('mechanism_unanswered[audit](M)').flat(), ['label_boundary']),
+  },
+];
+
+for (const g of LABELS) test(`${g.name} — a label bounds a transfer`, () => g.expect(build(g.mut), base()));
+
+test('WHERE THE LABELLED ARM CANNOT LOOK: it walks up, and a walk crosses guards', () => {
+  const m = base();
+  // ASKED OF THE RULE BEFORE IT WAS BELIEVED, and answered with a row rather
+  // than a sentence. `conditionalLabelledBreak` puts `break cond` under an `if`,
+  // so `pastConditionalLabelledBreak` runs on every iteration whose test is
+  // false — and `after_abrupt`, whose own comment says NEVER, names it anyway.
+  //
+  // THE ROW IS ATTRIBUTABLE TO THIS ARM: the reference is inside the `if`'s
+  // consequent, a singular field with nothing after it, so the direct-sibling
+  // arm derives nothing there and only the walking arm can produce it.
+  assert.ok(afterAbrupt(m).includes('pastConditionalLabelledBreak'));
+  const without = build([{ find: LABEL_ARM, replace: '' }]);
+  assert.equal(afterAbrupt(without).includes('pastConditionalLabelledBreak'), false,
+    'positive control: no other arm reaches that statement');
+  // NOTHING DOWNSTREAM IS WRONG TODAY, which is why this is a recorded finding
+  // and not a fix: both consumers of `after_abrupt` reach it through `guarded`,
+  // a MAY-set that over-covers on purpose.
+  assert.ok(m.q('guarded[code](N)').length > 0);
+  // ...and the throwing-call arm has had the same walk since 2026-09-06.
+  // f_after_abrupt_says_never_and_the_walking_arms_say_may owns the decision.
+});
+
+// ---------------------------------------------------------------------------
+// 6. THE INERT STATEMENTS — queue item w_inert_statements, 2026-09-08.
+
+test('an inert statement OCCUPIES a conditional position and CREATES none', () => {
+  const m = base();
+  const ids = (k: string) => m.q(`ast_node[code](N, ${k}, F, L)`).map(([n]) => n);
+  const guarded = new Set(m.q('guarded[code](N)').map(([n]) => n));
+  const arms = new Set(m.q('guard_arm[code](P, A)').map(([, a]) => a));
+  const abrupt = new Set(m.q('after_abrupt[code](S)').map(([s]) => s));
+
+  // THE ITEM'S NOTE SAID "no layer is LIKELY to have an opinion", and the
+  // control-flow layer has one. `;` is a guard ARM twice over in the fixture —
+  // the body of `for (const cell of xs) ;` and the consequent of an `if` — and
+  // both an empty statement and a `debugger` sit after a `return`, where an
+  // inert statement still consumes an index.
+  const empties = ids('empty_statement');
+  assert.ok(empties.length >= 4, 'positive control: the fixture put them in the corpus');
+  assert.ok(empties.some((n) => arms.has(n)), 'a `;` can BE a guarded arm');
+  assert.ok(empties.some((n) => abrupt.has(n)), '...and can sit after an abrupt transfer');
+  assert.ok(empties.some((n) => guarded.has(n)));
+  const dbg = ids('debugger_statement');
+  assert.ok(dbg.length >= 2, 'positive control');
+  assert.ok(dbg.some((n) => abrupt.has(n)));
+
+  // WHAT NEITHER DOES IS TRANSFER. Not in the mechanism table, so no arm of this
+  // layer can reach one, and `;` is the only statement the scanner emits with
+  // ZERO children — nothing inside it for a guard to skip.
+  for (const k of ['empty_statement', 'debugger_statement']) {
+    assert.deepEqual(m.q(`transfer_mechanism(${k}, M)`).flat(), [],
+      `${k} transfers nothing`);
+    assert.equal(m.n(`verdict[audit](js, ${k}, none, controlflow, waived)`), 1);
+  }
+  for (const n of empties)
+    assert.deepEqual(m.q(`ast_child[code](${n}, F, I, C)`), [],
+      'an empty statement has no children at all');
+  // ...with a positive control on the same query shape, so the emptiness is a
+  // fact about `;` and not about the way it was asked.
+  const block = m.q('ast_node[code](N, block_statement, F, L)')[0][0];
+  assert.ok(m.q(`ast_child[code](${block}, F, I, C)`).length > 0);
+});
+
+test('the four layers were ASKED about the inert kinds, not assumed', () => {
+  const m = base();
+  const ids = (k: string) => m.q(`ast_node[code](N, ${k}, F, L)`).map(([n]) => n);
+  const sites = new Set(m.q('site[code](X)').map(([x]) => x));
+  const resolvesC = new Set(m.q('resolves[code](C, F)').map(([c]) => c));
+  const valued = new Set(m.q('valued[flow](E)').map(([e]) => e));
+
+  // THE POSITIVE CONTROLS FIRST, because an empty intersection is a fact about
+  // the query until something proves the query can return rows at all.
+  assert.ok(ids('call_expression').every((n) => sites.has(n)),
+    'every call expression is a site');
+  assert.ok(ids('identifier').some((n) => valued.has(n)), 'identifiers carry values');
+
+  for (const k of ['labeled_statement', 'empty_statement', 'debugger_statement']) {
+    const ns = ids(k);
+    assert.ok(ns.length > 0, `positive control: ${k} is in the corpus`);
+    assert.deepEqual(ns.filter((n) => sites.has(n)), [], `${k} is not a call or transfer site`);
+    assert.deepEqual(ns.filter((n) => resolvesC.has(n)), [], `${k} resolves to nothing`);
+    assert.deepEqual(ns.filter((n) => valued.has(n)), [], `${k} carries no value`);
+  }
+});
+
+test('`with` has no site in this corpus, and the reason is a SETTING that was measured', () => {
+  const m = base();
+  // THE SCAN IS THE MEASUREMENT, not a sentence about strict mode. Under this
+  // scanner's one configuration the file is LOST rather than incomplete, which
+  // is why no fixture can hold a `with`.
+  const refused = scan(`with (o) { p(); }`, { file: 'with.js' });
+  assert.equal(refused.nodes, 0);
+  assert.deepEqual([...refused.kinds], []);
+  assert.match(refused.facts[0], /^ast_parse_error\[code\]\("with\.js", "'with' in strict mode/);
+  // ...AND THE SAME SOURCE PARSES UNDER `script`, so the blocker is this
+  // scanner's setting and not the parser's capability. That distinction is the
+  // whole reason the four cells are left OPEN with an owner instead of waived:
+  // `no possible site` would have been the defect
+  // f_the_contract_excluded_one_property_in_the_whole_language paid for.
+  const ok: any = parse(`with (o) { p(); }`, { sourceType: 'script', plugins: ['typescript'] });
+  assert.equal(ok.program.body[0].type, 'WithStatement');
+  // ...and `unambiguous` would leave the present corpus untouched: every fixture
+  // in it is chosen as a module, measured file by file.
+  for (const [, disk] of FILES)
+    assert.equal((parse(read(disk), { sourceType: 'unambiguous', plugins: ['typescript'] }) as any)
+      .program.sourceType, 'module', `${disk} is unambiguously a module`);
+  // SO THE CELLS STAY OPEN AND OWNED. Four of them, one per layer, and the
+  // model says so rather than a comment.
+  assert.equal(m.n('ast_node[code](N, with_statement, F, L)'), 0);
+  assert.deepEqual(m.q('verdict[audit](js, with_statement, none, L, not_modelled)')
+    .map(([l]) => l).sort(), ['callgraph', 'controlflow', 'dataflow', 'modules']);
 });
