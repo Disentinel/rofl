@@ -26,7 +26,6 @@
 -- and `ignored` only, so QUEUEING WORK IS NOT DOING IT, by construction.
 
 edb(work).          -- work(Item, Note)             an item, and what it is
-edb(work_order).    -- work_order(Item, N)          the order to take them in
 edb(work_state).    -- work_state(Item, State)      open | taken | done
 edb(work_sweeps).   -- work_sweeps(Item, Layer)     owns the layer's residue
 edb(work_spawned).  -- work_spawned(Item, Finding)  a problem this item found
@@ -164,7 +163,6 @@ false_done[audit](W, K, S, L) :- work_state(W, done), claim(queued, js, K, S, L,
 -- exported for exactly that and for no other reason.
 
 -- ordinary hygiene of an authored table, each direction a positive row
-ordered(W)                    :- work_order(W, _).
 stated_state(W)               :- work_state(W, _).
 work_unstated[audit](W)       :- claim(queued, js, _, _, _, W), not work(W, _).
 -- ...and the same question for a kind deferred out of the frame: the deferral
@@ -173,19 +171,15 @@ work_unstated[audit](W)       :- claim(queued, js, _, _, _, W), not work(W, _).
 frame_owner_unknown[audit](K, W) :- frame_deferred(K, W), not work(W, _).
 frame_owner_done[audit](K, W)    :- frame_deferred(K, W), work_state(W, done).
 work_unstated[audit](W)       :- work_sweeps(W, _), not work(W, _).
-work_unordered[audit](W)      :- work(W, _), not ordered(W).
 work_stateless[audit](W)      :- work(W, _), not stated_state(W).
 work_bad_state[audit](W, S)   :- work_state(W, S), not work_state_kind(S).
 work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
 
--- TWO ITEMS AT ONE POSITION. `next_work` picks the takeable item with no
--- earlier takeable one, so a duplicated order is not an error the model can
--- feel — it simply hands out whichever the join reaches first, and the plan
--- stops being an ORDER while still looking like one. FOUND BY HAND on
--- 2026-09-04, with awk over the fact file, when the fourth sweep was given a
--- number another item already had: exactly the kind of check that should never
--- have needed a shell pipeline in a repository where the plan is derived.
-order_collision[audit](A, B, N) :- work_order(A, N), work_order(B, N), A != B.
+-- `order_collision[audit]` WENT WITH THE NUMBER on 2026-09-08. It reported two
+-- pairs on an honest tree and was asserted nowhere; under a derived order two
+-- items sharing a position is not a collision but a PARTIAL ORDER, which is
+-- what a plan actually is. What replaces it is `work_needs_cycle[audit]`
+-- below — the thing a hand number made impossible for free.
 
 -- ---------------------------------------------------------------------------
 -- DEPENDENCIES, ADDED 2026-09-04 BECAUSE THREE OF THEM WERE ALREADY REAL AND
@@ -243,8 +237,46 @@ takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_ite
 -- is done and nobody said so. A queue that skips an item without saying why is
 -- the silence this whole pack exists against.
 nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W).
-earlier_takeable(N) :- takeable(W), work_order(W, M), M < N.
-next_work[audit](W) :- takeable(W), work_order(W, N), not earlier_takeable(N).
+-- THE ORDER IS THE WORK, 2026-09-08, on the owner's instruction. This read
+-- `takeable(W), work_order(W, N), not earlier_takeable(N)` over a HAND-WRITTEN
+-- number, and the number was unreliable for a reason that had nothing to do
+-- with care: facts/worklist.rofl is grouped by TOPIC, so the file order and the
+-- numeric order disagreed in twenty positions out of sixty-five, and whoever
+-- appended an item read `...37 38 39` above them and took 40 — which a block
+-- near the top of the file had taken days earlier. `order_collision[audit]`
+-- derived both pairs correctly and was asserted nowhere.
+--
+-- WHAT REPLACES IT IS LEVERAGE, and it is a boolean rather than a count because
+-- this kernel has no aggregation: an item that something else WAITS ON comes
+-- before one nothing waits on. Measured on this very plan the same day —
+-- `w_env_api_surface` had three items behind it and closing it took eleven
+-- cells out of the queue at once, which no hand number had said.
+--
+-- AND `next_work` IS A SET NOW, honestly. A partial order has no unique least
+-- element, and pretending otherwise is what the hand number was doing: with two
+-- items at 40 the old rule handed out whichever the join reached first.
+-- THE FALLBACK ARM IS RANGE-RESTRICTED, which is why `any_unblocker` carries a
+-- variable it does not read: this kernel has no nullary head, and a body that
+-- only asks `does anything at all unblock` still has to name the item it is
+-- answering about. Measured — the first draft wrote `takeable_unblocker :- ...`
+-- and the parser refused it at the door.
+unblocks(P)            :- work_needs(_, P).
+unblocking_work(W)     :- takeable(W), unblocks(W).
+any_unblocker(W)       :- takeable(W), unblocking_work(_).
+next_work[audit](W)    :- unblocking_work(W).
+next_work[audit](W)    :- takeable(W), not any_unblocker(W).
+
+-- ...AND THE AUDIT THE CHANGE MAKES NECESSARY. A hand-written number cannot be
+-- less than itself, so acyclicity came free and nobody had to state it. Derive
+-- the order from `work_needs` and a cycle becomes possible AND INVISIBLE: every
+-- item in it is blocked by another in it, so none is takeable and the queue
+-- simply goes quiet. This plan came within one row of that on 2026-09-08 —
+-- `w_env_api_surface` waited on `w_prototype_of_a_value` while that item's own
+-- note said its remaining half needed `w_env_api_surface`, and only the note
+-- being prose rather than a row kept it acyclic.
+waits_on(W, P)         :- work_needs(W, P).
+waits_on(W, P)         :- work_needs(W, Q), waits_on(Q, P).
+work_needs_cycle[audit](W) :- waits_on(W, W).
 in_flight[audit](W) :- work_state(W, taken).
 
 -- WHAT AN ITEM HAS COST SO FAR, in problems found. The plan and the ledger are

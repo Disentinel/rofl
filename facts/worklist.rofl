@@ -19,7 +19,6 @@ claim_kind(queued).
 -- filled, because it decides at what granularity they are filled at all.
 work(w_mod_partial_cell,
      "DONE 2026-09-04: the modules layer gained a specifier refinement, the three false stale_reason rows are gone").
-work_order(w_mod_partial_cell, 1).
 work_state(w_mod_partial_cell, done).
 work_spawned(w_mod_partial_cell, f_a_cell_can_be_ticked_and_partial_and_the_matrix_calls_that_a_stale_excuse).
 work_spawned(w_cg_member_family, f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable).
@@ -47,7 +46,6 @@ work_spawned(w_cg_member_family, f_two_reason_relations_over_one_fact_have_now_b
 -- reason `nothing_workable` has two causes wanting opposite responses.
 work(w_cg_member_family,
      "the catch-all split into eight named object positions, six modelled; only the blocked template key is left").
-work_order(w_cg_member_family, 4).
 -- DONE 2026-09-08. The last cell this item owned was the TEMPLATE KEY, blocked
 -- on the scanner's contract; the contract moved, the cell closed, and an item
 -- with no claims left is finished rather than offerable. The queue said so
@@ -75,7 +73,6 @@ claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_contr
 -- scanner's contract. The item stays open because the cell is open; it is not
 -- done and it is not offerable, and those are different states.
 work(w_cg_optional_member, "optional_member_expression: only the template key is left, and it waits on the scanner").
-work_order(w_cg_optional_member, 5).
 -- DONE 2026-09-08, with its sibling and for the same reason: its note said
 -- `only the template key is left, and it waits on the scanner`, and the
 -- scanner stopped making it wait.
@@ -86,14 +83,12 @@ work_needs(w_cg_optional_member, w_df_value_core).
 -- transfer site of a different node kind, which the callee-shape axis cannot
 -- see by construction.
 work(w_cg_new_expression, "DONE 2026-09-04: the constructor edge, through a second role of the kind on the refinement column").
-work_order(w_cg_new_expression, 6).
 work_state(w_cg_new_expression, done).
 
 -- 5 — syntactic wrappers around a callee. Mechanical: unwrap and ask again.
 -- Grouped because one rule shape closes all five, which is the test of whether
 -- they really are one thing.
 work(w_cg_syntactic_wrappers, "(f)(), f as T (), f!(), (a, f)(), c ? f : g () — unwrap the callee and recurse").
-work_order(w_cg_syntactic_wrappers, 7).
 work_state(w_cg_syntactic_wrappers, done).
 claim(queued, js, tsas_expression,          s_ts_as,         callgraph, w_cg_syntactic_wrappers).
 claim(queued, js, tsnon_null_expression,    s_non_null,      callgraph, w_cg_syntactic_wrappers).
@@ -114,7 +109,6 @@ claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syn
 -- `super()` whose whole chain declares no constructor — and it is theirs, not
 -- ours.
 work(w_cg_call_result, "DONE 2026-09-04: super() reaches the nearest ancestor's constructor; the dynamic-import shape is unreachable and waived").
-work_order(w_cg_call_result, 8).
 work_state(w_cg_call_result, done).
 work_needs(w_cg_call_result, w_df_function_forms).
 claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
@@ -127,7 +121,6 @@ work_spawned(w_cg_call_result, f_the_corpus_had_no_class_that_inherited_anything
 -- Ordered last for the same reason as the leak item: it is a language question
 -- and the owner schedules it.
 work(w_body_order_is_load_bearing, "DONE 2026-09-05: evalOrder defers a negated literal until its variables are bound; the two spellings are one program again").
-work_order(w_body_order_is_load_bearing, 20).
 work_state(w_body_order_is_load_bearing, done).
 work_spawned(w_body_order_is_load_bearing, f_a_static_call_through_the_class_name_is_invisible_to_the_census).
 work_spawned(w_body_order_is_load_bearing, f_the_safe_flag_is_a_strategy_not_a_verdict).
@@ -144,7 +137,6 @@ work_spawned(w_body_order_is_load_bearing, f_body_order_changes_the_answer_and_w
 -- run the program. Four cells are ticked: call arguments, assignment, the
 -- declarator initialiser. Everything a value can actually BE is open.
 work(w_df_value_core, "DONE 2026-09-04: literals, identifiers, objects, arrays, member lookup, object properties and `this`").
-work_order(w_df_value_core, 2).
 work_state(w_df_value_core, done).
 
 -- 8 — parameters and returns. NOTE, because it is the argument for doing this
@@ -152,7 +144,6 @@ work_state(w_df_value_core, done).
 -- built argument-to-parameter flow to resolve a callback. That is a DATAFLOW
 -- fact living in the call-graph pack, and this item is where it belongs.
 work(w_df_function_forms, "DONE 2026-09-04: arguments into parameters, return values, construction. param_bind still duplicates half of this in the callgraph pack").
-work_order(w_df_function_forms, 3).
 work_state(w_df_function_forms, done).
 
 -- 9 — value movement through control constructs. This is the item that will
@@ -164,7 +155,6 @@ work_state(w_df_function_forms, done).
 -- binds its variable to what the source hands out, and the fifth cell went to
 -- an item of its own rather than being ticked half-true.
 work(w_df_control_forms, "DONE 2026-09-04: await transparent, for-of over an array and over a generator; conditional and sequence were already modelled and unticked").
-work_order(w_df_control_forms, 9).
 work_state(w_df_control_forms, done).
 claim(queued, js, await_expression,          none, dataflow, w_df_control_forms).
 claim(queued, js, conditional_expression,    none, dataflow, w_df_control_forms).
@@ -196,7 +186,6 @@ work_spawned(w_df_control_forms, f_an_unawaited_async_entry_point_looked_like_ov
 -- the unrefined cell the claim named no longer exists and `orphan[audit]` said
 -- so in one run.
 work(w_df_generator_protocol, "DONE 2026-09-05: what a generator RECEIVES - next(v) into the yield, through a delegation, and inner's return").
-work_order(w_df_generator_protocol, 21).
 work_state(w_df_generator_protocol, done).
 
 -- ===========================================================================
@@ -212,7 +201,6 @@ work_state(w_df_generator_protocol, done).
 -- mechanisms; what it waives is `await` and `yield`, which transfer control and
 -- come BACK; what it leaves open is `return`, which needs statement order.
 work(w_controlflow_layer, "DONE 2026-09-04: layer(controlflow) is one fact, it opened 50 cells, and six kinds are answered by two mechanisms").
-work_order(w_controlflow_layer, 10).
 work_state(w_controlflow_layer, done).
 work_spawned(w_controlflow_layer, f_one_fact_opened_fifty_cells_and_the_claim_was_never_run).
 work_spawned(w_controlflow_layer, f_over_approximation_had_two_causes_wearing_one_label).
@@ -236,7 +224,6 @@ work_spawned(w_controlflow_layer, f_the_plan_had_no_check_that_its_order_is_an_o
 -- A gap attributed to whichever item happened to be open is a guess, and it
 -- survives until closing the item forces it to be measured.
 work(w_cf_abrupt_transfer, "DONE 2026-09-06: r_abrupt reads the sibling index; 4 kinds modelled, witness re-attributed to w_exn_propagation").
-work_order(w_cf_abrupt_transfer, 22).
 work_state(w_cf_abrupt_transfer, done).
 work_spawned(w_cf_abrupt_transfer, f_a_gap_is_attributed_to_whichever_item_is_open).
 work_spawned(w_cf_abrupt_transfer, f_the_weaker_consumer_cannot_check_the_stronger_relation).
@@ -258,7 +245,6 @@ claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
 -- is one recursive relation over statement kinds and NOT a fifth mechanism: the
 -- mechanism table already says `abrupt`, and the missing part is the closure.
 work(w_cf_completion, "abrupt transfer only reaches siblings: a return in a nested block, in both if arms, or under a label completes the enclosing region and no rule sees it").
-work_order(w_cf_completion, 40).
 work_state(w_cf_completion, open).
 work_needs(w_cf_completion, w_cf_abrupt_transfer).
 
@@ -270,7 +256,6 @@ work_needs(w_cf_completion, w_cf_abrupt_transfer).
 -- wrong fix: the call-graph fixpoint is what it was built to watch and mixing
 -- layers in would blur the signal it has. A SECOND number is what is missing.
 work(w_cost_gate_per_layer, "the fixpoint cost gate watches the call graph only; the control-flow and era layers have no cost number at all").
-work_order(w_cost_gate_per_layer, 41).
 work_state(w_cost_gate_per_layer, open).
 work_spawned(w_cost_gate_per_layer, f_the_cost_gate_cannot_see_the_layer_i_kept_attributing_to_it).
 work_spawned(w_cost_gate_per_layer, f_an_instruments_world_is_part_of_its_claim).
@@ -289,7 +274,6 @@ work_spawned(w_cost_gate_per_layer, f_an_instruments_world_is_part_of_its_claim)
 -- the rules rather than noticing it per case — and the third instance of that
 -- schema this session.
 work(w_unconsumed_attribute, "an attribute key the scanner emits that no rule reads: four design notes lost to facts already on the store").
-work_order(w_unconsumed_attribute, 42).
 work_state(w_unconsumed_attribute, open).
 work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
 
@@ -340,7 +324,6 @@ work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_const
 -- 43 minutes of CPU: 862 s at three lanes, 707 s at four, same 1109/1101/8.
 -- One line, no semantics touched, -18%.
 work(w_mutant_costs_a_world, "DONE 2026-09-07: the nine-load waste is fixed, the kernel's incrementality EXISTS and is not worth its price - 1.6x on a base that no longer restores to itself; the suite took the fourth core instead").
-work_order(w_mutant_costs_a_world, 43).
 work_state(w_mutant_costs_a_world, done).
 work_spawned(w_mutant_costs_a_world, f_a_worlds_cost_is_the_fixpoint_and_a_file_is_a_core).
 work_spawned(w_mutant_costs_a_world, f_nine_loads_ran_the_fixpoint_nine_times).
@@ -366,7 +349,6 @@ work_spawned(w_mutant_costs_a_world, f_the_default_was_one_core_short_and_nobody
 --     graph does not cross, three to the calls that have no call site, one to
 --     scope and one to the generator protocol.
 work(w_cg_sweep,  "DONE 2026-09-05: 18 cells, 4 residue, 3 already modelled, 11 handed to items").
-work_order(w_cg_sweep, 11).
 work_state(w_cg_sweep, done).
 work_sweeps(w_cg_sweep, callgraph).
 work_spawned(w_cg_sweep, f_the_callee_catch_all_had_no_audit_for_three_days).
@@ -379,7 +361,6 @@ work_spawned(w_cg_sweep, f_the_call_graph_stops_at_the_module_boundary).
 -- control-flow sweep spawned four items, the call-graph sweep two, this one
 -- none - the first measured deceleration in this queue.
 work(w_df_sweep,  "DONE 2026-09-05: 12 cells, 1 already modelled, 2 closed with a reason, 9 to items that existed").
-work_order(w_df_sweep, 12).
 work_state(w_df_sweep, done).
 work_sweeps(w_df_sweep, dataflow).
 
@@ -390,7 +371,6 @@ work_sweeps(w_df_sweep, dataflow).
 -- whose own comment described undone work, which is open work counted as
 -- settled and which no audit can see.
 work(w_mod_sweep, "DONE 2026-09-05: 39 cells, 34 residue, 2 already modelled, and a false waiver corrected beside them").
-work_order(w_mod_sweep, 13).
 work_state(w_mod_sweep, done).
 work_sweeps(w_mod_sweep, modules).
 
@@ -404,7 +384,6 @@ work_sweeps(w_mod_sweep, modules).
 -- a blanket waiver would have been wrong about twelve. The twelve fall into
 -- four questions and each got an item of its own rather than a bucket.
 work(w_cf_sweep, "DONE 2026-09-05: 40 cells, 28 waived with a reason, 12 that were not residue split into four items").
-work_order(w_cf_sweep, 23).
 work_state(w_cf_sweep, done).
 work_sweeps(w_cf_sweep, controlflow).
 work_spawned(w_cf_sweep, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
@@ -428,7 +407,6 @@ work_spawned(w_cf_sweep, f_a_sweep_is_where_the_residue_stops_being_residue).
 -- makes the difference visible. Second item running whose fixture had to come
 -- before its rule.
 work(w_cf_reachability, "DONE 2026-09-06: entry surface = export surface; r_reachability answers all five function forms").
-work_order(w_cf_reachability, 24).
 work_state(w_cf_reachability, done).
 work_spawned(w_cf_reachability, f_the_entry_point_is_what_makes_the_question_stratified).
 work_spawned(w_cf_reachability, f_the_denominator_was_empty_so_the_probe_could_not_fail).
@@ -457,7 +435,6 @@ claim(queued, js, object_method,             none, controlflow, w_cf_reachabilit
 -- BOTH HALVES NEEDED A FIXTURE. The corpus held one function that cannot
 -- return normally and one catch clause with a parameter that only voided it.
 work(w_exception_flow, "DONE 2026-09-06: r_call_is_an_exit + r_exception_value; 4 cells, and `after` explained at last").
-work_order(w_exception_flow, 25).
 work_state(w_exception_flow, done).
 work_spawned(w_exception_flow, f_a_call_that_exits_stops_at_the_function_boundary).
 work_spawned(w_exception_flow, f_a_fixture_can_blind_a_mutant_and_a_count_cannot_tell).
@@ -480,7 +457,6 @@ claim(queued, js, catch_clause,     none, dataflow,    w_exception_flow).
 -- `method` and `constructor` and nothing else — so the fixture came first for
 -- the fourth item running.
 work(w_cf_accessor, "DONE 2026-09-06: r_accessor; a read that runs a getter, and an exit when the getter throws").
-work_order(w_cf_accessor, 26).
 work_state(w_cf_accessor, done).
 work_spawned(w_cf_accessor, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
 work_spawned(w_cf_accessor, f_an_instruments_world_is_part_of_its_claim).
@@ -508,7 +484,6 @@ claim(queued, js, member_expression, none, controlflow, w_cf_accessor).
 -- layer carries `kind_baseline` and an `attr_needs` row for `**` on a kind the
 -- vocabulary did not contain. That is the sharpest thing this audit has caught.
 work(w_vocabulary_frame, "DONE 2026-09-06: 3 not constructs, 4 declared and answered, 10 deferred to w_type_surface; the audit is at zero").
-work_order(w_vocabulary_frame, 27).
 work_state(w_vocabulary_frame, done).
 work_spawned(w_vocabulary_frame, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
 work_spawned(w_vocabulary_frame, f_a_gate_with_nowhere_to_record_the_decision_stays_red).
@@ -529,7 +504,6 @@ work_spawned(w_vocabulary_frame, f_a_gate_with_nowhere_to_record_the_decision_st
 -- SYNTACTICALLY, so `const A = Vat; A.tapped()` reads as an instance and loses
 -- the static. Recorded as f_the_receiver_role_is_syntactic_and_an_alias_loses_it.
 work(w_df_instance_vs_class, "DONE 2026-09-05: the receiver decides which half of a class it sees; super needed no rule").
-work_order(w_df_instance_vs_class, 14).
 work_state(w_df_instance_vs_class, done).
 work_spawned(w_df_instance_vs_class, f_the_receiver_role_is_syntactic_and_an_alias_loses_it).
 -- THE THIRD FACE OF THE SAME CONFUSION, folded in by the dataflow sweep rather
@@ -580,7 +554,6 @@ work_spawned(w_df_instance_vs_class, f_the_receiver_role_is_syntactic_and_an_ali
 -- `scan_failed`, was dropped for `ast_parse_error`: a second name for a thing
 -- that already has one is a table that can disagree with itself.
 work(w_env_scan_failed, "DONE 2026-09-05: ast_parse_error from the scanner, and a refused file is invalid in every environment").
-work_order(w_env_scan_failed, 15).
 work_state(w_env_scan_failed, done).
 work_spawned(w_env_scan_failed, f_the_refusal_was_a_fact_in_the_other_scanner_already).
 work_spawned(w_env_scan_failed, f_a_refused_file_is_absent_not_invalid).
@@ -603,7 +576,6 @@ work_spawned(w_env_scan_failed, f_a_refused_file_is_absent_not_invalid).
 -- tree: `feature_undeclared[audit]` read `kind_needs` alone while three tables
 -- feed it, so a typo in `attr_needs` was silent while taking `invalid` 8 -> 9.
 work(w_env_positional_features, "DONE 2026-09-05: outside_attr_needs gates on what is NOT around a node; the era vocabulary audits read all three tables").
-work_order(w_env_positional_features, 16).
 work_state(w_env_positional_features, done).
 work_spawned(w_env_positional_features, f_the_feature_vocabulary_audit_read_one_of_three_tables).
 
@@ -637,7 +609,6 @@ work_spawned(w_env_positional_features, f_the_feature_vocabulary_audit_read_one_
 -- appeared and never what to use instead. That needs a second table TypeScript
 -- does not keep, so it is a new item rather than a loose end.
 work(w_env_api_surface, "DONE 2026-09-08: the API surface generated from TypeScript`s lib.es*.d.ts, joined to the call graph`s residue and gated by year").
-work_order(w_env_api_surface, 17).
 work_state(w_env_api_surface, done).
 
 -- 18. THE FORM THE OWNER ASKED FOR. `unsupported[node18](Site, Feature)`
@@ -648,7 +619,6 @@ work_state(w_env_api_surface, done).
 -- `work_needs`-blocked rather than merely unstarted, and the queue will not
 -- offer it until that is true.
 work(w_env_ledger_form, "move the verdict into the environment's own ledger: unsupported[node18](Site, Feature)").
-work_order(w_env_ledger_form, 18).
 work_state(w_env_ledger_form, open).
 work_needs(w_env_ledger_form, w_leak_variable_on_the_right).
 work_spawned(w_env_ledger_form, f_a_derived_per_environment_conclusion_has_no_green_form).
@@ -658,7 +628,6 @@ work_spawned(w_env_ledger_form, f_a_derived_per_environment_conclusion_has_no_gr
 -- It is ordered LAST because it is the owner's to schedule, not mine: seven
 -- tests are already red on it and he has said to hold it.
 work(w_leak_variable_on_the_right, "leak[audit] cannot see a variable ledger on the RIGHT of a crossing; collects covers only the left").
-work_order(w_leak_variable_on_the_right, 19).
 work_state(w_leak_variable_on_the_right, open).
 work_spawned(w_leak_variable_on_the_right, f_the_leak_audit_now_fires_on_a_ledger_polymorphic_head).
 work_spawned(w_leak_variable_on_the_right, f_a_hold_written_as_an_ordinal_expires_when_the_queue_grows).
@@ -708,7 +677,6 @@ held(w_leak_variable_on_the_right, vadim).
 -- host. Owned by w_env_api_surface, and the audit stays exact rather than
 -- absorbing it.
 work(w_exn_propagation, "DONE 2026-09-06: may_throw and thrown_by close over the call graph; the catch_from_call frontier is answered").
-work_order(w_exn_propagation, 28).
 work_state(w_exn_propagation, done).
 work_needs(w_exn_propagation, w_exception_flow).
 work_spawned(w_exn_propagation, f_a_frontier_with_an_owner_pays_out_when_the_owner_lands).
@@ -739,7 +707,6 @@ work_spawned(w_exn_propagation, f_a_frontier_with_an_owner_pays_out_when_the_own
 -- (a literal binder colliding across functions, and a closure reading an outer
 -- const, which is what tells `contains` from `is`).
 work(w_scope_binding, "DONE 2026-09-07: a use sees the binders whose region contains it, and `this` is bound by the nearest enclosing non-arrow function; shadowing is w_scope_shadowing").
-work_order(w_scope_binding, 29).
 work_state(w_scope_binding, done).
 work_spawned(w_scope_binding, f_a_blindness_can_have_no_cell).
 work_spawned(w_scope_binding, f_the_corpus_was_bent_around_the_defect_until_it_could_not_be_seen).
@@ -752,18 +719,15 @@ work_spawned(w_scope_binding, f_a_declared_over_approximation_is_a_defect_with_a
 -- a may-set — and it needs block regions plus a nearest-wins rule, which is a
 -- different shape from the containment rule that closed the function half.
 work(w_scope_shadowing, "an inner binder does not hide an outer one: block regions, nearest-wins, the TDZ and parameter scope").
-work_order(w_scope_shadowing, 44).
 work_state(w_scope_shadowing, open).
 work_needs(w_scope_shadowing, w_scope_binding).
 
-work(w_mutant_anchor_decay, "DONE 2026-09-07: the plant is computed from `takeable(W)` ordered by `work_order`, so it names the CURRENT head and the LAST takeable item and expires never - five re-aimings were what it cost to stop writing the anchor by hand").
-work_order(w_mutant_anchor_decay, 45).
+work(w_mutant_anchor_decay, "DONE 2026-09-07: the plant is computed from `takeable(W)` rather than written by hand, so it expires never - five re-aimings were what it cost. Re-aimed again 2026-09-08 when `work_order` was replaced by a derived order, and the mutation got SHARPER: one `work_needs` row now blocks the dependent and promotes the premise at once, exercising both arms of `next_work`").
 work_state(w_mutant_anchor_decay, done).
 work_spawned(w_mutant_anchor_decay, f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes).
 work_spawned(w_mutant_anchor_decay, f_the_anchor_was_authored_text_and_the_thing_it_named_was_a_query).
 
 work(w_query_names_nothing, "DONE 2026-09-07: a query answered NO ROWS and NO SUCH RELATION alike, so every `audit is empty` assertion was satisfiable by a typo, a rename, a wrong arity or a wrong ledger; `unpopulatable` in src/api.ts tells them apart").
-work_order(w_query_names_nothing, 46).
 work_state(w_query_names_nothing, done).
 work_spawned(w_query_names_nothing, f_a_query_that_names_nothing_answers_like_a_query_that_finds_nothing).
 work_spawned(w_query_names_nothing, f_the_probe_for_one_item_found_the_defect_in_the_instrument).
@@ -771,12 +735,10 @@ work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_und
 work_spawned(w_query_names_nothing, f_a_hand_written_list_goes_stale_on_a_refactor).
 
 work(w_note_is_not_evidence, "a work item's note asserting an absence is a claim about the store and carries no query, so six notes in a row were believed and refuted; give a note a witness, which needs a checker world that has the corpus (f_a_witness_has_no_world)").
-work_order(w_note_is_not_evidence, 47).
 work_state(w_note_is_not_evidence, open).
 work_spawned(w_note_is_not_evidence, f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes).
 
 work(w_wire_the_witness_gate, "DONE 2026-09-07: test/witness-check.test.ts runs it, so a stale witness is CI's business rather than a thing somebody has to remember; the script keeps its CLI over the same two exported functions").
-work_order(w_wire_the_witness_gate, 48).
 work_state(w_wire_the_witness_gate, done).
 work_spawned(w_wire_the_witness_gate, f_the_witness_gate_is_wired_to_nothing).
 work_spawned(w_wire_the_witness_gate, f_a_gate_that_depends_on_remembering_is_not_a_gate).
@@ -788,7 +750,6 @@ work_spawned(w_wire_the_witness_gate, f_a_gate_that_depends_on_remembering_is_no
 -- because a kind-level cell cannot distinguish a read from a write. The cell it
 -- CAN claim is the assignment itself, which is open and today swept.
 work(w_alias_store, "DONE 2026-09-07: r_member_write; a member written is a member read, and no store was needed - the layer is already flow-insensitive for an assignment to an identifier").
-work_order(w_alias_store, 30).
 work_state(w_alias_store, done).
 work_spawned(w_alias_store, f_the_store_was_never_the_missing_thing).
 work_spawned(w_alias_store, f_a_delete_mutant_belongs_on_every_literal_not_only_on_the_arm).
@@ -813,7 +774,6 @@ claim(queued, js, assignment_expression, none, callgraph, w_alias_store).
 --     repository forbids by name.
 -- A NODE IN TYPE POSITION AND THE TYPE OF A VALUE SHARE A WORD AND NOTHING ELSE.
 work(w_type_surface, "DONE 2026-09-07: the ten TypeScript type-node kinds are declared and answered at all four layers; the prototype question was a different item and is w_prototype_of_a_value").
-work_order(w_type_surface, 31).
 work_state(w_type_surface, done).
 work_spawned(w_type_surface, f_a_node_in_type_position_is_not_the_type_of_a_value).
 work_spawned(w_type_surface, f_the_declared_list_had_no_misspelling_guard).
@@ -842,7 +802,6 @@ work_spawned(w_type_surface, f_a_measurement_with_hard_coded_axes_measures_the_l
 -- not have, which is w_env_api_surface — and that item waits on THIS one, so
 -- the dependency is now half discharged rather than blocked.
 work(w_prototype_of_a_value, "DONE 2026-09-08: prototype_of[flow] derives which prototype a value has, stdlib_member[audit] names the residue, and w_env_api_surface attributed it").
-work_order(w_prototype_of_a_value, 49).
 work_state(w_prototype_of_a_value, done).
 work_spawned(w_prototype_of_a_value, f_no_site_in_the_corpus_was_asking_may_be_lit).
 work_needs(w_type_surface, w_vocabulary_frame).
@@ -863,7 +822,6 @@ work_needs(w_type_surface, w_vocabulary_frame).
 -- and `ndet` plus `io` are item 17 - which is to say the effect layer is not a
 -- new question at all, it is the JOIN of four questions already queued.
 work(w_effect_layer, "the effect axis over Koka's basic set: total, exn, div, ndet, read, write, io").
-work_order(w_effect_layer, 32).
 work_state(w_effect_layer, open).
 work_needs(w_effect_layer, w_exn_propagation).
 work_needs(w_effect_layer, w_alias_store).
@@ -900,7 +858,6 @@ work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_la
 -- only declaration in the corpus that names it is gamma's second `export *` —
 -- a fixture must be reachable ONLY through the construct it tests.
 work(w_cg_module_boundary, "DONE 2026-09-07: r_imported_name and r_reexported_name; all seven import/export forms answered at both layers, with the last one needing a module reachable only through the re-export and a name that collides with the importing file's own").
-work_order(w_cg_module_boundary, 33).
 work_state(w_cg_module_boundary, done).
 work_spawned(w_cg_module_boundary, f_the_kernel_refused_exactly_and_nobody_read_the_refusal).
 work_spawned(w_cg_module_boundary, f_the_boundary_had_no_site_to_cross).
@@ -951,7 +908,6 @@ claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_bound
 -- a computed member the scanner cannot reduce to a literal. The decorator
 -- produces no node at all with the parser plugin off.
 work(w_cg_invisible_calls, "DONE 2026-09-08: three of the four invisible calls have rules - r_tag_call, r_iterator_protocol, r_decorator_call - and the fourth is not one of them: an await's `.then` is a standard-library method with no node, re-pointed at w_env_api_surface with the measurement written down").
-work_order(w_cg_invisible_calls, 34).
 work_state(w_cg_invisible_calls, done).
 work_spawned(w_cg_invisible_calls, f_the_instrument_decides_which_invisible_call_can_be_closed).
 work_spawned(w_cg_invisible_calls, f_a_guard_over_a_runnable_corpus_has_no_site_to_bite_on).
@@ -1046,7 +1002,6 @@ claim(queued, js, this_expression,  none, callgraph, w_scope_binding).
 -- because `queue_stale[audit]` calls a claim on a shut cell under an open item
 -- a lie and `false_done[audit]` guards the other direction.
 work(w_scanner_nested_values, "the scanner emits scalar own properties only, so a template's text never becomes a fact").
-work_order(w_scanner_nested_values, 35).
 work_state(w_scanner_nested_values, done).
 work_spawned(w_scanner_nested_values, f_the_contract_excluded_one_property_in_the_whole_language).
 
@@ -1061,7 +1016,6 @@ work_spawned(w_scanner_nested_values, f_the_contract_excluded_one_property_in_th
 -- of this defect already names: under negation, order changes the ANSWER, so a
 -- planner may not reorder across a negative literal. Same item, both hats.
 work(w_join_planner, "order body literals by boundness at match time: cost is currently a property of how a human typed the rule").
-work_order(w_join_planner, 36).
 work_state(w_join_planner, open).
 work_needs(w_join_planner, w_body_order_is_load_bearing).
 work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
@@ -1106,7 +1060,6 @@ work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
 -- to the same node types, so it was green over a set that excluded seven real
 -- places. Recorded as f_two_enumerations_with_one_blind_spot_agree_about_nothing.
 work(w_mod_beyond_the_import, "PARTLY DONE 2026-09-08: `export ... from` is a module site at last (r_reexport_edge) and `reexport_offers` joins the resolver to the export side; `require`, the subpath specifier and the default form stay open and the first two are the owner's to scope").
-work_order(w_mod_beyond_the_import, 37).
 work_state(w_mod_beyond_the_import, open).
 work_spawned(w_mod_beyond_the_import, f_two_enumerations_with_one_blind_spot_agree_about_nothing).
 work_spawned(w_mod_beyond_the_import, f_a_reexports_local_name_is_not_a_name_in_this_module).
@@ -1132,7 +1085,6 @@ claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_i
 -- `node_kind` to the pack whose name promises them and load it everywhere, or
 -- keep `a file that makes a claim declares the kind` and accept the copies.
 work(w_vocabulary_home, "node_kind rows live in five packs; facts/js-kinds.rofl is named for them and holds a minority").
-work_order(w_vocabulary_home, 38).
 work_state(w_vocabulary_home, open).
 work_spawned(w_vocabulary_home, f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it).
 
@@ -1146,7 +1098,6 @@ work_spawned(w_vocabulary_home, f_the_kind_vocabulary_is_scattered_across_the_pa
 -- one evaluation strategy to another and leave the wrong answer where it was.
 -- The diagnostic belongs where `unsafe/1` and `malformed/2` already live.
 work(w_negation_range_restriction, "a variable bound only inside a negation is accepted, and asks whether the relation is empty").
-work_order(w_negation_range_restriction, 39).
 work_state(w_negation_range_restriction, open).
 work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_verdict).
 
@@ -1176,7 +1127,6 @@ work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_v
 -- once — but it CHANGES THE MODEL for a computed identifier key, so it needs
 -- the site above before it can be measured rather than argued.
 work(w_computed_key_names, "a computed key that is a bare identifier is named by the variable's spelling, the guard that forbids it covers only member-expression keys, and the same arm ranges over every named node rather than over keys").
-work_order(w_computed_key_names, 40).
 work_state(w_computed_key_names, open).
 work_spawned(w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).
 
@@ -1193,7 +1143,6 @@ work_spawned(w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_i
 -- between them. A fixture that suspends forever then put `afterStall` in front
 -- of the acceptance gate within a single run.
 work(w_cf_suspension, "the code after an await or a yield may not run, because control returns only if the promise settles or the consumer asks again").
-work_order(w_cf_suspension, 41).
 work_state(w_cf_suspension, done).
 work_spawned(w_cf_suspension, f_a_suspension_is_a_scheduling_fact_and_the_waiver_assumed_it).
 work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string_operation).
@@ -1215,7 +1164,6 @@ work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string
 
 -- 50 - array_pattern, assignment_pattern, rest_element, spread_element.
 work(w_destructuring_rest_and_spread, "array and assignment patterns, rest and spread: object_pattern landed with a rule, and the other four forms of the same family have no site yet").
-work_order(w_destructuring_rest_and_spread, 50).
 work_state(w_destructuring_rest_and_spread, done).
 -- THIRTEEN OF THE SIXTEEN, and the three that are not here went to
 -- `w_destructuring_hides_a_call` (60) because measuring them changed the
@@ -1239,7 +1187,6 @@ work_spawned(w_destructuring_rest_and_spread, f_destructuring_hides_a_call_the_w
 
 -- 51 - class_property, class_private_property, class_private_method, private_name, static_block.
 work(w_class_fields, "class fields, private names and static blocks - ES2022 class syntax the vocabulary never named").
-work_order(w_class_fields, 51).
 work_state(w_class_fields, done).
 -- DONE 2026-09-08. All twenty cells answered: fourteen `handled` and six
 -- waivers, and the five kinds' names were checked against what the scanner
@@ -1299,7 +1246,6 @@ claim(queued, js, static_block,                none, modules,      w_class_field
 
 -- 52 - class_expression.
 work(w_class_expression, "class_expression is READ by obj_like[flow] and node_value_kind and was declared nowhere: the model had an opinion the matrix could not report").
-work_order(w_class_expression, 52).
 -- DONE 2026-09-08. Four cells answered: two `handled` and two waivers, and each
 -- of the four is the OPPOSITE of what consistency with `class_declaration`
 -- would have written for at least one of them.
@@ -1408,7 +1354,6 @@ work_spawned(w_class_expression, f_a_heritage_clause_runs_and_a_class_is_waived_
 -- in the same grep. So the missing write is an absence in a may-set and can
 -- never become a positive false claim.
 work(w_update_and_literals, "DONE 2026-09-08: 1n reached the store with no value at all (a bigint matched none of the scanner's four branches), a for-update was never a guard arm, and a regexp literal is the one literal whose value is an object").
-work_order(w_update_and_literals, 53).
 work_state(w_update_and_literals, done).
 work_spawned(w_update_and_literals, f_a_bigint_matched_none_of_the_four_branches).
 work_spawned(w_update_and_literals, f_a_for_update_was_never_a_guard_arm).
@@ -1433,7 +1378,6 @@ claim(queued, js, reg_exp_literal,             none, modules,      w_update_and_
 
 -- 54 - meta_property.
 work(w_meta_property, "new.target and import.meta: one node kind and two questions").
-work_order(w_meta_property, 54).
 -- PARTLY DONE 2026-09-08, and the item stays OPEN with three of its four cells
 -- unanswered ON PURPOSE. Closing them would need one verdict to cover two
 -- constructs, and the measurement says they are two.
@@ -1495,7 +1439,6 @@ claim(queued, js, meta_property,               none, modules,      w_meta_proper
 
 -- 55 - export_specifier, export_namespace_specifier.
 work(w_export_specifier_forms, "export { a as b } and export * as ns: the two export forms with no node in this vocabulary").
-work_order(w_export_specifier_forms, 55).
 -- DONE 2026-09-08. All eight cells answered: seven `handled` and one waiver,
 -- and the waiver is the one the measurement earned rather than the one the
 -- pattern suggested.
@@ -1550,7 +1493,6 @@ work_state(w_export_specifier_forms, done).
 -- mechanism rather than a sixth kind filed under `abrupt`, because a label
 -- receives a transfer instead of performing one.
 work(w_labelled_control, "DONE 2026-09-08: r_labelled_boundary; a labelled statement, and break/continue to a label - the one new statement form that really does transfer control").
-work_order(w_labelled_control, 56).
 work_state(w_labelled_control, done).
 work_spawned(w_labelled_control, f_a_labelled_break_was_read_as_an_ordinary_one).
 claim(queued, js, labeled_statement,           none, callgraph,    w_labelled_control).
@@ -1601,7 +1543,6 @@ claim(queued, js, labeled_statement,           none, modules,      w_labelled_co
 -- and it is why this is left as work rather than waived at four layers on the
 -- strength of the word "inert". See f_with_is_a_scanner_setting_and_a_scoping_hazard.
 work(w_inert_statements, "empty and debugger are answered at four layers each; `with` is open because the scanner parses every file as a module - a setting, measured - and because it redirects name resolution").
-work_order(w_inert_statements, 57).
 work_state(w_inert_statements, open).
 work_spawned(w_inert_statements, f_with_is_a_scanner_setting_and_a_scoping_hazard).
 claim(queued, js, with_statement,              none, callgraph,    w_inert_statements).
@@ -1645,7 +1586,6 @@ claim(queued, js, with_statement,              none, modules,      w_inert_state
 --     stays, annotated, because both answers are false and only an `es2023` on
 --     the scale fixes it - which is the owner's.
 work(w_directives, "'use strict' and the hashbang: directives are a real construct and the scanner emits them").
-work_order(w_directives, 58).
 work_state(w_directives, done).
 work_spawned(w_directives, f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it).
 work_spawned(w_directives, f_use_strict_changes_two_things_this_model_has_neither_of).
@@ -1676,7 +1616,6 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 -- The first two land with the decorator work, which needs the same plugin and
 -- will need the same question asked of the environment scale.
 work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: two need a parser plugin and two need an environment the scale does not have").
-work_order(w_plugin_gated_kinds, 59).
 work_state(w_plugin_gated_kinds, open).
 
 
@@ -1702,7 +1641,6 @@ work_state(w_plugin_gated_kinds, open).
 -- closable with the machinery this layer already has, because its transfer is
 -- an arm skipped by a condition rather than a call the syntax hides.
 work(w_destructuring_hides_a_call, "an array pattern, an object rest and every spread position transfer control into user code - an iterator or a getter - and the layer`s reason atom for all four says they transfer nothing").
-work_order(w_destructuring_hides_a_call, 60).
 work_state(w_destructuring_hides_a_call, open).
 work_needs(w_destructuring_hides_a_call, w_env_api_surface).
 claim(queued, js, object_pattern,              none, controlflow,  w_destructuring_hides_a_call).
@@ -1718,7 +1656,6 @@ work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_
 -- be stated as an identity - the open set against a relation derived some other
 -- way - is a real question and not a tidy-up.
 work(w_open_cell_should_be_an_identity, "the open-cell count is the last pin in the queue tests that is a number, and three parallel branches move it at once").
-work_order(w_open_cell_should_be_an_identity, 61).
 work_state(w_open_cell_should_be_an_identity, open).
 
 -- ==========================================================================
@@ -1773,7 +1710,6 @@ work_state(w_open_cell_should_be_an_identity, open).
 -- the replacement and refuse the other two on purpose. Recorded as
 -- f_a_decorator_returns_a_different_shape_for_every_position.
 work(w_decorator_replaces_its_target, "DONE 2026-09-08: r_decorator_replacement gives a decorated name and a decorated method the decorator's return, and an auto-accessor becomes a field").
-work_order(w_decorator_replaces_its_target, 62).
 work_state(w_decorator_replaces_its_target, done).
 work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_shape_for_every_position).
 
@@ -1807,5 +1743,4 @@ work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_
 -- microtask queue. `w_env_api_surface` answered the half about the callee`s
 -- name; nobody has answered the half about the caller`s.
 work(w_await_is_a_call_the_oracle_places_elsewhere, "an await calls then(): the callee is a library method the model never sees, and V8 credits a user thenable`s then to <top>").
-work_order(w_await_is_a_call_the_oracle_places_elsewhere, 63).
 work_state(w_await_is_a_call_the_oracle_places_elsewhere, open).

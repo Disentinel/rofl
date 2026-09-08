@@ -96,7 +96,7 @@ const LIES = [
   'double_owned[audit](K, S, L, A, B)',
   'spawn_orphan[audit](W, F)',
   'work_unstated[audit](W)',
-  'work_unordered[audit](W)',
+  'work_needs_cycle[audit](W)',
   'work_stateless[audit](W)',
   'work_bad_state[audit](W, S)',
   'work_sweeps_nolayer[audit](W, L)',
@@ -537,10 +537,29 @@ test('MUTANT 6 — a spawned finding that is not in the ledger', () => {
   assert.equal(w.n('spawn_orphan[audit](W, F)'), 1);
 });
 
-test('MUTANT 7 — an item with no order and no state', () => {
-  const w = world({ extra: 'work(w_ghost, "neither ordered nor stated").' });
-  assert.equal(w.n('work_unordered[audit](W)'), 1);
+test('MUTANT 7 — an item with no state, and a plan that waits on itself', () => {
+  // `work_unordered[audit]` WENT WITH THE NUMBER on 2026-09-08, when the order
+  // became a derivation over `work_needs` instead of a hand-written integer.
+  const w = world({ extra: 'work(w_ghost, "stateless").' });
   assert.equal(w.n('work_stateless[audit](W)'), 1);
+  const honest = world();
+
+  // ...AND ITS REPLACEMENT, which the change made necessary rather than
+  // optional. A hand number cannot be less than itself, so acyclicity came free
+  // and nobody had to state it; a derived order makes a cycle possible AND
+  // SILENT, because every item in one is blocked by another in it, none is
+  // takeable, and the queue simply goes quiet.
+  assert.equal(honest.n('work_needs_cycle[audit](W)'), 0, 'and none on the honest tree');
+  const loop = world({ extra: 'work_needs(w_join_planner, w_effect_layer).\n'
+                            + 'work_needs(w_effect_layer, w_join_planner).' });
+  assert.deepEqual(loop.binds('work_needs_cycle[audit](W)', 'W'),
+    ['w_effect_layer', 'w_join_planner']);
+  // AND THE SILENCE IS THE POINT: both are takeable on the honest tree and
+  // neither is in the cycle world's queue, with no other row saying why.
+  for (const wi of ['w_join_planner', 'w_effect_layer']) {
+    assert.ok(honest.binds('takeable(W)', 'W').includes(wi), `positive control: ${wi} is takeable`);
+    assert.ok(!loop.binds('takeable(W)', 'W').includes(wi), `${wi} vanishes from the queue`);
+  }
 });
 
 test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
@@ -627,7 +646,12 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and again: the transitive half closed the same day its premise did, so
   // the head is the SCOPE question — `binder[flow]` is file-scoped by
   // construction, which has cost this loop five fixture renames.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_effect_layer']);
+  // THE HEAD IS EVERY TAKEABLE ITEM SINCE 2026-09-08, and that is this plan
+  // rather than the rule: the order is derived from `work_needs` now, and the
+  // eleven items anything waits on are all done, so nothing left has leverage.
+  // A flat queue is what a finished dependency chain looks like from here.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W').sort(),
+                   base.binds('takeable(W)', 'W').sort());
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -707,31 +731,29 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // restriction leaving the host for the rules: derive the check instead of
   // copying it. Two anchors in this repository have now been retired this way
   // and both had decayed exactly as often as the thing they named changed.
-  const orderOf = (w: ReturnType<typeof world>) => new Map(w.binds('work_order(W, N)', 'W', 'N')
-    .map((row) => { const [item, n] = row.split('/'); return [item, Number(n)] as const; }));
-  const byOrder = (w: ReturnType<typeof world>) => {
-    const o = orderOf(w);
-    return w.binds('takeable(W)', 'W').sort((x, y) => (o.get(x) ?? 0) - (o.get(y) ?? 0));
-  };
-  const takeable = byOrder(base);
-  // POSITIVE CONTROL FOR THE DERIVATION ITSELF, because a plant computed from an
-  // empty list plants nothing and passes in silence: three takeable items are
-  // needed for the head, the successor and a premise that is none of them.
+  // RE-AIMED 2026-09-08, and the mutation is SHARPER under a derived order than
+  // it was under the number. The plant is one `work_needs` row between two
+  // takeable items, and it now does TWO things at once: the dependent becomes
+  // blocked and therefore leaves the queue, and the premise becomes an
+  // UNBLOCKER and therefore becomes the whole of it. One row, both arms of
+  // `next_work`, and the oracle is a set rather than a position.
+  const takeable = base.binds('takeable(W)', 'W');
   assert.ok(takeable.length >= 3, `only ${takeable.length} takeable items to plant between`);
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), [takeable[0]],
-    'the head IS the first takeable item by order — the plant is aimed at a derived row');
-  const premise = takeable[takeable.length - 1];
-  const mut = world({ extra: `work_needs(${takeable[0]}, ${premise}).` });
+  // ON THE HONEST TREE EVERY TAKEABLE ITEM IS NEXT, and that is a fact about
+  // this plan rather than about the rule: the eleven items anything waits on
+  // are all done, so nothing left has leverage over anything and the fallback
+  // arm hands out the lot. A flat plan is what a finished dependency chain
+  // looks like from the queue's side.
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W').sort(), takeable.slice().sort(),
+    'with no leverage anywhere, next is everything takeable');
+  const [head, , premise] = takeable;
+  const mut = world({ extra: `work_needs(${head}, ${premise}).` });
   assert.equal(mut.n('blocked[audit](W)'), base.n('blocked[audit](W)') + 1,
     'the planted one on top of the real ones');
-  // ...and the head becomes the NEXT ITEM BY ORDER, not the premise: the premise
-  // is the LAST takeable item and the queue does not promote it for being
-  // needed. That is the relation doing exactly one thing — skipping — which is
-  // what makes it checkable.
-  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), [takeable[1]],
-    'and the blocked item is skipped rather than handed out');
-  console.log(`  KILLED: head ${takeable[0]} blocked on ${premise} -> ${takeable[1]}`
-    + `; blocked ${base.n('blocked[audit](W)')} -> ${mut.n('blocked[audit](W)')}`);
+  assert.deepEqual(mut.binds('next_work[audit](W)', 'W'), [premise],
+    'the premise is the only thing with leverage, so it is the whole queue');
+  assert.ok(!mut.binds('takeable(W)', 'W').includes(head), 'and the dependent is gone from it');
+  console.log(`  KILLED: ${head} blocked on ${premise}; next ${takeable.length} -> 1`);
 });
 
 test('the layer list is the owner\'s, and a rule says so', () => {
