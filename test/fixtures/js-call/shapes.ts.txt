@@ -426,3 +426,75 @@ export function inertDebugger(n: number): number {
 // question that is not about functions.
 export type { Base as BaseType };
 export { type curried as curriedType };
+
+// ===========================================================================
+// THREE VALUE FORMS THE VOCABULARY NEVER NAMED (w_update_and_literals,
+// 2026-09-08): `i++`, `1n` and `/re/g`. Every position below exists to make
+// one of the four layers say something, and each one was chosen AFTER the
+// measurement that showed the layer said nothing.
+//
+// `seenUpdate` and `bumpedInUpdate` are the pair the control-flow half turns
+// on, and the difference between them is the whole point: one is called from
+// the BODY of a `for`, which `guard_kind(for_statement, body)` has always
+// covered, and the other from its UPDATE, which had no row. Measured before
+// the row was written, on the one C-style `for` this corpus already had
+// (alpha.mjs:845): `guard_arm` named its body and NOT its `j += 1`, so the
+// model positively asserted that a for-update runs — and `for (i = 0; i < 0;
+// i++)` runs it zero times.
+// ...and `readLimit` is the THIRD slot, which exists because a mutant needed
+// it. `guard_kind(for_statement, test)` is a row somebody could plausibly add
+// beside the right one, and it is FALSE — a `for`'s test runs at least once
+// whenever its init completes. Measured without this function in the corpus,
+// the mis-aimed row moved `guarded` from 385 to 394 and moved `may_not_run`
+// and `guarded_call` NOT AT ALL, because no `for` in the corpus called
+// anything in its test: a survivor for want of a site rather than for want of
+// a rule. One call here turns it into a mutant that dies.
+function seenUpdate(n: number): number { return n; }
+function bumpedInUpdate(n: number): number { return n + 1; }
+function readLimit(n: number): number { return n; }
+
+export function updateForms(n: number): number {
+  let i = 0;
+  // POSTFIX AND PREFIX, both bound, because the two differ in the one place
+  // this layer would have to look: `taken` is the value BEFORE the increment
+  // and `given` the value after. Neither is carried, and the reason is
+  // `plain_assign`'s reason for refusing `x += y` — the value is the result of
+  // ToNumeric on the operand, so even a known literal operand does not give
+  // this layer the answer: `"5"++` is the NUMBER 5.
+  const taken = i++;
+  const given = --i;
+  let total = taken + given;
+  for (let k = 0; k < n; k++) { total += seenUpdate(k); }
+  for (let m = 0; m < n; m = bumpedInUpdate(m)) { total += m; }
+  for (let p = 0; p < readLimit(n); p++) { total += p; }
+  return total;
+}
+
+// A BIGINT'S VALUE REACHED THE STORE AS NOTHING AT ALL until the scanner
+// learned the fourth scalar: `BigIntLiteral.value` is a native `bigint`, which
+// matched none of the four branches in scanners/js_ast.ts, so `1n` was the one
+// literal in JavaScript that arrived with no `ast_attr` row. `BIG_TOTAL` is
+// bound so the value has to travel through `binder`, and `255n.toString(16)`
+// is a member call ON a bigint literal — the residue that belongs to the
+// standard library rather than to this program.
+const BIG_TOTAL = 9007199254740993n;
+export function bigForms(): string {
+  return 255n.toString(16) + String(BIG_TOTAL);
+}
+
+// A REGEXP LITERAL IS THE ONLY LITERAL IN THIS LANGUAGE WHOSE VALUE IS AN
+// OBJECT, which is why it is in `node_value_kind` beside `object_expression`
+// and not in `literal_kind` beside `1n`. Two receivers on purpose: `MATCHER`
+// reaches its prototype through the VALUE arm of `prototype_of` (binder ->
+// may_be_node -> kind), and the inline `/x[0-9]/` reaches it through the KIND
+// arm, so deleting either arm loses exactly one of them.
+const MATCHER = /ab+c/gi;
+//
+// THE RETURN TYPE IS `number` AND THAT IS NOT A STYLE CHOICE: written
+// `: boolean`, this line put `tsboolean_keyword` in the corpus and
+// `vocabulary_gap[audit]` named it on the first run — a kind nobody had
+// declared, arriving through a fixture written for a different question. The
+// audit doing its job, and a reminder that a fixture's TYPES are corpus too.
+export function regexpForms(s: string): number {
+  return MATCHER.test(s) || /x[0-9]/.test(s) ? 1 : 0;
+}

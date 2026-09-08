@@ -37,6 +37,27 @@ guard_kind(logical_expression,         right).
 -- spec and not in the shape: all five loops look identical in the tree.
 guard_kind(for_of_statement,           body).
 guard_kind(for_statement,              body).
+-- ...AND ITS UPDATE, 2026-09-08 (w_update_and_literals). A C-style `for` has
+-- FOUR children and only one of them was on this table. `init` always runs and
+-- `test` runs at least once, so neither belongs here — but `update` runs ZERO
+-- times when the test is false to begin with, and zero times more when the
+-- body leaves by a `break`, a `return` or a throw. It is skippable in exactly
+-- the sense `body` is.
+--
+-- MEASURED BEFORE THE ROW, on the one C-style `for` this corpus already had
+-- (alpha.mjs:845, `for (let j = 0; j < 2; j += 1)`): `guard_arm` named the
+-- body and nothing else, and `guarded[code]` was EMPTY for the `j += 1`. The
+-- model positively asserted that a for-update runs — the same direction as
+-- `pastLabelledBlock` one item ago, and the direction this layer documents as
+-- the dangerous one, because a CALL written there (`for (…; …; m = step(m))`)
+-- was `reached_unguarded` and therefore kept out of `may_not_run`.
+--
+-- THE ITEM THAT FOUND IT IS `update_expression`'s, and that is not a
+-- coincidence: `i++` is what a for-update is almost always written as, and
+-- nobody had looked at the slot while the form that inhabits it was not in the
+-- vocabulary. The row is on `for_statement` because that is whose field it is,
+-- and it answers for every expression written there.
+guard_kind(for_statement,              update).
 guard_kind(for_in_statement,           body).
 guard_kind(while_statement,            body).
 -- A DEFAULT VALUE RUNS ONLY IF THE ARGUMENT IS ABSENT. `function f(n, made =

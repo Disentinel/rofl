@@ -254,3 +254,28 @@ ignored(js, tstype_parameter_instantiation, controlflow, a_type_only_no_runtime_
 ignored(js, tstype_query,                   controlflow, a_type_only_no_runtime_value).
 ignored(js, tstype_reference,               controlflow, a_type_only_no_runtime_value).
 ignored(js, tsunion_type,                   controlflow, a_type_only_no_runtime_value).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). All three are waived here, and the item's real
+-- control-flow work is NOT in these three rows — it is the
+-- `guard_kind(for_statement, update)` row in rules/js-controlflow.rofl, which
+-- this item found because `i++` is what a for-update is written as and nobody
+-- had looked at the slot while the form was outside the vocabulary.
+--
+-- THE WAIVERS ARE ABOUT THE FORM AND NOT ABOUT THE POSITION, which is the
+-- distinction that keeps them honest: this layer's per-kind cell asks whether
+-- a kind TRANSFERS control, and `guarded` answers separately for whatever is
+-- written in a skippable place. None of the three transfers anything. An
+-- update runs its operand's ToNumeric and writes back; a bigint and a regexp
+-- literal are values. `may_throw[code]` here is the explicit-throw model —
+-- `throw` statements and calls that reach one — so the implicit TypeError a
+-- `const` update raises is outside what this layer models for EVERY kind, not
+-- for these three.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+ignored(js, update_expression, controlflow, a_no_control_transfer).
+ignored(js, big_int_literal,   controlflow, a_no_control_transfer).
+ignored(js, reg_exp_literal,   controlflow, a_no_control_transfer).

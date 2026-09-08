@@ -491,10 +491,14 @@ guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).` , replace: 
       // `guarded` 320 -> 345 in the base while the mutant world grew by less, so
       // a ratio chosen when the corpus was smaller went red without the mutant's
       // behaviour changing at all.
+      // ...AND `readLimit` JOINED IT 2026-09-08 (w_update_and_literals), a
+      // fifteenth name and the same claim: it is called from a `for`'s TEST,
+      // which always runs, and the reversed order test makes the statements
+      // before a later suspension guard it. A named set grown by a second item.
       assert.deepEqual([...new Set(mnr(m).filter((n) => !mnr(b).includes(n)))],
         ['broken', 'callsSent', 'chooser', 'iterator', 'mark', 'mkAlef',
-         'nestedThrow', 'outerGen', 'pick', 'read', 'seenEmpty', 'tag', 'thrower',
-         'topThrowWithReturn']);
+         'nestedThrow', 'outerGen', 'pick', 'read', 'readLimit', 'seenEmpty', 'tag',
+         'thrower', 'topThrowWithReturn']);
       assert.ok(m.n('guarded[code](S)') > b.n('guarded[code](S)'),
         `guarded ${b.n('guarded[code](S)')} -> ${m.n('guarded[code](S)')}`);
     },
@@ -664,8 +668,14 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
+    // THREE NAMES JOINED 2026-09-08 (w_update_and_literals) and they say the
+    // same thing `seenEmpty` did, one file further on: `seenUpdate`,
+    // `bumpedInUpdate` and `readLimit` are module-level declarations in a
+    // DIFFERENT function's neighbourhood entirely, so a walk that does not stop
+    // at the label reaches them too.
     expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
-      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']),
+      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'bumpedInUpdate',
+       'pastInnerLabel', 'readLimit', 'seenEmpty', 'seenUpdate']),
   },
   {
     name: 'l3 the name join is dropped',

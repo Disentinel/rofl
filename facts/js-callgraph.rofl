@@ -480,3 +480,34 @@ node_kind(js, export_namespace_specifier).
 handled(js, export_specifier,           callgraph, r_export_rename).
 handled(js, export_namespace_specifier, callgraph, r_namespace_reexport).
 
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). ONE of the three cells is answered here and TWO ARE
+-- LEFT OPEN with an owner, which is the honest split rather than the tidy one.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+-- AN UPDATE EVALUATES TO A NUMBER OR A BIGINT, always, whatever its operand
+-- was: the result of ToNumeric plus at most one. There is no operand for which
+-- `i++` denotes a function, so no call site can resolve through one. Same
+-- verdict and same reason as `unary_expression` beside it, and the fixture
+-- gives it the site that verdict never had.
+ignored(js, update_expression, callgraph, a_a_primitive_is_never_a_callee).
+
+-- THE OTHER TWO CELLS ARE NOT WAIVED AND NOT ANSWERED, and the reason is the
+-- one `w_prototype_of_a_value` already recorded about `array_expression`:
+-- naming the residue is not resolving it. `/x[0-9]/.test(s)`,
+-- `MATCHER.test(s)` and `255n.toString(16)` are member calls whose METHOD IS
+-- NOT A NODE IN THIS PROGRAM, so no rule here can produce an edge — every one
+-- of them lives in a standard library this model does not have.
+--
+-- WHAT CHANGED IS THAT THEY ARE NAMED. Measured before the two
+-- `kind_prototype` rows landed: all three were `unresolved_call` with
+-- `prototype_of` EMPTY, so `stdlib_member[audit]` — the relation that exists
+-- to collect exactly this residue — could not see them. It names all three
+-- now, which moves them from silence into `w_env_api_surface`'s in-tray, and
+-- the two claims in facts/worklist.rofl are re-pointed at that item by name.
+-- An `ignored` here would have been a blocker wearing a waiver's face; see
+-- f_a_guard_becomes_falsifiable_when_another_item_lands for the distinction.

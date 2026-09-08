@@ -267,9 +267,11 @@ kind_absent_ok(class_private_method, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(private_name, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(static_block, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(class_expression, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(update_expression, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(big_int_literal, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(reg_exp_literal, a_declared_for_the_denominator_and_queued).
+-- ...AND THREE MORE ARE GONE, 2026-09-08 (w_update_and_literals): the fixture
+-- at the end of test/fixtures/js-call/shapes.ts.txt puts `i++`, `--i`,
+-- `9007199254740993n`, `255n` and two regexp literals in the corpus, so
+-- `update_expression`, `big_int_literal` and `reg_exp_literal` are exercised
+-- and `kind_absent_stale[audit]` named all three the run the fixture landed.
 kind_absent_ok(meta_property, a_declared_for_the_denominator_and_queued).
 -- ...AND TWO ARE GONE, 2026-09-08 (w_export_specifier_forms): `export_specifier`
 -- and `export_namespace_specifier` have corpus sites now — `export { renamed as

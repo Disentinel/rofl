@@ -762,7 +762,15 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       // A TEMPLATE LITERAL IS IN NEITHER `literal_kind` NOR `node_value_kind`,
       // so the value layer never carries one and only the kind arm reaches it.
       // That is the whole reason the two arms are two.
-      assert.deepEqual(stdlib(b).filter((x) => !stdlib(m).includes(x)), ['string.concat']);
+      // ...AND `255n.toString(16)` JOINED IT 2026-09-08 (w_update_and_literals),
+      // for the same reason and from the other end of the value space: a bigint
+      // literal is a receiver whose kind is the answer. `regexp.test` is NOT on
+      // this difference — `MATCHER.test(s)` reaches `regexp` through the value
+      // arm, which this mutant leaves standing, and `includes` on a multiset
+      // then hides its inline twin. A named set grown by a second item, which
+      // is the merge shape this ledger is built for.
+      assert.deepEqual(stdlib(b).filter((x) => !stdlib(m).includes(x)),
+        ['bigint.toString', 'string.concat']);
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)') * 2);
     },
   },
@@ -778,10 +786,14 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // the array to a name, so its receiver's kind is reachable only through
     // `may_be_node`, and the arm becomes load-bearing rather than decoration.
     expect: (m, b) => {
-      assert.deepEqual(stdlib(b), ['array.join', 'array.join', 'string.concat'],
-        'two arrays — one written in place and one reached through a binder');
-      assert.deepEqual(stdlib(m), ['array.join', 'string.concat'],
-        'and the bound one is the row this arm carries');
+      // THE UNION, 2026-09-08: w_update_and_literals added a bigint receiver
+      // and two regexp ones, and `MATCHER.test(s)` is the SECOND row this arm
+      // carries alone — the first being the bound array.
+      assert.deepEqual(stdlib(b), ['array.join', 'array.join', 'bigint.toString',
+        'regexp.test', 'regexp.test', 'string.concat'],
+        'two arrays, two regexps and a bigint — some written in place, some reached through a binder');
+      assert.deepEqual(stdlib(m), ['array.join', 'bigint.toString', 'regexp.test', 'string.concat'],
+        'and the bound array and the bound regexp are the rows this arm carries');
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)'));
     },
   },
@@ -811,7 +823,8 @@ test('the residue that is the standard library is a row, not a comment', () => {
   // rules/js-callgraph.rofl has carried `the String prototype, which is the
   // standard library and a different programme` as PROSE since the shape split.
   // A sentence in a comment cannot go red and cannot be counted.
-  assert.deepEqual(stdlib(m), ['array.join', 'array.join', 'string.concat']);
+  assert.deepEqual(stdlib(m), ['array.join', 'array.join', 'bigint.toString',
+    'regexp.test', 'regexp.test', 'string.concat']);
   // ...AND IT RESOLVES NOTHING, which is asserted rather than assumed: every
   // site it names is still on the frontier, and the audit moved no edge.
   for (const [c] of m.q('stdlib_member[audit](C, P, K)')) {

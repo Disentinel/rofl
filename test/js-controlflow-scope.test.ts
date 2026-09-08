@@ -924,14 +924,23 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // `assert.equal(mayNotRun.size, 17)` against `... 29`, both numbers would have
   // been right on their own branch, neither right here, and nothing in the
   // conflict would have said what the third number was.
+  // THIRTY-TWO ON 2026-09-08, AND THE TWO NEW ONES ARE THE SAME SHAPE AS
+  // `pastLabelledBlock`: a position the model said RUNS. `bumpedInUpdate` is
+  // called from a `for`'s UPDATE, which had no `guard_kind` row at all until
+  // w_update_and_literals — measured on alpha.mjs:845, the body was a guard arm
+  // and the `j += 1` beside it was not — and `seenUpdate` is its control, called
+  // from the BODY of the loop next door, where the row has always existed.
+  // `readLimit` is deliberately NOT here: it is called from the `for`'s TEST,
+  // which runs at least once, and a set that grew to include it would be the
+  // narrow direction this comment is about.
   assert.deepEqual([...mayNotRun].sort(), [
-    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'fallbackMaker',
-    'guardedElse', 'label', 'loopBody', 'neverCased', 'neverReached',
-    'pastBlockBreak', 'pastBreak', 'pastConditionalLabelledBreak',
-    'pastContinue', 'pastDebugger', 'pastEmpty', 'pastInnerBreak',
-    'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
+    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'bumpedInUpdate',
+    'fallbackMaker', 'guardedElse', 'label', 'loopBody', 'neverCased',
+    'neverReached', 'pastBlockBreak', 'pastBreak',
+    'pastConditionalLabelledBreak', 'pastContinue', 'pastDebugger', 'pastEmpty',
+    'pastInnerBreak', 'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
     'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'reading', 'rescue',
-    'sleeper', 'unlit', 'unreached', 'unreadable',
+    'seenUpdate', 'sleeper', 'unlit', 'unreached', 'unreadable',
   ]);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));

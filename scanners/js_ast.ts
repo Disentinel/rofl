@@ -77,6 +77,13 @@ export const AST_REFUSAL = 'ast_parse_error' as const;
 const SKIP_KEYS = new Set(['loc', 'start', 'end', 'range', 'type', 'extra']);
 const skipKey = (k: string): boolean => SKIP_KEYS.has(k) || k.endsWith('Comments');
 
+/** THE SCALARS, IN ONE PLACE. Two branches below asked the question separately
+ *  and both spelled the same three types, so a fourth was a two-site edit and
+ *  the second site is the one nobody looks at. `bigint` is the fourth. */
+const isScalar = (v: unknown): v is string | number | boolean | bigint =>
+  typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+  || typeof v === 'bigint';
+
 const isNode = (v: unknown): boolean =>
   v !== null && typeof v === 'object' && !Array.isArray(v) &&
   typeof (v as { type?: unknown }).type === 'string';
@@ -96,8 +103,31 @@ export const atomise = (k: string): string =>
  *  what a later rule reads to tell `o.m()` from `o[k]()`. A number the
  *  grammar cannot spell — 1.5, 1e21, NaN — becomes its decimal STRING rather
  *  than being dropped: the tokenizer only knows `[0-9]+`, and losing the value
- *  entirely would be a judgement about which numbers matter. */
-function scalarTerm(v: string | number | boolean): string {
+ *  entirely would be a judgement about which numbers matter.
+ *
+ *  A BIGINT IS THE FIFTH SCALAR AND IT WAS BEING DROPPED, 2026-09-08
+ *  (w_update_and_literals). `BigIntLiteral.value` is a native `bigint` — not a
+ *  string, not a number — so it matched NONE of the four branches in `emit`
+ *  below and fell through them all: `1n` reached the store as an `ast_node`
+ *  with ZERO attributes, the only literal in JavaScript whose value the
+ *  scanner did not record. `extra.raw` holds `"1n"` and `extra` is declared
+ *  out above, so nothing else carried it either.
+ *
+ *  Measured, not assumed: `typeof (parse('1n')…value)` is `bigint`, and a
+ *  three-line scan of `const b = 1n` emitted one `ast_node` fact and no
+ *  `ast_attr`. The contract line at the top of this file says `every scalar
+ *  own property`, so the omission contradicted the file's own statement of
+ *  what it does.
+ *
+ *  ITS TERM IS THE DECIMAL STRING, by the rule already written for a number
+ *  the grammar cannot spell — `Number.isSafeInteger` is false for every
+ *  bigint, so this function needs no new branch, only permission to be
+ *  called. The collision that buys is stated rather than hidden: `1n` and the
+ *  string `"1"` become the same term, exactly as `1e21` and its decimal
+ *  spelling already do. The alternative — a bare integer — would collide with
+ *  the NUMBER `1` instead, and `1n !== 1` is the distinction JavaScript
+ *  actually enforces. */
+function scalarTerm(v: string | number | boolean | bigint): string {
   if (typeof v === 'string') return q(v);
   if (typeof v === 'boolean') return v ? 'true' : 'false';
   return Number.isSafeInteger(v) ? String(v) : q(String(v));
@@ -165,7 +195,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
       } else if (isNode(v)) {
         const child = emit(v as Record<string, unknown>);
         facts.push(`ast_child[${persp}](${me}, ${field}, 0, ${child}).`);
-      } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      } else if (isScalar(v)) {
         facts.push(`ast_attr[${persp}](${me}, ${field}, ${scalarTerm(v)}).`);
       } else if (typeof v === 'object' && !Array.isArray(v)) {
         // A NESTED OBJECT WHOSE MEMBERS ARE ALL SCALARS IS FLATTENED, one key
@@ -187,14 +217,11 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
         // declared and empty rather than known and populated.
         const inner = v as Record<string, unknown>;
         const keys = Object.keys(inner).filter((ik) => !skipKey(ik));
-        const flat = keys.every((ik) => {
-          const iv = inner[ik];
-          return typeof iv === 'string' || typeof iv === 'number' || typeof iv === 'boolean';
-        });
+        const flat = keys.every((ik) => isScalar(inner[ik]));
         if (flat) {
           for (const ik of keys) {
             facts.push(`ast_attr[${persp}](${me}, ${field}_${atomise(ik)}, `
-              + `${scalarTerm(inner[ik] as string | number | boolean)}).`);
+              + `${scalarTerm(inner[ik] as string | number | boolean | bigint)}).`);
           }
         }
       }

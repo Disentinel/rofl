@@ -457,3 +457,18 @@ kind_absent_ok(decorator, a_no_corpus_site).
 -- on 2026-09-07: the kind has three corpus sites now, so every copy of the
 -- excuse had to go. The home rule from the direction of retirement, twice.
 kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). None of the three can carry a module edge, and the
+-- one that could be mistaken for a candidate is the bigint: a module specifier
+-- is a STRING literal and nothing else, which is why `module_source[code]`
+-- reads `ast_node(Src, string_literal, _, _)` and not `ast_value` alone. A
+-- `1n` in specifier position is a syntax error, not a module nobody resolved.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+ignored(js, update_expression, modules, a_not_a_module_construct).
+ignored(js, big_int_literal,   modules, a_not_a_module_construct).
+ignored(js, reg_exp_literal,   modules, a_not_a_module_construct).

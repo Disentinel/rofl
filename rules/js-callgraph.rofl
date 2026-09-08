@@ -115,6 +115,23 @@ obj_kind_class(new_expression,             o_new).
 obj_kind_class(object_expression,          o_object_literal).
 obj_kind_class(string_literal,             o_literal).
 obj_kind_class(numeric_literal,            o_literal).
+-- TWO MORE, 2026-09-08 (w_update_and_literals), AND THE AUDIT ASKED FOR THEM
+-- BY NAME. `catch_all_occupied[audit]` is waived as empty in
+-- facts/js-shapes.rofl, and the comment beside it already listed `a regular
+-- expression` among the forms that would land in the bucket. The fixture put
+-- `/x[0-9]/.test(s)` and `255n.toString(16)` in the corpus and the audit went
+-- from 0 to 2 within one run, naming both kinds — a waiver that could fill,
+-- filling, exactly as it was written to.
+--
+-- BOTH GO TO `o_literal` BECAUSE THE CRITERION IS THE VERDICT, not the type: a
+-- member on a string, a number, a bigint or a regexp is answered by the
+-- STANDARD LIBRARY and by nothing in this program, which is one verdict and
+-- therefore one bucket. That is the same test the eight-way split below was
+-- made on, applied rather than re-argued, and it needs no new shape and no new
+-- cell — `s_member_on_literal` already carries `not_yet` under
+-- `w_env_api_surface`, which is where these two receivers belong.
+obj_kind_class(big_int_literal,            o_literal).
+obj_kind_class(reg_exp_literal,            o_literal).
 
 -- EIGHT KINDS THAT USED TO SHARE THE CATCH-ALL, split because they do not
 -- share a VERDICT. Measured on a probe corpus with one site per kind, all in

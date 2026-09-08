@@ -80,6 +80,21 @@ edb(literal_kind).
 literal_kind(string_literal).
 literal_kind(numeric_literal).
 literal_kind(boolean_literal).
+-- A BIGINT IS A LITERAL LIKE ANY OTHER AND ITS VALUE WAS NOT ON THE STORE,
+-- 2026-09-08 (w_update_and_literals). This row is one word and the measurement
+-- under it is the item: `BigIntLiteral.value` is a native `bigint`, which
+-- matched none of the four branches in scanners/js_ast.ts, so `const b = 1n`
+-- emitted one `ast_node` fact and NO `ast_attr` — the only literal in the
+-- language whose value the scanner dropped, silently, while its own contract
+-- line said `every scalar own property`. Adding the row without the scanner
+-- fix would have derived nothing at all, which is why the fix came first and
+-- the mutant that removes it kills this arm rather than the row.
+--
+-- ITS TERM IS THE DECIMAL STRING and the collision is stated: `1n` and the
+-- string `"1"` are the same term here, exactly as `1e21` and its decimal
+-- spelling already are. See scanners/js_ast.ts for why the alternative — a
+-- bare integer, colliding with the NUMBER `1` — is the worse of the two.
+literal_kind(big_int_literal).
 
 may_be_lit[flow](E, V) :- ast_node[code](E, K, _, _), literal_kind(K), ast_value[code](E, V).
 
@@ -117,6 +132,22 @@ node_value_kind(function_expression).
 node_value_kind(arrow_function_expression).
 node_value_kind(class_declaration).
 node_value_kind(class_expression).
+-- THE ONE LITERAL IN JAVASCRIPT WHOSE VALUE IS AN OBJECT, 2026-09-08
+-- (w_update_and_literals). `/ab+c/gi` is written like `1n` and behaves like
+-- `{}`: it has methods, it has identity, and `/x/ === /x/` is false. So it
+-- belongs to THIS list and not to `literal_kind` — a `may_be_lit` row would
+-- have to name a text, and the text of a regexp is not what the expression
+-- evaluates to. The scanner gives it `pattern` and `flags` and NO `value`
+-- attribute, so the `literal_kind` arm could not have reached it anyway;
+-- measured before the row was written, `may_be_node` and `prototype_of` were
+-- both EMPTY for both receivers in the fixture.
+--
+-- SAME OVER-APPROXIMATION AS ITS NEIGHBOURS, stated because a regexp is where
+-- it is easiest to notice: a literal inside a loop evaluates to a NEW object
+-- each time round, so `may_be_node(E, E)` names the site rather than the
+-- object — which is exactly what `object_expression` and `array_expression`
+-- have always meant here.
+node_value_kind(reg_exp_literal).
 
 may_be_node[flow](E, E) :- ast_node[code](E, K, _, _), node_value_kind(K).
 
@@ -259,6 +290,16 @@ kind_prototype(boolean_literal,           boolean).
 kind_prototype(object_expression,         object).
 kind_prototype(function_expression,       function).
 kind_prototype(arrow_function_expression, function).
+-- TWO MORE, 2026-09-08 (w_update_and_literals), and both were measured as
+-- SILENT before they were written rather than assumed to be missing.
+-- `/x[0-9]/.test(s)` and `255n.toString(16)` are member calls on a literal;
+-- both were `unresolved_call` with `prototype_of` EMPTY, so `stdlib_member`
+-- could not name them and the residue was invisible at the one place the model
+-- collects it. A regexp goes through both arms — the inline receiver by KIND,
+-- `MATCHER.test(s)` through `may_be_node` — which is why the fixture writes
+-- it twice.
+kind_prototype(reg_exp_literal,           regexp).
+kind_prototype(big_int_literal,           bigint).
 
 prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
 prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
@@ -276,6 +317,14 @@ builtin_prototype(array).
 builtin_prototype(string).
 builtin_prototype(number).
 builtin_prototype(boolean).
+-- ...AND TWO WHOSE METHODS ARE THE WHOLE POINT OF THE FORM, 2026-09-08. A
+-- regexp literal is USED by calling `.test`/`.exec` on it, so unlike `object`
+-- and `function` above there is no in-program answer to route to first: every
+-- member of a regexp lives in the library. `bigint` is here for the same
+-- reason `number` is. The atom `bigint` is also a `feature` in
+-- facts/js-env.rofl; different relation, and the two never meet.
+builtin_prototype(regexp).
+builtin_prototype(bigint).
 
 -- ---------------------------------------------------------------------------
 -- DESTRUCTURING: A NAME BOUND FROM A PATTERN RATHER THAN FROM A VALUE.
