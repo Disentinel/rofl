@@ -282,7 +282,29 @@ unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scop
 -- before this branch and is left exactly as it was — changing somebody else's
 -- recorded decision on a guess is the same overreach in the other direction.
 -- `scope_unowned[audit]` names both, and it names them until they are settled.
-unknown_because(js, member_expression, s_member_on_literal, callgraph, not_yet).
+-- ATTRIBUTED, AND STILL EDGELESS — w_env_api_surface, 2026-09-08, and the two
+-- halves of that sentence are the whole result. `stdlib_member[audit]` names
+-- the residue; `lib_call[code]` in rules/js-env-api.rofl now says WHICH library
+-- method it is and SINCE WHEN, from facts/js-lib-surface.rofl, which
+-- scanners/ts_lib.ts generates from TypeScript`s own lib.es*.d.ts — 130 members
+-- of eight prototypes, each dated by the earliest lib file that declares it.
+--
+-- SO THE REASON CHANGES FROM `not_yet` TO `no_source_target`, which is a move
+-- from OURS to IRREDUCIBLE and takes the cell out of the work queue. That is
+-- not a waiver: the call really does transfer control, into `Array.prototype.join`,
+-- and there is no node in this program for an edge to reach. What was `not_yet`
+-- meant `somebody could still do something here`, and after this item nobody
+-- can — every rule that could be written has been, and the remaining gap is
+-- that the target has no source.
+--
+-- WHAT THE ITEM DELIVERED INSTEAD OF AN EDGE is an ANSWER at the era layer:
+-- `lib_unsupported[audit]` reports that `[1,2,3].at(0)` is invalid under es5,
+-- es2015, es2016 and es2020 and valid under ts5, that `'a'.replaceAll` is
+-- invalid under everything up to es2020, and that `1n.toString()` is invalid
+-- below es2020 — three methods, three different years, discriminated. That is
+-- the half of the environment question the item`s own note called `what syntax
+-- cannot answer`.
+unknown_because(js, member_expression, s_member_on_literal, callgraph, no_source_target).
 
 -- TWO OF THE SPLIT ARE OPEN AND EACH IS OWNED SOMEWHERE ELSE, which is the
 -- point of splitting them out rather than leaving them in a bucket whose
@@ -296,7 +318,7 @@ handled(js, member_expression, s_member_on_await, callgraph, r_await_transparent
 -- `` `k${n}`.concat() `` — the receiver is a String and `concat` answers
 -- through the built-in prototype. Not a value in this program at all; it is
 -- the standard library, which is `w_env_api_surface`.
-unknown_because(js, member_expression, s_member_on_template, callgraph, not_yet).
+unknown_because(js, member_expression, s_member_on_template, callgraph, no_source_target).
 
 -- AND THE CATCH-ALL ITSELF IS NOW EMPTY, WHICH IS ITS JOB. Every object
 -- position the probe found has a name of its own, so `s_member_on_other` holds

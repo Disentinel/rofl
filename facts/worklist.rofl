@@ -64,8 +64,8 @@ work_needs(w_cg_member_family, w_df_value_core).
 -- member-expression work and neither would ever have surfaced as its own row
 -- while the bucket existed.
 claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_control_forms).
-claim(queued, js, member_expression, s_member_on_template, callgraph, w_env_api_surface).
-claim(queued, js, member_expression, s_member_on_literal,  callgraph, w_env_api_surface).
+-- retired 2026-09-08: the cell is now irreducible, not queued.
+-- retired 2026-09-08: the cell is now irreducible, not queued.
 
 -- 3 — the same family through the optional-chaining kind. Held apart because
 -- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow
@@ -616,9 +616,29 @@ work_spawned(w_env_positional_features, f_the_feature_vocabulary_audit_read_one_
 -- question left unanswered here: a remedy for an API is a SUBSTITUTION
 -- (`replaced_by/2`) where a remedy for syntax is a transform, and this model
 -- has no term for a transform.
-work(w_env_api_surface, "the API half: provides/replaced_by generated from .d.ts, starting with node: builtins").
+-- DONE 2026-09-08, and the deliverable is an ANSWER rather than an edge.
+-- scanners/ts_lib.ts reads TypeScript`s own `lib.es*.d.ts` — 130 members of
+-- eight prototypes, each dated by the earliest lib file that declares it — into
+-- facts/js-lib-surface.rofl, and rules/js-env-api.rofl joins that to
+-- `stdlib_member[audit]`. `[1,2,3].at(0)` is now known to be invalid under es5,
+-- es2015, es2016 and es2020 and valid under ts5; `'a'.replaceAll` invalid up to
+-- es2020; `1n.toString()` invalid below es2020. Three methods, three years,
+-- discriminated — which is the half of the environment question this item`s own
+-- note called `what syntax cannot answer`.
+--
+-- ITS FOUR CELLS DID NOT BECOME `handled` AND THAT IS THE HONEST OUTCOME: the
+-- call transfers into a function with no source, so `no_source_target` — the
+-- model`s own IRREDUCIBLE atom — is what they carry now. They leave the work
+-- queue because nobody can do anything more, not because somebody decided not
+-- to look.
+--
+-- `replaced_by/2` IS THE HALF NOT DONE. The item`s note asks for a remedy as a
+-- SUBSTITUTION, and nothing here supplies one: the surface says WHEN a method
+-- appeared and never what to use instead. That needs a second table TypeScript
+-- does not keep, so it is a new item rather than a loose end.
+work(w_env_api_surface, "DONE 2026-09-08: the API surface generated from TypeScript`s lib.es*.d.ts, joined to the call graph`s residue and gated by year").
 work_order(w_env_api_surface, 17).
-work_state(w_env_api_surface, open).
+work_state(w_env_api_surface, done).
 
 -- 18. THE FORM THE OWNER ASKED FOR. `unsupported[node18](Site, Feature)`
 -- instead of an environment column, blocked by one measured defect and by
@@ -821,14 +841,14 @@ work_spawned(w_type_surface, f_a_measurement_with_hard_coded_axes_measures_the_l
 -- `Array.prototype.join` and gating it by era needs a library this model does
 -- not have, which is w_env_api_surface — and that item waits on THIS one, so
 -- the dependency is now half discharged rather than blocked.
-work(w_prototype_of_a_value, "which prototype a value has: prototype_of[flow] derives it from the KIND and through the value layer, and stdlib_member[audit] names the residue - what is left is attributing a named library method and gating it by era, which needs w_env_api_surface").
+work(w_prototype_of_a_value, "DONE 2026-09-08: prototype_of[flow] derives which prototype a value has, stdlib_member[audit] names the residue, and w_env_api_surface attributed it").
 work_order(w_prototype_of_a_value, 49).
-work_state(w_prototype_of_a_value, open).
+work_state(w_prototype_of_a_value, done).
 work_spawned(w_prototype_of_a_value, f_no_site_in_the_corpus_was_asking_may_be_lit).
 work_needs(w_type_surface, w_vocabulary_frame).
 -- RE-POINTED 2026-09-07: item 31 split, and what 17 waits on is the PROTOTYPE
 -- half, not the type-node vocabulary that closed.
-work_needs(w_env_api_surface, w_prototype_of_a_value).
+-- discharged 2026-09-08: both halves landed, and both items are done.
 
 -- 32. EFFECTS, AND THE TAXONOMY IS NOT OURS TO INVENT. The owner asked whether
 -- a standard one exists. It does, and in two versions that disagree usefully -
@@ -1351,8 +1371,8 @@ claim(queued, js, reg_exp_literal,             none, modules,      w_update_and_
 -- half — it already owns `s_member_on_template` and `s_member_on_literal` at
 -- the top of this file for exactly the same reason. `stdlib_member[audit]`
 -- names all three sites now, so the in-tray is a query rather than a sentence.
-claim(queued, js, big_int_literal,             none, callgraph,    w_env_api_surface).
-claim(queued, js, reg_exp_literal,             none, callgraph,    w_env_api_surface).
+-- retired 2026-09-08: the cell is now irreducible, not queued.
+-- retired 2026-09-08: the cell is now irreducible, not queued.
 
 -- 54 - meta_property.
 work(w_meta_property, "new.target and import.meta: one node kind and two questions").

@@ -273,6 +273,15 @@ unknown_because(js, await_expression,           callgraph, not_yet).
 -- `top -> decoOnce` and `top -> decoApplied`.
 unknown_because(js, class_accessor_property,    callgraph, not_yet).
 
+-- ...AND THE TWO LITERALS WHOSE METHODS ARE IN A LIBRARY, re-typed the same
+-- day and for the same reason as the two shape cells in facts/js-shapes.rofl:
+-- `1n.toString(16)` and `/x/.test(s)` are attributed by `lib_call[code]` and
+-- have no node to reach. `no_source_target` is the model`s own atom for that
+-- and it is IRREDUCIBLE, so these leave the work queue rather than sitting in
+-- it as if a rule were still owed.
+unknown_because(js, big_int_literal, callgraph, no_source_target).
+unknown_because(js, reg_exp_literal, callgraph, no_source_target).
+
 -- ===========================================================================
 -- THE FRONTIER, BY SHAPE. Every shape whose sites do not all resolve has a row
 -- here; `shape_unexplained[audit]` is the gate that says so, and it must be
@@ -338,7 +347,12 @@ shape_because(js, s_non_null,              callgraph, not_yet).
 -- not write and cannot confirm either. Whether this model ever describes
 -- built-in prototypes is a real question with a real answer; `scope_unowned`
 -- keeps it on the table until somebody with the authority answers it.
-shape_because(js, s_member_on_literal,     callgraph, not_yet).
+-- RE-TYPED 2026-09-08 WITH ITS TWIN. `f_two_reason_relations_over_one_fact_have_now_bitten_twice`
+-- records that `shape_because` (the FRONTIER's reason) and `unknown_because`
+-- (the MATRIX's reason for the same cell) are taken for one fact by every
+-- reader and derive from each other nowhere. Both are moved here in the same
+-- edit, on purpose, so the pair does not diverge a third time.
+shape_because(js, s_member_on_literal,     callgraph, no_source_target).
 -- TWO NEW RESIDUES from the 2026-09-04 split of the object-position catch-all,
 -- and each is owned by a DIFFERENT item, which is why they are two rows and
 -- not one bucket: `(await p).m()` waits on the control-form work and
@@ -346,7 +360,7 @@ shape_because(js, s_member_on_literal,     callgraph, not_yet).
 -- `s_member_on_await` RETIRED 2026-09-04: `await` is transparent to the value
 -- layer now, the site resolves, and a reason with no residue is what
 -- `shape_stale[audit]` exists to catch.
-shape_because(js, s_member_on_template,    callgraph, not_yet).
+shape_because(js, s_member_on_template,    callgraph, no_source_target).
 -- `s_member_on_other` KEEPS ITS ROW even though the matrix now waives the
 -- cell, and the distinction is the one this file's header draws: the frontier
 -- reason describes the RESIDUE OF A SHAPE, and the catcher has a residue the

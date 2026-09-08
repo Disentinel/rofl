@@ -703,8 +703,12 @@ test('the three verdicts still partition the cell space with a third axis', () =
   assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)')
              + n(r, 'our_unknown[audit](A, B, S, L)'), f.not_modelled,
     'the split is a work queue');
-  assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 2,
-    'two dynamic-import cells at kind level; the computed-callee ones left this list when the value layer resolved their sites');
+  // 2 -> 6 on 2026-09-08 with w_env_api_surface: the two literal kinds and the
+  // two member SHAPES whose methods are in a library this program does not
+  // contain. They became irreducible by being ANSWERED — `lib_call[code]` names
+  // the method and its year — so `not_yet` became false by measurement.
+  assert.equal(n(r, 'irreducible_unknown[audit](A, B, S, L)'), 6,
+    'two dynamic-import cells, two literal kinds and two member shapes with no node to reach');
 
   // THE DEFAULT IS STILL EXPLAINABLE at the finer grain — this is the property
   // the extra column was not allowed to cost.
@@ -802,10 +806,27 @@ test('member_expression: one tick becomes one handled and twelve not_modelled', 
   // somebody else's recorded decision on a guess is the same overreach the
   // other way — and `scope_unowned[audit]` names both until they are settled.
   assert.deepEqual(byReason.get('out_of_scope'), ['s_member_on_array']);
-  // THREE -> TWO on 2026-09-08: `s_computed_template_key` carried `not_yet`
-  // and stopped, so what is left under `ours and unfinished` is the literal
-  // key's own residue and `s_member_on_literal`.
-  assert.equal(byReason.get('not_yet')?.length, 2);
+  // TWO -> NONE on 2026-09-08 with w_env_api_surface, and the group emptying is
+  // the result rather than an accident: `s_member_on_literal` and
+  // `s_member_on_template` were the last member shapes reading `not_yet`, and
+  // the library surface made that false BY MEASUREMENT — `lib_call[code]` names
+  // the method and the year it landed, so what is left is a target with no node,
+  // which is `no_source_target` and irreducible.
+  //
+  // BY NAME AND NOT BY COUNT, because a count of an EMPTY group cannot say
+  // whether the group is empty or the key is missing: the first draft of this
+  // line read `byReason.get('not_yet')?.length === 2` and failed with
+  // `undefined !== 2`, which is the optional chaining hiding exactly that.
+  assert.deepEqual(byReason.get('not_yet') ?? [], [],
+    'no member shape is waiting on us any more');
+  // TWO AND NOT FOUR: `s_member_on_ident` and `s_member_on_new` carry the same
+  // atom on the FRONTIER (shape_because) and are `modelled` in the matrix, so
+  // they are not among the not_modelled rows this map is built from. The two
+  // relations answer different questions about the same cell, which is the
+  // hazard `f_two_reason_relations_over_one_fact_have_now_bitten_twice` records.
+  assert.deepEqual((byReason.get('no_source_target') ?? []).sort(),
+    ['s_member_on_literal', 's_member_on_template'],
+    'the two member shapes whose callee is in a library this program does not contain');
 });
 
 // ---------------------------------------------------------------------------

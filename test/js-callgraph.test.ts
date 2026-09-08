@@ -658,12 +658,22 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // the LANGUAGE synthesises; these earn it for a target that exists nowhere at
   // all. Both are "there is no node to reach", which is what the atom says, and
   // `not_yet` would have been a queue entry nobody can ever discharge.
+  // FOUR BECAME SIX on 2026-09-08 with w_env_api_surface, and these two are the
+  // first that became irreducible by being ANSWERED rather than by being
+  // recognised. `s_member_on_literal` and `s_member_on_template` are member
+  // calls on a receiver whose PROTOTYPE the model knows — `[1,2].join()`,
+  // `` `x`.concat() `` — and `lib_call[code]` now names the method and the year
+  // it landed, from TypeScript's own lib.es*.d.ts. The call still transfers into
+  // a function with no node in this program, so no edge is possible; what
+  // changed is that `not_yet` became FALSE BY MEASUREMENT rather than by
+  // decision, which is the difference between a shrug and a finished frontier.
   assert.deepEqual(m.binds('shape_irreducible[audit](S)', 'S'),
-    ['s_computed_dynamic_key', 's_member_on_ident', 's_member_on_new', 's_super']);
+    ['s_computed_dynamic_key', 's_member_on_ident', 's_member_on_literal',
+     's_member_on_new', 's_member_on_template', 's_super']);
   const ours = m.binds('shape_ours[audit](S)', 'S');
-  assert.equal(ours.length + 4, residue.length, 'irreducible + ours partitions the residue');
+  assert.equal(ours.length + 6, residue.length, 'irreducible + ours partitions the residue');
 
-  console.log('  frontier: ' + residue.length + ' shapes with a residue, 4 irreducible, '
+  console.log('  frontier: ' + residue.length + ' shapes with a residue, 6 irreducible, '
     + ours.length + ' ours');
   console.log('  unexercised verdicts (grammar, not corpus): '
     + m.binds('shape_unexercised[audit](S)', 'S').join(', '));

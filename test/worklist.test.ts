@@ -293,7 +293,11 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // 71 -> 36 ON ONE AFTERNOON, closed by four branches that could not see each
   // other: ES2022 class syntax (20 cells), the two export forms, the update and
   // literal forms, class expressions, meta properties and decorators.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 36, 'the queue is the model\'s open set');
+  // 36 -> 32 on 2026-09-08 with w_env_api_surface: four cells left the queue by
+  // becoming IRREDUCIBLE rather than by being answered — the call transfers into
+  // a library method with no node in this program, and `open_cell` requires
+  // `our_unknown`. They left because nobody can do more, not because nobody looked.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 32, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -361,7 +365,10 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // could not see one another: callgraph 18 -> 11, dataflow 16 -> 7, modules
   // 19 -> 10, controlflow 18 -> 8. The claimed figures barely move, which is
   // the tell that these are cells being ANSWERED rather than re-owned.
-  assert.deepEqual(per('callgraph'), [11, 32, 0]);
+  // 11 -> 7 open and 32 -> 28 claimed on 2026-09-08: the four cells
+  // w_env_api_surface closed are all at this layer, and their claims went with
+  // them because a claim on an irreducible cell is what `queue_stale` calls a lie.
+  assert.deepEqual(per('callgraph'), [7, 28, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -417,10 +424,17 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // shape turned out to contain decidable sites — which is the finding
   // f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable
   // coming true, found by `unrecorded_coverage[audit]` rather than remembered.
+  // THREE BECAME SEVEN on 2026-09-08 with w_env_api_surface: two literal kinds
+  // and two member shapes whose callee is a library method with no node in this
+  // program, each named and dated by `lib_call[code]` before the reason moved.
   assert.deepEqual(w.binds('irreducible_unknown[audit](A, K, S, L)', 'K', 'S', 'L'), [
+    'big_int_literal/none/callgraph',
     'import_expression/computed/modules',
     'import_expression/none/callgraph',
     'import_expression/none/dataflow',
+    'member_expression/s_member_on_literal/callgraph',
+    'member_expression/s_member_on_template/callgraph',
+    'reg_exp_literal/none/callgraph',
   ], 'a dynamic import specifier: nobody is ever assigned these');
 });
 
@@ -597,7 +611,7 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...and again: the transitive half closed the same day its premise did, so
   // the head is the SCOPE question — `binder[flow]` is file-scoped by
   // construction, which has cost this loop five fixture renames.
-  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_cg_invisible_calls']);
+  assert.deepEqual(base.binds('next_work[audit](W)', 'W'), ['w_effect_layer']);
   // FIVE dependencies are live now and every one is DELIBERATE. One is the
   // kernel question the owner has said to hold (`w_env_ledger_form` on
   // `w_leak_variable_on_the_right`); the other four are the chain the five new
@@ -631,10 +645,15 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // `new new.target()`, waits on nothing but a notion of call MODE this model
   // does not have. A dependency that covers part of an item is still a
   // dependency the plan must honour.
+  // FIVE BECAME ONE on 2026-09-08, and the one left is the kernel question the
+  // owner is holding. `w_env_api_surface` closed — the library surface generated
+  // from TypeScript's lib.es*.d.ts — and with it went every item that waited on
+  // it: the effect layer, `w_meta_property` and `w_destructuring_hides_a_call`.
+  // A chain four deep, and its root was never blocked at all: `w_prototype_of_a_value`
+  // was open the whole time and its note said so.
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
-    ['w_destructuring_hides_a_call', 'w_effect_layer', 'w_env_api_surface',
-     'w_env_ledger_form', 'w_meta_property'],
-    'one held on purpose by the owner, three real premises');
+    ['w_env_ledger_form'],
+    'the one dependency held on purpose by the owner');
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation

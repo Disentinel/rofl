@@ -461,7 +461,11 @@ test('every read path above five per cent, by name', () => {
   // reading: fewer derivations over more input is what a GUARD does — the
   // decorator enclosure guard and `guard_kind(for_statement, update)` both
   // withdraw facts that everything downstream was deriving over.
-  assert.equal(c.total, 1602097, 'total rows handed out by the store in one fixpoint');
+  // 1 602 097 -> 1 613 329 on 2026-09-08: `libEras` in shapes.ts, four library
+  // calls added so the era gate has three different years to discriminate. The
+  // rules of w_env_api_surface are in a pack this world does not load, so this
+  // move is PURE CORPUS — the one time in three iterations that is true.
+  assert.equal(c.total, 1613329, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -568,5 +572,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 72154, 'derivations, against 76 509 before four branches merged');
+  assert.equal(c.firings, 71920, 'derivations, against 72 154 before the library fixture');
 });

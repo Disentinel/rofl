@@ -730,3 +730,26 @@ export class Outer {
 // `plated["#edge"]`.
 const plated = { '#edge': 'a string key, not a private name' };
 export function reachesPlated(): string { return plated['#edge']; }
+
+// TWO LIBRARY METHODS WITH TWO DIFFERENT YEARS (w_env_api_surface, 2026-09-08),
+// and the pair is the point rather than either one. `bigint.toString` was
+// already here and is ES2020; `at` is declared in lib.es2022.array.d.ts and
+// `replaceAll` in lib.es2021.string.d.ts, so the three of them are unsupported
+// under three DIFFERENT sets of environments. A single site would have shown a
+// gate that fires; three sites a year apart show a gate that DISCRIMINATES,
+// which is the claim `lib_unsupported[audit]` actually makes.
+//
+// NEITHER METHOD IS A NODE IN THIS PROGRAM, which is what puts them in
+// `stdlib_member[audit]`'s residue in the first place — the receiver's kind is
+// the whole of what the model knows, and the library says the rest.
+// AND THE LIMIT, IN THE SAME FIXTURE AND MEASURED RATHER THAN DESCRIBED. The
+// surface reaches a receiver whose PROTOTYPE the value layer knows, and it knows
+// one from the receiver's KIND. `'aaa'.replaceAll(...)` is a string literal and
+// is attributed; `s.replaceAll(...)` — the same method on a PARAMETER annotated
+// `string` — is not, because a TypeScript annotation is not a value the model
+// carries. Both lines are here so the gap is a row rather than a sentence.
+export function libEras(s: string): string {
+  const picked = [1, 2, 3].at(0);
+  const known = 'aaa'.replaceAll('a', 'b');
+  return known + s.replaceAll('a', 'b') + String(picked);
+}
