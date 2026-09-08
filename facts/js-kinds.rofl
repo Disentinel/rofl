@@ -256,10 +256,11 @@ node_kind(js, interpreter_directive).
 -- one`s fixture arrives with the item that claims its cells. The day a corpus
 -- produces one, `kind_absent_stale[audit]` names it and the row must go.
 
-kind_absent_ok(array_pattern, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(assignment_pattern, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(rest_element, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(spread_element, a_declared_for_the_denominator_and_queued).
+-- THE FIRST FOUR EXCUSES ARE GONE, 2026-09-08, and the audit is what removed
+-- them: `w_destructuring_rest_and_spread` put `array_pattern`,
+-- `assignment_pattern`, `rest_element` and `spread_element` in the corpus, and
+-- `kind_absent_stale[audit]` named all four on the first run with the fixtures
+-- in and no verdict written. An excuse cannot outlive its cause.
 kind_absent_ok(class_property, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(class_private_property, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(class_private_method, a_declared_for_the_denominator_and_queued).

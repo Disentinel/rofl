@@ -317,6 +317,116 @@ may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
                            member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
+-- ---------------------------------------------------------------------------
+-- THE OTHER FOUR FORMS OF THE SAME FAMILY (w_destructuring_rest_and_spread).
+--
+-- `object_pattern` landed one iteration ago and `array_pattern`,
+-- `assignment_pattern`, `rest_element` and `spread_element` had no site in the
+-- corpus at all. MEASURED WITH THE FIXTURES IN AND NO RULE WRITTEN: the value
+-- layer answered NOTHING at seven of the eight new sites, and answered the
+-- eighth WRONGLY — see the spread-argument paragraph below, which is the one
+-- place this family made the model say something false rather than nothing.
+
+-- AN ARRAY PATTERN BINDS BY POSITION, which is the whole difference from an
+-- object pattern: `{ a }` names its member and `[a, b]` counts to it. The
+-- INDEX the scanner carries is therefore the content of the relation, exactly
+-- as it is for an argument — and it is counted over the RAW array, so a hole
+-- in `[, second]` leaves `second` at index 1 rather than sliding it to 0.
+destructures_at[code](D, Local, Index, File) :- ast_node[code](D, variable_declarator, File, _),
+                                                ast_child[code](D, id, 0, P),
+                                                ast_node[code](P, array_pattern, _, _),
+                                                ast_child[code](P, elements, Index, L),
+                                                ast_name[code](L, Local).
+scoped_binder[code](D, File) :- destructures_at[code](D, _, _, File).
+
+-- WHAT AN ARRAY HOLDS AT A POSITION. `iter_elem[flow]` further down answers
+-- the same question for `for-of` and deliberately DROPS the index, because a
+-- loop variable takes every element in turn. Two readers, two questions, and
+-- the index is the difference: this one is also what expands a spread argument.
+elem_at[flow](X, I, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
+                          ast_child[code](A, elements, I, E).
+
+may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
+                           ast_child[code](D, init, 0, Init), elem_at[flow](Init, Index, V),
+                           may_be_node[flow](V, N),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
+
+-- NO `may_be_lit` ARM HERE, and it is left out on purpose rather than
+-- forgotten: nothing in this corpus destructures a literal out of an array, so
+-- the arm would be a clause no mutant could kill. The rule this repository
+-- already paid for — an arm nothing exercises cannot go red — applies to a
+-- symmetry as much as to a feature.
+
+-- A DEFAULTED PARAMETER WAS INVISIBLE TWICE OVER. `param_of[flow]` reads
+-- `ast_name` off the `params` child and an `assignment_pattern` has none, so a
+-- defaulted parameter had NO INDEX: neither did the default reach the body,
+-- nor did an argument PASSED at that position. Both halves are below and they
+-- are separate arms because they are separate claims — measured apart with two
+-- call sites, one omitting the argument and one supplying it.
+param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
+                              ast_node[code](P, assignment_pattern, _, _),
+                              ast_child[code](P, left, 0, L), ast_name[code](L, Name).
+
+param_default[flow](F, Name, Init) :- fn_node_v[flow](F), ast_child[code](F, params, _, P),
+                                      ast_node[code](P, assignment_pattern, _, _),
+                                      ast_child[code](P, left, 0, L), ast_name[code](L, Name),
+                                      ast_child[code](P, right, 0, Init).
+
+may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow](Init, N),
+                           param_use[flow](F, Name, U).
+
+-- AN OBJECT REST BINDS A FRESH OBJECT and that object has no node of its own
+-- in the source — so the model gives it the `rest_element` node's identity.
+-- The rest node IS the object, in the same sense that an `object_expression`
+-- is the object it writes: both are values named by a node the store already
+-- has, which is the whole point of `may_be_node` carrying identity.
+pattern_takes[code](P, Key) :- ast_node[code](P, object_pattern, _, _),
+                               ast_child[code](P, properties, _, Prop),
+                               ast_child[code](Prop, key, 0, K), key_name[code](K, Key).
+
+rest_in_pattern[code](D, R, File) :- ast_node[code](D, variable_declarator, File, _),
+                                     ast_child[code](D, id, 0, P),
+                                     ast_node[code](P, object_pattern, _, _),
+                                     ast_child[code](P, properties, _, R),
+                                     ast_node[code](R, rest_element, _, _).
+rest_binds[code](D, R, Local, File) :- rest_in_pattern[code](D, R, File),
+                                       ast_child[code](R, argument, 0, L), ast_name[code](L, Local).
+scoped_binder[code](D, File) :- rest_binds[code](D, _, _, File).
+
+-- ...AND THE EXCLUSION IS THE WHOLE CONTENT OF THE RELATION. `{ a, ...rest }`
+-- gives `rest` every key EXCEPT `a`, and a rule that copied them all would
+-- answer `rest.a` — which is `undefined` and throws when called. No runnable
+-- fixture can hold that site, so it lives in shapes.ts and it is the only
+-- thing that tells the two rules apart.
+member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _),
+                                 ast_child[code](D, id, 0, P),
+                                 ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                                 member_value[flow](Obj, Key, V),
+                                 not pattern_takes[code](P, Key).
+-- a rest object is PLAIN in the sense `member_plain` means: no `static`
+-- attribute anywhere on it, so neither class arm reaches it and the member
+-- lookup would find nothing without this row. Same reason the module namespace
+-- needed one, and measured the same way.
+member_plain[flow](R, Key, V) :- rest_in_pattern[code](_, R, _), member_value[flow](R, Key, V).
+
+may_be_node[flow](E, R) :- rest_binds[code](D, R, Local, File),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
+
+-- AN OBJECT SPREAD COPIES THE KEYS OF WHAT IT SPREADS, so a member of the
+-- result is a member of the source reached through one more node. This is an
+-- ordinary `member_value` arm and it needs no new carrier at all.
+--
+-- OVER-APPROXIMATION DECLARED: `{ ...o, k: v }` overrides `o`'s own `k`, and
+-- this rule keeps both. The direction is the safe one for a may-set — an extra
+-- candidate, never a missing one — and narrowing it needs an order this layer
+-- does not have, which is the same sentence `assigns` carries about `x = a`
+-- then `x = b`.
+member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                 ast_child[code](O, properties, _, S),
+                                 ast_node[code](S, spread_element, _, _),
+                                 ast_child[code](S, argument, 0, A), may_be_node[flow](A, Src),
+                                 member_value[flow](Src, Key, V).
+
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).
 
@@ -363,8 +473,44 @@ nearest_v[flow](F, X)  :- encloses_v[flow](F, X), not closer_v[flow](F, X).
 
 -- ARGUMENT INTO PARAMETER. The INDEX is the content — argument 0 and argument 1
 -- are different facts about the program, which is why the scanner carries it.
+-- A SPREAD ARGUMENT DESTROYS THE CORRESPONDENCE THIS RELATION EXISTS TO
+-- CARRY, and the model said something FALSE about it before this was written.
+-- MEASURED on `pair(...bench, cubed)` with `bench = [chiselled, planed]` and
+-- the fixture running: the model derived `pair -> cubed`, because argument 1 in
+-- the TREE is `cubed` while argument 1 at RUN TIME is `planed` — `bench`
+-- contributes two arguments and everything after it shifts. The oracle says
+-- `pair` calls `chiselled` and `planed` and nothing else.
+--
+-- A may-set is allowed to be SILENT and is not allowed to be WRONG, so the
+-- positional arm stops at the first spread. Note this is not the spread node
+-- itself being unvalued — that is silence and costs an edge; this is a
+-- DIFFERENT argument getting an index that is not its own.
+spread_arg[code](C, I)   :- ast_node[code](C, K, _, _), call_like_v(K),
+                            ast_child[code](C, arguments, I, S),
+                            ast_node[code](S, spread_element, _, _).
+after_spread[code](C, I) :- spread_arg[code](C, J), ast_child[code](C, arguments, I, _), J < I.
+
 arg_at[flow](C, I, A)      :- ast_node[code](C, K, _, _), call_like_v(K),
-                              ast_child[code](C, arguments, I, A).
+                              ast_child[code](C, arguments, I, A),
+                              not ast_node[code](A, spread_element, _, _),
+                              not after_spread[code](C, I).
+
+-- ...AND THE CASE WHERE THE CORRESPONDENCE SURVIVES EXACTLY, which is not the
+-- narrow one it first looks like. A spread at argument position J contributes
+-- its element I at argument J + I — the arguments BEFORE it are unshifted by
+-- definition, and the ones after it are already silenced above. So a spread of
+-- an array this layer can see is answerable wherever it sits, and `elem_at` is
+-- already the relation that says which element is where.
+--
+-- THE GUARD IS ON THE SPREAD ITSELF, not on what follows it: a spread that is
+-- after another spread has been shifted by a count this layer does not carry.
+-- DECLARED UNEXERCISED — `f(...a, ...b)` is in no fixture here, so no mutant of
+-- this corpus can kill that literal, and the site that would is a call with two
+-- spreads whose first array has a length other than one.
+arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, J),
+                              ast_child[code](C, arguments, J, S),
+                              ast_child[code](S, argument, 0, A), elem_at[flow](A, K, E),
+                              I is J + K.
 param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 

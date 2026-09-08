@@ -398,6 +398,22 @@ const TAG: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
 
 for (const g of TAG) test(`${g.name} — a call with no call site`, () => g.expect(build(g.mut), base()));
 
+// EVERY AMBIGUOUS SITE, BY NAME. This was `n('ambiguous_call[audit](C, F, G)')
+// === 8` in two places until 2026-09-08, and `w_destructuring_rest_and_spread`
+// moved it to 10 without either assertion being able to say WHICH sites — the
+// exact failure `f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus`
+// names. The pair is unordered in the relation (both directions are rows) and
+// the caller is named rather than located, because a LINE moves when a fixture
+// grows and a function name does not.
+const ambiguous = (w: World) => [...new Set(w.q('ambiguous_call[audit](C, F, G)').map(([c, f, g]) => {
+  const nm = (n: string) => w.q(`fn_name[code](${n}, N)`)[0]?.[0] ?? '?';
+  const caller = w.q(`nearest_v[flow](H, ${c})`).map(([h]) => nm(h))[0] ?? '<top>';
+  return `${caller}: ${[nm(f), nm(g)].sort().join(' | ')}`;
+}))].sort();
+const AMBIGUOUS = ['shaped: cubed | squared', 'useCond: pick | pick',
+                   'useForOfArray: alef | bet', 'useForOfGen: alef | bet',
+                   'useOr: pick | pick'];
+
 test('the tag is called, and what it returns is called too', () => {
   const m = base();
   // THE POSITIVE HALF, and both cells are in it. `useTag -> mark` is the call
@@ -408,7 +424,7 @@ test('the tag is called, and what it returns is called too', () => {
   // AND THE COLLISION RESOLVES PER FILE. Two functions named `mark`, one in
   // each of the two files that use a tag, and neither answers for the other —
   // which is the only thing that makes the value join's file column observable.
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  assert.deepEqual(ambiguous(m), AMBIGUOUS, 'and nothing new is ambiguous');
   assert.deepEqual(m.q('transfer_site[code](X, K)')
     .filter(([, k]) => k === 'tagged_template_expression')
     .map(([x]) => m.q(`ast_node[code](${x}, K, File, L)`)[0]?.[1]).sort(),
@@ -435,7 +451,8 @@ test('the tag is called, and what it returns is called too', () => {
 // wrong here, because a for-of makes two calls and both are true. So only the
 // `[Symbol.iterator]` hop goes through `resolves`; the `next` hop goes
 // straight into `calls`. Routed both ways and measured: through `resolves` it
-// takes `ambiguous_call` from 8 to 9. h1 deletes the `resolves` arm and
+// adds `useIterable: bump | iterator` to the set `ambiguous` names below
+// (measured as 8 -> 9 rows when that was still a count). h1 deletes the `resolves` arm and
 // `useIterable -> bump` SURVIVES — which is the fork stated as a row rather
 // than as a paragraph.
 //
@@ -597,7 +614,7 @@ test('both hops of the for-of are called, and the four sites are not four answer
   }
   // NOTHING NEW IS AMBIGUOUS, which is the fork holding: two callees from one
   // statement are two `calls` rows and one `resolves` row.
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8);
+  assert.deepEqual(ambiguous(m), AMBIGUOUS);
   // FOUR SITES, TWO ANSWERS, and the two that stay silent are not residue of
   // the same class as anything else on the frontier: iterating an array
   // literal or a generator calls a BUILT-IN `[Symbol.iterator]`, a function
@@ -846,9 +863,14 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     name: 'e1 the value arm is deleted',
     mut: [{ find: DESTR_ARM, replace: '', file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
+      // FOUR SINCE 2026-09-08 and it is the same rule deriving them: the rest
+      // fixtures of `w_destructuring_rest_and_spread` each take a key BY NAME
+      // beside their `...rest`, and a named key in a pattern is what
+      // `destructures` answers whatever else the pattern holds.
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-        ['scoped -> fetched', 'useDestructured -> pulled'],
-        'the runnable site and the scanned one');
+        ['pullsTaken -> bolted', 'scoped -> fetched',
+         'useDestructured -> pulled', 'useTakenFromRest -> caliper'],
+        'the runnable sites and the scanned ones');
       // THE COLUMN THAT TELLS THIS FROM e2 AND e6: the names are still bound
       // and the declarator is still a scoped binder — only nothing reads them.
       assert.deepEqual(bound(m), bound(b));
@@ -861,7 +883,8 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
             replace: 'ast_node[code](P, no_such_kind, _, _),', file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-        ['scoped -> fetched', 'useDestructured -> pulled']);
+        ['pullsTaken -> bolted', 'scoped -> fetched',
+         'useDestructured -> pulled', 'useTakenFromRest -> caliper']);
       assert.deepEqual(bound(m), [], 'nothing is bound from a pattern any more');
       assert.equal(b.n('scoped_binder[code](D, F)') - m.n('scoped_binder[code](D, F)'), 2);
     },
@@ -881,9 +904,13 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // `shorthand` test: key for the member, value for the local, both forms.
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-        ['scoped -> fetched', 'useDestructured -> pulled']);
-      assert.deepEqual(bound(b), ['inner<-fetchIt', 'taken<-pulled']);
-      assert.deepEqual(bound(m), ['fetchIt<-inner', 'pulled<-taken'], 'read backwards');
+        ['pullsTaken -> bolted', 'scoped -> fetched',
+         'useDestructured -> pulled', 'useTakenFromRest -> caliper']);
+      assert.deepEqual(bound(b),
+        ['inner<-fetchIt', 'taken<-pulled', 'takenCaliper<-caliper', 'usedBolted<-bolted']);
+      assert.deepEqual(bound(m),
+        ['bolted<-usedBolted', 'caliper<-takenCaliper', 'fetchIt<-inner', 'pulled<-taken'],
+        'read backwards');
     },
   },
   {
@@ -910,6 +937,11 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // THE HALF THE REFACTOR BOUGHT, and the column that tells it from e2: the
     // names are still bound, and they are visible to nobody.
     expect: (m, b) => {
+      // TWO AND NOT FOUR, which is the discrimination this mutant buys for
+      // free: the two declarators the rest fixtures added are ALSO
+      // `scoped_binder` through `rest_binds`, so deleting the `destructures`
+      // arm alone leaves them visible. e2, which stops the pattern being a
+      // pattern at all, loses all four.
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
         ['scoped -> fetched', 'useDestructured -> pulled']);
       assert.deepEqual(bound(m), bound(b), 'the names are bound and unreachable');
@@ -934,10 +966,362 @@ test('destructuring binds through the member, and only inside its region', () =>
   assert.ok(edges(m).has('useDestructured -> pulled'), 'the runnable site resolves');
   assert.ok(edges(m).has('scoped -> fetched'), 'and the scanned one, bound inside a function');
   assert.ok(!edges(m).has('outside -> fetched'), 'and a free name of the same spelling does not');
-  assert.deepEqual(bound(m), ['inner<-fetchIt', 'taken<-pulled'],
+  // FOUR SINCE 2026-09-08, not two: `w_destructuring_rest_and_spread` added an
+  // object pattern in each file to carry a REST beside a taken key, and the
+  // same rule binds their named halves. The set is written out rather than
+  // counted for exactly this reason — a length would have absorbed them.
+  assert.deepEqual(bound(m),
+    ['inner<-fetchIt', 'taken<-pulled', 'takenCaliper<-caliper', 'usedBolted<-bolted'],
     'local on the left, member key on the right');
   // ...AND THE KIND IS IN THE VOCABULARY NOW, which is what took the matrix
   // from reporting nothing about it to reporting four cells.
   assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0);
   assert.ok(m.n('ast_node[code](P, object_pattern, F, L)') > 0, 'positive control: patterns exist');
+});
+
+// ---------------------------------------------------------------------------
+// 3q. THE OTHER FOUR FORMS OF THE DESTRUCTURING FAMILY
+//     (w_destructuring_rest_and_spread).
+//
+// `object_pattern` landed in 3p; `array_pattern`, `assignment_pattern`,
+// `rest_element` and `spread_element` had no site in the corpus at all.
+//
+// MEASURED WITH THE FIXTURES IN AND NO RULE WRITTEN, which is the run that
+// decided the shape of this whole section: the value layer answered NOTHING at
+// seven of the eight new sites — and answered the eighth WRONGLY.
+// `pair(...bench, cubed)` with `bench = [chiselled, planed]` derived
+// `pair -> cubed`, while the same file RUN under node returns
+// `chiselled(1) + planed(1)`. A spread contributes as many arguments as its
+// iterable has elements, so every argument after it lands somewhere the TREE
+// index does not name, and `arg_at`/`param_of` had been pairing the two.
+//
+// A may-set is allowed to be SILENT and is not allowed to be WRONG. Seven
+// silences cost edges; the eighth was a claim the oracle contradicts, and it
+// is the only defect of that kind this family produced.
+const DF = 'rules/js-dataflow.rofl';
+const CF = 'rules/js-controlflow.rofl';
+
+/** every name bound by an ARRAY pattern, as `local<-index` */
+const boundAt = (w: World) => w.q('destructures_at[code](D, L, I, F)')
+  .map(([, l, i]) => `${l}<-${i}`).sort();
+/** what a REST object carries, as `key` — the exclusion is the whole content */
+const restKeys = (w: World) => w.q('rest_in_pattern[code](D, R, F)')
+  .flatMap(([, r]) => w.q(`member_value[flow](${r}, K, V)`).map(([k]) => k)).sort();
+/** how many identifiers the model gives a rest object's identity to */
+const restReads = (w: World) => w.q('rest_binds[code](D, R, L, F)')
+  .flatMap(([, r]) => w.q(`may_be_node[flow](E, ${r})`).map(([e]) => e)).length;
+
+const FAMILY: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'h1 the array-pattern value arm is deleted',
+    mut: [{ file: DF, find: `may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
+                           ast_child[code](D, init, 0, Init), elem_at[flow](Init, Index, V),
+                           may_be_node[flow](V, N),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).`, replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['useFirstSlot -> chiselled', 'useSecondSlot -> planed']);
+      // THE COLUMN THAT TELLS THIS FROM h2: the names are still bound by
+      // position and nothing reads them. Same discrimination 3p needed.
+      assert.deepEqual(boundAt(m), boundAt(b));
+    },
+  },
+  {
+    name: 'h2 an array pattern stops being an array pattern',
+    mut: [{ file: DF, find: 'ast_node[code](P, array_pattern, _, _),', replace: 'ast_node[code](P, no_such_kind, _, _),' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['useFirstSlot -> chiselled', 'useSecondSlot -> planed']);
+      assert.deepEqual(boundAt(m), [], 'and nothing is bound by position any more');
+      assert.deepEqual(boundAt(b), ['exportedTool<-0', 'firstTool<-0', 'secondTool<-1']);
+    },
+  },
+  {
+    name: 'h3 the array pattern reads any element instead of its own',
+    mut: [{ file: DF, find: 'ast_child[code](D, init, 0, Init), elem_at[flow](Init, Index, V),',
+            replace: 'ast_child[code](D, init, 0, Init), elem_at[flow](Init, _, V),' }],
+    // AND THIS IS WHY THE TWO LOCALS ARE READ IN TWO DIFFERENT FUNCTIONS.
+    // Read in one function, `[firstTool, secondTool]` derives the SAME EDGE SET
+    // whether the rule matches the index or ranges over every element, and this
+    // mutant would survive on a corpus that looks like it tests the index. The
+    // mutant GAINS, which is the direction an over-approximation moves.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['useFirstSlot -> planed', 'useSecondSlot -> chiselled']);
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), [], 'and loses nothing');
+    },
+  },
+  {
+    name: 'h4 a defaulted parameter has no name again',
+    mut: [{ file: DF, find: `param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
+                              ast_node[code](P, assignment_pattern, _, _),
+                              ast_child[code](P, left, 0, L), ast_name[code](L, Name).`, replace: '' }],
+    // BOTH HALVES GO, and that is the point of the mutant rather than a defect
+    // in it: without an index the parameter has no identity at all, so neither
+    // the default nor an argument passed at that position can reach the body.
+    expect: (m, b) => assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['shaped -> cubed', 'shaped -> squared']),
+  },
+  {
+    name: 'h5 the default value never reaches the body',
+    mut: [{ file: DF, find: `may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow](Init, N),
+                           param_use[flow](F, Name, U).`, replace: '' }],
+    // ...AND HALF OF IT GOES, which is what tells this from h4: the parameter
+    // still has an index, so `usePassedParam`'s argument still arrives.
+    expect: (m, b) => assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['shaped -> squared']),
+  },
+  {
+    name: 'h6 the rest object copies the keys the pattern took',
+    mut: [{ file: DF, find: `                                 member_value[flow](Obj, Key, V),
+                                 not pattern_takes[code](P, Key).`,
+            replace: `                                 member_value[flow](Obj, Key, V).` }],
+    // THE ONLY MUTANT IN THIS SET THAT NEEDS shapes.ts, and it is why the site
+    // is there: `leftovers.bolted(n)` is `undefined(n)` and throws, so no
+    // executable fixture can hold it — and the exclusion is the whole content
+    // of the relation, unobservable on a runnable corpus.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['pullsExcluded -> bolted']);
+      assert.deepEqual(restKeys(b), ['riveted', 'spanner']);
+      assert.deepEqual(restKeys(m), ['bolted', 'caliper', 'riveted', 'spanner']);
+    },
+  },
+  {
+    name: 'h7 a rest object is not a plain object',
+    mut: [{ file: DF, find: 'member_plain[flow](R, Key, V) :- rest_in_pattern[code](_, R, _), member_value[flow](R, Key, V).', replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['pullsRest -> riveted', 'useObjectRest -> spanner']);
+      // THE COLUMN THAT TELLS THIS FROM h8: the rest object still HAS its keys
+      // and the locals still denote it — the member lookup simply cannot see a
+      // receiver that passes none of its three guards. That is the same defect
+      // the module namespace had, and it is why the row exists at all.
+      assert.deepEqual(restKeys(m), restKeys(b));
+      assert.equal(restReads(m), restReads(b));
+    },
+  },
+  {
+    name: 'h8 the rest local denotes nothing',
+    mut: [{ file: DF, find: `may_be_node[flow](E, R) :- rest_binds[code](D, R, Local, File),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).`, replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['pullsRest -> riveted', 'useObjectRest -> spanner']);
+      assert.deepEqual(restKeys(m), restKeys(b), 'the object still carries its keys');
+      assert.equal(restReads(m), 0, 'and no identifier reaches it');
+      assert.ok(restReads(b) > 0, 'positive control');
+    },
+  },
+  {
+    name: 'h9 an object spread copies nothing',
+    mut: [{ file: DF, find: `member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
+                                 ast_child[code](O, properties, _, S),
+                                 ast_node[code](S, spread_element, _, _),
+                                 ast_child[code](S, argument, 0, A), may_be_node[flow](A, Src),
+                                 member_value[flow](Src, Key, V).`, replace: '' }],
+    expect: (m, b) => assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['useObjectSpread -> spanner']),
+  },
+  {
+    name: 'h10 an argument after a spread keeps its tree index',
+    mut: [{ file: DF, find: `                              not ast_node[code](A, spread_element, _, _),
+                              not after_spread[code](C, I).`,
+            replace: `                              not ast_node[code](A, spread_element, _, _).` }],
+    // THE MUTANT IS THE MODEL AS IT STOOD BEFORE THIS ITEM, and the edge it
+    // gains is the one the running fixture contradicts: `useSpreadThenArg`
+    // returns 5 = chiselled(1) + planed(1), so `pair` calls `cubed` never.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
+        ['pair -> cubed'], 'the false edge is back');
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), [], 'and nothing else moves');
+    },
+  },
+  {
+    name: 'h11 a spread argument expands to nothing',
+    mut: [{ file: DF, find: `arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, J),
+                              ast_child[code](C, arguments, J, S),
+                              ast_child[code](S, argument, 0, A), elem_at[flow](A, K, E),
+                              I is J + K.`, replace: '' }],
+    expect: (m, b) => assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['duo -> chiselled', 'pair -> chiselled', 'pair -> planed']),
+  },
+  {
+    name: 'h12 a spread expands from index zero wherever it sits',
+    mut: [{ file: DF, find: '                              I is J + K.', replace: '                              I = K.' }],
+    // `duo(cubed, ...bench)` binds `x` to `cubed` and `y` to `chiselled` at run
+    // time. Expanding from zero says `y` may be `planed`, which is false — and
+    // it is why the fixture has a spread that is NOT first: with only
+    // `pair(...bench)` in the corpus, J is 0 at every site and this mutant is
+    // byte-identical to the rule.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(), ['duo -> planed']);
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), []);
+    },
+  },
+  {
+    name: 'h13 a default value is not a guarded arm',
+    mut: [{ file: CF, find: 'guard_kind(assignment_pattern,         right).', replace: '' }],
+    // TWO CONSEQUENCES OF ONE DELETION, and the second is the closed-vocabulary
+    // gate doing its job: the kind still carries `skip_arm` in
+    // `transfer_mechanism`, so a mechanism claimed as modelled by a rule
+    // nothing connects to the kind is exactly what `guard_unmodelled` reports.
+    expect: (m, b) => {
+      assert.equal(names(m).has('fallbackMaker'), false, 'a call only reachable through a default');
+      assert.equal(names(b).has('fallbackMaker'), true, 'positive control');
+      assert.deepEqual(m.q('guard_unmodelled[audit](K)').flat(), ['assignment_pattern']);
+      assert.deepEqual(b.q('guard_unmodelled[audit](K)').flat(), []);
+    },
+  },
+];
+
+// TWO MUTANTS ARE NAMED AND NOT RUN, because each is unkillable for a reason
+// worth writing down rather than for want of trying.
+//
+// (b) UNKILLABLE BY THE INSTRUMENT — deleting
+// `transfer_mechanism(assignment_pattern, skip_arm)` moves NOTHING. Every
+// consumer reads that row as a PREMISE: `guard_named` derives from
+// `guard_kind`, and `guard_unmodelled[audit]` is
+// `transfer_mechanism ∧ mechanism_modelled ∧ ¬guard_named`, so removing the
+// premise silences the audit that exists to notice. A closed-vocabulary gate
+// is structurally unable to see a kind removed FROM the vocabulary it ranges
+// over, and that is the same hole CLAUDE.md records for `orphan_claim`.
+//
+// (a) NO SITE IN THIS CORPUS — dropping `not after_spread[code](C, J)` from the
+// expansion arm. It guards a spread that has itself been shifted by an earlier
+// spread, and `f(...a, ...b)` is in no fixture here. The site that would kill
+// it is a call with TWO spreads whose first array has a length other than one;
+// it is not written because a second spread is a second construct and the
+// fixture discipline this file keeps forbids smuggling one in.
+
+for (const g of FAMILY) test(`${g.name} — array, assignment, rest and spread`, () => g.expect(build(g.mut), base()));
+
+test('the four remaining destructuring forms, answered and measured', () => {
+  const m = base();
+  // EVERY EDGE THE FAMILY ADDS, BY NAME. Each is confirmed by running
+  // alpha.mjs: useArgThenSpread() is 3 = cubed(1) + chiselled(1) and
+  // useSpreadOnly() is 5 = chiselled(1) + planed(1).
+  const family = ['chiselled', 'planed', 'squared', 'cubed', 'spanner', 'caliper',
+                  'fallbackMaker', 'riveted', 'bolted'];
+  assert.deepEqual([...edges(m)].filter((e) => family.some((f) => e.endsWith(' -> ' + f))).sort(), [
+    'duo -> chiselled', 'duo -> cubed',
+    'pair -> chiselled', 'pair -> planed',
+    'pullsRest -> riveted', 'pullsTaken -> bolted',
+    'shaped -> cubed', 'shaped -> squared',
+    'useFirstSlot -> chiselled', 'useObjectRest -> spanner',
+    'useObjectSpread -> spanner', 'useSecondSlot -> planed',
+    'useTakenFromRest -> caliper', 'withMade -> fallbackMaker',
+  ]);
+  // ...AND THE ONE THAT MUST NOT BE THERE, stated separately because an
+  // absence inside a set assertion is invisible to a reader.
+  assert.equal(edges(m).has('pair -> cubed'), false, 'an argument after a spread claims nothing');
+  assert.equal(edges(m).has('pullsExcluded -> bolted'), false, 'a rest excludes what the pattern took');
+
+  assert.deepEqual(boundAt(m), ['exportedTool<-0', 'firstTool<-0', 'secondTool<-1']);
+  assert.deepEqual(restKeys(m), ['riveted', 'spanner']);
+  assert.equal(names(m).has('fallbackMaker'), true, 'a default expression may not run');
+
+  // THE KINDS ARE IN THE CORPUS NOW, which is what took `kind_absent_ok` from
+  // four rows to none — the excuse cannot outlive its cause.
+  assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0);
+  assert.equal(m.n('kind_absent_stale[audit](K)'), 0);
+  for (const k of ['array_pattern', 'assignment_pattern', 'rest_element', 'spread_element']) {
+    assert.ok(m.n(`ast_node[code](N, ${k}, F, L)`) > 0, `positive control: ${k} is in the corpus`);
+  }
+});
+
+test('the modules layer has no opinion about a destructuring form, measured', () => {
+  const m = base();
+  // A TEXTUAL CENSUS AND ITS LIMIT, STATED. `rules/js-modules.rofl` is not in
+  // this world`s RULES — every relation of that layer is unpopulatable here —
+  // so the measurement is over the rule TEXT rather than over derived rows,
+  // and a textual census has a ceiling and not a floor.
+  //
+  // WHAT IT MEASURES IS STILL THE RIGHT QUESTION. That pack reaches the tree
+  // through `ast_node[code]` and nowhere else, so the set of kinds it names is
+  // the set of kinds it can possibly have an opinion about.
+  const named = new Set([...read('rules/js-modules.rofl')
+    .matchAll(/ast_node\[code\]\([^,]+,\s*([a-z_]+)\s*,/g)].map((x) => x[1]));
+  assert.deepEqual([...named].sort(), [
+    '_', 'import_declaration', 'import_default_specifier', 'import_expression',
+    'import_namespace_specifier', 'import_specifier', 'string_literal',
+  ], 'every kind the modules pack names, and not one of them is a pattern');
+  // THE WILDCARD IS NOT A HOLE, and it was read rather than assumed: both `_`
+  // occurrences are `site_file` and `site_line`, and each carries
+  // `import_site[code](I, _)` on the SAME node in the same body, so neither
+  // ranges over anything an import site is not.
+  for (const k of ['array_pattern', 'assignment_pattern', 'rest_element', 'spread_element',
+                   'object_pattern']) assert.equal(named.has(k), false);
+
+  // ...AND THE SITE THAT MAKES THE VERDICT EXERCISED RATHER THAN DEFINITIONAL:
+  // `export const [exportedTool] = bench` is a destructuring form DIRECTLY
+  // under an export declaration. Without it `a_not_a_module_construct` would be
+  // untestable by construction — a kind that never met an `export` cannot show
+  // that meeting one changes nothing.
+  const underExport = m.q('ast_node[code](P, array_pattern, F, L)')
+    .filter(([p]) => m.q('ast_node[code](E, export_named_declaration, F2, L2)')
+      .some(([e]) => m.n(`ast_within[code](${e}, ${p})`) === 1));
+  assert.equal(underExport.length, 1, 'exactly one pattern under an export');
+  assert.ok(m.n('ast_node[code](P, array_pattern, F, L)') > 1,
+    'positive control: patterns that are NOT under an export exist too');
+});
+
+// ---------------------------------------------------------------------------
+// 3r. WHAT THESE FORMS DO AT RUN TIME, which is where the CONTROL-FLOW verdict
+//     for three of the four came from (w_destructuring_hides_a_call).
+//
+// `ignored(js, K, controlflow, a_no_control_transfer)` is a claim about the
+// LANGUAGE, and this repository`s rule is that such a claim is the output of
+// running something. So it runs: seven cases, each recording which functions
+// actually executed, and the answer decided three cells and reopened a fourth.
+//
+// IT COSTS NO WORLD, which is why it is a test rather than a scratch file.
+// Every other test in this file pays for a fixpoint; this one pays for a
+// getter and an iterator, and it is the only instrument that can see the
+// difference between `this kind transfers nothing` and `this kind transfers
+// into a function whose name the model cannot say`.
+test('a destructuring form hides a call, measured by running one', () => {
+  const ran: string[] = [];
+  const mark = (w: string) => { ran.push(w); return 1; };
+
+  const iterable = { *[Symbol.iterator]() { mark('array_pattern:iterator'); yield 1; yield 2; } };
+  const [, second] = iterable;                       // 1. an array pattern
+  const withGetter = { get taken() { return mark('object_pattern:getter'); } };
+  const { taken } = withGetter;                      // 2. an object pattern
+  const spreadCopy = { ...withGetter };               // 3. an object spread
+  const arrCopy = [...iterable];                      // 4. an array spread
+  const sink = (...xs: number[]) => xs.length;
+  sink(...iterable);                                  // 5. a spread argument
+  const restSrc = { a: 1, get b() { return mark('rest_element:getter'); } };
+  const { a, ...rest } = restSrc;                     // 6. an object rest
+  const withDefault = (x = mark('assignment_pattern:default')) => x;
+  withDefault();                                      // 7. a default, omitted
+  withDefault(9);                                     //    and supplied
+
+  // SIX TRANSFERS OUT OF SEVEN CASES, named rather than counted.
+  assert.deepEqual(ran, [
+    'array_pattern:iterator',       // [, second] = iterable
+    'object_pattern:getter',        // { taken } = withGetter
+    'object_pattern:getter',        // { ...withGetter }
+    'array_pattern:iterator',       // [...iterable]
+    'array_pattern:iterator',       // sink(...iterable)
+    'rest_element:getter',          // { a, ...rest } = restSrc
+    'assignment_pattern:default',   // withDefault() and NOT withDefault(9)
+  ]);
+  // THE DEFAULT IS THE DISCRIMINATING CASE: two calls, one execution. That is
+  // an arm skipped by a condition, which `guard_kind` already models — and it
+  // is why `assignment_pattern` is the one of the four this layer could close.
+  assert.equal(ran.filter((w) => w === 'assignment_pattern:default').length, 1);
+  // ...and the other three transfer into a function the model cannot NAME,
+  // because naming it needs the receiver's iterator or its getter — a standard
+  // library this model does not have. Same shape as `accessor_call`, which the
+  // layer does model, and structurally out of `accessor_read`'s reach because
+  // none of these is a `member_expression`.
+  assert.deepEqual([...new Set(ran)].sort(), [
+    'array_pattern:iterator', 'assignment_pattern:default',
+    'object_pattern:getter', 'rest_element:getter',
+  ]);
+  // the bindings are read so that no engine can elide the constructs above
+  assert.deepEqual([second, taken, spreadCopy.taken, arrCopy.length, a, (rest as any).b],
+    [2, 1, 1, 2, 1, 1]);
 });

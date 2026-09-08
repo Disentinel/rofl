@@ -55,6 +55,22 @@ handled(js, yield_expression, controlflow, r_suspension).
 -- was written and no rule had ever read it; `r_abrupt` reads it now.
 handled(js, return_statement, controlflow, r_abrupt).
 
+-- A DEFAULTED PARAMETER IS AN ARM SKIPPED BY A CONDITION, 2026-09-08
+-- (w_destructuring_rest_and_spread). `function f(n, made = fallbackMaker(n))`
+-- calls `fallbackMaker` at exactly the sites that omit the argument, so the
+-- `right` of an `assignment_pattern` is a guard arm in the same sense a `?:`
+-- alternate is. `guard_kind(assignment_pattern, right)` is the whole rule.
+--
+-- MEASURED BOTH WAYS. At run time, two calls to the same defaulted function —
+-- one supplying the argument and one not — ran the default expression exactly
+-- ONCE. In the model, with the fixture in and the row absent, `fallbackMaker`
+-- was NOT in `may_not_run` although its only call site is inside a default.
+--
+-- IT IS THE ONLY ONE OF THE FOUR THIS LAYER CAN ANSWER, and that is measured
+-- rather than assumed — see the `object_pattern` paragraph below.
+node_kind(js, assignment_pattern).
+handled(js, assignment_pattern, controlflow, r_guard_arm).
+
 -- ===========================================================================
 -- THE SWEEP (queue item w_cf_sweep). Forty cells, and the point of doing it by
 -- hand rather than by default is that NINE OF THEM ARE NOT RESIDUE. A default
@@ -79,7 +95,18 @@ ignored(js, null_literal,                controlflow, a_no_control_transfer).
 ignored(js, template_literal,            controlflow, a_no_control_transfer).
 ignored(js, tagged_template_expression,  controlflow, a_no_control_transfer).
 ignored(js, array_expression,            controlflow, a_no_control_transfer).
-ignored(js, object_pattern,              controlflow, a_no_control_transfer).
+-- ...AND `object_pattern` IS NOT HERE ANY MORE. Its row read
+-- `a_no_control_transfer` and 2026-09-08 MEASURED that the reason is false:
+-- `const { taken } = withGetter` RUNS the getter, which is a transfer into user
+-- code by syntax that hides it — the same class this layer already models under
+-- `accessor_call` for `member_expression`. The probe is seven cases and it
+-- recorded which functions ran; an object pattern, an array pattern, an object
+-- rest and all three spread positions each transferred control, and only
+-- `assignment_pattern` was answerable with the machinery this layer has.
+--
+-- The cell is OPEN and OWNED, by `w_destructuring_hides_a_call`. Second
+-- borrowed-reason correction in this file after `import_expression`, and it
+-- arrives the same way: the reason was re-READ rather than re-labelled.
 ignored(js, object_expression,           controlflow, a_no_control_transfer).
 ignored(js, object_property,             controlflow, a_no_control_transfer).
 ignored(js, assignment_expression,       controlflow, a_no_control_transfer).

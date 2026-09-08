@@ -50,6 +50,37 @@ handled(js, array_expression,   dataflow, r_value_core).
 -- comes from which key and the value arm joins it through `member_value`.
 handled(js, object_pattern,     dataflow, r_destructure).
 
+-- ...AND THE OTHER FOUR FORMS OF THE FAMILY, 2026-09-08
+-- (w_destructuring_rest_and_spread). Measured with the fixtures in and no rule
+-- written: the value layer answered NOTHING at seven of the eight new sites,
+-- and answered the eighth WRONGLY.
+--
+--   array_pattern       `r_destructure_index` — an array pattern counts to its
+--                       member where an object pattern names it, so the INDEX
+--                       is the content. `elem_at[flow]` is the new carrier.
+--   assignment_pattern  `r_param_default` — `param_of` reads `ast_name` off the
+--                       params child and a defaulted parameter has none, so it
+--                       had NO INDEX: neither the default reached the body nor
+--                       an argument passed at that position.
+--   rest_element        `r_object_rest` — the rest node IS the object it binds,
+--                       carrying every key the pattern did not take. The
+--                       EXCLUSION is the whole content and it is unobservable
+--                       on a runnable corpus, so its site is in shapes.ts.
+--   spread_element      `r_spread` — an object spread copies the keys of what
+--                       it spreads, and a spread ARGUMENT shifts every argument
+--                       after it. The second half is the one place this family
+--                       made the model say something FALSE rather than nothing:
+--                       `pair(...bench, cubed)` derived `pair -> cubed` while
+--                       the running fixture calls `chiselled` and `planed`.
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+handled(js, array_pattern,      dataflow, r_destructure_index).
+handled(js, assignment_pattern, dataflow, r_param_default).
+handled(js, rest_element,       dataflow, r_object_rest).
+handled(js, spread_element,     dataflow, r_spread).
+
 -- and the three transparent wrappers, which `w_df_control_forms` claimed and
 -- this item closed by accident: a parenthesis, a cast and a non-null assertion
 -- change nothing about a value, so they are one rule over a table rather than

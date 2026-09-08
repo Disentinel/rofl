@@ -1131,10 +1131,13 @@ work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string
 -- 50 - array_pattern, assignment_pattern, rest_element, spread_element.
 work(w_destructuring_rest_and_spread, "array and assignment patterns, rest and spread: object_pattern landed with a rule, and the other four forms of the same family have no site yet").
 work_order(w_destructuring_rest_and_spread, 50).
-work_state(w_destructuring_rest_and_spread, open).
+work_state(w_destructuring_rest_and_spread, done).
+-- THIRTEEN OF THE SIXTEEN, and the three that are not here went to
+-- `w_destructuring_hides_a_call` (60) because measuring them changed the
+-- answer. The claims below are the cells this item CLOSED; a done item keeps
+-- them so `false_done[audit]` can contradict it if any is still open.
 claim(queued, js, array_pattern,               none, callgraph,    w_destructuring_rest_and_spread).
 claim(queued, js, array_pattern,               none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, array_pattern,               none, controlflow,  w_destructuring_rest_and_spread).
 claim(queued, js, array_pattern,               none, modules,      w_destructuring_rest_and_spread).
 claim(queued, js, assignment_pattern,          none, callgraph,    w_destructuring_rest_and_spread).
 claim(queued, js, assignment_pattern,          none, dataflow,     w_destructuring_rest_and_spread).
@@ -1142,12 +1145,12 @@ claim(queued, js, assignment_pattern,          none, controlflow,  w_destructuri
 claim(queued, js, assignment_pattern,          none, modules,      w_destructuring_rest_and_spread).
 claim(queued, js, rest_element,                none, callgraph,    w_destructuring_rest_and_spread).
 claim(queued, js, rest_element,                none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, rest_element,                none, controlflow,  w_destructuring_rest_and_spread).
 claim(queued, js, rest_element,                none, modules,      w_destructuring_rest_and_spread).
 claim(queued, js, spread_element,              none, callgraph,    w_destructuring_rest_and_spread).
 claim(queued, js, spread_element,              none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, spread_element,              none, controlflow,  w_destructuring_rest_and_spread).
 claim(queued, js, spread_element,              none, modules,      w_destructuring_rest_and_spread).
+work_spawned(w_destructuring_rest_and_spread, f_a_spread_argument_shifts_every_argument_after_it).
+work_spawned(w_destructuring_rest_and_spread, f_destructuring_hides_a_call_the_way_an_accessor_does).
 
 -- 51 - class_property, class_private_property, class_private_method, private_name, static_block.
 work(w_class_fields, "class fields, private names and static blocks - ES2022 class syntax the vocabulary never named").
@@ -1281,3 +1284,35 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: two need a parser plugin and two need an environment the scale does not have").
 work_order(w_plugin_gated_kinds, 59).
 work_state(w_plugin_gated_kinds, open).
+
+
+-- ==========================================================================
+-- 60 - THE THREE CELLS ITEM 50 COULD NOT CLOSE, plus one it had to REOPEN.
+--
+-- MEASURED AT RUN TIME, seven cases, recording which functions ran: an array
+-- pattern over a custom iterable runs the iterator; an object spread over an
+-- object with a getter runs the getter; an array spread and a spread ARGUMENT
+-- both run the iterator; an object rest runs the source`s getters. So
+-- `a_no_control_transfer` is FALSE for all three, and it was already false for
+-- `object_pattern`, which carried that reason from the forty-cell sweep - its
+-- row is gone from facts/js-controlflow.rofl and its cell is claimed here.
+--
+-- THIS IS `accessor_call` WEARING ANOTHER SYNTAX. The layer already models one
+-- hidden call - `transfer_mechanism(member_expression, accessor_call)` reached
+-- by `accessor_read` - and every case above is the same shape: a construct
+-- whose surface is a binding and whose semantics is a call. What it needs is
+-- the receiver`s ITERATOR, which is a standard-library question, so this waits
+-- on the same chain `w_effect_layer` does.
+--
+-- `assignment_pattern` IS NOT HERE and that is the discriminating half: it was
+-- closable with the machinery this layer already has, because its transfer is
+-- an arm skipped by a condition rather than a call the syntax hides.
+work(w_destructuring_hides_a_call, "an array pattern, an object rest and every spread position transfer control into user code - an iterator or a getter - and the layer`s reason atom for all four says they transfer nothing").
+work_order(w_destructuring_hides_a_call, 60).
+work_state(w_destructuring_hides_a_call, open).
+work_needs(w_destructuring_hides_a_call, w_env_api_surface).
+claim(queued, js, object_pattern,              none, controlflow,  w_destructuring_hides_a_call).
+claim(queued, js, array_pattern,               none, controlflow,  w_destructuring_hides_a_call).
+claim(queued, js, rest_element,                none, controlflow,  w_destructuring_hides_a_call).
+claim(queued, js, spread_element,              none, controlflow,  w_destructuring_hides_a_call).
+work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_an_accessor_does).

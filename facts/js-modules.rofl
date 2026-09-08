@@ -255,6 +255,30 @@ checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resol
 -- repository forbids. See the reclassification below.
 ignored(js, array_expression,             modules, a_not_a_module_construct).
 ignored(js, object_pattern,               modules, a_not_a_module_construct).
+-- ...AND THE OTHER FOUR OF THE FAMILY, 2026-09-08, MEASURED RATHER THAN
+-- ASSERTED. This layer has exactly TWO entry points — `import_site[code]` is
+-- `import_declaration` and `import_expression` and nothing else — and a census
+-- of every kind rules/js-modules.rofl names through `ast_node[code]` returns
+-- six: those two, the three import specifier forms, and `string_literal` for a
+-- specifier`s text. Not one of them is a pattern.
+--
+-- THE CENSUS IS TEXTUAL AND ITS CEILING IS DECLARED. It reads the rule pack
+-- rather than the derived rows, because test/js-controlflow-values.test.ts —
+-- where the check lives, beside the corpus that has the sites — does not load
+-- this pack, so every relation of it is unpopulatable there. The two `_`
+-- wildcards the census reports were READ rather than waved past: `site_file`
+-- and `site_line` each carry `import_site[code](I, _)` on the SAME node in the
+-- same body, so neither ranges over anything an import site is not.
+--
+-- AND THE SITE THAT EXERCISES IT: alpha.mjs now carries
+-- `export const [exportedTool] = bench`, a destructuring form DIRECTLY UNDER an
+-- export declaration. It moves no row of this layer, which is the only way the
+-- verdict can be checked rather than believed — a pattern that never met an
+-- `export` would make `a_not_a_module_construct` untestable by construction.
+ignored(js, array_pattern,                modules, a_not_a_module_construct).
+ignored(js, assignment_pattern,           modules, a_not_a_module_construct).
+ignored(js, rest_element,                 modules, a_not_a_module_construct).
+ignored(js, spread_element,               modules, a_not_a_module_construct).
 ignored(js, arrow_function_expression,    modules, a_not_a_module_construct).
 ignored(js, assignment_expression,        modules, a_not_a_module_construct).
 ignored(js, await_expression,             modules, a_not_a_module_construct).
@@ -326,6 +350,10 @@ unknown_because(js, call_expression, modules, not_yet).
 -- a slip - see f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it.
 node_kind(js, array_expression).
 node_kind(js, object_pattern).
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
 node_kind(js, arrow_function_expression).
 node_kind(js, await_expression).
 node_kind(js, boolean_literal).

@@ -39,6 +39,17 @@ guard_kind(for_of_statement,           body).
 guard_kind(for_statement,              body).
 guard_kind(for_in_statement,           body).
 guard_kind(while_statement,            body).
+-- A DEFAULT VALUE RUNS ONLY IF THE ARGUMENT IS ABSENT. `function f(n, made =
+-- fallbackMaker(n))` calls `fallbackMaker` at exactly the call sites that omit
+-- the second argument, so the `right` of an `assignment_pattern` is an arm
+-- skipped by a condition in the same sense a `?:` alternate is — and this is
+-- the whole reason `assignment_pattern` is more than a dataflow join.
+--
+-- MEASURED BEFORE THE ROW: with the fixture in and this line absent,
+-- `fallbackMaker` was NOT in `may_not_run` although its only call site is
+-- inside a default. The `left` is deliberately not an arm: a parameter's NAME
+-- is not conditional, only its value is.
+guard_kind(assignment_pattern,         right).
 -- A CASE BODY is skipped unless the switch selects it, and `consequent` is an
 -- ARRAY here — which is why `guard_arm` below reads any index rather than 0.
 guard_kind(switch_case,                consequent).
@@ -478,6 +489,9 @@ transfer_mechanism(catch_clause,               skip_arm).
 -- because a loop kind missing from `transfer_mechanism` reads as "nobody
 -- looked" and this one was looked at.
 transfer_mechanism(do_while_statement,         loop_at_least_once).
+-- ...and a defaulted parameter, whose `right` is skipped when the argument is
+-- supplied. `guard_named` follows from `guard_kind` and needs no row of its own.
+transfer_mechanism(assignment_pattern,         skip_arm).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).

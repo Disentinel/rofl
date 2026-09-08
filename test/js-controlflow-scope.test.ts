@@ -80,8 +80,9 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
         ['apply2 -> stamped', 'applyFirst -> stamped', 'useCb -> stamped',
          'useKeyA -> keyTwo', 'useKeyB -> keyOne'],
         'every binder visible everywhere: each computed key reaches the other site');
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 22,
-        'and the collisions the region rule closed come back: 8 -> 22');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 14,
+        'and the collisions the region rule closed come back, fourteen of them');
     },
   },
   {
@@ -126,8 +127,9 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // site resolving TWO ways is what `ambiguous_call[audit]` counts.
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), []);
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 10,
-        'the `this` in `relay` answers with the object AND the class: 8 -> 10');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 2,
+        'the `this` in `relay` answers with the object AND the class');
     },
   },
   {
@@ -216,7 +218,8 @@ const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void 
       // `twin` existed twice: beta.mjs DOES contain an identifier `twin` — its
       // own declaration — so reading the imported name where the local one
       // belongs makes beta's own call to its own `twin` mean delta's as well.
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 10, 'the collision resolves both ways: 8 -> 10');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 2, 'the collision resolves both ways');
     },
   },
   {
@@ -233,7 +236,8 @@ const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void 
         'apply2 -> crossed', 'applyFirst -> crossed', 'hello -> crossed',
         'inner -> crossed', 'inner2 -> crossed', 'mid -> crossed',
       ], "every alpha.mjs call to its own `leaf` reaches beta's import as well");
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 22, 'and each site resolves two ways: 8 -> 22');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 14, 'and each site resolves two ways');
     },
   },
 ];
@@ -425,6 +429,17 @@ const ambRows = (w: World) => w.q('ambiguous_call[audit](C, F, G)').map(([c, f, 
   `${fileOf(w, c)}: ${w.q(`fn_name[code](${f}, N)`)[0]?.[0]}@${fileOf(w, f)}`
   + ` | ${w.q(`fn_name[code](${g}, N)`)[0]?.[0]}@${fileOf(w, g)}`).sort();
 
+const AMBIGUOUS_ROWS = ['alpha.mjs: alef@alpha.mjs | bet@alpha.mjs',
+   'alpha.mjs: alef@alpha.mjs | bet@alpha.mjs',
+   'alpha.mjs: bet@alpha.mjs | alef@alpha.mjs',
+   'alpha.mjs: bet@alpha.mjs | alef@alpha.mjs',
+   'alpha.mjs: cubed@alpha.mjs | squared@alpha.mjs',
+   'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
+   'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
+   'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
+   'alpha.mjs: pick@alpha.mjs | pick@alpha.mjs',
+   'alpha.mjs: squared@alpha.mjs | cubed@alpha.mjs'];
+
 const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
   {
     name: 'r1 the re-export arm is deleted',
@@ -561,7 +576,13 @@ test('a re-export carries names and not the default, and the receiver keeps its 
   // THE COLLISION RESOLVES THE RIGHT WAY ROUND: two functions named `twin`, one
   // reached through gamma and one declared in the calling file, and neither
   // answers for the other.
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  // BY NAME AND NOT BY COUNT. This was `=== 8` until 2026-09-08 and
+  // `w_destructuring_rest_and_spread` moved it to 10 without the assertion
+  // being able to say WHICH sites — the failure
+  // `f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus` names. The
+  // two new rows are one site, `shaped`'s `shape(n)`, which is a defaulted
+  // parameter reached once through its default and once through an argument.
+  assert.deepEqual(ambRows(m), AMBIGUOUS_ROWS, 'and nothing new is ambiguous');
   assert.deepEqual(m.q('imports_name[code](L, N, S, "beta.mjs")')
     .map(([l, n, s]) => `${l}=${n}@${s}`).sort(),
     ['leaf=crossed@./alpha.mjs', 'trace=trace@./trace.mjs', 'viaStar=crossed@./gamma.mjs',
@@ -633,7 +654,8 @@ const ALIAS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
         ['useRack -> shelved', 'useShelf -> slotted']);
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 12, 'and each site resolves two ways: 8 -> 12');
+      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
+        b.n('ambiguous_call[audit](C, F, G)') + 4, 'and each site resolves two ways');
     },
   },
   {
@@ -680,7 +702,13 @@ test('a member WRITTEN is a member read, and the receiver decides', () => {
   // answers for the other.
   assert.ok(!edges(m).has('useRack -> shelved') && !edges(m).has('useShelf -> slotted'),
     'one key on two objects is two answers');
-  assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  // BY NAME AND NOT BY COUNT. This was `=== 8` until 2026-09-08 and
+  // `w_destructuring_rest_and_spread` moved it to 10 without the assertion
+  // being able to say WHICH sites — the failure
+  // `f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus` names. The
+  // two new rows are one site, `shaped`'s `shape(n)`, which is a defaulted
+  // parameter reached once through its default and once through an argument.
+  assert.deepEqual(ambRows(m), AMBIGUOUS_ROWS, 'and nothing new is ambiguous');
 });
 
 
@@ -829,10 +857,18 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // in the safe direction is what `may_not_run` is documented to be — the
   // dangerous direction is a live function reported dead by a set that is too
   // NARROW.
+  // SEVENTEEN on 2026-09-08 with `w_destructuring_rest_and_spread`, and the new
+  // name is a SEVENTEENTH REASON rather than a seventeenth instance:
+  // `fallbackMaker` is called nowhere except inside a parameter`s DEFAULT
+  // VALUE, and a default runs only when the argument is absent. Measured at run
+  // time before the row: two calls to the same defaulted function, one
+  // supplying the argument and one not, ran the default exactly ONCE. The
+  // runtime does enter it — `useMade(1)` omits the argument — which is the same
+  // safe over-cover `alef` and `pickedB` are here for.
   assert.deepEqual([...mayNotRun].sort(),
-    ['after', 'afterStall', 'alef', 'bet', 'guardedElse', 'label', 'loopBody',
-     'neverCased', 'neverReached', 'pickedB', 'reading', 'rescue', 'sleeper',
-     'unlit', 'unreached', 'unreadable']);
+    ['after', 'afterStall', 'alef', 'bet', 'fallbackMaker', 'guardedElse',
+     'label', 'loopBody', 'neverCased', 'neverReached', 'pickedB', 'reading',
+     'rescue', 'sleeper', 'unlit', 'unreached', 'unreadable']);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   // TWO now, and they are two different shapes of the same relation. `dormant`
