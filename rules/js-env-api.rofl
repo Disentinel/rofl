@@ -24,8 +24,8 @@
 -- ---------------------------------------------------------------------------
 -- THE ATTRIBUTION. One join, and it is one join because both halves already
 -- existed: the residue is keyed by (prototype, key) and so is the library.
-lib_call[code](C, P, Key, Since) :- stdlib_member[audit](C, P, Key),
-                                    lib_member(P, Key, Since).
+lib_call[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),
+                                  lib_member(P, Key, Rel).
 
 -- ...AND WHAT IT DOES NOT ATTRIBUTE, which is the row worth watching. A member
 -- call on a KNOWN prototype whose name TypeScript's declarations do not carry
@@ -43,5 +43,12 @@ stdlib_unattributed[audit](C, P, Key) :- stdlib_member[audit](C, P, Key),
 -- under es2020 — and until now the model could say that about `??=` and not
 -- about `.at`, which is the half of the environment question the item's own
 -- note calls "what syntax cannot answer".
-lib_unsupported[audit](E, C, P, Key) :- lib_call[code](C, P, Key, Since),
-                                        environment(E), env_rank(E, R), Since > R.
+-- BY COMPOSITION SINCE 2026-09-08, like everything else on this axis. This read
+-- `env_rank(E, R), Since > R` while `Since` was a YEAR; it is a RELEASE now —
+-- `lib.es2022.array.d.ts` names `es2022` and the file name was always the
+-- release rather than the number — so the question is membership and not
+-- comparison: does this environment REACH the release that introduced the
+-- method. Which is the same question `has_feature` asks of a syntax feature,
+-- in the same words, for the first time.
+lib_unsupported[audit](E, C, P, Key) :- lib_call[code](C, P, Key, Rel),
+                                        environment(E), not reaches[audit](E, Rel).

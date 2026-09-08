@@ -6,135 +6,165 @@
 -- from that year, read from TypeScript`s own lib.es*.d.ts declarations. The
 -- year is the earliest lib file that declares it, which is the record
 -- TypeScript keeps of when each method landed.
+-- `release(R)` and `includes(R, Part)` are TypeScript`s OWN composition,
+-- read from the `/// <reference lib=` lines: an edition is a UNION OF NAMED
+-- RELEASES in which the previous edition is one part. The year was the wrong
+-- key and this is what replaced it — see
+-- f_an_era_is_a_composition_of_releases_and_not_a_year.
 edb(lib_member).
+edb(release).
+edb(includes).
 
-lib_member(array, "at", 2022).
-lib_member(array, "concat", 2009).
-lib_member(array, "copyWithin", 2015).
-lib_member(array, "entries", 2015).
-lib_member(array, "every", 2009).
-lib_member(array, "fill", 2015).
-lib_member(array, "filter", 2009).
-lib_member(array, "find", 2015).
-lib_member(array, "findIndex", 2015).
-lib_member(array, "findLast", 2023).
-lib_member(array, "findLastIndex", 2023).
-lib_member(array, "flat", 2019).
-lib_member(array, "flatMap", 2019).
-lib_member(array, "forEach", 2009).
-lib_member(array, "includes", 2016).
-lib_member(array, "indexOf", 2009).
-lib_member(array, "join", 2009).
-lib_member(array, "keys", 2015).
-lib_member(array, "lastIndexOf", 2009).
-lib_member(array, "length", 2009).
-lib_member(array, "map", 2009).
-lib_member(array, "pop", 2009).
-lib_member(array, "push", 2009).
-lib_member(array, "reduce", 2009).
-lib_member(array, "reduceRight", 2009).
-lib_member(array, "reverse", 2009).
-lib_member(array, "shift", 2009).
-lib_member(array, "slice", 2009).
-lib_member(array, "some", 2009).
-lib_member(array, "sort", 2009).
-lib_member(array, "splice", 2009).
-lib_member(array, "toLocaleString", 2009).
-lib_member(array, "toReversed", 2023).
-lib_member(array, "toSorted", 2023).
-lib_member(array, "toSpliced", 2023).
-lib_member(array, "toString", 2009).
-lib_member(array, "unshift", 2009).
-lib_member(array, "values", 2015).
-lib_member(array, "with", 2023).
-lib_member(bigint, "toLocaleString", 2020).
-lib_member(bigint, "toString", 2020).
-lib_member(bigint, "valueOf", 2020).
-lib_member(boolean, "valueOf", 2009).
-lib_member(function, "apply", 2009).
-lib_member(function, "arguments", 2009).
-lib_member(function, "bind", 2009).
-lib_member(function, "call", 2009).
-lib_member(function, "caller", 2009).
-lib_member(function, "length", 2009).
-lib_member(function, "name", 2015).
-lib_member(function, "prototype", 2009).
-lib_member(function, "toString", 2009).
-lib_member(number, "toExponential", 2009).
-lib_member(number, "toFixed", 2009).
-lib_member(number, "toLocaleString", 2009).
-lib_member(number, "toPrecision", 2009).
-lib_member(number, "toString", 2009).
-lib_member(number, "valueOf", 2009).
-lib_member(object, "constructor", 2009).
-lib_member(object, "hasOwnProperty", 2009).
-lib_member(object, "isPrototypeOf", 2009).
-lib_member(object, "propertyIsEnumerable", 2009).
-lib_member(object, "toLocaleString", 2009).
-lib_member(object, "toString", 2009).
-lib_member(object, "valueOf", 2009).
-lib_member(regexp, "compile", 2009).
-lib_member(regexp, "dotAll", 2018).
-lib_member(regexp, "exec", 2009).
-lib_member(regexp, "flags", 2015).
-lib_member(regexp, "global", 2009).
-lib_member(regexp, "hasIndices", 2022).
-lib_member(regexp, "ignoreCase", 2009).
-lib_member(regexp, "lastIndex", 2009).
-lib_member(regexp, "multiline", 2009).
-lib_member(regexp, "source", 2009).
-lib_member(regexp, "sticky", 2015).
-lib_member(regexp, "test", 2009).
-lib_member(regexp, "unicode", 2015).
-lib_member(regexp, "unicodeSets", 2024).
-lib_member(string, "anchor", 2015).
-lib_member(string, "at", 2022).
-lib_member(string, "big", 2015).
-lib_member(string, "blink", 2015).
-lib_member(string, "bold", 2015).
-lib_member(string, "charAt", 2009).
-lib_member(string, "charCodeAt", 2009).
-lib_member(string, "codePointAt", 2015).
-lib_member(string, "concat", 2009).
-lib_member(string, "endsWith", 2015).
-lib_member(string, "fixed", 2015).
-lib_member(string, "fontcolor", 2015).
-lib_member(string, "fontsize", 2015).
-lib_member(string, "includes", 2015).
-lib_member(string, "indexOf", 2009).
-lib_member(string, "isWellFormed", 2024).
-lib_member(string, "italics", 2015).
-lib_member(string, "lastIndexOf", 2009).
-lib_member(string, "length", 2009).
-lib_member(string, "link", 2015).
-lib_member(string, "localeCompare", 2009).
-lib_member(string, "match", 2009).
-lib_member(string, "matchAll", 2020).
-lib_member(string, "normalize", 2015).
-lib_member(string, "padEnd", 2017).
-lib_member(string, "padStart", 2017).
-lib_member(string, "repeat", 2015).
-lib_member(string, "replace", 2009).
-lib_member(string, "replaceAll", 2021).
-lib_member(string, "search", 2009).
-lib_member(string, "slice", 2009).
-lib_member(string, "small", 2015).
-lib_member(string, "split", 2009).
-lib_member(string, "startsWith", 2015).
-lib_member(string, "strike", 2015).
-lib_member(string, "sub", 2015).
-lib_member(string, "substr", 2009).
-lib_member(string, "substring", 2009).
-lib_member(string, "sup", 2015).
-lib_member(string, "toLocaleLowerCase", 2009).
-lib_member(string, "toLocaleUpperCase", 2009).
-lib_member(string, "toLowerCase", 2009).
-lib_member(string, "toString", 2009).
-lib_member(string, "toUpperCase", 2009).
-lib_member(string, "toWellFormed", 2024).
-lib_member(string, "trim", 2009).
-lib_member(string, "trimEnd", 2019).
-lib_member(string, "trimLeft", 2019).
-lib_member(string, "trimRight", 2019).
-lib_member(string, "trimStart", 2019).
-lib_member(string, "valueOf", 2009).
+release(es2015).
+release(es2016).
+release(es2017).
+release(es2018).
+release(es2019).
+release(es2020).
+release(es2021).
+release(es2022).
+release(es2023).
+release(es2024).
+release(es5).
+
+includes(es2015, es5).
+includes(es2016, es2015).
+includes(es2017, es2016).
+includes(es2018, es2017).
+includes(es2019, es2018).
+includes(es2020, es2019).
+includes(es2021, es2020).
+includes(es2022, es2021).
+includes(es2023, es2022).
+includes(es2024, es2023).
+
+lib_member(array, "at", es2022).
+lib_member(array, "concat", es5).
+lib_member(array, "copyWithin", es2015).
+lib_member(array, "entries", es2015).
+lib_member(array, "every", es5).
+lib_member(array, "fill", es2015).
+lib_member(array, "filter", es5).
+lib_member(array, "find", es2015).
+lib_member(array, "findIndex", es2015).
+lib_member(array, "findLast", es2023).
+lib_member(array, "findLastIndex", es2023).
+lib_member(array, "flat", es2019).
+lib_member(array, "flatMap", es2019).
+lib_member(array, "forEach", es5).
+lib_member(array, "includes", es2016).
+lib_member(array, "indexOf", es5).
+lib_member(array, "join", es5).
+lib_member(array, "keys", es2015).
+lib_member(array, "lastIndexOf", es5).
+lib_member(array, "length", es5).
+lib_member(array, "map", es5).
+lib_member(array, "pop", es5).
+lib_member(array, "push", es5).
+lib_member(array, "reduce", es5).
+lib_member(array, "reduceRight", es5).
+lib_member(array, "reverse", es5).
+lib_member(array, "shift", es5).
+lib_member(array, "slice", es5).
+lib_member(array, "some", es5).
+lib_member(array, "sort", es5).
+lib_member(array, "splice", es5).
+lib_member(array, "toLocaleString", es5).
+lib_member(array, "toReversed", es2023).
+lib_member(array, "toSorted", es2023).
+lib_member(array, "toSpliced", es2023).
+lib_member(array, "toString", es5).
+lib_member(array, "unshift", es5).
+lib_member(array, "values", es2015).
+lib_member(array, "with", es2023).
+lib_member(bigint, "toLocaleString", es2020).
+lib_member(bigint, "toString", es2020).
+lib_member(bigint, "valueOf", es2020).
+lib_member(boolean, "valueOf", es5).
+lib_member(function, "apply", es5).
+lib_member(function, "arguments", es5).
+lib_member(function, "bind", es5).
+lib_member(function, "call", es5).
+lib_member(function, "caller", es5).
+lib_member(function, "length", es5).
+lib_member(function, "name", es2015).
+lib_member(function, "prototype", es5).
+lib_member(function, "toString", es5).
+lib_member(number, "toExponential", es5).
+lib_member(number, "toFixed", es5).
+lib_member(number, "toLocaleString", es5).
+lib_member(number, "toPrecision", es5).
+lib_member(number, "toString", es5).
+lib_member(number, "valueOf", es5).
+lib_member(object, "constructor", es5).
+lib_member(object, "hasOwnProperty", es5).
+lib_member(object, "isPrototypeOf", es5).
+lib_member(object, "propertyIsEnumerable", es5).
+lib_member(object, "toLocaleString", es5).
+lib_member(object, "toString", es5).
+lib_member(object, "valueOf", es5).
+lib_member(regexp, "compile", es5).
+lib_member(regexp, "dotAll", es2018).
+lib_member(regexp, "exec", es5).
+lib_member(regexp, "flags", es2015).
+lib_member(regexp, "global", es5).
+lib_member(regexp, "hasIndices", es2022).
+lib_member(regexp, "ignoreCase", es5).
+lib_member(regexp, "lastIndex", es5).
+lib_member(regexp, "multiline", es5).
+lib_member(regexp, "source", es5).
+lib_member(regexp, "sticky", es2015).
+lib_member(regexp, "test", es5).
+lib_member(regexp, "unicode", es2015).
+lib_member(regexp, "unicodeSets", es2024).
+lib_member(string, "anchor", es2015).
+lib_member(string, "at", es2022).
+lib_member(string, "big", es2015).
+lib_member(string, "blink", es2015).
+lib_member(string, "bold", es2015).
+lib_member(string, "charAt", es5).
+lib_member(string, "charCodeAt", es5).
+lib_member(string, "codePointAt", es2015).
+lib_member(string, "concat", es5).
+lib_member(string, "endsWith", es2015).
+lib_member(string, "fixed", es2015).
+lib_member(string, "fontcolor", es2015).
+lib_member(string, "fontsize", es2015).
+lib_member(string, "includes", es2015).
+lib_member(string, "indexOf", es5).
+lib_member(string, "isWellFormed", es2024).
+lib_member(string, "italics", es2015).
+lib_member(string, "lastIndexOf", es5).
+lib_member(string, "length", es5).
+lib_member(string, "link", es2015).
+lib_member(string, "localeCompare", es5).
+lib_member(string, "match", es5).
+lib_member(string, "matchAll", es2020).
+lib_member(string, "normalize", es2015).
+lib_member(string, "padEnd", es2017).
+lib_member(string, "padStart", es2017).
+lib_member(string, "repeat", es2015).
+lib_member(string, "replace", es5).
+lib_member(string, "replaceAll", es2021).
+lib_member(string, "search", es5).
+lib_member(string, "slice", es5).
+lib_member(string, "small", es2015).
+lib_member(string, "split", es5).
+lib_member(string, "startsWith", es2015).
+lib_member(string, "strike", es2015).
+lib_member(string, "sub", es2015).
+lib_member(string, "substr", es5).
+lib_member(string, "substring", es5).
+lib_member(string, "sup", es2015).
+lib_member(string, "toLocaleLowerCase", es5).
+lib_member(string, "toLocaleUpperCase", es5).
+lib_member(string, "toLowerCase", es5).
+lib_member(string, "toString", es5).
+lib_member(string, "toUpperCase", es5).
+lib_member(string, "toWellFormed", es2024).
+lib_member(string, "trim", es5).
+lib_member(string, "trimEnd", es2019).
+lib_member(string, "trimLeft", es2019).
+lib_member(string, "trimRight", es2019).
+lib_member(string, "trimStart", es2019).
+lib_member(string, "valueOf", es5).

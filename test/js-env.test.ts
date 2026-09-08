@@ -97,7 +97,10 @@ function build(muts: Mut[] = [], extraSources: [string, string][] = []): World {
   // A BUDGET THAT IS NEVER CHECKED IS A PIN ON THE SIZE OF THE WORLD that
   // nothing in the file mentions. This is the third such pin found in two days.
   const packs = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
-                 'facts/js-modules.rofl', 'facts/js-shapes.rofl', FACTS]
+                 'facts/js-modules.rofl', 'facts/js-shapes.rofl',
+                 // the GENERATED composition: `release` and `includes` come from
+                 // TypeScript's own `/// <reference lib=` lines.
+                 'facts/js-lib-surface.rofl', FACTS]
     .map((f) => {
       let text = read(f);
       for (const m of muts) if ((m.file ?? FACTS) === f) {
@@ -253,8 +256,8 @@ test('one node kind carries two features five years apart', () => {
     ['import_meta', 'new_target'],
     'a meta_property is EITHER new.target (2015) or import.meta (2020)');
   // and the years are the model's, not this test's
-  assert.deepEqual(m.q('feature_since(new_target, Y)').flat(), ['2015']);
-  assert.deepEqual(m.q('feature_since(import_meta, Y)').flat(), ['2020']);
+  assert.deepEqual(m.q('provides(R, new_target)').flat(), ['es2015']);
+  assert.deepEqual(m.q('provides(R, import_meta)').flat(), ['es2020']);
   // ...and es2015 refuses exactly the LATER one at exactly the site that spells
   // it, which is the difference a kind-keyed table could not have expressed.
   assert.deepEqual([...m.set('unsupported_in[audit](es2015, File, import_meta)')],
@@ -289,7 +292,7 @@ test('the provenance of a refusal names the table row, not just the answer', () 
   assert.ok(row, 'es5 refuses a class');
   const tree = m.why(`unsupported[audit](es5, ${row[1]}, classes)`);
   assert.match(tree, /kind_needs/, 'the tree names the gate row');
-  assert.match(tree, /env_has|env_rank|feature_since/, 'and why the environment lacks it');
+  assert.match(tree, /env_has|has_feature|reaches|provides/, 'and why the environment lacks it');
 });
 
 // ---------------------------------------------------------------------------
@@ -324,8 +327,8 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
   },
   {
     name: 'm3 a feature year is moved earlier',
-    targets: 'feature_since carries the answer, not the feature name',
-    mut: [{ find: 'feature_since(optional_chaining, 2020)', replace: 'feature_since(optional_chaining, 2015)' }],
+    targets: 'provides carries the answer, not the feature name',
+    mut: [{ find: 'provides(es2020, optional_chaining)', replace: 'provides(es2015, optional_chaining)' }],
     expect: (m) => {
       assert.equal(m.set('lost_feature[audit](A, B, F)').has('es2020 es2015 optional_chaining'), false,
         'es2015 no longer loses optional chaining');
@@ -371,7 +374,7 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
   {
     name: 'm9 the only carrier of an off-timeline feature is removed',
     targets: 'feature_unreachable[audit]',
-    mut: [{ find: 'env_extra(ts5, type_syntax).', replace: '' }],
+    mut: [{ find: 'provides(ts5, type_syntax).', replace: '' }],
     expect: (m) => {
       assert.deepEqual(m.q('feature_unreachable[audit](F)').flat(), ['type_syntax']);
       assert.equal(m.set('valid[audit](E, File)').has('ts5 era.ts'), false,
@@ -381,7 +384,12 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
   {
     name: 'm10 two environments are given the same rank',
     targets: 'env_pair_indistinct[audit] — a comparison that measures nothing',
-    mut: [{ find: 'env_rank(es2016, 2016).', replace: 'env_rank(es2016, 2015).' }],
+    // RE-AIMED 2026-09-08. It gave es2016 the RANK 2015 and watched two
+    // environments become indistinguishable — and under composition a rank is a
+    // LABEL, so that mutation is now inert and would have survived silently.
+    // The equivalent defect is a release that introduces nothing: strip
+    // es2016's one feature and it provides exactly what es2015 does.
+    mut: [{ find: 'provides(es2016, exponentiation).', replace: '' }],
     expect: (m) => assert.ok(m.set('env_pair_indistinct[audit](A, B)').size > 0,
       'es2015 and es2016 now separate no site'),
   },
@@ -436,7 +444,7 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
   {
     name: 'm14 both halves are given the older year',
     targets: 'the YEAR carries the answer — this is the state of the table before this item',
-    mut: [{ find: 'feature_since(import_meta, 2020).', replace: 'feature_since(import_meta, 2015).' }],
+    mut: [{ find: 'provides(es2020, import_meta).', replace: 'provides(es2015, import_meta).' }],
     expect: (m) => {
       assert.equal(m.set('lost_feature[audit](A, B, F)').has('es2020 es2015 import_meta'), false,
         'es2015 no longer loses import.meta, which is what the single kind_needs row said');
@@ -501,7 +509,15 @@ test('every gate this layer declares has a mutant aimed at it, or is named as ha
   // put `audit -> main` back into `leak[audit]`, which is the ledger saying
   // that reading a book is what puts you in it. Every other [audit] head in
   // this file is a report.
-  const gates = [...heads].filter((h) => !['env_separates', 'env_has', 'any_env_has'].includes(h)
+  // `reaches` AND `has_feature` JOINED THE EXCLUSION 2026-09-08, for exactly the
+  // reason `env_has` is already on it: they live in [audit] because they READ
+  // it, and they are what `env_has` is now derived FROM — the composition that
+  // replaced the year. A relation cannot be told from a gate by its name, so
+  // the list is the thing a reviewer checks, and these two are helpers with no
+  // empty set to hold: `reaches` is reflexive by construction and `has_feature`
+  // is non-empty in any world with a release in it.
+  const gates = [...heads].filter((h) => !['env_separates', 'env_has', 'any_env_has',
+                                           'reaches', 'has_feature'].includes(h)
     && !h.startsWith('uses') && !h.startsWith('unsupported') && !h.startsWith('lost')
     // `scanned_file` joined them on 2026-09-05: it is the DENOMINATOR the three
     // reports range over — every file the scanner reported on, parsed or

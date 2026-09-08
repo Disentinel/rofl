@@ -18,7 +18,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
-import { scanLib, emit, eraOf, PROTOTYPES } from '../scanners/ts_lib.ts';
+import { scanLib, emit, releaseOf, PROTOTYPES } from '../scanners/ts_lib.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -35,7 +35,7 @@ const PACKS = [
   'boot.rofl',
   'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
   'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-statements.rofl',
-  'facts/js-controlflow.rofl', 'facts/js-env.rofl', SURFACE,
+  'facts/js-controlflow.rofl', SURFACE, 'facts/js-env.rofl',
   'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
   'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl', 'rules/js-env.rofl',
   'rules/js-env-api.rofl',
@@ -126,16 +126,16 @@ test('the era of a method is the earliest lib file that declares it', () => {
   const at = new Map(members.map((m) => [`${m.proto}.${m.method}`, m]));
   // FOUR SPOT CHECKS ACROSS FOUR ERAS of the specification. The claim is not
   // "there are 130 rows", it is "the year is right", and a count cannot say so.
-  assert.equal(at.get('array.join')?.since, 2009);
-  assert.equal(at.get('array.flat')?.since, 2019);
-  assert.equal(at.get('string.replaceAll')?.since, 2021);
-  assert.equal(at.get('array.at')?.since, 2022);
+  assert.equal(at.get('array.join')?.since, 'es5');
+  assert.equal(at.get('array.flat')?.since, 'es2019');
+  assert.equal(at.get('string.replaceAll')?.since, 'es2021');
+  assert.equal(at.get('array.at')?.since, 'es2022');
   assert.equal(at.get('array.at')?.file, 'lib.es2022.array.d.ts');
   // ...AND THE FILE-NAME RULE ITSELF, since everything above rests on it.
-  assert.equal(eraOf('lib.es5.d.ts'), 2009);
-  assert.equal(eraOf('lib.es2015.core.d.ts'), 2015);
-  assert.equal(eraOf('lib.esnext.array.d.ts'), null, 'esnext has no year to give');
-  assert.equal(eraOf('lib.dom.d.ts'), null, 'the DOM is not on this scale');
+  assert.equal(releaseOf('lib.es5.d.ts'), 'es5');
+  assert.equal(releaseOf('lib.es2015.core.d.ts'), 'es2015');
+  assert.equal(releaseOf('lib.esnext.array.d.ts'), null, 'esnext names no release');
+  assert.equal(releaseOf('lib.dom.d.ts'), null, 'the DOM names no release');
   // POSITIVE CONTROL: the sweep found the eight prototypes it was asked for.
   assert.deepEqual([...new Set(members.map((m) => m.proto))].sort(),
     [...PROTOTYPES.values()].sort());
@@ -147,12 +147,12 @@ test('the era of a method is the earliest lib file that declares it', () => {
 test('every member call on a known prototype is attributed to a dated method', () => {
   const b = base();
   assert.deepEqual(attributed(b), [
-    'array.at since 2022',
-    'array.join since 2009 x2',
-    'bigint.toString since 2020',
-    'regexp.test since 2009 x2',
-    'string.concat since 2009',
-    'string.replaceAll since 2021',
+    'array.at since es2022',
+    'array.join since es5 x2',
+    'bigint.toString since es2020',
+    'regexp.test since es5 x2',
+    'string.concat since es5',
+    'string.replaceAll since es2021',
   ]);
   // ...AND NOTHING IS LEFT OVER. This is the row that would notice
   // `prototype_of` going wrong: a member call on a KNOWN prototype whose name
@@ -199,8 +199,8 @@ test('a library method is gated by year, and three years discriminate', () => {
 
 test('MUTANT 1 — the attribution rule is withdrawn', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
-    find: 'lib_call[code](C, P, Key, Since) :- stdlib_member[audit](C, P, Key),',
-    replace: 'lib_call_unused[code](C, P, Key, Since) :- stdlib_member[audit](C, P, Key),' }]);
+    find: 'lib_call[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),',
+    replace: 'lib_call_unused[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),' }]);
   assert.deepEqual(attributed(m), []);
   assert.deepEqual(unsupported(m), [], 'and the era answer goes with it');
 });
@@ -220,18 +220,30 @@ test('MUTANT 2 — the residue audit stops subtracting what it attributed', () =
 
 test('MUTANT 3 — the year comparison includes the environment itself', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
-    find: 'environment(E), env_rank(E, R), Since > R.',
-    replace: 'environment(E), env_rank(E, R), Since >= R.' }]);
-  // ts5 RANKS 2022 AND `array.at` IS 2022, so an off-by-one at the boundary
-  // reports the newest method unsupported in the newest environment — the false
-  // positive this comparison exists to avoid, at exactly one place.
+    // RE-AIMED 2026-09-08 with the move to composition. The off-by-one it
+    // planted was `Since >= R` on a year; the same defect on a membership test
+    // is dropping the `not` — an environment is then reported as lacking exactly
+    // the methods it HAS, which is the boundary error one step further out.
+    find: 'environment(E), not reaches[audit](E, Rel).',
+    replace: 'environment(E), reaches[audit](E, Rel).' }]);
+  // THE MEMBERSHIP TEST INVERTED: every environment now reports the methods it
+  // REACHES as unsupported, so ts5 — which reaches all three — reports all
+  // three, and es5 reports none. Both halves are named, because a mutant that
+  // only added rows could be a widening rather than an inversion.
   assert.ok(unsupported(m).some((l) => l.startsWith('ts5: array.at')),
     `expected a ts5 row, got ${JSON.stringify(unsupported(m))}`);
+  // ...AND es5 REPORTS THE THREE ES5 METHODS, which is the inversion seen from
+  // the other end: it reaches `es5` and nothing later, so under the mutant the
+  // only methods it calls unsupported are exactly the ones it has. Named rather
+  // than counted, because `es5 reports something` would also be true of the
+  // honest tree.
+  assert.ok(unsupported(m).some((l) => l === 'es5: array.join regexp.test string.concat'),
+    `expected es5 to report its own methods, got ${JSON.stringify(unsupported(m))}`);
 });
 
 test('MUTANT 4 — a method is dated wrongly in the pack', () => {
   const m = build([{ file: SURFACE,
-    find: 'lib_member(array, "at", 2022).', replace: 'lib_member(array, "at", 2009).' }]);
+    find: 'lib_member(array, "at", es2022).', replace: 'lib_member(array, "at", es5).' }]);
   // ...and it leaves the gate entirely rather than moving within it: 2009 is at
   // or below every environment on the scale.
   assert.deepEqual(unsupported(m), [
@@ -251,7 +263,7 @@ test('MUTANT 5 — the method is written as an atom instead of a string', () => 
   // the audit written to notice a wrong PROTOTYPE noticing a wrong TERM TYPE
   // instead, one level down.
   const m = build([{ file: SURFACE,
-    find: 'lib_member(array, "join", 2009).', replace: 'lib_member(array, join, 2009).' }]);
+    find: 'lib_member(array, "join", es5).', replace: 'lib_member(array, join, es5).' }]);
   assert.ok(!attributed(m).some((s) => s.startsWith('array.join')),
     'an atom does not join against a quoted key');
   assert.deepEqual(residue(m), ['array.join', 'array.join']);

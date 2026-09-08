@@ -40,29 +40,67 @@ export const PROTOTYPES = new Map<string, string>([
   ['Object', 'object'], ['Function', 'function'],
 ]);
 
-/** `lib.es2015.core.d.ts` -> 2015, `lib.es5.d.ts` -> 2009. The years are the
- *  ones `env_rank` already uses, so a library method and a syntax feature are
- *  measured on ONE scale. */
-export function eraOf(libFile: string): number | null {
-  const m = /^lib\.(es\d+|es5|esnext)\b/.exec(libFile);
-  if (!m) return null;
-  if (m[1] === 'es5') return 2009;
-  if (m[1] === 'esnext') return null;   // no year to give; excluded on purpose
-  const n = Number(m[1].slice(2));
-  return Number.isFinite(n) ? n : null;
+/** `lib.es2015.core.d.ts` -> `es2015`, `lib.es5.d.ts` -> `es5`. THE RELEASE AND
+ *  NOT THE YEAR, changed 2026-09-08 on the owner's instruction.
+ *
+ *  A year was the wrong key and this file is where it entered. Three things say
+ *  so and the third is right here: `lib.es2022.d.ts` is not a point on an axis,
+ *  it is `es2021` PLUS six named parts — an edition is a UNION OF NAMED
+ *  RELEASES, and the linearity of pure ecmascript is a consequence rather than
+ *  the mechanism. That is why `lib.dom` and `lib.esnext.*` fit the same shape
+ *  and no year, and why the model could hold at most ONE ENVIRONMENT PER YEAR
+ *  while 2023 alone had node 20, node 21 and four TypeScript releases. */
+export function releaseOf(libFile: string): string | null {
+  const m = /^lib\.(es5|es\d{4})\b/.exec(libFile);
+  return m ? m[1] : null;   // `esnext` and `dom` are excluded: no release to name
 }
 
-export interface LibMember { proto: string; method: string; since: number; file: string }
+export interface LibMember { proto: string; method: string; since: string; file: string }
+
+/** `includes(Release, Part)` — TypeScript's OWN composition, read from the
+ *  `/// <reference lib="..." />` lines. Measured 2026-09-08: every edition file
+ *  names exactly one previous EDITION plus between two and nine named parts, so
+ *  the chain es5 -> es2015 -> ... -> es2024 is a fact rather than an assumption
+ *  about the timeline. */
+export function scanComposition(libDir: string): [string, string][] {
+  const out: [string, string][] = [];
+  for (const f of fs.readdirSync(libDir).sort()) {
+    const r = releaseOf(f);
+    if (!r || !/^lib\.(es5|es\d{4})\.d\.ts$/.test(f)) continue;
+    for (const m of fs.readFileSync(path.join(libDir, f), 'utf8').matchAll(/reference lib="([^"]+)"/g)) {
+      if (/^(es5|es\d{4})$/.test(m[1]) && m[1] !== r) out.push([r, m[1]]);
+    }
+  }
+  return out.sort((a, b) => (a[0] === b[0] ? (a[1] < b[1] ? -1 : 1) : (a[0] < b[0] ? -1 : 1)));
+}
+
+/** does `a` come at or before `b` in the composition chain? */
+export function before(a: string, b: string, inc = COMPOSITION): boolean {
+  if (a === b) return true;
+  const seen = new Set<string>(); const todo = [b];
+  while (todo.length) {
+    const r = todo.pop()!;
+    if (r === a) return true;
+    if (seen.has(r)) continue;
+    seen.add(r);
+    for (const [from, to] of inc) if (from === r) todo.push(to);
+  }
+  return false;
+}
+
+const LIB_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname),
+                             '..', 'node_modules', 'typescript', 'lib');
+const COMPOSITION: [string, string][] = fs.existsSync(LIB_DIR) ? scanComposition(LIB_DIR) : [];
 
 /** every member of the eight prototypes, with the EARLIEST lib file that
  *  declares it — the year it became available. */
 export function scanLib(libDir: string): LibMember[] {
   const files = fs.readdirSync(libDir)
-    .filter((f) => /^lib\.[a-z0-9.]*\.d\.ts$/.test(f) && eraOf(f) !== null)
+    .filter((f) => /^lib\.[a-z0-9.]*\.d\.ts$/.test(f) && releaseOf(f) !== null)
     .sort();
   const earliest = new Map<string, LibMember>();
   for (const f of files) {
-    const since = eraOf(f)!;
+    const since = releaseOf(f)!;
     const src = ts.createSourceFile(f, fs.readFileSync(path.join(libDir, f), 'utf8'),
                                     ts.ScriptTarget.Latest, true);
     for (const st of src.statements) {
@@ -77,7 +115,11 @@ export function scanLib(libDir: string): LibMember[] {
         if (!mem.name || !ts.isIdentifier(mem.name)) continue;
         const key = `${proto}.${mem.name.text}`;
         const prev = earliest.get(key);
-        if (!prev || since < prev.since) {
+        // EARLIEST BY THE COMPOSITION AND NOT BY THE STRING. `es5` sorts after
+        // `es2024` alphabetically, so a lexical `<` would date every es5 member
+        // to whatever edition it also appears in. The chain below is measured
+        // from the `/// <reference lib=` lines, so `before` asks the graph.
+        if (!prev || before(since, prev.since)) {
           earliest.set(key, { proto, method: mem.name.text, since, file: f });
         }
       }
@@ -88,7 +130,7 @@ export function scanLib(libDir: string): LibMember[] {
 }
 
 /** the pack, as text. Deterministic: sorted, and every row carries its source. */
-export function emit(members: LibMember[]): string {
+export function emit(members: LibMember[], composition: [string, string][] = COMPOSITION): string {
   const head = [
     '-- js-lib-surface.rofl — GENERATED by scanners/ts_lib.ts. Do not hand-edit;',
     '-- test/js-lib-surface.test.ts regenerates it and compares, so a hand edit',
@@ -98,7 +140,14 @@ export function emit(members: LibMember[]): string {
     '-- from that year, read from TypeScript`s own lib.es*.d.ts declarations. The',
     '-- year is the earliest lib file that declares it, which is the record',
     '-- TypeScript keeps of when each method landed.',
+    '-- `release(R)` and `includes(R, Part)` are TypeScript`s OWN composition,',
+    '-- read from the `/// <reference lib=` lines: an edition is a UNION OF NAMED',
+    '-- RELEASES in which the previous edition is one part. The year was the wrong',
+    '-- key and this is what replaced it — see',
+    '-- f_an_era_is_a_composition_of_releases_and_not_a_year.',
     'edb(lib_member).',
+    'edb(release).',
+    'edb(includes).',
     '',
   ];
   // THE METHOD IS A QUOTED STRING AND THE PROTOTYPE IS AN ATOM, which is not a
@@ -108,8 +157,13 @@ export function emit(members: LibMember[]): string {
   // out of six, and `stdlib_unattributed[audit]` reported all six — the audit
   // written to notice a wrong prototype noticing a wrong TERM TYPE instead,
   // which is the same class of mistake one level down.
+  const releases = [...new Set(composition.flat())].sort();
+  const comp = [
+    ...releases.map((r) => `release(${r}).`), '',
+    ...composition.map(([r, p]) => `includes(${r}, ${p}).`), '',
+  ];
   const rows = members.map((m) => `lib_member(${m.proto}, ${JSON.stringify(m.method)}, ${m.since}).`);
-  return head.concat(rows).join('\n') + '\n';
+  return head.concat(comp).concat(rows).join('\n') + '\n';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

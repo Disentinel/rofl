@@ -52,10 +52,16 @@
 -- `layer/1` stays the vocabulary of what WE model.
 edb(environment).
 edb(env_rank).
-edb(env_extra).
+-- `provides(Release, Feature)`. `release/1` and `includes/2` are NOT declared
+-- here: they are GENERATED into facts/js-lib-surface.rofl from TypeScript's own
+-- `/// <reference lib=` lines, which is the whole point of the change — the
+-- composition of the ecmascript editions is a measured fact and not a table
+-- this repository maintains. What is declared here is the part TypeScript does
+-- not know about: which SYNTAX feature each edition introduced, and the one
+-- release that is not an edition at all.
+edb(provides).
 edb(env_lang).
 edb(feature).
-edb(feature_since).
 edb(kind_needs).
 edb(attr_needs).
 edb(kind_baseline).
@@ -106,49 +112,58 @@ environment(es2021).  env_rank(es2021, 2021).
 environment(es2023).  env_rank(es2023, 2023).
 environment(ts5).     env_rank(ts5, 2022).
 
--- TypeScript is es2022 PLUS syntax that is on no ecmascript timeline. It is
+-- TYPESCRIPT IS THE RELEASE THAT PROVED THE YEAR WRONG. This block used to read
+-- `TypeScript is es2022 PLUS syntax that is on no ecmascript timeline. It is
 -- not a later edition and modelling it as one would be a lie the integer
--- comparison could not detect.
-env_extra(ts5, type_syntax).
-env_extra(ts5, decorators).
+-- comparison could not detect` — and `env_extra` was the patch that admitted it
+-- while leaving the integer in place. Under composition there is no patch and
+-- no admission: ts5 INCLUDES es2022 and PROVIDES two features of its own,
+-- which is the same sentence the reference graph writes for every edition.
+release(ts5).
+includes(ts5, es2022).
+provides(ts5, type_syntax).
+provides(ts5, decorators).
 
 -- ---------------------------------------------------------------------------
--- THE FEATURES. `feature_since(F, Year)` places F on the ecmascript timeline;
--- a feature with no such row is reachable only through `env_extra`.
-feature(arrow_functions).     feature_since(arrow_functions, 2015).
-feature(destructuring).       feature_since(destructuring, 2015).
-feature(classes).             feature_since(classes, 2015).
-feature(template_literals).   feature_since(template_literals, 2015).
-feature(for_of).              feature_since(for_of, 2015).
-feature(generators).          feature_since(generators, 2015).
-feature(modules).             feature_since(modules, 2015).
-feature(shorthand_methods).   feature_since(shorthand_methods, 2015).
-feature(exponentiation).      feature_since(exponentiation, 2016).
-feature(async_await).         feature_since(async_await, 2017).
+-- THE FEATURES. `provides(R, F)` says which RELEASE introduced F; a feature no
+-- release provides is reachable by nothing, which `feature_unreachable[audit]`
+-- reports. There is no longer a second mechanism: what `env_extra` used to do
+-- for TypeScript is what `provides(ts5, ...)` does, in the same table as
+-- everything else.
+feature(arrow_functions).     provides(es2015, arrow_functions).
+feature(destructuring).       provides(es2015, destructuring).
+feature(classes).             provides(es2015, classes).
+feature(template_literals).   provides(es2015, template_literals).
+feature(for_of).              provides(es2015, for_of).
+feature(generators).          provides(es2015, generators).
+feature(modules).             provides(es2015, modules).
+feature(shorthand_methods).   provides(es2015, shorthand_methods).
+feature(exponentiation).      provides(es2016, exponentiation).
+feature(async_await).         provides(es2017, async_await).
 -- THE SAME WORD IN TWO ERAS, added 2026-09-05. `await` inside an async function
 -- is ES2017; the same node at the top level of a module is ES2022, and no
 -- attribute of the node itself says which. See `outside_attr_needs` below.
-feature(top_level_await).     feature_since(top_level_await, 2022).
-feature(optional_chaining).   feature_since(optional_chaining, 2020).
-feature(dynamic_import).      feature_since(dynamic_import, 2020).
-feature(nullish_coalescing).  feature_since(nullish_coalescing, 2020).
-feature(logical_assignment).  feature_since(logical_assignment, 2021).
+feature(top_level_await).     provides(es2022, top_level_await).
+feature(optional_chaining).   provides(es2020, optional_chaining).
+feature(dynamic_import).      provides(es2020, dynamic_import).
+feature(nullish_coalescing).  provides(es2020, nullish_coalescing).
+feature(logical_assignment).  provides(es2021, logical_assignment).
 -- FOUR MORE, 2026-09-08, with the twenty-three kinds the vocabulary took on.
 -- Each has a year and each is reachable: ts5 ranks 2022, which is why
 -- `import_attributes` (ES2025) is NOT here - a feature no environment can
 -- have would sit in `feature_unreachable[audit]` for ever.
-feature(class_fields).        feature_since(class_fields, 2022).
-feature(hashbang).            feature_since(hashbang, 2023).
+feature(class_fields).        provides(es2022, class_fields).
+feature(hashbang).            provides(es2023, hashbang).
 -- ONE NODE KIND, TWO FEATURES, TWO YEARS (w_meta_property, 2026-09-08). This
--- row used to read `feature(meta_property). feature_since(meta_property, 2015).`
+-- row used to read `feature(meta_property). provides(es2015, meta_property).`
 -- and it was WRONG FOR HALF THE KIND: `new.target` is ES2015 and `import.meta`
 -- is ES2020, they are the same `meta_property` node, and a table keyed by kind
 -- said es2015 accepts both. See `child_needs` below for why neither of the two
 -- refinements this file already had could tell them apart.
-feature(new_target).          feature_since(new_target, 2015).
-feature(import_meta).         feature_since(import_meta, 2020).
-feature(bigint).              feature_since(bigint, 2020).
-feature(namespace_reexport).  feature_since(namespace_reexport, 2020).
+feature(new_target).          provides(es2015, new_target).
+feature(import_meta).         provides(es2020, import_meta).
+feature(bigint).              provides(es2020, bigint).
+feature(namespace_reexport).  provides(es2020, namespace_reexport).
 feature(type_syntax).
 feature(decorators).
 

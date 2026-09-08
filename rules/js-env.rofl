@@ -51,8 +51,32 @@ imports(audit, code).
 -- 1. WHAT AN ENVIRONMENT GIVES. Two rules, because there are two ways to have
 --    a feature: be at or past the edition that introduced it, or carry it
 --    outside the timeline altogether.
-env_has[audit](E, F) :- environment(E), env_rank(E, R), feature_since(F, S), S <= R.
-env_has[audit](E, F) :- environment(E), env_extra(E, F).
+-- COMPOSITION, NOT COMPARISON, 2026-09-08 on the owner's instruction. This read
+--
+--     env_has(E, F) :- environment(E), env_rank(E, R), feature_since(F, S), S <= R.
+--     env_has(E, F) :- environment(E), env_extra(E, F).
+--
+-- and the integer was the wrong key. THREE MEASUREMENTS SAID SO. The second arm
+-- was itself the confession: TypeScript is not a later edition, so it needed a
+-- mechanism OUTSIDE the timeline, and facts/js-env.rofl said in so many words
+-- that modelling it as one `would be a lie the integer comparison could not
+-- detect`. The comparison also FORBADE what reality has — `lost[audit]` below
+-- carried a strict `RT < RF`, so two environments at one year could not
+-- separate each other in either direction and the model held at most ONE
+-- ENVIRONMENT PER YEAR, while 2023 alone had node 20, node 21 and four
+-- TypeScript releases. And the authority this repository already reads models
+-- it as composition: `lib.es2022.d.ts` is `es2021` PLUS six named parts, which
+-- is why `lib.dom` and `lib.esnext.*` fit the same shape and no year.
+--
+-- `reaches` IS REFLEXIVE ON PURPOSE. A release provides its own features, and
+-- writing that as a second arm of `has_feature` would put the same fact in two
+-- places; the day a release includes two others — which is what `lib.dom`
+-- alongside an edition already looks like — the transitive arm is what carries
+-- it and the reflexive arm is what stops it needing a base case per release.
+reaches[audit](R, R)  :- release(R).
+reaches[audit](R, P)  :- includes(R, Q), reaches[audit](Q, P).
+has_feature[audit](R, F) :- reaches[audit](R, P), provides(P, F).
+env_has[audit](E, F)  :- environment(E), has_feature[audit](E, F).
 
 -- ---------------------------------------------------------------------------
 -- 2. WHAT THE PROGRAM USES. One rule over the whole vocabulary: a node of a
@@ -163,9 +187,17 @@ invalid[audit](E, File)   :- environment(E), scanned_file[audit](File), file_bro
 --    environments, attributed to a site and a feature. This is the row the
 --    whole layer exists for: not "es5 is worse" but "THIS site, THIS feature,
 --    and here is the line".
-lost[audit](From, To, N, F) :- unsupported[audit](To, N, F),
-                               env_rank(To, RT), env_rank(From, RF), RT < RF,
-                               not unsupported[audit](From, N, F).
+-- A SET DIFFERENCE, AND NO ORDERING AT ALL. This carried `env_rank(To, RT),
+-- env_rank(From, RF), RT < RF` until 2026-09-08, which is what made two
+-- environments at one year mutually invisible — and `env_pair_indistinct` below
+-- already has a note saying its OWN rank premise was a defect for the same
+-- reason. The direction now falls out of the data: `lost(es2023, es5, ...)` is
+-- non-empty and `lost(es5, es2023, ...)` is not, because es5 has nothing es2023
+-- lacks. Two releases that are not comparable at all — an edition and a runtime
+-- — each lose things to the other, which is the true answer and one a number
+-- could not give.
+lost[audit](From, To, N, F) :- unsupported[audit](To, N, F), environment(From),
+                               From != To, not unsupported[audit](From, N, F).
 
 lost_feature[audit](From, To, F) :- lost[audit](From, To, _, F).
 lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),

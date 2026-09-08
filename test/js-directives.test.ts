@@ -128,25 +128,42 @@ const ERA: [string, string][] = [
   ['era-fields.js', 'test/fixtures/js-env/era-fields.js.txt'],
 ];
 function eraWorld(extra: [string, string][] = [], mut?: [string, string]) {
+  // PACKS FIRST, FACTS AFTER, AND ONE `load` — corrected 2026-09-08 and the
+  // FOURTH file with this construction. `r.load()` re-evaluates under its own
+  // DEFAULT_BUDGET of 100 000 steps, so a world built by seven successive loads
+  // runs its fixpoint seven times and the last is the one that counts. It stays
+  // invisible until something grows, and then a query comes back `partial` —
+  // which reads like a budget and is not one. See
+  // f_partial_names_the_symptom_and_the_hole_names_the_cause.
+  //
+  // AND facts/js-lib-surface.rofl JOINED THE LIST, because `release/1` and
+  // `includes/2` — TypeScript's own composition, generated from its
+  // `/// <reference lib=` lines — are what `reaches` walks since the era table
+  // stopped keying on the year. Without them no environment has any feature at
+  // all, which is exactly what this world reported before the pack was added.
   const r = new Rofl();
-  assert.ok(r.load(read('boot.rofl')).ok);
+  const packs = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
+                 'facts/js-modules.rofl', 'facts/js-shapes.rofl',
+                 'facts/js-lib-surface.rofl', 'facts/js-env.rofl']
+    .map((f) => {
+      let t = read(f);
+      if (mut && f === 'facts/js-env.rofl') {
+        assert.ok(t.includes(mut[0]), `era mutation anchor absent: ${mut[0]}`);
+        t = t.replace(mut[0], mut[1]);
+      }
+      return t;
+    });
+  assert.ok(r.load([read('boot.rofl'), ...packs,
+                    read('rules/js-structure.rofl'), read('rules/js-env.rofl')].join('\n')).ok);
   for (const [logical, disk] of ERA) r.assert(scan(read(disk), { file: logical }).facts.join('\n'));
   for (const [logical, src] of extra) {
     const sc = scan(src, { file: logical });
     assert.ok(!sc.facts.some((f) => f.startsWith('ast_parse_error')), `${logical} refused`);
     assert.ok(r.assert(sc.facts.join('\n')).ok);
   }
-  for (const f of ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
-                   'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-env.rofl']) {
-    let t = read(f);
-    if (mut && f === 'facts/js-env.rofl') {
-      assert.ok(t.includes(mut[0]), `era mutation anchor absent: ${mut[0]}`);
-      t = t.replace(mut[0], mut[1]);
-    }
-    assert.ok(r.load(t).ok, `${f} REJECTED`);
-  }
-  assert.ok(r.load([read('rules/js-structure.rofl'), read('rules/js-env.rofl')].join('\n')).ok);
-  r.evaluate(20_000_000);
+  r.evaluate(400_000_000);
+  assert.deepEqual(r.query('hole(Q, R)').rows.map((x) => `${x.bindings.Q}/${x.bindings.R}`), [],
+                   'this world must reach its fixpoint, not stop at a budget');
   return asker(r);
 }
 
