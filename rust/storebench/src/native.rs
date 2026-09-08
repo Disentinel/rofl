@@ -64,6 +64,19 @@ impl NativeBackend {
     }
 }
 
+impl NativeBackend {
+    /// The store's own parts and the heap's, kept apart, because the question
+    /// this benchmark exists to answer is whether the FACT REPRESENTATION is
+    /// dense — and a heap that holds the vocabulary is a cost every store
+    /// pays, including one that renders names from a column.
+    pub fn split(&self) -> Vec<(&'static str, usize)> {
+        let mut v = self.s.bytes();
+        v.extend(self.h.parts());
+        v.push(("names_vec", self.names.capacity() * 24));
+        v
+    }
+}
+
 impl Backend for NativeBackend {
     fn add(&mut self, rel: u32, persp: u32, args: &[u32], base: bool, frozen: bool) -> bool {
         let (r, p) = (self.s_of(rel), self.s_of(persp));

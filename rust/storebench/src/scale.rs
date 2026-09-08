@@ -53,6 +53,52 @@ pub fn footprint() -> u64 {
 }
 
 /// Resident set of this process, in bytes, from the operating system.
+/// LIVE ALLOCATED BYTES, from the allocator, and the reason it exists is a
+/// measurement that broke in front of us.
+///
+/// `rss()` below shells out to `ps`, and resident set size is not monotonic:
+/// at the working set these arms reach, macOS evicts clean pages while the
+/// process is still holding them, so a delta taken across a build can come
+/// back SMALLER than zero. Observed twice on the same command — one run of
+/// the `native` arm reported 1123.0 MB and the next reported 0.0 (the
+/// `saturating_sub` floor), and two runs of the identical `tiled_names` call
+/// reported 1963.5 MB and 1726.4 MB for the same 10.4M strings. A 12 percent
+/// spread between two runs of one line, and a zero, are not a density table.
+///
+/// This counter is exact, deterministic and independent of the OS: every
+/// allocation and free the process makes passes through it. It is the same
+/// instrument `rofl-eval --bytes` already uses on the engine side
+/// (rust/rofl/src/bin/rofl_eval.rs), so the two now report in one unit.
+///
+/// What it cannot see, stated: the allocator's own bookkeeping and the
+/// rounding it does above the requested size — so it is a floor on real
+/// memory, and a fair one only because BOTH arms are charged the same way.
+/// What it does see that `rss()` did not: memory the OS has paged out.
+pub fn live_bytes() -> u64 {
+    LIVE.load(std::sync::atomic::Ordering::Relaxed).max(0) as u64
+}
+
+pub struct Counting;
+pub static LIVE: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
+unsafe impl std::alloc::GlobalAlloc for Counting {
+    unsafe fn alloc(&self, l: std::alloc::Layout) -> *mut u8 {
+        LIVE.fetch_add(l.size() as isize, std::sync::atomic::Ordering::Relaxed);
+        std::alloc::System.alloc(l)
+    }
+    unsafe fn dealloc(&self, p: *mut u8, l: std::alloc::Layout) {
+        LIVE.fetch_sub(l.size() as isize, std::sync::atomic::Ordering::Relaxed);
+        std::alloc::System.dealloc(p, l)
+    }
+    unsafe fn realloc(&self, p: *mut u8, l: std::alloc::Layout, n: usize) -> *mut u8 {
+        LIVE.fetch_add(
+            n as isize - l.size() as isize,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        std::alloc::System.realloc(p, l, n)
+    }
+}
+
 pub fn rss() -> u64 {
     let out = std::process::Command::new("ps")
         .args(["-o", "rss=", "-p", &std::process::id().to_string()])
@@ -200,28 +246,65 @@ pub fn build(backend: &str, t: &Trace, tiles: usize, dir: &Path, prov: bool, pro
             // arms need names, only one of them stores them, and charging the
             // difference to the fact representation would be measuring the
             // benchmark's own string vector.
-            let base = rss();
+            // LIVE ALLOCATOR BYTES, not `rss()`: see `live_bytes` above for the
+            // two readings that condemned the old instrument on this very arm.
+            let base = live_bytes();
             let names = tiled_names(t, tiles);
             let nsym = names.len();
-            let vocab = rss().saturating_sub(base);
-            let rss0 = rss();
-            let mut b: Box<dyn Backend> = if backend == "native" {
-                Box::new(crate::native::NativeBackend::new(names))
+            let vocab = live_bytes().saturating_sub(base);
+            // THE FREE HAS TO HAPPEN BEFORE THE WINDOW OPENS, and it did not.
+            // `drop(names)` stood INSIDE the measured window on the column arm,
+            // so `used` was (what the store allocated) minus (1.8 GB of
+            // vocabulary released) — negative, and `saturating_sub` floored it
+            // to zero. Under `rss()` that never showed: resident bytes do not
+            // fall when an allocator frees, so the arm read ~190 MB and became
+            // "6.5x denser than the store we have". Under an exact allocator it
+            // reads 0.0 MB, which is what a window containing a larger free
+            // than fill actually measures.
+            // The two arms are built as CONCRETE types and only then boxed,
+            // because the byte split below is each one's own accounting and a
+            // `dyn Backend` cannot be asked for it without a downcast.
+            enum Arm {
+                Native(Box<crate::native::NativeBackend>),
+                Column(Box<crate::column::ColumnBackend>),
+            }
+            let mut arm = if backend == "native" {
+                Arm::Native(Box::new(crate::native::NativeBackend::new(names)))
             } else {
                 drop(names);
-                Box::new(crate::column::ColumnBackend::new())
+                Arm::Column(Box::new(crate::column::ColumnBackend::new()))
             };
-            for (i, (r, p, a)) in facts.iter().enumerate() {
-                b.add(*r, *p, a, true, false);
-                if prov {
-                    b.support(*r, *p, a, i as u32, 3);
+            let rss0 = live_bytes();
+            {
+                let b: &mut dyn Backend = match &mut arm {
+                    Arm::Native(x) => x.as_mut(),
+                    Arm::Column(x) => x.as_mut(),
+                };
+                for (i, (r, p, a)) in facts.iter().enumerate() {
+                    b.add(*r, *p, a, true, false);
+                    if prov {
+                        b.support(*r, *p, a, i as u32, 3);
+                    }
                 }
             }
-            let used = rss().saturating_sub(rss0);
+            let used = live_bytes().saturating_sub(rss0);
+            // PART BY PART, because a single total hides that one arm carries
+            // a vocabulary and the other cannot render a name at all.
+            let split: Vec<(&'static str, usize)> = match &arm {
+                Arm::Native(x) => x.split(),
+                Arm::Column(x) => x.split(),
+            };
+            for (n, v) in &split {
+                println!("  part {n}\t{v}");
+            }
             // The same point-lookup workload the mapped arms run, so
             // "probe from a mapped base versus from an in-heap store" is one
             // comparison and not two benchmarks.
             if probes > 0 {
+                let b: &mut dyn Backend = match &mut arm {
+                    Arm::Native(x) => x.as_mut(),
+                    Arm::Column(x) => x.as_mut(),
+                };
                 let mut hits = 0usize;
                 let t2 = Instant::now();
                 for i in 0..probes {
@@ -252,7 +335,7 @@ us_per_probe={:.3} rss_mb={:.1} rss_delta_mb={:.1} foot_mb={:.1}",
                 vocab as f64 / facts.len() as f64
             );
             // keep it alive until after the measurement
-            drop(b);
+            drop(arm);
             return;
         }
         "colfile" => colfile::write(&dir.join("base.col"), &facts).unwrap(),

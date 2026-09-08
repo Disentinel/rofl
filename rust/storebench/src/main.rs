@@ -14,6 +14,9 @@
 //! machine that gets busier halfway through otherwise charges the difference
 //! to whichever backend was in the middle.
 
+#[global_allocator]
+static ALLOC: scale::Counting = scale::Counting;
+
 mod backend;
 mod colfile;
 mod column;

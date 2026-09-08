@@ -216,6 +216,36 @@ impl ColumnBackend {
     }
 }
 
+impl ColumnBackend {
+    /// The same accounting `NativeBackend::split` gives, part for part, so the
+    /// two arms can be compared where they differ instead of by a total. Note
+    /// what is NOT here and cannot be: this store holds no vocabulary at all —
+    /// it works in the trace's own symbol ids and cannot render a name.
+    pub fn split(&self) -> Vec<(&'static str, usize)> {
+        let mut args = 0usize;
+        let mut solid = 0usize;
+        let mut pats = 0usize;
+        for g in &self.g {
+            args += g.args.capacity() * 4;
+            solid += g.solid.capacity();
+            for m in g.pats.values() {
+                pats += m.capacity() * (8 + 24 + 8);
+                for v in m.values() {
+                    pats += v.capacity() * 4;
+                }
+            }
+        }
+        vec![
+            ("col.args", args),
+            ("col.solid", solid),
+            ("col.pats", pats),
+            ("col.keys", self.keys.capacity() * 8),
+            ("col.sup", self.sup.capacity() * 12),
+            ("col.sup_ix", self.sup_ix.capacity() * 4),
+        ]
+    }
+}
+
 impl Backend for ColumnBackend {
     fn add(&mut self, rel: u32, persp: u32, args: &[u32], base: bool, frozen: bool) -> bool {
         let solid = base || frozen;
