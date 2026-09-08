@@ -86,6 +86,31 @@ guard_kind(try_statement,              handler).
 guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
                          ast_child[code](P, Field, _, A).
 
+-- A FIELD INITIALISER IS AN ARM SKIPPED BY THE ABSENCE OF A `new`, 2026-09-08 —
+-- queue item w_class_fields, and the row is NOT in `guard_kind` because the
+-- condition is an ATTRIBUTE and not a field.
+--
+-- MEASURED BY RUNNING THE SHAPE, which is what split one kind into two answers:
+--
+--   class Never { unused = mark(); static tag = mark(); }   // defined, never `new`ed
+--   -> ["never:staticfield"]
+--
+-- A STATIC field initialiser runs when the class DEFINITION is evaluated, so it
+-- is exactly as conditional as the statement the class sits in and guarding it
+-- would report a call that always runs as one that may not. A NON-STATIC one
+-- runs once per construction and zero times if the class is never constructed,
+-- which is a may-not-run in the layer's own sense.
+--
+-- DERIVED FROM `transfer_mechanism` rather than from a second hand-written list
+-- of the two kinds, on the pattern `suspend_at` and `label_target` already use:
+-- the next kind filed under `per_construction` is covered without anybody
+-- remembering, and `guard_unmodelled[audit]` reddens if the mechanism is claimed
+-- with no rule reaching the kinds that carry it.
+field_init[code](P, V) :- transfer_mechanism(K, per_construction),
+                          ast_node[code](P, K, _, _), ast_attr[code](P, static, false),
+                          ast_child[code](P, value, 0, V).
+guard_arm[code](P, V)  :- field_init[code](P, V).
+
 -- ...and everything inside such an arm inherits the condition.
 guarded[code](A) :- guard_arm[code](_, A).
 guarded[code](N) :- guard_arm[code](_, A), ast_within[code](A, N).
@@ -331,6 +356,16 @@ accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
 accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
                              selects[flow](N, Key), ast_child[code](N, object, 0, O),
                              may_be_node[flow](O, Obj).
+-- ...AND A PRIVATE ACCESSOR, 2026-09-08 (w_class_fields). `get #face()` is a
+-- `class_private_method` carrying `kind: "get"`, and `this.#face` is a member
+-- read that runs it — the same transfer with none of the same machinery, because
+-- a private name is bound LEXICALLY and never reaches `member_value` or
+-- `selects`. NO RECEIVER LITERAL IS NEEDED and that is not a shortcut: the class
+-- body that declares `#face` is the only place `this.#face` can be written at
+-- all, so `private_binds` has already decided both halves that
+-- `accessor_of` + `may_be_node` decide for a public one.
+accessor_read[code](N, M) :- private_binds[code](N, M),
+                             accessor_kind(K), ast_attr[code](M, kind, K).
 
 -- ...AND IT COMPOSES WITH THE ITEM BEFORE IT. A getter that always throws makes
 -- the READ an exit, with no call syntax anywhere at the site. This arm is the
@@ -641,6 +676,16 @@ transfer_mechanism(labeled_statement,          label_boundary).
 -- accessor call happens on every property access and a decorator runs ONCE, at
 -- definition, before the decorated thing can be reached at all.
 transfer_mechanism(decorator,                  definition_time_call).
+-- A SEVENTH MECHANISM, 2026-09-08 (w_class_fields), and it is a seventh for the
+-- same reason `label_boundary` was a sixth. A class field's initialiser is not
+-- skipped by a CONDITION anywhere in the source — nothing near it branches — and
+-- it is not evaluated once either: it runs on every `new` and never if there is
+-- none. `skip_arm` would have said a condition decides it, which no reader could
+-- then find; `loop_at_least_once` would have said it always runs, which is the
+-- narrow direction. Measured by running a class that is defined and never
+-- constructed: the STATIC initialiser ran and the instance one did not.
+transfer_mechanism(class_property,             per_construction).
+transfer_mechanism(class_private_property,     per_construction).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
@@ -657,6 +702,10 @@ mechanism_modelled(suspend).
 -- and the kind that carries it.
 mechanism_modelled(label_boundary).
 mechanism_modelled(definition_time_call).
+-- PER_CONSTRUCTION JOINED 2026-09-08 (w_class_fields), answered rather than
+-- open: `field_init` reads the two kinds by mechanism and puts the initialiser
+-- in `guard_arm`, so there is a rule between the mechanism and the kinds.
+mechanism_modelled(per_construction).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
@@ -701,6 +750,10 @@ guard_named[code](K)       :- transfer_mechanism(K, suspend).
 -- rule that reaches `labeled_statement` reddens `guard_unmodelled[audit]`
 -- instead of passing quietly.
 guard_named[code](K)       :- transfer_mechanism(K, label_boundary).
+-- ...and the two FIELD kinds, on the same pattern: derived from the mechanism,
+-- so declaring `mechanism_modelled(per_construction)` without `field_init`
+-- reaching them reddens `guard_unmodelled[audit]` instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, per_construction).
 -- `catch_clause` carries `skip_arm` and is reached as the ARM of a
 -- `try_statement` rather than by a `guard_kind` row of its own — the guard is
 -- the try's `handler` field, and the clause is what sits in it. Named here so

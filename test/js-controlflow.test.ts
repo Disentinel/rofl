@@ -299,18 +299,21 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
   {
     name: 'r1 the export surface stops being a seed',
     mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
-    // NAMED RATHER THAN COUNTED, AND THE NAMES CAME FROM TWO BRANCHES. This read
-    // `=== 1, one top-level call` until two separate corrections landed the same
-    // day: `top_call` was keyed on `call_site` where it belonged on `site`, so a
-    // transfer site at module scope resolved a callee and drew no edge —
-    // `decoOnce`, reached by a CLASS-LEVEL decorator, which is un-enclosed by
-    // construction — and `w_class_expression` added a heritage clause,
-    // `export const Bracket = class extends mountOf() {}`, which calls when the
-    // module is evaluated. A count would have said `3` and left a reader to
-    // guess whether the walk had gained two starts or lost a boundary.
-    expect: (m) => assert.deepEqual(
-      m.q('reachable[code](F)').map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)[0] ?? f).sort(),
-      ['decoOnce', 'mountOf', 'seed'],
+    // NAMED RATHER THAN COUNTED, AND THE NAMES CAME FROM THREE BRANCHES AT ONCE.
+    // This read `=== 1, one top-level call` and every branch that landed on
+    // 2026-09-08 added a start the grammar forces: `decoOnce` from a CLASS-LEVEL
+    // decorator (un-enclosed by construction, and only visible once `top_call`
+    // was corrected to key on `site` rather than `call_site`); `mountOf` from a
+    // heritage clause, `class extends mountOf()`, which calls when the module is
+    // evaluated; `forge` and `sealed` from a static block and a STATIC field
+    // initialiser, neither of which sits in a function; and `hammered` one hop
+    // on from `forge` through the recursive arm this mutant leaves alone.
+    //
+    // A COUNT WOULD HAVE SAID `6` AND NOTHING ELSE. The set says which, and its
+    // merge from three branches was a union anyone could compute.
+    expect: (m) => assert.deepEqual(m.q('reachable[code](F)')
+      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+      ['decoOnce', 'forge', 'hammered', 'mountOf', 'sealed', 'seed'],
       'without the seed the walk starts only where the grammar forces it to'),
   },
   {
@@ -318,12 +321,14 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     mut: [{ find: `reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
                       not guarded[code](C).`, replace: '' }],
     expect: (m, b) => {
-      // NAMED RATHER THAN OFFSET 2026-09-08, for the same reason as r1 above:
-      // the `+ 1` was the corpus's one top-level call and there are two now.
-      const eps = new Set(m.q('entry_point[code](F)').map(([f]) => f));
-      assert.deepEqual(m.q('reachable[code](F)').filter(([f]) => !eps.has(f))
-        .map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n).sort().join('/')).sort(),
-        ['mountOf', 'seed'],
+      // NAMED RATHER THAN OFFSET, from the same three branches as r1 — and this
+      // one is ONE HOP SHORTER, which is what tells the two mutants apart:
+      // `hammered` is reached from `forge` and is NOT here, because this is the
+      // arm that takes the hop.
+      assert.deepEqual(m.q('reachable[code](F)')
+        .filter(([f]) => m.n(`entry_point[code](${f})`) === 0)
+        .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+        ['decoOnce', 'forge', 'mountOf', 'sealed', 'seed'],
         'only the entry points and the TOP-LEVEL calls remain');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },
@@ -338,9 +343,16 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     // than called. That is unreachability with no guard anywhere in it, so no
     // amount of ignoring guards can reach it — which makes it a better
     // statement than the zero this asserted before the propagation fixtures.
+    // FOUR MORE ON 2026-09-08 (w_class_fields), and they sharpen the statement
+    // rather than blunt it: `inked`, `minted`, `punched` and `stamped` are called
+    // from NON-STATIC field initialisers, whose only path into the walk is the
+    // top-level seed arm — and that arm carries its OWN `not guarded`, which this
+    // mutant does not touch. So they are unreachable here for the same kind of
+    // reason `lateThrow` is: nothing this mutation relaxes can reach them.
     expect: (m) => assert.deepEqual(m.q('may_not_be_reached[code](F)')
-      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)), ['lateThrow'],
-      'the only thing left is unreachable for a reason that is not a guard'),
+      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+      ['inked', 'lateThrow', 'minted', 'punched', 'stamped'],
+      'what is left is unreachable for reasons the relaxed arm cannot touch'),
   },
   {
     name: 'r4 every function is an entry point',
@@ -688,21 +700,17 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
-    // A SUPERSET RATHER THAN AN EQUALITY, 2026-09-08. The five names below are
-    // the CLAIM — the walk leaves the labelled statement, and `seenEmpty` says
-    // it leaves the FUNCTION — and the rest of what a boundary-less walk sweeps
-    // up is whatever the module happens to declare after the last abrupt
-    // statement in shapes.ts. That is a fact about the corpus, and it moved the
-    // day w_class_expression appended a block: eight more names, all of them
-    // methods and constructors of the new fixture and not one of them about
-    // labels. The five are named; the corpus is not counted.
+    // A LOWER BOUND AND NOT AN ENUMERATION, converted 2026-09-08: this mutant
+    // deliberately walks to the MODULE, so its difference set contains every
+    // top-level callee after the label in the file — which grows whenever anybody
+    // appends a fixture to shapes.ts.txt, and did. The five names below are the
+    // claim; the rest are the corpus.
     expect: (m, b) => {
-      const added = afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n));
-      for (const n of ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']) {
-        assert.ok(added.includes(n), `the boundary-less walk reaches ${n}`);
-      }
-      assert.ok(!afterAbrupt(b).includes('seenEmpty'),
-        'positive control: with the literal in place the walk stays in its own function');
+      const extra = afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n));
+      for (const n of ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty'])
+        assert.ok(extra.includes(n), `${n} is reached without the containment literal`);
+      assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)), [],
+        'and nothing is lost — the boundary is absent, not merely moved');
     },
   },
   {

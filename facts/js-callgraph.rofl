@@ -549,3 +549,53 @@ ignored(js, update_expression, callgraph, a_a_primitive_is_never_a_callee).
 -- the two claims in facts/worklist.rofl are re-pointed at that item by name.
 -- An `ignored` here would have been a blocker wearing a waiver's face; see
 -- f_a_guard_becomes_falsifiable_when_another_item_lands for the distinction.
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields. The kinds are
+-- re-declared here because a file that makes a claim declares the kind.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+-- A FIELD IS A CALLEE TARGET when it holds a function, which is how a bound
+-- handler is written in modern JavaScript: `strike = (n) => struck(n)` and then
+-- `this.strike(n)`. MEASURED BEFORE THE RULE — with the fixture in and nothing
+-- written, both calls in `Coin.value` came back as `unresolved_call ...
+-- s_member_on_this`, because `member_value` reached only `class_method`.
+--
+-- AND THE NAME IS MEASURED AGAINST A FRAME rather than assumed: V8 reports
+-- `getFunctionName() === "strike"` for the arrow a field holds, so `fn_name`
+-- can be compared against an execution oracle.
+handled(js, class_property,         callgraph, r_field_value).
+
+-- A PRIVATE MEMBER RESOLVES LEXICALLY. `this.#rim(n)` and `this.#mark(n)` both
+-- resolve — the method directly, the field through the function it holds — and
+-- neither goes through `member_value`, `selects` or the receiver's value at all.
+--
+-- ONE HALF OF THE CLAIM IS SHORT AND IT IS SAID HERE RATHER THAN LEFT TO BE
+-- FOUND: `resolves[code]` reaches a private method and `calls_named` CANNOT
+-- SPELL IT. V8 names the frame `#rim`; the store holds `rim`, on the identifier
+-- under the `private_name`; the two namespaces are disjoint (`rim` and `#rim`
+-- are both members of the fixture's class) so the bare name would conflate two
+-- functions, and the kernel has no operation that BUILDS a string — `str_pre`,
+-- `str_seg`, `str_segs`, `str_sub`, `str_char` all cut one up. Recorded as
+-- f_a_private_method_resolves_and_cannot_be_named.
+handled(js, class_private_property, callgraph, r_private_binding).
+handled(js, class_private_method,   callgraph, r_call_edge).
+handled(js, private_name,           callgraph, r_private_binding).
+
+-- A STATIC BLOCK IS NOT A CALLEE and needs no rule to be one. MEASURED, not
+-- assumed: a call inside the fixture's static block is attributed by the
+-- ordinary `top_call` arm to the file root, because a `static_block` is not a
+-- `fn_node` and nothing encloses the site — and that attribution is CORRECT for
+-- a top-level class declaration, since running the shape shows the static block
+-- executes at module evaluation, before any instance exists.
+--
+-- WHAT THE ATTRIBUTION CANNOT SAY, stated because it is a real loss: V8 names
+-- the frame `<static_initializer>` (and an instance field's
+-- `<instance_members_initializer>`), so the model's caller and the runtime's
+-- caller are different names for the same moment. That is why this fixture is
+-- in the SCANNED half of the corpus — see f_a_class_initialiser_is_a_frame_with
+-- _no_function.
+ignored(js, static_block,           callgraph, a_a_statement_is_not_a_callee).

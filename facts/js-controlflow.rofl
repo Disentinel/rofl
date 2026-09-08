@@ -331,3 +331,49 @@ node_kind(js, reg_exp_literal).
 ignored(js, update_expression, controlflow, a_no_control_transfer).
 ignored(js, big_int_literal,   controlflow, a_no_control_transfer).
 ignored(js, reg_exp_literal,   controlflow, a_no_control_transfer).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+-- A FIELD INITIALISER IS AN ARM SKIPPED BY THE ABSENCE OF A `new`, and the
+-- SEVENTH mechanism in `transfer_mechanism` is what keeps that from being filed
+-- under one of the six that would be wrong. `per_construction` is not
+-- `skip_arm` — nothing near a field branches — and it is not
+-- `loop_at_least_once` either, because a class that is never constructed runs
+-- its instance initialisers zero times.
+--
+-- MEASURED BY RUNNING THE SHAPE, and it split one kind into two answers:
+-- `class Never { unused = mark(); static tag = mark(); }`, defined and never
+-- constructed, ran the STATIC initialiser and not the instance one. So
+-- `field_init` guards the non-static half only, and the model agrees: with the
+-- fixture in, `may_not_run` names `stamped minted inked scored struck burnished`
+-- and NOT `sealed`, which is the static field's callee.
+handled(js, class_property,         controlflow, r_field_guard).
+handled(js, class_private_property, controlflow, r_field_guard).
+
+-- A PRIVATE METHOD IS A FUNCTION LIKE ANY OTHER at this layer: it is in
+-- `fn_kind`, so `may_not_run` and `may_not_be_reached` range over it. The site
+-- is the private GETTER, read behind a conditional in the fixture, and
+-- `may_not_run[code]` names its node.
+handled(js, class_private_method,   controlflow, r_reachability).
+
+-- READING A PRIVATE NAME MAY TRANSFER CONTROL, because `get #face()` is a
+-- `class_private_method` carrying `kind: "get"` and `this.#face` runs it. The
+-- public arm of `accessor_read` cannot reach it — a private name never touches
+-- `member_value` or `selects` — so the private accessor needed an arm of its
+-- own, and it needs NO receiver literal: the class body that declares `#face` is
+-- the only place `this.#face` can be written.
+handled(js, private_name,           controlflow, r_accessor).
+
+-- A STATIC BLOCK RUNS UNCONDITIONALLY WHEN THE CLASS DEFINITION IS EVALUATED —
+-- measured by running the shape, where it fires before any `new` and once. So
+-- it guards nothing, skips nothing and suspends nothing, and the reachability of
+-- what is inside it is already the reachability of the class declaration, which
+-- the enclosing guards decide. The one thing it does need is for the calls
+-- inside it to count as module-level entry points, and `reachable[code]`'s
+-- `not in_fn` arm already says so without a rule about this kind.
+ignored(js, static_block,           controlflow, a_a_static_block_runs_when_the_class_is_defined).

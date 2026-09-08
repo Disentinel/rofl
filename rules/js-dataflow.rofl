@@ -838,6 +838,193 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _, _).
 may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
 
+-- ===========================================================================
+-- ES2022 CLASS SYNTAX AT THE VALUE LAYER, 2026-09-08 — queue item
+-- w_class_fields. Five kinds: `class_property`, `class_private_property`,
+-- `class_private_method`, `private_name`, `static_block`.
+--
+-- MEASURED BEFORE A LINE OF THIS WAS WRITTEN, with the fixture in and no rule:
+-- `member_value` on the fixture's class answered `["value"]` — the one
+-- `class_method` — and nothing else; `own_key` the same; `selects[flow]` on
+-- every one of the six private member reads answered NOTHING; `fn_name` on both
+-- `class_private_method` nodes was empty; and the two calls in `value` came back
+-- as `unresolved_call ... s_member_on_this`. So the model was SILENT about all
+-- five, which is the safe direction — except for one row, and that one is in
+-- section 3 below.
+
+-- ---------------------------------------------------------------------------
+-- 1. A FIELD IS A MEMBER. `class_property` is to a class what `object_property`
+--    is to an object literal, and the two are not alike in the language for one
+--    reason this model must carry: a field's initialiser is evaluated ONCE PER
+--    CONSTRUCTION rather than once. That is a control-flow fact and it lives in
+--    rules/js-controlflow.rofl; here a field is a member holding a value.
+--
+-- THE `static` ATTRIBUTE IS READ OFF THE FIELD AND NOT OFF ITS VALUE, which is
+-- why `field_of` carries the property node P beside the value V. The existing
+-- `class_member_static`/`class_member_proto` arms read `ast_attr(M, static, _)`
+-- on whatever `member_value` returned, and for a method that IS the member —
+-- for a field it is the initialiser expression, which carries no such flag. So
+-- the two lookup halves need their own arms or a class field would be visible
+-- through neither receiver.
+edb(class_field_kind).
+class_field_kind(class_property).
+
+field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                  ast_child[code](B, body, _, P),
+                                  class_field_kind(K), ast_node[code](P, K, _, _),
+                                  ast_child[code](P, key, 0, KN), key_name[code](KN, Key),
+                                  ast_child[code](P, value, 0, V).
+member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).
+own_key[flow](CD, Key)         :- field_of[flow](CD, Key, _, _).
+class_member_static[flow](CD, Key, V) :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, true).
+-- `proto` IS THE WRONG WORD FOR A FIELD AND THE RIGHT RELATION. An instance
+-- field is an OWN property of the instance, not a prototype property; what this
+-- relation is consumed for is "visible through an instance receiver", and on
+-- that question a field and a prototype method answer the same.
+class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, false).
+
+-- AND A SUBCLASS INHERITS THEM. `member_value` already walks `super_of` for a
+-- METHOD, and the two receiver halves get it for free there because the method
+-- node carries its own `static` flag — a field's flag is on the property node,
+-- which the inherited row does not carry, so an inherited field was reachable
+-- through NO receiver until these two arms. Both are true of the language:
+-- `new Doubloon().strike` exists because the base constructor runs Coin's
+-- initialisers on the subclass instance, and `Doubloon.forge` because a class's
+-- prototype is its parent.
+--
+-- FOUND BY A MUTANT, not by reading: deleting `member_value :- field_of` moved
+-- NOT ONE ROW, because everything downstream read `field_of` directly. An arm
+-- whose deletion changes nothing is decoration, and the fix was a site — a
+-- subclass — which then needed these two.
+--
+-- `not own_key` IS SHADOWING and goes LAST for the reason the method arm above
+-- spells out: with `Key` unbound the negation reads as "the subclass has no own
+-- key at all". The negation is stratified — `own_key` reads the class body and
+-- nothing here.
+--
+-- IT WALKS FIELDS AND NOT MEMBERS, and the first draft did the opposite and was
+-- CAUGHT BY SOMEBODY ELSE'S MUTANT within one run: written over
+-- `class_member_proto[flow](SD, Key, V)` it inherited METHODS too, and `mutant
+-- 21 — a class stops inheriting its ancestors' methods` in
+-- test/js-callgraph.test.ts stopped killing, because a second path to
+-- `useSuper -> hold` had appeared. A rule that answers an existing question a
+-- second way silently disarms the mutant that guards it.
+inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD), field_of[flow](SD, Key, P, V),
+                                         not own_key[flow](CD, Key).
+inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD),
+                                         inherited_field[flow](SD, Key, P, V),
+                                         not own_key[flow](CD, Key).
+class_member_proto[flow](CD, Key, V)  :- inherited_field[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, false).
+class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, true).
+
+-- A FIELD WITH NO INITIALISER IS NOT A ROW HERE, and `blank;` in the fixture is
+-- the site that says so rather than a sentence: babel emits the property with no
+-- `value` child, so `field_of` derives nothing for it. The member exists at run
+-- time and holds `undefined`, and this layer has no `undefined` to give it —
+-- naming the member with no value would make `member_value` mean two things.
+
+-- ---------------------------------------------------------------------------
+-- 2. A PRIVATE NAME IS LEXICAL, NOT A LOOKUP — and that is the whole item.
+--
+-- `this.#edge` does not ask the receiver what `#edge` is. A private name is
+-- bound by the class body that DECLARES it, at parse time, and cannot be
+-- inherited, deleted, computed or reached from outside that body. So the rules
+-- below never touch `may_be_node` on the receiver, and they are EXACT where the
+-- ordinary member lookup is a may-set.
+--
+-- IT IS ALSO A DIFFERENT NAMESPACE, and the fixture holds both proofs:
+--   * `rim` and `#rim` are two members of ONE class in the fixture. A model
+--     that read a private key as the bare identifier under its `private_name`
+--     would answer both for `this.#rim(n)`.
+--   * `{ '#edge': ... }` is an ordinary string key and a legal one — measured by
+--     running it. A model that spelled the private key `#edge` would answer that
+--     object for a private read and the class for `plated['#edge']`.
+-- That is why `key_name[code]` gets NO arm for `private_name` and `selects`
+-- stays empty on a private member read: the private half is a separate relation
+-- from top to bottom, and the two namespaces never meet.
+private_key[code](P, Name) :- ast_node[code](P, private_name, _, _),
+                              ast_child[code](P, id, 0, I), ast_name[code](I, Name).
+
+edb(private_member_kind).
+private_member_kind(class_private_property).
+private_member_kind(class_private_method).
+
+private_member[code](CD, Name, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                     ast_child[code](B, body, _, M),
+                                     private_member_kind(K), ast_node[code](M, K, _, _),
+                                     ast_child[code](M, key, 0, P), private_key[code](P, Name).
+private_ref[code](N, Name)        :- member_node_v[flow](N),
+                                     ast_child[code](N, property, 0, P),
+                                     private_key[code](P, Name).
+
+-- THE NEAREST DECLARING CLASS, and the fixture has the nesting that needs it:
+-- `Outer` declares `#tag` and the `Inner` class inside `Outer.make` declares its
+-- own. Running it answers `inner/outer`, so a rule that took every enclosing
+-- class would be wrong about one of the two reads. `private_inner` is the
+-- shadowing test and the negation is stratified — it reads `private_member` and
+-- `private_ref`, neither of which reads `private_binds`.
+private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](CD, Name, _),
+                              ast_within[code](CD, N),
+                              private_member[code](CD2, Name, _),
+                              ast_within[code](CD, CD2), ast_within[code](CD2, N).
+private_binds[code](N, M)  :- private_ref[code](N, Name), private_member[code](CD, Name, M),
+                              ast_within[code](CD, N), not private_inner[code](N, CD).
+
+-- AND WHAT A PRIVATE READ EVALUATES TO. A private method is its own value, the
+-- same way `may_be_node(M, M)` above says a `class_method` is; a private field
+-- evaluates to its initialiser.
+may_be_node[flow](M, M)  :- ast_node[code](M, class_private_method, _, _).
+may_be_node[flow](N, M)  :- private_binds[code](N, M),
+                            ast_node[code](M, class_private_method, _, _).
+may_be_node[flow](N, V2) :- private_binds[code](N, M),
+                            ast_node[code](M, class_private_property, _, _),
+                            ast_child[code](M, value, 0, V), may_be_node[flow](V, V2).
+may_be_lit[flow](N, L)   :- private_binds[code](N, M),
+                            ast_node[code](M, class_private_property, _, _),
+                            ast_child[code](M, value, 0, V), may_be_lit[flow](V, L).
+
+-- ---------------------------------------------------------------------------
+-- 3. WHICH CONSTRUCTS BIND `this`, and three of these five kinds do.
+--
+-- `this_binds_kind(class_private_method)` WAS ALREADY DECLARED above and
+-- `class_method_of` did not read it, so `this` inside a private method reached
+-- no class and `this.#edge` inside `#rim` had no receiver. The row existed and
+-- the consumer did not — the shape this repository keeps finding on its own
+-- store, and the one place in these five kinds where the model was INCOMPLETE
+-- about something it had already declared.
+class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                ast_child[code](B, body, _, M),
+                                ast_node[code](M, class_private_method, _, _).
+
+-- A FIELD INITIALISER BINDS `this` TO THE INSTANCE and a static block binds it
+-- to the CLASS — measured by running the shape: `this === Coin` inside the
+-- static block. Neither is a function and both are `this` binders, which is why
+-- `this_binds_kind` is not the same list as `fn_kind`.
+this_binds_kind(class_property).
+this_binds_kind(class_private_property).
+this_binds_kind(static_block).
+
+class_field_this[flow](CD, P) :- field_of[flow](CD, _, P, _).
+class_field_this[flow](CD, P) :- private_member[code](CD, _, P),
+                                 ast_node[code](P, class_private_property, _, _).
+may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), this_host[flow](P, T).
+
+static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                 ast_child[code](B, body, _, SB),
+                                 ast_node[code](SB, static_block, _, _).
+may_be_node[flow](T, CD)      :- static_block_of[flow](CD, SB), this_host[flow](SB, T).
+-- ...AND IT IS THE CLASS OBJECT, NOT AN INSTANCE. `class_receiver[flow]` decides
+-- the two roles syntactically — a bare name that is a class name in this file —
+-- and a `this_expression` is not a name, so without this row `this.mintMark`
+-- inside the static block would be looked up through `class_member_proto` and
+-- miss a static field. Measured on the fixture, where `mintMark` is static and
+-- assigned from the static block.
+class_receiver[flow](T)       :- static_block_of[flow](_, SB), this_host[flow](SB, T).
+
 -- ENTRY 9 — AN IMPORTED NAME (w_cg_module_boundary).
 --
 -- WHAT THE QUEUE ITEM SAID: "a call graph that stops at the file: an imported

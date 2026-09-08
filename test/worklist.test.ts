@@ -188,7 +188,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // not one nobody looked at — it is one nobody has STARTED, which this list
     // cannot tell apart and does not pretend to.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
-    'w_cg_syntactic_wrappers', 'w_class_fields',
+    'w_cg_syntactic_wrappers',
+    // `w_class_expression` and `w_class_fields` LEFT THIS LIST on 2026-09-08,
+    // each in its own branch: both were taken and both spawned findings, one of
+    // them a KERNEL gap — no string operation BUILDS a string, so a private
+    // method resolves and cannot be named.
     'w_decorator_replaces_its_target', 'w_df_function_forms',
     'w_df_generator_protocol', 'w_df_sweep', 'w_df_value_core', 'w_directives',
     // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:

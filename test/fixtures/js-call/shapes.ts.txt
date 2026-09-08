@@ -465,7 +465,7 @@ class Decorated {
   accessor slot = 4;
 }
 export { Decorated, decoOnce, decoApplied, decoFactory };
-// ====================================================================
+// =============================================================
 // THREE VALUE FORMS THE VOCABULARY NEVER NAMED (w_update_and_literals,
 // 2026-09-08): `i++`, `1n` and `/re/g`. Every position below exists to make
 // one of the four layers say something, and each one was chosen AFTER the
@@ -620,3 +620,115 @@ export const Bracket = class extends mountOf() {
 // with this item. The residue is named in facts/worklist.rofl instead.
 export function constructionMode(n: number) { return new.target ? n : null; }
 export const moduleHere = import.meta.url;
+=======
+// ===========================================================================
+// ES2022 CLASS SYNTAX (w_class_fields, 2026-09-08). Five kinds the vocabulary
+// named on 2026-09-08 for the denominator and no corpus site exercised:
+// `class_property`, `class_private_property`, `class_private_method`,
+// `private_name` and `static_block`.
+//
+// MEASURED BY RUNNING THE SHAPE BEFORE THE SITE WAS WRITTEN, and the timings
+// are the whole reason the control-flow verdicts differ between two rows of the
+// same class body:
+//
+//   at class DEFINITION      static mintMark = ...      static { ... }
+//   at every `new`           face = ...    #edge = ...
+//   never, if never `new`ed  face = ...    #edge = ...
+//
+// ...so a NON-STATIC field initialiser is an arm that may be skipped and a
+// static one is not. See test/js-controlflow-values.test.ts, which runs it.
+//
+// V8 NAMES NEITHER FRAME AFTER A FUNCTION: a call inside a static block reports
+// `<static_initializer>` and one inside an instance field reports
+// `<instance_members_initializer>`, both with the class as the type name. That
+// is why this fixture is in the SCANNED half — the execution oracle could not
+// attribute these edges to a caller it has a name for.
+function stamped(n: number): number { return n + 1; }
+function minted(n: number): number { return n + 2; }
+function sealed(n: number): number { return n + 3; }
+function struck(n: number): number { return n + 4; }
+function pressed(n: number): number { return n + 5; }
+function notched(n: number): number { return n + 8; }
+function burnished(n: number): number { return n + 9; }
+function hammered(n: number): number { return n + 10; }
+
+export class Coin {
+  face = stamped(0);                          // class_property, instance
+  #edge = minted(0);                          // class_private_property + private_name
+  static mintMark = sealed(0);                // class_property, static
+  static #tally = 0;                          // class_private_property, static
+  static forge = (n: number) => hammered(n);  // a STATIC field whose value is one
+  static pick = 'rim';                        // a field whose value is a LITERAL
+  strike = (n: number) => struck(n);          // a field whose value is a function
+  #mark = (n: number) => burnished(n);        // a PRIVATE field whose value is one
+  blank;                                      // a field with NO initialiser
+
+  // `this.strike(n)` here is the site for `class_method_of`: a PUBLIC member read
+  // through `this` inside a PRIVATE method, which needs `this` to reach the class.
+  #rim(n: number): number { return this.#edge + this.strike(n) + n; }
+  get #face(): number { return pressed(0); }                // a PRIVATE ACCESSOR
+  // A PUBLIC TWIN OF `#rim`, and it is the negative control the private
+  // reading needs: `#rim` and `rim` are two different members of one class, so
+  // a model that named a private member by the bare identifier under its
+  // `private_name` would answer BOTH for `this.#rim(n)` and derive an edge to
+  // `notched` that no execution takes.
+  rim(n: number): number { return notched(n); }
+
+  // `this` is the CLASS here, not an instance, and `Coin.#tally` is a private read
+  // through a receiver that is not `this` at all — privacy is lexical either way.
+  static { this.mintMark = Coin.#tally + 1; this.forge(0); }
+
+  value(n: number): number {
+    return this.face + this.#rim(n) + this.strike(n) + this.#mark(n) + (n > 0 ? this.#face : 0);
+  }
+}
+
+export function usesCoin(n: number): number { return new Coin().value(n) + Coin.forge(n); }
+
+// A SUBCLASS INHERITS ITS PARENT'S FIELDS AND A FIELD OF ITS OWN SHADOWS ONE,
+// which is what makes `member_value` and `own_key` load-bearing for a field
+// rather than merely true of one. MEASURED FIRST, and it is why these four lines
+// exist: with the class-fields rules in and no subclass, deleting
+// `member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).` moved NOT
+// ONE ROW - the receiver halves are derived from `field_of` directly - so the arm
+// was decoration until something read it.
+//
+//   new Doubloon().strike(n)   an INSTANCE field declared only on Coin
+//   Doubloon.forge(n)          a STATIC field declared only on Coin
+//   Doubloon.pick              a static field the subclass SHADOWS, so the
+//                              computed callee is `value` here and `rim` on Coin
+function punched(n: number): number { return n + 11; }
+
+export class Doubloon extends Coin {
+  static pick = 'value';
+  tint = punched(0);
+}
+export function usesDoubloon(n: number): number { return new Doubloon().strike(n) + Doubloon.forge(n); }
+export function usesPicked(n: number): number { return new Coin()[Coin.pick](n); }
+export function usesPickedSub(n: number): number { return new Doubloon()[Doubloon.pick](n); }
+
+// A PRIVATE NAME IS LEXICAL, NOT A LOOKUP, and this is the site that says so.
+// `new Inner().read()` returns Inner's `#tag` and not Outer's — measured by
+// running the shape — so a rule that reached the private member through the
+// receiver's VALUE would answer both here and be wrong about one of them.
+function inked(n: number): number { return n + 6; }
+function scored(n: number): number { return n + 7; }
+
+export class Outer {
+  #tag = inked(0);
+  make(n: number): number {
+    class Inner {
+      #tag = scored(0);
+      read(): number { return this.#tag; }
+    }
+    return new Inner().read() + this.#tag + n;
+  }
+}
+
+// ...AND THE COLLISION THAT MAKES THE LEXICAL READING NECESSARY RATHER THAN
+// TIDY: `"#edge"` is an ordinary string key and a legal one, measured. A model
+// that spelled the private name `#edge` in the same key namespace would answer
+// this object for a read of `this.#edge` and the class for a read of
+// `plated["#edge"]`.
+const plated = { '#edge': 'a string key, not a private name' };
+export function reachesPlated(): string { return plated['#edge']; }

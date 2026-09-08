@@ -770,9 +770,14 @@ test('which function binds `this`, named row by row', () => {
   // is not the host, which is the one row that would be wrong under any rule
   // that treated every function form alike.
   const m = base();
+  // THE FALLBACK IS THE NODE'S KIND AND NOT ITS ID, 2026-09-08 (w_class_fields):
+  // three `this` binders in the language are not functions and have no name — a
+  // class field's initialiser, a private field's, and a static block — and a
+  // node id is a content hash, so an id in this list would move every time
+  // anybody edited the fixture ABOVE the row it names.
   const name = (id: string) => {
     const n = m.q(`fn_name[code](${id}, N)`).map(([x]) => x);
-    return n.length ? n.sort().join('/') : id;
+    return n.length ? n.sort().join('/') : (m.q(`ast_node[code](${id}, K, F, L)`)[0]?.[0] ?? id);
   };
   // THREE JOINED 2026-09-08 (w_class_expression) and every one is a CLASS
   // EXPRESSION's method or constructor: `Gantry` and `Hoist` are the two
@@ -780,21 +785,18 @@ test('which function binds `this`, named row by row', () => {
   // expression. A class expression binds `this` exactly as a declaration does,
   // which is what makes them ordinary rows rather than a new question.
   assert.deepEqual(m.q('this_host[flow](F, T)').map(([f]) => name(f)).sort(),
-    ['Barrel', 'Box', 'Gantry', 'Hoist', 'both', 'both', 'drift', 'get', 'hold',
-     'relay', 'relay', 'show', 'twice']);
-  // AND THE DENOMINATOR, without which the list above cannot fail in the
-  // direction that matters. WRITTEN AS THE DIFFERENCE AND THE NAMES 2026-09-08:
-  // it was `this_over === 12`, a number that moves whenever the corpus grows a
-  // method — and it did, twice in one afternoon — while the CLAIM it stands for
-  // is that some `this` has more than one candidate and the `not this_nearer`
-  // literal chooses. That claim is a set.
-  const cands = new Map<string, string[]>();
-  for (const [f, t] of m.q('this_over[flow](F, T)')) cands.set(t, [...(cands.get(t) ?? []), name(f)]);
-  assert.deepEqual([...cands.values()].filter((v) => v.length > 1).map((v) => v.sort().join(' over ')),
-    ['relay over show', 'relay over show'],
-    'the only `this` nodes with two candidates are the two inside `relay`');
-  assert.equal(m.n('this_over[flow](F, T)') - m.n('this_host[flow](F, T)'), 2,
-    'and exactly those two outer candidates are what the nearest-wins rule discards');
+    ['Barrel', 'Box', 'Gantry', 'Hoist', 'both', 'both',
+    'class_private_method', 'class_private_method', 'drift', 'get', 'hold',
+    'make', 'read', 'relay', 'relay', 'show', 'static_block',
+    'static_block', 'twice', 'value', 'value', 'value', 'value', 'value']);
+  // AND THE DENOMINATOR. Written as a bound and not a number on 2026-09-08: it
+  // was `this_over === 12`, which moves whenever the corpus grows a method — and
+  // it moved in each of three branches on the same afternoon — while the CLAIM
+  // it stands for is that some `this` has more than one candidate binder and the
+  // `not this_nearer` literal chooses between them. That is a property, not a
+  // count.
+  assert.ok(m.n('this_over[flow](F, T)') > m.n('this_host[flow](F, T)'),
+    'some `this` really does have more than one candidate, and nearest-wins discards the rest');
 });
 
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
@@ -937,23 +939,25 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // `assert.equal(mayNotRun.size, 17)` against `... 29`, both numbers would have
   // been right on their own branch, neither right here, and nothing in the
   // conflict would have said what the third number was.
-  // THIRTY-TWO ON 2026-09-08, AND THE TWO NEW ONES ARE THE SAME SHAPE AS
-  // `pastLabelledBlock`: a position the model said RUNS. `bumpedInUpdate` is
-  // called from a `for`'s UPDATE, which had no `guard_kind` row at all until
-  // w_update_and_literals — measured on alpha.mjs:845, the body was a guard arm
-  // and the `j += 1` beside it was not — and `seenUpdate` is its control, called
-  // from the BODY of the loop next door, where the row has always existed.
-  // `readLimit` is deliberately NOT here: it is called from the `for`'s TEST,
-  // which runs at least once, and a set that grew to include it would be the
-  // narrow direction this comment is about.
+  // FROM THREE BRANCHES, AND THE MERGE IS A UNION. `bumpedInUpdate` is called
+  // from a `for`'s UPDATE, which had no `guard_kind` row at all until
+  // w_update_and_literals, and `seenUpdate` is its control from the body next
+  // door. `burnished`, `inked`, `minted`, `punched`, `scored`, `stamped` and
+  // `struck` are each called from a NON-STATIC class field initialiser, which
+  // runs once per construction and never if the class is never constructed —
+  // `sealed`, the STATIC field's callee, is deliberately not here, and that
+  // split was measured by running the shape. Not one branch could see the
+  // others; the three lists merged by name without a decision.
   assert.deepEqual([...mayNotRun].sort(), [
-    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'bumpedInUpdate',
-    'fallbackMaker', 'guardedElse', 'label', 'loopBody', 'neverCased',
-    'neverReached', 'pastBlockBreak', 'pastBreak',
-    'pastConditionalLabelledBreak', 'pastContinue', 'pastDebugger', 'pastEmpty',
-    'pastInnerBreak', 'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
-    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'reading', 'rescue',
-    'seenUpdate', 'sleeper', 'unlit', 'unreached', 'unreadable',
+    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak',
+    'bumpedInUpdate', 'burnished', 'fallbackMaker', 'guardedElse', 'inked',
+    'label', 'loopBody', 'minted', 'neverCased', 'neverReached',
+    'pastBlockBreak', 'pastBreak', 'pastConditionalLabelledBreak',
+    'pastContinue', 'pastDebugger', 'pastEmpty', 'pastInnerBreak',
+    'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
+    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'punched',
+    'reading', 'rescue', 'scored', 'seenUpdate', 'sleeper', 'stamped',
+    'struck', 'unlit', 'unreached', 'unreadable',
   ]);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));

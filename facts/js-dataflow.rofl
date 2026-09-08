@@ -423,3 +423,42 @@ handled(js, reg_exp_literal,   dataflow, r_value_core).
 -- a may-set and never a positive assertion. The one negation in this file,
 -- `binder_at_top`, reads a REGION and not a value.
 ignored(js, update_expression, dataflow, a_a_computed_primitive_and_a_write_with_no_value).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+-- A FIELD IS A MEMBER HOLDING A VALUE, and the `static` flag on the FIELD
+-- decides which receiver sees it — read off the property node and not off the
+-- initialiser, which carries no such attribute. MEASURED BEFORE THE RULE:
+-- `member_value` on the fixture's class answered `["value"]`, the one
+-- `class_method`, and `own_key` the same.
+handled(js, class_property,         dataflow, r_field_value).
+
+-- A PRIVATE NAME IS BOUND BY THE CLASS BODY THAT DECLARES IT, not by the
+-- receiver's value — which makes the private half EXACT where the ordinary
+-- member lookup is a may-set, and makes it a separate namespace end to end.
+-- Both halves have a site: `rim` and `#rim` are two members of one class, and
+-- `{ '#edge': ... }` is a legal string key, measured by running it.
+--
+-- THE NESTING IS EXERCISED, not assumed: `Outer` and the `Inner` class inside
+-- its method both declare `#tag`, running the shape answers `inner/outer`, and
+-- `private_inner` is the shadowing test that makes the model agree.
+handled(js, class_private_property, dataflow, r_private_binding).
+handled(js, private_name,           dataflow, r_private_binding).
+
+-- A PRIVATE METHOD IS A VALUE AND A `this` BINDER. `this_binds_kind` already
+-- carried `class_private_method` and `class_method_of` did not read it, so
+-- `this` inside a private method reached no class — a row with no consumer,
+-- which is the shape this repository keeps finding on its own store.
+handled(js, class_private_method,   dataflow, r_call_flow).
+
+-- A STATIC BLOCK CARRIES NO VALUE AND STILL ANSWERS A VALUE QUESTION: `this`
+-- inside one is the CLASS OBJECT, measured by running the shape (`this === Coin`
+-- is true there), which is a different receiver role from every other `this` in
+-- a class body. Without `class_receiver[flow]` saying so, `this.mintMark` in the
+-- static block is looked up through the instance half and misses a static field.
+handled(js, static_block,           dataflow, r_static_block_this).

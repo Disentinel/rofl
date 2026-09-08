@@ -299,6 +299,23 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
                        ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
+-- A CLASS FIELD NAMES THE FUNCTION IT HOLDS, 2026-09-08 (w_class_fields), the
+-- same way an `object_property` two rules up does. MEASURED AGAINST A FRAME
+-- rather than assumed: for `strike = (n) => ...`, V8 reports
+-- `getFunctionName() === "strike"` and `getMethodName() === "strike"`, so this
+-- is the name an execution oracle would have to be compared against.
+fn_name[code](F, N) :- fn_node[code](F), class_field_kind(K), ast_node[code](P, K, _, _),
+                       ast_child[code](P, value, 0, F),
+                       ast_child[code](P, key, 0, KN), key_name[code](KN, N).
+-- ...AND A PRIVATE METHOD GETS NO NAME HERE, which is a MEASURED refusal and
+-- not an omission. V8 reports the frame as `#rim` — with the hash — and the
+-- store holds `rim`, on the `identifier` under the `private_name`. The two
+-- namespaces are disjoint (`rim` and `#rim` are both members of the fixture's
+-- class), so naming a private method `rim` would make `calls_named` conflate
+-- two different functions, and the kernel has no string operation that BUILDS a
+-- string: `str_pre`, `str_seg`, `str_segs`, `str_sub` and `str_char` all cut one
+-- up. So `resolves[code]` reaches a private method and `calls_named` cannot
+-- spell it — recorded as f_a_private_method_resolves_and_cannot_be_named.
 
 -- ...AND A CLASS WITH NO `id` TAKES THE NAME OF ITS BINDING, which is the
 -- LANGUAGE'S OWN inference and not a convenience (w_class_expression,

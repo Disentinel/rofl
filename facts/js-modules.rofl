@@ -485,3 +485,24 @@ node_kind(js, reg_exp_literal).
 ignored(js, update_expression, modules, a_not_a_module_construct).
 ignored(js, big_int_literal,   modules, a_not_a_module_construct).
 ignored(js, reg_exp_literal,   modules, a_not_a_module_construct).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields. Five kinds and
+-- one answer, on the same reading `class_declaration` and `class_method` already
+-- have here: a class body is not a module construct.
+--
+-- THE SITE IS WHAT MAKES THE VERDICT EXERCISED RATHER THAN DEFINITIONAL, on the
+-- pattern w_destructuring_rest_and_spread set: `export class Coin` in
+-- test/fixtures/js-call/shapes.ts.txt puts all five kinds DIRECTLY under an
+-- `export_named_declaration`, so a kind that never met an `export` cannot be
+-- what is being claimed about.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+ignored(js, class_property,         modules, a_not_a_module_construct).
+ignored(js, class_private_property, modules, a_not_a_module_construct).
+ignored(js, class_private_method,   modules, a_not_a_module_construct).
+ignored(js, private_name,           modules, a_not_a_module_construct).
+ignored(js, static_block,           modules, a_not_a_module_construct).
