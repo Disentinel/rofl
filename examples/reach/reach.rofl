@@ -1,0 +1,33 @@
+-- reach.rofl — WHICH SERVICE CAN REACH WHICH, and what that costs to hold.
+--
+-- Two rules and no tricks. The graph is a layered call topology handed in by
+-- demo.ts: sixteen services per layer, thirty layers, every service calling
+-- every service in the layer below it. That shape is not exotic — it is what a
+-- request path through a tiered system looks like when you stop pretending the
+-- fan-out is one.
+--
+-- WHY THIS EXAMPLE EXISTS. `space_exhausted` and `budget_exhausted` are two
+-- atoms in this kernel because they demand OPPOSITE repairs (src/reflect.ts:249)
+-- and, until 2026-09-09, a caller could act on neither: the budget was a
+-- parameter and the space was a constant nobody could reach. Now both are
+-- settable and the difference has to be shown rather than asserted.
+--
+-- AND THE DIFFERENCE IS NOT "ONE IS BIGGER". `test/rule-shape.test.ts` gates a
+-- rule whose premise shares no variable with what precedes it — a CROSS
+-- PRODUCT, where the intermediate is large because the rule is wrong and the
+-- repair is to reorder the body. Nothing here is that. `reaches(A, C) :-
+-- reaches(A, B), calls(B, C).` joins on `B` at every step, and the answer
+-- itself is quadratic: 111 360 pairs over 480 services, which is
+-- 16 * 16 * 30 * 29 / 2 exactly and can be checked by hand. No ordering makes a
+-- quadratic answer small. The only question left is whether you can hold it,
+-- and that is what `space` is for.
+
+edb(calls).
+
+reaches(A, B) :- calls(A, B).
+reaches(A, C) :- reaches(A, B), calls(B, C).
+
+-- The two summaries the demo prints, so the transcript is the kernel's answer
+-- and not the host's arithmetic.
+serves(A)      :- reaches(A, _).
+reachable(B)   :- reaches(_, B).
