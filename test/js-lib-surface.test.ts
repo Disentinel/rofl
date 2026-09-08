@@ -174,10 +174,18 @@ test('the same method on a receiver the value layer cannot type is NOT attribute
 // 3. THE ERA ANSWER
 
 test('a library method is gated by year, and three years discriminate', () => {
+  // SIX ROWS SINCE THE SCALE GREW, 2026-09-08, and es2021 is the one that makes
+  // the claim: it lacks ONLY `array.at`, because `string.replaceAll` is 2021 and
+  // `bigint.toString` 2020 and both are its own. With five environments the gate
+  // could be read as "older environments lack newer methods"; with es2017 and
+  // es2021 in the scale it is visibly a comparison of YEARS, method by method.
+  // es2023 is absent from the list entirely — it is above all three.
   assert.deepEqual(unsupported(base()), [
     'es2015: array.at bigint.toString string.replaceAll',
     'es2016: array.at bigint.toString string.replaceAll',
+    'es2017: array.at bigint.toString string.replaceAll',
     'es2020: array.at string.replaceAll',
+    'es2021: array.at',
     'es5: array.at bigint.toString string.replaceAll',
   ]);
   // ts5 RANKS 2022 AND IS ABSENT FROM THAT LIST, which is the claim: the gate
@@ -229,6 +237,7 @@ test('MUTANT 4 — a method is dated wrongly in the pack', () => {
   assert.deepEqual(unsupported(m), [
     'es2015: bigint.toString string.replaceAll',
     'es2016: bigint.toString string.replaceAll',
+    'es2017: bigint.toString string.replaceAll',
     'es2020: string.replaceAll',
     'es5: bigint.toString string.replaceAll',
   ]);
@@ -272,7 +281,9 @@ test('without the era pack the kernel names the missing half', () => {
   // POSITIVE CONTROL on that field: with the pack, the same query is populated.
   const whole = buildRaw(PACKS).query('environment(E)', BUDGET);
   assert.equal(whole.unpopulatable, false);
-  assert.equal(whole.rows.length, 5);
+  // 5 -> 8 on 2026-09-08: es2017, es2021 and es2023 joined the scale, each at a
+  // year this vocabulary has a feature for.
+  assert.equal(whole.rows.length, 8);
   // ...AND THE HALF THAT DOES NOT NEED IT STILL ANSWERS, which is why the rules
   // are one pack rather than two: attribution is unchanged and only the era
   // verdict is gone.

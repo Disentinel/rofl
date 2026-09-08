@@ -45,6 +45,11 @@ const ERA: [string, string][] = [
   // A FOURTH, 2026-09-08, and for the same reason as the third: class fields
   // are ES2022 and era.js is asserted to fail es2020 for EXACTLY ONE reason.
   ['era-fields.js', 'test/fixtures/js-env/era-fields.js.txt'],
+  // A FIFTH, 2026-09-08. A hashbang is only a hashbang on LINE 1, so unlike an
+  // operator or a class field it cannot be appended to an existing fixture at
+  // all — the one file it could have shared is era.js, whose single-reason
+  // assertion is what the third and fourth files exist to protect.
+  ['era-hashbang.js', 'test/fixtures/js-env/era-hashbang.js.txt'],
 ];
 
 const FACTS = 'facts/js-env.rofl';
@@ -59,6 +64,15 @@ interface World {
   why: (lit: string) => string;
 }
 
+/** 20M -> 400M on 2026-09-08. The scale went from five environments to eight
+ *  and every audit in this pack ranges over them, so the FIXPOINT stopped
+ *  fitting — not the query. Measured: with the query budget alone raised,
+ *  `kind_ungoverned[audit]` still came back partial, which is the tell that the
+ *  truncation is upstream of the question; and the call-graph world at the
+ *  bottom of this file needs more than the era world, because it carries a
+ *  corpus written for a different question. */
+const EVAL_BUDGET = 400_000_000;
+
 const unq = (s: string) => (s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s);
 
 function build(muts: Mut[] = [], extraSources: [string, string][] = []): World {
@@ -67,36 +81,58 @@ function build(muts: Mut[] = [], extraSources: [string, string][] = []): World {
     const res = r.load(text);
     assert.ok(res.ok, `${name} REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   };
-  load('boot.rofl', read('boot.rofl'));
-
-  for (const [logical, disk] of [...ERA, ...extraSources]) {
-    const res = r.assert(scan(read(disk), { file: logical }).facts.join('\n'));
-    assert.ok(res.ok, `${logical} facts REJECTED:\n${res.diagnostics.slice(0, 4).join('\n')}`);
-  }
-
-  // The kind vocabulary the era table is measured against lives across the
-  // model's fact packs; the era table itself declares no kind of its own,
-  // because a table that declares the vocabulary it grades cannot be wrong.
-  for (const f of ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
-                   'facts/js-modules.rofl', 'facts/js-shapes.rofl', FACTS]) {
-    let text = read(f);
-    for (const m of muts) if ((m.file ?? FACTS) === f) {
-      assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
-      text = text.replace(m.find, m.replace);
-    }
-    load(f, text);
-  }
-
+  // PACKS FIRST, FACTS AFTER, AND ONE `load` — the construction
+  // test/js-corpus-world.ts documents, adopted here on 2026-09-08 and for the
+  // SECOND time in two days: test/js-model.test.ts had the identical defect and
+  // was repaired the day before.
+  //
+  // WHAT IT WAS. The AST facts were asserted FIRST and the packs loaded after,
+  // and `r.load()` RE-EVALUATES under its own DEFAULT_BUDGET of 100 000 steps —
+  // so the last `load` ran the whole fixpoint on that budget and the
+  // `r.evaluate()` below measured nothing. It was invisible while the truncated
+  // fixpoint happened to contain what the assertions read, and the day the
+  // environment scale went from five to eight it stopped: `kind_ungoverned[audit]`
+  // came back PARTIAL, which is an empty answer to `is this audit clean`.
+  //
+  // A BUDGET THAT IS NEVER CHECKED IS A PIN ON THE SIZE OF THE WORLD that
+  // nothing in the file mentions. This is the third such pin found in two days.
+  const packs = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl',
+                 'facts/js-modules.rofl', 'facts/js-shapes.rofl', FACTS]
+    .map((f) => {
+      let text = read(f);
+      for (const m of muts) if ((m.file ?? FACTS) === f) {
+        assert.ok(text.includes(m.find), `mutation anchor absent in ${f}: ${m.find}`);
+        text = text.replace(m.find, m.replace);
+      }
+      return text;
+    });
   let rules = read(RULES);
   for (const m of muts) if (m.file === RULES) {
     assert.ok(rules.includes(m.find), `mutation anchor absent in ${RULES}: ${m.find}`);
     rules = rules.replace(m.find, m.replace);
   }
-  load('rules/*', [read('rules/js-structure.rofl'), rules].join('\n'));
-  r.evaluate(20_000_000);
+  load('all packs', [read('boot.rofl'), ...packs,
+                     read('rules/js-structure.rofl'), rules].join('\n'));
 
+  for (const [logical, disk] of [...ERA, ...extraSources]) {
+    const res = r.assert(scan(read(disk), { file: logical }).facts.join('\n'));
+    assert.ok(res.ok, `${logical} facts REJECTED:\n${res.diagnostics.slice(0, 4).join('\n')}`);
+  }
+  r.evaluate(EVAL_BUDGET);
+  // ...AND THE FIXPOINT IS ASSERTED RATHER THAN ASSUMED, which is the check
+  // whose absence let the truncation above run unnoticed.
+  assert.deepEqual(r.query('hole(Q, R)').rows.map((x) => `${x.bindings.Q}/${x.bindings.R}`), [],
+                   'this world must reach its fixpoint, not stop at a budget');
+
+  // A STATED BUDGET SINCE 2026-09-08, when the scale went from five environments
+  // to eight on the owner's approval. Every audit here ranges over environments,
+  // so the default budget stopped fitting and `kind_ungoverned[audit]` came back
+  // PARTIAL — an empty answer read as `the audit is clean`, which is the failure
+  // this repository has now caught in itself five times. The assertion below
+  // refuses a partial answer; the budget is what lets it be true.
+  const QUERY_BUDGET = { budget: 400_000_000 };
   const q = (lit: string): string[][] => {
-    const res = r.query(lit);
+    const res = r.query(lit, QUERY_BUDGET);
     assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
     assert.equal(res.partial, false, `query ${lit} hit a budget`);
     assert.equal(res.unpopulatable, false, `query ${lit}: nothing in this world can populate it`);
@@ -144,9 +180,25 @@ test('the verdict is total over the files scanned, and only ts5 takes both', () 
   // FOUR FILES since 2026-09-08: era-fields.js joined for class fields, which
   // are ES2022 and could not go in era.js without making its one-reason
   // assertion two-valued.
-  assert.deepEqual([...m.set('valid[audit](E, File)')].sort(),
-    ['ts5 era-fields.js', 'ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts'],
-    'ts5 is the only environment carrying both the timeline and the extras');
+  // NINE ROWS SINCE 2026-09-08, and the claim is sharper than the four it
+  // replaces. The scale gained es2017, es2021 and es2023 on the owner's
+  // approval, and what each takes is now a statement about that year rather
+  // than about "the newest environment":
+  //   * es2021 takes era.js and nothing else — era.js tops out at
+  //     `logical_assignment`, 2021;
+  //   * es2023 takes four of the five, being the first year above every
+  //     ecmascript feature this table gates;
+  //   * ts5 takes those four MINUS the hashbang (2023 > 2022) and era.ts,
+  //     which no ecmascript year can take at all because TypeScript syntax
+  //     reaches an environment through `env_extra` and not through a year.
+  // So `only ts5 takes both` has become `only ts5 takes era.ts, and only
+  // es2023 takes the hashbang` — two different reasons where there was one.
+  assert.deepEqual([...m.set('valid[audit](E, File)')].sort(), [
+    'es2021 era.js',
+    'es2023 era-fields.js', 'es2023 era-hashbang.js', 'es2023 era-position.js',
+    'es2023 era.js',
+    'ts5 era-fields.js', 'ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts',
+  ], 'ts5 is the only environment carrying the extras, es2023 the only one above the hashbang');
   // total: every (environment, file) pair is decided, none is silent
   // THE PRODUCT AND NOT THE NUMBER, 2026-09-08, and the first draft of this line
   // was `5 * 3` written out. Both factors are facts this world holds — the

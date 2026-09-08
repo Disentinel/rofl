@@ -66,13 +66,44 @@ edb(feature_unscannable).
 env_lang(js).
 
 -- ---------------------------------------------------------------------------
--- THE ENVIRONMENTS. Four, chosen so that every gated feature is on the wrong
--- side of at least one of them; an environment nothing distinguishes is a row
--- that cannot make the model say no.
+-- THE ENVIRONMENTS, and the rule for adding one is the comment that has always
+-- been here: an environment nothing distinguishes is a row that cannot make the
+-- model say no. `env_pair_indistinct[audit]` enforces it, so the scale can only
+-- grow to years where a feature really lands.
+--
+-- THREE MORE ON 2026-09-08, on the owner's approval, and the set is NOT `every
+-- ecmascript edition`. It is exactly the years this vocabulary has a feature
+-- for and does not already have one at: 2017 (async_await), 2021
+-- (logical_assignment) and 2023 (hashbang). es2018, es2019, es2024 and es2025 are
+-- DELIBERATELY ABSENT — this table gates no feature at those years, so each
+-- would be indistinguishable from its neighbour and the audit would say so.
+-- The scale is a record of what the model can tell apart, not of what TC39
+-- published.
+--
+-- es2022 IS NOT HERE, AND THE REASON IS STRUCTURAL RATHER THAN A CHOICE. The
+-- first draft added it beside ts5, both at rank 2022, reasoning that
+-- `env_pair_indistinct` reads `lost_feature` and not the ranks. The audit
+-- reported the pair immediately, and it was right: `lost[audit]` carries
+-- `RT < RF`, STRICTLY, so two environments at one year can never separate each
+-- other in either direction. `env_extra` can give an environment features its
+-- year does not, and it cannot make it distinguishable from a same-year
+-- sibling — the extras only ever move features UP the scale, and `lost` reads
+-- the scale. So this model holds AT MOST ONE ENVIRONMENT PER YEAR, and ts5
+-- occupies 2022. Recorded rather than worked around; the fix would be a change
+-- to what `lost` means for every pair.
+--
+-- WHAT THIS UNLOCKS is the row directly below `kind_needs(js, directive, ...)`:
+-- `interpreter_directive` was `kind_baseline` — a MEASURED FALSEHOOD, `#!` is
+-- ES2023 — and the true gate could not be written because the scale topped out
+-- at 2022 and `feature_unreachable[audit]` would have named `hashbang` for ever.
+-- Both answers were false and only a new environment could make either true.
 environment(es5).     env_rank(es5, 2009).
 environment(es2015).  env_rank(es2015, 2015).
 environment(es2016).  env_rank(es2016, 2016).
+environment(es2017).  env_rank(es2017, 2017).
 environment(es2020).  env_rank(es2020, 2020).
+environment(es2021).  env_rank(es2021, 2021).
+environment(es2023).  env_rank(es2023, 2023).
 environment(ts5).     env_rank(ts5, 2022).
 
 -- TypeScript is es2022 PLUS syntax that is on no ecmascript timeline. It is
@@ -107,6 +138,7 @@ feature(logical_assignment).  feature_since(logical_assignment, 2021).
 -- `import_attributes` (ES2025) is NOT here - a feature no environment can
 -- have would sit in `feature_unreachable[audit]` for ever.
 feature(class_fields).        feature_since(class_fields, 2022).
+feature(hashbang).            feature_since(hashbang, 2023).
 -- ONE NODE KIND, TWO FEATURES, TWO YEARS (w_meta_property, 2026-09-08). This
 -- row used to read `feature(meta_property). feature_since(meta_property, 2015).`
 -- and it was WRONG FOR HALF THE KIND: `new.target` is ES2015 and `import.meta`
@@ -238,7 +270,12 @@ kind_baseline(js, with_statement).
 -- See f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it.
 kind_baseline(js, directive).
 kind_baseline(js, directive_literal).
-kind_baseline(js, interpreter_directive).
+-- ...AND IT STOPPED BEING A LIE ON 2026-09-08, when `environment(es2023)` was
+-- approved. `#!` is the ES2023 Hashbang Grammar, and until the scale reached
+-- 2023 BOTH answers were false: `kind_baseline` said es5 takes it, and the
+-- true gate would have put `hashbang` in `feature_unreachable[audit]` for ever.
+-- A new environment is the only thing that could make either one true.
+kind_needs(js, interpreter_directive, hashbang).
 kind_baseline(js, identifier).
 kind_baseline(js, member_expression).
 kind_baseline(js, call_expression).

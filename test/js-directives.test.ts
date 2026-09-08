@@ -515,18 +515,32 @@ test("SEMANTICS: 'use strict' changes two things this model has neither of", asy
 
 const CLI = "#!/usr/bin/env node\n'use strict';\nexport const cliFlag = 1;\n";
 
-test('ERA: the model says an es5 engine takes a hashbang, and it is ES2023', () => {
+test('ERA: the hashbang is gated on its true year, and the scale reaches it', () => {
   const q = eraWorld([['cli.mjs', CLI]]);
   // THE SITE IS REAL and the era world can see it.
   assert.equal(q('ast_node[code](N, interpreter_directive, F, L)').length, 1);
-  // ...AND THE ANSWER IS SILENCE IN EVERY ENVIRONMENT, es5 (2009) included.
+  // THIS TEST WAS A TRIPWIRE AND IT FIRED. It read `the model says an es5 engine
+  // takes a hashbang, and it is ES2023` and asserted SILENCE in every
+  // environment — a measured falsehood recorded as a tripwire because the true
+  // gate could not be written while the scale topped out at ts5/2022:
+  // `feature_unreachable[audit]` would have named `hashbang` for ever, so BOTH
+  // answers were false and only a new environment could make either one true.
+  //
+  // The owner approved `environment(es2023)` on 2026-09-08. The gate is now
+  // `kind_needs(js, interpreter_directive, hashbang)` with
+  // `feature_since(hashbang, 2023)`, and what the test asserts is the answer.
   const hb = q('ast_node[code](N, interpreter_directive, F, L)')[0][0];
-  assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, n]) => n === hb), []);
-  assert.deepEqual(q('uses[audit](N, F)').filter(([n]) => n === hb), []);
-  // POSITIVE CONTROLS: the world grades other things, and es5 is on the scale.
+  assert.deepEqual(q('uses[audit](N, F)').filter(([n]) => n === hb).map(([, f]) => f), ['hashbang'],
+    'the site uses the feature its kind is gated on');
+  assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, n]) => n === hb)
+    .map(([e]) => e).sort(),
+    ['es2015', 'es2016', 'es2017', 'es2020', 'es2021', 'es5', 'ts5'],
+    'every environment below 2023 refuses it, and es2023 is the one that does not');
+  // POSITIVE CONTROLS: the world grades other things, and the scale is what it is.
   assert.ok(q('unsupported[audit](E, N, F)').length > 50, 'the era world does say no');
   assert.deepEqual(q('env_rank(E, R)').map(([e, r]) => `${e}=${r}`).sort(),
-    ['es2015=2015', 'es2016=2016', 'es2020=2020', 'es5=2009', 'ts5=2022']);
+    ['es2015=2015', 'es2016=2016', 'es2017=2017', 'es2020=2020', 'es2021=2021',
+     'es2023=2023', 'es5=2009', 'ts5=2022']);
 
   // ...AND THE HONEST TREE IS OTHERWISE CLEAN, which is what makes the row
   // below a trade rather than a repair.
@@ -534,24 +548,37 @@ test('ERA: the model says an es5 engine takes a hashbang, and it is ES2023', () 
   assert.deepEqual(q('kind_unaccounted[audit](L, K)'), []);
 });
 
-test('ERA: stating the true year makes the feature unreachable — the scale stops at 2022', () => {
+test('ERA: MUTANT 8 — the falsehood put back, and the audit that could not name it', () => {
   // MUTANT 8 — `kind_baseline(js, interpreter_directive)` replaced by the gate
   // that says what the hashbang actually is. `feature_since(hashbang, 2023)` is
   // above every `env_rank` on the scale, so `env_has` is empty for it and the
   // hashbang reports unsupported in ts5 as well as in es5: a false NO
   // everywhere traded for the false YES everywhere the honest tree gives.
-  const q = eraWorld([['cli.mjs', CLI]], ['kind_baseline(js, interpreter_directive).',
-    'kind_needs(js, interpreter_directive, hashbang).\n'
-    + 'feature(hashbang).\nfeature_since(hashbang, 2023).']);
-  assert.deepEqual(q('feature_unreachable[audit](F)').flat(), ['hashbang']);
-  assert.deepEqual(q('env_has[audit](E, hashbang)'), []);
-  assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, , f]) => f === 'hashbang')
-    .map(([e]) => e).sort(), ['es2015', 'es2016', 'es2020', 'es5', 'ts5']);
-
-  // THE ONE THING THAT WOULD FIX IT is an environment above 2022, and that is
-  // the owner's to add — `layer` and the era scale are both his. THIS IS THE
-  // TRIPWIRE: the day an `es2023` arrives, `env_has` is no longer empty here
-  // and this assertion goes red, which is the reminder to take the true gate.
-  assert.equal(Math.max(...q('env_rank(E, R)').map(([, r]) => Number(r))), 2022,
-    'no environment on this scale can reach a 2023 feature');
+  // MUTATION INVERTED 2026-09-08. It used to plant the TRUE gate over the false
+  // baseline and watch `feature_unreachable[audit]` name `hashbang` — the trade
+  // that made the falsehood the lesser evil. With es2023 on the scale the true
+  // gate is what the tree carries, so the mutant now plants the FALSEHOOD back,
+  // and its oracle is the answer going silent rather than an audit firing:
+  // `kind_baseline` says every environment takes a hashbang, and NO AUDIT IN
+  // THIS TABLE CAN SAY THAT IS WRONG. That is the whole reason it was recorded
+  // as a finding rather than left to a reader — a baseline claim is unfalsifiable
+  // from inside the era table, and only knowing the specification catches it.
+  const q = eraWorld([['cli.mjs', CLI]],
+    ['kind_needs(js, interpreter_directive, hashbang).', 'kind_baseline(js, interpreter_directive).']);
+  const hb = q('ast_node[code](N, interpreter_directive, F, L)')[0][0];
+  assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, n]) => n === hb), [],
+    'the falsehood is silence: es5 takes a 2023 construct and nothing objects');
+  assert.deepEqual(q('feature_unreachable[audit](F)'), [],
+    'and the audit that used to name it cannot, because the feature now has no user');
+  // THE TRIPWIRE FIRED, and this is what it left behind. It read: `the one thing
+  // that would fix it is an environment above 2022, and that is the owner's to
+  // add — the day an es2023 arrives, `env_has` is no longer empty here and this
+  // assertion goes red, which is the reminder to take the true gate.` The owner
+  // added it on 2026-09-08 and the gate was taken; what remains is the mutant
+  // measuring the falsehood it used to be forced to live with.
+  assert.deepEqual(q('env_has[audit](E, hashbang)').map(([e]) => e), ['es2023'],
+    'the scale reaches the feature now — which is what made the true gate writable');
+  assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, , f]) => f === 'hashbang'), [],
+    'and yet nothing is refused, because the mutant left the feature with no user');
+  assert.equal(Math.max(...q('env_rank(E, R)').map(([, r]) => Number(r))), 2023);
 });
