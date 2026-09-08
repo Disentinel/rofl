@@ -88,6 +88,7 @@ fn main() {
         eprintln!("facts\t{n}");
         eprintln!("syms\t{}", l.eval.h.sym_count());
         eprintln!("funcs\t{}", l.eval.h.func_count());
+        eprintln!("tuples\t{}", l.eval.store.tuple_count());
         for (k, b) in l.eval.h.parts() {
             eprintln!("{k}\t{b}");
         }

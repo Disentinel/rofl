@@ -1084,7 +1084,7 @@ impl Eval {
         let recs = asm.by_rel.get(&l.rel).unwrap_or(&empty);
         for f in recs {
             let fr = self.store.rec(*f);
-            let (fp, flen) = (fr.persp, fr.args_len as usize);
+            let (fp, flen) = (fr.persp, self.store.arity(*f));
             if flen != l.args.len() {
                 continue;
             }

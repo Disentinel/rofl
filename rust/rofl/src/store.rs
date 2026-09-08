@@ -16,11 +16,33 @@
 //!   * inside a group the prefix is shared, so order is the argument rendering
 //!     alone.
 //!
-//! WHAT IT COST: eight bytes a fact. `sortkey` holds the first eight bytes of
+//! WHAT IT COST: eight bytes a TUPLE. `sortkey` holds the first eight bytes of
 //! the argument rendering, zero-padded and big-endian, so the common comparison
 //! is one `u64` compare and only a tie renders anything. Zero means "the first
 //! eight bytes are not ASCII" and forces the full comparison, which is what
 //! keeps the fast path honest about JavaScript's UTF-16 string order.
+//!
+//! WHERE THE ARGUMENTS LIVE. A fact's arguments are ONE hash-consed handle into
+//! `Tuples` and not a slice of a per-fact arena. Three consequences, and the
+//! third is the one that paid:
+//!
+//!   * two facts with the same argument tuple — `edge(a,b)` in two
+//!     perspectives, `p(x)` and `q(x)` — share the storage;
+//!   * re-deriving a fact the alternating fixpoint has dropped allocates
+//!     nothing, because the tuple it wants is already interned;
+//!   * `sortkey` moves off the fact and onto the tuple, so `FactRec` is
+//!     sixteen bytes rather than twenty-four, and a tuple identity makes
+//!     `cmp_args` answer `Equal` without touching the sortkey at all.
+//!
+//! And it is what makes RESURRECTION cheap: `add` of a `(rel, persp, tuple)`
+//! that is present but dead revives the record it already has instead of
+//! appending another. That is the repair for the one case where this port was
+//! WORSE than the JS reference — `semantics(well_founded)`, where a dropped
+//! record must stay readable for its key to be spellable, so the record arena
+//! could not be reclaimed and grew a copy of the world per alternation round.
+//! Reviving is sound BECAUSE the key is a function of `(rel, persp, tuple)`:
+//! a held `PremRef::Fact` spells exactly the string it spelled before, and the
+//! fact identity becomes what the JS kernel's key already is — injective.
 
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::Ordering;
@@ -33,33 +55,61 @@ pub const F_FROZEN: u8 = 2;
 pub const F_TICK: u8 = 4;
 pub const F_DEAD: u8 = 8;
 
+/// TWELVE BYTES, and no padding left in them: the relation, the perspective,
+/// and one word holding the hash-consed argument tuple in the low 28 bits with
+/// the four flag bits above it. `(rel, persp, tup)` is the key, injectively —
+/// see the module note.
 #[derive(Clone, Copy)]
 pub struct FactRec {
     pub rel: Sym,
     pub persp: Sym,
-    pub args_at: u32,
-    pub args_len: u16,
-    pub flags: u8,
-    /// The first eight bytes of the argument rendering — see the module note.
-    pub sortkey: u64,
+    packed: u32,
 }
+
+const TUP_MASK: u32 = (1 << 28) - 1;
 
 impl FactRec {
     #[inline]
+    fn new(rel: Sym, persp: Sym, tup: TupId, flags: u8) -> FactRec {
+        debug_assert!(tup <= TUP_MASK && flags & 0xf0 == 0);
+        FactRec {
+            rel,
+            persp,
+            packed: tup | ((flags as u32) << 28),
+        }
+    }
+    #[inline]
+    pub fn tup(&self) -> TupId {
+        self.packed & TUP_MASK
+    }
+    #[inline]
+    pub fn flags(&self) -> u8 {
+        (self.packed >> 28) as u8
+    }
+    #[inline]
+    fn set_flags(&mut self, f: u8) {
+        debug_assert!(f & 0xf0 == 0);
+        self.packed = (self.packed & TUP_MASK) | ((f as u32) << 28);
+    }
+    #[inline]
+    fn add_flags(&mut self, f: u8) {
+        self.set_flags(self.flags() | f);
+    }
+    #[inline]
     pub fn base(&self) -> bool {
-        self.flags & F_BASE != 0
+        self.flags() & F_BASE != 0
     }
     #[inline]
     pub fn frozen(&self) -> bool {
-        self.flags & F_FROZEN != 0
+        self.flags() & F_FROZEN != 0
     }
     #[inline]
     pub fn tick_scope(&self) -> bool {
-        self.flags & F_TICK != 0
+        self.flags() & F_TICK != 0
     }
     #[inline]
     pub fn dead(&self) -> bool {
-        self.flags & F_DEAD != 0
+        self.flags() & F_DEAD != 0
     }
 }
 
@@ -100,13 +150,131 @@ type ArgIndex = HashMap<u32, HashMap<Box<[Term]>, Vec<FactId>>>;
 const MIN_INDEXED: usize = 16;
 const MAX_PATTERNS: usize = 8;
 
-/// The two flat vectors a fact lives in, kept apart from the indexes so that
-/// sorting a key run can borrow the records immutably while the run is taken
-/// mutably. No unsafe, and the split is the reason there is none.
+pub type TupId = u32;
+
+const TUP_EMPTY: u32 = u32::MAX;
+
+fn tup_hash(args: &[Term]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for a in args {
+        h ^= a.bits();
+        h = h.wrapping_mul(0x1000_0000_01b3);
+    }
+    h ^ (args.len() as u64)
+}
+
+/// Hash-consed argument tuples: one flat arena of terms plus TWELVE BYTES per
+/// DISTINCT tuple, and an open-addressed table holding nothing but the tuple's
+/// own index — the same shape, and for the same reason, as the functor
+/// hash-consing in `term.rs`. A table keyed by the tuple would hold a second
+/// copy of every tuple, which is the cost this exists to avoid.
+///
+/// Twelve and not sixteen, because the pool is append-only and so the span is
+/// one number: `ends[t - 1]` is where tuple `t` starts. A `(start, len)` pair
+/// beside a `u64` sortkey pads to sixteen, and the padding is pure loss on a
+/// case where nothing shares.
+#[derive(Default)]
+pub struct Tuples {
+    /// Where each tuple's arguments END in `args`.
+    ends: Vec<u32>,
+    /// The eight-byte order prefix — see the module note. It belongs to the
+    /// TUPLE and not to the fact, because that is what it is a function of.
+    sks: Vec<u64>,
+    args: Vec<Term>,
+    cons: Vec<u32>,
+}
+
+impl Tuples {
+    #[inline]
+    fn span(&self, t: TupId) -> (usize, usize) {
+        let end = self.ends[t as usize] as usize;
+        let start = if t == 0 {
+            0
+        } else {
+            self.ends[t as usize - 1] as usize
+        };
+        (start, end)
+    }
+    #[inline]
+    pub fn args(&self, t: TupId) -> &[Term] {
+        let (a, b) = self.span(t);
+        &self.args[a..b]
+    }
+    #[inline]
+    fn arity(&self, t: TupId) -> usize {
+        let (a, b) = self.span(t);
+        b - a
+    }
+    #[inline]
+    fn sortkey(&self, t: TupId) -> u64 {
+        self.sks[t as usize]
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.ends.len()
+    }
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.ends.is_empty()
+    }
+    fn slot(&self, args: &[Term]) -> usize {
+        let mask = self.cons.len() - 1;
+        let mut i = (tup_hash(args) as usize) & mask;
+        loop {
+            let s = self.cons[i];
+            if s == TUP_EMPTY || self.args(s) == args {
+                return i;
+            }
+            i = (i + 1) & mask;
+        }
+    }
+    /// Doubling at three-quarters full, which is two `u32` slots per tuple on
+    /// average. The quadrupling `Heap::cons_grow` uses would be four more bytes
+    /// a tuple for nothing this table's probe lengths need.
+    fn grow(&mut self) {
+        let want = ((self.ends.len() + 1) * 2).next_power_of_two().max(64);
+        self.cons = vec![TUP_EMPTY; want];
+        let mask = want - 1;
+        for k in 0..self.ends.len() {
+            let a = self.args(k as TupId);
+            let mut i = (tup_hash(a) as usize) & mask;
+            while self.cons[i] != TUP_EMPTY {
+                i = (i + 1) & mask;
+            }
+            self.cons[i] = k as u32;
+        }
+    }
+    /// The tuple's identity, created if this is the first fact to carry it.
+    fn intern(&mut self, h: &Heap, args: &[Term]) -> TupId {
+        if (self.ends.len() + 1) * 4 >= self.cons.len() * 3 {
+            self.grow();
+        }
+        let slot = self.slot(args);
+        if self.cons[slot] != TUP_EMPTY {
+            return self.cons[slot];
+        }
+        self.args.extend_from_slice(args);
+        let i = self.ends.len() as TupId;
+        self.ends.push(self.args.len() as u32);
+        self.sks.push(args_sortkey(h, args));
+        self.cons[slot] = i;
+        i
+    }
+    fn bytes(&self) -> (usize, usize) {
+        (
+            self.ends.capacity() * 4 + self.sks.capacity() * 8 + self.cons.capacity() * 4,
+            self.args.capacity() * 8,
+        )
+    }
+}
+
+/// The record vector and the tuple pool a fact lives in, kept apart from the
+/// indexes so that sorting a key run can borrow the records immutably while the
+/// run is taken mutably. No unsafe, and the split is the reason there is none.
 #[derive(Default)]
 pub struct Facts {
     recs: Vec<FactRec>,
-    args: Vec<Term>,
+    tups: Tuples,
 }
 
 impl Facts {
@@ -116,24 +284,33 @@ impl Facts {
     }
     #[inline]
     pub fn args(&self, id: FactId) -> &[Term] {
-        let r = &self.recs[id as usize];
-        &self.args[r.args_at as usize..r.args_at as usize + r.args_len as usize]
+        self.tups.args(self.recs[id as usize].tup())
+    }
+    #[inline]
+    pub fn arity(&self, id: FactId) -> usize {
+        self.tups.arity(self.recs[id as usize].tup())
     }
     #[inline]
     pub fn alive(&self, id: FactId) -> bool {
         !self.recs[id as usize].dead()
     }
     /// The order the JS kernel's key strings compare in, inside one
-    /// `(relation, perspective)` group where the whole prefix is shared.
+    /// `(relation, perspective)` group where the whole prefix is shared. Tuples
+    /// are hash-consed, so the same tuple is the same rendering and the
+    /// comparison is over before it starts.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
-        let (ra, rb) = (&self.recs[a as usize], &self.recs[b as usize]);
-        if ra.sortkey != 0 && rb.sortkey != 0 && ra.sortkey != rb.sortkey {
-            return ra.sortkey.cmp(&rb.sortkey);
+        let (ta, tb) = (self.recs[a as usize].tup(), self.recs[b as usize].tup());
+        if ta == tb {
+            return Ordering::Equal;
+        }
+        let (ka, kb) = (self.tups.sortkey(ta), self.tups.sortkey(tb));
+        if ka != 0 && kb != 0 && ka != kb {
+            return ka.cmp(&kb);
         }
         let mut sa = String::new();
         let mut sb = String::new();
-        write_args(h, self.args(a), &mut sa);
-        write_args(h, self.args(b), &mut sb);
+        write_args(h, self.tups.args(ta), &mut sa);
+        write_args(h, self.tups.args(tb), &mut sb);
         cmp_js(&sa, &sb)
     }
 }
@@ -216,6 +393,10 @@ impl Store {
         self.facts.args(id)
     }
     #[inline]
+    pub fn arity(&self, id: FactId) -> usize {
+        self.facts.arity(id)
+    }
+    #[inline]
     pub fn alive(&self, id: FactId) -> bool {
         self.facts.alive(id)
     }
@@ -225,6 +406,11 @@ impl Store {
     }
     pub fn fact_count(&self) -> usize {
         self.n_live
+    }
+    /// Distinct argument tuples. Beside `fact_count` this is the SHARING the
+    /// pool actually found, which is the number that decides whether it paid.
+    pub fn tuple_count(&self) -> usize {
+        self.facts.tups.len()
     }
     pub fn all_facts(&self) -> Vec<FactId> {
         (0..self.facts.recs.len() as FactId)
@@ -242,7 +428,11 @@ impl Store {
         &mut v[n].1
     }
 
-    fn find(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+    /// The record for this key, ALIVE OR DEAD. There is at most one, because a
+    /// removal marks the record and never drops its slot and `add` revives what
+    /// it finds — so `(rel, persp, args)` and `FactId` are in bijection, which
+    /// is the property the JS kernel's string key has and this port did not.
+    fn find_rec(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
         if self.keys.is_empty() {
             return None;
         }
@@ -254,11 +444,15 @@ impl Store {
                 return None;
             }
             let r = &self.facts.recs[slot as usize];
-            if !r.dead() && r.rel == rel && r.persp == persp && self.args(slot) == args {
+            if r.rel == rel && r.persp == persp && self.args(slot) == args {
                 return Some(slot);
             }
             i = (i + 1) & mask;
         }
+    }
+
+    fn find(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        self.find_rec(rel, persp, args).filter(|&i| self.alive(i))
     }
 
     fn key_insert(&mut self, id: FactId) {
@@ -275,24 +469,24 @@ impl Store {
         self.keys_n += 1;
     }
 
-    /// Rebuild the table from the LIVE facts. Slots are never tombstoned — a
-    /// removal leaves its slot standing and `find` skips it — so this is also
-    /// how a cleared derived layer stops being paid for.
+    /// Rebuild the table over EVERY record, dead ones included: a dead record
+    /// is what `add` revives, so dropping it from the table would be dropping
+    /// the identity it stands for.
     fn key_grow(&mut self) {
-        let want = ((self.n_live + 1) * 4).next_power_of_two().max(64);
+        let want = ((self.facts.recs.len() + 1) * 4)
+            .next_power_of_two()
+            .max(64);
         self.keys = vec![EMPTY; want];
         self.keys_n = 0;
         for id in 0..self.facts.recs.len() as FactId {
-            if !self.facts.recs[id as usize].dead() {
-                let mask = self.keys.len() - 1;
-                let r = self.facts.recs[id as usize];
-                let mut i = (hash_key(r.rel, r.persp, self.args(id)) as usize) & mask;
-                while self.keys[i] != EMPTY {
-                    i = (i + 1) & mask;
-                }
-                self.keys[i] = id;
-                self.keys_n += 1;
+            let mask = self.keys.len() - 1;
+            let r = self.facts.recs[id as usize];
+            let mut i = (hash_key(r.rel, r.persp, self.args(id)) as usize) & mask;
+            while self.keys[i] != EMPTY {
+                i = (i + 1) & mask;
             }
+            self.keys[i] = id;
+            self.keys_n += 1;
         }
     }
 
@@ -305,28 +499,34 @@ impl Store {
 
     /// `Store.add` (src/store.ts:346). Returns true when the fact was new; a
     /// base assertion still wins over an earlier derived copy.
+    ///
+    /// A key whose record is present but DEAD is revived rather than appended
+    /// again — see the module note. `remove_many` has already cleared the
+    /// record's firing chain and purged it from every run vector, so the revival
+    /// is exactly the fresh-record path with the record supplied.
     pub fn add(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> bool {
-        if let Some(id) = self.find(rel, persp, args) {
-            if flags & F_BASE != 0 && !self.facts.recs[id as usize].base() {
-                self.facts.recs[id as usize].flags |= F_BASE;
+        let id = match self.find_rec(rel, persp, args) {
+            Some(id) if self.alive(id) => {
+                if flags & F_BASE != 0 && !self.facts.recs[id as usize].base() {
+                    self.facts.recs[id as usize].add_flags(F_BASE);
+                }
+                return false;
             }
-            return false;
-        }
-        let args_at = self.facts.args.len() as u32;
-        self.facts.args.extend_from_slice(args);
-        let sortkey = args_sortkey(h, args);
-        let id = self.facts.recs.len() as FactId;
-        self.facts.recs.push(FactRec {
-            rel,
-            persp,
-            args_at,
-            args_len: args.len() as u16,
-            flags,
-            sortkey,
-        });
+            Some(id) => {
+                debug_assert_eq!(self.wit_head[id as usize], EMPTY);
+                self.facts.recs[id as usize].set_flags(flags);
+                id
+            }
+            None => {
+                let tup = self.facts.tups.intern(h, args);
+                let id = self.facts.recs.len() as FactId;
+                self.facts.recs.push(FactRec::new(rel, persp, tup, flags));
+                self.wit_head.push(EMPTY);
+                self.key_insert(id);
+                id
+            }
+        };
         self.n_live += 1;
-        self.wit_head.push(EMPTY);
-        self.key_insert(id);
         let ground = args.iter().all(|a| h.is_ground(*a));
         let run = self.run_mut(rel, persp);
         run.arrived.push(id);
@@ -344,15 +544,7 @@ impl Store {
     /// stored. Facts here are always from the same `(rel, persp)` group when
     /// this is used as a run comparator; the group-level part is `cmp_group`.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
-        let (ra, rb) = (&self.facts.recs[a as usize], &self.facts.recs[b as usize]);
-        if ra.sortkey != 0 && rb.sortkey != 0 && ra.sortkey != rb.sortkey {
-            return ra.sortkey.cmp(&rb.sortkey);
-        }
-        let mut sa = String::new();
-        let mut sb = String::new();
-        write_args(h, self.args(a), &mut sa);
-        write_args(h, self.args(b), &mut sb);
-        cmp_js(&sa, &sb)
+        self.facts.cmp_args(h, a, b)
     }
 
     fn absorb(&mut self, h: &Heap, rel: Sym, persp: Sym) {
@@ -649,7 +841,7 @@ impl Store {
             if r.dead() {
                 continue;
             }
-            self.facts.recs[id as usize].flags |= F_DEAD;
+            self.facts.recs[id as usize].add_flags(F_DEAD);
             self.n_live -= 1;
             if self.wit_head[id as usize] != EMPTY {
                 let mut c = self.wit_head[id as usize];
@@ -701,7 +893,6 @@ impl Store {
             })
             .collect();
         self.remove_many(&drop);
-        self.key_grow();
         self.compact_wits();
         self.partial_eval = false;
     }
@@ -973,12 +1164,14 @@ impl Store {
         let wit: usize = self.wit_head.capacity() * 4
             + self.wits.capacity() * std::mem::size_of::<WitNode>()
             + self.prem_arena.capacity() * std::mem::size_of::<PremRef>();
+        let (tups, targs) = self.facts.tups.bytes();
         vec![
             (
                 "recs",
                 self.facts.recs.capacity() * std::mem::size_of::<FactRec>(),
             ),
-            ("args", self.facts.args.capacity() * 8),
+            ("tups", tups),
+            ("args", targs),
             ("by_key", self.keys.capacity() * 4),
             ("idx", idx),
             ("wit", wit),
@@ -1138,5 +1331,73 @@ pub fn atom_name(t: Term) -> Option<Sym> {
     match t.kind() {
         TermK::Atom(s) => Some(s),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::term::Heap;
+
+    fn world() -> (Heap, Store, Sym, Sym, Term) {
+        let mut h = Heap::default();
+        let p = h.intern("p");
+        let m = h.intern("main");
+        let a = h.atom("a");
+        (h, Store::new(), p, m, a)
+    }
+
+    #[test]
+    fn a_removed_and_re_added_fact_keeps_its_id_and_its_key() {
+        // The invariant the whole revival rests on, and the reason a held
+        // `PremRef::Fact` still spells the string it spelled before.
+        let (h, mut s, p, m, a) = world();
+        assert!(s.add(&h, p, m, &[a], 0));
+        let id = s.get(p, m, &[a]).unwrap();
+        let key = s.key(&h, id);
+        s.clear_derived();
+        assert!(!s.alive(id));
+        assert_eq!(s.get(p, m, &[a]), None);
+        assert!(s.add(&h, p, m, &[a], 0));
+        assert_eq!(s.get(p, m, &[a]), Some(id));
+        assert_eq!(s.key(&h, id), key);
+        assert_eq!(s.len_ids(), 1, "the record arena grew a second copy");
+        assert_eq!(s.fact_count(), 1);
+    }
+
+    #[test]
+    fn a_revived_record_takes_the_new_flags_and_not_the_old() {
+        // `canonicalState` prints the scope and the base bit, so a flag left
+        // over from the record's previous life is OBSERVABLE.
+        let (h, mut s, p, m, a) = world();
+        s.add(&h, p, m, &[a], F_TICK);
+        let id = s.get(p, m, &[a]).unwrap();
+        assert!(s.rec(id).tick_scope());
+        s.clear_derived();
+        s.add(&h, p, m, &[a], 0);
+        assert!(!s.rec(id).tick_scope());
+        assert!(!s.rec(id).dead());
+    }
+
+    #[test]
+    fn facts_that_share_an_argument_tuple_share_its_storage() {
+        let (mut h, mut s, p, m, a) = world();
+        let q = h.intern("q");
+        let other = h.intern("other");
+        s.add(&h, p, m, &[a], F_BASE);
+        s.add(&h, q, m, &[a], F_BASE);
+        s.add(&h, p, other, &[a], F_BASE);
+        assert_eq!(s.fact_count(), 3);
+        assert_eq!(s.tuple_count(), 1);
+    }
+
+    #[test]
+    fn a_flag_bit_never_reaches_the_tuple_id() {
+        // FactRec packs both into one word; this is the boundary that packing
+        // put there.
+        let r = FactRec::new(7, 9, TUP_MASK, F_BASE | F_FROZEN | F_TICK | F_DEAD);
+        assert_eq!(r.tup(), TUP_MASK);
+        assert_eq!(r.flags(), F_BASE | F_FROZEN | F_TICK | F_DEAD);
+        assert_eq!(std::mem::size_of::<FactRec>(), 12);
     }
 }
