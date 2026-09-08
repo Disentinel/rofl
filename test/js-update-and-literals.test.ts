@@ -408,6 +408,14 @@ function withoutBigintValues(): World {
     const qr = r.query(lit);
     assert.equal(qr.error, undefined, `query ${lit}: ${qr.error}`);
     assert.equal(qr.partial, false, `query ${lit} hit a budget`);
+    // ...AND THE THIRD FIELD, added 2026-09-08 when the derived gate in
+    // test/query-unpopulatable.test.ts named this file. It matters MORE here
+    // than in a shared world, not less: this construction exists to WITHHOLD
+    // facts, so the answer it is asked for is expected to be empty, and an
+    // empty answer from a misspelt relation is the same picture. `unpopulatable`
+    // is the kernel separating `nothing derived` from `nothing here could`.
+    assert.equal(qr.unpopulatable, false,
+      `query ${lit}: nothing in this world can populate it`);
     const seen = new Set<string>();
     const order = [...lit.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map((mm) => mm[1])
       .filter((v) => (seen.has(v) ? false : (seen.add(v), true)));
