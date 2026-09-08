@@ -153,6 +153,8 @@ test('every member call on a known prototype is attributed to a dated method', (
     'regexp.test since es5 x2',
     'string.concat since es5',
     'string.replaceAll since es2021',
+    'string.substr since es5',
+    'string.trimLeft since es2019',
   ]);
   // ...AND NOTHING IS LEFT OVER. This is the row that would notice
   // `prototype_of` going wrong: a member call on a KNOWN prototype whose name
@@ -181,12 +183,12 @@ test('a library method is gated by year, and three years discriminate', () => {
   // es2021 in the scale it is visibly a comparison of YEARS, method by method.
   // es2023 is absent from the list entirely — it is above all three.
   assert.deepEqual(unsupported(base()), [
-    'es2015: array.at bigint.toString string.replaceAll',
-    'es2016: array.at bigint.toString string.replaceAll',
-    'es2017: array.at bigint.toString string.replaceAll',
+    'es2015: array.at bigint.toString string.replaceAll string.trimLeft',
+    'es2016: array.at bigint.toString string.replaceAll string.trimLeft',
+    'es2017: array.at bigint.toString string.replaceAll string.trimLeft',
     'es2020: array.at string.replaceAll',
     'es2021: array.at',
-    'es5: array.at bigint.toString string.replaceAll',
+    'es5: array.at bigint.toString string.replaceAll string.trimLeft',
   ]);
   // ts5 RANKS 2022 AND IS ABSENT FROM THAT LIST, which is the claim: the gate
   // compares years and does not flag methods for looking new.
@@ -215,7 +217,8 @@ test('MUTANT 2 — the residue audit stops subtracting what it attributed', () =
   assert.deepEqual(attributed(m), attributed(base()));
   assert.deepEqual(residue(m),
     ['array.at', 'array.join', 'array.join', 'bigint.toString',
-     'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll']);
+     'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll',
+     'string.substr', 'string.trimLeft']);
 });
 
 test('MUTANT 3 — the year comparison includes the environment itself', () => {
@@ -237,7 +240,7 @@ test('MUTANT 3 — the year comparison includes the environment itself', () => {
   // only methods it calls unsupported are exactly the ones it has. Named rather
   // than counted, because `es5 reports something` would also be true of the
   // honest tree.
-  assert.ok(unsupported(m).some((l) => l === 'es5: array.join regexp.test string.concat'),
+  assert.ok(unsupported(m).some((l) => l === 'es5: array.join regexp.test string.concat string.substr'),
     `expected es5 to report its own methods, got ${JSON.stringify(unsupported(m))}`);
 });
 
@@ -247,11 +250,11 @@ test('MUTANT 4 — a method is dated wrongly in the pack', () => {
   // ...and it leaves the gate entirely rather than moving within it: 2009 is at
   // or below every environment on the scale.
   assert.deepEqual(unsupported(m), [
-    'es2015: bigint.toString string.replaceAll',
-    'es2016: bigint.toString string.replaceAll',
-    'es2017: bigint.toString string.replaceAll',
+    'es2015: bigint.toString string.replaceAll string.trimLeft',
+    'es2016: bigint.toString string.replaceAll string.trimLeft',
+    'es2017: bigint.toString string.replaceAll string.trimLeft',
     'es2020: string.replaceAll',
-    'es5: bigint.toString string.replaceAll',
+    'es5: bigint.toString string.replaceAll string.trimLeft',
   ]);
 });
 
@@ -302,4 +305,62 @@ test('without the era pack the kernel names the missing half', () => {
   const w = wrap(half);
   assert.deepEqual(attributed(w), attributed(base()));
   assert.deepEqual(unsupported(w), []);
+});
+
+// ---------------------------------------------------------------------------
+// 6. AND WHETHER THE METHOD IS STILL THE ONE TO USE
+//
+// w_env_api_surface asked for `replaced_by/2` as the other half of the surface.
+// It is not a missing half — it is a relation whose subject barely exists.
+
+const deprecated = (w: World): string[] =>
+  w.q('lib_call_deprecated[audit](C, P, K)').map(([, p, k]) => `${p}.${k}`).sort();
+const remedy = (w: World): string[] =>
+  w.q('lib_call_remedy[audit](C, P, K, R)').map(([, p, k, r]) => `${p}.${k} -> ${r}`).sort();
+
+test('a deprecated call is named, and its remedy only when the source names one', () => {
+  const b = base();
+  assert.deepEqual(deprecated(b), ['string.substr', 'string.trimLeft']);
+  // ONE REMEDY OUT OF TWO DEPRECATIONS, and that ratio is the finding rather
+  // than the fixture: measured over the ecmascript lib files, FORTY-ONE
+  // `@deprecated` tags and TWO name a replacement. The other thirty-nine read
+  // `A legacy feature for browser compatibility` and name nothing, because
+  // there IS no replacement for `blink()` or `substr()`.
+  assert.deepEqual(remedy(b), ['string.trimLeft -> trimStart']);
+});
+
+test('the generated tables carry the ratio the source has', () => {
+  const members = scanLib(LIB);
+  const dep = members.filter((m) => m.deprecated);
+  const named = members.filter((m) => m.replacedBy);
+  // SEVENTEEN ON THE EIGHT PROTOTYPES THIS MODEL NAMES, of the forty-one tags
+  // in those files — the rest sit on standalone declarations like `escape` and
+  // on interfaces no `kind_prototype` row reaches.
+  assert.equal(dep.length, 17);
+  assert.deepEqual(named.map((m) => `${m.proto}.${m.method} -> ${m.replacedBy}`).sort(),
+    ['string.trimLeft -> trimStart', 'string.trimRight -> trimEnd']);
+});
+
+test('MUTANT 6 — the deprecation join is withdrawn', () => {
+  const m = build([{ file: 'rules/js-env-api.rofl',
+    find: 'lib_call_deprecated[audit](C, P, Key) :- lib_call[code](C, P, Key, _),',
+    replace: 'lib_call_deprecated_unused[audit](C, P, Key) :- lib_call[code](C, P, Key, _),' }]);
+  assert.deepEqual(deprecated(m), []);
+  assert.deepEqual(remedy(m), [], 'and the remedy goes with it, being derived from it');
+});
+
+test('MUTANT 7 — the remedy join is withdrawn', () => {
+  const m = build([{ file: 'rules/js-env-api.rofl',
+    find: 'lib_replaced_by(P, Key, R).', replace: 'lib_replaced_by_unused(P, Key, R).' }]);
+  // ITS OWN SIGNATURE, and it is what separates this mutant from the one above:
+  // the deprecations stand and only the remedy goes.
+  assert.deepEqual(deprecated(m), ['string.substr', 'string.trimLeft']);
+  assert.deepEqual(remedy(m), []);
+});
+
+test('MUTANT 8 — a deprecation is dropped from the generated pack', () => {
+  const m = build([{ file: SURFACE,
+    find: 'lib_deprecated(string, "substr").', replace: '' }]);
+  assert.deepEqual(deprecated(m), ['string.trimLeft'],
+    'the one with a remedy survives, which is the half a reader would notice last');
 });

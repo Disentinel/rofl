@@ -55,7 +55,19 @@ export function releaseOf(libFile: string): string | null {
   return m ? m[1] : null;   // `esnext` and `dom` are excluded: no release to name
 }
 
-export interface LibMember { proto: string; method: string; since: string; file: string }
+export interface LibMember {
+  proto: string; method: string; since: string; file: string;
+  /** the member carries `@deprecated` in its own JSDoc */
+  deprecated: boolean;
+  /** the replacement the deprecation NAMES, where it names one. Measured
+   *  2026-09-08 over the ecmascript lib files: 41 deprecations and TWO name a
+   *  replacement (`trimStart`, `trimEnd`). The other 39 read `A legacy feature
+   *  for browser compatibility` and name nothing — not because the source is
+   *  poor but because there IS no replacement for `blink()` or `substr()`. The
+   *  relation is nearly empty in truth, which is worth knowing before anyone
+   *  builds a mechanism for it. */
+  replacedBy: string | null;
+}
 
 /** `includes(Release, Part)` — TypeScript's OWN composition, read from the
  *  `/// <reference lib="..." />` lines. Measured 2026-09-08: every edition file
@@ -109,6 +121,13 @@ export function scanLib(libDir: string): LibMember[] {
       if (!proto) continue;
       for (const mem of st.members) {
         if (!ts.isMethodSignature(mem) && !ts.isPropertySignature(mem)) continue;
+        // THE DEPRECATION IS IN THE JSDoc, and the compiler hands the leading
+        // comment ranges back rather than parsing the tag for us at this level.
+        // Reading the text is the whole of it: `@deprecated` is the flag, and
+        // `Use \`X\` instead` is the only structured half of what follows.
+        const doc = mem.getFullText(src).slice(0, mem.getStart(src) - mem.getFullStart());
+        const deprecated = /@deprecated/.test(doc);
+        const rep = /@deprecated[^\n]*?[Uu]se `([^`]+)` instead/.exec(doc);
         // A COMPUTED NAME IS A SYMBOL, and a symbol-keyed member is not a name
         // a member expression in this corpus can spell. `selects[flow]` answers
         // a KEY, so the surface is keyed by names too.
@@ -120,7 +139,8 @@ export function scanLib(libDir: string): LibMember[] {
         // to whatever edition it also appears in. The chain below is measured
         // from the `/// <reference lib=` lines, so `before` asks the graph.
         if (!prev || before(since, prev.since)) {
-          earliest.set(key, { proto, method: mem.name.text, since, file: f });
+          earliest.set(key, { proto, method: mem.name.text, since, file: f,
+                              deprecated, replacedBy: rep ? rep[1] : null });
         }
       }
     }
@@ -163,7 +183,24 @@ export function emit(members: LibMember[], composition: [string, string][] = COM
     ...composition.map(([r, p]) => `includes(${r}, ${p}).`), '',
   ];
   const rows = members.map((m) => `lib_member(${m.proto}, ${JSON.stringify(m.method)}, ${m.since}).`);
-  return head.concat(comp).concat(rows).join('\n') + '\n';
+  const dep = [
+    '',
+    '-- `lib_deprecated(Prototype, Method)` — the member carries `@deprecated` in',
+    '-- TypeScript`s own declaration. `lib_replaced_by` is the half the source can',
+    '-- rarely give: MEASURED, 41 deprecations across the ecmascript libs and TWO',
+    '-- name a replacement. The other 39 read `A legacy feature for browser',
+    '-- compatibility` and name nothing, because there IS no replacement for',
+    '-- `blink()` or `substr()`. The relation is nearly empty in truth.',
+    'edb(lib_deprecated).',
+    'edb(lib_replaced_by).',
+    '',
+    ...members.filter((m) => m.deprecated)
+      .map((m) => `lib_deprecated(${m.proto}, ${JSON.stringify(m.method)}).`),
+    '',
+    ...members.filter((m) => m.replacedBy)
+      .map((m) => `lib_replaced_by(${m.proto}, ${JSON.stringify(m.method)}, ${JSON.stringify(m.replacedBy)}).`),
+  ];
+  return head.concat(comp).concat(rows).concat(dep).join('\n') + '\n';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

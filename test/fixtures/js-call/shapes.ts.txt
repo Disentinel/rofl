@@ -842,3 +842,13 @@ export function usesThimble(n: number): number {
   return new Thimble().seized(n) + new Thimble().hauls(n) + Thimble.tightened(n);
 }
 export function usesTucked(n: number): number { return new Thimble().tucked(n); }
+
+// TWO DEPRECATED LIBRARY CALLS (w_env_api_surface, 2026-09-08), and the pair is
+// the point: `substr` is deprecated and names NO replacement, `trimLeft` is
+// deprecated and names `trimStart`. Measured over the ecmascript lib files —
+// forty-one deprecations, two of which name a replacement — so a site for each
+// half is a site for the whole relation, and `lib_call_remedy[audit]` having
+// exactly one row is a fact about the SOURCE rather than about this fixture.
+export function legacyString(s: string): string {
+  return 'abc'.substr(0, 1) + 'abc'.trimLeft() + s;
+}

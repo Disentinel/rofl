@@ -52,3 +52,23 @@ stdlib_unattributed[audit](C, P, Key) :- stdlib_member[audit](C, P, Key),
 -- in the same words, for the first time.
 lib_unsupported[audit](E, C, P, Key) :- lib_call[code](C, P, Key, Rel),
                                         environment(E), not reaches[audit](E, Rel).
+
+-- ---------------------------------------------------------------------------
+-- AND WHETHER THE METHOD IS STILL THE ONE TO USE. `lib_deprecated` is read from
+-- the same declarations as everything else here — TypeScript carries
+-- `@deprecated` in the JSDoc and the scanner reads it — so a call to a method
+-- the standard says not to use is one join away from the residue.
+--
+-- `lib_replaced_by` IS NEARLY EMPTY AND THAT IS THE ANSWER, not a gap. Measured
+-- 2026-09-08: forty-one `@deprecated` tags across the ecmascript libs and TWO
+-- name a replacement, `trimStart` and `trimEnd`. The other thirty-nine read
+-- `A legacy feature for browser compatibility` and name nothing, because there
+-- IS no replacement for `blink()` or `substr()`. w_env_api_surface asked for
+-- `replaced_by/2` as if it were the missing half of the surface; it is a
+-- relation whose subject barely exists on this axis, and the place it would
+-- earn its keep is a RUNTIME's API — `fs.rmdir` for `fs.rm` — which is a source
+-- this repository does not have.
+lib_call_deprecated[audit](C, P, Key) :- lib_call[code](C, P, Key, _),
+                                         lib_deprecated(P, Key).
+lib_call_remedy[audit](C, P, Key, R)  :- lib_call_deprecated[audit](C, P, Key),
+                                         lib_replaced_by(P, Key, R).

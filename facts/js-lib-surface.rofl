@@ -168,3 +168,33 @@ lib_member(string, "trimLeft", es2019).
 lib_member(string, "trimRight", es2019).
 lib_member(string, "trimStart", es2019).
 lib_member(string, "valueOf", es5).
+
+-- `lib_deprecated(Prototype, Method)` — the member carries `@deprecated` in
+-- TypeScript`s own declaration. `lib_replaced_by` is the half the source can
+-- rarely give: MEASURED, 41 deprecations across the ecmascript libs and TWO
+-- name a replacement. The other 39 read `A legacy feature for browser
+-- compatibility` and name nothing, because there IS no replacement for
+-- `blink()` or `substr()`. The relation is nearly empty in truth.
+edb(lib_deprecated).
+edb(lib_replaced_by).
+
+lib_deprecated(regexp, "compile").
+lib_deprecated(string, "anchor").
+lib_deprecated(string, "big").
+lib_deprecated(string, "blink").
+lib_deprecated(string, "bold").
+lib_deprecated(string, "fixed").
+lib_deprecated(string, "fontcolor").
+lib_deprecated(string, "fontsize").
+lib_deprecated(string, "italics").
+lib_deprecated(string, "link").
+lib_deprecated(string, "small").
+lib_deprecated(string, "strike").
+lib_deprecated(string, "sub").
+lib_deprecated(string, "substr").
+lib_deprecated(string, "sup").
+lib_deprecated(string, "trimLeft").
+lib_deprecated(string, "trimRight").
+
+lib_replaced_by(string, "trimLeft", "trimStart").
+lib_replaced_by(string, "trimRight", "trimEnd").
