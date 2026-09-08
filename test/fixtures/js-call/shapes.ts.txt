@@ -197,3 +197,218 @@ const { bolted: usedBolted, ...leftovers } = fastenings;
 export function pullsRest(n: number): number { return leftovers.riveted(n); }
 export function pullsTaken(n: number): number { return usedBolted(n); }
 export function pullsExcluded(n: number): number { return leftovers.bolted(n); }
+// ---------------------------------------------------------------------------
+// LABELLED CONTROL, 2026-09-08 — queue item w_labelled_control, and the corpus
+// contained ZERO labels before this block: `labeled_statement` 0 nodes,
+// `break_statement` with a `label` child 0. So what the control-flow layer did
+// with `break outer` was a GUESS, and the first thing this fixture bought was
+// the measurement rather than the rule.
+//
+// SCANNED AND NOT RUN, and the reason is the oracle rather than the construct —
+// every line here runs perfectly well. trace.mjs records CALL FRAMES, and what
+// this fixture asks about is `after_abrupt`, which is not observable as a
+// frame: a statement that never runs produces no evidence at all. A runnable
+// copy would cost alpha.mjs's pinned counts and buy nothing.
+//
+// EACH POSITION IS A CALL TO A DISTINCTLY NAMED FUNCTION, which is the pattern
+// `neverReached`/`neverCased` established in alpha.mjs: a statement has no name
+// and a count of them measures the corpus, so the oracle joins `after_abrupt`
+// through `resolves` and reads the CALLEE's name.
+//
+// EVERY LOOP HERE IS A `while` AND THE FIRST DRAFT USED `for...of`, which is the
+// natural spelling and the wrong one. A `for...of` is a `transfer_kind` at the
+// call graph, so ten of them walked into the iterator-protocol oracle in
+// test/js-controlflow-values.test.ts — a named set of four loops, sorted by the
+// function that holds them, whose whole point is which iterables the model can
+// reach. `while` carries the same `guard_kind(_, body)` arm and asks nothing of
+// the value layer, so the label work is measured without moving another item's
+// instrument. A fixture is part of the corpus every other test reads.
+function pastBreak(n: number): number { return n; }
+function pastLabelledBreak(n: number): number { return n; }
+function beyondLabel(n: number): number { return n; }
+
+// `break outer` leaves the OUTER loop from inside the inner one — a transfer
+// across a boundary no unlabelled `break` can cross. `pastBreak` is the
+// ordinary arm (a sibling of the break in its own statement list, which
+// `r_abrupt` already covered) and `pastLabelledBreak` is the one only a label
+// can reach: it is a sibling of the INNER LOOP, one list further out.
+// `beyondLabel` is the precision control — it sits after the labelled statement
+// and it runs.
+export function labelledBreak(n: number): number {
+  let total = 0;
+  outer: while (total < n) {
+    while (total < n) {
+      total = total + 1;
+      break outer;
+      pastBreak(n);
+    }
+    pastLabelledBreak(total);
+  }
+  return beyondLabel(total);
+}
+
+function pastContinue(n: number): number { return n; }
+function pastLabelledContinue(n: number): number { return n; }
+
+// ...and `continue outer` is the same walk with a different destination: the
+// rest of the labelled loop's body is skipped for this iteration. The layer
+// files break and continue under one mechanism and this fixture keeps them two
+// sites, because one site would let an arm covering only `break` pass.
+export function labelledContinue(n: number): number {
+  let total = 0;
+  rowLoop: while (total < n) {
+    while (total < n) {
+      total = total + 1;
+      continue rowLoop;
+      pastContinue(n);
+    }
+    pastLabelledContinue(total);
+  }
+  return total;
+}
+
+function pastBlockBreak(n: number): number { return n; }
+function pastLabelledBlock(n: number): number { return n; }
+function afterBlock(n: number): number { return n; }
+
+// A LABEL ON A BLOCK, which is the form nothing but a label can produce: `blk`
+// names no loop and no switch, so `break blk` is the only statement in the
+// language that can leave it. A model that read a labelled break as an ordinary
+// one would say the whole of this function's block runs — and that is not a
+// hypothetical, it is what the model said before this item: a labelled block is
+// not a loop body, not an `if` arm and not a switch case, so `pastLabelledBlock`
+// was in NEITHER `guarded` NOR `may_not_run`.
+export function labelledBlock(n: number): number {
+  let total = 0;
+  blk: {
+    while (total < n) {
+      total = total + 1;
+      break blk;
+      pastBlockBreak(n);
+    }
+    pastLabelledBlock(total);
+  }
+  return afterBlock(total);
+}
+
+function pastConditionalLabelledBreak(n: number): number { return n; }
+
+// WHERE THIS ARM IS STRUCTURALLY UNABLE TO LOOK, put in the corpus as a ROW
+// rather than left in a sentence. Every break above is UNCONDITIONAL in its own
+// statement list, so reaching it is reaching it. Here the transfer sits under an
+// `if`, which means `pastConditionalLabelledBreak` runs on every iteration whose
+// test is false — and `after_abrupt`, whose own comment says NEVER, names it
+// anyway, because the walk from the reference to the label crosses a guard arm
+// without noticing. The `throwing_call` arm has had the same body shape since
+// 2026-09-06 and was never given a site of its own.
+export function conditionalLabelledBreak(n: number, off: number): number {
+  let total = 0;
+  cond: while (total < n) {
+    while (total < n) {
+      if (off > 0) break cond;
+      total = total + 1;
+    }
+    pastConditionalLabelledBreak(total);
+  }
+  return total;
+}
+
+function pastPlainBreak(n: number): number { return n; }
+function beyondPlainBreak(n: number): number { return n; }
+
+// THE NEGATIVE CONTROL, and it is the whole content of the item. An UNLABELLED
+// break leaves the inner loop and nothing else, so `beyondPlainBreak` runs on
+// every iteration that reaches it. If the rule for the labelled form is written
+// over `break_statement` rather than over the LABEL, this name appears beside
+// `pastLabelledBreak` and the model has stopped telling the two apart.
+//
+// THE LABEL IS PRESENT AND UNREFERENCED ON PURPOSE. Without it this site only
+// says "a function with no label behaves as before", which a rule that keyed on
+// `break_statement` and happened to find no label would also satisfy. With it,
+// the only thing standing between the plain `break` and `unused` is the `label`
+// CHILD the reference does not have.
+export function plainBreak(n: number): number {
+  let total = 0;
+  unused: while (total < n) {
+    while (total < n) {
+      total = total + 1;
+      break;
+      pastPlainBreak(n);
+    }
+    beyondPlainBreak(total);
+  }
+  return total;
+}
+
+function pastInnerBreak(n: number): number { return n; }
+function pastInnerLabel(n: number): number { return n; }
+
+// TWO LABELS, AND THE BREAK NAMES THE INNER ONE. Every other site here has one
+// label per function, so "the label containing the reference" and "the label
+// whose NAME the reference carries" are the same node and no site could tell a
+// rule that joins on the name from one that does not. Here they differ:
+// `break linner` leaves the inner loop only, so `pastInnerLabel` runs on every
+// iteration, and a rule that took any enclosing label as the target would say it
+// does not.
+export function twoLabels(n: number): number {
+  let total = 0;
+  louter: while (total < n) {
+    linner: while (total < n) {
+      total = total + 1;
+      break linner;
+      pastInnerBreak(n);
+    }
+    pastInnerLabel(total);
+  }
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// THE INERT STATEMENTS, 2026-09-08 — queue item w_inert_statements, whose own
+// note says "three statements no layer is likely to have an opinion about".
+// LIKELY is a guess and this file exists so that verdicts are not written from
+// guesses, so each position below is here to make one of the four layers say
+// something rather than to make the count go up.
+//
+// `with` IS NOT HERE AND CANNOT BE. Measured 2026-09-08: scanners/js_ast.ts
+// parses every file with `sourceType: 'module'`, modules are strict, and babel
+// answers `'with' in strict mode. (1:0)` — a REFUSAL, not a node. The refusal
+// is total: the scan returns `ast_parse_error` and ZERO ast_node facts, so a
+// `with` anywhere in this file would delete the whole of it from the corpus.
+// See w_inert_statements in facts/worklist.rofl for what the same source does
+// under `sourceType: 'script'`, which is a different measurement with a
+// different answer.
+function seenEmpty(n: number): number { return n; }
+function pastEmpty(n: number): number { return n; }
+
+// FOUR POSITIONS FOR ONE STATEMENT WITH NO CHILDREN. `;` is a statement the
+// scanner emits with ZERO `ast_child` rows, so there is nothing in it for a
+// guard arm to skip and nothing after it inside itself — but it can OCCUPY a
+// guarded position, and the two are different claims. Here it is a statement of
+// its own, the body of a loop, an arm of an `if`, and a sibling after a
+// `return` — which is where an inert statement could still change an answer,
+// because `after_abrupt` counts INDEX and an empty statement consumes one.
+export function inertEmpty(n: number): number {
+  ;
+  let total = n;
+  while (total < 0) ;
+  if (n < 0) ; else total = seenEmpty(total);
+  return total;
+  ;
+  pastEmpty(total);
+}
+
+function pastDebugger(n: number): number { return n; }
+
+// `debugger` is the one statement whose meaning is IMPLEMENTATION-DEFINED: the
+// spec lets an implementation break here and requires nothing. It completes
+// normally either way, which is why it is filed with the inert ones and not
+// with the suspensions — a suspension is control leaving, and this is control
+// stopping in place with the same continuation.
+export function inertDebugger(n: number): number {
+  debugger;
+  const total = seenEmpty(n);
+  return total;
+  debugger;
+  pastDebugger(total);
+}

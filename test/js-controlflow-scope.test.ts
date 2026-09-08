@@ -857,18 +857,35 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // in the safe direction is what `may_not_run` is documented to be — the
   // dangerous direction is a live function reported dead by a set that is too
   // NARROW.
-  // SEVENTEEN on 2026-09-08 with `w_destructuring_rest_and_spread`, and the new
-  // name is a SEVENTEENTH REASON rather than a seventeenth instance:
-  // `fallbackMaker` is called nowhere except inside a parameter`s DEFAULT
-  // VALUE, and a default runs only when the argument is absent. Measured at run
-  // time before the row: two calls to the same defaulted function, one
-  // supplying the argument and one not, ran the default exactly ONCE. The
-  // runtime does enter it — `useMade(1)` omits the argument — which is the same
-  // safe over-cover `alef` and `pickedB` are here for.
-  assert.deepEqual([...mayNotRun].sort(),
-    ['after', 'afterStall', 'alef', 'bet', 'fallbackMaker', 'guardedElse',
-     'label', 'loopBody', 'neverCased', 'neverReached', 'pickedB', 'reading',
-     'rescue', 'sleeper', 'unlit', 'unreached', 'unreadable']);
+  // THIRTY ON 2026-09-08, AND THE NUMBER IS A MERGE OF TWO PARALLEL BRANCHES.
+  // `fallbackMaker` arrives from w_destructuring_rest_and_spread: it is called
+  // nowhere except inside a parameter's DEFAULT VALUE, and a default runs only
+  // when the argument is absent — measured at run time, two calls to the same
+  // defaulted function ran the default exactly ONCE. The other thirteen arrive
+  // from w_labelled_control and w_inert_statements, and not one of them is a new
+  // KIND of answer: each is a call placed in a position under study so that a
+  // statement, which has no name, can be read back by the name of what it calls.
+  // Four say something only a label can — `pastLabelledBreak`,
+  // `pastLabelledContinue`, `pastLabelledBlock` and
+  // `pastConditionalLabelledBreak` follow a transfer that leaves a statement
+  // further out than the reference's own list — and `pastLabelledBlock` is the
+  // one that was WRONG rather than missing: a labelled block is not a loop body
+  // and not an arm, so before the rule the model said it runs.
+  //
+  // THIS LIST IS WHY THE PINS ARE SETS. Two branches grew it independently and
+  // the merge is a UNION, which is computable and was computed. Had it been
+  // `assert.equal(mayNotRun.size, 17)` against `... 29`, both numbers would have
+  // been right on their own branch, neither right here, and nothing in the
+  // conflict would have said what the third number was.
+  assert.deepEqual([...mayNotRun].sort(), [
+    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'fallbackMaker',
+    'guardedElse', 'label', 'loopBody', 'neverCased', 'neverReached',
+    'pastBlockBreak', 'pastBreak', 'pastConditionalLabelledBreak',
+    'pastContinue', 'pastDebugger', 'pastEmpty', 'pastInnerBreak',
+    'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
+    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'reading', 'rescue',
+    'sleeper', 'unlit', 'unreached', 'unreadable',
+  ]);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
   // TWO now, and they are two different shapes of the same relation. `dormant`

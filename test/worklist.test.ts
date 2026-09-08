@@ -191,8 +191,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     'w_cg_syntactic_wrappers', 'w_class_expression', 'w_class_fields',
     'w_destructuring_rest_and_spread', 'w_df_function_forms', 'w_df_generator_protocol',
     'w_df_sweep', 'w_df_value_core', 'w_directives',
-    'w_env_api_surface', 'w_export_specifier_forms', 'w_inert_statements',
-    'w_labelled_control', 'w_meta_property', 'w_mod_beyond_the_import',
+    // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:
+    // both were taken and both spawned, which is the list working — an item
+    // entered but not started looks identical to one nobody looked at, and the
+    // only thing that tells them apart is a finding.
+    'w_env_api_surface', 'w_export_specifier_forms',
+    'w_meta_property', 'w_mod_beyond_the_import',
     'w_mod_sweep', 'w_plugin_gated_kinds', 'w_scope_shadowing',
     'w_update_and_literals',
   ], 'an item that spawns nothing is either trivial or was not looked at');

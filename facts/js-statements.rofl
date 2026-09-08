@@ -145,3 +145,76 @@ ignored(js, variable_declaration, controlflow, a_a_container_transfers_nothing).
 handled(js, throw_statement,    controlflow, r_abrupt).
 handled(js, break_statement,    controlflow, r_abrupt).
 handled(js, continue_statement, controlflow, r_abrupt).
+
+-- ===========================================================================
+-- LABELLED CONTROL, 2026-09-08 — queue item w_labelled_control. One kind, four
+-- cells, and the interesting one is the third.
+--
+-- MEASURED FIRST, on a fixture built because the corpus held ZERO labels:
+-- `after_abrupt[code]` named `pastBreak` and `pastContinue` — the siblings of
+-- the break in its OWN statement list, which a plain `break` kills too — and
+-- did not name `pastLabelledBreak`, `pastLabelledContinue` or
+-- `pastLabelledBlock`. THE MODEL WAS READING A LABELLED BREAK AS AN ORDINARY
+-- ONE. `r_labelled_boundary` reads the LABEL rather than the keyword and walks
+-- from the reference to the `labeled_statement` that carries the same name,
+-- which is why `beyondPlainBreak` — after an unlabelled break — stays out.
+handled(js, labeled_statement, controlflow, r_labelled_boundary).
+
+-- ...AND THE OTHER THREE LAYERS WERE ASKED RATHER THAN ASSUMED. Over the
+-- corpus, with the fixture in it, every `labeled_statement` node appears in
+-- ZERO rows of `site[code]` (the call graph's own denominator: a call site or a
+-- transfer site) and zero of `resolves[code]` on either side, ZERO of
+-- `valued[flow]` (`may_be_lit` or `may_be_node`, the value layer's answer to
+-- "does this node carry a value"), and ZERO of `import_site[code]`,
+-- `site_kind[code]` and `binding[code]`. AN EMPTY INTERSECTION IS A FACT ABOUT
+-- THE QUERY until something proves the query can return rows, so each of those
+-- five carries a positive control in the same run: EVERY `call_expression` node
+-- is a site (406 of 406 on 2026-09-08), identifiers are valued (938), and every
+-- `import_declaration` is an import site with a shape (8 of 8). The first three
+-- are asserted in test/js-controlflow.test.ts; the modules pair was measured in
+-- a world built by hand, because test/js-corpus-world.ts does not load
+-- rules/js-modules.rofl and those relations are not in that world at all.
+ignored(js, labeled_statement, callgraph, a_a_statement_is_not_a_callee).
+ignored(js, labeled_statement, dataflow,  a_a_statement_carries_no_value).
+ignored(js, labeled_statement, modules,   a_not_a_module_construct).
+
+-- ===========================================================================
+-- THE INERT STATEMENTS, 2026-09-08 — queue item w_inert_statements. Its own
+-- note says "three statements no layer is likely to have an opinion about", and
+-- LIKELY is a guess: eight of the twelve cells are closed below because a
+-- fixture put the construct in the corpus and a query returned a row or failed
+-- to. The other four are `with_statement`, which no scan in this repository can
+-- produce — see facts/worklist.rofl for the measurement and what would move it.
+--
+-- AND THE CONTROL-FLOW LAYER DOES HAVE AN OPINION, which is why these two rows
+-- are not the arithmetic the item's note expected. Measured over the corpus:
+-- of four `empty_statement` nodes, THREE are `guarded[code]`, TWO are a
+-- `guard_arm[code]` (a loop body written `while (total < 0) ;` and the
+-- consequent of an `if`) and ONE is `after_abrupt[code]`; of two
+-- `debugger_statement` nodes, one is guarded and one is after an abrupt
+-- transfer. So an inert statement OCCUPIES conditional positions perfectly
+-- well. What it does not do is CREATE one — neither kind is in
+-- `transfer_mechanism`, and `;` is the only statement in the language the
+-- scanner emits with ZERO `ast_child` rows, so there is nothing inside it for a
+-- guard to skip and nothing after it inside itself. Occupying a guarded
+-- position and transferring control are different claims, and only the second
+-- is what this layer's cells ask about.
+ignored(js, empty_statement,    controlflow, a_no_control_transfer).
+-- `debugger` is the one statement whose effect is IMPLEMENTATION-DEFINED: the
+-- spec permits a breakpoint and requires nothing. Either way it completes
+-- normally with the same continuation, which is what separates it from the
+-- suspensions — an `await` is control LEAVING, and this is control stopping in
+-- place. Waived on the language rather than on our effort, the same shape as
+-- `do_while_statement` above.
+ignored(js, debugger_statement, controlflow, a_no_control_transfer).
+
+-- ...and the same three queries as the label, with the same positive controls:
+-- four `empty_statement` and two `debugger_statement` nodes, ZERO rows in
+-- `site[code]`, `resolves[code]`, `valued[flow]`, `import_site[code]`,
+-- `site_kind[code]` and `binding[code]`.
+ignored(js, empty_statement,    callgraph, a_a_statement_is_not_a_callee).
+ignored(js, debugger_statement, callgraph, a_a_statement_is_not_a_callee).
+ignored(js, empty_statement,    dataflow,  a_a_statement_carries_no_value).
+ignored(js, debugger_statement, dataflow,  a_a_statement_carries_no_value).
+ignored(js, empty_statement,    modules,   a_not_a_module_construct).
+ignored(js, debugger_statement, modules,   a_not_a_module_construct).
