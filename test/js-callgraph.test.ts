@@ -384,16 +384,28 @@ test('the shape census — the frontier, as a table', () => {
   const rows = [...tally].sort((a, b) => b[1] - a[1]);
   console.log('  shape census (' + m.n('call_site[code](C, F)') + ' call sites):');
   for (const [s, n] of rows) console.log(`    ${String(n).padStart(3)}  ${s}`);
-  // s_identifier dominates because every instrumented function calls trace()
-  // 3 -> 5 on 2026-09-07 with the scope fixtures: `useKeyA` and `useKeyB` each
-  // write `two[keyPick]()` where `keyPick` is a local `const` holding a string,
-  // so the KEY EXPRESSION is not a literal and the shape is dynamic — while the
-  // value layer resolves both, which is the point of the pair. A shape counts
-  // how the site is SPELLED; whether it resolves is a different table.
-  // 5 -> 6 on 2026-09-07: `bin.nest[slotKey](n)` — the read side of the
-  // computed write the alias arm was asked to reach.
-  assert.equal(tally.get('s_computed_dynamic_key'), 6, 'six computed callees with a non-literal key');
-  assert.equal(tally.get('s_computed_literal_key'), 2, 'two computed callees with a literal key');
+  // s_identifier dominates because every instrumented function calls trace().
+  //
+  // CONVERTED FROM TWO LITERALS, 2026-09-08 (w_class_fields), and the changelog
+  // they had carried is the argument: `3 -> 5 on 2026-09-07 with the scope
+  // fixtures`, `5 -> 6 the same day`, and then 6 -> 8 the next, because
+  // `new Coin()[Coin.pick](n)` and its subclass twin are two more computed
+  // callees. A NUMBER THAT MOVES WHEN THE CORPUS GROWS IS MEASURING THE CORPUS
+  // — f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus — and what
+  // these two lines were actually asserting is that the three computed shapes
+  // PARTITION the computed callees, which is an identity and does not move.
+  //
+  // A shape counts how the site is SPELLED; whether it resolves is a different
+  // table, and the pair `two[keyPick]()` / `two['fixed']()` is still what makes
+  // the partition non-vacuous on both sides.
+  const computed = m.q('computed_member[code](C, K)').length;
+  const byShape = (s: string) => tally.get(s) ?? 0;
+  assert.equal(byShape('s_computed_dynamic_key') + byShape('s_computed_literal_key')
+    + byShape('s_computed_template_key'), computed,
+    'the three computed shapes partition the computed callees');
+  for (const s of ['s_computed_dynamic_key', 's_computed_literal_key', 's_computed_template_key']) {
+    assert.ok(byShape(s) > 0, `positive control: ${s} has a site`);
+  }
   assert.ok((tally.get('s_unclassified') ?? 0) === 0, 'nothing unclassified in this corpus');
 });
 

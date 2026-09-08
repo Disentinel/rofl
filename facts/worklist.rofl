@@ -1155,7 +1155,42 @@ work_spawned(w_destructuring_rest_and_spread, f_destructuring_hides_a_call_the_w
 -- 51 - class_property, class_private_property, class_private_method, private_name, static_block.
 work(w_class_fields, "class fields, private names and static blocks - ES2022 class syntax the vocabulary never named").
 work_order(w_class_fields, 51).
-work_state(w_class_fields, open).
+work_state(w_class_fields, done).
+-- DONE 2026-09-08. All twenty cells answered: fourteen `handled` and six
+-- waivers, and the five kinds' names were checked against what the scanner
+-- EMITS before anything was written - all five match.
+--
+-- THE ANSWER TO THE SHARP QUESTION, and it decided the shape of every rule.
+-- A PRIVATE NAME IS NOT A KEY. `this.#edge` does not ask the receiver what
+-- `#edge` is: a private name is bound by the class body that DECLARES it, at
+-- parse time, and cannot be inherited, deleted, computed or reached from
+-- outside. So `key_name[code]` got NO arm for `private_name`, `selects[flow]`
+-- stays empty on a private member read, and the private half is a separate
+-- relation from `private_key` down to `may_be_node` - EXACT where the ordinary
+-- member lookup is a may-set. Two sites say why rather than a paragraph: `rim`
+-- and `#rim` are both members of one class in the fixture, and `{ '#edge': ... }`
+-- is a legal string key, measured by running it.
+--
+-- AND THE CONTROL-FLOW ANSWER CAME FROM RUNNING THE SHAPE, which split one kind
+-- into two verdicts nobody had asked for. `class Never { unused = mark();
+-- static tag = mark(); }`, defined and never constructed, ran the STATIC
+-- initialiser and not the instance one - so a non-static field initialiser is
+-- an arm skipped by the ABSENCE OF A `new` and a static one is not. That is the
+-- seventh `transfer_mechanism`, `per_construction`, and the model agrees with
+-- the measurement: `may_not_run` names the six callees of instance initialisers
+-- and not `sealed`, which is the static field`s.
+--
+-- ONE ROW WAS ALREADY WRONG RATHER THAN SILENT, and it is the only one:
+-- `this_binds_kind(class_private_method)` was declared and `class_method_of`
+-- did not read it, so `this` inside a private method reached no class. A row
+-- with no consumer, found by writing the fixture rather than by reading.
+--
+-- WHAT IS SHORT, SAID HERE RATHER THAN LEFT TO BE FOUND: `resolves[code]`
+-- reaches a private method and `calls_named` cannot spell it. See
+-- f_a_private_method_resolves_and_cannot_be_named - it is a kernel gap, not a
+-- rule gap.
+work_spawned(w_class_fields, f_a_private_method_resolves_and_cannot_be_named).
+work_spawned(w_class_fields, f_a_class_initialiser_is_a_frame_with_no_function).
 claim(queued, js, class_property,              none, callgraph,    w_class_fields).
 claim(queued, js, class_property,              none, dataflow,     w_class_fields).
 claim(queued, js, class_property,              none, controlflow,  w_class_fields).

@@ -295,16 +295,28 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
   {
     name: 'r1 the export surface stops being a seed',
     mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
-    expect: (m) => assert.equal(m.n('reachable[code](F)'), 1,
-      'without the seed the walk has nowhere to start: one top-level call'),
+    // A NAMED SET AND NOT A COUNT, converted 2026-09-08 (w_class_fields), which
+    // is when the number moved 1 -> 4: a call in a STATIC field initialiser and
+    // one in a static block are top-level calls too — neither sits in a function
+    // — so they seed the walk exactly as `seed` does, and `hammered` follows
+    // from `forge` through the recursive arm this mutant leaves alone.
+    expect: (m) => assert.deepEqual(m.q('reachable[code](F)')
+      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+      ['forge', 'hammered', 'sealed', 'seed'],
+      'without the seed only the top-level calls start the walk'),
   },
   {
     name: 'r2 the walk stops after one step',
     mut: [{ find: `reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
                       not guarded[code](C).`, replace: '' }],
     expect: (m, b) => {
-      assert.equal(m.n('reachable[code](F)'), m.n('entry_point[code](F)') + 1,
-        'only the entry points and the top-level call remain');
+      assert.deepEqual(m.q('reachable[code](F)')
+        .filter(([f]) => m.n(`entry_point[code](${f})`) === 0)
+        .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+        ['sealed', 'seed'],
+        'only the entry points and the top-level calls remain — and `hammered` is '
+        + 'NOT among them, which is what tells this mutant from r1: it is one hop '
+        + 'further on and this is the arm that takes the hop');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },
   },
@@ -318,9 +330,16 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
     // than called. That is unreachability with no guard anywhere in it, so no
     // amount of ignoring guards can reach it — which makes it a better
     // statement than the zero this asserted before the propagation fixtures.
+    // FOUR MORE ON 2026-09-08 (w_class_fields), and they sharpen the statement
+    // rather than blunt it: `inked`, `minted`, `punched` and `stamped` are called
+    // from NON-STATIC field initialisers, whose only path into the walk is the
+    // top-level seed arm — and that arm carries its OWN `not guarded`, which this
+    // mutant does not touch. So they are unreachable here for the same kind of
+    // reason `lateThrow` is: nothing this mutation relaxes can reach them.
     expect: (m) => assert.deepEqual(m.q('may_not_be_reached[code](F)')
-      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)), ['lateThrow'],
-      'the only thing left is unreachable for a reason that is not a guard'),
+      .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)).sort(),
+      ['inked', 'lateThrow', 'minted', 'punched', 'stamped'],
+      'what is left is unreachable for reasons the relaxed arm cannot touch'),
   },
   {
     name: 'r4 every function is an entry point',
@@ -664,8 +683,18 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
-    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
-      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']),
+    // A LOWER BOUND AND NOT AN ENUMERATION, converted 2026-09-08: this mutant
+    // deliberately walks to the MODULE, so its difference set contains every
+    // top-level callee after the label in the file — which grows whenever anybody
+    // appends a fixture to shapes.ts.txt, and did. The five names below are the
+    // claim; the rest are the corpus.
+    expect: (m, b) => {
+      const extra = afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n));
+      for (const n of ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty'])
+        assert.ok(extra.includes(n), `${n} is reached without the containment literal`);
+      assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)), [],
+        'and nothing is lost — the boundary is absent, not merely moved');
+    },
   },
   {
     name: 'l3 the name join is dropped',

@@ -770,18 +770,26 @@ test('which function binds `this`, named row by row', () => {
   // is not the host, which is the one row that would be wrong under any rule
   // that treated every function form alike.
   const m = base();
+  // THE FALLBACK IS THE NODE'S KIND AND NOT ITS ID, 2026-09-08 (w_class_fields):
+  // three `this` binders in the language are not functions and have no name — a
+  // class field's initialiser, a private field's, and a static block — and a
+  // node id is a content hash, so an id in this list would move every time
+  // anybody edited the fixture ABOVE the row it names.
   const name = (id: string) => {
     const n = m.q(`fn_name[code](${id}, N)`).map(([x]) => x);
-    return n.length ? n.sort().join('/') : id;
+    return n.length ? n.sort().join('/') : (m.q(`ast_node[code](${id}, K, F, L)`)[0]?.[0] ?? id);
   };
   assert.deepEqual(m.q('this_host[flow](F, T)').map(([f]) => name(f)).sort(),
-    ['Barrel', 'Box', 'both', 'both', 'drift', 'get', 'hold', 'relay', 'relay', 'show']);
+    ['Barrel', 'Box', 'both', 'both', 'class_private_method', 'class_private_method',
+     'drift', 'get', 'hold', 'make', 'read', 'relay', 'relay', 'show',
+     'static_block', 'static_block', 'value', 'value', 'value', 'value', 'value']);
   // AND THE DENOMINATOR, without which the list above cannot fail in the
-  // direction that matters: twelve (node, enclosing this-binder) pairs, ten
-  // hosts — so two `this` nodes really do have more than one candidate and the
-  // `not this_nearer` literal really is choosing between them.
-  assert.equal(m.n('this_over[flow](F, T)'), 12,
-    'two of the twelve are the outer candidates the nearest-wins rule discards');
+  // direction that matters: every `this` node paired with each ENCLOSING
+  // this-binder, of which the hosts are the innermost. The gap is the outer
+  // candidates the `not this_nearer` literal discards, and it must not be zero
+  // or the rule is choosing between nothing.
+  assert.ok(m.n('this_over[flow](F, T)') > m.n('this_host[flow](F, T)'),
+    'some `this` really does have more than one candidate binder');
 });
 
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
@@ -924,14 +932,23 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // `assert.equal(mayNotRun.size, 17)` against `... 29`, both numbers would have
   // been right on their own branch, neither right here, and nothing in the
   // conflict would have said what the third number was.
+  // SEVEN MORE ON 2026-09-08 FROM w_class_fields, and they are ONE new kind of
+  // answer rather than seven: `burnished`, `inked`, `minted`, `punched`,
+  // `scored`, `stamped` and `struck` are each called from a NON-STATIC class
+  // field initialiser, which runs once per construction and never if the class
+  // is never constructed. `sealed` — the STATIC field's callee — is deliberately
+  // NOT here, and that split was measured by running the shape rather than read
+  // off the grammar.
   assert.deepEqual([...mayNotRun].sort(), [
-    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'fallbackMaker',
-    'guardedElse', 'label', 'loopBody', 'neverCased', 'neverReached',
+    'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak', 'burnished',
+    'fallbackMaker', 'guardedElse', 'inked', 'label', 'loopBody', 'minted',
+    'neverCased', 'neverReached',
     'pastBlockBreak', 'pastBreak', 'pastConditionalLabelledBreak',
     'pastContinue', 'pastDebugger', 'pastEmpty', 'pastInnerBreak',
     'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
-    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'reading', 'rescue',
-    'sleeper', 'unlit', 'unreached', 'unreadable',
+    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'punched', 'reading',
+    'rescue', 'scored', 'sleeper', 'stamped', 'struck', 'unlit', 'unreached',
+    'unreadable',
   ]);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));

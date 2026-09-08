@@ -261,11 +261,6 @@ node_kind(js, interpreter_directive).
 -- `assignment_pattern`, `rest_element` and `spread_element` in the corpus, and
 -- `kind_absent_stale[audit]` named all four on the first run with the fixtures
 -- in and no verdict written. An excuse cannot outlive its cause.
-kind_absent_ok(class_property, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(class_private_property, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(class_private_method, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(private_name, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(static_block, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(class_expression, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(update_expression, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(big_int_literal, a_declared_for_the_denominator_and_queued).
@@ -283,6 +278,13 @@ kind_absent_ok(meta_property, a_declared_for_the_denominator_and_queued).
 -- the corpus, so `labeled_statement`, `empty_statement` and `debugger_statement`
 -- are exercised and an excuse for their absence is a row about a world that no
 -- longer exists.
+-- ...AND THE FIVE ES2022 CLASS KINDS ARE GONE TOO, 2026-09-08 (w_class_fields),
+-- named by `kind_absent_stale[audit]` on the first run with the fixture in and
+-- no verdict written: the class at the end of test/fixtures/js-call/shapes.ts.txt
+-- puts `class_property`, `class_private_property`, `class_private_method`,
+-- `private_name` and `static_block` in the corpus. An excuse cannot outlive its
+-- cause, and this is the second time in one day the audit said so before a
+-- reader did.
 -- `with_statement` KEEPS ITS ROW and its reason is now a MEASUREMENT rather than
 -- a queue position. scanners/js_ast.ts parses every file with
 -- `sourceType: 'module'`; a module is strict; babel answers `'with' in strict

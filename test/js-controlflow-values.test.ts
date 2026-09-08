@@ -1338,3 +1338,417 @@ test('a destructuring form hides a call, measured by running one', () => {
   assert.deepEqual([second, taken, spreadCopy.taken, arrCopy.length, a, (rest as any).b],
     [2, 1, 1, 2, 1, 1]);
 });
+
+// ---------------------------------------------------------------------------
+// 3s. ES2022 CLASS SYNTAX (w_class_fields), and the item's own question decided
+//     the shape of every rule below: IS A PRIVATE NAME A KEY?
+//
+// It is not. `this.#edge` does not ask the receiver what `#edge` is — a private
+// name is bound by the class body that DECLARES it, at parse time, and cannot be
+// inherited, deleted, computed or reached from outside. So `key_name[code]` has
+// no arm for `private_name`, `selects[flow]` stays EMPTY on a private member
+// read, and the private half is a separate relation from `private_key` down to
+// `may_be_node`. Two sites in the fixture say why rather than a paragraph, and
+// mutant p1 below is the one that turns the second into a red.
+
+/** every private reference in the corpus as `<class it is written in> reads
+ *  <class that declares it>.#<name>` — a NAMED SET, so two branches growing the
+ *  fixture merge as a union rather than as two right numbers. */
+const innerClass = (w: World, n: string): string => {
+  const cands = w.q('class_named[flow](CD, Name, File)')
+    .filter(([cd]) => w.n(`ast_within[code](${cd}, ${n})`) === 1);
+  return cands.filter(([cd]) => !cands.some(([o]) => o !== cd && w.n(`ast_within[code](${cd}, ${o})`) === 1))
+    .map(([, name]) => name).sort().join('+') || '<none>';
+};
+const privBinds = (w: World) => w.q('private_binds[code](N, M)').map(([n, mm]) => {
+  const row = w.q(`private_member[code](CD, Name, ${mm})`)[0];
+  const owner = row ? (w.q(`class_named[flow](${row[0]}, N, F)`)[0]?.[0] ?? '?') : '?';
+  return `${innerClass(w, n)} reads ${owner}.#${row ? row[1] : '?'}`;
+}).sort();
+
+/** the callees of class-field initialisers, by name. `sealed` is the STATIC
+ *  one and it must never be in the may-not-run half. */
+const FIELD_CALLEES = ['burnished', 'hammered', 'inked', 'minted', 'notched',
+                       'pressed', 'punched', 'scored', 'sealed', 'stamped', 'struck'];
+const fieldMayNotRun = (w: World) => [...names(w)].filter((n) => FIELD_CALLEES.includes(n)).sort();
+
+/** the class-fields half of the call graph, as named edges */
+const COIN = ['forge', 'strike', 'value', 'rim', 'usesCoin'];
+const coinEdges = (w: World) => [...edges(w)]
+  .filter((e) => FIELD_CALLEES.some((f) => e.endsWith(' -> ' + f)) || COIN.some((c) => e.endsWith(' -> ' + c)))
+  .filter((e) => !e.startsWith('main ') && !e.startsWith('useTag ') && !e.startsWith('make '))
+  .sort();
+
+/** the private CALL sites that resolve, named by the private member they read —
+ *  `#rim` is the method itself and `#mark` is the arrow a private field holds,
+ *  so the two arms of `may_be_node` are told apart by NAME rather than by a
+ *  count that both would move. */
+const privateCallsResolved = (w: World) => w.q('private_binds[code](N, M)')
+  .map(([n, mm]) => [w.q(`ast_child[code](C, callee, 0, ${n})`)[0]?.[0], mm])
+  .filter(([c]) => c !== undefined && w.n(`resolved_site[code](${c})`) === 1)
+  .map(([, mm]) => '#' + (w.q(`private_member[code](CD, Name, ${mm})`)[0]?.[1] ?? '?'))
+  .sort();
+
+/** the SHAPES of unresolved call sites inside the class-fields region, found by
+ *  CONTAINMENT rather than by a line range - the fixture file is shared and a
+ *  line number moves whenever anybody else appends to it. Empty on the baseline,
+ *  and the seven unresolved sites elsewhere in that file stay put. */
+const FIELD_ROOTS = ['Coin', 'Doubloon', 'Outer'];
+const FIELD_FNS = ['usesCoin', 'usesDoubloon', 'usesPicked', 'usesPickedSub'];
+const unresolvedInFields = (w: World) => {
+  const roots = [
+    ...w.q('class_named[flow](CD, Name, File)').filter(([, n]) => FIELD_ROOTS.includes(n)).map(([cd]) => cd),
+    ...w.q('fn_name[code](F, N)').filter(([, n]) => FIELD_FNS.includes(n)).map(([f]) => f),
+  ];
+  const inside = new Set<string>();
+  for (const r of roots) for (const [d] of w.q(`ast_within[code](${r}, D)`)) inside.add(d);
+  return w.q('unresolved_call[code](C, S)').filter(([c]) => inside.has(c)).map(([, sh]) => sh).sort();
+};
+
+test('class fields, private names and static blocks, answered and measured', () => {
+  const m = base();
+
+  // THE FIVE KINDS ARE IN THE CORPUS, which is what took `kind_absent_ok` from
+  // five rows to none — an excuse cannot outlive its cause.
+  for (const k of ['class_property', 'class_private_property', 'class_private_method',
+                   'private_name', 'static_block']) {
+    assert.ok(m.n(`ast_node[code](N, ${k}, F, L)`) > 0, `positive control: ${k} is in the corpus`);
+  }
+  assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0);
+  assert.equal(m.n('kind_absent_stale[audit](K)'), 0);
+
+  // A PRIVATE NAME IS NOT A KEY, stated as an absence with its positive control
+  // beside it: every private member read has a `private_binds` row and NOT ONE
+  // has a `selects` row, while the public reads in the same class do.
+  const privRefs = m.q('private_ref[code](N, Name)');
+  assert.ok(privRefs.length >= 7, `positive control: ${privRefs.length} private references`);
+  assert.deepEqual(privRefs.filter(([n]) => m.n(`selects[flow](${n}, K)`) > 0), [],
+    'no private member read has a string key');
+  assert.ok(m.n('selects[flow](N, K)') > 0, 'positive control: public reads do');
+
+  // ...AND IT BINDS LEXICALLY, WITH SHADOWING. `Inner` inside `Outer.make`
+  // declares its own `#tag`; running the shape answers `inner/outer`.
+  assert.deepEqual(privBinds(m), [
+    'Coin reads Coin.#edge', 'Coin reads Coin.#face', 'Coin reads Coin.#mark',
+    'Coin reads Coin.#rim', 'Coin reads Coin.#tally',
+    'Inner reads Inner.#tag', 'Outer reads Outer.#tag',
+  ]);
+
+  // THE CALL GRAPH. `Coin.forge` is a STATIC field read through the class name,
+  // `this.strike` an instance field through `this`, and `top -> forge` a call
+  // inside a STATIC BLOCK — attributed to the file root, which is when a static
+  // block runs, measured by running the shape.
+  assert.deepEqual(coinEdges(m), [
+    'forge -> hammered', 'rim -> notched', 'strike -> struck',
+    'top -> forge', 'top -> inked', 'top -> minted', 'top -> punched', 'top -> sealed',
+    'top -> stamped',
+    'usesCoin -> forge', 'usesCoin -> value',
+    'usesDoubloon -> forge', 'usesDoubloon -> strike',
+    'usesPicked -> rim', 'usesPickedSub -> value',
+    'value -> strike',
+  ]);
+  // TWO OF THOSE ARE THE SAME EXPRESSION ON TWO CLASSES. `usesPicked -> rim`
+  // and `usesPickedSub -> value` are both `new C()[C.pick](n)`, and they differ
+  // because `Doubloon` declares its own `pick` and shadows the inherited one -
+  // which is what makes `own_key[flow] :- field_of[flow]` load-bearing.
+  // ...and the other two are INHERITED fields: `strike` and `forge` are declared
+  // on `Coin` alone and reached through a `Doubloon`.
+  // ...AND THE EDGE THAT MUST NOT BE THERE, said separately because an absence
+  // inside a set assertion is invisible to a reader.
+  assert.equal(edges(m).has('value -> rim'), false,
+    'a private call does not reach the public twin of its name');
+  assert.ok(m.n('unresolved_call[code](C, S)') > 0, 'positive control: the corpus has unresolved sites');
+  assert.deepEqual(unresolvedInFields(m), [], 'every call site in the class-fields region resolves');
+
+  // CONTROL FLOW, and the split is the whole of it: a NON-STATIC field
+  // initialiser is an arm skipped by the absence of a `new`, a static one is
+  // not. Measured by running the shape — `class Never { unused = mark(); static
+  // tag = mark(); }`, defined and never constructed, ran only the static one.
+  assert.deepEqual(fieldMayNotRun(m),
+    ['burnished', 'inked', 'minted', 'punched', 'scored', 'stamped', 'struck']);
+  assert.equal(names(m).has('sealed'), false, 'the static field initialiser always runs');
+  assert.equal(names(m).has('hammered'), false, 'and so does what it holds, when it is called');
+
+  // ...and every arm it derives is a non-static one, with the positive control
+  // that static fields exist to be excluded.
+  assert.deepEqual(m.q('field_init[code](P, V)')
+    .filter(([p]) => m.n(`ast_attr[code](${p}, static, false)`) !== 1), [],
+    'every guarded field initialiser is a non-static one');
+  assert.ok(m.q('field_of[flow](CD, Key, P, V)')
+    .some(([, , p]) => m.n(`ast_attr[code](${p}, static, true)`) === 1),
+    'positive control: static fields exist and are NOT in field_init');
+
+  // A PRIVATE ACCESSOR IS A CALL WEARING A READ'S SYNTAX, like a public one and
+  // through none of the same machinery.
+  const privAcc = m.q('accessor_read[code](N, M)')
+    .filter(([, mm]) => m.q(`ast_node[code](${mm}, K, F, L)`)[0]?.[0] === 'class_private_method');
+  assert.equal(privAcc.length, 1, 'the private getter is read as a transfer');
+  assert.equal(m.n(`may_not_run[code](${privAcc[0][1]})`), 1,
+    'and behind a conditional it may not run');
+
+  // THE VERDICTS, and the audits that would contradict them.
+  for (const [k, l, v] of [
+    ['class_property', 'callgraph', 'r_field_value'], ['class_property', 'dataflow', 'r_field_value'],
+    ['class_property', 'controlflow', 'r_field_guard'],
+    ['class_private_property', 'callgraph', 'r_private_binding'],
+    ['class_private_property', 'dataflow', 'r_private_binding'],
+    ['class_private_property', 'controlflow', 'r_field_guard'],
+    ['class_private_method', 'callgraph', 'r_call_edge'],
+    ['class_private_method', 'dataflow', 'r_call_flow'],
+    ['class_private_method', 'controlflow', 'r_reachability'],
+    ['private_name', 'callgraph', 'r_private_binding'],
+    ['private_name', 'dataflow', 'r_private_binding'],
+    ['private_name', 'controlflow', 'r_accessor'],
+    ['static_block', 'dataflow', 'r_static_block_this'],
+  ]) assert.deepEqual(m.q(`handled(js, ${k}, ${l}, R)`).flat(), [v], `${k} x ${l}`);
+  assert.deepEqual(m.q('ignored(js, static_block, callgraph, R)').flat(), ['a_a_statement_is_not_a_callee']);
+  assert.deepEqual(m.q('ignored(js, static_block, controlflow, R)').flat(),
+    ['a_a_static_block_runs_when_the_class_is_defined']);
+  assert.equal(m.n('orphan_claim[audit](L, K, X)'), 0);
+  assert.equal(m.n('guard_unmodelled[audit](K)'), 0);
+  assert.equal(m.n('mechanism_unanswered[audit](M)'), 0);
+});
+
+// THE MUTANT SET. Eighteen, each with its OWN oracle, and the question asked of
+// each rule before it was written was "where is this structurally unable to
+// look" rather than "what else could I break" — which is why p1 (the namespace
+// conflation) and c3 (the mechanism split) are here at all.
+const FIELDS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'f1 a field is not a member at all',
+    mut: [{ find: 'member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).', replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    // IT SURVIVED THE FIRST RUN AND THE SURVIVAL WAS THE FINDING: everything
+    // downstream reads `field_of` directly, so before the subclass and the two
+    // computed-key sites went into the fixture this arm was decoration. What
+    // reads it now is `may_be_lit` through a member - the literal a field holds.
+    expect: (m, b) => {
+      assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+        ['usesPicked -> rim', 'usesPickedSub -> value'],
+        'a field holding a literal stops being readable as one');
+      assert.equal(m.n('own_key[flow](CD, K)'), b.n('own_key[flow](CD, K)'),
+        'own_key has its own arm and does not move');
+    },
+  },
+  {
+    name: 'f2 an instance field is visible through no receiver',
+    mut: [{ find: `class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, false).`, replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+        ['value -> strike'],
+        'the OWN instance field goes and the static one stays — and so does the '
+        + 'INHERITED one, because `inherited_field` reads `field_of` rather than '
+        + 'this arm, which is what f5 is for');
+      assert.equal(m.n('member_value[flow](O, K, V)'), b.n('member_value[flow](O, K, V)'),
+        'the member still EXISTS — only the receiver half is gone');
+    },
+  },
+  {
+    name: 'f3 a static field is visible through no receiver',
+    mut: [{ find: `class_member_static[flow](CD, Key, V) :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, true).`, replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+      ['top -> forge', 'usesCoin -> forge'],
+      'the OWN static field goes and the instance one stays'),
+  },
+  {
+    name: 'f4 the `static` split is dropped and every field is an instance field',
+    mut: [{ find: `class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, false).`,
+            replace: `class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, _).`,
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.ok(m.n('class_member_proto[flow](CD, K, V)') > b.n('class_member_proto[flow](CD, K, V)'),
+      'a static field becomes visible on an instance'),
+  },
+  {
+    name: 'f5 an inherited INSTANCE field is visible through no receiver',
+    mut: [{ find: `class_member_proto[flow](CD, Key, V)  :- inherited_field[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, false).`, replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+      ['usesDoubloon -> strike'], 'a field the base class declares stops answering on a subclass instance'),
+  },
+  {
+    name: 'f6 an inherited STATIC field is visible through no receiver',
+    mut: [{ find: `class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, P, V),
+                                         ast_attr[code](P, static, true).`, replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+      ['usesDoubloon -> forge'], 'and the static half is a separate arm with a separate site'),
+  },
+  {
+    name: 'f7 a field does not shadow the one it overrides',
+    mut: [{ find: 'own_key[flow](CD, Key)         :- field_of[flow](CD, Key, _, _).', replace: '',
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(coinEdges(m).filter((e) => !coinEdges(b).includes(e)),
+      ['usesPickedSub -> rim'],
+      'the subclass answers with the parent`s `pick` as well as its own'),
+  },
+  {
+    name: 'p1 a private name is read as an ordinary key',
+    // THE MUTANT THE WHOLE DESIGN EXISTS TO KILL, and it is an ADDITION rather
+    // than a deletion: give `key_name` the arm that spells a private name by the
+    // bare identifier under it, and `#rim` and the public `rim` become one
+    // member of one class.
+    // THE MUTANT IS ON `selects` AND NOT ON `key_name`, and finding that out was
+    // itself a measurement: the first version added the private arm to
+    // `key_name` and CHANGED NOTHING, because `selects[flow]` reads
+    // `ast_name[code]` on the property directly and a `private_name` carries no
+    // `name` attribute. So the arm that would make a private read an ordinary
+    // key read is this one, and this is where the whole design is falsifiable.
+    mut: [{ find: `selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, false),
+                               ast_child[code](N, property, 0, P), ast_name[code](P, Key).`,
+            replace: `selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, false),
+                               ast_child[code](N, property, 0, P), ast_name[code](P, Key).
+selects[flow](N, Key)       :- member_node_v[flow](N),
+                               ast_child[code](N, property, 0, P), private_key[code](P, Key).`,
+            file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.equal(edges(m).has('value -> rim'), true,
+        'a private call reaches the public twin of its name');
+      assert.equal(edges(b).has('value -> rim'), false, 'positive control');
+    },
+  },
+  {
+    name: 'p2 a private name binds in any enclosing class, not the nearest',
+    mut: [{ find: 'ast_within[code](CD, N), not private_inner[code](N, CD).',
+            replace: 'ast_within[code](CD, N).', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(privBinds(m).filter((x) => !privBinds(b).includes(x)),
+      ['Inner reads Outer.#tag'], 'the shadowed declaration answers too'),
+  },
+  {
+    name: 'p3 a private name binds without being inside the declaring class',
+    mut: [{ find: `private_binds[code](N, M)  :- private_ref[code](N, Name), private_member[code](CD, Name, M),
+                              ast_within[code](CD, N), not private_inner[code](N, CD).`,
+            replace: `private_binds[code](N, M)  :- private_ref[code](N, Name), private_member[code](CD, Name, M),
+                              not private_inner[code](N, CD).`,
+            file: 'rules/js-dataflow.rofl' }],
+    // ...AND IT LEAKS IN ONE DIRECTION ONLY, which is the measurement rather
+    // than the guess: `private_inner` is still in the body, so the reference in
+    // `Inner` still has `Outer` shadowed away, and only the OUTER reference —
+    // which no closer class declares `#tag` for — reaches into the nested class.
+    // The two literals are therefore not redundant with one another.
+    expect: (m, b) => assert.deepEqual(privBinds(m).filter((x) => !privBinds(b).includes(x)).sort(),
+      ['Outer reads Inner.#tag'],
+      'a private name reaches into a class it is not written in'),
+  },
+  {
+    name: 'p4 the value a private field holds is not carried',
+    mut: [{ find: `may_be_node[flow](N, V2) :- private_binds[code](N, M),
+                            ast_node[code](M, class_private_property, _, _),
+                            ast_child[code](M, value, 0, V), may_be_node[flow](V, V2).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(unresolvedInFields(m), ['s_member_on_this'], 'one site stops resolving');
+      assert.deepEqual(privateCallsResolved(m), ['#rim'], 'and it is `this.#mark(n)`');
+      assert.deepEqual(privateCallsResolved(b), ['#mark', '#rim'], 'positive control');
+    },
+  },
+  {
+    name: 'p5 a private method is not its own value',
+    mut: [{ find: `may_be_node[flow](N, M)  :- private_binds[code](N, M),
+                            ast_node[code](M, class_private_method, _, _).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(unresolvedInFields(m), ['s_member_on_this'], 'one site stops resolving');
+      assert.deepEqual(privateCallsResolved(m), ['#mark'], 'and it is `this.#rim(n)`');
+      assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)), [],
+        'and no NAMED edge moves, because a private method has no name to lose');
+    },
+  },
+  {
+    name: 'p6 `this` inside a private method reaches no class',
+    mut: [{ find: `class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
+                                ast_child[code](B, body, _, M),
+                                ast_node[code](M, class_private_method, _, _).`,
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(unresolvedInFields(m), ['s_member_on_this'],
+        '`this.strike(n)` inside `#rim` loses its receiver');
+      assert.deepEqual(unresolvedInFields(b), [], 'positive control');
+    },
+  },
+  {
+    name: 'c1 a field initialiser is not a guarded arm',
+    mut: [{ find: 'guard_arm[code](P, V)  :- field_init[code](P, V).', replace: '' }],
+    expect: (m, b) => assert.deepEqual(fieldMayNotRun(b).filter((n) => !fieldMayNotRun(m).includes(n)),
+      ['burnished', 'inked', 'minted', 'punched', 'scored', 'stamped', 'struck']),
+  },
+  {
+    name: 'c2 a STATIC field initialiser is guarded too',
+    mut: [{ find: 'ast_node[code](P, K, _, _), ast_attr[code](P, static, false),',
+            replace: 'ast_node[code](P, K, _, _), ast_attr[code](P, static, _),' }],
+    // TWO NAMES, NOT ONE, and the second is what the mutant teaches: guarding a
+    // static field guards everything INSIDE its initialiser too, so `hammered` —
+    // reached only through the arrow that `static forge` holds — is reported as
+    // maybe-dead as well. One wrong attribute costs a subtree, not a row.
+    expect: (m, b) => assert.deepEqual(fieldMayNotRun(m).filter((n) => !fieldMayNotRun(b).includes(n)),
+      ['hammered', 'sealed'], 'a call that always runs is reported as one that may not'),
+  },
+  {
+    name: 'c3 only PUBLIC fields carry the mechanism',
+    mut: [{ find: 'transfer_mechanism(class_private_property,     per_construction).', replace: '' }],
+    expect: (m, b) => assert.deepEqual(fieldMayNotRun(b).filter((n) => !fieldMayNotRun(m).includes(n)),
+      ['burnished', 'inked', 'minted', 'scored'],
+      'the private initialisers stop being guarded and the public ones do not'),
+  },
+  {
+    name: 'c4 the private accessor is not a transfer',
+    mut: [{ find: `accessor_read[code](N, M) :- private_binds[code](N, M),
+                             accessor_kind(K), ast_attr[code](M, kind, K).`, replace: '' }],
+    expect: (m, b) => {
+      const priv = (w: World) => w.q('accessor_read[code](N, M)')
+        .filter(([, mm]) => w.q(`ast_node[code](${mm}, K, F, L)`)[0]?.[0] === 'class_private_method').length;
+      assert.equal(priv(m), 0);
+      assert.equal(priv(b), 1, 'positive control');
+    },
+  },
+  {
+    name: 'c5 the mechanism is unanswered',
+    mut: [{ find: 'mechanism_modelled(per_construction).', replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('mechanism_unanswered[audit](M)').flat(), ['per_construction']),
+  },
+  {
+    name: 'c6 the two field kinds are not named as reached',
+    mut: [{ find: 'guard_named[code](K)       :- transfer_mechanism(K, per_construction).', replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('guard_unmodelled[audit](K)').flat().sort(),
+      ['class_private_property', 'class_property']),
+  },
+  {
+    name: 's1 `this` in a static block is an instance, not the class',
+    mut: [{ find: 'class_receiver[flow](T)       :- static_block_of[flow](_, SB), this_host[flow](SB, T).',
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+      ['top -> forge'], 'a static member read through `this` in a static block'),
+  },
+  {
+    name: 's2 a static block binds no `this` at all',
+    mut: [{ find: 'this_binds_kind(static_block).', replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)), ['top -> forge']);
+      assert.equal(m.n('static_block_of[flow](CD, SB)'), b.n('static_block_of[flow](CD, SB)'),
+        'the block is still found — it is the `this` inside it that is lost');
+    },
+  },
+  {
+    name: 'n1 a class field does not name the function it holds',
+    mut: [{ find: `fn_name[code](F, N) :- fn_node[code](F), class_field_kind(K), ast_node[code](P, K, _, _),
+                       ast_child[code](P, value, 0, F),
+                       ast_child[code](P, key, 0, KN), key_name[code](KN, N).`,
+            replace: '', file: 'rules/js-callgraph.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual(coinEdges(b).filter((e) => !coinEdges(m).includes(e)),
+        ['forge -> hammered', 'strike -> struck', 'top -> forge', 'usesCoin -> forge',
+         'usesDoubloon -> forge', 'usesDoubloon -> strike', 'value -> strike']);
+      assert.equal(m.n('resolves[code](C, F)'), b.n('resolves[code](C, F)'),
+        'every site still RESOLVES — this mutant takes the NAME and not the edge, '
+        + 'which is exactly the state a private method is permanently in');
+    },
+  },
+];
+
+for (const g of FIELDS) test(`${g.name} — class fields`, () => g.expect(build(g.mut), base()));
