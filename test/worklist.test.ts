@@ -189,14 +189,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // its cells. An item that has spawned nothing on the day it was ENTERED is
     // not one nobody looked at — it is one nobody has STARTED, which this list
     // cannot tell apart and does not pretend to.
+    'w_await_is_a_call_the_oracle_places_elsewhere',
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
     // `w_class_expression` and `w_class_fields` LEFT THIS LIST on 2026-09-08,
     // each in its own branch: both were taken and both spawned findings, one of
     // them a KERNEL gap — no string operation BUILDS a string, so a private
     // method resolves and cannot be named.
-    'w_decorator_replaces_its_target', 'w_df_function_forms',
-    'w_df_generator_protocol', 'w_df_sweep', 'w_df_value_core', 'w_directives',
+    'w_df_function_forms',
+    'w_df_generator_protocol', 'w_df_sweep', 'w_df_value_core',
     // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:
     // both were taken and both spawned, which is the list working — an item
     // entered but not started looks identical to one nobody looked at, and the
@@ -303,7 +304,10 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // becoming IRREDUCIBLE rather than by being answered — the call transfers into
   // a library method with no node in this program, and `open_cell` requires
   // `our_unknown`. They left because nobody can do more, not because nobody looked.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 32, 'the queue is the model\'s open set');
+  // 32 -> 15 ON ONE AFTERNOON, from four branches and the library surface:
+  // directives (12 cells), the re-export edge, the decorator replacement, the
+  // two class-accessor value cells, and four that left by becoming irreducible.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 15, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -334,7 +338,11 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // a number, and three parallel branches moved it at once.
   // 63 -> 64: `w_decorator_replaces_its_target`, for the half of a decorator
   // that is a VALUE question — the call is modelled, the replacement is not.
-  assert.equal(w.n('work(W, Note)'), 64);
+  // 64 -> 65: `w_await_is_a_call_the_oracle_places_elsewhere`, which exists
+  // because two branches re-pointed one cell at owners that were both wrong —
+  // the second at an item a parallel branch had just closed, which
+  // `false_done[audit]` reported within one run.
+  assert.equal(w.n('work(W, Note)'), 65);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -374,7 +382,9 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // 11 -> 7 open and 32 -> 28 claimed on 2026-09-08: the four cells
   // w_env_api_surface closed are all at this layer, and their claims went with
   // them because a claim on an irreducible cell is what `queue_stale` calls a lie.
-  assert.deepEqual(per('callgraph'), [7, 28, 0]);
+  // ALL FOUR LAYERS AGAIN, 2026-09-08: callgraph 7 -> 3, dataflow 7 -> 2,
+  // modules 10 -> 5, controlflow 8 -> 5.
+  assert.deepEqual(per('callgraph'), [3, 27, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -391,7 +401,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
   // 15 -> 16 open: `class_accessor_property`'s value cell, owned by
   // `w_decorator_replaces_its_target` along with the decorator's own.
-  assert.deepEqual(per('dataflow'), [7, 27, 0]);
+  assert.deepEqual(per('dataflow'), [2, 25, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -400,7 +410,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // eight cells, and the destructuring family answered the rest by measurement
   // rather than by definition — a pattern DIRECTLY under an export declaration
   // moves no row of this layer, which is a verdict that had to be exercised.
-  assert.deepEqual(per('modules'), [10, 23, 0]);
+  assert.deepEqual(per('modules'), [5, 21, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -418,7 +428,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // when the vocabulary became the language, and four `with_statement` cells
   // stayed OPEN AND UNBLOCKED — the work is a one-word scanner change and what
   // it waits on is a decision about name resolution, not a blocker.
-  assert.deepEqual(per('controlflow'), [8, 30, 0]);
+  assert.deepEqual(per('controlflow'), [5, 30, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot

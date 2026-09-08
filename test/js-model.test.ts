@@ -649,8 +649,8 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // layers, and both are answered — the value layer by `r_destructure` and the
   // call graph for nothing, because a destructured name is a callee like any
   // other once the value layer can say what it denotes.
-  assert.deepEqual(f, { cell: 206, modelled: 73, waived: 29, not_modelled: 104 },
-    'predicted 206 fine cells = 73 + 29 + 104');
+  assert.deepEqual(f, { cell: 206, modelled: 74, waived: 29, not_modelled: 103 },
+    'predicted 206 fine cells = 74 + 29 + 103');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and

@@ -213,11 +213,11 @@ test('every read path above five per cent, by name', () => {
   // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
   // rather than explained.
   const SHARE: [string, number][] = [
-    ['relPersp authority', 10.05],
-    ['argMatches ast_within pos=[0]', 7.99],
-    ['argMatches ast_node pos=[1]', 6.08],
-    ['argMatches encloses_v pos=[1]', 6.03],
-    ['relPersp ast_node', 5.97],
+    ['relPersp authority', 10.06],
+    ['argMatches ast_within pos=[0]', 8.01],
+    ['argMatches ast_node pos=[1]', 6.23],
+    ['argMatches encloses_v pos=[1]', 6.02],
+    ['relPersp ast_node', 5.99],
     ['relPersp encloses_v', 5.84],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
@@ -259,7 +259,11 @@ test('every read path above five per cent, by name', () => {
   // 7.4 -> 8.0. The 2x2 above says the corpus did it, as it did last time: the
   // four branches' fixtures are class bodies and nested patterns, and the
   // heaviest read path is still the CONTAINMENT walk.
-  assert.ok(c.total / c.facts < 8.0,
+  // 8.0 -> 8.4. The 2x2 above puts it on the CORPUS for the third time running,
+  // and the reading in this file's own note holds: what the number still catches
+  // is a scan appearing in the hot path with the corpus held still, which is the
+  // left-hand column and nothing else.
+  assert.ok(c.total / c.facts < 8.4,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -465,7 +469,19 @@ test('every read path above five per cent, by name', () => {
   // calls added so the era gate has three different years to discriminate. The
   // rules of w_env_api_surface are in a pack this world does not load, so this
   // move is PURE CORPUS — the one time in three iterations that is true.
-  assert.equal(c.total, 1613329, 'total rows handed out by the store in one fixpoint');
+  // 1 613 329 -> 1 694 517 on 2026-09-08 when four more branches merged. Axes
+  // from the merged diff, control OK:
+  //
+  //                        prev corpus              this corpus
+  //     prev rules   1 611 471 / 72 154 fir   1 691 778 / 70 631 fir
+  //     these rules  1 604 068 / 72 144 fir   1 694 517 / 70 625 fir
+  //
+  // THE RULES ARE WORTH -0.5% OF ROWS AGAIN and the corpus +5%, which is the
+  // third iteration running where a day of rule-writing made the fixpoint no
+  // more expensive. AND FIRINGS FELL AGAIN, 72 154 -> 70 625, on a corpus that
+  // grew: the re-export edge and the directive fixtures both add facts that
+  // GUARD rather than derive.
+  assert.equal(c.total, 1694517, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -572,5 +588,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 71920, 'derivations, against 72 154 before the library fixture');
+  assert.equal(c.firings, 70625, 'derivations, against 72 154 before the four-branch merge');
 });

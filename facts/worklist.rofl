@@ -1011,7 +1011,7 @@ work_spawned(w_cg_invisible_calls, f_an_invisible_call_is_two_different_blockers
 -- `<top>` because the promise machinery makes the call, so even a corpus that
 -- HAD a user thenable would be modelling something the instrument contradicts.
 -- Two independent reasons, and only the first is what the queue can act on.
-claim(queued, js, await_expression,           none, callgraph, w_env_api_surface).
+claim(queued, js, await_expression,            none, callgraph,    w_await_is_a_call_the_oracle_places_elsewhere).
 -- `decorator` LEFT THIS ITEM ON 2026-09-08, closed by `r_decorator_call` while
 -- the plugin work was going on. It was correctly claimed here — a decorator IS
 -- an invisible call, which is what this item is about — and the claim is
@@ -1776,3 +1776,36 @@ work(w_decorator_replaces_its_target, "DONE 2026-09-08: r_decorator_replacement 
 work_order(w_decorator_replaces_its_target, 62).
 work_state(w_decorator_replaces_its_target, done).
 work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_shape_for_every_position).
+
+
+-- ==========================================================================
+-- 63 - WHAT AN `await` CALLS, AND WHERE THE RUNTIME PUTS IT.
+--
+-- The last cell of w_cg_invisible_calls, re-pointed twice on 2026-09-08 and
+-- landing here because BOTH of its earlier owners were wrong about it.
+--
+-- IT WENT TO w_env_api_surface FIRST, correctly by one of its two reasons:
+-- `await x` calls `Promise.prototype.then`, a library method with no node in
+-- this program. That item closed the same afternoon, in a parallel branch that
+-- could not see the re-pointing, and `false_done[audit]` reported the pair
+-- within one run - a done item owning an open cell.
+--
+-- AND THE LIBRARY REASON IS NOT THE BINDING ONE. Measured:
+-- `member_value[flow](O, "then", V)` is ZERO over the whole corpus, with the
+-- positive control `member_value[flow](O, "next", V)` at two rows out of 140
+-- distinct keys - so the model does not know an await`s callee at all, and
+-- `stdlib_member[audit]` never sees it. A USER thenable would put a real node
+-- there, which is what makes this not simply `no_source_target` like
+-- `array.join`. AND THEN V8 ATTRIBUTES THAT NODE`S CALL TO `<top>`, measured a
+-- week earlier when the suspension work asked where a resumption runs: so a
+-- model that drew `caller -> then` would be contradicted by the acceptance
+-- oracle, and one that drew `<top> -> then` would be right for a reason that
+-- has nothing to do with the await.
+--
+-- SO THE CELL IS OPEN ON A QUESTION AND NOT ON A GAP: what does this layer mean
+-- by a caller, when the language performs the call and the runtime credits the
+-- microtask queue. `w_env_api_surface` answered the half about the callee`s
+-- name; nobody has answered the half about the caller`s.
+work(w_await_is_a_call_the_oracle_places_elsewhere, "an await calls then(): the callee is a library method the model never sees, and V8 credits a user thenable`s then to <top>").
+work_order(w_await_is_a_call_the_oracle_places_elsewhere, 63).
+work_state(w_await_is_a_call_the_oracle_places_elsewhere, open).
