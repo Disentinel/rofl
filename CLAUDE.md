@@ -68,7 +68,10 @@ Design disciplines that bind all modeling here:
 `docs/time-and-continuity.md` (what `not p` means, where a veto belongs,
 what a continuous model would need),
 `docs/choosing-perspectives.md` (perspective = ledger, never status or
-modality), `docs/inquiry-kinds.md` (typed inquiry roots),
+modality), `docs/books-and-permission.md` (the whole permission model in one
+place: every relation with who may write it, every audit with what it cannot
+see, and the open decisions as one list — derived from boot.rofl and gated by
+`test/permission-doc.test.ts`), `docs/inquiry-kinds.md` (typed inquiry roots),
 `docs/guided-formal-reasoning-roadmap.md` (the plan; amend via findings).
 
 ## Every flag must be exercised by a demo, not merely mentioned

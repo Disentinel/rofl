@@ -1,17 +1,17 @@
 // test/exports.test.ts — THE NAMELESS READER OF A NAMED BOOK.
 //
-// `imports(To, From)` relates two REGISTERED perspectives. `collects(X)` exists
-// because a rule polymorphic in its SOURCE reads a `$var` that can never be the
-// From of an import. The mirror stood open and was recorded as a permanent gap
-// (`f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`): a rule
+// The model these tests exercise -- the four declarations, who may write each
+// and what each permits -- is docs/books-and-permission.md 2.1. What is local
+// here: the gap `exports(A, anyone)` closed was recorded as permanent
+// (`f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`) -- a rule
 // polymorphic in its HEAD book reads a named one, and `$var("G")` can never be
 // the To of an import. Three rows, two programs, and both said in their own
 // comments that the available workaround -- `imports($var("G"), main).` -- was
 // worse than the gap, because it licenses THE SPELLING OF A VARIABLE.
 //
-// `publishes(A)` is the missing sentence, declared by the SOURCE because the
-// source is the only named party. These tests pin what it covers and, more
-// importantly, what it must NOT.
+// These tests pin what `exports(A, anyone)` covers and, more importantly, what
+// it must NOT. (It was built and shipped under the name `publishes(A)` and
+// renamed the same day; nothing but the spelling changed.)
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

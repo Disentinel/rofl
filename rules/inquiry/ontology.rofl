@@ -53,15 +53,10 @@ imports(epistemic, main).
 -- the From of an import; `collects` is the only sentence available.
 --
 -- RESERVATION, recorded rather than hidden: [main] is also the DEFAULT ledger,
--- the one every rule nobody gave a book to writes into, and the flow graph
--- cannot tell such a namespace from a book of asserted content
--- (examples/sensors.rofl makes the same point about the same ledger). So this
--- licence is broader than the two rules that need it. The narrow repair is to
--- give `agent_disputed` and `agent_attached` a derived ledger of their own —
--- [disputes], say — and declare `collects` on THAT. It is not made here
--- because it changes what every program over this layer computes.
---
--- Still narrow in the direction that matters: `collects_from` requires
--- `not perspective(A)`, so the two named crossings above are NOT licensed by
--- this line and would still be reported without their own `imports`.
+-- so this licence is broader than the two rules that need it. That is the open
+-- decision in docs/books-and-permission.md 5.1, not a fault of this file. The
+-- narrow repair available HERE is to give `agent_disputed` and
+-- `agent_attached` a derived ledger of their own — [disputes], say — and
+-- declare `collects` on THAT. It is not made because it changes what every
+-- program over this layer computes.
 collects(main).

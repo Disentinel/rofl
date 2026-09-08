@@ -58,13 +58,12 @@ authority(black, black).
 
 -- [case] is where testimony from every speaker is collected: `claim[case](P,
 -- K, C, A, T) :- said[P](K, C, A, T)` and its three siblings read a speaker's
--- own book under the perspective VARIABLE [P]. That is a crossing `imports`
--- cannot license -- `$var("P")` is not a registered perspective and cannot be
--- the From of an import -- and it is entirely deliberate: collecting what
--- each player said, with the speaker relocated from the perspective slot into
--- an ordinary argument, is what the case file IS. Declared once here, at the
--- ledger that gathers; the hops out of [case] into [worlds] stay subject to
--- the ordinary audit, and an undeclared one would still be a leak.
+-- own book under the perspective VARIABLE [P]. Why `imports` cannot license
+-- that and `collects` can: docs/books-and-permission.md 2.1. It is entirely
+-- deliberate here: collecting what each player said, with the speaker
+-- relocated from the perspective slot into an ordinary argument, is what the
+-- case file IS. Declared once, at the ledger that gathers; the hops out of
+-- [case] into [worlds] stay subject to the ordinary audit.
 collects(case).
 
 -- THREE MORE, and the reason they were never typed: `crossing` used to carry

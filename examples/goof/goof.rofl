@@ -500,22 +500,14 @@ knot(trefoil).
 -- either direction. It is kept because naming the ledger you write is worth
 -- doing on its own, not because it silences anything.
 --
--- THE GAP THIS SECTION RECORDED IS CLOSED, AND THE SENTENCE IT WANTED EXISTS.
--- Two rows stood here: `leak[audit](main, $var("G"))` and the two-hop
--- `$kernel -> $var("G")` behind it. A rule reads [main] -- the arithmetic and
--- structural helpers nobody gave a book to -- and writes the ledger VARIABLE,
--- so the crossing's DESTINATION is unnameable. `imports(To, From)` needs both
--- ends registered and `collects(X)` is the mirror image, gathering from books
--- it does not name.
---
--- The line that would have silenced it, `imports($var("G"), main).`, was
--- refused and the refusal was right: it licenses by the SPELLING OF THE
--- VARIABLE, so renaming ?G to ?H revokes a licence nothing about the program
--- changed. What was missing was a sentence for the other side, and boot.rofl
--- now has it: `exports(A, anyone)` says A's content may travel to a reader that
--- has no name to be granted. The declaration is the SOURCE's, because the source
--- is the only named party -- exactly the argument that makes `collects` the
--- gatherer's.
+-- THE GAP THIS SECTION RECORDED IS CLOSED. Two rows stood here:
+-- `leak[audit](main, $var("G"))` and the two-hop `$kernel -> $var("G")` behind
+-- it. A rule reads [main] -- the arithmetic and structural helpers nobody gave
+-- a book to -- and writes the ledger VARIABLE, so the crossing's DESTINATION
+-- is unnameable. What that needs, and why the SOURCE declares it:
+-- docs/books-and-permission.md 2.1. The line that would have silenced it,
+-- `imports($var("G"), main).`, was refused rightly -- it licenses by the
+-- SPELLING of the variable, so renaming ?G to ?H revokes it in silence.
 --
 -- ONE declaration clears both rows: the two-hop walk is discharged by the
 -- source-side transitive clause, so `exports($kernel, anyone)` is not needed and

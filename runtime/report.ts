@@ -68,13 +68,54 @@ function findingsSection(r: Rofl): string[] {
   return out;
 }
 
+/** The book-and-permission inventory, rendered when the model is loaded.
+ *
+ *  Silent otherwise: `family(Rel)` is empty in every world that has not loaded
+ *  `rules/permission-model.rofl`, so this costs nothing for every other
+ *  report. Prose half: docs/books-and-permission.md; gate:
+ *  test/permission-doc.test.ts. */
+function permissionSection(r: Rofl): string[] {
+  const family = col(r, 'family(Rel)', 'Rel');
+  if (family.length === 0) return [];
+  const out = ['# Permission model', ''];
+  const list = (label: string, q: string): void => {
+    const xs = col(r, q, 'Rel');
+    out.push(`- **${label}** (${xs.length}): ${xs.join(', ') || '(none)'}`);
+  };
+  list('family', 'family(Rel)');
+  list('outside it, in boot.rofl', 'outside(Rel)');
+  list('evidence it reads but does not own', 'evidence(Rel)');
+  out.push('');
+  list('declarations a program writes', 'declaration(Rel)');
+  list('carried across the tick boundary', 'carried(Rel)');
+  list('audit rows', 'audit_row(Rel)');
+  out.push('');
+  out.push('## Negatives a grep cannot produce', '');
+  list('nothing anywhere reads', 'nothing_reads(Rel)');
+  list('no RULE anywhere consumes', 'terminal(Rel)');
+  list('...and is not an audit row, so it is dead weight', 'terminal_non_audit(Rel)');
+  list('declared by no .rofl program in this repository', 'never_declared(Rel)');
+  list('an offer nobody took up', 'untaken_offer(Rel)');
+  list('empty in every world, which for an audit is the required result', 'quiet_audit(Rel)');
+  const clash = r.query('name_collision(Prog, Rel, B)').rows
+    .map((x) => `${x.bindings.Prog} concludes ${x.bindings.Rel}[${x.bindings.B}]`).sort();
+  out.push(`- **name collisions with boot.rofl vocabulary** (${clash.length}): ${clash.join('; ') || '(none)'}`);
+  out.push('');
+  out.push('## Against docs/books-and-permission.md', '');
+  list('in the inventory, missing from the document', 'doc_missing(Rel)');
+  list('in the document, not in the inventory', 'doc_extra(Rel)');
+  return out;
+}
+
 export function buildReport(r: Rofl): string {
   const out: string[] = [];
   const inquiries = r.query('inquiry(I, K)').rows;
   const findings = findingsSection(r);
-  if (inquiries.length === 0 && findings.length === 0) {
+  const permission = permissionSection(r);
+  if (inquiries.length === 0 && findings.length === 0 && permission.length === 0) {
     return '# Epistemic report\n\n(no inquiry framed, no findings recorded)\n';
   }
+  if (permission.length) out.push(...permission, '');
   for (const iq of inquiries) {
     const I = iq.bindings.I;
     const K = iq.bindings.K;

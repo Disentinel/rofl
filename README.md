@@ -176,15 +176,15 @@ the same rules names every relation that can never settle, which reaches
 further than `unstratified/1` did — it includes relations that merely negate
 something on the cycle. See `docs/three-valued-answers.md`.
 
-**Audits over this vocabulary** (boot.rofl, all in `[audit]`, all required
-empty on load): `malformed` — a rule with no premises or no conclusion;
-`breach` — a rule concluding into a reserved relation; `leak` — a perspective
-crossing, *at any number of hops*, that `sees`/`imports` does not permit and
-no declared collection covers; `collected` — a ledger that exercised a
-`collects` declaration; `forged` — a fact asserted
-into a perspective by someone without authority; `unmoded` — a rule using a
-builtin with no declared mode; and `undefined_premise(RuleId, Rel)` — a rule
-with a positive premise on a relation that no rule concludes and no base fact
+**Audits over this vocabulary** (boot.rofl, all in `[audit]`). Six are about
+BOOKS AND PERMISSION — `leak`, `forged`, `collected`, `exported`,
+`unattributed`, `widened` — and **the whole model for those is in one place:
+`docs/books-and-permission.md`**, derived from boot.rofl and gated by
+`test/permission-doc.test.ts`. Four are STRUCTURAL and required empty on load:
+`malformed` — a rule with no premises or no conclusion; `breach` — a rule
+concluding into a reserved relation; `unmoded` — a rule using a builtin with
+no declared mode; and `undefined_premise(RuleId, Rel)` — a rule with a
+positive premise on a relation that no rule concludes and no base fact
 populates. That rule is not wrong, it is *unpopulatable*: `hit(N) :- msg(N, S),
 contains(S, "404")` loads clean because `contains` is not a builtin, and `hit`
 is then silently empty forever. `edb(Rel)` doubles as the declaration that a

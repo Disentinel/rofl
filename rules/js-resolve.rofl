@@ -227,12 +227,11 @@ mechanism_unexercised[audit](M) :- resolve_mechanism(M), not mechanism_seen[audi
 
 -- ============ the gather this file's audits perform ============
 --
--- `imports(To, From)` relates two REGISTERED ledgers, and the environment
--- ledger here is a VARIABLE — `resolve_answer[Env](S, P)` — which has no
--- `authority` fact and can never be the From of an import. That is the case
--- `collects` exists for, and it is true of this file specifically: comparing
--- one environment's answer against another's is the whole point of the
--- referee, so [audit] gathers here from ledgers it deliberately does not name.
+-- The environment ledger here is a VARIABLE — `resolve_answer[Env](S, P)` —
+-- which is the case `collects` exists for (docs/books-and-permission.md 2.1),
+-- and it is true of this file specifically: comparing one environment's answer
+-- against another's is the whole point of the referee, so [audit] gathers here
+-- from ledgers it deliberately does not name.
 --
 -- Seven rules read `$var("Env")` (`answer_ambiguous`, `answer_without_trace`,
 -- `answer_without_mechanism`, `uncompared`, `resolve_divergence`, ...), one
@@ -242,8 +241,7 @@ mechanism_unexercised[audit](M) :- resolve_mechanism(M), not mechanism_seen[audi
 -- It is NOT in boot.rofl, and that was measured rather than assumed: bare
 -- boot.rofl has no polymorphic audit rule, so the sentence would license
 -- nothing there while standing as a blanket permanent licence for every
--- program that ever loads the kernel. It is narrow here: `collects_from`
--- requires `not perspective(A)`, so declaring it never stops the audit saying
--- no about a ledger that HAS a name — `code -> audit` still needs its own
+-- program that ever loads the kernel. It stays narrow here for the reason in
+-- docs/books-and-permission.md 2.1 — `code -> audit` still needs its own
 -- `imports`, and gets one in rules/js-model.rofl.
 collects(audit).
