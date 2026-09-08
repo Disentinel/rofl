@@ -201,15 +201,41 @@ kind_needs(js, class_accessor_property,     decorators).
 -- makes a kind nobody thought about indistinguishable from a kind somebody
 -- decided was baseline, and the first new kind the scanner emits would arrive
 -- silently declared safe.
--- NINE MORE ARE BASELINE, 2026-09-08: every one of them is ES5 or earlier, so
--- no environment on this scale can refuse them and `kind_unaccounted[audit]`
--- is satisfied by a fact rather than by a feature nobody needs.
+-- NINE MORE ARE BASELINE, 2026-09-08: eight of them are ES5 or earlier, so no
+-- environment on this scale can refuse them and `kind_unaccounted[audit]` is
+-- satisfied by a fact rather than by a feature nobody needs. THE NINTH IS NOT
+-- AND ITS ROW IS A KNOWN LIE - see the note on `interpreter_directive` below.
 kind_baseline(js, update_expression).
 kind_baseline(js, reg_exp_literal).
 kind_baseline(js, labeled_statement).
 kind_baseline(js, empty_statement).
 kind_baseline(js, debugger_statement).
 kind_baseline(js, with_statement).
+-- TWO OF THE THREE DIRECTIVE KINDS ARE HONESTLY BASELINE and the third is a
+-- MEASURED FALSEHOOD, found 2026-09-08 by w_directives and left standing on
+-- purpose. A `directive` and its `directive_literal` are a string-literal
+-- statement at the head of a body, which every edition on this scale parses;
+-- `'use strict'` gives one of them a MEANING in ES5 and the NODE is older than
+-- that. An `interpreter_directive` is not: `#!` is the ES2023 Hashbang Grammar,
+-- and es5 (2009) refuses it.
+--
+-- THE ROW IS WRONG AND EVERY REPAIR AVAILABLE HERE IS WORSE, measured rather
+-- than argued. As it stands, a file whose first line is `#!/usr/bin/env node`
+-- produces ZERO `unsupported[audit]` rows in ANY environment — the model says
+-- an es5 engine takes it. Replace this row with `kind_needs(js,
+-- interpreter_directive, hashbang)` and `feature_since(hashbang, 2023)`, which
+-- is the true year, and `env_has` is EMPTY for it: the highest rank on this
+-- scale is ts5 at 2022, so `feature_unreachable[audit]` names `hashbang` and
+-- the hashbang reports unsupported in ts5 as well — a false no everywhere
+-- traded for a false yes everywhere, with a green audit turned red on an honest
+-- tree to pay for it.
+--
+-- WHAT WOULD FIX IT IS AN `es2023` ON THE SCALE, which is the owner's to add:
+-- the same question already excluded `import_attribute` from the vocabulary
+-- entirely, and this is the first time it has been found INSIDE the table as a
+-- row that answers rather than as a kind left out. Both mutants are asserted in
+-- test/js-directives.test.ts so the day the scale grows, this comment goes red.
+-- See f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it.
 kind_baseline(js, directive).
 kind_baseline(js, directive_literal).
 kind_baseline(js, interpreter_directive).
