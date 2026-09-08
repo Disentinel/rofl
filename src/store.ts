@@ -585,6 +585,30 @@ export class Store implements FactStore {
       if (!rec.base && !rec.frozen && !(keep && keep(rec))) toDrop.push(rec.key);
     }
     this.removeMany(toDrop);
+    // AND THE STORE IS NOW DIRTY, which it was not until 2026-09-09. `ensure`
+    // returns immediately on a clean store (src/api.ts:620), so a caller that
+    // dropped the derived layer and asked for it back got `{partial: false}`
+    // and a world of base facts — the derived layer gone, the call a no-op, and
+    // nothing said. `advanceTick` sets the flag and `restore` sets it; this was
+    // the one place that dropped facts without it.
+    //
+    // Safe inside an evaluation: every internal caller (src/engine.ts:554,
+    // 1046, 1098 and src/rounds.ts:229) runs before that evaluation's own
+    // `dirty = false`, so the flag it sets here is cleared by the run that set
+    // it. Found by an instrument that returned the expected shape while
+    // measuring nothing — see
+    // f_clear_derived_does_not_dirty_the_store_so_the_next_evaluate_is_a_no_op.
+    this.dirty = true;
+    // AND THE REUSE FINGERPRINTS ARE NOW LIES. `derivedKeys` maps a relation to
+    // the fingerprint of the cone that produced it, and `planReuse`
+    // (src/engine.ts:810) reads it as "this relation is already served, do not
+    // run its rules". Dropping the layer without dropping the map leaves the
+    // claim standing over facts that are gone, so the next evaluation skips
+    // exactly the rules whose output was just deleted — which is the SECOND
+    // layer of the same no-op: with `reuse` off the re-evaluation worked and
+    // with it on the relation stayed empty. `advanceTick` already clears this
+    // for the same reason; this was the other place that drops facts.
+    this.derivedKeys.clear();
     this.partialEval = false;
   }
 
