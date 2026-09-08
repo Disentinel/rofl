@@ -260,9 +260,17 @@ impl Tuples {
         self.cons[slot] = i;
         i
     }
-    fn bytes(&self) -> (usize, usize) {
+    /// FOUR NUMBERS AND NOT TWO, because the two hid a claim. Rolled up as one
+    /// `tups` figure, this table reads as 16 bytes of metadata per tuple and
+    /// invites the reader to attribute all of it to whatever they are arguing
+    /// about; the sort key is HALF of it and the hash-cons table a quarter.
+    /// Said the wrong way round once already, in a proposal that put `sks` at
+    /// the whole 134 MB when it is 67.
+    fn bytes(&self) -> (usize, usize, usize, usize) {
         (
-            self.ends.capacity() * 4 + self.sks.capacity() * 8 + self.cons.capacity() * 4,
+            self.ends.capacity() * 4,
+            self.sks.capacity() * 8,
+            self.cons.capacity() * 4,
             self.args.capacity() * 8,
         )
     }
@@ -1328,13 +1336,15 @@ impl Store {
         let wit: usize = self.wit_head.capacity() * 4
             + self.wits.capacity() * std::mem::size_of::<WitNode>()
             + self.prem_arena.capacity() * std::mem::size_of::<PremRef>();
-        let (tups, targs) = self.facts.tups.bytes();
+        let (tends, tsks, tcons, targs) = self.facts.tups.bytes();
         vec![
             (
                 "recs",
                 self.facts.recs.capacity() * std::mem::size_of::<FactRec>(),
             ),
-            ("tups", tups),
+            ("tup_ends", tends),
+            ("tup_sks", tsks),
+            ("tup_cons", tcons),
             ("args", targs),
             ("by_key", self.keys.capacity() * 4),
             ("idx", idx),
@@ -1526,6 +1536,54 @@ mod tests {
         let m = h.intern("main");
         let a = h.atom("a");
         (h, Store::new(), p, m, a)
+    }
+
+    /// WHAT THE CANONICAL MERGE COSTS AS A GROUP GETS BIG, printed rather than
+    /// asserted. `cargo test -p rofl --release -- --ignored --nocapture merge`.
+    ///
+    /// WHY IT EXISTS. `absorb` sorts each round's arrivals and merges them into
+    /// the group's canonical run, so `cmp_args` is on the evaluation path and
+    /// not only on the export path — and `Tuples.sks` is the eight-byte cache
+    /// that keeps that comparison off the string renderer. The port corpus
+    /// cannot price it: its groups hold six to twelve facts, so a proposal to
+    /// delete the cache measured "no change" there and would have been read as
+    /// "the cache is free to remove". The regime the storage work is ABOUT has
+    /// groups of millions — one `defines(File, Symbol)` over a real repository
+    /// is a single group — and this is the only instrument that reaches it.
+    ///
+    /// Rounds are simulated the way the evaluator produces them: a batch of
+    /// arrivals, then a read that forces the merge.
+    #[test]
+    #[ignore]
+    fn canonical_merge_at_group_size() {
+        for (n, rounds) in [(10_000usize, 20usize), (100_000, 20), (1_000_000, 20)] {
+            let mut h = Heap::default();
+            let p = h.intern("p");
+            let m = h.intern("main");
+            // Distinct atoms, so no two facts share a tuple and every comparison
+            // is a real one — the worst case, and the one a large group is.
+            let atoms: Vec<Term> = (0..n).map(|i| h.atom(&format!("v{i:09}"))).collect();
+            let mut s = Store::new();
+            let per = n / rounds;
+            let t0 = std::time::Instant::now();
+            for r in 0..rounds {
+                for a in atoms.iter().skip(r * per).take(per) {
+                    s.add(&h, p, m, &[*a], 0);
+                }
+                s.rel_persp(&h, p, m);
+            }
+            let ms = t0.elapsed().as_secs_f64() * 1e3;
+            let parts = s.bytes();
+            let sks = parts.iter().find(|(k, _)| *k == "tup_sks").unwrap().1;
+            let total: usize = parts.iter().map(|(_, v)| v).sum();
+            println!(
+                "group {n:>9}  {rounds} rounds  merge {ms:>9.1} ms   \
+sks {:>10} B ({:>4.1}% of {})",
+                sks,
+                100.0 * sks as f64 / total as f64,
+                total
+            );
+        }
     }
 
     #[test]
