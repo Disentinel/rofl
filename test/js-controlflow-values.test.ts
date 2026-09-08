@@ -798,8 +798,13 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       // ...AND `string.replaceAll` JOINED 2026-09-08 (w_env_api_surface) for the
       // same reason as `bigint.toString`: `'aaa'.replaceAll(...)` is a receiver
       // written in place, so the KIND arm is the only thing that answers it.
+      // ...AND `string.substr` / `string.trimLeft` JOINED 2026-09-08
+      // (w_env_api_surface's deprecation half): both are called on a string
+      // literal written in place, so like `replaceAll` they are answered by
+      // the KIND arm alone. A named set grown by a third item.
       assert.deepEqual(stdlib(b).filter((x) => !stdlib(m).includes(x)),
-        ['bigint.toString', 'string.concat', 'string.replaceAll']);
+        ['bigint.toString', 'string.concat', 'string.replaceAll',
+         'string.substr', 'string.trimLeft']);
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)') * 2);
     },
   },
@@ -823,10 +828,11 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       // answered by the kind arm and both survive this mutant — which is why
       // they appear on each side of the pair below.
       assert.deepEqual(stdlib(b), ['array.at', 'array.join', 'array.join', 'bigint.toString',
-        'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll'],
+        'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll',
+        'string.substr', 'string.trimLeft'],
         'two arrays, two regexps and a bigint — some written in place, some reached through a binder');
       assert.deepEqual(stdlib(m), ['array.at', 'array.join', 'bigint.toString', 'regexp.test',
-        'string.concat', 'string.replaceAll'],
+        'string.concat', 'string.replaceAll', 'string.substr', 'string.trimLeft'],
         'and the bound array and the bound regexp are the rows this arm carries');
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)'));
     },
@@ -862,8 +868,13 @@ test('the residue that is the standard library is a row, not a comment', () => {
     // ATTRIBUTED: `array.at` is ES2022 and `string.replaceAll` ES2021, so this
     // list is no longer only a residue — every row now carries a method name and
     // the year it landed, from TypeScript's own lib.es*.d.ts.
+    // TWO MORE AGAIN 2026-09-08, from the DEPRECATION half of the same item:
+    // `string.substr` and `string.trimLeft` are on the list because they are
+    // deprecated, which is a fact this residue can now carry beside the year —
+    // `lib_deprecated` names 17 of them and `lib_replaced_by` gives 2 a remedy.
     'array.at', 'array.join', 'array.join', 'bigint.toString',
     'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll',
+    'string.substr', 'string.trimLeft',
   ]);
   // ...AND IT RESOLVES NOTHING, which is asserted rather than assumed: every
   // site it names is still on the frontier, and the audit moved no edge.
@@ -1371,9 +1382,17 @@ test('the modules layer has no opinion about a destructuring form, measured', ()
   // element added from another branch, and the note above still holds — the
   // CLAIM is the loop below and it is untouched; the enumeration pins somebody
   // else's file and has to be re-read whenever they work.
+  // THIRTEEN SINCE 2026-09-08: `export_default_declaration` and `identifier`
+  // arrived with the default export's naming half — the declaration is the
+  // module site and the identifier is what it exports under. Fifth and sixth
+  // elements added from another branch; the note above holds unchanged, and
+  // this is the third time this enumeration has been re-read for somebody
+  // else's work rather than for its own.
   assert.deepEqual([...named].sort(), [
-    '_', 'export_all_declaration', 'export_named_declaration',
-    'export_namespace_specifier', 'export_specifier', 'import_declaration',
+    '_', 'export_all_declaration', 'export_default_declaration',
+    'export_named_declaration',
+    'export_namespace_specifier', 'export_specifier', 'identifier',
+    'import_declaration',
     'import_default_specifier', 'import_expression',
     'import_namespace_specifier', 'import_specifier', 'string_literal',
   ], 'every kind the modules pack names, and not one of them is a pattern');

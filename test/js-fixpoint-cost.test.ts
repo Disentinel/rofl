@@ -103,7 +103,17 @@ function cost(): Cost {
     };
   }
   r.evaluate(400_000_000);
-  assert.deepEqual(r.query('hole(Q, W)').rows.map((x) => `${x.bindings.Q}/${x.bindings.W}`), [],
+  // AND THE EMPTY ANSWER HAS TO MEAN SOMETHING. `hole(Q, W)` returning no rows
+  // is the claim this file's every number rests on, and until `unpopulatable`
+  // existed that answer was also what a typo, a rename or a wrong ledger
+  // returned. This file only started building a model world on 2026-09-08,
+  // when the load order was fixed, and `test/query-unpopulatable.test.ts`
+  // caught the new hole the same day — the sweep is derived from the files
+  // rather than written down, which is why it could.
+  const holes = r.query('hole(Q, W)');
+  assert.equal(holes.unpopulatable, false,
+               '`hole` is a relation this world has, so an empty answer is a measurement');
+  assert.deepEqual(holes.rows.map((x) => `${x.bindings.Q}/${x.bindings.W}`), [],
                    'the world whose cost this file measures must reach its fixpoint');
   assert.ok(r.query('calls_in[code](F, A, B)').rows.length > 100,
             'positive control: the call graph this corpus exists for is derived');

@@ -15,16 +15,36 @@ Branch `modeljs`. The vocabulary now takes on **the language** rather than its
 own list, by the owner's decision on 2026-09-08.
 
 ```
-KIND x LAYER   420 cells = modelled 150 + waived 224 + not_modelled 46
-  answered (modelled | waived):  374 / 420 = 89.0%
+KIND x LAYER   453 cells = modelled 189 + waived 229 + not_modelled 35
+  answered (modelled | waived):  418 / 453 = 92.3%
 
-open_cell[audit] 15, every one owned BY NAME, sweeper 0 at all four layers.
+open_cell[audit] 6, every one owned BY NAME, sweeper 0 at all four layers.
 65 work items.  blocked[audit] 1 — the kernel question the owner holds.
-  callgraph  open  3, claimed 27     dataflow    open  2, claimed 25
-  modules    open  5, claimed 21     controlflow open  5, claimed 30
+  callgraph  open  1, claimed 25     dataflow    open  1, claimed 24
+  modules    open  3, claimed 19     controlflow open  1, claimed 30
 ```
 
-**THE PLAN IS FLAT AND `next_work` IS SEVENTEEN.** `work_order` — sixty-five
+**THE OPEN SET IS SIX AND EVERY ONE OF THEM IS THE OWNER'S.** This is the
+first time the queue has been in that state, and it is why the open-cell pin
+stopped being a number on 2026-09-08 — `w_open_cell_should_be_an_identity`
+asked for that and the reason it can be granted is not that six is small:
+
+```
+with_statement/none/callgraph     what `with` does to name resolution
+with_statement/none/controlflow   (one-word scanner change; the DECISION is
+with_statement/none/dataflow       what it costs `sees_binder` and `may_be_node`)
+with_statement/none/modules
+call_expression/none/modules      `require` has no site in the whole tree
+import_declaration/subpath/modules  needs a third host loan
+```
+
+A seventh row is now a red test with a name in it rather than an off-by-one.
+**No amount of work closes any of the six**; the remaining open work items —
+`w_cf_completion`, `w_scope_shadowing`, `w_computed_key_names`,
+`w_cost_gate_per_layer` and the rest — improve the model without touching a
+cell, which is the shape `f_a_blindness_can_have_no_cell` already names.
+
+**THE PLAN IS FLAT AND `next_work` IS FOURTEEN.** `work_order` — sixty-five
 hand-written numbers — is gone; the order is derived from `work_needs`, and an
 item something waits on comes before one nothing waits on. All eleven items
 anything waited on are now done, so nothing left has leverage and every takeable

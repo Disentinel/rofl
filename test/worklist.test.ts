@@ -162,9 +162,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   // from its siblings: scanned beside the six re-export forms,
   // `export default function f() {}` emits no `source` child of any kind, so
   // it is not an edge. What is left of that cell is the naming half.
+  // AND THE DEFAULT FORM LEFT ON 2026-09-08: the naming half landed, so
+  // `export_default_declaration x modules` is answered and no longer shaped by
+  // a reason. Four rows where there were five.
   assert.deepEqual(w.binds('shaped_because[audit](A, K, S, modules, R)', 'K', 'S', 'R'), [
     'call_expression/none/not_yet',
-    'export_default_declaration/none/not_yet',
     'import_declaration/bare/out_of_scope',
     'import_declaration/subpath/not_yet',
     'import_expression/computed/runtime_dependent',
@@ -189,7 +191,10 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // its cells. An item that has spawned nothing on the day it was ENTERED is
     // not one nobody looked at — it is one nobody has STARTED, which this list
     // cannot tell apart and does not pretend to.
-    'w_await_is_a_call_the_oracle_places_elsewhere',
+    // `w_await_is_a_call_the_oracle_places_elsewhere` LEFT THIS LIST
+    // 2026-09-08: it was taken and it spawned a finding of its own — `await`
+    // calls `Promise.prototype.then` ZERO times, measured with a monkey-patch
+    // and a positive control, because the spec uses an internal operation.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
     // `w_class_expression` and `w_class_fields` LEFT THIS LIST on 2026-09-08,
@@ -307,7 +312,23 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // 32 -> 15 ON ONE AFTERNOON, from four branches and the library surface:
   // directives (12 cells), the re-export edge, the decorator replacement, the
   // two class-accessor value cells, and four that left by becoming irreducible.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 15, 'the queue is the model\'s open set');
+  // 15 -> 6 on 2026-09-08, and this pin STOPS BEING A NUMBER here, which is
+  // what `w_open_cell_should_be_an_identity` was entered to ask for. The reason
+  // it can stop now is not that six is small: it is that the six no longer
+  // form a backlog. Every one of them is a cell whose work is known and whose
+  // DECISION is the owner's — `with_statement` at all four layers waits on
+  // what `with` does to name resolution, `require` has no site in this tree,
+  // and the subpath specifier needs a third host loan. A count could not say
+  // that; the rows can, and a seventh row appearing is now a red test with a
+  // name in it rather than an off-by-one.
+  assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
+    'call_expression/none/modules',
+    'import_declaration/subpath/modules',
+    'with_statement/none/callgraph',
+    'with_statement/none/controlflow',
+    'with_statement/none/dataflow',
+    'with_statement/none/modules',
+  ], 'the queue is the model\'s open set, and all six of it are the owner\'s to decide');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -384,7 +405,12 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // them because a claim on an irreducible cell is what `queue_stale` calls a lie.
   // ALL FOUR LAYERS AGAIN, 2026-09-08: callgraph 7 -> 3, dataflow 7 -> 2,
   // modules 10 -> 5, controlflow 8 -> 5.
-  assert.deepEqual(per('callgraph'), [3, 27, 0]);
+  // ALL FOUR AGAIN, 2026-09-08 evening: callgraph 3 -> 1, dataflow 2 -> 1,
+  // modules 5 -> 3, controlflow 5 -> 1. The open column is now SIX rows in
+  // total and every one of them is named in `open_cell` above — four
+  // `with_statement` cells, `require`, and the subpath specifier. The claimed
+  // column falls with it wherever a claim went out with the cell it named.
+  assert.deepEqual(per('callgraph'), [1, 25, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -401,7 +427,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
   // 15 -> 16 open: `class_accessor_property`'s value cell, owned by
   // `w_decorator_replaces_its_target` along with the decorator's own.
-  assert.deepEqual(per('dataflow'), [2, 25, 0]);
+  assert.deepEqual(per('dataflow'), [1, 24, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
@@ -410,7 +436,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // eight cells, and the destructuring family answered the rest by measurement
   // rather than by definition — a pattern DIRECTLY under an export declaration
   // moves no row of this layer, which is a verdict that had to be exercised.
-  assert.deepEqual(per('modules'), [5, 21, 0]);
+  assert.deepEqual(per('modules'), [3, 19, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -428,7 +454,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // when the vocabulary became the language, and four `with_statement` cells
   // stayed OPEN AND UNBLOCKED — the work is a one-word scanner change and what
   // it waits on is a decision about name resolution, not a blocker.
-  assert.deepEqual(per('controlflow'), [5, 30, 0]);
+  assert.deepEqual(per('controlflow'), [1, 30, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -449,7 +475,16 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     'import_expression/none/callgraph',
     'import_expression/none/dataflow',
     'member_expression/s_member_on_literal/callgraph',
+    // FOUR MORE ON 2026-09-08 with the meta properties, and all four are
+    // irreducible for the same reason the literals are: the receiver is
+    // provided by the HOST. `import.meta` and `new.target` have no node in
+    // this program, so a call through either has no source target and no
+    // value to flow.
+    'member_expression/s_member_on_meta/callgraph',
     'member_expression/s_member_on_template/callgraph',
+    'meta_property/import_meta/dataflow',
+    'meta_property/new_target/callgraph',
+    'meta_property/new_target/dataflow',
     'reg_exp_literal/none/callgraph',
   ], 'a dynamic import specifier: nobody is ever assigned these');
 });

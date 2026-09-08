@@ -189,6 +189,7 @@ a fact.** A long run must therefore attest to its own conditions:
 
 ```bash
 snap() { find . \( -name "*.ts" -o -name "*.rofl" \) -not -path "./node_modules/*" \
+         -not -path "./.claude/*" \
          -exec stat -f "%m %N" {} \; | sort | md5; }
 B=$(snap)
 touch ./_ctl.ts; C=$(snap); rm -f ./_ctl.ts     # control: it must DIFFER
@@ -200,6 +201,18 @@ npm test > /tmp/out.txt 2>&1
 The control matters as much as the comparison: a fingerprint that cannot change
 certifies everything. On its first run this caught a moving tree and correctly
 discarded a 929-test result that would otherwise have been believed.
+
+**`./.claude/*` IS EXCLUDED AND WAS NOT, AND THE OMISSION WAS 92 PER CENT OF THE
+FINGERPRINT.** Measured 2026-09-09: the ritual as first written covered **4 208**
+files, of which **334** are this working tree and **3 874** belong to twelve
+OTHER agents' worktrees living under `.claude/worktrees/`. Those did not exist
+when the ritual was written, so the gate inherited the scope of its incident and
+the repository grew out from under it — the same sentence this file already
+writes about the NUL check and the `# tests` grep. It failed in the safe
+direction, which is why nothing noticed: a foreign worktree moving would have
+made a valid result read `TREE MOVED — DISCARD`, and a run that is discarded for
+the wrong reason is simply re-run. **The cost was never a wrong answer; it was
+that the fingerprint said almost nothing about the thing it was certifying.**
 
 The rest of the repository already works this way — an oracle enumerates its own
 call sites, a gate ships with a planted defect, a witness is a query anyone can

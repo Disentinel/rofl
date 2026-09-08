@@ -818,8 +818,9 @@ test('the price of the cell: what modelling the call graph dragged into the matr
 //
 // WHAT IS PINNED HERE IS THE TRANSFORMATION AND NOT THE ENGINE, and the
 // distinction is the reason this is a table of STRINGS rather than a fixture of
-// call sites. The raw column is a measurement — identical on V8 12.4 and V8
-// 14.0, re-swept the same day — and the arrow is ours. CI runs this suite under
+// call sites. The raw column is a measurement — identical on V8 11.3 and V8
+// 13.6, re-swept the same day, those being the engines node 20.20.0 and node
+// 24.13.0 actually carry — and the arrow is ours. CI runs this suite under
 // bun as well, where the raw names are JavaScriptCore's; a test that called the
 // shapes for real would pin an engine and go red for being right.
 test("the oracle's frame naming: what V8 spells, and what it becomes", async () => {

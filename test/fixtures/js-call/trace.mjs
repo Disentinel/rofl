@@ -44,11 +44,13 @@ const measured = new Set();
  *  which is what the model calls it too — every other method is named by its
  *  key rather than by its receiver, and a computed key is still a key.
  *
- *  RE-SWEPT 2026-09-07 on V8 12.4 (node 20) and V8 14.0 (node 24): the raw
- *  names are IDENTICAL on both, shape for shape — including `new Sub()`,
- *  which reports `Sub` only when the subclass declares its own constructor —
- *  so the table above is a property of V8 across four major versions rather
- *  than of one.
+ *  RE-SWEPT 2026-09-07 on V8 11.3 (node 20.20.0) and V8 13.6 (node 24.13.0)
+ *  — the two engines this checkout can actually run, and the version pair
+ *  printed by `process.versions.v8`, not the one this comment first claimed.
+ *  The raw names are IDENTICAL on both, shape for shape — including
+ *  `new Sub()`, which reports `Sub` only when the subclass declares its own
+ *  constructor — so the table above holds across two major V8 versions. Two
+ *  is what was measured; it is not a claim about the majors in between.
  *
  *  `frameName` IS EXPORTED so the transformation can be gated without an
  *  engine in the loop: test/js-callgraph.test.ts pins raw string -> name,
