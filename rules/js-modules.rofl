@@ -331,6 +331,102 @@ export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
                                              export_binding[code](_, Sp, _, B), A != B.
 
 -- ---------------------------------------------------------------------------
+-- 4c. THE DEFAULT EXPORT — the third export form, and the only one in the
+--     grammar with NO SPECIFIER NODE to hang a name on.
+--
+-- MEASURED FROM THE SCANNER on a probe holding eight spellings, rather than
+-- recalled, and the eight split FOUR AND FOUR on whether an internal name
+-- exists at all — which is the whole shape of this section:
+--
+--   export default function named() {}   function_declaration with `id`   named
+--   export default class Named {}        class_declaration    with `id`   named
+--   export default interface I {}        tsinterface_declaration, `id`    named
+--   export default q                     identifier — the NAME ITSELF     named
+--   export default function () {}        function_declaration, NO id      anon
+--   export default class {}              class_declaration,    NO id      anon
+--   export default 42                    numeric_literal                  anon
+--   export default () => 1               arrow_function_expression        anon
+--
+-- ...and every one of the eight carries `export_kind` "value" and NO `source`
+-- child of any kind, which is why this form is a NAME and not an EDGE: the
+-- `export v from './m'` spelling needs babel's `exportDefaultFrom` plugin,
+-- which is off here and which no environment claims. Section 5b gives the
+-- re-export forms `depends`/`flows`/`evaluates` and deliberately says nothing
+-- here; what is left, and what this section is, is the NAMING half.
+--
+-- THE EXTERNAL NAME IS FIXED BY THE GRAMMAR and it is not invented here.
+-- `"default"` is the string section 4 already writes for an
+-- ImportDefaultSpecifier's `imported` name, so the two ends of
+-- `import d from './m'` / `export default ...` meet on ONE spelling rather
+-- than on two that could drift — the same argument section 4b makes for `"*"`.
+export_default_site[code](E) :- ast_node[code](E, export_default_declaration, _, _).
+
+default_external[code](E, "default") :- export_default_site[code](E).
+
+-- WHAT THE NAME STANDS FOR IS A NODE, AND ONLY SOMETIMES A NAME. Four of the
+-- eight spellings above have an `id` child and four do not: `export default 42`
+-- offers `default` and there is no internal name anywhere in the program. So
+-- the internal column is PARTIAL by the grammar and the complement is written
+-- down rather than left as an absence, which is what makes the pair total.
+default_declaration[code](E, D) :- export_default_site[code](E),
+                                   ast_child[code](E, declaration, 0, D).
+
+default_internal[code](E, N) :- default_declaration[code](E, D),
+                                ast_child[code](D, id, 0, I), ast_name[code](I, N).
+
+-- ...AND THE SECOND ARM, `export default q`, WHERE THE DECLARATION IS THE NAME.
+-- babel gives an Identifier a `name` attribute and no `id` child, so a rule
+-- reading `id` alone reports this form ANONYMOUS — and that would be wrong in
+-- exactly the direction this whole cell is about: the module offers `default`
+-- standing for `q`, and unlike a re-export's `local`, `q` really is a name in
+-- THIS module. Two arms and not one `ast_name` on the declaration, because on a
+-- FunctionDeclaration the name is one level below and on an Identifier it is
+-- the node itself — the same two-shapes-one-question split section 4b makes
+-- for `exported` being an Identifier or a StringLiteral.
+default_internal[code](E, N) :- default_declaration[code](E, D),
+                                ast_node[code](D, identifier, _, _), ast_name[code](D, N).
+
+has_default_internal[code](E) :- default_internal[code](E, _).
+default_anonymous[code](E)    :- default_declaration[code](E, _),
+                                 not has_default_internal[code](E).
+
+-- the module that offers the name, straight off the node
+default_export_file[code](F, E) :- ast_node[code](E, export_default_declaration, F, _).
+
+-- THE GATES. Same three questions section 4b asks of a specifier, asked of a
+-- declaration instead.
+--
+-- TOTALITY: a default site names something or names nothing, and never falls
+-- out of the bottom. The one thing that would make it fall out is a site with
+-- no `declaration` child — which is exactly what `export v from './m'` is
+-- under the plugin this build does not enable, so the gate is aimed at the
+-- form the vocabulary would meet first if that decision changed.
+default_accounted[audit](E)   :- default_internal[code](E, _).
+default_accounted[audit](E)   :- default_anonymous[code](E).
+default_unaccounted[audit](E) :- export_default_site[code](E), not default_accounted[audit](E).
+
+-- the internal name is a FUNCTION of the site: never two
+default_internal_conflict[audit](E, A, B) :- default_internal[code](E, A),
+                                             default_internal[code](E, B), A != B.
+
+-- ...and ONE DEFAULT PER MODULE, which the grammar guarantees and this states.
+-- It is not decoration: `ast_node`'s ids are unique across files only because
+-- the scanner prefixes them per file, so two default sites in one File column
+-- is what a collision between two scanned modules would look like from here.
+default_conflict[audit](F, A, B) :- default_export_file[code](F, A),
+                                    default_export_file[code](F, B), A != B.
+
+-- WHAT THIS SECTION DOES NOT CLAIM, and it is a measurement rather than an
+-- omission. `export default interface I {}` is legal TypeScript, is erased
+-- entirely before anything runs, and carries `export_kind` "value" — so BOTH
+-- erasure markers section 4b reads say the OPPOSITE of the truth for it, and
+-- the only discriminator left is the KIND of the `declaration` child. That
+-- kind is not in this vocabulary, so the model has no cell for it and
+-- `vocabulary_gap[audit]` in rules/js-model.rofl is the row that says so the
+-- moment such a declaration enters a corpus. Declaring it would open a cell at
+-- every layer, which is a vocabulary decision and not this section's.
+
+-- ---------------------------------------------------------------------------
 -- 5. DEPENDS, EVALUATES, FLOWS — three relations, because two do not separate
 --    the three things that actually happen.
 
@@ -450,6 +546,65 @@ reexport_offers[code](F, External, T, Internal) :-
     reexport_value_spec[code](E, Sp),
     spec_external[code](Sp, External), spec_internal[code](Sp, Internal),
     resolved_import[code](E, T), site_file[code](E, F).
+
+-- ---------------------------------------------------------------------------
+-- 5c. WHICH MODULE AN INTERNAL NAME LIVES IN — and the settlement of
+--     f_a_reexports_local_name_is_not_a_name_in_this_module.
+--
+-- THE QUESTION. Section 4b derives `reHelper <- helper` for
+-- `export { helper as reHelper } from './c.ts'`, and `helper` is c.ts's name,
+-- not a name in the file doing the re-export. The dataflow layer guards
+-- exactly this — `export_local` in rules/js-dataflow.rofl carries
+-- `not reexport_decl[code](E)` — so one layer had the negation over the same
+-- two children of the same node and this one did not.
+--
+-- THE GUARD IS NOT TRANSPLANTABLE, and that is a fact about the GRAMMAR rather
+-- than about this fixture. Measured against babel 8: `export * as ns;` is a
+-- SYNTAX ERROR — an ExportNamespaceSpecifier cannot occur without a `source`.
+-- So narrowing `export_site` to exclude declarations with a `source` would
+-- make section 4b derive ZERO rows for `export_namespace_specifier` in EVERY
+-- program that can be written, not merely in this tree — a `handled` cell
+-- answered by a rule that is empty by construction, which is the shape
+-- CLAUDE.md names as a flag nothing exercises. The finding's own note put the
+-- cost at `everything <- *` in this corpus; it is larger than that.
+--
+-- SO THE ROW IS KEPT AND THE SILENCE IS CLOSED. `export_binding` says a true
+-- thing about NAMING — this module offers External, standing for Internal —
+-- and what it could not say is WHICH MODULE Internal is a name in. That is one
+-- rule with two arms, total over every export specifier, and it costs no cell:
+--
+--   a specifier under a declaration with no `source`   -> this file
+--   a specifier under a re-export                      -> the file it resolves to
+--
+-- `"*"` rides the second arm without a special case, exactly as it does in
+-- `reexport_offers`: the module `export * as ns from './m'` offers IS m.
+local_export_site[code](E) :- export_site[code](E), not reexport_site[code](E, reexport_named).
+
+export_internal_in[code](Sp, F) :- export_spec[code](E, Sp), local_export_site[code](E),
+                                   ast_node[code](E, _, F, _).
+export_internal_in[code](Sp, T) :- reexport_spec[code](E, Sp), resolved_import[code](E, T).
+
+-- ...AND THE RESIDUE, as a positive relation rather than a gate, because a
+-- re-export from a package is grammatical and this corpus has none: a
+-- specifier whose declaration names a module the resolver declined has no home
+-- to report, and saying which SHAPE declined it is the honest answer.
+export_internal_unplaced[code](Sp, Sh) :- reexport_spec[code](E, Sp),
+                                          unresolved_import[code](E, Sh).
+
+-- THE ROW THE FINDING WAS ABOUT, made queryable instead of commented: an
+-- external name whose internal name is not a name in the exporting module. It
+-- is not `reexport_offers` under another name — that relation carries only the
+-- specifiers that survive erasure, and two of these four are type-only.
+export_internal_elsewhere[code](F, X, T) :- export_binding[code](E, Sp, X, _),
+                                            ast_node[code](E, _, F, _),
+                                            export_internal_in[code](Sp, T), T != F.
+
+-- the totality gate, in the shape section 6 already uses: every bound
+-- specifier is placed in a module or declared unplaceable, and never neither
+has_internal_home[audit](Sp)        :- export_internal_in[code](Sp, _).
+has_internal_home[audit](Sp)        :- export_internal_unplaced[code](Sp, _).
+export_internal_homeless[audit](Sp) :- export_binding[code](_, Sp, _, _),
+                                       not has_internal_home[audit](Sp).
 
 -- ---------------------------------------------------------------------------
 -- 6. THE FRONTIER, AS A POSITIVE RELATION
