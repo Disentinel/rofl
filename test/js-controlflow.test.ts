@@ -295,16 +295,28 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
   {
     name: 'r1 the export surface stops being a seed',
     mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
-    expect: (m) => assert.equal(m.n('reachable[code](F)'), 1,
-      'without the seed the walk has nowhere to start: one top-level call'),
+    // NAMED RATHER THAN COUNTED 2026-09-08: this was `=== 1`, and a second
+    // top-level call arrived with w_class_expression's heritage-clause site
+    // (`export const Bracket = class extends mountOf() {}` calls `mountOf` when
+    // the module is evaluated). The claim is WHICH functions a corpus reaches
+    // with no export surface at all, and that is a set.
+    expect: (m) => assert.deepEqual(m.q('reachable[code](F)')
+      .map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n).sort().join('/')).sort(),
+      ['mountOf', 'seed'],
+      'without the seed the walk has nowhere to start but the top-level calls'),
   },
   {
     name: 'r2 the walk stops after one step',
     mut: [{ find: `reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
                       not guarded[code](C).`, replace: '' }],
     expect: (m, b) => {
-      assert.equal(m.n('reachable[code](F)'), m.n('entry_point[code](F)') + 1,
-        'only the entry points and the top-level call remain');
+      // NAMED RATHER THAN OFFSET 2026-09-08, for the same reason as r1 above:
+      // the `+ 1` was the corpus's one top-level call and there are two now.
+      const eps = new Set(m.q('entry_point[code](F)').map(([f]) => f));
+      assert.deepEqual(m.q('reachable[code](F)').filter(([f]) => !eps.has(f))
+        .map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n).sort().join('/')).sort(),
+        ['mountOf', 'seed'],
+        'only the entry points and the TOP-LEVEL calls remain');
       assert.ok(m.n('reachable[code](F)') < b.n('reachable[code](F)'));
     },
   },
@@ -664,8 +676,22 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
-    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
-      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']),
+    // A SUPERSET RATHER THAN AN EQUALITY, 2026-09-08. The five names below are
+    // the CLAIM — the walk leaves the labelled statement, and `seenEmpty` says
+    // it leaves the FUNCTION — and the rest of what a boundary-less walk sweeps
+    // up is whatever the module happens to declare after the last abrupt
+    // statement in shapes.ts. That is a fact about the corpus, and it moved the
+    // day w_class_expression appended a block: eight more names, all of them
+    // methods and constructors of the new fixture and not one of them about
+    // labels. The five are named; the corpus is not counted.
+    expect: (m, b) => {
+      const added = afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n));
+      for (const n of ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']) {
+        assert.ok(added.includes(n), `the boundary-less walk reaches ${n}`);
+      }
+      assert.ok(!afterAbrupt(b).includes('seenEmpty'),
+        'positive control: with the literal in place the walk stays in its own function');
+    },
   },
   {
     name: 'l3 the name join is dropped',

@@ -266,17 +266,22 @@ kind_absent_ok(class_private_property, a_declared_for_the_denominator_and_queued
 kind_absent_ok(class_private_method, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(private_name, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(static_block, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(class_expression, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(update_expression, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(big_int_literal, a_declared_for_the_denominator_and_queued).
 kind_absent_ok(reg_exp_literal, a_declared_for_the_denominator_and_queued).
-kind_absent_ok(meta_property, a_declared_for_the_denominator_and_queued).
 -- ...AND TWO ARE GONE, 2026-09-08 (w_export_specifier_forms): `export_specifier`
 -- and `export_namespace_specifier` have corpus sites now — `export { renamed as
 -- exposed }` in alpha.mjs, `export * as alphaAll from` in gamma.mjs, and both
 -- forms again in test/fixtures/js-mod/exp.ts — so their excuses had to go, which
 -- is what the paragraph above promised and `kind_absent_stale[audit]` named
 -- within one run rather than being noticed by hand.
+-- ...AND TWO MORE ARE GONE, 2026-09-08 (w_class_expression, w_meta_property):
+-- test/fixtures/js-call/shapes.ts.txt carries three class expressions — one
+-- anonymous, one named, one with a constructor — and one `new.target` beside
+-- one `import.meta`, so `class_expression` and `meta_property` are exercised
+-- and `kind_absent_stale[audit]` named both by name on the first run with the
+-- fixture in and no verdict yet written. That is the third time this audit has
+-- removed its own excuses rather than a reader noticing.
 -- THREE ROWS LEFT ON 2026-09-08 (w_labelled_control, w_inert_statements) and
 -- `kind_absent_stale[audit]` is what took them: the fixture at the end of
 -- test/fixtures/js-call/shapes.ts.txt puts a label, a `;` and a `debugger` in

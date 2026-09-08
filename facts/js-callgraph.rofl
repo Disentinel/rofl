@@ -152,6 +152,30 @@ ignored(js, null_literal,      callgraph, a_a_literal_is_never_callable).
 ignored(js, return_statement,   callgraph, a_not_a_call_site).
 ignored(js, class_declaration,  callgraph, a_the_constructor_is_the_target).
 
+-- ...AND ITS EXPRESSION TWIN TAKES THE SAME WAIVER, 2026-09-08
+-- (w_class_expression) — and it takes it only because the constructor really
+-- IS the target now, which it was not the day before.
+--
+-- MEASURED BEFORE AND AFTER, on the corpus rather than on a probe. Before:
+-- `new (class {})().turn()` and `new (class Hoist {})().lift()` came back as
+-- unresolved `s_member_on_ident`, `Gantry.rated()` came back unresolved, and no
+-- constructor edge existed for any of them — so the waiver `a_the_constructor
+-- is the target` would have been a sentence about a target nothing could reach.
+-- After the `class_named` arm in rules/js-dataflow.rofl and the anonymous
+-- constructor name above, `calls_in` carries all five edges from
+-- test/fixtures/js-call/shapes.ts.txt by name:
+--
+--     onAnonClassExpr -> turn        onClassExprStatic -> rated
+--     onNamedClassExpr -> lift       onClassExprCtor -> Gantry, -> bear
+--                                    onExtendsClassExpr -> twice
+--
+-- `-> Gantry` is the constructor edge and its NAME is the whole of the second
+-- rule: the class has no `id`, so without the binding-name arm the edge is
+-- derived by `resolves` and then dropped by `calls_in`, which joins `fn_name`
+-- on both ends.
+node_kind(js, class_expression).
+ignored(js, class_expression,   callgraph, a_the_constructor_is_the_target).
+
 -- A LITERAL AS A COMPUTED KEY. `string_literal` and `numeric_literal` are read
 -- for their KIND, which is all a shape needs, and their value is on the facts
 -- when a later tier wants it.

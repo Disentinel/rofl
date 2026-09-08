@@ -107,7 +107,14 @@ feature(logical_assignment).  feature_since(logical_assignment, 2021).
 -- `import_attributes` (ES2025) is NOT here - a feature no environment can
 -- have would sit in `feature_unreachable[audit]` for ever.
 feature(class_fields).        feature_since(class_fields, 2022).
-feature(meta_property).       feature_since(meta_property, 2015).
+-- ONE NODE KIND, TWO FEATURES, TWO YEARS (w_meta_property, 2026-09-08). This
+-- row used to read `feature(meta_property). feature_since(meta_property, 2015).`
+-- and it was WRONG FOR HALF THE KIND: `new.target` is ES2015 and `import.meta`
+-- is ES2020, they are the same `meta_property` node, and a table keyed by kind
+-- said es2015 accepts both. See `child_needs` below for why neither of the two
+-- refinements this file already had could tell them apart.
+feature(new_target).          feature_since(new_target, 2015).
+feature(import_meta).         feature_since(import_meta, 2020).
 feature(bigint).              feature_since(bigint, 2020).
 feature(namespace_reexport).  feature_since(namespace_reexport, 2020).
 feature(type_syntax).
@@ -131,7 +138,7 @@ kind_needs(js, class_private_property,    class_fields).
 kind_needs(js, class_private_method,      class_fields).
 kind_needs(js, private_name,              class_fields).
 kind_needs(js, static_block,              class_fields).
-kind_needs(js, meta_property,             meta_property).
+-- `meta_property` IS GATED BY A CHILD AND NOT BY THE KIND — see `child_needs`.
 kind_needs(js, big_int_literal,           bigint).
 kind_needs(js, export_namespace_specifier, namespace_reexport).
 kind_needs(js, class_declaration,           classes).
@@ -294,3 +301,36 @@ feature_unscannable(decorators, a_parser_plugin_not_enabled).
 -- async ancestor" and "is inside a function at all" coincide for this feature.
 edb(outside_attr_needs).
 outside_attr_needs(js, await_expression, async, true, top_level_await).
+
+
+-- ===========================================================================
+-- THE FOURTH GATE SHAPE: WHAT IS *INSIDE* A NODE (w_meta_property, 2026-09-08).
+--
+-- `child_needs(Lang, Kind, Field, Name, Feature)`: a node of Kind whose `Field`
+-- child is named `Name` needs `Feature`.
+--
+-- WHY A FOURTH TABLE AND NOT A ROW IN ONE OF THE THREE. `new.target` is ES2015
+-- and `import.meta` is ES2020 and they are ONE node kind, so `kind_needs`
+-- cannot split them — it gave both the older year, which says an es2015 runtime
+-- accepts `import.meta`. Neither refinement already here could do it either,
+-- and that is a MEASUREMENT rather than a reading:
+--
+--   `attr_needs` reads `ast_attr`. Probed across the corpus — a `meta_property`
+--   node carries ZERO `ast_attr` rows of any key. There is no attribute to key
+--   on, so the operator trick that separates `**` from `*` has nothing to grip.
+--
+--   `outside_attr_needs` reads an ANCESTOR's attribute. What distinguishes
+--   these two is entirely inside the node.
+--
+-- WHAT IS THERE IS TWO IDENTIFIER CHILDREN, `meta` and `property`, and the
+-- scanner already emits both with their names: `new.target` is
+-- (meta="new", property="target") and `import.meta` is
+-- (meta="import", property="meta"). So this needs no new scanner contract
+-- either, which is the same argument `attr_needs` made for the operator.
+--
+-- KEYED ON `meta` AND NOT ON `property`, deliberately: `meta` is the reserved
+-- word the grammar switches on, and it is the half that cannot collide — a
+-- future `import.defer` would still be `meta="import"`.
+edb(child_needs).
+child_needs(js, meta_property, meta, "new",    new_target).
+child_needs(js, meta_property, meta, "import", import_meta).

@@ -306,6 +306,16 @@ ignored(js, boolean_literal,              modules, a_not_a_module_construct).
 node_kind(js, null_literal).
 ignored(js, null_literal,                 modules, a_not_a_module_construct).
 ignored(js, class_declaration,            modules, a_not_a_module_construct).
+-- ...and the expression form, 2026-09-08 (w_class_expression), WITH ITS OWN
+-- CONTROL. `export const C = class {}` puts no name in `exports_name[code]` —
+-- and neither does `export const f = function () {}` nor `export const g = () =>
+-- 2`, measured side by side in one probe file, while `export function h() {}`
+-- beside them does. So the silence belongs to the `export const X = <expr>`
+-- FORM and not to classes: nothing this layer says about a class expression is
+-- different from what it says about any other expression, which is what makes
+-- the waiver honest rather than borrowed. The `export const` gap itself is
+-- named in facts/worklist.rofl.
+ignored(js, class_expression,             modules, a_not_a_module_construct).
 ignored(js, class_method,                 modules, a_not_a_module_construct).
 ignored(js, conditional_expression,       modules, a_not_a_module_construct).
 ignored(js, decorator,                    modules, a_not_a_module_construct).
@@ -374,6 +384,7 @@ node_kind(js, await_expression).
 node_kind(js, boolean_literal).
 node_kind(js, class_declaration).
 node_kind(js, class_method).
+node_kind(js, class_expression).
 node_kind(js, conditional_expression).
 node_kind(js, decorator).
 node_kind(js, for_of_statement).

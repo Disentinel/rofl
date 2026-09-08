@@ -774,14 +774,27 @@ test('which function binds `this`, named row by row', () => {
     const n = m.q(`fn_name[code](${id}, N)`).map(([x]) => x);
     return n.length ? n.sort().join('/') : id;
   };
+  // THREE JOINED 2026-09-08 (w_class_expression) and every one is a CLASS
+  // EXPRESSION's method or constructor: `Gantry` and `Hoist` are the two
+  // constructors and `twice` is a `this.turn(n)` in a class that extends a class
+  // expression. A class expression binds `this` exactly as a declaration does,
+  // which is what makes them ordinary rows rather than a new question.
   assert.deepEqual(m.q('this_host[flow](F, T)').map(([f]) => name(f)).sort(),
-    ['Barrel', 'Box', 'both', 'both', 'drift', 'get', 'hold', 'relay', 'relay', 'show']);
+    ['Barrel', 'Box', 'Gantry', 'Hoist', 'both', 'both', 'drift', 'get', 'hold',
+     'relay', 'relay', 'show', 'twice']);
   // AND THE DENOMINATOR, without which the list above cannot fail in the
-  // direction that matters: twelve (node, enclosing this-binder) pairs, ten
-  // hosts — so two `this` nodes really do have more than one candidate and the
-  // `not this_nearer` literal really is choosing between them.
-  assert.equal(m.n('this_over[flow](F, T)'), 12,
-    'two of the twelve are the outer candidates the nearest-wins rule discards');
+  // direction that matters. WRITTEN AS THE DIFFERENCE AND THE NAMES 2026-09-08:
+  // it was `this_over === 12`, a number that moves whenever the corpus grows a
+  // method — and it did, twice in one afternoon — while the CLAIM it stands for
+  // is that some `this` has more than one candidate and the `not this_nearer`
+  // literal chooses. That claim is a set.
+  const cands = new Map<string, string[]>();
+  for (const [f, t] of m.q('this_over[flow](F, T)')) cands.set(t, [...(cands.get(t) ?? []), name(f)]);
+  assert.deepEqual([...cands.values()].filter((v) => v.length > 1).map((v) => v.sort().join(' over ')),
+    ['relay over show', 'relay over show'],
+    'the only `this` nodes with two candidates are the two inside `relay`');
+  assert.equal(m.n('this_over[flow](F, T)') - m.n('this_host[flow](F, T)'), 2,
+    'and exactly those two outer candidates are what the nearest-wins rule discards');
 });
 
 test('WHERE THE WALK CANNOT LOOK: a function the HOST calls', () => {
