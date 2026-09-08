@@ -404,6 +404,29 @@ across two runs:
 across nine files, none of them saying "a fixture is gone". `scripts/text_check.ts`
 now rejects markers and `test/js-ast.test.ts` asserts every fixture scans.
 
+**Three operational traps, all paid for on 2026-09-08/09 and none of them
+about the model.**
+
+1. **The suite needs node 24 and the default node here is 20.** `npm test`
+   under node 20.20.0 dies with `node: bad option:
+   --experimental-strip-types` and reports nothing else — it looks like a
+   harness failure, not a wrong interpreter. Put
+   `export PATH=/Users/vadim/.nvm/versions/node/v24.13.0/bin:$PATH` at the top
+   of every brief and every background run.
+2. **Never pipe a test run into `head`.** `node --test ... | grep ... | head`
+   makes `head` exit early, `grep` take SIGPIPE, and node BLOCK on stdout: the
+   run sits at 0 per cent CPU forever and the harness eventually kills it with
+   exit 144. Three runs were lost this way and read as "the file hangs now",
+   which sent the diagnosis at the tests rather than at the pipe. Redirect to a
+   file and grep the file.
+3. **This machine is shared and the other tenants are invisible.** A second
+   session was running cost measurements over `eslint/lib` in
+   `/Users/vadim/rofl-modeljs` on `wip/curve`; `js-controlflow-values` went
+   from about two minutes to over eight, with nothing in this tree changed.
+   `git worktree list` and `ps` before quoting any timing — and note that a
+   sibling worktree's `git add -A` is scoped to ITS worktree, so the danger is
+   contention and not your working tree.
+
 **Budget the integration, not the authoring.** Merging cost nine hunks and ten
 failing tests, of which six were pins and **four were real** — and three of the
 four were defects that PREDATED the parallel work and were found by a fresh
