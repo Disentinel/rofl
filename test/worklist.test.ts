@@ -208,6 +208,14 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // entered but not started looks identical to one nobody looked at, and the
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
+    // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
+    // by the item that built the second cost gate. It is on this list for the
+    // reason the block above names: entered today, not started — and it is the
+    // clearest case yet of the distinction this list cannot draw, because the
+    // work it asks for is already MEASURED (a 42.7% reorder with a row-for-row
+    // equivalence control in MUTANT B of test/js-layer-cost.test.ts) and simply
+    // not applied.
+    'w_has_return_is_a_join_over_the_whole_corpus',
     // `w_class_expression` and `w_meta_property` LEFT THIS LIST 2026-09-08 for
     // the same reason the two before them did: both were taken and both
     // spawned. `w_meta_property` is still OPEN and still on this side of the
