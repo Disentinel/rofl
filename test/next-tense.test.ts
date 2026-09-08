@@ -167,7 +167,7 @@ test('the kernel publishes the head tense, and it is readable by a rule', () => 
   // Named rather than filtered out: if a third joins them the join is what
   // should say so.
   assert.deepEqual(rows(r, 'staged_rel(Rel)'),
-    ['Rel = collects', 'Rel = imports', 'Rel = later']);
+    ['Rel = collects', 'Rel = imports', 'Rel = later', 'Rel = publishes']);
 });
 
 // ---------------------------------------------------------------------------

@@ -153,7 +153,11 @@ test('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and
     .map((x) => x.bindings['R']));
   const fromMain = reads('main');
   const fromKernel = reads('$kernel');
-  assert.equal(fromMain.size, 9, `nine audit rules read [main], got ${fromMain.size}`);
+  // TEN SINCE 2026-09-08: `published[audit]` reads `published_to`, which is
+  // derived into [main] from `publishes` and `flow`, so the publication
+  // instrument lands on the [main] side of this count exactly as
+  // `widened[audit]` did the day before.
+  assert.equal(fromMain.size, 10, `ten audit rules read [main], got ${fromMain.size}`);
   // MUTANT / THE OTHER HALF, which is the point of splitting one sentence into
   // two: the rules that vanished from the count above did not vanish from the
   // program. Asserting only the 8 would pass just as well if the kernel's book

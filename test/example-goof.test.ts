@@ -60,7 +60,7 @@ test('the model loads clean, and every rule materialises bottom-up', () => {
   assert.equal(books(r).length, 9);
 });
 
-test('a rule uniform in the ledger is no leak, and the audit still bites', () => {
+test('a rule uniform in the ledger is no leak, and the audit no longer bites', () => {
   // A rule that reads and writes the SAME perspective variable carries one
   // term at both ends of the reflection -- `$var("G")` -- so boot.rofl sees
   // no crossing. This example is what paid for that: while every variable
@@ -78,23 +78,26 @@ test('a rule uniform in the ledger is no leak, and the audit still bites', () =>
   // `proposition[main](P) :- axiom[G](P)` pools all nine axiom sets into one
   // language, which is half the thesis.
   //
-  // TWO ROWS STAND, AND THEY ARE NOT THIS TEST'S SUBJECT. goof.rofl names one
-  // of them in its own words -- "ONE ROW IS LEFT REPORTING HERE, AND IT IS A
-  // GAP IN THE LANGUAGE. `leak[audit](main, $var(\"G\"))`: a rule reads [main]
-  // -- the arithmetic and structural helpers nobody gave a book to -- and
-  // writes the ledger VARIABLE. The crossing's DESTINATION is unnameable" --
-  // and the second is that same walk one hop further back, since boot.rofl's
-  // `flow($kernel, main)` reaches [main] and [main] reaches the variable.
-  // `imports($var("G"), main).` would silence both and is WRONG: it licenses
-  // by the spelling of the variable, so renaming ?G to ?H would revoke it.
-  // Finding `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`,
-  // which `demands(..., decision)`; examples/npc carries the same row.
+  // TWO ROWS STOOD HERE UNTIL 2026-09-08 AND THE GAP THEY NAMED IS CLOSED.
+  // goof.rofl described one in its own words -- "the crossing's DESTINATION is
+  // unnameable" -- and the second was that walk one hop further back, since
+  // `flow($kernel, main)` reaches [main] and [main] reaches the variable. The
+  // workaround `imports($var("G"), main).` was refused rightly: it licenses by
+  // the SPELLING of the variable, so renaming ?G to ?H would revoke it.
   //
-  // Pinned rather than expected away: green on an honest checkout, red the
-  // moment the SET changes -- including if it goes empty because the audit
-  // stopped looking.
-  assert.deepEqual(pairs(r, 'leak[audit](A, B)', 'A', 'B'),
-    [['$kernel', '$var("G")'], ['main', '$var("G")']]);
+  // `publishes(A)` is the sentence that was missing -- the mirror of
+  // `collects`, declared by the SOURCE because the source is the only named
+  // party. ONE declaration, `publishes(main).`, clears both rows: the two-hop
+  // walk goes to the source-side transitive clause, so this demo never has to
+  // license the kernel's book. Finding
+  // `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`.
+  //
+  // Still pinned rather than asserted away: empty here must stay empty for the
+  // DECLARED reason, and this goes red if the audit stops looking as much as
+  // if a new walk appears.
+  assert.deepEqual(pairs(r, 'leak[audit](A, B)', 'A', 'B'), []);
+  assert.ok(r.holds('published[audit](main)'),
+    'the publication declaration was EXERCISED, not merely written');
   // and what the DECLARATION is worth is the difference between that set and
   // the one without it: the three walks out of a ledger variable are silent.
   assert.deepEqual(pairs(r, 'gathered(A, B)', 'A', 'B').filter(([a]) => a.startsWith('$var')),

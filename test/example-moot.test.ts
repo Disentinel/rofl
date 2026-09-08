@@ -276,9 +276,14 @@ test('MOOT pointed at boot.rofl: the forgery audit is live, and the OPT-IN one i
   const enc = encodeProgram(r, [BOOT]);
   const s = selfWorld(enc);
   const v = verdicts(s);
+  // `publishes` JOINS THE SAME LIST for the same reason, 2026-09-08: boot.rofl
+  // gained `publishes(A) @next :- publishes(A).` plus the two rules that read
+  // a publication, and a bare boot.rofl declares none. Dead here, alive the
+  // moment a program says `publishes(A)` -- which examples/goof and
+  // examples/npc now do.
   assert.deepEqual(v.unreachable.sort(),
     ['collected', 'collects', 'collects_from', 'demands_authorship', 'gathered',
-     'unattributed']);
+     'published', 'published_to', 'publishes', 'unattributed']);
   const dead = deadRules(s, enc);
   // `collects` JOINED THIS LIST when boot.rofl gained
   // `collects(X) @next :- collects(X).` — the clause that keeps a collection
@@ -286,14 +291,14 @@ test('MOOT pointed at boot.rofl: the forgery audit is live, and the OPT-IN one i
   // declared one it can never fire, which is the same sentence the three
   // `collects`-shaped rules below already made. The `imports` half of the same
   // carry is NOT here: boot.rofl writes three import rows of its own.
+  // `published`, `published_to` and `publishes` join, 2026-09-08: boot.rofl
+  // gained the publication instrument and its carry rule, and a bare
+  // boot.rofl declares no publication -- dead here for the same reason the
+  // `collects`-shaped rules are, alive the moment a program says
+  // `publishes(A)`, which examples/goof and examples/npc now do.
   assert.deepEqual(dead.map((x) => x.rel).sort(),
-    // `imports` and BOTH `sees` rules left this list when boot.rofl gained
-    // `imports(audit, main).` — the kernel now has to say out loud what its
-    // nine audit rules do, where the engine used to emit that licence itself
-    // for any rule whose head named a ledger. So the import graph and its
-    // transitive closure are executed by a program for the first time; before
-    // that no program loading only boot.rofl ever ran them.
-    ['collected', 'collects', 'collects_from', 'gathered', 'gathered', 'unattributed']);
+    ['collected', 'collects', 'collects_from', 'gathered', 'gathered', 'gathered',
+     'published', 'published_to', 'publishes', 'unattributed']);
   assert.equal(v.shadowed.length, 0, 'no rule body of boot.rofl is a subset of a sibling');
 
   // THE CONTRAST THIS TEST LOST, stated rather than quietly dropped. It used

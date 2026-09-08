@@ -113,12 +113,13 @@ imports(audit, mind).
 -- NOT DECLARED, and left reporting on purpose: `world -> $var("A")`. A rule
 -- reads [world] and writes an agent's OWN journal under the ledger variable,
 -- so the crossing's DESTINATION is unnameable. `collects(X)` says "X gathers
--- from books it does not name" and is the mirror image — there is no sentence
--- in this language for "an unnamed reader may read a named book". The one
--- line that silences it, `imports($var("A"), world).`, is writable and wrong:
--- it licenses by the SPELLING OF THE VARIABLE, so renaming ?A to ?B in the
--- rule would revoke it. An open gap in the language beats a closed one in the
--- wrong instrument, so the row stands.
+-- from books it does not name" and is the mirror image. The sentence this
+-- section said the language lacked -- "an unnamed reader may read a named
+-- book" -- now exists as `publishes(A)`, declared by the SOURCE because the
+-- source is the only named party. The workaround it refused,
+-- `imports($var("A"), world).`, was refused rightly: it licenses by the
+-- SPELLING OF THE VARIABLE, so renaming ?A to ?B would revoke it.
+publishes(world).
 
 
 -- The simulator republishes these every tick, so at load time they are

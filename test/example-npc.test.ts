@@ -52,26 +52,24 @@ const WATCH = [
   'any_option', 'contender', 'preempted', 'does', 'uncovered', 'tie',
 ];
 
-/** THE ONE ROW THE AUDIT REPORTS, PINNED RATHER THAN EXPECTED AWAY.
+/** NO ROW. THE GAP THAT KEPT ONE HERE WAS CLOSED 2026-09-08.
  *
- *  npc.rofl says it in its own words, beside the declarations: "NOT DECLARED,
- *  and left reporting on purpose: `world -> $var("A")`. A rule reads [world]
- *  and writes an agent's OWN journal under the ledger variable, so the
- *  crossing's DESTINATION is unnameable." `collects(X)` is the mirror image --
- *  it says "X gathers from books it does not name" -- and there is no sentence
- *  in this language for a NAMELESS READER of a NAMED book. The one line that
- *  silences it, `imports($var("A"), world).`, is writable and wrong: it
- *  licenses by the SPELLING OF THE VARIABLE, so renaming ?A to ?B in the rule
- *  would revoke it.
+ *  npc.rofl described it in its own words: "a rule reads [world] and writes an
+ *  agent's OWN journal under the ledger variable, so the crossing's DESTINATION
+ *  is unnameable", and "there is no sentence in this language for a NAMELESS
+ *  READER of a NAMED book". `collects(X)` is the mirror image, gathering from
+ *  books it does not name. The workaround `imports($var("A"), world).` was
+ *  refused rightly: it licenses by the SPELLING of the variable, so renaming
+ *  ?A to ?B would revoke it.
  *
- *  That is finding `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book`
- *  and it `demands(..., decision)` -- an owner's call about the language, not a
- *  repair. examples/goof carries the same row for the same reason. Until it is
- *  taken, the row is pinned HERE: the gate stays green on an honest checkout
- *  (a gate red on one gets switched off, and then its absence is invisible)
- *  and goes red the moment the SET changes -- a second leak, or this one
- *  quietly disappearing because the audit stopped looking. */
-const LEAK = [{ A: 'world', B: '$var("A")' }];
+ *  `publishes(A)` is that missing sentence, declared by the SOURCE because the
+ *  source is the only named party. npc declares `publishes(world).` and the row
+ *  is gone -- for a stated reason, which is why this stays an exact set rather
+ *  than becoming an `ok(length === 0)`: it goes red if a second leak appears
+ *  AND if this one comes back, and the emptiness has to keep being earned by a
+ *  declaration rather than by an audit that stopped looking. The demo's own
+ *  positive control, further down, is what proves the audit still bites. */
+const LEAK: { A: string; B: string }[] = [];
 
 // one settled world at tick 1, one run, one run with the learned rule
 const base = head();

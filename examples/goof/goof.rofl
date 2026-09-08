@@ -500,21 +500,27 @@ knot(trefoil).
 -- either direction. It is kept because naming the ledger you write is worth
 -- doing on its own, not because it silences anything.
 --
--- ONE ROW IS LEFT REPORTING HERE, AND IT IS A GAP IN THE LANGUAGE.
--- `leak[audit](main, $var("G"))`: a rule reads [main] — the arithmetic and
--- structural helpers nobody gave a book to — and writes the ledger VARIABLE.
--- The crossing's DESTINATION is unnameable, and every instrument this
--- language has points the other way. `imports(To, From)` needs both ends
--- registered; `collects(X)` says "X gathers from books it does not name",
--- which is the mirror image and does not fit.
+-- THE GAP THIS SECTION RECORDED IS CLOSED, AND THE SENTENCE IT WANTED EXISTS.
+-- Two rows stood here: `leak[audit](main, $var("G"))` and the two-hop
+-- `$kernel -> $var("G")` behind it. A rule reads [main] -- the arithmetic and
+-- structural helpers nobody gave a book to -- and writes the ledger VARIABLE,
+-- so the crossing's DESTINATION is unnameable. `imports(To, From)` needs both
+-- ends registered and `collects(X)` is the mirror image, gathering from books
+-- it does not name.
 --
--- The line that silences it, `imports($var("G"), main).`, is writable —
--- `$var` is typeable since `$` became a leading name character — and it is
--- WRONG: it licenses by the SPELLING OF THE VARIABLE, so renaming `?G` to
--- `?H` throughout would revoke a licence that nothing about the program
--- changed. examples/npc carries the same row for the same reason
--- (`world -> $var("A")`). Two demos, one missing sentence. An open gap beats
--- a closed one in the wrong instrument, so both rows stand and are named.
+-- The line that would have silenced it, `imports($var("G"), main).`, was
+-- refused and the refusal was right: it licenses by the SPELLING OF THE
+-- VARIABLE, so renaming ?G to ?H revokes a licence nothing about the program
+-- changed. What was missing was a sentence for the other side, and boot.rofl
+-- now has it: `publishes(A)` says A's content may travel to a reader that has
+-- no name to be granted. The declaration is the SOURCE's, because the source
+-- is the only named party -- exactly the argument that makes `collects` the
+-- gatherer's.
+--
+-- ONE declaration clears both rows: the two-hop walk is discharged by the
+-- source-side transitive clause, so `publishes($kernel)` is not needed and
+-- this demo never licenses the kernel's book.
+publishes(main).
 --
 -- @rules
 

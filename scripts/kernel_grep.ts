@@ -149,6 +149,7 @@ const ALLOWED = new Set([...KERNEL_RELS, ...IFACE_RELS, ...SYNTAX, ...CONSTANTS,
 const FORBIDDEN = [
   'rule_known', 'perspective', 'sees', 'imports', 'dep', 'dep_neg', 'reach',
   'flow', 'flows_to', 'crossing', 'collects', 'collects_from', 'gathered',
+  'publishes', 'published_to',
   'collected',
   'malformed', 'breach', 'leak', 'forged', 'unmoded',
   'undefined_premise',
