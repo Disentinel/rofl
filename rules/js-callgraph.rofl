@@ -287,11 +287,19 @@ ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
-                       ast_child[code](D, init, 0, F),
+-- THE DECLARATOR FIRST, and it is the same repair `has_return` took. Written
+-- `fn_node(F)` then `ast_node(D, variable_declarator, _, _)`, F and D share
+-- nothing, so every function is laid beside every declarator and
+-- `ast_child(D, init, 0, F)` filters afterwards: measured by
+-- scanners/js_cost.ts on sixteen files of eslint/lib, 271 982 accumulator
+-- elements reaching that filter to conclude NOTHING AT ALL. Asking
+-- `ast_child(D, init, 0, F)` with D already bound reads one child instead.
+fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _, _),
+                       ast_child[code](D, init, 0, F), fn_node[code](F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- fn_node[code](F), ast_node[code](P, object_property, _, _),
-                       ast_child[code](P, value, 0, F),
+-- The same shape and the same repair: 236 132 elements for nothing.
+fn_name[code](F, N) :- ast_node[code](P, object_property, _, _),
+                       ast_child[code](P, value, 0, F), fn_node[code](F),
                        ast_child[code](P, key, 0, K), ast_name[code](K, N).
 -- a constructor answers to the CLASS's name at runtime, which is what a stack
 -- frame says and therefore what an execution oracle can be compared against

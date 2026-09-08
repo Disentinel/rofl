@@ -16,14 +16,6 @@ fires("r46bc5731", 72).  conc("r46bc5731", 2295).  fresh("r46bc5731", 1946).  he
   width("r46bc5731", 0, 72).  yield("r46bc5731", 0, 624533).  slot("r46bc5731", 0, pos, encloses_v).
   width("r46bc5731", 1, 624533).  yield("r46bc5731", 1, 440279).  slot("r46bc5731", 1, pos, encloses_v).
   width("r46bc5731", 2, 440279).  yield("r46bc5731", 2, 2295).  slot("r46bc5731", 2, pos, ast_within).
-fires("r91cf5b48", 3).  conc("r91cf5b48", 0).  fresh("r91cf5b48", 0).  head("r91cf5b48", fn_name).
-  width("r91cf5b48", 0, 3).  yield("r91cf5b48", 0, 478).  slot("r91cf5b48", 0, pos, fn_node).
-  width("r91cf5b48", 1, 478).  yield("r91cf5b48", 1, 271982).  slot("r91cf5b48", 1, pos, ast_node).
-  width("r91cf5b48", 2, 271982).  yield("r91cf5b48", 2, 0).  slot("r91cf5b48", 2, pos, ast_child).
-fires("r4d16455e", 3).  conc("r4d16455e", 0).  fresh("r4d16455e", 0).  head("r4d16455e", fn_name).
-  width("r4d16455e", 0, 3).  yield("r4d16455e", 0, 478).  slot("r4d16455e", 0, pos, fn_node).
-  width("r4d16455e", 1, 478).  yield("r4d16455e", 1, 236132).  slot("r4d16455e", 1, pos, ast_node).
-  width("r4d16455e", 2, 236132).  yield("r4d16455e", 2, 0).  slot("r4d16455e", 2, pos, ast_child).
 fires("r5ce3aaee", 29).  conc("r5ce3aaee", 163395).  fresh("r5ce3aaee", 108277).  head("r5ce3aaee", ast_within).
   width("r5ce3aaee", 0, 29).  yield("r5ce3aaee", 0, 180094).  slot("r5ce3aaee", 0, pos, ast_within).
   width("r5ce3aaee", 1, 180094).  yield("r5ce3aaee", 1, 163395).  slot("r5ce3aaee", 1, pos, ast_in).
@@ -382,6 +374,10 @@ fires("rce3f8590", 40).  conc("rce3f8590", 0).  fresh("rce3f8590", 0).  head("rc
   width("rce3f8590", 0, 40).  yield("rce3f8590", 0, 1731).  slot("rce3f8590", 0, pos, for_of_use).
   width("rce3f8590", 1, 1731).  yield("rce3f8590", 1, 1731).  slot("rce3f8590", 1, pos, for_of_src).
   width("rce3f8590", 2, 1731).  yield("rce3f8590", 2, 0).  slot("rce3f8590", 2, pos, iter_elem).
+fires("r57404708", 3).  conc("r57404708", 0).  fresh("r57404708", 0).  head("r57404708", fn_name).
+  width("r57404708", 0, 3).  yield("r57404708", 0, 1707).  slot("r57404708", 0, pos, ast_node).
+  width("r57404708", 1, 1707).  yield("r57404708", 1, 1707).  slot("r57404708", 1, pos, ast_child).
+  width("r57404708", 2, 1707).  yield("r57404708", 2, 0).  slot("r57404708", 2, pos, fn_node).
 fires("r812d5cab", 24).  conc("r812d5cab", 4).  fresh("r812d5cab", 4).  head("r812d5cab", may_be_node).
   width("r812d5cab", 0, 24).  yield("r812d5cab", 0, 1584).  slot("r812d5cab", 0, pos, ast_node).
   width("r812d5cab", 1, 1584).  yield("r812d5cab", 1, 1584).  slot("r812d5cab", 1, pos, ast_child).
@@ -397,6 +393,10 @@ fires("r01782c0d", 2).  conc("r01782c0d", 606).  fresh("r01782c0d", 303).  head(
   width("r01782c0d", 3, 618).  yield("r01782c0d", 3, 618).  slot("r01782c0d", 3, pos, ast_child).
   width("r01782c0d", 4, 618).  yield("r01782c0d", 4, 606).  slot("r01782c0d", 4, pos, key_name).
   width("r01782c0d", 5, 606).  yield("r01782c0d", 5, 606).  slot("r01782c0d", 5, pos, ast_child).
+fires("rc6c86c82", 3).  conc("rc6c86c82", 0).  fresh("rc6c86c82", 0).  head("rc6c86c82", fn_name).
+  width("rc6c86c82", 0, 3).  yield("rc6c86c82", 0, 1482).  slot("rc6c86c82", 0, pos, ast_node).
+  width("rc6c86c82", 1, 1482).  yield("rc6c86c82", 1, 1362).  slot("rc6c86c82", 1, pos, ast_child).
+  width("rc6c86c82", 2, 1362).  yield("rc6c86c82", 2, 0).  slot("rc6c86c82", 2, pos, fn_node).
 fires("r500f1306", 2).  conc("r500f1306", 748).  fresh("r500f1306", 374).  head("r500f1306", binder).
   width("r500f1306", 0, 2).  yield("r500f1306", 0, 988).  slot("r500f1306", 0, pos, ast_node).
   width("r500f1306", 1, 988).  yield("r500f1306", 1, 988).  slot("r500f1306", 1, pos, ast_child).
@@ -1476,6 +1476,6 @@ fires("r0764bf3c", 1).  conc("r0764bf3c", 0).  fresh("r0764bf3c", 0).  head("r07
   width("r0764bf3c", 0, 1).  yield("r0764bf3c", 0, 0).  slot("r0764bf3c", 0, pos, super_of).
 
 total_rules(436).
-total_width(3615655).
+total_width(3112843).
 total_conc(639219).
 total_fresh(399799).
