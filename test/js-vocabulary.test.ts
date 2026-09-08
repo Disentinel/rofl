@@ -59,9 +59,27 @@ function world(extra: string[] = [], mut?: Mut): Rofl {
   assert.ok(res.ok, `world REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   return r;
 }
-const audit = (r: Rofl): string[] =>
-  r.query('rule_opinion_unlisted[audit](L, K)', BUDGET).rows
-    .map((x) => String(x.bindings.K)).sort();
+// EVERY EMPTY ANSWER HERE IS AN ASSERTION, so every empty answer is guarded.
+// `assert.deepEqual(audit(world()), [])` is the central claim of this file and
+// it would pass just as well on a MISSPELLED relation name, which is what
+// `unpopulatable` exists to refuse: the kernel distinguishes "nothing derived"
+// from "nothing in this world could derive this". It stays false in the mutant
+// worlds too — a deleted premise leaves the rule head standing — so the guard
+// costs nothing there and catches a rename everywhere.
+const audit = (r: Rofl): string[] => {
+  const res = r.query('rule_opinion_unlisted[audit](L, K)', BUDGET);
+  assert.equal(res.unpopulatable, false, 'nothing in this world can populate the audit');
+  assert.equal(res.partial, false, 'the audit query hit a budget');
+  return res.rows.map((x) => String(x.bindings.K)).sort();
+};
+
+/** a query whose empty answer would be a claim, guarded the same way */
+const asked = (r: Rofl, lit: string) => {
+  const res = r.query(lit, BUDGET);
+  assert.equal(res.unpopulatable, false, `nothing in this world can populate ${lit}`);
+  assert.equal(res.partial, false, `${lit} hit a budget`);
+  return res.rows;
+};
 
 // ---------------------------------------------------------------------------
 // 1. THE AUDIT ON AN HONEST TREE
@@ -99,7 +117,7 @@ test('removing a declaration makes the audit name exactly that kind', () => {
 // 2. THE SLOTS ARE DISCOVERED, NOT DECLARED
 
 test('the kind-carrying argument positions configure themselves', () => {
-  const slots = world().query('kind_slot(Rel, I)', BUDGET).rows
+  const slots = asked(world(), 'kind_slot(Rel, I)')
     .map((x) => `${x.bindings.Rel}/${x.bindings.I}`).sort();
   // TWO, and the second is the point: a hand-written table of kind slots would
   // have had `ast_node` in it and would not have had `transfer_site`, which is
@@ -195,10 +213,20 @@ const KIND_TABLE_EXEMPT = new Set(['node_kind']);
 /** Every (relation, arity, argument) that holds at least one declared js kind,
  *  with the values in it that are NOT declared js kinds. */
 function kindPositionCensus(r: Rofl): Map<string, string[]> {
-  const kinds = new Set(r.query('node_kind(js, K)', BUDGET).rows.map((x) => String(x.bindings.K)));
+  // THE ONE PLACE `unpopulatable` IS NOT A DEFECT. The sweep below asks every
+  // relation at arities 1..3, so most of those queries are deliberately wrong
+  // and their refusal is the answer. The two queries whose emptiness would be a
+  // CLAIM — the kind list and the relation names — are guarded.
+  const kinds = new Set(asked(r, 'node_kind(js, K)').map((x) => String(x.bindings.K)));
   const names = new Set<string>();
+  // THE UNION IS GUARDED, NOT EACH SOURCE, and the difference is a measured
+  // fact rather than a convenience: `rule_relation` is derived by the KERNEL'S
+  // OWN program (policy.rofl, in a store of its own) and is `unpopulatable` in
+  // an ordinary world. Requiring each source to answer failed here and said so.
+  // What must not be empty is the set the sweep walks.
   for (const q of ['rule_relation(N)', 'edb(N)', 'concludes(_, N)'])
     for (const row of r.query(q, BUDGET).rows) names.add(String(row.bindings.N));
+  assert.ok(names.size > 100, `the sweep found only ${names.size} relation names`);
   const out = new Map<string, string[]>();
   for (const n of [...names].sort()) {
     if (KIND_TABLE_EXEMPT.has(n)) continue;

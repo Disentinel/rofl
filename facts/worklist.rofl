@@ -1393,3 +1393,13 @@ claim(queued, js, array_pattern,               none, controlflow,  w_destructuri
 claim(queued, js, rest_element,                none, controlflow,  w_destructuring_hides_a_call).
 claim(queued, js, spread_element,              none, controlflow,  w_destructuring_hides_a_call).
 work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_an_accessor_does).
+
+-- 2026-09-08. The last pin in test/worklist.test.ts that is still a number, and
+-- the only assertion there whose SUBJECT is the size of the open set. Three
+-- parallel branches moved it from 102 to 70 in one afternoon; a fourth would
+-- have moved it again, and no branch can know the merged value. Whether it can
+-- be stated as an identity - the open set against a relation derived some other
+-- way - is a real question and not a tidy-up.
+work(w_open_cell_should_be_an_identity, "the open-cell count is the last pin in the queue tests that is a number, and three parallel branches move it at once").
+work_order(w_open_cell_should_be_an_identity, 61).
+work_state(w_open_cell_should_be_an_identity, open).

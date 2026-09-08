@@ -180,12 +180,17 @@ test('the five heaviest read paths, by name', () => {
   // read paths, so the total moved for a MODEL change and these are re-stated
   // on purpose. The five NAMES are unchanged, which is the claim this list
   // actually makes; the band still catches one path pulling away from the rest.
+  // RE-STATED 2026-09-08 (second time in a day) after three parallel branches
+  // landed: the destructuring family, the two export specifier forms, labelled
+  // and inert statements. ALL FIVE ROSE TOGETHER, between 0.38 and 0.71 points,
+  // and the five NAMES are unchanged — which is this list's own criterion for
+  // `a bigger corpus` rather than `a badly ordered body`.
   const SHARE: [string, number][] = [
-    ['argMatches ast_within pos=[0]', 10.65],
-    ['relPersp authority', 8.6],
-    ['argMatches encloses_v pos=[1]', 5.2],
-    ['relPersp encloses_v', 5.0],
-    ['relPersp ast_node', 5.05],
+    ['argMatches ast_within pos=[0]', 11.06],
+    ['relPersp authority', 9.11],
+    ['argMatches encloses_v pos=[1]', 5.57],
+    ['relPersp encloses_v', 5.38],
+    ['relPersp ast_node', 5.76],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -201,13 +206,29 @@ test('the five heaviest read paths, by name', () => {
     assert.ok(Math.abs(now - want) < 0.4,
       `${name}: ${now.toFixed(2)}% of the total, and it has been ${want}% — this path grew alone`);
   }
-  // ...AND THE COST PER FACT, which is the quantity this file's own header
-  // identifies as the tell: firings scale with the corpus, and cost-per-fact
-  // scaling with the STORE is the signature of a scan in the hot path. It is
-  // the one number here that a bigger fixture cannot move on its own.
-  // 6.537 at iteration 26; 6.419 now, so this iteration made the fixpoint
-  // cheaper per fact while making the corpus bigger.
-  assert.ok(c.total / c.facts < 6.6,
+  // ...AND THE COST PER FACT, which this file said until 2026-09-08 was `the one
+  // number here that a bigger fixture cannot move on its own`. THAT CLAIM IS
+  // FALSE AND THE 2x2 IS WHAT SAYS SO. Four builds, axes taken from this diff —
+  // the three parallel branches' RULES against their CORPUS — same machine,
+  // same minute, with the untouched corner as the control:
+  //
+  //                         HEAD corpus                 this corpus
+  //     HEAD rules   1 207 724 / 6.260 per fact   1 470 391 / 7.239 per fact
+  //     these rules  1 203 187 / 6.214 per fact   1 468 440 / 7.209 per fact
+  //
+  // THE RULES COST NOTHING — minus 0.4% of rows and cost-per-fact DOWN, across
+  // three branches that added a dozen relations — and the corpus costs all of
+  // it: 6.26 -> 7.24 with the rules held still. So a fixture moved the quantity
+  // this file called fixture-proof, and the reason is legible in the heaviest
+  // path above: `ast_within pos=[0]` is the CONTAINMENT walk, and the new
+  // fixtures are nested destructuring patterns and labelled nested loops. A
+  // fact deeper in the tree participates in more joins than the average fact,
+  // so density moves this ratio where sheer size does not.
+  //
+  // WHAT THE NUMBER STILL CATCHES is a scan appearing in the hot path with the
+  // corpus held still — the left-hand column — and that is now the reading to
+  // take. 6.6 -> 7.4.
+  assert.ok(c.total / c.facts < 7.4,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -368,7 +389,22 @@ test('the five heaviest read paths, by name', () => {
   // eight kinds and again over everything `may_be_node` reaches — costs a
   // hundredfold more. Both are one rule. The fixture costs +2.69% and 2 681,
   // which is where a new KIND lands. Cost per fact fell again, 6.336 -> 6.226.
-  assert.equal(c.total, 1199900, 'total rows handed out by the store in one fixpoint');
+  // 1 199 900 -> 1 468 440 and 76 459 -> 76 509 firings on 2026-09-08, THREE
+  // BRANCHES AT ONCE — the destructuring family, the two export specifier forms,
+  // labelled and inert statements. Axes from the merged diff, control OK:
+  //
+  //                        prev corpus              this corpus
+  //     prev rules   1 207 724 / 76 459 fir   1 470 391 / 76 448 fir
+  //     these rules  1 203 187 / 76 577 fir   1 468 440 / 76 509 fir
+  //
+  // THE MOST LOPSIDED READING THIS INSTRUMENT HAS PRODUCED. The rules cost
+  // MINUS 0.4% of rows across a dozen new relations, and the corpus costs +22%.
+  // And FIRINGS BARELY MOVE AT ALL — +50 on a corpus that grew ten thousand
+  // facts — which is the pair of quantities coming apart as far as they have:
+  // the new fixtures are DEEP rather than numerous, so the same derivations
+  // enumerate longer containment chains. A single delta would have said `+22%`
+  // and pointed at three innocent rule sets.
+  assert.equal(c.total, 1468440, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -464,5 +500,12 @@ test('the five heaviest read paths, by name', () => {
   // reasoning about ninety-six more coordinates. Cost per fact 6.226 -> 6.219:
   // the fixpoint did not get denser, it got wider, exactly as the denominator
   // did.
-  assert.equal(c.firings, 76459, 'derivations: 75 999 before the vocabulary edit');
+  // 76 459 -> 76 509 on 2026-09-08 with three parallel branches: FIFTY MORE
+  // DERIVATIONS for ten thousand more facts and twenty-two percent more rows
+  // handed out. That is the sharpest separation this file has recorded between
+  // its two quantities, and the 2x2 above says which half did it — the corpus,
+  // whose new fixtures are nested rather than numerous. Firings count how many
+  // times a rule concluded something; rows count how far the store was walked
+  // to conclude it.
+  assert.equal(c.firings, 76509, 'derivations, against 76 459 before three branches merged');
 });

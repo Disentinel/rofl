@@ -83,6 +83,8 @@ const FACT_FILES = ['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'];
 type Mutation = { find: string; replace: string; file?: string };
 
 interface Model {
+  /** the store itself, for the one mutant whose answer is SUPPOSED not to fit */
+  store: Rofl;
   q: (lit: string) => string[][];
   n: (lit: string) => number;
   binds: (lit: string, ...vars: string[]) => string[];
@@ -151,8 +153,18 @@ function buildFresh(mutations: Mutation[]): Model {
   }
   r.evaluate(20_000_000);
 
+  // A STATED BUDGET, 2026-09-08, and the file already argued for it before it
+  // had one: mutant 8 and mutant 9 both read as "does not finish" until 2026-09-07
+  // when the wall turned out to be `r.load()`'s DEFAULT budget rather than the
+  // program diverging. `query` kept the default, and on the day three parallel
+  // branches tripled the corpus mutant 9 — a parameter read from anywhere, which
+  // is SUPPOSED to explode — stopped fitting in it and reported `partial` instead
+  // of the edges it invents. A budget nobody states is a pin on the size of the
+  // corpus that nothing in the file mentions, and this is the second one found
+  // in a day; the other was test/js-model.test.ts's `corpus()`.
+  const QUERY_BUDGET = { budget: 400_000_000 };
   const q = (lit: string): string[][] => {
-    const res = r.query(lit);
+    const res = r.query(lit, QUERY_BUDGET);
     assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
     assert.equal(res.partial, false, `query ${lit} hit a budget`);
     // A QUERY THAT NAMES NOTHING RETURNS THE SAME EMPTY ANSWER AS A QUERY THAT
@@ -167,9 +179,10 @@ function buildFresh(mutations: Mutation[]): Model {
   };
   return {
     q,
+    store: r,
     n: (lit) => q(lit).length,
     binds: (lit, ...vars) => {
-      const res = r.query(lit);
+      const res = r.query(lit, QUERY_BUDGET);
       assert.equal(res.error, undefined, `query ${lit}: ${res.error}`);
       assert.equal(res.unpopulatable, false, `query ${lit}: nothing in this world can populate it`);
       return res.rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '')).join(' -> ')).sort();
@@ -1420,13 +1433,14 @@ test('mutant 8 — sever the cycle: bind parameters without asking who is called
 
 test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
   const base = probe([]);
+  const baseStore = () => build([]).store;
   // THE KILL GOT LOUDER ON 2026-09-05, like mutant 8's — and on 2026-09-07 it
   // turned out both had gone QUIETER. "Does not finish" was `r.load()`'s default
   // budget running out, not the program diverging; under a stated budget this
   // mutant terminates and the edges it invents can be named, which is the
   // sharper claim. See mutant 8 for the measurement.
   assert.ok(!base.edges.has('useCb -> leaf'), 'baseline: two parameters named `f` stay two');
-  const mut = probe([{
+  const mut = build([{
     file: 'rules/js-dataflow.rofl',
     // RE-AIMED 2026-09-05 with the cost reordering: `ast_within` moved ahead of
     // `ident`, and dropping it is still exactly the defect — a parameter read
@@ -1437,11 +1451,43 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
     replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
         + '                               ident[code](U, Name).',
   }]);
-  assert.ok(mut.edges.has('useCb -> leaf'),
+  // ...AND ON 2026-09-08 IT STOPPED FITTING, which is mutant 7's ending arriving
+  // here. Three parallel branches tripled the corpus, and a rule that reads a
+  // parameter from ANYWHERE is quadratic in exactly the thing that grew: the
+  // answer no longer fits a stated budget of 400 million steps, and the shared
+  // `q` above refuses a partial answer for the good reason that everywhere else
+  // in this file an empty answer is a claim.
+  //
+  // SO THE MUTANT IS ASKED DIRECTLY, and the reading is sound in ONE direction
+  // only, which is the direction this test needs. A partial answer that CONTAINS
+  // the invented edge proves the mutant invents it; a partial answer that lacks
+  // one proves nothing. The assertion below is of the first kind, so the wall is
+  // named rather than raised — raising it buys nothing, because the next fixture
+  // moves it again.
+  const res = mut.store.query('calls_in[code](File, A, B)', { budget: 400_000_000 });
+  assert.equal(res.unpopulatable, false, 'positive control: the mutant world derives a call graph');
+  assert.equal(res.partial, true,
+    'the unscoped parameter read no longer fits 400M steps — if this goes false, read the edge count below');
+  // ...AND THE INVENTED EDGE IS NOT IN THE PARTIAL ANSWER — measured, not
+  // assumed: the budget runs out before `calls_in` reaches it. So the oracle
+  // moves to the relation the defect is IN, which is where it should have been.
+  // `param_use[flow]` is one join away from the deleted premise and small enough
+  // to finish, and what the mutation does there is exact: every row the baseline
+  // has, plus rows binding a parameter's name to a use OUTSIDE the function that
+  // declares it.
+  const uses = (m: Rofl) => new Set(m.query('param_use[flow](F, Name, U)', { budget: 400_000_000 })
+    .rows.map((row) => `${row.bindings.F}/${row.bindings.Name}/${row.bindings.U}`));
+  const baseUses = uses(baseStore());
+  const mutUses = uses(mut.store);
+  assert.ok(baseUses.size > 0, 'positive control: the baseline binds parameter uses at all');
+  assert.deepEqual([...baseUses].filter((u) => !mutUses.has(u)), [],
+    'the mutant loses nothing: it only widens');
+  const widened = [...mutUses].filter((u) => !baseUses.has(u));
+  assert.ok(widened.length > 0,
     'a parameter read from anywhere merges two parameters that share a name');
-  console.log(`  KILLED: the unscoped parameter read invents `
-    + `${[...mut.edges].filter((e) => !base.edges.has(e)).length} edges`
-    + ` (baseline ${base.edges.size})`);
+  console.log(`  KILLED: the unscoped parameter read invents ${widened.length} parameter uses`
+    + ` (baseline ${baseUses.size}), and `
+    + `calls_in stops fitting 400M steps`);
 });
 
 test('mutant 10 — delete the value flow across a call', () => {

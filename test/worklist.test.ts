@@ -189,7 +189,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // cannot tell apart and does not pretend to.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers', 'w_class_expression', 'w_class_fields',
-    'w_destructuring_rest_and_spread', 'w_df_function_forms', 'w_df_generator_protocol',
+    'w_df_function_forms', 'w_df_generator_protocol',
     'w_df_sweep', 'w_df_value_core', 'w_directives',
     // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:
     // both were taken and both spawned, which is the list working — an item
@@ -208,7 +208,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
   assert.equal(w.n('work_spawned(w_cg_member_family, F)'), 4);
 });
 
-test('the queue covers the model: 10 open cells, every one owned by name, none swept', () => {
+test('the queue covers the model: every open cell owned by name, none swept', () => {
   const w = world();
   // 83 -> 48 when the last bucket closed. Every open cell in the model now has
   // an item that owns it BY NAME: `sweeper` is empty at all four layers, which
@@ -262,7 +262,17 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // for three sessions behind a sentence that was true and unmeasured: the
   // scalars-only contract excluded exactly ONE property in the whole language.
   // The biggest single fall this number has had, and none of it was a rule.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 102, 'the queue is the model\'s open set');
+  // 102 -> 70 on 2026-09-08, THIRTY-TWO CELLS IN ONE AFTERNOON, closed by three
+  // branches running at the same time: the destructuring family, the two export
+  // specifier forms, and labelled plus inert statements.
+  //
+  // THIS NUMBER IS THE LAST PIN IN THIS FILE THAT IS STILL A NUMBER, and it is
+  // one on purpose: it is the only assertion here whose SUBJECT is the size of
+  // the open set. Everything around it — the owners, the layers, the sweeper —
+  // is named, so a wrong number cannot hide behind them. It is also the pin the
+  // parallel experiment moved from three branches at once, which is recorded
+  // under `w_open_cell_should_be_an_identity`.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 70, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -281,7 +291,14 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 51, unchanged: no item was entered, and three were marked DONE —
   // w_scanner_nested_values with its cells, and w_cg_member_family and
   // w_cg_optional_member, whose last claims went with them.
-  assert.equal(w.n('work(W, Note)'), 61);
+  // 61 -> 62 on 2026-09-08: ONE item entered where three closed, and it is
+  // `w_destructuring_hides_a_call` — a cell REOPENED rather than a new frontier.
+  // `ignored(js, object_pattern, controlflow, a_no_control_transfer)` was
+  // measured false the day after it was written: `const {taken} = withGetter`
+  // runs the getter, so a destructuring pattern hides a call the way an
+  // accessor does, and `accessor_read` is structurally unable to see it because
+  // none of these nodes is a `member_expression`.
+  assert.equal(w.n('work(W, Note)'), 62);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -308,7 +325,11 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 7 -> 4 and claimed 17 -> 14 on 2026-09-08: the template key on both member
   // kinds and `template_literal` itself, closed by a scanner contract that grew
   // one property, with no rule at the call graph at all.
-  assert.deepEqual(per('callgraph'), [27, 37, 0]);
+  // 4 -> 18 open and 14 -> 33 claimed on 2026-09-08, and the direction is the
+  // point: this layer got BIGGER because three parallel branches declared work
+  // rather than because anything regressed. Every one of the fourteen new open
+  // cells carries an owner, which is what the zero on the right says.
+  assert.deepEqual(per('callgraph'), [18, 33, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
   // nine onto items the two earlier sweeps had already made. Three of four
@@ -320,11 +341,19 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // `resolves`, so the cell closed when the call-graph arm landed.
   // 2 -> 1 and claimed 9 -> 8: the value half of the same move — a template
   // with no interpolation evaluates to its cooked text.
-  assert.deepEqual(per('dataflow'), [24, 31, 0]);
+  // 24 -> 15 open and 31 -> 27 claimed on 2026-09-08: the destructuring family
+  // took nine of these, with four claims retired beside them because a claim
+  // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
+  assert.deepEqual(per('dataflow'), [15, 27, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.
-  assert.deepEqual(per('modules'), [28, 28, 0]);
+  // 28 -> 19 open and 28 -> 24 claimed on 2026-09-08, and the modules layer is
+  // where the parallel work paid most: the two export specifier forms answered
+  // eight cells, and the destructuring family answered the rest by measurement
+  // rather than by definition — a pattern DIRECTLY under an export declaration
+  // moves no row of this layer, which is a verdict that had to be exercised.
+  assert.deepEqual(per('modules'), [19, 24, 0]);
   // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
   // control constructs were declared, and the sweep closed forty of them with a
   // reason. The twelve that are left are all claimed BY NAME and none is swept:
@@ -337,7 +366,12 @@ test('the queue covers the model: 10 open cells, every one owned by name, none s
   // 3 -> 1 -> ZERO on 2026-09-06: a call is an exit, then a read that runs a
   // getter. THE FIRST LAYER OF THE FOUR TO BE COMPLETELY ANSWERED — every kind
   // in the vocabulary has a verdict at controlflow and none of them is open.
-  assert.deepEqual(per('controlflow'), [23, 35, 0]);
+  // 23 -> 18 open and 35 -> 32 claimed on 2026-09-08. `labeled_statement` and
+  // the two inert statement forms closed twelve of the cells this layer took on
+  // when the vocabulary became the language, and four `with_statement` cells
+  // stayed OPEN AND UNBLOCKED — the work is a one-word scanner change and what
+  // it waits on is a decision about name resolution, not a blocker.
+  assert.deepEqual(per('controlflow'), [18, 32, 0]);
 
   // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
   // kept out of the queue — named rather than counted, because a count cannot
@@ -548,9 +582,19 @@ test('MUTANT 9 — a dependency the plan does not honour', () => {
   // ...AND FOUR BECAME THREE the same day: `w_env_api_surface` waited on the
   // frame, and the frame is decided. Two of the three that remain are the type
   // chain and one is the kernel question the owner is holding.
-  assert.equal(base.n('blocked[audit](W)'), 3, 'one held on purpose, two real premises');
+  // THREE BECAME FOUR on 2026-09-08: `w_destructuring_hides_a_call` waits on
+  // `w_env_api_surface` for the same reason `w_effect_layer` does — a getter
+  // run by a destructuring pattern is a call into the standard library and the
+  // model cannot attribute it without an API surface.
+  //
+  // NAMED RATHER THAN COUNTED, and the change is why: three parallel branches
+  // landed in one afternoon and a count would have said only that the number
+  // moved. `blocked` is a claim about WHICH items are held, and holding the
+  // wrong one is the failure this test exists to catch.
   assert.deepEqual(base.binds('blocked[audit](W)', 'W'),
-    ['w_effect_layer', 'w_env_api_surface', 'w_env_ledger_form']);
+    ['w_destructuring_hides_a_call', 'w_effect_layer', 'w_env_api_surface',
+     'w_env_ledger_form'],
+    'one held on purpose by the owner, three real premises');
 
   // ADDING one makes the queue refuse to hand out an item whose premise is not
   // done — which is the whole content of the relation

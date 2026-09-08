@@ -1242,9 +1242,22 @@ test('the modules layer has no opinion about a destructuring form, measured', ()
   // the set of kinds it can possibly have an opinion about.
   const named = new Set([...read('rules/js-modules.rofl')
     .matchAll(/ast_node\[code\]\([^,]+,\s*([a-z_]+)\s*,/g)].map((x) => x[1]));
+  // TEN SINCE 2026-09-08, AND THREE OF THEM ARRIVED FROM ANOTHER BRANCH. This
+  // assertion enumerates the contents of `rules/js-modules.rofl`, which is not
+  // this test's file and not this item's layer: `w_export_specifier_forms`
+  // landed `export_named_declaration`, `export_specifier` and
+  // `export_namespace_specifier` there in parallel and the list went red.
+  //
+  // A NAMED SET IS SAFE AGAINST A COUNT AND NOT AGAINST A SCOPE. Nothing about
+  // the CLAIM moved — the claim is the loop below, that no pattern is among
+  // them, and it holds — but the enumeration pins somebody else's file, so it
+  // moves whenever they work. The loop is the part that measures; this list is
+  // the part that has to be re-read.
   assert.deepEqual([...named].sort(), [
-    '_', 'import_declaration', 'import_default_specifier', 'import_expression',
-    'import_namespace_specifier', 'import_specifier', 'string_literal',
+    '_', 'export_named_declaration', 'export_namespace_specifier',
+    'export_specifier', 'import_declaration', 'import_default_specifier',
+    'import_expression', 'import_namespace_specifier', 'import_specifier',
+    'string_literal',
   ], 'every kind the modules pack names, and not one of them is a pattern');
   // THE WILDCARD IS NOT A HOLE, and it was read rather than assumed: both `_`
   // occurrences are `site_file` and `site_line`, and each carries
