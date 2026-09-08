@@ -359,6 +359,31 @@ async function useAwait(n) {
   return awaited(n);
 }
 
+// A NAME BOUND BY DESTRUCTURING. `binder[code]` reads a declarator`s `id` for
+// an `ast_name`, and a pattern has none — so every name introduced this way was
+// invisible to the value layer, and `object_pattern` was not even in the
+// vocabulary. Measured on a probe before the rule: the direct call resolved and
+// the destructured one was lost, with `vocabulary_gap[audit]` naming the kind.
+//
+// THE RENAME FORM AND NOT THE SHORTHAND, and the reason is the fixture rather
+// than the rule: `{ pulled }` would bind a local called `pulled` in a file that
+// already declares a function of that name, and the site would then measure
+// shadowing instead of destructuring. `{ pulled: taken }` keeps the construct
+// under study alone — and the rule reads the KEY for the member and the VALUE
+// for the local, which covers both forms with no test for either.
+function pulled(n) {
+  trace();
+  return n;
+}
+
+const drawer = { pulled };
+const { pulled: taken } = drawer;
+
+export function useDestructured(n) {
+  trace();
+  return taken(n);
+}
+
 // A RECEIVER REACHED THROUGH A BINDER, whose PROTOTYPE is the answer
 // (w_prototype_of_a_value). `useArr` already calls `.join` on an array written
 // in place, and that site is answered by the KIND alone — so the arm of
@@ -1283,6 +1308,7 @@ export async function main() {
     useStall(1),
     useTmplKey(1),
     useBoundArr(1),
+    useDestructured(1),
     usePanel(1),
     useRack(1),
     useShelf(1),

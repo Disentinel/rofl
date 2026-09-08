@@ -85,6 +85,7 @@ env_extra(ts5, decorators).
 -- THE FEATURES. `feature_since(F, Year)` places F on the ecmascript timeline;
 -- a feature with no such row is reachable only through `env_extra`.
 feature(arrow_functions).     feature_since(arrow_functions, 2015).
+feature(destructuring).       feature_since(destructuring, 2015).
 feature(classes).             feature_since(classes, 2015).
 feature(template_literals).   feature_since(template_literals, 2015).
 feature(for_of).              feature_since(for_of, 2015).
@@ -110,6 +111,7 @@ feature(decorators).
 -- appear in neither, which is the closed-vocabulary discipline this repository
 -- already applies to `handled`/`ignored`.
 kind_needs(js, arrow_function_expression,   arrow_functions).
+kind_needs(js, object_pattern,              destructuring).
 kind_needs(js, class_declaration,           classes).
 kind_needs(js, class_method,                classes).
 kind_needs(js, super,                       classes).

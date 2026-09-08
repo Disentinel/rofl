@@ -147,4 +147,34 @@ export function onIterObject(n: number): number {
 const wellKnown = { spot: 'pick' };
 export const aliasedKey = { [wellKnown.spot](n: number): number { return n; } };
 
+// A DESTRUCTURED NAME AND A FREE ONE THAT LOOKS LIKE IT. The value arm for
+// destructuring ends in `sees_binder`, and that guard had nothing to bite on in
+// a runnable corpus: the fixture in alpha.mjs binds `taken` at module scope and
+// uses it once, so a binder visible everywhere and a binder visible in its
+// region are the same binder.
+//
+// HERE THEY ARE NOT. `inner` is bound INSIDE `scoped`, and `outside` calls a
+// free identifier of the same name — which throws at run time, so no executable
+// fixture can hold it. Without the scoping join the model would resolve
+// `outside`'s call to the value bound in a function it is not in, and invent an
+// edge. This is scope and NOT shadowing: nothing declares `inner` twice, so it
+// asks nothing of w_scope_shadowing.
+// `fetched` IS A PLAIN FUNCTION AND NOT `curried`, and the first draft used
+// `curried`: `inner(n)(n)` is a call ON a call, so the free identifier left
+// `s_call_result` — a shape every site of which resolved — carrying a residue
+// with no reason, and `shape_unexplained[audit]` said so within one run. A site
+// must introduce the construct it tests and NOTHING ELSE, and a second call was
+// a second construct.
+function fetched(n: number): number { return n; }
+const cache = { fetchIt: fetched };
+
+export function scoped(n: number): number {
+  const { fetchIt: inner } = cache;
+  return inner(n);
+}
+
+export function outside(n: number): number {
+  return inner(n);
+}
+
 export async function dyn(p: string) { return import(p); }

@@ -79,6 +79,7 @@ ignored(js, null_literal,                controlflow, a_no_control_transfer).
 ignored(js, template_literal,            controlflow, a_no_control_transfer).
 ignored(js, tagged_template_expression,  controlflow, a_no_control_transfer).
 ignored(js, array_expression,            controlflow, a_no_control_transfer).
+ignored(js, object_pattern,              controlflow, a_no_control_transfer).
 ignored(js, object_expression,           controlflow, a_no_control_transfer).
 ignored(js, object_property,             controlflow, a_no_control_transfer).
 ignored(js, assignment_expression,       controlflow, a_no_control_transfer).

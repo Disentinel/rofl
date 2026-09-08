@@ -254,6 +254,7 @@ checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resol
 -- sweep that walks past a false verdict in its own layer is the silence this
 -- repository forbids. See the reclassification below.
 ignored(js, array_expression,             modules, a_not_a_module_construct).
+ignored(js, object_pattern,               modules, a_not_a_module_construct).
 ignored(js, arrow_function_expression,    modules, a_not_a_module_construct).
 ignored(js, assignment_expression,        modules, a_not_a_module_construct).
 ignored(js, await_expression,             modules, a_not_a_module_construct).
@@ -324,6 +325,7 @@ unknown_because(js, call_expression, modules, not_yet).
 -- day before, and the SECOND time, which is what makes it a class rather than
 -- a slip - see f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it.
 node_kind(js, array_expression).
+node_kind(js, object_pattern).
 node_kind(js, arrow_function_expression).
 node_kind(js, await_expression).
 node_kind(js, boolean_literal).

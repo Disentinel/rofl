@@ -552,7 +552,9 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // fact about the language and not the prototype question.
   // 55 -> 57 js on 2026-09-07: `import_specifier` and `export_named_declaration`
   // are declared in this pack now, because their verdicts are.
-  assert.equal(n(r, 'node_kind(A, B)'), 66, '61 js + 5 py');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(n(r, 'node_kind(A, B)'), 67, '62 js + 5 py');
   assert.equal(n(r, 'layer(L)'), 2);
   assert.equal(n(r, 'axis(A)'), 1);
   assert.equal(n(r, 'axis_applies(A, L)'), 1, 'callgraph only — see facts/js-shapes.rofl');
@@ -570,7 +572,7 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   console.log('      PREDICTED  coarse 82 | fine 98 = modelled 37 + waived 6 + not_modelled 55');
   show('MEASURED coarse', coarse);
   showFine('MEASURED fine  ', f);
-  assert.equal(coarse.cell, 132, 'predicted 132 coarse cells');
+  assert.equal(coarse.cell, 134, 'predicted 134 coarse cells');
   // 108 -> 114 on 2026-09-05: the call-graph pack declares `boolean_literal`,
   // `class_declaration` and `return_statement`, because it now carries a
   // verdict about each and `orphan_claim[audit]` refuses a claim whose kind
@@ -625,8 +627,13 @@ test('the shape axis loads, every kernel audit is empty, and the paper predictio
   // `s_computed_template_key` on both member kinds closed behind it. The call
   // graph needed nothing: `selects[flow]` already read a computed key through
   // `may_be_lit`.
-  assert.deepEqual(f, { cell: 156, modelled: 61, waived: 26, not_modelled: 69 },
-    'predicted 156 fine cells = 61 + 26 + 69');
+  // 61 -> 62 modelled and 156 -> 158 cells on 2026-09-08: `object_pattern`
+  // entered the vocabulary with destructuring, which this world declares at two
+  // layers, and both are answered — the value layer by `r_destructure` and the
+  // call graph for nothing, because a destructured name is a callee like any
+  // other once the value layer can say what it denotes.
+  assert.deepEqual(f, { cell: 158, modelled: 62, waived: 26, not_modelled: 70 },
+    'predicted 158 fine cells = 62 + 26 + 70');
   assert.equal(f.cell - coarse.cell, 24, 'predicted delta: 39 shapes replace 15 unrefined cells');
 
   // every audit over the new relations is silent on the pristine tree, and
@@ -661,7 +668,9 @@ test('the three verdicts still partition the cell space with a third axis', () =
     const k = `${row.bindings['A']}/${row.bindings['B']}/${row.bindings['S']}/${row.bindings['L']}`;
     seen.set(k, [...(seen.get(k) ?? []), row.bindings['V']]);
   }
-  assert.equal(seen.size, 156, 'every cell carries a verdict, and no verdict lacks a cell');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(seen.size, 158, 'every cell carries a verdict, and no verdict lacks a cell');
   assert.deepEqual([...seen].filter(([, v]) => v.length > 1), []);
 
   // THE REASON IS TOTAL OVER not_modelled, and that sentence is the assertion
@@ -1257,7 +1266,9 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
   showFine('mutant 1 (axis applies nowhere)', f);
   // PREDICTED 97 -> 82: every cell falls back to `none`, so the three-axis
   // matrix must become the two-axis one exactly.
-  assert.equal(f.cell, 132, 'predicted 132');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(f.cell, 134, 'predicted 134');
   assert.equal(n(r, 'shape_of(A, B, S)'), 40, 'the shapes are still declared — only the layer changed');
 
   // ROW FOR ROW, not by count: this is the strongest statement the refinement
@@ -1357,9 +1368,9 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
   // its VALUES are per-layer, so a layer that declares the axis without
   // declaring any value of its own gets only the 41 unrefined `none` cells.
   // The phantom is what the guard removed; the unearned row is what remains.
-  assert.equal(counts(r).cell, 198, 'predicted 198 coarse');
-  assert.equal(f.cell, 222, '156 + 66 unrefined none-cells, and NOT one shaped cell');
-  assert.equal(f.cell - before.cell, 66);
+  assert.equal(counts(r).cell, 201, 'predicted 201 coarse');
+  assert.equal(f.cell, 225, '158 + 67 unrefined none-cells, and NOT one shaped cell');
+  assert.equal(f.cell - before.cell, 67);
   assert.equal(n(r, 'cell[audit](A, K, s_member_on_this, modules)'), 0,
                'no callee shape leaks into the module layer');
 
@@ -1383,7 +1394,9 @@ test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft de
   assert.ok(r.holds('axis_applies(shape, dataflow)'), 'positive control');
   const f = fine(r);
   showFine('mutant 2b (shape applies to dataflow)', f);
-  assert.equal(f.cell, 156, 'not one cell moves: no shape declares itself in dataflow');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(f.cell, 158, 'not one cell moves: no shape declares itself in dataflow');
   assert.deepEqual(r.query('unearned_axis[audit](A, L)').rows
     .map((x) => `${x.bindings['A']}/${x.bindings['L']}`).sort(), ['shape/dataflow']);
   console.log('      KILLED: the brief\'s own draft row is refused — inert AND unearned');
@@ -1399,7 +1412,9 @@ test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
             'positive control: the injected fact reached the store');
   const f = fine(r);
   showFine('mutant 3 (shape over a ghost kind)', f);
-  assert.equal(f.cell, 157, 'predicted 156 + 1: the ghost gets a cell of its own');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(f.cell, 159, 'predicted 158 + 1: the ghost gets a cell of its own');
   assert.deepEqual(r.query('orphan_shape[audit](L, K, S)').rows
     .map((x) => `${x.bindings['K']}/${x.bindings['S']}`), ['no_such_kind/s_identifier']);
   assert.deepEqual(cells(r, 'invented_cell[audit](A, B, C)'), ['js/no_such_kind/callgraph'],
@@ -1431,7 +1446,9 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 4 (none beside a shape)', f);
-  assert.equal(f.cell, 172, 'predicted 156 + 16, one per splitting kind');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(f.cell, 174, 'predicted 158 + 16, one per splitting kind');
   assert.equal(n(r, 'double_cell[audit](A, B, L)'), 16, 'and each is named');
   assert.ok(r.holds('double_cell[audit](js, member_expression, callgraph)'));
 
@@ -1460,8 +1477,10 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 5a (no unsplit-none branch)', f);
-  assert.equal(f.cell, 106, 'predicted 156 - 50');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 50, 'a coarse cell with nothing under it');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(f.cell, 107, 'predicted 158 - 51');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 51, 'a coarse cell with nothing under it');
   // the loss is exactly the kinds the axis does not split, at the layer where
   // it applies — and one of them is a cell somebody deliberately WAIVED, which
   // would have vanished from the table with its reason
@@ -1483,8 +1502,9 @@ test('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole
   const r = shapeWorld({ rules });
   const f = fine(r);
   showFine('mutant 5b (no not-applicable-none branch)', f);
-  assert.equal(f.cell, 90, 'predicted 156 - 66: the dataflow layer disappears');
-  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 66);
+  // +1 on 2026-09-08 with `object_pattern`.
+  assert.equal(f.cell, 91, 'predicted 158 - 67: the dataflow layer disappears');
+  assert.equal(n(r, 'lost_cell[audit](A, B, L)'), 67);
   assert.equal(n(r, 'cell[audit](A, B, S, dataflow)'), 0, 'positive control: it is the dataflow half');
   console.log('      KILLED: lost_cell names all 45 dataflow cells');
 });
@@ -1505,7 +1525,8 @@ test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-on
   assert.equal(n(r, 'shape_of(js, member_expression, S)'), 1);
   const f = fine(r);
   showFine('mutant 6 (one shape for member_expression)', f);
-  assert.equal(f.cell, 136, 'predicted 156 - 20');
+  // +2 on 2026-09-08 with `object_pattern`.
+  assert.equal(f.cell, 138, 'predicted 158 - 20');
 
   // WHEN THIS WAS WRITTEN EVERY AUDIT INSIDE THE MODEL WAS SILENT: the matrix
   // came out smaller, complete, partitioned and wrong, and only the census

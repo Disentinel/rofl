@@ -141,8 +141,21 @@ binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File
 -- A BINDER'S REGION is the function it sits in, or the FILE when it sits in
 -- none. A use sees a binder when the binder's region contains the use — which
 -- is what makes two `const c` in two functions two names again.
-binder_region[code](D, R)    :- binder[code](D, _, _, _), nearest_v[flow](R, D).
-binder_at_top[code](D)       :- binder[code](D, _, _, _), not binder_region[code](D, _).
+-- ONE NOTION OF SCOPE, AND MORE THAN ONE WAY TO BIND. `scoped_binder` exists so
+-- that the three rules below name the thing they care about — a declarator that
+-- introduces names in a region — rather than the one relation that happened to
+-- be the only such thing. Added 2026-09-08 with destructuring, which binds
+-- names from a PATTERN and therefore cannot be a `binder` row: `binder`'s third
+-- argument is the node the name evaluates to, and a destructured name evaluates
+-- to a MEMBER of that node rather than to the node.
+--
+-- THE REFACTOR SHIPPED BEFORE THE FEATURE AND WITH ITS OWN CONTROL: with only
+-- this indirection in place and no second arm, fifteen relations of this layer
+-- were compared row for row against the previous form and came back IDENTICAL.
+scoped_binder[code](D, File) :- binder[code](D, _, _, File).
+
+binder_region[code](D, R)    :- scoped_binder[code](D, _), nearest_v[flow](R, D).
+binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).
 --
 -- `ident_in[code](E, _, _)` IS A COST LITERAL AND NOTHING ELSE, and it is here
 -- because the first version of this paragraph nearly doubled the fixpoint. A
@@ -163,7 +176,7 @@ sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E
 -- ...and a top-level binder is visible everywhere in its own file, which is the
 -- honest reading: `const seeded = run(1)` at module scope really is in scope
 -- inside every function below it.
-sees_binder[code](E, D)      :- binder_at_top[code](D), binder[code](D, _, _, File),
+sees_binder[code](E, D)      :- binder_at_top[code](D), scoped_binder[code](D, File),
                                 ident_in[code](E, _, File).
 
 -- WHAT THIS DOES NOT DO, stated rather than discovered later: SHADOWING. Two
@@ -263,6 +276,46 @@ builtin_prototype(array).
 builtin_prototype(string).
 builtin_prototype(number).
 builtin_prototype(boolean).
+
+-- ---------------------------------------------------------------------------
+-- DESTRUCTURING: A NAME BOUND FROM A PATTERN RATHER THAN FROM A VALUE.
+--
+-- `const { pulled: taken } = drawer` binds `taken` to the MEMBER `pulled` of
+-- whatever `drawer` is, and `binder[code]` cannot say that: its third argument
+-- is the node the name evaluates to, and here the name evaluates to a member of
+-- that node. A declarator whose `id` is an `object_pattern` has no `ast_name`
+-- at all, so it produced no `binder` row and the names it introduces were
+-- invisible to the whole value layer.
+--
+-- MEASURED BEFORE ANY OF THIS: on a three-line probe with `const { pick } =
+-- holder` beside a direct `holder.pick(n)`, the model derived the direct edge
+-- and lost the destructured one entirely, and `vocabulary_gap[audit]` named
+-- `object_pattern` the same run. So the hole was DECLARED rather than silent —
+-- it was waiting for a fixture, which is exactly what that audit is for.
+--
+-- EVERY FACT THIS NEEDS WAS ALREADY THERE. `member_value[flow]` answers what a
+-- key holds and `may_be_node` carries it, so the arm is a join: the local name
+-- may be whatever the init`s member of that key may be. `key_name` rather than
+-- `ast_name` on the key, for the reason four other readers of a key learned.
+--
+-- SHORTHAND AND RENAME ARE ONE CASE, not two. `{ pulled }` gives an
+-- `object_property` whose key and value are two identifiers of the same name,
+-- and `{ pulled: taken }` gives two of different names — so reading the key for
+-- the member and the value for the local covers both without a `shorthand`
+-- test, and the corpus`s fixture uses the rename because the shorthand form
+-- would shadow the function it binds.
+destructures[code](D, Local, Key, File) :- ast_node[code](D, variable_declarator, File, _),
+                                           ast_child[code](D, id, 0, P),
+                                           ast_node[code](P, object_pattern, _, _),
+                                           ast_child[code](P, properties, _, Prop),
+                                           ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
+                                           ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+scoped_binder[code](D, File) :- destructures[code](D, _, _, File).
+
+may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
+                           ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                           member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
 
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).

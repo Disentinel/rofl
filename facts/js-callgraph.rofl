@@ -32,6 +32,7 @@ node_kind(js, tsas_expression).
 node_kind(js, this_expression).
 node_kind(js, super).
 node_kind(js, array_expression).
+node_kind(js, object_pattern).
 node_kind(js, object_expression).
 node_kind(js, object_method).
 node_kind(js, object_property).
@@ -168,6 +169,11 @@ ignored(js, class_declaration,  callgraph, a_the_constructor_is_the_target).
 handled(js, string_literal,  callgraph, r_call_edge).
 handled(js, numeric_literal, callgraph, r_call_edge).
 handled(js, template_literal, callgraph, r_template_key).
+-- ...and a PATTERN, 2026-09-08. A destructured name is a callee like any other
+-- once the value layer can say what it denotes; no rule was needed here, which
+-- is the second time in three iterations that declaring a kind at this layer
+-- cost nothing but the row.
+handled(js, object_pattern,   callgraph, r_destructure).
 
 -- ===========================================================================
 -- CONTROL TRANSFERS THAT ARE NOT CALL EXPRESSIONS.

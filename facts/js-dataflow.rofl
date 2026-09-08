@@ -14,6 +14,7 @@ node_kind(js, boolean_literal).
 node_kind(js, identifier).
 node_kind(js, object_expression).
 node_kind(js, array_expression).
+node_kind(js, object_pattern).
 node_kind(js, function_expression).
 node_kind(js, arrow_function_expression).
 node_kind(js, class_declaration).
@@ -43,6 +44,11 @@ handled(js, numeric_literal,    dataflow, r_value_core).
 handled(js, identifier,         dataflow, r_value_core).
 handled(js, object_expression,  dataflow, r_value_core).
 handled(js, array_expression,   dataflow, r_value_core).
+-- DESTRUCTURING, 2026-09-08. A declarator whose `id` is a pattern binds names
+-- `binder[code]` cannot see, because a destructured name evaluates to a MEMBER
+-- of the init rather than to the init. `destructures[code]` says which name
+-- comes from which key and the value arm joins it through `member_value`.
+handled(js, object_pattern,     dataflow, r_destructure).
 
 -- and the three transparent wrappers, which `w_df_control_forms` claimed and
 -- this item closed by accident: a parenthesis, a cast and a non-null assertion

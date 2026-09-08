@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iteration 31). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iteration 32). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -56,6 +56,58 @@ then read as a constraint rather than as a setting:
 **So: when the model says it cannot, go and measure how far it is from being
 able to.** The measurement is usually a thirty-second probe and it has been
 wrong four times out of four.
+
+## What iteration 32 measured — destructuring, and the denominator
+
+**The coverage matrix cannot answer "which features are not covered", because
+its denominator is the model's own vocabulary.** 89% is 89% of 75 declared
+kinds; babel's core ES grammar — no TS, no Flow, no JSX, no experimental — has
+about **107** concrete node types, and roughly **25 are not declared at all**:
+
+```
+destructuring   object_pattern, array_pattern, assignment_pattern,
+                rest_element, spread_element
+class fields    class_property, class_private_property, class_private_method,
+                private_name, static_block, class_accessor_property
+expressions     update_expression, class_expression
+statements      labeled, empty, debugger, with
+other           meta_property, reg_exp_literal, big_int_literal,
+                export_specifier, export_namespace_specifier
+```
+
+**The hole is DECLARED rather than silent**: `vocabulary_gap[audit]` fired on
+`object_pattern` on a three-line probe before a rule existed. What the model
+lacked was a corpus, not a check.
+
+**ONE HOLE IS GENUINELY SILENT and needs the owner.** Diffing the kinds a RULE
+READS BY NAME against the vocabulary finds two: `program`, structural, and
+**`class_expression`** — which `obj_like[flow]` and `node_value_kind` both read,
+so the model HAS an opinion, and the matrix has NO CELL for it at any layer. A
+kind the vocabulary does not declare can never be reported unmodelled. That
+check is derivable (rules are facts) and belongs beside `vocabulary_gap`, which
+watches the corpus and not the rules.
+
+`object_pattern` is declared and answered at four layers now. `destructures[code]`
+says which local comes from which key and the value arm joins it through
+`member_value`; **shorthand and rename are one case**, because reading the key
+for the member and the value for the local covers both without a `shorthand`
+test.
+
+**THE REFACTOR SHIPPED BEFORE THE FEATURE, with its own control.**
+`binder_region`, `binder_at_top` and the top-level arm of `sees_binder` all read
+`binder` because it was the only way to bind; they read `scoped_binder` now.
+With the indirection in and no second arm, fifteen relations compared row for
+row: identical, 731 066 bytes of sorted rows. A rename bundled with a feature is
+a diff where nothing can be attributed.
+
+**AN EMPTY ANSWER WAS A FACT ABOUT THE TOOL, for the second time in two
+iterations.** `WHERE THE WALK CANNOT LOOK` asserts a live function is reported
+maybe-dead — and it went red because its world returned ZERO ROWS: that test
+loaded the AST facts BEFORE the packs, so `r.load()` ran a full fixpoint under
+its own DEFAULT budget and emitted `hole($load(2), budget_exhausted)`. Raising
+`evaluate` to 200 M changed nothing, because the wall was never `evaluate`'s.
+The packs load first now, as `test/js-corpus-world.ts` already records, and
+every query in that test checks `partial`.
 
 ## What iteration 31 measured — and a number I reported that was wrong
 

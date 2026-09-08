@@ -48,7 +48,7 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   },
   {
     name: 't2 a top-level binder is invisible inside a function',
-    mut: [{ find: `sees_binder[code](E, D)      :- binder_at_top[code](D), binder[code](D, _, _, File),
+    mut: [{ find: `sees_binder[code](E, D)      :- binder_at_top[code](D), scoped_binder[code](D, File),
                                 ident_in[code](E, _, File).`, replace: '',
             file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
@@ -60,7 +60,7 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   },
   {
     name: 't3 every binder is treated as top-level',
-    mut: [{ find: 'binder_at_top[code](D)       :- binder[code](D, _, _, _), not binder_region[code](D, _).',
+    mut: [{ find: 'binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).',
             replace: 'binder_at_top[code](D)       :- binder[code](D, _, _, _).',
             file: 'rules/js-dataflow.rofl' }],
     // MEASURED IN THIS WORLD, not in a probe's. A scratch harness without
@@ -735,19 +735,45 @@ export function useCbHost() { return [1].map(cbBody); }
     const res = r.load(text);
     assert.ok(res.ok, `${name} REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   };
-  load('boot.rofl', read('boot.rofl'));
+  // ONE LOAD, AND THE FACTS AFTER, which is what test/js-corpus-world.ts
+  // records and this world was still doing the old way. `r.load()` EVALUATES,
+  // under its own DEFAULT budget — so loading the packs onto a store that
+  // already holds a hundred thousand AST facts runs a full fixpoint there, and
+  // on 2026-09-08 this world outgrew that budget: `hole($load(2),
+  // budget_exhausted)`, every later query `partial`, and zero rows. Zero rows
+  // then read as `cbHelper is not reported maybe-dead`, which is the sentence
+  // this test exists to deny. Raising `evaluate` to 200 M changed nothing,
+  // because the wall was never `evaluate`'s.
+  load('all packs', [read('boot.rofl'), ...FACTS.map(read),
+    read('facts/js-controlflow.rofl'), ...RULES.map(read)].join('\n'));
   for (const [logical, disk] of FILES) {
     const src = read(disk) + (logical === 'alpha.mjs' ? extra : '');
     assert.ok(r.assert(scan(src, { file: logical }).facts.join('\n')).ok);
   }
-  for (const f of [...FACTS, 'facts/js-controlflow.rofl']) load(f, read(f));
-  load('rules/*', RULES.map(read).join('\n'));
   r.evaluate(20_000_000);
-  const rows = r.query('may_not_be_reached[code](F)').rows;
+  // THE QUERY CARRIES ITS OWN BUDGET AND THIS TEST NEVER READ `partial`, which
+  // made its central assertion unfalsifiable in the wrong direction. `query`
+  // re-ensures under the DEFAULT budget whatever `evaluate` was given, and this
+  // world — the whole corpus plus three appended functions — outgrew it on
+  // 2026-09-08. Every query then came back `partial: true` with a
+  // `hole(budget_exhausted)` and ZERO ROWS, and zero rows read as `cbHelper is
+  // not reported maybe-dead`, which is exactly the sentence this test exists to
+  // deny. An empty answer is a fact about the tool until shown otherwise, and
+  // this file had shown otherwise about a DIFFERENT tool two hundred lines up.
+  // Second instance in two iterations, after `mutant 8` in
+  // test/js-callgraph.test.ts.
+  const BUDGET = 40_000_000;
+  const ask = (lit: string) => {
+    const res = r.query(lit, { budget: BUDGET });
+    assert.equal(res.partial, false, `query ${lit} hit a budget — the answer is about the tool`);
+    return res;
+  };
+  const rows = ask('may_not_be_reached[code](F)').rows;
   const names = new Set(rows.flatMap((row) => {
     const f = row.bindings.F ?? '';
-    return r.query(`fn_name[code](${f}, N)`).rows.map((x) => unq(x.bindings.N ?? ''));
+    return ask(`fn_name[code](${f}, N)`).rows.map((x) => unq(x.bindings.N ?? ''));
   }));
+  assert.ok(names.size > 0, 'positive control: the walk reports somebody');
   assert.equal(names.has('cbHelper'), true,
     'a live function is reported maybe-dead: the host-callback limit is still open');
   assert.equal(names.has('cbBody'), false,

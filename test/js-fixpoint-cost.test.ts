@@ -354,7 +354,21 @@ test('the five heaviest read paths, by name', () => {
   // and again over everything `may_be_node` reaches, which is a wider relation
   // than an arm joining two standing ones. Cost per fact still fell,
   // 6.358 -> 6.336, because the corpus grew with it.
-  assert.equal(c.total, 1160843, 'total rows handed out by the store in one fixpoint');
+  // 1 160 843 -> 1 194 681 and 72 195 -> 75 999 on 2026-09-08 with DESTRUCTURING.
+  // Axes from this diff, control OK to the row:
+  //
+  //                        prev corpus            this corpus
+  //     prev rules   1 160 843 / 72 195 fir  1 192 012 / 74 876 fir
+  //     destructure  1 161 946 / 72 270 fir  1 194 681 / 75 999 fir
+  //
+  // AND THE RULES ARE NEARLY FREE THIS TIME — +0.10% of rows and 75 firings,
+  // against +1.11% for `prototype_of` one iteration ago. The comparison is the
+  // useful part: an arm that JOINS relations already standing costs almost
+  // nothing, and a relation that RANGES — `prototype_of` over every node of
+  // eight kinds and again over everything `may_be_node` reaches — costs a
+  // hundredfold more. Both are one rule. The fixture costs +2.69% and 2 681,
+  // which is where a new KIND lands. Cost per fact fell again, 6.336 -> 6.226.
+  assert.equal(c.total, 1194681, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -443,5 +457,5 @@ test('the five heaviest read paths, by name', () => {
   // calls, which is the shape this gate reports honestly and the reason its own
   // header says it is structurally unable to see the control-flow layer.
   // Cost per fact 6.419 -> 6.354, down again.
-  assert.equal(c.firings, 72195, 'derivations: 70 262 before prototype_of');
+  assert.equal(c.firings, 75999, 'derivations: 72 195 before destructuring');
 });

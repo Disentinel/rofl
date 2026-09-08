@@ -674,7 +674,9 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // 44 -> 50 on 2026-09-07: `import_specifier`, `export_named_declaration` and
   // the four unexercised import/export forms, declared in this pack because
   // their verdicts are.
-  assert.equal(dKinds, 50, 'kinds the matrix did not know existed');
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(dKinds, 51, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);
@@ -1126,7 +1128,9 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // 176 -> 178 on 2026-09-08: `useBoundArr` and its `trace()`, plus the
   // `.join` and `.length` chain on a bound array — the site that makes the
   // value arm of `prototype_of` load-bearing.
-  assert.equal(sites - resolved, 178, `${sites - resolved} call sites vanished from the frontier`);
+  // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
+  // destructuring, and this world declares two layers.
+  assert.equal(sites - resolved, 181, `${sites - resolved} call sites vanished from the frontier`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

@@ -811,3 +811,133 @@ test('the residue that is the standard library is a row, not a comment', () => {
   assert.deepEqual(nextCalls.filter(([c]) => m.n(`stdlib_member[audit](${c}, P, K)`) > 0), [],
     'and none of them has a prototype this relation can name');
 });
+
+
+// ---------------------------------------------------------------------------
+// 3p. A NAME BOUND BY DESTRUCTURING.
+//
+// `const { pulled: taken } = drawer` binds `taken` to the MEMBER `pulled` of
+// whatever `drawer` is, and `binder[code]` cannot say that: its third argument
+// is the node the name evaluates to, and a destructured name evaluates to a
+// member of that node. A declarator whose `id` is a pattern has no `ast_name`
+// at all, so it produced no binder row and every name introduced this way was
+// invisible to the value layer.
+//
+// MEASURED ON A PROBE FIRST: with `const { pick } = holder` beside a direct
+// `holder.pick(n)`, the model derived the direct edge and lost the destructured
+// one entirely — and `vocabulary_gap[audit]` named `object_pattern` the same
+// run, so the hole was DECLARED rather than silent. It was waiting for a
+// fixture, which is what that audit is for.
+//
+// THE REFACTOR SHIPPED BEFORE THE FEATURE. `binder_region`, `binder_at_top` and
+// the top-level arm of `sees_binder` all read `binder` because it was the only
+// way to bind; they read `scoped_binder` now. With the indirection in and no
+// second arm, fifteen relations of this layer were compared row for row against
+// the previous form and came back IDENTICAL.
+const DESTR_ARM = `may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
+                           ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                           member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).`;
+const bound = (w: World) => w.q('destructures[code](D, L, K, F)')
+  .map(([, l, k]) => `${l}<-${k}`).sort();
+
+const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'e1 the value arm is deleted',
+    mut: [{ find: DESTR_ARM, replace: '', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['scoped -> fetched', 'useDestructured -> pulled'],
+        'the runnable site and the scanned one');
+      // THE COLUMN THAT TELLS THIS FROM e2 AND e6: the names are still bound
+      // and the declarator is still a scoped binder — only nothing reads them.
+      assert.deepEqual(bound(m), bound(b));
+      assert.equal(m.n('scoped_binder[code](D, F)'), b.n('scoped_binder[code](D, F)'));
+    },
+  },
+  {
+    name: 'e2 a pattern stops being a pattern',
+    mut: [{ find: 'ast_node[code](P, object_pattern, _, _),',
+            replace: 'ast_node[code](P, no_such_kind, _, _),', file: 'rules/js-dataflow.rofl' }],
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['scoped -> fetched', 'useDestructured -> pulled']);
+      assert.deepEqual(bound(m), [], 'nothing is bound from a pattern any more');
+      assert.equal(b.n('scoped_binder[code](D, F)') - m.n('scoped_binder[code](D, F)'), 2);
+    },
+  },
+  {
+    name: 'e4 the key and the value are swapped',
+    mut: [{ find: `ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
+                                           ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).`,
+            replace: `ast_child[code](Prop, value, 0, K), key_name[code](K, Key),
+                                           ast_child[code](Prop, key, 0, L), ast_name[code](L, Local).`,
+            file: 'rules/js-dataflow.rofl' }],
+    // AND THIS IS WHY BOTH FIXTURES USE THE RENAME FORM. `{ pulled }` gives an
+    // `object_property` whose key and value are two identifiers of the SAME
+    // name, so reading them the wrong way round would derive the same rows and
+    // this mutant would survive on a shorthand corpus. The rename makes the
+    // direction observable, and it is the whole reason the rule needs no
+    // `shorthand` test: key for the member, value for the local, both forms.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['scoped -> fetched', 'useDestructured -> pulled']);
+      assert.deepEqual(bound(b), ['inner<-fetchIt', 'taken<-pulled']);
+      assert.deepEqual(bound(m), ['fetchIt<-inner', 'pulled<-taken'], 'read backwards');
+    },
+  },
+  {
+    name: 'e5 the scoping join is dropped',
+    mut: [{ find: 'ident_in[code](E, Local, File), sees_binder[code](E, D).',
+            replace: 'ident_in[code](E, Local, File).', file: 'rules/js-dataflow.rofl' }],
+    // A GUARD WITH NOWHERE TO BITE, measured before it was given a site: the
+    // runnable fixture binds `taken` at module scope and uses it once, so a
+    // binder visible everywhere and a binder visible in its region are the same
+    // binder. `scoped`/`outside` in shapes.ts are a name bound INSIDE a
+    // function and a free identifier of that name outside it — which throws at
+    // run time, so no executable fixture can hold it. THE MUTANT GAINS rather
+    // than loses, which is the direction an over-approximation moves.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)), ['outside -> fetched'],
+        'a name resolved to a binder in a function it is not in');
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), [], 'and loses nothing');
+    },
+  },
+  {
+    name: 'e6 a destructuring declarator is not a scoped binder',
+    mut: [{ find: 'scoped_binder[code](D, File) :- destructures[code](D, _, _, File).',
+            replace: '', file: 'rules/js-dataflow.rofl' }],
+    // THE HALF THE REFACTOR BOUGHT, and the column that tells it from e2: the
+    // names are still bound, and they are visible to nobody.
+    expect: (m, b) => {
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['scoped -> fetched', 'useDestructured -> pulled']);
+      assert.deepEqual(bound(m), bound(b), 'the names are bound and unreachable');
+      assert.equal(b.n('scoped_binder[code](D, F)') - m.n('scoped_binder[code](D, F)'), 2);
+    },
+  },
+];
+
+// ONE MUTANT SURVIVES AND IT IS WAITING ON ANOTHER ITEM. Reading `ast_name` on
+// the key where the rule reads `key_name` derives a byte-identical world,
+// because every key in a pattern in this corpus is a plain identifier and
+// `key_name`'s first arm IS `ast_name`. It would bite on a COMPUTED key in a
+// pattern — `const { [k]: v } = o` — which is exactly the shape
+// `w_computed_key_names` owns, and which cannot be written honestly until that
+// item settles what a computed key is named. Third category of survivor, after
+// "no site in this corpus" and "unkillable by the grammar": waiting on an item.
+
+for (const g of DESTR) test(`${g.name} — a name bound by destructuring`, () => g.expect(build(g.mut), base()));
+
+test('destructuring binds through the member, and only inside its region', () => {
+  const m = base();
+  assert.ok(edges(m).has('useDestructured -> pulled'), 'the runnable site resolves');
+  assert.ok(edges(m).has('scoped -> fetched'), 'and the scanned one, bound inside a function');
+  assert.ok(!edges(m).has('outside -> fetched'), 'and a free name of the same spelling does not');
+  assert.deepEqual(bound(m), ['inner<-fetchIt', 'taken<-pulled'],
+    'local on the left, member key on the right');
+  // ...AND THE KIND IS IN THE VOCABULARY NOW, which is what took the matrix
+  // from reporting nothing about it to reporting four cells.
+  assert.equal(m.n('vocabulary_gap[audit](L, K)'), 0);
+  assert.ok(m.n('ast_node[code](P, object_pattern, F, L)') > 0, 'positive control: patterns exist');
+});

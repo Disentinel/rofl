@@ -18,6 +18,12 @@ export * from './other.js';
 
 const arrow = (n) => n + 1;
 
+// DESTRUCTURING, ES2015, added 2026-09-08 with `object_pattern`. One site here
+// because `feature_unexercised[audit]` demands one: a `kind_needs` row the era
+// corpus never produces is a table agreeing with itself, which is what this
+// file exists to prevent.
+const { named: renamed } = { named: 1 };
+
 function* counter() { yield 1; yield 2; }
 
 class Base { greet() { return 'base'; } }
