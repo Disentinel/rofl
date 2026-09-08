@@ -218,7 +218,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // question about a NEIGHBOUR'S landed cell — `export_binding` reports a
     // re-export's `local` as a name in the re-exporting module, which the
     // dataflow layer already guards against and this one does not.
-    'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
+    // `w_open_cell_should_be_an_identity` LEFT THIS LIST 2026-09-09, the same
+    // way the three before it did: it was taken and it spawned a finding —
+    // `f_an_instruments_world_is_part_of_its_claim`, whose third instance was
+    // the two shape mutants that were green because `shapeWorld` does not load
+    // the packs their own message talks about.
+    'w_mod_sweep', 'w_plugin_gated_kinds',
     // `w_update_and_literals` LEFT THIS LIST 2026-09-08, the same way the two
     // before it did: it was taken and it spawned two findings, one of them in
     // the SCANNER (a bigint matched none of the four branches) and one in a

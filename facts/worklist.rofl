@@ -1829,8 +1829,22 @@ work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_
 -- have moved it again, and no branch can know the merged value. Whether it can
 -- be stated as an identity - the open set against a relation derived some other
 -- way - is a real question and not a tidy-up.
-work(w_open_cell_should_be_an_identity, "the open-cell count is the last pin in the queue tests that is a number, and three parallel branches move it at once").
-work_state(w_open_cell_should_be_an_identity, open).
+-- DONE 2026-09-09, and NOT as an identity. The question the item asked - can
+-- the open set be stated against a relation derived some other way - was
+-- answered by the set itself getting SMALL AND STABLE for a reason: 15 -> 6,
+-- and all six are cells whose work is known and whose DECISION is the owner's
+-- (with_statement at four layers, `require`, the subpath specifier). So the
+-- pin is now a deepEqual over the six rows by name. That is stronger than an
+-- identity would have been for the merge problem this item was entered for -
+-- two branches closing different cells produce two different SETS, and git
+-- merges a set of named rows where it cannot merge two numbers - and it is
+-- honest about what it is: an enumeration that must be re-read, not a law.
+-- WHAT WAS NOT DONE: no second derivation of the open set exists, so nothing
+-- CROSS-CHECKS the enumeration. If the six ever grow back into a backlog, the
+-- identity question returns with them.
+work(w_open_cell_should_be_an_identity, "DONE 2026-09-09: the open-cell pin is a named set of six rows, every one of them the owner's to decide; an identity was not needed once the set stopped being a backlog").
+work_state(w_open_cell_should_be_an_identity, done).
+work_spawned(w_open_cell_should_be_an_identity, f_an_instruments_world_is_part_of_its_claim).
 
 -- ==========================================================================
 -- 62 - WHAT A DECORATOR DOES TO THE THING IT DECORATES.
