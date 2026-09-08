@@ -3732,3 +3732,11 @@ finding(f_a_class_initialiser_is_a_frame_with_no_function, insight).
 recorded(f_a_class_initialiser_is_a_frame_with_no_function, "2026-09-08").
 demands(f_a_class_initialiser_is_a_frame_with_no_function, doc).
 finding_note(f_a_class_initialiser_is_a_frame_with_no_function, "A CALL INSIDE A CLASS FIELD INITIALISER OR A STATIC BLOCK RUNS IN A FRAME NAMED AFTER NEITHER, and the execution oracle and the model disagree about the caller for a THIRD reason - neither unsound nor over-approximate. MEASURED: V8 names the static block's frame `<static_initializer>` and an instance field's `<instance_members_initializer>`, both with the class as the type name; the model has no such region, so `nearest_fn` finds nothing for a top-level class and `top_call` attributes the call to the FILE ROOT. For a static field or a static block that attribution is right about the moment - running the shape shows both fire at module evaluation, before any instance - and for an INSTANCE field it is wrong about the moment, which is why the control-flow layer's `per_construction` mechanism guards it and `may_not_run` hedges. THIS IS WHY THE FIXTURE IS IN THE SCANNED HALF. Put the same class in alpha.mjs and `runOracle` records `<static_initializer> -> sealed` against the model's `top -> sealed`: a name the oracle has and the model does not, which the existing UNSOUND/over-approximation split has no third bucket for. SAME SHAPE AS `f_a_synthesised_constructor_has_a_frame_and_no_node`, which is still a question in this ledger, and as `f_a_generators_first_resume_is_attributed_to_a_builtin_frame`: three frames the HOST names for which the PROGRAM has no node. Three instances is where a third bucket in the oracle's report stops being a special case.").
+
+-- ...AND FOUR MORE ON 2026-09-08 (w_class_fields): the shape census in
+-- test/js-callgraph.test.ts (6 -> 8 computed callees became a partition) and
+-- `r1`, `r2` and `l2` in test/js-controlflow.test.ts, each of which counted a
+-- corpus rather than a rule. `l2` is the instructive one: its difference set is
+-- the whole module BY CONSTRUCTION, because the mutant deletes the containment
+-- literal, so it is a lower bound on named rows and cannot be an enumeration.
+addressed_by(f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus, "test/js-controlflow.test.ts").
