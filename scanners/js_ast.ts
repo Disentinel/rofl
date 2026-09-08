@@ -128,7 +128,32 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   // environment rather than absent from all of them.
   let ast;
   try {
-    ast = parse(src, { sourceType: 'module', plugins: ['typescript'] });
+    // TWO PLUGINS JOINED `typescript` ON 2026-09-08, on the owner's ask that the
+    // model support what people really write. `decorators` is the standard
+    // proposal (not `decoratorsLegacy`, which babel 8 no longer recognises under
+    // that name — measured) and `decoratorAutoAccessors` is a SEPARATE plugin
+    // that `decorators` does not imply: `@dec class A {}` parses without it and
+    // `accessor a = 1` does not.
+    //
+    // THE CONTROL, run before the change and again after: all 29 parseable
+    // fixture files in test/fixtures produce a byte-identical AST with and
+    // without the two plugins, comparing the whole program with `loc`, `start`,
+    // `end`, `range` and `extra` stripped. Nought differ, nought break. A plugin
+    // that adds syntax is not automatically a plugin that leaves syntax alone,
+    // and this repository has been caught assuming that class of thing before.
+    //
+    // WHAT IS STILL NOT ENABLED, and each for a measured reason rather than
+    // caution: `importAttributes` is unnecessary — `import x from "y" with { type: "json" }`
+    // already parses under `typescript` alone — while the KIND stays undeclared
+    // because import attributes are ES2025 and the highest environment on the
+    // era scale is ts5 at 2022; `exportDefaultFrom` would parse `export v from`,
+    // and no environment on the scale claims that Babel proposal either. Both
+    // would sit in `feature_unreachable[audit]` for ever. See
+    // `w_plugin_gated_kinds` in facts/worklist.rofl.
+    ast = parse(src, {
+      sourceType: 'module',
+      plugins: ['typescript', 'decorators', 'decoratorAutoAccessors'],
+    });
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {

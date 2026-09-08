@@ -439,7 +439,10 @@ test('CLOSED: a file the scanner refuses is INVALID in every environment', () =>
   // throwing, `scanned_file[audit]` is the denominator, and a refused file is
   // broken in EVERY environment — the question «is this valid under node18» has
   // an answer for it and the answer is no.
-  const refused = scan('class S { @log m() {} }', { file: 'refused.js' });
+  // WAS A DECORATOR UNTIL 2026-09-08, when the scanner gained the plugin and
+  // this string started to parse. `with` is refused because a module is strict,
+  // which is a property of the language rather than of a plugin list.
+  const refused = scan('with (o) { p(); }\nexport {};', { file: 'refused.js' });
   assert.deepEqual(refused.facts.map((f) => f.split('[')[0]), ['ast_parse_error'],
     'the refusal is a fact, and it is the ONLY fact: no partial tree');
   assert.equal(refused.nodes, 0);

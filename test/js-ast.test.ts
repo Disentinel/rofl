@@ -228,7 +228,9 @@ test('the scanner emits EXACTLY the four contract relations, into [code]', () =>
   // every count still plausible. It now emits `ast_parse_error` and NOTHING
   // ELSE, so the model can say the file is invalid rather than never mention
   // it. The two sets never mix: four on success, one on refusal.
-  const refused = scan('class S { @log m() {} }', { file: 'refused.js' });
+  // WAS A DECORATOR UNTIL 2026-09-08 — see test/fixtures/js-env/refused.js.txt
+  // for why a refusal that rests on a parser setting has an expiry date.
+  const refused = scan('with (o) { p(); }\nexport {};', { file: 'refused.js' });
   assert.deepEqual([...new Set(rows(refused.facts).map((r) => r.rel))], [AST_REFUSAL],
     'a refusal emits the refusal and no partial tree');
   assert.equal(refused.nodes, 0);
