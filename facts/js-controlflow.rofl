@@ -116,7 +116,10 @@ ignored(js, this_expression,             controlflow, a_no_control_transfer).
 ignored(js, new_expression,              controlflow, a_no_control_transfer).
 ignored(js, variable_declarator,         controlflow, a_no_control_transfer).
 ignored(js, class_declaration,           controlflow, a_no_control_transfer).
-ignored(js, decorator,                   controlflow, a_no_control_transfer).
+-- `decorator` LEFT THIS LIST ON 2026-09-08 and its row is now a `handled` in
+-- the block below. `a_no_control_transfer` was written when no corpus could
+-- contain a decorator, and it is false: a decorator IS a call.
+ignored(js, class_accessor_property,     controlflow, a_both_accessors_are_synthesised).
 ignored(js, import_declaration,          controlflow, a_no_control_transfer).
 ignored(js, import_specifier,            controlflow, a_no_control_transfer).
 ignored(js, import_default_specifier,    controlflow, a_no_control_transfer).
@@ -209,6 +212,7 @@ handled(js, super,           controlflow, r_call_is_an_exit).
 -- value layer already reads that attribute for `"constructor"`. Nothing had
 -- ever asked it for `"get"`.
 handled(js, member_expression, controlflow, r_accessor).
+handled(js, decorator, controlflow, r_decorator_call).
 -- ...AND ITS OPTIONAL TWIN CANNOT SAY THIS, which is a real loss and worth the
 -- sentence. `optional_member_expression` is already MODELLED at this layer for
 -- its short-circuit, and a kind-level cell at a layer with no refinement column

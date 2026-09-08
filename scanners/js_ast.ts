@@ -109,6 +109,15 @@ function scalarTerm(v: string | number | boolean): string {
 export const idPrefix = (file: string): string =>
   'n' + crypto.createHash('sha256').update(file).digest('hex').slice(0, 8) + '_';
 
+/** THE PARSER CONFIGURATION, EXPORTED because a test that re-parses the corpus
+ *  must not carry a SECOND copy of it. Measured 2026-09-08: two assertions in
+ *  test/js-controlflow.test.ts had their own `plugins: ['typescript']` and both
+ *  went red the day this list gained a member — not because their claim moved
+ *  but because their copy had. A list duplicated in a test is a gate that goes
+ *  red on an honest tree, which CLAUDE.md records as the state in which a gate
+ *  gets switched off. */
+export const PARSER_PLUGINS = ['typescript', 'decorators', 'decoratorAutoAccessors'] as const;
+
 export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
@@ -150,10 +159,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     // and no environment on the scale claims that Babel proposal either. Both
     // would sit in `feature_unreachable[audit]` for ever. See
     // `w_plugin_gated_kinds` in facts/worklist.rofl.
-    ast = parse(src, {
-      sourceType: 'module',
-      plugins: ['typescript', 'decorators', 'decoratorAutoAccessors'],
-    });
+    ast = parse(src, { sourceType: 'module', plugins: [...PARSER_PLUGINS] });
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {

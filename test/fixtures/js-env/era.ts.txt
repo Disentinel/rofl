@@ -3,15 +3,19 @@
 // through `env_extra` rather than through a year, and this file is what makes
 // that path carry real sites instead of a claim.
 //
-// THE DECORATOR IS NOT HERE, and its absence is a fact about the SCANNER
-// rather than about this fixture. scanners/js_ast.ts parses with
-// `plugins: ['typescript']` and nothing else, so `@logged` is a hard parse
-// ERROR — not a missing node, a refused file. `decorator` is nonetheless in
-// the declared `node_kind` vocabulary, so the era table gates a kind this
-// configuration can never produce. That is recorded as
-// `feature_unscannable(decorators, a_parser_plugin_not_enabled)` rather than
-// left to look like a corpus gap, which is the same distinction
-// `parenthesized_expression` already forced in the call-graph corpus.
+// THE DECORATOR IS HERE SINCE 2026-09-08, and the paragraph it replaces is
+// worth quoting because it was true and is not: "its absence is a fact about
+// the SCANNER rather than about this fixture ... `@logged` is a hard parse
+// ERROR — not a missing node, a refused file". That was recorded as
+// `feature_unscannable(decorators, a_parser_plugin_not_enabled)` so a permanent
+// absence would not read as a corpus gap. The owner asked for decorators, the
+// scanner gained the plugin, and the waiver became a claim about a
+// configuration that no longer exists — so it went, and this file owes the era
+// table a real site for `decorators` instead.
+//
+// BOTH KINDS THE PLUGIN UNLOCKS ARE HERE, because they need SEPARATE plugins
+// and one does not imply the other: `@logged` needs `decorators` and
+// `accessor` needs `decoratorAutoAccessors`.
 export function widen(n: number, s: string): number {
   const cast = (n as number) + 1;
   const shouted: string = s!;
@@ -20,4 +24,12 @@ export function widen(n: number, s: string): number {
 
 export class Service {
   run(): string { return 'ran'; }
+}
+
+function logged(value, _ctx) { return value; }
+
+@logged
+export class Decorated {
+  @logged run(): string { return 'ran'; }
+  accessor slot = 1;
 }

@@ -16,7 +16,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parse } from '@babel/parser';
-import { scan } from '../scanners/js_ast.ts';
+import { scan, PARSER_PLUGINS } from '../scanners/js_ast.ts';
 import { build, base, edges, names, caught, read, FILES, FACTS, RULES } from './js-corpus-world.ts';
 import type { Mut, World } from './js-corpus-world.ts';
 
@@ -82,8 +82,12 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // 269 -> 272 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares three layers plus the one the fact
   // opens.
-  assert.equal(before, 341, 'positive control: the matrix before the fact');
-  assert.equal(after, 445, 'positive control: and after');
+  // 341 -> 344 on 2026-09-08: `class_accessor_property` entered the vocabulary
+  // with the decorator plugin, and this world declares three layers before the
+  // fact opens the fourth.
+  assert.equal(before, 344, 'positive control: the matrix before the fact');
+  // 445 -> 449, the same one kind at the fourth layer the fact opens.
+  assert.equal(after, 449, 'positive control: and after');
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.
@@ -295,8 +299,18 @@ const REACH: { name: string; mut: Mut[]; expect: (m: World, base: World) => void
   {
     name: 'r1 the export surface stops being a seed',
     mut: [{ find: 'reachable[code](F) :- entry_point[code](F).', replace: '' }],
-    expect: (m) => assert.equal(m.n('reachable[code](F)'), 1,
-      'without the seed the walk has nowhere to start: one top-level call'),
+    // BY NAME SINCE 2026-09-08, and the rename is the measurement. This read
+    // `=== 1, one top-level call` until `top_call` was corrected to key on
+    // `site` instead of `call_site` — a transfer site at module scope had been
+    // resolving a callee and drawing no edge — and the second name is what that
+    // correction admits: `decoOnce`, reached by a CLASS-LEVEL DECORATOR, which
+    // is un-enclosed by construction because a class at module scope has no
+    // enclosing function. A count would have said `2` and left a reader to
+    // guess whether the walk had gained a start or lost a boundary.
+    expect: (m) => assert.deepEqual(
+      m.q('reachable[code](F)').map(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)[0] ?? f).sort(),
+      ['decoOnce', 'seed'],
+      'without the seed the walk starts only where the grammar forces it to'),
   },
   {
     name: 'r2 the walk stops after one step',
@@ -664,8 +678,14 @@ const LABELS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }
     // break that names nothing there, and `seenEmpty` is in a different function
     // entirely — which is the tell that the boundary is not merely imprecise
     // without this literal, it is absent.
+    // THREE MORE ON 2026-09-08, and they STRENGTHEN the claim rather than dilute
+    // it: `decoApplied`, `decoFactory` and `decoOnce` are new MODULE-LEVEL
+    // functions in shapes.ts, and the whole point of this mutant is that
+    // without `ast_within(LS, S)` the walk runs to the module. Every name added
+    // to that scope should appear here, and the day three were added, three did.
     expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
-      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'pastInnerLabel', 'seenEmpty']),
+      ['afterBlock', 'beyondLabel', 'beyondPlainBreak', 'decoApplied', 'decoFactory',
+       'decoOnce', 'pastInnerLabel', 'seenEmpty']),
   },
   {
     name: 'l3 the name join is dropped',
@@ -812,12 +832,12 @@ test('`with` has no site in this corpus, and the reason is a SETTING that was me
   // whole reason the four cells are left OPEN with an owner instead of waived:
   // `no possible site` would have been the defect
   // f_the_contract_excluded_one_property_in_the_whole_language paid for.
-  const ok: any = parse(`with (o) { p(); }`, { sourceType: 'script', plugins: ['typescript'] });
+  const ok: any = parse(`with (o) { p(); }`, { sourceType: 'script', plugins: [...PARSER_PLUGINS] });
   assert.equal(ok.program.body[0].type, 'WithStatement');
   // ...and `unambiguous` would leave the present corpus untouched: every fixture
   // in it is chosen as a module, measured file by file.
   for (const [, disk] of FILES)
-    assert.equal((parse(read(disk), { sourceType: 'unambiguous', plugins: ['typescript'] }) as any)
+    assert.equal((parse(read(disk), { sourceType: 'unambiguous', plugins: [...PARSER_PLUGINS] }) as any)
       .program.sourceType, 'module', `${disk} is unambiguously a module`);
   // SO THE CELLS STAY OPEN AND OWNED. Four of them, one per layer, and the
   // model says so rather than a comment.

@@ -58,6 +58,7 @@ node_kind(js, template_literal).
 -- is what was written and splitting it into invented ids would be the
 -- tautology js-model.rofl already paid for.
 handled(js, identifier,                callgraph, r_call_edge).
+handled(js, decorator, callgraph, r_decorator_call).
 handled(js, optional_call_expression,  callgraph, r_call_edge).
 handled(js, function_expression,       callgraph, r_call_edge).
 handled(js, arrow_function_expression, callgraph, r_call_edge).
@@ -213,6 +214,7 @@ node_kind(js, tagged_template_expression).
 node_kind(js, await_expression).
 node_kind(js, for_of_statement).
 node_kind(js, decorator).
+node_kind(js, class_accessor_property).
 
 -- ...AND TWO OF THE FOUR ARE ANSWERED, 2026-09-07. `` tag`x` `` is a TRANSFER
 -- SITE, the same shape `new C()` took, and the tag resolves through the value
@@ -239,7 +241,13 @@ node_kind(js, decorator).
 handled(js, tagged_template_expression,     callgraph, r_tag_call).
 handled(js, for_of_statement,               callgraph, r_iterator_protocol).
 unknown_because(js, await_expression,           callgraph, not_yet).
-unknown_because(js, decorator,                  callgraph, not_yet).
+-- `decorator` LEFT THIS LIST ON 2026-09-08 with a rule, not a waiver:
+-- `r_decorator_call` in rules/js-callgraph.rofl reads the `expression` child
+-- through the value layer, and ONE ARM REACHES BOTH SHAPES — `@decoOnce` names
+-- the function and `@decoFactory('m')` names a call whose RESULT is applied.
+-- Measured: `resolves` gains exactly two rows and the edge set gains exactly
+-- `top -> decoOnce` and `top -> decoApplied`.
+unknown_because(js, class_accessor_property,    callgraph, not_yet).
 
 -- ===========================================================================
 -- THE FRONTIER, BY SHAPE. Every shape whose sites do not all resolve has a row
@@ -420,7 +428,13 @@ ignored(js, tsunion_type,                   callgraph, a_type_only_no_runtime_va
 -- DECLARED HERE AND ABSENT FROM THE CORPUS, with the reason written down;
 -- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
 -- declared.
-kind_absent_ok(decorator, a_no_corpus_site).
+-- `decorator`'s EXCUSE WENT ON 2026-09-08: the corpus has two, in
+-- test/fixtures/js-call/shapes.ts.txt, and `kind_absent_stale[audit]` named the
+-- row within one run of the fixture landing.
+-- ...AND `class_accessor_property` NEVER NEEDED ONE. The first draft wrote it
+-- an excuse in the same edit that gave it a site, and `kind_absent_stale[audit]`
+-- reported the row within one run — an excuse and its cause landing together
+-- is the same defect as an excuse outliving its cause, caught by the same rule.
 -- `tagged_template_expression` stood here until 2026-09-07 and the corpus grew
 -- three sites — two runnable and one in shapes.ts that exists so the `fn_node`
 -- guard has something to bite on. `kind_absent_stale[audit]` is what would have

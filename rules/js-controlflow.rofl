@@ -606,6 +606,20 @@ transfer_mechanism(assignment_pattern,         skip_arm).
 -- and the layer's own doctrine is that four mechanisms in one bucket get one
 -- verdict between them.
 transfer_mechanism(labeled_statement,          label_boundary).
+-- A SEVENTH MECHANISM, 2026-09-08 (w_plugin_gated_kinds), and it replaces a
+-- WAIVER rather than filling a gap. `ignored(js, decorator, controlflow,
+-- a_no_control_transfer)` stood here until the scanner could see a decorator,
+-- and it is false: `@decoOnce class Decorated {}` calls `decoOnce` with the
+-- class and a context object at class-definition time. Same shape as
+-- `accessor_call` — a construct whose surface is an annotation and whose
+-- semantics is a call — and unlike the destructuring cases in
+-- `w_destructuring_hides_a_call` it is CLOSABLE, because the callee is named
+-- right there in user code and needs no standard-library surface to reach.
+--
+-- ITS OWN MECHANISM AND NOT `accessor_call`, because when it runs differs: an
+-- accessor call happens on every property access and a decorator runs ONCE, at
+-- definition, before the decorated thing can be reached at all.
+transfer_mechanism(decorator,                  definition_time_call).
 
 edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
 mechanism_modelled(skip_arm).
@@ -621,6 +635,7 @@ mechanism_modelled(suspend).
 -- extra `abrupt_at` arm walks to it, so there is a rule between the mechanism
 -- and the kind that carries it.
 mechanism_modelled(label_boundary).
+mechanism_modelled(definition_time_call).
 edb(mechanism_waived).      -- mechanism_waived(M, Reason)
 mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
 
@@ -679,6 +694,10 @@ guard_named[code](switch_statement).
 -- reason `catch_clause` is — so the closed-vocabulary gate does not report a
 -- kind the rules really do cover.
 guard_named[code](member_expression).
+-- ...and `decorator`, for exactly the reason above it: a decorator transfers
+-- control INTO the decorator function, it does not skip an arm, so it is
+-- reached through the call graph rather than by a `guard_kind` row.
+guard_named[code](decorator).
 guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
                               ast_node[code](_, K, _, _), not guard_named[code](K).
 

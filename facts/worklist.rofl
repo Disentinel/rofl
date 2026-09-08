@@ -966,10 +966,18 @@ work_spawned(w_cg_invisible_calls, f_the_for_of_was_blocked_by_naming_and_not_by
 -- item as a lie and says so within one run, so closing the cell and retiring
 -- the claim are one edit rather than two.
 claim(queued, js, await_expression,           none, callgraph, w_cg_invisible_calls).
-claim(queued, js, decorator,                  none, callgraph, w_cg_invisible_calls).
+-- `decorator` LEFT THIS ITEM ON 2026-09-08, closed by `r_decorator_call` while
+-- the plugin work was going on. It was correctly claimed here — a decorator IS
+-- an invisible call, which is what this item is about — and the claim is
+-- retired rather than left standing, because `queue_stale[audit]` calls a
+-- claim on an answered cell a lie. It reported this one within a run.
 -- ...and their value halves: what a decorator or a tagged template EVALUATES
 -- to is what the call returns, and the call has no site to hang a return on.
-claim(queued, js, decorator,                  none, dataflow, w_cg_invisible_calls).
+-- ...AND ITS DATAFLOW CLAIM WENT WITH IT, to w_decorator_replaces_its_target.
+-- `double_owned[audit]` reported the overlap the moment the second item was
+-- written, and the split is not bookkeeping: what is left at this layer is
+-- that a decorator RETURNS A REPLACEMENT, which is a value question, and this
+-- item is about calls the grammar does not show.
 
 -- ...and the two the sweep handed to items that already existed. `this()` is a
 -- question about what `this` denotes, which is scope; `(yield v)()` is the
@@ -1403,3 +1411,32 @@ work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_
 work(w_open_cell_should_be_an_identity, "the open-cell count is the last pin in the queue tests that is a number, and three parallel branches move it at once").
 work_order(w_open_cell_should_be_an_identity, 61).
 work_state(w_open_cell_should_be_an_identity, open).
+
+-- ==========================================================================
+-- 62 - WHAT A DECORATOR DOES TO THE THING IT DECORATES.
+--
+-- The CALL is modelled (r_decorator_call, 2026-09-08) and the RESULT is not.
+-- A decorator returns a replacement: `@decoOnce class Decorated {}` binds
+-- whatever `decoOnce` gave back, so the value layer's answer for `Decorated`
+-- should be the decorator's return and today it is the class. Same for a
+-- decorated method and for an auto-accessor, whose get/set pair a decorator may
+-- replace wholesale.
+--
+-- IT IS A VALUE QUESTION AND NOT A CALL QUESTION, which is why it is a separate
+-- item rather than a loose end on the one that landed: `returns[flow]` already
+-- carries what a function gave back, so the join exists; what is missing is a
+-- rule saying that a decorated NAME evaluates to it.
+--
+-- AND `class_accessor_property` IS HERE FOR A DIFFERENT REASON. Its callgraph
+-- and dataflow cells are open because the corpus has a DECLARATION and no READ:
+-- `accessor slot = 4` synthesises a getter and a setter, and nothing in this
+-- corpus calls them. The control-flow cell is waived on the measured ground
+-- that both accessors are language-created, so no transfer into USER code
+-- happens - which is exactly what makes the other two cells about the value
+-- layer rather than about the call graph.
+work(w_decorator_replaces_its_target, "a decorator returns a replacement and the value layer still answers the original: the call is modelled, the result is not").
+work_order(w_decorator_replaces_its_target, 62).
+work_state(w_decorator_replaces_its_target, open).
+claim(queued, js, decorator,                   none, dataflow,     w_decorator_replaces_its_target).
+claim(queued, js, class_accessor_property,     none, callgraph,    w_decorator_replaces_its_target).
+claim(queued, js, class_accessor_property,     none, dataflow,     w_decorator_replaces_its_target).

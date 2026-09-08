@@ -45,6 +45,12 @@ transfer_kind(new_expression).
 transfer_kind(tagged_template_expression).
 -- ...and a THIRD, which is the first one that is two calls at one node.
 transfer_kind(for_of_statement).
+-- A DECORATOR IS A CALL WITH NO CALL EXPRESSION, 2026-09-08, and it is the
+-- fourth of that family this layer models: `new`, a tagged template's tag, and
+-- `for-of`'s iterator are the others. `@decoOnce class Decorated {}` evaluates
+-- `decoOnce` and calls it with the class and a context object, and the grammar
+-- shows no `call_expression` whatever.
+transfer_kind(decorator).
 transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
 
 -- what an enclosing function can be asked about: a call site or a transfer site
@@ -279,7 +285,22 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
 
 -- ORDERED FOR COST: `ast_within` with F bound is a probe, `site` with C bound
 -- is a hash hit; the other way round every function scanned all 184 sites.
-encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C).
+-- A DECORATOR IS INSIDE THE THING IT DECORATES AND DOES NOT RUN THERE, which
+-- is the one place containment and attribution come apart in this grammar.
+-- `@decoFactory('m') marked() { ... }` puts the factory call in the SUBTREE of
+-- `marked` and evaluates it at CLASS-DEFINITION time, in whatever scope the
+-- class sits in, before `marked` has ever been called. MEASURED on the fixture
+-- the day decorators were enabled: the model derived `marked -> decoFactory`,
+-- an edge from a function to something it never calls.
+--
+-- Two arms because the decorator node is ITSELF a site once `transfer_kind`
+-- names it, and `ast_within` is irreflexive, so the first arm cannot reach it.
+decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
+                                 ast_node[code](D, decorator, _, _).
+in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
+in_own_decorator[code](F, D)  :- decorates[code](F, D).
+encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C),
+                          not in_own_decorator[code](F, C).
 -- F is not the nearest if some OTHER enclosing G sits inside it. `F != G`
 -- is carried explicitly so the rule does not silently depend on ast_within
 -- being irreflexive.
@@ -288,8 +309,20 @@ closer[code](F, C)     :- encloses[code](F, C), encloses[code](G, C),
 nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
 
 enclosed[code](C)      :- encloses[code](_, C).
-top_call[code](C, R)   :- call_site[code](C, File), ast_file[code](R, File),
-                          not enclosed[code](C).
+-- `site` AND NOT `call_site`, corrected 2026-09-08. The two differ by exactly
+-- the transfer sites — `new`, a tagged template, a `for-of`, and now a
+-- decorator — and a transfer site at the top level of a module was therefore
+-- resolving a callee and drawing NO EDGE, because `calls` reaches an
+-- un-enclosed site only through here.
+--
+-- IT WAS ALREADY WRONG BEFORE DECORATORS EXISTED. Measured on the corpus as it
+-- stood: ONE un-enclosed `new_expression`, silently edgeless. Decorators are
+-- what made it visible rather than what caused it — the class-level decorator
+-- `@decoOnce class Decorated {}` is un-enclosed by construction, since a class
+-- at module scope has no enclosing function and there is nowhere else the call
+-- could be attributed.
+top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
+                          ast_file[code](R, File), not enclosed[code](C).
 top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
                           ast_file[code](R, File), not enclosed[code](X).
 
@@ -442,6 +475,17 @@ resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
 resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
                         may_be_node[flow](T, F), fn_node[code](F).
+
+-- THE DECORATOR'S CALLEE, and it is ONE ARM FOR TWO SHAPES on purpose.
+-- `@decoOnce` names the function directly; `@decoFactory('m')` names a CALL
+-- whose result is what gets applied, and the value layer already carries what a
+-- call returns — so reading `expression` through `may_be_node` should reach
+-- `decoApplied` without a second rule. Whether it does was measured rather than
+-- hoped: it does, and the factory's own call stays visible beside it because
+-- that one IS in the grammar.
+resolves[code](X, F) :- transfer_site[code](X, decorator),
+                        ast_child[code](X, expression, 0, E),
+                        may_be_node[flow](E, F), fn_node[code](F).
 
 -- THE ITERATOR PROTOCOL. `for (x of E)` calls `E[Symbol.iterator]()` and then
 -- `next()` on whatever that returned, and the grammar shows neither. Both are

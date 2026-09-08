@@ -185,12 +185,27 @@ test('the five heaviest read paths, by name', () => {
   // and inert statements. ALL FIVE ROSE TOGETHER, between 0.38 and 0.71 points,
   // and the five NAMES are unchanged — which is this list's own criterion for
   // `a bigger corpus` rather than `a badly ordered body`.
+  // RE-STATED 2026-09-08 WITH THE DECORATOR WORK, and this time ONE PATH MOVED
+  // ALONE — which is the case this list was written to catch and had not yet
+  // seen. `argMatches ast_within pos=[0]` fell from 11.06% to 7.83%, three
+  // points, eight times the spread the instrument itself shows, while the other
+  // four rose between 0.27 and 0.52. The five NAMES are unchanged.
+  //
+  // IT FELL FOR A RULE AND NOT FOR THE CORPUS. The 2x2 below shows the rules
+  // taking rows-handed-out DOWN 5.8% on an unchanged corpus with the firings
+  // unchanged to within five, so the same derivations are being reached more
+  // cheaply. WHY is NOT ESTABLISHED and is written down as unestablished: the
+  // likeliest path is that `encloses` gained a negated premise and lost a few
+  // rows, and `closer` is quadratic in `encloses` and probes `ast_within` with
+  // both arguments bound — but that is a hypothesis about a 5.8% move made from
+  // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
+  // rather than explained.
   const SHARE: [string, number][] = [
-    ['argMatches ast_within pos=[0]', 11.06],
-    ['relPersp authority', 9.11],
-    ['argMatches encloses_v pos=[1]', 5.57],
-    ['relPersp encloses_v', 5.38],
-    ['relPersp ast_node', 5.76],
+    ['argMatches ast_within pos=[0]', 7.83],
+    ['relPersp authority', 9.63],
+    ['argMatches encloses_v pos=[1]', 5.84],
+    ['relPersp encloses_v', 5.65],
+    ['relPersp ast_node', 6.09],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -404,7 +419,19 @@ test('the five heaviest read paths, by name', () => {
   // the new fixtures are DEEP rather than numerous, so the same derivations
   // enumerate longer containment chains. A single delta would have said `+22%`
   // and pointed at three innocent rule sets.
-  assert.equal(c.total, 1468440, 'total rows handed out by the store in one fixpoint');
+  // 1 468 440 -> 1 411 085 on 2026-09-08 with decorators, and it went DOWN.
+  // Axes from this diff, control OK:
+  //
+  //                        prev corpus              this corpus
+  //     prev rules   1 476 984 / 76 509 fir   1 485 919 / 76 177 fir
+  //     these rules  1 390 798 / 76 504 fir   1 411 085 / 76 173 fir
+  //
+  // THE RULES ARE WORTH -5.8% OF ROWS ON AN UNCHANGED CORPUS with firings
+  // unchanged to within five, and the fixture is worth +1.5%. The first
+  // iteration in this file's history where a rule change made the fixpoint
+  // CHEAPER, and the honest note is that the mechanism is not established —
+  // see the share block above.
+  assert.equal(c.total, 1411085, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -507,5 +534,9 @@ test('the five heaviest read paths, by name', () => {
   // whose new fixtures are nested rather than numerous. Firings count how many
   // times a rule concluded something; rows count how far the store was walked
   // to conclude it.
-  assert.equal(c.firings, 76509, 'derivations, against 76 459 before three branches merged');
+  // 76 509 -> 76 173, DOWN 336, and the direction is the interesting half: the
+  // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
+  // the total fell, because the `encloses` guard withdraws a handful of
+  // enclosure facts that `closer` and everything downstream were deriving over.
+  assert.equal(c.firings, 76173, 'derivations, against 76 509 before the decorator work');
 });

@@ -290,9 +290,28 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
       'es2015 and es2016 now separate no site'),
   },
   {
-    name: 'm11 the unscannable waiver is withdrawn',
-    targets: 'the waiver is load-bearing, and its absence reads as a corpus gap',
-    mut: [{ find: 'feature_unscannable(decorators, a_parser_plugin_not_enabled).', replace: '' }],
+    // RE-AIMED 2026-09-08. It used to withdraw
+    // `feature_unscannable(decorators, a_parser_plugin_not_enabled)` and watch
+    // `decorators` become unexercised — and on the day the scanner gained the
+    // plugin that row stopped being true and went, so the mutant lost its
+    // anchor. The claim survives the anchor: `decorators` is exercised because
+    // a KIND in the corpus is gated on it, and `kind_needs` is the only thing
+    // making that connection. Withdraw the connection and the feature has no
+    // user, exactly as the waiver's absence used to leave it.
+    //
+    // ONE SIDE EFFECT, NAMED: without the row `decorator` is a kind that is
+    // neither baseline nor gated, so `kind_unaccounted[audit]` fires too. The
+    // oracle below is the one this mutant is aimed at; the other is collateral
+    // and would be a defect to assert as if it were the target.
+    name: 'm11 the kind is no longer gated on the feature it uses',
+    targets: 'kind_needs is what makes a corpus site count as USING a feature',
+    // BOTH ROWS, and the first draft removed only one and reported nothing —
+    // which is itself the measurement: `decorators` has TWO users since
+    // 2026-09-08, `decorator` and `class_accessor_property`, so withdrawing
+    // either leaves the feature exercised by the other. A mutant aimed at one
+    // of two sufficient causes is not a mutant.
+    mut: [{ find: 'kind_needs(js, decorator,                   decorators).', replace: '' },
+          { find: 'kind_needs(js, class_accessor_property,     decorators).', replace: '' }],
     expect: (m) => assert.deepEqual(m.q('feature_unexercised[audit](F)').flat(), ['decorators']),
   },
   {

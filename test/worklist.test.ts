@@ -189,15 +189,16 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // cannot tell apart and does not pretend to.
     'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers', 'w_class_expression', 'w_class_fields',
-    'w_df_function_forms', 'w_df_generator_protocol',
-    'w_df_sweep', 'w_df_value_core', 'w_directives',
+    'w_decorator_replaces_its_target', 'w_df_function_forms',
+    'w_df_generator_protocol', 'w_df_sweep', 'w_df_value_core', 'w_directives',
     // `w_inert_statements` and `w_labelled_control` LEFT THIS LIST 2026-09-08:
     // both were taken and both spawned, which is the list working — an item
     // entered but not started looks identical to one nobody looked at, and the
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
     'w_meta_property', 'w_mod_beyond_the_import',
-    'w_mod_sweep', 'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
+    'w_mod_sweep',
+    'w_open_cell_should_be_an_identity', 'w_plugin_gated_kinds',
     'w_scope_shadowing',
     'w_update_and_literals',
   ], 'an item that spawns nothing is either trivial or was not looked at');
@@ -273,7 +274,12 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // is named, so a wrong number cannot hide behind them. It is also the pin the
   // parallel experiment moved from three branches at once, which is recorded
   // under `w_open_cell_should_be_an_identity`.
-  assert.equal(w.n('open_cell[audit](K, S, L)'), 70, 'the queue is the model\'s open set');
+  // 70 -> 71 on 2026-09-08 with the decorator work, and the direction is
+  // honest: two cells CLOSED (`decorator` at the call graph and at control
+  // flow) and `class_accessor_property` entered the vocabulary with four cells
+  // of its own, two of them open. A number that only ever falls is a number
+  // measuring effort rather than the model.
+  assert.equal(w.n('open_cell[audit](K, S, L)'), 71, 'the queue is the model\'s open set');
   assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
   // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
   // kernel defect of its own. Every one of the six was entered because the work
@@ -302,7 +308,9 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // ...AND 62 -> 63 the same day: `w_open_cell_should_be_an_identity`, entered
   // because the open-cell assertion above is the last pin in this file that is
   // a number, and three parallel branches moved it at once.
-  assert.equal(w.n('work(W, Note)'), 63);
+  // 63 -> 64: `w_decorator_replaces_its_target`, for the half of a decorator
+  // that is a VALUE question — the call is modelled, the replacement is not.
+  assert.equal(w.n('work(W, Note)'), 64);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
@@ -333,6 +341,8 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // point: this layer got BIGGER because three parallel branches declared work
   // rather than because anything regressed. Every one of the fourteen new open
   // cells carries an owner, which is what the zero on the right says.
+  // claimed 33 -> 34: `decorator` closed here and `class_accessor_property`
+  // arrived with a claim, so the open figure holds still while both moved.
   assert.deepEqual(per('callgraph'), [18, 33, 0]);
   // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
   // items — one already modelled and never recorded, two closed with a reason,
@@ -348,7 +358,9 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // 24 -> 15 open and 31 -> 27 claimed on 2026-09-08: the destructuring family
   // took nine of these, with four claims retired beside them because a claim
   // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
-  assert.deepEqual(per('dataflow'), [15, 27, 0]);
+  // 15 -> 16 open: `class_accessor_property`'s value cell, owned by
+  // `w_decorator_replaces_its_target` along with the decorator's own.
+  assert.deepEqual(per('dataflow'), [16, 28, 0]);
   // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
   // them came from OUTSIDE the bucket — a waiver whose own comment described
   // undone work, which is open work counted as settled.

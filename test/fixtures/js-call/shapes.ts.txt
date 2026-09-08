@@ -426,3 +426,42 @@ export function inertDebugger(n: number): number {
 // question that is not about functions.
 export type { Base as BaseType };
 export { type curried as curriedType };
+
+// DECORATORS AND ONE AUTO-ACCESSOR (w_plugin_gated_kinds, 2026-09-08). They are
+// HERE and not in a `.mjs` for a reason that was measured rather than assumed:
+// node 24.13 refuses both — `@log` is `SyntaxError: Invalid or unexpected token`
+// and `accessor slot = 4` fails at the keyword — so no fixture of this shape can
+// be reached by the execution oracle on this machine at all. That is a real
+// limit on what the verdicts below can rest on, and it is stated in the ledger
+// rather than left for a reader to discover.
+//
+// `@decoOnce` IS A CALL WITH NO CALL EXPRESSION. `@decoOnce class Decorated {}`
+// evaluates `decoOnce` and calls it with the class and a context object at
+// class-definition time, and the grammar shows no `call_expression` whatever —
+// the same shape as a tagged template's tag and as `for-of`'s `Symbol.iterator`,
+// both of which this layer already models, and the same shape as the accessor
+// call it cannot yet model.
+//
+// `@decoFactory('m')` IS THE OTHER SHAPE and the pair is the point: the factory
+// call IS in the grammar, and what is invisible is the call of its RESULT. One
+// arm should reach both, because the value layer already carries what a call
+// returns; whether it does is a measurement and not a hope.
+// NO GENERICS AND NO `unknown` HERE, and that is not a style choice: the first
+// draft wrote `decoOnce<T>(value: T, _ctx: unknown)` and `vocabulary_gap[audit]`
+// immediately reported THREE kinds this item is not about —
+// `tstype_parameter`, `tstype_parameter_declaration`, `tsunknown_keyword`. The
+// second draft used `object` and added a fourth, `tsobject_keyword`. A fixture
+// for one construct that quietly declares three others makes its own verdicts
+// unattributable, so these two carry no annotation at all — `.ts` does not
+// require one, and the only annotation left, `_name: string`, is a kind the
+// vocabulary already declares.
+function decoOnce(value, _ctx) { return value; }
+function decoApplied(value, _ctx) { return value; }
+function decoFactory(_name: string) { return decoApplied; }
+
+@decoOnce
+class Decorated {
+  @decoFactory('m') marked(): number { return 1; }
+  accessor slot = 4;
+}
+export { Decorated, decoOnce, decoApplied, decoFactory };

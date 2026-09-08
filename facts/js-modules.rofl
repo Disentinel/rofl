@@ -309,6 +309,7 @@ ignored(js, class_declaration,            modules, a_not_a_module_construct).
 ignored(js, class_method,                 modules, a_not_a_module_construct).
 ignored(js, conditional_expression,       modules, a_not_a_module_construct).
 ignored(js, decorator,                    modules, a_not_a_module_construct).
+ignored(js, class_accessor_property,      modules, a_not_a_module_construct).
 ignored(js, for_of_statement,             modules, a_not_a_module_construct).
 ignored(js, function_declaration,         modules, a_not_a_module_construct).
 ignored(js, function_expression,          modules, a_not_a_module_construct).
@@ -376,6 +377,7 @@ node_kind(js, class_declaration).
 node_kind(js, class_method).
 node_kind(js, conditional_expression).
 node_kind(js, decorator).
+node_kind(js, class_accessor_property).
 node_kind(js, for_of_statement).
 node_kind(js, function_expression).
 node_kind(js, identifier).
@@ -452,7 +454,7 @@ kind_absent_ok(import, a_babel_emits_no_import_callee).
 -- `node_kind` rows are: a world loading this pack and not the other declares
 -- the kind and would carry no reason for its absence.
 -- `kind_unexercised[audit]` named the missing copies within one run.
-kind_absent_ok(decorator, a_no_corpus_site).
+-- `decorator`'s excuse went on 2026-09-08; the corpus has two now.
 -- ...and the tagged template's copy went with the one in facts/js-callgraph.rofl
 -- on 2026-09-07: the kind has three corpus sites now, so every copy of the
 -- excuse had to go. The home rule from the direction of retirement, twice.

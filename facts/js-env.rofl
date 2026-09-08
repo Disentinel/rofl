@@ -180,6 +180,13 @@ kind_needs(js, tsnull_keyword,              type_syntax).
 kind_needs(js, tstype_alias_declaration,    type_syntax).
 kind_needs(js, tstype_query,                type_syntax).
 kind_needs(js, decorator,                   decorators).
+-- AN AUTO-ACCESSOR RIDES THE SAME FEATURE AND A DIFFERENT PLUGIN. `accessor a
+-- = 1` is part of the decorators proposal — it exists so a decorator has
+-- something with a get/set pair to decorate — so `decorators` is the honest
+-- gate, and ts5 claims it through `env_extra`. The PLUGIN is separate
+-- (`decoratorAutoAccessors`), which is a fact about babel rather than about the
+-- language, and it is recorded in scanners/js_ast.ts where it acts.
+kind_needs(js, class_accessor_property,     decorators).
 
 -- ---------------------------------------------------------------------------
 -- THE WAIVERS: kinds valid in every environment this file names. It is a LIST
@@ -267,15 +274,19 @@ attr_needs(js, assignment_expression, operator, "||=", logical_assignment).
 attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
 
 -- ---------------------------------------------------------------------------
--- A FEATURE THIS SCANNER CANNOT SEE, declared so that its permanent absence
--- from every corpus reads as a fact about the instrument and not as a gap in
--- the fixtures. scanners/js_ast.ts parses with `plugins: ['typescript']`, and
--- a decorator under that configuration is not a missing node but a REFUSED
--- FILE — `@logged` raises MissingOneOfPlugins and nothing is scanned at all.
--- The same distinction `parenthesized_expression` forced in the call-graph
--- corpus, arrived at from the other side: there babel emits no node, here
--- babel refuses the source.
-feature_unscannable(decorators, a_parser_plugin_not_enabled).
+-- A FEATURE THIS SCANNER CANNOT SEE. The table is EMPTY as of 2026-09-08 and
+-- the shape stays, which is the point: its one row said decorators could not be
+-- scanned because `scanners/js_ast.ts` parsed with `plugins: ['typescript']`
+-- and a decorator under that configuration was a REFUSED FILE rather than a
+-- missing node. That was true and is not — the owner asked for decorators, the
+-- scanner gained `decorators` and `decoratorAutoAccessors`, and the waiver
+-- became a claim about a configuration that no longer exists.
+--
+-- A WAIVER FOR AN INSTRUMENT'S LIMIT IS DATED BY CONSTRUCTION, which is the
+-- lesson rather than the row. Nothing in the model would have noticed: the
+-- feature would simply have gone on being excused while its site sat in
+-- era.ts.txt. What noticed was `feature_unexercised[audit]`, once the waiver
+-- was withdrawn on purpose to see whether anything still needed it.
 
 
 -- ===========================================================================
