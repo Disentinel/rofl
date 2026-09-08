@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iterations 35-38). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iterations 35-40). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -23,6 +23,21 @@ open_cell[audit] 15, every one owned BY NAME, sweeper 0 at all four layers.
   callgraph  open  3, claimed 27     dataflow    open  2, claimed 25
   modules    open  5, claimed 21     controlflow open  5, claimed 30
 ```
+
+**THE PLAN IS FLAT AND `next_work` IS SEVENTEEN.** `work_order` — sixty-five
+hand-written numbers — is gone; the order is derived from `work_needs`, and an
+item something waits on comes before one nothing waits on. All eleven items
+anything waited on are now done, so nothing left has leverage and every takeable
+item is next. That is what a finished dependency chain looks like from the
+queue's side, and it is the state a wave of parallel agents is for.
+
+**THE ERA TABLE KEYS ON A RELEASE, NOT A YEAR.** `env_has` walks a composition —
+`release`, `includes`, `provides`, `reaches` — generated from TypeScript's own
+`/// <reference lib=` lines. `env_extra` is gone: it existed only because
+TypeScript is not a later edition, which the file admitted in prose. Two
+consequences worth knowing before touching this: a rank is now a LABEL, so a
+mutant aimed at one is inert; and `lost[audit]` is a set difference with no
+ordering, so the old one-environment-per-year limit is gone.
 
 **102 -> 15 open cells in one day, from EIGHT branches across three rounds.**
 The vocabulary took on the language on 2026-09-08 morning (102 open cells) and
