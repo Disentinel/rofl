@@ -233,10 +233,43 @@ handled(js, export_namespace_specifier,  modules, r_export_namespace_binding).
 -- atom is in the vocabulary and both atoms were, `stale_reason` checks a reason
 -- outliving its cause and this one had not. Only reading the sentence beside it
 -- does, which is why a sweep reads them.
-unknown_because(js, export_named_declaration, modules, not_yet).
-unknown_because(js, export_all_declaration,   modules, not_yet).
--- ...and the default form is open for the SAME reason and owned by the same
--- item: this layer has one edge kind, and `export default` is not it.
+-- CLOSED 2026-09-08 (w_mod_beyond_the_import). §1 of rules/js-modules.rofl
+-- calls these `reexport_site` and unions them into `module_site`, which is what
+-- every rule below the specifier question now reads; §5b gives them FLOWS and
+-- EVALUATES, which needed rules of their own because the erasure markers sit on
+-- different nodes for an export than for an import.
+--
+-- MEASURED BEFORE THE RULE, and it is the number the reclassification above
+-- predicted: `import_site` 17 and `depends` 10 on this tree, with `exp.ts`
+-- appearing in NEITHER, while two declarations in that file carry a `source`
+-- child the scanner had already emitted. After: `module_site` 24, `depends` 16,
+-- and exp.ts reaches six targets.
+--
+-- THE DISCRIMINATOR IS THE `source` CHILD AND NOT THE KIND, measured from the
+-- scanner on a probe holding all six forms: `export { a as b }` and
+-- `export { a as b } from './d'` are the SAME node kind, so a rule keyed on
+-- `export_named_declaration` would make every local export list an edge to
+-- nowhere.
+--
+-- NO SHAPE REFINEMENT FOR THESE TWO, and that is the same decision
+-- `import_expression` carries three lines further up rather than a new one: a
+-- bare or subpath re-export is grammatical and this corpus has none, and
+-- `reason_unexercised[audit]` calls a reason recorded for something that never
+-- happens decoration. Every re-export site here is `relative`, so the cell is
+-- unrefined and the claim is at kind granularity.
+handled(js, export_named_declaration, modules, r_reexport_edge).
+handled(js, export_all_declaration,   modules, r_reexport_edge).
+-- ...AND THE DEFAULT FORM STAYS OPEN, with the reason MEASURED rather than
+-- inherited. Scanned on a probe beside the six re-export forms: `export default
+-- function named() {}` emits `export_default_declaration` with `export_kind`
+-- "value" and a `declaration` child and NO `source` child of any kind — the
+-- `export v from './m'` spelling needs babel's `exportDefaultFrom` plugin,
+-- which is off here. So it is not an edge and this item's rule correctly leaves
+-- it alone. What is left of the cell is the NAMING half: the declaration binds
+-- the external name `default` to whatever its `declaration` child is, which is
+-- section 4b's question and the one export form with no specifier node to hang
+-- it on. Left open rather than waived, because `a_not_a_module_construct` would
+-- be false of a declaration that does introduce an export name.
 unknown_because(js, export_default_declaration, modules, not_yet).
 
 -- ---------------------------------------------------------------------------
@@ -248,6 +281,15 @@ unknown_because(js, export_default_declaration, modules, not_yet).
 --   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
 checked(js, import_declaration, modules, r_import_decl_module_edge, o_node_resolver, 15).
 checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resolver, 2).
+-- ...AND THE RE-EXPORT SITES, 2026-09-08. The oracle in test/js-modules.test.ts
+-- enumerates its own sites from babel and it now walks the export forms too —
+-- which it had to, because otherwise the one assertion that says the two
+-- enumerations agree would have read the new sites as a model inventing places
+-- node never saw. `createRequire().resolve` answers a re-export's specifier
+-- exactly as it answers an import's; nothing about the oracle is per-form
+-- except which nodes it collects.
+checked(js, export_named_declaration, modules, r_reexport_edge, o_node_resolver, 5).
+checked(js, export_all_declaration,   modules, r_reexport_edge, o_node_resolver, 2).
 
 
 -- ===========================================================================

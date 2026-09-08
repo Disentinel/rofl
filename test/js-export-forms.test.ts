@@ -139,12 +139,26 @@ test('MODULES: an external name is not an internal one, and `* as ns` has no int
   // THE NAMED SET, not a count. `ErasedOut` and `AlsoErasedOut` are BINDINGS —
   // the module does declare those names — and they are not VALUE bindings,
   // which is the distinction section 5 of the same file makes for imports.
+  // THREE OF THESE ARRIVED FROM ANOTHER ITEM, 2026-09-08, and the arrival is
+  // worth reading rather than absorbing. w_mod_beyond_the_import gave exp.ts
+  // three RE-EXPORT specifiers, and section 4b reads `local` and `exported` on
+  // any ExportSpecifier whatever — it says so, and says the `source` half is the
+  // other item's — so `reHelper <- helper` is a row this relation now derives
+  // for a specifier whose `local` name belongs to c.ts and NOT to exp.ts. The
+  // cell's claim survives intact: the external name is still not the internal
+  // one, and the erasure markers still separate. What the rows above cannot say
+  // is WHICH MODULE an internal name lives in, and rules/js-modules.rofl's
+  // `reexport_offers` is the relation that can — recorded as
+  // f_a_reexports_local_name_is_not_a_name_in_this_module.
   assert.deepEqual(bindings(m), [
     'AlsoErasedOut <- AlsoErased',
     'ErasedOut <- Erased',
+    'ReT1 <- T1',
+    'ReT4 <- T4',
     'alsoExternal <- alsoInternal',
     'everything <- *',
     'external <- internal',
+    'reHelper <- helper',
     'shorthand <- shorthand',
   ], 'every export specifier in the fixture binds an external name to an internal one');
 
@@ -153,17 +167,18 @@ test('MODULES: an external name is not an internal one, and `* as ns` has no int
   // there is nothing to put in the internal column but the `"*"` the import
   // half already spells.
   assert.deepEqual(m.q('spec_internal[code](Sp, L)').map(([, l]) => l).sort(),
-    ['*', 'AlsoErased', 'Erased', 'alsoInternal', 'internal', 'shorthand']);
+    ['*', 'AlsoErased', 'Erased', 'T1', 'T4', 'alsoInternal', 'helper', 'internal', 'shorthand']);
 
   // THE RENAME, as its own relation: four of the six differ, and `shorthand` is
   // the control that keeps a rule reading `exported` for BOTH columns from
   // looking correct.
   assert.deepEqual(m.q('export_renamed[code](Sp, X, L)').map(([, x, l]) => `${x} <- ${l}`).sort(),
-    ['AlsoErasedOut <- AlsoErased', 'ErasedOut <- Erased', 'alsoExternal <- alsoInternal',
-     'everything <- *', 'external <- internal']);
+    ['AlsoErasedOut <- AlsoErased', 'ErasedOut <- Erased', 'ReT1 <- T1', 'ReT4 <- T4',
+     'alsoExternal <- alsoInternal', 'everything <- *', 'external <- internal',
+     'reHelper <- helper']);
 
   // ERASURE: both markers, and neither implies the other.
-  assert.deepEqual(valueNames(m), ['alsoExternal', 'everything', 'external', 'shorthand'],
+  assert.deepEqual(valueNames(m), ['alsoExternal', 'everything', 'external', 'reHelper', 'shorthand'],
     'the two type-only exports are bindings and are not values');
 
   // the gates read zero on the model as written

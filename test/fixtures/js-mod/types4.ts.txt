@@ -1,0 +1,9 @@
+// types4.ts — THE TARGET OF THE TYPE-ONLY `export *`, AND OF NOTHING ELSE.
+//
+// A fourth one-line module rather than a second declaration against types3.ts,
+// and the reason is the mutant set: `export type * from` carries its erasure
+// marker on the DECLARATION and has no specifier, while `export { type T4 }
+// from` carries it on the SPECIFIER. Pointed at one target, the two negations
+// would be killed by the same row and neither could be shown to matter on its
+// own — three erasure arms, three targets, three oracles.
+export type T6 = { tag: 'T6' };
