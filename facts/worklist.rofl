@@ -967,7 +967,41 @@ work_spawned(w_cg_invisible_calls, f_an_invisible_call_is_two_different_blockers
 -- `<top>` because the promise machinery makes the call, so even a corpus that
 -- HAD a user thenable would be modelling something the instrument contradicts.
 -- Two independent reasons, and only the first is what the queue can act on.
-claim(queued, js, await_expression,            none, callgraph,    w_await_is_a_call_the_oracle_places_elsewhere).
+-- ...AND EVERY BULLET ABOVE IS TRUE AND THE CONCLUSION IS NOT, measured
+-- 2026-09-08. The corpus measurements re-run and agree (`member_value[flow](O,
+-- "then", V)` is 0 with `"next"` at 2 over 162 distinct keys now, and all four
+-- awaits take a native promise). What is false is the sentence they support:
+-- "the `.then` every one of these four awaits would call is
+-- `Promise.prototype.then`".
+--
+--   * PROBE, with `Promise.prototype.then` monkey-patched and a POSITIVE
+--     CONTROL that the patch is live (`p.then(f)` counts 1): `await <native
+--     promise>` calls it ZERO times, `await 5` zero, on V8 11.3 (node
+--     20.20.0) and V8 13.6 (node 24.13.0) alike. The specification's `Await` uses
+--     PerformPromiseThen, an INTERNAL operation. There is no library method in
+--     this construct, so the cell never belonged to `w_env_api_surface` and the
+--     dependency it was re-pointed at could never have discharged it.
+--   * A USER thenable's own `then` IS called, exactly once — so an await's
+--     callee, when it has one, is a function this program may well contain.
+--   * AND THE ORACLE DOES NOT CONTRADICT IT, IT CANNOT SEE IT. The `.then` runs
+--     on a stack of DEPTH ONE: `st[1]` is undefined, so trace.mjs writes
+--     `file: ""`, and `runOracle` keeps a frame only when the CALLER's file is a
+--     run file. Measured on a live thenable in a copied fixture directory: the
+--     instrument records `<top> -> settle file="" line=0` and the harness keeps
+--     NOTHING. `<top>` in that file is what an ABSENT caller renders as and also
+--     what a module-top-level caller renders as — two facts under one name, and
+--     that collision is what the note above read as a contradiction.
+--
+-- SO THE CELL IS ANSWERED, and the answer is the question the item asked. This
+-- layer's caller is a LEXICAL REGION — `nearest_fn` or the module root — and an
+-- await's call has neither. `performed_call[code]` in rules/js-callgraph.rofl
+-- names the callee and refuses the caller column; `await_no_call[code]` says an
+-- await performs no call at all (2 of 5 sites); `await_value_unknown[audit]` is
+-- the residue (2 of 5), and it is deliberately NOT wired into `frontier_at`,
+-- because that relation is keyed by the caller and the whole finding is that
+-- this class of call has none.
+-- retired 2026-09-08: the cell is answered — `handled(js, await_expression,
+-- callgraph, r_await_performs_then)`.
 -- `decorator` LEFT THIS ITEM ON 2026-09-08, closed by `r_decorator_call` while
 -- the plugin work was going on. It was correctly claimed here — a decorator IS
 -- an invisible call, which is what this item is about — and the claim is
@@ -1405,37 +1439,87 @@ work(w_meta_property, "new.target and import.meta: one node kind and two questio
 -- identifiers and neither is a `site[code]`, with a positive control that the
 -- containment query does return sites for a node that has one. Both forms are
 -- LEAVES — two tokens joined by a dot, and neither token is a lookup.
-work_state(w_meta_property, open).
--- ...and it waits on the standard library BY NAME for half of one cell, which
--- is the dependency `unresolved_call` on `import.meta.resolve` would sit in.
-work_needs(w_meta_property, w_env_api_surface).
+-- DONE 2026-09-08. All four cells answered, and the three that were open closed
+-- on ONE measurement rather than on four rules: the reason all three carried is
+-- false, because `axis_applies(shape, modules)` was already declared and the
+-- column is per-layer by design. See the three notes below.
+work_state(w_meta_property, done).
+-- ...AND THE DEPENDENCY IS WITHDRAWN, measured. It read: the item waits on the
+-- standard library by name for half of one cell, because `unresolved_call` on
+-- `import.meta.resolve` would sit in `w_env_api_surface`'s in-tray. It cannot:
+-- `interface ImportMeta` in TypeScript's `lib.es5.d.ts` is EMPTY, `url` and
+-- `resolve` are declared in `lib.dom.d.ts` and `@types/node`, and `releaseOf`
+-- in scanners/ts_lib.ts returns null for both because neither file name carries
+-- a release. The library surface `w_env_api_surface` built is keyed on
+-- ECMAScript editions and this member has none, so the residue is HOST rather
+-- than LANGUAGE and no amount of that item finishes this one.
 work_spawned(w_meta_property, f_one_node_kind_two_features_and_the_era_table_could_not_look_at_a_child).
 
 -- THE THREE THAT STAY OPEN, each with the measurement that keeps it open.
 --
--- callgraph: BOTH forms stand in a callee-object position and the model buckets
---   them as `o_other`. `import.meta.resolve("./x")` is a real call edge into the
---   HOST, which is w_env_api_surface's programme, and `new new.target()` is a
---   transfer site whose value is the construction mode. A waiver here would
---   claim there is no call-graph question and there are two. NOTE: no site for
---   either is in the corpus, deliberately — facts/js-shapes.rofl waives
---   `s_member_on_other` as `a_catch_all_empty_by_design` and a site would make
---   that waiver false for a reason belonging to another item.
-claim(queued, js, meta_property,               none, callgraph,    w_meta_property).
--- dataflow: `may_be_node[flow]` is EMPTY for both, measured against 1 125 valued
---   expressions in the same world. `import.meta` is a host object with no node
---   in any program; `new.target` is the CONSTRUCTION MODE, and this model has no
---   relation for call mode at all — a function reached by both `f()` and
---   `new f()` has one body and one answer here. The second half is the sharper
---   one and it is this item's own.
-claim(queued, js, meta_property,               none, dataflow,     w_meta_property).
--- modules: `import.meta` IS a module construct — the module's own metadata — and
---   `new.target` is not, so `a_not_a_module_construct` is true of exactly half
---   the kind. THE CELL IS KEYED BY KIND AND THE QUESTION IS NOT, and the shape
---   axis that could split it applies to `callgraph` only (facts/js-shapes.rofl).
---   Left open rather than half-waived; see
---   f_one_node_kind_two_features_and_the_era_table_could_not_look_at_a_child.
-claim(queued, js, meta_property,               none, modules,      w_meta_property).
+-- ...AND ALL THREE WERE ANSWERED 2026-09-08 BY ONE MEASUREMENT, which is that
+-- the reason all three were open is FALSE. Every one of the three notes below
+-- ends in the same sentence — the cell is keyed by KIND and the question is
+-- not, and the axis that would split it applies to `callgraph` only. The row it
+-- cites lives in facts/js-shapes.rofl; `axis_applies(shape, modules).` lives in
+-- facts/js-modules.rofl and has since the specifier refinement landed, and the
+-- column's own design is ONE COLUMN WITH PER-LAYER VOCABULARIES, gated by
+-- `shape_in`. So the split was available at two of the three layers before this
+-- item started and the third cost one `axis_applies` row.
+--
+-- THE DISCRIMINATOR IS `meta_form[code]` in rules/js-structure.rofl, reading
+-- the two identifier children the scanner has always emitted. It is the FIFTH
+-- time in this loop that the answer to “the table cannot say X” has been
+-- “the scanner already emits X and no rule reads it”.
+--
+-- callgraph, SPLIT AND BOTH HALVES ANSWERED. `new.target` in callee position is
+--   the constructor of the CURRENT INVOCATION — measured on V8 13.6, `Derived`
+--   and not `Base` inside `Base`'s constructor under `new Derived()`, and
+--   `undefined` in a plain call — so `runtime_dependent`, irreducible.
+--   `import.meta` is NEVER a callee (`import.meta()` is a TypeError), so it is
+--   waived; its only call-graph position is as a RECEIVER, and that call is
+--   `member_expression x s_member_on_meta`, which now has a site
+--   (`import.meta.resolve(spec)` in shapes.ts) and its own irreducible verdict.
+--   THE NOTE'S OWN OBJECTION IS DISCHARGED RATHER THAN IGNORED: it kept the site
+--   out because it would land in `s_member_on_other` and falsify that shape's
+--   `a_catch_all_empty_by_design`. Measured with the site in and no receiver
+--   class: `catch_all_occupied[audit]` 0 -> 1, naming `meta_property`. One row,
+--   `obj_kind_class(meta_property, o_meta)`, and it is 0 again.
+-- retired 2026-09-08: the cell is SPLIT and both halves are answered, so a
+-- claim on `none` names a cell that no longer exists — `orphan[audit]` says so
+-- within one run, which is how this convention is enforced rather than agreed.
+-- dataflow, SPLIT AND BOTH HALVES IRREDUCIBLE FOR DIFFERENT REASONS, which is
+--   what earns the axis this layer rather than a preference: `axis_earns[audit]`
+--   wants the refinement to make the model say something DIFFERENT about two
+--   shapes of one kind, and these two do. `import.meta` is `no_source_target`
+--   — a host object with no node, and the library surface cannot supply the
+--   missing half either, because `interface ImportMeta` in `lib.es5.d.ts` is
+--   EMPTY and `url`/`resolve` are declared in `lib.dom.d.ts` and `@types/node`,
+--   which `releaseOf` refuses by construction. `new.target` is
+--   `runtime_dependent`, the construction mode, and THE CORPUS CANNOT EVEN
+--   DISCRIMINATE THE MISSING NOTION: measured, 246 call targets against 14
+--   transfer targets with an EMPTY intersection, so no function here is reached
+--   both by `f()` and by `new f()`. (`may_be_node`, `may_be_lit` and
+--   `prototype_of` are all 0 for both nodes, against 1 333 valued expressions in
+--   the same world — the note's 1 125 was the same fact on a smaller corpus.)
+-- retired 2026-09-08: the cell is SPLIT and both halves are answered, so a
+-- claim on `none` names a cell that no longer exists — `orphan[audit]` says so
+-- within one run, which is how this convention is enforced rather than agreed.
+-- modules, SPLIT AND HALF-WAIVED ON PURPOSE, which is exactly what the note said
+--   the matrix could not do. `r_module_meta` in rules/js-modules.rofl derives
+--   `module_meta[code]` and `self_referential_module[code]`: a module that
+--   reflects on itself cannot be relocated without changing what it computes,
+--   which is the module-graph consequence of the construct. `new.target` keeps
+--   `a_not_a_module_construct`, now written at shape granularity so it stops
+--   standing for `import.meta` as well — the same correction the specifier
+--   refinement made to `import_declaration`.
+--   NOT MODELLED AND NAMED: `import.meta.resolve(spec)` is a module SPECIFIER in
+--   a fifth place, and wiring it into `module_site` would move the relation
+--   test/js-modules.test.ts compares SITE FOR SITE against node's own resolver.
+--   That is a real extension with a real oracle cost and it is a separate item.
+-- retired 2026-09-08: the cell is SPLIT and both halves are answered, so a
+-- claim on `none` names a cell that no longer exists — `orphan[audit]` says so
+-- within one run, which is how this convention is enforced rather than agreed.
 
 -- 55 - export_specifier, export_namespace_specifier.
 work(w_export_specifier_forms, "export { a as b } and export * as ns: the two export forms with no node in this vocabulary").
@@ -1742,5 +1826,6 @@ work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_
 -- by a caller, when the language performs the call and the runtime credits the
 -- microtask queue. `w_env_api_surface` answered the half about the callee`s
 -- name; nobody has answered the half about the caller`s.
-work(w_await_is_a_call_the_oracle_places_elsewhere, "an await calls then(): the callee is a library method the model never sees, and V8 credits a user thenable`s then to <top>").
-work_state(w_await_is_a_call_the_oracle_places_elsewhere, open).
+work(w_await_is_a_call_the_oracle_places_elsewhere, "DONE 2026-09-08: BOTH stated reasons were false and the item is its own answer - an await calls no library method at all, and the oracle does not contradict a thenable`s `then`, it DROPS the frame because a caller-less edge carries no file").
+work_state(w_await_is_a_call_the_oracle_places_elsewhere, done).
+work_spawned(w_await_is_a_call_the_oracle_places_elsewhere, f_a_caller_less_call_is_invisible_to_an_oracle_keyed_on_the_caller).

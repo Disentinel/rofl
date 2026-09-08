@@ -85,9 +85,24 @@ test('one fact opens the layer, and the model enumerates what it now demands', (
   // 341 -> 344 on 2026-09-08: `class_accessor_property` entered the vocabulary
   // with the decorator plugin, and this world declares three layers before the
   // fact opens the fourth.
-  assert.equal(before, 344, 'positive control: the matrix before the fact');
-  // 445 -> 449, the same one kind at the fourth layer the fact opens.
-  assert.equal(after, 449, 'positive control: and after');
+  // 344 -> 348 and 449 -> 453 on 2026-09-08 (w_meta_property): `meta_property`
+  // is REFINED at three layers now, and a refined kind trades its one `none`
+  // cell for one per shape, so a fine count moves without any kind entering the
+  // vocabulary at all.
+  //
+  // AND THE TWO LITERALS ARE GONE, which is the conversion this comment block
+  // has been arguing for six times over. They were "a positive control that the
+  // worlds are the ones the identity was measured on", and a number that four
+  // separate items have had to re-derive is not controlling anything — it is
+  // f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus, and with agents
+  // in parallel it is also a merge that is wrong on every branch. The COARSE
+  // matrix is `node_kind x layer` by its own rule and cannot move except with
+  // the vocabulary, so it says the same thing and stays true.
+  assert.equal(without.n('cell[audit](A, K, L)'), without.n('node_kind(A, K)') * 3,
+    'positive control: the coarse matrix before the fact is kinds x three layers');
+  assert.equal(withIt.n('cell[audit](A, K, L)'), withIt.n('node_kind(A, K)') * 4,
+    'positive control: and kinds x four layers after');
+  assert.ok(before > 0 && after > before, `the fine matrix grew: ${before} -> ${after}`);
 
   // ...and the kinds are named, not counted. Every js and py kind the
   // vocabulary declares appears at the new layer exactly once.

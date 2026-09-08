@@ -195,7 +195,13 @@ test('the scanner distinguishes new.target from import.meta, and by a CHILD', ()
       .flatMap(([c]) => w.q(`ast_name[code](${c}, X)`).flat())[0];
     return `${part('meta')}.${part('property')}`;
   }).sort();
-  assert.deepEqual(spellings, ['import.meta', 'new.target']);
+  // DEDUPED 2026-09-08 (w_meta_property). This was a list with multiplicity, so
+  // it was asserting HOW MANY of each form the corpus holds as well as which —
+  // and a second `import.meta` site (the `import.meta.resolve` call the call
+  // graph needed) broke it while every claim it makes stayed true. The set is
+  // what the sentence above means: both spellings occur, and the scanner tells
+  // them apart by a child.
+  assert.deepEqual([...new Set(spellings)], ['import.meta', 'new.target']);
   // AND THERE IS NO ATTRIBUTE, which is what makes the era layer's second gate
   // table structurally unable to split this kind. Measured, not read off a rule.
   const attrs = w.q('ast_attr[code](N, K, V)');

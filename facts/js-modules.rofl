@@ -273,6 +273,35 @@ handled(js, export_all_declaration,   modules, r_reexport_edge).
 unknown_because(js, export_default_declaration, modules, not_yet).
 
 -- ---------------------------------------------------------------------------
+-- THE MODULE'S OWN METADATA, 2026-09-08 (w_meta_property) — and the item's own
+-- note said this cell could not be answered, for a reason that is false.
+--
+-- It reads: "`import.meta` IS a module construct — the module's own metadata —
+-- and `new.target` is not, so `a_not_a_module_construct` is true of exactly
+-- half the kind. THE CELL IS KEYED BY KIND AND THE QUESTION IS NOT, and the
+-- shape axis that could split it applies to `callgraph` only". `axis_applies
+-- (shape, modules)` is thirty lines above this one and has been since the
+-- specifier refinement landed. The column is shared and its VALUES are
+-- per-layer; nothing had to be built.
+--
+-- So the cell splits and each half gets the verdict that is true of it,
+-- discriminated by `meta_form[code]` — which reads the two identifier children
+-- the scanner has emitted all along, and which nothing above the scanner had
+-- ever read.
+shape_of(js, meta_property, import_meta).
+shape_of(js, meta_property, new_target).
+shape_in(import_meta, modules).
+shape_in(new_target,  modules).
+node_kind(js, meta_property).
+
+handled(js, meta_property, import_meta, modules, r_module_meta).
+-- ...and the half the kind-level waiver was actually about. It is written at
+-- shape granularity now, so it stops standing for `import.meta` as well —
+-- which is the same correction the specifier refinement made to
+-- `import_declaration` and for the same reason.
+ignored(js, meta_property, new_target, modules, a_not_a_module_construct).
+
+-- ---------------------------------------------------------------------------
 -- THE EVIDENCE. Not a claim: the number of fixture import sites whose
 -- resolution was compared, SET FOR SET, against node's own resolver
 -- (import.meta.resolve, cross-checked with createRequire().resolve) —

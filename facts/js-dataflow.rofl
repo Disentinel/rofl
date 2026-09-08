@@ -493,3 +493,53 @@ handled(js, decorator,              dataflow, r_decorator_replacement).
 -- holds a function and `hauls` calls it, which is what makes the row visible at
 -- the call graph too.
 handled(js, class_accessor_property, dataflow, r_field_value).
+
+-- ===========================================================================
+-- THE FORM AXIS REACHES A THIRD LAYER, 2026-09-08 (w_meta_property)
+--
+-- `meta_property x dataflow` was one cell for two constructs whose value
+-- questions have nothing in common, and both halves were measured before this
+-- was written: `may_be_node`, `may_be_lit` and `prototype_of` are ALL EMPTY for
+-- both nodes, against 1 333 expressions the value layer does answer for in the
+-- same world.
+--
+-- WHY THE COLUMN AND NOT A KIND-LEVEL VERDICT. The two halves are irreducible
+-- for DIFFERENT reasons, and a kind-level cell carries one atom. That is
+-- exactly the condition `axis_earns[audit]` tests — an axis earns a layer when
+-- its refinement makes the model say something different about two shapes of
+-- the same kind there — so this row is falsifiable rather than declared:
+-- `unearned_axis[audit](shape, dataflow)` says no if the two reasons ever
+-- become one.
+--
+-- IT DOES NOT REFINE ANYTHING ELSE. `shape_kind[audit]` needs
+-- `shape_of(Lang, K, S), shape_in(S, dataflow)`, and the only two values gated
+-- into this layer are the two below — so every other kind keeps its single
+-- `none` cell here, which is what facts/js-shapes.rofl's refusal of a
+-- callee-shape vocabulary in this layer was actually about.
+axis_applies(shape, dataflow).
+shape_of(js, meta_property, new_target).
+shape_of(js, meta_property, import_meta).
+shape_in(new_target, dataflow).
+shape_in(import_meta, dataflow).
+node_kind(js, meta_property).
+
+-- `import.meta` IS A HOST OBJECT WITH NO NODE ANYWHERE, and the standard
+-- library cannot supply the missing half either: measured in TypeScript's own
+-- files, `interface ImportMeta` in `lib.es5.d.ts` is EMPTY, and `url` and
+-- `resolve` are declared in `lib.dom.d.ts` and `@types/node` — files
+-- `releaseOf` in scanners/ts_lib.ts refuses by construction because their names
+-- carry no release. So this is not `w_env_api_surface`'s residue arriving late;
+-- it is the residue that surface is structurally unable to hold.
+unknown_because(js, meta_property, import_meta, dataflow, no_source_target).
+-- `new.target` IS THE CONSTRUCTION MODE, and this model has no relation for the
+-- mode of a call at all. MEASURED on V8 13.6: `undefined` in a plain call, the
+-- MOST DERIVED constructor under `new` — `Derived`, not `Base`, inside `Base`'s
+-- constructor under `new Derived()`. So the value is a property of the
+-- invocation, which is what `runtime_dependent` says.
+--
+-- AND THE CORPUS CANNOT DISCRIMINATE THE MISSING NOTION EITHER, which is worth
+-- a row rather than a plan: 246 call targets against 14 transfer targets with an
+-- EMPTY intersection, so no function here is reached both by `f()` and by
+-- `new f()`. A call-mode relation would have nothing to be measured against
+-- until a fixture provides one, and that is a different item's fixture.
+unknown_because(js, meta_property, new_target, dataflow, runtime_dependent).

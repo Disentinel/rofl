@@ -52,3 +52,41 @@ key_name[code](K, N)   :- ast_node[code](K, member_expression, _, _),
                           ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
                           ast_child[code](K, property, 0, P), ast_name[code](P, N).
 ast_value[code](N, V)  :- ast_attr[code](N, value, V).
+
+-- ONE NODE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD
+-- (w_meta_property, 2026-09-08). `new.target` and `import.meta` are both a
+-- `meta_property` and nothing above the scanner told them apart: measured
+-- again here, every `meta_property` in the corpus carries ZERO `ast_attr`
+-- rows of any key and exactly two identifier children, `meta` and `property`.
+--
+-- IT IS HERE AND NOT IN A LAYER because three layers need it and none owns
+-- it. `child_needs` in facts/js-env.rofl already reads the same child for the
+-- ERA question; that table is a gate keyed on a feature and cannot be read by
+-- a layer that wants the FORM. This is the form, named once, in the file whose
+-- whole job is "true of any tree the scanner emits".
+--
+-- KEYED ON `meta` AND NOT ON `property`, for the reason facts/js-env.rofl
+-- states: `meta` is the reserved word the grammar switches on, and it is the
+-- half that cannot collide — a future `import.defer` is still (meta="import").
+meta_form[code](M, new_target)  :- ast_node[code](M, meta_property, _, _),
+                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "new").
+meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _, _),
+                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "import").
+
+-- ...and the gate, in the direction that can go red. A `meta_property` the two
+-- rules above do not classify is a THIRD form of the construct — the grammar
+-- allows exactly two today — and every relation keyed on the form would be
+-- silently missing it. Empty on an honest tree; the mutant set plants one.
+meta_unformed[audit](M) :- ast_node[code](M, meta_property, _, _),
+                           not meta_form[code](M, _).
+
+-- ...AND THE OTHER DIRECTION, WHICH THE GATE ABOVE IS STRUCTURALLY UNABLE TO
+-- LOOK AT. Found by asking that question of this file's own instrument rather
+-- than by a failing test: `meta_unformed` watches for a node with NO form, and
+-- the mutant that keys the first arm on the wrong word gives every
+-- `import.meta` node TWO forms — one node answering as both constructs, which
+-- every reader below treats as a function. Half the damage of that mutant was
+-- invisible to the only gate over this relation. Both halves are named now, and
+-- the pair is the same construction `export_binding_conflict[audit]` already
+-- uses one layer up.
+meta_form_conflict[audit](M, A, B) :- meta_form[code](M, A), meta_form[code](M, B), A != B.
