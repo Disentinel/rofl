@@ -1,0 +1,18 @@
+[package]
+name = "colbench"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+
+
+datafusion = "54.1.0"
+duckdb = { version = "1.10505.0", features = ["bundled"] }
+polars = { version = "0.51", features = ["lazy"] }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+
+[profile.release]
+opt-level = 3
+debug = false

@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 dist/
 *.snapshot.json
 facts/generated/
@@ -19,3 +19,7 @@ facts/port-corpus/
 
 # Rust port build output (rust/); the source is tracked, the target is not.
 rust/target/
+
+# bench crates under rust/ carry their own target dirs
+rust/*/target/
+rust/storebench/traces/
