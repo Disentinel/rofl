@@ -752,6 +752,8 @@ export function libEras(s: string): string {
   const picked = [1, 2, 3].at(0);
   const known = 'aaa'.replaceAll('a', 'b');
   return known + s.replaceAll('a', 'b') + String(picked);
+}
+
 // A DIRECTIVE IS NOT AN EXPRESSION STATEMENT (w_directives, 2026-09-08), and
 // this is the FUNCTION-BODY half of the fixture — delta.mjs carries the
 // program-level one and the hashbang, because both of those have to be at the
