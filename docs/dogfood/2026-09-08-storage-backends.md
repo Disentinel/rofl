@@ -17,6 +17,12 @@ rust/colbench           # one semi-naive round in a columnar engine
 rust/share_curve.sh     # N agents on one base: does memory grow with N
 ```
 
+**`npm run storetrace` FIRST, in a fresh checkout.** The traces are 30 MB and
+`.gitignore`d, the same treatment `facts/port-corpus/` gets and for the same
+reason — deterministic, rebuilt on demand — so `storebench` and
+`share_curve.sh` fail with a missing-file panic until they exist. Said here
+because the panic names the file and not the command that makes it.
+
 ---
 
 ## 0. A correction to the number this evaluation started from
