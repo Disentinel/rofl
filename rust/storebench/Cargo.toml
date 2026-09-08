@@ -1,0 +1,18 @@
+[package]
+name = "storebench"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+fjall = "3.1.10"
+heed = "0.22.1"
+memmap2 = "0.9.11"
+redb = "4.2.0"
+rocksdb = "0.25.0"
+rofl = { version = "0.1.0", path = "../rofl" }
+
+[profile.release]
+opt-level = 3
+debug = false

@@ -39,7 +39,9 @@
     "forkctl": "node --experimental-strip-types bench/fork_control.ts",
     "portcorpus": "node --experimental-strip-types scripts/port_corpus.ts",
     "boundary": "node --experimental-strip-types scanners/store_boundary.ts",
-    "booklocality": "node --experimental-strip-types scanners/book_locality.ts"
+    "booklocality": "node --experimental-strip-types scanners/book_locality.ts",
+    "storetrace": "node --experimental-strip-types scanners/store_trace.ts && node --experimental-strip-types scanners/store_trace.ts --noreuse",
+    "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
