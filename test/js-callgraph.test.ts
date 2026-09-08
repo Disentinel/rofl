@@ -632,10 +632,19 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // whoever re-derives it, and two branches moving it merge to a number that is
   // right on neither (f_a_ledger_keyed_by_name_merges_and_a_pin_keyed_by_
   // nothing_does_not).
+  // ...AND ONE MORE ON 2026-09-08 (w_meta_property): `s_member_on_meta` is
+  // `import.meta.resolve(spec)`, the ninth receiver class, and it arrives with
+  // its verdict already written. It is the first residue on this list whose
+  // callee is the HOST's rather than the LANGUAGE's — measured in TypeScript's
+  // own files, `interface ImportMeta` in `lib.es5.d.ts` is EMPTY and
+  // `url`/`resolve` live in `lib.dom.d.ts` and `@types/node`, which
+  // `releaseOf` refuses because their names carry no release. So `lib_call`
+  // could never date it and `no_source_target` is not a placeholder.
   assert.deepEqual(residue, [
     's_computed_dynamic_key', 's_computed_literal_key', 's_identifier',
     's_member_on_array', 's_member_on_ident', 's_member_on_literal',
-    's_member_on_new', 's_member_on_template', 's_non_null', 's_super',
+    's_member_on_meta', 's_member_on_new', 's_member_on_template',
+    's_non_null', 's_super',
   ], `positive control: ${residue.length} shapes with a residue`);
 
   // THE TOTALITY ARITHMETIC, stated as an identity rather than as a count:
@@ -679,14 +688,29 @@ test('every unresolved shape carries a typed verdict, and it type-checks', () =>
   // a function with no node in this program, so no edge is possible; what
   // changed is that `not_yet` became FALSE BY MEASUREMENT rather than by
   // decision, which is the difference between a shrug and a finished frontier.
-  assert.deepEqual(m.binds('shape_irreducible[audit](S)', 'S'),
+  // SIX BECAME SEVEN on 2026-09-08 with w_meta_property, and the seventh is a
+  // third way to earn the atom rather than another instance of the second.
+  // `s_member_on_literal` and `s_member_on_template` reach a method the
+  // LANGUAGE's library declares and this model does not hold;
+  // `s_member_on_meta` reaches one NO edition of the language declares at all,
+  // measured in TypeScript's own files. Both are "there is no node here", and
+  // only the first two will ever be datable by `lib_unsupported[audit]`.
+  const irreducible = m.binds('shape_irreducible[audit](S)', 'S');
+  assert.deepEqual(irreducible,
     ['s_computed_dynamic_key', 's_member_on_ident', 's_member_on_literal',
-     's_member_on_new', 's_member_on_template', 's_super']);
+     's_member_on_meta', 's_member_on_new', 's_member_on_template', 's_super']);
   const ours = m.binds('shape_ours[audit](S)', 'S');
-  assert.equal(ours.length + 6, residue.length, 'irreducible + ours partitions the residue');
+  // THE COUNT WAS A LITERAL `6` UNTIL 2026-09-08 AND IT IS THE SET'S OWN LENGTH
+  // NOW. Both halves of this partition are named sets a branch can grow, and a
+  // literal standing beside them is exactly the pin
+  // f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus describes: right
+  // on each branch and wrong in the merge, with nothing in the conflict to say
+  // what the third number is.
+  assert.equal(ours.length + irreducible.length, residue.length,
+    'irreducible + ours partitions the residue');
 
-  console.log('  frontier: ' + residue.length + ' shapes with a residue, 6 irreducible, '
-    + ours.length + ' ours');
+  console.log(`  frontier: ${residue.length} shapes with a residue, `
+    + `${irreducible.length} irreducible, ${ours.length} ours`);
   console.log('  unexercised verdicts (grammar, not corpus): '
     + m.binds('shape_unexercised[audit](S)', 'S').join(', '));
 });
@@ -1300,10 +1324,14 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // WRITTEN AS THE SET, for the reason the sentence above gives — a number that
   // moves in both directions for four different reasons is a number nobody can
   // check.
+  // ...and 10 -> 11 on 2026-09-08 for the SPLIT reason rather than the residue
+  // one: `s_member_on_meta` is a new receiver class with a site and a written
+  // excuse (w_meta_property), so the mutant strands one more.
   assert.deepEqual(stale, [
     's_computed_dynamic_key', 's_computed_literal_key', 's_identifier',
     's_member_on_array', 's_member_on_ident', 's_member_on_literal',
-    's_member_on_new', 's_member_on_template', 's_non_null', 's_super',
+    's_member_on_meta', 's_member_on_new', 's_member_on_template',
+    's_non_null', 's_super',
   ], `the stale-verdict audit fires on ${stale.length} shapes`);
   assert.deepEqual(build().binds('shape_stale[audit](S)', 'S'), [], 'and is silent on the baseline');
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);

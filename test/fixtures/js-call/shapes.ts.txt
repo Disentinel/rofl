@@ -852,3 +852,64 @@ export function usesTucked(n: number): number { return new Thimble().tucked(n); 
 export function legacyString(s: string): string {
   return 'abc'.substr(0, 1) + 'abc'.trimLeft() + s;
 }
+
+// ===========================================================================
+// THE CALLER, WHEN THE LANGUAGE PERFORMS THE CALL, 2026-09-08
+// (w_meta_property + w_await_is_a_call_the_oracle_places_elsewhere).
+//
+// TWO SITES, ONE QUESTION, AND BOTH ARE HERE RATHER THAN IN A RUNNABLE FILE
+// FOR THE SAME MEASURED REASON: the execution oracle CANNOT SEE EITHER OF THEM.
+// `runOracle` in test/js-callgraph.test.ts keeps a frame only when the CALLER's
+// file is a run file, and trace.mjs writes `file: st[1] ? ... : ''` — so an
+// edge with no caller frame carries `""` and is dropped. Measured on a live
+// probe: a thenable's `.then` reports `<top> -> settle  file="" line=0`, and it
+// does not survive the filter. A site in alpha.mjs would therefore be judged by
+// an instrument structurally unable to look at it.
+//
+// ---- 1. AN AWAIT REALLY DOES CALL SOMETHING, AND IT IS NOT WHAT THE QUEUE
+// SAID. w_await_is_a_call recorded the callee as `Promise.prototype.then`, a
+// standard-library method with no node. MEASURED and false: with
+// `Promise.prototype.then` monkey-patched and a positive control that the patch
+// is live (`p.then(f)` counts 1), `await <native promise>` calls it ZERO times
+// on V8 11.3 (node 20.20.0) and V8 13.6 (node 24.13.0) - the versions are
+// `process.versions.v8` and not the pair this repository has been quoting; see
+// f_the_v8_version_pair_this_repository_quotes_is_not_the_one_it_runs. The
+// spec's Await uses
+// PerformPromiseThen, an INTERNAL operation — there is no observable call at
+// all. What DOES get called is a user thenable's OWN `then`, exactly once.
+//
+// So the corpus's four existing awaits perform NO CALL (their arguments are all
+// native promises, and `member_value[flow](_, "then", _)` is 0 of 162 keys),
+// and this is the one shape where an await has a callee this program contains.
+//
+// AND THE CALLER IS NOBODY. The same probe reports the frame as a stack of
+// DEPTH ONE — `st[1]` is undefined — so `settleThen` runs with no caller frame
+// whatsoever. `<top>` in trace.mjs is what that ABSENCE renders as, and it is
+// the same string that file writes for a call from module top level, which is a
+// real region with real code. The model must not draw `awaitsThenable ->
+// settleThen`: `performed_call[code]` says the call happens and refuses to name
+// a caller, which is what this layer means by a caller when the language calls.
+function settleThen(res: (v: number) => number) { res(1); }
+const userThenable = { then: settleThen };
+export async function awaitsThenable(n: number): Promise<number> {
+  await userThenable;
+  return n;
+}
+
+// ---- 2. `import.meta.resolve(...)` IS A CALL INTO THE HOST, and the note that
+// kept it out of the corpus is discharged rather than ignored. It said a call
+// here would land in `s_member_on_other`, whose waiver
+// `a_catch_all_empty_by_design` would then be false for another item's reason.
+// `obj_kind_class(meta_property, o_meta)` gives the receiver a name of its own,
+// so the catch-all stays empty and this site is classified rather than swept.
+//
+// THE CALLEE IS THE HOST'S AND NOT THE LANGUAGE'S, and TypeScript's own files
+// say so: `interface ImportMeta` in `lib.es5.d.ts` is EMPTY — `url` and
+// `resolve` are declared in `lib.dom.d.ts` and in `@types/node`. `releaseOf` in
+// scanners/ts_lib.ts returns null for both, by construction, because neither
+// file name carries a release. So the standard-library surface that answered
+// `array.join` is structurally unable to answer this one, and the residue is
+// `no_source_target` rather than a queue entry.
+export function resolvesHere(spec: string): string {
+  return import.meta.resolve(spec);
+}

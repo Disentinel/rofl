@@ -41,6 +41,17 @@ axis(shape).
 -- measured one tick earlier as 24 kinds x 2 layers = 48 cells, not one of them
 -- a question.
 --
+-- ...AND THAT REFUSAL WAS ABOUT A DIFFERENT `shape_in` SET, 2026-09-08
+-- (w_meta_property). It was measured with the CALLEE-shape vocabulary in the
+-- dataflow column, where every one of the thirty cells carries its neighbour's
+-- answer; the refusal is still correct about those thirty. `axis_applies(shape,
+-- dataflow)` is declared in facts/js-dataflow.rofl now, with exactly two values
+-- gated into that layer by `shape_in` — `new_target` and `import_meta` — and
+-- they carry DIFFERENT irreducible reasons, so `axis_earns[audit]` has a
+-- witness there rather than thirty rows of arithmetic. The applicability row is
+-- what makes that checkable in either direction, which is what this paragraph
+-- said it was for.
+--
 -- There is deliberately NO row for `modules`. A callee's shape is a fact about
 -- a call and says nothing whatever about a module graph; `importKind` is the
 -- local axis there and it is not this one. That absence is not a silence — it
@@ -102,6 +113,52 @@ shape_of(js, yield_expression,          s_yield_result).
 shape_in(s_yield_result, callgraph).
 shape_in(s_construct, callgraph).
 handled(js, new_expression, s_construct, callgraph, r_construct).
+
+-- ---------------------------------------------------------------------------
+-- THE THIRD KIND THE COLUMN SPLITS, 2026-09-08 (w_meta_property) — and the
+-- first whose two values are not two ROLES of one construct but TWO CONSTRUCTS
+-- wearing one node kind. `new.target` is ES2015 and `import.meta` is ES2020,
+-- babel gives both `meta_property`, and the scanner has always emitted the
+-- discriminator: zero `ast_attr` rows and two identifier children, so
+-- (meta="new", property="target") against (meta="import", property="meta").
+-- `meta_form[code]` in rules/js-structure.rofl is the one relation that reads
+-- it; `child_needs` in facts/js-env.rofl reads the same child for the ERA gate
+-- and is keyed on a feature, so it cannot answer a question about the FORM.
+--
+-- THE ITEM'S NOTE SAID THIS COULD NOT BE DONE AND THE ROW IT CITED IS ONE FILE
+-- OVER. It reads "the shape axis that could split it applies to `callgraph`
+-- only (facts/js-shapes.rofl)", pointing at the paragraph above that declines
+-- `axis_applies(shape, dataflow)`. Measured: `axis_applies(shape, modules).`
+-- has been in facts/js-modules.rofl since the modules layer had shapes, and the
+-- column's whole design is ONE COLUMN WITH PER-LAYER VOCABULARIES — `shape_in`
+-- is what keeps a specifier shape out of the call graph. So the split was
+-- available at two of the three layers before this item started, and the third
+-- costs one `axis_applies` row, declared beside its values in
+-- facts/js-dataflow.rofl.
+shape_of(js, meta_property, new_target).
+shape_of(js, meta_property, import_meta).
+shape_in(new_target, callgraph).
+shape_in(import_meta, callgraph).
+
+-- AS A CALLEE, `new.target` IS THE CONSTRUCTOR OF THE CURRENT INVOCATION, which
+-- is a fact about the CALL and not about the text — the taxonomy's own
+-- `runtime_dependent`, and the second row in this repository to carry it.
+-- MEASURED rather than reasoned: in `class Derived extends Base {}`, `new.target`
+-- inside `Base`'s constructor is `Derived` under `new Derived()` and `Base`
+-- under `new Base()`; in a plain call it is `undefined`; and `new new.target()`
+-- reports the enclosing function as its caller (`Recur -> Recur`), so unlike an
+-- await this one is an ordinary edge whose CALLEE is undecidable. A rule
+-- pointing it at the enclosing function would be an under-report the moment a
+-- subclass exists, and the corpus cannot even discriminate the question:
+-- measured, 246 call targets and 14 transfer targets with an EMPTY intersection,
+-- so no function here is both called and constructed.
+unknown_because(js, meta_property, new_target, callgraph, runtime_dependent).
+-- `import.meta` IS NEVER A CALLEE. `import.meta()` is a TypeError, and the only
+-- call-graph position it occupies is the RECEIVER of a member call — which is
+-- `member_expression x s_member_on_meta` and answered there, with the site
+-- `import.meta.resolve(spec)` in shapes.ts. Waived here rather than left as
+-- backlog, because there is no form to model.
+ignored(js, meta_property, import_meta, callgraph, a_import_meta_is_never_a_callee).
 shape_of(js, import,                    s_dynamic_import).
 shape_of(js, sequence_expression,       s_sequence).
 shape_of(js, parenthesized_expression,  s_parenthesized).
@@ -136,6 +193,7 @@ shape_of(js, member_expression, s_member_on_await).
 shape_of(js, member_expression, s_member_on_template).
 shape_of(js, member_expression, s_member_on_cast).
 shape_of(js, member_expression, s_member_on_non_null).
+shape_of(js, member_expression, s_member_on_meta).
 shape_of(js, member_expression, s_member_on_other).
 shape_of(js, member_expression, s_computed_literal_key).
 shape_of(js, member_expression, s_computed_dynamic_key).
@@ -329,6 +387,18 @@ unknown_because(js, member_expression, s_member_on_template, callgraph, no_sourc
 -- subject nobody has seen. The pair is the same construction `s_unclassified`
 -- already has one level up, and it is the honest version of the `absent` that
 -- `s_parenthesized` showed means two different things.
+-- `import.meta.resolve(spec)` — THE HOST'S MEMBER AND NOT THE LANGUAGE'S,
+-- 2026-09-08 (w_meta_property). Same atom as the two above and a different
+-- reason for it: those two reach a method the standard library declares and
+-- this model cannot see, and `lib_call[code]` names them from
+-- `lib.es*.d.ts`. This one reaches a method NO `lib.es*` file declares at all —
+-- measured, `interface ImportMeta` in `lib.es5.d.ts` is empty and `resolve`
+-- lives in `lib.dom.d.ts` and `@types/node`, which `releaseOf` refuses by
+-- construction. So `lib_call` is silent here on purpose and
+-- `stdlib_unattributed[audit]` stays silent too, because the receiver has no
+-- `builtin_prototype`: it is not a prototype the language owns.
+unknown_because(js, member_expression, s_member_on_meta, callgraph, no_source_target).
+
 ignored(js, member_expression, s_member_on_other, callgraph, a_catch_all_empty_by_design).
 
 -- ---------------------------------------------------------------------------
@@ -360,6 +430,7 @@ shape_in(s_member_on_await, callgraph).
 shape_in(s_member_on_template, callgraph).
 shape_in(s_member_on_cast, callgraph).
 shape_in(s_member_on_non_null, callgraph).
+shape_in(s_member_on_meta, callgraph).
 shape_in(s_member_on_other, callgraph).
 shape_in(s_member_on_super, callgraph).
 shape_in(s_member_on_this, callgraph).

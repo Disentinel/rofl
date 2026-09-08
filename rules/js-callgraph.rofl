@@ -157,6 +157,27 @@ obj_kind_class(await_expression,           o_await).
 obj_kind_class(template_literal,           o_template).
 obj_kind_class(tsas_expression,            o_cast).
 obj_kind_class(tsnon_null_expression,      o_non_null).
+-- A NINTH RECEIVER CLASS, 2026-09-08 (w_meta_property), AND THE AUDIT ASKED FOR
+-- IT WITHIN ONE RUN. `import.meta.resolve(spec)` is a member call whose object
+-- is a `meta_property`, and w_meta_property's own note kept the site OUT of the
+-- corpus rather than let it land in `s_member_on_other` — whose waiver
+-- `a_catch_all_empty_by_design` would then have been false for a reason
+-- belonging to another item. Measured with the site in and this row out:
+-- `catch_all_occupied[audit]` went from 0 to 1 naming `meta_property`, exactly
+-- as that waiver's own comment predicts. One row is the whole cost of the
+-- objection, so the note is discharged rather than deferred.
+--
+-- ITS OWN CLASS AND NOT `o_literal`, because the criterion here is the VERDICT
+-- and this receiver's verdict is a different one. A member on a string or a
+-- regexp is answered by the standard LIBRARY, which `lib_member` carries from
+-- TypeScript's `lib.es*.d.ts`. `import.meta`'s members are the HOST's — measured
+-- in TypeScript's own files, `interface ImportMeta` in `lib.es5.d.ts` is EMPTY,
+-- and `url`/`resolve` are declared in `lib.dom.d.ts` and `@types/node`, neither
+-- of which `releaseOf` in scanners/ts_lib.ts will name, by construction, since
+-- neither file name carries a release. So the era axis is structurally unable
+-- to date this member, and `o_literal` would have promised an answer that
+-- cannot arrive.
+obj_kind_class(meta_property,              o_meta).
 
 obj_kind_known(K)           :- obj_kind_class(K, _).
 obj_class[code](C, Cl)      :- callee_obj_kind[code](C, K), obj_kind_class(K, Cl).
@@ -180,6 +201,7 @@ member_shape(o_await,          s_member_on_await).
 member_shape(o_template,       s_member_on_template).
 member_shape(o_cast,           s_member_on_cast).
 member_shape(o_non_null,       s_member_on_non_null).
+member_shape(o_meta,           s_member_on_meta).
 member_shape(o_other,          s_member_on_other).
 
 -- A COMPUTED callee is the one place the taxonomy's `runtime_dependent` is
@@ -753,6 +775,115 @@ callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _, _)
 callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _, _).
 callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _, _).
 kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
+
+-- ===========================================================================
+-- 8. WHAT THIS LAYER MEANS BY A CALLER, WHEN THE LANGUAGE PERFORMS THE CALL
+--    (w_await_is_a_call_the_oracle_places_elsewhere, 2026-09-08)
+--
+-- `calls[code]` has exactly two arms and both say the caller is a LEXICAL
+-- REGION of this program: the nearest enclosing function, or the module root.
+-- That is the whole notion of a caller here, and an `await` is the construct
+-- that breaks it.
+--
+-- THE ITEM'S PREMISE WAS FALSE AND THE PROBE IS THREE LINES. The queue recorded
+-- the callee as `Promise.prototype.then`, "a library method with no node", and
+-- pointed the cell at `w_env_api_surface`. Measured with that method
+-- monkey-patched and a POSITIVE CONTROL that the patch is live (`p.then(f)`
+-- counts 1), on V8 11.3 (node 20.20.0) and V8 13.6 (node 24.13.0) alike:
+--
+--   await <native promise>   Promise.prototype.then called 0 times
+--   await 5                  Promise.prototype.then called 0 times
+--   await <user thenable>    Promise.prototype.then 0, the thenable's own
+--                            `then` exactly 1
+--
+-- The specification's `Await` uses PerformPromiseThen, an INTERNAL operation:
+-- there is no observable call at all. So the standard library is not this
+-- cell's blocker, the residue is not `w_env_api_surface`'s, and the only await
+-- that calls anything calls a `then` this program may well contain.
+--
+-- AND ITS CALLER IS NOBODY. The same probe reports that `then` on a stack of
+-- DEPTH ONE — `st[1]` is undefined — so there is no caller frame whatsoever.
+-- `<top>` in test/fixtures/js-call/trace.mjs is what that ABSENCE renders as,
+-- and it is the same string that file writes for a call made from module top
+-- level, which is a real region with real code. Two different facts under one
+-- name, which is why the queue read the oracle as a contradiction.
+--
+-- IT IS NOT A CONTRADICTION, IT IS A BLIND SPOT, and that is measured too:
+-- `runOracle` keeps a frame only when the CALLER's file is a run file, and
+-- trace.mjs writes `file: st[1] ? st[1].getFileName() : ''`. A caller-less edge
+-- therefore carries `""`, `path.basename("")` is `""`, and the edge is dropped
+-- before any comparison. Run on a real thenable: the instrument records
+-- `<top> -> settle  file="" line=0` and the harness keeps nothing. So the
+-- acceptance oracle can neither confirm nor refute anything in this section —
+-- ASK WHERE THE CHECK CANNOT LOOK, and this is where.
+--
+-- WHAT THE MODEL SAYS INSTEAD OF AN EDGE: the call happens, the callee has a
+-- name, and there is NO CALLER. `performed_call[code]` is deliberately not
+-- `calls[code]` and deliberately never reaches `calls_named`/`calls_in`, so
+-- nothing this section derives can be compared against a stack frame — which
+-- is correct, because there is no stack frame to compare it with.
+await_arg[code](A, X) :- ast_node[code](A, await_expression, _, _),
+                         ast_child[code](A, argument, 0, X).
+
+-- the awaited value's own `then`, through the value layer. TWO `may_be_node`
+-- hops and not one, because `member_value` NAMES THE NODE A MEMBER HOLDS and
+-- for `{ then: settleThen }` that is the IDENTIFIER — the same last step
+-- `r_iterator_protocol` takes for `next`, and the same one this rule was
+-- written without: `awaited_then` came back EMPTY on a corpus that had the
+-- site, which is the relation's own comment being ignored for the second time.
+-- `fn_node` is the guard that keeps a non-callable `then` — a thenable is a
+-- duck-type and any property may be spelled that way — out of a call relation.
+awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
+                            member_value[flow](O, "then", V),
+                            may_be_node[flow](V, F), fn_node[code](F).
+
+-- THE CALL WITH NO CALLER. One argument short of `calls[code]` on purpose: the
+-- missing column is the caller, and the missing column is the answer.
+performed_call[code](A, F) :- awaited_then[code](A, F).
+callerless_call[audit](Name) :- performed_call[code](_, F), fn_name[code](F, Name).
+
+-- ...AND THE THREE-WAY SPLIT OF EVERY AWAIT IN THE CORPUS, because "no call
+-- here" and "no answer here" are opposite readings of the same silence and a
+-- single negation would have merged them.
+await_value_known[code](A)    :- await_arg[code](A, X), may_be_node[flow](X, _).
+-- the value is known and carries no `then`: the language performs NO call, and
+-- that is a statement rather than an absence.
+--
+-- ITS CEILING, STATED, because this is the one arm here that can be WRONG
+-- rather than merely silent. `may_be_node` is a MAY-set and may be incomplete,
+-- so a value the layer answers for partially — one arm reaching an object
+-- literal with no `then`, another arm the layer cannot see — reads as "performs
+-- no call" while a call may happen. Every other relation in this section fails
+-- towards silence; this one fails towards a positive claim. It has no site in
+-- this corpus (all three of its rows are a native promise or a plain value) and
+-- the fixture that would exercise it is a union whose arms disagree, which is
+-- `w_df_value_core`'s shape rather than this item's.
+await_no_call[code](A)        :- await_value_known[code](A), not awaited_then[code](A, _).
+-- the value layer answered nothing, so whether a call happens is unknown. This
+-- is the frontier of this section, and it is NOT wired into `frontier_at`:
+-- that relation is keyed by the CALLER, and the whole finding above is that
+-- this class of call has none, so an attribution keyed on the caller is the
+-- wrong instrument by construction.
+await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[code](A).
+
+-- THE GATE, in the one direction that matters: a performed call must never
+-- become an ordinary edge. It goes red the moment somebody routes
+-- `performed_call` into `calls`, which is the mutant this section is written
+-- against, and it is empty on an honest tree because the corpus's one thenable
+-- method is reached no other way.
+--
+-- AND IT CANNOT USE `nearest_fn`, WHICH IS THE FINDING ONE LEVEL DOWN. Measured
+-- when this gate came back permanently silent: `encloses[code]` demands
+-- `site[code](C)` and an `await_expression` is not a site, so `nearest_fn`
+-- reaches no await at all and a gate written over it can never fire — a check
+-- that is wrong in the SAFE direction, which CLAUDE.md names as worse than a
+-- red one. The caller machinery of this layer is keyed on SITES, and the
+-- construct whose caller is in question is not one of them.
+awaiting_fn[code](Fn, A) :- performed_call[code](A, _), fn_node[code](Fn),
+                            ast_within[code](Fn, A).
+performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
+                                   awaiting_fn[code](Fn, A),
+                                   calls[code](Fn, F).
 
 -- THE CALL GRAPH READS THE VALUE LAYER, which is the whole shape of this model
 -- since resolution collapsed into one rule: `resolves` asks what the callee

@@ -264,7 +264,29 @@ node_kind(js, class_accessor_property).
 -- eight shapes.
 handled(js, tagged_template_expression,     callgraph, r_tag_call).
 handled(js, for_of_statement,               callgraph, r_iterator_protocol).
-unknown_because(js, await_expression,           callgraph, not_yet).
+-- ...AND THE AWAIT LEFT THIS LIST ON 2026-09-08, and it left because the note
+-- above is WRONG about the callee and wrong about the instrument. It reads "V8
+-- attributes the `.then` call to the promise machinery, so a model deriving it
+-- would be contradicted by the instrument". Two probes, both re-runnable:
+--
+--   * With `Promise.prototype.then` monkey-patched and a positive control that
+--     the patch is live, `await <native promise>` calls it ZERO times on V8
+--     11.3 and V8 13.6. The specification's `Await` uses PerformPromiseThen, an
+--     internal operation. There is no library method in this construct at all,
+--     so the cell never belonged to `w_env_api_surface`.
+--   * A USER thenable's own `then` IS called, exactly once, on a stack of DEPTH
+--     ONE. The oracle does not contradict that edge — it DROPS it: `runOracle`
+--     keeps a frame only when the CALLER's file is a run file, and a caller-less
+--     frame carries `file: ""`. Run on a real thenable, the instrument records
+--     `<top> -> settle file="" line=0` and the harness keeps nothing.
+--
+-- So the model says what it can see and refuses the column it cannot:
+-- `performed_call[code]` names the callee and NO CALLER, `await_no_call[code]`
+-- says an await performs no call at all, and `await_value_unknown[audit]` is
+-- the residue. `unverified[audit]` will carry this claim, correctly — the
+-- execution oracle is structurally unable to check it, which is a different
+-- statement from nobody having tried.
+handled(js, await_expression,               callgraph, r_await_performs_then).
 -- `decorator` LEFT THIS LIST ON 2026-09-08 with a rule, not a waiver:
 -- `r_decorator_call` in rules/js-callgraph.rofl reads the `expression` child
 -- through the value layer, and ONE ARM REACHES BOTH SHAPES — `@decoOnce` names
@@ -432,6 +454,17 @@ checked(js, call_expression, callgraph, r_call_edge, o_run_with_stack, 2).
 -- correcting one level up.
 shape_because(js, s_member_on_ident, callgraph, no_source_target).
 shape_because(js, s_member_on_new,   callgraph, no_source_target).
+
+-- A NINTH RECEIVER SHAPE, 2026-09-08 (w_meta_property). `import.meta.resolve()`
+-- is a call into the HOST, and the residue is irreducible for a reason that is
+-- in TypeScript's own files rather than in an argument: `interface ImportMeta`
+-- in `lib.es5.d.ts` is EMPTY, and `url`/`resolve` are declared in
+-- `lib.dom.d.ts` and `@types/node`. `releaseOf` in scanners/ts_lib.ts returns
+-- null for both — no release in the file name — so `lib_member` cannot carry
+-- them and `lib_unsupported[audit]` could never date them. This is the first
+-- residue on this list whose callee is the HOST's rather than the LANGUAGE's,
+-- and the distinction is exactly the one the era axis cannot represent.
+shape_because(js, s_member_on_meta,  callgraph, no_source_target).
 
 -- ---------------------------------------------------------------------------
 -- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is

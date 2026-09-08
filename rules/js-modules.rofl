@@ -672,3 +672,42 @@ reason_unexercised[audit](K, R) :- unknown_because(js, K, Sh, modules, R),
                                    not reason_earned[audit](K, R).
 reason_earned[audit](K, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
                               shape_verdict(Sh, R).
+
+-- ---------------------------------------------------------------------------
+-- 7. THE MODULE'S OWN METADATA (w_meta_property, 2026-09-08)
+--
+-- Everything above this line models an edge from one module to another. This is
+-- the one construct that points a module at ITSELF: `import.meta` is the
+-- reflective object the host supplies per module instance, and `import.meta.url`
+-- is the module's own identity. It is a module-graph fact and there was nowhere
+-- to put it, because the matrix cell was keyed by NODE KIND and the kind is
+-- shared with `new.target`, which is not a module construct at all.
+--
+-- THE SPLIT RIDES THE COLUMN THIS LAYER ALREADY USES. `axis_applies(shape,
+-- modules)` has been in facts/js-modules.rofl since the specifier refinement,
+-- so the form axis costs two `shape_in` rows and no new machinery — and
+-- `meta_form[code]` in rules/js-structure.rofl is the discriminator, read from
+-- the two identifier children the scanner has always emitted.
+--
+-- WHAT IT DOES NOT CLAIM. `import.meta.resolve(spec)` is a module SPECIFIER
+-- occurring in a fifth place, and it is not modelled here: `site_source` reads
+-- a `source` child and a call carries its argument in `arguments`, so wiring it
+-- in would change `module_site` — the very relation test/js-modules.test.ts
+-- compares SITE FOR SITE against node's own resolver, whose enumeration walks
+-- import and export declarations only. That is a real extension of this layer
+-- with a real oracle cost, and it is a separate item rather than a line here.
+-- What this section says is narrower and complete: which modules reflect on
+-- themselves, and which `meta_property` is not a module construct.
+module_meta[code](F, M) :- meta_form[code](M, import_meta), ast_node[code](M, _, F, _).
+
+-- SELF-REFERENTIAL, as a property of the FILE rather than of a node — the form
+-- a module-graph reader wants. A module with a row here cannot be relocated
+-- without changing what it computes, which is the module-graph consequence of
+-- the construct and the reason it is worth a relation.
+self_referential_module[code](F) :- module_meta[code](F, _).
+
+-- ...and the other half of the kind, named rather than left to a negation
+-- somebody would have to reconstruct: a `meta_property` that is NOT module
+-- metadata. Empty on a corpus with no `new.target`, which is why the audit
+-- names the node instead of counting.
+not_module_meta[audit](M) :- meta_form[code](M, new_target).
