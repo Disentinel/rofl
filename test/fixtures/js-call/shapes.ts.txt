@@ -178,3 +178,18 @@ export function outside(n: number): number {
 }
 
 export async function dyn(p: string) { return import(p); }
+
+// THE TWO ERASURE MARKERS AN EXPORT CARRIES (w_export_specifier_forms,
+// 2026-09-08), and this file is where they can be spelled at all: a `.mjs` has
+// no `type` keyword, so the guards in `export_local` (rules/js-dataflow.rofl)
+// had NO SITE in the runnable half of the corpus and their mutants would have
+// survived for want of one rather than for want of a rule.
+//
+// NEITHER LINE DECLARES ANYTHING NEW. `Base` and `curried` are already here and
+// already reached by the value layer, so with the guard in place these two rows
+// derive NOTHING and with it removed they derive a name the module does not
+// offer at runtime — which is exactly the difference the mutant measures. A
+// fixture that also introduced a function would have moved the census for a
+// question that is not about functions.
+export type { Base as BaseType };
+export { type curried as curriedType };

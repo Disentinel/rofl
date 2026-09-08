@@ -179,9 +179,15 @@ const IMPORTS: { name: string; mut: Mut[]; expect: (m: World, b: World) => void 
     // changes which module `exports_name` answers for — the binding is still
     // this rule. Deleting it takes the direct import and the re-exported one
     // together, which is what says the two paths share a binder.
+    // FOUR SINCE 2026-09-08 (w_export_specifier_forms), and the two new ones say
+    // the same thing about two more export FORMS: `bviaRename -> renamed` comes
+    // through `export { renamed as exposed }`, where the name the importer asks
+    // for is not the name the function has, and `bviaNsReexport -> leaf` through
+    // `export * as alphaAll from`, where what the importer binds is a whole
+    // module. Both reach `may_be_node` by this one arm and go with it.
     expect: (m, b) => assert.deepEqual(
       [...edges(b)].filter((e) => !edges(m).has(e)).sort(),
-      ['bcross -> crossed', 'bviaStar -> crossed'],
+      ['bcross -> crossed', 'bviaNsReexport -> leaf', 'bviaRename -> renamed', 'bviaStar -> crossed'],
       'every cross-file call edge this model derives goes through this one arm'),
   },
   {
@@ -262,7 +268,12 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
     // mutants: `member_value` still names the export, and all three member
     // lookups guard their receiver, so a `program` node passes none of them.
     expect: (m, b) => {
-      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaNs -> crossed']);
+      // TWO EDGES SINCE 2026-09-08: `alphaAll.leaf` is a member lookup on a
+      // module object that arrived through `export * as` rather than through
+      // `import * as`, and the receiver is the same kind of node either way —
+      // which is the point of deriving the namespace re-export as a value.
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['bviaNs -> crossed', 'bviaNsReexport -> leaf']);
       // WAS TWO COUNTS (82 and 30) AND IS NOW THE EQUATION THEY WERE STANDING
       // IN FOR, 2026-09-07. Both moved every time the corpus grew an object or
       // a module, and neither said which rows had gone: the deleted arm reads
@@ -313,8 +324,17 @@ const SPECIFIERS: { name: string; mut: Mut[]; expect: (m: World, b: World) => vo
       // did not already reach. Written out, the list went red for every
       // function the fixture ever gained — which is a fact about alpha.mjs and
       // not about this mutant.
-      const named = exportsOf(b, 'alpha.mjs')
-        .map((x) => `bviaNs -> ${x.split('@')[0]}`);
+      // ...AND `EVERY NAMED EXPORT` STOPPED BEING THE RIGHT SET ON 2026-09-08,
+      // which is a measurement rather than a repair. Two things separated that
+      // the corpus had kept equal: an export's NAME is not its function's name
+      // once `export { renamed as exposed }` exists, and an export written as a
+      // SPECIFIER has no `declaration` child — which is the child the mutated
+      // rule reads. So this mutant reaches every export alpha.mjs writes INLINE
+      // and not the one it writes as a specifier, and the expectation says
+      // which instead of saying `every named export` and being wrong by one.
+      const named = b.q('exports_name[code](F, N, "alpha.mjs")')
+        .filter(([f]) => b.n(`ast_child[code](E, declaration, 0, ${f})`) > 0)
+        .flatMap(([f]) => b.q(`fn_name[code](${f}, N)`).map(([n]) => `bviaNs -> ${n}`));
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
         [...new Set(named.filter((e) => !edges(b).has(e)))].sort(),
         'one binding becomes every named export alpha.mjs has');
@@ -436,7 +456,12 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
     expect: (m, b) => {
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaStar -> crossed'],
         'the name imported only through gamma.mjs stops resolving');
-      assert.deepEqual(reexports(m), [], 'and gamma exports nothing of its own');
+      // ...AND WHAT SURVIVES IS THE OTHER RE-EXPORT ARM, not a leak: gamma also
+      // carries `export * as alphaAll from './alpha.mjs'`, whose specifier is an
+      // ExportNamespaceSpecifier and whose rule is a different one. Deleting the
+      // export-all arm must not take it, and this row is what says so.
+      assert.deepEqual(reexports(m), ['alphaAll@alpha.mjs'],
+        'gamma exports nothing of its own but the namespace it re-exports by name');
       // THE CONJUNCT THAT KEEPS THIS APART FROM r4, which loses the same edge:
       // the SPECIFIER still names a module here, only the names do not travel.
       assert.equal(m.q('import_target[code](S, T)').length, 3,
@@ -499,7 +524,8 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
     // starts costing an edge as well.
     expect: (m, b) => {
       assert.deepEqual(betaExports(b), ['bTag@beta.mjs', 'bcross@beta.mjs', 'bmain@beta.mjs',
-        'bviaNs@beta.mjs', 'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
+        'bviaNs@beta.mjs', 'bviaNsReexport@beta.mjs', 'bviaRename@beta.mjs',
+        'bviaStar@beta.mjs', 'bviaTwin@beta.mjs', 'run@beta.mjs', 'twin@beta.mjs'],
         'beta.mjs exports what beta.mjs declares');
       // WAS FOURTEEN NAMES TYPED OUT AND IS NOW `everything it imports`, read
       // off the BASELINE — which is what keeps it from being circular: the
@@ -529,7 +555,13 @@ const REEXPORT: { name: string; mut: Mut[]; expect: (m: World, b: World) => void
       assert.deepEqual(m.q('import_target[code](S, T)'),
         [['./alpha.mjs', 'alpha.mjs'], ['./gamma.mjs', 'gamma.mjs']],
         'the module only a re-export names stops being resolvable');
-      assert.deepEqual(reexports(m), [], 'so gamma re-exports nothing at all');
+      // ...and the namespace re-export goes with it, for a different reason and
+      // through the same relation: `export * as alphaAll from` puts its source
+      // on the DECLARATION, so it reads `module_source` too — but its own arm,
+      // which this mutant does not delete. What it loses is the resolution of
+      // the specifier that only an export-all names.
+      assert.deepEqual(reexports(m), ['alphaAll@alpha.mjs'],
+        'so gamma re-exports no NAME at all, and keeps the namespace it binds');
       assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)), ['bviaStar -> crossed']);
     },
   },
@@ -551,8 +583,18 @@ test('a re-export carries names and not the default, and the receiver keeps its 
   // r1 through r4 each still break it.
   const sources = targetsOf(m, 'gamma.mjs');
   assert.deepEqual(sources, ['alpha.mjs', 'delta.mjs'], 'the two modules gamma names');
-  assert.deepEqual(reexports(m), [...new Set(sources.flatMap((t) => exportsOf(m, t)))].sort(),
-    'gamma re-exports the NAMED exports of both its sources, and nothing else');
+  // ...PLUS THE NAMESPACES IT BINDS ITSELF, added 2026-09-08. `export * as
+  // alphaAll from './alpha.mjs'` is not a re-export of alpha's NAMES — it
+  // offers ONE name, `alphaAll`, standing for the whole module — so it belongs
+  // on the right-hand side of this equation as its own term rather than being
+  // absorbed into the union. Read off `export_ns_name`, which is the relation
+  // that derives it, so the term is a query and not a typed-out name.
+  const boundNs = m.q('export_ns_name[code](N, S, "gamma.mjs")')
+    .flatMap(([n, src]) => m.q(`import_target[code]("${src}", T)`).map(([t]) => `${n}@${t}`));
+  assert.deepEqual(boundNs, ['alphaAll@alpha.mjs'], 'gamma binds exactly one module by name');
+  assert.deepEqual(reexports(m),
+    [...new Set([...sources.flatMap((t) => exportsOf(m, t)), ...boundNs])].sort(),
+    'gamma re-exports the NAMED exports of both its sources, plus the one module it binds, and nothing else');
   // ...AND NOT THE DEFAULT, which `export *` deliberately leaves behind. This is
   // asserted rather than assumed because `exports_default[code]` is a separate
   // relation with no re-export arm at all, and its absence is the rule.
@@ -562,9 +604,14 @@ test('a re-export carries names and not the default, and the receiver keeps its 
   // reached through gamma and one declared in the calling file, and neither
   // answers for the other.
   assert.equal(m.n('ambiguous_call[audit](C, F, G)'), 8, 'and nothing new is ambiguous');
+  // SIX SINCE 2026-09-08. `exposed` is alpha's `renamed` under the external name
+  // an ExportSpecifier gives it, and `alphaAll` is the module gamma binds with
+  // `export * as` — both are ordinary named imports HERE, which is the point:
+  // the two new export forms need nothing new on the import side at all.
   assert.deepEqual(m.q('imports_name[code](L, N, S, "beta.mjs")')
     .map(([l, n, s]) => `${l}=${n}@${s}`).sort(),
-    ['leaf=crossed@./alpha.mjs', 'trace=trace@./trace.mjs', 'viaStar=crossed@./gamma.mjs',
+    ['alphaAll=alphaAll@./gamma.mjs', 'exposed=exposed@./alpha.mjs',
+     'leaf=crossed@./alpha.mjs', 'trace=trace@./trace.mjs', 'viaStar=crossed@./gamma.mjs',
      'viaTwin=twin@./gamma.mjs']);
 });
 

@@ -386,6 +386,29 @@ in_fn[code](N)   :- nearest_v[flow](_, N).
 -- who imports the class can call it.
 exported_fn[code](F) :- export_kind(K), ast_node[code](E, K, _, _),
                         ast_within[code](E, F), fn_node[code](F), not in_fn[code](F).
+
+-- ...AND THE EXPORT FORM CONTAINMENT CANNOT REACH (w_export_specifier_forms,
+-- 2026-09-08). `export { f }` and `export { f as g }` contain no function at
+-- all — the declaration's subtree is two identifiers — so the rule above walks
+-- it and finds nothing, and until this arm existed a module whose every export
+-- went through a specifier list had an EMPTY entry surface.
+--
+-- MEASURED, on a probe whose three functions were exported only that way:
+-- `exported_fn` 0, `entry_point` 0, `reachable` 0, `no_entry_point[audit]`
+-- firing on the file, and `may_not_be_reached` naming `helper` — a function
+-- that same file exports AND calls. The positive control, the identical three
+-- functions written `export function`, gives all three as entry points and an
+-- empty `may_not_be_reached`. So this is the dangerous direction the export-kind
+-- typo gate already names, arriving through a form rather than a misspelling.
+--
+-- THE JOIN IS `export_local` FROM rules/js-dataflow.rofl AND NOT A SECOND WALK:
+-- that relation already excludes a re-export's `local` (a name in another
+-- module) and a type-only export (erased before anything runs), and both of
+-- those are wrong answers here too. `not in_fn` is the same precision clause the
+-- arm above carries, for the same reason.
+exported_fn[code](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
+                        fn_node[code](F), not in_fn[code](F).
+
 entry_point[code](F) :- exported_fn[code](F).
 
 reachable[code](F) :- entry_point[code](F).

@@ -1130,7 +1130,42 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   // value arm of `prototype_of` load-bearing.
   // +2 on 2026-09-08: `object_pattern` entered the vocabulary with
   // destructuring, and this world declares two layers.
-  assert.equal(sites - resolved, 181, `${sites - resolved} call sites vanished from the frontier`);
+  //
+  // CONVERTED TO AN IDENTITY 2026-09-08 (w_export_specifier_forms), and the
+  // twenty lines of arithmetic above are the argument for converting it: this
+  // is `f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus` with a
+  // fourteen-entry changelog attached, and every entry is a fixture rather than
+  // a change to the model. What the mutant DAMAGES is exact and needs no
+  // number: the sites that stop being accounted for are precisely the ones the
+  // baseline had on its frontier, because the mutation empties `unresolved_call`
+  // and touches nothing else. The baseline residue is the positive control four
+  // lines above, so an identity between two zeros cannot pass unnoticed.
+  // ...AND `sites - resolved` WAS NEVER THE NUMBER THIS MEANT TO PIN. Measured
+  // while converting it: base `call_site` 397, `shape` 397, `resolved_site`
+  // 213, `unresolved_call` 195 — and 397 - 213 = 184, which is neither. The
+  // difference is ELEVEN TRANSFER SITES: `resolved_site` counts a `new` and a
+  // tagged template, `call_site` and `shape` do not, so the subtraction mixed
+  // two populations and its fourteen-entry changelog above was tracking a
+  // corpus through a quantity nothing else in the model uses.
+  //
+  // WHAT THE MUTATION ACTUALLY DAMAGES, stated as a set: a shaped site with NO
+  // verdict at all — neither resolved nor on the frontier. That is zero in the
+  // baseline by the totality the frontier exists to keep, and under the mutant
+  // it is exactly the baseline's frontier, because the mutation empties
+  // `unresolved_call` and touches no rule that decides resolution.
+  const orphaned = (w: Model): number => {
+    const res = new Set(w.binds('resolved_site[code](C)', 'C'));
+    const front = new Set(w.binds('unresolved_call[code](C, S)', 'C'));
+    return new Set(w.binds('shape[code](C, S)', 'C')).size
+      - [...new Set(w.binds('shape[code](C, S)', 'C'))].filter((c) => res.has(c) || front.has(c)).length;
+  };
+  const baseline = build([]);
+  const baseFrontier = new Set(baseline.binds('unresolved_call[code](C, S)', 'C')).size;
+  assert.equal(orphaned(baseline), 0,
+    'positive control: the baseline accounts for every shaped site, so the identity below is not two zeros');
+  assert.ok(baseFrontier > 30, `positive control: the baseline frontier is ${baseFrontier}`);
+  assert.equal(orphaned(mut), baseFrontier,
+    `${orphaned(mut)} shaped sites fell out of the bottom, and the baseline frontier held ${baseFrontier}`);
   // an empty frontier is not success: the shapes still exist and the sites
   // still do not resolve. `shape_stale` is what says so — every verdict now
   // stands over a shape the model claims is finished.

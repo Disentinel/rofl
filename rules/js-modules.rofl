@@ -210,6 +210,104 @@ binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
 has_specifier[code](I) :- import_spec[code](I, _).
 
 -- ---------------------------------------------------------------------------
+-- 4b. EXPORT BINDINGS — the mirror of section 4, and a second set of rules
+--     rather than the same one, because the two forms read OPPOSITE children.
+--
+-- An import binds a LOCAL name in this module to a name in another one. An
+-- export binds an EXTERNAL name — the one other modules will ask for — to a
+-- name in THIS one. They are not the same relation with the arrows reversed:
+-- a module's external name for a binding can differ from its internal one, and
+-- that difference has no other node to live on.
+--
+--   export { b }              ExportSpecifier            external b  <- local b
+--   export { b as bb }        ExportSpecifier            external bb <- local b
+--   export * as ns from '...' ExportNamespaceSpecifier   external ns <- "*"
+--
+-- MEASURED FROM THE SCANNER on a probe holding all three, rather than recalled:
+-- an ExportSpecifier carries `local` AND `exported`; an
+-- ExportNamespaceSpecifier carries `exported` and NO `local` — there is no
+-- local name for `* as ns` at all, and `export * as ns from` is an
+-- ExportNamedDeclaration, NOT an ExportAllDeclaration. So a rule that reads one
+-- child for both forms is wrong about one of them, and the mutant set targets
+-- exactly that. `"*"` is not invented here: it is what section 4 already writes
+-- for an ImportNamespaceSpecifier's imported name.
+--
+-- WHAT THIS SECTION DOES NOT CLAIM. A re-export (`export { q } from './d'`,
+-- `export * as ns from './d'`) is also a module EDGE, and that edge is
+-- `export_named_declaration`'s cell and w_mod_beyond_the_import's work. Nothing
+-- below reads `source`; the naming question and the edge question are separate
+-- and only the first is answered here.
+
+export_site[code](E) :- ast_node[code](E, export_named_declaration, _, _).
+export_spec[code](E, Sp) :- export_site[code](E), ast_child[code](E, specifiers, _, Sp).
+
+export_specifier_node[code](Sp) :- ast_node[code](Sp, export_specifier, _, _).
+export_specifier_node[code](Sp) :- ast_node[code](Sp, export_namespace_specifier, _, _).
+
+-- the name other modules ask for. BOTH forms carry it, and it is `exported`.
+spec_external[code](Sp, X) :- export_specifier_node[code](Sp),
+                              ast_child[code](Sp, exported, 0, N), ast_name[code](N, X).
+-- ...and the arbitrary-module-namespace-name form, `export { a as "a-b" }`,
+-- where `exported` is a StringLiteral instead of an Identifier. Zero
+-- occurrences in this repository; two lines is cheaper than a verdict about
+-- why it is missing, which is the argument section 4 already makes for the
+-- import half of the same ES2022 grammar.
+spec_external[code](Sp, X) :- export_specifier_node[code](Sp),
+                              ast_child[code](Sp, exported, 0, N), ast_value[code](N, X).
+
+-- the name INSIDE this module. Only the plain specifier has one.
+spec_internal[code](Sp, L)   :- ast_node[code](Sp, export_specifier, _, _),
+                                ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
+spec_internal[code](Sp, "*") :- ast_node[code](Sp, export_namespace_specifier, _, _).
+
+export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
+                                                   spec_external[code](Sp, External),
+                                                   spec_internal[code](Sp, Internal).
+
+-- THE CASE THE CELL EXISTS FOR, as a relation rather than a comment so that it
+-- is queryable: the two names differ, and a reader of `local` alone would
+-- report the wrong one to every importer.
+export_renamed[code](Sp, External, Internal) :- export_binding[code](_, Sp, External, Internal),
+                                                External != Internal.
+
+-- ERASURE, THE SAME TWO MARKERS AND THE SAME TRAP AS SECTION 5.
+--
+--   export type { X }   -> ExportNamedDeclaration exportKind "type",
+--                          and its ExportSpecifier exportKind "VALUE"
+--   export { type X }   -> ExportNamedDeclaration exportKind "value",
+--                          and its ExportSpecifier exportKind "type"
+--
+-- Reading either marker alone gets one of the two forms wrong, and the
+-- specifier of a type-only declaration says the OPPOSITE of the truth. Both are
+-- read, and both negations are separately mutated.
+export_decl_type_only[code](E)  :- ast_attr[code](E, export_kind, "type").
+export_spec_type_only[code](Sp) :- ast_attr[code](Sp, export_kind, "type").
+
+-- a name that survives to runtime: NEITHER marker says type. An
+-- ExportNamespaceSpecifier carries no exportKind attribute at all, so it falls
+-- through both negations and is a value binding, which is correct — `export *
+-- as ns` has no type-only spelling.
+export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _),
+                                     not export_decl_type_only[code](E),
+                                     not export_spec_type_only[code](Sp).
+
+-- THE GATE, in both directions. Every specifier node under an export
+-- declaration must produce EXACTLY ONE external name: none means a child these
+-- rules do not read, and two means the name is not a function of the specifier.
+-- Written as two relations rather than one count because a count cannot say
+-- WHICH, and the specifier is the thing a person would go and look at.
+export_bound[audit](Sp) :- export_binding[code](_, Sp, _, _).
+export_binding_missing[audit](Sp)  :- export_spec[code](_, Sp), not export_bound[audit](Sp).
+export_binding_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, A, _),
+                                            export_binding[code](_, Sp, B, _), A != B.
+
+-- ...and the same for the internal half, which the relation above cannot see:
+-- a specifier bound to two internal names is one external name pointing at two
+-- things, and `export_binding_conflict` is keyed on the external column.
+export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
+                                             export_binding[code](_, Sp, _, B), A != B.
+
+-- ---------------------------------------------------------------------------
 -- 5. DEPENDS, EVALUATES, FLOWS — three relations, because two do not separate
 --    the three things that actually happen.
 

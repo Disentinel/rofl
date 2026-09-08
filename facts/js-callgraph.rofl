@@ -436,3 +436,21 @@ handled(js, export_default_declaration, callgraph, r_imported_name).
 -- is gamma.mjs, which declares no function and re-exports two modules, one of
 -- which nothing else imports.
 handled(js, export_all_declaration,     callgraph, r_reexported_name).
+
+-- THE TWO EXPORT FORMS WITH NO NODE IN THE VOCABULARY, 2026-09-08
+-- (w_export_specifier_forms). `export { a as b }` is where a module's EXTERNAL
+-- name for a binding stops being its internal one, and `export * as ns from` is
+-- where a module offers ANOTHER module under a name of its own. Both are read in
+-- rules/js-dataflow.rofl and both reach this layer through `may_be_node` like
+-- every other value — the fourth time in this loop the module boundary has cost
+-- a value fact and no mechanism at all.
+--
+-- MEASURED BEFORE THE RULE: with `export { hidden as shown }` beside `export
+-- function plain`, `exports_name` derived exactly one row — `plain` — and the
+-- cross-file call `usesShown -> hidden` was missing with its site reported as an
+-- unresolved `s_identifier`. SILENT, not wrong-named.
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+handled(js, export_specifier,           callgraph, r_export_rename).
+handled(js, export_namespace_specifier, callgraph, r_namespace_reexport).
+

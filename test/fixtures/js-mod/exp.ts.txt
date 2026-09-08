@@ -1,0 +1,58 @@
+// exp.ts — ONE EXPORT SITE PER SPECIFIER KIND, and per ERASURE MARKER.
+//
+// A SEPARATE FILE rather than more lines in a.ts, for the reason
+// era-position.js exists in the era corpus: a.ts is asserted site for site
+// against node's own resolver, and every assertion in that comparison is keyed
+// on `(file, line, specifier)`. An export form that carries a source would move
+// the line numbers of ten import sites; one that does not carries no specifier
+// at all and would read as a site the oracle never enumerated.
+//
+// IT IMPORTS NOTHING, deliberately. `import_site` is `import_declaration` plus
+// `import_expression` and this file contains neither, so the census, the
+// oracle comparison and every shape count in test/js-modules.test.ts see
+// exactly what they saw before it existed. What it adds is EXPORT bindings,
+// which is a different relation.
+
+const internal = 1;
+const alsoInternal = 2;
+const shorthand = 3;
+
+// THE RENAME. The external name is not the internal one, so a rule reading
+// `local` and a rule reading `exported` derive different rows and a mutant that
+// swaps them is observable. Every other export form in this repository has the
+// two names equal.
+export { internal as external };
+
+// ...AND THE SHORTHAND, where they ARE equal. It is here as the control: with
+// only the rename above, a rule that read `exported` for both columns would
+// still produce one row per specifier and only the pair would be wrong.
+export { shorthand };
+
+// THE TWO ERASURE MARKERS, which are the same two an import carries and
+// neither implies the other — measured against babel 8 rather than recalled:
+//
+//   export type { X }   -> ExportNamedDeclaration exportKind "type",
+//                          and its ExportSpecifier exportKind "VALUE"
+//   export { type X }   -> ExportNamedDeclaration exportKind "value",
+//                          and its ExportSpecifier exportKind "type"
+//
+// So reading either marker alone gets one of the two forms wrong, and the
+// specifier of a type-only declaration says the OPPOSITE of the truth.
+type Erased = { tag: 'Erased' };
+type AlsoErased = { tag: 'AlsoErased' };
+
+export type { Erased as ErasedOut };
+export { type AlsoErased as AlsoErasedOut, alsoInternal as alsoExternal };
+
+// THE NAMESPACE RE-EXPORT, ES2020. babel parses `export * as ns from` as an
+// ExportNamedDeclaration whose one specifier is an ExportNamespaceSpecifier —
+// NOT an ExportAllDeclaration — and that specifier carries an `exported` child
+// and NO `local` child. There is no local name for `* as ns` at all, which is
+// why the modules layer binds it to `"*"`, exactly as an ImportNamespace-
+// Specifier's imported name is `"*"`.
+export * as everything from './b.ts';
+
+// ...and the plain `export * from`, which has NO specifier node of any kind.
+// It is here so that "a declaration with no specifiers" is a case the export
+// binding rules meet rather than a case they were never shown.
+export * from './types2.ts';

@@ -726,6 +726,80 @@ exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, F
                                      import_target[code](Src, Target),
                                      exports_name[code](F, Name, Target).
 
+-- ...AND THE FORM WHOSE EXTERNAL NAME IS NOT ITS INTERNAL ONE
+-- (w_export_specifier_forms, 2026-09-08). `export { a as b }` is an
+-- ExportNamedDeclaration with NO `declaration` child and a `specifiers` list,
+-- so the first arm above — which reads `declaration` — derives NOTHING for it.
+--
+-- MEASURED BEFORE THE RULE, because the item's brief allowed either answer and
+-- the difference matters: on a two-file probe with `export { hidden as shown }`
+-- beside `export function plain`, `exports_name` returned exactly ONE row,
+-- `plain`, and the cross-file call `usesShown -> hidden` was absent from
+-- `calls_in` with its site reported as an unresolved `s_identifier`. So the
+-- model was SILENT rather than wrong-named. It did not believe the module
+-- exported `hidden`; it believed the module exported nothing.
+--
+-- `may_be_node` ON THE `local` CHILD IS THE WHOLE RESOLUTION, and no new
+-- mechanism was needed for the second time in this loop: entry 6 already says
+-- an identifier naming a declared function IN THIS FILE evaluates to that
+-- function, and the specifier's `local` child is exactly such an identifier.
+-- Reading `exported` here instead would name the function `b` denotes, which
+-- outside this file is nothing.
+--
+-- A SPECIFIER UNDER A DECLARATION WITH A `source` IS A DIFFERENT SENTENCE.
+-- `export { q } from './d'` re-exports someone ELSE'S binding: its `local`
+-- child is a name in the OTHER module and there is no local function for it
+-- here. Without this negation a `local` that happened to collide with a
+-- function of this file would be re-exported instead — the file-scope defect
+-- delta.mjs exists to catch, arriving through a different door.
+reexport_decl[code](E) :- ast_node[code](E, export_named_declaration, _, _),
+                          ast_child[code](E, source, 0, _).
+
+-- ERASURE, THE SAME TWO MARKERS AN IMPORT CARRIES AND NEITHER IMPLYING THE
+-- OTHER: `export type { X }` marks the DECLARATION and leaves the specifier
+-- saying "value"; `export { type X }` marks the SPECIFIER. A type-only export
+-- names nothing at runtime, so it must not reach `may_be_node`.
+export_list_erased[code](E)  :- ast_attr[code](E, export_kind, "type").
+export_item_erased[code](Sp) :- ast_attr[code](Sp, export_kind, "type").
+
+export_local[code](L, Ext, File) :-
+    ast_node[code](E, export_named_declaration, File, _),
+    not reexport_decl[code](E), not export_list_erased[code](E),
+    ast_child[code](E, specifiers, _, Sp),
+    ast_node[code](Sp, export_specifier, _, _), not export_item_erased[code](Sp),
+    ast_child[code](Sp, local, 0, L),
+    ast_child[code](Sp, exported, 0, X), ast_name[code](X, Ext).
+
+exports_name[code](F, Ext, File) :- export_local[code](L, Ext, File),
+                                    may_be_node[flow](L, F).
+
+-- ...AND THE NAMESPACE RE-EXPORT, which exports a MODULE rather than a name in
+-- it. `export * as ns from './m'` is an ExportNamedDeclaration whose one
+-- specifier is an ExportNamespaceSpecifier — measured from the scanner, not
+-- recalled — with the source on the DECLARATION, an `exported` child on the
+-- specifier and NO `local` child anywhere: there is no local name for `* as ns`
+-- at all.
+--
+-- WHAT IT EXPORTS UNDER THAT NAME IS THE OTHER MODULE'S OBJECT, and that node
+-- already has a name here: `module_object` is the target file's `program`. So
+-- an importer's `ns.f()` is an ordinary member lookup through `member_value`
+-- over the exports, exactly as a namespace IMPORT is, and the call graph needs
+-- nothing new — the third time in this loop the module boundary has cost a
+-- value fact and no mechanism.
+module_source[code](N, Src, File) :- ast_node[code](N, export_named_declaration, File, _),
+                                     ast_child[code](N, source, 0, S), ast_value[code](S, Src).
+
+export_ns_name[code](Name, Src, File) :-
+    ast_node[code](E, export_named_declaration, File, _),
+    ast_child[code](E, specifiers, _, Sp),
+    ast_node[code](Sp, export_namespace_specifier, _, _),
+    ast_child[code](Sp, exported, 0, X), ast_name[code](X, Name),
+    module_source[code](E, Src, File).
+
+exports_name[code](P, Name, File) :- export_ns_name[code](Name, Src, File),
+                                     import_target[code](Src, Target),
+                                     module_object[flow](P, Target).
+
 may_be_node[flow](E, F) :- imports_name[code](Local, Name, Src, File),
                            import_target[code](Src, Target),
                            exports_name[code](F, Name, Target),
