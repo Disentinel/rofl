@@ -730,3 +730,75 @@ export class Outer {
 // `plated["#edge"]`.
 const plated = { '#edge': 'a string key, not a private name' };
 export function reachesPlated(): string { return plated['#edge']; }
+
+// =============================================================
+// A DECORATOR RETURNS A REPLACEMENT (w_decorator_replaces_its_target, 62).
+// The CALL a decorator makes landed on 2026-09-08 as `r_decorator_call`; what
+// it does to the thing it decorates did not. `@decoFerrule class Swage {}`
+// binds `Swage` to whatever `decoFerrule` gave back, and until this block the
+// value layer answered the ORIGINAL class for every read of that name.
+//
+// THE TWO DECORATORS ALREADY IN THIS FILE COULD NOT SHOW IT, and that is why
+// these are here rather than a rule being written against them: `decoOnce` and
+// `decoApplied` both `return value`, a PARAMETER, and a decorator call has no
+// argument nodes in the grammar at all — so `may_be_node` of both decorator
+// nodes was measured EMPTY, and a replacement rule over them would have derived
+// nothing while looking finished. A decorator that returns a NAMED thing is the
+// smallest site at which the question has an answer to be right or wrong about.
+//
+// `Swage.spliced(n)` IS THE OBSERVATION, and it is chosen so that the original
+// cannot answer it: `Swage` declares no members whatever, so the edge exists
+// only if the name reaches `Ferrule`. The alternative — giving both classes the
+// same method — would have derived the same edge NAME either way and measured
+// nothing.
+function swaged(n: number): number { return n + 31; }
+function crimped(n: number): number { return n + 32; }
+function slung(n: number): number { return n + 33; }
+function bitted(n: number): number { return n + 34; }
+
+class Ferrule {
+  static spliced(n: number): number { return swaged(n); }
+}
+function decoFerrule(_value, _ctx) { return Ferrule; }
+function decoCrimp(_value, _ctx) { return crimped; }
+function decoBitt(_value, _ctx) { return bitted; }
+
+@decoFerrule
+class Swage {}
+export function usesSwage(n: number): number { return Swage.spliced(n); }
+
+// A DECORATED METHOD AND AN AUTO-ACCESSOR IN ONE CLASS. `seized` is replaced by
+// `crimped` — a method decorator returns the new method — and `sling` is an
+// auto-accessor whose value is a function, which is the shape that gives
+// `class_accessor_property` anything to say at either layer: the corpus had a
+// DECLARATION and no READ, so both its cells were open for want of a site
+// rather than for want of a rule.
+// THE STATIC ONE IS NOT DECORATION EITHER. `class_member_static` and
+// `class_member_proto` read the flag off the DECORATED MEMBER and not off what
+// came back — a replacement is an ordinary function and carries no `static`
+// attribute — so without a decorated static method the static half of that pair
+// has no site and its mutant cannot die. `decoBitt` is a THIRD decorator rather
+// than a reuse of `decoCrimp` for the same reason the two classes above have
+// different members: one replacement reached through two arms would derive the
+// same edge either way and measure neither.
+//
+// `#tucked` AND `tucked` ARE THE NEGATIVE CONTROL, on the pattern `#rim`/`rim`
+// already sets in this file. `decorated_member` restricts itself to
+// `class_method`, and `class_method_of` carries a PRIVATE method too — so
+// without that one literal a decorated private method would enter
+// `member_value` under its bare name and `new Thimble().tucked(n)` would answer
+// the replacement of a member it cannot see. A private name is lexical and
+// never reaches a receiver lookup; these two lines are what makes that
+// statement falsifiable instead of true by absence.
+class Thimble {
+  @decoCrimp seized(n: number): number { return slung(n); }
+  @decoBitt static tightened(n: number): number { return slung(n); }
+  @decoCrimp #tucked(n: number): number { return slung(n); }
+  accessor sling = slung;
+  tucked(n: number): number { return bitted(n) + this.#tucked(n); }
+  hauls(n: number): number { return this.sling(n); }
+}
+export function usesThimble(n: number): number {
+  return new Thimble().seized(n) + new Thimble().hauls(n) + Thimble.tightened(n);
+}
+export function usesTucked(n: number): number { return new Thimble().tucked(n); }

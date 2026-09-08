@@ -868,6 +868,26 @@ may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
 -- through neither receiver.
 edb(class_field_kind).
 class_field_kind(class_property).
+-- AN AUTO-ACCESSOR IS A FIELD WITH A PAIR OF SYNTHESISED FUNCTIONS IN FRONT OF
+-- IT, 2026-09-08 — queue item w_decorator_replaces_its_target (62). `accessor
+-- sling = slung` declares a private backing slot, a getter that reads it and a
+-- setter that writes it, and on the only question THIS layer asks — what does
+-- `o.sling` evaluate to — the three collapse into one answer: the initialiser,
+-- exactly as for a plain field. So it is a ROW here rather than a rule, and the
+-- `static` flag it carries decides the receiver half the same way.
+--
+-- IT WAS NOT A RULE THAT WAS MISSING. Measured before this row, over a corpus
+-- that had held `accessor slot = 4` since decorators landed: `member_value` had
+-- no `slot` key, `own_key` had none, and the kind's two open cells were open
+-- because the corpus had a DECLARATION AND NO READ. The site came first —
+-- `Thimble.sling` holds a function and `hauls` calls it — and then this row.
+--
+-- WHAT IT DOES NOT SAY: that reading `o.sling` transfers control. It does, into
+-- a getter the LANGUAGE wrote, and `ignored(js, class_accessor_property,
+-- controlflow, a_both_accessors_are_synthesised)` is that verdict — a
+-- `class_accessor_property` carries no `kind` attribute, so `accessor_of` can
+-- never reach one and this row cannot manufacture an accessor call by accident.
+class_field_kind(class_accessor_property).
 
 field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                   ast_child[code](B, body, _, P),
@@ -1626,3 +1646,99 @@ catch_from_host[flow](P) :- catch_from_call[flow](P), not caught_value[flow](P, 
 -- reading, host included — a dead handler rather than a limit of the model.
 catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
                              not thrown_in[flow](T, _), not call_in_try[flow](T).
+
+-- ---------------------------------------------------------------------------
+-- WHAT A DECORATOR DOES TO THE THING IT DECORATES — `r_decorator_replacement`,
+-- 2026-09-08, queue item w_decorator_replaces_its_target (62). It is the VALUE
+-- half of a call whose other half landed the same day as `r_decorator_call`.
+--
+-- `@decoFerrule class Swage {}` does not merely CALL `decoFerrule` with the
+-- class: it binds `Swage` to whatever came back. So the name evaluates to the
+-- decorator's return and, until these rules, this layer answered the original
+-- class for every read of it. Nothing new is needed to get the return —
+-- `may_be_node` already carries what a call gave back through `resolves[code]`,
+-- and a decorator node IS a `resolves` site — so this is a join and not a
+-- mechanism, which is the same shape the tagged template's value half took.
+--
+-- MEASURED BEFORE A LINE OF IT WAS WRITTEN, and the measurement is why the
+-- fixture grew rather than the rules being written against the sites that
+-- existed: `may_be_node` of BOTH decorator nodes in the corpus was EMPTY.
+-- `decoOnce` and `decoApplied` both `return value`, a PARAMETER, and a
+-- decorator call has no argument nodes in the grammar at all — so `arg_at` has
+-- nothing to bind and the parameter has no value. A rule written then would
+-- have derived nothing while looking finished.
+decorated_by[flow](Owner, N) :- decorates[code](Owner, D), may_be_node[flow](D, N).
+
+-- 1. A DECORATED CLASS ANSWERS TO ITS NAME, and the name is what the binding
+--    holds. `class_named` is already the relation that says which name reaches
+--    this class in this file — the same one `new C()` and `super` read — so the
+--    replacement enters through it and inherits its declared file scope.
+--
+-- IT ADDS RATHER THAN REPLACES, and that is the may-set discipline and not a
+-- hedge: `may_be_node` is an UNDER-approximation whose rows mean `either of
+-- these`, and a rule that RETRACTED the class would have to be sure the
+-- decorator returns something, which for `@decoOnce` — a decorator that returns
+-- its argument — is the class again. So the model says `Swage` may be `Swage`
+-- or may be `Ferrule`, both of which are true of some decorator.
+may_be_node[flow](E, N) :- decorated_by[flow](CD, N), class_named[flow](CD, Name, File),
+                           ident_in[code](E, Name, File).
+
+-- 2. A DECORATED METHOD IS A MEMBER HOLDING THE REPLACEMENT. The `static` flag
+--    is read off the METHOD and not off what came back, for the reason
+--    `field_of` already records one section up: the replacement is an ordinary
+--    function and carries no such attribute, so a member built on it would be
+--    visible through NEITHER receiver.
+--
+-- `class_method` AND NOT `class_private_method`, deliberately: a private method
+-- is reached by `private_binds` and never by `member_value`, so an arm here
+-- would be a row with no consumer. Named rather than left as an absence.
+--
+-- THAT LITERAL IS REDUNDANT TODAY AND IS KEPT ANYWAY, measured with a site
+-- rather than argued: `@decoCrimp #tucked(n)` is in the fixture, deleting the
+-- literal moves NOT ONE ROW, and the reason is a THIRD relation — `key_name`
+-- reads a `name` attribute and a private method's `key` child is a
+-- `private_name` NODE whose name sits on the identifier beneath it, so
+-- `decorated_member` cannot fire for a private member either way. Same
+-- precedent as `closer[code]` in rules/js-callgraph.rofl carrying `F != G`
+-- explicitly: a guard is kept so the rule does not depend SILENTLY on another
+-- relation's blindness. If `key_name` ever learns a private key — which needs a
+-- string operation this kernel has not got, see
+-- f_a_private_method_resolves_and_cannot_be_named — this literal starts
+-- earning its keep the same hour.
+--
+-- AND NO ARM FOR A DECORATED FIELD OR AUTO-ACCESSOR, which is a statement about
+-- the LANGUAGE rather than about effort: a field decorator returns an
+-- initialiser TRANSFORMER and an auto-accessor decorator returns a `{get, set,
+-- init}` triple — neither is the member's value, and a rule that treated the
+-- return as one would answer `o.k` with the wrong object. Recorded as
+-- f_a_decorator_returns_a_different_shape_for_every_position.
+decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
+                                         ast_node[code](M, class_method, _, _),
+                                         class_method_of[flow](CD, M),
+                                         ast_child[code](M, key, 0, K), key_name[code](K, Key).
+--
+-- NO `own_key` ARM, AND THE FIRST DRAFT HAD ONE. It made the program
+-- UNSTRATIFIABLE and the kernel said so on the next load, naming seventy
+-- relations that "negate something that never settles": `member_value` reads
+-- `not own_key` to make an inherited member a lookup rather than a union, and
+-- `own_key` here would have depended on `may_be_node` and so on `member_value`
+-- itself. The invariant is written above the structural arm in this same file —
+-- "`own_key` reads the class body directly and does not depend on
+-- `member_value`" — and it costs nothing to keep: a decorated method's key is
+-- already an own key through that arm, because the METHOD is still in the body.
+--
+-- AND NO `member_value` ARM EITHER, WHICH IS THE SAME MUTANT THE FIELD RULES
+-- PAID FOR ONE SECTION UP. The draft had `member_value(CD, Key, N) :-
+-- decorated_member(...)` and deleting it moved TWO ROWS OF `member_value` AND
+-- NOT ONE EDGE, because every consumer that can reach a decorated method reads
+-- `class_member_static` / `class_member_proto` directly. It would not have
+-- become load-bearing through inheritance either: `member_value` walks
+-- `super_of`, but the inherited row carries the REPLACEMENT, which is an
+-- ordinary function with no `static` attribute, so neither receiver half could
+-- read it — exactly the hole `inherited_field` exists to close for a field. An
+-- arm whose deletion changes nothing is decoration, and this one is left out
+-- rather than left in with a mutant that cannot die.
+class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N),
+                                         ast_attr[code](M, static, true).
+class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N),
+                                         ast_attr[code](M, static, false).

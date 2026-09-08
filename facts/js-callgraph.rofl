@@ -271,7 +271,17 @@ unknown_because(js, await_expression,           callgraph, not_yet).
 -- the function and `@decoFactory('m')` names a call whose RESULT is applied.
 -- Measured: `resolves` gains exactly two rows and the edge set gains exactly
 -- `top -> decoOnce` and `top -> decoApplied`.
-unknown_because(js, class_accessor_property,    callgraph, not_yet).
+-- ...AND `class_accessor_property` LEFT IT ON 2026-09-08 THE WAY A FIELD DID,
+-- with a ROW rather than a rule: `class_field_kind(class_accessor_property)` in
+-- rules/js-dataflow.rofl puts `accessor sling = slung` into `field_of`, and a
+-- member holding a function is a callee target — `this.sling(n)` resolves for
+-- exactly the reason `this.strike(n)` already did.
+--
+-- ITS EXCUSE WAS NEVER A RULE'S ABSENCE. Measured over the corpus that had held
+-- `accessor slot = 4` since decorators landed: `member_value` carried no key
+-- for it, because there was a DECLARATION AND NO READ and the site could not
+-- decide anything. The fixture came first.
+handled(js, class_accessor_property,        callgraph, r_field_value).
 
 -- ===========================================================================
 -- THE FRONTIER, BY SHAPE. Every shape whose sites do not all resolve has a row
