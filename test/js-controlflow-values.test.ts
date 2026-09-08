@@ -769,8 +769,11 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       // arm, which this mutant leaves standing, and `includes` on a multiset
       // then hides its inline twin. A named set grown by a second item, which
       // is the merge shape this ledger is built for.
+      // ...AND `string.replaceAll` JOINED 2026-09-08 (w_env_api_surface) for the
+      // same reason as `bigint.toString`: `'aaa'.replaceAll(...)` is a receiver
+      // written in place, so the KIND arm is the only thing that answers it.
       assert.deepEqual(stdlib(b).filter((x) => !stdlib(m).includes(x)),
-        ['bigint.toString', 'string.concat']);
+        ['bigint.toString', 'string.concat', 'string.replaceAll']);
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)') * 2);
     },
   },
@@ -789,10 +792,15 @@ const PROTO: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       // THE UNION, 2026-09-08: w_update_and_literals added a bigint receiver
       // and two regexp ones, and `MATCHER.test(s)` is the SECOND row this arm
       // carries alone — the first being the bound array.
-      assert.deepEqual(stdlib(b), ['array.join', 'array.join', 'bigint.toString',
-        'regexp.test', 'regexp.test', 'string.concat'],
+      // TWO MORE ON 2026-09-08 (w_env_api_surface): `[1,2,3].at(0)` and
+      // `'aaa'.replaceAll(...)`, both receivers written IN PLACE, so both are
+      // answered by the kind arm and both survive this mutant — which is why
+      // they appear on each side of the pair below.
+      assert.deepEqual(stdlib(b), ['array.at', 'array.join', 'array.join', 'bigint.toString',
+        'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll'],
         'two arrays, two regexps and a bigint — some written in place, some reached through a binder');
-      assert.deepEqual(stdlib(m), ['array.join', 'bigint.toString', 'regexp.test', 'string.concat'],
+      assert.deepEqual(stdlib(m), ['array.at', 'array.join', 'bigint.toString', 'regexp.test',
+        'string.concat', 'string.replaceAll'],
         'and the bound array and the bound regexp are the rows this arm carries');
       assert.ok(b.n('prototype_of[flow](E, P)') > m.n('prototype_of[flow](E, P)'));
     },
@@ -823,8 +831,14 @@ test('the residue that is the standard library is a row, not a comment', () => {
   // rules/js-callgraph.rofl has carried `the String prototype, which is the
   // standard library and a different programme` as PROSE since the shape split.
   // A sentence in a comment cannot go red and cannot be counted.
-  assert.deepEqual(stdlib(m), ['array.join', 'array.join', 'bigint.toString',
-    'regexp.test', 'regexp.test', 'string.concat']);
+  assert.deepEqual(stdlib(m), [
+    // TWO MORE ON 2026-09-08 with w_env_api_surface, and they are what that item
+    // ATTRIBUTED: `array.at` is ES2022 and `string.replaceAll` ES2021, so this
+    // list is no longer only a residue — every row now carries a method name and
+    // the year it landed, from TypeScript's own lib.es*.d.ts.
+    'array.at', 'array.join', 'array.join', 'bigint.toString',
+    'regexp.test', 'regexp.test', 'string.concat', 'string.replaceAll',
+  ]);
   // ...AND IT RESOLVES NOTHING, which is asserted rather than assumed: every
   // site it names is still on the frontier, and the audit moved no edge.
   for (const [c] of m.q('stdlib_member[audit](C, P, K)')) {
