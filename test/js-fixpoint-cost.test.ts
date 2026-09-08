@@ -61,10 +61,33 @@ interface Cost { total: number; top: string[]; share: [string, number][]; facts:
  *  reports it. scripts/kernel_grep.ts scans `src/`, so nothing about this
  *  wrapper touches the kernel's closed vocabulary. */
 function cost(): Cost {
+  // PACKS FIRST, FACTS AFTER, AND THE TALLY ROUND `evaluate` — corrected
+  // 2026-09-08 and this is the FIFTH file with the construction, the worst of
+  // the five because THIS one exists to measure a fixpoint.
+  //
+  // WHAT IT WAS MEASURING. The AST facts were asserted first and the packs
+  // loaded after, and `r.load()` re-evaluates under its own DEFAULT_BUDGET of
+  // 100 000 steps — so the third `load` truncated, left
+  // `hole($load(3), budget_exhausted)` in the store, and the tally wrapped a
+  // load that could not finish. MEASURED both ways on the same corpus:
+  //
+  //     facts first   calls_in    0 rows   207 857 facts    70 156 firings
+  //     packs first   calls_in  313 rows   348 889 facts   140 679 firings
+  //
+  // `calls_in` at ZERO is the tell and it was in front of anyone who asked:
+  // the call graph — the whole point of this corpus — was never derived in the
+  // world whose cost this file pins. Every figure it has carried, and every
+  // 2x2 taken through it, described a fixpoint half the size of the real one.
+  //
+  // AND THE TALLY HAD TO MOVE WITH IT. It wrapped the final `load` because that
+  // load was where the evaluation happened; with the packs loaded first there is
+  // nothing left to evaluate until `evaluate` is called, so the wrapper goes
+  // round that instead. Same instrument, the whole fixpoint inside it.
   const r = new Rofl();
-  r.load(read('boot.rofl'));
+  r.load([read('boot.rofl'),
+          ...['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'].map(read),
+          ...RULES.map(read)].join('\n'));
   r.assert(FILES.map(([l, d]) => scan(read(path.join(FIX, d)), { file: l }).facts.join('\n')).join('\n'));
-  r.load(['facts/js-kinds.rofl', 'facts/js-callgraph.rofl'].map(read).join('\n'));
 
   const st = (r as unknown as { store: Record<string, unknown> }).store;
   const tally = new Map<string, number>();
@@ -79,7 +102,11 @@ function cost(): Cost {
       return out;
     };
   }
-  r.load(RULES.map(read).join('\n'));
+  r.evaluate(400_000_000);
+  assert.deepEqual(r.query('hole(Q, W)').rows.map((x) => `${x.bindings.Q}/${x.bindings.W}`), [],
+                   'the world whose cost this file measures must reach its fixpoint');
+  assert.ok(r.query('calls_in[code](F, A, B)').rows.length > 100,
+            'positive control: the call graph this corpus exists for is derived');
 
   let total = 0;
   for (const n of tally.values()) total += n;
@@ -93,11 +120,13 @@ function cost(): Cost {
   // this file already recorded one place further down the list, where the fourth
   // and fifth were 5.25 and 5.24.
   //
-  // FIVE PER CENT IS WHERE THE MEASURED GAP IS: six paths between 5.84 and
-  // 10.05, then nothing until 4.47. A threshold with a 1.4-point gap under it is
-  // a stable set where a rank is not.
+  // THE CUT MOVED TO 4.5 ON 2026-09-08, when the world stopped being truncated
+  // and every share changed. Measured on the whole fixpoint: six paths between
+  // 4.99 and 8.63, then nothing until 3.84. Five per cent would now sit ON the
+  // sixth path (4.99) — a cut has to be where the data has a gap, and the gap
+  // moved when the measurement stopped being of half a world.
   const share = ranked.map(([k, v]) => [k, (100 * v) / total] as [string, number])
-    .filter(([, pct]) => pct >= 5);
+    .filter(([, pct]) => pct >= 4.5);
   const store = st as unknown as { facts: Map<string, unknown>; firings: Map<string, unknown> };
   return { total, top, share, facts: store.facts.size, firings: store.firings.size };
 }
@@ -213,12 +242,12 @@ test('every read path above five per cent, by name', () => {
   // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
   // rather than explained.
   const SHARE: [string, number][] = [
-    ['relPersp authority', 10.06],
-    ['argMatches ast_within pos=[0]', 8.01],
-    ['argMatches ast_node pos=[1]', 6.23],
-    ['argMatches encloses_v pos=[1]', 6.02],
-    ['relPersp ast_node', 5.99],
-    ['relPersp encloses_v', 5.84],
+    ['relPersp authority', 8.63],
+    ['argMatches ast_within pos=[0]', 6.89],
+    ['argMatches ast_node pos=[1]', 6.06],
+    ['relPersp ast_node', 5.48],
+    ['argMatches encloses_v pos=[1]', 5.13],
+    ['relPersp encloses_v', 4.99],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -263,7 +292,10 @@ test('every read path above five per cent, by name', () => {
   // and the reading in this file's own note holds: what the number still catches
   // is a scan appearing in the hot path with the corpus held still, which is the
   // left-hand column and nothing else.
-  assert.ok(c.total / c.facts < 8.4,
+  // 8.4 -> 6.5, and DOWN because the truncated world stopped part-way through
+  // the cheap derivations: 348 819 facts at 6.04 rows each against 204 783 at
+  // 8.27. The ratio was measuring where the budget ran out.
+  assert.ok(c.total / c.facts < 6.5,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -481,7 +513,18 @@ test('every read path above five per cent, by name', () => {
   // more expensive. AND FIRINGS FELL AGAIN, 72 154 -> 70 625, on a corpus that
   // grew: the re-export edge and the directive fixtures both add facts that
   // GUARD rather than derive.
-  assert.equal(c.total, 1694517, 'total rows handed out by the store in one fixpoint');
+  // 1 694 517 -> 2 116 345, and it is not growth. THE WORLD THIS FILE MEASURES
+  // WAS TRUNCATED: the AST facts were asserted before the packs, `r.load()`
+  // re-evaluates under its own DEFAULT_BUDGET of 100 000 steps, and the third
+  // load stopped with `hole($load(3), budget_exhausted)`. Measured both ways on
+  // one corpus — facts first: `calls_in` ZERO rows, 207 857 facts, 70 156
+  // firings; packs first: 313 rows, 348 889 facts, 140 679 firings. The call
+  // graph this corpus exists for was never derived in the world whose cost was
+  // pinned, and every figure this file has carried described half a fixpoint.
+  //
+  // NO 2x2 IS QUOTED FOR THIS MOVE, on purpose: the old number is not a smaller
+  // measurement of the same thing, so there is no corner to compare against.
+  assert.equal(c.total, 2116345, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -588,5 +631,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 70625, 'derivations, against 72 154 before the four-branch merge');
+  assert.equal(c.firings, 140644, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
 });
