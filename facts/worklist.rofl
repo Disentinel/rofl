@@ -255,10 +255,51 @@ work_needs(w_cf_completion, w_cf_abrupt_transfer).
 -- those two iterations was about the shared CORPUS. Widening that test is the
 -- wrong fix: the call-graph fixpoint is what it was built to watch and mixing
 -- layers in would blur the signal it has. A SECOND number is what is missing.
-work(w_cost_gate_per_layer, "the fixpoint cost gate watches the call graph only; the control-flow and era layers have no cost number at all").
-work_state(w_cost_gate_per_layer, open).
+--
+-- CLOSED 2026-09-09 by test/js-layer-cost.test.ts, and the second number was
+-- worth having on its first run. The layer nobody was measuring is 45.97% of
+-- the rows handed out in its own world while being 5.13% of its derivations —
+-- 234 rows walked per fact concluded, against 14.9 for everything else in the
+-- same world — and 94.08% of that is ONE read path, `argMatches ast_node
+-- pos=[1]`, which is a scan over every node of a kind. Ablating each of the 28
+-- clauses in rules/js-controlflow.rofl that mention `ast_node` names the rule:
+-- `has_return`, which joins every function against every return statement and
+-- then filters by containment. The next heaviest clause in the layer is worth
+-- 780 rows against its 1 703 150.
+--
+-- THE WORLD IS AN ASSERTION AND NOT A COMMENT, which is what
+-- f_an_instruments_world_is_part_of_its_claim asked for: each of the three
+-- worlds in that file lists the JS packs it loads AND the ones it refuses, and
+-- the two lists are asserted to cover `facts/js-*.rofl` + `rules/js-*.rofl`
+-- exactly, so a new pack reddens the file until somebody decides about each.
+work(w_cost_gate_per_layer, "DONE 2026-09-09: test/js-layer-cost.test.ts is the second number — a per-layer cost by difference for controlflow and era, with each world`s pack list asserted rather than commented").
+work_state(w_cost_gate_per_layer, done).
 work_spawned(w_cost_gate_per_layer, f_the_cost_gate_cannot_see_the_layer_i_kept_attributing_to_it).
 work_spawned(w_cost_gate_per_layer, f_an_instruments_world_is_part_of_its_claim).
+work_spawned(w_cost_gate_per_layer, f_the_layer_no_gate_watched_is_half_the_cost_of_its_own_world).
+work_spawned(w_cost_gate_per_layer, f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door).
+
+-- 66 — A JOIN OVER THE WHOLE CORPUS, ENTERED 2026-09-09 by the item above and
+-- measured by the gate it delivered. `has_return[code](F) :- fn_node[code](F),
+-- ast_node[code](R, return_statement, _, _), ast_within[code](F, R).` leads
+-- with the function and enumerates every return statement against it, then
+-- filters by containment — the exact body shape f_the_engine_has_no_join_planner
+-- describes, sitting in the layer that had no cost number.
+--
+-- THE REPAIR IS MEASURED AND THE EQUIVALENCE CONTROL IS RUN, in MUTANT B of
+-- test/js-layer-cost.test.ts: leading with `ast_node[code](R, return_statement,
+-- _, _)` takes the layer from 1 814 160 rows to 130 465 (-92.8%) and the world
+-- from 3 946 681 to 2 262 986 (-42.7%), with firings, facts and TEN named
+-- relations — `has_return`, `always_throws`, `throwing_call`, `may_throw`,
+-- `after_abrupt`, `may_not_run`, `reachable`, `guarded`, `may_not_be_reached`,
+-- `calls_in` — identical row for row.
+--
+-- IT IS NOT APPLIED BY THE GATE THAT FOUND IT, on purpose: an instrument that
+-- repairs its own subject has no baseline left to report, and the number in
+-- that file is the record of what the layer cost while nothing was watching.
+work(w_has_return_is_a_join_over_the_whole_corpus, "has_return joins every function against every return statement; the reorder is worth 42.7% of the control-flow world and is answer-preserving over ten named relations").
+work_state(w_has_return_is_a_join_over_the_whole_corpus, open).
+work_needs(w_has_return_is_a_join_over_the_whole_corpus, w_cost_gate_per_layer).
 
 -- 42 — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS. Four design notes in
 -- four items said a fact was missing that was already on the store, and the

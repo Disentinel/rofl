@@ -208,6 +208,14 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // entered but not started looks identical to one nobody looked at, and the
     // only thing that tells them apart is a finding.
     'w_env_api_surface', 'w_export_specifier_forms',
+    // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
+    // by the item that built the second cost gate. It is on this list for the
+    // reason the block above names: entered today, not started — and it is the
+    // clearest case yet of the distinction this list cannot draw, because the
+    // work it asks for is already MEASURED (a 42.7% reorder with a row-for-row
+    // equivalence control in MUTANT B of test/js-layer-cost.test.ts) and simply
+    // not applied.
+    'w_has_return_is_a_join_over_the_whole_corpus',
     // `w_class_expression` and `w_meta_property` LEFT THIS LIST 2026-09-08 for
     // the same reason the two before them did: both were taken and both
     // spawned. `w_meta_property` is still OPEN and still on this side of the
@@ -368,7 +376,14 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // because two branches re-pointed one cell at owners that were both wrong —
   // the second at an item a parallel branch had just closed, which
   // `false_done[audit]` reported within one run.
-  assert.equal(w.n('work(W, Note)'), 65);
+  // 65 -> 66 on 2026-09-09: `w_has_return_is_a_join_over_the_whole_corpus`,
+  // entered by the new per-layer cost gate ON ITS FIRST RUN. `has_return` is
+  // 94 per cent of the control-flow layer's read path, and leading with the
+  // return statement instead of the function takes the layer down 92.8 per
+  // cent and the whole world down 42.7, with firings, facts and ten named
+  // relations identical row for row. The item exists because the repair is a
+  // rule change and the gate that found it is a measurement.
+  assert.equal(w.n('work(W, Note)'), 66);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.
