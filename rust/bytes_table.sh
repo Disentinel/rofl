@@ -6,13 +6,19 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 JS="${TMPDIR:-/tmp}/rofl-mem-js.tsv"
 [ -f "$JS" ] || { echo "run: node --expose-gc --experimental-strip-types rust/tools/mem_js.ts > $JS" >&2; exit 2; }
-printf '%-14s %7s %10s %10s %8s %9s %9s\n' case facts js_bpf rust_bpf ratio js_ms rust_ms
-awk 'NR>1' "$JS" | while IFS=$'\t' read -r name facts bytes bpf jsms; do
-  err=$("$ROOT/rust/target/release/rofl-eval" --bytes "$ROOT/facts/port-corpus/$name.seed.json" 2>&1 >/dev/null)
+# THE TICK COUNT TRAVELS WITH THE CASE, from INDEX.tsv through mem_js.ts's
+# sixth column to here, so both columns of a row measure the same world. A
+# ticked twin shares its SEED with the plain case; only the number of
+# `tickAdvance` calls tells them apart, and a table that dropped it would print
+# the plain world twice.
+printf '%-14s %5s %7s %10s %10s %8s %9s %9s\n' case ticks facts js_bpf rust_bpf ratio js_ms rust_ms
+awk 'NR>1' "$JS" | while IFS=$'\t' read -r name facts bytes bpf jsms ticks; do
+  TICKARG=""; [ "${ticks:-0}" != "0" ] && TICKARG="--ticks $ticks"
+  err=$("$ROOT/rust/target/release/rofl-eval" --bytes $TICKARG "$ROOT/facts/port-corpus/$name.seed.json" 2>&1 >/dev/null)
   rb=$(echo "$err" | awk -F'\t' '$1=="bytes_per_fact"{print $2}')
   lm=$(echo "$err" | awk -F'\t' '$1=="load_ms"{print $2}')
   em=$(echo "$err" | awk -F'\t' '$1=="eval_ms"{print $2}')
-  printf '%-14s %7s %10s %10s %8s %9s %9s\n' "$name" "$facts" "$bpf" "$rb" \
+  printf '%-14s %5s %7s %10s %10s %8s %9s %9s\n' "$name" "${ticks:-0}" "$facts" "$bpf" "$rb" \
     "$(echo "$bpf $rb" | awk '{printf "%.2f", $1/$2}')" "$jsms" \
     "$(echo "$lm $em" | awk '{printf "%.1f", $1+$2}')"
 done
