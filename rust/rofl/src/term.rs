@@ -17,49 +17,134 @@
 //! object per node with a `k` string tag, plus a `name` or `v` field, plus an
 //! args array for a functor.
 
-use std::collections::HashMap;
-use std::rc::Rc;
-
 pub type Sym = u32;
 
 /// Interned names. One table for every kind of name — relation, perspective,
 /// atom, functor, variable — because the same string is all of those in
 /// different slots and a per-slot table would hold it several times.
+///
+/// ARENA PLUS AN OPEN-ADDRESSED TABLE OF IDS, which is the same move `Heap.cons`
+/// below already makes for functors and for the same reason: a table keyed by
+/// the string holds a SECOND handle to every name, so the copy is added rather
+/// than saved. The previous shape was `Vec<Rc<str>>` + `HashMap<Rc<str>, Sym>`,
+/// and the `Rc` was there to stop the two halves holding two copies of the
+/// bytes — it did, and it left three per-name overheads standing: a 16-byte fat
+/// pointer in the vector, a 16-byte refcount header on a separate allocation
+/// per name, and a 28-byte map slot. Measured over the port corpus before this
+/// change: 87.0 B/sym on spat, 84.5 on wtf, 92.1 on goof, 91.5 on sensors,
+/// against name text averaging 16 bytes.
+///
+/// Here a name costs its own bytes plus 4 for an end offset plus 4 per hash
+/// slot at a load factor of 0.7 — no per-name allocation, no refcount, and
+/// nothing to drop. `Sym` was already `u32`, so the id ceiling has not moved;
+/// what is new is a 4 GiB ceiling on the TOTAL TEXT of distinct names, which
+/// `intern` refuses rather than truncating. See LIMITS.md.
 #[derive(Default)]
 pub struct Interner {
-    /// ONE COPY OF EACH NAME, shared between the lookup table and the array.
-    /// A `Box<str>` in both would be two copies of every relation name,
-    /// perspective, atom and variable in the program — measured at 1.1 MB on
-    /// examples/spat before this was an `Rc`.
-    names: Vec<Rc<str>>,
-    map: HashMap<Rc<str>, Sym>,
+    /// Every name's bytes, concatenated, never moved and never freed.
+    ///
+    /// A `String` and not a `Vec<u8>` deliberately: `&self.buf[a..b]` is then a
+    /// SAFE slice whose only check is `is_char_boundary` at each end, which is
+    /// O(1) — where `Vec<u8>` would force either a full `from_utf8` revalidation
+    /// on every `name()` or the one `unsafe` block in this library.
+    buf: String,
+    /// `ends[i]` is where name `i` ends in `buf`; it begins where `i - 1` ended.
+    /// One `u32` per name, and no start array, because the names are appended
+    /// in id order and never removed.
+    ends: Vec<u32>,
+    /// Open addressing, power-of-two length, linear probing. A slot holds
+    /// `id + 1` so that 0 can mean empty without a sentinel id.
+    slots: Vec<u32>,
+}
+
+/// FxHash's mixing step over 8-byte chunks, with the length folded in at the
+/// end so that a name and the same name padded with NULs cannot collide
+/// through the tail buffer.
+fn name_hash(b: &[u8]) -> u64 {
+    const K: u64 = 0x51_7c_c1_b7_27_22_0a_95;
+    let mut h: u64 = 0;
+    let mut chunks = b.chunks_exact(8);
+    for c in &mut chunks {
+        let w = u64::from_le_bytes(c.try_into().unwrap());
+        h = (h.rotate_left(5) ^ w).wrapping_mul(K);
+    }
+    let rem = chunks.remainder();
+    if !rem.is_empty() {
+        let mut t = [0u8; 8];
+        t[..rem.len()].copy_from_slice(rem);
+        h = (h.rotate_left(5) ^ u64::from_le_bytes(t)).wrapping_mul(K);
+    }
+    (h.rotate_left(5) ^ b.len() as u64).wrapping_mul(K)
 }
 
 impl Interner {
     pub fn intern(&mut self, s: &str) -> Sym {
-        if let Some(&id) = self.map.get(s) {
-            return id;
+        if self.slots.is_empty() {
+            self.rehash(64);
         }
-        let id = self.names.len() as Sym;
-        let b: Rc<str> = s.into();
-        self.names.push(b.clone());
-        self.map.insert(b, id);
+        let h = name_hash(s.as_bytes());
+        let i = self.probe(s, h);
+        if self.slots[i] != 0 {
+            return self.slots[i] - 1;
+        }
+        let id = self.ends.len() as Sym;
+        assert!(
+            self.buf.len() + s.len() <= u32::MAX as usize,
+            "interner: more than 4 GiB of distinct name text"
+        );
+        self.buf.push_str(s);
+        self.ends.push(self.buf.len() as u32);
+        self.slots[i] = id + 1;
+        // 0.7 load, checked after the insert so the slot index above cannot go
+        // stale under a resize that happens between finding it and filling it.
+        if self.ends.len() * 10 >= self.slots.len() * 7 {
+            self.rehash(self.slots.len() * 2);
+        }
         id
+    }
+    /// The slot `s` occupies or would occupy. Terminates because `rehash` keeps
+    /// at least three empty slots in ten.
+    fn probe(&self, s: &str, h: u64) -> usize {
+        let mask = self.slots.len() - 1;
+        let mut i = h as usize & mask;
+        loop {
+            let v = self.slots[i];
+            if v == 0 || self.name(v - 1) == s {
+                return i;
+            }
+            i = (i + 1) & mask;
+        }
+    }
+    fn rehash(&mut self, cap: usize) {
+        let mask = cap - 1;
+        let mut slots = vec![0u32; cap];
+        for id in 0..self.ends.len() as Sym {
+            let mut i = name_hash(self.name(id).as_bytes()) as usize & mask;
+            while slots[i] != 0 {
+                i = (i + 1) & mask;
+            }
+            slots[i] = id + 1;
+        }
+        self.slots = slots;
     }
     #[inline]
     pub fn name(&self, id: Sym) -> &str {
-        &self.names[id as usize]
+        let i = id as usize;
+        let start = if i == 0 { 0 } else { self.ends[i - 1] as usize };
+        &self.buf[start..self.ends[i] as usize]
     }
     pub fn len(&self) -> usize {
-        self.names.len()
+        self.ends.len()
     }
     pub fn is_empty(&self) -> bool {
-        self.names.is_empty()
+        self.ends.is_empty()
     }
-    /// Bytes the table itself holds: the strings, the vector, and the map.
+    /// Bytes the table itself holds: the arena, the offsets, and the slots.
+    /// All three are single allocations, so this is the whole of it — unlike
+    /// the shape before, where a per-name allocation put the estimate below
+    /// the allocator's answer by whatever malloc rounded up.
     pub fn bytes(&self) -> usize {
-        let strs: usize = self.names.iter().map(|s| s.len() + 16).sum();
-        strs + self.names.capacity() * 16 + self.map.capacity() * (16 + 4 + 8)
+        self.buf.capacity() + self.ends.capacity() * 4 + self.slots.capacity() * 4
     }
 }
 
@@ -617,6 +702,90 @@ mod tests {
         let b = "\u{e000}";
         assert_eq!(cmp_js(a, b), std::cmp::Ordering::Less);
         assert_eq!(a.as_bytes().cmp(b.as_bytes()), std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn interning_round_trips_and_the_second_call_returns_the_first_id() {
+        let mut i = Interner::default();
+        let a = i.intern("alpha");
+        let b = i.intern("beta");
+        assert_eq!(i.intern("alpha"), a);
+        assert_eq!(i.intern("beta"), b);
+        assert_eq!(i.name(a), "alpha");
+        assert_eq!(i.name(b), "beta");
+        assert_eq!(i.len(), 2);
+    }
+
+    #[test]
+    fn a_name_and_the_same_name_null_padded_are_two_names() {
+        // The tail of `name_hash` folds the LENGTH in for this case: without
+        // it "a" and "a\0" hash the same, because the short chunk is zero
+        // padded to eight bytes either way. A collision would still be correct
+        // (the probe compares the string) — this asserts they are two entries
+        // and not one, which is the thing a wrong `probe` would break.
+        let mut i = Interner::default();
+        let a = i.intern("a");
+        let b = i.intern("a\u{0}");
+        assert_ne!(a, b);
+        assert_eq!(i.name(a), "a");
+        assert_eq!(i.name(b), "a\u{0}");
+    }
+
+    #[test]
+    fn a_multibyte_name_slices_at_its_own_boundaries() {
+        // The arena is a `String` and `name` indexes it by byte range, so a
+        // wrong offset is a panic rather than a silent mis-slice. Non-ASCII
+        // names are ordinary here: perspectives and atoms carry whatever the
+        // program wrote.
+        let mut i = Interner::default();
+        let a = i.intern("Ж");
+        let b = i.intern("книга");
+        let c = i.intern("🙂");
+        assert_eq!(i.name(a), "Ж");
+        assert_eq!(i.name(b), "книга");
+        assert_eq!(i.name(c), "🙂");
+        assert_eq!(i.intern("книга"), b);
+    }
+
+    #[test]
+    fn a_hundred_thousand_names_survive_every_growth_of_the_table() {
+        // The corpus interns about three thousand names, so nothing in the
+        // conformance run reaches the fifth rehash. This does: every id must
+        // still name its own string after eleven doublings, and re-interning
+        // must find it rather than append a duplicate.
+        let mut i = Interner::default();
+        let n = 100_000u32;
+        for k in 0..n {
+            let id = i.intern(&format!("name_{k}"));
+            assert_eq!(id, k);
+        }
+        assert_eq!(i.len(), n as usize);
+        for k in 0..n {
+            let s = format!("name_{k}");
+            assert_eq!(i.name(k), s);
+            assert_eq!(i.intern(&s), k);
+        }
+        assert_eq!(i.len(), n as usize);
+    }
+
+    /// What a vocabulary costs, printed rather than asserted, because the
+    /// number depends on name length and there is no threshold worth failing
+    /// on. `cargo test -p rofl -- --ignored --nocapture vocabulary`.
+    #[test]
+    #[ignore]
+    fn vocabulary_cost_at_scale() {
+        for n in [100_000usize, 1_000_000, 10_000_000] {
+            let mut i = Interner::default();
+            for k in 0..n {
+                i.intern(&format!("rel_{k}_of_a_realistic_length"));
+            }
+            println!(
+                "{:>10} names  {:>10.1} MB  {:>6.1} B/name",
+                n,
+                i.bytes() as f64 / 1e6,
+                i.bytes() as f64 / n as f64
+            );
+        }
     }
 
     #[test]
