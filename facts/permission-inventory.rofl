@@ -109,6 +109,7 @@ corpus_fact("boot.rofl", imports, main, 3).
 corpus_fact("examples/aka", authority, main, 6).
 corpus_fact("examples/aka", edb, main, 1).
 corpus_fact("examples/aka", imports, main, 6).
+corpus_fact("examples/cram", imports, main, 1).
 corpus_fact("examples/ditto", authority, main, 3).
 corpus_fact("examples/ditto", collects, main, 1).
 corpus_fact("examples/ditto", edb, main, 16).
@@ -122,7 +123,7 @@ corpus_fact("examples/heck", edb, main, 14).
 corpus_fact("examples/heck", imports, main, 1).
 corpus_fact("examples/iffy", authority, main, 1).
 corpus_fact("examples/iffy", edb, main, 11).
-corpus_fact("examples/iffy", imports, main, 1).
+corpus_fact("examples/iffy", imports, main, 2).
 corpus_fact("examples/jopa", authority, main, 3).
 corpus_fact("examples/jopa", edb, main, 11).
 corpus_fact("examples/jopa", imports, main, 4).
@@ -504,19 +505,17 @@ world_rows("counter", rule_known, 32).
 world_rows("counter", sees, 6).
 world_rows("counter", uses_builtin, 7).
 world_rows("counter", writes_to, 32).
-world_rows("cram", asserted_by, 146).
+world_rows("cram", asserted_by, 147).
 world_rows("cram", authority, 9).
 world_rows("cram", concludes, 58).
-world_rows("cram", crossing, 1).
 world_rows("cram", edb, 35).
 world_rows("cram", flow, 7).
 world_rows("cram", flows_to, 7).
 world_rows("cram", has_conclusion, 58).
 world_rows("cram", has_premise, 102).
-world_rows("cram", imports, 3).
-world_rows("cram", in_perspective, 146).
-world_rows("cram", leak, 1).
-world_rows("cram", loader, 10).
+world_rows("cram", imports, 4).
+world_rows("cram", in_perspective, 147).
+world_rows("cram", loader, 11).
 world_rows("cram", mode, 14).
 world_rows("cram", negated_under, 15).
 world_rows("cram", perspective, 5).
@@ -525,7 +524,7 @@ world_rows("cram", premise_pos, 76).
 world_rows("cram", reads_from, 64).
 world_rows("cram", reserved, 21).
 world_rows("cram", rule_known, 58).
-world_rows("cram", sees, 8).
+world_rows("cram", sees, 9).
 world_rows("cram", undefined_premise, 1).
 world_rows("cram", uses_builtin, 8).
 world_rows("cram", writes_to, 58).
@@ -652,18 +651,16 @@ world_rows("huh", sees, 6).
 world_rows("huh", undefined_premise, 3).
 world_rows("huh", uses_builtin, 7).
 world_rows("huh", writes_to, 34).
-world_rows("iffy", asserted_by, 20).
+world_rows("iffy", asserted_by, 21).
 world_rows("iffy", authority, 10).
 world_rows("iffy", concludes, 139).
-world_rows("iffy", crossing, 2).
 world_rows("iffy", edb, 36).
 world_rows("iffy", flow, 7).
 world_rows("iffy", flows_to, 8).
 world_rows("iffy", has_conclusion, 139).
 world_rows("iffy", has_premise, 327).
-world_rows("iffy", imports, 4).
-world_rows("iffy", in_perspective, 20).
-world_rows("iffy", leak, 2).
+world_rows("iffy", imports, 5).
+world_rows("iffy", in_perspective, 21).
 world_rows("iffy", loader, 3).
 world_rows("iffy", mode, 14).
 world_rows("iffy", negated_under, 28).
@@ -673,7 +670,7 @@ world_rows("iffy", premise_pos, 261).
 world_rows("iffy", reads_from, 177).
 world_rows("iffy", reserved, 21).
 world_rows("iffy", rule_known, 139).
-world_rows("iffy", sees, 10).
+world_rows("iffy", sees, 12).
 world_rows("iffy", undefined_premise, 54).
 world_rows("iffy", uses_builtin, 15).
 world_rows("iffy", writes_to, 139).

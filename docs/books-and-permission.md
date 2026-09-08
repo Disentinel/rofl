@@ -157,7 +157,7 @@ apart (`quiet_audit` against `dead`).
 
 | relation | what it catches | rows over 26 worlds | what it structurally CANNOT see |
 |---|---|---|---|
-| `leak`/2 | a crossing between two books that nothing licensed | 7 rows in 3 worlds (sensors 4, iffy 2, cram 1) | (a) it cannot tell an honest `imports` from a self-granted one, because `imports` is unauthenticated — the program declares what it reads and the source is never asked (`f_self_licensing_is_not_gone_it_is_now_a_line_someone_typed`); (b) a crossing that does not exist until a book is READ AT RUNTIME — `examples/loot` installs books from `demo.ts` and is clean on a bare world (`f_a_corpus_sweep_that_only_loads_misses_what_a_runtime_load_makes`); (c) a walk whose start is `[main]` cannot be distinguished from a helper relation nobody bracketed (§5.1) |
+| `leak`/2 | a crossing between two books that nothing licensed | 4 rows in 1 world (sensors, deliberate — §5.8) | (a) it cannot tell an honest `imports` from a self-granted one, because `imports` is unauthenticated — the program declares what it reads and the source is never asked (`f_self_licensing_is_not_gone_it_is_now_a_line_someone_typed`); (b) a crossing that does not exist until a book is READ AT RUNTIME — `examples/loot` installs books from `demo.ts` and is clean on a bare world (`f_a_corpus_sweep_that_only_loads_misses_what_a_runtime_load_makes`); (c) a walk whose start is `[main]` cannot be distinguished from a helper relation nobody bracketed (§5.1) |
 | `forged`/1 | a fact signed by a principal with no standing in the book it landed in | 0 | (a) **who granted the standing.** Nothing authenticates an anonymous load, so the operator and an attacker are one principal, `user`; a laundered self-grant is indistinguishable from an honest one, pinned by the second test in `test/authority-grant.test.ts`. (b) **rules.** `encodeRule` writes reflection facts directly and bypasses the signing path, so `who` does not apply to a rule under any value. (c) anonymity: an unsigned fact is signed `user`, and `user` has standing over every ordinary book by a measured decision (§4). |
 | `collected`/1 | the declared gathers, as a positive row with a `why` — a licence nobody can ask about is an invisible absence | 6 rows in 6 worlds | whether the gather was APPROPRIATE. It reports that a declaration was exercised, never that it was warranted. |
 | `exported`/1 | the declared exports to nameless readers, same shape and same reason | 2 rows in 2 worlds | the NAMED half of `exports` is not built, so it says nothing about `exports(A, some_named_book)` (§5.3). |
@@ -389,29 +389,40 @@ in another. `f_afk_needs_incremental_maintenance` is about write rate and
 incremental maintenance. Neither names a relation in this inventory. They stay
 open on their own merits and belong to other documents.
 
-### 5.8 Three worlds still leak at load, and two of them say nothing about it
+### 5.8 Three worlds leaked at load; two are settled and one is §5.1
 
-`f_three_worlds_still_leak_at_load_and_nothing_says_so` (defect), recorded by
-this work.
+`f_three_worlds_still_leak_at_load_and_nothing_says_so` (defect), recorded and
+settled by this work — **settled 2026-09-08, and the residue is §5.1's, not a
+new question.**
 
 Derived by the scanner, which loads each `examples/` world on bare boot.rofl,
 evaluates once at tick 0, and asks each audit IN THE BOOK IT LANDS IN. 26
-worlds built, `leak[audit]` non-empty in three:
+worlds built, `leak[audit]` was non-empty in three:
 
-| world | rows |
-|---|---|
-| examples/sensors | 4 — declared open in its own comments, and the standing example of §5.1 |
-| examples/iffy | 2 — `record -> audit`, `record -> main`. No comment, no declaration, no test. |
-| examples/cram | 1 — `$kernel -> log`. Same. |
+| world | rows | disposition |
+|---|---|---|
+| examples/sensors | 4 — one walk `main -> trust -> verified`, named at three points | **left firing.** Declared open in its own comments and the standing example of §5.1 |
+| examples/iffy | 2 — `record -> audit`, `record -> main` | **declared.** `imports(main, record).` in `statute.rofl` §2; `record -> audit` goes with it because `sees` is transitive through the existing `imports(audit, main)` |
+| examples/cram | 1 — `$kernel -> log` | **declared.** `imports(log, $kernel).` in `flight_log.rofl` |
 
-Two earlier sweeps recorded that the tree was brought to `leak` 0. It is not,
+After the two declarations the scanner reports `crossing` 0 and `leak` 0 for
+both worlds, `npm test` 1061/1061, and both demos unchanged. Only sensors
+remains, at 4.
+
+**Why these two were declarable and sensors is not**, which is the part worth
+carrying: the test is not whether a row can be silenced but whether the
+sentence is TRUE about the program. `flight_log.rofl` exists to read the
+kernel's provenance — its own header says so at length, and prose is not a
+premise. `statute.rofl` exists to adapt a corpus of cases held in `[record]`.
+Sensors' crossing is an arithmetic helper that happens to live in `[main]`, so
+`imports(verified, main)` would assert a content read that never happens; the
+repair there is §5.1's default-book decision, not a declaration written to
+make a row go away.
+
+Two earlier sweeps recorded that the tree was brought to `leak` 0. It was not,
 and the reason is the class one of them already names: **a sweep that reports
 "the whole tree is at zero" must say which worlds it built, and print the rows
 rather than the count.**
-
-**What would settle it:** per world, and each is small — either the crossing
-is real and wants an `imports` line, or it is the default-book case of §5.1
-and wants a comment saying so, which is what sensors did.
 
 ---
 

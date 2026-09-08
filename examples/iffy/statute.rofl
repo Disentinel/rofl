@@ -61,6 +61,23 @@ enacted_elem(admits(K, F))     :- proves(K, F, Sub), norm(Sub).
 -- 2. the corpus, and the questions asked of it
 -- =========================================================================
 
+-- THE ADAPTER READS THE CASE CORPUS, AND SAYS SO. Every rule below with an
+-- unbracketed head writes [main] and reads [record], so the walk is
+-- `record -> main`, and `imports(audit, main)` carries it one hop further to
+-- `record -> audit` -- two rows of `leak[audit]`, standing unexplained since
+-- the automatic bridge was removed and found by scanners/permission_inventory.ts
+-- (f_three_worlds_still_leak_at_load_and_nothing_says_so). One line clears
+-- both, because `sees` is transitive.
+--
+-- AND THE SENTENCE IS TRUE HERE IN A WAY IT IS NOT IN examples/sensors.rofl,
+-- which is the file this one has to be compared against before copying its
+-- shape. Sensors leaves its walk firing because what crosses is an arithmetic
+-- helper that happens to live in [main], so a declaration would claim a
+-- content read that never happens. Here the crossing IS the content: the
+-- corpus of cases is what §2 and §3 are for, and an adapter that could not
+-- read [record] would have nothing to adapt.
+imports(main, record).
+
 acase(C)           :- claim[record](C, _).
 question(q_due(C)) :- acase(C).
 question(q_excl(C)):- acase(C).

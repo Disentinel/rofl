@@ -24,6 +24,19 @@
 -- about the same program. Measured in demo.ts §7: loading this file makes the
 -- run cost 9.5x the firings and takes the store off any bound at all.
 
+-- AND THE READ IS DECLARED, because the header above declares it in prose and
+-- prose is not a premise. `derived_by` is one of the kernel's own relations, so
+-- it resolves to [$kernel] whatever bracket is written, and a rule with a [log]
+-- head reading it is a walk `$kernel -> log` that nothing licensed:
+-- `leak[audit]($kernel, log)`, one row, standing since the automatic bridge
+-- was removed. The sentence is true about this program in the strongest sense
+-- available -- reading the provenance is the ONLY thing this file does, and the
+-- two policies quoted above exist because of it. Found by
+-- scanners/permission_inventory.ts, which loads every examples/ world on bare
+-- boot.rofl and prints the rows rather than a count
+-- (f_three_worlds_still_leak_at_load_and_nothing_says_so).
+imports(log, $kernel).
+
 -- Which rule fired on which tick. The join is trivial and the reach is not:
 -- this is the whole provenance table, and it is the table the policy exists
 -- to bound.

@@ -3322,6 +3322,26 @@ finding_note(f_the_main_cluster_re_measurement_was_itself_half_wrong,
 finding(f_three_worlds_still_leak_at_load_and_nothing_says_so, defect).
 recorded(f_three_worlds_still_leak_at_load_and_nothing_says_so, "2026-09-08").
 demands(f_three_worlds_still_leak_at_load_and_nothing_says_so, decision).
+addressed_by(f_three_worlds_still_leak_at_load_and_nothing_says_so, "examples/iffy/statute.rofl").
+addressed_by(f_three_worlds_still_leak_at_load_and_nothing_says_so, "examples/cram/flight_log.rofl").
+-- SETTLED 2026-09-08. Two of the three were declarable and are declared:
+-- `imports(main, record).` in statute.rofl clears BOTH its rows, because
+-- `sees` is transitive through the existing `imports(audit, main)`, and
+-- `imports(log, $kernel).` in flight_log.rofl clears cram's. Both worlds now
+-- report `crossing` 0 and `leak` 0 under the scanner's own protocol; suite
+-- 1061/1061, both demos unchanged. The third is sensors and it is LEFT
+-- FIRING, which is the disposition its own file already argued for.
+--
+-- THE TEST THAT SEPARATED THEM, and it is the reusable part: not whether a row
+-- can be silenced but whether the SENTENCE IS TRUE about the program.
+-- flight_log.rofl exists to read the kernel's provenance -- its header says so
+-- at length, and prose is not a premise, which is the whole reason `imports`
+-- is a relation and not a comment. statute.rofl exists to adapt a corpus held
+-- in [record]. Sensors' crossing is an ARITHMETIC HELPER that happens to live
+-- in [main], so `imports(verified, main)` would assert a content read that
+-- never happens -- a false declaration written to make an audit quiet, which
+-- is worse than the row. Its repair is the default-book decision
+-- (docs/books-and-permission.md 5.1) and stays open there.
 finding_note(f_three_worlds_still_leak_at_load_and_nothing_says_so,
   "THE CORPUS IS NOT AT `leak` ZERO, AND TWO OF THE THREE WORLDS DO NOT MENTION IT ANYWHERE. Derived by scanners/permission_inventory.ts, which loads each examples/ world on bare boot.rofl - every .rofl file in the directory, sorted - evaluates once at tick 0 and asks each audit IN THE BOOK IT LANDS IN. 26 worlds built; `leak[audit]` non-empty in three: examples/sensors 4 rows, examples/iffy 2 (`record -> audit`, `record -> main`), examples/cram 1 (`$kernel -> log`). Sensors is DECLARED OPEN in its own comments and is the standing example of the [main] default-book decision. iffy and cram say nothing at all: no comment, no declaration, and no test that reads the audit, so these two rows have been standing unexplained since the automatic bridge was removed. `f_there_is_no_instrument_for_a_nameless_reader_of_a_named_book` recorded a sweep that `brought the whole tree to leak 0` and `f_a_corpus_sweep_that_only_loads_misses_what_a_runtime_load_makes` found ONE it missed; this is three more, and the reason is the same class one step earlier - a sweep that reports `the whole tree is at zero` must say WHICH WORLDS IT BUILT and print the rows rather than the count. THE DECISION OWED is per world and small: either the crossing is real and wants an `imports` line, or it is the [main] default-book case and wants a comment saying so, which is what sensors did. THE INSTRUMENT'S OWN LIMIT, stated: this loads sources only, so a world whose rule set grows at runtime is measured before its books exist - examples/loot is exactly that and reads clean here.").
 
