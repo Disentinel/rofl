@@ -1,0 +1,71 @@
+-- js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS.
+--
+-- w_unconsumed_attribute, and its note is a list of four times a design note
+-- claimed a fact was missing that was already on the store: `ast_attr(M, kind,
+-- "get")` was the fourth, and the same key was consumed for `"constructor"` and
+-- for nothing else. THE SHAPE IS ALWAYS THE SAME — the note was written while
+-- looking at the RULES, and the store is a different artifact produced by a
+-- scanner nobody is reading at that moment.
+--
+-- SO ASK THE RULES. This is the third audit built on the kernel's own
+-- reification (see rules/js-vocabulary.rofl, whose `lit_rel` and `lit_arg` this
+-- pack reads): clauses are stored as facts after parsing, so `which attribute
+-- keys does any rule name` is a QUERY over `premise_lit` and not a grep.
+--
+-- IT NEEDS A CORPUS AND rules/js-vocabulary.rofl, which is why it is a pack of
+-- its own: the vocabulary audit is deliberately corpus-free and costs 8.9% of
+-- every world it is loaded into. This one has `ast_attr` on the left of every
+-- rule and cannot be.
+
+-- ---------------------------------------------------------------------------
+-- WHAT A RULE NAMES, ARGUMENT BY ARGUMENT AND LITERAL BY LITERAL. `slot_atom`
+-- in the vocabulary pack answers per POSITION, which is the wrong grain here:
+-- the question is whether one literal names a key AND a value together, and a
+-- key read with a variable value is a rule reading every value there is.
+attr_lit(L, K, V)      :- lit_rel(L, ast_attr), lit_arg(L, 2, K), lit_arg(L, 3, V).
+attr_lit_kvar(L, $var(X)) :- attr_lit(L, $var(X), _).
+attr_lit_vvar(L, $var(X)) :- attr_lit(L, _, $var(X)).
+
+-- a key some rule names by name
+attr_key_read(K)       :- attr_lit(L, K, _), not attr_lit_kvar(L, K).
+-- ...and a key some rule reads with the VALUE left free, which is a rule that
+-- reads every value the scanner can put there. `unconsumed_value` must not fire
+-- for those, or it would report every name in the corpus.
+attr_key_read_free(K)  :- attr_lit(L, K, V), not attr_lit_kvar(L, K), attr_lit_vvar(L, V).
+attr_pair_read(K, V)   :- attr_lit(L, K, V), not attr_lit_kvar(L, K), not attr_lit_vvar(L, V).
+
+-- ---------------------------------------------------------------------------
+-- THE TWO AUDITS, and they are two because the defect has two shapes. The first
+-- is a whole key nobody reads — `async`, `generator`, `prefix`. The second is
+-- the one the item was named for: a key that IS read, only ever with constant
+-- values, and a value among them that no rule names.
+-- TWO LISTS, AND THE SPLIT IS THE `not_a_construct` / `frame_deferred` SPLIT
+-- rules/js-model.rofl already makes for kinds, for the same reason: a key the
+-- model will never read is a different fact from one nobody has read YET, and
+-- collapsing them is how a queue becomes a shrug.
+--
+-- THE CRITERION FOR THE FIRST LIST IS MEASURABLE, not a preference: the
+-- distinction the attribute carries is ALSO carried by something the model
+-- already reads — usually the node KIND. `optional` is `optional_member_expression`;
+-- `method` is `object_method`; `tail` is the child index of the last quasi.
+-- Reading the attribute would be a second spelling of a fact the model has.
+edb(attr_unread_ok).       -- attr_unread_ok(Key, Reason)
+edb(attr_deferred).        -- attr_deferred(Key, WorkItem)
+edb(attr_value_unread_ok). -- attr_value_unread_ok(Key, Value, Reason)
+
+unconsumed_attr[audit](K) :- ast_attr[code](_, K, _), not attr_key_read(K),
+                             not attr_unread_ok(K, _), not attr_deferred(K, _).
+unconsumed_value[audit](K, V) :- ast_attr[code](_, K, V), attr_key_read(K),
+                                 not attr_key_read_free(K), not attr_pair_read(K, V),
+                                 not attr_value_unread_ok(K, V, _).
+
+-- ...AND BOTH EXCUSE LISTS ARE GUARDED THEMSELVES, on the precedent
+-- `not_a_construct_unseen` set in rules/js-model.rofl: a misspelling in either
+-- list silently readmits the key to nothing, and this audit is the only thing
+-- that would have said so.
+attr_unread_ok_unseen[audit](K)   :- attr_unread_ok(K, _), not ast_attr[code](_, K, _).
+attr_unread_ok_read[audit](K)     :- attr_unread_ok(K, _), attr_key_read(K).
+attr_value_ok_unseen[audit](K, V) :- attr_value_unread_ok(K, V, _), not ast_attr[code](_, K, V).
+attr_deferred_unseen[audit](K)    :- attr_deferred(K, _), not ast_attr[code](_, K, _).
+attr_deferred_read[audit](K)      :- attr_deferred(K, _), attr_key_read(K).
+attr_double_excused[audit](K)     :- attr_unread_ok(K, _), attr_deferred(K, _).

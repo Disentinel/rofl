@@ -1,0 +1,99 @@
+-- js-attrs.rofl — WHAT THE SCANNER SAYS THAT NO RULE HEARS, and why.
+--
+-- `unconsumed_attr[audit]` in rules/js-attrs.rofl reported THIRTEEN keys on the
+-- honest tree the day it was written, and `unconsumed_value[audit]` fourteen
+-- (key, value) pairs. Every one of them is either excused with a MEASURED
+-- reason or deferred to an item by name, on the `not_a_construct` /
+-- `frame_deferred` precedent — a gate red on an honest checkout gets switched
+-- off, and its absence is then invisible.
+
+-- ---------------------------------------------------------------------------
+-- 1. A SECOND SPELLING OF A FACT THE MODEL ALREADY HAS. The criterion is
+-- measurable rather than a preference: the distinction each attribute carries
+-- is also carried by something the model reads, so a rule reading it would
+-- derive nothing new.
+attr_unread_ok(optional,   a_the_kind_carries_it).
+-- `a?.b` — `optional_member_expression` and `optional_call_expression` are
+-- separate KINDS, both declared, both gated on `optional_chaining`, and
+-- `short_circuit_kind` reads them by name in rules/js-controlflow.rofl.
+attr_unread_ok(method,     a_the_kind_carries_it).
+-- `{ m() {} }` is `object_method` and `{ m: function () {} }` is an
+-- `object_property` holding a `function_expression`. `fn_kind` reads the first
+-- by name.
+attr_unread_ok(tail,       a_the_child_index_carries_it).
+-- whether a template quasi is the last one — `ast_child(T, quasis, I, Q)`
+-- already gives the position, and the template rules read it.
+attr_unread_ok(value_raw,  a_the_cooked_value_is_the_one_every_layer_reads).
+-- the literal AS WRITTEN beside its cooked value. `may_be_lit` reads `value`,
+-- and `value_cooked` is the template's own arm; the raw text differs from both
+-- only in escapes, which no layer models.
+attr_unread_ok(shorthand,  a_a_spelling_and_not_a_structure).
+-- `{ a }` against `{ a: a }`. The key and the value are the same node in the
+-- first and two nodes in the second, and every rule here reads them through
+-- `ast_child`, which answers identically.
+attr_unread_ok(declare,    a_the_era_table_gates_type_syntax_and_no_layer_models_it).
+-- TypeScript's ambient modifier. `type_syntax` is a FEATURE with no year,
+-- reachable only through `provides(ts5, type_syntax)`; no layer has an opinion
+-- about a declaration that emits no code.
+
+-- ---------------------------------------------------------------------------
+-- 2. NOBODY HAS READ IT YET, and the item is named. These are not spellings —
+-- each carries something the model cannot otherwise derive.
+attr_deferred(async,       w_unconsumed_attribute).
+attr_deferred(generator,   w_unconsumed_attribute).
+attr_deferred(await,       w_unconsumed_attribute).
+-- whether a function is async, whether it is a generator, whether a `for-of` is
+-- `for await`. The control-flow layer models suspension through
+-- `transfer_mechanism(await_expression, suspend)` and reads the KIND; these
+-- three say the same thing about the FUNCTION and about the loop, which no kind
+-- carries.
+attr_deferred(prefix,      w_unconsumed_attribute).
+-- `i++` against `++i`. w_update_and_literals recorded that an update's VALUE
+-- differs between the two forms and that the value layer carries neither; this
+-- attribute is the half the scanner already supplies.
+attr_deferred(pattern,     w_unconsumed_attribute).
+attr_deferred(flags,       w_unconsumed_attribute).
+-- THE REGEXP'S OWN TEXT, and the pair is worth a sentence because a mutant was
+-- filed against it. w_update_and_literals left `literal_kind(reg_exp_literal)`
+-- as a deliberate survivor, categorised `unkillable by the fact vocabulary: a
+-- RegExpLiteral carries pattern/flags and no value, so the premise cannot be
+-- populated`, and added `becomes killable the day the scanner records a
+-- regexp's text`. THAT DAY WAS ALREADY PAST: the scanner records it, under
+-- these two keys, and what is missing is a rule that reads them rather than a
+-- fact. The category was right and the note's condition was already met.
+attr_deferred(source_type, w_unconsumed_attribute).
+-- `"module"` for every file in the corpus, because scanners/js_ast.ts hardcodes
+-- `sourceType: 'module'`. Measured 2026-09-08 across all 34 fixtures under
+-- `unambiguous`: three would be chosen as SCRIPT and the ONLY differing key in
+-- the whole AST is this one. So the attribute is a constant today and the
+-- moment the setting changes it stops being one — and every rule that silently
+-- assumes strict mode becomes conditional on a row nobody reads.
+
+-- ---------------------------------------------------------------------------
+-- 3. A VALUE NO RULE NAMES, where the key is only ever read with constants.
+-- `name`, `value`, `kind` and `value_cooked` are absent from this list and
+-- cannot appear in it: some rule reads each of them with the value LEFT FREE,
+-- which is a rule reading every value there is. That exclusion is derived
+-- (`attr_key_read_free`) rather than listed, and without it this table would
+-- carry four hundred and fifty-five names.
+attr_value_unread_ok(operator, "+",   a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "-",   a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "*",   a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "++",  a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "--",  a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "+=",  a_no_layer_models_arithmetic).
+attr_value_unread_ok(operator, "<",   a_no_layer_models_comparison).
+attr_value_unread_ok(operator, ">",   a_no_layer_models_comparison).
+attr_value_unread_ok(operator, ">=",  a_no_layer_models_comparison).
+attr_value_unread_ok(operator, "===", a_no_layer_models_comparison).
+attr_value_unread_ok(operator, "||",  a_the_kind_carries_the_short_circuit).
+-- `logical_expression` is a `short_circuit_kind` and the layer reads the KIND;
+-- WHICH operator it is changes nothing about the guard, and the era table reads
+-- `operator` only for the ones that carry an era — `**`, `??`, `??=`, `||=`,
+-- `&&=`. That is the whole of why this list is operators.
+attr_value_unread_ok(operator, "void", a_no_layer_models_a_unary_operator).
+attr_value_unread_ok(export_kind, "value", a_the_erasure_marker_is_the_other_value).
+attr_value_unread_ok(import_kind, "value", a_the_erasure_marker_is_the_other_value).
+-- `"type"` is what `export_local` and the import rules read: it marks a binding
+-- TypeScript erases. `"value"` is the default and says only `not erased`, which
+-- is the absence of the marker rather than a fact of its own.
