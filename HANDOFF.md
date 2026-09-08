@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iterations 35-36). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iterations 35-38). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -15,21 +15,27 @@ Branch `modeljs`. The vocabulary now takes on **the language** rather than its
 own list, by the owner's decision on 2026-09-08.
 
 ```
-KIND x LAYER   420 cells = modelled 145 + waived 212 + not_modelled 63
-  answered (modelled | waived):  357 / 420 = 85.0%
+KIND x LAYER   420 cells = modelled 150 + waived 224 + not_modelled 46
+  answered (modelled | waived):  374 / 420 = 89.0%
 
-open_cell[audit] 36, every one owned BY NAME, sweeper 0 at all four layers.
-64 work items.
-  callgraph  open 11, claimed 32     dataflow    open  7, claimed 27
-  modules    open 10, claimed 23     controlflow open  8, claimed 30
+open_cell[audit] 15, every one owned BY NAME, sweeper 0 at all four layers.
+65 work items.  blocked[audit] 1 — the kernel question the owner holds.
+  callgraph  open  3, claimed 27     dataflow    open  2, claimed 25
+  modules    open  5, claimed 21     controlflow open  5, claimed 30
 ```
 
-**70 -> 36 open cells in one afternoon, from FOUR branches at once**: ES2022
-class syntax (`w_class_fields`, 20 cells), `w_update_and_literals`,
-`w_class_expression`, `w_meta_property`, and decorators
-(`w_plugin_gated_kinds`) in the main tree. Every layer fell together, and the
-CLAIMED figures barely moved — the tell that these are cells being ANSWERED
-rather than re-owned.
+**102 -> 15 open cells in one day, from EIGHT branches across three rounds.**
+The vocabulary took on the language on 2026-09-08 morning (102 open cells) and
+the afternoon closed 87 of them: ES2022 class syntax, the destructuring family,
+the two export forms, labelled and inert statements, class expressions, meta
+properties, decorators, the update and literal forms, directives, the re-export
+edge, and the standard-library surface.
+
+**And the last BLOCKED chain went with them.** `w_env_api_surface` waited on
+`w_prototype_of_a_value`, which was OPEN and unblocked the whole time — its own
+note said the dependency was half discharged and nobody read it. Closing the
+pair unblocked the effect layer, `w_meta_property` and
+`w_destructuring_hides_a_call` at once.
 
 **102 -> 70 open cells in one afternoon**, from three branches at once:
 `w_destructuring_rest_and_spread` (50), `w_export_specifier_forms` (55),
