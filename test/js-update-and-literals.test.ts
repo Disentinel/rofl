@@ -46,40 +46,68 @@ import { build, base, read, FILES, FACTS, RULES, unq, type Mut, type World } fro
 
 /** `stdlib_member[audit]` restricted to the two prototypes this item added,
  *  as `prototype.key@file:line` — a named set, and one no other item writes. */
-const residue = (w: World): string[] =>
-  w.q('stdlib_member[audit](C, P, Key)')
-    .filter(([, p]) => p === 'regexp' || p === 'bigint')
-    .map(([c, p, k]) => {
-      const [, f, l] = w.q(`ast_node[code](${c}, K, F, L)`)[0] ?? [];
-      return `${p}.${k}@${f}:${l}`;
-    }).sort();
+const residue = (w: World): string[] => {
+  // MULTIPLICITY RATHER THAN LINE NUMBERS, for the reason given at `byName`
+  // below: `regexp.test` is TWO rows because two arms reach the same site, and
+  // that is what the pair used to say by repeating a line number.
+  const tally = new Map<string, number>();
+  for (const [, p, k] of w.q('stdlib_member[audit](C, P, Key)')
+      .filter(([, p]) => p === 'regexp' || p === 'bigint'))
+    tally.set(`${p}.${k}`, (tally.get(`${p}.${k}`) ?? 0) + 1);
+  return [...tally].map(([n, c]) => (c === 1 ? n : `${n} x${c}`)).sort();
+};
 
 /** every expression the value layer says may be the fixture's bigint, named by
  *  the identifier it is written as (or by its own kind when it is the literal) */
+/** A NAME WITH ITS MULTIPLICITY, NOT A NAME WITH ITS LINE. These sets keyed on
+ *  `name@file:line` until 2026-09-08, and the line is the part that broke: a
+ *  parallel branch appended a fixture EARLIER in shapes.ts.txt and every one of
+ *  them moved by 38, all at once, while every claim they make stayed true.
+ *
+ *  A THIRD WAY A PIN CAN FAIL TO SURVIVE A MERGE, beside a count and a scope. A
+ *  named set is safe because the names are stable; a set whose ELEMENTS embed a
+ *  coordinate is a count in disguise, and the coordinate belongs to the whole
+ *  file rather than to the thing named. What the line was carrying here is
+ *  `BIG_TOTAL appears twice` — the declaration and the use — and multiplicity
+ *  says that without borrowing anybody else's line numbering. */
+const byName = (w: World, rows: string[][]): string[] => {
+  const tally = new Map<string, number>();
+  for (const [e] of rows) {
+    const name = w.q(`ast_name[code](${e}, N)`)[0]?.[0];
+    const k = w.q(`ast_node[code](${e}, K, F, L)`)[0]?.[0];
+    const key = String(name ?? k);
+    tally.set(key, (tally.get(key) ?? 0) + 1);
+  }
+  return [...tally].map(([n, c]) => (c === 1 ? n : `${n} x${c}`)).sort();
+};
+
 const bigCarriers = (w: World): string[] =>
-  w.q('may_be_lit[flow](E, "9007199254740993")')
-    .map(([e]) => {
-      const name = w.q(`ast_name[code](${e}, N)`)[0]?.[0];
-      const [k, f, l] = w.q(`ast_node[code](${e}, K, F, L)`)[0] ?? [];
-      return `${name ?? k}@${f}:${l}`;
-    }).sort();
+  byName(w, w.q('may_be_lit[flow](E, "9007199254740993")'));
 
 /** every expression the value layer gives the `regexp` prototype, named the
  *  same way — the two arms of `prototype_of[flow]` reach different ones */
 const regexpReceivers = (w: World): string[] =>
-  w.q('prototype_of[flow](E, regexp)')
-    .map(([e]) => {
-      const name = w.q(`ast_name[code](${e}, N)`)[0]?.[0];
-      const [k, f, l] = w.q(`ast_node[code](${e}, K, F, L)`)[0] ?? [];
-      return `${name ?? k}@${f}:${l}`;
-    }).sort();
+  byName(w, w.q('prototype_of[flow](E, regexp)'));
 
 /** the `update` child of every C-style `for` in the corpus, and whether the
  *  control-flow layer says it may be skipped */
 const forUpdates = (w: World): string[] =>
   w.q('ast_node[code](P, for_statement, F, L)')
-    .flatMap(([p, f, l]) => w.q(`ast_child[code](${p}, update, 0, U)`)
-      .map(([u]) => `${f}:${l} ${w.n(`guarded[code](${u})`) > 0 ? 'guarded' : 'RUNS'}`))
+    .flatMap(([p, f]) => w.q(`ast_child[code](${p}, update, 0, U)`)
+      .map(([u]) => {
+        // BY THE VARIABLE IT BUMPS, NOT BY THE LINE IT SITS ON. This read
+        // `${f}:${l}` until 2026-09-08, when a parallel branch appended a
+        // fixture EARLIER in shapes.ts.txt and moved all three by 38 while every
+        // claim they make stayed true. See `byName` for the general form.
+        // TWO SHAPES, because a `for`-update is `i++` OR `i += 1`: an
+        // `update_expression` keeps its operand under `argument` and an
+        // `assignment_expression` under `left`. The first draft read only
+        // `argument` and two of the four came back `?`.
+        const v = ['argument', 'left']
+          .flatMap((field) => w.q(`ast_child[code](${u}, ${field}, 0, A)`))
+          .flatMap(([a]) => w.q(`ast_name[code](${a}, N)`).map(([n]) => n))[0];
+        return `${f} ${v ?? '?'} ${w.n(`guarded[code](${u})`) > 0 ? 'guarded' : 'RUNS'}`;
+      }))
     .sort();
 
 /** the functions `may_not_run` names, by name (js-corpus-world's `names`
@@ -126,7 +154,7 @@ test('DATAFLOW: the bigint travels through the binder, and dropping either half 
   // name it is bound to. Three rows, and the two identifiers are what says the
   // value crossed `binder[code]` rather than sitting on the literal.
   assert.deepEqual(bigCarriers(b), [
-    'BIG_TOTAL@shapes.ts:480', 'BIG_TOTAL@shapes.ts:482', 'big_int_literal@shapes.ts:480',
+    'BIG_TOTAL x2', 'big_int_literal',
   ]);
 
   // MUTANT 1 — the rule half. `literal_kind(big_int_literal)` removed: the
@@ -148,8 +176,7 @@ test('DATAFLOW: a regexp literal is a NODE value, and the two prototype arms rea
   // KIND arm alone. The two regexp literals themselves are in the set through
   // the kind arm as well, which is why there are four rows and not two.
   assert.deepEqual(regexpReceivers(b), [
-    'MATCHER@shapes.ts:491', 'MATCHER@shapes.ts:499',
-    'reg_exp_literal@shapes.ts:491', 'reg_exp_literal@shapes.ts:499',
+    'MATCHER x2', 'reg_exp_literal x2',
   ]);
 
   // MUTANT 3 — `node_value_kind(reg_exp_literal)` removed. The KIND arm still
@@ -158,7 +185,7 @@ test('DATAFLOW: a regexp literal is a NODE value, and the two prototype arms rea
   // it the same defect as mutant 4.
   const m3 = build(mut('node_value_kind(reg_exp_literal).', '', DF), false);
   assert.deepEqual(regexpReceivers(m3), [
-    'reg_exp_literal@shapes.ts:491', 'reg_exp_literal@shapes.ts:499',
+    'reg_exp_literal x2',
   ], 'the two identifier occurrences of MATCHER are the only rows lost');
 
   // MUTANT 4 — `kind_prototype(reg_exp_literal, regexp)` removed. Both arms
@@ -177,30 +204,31 @@ test('CALLGRAPH: three member calls on a literal are named by stdlib_member, and
   // method is not a node in this program. What changed is that the model can
   // now SAY SO, at the one place it collects the standard library.
   assert.deepEqual(residue(b), [
-    'bigint.toString@shapes.ts:482', 'regexp.test@shapes.ts:499', 'regexp.test@shapes.ts:499',
+    'bigint.toString', 'regexp.test x2',
   ]);
   for (const [c] of b.q('stdlib_member[audit](C, P, Key)'))
     assert.equal(b.n(`resolved_site[code](${c})`), 0, 'residue is residue: none of them resolves');
 
   // MUTANT 5 — the regexp prototype row. Both regexp rows go, the bigint stays.
   const m5 = build(mut('kind_prototype(reg_exp_literal,           regexp).', '', DF), false);
-  assert.deepEqual(residue(m5), ['bigint.toString@shapes.ts:482']);
+  assert.deepEqual(residue(m5), ['bigint.toString']);
 
   // MUTANT 6 — the bigint prototype row, the other way round.
   const m6 = build(mut('kind_prototype(big_int_literal,           bigint).', '', DF), false);
-  assert.deepEqual(residue(m6), ['regexp.test@shapes.ts:499', 'regexp.test@shapes.ts:499']);
+  assert.deepEqual(residue(m6), ['regexp.test x2']);
 
   // MUTANT 7 — `builtin_prototype(regexp)`. The SAME rows disappear as in
   // mutant 5 and for a different reason, so the two are told apart by what
   // SURVIVES: `prototype_of` still names all four receivers here and names
   // none of them there. Without this second oracle the two mutants are one.
   const m7 = build(mut('builtin_prototype(regexp).', '', DF), false);
-  assert.deepEqual(residue(m7), ['bigint.toString@shapes.ts:482']);
-  assert.equal(regexpReceivers(m7).length, 4, 'the prototype is still derived; only the audit stops reading it');
+  assert.deepEqual(residue(m7), ['bigint.toString']);
+  assert.deepEqual(regexpReceivers(m7), ['MATCHER x2', 'reg_exp_literal x2'],
+    'the prototype is still derived; only the audit stops reading it');
 
   // MUTANT 8 — `builtin_prototype(bigint)`, the same shape on the other row.
   const m8 = build(mut('builtin_prototype(bigint).', '', DF), false);
-  assert.deepEqual(residue(m8), ['regexp.test@shapes.ts:499', 'regexp.test@shapes.ts:499']);
+  assert.deepEqual(residue(m8), ['regexp.test x2']);
 });
 
 // ===========================================================================
@@ -211,8 +239,8 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // BOTH C-STYLE `for`s IN THE CORPUS, NAMED. alpha.mjs:845 predates this item
   // entirely — it is the site the defect was measured on, and it is the
   // positive control that the row is not a fixture answering itself.
-  assert.deepEqual(forUpdates(b), ['alpha.mjs:845 guarded', 'shapes.ts:467 guarded', 'shapes.ts:468 guarded',
-    'shapes.ts:469 guarded']);
+  assert.deepEqual(forUpdates(b), ['alpha.mjs j guarded', 'shapes.ts k guarded',
+    'shapes.ts m guarded', 'shapes.ts p guarded']);
 
   // AND THE CONSEQUENCE, which is why the row is worth writing: a call in the
   // update slot was `reached_unguarded` and therefore kept OUT of
@@ -226,8 +254,8 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // MUTANT 9 — the row deleted. The update slots go back to `RUNS` and the
   // function called from one leaves the may-set, while the body control stays.
   const m9 = build(mut('guard_kind(for_statement,              update).', '', CF), false);
-  assert.deepEqual(forUpdates(m9), ['alpha.mjs:845 RUNS', 'shapes.ts:467 RUNS', 'shapes.ts:468 RUNS',
-    'shapes.ts:469 RUNS']);
+  assert.deepEqual(forUpdates(m9), ['alpha.mjs j RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
+     'shapes.ts p RUNS']);
   assert.equal(dead(m9).has('bumpedInUpdate'), false, 'the defect, reproduced');
   assert.equal(dead(m9).has('seenUpdate'), true, 'and the control is untouched by it');
 
@@ -237,8 +265,8 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // `guarded` would not tell them apart, so the oracle reads the FIELD.
   const m10 = build(mut('guard_kind(for_statement,              update).',
     'guard_kind(for_statement,              init).', CF), false);
-  assert.deepEqual(forUpdates(m10), ['alpha.mjs:845 RUNS', 'shapes.ts:467 RUNS', 'shapes.ts:468 RUNS',
-    'shapes.ts:469 RUNS']);
+  assert.deepEqual(forUpdates(m10), ['alpha.mjs j RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
+     'shapes.ts p RUNS']);
   const inits = m10.q('ast_node[code](P, for_statement, F, L)')
     .flatMap(([p]) => m10.q(`ast_child[code](${p}, init, 0, I)`).map(([i]) => m10.n(`guarded[code](${i})`)));
   assert.deepEqual(inits, [1, 1, 1, 1], 'the mis-aimed row guards the one child that always runs');
