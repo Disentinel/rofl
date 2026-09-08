@@ -1,6 +1,6 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
-Written 2026-09-08 by the nightly loop (iteration 30). The tree is **green** apart from the
+Written 2026-09-08 by the nightly loop (iteration 31). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.
 
@@ -56,6 +56,40 @@ then read as a constraint rather than as a setting:
 **So: when the model says it cannot, go and measure how far it is from being
 able to.** The measurement is usually a thirty-second probe and it has been
 wrong four times out of four.
+
+## What iteration 31 measured — and a number I reported that was wrong
+
+**I told the owner there were seven note texts to reconcile by hand after the
+ledger merge. There were none.** The comparison loaded both ledgers as
+perspectives and derived `note_split 7` beside `kind_split 0` — and re-measured
+with a second instrument, a clause-level walk found 413 shared findings and
+ZERO differing texts.
+
+`finding_note` is **one-to-many** in this ledger and always has been: seven
+findings carry two rows and one carries three, and the second is always a
+correction (*DISMISSED THE SAME DAY*, *CORRECTED WITHIN THE HOUR, by the
+owner*). So `finding_note[a](F, X), finding_note[b](F, Y), X != Y` pairs a
+finding's own first note against its own correction arriving through the other
+book, and the seven were exactly the seven that carry two.
+
+The convention is good and `runtime/report.ts` already joins every note, so no
+READER was ever misled — only a rule. It is declared now: `corrected(F)`,
+`corrected_unsettled[audit]` for the hazard the convention creates (revisited
+and left open — empty on the honest tree, planted in the test), and the report's
+joining asserted rather than assumed.
+
+**Third instrument defect this week of the same shape**: a rule right about the
+question it asks and wrong about the shape of what it reads — after a census
+comparing `broken` against `get broken`, and a walk that excluded `extra` from
+its own measurement of what was excluded.
+
+**A check was measured and NOT built**, and the measurement is the reason. A
+finding whose prose claims a settlement the facts lack would be work already
+done that the backlog still offers. Six candidates, every one a false positive:
+`REVERTED` describes a patch, `RETRACTED` a claim inside the finding, and one
+hit `CLOSED` standing under a negation — *the bypass is narrowed, NOT CLOSED*.
+A keyword over prose cannot tell a finding's state from its subject. The
+structural version is one line and needed no prose at all.
 
 ## What iteration 30 measured
 

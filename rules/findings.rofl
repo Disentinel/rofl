@@ -17,6 +17,32 @@ settled(F)           :- dismissed(F, _).
 
 open_finding(F)      :- finding(F, _), not settled(F).
 
+-- A FINDING ACCUMULATES NOTES, and until 2026-09-08 nothing said so. Seven
+-- findings carry two `finding_note` rows and one carries three, and the second
+-- is always a CORRECTION: `DISMISSED THE SAME DAY, and the dismissal is the
+-- finding`, `CORRECTED WITHIN THE HOUR, by the owner`, `TRIED IN boot.rofl AND
+-- REVERTED, and the negative result is worth more than the idea was`. That is a
+-- good convention - a ledger that overwrote its first answer would lose the
+-- most valuable half - and `runtime/report.ts` already joins every note, so
+-- nothing is hidden from a reader.
+--
+-- WHAT WAS MISSING IS THAT IT WAS NEVER DECLARED, and an undeclared arity is a
+-- trap for the next rule. One was written the same week: a comparison of two
+-- ledgers loaded as two perspectives read `finding_note[a](F, X),
+-- finding_note[b](F, Y), X != Y` and reported SEVEN findings whose text had
+-- diverged between two branches. Not one had. The rule was pairing a finding`s
+-- own first note against its own correction, arriving through the other book,
+-- and the seven were exactly the seven that carry two. A merge was justified to
+-- the owner on that number.
+corrected(F)                  :- finding_note(F, A), finding_note(F, B), A != B.
+
+-- ...AND A CORRECTION IS THE MOMENT TO SETTLE OR RE-AIM. A finding that has
+-- been revisited and left open is the silent forgetting this ledger exists to
+-- prevent, one step subtler: somebody looked, wrote down what they found, and
+-- did not say what it changed. Empty on the honest tree, with a planted control
+-- in test/findings.test.ts.
+corrected_unsettled[audit](F) :- corrected(F), not settled(F).
+
 finding_action(F, W) :- open_finding(F), demands(F, W).
 
 -- The QUEUE, derived rather than narrated. `blocks(A, B)` says A must be
