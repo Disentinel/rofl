@@ -525,3 +525,48 @@ test('rules/js-dataflow.rofl still runs at the new arity', () => {
   assert.ok(r.holds('var_reaches[code]("source", "sink")'), 'the closure carries the chain');
   assert.ok(!r.holds('var_reaches[code]("unrelated", "sink")'), 'and the gate can say no');
 });
+
+// ---------------------------------------------------------------------------
+// EVERY FIXTURE SCANS, AND THE ONE THAT DOES NOT SAYS SO BY NAME.
+//
+// PAID FOR 2026-09-08. A three-way merge left one `=======` line in
+// test/fixtures/js-call/shapes.ts.txt, babel refused the whole file, and 2 432
+// nodes left the corpus in one step. What that looked like from the outside was
+// 106 failing tests across nine files — mutants that stopped killing, named sets
+// that came back empty, counts off by hundreds — and not one of them said `a
+// fixture is gone`. The file has a `.txt` tail so that tsc will not compile it,
+// which is exactly why tsc was silent.
+//
+// A REFUSED FILE IS ALREADY A FACT (`ast_parse_error[code]`), and the model
+// reasons about it correctly — `invalid[audit]` in every environment. What was
+// missing is that NOBODY ASKS. The refusal is a fact about a file the corpus
+// still counts; a fixture silently leaving the corpus is a fact about the
+// INSTRUMENT, and it needs its own gate.
+test('every fixture scans, except the one whose job is to be refused', () => {
+  const FIXTURES = path.join(ROOT, 'test', 'fixtures');
+  // BY NAME, and there is exactly one: test/fixtures/js-env/refused.js.txt
+  // exists so that a refused file has somewhere to be. Anything else refusing
+  // is a fixture that has stopped being part of the corpus.
+  const EXPECTED_REFUSALS = new Set(['refused.js.txt']);
+  // ...and these are not JavaScript at all — they are `package.json` bodies the
+  // resolver reads as data.
+  const NOT_SOURCE = /(^|\/)package\.json\.txt$/;
+
+  const files: string[] = [];
+  const walk = (d: string) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(js|mjs|ts|txt)$/.test(e.name) && !NOT_SOURCE.test(p)) files.push(p);
+    }
+  };
+  walk(FIXTURES);
+  assert.ok(files.length >= 25, `positive control: only ${files.length} fixtures found`);
+
+  const refused = files
+    .filter((p) => scan(fs.readFileSync(p, 'utf8'), { file: path.basename(p) })
+      .facts.some((f) => f.startsWith('ast_parse_error')))
+    .map((p) => path.basename(p)).sort();
+  assert.deepEqual(refused, [...EXPECTED_REFUSALS].sort(),
+    'a fixture the scanner refuses is a fixture that has left the corpus');
+});

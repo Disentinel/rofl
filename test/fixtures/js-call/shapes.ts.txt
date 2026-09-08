@@ -536,7 +536,6 @@ const MATCHER = /ab+c/gi;
 export function regexpForms(s: string): number {
   return MATCHER.test(s) || /x[0-9]/.test(s) ? 1 : 0;
 }
-=======
 // ===========================================================================
 // CLASS EXPRESSIONS, 2026-09-08 (w_class_expression), and the item's premise
 // was that the model ALREADY had an opinion here — `obj_like[flow]` and
@@ -620,7 +619,6 @@ export const Bracket = class extends mountOf() {
 // with this item. The residue is named in facts/worklist.rofl instead.
 export function constructionMode(n: number) { return new.target ? n : null; }
 export const moduleHere = import.meta.url;
-=======
 // ===========================================================================
 // ES2022 CLASS SYNTAX (w_class_fields, 2026-09-08). Five kinds the vocabulary
 // named on 2026-09-08 for the denominator and no corpus site exercised:

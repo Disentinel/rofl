@@ -137,6 +137,9 @@ const hex = (b: number): string => '0x' + b.toString(16).padStart(2, '0');
 
 const decoder = new TextDecoder('utf8', { fatal: true });
 
+/** the buffer as text, for the line-oriented checks; byte checks run first */
+const text = (b: Buffer): string => b.toString('utf8');
+
 export function checkSourceIsText(rootDir: string): TextViolation[] {
   const files = listTextFiles(rootDir);
   const out: TextViolation[] = [];
@@ -166,6 +169,26 @@ export function checkSourceIsText(rootDir: string): TextViolation[] {
           ? `lone CR ${hex(CR)} at offset ${bad.at} (${place(buf, bad.at)}); a bare carriage return is not a line break — a terminal paints over the line and grep sees one line where a reader sees two${more}`
           : `control byte ${hex(buf[bad.at])} at offset ${bad.at} (${place(buf, bad.at)}); it is invisible to a reader and it splits the token it sits inside, so grep will not match that token${more}`,
       });
+      continue;
+    }
+
+    // A LEFT-OVER MERGE MARKER, added 2026-09-08 and paid for the same day.
+    // Resolving a three-way merge by script, one `=======` line survived in
+    // test/fixtures/js-call/shapes.ts.txt — the resolver checked for `<<<<<<<`
+    // and nothing else — and babel refused the WHOLE FIXTURE, so 2 432 nodes
+    // left the corpus at once and 106 tests failed in ways that read as a
+    // hundred unrelated regressions. `tsc` saw nothing, because the file has a
+    // `.txt` tail precisely so that it will not compile.
+    //
+    // SAME CLASS AS EVERY OTHER RULE IN THIS FILE: the property is
+    // REVIEWABILITY, and a file with a marker in it is not a file anybody
+    // reviewed. All three markers are checked, not just the opener, because the
+    // opener is the one a hand-written grep remembers and the closers are what
+    // a partial resolution leaves behind.
+    const marker = text(buf).split('\n').findIndex((l) =>
+      l === '=======' || l.startsWith('<<<<<<< ') || l.startsWith('>>>>>>> '));
+    if (marker >= 0) {
+      out.push({ file: rel, what: `merge conflict marker on line ${marker + 1}; an unresolved or half-resolved merge is not a reviewed file, and a scanner may refuse the whole file for it` });
       continue;
     }
 
