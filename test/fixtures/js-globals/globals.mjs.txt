@@ -125,3 +125,55 @@ export function asBig(n) {
 export function ceiling(n) {
   return n > 0 ? n : Infinity;
 }
+
+// 14. A CONSTRUCTED RECEIVER REACHED THROUGH A BINDER
+//     (w_prototype_of_a_constructed_value). `RegExp` is an ES global with a
+//     bridge row, so the instance HAS a prototype this model can name; the
+//     receiver is a bound name, so the answer has to travel the binder arm of
+//     `may_be_node` rather than being read off the construction site.
+export function matches(src, s) {
+  const re = new RegExp(src, 'g');
+  return re.test(s);
+}
+
+// 15. A CONSTRUCTED RECEIVER WRITTEN IN PLACE, AND THE METHOD IS DEPRECATED.
+//     `new String(s).substr(0, 2)` reaches `lib_call_deprecated[audit]` through
+//     a construction, which is the deprecation question asked of a surface that
+//     could not be reached at all before this item.
+export function head(s) {
+  return new String(s).substr(0, 2);
+}
+
+// 16. THE SAME, WHERE THE ERA GATE HAS SOMETHING TO SAY. `Array.prototype.fill`
+//     is es2015, so `new Array(n).fill(0)` is a `lib_unsupported[audit]` row
+//     under es5 and not under es2015 — a constructed receiver dated on the same
+//     scale as a literal one.
+export function padded(n) {
+  return new Array(n).fill(0);
+}
+
+// 17. THE IDENTITY AND NOT THE SPELLING, ONE LEVEL PAST SITE 10. `Set` there is
+//     a local OBJECT shadowing a global; this is a local CLASS shadowing one and
+//     being CONSTRUCTED. `new Number(n)` builds a value of THIS program's class,
+//     so it must reach neither the ES binding nor the `number` prototype —
+//     `free_global` is `not declares_name`, and `declares_name` is file-scoped,
+//     so the whole file loses the global and that is the safe direction. The
+//     call is left unresolved on purpose: a model matching on the SPELLING would
+//     attribute `.toFixed` to the standard library, and this one must not.
+class Number { constructor(n) { this.n = n; } }
+export function boxed(n) {
+  return new Number(n).toFixed(2);
+}
+
+// 18. THE CEILING OF SITE 14-16, AS A LINE RATHER THAN AS A SENTENCE. A
+//     construction whose callee is a MEMBER EXPRESSION reaches nothing:
+//     `global_ref_position` names five positions and `new Intl.NumberFormat()`
+//     puts the global in the `object` of the callee rather than in the callee,
+//     so the model sees the STATIC `Intl.NumberFormat` and never the
+//     construction. `.format` is therefore outside every relation this item
+//     added — not even `es_instance_unattributed[audit]`, which is the row
+//     `holder.set` gets. A namespaced constructor is the commonest shape in the
+//     language this model cannot follow, and the silence is asserted by name.
+export function money(n) {
+  return new Intl.NumberFormat('en').format(n);
+}

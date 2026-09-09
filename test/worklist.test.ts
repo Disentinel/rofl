@@ -258,15 +258,15 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // the two shape mutants that were green because `shapeWorld` does not load
     // the packs their own message talks about.
     'w_mod_sweep', 'w_plugin_gated_kinds',
-    // `w_prototype_of_a_constructed_value` JOINED 2026-09-09, entered by
-    // `w_es_globals` as the hole its own bridge made visible: `lib_global_
-    // prototype` reaches EIGHT of forty-seven globals, because eight is what
-    // `kind_prototype` can name a receiver for, and `new Map()` reaches none —
-    // so `holder.set(k, v)` is outside BOTH halves of the standard library and
-    // `stdlib_member[audit]` does not fire on it. Entered on the day, so it has
-    // spawned nothing; the finding it exists for was spawned by the item that
-    // found it, which is where this list draws the line.
-    'w_prototype_of_a_constructed_value',
+    // `w_prototype_of_a_constructed_value` JOINED THIS LIST AND LEFT IT ON THE
+    // SAME DAY, 2026-09-09, which is the shortest round trip the list has seen
+    // and the clearest illustration of what it measures. It was entered by
+    // `w_es_globals` as the hole its own bridge made visible — `new Map()`
+    // reaches no prototype, so `holder.set(k, v)` is outside BOTH halves of the
+    // standard library — and it was TAKEN the same day, so it spawned three:
+    // a namespaced constructor is outside the reference position table, both
+    // cost gates refuse the pack they would have priced, and a relation sweep
+    // needs the arity that ANSWERS rather than the first that does not error.
     // `w_update_and_literals` LEFT THIS LIST 2026-09-08, the same way the two
     // before it did: it was taken and it spawned two findings, one of them in
     // the SCANNER (a bigint matched none of the four branches) and one in a

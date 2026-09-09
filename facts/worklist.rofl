@@ -2773,5 +2773,32 @@ work_spawned(w_es_globals, f_a_generated_pack_with_no_regeneration_gate_has_alre
 -- program — the same question `w_prototype_of_a_value` answered for literals and
 -- left unasked for constructions — and what that costs `may_be_node` and the
 -- ambiguity audits.
-work(w_prototype_of_a_constructed_value, "`new Map()` reaches no prototype, so a call on the instance is outside both halves of the library; the join exists and the decision does not").
-work_state(w_prototype_of_a_constructed_value, open).
+--
+-- DONE 2026-09-09, AND WHAT WAS DECIDED IS ONE SENTENCE: a construction of an
+-- ES global that nothing in this program binds IS A VALUE SITE, and the site
+-- stands for the value. rules/js-globals.rofl section 6 writes it as
+-- `may_be_node[flow](X, X) :- es_instance[flow](X, _, _)` — the same
+-- abstraction rules/js-dataflow.rofl already uses for `array_expression` and
+-- `reg_exp_literal` — so the binder, assignment and wrapper arms of
+-- `may_be_node` carry the instance to the receiver position for free and
+-- nothing is re-plumbed. `prototype_of[flow]` gets ONE new arm on top of that.
+--
+-- THE CLASS CHAIN IS UNTOUCHED, measured rather than argued: `resolves`,
+-- `calls_in`, `ambiguous_call` and `unresolved_call` are row-for-row identical
+-- with the section in and out, because `es_global_construct` stands on
+-- `free_global`, which is `not declares_name` — an identity, not a spelling.
+-- The fixture makes that load-bearing with a local `class Number` that is
+-- CONSTRUCTED, which site 10`s shadowed `Set` could not.
+--
+-- WHAT IT DOES NOT CLOSE, AND THE FRONTIER IS ROWS NOW RATHER THAN SILENCE.
+-- `lib_global_prototype` is still 8 of 47 and the reason is one level below the
+-- bridge: `lib_member` is keyed by the eight prototypes scanners/ts_lib.ts
+-- names, so a ninth bridge row would point at an empty table.
+-- `es_prototype_gap[audit]` names the 32 constructible globals with no instance
+-- surface and `es_instance_unattributed[audit]` names the CALLS on them —
+-- `holder.set` is a row saying `Map` and `set` where there was nothing.
+work(w_prototype_of_a_constructed_value, "DONE 2026-09-09: a construction of an ES global is a value site and the site stands for the value; the prototype arm, and the 32-global frontier as rows rather than as a silence").
+work_state(w_prototype_of_a_constructed_value, done).
+work_spawned(w_prototype_of_a_constructed_value, f_a_namespaced_constructor_is_outside_the_reference_position_table).
+work_spawned(w_prototype_of_a_constructed_value, f_both_cost_gates_refuse_the_pack_they_would_have_priced).
+work_spawned(w_prototype_of_a_constructed_value, f_a_relation_sweep_needs_the_arity_that_answers_not_the_one_that_does_not_error).
