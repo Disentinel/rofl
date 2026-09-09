@@ -202,6 +202,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // whose successor holds a call, which on this corpus is 27 rows out of 789.
     'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
+    // `w_connected_and_badly_ordered` JOINED 2026-09-09, entered by
+    // `w_join_planner` as the half of join order its planner cannot see: a body
+    // whose every literal is connected can still be in the wrong order, and the
+    // only planner that could tell needs per-JOIN statistics rather than
+    // per-relation ones. Entered on the day, so it has spawned nothing.
+    'w_connected_and_badly_ordered',
     // `w_class_expression` and `w_class_fields` LEFT THIS LIST on 2026-09-08,
     // each in its own branch: both were taken and both spawned findings, one of
     // them a KERNEL gap — no string operation BUILDS a string, so a private
@@ -620,13 +626,21 @@ test('MUTANT 7 — an item with no state, and a plan that waits on itself', () =
   // SILENT, because every item in one is blocked by another in it, none is
   // takeable, and the queue simply goes quiet.
   assert.equal(honest.n('work_needs_cycle[audit](W)'), 0, 'and none on the honest tree');
-  const loop = world({ extra: 'work_needs(w_join_planner, w_effect_layer).\n'
-                            + 'work_needs(w_effect_layer, w_join_planner).' });
-  assert.deepEqual(loop.binds('work_needs_cycle[audit](W)', 'W'),
-    ['w_effect_layer', 'w_join_planner']);
+  // THE PAIR IS READ OFF THE QUEUE RATHER THAN TYPED, 2026-09-09. It used to
+  // name `w_join_planner` and `w_effect_layer`, and `w_join_planner` was closed
+  // — so the mutant's own POSITIVE CONTROL went red for a reason that had
+  // nothing to do with the cycle it exists to catch. A mutant anchored to an
+  // item's STATE expires the day somebody does the item, which is the same
+  // sentence this repository already writes about a mutant anchored to a rule's
+  // TEXT. The two heads of the honest queue are whichever two the plan offers.
+  const heads = honest.binds('takeable(W)', 'W').sort();
+  assert.ok(heads.length >= 2, 'positive control: the honest queue offers at least two items');
+  const [a, b] = heads;
+  const loop = world({ extra: `work_needs(${a}, ${b}).\nwork_needs(${b}, ${a}).` });
+  assert.deepEqual(loop.binds('work_needs_cycle[audit](W)', 'W').sort(), [a, b].sort());
   // AND THE SILENCE IS THE POINT: both are takeable on the honest tree and
   // neither is in the cycle world's queue, with no other row saying why.
-  for (const wi of ['w_join_planner', 'w_effect_layer']) {
+  for (const wi of [a, b]) {
     assert.ok(honest.binds('takeable(W)', 'W').includes(wi), `positive control: ${wi} is takeable`);
     assert.ok(!loop.binds('takeable(W)', 'W').includes(wi), `${wi} vanishes from the queue`);
   }

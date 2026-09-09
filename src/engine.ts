@@ -317,14 +317,71 @@ export function planBody(c: Clause): { plan: BodyElem[]; stuck: BodyElem | null;
       pending.splice(at, 1);
     }
   };
+  // ...AND ONE POSITIVE MOVES, FOR EXACTLY ONE REASON: it is a CROSS PRODUCT
+  // where it stands -- it shares no variable with any element before it, so its
+  // fan-out is its whole relation and it is multiplied by everything already
+  // accumulated. It is held until something binds one of its variables.
+  //
+  // WHY ONLY THAT, AND NOT A COST MODEL. Measured 2026-09-09 and recorded as
+  // `f_a_cost_model_can_be_five_for_five_backwards_and_wrong_forwards`: a greedy
+  // planner minimising the sum of intermediate result sizes, fed PERFECT
+  // statistics off a finished store, reproduced all five reorders that had been
+  // measured by hand -- and of the two orders it proposed that nobody had
+  // measured, one was worth -0.32% against a predicted 19.3x and the other made
+  // its world 4.3x DEARER against a predicted 4.43x improvement. A per-relation
+  // average is not what a correlated join asks for. A cross product needs no
+  // statistics to see and cannot be wrong about a distribution.
+  //
+  // THIS PATH IS THE BOTTOM-UP ONE. `solveDemandRule` unfolds a renamed clause
+  // through `solveBody` on its WRITTEN body, so a demand-backed rule and a
+  // materialised one now solve their positives in different orders. Both are
+  // answer-equivalent -- reordering positives is a permutation of a join, and
+  // the negation half of this function is what makes THAT true -- so the only
+  // thing that differs between the two paths is what they spend.
+  const crossHeld: number[] = [];
+  const shares = (i: number): boolean => {
+    const l = (c.body[i] as BodyElem & { t: 'pos' }).lit;
+    for (const a of l.args) for (const v of varsOf(a)) if (bound.has(v)) return true;
+    for (const v of varsOf(l.persp)) if (bound.has(v)) return true;
+    return false;
+  };
+  const takePos = (i: number) => {
+    const l = (c.body[i] as BodyElem & { t: 'pos' }).lit;
+    for (const a of l.args) bindAll(a);
+    bindAll(l.persp);
+    plan.push(c.body[i]);
+    flush();
+  };
+  /** a held literal whose variables the plan has since bound is no longer a
+   *  cross product, and goes in as soon as that is true */
+  const release = () => {
+    for (;;) {
+      const at = crossHeld.findIndex(shares);
+      if (at < 0) return;
+      takePos(crossHeld.splice(at, 1)[0]);
+    }
+  };
+  /** THE BARRIER. A negation or a builtin ends the run of positives it follows,
+   *  and everything still held goes in ahead of it in written order. That is
+   *  what keeps this change unable to move a `not` or an `is` relative to the
+   *  literals that bind it — the two places where order is the ANSWER rather
+   *  than the cost. */
+  const drain = () => { while (crossHeld.length > 0) takePos(crossHeld.shift()!); };
   c.body.forEach((b, i) => {
+    if (b.t === 'pos') {
+      if (bound.size > 0 && !shares(i)) { crossHeld.push(i); return; }
+      takePos(i);
+      release();
+      return;
+    }
+    drain();
     if (b.t === 'neg') { pending.push(i); flush(); return; }
-    if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); }
-    else if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
+    if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
     else if (b.op === 'is') { if (groundIn(b.r)) bindAll(b.l); }
     plan.push(b);
     flush();
   });
+  drain();
 
   const headGround = c.head.args.every(groundIn) && groundIn(c.head.persp);
   if (pending.length === 0) return { plan, stuck: null, stuckVars: [], headGround };

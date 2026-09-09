@@ -30,9 +30,17 @@
 //
 // WHAT TO DO WHEN IT GOES RED: look at which path grew. A premise that hands out
 // hundreds of rows per call is a body ordered so that a big relation is
-// enumerated before it is constrained. The engine reads a body LEFT TO RIGHT and
-// has no join planner — see f_the_engine_has_no_join_planner — so lead with the
-// literal that binds, and the store's argument index does the rest.
+// enumerated before it is constrained. The engine reads a body LEFT TO RIGHT, so
+// lead with the literal that binds and the store's argument index does the rest.
+//
+// AMENDED 2026-09-09 (w_join_planner): `planBody` now HOLDS a positive literal
+// that shares no variable with anything before it — a cross product — until
+// something binds it, so one class of bad order no longer reaches this number at
+// all. The class that DOES is a body whose literals are all connected and still
+// ordered badly (`w_connected_and_badly_ordered`, measured at +117% of the
+// control-flow world on `closer_v`), and that is what a red path here now means.
+// The pins in this file moved with the planner and the reason is in
+// f_a_cross_product_is_the_half_of_join_order_that_needs_no_statistics.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

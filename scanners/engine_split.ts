@@ -308,7 +308,10 @@ export const ABSORBED: Record<string, string[]> = {
   // header block because `FrontInfo` does, and it is plumbing either way.
   header: ['BudgetExhausted', 'constructor', 'StratificationError', 'constructor', 'noteFront'],
   // the one closure inside `planBody` the walker counts as a definition
-  planBody: ['note'],
+  // ...and `drain`, the barrier that puts every held cross-product literal in
+  // ahead of a negation or a builtin. Same block, same subject: where a literal
+  // may stand.
+  planBody: ['note', 'drain'],
   asking: ['policyStore'],
 
   evaluation: ['constructor'],

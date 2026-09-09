@@ -1236,10 +1236,48 @@ work_spawned(w_scanner_nested_values, f_the_contract_excluded_one_property_in_th
 -- literals by boundness at match time, and it carries the risk the other half
 -- of this defect already names: under negation, order changes the ANSWER, so a
 -- planner may not reorder across a negative literal. Same item, both hats.
-work(w_join_planner, "order body literals by boundness at match time: cost is currently a property of how a human typed the rule").
-work_state(w_join_planner, open).
+-- DONE 2026-09-09, AND THE ITEM'S OWN QUESTION WAS ANSWERED BY REFUSING HALF OF
+-- IT. The planner it asks for - order literals by boundness - was built first in
+-- its strongest form: greedy join ordering, exact minimisation of the sum of
+-- intermediate result sizes by subset DP over every legal order, fed PERFECT
+-- statistics off a finished 434 149-fact store. Scored against the five hand
+-- reorders of 2026-09-05 and 2026-09-09 it got FIVE OF FIVE: `has_return`,
+-- `encloses_s` and `param_hidden` reordered exactly as the humans did,
+-- `tdz_deferred` rated at 1.01x (the `worth nothing` that was measured), and
+-- `closer_v` KEPT as written with its +65% variant reverted. A boundness
+-- heuristic gets two of those wrong, so the model was doing real work.
+-- AND ALL FIVE WERE RETRODICTIONS. It proposed two orders nobody had measured
+-- and both were built: -0.32% against a predicted 19.3x, and +326% - the world
+-- 3 521 279 rows to 15 015 237 - against a predicted 4.43x IMPROVEMENT. The
+-- mechanism is measured: the estimate for `ident[code](U, Name)` with Name bound
+-- is the mean rows per name, 4.41 over 553 names, and the join asks it about
+-- PARAMETER names where the same quantity is 648, because one parameter is
+-- called `n` and `n` occurs 758 times against a median of 2. A join's probe
+-- values are correlated with the tail of the distribution it probes.
+--
+-- WHAT SHIPPED IS THE HALF THAT NEEDS NO STATISTICS. Asking what the three real
+-- repairs had that the two non-repairs did not gives a criterion with no numbers
+-- in it: a positive literal sharing NO VARIABLE with anything before it is a
+-- CROSS PRODUCT where it stands. `planBody` holds such a literal until something
+-- binds it, and a negation or a builtin drains the hold ahead of itself, so a
+-- positive can never overtake a `not` or an `is` - which is the risk this item
+-- names in its own sentence. Control-flow world 3 521 279 -> 3 353 932 rows
+-- (-4.75%) with all 199 959 program facts, 177 218 firings and 434 149 facts
+-- IDENTICAL, and the whole non-JS suite at 956/963 with the same seven
+-- pre-existing failures. The item's point is the other numbers: with it in, the
+-- PRE-REPAIR spellings of `encloses_s` and `param_hidden` cost 0.00% more than
+-- the repaired ones and the `tdz_deferred` swap costs 0.00%, where they were
+-- +37.27%, +119.87% and -0.04% - three bodies whose written order stopped being
+-- a cost decision. `has_return` is the honest partial, +66.62% -> +1.52%.
+work(w_join_planner, "DONE 2026-09-09: a cross-product literal is held until something binds it - the half of join order that needs no statistics, because the half that needs them was measured wrong twice on its own proposals").
+work_state(w_join_planner, done).
 work_needs(w_join_planner, w_body_order_is_load_bearing).
 work_spawned(w_join_planner, f_the_engine_has_no_join_planner).
+work_spawned(w_join_planner, f_a_cost_model_can_be_five_for_five_backwards_and_wrong_forwards).
+work_spawned(w_join_planner, f_a_cross_product_is_the_half_of_join_order_that_needs_no_statistics).
+work_spawned(w_join_planner, f_a_mutant_that_plants_a_bad_body_order_expires_when_the_engine_stops_caring).
+work_spawned(w_join_planner, f_a_mutant_anchored_to_an_items_state_expires_when_the_item_is_done).
+work_spawned(w_join_planner, f_an_exact_per_premise_estimate_does_not_make_a_seed_ordering_rule_correct).
 
 -- 37 — THE MODULE GRAPH HAS ONE EDGE KIND, and the sweep of the last bucket is
 -- what put it in one sentence. rules/js-modules.rofl models the import
@@ -2158,3 +2196,38 @@ work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_
 work(w_await_is_a_call_the_oracle_places_elsewhere, "DONE 2026-09-08: BOTH stated reasons were false and the item is its own answer - an await calls no library method at all, and the oracle does not contradict a thenable`s `then`, it DROPS the frame because a caller-less edge carries no file").
 work_state(w_await_is_a_call_the_oracle_places_elsewhere, done).
 work_spawned(w_await_is_a_call_the_oracle_places_elsewhere, f_a_caller_less_call_is_invisible_to_an_oracle_keyed_on_the_caller).
+
+-- 64 - A BODY THAT IS CONNECTED AND BADLY ORDERED, which is exactly what
+-- w_join_planner could not take on. The cross-product planner reacts to a
+-- structural fact and has no opinion about a body whose every literal shares a
+-- variable with the ones before it. The measured instance is `closer_v`:
+-- `encloses_v(F, X), encloses_v(G, X), ast_within(F, G)` and
+-- `encloses_v(F, X), ast_within(F, G), encloses_v(G, X)` are both connected
+-- throughout, and the second costs the control-flow world +117% - 3 353 932 rows
+-- to 7 285 630. A human reverted it by hand on 2026-09-09 and nothing in the
+-- tree would have stopped it being written again.
+--
+-- WHAT IT NEEDS IS NOT MORE STATISTICS OF THE SAME KIND, and that is the whole
+-- content of the item. Per-relation cardinality and per-position distinct counts
+-- were measured, off a FINISHED store, and they got this case right and two
+-- unmeasured cases wrong by up to 4.3x. The quantity that decides it is the
+-- fan-out of a probe under the values a JOIN supplies, which is a per-join
+-- histogram rather than a per-relation average - or, the other way round, an
+-- ADAPTIVE order read off what the engine actually handed out on the last round,
+-- which this engine can see and no static model can.
+work(w_connected_and_badly_ordered, "a body whose literals are all connected can still be in the wrong order, and the only planner that could tell needs per-join statistics rather than per-relation ones").
+work_state(w_connected_and_badly_ordered, open).
+-- RE-MEASURED 2026-09-09 AGAINST ANOTHER SESSION'S EVIDENCE, and the item got
+-- sharper rather than smaller. Over 16 files of eslint/lib they measured that a
+-- position-0 premise's observed cost equals a STATIC count conditioned on its
+-- written argument pattern - 68.8% exactly non-recursive, 28.9% recursive,
+-- against a 23.1% shuffled control. The half that transfers transfers cleanly:
+-- on THIS corpus `encloses_v` is 5 815 rows and `encloses_s` is 133, so the
+-- conditioned count does separate `closer_v` from `closer_s`, which no property
+-- of their identical text could. THE POLICY DOES NOT FOLLOW FROM THE ESTIMATE:
+-- `fn_node` is 395 rows here and the return statements 400, and `has_return`'s
+-- -23.3% repair LEADS WITH THE LARGER - so a rule that seeds with the cheapest
+-- conditioned count makes no repair at all, and on another corpus would make it
+-- on a 1.3% gap. What decides that body is the DIRECTION of the second literal,
+-- not either seed's size. So this item wants the count ON THE JOIN.
+work_needs(w_connected_and_badly_ordered, w_join_planner).
