@@ -80,12 +80,36 @@ candidate_intent(parse, C, F) :- needs_index[code](C, F).
 -- now so that the day it fills, nothing else has to change.
 coolable[code](F) :- indexed[code](F), not needed_hot[code](F).
 
--- WHEN TO ACTUALLY COOL IS A POLICY AND POLICY IS FACTS. The host measures
--- pressure — `peak_rows` against `space` is the only honest signal, and it is
--- counted in ROWS, which are not facts — and asserts `under_pressure`. The
--- rules decide WHAT to cool; the host decides WHETHER it must. Neither half
--- can do the other's job: the host cannot see which book is still wanted, and
--- the rules cannot see how much room is left.
+-- WHEN TO COOL IS A DISJUNCTION, AND ONE SIGNAL WAS NOT ENOUGH.
+--
+-- This began as a single premise on `peak_rows` against `space`, and that is
+-- the WRONG INSTRUMENT for the workload it was written for. Measured on the
+-- whole of eslint, 1426 files: the world grew to 5 896 383 facts while
+-- `peak_rows` sat at 7 437 against a 25 000 threshold, so cooling never fired
+-- once. The join accumulator is empty on a pure AST index, because every fact
+-- is BASE and nothing is derived from it — the store grows and the accumulator
+-- does not. Rows are not facts, and a threshold on one is blind to the other.
+--
+-- So the reasons are separate facts and any of them is enough. Each is
+-- measured by a DIFFERENT instrument and none can stand in for another, which
+-- is the whole lesson: a single number that correlates with pressure is not
+-- pressure. The host asserts whichever hold; the rules still decide WHAT may
+-- be cooled and never why.
+under_pressure[code](C) :- rows_pressure[code](C).
+under_pressure[code](C) :- world_pressure[code](C).
+under_pressure[code](C) :- memory_pressure[code](C).
+under_pressure[code](C) :- volume_settled[code](C).
+under_pressure[code](C) :- eviction_asked[code](C).
+
+edb(rows_pressure).      -- the join accumulator nears `space`
+edb(world_pressure).     -- the STORE nears its fact ceiling; the one that was missing
+edb(memory_pressure).    -- resident memory, which only the host can see at all
+edb(volume_settled).     -- the work is done and nothing pending refers to it
+edb(eviction_asked).     -- a checkpoint, a shutdown, a snapshot: somebody said so
+--
+-- The rules decide WHAT to cool; the host decides WHETHER it must. Neither
+-- half can do the other's job: the host cannot see which book is still wanted,
+-- and the rules cannot see how much room is left.
 -- PREMISE ORDER IS THE AUTHOR'S AND IT MATTERS HERE. `must_index` leads
 -- because it binds BOTH C and F; leading with `coolable(F)` and
 -- `under_pressure(C)` pairs two relations that share no variable, which is a

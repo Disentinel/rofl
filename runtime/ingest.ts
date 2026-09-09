@@ -48,8 +48,16 @@ export interface IngestOpts {
   volumes: string;
   /** Files parsed per tick. */
   batch: number;
-  /** Cool when peak rows exceed this fraction of the wall. */
+  /** Cool when peak rows exceed this fraction of the row wall. */
   pressureAt: number;
+  /** Cool when the world exceeds this many facts. The signal the row wall
+   *  cannot see: on a pure AST index every fact is BASE, so the join
+   *  accumulator stays empty while the store grows without bound. Measured on
+   *  the whole of eslint — 5 896 383 facts at 7 437 rows. */
+  maxFacts: number;
+  /** Cool when resident memory exceeds this many MB. Only the host can see
+   *  this at all; the engine has no idea how much room the machine has. */
+  maxRssMb: number;
   onTick?: (t: TickReport) => void;
 }
 
@@ -110,10 +118,22 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
     const t3 = Date.now();
 
     // 3-4. PRESSURE IS THE HOST'S TO SEE, COOLING IS THE RULES' TO CHOOSE.
+    //
+    // EVERY REASON IS MEASURED SEPARATELY AND ANY ONE IS ENOUGH. This was a
+    // single premise on `peak_rows` and that instrument is blind to the thing
+    // that actually grew: over the whole of eslint the world reached 5 896 383
+    // facts while peak rows sat at 7 437, so cooling never fired. Rows are not
+    // facts. A number that correlates with pressure is not pressure.
     let cooled = 0;
     let coldBytes = 0;
-    if (ev.peakRows > ev.space * o.pressureAt) {
-      await s.load(`under_pressure[code](${o.corpus}).`);
+    const { facts: hot } = await s.factCount();
+    const rssMb = Math.round(process.memoryUsage().rss / 1048576);
+    const reasons: string[] = [];
+    if (ev.peakRows > ev.space * o.pressureAt) reasons.push('rows_pressure');
+    if (hot > o.maxFacts) reasons.push('world_pressure');
+    if (rssMb > o.maxRssMb) reasons.push('memory_pressure');
+    if (reasons.length > 0) {
+      await s.load(reasons.map((r) => `${r}[code](${o.corpus}).`).join('\n'));
       await s.evaluate();
       const want = (await s.ask('candidate_intent(cool, C, F)')).rows.map((r) => JSON.parse(r[1]) as string);
       // ONE PASS FOR ALL OF THEM. One call per volume walks the whole world per
@@ -138,8 +158,11 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
         }
       }
       if (done.length > 0) await s.load(done.join('\n'));
-      // The pressure reading is per tick, so the flag does not outlive it.
-      await s.load(`pressure_relieved[code](${o.corpus}, ${tick}).`);
+      // The pressure reading is per tick, so the flag does not outlive it —
+      // and the REASONS are recorded beside it, because a volume that went to
+      // disk should be able to say why it went.
+      await s.load(`pressure_relieved[code](${o.corpus}, ${tick}).\n`
+        + reasons.map((r) => `cooled_because[code](${o.corpus}, ${tick}, ${r}).`).join('\n'));
     }
     const t4 = Date.now();
     const t5 = t4;
@@ -199,6 +222,8 @@ if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1])))
     volumes: path.join(REPO, 'rust/target/volumes'),
     batch: arg('--batch', 8),
     pressureAt: arg('--pressure', 0.5),
+    maxFacts: arg('--max-facts', 2_000_000),
+    maxRssMb: arg('--max-rss', 4096),
     onTick: (t) => console.log(
       `tick ${String(t.tick).padStart(3)} parsed ${String(t.parsed).padStart(3)} ` +
       `cooled ${String(t.cooled).padStart(3)} world ${String(t.worldFacts).padStart(9)} ` +

@@ -68,7 +68,41 @@ const isNode = (v: unknown): boolean =>
  *  next character, literally" (src/parser.ts tokenize). There is no `\n`, so a
  *  newline inside a string value is emitted RAW — escaping it would round-trip
  *  as the letter `n`, which is silently wrong where raw is merely ugly. */
-const q = (s: string): string => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+/** A ROFL string literal.
+ *
+ *  UNPAIRED SURROGATES ARE REPLACED, AND THE REPLACEMENT IS RECORDED. A
+ *  JavaScript string is UTF-16 and may hold a lone surrogate; a Rust string is
+ *  guaranteed UTF-8 and cannot, so one cannot cross into the port at all —
+ *  `JSON.stringify` emits `\ud83d` and `serde_json` refuses it with
+ *  "unexpected end of hex escape". Nor could it survive a cooled volume: this
+ *  repository's own parser decodes five escapes and refuses the rest by name.
+ *
+ *  Found the expensive way on 2026-09-09: two files of eslint's 1426 carry one
+ *  in their AST — `no-misleading-character-class` and `utils/char-source`,
+ *  which are the tests FOR surrogate handling, so of course they do — and the
+ *  ingest loop hung on them rather than failing, because the client dropped the
+ *  engine's parse error in silence.
+ *
+ *  U+FFFD is the standard replacement and the loss is real, so it is not
+ *  silent: `surrogate_replaced` is emitted beside the fact, and a question
+ *  about that value can find out it was changed. */
+const q = (s: string): string => {
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF) {
+      const n = s.charCodeAt(i + 1);
+      if (n >= 0xDC00 && n <= 0xDFFF) { out += s[i] + s[i + 1]; i++; continue; }
+      out += '\uFFFD'; lostSurrogates += 1; continue;
+    }
+    if (c >= 0xDC00 && c <= 0xDFFF) { out += '\uFFFD'; lostSurrogates += 1; continue; }
+    out += s[i];
+  }
+  return '"' + out.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+};
+
+/** How many unpaired surrogates `q` replaced since the last `scan`. */
+let lostSurrogates = 0;
 
 /** babel's CamelCase → the lower_snake this language's atoms use */
 export const atomise = (k: string): string =>
@@ -96,6 +130,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
   const prefix = idPrefix(file);
+  lostSurrogates = 0;
   const ast = parse(src, { sourceType: 'module', plugins: ['typescript'] });
 
   const facts: string[] = [];
@@ -139,5 +174,22 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
 
   const root = emit(ast as unknown as Record<string, unknown>);
   facts.push(`ast_file[${persp}](${root}, ${qFile}).`);
+  // THE LOSS IS RECORDED BESIDE THE DATA. Replacing a character silently would
+  // make a question about that value answerable and wrong; this makes it
+  // answerable and honest.
+  //
+  // AND IT DELIBERATELY CARRIES NO VOLUME PREFIX, so cooling cannot find it and
+  // it stays hot when the file's facts go to disk. That is the right way round:
+  // a note saying THIS FILE'S DATA WAS ALTERED must remain readable exactly
+  // when the altered data is not there to be inspected. It costs one fact per
+  // affected file — two, on the whole of eslint.
+  //
+  // The general shape is worth knowing: a volume is a KEY PREFIX, so a fact
+  // that mentions a volume by NAME rather than by ID is outside that volume and
+  // will not be cooled with it. Here that is deliberate; elsewhere it would be
+  // a leak.
+  if (lostSurrogates > 0) {
+    facts.push(`surrogate_replaced[${persp}](${qFile}, ${lostSurrogates}).`);
+  }
   return { facts, nodes: n, kinds, root, prefix };
 }

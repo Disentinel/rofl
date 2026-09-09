@@ -217,6 +217,17 @@ export class RoflPort {
   private waiting = new Map<number, { ok: (v: Record<string, unknown>) => void; no: (e: Error) => void }>();
   private seq = 1;
   private dead: Error | null = null;
+  private err = '';
+
+  /** Every outstanding promise fails, and the reason is kept for later sends.
+   *  A protocol whose failures are silent leaves the caller awaiting a promise
+   *  that can never settle, which is strictly worse than the crash it came
+   *  from — and worse than that is a LOST answer, because nothing crashed. */
+  private fail(why: string): void {
+    this.dead ??= new Error(`${why}${this.err ? `: ${this.err.trim()}` : ''}`);
+    for (const w of this.waiting.values()) w.no(this.dead);
+    this.waiting.clear();
+  }
 
   private constructor(bin: string) {
     this.child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -225,15 +236,9 @@ export class RoflPort {
     // A child that dies with requests outstanding must REJECT them. A protocol
     // whose failures are silent leaves the caller awaiting a promise that can
     // never settle, which is worse than the crash it came from.
-    let err = '';
-    this.child.stderr.on('data', (b: Buffer) => { err += b.toString(); });
-    const fail = (why: string): void => {
-      this.dead ??= new Error(`${why}${err ? `: ${err.trim()}` : ''}`);
-      for (const w of this.waiting.values()) w.no(this.dead);
-      this.waiting.clear();
-    };
-    this.child.on('error', (e) => fail(`rofl-serve would not start (${e.message})`));
-    this.child.on('exit', (code, sig) => fail(`rofl-serve exited (code ${code}, signal ${sig})`));
+    this.child.stderr.on('data', (b: Buffer) => { this.err += b.toString(); });
+    this.child.on('error', (e) => this.fail(`rofl-serve would not start (${e.message})`));
+    this.child.on('exit', (code, sig) => this.fail(`rofl-serve exited (code ${code}, signal ${sig})`));
   }
 
   /** Start the engine. `bin` defaults to the release build in this tree; a
@@ -249,11 +254,43 @@ export class RoflPort {
   private receive(line: string): void {
     let v: Record<string, unknown>;
     try { v = JSON.parse(line) as Record<string, unknown>; }
-    catch { return; }
+    catch (e) {
+      // A LINE THAT WILL NOT PARSE USED TO BE DROPPED HERE, and the caller
+      // then waited for a reply that had already arrived and been thrown away.
+      // Both processes go idle — the engine blocked in `read` waiting for the
+      // next request, node blocked in `kevent` waiting for the answer to the
+      // last — and nothing says so. It is the same defect this client's own
+      // gate was built to catch on the OTHER path: a dead child rejects every
+      // outstanding promise, and a lost MESSAGE did not.
+      //
+      // Rejecting everything outstanding is deliberately blunt. The id is in
+      // the line that would not parse, so there is no way to know whose answer
+      // this was, and a protocol that cannot say which request died must say
+      // that all of them might have.
+      this.fail(`unreadable answer from the engine (${(e as Error).message}): `
+        + `${line.length} bytes starting ${JSON.stringify(line.slice(0, 120))}`);
+      return;
+    }
     const id = v.id as number;
     const w = this.waiting.get(id);
-    if (!w) return;
+    if (!w) {
+      // AN ANSWER NOBODY IS WAITING FOR was dropped here in silence, which is
+      // the same defect as the unparseable line above wearing a different hat:
+      // if the ids ever desync, every later request waits forever and nothing
+      // says why. It is reported rather than repaired, because an answer to a
+      // request this client did not make means the two sides disagree about
+      // what has been asked, and continuing would be guessing.
+      // AND IT CARRIES WHAT THE ENGINE SAID. `id: null` is what a request the
+      // engine could not even parse comes back as — the id was inside the text
+      // that failed — so without the engine's own message this failure reports
+      // that something went wrong and destroys the only evidence of what.
+      this.fail(`an answer arrived for request ${id}, which is not outstanding `
+        + `(waiting on ${[...this.waiting.keys()].join(', ') || 'nothing'}). `
+        + `The engine said: ${JSON.stringify(v).slice(0, 400)}`);
+      return;
+    }
     this.waiting.delete(id);
+    if (process.env.ROFL_PORT_TRACE) process.stderr.write(`<- ${id} ${line.length}B\n`);
     if (v.ok === true) w.ok(v);
     else w.no(new Error(String(v.error ?? 'unknown engine error')));
   }
@@ -263,7 +300,14 @@ export class RoflPort {
     const id = this.seq++;
     return new Promise((ok, no) => {
       this.waiting.set(id, { ok, no });
-      this.child.stdin.write(`${JSON.stringify({ ...req, id })}\n`);
+      const line = `${JSON.stringify({ ...req, id })}\n`;
+      if (process.env.ROFL_PORT_TRACE) {
+        process.stderr.write(`-> ${id} ${String(req.op)} ${line.length}B\n`);
+      }
+      // A WRITE THAT FAILS MUST NOT BE SILENT EITHER. `write` reports an error
+      // through the callback, and without it a broken pipe leaves the caller
+      // waiting on an answer to a request that never left.
+      this.child.stdin.write(line, (e) => { if (e) this.fail(`write failed: ${e.message}`); });
     });
   }
 
