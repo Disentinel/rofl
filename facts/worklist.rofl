@@ -297,6 +297,36 @@ work_spawned(w_cost_gate_per_layer, f_a_cost_attributed_by_pack_cannot_see_the_p
 -- IT IS NOT APPLIED BY THE GATE THAT FOUND IT, on purpose: an instrument that
 -- repairs its own subject has no baseline left to report, and the number in
 -- that file is the record of what the layer cost while nothing was watching.
+--
+-- AND A SECOND SESSION FOUND THE SAME RULE THE SAME NIGHT, ON A DIFFERENT
+-- CORPUS, WITH A DIFFERENT INSTRUMENT. Recorded here because only the
+-- integrator could see both, and the provenance is unusual and should be
+-- stated: the other session`s work was read off a PROCESS LISTING on the
+-- shared machine (a `wip/curve` worktree at /Users/vadim/rofl-modeljs), not
+-- off a merged branch, so treat the numbers as reported-by-them and re-measure
+-- before quoting. What they report: the same reorder over sixteen files of
+-- eslint/lib through scanners/js_cost.ts takes total accumulator width from
+-- 5 331 063 to 3 615 655, -32.2%, with the fact count 886 230 before and
+-- after, IDENTICAL — the same answer-preserving control this item ran on its
+-- own corpus. They also took the CURVE, which this gate did not: over
+-- grafema/packages/util at 8/16/32/64 files, 3.16/6.03/15.78/74.29 s becomes
+-- 3.10/5.47/12.94/47.55, so 7.47x the facts cost 23.5x the time before and
+-- 15.3x after — time as facts^1.57 becoming facts^1.36.
+--
+-- THE EXPONENT IS THE PART NEITHER MEASUREMENT WOULD HAVE HAD ALONE. A single
+-- corpus gives a percentage and cannot tell a constant from an exponent; two
+-- corpora at four sizes can. That two independent instruments over two
+-- unrelated corpora landed on ONE CLAUSE is the strongest evidence this item
+-- has, and it is worth more than either number.
+--
+-- THEIR SECOND ATTEMPT BACKFIRED AND THAT IS THE WARNING FOR WHOEVER TAKES
+-- THIS. They reordered `closer_v[flow]` on the same reasoning — put the
+-- narrower premise first — and measured 1 064 884 -> 1 762 311, SIXTY-FIVE
+-- PER CENT WORSE, and reverted. `closer_v` is not a cross product; both
+-- positions join on X. So the reasoning that worked here and the reasoning
+-- that failed there are the same reasoning, and only running both separated
+-- them. Do not apply this reorder by argument; apply it by measurement, with
+-- the row-for-row equivalence control.
 work(w_has_return_is_a_join_over_the_whole_corpus, "has_return joins every function against every return statement; the reorder is worth 42.7% of the control-flow world and is answer-preserving over ten named relations").
 work_state(w_has_return_is_a_join_over_the_whole_corpus, open).
 work_needs(w_has_return_is_a_join_over_the_whole_corpus, w_cost_gate_per_layer).
