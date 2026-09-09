@@ -126,10 +126,19 @@ test('03 metadep — the closure is immune to data, the edb reader is not', () =
 
 test('04 false miss — the same question, two instruments, opposite answers', () => {
   const t = out('04', falseMiss);
-  // The instrument that skips binary files answers with nothing at all about a
-  // file with three exports. That IS the fragment; if it ever starts warning,
-  // the lesson weakens and the text must change.
-  assert.match(t, /\/usr\/bin\/grep -I -c\s+3\s+\[exit 0\]\s+\(NOTHING AT ALL\)\s+\[exit 1\]/);
+  // The instrument that skips binary files reports NO exports about a file with
+  // three of them, and exits 1. THAT is the fragment. How it renders "no
+  // exports" is the HOST's business and not the lesson's: BSD grep on macOS
+  // prints nothing at all, GNU grep on Linux prints 0, and this assertion was
+  // pinned to the first of those — so it passed on every developer machine and
+  // failed on every CI run, which is where the referee lives.
+  //
+  // A gate inherits the scope of its INCIDENT, not of its class, and the
+  // incident here is an instrument answering "none" about a file with three.
+  // Both renderings are that incident; only one of them was written down. The
+  // property is asserted instead: the -I column disagrees with the -c column
+  // about the same file, and says so with a failing exit.
+  assert.match(t, /\/usr\/bin\/grep -I -c\s+3\s+\[exit 0\]\s+(?:\(NOTHING AT ALL\)|0)\s+\[exit 1\]/);
   assert.match(t, /\/usr\/bin\/grep -c\s+3\s+\[exit 0\]\s+3\s+\[exit 0\]/);
   // The replacement gate reads bytes and does say no.
   assert.match(t, /1 violation\(s\)/);
