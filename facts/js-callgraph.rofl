@@ -262,6 +262,32 @@ node_kind(js, class_accessor_property).
 -- A kind-level cell cannot express that split; the precedent is
 -- `member_expression`, handled since tier 2 and still missing seven of its
 -- eight shapes.
+--
+-- ...AND THE SENTENCE ABOVE PUTS TWO DIFFERENT ANSWERS IN ONE CLAUSE, measured
+-- 2026-09-09 by `hidden_call_*` in rules/js-controlflow.rofl, the census
+-- `w_destructuring_hides_a_call` built for its own four positions and pointed at
+-- this door too. The two unresolved for-of sites are NOT the same residue:
+--
+--   for (const chosen of [alef, bet])   an array_expression -> BUILTIN. The
+--                                       sentence is exactly right, and it is a
+--                                       POSITIVE statement: nothing user-written
+--                                       runs, so no edge is missing.
+--   for (const drawn of pick())         a generator object, which `may_be_node`
+--                                       does not carry -> UNTRACED. And a
+--                                       generator's `next` runs the generator
+--                                       BODY, which IS a node in this program,
+--                                       so an edge may well be missing here.
+--
+-- One of the two is answered and one is a frontier, and the clause reads them
+-- as one because a cell cannot hold the split. `hidden_call_untraced[flow]` is
+-- where the second one now sits; the first is `hidden_call_builtin[flow]`.
+--
+-- THE VERDICT IS LEFT AS IT STANDS AND THE QUESTION IS OWNED BY NAME.
+-- `w_the_generator_is_not_a_builtin` in facts/worklist.rofl carries the
+-- measurement and claims no cell: whether `for_of_statement/none/callgraph`
+-- should reopen on the strength of it is a verdict, and a verdict is the
+-- owner's. What is NOT left as prose is the split itself, which is now two
+-- rows anybody can query.
 handled(js, tagged_template_expression,     callgraph, r_tag_call).
 handled(js, for_of_statement,               callgraph, r_iterator_protocol).
 -- ...AND THE AWAIT LEFT THIS LIST ON 2026-09-08, and it left because the note

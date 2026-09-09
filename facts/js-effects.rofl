@@ -452,10 +452,47 @@ handled(js, optional_member_expression, effect, r_effect_state).
 -- FOUR OF THESE ARE HIDDEN CALLS and the control-flow layer had already found
 -- them: `w_destructuring_hides_a_call` measured at run time that an array
 -- pattern runs the iterator, an object spread runs the getters, and an object
--- rest runs the source's getters. `pattern_iterates` and `pattern_accessor`
--- turn each into a `resolves` row, so at this layer they are ordinary calls.
--- The residue — an iterator that belongs to the standard library rather than
--- to this program — is `call_expression`'s open cell and not four copies of it.
+-- rest runs the source's getters. The residue — an iterator that belongs to the
+-- standard library rather than to this program — is `call_expression`'s open
+-- cell and not four copies of it.
+--
+-- ...AND THE SENTENCE THAT STOOD HERE WAS HALF TRUE FOR SEVEN DAYS' WORTH OF
+-- READERS, CORRECTED 2026-09-09. It read *`pattern_iterates` and
+-- `pattern_accessor` turn each into a `resolves` row, so at this layer they are
+-- ordinary calls*. `pattern_iterates` does; `pattern_accessor` does NOT and
+-- deliberately does not, because a rest over two getters is two true calls at
+-- one node and two `resolves` rows at one node is what `ambiguous_call[audit]`
+-- exists to report. `eff_latent` closes over `resolves`, so THREE of these four
+-- kinds — `object_pattern`, `rest_element` and the `properties` half of
+-- `spread_element` — contributed nothing whatever at this layer while the cell
+-- said they were ordinary calls. Measured with a probe: a getter that writes
+-- and throws reaches the enclosing function through `gate.hot` and through
+-- nothing else.
+--
+-- SECTION 5d OF rules/js-effects.rofl MEASURES IT AND DOES NOT CLOSE IT, BY THE
+-- OWNER'S DECISION ON 2026-09-09. The arm that would close it is one line and
+-- section 5b already writes it — `eff_conv_call` propagates a coercion's hidden
+-- callee exactly this way — and it was written, measured and REVERTED: the
+-- repair belongs to the call-graph and effect packs together and is not to
+-- arrive inside a destructuring merge. `w_effect_reads_only_what_resolves` owns
+-- it, and `eff_hidden_call[flow]` and `eff_edge_unclosed[flow]` are what stand
+-- in the meantime — the doors, and what they drop.
+--
+-- SO THESE FOUR ROWS ARE NOW READ WITH A LIMIT, and the limit is the honest
+-- half of a `handled` cell rather than a footnote to it: `array_pattern` earns
+-- its row through `resolves` and the other three do not earn theirs at all
+-- today. The verdicts are LEFT AS THEY STAND because a cell is the owner's to
+-- move and because the residue is named rather than silent — which is the same
+-- standard `call_expression`'s ambient cell is held to — but a reader who takes
+-- `r_effect_transfer` at face value for `object_pattern`, `rest_element` or the
+-- `properties` half of `spread_element` is taking it for more than it is.
+--
+-- AND THE GATE THAT SHOULD HAVE CAUGHT THIS COULD NOT. `eff_join_short[audit]`
+-- says a caller's row contains its callee's and reads `resolves` — the same
+-- relation the propagation reads — so it is green in the very world where
+-- `eff_edge_unclosed[flow]` is not. A gate sharing its blind spot with the
+-- thing it guards is the transferable half of this, and it is the third
+-- instrument defect of that shape on this branch in one day.
 -- ---------------------------------------------------------------------------
 -- AMBIENT — A CALL WHOSE CALLEE IS NOT IN THIS PROGRAM, closed 2026-09-09 by
 -- `w_effect_ambient_call`. These four were the eighteen's largest group and

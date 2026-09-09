@@ -600,13 +600,30 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // owner's authorised list stays readable as a list. A FIFTH LAYER FOR
   // TWENTY-FOUR ROWS of 3.07 million, because the effect join sits at the
   // FUNCTION boundary through `nearest_v` rather than per node.
-  // +325 ROWS AND +37 FIRINGS ON 2026-09-09, and the whole of it is the owner's
-  // `environment(es2025)` declaration bringing `import_attribute` into the
-  // vocabulary: one kind, `node_kind` in four packs, four `kind_absent_ok`
-  // excuses and five verdicts. This world loads the control-flow pack, so it
-  // sees the vocabulary rows and not the modules rules.
-  assert.equal(L.world.total, 3066104, 'rows handed out by the store in the control-flow fixpoint');
-  assert.equal(L.world.firings, 171316, 'derivations in the control-flow fixpoint');
+  // TWO BRANCHES MOVED THESE TWO NUMBERS FOR TWO UNRELATED REASONS, and this is
+  // the exact shape this repository warns about: a COUNT that two branches move
+  // is right on each branch and wrong in the merge, with nothing in the conflict
+  // to say what the third number is. Both causes, kept:
+  //
+  //   * +325 rows / +37 firings — the owner's `environment(es2025)` declaration
+  //     bringing `import_attribute` into the vocabulary: one kind, `node_kind`
+  //     in four packs, four `kind_absent_ok` excuses and five verdicts. This
+  //     world loads the control-flow pack, so it sees the vocabulary rows and
+  //     not the modules rules.
+  //   * +3 716 rows / +218 firings — `w_destructuring_hides_a_call`'s second
+  //     pass and its `hidden_call_*` census: seven relations over 28 positions
+  //     answering which of two opposite things a rule's silence means. On that
+  //     branch the world and the layer moved by the same amount, which is what a
+  //     difference-based attribution looks like when the change is local.
+  //
+  // THE NUMBERS BELOW ARE A PREDICTION AND NOT A MEASUREMENT — 3 065 779 + 325 +
+  // 3 716 and 171 279 + 37 + 218, the two deltas assumed independent. They have
+  // NOT been re-measured on the merged tree, because this merge was taken
+  // without a test pass on instruction. RE-MEASURE BEFORE TRUSTING: if the
+  // deltas interact at all the sum is wrong, and a sum that happens to be right
+  // is indistinguishable here from one that is not.
+  assert.equal(L.world.total, 3069820, 'rows handed out by the store in the control-flow fixpoint');
+  assert.equal(L.world.firings, 171534, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
   // 45.97% of the rows handed out in its own world, while being 5.13% of its
@@ -614,8 +631,12 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // everything else in the same world. A layer that reads more than a dozen
   // rows per derivation is doing a scan somewhere, and the path list below says
   // where.
-  assert.equal(L.rows, 249596, 'rows the control-flow pack costs, by difference');
-  assert.equal(L.firings, 11293, 'derivations the control-flow pack adds');
+  // 249 596 -> 253 312 and 11 293 -> 11 511 on 2026-09-09, the census above.
+  // 17.0 rows per derivation for the added part, BELOW the layer's own 22.0 —
+  // the arms are bound on a node the pattern rules already located, so the
+  // census walks less per answer than the pack it measures.
+  assert.equal(L.rows, 253312, 'rows the control-flow pack costs, by difference');
+  assert.equal(L.firings, 11511, 'derivations the control-flow pack adds');
   assert.ok(Math.abs(L.rowShare - 8.141) < 1.5,
     `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 8.141%`);
   assert.ok(Math.abs(L.firingShare - 6.593) < 0.5,
@@ -809,7 +830,13 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   assert.equal(L.firings, cf().firings, 'positive control: the ANSWERS do not move — this is cost only');
   assert.equal(L.world.q('after_abrupt[code](S)').n, cf().world.q('after_abrupt[code](S)').n);
 
-  assert.notEqual(L.world.total, 3065779, 'KILLED by the world total (+1.15%)');
+  // THE LITERAL IS THE BASELINE'S AND MOVES WITH IT, restated 2026-09-09 with
+  // the `hidden_call_*` census. The percentage in the message was ALREADY stale
+  // when this was touched — the mutant is +2.69% over the baseline, not +1.15%
+  // — so the figure is dropped rather than corrected to a number that will go
+  // stale again; what the assertion says is `not the baseline`, and the baseline
+  // is printed by `showLayer` two lines up.
+  assert.notEqual(L.world.total, 3069495, 'KILLED by the world total');
   assert.deepEqual(L.paths.map(([k]) => k).filter((k) => !cf().paths.some(([b]) => b === k)),
     ['relPersp ast_child'],
     'KILLED by the layer\'s path SET, with the offender\'s own name in the diff');
@@ -934,8 +961,8 @@ test('MUTANT C: an expensive new rule added to the layer pack', () => {
   const L = layerCost(CONTROLFLOW, CF_CUT, [{ file: 'rules/js-controlflow.rofl', append: PROBE }], cf().without);
   showLayer('mutant C', L);
   assert.ok(L.world.q('cost_probe[audit](N, C)').n > 0, 'positive control: the injected rule fires');
-  assert.notEqual(L.world.total, 3065779, 'KILLED by the world total');
-  assert.notEqual(L.world.firings, 171279, 'KILLED by the world firings');
+  assert.notEqual(L.world.total, 3069495, 'KILLED by the world total');
+  assert.notEqual(L.world.firings, 171497, 'KILLED by the world firings');
   assert.ok(Math.abs(L.firingShare - 6.373) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
   assert.ok(Math.abs(L.perFiring - 22.10) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
   // SURVIVOR, named: the layer's PATH SET does not change. A new rule that
@@ -981,7 +1008,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
 
   // THE WORLD SEES IT — and to the row it is the same cost as MUTANT C, which
   // is what makes this a controlled pair rather than an anecdote.
-  assert.notEqual(L.world.total, 3065779, 'the world total is what catches it');
+  assert.notEqual(L.world.total, 3069495, 'the world total is what catches it');
   // THE LAYER DOES NOT, and every layer figure is identical to the baseline.
   assert.equal(L.rows, cf().rows, 'SURVIVOR: the layer\'s rows do not move by ONE');
   assert.equal(L.firings, cf().firings, 'SURVIVOR: nor its derivations');
@@ -1016,7 +1043,7 @@ test('MUTANT D: the layer pack missing from the world', () => {
     [...dropped.packs.filter((p) => p !== 'boot.rofl'), ...dropped.omits].sort(),
     jsPacksOnDisk(),
     'KILLED by the closure: a pack that is neither loaded nor refused');
-  assert.ok(w.total < 3065779, `and the total falls, which on its own says nothing: ${w.total}`);
+  assert.ok(w.total < 3069495, `and the total falls, which on its own says nothing: ${w.total}`);
   console.log('      KILLED by unpopulatable and by the pack-list closure; the TOTAL alone ' +
               'only falls, which is the safe direction and is why it cannot be the check');
 });
@@ -1026,7 +1053,7 @@ test('MUTANT E: the fixpoint truncated at a budget', () => {
   // that was found in five files at once, one of them the first cost gate, which
   // had been pinning half a world.
   const w = build(CONTROLFLOW, { budget: 100_000 });
-  assert.ok(w.total < 3065779 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
+  assert.ok(w.total < 3069495 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
   assert.equal(w.holes.unpopulatable, false);
   assert.ok(w.holes.n > 0, 'KILLED by hole(Q, W), which the real gate asserts is empty');
   // AND A SECOND TELL, found by planting this mutant: in a truncated world the
