@@ -376,6 +376,47 @@ handled(js, class_private_method,       effect, r_effect_latent).
 handled(js, object_method,              effect, r_effect_latent).
 
 -- ---------------------------------------------------------------------------
+-- DEFINITION TIME AND CONSTRUCTION TIME — the five kinds that RUN at a moment
+-- other than a call, 2026-09-09 (w_effect_class_initialisers). They are the
+-- exact complement of the latent group above and that is why they could not
+-- join it: a class declaration is not inert where it stands. It evaluates
+-- `extends`, it calls its decorators, it evaluates every computed key, and it
+-- runs every static block and every static field initialiser, in source order,
+-- once. `r_effect_class_definition` is the join over those parts, seeded onto
+-- the declaration NODE, which is the edge `eff_latent` could not supply because
+-- there is no `resolves` row to carry it.
+--
+-- AND IT IS ALSO WHY THIS GROUP IS NOT ONE VERDICT. A STATIC field initialiser
+-- and a static block run ONCE, when the class is defined; a NON-STATIC one runs
+-- ONCE PER INSTANCE, at every `new`, and never at all if nothing constructs the
+-- class. Two moments, and the model carries them as two relations —
+-- `class_define_eff` and `class_construct_eff` — with
+-- `eff_moment_both[audit]`/`eff_moment_unplaced[audit]` asserting that every
+-- initialiser lands in exactly one. Collapsing them would have put an instance
+-- initialiser's effect at a point in the program where it provably does not
+-- happen, which is the one thing a may-set is not allowed to do.
+--
+-- THE CONSTRUCTION HALF HAS A CALL SITE AFTER ALL, which is the half of this
+-- item's own note that turned out to be wrong: `may_be_node[flow]` says which
+-- class a `new` expression constructs, so the instance row hangs on the `new`
+-- exactly as a callee's row hangs on a call. Only the definition half needed an
+-- edge of a new shape.
+--
+-- `class_accessor_property` IS MODELLED AS A FIELD AND ITS SYNTHESISED PAIR
+-- ADDS NOTHING HERE. Its parser plugin is on, the corpus holds two nodes, and
+-- both are non-static — so the site this verdict rests on is the construction
+-- half. The get/set pair the language writes reads and writes a backing slot on
+-- the same receiver that `o.a` is already a `read<h>` and `o.a = v` already a
+-- `write<h>` of, so it contributes no label the member machinery does not
+-- derive. That is the opposite of the control-flow layer's verdict for the same
+-- kind, where the synthesised call IS the content.
+handled(js, class_declaration,          effect, r_effect_class_definition).
+handled(js, static_block,               effect, r_effect_class_definition).
+handled(js, class_property,             effect, r_effect_class_init).
+handled(js, class_private_property,     effect, r_effect_class_init).
+handled(js, class_accessor_property,    effect, r_effect_class_init).
+
+-- ---------------------------------------------------------------------------
 -- STATE, WITH ITS HEAP. `w_alias_store` left `r_member_write` — a member
 -- written is a member read — and this layer reads that machinery rather than
 -- inventing one: `plain_assign[flow]` says which assignments are plain, and
@@ -631,6 +672,9 @@ unknown_because(js, debugger_statement, effect, runtime_dependent).
 -- ===========================================================================
 -- WHAT IS OPEN — 13 CELLS, EVERY ONE OWNED BY NAME IN facts/worklist.rofl
 --
+-- EIGHTEEN BECAME THIRTEEN ON 2026-09-09: `w_effect_class_initialisers` closed
+-- its five, and the group it used to occupy is now a `handled` block above.
+--
 -- The rows below are `not_yet` by DEFAULT and carry no `unknown_because`,
 -- because `not_yet` is exactly what they are and writing it out would add a
 -- word without adding a fact. What they DO carry is an owner, one
@@ -647,15 +691,6 @@ unknown_because(js, debugger_statement, effect, runtime_dependent).
 --     down: a bare name is a local (bottom or `read<local>`), an import
 --     (bottom), or a free global (`read<global>`, and a ReferenceError if it is
 --     not there), and only the third needs the surface.
---
---   FIVE — CLASS INITIALISERS           w_effect_class_initialisers
---     class_declaration, class_property, class_private_property,
---     class_accessor_property, static_block
---     A static block and a field initialiser RUN when the class is defined, so
---     their effect belongs to the declaration site and not to a call. Joining a
---     latent effect into a declaration is a rule this layer does not have, and
---     it is a different rule from the call propagation because there is no call
---     site to hang it on.
 --
 --   THREE — IMPLICIT COERCION           w_effect_implicit_coercion
 --     binary_expression, unary_expression, template_literal

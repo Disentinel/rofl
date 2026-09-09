@@ -85,6 +85,59 @@ function build(muts: Mut[] = [], extra: Extra[] = [], src: [string, string][] = 
 let BASE: World | undefined;
 const base = () => (BASE ??= build());
 
+/** THE CLASS-INITIALISER PROBE, w_effect_class_initialisers 2026-09-09.
+ *
+ *  SEVEN shapes the five shared fixtures do not have, and every one is here
+ *  because a mutant of section 6 could not otherwise die. THE WHOLE REASON THE
+ *  CORPUS CANNOT CARRY THEM is one measured sentence: every field initialiser
+ *  in those files either allocates an arrow or calls a function that is
+ *  `total`, so the propagation arm, the construction seed and the discharge all
+ *  derive nothing there.
+ *
+ *    static heat = scratch()   a DEFINITION-time initialiser whose callee has a
+ *                              row of its own
+ *    glaze = crack()           a CONSTRUCTION-time initialiser that throws, so
+ *                              the construction seed reaches `fires`
+ *    static tongs = () => ...  a static field holding a CLOSURE whose body is
+ *                              divergent: the walk must keep the arrow and
+ *                              refuse to descend into it
+ *    static { try ... catch }  a handler inside a class part, which
+ *                              `caught_here` is structurally unable to see
+ *    class Kilnling extends    a subclass with NO member of its own, so the
+ *                              inheritance arm is the only way its row is
+ *                              non-empty
+ *    class Forge extends f()   an `extends` expression that DOES something
+ *    @toll class Chime { [spin()]() {} }
+ *                              a decorator and a computed key, and their labels
+ *                              are deliberately different — `toll` throws and
+ *                              `spin` diverges — so `exn` on `Chime` can only
+ *                              be the decorator and `div` can only be the key
+ *
+ *  IT IS A PROBE AND NOT A SIXTH FIXTURE for the reason `build` records: the
+ *  five shared files are what every other claim in this file — and the cell
+ *  counts, and four other test files' numbers — are measured over. */
+const KILN = `
+let plate = 0;
+function scratch() { plate = plate + 1; return plate; }
+function crack() { throw new Error('crack'); }
+function spin() { while (plate > 0) { plate = plate - 1; } return plate; }
+function mount() { plate = plate + 2; return Kiln; }
+function toll(v, c) { throw new Error('toll'); }
+export class Kiln {
+  static heat = scratch();
+  static tongs = () => spin();
+  glaze = crack();
+  static { try { crack(); } catch (e) { plate = 0; } }
+}
+export function fires() { return new Kiln(); }
+export class Kilnling extends Kiln {}
+export function firesSub() { return new Kilnling(); }
+export class Forge extends mount() {}
+@toll
+class Chime { [spin()]() { return plate; } }
+export function chimes() { return new Chime(); }
+`;
+
 // ===========================================================================
 // 1. THE LATTICE
 
@@ -216,6 +269,143 @@ test('a try with no handler catches nothing — and there is no such site here',
 });
 
 // ===========================================================================
+// 2b. WHAT RUNS WHEN A CLASS IS DEFINED, AND WHAT RUNS WHEN ONE IS BUILT
+//     w_effect_class_initialisers, 2026-09-09.
+//
+// EVERY SET HERE IS KEYED BY CLASS NAME AND MEMBER NAME rather than by node id,
+// because a node id embeds an index into its file and an element that moves
+// when somebody edits a part of the fixture the claim is not about is not a
+// named set. `Coin` and `#edge` do not move.
+
+/** each class field with an initialiser, as `<class>.<key>` and the moment it
+ *  runs. A PRIVATE key is read through the `id` child of its `private_name`,
+ *  which is where the spelling lives — `ast_name` on the key node itself
+ *  answers nothing for `#edge`, and rendering all five private fields as one
+ *  string would have collapsed `#edge`, `#tally` and `#mark` into one element. */
+const moments = (w: World) => w.q('eff_field_moment[flow](P, M)').map(([p, m]) => {
+  const cd = w.q(`eff_field_value[code](CD, ${p}, V)`)[0]?.[0] ?? '?';
+  const cls = w.q(`class_named[flow](${cd}, Name, File)`)[0]?.[0] ?? cd;
+  const kn = w.q(`ast_child[code](${p}, key, 0, KN)`)[0]?.[0] ?? '?';
+  const plain = w.q(`ast_name[code](${kn}, Name)`)[0]?.[0];
+  const priv = w.q(`ast_child[code](${kn}, id, 0, I)`)[0]?.[0];
+  const key = plain ?? (priv ? `#${w.q(`ast_name[code](${priv}, Name)`)[0]?.[0]}` : kn);
+  return `${cls}.${key}/${m}`;
+}).sort();
+
+/** a class's row at one of the two moments, as `<class>/<label>/<heap>` */
+const rows = (w: World, rel: string) => w.q(`${rel}(CD, L, H)`)
+  .map(([cd, l, h]) => `${w.q(`class_named[flow](${cd}, Name, File)`)[0]?.[0] ?? cd}/${l}/${h}`)
+  .sort();
+
+test('A FIELD INITIALISER RUNS AT DEFINITION OR AT CONSTRUCTION, never both and never neither', () => {
+  const w = base();
+  // The identity first, because it is true of any corpus: a `static` field and
+  // a static block run ONCE when the class is defined, a non-static initialiser
+  // runs once per INSTANCE and never at all if nothing constructs the class.
+  // Collapsing the two would put an effect at a point in the program where it
+  // provably does not happen, which is the one thing a may-set may not do.
+  assert.deepEqual(w.binds('eff_moment_both[audit](P, A, B)'), [],
+    'no initialiser runs at both moments');
+  assert.deepEqual(w.binds('eff_moment_unplaced[audit](P)'), [],
+    'and none falls out of both — the two arms are POSITIVE so this can bite');
+  // ...and then the placement itself, by name. `blank;` is absent from this set
+  // and that is the point: babel emits no `value` child for a field with no
+  // initialiser, so there is nothing to place.
+  assert.deepEqual(moments(w), [
+    'Coin.#edge/construction',
+    'Coin.#mark/construction',
+    'Coin.#tally/definition',
+    'Coin.face/construction',
+    'Coin.forge/definition',
+    'Coin.mintMark/definition',
+    'Coin.pick/definition',
+    'Coin.strike/construction',
+    'Decorated.slot/construction',
+    'Doubloon.pick/definition',
+    'Doubloon.tint/construction',
+    'Inner.#tag/construction',
+    'Outer.#tag/construction',
+    'Thimble.sling/construction',
+  ]);
+  // BOTH `class_accessor_property` SITES ARE NON-STATIC, so the kind's verdict
+  // rests on the construction half. Its plugin is on and the corpus has exactly
+  // these two — a declaration in `Decorated` and one in `Thimble` that `hauls`
+  // reads — which is what the kind had been waiting for at every layer.
+  assert.deepEqual(moments(w).filter((m) => m.endsWith('slot/construction') || m.endsWith('sling/construction')),
+    ['Decorated.slot/construction', 'Thimble.sling/construction']);
+});
+
+test('the two carriers, by class name — and the corpus can only make one of them speak', () => {
+  const w = base();
+  // `Coin` holds the only `static_block` in the tree; its static block writes
+  // `this.mintMark`, reads `Coin.#tally` and allocates nothing of its own,
+  // while `static forge = (n) => ...` allocates a closure at definition.
+  assert.deepEqual(rows(w, 'class_define_eff[flow]'),
+    ['Coin/alloc/none', 'Coin/read/local', 'Coin/write/local']);
+  // ...and the construction side is `alloc` and nothing else, because every
+  // instance initialiser in these five fixtures either allocates an arrow or
+  // calls a function that is `total`. `Doubloon` is here through `super_of`
+  // WITHOUT an instance initialiser that allocates — it declares only
+  // `tint = punched(0)` — so this row is the inheritance arm and nothing else.
+  assert.deepEqual(rows(w, 'class_construct_eff[flow]'),
+    ['Coin/alloc/none', 'Doubloon/alloc/none']);
+  // THE PRICE OF NOT WIDENING INTO `class_expression`, as a name rather than a
+  // sentence. `eff_class_form` has one row; `Bracket` is what that costs.
+  assert.deepEqual(w.q('eff_define_unreached[flow](CE, S)')
+    .map(([ce]) => w.q(`class_named[flow](${ce}, Name, File)`)[0]?.[0] ?? ce), ['Bracket']);
+});
+
+test('THE PROBE: both moments with real labels, and the oracle the corpus cannot ask', () => {
+  // Every claim above is about a corpus whose field initialisers are all
+  // `total` or an allocation, so the propagation arm, the construction seed and
+  // the discharge derive NOTHING there and no mutant of them could die. This
+  // plants the seven shapes the fixtures lack — a PROBE and not a sixth
+  // fixture, for the reason `build`'s own comment gives.
+  const w = build([], [], [['kiln.ts', KILN]]);
+  // DEFINITION TIME, and the sources are separated by their labels rather
+  // than by a count. `Kiln`: `scratch` bumps a module-level `let`, so the
+  // class's own row carries its write and its read, and `static tongs` is the
+  // `alloc`. `exn` is NOT on `Kiln` although its static block calls something
+  // that throws — the try/catch discharges it, which `caught_here` could not
+  // have said (MUTANT M11). `Forge` has nothing but an `extends` that writes.
+  // `Chime` has nothing but a decorator that throws and a computed key that
+  // diverges, so `exn` there is the decorator and `div` is the key.
+  assert.deepEqual(rows(w, 'class_define_eff[flow]').filter((r) => !r.startsWith('Coin/')),
+    ['Chime/alloc/none', 'Chime/div/none', 'Chime/exn/none', 'Chime/read/local',
+      'Chime/write/local', 'Forge/read/local', 'Forge/write/local',
+      'Kiln/alloc/none', 'Kiln/read/local', 'Kiln/write/local']);
+  // CONSTRUCTION TIME: `glaze = crack()` throws, and it reaches the class only
+  // through the propagation arm — the initialiser holds a call and no label of
+  // its own. `Kilnling` has no field at all and inherits the row. `Forge` is
+  // absent, and correctly: `extends mount()` is a call whose value this model
+  // does not follow to a class, so `super_of` has no row for it.
+  assert.deepEqual(rows(w, 'class_construct_eff[flow]'),
+    ['Coin/alloc/none', 'Doubloon/alloc/none',
+      'Kiln/alloc/none', 'Kiln/exn/none', 'Kilnling/alloc/none', 'Kilnling/exn/none']);
+  // ...AND THE CONSTRUCTION SEED REACHES A FUNCTION, which is the edge the call
+  // graph does not have: the call in the initialiser has no enclosing function,
+  // so `encloses[code]` attributes it to nobody and V8 names the frame
+  // `<instance_members_initializer>`.
+  const throwers = new Set(w.q('eff_latent[flow](F, exn, none)')
+    .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)));
+  assert.ok(throwers.has('fires') && throwers.has('firesSub'),
+    `a function whose only throw is a field initialiser is exn — got ${[...throwers].join(' ')}`);
+  // AND THIS IS WHERE THE INDEPENDENT ORACLE AND THIS LAYER PART COMPANY.
+  // `may_throw[code]` propagates over `resolves` + `nearest_v`, and the call in
+  // a field initialiser has no caller for it to reach — so it says `fires` does
+  // not throw and it is WRONG. `eff_exn_only[audit]` is the row that reports it
+  // and it is EMPTY on the honest corpus, because no field initialiser in the
+  // five fixtures reaches a throw. `f_may_throw_has_no_construction_edge`.
+  assert.deepEqual(w.binds('eff_exn_only[audit](F)').map((f) =>
+    w.q(`fn_name[code](${f}, N)`)[0]?.[0] ?? f).sort(), ['fires', 'firesSub'],
+  'the divergence is exactly the two functions that construct');
+  assert.deepEqual(base().binds('eff_exn_only[audit](F)'), [],
+    'and the shared corpus has no site for it, which is why this is a probe');
+  assert.deepEqual(w.binds('may_throw_only[audit](F)'), [],
+    'the other direction stays exact: this layer loses nothing may_throw has');
+});
+
+// ===========================================================================
 // 3. THE MATRIX
 
 test('the effect layer answers 100 js cells and the partition closes', () => {
@@ -235,13 +425,51 @@ test('the effect layer answers 100 js cells and the partition closes', () => {
   // fires on all three of its kinds and 141 of 369 coerced operands are values
   // the value layer did not trace, which is a residue and therefore an open
   // cell by this layer's own criterion.
+  // THE THREE COUNTS BECAME A NAMED SET ON 2026-09-09, and the reason is the
+  // merge rather than taste. `29 / 52 / 19` is three numbers that FOUR items
+  // move — `w_effect_class_initialisers`, `w_effect_ambient_call`,
+  // `w_effect_implicit_coercion`, `w_effect_module_evaluation` — one layer,
+  // four branches, and when two of them move a number to the same value git
+  // auto-merges in silence, which HANDOFF.md records as having already
+  // happened once to `unproven(F)`. What replaces them:
+  //
+  //   * the PARTITION, an identity, unchanged;
+  //   * the KINDS this layer has not answered, BY NAME — a set that shrinks by
+  //     the elements one branch closes and merges as a set difference;
+  //   * `waived`, which is still a number because no open item moves it: every
+  //     one of the fifty-two is a decision already taken, and a branch that
+  //     changes one is changing a verdict rather than adding work.
   assert.equal(v('modelled') + v('waived') + v('not_modelled'),
     w.n('cell[audit](js, K, S, effect)'), 'the three buckets partition the layer');
   assert.equal(w.n('cell[audit](js, K, S, effect)'), w.n('node_kind(js, K)'),
     'one cell per kind: the shape axis does not apply here');
-  assert.equal(v('modelled'), 33);
+  assert.deepEqual(w.binds('verdict[audit](js, K, S, effect, not_modelled)').map((x) => x.split('/')[0]).sort(), [
+    // FOURTEEN -> NINE ON THE MERGE, 2026-09-09, and neither branch could have
+    // written this list. `w_effect_class_initialisers` closed five kinds and
+    // `w_effect_module_evaluation` closed five others, each seeing the other's
+    // as still open. THE MERGED LIST IS THE ONLY PLACE THE TRUTH EXISTED — which
+    // is the whole argument for a named set over three counts: two branches
+    // moving `not_modelled` 19 -> 14 by different fives would have auto-merged
+    // to 14 and been wrong, silently, in the shape this repository has now met
+    // four times.
+    'binary_expression',
+    'call_expression',
+    'debugger_statement',
+    'identifier',
+    'new_expression',
+    'optional_call_expression',
+    'template_literal',
+    'unary_expression',
+    'with_statement',
+  ], 'the kinds this layer has not answered, by name');
+  // 52 -> 53 ON THE MERGE, and this one IS still a count — which is why it
+  // moved silently where the list above did not. `import` became `ignored`
+  // (babel emits no `Import` node under our plugins) on one branch while the
+  // other branch waived nothing, so the two sides differed by one and git had
+  // no conflict to raise. Kept as a count deliberately: `waived` is the half
+  // whose MEMBERS are already named by `ignored(...)` rows in
+  // facts/js-effects.rofl and re-listing them here would pin the same set twice.
   assert.equal(v('waived'), 53);
-  assert.equal(v('not_modelled'), 14);
   // the reason vocabulary is closed and no excuse outlived its cause
   assert.deepEqual(w.binds('bad_reason[audit](A, K, S, L, R)'), []);
   assert.deepEqual(w.binds('orphan_claim[audit](A, K, S, L)'), []);
@@ -788,4 +1016,121 @@ surface_origin(array, builtin_prototype).
 ambient_effect(array, "join", rd_local).
 `]);
   assert.deepEqual(ok.binds('eff_exn_only[audit](F)'), []);
+});
+
+// ---------------------------------------------------------------------------
+// M9 .. M14 — THE CLASS INITIALISERS (w_effect_class_initialisers, 2026-09-09).
+//
+// The set was chosen by asking where THIS check cannot look, and the answer was
+// the same each time: the shared corpus has no field initialiser whose effect is
+// anything but an allocation, so three of the six survive it entirely and die
+// only against `KILN`. That is the difference between a rule that does nothing
+// and a corpus with no site, and it is why the probe exists.
+//
+//   M9   collapse the two moments          KILLED by the corpus
+//   M10  descend through a closure         survives the corpus, KILLED by KILN
+//   M11  drop the class-part handler       survives ROW FOR ROW, KILLED by KILN
+//   M12  drop the inheritance arm          KILLED by the corpus
+//   M13  drop the construction seed        survives EVERY relation, KILLED by KILN
+//   M14  drop the class-declaration alloc  survives `eff_latent`, KILLED by `eff_here`
+
+test('MUTANT M9: the two moments collapsed — the partition identity kills it', () => {
+  // Targets: that `static` is what decides WHEN an initialiser runs. Both arms
+  // now read the same attribute value, so a non-static field lands in both
+  // moments and a static one in neither.
+  const m = build([{ file: EFF_RULES,
+    find: `eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
+                                           ast_attr[code](P, static, true).`,
+    replace: `eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
+                                           ast_attr[code](P, static, false).` }]);
+  assert.ok(m.n('eff_moment_both[audit](P, A, B)') > 0, 'KILLED: an initialiser at both moments');
+  assert.ok(m.n('eff_moment_unplaced[audit](P)') > 0, 'and one at neither');
+});
+
+test('MUTANT M10: the walk descends THROUGH a closure — survives the corpus, dies on the probe', () => {
+  // Targets: that a static field holding a function allocates at definition and
+  // does NOT perform what its body performs. Without the guard the walk sweeps
+  // every latent body into the definition moment, which is the exact confusion
+  // the latent group exists to prevent.
+  const mut = { file: EFF_RULES,
+    find: `eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node_v[flow](Y),
+                           ast_in[code](Y, X).`,
+    replace: 'eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), ast_in[code](Y, X).' };
+  const m = build([mut]);
+  assert.deepEqual(rows(m, 'class_define_eff[flow]'), rows(base(), 'class_define_eff[flow]'),
+    'SURVIVES the shared corpus: `static forge = (n) => hammered(n)` has a total body');
+  const p = build([mut], [], [['kiln.ts', KILN]]);
+  assert.ok(rows(p, 'class_define_eff[flow]').includes('Kiln/div/none'),
+    'KILLED by the probe: `static tongs = () => spin()` diverges only when called');
+});
+
+test('MUTANT M11: the class-part handler dropped — survives ROW FOR ROW, dies on the probe', () => {
+  // Targets: the arm that repairs `caught_here` inside a class part. It is the
+  // clearest survivor of the set, because deleting it changes NOTHING here —
+  // not one try in these five files sits in a static block or an initialiser.
+  const mut = { file: EFF_RULES,
+    find: `eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
+                           ast_node[code](TS, try_statement, _, _),
+                           in_try_block[code](TS, N), eff_runs_in[flow](P, N),
+                           ast_child[code](TS, handler, 0, _).`,
+    replace: '' };
+  const m = build([mut]);
+  assert.equal(m.n('eff_catch_here[code](N)'), base().n('eff_catch_here[code](N)'),
+    'SURVIVES: no try in the shared corpus runs in a class part');
+  assert.equal(m.n('eff_here[flow](N, L, H)'), base().n('eff_here[flow](N, L, H)'),
+    'and the seeds are unchanged, so the repair costs the honest tree nothing');
+  const p = build([mut], [], [['kiln.ts', KILN]]);
+  assert.ok(rows(p, 'class_define_eff[flow]').includes('Kiln/exn/none'),
+    'KILLED by the probe: a handler in plain sight, ignored');
+});
+
+test('MUTANT M12: a subclass stops running its ancestors\' initialisers — the corpus kills it', () => {
+  // Targets: that constructing a subclass runs the BASE's instance initialisers
+  // too, INCLUDING the shadowed ones. `Doubloon` declares `tint = punched(0)`
+  // and nothing that allocates, so its whole construction row is this arm.
+  const m = build([{ file: EFF_RULES,
+    find: `class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
+                                       class_construct_eff[flow](SD, L, H).`,
+    replace: '' }]);
+  assert.deepEqual(rows(m, 'class_construct_eff[flow]'), ['Coin/alloc/none'],
+    'KILLED: Doubloon leaves the relation entirely');
+});
+
+test('MUTANT M13: the construction seed dropped — survives EVERYTHING here, dies on the probe', () => {
+  // Targets: the edge from an instance initialiser to the `new` that runs it. It
+  // survives every relation in this pack over the shared corpus for a reason
+  // worth stating rather than counting: the only construction-time label those
+  // fixtures have is `alloc`, and `new_expression` is already in
+  // `eff_alloc_kind`, so the seed delivers a label the site already carried.
+  const mut = { file: EFF_RULES,
+    find: `eff_here[flow](X, L, H)  :- ast_node[code](X, new_expression, _, _),
+                            may_be_node[flow](X, CD), class_construct_eff[flow](CD, L, H).`,
+    replace: '' };
+  const m = build([mut]);
+  assert.equal(m.n('eff_here[flow](N, L, H)'), base().n('eff_here[flow](N, L, H)'),
+    'SURVIVES row for row');
+  assert.equal(m.n('eff_latent[flow](F, L, H)'), base().n('eff_latent[flow](F, L, H)'),
+    'and so does the join');
+  assert.deepEqual(m.binds('eff_exn_only[audit](F)'), [], 'and the independent oracle');
+  const p = build([mut], [], [['kiln.ts', KILN]]);
+  assert.deepEqual(p.binds('eff_exn_only[audit](F)'), [],
+    'KILLED by the probe: `fires` stops carrying the throw its construction performs');
+});
+
+test('MUTANT M14: a class declaration allocates nothing — `eff_latent` cannot see it', () => {
+  // Targets: the one-row claim that evaluating a class declaration creates a
+  // fresh mutable identity, exactly as `class_expression` does. It survives
+  // `eff_latent` and `effect_of` on this corpus because every class here is
+  // either at a module's top level, where `nearest_v` reaches nothing, or inside
+  // a function that already allocates through the `new` beside it.
+  const m = build([{ file: EFF_RULES, find: 'eff_alloc_kind(class_declaration).', replace: '' }]);
+  assert.equal(m.n('eff_latent[flow](F, L, H)'), base().n('eff_latent[flow](F, L, H)'),
+    'SURVIVES the join: no function in this corpus needed it to be alloc');
+  assert.equal(m.n('effect_of[flow](F, N)'), base().n('effect_of[flow](F, N)'), 'and every name');
+  const allocked = (w: World) => new Set(w.q('eff_here[flow](N, alloc, none)')
+    .filter(([n]) => w.q(`ast_node[code](${n}, class_declaration, F, L)`).length === 1)
+    .flatMap(([n]) => w.q(`class_named[flow](${n}, Name, File)`).map(([x]) => x)));
+  assert.deepEqual([...allocked(m)], ['Coin'],
+    'KILLED by eff_here: only Coin is left, and through its static field rather than its kind');
+  assert.ok(allocked(base()).size > 15, 'while every class declaration carried it');
 });

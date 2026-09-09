@@ -239,7 +239,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // `resolves`, so the first surface row mapping to `io` turns it red. An
     // item that closes nothing and finds something is exactly the case a count
     // of closed cells cannot see.
-    'w_effect_class_initialisers', 'w_effect_sweep',
+    // `w_effect_class_initialisers` LEFT THIS LIST 2026-09-09, the same day it
+    // joined: it spawned four findings, two of them about relations it does not
+    // own — `may_throw` has no construction edge, and a `try` in a class part
+    // catches nothing because a part is not a function.
+    'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
     // by the item that built the second cost gate. It is on this list for the
@@ -412,15 +416,18 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     'binary_expression/none/effect',
     'call_expression/none/effect',
     'call_expression/none/modules',
-    'class_accessor_property/none/effect',
-    'class_declaration/none/effect',
-    'class_private_property/none/effect',
-    'class_property/none/effect',
+    // FIVE MORE LEFT THE SET 2026-09-09 (w_effect_class_initialisers), the
+    // class parts: `class_declaration`, `class_property`,
+    // `class_private_property`, `class_accessor_property`, `static_block`.
+    // TOGETHER WITH THE FIVE ABOVE THAT IS TEN CLOSED BY TWO BRANCHES THAT
+    // COULD NOT SEE EACH OTHER, and neither could have written this list —
+    // which is the argument for a set over a count met for the fourth time
+    // today: two branches moving one number by different fives auto-merge to
+    // the same wrong value with no conflict to read.
     'identifier/none/effect',
     'import_declaration/subpath/modules',
     'new_expression/none/effect',
     'optional_call_expression/none/effect',
-    'static_block/none/effect',
     'template_literal/none/effect',
     'unary_expression/none/effect',
     'with_statement/none/callgraph',

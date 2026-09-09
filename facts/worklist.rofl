@@ -2631,13 +2631,42 @@ claim(queued, js, identifier,               none, effect, w_effect_ambient_call)
 -- every static block, and it runs every static field initialiser, in order.
 -- `static_block_of[flow]` and `field_of[flow]` already name the pieces; what is
 -- missing is the join from them to the declaration.
+--
+-- DONE 2026-09-09, ALL FIVE CELLS, and the note above was half wrong in a way
+-- worth keeping rather than editing away. "There is no call site to hang it on"
+-- is true of the DEFINITION half and false of the CONSTRUCTION half:
+-- `may_be_node[flow]` already says which class a `new` expression constructs,
+-- so an instance initialiser's row hangs on the `new` exactly as a callee's
+-- hangs on a call. Only the definition half needed an edge of a new shape, and
+-- it goes to the declaration NODE.
+--
+-- TWO MOMENTS AND THE ITEM WOULD HAVE BEEN WRONG TO COLLAPSE THEM. A static
+-- field and a static block run ONCE, when the class is defined; a non-static
+-- field initialiser runs once per INSTANCE and never if nothing constructs the
+-- class. `class_define_eff` and `class_construct_eff` in rules/js-effects.rofl
+-- are the two carriers, and `eff_moment_both[audit]`/`eff_moment_unplaced[audit]`
+-- assert every initialiser lands in exactly one of them — an identity, so it is
+-- true of any corpus rather than of this one.
+--
+-- CORPUS SITES FOR BOTH MOMENTS, IN ONE CLASS. `Coin` in shapes.ts holds the
+-- only `static_block` in the tree, two static field initialisers and four
+-- instance ones; `Doubloon extends Coin` is the site for the inheritance arm,
+-- because constructing a subclass runs the base's initialisers including the
+-- SHADOWED ones. `class_accessor_property` has two sites and both are
+-- non-static, so its verdict rests on the construction half.
+--
+-- WHAT THE CORPUS HAS NO SITE FOR: an initialiser whose effect is anything but
+-- `alloc`. Every field initialiser in these five fixtures calls a function that
+-- is `total`, so the propagation arm, the construction seed and the discharge
+-- all derive nothing here and are exercised by the PROBE SOURCE in
+-- test/js-effects.test.ts instead — which is that file's own established shape
+-- for a claim the shared corpus must not be grown to carry.
 work(w_effect_class_initialisers, "a static block and a field initialiser run when the class is DEFINED, so their latent effect belongs to the declaration site and the propagation rule has no call site to hang it on").
-work_state(w_effect_class_initialisers, open).
-claim(queued, js, class_declaration,        none, effect, w_effect_class_initialisers).
-claim(queued, js, class_property,           none, effect, w_effect_class_initialisers).
-claim(queued, js, class_private_property,   none, effect, w_effect_class_initialisers).
-claim(queued, js, class_accessor_property,  none, effect, w_effect_class_initialisers).
-claim(queued, js, static_block,             none, effect, w_effect_class_initialisers).
+work_state(w_effect_class_initialisers, done).
+work_spawned(w_effect_class_initialisers, f_a_class_declaration_runs_code_and_a_function_declaration_does_not).
+work_spawned(w_effect_class_initialisers, f_may_throw_has_no_construction_edge).
+work_spawned(w_effect_class_initialisers, f_a_try_in_a_class_part_catches_nothing_because_a_part_is_not_a_function).
+work_spawned(w_effect_class_initialisers, f_the_attribute_guard_audit_caught_the_next_rule_and_could_not_have_excused_it).
 
 -- 67 - AN OPERATOR THAT IS A CALL. `a + b` runs `valueOf` or `toString` on an
 -- operand that has one and throws a TypeError for a Symbol; `-x` coerces;
