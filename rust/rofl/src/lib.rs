@@ -16,6 +16,10 @@ pub mod reflect;
 pub mod ring1_lexer;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_predgen.ts.
 pub mod ring1_preds;
+/// The driver for the generated tokenizer tables, written once.
+pub mod ring1_tok;
+/// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_spangen.ts.
+pub mod ring1_tables;
 pub mod seed;
 pub mod store;
 pub mod term;
