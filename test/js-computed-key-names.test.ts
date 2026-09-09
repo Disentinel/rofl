@@ -321,6 +321,14 @@ const MUTANTS: { name: string; targets: string; mut: Mut[]; expect: (m: World) =
   },
   // --------------------------------------------------------------- survivors
   {
+    // DISCHARGED 2026-09-09 BY A DIFFERENT INSTRUMENT, and it stays here as a
+    // survivor because it still survives THIS one. `attr_blind_guard[audit]` in
+    // rules/js-attrs.rofl reads the guard out of the clause rather than reading
+    // what the model derives from it, so the swap moves two rows there —
+    // `computed/key/class_private_property` and `.../class_private_method` — and
+    // MUTANT 9 in test/js-attrs.test.ts is the kill. The lesson is the one this
+    // file's own header states: an oracle over what a relation DERIVES cannot
+    // see a guard that reaches fewer nodes and derives the same rows.
     name: 'm6 SURVIVOR — the guard becomes a positive `computed, false` test',
     targets: 'THE CHOICE OF NEGATION over a positive attribute test',
     mut: [{ file: ST, find: `                          not ast_attr[code](P, computed, true),`,

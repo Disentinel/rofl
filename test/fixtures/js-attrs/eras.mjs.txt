@@ -1,0 +1,29 @@
+// eras.mjs — THE FIVE (operator, value) PAIRS THE ERA TABLE READS THROUGH A
+// TABLE AND NO RULE NAMES.
+//
+// `attr_needs` in facts/js-env.rofl carries `**`, `??`, `??=`, `||=` and `&&=`;
+// `rules/js-env.rofl` reads them as `attr_needs(L, K, Key, V, F),
+// ast_attr[code](N, Key, V)`, so both arguments of the `ast_attr` literal are
+// VARIABLES and `attr_key_read` — which sees a rule NAMING a key — cannot see
+// the read at all.
+//
+// WITHOUT A SITE THE HOLE IS UNFALSIFIABLE. The js-call corpus carries thirteen
+// operator values and not one of these five, so `unconsumed_value[audit]` was
+// green over a gap it would have reported the moment somebody wrote `a ** b` in
+// a fixture. This file is that site: with the bridge in rules/js-attrs.rofl the
+// audit stays empty, and without it these five values are reported as read by
+// nobody while the era layer gates three features on them.
+//
+// EVERY OTHER OPERATOR HERE IS ALREADY EXCUSED BY NAME (`+`), deliberately: a
+// fixture that also introduced an unexcused value would make the mutant's
+// answer a mixture rather than exactly the five.
+export function eras(a, b) {
+  const power = a ** b;
+  let near = a ?? b;
+  near ??= b;
+  let some = a;
+  some ||= b;
+  let both = b;
+  both &&= a;
+  return power + near + some + both;
+}
