@@ -203,25 +203,85 @@ on it.
 
 ## Applying this to the comments
 
-The same treatment does not fit 19,815 lines and should not be attempted. The
-useful subset is narrow and already identified above:
+The recommendation in the first draft of this document was too weak: it proposed
+attaching witnesses to the 105 comment lines that already state a measurement.
+That treats the symptom. The owner's correction is the structural reading, and
+it is right:
 
-1. **The 105 comment lines that assert a measurement with a number.** These
-   already name an observation and a date. Attaching the query that produces the
-   number converts each into a checked claim, and `witness_check` already exists
-   to run them. This is the highest yield per line in the repository.
-2. **The 1,131 lines containing a number.** Not all are claims, but every one
-   that is, is a pin with no checker. A lint that lists them, so that the author
-   can mark which are load-bearing, would size the problem honestly.
-3. **Marking type where it is cheap.** A comment that records a decision or an
-   inherited belief could say so in one word. Most already have a characteristic
-   phrasing; making it consistent costs nothing and tells a reader what is safe
-   to rely on.
+> Facts about the development process belong inside the model of the development
+> process. They are written as prose outside the model, and the model is itself
+> the subject of the work. Relations like `measured`, `witness`, `finding`,
+> `claim` and an architecture decision record are things epistemic discipline
+> can be applied to. A comment is not.
 
-What should not be done is converting reasoning into rows. The comments carry
-the argument, and the argument is why the repository can be picked up by someone
-new. The goal is to separate the checkable assertions embedded in that argument
-from the argument itself — not to remove the argument.
+The evidence is one line: **`measured/` holds 3 rows. The word "MEASURED"
+appears in 436 comment lines.** The relation exists, is the right home, and is
+used a hundred and forty times less often than the prose that should be in it.
+
+### The backlog is a matrix, exactly like the coverage matrix
+
+A comment block — consecutive comment lines, counted as one event — is a cell
+awaiting a verdict, in the same shape this repository already uses for node
+kinds. Measured across hand-written packs and examples:
+
+| | Count |
+| --- | --- |
+| Comment blocks | **2,210** |
+| Lines in them | 19,661 |
+| Mean lines per block | 8.9 |
+| Files containing any | 78 |
+
+The largest concentrations: `facts/worklist.rofl` 126 blocks, `rules/js-dataflow.rofl`
+124, `rules/js-controlflow.rofl` 107, `facts/findings.rofl` 82.
+
+### The shape of the check
+
+```
+comment_block(Id, File).              -- generated, refreshed by a script
+migrated(Id, Relation).               -- its content now lives in the model
+kept(Id, Reason).                     -- legitimately a comment, reason from a closed list
+open_comment[audit](Id, File) :- comment_block(Id, File),
+                                  not migrated(Id, _), not kept(Id, _).
+```
+
+`open_comment[audit]` is the backlog and behaves like `open_cell[audit]`: it is
+worked down in order, every entry needs an owner, and zero is the target.
+
+**The identifier must be derived from the block's content, not from its line
+number.** A set whose elements embed a coordinate moves whenever somebody edits
+above it — that is one of the named failure modes in `docs/working-with-ledgers.md`,
+and using file-and-line here would walk straight into it.
+
+### Where the content goes
+
+| Content of the block | Destination |
+| --- | --- |
+| A measurement, with or without a date | `measured` plus a `witness` that reproduces it |
+| A decision and its reasoning | an architecture decision record relation — does not exist yet and needs defining |
+| Something that was tried and rejected | the same record, with the rejected alternative named |
+| A correction, a staleness note, a refutation | `finding` plus an explicit supersession, rather than a `STALE` marker in prose |
+| A belief with no measurement behind it | recorded as a belief with what supports it, or dropped |
+| A pointer to another relation or section | a pointer relation |
+| A genuinely local reading aid | `kept`, with a reason |
+
+### The expected yield is not tidiness
+
+Migration means reading each block and asking what kind of claim it makes. On
+this repository's own record — 14 stale markers, 11 corrections, 5 notes refuted
+by a probe, five findings whose subject is a note being wrong — a meaningful
+fraction of what is read will turn out to be **false or expired**. That is the
+return on the work, and the count of blocks found wrong should be reported
+separately from the count migrated.
+
+### The obvious way this goes wrong
+
+`kept` is cheaper than migration and turns the alarm green just as well. I did
+exactly this earlier in the same session with `kind_absent_ok`, choosing four
+waivers over one fixture because the waivers had the smaller blast radius.
+
+So the reason vocabulary for `kept` must be closed and short, a file where most
+blocks end up `kept` is a finding rather than a result, and the ratio should be
+reported per file.
 
 ## Open
 
