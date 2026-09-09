@@ -14,6 +14,8 @@ pub mod engine;
 pub mod reflect;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_lexgen.ts.
 pub mod ring1_lexer;
+/// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_predgen.ts.
+pub mod ring1_preds;
 pub mod seed;
 pub mod store;
 pub mod term;
