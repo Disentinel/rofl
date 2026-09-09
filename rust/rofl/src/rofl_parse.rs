@@ -293,9 +293,9 @@ impl<'a> Parser<'a> {
     /// `lit(I, C2, lit(R, Bk, A, T))  :- lit0(...), tmark(K, C2, T).`
     fn lit(&mut self) -> P<Lit> {
         let (rel, book) = self.relbook()?;
-        if !self.eat_punct("lpar") { return Err(format!("lit: `{rel}` has no argument list")); }
+        if !self.eat_punct("lpar") { return Err(format!("lit: `{}` has no argument list", self.h.name(rel))); }
         let args = self.args()?;
-        if !self.eat_punct("rpar") { return Err(format!("lit: `{rel}(` is not closed")); }
+        if !self.eat_punct("rpar") { return Err(format!("lit: `{}(` is not closed", self.h.name(rel))); }
         let mut tense = Tense::Now;
         if self.is_punct(0, "at") {
             let t = match () {

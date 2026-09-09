@@ -96,17 +96,41 @@ test('the hand-written parser agrees with src/parser.ts on every file the host a
   assert.ok(hostRefused <= 2, `the host refused ${hostRefused} files; the oracle has changed`);
 });
 
+// BY NAME IS THE HALF THAT MATTERS, and this test did not check it.
+//
+// It asserted only that a refusal says `REFUSED` and exits non-zero, while its
+// own title promised the message names what it choked on. That gap let a real
+// regression through: when the parser moved to interned names, `relbook` began
+// returning a `Sym` and two diagnostics kept interpolating it directly, so an
+// unclosed literal reported `lit: \`334\` has no argument list` — a symbol id
+// where the author's own word belongs. Nothing was red. It was found by
+// loading a hand-written file and being unable to tell which line was wrong.
+//
+// So each case below names a token the author actually typed, and asserts the
+// message contains THAT rather than merely that something was refused. A
+// diagnostic that cannot say what it read is not a diagnostic.
 test('the parser refuses what it cannot read, by name', () => {
   if (!fs.existsSync(BIN)) return;
   const tmp = path.join(REPO, 'rust/target/_bad.rofl');
-  fs.writeFileSync(tmp, 'p(a\n');                        // never closed
-  let refused = false;
-  try { execFileSync(BIN, [tmp], { encoding: 'utf8', stdio: 'pipe' }); }
-  catch (e) {
-    refused = true;
-    assert.match(String((e as { stderr?: string }).stderr ?? ''), /REFUSED/,
-      'a refusal must say so rather than exit quietly');
+  const cases: [string, RegExp][] = [
+    ['p(a\n', /myrel|p/],                       // an unclosed argument list
+    ['myrel\n', /myrel/],                       // a literal with no arguments
+    ['myrel(a\n', /myrel/],                     // named, and never closed
+    ['myrel(a)\n', /myrel/],                    // no closing dot
+    ['q(x) :- \n', /./],                        // a body that never arrives
+  ];
+  for (const [src, want] of cases) {
+    fs.writeFileSync(tmp, src);
+    let stderr = '';
+    let refused = false;
+    try { execFileSync(BIN, [tmp], { encoding: 'utf8', stdio: 'pipe' }); }
+    catch (e) { refused = true; stderr = String((e as { stderr?: string }).stderr ?? ''); }
+    assert.ok(refused, `accepted: ${JSON.stringify(src)}`);
+    assert.match(stderr, /REFUSED/, 'a refusal must say so rather than exit quietly');
+    assert.match(stderr, want, `the message did not name what it read: ${stderr.trim()}`);
+    // A symbol id is not a name. This is the exact shape of the regression.
+    assert.doesNotMatch(stderr, /`\d+`/,
+      `a diagnostic quoted a symbol id instead of a name: ${stderr.trim()}`);
   }
   fs.rmSync(tmp, { force: true });
-  assert.ok(refused, 'an unclosed literal was accepted');
 });
