@@ -452,12 +452,22 @@ test('the effect layer answers 100 js cells and the partition closes', () => {
     // moving `not_modelled` 19 -> 14 by different fives would have auto-merged
     // to 14 and been wrong, silently, in the shape this repository has now met
     // four times.
+    //
+    // NINE -> FIVE, 2026-09-09, and this is the third branch to shrink the same
+    // list. `w_effect_ambient_call` closed four — `call_expression`,
+    // `identifier`, `new_expression`, `optional_call_expression` — which are
+    // exactly the four kinds whose cell was open because THE CALLEE IS NOT IN
+    // THIS PROGRAM. It closed them by deriving the surface rather than by
+    // writing effect rows: rules/js-ambient.rofl has no facts file, and what it
+    // cannot attribute is a positive row in `ambient_owed[flow]` instead of a
+    // silence. That is the difference between closing a cell and painting it.
+    //
+    // AND THE LIST IS NOW THE ARGUMENT FOR ITSELF. Three branches, three
+    // different fives-and-fours, one relation: 14 -> 9 -> 5 as SETS that merge
+    // by difference. As three counts it would have been 14 -> 9 twice and 9 -> 5
+    // once, with git resolving the collision by picking a number.
     'binary_expression',
-    'call_expression',
     'debugger_statement',
-    'identifier',
-    'new_expression',
-    'optional_call_expression',
     'template_literal',
     'unary_expression',
     'with_statement',

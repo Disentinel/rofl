@@ -482,7 +482,14 @@ about the model.**
    --experimental-strip-types` and reports nothing else — it looks like a
    harness failure, not a wrong interpreter. Put
    `export PATH=/Users/vadim/.nvm/versions/node/v24.13.0/bin:$PATH` at the top
-   of every brief and every background run.
+   of every brief and every background run. **AND THE ATTESTATION DOES NOT
+   CATCH THIS** — walked into again on 2026-09-09 after this entry was
+   written: the fingerprint says `TREE STILL — result valid` (true, the tree
+   did not move) and the completeness awk said `suite whole` over a five-line
+   output with no counts in it, because its identity held vacuously on unset
+   variables. CLAUDE.md's ritual now has two arms in front of the comparison;
+   the entry stays here because the trap is the interpreter and the repair is
+   only the alarm.
 2. **Never pipe a test run into `head`.** `node --test ... | grep ... | head`
    makes `head` exit early, `grep` take SIGPIPE, and node BLOCK on stdout: the
    run sits at 0 per cent CPU forever and the harness eventually kills it with

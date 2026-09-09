@@ -304,6 +304,9 @@ eff_origin(builtin_prototype).
 -- ===========================================================================
 -- WHAT THE LAYER ANSWERS — 33 CELLS, BY MECHANISM
 --
+-- Twenty-nine when the layer was declared on 2026-09-09 morning; the AMBIENT
+-- group below is the four `w_effect_ambient_call` closed the same day.
+--
 -- rules/js-effects.rofl carries the mechanisms and the audits that keep the
 -- vocabulary closed. The split below is by MECHANISM and not by kind, which is
 -- the shape facts/js-controlflow.rofl already uses.
@@ -453,6 +456,47 @@ handled(js, optional_member_expression, effect, r_effect_state).
 -- turn each into a `resolves` row, so at this layer they are ordinary calls.
 -- The residue — an iterator that belongs to the standard library rather than
 -- to this program — is `call_expression`'s open cell and not four copies of it.
+-- ---------------------------------------------------------------------------
+-- AMBIENT — A CALL WHOSE CALLEE IS NOT IN THIS PROGRAM, closed 2026-09-09 by
+-- `w_effect_ambient_call`. These four were the eighteen's largest group and
+-- they were open for ONE reason: the concrete column had a surface half and an
+-- operation half and no map into the lattice.
+--
+-- `rules/js-ambient.rofl` supplies the map and AUTHORS NOT ONE ROW OF IT.
+-- There is no `facts/js-ambient.rofl`, which is the whole shape of the answer:
+-- `ambient_effect(Surface, Member, EffectName)` is DERIVED from
+-- `host_module_effect`, `host_member_effect` and `host_global_effect` — the
+-- runtime layer's own table, twenty-two modules with seven member overrides —
+-- through one join and one translation, and the translation is itself derived
+-- from this lattice rather than typed (`read` is a LABEL and Koka parameterises
+-- it by a heap; an ambient surface is not this program's heap, so an ambient
+-- read is `read<global>` by exactly the test `eff_heap_of[flow]` applies).
+--
+-- WHAT IS ANSWERED AND WHAT IS OWED, and the second is a ROW rather than a
+-- silence. Over `w_js_ambient` — the runtime and ES-globals fixtures under all
+-- five layers — thirty-five ambient sites carry a (surface, operation) pair and
+-- seventeen of them denote a landmark. The rest are `ambient_owed[flow](Origin,
+-- Surface)`: the ECMAScript intrinsics (nine surfaces, no effect table
+-- anywhere), the builtin prototypes (one), and one host global. So the cell is
+-- `modelled` in the sense every other cell here is — the layer has a mechanism
+-- and names its residue — and the residue has an owner in facts/worklist.rofl.
+--
+-- `new_expression` GETS THE SECOND HALF OF ITS ANSWER. `eff_alloc_kind` already
+-- seeded the allocation for all of them; what was open is what the CONSTRUCTOR
+-- does, and `new URL(s)` is `alloc` and `new Map()` is owed, by the same
+-- machinery, under the operation `construct`.
+--
+-- `identifier` IS THE ONE THAT NEEDED NO SURFACE IN THE END. The three cases
+-- are a mutable local (`read<local>`, already derived), an immutable binding
+-- (nothing, already derived, and that is Koka's answer rather than a shortcut),
+-- and a FREE GLOBAL — a property of the host's global object, which is a cell
+-- this program did not allocate, so `read<global>` whatever the name turns out
+-- to be. Measured: `globalThis` seeds it and no surface names `globalThis`.
+handled(js, call_expression,            effect, r_effect_ambient).
+handled(js, optional_call_expression,   effect, r_effect_ambient).
+handled(js, new_expression,             effect, r_effect_construct).
+handled(js, identifier,                 effect, r_effect_read_binding).
+
 handled(js, decorator,                  effect, r_effect_transfer).
 handled(js, super,                      effect, r_effect_transfer).
 handled(js, tagged_template_expression, effect, r_effect_transfer).
@@ -674,6 +718,7 @@ unknown_because(js, debugger_statement, effect, runtime_dependent).
 --
 -- EIGHTEEN BECAME THIRTEEN ON 2026-09-09: `w_effect_class_initialisers` closed
 -- its five, and the group it used to occupy is now a `handled` block above.
+-- WHAT IS OPEN — 14 CELLS, EVERY ONE OWNED BY NAME IN facts/worklist.rofl
 --
 -- The rows below are `not_yet` by DEFAULT and carry no `unknown_because`,
 -- because `not_yet` is exactly what they are and writing it out would add a
@@ -681,16 +726,15 @@ unknown_because(js, debugger_statement, effect, runtime_dependent).
 -- `claim(queued, ...)` each, in facts/worklist.rofl beside the item that owns
 -- it. `sweeper` for this layer is 0 and `unqueued[audit]` is 0, which is the
 -- pair of numbers that says every one of the thirteen has a name against it.
+-- pair of numbers that says every one of the fourteen has a name against it.
 --
---   FOUR — THE AMBIENT SURFACE          w_effect_ambient_call
---     call_expression, optional_call_expression, new_expression, identifier
---     261 of the corpus's call sites do not resolve to a node in this program.
---     A call whose callee is outside the program has an effect this layer
---     cannot state, and `console.log` is `io` only if something says `console`
---     is a runtime surface. `identifier` is here for the same reason one level
---     down: a bare name is a local (bottom or `read<local>`), an import
---     (bottom), or a free global (`read<global>`, and a ReferenceError if it is
---     not there), and only the third needs the surface.
+-- EIGHTEEN WHEN THE LAYER WAS DECLARED, and the four that left are the AMBIENT
+-- SURFACE group — `call_expression`, `optional_call_expression`,
+-- `new_expression`, `identifier` — closed the same day by
+-- `w_effect_ambient_call`. They are `handled` above with the answer and the
+-- residue both written out; what is still owed is a table of effects for the
+-- ECMAScript intrinsics and the builtin prototypes, which is a SURFACE's work
+-- rather than this layer's and has items of its own in facts/worklist.rofl.
 --
 --   THREE — IMPLICIT COERCION           w_effect_implicit_coercion
 --     binary_expression, unary_expression, template_literal

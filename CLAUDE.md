@@ -217,9 +217,28 @@ needs a second line, and it is one comparison:
 ```bash
 [ "$(grep -c '^ℹ tests' /tmp/out.txt)" ] && \
   awk '/^ℹ tests/{t=$3} /^ℹ pass/{p=$3} /^ℹ fail/{f=$3} \
-       END{ if (t != p+f) print "SUITE TRUNCATED — " p "+" f " of " t; \
+       END{ if (t == "") print "NO COUNT AT ALL — the reporter never ran"; \
+            else if (t+0 < 1000) print "SUITE SHORT — only " t " tests counted"; \
+            else if (t != p+f) print "SUITE TRUNCATED — " p "+" f " of " t; \
             else print "suite whole — " t " tests" }' /tmp/out.txt
 ```
+
+**THE FIRST TWO ARMS WERE ADDED 2026-09-09 BECAUSE THE CHECK CERTIFIED A RUN
+THAT NEVER STARTED.** With the wrong node on `PATH` (see the trap about node 24
+in HANDOFF.md, which this walked straight into) `npm test` dies in five lines
+with `node: bad option: --experimental-strip-types` and emits no `ℹ` line at
+all. The awk above then had `t` unset, `p+f` zero, `t != p+f` false — and it
+printed **`suite whole`** over an empty file, under a `TREE STILL — result
+valid` that was perfectly true. Every guard fired correctly and the conclusion
+was the opposite of the truth.
+
+It is the same shape as the incident that produced the check: a gate inherits
+the scope of its incident. That one was built to catch a TRUNCATED run and so
+required numbers to compare; asked about a run with NO numbers, it read the
+absence as agreement. **An arithmetic identity over unset variables is not a
+measurement**, and the guard against it is to say what must be PRESENT before
+saying what must be EQUAL. The `< 1000` arm is the total this file already
+argues for, moved out of the reader's head and into the script.
 
 Run against the failing output it prints `SUITE TRUNCATED — 665+7 of 739`, so
 it catches this incident. **AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE

@@ -408,8 +408,27 @@ eff_here[flow](C, L, H)          :- concrete_effect[flow](C, S, Op),
 -- an order ON the concrete names. `http:get` and `fs:write` are incomparable
 -- and always will be; what is comparable is what they DENOTE, and that is the
 -- lattice doing the work the concrete column cannot.
-concrete_leq[flow](S1, O1, S2, O2) :- ambient_effect(S1, O1, E1),
-                                      ambient_effect(S2, O2, E2), eff_leq(E1, E2).
+--
+-- IT RANGES OVER `concrete_denotes` AND NOT OVER `ambient_effect`, AND THE
+-- CHANGE IS THE ARGUMENT SECTION 4 ALREADY MAKES ABOUT `eff_leq`, arriving one
+-- relation over. That paragraph refuses to materialise the comparison per
+-- FUNCTION PAIR — "|functions| squared rows for no answer the query does not
+-- already give, on a corpus of 395 functions and an engine whose space wall is
+-- 500 000 rows" — and this rule was |ambient_effect| squared. It was invisible
+-- while `ambient_effect` was EMPTY: 0 x 0 is 0, and the shape of a rule is not
+-- visible in its row count until something populates it.
+--
+-- MEASURED 2026-09-09 the day the surface arrived (w_effect_ambient_call): 571
+-- `ambient_effect` rows produced about 330 000 here, and the world in
+-- test/js-attrs.test.ts — which loads every JS pack in the tree — came back
+-- `$rule(...)/space_exhausted` with eighteen of its nineteen tests red. Bounded
+-- by `concrete_denotes` it is the pairs a CALL SITE in the corpus reaches, 17
+-- over `w_js_ambient`, and that is also the only version anybody can ask a
+-- question about: comparing two members nothing calls is a comparison about
+-- nothing. The raw form is one query over `ambient_effect` for anyone who wants
+-- it, exactly as `eff_leq` over `effect_of` is.
+concrete_leq[flow](S1, O1, S2, O2) :- concrete_denotes[flow](S1, O1, E1),
+                                      concrete_denotes[flow](S2, O2, E2), eff_leq(E1, E2).
 
 -- ---------------------------------------------------------------------------
 -- THE RESIDUE, AS A POSITIVE RELATION AND NOT AS AN AUDIT.

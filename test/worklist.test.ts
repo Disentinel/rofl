@@ -206,6 +206,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // instrument rather than the model — the callee-name oracle this layer
     // reads statement order through can only see a `completes_abruptly` row
     // whose successor holds a call, which on this corpus is 27 rows out of 789.
+    // TWO JOINED 2026-09-09 from w_effect_ambient_call, and they are its honest
+    // residue: `w_ambient_es_intrinsic_effects` (nine ECMAScript surfaces with
+    // no effect table anywhere) and `w_ambient_prototype_effects` (the builtin
+    // prototypes). Neither spawned a finding because neither is a discovery —
+    // they exist to OWN what the derivation could not reach, which is what
+    // this list is for.
+    'w_ambient_es_intrinsic_effects', 'w_ambient_prototype_effects',
     'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
     // `w_connected_and_badly_ordered` JOINED 2026-09-09, entered by
@@ -243,7 +250,11 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // joined: it spawned four findings, two of them about relations it does not
     // own — `may_throw` has no construction edge, and a `try` in a class part
     // catches nothing because a part is not a function.
-    'w_effect_sweep',
+    // ...and `w_effect_shape_axis` JOINED from the ambient branch: the refusal
+    // of `axis_applies(shape, effect)` has EXPIRED, because that branch
+    // attributed one member beside one it could not, in one store — which is
+    // the exact condition the refusal named for itself.
+    'w_effect_shape_axis', 'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
     // by the item that built the second cost gate. It is on this list for the
@@ -413,8 +424,20 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // `f_a_cell_can_be_open_while_a_rule_fires_on_its_kind` applied in advance
   // rather than discovered afterwards.
   assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
+    // ...AND FOUR MORE 2026-09-09 (w_effect_ambient_call): the AMBIENT cells,
+    // `call_expression`, `optional_call_expression`, `new_expression` and
+    // `identifier`. THAT IS FOURTEEN CLOSED BY THREE BRANCHES THAT COULD NOT
+    // SEE EACH OTHER, 24 -> 10, and none of the three could have written this
+    // list. Had it been a count all three would have moved it and the merge
+    // would have picked one silently.
+    //
+    // SEVEN OF THE TEN ARE THE OWNER'S and unchanged since morning — five
+    // `with_statement` rows, `require`, the subpath specifier. So the effect
+    // layer is down from a hundred open cells to THREE, and those three stay
+    // open on a measurement: 141 of 369 coerced operands are values the value
+    // layer never traced, and seeding the lattice's top for them was tried and
+    // refused because it makes `effect_of` `top` for most of the corpus.
     'binary_expression/none/effect',
-    'call_expression/none/effect',
     'call_expression/none/modules',
     // FIVE MORE LEFT THE SET 2026-09-09 (w_effect_class_initialisers), the
     // class parts: `class_declaration`, `class_property`,
@@ -424,10 +447,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     // which is the argument for a set over a count met for the fourth time
     // today: two branches moving one number by different fives auto-merge to
     // the same wrong value with no conflict to read.
-    'identifier/none/effect',
     'import_declaration/subpath/modules',
-    'new_expression/none/effect',
-    'optional_call_expression/none/effect',
     'template_literal/none/effect',
     'unary_expression/none/effect',
     'with_statement/none/callgraph',

@@ -2605,18 +2605,86 @@ work_spawned(w_runtime_surface, f_a_free_identifier_is_a_negative_over_a_file_an
 -- declaring the row would multiply the table and answer nothing, which is what
 -- `unearned_axis[audit]` exists to refuse. test/js-effects.test.ts plants the
 -- attribution as a positive control, so that sentence is runnable.
-work(w_effect_ambient_call, "the effect of a call whose callee is not in this program: the (surface, operation) pair is derivable and the map into the lattice is a table the runtime and globals surfaces owe, one row per member").
-work_state(w_effect_ambient_call, open).
+--
+-- ==========================================================================
+-- DONE 2026-09-09, and the four cells are closed. `rules/js-ambient.rofl` is
+-- the whole artefact and THERE IS NO `facts/js-ambient.rofl` — the item`s
+-- answer to "do not author a table of effects by hand" is that it authored
+-- none, and the absence of a fact pack is the evidence.
+--
+-- WHAT WAS DERIVED AND FROM WHAT, which is the half the note above said was
+-- not free:
+--
+--   the SURFACE      `host_module(node, Spec)`, `host_global(H, Name)`,
+--                    `lib_global(Name, _, _)`, `builtin_prototype(P)` — four
+--                    generated tables, so no surface in this model can fail to
+--                    name the declaration file it came from
+--   the BINDING      `host_module_ns[code]` for a namespace import and
+--                    `free_global[code]` for a global. NOT `host_global_ref` —
+--                    that relation has no reference-position restriction and
+--                    over the five shared call fixtures it reports `length` and
+--                    `toString` as browser globals, because `x.length` writes
+--                    the word as an identifier
+--   the MAP          `member_effect[code]` and `host_global_effect` — the
+--                    runtime layer`s own table, twenty-two module defaults with
+--                    seven member overrides subtracted, written for a different
+--                    purpose and defended line by line there
+--   the TRANSLATION  a host atom is a lattice landmark, and the two that are
+--                    not identities are DERIVED from this lattice rather than
+--                    typed: `read` and `write` are LABELS, Koka parameterises
+--                    both by a heap, and an ambient surface is not this
+--                    program`s heap — so `read` is `rd_global` by exactly the
+--                    test `eff_heap_of[flow]` applies to a receiver
+--
+-- MEASURED IN `w_js_ambient` (facts/worlds.rofl), which is the runtime and
+-- ES-globals fixtures under all five layers plus both surfaces: 571
+-- `ambient_effect` rows over 44 surfaces; 35 ambient sites with a (surface,
+-- operation) pair, of which 17 denote a landmark; `eff_call_unattributed[flow]`
+-- 5, down from 22, and their three SHAPES are named. `eff_label_unseen[flow]`
+-- is EMPTY — every label of the lattice is exercised — which is `ndet` having a
+-- seed for the first time anywhere, from `performance.now`.
+--
+-- AND THE SHARED CALL CORPUS GAINS NOTHING, which is why the pack is refused by
+-- `w_js_effects`: its free globals are `Error`, `Promise`, `String`, `Symbol`,
+-- four ES intrinsics with no effect table anywhere, and it imports no node
+-- builtin. A claim about the ambient surface measured there would have been a
+-- claim about an empty relation.
+--
+-- AND THE ONE ORACLE THIS LAYER HAS WENT 0 -> 12, IN THE RIGHT DIRECTION, and
+-- the number is here because the coercion branch asked for it before this item
+-- seeded a label. `may_throw[code]` closes over `resolves` and
+-- `throw_statement` only; `io` contains `exn`; so an attributed ambient call
+-- makes its caller throw. Measured in ONE world with the pack in and out:
+-- `eff_exn_only[audit]` 0 -> 12 (announce, get, isThere, later, matches,
+-- readIt, readLater, say, soon, space, where, writeLater - every one an `io`
+-- host call in its own body) and `may_throw_only[audit]` 0 -> 0, which is the
+-- direction a propagation defect would take. `now` is NOT among them, because
+-- `performance.now` is `ndet` and `ndet` does not contain `exn` - the widening
+-- follows the ROW and not the word `ambient`. The oracle is NARROWED rather
+-- than repaired or suppressed: `eff_exn_unexplained[audit]` demands that every
+-- divergence reach an ambient `exn` source through the propagation rule`s own
+-- closure, and MUTANT M8 shows it can go red. `may_throw` is untouched.
+--
+-- AND NOTHING WAS PUSHED TO THE TOP, which is the other half of the standard
+-- the coercion branch set the same day when it refused to seed `top` for 141
+-- untraced operands. An unattributed ambient call seeds NOTHING here; the set
+-- of functions at `top` is identical with the pack in and out.
+--
+-- WHAT IS STILL OWED IS A ROW AND NOT A SILENCE: `ambient_owed[flow](Origin,
+-- Surface)` is eleven, and it splits by origin into three different items —
+-- `w_ambient_es_intrinsic_effects` (nine ECMAScript surfaces),
+-- `w_ambient_prototype_effects` (the builtin prototypes) and
+-- `w_ambient_global_members` (the one host global, and the scanner gap under
+-- it). None of the three is this layer`s work; all three are a SURFACE`s.
+work(w_effect_ambient_call, "DONE 2026-09-09: the effect of a call whose callee is not in this program. The map into the lattice is DERIVED from the runtime layer`s own attribution through one join and one translation, and what it cannot reach is `ambient_owed[flow]` rather than a silence").
+work_state(w_effect_ambient_call, done).
 work_spawned(w_effect_ambient_call, f_a_concrete_effect_is_two_halves_and_only_one_of_them_is_free).
-claim(queued, js, call_expression,          none, effect, w_effect_ambient_call).
-claim(queued, js, optional_call_expression, none, effect, w_effect_ambient_call).
-claim(queued, js, new_expression,           none, effect, w_effect_ambient_call).
--- `identifier` is the same question one level down and NOT a fifth call kind: a
--- bare name is a local (bottom, or `read<local>` if something reassigns it), an
--- import (bottom), or a free global (`read<global>`, and a ReferenceError if it
--- is not there). The rules derive the first two today; only the third needs the
--- surface, and `ambient_binding` is exactly the relation that decides it.
-claim(queued, js, identifier,               none, effect, w_effect_ambient_call).
+work_spawned(w_effect_ambient_call, f_an_oracle_that_agreed_row_for_row_was_a_statement_about_one_seed).
+work_spawned(w_effect_ambient_call, f_the_surface_enumerates_a_modules_members_and_not_a_globals).
+work_spawned(w_effect_ambient_call, f_a_free_name_is_a_read_of_the_global_heap_whether_or_not_a_surface_names_it).
+work_spawned(w_effect_ambient_call, f_the_witness_world_builder_could_not_take_a_specifier_apart).
+work_spawned(w_effect_ambient_call, f_a_frontier_relation_is_what_a_deleted_door_falls_out_of).
+work_spawned(w_effect_ambient_call, f_a_squared_relation_over_an_empty_table_is_invisible_until_the_table_fills).
 
 -- 66 - WHAT RUNS WHEN A CLASS IS DEFINED. A static block and a field
 -- initialiser run at DECLARATION time, not at a call, so their effect belongs
@@ -2888,3 +2956,114 @@ work_state(w_prototype_of_a_constructed_value, done).
 work_spawned(w_prototype_of_a_constructed_value, f_a_namespaced_constructor_is_outside_the_reference_position_table).
 work_spawned(w_prototype_of_a_constructed_value, f_both_cost_gates_refuse_the_pack_they_would_have_priced).
 work_spawned(w_prototype_of_a_constructed_value, f_a_relation_sweep_needs_the_arity_that_answers_not_the_one_that_does_not_error).
+work(w_prototype_of_a_constructed_value, "`new Map()` reaches no prototype, so a call on the instance is outside both halves of the library; the join exists and the decision does not").
+work_state(w_prototype_of_a_constructed_value, open).
+
+-- ===========================================================================
+-- 70-73. WHAT THE AMBIENT SURFACE OWES, entered 2026-09-09 by
+-- w_effect_ambient_call. FOUR ITEMS AND NOT ONE, because
+-- `ambient_owed[flow](Origin, Surface)` splits by ORIGIN and the three origins
+-- owe different work to different owners — which is the whole reason that
+-- relation carries the origin column. Grouping them as "the effect table is
+-- incomplete" is the queue smell
+-- `f_an_invisible_call_is_two_different_blockers_and_only_one_is_ours` names.
+--
+-- NONE OF THE FOUR CLAIMS A CELL. The four ambient cells are `handled`: the
+-- layer has its mechanism and names its residue, and every one of these
+-- improves the ANSWER without touching a verdict — the shape
+-- `f_a_blindness_can_have_no_cell` already records.
+
+-- 70 - THE ECMASCRIPT INTRINSICS HAVE NO EFFECT TABLE ANYWHERE, and that is
+-- nine of the eleven rows in the in-tray: `Math`, `JSON`, `Object`, `Promise`,
+-- `Reflect`, `Symbol`, `Error`, `Map`, `BigInt`. The surface half is free —
+-- `lib_global` and `lib_static` are generated from TypeScript`s own lib.es*.d.ts
+-- and carry 47 globals and 226 statics with a RELEASE each — and the map into
+-- the lattice is not, for the reason the founding finding measured:
+-- `Math.max` and `Math.random` are the same MethodSignature and are `total` and
+-- `ndet`.
+--
+-- WHAT MAKES IT DIFFERENT FROM THE RUNTIME`S TABLE, which is why it is a
+-- separate item rather than more rows in facts/js-host.rofl: the runtime table
+-- is per MODULE with member overrides, and a module is a coherent unit —
+-- "every reason to import node:fs is io" is defensible in one line. `Math` has
+-- no such default: one member of it is `ndet` and the other thirty-four are
+-- `total`, so a module-grain default would be wrong about the only member
+-- anybody`s determinism depends on. The grain here is the MEMBER and there are
+-- 226 of them, which is the size at which a hand table stops being defensible.
+--
+-- AND THERE IS A DERIVABLE HALF NOBODY HAS TRIED. `lib_static_shape(Name, Key,
+-- data|method)` already separates a PropertySignature from a MethodSignature —
+-- that is how `Math.PI` and `Symbol.iterator` are known to be keys rather than
+-- calls — and a data static of a frozen intrinsic is `total` with no judgement
+-- at all. That is a floor for this item rather than the whole of it, and it is
+-- what would make the first rows DERIVED rather than typed.
+work(w_ambient_es_intrinsic_effects, "nine ECMAScript surfaces reach a call site and no table says what any of their members do; the surface half is generated and the map is not, and the data/method split is the one part of it that is derivable").
+work_state(w_ambient_es_intrinsic_effects, open).
+work_needs(w_ambient_es_intrinsic_effects, w_effect_ambient_call).
+
+-- 71 - THE BUILTIN PROTOTYPES, and this is the row `w_effect_layer` measured
+-- on its first day: ten call sites in the shared call corpus carry a (surface,
+-- operation) pair derived from the receiver`s KIND alone — `array:join`,
+-- `string:concat`, `regexp:test`, `bigint:toString` — with no `.d.ts` involved.
+-- Not one of them has a map. Over `w_js_ambient` the same shape shows as one
+-- row, `builtin_prototype/array` from `[3,1,2].toSorted()`.
+--
+-- IT IS THE SMALLEST OF THE THREE AND THE MOST LIKELY TO BE DERIVABLE, because
+-- `lib_member(Proto, Key, Release)` already exists for eight prototypes and the
+-- mutating half of the Array prototype is a CLOSED LIST the language names —
+-- `push`, `pop`, `splice`, `sort`, `reverse`, `fill`, `copyWithin`, `shift`,
+-- `unshift` — against the non-mutating copies ES2023 added beside them
+-- (`toSorted`, `toReversed`, `toSpliced`, `with`). Whether that list can be
+-- READ from a declaration file rather than typed is the question this item has
+-- to answer before it writes a row, and the honest answer may be no.
+work(w_ambient_prototype_effects, "a call on a builtin prototype has a surface and an operation derived from the receiver`s kind and no map into the lattice; the array mutators are a closed list and whether it can be READ rather than typed is the question").
+work_state(w_ambient_prototype_effects, open).
+work_needs(w_ambient_prototype_effects, w_effect_ambient_call).
+
+-- 72 - THE GLOBAL MEMBERS THE SCANNER STOPS ONE CALL SHORT OF, recorded as
+-- `f_the_surface_enumerates_a_modules_members_and_not_a_globals`. scanners/
+-- host_lib.ts gets a module`s 1321 members from
+-- `checker.getTypeAtLocation(init).getProperties()` and gets the globals from
+-- the SAME CALL one level up, on `globalThis`, keeping only the NAMES. So
+-- `host_global(node, "console")` exists and `host_global_member(node,
+-- "console", "log")` does not, anywhere.
+--
+-- WHAT IT COSTS IS STATED AS A ROW: `ambient_unenumerated[flow](S)` is exactly
+-- the global surfaces and not one module, because a module`s `ambient_effect`
+-- rows are corpus-independent and a global`s are the members a program happens
+-- to select. `console.log` and `console.table` are indistinguishable today and
+-- both read `io`, which is true and coarse; `process.cwd` reads and
+-- `process.exit` does not return, and there is no place to say so.
+--
+-- IT IS THE RUNTIME SURFACE`S ITEM AND NOT THE EFFECT LAYER`S. Touching it
+-- regenerates facts/js-host-surface.rofl, which test/js-host.test.ts
+-- regenerates and compares — so the change is a scanner change with a pinned
+-- generated file under it, which is that owner`s ground.
+work(w_ambient_global_members, "the host surface enumerates a MODULE`s members through the checker and stops at the NAMES of the globals; the same call one level down would give console`s members and nothing asks for it").
+work_state(w_ambient_global_members, open).
+work_spawned(w_ambient_global_members, f_the_surface_enumerates_a_modules_members_and_not_a_globals).
+
+-- 73 - THE SHAPE AXIS ON THE EFFECT LAYER, AND ITS CONDITION IS NOW MET.
+-- facts/js-effects.rofl refuses `axis_applies(shape, effect)` with a date on it
+-- and states the exact condition for granting it: "it becomes correct on the day
+-- the surface packs attribute AT LEAST ONE member and leave at least one
+-- unattributed — one `handled` shape beside one `not_yet` shape is what
+-- `axis_earns` asks for." test/js-effects.test.ts plants that pair as a positive
+-- control, so the sentence was runnable rather than a prediction.
+--
+-- IT IS TRUE AS OF 2026-09-09. Over `w_js_ambient`, `console.log` denotes `io`
+-- and `Math.max` denotes nothing, in one store, off two surfaces of two
+-- different origins. So the refusal has expired and the row is now declarable.
+--
+-- IT IS NOT DECLARED HERE, DELIBERATELY, and the reason is arithmetic rather
+-- than caution: `axis_applies(shape, effect)` multiplies the effect layer`s
+-- hundred cells by every `shape_of` row in facts/js-shapes.rofl, which re-opens
+-- dozens of cells at once and moves `test/js-model.test.ts` and the queue
+-- counts — three files this wave`s rules reserve for the integrator. A layer
+-- that gains a refinement column gains it with its own cell ownership in the
+-- same commit, which is the constraint
+-- `f_a_layer_declared_without_owners_is_not_a_state_the_queue_can_be_in`
+-- already states about `layer/1` and which applies unchanged to an axis.
+work(w_effect_shape_axis, "the refusal of `axis_applies(shape, effect)` has expired: one member is attributed and another is not, in one store. Declaring it re-opens cells and needs its own ownership in the same commit").
+work_state(w_effect_shape_axis, open).
+work_needs(w_effect_shape_axis, w_effect_ambient_call).

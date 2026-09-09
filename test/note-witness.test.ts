@@ -193,7 +193,17 @@ test('the tree\'s own witnesses stand, each in its own world', () => {
   // arrived 2026-09-09 with the effect layer: the corpus world plus two packs,
   // declared separately because `w_js_corpus` is asserted identical to the world
   // test/js-corpus-world.ts builds and its row count is pinned elsewhere.
-  assert.deepEqual([...used].sort(), ['w_js_corpus', 'w_js_effects', 'w_ledger', 'w_queue'],
+  // `w_js_ambient` arrived 2026-09-09 with `w_effect_ambient_call`: the same
+  // five layers over the RUNTIME and ES-GLOBALS fixtures plus both ambient
+  // surfaces, declared separately because the shared call corpus has no ambient
+  // callee any surface names — its free globals are four ES intrinsics and it
+  // imports no node builtin — so a claim about the ambient surface measured in
+  // `w_js_effects` would be a claim about an empty relation. It is also the
+  // first declared world whose corpus writes `import ... from 'node:fs'`, which
+  // is what found that the checker's world builder emitted no string facts and
+  // therefore ran no module door at all.
+  assert.deepEqual([...used].sort(),
+    ['w_js_ambient', 'w_js_corpus', 'w_js_effects', 'w_ledger', 'w_queue'],
     'every declared world carries a witness, so none is a declaration nobody uses');
   console.log(`  ${ws.length} witnesses over ${used.size} worlds, all standing`);
 });

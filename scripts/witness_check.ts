@@ -130,12 +130,55 @@ export function worldMap(): Map<string, WorldSpec> {
   return out;
 }
 
+/** THE TWO BLIND HOST EMITTERS THE MODULES LAYER NEEDS, in the same form
+ *  test/js-host-world.ts and test/js-modules.test.ts write them. The kernel's
+ *  builtins are arithmetic and comparison only, so NO RULE CAN TAKE A SPECIFIER
+ *  APART: without these, `str_scheme[code]` is empty, `node:fs` never
+ *  classifies as a `node_builtin`, `resolved_builtin[code]` derives nothing and
+ *  the whole module door of rules/js-modules.rofl and rules/js-host.rofl is
+ *  SILENT — with no diagnostic, because an empty relation is a fact about the
+ *  query until proven otherwise.
+ *
+ *  ADDED 2026-09-09 by w_effect_ambient_call, and the reason is that the gap
+ *  was invisible until a world needed the module door: every world declared
+ *  before it either refused rules/js-modules.rofl or had a corpus of relative
+ *  specifiers, so the missing facts subtracted nothing anybody had asked for.
+ *  It only ADDS facts, and only for a corpus that writes an import — a world
+ *  that does not load the modules pack holds them unread. */
+const qs = (s: string): string => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+function strFacts(s: string): string[] {
+  if (s.length === 0) return [];
+  const segs = s.split('/');
+  const out = [`str_char0[code](${qs(s)}, ${qs(s[0] as string)}).`, `str_segs[code](${qs(s)}, ${segs.length}).`];
+  segs.forEach((g, i) => out.push(`str_seg[code](${qs(s)}, ${i}, ${qs(g)}).`));
+  const c = s.indexOf(':');
+  if (c > 0) out.push(`str_scheme[code](${qs(s)}, ${qs(s.slice(0, c))}).`);
+  return out;
+}
+/** every specifier the corpus actually writes, cut for the string relations.
+ *  Read off the SOURCE rather than listed by hand, so a new import in a fixture
+ *  cannot silently go unresolvable. */
+function specifierFacts(sources: string[]): string[] {
+  const out = new Set<string>();
+  for (const src of sources)
+    for (const m of src.matchAll(/from\s+['"]([^'"]+)['"]/g)) for (const f of strFacts(m[1])) out.add(f);
+  return [...out];
+}
+
 /** build one named world: its packs, then its corpus scanned in, then evaluate */
 export function build(spec: WorldSpec): any {
   const r = rofl(['boot.rofl', ...spec.packs]);
+  const sources: string[] = [];
   for (const [logical, disk] of spec.corpus) {
-    const res = r.assert(scan(read(disk), { file: logical }).facts.join('\n'));
+    const src = read(disk);
+    sources.push(src);
+    const res = r.assert(scan(src, { file: logical }).facts.join('\n'));
     if (!res.ok) { console.error(`${spec.name}: ${logical} REJECTED: ${res.diagnostics[0]}`); process.exit(1); }
+  }
+  const sf = specifierFacts(sources);
+  if (sf.length) {
+    const res = r.assert(sf.join('\n'));
+    if (!res.ok) { console.error(`${spec.name}: specifier facts REJECTED: ${res.diagnostics[0]}`); process.exit(1); }
   }
   r.evaluate(50_000_000);
   return r;
