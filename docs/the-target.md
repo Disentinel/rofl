@@ -48,16 +48,51 @@ Measured on real eslint/lib source at 8, 16, 32 and 64 files, both engines on
 the same worlds, seeds built by `scanners/js_seed.ts` and required to
 round-trip on the reference before they count.
 
-| | 8 files | 16 | 32 | 64 |
-|---|---|---|---|---|
-| facts | 186 224 | 853 567 | 1 176 561 | 2 968 422 |
-| JS bytes/fact | 799 | 880 | 894 | 911 |
-| **Rust bytes/fact** | **182** | **191** | **232** | **179** |
-| JS seconds | 1.16 | 6.85 | 9.71 | 39.87 |
-| **Rust seconds** | **0.42** | **2.80** | **4.43** | **16.81** |
+| | 8 files | 16 | 32 | 64 | 128 |
+|---|---|---|---|---|---|
+| facts | 186 224 | 853 567 | 1 176 561 | 2 968 422 | 5 676 864 |
+| JS bytes/fact | 799 | 880 | 894 | 911 | 908.5 |
+| **Rust bytes/fact** | **182** | **191** | **232** | **179** | **198.3** |
+| JS seconds | 1.16 | 6.85 | 9.71 | 39.87 | 88.34 |
+| **Rust seconds** | **0.42** | **2.80** | **4.43** | **16.81** | **45.72** |
 
-Four to five times denser and twice as fast, and the density gap WIDENS with
-size because the JS figure drifts up while the Rust one does not.
+Four to five times denser and about twice as fast at every size measured.
+
+**The 128 column is UNJUDGED and says so.** `canonicalState` returns one string
+and V8 caps a string near 512 MB, so above roughly 3M facts the reference throws
+`RangeError: Invalid string length` and no heap flag moves it. The seed was
+built with `scanners/js_seed.ts --no-oracle`, which writes
+`128.unjudged.seed.json` and skips the round-trip, because a round-trip whose
+comparison cannot be computed is not a check. The port's fact count is
+5 677 298 against the reference's 5 676 864 — the same constant 434 that holds
+at every judged size — so the two agree as far as anything here can still see,
+and that is a weaker statement than 34/34 on both oracles.
+
+**A claim this column RETRACTS.** The previous version of this table said the
+density gap widens with size "because the JS figure drifts up while the Rust one
+does not". Over 64 to 128 both halves of that are false: JS is flat (911 ->
+908.5) and Rust drifts UP (179 -> 198.3). The ratio therefore NARROWS, 5.09x to
+4.58x, and so does the time ratio, 2.37x to 1.93x. Four points looked like a
+trend and the fifth was the first one outside the region the trend was fitted
+in.
+
+**And the curve steepens at the top, which is the number that matters for L4.**
+Measured in ONE session at a load average held at 4.2 from start to finish, so
+the two points are comparable to each other: 64 files 17.73 s, 128 files 45.72 s,
+over 1.913x the facts. That is an exponent of **1.46** — against the 1.34 fitted
+over 8 to 64. The reference over the same interval is 1.23, from a 64-file
+figure taken in an earlier session, so that half of the comparison is
+cross-session and weaker. The port is faster at every size AND its curve is the
+steeper one at the top, and only the first of those was known before.
+
+**Rows are not facts, and the ratio is 0.507.** `DEFAULT_SPACE` is 500 000 ROWS,
+which is what the accumulator charges against, not facts. Measured on this
+world: 64 files 2 968 856 facts / 1 509 144 peak rows, 128 files 5 677 298 /
+2 879 275 — 0.508 and 0.507, stable across a doubling. The port's row accounting
+is a line-for-line port of the reference's (`rows++`, the same high-water mark,
+the same `rows + next.len()` correction, the same `rows > space` wall), so the
+figure is the reference's too. It is a property of these RULES and does not
+transfer to another rule set unmeasured.
 
 **L3** (eslint/lib entire, 388 files, ~17.0M facts): about 3.0 GB and a few
 minutes on the port; 15.5 GB on the reference, which needs
