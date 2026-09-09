@@ -12,6 +12,8 @@
 pub mod dense;
 pub mod engine;
 pub mod reflect;
+/// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_lexgen.ts.
+pub mod ring1_lexer;
 pub mod seed;
 pub mod store;
 pub mod term;

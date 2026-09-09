@@ -14,3 +14,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "rofl-eval"
 path = "src/bin/rofl_eval.rs"
+
+[[bin]]
+name = "ring1-lex"
+path = "src/bin/ring1_lex.rs"
