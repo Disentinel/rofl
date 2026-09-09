@@ -325,7 +325,14 @@ const memo = (key: string, f: () => LayerCost) => {
 
 // The cut for each world is placed where the data has a measured gap, never at
 // a rank. Re-measure `nextBelow` before moving one.
-const CF_CUT = 0.6;   // 0.858% then 0.324%: the gap is 0.53 pp, 2.6x the next
+// RE-PLACED 2026-09-09 AFTER THE REPAIR, and the move is the repair's own
+// evidence. At 0.6 the cut named four paths of a layer one of them owned at
+// 94%. With `has_return` reordered that path is gone, the layer is 7x smaller,
+// and 0.6% of a small denominator admitted TWENTY paths — a cut is a fraction
+// of a total and a shrinking total makes a fixed fraction finer. Re-placed
+// where the data has a gap, which is this file's own rule: 12.897% then
+// 7.073%, a gap of 5.82 pp against 2.04 for the next largest, 2.9x.
+const CF_CUT = 10.0;
 const ERA_CUT = 6.0;  // 7.121% then 4.613%: the gap is 2.51 pp
 
 const cf = () => memo('cf', () => layerCost(CONTROLFLOW, CF_CUT));
@@ -418,8 +425,8 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // -> 46.386) because the change is not in this pack; the WORLD carries it,
   // which is exactly what f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door
   // says a difference cannot see and the totals beside it can.
-  assert.equal(L.world.total, 4019034, 'rows handed out by the store in the control-flow fixpoint');
-  assert.equal(L.world.firings, 152816, 'derivations in the control-flow fixpoint');
+  assert.equal(L.world.total, 7742219, 'rows handed out by the store in the control-flow fixpoint');
+  assert.equal(L.world.firings, 177218, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
   // 45.97% of the rows handed out in its own world, while being 5.13% of its
@@ -427,35 +434,44 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // everything else in the same world. A layer that reads more than a dozen
   // rows per derivation is doing a scan somewhere, and the path list below says
   // where.
-  assert.equal(L.rows, 1864255, 'rows the control-flow pack costs, by difference');
-  assert.equal(L.firings, 7818, 'derivations the control-flow pack adds');
-  assert.ok(Math.abs(L.rowShare - 46.386) < 1.5,
-    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 46.386%`);
-  assert.ok(Math.abs(L.firingShare - 5.116) < 0.5,
-    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 5.116%`);
-  assert.ok(Math.abs(L.perFiring - 238.46) < 5,
-    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 238.46`);
+  assert.equal(L.rows, 252165, 'rows the control-flow pack costs, by difference');
+  assert.equal(L.firings, 11294, 'derivations the control-flow pack adds');
+  assert.ok(Math.abs(L.rowShare - 3.257) < 1.5,
+    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 3.257%`);
+  assert.ok(Math.abs(L.firingShare - 6.373) < 0.5,
+    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 6.373%`);
+  assert.ok(Math.abs(L.perFiring - 22.33) < 5,
+    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.33`);
 
   // AND THE COMPARISON THAT MAKES THAT NUMBER READABLE: the same ratio for the
   // world without this pack.
+  // AND THE COMPARISON INVERTED WITH THE REPAIR, which is worth more than the
+  // threshold it replaces. It read `rest < 20` because the layer walked 234
+  // rows per derivation against 14.9 for everything else — the signature of a
+  // scan. With `has_return` reordered the layer walks 22.33 and the REST of
+  // the world walks 45.14, so the control-flow pack is now the CHEAPER half of
+  // its own world by this measure. The assertion is kept pointing at the layer
+  // rather than at the rest, because the rest is not this gate's subject.
   const rest = L.without.total / L.without.firings;
-  assert.ok(rest < 20, `the rest of the world walks ${rest.toFixed(2)} rows per derivation`);
+  assert.ok(L.perFiring < rest,
+    `the layer walks ${L.perFiring.toFixed(2)} rows per derivation and the rest of the world ${rest.toFixed(2)}`);
   console.log(`    rows per derivation: layer ${L.perFiring.toFixed(2)}, rest of the world ${rest.toFixed(2)}`);
 });
 
-test('the control-flow layer\'s read paths, by name, and one of them is 94% of it', () => {
+test('the control-flow layer\'s read paths, by name, and the 94% one is GONE', () => {
   const L = cf();
   // BY THRESHOLD AND NOT BY RANK. `slice(0, n)` makes membership depend on an
   // ordering the instrument cannot resolve when two paths are hundredths apart;
   // the cut goes where the data has a gap, and the gap here is 0.53 pp between
   // 0.858% and 0.324% — re-read `nextBelow` in the log before moving it.
   //
-  // WHAT THIS LIST SAYS. `argMatches ast_node pos=[1]` is a probe of the node
-  // table with the KIND bound and the node unbound: a scan over every node of a
-  // kind. It hands out 1 706 704 rows on its own, 94.08% of everything this
-  // layer costs and 43% of the whole world, and ONE RULE is responsible —
-  // measured by ablating each of the 28 clauses in rules/js-controlflow.rofl
-  // that mention `ast_node` and comparing this path:
+  // THE REPAIR LANDED 2026-09-09 AND THIS LIST IS ITS RECEIPT. What follows,
+  // down to the SHARE table, is kept as written on the day the defect was
+  // found, because the measurement is the argument and deleting it would leave
+  // the numbers below looking arbitrary. `argMatches ast_node pos=[1]` used to
+  // hand out 1 706 704 rows on its own — 94.08% of this layer and 43% of the
+  // whole world. It is now 4.179% of a layer 7x smaller and does not clear the
+  // cut. What was true when it was written:
   //
   //     has_return[code](F) :- fn_node[code](F),
   //                            ast_node[code](R, return_statement, _, _),
@@ -466,16 +482,23 @@ test('the control-flow layer\'s read paths, by name, and one of them is 94% of i
   // same layer is worth 780 rows. Leading with the return statement instead
   // was measured on the same corpus: the layer falls from 1 814 160 rows to
   // 130 465 (-92.8%), the world from 3 946 681 to 2 262 986 (-42.7%), with
-  // firings, facts and TEN named relations identical row for row — see
-  // MUTANT B, which runs that comparison. It is not applied here:
-  // w_has_return_is_a_join_over_the_whole_corpus owns the change, this file
-  // owns the measurement, and a gate that quietly repairs its own subject has
-  // no baseline left to report.
+  // firings, facts and TEN named relations identical row for row.
+  //
+  // APPLIED 2026-09-09 by the integrator, with that equivalence control re-run
+  // on the merged tree: world 10 088 161 -> 7 742 219, layer 1 864 255 ->
+  // 252 165, share 46.386% -> 3.257%. What forced the decision was not the
+  // saving: MUTANT C and C' stopped fitting in the engine's 500 000-row SPACE
+  // wall, so the gate could no longer plant its own probes. MUTANT B is
+  // re-aimed at the regression and now guards the repair.
+  //
+  // THE NEW LIST IS THREE PATHS AND NONE OF THEM DOMINATES — 22%, 16%, 13%
+  // where there was one at 94%. That shape, not the total, is what says the
+  // scan is gone: a layer whose cost is spread across its reads is doing work,
+  // and a layer with one path at 94% is doing a scan.
   const SHARE: [string, number][] = [
-    ['argMatches ast_node pos=[1]', 94.077],
-    ['argMatches ast_within pos=[0]', 1.004],
-    ['relPersp member_node_v', 0.886],
-    ['relPersp call_site', 0.858],
+    ['relPersp completion_known', 22.141],
+    ['argMatches ast_within pos=[0]', 15.525],
+    ['argMatches ast_within pos=[1]', 12.897],
   ];
   assert.deepEqual(L.paths.map(([k]) => k).sort(), SHARE.map(([k]) => k).sort(),
     'a new path in the control-flow layer\'s own cost, or one that left it');
@@ -566,38 +589,54 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   assert.equal(L.firings, cf().firings, 'positive control: the ANSWERS do not move — this is cost only');
   assert.equal(L.world.q('after_abrupt[code](S)').n, cf().world.q('after_abrupt[code](S)').n);
 
-  assert.notEqual(L.world.total, 3946681, 'KILLED by the world total (+1.15%)');
+  assert.notEqual(L.world.total, 7742219, 'KILLED by the world total (+1.15%)');
   assert.deepEqual(L.paths.map(([k]) => k).filter((k) => !cf().paths.some(([b]) => b === k)),
     ['relPersp ast_child'],
     'KILLED by the layer\'s path SET, with the offender\'s own name in the diff');
-  const hot = new Map(L.paths).get('argMatches ast_node pos=[1]')!;
-  assert.ok(Math.abs(hot - 94.077) > 0.5, `KILLED by the share band: ${hot.toFixed(3)}% against 94.077%`);
-  // SURVIVORS, named. The layer's ROW SHARE moves 45.967 -> 46.583, inside its
-  // own 1.5 pp band, and the FIRING share and rows-per-derivation do not move
-  // at all in the direction the band would catch. A mutant that adds rows
+  // THIS KILL DIED WITH THE DEFECT IT WAS AIMED AT, 2026-09-09. It read the
+  // share of `argMatches ast_node pos=[1]` against 94.077% — and after the
+  // `has_return` repair that path is 4.179% of the layer and does not clear the
+  // cut at all, so the lookup returned `undefined` and the assertion failed
+  // with a TypeError rather than a verdict. A THRESHOLD ASSERTION THAT INDEXES
+  // A SET IS TWO ASSERTIONS, and only one of them was written down.
+  // Re-aimed at what is now true and is a stronger statement anyway: the
+  // repaired layer has no path anywhere near 94%, and the mutant does not
+  // create one.
+  assert.ok(!L.paths.some(([, p]) => p > 50),
+    `no path dominates the repaired layer: heaviest is ${L.paths[0][1].toFixed(3)}%`);
+  // SURVIVORS, named, and re-measured after the repair. A mutant that adds rows
   // without adding derivations is visible in the totals and in the path list,
   // and invisible to every ratio here except `perFiring`.
-  assert.ok(Math.abs(L.rowShare - 46.386) < 1.5,
+  assert.ok(Math.abs(L.rowShare - 3.257) < 1.5,
     `SURVIVOR: the row-share band sleeps through it (${L.rowShare.toFixed(3)}%)`);
-  assert.ok(Math.abs(L.firingShare - 5.116) < 0.5,
+  assert.ok(Math.abs(L.firingShare - 6.373) < 0.5,
     `SURVIVOR: the firing-share band sleeps through it (${L.firingShare.toFixed(3)}%)`);
   console.log('      KILLED by the world total, the path set and the share band; ' +
               'SURVIVED the row-share and firing-share bands');
 });
 
-test('MUTANT B: the same rule reordered to constrain first — the repair, measured', () => {
-  // TARGET: `the gate can see a rule getting CHEAPER`, which is the direction a
-  // cost gate is likeliest to sleep through, since nothing else in the suite
-  // would notice. It also runs the equivalence control that
-  // w_has_return_is_a_join_over_the_whole_corpus needs.
+test('MUTANT B: the repair REVERTED — the regression, and the gate must catch it', () => {
+  // TARGET: `the gate can see a rule getting CHEAPER` — and it did, which is
+  // why this mutant now points the other way. THE REPAIR WAS APPLIED on
+  // 2026-09-09 (w_has_return_is_a_join_over_the_whole_corpus), so the text this
+  // mutant used to search for NO LONGER EXISTS and the assertion would have
+  // died on `mutation anchor absent` rather than on anything about cost. That
+  // is f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes wearing
+  // a rule body instead of an item id: A MUTANT ANCHORED TO THE DEFECT EXPIRES
+  // WHEN THE DEFECT IS FIXED.
+  // RE-AIMED rather than deleted, and it is STRONGER this way: it now plants
+  // the OLD order and proves the gate still catches the regression, so the
+  // repair cannot be quietly reverted. The equivalence control that
+  // w_has_return_is_a_join_over_the_whole_corpus needed has been run and the
+  // item closed; what is left to guard is the direction of travel.
   const L = layerCost(CONTROLFLOW, CF_CUT, [{
     file: 'rules/js-controlflow.rofl',
-    find: 'has_return[code](F)    :- fn_node[code](F), ast_node[code](R, return_statement, _, _),\n' +
-          '                          ast_within[code](F, R).',
-    replace: 'has_return[code](F)    :- ast_node[code](R, return_statement, _, _),\n' +
-             '                          ast_within[code](F, R), fn_node[code](F).',
+    find: 'has_return[code](F)    :- ast_node[code](R, return_statement, _, _),\n' +
+          '                          ast_within[code](F, R), fn_node[code](F).',
+    replace: 'has_return[code](F)    :- fn_node[code](F), ast_node[code](R, return_statement, _, _),\n' +
+             '                          ast_within[code](F, R).',
   }], cf().without);
-  showLayer('mutant B', L);
+  showLayer('mutant B (regression re-planted)', L);
 
   // THE ANSWERS ARE THE SAME, and that is asserted over a NAMED SET of the
   // relations that depend on `has_return`, directly or through the layer.
@@ -610,27 +649,54 @@ test('MUTANT B: the same rule reordered to constrain first — the repair, measu
   assert.equal(L.world.firings, cf().world.firings, 'and derives exactly the same facts');
   assert.equal(L.world.facts, cf().world.facts);
 
-  assert.ok(L.world.total < 3946681 * 0.6, `KILLED by the world total: ${L.world.total} against 3946681`);
-  assert.ok(Math.abs(L.rowShare - 46.386) > 1.5, `KILLED by the row-share band: ${L.rowShare.toFixed(3)}%`);
-  assert.ok(Math.abs(L.perFiring - 238.46) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
+  // THE DIRECTION IS REVERSED WITH THE MUTANT: the regression makes the world
+  // DEARER, so every kill below is an upper bound where it used to be a lower.
+  assert.ok(L.world.total > cf().world.total * 1.25,
+    `KILLED by the world total: ${L.world.total} against ${cf().world.total}`);
+  assert.ok(Math.abs(L.rowShare - cf().rowShare) > 1.5,
+    `KILLED by the row-share band: ${L.rowShare.toFixed(3)}% against ${cf().rowShare.toFixed(3)}%`);
+  assert.ok(Math.abs(L.perFiring - cf().perFiring) > 5,
+    `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)} against ${cf().perFiring.toFixed(2)}`);
   assert.notDeepEqual(L.paths.map(([k]) => k).sort(), cf().paths.map(([k]) => k).sort(),
     'KILLED by the path set');
-  console.log(`      KILLED four ways. The repair is worth ${(100 * (1 - L.world.total / 3946681)).toFixed(1)}% ` +
-              `of the world and ${(100 * (1 - L.rows / cf().rows)).toFixed(1)}% of the layer, answers identical.`);
+  console.log(`      KILLED four ways. Reverting the repair costs ` +
+              `${(100 * (L.world.total / cf().world.total - 1)).toFixed(1)}% of the world ` +
+              `and ${(100 * (L.rows / cf().rows - 1)).toFixed(1)}% of the layer, answers identical.`);
 });
 
 test('MUTANT C: an expensive new rule added to the layer pack', () => {
   // TARGET: `a rule added to this layer can be arbitrarily expensive and no
   // number moves` — the sentence f_the_cost_gate_cannot_see_the_layer... had to
   // write about the first gate. It must be false here.
-  const PROBE = 'cost_probe[audit](N, C) :- ast_node[code](N, return_statement, _, _), call_site[code](C, _).\n';
+  // NARROWED 2026-09-09, AND THE REASON IS THE FINDING. The original probe was
+  // `return_statement x call_site`, an honest cross product; on the corpus this
+  // wave grew it no longer FITS. The engine's space wall is DEFAULT_SPACE =
+  // 500 000 rows (src/engine.ts), the merged control-flow world already holds
+  // 434 149 facts, and `Rofl`'s constructor takes no `space` option — so the
+  // wall cannot be raised from the public API and the probe came back
+  // `$rule(...)/space_exhausted` instead of a cost. Bounding the right side to
+  // functions keeps the mutant's meaning — a rule in this pack can be
+  // arbitrarily expensive — inside the headroom that is left.
+  // AND THE RIGHT SIDE MUST BE EDB, which the first narrowing got wrong:
+  // `fn_node[code]` has an arm in rules/js-controlflow.rofl itself, so planting
+  // the "identical" rule one pack away was not identical — C' lost its survivor
+  // because the probe reached back into the layer. `ast_node` is the scanner's
+  // own table and belongs to no pack, which is what C' needs to mean anything.
+  // AND IT IS SIZED TO THE HEADROOM, measured rather than guessed. This corpus
+  // holds 400 `return_statement` and 614 `call_expression` nodes, so the
+  // original product is 245 600 rows against roughly 66 000 left under the
+  // wall. `class_declaration` is 21 of them: 8 400 rows, which fits and still
+  // moves every number this mutant tests. The probe is a cross product either
+  // way — what changed is only that it is now a product this engine can hold.
+  const PROBE = 'cost_probe[audit](N, C) :- ast_node[code](N, return_statement, _, _), '
+              + 'ast_node[code](C, class_declaration, _, _).\n';
   const L = layerCost(CONTROLFLOW, CF_CUT, [{ file: 'rules/js-controlflow.rofl', append: PROBE }], cf().without);
   showLayer('mutant C', L);
   assert.ok(L.world.q('cost_probe[audit](N, C)').n > 0, 'positive control: the injected rule fires');
-  assert.notEqual(L.world.total, 3946681, 'KILLED by the world total');
-  assert.notEqual(L.world.firings, 150885, 'KILLED by the world firings');
-  assert.ok(Math.abs(L.firingShare - 5.116) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
-  assert.ok(Math.abs(L.perFiring - 238.46) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
+  assert.notEqual(L.world.total, 7742219, 'KILLED by the world total');
+  assert.notEqual(L.world.firings, 177218, 'KILLED by the world firings');
+  assert.ok(Math.abs(L.firingShare - 6.373) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
+  assert.ok(Math.abs(L.perFiring - 22.33) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
   // SURVIVOR, named: the layer's PATH SET does not change. A new rule that
   // reads relations already standing adds rows to paths that are already in the
   // list, so membership says nothing and only the shares and the totals do.
@@ -645,7 +711,28 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
   // worlds attributes cost BY PACK. The identical rule, housed in
   // rules/js-dataflow.rofl instead of rules/js-controlflow.rofl, is present in
   // BOTH worlds, so it cancels out of every layer figure exactly.
-  const PROBE = 'cost_probe[audit](N, C) :- ast_node[code](N, return_statement, _, _), call_site[code](C, _).\n';
+  // NARROWED 2026-09-09, AND THE REASON IS THE FINDING. The original probe was
+  // `return_statement x call_site`, an honest cross product; on the corpus this
+  // wave grew it no longer FITS. The engine's space wall is DEFAULT_SPACE =
+  // 500 000 rows (src/engine.ts), the merged control-flow world already holds
+  // 434 149 facts, and `Rofl`'s constructor takes no `space` option — so the
+  // wall cannot be raised from the public API and the probe came back
+  // `$rule(...)/space_exhausted` instead of a cost. Bounding the right side to
+  // functions keeps the mutant's meaning — a rule in this pack can be
+  // arbitrarily expensive — inside the headroom that is left.
+  // AND THE RIGHT SIDE MUST BE EDB, which the first narrowing got wrong:
+  // `fn_node[code]` has an arm in rules/js-controlflow.rofl itself, so planting
+  // the "identical" rule one pack away was not identical — C' lost its survivor
+  // because the probe reached back into the layer. `ast_node` is the scanner's
+  // own table and belongs to no pack, which is what C' needs to mean anything.
+  // AND IT IS SIZED TO THE HEADROOM, measured rather than guessed. This corpus
+  // holds 400 `return_statement` and 614 `call_expression` nodes, so the
+  // original product is 245 600 rows against roughly 66 000 left under the
+  // wall. `class_declaration` is 21 of them: 8 400 rows, which fits and still
+  // moves every number this mutant tests. The probe is a cross product either
+  // way — what changed is only that it is now a product this engine can hold.
+  const PROBE = 'cost_probe[audit](N, C) :- ast_node[code](N, return_statement, _, _), '
+              + 'ast_node[code](C, class_declaration, _, _).\n';
   const mut: Mut = { file: 'rules/js-dataflow.rofl', append: PROBE };
   const L = layerCost(CONTROLFLOW, CF_CUT, [mut]);
   showLayer("mutant C'", L);
@@ -653,7 +740,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
 
   // THE WORLD SEES IT — and to the row it is the same cost as MUTANT C, which
   // is what makes this a controlled pair rather than an anecdote.
-  assert.notEqual(L.world.total, 3946681, 'the world total is what catches it');
+  assert.notEqual(L.world.total, 7742219, 'the world total is what catches it');
   // THE LAYER DOES NOT, and every layer figure is identical to the baseline.
   assert.equal(L.rows, cf().rows, 'SURVIVOR: the layer\'s rows do not move by ONE');
   assert.equal(L.firings, cf().firings, 'SURVIVOR: nor its derivations');
@@ -661,7 +748,15 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
   assert.deepEqual(L.paths, cf().paths, 'SURVIVOR: nor any of its read paths, to three decimals');
   // ...with one exception worth having, and it is the reason the SHARES are
   // pinned beside the differences: a share has the world in its denominator.
-  assert.ok(Math.abs(L.firingShare - 5.116) > 0.5,
+  // RECALIBRATED 2026-09-09 WITH THE PROBE, and the recalibration is itself the
+  // point: this threshold was 0.5 against a probe of 245 600 rows, and the
+  // probe is now 8 400 because the engine's space wall left no room for the
+  // other. The share still catches the neighbour — 6.373% -> 6.085% — but by
+  // 0.288 pp instead of by pages. SO THE SHARE'S SENSITIVITY IS PROPORTIONAL
+  // TO THE NEIGHBOUR'S SIZE, which means it is a detector of large neighbours
+  // and not a detector of neighbours. A rule one pack away that is merely
+  // expensive-ish is invisible to every figure this gate has.
+  assert.ok(Math.abs(L.firingShare - 6.373) > 0.2,
     `the firing SHARE catches it because the denominator grew: ${L.firingShare.toFixed(3)}%`);
   console.log('      SURVIVED every difference this gate takes. Killed only by the world ' +
               'totals and by the shares, which have the world in their denominator.');
@@ -680,7 +775,7 @@ test('MUTANT D: the layer pack missing from the world', () => {
     [...dropped.packs.filter((p) => p !== 'boot.rofl'), ...dropped.omits].sort(),
     jsPacksOnDisk(),
     'KILLED by the closure: a pack that is neither loaded nor refused');
-  assert.ok(w.total < 3946681, `and the total falls, which on its own says nothing: ${w.total}`);
+  assert.ok(w.total < 7742219, `and the total falls, which on its own says nothing: ${w.total}`);
   console.log('      KILLED by unpopulatable and by the pack-list closure; the TOTAL alone ' +
               'only falls, which is the safe direction and is why it cannot be the check');
 });
@@ -690,7 +785,7 @@ test('MUTANT E: the fixpoint truncated at a budget', () => {
   // that was found in five files at once, one of them the first cost gate, which
   // had been pinning half a world.
   const w = build(CONTROLFLOW, { budget: 100_000 });
-  assert.ok(w.total < 3946681 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
+  assert.ok(w.total < 7742219 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
   assert.equal(w.holes.unpopulatable, false);
   assert.ok(w.holes.n > 0, 'KILLED by hole(Q, W), which the real gate asserts is empty');
   // AND A SECOND TELL, found by planting this mutant: in a truncated world the

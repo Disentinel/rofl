@@ -244,9 +244,45 @@ claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
 -- This is completion analysis (does this statement complete normally?), which
 -- is one recursive relation over statement kinds and NOT a fifth mechanism: the
 -- mechanism table already says `abrupt`, and the missing part is the closure.
-work(w_cf_completion, "abrupt transfer only reaches siblings: a return in a nested block, in both if arms, or under a label completes the enclosing region and no rule sees it").
-work_state(w_cf_completion, open).
+-- DONE 2026-09-09, and the item's three probes were reproduced before a line of
+-- the rule was written: on a standalone world with one function per shape,
+-- `after_abrupt` stood at 1 — the labelled ESCAPE, which the walking arm
+-- already reaches — and the callee list was EMPTY.
+--
+-- WHAT WAS ADDED IS ONE RECURSIVE RELATION AND NO NINTH MECHANISM, exactly as
+-- the note demanded. `completes_abruptly[code]` is the old `abrupt_at` base arm
+-- made recursive: the four abrupt kinds, a BLOCK whose body holds one, an `if`
+-- whose BOTH arms hold one, and a LABELLED statement whose body does and which
+-- nothing breaks out of. The old arm was REPLACED rather than kept beside it —
+-- its first literal is now the base case — so exactly one rule concludes the
+-- shape and no arm is subsumed by another.
+--
+-- THE CLOSURE IS INERT ON THE OLD CORPUS AND THAT IS THE ITEM RESTATED. With
+-- the rules in and no new fixture, `abrupt_at` went 374 -> 705 and NOT ONE
+-- downstream relation moved: `after_abrupt` 19, `guarded` 430, `may_not_run`
+-- 40, `reachable` 292, all unchanged. There was no statement in this corpus
+-- sitting after a completed region, which is why three probes could come back
+-- blind and nothing was wrong.
+--
+-- SEVEN KINDS ARE DEFERRED WITH A REASON, four of them with a site of their
+-- own, and none of them left to fall through the block arm silently: a `while`/`for`/`for-in`/`for-of` body may run zero times, and a
+-- `do/while` and a `switch` complete normally when the transfer is a `break`
+-- rather than a `return` — which needs a completion REASON the relation does not
+-- carry — and a `try`'s handler may swallow it. `completion_unaccounted[audit]`
+-- is the gate that keeps that table from silently shrinking.
+--
+-- FIFTEEN MUTANTS, FOURTEEN KILLED. The survivor is `ast_child(B, _, _, S)` in
+-- the block arm, unkillable BY THE GRAMMAR: a `block_statement` has `body` and
+-- `directives` and nothing else, and a directive is never an abrupt completion.
+-- Two results are worth more than the tally. c13 — the labelled arm reading any
+-- DESCENDANT — moves ZERO rows of the callee-name oracle, and only a second
+-- oracle over `label_name` kills it; c15 — the block arm reading only its LAST
+-- statement — survived until a site was written where the return is not last.
+work(w_cf_completion, "DONE 2026-09-09: completes_abruptly is the closure the mechanism table already promised; nested block, both if arms and a label, with five kinds deferred by name").
+work_state(w_cf_completion, done).
 work_needs(w_cf_completion, w_cf_abrupt_transfer).
+work_spawned(w_cf_completion, f_the_callee_name_oracle_cannot_see_the_region_a_closure_derives).
+work_spawned(w_cf_completion, f_a_derived_pair_costs_what_its_first_unbound_literal_costs).
 
 -- 41 — NO COST GATE OUTSIDE THE CALL GRAPH. test/js-fixpoint-cost.test.ts loads
 -- four rule packs and NOT rules/js-controlflow.rofl, so two iterations of rules

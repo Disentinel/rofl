@@ -251,19 +251,20 @@ test('every read path above five per cent, by name', () => {
   // both arguments bound — but that is a hypothesis about a 5.8% move made from
   // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
   // rather than explained.
+  // REPLACED WHOLESALE 2026-09-09, and the replacement is the receipt for two
+  // repairs measured the same night. `param_hidden` read the WHOLE `fn_node_v`
+  // relation once per parameter — `relPersp fn_node_v` was 58.7% of this world
+  // — and reordering it took the total 7 465 259 -> 3 244 319, -56.5%, with
+  // answers unchanged. `has_return` in the control-flow pack was repaired the
+  // same night for the same shape. Of the six names that used to be here, four
+  // no longer clear five per cent because the DENOMINATOR fell by half; only
+  // `authority` and the containment walk survive, and `hidden_at` is new.
+  // THE CUT SITS IN A GAP, checked rather than assumed: 6.398% then 4.347%, a
+  // gap of 2.05 pp against 1.29 for the next largest.
   const SHARE: [string, number][] = [
-    ['relPersp authority', 8.63],
-    ['argMatches ast_within pos=[0]', 6.89],
-    // 6.06 -> 5.35 on 2026-09-09 with w_computed_key_names, and this is the
-    // ONE share that moved: every other path here moved by 0.08 or less and
-    // the name set is unchanged. It fell because `key_name` stopped being an
-    // EDB copy, so the four bodies that lead with a kind scan now lead with
-    // the small relation instead. The item PREDICTED a saving and the total
-    // below went UP anyway — see f_a_relation_can_shrink_and_the_fixpoint_get_dearer.
-    ['argMatches ast_node pos=[1]', 5.35],
-    ['relPersp ast_node', 5.48],
-    ['argMatches encloses_v pos=[1]', 5.13],
-    ['relPersp encloses_v', 4.99],
+    ['relPersp hidden_at', 21.92],
+    ['argMatches ast_within pos=[0]', 7.69],
+    ['relPersp authority', 6.40],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -311,7 +312,17 @@ test('every read path above five per cent, by name', () => {
   // 8.4 -> 6.5, and DOWN because the truncated world stopped part-way through
   // the cheap derivations: 348 819 facts at 6.04 rows each against 204 783 at
   // 8.27. The ratio was measuring where the budget ran out.
-  assert.ok(c.total / c.facts < 6.5,
+  // 6.5 -> 8.5 on 2026-09-09, and UP even though two repairs took the total
+  // down by more than half. Facts grew 353 746 -> 403 379 (+14%) with the
+  // wave's fixtures while rows grew 2 138 623 -> 3 253 649 (+52%), so the ratio
+  // is 8.07 where it was 6.05. THE SHADOWING LAYER IS WHAT THAT BOUGHT: a
+  // negated literal is read once per candidate, and `relPersp hidden_at` is
+  // 21.9% of this world on its own — the heaviest single path left, and the
+  // next candidate after `param_hidden` and `has_return`. It is NOT reordered
+  // here: `hidden_at` is negated inside both arms of `sees_binder`, so the cost
+  // is in the shape of the negation and not in the order of a body, which is a
+  // different repair and somebody's item rather than a line in a pin pass.
+  assert.ok(c.total / c.facts < 8.5,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
   // and all five names above unmoved. The kernel now defers a negative literal
@@ -545,7 +556,7 @@ test('every read path above five per cent, by name', () => {
   // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
   // reproduced this pin exactly before it moved, which is the control that
   // says the two halves are what they are claimed to be.
-  assert.equal(c.total, 2138623, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 3253649, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -652,5 +663,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 142497, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
+  assert.equal(c.firings, 163423, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
 });

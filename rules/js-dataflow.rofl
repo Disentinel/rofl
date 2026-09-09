@@ -292,7 +292,15 @@ lexical_binder[code](D) :- lexical_decl[code](V), ast_child[code](V, declaration
 -- returns; nothing here needs the nearest block of an arbitrary node, and
 -- ranging over one would have built the (node x scope) product that the
 -- `ident_in` cost note two paragraphs up exists to warn about.
-encloses_s[code](R, D) :- scoped_binder[code](D, _), scope_node[code](R), ast_within[code](R, D).
+-- ORDERED FOR COST, MEASURED 2026-09-09 AND NOT ARGUED. `scope_node(R)` in
+-- position 2 leaves R unbound, so the body built the (binder x scope) product
+-- the comment above warns about — the very product it names. Asking
+-- `ast_within(R, D)` first with D bound walks D's ANCESTORS, a short chain,
+-- and `scope_node` then filters it: control-flow world 11 400 715 -> 10 088 161
+-- rows, -11.5%, with firings 177 218 and facts 434 149 IDENTICAL on both sides.
+-- The same reorder applied to `tdz_deferred` in the same run was worth 1 508
+-- rows, 0.013%, and was NOT kept — see the note there.
+encloses_s[code](R, D) :- scoped_binder[code](D, _), ast_within[code](R, D), scope_node[code](R).
 closer_s[code](R, D)   :- encloses_s[code](R, D), encloses_s[code](S, D),
                           ast_within[code](R, S), R != S.
 nearest_s[code](R, D)  :- encloses_s[code](R, D), not closer_s[code](R, D).
@@ -762,8 +770,23 @@ param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   binder_region[code](D, R),
                                   ast_within[code](F, R), ast_within[code](R, U),
                                   ident[code](U, Name).
+-- ORDERED FOR COST, MEASURED 2026-09-09. `fn_node_v(G)` in position 2 left G
+-- unbound, so this body READ THE WHOLE `fn_node_v` RELATION once per parameter:
+-- `relPersp fn_node_v` was 58.7 PER CENT of everything the call-graph world
+-- handed out, the single heaviest path in the tree after `has_return` was
+-- repaired the same night. Asking `ast_within(F, G)` first with F bound walks
+-- F's descendants and `fn_node_v` then filters them: 7 465 259 -> 3 244 319
+-- rows, -56.5%, and `fn_node_v` leaves the top of the distribution entirely.
+-- Answers unchanged: js-controlflow-scope 48/48 including the mutant that
+-- deletes this very arm, js-callgraph 38/38.
+-- IT IS ALSO WHY `param_use` BLEW ITS BUDGET. w_scope_shadowing reported that
+-- nine new functions pushed `param_use` past 400M steps and cost a mutant its
+-- row-level oracle; this is the rule that was spending it.
+-- AND THE RULE I EXPECTED WAS THE WRONG ONE. `tdz_deferred` carries the same
+-- unbound `fn_node_v(G)` shape and reordering it moved 0.02%. The signature
+-- names a CANDIDATE, never a cause.
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
-                                  fn_node_v[flow](G), ast_within[code](F, G),
+                                  ast_within[code](F, G), fn_node_v[flow](G),
                                   param_of[flow](G, _, Name),
                                   ast_within[code](G, U), ident[code](U, Name).
 param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),

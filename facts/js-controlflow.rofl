@@ -55,6 +55,26 @@ handled(js, yield_expression, controlflow, r_suspension).
 -- was written and no rule had ever read it; `r_abrupt` reads it now.
 handled(js, return_statement, controlflow, r_abrupt).
 
+-- ...AND `r_abrupt` READS A CLOSURE SINCE 2026-09-09 (w_cf_completion), which
+-- MOVES NO CELL AND IS RECORDED HERE ANYWAY. The rule used to ask whether the
+-- statement in a list IS one of the four abrupt kinds; it asks now whether the
+-- statement COMPLETES ABRUPTLY, which is one recursive relation over statement
+-- kinds — a nested block, both arms of an `if`, a labelled statement nothing
+-- breaks out of. No kind changed its verdict, no mechanism was added, and the
+-- item's own note says why: the mechanism table already files all four kinds
+-- under `abrupt` and what was missing was the closure.
+--
+-- THREE CONTAINERS ARE NOW READ BY A RULE AT THIS LAYER AND THEIR WAIVERS STILL
+-- STAND, which is the question `object_pattern` made this file ask of every
+-- reason it carries. `block_statement` reads
+-- `a_a_container_transfers_nothing` in facts/js-statements.rofl and the
+-- sentence is TRUE: a block performs no transfer, it PROPAGATES one its
+-- contents performed, and `transfer_mechanism(block_statement, M)` is empty on
+-- purpose — asserted in test/js-controlflow.test.ts rather than left to a
+-- reader. `if_statement` and `labeled_statement` are already `handled` here, by
+-- `r_guard_arm` and `r_labelled_boundary`, and neither claim is weakened by a
+-- second rule reading the same kind for a different question.
+
 -- A DEFAULTED PARAMETER IS AN ARM SKIPPED BY A CONDITION, 2026-09-08
 -- (w_destructuring_rest_and_spread). `function f(n, made = fallbackMaker(n))`
 -- calls `fallbackMaker` at exactly the sites that omit the argument, so the

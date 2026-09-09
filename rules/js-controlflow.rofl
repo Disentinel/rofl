@@ -155,8 +155,19 @@ edb(stmt_seq_field).
 stmt_seq_field(body).
 stmt_seq_field(consequent).
 
-abrupt_at[code](B, F, I) :- abrupt_kind(K), ast_node[code](S, K, _, _),
-                            stmt_seq_field(F), ast_child[code](B, F, I, S).
+-- THE ARM THAT USED TO STAND HERE IS THE BASE CASE OF A CLOSURE NOW, 2026-09-09
+-- (w_cf_completion). It read
+--
+--     abrupt_at[code](B, F, I) :- abrupt_kind(K), ast_node[code](S, K, _, _),
+--                                 stmt_seq_field(F), ast_child[code](B, F, I, S).
+--
+-- — the statement in the list must BE the transfer — and the item this file
+-- opened for it says where that cannot look: a `return` inside a nested block,
+-- in both arms of an `if`, or under a label completes the ENCLOSING region and
+-- this arm sees none of the three. `completes_abruptly` in COMPLETION below is
+-- that arm's first literal made recursive; the arm itself moved there, so that
+-- there is exactly one rule concluding this shape rather than two of which one
+-- subsumes the other.
 
 -- ORDERED FOR COST: `abrupt_at` is a handful of rows and binds B and F, so the
 -- second literal is a probe rather than a walk over every containment pair.
@@ -302,6 +313,155 @@ abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
 -- unconditionally so that its own witness does not depend on the looser reading.
 
 -- ---------------------------------------------------------------------------
+-- COMPLETION, 2026-09-09 — queue item w_cf_completion, and the item's own note
+-- is the design: this is NOT a ninth mechanism. The mechanism table already
+-- files `return`, `throw`, `break` and `continue` under `abrupt`; what was
+-- missing is the CLOSURE — the recursive question *does this statement complete
+-- normally?* — which every arm above answers only for the four kinds that ARE
+-- the transfer.
+--
+-- THE THREE SHAPES WERE MEASURED BLIND BEFORE A LINE OF THIS WAS WRITTEN, on a
+-- probe with one function per shape and a distinctly named callee after each:
+-- `after_abrupt` 1 (the labelled escape, which the arm above reaches) and the
+-- callee list EMPTY — `pastNestedReturn`, `pastBothArms` and `pastLabelledReturn`
+-- were all outside `may_not_run` and outside `guarded`. That is the item's
+-- statement reproduced rather than quoted, and mutants c1, c2 and c3 in
+-- test/js-controlflow.test.ts are that world reconstructed one arm at a time.
+--
+-- IT IS A SOUND UNDER-APPROXIMATION, on the same doctrine as `always_throws`
+-- in A CALL IS AN EXIT below: a statement this relation does NOT name may
+-- still complete abruptly, and the cost of that is a `guarded` set too small —
+-- which is the
+-- narrow direction the layer already documents. What it must never do is name a
+-- statement that CAN complete normally, and each arm below is the language's own
+-- rule for its kind rather than a heuristic.
+edb(completion_kind).       -- completion_kind(K)  a kind whose abrupt completion this closure DERIVES
+completion_kind(block_statement).
+completion_kind(if_statement).
+completion_kind(labeled_statement).
+
+-- (1) THE BASE, and it is exactly the four kinds `abrupt_at` used to read
+--     directly. A `return` completes abruptly by being a `return`.
+completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _, _).
+
+-- (2) A BLOCK COMPLETES ABRUPTLY IF ANY STATEMENT IN IT DOES. Not the LAST one:
+--     a statement that completes abruptly is the last one that runs, whatever
+--     follows it in the list, so quantifying over the whole body is the language
+--     and not a shortcut.
+--
+--     ORDERED FOR COST, on the pattern this file uses everywhere: seed from
+--     `completes_abruptly` (a handful of rows), walk UP one edge to the parent,
+--     then check the parent's kind. Written the other way round the first
+--     literal is every block statement in the corpus.
+completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
+                               ast_node[code](B, block_statement, _, _).
+
+-- (3) AN `if` COMPLETES ABRUPTLY ONLY IF BOTH ARMS EXIST AND BOTH DO, which is
+--     the whole content of the second shape. `if (c) return;` with no alternate
+--     completes normally when `c` is false, and this rule says so by REQUIRING
+--     the `alternate` child — an `if` without one derives nothing here.
+completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
+                               ast_node[code](S, if_statement, _, _),
+                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).
+
+-- (4) A LABELLED STATEMENT COMPLETES ABRUPTLY IF ITS BODY DOES **AND NOTHING
+--     BREAKS OUT OF IT**, and the negative half is the whole reason a label
+--     needs an arm of its own rather than falling out of (2). `lbl: { return n; }`
+--     never completes normally; `esc: { if (c) break esc; return n; }` completes
+--     normally on exactly the path that takes the break, and a closure that
+--     ignored the escape would say the statement after `esc:` is unreachable —
+--     a claim, in the narrow direction, about a statement that runs.
+--
+--     `label_target` IS REUSED RATHER THAN RE-DERIVED. It already joins a
+--     reference to the labelled statement BY NAME, and the grammar makes that
+--     target unique (a nested duplicate label is a SyntaxError). A second walk
+--     here would be the `orphan_claim` shape this file has paid for twice.
+label_escaped[code](LS)      :- label_target[code](_, LS).
+completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
+                                ast_node[code](LS, labeled_statement, _, _),
+                                not label_escaped[code](LS).
+
+-- ...AND THE CONSUMER IS THE ARM THAT USED TO READ `abrupt_kind` DIRECTLY.
+-- Replacing it rather than adding beside it is deliberate: the base case above
+-- IS the old arm, so the rows it produced are all still produced, and a second
+-- copy would be a rule no mutant could kill because the other one covers it.
+abrupt_at[code](B, F, I) :- completes_abruptly[code](S), stmt_seq_field(F),
+                            ast_child[code](B, F, I, S).
+
+-- A KIND THIS CLOSURE CLAIMS AND NEVER DECIDES. Same shape as
+-- `guard_arm_unseen`, `stmt_seq_unseen` and `export_kind_unseen`, and it covers
+-- two failures with one row: an arm misspelled or deleted (the rule stops
+-- firing) and a corpus with no site for it (the arm was never exercised). Both
+-- read as "the closure is smaller than it says it is", which is the narrow
+-- direction, and neither is visible from any count of `after_abrupt`.
+completion_decided[code](K)    :- completes_abruptly[code](S), ast_node[code](S, K, _, _).
+completion_unreached[audit](K) :- completion_kind(K), ast_node[code](_, K, _, _),
+                                  not completion_decided[code](K).
+
+-- WHERE THIS CLOSURE IS STRUCTURALLY UNABLE TO LOOK, asked of it before it was
+-- believed and answered with a TABLE rather than a sentence. SEVEN statement
+-- kinds over THREE questions can hold a `return` and still complete normally,
+-- and each of them is DECLARED here rather than left to fall through (2)'s
+-- block arm silently. Four of the seven have a site of their own in
+-- test/fixtures/js-call/shapes.ts.txt — a `while`, a `do`/`while`, a `switch`
+-- and a `try`, each holding a block that completes abruptly — and the three
+-- remaining loop kinds are the same question with the same answer:
+edb(completion_deferred).   -- completion_deferred(K, Reason)
+-- A loop body may run zero times, and whether it runs at all is the loop's
+-- CONDITION — which is the same thing `guard_kind` already refuses to decide for
+-- every loop kind in the table.
+completion_deferred(while_statement,    a_condition_this_layer_cannot_decide).
+completion_deferred(for_statement,      a_condition_this_layer_cannot_decide).
+completion_deferred(for_in_statement,   a_condition_this_layer_cannot_decide).
+completion_deferred(for_of_statement,   a_condition_this_layer_cannot_decide).
+-- ...and `do_while_statement` runs its body once, so a `return` in it really
+-- does complete the loop abruptly — EXCEPT that a `continue` in the same body
+-- does not, and telling the two apart needs the completion REASON (return /
+-- break / continue) that this relation deliberately does not carry. Declared
+-- open rather than modelled from the half of the question that is easy.
+completion_deferred(do_while_statement, a_completion_reason_this_relation_does_not_carry).
+-- A `switch` completes abruptly only if every case does AND there is a
+-- `default`, and a `break` inside a case completes the SWITCH normally — the
+-- same reason/kind distinction as the loop above, one level harder.
+completion_deferred(switch_statement,   a_completion_reason_this_relation_does_not_carry).
+-- A `try` whose block completes abruptly may still complete normally, because
+-- the handler can swallow the transfer; `finally` can also OVERRIDE it. Neither
+-- is decidable from the shape of the statement.
+completion_deferred(try_statement,      a_handler_that_may_swallow_the_transfer).
+
+completion_known(K) :- completion_kind(K).
+completion_known(K) :- completion_deferred(K, _).
+completion_known(K) :- abrupt_kind(K).
+
+-- ...AND THE GATE THAT KEEPS THAT TABLE HONEST: a statement kind that holds an
+-- abrupt completion INSIDE ITS OWN CONTROL REGION, sits in a statement list
+-- itself, and is in neither list. It reads as "nobody looked", and the answer it
+-- is silently given is *completes normally* — the narrow direction again.
+--
+-- THE FUNCTION BOUNDARY IS THE PRECISION CLAUSE, and without it this gate is
+-- noise: `const f = () => { return 1; };` is a `variable_declaration` in a
+-- statement list containing a `return`, and every module in the corpus is full
+-- of them. Mutant c11 measures exactly that — five kinds, all of them a function
+-- in disguise.
+--
+-- THE CANDIDATE COMES FIRST AND THE BOUNDARY IS ASKED OF IT, which is an
+-- ORDERING decision and was measured rather than reasoned. Written the other way
+-- round — `completes_abruptly(S), fn_node_v(G), ast_within(G, S), ast_within(P, G)`
+-- — the second literal is unbound, so the pair relation is built over EVERY
+-- function in the corpus crossed with every abrupt completion and then filtered:
+-- one world went from 8.8 s to 21.7 s, and 13 of those seconds were this one
+-- rule. Seeding from `completion_outer`, which is only the kinds the table does
+-- not know, is the same answer for a twentieth of the work.
+completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
+                                     ast_node[code](P, K, _, _), not completion_known(K),
+                                     not fn_node_v[flow](P),
+                                     stmt_seq_field(F), ast_child[code](_, F, _, P).
+completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](P, G),
+                                     fn_node_v[flow](G), ast_within[code](G, S).
+completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _, _),
+                                     not completion_fn_between[code](P, S).
+
+-- ---------------------------------------------------------------------------
 -- A CALL IS AN EXIT, 2026-09-06 — queue item w_exception_flow, and it corrects
 -- an attribution this file made TWO ITERATIONS AGO. When w_cf_abrupt_transfer
 -- closed, `useTry -> after` was moved from that item to w_exn_propagation (28,
@@ -320,8 +480,24 @@ abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
 -- or an inner throw fires first), and cannot skip past the throw. The error
 -- direction is the safe one: a function that does always throw but has a return
 -- somewhere is simply not named, so a call to it stays live.
-has_return[code](F)    :- fn_node[code](F), ast_node[code](R, return_statement, _, _),
-                          ast_within[code](F, R).
+-- ORDERED FOR COST, MEASURED 2026-09-09 AND APPLIED BY MEASUREMENT.
+-- Leading with `fn_node(F)` left R unbound, so this body enumerated EVERY
+-- return statement in the corpus against every function and then filtered by
+-- containment. It was 94 per cent of the whole control-flow layer's read cost:
+-- 1 703 150 rows on one path, where the next heaviest clause in the layer is
+-- worth 780. Named by ABLATION over all 28 clauses in this file that mention
+-- `ast_node`, by the per-layer cost gate on its first run.
+-- TWO INDEPENDENT CORPORA AGREE. Here: control-flow world 10 088 161 ->
+-- 7 742 219 rows, -23.3%, with firings 177 218 and facts 434 149 IDENTICAL and
+-- ten named relations equal row for row. A second session the same night
+-- measured the same reorder over sixteen files of eslint/lib through a
+-- different scanner: total width 5 331 063 -> 3 615 655, fact count identical,
+-- and the CURVE it took says time as facts^1.57 becomes facts^1.36.
+-- AND IT IS APPLIED ONLY BECAUSE IT WAS RUN. The same reasoning failed twice
+-- the same night — `closer_v` 65 per cent WORSE and `tdz_deferred` worth
+-- 0.013 per cent — so the argument for this shape is not evidence for it.
+has_return[code](F)    :- ast_node[code](R, return_statement, _, _),
+                          ast_within[code](F, R), fn_node[code](F).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_child[code](B, body, _, S),
                           ast_node[code](S, throw_statement, _, _).

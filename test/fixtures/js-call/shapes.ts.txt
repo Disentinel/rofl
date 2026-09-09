@@ -985,3 +985,214 @@ export const sill = {
 // keys. What has to be observable is `destructures`, and a declaration is
 // enough for that.
 const { [haspSpelling]: pried } = jamb;
+
+// =========================================================================
+// COMPLETION — AN ABRUPT TRANSFER THAT COMPLETES AN ENCLOSING REGION,
+// 2026-09-09, queue item w_cf_completion.
+//
+// EVERY POSITION BELOW WAS MEASURED BLIND BEFORE THE RULE EXISTED, on the
+// corpus and on a standalone probe: `after_abrupt` did not move and not one of
+// the three `past*` callees entered `may_not_run`. The item's note says the
+// same thing and this file is where the sentence becomes rows.
+//
+// WHY EACH DEAD POSITION IS A CALL. A statement has no name, so the only way to
+// read `after_abrupt` back by name is through the callee — the pattern this
+// file established for the labelled forms above.
+//
+// AND WHY THE CONTROLS OUTNUMBER THE CLAIMS. The dangerous direction for this
+// closure is the WIDE one: saying a statement never runs when a path reaches
+// it. Four of the nine shapes here exist only to be `false` — an `if` with one
+// arm, a label something breaks out of, a block whose return is under a guard,
+// and the five statement kinds whose completion this layer defers.
+
+function insideNested(n: number): number { return n; }
+function pastNestedReturn(n: number): number { return n; }
+
+// (1) A RETURN IN A NESTED BLOCK. The block is a sibling in the function's own
+// statement list and `pastNestedReturn` follows it; the transfer belongs to the
+// block, so a rule that reads only the list's direct members sees nothing.
+export function nestedBlockReturn(n: number): number {
+  let total = n;
+  {
+    total = insideNested(total);
+    return total;
+  }
+  pastNestedReturn(total);
+}
+
+function pastDoubleBlock(n: number): number { return n; }
+
+// ...AND TWICE OVER, which is what makes the arm a CLOSURE rather than one more
+// case: the inner block completes the outer one, and the outer completes the
+// function's list. A single non-recursive lift covers the shape above and not
+// this one.
+export function doubleBlockReturn(n: number): number {
+  {
+    {
+      return n;
+    }
+  }
+  return pastDoubleBlock(n);
+}
+
+function pastBothArms(n: number): number { return n; }
+
+// (2) A RETURN IN BOTH ARMS OF AN `if`. Neither arm is reachable-past, so the
+// `if` itself completes abruptly and `pastBothArms` never runs. One arm is a
+// bare `return` and the other a BLOCK, so this site also joins the two arms of
+// the closure to each other.
+export function bothArmsReturn(n: number): number {
+  if (n > 0) return insideNested(n);
+  else { return n; }
+  pastBothArms(n);
+}
+
+function pastOneArm(n: number): number { return n; }
+
+// ...AND THE CONTROL THAT DECIDES THE ARM, which is the difference between a
+// hedge and a false claim: with no `alternate` the `if` completes normally
+// whenever the test is false, so `pastOneArm` RUNS and must stay out of every
+// set this layer derives.
+export function oneArmReturn(n: number): number {
+  if (n > 0) { return n; }
+  const total = pastOneArm(n);
+  return total;
+}
+
+function pastGuardedBlock(n: number): number { return n; }
+
+// ...AND THE CONTROL FOR THE BLOCK ARM, which is the sharper of the two. The
+// block CONTAINS a `return` and does not complete abruptly, because the return
+// is under a guard rather than a statement of the block. A block arm written
+// over containment instead of over a direct statement child passes every other
+// site in this file and kills this one.
+export function guardedBlockReturn(n: number): number {
+  {
+    if (n > 0) { return n; }
+  }
+  return pastGuardedBlock(n);
+}
+
+function pastLabelledReturn(n: number): number { return n; }
+
+// (3) A RETURN UNDER A LABEL. `wrapUp:` names a block, and the only statement in
+// it is a `return` — so the labelled statement completes abruptly and
+// `pastLabelledReturn` never runs. The labelled arm above this section walks
+// from a reference to its target and there is no reference here at all, which
+// is why that arm cannot reach this shape.
+export function labelledReturn(n: number): number {
+  wrapUp: {
+    return insideNested(n);
+  }
+  pastLabelledReturn(n);
+}
+
+function pastLabelledEscape(n: number): number { return n; }
+
+// ...AND THE CONTROL THAT IS THE WHOLE REASON THE LABEL NEEDS ITS OWN ARM. The
+// body completes abruptly on one path and `break esc` leaves the labelled
+// statement on the other, so the statement AFTER the label runs. A closure that
+// lifted the body's completion to the label without asking whether anything
+// breaks out of it would report `pastLabelledEscape` dead — the narrow
+// direction, on a function the runtime would enter.
+export function labelledEscape(n: number): number {
+  esc: {
+    if (n > 0) break esc;
+    return n;
+  }
+  return pastLabelledEscape(n);
+}
+
+function pastLoopReturn(n: number): number { return n; }
+function pastDoWhileReturn(n: number): number { return n; }
+function pastSwitchReturn(n: number): number { return n; }
+function pastTryReturn(n: number): number { return n; }
+
+// (4) THE DEFERRED KINDS, four sites for a table of seven rows, and they are
+// here as CONTROLS rather than as claims. The three loop kinds without a site
+// of their own — `for`, `for-in`, `for-of` — are the same question with the
+// same answer as the `while` below, and the corpus is full of them. Each holds a block that completes abruptly
+// and each may still complete normally itself: a `while` whose test is false
+// runs its body zero times; a `do`/`while` and a `switch` complete normally
+// when the transfer is a `break` rather than a `return`, which needs a
+// completion REASON this relation does not carry; a `try` completes normally
+// when the handler swallows the transfer.
+//
+// SO ALL FOUR `past*` CALLEES BELOW MUST STAY OUT of `after_abrupt`, and
+// `completion_deferred` is what keeps them out — delete a row and
+// `completion_unaccounted[audit]` names the kind rather than the model
+// quietly widening.
+export function loopReturn(n: number): number {
+  while (n > 0) {
+    return n;
+  }
+  return pastLoopReturn(n);
+}
+
+export function doWhileReturn(n: number): number {
+  do {
+    return n;
+  } while (n > 0);
+  return pastDoWhileReturn(n);
+}
+
+export function switchReturn(n: number): number {
+  switch (n) {
+    case 1: return n;
+    default: return -n;
+  }
+  return pastSwitchReturn(n);
+}
+
+export function tryReturn(n: number): number {
+  try {
+    return n;
+  } catch {
+    return -n;
+  }
+  return pastTryReturn(n);
+}
+
+function pastInnerDead(n: number): number { return n; }
+function pastTailBlock(n: number): number { return n; }
+
+// (5) THE ABRUPT STATEMENT NEED NOT BE THE BLOCK'S LAST, and this site exists
+// because a mutant asked where the others could not look. Every nested block
+// above ends with its `return`, so a block arm that read only the FINAL
+// statement of the body would pass all of them — a survivor that is a missing
+// witness rather than a missing rule. Here the return is followed inside the
+// block by a call that never runs, and the block still completes abruptly for
+// the statement list outside it. Two dead positions, one nested and one after.
+export function tailBlockReturn(n: number): number {
+  {
+    return n;
+    pastInnerDead(n);
+  }
+  pastTailBlock(n);
+}
+
+function pastElseIf(n: number): number { return n; }
+
+// (6) AN `else if` CHAIN, which is the `if` arm reaching THROUGH ITSELF: the
+// alternate of the first `if` is a second `if`, and that one completes abruptly
+// only because both of ITS arms do. A rule that required each arm to be an
+// abrupt KIND rather than an abruptly-COMPLETING statement covers
+// `bothArmsReturn` above and not this.
+export function elseIfChainReturn(n: number): number {
+  if (n > 0) return n;
+  else if (n < 0) return -n;
+  else return 0;
+  pastElseIf(n);
+}
+
+function pastElseIfOpen(n: number): number { return n; }
+
+// ...AND THE SAME CHAIN WITH NO FINAL `else`, which completes normally on the
+// one path that falls off the end of it. The recursion must stop at the inner
+// `if` for the outer one to be honest, so this is the control for the site
+// above and not a repetition of `oneArmReturn`.
+export function elseIfOpenReturn(n: number): number {
+  if (n > 0) return n;
+  else if (n < 0) return -n;
+  return pastElseIfOpen(n);
+}
