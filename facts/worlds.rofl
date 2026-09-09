@@ -1,0 +1,170 @@
+-- facts/worlds.rofl — THE THREE STORES A WITNESS MAY BE ASKED OF.
+--
+-- Vocabulary and audits: rules/worlds.rofl. The closure — every ledger and JS
+-- pack in the tree appears in exactly ONE of `world_pack` / `world_omits` for
+-- every world — is asserted in test/note-witness.test.ts, because nothing in
+-- ROFL can read a directory.
+--
+-- `boot.rofl` is outside the closure and is loaded by every world: it is the
+-- kernel's own book, it claims the kernel ring in its first clause, and a
+-- second claim is refused. Listing it as a pack every world loads would be a
+-- row that can never differ.
+--
+-- ORDER IS NOT A FACT HERE. `world_pack` is a set; scripts/witness_check.ts
+-- concatenates rules before facts and asserts a scanned corpus last, which is
+-- the shape test/js-corpus-world.ts measured as both correct and cheapest
+-- (nine loads 16.9 s, one load facts-after 10.0 s). An ordinal column would be
+-- a position, and this repository has already paid for one of those.
+
+witness_default_world(w_ledger).
+witness_index(w_queue).
+
+-- ===========================================================================
+-- THE LEDGER WORLD — today's checker, exactly. `witness/3` and
+-- `witness_atleast/3` mean THIS world, so every witness written before
+-- 2026-09-09 is asked of precisely the store it was asked of before.
+world(w_ledger).
+world_note(w_ledger, "boot.rofl plus the findings ledger and its rules: the world scripts/witness_check.ts has always had, and the default for witness/3").
+world_pack(w_ledger, "rules/worlds.rofl").
+world_pack(w_ledger, "facts/worlds.rofl").
+world_pack(w_ledger, "rules/findings.rofl").
+world_pack(w_ledger, "facts/findings.rofl").
+world_omits(w_ledger, "rules/worklist.rofl").
+world_omits(w_ledger, "facts/worklist.rofl").
+world_omits(w_ledger, "facts/js-attrs.rofl").
+world_omits(w_ledger, "facts/js-callgraph.rofl").
+world_omits(w_ledger, "facts/js-controlflow.rofl").
+world_omits(w_ledger, "facts/js-dataflow.rofl").
+world_omits(w_ledger, "facts/js-env.rofl").
+world_omits(w_ledger, "facts/js-kinds.rofl").
+world_omits(w_ledger, "facts/js-lib-surface.rofl").
+world_omits(w_ledger, "facts/js-modules.rofl").
+world_omits(w_ledger, "facts/js-resolve.rofl").
+world_omits(w_ledger, "facts/js-shapes.rofl").
+world_omits(w_ledger, "facts/js-statements.rofl").
+world_omits(w_ledger, "rules/js-attrs.rofl").
+world_omits(w_ledger, "rules/js-callgraph.rofl").
+world_omits(w_ledger, "rules/js-controlflow.rofl").
+world_omits(w_ledger, "rules/js-dataflow.rofl").
+world_omits(w_ledger, "rules/js-env-api.rofl").
+world_omits(w_ledger, "rules/js-env.rofl").
+world_omits(w_ledger, "rules/js-model.rofl").
+world_omits(w_ledger, "rules/js-modules.rofl").
+world_omits(w_ledger, "rules/js-resolve.rofl").
+world_omits(w_ledger, "rules/js-structure.rofl").
+world_omits(w_ledger, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_ledger, "rules/js-pack-home.rofl").
+
+-- ===========================================================================
+-- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
+-- which is the world test/worklist.test.ts builds and the only one in which
+-- `work(W, Note)` can be asked at all. Measured: it is unpopulatable in
+-- w_ledger, so a work item's note could not carry a witness even if the
+-- vocabulary had allowed one — the corpus was never the only missing world.
+--
+-- IT IS ALSO THE INDEX. The checker READS every witness row here, because
+-- witness rows live in both ledgers and this is the one world that holds both.
+world(w_queue).
+world_note(w_queue, "the plan plus the coverage matrix plus the findings ledger: where work(W, Note), open_cell[audit] and layer(L) are all askable, and the world the checker reads its own witness list from").
+world_pack(w_queue, "rules/worlds.rofl").
+world_pack(w_queue, "facts/worlds.rofl").
+world_pack(w_queue, "rules/findings.rofl").
+world_pack(w_queue, "facts/findings.rofl").
+world_pack(w_queue, "rules/worklist.rofl").
+world_pack(w_queue, "facts/worklist.rofl").
+world_pack(w_queue, "rules/js-model.rofl").
+world_pack(w_queue, "facts/js-kinds.rofl").
+world_pack(w_queue, "facts/js-shapes.rofl").
+world_pack(w_queue, "facts/js-modules.rofl").
+world_pack(w_queue, "facts/js-callgraph.rofl").
+world_pack(w_queue, "facts/js-resolve.rofl").
+world_pack(w_queue, "facts/js-dataflow.rofl").
+world_pack(w_queue, "facts/js-statements.rofl").
+world_pack(w_queue, "facts/js-controlflow.rofl").
+-- the era packs answer a different question on a different corpus, and the
+-- resolver, attribute and vocabulary rules each have a test file that builds
+-- its own world; none of them is read by the plan
+world_omits(w_queue, "facts/js-attrs.rofl").
+world_omits(w_queue, "facts/js-env.rofl").
+world_omits(w_queue, "facts/js-lib-surface.rofl").
+world_omits(w_queue, "rules/js-attrs.rofl").
+world_omits(w_queue, "rules/js-callgraph.rofl").
+world_omits(w_queue, "rules/js-controlflow.rofl").
+world_omits(w_queue, "rules/js-dataflow.rofl").
+world_omits(w_queue, "rules/js-env-api.rofl").
+world_omits(w_queue, "rules/js-env.rofl").
+world_omits(w_queue, "rules/js-modules.rofl").
+world_omits(w_queue, "rules/js-resolve.rofl").
+world_omits(w_queue, "rules/js-structure.rofl").
+world_omits(w_queue, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_queue, "rules/js-pack-home.rofl").
+
+-- ===========================================================================
+-- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
+-- f_a_witness_has_no_world said was unreachable and the one
+-- w_note_is_not_evidence needs: a note claiming the model LACKS something is a
+-- claim about THIS store, and it can now be written as a query that returns
+-- nothing and goes red by itself the day somebody adds the thing.
+--
+-- IT IS test/js-corpus-world.ts's WORLD, and that is asserted rather than
+-- trusted (test/note-witness.test.ts), for the reason test/js-layer-cost.test.ts
+-- gives about its own: a claim measured in a world nobody else builds describes
+-- nothing anybody else tests. THAT IS THE WHOLE POINT OF THE ITEM — twice in
+-- ten minutes a witness was written from a number measured in a PURPOSE-BUILT
+-- PROBE and both were stale within the minute.
+world(w_js_corpus).
+world_note(w_js_corpus, "the four-layer JS model over the five call fixtures: the world test/js-corpus-world.ts builds, and the one a note about what the corpus lacks is a claim about").
+world_pack(w_js_corpus, "rules/js-structure.rofl").
+world_pack(w_js_corpus, "rules/js-dataflow.rofl").
+world_pack(w_js_corpus, "rules/js-model.rofl").
+world_pack(w_js_corpus, "rules/js-callgraph.rofl").
+world_pack(w_js_corpus, "rules/js-controlflow.rofl").
+world_pack(w_js_corpus, "facts/js-kinds.rofl").
+world_pack(w_js_corpus, "facts/js-callgraph.rofl").
+world_pack(w_js_corpus, "facts/js-dataflow.rofl").
+world_pack(w_js_corpus, "facts/js-modules.rofl").
+world_pack(w_js_corpus, "facts/js-shapes.rofl").
+world_pack(w_js_corpus, "facts/js-statements.rofl").
+world_pack(w_js_corpus, "facts/js-controlflow.rofl").
+world_corpus(w_js_corpus, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
+world_corpus(w_js_corpus, "beta.mjs", "test/fixtures/js-call/beta.mjs").
+world_corpus(w_js_corpus, "gamma.mjs", "test/fixtures/js-call/gamma.mjs").
+world_corpus(w_js_corpus, "delta.mjs", "test/fixtures/js-call/delta.mjs").
+world_corpus(w_js_corpus, "shapes.ts", "test/fixtures/js-call/shapes.ts.txt").
+-- the ledgers are not loaded on purpose: a query over the corpus must not be
+-- able to answer itself out of the plan that describes it
+world_omits(w_js_corpus, "rules/worlds.rofl").
+world_omits(w_js_corpus, "facts/worlds.rofl").
+world_omits(w_js_corpus, "rules/findings.rofl").
+world_omits(w_js_corpus, "facts/findings.rofl").
+world_omits(w_js_corpus, "rules/worklist.rofl").
+world_omits(w_js_corpus, "facts/worklist.rofl").
+world_omits(w_js_corpus, "facts/js-attrs.rofl").
+world_omits(w_js_corpus, "facts/js-env.rofl").
+world_omits(w_js_corpus, "facts/js-lib-surface.rofl").
+world_omits(w_js_corpus, "facts/js-resolve.rofl").
+world_omits(w_js_corpus, "rules/js-attrs.rofl").
+world_omits(w_js_corpus, "rules/js-env-api.rofl").
+world_omits(w_js_corpus, "rules/js-env.rofl").
+world_omits(w_js_corpus, "rules/js-modules.rofl").
+world_omits(w_js_corpus, "rules/js-resolve.rofl").
+world_omits(w_js_corpus, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_js_corpus, "rules/js-pack-home.rofl").

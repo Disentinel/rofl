@@ -289,3 +289,38 @@ of the queue until someone can state one.
 
 Do not repair a stale witness by adjusting the number to match a private probe.
 That converts a runnable premise into a decoration that happens to be green.
+
+**AMENDED 2026-09-09 (`w_note_is_not_evidence`): A WITNESS NAMES ITS WORLD, so
+the paragraph above is no longer the whole rule.** The checker had one world and
+the sentence *if the premise cannot be stated over `boot.rofl` + the ledger, the
+finding does not get a witness* was a statement about the instrument rather than
+about the claim. Three worlds are declared in `facts/worlds.rofl` — `w_ledger`
+(the old one, and what a bare `witness/3` still means), `w_queue` (the plan, the
+matrix and the ledger, where `work(W, Note)` and `layer(L)` exist), and
+`w_js_corpus` (the four-layer model over the call fixtures) — each stating the
+packs it loads AND the packs it refuses, with the two lists asserted to cover the
+tree. **A WORK ITEM'S NOTE CAN CARRY ONE**, which is the whole item: a note
+asserting an absence is a claim about a store, and it now goes stale by itself.
+
+Three things this changes for the writer, all measured on the day:
+
+- **Ask the query in the world the SENTENCE is about, and say which.** The rule
+  is unchanged in spirit and its old form is a live example of the failure:
+  `witness(f_the_matrix_collapses..., "layer(L)", 0)` stood for *no layer is
+  declared yet*, four were declared, and it stayed green for eight days because
+  `edb(layer)` had been added to the LEDGER to make the query askable there.
+  **A witness whose query needs an `edb` line added to the ledger to be askable
+  is a witness about something the ledger does not hold.**
+- **An absence witness carries a CONTROL, and the control is the claim with one
+  constant swapped.** `unpopulatable` sees a misspelt relation, a wrong arity and
+  a wrong ledger; it is blind to a mis-quoted CONSTANT, and the two relations you
+  will reach for want opposite forms — `ast_name[code](N, "twin")` is 5 and
+  `ast_name[code](N, twin)` is 0; `ast_node[code](N, if_statement, F, L)` is 16
+  and the quoted form is 0. Neither wrong one errors. So `witness_absent(Id,
+  World, Query, Control)` refuses a control that is not token-for-token the
+  query with one constant changed, in the same lexical form.
+- **A count over the ledger is not a pin.** `unproven(F) -> 32` moved three times
+  in one night on four branches, every move correct, and the merge of two
+  identical 31s auto-resolved in silence. It is replaced by what it stood for:
+  `unproven_misaimed[audit]` empty (the aim), and two FLOORS (not blind, not
+  permanently red). A floor merges; a count does not.

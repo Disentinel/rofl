@@ -18,17 +18,23 @@
 // relation answers zero rows and no error, which is exactly the shape a witness
 // wanting zero rows would read as satisfied.
 
+// A WITNESS NAMES ITS WORLD SINCE 2026-09-09 (w_note_is_not_evidence), so
+// `world()` is the INDEX world — the one the witness list is read from — and
+// each witness is judged against the store its own row names. The planted
+// mutants below stay in ONE world on purpose: what they are about is the
+// verdict, not the world column, and test/note-witness.test.ts owns that.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { world, witnesses, judge } from '../scripts/witness_check.ts';
+import { world, worldMap, witnesses, judge, worldsFor } from '../scripts/witness_check.ts';
 
 test('every witness the ledger records still holds', () => {
+  const map = worldMap();
   const r = world();
-  const ws = witnesses(r);
+  const ws = witnesses(r, map);
   // POSITIVE CONTROL FIRST: an empty witness list passes every assertion below
   // in silence, and "no witnesses recorded" reads exactly like "all clean".
   assert.ok(ws.length >= 5, `only ${ws.length} witnesses — is the ledger loaded?`);
-  const vs = judge(r, ws);
+  const vs = judge(r, ws, worldsFor(ws, map, r));
   const bad = vs.filter((v) => !v.ok)
     .map((v) => `${v.id}: ${v.q} -> ${v.err ? v.err : v.got} (want ${v.floor ? '>= ' : ''}${v.want})`);
   assert.deepEqual(bad, [], 'a finding rests on something that has moved');
@@ -51,7 +57,8 @@ test('MUTANT: a witness whose number moved is STALE, and one that names nothing 
   // BROKEN: a literal nothing in this world can populate. It answers zero rows
   // and no error, so a witness wanting zero would read as SATISFIED without the
   // kernel's `unpopulatable` — which is measured here rather than trusted.
-  const broken = judge(r, [{ id: 'f_planted', q: 'zzz_no_such_relation(X)', want: 0, floor: false }]);
+  const broken = judge(r, [{ id: 'f_planted', world: 'w_queue', q: 'zzz_no_such_relation(X)',
+                             want: 0, floor: false }]);
   assert.equal(broken[0].ok, false, 'a witness naming nothing must not read as satisfied');
   assert.match(broken[0].err, /populate/, 'and it says WHY rather than reporting a count');
 

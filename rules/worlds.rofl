@@ -1,0 +1,116 @@
+-- rules/worlds.rofl — A WITNESS'S WORLD, MADE A FACT.
+--
+-- `witness(F, Query, N)` states a premise as something anyone can run. It has
+-- never said WHICH STORE to run it against, and `scripts/witness_check.ts` had
+-- exactly one — boot.rofl plus the findings ledger — so a premise about the JS
+-- corpus, or about the queue, could not be stated at all. That is
+-- f_a_witness_has_no_world, recorded 2026-09-01 and deliberately left open
+-- because changing the witness FORMAT is a design decision. This pack is that
+-- decision, taken along the line the finding itself names: NAME THE WORLD IN
+-- THE WITNESS, rather than load everything into one store.
+--
+-- WHY NOT ONE BIG WORLD. The finding says it and the measurement agrees:
+-- different claims are about different file sets, and merging them changes what
+-- a query MEANS rather than widening it. `layer(L)` answers 0 in the ledger
+-- world and 4 in the queue world, and both are correct answers to different
+-- questions. A checker that loaded everything would silently pick one.
+--
+-- THE SHAPE IS BORROWED FROM test/js-layer-cost.test.ts, which had the same
+-- problem one level down and solved it the same way: a world states the packs
+-- it LOADS and the packs it deliberately REFUSES, the two lists are asserted to
+-- cover the tree exactly, and a new pack reddens the gate until every world has
+-- decided about it. A missing pack SUBTRACTS rows, and a subtracted row cannot
+-- make a witness fail — it fails in the safe direction, which is precisely how
+-- a witness becomes a decoration that happens to be green.
+
+edb(world).          -- world(W)                       a named store a witness can be asked of
+edb(world_pack).     -- world_pack(W, File)            a .rofl file this world loads
+edb(world_omits).    -- world_omits(W, File)           a pack this world deliberately does NOT load
+edb(world_corpus).   -- world_corpus(W, Logical, Disk) a source file scanned into this world
+edb(world_note).     -- world_note(W, Text)            what this world is FOR, in one line
+edb(witness_index).  -- witness_index(W)               the world the checker READS witnesses from
+
+-- The four witness forms. `witness/3` and `witness_atleast/3` are the originals
+-- and mean "in the ledger world" — they are not rewritten, both because two
+-- hundred lines of ledger would churn for nothing and because a default that
+-- reproduces today's behaviour exactly is what makes this change checkable.
+edb(witness_in).          -- witness_in(Id, W, Query, N)
+edb(witness_in_atleast).  -- witness_in_atleast(Id, W, Query, N)
+edb(witness_absent).      -- witness_absent(Id, W, Query, Control)
+
+-- ---------------------------------------------------------------------------
+-- THE DEFAULT IS A FACT, NOT A CONVENTION IN THE SCRIPT. `witness/3` is asked
+-- of whichever world this names, so moving the default is an edit to the ledger
+-- rather than to a checker nobody reads.
+edb(witness_default_world).
+
+-- READ BY THIS PACK AND OWNED ELSEWHERE, declared here so that a world holding
+-- the map WITHOUT the queue (the ledger world does exactly that) does not read
+-- their emptiness as a misspelling. boot.rofl's own comment on `edb(imports)`
+-- is the precedent, verbatim: declaring an input is the remedy, not a waiver.
+edb(work).      -- rules/worklist.rofl owns it
+edb(finding).   -- facts/findings.rofl owns it
+
+world_declared(W)          :- world_pack(W, _).
+world_undeclared[audit](W) :- world(W), not world_declared(W).
+world_unnamed[audit](W)    :- world_pack(W, _), not world(W).
+-- a pack cannot be both loaded and refused; the two lists are a partition
+world_confused[audit](W, F) :- world_pack(W, F), world_omits(W, F).
+-- ...and a world that scans source it does not have the packs to interpret is a
+-- world whose corpus says nothing. `boot.rofl` alone would answer every query
+-- with zero rows and no error, which is the BROKEN case one level up.
+world_corpus_only[audit](W) :- world_corpus(W, _, _), not world_declared(W).
+
+-- ---------------------------------------------------------------------------
+-- A WITNESS NAMING A WORLD NOBODY DECLARES. Without this the checker would have
+-- to invent a fallback, and a fallback is how `layer(L)` came to be asked in a
+-- store with no layers in it: the answer was 0, the witness wanted 0, and the
+-- claim it was standing for had been false for a week.
+witness_world_unknown[audit](Id, W) :- witness_in(Id, W, _, _), not world(W).
+witness_world_unknown[audit](Id, W) :- witness_in_atleast(Id, W, _, _), not world(W).
+witness_world_unknown[audit](Id, W) :- witness_absent(Id, W, _, _), not world(W).
+
+-- ---------------------------------------------------------------------------
+-- WHAT A NOTE'S WITNESS IS. A work item's note is prose sitting beside measured
+-- facts, in the same syntax, with the same authority, and the session-start hook
+-- prints it — so the next reader has no way to tell a MEASUREMENT from a prior
+-- guess (f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes: six
+-- notes in a row believed and refuted, every one written by the same loop that
+-- then read it back as a premise).
+--
+-- A witness is the difference, and the id column already allows it: nothing in
+-- `witness_in` says the id must be a finding. So a note carries the query its
+-- own claim makes, and goes stale by itself the moment the store grows the
+-- thing the note says is missing.
+note_witnessed(W)          :- work(W, _), witness_in(W, _, _, _).
+note_witnessed(W)          :- work(W, _), witness_in_atleast(W, _, _, _).
+note_witnessed(W)          :- work(W, _), witness_absent(W, _, _, _).
+
+-- and the id that is neither. A witness on a name nobody declares is checked
+-- against a world and reported clean, which is a green row about nothing —
+-- the same defect as an unknown world, one column to the left.
+witnessed_thing(Id)          :- finding(Id, _).
+witnessed_thing(Id)          :- work(Id, _).
+witness_orphan[audit](Id)    :- witness_in(Id, _, _, _), not witnessed_thing(Id).
+witness_orphan[audit](Id)    :- witness_in_atleast(Id, _, _, _), not witnessed_thing(Id).
+witness_orphan[audit](Id)    :- witness_absent(Id, _, _, _), not witnessed_thing(Id).
+
+-- WHERE THIS PACK CANNOT LOOK, stated rather than discovered later.
+--
+-- 1. It cannot tell whether a note's query is the note's CLAIM. `witness_absent`
+--    on a work item asserts that some literal is empty; that the literal is the
+--    one the prose is about is a judgement no rule here makes. What the rule
+--    buys is that SOMETHING was run and written down, and that it goes red on
+--    its own afterwards.
+-- 2. It cannot require a note to carry one. Classifying prose as "asserts an
+--    absence" is exactly the keyword-over-prose move this repository already
+--    measured and refused (six candidates, six false positives — `REVERTED`
+--    describes a patch, `CLOSED` stood under a negation). So `note_witnessed`
+--    is a positive relation and there is deliberately no `note_unwitnessed`
+--    audit: it would be a count over the queue, which is the shape this whole
+--    item exists to stop writing.
+-- 3. A world's pack list is a fact here and the FILES ARE ON DISK. Nothing in
+--    ROFL can read a directory, so the closure — every pack in the tree appears
+--    in exactly one of `world_pack` / `world_omits` — is asserted in
+--    test/note-witness.test.ts, the same division test/js-layer-cost.test.ts
+--    makes for the same reason.
