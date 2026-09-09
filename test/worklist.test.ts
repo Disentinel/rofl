@@ -228,7 +228,13 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // here rather than where they were entered. Each was entered to OWN cells
     // rather than to record a discovery — which is what an item with no spawned
     // finding looks like when it is doing its job.
-    'w_effect_class_initialisers', 'w_effect_implicit_coercion',
+    // `w_effect_class_initialisers` LEFT THIS LIST 2026-09-09, the way the four
+    // before it did: it was taken and it spawned FOUR findings — a defect in a
+    // relation it does not own (`may_throw` has no construction edge), a defect
+    // its own rules opened and half closed (a try in a class part catches
+    // nothing, because a part is not a function), and one that is somebody
+    // else's gate biting this item within a run of the rule being written.
+    'w_effect_implicit_coercion',
     'w_effect_module_evaluation', 'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
@@ -384,14 +390,14 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // AND THE SIX THAT ARE THE OWNER'S ARE STILL HERE, unchanged: the four
   // `with_statement` rows at the older layers, `require`, and the subpath
   // specifier. A layer arriving does not close somebody else's decision.
+  // FIVE LEFT THIS SET on 2026-09-09 (w_effect_class_initialisers):
+  // `class_accessor_property`, `class_declaration`, `class_private_property`,
+  // `class_property` and `static_block`, all at the effect layer — the kinds
+  // that run code at a moment other than a call.
   assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
     'binary_expression/none/effect',
     'call_expression/none/effect',
     'call_expression/none/modules',
-    'class_accessor_property/none/effect',
-    'class_declaration/none/effect',
-    'class_private_property/none/effect',
-    'class_property/none/effect',
     'export_all_declaration/none/effect',
     'export_named_declaration/none/effect',
     'identifier/none/effect',
@@ -401,7 +407,6 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     'import_expression/none/effect',
     'new_expression/none/effect',
     'optional_call_expression/none/effect',
-    'static_block/none/effect',
     'template_literal/none/effect',
     'unary_expression/none/effect',
     'with_statement/none/callgraph',

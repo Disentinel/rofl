@@ -453,7 +453,269 @@ eff_suspension_word(await).
 eff_suspension_word(next).
 
 -- ===========================================================================
--- 6. WHERE THIS PACK CANNOT LOOK, STATED RATHER THAN DISCOVERED LATER
+-- 6. WHAT RUNS WHEN A CLASS IS DEFINED, AND WHAT RUNS WHEN ONE IS BUILT
+--    2026-09-09 — queue item w_effect_class_initialisers.
+--
+-- `r_effect_latent` is the rule these five kinds are NOT, and saying how they
+-- differ is the whole item. That rule says a function definition performs no
+-- operation: what its body does happens at a CALL, and `eff_latent`'s second
+-- arm carries the row over a `resolves` edge. THESE FIVE ARE THE OPPOSITE CASE
+-- — code that runs at a moment other than a call — so the edge `eff_latent`
+-- rides does not exist for them:
+--
+--   class C { static { f(); } }    f runs where the DECLARATION stands
+--   class C { static x = f(); }    f runs where the DECLARATION stands
+--   class C { x = f(); }           f runs at every `new C()`, and never at all
+--                                  if nothing ever constructs a C
+--
+-- TWO MOMENTS, TWO CARRIERS, AND THE ITEM'S NOTE IS HALF RIGHT ABOUT THE CALL
+-- SITE. It says the propagation "has no call site to hang it on"; that is true
+-- of the DEFINITION half and false of the CONSTRUCTION half. `may_be_node[flow]`
+-- already answers which class a `new` expression constructs, so an instance
+-- initialiser's row hangs on the `new` exactly as a callee's row hangs on a
+-- call. Only the definition half needed an edge of a new shape, and it goes to
+-- the DECLARATION NODE — which is what makes `class_declaration` a kind with a
+-- contribution of its own rather than the twenty-sixth container.
+--
+-- AND THE JOIN IS STILL FREE. Two rules with one head are a union, so each
+-- carrier below is a join over its parts with no join operation written
+-- anywhere — the same reason `eff_latent` needs none over a body. Feeding both
+-- back into `eff_here` means a class written inside a function reaches that
+-- function through `nearest_v` with no arm of its own, and the labels that walk
+-- already delivered arrive a second time into a SET, which is idempotent.
+
+edb(eff_class_form).
+-- ONE ROW, AND `class_expression` IS DELIBERATELY NOT THE SECOND. Its cell is
+-- `r_effect_closure` and belongs to another item; a rule of this one firing on
+-- it would answer a kind this item does not own. THE REFUSAL IS PRICED rather
+-- than asserted: `eff_define_unreached[flow]` below is exactly what it loses,
+-- one row on this corpus, and adding `eff_class_form(class_expression)` is the
+-- whole change on the day somebody takes it.
+eff_class_form(class_declaration).
+
+edb(eff_field_kind).
+-- THE THREE KINDS THAT CARRY AN INITIALISER. `class_method` and
+-- `class_private_method` are not here: they are function definitions and are
+-- filed with the latent group, where they belong.
+--
+-- `class_accessor_property` IS HERE, AND ITS SYNTHESISED PAIR ADDS NO LABEL.
+-- `accessor a = 1` declares a private backing slot, a getter that reads it and
+-- a setter that writes it; on this layer's question the getter's read of the
+-- slot is a `read` on the same receiver that `o.a` is already a `read` of, and
+-- the setter's write is the `write` that `o.a = v` already is. So what the kind
+-- contributes BEYOND a plain field is nothing, and what it contributes AS a
+-- field is its initialiser at construction time. That is the reverse of the
+-- control-flow layer's answer for the same kind, where the synthesised call is
+-- the whole content of the verdict — the two layers are asking different
+-- questions of one construct, which is the pattern this model is built on.
+eff_field_kind(class_property).
+eff_field_kind(class_private_property).
+eff_field_kind(class_accessor_property).
+
+eff_class_body[code](CD, P) :- eff_class_form(K), ast_node[code](CD, K, _, _),
+                               ast_child[code](CD, body, 0, B),
+                               ast_child[code](B, body, _, P).
+eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), eff_field_kind(K),
+                                   ast_node[code](P, K, _, _),
+                                   ast_child[code](P, value, 0, V).
+
+-- THE TWO MOMENTS, AND BOTH ARMS ARE POSITIVE ON PURPOSE. Writing the second as
+-- `not ast_attr(P, static, true)` would make the pair total by construction and
+-- default every field the scanner stops flagging to construction time, silently
+-- — which is the wrong direction, because a static initialiser reported as
+-- per-construction runs at a moment nothing in the model then names. Two
+-- positive arms leave `eff_moment_unplaced[audit]` able to bite, and that audit
+-- is the only thing in this tree that would notice the attribute going away.
+--
+-- A FIELD WITH NO INITIALISER IS IN NEITHER, and `blank;` in the fixture is the
+-- site that says so: babel emits the property with no `value` child, so
+-- `eff_field_value` derives nothing for it and there is no moment to place. The
+-- member exists at run time and holding `undefined` performs no operation.
+eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
+                                           ast_attr[code](P, static, true).
+eff_field_moment[flow](P, construction) :- eff_field_value[code](_, P, _),
+                                           ast_attr[code](P, static, false).
+
+eff_define_part[flow](CD, V)    :- eff_field_value[code](CD, P, V),
+                                   eff_field_moment[flow](P, definition).
+eff_construct_part[flow](CD, V) :- eff_field_value[code](CD, P, V),
+                                   eff_field_moment[flow](P, construction).
+
+-- A STATIC BLOCK IS THE SECOND DEFINITION-TIME PART, and it carries no `static`
+-- attribute at all — measured: a `static_block` node has an empty `ast_attr`,
+-- the word is in its KIND and not in its facts. So it cannot ride the arms
+-- above and gets one of its own.
+eff_define_part[flow](CD, S) :- eff_class_body[code](CD, S),
+                                ast_node[code](S, static_block, _, _).
+
+-- ...AND THREE MORE THINGS RUN AT DEFINITION, none of which is a field:
+--   the `extends` expression   `class B extends mountOf() {}` calls `mountOf`
+--                              before the class object exists
+--   a COMPUTED KEY             `class C { [k()]() {} }` evaluates `k()` when the
+--                              class is defined, whether or not the member it
+--                              names is ever reached
+--   a DECORATOR                `@deco class C {}` calls `deco` at definition,
+--                              which the control-flow layer already files as
+--                              `definition_time_call`
+--
+-- THE DECORATOR ARMS DO NOT TOUCH `decorator`'S OWN CELL, which is
+-- `r_effect_transfer` and stays: all six decorator nodes in this corpus have a
+-- `resolves` row, so the transfer verdict was never the missing part. What is
+-- added here is WHEN, which is the only thing this item is about.
+eff_define_part[flow](CD, S)  :- eff_class_form(K), ast_node[code](CD, K, _, _),
+                                 ast_child[code](CD, super_class, 0, S).
+-- THE COMPUTED-KEY ARM IS TWO RULES AND A DOUBLE NEGATION, AND IT WAS ONE RULE
+-- AND A POSITIVE TEST UNTIL `attr_blind_guard[audit]` SAID SO IN ONE RUN.
+-- `ast_attr[code](P, computed, true)` beside `ast_child[code](P, key, 0, KN)` is
+-- a positive attribute guard, and a positive attribute test cannot reach a kind
+-- that carries no such attribute at all — which here is
+-- `class_private_method` and `class_private_property`, because babel emits no
+-- `computed` field for a private member. The two rows are not a defect in what
+-- this rule DERIVES (a private name can never be a computed key, so the answer
+-- is the same either way); they are a statement about what the guard can REACH,
+-- which is `f_a_positive_attribute_test_is_blind_to_a_kind_that_has_no_such_attribute`
+-- and the reason `key_name` in rules/js-structure.rofl is written with a
+-- negation.
+--
+-- SO THIS IS WRITTEN WITH THE NEGATION TOO, one relation over: `eff_plain_key`
+-- holds of every member the `computed` flag does not mark, INCLUDING every kind
+-- that has no such flag, and the arm below negates it. Same extension, no
+-- blindness to declare — and declaring it was not available, because
+-- `attr_slot_gap_ok` is keyed by (attribute, position, kind) and an excuse
+-- written for this rule would have silently excused `key_name`'s guard as well,
+-- disarming MUTANT 9 in test/js-attrs.test.ts.
+eff_plain_key[code](P)        :- eff_class_body[code](_, P),
+                                 not ast_attr[code](P, computed, true).
+eff_define_part[flow](CD, KN) :- eff_class_body[code](CD, P), not eff_plain_key[code](P),
+                                 ast_child[code](P, key, 0, KN).
+eff_define_part[flow](CD, D)  :- eff_class_form(K), ast_node[code](CD, K, _, _),
+                                 ast_child[code](CD, decorators, _, D).
+eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P),
+                                 ast_child[code](P, decorators, _, D).
+
+-- WHAT RUNS WHEN A PART IS REACHED, AND IT STOPS AT A FUNCTION. This is
+-- `nearest_v` said from the other end, and it is the same two-rule linear walk
+-- for the reason rules/js-dataflow.rofl records beside that relation: the
+-- "descendant with no function in between" form written as a negation over a
+-- quadratic was 35 per cent of a fixpoint when it was tried there.
+--
+-- THE PART ITSELF IS IN THE SET, AND THE SECOND ARM KEEPS A FUNCTION NODE WHILE
+-- REFUSING TO DESCEND THROUGH IT. That is what makes
+-- `static forge = (n) => hammered(n)` contribute `alloc` and NOT whatever
+-- `hammered` does: the closure is allocated when the class is defined and its
+-- body is latent until something calls it. Dropping the guard would file every
+-- latent body under the definition moment, which is the exact confusion the
+-- latent group exists to prevent.
+eff_runs_in[flow](P, P) :- eff_define_part[flow](_, P).
+eff_runs_in[flow](P, P) :- eff_construct_part[flow](_, P).
+eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node_v[flow](Y),
+                           ast_in[code](Y, X).
+
+-- A TRY INSIDE A CLASS PART CATCHES WHAT RUNS IN THAT PART, and `caught_here`
+-- is STRUCTURALLY UNABLE to say so — which is a hole the rules above open and
+-- therefore one they close. `caught_here` asks `nearest_v(F, TS)` and
+-- `nearest_v(F, N)` for one F, because a try catches what runs in its own
+-- FUNCTION; a `static { try { risky(); } catch {} }` at a module's top level has
+-- no such F, `try_of` is empty for it, and the handler catches nothing as far as
+-- the model is concerned. MEASURED, not suspected: with the carriers in and this
+-- arm out, a class whose static block wraps a throwing call in a try/catch
+-- reported `exn` at definition time.
+--
+-- The same equality one level over: `eff_runs_in` for the part is what
+-- `nearest_v` is for the function, so the two literals below are `caught_here`'s
+-- two literals with the walk swapped. The handler test is the strict one section
+-- 2 already argues for — a `finally` with no `catch` discharges nothing.
+eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
+                           ast_node[code](TS, try_statement, _, _),
+                           in_try_block[code](TS, N), eff_runs_in[flow](P, N),
+                           ast_child[code](TS, handler, 0, _).
+
+-- THE TWO CARRIERS. Each is a join over its parts (arm one) closed over the
+-- call graph (arm two), and arm two is `eff_latent`'s propagation with
+-- `eff_runs_in` where `nearest_v` stands — which is the one substitution the
+-- whole item comes down to. `not eff_discharged_at` is carried across
+-- unchanged, so a `try` inside a static block removes `exn` from the class's row
+-- and leaves the seven other labels where they are.
+class_define_eff[flow](CD, L, H)    :- eff_define_part[flow](CD, P),
+                                       eff_runs_in[flow](P, X), eff_here[flow](X, L, H).
+class_define_eff[flow](CD, L, H)    :- eff_define_part[flow](CD, P), eff_runs_in[flow](P, C),
+                                       resolves[code](C, G), eff_latent[flow](G, L, H),
+                                       not eff_discharged_at[code](C, L).
+class_construct_eff[flow](CD, L, H) :- eff_construct_part[flow](CD, P),
+                                       eff_runs_in[flow](P, X), eff_here[flow](X, L, H).
+class_construct_eff[flow](CD, L, H) :- eff_construct_part[flow](CD, P), eff_runs_in[flow](P, C),
+                                       resolves[code](C, G), eff_latent[flow](G, L, H),
+                                       not eff_discharged_at[code](C, L).
+
+-- A SUBCLASS RUNS ITS ANCESTORS' INSTANCE INITIALISERS, INCLUDING THE SHADOWED
+-- ONES. The base constructor evaluates the base's initialiser and the derived
+-- class then overwrites the value, so BOTH initialisers run and only one value
+-- survives. That is why this walks `super_of` directly rather than reading
+-- `inherited_field[flow]`, which subtracts an own key on purpose: right for a
+-- value, wrong for an effect. `Doubloon` declares `static pick` over `Coin`'s
+-- and is the site that separates the two readings.
+class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
+                                       class_construct_eff[flow](SD, L, H).
+
+-- THE TWO SEEDS, AND THEY ARE WHY THE CELLS CLOSE. The first gives the
+-- declaration node its own row, so a class defined inside a function reaches
+-- that function through `nearest_v` and a class at a module's top level is at
+-- least queryable — the join from a top level into an importer is
+-- w_effect_module_evaluation's, and this is the row it will read. The second is
+-- the construction edge, and it is one the CALL GRAPH does not have: a call in a
+-- field initialiser has no enclosing function, so `encloses` attributes it to
+-- nobody, and V8 agrees — it names the frame `<instance_members_initializer>`.
+eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
+eff_here[flow](X, L, H)  :- ast_node[code](X, new_expression, _, _),
+                            may_be_node[flow](X, CD), class_construct_eff[flow](CD, L, H).
+
+-- AND EVALUATING A CLASS DECLARATION ALLOCATES — one row in the table section 2
+-- already keeps, not a rule. `class_expression` has been in that list since the
+-- layer opened and `class_declaration` was not, and the difference between them
+-- is not in the language: both create a fresh constructor with a fresh, mutable
+-- `prototype`, which is the same fresh mutable identity the other six rows name.
+--
+-- WHY `function_declaration` STAYS OUT WHILE THIS GOES IN, since the two look
+-- alike and are filed apart. A function declaration is HOISTED: its object
+-- exists before the first statement of its scope runs, so nothing is performed
+-- where it is written. A class declaration sits in the temporal dead zone until
+-- control reaches it and the object is created THERE. This layer's carrier is
+-- per-node, so "at this node" is the question being asked, and the two kinds
+-- answer it differently.
+eff_alloc_kind(class_declaration).
+
+-- THE IDENTITY THAT SAYS THE TWO MOMENTS WERE NOT COLLAPSED. A field
+-- initialiser runs at definition or at construction, never both and never
+-- neither — true of any corpus rather than of this one, which is the same shape
+-- `eff_member_both` has for the read/write partition one section up. A COUNT of
+-- definition-time parts could not tell a static field the rule missed from an
+-- instance field it filed under the wrong moment.
+eff_moment_both[audit](P, A, B) :- eff_field_moment[flow](P, A),
+                                   eff_field_moment[flow](P, B), A != B.
+eff_moment_unplaced[audit](P)   :- eff_field_value[code](_, P, _),
+                                   not eff_field_moment[flow](P, _).
+
+-- ...AND THE RESIDUE OF REFUSING TO WIDEN INTO `class_expression`, as a POSITIVE
+-- relation and not an audit, for the reason `concrete_unmapped` is one: it is
+-- non-empty on an honest checkout by design, and a gate red on an honest
+-- checkout gets switched off. One row today — `export const Bracket = class
+-- extends mountOf() {}` — and it is the entire price of `eff_class_form` having
+-- a single row.
+eff_define_unreached[flow](CE, S) :- ast_node[code](CE, class_expression, _, _),
+                                     ast_child[code](CE, super_class, 0, S).
+eff_define_unreached[flow](CE, P) :- ast_node[code](CE, class_expression, _, _),
+                                     ast_child[code](CE, body, 0, B),
+                                     ast_child[code](B, body, _, P),
+                                     ast_node[code](P, static_block, _, _).
+eff_define_unreached[flow](CE, V) :- ast_node[code](CE, class_expression, _, _),
+                                     ast_child[code](CE, body, 0, B),
+                                     ast_child[code](B, body, _, P),
+                                     eff_field_kind(K), ast_node[code](P, K, _, _),
+                                     ast_attr[code](P, static, true),
+                                     ast_child[code](P, value, 0, V).
+
+-- ===========================================================================
+-- 7. WHERE THIS PACK CANNOT LOOK, STATED RATHER THAN DISCOVERED LATER
 --
 -- 1. NO IMPLICIT THROW OF ANY KIND. `exn` is seeded from `throw_statement` and
 --    nothing else, exactly as `may_throw` is, so a `null.x`, an
@@ -476,6 +738,26 @@ eff_suspension_word(next).
 --    are incomparable both round UP to the same landmark and compare equal, so
 --    this relation under-reports. It is the price of naming, and the raw
 --    comparison over `eff_latent` is available to anybody who wants it.
+-- 6. AN INSTANCE INITIALISER REACHES ITS ENCLOSING FUNCTION TWICE, and one of
+--    the two arrivals is early. `nearest_v` walks a function down through a
+--    class body into a NON-static field initialiser, because `class_property`
+--    is not a value context — so a function that merely DEFINES a class already
+--    carries that initialiser's labels although only a `new` runs them.
+--    Section 6's construction edge is the arrival that is timed correctly; the
+--    other is a may-set widening in the safe direction, and narrowing it means
+--    changing `nearest_v`, which is the value layer's relation and the call
+--    graph's caller attribution.
+-- 7. `may_throw[code]` HAS NO CONSTRUCTION EDGE, so the oracle in section 3 and
+--    the rule in section 6 disagree in principle and agree on this corpus.
+--    `function g() { return new C(); }` with `class C { x = boom(); }` throws,
+--    `eff_latent(g, exn, none)` now says so, and `may_throw(g)` cannot: its
+--    propagation rides `resolves` + `nearest_v`, and the call in the initialiser
+--    has no enclosing function to be the caller. No field initialiser in these
+--    five fixtures reaches a throw, so `eff_exn_only[audit]` is empty here — and
+--    test/js-effects.test.ts plants the shape that makes it fire, because an
+--    agreement that has never been asked the question is not evidence.
+--    `f_may_throw_has_no_construction_edge` and it is `may_throw` that is
+--    wrong, not the projection.
 
 -- WHAT THIS PACK'S LEDGERS READ, written out because the kernel stopped
 -- emitting a bridge row for a rule that licenses itself by existing. Seven
