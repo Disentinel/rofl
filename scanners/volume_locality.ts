@@ -83,7 +83,17 @@ export interface Verdict {
 
 /** One world per file against one world of all of them. `drop` withholds a base
  *  relation from the isolated builds — the planted defect that proves the
- *  comparison can see a difference at all. */
+ *  comparison can see a difference at all.
+ *
+ *  THE CORE IS BUILT ONCE AND FORKED. Rebuilding it per volume was measured at
+ *  383 ms against 3 ms to fork, a hundred and twenty-eight times, and it is
+ *  what made 64 volumes cost 5.87x one world of 64 files: the volumes together
+ *  held 1.26 MILLION more facts than the single world, which is sixty-four
+ *  copies of the same vocabulary, rules-as-data and reflection.
+ *
+ *  A fork must not change an answer, and that is asserted rather than assumed:
+ *  `forkIsFree` re-runs a volume the slow way and compares. If forking ever
+ *  moves a fact this is a kernel defect and matters more than the speed. */
 export function compare(corpus: string, files: string[], drop = '', space = 40_000_000): Verdict[] {
   const P = packs();
   const all = new Rofl({ space });
@@ -93,12 +103,17 @@ export function compare(corpus: string, files: string[], drop = '', space = 40_0
   all.evaluate(BUDGET);
   const together = ownFacts(all.store.canonicalState());
 
+  // The core, once. Everything below forks it instead of parsing and deriving
+  // the same 20 630 facts again per volume.
+  const core = new Rofl({ space });
+  core.load(P, { budget: BUDGET });
+  core.evaluate(BUDGET);
+
   const out: Verdict[] = [];
   for (const f of files) {
     let ast = scan(fs.readFileSync(path.join(corpus, f), 'utf8'), { file: label(f) }).facts;
     if (drop) ast = ast.filter((l) => !l.startsWith(`${drop}[`));
-    const one = new Rofl({ space });
-    one.load(P, { budget: BUDGET });
+    const one = core.fork();
     one.assert(ast.join('\n'));
     one.evaluate(BUDGET);
     const mine = ownFacts(one.store.canonicalState());
@@ -119,6 +134,36 @@ export function compare(corpus: string, files: string[], drop = '', space = 40_0
                missing: [...t].filter((x) => !a.has(x)).length, invented: invented.length, inventedRels: rels });
   }
   return out;
+}
+
+/** Is a forked core the same world as a rebuilt one? Answers for ONE volume,
+ *  which is enough: if the fork loses or invents a single fact the property is
+ *  false and the speed is irrelevant. Returns the two fact counts and the size
+ *  of their symmetric difference. */
+export function forkIsFree(corpus: string, file: string, space = 40_000_000):
+    { forked: number; rebuilt: number; differ: number } {
+  const P = packs();
+  const label = file.endsWith('.txt') ? file.slice(0, -4) : file;
+  const ast = scan(fs.readFileSync(path.join(corpus, file), 'utf8'), { file: label }).facts.join('\n');
+
+  const core = new Rofl({ space });
+  core.load(P, { budget: BUDGET });
+  core.evaluate(BUDGET);
+  const f1 = core.fork();
+  f1.assert(ast);
+  f1.evaluate(BUDGET);
+
+  const f2 = new Rofl({ space });
+  f2.load(P, { budget: BUDGET });
+  f2.assert(ast);
+  f2.evaluate(BUDGET);
+
+  const A = new Set(f1.store.canonicalState().split('\n'));
+  const B = new Set(f2.store.canonicalState().split('\n'));
+  let differ = 0;
+  for (const x of A) if (!B.has(x)) differ++;
+  for (const x of B) if (!A.has(x)) differ++;
+  return { forked: A.size, rebuilt: B.size, differ };
 }
 
 function jsUnder(dir: string, limit: number): string[] {

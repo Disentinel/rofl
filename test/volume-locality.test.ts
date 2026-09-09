@@ -23,7 +23,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { compare } from '../scanners/volume_locality.ts';
+import { compare, forkIsFree } from '../scanners/volume_locality.ts';
 
 const FIXTURES = path.join(fs.realpathSync(new URL('..', import.meta.url).pathname),
   'test/fixtures/js-volume');
@@ -64,4 +64,22 @@ test('the control: withholding one relation must go red, and must INVENT', () =>
   const rels = new Set<string>();
   for (const v of vs) for (const r of v.inventedRels.keys()) rels.add(r);
   assert.ok(rels.size > 0, 'the invented facts must be attributable to relations by name');
+});
+
+test('a forked core is the same world as a rebuilt one, to the byte', () => {
+  // The volume path builds the core ONCE and forks it, because rebuilding it
+  // per volume was measured at 383 ms against 3 ms — a hundred and twenty-eight
+  // times, and the reason 64 volumes cost 5.87x one world of the same files.
+  //
+  // That is an optimisation, so it owes an answer-preserving proof rather than
+  // a plausibility argument. If a fork ever loses or invents a fact, the speed
+  // stops mattering and this is a kernel defect: `fork` is documented as a
+  // FORK and not a view, and every volume in this repository now rests on it.
+  for (const f of FILES) {
+    const r = forkIsFree(FIXTURES, f);
+    assert.equal(r.differ, 0,
+      `${f}: a forked core and a rebuilt one disagree on ${r.differ} lines of canonical state`);
+    assert.equal(r.forked, r.rebuilt, `${f}: forked ${r.forked} facts, rebuilt ${r.rebuilt}`);
+    assert.ok(r.forked > 0, `${f}: neither world concluded anything, so this proves nothing`);
+  }
 });
