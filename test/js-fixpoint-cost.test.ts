@@ -586,7 +586,10 @@ test('every read path above five per cent, by name', () => {
   // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
   // reproduced this pin exactly before it moved, which is the control that
   // says the two halves are what they are claimed to be.
-  assert.equal(c.total, 2800699, 'total rows handed out by the store in one fixpoint');
+  // +145 on 2026-09-09: `import_attribute` entered the vocabulary with the
+  // owner's `environment(es2025)` — one kind across four declaring packs,
+  // four absence excuses and five verdicts, all of them matrix rows.
+  assert.equal(c.total, 2800844, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -693,5 +696,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 157485, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
+  assert.equal(c.firings, 157504, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
 });

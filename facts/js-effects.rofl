@@ -645,6 +645,7 @@ ignored(js, assignment_pattern,         effect, a_a_container_performs_no_operat
 -- declaration evaluates anything at all, and section 5c of the rules reads it
 -- off the specifier while the effect stays on the declaration.
 ignored(js, import_specifier,           effect, a_a_container_performs_no_operation).
+ignored(js, import_attribute,           effect, a_not_an_evaluated_construct).
 ignored(js, import_default_specifier,   effect, a_a_container_performs_no_operation).
 ignored(js, import_namespace_specifier, effect, a_a_container_performs_no_operation).
 ignored(js, export_specifier,           effect, a_a_container_performs_no_operation).

@@ -487,7 +487,13 @@ const CF_CUT = 10.0;
 // path gained share from a smaller denominator and the path below the cut rose
 // 4.613% -> 5.037%. The gap is still there and still wide — 7.776% then
 // 5.037%, 2.74 pp — it moved. Re-placed in it rather than widened around it.
-const ERA_CUT = 6.4;
+// 6.4 -> 7.0 ON 2026-09-09. The cut must sit in a GAP, and the ninth
+// environment moved the floor: the heaviest path below the set is now 5.637%
+// where it was 4.6%, so 6.4 no longer clears it by the 1.0 pp the assertion
+// below demands. At 7.0 the same five paths are above it (7.499% is the
+// lowest) and the gap is 1.36 pp. THE SET DID NOT CHANGE — only the room
+// around it did, which is why the cut moved and the membership did not.
+const ERA_CUT = 7.0;
 
 const cf = () => memo('cf', () => layerCost(CONTROLFLOW, CF_CUT));
 const era = () => memo('era', () => layerCost(ERA, ERA_CUT));
@@ -594,8 +600,13 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // owner's authorised list stays readable as a list. A FIFTH LAYER FOR
   // TWENTY-FOUR ROWS of 3.07 million, because the effect join sits at the
   // FUNCTION boundary through `nearest_v` rather than per node.
-  assert.equal(L.world.total, 3065779, 'rows handed out by the store in the control-flow fixpoint');
-  assert.equal(L.world.firings, 171279, 'derivations in the control-flow fixpoint');
+  // +325 ROWS AND +37 FIRINGS ON 2026-09-09, and the whole of it is the owner's
+  // `environment(es2025)` declaration bringing `import_attribute` into the
+  // vocabulary: one kind, `node_kind` in four packs, four `kind_absent_ok`
+  // excuses and five verdicts. This world loads the control-flow pack, so it
+  // sees the vocabulary rows and not the modules rules.
+  assert.equal(L.world.total, 3066104, 'rows handed out by the store in the control-flow fixpoint');
+  assert.equal(L.world.firings, 171316, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
   // 45.97% of the rows handed out in its own world, while being 5.13% of its
@@ -712,22 +723,29 @@ test('the era layer costs a number too, and it is half of its world\'s derivatio
   assert.equal(again.total, L.world.total, 'two identical worlds hand out the same rows');
 
   // FIRST MEASUREMENT 2026-09-09, same as above: this world had no cost gate.
-  assert.equal(L.world.total, 84901, 'rows handed out in the era fixpoint');
-  assert.equal(L.world.firings, 6067, 'derivations in the era fixpoint');
-  assert.equal(L.rows, 24935, 'rows the era pack costs, by difference');
-  assert.equal(L.firings, 3208, 'derivations the era pack adds');
+  // RE-MEASURED TOGETHER 2026-09-09, all seven, and NOT nudged one at a time.
+  // ONE CAUSE: the owner declared `environment(es2025)`, so this layer crosses
+  // its kind table with NINE environments where it crossed eight. Every number
+  // here moves with the ninth and they move consistently — 84 901 -> 86 933
+  // rows against 6 067 -> 6 576 firings is more work of the same shape, which
+  // is what an extra environment should look like. A single number nudged until
+  // green would have hidden that the SHAPE held.
+  assert.equal(L.world.total, 86933, 'rows handed out in the era fixpoint');
+  assert.equal(L.world.firings, 6576, 'derivations in the era fixpoint');
+  assert.equal(L.rows, 26751, 'rows the era pack costs, by difference');
+  assert.equal(L.firings, 3717, 'derivations the era pack adds');
   // THE SHAPE IS THE OPPOSITE OF THE CONTROL-FLOW LAYER'S and that is the whole
   // reason for two numbers rather than one average: this layer is 31% of its
   // world's rows and 52% of its derivations, 8.5 rows walked per fact — a wide,
   // cheap layer. The other is 46% of the rows and 5% of the derivations at 234
   // rows per fact — a narrow, expensive one. A single gate over a merged world
   // would report their sum and name neither.
-  assert.ok(Math.abs(L.rowShare - 29.370) < 1.5,
-    `the era layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 29.370%`);
-  assert.ok(Math.abs(L.firingShare - 52.876) < 1.5,
-    `${L.firingShare.toFixed(3)}% of its derivations, and it has been 52.876%`);
-  assert.ok(Math.abs(L.perFiring - 7.77) < 0.5,
-    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 7.77`);
+  assert.ok(Math.abs(L.rowShare - 30.772) < 1.5,
+    `the era layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 30.772%`);
+  assert.ok(Math.abs(L.firingShare - 56.524) < 1.5,
+    `${L.firingShare.toFixed(3)}% of its derivations, and it has been 56.524%`);
+  assert.ok(Math.abs(L.perFiring - 7.20) < 0.5,
+    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 7.20`);
 
   // POSITIVE CONTROLS, and they are `unpopulatable` checks rather than counts:
   // the era layer's own answers must be askable and answered in this world.
@@ -746,11 +764,17 @@ test('the era layer\'s read paths, by name', () => {
     // something binds it and the path stops clearing the cut. The era layer's
     // rows fall 27 228 -> 24 935 with the same firings, which is what a
     // deferred cross product looks like from outside.
-    ['relPersp ast_node', 12.031],
-    ['relPersp environment', 10.876],
-    ['relPersp attr_needs', 10.066],
-    ['relPersp child_needs', 8.045],
-    ['argMatches ast_node pos=[0]', 7.776],
+    // RE-MEASURED 2026-09-09 for the ninth environment. THE PATH SET IS
+    // UNCHANGED, ELEMENT FOR ELEMENT, and only the shares moved — which is the
+    // reading that matters and the reason this is a named set with a band
+    // rather than five numbers. `relPersp environment` overtook `relPersp
+    // ast_node` at the top, which is exactly what adding an environment to the
+    // table should do and would have been invisible in a total.
+    ['relPersp environment', 12.078],
+    ['relPersp ast_node', 11.215],
+    ['relPersp attr_needs', 9.383],
+    ['argMatches ast_node pos=[0]', 8.134],
+    ['relPersp child_needs', 7.499],
   ];
   // SIX PATHS BETWEEN 7.1% AND 11.0%, THEN NOTHING UNTIL 4.6% — a 2.51 pp gap,
   // five times the band below. And unlike the control-flow layer there is no

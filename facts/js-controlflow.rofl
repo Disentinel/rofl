@@ -142,6 +142,7 @@ ignored(js, class_declaration,           controlflow, a_no_control_transfer).
 ignored(js, class_accessor_property,     controlflow, a_both_accessors_are_synthesised).
 ignored(js, import_declaration,          controlflow, a_no_control_transfer).
 ignored(js, import_specifier,            controlflow, a_no_control_transfer).
+ignored(js, import_attribute,            controlflow, a_no_control_transfer).
 ignored(js, import_default_specifier,    controlflow, a_no_control_transfer).
 ignored(js, import_namespace_specifier,  controlflow, a_no_control_transfer).
 ignored(js, export_named_declaration,    controlflow, a_no_control_transfer).
@@ -164,6 +165,24 @@ ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
 -- WRONG in the dangerous direction, and the site is
 -- test/fixtures/js/export-surface.js.
 node_kind(js, export_specifier).
+-- ...and the attribute, 2026-09-09, for the reason `export_specifier` is here:
+-- a pack that CLAIMS a kind must also declare it, or a world loading this
+-- pack without facts/js-modules.rofl carries a claim with no cell under it
+-- and `orphan_claim[audit]` reports it. Measured in test/js-model.test.ts
+-- the moment the claim went in without this line.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
 handled(js, export_specifier, controlflow, r_export_entry_surface).
 
 -- ...AND THE NAMESPACE FORM INTRODUCES NO LOCAL ENTRY, which is the same

@@ -711,3 +711,65 @@ self_referential_module[code](F) :- module_meta[code](F, _).
 -- metadata. Empty on a corpus with no `new.target`, which is why the audit
 -- names the node instead of counting.
 not_module_meta[audit](M) :- meta_form[code](M, new_target).
+
+-- ===========================================================================
+-- 8. IMPORT ATTRIBUTES (w_plugin_gated_kinds, 2026-09-09)
+--
+-- `import cfg from "./c.json" with { type: "json" }` — the one construct in
+-- this layer that says what the imported module IS rather than where it is.
+-- Everything in sections 1 to 5 answers "which file", and a resolution that
+-- lands on a file still does not say whether the host will run it as code or
+-- parse it as data. That is what the attribute decides, and it is a MODULE
+-- fact by the same test rules/js-pack-home.rofl applies to every kind.
+--
+-- THE KIND WAITED ON THE ERA SCALE AND ON NOTHING ELSE. `w_plugin_gated_kinds`
+-- held it open with the sentence "the feature would sit in
+-- `feature_unreachable[audit]` for ever", which was a true reading of a scale
+-- topping out at 2023 and never a claim about the language — the scanner has
+-- emitted this node all along, measured. The owner declared `environment(es2025)`
+-- on 2026-09-09 and the sentence expired; these rules are what the declaration
+-- was for, because a feature no kind is gated on is a row that gates nothing.
+--
+-- ORDERED FOR COST: the small relation leads. `ast_node` on the kind binds A,
+-- and both children are probed from it rather than enumerated.
+import_attr[code](A, Key, Value) :- ast_node[code](A, import_attribute, _, _),
+                                    ast_child[code](A, key, 0, K), ast_name[code](K, Key),
+                                    ast_child[code](A, value, 0, V), ast_value[code](V, Value).
+
+-- WHICH DECLARATION CARRIES IT. The scanner hangs attributes off the `attributes`
+-- field, and BOTH import and export declarations have one — `export { a } from
+-- "./b.json" with { type: "json" }` is the re-export half and it is the same
+-- node kind in the same field. Written over the field rather than over the two
+-- parent kinds, so a third carrier does not need a third clause.
+import_attr_of[code](D, A) :- ast_child[code](D, attributes, _, A).
+module_attr[code](D, Key, Value) :- import_attr_of[code](D, A), import_attr[code](A, Key, Value).
+
+-- THE ONE KEY THE STANDARD DEFINES. `type` is the only attribute ECMAScript
+-- gives a meaning to; a host may accept others and this model does not guess at
+-- them, so the general relation above stays keyed by name and this one names
+-- the key it knows. An unknown key is not an error here — it is a row in
+-- `module_attr` that nothing reads, which is the honest shape.
+module_type[code](D, T) :- module_attr[code](D, "type", T).
+
+-- ...AND THE CONSEQUENCE, which is why this is worth a relation rather than an
+-- attribute lookup. A module imported as data is NOT EVALUATED AS CODE: it has
+-- no top-level effect, no imports of its own, and its default export is a value
+-- rather than anything callable. `effect_of_module[flow]` in rules/js-effects.rofl
+-- joins over the module graph on the assumption that an imported module RUNS,
+-- and for these it does not.
+module_is_data[code](D, T) :- module_type[code](D, T), T != "javascript".
+
+-- THE FRONTIER, AS A POSITIVE RELATION rather than a silence: an attribute
+-- whose parent this layer does not recognise as a site. Empty on a corpus where
+-- every attribute hangs off an import or an export, and non-empty the day a
+-- third carrier appears — which is the row that would tell us, instead of the
+-- construct being silently dropped.
+import_attr_unsited[audit](A) :- ast_node[code](A, import_attribute, _, _),
+                                 not import_attr_of[code](_, A).
+
+-- ...and the other direction, which is the one a hand-written rule gets wrong:
+-- an attribute the scanner emitted whose key/value this layer could not read.
+-- `import_attr` needs BOTH children and both accessors; if a future grammar
+-- allows a computed key the join drops the row and nothing says so.
+import_attr_unread[audit](A) :- ast_node[code](A, import_attribute, _, _),
+                                not import_attr[code](A, _, _).

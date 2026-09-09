@@ -806,7 +806,10 @@ test('the price of the cell: what modelling the call graph dragged into the matr
   // +1 on 2026-09-08: `class_accessor_property`, declared in this pack because
   // its call-graph verdict is — `accessor slot = 4` synthesises both accessors,
   // so the language and not user code is what a reader of them would reach.
-  assert.equal(dKinds, 52, 'kinds the matrix did not know existed');
+  // +1 on 2026-09-09: `import_attribute`, declared in this pack because its
+  // call-graph verdict is — an attribute is a key and a value the host reads
+  // when it decides how to parse a module, and never a callee.
+  assert.equal(dKinds, 53, 'kinds the matrix did not know existed');
   const layers = dCells / dKinds;
   assert.ok(Number.isInteger(layers), 'every new kind opens one cell per layer');
   assert.equal(dCells, dKinds * layers, `${dKinds} kinds x ${layers} layers`);

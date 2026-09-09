@@ -23,6 +23,24 @@ layer(modules).
 node_kind(js, import_specifier).
 node_kind(js, import_default_specifier).
 node_kind(js, import_namespace_specifier).
+-- ...AND THE ATTRIBUTE, 2026-09-09, once the owner put es2025 on the era scale.
+-- THE KIND'S HOME IS HERE AND THAT IS AN ARGUMENT, not a convenience:
+-- rules/js-pack-home.rofl says a kind belongs to the pack of the layer that
+-- SPEAKS ABOUT it, and `with { type: "json" }` is a statement about what the
+-- imported module IS. No other layer has a sentence for it.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
 
 -- ...and the two kinds that carry a module specifier and are NOT imports.
 -- Named so the audit can see them, ignored so the silence is not an option.
@@ -216,6 +234,7 @@ handled(js, import_expression,  node_builtin, modules, r_dynamic_import_literal)
 handled(js, import_specifier,            modules, r_named_binding).
 handled(js, import_default_specifier,    modules, r_default_binding).
 handled(js, import_namespace_specifier,  modules, r_namespace_binding).
+handled(js, import_attribute,            modules, r_import_attribute).
 
 -- ...AND THE EXPORT HALF, 2026-09-08 (w_export_specifier_forms). Section 4b of
 -- rules/js-modules.rofl. The cell is the NAMING question and not the edge

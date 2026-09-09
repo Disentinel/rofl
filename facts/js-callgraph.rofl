@@ -535,6 +535,25 @@ node_kind(js, export_named_declaration).
 -- that the pack carrying a verdict declares BOTH the kind and the layer, and
 -- writing it down here is cheaper than rediscovering it a fifth time.
 node_kind(js, import_default_specifier).
+-- ...and the attribute, 2026-09-09. Declared in this pack as well as in
+-- facts/js-modules.rofl for the reason `import_specifier` is: a pack that
+-- CLAIMS a kind must also declare it, or a world loading this pack without
+-- the modules one carries a claim with no cell under it and
+-- `orphan_claim[audit]` says so. Measured: it did, in test/js-model.test.ts,
+-- the moment the claim went in without this line.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
 node_kind(js, import_namespace_specifier).
 node_kind(js, export_default_declaration).
 node_kind(js, export_all_declaration).
@@ -550,6 +569,7 @@ node_kind(js, export_all_declaration).
 -- harness calls is not a form the model can be checked on.
 handled(js, import_namespace_specifier, callgraph, r_imported_name).
 handled(js, import_default_specifier,   callgraph, r_imported_name).
+ignored(js, import_attribute,            callgraph, a_not_a_call_site).
 handled(js, export_default_declaration, callgraph, r_imported_name).
 -- ...AND THE RE-EXPORT, 2026-09-07, under its own rule name because it is its
 -- own rule: `export * from './x'` makes x's NAMES this module's, and the arm

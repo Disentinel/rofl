@@ -2219,7 +2219,30 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 --                             environment claims it, not even ts5
 -- The first two land with the decorator work, which needs the same plugin and
 -- will need the same question asked of the environment scale.
-work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: the PLUGIN HALF IS DISCHARGED - the corpus holds two class_accessor_property nodes since the decorator work turned decoratorAutoAccessors on - and what is left for all three is an environment the era scale does not have").
+-- ONE OF THE THREE CLOSED 2026-09-09, ON THE OWNER'S DECLARATION. The owner put
+-- `environment(es2025)` on the era scale and `import_attribute` left this item:
+-- it is in the vocabulary, gated on `import_attributes`, modelled at modules by
+-- rules/js-modules.rofl section 8 and waived with an argument at the other four
+-- layers. Two of the three remain and both for reasons the scale cannot fix -
+-- `export_default_specifier` is a Babel proposal NO environment claims, and the
+-- `class_accessor_property` half is the vocabulary question rather than the era
+-- one.
+--
+-- AND "ONE LINE" WAS WRONG, WHICH IS WORTH RECORDING BECAUSE IT WAS SAID TO THE
+-- OWNER BEFORE THE DECISION. The estimate given was that declaring the
+-- environment closes the kind in a line. MEASURED, it took: `environment` and
+-- `env_rank`; a hand-written `release` and `includes` because TypeScript 5.9.3
+-- ships no lib.es2025.d.ts and the release chain is GENERATED from those files;
+-- `feature` and `provides`; a `kind_needs` gate; a SIXTH era fixture, because
+-- `feature_unexercised[audit]` named the feature within one run and would not
+-- stop until a site existed; `node_kind` in FOUR packs, because a pack that
+-- claims a kind must declare it or `orphan_claim[audit]` fires; four
+-- `kind_absent_ok` excuses, because the shared corpus still has no site; five
+-- verdicts; five rules and two audits; and fourteen restated cell counts in
+-- test/js-model.test.ts. THE MODEL REFUSED EVERY SHORTCUT ON THE WAY, each time
+-- with a named audit, which is the system working exactly as intended and an
+-- estimate that did not know what it was estimating.
+work(w_plugin_gated_kinds, "class_accessor_property and export_default_specifier: import_attribute CLOSED 2026-09-09 when the owner declared environment(es2025) - vocabulary, gate, era fixture, modules rules and five verdicts - and what is left for the other two is an environment no scale can give, since export v from is a Babel proposal no release claims").
 work_state(w_plugin_gated_kinds, open).
 -- THE NOTE WAS REFUTED BY ITS OWN WITNESS, 2026-09-09 (w_note_is_not_evidence),
 -- and this is the SEVENTH note in this file refuted by a first probe. It is

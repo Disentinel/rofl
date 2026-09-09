@@ -50,6 +50,13 @@ const ERA: [string, string][] = [
   // all — the one file it could have shared is era.js, whose single-reason
   // assertion is what the third and fourth files exist to protect.
   ['era-hashbang.js', 'test/fixtures/js-env/era-hashbang.js.txt'],
+  // A SIXTH, 2026-09-09, and the hashbang story a second time: the owner put
+  // `environment(es2025)` on the scale, `kind_needs(js, import_attribute,
+  // import_attributes)` became writable, and `feature_unexercised[audit]` named
+  // the feature within one run and would not stop until a site existed. Its own
+  // file for the third and fourth files' reason — a 2025 feature in era.js would
+  // make the single-reason assertion two-valued.
+  ['era-attributes.js', 'test/fixtures/js-env/era-attributes.js.txt'],
 ];
 
 const FACTS = 'facts/js-env.rofl';
@@ -196,12 +203,34 @@ test('the verdict is total over the files scanned, and only ts5 takes both', () 
   //     reaches an environment through `env_extra` and not through a year.
   // So `only ts5 takes both` has become `only ts5 takes era.ts, and only
   // es2023 takes the hashbang` — two different reasons where there was one.
+  //
+  // FOURTEEN ROWS SINCE 2026-09-09, when the owner declared `environment(es2025)`
+  // for the import-attribute gate. FIVE new rows and every one of them is
+  // es2025, which is the whole shape of what a new top of the scale does: it
+  // takes every file below it and nothing else changes.
+  //
+  // AND THE ROW THAT EARNS THE ENVIRONMENT IS `es2025 era-attributes.js`, WHICH
+  // APPEARS EXACTLY ONCE. No other environment takes that file — es2023 is two
+  // years short — so es2025 is DISTINGUISHABLE from its neighbour by a file the
+  // corpus really contains. That is not a nicety: facts/js-env.rofl records
+  // that es2018, es2019 and es2024 are deliberately absent because nothing in
+  // this table separates them from a neighbour, and `env_pair_indistinct[audit]`
+  // enforces it. This one row is the difference between es2025 belonging on the
+  // scale and being the fourth name in that absent list.
+  //
+  // `es2025 era.ts` IS ABSENT AND THAT IS THE OLD SENTENCE STILL HOLDING: no
+  // ecmascript year takes era.ts at all, because TypeScript syntax reaches an
+  // environment through the ts5 release's own `provides` rather than through a
+  // year, and a later year does not acquire it by being later.
   assert.deepEqual([...m.set('valid[audit](E, File)')].sort(), [
     'es2021 era.js',
     'es2023 era-fields.js', 'es2023 era-hashbang.js', 'es2023 era-position.js',
     'es2023 era.js',
+    'es2025 era-attributes.js', 'es2025 era-fields.js', 'es2025 era-hashbang.js',
+    'es2025 era-position.js', 'es2025 era.js',
     'ts5 era-fields.js', 'ts5 era-position.js', 'ts5 era.js', 'ts5 era.ts',
-  ], 'ts5 is the only environment carrying the extras, es2023 the only one above the hashbang');
+  ], 'ts5 is the only environment carrying the extras, es2023 the only one above '
+   + 'the hashbang, and es2025 the only one above the import attribute');
   // total: every (environment, file) pair is decided, none is silent
   // THE PRODUCT AND NOT THE NUMBER, 2026-09-08, and the first draft of this line
   // was `5 * 3` written out. Both factors are facts this world holds — the

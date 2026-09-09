@@ -555,9 +555,13 @@ test('ERA: the hashbang is gated on its true year, and the scale reaches it', ()
     'every environment below 2023 refuses it, and es2023 is the one that does not');
   // POSITIVE CONTROLS: the world grades other things, and the scale is what it is.
   assert.ok(q('unsupported[audit](E, N, F)').length > 50, 'the era world does say no');
+  // ...AND es2025 JOINED THE SCALE 2026-09-09, on the owner's declaration, for
+  // the import-attribute gate. It changes nothing about the hashbang except
+  // that there is now a SECOND environment above 2023 — see the assertion in
+  // the mutant below, which moved from one element to two for that reason.
   assert.deepEqual(q('env_rank(E, R)').map(([e, r]) => `${e}=${r}`).sort(),
     ['es2015=2015', 'es2016=2016', 'es2017=2017', 'es2020=2020', 'es2021=2021',
-     'es2023=2023', 'es5=2009', 'ts5=2022']);
+     'es2023=2023', 'es2025=2025', 'es5=2009', 'ts5=2022']);
 
   // ...AND THE HONEST TREE IS OTHERWISE CLEAN, which is what makes the row
   // below a trade rather than a repair.
@@ -593,9 +597,16 @@ test('ERA: MUTANT 8 — the falsehood put back, and the audit that could not nam
   // assertion goes red, which is the reminder to take the true gate.` The owner
   // added it on 2026-09-08 and the gate was taken; what remains is the mutant
   // measuring the falsehood it used to be forced to live with.
-  assert.deepEqual(q('env_has[audit](E, hashbang)').map(([e]) => e), ['es2023'],
+  // ONE ELEMENT -> TWO ON 2026-09-09, and the reason is the paragraph above this
+  // one continuing to be true. es2025 joined the scale for the import-attribute
+  // gate and reaches the hashbang for free, by ranking above 2023 — which is
+  // the whole behaviour of a scale and not a side effect. The assertion is a
+  // SET rather than a count for exactly this: the next environment the owner
+  // declares appends here and merges as a union.
+  assert.deepEqual(q('env_has[audit](E, hashbang)').map(([e]) => e).sort(),
+    ['es2023', 'es2025'],
     'the scale reaches the feature now — which is what made the true gate writable');
   assert.deepEqual(q('unsupported[audit](E, N, F)').filter(([, , f]) => f === 'hashbang'), [],
     'and yet nothing is refused, because the mutant left the feature with no user');
-  assert.equal(Math.max(...q('env_rank(E, R)').map(([, r]) => Number(r))), 2023);
+  assert.equal(Math.max(...q('env_rank(E, R)').map(([, r]) => Number(r))), 2025);
 });

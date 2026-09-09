@@ -408,7 +408,7 @@ test('THE PROBE: both moments with real labels, and the oracle the corpus cannot
 // ===========================================================================
 // 3. THE MATRIX
 
-test('the effect layer answers 100 js cells and the partition closes', () => {
+test('the effect layer answers 101 js cells and the partition closes', () => {
   const w = base();
   const v = (x: string) => w.n(`verdict[audit](js, K, S, effect, ${x})`);
   // A number that moves when the MODEL changes stays a number, and this one is
@@ -479,7 +479,18 @@ test('the effect layer answers 100 js cells and the partition closes', () => {
   // no conflict to raise. Kept as a count deliberately: `waived` is the half
   // whose MEMBERS are already named by `ignored(...)` rows in
   // facts/js-effects.rofl and re-listing them here would pin the same set twice.
-  assert.equal(v('waived'), 53);
+  //
+  // 53 -> 54 ON 2026-09-09, and it moved silently AGAIN, which is the second
+  // entry in this comment's own changelog saying the same thing. The owner
+  // declared `environment(es2025)` and `import_attribute` entered the
+  // vocabulary; its effect cell is `ignored(js, import_attribute, effect,
+  // a_not_an_evaluated_construct)` — an attribute is read by the HOST when it
+  // decides how to parse the module, and nothing in the program evaluates it.
+  // A count that has now moved twice for two unrelated reasons is the shape
+  // this file argues against four hundred lines up; it stays a count only
+  // because its members are named by `ignored(...)` rows, and that is the whole
+  // defence it has.
+  assert.equal(v('waived'), 54);
   // the reason vocabulary is closed and no excuse outlived its cause
   assert.deepEqual(w.binds('bad_reason[audit](A, K, S, L, R)'), []);
   assert.deepEqual(w.binds('orphan_claim[audit](A, K, S, L)'), []);

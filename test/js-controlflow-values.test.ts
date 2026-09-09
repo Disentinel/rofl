@@ -1415,11 +1415,16 @@ test('the modules layer has no opinion about a destructuring form, measured', ()
   // elements added from another branch; the note above holds unchanged, and
   // this is the third time this enumeration has been re-read for somebody
   // else's work rather than for its own.
+  // FOURTEEN SINCE 2026-09-09, and the fourth time this enumeration has been
+  // re-read for somebody else's work: `import_attribute` arrived when the owner
+  // declared `environment(es2025)` and the kind entered the vocabulary. It is
+  // still not a pattern — an attribute is a key and a value, which is exactly
+  // what this assertion is about.
   assert.deepEqual([...named].sort(), [
     '_', 'export_all_declaration', 'export_default_declaration',
     'export_named_declaration',
     'export_namespace_specifier', 'export_specifier', 'identifier',
-    'import_declaration',
+    'import_attribute', 'import_declaration',
     'import_default_specifier', 'import_expression',
     'import_namespace_specifier', 'import_specifier', 'string_literal',
   ], 'every kind the modules pack names, and not one of them is a pattern');

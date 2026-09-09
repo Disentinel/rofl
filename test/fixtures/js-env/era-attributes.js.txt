@@ -1,0 +1,24 @@
+// era-attributes.js.txt — SCANNED, NEVER RUN, and a SIXTH file for exactly the
+// reason the fifth gives about itself. era.js is asserted to fail es2020 for
+// ONE reason and that reason is an operator; a 2025 feature there would make
+// that assertion two-valued. So this construct gets its own file, as `#!` did.
+//
+// WHY IT IS HERE AT ALL, 2026-09-09, and it is the hashbang story told a second
+// time. `import_attribute` sat outside the vocabulary with the reason "import
+// attributes are ES2025 and the highest environment on the scale is 2023, so
+// the feature would sit in `feature_unreachable[audit]` for ever" — a true
+// reading of the scale and never a claim about the language, since the scanner
+// has emitted this node all along. The owner declared `environment(es2025)`;
+// the gate became writable; and `feature_unexercised[audit]` named
+// `import_attributes` within one run and would not stop until a site existed.
+//
+// TWO SITES AND NOT ONE, because the attribute rides TWO carriers and a fixture
+// with only the import half would let a rule written over `import_declaration`
+// alone pass. rules/js-modules.rofl section 8 is written over the `attributes`
+// FIELD for that reason, and this file is what makes the difference visible.
+import cfg from "./era-config.json" with { type: "json" };
+export { name } from "./era-config.json" with { type: "json" };
+
+export function configured(n) {
+  return n + cfg.offset;
+}

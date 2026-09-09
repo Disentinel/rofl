@@ -1196,3 +1196,114 @@ for (const m of LATE_MUTANTS) {
     assert.ok(d !== null, `mutant SURVIVED: ${m.name}`);
   });
 }
+
+// ===========================================================================
+// 8. IMPORT ATTRIBUTES — what the imported module IS, not where it is
+//
+// A WORLD OF ITS OWN, and deliberately not a new fixture in FILES. Every named
+// set in this file is measured over that list, so a sixth file would move all
+// of them for the sake of one section — the argument test/js-ambient.test.ts
+// makes about its own probe, applied here. This world loads the structure and
+// modules packs over a scanned probe and nothing else.
+//
+// WHY THE SECTION EXISTS AT ALL: `import_attribute` sat outside the vocabulary
+// until 2026-09-09 on the sentence "import attributes are ES2025 and the scale
+// tops out at 2023, so the feature would sit in `feature_unreachable[audit]`
+// for ever". That was a true reading of the era scale and never a claim about
+// the language — the scanner has emitted the node all along, measured. The
+// owner declared `environment(es2025)`; these rules are what the declaration
+// was for.
+function attrWorld(src: string): (lit: string) => string[][] {
+  const r = new Rofl();
+  const s = scan(src, { file: 'attrs.mjs' });
+  assert.ok(s.facts.length > 0, 'the probe scans');
+  for (const [text, what] of [[s.facts.join('\n'), 'probe facts'],
+                              [KINDS, 'js-kinds'], [FACTS, 'js-modules facts'],
+                              [STRUCTURE, 'js-structure'], [RULES, 'js-modules rules']] as [string, string][]) {
+    const res = r.load(text);
+    assert.ok(res.ok, `${what}: ${res.diagnostics.slice(0, 3).join(' | ')}`);
+  }
+  r.evaluate(40_000_000);
+  return (lit: string): string[][] => {
+    const out = r.query(lit, { budget: 90_000_000 });
+    assert.equal(out.error, undefined, `${lit}: ${out.error}`);
+    assert.equal(out.unpopulatable, false, `${lit}: nothing in this world can populate it`);
+    const seen = new Set<string>();
+    const order = [...lit.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map((m) => m[1])
+      .filter((v) => (seen.has(v) ? false : (seen.add(v), true)));
+    return out.rows.map((row: any) => order.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? ''));
+  };
+}
+
+const ATTR_SRC = `import cfg from "./c.json" with { type: "json" };
+export { a } from "./b.json" with { type: "json" };
+import plain from "./d.mjs";
+const dyn = await import("./e.json", { with: { type: "json" } });
+`;
+
+test('an import attribute is read as a key and a value, on BOTH carriers', () => {
+  const q = attrWorld(ATTR_SRC);
+  // TWO SITES AND TWO CARRIERS. `import ... with` and `export ... from ... with`
+  // are the same node kind in the same `attributes` field on two different
+  // parent kinds, which is why rules/js-modules.rofl section 8 is written over
+  // the FIELD. A rule written over `import_declaration` alone passes a probe
+  // with only the first line, and that is exactly the mistake this asserts away.
+  assert.deepEqual(q('import_attr[code](A, K, V)').map(([, k, v]) => `${k}=${v}`).sort(),
+    ['type=json', 'type=json']);
+  const carriers = q('import_attr_of[code](D, A)')
+    .flatMap(([d]) => q(`ast_node[code](${d}, K, F, L)`).map(([k]) => k)).sort();
+  assert.deepEqual(carriers, ['export_named_declaration', 'import_declaration'],
+    'both carriers, and the rule never named either of them');
+  // THE PLAIN IMPORT IS NOT A CARRIER, which is the control: a rule that fired
+  // on every import declaration would pass the two assertions above.
+  assert.equal(q('import_attr_of[code](D, A)').length, 2);
+});
+
+test('a module imported as data is not a module that RUNS', () => {
+  const q = attrWorld(ATTR_SRC);
+  // The consequence, and the reason this is a relation rather than a lookup.
+  // `effect_of_module[flow]` in rules/js-effects.rofl joins over the module
+  // graph on the assumption that an imported module is EVALUATED. For a JSON
+  // import it is not: no top-level effect, no imports of its own, and a default
+  // export that is a value rather than anything callable.
+  assert.deepEqual(q('module_type[code](D, T)').map(([, t]) => t).sort(), ['json', 'json']);
+  assert.equal(q('module_is_data[code](D, T)').length, 2);
+  // ...and the negative arm is live rather than vacuous: `type: "javascript"`
+  // is a real attribute value that means the opposite, and `module_is_data`
+  // must not fire on it. Asserted with its own probe so the guard has a site.
+  const j = attrWorld('import m from "./f.js" with { type: "javascript" };\n');
+  assert.equal(j('module_attr[code](D, K, V)').length, 1, 'the attribute is read');
+  assert.equal(j('module_is_data[code](D, T)').length, 0, 'and it is NOT data');
+});
+
+test('THE DYNAMIC FORM IS NOT ATTRIBUTE SYNTAX, and the model says so by silence', () => {
+  const q = attrWorld(ATTR_SRC);
+  // `import("./e.json", { with: { type: "json" } })` carries its attributes as
+  // an ORDINARY OBJECT ARGUMENT — babel emits `object_expression` and
+  // `object_property`, not `import_attribute`, measured. So the dynamic form is
+  // outside this section entirely, and that is a fact about the grammar rather
+  // than a gap in these rules.
+  //
+  // IT IS ASSERTED HERE BECAUSE THE SILENCE IS INDISTINGUISHABLE FROM A BUG.
+  // A reader who sees two `import_attr` rows over a source with three JSON
+  // imports will suspect the rule; this line says which one the grammar does
+  // not offer, and would go red the day babel changes its mind.
+  assert.equal(q('ast_node[code](N, import_attribute, F, L)').length, 2,
+    'two static sites, and the dynamic one is not among them');
+  assert.ok(q('ast_node[code](N, object_expression, F, L)').length >= 1,
+    'the control: the dynamic form IS in the corpus, as an object');
+});
+
+test('the frontier of this section is two empty audits with live shapes', () => {
+  const q = attrWorld(ATTR_SRC);
+  // Neither is a count. `import_attr_unsited` names an attribute whose parent
+  // this layer does not recognise as a carrier — non-empty the day a third
+  // carrier appears, which is the row that would tell us instead of the
+  // construct being dropped. `import_attr_unread` names one whose key or value
+  // the accessors could not read, which is what a computed key would produce.
+  assert.deepEqual(q('import_attr_unsited[audit](A)'), []);
+  assert.deepEqual(q('import_attr_unread[audit](A)'), []);
+  // POSITIVE CONTROL: both audits are judging something rather than ranging
+  // over an empty relation.
+  assert.equal(q('ast_node[code](N, import_attribute, F, L)').length, 2);
+});

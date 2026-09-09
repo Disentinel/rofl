@@ -298,7 +298,19 @@ test('without the era pack the kernel names the missing half', () => {
   assert.equal(whole.unpopulatable, false);
   // 5 -> 8 on 2026-09-08: es2017, es2021 and es2023 joined the scale, each at a
   // year this vocabulary has a feature for.
-  assert.equal(whole.rows.length, 8);
+  //
+  // 8 -> 9 ON 2026-09-09 (es2025, for the import-attribute gate) — AND THAT IS
+  // THE THIRD ENTRY IN THIS CHANGELOG, so the count is now a SET. Every entry
+  // said the same thing, an environment joined the scale, and none of them
+  // could say WHICH from the number alone: 8 is 8 whether es2025 arrived or
+  // es2019 did. The names cost nothing to assert and they merge as a union when
+  // two branches each declare an environment, where a count merges to one of
+  // them silently. This is the repair this repository argues for and keeps
+  // deferring, done here because it is four lines.
+  assert.deepEqual(whole.rows.map((r: any) => r.bindings['E']).sort(),
+    ['es2015', 'es2016', 'es2017', 'es2020', 'es2021', 'es2023', 'es2025',
+     'es5', 'ts5'],
+    'the scale, by name — a new environment appends here rather than moving a number');
   // ...AND THE HALF THAT DOES NOT NEED IT STILL ANSWERS, which is why the rules
   // are one pack rather than two: attribution is unchanged and only the era
   // verdict is gone.
