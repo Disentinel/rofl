@@ -30,3 +30,7 @@ path = "src/bin/ring1_tokens_dump.rs"
 [[bin]]
 name = "rofl-lex"
 path = "src/bin/rofl_lex_dump.rs"
+
+[[bin]]
+name = "rofl-parse"
+path = "src/bin/rofl_parse_dump.rs"
