@@ -5,7 +5,14 @@ is a measurement made on this branch, and the point of writing them down first
 is that a surface designed without them will hide exactly the things a caller
 needs to see.
 
-## What exists today
+**IMPLEMENTED 2026-09-09** in `rust/rofl/src/session.rs`, gated by
+`rust/rofl/tests/session.rs` (6 tests, green). What the gate found on its first
+run is the reason it exists: the design above says "`ask(query)`" without ever
+writing a query down, and the first implementation invented `rel@book(args)`
+for a language whose book is `rel[book](args)` and whose `@` is the TENSE. A
+surface designed on paper will get the paper right and the syntax wrong.
+
+## What existed when this was written
 
 ```rust
 pub fn load(json: &str, budget: i64) -> Result<Loaded, String>
@@ -15,10 +22,15 @@ pub mod dense; pub mod engine; pub mod reflect; pub mod seed; pub mod store; pub
 
 One binary, `rofl-eval`, which reads a seed and prints the state to stdout.
 
-**So the port is not an engine, it is an accelerator.** Its only input is a
-snapshot the TypeScript kernel produced; there is no parser, no incremental
+**So the port was not an engine, it was an accelerator.** Its only input was a
+snapshot the TypeScript kernel produced; there was no parser, no incremental
 assert, no query entry point and no way to advance a tick from a program. What
-can be offered today is the PAIR, and the pair has no documented interface.
+could be offered was the PAIR, and the pair had no documented interface.
+
+Four of those five are now closed — parser, assert, ask, tick — and the fifth
+is named at the end of this document. The rest of the page is left as it was
+written, because the measurements are what shaped the answer and a design read
+back with its constraints removed is just an opinion.
 
 ## Five measurements that constrain the design
 
@@ -67,7 +79,7 @@ a control-flow world 0.614.
 a row wall against a fact count is a category error, and it has already been
 made once here.
 
-## The shape this suggests
+## The shape this suggests, and the shape that was built
 
 Small, and the smallness is the point — five verbs.
 
@@ -88,20 +100,66 @@ Plus `tick()` for the boundary, since that is where a volume may be lifted.
 world mid-evaluation, and any `query` that hides whether it probed an index or
 scanned a relation.
 
-## The input question is open and it is not this document's
+### What changed between the design and the code
 
-The port has no parser. `f_the_parser_should_be_generated_from_the_rules_not_written_twice`
-holds the decision and the measurement that constrains it: `examples/ring1`
-parses ROFL with rules, is 41 of 41 IDENTICAL to `src/parser.ts` over 267 KiB
-with 0 refused, and costs **9 758x** the host parser with the ratio FLAT in
-size. So interpreting the tower in production is out by four orders of
-magnitude, and a hand-written Rust parser puts the syntax back into code, which
-is what the tower was built to prevent. Generating one from the rules is what
-remains — and then ring1 is the ORACLE the generated parser must match on all
-41 files, rather than the thing that runs.
+- **`ask` takes ROFL, not a query type.** `ask("kind[js](F, _)")` — the source
+  language IS the query language, which is the point of having a parser in the
+  crate at all. A caller who can write a rule can write a question, there is no
+  second syntax to keep in step with the first, and a syntax change reaches the
+  query surface for free. `_` and a named variable are both columns; a repeated
+  variable constrains, exactly as it does in a body.
+- **Measurement 3 is honoured by CONSTRUCTION, not by a guard.** The design
+  says `assert` must refuse mid-evaluation. There is no mid-evaluation to
+  refuse from: `evaluate()` is one call that reaches the fixpoint or halts at a
+  wall, and `assert` only marks the store dirty, so what it adds is first judged
+  by the next WHOLE evaluation. A guard would have been a check against a state
+  the surface cannot reach; the absence of a verb is the stronger statement.
+- **`Answer` carries `scanned` and `probed`, and the gate holds them to
+  something.** `scanned` is the candidate superset the store handed back —
+  the number that separates 5.5 ms from 12 469 ms — and `probed` says whether an
+  index served the ask or the relation was walked. The gate asserts that a
+  wholly-unbound ask NEVER probes (it has no bound position to probe with) and
+  that a bound ask sometimes scans less than its whole relation. Without the
+  second assertion the cost fields would be decoration.
+- **A tick is `tick()` N times and nothing else.** The gate mirrors the corpus
+  generator rather than calling `evaluate()` beside it — calling both re-derives
+  a layer the tick already has and re-dates every witness, which is the harness
+  defect recorded at the top of `src/bin/rofl_eval.rs`.
 
-Until that is settled, `open(packs)` above means `open(seed)` and the pair
-stands.
+### What the gate compares against
+
+Not itself. `evaluate` is diffed against `<name>.expected.txt` on all 34 corpus
+cases, so the session path is provably the harness path. `fork` is judged in
+BOTH directions — two forks of one core must evaluate identically, and a fact
+asserted into one must be invisible to the other — because sharing everything
+passes the first test and sharing nothing passes the second. `ask` is counted
+against a census taken straight off the store, over every (relation, book,
+arity) in every case: two counts from two pieces of code that must agree.
+
+## The input question, and how it was settled
+
+The port had no parser. It has one now: `rust/rofl/src/rofl_parse.rs`, written
+by hand, identical to `src/parser.ts` on 65 of 66 files with 0 differing and 0
+refused.
+
+The route there is worth keeping, because the obvious answer was tried first
+and lost. `examples/ring1` parses ROFL with RULES, is 41 of 41 identical to
+`src/parser.ts` over 267 KiB with 0 refused, and costs **9 758x** the host
+parser with the ratio FLAT in size — so interpreting the tower in production is
+out by four orders of magnitude. Generating a Rust parser from those rules was
+the next answer, and the generated tokenizer was correct and **700x too slow**;
+a hand-written one was 260x faster than it. The owner's decision, 2026-09-09:
+**hand-written parser, ring1 kept as the ORACLE.**
+
+That keeps what the tower was built for. A syntax change is still a change to
+the RULES first — ring1 defines every production, each one is quoted above the
+Rust that implements it, and `test/rofl-parse.test.ts` renders BOTH trees into
+one s-expression so a divergence cannot be silent. The syntax is not back in
+the code; the code is held to the syntax.
+
+`open(packs)` above still means `open(seed)`. Parsing a `.rofl` file into
+CLAUSES the engine will run is a different bridge from parsing it into an AST,
+and it is not built.
 
 ## What must be said to anyone handed this
 

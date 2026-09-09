@@ -72,6 +72,7 @@ pub struct Clause {
 
 /// The kernel's vocabulary, interned once. `src/reflect.ts` is the single
 /// place these names appear on the JS side and this is its counterpart.
+#[derive(Clone)]
 pub struct Vocab {
     pub derived_by: Sym,
     pub rule: Sym,

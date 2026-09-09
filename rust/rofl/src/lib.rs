@@ -25,6 +25,8 @@ pub mod rofl_parse;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_spangen.ts.
 pub mod ring1_tables;
 pub mod seed;
+/// The five verbs the port offers a caller, derived in docs/port-surface.md.
+pub mod session;
 pub mod store;
 pub mod term;
 

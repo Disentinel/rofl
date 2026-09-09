@@ -34,3 +34,11 @@ path = "src/bin/rofl_lex_dump.rs"
 [[bin]]
 name = "rofl-parse"
 path = "src/bin/rofl_parse_dump.rs"
+
+[[bin]]
+name = "rofl-parse-bench"
+path = "src/bin/rofl_parse_bench.rs"
+
+[[bin]]
+name = "rofl-session-bench"
+path = "src/bin/rofl_session_bench.rs"

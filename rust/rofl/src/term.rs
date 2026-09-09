@@ -39,7 +39,7 @@ pub type Sym = u32;
 /// nothing to drop. `Sym` was already `u32`, so the id ceiling has not moved;
 /// what is new is a 4 GiB ceiling on the TOTAL TEXT of distinct names, which
 /// `intern` refuses rather than truncating. See LIMITS.md.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Interner {
     /// Every name's bytes, concatenated, never moved and never freed.
     ///
@@ -242,7 +242,7 @@ struct FuncNode {
 /// Where terms live. Functor arguments are slices of one flat vector, so a
 /// three-argument functor costs 12 bytes of node plus 24 of arguments rather
 /// than an object with an array in it.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Heap {
     pub syms: Interner,
     funcs: Vec<FuncNode>,

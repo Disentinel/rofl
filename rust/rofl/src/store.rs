@@ -130,7 +130,7 @@ pub struct Witness {
     pub prems: Vec<PremRef>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct KeyRun {
     canon: Vec<FactId>,
     arrived: Vec<FactId>,
@@ -173,7 +173,7 @@ fn tup_hash(args: &[Term]) -> u64 {
 /// one number: `ends[t - 1]` is where tuple `t` starts. A `(start, len)` pair
 /// beside a `u64` sortkey pads to sixteen, and the padding is pure loss on a
 /// case where nothing shares.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Tuples {
     /// Where each tuple's arguments END in `args`.
     ends: Vec<u32>,
@@ -279,7 +279,7 @@ impl Tuples {
 /// The record vector and the tuple pool a fact lives in, kept apart from the
 /// indexes so that sorting a key run can borrow the records immutably while the
 /// run is taken mutably. No unsafe, and the split is the reason there is none.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Facts {
     recs: Vec<FactRec>,
     tups: Tuples,
@@ -324,6 +324,7 @@ impl Facts {
 }
 
 #[derive(Default)]
+#[derive(Clone)]
 pub struct Store {
     pub tick: u32,
     pub dirty: bool,
