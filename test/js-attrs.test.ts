@@ -68,7 +68,16 @@ const PACKS = [
   // refuse a pack of facts about them. Fourth time in one morning that a pack
   // added on one branch reddened another's closure, and every one was caught in
   // a single run.
-  'facts/js-cost.rofl', RULES,
+  'facts/js-cost.rofl',
+  // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). `layer(effect)` and its
+  // hundred verdicts live in `facts/js-effects.rofl` and the lattice in
+  // `rules/js-effects.rofl`. Both are LOADED rather than refused, and for this
+  // world the reason is not a preference: this file's subject is which
+  // attributes the JS layers READ, and the effect rules read `operator` — via
+  // `plain_assign` — and `handler`, so refusing them would make
+  // `attr_deferred` claim nobody reads an attribute a layer reads. Fifth pack
+  // in one week to redden this closure, and the fifth caught in a single run.
+  'facts/js-effects.rofl', 'rules/js-effects.rofl', RULES,
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER

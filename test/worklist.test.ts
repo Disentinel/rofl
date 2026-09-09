@@ -36,7 +36,13 @@ const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 // model disagreeing about which world they are in.
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
   'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl',
-  'facts/js-statements.rofl', 'facts/js-controlflow.rofl', 'facts/findings.rofl'];
+  'facts/js-statements.rofl', 'facts/js-controlflow.rofl',
+  // THE FIFTH LAYER, 2026-09-09 (w_effect_layer). This is a LIST and not a pin:
+  // `facts/js-effects.rofl` carries `layer(effect)` AND the hundred verdicts
+  // under it, and without it in this world the plan would see a layer it has no
+  // claims for — a hundred rows in `unqueued[audit]`. The counts below are the
+  // integrator's to move; this line is what makes them measurable at all.
+  'facts/js-effects.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string; file?: string }

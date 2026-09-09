@@ -108,6 +108,16 @@ const CONTROLFLOW: WorldSpec = {
     // that catches a pack it should not have been asked about is doing the same
     // job as one that catches a pack nobody decided on.
     'facts/js-cost.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     // the era layer has its own world below, its own corpus, and its own number
     'facts/js-env.rofl', 'facts/js-lib-surface.rofl', 'rules/js-env.rofl',
     'rules/js-env-api.rofl',
@@ -150,6 +160,16 @@ const ERA: WorldSpec = {
     // that catches a pack it should not have been asked about is doing the same
     // job as one that catches a pack nobody decided on.
     'facts/js-cost.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     // no call graph and no value flow: the era question is one pass over kinds
     // and one attribute, which is why this world costs 92 ms and the one above
     // costs 4.6 s
@@ -194,6 +214,16 @@ const CALLGRAPH: WorldSpec = {
     // that catches a pack it should not have been asked about is doing the same
     // job as one that catches a pack nobody decided on.
     'facts/js-cost.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     'facts/js-controlflow.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl',
     'facts/js-shapes.rofl', 'facts/js-statements.rofl', 'facts/js-env.rofl',
     'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl', 'facts/js-resolve.rofl',

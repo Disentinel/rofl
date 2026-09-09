@@ -1,0 +1,493 @@
+-- js-effects.rofl — THE FIFTH LAYER, AND THE ONLY ONE WITH A JOIN.
+--
+-- facts/js-effects.rofl declares `layer(effect)`, the Koka taxonomy and the
+-- hundred verdicts. This file is the ORDER those verdicts are about, the rules
+-- that put a corpus node into it, and the audits that keep both honest.
+--
+-- THREE ORDERS NOW LIVE IN THIS TREE AND THEY ARE DELIBERATELY NOT MERGED.
+-- The next reader will want to unify them, so the refusal is written here
+-- rather than left to be rediscovered:
+--
+--   ES RELEASES        `release`, `includes`, `provides`, `reaches` in the era
+--                      layer — a TOTAL order in time, generated from
+--                      TypeScript's own `/// <reference lib=` lines. A later
+--                      edition contains an earlier one. NO JOIN: "the join of
+--                      es2015 and es2020" is not a question anybody asks; the
+--                      question is `env_has`, which is a comparison.
+--   RUNTIME VERSIONS   `runtime_includes(node20, node18)`, with the named
+--                      bridge `provides_release(node20, es2022)` into the scale
+--                      above. A subkind order, approved by the owner
+--                      2026-09-09. NO JOIN either, and for a sharper reason:
+--                      node20 and a browser have no common runtime, and
+--                      inventing one to make the order a lattice would be
+--                      manufacturing a term.
+--   THE EFFECT LATTICE this file. It HAS a join and a meet, and it needs them,
+--                      because the two questions the layer is asked are exactly
+--                      a join (what is a body's effect given its statements')
+--                      and a comparison (is this call at least as effectful as
+--                      that one).
+--
+-- They are three orders over three different carriers and the only thing they
+-- share is the word. Merging them would mean asking what `es2020 join
+-- write<local>` is, which is not a question about anything.
+
+-- ===========================================================================
+-- 1. THE ORDER, AND IT IS DERIVED FROM THE ROWS RATHER THAN TYPED OUT
+--
+-- Koka's aliases are DEFINITIONS, so `eff_row` is closed over `eff_alias`
+-- instead of `pure`'s two labels being written down a second time. That is what
+-- makes `join(div, exn) = pure` a derivation and not a coincidence between two
+-- hand-written tables.
+eff_row(A, L, H) :- eff_alias(A, P), eff_row(P, L, H).
+
+-- INCLUSION, VIA ITS OWN NEGATION. `A <= B` when no label of A is missing from
+-- B — which is subset inclusion, so reflexivity and transitivity come from the
+-- rows rather than from arms somebody has to remember to write. `total` has no
+-- rows, so it lacks nothing and is below everything: the bottom is a
+-- consequence of the encoding rather than a declaration.
+eff_lacks(A, B) :- eff_name(B), eff_row(A, L, H), not eff_row(B, L, H).
+eff_leq(A, B)   :- eff_name(A), eff_name(B), not eff_lacks(A, B).
+eff_lt(A, B)    :- eff_leq(A, B), not eff_leq(B, A).
+
+-- THE JOIN AND THE MEET, AS LEAST UPPER AND GREATEST LOWER BOUNDS OVER THE
+-- NAMED FAMILY. The join of two named rows is the least NAME above their union;
+-- it is not the union itself, because the fourteen landmarks are not closed
+-- under union and naming every subset would be sixty-four rows nobody reads.
+--
+-- THAT IS SOUND EXACTLY WHEN THE FAMILY IS CLOSED UNDER INTERSECTION and
+-- contains the full row — a Moore family — and that is a THEOREM about this
+-- table rather than a hope about it. The four ways it can fail are the four
+-- audits below, and they are the acceptance for this section.
+eff_ub(A, B, C)       :- eff_leq(A, C), eff_leq(B, C).
+eff_ub_lower(A, B, C) :- eff_ub(A, B, D), eff_lt(D, C).
+eff_join(A, B, C)     :- eff_ub(A, B, C), not eff_ub_lower(A, B, C).
+eff_has_join(A, B)    :- eff_join(A, B, _).
+
+eff_lb(A, B, C)        :- eff_leq(C, A), eff_leq(C, B).
+eff_lb_higher(A, B, C) :- eff_lb(A, B, D), eff_lt(C, D).
+eff_meet(A, B, C)      :- eff_lb(A, B, C), not eff_lb_higher(A, B, C).
+eff_has_meet(A, B)     :- eff_meet(A, B, _).
+
+-- THE FOUR WAYS THIS IS NOT A LATTICE. `missing` is a pair with no bound at all
+-- and `ambiguous` is a pair with two incomparable minimal ones; either makes
+-- the join a partial or a multi-valued function, and both are silent otherwise
+-- — the join relation simply answers nothing, or answers twice, and every
+-- reader downstream sees a smaller or a doubled set with nothing saying why.
+join_missing[audit](A, B)         :- eff_name(A), eff_name(B), not eff_has_join(A, B).
+join_ambiguous[audit](A, B, C, D) :- eff_join(A, B, C), eff_join(A, B, D), C != D.
+meet_missing[audit](A, B)         :- eff_name(A), eff_name(B), not eff_has_meet(A, B).
+meet_ambiguous[audit](A, B, C, D) :- eff_meet(A, B, C), eff_meet(A, B, D), C != D.
+
+-- ...AND THE BOTTOM AND THE TOP, AS SETS RATHER THAN AS TWO CLAIMED NAMES. A
+-- lattice with a bottom and a top is what the founding finding asked for, so
+-- both are DERIVED and the test asserts the derived set is `{total}` and
+-- `{top}`. Naming them in a fact would have made the claim unfalsifiable.
+eff_not_top(T) :- eff_name(T), eff_name(M), not eff_leq(M, T).
+eff_not_bot(B) :- eff_name(B), eff_name(M), not eff_leq(B, M).
+eff_top(T)     :- eff_name(T), not eff_not_top(T).
+eff_bot(B)     :- eff_name(B), not eff_not_bot(B).
+
+-- ORDINARY HYGIENE OF AN AUTHORED TABLE, each direction a positive row. A
+-- misspelt alias is the dangerous one: it silently gives a NAME the empty row,
+-- which makes it the bottom, which makes every comparison against it true.
+eff_row_unknown[audit](N)      :- eff_row(N, _, _), not eff_name(N).
+eff_label_unknown[audit](L, H) :- eff_row(_, L, H), not eff_label(L, H).
+eff_alias_unknown[audit](A, P) :- eff_alias(A, P), not eff_name(P).
+eff_alias_unnamed[audit](A)    :- eff_alias(A, _), not eff_name(A).
+eff_name_empty[audit](N)       :- eff_name(N), not eff_row(N, _, _), N != total.
+eff_heap_unknown[audit](H)     :- eff_label(_, H), not eff_heap(H).
+-- a label no name reaches is a label the lattice cannot express
+eff_label_unnamed[audit](L, H) :- eff_label(L, H), not eff_row(_, L, H).
+
+-- ===========================================================================
+-- 2. WHAT A NODE CONTRIBUTES — THE SEEDS
+--
+-- `eff_here[flow](Node, Label, Heap)` is one label a node contributes when it
+-- is REACHED. The join is not performed here: two rules with the same head are
+-- a union, which is what a join over a row IS, so the row of a function is the
+-- set of `eff_here` labels of everything that runs in it. That is the whole
+-- reason the carrier is a set of labels rather than a name — a name would have
+-- needed a join operation at every step, and a set needs none.
+
+-- ---------------------------------------------------------------------------
+-- EXN. Seeded from a `throw` that its own function does not catch, which is the
+-- same seed `throws_outright[code]` uses — deliberately, so that the exn
+-- projection of this layer can be compared row for row against `may_throw`.
+--
+-- AND THE HANDLER TEST IS STRICTER HERE THAN THE ONE IT COPIES, which is a
+-- repair rather than a divergence. `caught_here[code]` asks whether a node sits
+-- in the `block` of a `try` in the same function and does NOT ask whether that
+-- try has a HANDLER — so `try { risky(); } finally { close(); }` would be
+-- reported as catching, and it catches nothing. There is no such site in this
+-- corpus (11 try statements, 11 handlers, and the one `finalizer` sits on a try
+-- that also has a handler), so the two relations agree today and the agreement
+-- is not evidence that the guard is unnecessary. It is
+-- `f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does`.
+eff_catch_here[code](N) :- caught_here[code](N), in_try_block[code](TS, N),
+                           ast_child[code](TS, handler, 0, _).
+
+-- ...AND THE ABSENCE IS A WITNESS RATHER THAN A SENTENCE. Two arms of ONE
+-- relation, so that "no try in this corpus lacks a handler" can be written as
+-- `witness_absent` with a control that is the same literal with ONE CONSTANT
+-- swapped — which is what the witness format demands and what a pair of
+-- differently-named relations could only fake.
+eff_try_arm[flow](T, handled)   :- ast_node[code](T, try_statement, _, _),
+                                   ast_child[code](T, handler, 0, _).
+eff_try_arm[flow](T, unhandled) :- ast_node[code](T, try_statement, _, _),
+                                   not ast_child[code](T, handler, 0, _).
+
+eff_here[flow](T, exn, none) :- ast_node[code](T, throw_statement, _, _),
+                                not eff_catch_here[code](T).
+
+-- ---------------------------------------------------------------------------
+-- DIV. Two seeds, and the second is the one a loop-shaped rule would miss.
+edb(eff_loop_kind).
+eff_loop_kind(while_statement).
+eff_loop_kind(do_while_statement).
+eff_loop_kind(for_statement).
+eff_loop_kind(for_in_statement).
+eff_loop_kind(for_of_statement).
+
+eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _, _).
+
+-- RECURSION IS DIVERGENCE TOO, and it has no syntax. A call that can come back
+-- to the function it is written in may not terminate for exactly the reason a
+-- `while (true)` may not, and nothing in the tree shows it. `eff_reaches` is
+-- the transitive callee closure of `resolves`; the seed is a call site whose
+-- callee reaches its own caller.
+--
+-- ORDERED FOR COST: `eff_calls` leads with `resolves`, which binds both ends,
+-- so `nearest_v` is probed by the call site rather than enumerated.
+eff_calls[code](F, G)   :- resolves[code](C, G), nearest_v[flow](F, C), fn_node[code](G).
+eff_reaches[code](F, G) :- eff_calls[code](F, G).
+eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_calls[code](G, H).
+
+eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_v[flow](F, C),
+                                eff_reaches[code](G, F).
+
+-- ---------------------------------------------------------------------------
+-- ALLOC. A fresh MUTABLE IDENTITY. `new_expression` is in this list although
+-- its CELL is open: the allocation half is derived and complete, and what is
+-- open is the constructor's effect, which is the ambient-surface question.
+-- A rule may be right about half a kind while the cell stays honest about the
+-- other half — that is what an open cell beside a firing rule means here.
+edb(eff_alloc_kind).
+eff_alloc_kind(object_expression).
+eff_alloc_kind(array_expression).
+eff_alloc_kind(reg_exp_literal).
+eff_alloc_kind(function_expression).
+eff_alloc_kind(arrow_function_expression).
+eff_alloc_kind(class_expression).
+eff_alloc_kind(new_expression).
+
+eff_here[flow](N, alloc, none) :- eff_alloc_kind(K), ast_node[code](N, K, _, _).
+
+-- ---------------------------------------------------------------------------
+-- READ AND WRITE, AND THEIR HEAP.
+--
+-- THE HEAP IS DECIDED BY WHETHER THE VALUE LAYER CAN TRACE THE RECEIVER. If
+-- `may_be_node[flow]` reaches an allocation for the object, the object is one
+-- this program made and the heap is `local`; if it does not, the receiver came
+-- from outside and the heap is `global`. The two arms are written as a
+-- negation pair rather than as one arm with a default, so a receiver cannot
+-- fall out of both and be silently effect-free.
+eff_obj_traced[flow](M) :- member_node_v[flow](M), ast_child[code](M, object, 0, O),
+                           may_be_node[flow](O, _).
+eff_heap_of[flow](M, local)  :- member_node_v[flow](M), eff_obj_traced[flow](M).
+eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
+
+eff_assign[code](A)           :- ast_node[code](A, assignment_expression, _, _).
+eff_assign_target[code](A, L) :- eff_assign[code](A), ast_child[code](A, left, 0, L).
+-- `plain_assign[flow]` IS LOAD-BEARING AND IT IS NOT MINE. The value layer
+-- already separates `=` from `+=` because a compound assignment evaluates to a
+-- SUM and that layer knows nothing about sums; here the same relation separates
+-- a write from a read-and-write, which is a second use for one distinction.
+eff_compound[code](A)         :- eff_assign[code](A), not plain_assign[flow](A).
+eff_member_target[code](L)    :- eff_assign_target[code](_, L), member_node_v[flow](L).
+eff_name_target[code](L)      :- eff_assign_target[code](_, L), ast_name[code](L, _).
+
+eff_here[flow](L, write, H) :- eff_member_target[code](L), eff_heap_of[flow](L, H).
+eff_here[flow](L, read, H)  :- eff_compound[code](A), ast_child[code](A, left, 0, L),
+                               eff_member_target[code](L), eff_heap_of[flow](L, H).
+eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
+
+-- A MEMBER THAT IS NOT AN ASSIGNMENT TARGET IS A READ. This covers the whole
+-- of `member_expression` and `optional_member_expression`, on both heaps, with
+-- no residue — which is why those two cells are `handled` while
+-- `call_expression` is not: reading `console.log` really is a `read<global>`
+-- and the unknown is what the resulting function DOES.
+eff_read_site[flow](M) :- member_node_v[flow](M), not eff_member_target[code](M).
+eff_here[flow](M, read, H) :- eff_read_site[flow](M), eff_heap_of[flow](M, H).
+
+-- ...AND THE TWO HALVES PARTITION THE MEMBER NODES, which is an IDENTITY and
+-- therefore true of any corpus rather than of this one. The `never both` half
+-- is this row; the `never neither` half is the sum, asserted in
+-- test/js-effects.test.ts. A count of read sites could not tell a read the rule
+-- MISSED from a write the rule called a read.
+eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
+
+-- `x++` IS A READ AND A WRITE, on whichever of the two forms it takes.
+eff_update_arg[code](U, X) :- ast_node[code](U, update_expression, _, _),
+                              ast_child[code](U, argument, 0, X).
+eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ast_name[code](X, _).
+eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ast_name[code](X, _).
+eff_here[flow](U, read, H)      :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
+eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
+
+-- READING A MUTABLE BINDING IS `read<local>` AND READING AN IMMUTABLE ONE IS
+-- NOTHING. That is Koka's answer rather than a shortcut: `read<h>` is a read of
+-- a CELL, and a binding nothing reassigns has no cell to read — it is a value.
+-- So the mutable names are named first and the identifiers are probed by name.
+--
+-- ORDERED FOR COST, and this is the ordering `f_the_engine_has_no_join_planner`
+-- was written about: `eff_mutable_name` is a handful of rows and binds both
+-- Name and File, so `ident_in[code]` — which the store indexes on exactly that
+-- pair — is a probe. Leading with the identifier would have enumerated every
+-- identifier in the corpus for each mutable name.
+eff_mutable_name[code](Name, File) :- assigns[code](Name, _, File).
+eff_mutable_name[code](Name, File) :- eff_update_arg[code](U, X), ast_name[code](X, Name),
+                                      ast_node[code](U, _, File, _).
+eff_here[flow](N, read, local) :- eff_mutable_name[code](Name, File),
+                                  ident_in[code](N, Name, File),
+                                  not eff_name_target[code](N).
+
+-- WHICH LABELS A CORPUS ACTUALLY EXERCISES. A POSITIVE relation and not an
+-- audit, because two of the eight are empty on an honest checkout today and a
+-- gate red on an honest checkout gets switched off. The two are empty for
+-- DIFFERENT reasons and the difference is the whole value of the row:
+--
+--   write/global   HAS a seed and no site. Nothing in this corpus assigns to a
+--                  member of a receiver the value layer cannot trace.
+--   ndet           has NO SEED AT ALL, and cannot have one. Nothing in the
+--                  LANGUAGE is nondeterministic; `Math.random`, `Date.now` and
+--                  `crypto.getRandomValues` are ambient members, so `ndet` is
+--                  derivable exactly when `ambient_effect` exists. It is the
+--                  sharpest single statement of what this layer is waiting for.
+eff_label_seen[flow](L, H)   :- eff_here[flow](_, L, H).
+eff_label_unseen[flow](L, H) :- eff_label(L, H), not eff_label_seen[flow](L, H).
+
+-- ===========================================================================
+-- 3. THE JOIN OVER A BODY, AND THE CLOSURE OVER THE CALL GRAPH
+--
+-- `eff_latent[flow](F, Label, Heap)` is a function's row: what it may do when
+-- called. The first arm is the join over its own body — every `eff_here` label
+-- of a node whose nearest value context is F — and the join is the union two
+-- arms with one head already are.
+eff_latent[flow](F, L, H) :- eff_here[flow](N, L, H), nearest_v[flow](F, N).
+
+-- A HANDLER REMOVES A LABEL FROM A ROW, PER LABEL. This is the piece of an
+-- effect system a flat list of labels cannot express, and writing it as
+-- `not eff_catch_here(C)` on the whole arm — which is what `may_throw` does,
+-- correctly, because `may_throw` carries only one label — would have made a
+-- `try` around a call swallow the callee's WRITES as well as its throws.
+edb(eff_discharges).
+eff_discharges(catch_clause, exn).
+eff_discharged_at[code](C, L) :- eff_catch_here[code](C), eff_discharges(catch_clause, L).
+
+eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), resolves[code](C, G),
+                             nearest_v[flow](F, C), not eff_discharged_at[code](C, L).
+
+-- ...and the vocabulary the discharge table is over, kept closed. A label
+-- nothing can discharge is fine; a discharge naming a label that is not one is
+-- a row that removes nothing and says it removes something.
+eff_discharge_unknown[audit](M, L) :- eff_discharges(M, L), not eff_label(L, _).
+
+-- THE ONE INDEPENDENT ORACLE THIS LAYER HAS. `may_throw[code]` was built by
+-- `w_exn_propagation` for the exception question alone — a different relation,
+-- a different pack, written before this layer existed — and the `exn`
+-- projection of the general machinery must reproduce it ROW FOR ROW. Both
+-- directions, because one of them alone is satisfied by a rule that derives
+-- nothing at all.
+eff_exn_only[audit](F)   :- eff_latent[flow](F, exn, none), not may_throw[code](F).
+may_throw_only[audit](F) :- may_throw[code](F), not eff_latent[flow](F, exn, none).
+
+-- ...AND THE GATE THAT ORACLE IS STRUCTURALLY UNABLE TO BE. `may_throw` carries
+-- ONE LABEL, so a discharge written `not eff_catch_here(C)` on the whole arm —
+-- swallowing the callee's whole row at a try instead of the one label a handler
+-- removes — agrees with it EXACTLY. The oracle cannot see the difference,
+-- because the difference is entirely in the seven labels the oracle does not
+-- carry. Found by asking where the check cannot look rather than what else
+-- could be broken, and closed here rather than left as a surviving mutant.
+--
+-- MEASURED: twelve (call, label) pairs in this corpus sit at a caught call site
+-- with a non-`exn` label — `read<local>` and `alloc` at eight sites — so the
+-- row is populatable and empty rather than empty because nothing reaches it.
+eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G),
+                                    eff_latent[flow](G, L, H), L != exn,
+                                    nearest_v[flow](F, C),
+                                    not eff_latent[flow](F, L, H).
+
+-- ===========================================================================
+-- 4. NAMING A FUNCTION'S EFFECT — THE LEAST LANDMARK ABOVE ITS ROW
+--
+-- `effect_of[flow](F, Name)` is the smallest named row that contains F's, which
+-- is the Moore-family closure the audits in section 1 certify exists and is
+-- unique. A function with no labels at all gets `total`, which is a positive
+-- answer rather than an absence — that is the whole reason the bottom is named.
+--
+-- THE COMPARISON IS `eff_leq` AND IT IS NOT MATERIALISED PER FUNCTION PAIR.
+-- "Is this call at least as effectful as that one" is
+-- `effect_of(F, NF), effect_of(G, NG), eff_leq(NG, NF)` — a two-join query
+-- anybody can run. Writing it as a relation would be |functions| squared rows
+-- for no answer the query does not already give, on a corpus of 395 functions
+-- and an engine whose space wall is 500 000 rows.
+eff_subject[flow](F)        :- fn_node[code](F).
+eff_over[flow](F, N)        :- eff_name(N), eff_latent[flow](F, L, H), not eff_row(N, L, H).
+eff_bounded[flow](F, N)     :- eff_subject[flow](F), eff_name(N), not eff_over[flow](F, N).
+eff_bounded_low[flow](F, N) :- eff_bounded[flow](F, M), eff_lt(M, N).
+effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow](F, N).
+
+-- ...and the two ways that could be wrong, as rows. A function with no name is
+-- a hole in the closure; a function with two is the ambiguity `join_ambiguous`
+-- forbids arriving through a subject instead of through a pair.
+eff_unnamed[audit](F)       :- eff_subject[flow](F), not effect_of[flow](F, _).
+eff_two_names[audit](F, A, B) :- effect_of[flow](F, A), effect_of[flow](F, B), A != B.
+
+-- THE JOIN, USED RATHER THAN DECORATED. A caller's effect must already contain
+-- its callee's wherever nothing is discharged, so joining the two names must
+-- give the caller's own back. Anything else is a propagation rule that has
+-- dropped a label, and this is the one place the join operation is READ by
+-- something other than a test.
+eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_v[flow](F, C),
+                                  not eff_catch_here[code](C),
+                                  effect_of[flow](F, NF), effect_of[flow](G, NG),
+                                  eff_join(NF, NG, J), J != NF.
+
+-- WHERE A CALLEE IS STRICTLY PURER THAN ITS CALLER — the comparison put to work
+-- on the corpus rather than left as a query in a comment. Bounded by the call
+-- edges, so it costs what the call graph costs and nothing more.
+eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_v[flow](F, C),
+                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
+                                   eff_lt(NG, NF).
+
+-- ===========================================================================
+-- 5. THE CONCRETE COLUMN — `http:get` RATHER THAN `io`
+--
+-- A concrete effect is a PAIR (Surface, Operation), rendered `surface:operation`
+-- for a reader. facts/js-effects.rofl carries the argument for having two
+-- columns and the provenance of each half; this section is the derivation.
+--
+-- THE SURFACE HALF IS DERIVED AND THE OPERATION HALF IS DERIVED. Neither is
+-- authored anywhere in this tree, which is the constraint the founding finding
+-- imposes: Koka's set is closed at eight and `http:get` opens an infinite one,
+-- so a concrete effect that somebody TYPED would be the taxonomy being invented
+-- after all.
+--
+-- WHAT IS DERIVABLE TODAY, with no surface pack at all: the builtin prototypes.
+-- `prototype_of[flow]` reads the receiver's KIND — `[1,2,3].join(",")` needs
+-- nothing carried as a value — and `builtin_prototype` names the six the
+-- language owns. That gives ten call sites in this corpus with a surface and an
+-- operation and no `.d.ts` involved.
+eff_surface[flow](C, P) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                           ast_child[code](N, object, 0, O),
+                           prototype_of[flow](O, P), builtin_prototype(P).
+-- ...and the second source, which needs the pack the runtime and globals agents
+-- are building: a free NAME whose surface something declares.
+-- `ambient_binding` is empty today, so this arm derives nothing and is not
+-- dead — it is the shape the surface plugs into, stated as a rule so that the
+-- day the rows arrive nothing here has to change.
+eff_surface[flow](C, S) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                           ast_child[code](N, object, 0, O), ast_name[code](O, Name),
+                           ast_node[code](C, _, File, _), ambient_binding(File, Name, S).
+
+eff_operation[flow](C, Key) :- eff_surface[flow](C, _), callee_of[code](C, N),
+                               selects[flow](N, Key).
+concrete_effect[flow](C, S, Op) :- eff_surface[flow](C, S), eff_operation[flow](C, Op).
+
+-- `⊑`, AND IT IS ONE ROW PER MEMBER SUPPLIED BY THE SURFACE PACK. Nothing in a
+-- `.d.ts` signature says `readFileSync` reads and `writeFileSync` writes; the
+-- declaration FILE fixes the surface and says nothing about the effect. So this
+-- is the one part of the column that is a table rather than a derivation, and
+-- it is a table SOMEBODY ELSE OWNS — which is why an unattributed member is an
+-- open cell below rather than a guess.
+concrete_denotes[flow](S, Op, E) :- concrete_effect[flow](_, S, Op), ambient_effect(S, Op, E).
+eff_here[flow](C, L, H)          :- concrete_effect[flow](C, S, Op),
+                                    ambient_effect(S, Op, E), eff_row(E, L, H).
+
+-- THE PREORDER THE MAP INDUCES, and it is named so that nobody mistakes it for
+-- an order ON the concrete names. `http:get` and `fs:write` are incomparable
+-- and always will be; what is comparable is what they DENOTE, and that is the
+-- lattice doing the work the concrete column cannot.
+concrete_leq[flow](S1, O1, S2, O2) :- ambient_effect(S1, O1, E1),
+                                      ambient_effect(S2, O2, E2), eff_leq(E1, E2).
+
+-- ---------------------------------------------------------------------------
+-- THE RESIDUE, AS A POSITIVE RELATION AND NOT AS AN AUDIT.
+--
+-- These are NOT `[audit]` and the distinction is the one CLAUDE.md records: a
+-- gate red on an honest checkout gets switched off. Both of these are non-empty
+-- today BY DESIGN — the surface pack does not exist — so they are the frontier,
+-- countable and queryable, in exactly the shape `unresolved_call` and
+-- `frontier_at` already have. What is asserted about them is that their
+-- SURFACES are named, not that they are empty.
+concrete_unmapped[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                  not ambient_effect(S, Op, _).
+eff_call_unattributed[flow](C) :- unresolved_call[code](C, _),
+                                  not concrete_effect[flow](C, _, _).
+
+-- ---------------------------------------------------------------------------
+-- AND THE AUDITS THAT DO GO RED, all three about a surface pack that is wrong
+-- rather than absent.
+--
+-- A `⊑` naming something that is not a landmark maps into nothing and
+-- contributes nothing, silently — the same silence `orphan_claim` exists for,
+-- arriving through a relation nobody in this tree has written yet.
+concrete_unnamed[audit](S, Op, E) :- ambient_effect(S, Op, E), not eff_name(E).
+-- A surface with no declared origin is a name somebody typed. The whole
+-- argument for the concrete column is that its names come from a declaration
+-- file; a surface that cannot say which file is the invented taxonomy the
+-- founding finding refused.
+concrete_no_origin[audit](S) :- ambient_effect(S, _, _), not surface_origin(S, _).
+concrete_bad_origin[audit](S, O) :- surface_origin(S, O), not eff_origin(O).
+-- ASYNC MUST NOT COME BACK AS A CONCRETE NAME. The founding finding refused
+-- ASYNC as an effect on a measurement — `await` is transparent to value flow
+-- and `yield` is not — and a concrete column is exactly where it would
+-- reappear, as `promise:await` or `async:spawn`, mapping into nothing. A
+-- concrete effect must denote a landmark; one that denotes `total` while
+-- claiming to describe suspension is the smuggling this row names.
+concrete_async_smuggled[audit](S, Op) :- ambient_effect(S, Op, E), eff_bot(E),
+                                         eff_suspension_word(Op).
+edb(eff_suspension_word).
+eff_suspension_word(then).
+eff_suspension_word(await).
+eff_suspension_word(next).
+
+-- ===========================================================================
+-- 6. WHERE THIS PACK CANNOT LOOK, STATED RATHER THAN DISCOVERED LATER
+--
+-- 1. NO IMPLICIT THROW OF ANY KIND. `exn` is seeded from `throw_statement` and
+--    nothing else, exactly as `may_throw` is, so a `null.x`, an
+--    out-of-scope name and a failed coercion are all `total` here. That is a
+--    limit of the seed and not of the lattice, and it is the same one
+--    facts/js-statements.rofl already records for strict mode.
+-- 2. NO TERMINATION ARGUMENT. Every loop is `div`, including the ones that
+--    obviously stop. The may-set is wide in the safe direction.
+-- 3. THE HEAP IS TWO-VALUED AND ONE OF THE TWO IS "THE VALUE LAYER LOST IT".
+--    `global` here means untraceable, which is a superset of the actual global
+--    heap: a receiver that came in as a parameter is `global` although it may
+--    well be a local object of the caller's. Narrowing it is inter-procedural
+--    value flow, which is a different item.
+-- 4. THE JOIN HAPPENS AT THE FUNCTION BOUNDARY, NOT AT EVERY NODE. `eff_latent`
+--    reads `nearest_v`, so the row of a BLOCK or an `if` is not materialised.
+--    Every question this layer has been asked is about a function or a call, so
+--    the per-node rows would be cost with no reader — and if one ever wants
+--    them, they are one rule over `ast_within` and a large one.
+-- 5. `eff_purer_callee` COMPARES NAMES AND NOT ROWS. Two functions whose rows
+--    are incomparable both round UP to the same landmark and compare equal, so
+--    this relation under-reports. It is the price of naming, and the raw
+--    comparison over `eff_latent` is available to anybody who wants it.
+
+-- WHAT THIS PACK'S LEDGERS READ, written out because the kernel stopped
+-- emitting a bridge row for a rule that licenses itself by existing. Seven
+-- crossings and every one of them is a rule in this file: [code] joins
+-- `nearest_v[flow]` and `member_node_v[flow]`, [flow] reads the scanner's book
+-- and the label tables in [main], and every audit here reads both books it
+-- audits. Some of these are already declared by js-callgraph and js-dataflow;
+-- they are repeated because a pack that cannot be loaded on its own without
+-- leaking is a pack whose crossings live somewhere else.
+imports(code, main).
+imports(code, flow).
+imports(flow, code).
+imports(flow, main).
+imports(audit, code).
+imports(audit, flow).

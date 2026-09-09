@@ -1,4 +1,4 @@
--- facts/worlds.rofl — THE THREE STORES A WITNESS MAY BE ASKED OF.
+-- facts/worlds.rofl — THE FOUR STORES A WITNESS MAY BE ASKED OF.
 --
 -- Vocabulary and audits: rules/worlds.rofl. The closure — every ledger and JS
 -- pack in the tree appears in exactly ONE of `world_pack` / `world_omits` for
@@ -64,6 +64,12 @@ world_omits(w_ledger, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_ledger, "facts/js-cost.rofl").
+-- ...and the fifth layer, added 2026-09-09 by w_effect_layer. The effect
+-- verdicts are a claim about the JS matrix and the effect rules read a
+-- corpus; the ledger world holds neither, and the closure named both
+-- packs within one run of test/note-witness.test.ts.
+world_omits(w_ledger, "facts/js-effects.rofl").
+world_omits(w_ledger, "rules/js-effects.rofl").
 
 -- ===========================================================================
 -- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
@@ -91,6 +97,7 @@ world_pack(w_queue, "facts/js-resolve.rofl").
 world_pack(w_queue, "facts/js-dataflow.rofl").
 world_pack(w_queue, "facts/js-statements.rofl").
 world_pack(w_queue, "facts/js-controlflow.rofl").
+world_pack(w_queue, "facts/js-effects.rofl").
 -- the era packs answer a different question on a different corpus, and the
 -- resolver, attribute and vocabulary rules each have a test file that builds
 -- its own world; none of them is read by the plan
@@ -118,6 +125,12 @@ world_omits(w_queue, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_queue, "facts/js-cost.rofl").
+-- ...and the fifth layer's RULES, 2026-09-09. `rules/js-effects.rofl` reads
+-- `resolves`, `nearest_v` and `member_node_v` — a corpus this world does not
+-- have — so loading it here would report five relations as undefined premises
+-- and derive nothing. The FACTS pack is loaded above, with `layer(effect)` and
+-- the hundred verdicts, because that is exactly what a plan is about.
+world_omits(w_queue, "rules/js-effects.rofl").
 
 -- ===========================================================================
 -- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
@@ -180,3 +193,70 @@ world_omits(w_js_corpus, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_js_corpus, "facts/js-cost.rofl").
+-- ...AND THE FIFTH LAYER IS REFUSED HERE AND HAS A WORLD OF ITS OWN, 2026-09-09.
+-- This world is ASSERTED IDENTICAL to the one test/js-corpus-world.ts builds,
+-- and that world's cost is pinned by test/js-layer-cost.test.ts and read by
+-- four other test files. Adding a layer to it moves every one of those numbers
+-- for a reason that has nothing to do with what they measure. `w_js_effects`
+-- below is the same corpus with the effect packs on top, which is where a claim
+-- about the effect layer is a claim about a store somebody builds.
+world_omits(w_js_corpus, "facts/js-effects.rofl").
+world_omits(w_js_corpus, "rules/js-effects.rofl").
+
+
+-- ===========================================================================
+-- THE EFFECT WORLD — the corpus world with the fifth layer on top, added
+-- 2026-09-09 by w_effect_layer.
+--
+-- WHY IT IS A FOURTH WORLD AND NOT A LINE IN THE THIRD. `w_js_corpus` is
+-- asserted identical to the world test/js-corpus-world.ts builds, and that
+-- world's row count is pinned by test/js-layer-cost.test.ts and read by four
+-- other files. A layer added to it moves numbers that are not about it. So this
+-- world is the corpus world PLUS two packs, which keeps both claims honest: a
+-- note about what the effect layer derives is a claim about THIS store, and
+-- nothing about the other four layers moves.
+--
+-- IT COSTS A FIXPOINT AND ONLY WHEN SOMETHING ASKS. `worldsFor` builds only the
+-- worlds some witness names, so an unused declaration is free — and three
+-- witnesses name this one.
+world(w_js_effects).
+world_note(w_js_effects, "the corpus world with the effect layer on top: the four-layer JS model over the five call fixtures plus facts/js-effects.rofl and rules/js-effects.rofl, and the world a claim about the effect lattice or the concrete column is a claim about").
+world_pack(w_js_effects, "rules/js-structure.rofl").
+world_pack(w_js_effects, "rules/js-dataflow.rofl").
+world_pack(w_js_effects, "rules/js-model.rofl").
+world_pack(w_js_effects, "rules/js-callgraph.rofl").
+world_pack(w_js_effects, "rules/js-controlflow.rofl").
+world_pack(w_js_effects, "rules/js-effects.rofl").
+world_pack(w_js_effects, "facts/js-kinds.rofl").
+world_pack(w_js_effects, "facts/js-callgraph.rofl").
+world_pack(w_js_effects, "facts/js-dataflow.rofl").
+world_pack(w_js_effects, "facts/js-modules.rofl").
+world_pack(w_js_effects, "facts/js-shapes.rofl").
+world_pack(w_js_effects, "facts/js-statements.rofl").
+world_pack(w_js_effects, "facts/js-controlflow.rofl").
+world_pack(w_js_effects, "facts/js-effects.rofl").
+world_corpus(w_js_effects, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
+world_corpus(w_js_effects, "beta.mjs", "test/fixtures/js-call/beta.mjs").
+world_corpus(w_js_effects, "gamma.mjs", "test/fixtures/js-call/gamma.mjs").
+world_corpus(w_js_effects, "delta.mjs", "test/fixtures/js-call/delta.mjs").
+world_corpus(w_js_effects, "shapes.ts", "test/fixtures/js-call/shapes.ts.txt").
+-- refused for exactly the reasons w_js_corpus refuses them, which is the point
+-- of this world being that one plus two packs and nothing else
+world_omits(w_js_effects, "rules/worlds.rofl").
+world_omits(w_js_effects, "facts/worlds.rofl").
+world_omits(w_js_effects, "rules/findings.rofl").
+world_omits(w_js_effects, "facts/findings.rofl").
+world_omits(w_js_effects, "rules/worklist.rofl").
+world_omits(w_js_effects, "facts/worklist.rofl").
+world_omits(w_js_effects, "facts/js-attrs.rofl").
+world_omits(w_js_effects, "facts/js-env.rofl").
+world_omits(w_js_effects, "facts/js-lib-surface.rofl").
+world_omits(w_js_effects, "facts/js-resolve.rofl").
+world_omits(w_js_effects, "facts/js-cost.rofl").
+world_omits(w_js_effects, "rules/js-attrs.rofl").
+world_omits(w_js_effects, "rules/js-env-api.rofl").
+world_omits(w_js_effects, "rules/js-env.rofl").
+world_omits(w_js_effects, "rules/js-modules.rofl").
+world_omits(w_js_effects, "rules/js-resolve.rofl").
+world_omits(w_js_effects, "rules/js-vocabulary.rofl").
+world_omits(w_js_effects, "rules/js-pack-home.rofl").
