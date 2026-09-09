@@ -199,3 +199,70 @@ fn an_unknown_volume_cools_nothing() {
     assert_eq!(s.eval.store.canonical_state(&s.eval.h), before);
     std::fs::remove_file(&out).ok();
 }
+
+/// THE ASSERTION TRAIL, PARKED AND FETCHED BACK.
+///
+/// `asserted_by` is half the world and two thirds of what a load writes, and it
+/// is the layer nobody asks about until something is wrong. Cooling it is the
+/// difference between `sealed(assertions)` — cheaper, and the information gone
+/// for good — and keeping the answer available at the price of a disk read.
+///
+/// The round trip is asserted the same way a volume's is: byte for byte. It has
+/// to go PAST THE DOOR to come back, since `asserted_by` lives in `[$kernel]`
+/// and a program may not write a kernel ledger, so the header is what earns
+/// that — and the gate below corrupts it and requires a refusal, because a
+/// bypass with an unchecked signature is just a bypass.
+#[test]
+fn the_trail_cools_and_comes_back_whole() {
+    let mut s = world();
+    let before = s.eval.store.canonical_state(&s.eval.h);
+    let hot = s.eval.store.fact_count();
+
+    let out = tmp("cool_trail.rofl");
+    let c = s.cool_trail(out.to_str().unwrap()).expect("cool the trail");
+    assert!(c.facts >= 10, "only {} trail rows cooled", c.facts);
+    s.evaluate().expect("re-evaluate");
+    assert!(s.eval.store.fact_count() < hot, "cooling the trail freed nothing");
+    assert_eq!(s.ask("asserted_by[$kernel](F, W, T)").unwrap().rows.len(), 0,
+        "the trail is still hot after cooling");
+    // THE FACTS THEMSELVES ARE UNTOUCHED. Only the account of who asserted them
+    // has gone; a cold trail must not cost the world its data.
+    assert_eq!(s.ask("ast_node[code](I, K, F, L)").unwrap().rows.len(), 4);
+
+    let back = s.reheat_trail(out.to_str().unwrap()).expect("reheat the trail");
+    assert_eq!(back, c.facts, "reheating restored {back} of {} rows", c.facts);
+    s.evaluate().expect("re-evaluate after reheating");
+    assert_eq!(s.eval.store.canonical_state(&s.eval.h), before,
+        "the trail did not come back the way it left");
+    std::fs::remove_file(&out).ok();
+}
+
+#[test]
+fn a_trail_this_engine_did_not_write_is_refused() {
+    let mut s = world();
+    let out = tmp("cool_trail_sig.rofl");
+    s.cool_trail(out.to_str().unwrap()).expect("cool");
+    let good = std::fs::read_to_string(&out).expect("trail");
+    let body = good.split_once('\n').map(|(_, b)| b.to_string()).unwrap_or_default();
+
+    let bad = tmp("cool_trail_bad.rofl");
+    std::fs::write(&bad, format!("-- rofl-volume 1 kernel=deadbeefdeadbeef\n{body}")).unwrap();
+    match s.reheat_trail(bad.to_str().unwrap()) {
+        Ok(_) => panic!("reheated a trail from another kernel"),
+        Err(e) => {
+            assert!(e.contains("not a trail this engine wrote"), "{e}");
+            assert!(e.contains("wanted:"), "the refusal did not say what it wanted: {e}");
+        }
+    }
+    // AND A WELL-SIGNED FILE THAT IS NOT A TRAIL IS ALSO REFUSED. The bypass is
+    // earned by the signature, so what comes through it must still be what it
+    // claims — otherwise the header licences writing anything into `[$kernel]`.
+    let hdr = good.lines().next().unwrap().to_string();
+    std::fs::write(&bad, format!("{hdr}\nast_node[code](nx_1, file, \"x.js\", 1).\n")).unwrap();
+    match s.reheat_trail(bad.to_str().unwrap()) {
+        Ok(_) => panic!("a signed file wrote a non-trail fact into the kernel's book"),
+        Err(e) => assert!(e.contains("`asserted_by` facts and nothing else"), "{e}"),
+    }
+    std::fs::remove_file(&out).ok();
+    std::fs::remove_file(&bad).ok();
+}

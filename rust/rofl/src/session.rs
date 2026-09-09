@@ -275,6 +275,83 @@ impl Session {
         Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
     }
 
+    /// COOL THE ASSERTION TRAIL: the `why was this here` layer, parked.
+    ///
+    /// `asserted_by` is two-thirds of what a load writes and half of what a
+    /// world then holds — measured on 16 eslint files, 41 722 rows against
+    /// 43 078 base facts, and dropping it takes a load from 331 ms to 94. It is
+    /// also the layer nobody asks about until something is wrong.
+    ///
+    /// SEALING IT WOULD BE CHEAPER AND WORSE. `sealed(assertions)` already
+    /// exists and gets the same numbers, but the information is then never
+    /// written and `why` can never be answered, at any price. Cooling parks it:
+    /// the rows go to disk and come back when a question needs them.
+    ///
+    /// THE HOLE IS WHAT MAKES IT HONEST. A world whose trail is cold must
+    /// REFUSE a question about authorship rather than answer it empty, because
+    /// an empty audit and a clean one are the same two characters — so the
+    /// caller writes `hole($cold(assertions), cooled_to_disk)` as it cools,
+    /// exactly as it does for a volume.
+    pub fn cool_trail(&mut self, out: &str) -> Result<Cooled, String> {
+        let ab = self.eval.v.asserted_by;
+        let mut ids = Vec::new();
+        for id in self.eval.store.all_facts() {
+            if self.eval.store.alive(id) && self.eval.store.rec(id).rel == ab {
+                ids.push(id);
+            }
+        }
+        let mut text = self.header("$trail");
+        for id in &ids {
+            let r = *self.eval.store.rec(*id);
+            let args = self.eval.store.args(*id).to_vec();
+            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
+            text.push_str(".\n");
+        }
+        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
+        self.eval.store.remove_many(&ids);
+        self.eval.store.dirty = true;
+        Ok(Cooled { facts: ids.len(), bytes: text.len(), path: out.to_string() })
+    }
+
+    /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
+    ///
+    /// `asserted_by` lives in `[$kernel]`, and a program may not write a kernel
+    /// ledger — rightly, since that is the whole `$` ring. So a cooled trail
+    /// cannot come back through `load`, and this adds to the store directly.
+    ///
+    /// THAT IS THE SAME CATEGORY AS `seed::restore`, NOT A NEW ONE: the door
+    /// exists to judge UNTRUSTED INPUT, and a file this engine wrote of its own
+    /// state is not input, it is the state. What makes the claim checkable is
+    /// the header — the volume names the kernel it was written under, and a
+    /// mismatch is refused rather than translated, because translating needs
+    /// the meaning that has been lost.
+    pub fn reheat_trail(&mut self, path: &str) -> Result<usize, String> {
+        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        let head = text.lines().next().unwrap_or("");
+        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", env!("ROFL_KERNEL_HASH"));
+        if !head.starts_with(&want) {
+            return Err(format!(
+                "{path}: not a trail this engine wrote, so what it means is unknown.\n  \
+                 header: {head}\n  wanted: {want}..."
+            ));
+        }
+        let cs = rofl_parse::parse(&mut self.eval.h, &text)?;
+        let ab = self.eval.v.asserted_by;
+        let kp = self.eval.v.kernel_persp;
+        let mut n = 0;
+        for c in &cs {
+            if !c.body.is_empty() || c.head.rel != ab {
+                return Err(format!("{path}: a trail holds `asserted_by` facts and nothing else"));
+            }
+            let args = c.head.args.clone();
+            if self.eval.store.add(&self.eval.h, ab, kp, &args, F_BASE) {
+                n += 1;
+            }
+        }
+        self.eval.store.dirty = true;
+        Ok(n)
+    }
+
     /// REHEAT A COOLED VOLUME, refusing one this engine did not write.
     ///
     /// The check is a REFUSAL and never a repair: told the kernel has moved, a

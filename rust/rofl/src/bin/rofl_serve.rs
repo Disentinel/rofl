@@ -132,6 +132,18 @@ impl Server {
                     .collect();
                 Ok(json!({ "volumes": rows }))
             }
+            // The assertion trail, parked and fetched back. See
+            // `Session::cool_trail` for why this is cooled rather than sealed.
+            "cool_trail" => {
+                let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool_trail needs `path`")?.to_string();
+                let c = self.get(r)?.cool_trail(&out)?;
+                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
+            }
+            "reheat_trail" => {
+                let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat_trail needs `path`")?.to_string();
+                let n = self.get(r)?.reheat_trail(&p)?;
+                Ok(json!({ "restored": n }))
+            }
             "fork" => {
                 let f = self.get(r)?.fork();
                 let facts = f.eval.store.fact_count();
