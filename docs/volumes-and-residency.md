@@ -309,6 +309,50 @@ is the same instinct arriving from the query side rather than the storage side,
 and the two meet: demand says which volumes are touched, volumes say what may
 stay on disk.
 
+## What a warmed world costs to ask, and what it costs to start
+
+Both measured 2026-09-09 on a loaded machine — load average 23.8 and 26.2 —
+so the ABSOLUTE figures are upper bounds and only the shapes and the ratios
+should be quoted. Said here rather than discovered later.
+
+**Asking.** After the fixpoint the store is clean, `ensure` returns at once and
+a question is a match rather than a computation. What it costs depends entirely
+on the SHAPE of the question, over the 128-file world of 5 676 864 facts:
+
+| question | rows | median |
+|---|---|---|
+| a point, key fully bound | 1 | 5.5 ms |
+| a prefix, first argument bound | 240 | 8.6 ms |
+| a small relation, nothing bound | 1 297 | 16.3 ms |
+| a large relation, nothing bound | 13 509 | 72.0 ms |
+| the largest relation, nothing bound | 1 093 150 | **12 469 ms** |
+
+Three orders of magnitude between a keyed question and an open scan. "A warmed
+world answers in milliseconds" is true of the first four rows and false of the
+last by a factor of two thousand — which is the same lesson as everything else
+here: **the cost is a function of the question, not of the corpus.**
+
+Two things worth flagging rather than filing. 5.5 ms for a point query
+returning one row is slow for an index probe, so there is fixed per-question
+overhead beyond the probe itself, unmeasured. And a clean re-measure is owed
+before any of this is quoted as database behaviour.
+
+**Starting.** The core — no source at all, just the packs — is 20 630 facts and
+383 ms. A volume on top of it costs 279 to 770 ms of its own. And:
+
+```
+build the core            383 ms
+fork() the built core       3 ms
+```
+
+**One hundred and twenty-eight times cheaper to fork than to rebuild.** That is
+the repair for the 5.87x above, and it needs no new mechanism: `fork()` is on
+the API and now carries `space` through. Reconstructing the sum-of-parts figure
+with a forked core rather than a rebuilt one puts 64 volumes at roughly 26 s
+against the single world's 32 s — so the parts finally win, narrowly. That is
+an ESTIMATE from the decomposition and not a measurement, and it is the next
+thing to run.
+
 ## How to falsify this
 
 - `node --experimental-strip-types scanners/volume_locality.ts` — every volume
