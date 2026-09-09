@@ -29,6 +29,11 @@ export interface QueryRow { text: string; bindings: Record<string, string>; }
  *  thing to ask about — a caller decides whether unpopulatable is a defect. */
 export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; }
 
+/** What an evaluation spent, beside whether it finished. `peakRows` is the most
+ *  rows held at once and `space` is the wall — so a caller can see it coming
+ *  instead of learning the distance by crossing it. */
+export interface EvalReport { partial: boolean; peakRows: number; space: number; }
+
 /** whynot's demonstration bounds. `depth` counts levels of literal
  *  explanation: 1 is the single-step form (name the failing premises and
  *  stop), 2 also explains each of those premises, and so on. `nodes` caps
@@ -185,6 +190,8 @@ export class Rofl {
   private kernelClaimed = false;
   private lastStaged: StagedFact[] = [];
   private lastSteps = 0;
+  private lastPeakRows = 0;
+  private lastSpace = 0;
   /** Whether the loaded program reads provenance in a rule body, as the last
    *  evaluation read the rules. Starts pessimistic: until an evaluation has
    *  actually looked, "it might" is the only honest answer, and it is the one
@@ -631,8 +638,10 @@ export class Rofl {
       : new RoundEvaluation(this.store, opts);
   }
 
-  private ensure(budget: number, holeId: Term): { partial: boolean } {
-    if (!this.store.dirty) return { partial: this.store.partialEval };
+  private ensure(budget: number, holeId: Term): EvalReport {
+    if (!this.store.dirty) {
+      return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.lastSpace };
+    }
     const ev = this.newEval(budget, holeId);
     const out = ev.run();
     this.lastStaged = out.staged;
@@ -646,11 +655,24 @@ export class Rofl {
     // budget of whatever ran last.
     this.store.noteEval(budget, ev.steps, out.partial);
     this.diagnostics.push(...out.diags);
-    return { partial: out.partial };
+    // HOW CLOSE IT CAME, reported WITHOUT a failure. `peakRows` is the
+    // high-water mark of rows held at once and `space` is the wall it is
+    // measured against; until 2026-09-09 neither left the Evaluation, so the
+    // only way to learn the distance to the nearest hard ceiling in this system
+    // was to cross it and read `space_exhausted` off a hole. That is the defect
+    // CLAUDE.md names twice over — a gate whose criterion is borrowed from
+    // whichever tool produced the first red, and a capability nothing exercises
+    // — and it cost a real diagnosis: two mutants of a cost gate stopped
+    // fitting, and the distance had to be recovered by wrapping this method
+    // from a test. The information existed and breaking something was the only
+    // way to read it.
+    this.lastPeakRows = ev.peakRows;
+    this.lastSpace = ev.space;
+    return { partial: out.partial, peakRows: ev.peakRows, space: ev.space };
   }
 
   /** Evaluate now (mainly for tests); throws on unstratifiable programs. */
-  evaluate(budget: number = DEFAULT_BUDGET): { partial: boolean } {
+  evaluate(budget: number = DEFAULT_BUDGET): EvalReport {
     return this.ensure(budget, mka('$adhoc'));
   }
 

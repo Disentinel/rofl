@@ -192,6 +192,11 @@ interface Cost {
   total: number; facts: number; firings: number;
   tally: Map<string, number>;
   q: (lit: string) => { n: number; unpopulatable: boolean; partial: boolean };
+  /** How close this world came to the engine's row wall, reported without a
+   *  failure. Until 2026-09-09 the only way to read the distance was to cross
+   *  it — MUTANT C and C' did, and came back `space_exhausted`. */
+  peakRows: number;
+  space: number;
   /** `hole(Q, W)` as this world answered it, BEFORE any assertion about it.
    *  MUTANT E reads this rather than `q`, because `q` refuses a partial answer
    *  and a truncated world makes the very query that detects the truncation
@@ -238,7 +243,13 @@ function build(w: WorldSpec, opts: { muts?: Mut[]; dropLayer?: boolean; budget?:
       return out;
     };
   }
-  r.evaluate(opts.budget ?? 400_000_000);
+  // AND HOW CLOSE IT CAME TO THE WALL, which this file learned the hard way and
+  // could not read until 2026-09-09. MUTANT C and C' stopped fitting on the
+  // merged corpus and came back `space_exhausted` instead of a cost — the
+  // distance to the ceiling was only legible by crossing it. `evaluate` reports
+  // `peakRows` and `space` now, so the gate that found the wall states the
+  // distance on every world it builds.
+  const spent = r.evaluate(opts.budget ?? 400_000_000);
   let total = 0; for (const v of tally.values()) total += v;
   // THE QUERIES BELOW ARE OUTSIDE THE TALLY, which is the one place this
   // instrument differs from test/js-fixpoint-cost.test.ts: that file's `cost()`
@@ -274,7 +285,8 @@ function build(w: WorldSpec, opts: { muts?: Mut[]; dropLayer?: boolean; budget?:
     raw.rows.map((x) => `${x.bindings.Q}/${x.bindings.W}`), [],
     `${w.name}: the world whose cost this file measures must reach its fixpoint`);
   const holes = { n: raw.rows.length, unpopulatable: raw.unpopulatable!, partial: raw.partial };
-  return { total, facts: store.facts.size, firings: store.firings.size, tally: snapshot, q, holes };
+  return { total, facts: store.facts.size, firings: store.firings.size, tally: snapshot, q, holes,
+           peakRows: spent.peakRows, space: spent.space };
 }
 
 interface LayerCost {
@@ -463,6 +475,24 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   console.log(`    rows per derivation: layer ${L.perFiring.toFixed(2)}, rest of the world ${rest.toFixed(2)}`);
   assert.ok(Math.abs(L.perFiring - 22.33) < 5,
     `the layer walks ${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.33`);
+
+  // AND THE DISTANCE TO THE WALL, STATED RATHER THAN DISCOVERED. This is the
+  // gate that found the ceiling by crossing it — MUTANT C and C' came back
+  // `space_exhausted` on the merged corpus and the distance had to be recovered
+  // by wrapping `newEval` from a probe. `evaluate` reports it now.
+  // MEASURED 2026-09-09: 266 505 peak rows against 434 149 facts, a ratio of
+  // 0.614 and 53.3% of the 500 000-row wall. Two earlier estimates were wrong
+  // in opposite directions — 87% read the wall as facts when it counts ROWS,
+  // and 44% carried another rule set's 0.507 rows-per-fact across unmeasured.
+  // The band is wide because this is a ceiling check, not a cost pin: what it
+  // must catch is the world approaching the wall, not drifting near it.
+  console.log(`    peak rows ${L.world.peakRows} of ${L.world.space} `
+            + `(${(100 * L.world.peakRows / L.world.space).toFixed(1)}%), `
+            + `${(L.world.peakRows / L.world.facts).toFixed(3)} per fact`);
+  assert.ok(L.world.peakRows > 0, 'the engine reports what it held, not only whether it finished');
+  assert.equal(L.world.space, 500_000, 'DEFAULT_SPACE, and it is not raisable from the public API');
+  assert.ok(L.world.peakRows < L.world.space * 0.75,
+    `this world is ${(100 * L.world.peakRows / L.world.space).toFixed(1)}% of the row wall`);
 });
 
 test('the control-flow layer\'s read paths, by name, and the 94% one is GONE', () => {
