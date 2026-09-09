@@ -2161,6 +2161,26 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 --                             ES2025 and the highest environment on the scale
 --                             is ts5 at 2022, so the feature would sit in
 --                             `feature_unreachable[audit]` for ever
+--                             DETAIL CORRECTED 2026-09-09, conclusion intact:
+--                             the highest rank on the scale is `es2023` at 2023,
+--                             not ts5 at 2022 — `env_rank(es2023, 2023)` is in
+--                             facts/js-env.rofl. 2023 is still short of 2025, so
+--                             the feature is still unreachable and the item's
+--                             answer does not move. Recorded because a wrong
+--                             detail under a right conclusion is the shape that
+--                             survives review: nobody re-reads the premise of a
+--                             sentence they agree with.
+--                             AND THE UNBLOCKER MAY NOT BE THE ERA SCALE AT ALL.
+--                             Import attributes ship in Node 22. The owner
+--                             approved a SECOND axis on 2026-09-09 — runtime
+--                             versions as subkinds, `runtime_includes(node20,
+--                             node18)`, bridged to the ES scale by
+--                             `provides_release(node20, es2022)` — so an
+--                             environment could reach this feature through the
+--                             runtime axis without the ECMAScript scale moving
+--                             at all. If that lands, this third of the item
+--                             closes for a different reason than the one written
+--                             here, and the owner should be told which.
 --   export_default_specifier  `export v from` is a Babel proposal and NO
 --                             environment claims it, not even ts5
 -- The first two land with the decorator work, which needs the same plugin and
