@@ -55,6 +55,15 @@ export interface SpanRel { rel: string; arity: number; shapes: Shape[] }
 export interface Refusal { where: string; why: string }
 
 const SKIP = new Set(['at', 'len', 'src']);
+/** HOST-PROVIDED, and the span IR named them before this file existed:
+ *  `ch(I, C) :- at(I), src(S), C is str_char(S, I)` is a character read and
+ *  `kind(I, K) :- ch(I, C), cls(C, K)` its classification, both of which the
+ *  generated Rust already has as `kind_of`. Trying to DERIVE them is the
+ *  mistake — they are the host boundary
+ *  (f_the_generator_found_the_host_boundary_by_refusing_to_guess), and a
+ *  generator that does not know what it is given will refuse what it was
+ *  handed. */
+const HOST = new Set(['ch', 'kind', 'cls']);
 /** Predicates the previous layer already emits. */
 const PREDS = new Set(['opens_str', 'opens_cmt', 'code_at', 'str_open', 'str_close',
   'wordch', 'prevword', 'dollar_before', 'word_start', 'white']);
@@ -104,13 +113,53 @@ export type Step =
    *  where `close_between` holds if some close lies strictly between. Without
    *  the exclusion the clause would admit EVERY later close, so the negated
    *  companion is required and its absence is a refusal rather than a guess. */
-  | { k: 'search'; test: Test };
+  | { k: 'search'; test: Test }
+  /** A relation over ONE position that carries a VALUE — `punct(I, lpar) :-
+   *  kind(I, lpar), code_at(I)`. It tests the position and binds the value
+   *  without moving the cursor, which is why `tok(I, I) :- punct(I, K)` has a
+   *  zero-width span. The predicate layer emits booleans and cannot hold it. */
+  | { k: 'valued'; rel: string }
+  /** `consumed(J) :- op2(I, J, Op)` — a single position is interesting when
+   *  SOME span of a relation touches it. An existential projection, and the
+   *  sixth shape this layer needed. Each was read out of the rules when a
+   *  refusal named it, never chosen in advance. */
+  | { k: 'projected'; rel: string; end: boolean };
 
 export type Prod =
   | { p: 'chain'; steps: Step[]; endOff: number | null; value: string | null }
   | { p: 'while'; seedRel: string | null; step: Test[]; value: string | null };
 
 export interface SpanRel2 { rel: string; arity: number; prods: Prod[] }
+export interface ValuedRel { rel: string; cases: { tests: Test[]; value: string }[] }
+
+/** Relations of the form `R(I, <atom>)` whose every clause is tests at known
+ *  offsets. Extracted before the spans, because a span may consume one. */
+function valuedRels(prog: Clause[], byHead: Map<string, { c: Clause; i: number }[]>): Map<string, ValuedRel> {
+  const out = new Map<string, ValuedRel>();
+  for (const [rel, cs] of byHead) {
+    if (cs.length === 0) continue;
+    const cases: { tests: Test[]; value: string }[] = [];
+    let ok = true;
+    for (const { c } of cs) {
+      const a = c.head.args;
+      const I = vn(a[0]);
+      const v = a.length === 2 ? an(a[1]) : null;
+      if (c.body.length === 0 || I === null || v === null) { ok = false; break; }
+      const off = offsets(c, I);
+      const tests: Test[] = [];
+      for (const b of c.body) {
+        if (b.t === 'bi' || SKIP.has(b.lit.rel)) continue;
+        const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, off);
+        if (!t) { ok = false; break; }
+        tests.push(t);
+      }
+      if (!ok) break;
+      cases.push({ tests, value: v });
+    }
+    if (ok && cases.length) out.set(rel, { rel, cases });
+  }
+  return out;
+}
 
 /** A production is a CHAIN: walk the body in written order, keeping a cursor.
  *  A premise either TESTS a position at a known offset, or CONSUMES a span of a
@@ -121,21 +170,38 @@ export interface SpanRel2 { rel: string; arity: number; prods: Prod[] }
  *  `optok` not until `op2` — so the pass repeats while it keeps adding
  *  relations. That is the mirror of the predicate layer, which closes DOWN by
  *  dropping anything reading what it refused; here it closes UP. */
-export function extract(): { rels: SpanRel2[]; refused: Refusal[] } {
+export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: ValuedRel[];
+                             projected: { rel: string; of: string; end: boolean }[] } {
   const prog = parseProgram(read('examples/ring1/ring1.rofl'));
   const byHead = new Map<string, { c: Clause; i: number }[]>();
   for (const [i, c] of prog.entries()) {
     if (!byHead.has(c.head.rel)) byHead.set(c.head.rel, []);
     byHead.get(c.head.rel)!.push({ c, i });
   }
+  const valued = valuedRels(prog, byHead);
+  /** rel -> [span relation, true when the projection is onto the span's END] */
+  const projected = new Map<string, { of: string; end: boolean }>();
   const done = new Map<string, SpanRel2>();
   let refused: Refusal[] = [];
 
   for (let pass = 0; pass < 12; pass++) {
     const before = done.size;
     refused = [];
+    // projections become available as their span does
     for (const [rel, cs] of byHead) {
-      if (done.has(rel)) continue;
+      if (projected.has(rel) || cs.length !== 1) continue;
+      const c = cs[0]!.c;
+      const a = c.head.args;
+      if (a.length !== 1 || vn(a[0]) === null || c.body.length !== 1) continue;
+      const b = c.body[0]!;
+      if (b.t !== 'pos' || !done.has(b.lit.rel) || b.lit.args.length < 2) continue;
+      const X = vn(a[0]);
+      const at0 = vn(b.lit.args[0]), at1 = vn(b.lit.args[1]);
+      if (X === at1) projected.set(rel, { of: b.lit.rel, end: true });
+      else if (X === at0) projected.set(rel, { of: b.lit.rel, end: false });
+    }
+    for (const [rel, cs] of byHead) {
+      if (done.has(rel) || HOST.has(rel) || projected.has(rel)) continue;
       const heads = cs.filter(({ c }) => c.body.length > 0 && c.head.args.length >= 2
         && vn(c.head.args[0]) !== null && vn(c.head.args[1]) !== null);
       if (heads.length === 0 || heads.length !== cs.length) continue;
@@ -191,6 +257,29 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[] } {
           }
           const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, curOff);
           if (t) { steps.push({ k: 'test', off: 0, test: t }); continue; }
+          // a projection of an expressible span onto one position
+          if (a0 !== null && curOff.get(a0) !== undefined && projected.has(b.lit.rel)
+              && b.lit.args.length === 1) {
+            const pj = projected.get(b.lit.rel)!;
+            steps.push({ k: 'test', off: 0,
+              test: (b.t === 'neg'
+                ? { t: 'not', x: { t: 'pred', off: curOff.get(a0)!, rel: b.lit.rel } }
+                : { t: 'pred', off: curOff.get(a0)!, rel: b.lit.rel }) });
+            void pj;
+            continue;
+          }
+          // host-provided: the generated Rust answers it directly
+          if (b.t === 'pos' && HOST.has(b.lit.rel) && a0 !== null && curOff.get(a0) !== undefined) {
+            steps.push({ k: 'valued', rel: b.lit.rel });
+            continue;
+          }
+          // a valued single-index relation: tests the position, binds a value,
+          // and leaves the cursor where it was
+          if (b.t === 'pos' && valued.has(b.lit.rel) && a0 !== null && curOff.get(a0) !== undefined
+              && b.lit.args.length === 2 && an(b.lit.args[1]) === null) {
+            steps.push({ k: 'valued', rel: b.lit.rel });
+            continue;
+          }
           // SEARCH: a positive test on the head's END, which no offset can
           // reach because the end is what the clause is looking for.
           if (b.t === 'pos' && a0 === J && b.lit.args.length === 1 && PREDS.has(b.lit.rel)) {
@@ -217,12 +306,15 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[] } {
     }
     if (done.size === before) break;
   }
-  return { rels: [...done.values()], refused };
+  return { rels: [...done.values()], refused, valued: [...valued.values()],
+           projected: [...projected.entries()].map(([rel, v]) => ({ rel, ...v })) };
 }
 
 function main(): void {
-  const { rels, refused } = extract();
-  console.log(`${rels.length} span relations expressed, ${refused.length} refused\n`);
+  const { rels, refused, valued, projected } = extract();
+  console.log(`${rels.length} span relations and ${valued.length} valued relations expressed, ${refused.length} refused\n`);
+  console.log('  valued: ' + valued.map((v) => `${v.rel}(${v.cases.length})`).join(' '));
+  console.log('  projected: ' + (projected.map((v) => `${v.rel}<-${v.of}.${v.end ? 'end' : 'start'}`).join(' ') || 'none') + '\n');
   for (const r of rels) {
     const kinds = r.prods.map((p) => p.p === 'while' ? 'while'
       : `chain:${p.steps.filter((x) => x.k === 'consume').length}`
