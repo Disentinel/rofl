@@ -8,6 +8,16 @@ elapsed time, and the work was almost entirely mechanical. This document
 measures that and proposes changes. It is a criticism of the current test
 design, not of testing.
 
+## Why this is worth a document
+
+The JavaScript modeling sessions cost roughly **US$5,000 in subscription
+tokens** in total, per Claude Code's own accounting (figure reported by the
+owner, not measured here). A large and identifiable share of that went into the
+work below: re-measuring and restating derived totals in tests, none of which
+was a change in behaviour. That is the argument for the proposal at the end —
+not tidiness, but that the suite's current design charges a real price for every
+routine change.
+
 ## The measurement
 
 Adding `import_attribute` to the vocabulary — one node kind, five verdicts, five

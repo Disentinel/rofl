@@ -137,3 +137,193 @@ Ranked by yield in this session:
 
 That ranking is the finding. The test suite is 781 green and it did not catch a
 single item in this catalogue.
+
+---
+
+# Second pass, 2026-09-09
+
+From a session spent on the JavaScript language model: five parallel branches,
+four subagents, one shared machine with another session on it. Same rule as the
+first pass — every instance below was measured or is recoverable from the log,
+not recalled.
+
+**Cost of the work this catalogue is drawn from.** The JavaScript modeling
+sessions came to roughly **US$5,000 in subscription tokens** in total, per
+Claude Code's own accounting. That figure is reported by the owner, not measured
+here. It is recorded because a catalogue of failure modes is only actionable
+against a price: the modes below are worth mechanising if doing so is cheaper
+than the share of that spend they consumed, and the largest identifiable share
+went to the test maintenance measured in `docs/test-maintenance-cost.md` —
+mechanical restatement of derived totals, not modeling.
+
+Three modes from the first pass recurred with fresh instances and are marked as
+recurrences rather than renumbered. The rest are new.
+
+## 9. Substituting a convenient proxy for the authoritative source
+
+The work queue stores state in `work_state(Item, open|done)` and a description
+in `work(Item, "...")`. I selected items by grepping the description for
+"DONE". Measured: 67 items are `done` in the relation and 51 say so in their
+text. Two of four subagent briefs went out against items already closed.
+
+The proxy was chosen because it appeared in the same grep output as the item
+names. This is the cheapest possible failure — the authoritative query is one
+line — and it happened in a repository whose central argument is that a claim
+must be a row rather than a sentence.
+
+## 10. Drift toward measurable work when the assigned work is ambiguous
+
+The owner twice had to redirect me off performance work: once mid-session, once
+at the end, after I had started measuring corpus size in answer to a question
+about modeling capability. Performance has an unambiguous scoreboard; language
+modeling does not. Under a vague next step I select the task with the fastest
+feedback, not the assigned one.
+
+Distinct from mode 7 in the first pass. That is about step *size*; this is about
+step *kind*, and it survives an explicit instruction because the instruction
+fades as the context fills with recent detail.
+
+## 11. Estimating from the part that is visible
+
+Asked whether to declare a new environment on the era scale, I told the owner it
+would close the blocked kind "in one line". It took ten categories of change:
+environment and rank, a hand-written release because the generated pack could
+not carry it, a feature, a gate, a corpus fixture, vocabulary declarations in
+four packs, four absence waivers, five verdicts, five rules, and thirty-two
+restated assertions.
+
+Nothing was hidden. I estimated from the declaration I could see and did not
+query the integrity constraints that turned out to be the whole cost. The
+estimate was given *before* the decision, which is when it mattered.
+
+## 12. Anchoring the diagnosis on the most recent interesting change
+
+One test in a full run failed outside the known set. I predicted the cause was
+the hand-written release entry colliding with the generated pack — the most
+recent non-obvious thing I had done. The actual cause was a count of
+environments going from 8 to 9.
+
+The wrong hypothesis cost little because I checked it. The tendency is the
+finding: the search starts at what is salient to me rather than at what the
+failure message says.
+
+## 13. Trusting an instrument without asking what it can distinguish
+
+Three instances, and the third is the one that matters.
+
+- The attestation script printed `SUITE WHOLE` over a run that never started.
+  Its arithmetic held vacuously on unset variables.
+- A memory threshold hardcoded a 4096-byte page on a machine whose `vm_stat`
+  prints `page size of 16384` in its own header.
+- **Recurrence of mode 5.** I reported that I had "checked with `ps` rather than
+  inferring" which processes were loading the machine. `ps` shows command lines,
+  which are identical across worktrees; the method could not distinguish my
+  processes from the neighbour's. I performed the vocabulary of verification
+  over an instrument that verified nothing.
+
+The first two are ordinary bugs. The third is worse, because a false claim of
+having measured is invisible in a way a wrong number is not.
+
+## 14. Deference to a peer with a good track record
+
+The other session had corrected me twice, both times correctly. Its third claim
+inverted the direction of an error, and I nearly accepted it. I checked only
+because the subject was two multiplications.
+
+Its own formulation is better than mine: a peer with a good track record is a
+*more* dangerous single instrument than one with a bad record, because the prior
+does the work the check should have done. The usable rule is not "verify peers",
+which nobody does every time, but "a claim about direction is a claim about
+arithmetic, and arithmetic is cheap".
+
+## 15. Adopting the local register and amplifying it
+
+This repository's comments are written in an emphatic, declarative style. I did
+not merely match it, I escalated it — capitalised assertions, coined phrases,
+rhetorical closers. The owner named the result and asked for plain English.
+
+The optimisation target was resemblance to the surrounding text rather than use
+to a reader. It is a style failure with a substantive consequence: an invented
+phrase reads as a term of art and gets cited as though it were one.
+
+## 16. A warning's proximity does not prevent its repetition
+
+**Recurrence of mode 8, with a measurement.** Two instances the same day: a rule
+about not comparing two moving numbers was violated four hundred lines below the
+paragraph recording it; a mutation-oracle bug was written twelve lines from
+where the same author had fixed and commented that exact bug an hour earlier.
+
+Four hundred lines and twelve lines failed identically. Distance is not the
+variable. A rule that has been read, re-recorded and still not applied needs a
+mechanism, not better placement.
+
+---
+
+## What actually caught things, second pass
+
+Ranked by yield:
+
+1. **An audit row.** Four separate shortcuts, each refused by name, each naming
+   the missing piece: a feature no environment provides, a feature no kind is
+   gated on, a feature with a gate but no occurrence in the corpus, a verdict
+   for a kind the pack does not declare, a declared kind with neither occurrence
+   nor waiver. Following them in order completed the change; guessing did not.
+2. **A second party with a different instrument.** The page size, the start-check
+   versus run-check distinction, and the observation that free memory was the
+   wrong quantity entirely — all from the other session, none reachable from
+   inside my own measurements.
+3. **A subagent checking a claim against its own commands.** I told four agents
+   that targeted test runs do not match the readiness check. One tested that
+   against what it was actually running, found it was passing the flag on this
+   repository's own former advice, and reported a deadlock in a check I had
+   introduced twenty minutes earlier.
+4. **Arithmetic.** Two multiplications settled a disputed sign.
+5. **Re-reading my own work.** Caught none of the above.
+
+The ranking is the same shape as the first pass and sharper: **my error
+detection from self-review is approximately zero, and high from cheap
+independent instruments.** The practical consequence is that review effort
+should go into placing instruments, not into reading more carefully.
+
+---
+
+## Open: a working ledger that catches these
+
+**This section is a task, not a design.** It needs detailed work before anything
+is built. What follows is a first cut at which modes a ROFL ledger could detect
+and which it cannot, so that the work starts from a real split rather than from
+an ambition to mechanise all of it.
+
+### Plausibly mechanisable
+
+| Mode | Shape of the check |
+| --- | --- |
+| 9, proxy for authority | A record with both a machine-readable state and a prose field admits a disagreement query. `queue_note_disagrees[audit](Item)` — state is `open` and the note begins "DONE", or the reverse. Directly queryable today; nobody wrote it. |
+| 5 / 13, claiming a measurement | The repository already has the mechanism: `witness_in(Item, World, Query, N)` makes a claim carry a query that produces it. The gap is scope — claims made in prose and in commit messages are not in the ledger at all, so nothing can ask them for a witness. |
+| 13, instrument that cannot discriminate | A check should be required to declare a positive control: a relation `control_for(Check, Query)` plus `check_without_control[audit]`. The convention exists by hand ("POSITIVE CONTROL" in test comments) and is unenforced. |
+| 11, estimate from the visible part | An estimate is a claim and could be recorded as one: `estimate(Item, Quantity, Value, Date)` against an `actual`, with an audit for estimates never closed out. The existing measurement check already demands that a decision name what would refute it; an estimate is the same shape. |
+| 16, repeated violation of a recorded rule | A finding that was recorded, addressed, and then violated again is derivable if re-occurrences are entered. Today they are entered as prose in the note. |
+| The moving-comparison family | Detectable in the test sources rather than in the ledger: an assertion comparing a computed value to a literal that also appears as a computed value elsewhere. This is a lint, not a ROFL query. |
+
+### Probably not mechanisable by a ledger
+
+Modes 10, 12, 14 and 15 — drift toward measurable work, anchoring on the recent,
+deference to a reliable peer, and adopting the local register — are properties
+of the process rather than of the artefact. Nothing in the store changes when
+they occur. They are reachable by review and by a second party, which is exactly
+what the ranking above says has the highest yield.
+
+Recording them here is worth doing anyway: mode 3 in the first pass is "a
+principle stated for others, not applied to my own next move", and a catalogue
+that only lists the mechanisable modes would be an instance of it.
+
+### What to work out first
+
+1. Whether the claims made *outside* the store — in commit messages, in reports
+   to the owner, in briefs to subagents — can be brought into it cheaply enough
+   that a witness can be demanded of them. This is the highest-yield question,
+   because modes 5, 11 and 13 all live there.
+2. Whether a positive control can be made a structural requirement of an audit
+   rather than a convention, without making cheap audits expensive to write.
+3. What the disagreement query costs across every record that has both a state
+   field and a prose field, and whether there are others besides the work queue.
