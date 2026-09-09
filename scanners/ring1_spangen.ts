@@ -42,6 +42,12 @@ const an = (t: Term | undefined): string | null => {
 
 export type Test =
   | { t: 'kind'; off: number; kind: string }
+  /** A character compared with a LITERAL: `ch(I, "i")`. The keywords are
+   *  spelled out this way rather than sliced out of the source —
+   *  `kw_is(I) :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "s")` — so the text
+   *  of a token is NOT needed to read them, which is the opposite of what I
+   *  predicted before looking. The rules were simpler than the plan. */
+  | { t: 'char'; off: number; ch: string }
   | { t: 'state'; off: number; state: string }
   | { t: 'pred'; off: number; rel: string }
   | { t: 'not'; x: Test };
@@ -98,6 +104,10 @@ function asTest(rel: string, negated: boolean, args: Term[], off: Map<string, nu
   if (at === undefined) return null;
   let x: Test | null = null;
   if (rel === 'kind') { const k = an(args[1]); if (k) x = { t: 'kind', off: at, kind: k }; }
+  else if (rel === 'ch') {
+    const lit = args[1] as unknown as { k?: string; v?: unknown };
+    if (lit && lit.k === 's') x = { t: 'char', off: at, ch: String(lit.v) };
+  }
   else if (rel === 'st') { const s = an(args[1]); if (s) x = { t: 'state', off: at, state: s }; }
   else if (args.length === 1 && PREDS.has(rel)) x = { t: 'pred', off: at, rel };
   if (!x) return null;
@@ -105,7 +115,12 @@ function asTest(rel: string, negated: boolean, args: Term[], off: Map<string, nu
 }
 
 export type Step =
-  | { k: 'test'; off: number; test: Test }
+  /** `frame` names WHICH known position the offset is relative to: 0 is where
+   *  the production started, 1 is after the first consume, and so on. A test
+   *  may look BACK — `identtok(I, J) :- word(I, J), kind(I, lower)` tests the
+   *  START after the cursor has moved to the end — so one frame is not enough
+   *  and keeping only the current one made ordinary clauses unreadable. */
+  | { k: 'test'; frame: number; off: number; test: Test }
   | { k: 'consume'; rel: string; args: (string | null)[] }
   /** Advance to the NEAREST later position where `test` holds. This is what a
    *  clause encodes when it tests the head's END and excludes an earlier one:
@@ -202,15 +217,24 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: Value
     }
     for (const [rel, cs] of byHead) {
       if (done.has(rel) || HOST.has(rel) || projected.has(rel)) continue;
-      const heads = cs.filter(({ c }) => c.body.length > 0 && c.head.args.length >= 2
-        && vn(c.head.args[0]) !== null && vn(c.head.args[1]) !== null);
+      // A SINGLE-INDEX RELATION IS A DEGENERATE SPAN — start and end the same
+      // position, no cursor movement. Treating them separately was a scaffold
+      // that stopped paying: the dependency graph is NOT layered, it is mutual.
+      // `kw_is(I) :- word(I, J), ...` is a predicate that consumes a span, and
+      // `tok(I, I) :- punct(I, K)` is a span that reads a predicate. One
+      // generator over all of them, and the layering falls out instead of
+      // being imposed.
+      const heads = cs.filter(({ c }) => c.body.length > 0 && c.head.args.length >= 1
+        && vn(c.head.args[0]) !== null
+        && (c.head.args.length === 1 || vn(c.head.args[1]) !== null));
       if (heads.length === 0 || heads.length !== cs.length) continue;
 
       const prods: Prod[] = [];
       let stop: Refusal | null = null;
       for (const { c, i } of heads) {
         const where = `ring1.rofl#${i} ${rel}/${c.head.args.length}`;
-        const I = vn(c.head.args[0])!, J = vn(c.head.args[1])!;
+        const I = vn(c.head.args[0])!;
+        const J = c.head.args.length >= 2 ? vn(c.head.args[1])! : I;
         const off = offsets(c, I);
         const value = c.head.args.length >= 3 ? an(c.head.args[2]) : null;
 
@@ -239,7 +263,14 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: Value
         // the FOURTH time today a tool reported its own frame as a property of
         // the rules: a classifier with four populations, an offset solver that
         // read one direction, a loop guard anchored at the start, and now this.
+        // EVERY ANCHOR IS KEPT, NOT JUST THE CURRENT ONE. This is the fifth
+        // time today the tool reported its own frame as a property of the
+        // rules: a classifier with four populations, an offset solver reading
+        // one direction, a loop guard at the start instead of the cursor, one
+        // map for a whole chain, and now a chain that could not look back at a
+        // position it had already passed.
         let cur = I;
+        const frames: { v: string; off: Map<string, number> }[] = [{ v: I, off }];
         let curOff = off;
         const steps: Step[] = [];
         let bad: string | null = null;
@@ -253,15 +284,33 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: Value
             steps.push({ k: 'consume', rel: b.lit.rel, args: b.lit.args.slice(2).map(an) });
             cur = a1;
             curOff = offsets(c, cur);
+            frames.push({ v: cur, off: curOff });
             continue;
           }
-          const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, curOff);
-          if (t) { steps.push({ k: 'test', off: 0, test: t }); continue; }
+          // resolve the test against ANY frame, newest first
+          let placed = false;
+          for (let fi = frames.length - 1; fi >= 0 && !placed; fi--) {
+            const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, frames[fi]!.off);
+            if (t) { steps.push({ k: 'test', frame: fi, off: 0, test: t }); placed = true; }
+          }
+          if (placed) continue;
+          // AN EXPRESSIBLE DEGENERATE SPAN IS A TEST. `kw_is/1` is a span in
+          // this generator's own terms — start and end the same position — and
+          // `optok(I, J, is) :- kw_is(I), word(I, J)` asks it as a test. Once
+          // the layers merged, a relation could be expressible and still
+          // unusable purely because of which table it was filed under.
+          if (a0 !== null && curOff.get(a0) !== undefined && b.lit.args.length === 1
+              && done.has(b.lit.rel)) {
+            const base: Test = { t: 'pred', off: curOff.get(a0)!, rel: b.lit.rel };
+            steps.push({ k: 'test', frame: frames.length - 1, off: 0,
+              test: b.t === 'neg' ? { t: 'not', x: base } : base });
+            continue;
+          }
           // a projection of an expressible span onto one position
           if (a0 !== null && curOff.get(a0) !== undefined && projected.has(b.lit.rel)
               && b.lit.args.length === 1) {
             const pj = projected.get(b.lit.rel)!;
-            steps.push({ k: 'test', off: 0,
+            steps.push({ k: 'test', frame: frames.length - 1, off: 0,
               test: (b.t === 'neg'
                 ? { t: 'not', x: { t: 'pred', off: curOff.get(a0)!, rel: b.lit.rel } }
                 : { t: 'pred', off: curOff.get(a0)!, rel: b.lit.rel }) });
