@@ -60,7 +60,15 @@ const PACKS = [
   // refuse a pack of rules. Third time in one morning that a new pack reddened
   // another branch's closure; that is the closure working, and it is also the
   // merge cost of having three of them.
-  'rules/js-pack-home.rofl', RULES,
+  'rules/js-pack-home.rofl',
+  // AND ONE FROM THE wip/curve MERGE, 2026-09-09. `facts/js-cost.rofl` is the
+  // other session's per-rule cost table — instrumentation over the rules, the
+  // same class as the two above — and this world loads rather than refuses,
+  // because an audit over the rules themselves has no defensible reason to
+  // refuse a pack of facts about them. Fourth time in one morning that a pack
+  // added on one branch reddened another's closure, and every one was caught in
+  // a single run.
+  'facts/js-cost.rofl', RULES,
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER

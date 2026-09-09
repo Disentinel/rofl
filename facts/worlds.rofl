@@ -60,6 +60,10 @@ world_omits(w_ledger, "rules/js-vocabulary.rofl").
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
 world_omits(w_ledger, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_ledger, "facts/js-cost.rofl").
 
 -- ===========================================================================
 -- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
@@ -110,6 +114,10 @@ world_omits(w_queue, "rules/js-vocabulary.rofl").
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
 world_omits(w_queue, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_queue, "facts/js-cost.rofl").
 
 -- ===========================================================================
 -- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
@@ -168,3 +176,7 @@ world_omits(w_js_corpus, "rules/js-vocabulary.rofl").
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
 world_omits(w_js_corpus, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_js_corpus, "facts/js-cost.rofl").
