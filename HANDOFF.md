@@ -433,6 +433,74 @@ across two runs:
    A set defined by a RANK (`the five heaviest`) is a fourth: put the cut where
    the data has a measured gap instead.
 
+   **AND THE THIRD OCCURRENCE OF THE MOVING-COMPARISON RULE HAPPENED FOUR
+   HUNDRED LINES BELOW THE PARAGRAPH THAT RECORDS IT.** 2026-09-09, in
+   `test/js-layer-cost.test.ts`: MUTANT C' compares a live firing share against
+   `6.593`, which is the BASELINE's firing share written down as a literal. A
+   census moved the baseline to 6.712 and C' went red at 6.399 — still catching
+   its mutant, by 0.313 pp instead of 0.288, but against a reference that had
+   drifted out from under it. Two moving numbers again, with one of them only
+   LOOKING still because somebody had copied it.
+
+   The note beside that assertion already recorded two prior occurrences, both
+   on `perFiring`; this is the third and the first on `firingShare`. **So the
+   record has now failed three times to prevent the thing it records**, and the
+   answer was never going to be a better-written warning. The repair is to
+   COMPUTE the reference in the same run — measure the baseline world's share
+   alongside the mutant's and assert the delta against a band — so that nothing
+   is written down which the corpus can move, and a census moves both sides
+   together.
+
+   The general form is the one worth carrying out of this file: **a rule that
+   has been read, re-recorded and still not applied is asking to be made
+   structurally impossible to violate.** Restating the literal is a stopgap and
+   leaves the mechanism intact for a fourth time.
+
+   **A MUTANT'S ORACLE MUST KNOW WHICH HALF OF A UNION IT IS REMOVING.**
+   2026-09-09: MUTANT M16 deletes the `pattern_accessor` arm of
+   `eff_hidden_call` and asserted the relation EMPTIES. It does not —
+   `eff_hidden_call` is a union of two arms and the iterator's `next` survives,
+   three rows, exactly `pattern_next`. The oracle knew less about the relation
+   than the relation did. Rewritten as an identity instead of a number:
+
+   ```
+   eff_hidden_call  ==  pattern_next      (only the iterator hop remains)
+   pattern_next     >   0                 (the surviving arm has rows)
+   base: eff_hidden_call > pattern_next   (the removed doors were the difference)
+   ```
+
+   That is stronger than `=== 0` would have been EVEN IF ZERO HAD BEEN RIGHT: it
+   says which doors went and that the rest stayed, and it cannot be satisfied by
+   the relation merely vanishing. The same move as preferring a named set to a
+   count, applied to a mutation oracle.
+
+   **A MUTANT THAT REMOVES A RULE MUST BE JUDGED FROM DOWNSTREAM, NEVER FROM THE
+   RELATION IT REMOVED.** Same session, mutant `d14b`: it deletes the
+   `pattern_next` rule and then QUERIES `pattern_next` — asking the deleted rule
+   whether it was deleted. The shared `q` refuses correctly with "nothing in
+   this world can populate it", which is `unpopulatable` doing its job. Judge it
+   by what downstream LOST — here the three edges — not by the hole itself.
+
+   **AND THE WARNING'S PROXIMITY DOES NOT HELP, WHICH IS THE ARGUMENT FOR
+   STRUCTURE.** This exact bug had been found, fixed and COMMENTED in the c2
+   census mutant twelve lines away, earlier in the same session, by the same
+   author — and was then written again in another section of the same file. Put
+   it beside the C' entry above, where the moving-comparison lesson was
+   violated four hundred lines below the paragraph recording it, and the pair
+   says something neither says alone: **a lesson placed near the code does not
+   prevent its own repetition.** Four hundred lines and twelve lines fail the
+   same way. That is the case for making a rule impossible to violate rather
+   than for writing it more prominently.
+
+   **AND ALL THREE REDS OF THAT SESSION WERE ORACLES, NOT RULES** — worth saying
+   plainly, because the green line at the end otherwise implies the tests were
+   right first time. C' compared against a frozen copy of a moving number; M16
+   asserted a union empties when one arm goes; the c2/c5 census mutants would
+   have queried a relation whose only rule the mutant deletes. Each was a test
+   knowing less about its subject than the subject did. That is the better
+   direction to fail in, and three in one session still says where the next hour
+   of review belongs.
+
    **A FIFTH, from the other session 2026-09-09 and the most disguised of them:
    TWO COUNTERS WRITTEN BY THE SAME LINE OF CODE CANNOT CHECK EACH OTHER.** A
    test there compared `asserted_by` against `in_perspective` and read as a
@@ -755,6 +823,63 @@ about the model.**
 
    For a fleet: targeted test files during development, the full suite ONCE at
    the end, and stagger the ends.
+
+**PICKING WORK BY READING THE PROSE INSTEAD OF THE RELATION — and it was the
+integrator who did it.** 2026-09-09: a wave of four briefs was assembled by
+grepping `work(w_..., "...")` and treating a description that does not begin
+"DONE" as an open item. The authority is `work_state/2`, and it disagrees:
+**67 items are `done` while only 51 say so in their prose**, so sixteen are
+closed and do not advertise it. Two of the four briefs went out against items
+already `done` at HEAD — one of them three items at once.
+
+The agent that got them verified rather than assumed, found `work_state` =
+`done` for all three, `open_cell[audit]` = 10 with none of the ten its own, and
+`false_done`/`queue_stale`/`orphan` all zero — then re-ran every load-bearing
+claim in the notes instead of inventing work. THAT is the correct response to a
+brief written against a stale reading, and it is the reason the error cost
+little.
+
+```bash
+# the only correct way to pick an item
+grep -o 'work_state(\([a-z_]*\), open)' facts/worklist.rofl
+```
+
+**AND THE JOKE IS ON THE WHOLE REPOSITORY**: this file and CLAUDE.md argue at
+length that a claim must be a ROW rather than a sentence, that a count is not a
+set, and that a note is not a measurement — and the queue was read by its
+sentences by the person writing the briefs. A relation that exists and is not
+consulted is exactly as good as one that does not exist.
+
+**THE HONEST OTHER HALF, because it cuts the other way and matters more.**
+Re-measuring a `done` item was NOT wasted on either branch. The destructuring
+item was also `done`, and re-running it produced the `pattern_accessor` blind
+spot, the generator door, nine rows across three doors, and two new owned
+items. "Done" means the item's own question was answered, not that the ground
+under it stopped moving. So the fix is to pick from `work_state`, not to stop
+revisiting closed items — and a re-measurement of a closed item should be
+ENTERED as its own item rather than reopening the old one.
+
+**Three operational findings from that agent, all confirmed here before being
+written down.**
+
+1. **A WORKTREE WITHOUT `node_modules` FAILS TWO `js-modules` TESTS AND THEY
+   READ AS RESOLVER DEFECTS.** 42/2 without, 44/0 with a symlink to the main
+   checkout's, reproduced at HEAD with the branch reverted. Confirmed here that
+   agent worktrees differ in whether the symlink exists. The oracle is right to
+   distinguish `OUTSIDE` from `THROWS MODULE_NOT_FOUND`; the repair is the
+   environment. **This matters because every brief in that wave said "seven
+   failures are pre-existing and an eighth is yours"** — which would have sent
+   a worktree agent hunting a resolver bug that is a missing symlink. Say
+   instead: an eighth failure is yours UNLESS it is in `js-modules`, in which
+   case check for `node_modules` first.
+2. **`npm run measurecheck` EXITS 1 ON AN HONEST CHECKOUT** — verified here at
+   `001b849`: 2 rates stated without conditions, 4 decisions with no refuter.
+   It is NOT in `npm test`, so it is red and ignored, which is precisely the
+   state CLAUDE.md forbids for a gate.
+3. **EXIT 144 HAS A THIRD CAUSE: a run killed deliberately by its own agent for
+   fleet courtesy.** Two of them today. Indistinguishable from the pipe case
+   and the neighbour's-`pkill` case from inside the log — and a wrapper script's
+   own `exit=0` echo is not the suite's exit code, which is how it hides.
 
 **Budget the integration, not the authoring.** Merging cost nine hunks and ten
 failing tests, of which six were pins and **four were real** — and three of the
