@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--space N] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -54,6 +54,17 @@ const USAGE: &str =
 struct Args {
     path: Option<String>,
     budget: i64,
+    /// The materialization wall, in rows (`DEFAULT_SPACE`, 500 000).
+    ///
+    /// SEPARATE FROM `--budget` BECAUSE THEY DEMAND OPPOSITE REPAIRS, which is
+    /// the reason `budget_exhausted` and `space_exhausted` are two atoms
+    /// (src/reflect.ts:249): told the first, raise it and finish; told the
+    /// second, raising is the move that turns a refusal into a corpse — unless
+    /// you have decided you can hold the answer. Added 2026-09-09 when the JS
+    /// model over 32 files of eslint/lib refused here with `space_exhausted`
+    /// and this binary had no way to say yes; the JS side gained the same
+    /// setting the same day (`EvalOpts.space`, examples/reach).
+    space: i64,
     ticks: u32,
     want_bytes: bool,
     /// Print `derivations` (scripts/derivations.ts) instead of
@@ -67,6 +78,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
     let mut a = Args {
         path: None,
         budget: 100_000,
+        space: 500_000,
         ticks: 0,
         want_bytes: false,
         derivations: false,
@@ -87,6 +99,12 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
                 a.budget = v
                     .parse()
                     .map_err(|_| format!("--budget: not an integer: {v}"))?;
+            }
+            "--space" => {
+                let v = value(args, &mut i, "--space")?;
+                a.space = v
+                    .parse()
+                    .map_err(|_| format!("--space: not an integer: {v}"))?;
             }
             "--ticks" => {
                 let v = value(args, &mut i, "--ticks")?;
@@ -117,6 +135,7 @@ fn main() {
     let Args {
         path,
         budget,
+        space,
         ticks,
         want_bytes,
         derivations,
@@ -143,6 +162,10 @@ fn main() {
             std::process::exit(2);
         }
     };
+    // SET AFTER `load` AND BEFORE ANY EVALUATION. `rofl::load` builds the Eval
+    // with the default; the field is public and this is the one caller that has
+    // a reason to move it, so the library signature stays as it is.
+    l.eval.space = space;
     let t_load = t0.elapsed();
     if l.dangling > 0 {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
