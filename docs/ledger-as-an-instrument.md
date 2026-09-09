@@ -196,7 +196,11 @@ Trimming: ask whether the useful function survives without the component.
 
 1. Can claims made outside the store be brought into it cheaply enough to be
    attributed, if not witnessed? Briefs first, reports second — that is where
-   the damage is.
+   the damage is. **Answered 2026-09-09 in `docs/claims-outside-the-store.md`**,
+   with the measurement: hand-written packs are 54% comment by line, about 5% of
+   note records carry any check, and the repository already records fourteen
+   stale markers, eleven corrections and five findings whose subject is a note
+   being wrong.
 2. Can a positive control be made a structural requirement of an audit without
    making cheap audits expensive to write?
 3. Should every escape hatch carry an expiry by construction, rather than by the
