@@ -33,23 +33,40 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
             replace: `may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
                            ident_in[code](E, Name, File).`, file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
-      // +4 -> +10 on 2026-09-07, and the six new ones are a SECOND collision the
+      // +4 -> +10 on 2026-09-07, and the six new ones were a SECOND collision the
       // tagged-template fixture brought with it: `const f = mark`a`` in `useTag`
-      // and the parameter `f` in `apply2`, `applyFirst` and `useCb`. Named
-      // rather than counted, because a count that grew for a reason nobody
-      // looked at is the thing this file exists to prevent.
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
-        b.n('ambiguous_call[audit](C, F, G)') + 10,
-        'the two `const c` become one name again and both `hold`s answer both sites');
+      // and the parameter `f` in `apply2`, `applyFirst` and `useCb`.
+      // ...AND ON 2026-09-09 THE DELTA STOPPED BEING THE ASSERTION. It went to
+      // +22 when w_scope_shadowing put nine shadowing sites in alpha.mjs, which
+      // is the exact hazard a delta has: it is right on each branch and wrong in
+      // the merge, and it never says WHICH rows. What the mutant does is make
+      // every same-name binder in a file one name again, so the rows are named.
+      assert.deepEqual(newAmbRows(m, b), [
+        'alpha.mjs: hold@alpha.mjs | hold@alpha.mjs',
+        'alpha.mjs: leaf@alpha.mjs | stamped@alpha.mjs',
+        'alpha.mjs: mid@alpha.mjs | stamped@alpha.mjs',
+        'alpha.mjs: shBlockHit@alpha.mjs | shOuterHit@alpha.mjs',
+        'alpha.mjs: shInnerHit@alpha.mjs | shOuterHit@alpha.mjs',
+        'alpha.mjs: shOuterHit@alpha.mjs | shBlockHit@alpha.mjs',
+        'alpha.mjs: shOuterHit@alpha.mjs | shInnerHit@alpha.mjs',
+        'alpha.mjs: shOuterHit@alpha.mjs | shTdzHit@alpha.mjs',
+        'alpha.mjs: shTdzHit@alpha.mjs | shOuterHit@alpha.mjs',
+        'alpha.mjs: stamped@alpha.mjs | leaf@alpha.mjs',
+        'alpha.mjs: stamped@alpha.mjs | mid@alpha.mjs',
+      ], 'the two `const c` become one name again, and so does every shadowed name');
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
-        ['apply2 -> stamped', 'applyFirst -> stamped', 'useCb -> stamped'],
-        'and a module-scope `const f` answers every parameter named `f`');
+        ['apply2 -> stamped', 'applyFirst -> stamped',
+         'shadowBlock -> shOuterHit', 'shadowLoopHead -> shOuterHit',
+         'shadowNested -> shOuterHit', 'shadowOuterUse -> shInnerHit',
+         'shadowTdz -> shOuterHit', 'shadowTdz -> shTdzHit',
+         'shadowsOuterByParam -> shOuterHit', 'useCb -> stamped'],
+        'a module-scope `const f` answers every parameter named `f`, and every shadow reopens');
     },
   },
   {
     name: 't2 a top-level binder is invisible inside a function',
     mut: [{ find: `sees_binder[code](E, D)      :- binder_at_top[code](D), scoped_binder[code](D, File),
-                                ident_in[code](E, _, File).`, replace: '',
+                                ident_in[code](E, _, File), not hidden_at[code](E, D).`, replace: '',
             file: 'rules/js-dataflow.rofl' }],
     expect: (m, b) => {
       const lost = [...edges(b)].filter((e) => !edges(m).has(e));
@@ -75,14 +92,30 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
     // green while saying nothing. `keyPick` is bound to "keyOne" in one
     // function and to "keyTwo" in another, so a top-level binder lets each
     // computed site reach the other's key.
+    // THE MUTANT CHANGED WHAT IT SAYS ON 2026-09-09, and the reason is the
+    // interesting half. `binder_at_top` is now read by `shadowed_by` as well as
+    // by `sees_binder`, so making every binder top-level ALSO makes every
+    // same-name pair a shadow — and nearest-wins then hides more than the
+    // widened visibility invents. Five invented edges became one, and TEN REAL
+    // EDGES ARE DELETED, five of them in the destructuring family that has
+    // nothing to do with this rule. A mutant whose two effects run in opposite
+    // directions is exactly why the expectation is two named sets and not a
+    // count: the old `+14` would now read `+2` and look like a weaker kill.
     expect: (m, b) => {
       assert.deepEqual([...edges(m)].filter((e) => !edges(b).has(e)).sort(),
-        ['apply2 -> stamped', 'applyFirst -> stamped', 'useCb -> stamped',
-         'useKeyA -> keyTwo', 'useKeyB -> keyOne'],
-        'every binder visible everywhere: each computed key reaches the other site');
-      assert.equal(m.n('ambiguous_call[audit](C, F, G)'),
-        b.n('ambiguous_call[audit](C, F, G)') + 14,
-        'and the collisions the region rule closed come back, fourteen of them');
+        ['shadowOuterUse -> shInnerHit'],
+        'a binder inside a function answers outside it');
+      assert.deepEqual([...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+        ['pullsRest -> riveted', 'pullsTaken -> bolted', 'shadowBlock -> shBlockHit',
+         'shadowLoopHead -> shBlockHit', 'shadowParam -> shBlockHit',
+         'useDestructured -> pulled', 'useFirstSlot -> chiselled',
+         'useObjectRest -> spanner', 'useSecondSlot -> planed',
+         'useTakenFromRest -> caliper'],
+        'and every declarator being top-level makes it shadow the destructuring binders too');
+      assert.deepEqual(newAmbRows(m, b),
+        ['alpha.mjs: shInnerHit@alpha.mjs | shOuterHit@alpha.mjs',
+         'alpha.mjs: shOuterHit@alpha.mjs | shInnerHit@alpha.mjs'],
+        'the one collision the widening opens is the module-scope `shPick`');
     },
   },
   {
@@ -100,15 +133,33 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   {
     name: 't5 a region sees only itself, not what it contains',
     mut: [{ find: `sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E),
-                                ident_in[code](E, _, _).`,
+                                ident_in[code](E, _, _), not hidden_at[code](E, D).`,
             replace: `sees_binder[code](E, D)      :- binder_region[code](D, R), nearest_v[flow](R, E),
-                                ident_in[code](E, _, _).`,
+                                ident_in[code](E, _, _), not hidden_at[code](E, D).`,
             file: 'rules/js-dataflow.rofl' }],
     // A CLOSURE is what tells `contains` from `is`: `inner2` is a different
     // region from `closureRead`, and asking for the NEAREST enclosing function
     // loses the outer `const` entirely.
+    // ONE EDGE BECAME TWENTY-FIVE ON 2026-09-09, and the reason is a fact about
+    // `nearest_v` rather than about this mutant. Since w_scope_shadowing a
+    // `let`/`const` region is a BLOCK, and `nearest_v(R, E)` can only bind R to
+    // a FUNCTION — so the substitution does not merely narrow the region of
+    // every lexical binder, it makes them invisible outright. What used to be a
+    // closure test is now the whole value layer, and `inner2 -> leaf` is still
+    // in it: the row that says `contains` is not `is` survives inside the
+    // larger set rather than being replaced by it.
     expect: (m, b) => assert.deepEqual(
-      [...edges(b)].filter((e) => !edges(m).has(e)), ['inner2 -> leaf']),
+      [...edges(b)].filter((e) => !edges(m).has(e)).sort(),
+      ['chooser -> pickedA', 'drift -> via', 'inner2 -> leaf', 'innerGen -> pickedB',
+       'scoped -> fetched', 'shInnerCall -> shBlockHit', 'shVia -> shOuterHit',
+       'shadowBlock -> shBlockHit', 'shadowClosure -> shVia',
+       'shadowLoopHead -> shBlockHit', 'shadowNested -> shInnerHit',
+       'shadowNestedParam -> shInnerCall', 'shadowParam -> shBlockHit',
+       'show -> relay', 'useAwait -> alef', 'useClass -> both', 'useCrate -> both',
+       'useCrate -> hold', 'useKeyA -> keyOne', 'useKeyB -> keyTwo',
+       'usePanel -> drift', 'usePanel -> show', 'useSpreadGetter -> latched',
+       'useSuper -> hold', 'useTag -> stamped'],
+      'a block region cannot be a nearest FUNCTION, so every lexical binder goes with it'),
   },
   // THE `this` HALF, and it is the same question in a form that is not lexical
   // BINDING but is still lexical SCOPE: which construct binds `this`. The rule
@@ -155,6 +206,305 @@ const SCOPE: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
       'an arrow that inherits `this` stops reaching the class it inherited it from'),
   },
 ];
+
+
+// ---------------------------------------------------------------------------
+// 3h. SHADOWING (w_scope_shadowing): an inner binder HIDES an outer one.
+//
+// THE CORPUS HAD NO SHADOWING SITE AT ALL, and that was measured before a rule
+// was written. Over every pair of `scoped_binder` declarators sharing a name in
+// one file: eighty-four such pairs, and ZERO where one binder's region
+// contained the other's, zero sharing a region, zero with a top-level binder on
+// either side. All eighty-four were two functions side by side, which
+// w_scope_binding's containment rule already tells apart — so the blindness
+// `sees_binder`'s own comment declared could not be seen from any gate, for the
+// second time in this area. Nine runnable sites are at the end of alpha.mjs and
+// `main` calls every one, so V8's stack is what judges them.
+//
+// FIVE NAMED SETS AND NOT ONE COUNT, because each answers a different half and
+// a single number would let a mutant trade one for another. The EDGE set is the
+// one the runtime can contradict; `shadowRows` says which binder hides which,
+// `paramShadowRows` the parameter that hides an outer binder, `paramHiddenRows`
+// the parameter that is hidden by an inner one, and `tdzRows` the dead zone.
+// Every element is a NAME — a function's or an identifier's — so nothing here
+// moves when a fixture is appended somewhere else in the corpus.
+const SHADOW_FNS = new Set(['shOuterHit', 'shInnerHit', 'shBlockHit', 'shParamHit',
+  'shTdzHit', 'shadowNested', 'shadowOuterUse', 'shadowBlock', 'shadowParam',
+  'shadowsOuterByParam', 'shadowNestedParam', 'shadowTdz', 'shadowClosure', 'shVia',
+  'shInnerCall', 'shadowLoopHead', 'shadowVarNotBlockScoped']);
+/** every call edge inside the shadowing block, as `caller -> callee`. `main` is
+ *  excluded because main calls all of them and says nothing about scope. */
+const shadowEdges = (w: World) => [...edges(w)]
+  .filter((e) => { const [a, b] = e.split(' -> '); return a !== 'main' && (SHADOW_FNS.has(a) || SHADOW_FNS.has(b)); })
+  .sort();
+/** the function a node sits in, or `<top>` — the coordinate-free way to name a
+ *  binder, since a node id carries a file hash and an index that both move. */
+const inFn = (w: World, n: string) => {
+  const f = w.q(`nearest_v[flow](F, ${n})`)[0]?.[0];
+  return f === undefined ? '<top>' : (w.q(`fn_name[code](${f}, N)`)[0]?.[0] ?? '<anon>');
+};
+const fnName = (w: World, f: string) => w.q(`fn_name[code](${f}, N)`)[0]?.[0] ?? '<anon>';
+/** which binder is hidden, named by the name and the function the hider sits in */
+const shadowRows = (w: World) => [...new Set(w.q('shadowed_by[code](O, I, N)')
+  .map(([, i, n]) => `${n}@${inFn(w, i)}`))].sort();
+/** ...and the same for a PARAMETER doing the hiding */
+const paramShadowRows = (w: World) => [...new Set(w.q('shadowed_by_param[code](O, Fn, N)')
+  .map(([, f, n]) => `${n}@${fnName(w, f)}`))].sort();
+/** each dead-zone read, as `name@function` */
+const tdzRows = (w: World) => [...new Set(w.q('tdz_at[code](E, D)')
+  .map(([e]) => `${w.q(`ast_name[code](${e}, N)`)[0]?.[0]}@${inFn(w, e)}`))].sort();
+/** each parameter a nearer binder takes away, as `function(param)` */
+const paramHiddenRows = (w: World) => [...new Set(w.q('param_hidden[flow](Fn, N, U)')
+  .map(([f, n]) => `${fnName(w, f)}(${n})`))].sort();
+
+const SHADOW_EDGES = ['shInnerCall -> shBlockHit', 'shVia -> shOuterHit',
+  'shadowBlock -> shBlockHit', 'shadowClosure -> shVia',
+  'shadowLoopHead -> shBlockHit', 'shadowNested -> shInnerHit',
+  'shadowNestedParam -> shInnerCall', 'shadowOuterUse -> shOuterHit',
+  'shadowParam -> shBlockHit', 'shadowVarNotBlockScoped -> shOuterHit',
+  'shadowsOuterByParam -> shInnerHit'];
+
+test('the shadowing block derives exactly the edges the runtime takes', () => {
+  const b = base();
+  // THE POSITIVE HALF FIRST, because a nearest-wins rule that merely DELETED
+  // candidates would pass every over-approximation check in this file. Two of
+  // the eleven are there to stop that: `shadowOuterUse -> shOuterHit` reads the
+  // module binder OUTSIDE the function that rebinds it, and
+  // `shadowVarNotBlockScoped -> shOuterHit` reads a `var` past the end of the
+  // block it is written in, which is legal and is what `var` not being lexical
+  // MEANS.
+  assert.deepEqual(shadowEdges(b), SHADOW_EDGES);
+  assert.deepEqual(shadowRows(b),
+    ['shHold@shadowBlock', 'shLate@shadowTdz', 'shPick@shadowNested', 'shStep@shadowLoopHead'],
+    'four hidden binders: a block, a dead zone, a module-scope name and a for head');
+  assert.deepEqual(paramShadowRows(b), ['shPick@shadowsOuterByParam'],
+    'and one binder hidden by a PARAMETER, which no declarator relation has a row for');
+  assert.deepEqual(tdzRows(b), ['shLate@shadowTdz'],
+    'exactly one dead-zone read, and the closure in `shadowClosure` is NOT one');
+  assert.deepEqual(paramHiddenRows(b),
+    ['shadowNestedParam(shTake2)', 'shadowParam(shTake)'],
+    'two parameters a nearer binder takes away: a block const, and a nested function with its own parameter');
+  // ...AND NOTHING NEW IS AMBIGUOUS. Nine shadowing sites entered the corpus and
+  // `ambiguous_call[audit]` did not move, which is the claim in its strongest
+  // form: every new collision RESOLVES, so the model gained sites without
+  // gaining one site that answers two ways.
+  assert.deepEqual(ambRows(b), AMBIGUOUS_ROWS,
+    'the shadowing fixture adds no ambiguous call site at all');
+});
+
+// SIXTEEN MUTANTS, THIRTEEN KILLED, and the three that survive are named at the
+// bottom with the reason each is unkillable. Every one of the thirteen is aimed
+// at a NAMED premise of a NAMED rule, and no two are killed by the same set:
+// the point of the five oracles above is that a mutant which trades one for
+// another still goes red somewhere.
+//
+// TWO OF THE THIRTEEN KILL BY SUBTRACTION rather than by invention — s9 and
+// s13 — and those are the ones worth having, because every other check in this
+// file is an over-approximation check and would sleep through a rule that
+// deletes a real binding. Both are edges the runtime actually takes.
+const SHADOW: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 's1 block regions are dropped: every binder is function-scoped again',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `binder_region[code](D, R)    :- lexical_binder[code](D), nearest_s[code](R, D).
+binder_region[code](D, R)    :- scoped_binder[code](D, _), not lexical_binder[code](D),
+                                nearest_v[flow](R, D).`,
+            replace: `binder_region[code](D, R)    :- scoped_binder[code](D, _), nearest_v[flow](R, D).` }],
+    // THE WHOLE OF w_scope_binding, WHICH IS THE POINT. This is exactly what
+    // `binder_region` said before this item, so the mutant is the previous
+    // model — and the two binders it can no longer tell apart are the two that
+    // share a function: a block const and a for-head let.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b),
+        ['shadowBlock -> shOuterHit', 'shadowLoopHead -> shOuterHit', 'shadowParam -> shParamHit']);
+      assert.deepEqual(shadowRows(m), ['shLate@shadowTdz', 'shPick@shadowNested'],
+        'the two shadows that survive are the ones a FILE region already made');
+      assert.deepEqual(paramHiddenRows(m), ['shadowNestedParam(shTake2)'],
+        'and a block const stops hiding a parameter, because its region becomes the function');
+    },
+  },
+  {
+    name: 's2 nearest-wins is dropped from the REGION arm of sees_binder',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `ident_in[code](E, _, _), not hidden_at[code](E, D).`,
+            replace: `ident_in[code](E, _, _).` }],
+    expect: (m, b) => assert.deepEqual(gainedEdges(m, b),
+      ['shadowBlock -> shOuterHit', 'shadowLoopHead -> shOuterHit', 'shadowTdz -> shTdzHit'],
+      'the two inner regions answer with their outer binder, and the dead zone answers at all'),
+  },
+  {
+    name: 's3 nearest-wins is dropped from the TOP-LEVEL arm of sees_binder',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `ident_in[code](E, _, File), not hidden_at[code](E, D).`,
+            replace: `ident_in[code](E, _, File).` }],
+    // THE TWO ARMS ARE TWO CLAIMS, which is why both carry the negation and why
+    // both mutants are here: this one reaches only the binders with no region
+    // at all, and its three edges are disjoint from s2's three.
+    expect: (m, b) => assert.deepEqual(gainedEdges(m, b),
+      ['shadowNested -> shOuterHit', 'shadowTdz -> shOuterHit', 'shadowsOuterByParam -> shOuterHit'],
+      'a module-scope binder answers inside every function that rebinds its name'),
+  },
+  {
+    name: 's4 the top-level arm of shadowed_by is removed',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
+                                         binds_name[code](Inner, Name, File),
+                                         Outer != Inner, binder_at_top[code](Outer),
+                                         binder_region[code](Inner, _).`, replace: '' }],
+    // NOT THE SAME MUTANT AS s3 even though the edges overlap: s3 keeps the
+    // relation and stops READING it, this one stops deriving half of it. The
+    // difference shows in `shadowRows`, which s3 leaves untouched.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), ['shadowNested -> shOuterHit', 'shadowTdz -> shOuterHit']);
+      assert.deepEqual(shadowRows(m), ['shHold@shadowBlock', 'shStep@shadowLoopHead'],
+        'only the two region-inside-region shadows are left');
+    },
+  },
+  {
+    name: 's5 a PARAMETER no longer shadows an outer binder',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, File),
+                                           binder_at_top[code](Outer),
+                                           param_of[flow](F, _, Name),
+                                           ast_file[code](Root, File), ast_within[code](Root, F).`,
+            replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), ['shadowsOuterByParam -> shOuterHit']);
+      assert.deepEqual(paramShadowRows(m), [],
+        'a parameter is not a declarator, so nothing else in the rule can reach this');
+    },
+  },
+  {
+    name: 's6 param_use loses `not param_hidden`',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `                               ident[code](U, Name),
+                               not param_hidden[flow](F, Name, U).`,
+            replace: `                               ident[code](U, Name).` }],
+    // THE OVER-APPROXIMATION `param_use` DECLARED IN ITS OWN COMMENT, restored.
+    expect: (m, b) => assert.deepEqual(gainedEdges(m, b),
+      ['shInnerCall -> shParamHit', 'shadowParam -> shParamHit'],
+      'a parameter is read from everywhere under its function again'),
+  },
+  {
+    name: 's7 param_hidden loses the NESTED-FUNCTION arm',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
+                                  fn_node_v[flow](G), ast_within[code](F, G),
+                                  param_of[flow](G, _, Name),
+                                  ast_within[code](G, U), ident[code](U, Name).`, replace: '' }],
+    // ONE OF THE TWO ARMS, AND THE ONE NO DECLARATOR RELATION COULD REACH:
+    // a nested function with its own parameter of the same name binds nothing
+    // `binds_name` has a row for.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), ['shInnerCall -> shParamHit']);
+      assert.deepEqual(paramHiddenRows(m), ['shadowParam(shTake)'],
+        'the declarator arm is untouched, which is what says the two arms are two claims');
+    },
+  },
+  {
+    name: 's8 the temporal dead zone is switched off',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `hidden_at[code](E, D)    :- tdz_at[code](E, D).`, replace: '' }],
+    expect: (m, b) => assert.deepEqual(gainedEdges(m, b), ['shadowTdz -> shTdzHit'],
+      'a read above a `const` in its own block answers with that const'),
+  },
+  {
+    name: 's9 the dead zone ignores the closure exclusion',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).`,
+            replace: `tdz_at[code](E, D)       :- tdz_cand[code](E, D).` }],
+    // KILLS BY SUBTRACTION, and it is the only mutant in this set that makes the
+    // model wrong in the UNSAFE direction: `shVia` reads a const declared on a
+    // later line and the program is correct, because the arrow runs afterwards.
+    expect: (m, b) => {
+      assert.deepEqual(lostEdges(m, b), ['shVia -> shOuterHit'],
+        'an edge the runtime takes is deleted — the oracle would report a MISS');
+      assert.deepEqual(tdzRows(m), ['shDeferred@shVia', 'shLate@shadowTdz'],
+        'and a legal closure read is called a dead-zone read');
+    },
+  },
+  {
+    name: 's10 the dead zone compares the two lines the wrong way round',
+    mut: [{ file: 'rules/js-dataflow.rofl', find: `                            LE < LD.`,
+            replace: `                            LD < LE.` }],
+    // THE LOUDEST KILL IN THE SET, and the reason is worth reading: reversed,
+    // the comparison calls every ORDINARY use — the ones below their binder —
+    // a dead-zone read, so the model stops answering nearly everywhere. Seven
+    // of this block's own edges go, and sixteen more across the corpus.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), ['shadowTdz -> shTdzHit']);
+      assert.deepEqual(lostEdges(m, b),
+        ['shInnerCall -> shBlockHit', 'shadowBlock -> shBlockHit', 'shadowClosure -> shVia',
+         'shadowLoopHead -> shBlockHit', 'shadowNested -> shInnerHit',
+         'shadowNestedParam -> shInnerCall', 'shadowParam -> shBlockHit'],
+        'every use BELOW its binder becomes a dead-zone read');
+    },
+  },
+  {
+    name: 's12 for_statement leaves the scope-node list',
+    mut: [{ file: 'rules/js-dataflow.rofl', find: `block_scope_kind(for_statement).`, replace: '' }],
+    // THE SITE THIS FIXTURE EXISTS FOR. A `for` head is not a block, so with the
+    // kind off the list the loop variable falls back to the enclosing block and
+    // shares a region with the const outside the loop.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), ['shadowLoopHead -> shOuterHit']);
+      assert.deepEqual(shadowRows(m), ['shHold@shadowBlock', 'shLate@shadowTdz', 'shPick@shadowNested']);
+    },
+  },
+  {
+    name: 's13 `var` is treated as lexical too',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `lexical_binder[code](D) :- lexical_decl[code](V), ast_child[code](V, declarations, _, D).`,
+            replace: `lexical_binder[code](D) :- lexical_decl[code](V), ast_child[code](V, declarations, _, D).
+lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
+                           ast_attr[code](V, kind, "var").` }],
+    // THE SECOND SUBTRACTION KILL, and the negative of the whole block-region
+    // rule: a `var` written inside a block is readable after it, and giving it
+    // the block deletes an edge the runtime takes.
+    expect: (m, b) => assert.deepEqual(lostEdges(m, b), ['shadowVarNotBlockScoped -> shOuterHit'],
+      '`var` is function-scoped, and a lexical reading loses the use past the block'),
+  },
+  {
+    name: 's14 param_hidden containment stops being strict',
+    mut: [{ file: 'rules/js-dataflow.rofl',
+            find: `                                  ast_within[code](F, R), ast_within[code](R, U),`,
+            replace: `                                  ast_within[code](R, U),` }],
+    // THE EDGES DO NOT MOVE AND THE RELATION DOES, which is the whole reason
+    // `paramHiddenRows` is one of the five oracles: `ast_within(F, R)` is what
+    // ties the hiding binder to the function whose parameter is hidden, and
+    // without it a binder in any file hides a parameter in any other.
+    expect: (m, b) => {
+      assert.deepEqual(gainedEdges(m, b), []);
+      assert.deepEqual(lostEdges(m, b), []);
+      assert.ok(paramHiddenRows(m).length > paramHiddenRows(b).length + 10,
+        `parameters hidden by a binder that is nowhere near them: ${paramHiddenRows(m).length}`);
+      assert.ok(paramHiddenRows(m).includes('apply2(f)'),
+        'a `const f` inside another function now hides apply2 parameter of the same name');
+    },
+  },
+];
+
+/** the edges a mutant invents inside the shadowing block, and the ones it deletes */
+const gainedEdges = (m: World, b: World) => shadowEdges(m).filter((e) => !shadowEdges(b).includes(e));
+const lostEdges = (m: World, b: World) => shadowEdges(b).filter((e) => !shadowEdges(m).includes(e));
+
+for (const g of SHADOW) test(`${g.name} — shadowing`, () => g.expect(build(g.mut), base()));
+
+// THREE MUTANTS SURVIVED AND ALL THREE ARE UNKILLABLE BY CONSTRUCTION rather
+// than by this corpus, which is the distinction w_prototype_of_a_value asked
+// every survivor to make. They are recorded here instead of run, because a
+// mutant that cannot fail costs a fifteen-second world and buys nothing:
+//
+//   `hidden_at` with `ident_in(E, Name, _)` widened to `ident_in(E, _, _)`.
+//     Every consumer of `sees_binder` already joins the binder's own name, so
+//     hiding it at an identifier spelled something else suppresses a row
+//     nothing reads. The literal is a COST narrowing and the rule says so.
+//   `shadowed_by` without `RO != RI`, and without `Outer != Inner`.
+//     `ast_within` is the transitive closure of a parent-child relation and is
+//     therefore irreflexive, so `ast_within(RO, RO)` is already false; and a
+//     declarator cannot be both `binder_at_top` and have a region, because the
+//     first is defined as the negation of the second. No fixture can make
+//     either fire.
 
 
 // ---------------------------------------------------------------------------
@@ -448,6 +798,14 @@ const betaExports = (w: World) => exportsOf(w, 'beta.mjs');
 const ambRows = (w: World) => w.q('ambiguous_call[audit](C, F, G)').map(([c, f, g]) =>
   `${fileOf(w, c)}: ${w.q(`fn_name[code](${f}, N)`)[0]?.[0]}@${fileOf(w, f)}`
   + ` | ${w.q(`fn_name[code](${g}, N)`)[0]?.[0]}@${fileOf(w, g)}`).sort();
+
+/** the DISTINCT ambiguous rows a mutant world has and the baseline does not.
+ *  A delta between two worlds is a count two branches can both move; the rows
+ *  themselves are names, and they say which site stopped resolving. */
+const newAmbRows = (m: World, b: World) => {
+  const had = new Set(ambRows(b));
+  return [...new Set(ambRows(m))].filter((r) => !had.has(r)).sort();
+};
 
 const AMBIGUOUS_ROWS = ['alpha.mjs: alef@alpha.mjs | bet@alpha.mjs',
    'alpha.mjs: alef@alpha.mjs | bet@alpha.mjs',

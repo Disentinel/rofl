@@ -223,7 +223,14 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // before it did: it was taken and it spawned two findings, one of them in
     // the SCANNER (a bigint matched none of the four branches) and one in a
     // neighbour's already-ticked cell (a for-update was never a guard arm).
-    'w_scope_shadowing',
+    // ...and `w_scope_shadowing` LEFT IT 2026-09-09 the same way, with four:
+    // where nearest-wins stops (`binds_name` has no row for a function
+    // declaration, a class, a catch parameter or an import), a scope kind no
+    // declarator in this corpus reaches, and the dead zone turning out to be a
+    // region plus one line rather than flow sensitivity — and a fourth that is
+    // not about scope at all: mutant 9 in test/js-callgraph.test.ts lost its
+    // row-level oracle to a budget for the second time, and a budget kill
+    // decays into a green gate that says nothing.
   ], 'an item that spawns nothing is either trivial or was not looked at');
   assert.deepEqual([...spawners].filter((sp) => !items.has(sp)), [],
     'and nothing spawns a finding without being an item — the other direction');

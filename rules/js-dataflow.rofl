@@ -185,7 +185,18 @@ binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File
 -- were compared row for row against the previous form and came back IDENTICAL.
 scoped_binder[code](D, File) :- binder[code](D, _, _, File).
 
-binder_region[code](D, R)    :- scoped_binder[code](D, _), nearest_v[flow](R, D).
+-- A REGION IS A BLOCK WHEN THE DECLARATION IS LEXICAL, and the whole of the
+-- difference between `var` and `let` lives in those two arms. `var` is
+-- function-scoped and hoisted, so its region stays the nearest enclosing
+-- FUNCTION — which is what this relation said for every binder until
+-- 2026-09-09. `let` and `const` are scoped to the nearest enclosing BLOCK, and
+-- without that a `const x` in a nested block and a `const x` in the function
+-- around it have the same region, neither contains the other, and no
+-- nearest-wins rule below could tell them apart. Block regions are therefore
+-- not an independent feature: they are what makes shadowing STATABLE.
+binder_region[code](D, R)    :- lexical_binder[code](D), nearest_s[code](R, D).
+binder_region[code](D, R)    :- scoped_binder[code](D, _), not lexical_binder[code](D),
+                                nearest_v[flow](R, D).
 binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).
 --
 -- `ident_in[code](E, _, _)` IS A COST LITERAL AND NOTHING ELSE, and it is here
@@ -202,20 +213,185 @@ binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[cod
 -- Fifteen relations compared row-for-row between the two forms and IDENTICAL,
 -- with a positive control (removing `object_method` from `this_binds_kind`
 -- moves seven of them). The cheaper form is the same model.
+--
+-- `not hidden_at[code](E, D)` IS THE NEAREST-WINS HALF and it is written here,
+-- on both arms, rather than in the five consumers below. Keeping the negation
+-- inside `sees_binder` is what let every reader of this relation — the plain
+-- binder, the object pattern, the array pattern, the rest element — inherit
+-- shadowing without a line of its own.
 sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E),
-                                ident_in[code](E, _, _).
+                                ident_in[code](E, _, _), not hidden_at[code](E, D).
 -- ...and a top-level binder is visible everywhere in its own file, which is the
 -- honest reading: `const seeded = run(1)` at module scope really is in scope
 -- inside every function below it.
 sees_binder[code](E, D)      :- binder_at_top[code](D), scoped_binder[code](D, File),
-                                ident_in[code](E, _, File).
+                                ident_in[code](E, _, File), not hidden_at[code](E, D).
 
--- WHAT THIS DOES NOT DO, stated rather than discovered later: SHADOWING. Two
--- binders of one name where one region contains the other are both visible at a
--- use inside the inner one, and nothing here prefers the nearer. That needs
--- block regions and a nearest-wins rule, it needs its own fixture, and it is
--- w_scope_shadowing. The direction is the safe one — an extra candidate in a
--- may-set — and it is the same shape `class_receiver` declares one file over.
+-- ===========================================================================
+-- NEAREST WINS — w_scope_shadowing, 2026-09-09.
+--
+-- WHAT THIS PARAGRAPH REPLACED said the quiet part already: "two binders of one
+-- name where one region contains the other are both visible at a use inside the
+-- inner one, and nothing here prefers the nearer". That was true, it was the
+-- SAFE direction — an extra candidate in a may-set, never a missing one — and
+-- it is a precision defect rather than a soundness one. It is closed here.
+--
+-- THE CORPUS HAD NO SITE, AND THAT WAS MEASURED BEFORE A RULE WAS WRITTEN.
+-- Over every pair of `scoped_binder` declarators sharing a name in one file:
+-- pairs where one binder's region contains the other's region, ZERO; pairs
+-- sharing a region, ZERO; pairs where one is a top-level binder and the other
+-- is not, ZERO. So all 84 same-name pairs in this corpus were two functions
+-- side by side, which the containment rule of w_scope_binding already told
+-- apart. This is the same trap w_scope_binding hit and recorded as
+-- `f_the_corpus_was_bent_around_the_defect_until_it_could_not_be_seen` — one
+-- fixture in this very file carries the comment "RENAMED rather than shorthand:
+-- the local would otherwise be a file-scoped `broken`". The sites are in
+-- alpha.mjs now, they RUN, and V8's own stack is the oracle that judges them.
+
+-- A SCOPE NODE is a function or a block, and the LIST IS SHORTER THAN JS'S
+-- because every kind on it was required to have a declarator that actually
+-- reaches it AND a fixture that makes its presence on the list observable.
+-- Measured over this corpus, the nearest scope of a `scoped_binder` is
+-- `block_statement` 54 times and `for_statement` 5; one more binder is scoped
+-- to a `function_declaration`, and that one is the `var` arm below.
+--
+-- FOUR KINDS WERE WRITTEN AND THEN REMOVED, each with its own reason, because
+-- an arm nothing exercises cannot go red:
+--   catch_clause, switch_case  — neither can EVER be the nearest scope of a
+--     declarator: a catch always has a block body, and a `case` body is scoped
+--     to the whole switch. Unkillable by the grammar.
+--   for_of_statement, for_in_statement — unkillable by THIS MODEL rather than
+--     by the grammar, and that is a different fact. A for-of head binds without
+--     an initialiser, so `binder` (whose third argument is the node the name
+--     evaluates to) has no row for it and the loop variable reaches the value
+--     layer through `iter_elem[flow]` instead. Only a DESTRUCTURING for-of head
+--     would be a `scoped_binder`, and this corpus has none.
+--   switch_statement, static_block — unkillable by this corpus: no declaration
+--     sits directly in either. Recorded as f_a_scope_kind_no_declarator_reaches.
+-- Leaving any of them out widens the region, which is the same safe direction
+-- the whole of this item moves in.
+edb(block_scope_kind).
+block_scope_kind(block_statement).
+block_scope_kind(for_statement).
+
+scope_node[code](R) :- ast_node[code](R, K, _, _), block_scope_kind(K).
+scope_node[code](R) :- fn_node_v[flow](R).
+
+-- LEXICAL IS `let` AND `const` AND THE SCANNER ALREADY CARRIED IT: the `kind`
+-- attribute of the `variable_declaration` that owns the declarator. Reading it
+-- off the DECLARATION rather than the declarator is the whole subtlety —
+-- `binder` is a declarator relation and the keyword is one node up.
+lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
+                           ast_attr[code](V, kind, "let").
+lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
+                           ast_attr[code](V, kind, "const").
+lexical_binder[code](D) :- lexical_decl[code](V), ast_child[code](V, declarations, _, D).
+
+-- THE NEAREST ENCLOSING SCOPE, AND IT RANGES OVER DECLARATORS ONLY. `nearest_v`
+-- above ranges over every node because its callers ask about calls, throws and
+-- returns; nothing here needs the nearest block of an arbitrary node, and
+-- ranging over one would have built the (node x scope) product that the
+-- `ident_in` cost note two paragraphs up exists to warn about.
+encloses_s[code](R, D) :- scoped_binder[code](D, _), scope_node[code](R), ast_within[code](R, D).
+closer_s[code](R, D)   :- encloses_s[code](R, D), encloses_s[code](S, D),
+                          ast_within[code](R, S), R != S.
+nearest_s[code](R, D)  :- encloses_s[code](R, D), not closer_s[code](R, D).
+
+-- ONE NAME, FOUR WAYS TO BIND IT. `scoped_binder` says a declarator introduces
+-- names in a region and deliberately does NOT say which; shadowing is a
+-- question about a NAME, so it needs the projection that carries one. The four
+-- arms are the four binding forms this layer knows, and they are the same four
+-- that already write `scoped_binder`.
+binds_name[code](D, Name, File) :- binder[code](D, Name, _, File).
+binds_name[code](D, Name, File) :- destructures[code](D, Name, _, File).
+binds_name[code](D, Name, File) :- destructures_at[code](D, Name, _, File).
+binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
+
+-- SHADOWING IS CONTAINMENT BETWEEN REGIONS, not distance in the source. Both
+-- arms are the same claim over the two ways an outer binder can be outer: it
+-- has a region that strictly contains the inner one, or it has no region at all
+-- because it is at the top of its file, in which case every region in that file
+-- is inside it.
+--
+-- TWO GUARDS HERE ARE UNKILLABLE BY CONSTRUCTION and are named rather than
+-- removed, because a mutant that survives for a REASON is worth more than a
+-- line deleted. `RO != RI` is implied by `ast_within` being irreflexive - it is
+-- the transitive closure of a parent-child relation, so no node contains
+-- itself - and `Outer != Inner` follows from that on the first arm and from
+-- `binder_at_top`s own negation on the second, since a declarator cannot both
+-- have a region and lack one. Both mutants move NOTHING, in either arm, and
+-- that is a statement about the shape of `ast_within` rather than about this
+-- corpus: no fixture can make either fire.
+shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
+                                         binds_name[code](Inner, Name, File),
+                                         Outer != Inner,
+                                         binder_region[code](Outer, RO),
+                                         binder_region[code](Inner, RI),
+                                         RO != RI, ast_within[code](RO, RI).
+shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
+                                         binds_name[code](Inner, Name, File),
+                                         Outer != Inner, binder_at_top[code](Outer),
+                                         binder_region[code](Inner, _).
+
+-- A PARAMETER SHADOWS TOO, and it is the arm a purely declarator-shaped rule
+-- would have missed: `function f(seeded)` hides a module-scope `const seeded`
+-- through the whole of `f`, and no `binds_name` row exists for a parameter.
+-- The file join is `ast_file` + `ast_within` because `param_of` carries a
+-- function rather than a file.
+shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, _),
+                                           binder_region[code](Outer, RO),
+                                           param_of[flow](F, _, Name),
+                                           ast_within[code](RO, F).
+shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, File),
+                                           binder_at_top[code](Outer),
+                                           param_of[flow](F, _, Name),
+                                           ast_file[code](Root, File), ast_within[code](Root, F).
+
+-- ...AND WHERE THE OUTER ONE IS HIDDEN. The inner binder's REGION is the extent
+-- of the hiding, which is why this is regional and not positional: a `let x`
+-- hides an outer `x` over the whole block, INCLUDING the lines above its own
+-- declaration. That is the temporal dead zone stated as scope, and it is what
+-- makes the TDZ arm below a claim about silence rather than about the outer
+-- value coming back.
+--
+-- `ident_in[code](E, Name, _)` IS A COST NARROWING AND NOT A SEMANTIC ONE, and
+-- it is said here because its mutant SURVIVES: every consumer of `sees_binder`
+-- already joins `ident_in(E, Name, File)` against the binder`s own name, so
+-- hiding a binder at an identifier spelled something else suppresses a row
+-- nothing would have read. Replacing `Name` with `_` changes no derived
+-- relation in this corpus and makes `hidden_at` larger. Same reason the
+-- `ident_in(E, _, _)` literal in `sees_binder` above is there.
+hidden_at[code](E, Outer) :- shadowed_by[code](Outer, Inner, Name),
+                             binder_region[code](Inner, RI),
+                             ast_within[code](RI, E), ident_in[code](E, Name, _).
+hidden_at[code](E, Outer) :- shadowed_by_param[code](Outer, F, Name),
+                             ast_within[code](F, E), ident_in[code](E, Name, _).
+
+-- THE TEMPORAL DEAD ZONE — the one place in this layer where the LINE matters.
+-- Everything else here is flow-insensitive on purpose (the `assigns` paragraph
+-- below says so in as many words), and the TDZ is not an exception to that so
+-- much as a fact about syntax: a `let`/`const` binding is not initialised until
+-- its own declaration is evaluated, so a read of the name ABOVE the declaration
+-- in the same region throws. The model must therefore say NOTHING there —
+-- not the outer binder's value, which the shadowing arms already removed, and
+-- not the inner binder's, which is what this removes.
+--
+-- A CLOSURE IS THE COUNTER-CASE AND IT IS EXCLUDED BY CONSTRUCTION. `const via
+-- = () => later; const later = f;` reads `later` on an earlier line and is
+-- perfectly legal, because the arrow body runs after the declaration. So a use
+-- with a FUNCTION between it and the binder's region is deferred and keeps its
+-- value. Dropping `not tdz_deferred` loses a real edge rather than adding a
+-- false one, which is why the fixture for it is a closure the oracle RUNS.
+tdz_cand[code](E, D)     :- lexical_binder[code](D), binds_name[code](D, Name, _),
+                            binder_region[code](D, R), ast_within[code](R, E),
+                            ident_in[code](E, Name, _),
+                            ast_node[code](D, _, _, LD), ast_node[code](E, _, _, LE),
+                            LE < LD.
+tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
+                            fn_node_v[flow](G), ast_within[code](R, G), ast_within[code](G, E).
+tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
+hidden_at[code](E, D)    :- tdz_at[code](E, D).
+
 may_be_lit[flow](E, V)  :- binder[code](D, Name, Init, File), may_be_lit[flow](Init, V),
                            ident_in[code](E, Name, File), sees_binder[code](E, D).
 may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
@@ -563,17 +739,37 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
 param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 
--- WHERE A PARAMETER IS READ. Over-approximation declared: any identifier of
--- that name anywhere under F, so a nested function redeclaring the name is
--- claimed here and should not be. Shadowing is the scope layer's cell.
+-- WHERE A PARAMETER IS READ. The over-approximation this comment used to
+-- declare — "any identifier of that name anywhere under F, so a nested function
+-- redeclaring the name is claimed here and should not be. Shadowing is the
+-- scope layer's cell" — is closed by `not param_hidden` since 2026-09-09, and
+-- the hand-off was literal: w_scope_shadowing owned the cell and this is it.
 -- ORDERED FOR COST, and the order is the whole rule: `param_of` binds F and
 -- Name, `ast_within` with F bound hands back what is under that function, and
 -- `ident` is then a two-bound probe. The other way round it asked for every
 -- identifier of that name in the corpus first — measured at 168 rows a call
 -- for a parameter named `n`, 1110 times.
+--
+-- TWO WAYS TO HIDE A PARAMETER AND THEY ARE NOT THE SAME CLAIM. A declarator
+-- whose region is strictly INSIDE F rebinds the name for that region — and
+-- "strictly inside" is exactly right rather than merely convenient: `function
+-- f(x) { var x = 1; }` is legal and is the SAME binding, and its region is F
+-- itself, so the containment fails and the parameter is correctly not hidden.
+-- The second arm is a nested function with its own parameter of the name,
+-- which no declarator relation can see at all.
+param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
+                                  binds_name[code](D, Name, _),
+                                  binder_region[code](D, R),
+                                  ast_within[code](F, R), ast_within[code](R, U),
+                                  ident[code](U, Name).
+param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
+                                  fn_node_v[flow](G), ast_within[code](F, G),
+                                  param_of[flow](G, _, Name),
+                                  ast_within[code](G, U), ident[code](U, Name).
 param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                ast_within[code](F, U),
-                               ident[code](U, Name).
+                               ident[code](U, Name),
+                               not param_hidden[flow](F, Name, U).
 
 may_be_lit[flow](U, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V),
                            param_of[flow](F, I, Name), param_use[flow](F, Name, U).
