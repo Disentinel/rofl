@@ -218,6 +218,12 @@ The evidence is one line: **`measured/` holds 3 rows. The word "MEASURED"
 appears in 436 comment lines.** The relation exists, is the right home, and is
 used a hundred and forty times less often than the prose that should be in it.
 
+### A proposed remedy, not built and not tested
+
+Everything from here to the end of this section is a design sketch. It has not
+been implemented and its costs and benefits are predictions, not measurements.
+It is recorded as the candidate remedy for failure mode 17.
+
 ### The backlog is a matrix, exactly like the coverage matrix
 
 A comment block — consecutive comment lines, counted as one event — is a cell

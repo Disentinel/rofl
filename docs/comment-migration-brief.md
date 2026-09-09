@@ -2,9 +2,17 @@
 
 ## Status
 
-Task definition, written 2026-09-09. The analysis behind it is in
-`docs/claims-outside-the-store.md`. This file is the brief itself — the thing to
-hand to whoever does the work, one file at a time.
+**Proposed, not implemented, not validated.** Written 2026-09-09 as a task
+definition. Nothing in it has been built and no part of it has been run against
+the repository, so every claim about how it would behave is a prediction. It is
+recorded as a candidate remedy for failure mode 17 in `docs/failure-modes.md`,
+and the analysis behind it is in `docs/claims-outside-the-store.md`.
+
+Before acting on it, the first question is whether the remedy is worth its own
+cost: 2,210 blocks read one at a time is a large amount of work, and the return
+is asserted here rather than measured. A cheap way to find out is to run it on
+one small file first and report both counts — blocks migrated, and blocks found
+false — before committing to the rest.
 
 ## The problem in one paragraph
 
