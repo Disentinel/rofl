@@ -1,0 +1,121 @@
+# What the Rust engine has to expose before anyone else can use it
+
+Written 2026-09-09 as a design, not an implementation. Every constraint below
+is a measurement made on this branch, and the point of writing them down first
+is that a surface designed without them will hide exactly the things a caller
+needs to see.
+
+## What exists today
+
+```rust
+pub fn load(json: &str, budget: i64) -> Result<Loaded, String>
+pub fn describe(e: &Halt) -> String
+pub mod dense; pub mod engine; pub mod reflect; pub mod seed; pub mod store; pub mod term;
+```
+
+One binary, `rofl-eval`, which reads a seed and prints the state to stdout.
+
+**So the port is not an engine, it is an accelerator.** Its only input is a
+snapshot the TypeScript kernel produced; there is no parser, no incremental
+assert, no query entry point and no way to advance a tick from a program. What
+can be offered today is the PAIR, and the pair has no documented interface.
+
+## Five measurements that constrain the design
+
+**1. A question's cost is a property of the question, not of the corpus.** Over
+a 128-file world of 5 676 864 facts, after the fixpoint: a point with its key
+bound is 5.5 ms, a bound prefix 8.6 ms, a large relation scanned 72 ms, and the
+largest — 1 093 150 rows — **12 469 ms**. Three orders of magnitude.
+
+*So the surface must make the difference visible to the caller.* One `query`
+that sometimes returns in five milliseconds and sometimes in twelve seconds is
+a trap. Either the shape of the ask is part of the type, or the result carries
+what it cost and what it scanned.
+
+**2. Starting is 383 ms and forking is 3 ms.** The core — the packs, no source
+— is 20 630 facts and 383 ms to build; `fork` of a built core is 3 ms, a
+hundred and twenty-eight times cheaper. Rebuilding per unit of work is what
+made 64 volumes cost 5.87x a single world of the same files.
+
+*So `fork` belongs on the surface*, not only in the host. A session is a forked
+core, and that has to be the cheap and obvious path rather than an optimisation
+a caller discovers.
+
+**3. A volume may be lifted at a tick boundary and nowhere else.** The engine
+freezes what `not p` is judged against for the duration of a round, so a
+mid-round lift answers some negations against a world without the volume and
+others against a world with it.
+
+*So loading is an operation on the tick boundary*, and the surface must not
+offer a "load more data" call that can be issued mid-evaluation. This is a
+statement about what the program MEANS; see `docs/volumes-and-residency.md`.
+
+**4. Exhaustion is a FACT, and the two kinds demand opposite repairs.** A
+budget or space wall emits a `hole` into the store, so the unfinished part
+names itself and can be queried. `space_exhausted` and `budget_exhausted` are
+separate atoms because one wants more room and the other more steps.
+
+*So a partial answer is not an error.* The surface must return the answer AND
+the holes, never an exception that discards the work done. The TypeScript side
+already models this: `evaluate` returns `{ partial, peakRows, space }`.
+
+**5. Rows are not facts, and the wall is counted in rows.** `DEFAULT_SPACE` is
+500 000 rows; measured on the JS model the ratio is 0.507 rows per fact and on
+a control-flow world 0.614.
+
+*So whatever reports the margin must say which unit it is in.* A caller reading
+a row wall against a fact count is a category error, and it has already been
+made once here.
+
+## The shape this suggests
+
+Small, and the smallness is the point — five verbs.
+
+- **`open(packs) -> Session`** — build the core once. Expensive, once per
+  process.
+- **`Session::fork() -> Session`** — cheap, per unit of work. The normal way to
+  get a world.
+- **`Session::assert(facts)`** — add base facts. Legal between ticks.
+- **`Session::evaluate(budget) -> Outcome`** — where `Outcome` carries
+  `partial`, the holes, `peak_rows` and `space`, so the caller learns the margin
+  without hitting the wall.
+- **`Session::ask(query) -> Answer`** — where `Answer` carries the rows AND what
+  the ask cost, so measurement 1 is visible rather than hidden.
+
+Plus `tick()` for the boundary, since that is where a volume may be lifted.
+
+**Deliberately NOT on the surface**: anything that lets a caller mutate the
+world mid-evaluation, and any `query` that hides whether it probed an index or
+scanned a relation.
+
+## The input question is open and it is not this document's
+
+The port has no parser. `f_the_parser_should_be_generated_from_the_rules_not_written_twice`
+holds the decision and the measurement that constrains it: `examples/ring1`
+parses ROFL with rules, is 41 of 41 IDENTICAL to `src/parser.ts` over 267 KiB
+with 0 refused, and costs **9 758x** the host parser with the ratio FLAT in
+size. So interpreting the tower in production is out by four orders of
+magnitude, and a hand-written Rust parser puts the syntax back into code, which
+is what the tower was built to prevent. Generating one from the rules is what
+remains — and then ring1 is the ORACLE the generated parser must match on all
+41 files, rather than the thing that runs.
+
+Until that is settled, `open(packs)` above means `open(seed)` and the pair
+stands.
+
+## What must be said to anyone handed this
+
+- The port is verified 34/34 on both conformance oracles over the demo corpus,
+  and **unjudged above about 3M facts** — `canonicalState` returns one string
+  and V8 caps it. The owner's position, 2026-09-09, is that this is acceptable:
+  the TypeScript engine is for small worlds and the port for large ones, and
+  the reference is not built to reach there. It is still the case that nothing
+  checks the port at the scale it exists for.
+- The port and the reference differ by 434 `derived_by` rows on the JS model.
+  The port is right; the defect is
+  `f_a_stale_firing_outlives_the_premise_it_rests_on` and the repair is a
+  measured trade — see
+  `f_the_third_repair_makes_the_engines_agree_and_still_costs_twenty_tests`.
+- Density and time are measured on one workload: the JS model over JavaScript,
+  plus the demo corpus. 198 B/fact and 45.7 s at 5.68M facts is what that
+  workload does, not what the engine does.
