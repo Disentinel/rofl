@@ -329,6 +329,28 @@ pub struct Store {
     pub dirty: bool,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
+    /// WHAT `absorb` COSTS, which nothing else in this engine can see.
+    ///
+    /// `steps` counts rule firings and `peak_rows` the join accumulator; both
+    /// grow LINEARLY with facts over 8 to 64 files of eslint/lib, 16.6 times
+    /// against 15.9 — while the clock grows 84.3. Sorting a run and merging it
+    /// is not a rule firing, so it appears in neither counter, which makes it
+    /// the one place a superlinear cost can hide from the engine's own
+    /// accounting. Three numbers, because they separate three stories: how
+    /// OFTEN a run is rebuilt, how much ARRIVES each time, and how much
+    /// STANDING run is copied to accept it — the last being the one that turns
+    /// quadratic if a group grows while its arrivals stay small.
+    pub absorb_calls: u64,
+    pub absorb_fresh: u64,
+    pub absorb_canon: u64,
+    /// AND WHAT `arg_matches` COPIES BEFORE IT DECIDES ANYTHING. It clones the
+    /// whole canonical run of the group on every call — before the branch that
+    /// asks whether an index exists, whether one is worth building, or whether
+    /// the pattern budget is spent. One premise match is ONE step to the
+    /// engine's counter and O(group size) to the allocator, which is the shape
+    /// this pair exists to expose.
+    pub argm_calls: u64,
+    pub argm_cloned: u64,
     facts: Facts,
     /// key -> id, structural and OPEN-ADDRESSED. Functors are hash-consed in
     /// the heap, so a `Term` IS its structure and `(rel, persp, args)` needs no
@@ -584,6 +606,9 @@ impl Store {
         }
         let mut canon = std::mem::take(&mut v[i].1.canon);
         let mut fresh = std::mem::take(&mut v[i].1.arrived);
+        self.absorb_calls += 1;
+        self.absorb_fresh += fresh.len() as u64;
+        self.absorb_canon += canon.len() as u64;
         // The records are borrowed immutably while the run is taken mutably:
         // disjoint fields, no unsafe.
         let me = &self.facts;
@@ -746,19 +771,30 @@ impl Store {
             mask |= 1 << q;
         }
         self.absorb(h, rel, p);
-        let canon_ids: Vec<FactId> = self
+        // THE LENGTH FIRST, AND THE RUN ONLY IF IT IS GOING TO BE WALKED.
+        //
+        // Until 2026-09-09 this cloned the whole canonical run here, before the
+        // three branches below that can return without ever looking at it — no
+        // index yet and the group too small, the pattern budget spent, or the
+        // index already built and only probed. Measured on 64 files of
+        // eslint/lib: 7 638 626 calls cloning 369 484 155 486 fact ids between
+        // them, which is 1.5 TB of memcpy and, at the machine's memory
+        // bandwidth, essentially the whole 39.8 s the evaluation took. The
+        // counter that exposed it is `argm_cloned`, and the reason nothing else
+        // could was that one premise match is ONE step to `steps` and O(group
+        // size) to the allocator: over 8 to 64 files, facts grew 15.9x, steps
+        // 16.6x, and this 497.6x.
+        let canon_len = self
             .idx
             .get(&rel)
-            .and_then(|v| {
-                v.iter()
-                    .find(|(q, _)| *q == p)
-                    .map(|(_, r)| r.canon.clone())
-            })
-            .unwrap_or_default();
+            .and_then(|v| v.iter().find(|(q, _)| *q == p))
+            .map(|(_, r)| r.canon.len())
+            .unwrap_or(0);
+        self.argm_calls += 1;
         {
             let run = self.run_mut(rel, p);
             if run.by_pat.is_none() {
-                if canon_ids.len() < MIN_INDEXED {
+                if canon_len < MIN_INDEXED {
                     return None;
                 }
                 run.by_pat = Some(HashMap::new());
@@ -774,6 +810,21 @@ impl Store {
             !run.by_pat.as_ref().unwrap().contains_key(&mask)
         };
         if need_build {
+            // The one path that actually walks the run, and the only one that
+            // now pays to copy it. Cloned rather than borrowed because
+            // `self.alive` and `self.args` take `&self` while `run_mut` below
+            // takes `&mut self`; the copy is once per (group, pattern) instead
+            // of once per call.
+            let canon_ids: Vec<FactId> = self
+                .idx
+                .get(&rel)
+                .and_then(|v| {
+                    v.iter()
+                        .find(|(q, _)| *q == p)
+                        .map(|(_, r)| r.canon.clone())
+                })
+                .unwrap_or_default();
+            self.argm_cloned += canon_ids.len() as u64;
             let mut by_val: HashMap<Box<[Term]>, Vec<FactId>> = HashMap::new();
             for k in &canon_ids {
                 if !self.alive(*k) {

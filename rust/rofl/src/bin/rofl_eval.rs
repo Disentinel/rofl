@@ -221,6 +221,13 @@ fn main() {
         eprintln!("eval_ms\t{:.2}", t_eval.as_secs_f64() * 1000.0);
         eprintln!("steps\t{}", l.eval.steps);
         eprintln!("peak_rows\t{}", l.eval.peak_rows);
+        // `absorb` is invisible to both counters above, which is why these
+        // three are here: it sorts and merges rather than firing a rule.
+        eprintln!("absorb_calls\t{}", l.eval.store.absorb_calls);
+        eprintln!("absorb_fresh\t{}", l.eval.store.absorb_fresh);
+        eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
+        eprintln!("argm_calls\t{}", l.eval.store.argm_calls);
+        eprintln!("argm_cloned\t{}", l.eval.store.argm_cloned);
     }
 }
 
