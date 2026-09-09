@@ -23,3 +23,4 @@ rust/target/
 # bench crates under rust/ carry their own target dirs
 rust/*/target/
 rust/storebench/traces/
+rust/target/volumes/

@@ -106,6 +106,32 @@ impl Server {
                     Err(d) => Err(d.join("\n")),
                 }
             }
+            // Cool a volume to disk. The prefix is the volume; see
+            // `Session::cool`. The caller records `cooled` and the `hole`,
+            // because those are statements about a corpus and the engine knows
+            // only a prefix.
+            "cool" => {
+                let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("cool needs `prefix`")?.to_string();
+                let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
+                let c = self.get(r)?.cool(&prefix, &out)?;
+                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
+            }
+            // Many volumes in ONE pass over the world. Cooling them one at a
+            // time is a walk per volume over a world that is still shrinking.
+            "cool_many" => {
+                let vs = r.get("volumes").and_then(|v| v.as_array()).ok_or("cool_many needs `volumes`")?;
+                let mut pairs = Vec::with_capacity(vs.len());
+                for v in vs {
+                    let p = v.get("prefix").and_then(|x| x.as_str()).ok_or("a volume needs `prefix`")?;
+                    let o = v.get("path").and_then(|x| x.as_str()).ok_or("a volume needs `path`")?;
+                    pairs.push((p.to_string(), o.to_string()));
+                }
+                let cs = self.get(r)?.cool_many(&pairs)?;
+                let rows: Vec<Value> = cs.iter()
+                    .map(|c| json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
+                    .collect();
+                Ok(json!({ "volumes": rows }))
+            }
             "fork" => {
                 let f = self.get(r)?.fork();
                 let facts = f.eval.store.fact_count();

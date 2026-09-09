@@ -39,9 +39,9 @@
 //! and any query that hides whether it probed or scanned.
 
 use crate::engine::{Eval, Halt, Mode, TickOutcome};
-use crate::reflect::{bootstrap_kernel, Vocab};
+use crate::reflect::{bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{write_fact_key, Store, F_BASE};
+use crate::store::{write_fact_key, FactId, Store, F_BASE};
 use crate::term::{Heap, Sym, Term, TermK};
 
 /// A world. Built once with [`Session::open`], then forked per unit of work.
@@ -70,6 +70,22 @@ pub struct Evaluated {
 /// What [`Session::ask`] answers. Measurement 1 is the whole reason for the
 /// three cost fields: they are the difference between 5.5 ms and 12 469 ms,
 /// and they are visible before the caller is surprised by it.
+/// The first token of a cooled volume's header line.
+pub const VOLUME_MAGIC: &str = "rofl-volume";
+/// The layout of the file BELOW the header. Bumped when the rendering changes,
+/// separately from the kernel hash, because those are two different reasons a
+/// volume can stop being readable.
+pub const VOLUME_FORMAT: u32 = 1;
+
+/// What `cool` did. `facts` is what left memory; `bytes` is what reached the
+/// disk, and the two are reported separately because a caller sizing a volume
+/// store needs the second and a caller watching pressure needs the first.
+pub struct Cooled {
+    pub facts: usize,
+    pub bytes: usize,
+    pub path: String,
+}
+
 pub struct Answer {
     /// Variable names in the order they first appear in the query. `_` is
     /// dropped by the parser into a fresh name, so a wildcard is a column too.
@@ -203,6 +219,190 @@ impl Session {
             peak_rows: self.eval.peak_rows,
             space: self.eval.space,
         })
+    }
+
+    /// COOL A VOLUME TO DISK: write its facts out as ROFL and drop them.
+    ///
+    /// A VOLUME IS A KEY PREFIX (docs/volumes-and-residency.md). Which volume a
+    /// fact belongs to is decided by the SCANNER when it mints an id — nothing
+    /// is derived, because a derived answer would need the data in order to
+    /// find the data. `scanners/js_ast.ts` mints every node id as
+    /// `n<sha256(path)[0..8]>_<counter>`, so a file is a prefix of every id it
+    /// produced, and this reads that prefix off the key.
+    ///
+    /// THE RULES NEVER MENTION VOLUMES AND MUST NOT. All 64 volumes agreed byte
+    /// for byte while no rule knew volumes existed; locality here is a property
+    /// of the DATA, and a rule that named a volume would stop being about the
+    /// domain and start being about storage. So this is a host operation over
+    /// keys, and `rules/ingest.rofl` only ever says a book is `coolable`.
+    ///
+    /// ONLY BASE FACTS ARE WRITTEN AND DROPPED. A derived fact is not a
+    /// possession, it is a conclusion — re-derived from what remains — so
+    /// carrying it to disk would store an answer beside the question and let
+    /// the two disagree. Dropping the base layer marks the store dirty and the
+    /// next evaluation rebuilds what still follows.
+    ///
+    /// The caller is what records the act: `cooled[code](File, Path)` so the
+    /// file stays INDEXED rather than returning to the frontier, and
+    /// `hole($cold(File), cooled_to_disk)` so a question about the cold volume
+    /// REFUSES instead of answering empty. Neither is written here, because
+    /// both are statements about a corpus and this function knows only a
+    /// prefix.
+    pub fn cool(&mut self, prefix: &str, out: &str) -> Result<Cooled, String> {
+        let (write, drop) = self.volume(prefix);
+        // THE HEADER IS A REFUSAL WAITING TO HAPPEN, and that is its whole
+        // point. A volume is ROFL text, so no change to the store's layout can
+        // make it unreadable — but the kernel's own programs decide what a
+        // fact may say and how a rule is encoded, and a volume written under
+        // one policy and reheated under another still PARSES while meaning
+        // something else. That is the exact shape of the stale corpus this
+        // branch found today: an artefact that cannot go red on its own.
+        //
+        // A comment line, so the file stays ordinary ROFL and `load` will
+        // still take it. `reheat` is what checks — see the note there for the
+        // hole that leaves open, which is deliberate and named rather than
+        // pretended away.
+        let mut text = self.header(prefix);
+        for id in &write {
+            let r = *self.eval.store.rec(*id);
+            let args = self.eval.store.args(*id).to_vec();
+            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
+            text.push_str(".\n");
+        }
+        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
+        self.eval.store.remove_many(&drop);
+        self.eval.store.dirty = true;
+        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
+    }
+
+    /// REHEAT A COOLED VOLUME, refusing one this engine did not write.
+    ///
+    /// The check is a REFUSAL and never a repair: told the kernel has moved, a
+    /// caller re-parses the source, which is cheap — 28 MB/s measured on real
+    /// eslint AST facts — and is the only thing that can be right. Rewriting an
+    /// old volume to the new meaning would require knowing what it meant, which
+    /// is precisely what has been lost.
+    ///
+    /// THE HOLE, NAMED: a cooled volume is ordinary ROFL, so `load` will take
+    /// it without looking at the header. That is deliberate — a volume must
+    /// stay readable by anything that reads ROFL, including a person — and it
+    /// means the check lives on the path a driver uses rather than on the
+    /// format. A driver that reaches for `load` instead of `reheat` gets no
+    /// protection, and the gate says so rather than the doc claiming otherwise.
+    pub fn reheat(&mut self, path: &str) -> Result<usize, Vec<String>> {
+        let text = std::fs::read_to_string(path).map_err(|e| vec![format!("{path}: {e}")])?;
+        let head = text.lines().next().unwrap_or("");
+        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", env!("ROFL_KERNEL_HASH"));
+        if !head.starts_with(&want) {
+            return Err(vec![format!(
+                "{path}: not a volume this engine wrote, so what it means is unknown.\n                   header: {head}\n  wanted: {want}...\n                   Re-parse the source instead; a volume cannot be translated, because \
+                 translating it needs the meaning that has been lost."
+            )]);
+        }
+        self.load(&text, None)
+    }
+
+    /// Every live BASE fact IN A PROGRAM'S OWN BOOK carrying an atom whose name
+    /// begins with `prefix`, looked for inside functors too — an id can be
+    /// nested, and a volume that dropped only the top-level mentions would
+    /// leave half a file behind.
+    ///
+    /// WHAT IS WRITTEN AND WHAT IS REMOVED ARE NOT THE SAME SET, and conflating
+    /// them is the defect that made cooling useless.
+    ///
+    /// The kernel writes `in_perspective` and `asserted_by` into `[$kernel]`
+    /// about every fact a program asserts, and those rows MENTION the volume —
+    /// the fact is reified inside a `$fact(...)` functor, so a prefix search
+    /// finds them. The first version excluded them from BOTH halves, which was
+    /// half right and wholly wrong:
+    ///
+    ///   * excluding them from what is WRITTEN is correct. The trail is what
+    ///     the kernel says ABOUT an assertion; a reheat IS a fresh assertion
+    ///     and earns a fresh trail dated to when it actually happened. A volume
+    ///     carrying the old trail would claim a fact was asserted at a time it
+    ///     was not — and the door refuses it anyway, since `$` marks a kernel
+    ///     ledger a program may not write.
+    ///   * excluding them from what is REMOVED left the trail behind forever.
+    ///     Measured over 64 eslint files: every file cooled on every tick and
+    ///     the world still grew 18 360 -> 295 185 facts, because the trail is
+    ///     roughly two rows per fact and none of it ever left. Cooling freed
+    ///     the smaller half and kept the larger.
+    ///
+    /// So: `write` is the program's own facts, `drop` is everything about the
+    /// volume including the kernel's account of it.
+    pub fn volume(&mut self, prefix: &str) -> (Vec<FactId>, Vec<FactId>) {
+        let mut write = Vec::new();
+        let mut drop = Vec::new();
+        for id in self.eval.store.all_facts() {
+            if !self.eval.store.alive(id) {
+                continue;
+            }
+            let args = self.eval.store.args(id).to_vec();
+            if !args.iter().any(|a| self.mentions(*a, prefix)) {
+                continue;
+            }
+            let r = self.eval.store.rec(id);
+            let kernel = is_kernel_ledger(&self.eval.h, r.persp);
+            if r.base() && !kernel {
+                write.push(id);
+            }
+            drop.push(id);
+        }
+        (write, drop)
+    }
+
+    /// COOL MANY VOLUMES IN ONE PASS.
+    ///
+    /// `cool` walks every fact in the world to find one volume's, so cooling N
+    /// volumes one at a time is N walks over a world that is still shrinking —
+    /// quadratic, and measured as such: 8 volumes a tick over 64 files took
+    /// cooling from 73 ms to 4 699 ms while the work per tick was constant.
+    /// One pass, N prefixes.
+    pub fn cool_many(&mut self, vols: &[(String, String)]) -> Result<Vec<Cooled>, String> {
+        let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
+        let mut counts = vec![0usize; vols.len()];
+        let mut drop: Vec<FactId> = Vec::new();
+        for id in self.eval.store.all_facts() {
+            if !self.eval.store.alive(id) {
+                continue;
+            }
+            let args = self.eval.store.args(id).to_vec();
+            let Some(k) = vols.iter().position(|(p, _)| args.iter().any(|a| self.mentions(*a, p)))
+            else {
+                continue;
+            };
+            let r = *self.eval.store.rec(id);
+            if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
+                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);
+                texts[k].push_str(".\n");
+                counts[k] += 1;
+            }
+            drop.push(id);
+        }
+        let mut out = Vec::with_capacity(vols.len());
+        for (i, (_, path)) in vols.iter().enumerate() {
+            std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
+            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone() });
+        }
+        self.eval.store.remove_many(&drop);
+        self.eval.store.dirty = true;
+        Ok(out)
+    }
+
+    fn header(&self, prefix: &str) -> String {
+        format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={} prefix={prefix}\n",
+            env!("ROFL_KERNEL_HASH"))
+    }
+
+    fn mentions(&self, t: Term, prefix: &str) -> bool {
+        match t.kind() {
+            TermK::Atom(a) => self.eval.h.name(a).starts_with(prefix),
+            TermK::Func(i) => {
+                self.eval.h.name(self.eval.h.fname(i)).starts_with(prefix)
+                    || self.eval.h.fargs(i).iter().any(|x| self.mentions(*x, prefix))
+            }
+            _ => false,
+        }
     }
 
     /// The boundary. Staged `@next` facts are installed here, and here is the

@@ -132,6 +132,37 @@ export class RoflSession {
     return r as unknown as Answer;
   }
 
+  /** COOL A VOLUME TO DISK: write its base facts out as ROFL and drop them.
+   *
+   *  A volume is a KEY PREFIX minted by the scanner — `scanners/js_ast.ts`
+   *  exports `idPrefix(file)` — so residency is decided before anything is
+   *  loaded, and no rule ever mentions a volume. The kernel's own books are
+   *  excluded: `asserted_by` and `in_perspective` are what the kernel says
+   *  ABOUT an assertion, and a reheat IS a fresh assertion that earns a fresh
+   *  trail dated to the tick it actually happened on.
+   *
+   *  Reversible, and gated as such: `rust/rofl/tests/cool.rs` compares
+   *  canonicalState before cooling and after reheating, byte for byte.
+   *
+   *  The caller records the act — `cooled[code](File, Path)` so the file stays
+   *  INDEXED rather than returning to the frontier, and `hole($cold(File),
+   *  cooled_to_disk)` so a question about the cold volume refuses instead of
+   *  answering empty. */
+  async cool(prefix: string, path: string): Promise<{ facts: number; bytes: number; path: string }> {
+    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path });
+    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
+  }
+
+  /** Cool MANY volumes in one pass over the world.
+   *
+   *  Cooling them one at a time walks the world once per volume, and the world
+   *  is still shrinking as it goes — measured over 64 eslint files, that took
+   *  cooling from 73 ms to 4 699 ms a tick while the work per tick was flat. */
+  async coolMany(vols: { prefix: string; path: string }[]): Promise<{ facts: number; bytes: number; path: string }[]> {
+    const r = await this.port.send({ op: 'cool_many', session: this.id, volumes: vols });
+    return r.volumes as { facts: number; bytes: number; path: string }[];
+  }
+
   /** Write canonicalState to a file. Deliberately not a string — see the
    *  module note on V8's cap and where the port stops being judged. */
   async state(outPath: string): Promise<number> {
