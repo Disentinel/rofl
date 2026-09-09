@@ -22,7 +22,9 @@
 // named so that reaching for it is a decision.
 //
 //   const port = await RoflPort.start();
-//   const core = await port.open({ seedPath: 'world.seed.json' });
+//   const core = await port.fresh();
+//   await core.loadFile('boot.rofl');
+//   await core.loadFile('my-program.rofl');
 //   const work = await core.fork();          // 128x cheaper than open
 //   await work.assert('candidate(x).');
 //   await work.evaluate();
@@ -82,6 +84,27 @@ export class RoflSession {
   async fork(): Promise<RoflSession> {
     const r = await this.port.send({ op: 'fork', session: this.id });
     return new RoflSession(this.port, r.session as number, r.facts as number);
+  }
+
+  /** Load a ROFL PROGRAM — facts and rules. Returns how many clauses were
+   *  admitted; a refusal rejects with every diagnostic and leaves the world
+   *  exactly as it was, so a program with three bad clauses reports all three
+   *  and puts nothing in.
+   *
+   *  `who` is the author. A caller may not spell a `$` principal: the one way
+   *  into the kernel's ring is `$kernel_authority(...)` written as the FIRST
+   *  clause of the FIRST load, in the file itself, where a reader can see it. */
+  load(rofl: string, who?: string): Promise<number> {
+    return this.port.send({ op: 'load', session: this.id, rofl, who })
+      .then((r) => r.admitted as number);
+  }
+
+  /** The same, reading the text from a path the ENGINE opens. A large program
+   *  has no business going through a pipe and a JSON string escape when both
+   *  ends can read a file. */
+  loadFile(path: string, who?: string): Promise<number> {
+    return this.port.send({ op: 'load', session: this.id, path, who })
+      .then((r) => r.admitted as number);
   }
 
   /** Base facts, written as ROFL. Returns how many were NEW. What they add is
@@ -189,7 +212,15 @@ export class RoflPort {
     });
   }
 
-  /** Build the core. Expensive and meant to happen once; fork it after that. */
+  /** An EMPTY world with the kernel's bootstrap tables and nothing else —
+   *  `new Rofl()`. With `load` beside it a caller never needs a seed, and
+   *  therefore never needs the TypeScript kernel at all. */
+  async fresh(budget?: number): Promise<RoflSession> {
+    const r = await this.send({ op: 'fresh', budget });
+    return new RoflSession(this, r.session as number, r.facts as number);
+  }
+
+  /** Build the core from a snapshot. Expensive; fork it after that. */
   async open(opts: { seedPath?: string; seed?: string; budget?: number }): Promise<RoflSession> {
     const r = await this.send({ op: 'open', ...opts });
     return new RoflSession(this, r.session as number, r.facts as number);

@@ -159,6 +159,10 @@ pub struct Eval {
     /// provenance to keep, or none set — which keeps everything and is what
     /// the corpus runs under.
     pub retain_ticks: Option<u32>,
+    /// `Rofl.kernelClaimed` (src/api.ts). Whether `$kernel_authority` has been
+    /// made into THIS store. Once set the door is shut for the life of the
+    /// store, and a second claim is refused rather than ignored.
+    pub kernel_claimed: bool,
 }
 
 pub struct Outcome {
@@ -197,6 +201,7 @@ impl Eval {
             answer: RuleAnswer::default(),
             no_provenance: false,
             retain_ticks: None,
+            kernel_claimed: false,
         };
         e.prepare();
         e
@@ -211,6 +216,27 @@ impl Eval {
     }
 
     // ------------------------------------------------------------- prepare
+
+    /// Re-derive the prepared program from the store, after a load added
+    /// rules. Rules live in the store as reflection facts, and the peeled
+    /// strata, the body plans and the demand grouping are all computed from
+    /// them — so a load that added rules and left `self.rules` alone would
+    /// evaluate the OLD program against the NEW facts, silently.
+    ///
+    /// `prepare` overwrites everything it fills EXCEPT `diags`, which it
+    /// appends to. Its diagnostics are re-derived from the store on every
+    /// call, so a second preparation would double every rule's complaint;
+    /// they are merged rather than appended here.
+    pub fn reprepare(&mut self) {
+        let keep = std::mem::take(&mut self.diags);
+        self.prepare();
+        let fresh = std::mem::replace(&mut self.diags, keep);
+        for d in fresh {
+            if !self.diags.contains(&d) {
+                self.diags.push(d);
+            }
+        }
+    }
 
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
@@ -281,7 +307,7 @@ impl Eval {
     }
 
     fn classify(&mut self, r: DRule) -> ERule {
-        let (plan, stuck, _) = plan_body(&self.h, &r.clause);
+        let (plan, stuck, _, _) = plan_body(&self.h, &r.clause);
         let safe = stuck.is_none() && !self.answer.unsafe_rules.contains(&r.id);
         let mut has_neg = false;
         let mut pos_rels = Vec::new();
@@ -1807,7 +1833,15 @@ fn rename_lit(h: &mut Heap, l: &mut Lit, n: u64) {
 /// `planBody` (src/engine.ts:273). Positive premises and builtins keep the
 /// order they were written in; a negation is held back until every variable it
 /// shares with the rest of the rule is bound.
-pub fn plan_body(h: &Heap, c: &Clause) -> (Vec<BodyElem>, Option<usize>, bool) {
+/// `planBody` (src/api.ts). Returns the plan, the index of the first negation
+/// that never became ready, whether the head is ground under the plan, and
+/// WHAT WAS BOUND when it stalled.
+///
+/// The fourth element exists for `checkOrderable`, which has to name the
+/// variables the stuck negation still wants. Recomputing the binding walk
+/// there would be a second copy of the only thing this function knows, and a
+/// second copy of a planner is a second planner.
+pub fn plan_body(h: &Heap, c: &Clause) -> (Vec<BodyElem>, Option<usize>, bool, Vec<Sym>) {
     let mut seen_in: HashMap<Sym, Vec<i64>> = HashMap::new();
     let note = |t: Term, where_: i64, seen_in: &mut HashMap<Sym, Vec<i64>>| {
         let mut vs = Vec::new();
@@ -1915,7 +1949,7 @@ pub fn plan_body(h: &Heap, c: &Clause) -> (Vec<BodyElem>, Option<usize>, bool) {
     }
     let head_ground =
         c.head.args.iter().all(|a| ground_in(*a, &bound)) && ground_in(c.head.persp, &bound);
-    (plan, pending.first().copied(), head_ground)
+    (plan, pending.first().copied(), head_ground, bound)
 }
 
 // -------------------------------------------------------------- peelRounds
@@ -2344,7 +2378,20 @@ mod tests {
         // control: it is the same world at tick 0, where the witness table is
         // an order of magnitude larger, so a zero here would be the boundary
         // eating provenance rather than the world having none.
-        for (name, at_tick_0, carried) in [("tm", 66, 10), ("counter", 56, 4), ("oops", 135, 49)] {
+        // THE TICK-0 COLUMN IS A PROPERTY OF boot.rofl AND MOVES WITH IT.
+        // Re-measured 2026-09-09 after the corpus was regenerated against the
+        // current kernel: 66/56/135 became 70/60/139, +4 in all three worlds,
+        // which is exactly the four rules boot.rofl had gained (`exports`,
+        // `exported`, `exported_to`, `gathered`) and is why a uniform delta
+        // across three unrelated worlds is the reassuring shape rather than
+        // the alarming one. The CARRIED column did not move at all, because
+        // none of the four stages anything here.
+        //
+        // If this goes red after a change to boot.rofl, re-measure — do not
+        // adjust one number until it passes. The two columns moving by
+        // different amounts, or one world moving and another not, is the
+        // signal this test exists to give.
+        for (name, at_tick_0, carried) in [("tm", 70, 10), ("counter", 60, 4), ("oops", 139, 49)] {
             let mut l = crate::load(&seed(name), 1_000_000).unwrap();
             let before = l.eval.store.firing_keys().len();
             assert_eq!(before, 0, "{name}: a restored seed carries no live firing");

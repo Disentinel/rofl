@@ -136,6 +136,27 @@ passes the first test and sharing nothing passes the second. `ask` is counted
 against a census taken straight off the store, over every (relation, book,
 arity) in every case: two counts from two pieces of code that must agree.
 
+### The sixth verb, and the one that ends the pair
+
+**`Session::load(text, who)`** — `rust/rofl/src/program.rs`, added the same day.
+`open(packs)` meant `open(seed)` until it existed, so the port could not be
+handed to anyone without also handing them the TypeScript kernel that makes
+seeds. `Session::fresh()` + `load` builds a world out of `.rofl` text.
+
+The oracle is the LIVE KERNEL, not a file: for every world the corpus generator
+can build, `new Rofl(); load(boot); load(files); evaluate()` runs in TypeScript
+and the same text is loaded in Rust, and the two `canonicalState`s are compared
+byte for byte. That checks far more than the parse — the same facts, the same
+provenance, the same `asserted_by` tick, the same `edb` registrations, the same
+`authority` rows, the same encoded rules.
+
+A load is not "parse and insert", and the door is the half that matters: the
+kernel claim, the `$` ring in both slots, arity (a CRASH gate on the JS side,
+not tidiness — the readers destructure positionally), orderability, and the
+refusal to let a program grant authority to a `$` principal. A forgery is
+deliberately NOT refused: it is audited, because `forged[audit]` has to be
+plantable or it can never be shown to fire.
+
 ## The input question, and how it was settled
 
 The port had no parser. It has one now: `rust/rofl/src/rofl_parse.rs`, written
@@ -163,12 +184,22 @@ and it is not built.
 
 ## What must be said to anyone handed this
 
-- The port is verified 34/34 on both conformance oracles over the demo corpus,
-  and **unjudged above about 3M facts** — `canonicalState` returns one string
+- The port is verified **56/56 on both conformance oracles** over the demo
+  corpus, and **unjudged above about 3M facts** — `canonicalState` returns one string
   and V8 caps it. The owner's position, 2026-09-09, is that this is acceptable:
   the TypeScript engine is for small worlds and the port for large ones, and
   the reference is not built to reach there. It is still the case that nothing
   checks the port at the scale it exists for.
+- **That 56 was 34 until 2026-09-09, and the 34 was against a photograph.**
+  `facts/port-corpus/` is gitignored and `rust/run_corpus.sh` read whatever was
+  on disk, so every conformance pass reported on this branch was against a
+  snapshot of the kernel from whenever the generator last ran. All 34 cases
+  differed from a fresh generation, and 22 worlds had never been checked by
+  anything. Nothing could go red, because the seed and the expected output are
+  written in the same instant and therefore agree with each other forever. The
+  harness now generates its own oracle before running and refuses to report a
+  pass if generation fails. The port itself was never wrong — see
+  `f_the_conformance_corpus_was_a_photograph_of_the_kernel_not_the_kernel`.
 - The port and the reference differ by 434 `derived_by` rows on the JS model.
   The port is right; the defect is
   `f_a_stale_firing_outlives_the_premise_it_rests_on` and the repair is a

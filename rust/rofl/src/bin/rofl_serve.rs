@@ -81,6 +81,31 @@ impl Server {
                 let id = self.keep(s);
                 Ok(json!({ "session": id, "facts": facts, "dangling": dangling }))
             }
+            // An empty world with the kernel's bootstrap tables and nothing
+            // else — `new Rofl()`. With `load` beside it, a caller never needs
+            // a seed, and therefore never needs the TypeScript kernel.
+            "fresh" => {
+                let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
+                let s = Session::fresh(budget);
+                let facts = s.eval.store.fact_count();
+                let id = self.keep(s);
+                Ok(json!({ "session": id, "facts": facts, "dangling": 0 }))
+            }
+            // A refusal returns EVERY diagnostic and leaves the store as it
+            // was. It is an `ok:false` answer rather than a transport error,
+            // because a rejected program is a normal outcome of loading one.
+            "load" => {
+                let text = match (r.get("path").and_then(|v| v.as_str()), r.get("rofl").and_then(|v| v.as_str())) {
+                    (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
+                    (None, Some(t)) => t.to_string(),
+                    (None, None) => return Err("load needs `path` or `rofl`".into()),
+                };
+                let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
+                match self.get(r)?.load(&text, who.as_deref()) {
+                    Ok(n) => Ok(json!({ "admitted": n })),
+                    Err(d) => Err(d.join("\n")),
+                }
+            }
             "fork" => {
                 let f = self.get(r)?.fork();
                 let facts = f.eval.store.fact_count();

@@ -316,6 +316,24 @@ impl Vocab {
     pub fn in_kernel_book(&self, rel: Sym) -> bool {
         self.kernel_book.contains(&rel)
     }
+
+    /// `SEALED_BODY` (src/reflect.ts:323): the relations each sealable body
+    /// withholds. One relation with an argument rather than three relations,
+    /// because each scales with a different thing - the rules, the data, the
+    /// derivations - and what they share is the failure: dropped, every one
+    /// turns a QUESTION into an EMPTY ANSWER rather than into a refusal.
+    pub fn sealed_body_rels(&self, b: Sym) -> Vec<Sym> {
+        if b == self.sealed_rules {
+            vec![self.has_conclusion, self.reads_from, self.writes_to, self.uses_builtin]
+        } else if b == self.sealed_assertions {
+            vec![self.in_perspective, self.asserted_by]
+        } else if b == self.sealed_provenance {
+            vec![self.derived_by]
+        } else {
+            Vec::new()
+        }
+    }
+
     pub fn arity_of(&self, rel: Sym) -> Option<usize> {
         self.arity.iter().find(|(r, _)| *r == rel).map(|(_, n)| *n)
     }

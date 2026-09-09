@@ -8,6 +8,13 @@
 //!
 //! `facts/port-corpus/` is the oracle (`scripts/port_corpus.ts`), and every
 //! module here cites the JS file and line it ports.
+//!
+//! THE CORPUS IS GENERATED, NOT KEPT: it is gitignored, and `rust/run_corpus.sh`
+//! regenerates it before every run. It did not always — and a corpus read off
+//! disk is a photograph of whatever the kernel was when somebody last ran the
+//! generator, which cannot go stale visibly because the seed and the expected
+//! output are written in the same instant and agree with each other forever.
+//! See `f_the_conformance_corpus_was_a_photograph_of_the_kernel_not_the_kernel`.
 
 pub mod dense;
 pub mod engine;
@@ -24,6 +31,8 @@ pub mod rofl_lex;
 pub mod rofl_parse;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_spangen.ts.
 pub mod ring1_tables;
+/// Loading a ROFL program into the engine: the port of `Rofl.load`.
+pub mod program;
 pub mod seed;
 /// The five verbs the port offers a caller, derived in docs/port-surface.md.
 pub mod session;

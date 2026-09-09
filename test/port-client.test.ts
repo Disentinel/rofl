@@ -178,6 +178,38 @@ test('a dead engine rejects every outstanding promise', { skip: built ? false : 
   await assert.rejects(() => s.ask('$p(_)'), /exited|would not start/);
 });
 
+// The verb that ends the pair: a node caller building a world out of .rofl
+// text, with no seed and therefore no TypeScript kernel in the picture. The
+// oracle is the kernel itself, in this process, over the same text.
+test('a world can be built from .rofl text alone, and it is the kernel\'s world',
+  { skip: built ? false : 'rofl-serve not built' }, async () => {
+  const { Rofl } = await import('../src/api.ts');
+  const port = await RoflPort.start();
+  try {
+    const boot = path.join(REPO, 'boot.rofl');
+    const prog = path.join(REPO, 'examples/counter.rofl');
+    const s = await port.fresh();
+    assert.equal(typeof await s.loadFile(boot), 'number');
+    await s.loadFile(prog);
+    await s.evaluate();
+
+    const ref = new Rofl();
+    ref.load(fs.readFileSync(boot, 'utf8'));
+    ref.load(fs.readFileSync(prog, 'utf8'));
+    ref.evaluate();
+    assert.equal(await s.stateText(), ref.store.canonicalState(),
+      'a world built from text in Rust is not the world the kernel builds');
+
+    // A refused program reports every diagnostic and leaves nothing behind.
+    const before = await s.stateText();
+    await assert.rejects(() => s.load('authority(b, $kernel).\np[$kernel](c).'), /kernel/);
+    await s.evaluate();
+    assert.equal(await s.stateText(), before, 'a refused load left something behind');
+  } finally {
+    await port.stop();
+  }
+});
+
 test('a missing build is reported as a missing build', async () => {
   await assert.rejects(() => RoflPort.start('/nonexistent/rofl-serve'), /cargo build/);
 });

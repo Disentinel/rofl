@@ -38,10 +38,11 @@
 //! What is deliberately NOT here: any way to mutate the world mid-evaluation,
 //! and any query that hides whether it probed or scanned.
 
-use crate::engine::{Eval, Halt, TickOutcome};
+use crate::engine::{Eval, Halt, Mode, TickOutcome};
+use crate::reflect::{bootstrap_kernel, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{write_fact_key, F_BASE};
-use crate::term::{Sym, Term, TermK};
+use crate::store::{write_fact_key, Store, F_BASE};
+use crate::term::{Heap, Sym, Term, TermK};
 
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
@@ -95,6 +96,18 @@ impl Session {
         Ok(Session { eval: l.eval, dangling: l.dangling })
     }
 
+    /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
+    /// `new Rofl()` on the TypeScript side. This is where `load` starts from,
+    /// and it is the reason the port no longer needs a seed to exist: a caller
+    /// can now build a world out of `.rofl` text alone.
+    pub fn fresh(budget: i64) -> Session {
+        let mut h = Heap::default();
+        let v = Vocab::new(&mut h);
+        let mut store = Store::new();
+        bootstrap_kernel(&mut h, &v, &mut store);
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0 }
+    }
+
     /// A world of one's own, at 3 ms against 383 (measurement 2). The heap and
     /// the store are copied wholesale, so nothing the fork does is visible to
     /// the core or to a sibling — which is what makes 64 volumes cost 5.87x a
@@ -135,6 +148,34 @@ impl Session {
             self.eval.store.dirty = true;
         }
         Ok(n)
+    }
+
+    /// LOAD A ROFL PROGRAM — the verb that stops this being an accelerator.
+    ///
+    /// Until this existed, `open` meant `open(seed)` and the only way into a
+    /// Rust world was a snapshot the TypeScript kernel had made, so the port
+    /// could not be handed to anyone without handing them the pair.
+    ///
+    /// `who` is the author. A caller may not spell a `$` principal; the one
+    /// way into the kernel's ring is `$kernel_authority` written as the FIRST
+    /// clause of the FIRST load, in the file itself, where a reader can see it.
+    ///
+    /// A refusal returns EVERY diagnostic and leaves the store exactly as it
+    /// was — a program with three bad clauses hears about all three and puts
+    /// nothing in the world.
+    ///
+    /// THE RULES ARE RE-PREPARED AFTERWARDS, and that is not a detail: rules
+    /// live in the store as reflection facts, and the peeled strata, the body
+    /// plans and the demand grouping are all computed from them. A load that
+    /// added rules and left `self.rules` alone would evaluate the OLD program
+    /// against the NEW facts, silently.
+    pub fn load(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {
+        let r = crate::program::load_program(&mut self.eval, src, who);
+        if !r.ok {
+            return Err(r.diagnostics);
+        }
+        self.eval.reprepare();
+        Ok(r.admitted)
     }
 
     /// Run to fixpoint, or to a wall. `Err` is a defect or a stratification
