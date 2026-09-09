@@ -98,13 +98,32 @@ attr_value_unread_ok(operator, "+=",  a_no_layer_models_arithmetic).
 attr_value_unread_ok(operator, "<",   a_no_layer_models_comparison).
 attr_value_unread_ok(operator, ">",   a_no_layer_models_comparison).
 attr_value_unread_ok(operator, ">=",  a_no_layer_models_comparison).
-attr_value_unread_ok(operator, "===", a_no_layer_models_comparison).
 attr_value_unread_ok(operator, "||",  a_the_kind_carries_the_short_circuit).
 -- `logical_expression` is a `short_circuit_kind` and the layer reads the KIND;
 -- WHICH operator it is changes nothing about the guard, and the era table reads
 -- `operator` only for the ones that carry an era — `**`, `??`, `??=`, `||=`,
 -- `&&=`. That is the whole of why this list is operators.
-attr_value_unread_ok(operator, "void", a_no_layer_models_a_unary_operator).
+-- `===` AND `void` LEFT THIS LIST ON 2026-09-09 AND THE EXCUSE THEY LEFT IS THE
+-- POINT. Both were excused here as values `no layer models`, and the effect
+-- layer now models exactly them: `eff_op_inspects[code]` in rules/js-effects.rofl
+-- names the five operator spellings that run NO USER CODE - `===`, `!==`,
+-- `typeof`, `void`, `!` - and everything else converts an operand by
+-- complement, which is what makes `a + b` a hidden call and `a === b` not one.
+-- Removing the two rows rather than leaving them is the difference between an
+-- excuse and a decoration: `unconsumed_value[audit]` needs neither
+-- `attr_pair_read` nor `attr_value_unread_ok`, so a row kept beside a rule that
+-- reads the value is a sentence that has stopped being true and that nothing
+-- would ever object to.
+--
+-- AND THE OTHER TEN STAY, WHICH IS THE HALF THAT SAYS THE COMPLEMENT IS REAL.
+-- `+`, `-`, `*`, `<`, `>` and `>=` ARE modelled by the effect layer and are
+-- still excused here, because that layer names only the operators that run no
+-- user code and takes the rest BY COMPLEMENT - so no rule anywhere writes those
+-- six spellings, and `no layer models arithmetic` is still exactly true of the
+-- VALUE even though a layer now models the construct. `++`, `--` and `+=` sit on
+-- `update_expression` and `assignment_expression`, which no layer reads an
+-- operator off, and `||` sits on `logical_expression`, whose KIND carries the
+-- short circuit.
 attr_value_unread_ok(export_kind, "value", a_the_erasure_marker_is_the_other_value).
 attr_value_unread_ok(import_kind, "value", a_the_erasure_marker_is_the_other_value).
 -- `"type"` is what `export_local` and the import rules read: it marks a binding

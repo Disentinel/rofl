@@ -2659,11 +2659,34 @@ claim(queued, js, static_block,             none, effect, w_effect_class_initial
 -- - `===` never coerces, `<` always may, `typeof` is total and `delete` is a
 -- WRITE. Two of those four have no site here (`typeof`, `delete`), which is
 -- what the item has to answer for before it writes a rule.
-work(w_effect_implicit_coercion, "a binary operator, a unary operator and a template interpolation all call a conversion method on their operand: an operator whose semantics is a call, which is accessor_call in a third syntax").
+work(w_effect_implicit_coercion, "a binary operator, a unary operator and a template interpolation all call a conversion method on their operand: an operator whose semantics is a call, which is accessor_call in a third syntax. MODELLED 2026-09-09 in section 5b of rules/js-effects.rofl and STILL OPEN, measured: 369 coerced operands, 223 primitive, 5 in-program objects none of which overrides a conversion key, 141 the value layer did not trace - and those 141 are the cell").
 work_state(w_effect_implicit_coercion, open).
+work_spawned(w_effect_implicit_coercion, f_the_operand_decides_a_coercion_and_the_operator_only_says_whether_to_ask).
+work_spawned(w_effect_implicit_coercion, f_the_exn_oracle_cannot_see_a_label_that_did_not_arrive_through_resolves).
 claim(queued, js, binary_expression,        none, effect, w_effect_implicit_coercion).
 claim(queued, js, unary_expression,         none, effect, w_effect_implicit_coercion).
 claim(queued, js, template_literal,         none, effect, w_effect_implicit_coercion).
+
+-- WHAT THE ITEM ANSWERED FOR BEFORE IT WROTE A RULE, which is what its own note
+-- above demanded. `typeof` and `delete` have NO SITE in this corpus and neither
+-- has `instanceof`; the corpus carries eight operator spellings on a binary or
+-- unary node - `*`, `+`, `-`, `<`, `>`, `>=`, `===`, `void` - of which two run
+-- no user code at all. `===` and `void` are named in `eff_op_inspects` and the
+-- rest converts BY COMPLEMENT, so an operator no rule claimed is assumed to run
+-- user code, which is the safe direction for a may-set.
+--
+-- AND TWO OPERATORS ARE DELIBERATELY OUTSIDE THE MECHANISM. `x instanceof C`
+-- consults `C[Symbol.hasInstance]` and `delete o[k]` performs a WRITE on top of
+-- converting its key; neither is `ToPrimitive`, so `eff_op_beyond[flow]` names
+-- them and the complement still treats them as running user code. That is a
+-- second thing this item leaves for whoever wants the `delete` write as a
+-- `write<h>` seed - it is a state question rather than a conversion one.
+--
+-- WHY THE CELLS DO NOT CLOSE, stated as the criterion rather than as a feeling.
+-- facts/js-effects.rofl's own note says `member_expression` is `handled`
+-- BECAUSE the mechanism covers it with no residue, and `call_expression` is not
+-- because it has one. 141 untraced operands is a residue of exactly that shape,
+-- and the honest verdict is the one the pack already gives it.
 
 -- 68 - AN IMPORT EVALUATES A MODULE. `import './m.js'` runs m's whole top
 -- level, so its effect is m's top-level effect, and nothing joins one file's
@@ -2677,13 +2700,47 @@ claim(queued, js, template_literal,         none, effect, w_effect_implicit_coer
 -- `export_named_declaration` evaluate the source module exactly as an import
 -- does; `import()` evaluates it too and returns a promise, so it carries the
 -- module's effect on top of whatever the dynamic form costs.
-work(w_effect_module_evaluation, "a static import EVALUATES the imported module, so an import's effect is that module's top-level effect - a missing edge across a boundary the modules layer already crosses for a name").
-work_state(w_effect_module_evaluation, open).
-claim(queued, js, import_declaration,       none, effect, w_effect_module_evaluation).
-claim(queued, js, import,                   none, effect, w_effect_module_evaluation).
-claim(queued, js, import_expression,        none, effect, w_effect_module_evaluation).
-claim(queued, js, export_all_declaration,   none, effect, w_effect_module_evaluation).
-claim(queued, js, export_named_declaration, none, effect, w_effect_module_evaluation).
+work(w_effect_module_evaluation, "DONE 2026-09-09: a static import EVALUATES the imported module, so an import's effect is that module's top-level effect. Five cells closed - four `handled` under r_effect_module and `import` waived because babel emits no such node - and the join over the module graph is a FIXPOINT rather than a walk, because ES modules can be cyclic").
+work_state(w_effect_module_evaluation, done).
+work_spawned(w_effect_module_evaluation, f_the_join_over_a_module_graph_is_the_same_union_the_join_over_a_body_is).
+work_spawned(w_effect_module_evaluation, f_a_missing_file_and_a_missing_table_are_not_the_same_open_cell).
+
+-- WHAT IT COST AND WHERE IT CAME FROM. Nothing was rebuilt: `module_source[code]`
+-- in rules/js-dataflow.rofl already carries three of the four kinds and
+-- `import_target[code]` resolves a single-segment relative specifier against
+-- `corpus_file` with the kernel's own string destructors and NO host loan.
+-- rules/js-modules.rofl answers the same question more completely - it walks a
+-- real disk - and it is deliberately NOT loaded into the effect world: pulling
+-- it in would need the two blind host emitters and change nothing about the
+-- join. The one arm this layer added is the dynamic form, which
+-- `module_source` does not carry.
+--
+-- THE JOIN OVER THE GRAPH NEEDED NO ARM OF ITS OWN, which is
+-- `f_the_join_is_free_and_the_order_is_the_work` arriving one scope out. An
+-- `import_declaration` is a TOP-LEVEL node, so the row the site contributes
+-- reaches `eff_module` through the same negation that defines a module's own
+-- top level - `not eff_in_fn`, which is `nearest_v` ranging over functions only
+-- - and the transitive closure is a positive cycle the engine takes a least
+-- fixpoint over. NOTHING HERE ASSUMES ACYCLICITY. A cyclic module group is
+-- evaluated once, every member's top level runs, and every member therefore
+-- sees the whole group's effect; the least fixpoint is exactly that. MEASURED:
+-- this corpus's graph is ACYCLIC - beta->alpha, beta->gamma, gamma->alpha,
+-- gamma->delta, and gamma.mjs's own header says the direction was chosen to
+-- avoid a cycle - so the cyclic case is exercised by a probe rather than by the
+-- fixtures.
+--
+-- AND THE CORPUS HAD THE SITE, which was measured before anything was added.
+-- alpha.mjs and shapes.ts both run a member read and a member write at the top
+-- level and four files allocate there; `effect_of_module[flow]` comes back
+-- `alpha.mjs st_local`, `beta.mjs st_local`, `gamma.mjs st_local`,
+-- `delta.mjs total`, `shapes.ts top`. gamma.mjs is the row worth reading: it
+-- declares nothing at all - three `export ... from` lines and no function - and
+-- its whole effect is inherited across the module graph.
+--
+-- THE FRONTIER IS THREE ROWS AND IT IS A MISSING FILE. `./trace.mjs` is
+-- imported by alpha, beta and delta and is not in the corpus, so
+-- `eff_import_outside[flow]` names all three - the same sites
+-- `import_outside_corpus[audit]` already reports, seen from the effect side.
 
 -- ...AND THE FIFTH `with_statement` CELL GOES TO THE ITEM THAT ALREADY HOLDS
 -- THE OTHER FOUR. `with (o) { x }` turns every bare name in its body into a

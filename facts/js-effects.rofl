@@ -302,7 +302,7 @@ eff_origin(builtin_prototype).
 -- the row tried first.
 
 -- ===========================================================================
--- WHAT THE LAYER ANSWERS — 29 CELLS, BY MECHANISM
+-- WHAT THE LAYER ANSWERS — 33 CELLS, BY MECHANISM
 --
 -- rules/js-effects.rofl carries the mechanisms and the audits that keep the
 -- vocabulary closed. The split below is by MECHANISM and not by kind, which is
@@ -420,8 +420,44 @@ handled(js, rest_element,               effect, r_effect_transfer).
 handled(js, object_pattern,             effect, r_effect_transfer).
 handled(js, array_pattern,              effect, r_effect_transfer).
 
+-- ---------------------------------------------------------------------------
+-- MODULE EVALUATION. Four kinds whose evaluation runs ANOTHER FILE'S TOP LEVEL,
+-- so their effect is that module's top-level effect. This is a MISSING EDGE and
+-- not a missing surface, which is what separates this group from the ambient
+-- calls still open below: the module is in the corpus, `module_source[code]`
+-- and `import_target[code]` in rules/js-dataflow.rofl already name it, and
+-- crossing the boundary for a top-level EFFECT is the same join
+-- `w_cg_module_boundary` already made for a NAME.
+--
+-- FOUR KINDS AND NOT TWO. `export * from` and the `export ... from` form of
+-- `export_named_declaration` evaluate the source module exactly as an import
+-- does — the re-export edge `w_mod_beyond_the_import` closed at the modules
+-- layer, arriving here as an effect. `export_named_declaration` covers BOTH its
+-- forms with one mechanism: the form with a `source` carries the target's row,
+-- and the form without one performs nothing, which is the same positive
+-- statement `export_default_declaration` is waived under.
+--
+-- AND THE DYNAMIC FORM IS IN THIS GROUP RATHER THAN IN A SUSPENSION ONE.
+-- `import('./m')` evaluates m and returns a promise; the effect is m's row and
+-- the suspension is CONTROL, exactly as `await_expression` is waived under
+-- `a_suspension_is_not_an_effect`. There is no `load` label and no ordering
+-- label anywhere in this layer, and `eff_import_invented[audit]` is the row
+-- that says a site contributes what its target has and nothing else — the same
+-- refusal `concrete_async_smuggled[audit]` makes for the concrete column.
+--
+-- THE FRONTIER IS A MISSING FILE, NOT A MISSING TABLE, and that is why these
+-- four are answered while `call_expression` is not. A specifier naming a module
+-- outside the corpus has no module to ask — `eff_import_outside[flow]` names
+-- the three `./trace.mjs` sites — and adding the file makes the answer arrive
+-- with no rule change. Nothing anybody can add to a corpus supplies
+-- `ambient_effect`.
+handled(js, import_declaration,         effect, r_effect_module).
+handled(js, import_expression,          effect, r_effect_module).
+handled(js, export_all_declaration,     effect, r_effect_module).
+handled(js, export_named_declaration,   effect, r_effect_module).
+
 -- ===========================================================================
--- WHAT THE LAYER WAIVES — 52 CELLS, AND NOT ONE OF THEM IS `total` BY DEFAULT
+-- WHAT THE LAYER WAIVES — 53 CELLS, AND NOT ONE OF THEM IS `total` BY DEFAULT
 --
 -- A waiver here says the CONSTRUCT PERFORMS NO OPERATION, which in this
 -- taxonomy is the positive statement that its own contribution is the bottom of
@@ -518,8 +554,11 @@ ignored(js, tsnon_null_expression,      effect, a_a_container_performs_no_operat
 -- layer seen from here.
 ignored(js, assignment_pattern,         effect, a_a_container_performs_no_operation).
 -- The specifiers. A specifier NAMES what an import or export moves; the module
--- evaluation that the declaration triggers is the DECLARATION's cell, and all
--- five of those are open below.
+-- evaluation that the declaration triggers is the DECLARATION's cell, and those
+-- are `handled` above under `r_effect_module`. The split is load-bearing rather
+-- than tidy: a specifier's ERASURE marker is what decides whether the
+-- declaration evaluates anything at all, and section 5c of the rules reads it
+-- off the specifier while the effect stays on the declaration.
 ignored(js, import_specifier,           effect, a_a_container_performs_no_operation).
 ignored(js, import_default_specifier,   effect, a_a_container_performs_no_operation).
 ignored(js, import_namespace_specifier, effect, a_a_container_performs_no_operation).
@@ -535,6 +574,17 @@ ignored(js, export_default_declaration, effect, a_a_container_performs_no_operat
 -- one kind is.
 ignored(js, break_statement,            effect, a_a_transfer_performs_no_operation).
 ignored(js, continue_statement,         effect, a_a_transfer_performs_no_operation).
+
+-- ---------------------------------------------------------------------------
+-- ONE KIND THE PARSER NEVER EMITS. `import` is babel's `Import` node — the
+-- CALLEE of a dynamic import in the grammar babel used to produce — and
+-- `plugins: ['typescript']` never emits it: the dynamic form arrives as an
+-- `import_expression` with a `source` child and no callee at all. The argument
+-- is identical at the call-graph, dataflow and modules layers, where it is
+-- already written out three times under this same atom; this is the fourth, and
+-- it is written out rather than left to a default for the reason those three
+-- give — a kind waived by silence is a kind nobody can find again.
+ignored(js, import,                     effect, a_babel_emits_no_import_callee).
 
 -- ---------------------------------------------------------------------------
 -- TWO SUSPENSIONS, AND THIS IS THE TAXONOMY'S DECISION RATHER THAN THIS FILE'S.
@@ -579,14 +629,14 @@ ignored(js, interpreter_directive,      effect, a_not_an_evaluated_construct).
 unknown_because(js, debugger_statement, effect, runtime_dependent).
 
 -- ===========================================================================
--- WHAT IS OPEN — 18 CELLS, EVERY ONE OWNED BY NAME IN facts/worklist.rofl
+-- WHAT IS OPEN — 13 CELLS, EVERY ONE OWNED BY NAME IN facts/worklist.rofl
 --
 -- The rows below are `not_yet` by DEFAULT and carry no `unknown_because`,
 -- because `not_yet` is exactly what they are and writing it out would add a
 -- word without adding a fact. What they DO carry is an owner, one
 -- `claim(queued, ...)` each, in facts/worklist.rofl beside the item that owns
 -- it. `sweeper` for this layer is 0 and `unqueued[audit]` is 0, which is the
--- pair of numbers that says every one of the eighteen has a name against it.
+-- pair of numbers that says every one of the thirteen has a name against it.
 --
 --   FOUR — THE AMBIENT SURFACE          w_effect_ambient_call
 --     call_expression, optional_call_expression, new_expression, identifier
@@ -609,19 +659,25 @@ unknown_because(js, debugger_statement, effect, runtime_dependent).
 --
 --   THREE — IMPLICIT COERCION           w_effect_implicit_coercion
 --     binary_expression, unary_expression, template_literal
---     `a + b` calls `valueOf` or `toString` on an operand that has one, and
---     throws for a Symbol; `-x` coerces; `${x}` coerces. This is
---     `accessor_call` wearing a third syntax — a construct whose surface is an
---     operator and whose semantics is a call — and the model cannot tell which
---     operands have a custom conversion without the prototype surface.
+--     A RULE FIRES ON ALL THREE AND THE CELLS STAY OPEN, which is
+--     `f_a_cell_can_be_open_while_a_rule_fires_on_its_kind` a second time and
+--     is a measurement rather than a hedge. Section 5b of rules/js-effects.rofl
+--     decides a conversion by its OPERAND: a primitive has no conversion method
+--     to run, an in-program object that overrides neither `valueOf` nor
+--     `toString` converts through the language's own prototype, and an object
+--     that overrides one is an ordinary call. MEASURED over 369 coerced
+--     operands: 223 primitive, 5 in-program objects — none of which overrides
+--     either key — and 141 the value layer did not trace.
 --
---   FIVE — MODULE EVALUATION            w_effect_module_evaluation
---     import_declaration, import, import_expression, export_all_declaration,
---     export_named_declaration
---     A static import EVALUATES the imported module, so its effect is that
---     module's top-level effect. The modules layer resolves a specifier to a
---     file and nothing joins a file's top-level effect to the importer, so this
---     is a real missing edge rather than a missing surface.
+--     THOSE 141 ARE THE CELL. An operand the value layer lost MAY be an object
+--     with an override, and the honest answer is the one
+--     `eff_call_unattributed[flow]` already gives: a positive relation naming
+--     the frontier. Seeding the TOP of the lattice instead was measured and
+--     refused — it takes `eff_label_unseen` from two labels to none and makes
+--     `effect_of` `top` for most of the corpus. Narrowing it is interprocedural
+--     value flow, which is limit 3 of section 6 of the rules and a different
+--     item; the rest of the residue is an operand that came from outside the
+--     program, which is `w_effect_ambient_call`'s in-tray.
 --
 --   ONE — `with`                        w_inert_statements
 --     with_statement

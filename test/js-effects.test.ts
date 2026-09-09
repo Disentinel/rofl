@@ -222,16 +222,26 @@ test('the effect layer answers 100 js cells and the partition closes', () => {
   const w = base();
   const v = (x: string) => w.n(`verdict[audit](js, K, S, effect, ${x})`);
   // A number that moves when the MODEL changes stays a number, and this one is
-  // re-stated on purpose: 29 modelled, 52 waived, 19 not modelled — of which
-  // ONE is irreducible (`debugger` is `runtime_dependent`) and eighteen are open
+  // re-stated on purpose: 33 modelled, 53 waived, 14 not modelled — of which
+  // ONE is irreducible (`debugger` is `runtime_dependent`) and thirteen are open
   // and owned by name in facts/worklist.rofl.
+  //
+  // MOVED 2026-09-09 by w_effect_module_evaluation, 29/52/19 -> 33/53/14. Four
+  // kinds became `handled` under `r_effect_module` — `import_declaration`,
+  // `import_expression`, `export_all_declaration`, `export_named_declaration` —
+  // and `import` became `ignored`, because babel emits no `Import` node under
+  // these plugins and the same argument is already written out at three other
+  // layers. w_effect_implicit_coercion moved NONE of them, deliberately: a rule
+  // fires on all three of its kinds and 141 of 369 coerced operands are values
+  // the value layer did not trace, which is a residue and therefore an open
+  // cell by this layer's own criterion.
   assert.equal(v('modelled') + v('waived') + v('not_modelled'),
     w.n('cell[audit](js, K, S, effect)'), 'the three buckets partition the layer');
   assert.equal(w.n('cell[audit](js, K, S, effect)'), w.n('node_kind(js, K)'),
     'one cell per kind: the shape axis does not apply here');
-  assert.equal(v('modelled'), 29);
-  assert.equal(v('waived'), 52);
-  assert.equal(v('not_modelled'), 19);
+  assert.equal(v('modelled'), 33);
+  assert.equal(v('waived'), 53);
+  assert.equal(v('not_modelled'), 14);
   // the reason vocabulary is closed and no excuse outlived its cause
   assert.deepEqual(w.binds('bad_reason[audit](A, K, S, L, R)'), []);
   assert.deepEqual(w.binds('orphan_claim[audit](A, K, S, L)'), []);
@@ -472,4 +482,310 @@ export function mutualB(n) { return mutualA(n); }
     .filter(([, n]) => n === 'div' || n === 'pure' || n === 'top' || n === 'io')
     .flatMap(([f]) => w.q(`fn_name[code](${f}, Name)`).map(([x]) => x)));
   assert.ok(named.has('down'), `a recursive function is at least div — got ${[...named].join(' ')}`);
+});
+
+// ===========================================================================
+// 6. IMPLICIT COERCION — w_effect_implicit_coercion
+//
+// The mechanism is in section 5b of rules/js-effects.rofl and the item is
+// STILL OPEN. What is asserted here is the mechanism and the residue, never a
+// verdict: a count of coerced operands would move with the corpus and say
+// nothing about whether the three answers cover it.
+
+test('a conversion is decided by the OPERAND, and the three answers partition it', () => {
+  const w = base();
+  // AN IDENTITY, so it is true of any corpus rather than of this one: every
+  // coerced operand is a primitive, an in-program object, or a value the value
+  // layer did not trace, and never none of the three. The numbers on both sides
+  // move together and the identity does not.
+  assert.deepEqual(w.binds('eff_conv_unaccounted[audit](N, X)'), [],
+    'no coerced operand falls out of the bottom');
+  assert.equal(w.n('eff_conv_primitive[flow](N, X)') + w.n('eff_conv_object[flow](N, X)')
+    + w.n('eff_conv_untraced[flow](N, X)'), w.n('eff_coerced[flow](N, X)'),
+    'primitive + object + untraced = every conversion site');
+  // ...and all three arms are populated, so the identity is not the trivially
+  // true one. FLOORS, because a fixture gaining an operator must not redden a
+  // claim about whether the partition holds.
+  for (const r of ['eff_conv_primitive[flow](N, X)', 'eff_conv_object[flow](N, X)',
+    'eff_conv_untraced[flow](N, X)'])
+    assert.ok(w.n(r) >= 1, `${r} is populated`);
+});
+
+test('NOT ONE OBJECT IN THIS CORPUS OVERRIDES A CONVERSION METHOD, with a live control', () => {
+  const w = base();
+  // The absence carries its control, which is the same literal with ONE
+  // CONSTANT swapped — the form facts/findings.rofl's `witness_absent` demands
+  // and the form this claim is recorded in.
+  assert.deepEqual(w.binds('member_value[flow](O, "valueOf", V)'), []);
+  assert.deepEqual(w.binds('member_value[flow](O, "toString", V)'), []);
+  assert.ok(w.n('member_value[flow](O, "riveted", V)') >= 1,
+    'the control is live: this world can answer the question');
+  // so every in-program object at a conversion site converts through the
+  // language's own prototype, which performs nothing — the positive half
+  assert.deepEqual(w.binds('eff_conv_call[flow](N, M)'), []);
+  assert.equal(w.n('eff_conv_default[flow](N, X)'), w.n('eff_conv_object[flow](N, X)'),
+    'every traced object at a conversion site falls to Object.prototype');
+});
+
+test('WHICH OPERATORS THIS CORPUS HAS THAT RUN NO USER CODE, by name', () => {
+  const w = base();
+  // A NAMED SET AND NOT A COUNT. `eff_op_inspects` names five spellings and the
+  // rest converts by complement; this is the intersection with what the corpus
+  // actually carries, which is the half a reader wants and the half a mutant on
+  // the table moves.
+  const spell = (rel: string) => [...new Set(w.q(rel).flatMap(([n]) =>
+    w.q(`ast_attr[code](${n}, operator, Op)`).map(([o]) => o)))].sort();
+  assert.deepEqual(spell('eff_op_inspects[code](N)'), ['===', 'void']);
+  // ...AND THE TWO THE ITEM HAD TO ANSWER FOR, which have no site at all.
+  // `typeof` and `delete` were named in the item's own note as the cases it
+  // owed an answer; `instanceof` is the third. All three are absent, so
+  // `eff_op_beyond` is exercised by a probe below rather than by the fixtures.
+  assert.deepEqual(w.binds('eff_op_beyond[flow](N, W)'), []);
+  // the table must not classify a node of a kind this section does not model —
+  // `operator` sits on five kinds and `eff_op_inspects` reads it off all of them
+  assert.deepEqual(w.binds('eff_op_off_kind[audit](N, K)'), []);
+});
+
+test('MUTANT M9: `void` is no longer inspected — the operator set kills it', () => {
+  // Targets: that the operator table separates anything at all. A count of
+  // `eff_coerced` rows would move and say nothing about WHICH operator leaked.
+  const m = build([{ file: EFF_RULES,
+    find: 'eff_op_inspects[code](N) :- ast_attr[code](N, operator, "void").',
+    replace: '' }]);
+  assert.ok(m.n('eff_coerced[flow](N, X)') > base().n('eff_coerced[flow](N, X)'),
+    'KILLED: five `void` operands become conversion sites');
+});
+
+test('MUTANT M10: an in-program object is treated as untraceable — the partition kills it', () => {
+  // Targets: that a traced object discharges through `Object.prototype` rather
+  // than falling into the residue. Both halves move, so the SUM is what sees it.
+  const m = build([{ file: EFF_RULES,
+    find: 'eff_conv_object[flow](N, X)     :- eff_coerced[flow](N, X), may_be_node[flow](X, _).',
+    replace: 'eff_conv_object[flow](N, X)     :- eff_coerced[flow](N, X), may_be_node[flow](X, _), N != N.' }]);
+  assert.ok(m.n('eff_conv_unaccounted[audit](N, X)') > 0,
+    'KILLED by the partition: a traced object now falls out of the bottom');
+});
+
+test('...AND THE CONVERSION CALL IS EXERCISED, on a probe source rather than in a comment', () => {
+  // A capability nothing exercises cannot go red, which this repository forbids
+  // by name — and `eff_conv_call` is EMPTY on the shared corpus because not one
+  // object in it declares `valueOf` or `toString`. Three lines that do.
+  //
+  // THE PROBE WRITES AND DOES NOT THROW, deliberately.
+  // `f_the_exn_oracle_cannot_see_a_label_that_did_not_arrive_through_resolves`
+  // is the finding that says why: `may_throw` closes over `resolves` and a
+  // conversion is not a `resolves` edge, so a `valueOf` that threw would take
+  // `eff_exn_only[audit]` red for a reason that is about the oracle rather than
+  // about this arm.
+  const src = `
+const sink = { n: 0 };
+const priced = { valueOf() { sink.n = 1; return 2; } };
+export function total(n) { return priced + n; }
+export function shouted(n) { return \`v\${priced}\` + n; }
+export function dropped(o) { return delete o.gone; }
+export function isit(x, C) { return x instanceof C; }
+`;
+  const w = build([], [], [['conv.mjs', src]]);
+  assert.ok(w.n('eff_conv_call[flow](N, M)') >= 1, 'the seed fires on an overriding object');
+  // ...and the effect reaches the ENCLOSING FUNCTION through the ordinary
+  // propagation, which is the whole of what the arm is for: `total` writes
+  // because `priced.valueOf` writes, and nothing in `total` says so.
+  const named = new Set(w.q('eff_latent[flow](F, write, local)')
+    .flatMap(([f]) => w.q(`fn_name[code](${f}, Name)`).map(([x]) => x)));
+  assert.ok(named.has('total'), `a coercion carries its callee's write — got ${[...named].join(' ')}`);
+  // AND THE TWO OPERATORS OUTSIDE THE MECHANISM ARE NAMED RATHER THAN SILENT
+  assert.deepEqual(w.binds('eff_op_beyond[flow](N, W)').map((x) => x.split('/')[1]).sort(),
+    ['delete_own', 'has_instance']);
+  // ...and the partition still closes on a corpus that has all three answers
+  assert.deepEqual(w.binds('eff_conv_unaccounted[audit](N, X)'), []);
+});
+
+// ===========================================================================
+// 7. MODULE EVALUATION — w_effect_module_evaluation
+//
+// An import EVALUATES the imported module, so an import's effect is that
+// module's top-level effect. The graph is `module_source[code]` and
+// `import_target[code]`, both already standing in this world;
+// rules/js-modules.rofl is deliberately NOT loaded, because it would need the
+// two blind host emitters and change nothing about the join.
+
+test('a module\'s effect is its top level JOINED ACROSS THE GRAPH', () => {
+  const w = base();
+  // A NAMED SET, one row per corpus file, and the row worth reading is
+  // gamma.mjs: it declares nothing at all — three `export ... from` lines and
+  // not one function — and its whole effect is inherited from alpha and delta.
+  assert.deepEqual(w.binds('effect_of_module[flow](F, N)'), [
+    'alpha.mjs/st_local',
+    'beta.mjs/st_local',
+    'delta.mjs/total',
+    'gamma.mjs/st_local',
+    'shapes.ts/top',
+  ]);
+  // the Moore closure is total over files too, exactly as it is over functions
+  assert.deepEqual(w.binds('eff_mod_unnamed[audit](F)'), []);
+  assert.deepEqual(w.binds('eff_mod_two_names[audit](F, A, B)'), []);
+  // ...AND THE JOIN IS READ BY A RULE, a second time. An importer's effect
+  // joined with the effect of a module it evaluates must give the importer's
+  // own back — `eff_join_short[audit]` for a caller and its callee, said about
+  // a module and the module it loads.
+  assert.deepEqual(w.binds('eff_mod_join_short[audit](F, T, J)'), []);
+  assert.ok(w.n('eff_evaluates_at[code](I, T)') >= 1, 'the row is populatable');
+  // AND THE SUSPENSION IS NOT SMUGGLED BACK IN AS AN ORDERING EFFECT: a site
+  // contributes exactly the labels its target module has and nothing else.
+  assert.deepEqual(w.binds('eff_import_invented[audit](I, L, H)'), []);
+  // ...AND THE SPECIFIER RESOLVER IS A COPY WITH A CONTROL. `import_target[code]`
+  // is closed over `module_source[code]`, which has no arm for the dynamic form,
+  // so this pack writes the same four literals again — and asserts the two agree
+  // ROW FOR ROW in both directions wherever `module_source` carries the
+  // specifier, which is what keeps a copy from becoming a second opinion.
+  assert.deepEqual(w.binds('eff_mod_target_disagrees[audit](Src, T)'), []);
+  assert.ok(w.n('import_target[code](Src, T)') >= 1, 'and both sides are populated');
+});
+
+test('the frontier is a MISSING FILE, and it is named by the file that imports it', () => {
+  const w = base();
+  // A NAMED SET whose elements carry no node id and no line: a declaration
+  // appended anywhere in any of these files moves none of them.
+  // `q` returns ONE CELL PER CAPITAL-LETTER VARIABLE IN THE ORDER THE LITERAL
+  // WRITES THEM, so `(id, K, F, L)` is THREE cells and the file is `[1]`, not
+  // `[2]`. test/js-corpus-world.ts records this as the fourth wrong destructure
+  // of a positional result in this repository; this was the fifth, and it read
+  // as three line numbers.
+  const outside = w.q('eff_import_outside[flow](I, Src)')
+    .map(([i, src]) => `${w.q(`ast_node[code](${i}, K, F, L)`)[0]?.[1]} ${src}`).sort();
+  assert.deepEqual(outside,
+    ['alpha.mjs ./trace.mjs', 'beta.mjs ./trace.mjs', 'delta.mjs ./trace.mjs'],
+    'trace.mjs is the oracle probe and is not part of the corpus');
+});
+
+test('THE JOIN OVER THE GRAPH IS A FIXPOINT — a cyclic module pair, on a probe', () => {
+  // ES MODULES CAN BE CYCLIC and this corpus is acyclic: beta -> alpha,
+  // beta -> gamma, gamma -> alpha, gamma -> delta, and gamma.mjs's own header
+  // says the direction was chosen to avoid a cycle. So the case the rules are
+  // written for has no site in the fixtures and is exercised here.
+  //
+  // A PROBE AND NOT TWO MORE `.mjs` FIXTURES: test/js-modules.test.ts imports
+  // every `.mjs` in test/fixtures/js-call with node, so a sixth file there
+  // moves another branch's oracle.
+  const cycA = `
+import './cycB.mjs';
+const boxA = {};
+boxA.hit = 1;
+export function fromA(n) { return n; }
+`;
+  const cycB = `
+import { fromA } from './cycA.mjs';
+export function fromB(n) { return fromA(n); }
+while (0) { }
+`;
+  const w = build([], [], [['cycA.mjs', cycA], ['cycB.mjs', cycB]]);
+  // the cycle closes IN BOTH DIRECTIONS: cycA's allocation and write reach cycB,
+  // and cycB's `div` reaches cycA. Neither file contains the other's construct.
+  const rows = (f: string) => w.q(`eff_module[flow]("${f}", L, H)`).map((x) => x.join('/')).sort();
+  for (const f of ['cycA.mjs', 'cycB.mjs'])
+    assert.deepEqual(rows(f), ['alloc/none', 'div/none', 'write/local'], f);
+  // ...and the fixpoint TERMINATED, which is the claim a walk could not make.
+  // `build` already asserts `hole(Q, R)` is empty, so reaching this line at all
+  // is the statement; this names it.
+  assert.deepEqual(w.binds('eff_import_invented[audit](I, L, H)'), []);
+  assert.deepEqual(w.binds('eff_mod_join_short[audit](F, T, J)'), []);
+});
+
+test('a DYNAMIC import evaluates its module, and the suspension is not an effect', () => {
+  // The corpus's one `import_expression` is `import(p)` with a computed
+  // specifier — the irreducible form the modules layer already records as
+  // `runtime_dependent` — so the literal form has no site and is exercised here.
+  const dyn = `
+export async function later(n) { const m = await import('./cycC.mjs'); return m.fromC(n); }
+`;
+  const cycC = `
+const boxC = {};
+boxC.hit = 1;
+export function fromC(n) { return n; }
+`;
+  const w = build([], [], [['dyn.mjs', dyn], ['cycC.mjs', cycC]]);
+  // the site carries the target's row...
+  assert.ok(w.q('eff_evaluates_at[code](I, T)').some(([, t]) => t === 'cycC.mjs'),
+    'a dynamic import with a literal specifier is a module edge');
+  // ...and NOTHING ELSE. A promise is not an effect here: `await` is waived
+  // under `a_suspension_is_not_an_effect` and a dynamic import must not smuggle
+  // an ordering label back in through the module graph.
+  assert.deepEqual(w.binds('eff_import_invented[audit](I, L, H)'), []);
+  // the effect lands on the ENCLOSING FUNCTION, because this site is inside one
+  const named = new Set(w.q('eff_latent[flow](F, write, local)')
+    .flatMap(([f]) => w.q(`fn_name[code](${f}, Name)`).map(([x]) => x)));
+  assert.ok(named.has('later'), `a dynamic import carries its module's row — got ${[...named].join(' ')}`);
+});
+
+test('MUTANT M11: the erasure guard is dropped — a type-only import evaluates', () => {
+  // Targets: that `import type` evaluates NOTHING. There is no type-only import
+  // in the shared corpus (`ast_attr(_, import_kind, "type")` is empty), so this
+  // mutant is measured against a probe that has one.
+  const eraA = `
+import type { Shape } from './eraB.mjs';
+export function useA(s) { return s; }
+`;
+  const eraB = `
+const boxB = {};
+boxB.hit = 1;
+export function fromB(n) { return n; }
+`;
+  const files: [string, string][] = [['eraA.mjs', eraA], ['eraB.mjs', eraB]];
+  const clean = build([], [], files);
+  assert.deepEqual(clean.q('eff_module[flow]("eraA.mjs", L, H)'), [],
+    'a type-only import evaluates nothing at all');
+  const m = build([{ file: EFF_RULES,
+    find: `eff_evaluates_at[code](I, T) :- eff_mod_src[code](I, Src, _), not eff_erased[code](I),
+                                eff_mod_target[code](Src, T).`,
+    replace: `eff_evaluates_at[code](I, T) :- eff_mod_src[code](I, Src, _),
+                                eff_mod_target[code](Src, T).` }], [], files);
+  assert.ok(m.n('eff_module[flow]("eraA.mjs", L, H)') > 0,
+    'KILLED: the erased import now runs the module');
+});
+
+test('MUTANT M12: the top-level test is dropped — every function becomes its module', () => {
+  // Targets: `not eff_in_fn(N)`, which is the whole definition of "a module's
+  // own top level". Without it a module's row is every node in the file, so the
+  // distinction between what a module DOES and what its functions MAY do is
+  // gone — and the named set of module effects is what says so.
+  const m = build([{ file: EFF_RULES,
+    find: `eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not eff_in_fn[flow](N),
+                             ast_node[code](N, _, F, _).`,
+    replace: `eff_module[flow](F, L, H) :- eff_here[flow](N, L, H),
+                             ast_node[code](N, _, F, _).` }]);
+  assert.notDeepEqual(m.binds('effect_of_module[flow](F, N)'), base().binds('effect_of_module[flow](F, N)'),
+    'KILLED: delta.mjs stops being `total` although its top level does nothing');
+});
+
+// ===========================================================================
+// 8. WHERE THIS LAYER'S ONE ORACLE IS STRUCTURALLY UNABLE TO LOOK
+//
+// f_the_exn_oracle_cannot_see_a_label_that_did_not_arrive_through_resolves.
+// This is a MEASUREMENT of a defect that predates both items in this file's
+// section 6 and 7, kept as a runnable row rather than as prose, because its
+// premise cannot be stated over the honest world: `ambient_effect` is empty.
+
+test('ONE HONEST SURFACE ROW MAPPING TO `io` TURNS THE exn ORACLE RED', () => {
+  // `may_throw[code]` closes over `resolves` and `throw_statement` and nothing
+  // else. The concrete column seeds a label at a call site `resolves` has no row
+  // for, and `io` CONTAINS `exn` — so the first member the runtime and globals
+  // surfaces attribute to `io`, `exn`, `pure` or `top` breaks the only
+  // row-for-row cross-check this layer has.
+  const w = build([], [`
+surface_origin(array, builtin_prototype).
+ambient_effect(array, "join", io).
+`]);
+  assert.deepEqual(w.binds('concrete_denotes[flow](S, Op, E)'), ['array/join/io']);
+  assert.ok(w.n('eff_exn_only[audit](F)') > 0,
+    'the effect layer now claims a throw the exception layer does not have');
+  assert.deepEqual(w.binds('may_throw_only[audit](F)'), [],
+    'and only in that direction, which is why the oracle reads as a false alarm');
+  // ...and the existing positive control stays green ONLY because it maps two
+  // members to `rd_local`, which carries no `exn`. That is the coincidence this
+  // test exists to stop being one.
+  const ok = build([], [`
+surface_origin(array, builtin_prototype).
+ambient_effect(array, "join", rd_local).
+`]);
+  assert.deepEqual(ok.binds('eff_exn_only[audit](F)'), []);
 });
