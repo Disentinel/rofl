@@ -225,12 +225,22 @@ test('every surface names the declaration file it came from, and only one', () =
 
 test('THE PRODUCT: every ambient call this model can put in the lattice', () => {
   const w = base();
-  // Seventeen (surface, member) pairs with a landmark, and NOT ONE of them was
-  // typed anywhere in this tree: the module half comes from `member_effect[code]`
+  // Every (surface, member) pair with a landmark, and NOT ONE of them was typed
+  // anywhere in this tree: the module half comes from `member_effect[code]`
   // — twenty-two module defaults with seven member overrides subtracted — and
   // the global half from `host_global_effect`, both in facts/js-host.rofl and
   // both written for the runtime layer before this pack existed.
+  //
+  // TWO ARRIVED 2026-09-09 FROM THE SURFACE ITEMS AND THEY COME FROM A THIRD
+  // SOURCE — a `.d.ts` read structurally rather than an effect table. `array/
+  // fill/wr_local` is `lib_member` minus `lib_readonly_member`, the mutating
+  // half of the Array prototype taken as a SET DIFFERENCE over TypeScript's own
+  // `ReadonlyArray`; `Math/construct/exn` is `lib_global`'s FORM, which says
+  // `Math` has no constructor interface and therefore that `new Math()` throws.
+  // Neither is a judgement about a member: one is what `readonly` means and the
+  // other is what a missing constructor means.
   assert.deepEqual(w.binds('concrete_denotes[flow](S, Op, E)'), [
+    'Math/construct/exn', 'array/fill/wr_local',
     'console/error/io', 'console/log/io', 'fetch/itself/io',
     'node:fs/exists/io', 'node:fs/globSync/io', 'node:fs/promises/readFile/io',
     'node:fs/promises/writeFile/io', 'node:fs/readFileSync/io', 'node:fs/statfs/io',
@@ -264,37 +274,122 @@ test('THE IN-TRAY: what is owed, with the ORIGIN in the row', () => {
   // three intrinsics now have a surface here to owe an effect for. The in-tray
   // getting LONGER because the value layer got better is the healthy direction:
   // nothing moved from owed to attributed by itself.
+  //
+  // ONE ROW LEFT IT 2026-09-09 AND IT WAS NOT ATTRIBUTED — it was shown to
+  // belong to somebody else. `es_intrinsic/Error` was owed for exactly one
+  // operation, `Error.captureStackTrace`, which is V8's and which TypeScript
+  // declares in @types/node and nowhere in lib.es*.d.ts. So no table of
+  // ECMAScript effects will ever map it, and reporting the ECMAScript surface
+  // as owing one is false about the surface and hides whose debt it is.
+  // `ambient_off_surface[flow]` is where it went.
   assert.deepEqual(w.binds('ambient_owed[flow](O, S)'), [
     'builtin_prototype/array', 'builtin_prototype/regexp',
     'builtin_prototype/string',
-    'es_intrinsic/Array', 'es_intrinsic/BigInt', 'es_intrinsic/Error',
+    'es_intrinsic/Array', 'es_intrinsic/BigInt',
     'es_intrinsic/JSON', 'es_intrinsic/Map', 'es_intrinsic/Math',
     'es_intrinsic/Object', 'es_intrinsic/Promise', 'es_intrinsic/Reflect',
     'es_intrinsic/RegExp', 'es_intrinsic/String', 'es_intrinsic/Symbol',
     'host_runtime/atob',
   ]);
   // ...and the pairs under it, which is rules/js-effects.rofl's own residue
-  // relation with rows in it for the first time. The six new ones are the three
-  // constructions and the three members reached through them.
+  // relation with rows in it for the first time. Two left it on the same day
+  // and BOTH were attributed by a rule: `array/fill` because `fill` is absent
+  // from `ReadonlyArray`, `Math/construct` because `Math` has no constructor
+  // interface. `array/toSorted` stayed, and that is the honest half — a member
+  // that does not mutate is not thereby effect-free, since it takes a
+  // comparator this model has no edge to.
   assert.deepEqual(w.binds('concrete_unmapped[flow](S, Op)'), [
     'Array/construct', 'BigInt/itself', 'Error/captureStackTrace',
     'JSON/parse', 'JSON/stringify',
-    'Map/construct', 'Math/construct', 'Math/max', 'Object/entries',
+    'Map/construct', 'Math/max', 'Object/entries',
     'Object/hasOwn', 'Object/keys', 'Promise/allSettled', 'Promise/any',
     'Reflect/ownKeys', 'RegExp/construct', 'String/construct', 'Symbol/for',
-    'array/fill', 'array/toSorted', 'atob/itself', 'regexp/test',
+    'array/toSorted', 'atob/itself', 'regexp/test',
     'string/substr',
   ]);
+  // ...AND THE PAIR THAT IS OWED BY NOBODY HERE, which is the whole of what
+  // left the in-tray. It is one row and it is printed rather than counted,
+  // because the claim is about WHICH operation is off the surface.
+  assert.deepEqual(w.binds('ambient_off_surface[flow](S, Op)'),
+    ['Error/captureStackTrace']);
   // WHICH SURFACES THE MODEL CANNOT LIST THE MEMBERS OF, and it is exactly the
   // globals. `scanners/host_lib.ts` walks a MODULE's properties through the
   // checker and stops at the NAMES of the globals, so `console`'s members are
   // the ones a program selects rather than the ones `Console` declares. Every
   // unenumerated surface is a global and no module is one.
+  //
+  // AND IT IS THE HOST GLOBALS SPECIFICALLY, sharpened 2026-09-09 when the
+  // ECMAScript surfaces first got an `ambient_effect` row. `lib_global` and
+  // `lib_member` are member lists walked out of lib.es*.d.ts, so `Math` and
+  // `array` are enumerated by the same kind of source `node:fs` is; a
+  // `plain_value` global with no members is enumerated too, because an empty
+  // list from the source is an answer and a missing one is the gap.
   const un = w.binds('ambient_unenumerated[flow](S)');
   assert.deepEqual(un.filter((s) => s.startsWith('node:')), [],
     'a module surface is enumerated by the checker');
+  assert.deepEqual(un.filter((s) => ['Math', 'JSON', 'Reflect', 'NaN', 'array'].includes(s)), [],
+    'and so is every ECMAScript surface, binding and prototype alike');
   assert.ok(un.includes('console') && un.includes('process') && un.includes('crypto'),
-    `the global surfaces are not — got ${un.join(' ')}`);
+    `the host globals are not — got ${un.join(' ')}`);
+});
+
+test('THE IN-TRAY CANNOT BE EMPTIED BY ATTRIBUTING A MEMBER NOBODY CALLS', () => {
+  // `ambient_owed[flow]` used to read `not amb_surface_attributed(S)` — no
+  // member of this surface is attributed — and that form can be emptied without
+  // answering anything. `w_ambient_es_intrinsic_effects`'s own note proposes a
+  // floor of exactly that shape: a data static of a frozen intrinsic is
+  // `total`. MEASURED AND REFUSED — see the test below — and the relation was
+  // strengthened first so that the refusal is not the only thing standing
+  // between the in-tray and a free 87 rows.
+  //
+  // THE TWO FORMS NOW DISAGREE IN BOTH DIRECTIONS, and printing the difference
+  // is the whole point: four surfaces have SOME attribution and still owe an
+  // operation a call site reaches, and one surface has none and owes nothing.
+  //
+  // FIRST, THE CONTROL, AND IT IS WHAT SEPARATES A REPAIR FROM A REDEFINITION
+  // THAT HIDES ITS OWN EFFECT. With this branch's three new heads disconnected
+  // — the two `ambient_effect` arms and both `ambient_off_surface` arms — the
+  // pack is the one that shipped at 001b849 with only the in-tray's DEFINITION
+  // changed, and the two forms agree row for row. So the strengthening did not
+  // move the set; the attributions did.
+  const OFF = (find: string, head: string) => ({ file: AMB_RULES, find, replace: head });
+  const control = build([
+    OFF(`ambient_effect(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),
+                             eff_of_label(write, H, E).`,
+    `amb_off_a(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),
+                             eff_of_label(write, H, E).`),
+    OFF(`ambient_effect(Name, construct, E) :- amb_not_constructible(Name),
+                                      eff_of_label(exn, none, E).`,
+    `amb_off_b(Name, construct, E) :- amb_not_constructible(Name),
+                                      eff_of_label(exn, none, E).`),
+    OFF(`ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, es_intrinsic),`,
+    `amb_off_c[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, es_intrinsic),`),
+    OFF(`ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, builtin_prototype),`,
+    `amb_off_d[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, builtin_prototype),`),
+  ]);
+  // The SURFACES of both, because `surface_two_origins[audit]` is empty so a
+  // surface carries exactly one origin and the two sets are the same question.
+  const surfacesOwed = (x: World) => [...new Set(x.q('ambient_owed[flow](O, S)')
+    .map(([, s]) => s))].sort();
+  const surfacesWeak = (x: World) => [...new Set(x.q('ambient_surface_unattributed[flow](S)')
+    .map(([s]) => s))].sort();
+  assert.deepEqual(surfacesOwed(control), surfacesWeak(control),
+    'with nothing attributed the two definitions of the in-tray are the same set');
+  assert.equal(surfacesOwed(control).length, 16,
+    'and that set is the sixteen surfaces the pack shipped with at 001b849');
+
+  const w = base();
+  const weak = new Set(w.q('ambient_surface_unattributed[flow](S)').map(([s]) => s));
+  const owed = new Set(w.q('ambient_owed[flow](O, S)').map(([, s]) => s));
+  assert.deepEqual([...owed].filter((s) => !weak.has(s)).sort(),
+    ['JSON', 'Math', 'Reflect', 'array'],
+    'attributed in part, and still owed for an operation a call site reaches');
+  assert.deepEqual([...weak].filter((s) => !owed.has(s)).sort(), ['Error'],
+    'and the one that is unattributed and owes nobody anything');
 });
 
 // ===========================================================================
@@ -394,9 +489,17 @@ test('BEFORE AND AFTER: what seeding an ambient effect does to the exn oracle', 
   // probe. `now` is NOT here: `performance.now` is `ndet`, and `ndet` does not
   // contain `exn`, which is the row that shows the widening follows the LATTICE
   // rather than the word "ambient".
+  //
+  // `neverRun` JOINED THEM 2026-09-09 AND IT IS THE ONLY ONE THAT MAKES NO HOST
+  // CALL AT ALL. Its body is `return new Math()`, `Math` is a `namespace_object`
+  // with no constructor interface, and section 8 reads that form and says the
+  // construction throws. It is the first row in this set whose `exn` comes from
+  // a DECLARATION'S SHAPE rather than from an effect table, and it is explained
+  // by the same carrier closure as the other twelve — `eff_exn_unexplained` is
+  // still empty below.
   assert.deepEqual([...named(after)].sort(),
-    ['announce', 'get', 'isThere', 'later', 'matches', 'readIt', 'readLater',
-      'say', 'soon', 'space', 'where', 'writeLater']);
+    ['announce', 'get', 'isThere', 'later', 'matches', 'neverRun', 'readIt',
+      'readLater', 'say', 'soon', 'space', 'where', 'writeLater']);
 });
 
 test('AND THE ANSWER IS NOT THAT EVERYTHING IS THE TOP', () => {
@@ -556,7 +659,157 @@ test('THE FRONTIER: the calls that stay unattributed, by SHAPE', () => {
 });
 
 // ===========================================================================
-// 6. THE MUTANTS
+// 6. THE TWO SURFACE ITEMS: WHAT A DECLARATION FILE CAN AND CANNOT SAY
+//    (w_ambient_prototype_effects, w_ambient_es_intrinsic_effects)
+//
+// Both items are one question from two sides — a surface reaches a call site
+// and no table says what its members do — and the two answers are OPPOSITE,
+// which is why they were two items. The prototype one is YES and this section
+// is the evidence; the intrinsic one is NO for the members and yes for exactly
+// one consequence of the binding's FORM.
+
+/** A STRING LITERAL RECEIVER, which the four fixtures do not have and which is
+ *  the only shape that can measure the heap argument in section 7. `new
+ *  String(s).substr(...)` is a CONSTRUCTED receiver and `may_be_node` reaches
+ *  it; `'ab'.concat(x)` is a literal of a kind that is not a `node_value_kind`,
+ *  so the value layer cannot trace it and `eff_heap_of` says `global`. */
+const LITERAL_RECV = `
+export function shout(s) { return 'ab'.concat(s); }
+`;
+
+test('THE MUTATING HALF IS A SET DIFFERENCE, AND THE FIVE THAT HAVE NO VIEW '
+   + 'ARE A ROW', () => {
+  const w = base();
+  // THE NINE THE ITEM NAMED, DERIVED. `lib_member` minus `lib_readonly_member`
+  // over a prototype that HAS a readonly view — two generated tables and one
+  // rule body. The item asked whether this could be READ rather than typed and
+  // said the honest answer may be no; it is yes, and the set is identical to
+  // the list its own note writes out.
+  assert.deepEqual(w.binds('lib_mutator(P, Key)'),
+    ['array/copyWithin', 'array/fill', 'array/pop', 'array/push',
+      'array/reverse', 'array/shift', 'array/sort', 'array/splice',
+      'array/unshift']);
+  assert.deepEqual(w.binds('lib_readonly_only[audit](P, Key)'), [],
+    'the readonly view declares nothing the mutable interface does not, which '
+    + 'is the property the subtraction rests on');
+  // ...AND WHAT THE SOURCE CANNOT SAY, AS A POSITIVE ROW. Five of the six
+  // builtin prototypes have no `Readonly` twin in any lib file, so this
+  // construction is SILENT about them. That is not "they have no mutators", and
+  // the difference is the whole reason the rule is guarded.
+  assert.deepEqual(w.binds('amb_proto_unsplit[flow](P)'),
+    ['bigint', 'boolean', 'number', 'regexp', 'string']);
+});
+
+test('THE HEAP IS WHY THIS IS NOT MORE ROWS IN SECTION 4, and it is structural', () => {
+  const w = base();
+  // `ambient_effect(Surface, Member, Name)` HAS NO HEAP COLUMN, and a builtin
+  // prototype is the one surface whose effect is heap-parameterised: the
+  // surface is ambient and the RECEIVER is a value in this program. So the row
+  // can only be written where the model decides the heap without the site — and
+  // it does, for exactly the prototypes every one of whose `kind_prototype`
+  // kinds is a `node_value_kind`.
+  assert.deepEqual(w.binds('amb_proto_heap(P, H)'), ['array/local', 'regexp/local']);
+  assert.deepEqual(w.binds('amb_proto_heap_split[audit](P, M)'), [],
+    'and no site contradicts it');
+  // THE OTHER FOUR ARE NOT AN OVERSIGHT, MEASURED ON A PROBE. The four fixtures
+  // reach the `string` prototype only through `new String(s)`, whose receiver
+  // `may_be_node` traces — so this world CANNOT SEE the case the guard exists
+  // for, and a survivor here would be a fact about the corpus. A string LITERAL
+  // receiver is untraced and its heap is `global`, which is what a surface-grain
+  // `wr_local` would have been wrong about.
+  const p = build([], [['lit.mjs', LITERAL_RECV]]);
+  const recv = p.q('amb_proto_recv[flow](M, P)').filter(([, x]) => x === 'string');
+  const heaps = new Set(recv.flatMap(([m]) => p.q(`eff_heap_of[flow](${m}, H)`).map(([h]) => h)));
+  assert.ok(heaps.has('global'),
+    `a string literal receiver is untraced — got ${[...heaps].sort().join(' ')}`);
+  assert.deepEqual(p.binds('amb_proto_heap(P, H)'), ['array/local', 'regexp/local'],
+    'and the probe does not make `string` heap-decided');
+  assert.deepEqual(p.binds('amb_proto_heap_split[audit](P, M)'), []);
+});
+
+test('AND THE MODEL NOW SAYS `new Array(n).fill(0)` WRITES', () => {
+  // The point of the whole section, as the one thing that changed about a
+  // FUNCTION. `padded` is `new Array(n).fill(0)`; before this rule the model
+  // saw an allocation and a member READ and no write anywhere, because
+  // `eff_here(_, write, _)` is seeded only by an assignment target and an
+  // update expression. A mutator call is the third way to write and it had no
+  // rule.
+  const w = base();
+  const before = build([{ file: AMB_RULES,
+    find: `ambient_effect(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),
+                             eff_of_label(write, H, E).`,
+    replace: `amb_proto_write_off(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),
+                             eff_of_label(write, H, E).` }]);
+  const writers = (x: World) => [...new Set(x.q('eff_here[flow](N, write, local)')
+    .flatMap(([n]) => x.q(`nearest_v[flow](F, ${n})`))
+    .flatMap(([f]) => x.q(`fn_name[code](${f}, N)`).map(([nm]) => nm)))].sort();
+  assert.deepEqual(writers(w).filter((n) => !writers(before).includes(n)), ['padded'],
+    'one function gains a write of the local heap, and it is the one that fills an array');
+});
+
+test('THE INTRINSIC MEMBERS ARE NOT DERIVABLE, AND THE PROPOSED FLOOR IS '
+   + 'REFUSED WITH A MEASUREMENT', () => {
+  // `w_ambient_es_intrinsic_effects` names a derivable floor: `lib_static_shape`
+  // separates a PropertySignature from a MethodSignature, and "a data static of
+  // a frozen intrinsic is `total` with no judgement at all". IT WOULD HAVE BEEN
+  // 87 ROWS THAT JOIN NOTHING. An OPERATION in this model comes from
+  // `selects[flow]` on the callee of a CALL, so a data static can only be an
+  // operation if something calls `Math.PI(...)` — and the whole point of the
+  // data/method split is that nothing does.
+  const w = base();
+  const ops = new Set(w.q('concrete_effect[flow](C, S, Op)').map(([, s, o]) => `${s}.${o}`));
+  const dataOps = [...ops].filter((k) => {
+    const [s, o] = k.split('.');
+    return w.n(`lib_static_shape("${s}", "${o}", data)`) === 1;
+  });
+  assert.deepEqual(dataOps, [],
+    'not one data static is ever an operation, so a row for one denotes nothing');
+  assert.ok(w.n('lib_static_shape(S, K, data)') > 50, 'the control is live: there are many');
+  // ...AND THE IN-TRAY IS NOW IMMUNE TO IT, which is the reason the refusal is
+  // not the only thing standing between it and a free set of rows. With the
+  // refused rule IN, `ambient_owed` does not move by a single row, because it
+  // ranges over the operations a call site REACHES and not over "has this
+  // surface any attribution at all".
+  const m = build([{ file: AMB_RULES,
+    find: 'ambient_effect(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),',
+    replace: `ambient_effect(S, Key, total) :- lib_static_shape(S, Key, data).
+ambient_effect(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),` }]);
+  assert.ok(m.n('ambient_effect(S, Op, E)') > w.n('ambient_effect(S, Op, E)'),
+    'the control is live: the refused rule really does add rows');
+  assert.deepEqual(m.binds('ambient_owed[flow](O, S)'), w.binds('ambient_owed[flow](O, S)'),
+    'and not one surface leaves the in-tray for them');
+  assert.deepEqual(m.binds('concrete_denotes[flow](S, Op, E)'), w.binds('concrete_denotes[flow](S, Op, E)'),
+    'nor does one call site denote anything it did not denote before');
+});
+
+test('WHAT A FORM DOES SAY: `new Math()` THROWS, and the constructible ones '
+   + 'are REFUSED for a named reason', () => {
+  const w = base();
+  // The one ECMAScript effect a declaration file states outright. `Math` is a
+  // `namespace_object`: TypeScript declares no `MathConstructor` behind it, so
+  // `new Math()` is a TypeError always — exact, not an over-approximation.
+  // Seven globals are in that state and one of them has a site here.
+  assert.deepEqual(w.binds('amb_not_constructible(Name)'),
+    ['Atomics', 'Infinity', 'Intl', 'JSON', 'Math', 'NaN', 'Reflect']);
+  assert.ok(w.binds('concrete_denotes[flow](S, Op, E)').includes('Math/construct/exn'));
+  // AND THE CONSTRUCTIBLE ONES ARE NOT GIVEN `alloc`, which would have taken
+  // four surfaces out of the in-tray in one line. `new Map()` allocates; `new
+  // Array(n)`, `new String(s)` and `new RegExp(src)` allocate AND throw, on a
+  // bad length, a symbol and a bad pattern. The lattice's least name containing
+  // both labels is measured here rather than asserted in prose, and it is `io`
+  // — so the two available answers are an under-approximation and a claim that
+  // `new Map()` does input and output.
+  assert.deepEqual(w.binds('eff_join(alloc, exn, N)'), ['io'],
+    'there is no landmark between `alloc` and `io`, which is why the four stay owed');
+  assert.deepEqual(w.binds('ambient_owed[flow](O, S)')
+    .filter((r) => ['es_intrinsic/Array', 'es_intrinsic/Map', 'es_intrinsic/RegExp',
+      'es_intrinsic/String'].includes(r)),
+    ['es_intrinsic/Array', 'es_intrinsic/Map', 'es_intrinsic/RegExp', 'es_intrinsic/String'],
+    'and they are owed BY NAME rather than silently under-approximated');
+});
+
+// ===========================================================================
+// 7. THE MUTANTS
 //
 // Chosen by asking WHERE THIS CHECK IS STRUCTURALLY UNABLE TO LOOK. Three
 // survive and each survivor is a different KIND of survival, which is the
@@ -649,8 +902,19 @@ test('MUTANT M6: the ES intrinsic door removed — the IN-TRAY kills it', () => 
   const m = build([{ file: AMB_RULES,
     find: 'ambient_binding(File, Name, Name) :- free_global[code](_, Name, File), lib_global(Name, _, _).',
     replace: '' }]);
-  assert.deepEqual(m.binds('concrete_denotes[flow](S, Op, E)'), base().binds('concrete_denotes[flow](S, Op, E)'),
-    'the ATTRIBUTED half does not move, which is why a count of it would sleep');
+  // THE ATTRIBUTED HALF MOVES BY EXACTLY ONE ROW NOW, AND IT DID NOT ON
+  // 2026-09-09 WHEN THIS MUTANT WAS WRITTEN. That is the mutant getting
+  // STRONGER rather than the claim weakening, and the row says why: section 8
+  // reads `lib_global`'s FORM and attributes `new Math()` an `exn`, so one
+  // ECMAScript pair is now denoted and it goes with the door. Nine of the ten
+  // surfaces still vanish in silence, which is the sentence this mutant is
+  // about, so the difference is asserted as a NAMED ROW rather than allowed to
+  // stand as an inequality.
+  const lost = base().binds('concrete_denotes[flow](S, Op, E)')
+    .filter((r) => !m.binds('concrete_denotes[flow](S, Op, E)').includes(r));
+  assert.deepEqual(lost, ['Math/construct/exn'],
+    'the attributed half loses ONE row, and everything else about the ES '
+    + 'surface goes without a single relation saying so');
   // The RESIDUE is the two origins the ES arm does not carry, and it grew by the
   // two prototypes a constructed receiver now reaches — `regexp` and `string`
   // arrive through `new RegExp(...).test(...)` and `new String(s).substr(...)`,
@@ -773,4 +1037,73 @@ test('MUTANT M9: a plain call writes the surface in the operation column', () =>
     'KILLED: a plain call of a global denotes nothing');
   assert.ok(m.binds('concrete_unmapped[flow](S, Op)').includes('fetch/fetch'),
     'and lands in the residue under a member name that is its own surface');
+});
+
+// ---------------------------------------------------------------------------
+// ...AND THE THREE FOR THE TWO SURFACE ITEMS, chosen by the same question:
+// where are THESE rules structurally unable to look. M11 is the one that
+// answers it — the guard it removes has no site in this world at all.
+
+test('MUTANT M10: `lib_mutator` loses its readonly-view guard — the in-tray kills it', () => {
+  // Targets: that a prototype with NO `Readonly` twin yields no mutators.
+  // Without the guard the negation inverts the source's meaning wholesale —
+  // every member of every prototype the lib files declare no twin for becomes a
+  // mutator, because `not lib_readonly_member(P, Key)` is true of all of them.
+  // It fails in the direction that LOOKS productive: `regexp.test` acquires an
+  // effect and a surface leaves the in-tray.
+  const m = build([{ file: AMB_RULES,
+    find: `lib_mutator(P, Key) :- lib_member(P, Key, _), lib_readonly_view(P, _),
+                       not lib_readonly_member(P, Key).`,
+    replace: `lib_mutator(P, Key) :- lib_member(P, Key, _),
+                       not lib_readonly_member(P, Key).` }]);
+  assert.ok(m.binds('concrete_denotes[flow](S, Op, E)').includes('regexp/test/wr_local'),
+    'KILLED: `RegExp.prototype.test` is called a mutator because no ReadonlyRegExp exists');
+  assert.ok(!m.binds('ambient_owed[flow](O, S)').includes('builtin_prototype/regexp'),
+    'and a surface leaves the in-tray for a reason nothing in the source supports');
+});
+
+test('MUTANT M11: every prototype is heap-decided — SURVIVES the corpus, dies on a probe', () => {
+  // Targets: `not amb_proto_untraced(P)` — the structural argument that only a
+  // prototype whose every `kind_prototype` kind is a `node_value_kind` can have
+  // its heap decided without the site.
+  //
+  // THIS IS WHERE THE CHECK CANNOT LOOK, and it is the reason the probe exists.
+  // The four fixtures reach the `string` prototype ONLY through `new String(s)`,
+  // whose receiver `may_be_node` traces, so `amb_proto_heap_split[audit]` has no
+  // site that could contradict the wrong claim. The audit is honest and blind at
+  // the same time, and a survivor here would have been a statement about the
+  // fixtures.
+  const M = 'amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).';
+  const OFF = 'amb_proto_heap(P, local) :- builtin_prototype(P).';
+  const m = build([{ file: AMB_RULES, find: M, replace: OFF }]);
+  assert.deepEqual(m.binds('amb_proto_heap_split[audit](P, M)'), [],
+    'SURVIVES over the four fixtures: every prototype receiver in them is traced');
+  assert.ok(m.n('amb_proto_recv[flow](M, P)') >= 4, 'the control is live: there are receivers');
+  const p = build([{ file: AMB_RULES, find: M, replace: OFF }], [['lit.mjs', LITERAL_RECV]]);
+  const split = p.q('amb_proto_heap_split[audit](P, M)').map(([x]) => x);
+  assert.deepEqual([...new Set(split)].sort(), ['string'],
+    'KILLED on a string LITERAL receiver, which is untraced and therefore global');
+});
+
+test('MUTANT M12: `construct` counts as an off-surface member — the in-tray kills it', () => {
+  // Targets: `not amb_operation_word(Op)` in `ambient_off_surface`. `itself` and
+  // `construct` name a call and a `new`; no declaration file carries them as
+  // KEYS, so without the guard every construction of an ES global is "not on the
+  // surface" and several surfaces leave the in-tray at once — quietly, and in
+  // the direction that makes the queue look shorter.
+  const m = build([{ file: AMB_RULES,
+    find: `ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, es_intrinsic),
+                                    not amb_operation_word(Op),
+                                    not lib_static(S, Op, _).`,
+    replace: `ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
+                                    surface_origin(S, es_intrinsic),
+                                    not lib_static(S, Op, _).` }]);
+  const gone = base().binds('ambient_owed[flow](O, S)')
+    .filter((r) => !m.binds('ambient_owed[flow](O, S)').includes(r));
+  assert.deepEqual(gone,
+    ['es_intrinsic/Array', 'es_intrinsic/BigInt', 'es_intrinsic/Map',
+      'es_intrinsic/RegExp', 'es_intrinsic/String'],
+    'KILLED: the surfaces a construction or a bare call is the only route to '
+    + 'stop being owed, because a `new` is not a member name');
 });

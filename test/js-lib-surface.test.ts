@@ -18,7 +18,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
-import { scanLib, emit, releaseOf, PROTOTYPES } from '../scanners/ts_lib.ts';
+import { scanLib, scanReadonly, emit, releaseOf, PROTOTYPES } from '../scanners/ts_lib.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -117,8 +117,47 @@ test('the surface pack is generated, and regenerating it changes nothing', () =>
   // A GENERATED PACK THAT NOBODY REGENERATES IS A HAND-WRITTEN PACK with a
   // misleading header. This keeps the file honest, and it is the same shape as
   // the attestation ritual: compare, do not promise.
-  assert.equal(emit(scanLib(LIB)), read(SURFACE),
+  assert.equal(emit(scanLib(LIB), undefined, scanReadonly(LIB)), read(SURFACE),
     'facts/js-lib-surface.rofl is out of date — run `node --experimental-strip-types scanners/ts_lib.ts`');
+});
+
+test('THE MUTATING HALF OF A PROTOTYPE IS READ, AND IT IS A SET DIFFERENCE', () => {
+  // `w_ambient_prototype_effects` asked whether the array mutators can be READ
+  // from a declaration file rather than typed, and said the honest answer may
+  // be no. THIS IS THE ANSWER. TypeScript declares a `Readonly` TWIN of every
+  // mutable collection interface, and the twin is the same surface with the
+  // mutating members taken out — so the list is a subtraction over two
+  // interfaces in the files this scanner already reads.
+  const ro = scanReadonly(LIB);
+  const by = new Map(ro.map((r) => [r.base, r]));
+  // THE NINE, BY NAME AND IN THE ITEM'S OWN WORDS. Not a count: a count could
+  // not tell these nine from any other nine, and the whole claim is that the
+  // set the language names and the set the declaration yields are the SAME set.
+  assert.deepEqual(by.get('Array')?.mutators,
+    ['copyWithin', 'fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice',
+      'unshift']);
+  // ...AND THE CONSTRUCTION IS GENERAL RATHER THAN AN ARRAY COINCIDENCE, which
+  // is why the other two twins are measured here even though neither reaches a
+  // row: `Map` and `Set` are not prototypes `kind_prototype` can name a
+  // receiver for, so emitting them would be rows no rule reads.
+  assert.deepEqual(by.get('Map')?.mutators, ['clear', 'delete', 'set']);
+  assert.deepEqual(by.get('Set')?.mutators, ['add', 'clear', 'delete']);
+  assert.deepEqual(ro.map((r) => r.view).sort(),
+    ['ReadonlyArray', 'ReadonlyMap', 'ReadonlySet'],
+    'and those three are every Readonly twin the ecmascript lib files declare');
+  // THE PROPERTY THE SUBTRACTION RESTS ON, in the direction nobody looks: the
+  // readonly view declares NOTHING the mutable interface does not. If it did,
+  // `lib_member` minus `lib_readonly_member` would stop meaning "the members
+  // you cannot reach through a readonly reference" and start meaning nothing.
+  assert.deepEqual(ro.flatMap((r) => r.viewOnly.map((m) => `${r.view}.${m}`)), []);
+  // ...AND WHAT THE SOURCE CANNOT SAY, as a set rather than as a silence. SEVEN
+  // of the eight prototypes have no twin at all — five of them `builtin_prototype`
+  // rows and two (`object`, `function`) not — so this construction is SILENT
+  // about them, which is a different thing from saying they have no mutators
+  // and is why the rule in rules/js-ambient.rofl is guarded on the view.
+  const withView = new Set(ro.map((r) => r.proto).filter((p) => p !== null));
+  assert.deepEqual([...PROTOTYPES.values()].filter((p) => !withView.has(p)).sort(),
+    ['bigint', 'boolean', 'function', 'number', 'object', 'regexp', 'string']);
 });
 
 test('the era of a method is the earliest lib file that declares it', () => {

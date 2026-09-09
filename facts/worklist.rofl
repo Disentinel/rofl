@@ -2997,6 +2997,76 @@ work_state(w_prototype_of_a_constructed_value, open).
 -- calls — and a data static of a frozen intrinsic is `total` with no judgement
 -- at all. That is a floor for this item rather than the whole of it, and it is
 -- what would make the first rows DERIVED rather than typed.
+--
+-- ==========================================================================
+-- ANSWERED 2026-09-09 AND THE ANSWER IS NO, WITH ONE EXCEPTION THAT IS NOT
+-- ABOUT A MEMBER AT ALL. The item stays OPEN because eleven ECMAScript
+-- surfaces are still in `ambient_owed[flow]` and nothing here attributes one
+-- of their members; what changes is that three separate things are now
+-- measured rather than suspected.
+--
+-- THE PROPOSED FLOOR IS REFUSED, AND THE REFUSAL IS A MEASUREMENT RATHER THAN
+-- CAUTION. "A data static of a frozen intrinsic is `total` with no judgement at
+-- all" would have been 87 rows — and NOT ONE OF THEM WOULD EVER JOIN. An
+-- OPERATION in this model comes from `selects[flow]` on the CALLEE of a call,
+-- so a data static can only be an operation if a program calls `Math.PI(...)`,
+-- which is the very thing the data/method split exists to say nobody does.
+-- Measured over `w_js_ambient`: of the thirteen operations a call site reaches
+-- on an ES surface, thirteen are `callable` and zero are `data`. The rows would
+-- have moved exactly one thing — `ambient_owed`, which read "no member of this
+-- surface is attributed" — and that is a number moving without the debt moving.
+-- test/js-ambient.test.ts plants the refused rule as a mutant and shows the
+-- in-tray does not move for it, so the refusal is runnable and not a promise.
+--
+-- SO THE IN-TRAY WAS STRENGTHENED BEFORE ANYTHING WAS ATTRIBUTED.
+-- `ambient_owed[flow]` now ranges over `concrete_unmapped[flow]` — a surface
+-- with at least one operation a CALL SITE REACHES and no map — instead of over
+-- `not amb_surface_attributed`. MEASURED FIRST: on the tree before this item
+-- the two forms agree row for row, sixteen surfaces, so the redefinition is not
+-- what moves the set. They disagree in BOTH directions now, which is the whole
+-- point: `JSON`, `Math`, `Reflect` and `array` have some attribution and still
+-- owe an operation, and `Error` has none and owes nobody anything.
+--
+-- WHAT A DECLARATION FILE DOES STATE IS THE FORM OF THE BINDING, and one
+-- consequence of the form is an effect the language guarantees. `Math` is a
+-- `namespace_object`: TypeScript declares no `MathConstructor`, so `new Math()`
+-- is a TypeError ALWAYS. rules/js-globals.rofl already read that form
+-- (`constructible_form`, `es_construct_not_constructor[audit]`); section 8 of
+-- rules/js-ambient.rofl carries it into the lattice as `ambient_effect(Name,
+-- construct, exn)` for the seven globals with no constructor. It is exact
+-- rather than an over-approximation, and it is the first row in
+-- `eff_exn_only[audit]` — `neverRun` — whose `exn` comes from a declaration`s
+-- SHAPE rather than from an effect table.
+--
+-- AND THE CONSTRUCTIBLE ONES ARE REFUSED, WITH THE LATTICE`S OWN NUMBER.
+-- `new Map()` allocates; `new Array(n)`, `new String(s)` and `new RegExp(src)`
+-- allocate AND throw, on a bad length, a symbol and a bad pattern. The least
+-- landmark containing both `alloc` and `exn` is `io` — `eff_join(alloc, exn,
+-- io)`, measured — so the two available answers are an under-approximation of a
+-- constructor whose body is not in this program, and a claim that `new Map()`
+-- does input and output. NAMING A LANDMARK BETWEEN THEM IS THE EFFECT LAYER`S
+-- MOVE and not a surface pack`s, exactly as test/js-ambient.test.ts already
+-- says about the row above `st_local`. So `Array`, `Map`, `RegExp` and `String`
+-- stay owed for `construct` and the reason is a row.
+--
+-- AND ONE SURFACE LEFT THE IN-TRAY WITHOUT BEING ATTRIBUTED, which is the third
+-- thing this item measured and the only one that moved a set.
+-- `es_intrinsic/Error` was owed for exactly one operation,
+-- `Error.captureStackTrace` — V8`s, declared in @types/node and NOWHERE in
+-- lib.es*.d.ts. `lib_static("Error", "captureStackTrace", _)` does not exist,
+-- so no table of ECMAScript effects will ever map it, and reporting the
+-- ECMAScript surface as owing an effect for a member it does not declare is
+-- false about the surface and hides whose debt it is. `ambient_off_surface[flow]`
+-- is the relation and `Error/captureStackTrace` is its one row; the debt is
+-- `w_ambient_global_members`` neighbourhood, not this one`s.
+--
+-- WHAT IS STILL OWED, AND IT IS THE ITEM: `JSON.parse`, `JSON.stringify`,
+-- `Math.max`, `Object.keys`, `Object.entries`, `Object.hasOwn`,
+-- `Promise.allSettled`, `Promise.any`, `Reflect.ownKeys`, `Symbol.for`,
+-- `BigInt` called as a function, and the four constructions. Eleven surfaces.
+-- The founding finding is confirmed rather than worked around: `Math.max` and
+-- `Math.random` are the same MethodSignature in every declaration file there
+-- is, and no scan will separate `total` from `ndet`.
 work(w_ambient_es_intrinsic_effects, "nine ECMAScript surfaces reach a call site and no table says what any of their members do; the surface half is generated and the map is not, and the data/method split is the one part of it that is derivable").
 work_state(w_ambient_es_intrinsic_effects, open).
 work_needs(w_ambient_es_intrinsic_effects, w_effect_ambient_call).
@@ -3016,6 +3086,77 @@ work_needs(w_ambient_es_intrinsic_effects, w_effect_ambient_call).
 -- (`toSorted`, `toReversed`, `toSpliced`, `with`). Whether that list can be
 -- READ from a declaration file rather than typed is the question this item has
 -- to answer before it writes a row, and the honest answer may be no.
+--
+-- ==========================================================================
+-- ANSWERED 2026-09-09 AND THE ANSWER IS YES. TypeScript declares a `Readonly`
+-- TWIN of every mutable collection interface, and the twin is the same surface
+-- WITH THE MUTATING MEMBERS TAKEN OUT — so the closed list is a SET DIFFERENCE
+-- over two interfaces in the files scanners/ts_lib.ts already parses.
+-- Measured over the ecmascript lib files, all three twins:
+--
+--   Array \ ReadonlyArray   copyWithin fill pop push reverse shift sort
+--                           splice unshift      <- EXACTLY the nine above
+--   Map   \ ReadonlyMap     clear delete set
+--   Set   \ ReadonlySet     add clear delete
+--
+-- and the REVERSE difference is empty in all three, which is the property the
+-- subtraction rests on: the readonly view declares nothing the mutable
+-- interface does not, so a member missing from the view is missing because it
+-- mutates. `lib_readonly_only[audit]` is that direction as a row.
+--
+-- THE SUBTRACTION IS IN THE RULES AND NOT IN THE SCANNER, deliberately.
+-- facts/js-lib-surface.rofl carries what the declaration SAYS —
+-- `lib_readonly_view(array, "ReadonlyArray")` and the thirty members that view
+-- declares — and `lib_mutator` in rules/js-ambient.rofl is the difference. A
+-- scanner emitting the mutators directly would have put the one inference of
+-- the whole item in the layer nobody can argue with.
+--
+-- ONLY `Array` REACHES A ROW, AND THAT IS ABOUT THIS MODEL RATHER THAN THE
+-- SOURCE. `Map` and `Set` are not prototypes `kind_prototype` can name a
+-- receiver for — that is `es_prototype_gap[audit]` — so rows for them would be
+-- rows no rule reads. The measurement is kept in the scanner and asserted in
+-- test/js-lib-surface.test.ts off `scanReadonly`, so the generality of the
+-- construction is checked without inventing rows for it.
+--
+-- AND FIVE OF THE SIX BUILTIN PROTOTYPES HAVE NO TWIN AT ALL — `string`,
+-- `number`, `boolean`, `regexp`, `bigint`. The source is SILENT about them,
+-- which is not the same as saying they have no mutators, and it is why the rule
+-- is guarded on `lib_readonly_view(P, _)` having a row: without the guard the
+-- negation inverts the source wholesale and calls `regexp.test` a mutator.
+-- MUTANT M10 plants exactly that. `amb_proto_unsplit[flow]` is the five, as a
+-- positive row rather than as this sentence.
+--
+-- THE MAP COULD NOT GO THROUGH `ambient_effect` UNCHANGED, AND THAT IS THE
+-- SECOND HALF OF THE ANSWER. Section 3 of rules/js-ambient.rofl decides the
+-- ambient heap once — a surface this program did not allocate is `global` — and
+-- A BUILTIN PROTOTYPE BREAKS THAT ARGUMENT: the surface is ambient and the
+-- RECEIVER is a value in this program, so `[3,1,2].sort()` writes a cell this
+-- program made. `ambient_effect(Surface, Member, Name)` has no heap column, so
+-- a row can be written only where the model decides the heap WITHOUT the site.
+-- It does, for two of the six and structurally: every arm of `prototype_of[flow]`
+-- except the first is a `may_be_node` join, so the only untraced receiver comes
+-- from the receiver`s own KIND — and a prototype every one of whose
+-- `kind_prototype` kinds is a `node_value_kind` can have none. `array` and
+-- `regexp` are those two. `"ab".concat(x)` really is a read of an untraced
+-- receiver and no surface-grain row could be right about it; MUTANT M11 is that
+-- case, and it SURVIVES the four fixtures and dies on a probe, because this
+-- world reaches the `string` prototype only through `new String(s)`.
+--
+-- SO THE ROW IS `ambient_effect(array, "fill", wr_local)` AND EIGHT LIKE IT,
+-- with `wr_local` computed rather than typed: `eff_of_label(Label, Heap, Name)`
+-- is section 3`s closure generalised over (label, heap) instead of over an atom,
+-- so the landmark moves if the lattice does. WHAT IT BUYS IS A SENTENCE THE
+-- MODEL COULD NOT SAY: `eff_here(_, write, _)` was seeded by an assignment
+-- target and an update expression only, so `new Array(n).fill(0)` allocated and
+-- READ and wrote nothing. `padded` is the one function that gains a write.
+--
+-- WHY THE ITEM STAYS OPEN. The non-mutating half is NOT thereby effect-free and
+-- this pack refuses to say it is: `join` calls each element`s `toString`,
+-- `toSorted` takes a comparator, and the declaration says nothing about either
+-- — a callback into this program that no `resolves` edge carries. So
+-- `array/toSorted`, `regexp/test` and `string/substr` are still owed and the
+-- three prototypes are still in `ambient_owed[flow]`. The item`s QUESTION is
+-- answered and its residue is three rows.
 work(w_ambient_prototype_effects, "a call on a builtin prototype has a surface and an operation derived from the receiver`s kind and no map into the lattice; the array mutators are a closed list and whether it can be READ rather than typed is the question").
 work_state(w_ambient_prototype_effects, open).
 work_needs(w_ambient_prototype_effects, w_effect_ambient_call).

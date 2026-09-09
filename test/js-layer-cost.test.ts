@@ -712,7 +712,19 @@ test('the era layer costs a number too, and it is half of its world\'s derivatio
   assert.equal(again.total, L.world.total, 'two identical worlds hand out the same rows');
 
   // FIRST MEASUREMENT 2026-09-09, same as above: this world had no cost gate.
-  assert.equal(L.world.total, 84901, 'rows handed out in the era fixpoint');
+  //
+  // 84 901 -> 85 503 THE SAME DAY, +602 rows, and the cause is named rather
+  // than absorbed: `facts/js-lib-surface.rofl` gained `lib_readonly_view` and
+  // thirty `lib_readonly_member` rows — TypeScript's own `ReadonlyArray`, read
+  // so that `w_ambient_prototype_effects` could take the mutating half of the
+  // Array prototype as a SET DIFFERENCE instead of typing it. This world loads
+  // that pack for `release/1` and `includes/2` and reads NEITHER new relation,
+  // so the whole of the +602 is the store handing out rows for facts nothing
+  // here joins. It is a number that moved because the MODEL's source grew,
+  // which is the kind HANDOFF.md says stays a number and gets re-stated on
+  // purpose; the LAYER's own four figures below did not move at all, which is
+  // the row that says the growth is outside the thing this test measures.
+  assert.equal(L.world.total, 85503, 'rows handed out in the era fixpoint');
   assert.equal(L.world.firings, 6067, 'derivations in the era fixpoint');
   assert.equal(L.rows, 24935, 'rows the era pack costs, by difference');
   assert.equal(L.firings, 3208, 'derivations the era pack adds');

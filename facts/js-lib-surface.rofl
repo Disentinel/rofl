@@ -198,3 +198,52 @@ lib_deprecated(string, "trimRight").
 
 lib_replaced_by(string, "trimLeft", "trimStart").
 lib_replaced_by(string, "trimRight", "trimEnd").
+
+-- `lib_readonly_view(Prototype, Interface)` — the mutable interface has a
+-- `Readonly` TWIN in TypeScript`s own declarations, and
+-- `lib_readonly_member` is what that twin declares. THE MUTATING HALF OF A
+-- PROTOTYPE IS THE SET DIFFERENCE and it is taken in rules/js-ambient.rofl,
+-- not here: `lib_member` minus `lib_readonly_member` over a prototype that
+-- HAS a view. Measured over the ecmascript lib files: Array \ ReadonlyArray
+-- is exactly `copyWithin fill pop push reverse shift sort splice unshift`,
+-- Map \ ReadonlyMap is `clear delete set`, Set \ ReadonlySet is
+-- `add clear delete`, and the reverse difference is EMPTY in all three.
+-- Only Array reaches a row because only Array is a prototype
+-- `kind_prototype` can name a receiver for; the five that have no twin at
+-- all are SILENT here rather than mutator-free, which is why the rule is
+-- guarded on `lib_readonly_view` having a row.
+edb(lib_readonly_view).
+edb(lib_readonly_member).
+
+lib_readonly_view(array, "ReadonlyArray").
+
+lib_readonly_member(array, "at").
+lib_readonly_member(array, "concat").
+lib_readonly_member(array, "entries").
+lib_readonly_member(array, "every").
+lib_readonly_member(array, "filter").
+lib_readonly_member(array, "find").
+lib_readonly_member(array, "findIndex").
+lib_readonly_member(array, "findLast").
+lib_readonly_member(array, "findLastIndex").
+lib_readonly_member(array, "flat").
+lib_readonly_member(array, "flatMap").
+lib_readonly_member(array, "forEach").
+lib_readonly_member(array, "includes").
+lib_readonly_member(array, "indexOf").
+lib_readonly_member(array, "join").
+lib_readonly_member(array, "keys").
+lib_readonly_member(array, "lastIndexOf").
+lib_readonly_member(array, "length").
+lib_readonly_member(array, "map").
+lib_readonly_member(array, "reduce").
+lib_readonly_member(array, "reduceRight").
+lib_readonly_member(array, "slice").
+lib_readonly_member(array, "some").
+lib_readonly_member(array, "toLocaleString").
+lib_readonly_member(array, "toReversed").
+lib_readonly_member(array, "toSorted").
+lib_readonly_member(array, "toSpliced").
+lib_readonly_member(array, "toString").
+lib_readonly_member(array, "values").
+lib_readonly_member(array, "with").
