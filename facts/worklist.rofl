@@ -2396,3 +2396,100 @@ work_state(w_connected_and_badly_ordered, open).
 -- on a 1.3% gap. What decides that body is the DIRECTION of the second literal,
 -- not either seed's size. So this item wants the count ON THE JOIN.
 work_needs(w_connected_and_badly_ordered, w_join_planner).
+
+-- ==========================================================================
+-- 67 - THE RUNTIME SURFACE. DONE 2026-09-09.
+--
+-- `w_env_api_surface` gave the model the LANGUAGE's standard library: 130
+-- prototype methods read from TypeScript's own lib.es*.d.ts, dated by the
+-- edition that introduced them. It could not say anything about `console.log`,
+-- `fs.readFileSync` or `fetch`, because none of those is ECMAScript at all.
+-- This item is the HOST: what a program reaches for that is neither in the
+-- program nor in the language.
+--
+-- WHAT WAS BUILT, and from which source:
+--   scanners/host_lib.ts          the generator, via the TypeScript CHECKER
+--   facts/js-host-surface.rofl    GENERATED: 939 globals across two hosts,
+--                                 57 node modules, 1 321 members, 718 dated,
+--                                 26 deprecated, 17 with a named replacement
+--   facts/js-host.rofl            AUTHORED: the runtime axis, the bridge, and
+--                                 the effect attribution
+--   rules/js-host.rofl            the two doors, the four site shapes, the
+--                                 composition, and eleven audits
+--   test/fixtures/js-host/        a corpus of its own — see NO SITE below
+--   test/js-host.test.ts          31 tests, ten mutants, one declared survivor
+--
+-- THE CORPUS HAD NO SITE AND THAT WAS MEASURED FIRST. Over every module
+-- specifier in test/fixtures/js-call: `./alpha.mjs` x6, `./gamma.mjs` x4,
+-- `./trace.mjs` x3, `./delta.mjs` x3, `./x` x1 — FIVE distinct specifiers, all
+-- relative, NOT ONE node builtin. Grepped for console, fetch, setTimeout,
+-- setInterval, queueMicrotask, structuredClone, URL, TextEncoder,
+-- AbortController, performance, process, Buffer, require and globalThis: every
+-- hit is inside a COMMENT. So the layer would have derived exactly zero rows
+-- there, and the fixture lives in test/fixtures/js-host/ rather than as a sixth
+-- file in the call corpus — which would have moved every named set and every
+-- cost pin in the suite for a layer that needs none of them.
+--
+-- THE TWO AXES, ON THE OWNER'S DESIGN OF 2026-09-09. A runtime version is a
+-- SUBKIND of a runtime family, so `runtime_includes` is `includes` and
+-- `runtime_reaches` is `reaches`, walked the same way — no second traversal
+-- exists. `provides_release(node18, es2022)` is the BRIDGE, and it lands on a
+-- `release/1` that scanners/ts_lib.ts already generates, so nothing on the era
+-- scale is minted here. THE BRIDGE BITES: `[3,1,2].toSorted()` is es2023, node18
+-- provides es2022, and `runtime_lib_unsupported[audit](node18, C, array,
+-- "toSorted")` is the corpus's one row — the two axes answering one question.
+--
+-- AND THE COMPOSITION IS CHECKED AGAINST THE COMPARISON. `has_api[audit]`,
+-- walked over `runtime_includes`, must equal `arrived_by[code]`, computed by one
+-- `<=` over the semver in `@since`. 1 924 rows, EQUAL, asserted as a set
+-- identity rather than a count.
+--
+-- THE SHAPE THE EFFECT LAYER JOINS AGAINST is `host_call_effect[audit](C, E,
+-- Why)` — a call site, a Koka atom, and the PROVENANCE (`by_member`,
+-- `by_module`, `by_global`), because an effect attributed to a member by name
+-- and one inherited from its module's default are not equally strong. No rule
+-- downstream has to recognise a spelling. `host_effect_atom/1` is declared so a
+-- misspelling is a row; the LATTICE is not declared here and must not be.
+work(w_runtime_surface, "DONE 2026-09-09: the runtime surface of two hosts generated from @types/node and lib.dom.d.ts, a second version axis as subkinds of a runtime family, the bridge provides_release to the ES releases, and host_call_effect as the row the effect layer joins").
+work_state(w_runtime_surface, done).
+work_needs(w_runtime_surface, w_env_api_surface).
+work_spawned(w_runtime_surface, f_a_host_surface_that_does_not_name_its_host_is_wrong_in_both_directions).
+work_spawned(w_runtime_surface, f_a_runtime_records_arrival_and_never_removal).
+work_spawned(w_runtime_surface, f_the_runtime_api_is_where_replaced_by_earns_its_keep).
+work_spawned(w_runtime_surface, f_a_guard_written_three_times_cannot_be_killed_by_a_mutant_of_one).
+work_spawned(w_runtime_surface, f_the_rule_shape_census_is_a_generated_pack_with_no_gate).
+work_spawned(w_runtime_surface, f_a_free_identifier_is_a_negative_over_a_file_and_the_model_binds_five_ways).
+
+-- NO WITNESS, AND THE REASON IS THE INSTRUMENT RATHER THAN THE CLAIM.
+-- `w_note_is_not_evidence` says a witness names its world, and every sentence
+-- above is about a world `facts/worlds.rofl` does not declare: the runtime world
+-- of test/js-host-world.ts. Declaring a fourth world is possible and was
+-- deliberately not done, for two measured reasons. FIRST,
+-- scripts/witness_check.ts builds a world from `world_pack` plus `world_corpus`
+-- and asserts the SCANNED AST only — it emits none of the string-cutting host
+-- facts (`str_scheme`, `str_seg`) that rules/js-modules.rofl needs, so
+-- `resolved_builtin` would be empty there and every module-door claim would
+-- witness as 0 while being true. SECOND, test/note-witness.test.ts pins the
+-- worlds a witness may name as the NAMED SET {w_js_corpus, w_ledger, w_queue},
+-- and moving it is a change to a file three other branches read. THE CLAIMS ARE
+-- CHECKED IN test/js-host.test.ts INSTEAD, 31 tests, and the fourth world is
+-- left as a proposal with its blocker stated rather than as an absence.
+
+-- ...AND A MEASUREMENT OWED TO ITEM 59. `w_plugin_gated_kinds` says
+-- `import_attribute` is "scannable today, but `import attributes` is ES2025 and
+-- the highest environment on the scale is ts5 at 2022, so the feature would sit
+-- in `feature_unreachable[audit]` for ever". RE-MEASURED 2026-09-09 against the
+-- scanner: `import cfg from "./c.json" with { type: "json" }` PARSES with the
+-- current plugin list and emits an `import_attribute` node — so the SCANNABLE
+-- half of that sentence is confirmed rather than stale, unlike the
+-- `class_accessor_property` half which was corrected the same day.
+--
+-- AND THIS ITEM DOES NOT UNBLOCK IT, which is worth saying because a second
+-- version axis looks as though it should. Reachability for a syntax feature is
+-- decided by `env_has[audit]`, which reads `environment/1` and `provides/2` on
+-- the ERA scale; this item added neither and could not, because the era scale is
+-- the owner's. What it DID add is the mechanism that would make the answer
+-- cheap once an environment exists: `runtime_reaches_release[audit](node22,
+-- es2024)` is a live row, so a runtime already reaches an ES release by
+-- composition. The missing piece is one `environment` at es2025 plus a
+-- `provides(es2025, import_attributes)`, and both are the owner's to write.
