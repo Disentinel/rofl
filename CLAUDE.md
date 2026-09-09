@@ -74,6 +74,16 @@ see, and the open decisions as one list — derived from boot.rofl and gated by
 `test/permission-doc.test.ts`), `docs/inquiry-kinds.md` (typed inquiry roots),
 `docs/guided-formal-reasoning-roadmap.md` (the plan; amend via findings).
 
+Disciplines that bind a RUN rather than a model:
+`docs/scaling-a-corpus.md` (the incremental ingest loop, why a cooling
+threshold must be a disjunction, and the four defects a full-corpus run found
+that reading did not), `docs/normalisation-and-profiling.md` (a fact per PART
+that is one fact about the WHOLE, and profiling a world that did not finish),
+`docs/volumes-and-residency.md` (how a corpus stays cold),
+`docs/working-with-ledgers.md` and `docs/test-maintenance-cost.md` (what a
+routine change costs the suite, and which assertions charge for it),
+`docs/failure-modes.md` (the process failures, catalogued and priced).
+
 ## Every flag must be exercised by a demo, not merely mentioned
 
 **A capability added to the language or the API is not finished until some

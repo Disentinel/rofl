@@ -93,6 +93,13 @@ Admission (`runtime/admission.ts`) validates every result against
   fact per PART that is really one fact about the WHOLE, the repetition is
   findable in one pass and the mistake of deleting a genuinely per-part
   column is easy — `normalise.md` is the discipline and the measurement.
+- **Check that your instrument can tell the two answers apart.** A tool
+  chosen because it was at hand usually answers a question next to the one
+  asked, and says nothing about the difference — a piped gate reports
+  `grep`'s exit code, `ps` cannot tell your process from a neighbour's, a
+  proxy threshold is blind on the first workload it was not calibrated on.
+  `instruments.md` is the discipline: what else would produce this reading,
+  can it say the other word, is it the quantity the decision is about.
 - **Findings protocol**: insights and pitfalls discovered on the way go
   into the project's findings ledger, `facts/findings.rofl` (start one in
   your project if absent; the discipline is `$GFR/rules/findings.rofl`) —
