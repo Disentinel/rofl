@@ -42,3 +42,7 @@ path = "src/bin/rofl_parse_bench.rs"
 [[bin]]
 name = "rofl-session-bench"
 path = "src/bin/rofl_session_bench.rs"
+
+[[bin]]
+name = "rofl-serve"
+path = "src/bin/rofl_serve.rs"
