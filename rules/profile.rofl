@@ -1,0 +1,96 @@
+-- rules/profile.rofl — WHAT THE STORE'S SHAPE MEANS. Opt-in.
+--
+-- Reads scanners/profile_shape.ts's four relations and says which columns are
+-- one fact about a WHOLE repeated once per PART, which are keys nobody
+-- declared, and which are foreign keys that hold.
+--
+-- OPT-IN FROM BIRTH, AND THAT IS A PAID-FOR LESSON RATHER THAN A PREFERENCE.
+-- A profile reads every fact, which is the exact shape of `forged[audit]` —
+-- leading with an unbound premise over a per-fact relation — and that shape
+-- cost one hundred per cent of the evaluation of an AST index until it was
+-- moved out of the kernel on 2026-09-09
+-- (`f_four_rules_that_never_fire_are_the_entire_cost_of_an_index`). The
+-- sequence is known; there is no reason to walk it twice. So this is a pack a
+-- world loads when it wants to be profiled.
+--
+-- THE ENUMERATION IS THE HOST'S AND THE JUDGEMENT IS HERE. "No two rows
+-- disagree" cannot be said positively — a rule would have to enumerate the
+-- agreements — so what crosses the boundary is the WITNESS OF VIOLATION,
+-- `disagrees`, and the rules below say `not disagrees`. That is the only shape
+-- in which "none" is checkable by anyone who did not run the scan.
+--
+--   node --experimental-strip-types scanners/profile_shape.ts <files>
+--        > facts/profile-shape.rofl
+
+edb(grouped).
+edb(disagrees).
+edb(unique_col).
+edb(included).
+edb(census).
+
+-- ------------------------------------------------- the functional dependency
+
+-- A column is a function of the group its row belongs to. Both premises are
+-- needed and the first is the one that is easy to forget: without `grouped`,
+-- a relation holding ONE row per group satisfies every dependency vacuously.
+-- Measured: `ast_file` has exactly one row per file and reports as collapsible
+-- beside the real finding, meaning nothing.
+fd_holds[profile](R, P) :- grouped[profile](R, P),
+                           not disagrees[profile](R, P).
+
+-- ------------------------------------------------------------- the two tiers
+
+-- A MIGRATION: the column could become a fact about the whole, but no such
+-- fact exists yet, so something has to be written.
+collapsible[profile](R, P) :- fd_holds[profile](R, P),
+                              not already_whole[profile](R, P).
+
+-- A DELETION: the fact about the whole is ALREADY in the vocabulary and the
+-- column repeats it. `ast_node(Id, Kind, File, Line)` against
+-- `ast_file(RootId, File)` is this case — the schema is normalised and the
+-- scanner denormalises it on emit, 14 678 times over 16 files.
+--
+-- Recognised by INCLUSION rather than by name: the column's values are exactly
+-- the values of a column in a relation with one row per group. A list of
+-- relation names here would be a second thing to keep true.
+already_whole[profile](R, P) :- fd_holds[profile](R, P),
+                                included[profile](R, P, W, Q),
+                                one_per_group[profile](W).
+
+redundant[profile](R, P, W, Q) :- fd_holds[profile](R, P),
+                                  included[profile](R, P, W, Q),
+                                  one_per_group[profile](W).
+
+-- A relation with one row per group: it has a column that identifies its row
+-- AND no column of it ever groups. That is what "a fact about the whole" IS,
+-- said by shape rather than by name.
+one_per_group[profile](W) :- unique_col[profile](W, _), not grouped_any[profile](W).
+grouped_any[profile](W)   :- grouped[profile](W, _).
+
+-- ---------------------------------------------------------------- the others
+
+-- A key nobody declared. `ast_child(Parent, Field, Index, Child)` turns out to
+-- be keyed by its LAST argument: every node has at most one parent, so the
+-- relation is a function from child to (parent, field, position). Nothing in
+-- the vocabulary said so.
+undeclared_key[profile](R, P) :- unique_col[profile](R, P), P != 0.
+
+-- A foreign key that HOLDS. Reported rather than required: a model may
+-- legitimately name something it does not hold, and the moment this stops
+-- being reported is the moment to look.
+foreign_key[profile](R, P, W, Q) :- included[profile](R, P, W, Q),
+                                    unique_col[profile](W, Q),
+                                    R != W.
+
+-- --------------------------------------------------------------- the trap
+
+-- WHAT A COUNT OF DISTINCT VALUES WOULD HAVE TOLD YOU, and it is wrong about
+-- half of them. A column of few distinct values is either a whole-level fact
+-- repeated or a small alphabet, and only the grouping tells them apart. This
+-- names the ones a census would have flagged and the grouping clears, so the
+-- disagreement between the two instruments is itself queryable.
+looks_redundant[profile](R, P) :- census[profile](R, P, Rows, Distinct),
+                                  Distinct * 8 < Rows.
+
+census_would_mislead[profile](R, P) :- looks_redundant[profile](R, P),
+                                       disagrees[profile](R, P).

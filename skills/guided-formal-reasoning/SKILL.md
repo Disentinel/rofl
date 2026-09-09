@@ -77,7 +77,10 @@ Admission (`runtime/admission.ts`) validates every result against
 - **Your reasoning is not evidence.** You may assert into your own agent
   ledger; only the runtime writes the `[obs]` journal, and `measured`
   evidence exists only when a tool actually ran. The engine audits this
-  (`forged[audit]`) — do not fight it, it is the product.
+  (`forged[audit]`, in `rules/self-audit.rofl`, which the inquiry runtime
+  loads because an inquiry world admits results from agents — exactly the
+  multi-writer case the audit exists for) — do not fight it, it is the
+  product.
 - **Execute the intent you were given.** Do not restart the framing, widen
   the scope, or wander into generic risks. One intent, its stop condition,
   a structured result.
@@ -86,6 +89,10 @@ Admission (`runtime/admission.ts`) validates every result against
   inventing a result.
 - **New concerns go to `new_intents` / `model_extensions`** — separately
   from facts, for the runtime and the human to admit.
+- **Model the data before you argue about its size.** Where a model stores a
+  fact per PART that is really one fact about the WHOLE, the repetition is
+  findable in one pass and the mistake of deleting a genuinely per-part
+  column is easy — `normalise.md` is the discipline and the measurement.
 - **Findings protocol**: insights and pitfalls discovered on the way go
   into the project's findings ledger, `facts/findings.rofl` (start one in
   your project if absent; the discipline is `$GFR/rules/findings.rofl`) —
