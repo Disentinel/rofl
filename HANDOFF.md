@@ -458,7 +458,7 @@ a gate was pinned, and then a rule was repaired in a pack that gate's world
 loads — pinned numbers invalidated by the next edit in the same sitting. The
 targeted files were all green. Run the full suite before you believe a pin pass.
 
-**Three operational traps, all paid for on 2026-09-08/09 and none of them
+**Four operational traps, all paid for on 2026-09-08/09 and none of them
 about the model.**
 
 1. **The suite needs node 24 and the default node here is 20.** `npm test`
@@ -480,6 +480,16 @@ about the model.**
    `git worktree list` and `ps` before quoting any timing — and note that a
    sibling worktree's `git add -A` is scoped to ITS worktree, so the danger is
    contention and not your working tree.
+4. **EXIT 144 HAS TWO CAUSES AND THE FIRST DRAFT OF THIS ENTRY NAMED ONE.**
+   Corrected 2026-09-09 after the other session said so: one of the kills was
+   its `pkill -f test-concurrency`, which matched THIS tree's `js-directives`
+   run as well as its own. So a run can die with 144 because of the pipe above,
+   or because a neighbour's pattern was wider than its intent. Both look
+   identical from inside — a test run that vanishes with no failure line — and
+   the only way to tell them apart is that the pipe case sits at 0% CPU first.
+   If you `pkill` on this machine, match your own scratchpad path, not a flag
+   every session's node shares. **A wrong cause in a handoff is worse than no
+   entry**, which is why this correction is here rather than a quiet edit.
 
 **Budget the integration, not the authoring.** Merging cost nine hunks and ten
 failing tests, of which six were pins and **four were real** — and three of the
