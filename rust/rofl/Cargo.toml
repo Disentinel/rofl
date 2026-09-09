@@ -50,3 +50,7 @@ path = "src/bin/rofl_serve.rs"
 [[bin]]
 name = "rofl-load"
 path = "src/bin/rofl_load_dump.rs"
+
+[[bin]]
+name = "rofl-load-bench"
+path = "src/bin/rofl_load_bench.rs"

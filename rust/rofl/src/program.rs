@@ -241,33 +241,59 @@ fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
 /// to roll back FROM. The gate that proves it is
 /// `a_refused_load_is_atomic_and_complete`: a good clause sharing a file with
 /// three bad ones must leave no trace.
-fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bool) -> Option<String> {
+/// Returns the RESOLVED clause on success, so admission does not resolve it a
+/// second time, and the planner is skipped for a clause with no body.
+///
+/// BOTH OF THOSE WERE MEASURED AND NEITHER HELPED, which is the note worth
+/// keeping. A first profile said the phase between parsing and admission was
+/// 56 per cent of a load, and "between" is not a place you can optimise — so
+/// these two were changed on a guess about which half it was. The ratios did
+/// not move. Splitting the phase in two then gave the answer: over 120 000
+/// facts a load is 20 per cent parse, 44 per cent `to_clause`, 11 per cent
+/// THESE CHECKS, and 25 per cent admission. The eleven is what was optimised.
+///
+/// The changes stay because they are correct and do less work — a clause is
+/// cloned once instead of twice, and `planBody` returns `stuck: null` for an
+/// empty body every time, so skipping it there is exactly equivalent rather
+/// than a narrowing. But they are not the repair, and the repair is not here:
+/// it is that `rofl_parse::Term` carries a `String` per name and `to_clause`
+/// interns every one of them, so the parser and the bridge pay for the same
+/// names twice. Collapsing those two phases means the parser interning
+/// directly, and that is a change to its public type.
+fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bool) -> Result<Clause, String> {
     if let Some(d) = check_kernel_book(h, c0) {
-        return Some(d);
+        return Err(d);
     }
     let mut c = c0.clone();
     resolve_clause_books(v, &mut c);
     if !trusted {
         if let Some(d) = check_who(h, who, &c) {
-            return Some(d);
+            return Err(d);
         }
     }
     if let Some(d) = check_arity(h, v, &c) {
-        return Some(d);
+        return Err(d);
     }
-    if let Some(d) = check_orderable(h, &c) {
-        return Some(d);
+    // `checkOrderable` plans the body to find a negation nothing binds. A
+    // clause with NO body has no negation and `planBody` returns `stuck: null`
+    // for it every time — so skipping it here is exactly equivalent and not a
+    // narrowing. It matters because the planner allocates a map and a vector
+    // per call, and a scanner's output is entirely body-less facts.
+    if !c.body.is_empty() {
+        if let Some(d) = check_orderable(h, &c) {
+            return Err(d);
+        }
     }
     if c.body.is_empty() {
         let head = &c.head;
         let Some(_) = head.persp.as_atom() else {
-            return Some(format!("fact {}: perspective must be an atom", canon_clause(h, &c)));
+            return Err(format!("fact {}: perspective must be an atom", canon_clause(h, &c)));
         };
         if !head.args.iter().all(|a| h.is_ground(*a)) {
-            return Some(format!("fact {}: must be ground", canon_clause(h, &c)));
+            return Err(format!("fact {}: must be ground", canon_clause(h, &c)));
         }
         if head.temporal == Temporal::Next {
-            return Some(format!("fact {}: '@next' facts are not assertable", canon_clause(h, &c)));
+            return Err(format!("fact {}: '@next' facts are not assertable", canon_clause(h, &c)));
         }
         // NOBODY MAY GRANT THE KERNEL. The `$` prefix is the test, not the
         // single name `$kernel`: a program may not hand standing to ANY kernel
@@ -277,7 +303,7 @@ fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bo
         if head.rel == v.authority && head.args.len() == 2 {
             if let Some(w) = head.args[1].as_atom() {
                 if h.name(w).starts_with('$') {
-                    return Some(format!(
+                    return Err(format!(
                         "fact {}: '{}' is a kernel principal and cannot be granted authority by a program",
                         canon_clause(h, &c),
                         h.name(w)
@@ -285,27 +311,25 @@ fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bo
                 }
             }
         }
-        return None;
+        return Ok(c);
     }
     if v.is_reserved(c.head.rel) {
-        return Some(format!(
+        return Err(format!(
             "rule rejected: '{}' is a kernel relation (write-protected): {}",
             h.name(c.head.rel),
             canon_clause(h, &c)
         ));
     }
-    None
+    Ok(c)
 }
 
 /// The writing half of `addClause` (src/api.ts:481). NO REFUSAL LIVES HERE —
 /// `check_clause` has already run over every clause in the load, so anything
 /// that reaches this function is admissible. It returns nothing for the same
 /// reason.
-fn admit_clause(e: &mut Eval, c0: &Clause, who: Option<&str>) {
-    let mut c = c0.clone();
-    resolve_clause_books(&e.v, &mut c);
+fn admit_clause(e: &mut Eval, c: &Clause, who: Option<&str>) {
     if c.body.is_empty() {
-        add_fact(e, &c, who);
+        add_fact(e, c, who);
         return;
     }
     if let Some(p) = c.head.persp.as_atom() {
@@ -323,7 +347,7 @@ fn admit_clause(e: &mut Eval, c0: &Clause, who: Option<&str>) {
     // and a second, shorter version would be a second thing to keep true — and
     // the door decides which rows the store keeps.
     let drop = sealed_rels(e);
-    let (_, facts) = encode_rule(&mut e.h, &e.v, &c);
+    let (_, facts) = encode_rule(&mut e.h, &e.v, c);
     for f in facts {
         if drop.contains(&f.rel) {
             continue;
@@ -474,16 +498,20 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
             Err(d) => diags.push(d),
         }
     }
+    // The RESOLVED clauses come back from the checker, so admission does not
+    // resolve a second time.
+    let mut ready: Vec<Clause> = Vec::with_capacity(cs.len());
     for c in &cs {
-        if let Some(d) = check_clause(&e.h, &e.v, c, who_owned.as_deref(), trusted) {
-            diags.push(d);
+        match check_clause(&e.h, &e.v, c, who_owned.as_deref(), trusted) {
+            Ok(r) => ready.push(r),
+            Err(d) => diags.push(d),
         }
     }
     if !diags.is_empty() {
         return Loaded { ok: false, diagnostics: diags, admitted: 0 };
     }
-    for c in &cs {
+    for c in &ready {
         admit_clause(e, c, who_owned.as_deref());
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: cs.len() }
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() }
 }
