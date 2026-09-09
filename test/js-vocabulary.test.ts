@@ -258,7 +258,15 @@ test('a table that holds kinds holds only kinds', () => {
   // branch moves and a set is a claim about what exists.
   assert.deepEqual([...census.keys()].sort(), [
     'abrupt_kind/1 arg1', 'call_kind/1 arg1', 'call_like_v/1 arg1',
-    'callee_shape/2 arg1', 'class_field_kind/1 arg1', 'export_kind/1 arg1', 'fn_kind/1 arg1',
+    'callee_shape/2 arg1', 'class_field_kind/1 arg1',
+    // THREE FROM THE COMPLETION CLOSURE, 2026-09-09 (w_cf_completion), and the
+    // third is the interesting one: `completion_known` is DERIVED — the union of
+    // the kinds the closure decides, the kinds it defers, and the four abrupt
+    // kinds it is seeded from — so this census reaches a kind table that no
+    // `edb` line declares, which is exactly what its `concludes(_, N)` source is
+    // for.
+    'completion_deferred/2 arg1', 'completion_kind/1 arg1', 'completion_known/1 arg1',
+    'export_kind/1 arg1', 'fn_kind/1 arg1',
     'fn_kind_v/1 arg1', 'guard_kind/2 arg1', 'kind_absent_ok/2 arg1',
     'kind_prototype/2 arg1', 'literal_kind/1 arg1', 'member_kind/1 arg1',
     'member_kind_v/1 arg1', 'node_value_kind/1 arg1', 'obj_kind_class/2 arg1',

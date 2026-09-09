@@ -195,7 +195,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // 2026-09-08: it was taken and it spawned a finding of its own — `await`
     // calls `Promise.prototype.then` ZERO times, measured with a monkey-patch
     // and a positive control, because the spec uses an internal operation.
-    'w_cf_completion', 'w_cg_new_expression', 'w_cg_optional_member',
+    // `w_cf_completion` LEFT THIS LIST 2026-09-09, the same way the six before
+    // it did: it was taken and it spawned two findings, one of them about the
+    // instrument rather than the model — the callee-name oracle this layer
+    // reads statement order through can only see a `completes_abruptly` row
+    // whose successor holds a call, which on this corpus is 27 rows out of 789.
+    'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
     // `w_class_expression` and `w_class_fields` LEFT THIS LIST on 2026-09-08,
     // each in its own branch: both were taken and both spawned findings, one of

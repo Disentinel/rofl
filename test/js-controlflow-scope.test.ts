@@ -960,16 +960,31 @@ test('may_not_run is a MAY-set: it covers what stayed silent and over-covers on 
   // `sealed`, the STATIC field's callee, is deliberately not here, and that
   // split was measured by running the shape. Not one branch could see the
   // others; the three lists merged by name without a decision.
+  // SEVEN MORE ON 2026-09-09 (w_cf_completion), and every one of them is a
+  // position `r_abrupt` was structurally unable to look at: it read SIBLINGS, so
+  // an abrupt transfer that completes an ENCLOSING region reached nothing.
+  // `pastNestedReturn` and `pastTailBlock` follow a nested block that returns
+  // (`pastInnerDead` is inside one, after the return); `pastDoubleBlock` follows
+  // two nested blocks, which is the arm being a closure rather than one lift;
+  // `pastBothArms` and `pastElseIf` follow an `if` and an `else if` chain whose
+  // every arm returns; `pastLabelledReturn` follows a labelled block that
+  // returns, which the labelled arm cannot reach because there is no reference
+  // to walk from. The nine controls beside them — `pastOneArm`,
+  // `pastGuardedBlock`, `pastElseIfOpen`, `pastLabelledEscape` and the five
+  // deferred statement kinds — are deliberately NOT here, and mutants c4, c5 and
+  // c6 in test/js-controlflow.test.ts put each of them here on demand.
   assert.deepEqual([...mayNotRun].sort(), [
     'after', 'afterStall', 'alef', 'bet', 'beyondPlainBreak',
     'bumpedInUpdate', 'burnished', 'fallbackMaker', 'guardedElse', 'inked',
     'label', 'loopBody', 'minted', 'neverCased', 'neverReached',
-    'pastBlockBreak', 'pastBreak', 'pastConditionalLabelledBreak',
-    'pastContinue', 'pastDebugger', 'pastEmpty', 'pastInnerBreak',
-    'pastInnerLabel', 'pastLabelledBlock', 'pastLabelledBreak',
-    'pastLabelledContinue', 'pastPlainBreak', 'pickedB', 'punched',
-    'reading', 'rescue', 'scored', 'seenUpdate', 'sleeper', 'stamped',
-    'struck', 'unlit', 'unreached', 'unreadable',
+    'pastBlockBreak', 'pastBothArms', 'pastBreak',
+    'pastConditionalLabelledBreak', 'pastContinue', 'pastDebugger',
+    'pastDoubleBlock', 'pastElseIf', 'pastEmpty', 'pastInnerBreak',
+    'pastInnerDead', 'pastInnerLabel', 'pastLabelledBlock',
+    'pastLabelledBreak', 'pastLabelledContinue', 'pastLabelledReturn',
+    'pastNestedReturn', 'pastPlainBreak', 'pastTailBlock', 'pickedB',
+    'punched', 'reading', 'rescue', 'scored', 'seenUpdate', 'sleeper',
+    'stamped', 'struck', 'unlit', 'unreached', 'unreadable',
   ]);
   const reached = new Set(m.q('may_not_be_reached[code](F)')
     .flatMap(([f]) => m.q(`fn_name[code](${f}, N)`).map(([n]) => n)));

@@ -170,7 +170,8 @@ test('the layer answers, waives and defers, and nothing falls through', () => {
 test('every self-audit of the control-flow layer is empty', () => {
   const m = base();
   for (const lit of ['guard_unmodelled[audit](K)', 'guard_arm_unseen[audit](K, F)',
-                     'mechanism_unanswered[audit](M)', 'leak[audit](A, B)',
+                     'mechanism_unanswered[audit](M)', 'completion_unreached[audit](K)',
+                     'completion_unaccounted[audit](K)', 'leak[audit](A, B)',
                      'forged[audit](F)']) {
     assert.equal(m.n(lit), 0, `${lit}: ${JSON.stringify(m.q(lit))}`);
   }
@@ -293,6 +294,36 @@ const GATES: { name: string; targets: string; mut: Mut[]; expect: (m: World) => 
       assert.deepEqual([...names(m)].sort(), [...names(base())].sort(),
         'and may_not_run cannot tell — the arm already covered it');
     },
+  },
+  {
+    name: 'g9 a kind the closure claims and never decides',
+    targets: 'completion_unreached[audit]',
+    // THE LABEL ARM WITHDRAWN. `completion_kind(labeled_statement)` still says
+    // this closure decides the kind and no rule then does — which reads as "the
+    // closure is smaller than it says it is", the narrow direction. The same
+    // audit covers a MISSPELLED arm and a corpus with no site for one, because
+    // both look identical from the store's side and both cost the same answer.
+    mut: [{ find: `completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
+                                ast_node[code](LS, labeled_statement, _, _),
+                                not label_escaped[code](LS).`, replace: '' }],
+    expect: (m) => {
+      assert.deepEqual(m.q('completion_unreached[audit](K)').flat(), ['labeled_statement']);
+      // ...and it COSTS an answer, which is what makes the audit worth its row.
+      assert.equal(afterAbrupt(m).includes('pastLabelledReturn'), false);
+      assert.ok(afterAbrupt(base()).includes('pastLabelledReturn'), 'positive control');
+    },
+  },
+  {
+    name: 'g10 a statement kind that holds a transfer and is in neither list',
+    targets: 'completion_unaccounted[audit]',
+    // THE DEFERRAL TABLE IS THE CLAIM AND THIS IS ITS GATE. A `while` holds a
+    // block that completes abruptly and completes normally itself when the test
+    // is false, so it must be DECLARED deferred rather than fall through the
+    // block arm silently. Withdraw the row and the audit names the kind.
+    mut: [{ find: 'completion_deferred(while_statement,    a_condition_this_layer_cannot_decide).',
+            replace: '' }],
+    expect: (m) => assert.deepEqual(m.q('completion_unaccounted[audit](K)').flat(),
+      ['while_statement']),
   },
 ];
 
@@ -536,8 +567,17 @@ guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).` , replace: 
       // worth having is the position of the statements BETWEEN — a bare `;` and
       // a `debugger` — which is the only site in the corpus proving an inert
       // statement consumes an index like any other.
+      // SEVEN MORE ON 2026-09-09 (w_cf_completion), and they are here for the
+      // reason the two above are: this mutant reverses the order test on
+      // `after_abrupt`, and the completion closure feeds that relation seven new
+      // positions whose only guard is statement ORDER. `pastInnerDead` is the
+      // one that says the two arms compose — it sits after a `return` INSIDE the
+      // nested block, which the sibling arm already reached, and it is lost by
+      // the same reversal as the six the closure added outside.
       assert.deepEqual(mnr(b).filter((n) => !mnr(m).includes(n)).sort(),
-        ['after', 'neverReached', 'pastDebugger', 'pastEmpty', 'unlit', 'unreadable']);
+        ['after', 'neverReached', 'pastBothArms', 'pastDebugger', 'pastDoubleBlock',
+         'pastElseIf', 'pastEmpty', 'pastInnerDead', 'pastLabelledReturn',
+         'pastNestedReturn', 'pastTailBlock', 'unlit', 'unreadable']);
       // ...AND THE OTHER DIRECTION IS THE POINT, WRITTEN AS NAMES. The reversal
       // is not a smaller answer, it is a different and much larger one: every
       // one of these always runs, and is reported may-not because a suspension
@@ -553,10 +593,17 @@ guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).` , replace: 
       // fifteenth name and the same claim: it is called from a `for`'s TEST,
       // which always runs, and the reversed order test makes the statements
       // before a later suspension guard it. A named set grown by a second item.
+      // ...AND `pastOneArm` JOINED IT 2026-09-09 (w_cf_completion), a sixteenth
+      // name and the same claim from the completion fixture's side: it is called
+      // from the statement BEFORE `return total;` in `oneArmReturn`, so
+      // reversing the order test makes the return guard what precedes it. That
+      // it is `pastOneArm` — the fixture's control for an `if` with one arm, a
+      // function this layer must NOT report — is the sharpest reading of what
+      // this mutant does.
       assert.deepEqual([...new Set(mnr(m).filter((n) => !mnr(b).includes(n)))],
         ['broken', 'callsSent', 'chooser', 'iterator', 'mark', 'mkAlef',
-         'nestedThrow', 'outerGen', 'pick', 'read', 'readLimit', 'seenEmpty', 'tag',
-         'thrower', 'topThrowWithReturn']);
+         'nestedThrow', 'outerGen', 'pastOneArm', 'pick', 'read', 'readLimit',
+         'seenEmpty', 'tag', 'thrower', 'topThrowWithReturn']);
       assert.ok(m.n('guarded[code](S)') > b.n('guarded[code](S)'),
         `guarded ${b.n('guarded[code](S)')} -> ${m.n('guarded[code](S)')}`);
     },
@@ -806,6 +853,221 @@ test('WHERE THE LABELLED ARM CANNOT LOOK: it walks up, and a walk crosses guards
   // ...and the throwing-call arm has had the same walk since 2026-09-06.
   // f_after_abrupt_says_never_and_the_walking_arms_say_may owns the decision.
 });
+
+// ---------------------------------------------------------------------------
+// 5b. COMPLETION — an abrupt transfer that completes an ENCLOSING region,
+//     queue item w_cf_completion, 2026-09-09.
+//
+// THE ITEM WAS A MEASURED BLINDNESS BEFORE IT WAS A RULE, and its note records
+// three probes that all came back empty: `r_abrupt` reads SIBLINGS, so a
+// `return` in a nested block, a `return` in BOTH arms of an `if` and a `return`
+// under a label each completed the region around them and no rule saw it. The
+// closure is one recursive relation over statement kinds and NOT a ninth
+// mechanism — the table already files all four abrupt kinds under `abrupt`.
+//
+// THE CONTROLS OUTNUMBER THE CLAIMS, and that is the shape of the risk. A
+// closure that lifts too eagerly says a statement NEVER runs when a path
+// reaches it — the narrow direction, which this layer documents as the
+// dangerous one. Mutants c4, c5 and c6 are each that failure, and each is
+// caught by a `past*` name arriving where nothing should.
+
+const COMP_BLOCK = `completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
+                               ast_node[code](B, block_statement, _, _).`;
+const COMP_IF = `completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
+                               ast_node[code](S, if_statement, _, _),
+                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).`;
+const COMP_LABEL = `completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
+                                ast_node[code](LS, labeled_statement, _, _),
+                                not label_escaped[code](LS).`;
+
+/** the labelled statements the closure says complete abruptly, BY LABEL NAME.
+ *
+ *  THE ORACLE `afterAbrupt` CANNOT LOOK HERE, and that is why this one exists.
+ *  A statement is read back through the callee of a call that follows it, so a
+ *  `completes_abruptly` row whose node is LAST in its list — or whose successor
+ *  contains no call — produces nothing to name. Measured on this corpus: the
+ *  closure derives 789 `completes_abruptly` rows and 795 `abrupt_at` rows, of
+ *  which 27 reach `after_abrupt` at all. A label has a NAME in the source, so
+ *  this is one place where the unobserved region can be addressed directly, and
+ *  mutant c13 is killed by nothing else. */
+const labelsAbrupt = (w: World): string[] => [...new Set(w.q('completes_abruptly[code](S)')
+  .flatMap(([s]) => w.q(`label_name[code](${s}, N)`).map(([n]) => n)))].sort();
+
+test('an abrupt transfer completes the region it is nested in, and only that far', () => {
+  const m = base();
+  const aa = afterAbrupt(m);
+
+  // THE THREE SHAPES THE ITEM NAMED, plus the two that make the arms a closure
+  // rather than three lifts: a block inside a block, and an `else if` chain
+  // whose alternate is a second `if`.
+  for (const n of ['pastNestedReturn', 'pastTailBlock', 'pastDoubleBlock',
+                   'pastBothArms', 'pastElseIf', 'pastLabelledReturn'])
+    assert.ok(aa.includes(n), `${n}: an enclosing region completes and nothing sees it`);
+  // ...and `pastInnerDead` sits INSIDE the nested block, after the return, which
+  // the sibling arm already reached — it is here as the positive control that
+  // the two arms compose rather than replace each other.
+  assert.ok(aa.includes('pastInnerDead'));
+
+  // FOUR CONTROLS ON THE CLOSURE ITSELF. Each is a statement a path reaches, and
+  // each would be a FALSE claim rather than a missing one.
+  for (const n of ['pastOneArm', 'pastElseIfOpen', 'pastGuardedBlock', 'pastLabelledEscape'])
+    assert.equal(aa.includes(n), false, `${n}: a path reaches it, so the closure must stop`);
+
+  // ...AND FIVE MORE ON THE DEFERRAL TABLE. A loop, a do/while, a switch and a
+  // try each hold a block that completes abruptly and may still complete
+  // normally themselves, for a reason no syntax decides.
+  for (const n of ['pastLoopReturn', 'pastDoWhileReturn', 'pastSwitchReturn', 'pastTryReturn'])
+    assert.equal(aa.includes(n), false, `${n}: ${'the kind is deferred, not modelled'}`);
+  assert.deepEqual(m.q('completion_deferred(K, R)').map(([k]) => k).sort(),
+    ['do_while_statement', 'for_in_statement', 'for_of_statement', 'for_statement',
+     'switch_statement', 'try_statement', 'while_statement'],
+    'the deferral table, named — every row has a site above and a reason beside it');
+
+  // THE KINDS THE CLOSURE ACTUALLY DECIDES, as a set rather than a count: the
+  // four abrupt kinds it is seeded from, and the three it lifts to.
+  assert.deepEqual(m.q('completion_decided[code](K)').flat().sort(),
+    ['block_statement', 'break_statement', 'continue_statement', 'if_statement',
+     'labeled_statement', 'return_statement', 'throw_statement']);
+  assert.deepEqual(m.q('completion_kind(K)').flat().sort(),
+    ['block_statement', 'if_statement', 'labeled_statement']);
+
+  // ...AND THE ONE LABEL IN THE CORPUS THAT COMPLETES ABRUPTLY. The other eight
+  // labelled statements are each escaped by a `break` naming them, or have a
+  // loop for a body, and none of them has a call after it for `afterAbrupt` to
+  // read — so this is the assertion that looks where that one cannot.
+  assert.deepEqual(labelsAbrupt(m), ['wrapUp']);
+  assert.ok(m.q('label_name[code](LS, N)').length > 1,
+    'positive control: the corpus has more than one label to be wrong about');
+
+  // IT IS NOT A NINTH MECHANISM, which is the item's own design note. The four
+  // kinds it is seeded from were already filed under `abrupt`, and the three it
+  // lifts to are the two the layer already answers plus a container.
+  assert.deepEqual(m.q('transfer_mechanism(K, abrupt)').flat().sort(),
+    ['break_statement', 'continue_statement', 'return_statement', 'throw_statement']);
+  assert.deepEqual(m.q('transfer_mechanism(block_statement, M)').flat(), [],
+    'a block transfers nothing — it PROPAGATES what its contents did');
+});
+
+// FIFTEEN MUTANTS, FOURTEEN KILLED, and the survivor is named rather than
+// re-measured. Nine are kept as worlds below (two of them in GATES, where the
+// audits they aim at live); the other six were run once and are recorded here
+// with what they moved, because a world costs a whole fixpoint:
+//
+//   c8  `completion_deferred(try_statement, ...)` deleted
+//       -> completion_unaccounted[audit] = [try_statement].  Same head as c7,
+//          one row over, so it says nothing c7 does not.
+//   c10 `completion_kind(block_statement)` deleted
+//       -> completion_unaccounted[audit] = [block_statement].  The gate from
+//          the other side: a kind the closure DECIDES but does not declare.
+//   c11 the gate loses `not completion_fn_between`
+//       -> [class_body, class_declaration, export_default_declaration,
+//           export_named_declaration, variable_declaration] — every one of them
+//          a function in disguise, which is the precision clause earning itself.
+//   c12 the gate loses `not fn_node_v(P)`
+//       -> [class_method, class_private_method, function_declaration].
+//   c14 the base case hardcodes `return_statement` instead of joining
+//       `abrupt_kind` -> loses pastBlockBreak, pastBreak, pastContinue,
+//       pastInnerBreak, pastPlainBreak, and `completion_decided` drops
+//       break/continue/throw.  The `orphan_claim` shape, one relation over.
+//   c9  THE SURVIVOR, and it survives for the same reason the `F`-carry mutant
+//       of w_cf_abrupt_transfer does: reading `ast_child(B, _, _, S)` instead of
+//       `ast_child(B, body, _, S)` in the block arm changes NOTHING, on any
+//       relation, because a `block_statement` has exactly two fields in this
+//       scanner's contract — `body` and `directives` — and a directive is never
+//       an abrupt completion. It is unkillable BY THE GRAMMAR rather than for
+//       want of a corpus, so it is written down instead of run. The day
+//       `directives` becomes a statement sequence, test/js-directives.test.ts
+//       mutant 7 goes red first and this line is the second reader.
+const COMPLETION: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'c1 the block arm is gone',
+    mut: [{ find: COMP_BLOCK, replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)),
+        ['pastBothArms', 'pastDoubleBlock', 'pastLabelledReturn', 'pastNestedReturn',
+         'pastTailBlock'],
+        'the five positions a nested block reaches — including through the if and the label');
+      // ...AND THE LABEL ARM STOPS DERIVING TOO, because the one labelled
+      // statement that completes abruptly does it through a block. The `if` arm
+      // does NOT — `elseIfChainReturn`'s arms are bare returns — so this is one
+      // relation whose arms feed each other rather than three separate lifts,
+      // and the pair of results says which.
+      assert.deepEqual(labelsAbrupt(m), []);
+      assert.deepEqual(m.q('completion_decided[code](K)').flat().sort(),
+        ['break_statement', 'continue_statement', 'if_statement', 'return_statement',
+         'throw_statement']);
+    },
+  },
+  {
+    name: 'c2 the `if` arm is gone',
+    mut: [{ find: COMP_IF, replace: '' }],
+    expect: (m, b) => assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)),
+      ['pastBothArms', 'pastElseIf'], 'both arms of an if, and the else-if chain that recurses'),
+  },
+  {
+    name: 'c4 one arm of an `if` is enough',
+    mut: [{ find: COMP_IF, replace: COMP_IF.replace(`,
+                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).`, '.') }],
+    // THE NARROW DIRECTION, and three names arrive that a path reaches.
+    // `pastGuardedBlock` is the reach: without the `alternate` the guarded `if`
+    // inside the block completes it, and the block completes the list.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+      ['pastElseIfOpen', 'pastGuardedBlock', 'pastOneArm'],
+      'a one-armed if says three statements never run, and all three do'),
+  },
+  {
+    name: 'c5 the label ignores the escape',
+    mut: [{ find: COMP_LABEL, replace: COMP_LABEL.replace(`,
+                                not label_escaped[code](LS).`, '.') }],
+    expect: (m, b) => {
+      assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+        ['pastLabelledEscape'], 'the statement after a label something breaks out of');
+      assert.deepEqual(labelsAbrupt(m), ['esc', 'wrapUp'], '...and the label is named');
+    },
+  },
+  {
+    name: 'c6 the block arm reads containment, not a statement of the block',
+    mut: [{ find: COMP_BLOCK, replace: COMP_BLOCK.replace('ast_child[code](B, body, _, S)',
+                                                          'ast_within[code](B, S)') }],
+    // THE SHARPEST OF THE THREE NARROW MUTANTS: `{ if (c) { return n; } }`
+    // CONTAINS a return and completes normally, and only `guardedBlockReturn`
+    // in the fixture can tell the two readings apart.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(m).filter((n) => !afterAbrupt(b).includes(n)),
+      ['pastGuardedBlock'], 'a return under a guard is not a return of the block'),
+  },
+  {
+    name: 'c13 the label arm reads any descendant as its body',
+    mut: [{ find: COMP_LABEL, replace: COMP_LABEL.replace('ast_child[code](LS, body, 0, S)',
+                                                          'ast_within[code](LS, S)') }],
+    // WHERE `afterAbrupt` IS STRUCTURALLY UNABLE TO LOOK, and the only mutant in
+    // this set that proves it: the name oracle does not move A SINGLE ROW, while
+    // two more labelled statements start completing abruptly. `louter` and
+    // `unused` both wrap loops that contain returns further down, and neither has
+    // a call after it in its own list — so no callee name exists to change.
+    expect: (m, b) => {
+      assert.deepEqual(afterAbrupt(m), afterAbrupt(b),
+        'the callee oracle is blind to this one, and saying so is the point');
+      assert.deepEqual(labelsAbrupt(m), ['louter', 'unused', 'wrapUp']);
+    },
+  },
+  {
+    name: 'c15 the block arm reads only its LAST statement',
+    mut: [{ find: COMP_BLOCK, replace:
+      `block_tail[code](B, I) :- ast_child[code](B, body, I, _), ast_child[code](B, body, J, _), I < J.
+completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, I, S),
+                               ast_node[code](B, block_statement, _, _), not block_tail[code](B, I).` }],
+    // A SURVIVOR THAT BECAME A WITNESS. Every nested block in the fixture ended
+    // with its `return`, so this narrower rule — still SOUND, just weaker —
+    // passed all of them. `tailBlockReturn` was written for it: the return is
+    // followed inside the block by a call that never runs, and the block still
+    // completes the list outside.
+    expect: (m, b) => assert.deepEqual(afterAbrupt(b).filter((n) => !afterAbrupt(m).includes(n)),
+      ['pastTailBlock'], 'the abrupt statement need not be the block final one'),
+  },
+];
+
+for (const g of COMPLETION)
+  test(`${g.name} — an abrupt transfer completes its region`, () => g.expect(build(g.mut), base()));
 
 // ---------------------------------------------------------------------------
 // 6. THE INERT STATEMENTS — queue item w_inert_statements, 2026-09-08.
