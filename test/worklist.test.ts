@@ -220,7 +220,10 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // work it asks for is already MEASURED (a 42.7% reorder with a row-for-row
     // equivalence control in MUTANT B of test/js-layer-cost.test.ts) and simply
     // not applied.
-    'w_has_return_is_a_join_over_the_whole_corpus',
+    // `w_has_return_is_a_join_over_the_whole_corpus` LEFT THIS LIST 2026-09-09,
+    // the same way the four before it did: it was taken and it spawned a
+    // finding — a per-pack cost difference attributes by FILE and not by
+    // purpose, which is what let the repair hide next door.
     // `w_class_expression` and `w_meta_property` LEFT THIS LIST 2026-09-08 for
     // the same reason the two before them did: both were taken and both
     // spawned. `w_meta_property` is still OPEN and still on this side of the

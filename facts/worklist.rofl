@@ -363,8 +363,28 @@ work_spawned(w_cost_gate_per_layer, f_a_cost_attributed_by_pack_cannot_see_the_p
 -- that failed there are the same reasoning, and only running both separated
 -- them. Do not apply this reorder by argument; apply it by measurement, with
 -- the row-for-row equivalence control.
-work(w_has_return_is_a_join_over_the_whole_corpus, "has_return joins every function against every return statement; the reorder is worth 42.7% of the control-flow world and is answer-preserving over ten named relations").
-work_state(w_has_return_is_a_join_over_the_whole_corpus, open).
+-- DONE 2026-09-09, APPLIED BY MEASUREMENT AND NOT BY ARGUMENT. The reorder
+-- landed on the merged tree with the equivalence control re-run there: the
+-- control-flow world 10 088 161 -> 7 742 219 and the layer 1 864 255 ->
+-- 252 165, its share 46.386% -> 3.257%, firings and facts identical and ten
+-- named relations equal row for row.
+-- WHAT FORCED IT WAS NOT THE SAVING. MUTANT C and C' of the gate that found
+-- this stopped fitting the engine's 500 000-row space wall on the merged
+-- corpus, so the instrument could no longer plant its own probes. The repair
+-- was the cheapest way to give it room back.
+-- AND IT PULLED A SECOND ONE OUT. With `has_return` gone the heaviest path in
+-- the tree became `relPersp fn_node_v` at 58.7% of the call-graph world, which
+-- is `param_hidden` reading the whole relation once per parameter: repaired
+-- the same night, 7 465 259 -> 3 244 319, -56.5%, and it is also why
+-- w_scope_shadowing`s `param_use` had blown its 400M budget.
+-- THE CAUTION THE ITEM ASKED FOR WAS EARNED FOUR TIMES. `closer_v` in another
+-- session was 65 per cent WORSE on the same reasoning, and `tdz_deferred` —
+-- which carries the identical unbound-`fn_node_v` shape as `param_hidden`, in
+-- the same file — moved 0.02%. The signature names a CANDIDATE, never a cause,
+-- and that sentence is now in both repaired rules.
+work(w_has_return_is_a_join_over_the_whole_corpus, "DONE 2026-09-09: the reorder applied on the merged tree, -23.3% of the control-flow world, and it uncovered param_hidden at -56.5% behind it").
+work_state(w_has_return_is_a_join_over_the_whole_corpus, done).
+work_spawned(w_has_return_is_a_join_over_the_whole_corpus, f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door).
 work_needs(w_has_return_is_a_join_over_the_whole_corpus, w_cost_gate_per_layer).
 
 -- 42 — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS. Four design notes in
