@@ -86,7 +86,14 @@ const PACKS = [
   // `plain_assign` — and `handler`, so refusing them would make
   // `attr_deferred` claim nobody reads an attribute a layer reads. Fifth pack
   // in one week to redden this closure, and the fifth caught in a single run.
-  'facts/js-effects.rofl', 'rules/js-effects.rofl', RULES,
+  'facts/js-effects.rofl', 'rules/js-effects.rofl',
+  // AND ONE FROM THE ES GLOBALS BRANCH, 2026-09-09 (w_es_globals). The
+  // standard library's GLOBAL surface and the rules that join it to a corpus —
+  // `lib_global`, `lib_static`, `free_global[code]`, `es_static[code]`. LOADED
+  // for the reason this list keeps restating: this world's ANSWER is "what do
+  // the rules read", and a pack outside it is a pack whose reads are reported
+  // as absent. Fifth time a pack added on one branch reddened this closure.
+  'facts/js-globals.rofl', 'rules/js-globals.rofl', RULES,
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER

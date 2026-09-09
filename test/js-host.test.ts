@@ -466,6 +466,15 @@ test('the world names every js pack on disk as loaded or deliberately absent', (
     // make every number below a measurement of both.
     'facts/js-effects.rofl',
     'rules/js-effects.rofl',
+    // AND THE ES GLOBALS, same day, same wave. Refused, and this one is the
+    // near miss: `js-globals` covers the ECMAScript half of the same question
+    // this world answers for the host, and the two DO meet — `free_global[code]`
+    // partitions into `es_global` and `global_unattributed`, and that second
+    // audit is this world's in-tray. They are kept apart because each must be
+    // able to be wrong on its own: a world holding both cannot say which half
+    // failed to attribute a global.
+    'facts/js-globals.rofl',
+    'rules/js-globals.rofl',
   ]);
   const unaccounted = onDisk.filter((p) => !loaded.has(p) && !refused.has(p));
   assert.deepEqual(unaccounted, [],

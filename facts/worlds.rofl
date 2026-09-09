@@ -78,6 +78,16 @@ world_omits(w_ledger, "rules/js-host.rofl").
 -- packs within one run of test/note-witness.test.ts.
 world_omits(w_ledger, "facts/js-effects.rofl").
 world_omits(w_ledger, "rules/js-effects.rofl").
+-- ...and the fourth of it, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals). `facts/js-globals.rofl` is the standard library's
+-- GLOBAL surface — `lib_global`, `lib_static`, `lib_static_shape` —
+-- generated from TypeScript's own lib.es*.d.ts, and
+-- `rules/js-globals.rofl` joins it to a corpus. Refused here for exactly
+-- the reason `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl`
+-- already are: they answer a question about a CORPUS, and this world is
+-- the ledger and nothing else.
+world_omits(w_ledger, "facts/js-globals.rofl").
+world_omits(w_ledger, "rules/js-globals.rofl").
 
 -- ===========================================================================
 -- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
@@ -147,6 +157,13 @@ world_omits(w_queue, "rules/js-host.rofl").
 -- and derive nothing. The FACTS pack is loaded above, with `layer(effect)` and
 -- the hundred verdicts, because that is exactly what a plan is about.
 world_omits(w_queue, "rules/js-effects.rofl").
+-- ...and the fourth, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals): the global surface and the rules that join it to a
+-- corpus, refused for the reason `facts/js-lib-surface.rofl` above
+-- already is — the era axis answers a different question on a different
+-- corpus and the plan does not read it.
+world_omits(w_queue, "facts/js-globals.rofl").
+world_omits(w_queue, "rules/js-globals.rofl").
 
 -- ===========================================================================
 -- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
@@ -297,3 +314,24 @@ world_omits(w_js_effects, "rules/js-pack-home.rofl").
 world_omits(w_js_effects, "facts/js-host-surface.rofl").
 world_omits(w_js_effects, "facts/js-host.rofl").
 world_omits(w_js_effects, "rules/js-host.rofl").
+-- AND THE ES GLOBALS, 2026-09-09, the third pack pair to land on this world
+-- in one day from a branch that could not see it. Refused for the same
+-- reason as the host surface: `js-globals` is what the concrete effect
+-- column will JOIN against — `free_global[code]` partitions into
+-- `es_global` and `global_unattributed`, and the second is the runtime
+-- half`s in-tray — so it is the producer of this world`s input rather
+-- than part of its subject.
+world_omits(w_js_effects, "facts/js-globals.rofl").
+world_omits(w_js_effects, "rules/js-globals.rofl").
+-- ...and the fourth, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals), and this one is a refusal with a MEASUREMENT behind it
+-- rather than a filing decision. `rules/js-globals.rofl` needs a corpus
+-- site to say anything, and the five fixtures this world names contain
+-- NOT ONE static of an ES global — no `JSON.parse`, no `Object.entries`,
+-- no `Math.max` — measured 2026-09-09 before the pack was written. Its
+-- sites live in test/fixtures/js-globals/globals.mjs.txt, which is not
+-- in this world's corpus, so loading the pack here would add relations
+-- whose every answer is empty. Same family as
+-- `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl` above.
+world_omits(w_js_corpus, "facts/js-globals.rofl").
+world_omits(w_js_corpus, "rules/js-globals.rofl").
