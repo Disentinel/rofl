@@ -63,12 +63,22 @@ function main(): void {
   let out = path.join(os.homedir(), 'rofl-seeds');
   let dir = path.join(os.homedir(), 'eslint-corpus', 'lib');
   let space = 40_000_000;
+  let oracle = true;
   const sizes: number[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') out = argv[++i]!;
     else if (a === '--dir') dir = argv[++i]!;
     else if (a === '--space') space = Number(argv[++i]);
+    // WITHOUT A JUDGE, AND SAYING SO. `canonicalState` returns one string and
+    // the reference throws `RangeError: Invalid string length` above about 3M
+    // facts — V8's maximum string, which no heap flag moves. So beyond 64 files
+    // of eslint/lib a seed can still be BUILT and the port can still be
+    // measured on it, and neither can be judged. The flag exists so that the
+    // difference is a deliberate argument rather than a silently skipped check,
+    // and the seed it writes is named `.unjudged.seed.json` so nothing can
+    // mistake one for the other later.
+    else if (a === '--no-oracle') oracle = false;
     else if (!a.startsWith('--')) sizes.push(Number(a));
     else { console.error('usage: js_seed.ts <files...> [--out DIR] [--dir SRC] [--space N]'); process.exit(2); }
   }
@@ -94,7 +104,7 @@ function main(): void {
     const ms = Date.now() - t0;
     const mb = (heap() - h0) / 1e6;
     const facts = direct.store.factCount();
-    const want = direct.store.canonicalState();
+    const want = oracle ? direct.store.canonicalState() : null;
 
     const s = new Rofl({ space });
     s.load(packs, { budget: BUDGET });
@@ -102,19 +112,23 @@ function main(): void {
     s.store.clearDerived();
     const seed = s.store.snapshot();
 
-    // THE SAME WALL ON BOTH SIDES. See the header.
-    const replay = Rofl.fromSnapshot(seed, { space });
-    replay.evaluate(BUDGET);
-    if (replay.store.canonicalState() !== want) {
-      console.error(`  ${n}: REFUSED — the reference does not round-trip its own seed`);
-      process.exitCode = 1;
-      continue;
+    if (want !== null) {
+      // THE SAME WALL ON BOTH SIDES. See the header.
+      const replay = Rofl.fromSnapshot(seed, { space });
+      replay.evaluate(BUDGET);
+      if (replay.store.canonicalState() !== want) {
+        console.error(`  ${n}: REFUSED — the reference does not round-trip its own seed`);
+        process.exitCode = 1;
+        continue;
+      }
+      fs.writeFileSync(path.join(out, `${n}.expected.txt`), want);
     }
-    fs.writeFileSync(path.join(out, `${n}.seed.json`), seed);
-    fs.writeFileSync(path.join(out, `${n}.expected.txt`), want);
+    const name = want === null ? `${n}.unjudged.seed.json` : `${n}.seed.json`;
+    fs.writeFileSync(path.join(out, name), seed);
     console.log(`  ${String(n).padStart(4)} files  ${String(facts).padStart(9)} facts  `
       + `${(ms / 1e3).toFixed(2).padStart(7)} s  ${mb.toFixed(0).padStart(6)} MB  `
-      + `${(mb * 1e6 / facts).toFixed(1).padStart(6)} B/fact  seed ${(seed.length / 1e6).toFixed(1)} MB`);
+      + `${(mb * 1e6 / facts).toFixed(1).padStart(6)} B/fact  seed ${(seed.length / 1e6).toFixed(1)} MB`
+      + (want === null ? '   UNJUDGED' : ''));
   }
 }
 
