@@ -132,7 +132,7 @@ const MAX_ALTERNATIONS = 256;
  *
  *  `space` is a per-evaluation option, so a program that genuinely needs more
  *  asks for more, and gets a hole naming the rule if it asked wrongly. */
-const DEFAULT_SPACE = 500_000;
+export const DEFAULT_SPACE = 500_000;
 
 /** One round's frozen assumption: what `not p` is judged against while the
  *  round runs. Holds the RECORDS, not just the keys, because the store is

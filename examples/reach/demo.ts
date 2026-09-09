@@ -47,7 +47,7 @@ function topology(): string {
   return out.join('\n');
 }
 
-interface Run { pairs: number; ms: number; holes: string[] }
+interface Run { pairs: number; ms: number; holes: string[]; peakRows: number; space: number }
 
 function run(space?: number): Run {
   const r = space === undefined ? new Rofl() : new Rofl({ space });
@@ -61,12 +61,19 @@ function run(space?: number): Run {
   const t0 = Date.now();
   must(r.load(read('examples/reach/reach.rofl') + '\n' + topology(), { budget: BUDGET }),
        'reach.rofl + topology');
-  r.evaluate(BUDGET);
+  // READ THE WALL WITHOUT HITTING IT. `evaluate` reports the accumulator's
+  // high-water mark and the wall it is measured against, and the store is
+  // already clean here (see above), so these are the numbers `load`'s own
+  // fixpoint reached — which is the point: the margin is legible on the arm
+  // that SUCCEEDS, not only on the one that produced a hole.
+  const { peakRows, space: wall } = r.evaluate(BUDGET);
   const ms = Date.now() - t0;
   return {
     pairs: r.query('reaches(A, B)').rows.length,
     ms,
     holes: r.query('hole(A, B)').rows.map((x) => x.text),
+    peakRows,
+    space: wall,
   };
 }
 
@@ -79,6 +86,7 @@ function main(): void {
   console.log('1. THE DEFAULT WALL, 500 000 rows of intermediate.');
   const tight = run();
   console.log(`   reaches: ${tight.pairs} of ${expected} — the run stopped inside the answer.`);
+  console.log(`   peak rows: ${tight.peakRows} against a wall of ${tight.space}`);
   for (const h of tight.holes) console.log(`   hole: ${h}`);
   console.log('   TWO holes and ONE refusal: the load reports its own budget hole because');
   console.log('   the space refusal propagates out through it. Raise the space and both go.\n');
@@ -86,7 +94,13 @@ function main(): void {
   console.log('2. THE SAME WORLD WITH THE SPACE RAISED TO 2 000 000.');
   const roomy = run(2_000_000);
   console.log(`   reaches: ${roomy.pairs} of ${expected}`);
-  console.log(`   holes: ${roomy.holes.length === 0 ? 'none' : roomy.holes.join('; ')}\n`);
+  console.log(`   holes: ${roomy.holes.length === 0 ? 'none' : roomy.holes.join('; ')}`);
+  console.log(`   peak rows: ${roomy.peakRows} against a wall of ${roomy.space}`
+    + ` — ${((roomy.peakRows / roomy.space) * 100).toFixed(1)}% of it, and NOTHING FAILED to say so.`);
+  console.log('   ROWS ARE NOT FACTS. This wall counts rows of intermediate, which is a');
+  console.log('   different quantity from what `factCount()` reports; measured on the JS');
+  console.log('   model over real JavaScript the ratio is 0.507 and on a control-flow');
+  console.log('   world 0.614, so a fact count read against this wall is a category error.\n');
 
   console.log('3. WHAT IT COST, and why this is a decision rather than a retry.');
   console.log(`   refused at the default: ${tight.ms} ms`);

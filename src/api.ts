@@ -11,12 +11,16 @@ import {
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
   SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels,
 } from './reflect.ts';
-import { Evaluation, StratificationError, BudgetExhausted, planBody, type StagedFact, sigOf } from './engine.ts';
+import { Evaluation, StratificationError, BudgetExhausted, planBody, DEFAULT_SPACE, type StagedFact, sigOf } from './engine.ts';
 import { RoundEvaluation } from './rounds.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
 export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; }
+/** What an evaluation spent against the wall it was given. `peakRows` is the
+ *  accumulator's high-water mark and `space` the wall it is compared with;
+ *  both are in ROWS, which is not the unit `factCount()` reports. */
+export interface EvalOutcome { partial: boolean; peakRows: number; space: number; }
 
 /** whynot's demonstration bounds. `depth` counts levels of literal
  *  explanation: 1 is the single-step form (name the failing premises and
@@ -191,6 +195,13 @@ export class Rofl {
   private kernelClaimed = false;
   private lastStaged: StagedFact[] = [];
   private lastSteps = 0;
+  // THE NEAREST HARD CEILING, READABLE WITHOUT HITTING IT. `space` is a wall
+  // counted in ROWS, and until now the only way to learn how close a world
+  // came to it was to cross it and read the `hole`. That is the same defect
+  // as a witness with no world: the information exists and the only path to
+  // it is a failure. Held across a skipped evaluation because a world that
+  // has not changed still has the peak its last fixpoint reached.
+  private lastPeakRows = 0;
   /** Whether the loaded program reads provenance in a rule body, as the last
    *  evaluation read the rules. Starts pessimistic: until an evaluation has
    *  actually looked, "it might" is the only honest answer, and it is the one
@@ -638,12 +649,15 @@ export class Rofl {
       : new RoundEvaluation(this.store, opts);
   }
 
-  private ensure(budget: number, holeId: Term): { partial: boolean } {
-    if (!this.store.dirty) return { partial: this.store.partialEval };
+  private ensure(budget: number, holeId: Term): EvalOutcome {
+    if (!this.store.dirty) {
+      return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.space ?? DEFAULT_SPACE };
+    }
     const ev = this.newEval(budget, holeId);
     const out = ev.run();
     this.lastStaged = out.staged;
     this.lastSteps = ev.steps;
+    this.lastPeakRows = ev.peakRows;
     // Read off the rules this evaluation actually ran, not the ones a caller
     // believes are loaded. A rule can only arrive through a path that marks
     // the store dirty, so an evaluation skipped above cannot have stale it.
@@ -653,11 +667,20 @@ export class Rofl {
     // budget of whatever ran last.
     this.store.noteEval(budget, ev.steps, out.partial);
     this.diagnostics.push(...out.diags);
-    return { partial: out.partial };
+    return { partial: out.partial, peakRows: ev.peakRows, space: this.space ?? DEFAULT_SPACE };
   }
 
-  /** Evaluate now (mainly for tests); throws on unstratifiable programs. */
-  evaluate(budget: number = DEFAULT_BUDGET): { partial: boolean } {
+  /** Evaluate now (mainly for tests); throws on unstratifiable programs.
+   *
+   *  `peakRows` and `space` report the accumulator's high-water mark against
+   *  the wall it is measured against. Reporting the wall ONLY on the way
+   *  through it makes the margin invisible to everything except a failure,
+   *  and a ceiling nobody can read until they hit it is a ceiling nobody
+   *  budgets against — measured 2026-09-09, a collaborator reading a wall
+   *  counted in rows as if it counted facts, off by a factor that happened
+   *  to be safe. Rows are not facts: on the JS model over real JavaScript
+   *  the ratio is 0.507, and on a control-flow world 0.614. */
+  evaluate(budget: number = DEFAULT_BUDGET): EvalOutcome {
     return this.ensure(budget, mka('$adhoc'));
   }
 
