@@ -226,6 +226,9 @@ fn main() {
         eprintln!("absorb_calls\t{}", l.eval.store.absorb_calls);
         eprintln!("absorb_fresh\t{}", l.eval.store.absorb_fresh);
         eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
+        eprintln!("relp_calls\t{}", l.eval.store.relp_calls);
+        eprintln!("relp_cloned\t{}", l.eval.store.relp_cloned);
+        eprintln!("relp_dead\t{}", l.eval.store.relp_dead);
         eprintln!("argm_calls\t{}", l.eval.store.argm_calls);
         eprintln!("argm_cloned\t{}", l.eval.store.argm_cloned);
         // PER RULE, so the question "which body asks for more probes as the

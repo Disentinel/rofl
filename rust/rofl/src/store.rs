@@ -343,6 +343,27 @@ pub struct Store {
     pub absorb_calls: u64,
     pub absorb_fresh: u64,
     pub absorb_canon: u64,
+    /// `rel_persp` clones the whole canonical run, and both hot callers only
+    /// iterate it — one of them (`match_exists`) stops at the first hit. That
+    /// LOOKS like the `arg_matches` clone that was worth 256 000x, and it is
+    /// not. Measured on eslint/lib at 64 files: 1 102 014 calls cloning
+    /// 8 935 224 ids in total, an average run of 8.1. `arg_matches` cloned
+    /// 369 484 155 486. The difference is which relations reach this path —
+    /// it is the fallback for a literal with no usable index, and those are
+    /// the SMALL relations; the big ones are served by `index_probe` and
+    /// never arrive here.
+    ///
+    /// The counters stay because the negative is the finding. A resemblance
+    /// between two pieces of code is not a resemblance between two costs, and
+    /// this pair is four orders of magnitude apart.
+    ///
+    /// `relp_dead` is 0 over the whole run: the liveness filter removes
+    /// nothing on a workload that never retracts. Kept — it is correctness,
+    /// not optimisation — but recorded, because a filter that has never
+    /// removed anything is a filter nothing has tested.
+    pub relp_calls: u64,
+    pub relp_cloned: u64,
+    pub relp_dead: u64,
     /// AND WHAT `arg_matches` COPIES BEFORE IT DECIDES ANYTHING. It clones the
     /// whole canonical run of the group on every call — before the branch that
     /// asks whether an index exists, whether one is worth building, or whether
@@ -639,13 +660,17 @@ impl Store {
     /// Facts of one relation in one perspective, in canonical key order.
     pub fn rel_persp(&mut self, h: &Heap, rel: Sym, persp: Sym) -> Vec<FactId> {
         self.absorb(h, rel, persp);
+        self.relp_calls += 1;
         match self.idx.get(&rel).and_then(|v| {
             v.iter()
                 .find(|(p, _)| *p == persp)
                 .map(|(_, r)| r.canon.clone())
         }) {
             Some(mut c) => {
+                let before = c.len();
+                self.relp_cloned += before as u64;
                 c.retain(|&i| self.alive(i));
+                self.relp_dead += (before - c.len()) as u64;
                 c
             }
             None => Vec::new(),
