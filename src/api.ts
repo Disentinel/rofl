@@ -237,7 +237,7 @@ export class Rofl {
    *  and what a per-clause front end needs for the same reason. */
   fork(): Rofl {
     const r = new Rofl({ naive: this.naive, reuse: this.reuse,
-      evaluator: this.evaluator, retainTicks: this.retainTicks });
+      evaluator: this.evaluator, retainTicks: this.retainTicks, space: this.space });
     r.store = this.store.clone();
     return r;
   }
