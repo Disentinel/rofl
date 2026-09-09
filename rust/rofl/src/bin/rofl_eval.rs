@@ -228,6 +228,25 @@ fn main() {
         eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
         eprintln!("argm_calls\t{}", l.eval.store.argm_calls);
         eprintln!("argm_cloned\t{}", l.eval.store.argm_cloned);
+        // PER RULE, so the question "which body asks for more probes as the
+        // corpus grows" has an answer. Sorted, top twenty; the tail is long
+        // and flat and printing it would bury the head.
+        let mut by: Vec<(rofl::term::Sym, u64)> =
+            l.eval.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+        by.sort_by(|a, b| b.1.cmp(&a.1));
+        for (rid, n) in by.iter().take(20) {
+            // The head relation beside the id, because a rule id is a hash and
+            // the question this table answers is about a BODY someone has to
+            // find and read.
+            let head = l
+                .eval
+                .rules
+                .iter()
+                .find(|r| r.id == *rid)
+                .map(|r| l.eval.h.name(r.clause.head.rel).to_string())
+                .unwrap_or_else(|| "?".to_string());
+            eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), head, n);
+        }
     }
 }
 

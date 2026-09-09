@@ -120,6 +120,21 @@ pub struct Eval {
     pub store: Store,
     pub budget: i64,
     pub space: i64,
+    /// WHICH RULE IS FIRING, and how many index probes each one has asked for.
+    ///
+    /// `argm_calls` on the store is the aggregate, and it is what showed that
+    /// time now tracks the number of probes rather than the size of the world
+    /// (2.19, 2.27, 2.19, 2.25 microseconds a call across 8 to 64 files of
+    /// eslint/lib). The aggregate says the engine is linear in the work it is
+    /// asked to do; it cannot say WHICH RULE is asking for more of it as the
+    /// corpus grows, and that question belongs to the rules.
+    ///
+    /// A field rather than a threaded argument, which is the same shape
+    /// scanners/eval_cost.ts uses on the reference side: `fire_rule` sets it
+    /// and restores it, so a probe is attributed to whichever rule's body is
+    /// being solved, including through demand unfolding.
+    pub cur_rule: Option<Sym>,
+    pub argm_by_rule: HashMap<Sym, u64>,
     pub naive: bool,
     pub mode: Mode,
     pub steps: i64,
@@ -159,6 +174,8 @@ impl Eval {
             store,
             budget,
             space: DEFAULT_SPACE,
+            cur_rule: None,
+            argm_by_rule: HashMap::new(),
             naive: false,
             mode,
             steps: 0,
@@ -776,7 +793,10 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &HashSet<FactId>)>,
     ) -> Result<Front, Halt> {
-        let sols = self.solve_body(&r.plan, Subst::new(), 0, front_at, Some(r.id))?;
+        let outer = self.cur_rule.replace(r.id);
+        let sols = self.solve_body(&r.plan, Subst::new(), 0, front_at, Some(r.id));
+        self.cur_rule = outer;
+        let sols = sols?;
         let mut out = Front::default();
         for sol in sols {
             self.conclude(r, sol, &mut out)?;
@@ -1064,6 +1084,9 @@ impl Eval {
         }
         if pos.is_empty() {
             return None;
+        }
+        if let Some(rid) = self.cur_rule {
+            *self.argm_by_rule.entry(rid).or_insert(0) += 1;
         }
         self.store
             .arg_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals)
