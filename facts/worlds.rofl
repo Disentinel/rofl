@@ -1,0 +1,436 @@
+-- facts/worlds.rofl — THE FOUR STORES A WITNESS MAY BE ASKED OF.
+--
+-- Vocabulary and audits: rules/worlds.rofl. The closure — every ledger and JS
+-- pack in the tree appears in exactly ONE of `world_pack` / `world_omits` for
+-- every world — is asserted in test/note-witness.test.ts, because nothing in
+-- ROFL can read a directory.
+--
+-- `boot.rofl` is outside the closure and is loaded by every world: it is the
+-- kernel's own book, it claims the kernel ring in its first clause, and a
+-- second claim is refused. Listing it as a pack every world loads would be a
+-- row that can never differ.
+--
+-- ORDER IS NOT A FACT HERE. `world_pack` is a set; scripts/witness_check.ts
+-- concatenates rules before facts and asserts a scanned corpus last, which is
+-- the shape test/js-corpus-world.ts measured as both correct and cheapest
+-- (nine loads 16.9 s, one load facts-after 10.0 s). An ordinal column would be
+-- a position, and this repository has already paid for one of those.
+
+witness_default_world(w_ledger).
+witness_index(w_queue).
+
+-- ===========================================================================
+-- THE LEDGER WORLD — today's checker, exactly. `witness/3` and
+-- `witness_atleast/3` mean THIS world, so every witness written before
+-- 2026-09-09 is asked of precisely the store it was asked of before.
+world(w_ledger).
+world_note(w_ledger, "boot.rofl plus the findings ledger and its rules: the world scripts/witness_check.ts has always had, and the default for witness/3").
+world_pack(w_ledger, "rules/worlds.rofl").
+world_pack(w_ledger, "facts/worlds.rofl").
+world_pack(w_ledger, "rules/findings.rofl").
+world_pack(w_ledger, "facts/findings.rofl").
+world_omits(w_ledger, "rules/worklist.rofl").
+world_omits(w_ledger, "facts/worklist.rofl").
+world_omits(w_ledger, "facts/js-attrs.rofl").
+world_omits(w_ledger, "facts/js-callgraph.rofl").
+world_omits(w_ledger, "facts/js-controlflow.rofl").
+world_omits(w_ledger, "facts/js-dataflow.rofl").
+world_omits(w_ledger, "facts/js-env.rofl").
+world_omits(w_ledger, "facts/js-kinds.rofl").
+world_omits(w_ledger, "facts/js-lib-surface.rofl").
+world_omits(w_ledger, "facts/js-modules.rofl").
+world_omits(w_ledger, "facts/js-resolve.rofl").
+world_omits(w_ledger, "facts/js-shapes.rofl").
+world_omits(w_ledger, "facts/js-statements.rofl").
+world_omits(w_ledger, "rules/js-attrs.rofl").
+world_omits(w_ledger, "rules/js-callgraph.rofl").
+world_omits(w_ledger, "rules/js-controlflow.rofl").
+world_omits(w_ledger, "rules/js-dataflow.rofl").
+world_omits(w_ledger, "rules/js-env-api.rofl").
+world_omits(w_ledger, "rules/js-env.rofl").
+world_omits(w_ledger, "rules/js-model.rofl").
+world_omits(w_ledger, "rules/js-modules.rofl").
+world_omits(w_ledger, "rules/js-resolve.rofl").
+world_omits(w_ledger, "rules/js-structure.rofl").
+world_omits(w_ledger, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_ledger, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_ledger, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world holds the findings ledger and nothing about JavaScript, so all three are
+-- refused for the reason every other js pack is refused here.
+world_omits(w_ledger, "facts/js-host-surface.rofl").
+world_omits(w_ledger, "facts/js-host.rofl").
+world_omits(w_ledger, "rules/js-host.rofl").
+-- ...and the fifth layer, added 2026-09-09 by w_effect_layer. The effect
+-- verdicts are a claim about the JS matrix and the effect rules read a
+-- corpus; the ledger world holds neither, and the closure named both
+-- packs within one run of test/note-witness.test.ts.
+world_omits(w_ledger, "facts/js-effects.rofl").
+world_omits(w_ledger, "rules/js-effects.rofl").
+-- ...and the fourth of it, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals). `facts/js-globals.rofl` is the standard library's
+-- GLOBAL surface — `lib_global`, `lib_static`, `lib_static_shape` —
+-- generated from TypeScript's own lib.es*.d.ts, and
+-- `rules/js-globals.rofl` joins it to a corpus. Refused here for exactly
+-- the reason `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl`
+-- already are: they answer a question about a CORPUS, and this world is
+-- the ledger and nothing else.
+world_omits(w_ledger, "facts/js-globals.rofl").
+world_omits(w_ledger, "rules/js-globals.rofl").
+-- ...and the AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call).
+-- `rules/js-ambient.rofl` joins the runtime surface and the ES globals to the
+-- effect lattice; it has no fact pack at all, because the whole item is that
+-- nothing in it is authored. Refused here for the reason every js pack is:
+-- this world is the findings ledger and holds nothing about JavaScript.
+world_omits(w_ledger, "rules/js-ambient.rofl").
+
+-- ===========================================================================
+-- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
+-- which is the world test/worklist.test.ts builds and the only one in which
+-- `work(W, Note)` can be asked at all. Measured: it is unpopulatable in
+-- w_ledger, so a work item's note could not carry a witness even if the
+-- vocabulary had allowed one — the corpus was never the only missing world.
+--
+-- IT IS ALSO THE INDEX. The checker READS every witness row here, because
+-- witness rows live in both ledgers and this is the one world that holds both.
+world(w_queue).
+world_note(w_queue, "the plan plus the coverage matrix plus the findings ledger: where work(W, Note), open_cell[audit] and layer(L) are all askable, and the world the checker reads its own witness list from").
+world_pack(w_queue, "rules/worlds.rofl").
+world_pack(w_queue, "facts/worlds.rofl").
+world_pack(w_queue, "rules/findings.rofl").
+world_pack(w_queue, "facts/findings.rofl").
+world_pack(w_queue, "rules/worklist.rofl").
+world_pack(w_queue, "facts/worklist.rofl").
+world_pack(w_queue, "rules/js-model.rofl").
+world_pack(w_queue, "facts/js-kinds.rofl").
+world_pack(w_queue, "facts/js-shapes.rofl").
+world_pack(w_queue, "facts/js-modules.rofl").
+world_pack(w_queue, "facts/js-callgraph.rofl").
+world_pack(w_queue, "facts/js-resolve.rofl").
+world_pack(w_queue, "facts/js-dataflow.rofl").
+world_pack(w_queue, "facts/js-statements.rofl").
+world_pack(w_queue, "facts/js-controlflow.rofl").
+world_pack(w_queue, "facts/js-effects.rofl").
+-- the era packs answer a different question on a different corpus, and the
+-- resolver, attribute and vocabulary rules each have a test file that builds
+-- its own world; none of them is read by the plan
+world_omits(w_queue, "facts/js-attrs.rofl").
+world_omits(w_queue, "facts/js-env.rofl").
+world_omits(w_queue, "facts/js-lib-surface.rofl").
+world_omits(w_queue, "rules/js-attrs.rofl").
+world_omits(w_queue, "rules/js-callgraph.rofl").
+world_omits(w_queue, "rules/js-controlflow.rofl").
+world_omits(w_queue, "rules/js-dataflow.rofl").
+world_omits(w_queue, "rules/js-env-api.rofl").
+world_omits(w_queue, "rules/js-env.rofl").
+world_omits(w_queue, "rules/js-modules.rofl").
+world_omits(w_queue, "rules/js-resolve.rofl").
+world_omits(w_queue, "rules/js-structure.rofl").
+world_omits(w_queue, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_queue, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_queue, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world holds the plan and the matrix; a runtime surface is neither, and a
+-- witness about the queue must not be answerable out of node`s API list.
+world_omits(w_queue, "facts/js-host-surface.rofl").
+world_omits(w_queue, "facts/js-host.rofl").
+world_omits(w_queue, "rules/js-host.rofl").
+-- ...and the fifth layer's RULES, 2026-09-09. `rules/js-effects.rofl` reads
+-- `resolves`, `nearest_v` and `member_node_v` — a corpus this world does not
+-- have — so loading it here would report five relations as undefined premises
+-- and derive nothing. The FACTS pack is loaded above, with `layer(effect)` and
+-- the hundred verdicts, because that is exactly what a plan is about.
+world_omits(w_queue, "rules/js-effects.rofl").
+-- ...and the fourth, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals): the global surface and the rules that join it to a
+-- corpus, refused for the reason `facts/js-lib-surface.rofl` above
+-- already is — the era axis answers a different question on a different
+-- corpus and the plan does not read it.
+world_omits(w_queue, "facts/js-globals.rofl").
+world_omits(w_queue, "rules/js-globals.rofl").
+-- ...and the AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). It reads a
+-- CORPUS — `free_global[code]`, `host_module_ns[code]`, `callee_of[code]` —
+-- which this world does not have, so loading it here would report a dozen
+-- relations as undefined premises and derive nothing. Same refusal, for the
+-- same reason, as `rules/js-effects.rofl` two lines up.
+world_omits(w_queue, "rules/js-ambient.rofl").
+
+-- ===========================================================================
+-- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
+-- f_a_witness_has_no_world said was unreachable and the one
+-- w_note_is_not_evidence needs: a note claiming the model LACKS something is a
+-- claim about THIS store, and it can now be written as a query that returns
+-- nothing and goes red by itself the day somebody adds the thing.
+--
+-- IT IS test/js-corpus-world.ts's WORLD, and that is asserted rather than
+-- trusted (test/note-witness.test.ts), for the reason test/js-layer-cost.test.ts
+-- gives about its own: a claim measured in a world nobody else builds describes
+-- nothing anybody else tests. THAT IS THE WHOLE POINT OF THE ITEM — twice in
+-- ten minutes a witness was written from a number measured in a PURPOSE-BUILT
+-- PROBE and both were stale within the minute.
+world(w_js_corpus).
+world_note(w_js_corpus, "the four-layer JS model over the five call fixtures: the world test/js-corpus-world.ts builds, and the one a note about what the corpus lacks is a claim about").
+world_pack(w_js_corpus, "rules/js-structure.rofl").
+world_pack(w_js_corpus, "rules/js-dataflow.rofl").
+world_pack(w_js_corpus, "rules/js-model.rofl").
+world_pack(w_js_corpus, "rules/js-callgraph.rofl").
+world_pack(w_js_corpus, "rules/js-controlflow.rofl").
+world_pack(w_js_corpus, "facts/js-kinds.rofl").
+world_pack(w_js_corpus, "facts/js-callgraph.rofl").
+world_pack(w_js_corpus, "facts/js-dataflow.rofl").
+world_pack(w_js_corpus, "facts/js-modules.rofl").
+world_pack(w_js_corpus, "facts/js-shapes.rofl").
+world_pack(w_js_corpus, "facts/js-statements.rofl").
+world_pack(w_js_corpus, "facts/js-controlflow.rofl").
+world_corpus(w_js_corpus, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
+world_corpus(w_js_corpus, "beta.mjs", "test/fixtures/js-call/beta.mjs").
+world_corpus(w_js_corpus, "gamma.mjs", "test/fixtures/js-call/gamma.mjs").
+world_corpus(w_js_corpus, "delta.mjs", "test/fixtures/js-call/delta.mjs").
+world_corpus(w_js_corpus, "shapes.ts", "test/fixtures/js-call/shapes.ts.txt").
+-- the ledgers are not loaded on purpose: a query over the corpus must not be
+-- able to answer itself out of the plan that describes it
+world_omits(w_js_corpus, "rules/worlds.rofl").
+world_omits(w_js_corpus, "facts/worlds.rofl").
+world_omits(w_js_corpus, "rules/findings.rofl").
+world_omits(w_js_corpus, "facts/findings.rofl").
+world_omits(w_js_corpus, "rules/worklist.rofl").
+world_omits(w_js_corpus, "facts/worklist.rofl").
+world_omits(w_js_corpus, "facts/js-attrs.rofl").
+world_omits(w_js_corpus, "facts/js-env.rofl").
+world_omits(w_js_corpus, "facts/js-lib-surface.rofl").
+world_omits(w_js_corpus, "facts/js-resolve.rofl").
+world_omits(w_js_corpus, "rules/js-attrs.rofl").
+world_omits(w_js_corpus, "rules/js-env-api.rofl").
+world_omits(w_js_corpus, "rules/js-env.rofl").
+world_omits(w_js_corpus, "rules/js-modules.rofl").
+world_omits(w_js_corpus, "rules/js-resolve.rofl").
+world_omits(w_js_corpus, "rules/js-vocabulary.rofl").
+-- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
+-- that could not see this file: `rules/js-pack-home.rofl` audits which
+-- PACK a node_kind row belongs in, so it reads `asserted_by` and needs a
+-- `who` per pack that no world here supplies. Same class as the line
+-- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
+-- RUN, which is what the closure is for.
+world_omits(w_js_corpus, "rules/js-pack-home.rofl").
+-- ...and the third of the same family, from the wip/curve merge:
+-- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
+-- rather than about any corpus, so no world here has a use for it.
+world_omits(w_js_corpus, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world is the CALL corpus, whose five fixtures import nothing from node and
+-- reference no runtime global outside a comment — measured 2026-09-09, and
+-- the reason test/js-host-world.ts builds a world of its own rather than
+-- appending a sixth file here. Loading the packs would add 2 300 rows that
+-- nothing in this world can join against.
+world_omits(w_js_corpus, "facts/js-host-surface.rofl").
+world_omits(w_js_corpus, "facts/js-host.rofl").
+world_omits(w_js_corpus, "rules/js-host.rofl").
+-- ...AND THE FIFTH LAYER IS REFUSED HERE AND HAS A WORLD OF ITS OWN, 2026-09-09.
+-- This world is ASSERTED IDENTICAL to the one test/js-corpus-world.ts builds,
+-- and that world's cost is pinned by test/js-layer-cost.test.ts and read by
+-- four other test files. Adding a layer to it moves every one of those numbers
+-- for a reason that has nothing to do with what they measure. `w_js_effects`
+-- below is the same corpus with the effect packs on top, which is where a claim
+-- about the effect layer is a claim about a store somebody builds.
+world_omits(w_js_corpus, "facts/js-effects.rofl").
+world_omits(w_js_corpus, "rules/js-effects.rofl").
+-- ...AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). This world's
+-- five fixtures import nothing from node and reference no runtime global
+-- outside a comment, so the pack's host arms have no site; and this world's row
+-- count is pinned by test/js-layer-cost.test.ts and read by four other files.
+-- `w_js_ambient` below is the corpus that HAS the sites.
+world_omits(w_js_corpus, "rules/js-ambient.rofl").
+
+
+-- ===========================================================================
+-- THE EFFECT WORLD — the corpus world with the fifth layer on top, added
+-- 2026-09-09 by w_effect_layer.
+--
+-- WHY IT IS A FOURTH WORLD AND NOT A LINE IN THE THIRD. `w_js_corpus` is
+-- asserted identical to the world test/js-corpus-world.ts builds, and that
+-- world's row count is pinned by test/js-layer-cost.test.ts and read by four
+-- other files. A layer added to it moves numbers that are not about it. So this
+-- world is the corpus world PLUS two packs, which keeps both claims honest: a
+-- note about what the effect layer derives is a claim about THIS store, and
+-- nothing about the other four layers moves.
+--
+-- IT COSTS A FIXPOINT AND ONLY WHEN SOMETHING ASKS. `worldsFor` builds only the
+-- worlds some witness names, so an unused declaration is free — and three
+-- witnesses name this one.
+world(w_js_effects).
+world_note(w_js_effects, "the corpus world with the effect layer on top: the four-layer JS model over the five call fixtures plus facts/js-effects.rofl and rules/js-effects.rofl, and the world a claim about the effect lattice or the concrete column is a claim about").
+world_pack(w_js_effects, "rules/js-structure.rofl").
+world_pack(w_js_effects, "rules/js-dataflow.rofl").
+world_pack(w_js_effects, "rules/js-model.rofl").
+world_pack(w_js_effects, "rules/js-callgraph.rofl").
+world_pack(w_js_effects, "rules/js-controlflow.rofl").
+world_pack(w_js_effects, "rules/js-effects.rofl").
+world_pack(w_js_effects, "facts/js-kinds.rofl").
+world_pack(w_js_effects, "facts/js-callgraph.rofl").
+world_pack(w_js_effects, "facts/js-dataflow.rofl").
+world_pack(w_js_effects, "facts/js-modules.rofl").
+world_pack(w_js_effects, "facts/js-shapes.rofl").
+world_pack(w_js_effects, "facts/js-statements.rofl").
+world_pack(w_js_effects, "facts/js-controlflow.rofl").
+world_pack(w_js_effects, "facts/js-effects.rofl").
+world_corpus(w_js_effects, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
+world_corpus(w_js_effects, "beta.mjs", "test/fixtures/js-call/beta.mjs").
+world_corpus(w_js_effects, "gamma.mjs", "test/fixtures/js-call/gamma.mjs").
+world_corpus(w_js_effects, "delta.mjs", "test/fixtures/js-call/delta.mjs").
+world_corpus(w_js_effects, "shapes.ts", "test/fixtures/js-call/shapes.ts.txt").
+-- refused for exactly the reasons w_js_corpus refuses them, which is the point
+-- of this world being that one plus two packs and nothing else
+world_omits(w_js_effects, "rules/worlds.rofl").
+world_omits(w_js_effects, "facts/worlds.rofl").
+world_omits(w_js_effects, "rules/findings.rofl").
+world_omits(w_js_effects, "facts/findings.rofl").
+world_omits(w_js_effects, "rules/worklist.rofl").
+world_omits(w_js_effects, "facts/worklist.rofl").
+world_omits(w_js_effects, "facts/js-attrs.rofl").
+world_omits(w_js_effects, "facts/js-env.rofl").
+world_omits(w_js_effects, "facts/js-lib-surface.rofl").
+world_omits(w_js_effects, "facts/js-resolve.rofl").
+world_omits(w_js_effects, "facts/js-cost.rofl").
+world_omits(w_js_effects, "rules/js-attrs.rofl").
+world_omits(w_js_effects, "rules/js-env-api.rofl").
+world_omits(w_js_effects, "rules/js-env.rofl").
+world_omits(w_js_effects, "rules/js-modules.rofl").
+world_omits(w_js_effects, "rules/js-resolve.rofl").
+world_omits(w_js_effects, "rules/js-vocabulary.rofl").
+world_omits(w_js_effects, "rules/js-pack-home.rofl").
+-- AND THE HOST SURFACE, 2026-09-09, from the branch that landed beside this
+-- one. `w_js_effects` was written when these three packs did not exist, and
+-- the closure asked about all three in one run. REFUSED: this world's subject
+-- is the effect lattice over the shared JS corpus, and the host surface is
+-- what the CONCRETE column will join against once `ambient_effect` has rows —
+-- a different world's question, and loading it here would move numbers pinned
+-- against a world without it.
+world_omits(w_js_effects, "facts/js-host-surface.rofl").
+world_omits(w_js_effects, "facts/js-host.rofl").
+world_omits(w_js_effects, "rules/js-host.rofl").
+-- AND THE ES GLOBALS, 2026-09-09, the third pack pair to land on this world
+-- in one day from a branch that could not see it. Refused for the same
+-- reason as the host surface: `js-globals` is what the concrete effect
+-- column will JOIN against — `free_global[code]` partitions into
+-- `es_global` and `global_unattributed`, and the second is the runtime
+-- half`s in-tray — so it is the producer of this world`s input rather
+-- than part of its subject.
+world_omits(w_js_effects, "facts/js-globals.rofl").
+world_omits(w_js_effects, "rules/js-globals.rofl").
+-- ...AND THE AMBIENT SURFACE ITSELF, 2026-09-09 (w_effect_ambient_call), and
+-- this refusal is the sharpest one in the file because the pack was written FOR
+-- this layer. `rules/js-ambient.rofl` supplies the three relations
+-- rules/js-effects.rofl declares `edb` and waits for — so loading it here would
+-- put the producer inside the world whose subject is the consumer, and every
+-- named set this world pins (`concrete_effect` ten sites, `concrete_unmapped`
+-- eight pairs, `concrete_denotes` EMPTY) is a claim about the lattice WITHOUT a
+-- surface. That claim is worth keeping exactly as it is: it is the statement
+-- that the plug is a plug. `w_js_ambient` is the same lattice with both
+-- surfaces in, and the two worlds together are what say which half does what.
+world_omits(w_js_effects, "rules/js-ambient.rofl").
+-- ...and the fourth, from the ES GLOBALS branch, 2026-09-09
+-- (w_es_globals), and this one is a refusal with a MEASUREMENT behind it
+-- rather than a filing decision. `rules/js-globals.rofl` needs a corpus
+-- site to say anything, and the five fixtures this world names contain
+-- NOT ONE static of an ES global — no `JSON.parse`, no `Object.entries`,
+-- no `Math.max` — measured 2026-09-09 before the pack was written. Its
+-- sites live in test/fixtures/js-globals/globals.mjs.txt, which is not
+-- in this world's corpus, so loading the pack here would add relations
+-- whose every answer is empty. Same family as
+-- `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl` above.
+world_omits(w_js_corpus, "facts/js-globals.rofl").
+world_omits(w_js_corpus, "rules/js-globals.rofl").
+
+-- ===========================================================================
+-- THE AMBIENT WORLD — the effect lattice with BOTH SURFACES under it, added
+-- 2026-09-09 by w_effect_ambient_call.
+--
+-- WHY IT IS A FIFTH WORLD AND NOT A LINE IN w_js_effects. The item's whole
+-- subject is a call whose callee is NOT IN THIS PROGRAM, and the five call
+-- fixtures have no such callee that any surface names: measured 2026-09-09,
+-- their free globals are `Error`, `Promise`, `String` and `Symbol` — four ES
+-- intrinsics, all of them unattributed — and not one import of a node builtin.
+-- So a claim about the ambient surface measured there would be a claim about an
+-- empty relation. The corpus that HAS the sites is test/fixtures/js-host (the
+-- runtime layer's three files) plus test/fixtures/js-globals (the ES statics),
+-- and this world is those four over all five layers plus both surfaces.
+--
+-- IT IS THE ONE WORLD WHERE ONE SURFACE IS ATTRIBUTED AND ANOTHER IS NOT, which
+-- is the whole shape of the item: `console.log` denotes `io` and `Math.max`
+-- denotes nothing, in the same store, so `ambient_owed[flow](Origin, Surface)`
+-- is a set anybody can print rather than a promise about future work.
+world(w_js_ambient).
+world_note(w_js_ambient, "the five-layer JS model with BOTH ambient surfaces under it: the runtime and ES-globals fixtures over the corpus packs plus js-host, js-globals, js-effects and js-ambient, and the world a claim about what an ambient call denotes is a claim about").
+world_pack(w_js_ambient, "rules/js-structure.rofl").
+world_pack(w_js_ambient, "rules/js-dataflow.rofl").
+world_pack(w_js_ambient, "rules/js-model.rofl").
+world_pack(w_js_ambient, "rules/js-callgraph.rofl").
+world_pack(w_js_ambient, "rules/js-controlflow.rofl").
+world_pack(w_js_ambient, "rules/js-modules.rofl").
+world_pack(w_js_ambient, "rules/js-env.rofl").
+world_pack(w_js_ambient, "rules/js-env-api.rofl").
+world_pack(w_js_ambient, "rules/js-globals.rofl").
+world_pack(w_js_ambient, "rules/js-host.rofl").
+world_pack(w_js_ambient, "rules/js-effects.rofl").
+world_pack(w_js_ambient, "rules/js-ambient.rofl").
+world_pack(w_js_ambient, "facts/js-kinds.rofl").
+world_pack(w_js_ambient, "facts/js-callgraph.rofl").
+world_pack(w_js_ambient, "facts/js-dataflow.rofl").
+world_pack(w_js_ambient, "facts/js-modules.rofl").
+world_pack(w_js_ambient, "facts/js-shapes.rofl").
+world_pack(w_js_ambient, "facts/js-statements.rofl").
+world_pack(w_js_ambient, "facts/js-controlflow.rofl").
+world_pack(w_js_ambient, "facts/js-effects.rofl").
+world_pack(w_js_ambient, "facts/js-globals.rofl").
+world_pack(w_js_ambient, "facts/js-lib-surface.rofl").
+world_pack(w_js_ambient, "facts/js-env.rofl").
+world_pack(w_js_ambient, "facts/js-host-surface.rofl").
+world_pack(w_js_ambient, "facts/js-host.rofl").
+world_corpus(w_js_ambient, "runtime.mjs", "test/fixtures/js-host/runtime.mjs").
+world_corpus(w_js_ambient, "shadow.mjs", "test/fixtures/js-host/shadow.mjs").
+world_corpus(w_js_ambient, "clock.mjs", "test/fixtures/js-host/clock.mjs").
+world_corpus(w_js_ambient, "globals.mjs", "test/fixtures/js-globals/globals.mjs.txt").
+-- the ledgers are refused for the reason w_js_corpus refuses them: a query
+-- about the corpus must not be able to answer itself out of the plan
+world_omits(w_js_ambient, "rules/worlds.rofl").
+world_omits(w_js_ambient, "facts/worlds.rofl").
+world_omits(w_js_ambient, "rules/findings.rofl").
+world_omits(w_js_ambient, "facts/findings.rofl").
+world_omits(w_js_ambient, "rules/worklist.rofl").
+world_omits(w_js_ambient, "facts/worklist.rofl").
+-- the attribute census, the resolver oracle and the per-rule cost table are
+-- each their own instrument over their own subject; nothing here reads them
+world_omits(w_js_ambient, "facts/js-attrs.rofl").
+world_omits(w_js_ambient, "rules/js-attrs.rofl").
+world_omits(w_js_ambient, "facts/js-resolve.rofl").
+world_omits(w_js_ambient, "rules/js-resolve.rofl").
+world_omits(w_js_ambient, "facts/js-cost.rofl").
+-- ...and the two audits over the RULES rather than over a corpus. `js-vocabulary`
+-- reads the rules as facts and `js-pack-home` needs each pack loaded under a
+-- `who` of its own, which no world here does.
+world_omits(w_js_ambient, "rules/js-vocabulary.rofl").
+world_omits(w_js_ambient, "rules/js-pack-home.rofl").

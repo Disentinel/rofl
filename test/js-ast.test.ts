@@ -28,7 +28,7 @@ import { parse } from '@babel/parser';
 import { Rofl } from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
 import { type Term } from '../src/unify.ts';
-import { scan, AST_RELATIONS } from '../scanners/js_ast.ts';
+import { scan, AST_RELATIONS, AST_REFUSAL } from '../scanners/js_ast.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FIX = path.join(ROOT, 'test', 'fixtures', 'js');
@@ -89,7 +89,11 @@ function independentWalk(src: string, file: string): Sig {
   const ast = parse(src, { sourceType: 'module', plugins: ['typescript'] }) as unknown as Record<string, unknown>;
   const nodes: string[] = [], children: string[] = [], attrs: string[] = [];
 
-  const positional = ['loc', 'start', 'end', 'range', 'type'];
+  // `extra` JOINED THE SKIP LIST 2026-09-08, and this walk carries the change
+  // because it is the contract's independent statement of itself: babel's
+  // `extra` is formatting scratch — `parenStart` is a byte offset — and the
+  // flattening rule below would otherwise sweep it in.
+  const positional = ['loc', 'start', 'end', 'range', 'type', 'extra'];
   const carried = (k: string): boolean => !positional.includes(k) && !/Comments$/.test(k);
   const nodeish = (x: unknown): boolean =>
     !!x && typeof x === 'object' && !Array.isArray(x) &&
@@ -118,6 +122,19 @@ function independentWalk(src: string, file: string): Sig {
         recur(v as Record<string, unknown>);
       } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
         attrs.push(`${kindOf(x)}|${snake(k)}|${value(v)}`);
+      } else if (typeof v === 'object' && !Array.isArray(v)) {
+        // A NESTED OBJECT OF SCALARS IS FLATTENED, one attribute per member.
+        // The contract grew this on 2026-09-08 after measuring that it excluded
+        // exactly ONE property in the whole language — `TemplateElement.value`.
+        const inner = v as Record<string, unknown>;
+        const keys = Object.keys(inner).filter(carried);
+        const flat = keys.every((ik) => ['string', 'number', 'boolean'].includes(typeof inner[ik]));
+        if (flat) {
+          for (const ik of keys) {
+            attrs.push(`${kindOf(x)}|${snake(k)}_${snake(ik)}`
+              + `|${value(inner[ik] as string | number | boolean)}`);
+          }
+        }
       }
     }
   };
@@ -204,6 +221,20 @@ test('the scanner emits EXACTLY the four contract relations, into [code]', () =>
   assert.deepEqual(seen, ['ast_attr', 'ast_child', 'ast_file', 'ast_node'],
     'a fifth relation here is a judgement wearing a relation name');
   assert.deepEqual([...AST_RELATIONS].sort(), seen, 'the exported list and the output must agree');
+
+  // ...AND THE CONTRACT IS TWO DISJOINT SETS, since 2026-09-05. A file the
+  // parser refuses used to THROW, which is loud for one file and silent for a
+  // corpus — whoever catches it per file to keep going loses that file with
+  // every count still plausible. It now emits `ast_parse_error` and NOTHING
+  // ELSE, so the model can say the file is invalid rather than never mention
+  // it. The two sets never mix: four on success, one on refusal.
+  // WAS A DECORATOR UNTIL 2026-09-08 — see test/fixtures/js-env/refused.js.txt
+  // for why a refusal that rests on a parser setting has an expiry date.
+  const refused = scan('with (o) { p(); }\nexport {};', { file: 'refused.js' });
+  assert.deepEqual([...new Set(rows(refused.facts).map((r) => r.rel))], [AST_REFUSAL],
+    'a refusal emits the refusal and no partial tree');
+  assert.equal(refused.nodes, 0);
+  assert.ok(!seen.includes(AST_REFUSAL), 'and a successful scan never emits it');
 
   // POSITIVE CONTROL for the assertion above: a set of four is only meaningful
   // because all four are actually populated.
@@ -493,4 +524,49 @@ test('rules/js-dataflow.rofl still runs at the new arity', () => {
   assert.deepEqual(flows, ['"middle" -> "sink"', '"source" -> "middle"']);
   assert.ok(r.holds('var_reaches[code]("source", "sink")'), 'the closure carries the chain');
   assert.ok(!r.holds('var_reaches[code]("unrelated", "sink")'), 'and the gate can say no');
+});
+
+// ---------------------------------------------------------------------------
+// EVERY FIXTURE SCANS, AND THE ONE THAT DOES NOT SAYS SO BY NAME.
+//
+// PAID FOR 2026-09-08. A three-way merge left one `=======` line in
+// test/fixtures/js-call/shapes.ts.txt, babel refused the whole file, and 2 432
+// nodes left the corpus in one step. What that looked like from the outside was
+// 106 failing tests across nine files — mutants that stopped killing, named sets
+// that came back empty, counts off by hundreds — and not one of them said `a
+// fixture is gone`. The file has a `.txt` tail so that tsc will not compile it,
+// which is exactly why tsc was silent.
+//
+// A REFUSED FILE IS ALREADY A FACT (`ast_parse_error[code]`), and the model
+// reasons about it correctly — `invalid[audit]` in every environment. What was
+// missing is that NOBODY ASKS. The refusal is a fact about a file the corpus
+// still counts; a fixture silently leaving the corpus is a fact about the
+// INSTRUMENT, and it needs its own gate.
+test('every fixture scans, except the one whose job is to be refused', () => {
+  const FIXTURES = path.join(ROOT, 'test', 'fixtures');
+  // BY NAME, and there is exactly one: test/fixtures/js-env/refused.js.txt
+  // exists so that a refused file has somewhere to be. Anything else refusing
+  // is a fixture that has stopped being part of the corpus.
+  const EXPECTED_REFUSALS = new Set(['refused.js.txt']);
+  // ...and these are not JavaScript at all — they are `package.json` bodies the
+  // resolver reads as data.
+  const NOT_SOURCE = /(^|\/)package\.json\.txt$/;
+
+  const files: string[] = [];
+  const walk = (d: string) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(js|mjs|ts|txt)$/.test(e.name) && !NOT_SOURCE.test(p)) files.push(p);
+    }
+  };
+  walk(FIXTURES);
+  assert.ok(files.length >= 25, `positive control: only ${files.length} fixtures found`);
+
+  const refused = files
+    .filter((p) => scan(fs.readFileSync(p, 'utf8'), { file: path.basename(p) })
+      .facts.some((f) => f.startsWith('ast_parse_error')))
+    .map((p) => path.basename(p)).sort();
+  assert.deepEqual(refused, [...EXPECTED_REFUSALS].sort(),
+    'a fixture the scanner refuses is a fixture that has left the corpus');
 });

@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+// era-hashbang.js.txt — SCANNED, NEVER RUN, and a FIFTH file for the reason the
+// third and fourth already give: era.js is asserted to fail es2020 for EXACTLY
+// ONE reason and that reason is an operator. A 2023 feature there would make
+// that assertion two-valued.
+//
+// AND A HASHBANG CANNOT SHARE A FILE ANYWAY. `#!` is only a hashbang on line 1;
+// anywhere else it is a syntax error, so this construct cannot be appended to
+// an existing fixture the way an operator or a class field can. The one place
+// it could have gone is the top of era.js, which is exactly the assertion this
+// file exists to protect.
+//
+// WHY IT IS HERE AT ALL, 2026-09-08: `interpreter_directive` carried
+// `kind_baseline` — a measured falsehood, since `#!` is the ES2023 Hashbang
+// Grammar — and the true gate could not be written while the scale topped out
+// at ts5/2022, because `feature_unreachable[audit]` would have named `hashbang`
+// for ever. The owner approved `environment(es2023)`; the gate became writable;
+// and `feature_unexercised[audit]` then demanded this site within one run.
+export function shebanged(n) {
+  return n + 1;
+}

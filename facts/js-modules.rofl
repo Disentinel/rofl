@@ -23,22 +23,60 @@ layer(modules).
 node_kind(js, import_specifier).
 node_kind(js, import_default_specifier).
 node_kind(js, import_namespace_specifier).
+-- ...AND THE ATTRIBUTE, 2026-09-09, once the owner put es2025 on the era scale.
+-- THE KIND'S HOME IS HERE AND THAT IS AN ARGUMENT, not a convenience:
+-- rules/js-pack-home.rofl says a kind belongs to the pack of the layer that
+-- SPEAKS ABOUT it, and `with { type: "json" }` is a statement about what the
+-- imported module IS. No other layer has a sentence for it.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
 
 -- ...and the two kinds that carry a module specifier and are NOT imports.
 -- Named so the audit can see them, ignored so the silence is not an option.
 node_kind(js, export_named_declaration).
 node_kind(js, export_all_declaration).
+-- ...and the THIRD export form, declared 2026-09-06. It carries no specifier,
+-- so it was outside the sentence above and outside this pack's whole subject —
+-- and it was emitted by the scanner with no cell anywhere, which is exactly what
+-- `vocabulary_gap[audit]` reported the moment a default export entered the
+-- corpus. It is here rather than in the control-flow pack that needed it,
+-- because a kind belongs with its family and not with its first consumer.
+node_kind(js, export_default_declaration).
 
 -- ---------------------------------------------------------------------------
 -- WHAT THE HOST SUPPLIES, DECLARED (docs/modelling-a-language.md, rule 2).
 --
 -- A dirty emitter is allowed if the contamination is DECLARED and therefore
--- countable. These two are, and the honest reading of the first one is a
--- statement about the KERNEL rather than about JavaScript: the builtins are
--- `=`, `!=`, `is`, `<`, `<=`, `>`, `>=`, so there is no way to take a string
--- apart inside a rule. Path resolution is string surgery. Until the kernel has
--- a string primitive, every language model that resolves anything needs the
--- host to cut the string first.
+-- countable. These two are, and the first one is a statement about the KERNEL
+-- rather than about JavaScript: path resolution is string surgery, and when
+-- this row was written no rule could take a string apart at all.
+--
+-- **CORRECTED 2026-09-04: THE RETIREMENT CONDITION BELOW IS MET AND THIS ROW
+-- STILL STANDS.** `src/reflect.ts` carries `str_char/2`, `str_len/1`,
+-- `str_pre/2`, `str_seg/3` and `str_segs/2`, all reachable through `is`, so
+-- three of the four relations declared here are now spellable in a rule
+-- (`str_char0` is `str_char` at 0; `str_scheme` is `str_pre` on a colon) and
+-- the sentence this comment used to make about the builtin vocabulary was
+-- false. Whether to retire the loan is a DECISION and not a repair — the
+-- resolver moved to the host as an OBSERVATION, so re-deriving these in rules
+-- re-arms a second model nobody has decided to keep — and it is recorded as
+-- `f_the_str_algebra_loan_reached_its_retirement_condition_unnoticed`. What is
+-- not in doubt is that the comment may not go on asserting the old vocabulary.
+--
+-- Note what this says about the audit: nothing goes red when a loan becomes
+-- RETIRABLE, only when one is undeclared. The shape layer has exactly this
+-- detector — `shape_stale[audit]` — and `host_emitter` has none.
 --
 -- Neither emitter carries import semantics: `str_*` would split a shopping
 -- list the same way, and `fs_*` reports what is on disk. What they are NOT
@@ -109,28 +147,109 @@ shape_verdict(computed,     runtime_dependent).
 -- reason missing for something that happens, and a reason recorded for
 -- something that never does.
 --
+-- THE REFINEMENT, ADDED 2026-09-04, AND WHY THE COARSE ROWS BELOW ARE GONE.
+-- These three were written as facts about a KIND, and all three were true at
+-- once while the same kind was also `handled` — because the rule really does
+-- resolve a relative specifier while a bare one is out of scope and a subpath
+-- one is not done. A matrix keyed by kind reads that as an excuse outliving its
+-- cause: `stale_reason[audit]` fired three FALSE rows in the only world that
+-- loads every fact pack, and no test built that world. The cell was PARTIAL,
+-- which is the member_expression limit arriving in a second layer.
+--
+-- The refinement is the SPECIFIER, and it is not invented here: rules/
+-- js-modules.rofl already derives `src_shape` over exactly these four forms.
+-- The values ride the shared refinement column and `shape_in` keeps them out of
+-- the call graph, where a specifier means nothing.
+axis_applies(shape, modules).
+
+-- THE VALUES ARE THE ONES THE MODEL ALREADY DERIVES. `src_shape` in
+-- rules/js-modules.rofl classifies every specifier as relative, node_builtin,
+-- bare or subpath, and `shape_verdict` below already maps each to a verdict.
+-- The first draft of this block invented a parallel `sp_*` vocabulary and was
+-- wrong for the reason this repository keeps paying for: a second name for a
+-- thing that already has one is a table that can disagree with itself.
+shape_of(js, import_declaration, relative).
+shape_of(js, import_declaration, node_builtin).
+shape_of(js, import_declaration, bare).
+shape_of(js, import_declaration, subpath).
+shape_of(js, import_expression,  relative).
+shape_of(js, import_expression,  node_builtin).
+-- NOT bare and NOT subpath for a dynamic import: `reason_unexercised[audit]`
+-- said no when both were declared, because this corpus contains neither and a
+-- reason recorded for something that never happens is decoration.
+-- only a dynamic import can have a specifier that is not text at all
+shape_of(js, import_expression,  computed).
+
+shape_in(relative,     modules).
+shape_in(node_builtin, modules).
+shape_in(bare,         modules).
+shape_in(subpath,      modules).
+shape_in(computed,     modules).
+
 -- out_of_scope: a bare specifier is a package name and resolving it means
 -- walking node_modules, reading package.json "exports", and following the
 -- conditions map. 1.5% of this repository's imports; deliberately out.
-unknown_because(js, import_declaration, modules, out_of_scope).
+unknown_because(js, import_declaration, bare, modules, out_of_scope).
 
 -- not_yet: `#foo` needs the importing package's package.json "imports" map.
 -- Zero occurrences in this repository and it still needs a verdict, because
 -- the denominator is babel's grammar rather than the corpus.
-unknown_because(js, import_declaration, modules, not_yet).
+--
+-- THE REASON WAS RE-MEASURED 2026-09-08 (w_mod_beyond_the_import) AND THE NOTE
+-- BESIDE IT WAS WRONG TWICE. facts/worklist.rofl called this "the same on-disk
+-- question as `bare`" and named a package's `exports` map. Put to node's own
+-- resolver from the fixture tree, the two shapes land on OPPOSITE SIDES of the
+-- scanned root:
+--
+--   "#sub"          -> sub/c.ts                         INSIDE the scanned tree
+--   "@babel/parser" -> <repo>/node_modules/...          OUTSIDE it
+--
+-- `#sub` resolves through the IMPORTING package's own package.json `imports`
+-- map — a file the fs emitter already walks and already reports as
+-- `fs_file_in(".", "package.json", "package.json")` — and never enters
+-- node_modules at all. `bare` is a walk up through node_modules and a
+-- conditions map; this is a lookup in one file that is already on the disk the
+-- model can see. What it still lacks is that file's CONTENT: the host's two
+-- declared loans are the string algebra and the file tree, and a JSON object is
+-- neither, so closing this cell means a third blind emitter plus a walk that can
+-- START at the package root instead of at the importing file's directory.
+-- That is a decision about the host contract, so the cell stays open with the
+-- reason it actually has. Assert-checked in test/js-modules.test.ts so the
+-- correction is runnable rather than prose, and recorded as
+-- f_the_subpath_specifier_resolves_inside_the_tree_and_the_bare_one_does_not.
+unknown_because(js, import_declaration, subpath, modules, not_yet).
 
--- runtime_dependent: THE irreducible cell. `import(pathVar)` names a module
--- that does not exist until the expression is evaluated. One site in the
--- whole 802-import corpus, and no module-graph rule recovers it.
-unknown_because(js, import_expression, modules, runtime_dependent).
+-- runtime_dependent: THE irreducible cell, and now it is a cell rather than a
+-- kind. `import(pathVar)` names a module that does not exist until the
+-- expression is evaluated; `import("./x.js")` is an ordinary edge, and before
+-- the refinement those two shared one row.
+unknown_because(js, import_expression, computed, modules, runtime_dependent).
 
 -- ---------------------------------------------------------------------------
 -- THE CELLS, CLAIMED.
-handled(js, import_declaration,          modules, r_import_decl_module_edge).
-handled(js, import_expression,           modules, r_dynamic_import_literal).
+handled(js, import_declaration, relative,     modules, r_import_decl_module_edge).
+handled(js, import_declaration, node_builtin, modules, r_import_decl_module_edge).
+handled(js, import_expression,  relative,     modules, r_dynamic_import_literal).
+handled(js, import_expression,  node_builtin, modules, r_dynamic_import_literal).
 handled(js, import_specifier,            modules, r_named_binding).
 handled(js, import_default_specifier,    modules, r_default_binding).
 handled(js, import_namespace_specifier,  modules, r_namespace_binding).
+handled(js, import_attribute,            modules, r_import_attribute).
+
+-- ...AND THE EXPORT HALF, 2026-09-08 (w_export_specifier_forms). Section 4b of
+-- rules/js-modules.rofl. The cell is the NAMING question and not the edge
+-- question: `export_binding` says which external name a module offers and which
+-- internal name it stands for, and reads no `source`. The edge a re-export
+-- makes is `export_named_declaration`'s cell, still `not_yet` below and still
+-- w_mod_beyond_the_import's.
+-- The two kinds are also declared in facts/js-kinds.rofl's denominator block;
+-- the copy is here because the convention in force is that a pack declaring a
+-- CLAIM declares the kind, so a world loading this pack and not that one has a
+-- cell for the row below rather than an `orphan_claim[audit]`.
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+handled(js, export_specifier,            modules, r_export_binding).
+handled(js, export_namespace_specifier,  modules, r_export_namespace_binding).
 
 -- ...AND THE CELLS DELIBERATELY OUT.
 --
@@ -138,8 +257,119 @@ handled(js, import_namespace_specifier,  modules, r_namespace_binding).
 -- by every definition — a re-export both DEPENDS and FLOWS — and they are not
 -- imports. They are named here so that the gap is a row rather than a silence;
 -- the work is one more rule over the same `source` child and it is not done.
-ignored(js, export_named_declaration, modules, a_reexport_is_a_separate_cell).
-ignored(js, export_all_declaration,   modules, a_reexport_is_a_separate_cell).
+-- RECLASSIFIED 2026-09-05 BY THE SWEEP, and the correction is about the CLASS
+-- of the verdict rather than about the cell. These two were `ignored` - a
+-- waiver, which says the language offers nothing here to model - while the
+-- comment directly above them said "module-graph edges by every definition"
+-- and "the work is one more rule over the same `source` child and it is not
+-- done". That is `not_yet`: open work counted as settled, which flatters the
+-- coverage number by exactly two cells and hides them from `open_cell`.
+--
+-- MEASURED before changing it, on a probe holding both forms: `export { q }
+-- from './y'` and `export * from './z'` produce ZERO import sites while three
+-- ordinary imports in the same file produce three. The nodes are in the tree
+-- and the layer does not look at them.
+--
+-- THE TELL GENERALISES: a waiver whose own comment describes undone work is a
+-- waiver in the wrong class, and no audit can see it - `bad_reason` checks the
+-- atom is in the vocabulary and both atoms were, `stale_reason` checks a reason
+-- outliving its cause and this one had not. Only reading the sentence beside it
+-- does, which is why a sweep reads them.
+-- CLOSED 2026-09-08 (w_mod_beyond_the_import). §1 of rules/js-modules.rofl
+-- calls these `reexport_site` and unions them into `module_site`, which is what
+-- every rule below the specifier question now reads; §5b gives them FLOWS and
+-- EVALUATES, which needed rules of their own because the erasure markers sit on
+-- different nodes for an export than for an import.
+--
+-- MEASURED BEFORE THE RULE, and it is the number the reclassification above
+-- predicted: `import_site` 17 and `depends` 10 on this tree, with `exp.ts`
+-- appearing in NEITHER, while two declarations in that file carry a `source`
+-- child the scanner had already emitted. After: `module_site` 24, `depends` 16,
+-- and exp.ts reaches six targets.
+--
+-- THE DISCRIMINATOR IS THE `source` CHILD AND NOT THE KIND, measured from the
+-- scanner on a probe holding all six forms: `export { a as b }` and
+-- `export { a as b } from './d'` are the SAME node kind, so a rule keyed on
+-- `export_named_declaration` would make every local export list an edge to
+-- nowhere.
+--
+-- NO SHAPE REFINEMENT FOR THESE TWO, and that is the same decision
+-- `import_expression` carries three lines further up rather than a new one: a
+-- bare or subpath re-export is grammatical and this corpus has none, and
+-- `reason_unexercised[audit]` calls a reason recorded for something that never
+-- happens decoration. Every re-export site here is `relative`, so the cell is
+-- unrefined and the claim is at kind granularity.
+handled(js, export_named_declaration, modules, r_reexport_edge).
+handled(js, export_all_declaration,   modules, r_reexport_edge).
+-- ...AND THE DEFAULT FORM STAYS OPEN, with the reason MEASURED rather than
+-- inherited. Scanned on a probe beside the six re-export forms: `export default
+-- function named() {}` emits `export_default_declaration` with `export_kind`
+-- "value" and a `declaration` child and NO `source` child of any kind — the
+-- `export v from './m'` spelling needs babel's `exportDefaultFrom` plugin,
+-- which is off here. So it is not an edge and this item's rule correctly leaves
+-- it alone. What is left of the cell is the NAMING half: the declaration binds
+-- the external name `default` to whatever its `declaration` child is, which is
+-- section 4b's question and the one export form with no specifier node to hang
+-- it on. Left open rather than waived, because `a_not_a_module_construct` would
+-- be false of a declaration that does introduce an export name.
+-- CLOSED 2026-09-08 (w_mod_beyond_the_import), and the cell that closed is the
+-- NAMING half exactly as the note above predicted. Section 4c of
+-- rules/js-modules.rofl: `default_external` is `"default"` — the string
+-- section 4 already writes for an ImportDefaultSpecifier's `imported` name, so
+-- the two ends of the pair meet on one spelling — and `default_internal` is the
+-- `declaration` child's `id`, WHEN IT HAS ONE.
+--
+-- RE-MEASURED FIRST, over eight spellings rather than the one the note quotes,
+-- and they split FOUR AND FOUR: `function named`, `class Named`, `interface I`
+-- and `export default q` name something; their two anonymous twins, `42` and an
+-- arrow do not. So the internal column is PARTIAL by the grammar,
+-- `default_anonymous` is its written-down complement, and
+-- `default_unaccounted[audit]` says the pair is total.
+--
+-- AND THE FOUR THAT NAME SOMETHING NEEDED TWO ARMS. `export default function
+-- named() {}` carries the name on the declaration's `id` CHILD; `export default
+-- q` IS the name, because babel gives an Identifier a `name` attribute and no
+-- `id` child at all. A rule reading `id` alone reports the second form
+-- ANONYMOUS — the safe-looking direction, and wrong about a name that really is
+-- in this module, which is exactly the distinction section 5c draws.
+--
+-- AND ONE OF THE EIGHT IS AN ERASURE HOLE THIS PACK DOES NOT CLOSE.
+-- `export default interface I {}` is legal TypeScript, is erased entirely, and
+-- carries `export_kind` "value" — so both markers section 4b reads are wrong
+-- about it and the only discriminator is the `declaration` child's KIND, which
+-- is not in this vocabulary. `vocabulary_gap[audit]` is the row that would say
+-- so; declaring the kind opens a cell at every layer and is not this pack's
+-- call. Recorded as f_the_default_export_has_an_erasure_marker_that_lies.
+handled(js, export_default_declaration, modules, r_default_export_name).
+
+-- ---------------------------------------------------------------------------
+-- THE MODULE'S OWN METADATA, 2026-09-08 (w_meta_property) — and the item's own
+-- note said this cell could not be answered, for a reason that is false.
+--
+-- It reads: "`import.meta` IS a module construct — the module's own metadata —
+-- and `new.target` is not, so `a_not_a_module_construct` is true of exactly
+-- half the kind. THE CELL IS KEYED BY KIND AND THE QUESTION IS NOT, and the
+-- shape axis that could split it applies to `callgraph` only". `axis_applies
+-- (shape, modules)` is thirty lines above this one and has been since the
+-- specifier refinement landed. The column is shared and its VALUES are
+-- per-layer; nothing had to be built.
+--
+-- So the cell splits and each half gets the verdict that is true of it,
+-- discriminated by `meta_form[code]` — which reads the two identifier children
+-- the scanner has emitted all along, and which nothing above the scanner had
+-- ever read.
+shape_of(js, meta_property, import_meta).
+shape_of(js, meta_property, new_target).
+shape_in(import_meta, modules).
+shape_in(new_target,  modules).
+node_kind(js, meta_property).
+
+handled(js, meta_property, import_meta, modules, r_module_meta).
+-- ...and the half the kind-level waiver was actually about. It is written at
+-- shape granularity now, so it stops standing for `import.meta` as well —
+-- which is the same correction the specifier refinement made to
+-- `import_declaration` and for the same reason.
+ignored(js, meta_property, new_target, modules, a_not_a_module_construct).
 
 -- ---------------------------------------------------------------------------
 -- THE EVIDENCE. Not a claim: the number of fixture import sites whose
@@ -150,3 +380,300 @@ ignored(js, export_all_declaration,   modules, a_reexport_is_a_separate_cell).
 --   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
 checked(js, import_declaration, modules, r_import_decl_module_edge, o_node_resolver, 15).
 checked(js, import_expression,  modules, r_dynamic_import_literal,  o_node_resolver, 2).
+-- ...AND THE RE-EXPORT SITES, 2026-09-08. The oracle in test/js-modules.test.ts
+-- enumerates its own sites from babel and it now walks the export forms too —
+-- which it had to, because otherwise the one assertion that says the two
+-- enumerations agree would have read the new sites as a model inventing places
+-- node never saw. `createRequire().resolve` answers a re-export's specifier
+-- exactly as it answers an import's; nothing about the oracle is per-form
+-- except which nodes it collects.
+checked(js, export_named_declaration, modules, r_reexport_edge, o_node_resolver, 5).
+checked(js, export_all_declaration,   modules, r_reexport_edge, o_node_resolver, 2).
+
+-- ...AND THE DEFAULT EXPORT, AGAINST A DIFFERENT ORACLE, 2026-09-08. The node
+-- resolver cannot answer for this form and it is not a failure of the oracle:
+-- a default export has no specifier to resolve, so the question is not WHICH
+-- FILE but WHICH NAME THIS MODULE OFFERS — and the instrument that answers that
+-- is node itself IMPORTING the module and reading the namespace object. Run on
+-- the cross-module corpus rather than on the js-mod tree, because
+-- test/fixtures/js-call RUNS and test/fixtures/js-mod is TypeScript that node
+-- will not load; `o_node_module_namespace` reads `Object.keys(ns)` and
+-- `ns.default.name` and no ROFL fact at all. The number is re-derived from the
+-- oracle's own enumeration in test/js-modules.test.ts rather than counted here.
+checked(js, export_default_declaration, modules, r_default_export_name, o_node_module_namespace, 2).
+
+
+-- ===========================================================================
+-- THE MODULES SWEEP, 2026-09-05, and it is the last bucket. Thirty-nine cells,
+-- and the pattern of the previous three held for a fourth time: measuring first
+-- changed the answer for five of them.
+--
+--   2  ALREADY MODELLED AND NEVER RECORDED. `site_source` reads
+--      `ast_node(Src, string_literal, _, _), ast_value(Src, S)` - the specifier
+--      TEXT is the whole input to resolution - and the three binding rules read
+--      `ast_name` off an identifier. Both kinds are load-bearing here and both
+--      cells said nothing. Fourth and fifth instance of the matrix
+--      under-reporting its own coverage.
+--   1  unreachable under this parser: `import` is babel's `Import` node.
+--   2  went to an item, plus a third that was already open.
+--  34  residue, below.
+--
+-- AND TWO CELLS THAT WERE NOT IN THE BUCKET AT ALL, corrected here because a
+-- sweep that walks past a false verdict in its own layer is the silence this
+-- repository forbids. See the reclassification below.
+ignored(js, array_expression,             modules, a_not_a_module_construct).
+ignored(js, object_pattern,               modules, a_not_a_module_construct).
+-- ...AND THE OTHER FOUR OF THE FAMILY, 2026-09-08, MEASURED RATHER THAN
+-- ASSERTED. This layer has exactly TWO entry points — `import_site[code]` is
+-- `import_declaration` and `import_expression` and nothing else — and a census
+-- of every kind rules/js-modules.rofl names through `ast_node[code]` returns
+-- six: those two, the three import specifier forms, and `string_literal` for a
+-- specifier`s text. Not one of them is a pattern.
+--
+-- THE CENSUS IS TEXTUAL AND ITS CEILING IS DECLARED. It reads the rule pack
+-- rather than the derived rows, because test/js-controlflow-values.test.ts —
+-- where the check lives, beside the corpus that has the sites — does not load
+-- this pack, so every relation of it is unpopulatable there. The two `_`
+-- wildcards the census reports were READ rather than waved past: `site_file`
+-- and `site_line` each carry `import_site[code](I, _)` on the SAME node in the
+-- same body, so neither ranges over anything an import site is not.
+--
+-- AND THE SITE THAT EXERCISES IT: alpha.mjs now carries
+-- `export const [exportedTool] = bench`, a destructuring form DIRECTLY UNDER an
+-- export declaration. It moves no row of this layer, which is the only way the
+-- verdict can be checked rather than believed — a pattern that never met an
+-- `export` would make `a_not_a_module_construct` untestable by construction.
+ignored(js, array_pattern,                modules, a_not_a_module_construct).
+ignored(js, assignment_pattern,           modules, a_not_a_module_construct).
+ignored(js, rest_element,                 modules, a_not_a_module_construct).
+ignored(js, spread_element,               modules, a_not_a_module_construct).
+ignored(js, arrow_function_expression,    modules, a_not_a_module_construct).
+ignored(js, assignment_expression,        modules, a_not_a_module_construct).
+ignored(js, await_expression,             modules, a_not_a_module_construct).
+ignored(js, boolean_literal,              modules, a_not_a_module_construct).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+ignored(js, null_literal,                 modules, a_not_a_module_construct).
+ignored(js, class_declaration,            modules, a_not_a_module_construct).
+-- ...and the expression form, 2026-09-08 (w_class_expression), WITH ITS OWN
+-- CONTROL. `export const C = class {}` puts no name in `exports_name[code]` —
+-- and neither does `export const f = function () {}` nor `export const g = () =>
+-- 2`, measured side by side in one probe file, while `export function h() {}`
+-- beside them does. So the silence belongs to the `export const X = <expr>`
+-- FORM and not to classes: nothing this layer says about a class expression is
+-- different from what it says about any other expression, which is what makes
+-- the waiver honest rather than borrowed. The `export const` gap itself is
+-- named in facts/worklist.rofl.
+ignored(js, class_expression,             modules, a_not_a_module_construct).
+ignored(js, class_method,                 modules, a_not_a_module_construct).
+ignored(js, conditional_expression,       modules, a_not_a_module_construct).
+ignored(js, decorator,                    modules, a_not_a_module_construct).
+ignored(js, class_accessor_property,      modules, a_not_a_module_construct).
+ignored(js, for_of_statement,             modules, a_not_a_module_construct).
+ignored(js, function_declaration,         modules, a_not_a_module_construct).
+ignored(js, function_expression,          modules, a_not_a_module_construct).
+ignored(js, if_statement,                 modules, a_not_a_module_construct).
+ignored(js, logical_expression,           modules, a_not_a_module_construct).
+ignored(js, member_expression,            modules, a_not_a_module_construct).
+ignored(js, new_expression,               modules, a_not_a_module_construct).
+ignored(js, numeric_literal,              modules, a_not_a_module_construct).
+ignored(js, object_expression,            modules, a_not_a_module_construct).
+ignored(js, object_method,                modules, a_not_a_module_construct).
+ignored(js, object_property,              modules, a_not_a_module_construct).
+ignored(js, optional_call_expression,     modules, a_not_a_module_construct).
+ignored(js, optional_member_expression,   modules, a_not_a_module_construct).
+ignored(js, parenthesized_expression,     modules, a_not_a_module_construct).
+ignored(js, return_statement,             modules, a_not_a_module_construct).
+ignored(js, sequence_expression,          modules, a_not_a_module_construct).
+ignored(js, super,                        modules, a_not_a_module_construct).
+ignored(js, tagged_template_expression,   modules, a_not_a_module_construct).
+ignored(js, template_literal,             modules, a_not_a_module_construct).
+ignored(js, this_expression,              modules, a_not_a_module_construct).
+ignored(js, ts_string_keyword,            modules, a_not_a_module_construct).
+ignored(js, tsas_expression,              modules, a_not_a_module_construct).
+ignored(js, tsnon_null_expression,        modules, a_not_a_module_construct).
+ignored(js, variable_declarator,          modules, a_not_a_module_construct).
+ignored(js, yield_expression,             modules, a_not_a_module_construct).
+
+-- ...AND THE SAME UNREACHABLE KIND, a third time. `import` is babel's `Import`
+-- node and `plugins: ['typescript']` never emits it; the argument is identical
+-- at all three layers and is written out rather than left to the default.
+ignored(js, import, modules, a_babel_emits_no_import_callee).
+
+-- ...AND THE TWO THE LAYER ACTUALLY RUNS ON. Neither was ever recorded, and
+-- both are read by name in rules/js-modules.rofl: the specifier text is a
+-- string literal (`site_source`), and every binding a module introduces is an
+-- identifier (`r_named_binding`, `r_default_binding`, `r_namespace_binding`).
+handled(js, string_literal, modules, r_import_decl_module_edge).
+handled(js, identifier,     modules, r_named_binding).
+
+-- ...and the one construct that IS a module edge and is not an import.
+-- `require('./x')` parses as an ordinary call under `sourceType: 'module'`, so
+-- the model can SEE it and says nothing. Whether CommonJS belongs in scope at
+-- all is the owner's call - `bare` next to it already carries his
+-- `out_of_scope` - and until he says, it is honest work rather than a waiver.
+--
+-- RE-MEASURED 2026-09-08 (w_mod_beyond_the_import) AND THERE IS NO SITE. Every
+-- `.ts`, `.mjs`, `.js` and `.ts.txt` file in this repository was parsed — 265
+-- of them, 2 unparseable — and walked for a CallExpression whose callee is the
+-- identifier `require`: ZERO, in the whole tree and in both scanned corpora.
+-- So this cell is not merely unscoped, it has nothing to be measured on, which
+-- is the first of the three questions HANDOFF.md asks of a survivor: it waits
+-- on a CORPUS as well as on a decision, and the corpus half is ours.
+--
+-- AND THE GATES CANNOT SEE IT EITHER, which is the part worth carrying. Every
+-- frontier relation in section 6 of rules/js-modules.rofl is keyed on
+-- `module_site`, and a `require` call is not one — so a site the layer declines
+-- to model moves no row of `unaccounted_site[audit]`, `site_without_kind[audit]`
+-- or `reason_missing[audit]`, and the oracle in test/js-modules.test.ts
+-- enumerates four node types and would not see it. That is
+-- f_two_enumerations_with_one_blind_spot_agree_about_nothing arriving one level
+-- up, and it is asserted on a probe holding a real `require` site rather than
+-- argued: recorded as f_a_require_site_moves_no_row_of_the_frontier.
+unknown_because(js, call_expression, modules, not_yet).
+
+
+-- ===========================================================================
+-- DECLARED HERE BECAUSE THIS PACK NOW JUDGES THEM, and `orphan_claim[audit]`
+-- said so in one run: 31 kinds carried a modules verdict written above
+-- while their `node_kind` rows live in the callgraph, dataflow and statements
+-- packs, so in the world test/js-modules.test.ts builds the claims pointed at
+-- cells that do not exist. Same correction as facts/js-callgraph.rofl made the
+-- day before, and the SECOND time, which is what makes it a class rather than
+-- a slip - see f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it.
+node_kind(js, array_expression).
+node_kind(js, object_pattern).
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+node_kind(js, arrow_function_expression).
+node_kind(js, await_expression).
+node_kind(js, boolean_literal).
+node_kind(js, class_declaration).
+node_kind(js, class_method).
+node_kind(js, class_expression).
+node_kind(js, conditional_expression).
+node_kind(js, decorator).
+node_kind(js, class_accessor_property).
+node_kind(js, for_of_statement).
+node_kind(js, function_expression).
+node_kind(js, identifier).
+node_kind(js, import).
+node_kind(js, logical_expression).
+node_kind(js, member_expression).
+node_kind(js, new_expression).
+node_kind(js, numeric_literal).
+node_kind(js, object_expression).
+node_kind(js, object_method).
+node_kind(js, object_property).
+node_kind(js, optional_call_expression).
+node_kind(js, optional_member_expression).
+node_kind(js, parenthesized_expression).
+node_kind(js, return_statement).
+node_kind(js, sequence_expression).
+node_kind(js, string_literal).
+node_kind(js, super).
+node_kind(js, tagged_template_expression).
+node_kind(js, template_literal).
+node_kind(js, this_expression).
+node_kind(js, tsas_expression).
+node_kind(js, tsnon_null_expression).
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, modules, a_not_a_module_construct).
+ignored(js, unary_expression, modules, a_not_a_module_construct).
+ignored(js, class_body, modules, a_not_a_module_construct).
+ignored(js, template_element, modules, a_not_a_module_construct).
+
+-- TEN TYPE NODES, 2026-09-07 (w_type_surface). A type-only import still emits
+-- an import_declaration, and THAT is what carries the module edge; the type
+-- nodes under it contribute nothing of their own.
+node_kind(js, tsfunction_type).
+node_kind(js, tsnull_keyword).
+node_kind(js, tsnumber_keyword).
+node_kind(js, tsstring_keyword).
+node_kind(js, tstype_alias_declaration).
+node_kind(js, tstype_annotation).
+node_kind(js, tstype_parameter_instantiation).
+node_kind(js, tstype_query).
+node_kind(js, tstype_reference).
+node_kind(js, tsunion_type).
+
+ignored(js, tsfunction_type,                modules, a_not_a_module_construct).
+ignored(js, tsnull_keyword,                 modules, a_not_a_module_construct).
+ignored(js, tsnumber_keyword,               modules, a_not_a_module_construct).
+ignored(js, tsstring_keyword,               modules, a_not_a_module_construct).
+ignored(js, tstype_alias_declaration,       modules, a_not_a_module_construct).
+ignored(js, tstype_annotation,              modules, a_not_a_module_construct).
+ignored(js, tstype_parameter_instantiation, modules, a_not_a_module_construct).
+ignored(js, tstype_query,                   modules, a_not_a_module_construct).
+ignored(js, tstype_reference,               modules, a_not_a_module_construct).
+ignored(js, tsunion_type,                   modules, a_not_a_module_construct).
+
+-- DECLARED HERE AND ABSENT FROM THE CORPUS, with the reason written down;
+-- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
+-- declared.
+-- `export_all_declaration` had `kind_absent_ok` here until 2026-09-07; the
+-- corpus grew two of them and every copy of the excuse had to go. The modules
+-- layer's own cell stays open — w_mod_beyond_the_import owns it, and a name
+-- crossing a file is not the same question as a specifier reaching a disk.
+kind_absent_ok(import, a_babel_emits_no_import_callee).
+
+-- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the
+-- `node_kind` rows are: a world loading this pack and not the other declares
+-- the kind and would carry no reason for its absence.
+-- `kind_unexercised[audit]` named the missing copies within one run.
+-- `decorator`'s excuse went on 2026-09-08; the corpus has two now.
+-- ...and the tagged template's copy went with the one in facts/js-callgraph.rofl
+-- on 2026-09-07: the kind has three corpus sites now, so every copy of the
+-- excuse had to go. The home rule from the direction of retirement, twice.
+kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). None of the three can carry a module edge, and the
+-- one that could be mistaken for a candidate is the bigint: a module specifier
+-- is a STRING literal and nothing else, which is why `module_source[code]`
+-- reads `ast_node(Src, string_literal, _, _)` and not `ast_value` alone. A
+-- `1n` in specifier position is a syntax error, not a module nobody resolved.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+ignored(js, update_expression, modules, a_not_a_module_construct).
+ignored(js, big_int_literal,   modules, a_not_a_module_construct).
+ignored(js, reg_exp_literal,   modules, a_not_a_module_construct).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields. Five kinds and
+-- one answer, on the same reading `class_declaration` and `class_method` already
+-- have here: a class body is not a module construct.
+--
+-- THE SITE IS WHAT MAKES THE VERDICT EXERCISED RATHER THAN DEFINITIONAL, on the
+-- pattern w_destructuring_rest_and_spread set: `export class Coin` in
+-- test/fixtures/js-call/shapes.ts.txt puts all five kinds DIRECTLY under an
+-- `export_named_declaration`, so a kind that never met an `export` cannot be
+-- what is being claimed about.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+ignored(js, class_property,         modules, a_not_a_module_construct).
+ignored(js, class_private_property, modules, a_not_a_module_construct).
+ignored(js, class_private_method,   modules, a_not_a_module_construct).
+ignored(js, private_name,           modules, a_not_a_module_construct).
+ignored(js, static_block,           modules, a_not_a_module_construct).

@@ -192,6 +192,7 @@ a fact.** A long run must therefore attest to its own conditions:
 
 ```bash
 snap() { find . \( -name "*.ts" -o -name "*.rofl" \) -not -path "./node_modules/*" \
+         -not -path "./.claude/*" \
          -exec stat -f "%m %N" {} \; | sort | md5; }
 B=$(snap)
 touch ./_ctl.ts; C=$(snap); rm -f ./_ctl.ts     # control: it must DIFFER
@@ -203,6 +204,72 @@ npm test > /tmp/out.txt 2>&1
 The control matters as much as the comparison: a fingerprint that cannot change
 certifies everything. On its first run this caught a moving tree and correctly
 discarded a 929-test result that would otherwise have been believed.
+
+**AND THE FINGERPRINT DOES NOT CERTIFY THAT THE RUN FINISHED.** Measured
+2026-09-09, on a machine at load average 19 with another session's benchmark
+running: the suite reported `TREE STILL — result valid`, `fail 7` — the same
+seven pre-existing failures quoted all night — and **739 tests of 1399**. Seven
+whole FILES had been killed at ~420 s with `Promise resolution is still pending
+but the event loop has already resolved`, and 660 tests never ran. Every word of
+the attestation was true and none of it was about the thing that went wrong.
+
+**A green count from a partial suite looks exactly like a green count from a
+whole one.** What caught it was arithmetic: 739 is not 665 + 7. So the ritual
+needs a second line, and it is one comparison:
+
+```bash
+[ "$(grep -c '^ℹ tests' /tmp/out.txt)" ] && \
+  awk '/^ℹ tests/{t=$3} /^ℹ pass/{p=$3} /^ℹ fail/{f=$3} \
+       END{ if (t == "") print "NO COUNT AT ALL — the reporter never ran"; \
+            else if (t+0 < 1000) print "SUITE SHORT — only " t " tests counted"; \
+            else if (t != p+f) print "SUITE TRUNCATED — " p "+" f " of " t; \
+            else print "suite whole — " t " tests" }' /tmp/out.txt
+```
+
+**THE FIRST TWO ARMS WERE ADDED 2026-09-09 BECAUSE THE CHECK CERTIFIED A RUN
+THAT NEVER STARTED.** With the wrong node on `PATH` (see the trap about node 24
+in HANDOFF.md, which this walked straight into) `npm test` dies in five lines
+with `node: bad option: --experimental-strip-types` and emits no `ℹ` line at
+all. The awk above then had `t` unset, `p+f` zero, `t != p+f` false — and it
+printed **`suite whole`** over an empty file, under a `TREE STILL — result
+valid` that was perfectly true. Every guard fired correctly and the conclusion
+was the opposite of the truth.
+
+It is the same shape as the incident that produced the check: a gate inherits
+the scope of its incident. That one was built to catch a TRUNCATED run and so
+required numbers to compare; asked about a run with NO numbers, it read the
+absence as agreement. **An arithmetic identity over unset variables is not a
+measurement**, and the guard against it is to say what must be PRESENT before
+saying what must be EQUAL. The `< 1000` arm is the total this file already
+argues for, moved out of the reader's head and into the script.
+
+Run against the failing output it prints `SUITE TRUNCATED — 665+7 of 739`, so
+it catches this incident. **AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE
+DISCOVERED**, because that is the defect being repaired: it compares the
+reporter's OWN three numbers, so it catches a run whose arithmetic does not
+close and NOT a run that was killed so early the reporter never counted the
+missing files at all. The second guard for that is the total: this suite is
+about 1400 tests, and `ℹ tests 739` is wrong on its face to anyone who knows
+the number. Neither check is the whole answer; both are cheaper than believing
+a partial run.
+
+The general form is the one this file already writes about a gate inheriting
+the scope of its incident: the attestation was built to catch a MOVING TREE and
+it catches a moving tree exactly. It was never asked whether the run completed,
+so it does not answer that, and its confident `result valid` reads as though it
+had.
+
+**`./.claude/*` IS EXCLUDED AND WAS NOT, AND THE OMISSION WAS 92 PER CENT OF THE
+FINGERPRINT.** Measured 2026-09-09: the ritual as first written covered **4 208**
+files, of which **334** are this working tree and **3 874** belong to twelve
+OTHER agents' worktrees living under `.claude/worktrees/`. Those did not exist
+when the ritual was written, so the gate inherited the scope of its incident and
+the repository grew out from under it — the same sentence this file already
+writes about the NUL check and the `# tests` grep. It failed in the safe
+direction, which is why nothing noticed: a foreign worktree moving would have
+made a valid result read `TREE MOVED — DISCARD`, and a run that is discarded for
+the wrong reason is simply re-run. **The cost was never a wrong answer; it was
+that the fingerprint said almost nothing about the thing it was certifying.**
 
 The rest of the repository already works this way — an oracle enumerates its own
 call sites, a gate ships with a planted defect, a witness is a query anyone can
@@ -279,3 +346,38 @@ of the queue until someone can state one.
 
 Do not repair a stale witness by adjusting the number to match a private probe.
 That converts a runnable premise into a decoration that happens to be green.
+
+**AMENDED 2026-09-09 (`w_note_is_not_evidence`): A WITNESS NAMES ITS WORLD, so
+the paragraph above is no longer the whole rule.** The checker had one world and
+the sentence *if the premise cannot be stated over `boot.rofl` + the ledger, the
+finding does not get a witness* was a statement about the instrument rather than
+about the claim. Three worlds are declared in `facts/worlds.rofl` — `w_ledger`
+(the old one, and what a bare `witness/3` still means), `w_queue` (the plan, the
+matrix and the ledger, where `work(W, Note)` and `layer(L)` exist), and
+`w_js_corpus` (the four-layer model over the call fixtures) — each stating the
+packs it loads AND the packs it refuses, with the two lists asserted to cover the
+tree. **A WORK ITEM'S NOTE CAN CARRY ONE**, which is the whole item: a note
+asserting an absence is a claim about a store, and it now goes stale by itself.
+
+Three things this changes for the writer, all measured on the day:
+
+- **Ask the query in the world the SENTENCE is about, and say which.** The rule
+  is unchanged in spirit and its old form is a live example of the failure:
+  `witness(f_the_matrix_collapses..., "layer(L)", 0)` stood for *no layer is
+  declared yet*, four were declared, and it stayed green for eight days because
+  `edb(layer)` had been added to the LEDGER to make the query askable there.
+  **A witness whose query needs an `edb` line added to the ledger to be askable
+  is a witness about something the ledger does not hold.**
+- **An absence witness carries a CONTROL, and the control is the claim with one
+  constant swapped.** `unpopulatable` sees a misspelt relation, a wrong arity and
+  a wrong ledger; it is blind to a mis-quoted CONSTANT, and the two relations you
+  will reach for want opposite forms — `ast_name[code](N, "twin")` is 5 and
+  `ast_name[code](N, twin)` is 0; `ast_node[code](N, if_statement, F, L)` is 16
+  and the quoted form is 0. Neither wrong one errors. So `witness_absent(Id,
+  World, Query, Control)` refuses a control that is not token-for-token the
+  query with one constant changed, in the same lexical form.
+- **A count over the ledger is not a pin.** `unproven(F) -> 32` moved three times
+  in one night on four branches, every move correct, and the merge of two
+  identical 31s auto-resolved in silence. It is replaced by what it stood for:
+  `unproven_misaimed[audit]` empty (the aim), and two FLOORS (not blind, not
+  permanently red). A floor merges; a count does not.

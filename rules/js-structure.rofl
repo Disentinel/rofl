@@ -31,4 +31,92 @@ ast_within[code](P, D) :- ast_within[code](P, X), ast_in[code](X, D).
 
 -- the two attributes worth a name of their own
 ast_name[code](N, V)   :- ast_attr[code](N, name, V).
+
+-- THE NAME A KEY STANDS FOR, wherever a key appears — an object method, an
+-- object property, a class method. Written once here rather than four times
+-- because it grew a second case on 2026-09-07 and the four copies would have
+-- been four chances to add it three times.
+--
+-- A COMPUTED WELL-KNOWN SYMBOL IS A NAME. `{ [Symbol.iterator]() {} }` puts a
+-- `member_expression` where every other key has an identifier, so every
+-- relation reading `ast_name` on a key found nothing: the method had no name in
+-- `fn_name` and no key in `member_value`, and an edge to it was derivable and
+-- unreportable at once. The property is the name — `iterator` — which is what
+-- V8 says with the brackets off and what this model calls every other method.
+--
+-- GUARDED ON `Symbol` DELIBERATELY: `obj[someVar]` has no static name and this
+-- must not invent one. The well-known symbols are the only computed keys whose
+-- text the LANGUAGE fixes rather than a value.
+--
+-- ...AND THAT SENTENCE WAS FALSE OF THE RULE IT SAT ON UNTIL 2026-09-09
+-- (w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).
+-- The `Symbol` guard is on the SECOND arm — the one that reads a computed key
+-- written as a MEMBER EXPRESSION — and `obj[someVar]` is not one: for
+-- `{ [spoke]() {} }` the key node IS the identifier `spoke`, so the FIRST arm,
+-- `key_name(K, N) :- ast_name(K, N)`, named the property after the VARIABLE's
+-- spelling. The guard could never look at the case its own justification names.
+-- The site is `hub` at the end of test/fixtures/js-call/shapes.ts.txt, and it
+-- is in the SCANNED-ONLY fixture rather than a runnable one because a method
+-- the model must not name is a method the oracle would see run under a name
+-- nobody derived.
+--
+-- BOTH ARMS RANGE OVER KEYS NOW, and that is the same edit. `ast_name(K, N)`
+-- for K in ANY position derived 2 148 rows over a corpus with 115 key
+-- positions — a relation called `key_name` that was 95% not about keys, and
+-- the cost half of the same work item. Every reader already joined
+-- `ast_child(_, key, 0, K)` first, so narrowing here removes rows nothing read
+-- and no answer anywhere moves except the computed one above.
+--
+-- THE GUARD IS A NEGATION AND NOT `computed, false`, deliberately. Measured
+-- 2026-09-09: `class_private_property` and `class_private_method` carry NO
+-- `computed` attribute at all — babel gives a private name no such field — so
+-- eight key positions in this corpus have nothing for `computed, false` to
+-- match. It changes no row today, because `private_name` has no `name`
+-- attribute either and this relation has no arm for it (see the note in
+-- rules/js-dataflow.rofl); it decides what happens on the day it does.
+key_name[code](K, N)   :- ast_child[code](P, key, 0, K),
+                          not ast_attr[code](P, computed, true),
+                          ast_name[code](K, N).
+key_name[code](K, N)   :- ast_child[code](_, key, 0, K),
+                          ast_node[code](K, member_expression, _, _),
+                          ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
+                          ast_child[code](K, property, 0, P), ast_name[code](P, N).
 ast_value[code](N, V)  :- ast_attr[code](N, value, V).
+
+-- ONE NODE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD
+-- (w_meta_property, 2026-09-08). `new.target` and `import.meta` are both a
+-- `meta_property` and nothing above the scanner told them apart: measured
+-- again here, every `meta_property` in the corpus carries ZERO `ast_attr`
+-- rows of any key and exactly two identifier children, `meta` and `property`.
+--
+-- IT IS HERE AND NOT IN A LAYER because three layers need it and none owns
+-- it. `child_needs` in facts/js-env.rofl already reads the same child for the
+-- ERA question; that table is a gate keyed on a feature and cannot be read by
+-- a layer that wants the FORM. This is the form, named once, in the file whose
+-- whole job is "true of any tree the scanner emits".
+--
+-- KEYED ON `meta` AND NOT ON `property`, for the reason facts/js-env.rofl
+-- states: `meta` is the reserved word the grammar switches on, and it is the
+-- half that cannot collide — a future `import.defer` is still (meta="import").
+meta_form[code](M, new_target)  :- ast_node[code](M, meta_property, _, _),
+                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "new").
+meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _, _),
+                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "import").
+
+-- ...and the gate, in the direction that can go red. A `meta_property` the two
+-- rules above do not classify is a THIRD form of the construct — the grammar
+-- allows exactly two today — and every relation keyed on the form would be
+-- silently missing it. Empty on an honest tree; the mutant set plants one.
+meta_unformed[audit](M) :- ast_node[code](M, meta_property, _, _),
+                           not meta_form[code](M, _).
+
+-- ...AND THE OTHER DIRECTION, WHICH THE GATE ABOVE IS STRUCTURALLY UNABLE TO
+-- LOOK AT. Found by asking that question of this file's own instrument rather
+-- than by a failing test: `meta_unformed` watches for a node with NO form, and
+-- the mutant that keys the first arm on the wrong word gives every
+-- `import.meta` node TWO forms — one node answering as both constructs, which
+-- every reader below treats as a function. Half the damage of that mutant was
+-- invisible to the only gate over this relation. Both halves are named now, and
+-- the pair is the same construction `export_binding_conflict[audit]` already
+-- uses one layer up.
+meta_form_conflict[audit](M, A, B) :- meta_form[code](M, A), meta_form[code](M, B), A != B.

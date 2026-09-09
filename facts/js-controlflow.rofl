@@ -1,0 +1,494 @@
+-- js-controlflow.rofl — THE THIRD LAYER, ADDED AS ONE FACT.
+--
+-- `layer(controlflow).` is the whole declaration, and the programme's central
+-- claim is that the model then lights up every place it needs describing. That
+-- claim had never been run. It was, before this file had a second line:
+--
+--     layer(L)                              3  ->    4
+--     cell[audit](A, K, S, L)             179  ->  229
+--     open_cell[audit](K, S, L)            76  ->  121
+--     unqueued[audit](K, S, L)              0  ->   45
+--
+-- Fifty cells from one fact, forty-five of them work the plan was silent about,
+-- each named by kind. Nothing had to be enumerated by hand and nothing could be
+-- forgotten, which is the property the matrix exists for.
+--
+-- The rest of this file is the answer to what that fact enumerated.
+layer(controlflow).
+
+-- ---------------------------------------------------------------------------
+-- WHAT THE LAYER ANSWERS. Six kinds, and the split is by MECHANISM rather than
+-- by kind — rules/js-controlflow.rofl carries the vocabulary and the audits
+-- that keep it closed.
+handled(js, if_statement,               controlflow, r_guard_arm).
+handled(js, conditional_expression,     controlflow, r_guard_arm).
+handled(js, logical_expression,         controlflow, r_guard_arm).
+handled(js, for_of_statement,           controlflow, r_guard_arm).
+handled(js, optional_call_expression,   controlflow, r_short_circuit).
+handled(js, optional_member_expression, controlflow, r_short_circuit).
+
+-- ---------------------------------------------------------------------------
+-- WHAT IT USED TO WAIVE, AND THE WAIVER WAS A CLAIM ABOUT THE PROGRAM. Until
+-- 2026-09-07 this file read:
+--
+--   `await` and `yield` transfer control and do NOT guard anything: control
+--   comes back, and the code after them runs — later, but it runs. Filing them
+--   as guards would have made `may_not_run` report functions that always run.
+--
+-- The last sentence is TRUE and is not a reason to refuse: `may_not_run` is a
+-- may-set whose own comment says it over-covers on purpose, and the dangerous
+-- direction is the set being too NARROW. The first sentence is the defect —
+-- control comes back only if the awaited thing SETTLES and only if a consumer
+-- asks a generator for another value, and neither is something this layer can
+-- decide. Every await in the corpus settled, so the reason had never been
+-- exercised; a fixture that suspends forever put `afterStall` — a function the
+-- model calls and the runtime never enters — in front of the acceptance gate
+-- within one run.
+handled(js, await_expression, controlflow, r_suspension).
+handled(js, yield_expression, controlflow, r_suspension).
+
+-- ---------------------------------------------------------------------------
+-- WHAT IT LEFT OPEN AND NO LONGER DOES, 2026-09-06 — w_cf_abrupt_transfer.
+-- Everything after a `return` in the same statement list is unreachable, which
+-- is a fact about ORDER, and until this date nothing in this layer expressed
+-- order at all. `ast_child(B, F, I, S)` had carried the index since the scanner
+-- was written and no rule had ever read it; `r_abrupt` reads it now.
+handled(js, return_statement, controlflow, r_abrupt).
+
+-- ...AND `r_abrupt` READS A CLOSURE SINCE 2026-09-09 (w_cf_completion), which
+-- MOVES NO CELL AND IS RECORDED HERE ANYWAY. The rule used to ask whether the
+-- statement in a list IS one of the four abrupt kinds; it asks now whether the
+-- statement COMPLETES ABRUPTLY, which is one recursive relation over statement
+-- kinds — a nested block, both arms of an `if`, a labelled statement nothing
+-- breaks out of. No kind changed its verdict, no mechanism was added, and the
+-- item's own note says why: the mechanism table already files all four kinds
+-- under `abrupt` and what was missing was the closure.
+--
+-- THREE CONTAINERS ARE NOW READ BY A RULE AT THIS LAYER AND THEIR WAIVERS STILL
+-- STAND, which is the question `object_pattern` made this file ask of every
+-- reason it carries. `block_statement` reads
+-- `a_a_container_transfers_nothing` in facts/js-statements.rofl and the
+-- sentence is TRUE: a block performs no transfer, it PROPAGATES one its
+-- contents performed, and `transfer_mechanism(block_statement, M)` is empty on
+-- purpose — asserted in test/js-controlflow.test.ts rather than left to a
+-- reader. `if_statement` and `labeled_statement` are already `handled` here, by
+-- `r_guard_arm` and `r_labelled_boundary`, and neither claim is weakened by a
+-- second rule reading the same kind for a different question.
+
+-- A DEFAULTED PARAMETER IS AN ARM SKIPPED BY A CONDITION, 2026-09-08
+-- (w_destructuring_rest_and_spread). `function f(n, made = fallbackMaker(n))`
+-- calls `fallbackMaker` at exactly the sites that omit the argument, so the
+-- `right` of an `assignment_pattern` is a guard arm in the same sense a `?:`
+-- alternate is. `guard_kind(assignment_pattern, right)` is the whole rule.
+--
+-- MEASURED BOTH WAYS. At run time, two calls to the same defaulted function —
+-- one supplying the argument and one not — ran the default expression exactly
+-- ONCE. In the model, with the fixture in and the row absent, `fallbackMaker`
+-- was NOT in `may_not_run` although its only call site is inside a default.
+--
+-- IT IS THE ONLY ONE OF THE FOUR THIS LAYER CAN ANSWER, and that is measured
+-- rather than assumed — see the `object_pattern` paragraph below.
+node_kind(js, assignment_pattern).
+handled(js, assignment_pattern, controlflow, r_guard_arm).
+
+-- ===========================================================================
+-- THE SWEEP (queue item w_cf_sweep). Forty cells, and the point of doing it by
+-- hand rather than by default is that NINE OF THEM ARE NOT RESIDUE. A default
+-- would have called all forty `not_yet` and been wrong about thirty-one; a
+-- blanket waiver would have been wrong about nine.
+
+-- ---------------------------------------------------------------------------
+-- THIRTY-ONE THAT REALLY TRANSFER NOTHING. A literal, a name, a pattern, a
+-- specifier: control does not branch at any of them, and the reason is the same
+-- sentence for all of them, which is what makes this part arithmetic.
+ignored(js, identifier,                  controlflow, a_no_control_transfer).
+ignored(js, string_literal,              controlflow, a_no_control_transfer).
+ignored(js, numeric_literal,             controlflow, a_no_control_transfer).
+ignored(js, boolean_literal,             controlflow, a_no_control_transfer).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+ignored(js, null_literal,                controlflow, a_no_control_transfer).
+ignored(js, template_literal,            controlflow, a_no_control_transfer).
+ignored(js, tagged_template_expression,  controlflow, a_no_control_transfer).
+ignored(js, array_expression,            controlflow, a_no_control_transfer).
+-- ...AND `object_pattern` IS NOT HERE ANY MORE. Its row read
+-- `a_no_control_transfer` and 2026-09-08 MEASURED that the reason is false:
+-- `const { taken } = withGetter` RUNS the getter, which is a transfer into user
+-- code by syntax that hides it — the same class this layer already models under
+-- `accessor_call` for `member_expression`. The probe is seven cases and it
+-- recorded which functions ran; an object pattern, an array pattern, an object
+-- rest and all three spread positions each transferred control, and only
+-- `assignment_pattern` was answerable with the machinery this layer has.
+--
+-- The cell is OPEN and OWNED, by `w_destructuring_hides_a_call`. Second
+-- borrowed-reason correction in this file after `import_expression`, and it
+-- arrives the same way: the reason was re-READ rather than re-labelled.
+ignored(js, object_expression,           controlflow, a_no_control_transfer).
+ignored(js, object_property,             controlflow, a_no_control_transfer).
+ignored(js, assignment_expression,       controlflow, a_no_control_transfer).
+ignored(js, sequence_expression,         controlflow, a_no_control_transfer).
+ignored(js, parenthesized_expression,    controlflow, a_no_control_transfer).
+ignored(js, this_expression,             controlflow, a_no_control_transfer).
+ignored(js, new_expression,              controlflow, a_no_control_transfer).
+ignored(js, variable_declarator,         controlflow, a_no_control_transfer).
+ignored(js, class_declaration,           controlflow, a_no_control_transfer).
+-- `decorator` LEFT THIS LIST ON 2026-09-08 and its row is now a `handled` in
+-- the block below. `a_no_control_transfer` was written when no corpus could
+-- contain a decorator, and it is false: a decorator IS a call.
+ignored(js, class_accessor_property,     controlflow, a_both_accessors_are_synthesised).
+ignored(js, import_declaration,          controlflow, a_no_control_transfer).
+ignored(js, import_specifier,            controlflow, a_no_control_transfer).
+ignored(js, import_attribute,            controlflow, a_no_control_transfer).
+ignored(js, import_default_specifier,    controlflow, a_no_control_transfer).
+ignored(js, import_namespace_specifier,  controlflow, a_no_control_transfer).
+ignored(js, export_named_declaration,    controlflow, a_no_control_transfer).
+ignored(js, export_default_declaration,  controlflow, a_no_control_transfer).
+ignored(js, export_all_declaration,      controlflow, a_no_control_transfer).
+
+-- THE TWO EXPORT SPECIFIER FORMS, 2026-09-08 (w_export_specifier_forms), and
+-- they get OPPOSITE verdicts — which is the whole reason the item is two kinds
+-- and not one.
+--
+-- `export { f }` and `export { f as g }` PUT f ON THE ENTRY SURFACE, and until
+-- this iteration nothing did: `exported_fn` walks the CONTAINMENT of an export
+-- declaration, and a specifier list contains two identifiers and no function.
+-- MEASURED on a probe whose three functions were exported only that way:
+-- `exported_fn` 0, `entry_point` 0, `reachable` 0, `no_entry_point[audit]`
+-- firing on the file, and `may_not_be_reached` naming `helper` — a function
+-- that same file exports AND calls. The positive control, the identical three
+-- functions written `export function`, gives all three as entry points and an
+-- empty `may_not_be_reached`. So this cell was not merely unmodelled; it was
+-- WRONG in the dangerous direction, and the site is
+-- test/fixtures/js/export-surface.js.
+node_kind(js, export_specifier).
+-- ...and the attribute, 2026-09-09, for the reason `export_specifier` is here:
+-- a pack that CLAIMS a kind must also declare it, or a world loading this
+-- pack without facts/js-modules.rofl carries a claim with no cell under it
+-- and `orphan_claim[audit]` reports it. Measured in test/js-model.test.ts
+-- the moment the claim went in without this line.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
+handled(js, export_specifier, controlflow, r_export_entry_surface).
+
+-- ...AND THE NAMESPACE FORM INTRODUCES NO LOCAL ENTRY, which is the same
+-- sentence `export_all_declaration` carries three lines up and it is MEASURED
+-- rather than inherited: the scanner emits an `exported` child for an
+-- ExportNamespaceSpecifier and NO `local` child at all, so there is no name in
+-- this module for the entry surface to reach. What `export * as ns from './m'`
+-- offers is m's own export surface under one name, and that is m's entry
+-- surface, derived where m is.
+node_kind(js, export_namespace_specifier).
+ignored(js, export_namespace_specifier, controlflow, a_no_local_binding_to_enter).
+ignored(js, tsas_expression,             controlflow, a_no_control_transfer).
+ignored(js, tsnon_null_expression,       controlflow, a_no_control_transfer).
+ignored(js, ts_string_keyword,           controlflow, a_type_only_no_runtime_value).
+-- ...AND TWO THAT INHERITED A REASON THAT TURNED OUT TO BE FALSE. They read
+-- `a_control_returns_so_the_site_still_runs` — `await`'s waiver — under a
+-- comment saying `a dynamic import suspends, and the site runs`. When that
+-- waiver was refuted on 2026-09-07 these two were re-read rather than
+-- re-labelled, and the borrowed reason was wrong about the construct as well:
+-- `import(p)` does NOT suspend. It evaluates to a promise, like any other
+-- expression that produces a value; whatever suspends is the `await` around it,
+-- and this layer models that now. So the honest reason is the one every other
+-- value-producing form here carries.
+ignored(js, import_expression,           controlflow, a_no_control_transfer).
+ignored(js, import,                      controlflow, a_no_control_transfer).
+
+-- ---------------------------------------------------------------------------
+-- NINE THAT ARE NOT RESIDUE, and each carries the reason it is open rather than
+-- the default. They fall into three questions, and none of the three is
+-- member-expression-sized: each is an item.
+--
+-- FIVE FUNCTION FORMS — a body is a CONTROL REGION, entered only by a call, and
+-- everything in it runs only if the function is entered. Answered 2026-09-06 by
+-- w_cf_reachability. This paragraph used to say the walk was declared absent
+-- because "the transitive question wants an ENTRY POINT, and a model that
+-- guessed at entry points would answer something nobody asked" — and the
+-- measurement that closed it said something sharper: written WITHOUT an entry
+-- point the question is not under-determined, it is UNSTRATIFIED, and the
+-- kernel refuses the program outright. The entry point is what makes the
+-- question askable, and it is not guessed: a module's EXPORT SURFACE is its
+-- entry surface, which is a fact about the language and already on the store.
+handled(js, function_declaration,        controlflow, r_reachability).
+handled(js, function_expression,         controlflow, r_reachability).
+handled(js, arrow_function_expression,   controlflow, r_reachability).
+handled(js, class_method,                controlflow, r_reachability).
+
+-- ...AND `class_expression`, 2026-09-08 (w_class_expression), which gets
+-- `handled` rather than the `a_no_control_transfer` its DECLARATION twin
+-- carries thirty lines above — and the difference is measured, not stylistic.
+--
+-- TWO THINGS A CLASS EXPRESSION DOES AT THIS LAYER, both with a site in
+-- test/fixtures/js-call/shapes.ts.txt:
+--
+--   THE ENTRY SURFACE. `export const Bracket = class { fasten(n) {...} }` puts
+--   `fasten` on it. `exported_fn` walks CONTAINMENT and asks `not in_fn`, and a
+--   method of an exported class expression has no enclosing function — so it is
+--   an entry point on exactly the same footing as a method of an exported class
+--   declaration. Measured: `entry_point[code]` contains `fasten`, and `turn` —
+--   a method of a class expression bound to a module-local `const` — is
+--   correctly NOT on it.
+--
+--   THE HERITAGE CLAUSE RUNS. `class extends mountOf() {}` calls `mountOf` when
+--   the class expression is EVALUATED, which for an expression is wherever the
+--   expression stands. Measured: `calls_in` carries `shapes.ts top -> mountOf`.
+--   So `a_no_control_transfer` would have been FALSE for this kind, which is the
+--   same correction `object_pattern` earned in this file the same week and the
+--   reason that one is re-read rather than re-labelled. The declaration twin has
+--   the identical exposure and its row is NOT changed here — it belongs to
+--   whoever owns that cell, and it is recorded as a finding instead —
+--   f_a_heritage_clause_runs_and_a_class_is_waived_as_transferring_nothing.
+handled(js, class_expression,            controlflow, r_reachability).
+node_kind(js, class_expression).
+
+-- `meta_property` IS INERT AT THIS LAYER, 2026-09-08 (w_meta_property), and
+-- this is the ONE of its four cells that one verdict can honestly cover — which
+-- is the item's whole question, since `new.target` and `import.meta` are two
+-- constructs sharing a node kind.
+--
+-- MEASURED RATHER THAN ARGUED, because `a_no_control_transfer` is the reason
+-- this file has already had to withdraw once. A `meta_property` node has
+-- exactly two children and both are identifiers — `meta` and `property` — so
+-- there is nothing inside it that could be a `site[code]`, no callee position,
+-- no accessor read and no expression to evaluate. Both forms are LEAVES: the
+-- syntax is two tokens joined by a dot and neither token is a lookup.
+--
+-- WHAT IT DOES NOT WAIVE, and the difference matters: `new.target` DISTINGUISHES
+-- TWO WAYS OF ENTERING a function — `f()` gives undefined and `new f()` gives
+-- the constructor — and this model has no notion of call MODE at all, so a
+-- function with two entry modes has one body and one answer here. That is a
+-- real gap and it is a VALUE gap, which is why the dataflow cell is left open
+-- and owned rather than waived beside this one.
+ignored(js, meta_property,               controlflow, a_no_control_transfer).
+node_kind(js, meta_property).
+handled(js, object_method,               controlflow, r_reachability).
+
+-- TWO CALL FORMS — a call transfers control INTO the callee and may leave by
+-- THROWING rather than returning. Answered 2026-09-06 by w_exception_flow.
+-- `always_throws` is decidable from syntax in exactly one case (no `return`
+-- anywhere, a `throw` at the top level of the body), and a call to such a
+-- function is an abrupt transfer for the rest of ITS OWN function — a `try`
+-- stops it, and so does the function boundary, beyond which propagation is
+-- w_exn_propagation's question. `super` is the same rule reached through
+-- `ctor_of[flow]`, because a super call resolves to the CLASS and not to the
+-- body that runs.
+handled(js, call_expression, controlflow, r_call_is_an_exit).
+handled(js, super,           controlflow, r_call_is_an_exit).
+
+-- TWO MEMBER FORMS — a property read is not a transfer UNLESS the property is
+-- an accessor, and a getter is a call wearing a read's syntax. Answered
+-- 2026-09-06 by w_cf_accessor, and the note that stood here said telling them
+-- apart "needs the property to be known as an accessor, which is a fact about
+-- the object and not about the site" — true, and the fact was already on the
+-- store: the scanner emits `ast_attr(M, kind, "get")` for every method and the
+-- value layer already reads that attribute for `"constructor"`. Nothing had
+-- ever asked it for `"get"`.
+handled(js, member_expression, controlflow, r_accessor).
+handled(js, decorator, controlflow, r_decorator_call).
+-- ...AND ITS OPTIONAL TWIN CANNOT SAY THIS, which is a real loss and worth the
+-- sentence. `optional_member_expression` is already MODELLED at this layer for
+-- its short-circuit, and a kind-level cell at a layer with no refinement column
+-- is one word — so `o?.p` where `p` is an accessor is a control transfer this
+-- model cannot report without un-ticking the one it already has. Written as a
+-- claim it raised `queue_stale[audit]` immediately, which is the matrix
+-- refusing to hold two verdicts for one cell.
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, controlflow, a_no_control_transfer).
+ignored(js, unary_expression, controlflow, a_no_control_transfer).
+ignored(js, class_body, controlflow, a_a_container_transfers_nothing).
+ignored(js, template_element, controlflow, a_no_control_transfer).
+
+-- TEN TYPE NODES, 2026-09-07 (w_type_surface). Erased before anything runs,
+-- so there is no point at which control could reach one.
+node_kind(js, tsfunction_type).
+node_kind(js, tsnull_keyword).
+node_kind(js, tsnumber_keyword).
+node_kind(js, tsstring_keyword).
+node_kind(js, tstype_alias_declaration).
+node_kind(js, tstype_annotation).
+node_kind(js, tstype_parameter_instantiation).
+node_kind(js, tstype_query).
+node_kind(js, tstype_reference).
+node_kind(js, tsunion_type).
+
+ignored(js, tsfunction_type,                controlflow, a_type_only_no_runtime_value).
+ignored(js, tsnull_keyword,                 controlflow, a_type_only_no_runtime_value).
+ignored(js, tsnumber_keyword,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tsstring_keyword,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_alias_declaration,       controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_annotation,              controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_parameter_instantiation, controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_query,                   controlflow, a_type_only_no_runtime_value).
+ignored(js, tstype_reference,               controlflow, a_type_only_no_runtime_value).
+ignored(js, tsunion_type,                   controlflow, a_type_only_no_runtime_value).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). All three are waived here, and the item's real
+-- control-flow work is NOT in these three rows — it is the
+-- `guard_kind(for_statement, update)` row in rules/js-controlflow.rofl, which
+-- this item found because `i++` is what a for-update is written as and nobody
+-- had looked at the slot while the form was outside the vocabulary.
+--
+-- THE WAIVERS ARE ABOUT THE FORM AND NOT ABOUT THE POSITION, which is the
+-- distinction that keeps them honest: this layer's per-kind cell asks whether
+-- a kind TRANSFERS control, and `guarded` answers separately for whatever is
+-- written in a skippable place. None of the three transfers anything. An
+-- update runs its operand's ToNumeric and writes back; a bigint and a regexp
+-- literal are values. `may_throw[code]` here is the explicit-throw model —
+-- `throw` statements and calls that reach one — so the implicit TypeError a
+-- `const` update raises is outside what this layer models for EVERY kind, not
+-- for these three.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+ignored(js, update_expression, controlflow, a_no_control_transfer).
+ignored(js, big_int_literal,   controlflow, a_no_control_transfer).
+ignored(js, reg_exp_literal,   controlflow, a_no_control_transfer).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+-- A FIELD INITIALISER IS AN ARM SKIPPED BY THE ABSENCE OF A `new`, and the
+-- SEVENTH mechanism in `transfer_mechanism` is what keeps that from being filed
+-- under one of the six that would be wrong. `per_construction` is not
+-- `skip_arm` — nothing near a field branches — and it is not
+-- `loop_at_least_once` either, because a class that is never constructed runs
+-- its instance initialisers zero times.
+--
+-- MEASURED BY RUNNING THE SHAPE, and it split one kind into two answers:
+-- `class Never { unused = mark(); static tag = mark(); }`, defined and never
+-- constructed, ran the STATIC initialiser and not the instance one. So
+-- `field_init` guards the non-static half only, and the model agrees: with the
+-- fixture in, `may_not_run` names `stamped minted inked scored struck burnished`
+-- and NOT `sealed`, which is the static field's callee.
+handled(js, class_property,         controlflow, r_field_guard).
+handled(js, class_private_property, controlflow, r_field_guard).
+
+-- A PRIVATE METHOD IS A FUNCTION LIKE ANY OTHER at this layer: it is in
+-- `fn_kind`, so `may_not_run` and `may_not_be_reached` range over it. The site
+-- is the private GETTER, read behind a conditional in the fixture, and
+-- `may_not_run[code]` names its node.
+handled(js, class_private_method,   controlflow, r_reachability).
+
+-- READING A PRIVATE NAME MAY TRANSFER CONTROL, because `get #face()` is a
+-- `class_private_method` carrying `kind: "get"` and `this.#face` runs it. The
+-- public arm of `accessor_read` cannot reach it — a private name never touches
+-- `member_value` or `selects` — so the private accessor needed an arm of its
+-- own, and it needs NO receiver literal: the class body that declares `#face` is
+-- the only place `this.#face` can be written.
+handled(js, private_name,           controlflow, r_accessor).
+
+-- A STATIC BLOCK RUNS UNCONDITIONALLY WHEN THE CLASS DEFINITION IS EVALUATED —
+-- measured by running the shape, where it fires before any `new` and once. So
+-- it guards nothing, skips nothing and suspends nothing, and the reachability of
+-- what is inside it is already the reachability of the class declaration, which
+-- the enclosing guards decide. The one thing it does need is for the calls
+-- inside it to count as module-level entry points, and `reachable[code]`'s
+-- `not in_fn` arm already says so without a rule about this kind.
+ignored(js, static_block,           controlflow, a_a_static_block_runs_when_the_class_is_defined).
+
+-- ---------------------------------------------------------------------------
+-- FOUR KINDS WHOSE SURFACE IS A BINDING AND WHOSE SEMANTICS IS A CALL
+-- (w_destructuring_hides_a_call, 2026-09-08). Three of the four were
+-- `not_modelled` / `not_yet` and `object_pattern` had carried
+-- `a_no_control_transfer` since the forty-cell sweep, borrowed from
+-- `array_expression` where it is true.
+--
+-- WHAT THE ITEM WAITED ON WAS THE WRONG THING, and that is the result worth
+-- keeping. It was blocked on `w_env_api_surface` because naming the receiver's
+-- iterator reads as a standard-library question. MEASURED against the surface
+-- that item generated, with a positive control on the same query shape:
+-- `lib_member(P, K, R)` carries 130 rows over eight prototypes, and
+-- `lib_member(P, "iterator", R)`, `lib_member(P, "Symbol.iterator", R)` and
+-- `lib_member(P, "next", R)` are each ZERO — the surface is keyed by NAME and a
+-- well-known symbol is not a name.
+--
+-- THE REAL DISCRIMINATOR IS THE RECEIVER. Ten cases run against V8's own stack:
+-- an array pattern, an array spread and a spread argument over a PLAIN ARRAY run
+-- no user code at all, and an object spread over a PLAIN OBJECT runs none
+-- either — while the same four syntaxes over a source that owns a getter or a
+-- `[Symbol.iterator]` each transfer control, and V8 attributes both the iterator
+-- and its `next` to the ENCLOSING function exactly as it does for `for-of`. So
+-- the question was never the standard library: it was that every destructuring
+-- site in this corpus read a plain source, and no receiver here could
+-- contradict the sentence.
+--
+-- TWO RULES AND NOT ONE, and `spread_element` carries both. In `properties` a
+-- spread copies keys and runs getters; in `elements` or `arguments` it exhausts
+-- an iterator. Those are two mechanisms, and this layer's own doctrine is that
+-- mechanisms sharing a bucket get one verdict between them.
+-- ...AND THE ARITHMETIC THAT LICENSES ALL FIVE ROWS, 2026-09-09. The rows above
+-- were written on the strength of an execution oracle that reports `missed`
+-- EMPTY, which says the model has no edge the runtime contradicts — and says
+-- NOTHING about the positions where the rule derives no edge at all. There are
+-- more of those than of the others:
+--
+--   24 destructuring positions = 9 the rule fires at
+--                              + 15 traced to something in this program that
+--                                   owns neither a getter for the key taken nor
+--                                   a `[Symbol.iterator]`
+--                              + 0 primitive + 0 UNTRACED + 0 unsourced
+--
+-- NINE OF TWENTY-FOUR IS THE RATIO AND IT IS NOT THE ANSWER. A rule that fires
+-- at three eighths of its sites is a lie if the other fifteen are unknown and a
+-- complete model if they are answered NO — and until `hidden_call_*` in
+-- rules/js-controlflow.rofl existed the two were the same silence, exactly the
+-- hole `eff_conv_untraced` fills for a coerced operand. The residue is EMPTY
+-- and now SAYS SO; that, and not the oracle, is what closes these cells.
+--
+-- THE FIFTH DOOR IS IN THE SAME CENSUS AND ITS RESIDUE IS NOT EMPTY.
+-- `for_of_statement` reaches the identical protocol: 4 positions = 2 fire + 1
+-- builtin + 1 untraced. The untraced one is `for (const drawn of pick())` — a
+-- generator object, which `may_be_node` does not carry — and it is exactly the
+-- site facts/js-callgraph.rofl describes in prose as calling "a BUILT-IN
+-- `[Symbol.iterator]`". Half of that sentence is measured true (the array
+-- literal beside it) and half of it is now measured UNKNOWN: a generator's
+-- `next` runs the generator BODY, which is user code in this program.
+-- `w_the_generator_is_not_a_builtin` owns that half by name.
+handled(js, object_pattern,  controlflow, r_destructure_accessor).
+handled(js, rest_element,    controlflow, r_destructure_accessor).
+handled(js, spread_element,  controlflow, r_destructure_accessor).
+handled(js, spread_element,  controlflow, r_destructure_iterator).
+handled(js, array_pattern,   controlflow, r_destructure_iterator).
+
+-- ...AND ALL FOUR CELLS ARE `checked`, which is the first time this layer can
+-- say so. The oracle is the same execution oracle the call graph uses — V8's own
+-- stack, read by test/fixtures/js-call/trace.mjs, which reads no rule and no
+-- scanner fact — and the fixture sites are counted per kind and per mechanism.
+-- Every one of these edges is in the model AND in the oracle, with `missed`
+-- empty over the whole corpus.
+checked(js, object_pattern,  controlflow, r_destructure_accessor, o_run_with_stack, 2).
+checked(js, rest_element,    controlflow, r_destructure_accessor, o_run_with_stack, 1).
+checked(js, spread_element,  controlflow, r_destructure_accessor, o_run_with_stack, 1).
+checked(js, spread_element,  controlflow, r_destructure_iterator, o_run_with_stack, 2).
+checked(js, array_pattern,   controlflow, r_destructure_iterator, o_run_with_stack, 1).

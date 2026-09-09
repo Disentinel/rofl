@@ -95,3 +95,235 @@ unknown_because(js, import_expression, callgraph, runtime_dependent).
 -- The shape axis therefore loads on top of this file together with
 -- facts/js-callgraph.rofl, which is where the kinds it splits are declared.
 -- Two worlds, and test/js-model.test.ts builds both.
+
+-- ===========================================================================
+-- THE FRAME, decided 2026-09-06 — queue item w_vocabulary_frame.
+--
+-- `vocabulary_gap[audit]` stood at SEVENTEEN on an honest checkout: kinds the
+-- scanner emits that `node_kind` does not declare. Measured, they are not one
+-- list but THREE, and calling them one is what made the item look like a chore
+-- rather than the decision its own note said it was.
+
+-- ---------------------------------------------------------------------------
+-- NOT CONSTRUCTS. Two are the scanner's own roots and one is trivia. No layer
+-- can have an opinion about any of them; declaring them would produce twelve
+-- waivers that describe the SCANNER rather than the language, and a waiver that
+-- describes the instrument is noise in a matrix that exists to describe JS.
+not_a_construct(file).
+not_a_construct(program).
+not_a_construct(comment_line).
+
+-- ---------------------------------------------------------------------------
+-- FOUR REAL CONSTRUCTS, declared and answered. `binary_expression` was already
+-- LOAD-BEARING before it was declared — facts/js-env.rofl carries
+-- `kind_baseline(js, binary_expression)` and `attr_needs(js, binary_expression,
+-- operator, "**", exponentiation)`, so the era layer has been reasoning about a
+-- kind the vocabulary did not contain. That is the sharpest instance of what
+-- this audit exists to catch.
+-- ...and the four `node_kind` rows are NOT here either, for the second half of
+-- the same reason. This file is the minimal world test/js-model.test.ts uses to
+-- test the MATRIX MACHINERY — boot plus these facts and nothing else — so a
+-- kind declared here with its verdicts elsewhere adds cells that world can never
+-- answer: `not_modelled` went 14 -> 22 and every pin in that file moved. The
+-- convention in force is `a file that makes a claim declares the kind`, and this
+-- file makes no claim about these four. See the four layer packs.
+
+-- THE SIXTEEN VERDICTS ARE NOT HERE. `orphan_claim[audit]` reported eight of
+-- them within one run: a claim about a cell that does not exist, because a
+-- world that declares `layer(callgraph)` and not `layer(modules)` has no cell
+-- for a modules verdict — and this file is loaded in every world. A verdict
+-- belongs in the pack that DECLARES ITS LAYER, which is the sentence
+-- w_vocabulary_home is about and the reason the kind rows get copied.
+-- See facts/js-callgraph.rofl, js-dataflow.rofl, js-modules.rofl and
+-- js-controlflow.rofl for the four rows each of these kinds carries.
+
+-- ---------------------------------------------------------------------------
+-- THE TEN TYPE NODES ARE DECLARED, 2026-09-07, and the deferral that stood here
+-- was wrong about which question they belong to.
+--
+-- WHAT IT SAID: "Declaring them costs FORTY cells that no rule can close,
+-- because what a type MEANS in this model is w_type_surface's question and that
+-- item is blocked behind the API surface."
+--
+-- WHAT A TYPE NODE MEANS AT THESE FOUR LAYERS IS NOT THAT QUESTION AT ALL. A
+-- `tstype_annotation` carries no runtime value, is never a callee, transfers no
+-- control, and is not a module construct — four exact facts about the LANGUAGE,
+-- the same class as `binary_expression`'s four, and the reason atom
+-- `a_type_only_no_runtime_value` had already been invented for exactly them.
+-- The deferral confused A NODE IN TYPE POSITION with THE TYPE OF A VALUE. They
+-- share a word and nothing else: `xs.at(-1)` needs to know that `xs` is an
+-- Array, and no `tstype_annotation` anywhere says so.
+--
+-- SEVENTH DESIGN NOTE IN THIS LOOP REFUTED BY A PROBE, and the first one where
+-- what was refuted was my own pricing of a decision rather than a claim about
+-- the store: forty unanswerable cells were the reason for the deferral, and
+-- forty answerable cells is what they were.
+--
+-- The `node_kind` rows are in the four layer packs, with their verdicts, for
+-- the same reason the frame's four are: a file that makes a claim declares the
+-- kind, and a verdict belongs in the pack that declares its layer.
+
+-- ---------------------------------------------------------------------------
+-- DECLARED AND NEVER PRODUCED, WITH THE REASON WRITTEN DOWN.
+--
+-- `kind_unexercised[audit]` demands a row here for a kind this vocabulary
+-- declares and this corpus does not contain. It is NOT an error — a vocabulary
+-- may be wider than any one corpus, exactly as `feature_unexercised` may be —
+-- but the reason has to be sayable, and writing it is what found the first
+-- entry below.
+kind_absent_ok(ts_string_keyword, a_synthetic_fixture_the_scanner_cannot_emit).
+-- ...and the other SEVEN rows are not here, for the reason `orphan_claim` gives
+-- about a verdict and `kind_absent_undeclared[audit]` gave about these within
+-- one run: a row belongs in the pack that DECLARES its kind, or a world loading
+-- one pack and not the other carries an excuse for something it has never heard
+-- of. See the four layer packs.
+--
+-- THE FIRST ROW IS THE ONE THAT PAID FOR THE AUDIT. `ts_string_keyword` is not
+-- a kind: the scanner snake-cases babel's `TSStringKeyword` to
+-- `tsstring_keyword`, with no underscore after `ts`, so nothing will ever
+-- produce this spelling. It has carried four verdicts across four packs since
+-- the vocabulary was written, all of them about a kind that does not exist,
+-- while the REAL spelling sat in the deferral list — so a reader asking whether
+-- TypeScript's string keyword was handled found a row saying yes. It stays,
+-- because two mutants in test/js-model.test.ts use it as a kind with a verdict
+-- and it is honestly declared now; what changed is that its status is a ROW
+-- instead of a comment in a different file. facts/js-env.rofl had already
+-- noticed and routed around it, gating both spellings with a note calling this
+-- one "a SYNTHETIC fixture with no corpus behind it" — a known oddity nobody
+-- had anywhere to record.
+
+-- ==========================================================================
+-- THE DENOMINATOR IS THE LANGUAGE, 2026-09-08, by the owner`s decision.
+--
+-- Until today the coverage matrix answered `89% of what we declare`, and the
+-- owner asked which features of the LANGUAGE are not covered. Measured by
+-- diffing babel`s concrete node types against this vocabulary: 93 core ES
+-- kinds, 76 declared, 30 missing - of which seven are the scanner`s own roots,
+-- deprecated aliases or proposals nobody ships.
+--
+-- ALL TWENTY-THREE REAL ONES ARE DECLARED HERE AND NONE IS ANSWERED. That is
+-- the point: a verdict written without a site is the thing CLAUDE.md forbids
+-- by name, so every cell these open is `not_modelled`/`not_yet` with an OWNER
+-- in facts/worklist.rofl. The matrix stops flattering itself, `unqueued`
+-- stays empty, and the work arrives one measured construct at a time.
+--
+-- THREE ARE NOT HERE AND EACH HAS A MEASURED REASON, not a preference:
+--   class_accessor_property  the scanner returns NO node for `accessor a = 1`
+--                            without the decorators plugin - measured
+--   import_attribute         scannable, but `import attributes` is ES2025 and
+--                            the highest environment on the scale is ts5 at
+--                            2022, so the feature would be unreachable
+--   export_default_specifier `export v from` is a Babel proposal and NO
+--                            environment in the table claims it, not even ts5
+-- ==========================================================================
+
+-- w_destructuring_rest_and_spread
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+-- w_class_fields
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+-- w_class_expression
+node_kind(js, class_expression).
+-- w_update_and_literals
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+-- w_meta_property
+node_kind(js, meta_property).
+-- w_export_specifier_forms
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+-- w_labelled_control
+node_kind(js, labeled_statement).
+-- w_inert_statements
+node_kind(js, empty_statement).
+node_kind(js, debugger_statement).
+node_kind(js, with_statement).
+-- w_directives
+node_kind(js, directive).
+node_kind(js, directive_literal).
+node_kind(js, interpreter_directive).
+
+-- NONE OF THEM IS IN THE CORPUS YET, and `kind_unexercised[audit]` demands a
+-- row saying so. The reason is the same for all twenty-three and it is not an
+-- excuse: they are declared to make the denominator the language, and each
+-- one`s fixture arrives with the item that claims its cells. The day a corpus
+-- produces one, `kind_absent_stale[audit]` names it and the row must go.
+
+-- THE FIRST FOUR EXCUSES ARE GONE, 2026-09-08, and the audit is what removed
+-- them: `w_destructuring_rest_and_spread` put `array_pattern`,
+-- `assignment_pattern`, `rest_element` and `spread_element` in the corpus, and
+-- `kind_absent_stale[audit]` named all four on the first run with the fixtures
+-- in and no verdict written. An excuse cannot outlive its cause.
+-- ...AND THREE MORE ARE GONE, 2026-09-08 (w_update_and_literals): the fixture
+-- at the end of test/fixtures/js-call/shapes.ts.txt puts `i++`, `--i`,
+-- `9007199254740993n`, `255n` and two regexp literals in the corpus, so
+-- `update_expression`, `big_int_literal` and `reg_exp_literal` are exercised
+-- and `kind_absent_stale[audit]` named all three the run the fixture landed.
+-- ...AND TWO MORE THE SAME DAY (w_class_expression, w_meta_property):
+-- `class_expression` and `meta_property` got corpus sites in a parallel
+-- branch. FIVE EXCUSES RETIRED IN ONE AFTERNOON BY THREE BRANCHES, none of
+-- which could see the others, and the merge is a UNION OF REMOVALS — which
+-- is what a table addressed by name buys and a table addressed by position
+-- would not have.
+-- ...AND FIVE MORE, THE SAME DAY AGAIN (w_class_fields): `class_property`,
+-- `class_private_property`, `class_private_method`, `private_name` and
+-- `static_block` all got sites. TEN EXCUSES RETIRED IN ONE AFTERNOON BY FOUR
+-- BRANCHES, none of which could see the others, and every merge of them was a
+-- UNION OF REMOVALS that git computed unaided — which is what a table
+-- addressed by NAME buys and a table addressed by position would not have.
+-- ...AND TWO ARE GONE, 2026-09-08 (w_export_specifier_forms): `export_specifier`
+-- and `export_namespace_specifier` have corpus sites now — `export { renamed as
+-- exposed }` in alpha.mjs, `export * as alphaAll from` in gamma.mjs, and both
+-- forms again in test/fixtures/js-mod/exp.ts — so their excuses had to go, which
+-- is what the paragraph above promised and `kind_absent_stale[audit]` named
+-- within one run rather than being noticed by hand.
+-- ...AND TWO MORE ARE GONE, 2026-09-08 (w_class_expression, w_meta_property):
+-- test/fixtures/js-call/shapes.ts.txt carries three class expressions — one
+-- anonymous, one named, one with a constructor — and one `new.target` beside
+-- one `import.meta`, so `class_expression` and `meta_property` are exercised
+-- and `kind_absent_stale[audit]` named both by name on the first run with the
+-- fixture in and no verdict yet written. That is the third time this audit has
+-- removed its own excuses rather than a reader noticing.
+-- THREE ROWS LEFT ON 2026-09-08 (w_labelled_control, w_inert_statements) and
+-- `kind_absent_stale[audit]` is what took them: the fixture at the end of
+-- test/fixtures/js-call/shapes.ts.txt puts a label, a `;` and a `debugger` in
+-- the corpus, so `labeled_statement`, `empty_statement` and `debugger_statement`
+-- are exercised and an excuse for their absence is a row about a world that no
+-- longer exists.
+-- ...AND THE FIVE ES2022 CLASS KINDS ARE GONE TOO, 2026-09-08 (w_class_fields),
+-- named by `kind_absent_stale[audit]` on the first run with the fixture in and
+-- no verdict written: the class at the end of test/fixtures/js-call/shapes.ts.txt
+-- puts `class_property`, `class_private_property`, `class_private_method`,
+-- `private_name` and `static_block` in the corpus. An excuse cannot outlive its
+-- cause, and this is the second time in one day the audit said so before a
+-- reader did.
+-- `with_statement` KEEPS ITS ROW and its reason is now a MEASUREMENT rather than
+-- a queue position. scanners/js_ast.ts parses every file with
+-- `sourceType: 'module'`; a module is strict; babel answers `'with' in strict
+-- mode. (1:0)` and the scan returns `ast_parse_error` with ZERO ast_node facts,
+-- so a `with` does not merely fail to appear — it DELETES the file it is in from
+-- the corpus. Measured the same day: the same source under
+-- `sourceType: 'script'` parses and emits `WithStatement`, so the blocker is a
+-- setting of this scanner and not a property of the parser — which is why the
+-- four `with_statement` cells are left OPEN AND UNBLOCKED under
+-- w_inert_statements rather than blocked or waived. See that item in
+-- facts/worklist.rofl for what the work actually is.
+kind_absent_ok(with_statement, a_a_module_is_strict_and_with_is_a_syntax_error).
+-- ...AND THE LAST THREE ARE GONE, 2026-09-08 (w_directives), named by
+-- `kind_absent_stale[audit]` on the first run with the fixtures in and no
+-- verdict yet written. `directive`, `directive_literal` and
+-- `interpreter_directive` have corpus sites now: delta.mjs opens with a
+-- hashbang and a program-level `'use strict'`, and shapes.ts.txt ends with a
+-- function-body directive prologue of two strings. THE FIXTURES ARE IN TWO
+-- FILES BECAUSE NEITHER FORM CAN BE APPENDED - a hashbang is legal on line 1
+-- and nowhere else (line 2 is `Unexpected token (2:0)` and the whole file
+-- becomes an `ast_parse_error`, measured), and a string is a Directive only
+-- while it is the head of a body. See facts/js-statements.rofl for the twelve
+-- verdicts they opened.

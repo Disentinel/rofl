@@ -464,6 +464,10 @@ model missed can still appear as a miss.
 
 ### 83 call sites, 17 shapes, and the census as the deliverable
 
+> Read as of that tick. The fixture has since grown three functions (see *Three
+> of four mutants survived*), so the census is now **93 sites, 71 of them a
+> plain identifier callee**, with the same 17 shapes.
+
 The classification is TOTAL — every site gets exactly one shape, and the
 catch-all is reachable and tested. 61 of 83 are a plain identifier callee; the
 rest spread across sixteen shapes with one or two sites each. Nine further
@@ -494,6 +498,10 @@ smaller answer that looks correct, and nothing goes red. A model quietly
 returning 26 edges with no frontier would be **indistinguishable from a complete
 one**. This one returns 26 edges and a list of the 11 it knows it cannot see.
 
+> **Those figures are this tick's and two of the eleven have since been closed;
+> the table below stands as the measurement that found them.** The current
+> reading is 43 / 34 / 9 — see *The higher-order hole, closed* below.
+
 ### Two rows in that table are worth more than the other nine
 
 **`apply2 -> leaf` and `apply2 -> mid` are attributed to `s_identifier` — a shape
@@ -508,6 +516,76 @@ different node kind entirely.
 
 Both say the same thing in two registers: **the frontier is finer than the
 classification**, and the census exposed that rather than hiding it.
+
+### The higher-order hole, closed — 2026-09-04, and what the kernel had to say
+
+The two rows above are now edges. `s_identifier` gained a third tier: an
+identifier callee that names a PARAMETER resolves through the value the caller
+passed at that index.
+
+    param_bind[code](F, PName, G) :- resolves[code](C, F),
+                                     passes_function[code](C, I, G, _),
+                                     ast_child[code](F, params, I, P),
+                                     ast_name[code](P, PName).
+
+    resolves[code](C, G) :- shape[code](C, s_identifier), callee_of[code](C, N),
+                            ast_name[code](N, Name), nearest_fn[code](Fn, C),
+                            param_bind[code](Fn, Name, G).
+
+    oracle 43 edges  |  model 34 edges
+    UNSOUND under-report:  9   (was 11)
+    over-approximation:    0   (unchanged)
+
+**THE QUESTION THIS ANSWERED WAS ABOUT THE KERNEL, NOT ABOUT JAVASCRIPT.** The
+two rules are a CYCLE — `param_bind` reads `resolves` to know which function a
+call site goes to, and `resolves` reads `param_bind` to answer a parameter
+callee — inside a program that already carries negation (`not closer`, `not
+has_shape`). Whether a stratified fixpoint would take it was measured before a
+line was written, and it does: the recursion is positive, the negations it
+stands on sit outside the cycle, `unstratified` stays empty and the fixpoint
+settles in about 2.7 s over the fixture. A KILL SET — `not rebound` inside the
+cycle, which is what a dataflow with strong updates needs — is REFUSED with a
+precise diagnostic naming every relation that can never settle, and ACCEPTED
+under `semantics(well_founded)` at about five times the cost. So the thing that
+looked like an expressive wall is a price, not a wall; what remains genuinely
+outside the language is aggregation (§8, so a non-powerset lattice has no join)
+and string CONSTRUCTION (`N is M + 1`'s defect, deliberately excluded).
+
+The analysis is **context-insensitive and says so**: a function called twice
+with two different callbacks binds its parameter to both, at every site. That is
+tier 1's scope blindness in a second register, and it is visible rather than
+averaged away — `ambiguous_call[audit]` reports a site resolving two ways.
+
+### Three of four mutants survived, and the remedy was the FIXTURE
+
+Written by asking where the oracle is structurally unable to look, which is the
+question this repository already records as the highest-yield one. The answer
+came back: at almost all of it.
+
+| mutant | what it targets | against the old fixture | after |
+|---|---|---|---|
+| drop the argument index | slot is content | **survived** (edge set identical) | +`applyFirst -> mid` |
+| sever the cycle | which call site targets F | **survived** (bindings 5 → 89, edges unmoved) | +2 invented edges |
+| resolve a parameter by name alone | which function encloses the call | **survived** | +2 invented edges |
+| delete tier 3 | liveness | killed, −4 edges | killed |
+
+The cause is one property of `apply2(leaf, mid, n)`: it calls BOTH of its
+function parameters, so leaf and mid run either way and the edge set cannot
+distinguish a model that carries the index from one that does not. **An oracle
+this precise was blind to three separate defects because of what the fixture
+happened to contain.**
+
+The remedy was therefore not a stronger assertion. `applyFirst`, handed `mid`
+and never calling it, and `useCb`, whose parameter shares the name `f` with
+apply2's and is handed a different function, each turn one of those defects into
+an edge the runtime never ran — the one thing an execution oracle can see. All
+four mutants now die, and one dies TWICE OVER: `ambiguous_call` moves 0 → 6 on
+the index mutant, which is the audit seeing what the oracle could not.
+
+**The rule that generalises**: when a mutant survives an exact oracle, ask what
+the CORPUS cannot express before touching the check. A fixture in which two
+defects have the same observable consequence is a fixture that cannot tell them
+apart, and no assertion written over it can either.
 
 ### The price of the cell, measured a second time
 
@@ -528,7 +606,7 @@ is judgement cells per closed cell.
 ### The second structural limit: the matrix is coarser than the frontier
 
 The call graph's frontier lives at **shape** granularity — 17 shapes over 83
-sites — while the matrix lives at **kind** granularity. `member_expression` is
+sites (93 today) — while the matrix lives at **kind** granularity. `member_expression` is
 ONE KIND and SIX DISTINCT SHAPES, each with its own verdict and its own reason.
 
 So the coverage matrix and the working frontier are not the same object, and the

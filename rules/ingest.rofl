@@ -49,6 +49,22 @@ indexed[code](F) :- ast_file[code](_, F).
 -- a file is on disk when it is not.
 indexed[code](F) :- cooled[code](F, _).
 
+-- ...OR WHEN IT REFUSED TO PARSE, AND THAT IS THE HALF THAT BITES.
+--
+-- `scanners/js_ast.ts` used to THROW on a file it could not read, and this
+-- loop caught it and wrote `cooled(F, "<unparsable>")` so the file left the
+-- frontier. The merge of 2026-09-09 made the refusal a FACT instead — the
+-- right change, and the sibling scanner had done it all along — and the throw
+-- stopped happening. So the catch stopped firing, the file counted as PARSED,
+-- no `ast_file` was ever emitted, and it stayed on the frontier: the loop
+-- would take the same eight files every tick, for ever, reporting progress.
+--
+-- A LOOP THAT REPORTS PROGRESS WHILE MAKING NONE is worse than one that
+-- stalls, and the stall detector could not see it because `parsed` was eight.
+-- The repair is here rather than in the driver: a file the scanner has RULED
+-- ON is indexed, whether the ruling was a tree or a refusal.
+indexed[code](F) :- ast_parse_error[code](F, _).
+
 -- --------------------------------------------------------------- the goal
 
 -- THE FRONTIER, and the list the caller asked for.

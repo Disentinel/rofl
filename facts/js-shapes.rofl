@@ -41,6 +41,17 @@ axis(shape).
 -- measured one tick earlier as 24 kinds x 2 layers = 48 cells, not one of them
 -- a question.
 --
+-- ...AND THAT REFUSAL WAS ABOUT A DIFFERENT `shape_in` SET, 2026-09-08
+-- (w_meta_property). It was measured with the CALLEE-shape vocabulary in the
+-- dataflow column, where every one of the thirty cells carries its neighbour's
+-- answer; the refusal is still correct about those thirty. `axis_applies(shape,
+-- dataflow)` is declared in facts/js-dataflow.rofl now, with exactly two values
+-- gated into that layer by `shape_in` — `new_target` and `import_meta` — and
+-- they carry DIFFERENT irreducible reasons, so `axis_earns[audit]` has a
+-- witness there rather than thirty rows of arithmetic. The applicability row is
+-- what makes that checkable in either direction, which is what this paragraph
+-- said it was for.
+--
 -- There is deliberately NO row for `modules`. A callee's shape is a fact about
 -- a call and says nothing whatever about a module graph; `importKind` is the
 -- local axis there and it is not this one. That absence is not a silence — it
@@ -85,6 +96,69 @@ shape_of(js, tsnon_null_expression,     s_non_null).
 shape_of(js, call_expression,           s_call_result).
 shape_of(js, optional_call_expression,  s_call_result).
 shape_of(js, new_expression,            s_new_result).
+-- THE SECOND ROLE OF THE SAME KIND, added 2026-09-04 with the constructor edge.
+-- `s_new_result` is `new C()` standing in the CALLEE position — `(new C())()`.
+-- `s_construct` is `new C()` doing what it usually does: constructing. Two
+-- roles, one kind, and the refinement column is what tells them apart — which
+-- is the same reading the modules layer already gave it, where the values are
+-- specifier shapes rather than callee shapes. Without this there is nowhere to
+-- record the constructor edge at all: the kind is split, so it has no unrefined
+-- cell, and the coarse `unknown_because` it used to carry became unreachable.
+shape_of(js, new_expression,            s_construct).
+-- ADDED 2026-09-05 with the generator protocol. A yield expression in CALLEE
+-- position is its own shape and it RESOLVES, so the kind is split and its
+-- verdict moves to the shape — the same construction `new_expression` has, and
+-- for the same reason: the kind means two different things at this layer.
+shape_of(js, yield_expression,          s_yield_result).
+shape_in(s_yield_result, callgraph).
+shape_in(s_construct, callgraph).
+handled(js, new_expression, s_construct, callgraph, r_construct).
+
+-- ---------------------------------------------------------------------------
+-- THE THIRD KIND THE COLUMN SPLITS, 2026-09-08 (w_meta_property) — and the
+-- first whose two values are not two ROLES of one construct but TWO CONSTRUCTS
+-- wearing one node kind. `new.target` is ES2015 and `import.meta` is ES2020,
+-- babel gives both `meta_property`, and the scanner has always emitted the
+-- discriminator: zero `ast_attr` rows and two identifier children, so
+-- (meta="new", property="target") against (meta="import", property="meta").
+-- `meta_form[code]` in rules/js-structure.rofl is the one relation that reads
+-- it; `child_needs` in facts/js-env.rofl reads the same child for the ERA gate
+-- and is keyed on a feature, so it cannot answer a question about the FORM.
+--
+-- THE ITEM'S NOTE SAID THIS COULD NOT BE DONE AND THE ROW IT CITED IS ONE FILE
+-- OVER. It reads "the shape axis that could split it applies to `callgraph`
+-- only (facts/js-shapes.rofl)", pointing at the paragraph above that declines
+-- `axis_applies(shape, dataflow)`. Measured: `axis_applies(shape, modules).`
+-- has been in facts/js-modules.rofl since the modules layer had shapes, and the
+-- column's whole design is ONE COLUMN WITH PER-LAYER VOCABULARIES — `shape_in`
+-- is what keeps a specifier shape out of the call graph. So the split was
+-- available at two of the three layers before this item started, and the third
+-- costs one `axis_applies` row, declared beside its values in
+-- facts/js-dataflow.rofl.
+shape_of(js, meta_property, new_target).
+shape_of(js, meta_property, import_meta).
+shape_in(new_target, callgraph).
+shape_in(import_meta, callgraph).
+
+-- AS A CALLEE, `new.target` IS THE CONSTRUCTOR OF THE CURRENT INVOCATION, which
+-- is a fact about the CALL and not about the text — the taxonomy's own
+-- `runtime_dependent`, and the second row in this repository to carry it.
+-- MEASURED rather than reasoned: in `class Derived extends Base {}`, `new.target`
+-- inside `Base`'s constructor is `Derived` under `new Derived()` and `Base`
+-- under `new Base()`; in a plain call it is `undefined`; and `new new.target()`
+-- reports the enclosing function as its caller (`Recur -> Recur`), so unlike an
+-- await this one is an ordinary edge whose CALLEE is undecidable. A rule
+-- pointing it at the enclosing function would be an under-report the moment a
+-- subclass exists, and the corpus cannot even discriminate the question:
+-- measured, 246 call targets and 14 transfer targets with an EMPTY intersection,
+-- so no function here is both called and constructed.
+unknown_because(js, meta_property, new_target, callgraph, runtime_dependent).
+-- `import.meta` IS NEVER A CALLEE. `import.meta()` is a TypeError, and the only
+-- call-graph position it occupies is the RECEIVER of a member call — which is
+-- `member_expression x s_member_on_meta` and answered there, with the site
+-- `import.meta.resolve(spec)` in shapes.ts. Waived here rather than left as
+-- backlog, because there is no form to model.
+ignored(js, meta_property, import_meta, callgraph, a_import_meta_is_never_a_callee).
 shape_of(js, import,                    s_dynamic_import).
 shape_of(js, sequence_expression,       s_sequence).
 shape_of(js, parenthesized_expression,  s_parenthesized).
@@ -105,6 +179,21 @@ shape_of(js, member_expression, s_member_on_array).
 shape_of(js, member_expression, s_member_on_new).
 shape_of(js, member_expression, s_member_on_object_literal).
 shape_of(js, member_expression, s_member_on_literal).
+-- EIGHT SPLIT OUT OF THE CATCH-ALL, 2026-09-04. `s_member_on_other` carried
+-- every object position the classifier did not name, and a probe with one site
+-- per position showed the bucket holding FOUR different answers at once: four
+-- forms that already resolved, two that needed one value rule each, one owned
+-- by the control-form item and one that is the standard library. A single cell
+-- reported `not_yet` for all of them.
+shape_of(js, member_expression, s_member_on_conditional).
+shape_of(js, member_expression, s_member_on_sequence).
+shape_of(js, member_expression, s_member_on_logical).
+shape_of(js, member_expression, s_member_on_assignment).
+shape_of(js, member_expression, s_member_on_await).
+shape_of(js, member_expression, s_member_on_template).
+shape_of(js, member_expression, s_member_on_cast).
+shape_of(js, member_expression, s_member_on_non_null).
+shape_of(js, member_expression, s_member_on_meta).
 shape_of(js, member_expression, s_member_on_other).
 shape_of(js, member_expression, s_computed_literal_key).
 shape_of(js, member_expression, s_computed_dynamic_key).
@@ -137,6 +226,84 @@ handled(js, function_expression,       s_iife,             callgraph, r_call_edg
 handled(js, arrow_function_expression, s_iife,             callgraph, r_call_edge).
 handled(js, member_expression,         s_member_on_ident,  callgraph, r_call_edge).
 
+-- THREE MORE TICKED 2026-09-04, by ONE rule rather than three. `denotes` in
+-- rules/js-callgraph.rofl answers `what object does this expression denote`,
+-- and the shapes below are entry points into it rather than separate cases:
+-- `a.b.c()` is the relation calling itself, `this.m()` is a class method's
+-- receiver, `o?.m()` needed no rule at all because the member kinds were
+-- already both in the vocabulary. `r_denotes` is a NEW rule id and not
+-- `r_call_edge`, because a cell's rule id is what a reader follows to find out
+-- WHY the cell is ticked, and these three are ticked by different reasoning.
+handled(js, member_expression,          s_member_on_member, callgraph, r_denotes).
+handled(js, member_expression,          s_member_on_this,   callgraph, r_denotes).
+handled(js, optional_member_expression, s_optional_member,  callgraph, r_denotes).
+
+-- THREE MORE, 2026-09-04, and only one of them cost a rule. `s_member_on_super`
+-- needed `super_of` in the dataflow pack — `super` denotes the class ABOVE the
+-- one you are in. `s_member_on_new` and `s_member_on_object_literal` needed
+-- nothing at all: they were unmodelled because the CORPUS had no site, and two
+-- sites in shapes.ts showed the rules had covered them all along.
+-- A TEMPLATE AS A COMPUTED KEY, closed 2026-09-08 when the scanner's contract
+-- grew one property. No rule was written for it: `selects[flow]` already reads
+-- a computed key through `may_be_lit`, and a template with no interpolation is
+-- a string written the other way. Both member kinds close on the same arm.
+handled(js, member_expression,          s_computed_template_key, callgraph, r_template_key).
+handled(js, optional_member_expression, s_computed_template_key, callgraph, r_template_key).
+handled(js, member_expression, s_member_on_super,          callgraph, r_denotes).
+handled(js, member_expression, s_member_on_new,            callgraph, r_denotes).
+handled(js, member_expression, s_member_on_object_literal, callgraph, r_denotes).
+
+-- SIX MORE, 2026-09-04, and the split is what made the verdicts differ.
+-- FOUR NEEDED NOTHING BUT A NAME — the value layer already saw through a
+-- conditional, a sequence and both TypeScript wrappers, so the sites resolved
+-- the moment the classifier stopped lumping them together.
+handled(js, member_expression, s_member_on_conditional, callgraph, r_denotes).
+handled(js, member_expression, s_member_on_sequence,    callgraph, r_denotes).
+handled(js, member_expression, s_member_on_cast,        callgraph, r_denotes).
+handled(js, member_expression, s_member_on_non_null,    callgraph, r_denotes).
+-- TWO COST ONE VALUE RULE EACH, in rules/js-dataflow.rofl. `a || b` is the
+-- same may-set as `c ? a : b` and was invisible next to it; `(x = o)` has the
+-- value of its right-hand side, and ONLY for a plain `=` — the operator guard
+-- is the difference between an assignment and a sum.
+handled(js, member_expression, s_member_on_logical,     callgraph, r_value_logical).
+handled(js, member_expression, s_member_on_assignment,  callgraph, r_value_assign).
+
+-- `super()` THE CALL, 2026-09-04 (queue item w_cg_call_result). The callee's
+-- value is the parent class and what it reaches is that class's constructor,
+-- walking up the extends chain past any class that declares none. The residue
+-- — a chain with no explicit constructor anywhere — is `no_source_target` and
+-- is recorded on the FRONTIER in facts/js-callgraph.rofl, which is where a
+-- reason may stand beside a tick.
+handled(js, super, s_super, callgraph, r_super_ctor).
+
+-- ...and the dynamic-import shape WAIVED, because this parser cannot produce a
+-- site for it at all. The reason is in facts/js-callgraph.rofl beside the
+-- frontier row it replaces.
+ignored(js, import, s_dynamic_import, callgraph, a_babel_emits_no_import_callee).
+
+-- THE SYNTACTIC WRAPPERS, 2026-09-04, and all of them by ONE rule rather than
+-- five: `resolves[code](C, F) :- callee_of(C, N), may_be_node[flow](N, F),
+-- fn_node(F)` asks what the callee expression may BE instead of recognising how
+-- it is spelled. The dataflow layer already sees through a cast, an assertion,
+-- a sequence and a conditional, so the call graph did not have to learn any of
+-- them — and the next wrapper the grammar grows will need no rule here either.
+handled(js, tsnon_null_expression,  s_non_null,     callgraph, r_value_callee).
+handled(js, tsas_expression,        s_ts_as,        callgraph, r_value_callee).
+handled(js, sequence_expression,    s_sequence,     callgraph, r_value_callee).
+handled(js, conditional_expression, s_conditional,  callgraph, r_value_callee).
+handled(js, call_expression,          s_call_result, callgraph, r_value_callee).
+handled(js, optional_call_expression, s_call_result, callgraph, r_value_callee).
+
+-- AND ONE WAIVER, WITH A MEASUREMENT BEHIND IT. `s_parenthesized` has no site
+-- and never will: babel does not emit ParenthesizedExpression under this
+-- parser configuration, so `(f)(1)` reaches the classifier as a plain
+-- identifier callee. The shape was declared from the GRAMMAR and the parser is
+-- not the grammar — the same gap docs/modelling-a-language.md records as
+-- `babel is not the language`. If the scanner ever turns that option on, a site
+-- appears and this waiver goes stale, which is the property a reason should
+-- have.
+ignored(js, parenthesized_expression, s_parenthesized, callgraph, a_babel_emits_no_parenthesized_node).
+
 -- ---------------------------------------------------------------------------
 -- TYPED REASONS, only where the default `not_yet` would be a LIE. Same
 -- convention as facts/js-kinds.rofl: every other not_modelled shape takes
@@ -148,9 +315,137 @@ handled(js, member_expression,         s_member_on_ident,  callgraph, r_call_edg
 -- nothing else on the list may borrow the reason: `a.b.c()` is merely
 -- unfinished, and `o[`fixed`]()` is knowable at parse time and blocked on the
 -- scanner's scalar-only contract, which is ours.
-unknown_because(js, member_expression,          s_computed_dynamic_key, callgraph, runtime_dependent).
-unknown_because(js, optional_member_expression, s_computed_dynamic_key, callgraph, runtime_dependent).
+-- THESE TWO CELLS WERE TICKED 2026-09-04 AND THEIR REASON MOVED. `o[k]()` used
+-- to be `runtime_dependent` at CELL level — the one irreducible verdict this
+-- layer spent — and the value layer then resolved two of its three sites: a
+-- const key in the same file, and a literal passed as an argument. A cell with
+-- resolved sites is `handled`; what stays unknowable is the RESIDUE, and the
+-- residue is where `runtime_dependent` belongs. `bag[key]` with an ambient
+-- `key` is still irreducible and is recorded as such in facts/js-callgraph.rofl.
+--
+-- This is f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable
+-- coming true, and it was found by an audit rather than by remembering.
+handled(js, member_expression,          s_computed_dynamic_key, callgraph, r_value_key).
+handled(js, optional_member_expression, s_computed_dynamic_key, callgraph, r_value_key).
+handled(js, member_expression,          s_computed_literal_key, callgraph, r_value_key).
+handled(js, optional_member_expression, s_computed_literal_key, callgraph, r_value_key).
+handled(js, member_expression,          s_member_on_call,       callgraph, r_denotes).
 
 -- the receiver is a host literal and its methods belong to the runtime rather
 -- than to any corpus this analyser can be pointed at
 unknown_because(js, member_expression, s_member_on_array, callgraph, out_of_scope).
+-- ...and `"str".toUpperCase()`, which answers through the same built-in
+-- prototype. REVERTED TO not_yet 2026-09-04: I wrote out_of_scope here and
+-- scope is the owner's word. The neighbour above carries out_of_scope from
+-- before this branch and is left exactly as it was — changing somebody else's
+-- recorded decision on a guess is the same overreach in the other direction.
+-- `scope_unowned[audit]` names both, and it names them until they are settled.
+-- ATTRIBUTED, AND STILL EDGELESS — w_env_api_surface, 2026-09-08, and the two
+-- halves of that sentence are the whole result. `stdlib_member[audit]` names
+-- the residue; `lib_call[code]` in rules/js-env-api.rofl now says WHICH library
+-- method it is and SINCE WHEN, from facts/js-lib-surface.rofl, which
+-- scanners/ts_lib.ts generates from TypeScript`s own lib.es*.d.ts — 130 members
+-- of eight prototypes, each dated by the earliest lib file that declares it.
+--
+-- SO THE REASON CHANGES FROM `not_yet` TO `no_source_target`, which is a move
+-- from OURS to IRREDUCIBLE and takes the cell out of the work queue. That is
+-- not a waiver: the call really does transfer control, into `Array.prototype.join`,
+-- and there is no node in this program for an edge to reach. What was `not_yet`
+-- meant `somebody could still do something here`, and after this item nobody
+-- can — every rule that could be written has been, and the remaining gap is
+-- that the target has no source.
+--
+-- WHAT THE ITEM DELIVERED INSTEAD OF AN EDGE is an ANSWER at the era layer:
+-- `lib_unsupported[audit]` reports that `[1,2,3].at(0)` is invalid under es5,
+-- es2015, es2016 and es2020 and valid under ts5, that `'a'.replaceAll` is
+-- invalid under everything up to es2020, and that `1n.toString()` is invalid
+-- below es2020 — three methods, three different years, discriminated. That is
+-- the half of the environment question the item`s own note called `what syntax
+-- cannot answer`.
+unknown_because(js, member_expression, s_member_on_literal, callgraph, no_source_target).
+
+-- TWO OF THE SPLIT ARE OPEN AND EACH IS OWNED SOMEWHERE ELSE, which is the
+-- point of splitting them out rather than leaving them in a bucket whose
+-- verdict would have to be one word for both.
+--
+-- `(await p).m()` CLOSED 2026-09-04 by the item that owned it: `await` became
+-- transparent to the value layer and the site resolved with no member rule
+-- touched. `shape_stale[audit]` named the excuse the same run, which is the
+-- healthy direction for an excuse to rot in.
+handled(js, member_expression, s_member_on_await, callgraph, r_await_transparent).
+-- `` `k${n}`.concat() `` — the receiver is a String and `concat` answers
+-- through the built-in prototype. Not a value in this program at all; it is
+-- the standard library, which is `w_env_api_surface`.
+unknown_because(js, member_expression, s_member_on_template, callgraph, no_source_target).
+
+-- AND THE CATCH-ALL ITSELF IS NOW EMPTY, WHICH IS ITS JOB. Every object
+-- position the probe found has a name of its own, so `s_member_on_other` holds
+-- nothing — and it must not read `not_yet`, because there is no form to model:
+-- the shape is the CATCHER, and a catcher with something in it is news rather
+-- than a backlog item. `catch_all_occupied[audit]` in rules/js-callgraph.rofl
+-- is that news, and this waiver is what stops the queue offering work whose
+-- subject nobody has seen. The pair is the same construction `s_unclassified`
+-- already has one level up, and it is the honest version of the `absent` that
+-- `s_parenthesized` showed means two different things.
+-- `import.meta.resolve(spec)` — THE HOST'S MEMBER AND NOT THE LANGUAGE'S,
+-- 2026-09-08 (w_meta_property). Same atom as the two above and a different
+-- reason for it: those two reach a method the standard library declares and
+-- this model cannot see, and `lib_call[code]` names them from
+-- `lib.es*.d.ts`. This one reaches a method NO `lib.es*` file declares at all —
+-- measured, `interface ImportMeta` in `lib.es5.d.ts` is empty and `resolve`
+-- lives in `lib.dom.d.ts` and `@types/node`, which `releaseOf` refuses by
+-- construction. So `lib_call` is silent here on purpose and
+-- `stdlib_unattributed[audit]` stays silent too, because the receiver has no
+-- `builtin_prototype`: it is not a prototype the language owns.
+unknown_because(js, member_expression, s_member_on_meta, callgraph, no_source_target).
+
+ignored(js, member_expression, s_member_on_other, callgraph, a_catch_all_empty_by_design).
+
+-- ---------------------------------------------------------------------------
+-- WHICH LAYER EACH VALUE BELONGS TO. The column is shared across layers and
+-- its vocabulary is not: every value below is a CALLEE shape, and a callee
+-- shape is a fact about a call. facts/js-modules.rofl declares its own values
+-- for the same column, and `shape_in` is what keeps the two sets from minting
+-- each other's cells.
+shape_in(s_call_result, callgraph).
+shape_in(s_computed_dynamic_key, callgraph).
+shape_in(s_computed_literal_key, callgraph).
+shape_in(s_computed_template_key, callgraph).
+shape_in(s_conditional, callgraph).
+shape_in(s_dynamic_import, callgraph).
+shape_in(s_identifier, callgraph).
+shape_in(s_iife, callgraph).
+shape_in(s_member_on_array, callgraph).
+shape_in(s_member_on_call, callgraph).
+shape_in(s_member_on_ident, callgraph).
+shape_in(s_member_on_literal, callgraph).
+shape_in(s_member_on_member, callgraph).
+shape_in(s_member_on_new, callgraph).
+shape_in(s_member_on_object_literal, callgraph).
+shape_in(s_member_on_conditional, callgraph).
+shape_in(s_member_on_sequence, callgraph).
+shape_in(s_member_on_logical, callgraph).
+shape_in(s_member_on_assignment, callgraph).
+shape_in(s_member_on_await, callgraph).
+shape_in(s_member_on_template, callgraph).
+shape_in(s_member_on_cast, callgraph).
+shape_in(s_member_on_non_null, callgraph).
+shape_in(s_member_on_meta, callgraph).
+shape_in(s_member_on_other, callgraph).
+shape_in(s_member_on_super, callgraph).
+shape_in(s_member_on_this, callgraph).
+shape_in(s_new_result, callgraph).
+shape_in(s_non_null, callgraph).
+shape_in(s_optional_member, callgraph).
+shape_in(s_parenthesized, callgraph).
+shape_in(s_sequence, callgraph).
+shape_in(s_super, callgraph).
+shape_in(s_ts_as, callgraph).
+shape_in(s_unclassified, callgraph).
+
+-- AN EXCUSE IS COPIED WHEREVER ITS KIND IS DECLARED, for the same reason the
+-- `node_kind` rows are: a world loading this pack and not the other declares
+-- the kind and would carry no reason for its absence.
+-- `kind_unexercised[audit]` named the missing copies within one run.
+kind_absent_ok(import, a_babel_emits_no_import_callee).
+kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).

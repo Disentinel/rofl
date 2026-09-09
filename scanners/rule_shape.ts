@@ -84,7 +84,16 @@ function programs(): { group: string; path: string }[] {
  *  relation the rule concludes, and the relation the premise reads. Rule ids
  *  are hashes and line numbers move, so neither is part of the identity — the
  *  line-anchor trap this repository has recorded twice. */
-export interface Cross { group: string; file: string; head: string; premise: string; }
+export interface Cross {
+  group: string; file: string; head: string; premise: string;
+  /** Every positive premise of the rule, in PLAN order. The cost model
+   *  (facts/js-cost.rofl) keys rules by an opaque hash and this scanner keys
+   *  them by file and index, so neither id joins to the other; the ordered
+   *  relation list does, exactly. Matching on the HEAD alone conflates rules
+   *  that share one — `may_be_node` has nine — and a sum taken that way
+   *  credits a cross product with the cost of its innocent namesakes. */
+  body: string[];
+}
 
 export interface Analysis {
   facts: string[];
@@ -212,7 +221,10 @@ for (const { group, path } of programs()) {
         for (const v of vs) if (bound.has(v)) { shares = true; break; }
         if (shares) facts.push(`pos_shares(${q(site)}).`);
         if (!shares && !firstPos && vs.size > 0) {
-          cross.push({ group, file: rel, head: c.head.rel, premise: b.lit.rel });
+          cross.push({
+            group, file: rel, head: c.head.rel, premise: b.lit.rel,
+            body: plan.flatMap((e) => (e.t === 'pos' ? [e.lit.rel] : [])),
+          });
         }
         firstPos = false;
         for (const a of b.lit.args) bindAll(a);

@@ -1,0 +1,179 @@
+// globals.mjs.txt — THE ES GLOBALS, ONE SITE PER CLAIM.
+//
+// WHY A NEW FIXTURE RATHER THAN A LINE IN alpha.mjs. Measured 2026-09-09 over
+// the five files of test/fixtures/js-call: the corpus contains `String(n)`,
+// `new Error(...)`, `new Promise(...)` and `Symbol.iterator`, and NOT ONE call
+// to a static of an ES global — no `JSON.parse`, no `Object.entries`, no
+// `Math.max`, no `Promise.all`. So the static surface had no site at all and
+// every claim about it would have been vacuous. This file supplies the sites.
+//
+// IT IS `.txt` AND NOT `.mjs` ON PURPOSE. test/js-modules.test.ts imports every
+// `.mjs` in test/fixtures/js-call with node and compares default exports
+// set-for-set; a sixth module there is another branch's oracle changing under
+// it. The price is stated rather than hidden: nothing RUNS this file, so its
+// claims are checked against TypeScript's declarations and not against V8.
+//
+// EVERY SITE BELOW EARNS ITS PLACE BY BEING THE ONLY ONE OF ITS KIND. The four
+// declaration forms, the three surfaces, the two shapes of a static, both
+// residues, and the one negative control that makes the free-name test
+// load-bearing.
+
+// --------------------------------------------------------------------------
+// 1. A NAMESPACE OBJECT — `declare var JSON: JSON`. Not new-able, no prototype
+//    surface, and its two members are the whole of it. es5.
+export function roundTrip(text) {
+  return JSON.stringify(JSON.parse(text));
+}
+
+// 2. STATICS OF A CONSTRUCTOR BINDING, AT THREE DIFFERENT RELEASES, which is
+//    what makes the era gate a comparison rather than a slope: `keys` is es5,
+//    `entries` es2017 and `hasOwn` es2022, all three off the same global.
+export function describe(bag) {
+  return Object.keys(bag).length + Object.entries(bag).length
+       + (Object.hasOwn(bag, 'lid') ? 1 : 0);
+}
+
+// 3. es2020 AND es2021 OFF ANOTHER CONSTRUCTOR, so the gate discriminates two
+//    globals rather than two members of one.
+export function settleAll(work) {
+  return Promise.allSettled(work).then((r) => Promise.any(r));
+}
+
+// 4. CALLABLE AND DATA ON ONE GLOBAL. `Math.max` is a MethodSignature in
+//    TypeScript's declaration and `Math.PI` is a PropertySignature, and that is
+//    the whole of the difference the model reads.
+export function widest(a, b) {
+  return Math.max(a, b) * Math.PI;
+}
+
+// 5. THE SAME SPLIT WHERE IT MATTERS MOST. `Symbol.for` is a call and
+//    `Symbol.iterator` is a KEY — a well-known symbol exists to be written as a
+//    computed property name, and nothing about the spelling says so.
+export const tagged = {
+  [Symbol.iterator]() { return { next: () => ({ done: true }) }; },
+  stamp: Symbol.for('rofl.globals'),
+};
+
+// 6. THE NAMESPACE-BLOCK FORM — `declare namespace Reflect`. TypeScript declares
+//    no variable for it at all, so a walk that only reads `declare var` finds
+//    `Math` and misses this. es2015.
+export function ownedKeys(target) {
+  return Reflect.ownKeys(target);
+}
+
+// 7. A CONSTRUCTOR BINDING CONSTRUCTED, whose INSTANCE surface this model does
+//    not carry: there is no `kind_prototype` row for a `new_expression`, so
+//    `holder.set` is not a `lib_member` question and the missing
+//    `lib_global_prototype("Map", ...)` row is where that shows.
+export function fresh(k, v) {
+  const holder = new Map();
+  holder.set(k, v);
+  return holder;
+}
+
+// 8. A STATIC THE ECMASCRIPT SURFACE DOES NOT CARRY. `Error.captureStackTrace`
+//    is V8's, not the language's — TypeScript declares it in @types/node and
+//    nowhere in lib.es*.d.ts — so this is the positive control for the residue
+//    audit, which would otherwise be empty and unfalsifiable.
+export function whereFrom(holder) {
+  Error.captureStackTrace(holder, whereFrom);
+  return holder;
+}
+
+// 9. A FREE GLOBAL THE ECMASCRIPT SURFACE DOES NOT KNOW AT ALL. `console` is
+//    the runtime's and `globalThis` is a compiler intrinsic no lib.es*.d.ts
+//    declares. Both land in `global_unattributed[audit]`, which is the relation
+//    the runtime half of this question joins against.
+export function announce(n) {
+  console.log(n);
+  return globalThis.crypto;
+}
+
+// 10. THE NEGATIVE CONTROL, AND IT IS WHAT MAKES THE FREE-NAME TEST MEAN
+//     ANYTHING. `Set` here is a local binding that shadows the global of the
+//     same name; `Set.of` is a call on a value in this program and must NOT be
+//     attributed to the standard library. Without this line, `not
+//     declares_name` could be deleted and every assertion in the file would
+//     still pass.
+export function shadowed(rows) {
+  const Set = { of: (xs) => xs.length };
+  return Set.of(rows);
+}
+
+// 11. A FORM THAT IS NOT CONSTRUCTIBLE, CONSTRUCTED. `new Math()` is a
+//     TypeError at runtime and the model can now say why: `Math` is a
+//     `namespace_object` and there is no constructor interface behind it. The
+//     function is never called; the SITE is the point.
+export function neverRun() {
+  return new Math();
+}
+
+// 12. A CONSTRUCTOR BINDING CALLED AS A FUNCTION AND NOT CONSTRUCTED, which is
+//     a third thing to do with a binding and needs its own relation: `new
+//     BigInt(n)` is a TypeError and `BigInt(n)` is the whole point of it. It is
+//     also es2020, so the BINDING gate has something to say about four
+//     environments rather than only about es5.
+export function asBig(n) {
+  return BigInt(n);
+}
+
+// 13. THE CEILING, AS A LINE RATHER THAN AS A SENTENCE. `Infinity` is a
+//     `plain_value` global and this reference is neither the object of a member
+//     expression nor a callee, so `global_ref_position` cannot see it. The
+//     model is silent here, and test/js-globals.test.ts asserts the silence by
+//     name so that it is a stated limit rather than an unnoticed one.
+export function ceiling(n) {
+  return n > 0 ? n : Infinity;
+}
+
+// 14. A CONSTRUCTED RECEIVER REACHED THROUGH A BINDER
+//     (w_prototype_of_a_constructed_value). `RegExp` is an ES global with a
+//     bridge row, so the instance HAS a prototype this model can name; the
+//     receiver is a bound name, so the answer has to travel the binder arm of
+//     `may_be_node` rather than being read off the construction site.
+export function matches(src, s) {
+  const re = new RegExp(src, 'g');
+  return re.test(s);
+}
+
+// 15. A CONSTRUCTED RECEIVER WRITTEN IN PLACE, AND THE METHOD IS DEPRECATED.
+//     `new String(s).substr(0, 2)` reaches `lib_call_deprecated[audit]` through
+//     a construction, which is the deprecation question asked of a surface that
+//     could not be reached at all before this item.
+export function head(s) {
+  return new String(s).substr(0, 2);
+}
+
+// 16. THE SAME, WHERE THE ERA GATE HAS SOMETHING TO SAY. `Array.prototype.fill`
+//     is es2015, so `new Array(n).fill(0)` is a `lib_unsupported[audit]` row
+//     under es5 and not under es2015 — a constructed receiver dated on the same
+//     scale as a literal one.
+export function padded(n) {
+  return new Array(n).fill(0);
+}
+
+// 17. THE IDENTITY AND NOT THE SPELLING, ONE LEVEL PAST SITE 10. `Set` there is
+//     a local OBJECT shadowing a global; this is a local CLASS shadowing one and
+//     being CONSTRUCTED. `new Number(n)` builds a value of THIS program's class,
+//     so it must reach neither the ES binding nor the `number` prototype —
+//     `free_global` is `not declares_name`, and `declares_name` is file-scoped,
+//     so the whole file loses the global and that is the safe direction. The
+//     call is left unresolved on purpose: a model matching on the SPELLING would
+//     attribute `.toFixed` to the standard library, and this one must not.
+class Number { constructor(n) { this.n = n; } }
+export function boxed(n) {
+  return new Number(n).toFixed(2);
+}
+
+// 18. THE CEILING OF SITE 14-16, AS A LINE RATHER THAN AS A SENTENCE. A
+//     construction whose callee is a MEMBER EXPRESSION reaches nothing:
+//     `global_ref_position` names five positions and `new Intl.NumberFormat()`
+//     puts the global in the `object` of the callee rather than in the callee,
+//     so the model sees the STATIC `Intl.NumberFormat` and never the
+//     construction. `.format` is therefore outside every relation this item
+//     added — not even `es_instance_unattributed[audit]`, which is the row
+//     `holder.set` gets. A namespaced constructor is the commonest shape in the
+//     language this model cannot follow, and the silence is asserted by name.
+export function money(n) {
+  return new Intl.NumberFormat('en').format(n);
+}

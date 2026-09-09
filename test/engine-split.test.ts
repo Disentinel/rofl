@@ -175,7 +175,7 @@ test('MUTANTS: what the drift gate catches, and what it does not', () => {
 // evaluation that runs out of MEMORY says so instead of being killed). Every
 // counter below that moved carries the reason it moved, because a census
 // updated without one stops being a census and becomes an echo.
-test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', () => {
+test('the split: mechanism is 723 of 1024 code lines, policy 185 — by query', () => {
   // 778 -> 826 (+48): the whole of the space wall, both halves of it — the
   // charge inside solveBody's accumulator loop and the charge on every row
   // written, host-written rows included.
@@ -231,7 +231,26 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // reflection ABOUT its rules, and asking a sealed body refuses with a `hole`
   // rather than answering empty. The nine lines are the withhold at the door
   // and the standing hole; the policy half is the declaration being read.
-  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 968);
+  // 968 -> 995 (+27), MECH 696 -> 723, and `pol` DOES NOT MOVE — 173 before and
+  // after, which is the classification's own negative control and the reason
+  // this merge is reported here as a line rather than as a surprise. The +27
+  // arrived from the modeljs branch when the two kernels were merged on
+  // 2026-09-07: `evalOrder` and the five lines its caller gained, declared
+  // ABSORBED by `solveBody` in scanners/engine_split.ts, so no definition slid
+  // into a neighbouring block and inherited a category nobody chose — which is
+  // the event this file stopped pinning line ranges in order to catch.
+  // ORDERING A BODY IS MACHINERY. `planBody` decides WHERE a negation may
+  // stand and reads as policy; deciding in which order to solve the literals
+  // that are already there decides nothing about what the program means, and
+  // the scanner agrees without being told.
+  // 995 -> 1024 (+29), MECH 723 UNCHANGED, `pol` 156 -> 185: the cross-product
+  // half of `planBody`. A positive literal that shares no variable with the
+  // literals before it is a CROSS PRODUCT where it stands, and it is held until
+  // one of them binds something it names. THE MECH COUNT NOT MOVING BY A LINE
+  // is the claim: deciding where a literal may stand is the same kind of
+  // sentence as deciding where a negation may stand, and the scanner classified
+  // all 29 lines that way without being told.
+  assert.equal(rows(W, 'code_line(engine_ts, L, K)'), 1024);
   // 491 -> 526 (+35): all of it mechanism — chargeRow, the accumulator's
   // try/finally and its release, the wholesale price on the unknown gap, and
   // the two fields BudgetExhausted now carries to say WHICH wall and WHERE.
@@ -271,7 +290,7 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // 694 -> 693 (-1): `matchPremise`'s per-argument unify loop is one
   // `unifyAll` call now, and the arity guard went into it. Mechanism, not
   // policy — the line decided nothing.
-  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 696);
+  assert.equal(rows(W, 'block(engine_ts, L, mech)'), 723);
   // 124 -> 126 (+2), and this is the one worth reading twice. The two lines
   // are NOT the wholesale gap decision, which is where I first said they were
   // and which the block table refutes: that decision is inside the alternating
@@ -285,7 +304,8 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // meant "waiting on a fact family that does not exist", and the two families
   // it waited for now exist as seeds.
   // 181 -> 152: four blocks shrank to readings, and the asking machinery left.
-  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 156);
+  // 156 -> 185 (+29): the cross-product hold, its release and its barrier.
+  assert.equal(rows(W, 'block(engine_ts, L, pol)'), 185);
   // 92 -> 93 (+1): `classify` reads the plan instead of the written body, and
   // that block is the range-restriction analysis — POL*, since it needs the
   // rules themselves rather than only a program's text.
@@ -321,7 +341,8 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // 246 -> 244: `classify` is shorter by the fold and longer by the comment
   // that says which of the two unsafeties is still written here.
   // 244 -> 169.
-  assert.equal(rows(W, 'policy(engine_ts, L)'), 173);
+  // 173 -> 202 (+29): the cross-product hold, all of it in `planBody`'s block.
+  assert.equal(rows(W, 'policy(engine_ts, L)'), 202);
   // AND THE SPLIT THAT SAYS WHAT CAN MOVE. `decides` is policy whose judgement
   // lives in this code; `enforces` is policy that reads a judgement the rules
   // already derived and acts on it — `checkUnstratified` reads `unstratified/1`
@@ -344,7 +365,11 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   // block because it sat below it in the file, and it is declared MECH and
   // moved above it now. Four decisions remain in the host: where a negation
   // may stand, the opaque seed, the fingerprint hits, and the run gate.
-  assert.equal(rows(W, 'decides(engine_ts, L)'), 84);
+  // 84 -> 113 (+29): still four decisions, and the fourth got bigger. Where a
+  // literal may stand is the same judgement as where a negation may stand --
+  // `planBody` is the one block that answers both -- so the cross-product hold
+  // adds lines to `decides` and none to `enforces`.
+  assert.equal(rows(W, 'decides(engine_ts, L)'), 113);
   assert.equal(DECLS.filter((d) => d.role === 'decides').length, 4);
   assert.equal(rows(W, 'enforces(engine_ts, L)'), 89);
   assert.equal(rows(W, 'decides(engine_ts, L)') + rows(W, 'enforces(engine_ts, L)'),
@@ -357,9 +382,9 @@ test('the split: mechanism is 696 of 968 code lines, policy 173 — by query', (
   assert.equal(rows(W, 'block(engine_ts, L, wishful)'), 0);
   assert.equal(rows(W, 'block(other_file, L, mech)'), 0);
   // and the host's own arithmetic agrees with the store, so neither is alone
-  assert.equal(S.byCat['MECH'].code, 696);
-  assert.equal(S.total.code, 968);
-  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 173);
+  assert.equal(S.byCat['MECH'].code, 723);
+  assert.equal(S.total.code, 1024);
+  assert.equal(S.byCat['POL'].code + S.byCat['POL*'].code, 202);
 });
 
 test('policy splits by WHEN the answer is needed, and most of it is needed too early', () => {
@@ -371,10 +396,13 @@ test('policy splits by WHEN the answer is needed, and most of it is needed too e
   // 121 -> 170 (+49): a rule is planned once, when it is classified, and never
   // again — so every line of the negation-order fix is needed before phase A.
   // 184 -> 182: classify's fold is gone; its verdict-reading is not.
-  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 119);
+  // 119 -> 148 (+29): a body is planned once, at classification, so the whole
+  // of the cross-product hold is needed before phase A — the same reason the
+  // negation-order fix landed here.
+  assert.equal(rows(W, 'policy_when(engine_ts, L, before_a)'), 148);
   // 66 -> 31: the reuse plan's three decisions left for policy.rofl.
   assert.equal(rows(W, 'policy_when(engine_ts, L, end_of_run)'), 31);
-  assert.equal(23 + 119 + 31, rows(W, 'policy(engine_ts, L)'));
+  assert.equal(23 + 148 + 31, rows(W, 'policy(engine_ts, L)'));
   // MECH and PLUMB lines carry a tense too, and it must NOT leak into the
   // policy total: the relation is defined over `policy`, not over `block`.
   assert.equal(rows(W, 'policy_when(engine_ts, L, na)'), 0);
@@ -476,9 +504,9 @@ test('the report renders and carries its own headline', () => {
   // the same three numbers as the count test, read out of the RENDERED text
   // rather than the store, which is what makes this a second witness and not
   // a restatement. They moved for the reasons given there: the space wall.
-  assert.match(text, /MECH\s+696 code/);
-  assert.match(text, /TOTAL\s+968 code/);
-  assert.match(text, /before-A\s+119 code lines/);
+  assert.match(text, /MECH\s+723 code/);
+  assert.match(text, /TOTAL\s+1024 code/);
+  assert.match(text, /before-A\s+148 code lines/);
 });
 
 test('the definition index reads src/engine.ts, and it is not a grep', () => {

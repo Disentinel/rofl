@@ -1,0 +1,477 @@
+-- js-env.rofl — WHICH ENVIRONMENT IS THIS PROGRAM VALID IN, and what exactly
+-- stops being valid in an older one.
+--
+-- The question this file's table answers is the owner's, in his words: «Валидна
+-- ли эта программа в окружении node22? А если node18? А что именно перестанет
+-- быть валидным?» It is answered on the SYNTAX axis only. That is deliberate
+-- and it is the cheap half: every row below is over the node-kind vocabulary
+-- the model already declares, and not one byte of it comes from a `.d.ts`. The
+-- API-surface half (`fs.cp`, `Array.prototype.at`) needs generated packs and is
+-- a separate slice.
+--
+-- ONE SCALE, NOT TWO. A feature carries the YEAR of the edition that
+-- introduced it and an environment carries the year it implements up to, so
+-- "does this environment have this feature" is one integer comparison and
+-- there is no edition/environment join table to keep in agreement. A feature
+-- that is not on the ecmascript timeline at all (TypeScript syntax, a stage-3
+-- proposal) carries NO year and reaches an environment only through
+-- `env_extra` — which is why the two mechanisms are both here and neither is
+-- a special case of the other.
+--
+-- WHAT IS NOT MODELLED HERE, said rather than silently absent:
+--
+--   * WITHDRAWAL. `feature_since` has no `feature_until` twin, because no
+--     JavaScript SYNTAX this vocabulary contains was ever removed — going down
+--     the version order is the only direction that loses anything, and `since`
+--     alone covers it. The API half is where withdrawal first has a real row,
+--     and building the relation before that row exists would put a capability
+--     in the tree that no demo exercises (CLAUDE.md).
+--   * REMEDY. «Что заменить чтобы снова стало валидным?» is unanswered for
+--     syntax on purpose: replacing `a?.b` in an es5 world is a TRANSFORM, and
+--     this model has no term for a transform. For the API half a remedy IS a
+--     substitution (`fs.cp` -> `fs.copyFile`) and `replaced_by/2` arrives with
+--     it. Answering three of four questions and saying which one is missing is
+--     the honest report.
+-- ---------------------------------------------------------------------------
+-- WHY THIS IS NOT `layer(era)`. Every other question in this model is a LAYER
+-- over the (language, kind) matrix, and adding one is one fact — which is the
+-- experiment facts/js-kinds.rofl exists to run. The era question is not one of
+-- them, and the reason is that it would be TWO ACCOUNTING MECHANISMS OVER ONE
+-- COLUMN: `unaccounted[audit]` asks whether every kind has a `handled` or an
+-- `ignored` row per layer, and `kind_unaccounted[audit]` in rules/js-env.rofl
+-- asks whether every kind has a `kind_needs` or a `kind_baseline` row. They
+-- would answer the same question in two vocabularies, and the repository has
+-- already paid for that shape once — `orphan_claim[audit]` was written by hand
+-- for two relations and a third silently reopened the hole.
+--
+-- The distinction that decides it: a LAYER is a thing the model can say about a
+-- kind (does it carry a value, does it make a call edge), and the answer is
+-- per (kind, layer). An ERA is a thing the WORLD says about a kind, the same
+-- answer in every layer, and it is not ours to model differently per layer.
+-- So the era axis rides on `node_kind` and accounts for itself, and
+-- `layer/1` stays the vocabulary of what WE model.
+edb(environment).
+edb(env_rank).
+-- `provides(Release, Feature)`. `release/1` and `includes/2` are NOT declared
+-- here: they are GENERATED into facts/js-lib-surface.rofl from TypeScript's own
+-- `/// <reference lib=` lines, which is the whole point of the change — the
+-- composition of the ecmascript editions is a measured fact and not a table
+-- this repository maintains. What is declared here is the part TypeScript does
+-- not know about: which SYNTAX feature each edition introduced, and the one
+-- release that is not an edition at all.
+edb(provides).
+edb(env_lang).
+edb(feature).
+edb(kind_needs).
+edb(attr_needs).
+edb(kind_baseline).
+edb(feature_unscannable).
+
+-- The language whose vocabulary is gated. One fact, and the day Python gets
+-- an environment model it is one more — the same shape as `layer/1`.
+env_lang(js).
+
+-- ---------------------------------------------------------------------------
+-- THE ENVIRONMENTS, and the rule for adding one is the comment that has always
+-- been here: an environment nothing distinguishes is a row that cannot make the
+-- model say no. `env_pair_indistinct[audit]` enforces it, so the scale can only
+-- grow to years where a feature really lands.
+--
+-- THREE MORE ON 2026-09-08, on the owner's approval, and the set is NOT `every
+-- ecmascript edition`. It is exactly the years this vocabulary has a feature
+-- for and does not already have one at: 2017 (async_await), 2021
+-- (logical_assignment) and 2023 (hashbang). es2018, es2019 and es2024 are
+-- DELIBERATELY ABSENT — this table gates no feature at those years, so each
+-- would be indistinguishable from its neighbour and the audit would say so.
+-- The scale is a record of what the model can tell apart, not of what TC39
+-- published.
+--
+-- **es2025 WAS IN THAT ABSENT LIST UNTIL 2026-09-09 AND LEFT IT BY THE RULE
+-- RATHER THAN BY EXCEPTION.** The rule is "exactly the years this vocabulary
+-- has a feature for", and 2025 acquired one: `import_attributes`. So the row is
+-- admissible for the same reason the other three are absent, and
+-- `env_pair_indistinct[audit]` is the check that says so rather than this
+-- paragraph — es2025 separates from es2023 on that feature and the audit is
+-- asserted empty in test/js-env.test.ts. Had the owner declared the environment
+-- WITHOUT the feature, the audit would have reported the pair immediately,
+-- which is the whole point of it being a row.
+--
+-- es2022 IS NOT HERE, AND THE REASON IS STRUCTURAL RATHER THAN A CHOICE. The
+-- first draft added it beside ts5, both at rank 2022, reasoning that
+-- `env_pair_indistinct` reads `lost_feature` and not the ranks. The audit
+-- reported the pair immediately, and it was right: `lost[audit]` carries
+-- `RT < RF`, STRICTLY, so two environments at one year can never separate each
+-- other in either direction. `env_extra` can give an environment features its
+-- year does not, and it cannot make it distinguishable from a same-year
+-- sibling — the extras only ever move features UP the scale, and `lost` reads
+-- the scale. So this model holds AT MOST ONE ENVIRONMENT PER YEAR, and ts5
+-- occupies 2022. Recorded rather than worked around; the fix would be a change
+-- to what `lost` means for every pair.
+--
+-- WHAT THIS UNLOCKS is the row directly below `kind_needs(js, directive, ...)`:
+-- `interpreter_directive` was `kind_baseline` — a MEASURED FALSEHOOD, `#!` is
+-- ES2023 — and the true gate could not be written because the scale topped out
+-- at 2022 and `feature_unreachable[audit]` would have named `hashbang` for ever.
+-- Both answers were false and only a new environment could make either true.
+environment(es5).     env_rank(es5, 2009).
+environment(es2015).  env_rank(es2015, 2015).
+environment(es2016).  env_rank(es2016, 2016).
+environment(es2017).  env_rank(es2017, 2017).
+environment(es2020).  env_rank(es2020, 2020).
+environment(es2021).  env_rank(es2021, 2021).
+environment(es2023).  env_rank(es2023, 2023).
+environment(ts5).     env_rank(ts5, 2022).
+-- 2025, DECLARED BY THE OWNER 2026-09-09, and it is the first environment on
+-- this scale added for a feature rather than for a corpus. `w_plugin_gated_kinds`
+-- had been holding `import_attribute` open on the sentence "the feature would
+-- sit in `feature_unreachable[audit]` for ever"; that was true of a scale
+-- topping out at es2023/2023 and it is not a fact about the language. The scale
+-- is the owner's and so is this row.
+environment(es2025).  env_rank(es2025, 2025).
+
+-- TYPESCRIPT IS THE RELEASE THAT PROVED THE YEAR WRONG. This block used to read
+-- `TypeScript is es2022 PLUS syntax that is on no ecmascript timeline. It is
+-- not a later edition and modelling it as one would be a lie the integer
+-- comparison could not detect` — and `env_extra` was the patch that admitted it
+-- while leaving the integer in place. Under composition there is no patch and
+-- no admission: ts5 INCLUDES es2022 and PROVIDES two features of its own,
+-- which is the same sentence the reference graph writes for every edition.
+release(ts5).
+includes(ts5, es2022).
+provides(ts5, type_syntax).
+provides(ts5, decorators).
+
+-- ...AND es2025 IS DECLARED HERE FOR THE SAME REASON ts5 IS, which is worth
+-- stating because the release chain normally is NOT hand-written. `release/1`
+-- and `includes/2` come from facts/js-lib-surface.rofl, GENERATED by
+-- scanners/ts_lib.ts out of TypeScript's own `/// <reference lib=` lines, and
+-- test/js-lib-surface.test.ts regenerates and compares — so a hand edit there
+-- shows up as a failing test rather than as a silent divergence. MEASURED
+-- 2026-09-09: the installed TypeScript is 5.9.3 and its lib directory holds
+-- `lib.es2023.d.ts`, `lib.es2024.d.ts` and `lib.esnext.d.ts` AND NO
+-- `lib.es2025.d.ts`. So the generator cannot produce this release, and writing
+-- it into the generated pack would be undone by the next regeneration.
+--
+-- It lives here, beside ts5, which is the precedent: a release TypeScript's own
+-- composition does not name is declared by hand in the pack that owns the era
+-- scale. WHEN TYPESCRIPT SHIPS `lib.es2025.d.ts` THIS ROW MOVES to the
+-- generated pack and this comment goes with it — that is a real future edit and
+-- not a hypothetical, so it is written down where whoever regenerates will meet
+-- it.
+release(es2025).
+includes(es2025, es2024).
+provides(es2025, import_attributes).
+
+-- ---------------------------------------------------------------------------
+-- THE FEATURES. `provides(R, F)` says which RELEASE introduced F; a feature no
+-- release provides is reachable by nothing, which `feature_unreachable[audit]`
+-- reports. There is no longer a second mechanism: what `env_extra` used to do
+-- for TypeScript is what `provides(ts5, ...)` does, in the same table as
+-- everything else.
+feature(arrow_functions).     provides(es2015, arrow_functions).
+feature(destructuring).       provides(es2015, destructuring).
+feature(classes).             provides(es2015, classes).
+feature(template_literals).   provides(es2015, template_literals).
+feature(for_of).              provides(es2015, for_of).
+feature(generators).          provides(es2015, generators).
+feature(modules).             provides(es2015, modules).
+feature(shorthand_methods).   provides(es2015, shorthand_methods).
+feature(exponentiation).      provides(es2016, exponentiation).
+feature(async_await).         provides(es2017, async_await).
+-- THE SAME WORD IN TWO ERAS, added 2026-09-05. `await` inside an async function
+-- is ES2017; the same node at the top level of a module is ES2022, and no
+-- attribute of the node itself says which. See `outside_attr_needs` below.
+feature(top_level_await).     provides(es2022, top_level_await).
+feature(optional_chaining).   provides(es2020, optional_chaining).
+feature(dynamic_import).      provides(es2020, dynamic_import).
+feature(nullish_coalescing).  provides(es2020, nullish_coalescing).
+feature(logical_assignment).  provides(es2021, logical_assignment).
+-- FOUR MORE, 2026-09-08, with the twenty-three kinds the vocabulary took on.
+-- Each has a year and each is reachable: ts5 ranks 2022, which is why
+-- `import_attributes` (ES2025) is NOT here - a feature no environment can
+-- have would sit in `feature_unreachable[audit]` for ever.
+feature(class_fields).        provides(es2022, class_fields).
+feature(hashbang).            provides(es2023, hashbang).
+-- ...AND THE ONE THE PARAGRAPH ABOVE SAID COULD NOT BE HERE. That paragraph
+-- read `import_attributes (ES2025) is NOT here - a feature no environment can
+-- have would sit in feature_unreachable[audit] for ever`, which was a correct
+-- reading of a scale that stopped in 2023 and never a claim about the language.
+-- The owner declared es2025 on 2026-09-09 and the sentence expired with it.
+-- `provides` for this feature is written beside `release(es2025)` above, with
+-- the composition, rather than repeated here.
+feature(import_attributes).
+-- ONE NODE KIND, TWO FEATURES, TWO YEARS (w_meta_property, 2026-09-08). This
+-- row used to read `feature(meta_property). provides(es2015, meta_property).`
+-- and it was WRONG FOR HALF THE KIND: `new.target` is ES2015 and `import.meta`
+-- is ES2020, they are the same `meta_property` node, and a table keyed by kind
+-- said es2015 accepts both. See `child_needs` below for why neither of the two
+-- refinements this file already had could tell them apart.
+feature(new_target).          provides(es2015, new_target).
+feature(import_meta).         provides(es2020, import_meta).
+feature(bigint).              provides(es2020, bigint).
+feature(namespace_reexport).  provides(es2020, namespace_reexport).
+feature(type_syntax).
+feature(decorators).
+
+-- ---------------------------------------------------------------------------
+-- THE GATE, kind by kind. Every kind in the vocabulary must appear either here
+-- or in `kind_baseline` below; `kind_unaccounted[audit]` reports the ones that
+-- appear in neither, which is the closed-vocabulary discipline this repository
+-- already applies to `handled`/`ignored`.
+kind_needs(js, arrow_function_expression,   arrow_functions).
+kind_needs(js, object_pattern,              destructuring).
+kind_needs(js, array_pattern,             destructuring).
+kind_needs(js, assignment_pattern,        destructuring).
+kind_needs(js, rest_element,              destructuring).
+kind_needs(js, spread_element,            destructuring).
+kind_needs(js, class_expression,          classes).
+kind_needs(js, export_specifier,          modules).
+kind_needs(js, class_property,            class_fields).
+kind_needs(js, class_private_property,    class_fields).
+kind_needs(js, class_private_method,      class_fields).
+kind_needs(js, private_name,              class_fields).
+kind_needs(js, static_block,              class_fields).
+-- `meta_property` IS GATED BY A CHILD AND NOT BY THE KIND — see `child_needs`.
+kind_needs(js, big_int_literal,           bigint).
+kind_needs(js, export_namespace_specifier, namespace_reexport).
+-- THE ROW THE ENVIRONMENT WAS DECLARED FOR, 2026-09-09. Without it
+-- `feature_unexercised[audit]` names `import_attributes` — measured, it did,
+-- the moment the feature was added and before this line existed. A feature no
+-- kind is gated on is a row that gates nothing, and the audit says so rather
+-- than this comment.
+kind_needs(js, import_attribute,          import_attributes).
+kind_needs(js, class_declaration,           classes).
+kind_needs(js, class_method,                classes).
+kind_needs(js, super,                       classes).
+kind_needs(js, class_body,                  classes).
+kind_needs(js, template_literal,            template_literals).
+kind_needs(js, tagged_template_expression,  template_literals).
+kind_needs(js, template_element,            template_literals).
+kind_needs(js, for_of_statement,            for_of).
+kind_needs(js, yield_expression,            generators).
+kind_needs(js, import_declaration,          modules).
+kind_needs(js, import_specifier,            modules).
+kind_needs(js, import_default_specifier,    modules).
+kind_needs(js, import_namespace_specifier,  modules).
+kind_needs(js, export_named_declaration,    modules).
+kind_needs(js, export_all_declaration,      modules).
+kind_needs(js, export_default_declaration,  modules).
+kind_needs(js, export_specifier,            modules).
+kind_needs(js, object_method,               shorthand_methods).
+kind_needs(js, await_expression,            async_await).
+kind_needs(js, optional_member_expression,  optional_chaining).
+kind_needs(js, optional_call_expression,    optional_chaining).
+kind_needs(js, import_expression,           dynamic_import).
+kind_needs(js, import,                      dynamic_import).
+kind_needs(js, tsas_expression,             type_syntax).
+kind_needs(js, tsnon_null_expression,       type_syntax).
+-- `ts_string_keyword` is the spelling in facts/js-kinds.rofl, which is a
+-- SYNTHETIC fixture with no corpus behind it. The scanner snake-cases babel's
+-- own type names, so what a scanned file really carries is `tsstring_keyword`
+-- — no underscore after `ts`. Both are gated: the first so the declared
+-- vocabulary is accounted for, the rest because they are what the corpus
+-- actually produces.
+kind_needs(js, ts_string_keyword,           type_syntax).
+kind_needs(js, tsstring_keyword,            type_syntax).
+kind_needs(js, tsnumber_keyword,            type_syntax).
+kind_needs(js, tstype_annotation,           type_syntax).
+kind_needs(js, tstype_reference,            type_syntax).
+kind_needs(js, tstype_parameter_instantiation, type_syntax).
+kind_needs(js, tsunion_type,                type_syntax).
+kind_needs(js, tsfunction_type,             type_syntax).
+kind_needs(js, tsnull_keyword,              type_syntax).
+-- ...and two more the CALL-GRAPH corpus produced the day it gained a type
+-- alias, which is the frontier gate doing its job on a corpus this table's
+-- author did not shape.
+kind_needs(js, tstype_alias_declaration,    type_syntax).
+kind_needs(js, tstype_query,                type_syntax).
+kind_needs(js, decorator,                   decorators).
+-- AN AUTO-ACCESSOR RIDES THE SAME FEATURE AND A DIFFERENT PLUGIN. `accessor a
+-- = 1` is part of the decorators proposal — it exists so a decorator has
+-- something with a get/set pair to decorate — so `decorators` is the honest
+-- gate, and ts5 claims it through `env_extra`. The PLUGIN is separate
+-- (`decoratorAutoAccessors`), which is a fact about babel rather than about the
+-- language, and it is recorded in scanners/js_ast.ts where it acts.
+kind_needs(js, class_accessor_property,     decorators).
+
+-- ---------------------------------------------------------------------------
+-- THE WAIVERS: kinds valid in every environment this file names. It is a LIST
+-- and not a default for the reason `unaccounted[audit]` exists — a default
+-- makes a kind nobody thought about indistinguishable from a kind somebody
+-- decided was baseline, and the first new kind the scanner emits would arrive
+-- silently declared safe.
+-- NINE MORE ARE BASELINE, 2026-09-08: eight of them are ES5 or earlier, so no
+-- environment on this scale can refuse them and `kind_unaccounted[audit]` is
+-- satisfied by a fact rather than by a feature nobody needs. THE NINTH IS NOT
+-- AND ITS ROW IS A KNOWN LIE - see the note on `interpreter_directive` below.
+kind_baseline(js, update_expression).
+kind_baseline(js, reg_exp_literal).
+kind_baseline(js, labeled_statement).
+kind_baseline(js, empty_statement).
+kind_baseline(js, debugger_statement).
+kind_baseline(js, with_statement).
+-- TWO OF THE THREE DIRECTIVE KINDS ARE HONESTLY BASELINE and the third is a
+-- MEASURED FALSEHOOD, found 2026-09-08 by w_directives and left standing on
+-- purpose. A `directive` and its `directive_literal` are a string-literal
+-- statement at the head of a body, which every edition on this scale parses;
+-- `'use strict'` gives one of them a MEANING in ES5 and the NODE is older than
+-- that. An `interpreter_directive` is not: `#!` is the ES2023 Hashbang Grammar,
+-- and es5 (2009) refuses it.
+--
+-- THE ROW IS WRONG AND EVERY REPAIR AVAILABLE HERE IS WORSE, measured rather
+-- than argued. As it stands, a file whose first line is `#!/usr/bin/env node`
+-- produces ZERO `unsupported[audit]` rows in ANY environment — the model says
+-- an es5 engine takes it. Replace this row with `kind_needs(js,
+-- interpreter_directive, hashbang)` and `feature_since(hashbang, 2023)`, which
+-- is the true year, and `env_has` is EMPTY for it: the highest rank on this
+-- scale is ts5 at 2022, so `feature_unreachable[audit]` names `hashbang` and
+-- the hashbang reports unsupported in ts5 as well — a false no everywhere
+-- traded for a false yes everywhere, with a green audit turned red on an honest
+-- tree to pay for it.
+--
+-- WHAT WOULD FIX IT IS AN `es2023` ON THE SCALE, which is the owner's to add:
+-- the same question already excluded `import_attribute` from the vocabulary
+-- entirely, and this is the first time it has been found INSIDE the table as a
+-- row that answers rather than as a kind left out. Both mutants are asserted in
+-- test/js-directives.test.ts so the day the scale grows, this comment goes red.
+-- See f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it.
+kind_baseline(js, directive).
+kind_baseline(js, directive_literal).
+-- ...AND IT STOPPED BEING A LIE ON 2026-09-08, when `environment(es2023)` was
+-- approved. `#!` is the ES2023 Hashbang Grammar, and until the scale reached
+-- 2023 BOTH answers were false: `kind_baseline` said es5 takes it, and the
+-- true gate would have put `hashbang` in `feature_unreachable[audit]` for ever.
+-- A new environment is the only thing that could make either one true.
+kind_needs(js, interpreter_directive, hashbang).
+kind_baseline(js, identifier).
+kind_baseline(js, member_expression).
+kind_baseline(js, call_expression).
+kind_baseline(js, new_expression).
+kind_baseline(js, this_expression).
+kind_baseline(js, array_expression).
+kind_baseline(js, object_expression).
+kind_baseline(js, object_property).
+kind_baseline(js, function_declaration).
+kind_baseline(js, function_expression).
+kind_baseline(js, variable_declarator).
+kind_baseline(js, assignment_expression).
+kind_baseline(js, conditional_expression).
+kind_baseline(js, sequence_expression).
+kind_baseline(js, parenthesized_expression).
+kind_baseline(js, return_statement).
+kind_baseline(js, if_statement).
+kind_baseline(js, block_statement).
+kind_baseline(js, expression_statement).
+kind_baseline(js, variable_declaration).
+kind_baseline(js, program).
+kind_baseline(js, file).
+kind_baseline(js, comment_line).
+kind_baseline(js, comment_block).
+
+-- THE CONTROL CONSTRUCTS, declared in the vocabulary 2026-09-05 and baseline
+-- here: every one of them is as old as the language, so none gates an era. The
+-- era layer's frontier gate named all thirteen the run they appeared, which is
+-- a corpus this table was not written for doing exactly what it is for.
+kind_baseline(js, while_statement).
+kind_baseline(js, do_while_statement).
+kind_baseline(js, for_statement).
+kind_baseline(js, for_in_statement).
+kind_baseline(js, switch_statement).
+kind_baseline(js, switch_case).
+kind_baseline(js, throw_statement).
+kind_baseline(js, break_statement).
+kind_baseline(js, continue_statement).
+kind_baseline(js, try_statement).
+kind_baseline(js, catch_clause).
+kind_baseline(js, string_literal).
+kind_baseline(js, numeric_literal).
+kind_baseline(js, boolean_literal).
+
+-- THE KIND IS BASELINE AND THE OPERATOR IS NOT. `a ** b`, `a ?? b` and
+-- `a ??= b` are a `binary_expression`, a `logical_expression` and an
+-- `assignment_expression` — three kinds older than any gate here — and the era
+-- each belongs to is carried by the `operator` attribute alone. Baseline is
+-- therefore the truth about the KIND, and `attr_needs` below is the refinement
+-- that keeps it from being the whole answer.
+kind_baseline(js, binary_expression).
+-- `null` is as old as the language; `kind_unaccounted[audit]` asked for this
+-- row the same run `null_literal` entered the vocabulary.
+kind_baseline(js, null_literal).
+kind_baseline(js, unary_expression).
+kind_baseline(js, logical_expression).
+
+-- ---------------------------------------------------------------------------
+-- THE GATE, ATTRIBUTE BY ATTRIBUTE. Same shape as `kind_needs`, keyed on a
+-- scalar attribute the scanner already records, so no new scanner contract is
+-- needed to see the operators that carry an era.
+attr_needs(js, binary_expression,     operator, "**",  exponentiation).
+attr_needs(js, logical_expression,    operator, "??",  nullish_coalescing).
+attr_needs(js, assignment_expression, operator, "??=", logical_assignment).
+attr_needs(js, assignment_expression, operator, "||=", logical_assignment).
+attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
+
+-- ---------------------------------------------------------------------------
+-- A FEATURE THIS SCANNER CANNOT SEE. The table is EMPTY as of 2026-09-08 and
+-- the shape stays, which is the point: its one row said decorators could not be
+-- scanned because `scanners/js_ast.ts` parsed with `plugins: ['typescript']`
+-- and a decorator under that configuration was a REFUSED FILE rather than a
+-- missing node. That was true and is not — the owner asked for decorators, the
+-- scanner gained `decorators` and `decoratorAutoAccessors`, and the waiver
+-- became a claim about a configuration that no longer exists.
+--
+-- A WAIVER FOR AN INSTRUMENT'S LIMIT IS DATED BY CONSTRUCTION, which is the
+-- lesson rather than the row. Nothing in the model would have noticed: the
+-- feature would simply have gone on being excused while its site sat in
+-- era.ts.txt. What noticed was `feature_unexercised[audit]`, once the waiver
+-- was withdrawn on purpose to see whether anything still needed it.
+
+
+-- ===========================================================================
+-- THE THIRD GATE SHAPE: WHAT IS *NOT* AROUND A NODE.
+--
+-- `outside_attr_needs(Lang, Kind, Key, Value, Feature)`: a node of Kind with NO
+-- ancestor carrying Key=Value needs Feature. One row today and the shape earns
+-- its keep by being a table rather than a rule - the next positional feature is
+-- a line here, not an edit to rules/js-env.rofl.
+--
+-- WHY THE ASYNC ATTRIBUTE RATHER THAN A LIST OF FUNCTION KINDS: `ast_attr(F,
+-- async, Bool)` is emitted for every function form the scanner knows -
+-- declaration, expression, arrow, class method, object method - so reading it
+-- needs no kind class and cannot fall out of date when a sixth form appears.
+-- And an `await` inside a NON-async function is a syntax error, so "has an
+-- async ancestor" and "is inside a function at all" coincide for this feature.
+edb(outside_attr_needs).
+outside_attr_needs(js, await_expression, async, true, top_level_await).
+
+
+-- ===========================================================================
+-- THE FOURTH GATE SHAPE: WHAT IS *INSIDE* A NODE (w_meta_property, 2026-09-08).
+--
+-- `child_needs(Lang, Kind, Field, Name, Feature)`: a node of Kind whose `Field`
+-- child is named `Name` needs `Feature`.
+--
+-- WHY A FOURTH TABLE AND NOT A ROW IN ONE OF THE THREE. `new.target` is ES2015
+-- and `import.meta` is ES2020 and they are ONE node kind, so `kind_needs`
+-- cannot split them — it gave both the older year, which says an es2015 runtime
+-- accepts `import.meta`. Neither refinement already here could do it either,
+-- and that is a MEASUREMENT rather than a reading:
+--
+--   `attr_needs` reads `ast_attr`. Probed across the corpus — a `meta_property`
+--   node carries ZERO `ast_attr` rows of any key. There is no attribute to key
+--   on, so the operator trick that separates `**` from `*` has nothing to grip.
+--
+--   `outside_attr_needs` reads an ANCESTOR's attribute. What distinguishes
+--   these two is entirely inside the node.
+--
+-- WHAT IS THERE IS TWO IDENTIFIER CHILDREN, `meta` and `property`, and the
+-- scanner already emits both with their names: `new.target` is
+-- (meta="new", property="target") and `import.meta` is
+-- (meta="import", property="meta"). So this needs no new scanner contract
+-- either, which is the same argument `attr_needs` made for the operator.
+--
+-- KEYED ON `meta` AND NOT ON `property`, deliberately: `meta` is the reserved
+-- word the grammar switches on, and it is the half that cannot collide — a
+-- future `import.defer` would still be `meta="import"`.
+edb(child_needs).
+child_needs(js, meta_property, meta, "new",    new_target).
+child_needs(js, meta_property, meta, "import", import_meta).

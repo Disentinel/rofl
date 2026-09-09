@@ -110,10 +110,20 @@ test('the layering survives the one line that sits on a block boundary', () => {
 // THE 2026-09-01 SHIFT: the space wall added `chargeRow`, and it is reached
 // from `conclude`, so it is inside the minimal monotone core rather than
 // beside it. Each counter below says why it moved.
-test('the minimal tier 0: 16 methods, 267 code lines', () => {
+test('the minimal tier 0: 16 methods, 294 code lines', () => {
   const mc = minimalCore();
   // 18 -> 19: chargeRow, reached from conclude, which activate() reaches
-  assert.equal(mc.all.size, 19, 'call-graph reachability from activate()');
+  // 19 -> 20 on 2026-09-05: `evalOrder`, the body's evaluation order.
+  //
+  // AND IT WAS INVISIBLE HERE FOR AN HOUR, which is the reason this line has a
+  // comment. Written first as `private static`, called as
+  // `Evaluation.evalOrder(body)`, it did NOT appear in this set — the call
+  // graph does not follow a static call through the class name — while
+  // `codeAll` still rose by the five lines its CALLER gained. Fifty lines of
+  // reached code, uncounted, with the count still moving enough to look right.
+  // Made an ordinary method, and the set found it. Recorded as
+  // f_a_static_call_through_the_class_name_is_invisible_to_the_census.
+  assert.equal(mc.all.size, 20, 'call-graph reachability from activate()');
   // 280 -> 306 (+26): the wall's lines inside the reachable set
   // 306 -> 330 (+7): the kernel-ledger ring, and it is three separate places
   // because a perspective can reach a `$` book by three different routes —
@@ -126,11 +136,20 @@ test('the minimal tier 0: 16 methods, 267 code lines', () => {
   // guard went with it. One line fewer, no method and no condition removed.
   // 329 -> 332 (+3): `sealed(Body)` reaches the monotone core through the door
   // that withholds a sealed floor's reflection.
-  assert.equal(mc.codeAll, 332);
+  // 332 -> 359 (+27) on 2026-09-07, when the two kernels were merged: the
+  // modeljs branch's `evalOrder` and the five lines its caller gained. The
+  // whole +27 is here; see the note under `codeKept` for why the two counters
+  // move together this time.
+  assert.equal(mc.codeAll, 359);
   // 15 -> 16: chargeRow is in the KEPT set too — a monotone core still
   // concludes facts, and a core that concludes cannot be allowed to conclude
   // without limit, which is the whole point of the second budget
-  assert.equal(mc.kept.size, 16);
+  // 16 -> 17: `evalOrder` is in the KEPT set too, and that is the honest
+  // answer rather than a convenient one. A monotone core has no negative
+  // premise to defer — so the DEFERRING does nothing there — but the method
+  // decides the order of EVERY body, negation or not, and a core that solves
+  // bodies solves them in some order. It is reached and it is kept.
+  assert.equal(mc.kept.size, 17);
   // 306 - 280 = 26 but 244 - 219 = 25, and the missing line is the reason
   // both numbers are here: solveDemandRule gained its own charge and is
   // REACHED but not KEPT, so exactly one of the 26 lines falls outside
@@ -144,7 +163,13 @@ test('the minimal tier 0: 16 methods, 267 code lines', () => {
   // from the core this test is about.
   // 267 -> 266 (-1): the same line as `codeAll` above — `matchPremise` is in
   // the kept set, so its lost length guard is lost here too.
-  assert.equal(mc.codeKept, 267);
+  // 267 -> 294 (+27), and this time the two counters move TOGETHER — 359 - 332
+  // is also 27. They usually differ: a line reached from activate() but not
+  // kept by a monotone core falls out of exactly one of them. Here nothing
+  // falls out, because ordering a body is not a branch a monotone core skips —
+  // it is how every body is solved. The reasoning is the modeljs branch's own,
+  // carried across the 2026-09-07 kernel merge with the number it belongs to.
+  assert.equal(mc.codeKept, 294);
   // the three that drop out, and why each is a branch a monotone core skips
   for (const m of ['negHolds', 'solveDemandRule', 'renameClause']) {
     assert.equal(mc.kept.has(m), false, m);

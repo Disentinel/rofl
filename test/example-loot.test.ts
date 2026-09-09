@@ -21,7 +21,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
-import { ruleIdOf } from '../src/reflect.ts';
+import { ruleIdOf, KERNEL_BOOK } from '../src/reflect.ts';
 import { renderCount } from '../runtime/semirings.ts';
 import {
   BOOT, LOOT, BOOKS, BOOK, ROUTE, THINKING, START,
@@ -507,7 +507,25 @@ test('forgetting a book fades what stood on it, and restores what it displaced',
   assert.equal(r.holds('safe[mind](supply_chest)'), true, 'not restored — re-derived');
   assert.equal(r.holds('opens[mind](supply_chest)'), true);
   assert.equal(r.holds('threat[mind](wisp)'), true, 'the codex is untouched');
-  // nothing of the pack is left in the reflection either
+  // nothing of the pack is left in the reflection either — AND THIS IS CHECKED
+  // OVER THE KERNEL'S OWN SET NOW, not over the four relations a reader happens
+  // to think of. `forgetRule` swept a hand-written list of twelve where
+  // `KERNEL_BOOK` has thirteen keyed by a rule id, so `conclusion_tense`
+  // survived every unload this demo has ever done. It was invisible because no
+  // rule reads that relation any more, which is the safe direction and the one
+  // that lasts. The check is DERIVED so the next relation the kernel adds is
+  // covered without anybody remembering to add it here.
+  const st = (r as unknown as { store: { relAll: (rel: string) => { args: { k: string; name?: string }[] }[] } }).store;
+  const orphaned = [...KERNEL_BOOK].filter((rel) => st.relAll(rel).some((f) => {
+    const a0 = f.args[0];
+    return a0 !== undefined && a0.k === 'a' && un.removed.includes(a0.name!);
+  })).sort();
+  assert.deepEqual(orphaned, [], 'a forgotten rule still keys a fact in one of the kernel\'s books');
+  // POSITIVE CONTROL: the sweep is looking at something. A rule that is still
+  // loaded keys facts in several of those books, so an empty answer above is a
+  // statement about the forgotten rule rather than about the query.
+  const stillThere = [...KERNEL_BOOK].filter((rel) => st.relAll(rel).length > 0).length;
+  assert.ok(stillThere >= 8, `only ${stillThere} kernel books are populated at all`);
   assert.deepEqual(declaredIds(r, 'grimoire_of_ash'), []);
   assert.deepEqual(rows(r, 'dead_rule[audit](P, R)'), []);
   const h = hygiene(r, WATCH);

@@ -38,7 +38,7 @@ const API = fs.readFileSync(path.join(ROOT, 'src', 'api.ts'), 'utf8');
  *  list the gate uses — that is read out of `src/api.ts` — but an anchor: if
  *  extraction silently narrows, the count drops and this fails. */
 const KNOWN = ['budget', 'depth', 'evaluator', 'naive', 'nodes', 'onBoundary',
-               'onFixpoint', 'retainTicks', 'reuse', 'space', 'who'];
+               'onFixpoint', 'retainTicks', 'reuse', 'who'];
 
 /** Read once: the corpus is 49 files and the census parses every one. */
 const CORPUS = readCorpus(ROOT);
@@ -191,7 +191,7 @@ test('KNOWN BLIND SPOT: a helper that ignores the option still counts', () => {
 test('a real call at the right door IS exercise', () => {
   const res = census(API, one(`
     import { Rofl } from '../../src/api.ts';
-    export const r = new Rofl({ retainTicks: 3, reuse: false, naive: true, evaluator: 'strata', space: 9 });
+    export const r = new Rofl({ retainTicks: 3, reuse: false, naive: true, evaluator: 'strata', space: 500000 });
     export const s = Rofl.fromSnapshot(r.save(), { retainTicks: 0 });
     r.tickAdvance({ onFixpoint: (x) => x.factKeys().length });
     r.run({ maxTicks: 4, onBoundary: (x) => x.factKeys().length });

@@ -436,11 +436,14 @@ export class Store implements FactStore {
     const out: FactRec[] = [];
     // ONE FACT AT A TIME, and it is not style. `out.push(...arr)` passes every
     // element as an ARGUMENT, so a relation big enough overflows the call stack
-    // — measured 2026-09-07 on `edb` on branch modeljs, and again here on
-    // 2026-09-09 the moment a 64-file world of eslint/lib was asked for:
-    // `RangeError: Maximum call stack size exceeded` raised from this line by a
-    // caller that had merely asked what the store holds. A spread over an
-    // unbounded array is a size limit nobody declared.
+    // — measured TWICE, on two branches, from two directions. 2026-09-07 on
+    // `edb`, which carries a row per declared table and per asserted base
+    // relation; and 2026-09-09 the moment a 64-file world of eslint/lib was
+    // asked for. Both times: `RangeError: Maximum call stack size exceeded`
+    // raised from this line by a caller that had merely asked what the store
+    // holds. A spread over an unbounded array is a size limit nobody declared,
+    // and two independent worlds finding the same one is the argument for the
+    // loop rather than for a bigger threshold.
     for (const p of persps) for (const f of this.relPersp(rel, p)) out.push(f);
     return out;
   }

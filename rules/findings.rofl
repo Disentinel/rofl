@@ -17,6 +17,32 @@ settled(F)           :- dismissed(F, _).
 
 open_finding(F)      :- finding(F, _), not settled(F).
 
+-- A FINDING ACCUMULATES NOTES, and until 2026-09-08 nothing said so. Seven
+-- findings carry two `finding_note` rows and one carries three, and the second
+-- is always a CORRECTION: `DISMISSED THE SAME DAY, and the dismissal is the
+-- finding`, `CORRECTED WITHIN THE HOUR, by the owner`, `TRIED IN boot.rofl AND
+-- REVERTED, and the negative result is worth more than the idea was`. That is a
+-- good convention - a ledger that overwrote its first answer would lose the
+-- most valuable half - and `runtime/report.ts` already joins every note, so
+-- nothing is hidden from a reader.
+--
+-- WHAT WAS MISSING IS THAT IT WAS NEVER DECLARED, and an undeclared arity is a
+-- trap for the next rule. One was written the same week: a comparison of two
+-- ledgers loaded as two perspectives read `finding_note[a](F, X),
+-- finding_note[b](F, Y), X != Y` and reported SEVEN findings whose text had
+-- diverged between two branches. Not one had. The rule was pairing a finding`s
+-- own first note against its own correction, arriving through the other book,
+-- and the seven were exactly the seven that carry two. A merge was justified to
+-- the owner on that number.
+corrected(F)                  :- finding_note(F, A), finding_note(F, B), A != B.
+
+-- ...AND A CORRECTION IS THE MOMENT TO SETTLE OR RE-AIM. A finding that has
+-- been revisited and left open is the silent forgetting this ledger exists to
+-- prevent, one step subtler: somebody looked, wrote down what they found, and
+-- did not say what it changed. Empty on the honest tree, with a planted control
+-- in test/findings.test.ts.
+corrected_unsettled[audit](F) :- corrected(F), not settled(F).
+
 finding_action(F, W) :- open_finding(F), demands(F, W).
 
 -- The QUEUE, derived rather than narrated. `blocks(A, B)` says A must be
@@ -47,8 +73,56 @@ blocked_by(F, A)     :- blocks(A, F), not settled(A).
 -- DEMANDS CODE stays out of `ready` until someone has run the query and
 -- written down what it returned. Not a rule about attention: `ready` simply
 -- does not contain it, and `unproven` says so by name.
-unproven(F)          :- finding_action(F, rule_and_test), not witness(F, _, _).
-unproven(F)          :- finding_action(F, kernel_test),   not witness(F, _, _).
+-- A WITNESS HAS FIVE FORMS AND THIS RULE READ ONE, until 2026-09-09. It said
+-- `not witness(F, _, _)`, so a finding carrying only `witness_atleast` was
+-- refused as unproven while standing on a premise somebody had run. ZERO
+-- INSTANCES on the honest tree — both `witness_atleast` rows sit on settled
+-- findings, so the hole never fired and nothing would ever have told anyone it
+-- was there. It is planted in test/note-witness.test.ts rather than argued.
+--
+-- This is CLAUDE.md's `orphan_claim` incident verbatim, one book over: a check
+-- written by hand for the forms that existed, silently reopened by the next
+-- form over the same arguments. The remedy is the same one — derive it ONCE
+-- from a relation every form concludes into, so a sixth form costs one clause
+-- here and inherits the gate instead of copying it.
+-- ALL FIVE ARE DECLARED HERE, and the two old ones were not until today. They
+-- were only ever read under a NEGATION - `not witness(F, _, _)` - and
+-- `undefined_premise[audit]` is positive-only by design, so an undeclared
+-- `witness` was invisible while the ledger that declares it happened to be
+-- loaded alongside. `proven(F) :- witness(F, _, _)` is POSITIVE, so this pack
+-- standing on its own - the marketplace bundle ships it without the ledger -
+-- would have reported a misspelling. Declaring an input is the remedy, not a
+-- waiver; boot.rofl says so about `edb(imports)` in the same words.
+edb(witness).             -- witness(Id, Query, N)                 -- in w_ledger
+edb(witness_atleast).     -- witness_atleast(Id, Query, N)         -- in w_ledger
+edb(witness_in).          -- witness_in(Id, World, Query, N)
+edb(witness_in_atleast).  -- witness_in_atleast(Id, World, Query, N)
+edb(witness_absent).      -- witness_absent(Id, World, Query, Control)
+
+proven(F)            :- witness(F, _, _).
+proven(F)            :- witness_atleast(F, _, _).
+proven(F)            :- witness_in(F, _, _, _).
+proven(F)            :- witness_in_atleast(F, _, _, _).
+proven(F)            :- witness_absent(F, _, _, _).
+
+unproven(F)          :- finding_action(F, rule_and_test), not proven(F).
+unproven(F)          :- finding_action(F, kernel_test),   not proven(F).
+
+-- THE GATE'S AIM, AS A ROW RATHER THAN AS A SENTENCE IN ITS NOTE. The finding
+-- claims the refusal is AIMED, not blanket: a finding demanding a DECISION or a
+-- DOC passes untouched, because a decision is made by argument and a query
+-- cannot settle it. That sentence was pinned as the COUNT `unproven(F) -> 32`,
+-- which moved three times in one night across four branches — twice down by
+-- settling, once down again when those two merged, once up by recording — every
+-- move correct and the merged number right by accident. A count over the ledger
+-- is a reading, not a pin (f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin).
+--
+-- This is what the count was standing in for and it is EMPTY ON EVERY BRANCH,
+-- so it merges. It is not a tautology of the two clauses above: it goes red the
+-- moment somebody adds a third arm over a different `demands` value, which is
+-- the only way the gate's aim can actually drift.
+unproven_misaimed[audit](F) :- unproven(F), not demands(F, rule_and_test),
+                                            not demands(F, kernel_test).
 
 -- and the queue reads it, so an unproven item is not offered as work
 ready_proven(F)      :- ready(F), not unproven(F).

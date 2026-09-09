@@ -1,0 +1,1314 @@
+-- js-controlflow.rofl — THE THIRD LAYER, and it exists to answer a question the
+-- call graph cannot: not WHICH function a site reaches, but WHETHER the site
+-- runs at all.
+--
+-- WHY THIS LAYER EARNS ITS CELLS. The call-graph acceptance measures the model
+-- against a running program and reports two error directions: an edge the
+-- runtime took and the model missed (UNSOUND), and an edge the model derived
+-- and the runtime never took (over-approximation). The second list has been a
+-- flat one, and it conflates two completely different things — an edge the
+-- oracle CANNOT SEE because of how V8 names frames, and an edge that really was
+-- not taken because the program branched around it. Only the second is control
+-- flow, and until this layer existed nothing could tell them apart.
+--
+-- IT WRITES INTO [code], like the call graph and the modules layer, and not
+-- into a ledger of its own. The dataflow layer has `[flow]` because it answers
+-- a different KIND of question — what a value may be, rather than what the
+-- syntax is — and everything here is a fact about a position in the tree.
+
+-- ---------------------------------------------------------------------------
+-- 1. A POSITION THAT ONLY RUNS SOMETIMES. One row per (parent, arm), and the
+--    vocabulary is closed: `guard_kind` below is what this layer claims to know
+--    about, and `guard_unmodelled[audit]` reports a kind that branches and is
+--    not in it.
+edb(guard_kind).            -- guard_kind(Kind, Field)   an arm that may be skipped
+guard_kind(if_statement,               consequent).
+guard_kind(if_statement,               alternate).
+guard_kind(conditional_expression,     consequent).
+guard_kind(conditional_expression,     alternate).
+-- `a && b` and `a || b` and `a ?? b` evaluate the RIGHT operand only sometimes;
+-- the left always runs. This is the same operator-carries-the-meaning lesson
+-- the era layer paid for, arriving where it does not matter: all three
+-- short-circuit, so the KIND is enough here and no `operator` guard is needed.
+guard_kind(logical_expression,         right).
+-- A LOOP BODY MAY RUN ZERO TIMES — except one. `do { } while (c)` runs its body
+-- BEFORE testing, so it guards nothing at all, and putting it here would make
+-- `may_not_run` report functions that always run. The distinction is in the
+-- spec and not in the shape: all five loops look identical in the tree.
+guard_kind(for_of_statement,           body).
+guard_kind(for_statement,              body).
+-- ...AND ITS UPDATE, 2026-09-08 (w_update_and_literals). A C-style `for` has
+-- FOUR children and only one of them was on this table. `init` always runs and
+-- `test` runs at least once, so neither belongs here — but `update` runs ZERO
+-- times when the test is false to begin with, and zero times more when the
+-- body leaves by a `break`, a `return` or a throw. It is skippable in exactly
+-- the sense `body` is.
+--
+-- MEASURED BEFORE THE ROW, on the one C-style `for` this corpus already had
+-- (alpha.mjs:845, `for (let j = 0; j < 2; j += 1)`): `guard_arm` named the
+-- body and nothing else, and `guarded[code]` was EMPTY for the `j += 1`. The
+-- model positively asserted that a for-update runs — the same direction as
+-- `pastLabelledBlock` one item ago, and the direction this layer documents as
+-- the dangerous one, because a CALL written there (`for (…; …; m = step(m))`)
+-- was `reached_unguarded` and therefore kept out of `may_not_run`.
+--
+-- THE ITEM THAT FOUND IT IS `update_expression`'s, and that is not a
+-- coincidence: `i++` is what a for-update is almost always written as, and
+-- nobody had looked at the slot while the form that inhabits it was not in the
+-- vocabulary. The row is on `for_statement` because that is whose field it is,
+-- and it answers for every expression written there.
+guard_kind(for_statement,              update).
+guard_kind(for_in_statement,           body).
+guard_kind(while_statement,            body).
+-- A DEFAULT VALUE RUNS ONLY IF THE ARGUMENT IS ABSENT. `function f(n, made =
+-- fallbackMaker(n))` calls `fallbackMaker` at exactly the call sites that omit
+-- the second argument, so the `right` of an `assignment_pattern` is an arm
+-- skipped by a condition in the same sense a `?:` alternate is — and this is
+-- the whole reason `assignment_pattern` is more than a dataflow join.
+--
+-- MEASURED BEFORE THE ROW: with the fixture in and this line absent,
+-- `fallbackMaker` was NOT in `may_not_run` although its only call site is
+-- inside a default. The `left` is deliberately not an arm: a parameter's NAME
+-- is not conditional, only its value is.
+guard_kind(assignment_pattern,         right).
+-- A CASE BODY is skipped unless the switch selects it, and `consequent` is an
+-- ARRAY here — which is why `guard_arm` below reads any index rather than 0.
+guard_kind(switch_case,                consequent).
+-- THE EXCEPTION MACHINERY, and only one of its three parts is a guard. The
+-- `block` always runs; the `finalizer` always runs; the HANDLER runs only if
+-- something inside the block threw. Filing the block as guarded would have said
+-- that the ordinary path is conditional, which is the wrong way round.
+guard_kind(try_statement,              handler).
+
+-- ANY INDEX, not zero. A singular field is index 0 and reads the same; an array
+-- field — `switch_case`'s `consequent` — has one arm per statement, and reading
+-- only index 0 would have guarded the first statement of a case and no other.
+guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+                         ast_child[code](P, Field, _, A).
+
+-- A FIELD INITIALISER IS AN ARM SKIPPED BY THE ABSENCE OF A `new`, 2026-09-08 —
+-- queue item w_class_fields, and the row is NOT in `guard_kind` because the
+-- condition is an ATTRIBUTE and not a field.
+--
+-- MEASURED BY RUNNING THE SHAPE, which is what split one kind into two answers:
+--
+--   class Never { unused = mark(); static tag = mark(); }   // defined, never `new`ed
+--   -> ["never:staticfield"]
+--
+-- A STATIC field initialiser runs when the class DEFINITION is evaluated, so it
+-- is exactly as conditional as the statement the class sits in and guarding it
+-- would report a call that always runs as one that may not. A NON-STATIC one
+-- runs once per construction and zero times if the class is never constructed,
+-- which is a may-not-run in the layer's own sense.
+--
+-- DERIVED FROM `transfer_mechanism` rather than from a second hand-written list
+-- of the two kinds, on the pattern `suspend_at` and `label_target` already use:
+-- the next kind filed under `per_construction` is covered without anybody
+-- remembering, and `guard_unmodelled[audit]` reddens if the mechanism is claimed
+-- with no rule reaching the kinds that carry it.
+field_init[code](P, V) :- transfer_mechanism(K, per_construction),
+                          ast_node[code](P, K, _, _), ast_attr[code](P, static, false),
+                          ast_child[code](P, value, 0, V).
+guard_arm[code](P, V)  :- field_init[code](P, V).
+
+-- ...and everything inside such an arm inherits the condition.
+guarded[code](A) :- guard_arm[code](_, A).
+guarded[code](N) :- guard_arm[code](_, A), ast_within[code](A, N).
+
+-- ---------------------------------------------------------------------------
+-- 2. WHAT IT SAYS ABOUT CALLS. A site inside a guarded position may not run,
+--    and a function every one of whose call sites is guarded may never be
+--    entered at all.
+--
+-- THE NEGATION IS LAST, and that is not style: written before the literal that
+-- binds `F`, it would be evaluated with `F` unbound and read as "nothing
+-- unguarded resolves anywhere". Measured yesterday on `member_value`, recorded
+-- as f_body_order_changes_the_answer_and_whynot_cannot_see_it, and the reason
+-- the order is worth a comment on every rule of this shape until the kernel is
+-- fixed.
+-- ---------------------------------------------------------------------------
+-- STATEMENT ORDER, 2026-09-05 — queue item w_cf_abrupt_transfer, and the last
+-- mechanism in the table that had no rule.
+--
+-- Every other rule in this layer reads a parent/child POSITION: an arm of an
+-- `if`, the body of a loop. This one needs the ORDER of siblings, and the order
+-- has been on the store since the scanner was written — `ast_child(B, body, I,
+-- S)` carries the index. Nothing had ever read it.
+--
+-- MEASURED BEFORE WRITING, and it corrected the queue: the corpus contained
+-- ZERO statements sitting syntactically after a return, throw, break or
+-- continue in the same block, so this item had nothing to be tested against and
+-- a fixture had to come first. See also the witness correction below.
+edb(abrupt_kind).
+abrupt_kind(return_statement).
+abrupt_kind(throw_statement).
+abrupt_kind(break_statement).
+abrupt_kind(continue_statement).
+
+-- WHERE THIS RULE COULD NOT LOOK, asked of the rule before it was believed and
+-- answered by the scanner rather than by reading it: a SWITCH CASE holds its
+-- statements under `consequent`, not `body`. `case 1: g(); break; h();` left
+-- `h` unguarded, and no audit here said a word — the rule simply matched
+-- nothing. The field is vocabulary now instead of a constant inside one rule,
+-- which is the move this repository already made for guard arms.
+edb(stmt_seq_field).
+stmt_seq_field(body).
+stmt_seq_field(consequent).
+
+-- THE ARM THAT USED TO STAND HERE IS THE BASE CASE OF A CLOSURE NOW, 2026-09-09
+-- (w_cf_completion). It read
+--
+--     abrupt_at[code](B, F, I) :- abrupt_kind(K), ast_node[code](S, K, _, _),
+--                                 stmt_seq_field(F), ast_child[code](B, F, I, S).
+--
+-- — the statement in the list must BE the transfer — and the item this file
+-- opened for it says where that cannot look: a `return` inside a nested block,
+-- in both arms of an `if`, or under a label completes the ENCLOSING region and
+-- this arm sees none of the three. `completes_abruptly` in COMPLETION below is
+-- that arm's first literal made recursive; the arm itself moved there, so that
+-- there is exactly one rule concluding this shape rather than two of which one
+-- subsumes the other.
+
+-- ORDERED FOR COST: `abrupt_at` is a handful of rows and binds B and F, so the
+-- second literal is a probe rather than a walk over every containment pair.
+-- THE FIELD IS CARRIED, not re-quantified: an abrupt in a case's `consequent`
+-- must not reach a statement in the same node's `body`.
+after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+
+-- A SUSPENSION IS A POINT AFTER WHICH THE REST MAY NOT RUN, and until
+-- 2026-09-07 this layer WAIVED the question with the reason
+-- `a_control_returns_so_the_site_still_runs`. That reason is a claim about the
+-- PROGRAM, not about the language: control comes back only if the awaited thing
+-- settles and only if a generator is asked for another value. Every await in
+-- the corpus settled, so the waiver had never been exercised — and a fixture
+-- that suspends forever put a function the model says runs, and the runtime
+-- never entered, in front of the acceptance gate within one run.
+--
+-- DERIVED FROM `transfer_mechanism`, NOT COPIED. The vocabulary already files
+-- `await_expression` and `yield_expression` under `suspend`, and a second hand
+-- written list is the defect `orphan_claim` paid for: the next kind filed under
+-- `suspend` is covered here without anybody remembering.
+--
+-- IT IS NOT AN `abrupt_at` ARM, and the distinction is the whole point of
+-- having two relations. After a `return` the rest NEVER runs; after an `await`
+-- the rest runs unless the promise never settles. Both land in `guarded`, which
+-- this layer documents as a MAY-not-run, but writing a suspension as abrupt
+-- would put a NEVER in a relation whose own comment says it is weakening a
+-- never into a may.
+--
+-- CONFINED TO THE SUSPENDING FUNCTION, exactly as the throwing-call arm below
+-- is: without `nearest_v` an `await` inside a function would guard every
+-- statement after that function's own declaration at module level, which is a
+-- suspension of the module and is not what happened.
+suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
+                             nearest_v[flow](G, X), ast_within[code](G, S),
+                             ast_within[code](S, X),
+                             stmt_seq_field(F), ast_child[code](B, F, I, S).
+after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+
+-- A SEQUENCE FIELD THE SCANNER NEVER EMITS — the same typo hole `guard_arm_unseen`
+-- closes for arms, and the one this rule was carrying invisibly until the switch
+-- case was measured.
+stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
+
+-- THE MUTANT SET, run before the item was closed. Five directed at the rule:
+-- dropping `I < J`, reversing it, losing one `abrupt_kind`, dropping the
+-- containment closure — all four killed. The fifth SURVIVED and its survival is
+-- structural rather than a corpus gap: replacing `F` with `_` on both sides,
+-- so an abrupt in one field could reach a statement in another, changes nothing
+-- HERE and cannot change anything in JavaScript, because no node kind carries
+-- two multi-child fields at once — `switch_case` has only `consequent`, every
+-- block-like kind only `body`. Carrying F is defence against a future scanner,
+-- not against the language, and saying so is cheaper than a mutant that will
+-- never go red.
+--
+-- ...and then the question that actually paid: WHERE IS THIS RULE STRUCTURALLY
+-- UNABLE TO LOOK. Four shapes were built and all four came back blind, because
+-- this rule reads SIBLINGS and each of them completes an enclosing region
+-- instead: a `return` in a nested block, a `return` in both arms of an `if`, a
+-- `return` under a label, and a call to a function that never returns. The
+-- first three are w_cf_completion; the fourth is w_exn_propagation, and it is
+-- the one that corrected this item's own witness.
+
+-- ---------------------------------------------------------------------------
+-- A LABEL IS A BOUNDARY AN ORDINARY BREAK CANNOT CROSS, 2026-09-08 — queue item
+-- w_labelled_control.
+--
+-- MEASURED BEFORE A LINE OF THIS WAS WRITTEN, on a fixture built for the
+-- purpose because the corpus held ZERO labels: with `break outer` in the inner
+-- of two nested loops, the callees `after_abrupt[code]` named were
+--
+--   after neverCased neverReached pastBlockBreak pastBreak pastContinue
+--   pastDebugger pastEmpty pastInnerBreak pastPlainBreak unlit unreadable
+--
+-- ...and that list is not a memory of a world that has gone: deleting the arm
+-- below reproduces it exactly, which is mutant l1 in
+-- test/js-controlflow.test.ts. Written down once from the pre-rule world, it
+-- would have been a witness with no world the moment the fixture grew — and it
+-- did grow twice while this item was open.
+--
+-- `pastBreak` and `pastContinue` are there and `pastLabelledBreak`,
+-- `pastLabelledContinue` and `pastLabelledBlock` are not. So THE MODEL WAS
+-- TREATING A LABELLED BREAK AS AN ORDINARY ONE: it killed the siblings in the
+-- break's own statement list, which a plain `break` does too, and stopped. The
+-- whole content of a label — leaving a statement further out — was invisible.
+--
+-- AND ONE OF THE THREE WAS NOT MERELY MISSING FROM `after_abrupt`. A labelled
+-- LOOP body is a `guard_kind` arm, so `pastLabelledBreak` was in `guarded`
+-- anyway and the may-set was already hedging. A labelled BLOCK is not a loop,
+-- not an arm and not a switch: `pastLabelledBlock` was in NEITHER `guarded` nor
+-- `may_not_run`, so the model positively asserted that a statement runs which
+-- the only path through its own block skips. A may-set that is too narrow is a
+-- claim rather than a hedge, and this was the narrow direction.
+--
+-- THE LABEL IS READ, NOT THE KEYWORD. `label_ref` is the join that makes the
+-- negative control possible: an unlabelled `break` has no `label` child, so it
+-- derives nothing here and `beyondPlainBreak` stays out. A rule written over
+-- `break_statement` would have stopped telling the two forms apart.
+label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _, _),
+                             ast_child[code](LS, label, 0, I), ast_attr[code](I, name, N).
+-- DERIVED FROM `abrupt_kind` rather than from a second hand-written list of the
+-- two kinds that carry a label, which is the defect `orphan_claim` paid for.
+-- It costs nothing in precision: measured over the fixtures, `break` and
+-- `continue` are the only kinds in the language with a `label` CHILD at all —
+-- `return` and `throw` carry `argument`, and `labeled_statement` carries its own
+-- `label` and is not an abrupt kind.
+label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
+                             ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).
+-- THE TARGET IS UNIQUE AND THE GRAMMAR IS WHY, not a tie-break of ours. Two
+-- labels of the same name nested one inside the other are a SyntaxError
+-- ("Label 'outer' has already been declared"), so at most one `labeled_statement`
+-- with a given name can contain a given reference; and `outer: f(); outer: g();`
+-- is legal precisely because neither contains the other.
+label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
+                             ast_within[code](LS, X).
+
+-- ...AND THE WALK STOPS AT THE LABEL, which is the precision the item is about.
+-- `S` ranges over the statements BETWEEN the reference and its target, so the
+-- statements after the labelled statement itself — `beyondLabel`, `afterBlock` —
+-- are never reached: their parent list is outside `LS` and `ast_within(LS, S)`
+-- excludes it. NO FUNCTION-BOUNDARY LITERAL IS NEEDED here, unlike the
+-- suspension and throwing-call arms, and again the grammar is the reason: a
+-- label is not in scope inside a nested function, so `outer: for (...) { const
+-- f = () => { break outer; }; }` does not parse and no store can hold it.
+--
+-- ORDERED FOR COST, on the pattern this file already uses for `throwing_call`
+-- and `accessor_of`: `label_target` is a handful of rows and binds BOTH X and
+-- LS, so the two containment literals are probes from a named node rather than
+-- a scan over every containment pair in the corpus.
+abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
+                             ast_within[code](S, X), stmt_seq_field(F),
+                             ast_child[code](B, F, I, S).
+
+-- WHERE THIS ARM IS STRUCTURALLY UNABLE TO LOOK, asked of it before it was
+-- believed and answered with a shape rather than a hope: `if (c) break outer;`
+-- puts a GUARD between the reference and the target, and everything after the
+-- `if` in the enclosing lists is then reported by a relation whose own comment
+-- says NEVER when the honest word is MAY. That is not new with this arm — the
+-- `throwing_call` arm below has walked up through guard arms since 2026-09-06 —
+-- and it is recorded rather than repeated silently, as
+-- f_after_abrupt_says_never_and_the_walking_arms_say_may. Both
+-- consumers of `after_abrupt` reach it through `guarded`, which is a MAY-set, so
+-- nothing downstream reads the stronger word. The fixture for this item breaks
+-- unconditionally so that its own witness does not depend on the looser reading.
+
+-- ---------------------------------------------------------------------------
+-- COMPLETION, 2026-09-09 — queue item w_cf_completion, and the item's own note
+-- is the design: this is NOT a ninth mechanism. The mechanism table already
+-- files `return`, `throw`, `break` and `continue` under `abrupt`; what was
+-- missing is the CLOSURE — the recursive question *does this statement complete
+-- normally?* — which every arm above answers only for the four kinds that ARE
+-- the transfer.
+--
+-- THE THREE SHAPES WERE MEASURED BLIND BEFORE A LINE OF THIS WAS WRITTEN, on a
+-- probe with one function per shape and a distinctly named callee after each:
+-- `after_abrupt` 1 (the labelled escape, which the arm above reaches) and the
+-- callee list EMPTY — `pastNestedReturn`, `pastBothArms` and `pastLabelledReturn`
+-- were all outside `may_not_run` and outside `guarded`. That is the item's
+-- statement reproduced rather than quoted, and mutants c1, c2 and c3 in
+-- test/js-controlflow.test.ts are that world reconstructed one arm at a time.
+--
+-- IT IS A SOUND UNDER-APPROXIMATION, on the same doctrine as `always_throws`
+-- in A CALL IS AN EXIT below: a statement this relation does NOT name may
+-- still complete abruptly, and the cost of that is a `guarded` set too small —
+-- which is the
+-- narrow direction the layer already documents. What it must never do is name a
+-- statement that CAN complete normally, and each arm below is the language's own
+-- rule for its kind rather than a heuristic.
+edb(completion_kind).       -- completion_kind(K)  a kind whose abrupt completion this closure DERIVES
+completion_kind(block_statement).
+completion_kind(if_statement).
+completion_kind(labeled_statement).
+
+-- (1) THE BASE, and it is exactly the four kinds `abrupt_at` used to read
+--     directly. A `return` completes abruptly by being a `return`.
+completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _, _).
+
+-- (2) A BLOCK COMPLETES ABRUPTLY IF ANY STATEMENT IN IT DOES. Not the LAST one:
+--     a statement that completes abruptly is the last one that runs, whatever
+--     follows it in the list, so quantifying over the whole body is the language
+--     and not a shortcut.
+--
+--     ORDERED FOR COST, on the pattern this file uses everywhere: seed from
+--     `completes_abruptly` (a handful of rows), walk UP one edge to the parent,
+--     then check the parent's kind. Written the other way round the first
+--     literal is every block statement in the corpus.
+completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
+                               ast_node[code](B, block_statement, _, _).
+
+-- (3) AN `if` COMPLETES ABRUPTLY ONLY IF BOTH ARMS EXIST AND BOTH DO, which is
+--     the whole content of the second shape. `if (c) return;` with no alternate
+--     completes normally when `c` is false, and this rule says so by REQUIRING
+--     the `alternate` child — an `if` without one derives nothing here.
+completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
+                               ast_node[code](S, if_statement, _, _),
+                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).
+
+-- (4) A LABELLED STATEMENT COMPLETES ABRUPTLY IF ITS BODY DOES **AND NOTHING
+--     BREAKS OUT OF IT**, and the negative half is the whole reason a label
+--     needs an arm of its own rather than falling out of (2). `lbl: { return n; }`
+--     never completes normally; `esc: { if (c) break esc; return n; }` completes
+--     normally on exactly the path that takes the break, and a closure that
+--     ignored the escape would say the statement after `esc:` is unreachable —
+--     a claim, in the narrow direction, about a statement that runs.
+--
+--     `label_target` IS REUSED RATHER THAN RE-DERIVED. It already joins a
+--     reference to the labelled statement BY NAME, and the grammar makes that
+--     target unique (a nested duplicate label is a SyntaxError). A second walk
+--     here would be the `orphan_claim` shape this file has paid for twice.
+label_escaped[code](LS)      :- label_target[code](_, LS).
+completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
+                                ast_node[code](LS, labeled_statement, _, _),
+                                not label_escaped[code](LS).
+
+-- ...AND THE CONSUMER IS THE ARM THAT USED TO READ `abrupt_kind` DIRECTLY.
+-- Replacing it rather than adding beside it is deliberate: the base case above
+-- IS the old arm, so the rows it produced are all still produced, and a second
+-- copy would be a rule no mutant could kill because the other one covers it.
+abrupt_at[code](B, F, I) :- completes_abruptly[code](S), stmt_seq_field(F),
+                            ast_child[code](B, F, I, S).
+
+-- A KIND THIS CLOSURE CLAIMS AND NEVER DECIDES. Same shape as
+-- `guard_arm_unseen`, `stmt_seq_unseen` and `export_kind_unseen`, and it covers
+-- two failures with one row: an arm misspelled or deleted (the rule stops
+-- firing) and a corpus with no site for it (the arm was never exercised). Both
+-- read as "the closure is smaller than it says it is", which is the narrow
+-- direction, and neither is visible from any count of `after_abrupt`.
+completion_decided[code](K)    :- completes_abruptly[code](S), ast_node[code](S, K, _, _).
+completion_unreached[audit](K) :- completion_kind(K), ast_node[code](_, K, _, _),
+                                  not completion_decided[code](K).
+
+-- WHERE THIS CLOSURE IS STRUCTURALLY UNABLE TO LOOK, asked of it before it was
+-- believed and answered with a TABLE rather than a sentence. SEVEN statement
+-- kinds over THREE questions can hold a `return` and still complete normally,
+-- and each of them is DECLARED here rather than left to fall through (2)'s
+-- block arm silently. Four of the seven have a site of their own in
+-- test/fixtures/js-call/shapes.ts.txt — a `while`, a `do`/`while`, a `switch`
+-- and a `try`, each holding a block that completes abruptly — and the three
+-- remaining loop kinds are the same question with the same answer:
+edb(completion_deferred).   -- completion_deferred(K, Reason)
+-- A loop body may run zero times, and whether it runs at all is the loop's
+-- CONDITION — which is the same thing `guard_kind` already refuses to decide for
+-- every loop kind in the table.
+completion_deferred(while_statement,    a_condition_this_layer_cannot_decide).
+completion_deferred(for_statement,      a_condition_this_layer_cannot_decide).
+completion_deferred(for_in_statement,   a_condition_this_layer_cannot_decide).
+completion_deferred(for_of_statement,   a_condition_this_layer_cannot_decide).
+-- ...and `do_while_statement` runs its body once, so a `return` in it really
+-- does complete the loop abruptly — EXCEPT that a `continue` in the same body
+-- does not, and telling the two apart needs the completion REASON (return /
+-- break / continue) that this relation deliberately does not carry. Declared
+-- open rather than modelled from the half of the question that is easy.
+completion_deferred(do_while_statement, a_completion_reason_this_relation_does_not_carry).
+-- A `switch` completes abruptly only if every case does AND there is a
+-- `default`, and a `break` inside a case completes the SWITCH normally — the
+-- same reason/kind distinction as the loop above, one level harder.
+completion_deferred(switch_statement,   a_completion_reason_this_relation_does_not_carry).
+-- A `try` whose block completes abruptly may still complete normally, because
+-- the handler can swallow the transfer; `finally` can also OVERRIDE it. Neither
+-- is decidable from the shape of the statement.
+completion_deferred(try_statement,      a_handler_that_may_swallow_the_transfer).
+
+completion_known(K) :- completion_kind(K).
+completion_known(K) :- completion_deferred(K, _).
+completion_known(K) :- abrupt_kind(K).
+
+-- ...AND THE GATE THAT KEEPS THAT TABLE HONEST: a statement kind that holds an
+-- abrupt completion INSIDE ITS OWN CONTROL REGION, sits in a statement list
+-- itself, and is in neither list. It reads as "nobody looked", and the answer it
+-- is silently given is *completes normally* — the narrow direction again.
+--
+-- THE FUNCTION BOUNDARY IS THE PRECISION CLAUSE, and without it this gate is
+-- noise: `const f = () => { return 1; };` is a `variable_declaration` in a
+-- statement list containing a `return`, and every module in the corpus is full
+-- of them. Mutant c11 measures exactly that — five kinds, all of them a function
+-- in disguise.
+--
+-- THE CANDIDATE COMES FIRST AND THE BOUNDARY IS ASKED OF IT, which is an
+-- ORDERING decision and was measured rather than reasoned. Written the other way
+-- round — `completes_abruptly(S), fn_node_v(G), ast_within(G, S), ast_within(P, G)`
+-- — the second literal is unbound, so the pair relation is built over EVERY
+-- function in the corpus crossed with every abrupt completion and then filtered:
+-- one world went from 8.8 s to 21.7 s, and 13 of those seconds were this one
+-- rule. Seeding from `completion_outer`, which is only the kinds the table does
+-- not know, is the same answer for a twentieth of the work.
+completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
+                                     ast_node[code](P, K, _, _), not completion_known(K),
+                                     not fn_node_v[flow](P),
+                                     stmt_seq_field(F), ast_child[code](_, F, _, P).
+completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](P, G),
+                                     fn_node_v[flow](G), ast_within[code](G, S).
+completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _, _),
+                                     not completion_fn_between[code](P, S).
+
+-- ---------------------------------------------------------------------------
+-- A CALL IS AN EXIT, 2026-09-06 — queue item w_exception_flow, and it corrects
+-- an attribution this file made TWO ITERATIONS AGO. When w_cf_abrupt_transfer
+-- closed, `useTry -> after` was moved from that item to w_exn_propagation (28,
+-- the TRANSITIVE closure) on the reasoning that `after` follows a call that
+-- throws. Measured now: `thrower`'s own body contains the throw, with no
+-- handler and no return, so nothing has to propagate anywhere. It is item 25's
+-- half — a call that leaves by THROWING rather than returning — and the
+-- transitive item was one step too far. Ninth measurement in this session to
+-- correct an attribution, and the first to correct one of my own corrections.
+--
+-- A SOUND UNDER-APPROXIMATION, and the soundness is the whole design. "F always
+-- throws" is completion analysis in general (w_cf_completion), but one case is
+-- decidable from syntax alone: NO `return` anywhere in the body, and a `throw`
+-- at the TOP LEVEL of it. Then control cannot leave the body by returning
+-- (there is no return), cannot fall off the end (the top-level throw is reached
+-- or an inner throw fires first), and cannot skip past the throw. The error
+-- direction is the safe one: a function that does always throw but has a return
+-- somewhere is simply not named, so a call to it stays live.
+-- ORDERED FOR COST, MEASURED 2026-09-09 AND APPLIED BY MEASUREMENT.
+-- Leading with `fn_node(F)` left R unbound, so this body enumerated EVERY
+-- return statement in the corpus against every function and then filtered by
+-- containment. It was 94 per cent of the whole control-flow layer's read cost:
+-- 1 703 150 rows on one path, where the next heaviest clause in the layer is
+-- worth 780. Named by ABLATION over all 28 clauses in this file that mention
+-- `ast_node`, by the per-layer cost gate on its first run.
+-- TWO INDEPENDENT CORPORA AGREE. Here: control-flow world 10 088 161 ->
+-- 7 742 219 rows, -23.3%, with firings 177 218 and facts 434 149 IDENTICAL and
+-- ten named relations equal row for row. A second session the same night
+-- measured the same reorder over sixteen files of eslint/lib through a
+-- different scanner: total width 5 331 063 -> 3 615 655, fact count identical,
+-- and the CURVE it took says time as facts^1.57 becomes facts^1.36.
+-- AND IT IS APPLIED ONLY BECAUSE IT WAS RUN. The same reasoning failed twice
+-- the same night — `closer_v` 65 per cent WORSE and `tdz_deferred` worth
+-- 0.013 per cent — so the argument for this shape is not evidence for it.
+-- AND THE OTHER SESSION'S NUMBER, kept because it prices a DIFFERENT quantity
+-- and the two together are worth more than either. Mine counts rows handed
+-- out by the store; theirs counts accumulator elements reaching the third
+-- position, measured from inside the join by scanners/js_cost.ts on sixteen
+-- files of eslint/lib: 1 718 888 elements to produce 653 conclusions, 32.4
+-- per cent of the whole fixpoint's width. Two instruments, two corpora, one
+-- clause, and the repaired body below is BYTE-IDENTICAL in both trees —
+-- derived twice independently, which is the only reason that is reassuring
+-- rather than merely duplicated.
+has_return[code](F)    :- ast_node[code](R, return_statement, _, _),
+                          ast_within[code](F, R), fn_node[code](F).
+top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
+                          ast_child[code](B, body, _, S),
+                          ast_node[code](S, throw_statement, _, _).
+always_throws[code](F) :- top_throw[code](F), not has_return[code](F).
+
+throwing_call[code](C) :- call_site[code](C, _), resolves[code](C, F),
+                          always_throws[code](F).
+-- ---------------------------------------------------------------------------
+-- AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX, 2026-09-06 — queue item
+-- w_cf_accessor, the LAST open cell at this layer.
+--
+-- THE ITEM'S NOTE SAID THE VALUE LAYER DOES NOT RECORD WHICH PROPERTIES ARE
+-- ACCESSORS. Measured: the scanner emits `ast_attr(M, kind, "get"|"set")` for
+-- every method, the value layer already reads that exact attribute for
+-- `"constructor"` in `own_ctor`, and nothing had ever asked it for `"get"`.
+-- Fourth design note in four items to lose to one probe, and the third time
+-- this session the answer was a fact that had been on the store all along.
+--
+-- WHY IT BELONGS TO THIS LAYER RATHER THAN THE VALUE ONE: `o.p` on an accessor
+-- TRANSFERS CONTROL, and the value question — what the getter returns — is a
+-- different and harder one this does not answer. The value layer currently
+-- reads `o.p` as the getter METHOD itself, which is wrong about the value and
+-- silent about the transfer; naming the transfer is what this cell asks for.
+edb(accessor_kind).
+accessor_kind("get").
+accessor_kind("set").
+
+accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
+                                  accessor_kind(K), ast_attr[code](M, kind, K).
+-- ORDERED FOR COST: `accessor_of` is a handful of rows and binds Obj and Key,
+-- so the receiver walk is a probe rather than a scan of every member read.
+-- ...AND `selects` BEFORE `member_node_v`, which the note above got half
+-- right. Putting `accessor_of` first does bind Obj and Key, but the NEXT
+-- premise was `member_node_v(N)` with N sharing nothing with them — every
+-- accessor laid beside every member read, and `selects` filtering afterwards.
+-- Measured by scanners/js_cost.ts on sixteen files of eslint/lib: 88 980
+-- accumulator elements to conclude NOTHING. Asking `selects(N, Key)` with Key
+-- already bound names the reads of that key and leaves `member_node_v(N)` a
+-- check, which is what "a probe rather than a scan" was meant to be.
+accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key), member_node_v[flow](N),
+                             ast_child[code](N, object, 0, O),
+                             may_be_node[flow](O, Obj).
+-- ...AND A PRIVATE ACCESSOR, 2026-09-08 (w_class_fields). `get #face()` is a
+-- `class_private_method` carrying `kind: "get"`, and `this.#face` is a member
+-- read that runs it — the same transfer with none of the same machinery, because
+-- a private name is bound LEXICALLY and never reaches `member_value` or
+-- `selects`. NO RECEIVER LITERAL IS NEEDED and that is not a shortcut: the class
+-- body that declares `#face` is the only place `this.#face` can be written at
+-- all, so `private_binds` has already decided both halves that
+-- `accessor_of` + `may_be_node` decide for a public one.
+accessor_read[code](N, M) :- private_binds[code](N, M),
+                             accessor_kind(K), ast_attr[code](M, kind, K).
+
+-- ...AND IT COMPOSES WITH THE ITEM BEFORE IT. A getter that always throws makes
+-- the READ an exit, with no call syntax anywhere at the site. This arm is the
+-- reason the accessor question is worth answering at this layer at all: without
+-- it the transfer would be a fact nothing consumes, which is the shape this
+-- repository keeps finding on its own store.
+throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
+
+-- ...AND THE CALL GRAPH HAS TO SAY SO, which the first version did not and the
+-- EXECUTION ORACLE caught within one run: UNSOUND went 0 -> 2, the first
+-- unsoundness of the session, naming `useGauge -> get broken` and
+-- `useGauge -> get reading`. The runtime enters both getters and the model
+-- derived no edge to either, because `gauge.broken` is not a `call_site` under
+-- any spelling. A transfer the control-flow layer names and the call graph
+-- denies is half a model, and the half that is wrong is the one every consumer
+-- reads. The member_expression cells at the call-graph layer are already
+-- `handled`; this makes that claim true of one more site rather than changing a
+-- verdict.
+resolves[code](N, M) :- accessor_read[code](N, M).
+-- ...and it has to be a SITE, or the edge has no caller. `nearest_fn` ranges
+-- over `site[code]`, and `site` is `call_site` plus `transfer_site` — the latter
+-- keyed by KIND, so declaring `member_expression` a transfer kind would make
+-- every property read in the corpus a transfer site. The arm is on `site`
+-- directly and carries only the reads that really do run a function: two, here.
+site[code](N) :- accessor_read[code](N, _).
+
+-- ---------------------------------------------------------------------------
+-- A DESTRUCTURING FORM HIDES A CALL, 2026-09-08 — queue item
+-- w_destructuring_hides_a_call, and it is `accessor_call` wearing two other
+-- syntaxes plus the iterator protocol wearing three.
+--
+-- WHAT UNBLOCKED IT WAS NOT WHAT THE ITEM WAITED ON. It waited on
+-- `w_env_api_surface` on the ground that naming the receiver's iterator is a
+-- standard-library question. MEASURED against the surface that item generated,
+-- with a positive control: `lib_member(P, K, R)` carries 130 rows over eight
+-- prototypes, and `lib_member(P, "iterator", R)`, `lib_member(P,
+-- "Symbol.iterator", R)` and `lib_member(P, "next", R)` are each ZERO. The
+-- surface is keyed by NAME and a well-known symbol is not a name, so the
+-- blocker was never lifted — it was the WRONG BLOCKER.
+--
+-- THE RECEIVER DECIDES, NOT THE SYNTAX, and that is the measurement this item
+-- turns on. Ten cases run against V8's own stack (the same instrument
+-- test/js-callgraph.ts uses, nothing here reads a rule):
+--
+--   { notch } = dial            dial has `get notch`     -> get notch RAN
+--   { plain, ...rest } = dial   two getters left over    -> BOTH RAN
+--   { ...dial }                 an object spread         -> BOTH RAN
+--   [first] = spool             spool has [Symbol.iterator] -> iterator, next RAN
+--   [...spool] / f(...spool)    the same                 -> iterator, next RAN
+--   [...[a, b]] / [x] = [a]     a PLAIN ARRAY            -> NO USER CODE RAN
+--   { ...{ a: 1 } }             a PLAIN OBJECT           -> NO USER CODE RAN
+--
+-- So the four kinds transfer control when and only when the SOURCE carries user
+-- code, which is exactly the condition `accessor_of[flow]` and
+-- `member_value[flow](Obj, "iterator", M)` already decide. Every existing
+-- destructuring site in this corpus reads a plain array or a plain object, which
+-- is why the layer could stand for a week saying they transfer nothing and no
+-- oracle contradicted it: the fixtures had no receiver that could.
+--
+-- AND THE SECOND HOP IS ATTRIBUTABLE, measured the same way: with the fixture's
+-- `{ next: namedFn }` shape V8 names the ENCLOSING function as the caller of
+-- both the iterator and `next`, for an array pattern, an array spread and a
+-- spread argument alike — identical to `for-of`, which is the baseline the same
+-- probe ran beside them. So the model can be held to these edges by execution.
+
+-- (1) THE GETTER SIDE. Three kinds read an object's KEYS, and a key backed by a
+-- getter is a call — the same sentence `accessor_read` was written for, with a
+-- binding rather than a member read in front of it.
+-- THE SOURCE A PATTERN READS, and it is DERIVED rather than declared `edb`:
+-- every other table in this file with that declaration is authored data, and a
+-- relation a rule concludes has no business claiming nobody derives it.
+--
+-- ONLY THE DECLARATOR FORM: a pattern in a
+-- PARAMETER position reads whatever the argument was, which is a call-site
+-- question this arm deliberately does not answer, so a parameter pattern
+-- derives nothing here and is silent rather than wrong.
+pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
+                                 ast_child[code](D, id, 0, P),
+                                 ast_child[code](D, init, 0, Init).
+
+pattern_accessor[code](P, M) :- ast_node[code](P, object_pattern, _, _),
+                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
+                                pattern_takes[code](P, Key), accessor_of[flow](Obj, Key, M).
+-- ...and an object REST runs every getter the pattern did NOT take. The
+-- exclusion is the whole content of the arm, exactly as it is for the
+-- `member_value` arm this one mirrors in rules/js-dataflow.rofl.
+pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
+                                ast_child[code](D, id, 0, P),
+                                ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                                accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
+-- ...and an object SPREAD runs every getter of what it spreads. `{ ...o, k: v }`
+-- overrides a key and still READS it first, so there is no exclusion here and
+-- the asymmetry with the arm above is the language's rather than an omission.
+pattern_accessor[code](S, M) :- ast_node[code](O, object_expression, _, _),
+                                ast_child[code](O, properties, _, S),
+                                ast_node[code](S, spread_element, _, _),
+                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
+                                accessor_of[flow](Obj, Key, M).
+
+-- (2) THE ITERABLE SIDE, and it is `for_of_iterates` at three more nodes.
+-- WHICH SPREADS ITERATE, keyed by the FIELD the node sits in rather than by its
+-- kind, because `spread_element` is one kind doing two different things: in
+-- `properties` it copies keys and in `elements`/`arguments` it exhausts an
+-- iterator. A rule keyed on the kind alone would say `{ ...o }` calls an
+-- iterator, which the ten-case probe above measures as false.
+edb(spread_iterable_field).
+spread_iterable_field(elements).
+spread_iterable_field(arguments).
+spread_iterated[code](S) :- ast_node[code](S, spread_element, _, _),
+                            spread_iterable_field(F), ast_child[code](_, F, _, S).
+
+pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
+                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
+                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+pattern_iterates[code](S, M) :- spread_iterated[code](S),
+                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
+                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+
+-- ---------------------------------------------------------------------------
+-- HOW THE TWO SIDES REACH THE CALL GRAPH, AND THEY REACH IT DIFFERENTLY. The
+-- reason is the one `for_of_iterates` already recorded: `ambiguous_call[audit]`
+-- reads a site with two answers as an over-approximation that must be visible,
+-- which is right for a callee POSITION and wrong for a node that makes SEVERAL
+-- calls all of which are true.
+--
+--   an ITERABLE position has exactly one `[Symbol.iterator]` per receiver, so
+--   two answers there really are two candidate receivers -> `resolves`, which
+--   also buys the module-scope case through `top_call` for nothing;
+--   an OBJECT position runs one getter PER KEY, so a rest over two getters is
+--   two true calls at one node -> `calls` directly, with the top-level arm
+--   written out because `const { ... } = kit` at module scope is the shape this
+--   corpus already has and `nearest_fn` cannot reach it.
+site[code](N)          :- pattern_accessor[code](N, _).
+calls[code](Caller, M) :- pattern_accessor[code](N, M), nearest_fn[code](Caller, N).
+calls[code](R, M)      :- pattern_accessor[code](N, M), top_call[code](N, R).
+
+-- `site` ON BOTH SIDES, and it is not bookkeeping: `nearest_fn` ranges over
+-- `site[code]`, so a `resolves` row at a node nothing calls a site resolves a
+-- callee and draws NO EDGE. Measured — the first version of this rule omitted
+-- the line below, `pattern_iterates` stood at three rows and the execution
+-- oracle reported six missing edges.
+site[code](N)          :- pattern_iterates[code](N, _).
+resolves[code](N, M)   :- pattern_iterates[code](N, M).
+-- ...and the iterator object's `next`, which no syntax names — the same join
+-- `for_of_iterates` makes, on the same three relations, because it is the same
+-- protocol reached through a different door.
+--
+-- THE CALLEE IS A RELATION AND NOT AN INLINE JOIN, 2026-09-09, and the split is
+-- a REFACTOR SHIPPED BEFORE ITS FEATURE with its own control: `calls[code]`
+-- compared row for row across the change, identical, over sixteen relations and
+-- with a positive control that deleting the arm loses exactly three edges.
+--
+-- The reason is that a second reader needs this callee, and it needs it to
+-- REPORT rather than to repair. The effect layer closes over `resolves` and
+-- this hop reaches `calls` only, so section 5d of rules/js-effects.rofl names
+-- the callee in order to say what that layer DROPS — a hole the owner has
+-- deliberately left open under `w_effect_reads_only_what_resolves`. A
+-- four-premise join copied into another pack is a defect waiting for one of the
+-- copies to be repaired.
+pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
+                               returns[flow](M, E), may_be_node[flow](E, IterObj),
+                               member_value[flow](IterObj, "next", V),
+                               may_be_node[flow](V, Next), fn_node[code](Next).
+calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Caller, X).
+
+-- ---------------------------------------------------------------------------
+-- THE SOURCE DECIDES, SO COUNT THE SOURCES — w_destructuring_hides_a_call,
+-- 2026-09-09, and it is the arithmetic section 5b of rules/js-effects.rofl runs
+-- for a coerced operand, run for the positions whose surface is a binding.
+--
+-- WHY THE CELL NEEDED IT. The four cells above closed on a rule that fires at
+-- NINE of the corpus's TWENTY-FOUR positions, and until this section existed
+-- nothing could tell the reader which of the two sentences the other fifteen
+-- were: *this source runs no user code* — a positive statement about a plain
+-- array or an object owning no getter — or *the value layer never traced this
+-- source*, which is an absence wearing the same silence. `pattern_accessor`
+-- and `pattern_iterates` derive nothing in both cases and are right in one.
+-- That is the same hole `eff_conv_untraced` exists to fill one section over.
+--
+-- MEASURED over the five corpus files, and the arithmetic is what let the cells
+-- stay closed rather than being reopened:
+--
+--   24 positions  = 9 user code + 15 builtin + 0 primitive + 0 untraced
+--                                             + 0 unsourced
+--   by kind: object_pattern 10 (4 fire), array_pattern 3 (1), rest_element 3
+--            (1), spread_element 8 (3 — one getter, two iterable)
+--
+-- SO THE RESIDUE IS EMPTY AND SAYS SO, which is a different claim from the
+-- ratio 9/24 and the only one that licenses `handled`. A rule that fires at
+-- three eighths of its sites is a lie if the rest are unknown and a complete
+-- model if the rest are answered NO — and this section is what makes the
+-- difference queryable instead of arguable.
+--
+-- `for_of_statement` IS IN THE DENOMINATOR, because the mechanism and not the
+-- kind is the unit: the loop reaches the identical protocol through a different
+-- door, `transfer_mechanism(for_of_statement, iterator_call)` already says so,
+-- and its residue is the same question asked at a fifth position.
+
+-- (1) THE DENOMINATOR. Every position that runs a protocol, by MECHANISM. Keyed
+-- on the kind AND the field for the spread, exactly as `spread_iterated` is,
+-- because `{ ...o }` and `[ ...o ]` are one kind doing two different things.
+hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).
+hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _, _),
+                                           ast_node[code](P, object_pattern, _, _),
+                                           ast_child[code](P, properties, _, R).
+hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _, _),
+                                           ast_child[code](O, properties, _, S),
+                                           ast_node[code](S, spread_element, _, _).
+hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _, _).
+hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
+hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _, _).
+
+-- (2) THE SOURCE each position reads. A REST reads the declarator's init rather
+-- than its own child, which is why it cannot borrow the arm above it.
+hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _, _),
+                                  pattern_source[code](P, Init).
+hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _, _),
+                                  pattern_source[code](P, Init).
+hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
+                                  ast_child[code](D, init, 0, Init).
+hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _, _),
+                                  hidden_call_pos[code](S, _),
+                                  ast_child[code](S, argument, 0, A).
+hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _, _),
+                                  ast_child[code](X, right, 0, R).
+
+-- (3) THE FIVE ANSWERS, and the first of them is the RULE'S OWN OUTPUT rather
+-- than a second criterion. Writing "the source owns a getter" again here would
+-- be a copy of `pattern_accessor` that can drift from it, and the question this
+-- section asks is exactly *at which positions does that rule fire*.
+hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
+hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
+hidden_call_user[flow](X, M) :- for_of_iterates[code](X, M).
+hidden_call_fires[code](N)   :- hidden_call_user[flow](N, _).
+
+-- ...a source the value layer TRACED to something in this program that owns no
+-- such member converts through the language's own — `Array.prototype`'s
+-- iterator, `Object.prototype` — and runs no user code. A positive statement,
+-- and the one a rule keyed on the SYNTAX could not make.
+--
+-- AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE FOUND. This class is `traced
+-- AND the rule did not fire`, so reading it as *no user code runs here* rests
+-- on the transfer rules being RIGHT, not merely on the source being traced.
+-- Where they can be wrong is narrow and known: `pattern_iterates` requires
+-- `fn_node[code](M)`, so a receiver holding a non-function under `iterator`
+-- would land here rather than in the frontier. There is no such site in this
+-- corpus — that is the third unkillable mutant named in
+-- test/js-destructuring-transfer.test.ts — and the mutant set beside it is
+-- what this class borrows its confidence from.
+hidden_call_builtin[flow](N, O) :- hidden_call_src[code](N, Src),
+                                   may_be_node[flow](Src, O),
+                                   not hidden_call_fires[code](N).
+-- ...a PRIMITIVE has no user member either: `const [a, b] = "xy"` runs the
+-- String iterator and `const { length } = "xy"` runs nothing. Same answer,
+-- different reason, so it is its own row rather than folded into the one above.
+hidden_call_primitive[flow](N, V) :- hidden_call_src[code](N, Src),
+                                     may_be_lit[flow](Src, V),
+                                     not hidden_call_traced[code](N).
+hidden_call_traced[code](N)       :- hidden_call_src[code](N, Src), may_be_node[flow](Src, _).
+-- ...and the FRONTIER, named rather than seeded. A source the value layer did
+-- not trace MAY own a getter or an iterator, and the honest answer is the one
+-- `eff_call_unattributed` gives for an unresolved call: a positive relation.
+-- Seeding a transfer here instead would put every plain array in the corpus on
+-- the frontier, which is the layer's sharpest statement destroyed to say
+-- something nobody can use.
+hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
+                                      not may_be_lit[flow](Src, _),
+                                      not may_be_node[flow](Src, _).
+-- ...and the fifth answer, which is about the MODEL rather than the source:
+-- `pattern_source` covers the DECLARATOR form only, so a pattern in a PARAMETER
+-- position has no source here at all. That silence was a comment; it is a row.
+hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
+hidden_call_unsourced[flow](N, K)  :- hidden_call_pos[code](N, _),
+                                      not hidden_call_sourced[code](N),
+                                      ast_node[code](N, K, _, _).
+
+-- (4) TOTALITY, in the shape section 5b of rules/js-effects.rofl uses. Every
+-- position is answered one of the five ways and never none of them — an
+-- IDENTITY, so it is true of any corpus rather than of this one.
+hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
+hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_primitive[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_untraced[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N, _).
+hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
+                                     not hidden_call_accounted[audit](N).
+
+-- ...AND THE MECHANISM COLUMN IS CHECKED AGAINST THE TABLE THAT OWNS IT.
+-- `hidden_call_pos` writes a mechanism by hand at six arms, and a hand-written
+-- column drifts: an arm that filed an `object_pattern` under `iterator_call`
+-- would classify it against the wrong member and nothing else here would care.
+-- `transfer_mechanism` is the table that says which kind carries which, so this
+-- reads it back. Empty and populatable — swapping the mechanism on the
+-- `object_pattern`, `rest_element`, `array_pattern` or `for_of_statement` arm
+-- fires it immediately.
+--
+-- AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE FOUND: it is BLIND to the two
+-- `spread_element` arms, because that kind is the one carrying BOTH mechanisms
+-- and every pair it could be given is already declared. Swapping those two is
+-- a survivor by construction, and the mutant that kills it is `d9` in
+-- test/js-destructuring-transfer.test.ts, which reads the EDGES instead.
+-- `member_expression` is not what this catches either: it really does carry
+-- `accessor_call`, so a stray row for it would pass. What is refused is a
+-- kind/mechanism PAIR the layer has not declared.
+hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
+                                      ast_node[code](N, K, _, _),
+                                      not transfer_mechanism(K, M).
+
+-- ---------------------------------------------------------------------------
+-- WHAT PROPAGATES, 2026-09-06 — queue item w_exn_propagation, the transitive
+-- half of the exception path and the item that took `useTry -> after` back and
+-- forth twice before the measurement settled it.
+--
+-- FIRST ITEM IN FIVE THAT NEEDED NO NEW FIXTURE. Measured before a line was
+-- written: seven throw sites, six of them not caught by a try in their own
+-- function, and the closure over the call graph adds FOUR names —
+-- `nestedThrow -> useNested -> main`, `topThrowWithReturn -> useWithReturn`,
+-- `Fuse -> Lit`. The corpus grew the chain by accident while three earlier
+-- items were writing their own witnesses, which is the first time this session
+-- the queue's own note was simply right.
+--
+-- A TRY CATCHES WHAT RUNS IN ITS OWN FUNCTION, and the `nearest_v` equality is
+-- not decoration: `try { const f = () => g(); } catch {}` has `g()` inside the
+-- try's block TEXTUALLY, and it runs when `f` is called, which is later and
+-- elsewhere. Without the equality the model would report that call caught.
+try_of[code](TS, F)        :- ast_node[code](TS, try_statement, _, _), nearest_v[flow](F, TS).
+in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
+                              ast_child[code](TS, block, 0, B), ast_within[code](B, N).
+caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
+                              nearest_v[flow](F, N).
+
+-- A THROW THAT LEAVES ITS FUNCTION. Note `rethrown`: its throw sits in a
+-- HANDLER, and a clause does not catch what its own handler throws — the
+-- `block` field is what `in_try_block` reads, which is the same distinction
+-- `thrown_in[flow]` had to make one item ago.
+throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
+                            nearest_v[flow](F, T), not caught_here[code](T).
+
+-- ORDERED FOR COST: `may_throw` is a handful of rows and binds G, so `resolves`
+-- is probed by callee rather than enumerated.
+may_throw[code](F) :- throws_outright[code](F).
+may_throw[code](F) :- may_throw[code](G), resolves[code](C, G), nearest_v[flow](F, C),
+                      not caught_here[code](C).
+
+-- ...AND THE VALUE TRAVELS WITH IT, which is what closes the frontier item 25
+-- had to declare. `catch_from_call[flow]` named a catch parameter whose source
+-- crosses a call edge and handed it to THIS item; the arm below is the answer,
+-- and the audit beside it can now say something instead of deferring.
+thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _, _), nearest_v[flow](F, T),
+                         not caught_here[code](T), ast_child[code](T, argument, 0, V).
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), resolves[code](C, G),
+                         nearest_v[flow](F, C), not caught_here[code](C).
+caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            try_block[flow](T, B), ast_within[code](B, C),
+                            resolves[code](C, G), thrown_by[flow](G, V).
+
+-- A SECOND ARM WAS WRITTEN AND REMOVED, and the mutant is why. `super(...)`
+-- looked like it needed a hop through `ctor_of[flow]`, because a super call
+-- names the CLASS and not the body that runs. Measured: `resolves` already
+-- returns the `class_method` for a super call, so the arm never fired — the
+-- mutant that deleted it changed NOTHING, on any relation. A rule no corpus
+-- exercises cannot go red, so shipping it would have been a capability
+-- invisible to every gate here, which is the failure this repository names by
+-- name. `super x controlflow` is answered by the arm above.
+
+-- ...AND A TRY STOPS IT. The call is an abrupt transfer for the statement list
+-- it sits in, and for every list further out UNTIL a `try` catches it: code
+-- after the try runs precisely because the handler caught the throw. Without
+-- this clause the rule would report everything after a `try` as unreachable,
+-- which is the failure mode `may_not_run` was built to avoid — a may-set that
+-- is too WIDE stops being a hedge and becomes a false claim.
+try_stops[code](C, T) :- throwing_call[code](C), ast_node[code](T, try_statement, _, _),
+                         ast_within[code](T, C).
+try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
+
+-- ...AND SO DOES THE FUNCTION BOUNDARY, which the first draft omitted and the
+-- corpus caught in one run: without `ast_within(G, S)` the walk up from a
+-- throwing call reached the CLASS DECLARATION and then the module's own
+-- statement list, so everything after `class Lit` in alpha.mjs was reported
+-- unreachable — `after_abrupt` 3 -> 37, `reachable` 110 -> 38. An exit leaves
+-- the CURRENT function; whether it leaves the caller too is the transitive
+-- question, and w_exn_propagation owns it. The boundary between the two items
+-- is exactly the boundary this literal draws.
+--
+-- ORDERED FOR COST: `throwing_call` is a handful of rows and binds C, so
+-- `nearest_v` is a probe and `ast_within` is walked UP from a few nodes rather
+-- than over every containment pair.
+abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
+                            ast_within[code](G, S), ast_within[code](S, C),
+                            stmt_seq_field(F), ast_child[code](B, F, I, S),
+                            not try_stops[code](C, S).
+
+-- A STATEMENT AFTER AN ABRUPT TRANSFER NEVER RUNS, which is stronger than what
+-- `guarded` says — `guarded` is a MAY-not-run and this is a NEVER. The weaker
+-- word is used deliberately: the layer's vocabulary is the may-set, every
+-- consumer reads it that way, and a second stronger relation would need its own
+-- consumers before it could be checked. The over-coverage is in the safe
+-- direction and is what `may_not_run` is documented to be.
+guarded[code](S) :- after_abrupt[code](S).
+guarded[code](N) :- after_abrupt[code](S), ast_within[code](S, N).
+-- ...and the same two arms for a SUSPENSION, which is a may rather than a never
+-- and therefore belongs in this relation more exactly than the abrupt does.
+guarded[code](S) :- after_suspend[code](S).
+guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).
+
+guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
+reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
+may_not_run[code](F)       :- resolves[code](_, F), not reached_unguarded[code](F).
+
+-- ---------------------------------------------------------------------------
+-- TRANSITIVE REACHABILITY, 2026-09-06 — queue item w_cf_reachability.
+--
+-- `may_not_run` is LOCAL: it asks whether a function's own call sites are
+-- guarded and stops there. Whether the CALLER runs is the transitive question,
+-- and the item's note said guessing at entry points would answer something
+-- nobody asked, so the walk was declared absent rather than approximated.
+--
+-- THE MEASUREMENT SAID SOMETHING SHARPER THAN THE NOTE, and it decided the
+-- design. Written without an entry point the question is not merely
+-- under-determined, it is UNSTRATIFIED and the kernel refuses the program:
+--
+--     live(F) :- resolves(C, F), not guarded(C), nearest_v(G, C), not dead(G).
+--     dead(F) :- resolves(_, F), not live(F).
+--     -> "round 5 settled nothing while dead_fn, live_call remained"
+--
+-- An entry point is not a convenience here. It is what turns a cycle through
+-- negation into a positive least fixpoint, and the refusal is the rule that
+-- says so — measured before a line of this was written.
+--
+-- AND IT NEED NOT BE GUESSED. A module's EXPORT SURFACE is its entry surface,
+-- and the store already carries it. That is a fact about the language rather
+-- than about this corpus, which is the whole difference between a seed and an
+-- approximation. `export_all_declaration` is deliberately NOT here: it
+-- re-exports someone else's names and introduces no local entry.
+edb(export_kind).
+export_kind(export_named_declaration).
+export_kind(export_default_declaration).
+
+fn_node[code](F) :- fn_name[code](F, _).
+in_fn[code](N)   :- nearest_v[flow](_, N).
+
+-- THE SURFACE IS CONTAINMENT, NOT A PATH. `export function f(){}` puts the
+-- function under `declaration`; `export const g = () => {}` puts it under
+-- declaration/declarations/init; `export default function h(){}` is a third
+-- kind entirely. Enumerating the three paths is the shape this repository has
+-- twice paid to stop writing. `not in_fn` is what keeps it precise: a closure
+-- nested inside an exported function has an enclosing function and is NOT part
+-- of the surface, while a method of an exported class has none and IS — anyone
+-- who imports the class can call it.
+exported_fn[code](F) :- export_kind(K), ast_node[code](E, K, _, _),
+                        ast_within[code](E, F), fn_node[code](F), not in_fn[code](F).
+
+-- ...AND THE EXPORT FORM CONTAINMENT CANNOT REACH (w_export_specifier_forms,
+-- 2026-09-08). `export { f }` and `export { f as g }` contain no function at
+-- all — the declaration's subtree is two identifiers — so the rule above walks
+-- it and finds nothing, and until this arm existed a module whose every export
+-- went through a specifier list had an EMPTY entry surface.
+--
+-- MEASURED, on a probe whose three functions were exported only that way:
+-- `exported_fn` 0, `entry_point` 0, `reachable` 0, `no_entry_point[audit]`
+-- firing on the file, and `may_not_be_reached` naming `helper` — a function
+-- that same file exports AND calls. The positive control, the identical three
+-- functions written `export function`, gives all three as entry points and an
+-- empty `may_not_be_reached`. So this is the dangerous direction the export-kind
+-- typo gate already names, arriving through a form rather than a misspelling.
+--
+-- THE JOIN IS `export_local` FROM rules/js-dataflow.rofl AND NOT A SECOND WALK:
+-- that relation already excludes a re-export's `local` (a name in another
+-- module) and a type-only export (erased before anything runs), and both of
+-- those are wrong answers here too. `not in_fn` is the same precision clause the
+-- arm above carries, for the same reason.
+exported_fn[code](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
+                        fn_node[code](F), not in_fn[code](F).
+
+entry_point[code](F) :- exported_fn[code](F).
+
+reachable[code](F) :- entry_point[code](F).
+-- ...and a call at the top level of a module, which runs on import and has no
+-- enclosing function to be reached from.
+reachable[code](F) :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
+reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
+                      not guarded[code](C).
+
+-- STILL A MAY-SET, and the name says which one. `may_not_run` asks about a
+-- function's own sites; this asks whether anything that reaches it runs at all.
+may_not_be_reached[code](F) :- resolves[code](_, F), not reachable[code](F).
+
+-- AN EXPORT KIND THE SCANNER NEVER EMITS — the third instance of the same typo
+-- hole, after `guard_arm_unseen` and `stmt_seq_unseen`. A misspelling here
+-- silently shrinks the entry surface, and a smaller seed reports live functions
+-- as maybe-dead, which is the dangerous direction.
+export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _, _).
+
+-- A FILE WITH FUNCTIONS AND NO ENTRY POINT AT ALL. Every function in it comes
+-- back `may_not_be_reached`, and that is an artefact of the SEED rather than a
+-- finding about the program — a script with no exports is ordinary JavaScript.
+-- Named rather than derived silently, because a whole file reported dead looks
+-- exactly like a discovery.
+-- `has_entry` is [code] and not [audit] on purpose: it is the denominator the
+-- gate below ranges over, and a denominator is not a gate. The same distinction
+-- `scanned_file` earned in the era layer, and the meta-gate that demands a
+-- mutant per audit head is what forced it to be stated here too.
+has_entry[code](File)       :- entry_point[code](F), ast_node[code](F, _, File, _).
+no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File, _),
+                               not has_entry[code](File).
+
+-- ONE LEVEL, DECLARED. A function called unguarded from a function that itself
+-- may never run is NOT reported: this asks about the site, not about the walk.
+-- The transitive form is a reachability question and it wants the layer to have
+-- an entry point first — `main` is one here only by convention, and a model
+-- that guessed at entry points would be answering a question nobody asked.
+-- `may_not_run_transitive` is deliberately absent rather than approximated.
+
+-- ---------------------------------------------------------------------------
+-- 3. THE GATES.
+
+-- A KIND THAT TRANSFERS CONTROL AND IS NOT ACCOUNTED FOR. The first draft had
+-- ONE relation, `branching_kind`, and the gate named five kinds in its first
+-- run: `await`, `yield`, `return`, and both optional forms. They are not one
+-- thing, and putting them in one bucket would have given four different
+-- mechanisms one verdict — the defect `s_member_on_other` already paid for.
+--
+--   SKIP AN ARM        an if/conditional arm, a `&&` right side, a loop body:
+--                      the arm may be skipped and everything in it with it.
+--                      Modelled, above.
+--   SHORT-CIRCUIT      `a?.b()`: nothing is skipped by POSITION — the whole
+--                      node stops evaluating when the object is nullish, so
+--                      the guarded thing is the site itself, not a child.
+--                      Modelled, below.
+--   SUSPEND            `await`, `yield`: control leaves and COMES BACK. The
+--                      code after them runs; it merely runs later. Waived —
+--                      this layer asks whether a site runs, and the answer for
+--                      a suspension is yes.
+--   ABRUPT             `return` (and `throw`, `break`, `continue` when the
+--                      corpus grows them): everything after it in the same
+--                      block is unreachable. REAL and NOT MODELLED: it is a
+--                      question about statement ORDER within a block, which
+--                      nothing in this layer expresses yet.
+edb(transfer_mechanism).    -- transfer_mechanism(Kind, Mechanism)
+transfer_mechanism(if_statement,               skip_arm).
+transfer_mechanism(conditional_expression,     skip_arm).
+transfer_mechanism(logical_expression,         skip_arm).
+transfer_mechanism(for_of_statement,           skip_arm).
+transfer_mechanism(optional_call_expression,   short_circuit).
+transfer_mechanism(optional_member_expression, short_circuit).
+transfer_mechanism(member_expression,          accessor_call).
+transfer_mechanism(await_expression,           suspend).
+transfer_mechanism(yield_expression,           suspend).
+transfer_mechanism(return_statement,           abrupt).
+transfer_mechanism(throw_statement,            abrupt).
+transfer_mechanism(break_statement,            abrupt).
+transfer_mechanism(continue_statement,         abrupt).
+transfer_mechanism(while_statement,            skip_arm).
+transfer_mechanism(for_statement,              skip_arm).
+transfer_mechanism(for_in_statement,           skip_arm).
+transfer_mechanism(switch_statement,           skip_arm).
+transfer_mechanism(switch_case,                skip_arm).
+transfer_mechanism(try_statement,              skip_arm).
+transfer_mechanism(catch_clause,               skip_arm).
+-- A FIFTH MECHANISM, and it exists so that `do_while_statement` is not filed
+-- under either of the two that would be wrong. Its body runs at least once, so
+-- it guards nothing — and it is not a suspension either, because control never
+-- leaves. Waived with the reason spelled out rather than left out of the table,
+-- because a loop kind missing from `transfer_mechanism` reads as "nobody
+-- looked" and this one was looked at.
+transfer_mechanism(do_while_statement,         loop_at_least_once).
+-- ...and a defaulted parameter, whose `right` is skipped when the argument is
+-- supplied. `guard_named` follows from `guard_kind` and needs no row of its own.
+transfer_mechanism(assignment_pattern,         skip_arm).
+-- A SIXTH MECHANISM, 2026-09-08 (w_labelled_control), and it is a sixth rather
+-- than `abrupt` because a `labeled_statement` does not transfer control — it
+-- RECEIVES one. Filing it under `abrupt` would say that everything after a
+-- label in the same block is unreachable, which is false of every label in the
+-- language; filing it under `skip_arm` would say its body may be skipped, which
+-- is false too. What it does is BOUND a transfer some other statement performs,
+-- and the layer's own doctrine is that four mechanisms in one bucket get one
+-- verdict between them.
+transfer_mechanism(labeled_statement,          label_boundary).
+-- A SEVENTH MECHANISM, 2026-09-08 (w_plugin_gated_kinds), and it replaces a
+-- WAIVER rather than filling a gap. `ignored(js, decorator, controlflow,
+-- a_no_control_transfer)` stood here until the scanner could see a decorator,
+-- and it is false: `@decoOnce class Decorated {}` calls `decoOnce` with the
+-- class and a context object at class-definition time. Same shape as
+-- `accessor_call` — a construct whose surface is an annotation and whose
+-- semantics is a call — and unlike the destructuring cases in
+-- `w_destructuring_hides_a_call` it is CLOSABLE, because the callee is named
+-- right there in user code and needs no standard-library surface to reach.
+--
+-- ITS OWN MECHANISM AND NOT `accessor_call`, because when it runs differs: an
+-- accessor call happens on every property access and a decorator runs ONCE, at
+-- definition, before the decorated thing can be reached at all.
+transfer_mechanism(decorator,                  definition_time_call).
+-- A SEVENTH MECHANISM, 2026-09-08 (w_class_fields), and it is a seventh for the
+-- same reason `label_boundary` was a sixth. A class field's initialiser is not
+-- skipped by a CONDITION anywhere in the source — nothing near it branches — and
+-- it is not evaluated once either: it runs on every `new` and never if there is
+-- none. `skip_arm` would have said a condition decides it, which no reader could
+-- then find; `loop_at_least_once` would have said it always runs, which is the
+-- narrow direction. Measured by running a class that is defined and never
+-- constructed: the STATIC initialiser ran and the instance one did not.
+transfer_mechanism(class_property,             per_construction).
+transfer_mechanism(class_private_property,     per_construction).
+-- AN EIGHTH MECHANISM, 2026-09-08 (w_destructuring_hides_a_call), and it is the
+-- first time a KIND in this table carries TWO. `spread_element` in `properties`
+-- copies keys and runs getters — `accessor_call`, the mechanism already here —
+-- and in `elements` or `arguments` it exhausts an iterator, which is a call into
+-- a method the receiver names and neither an accessor nor an arm skipped by a
+-- condition. One row per (kind, mechanism) is what lets the table say that
+-- rather than making a reader pick which half to write down.
+--
+-- `for_of_statement` IS HERE FOR THE SAME REASON and its row is a correction:
+-- it has carried `skip_arm` alone since the layer opened, which is true of its
+-- BODY and silent about `E[Symbol.iterator]()`, a call `for_of_iterates` has
+-- modelled at the call-graph layer since 2026-09-07 with no row in this table
+-- to say so.
+transfer_mechanism(object_pattern,             accessor_call).
+transfer_mechanism(rest_element,               accessor_call).
+transfer_mechanism(spread_element,             accessor_call).
+transfer_mechanism(array_pattern,              iterator_call).
+transfer_mechanism(spread_element,             iterator_call).
+transfer_mechanism(for_of_statement,           iterator_call).
+
+edb(mechanism_modelled).    -- mechanism_modelled(M)  this layer answers it
+mechanism_modelled(skip_arm).
+mechanism_modelled(short_circuit).
+mechanism_modelled(accessor_call).
+mechanism_modelled(abrupt).
+-- SUSPEND JOINED 2026-09-07, and it left the waiver rather than the table: the
+-- reason `a_control_returns_so_the_site_still_runs` asserted that the promise
+-- settles, which this layer cannot know and never checked.
+mechanism_modelled(suspend).
+-- LABEL_BOUNDARY JOINED 2026-09-08 (w_labelled_control) and it arrived answered
+-- rather than open: `label_target` reads the labelled statement by kind and the
+-- extra `abrupt_at` arm walks to it, so there is a rule between the mechanism
+-- and the kind that carries it.
+mechanism_modelled(label_boundary).
+mechanism_modelled(definition_time_call).
+-- PER_CONSTRUCTION JOINED 2026-09-08 (w_class_fields), answered rather than
+-- open: `field_init` reads the two kinds by mechanism and puts the initialiser
+-- in `guard_arm`, so there is a rule between the mechanism and the kinds.
+mechanism_modelled(per_construction).
+-- ITERATOR_CALL JOINED 2026-09-08 (w_destructuring_hides_a_call), answered
+-- rather than open: `pattern_iterates` reads the two pattern kinds by KIND and
+-- `for_of_iterates` reads the loop, so every kind carrying it has a rule.
+mechanism_modelled(iterator_call).
+edb(mechanism_waived).      -- mechanism_waived(M, Reason)
+mechanism_waived(loop_at_least_once, a_body_that_always_runs_guards_nothing).
+
+-- THREE STATES, NOT TWO. The first draft had modelled and waived, and `abrupt`
+-- was neither — so `mechanism_unanswered[audit]` stood at one, permanently, for
+-- a mechanism nobody had forgotten. AN AUDIT THAT IS RED ON AN HONEST TREE GETS
+-- SWITCHED OFF, and this repository has paid for that once already. Declaring
+-- the openness with its OWNER keeps the row queryable and the audit at zero,
+-- which is the same move `cell_blocked` makes for a cell nobody can take.
+edb(mechanism_open).        -- mechanism_open(M, WorkItem)
+-- EMPTY SINCE 2026-09-06, and kept declared: `abrupt` was the only row and it
+-- moved to `mechanism_modelled` when w_cf_abrupt_transfer landed. The relation
+-- stays because the THREE-STATE shape is the point — the next mechanism that is
+-- neither answered nor waived needs somewhere honest to sit, and re-deriving
+-- that lesson costs more than one `edb` line.
+
+mechanism_known(M) :- mechanism_modelled(M).
+mechanism_known(M) :- mechanism_waived(M, _).
+mechanism_known(M) :- mechanism_open(M, _).
+
+-- A MECHANISM WITH NO OPINION AT ALL: not modelled, not waived, not declared
+-- open. A kind carrying one is silently read as unconditional — the WRONG
+-- direction, since it makes the guarded set too small and `may_not_run` too
+-- narrow, and a may-set that is too narrow is a claim rather than a hedge.
+mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(M).
+
+-- ...and the same question one level down: a kind carrying a MODELLED mechanism
+-- that no rule of this layer actually reaches.
+guard_named[code](K)       :- guard_kind(K, _).
+guard_named[code](K)       :- short_circuit_kind(K).
+-- ...and the four abrupt kinds, reached by `abrupt_at` rather than by an arm.
+guard_named[code](K)       :- abrupt_kind(K).
+-- ...and the two SUSPENSION kinds, reached by `suspend_at` on the same pattern.
+-- DERIVED FROM `transfer_mechanism` rather than listed, which is what caught
+-- the incomplete change: declaring `mechanism_modelled(suspend)` without this
+-- line put both kinds in `guard_unmodelled[audit]` within one run, and that is
+-- the audit doing exactly what it was written for — a mechanism claimed as
+-- answered by a rule nothing connects to the kinds that carry it.
+guard_named[code](K)       :- transfer_mechanism(K, suspend).
+-- ...and the LABEL, on the same pattern and for the same reason: derived from
+-- the mechanism, so declaring `mechanism_modelled(label_boundary)` without a
+-- rule that reaches `labeled_statement` reddens `guard_unmodelled[audit]`
+-- instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, label_boundary).
+-- ...and the two FIELD kinds, on the same pattern: derived from the mechanism,
+-- so declaring `mechanism_modelled(per_construction)` without `field_init`
+-- reaching them reddens `guard_unmodelled[audit]` instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, per_construction).
+-- `catch_clause` carries `skip_arm` and is reached as the ARM of a
+-- `try_statement` rather than by a `guard_kind` row of its own — the guard is
+-- the try's `handler` field, and the clause is what sits in it. Named here so
+-- the closed-vocabulary gate does not report a kind the rules really do cover.
+guard_named[code](catch_clause).
+-- ...and the same for the switch: `switch_statement` transfers control by
+-- selecting a case, and the arm that may be skipped belongs to `switch_case`.
+guard_named[code](switch_statement).
+-- ...and `member_expression`, which carries `accessor_call` and is reached by
+-- `accessor_read` rather than by a `guard_kind` row: an accessor read transfers
+-- control INTO a getter, it does not skip an arm. Named here for the same
+-- reason `catch_clause` is — so the closed-vocabulary gate does not report a
+-- kind the rules really do cover.
+guard_named[code](member_expression).
+-- ...and `decorator`, for exactly the reason above it: a decorator transfers
+-- control INTO the decorator function, it does not skip an arm, so it is
+-- reached through the call graph rather than by a `guard_kind` row.
+guard_named[code](decorator).
+-- ...and the THREE KINDS THAT READ AN OBJECT'S KEYS, 2026-09-08. Each is
+-- reached by `pattern_accessor` rather than by a `guard_kind` row, for the same
+-- reason `member_expression` is: a hidden getter call transfers control INTO the
+-- getter and skips no arm. Written out one per kind rather than derived from
+-- `transfer_mechanism(K, accessor_call)`, because a derived line would also
+-- cover `member_expression` and silence the mutant that guards the row above.
+guard_named[code](object_pattern).
+guard_named[code](rest_element).
+guard_named[code](spread_element).
+-- ...and the ITERABLE side, derived from the mechanism on the pattern
+-- `label_boundary` and `per_construction` set: declaring
+-- `mechanism_modelled(iterator_call)` without a rule that reaches
+-- `array_pattern`, `spread_element` and `for_of_statement` reddens
+-- `guard_unmodelled[audit]` instead of passing quietly.
+guard_named[code](K)       :- transfer_mechanism(K, iterator_call).
+guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
+                              ast_node[code](_, K, _, _), not guard_named[code](K).
+
+-- ---------------------------------------------------------------------------
+-- SHORT-CIRCUIT. `a?.b()` does not skip a CHILD — it stops the whole chain when
+-- the object is nullish, so the site itself is conditional, and so is anything
+-- further along the same member chain.
+edb(short_circuit_kind).
+short_circuit_kind(optional_call_expression).
+short_circuit_kind(optional_member_expression).
+
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _, _).
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _, _),
+                    ast_within[code](P, N).
+
+-- AN ARM DECLARED FOR A FIELD THE SCANNER NEVER EMITS UNDER THAT KIND — a typo
+-- in `guard_kind` is otherwise invisible: the row simply matches nothing and
+-- the guarded set is quietly smaller.
+guard_arm_seen[code](K, Field) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+                                  ast_child[code](P, Field, 0, _).
+guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _, _),
+                                  not guard_arm_seen[code](K, F).
+
+-- A GUARDED SITE AT A COORDINATE, so the report can point at the source and the
+-- acceptance can join it against what the runtime did.
+guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File, Line).

@@ -1,0 +1,305 @@
+-- js-globals.rofl — THE ES GLOBALS, WHICH IS THE HALF OF THE STANDARD LIBRARY
+-- THAT IS NOT A PROTOTYPE.
+--
+-- rules/js-env-api.rofl attributes `array.at` and `string.replaceAll` — a
+-- member call whose RECEIVER has a known prototype. It says nothing about
+-- `JSON.parse`, `Promise.all`, `Object.entries` or `Math.max`, because those
+-- hang off a GLOBAL BINDING and a binding is not a receiver. Measured
+-- 2026-09-09 over the five files of test/fixtures/js-call: ten stdlib calls,
+-- ten attributed, and NOT ONE static of an ES global anywhere in the corpus.
+-- The era question could not be asked of `JSON.parse` and nothing said so.
+--
+-- THREE SURFACES, THREE RELATIONS, AND THEY ARE NOT THE SAME QUESTION. This is
+-- the decision the pack is built on and it is stated rather than implied:
+--
+--   the BINDING     does the name `Promise` exist, and since when
+--                     -> `es_global[code](E, Name, Release, Form)`
+--   the STATICS     what hangs off the NAME: `Promise.all`, `Math.max`
+--                     -> `es_static[code](N, Name, Key, Release)`
+--   the PROTOTYPE   what hangs off an INSTANCE: `array.at`, `string.concat`
+--                     -> `lib_call[code]`, in rules/js-env-api.rofl, keyed by a
+--                        lower-case prototype atom. `lib_global_prototype` is
+--                        the bridge, and it covers EIGHT of the forty-seven
+--                        globals because eight is what `kind_prototype` in
+--                        rules/js-dataflow.rofl can name a receiver for.
+--                        SECTION 6 BELOW joins a CONSTRUCTION to that bridge
+--                        (w_prototype_of_a_constructed_value, 2026-09-09), so
+--                        `new RegExp(s).test(x)` reaches the prototype surface
+--                        and `new Map().set(k, v)` still does not — the missing
+--                        bridge row is where that is visible, and
+--                        `es_prototype_gap[audit]` is where it is a ROW.
+--
+-- AND THE FORMS ARE NOT UNIFORM EITHER. `lib_global_form` has four rows because
+-- TypeScript's declarations have four shapes, and averaging them would make
+-- three of the four wrong: `Math` and `JSON` are namespace objects with no
+-- constructor and no instance surface, `Reflect` and `Intl` are declared as
+-- namespace BLOCKS with no variable at all, and `NaN` and `Infinity` are values
+-- with no member surface whatever. `es_construct_not_constructor[audit]` below
+-- is that difference used rather than merely recorded.
+
+-- ===========================================================================
+-- 1. WHERE A GLOBAL CAN BE SEEN, AND THE CEILING IS THIS TABLE.
+--
+-- A global is an identifier that nothing binds, and "an identifier" is the
+-- expensive half: every property name, every declaration id, every object key
+-- is an `identifier` node too, and none of them is a reference. Rather than
+-- subtract the non-reference positions — a list nobody could close — this names
+-- the reference positions the three surfaces actually need, as a table.
+--
+-- WHAT THAT COSTS, SAID PLAINLY: a bare reference is invisible here. `n > 0 ? n
+-- : Infinity` and `typeof Promise` mention a global and neither is the object
+-- of a member expression nor a callee, so no row fires.
+-- test/js-globals.test.ts asserts that silence BY NAME rather than leaving it
+-- to be discovered.
+edb(global_ref_position).   -- global_ref_position(Kind, Field)
+global_ref_position(member_expression, object).
+global_ref_position(optional_member_expression, object).
+global_ref_position(call_expression, callee).
+global_ref_position(optional_call_expression, callee).
+global_ref_position(new_expression, callee).
+
+-- THE SMALL TABLE LEADS, which is a cost decision and the one this layer has
+-- paid for twice: `ident_in[code]` exists in rules/js-dataflow.rofl precisely
+-- because eight rules led with an unbound `ast_node(E, identifier, _, _)` and
+-- handed out 39% of the fixpoint's rows. Five positions x the nodes of those
+-- kinds is a selective question; identifiers first would be a scan.
+global_ref[code](E, Name, File) :- global_ref_position(K, Field),
+                                   ast_node[code](P, K, _, _),
+                                   ast_child[code](P, Field, 0, E),
+                                   ident_in[code](E, Name, File).
+
+-- ===========================================================================
+-- 2. WHAT THE FILE BINDS — AND IT IS DELIBERATELY OVER-BROAD.
+--
+-- `sees_binder[code]` is the model's real scope relation and it is NOT what
+-- this needs: it covers declarators and destructuring patterns only, so a
+-- `function Box() {}` or a `class Vat {}` is invisible to it and every call to
+-- `Box` would read as a reference to a global named Box. What this question
+-- needs is the SAFE direction — a name that anything in the file declares is
+-- not a global — and that is a different relation with a different failure
+-- mode, so it is written rather than borrowed.
+--
+-- THE OVER-APPROXIMATION, STATED: FILE-SCOPED, and a name declared anywhere in
+-- the file is treated as bound everywhere in it. So a genuine use of the global
+-- `Set` in a file that also has a local `Set` is LOST, and a global is never
+-- INVENTED. That is the direction an era gate and an effect layer can both
+-- live with: this relation under-reports globals and never over-reports them.
+edb(declaring_position).   -- declaring_position(Kind, Field)
+declaring_position(variable_declarator, id).
+declaring_position(function_declaration, id).
+declaring_position(class_declaration, id).
+declaring_position(function_expression, id).
+declaring_position(class_expression, id).
+declaring_position(import_specifier, local).
+declaring_position(import_default_specifier, local).
+declaring_position(import_namespace_specifier, local).
+declaring_position(catch_clause, param).
+
+declares_name[code](Name, File) :- declaring_position(K, Field),
+                                   ast_node[code](D, K, File, _),
+                                   ast_child[code](D, Field, 0, I), ast_name[code](I, Name).
+-- ...AND THE NAMES A PATTERN INTRODUCES, which the arm above cannot reach
+-- because a declarator whose `id` is an `object_pattern` has no `ast_name` of
+-- its own — the same fact that made `destructures[code]` necessary in
+-- rules/js-dataflow.rofl. Every name UNDER the binding position counts, keys
+-- and defaults included, which widens `declares_name` and therefore narrows
+-- the globals: the safe direction again.
+declares_name[code](Name, File) :- declaring_position(K, Field),
+                                   ast_node[code](D, K, File, _),
+                                   ast_child[code](D, Field, 0, I),
+                                   ast_within[code](I, X), ast_name[code](X, Name).
+-- ...and a PARAMETER, which is a position rather than a declaration kind and so
+-- cannot be a row in the table above.
+declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
+                                   ast_child[code](F, params, _, P), ast_name[code](P, Name).
+declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
+                                   ast_child[code](F, params, _, P),
+                                   ast_within[code](P, X), ast_name[code](X, Name).
+
+-- ===========================================================================
+-- 3. A GLOBAL, AS A FACT RATHER THAN AS A SPELLING.
+--
+-- THIS IS THE RELATION THE EFFECT LAYER JOINS AGAINST, and it is written here
+-- for that as much as for the era question. `layer(effect)` cannot derive `io`
+-- for `console.log` from the letters `c-o-n-s-o-l-e`; it needs a row saying
+-- that this node is a reference to a global named `console` that nothing in the
+-- program binds. That row is `free_global[code]`, and the two relations under
+-- it split the world in the way the effect lattice needs:
+--
+--   `es_global[code](E, Name, Rel, Form)`   ECMAScript declares it. A pure
+--                                           language surface, dated.
+--   `global_unattributed[audit](E, Name)`   it does not. `console`, `process`,
+--                                           `fetch`, `require`, `globalThis` —
+--                                           the RUNTIME half, and this audit is
+--                                           its in-tray rather than a defect.
+--
+-- Both are keyed by NODE, so an effect rule joins them to `callee_of[code]`,
+-- `arg_at[flow]` or `nearest_fn[code]` without re-deriving anything, and both
+-- are keyed by NAME, so a runtime table keyed by name joins straight on.
+free_global[code](E, Name, File) :- global_ref[code](E, Name, File),
+                                    not declares_name[code](Name, File).
+
+es_global[code](E, Name, Rel, Form) :- free_global[code](E, Name, _),
+                                       lib_global(Name, Rel, Form).
+
+global_unattributed[audit](E, Name) :- free_global[code](E, Name, _),
+                                       not lib_global(Name, _, _).
+
+-- ===========================================================================
+-- 4. THE STATIC SURFACE.
+--
+-- One join, and it is one join for the same reason `lib_call[code]` is: the
+-- corpus side is keyed by (global, key) once `selects[flow]` has answered the
+-- key, and so is the library. `selects[flow]` collapses static and computed
+-- access, which is right here — `Math["max"]` is the same question as
+-- `Math.max`.
+es_static[code](N, Name, Key, Rel) :- es_global[code](O, Name, _, _),
+                                      ast_child[code](N, object, 0, O),
+                                      selects[flow](N, Key), lib_static(Name, Key, Rel).
+
+-- ...AND WHAT IT DOES NOT ATTRIBUTE, which is the row worth watching and the
+-- mirror of `stdlib_unattributed[audit]`. A member selected off a KNOWN ES
+-- global whose name TypeScript's declarations do not carry is one of three
+-- things and this does not guess which: a member of a newer edition than this
+-- TypeScript ships, a HOST extension of a language global —
+-- `Error.captureStackTrace` is V8's and lives in @types/node — or a typo. It is
+-- NOT empty and is not meant to be: the fixture puts a site in it on purpose,
+-- because an audit with no site is a claim nothing can falsify.
+es_static_unattributed[audit](N, Name, Key) :- es_global[code](O, Name, _, _),
+                                               ast_child[code](N, object, 0, O),
+                                               selects[flow](N, Key),
+                                               not lib_static(Name, Key, _).
+
+-- A WELL-KNOWN SYMBOL IS A KEY AND NOT A CALL, taken from the source rather
+-- than asserted: `Symbol.iterator` is a PropertySignature in TypeScript's
+-- declaration and `Symbol.for` is a MethodSignature, so `lib_static_shape`
+-- already carries the difference and this reads it. `Math.PI` and
+-- `Number.MAX_SAFE_INTEGER` come out the same way, by the same rule, for free.
+es_static_key[code](N, Name, Key) :- es_static[code](N, Name, Key, _),
+                                     lib_static_shape(Name, Key, data).
+
+-- WHAT IS DONE WITH THE BINDING ITSELF, and the two are different facts about
+-- the language rather than two spellings of one. `String(n)` calls the global;
+-- `new Error(m)` constructs it. A relation that merged them could not state the
+-- audit below.
+es_static_call[code](C, Name, Key, Rel) :- callee_of[code](C, N),
+                                           es_static[code](N, Name, Key, Rel).
+es_global_invoke[code](C, Name, Rel)    :- callee_of[code](C, N),
+                                           es_global[code](N, Name, Rel, _).
+es_global_construct[code](X, Name, Rel) :- transfer_site[code](X, new_expression),
+                                           ast_child[code](X, callee, 0, N),
+                                           es_global[code](N, Name, Rel, _).
+
+-- ...AND THE FORM USED RATHER THAN RECORDED. `new Math()` is a TypeError and
+-- the model can now say WHY: `Math` is a `namespace_object`, TypeScript
+-- declares no `MathConstructor` behind it, and only a `constructor_binding` has
+-- one. This is the same class of claim as `ambiguous_call[audit]` reporting a
+-- static reached through an instance — a runtime error visible statically.
+edb(constructible_form).
+constructible_form(constructor_binding).
+es_construct_not_constructor[audit](X, Name, Form) :- es_global_construct[code](X, Name, _),
+                                                      lib_global(Name, _, Form),
+                                                      not constructible_form(Form).
+
+-- ===========================================================================
+-- 5. THE ERA QUESTION, IN THE SAME WORDS AS EVERY OTHER AXIS.
+--
+-- `lib_unsupported[audit]` asks it of a prototype method and `unsupported[audit]`
+-- of a syntax feature; these ask it of a binding and of a static, on the same
+-- scale, through the same `reaches[audit]` composition. `Object.hasOwn` is
+-- es2022 and `Promise.allSettled` es2020, so a corpus calling them is not valid
+-- under es2017 — and until now the model could say that about `??=` and about
+-- `.at`, and not about `Object.entries`.
+--
+-- LIKE rules/js-env-api.rofl THIS PACK NEEDS TWO WORLDS. `selects[flow]` and
+-- `callee_of[code]` come from the call-graph world; `environment` and
+-- `reaches[audit]` from facts/js-env.rofl, which that world does not load. A
+-- world with only one half derives the first four sections and reports
+-- `environment` as UNPOPULATABLE — the kernel saying "you brought half a
+-- question", which is the right thing for it to say.
+es_global_unsupported[audit](E, X, Name) :- es_global[code](X, Name, Rel, _),
+                                            environment(E), not reaches[audit](E, Rel).
+es_static_unsupported[audit](E, N, Name, Key) :- es_static[code](N, Name, Key, Rel),
+                                                 environment(E), not reaches[audit](E, Rel).
+
+-- ===========================================================================
+-- 6. WHAT THE PROTOTYPE OF A CONSTRUCTED VALUE IS
+--    (w_prototype_of_a_constructed_value; the hole
+--     f_a_constructed_value_reaches_no_prototype_so_a_map_call_is_outside_both_halves
+--     named the day the bridge above made it visible).
+--
+-- THE DECISION, IN ONE SENTENCE AND MADE HERE RATHER THAN BY HAND: a `new X()`
+-- whose callee is an ES GLOBAL NOTHING IN THIS PROGRAM BINDS evaluates to a
+-- value whose prototype is that global's, and THE CONSTRUCTION SITE STANDS FOR
+-- THE VALUE. `w_prototype_of_a_value` answered the question for literals and
+-- left it unasked for constructions; this is the same answer in the same shape.
+--
+-- WHY IT IS `may_be_node[flow](X, X)` AND NOT A NEW `kind_prototype` ROW. The
+-- finding said the repair is not more `kind_prototype` rows and it was right:
+-- a kind cannot carry it, because `new Map()` and `new Box()` are the same KIND
+-- and different questions. What it IS is the abstraction rules/js-dataflow.rofl
+-- already writes for `array_expression` and `reg_exp_literal` — a value with no
+-- node of its own is named by the site that makes it, `may_be_node(E, E)`,
+-- which "names the site rather than the object" and is a new object every time
+-- round a loop. Standing on that relation is what makes `const holder = new
+-- Map(); holder.set(k, v)` reach anything at all: the binder, assignment and
+-- transparent-wrapper arms of `may_be_node` then carry the instance to the
+-- receiver position for free, and nothing here re-plumbs them.
+--
+-- THREE THINGS IT DELIBERATELY DOES NOT DO.
+--
+--   IT DOES NOT TOUCH `new Foo()` WHERE `Foo` IS A CLASS IN THIS PROGRAM. That
+--   case is answered — `may_be_node` maps the construction to the class
+--   declaration and `resolves[code]` draws the constructor edge — and the two
+--   never meet, because `free_global` is `not declares_name`, so a name this
+--   program declares is not an ES global by construction. A spelling match on
+--   `Map` would have collided with a program that declares its own; the
+--   IDENTITY does not.
+--
+--   IT DOES NOT VALUE A FORM THAT CANNOT BE CONSTRUCTED. `new Math()` is a
+--   TypeError, `es_construct_not_constructor[audit]` above says so, and giving
+--   it an instance would make the model contradict its own audit one relation
+--   later. `constructible_form` is read here for exactly that.
+--
+--   IT DOES NOT INVENT A PROTOTYPE FOR THE THIRTY-NINE GLOBALS WITH NO BRIDGE
+--   ROW. Thirty-two of those are constructor bindings whose instance surface
+--   the library does not carry and `es_prototype_gap[audit]` names them by row;
+--   the other seven are the namespace and plain-value forms, which have no
+--   instance to have a prototype and are therefore not a gap at all.
+es_instance[flow](X, Name, Rel) :- es_global_construct[code](X, Name, Rel),
+                                   lib_global(Name, _, Form), constructible_form(Form).
+
+may_be_node[flow](X, X) :- es_instance[flow](X, _, _).
+
+prototype_of[flow](E, P) :- may_be_node[flow](E, X), es_instance[flow](X, Name, _),
+                            lib_global_prototype(Name, P).
+
+-- ...AND WHERE THAT ARM CANNOT LOOK, AS ROWS RATHER THAN AS THIS PARAGRAPH.
+-- The bridge is eight of forty-seven, so the answer above is available for
+-- eight globals and unavailable for the rest — and an unavailable answer that
+-- is merely absent is indistinguishable from a corpus with no site. These two
+-- audits are the difference, and they are the frontier this item OWNS rather
+-- than closes.
+--
+-- `es_prototype_gap[audit]` is the library side: a global that CAN be
+-- constructed and whose instance surface facts/js-lib-surface.rofl does not
+-- carry. `Map`, `Set`, `Promise`, `WeakMap`, `Date` and every typed array are
+-- in it, and `.set`, `.add`, `.then`, `.getTime` are ordinary calls in real
+-- code. It is a claim about the LIBRARY and needs no corpus, which is why it
+-- ranges over `lib_global` rather than over a construction site.
+--
+-- `es_instance_unattributed[audit]` is the corpus side and the mirror of
+-- `stdlib_unattributed[audit]` and `es_static_unattributed[audit]`: a member
+-- call on a value this model knows was constructed from a named ES global, and
+-- whose prototype it cannot name. `holder.set` produces a row saying `Map` and
+-- `set` where before it produced nothing at all — which was the whole of the
+-- finding: the call was outside BOTH halves and no relation said so.
+es_prototype_gap[audit](Name, Rel) :- lib_global(Name, Rel, Form), constructible_form(Form),
+                                      not lib_global_prototype(Name, _).
+
+es_instance_unattributed[audit](C, Name, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                                                 ast_child[code](N, object, 0, O),
+                                                 may_be_node[flow](O, X),
+                                                 es_instance[flow](X, Name, _),
+                                                 not lib_global_prototype(Name, _),
+                                                 selects[flow](N, Key).

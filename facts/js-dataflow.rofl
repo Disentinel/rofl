@@ -1,0 +1,565 @@
+-- facts/js-dataflow.rofl — the value core's vocabulary and its claims.
+--
+-- SEPARATE FROM facts/js-kinds.rofl ON PURPOSE, and the audit is what taught
+-- me: the first draft put these `handled` rows in the base file, where the
+-- kinds they name are not declared, and `orphan_claim[audit]` said so — a claim
+-- about a cell that does not exist. Each layer's pack declares the vocabulary
+-- it names, exactly as facts/js-callgraph.rofl does for the twenty-four kinds
+-- the call graph dragged in. A claim and the kind it is about travel together
+-- or neither is checkable.
+
+node_kind(js, string_literal).
+node_kind(js, numeric_literal).
+node_kind(js, boolean_literal).
+node_kind(js, identifier).
+node_kind(js, object_expression).
+node_kind(js, array_expression).
+node_kind(js, object_pattern).
+node_kind(js, function_expression).
+node_kind(js, arrow_function_expression).
+node_kind(js, class_declaration).
+node_kind(js, parenthesized_expression).
+node_kind(js, tsas_expression).
+node_kind(js, tsnon_null_expression).
+node_kind(js, object_method).
+node_kind(js, class_method).
+node_kind(js, optional_call_expression).
+node_kind(js, return_statement).
+node_kind(js, member_expression).
+node_kind(js, optional_member_expression).
+node_kind(js, object_property).
+node_kind(js, this_expression).
+
+-- THE VALUE CORE, 2026-09-04 (queue item w_df_value_core). Everything above
+-- moves a value between names; these are the cells that say what a value IS.
+-- `r_value_core` is rules/js-dataflow.rofl's may_be_lit / may_be_node.
+--
+-- FIVE OF THE EIGHT THE ITEM CLAIMED. `member_expression`, `object_property`
+-- and `this_expression` are NOT ticked and are not oversights: reading a
+-- property off a value is a second question (the call graph answers a narrow
+-- case of it in `denotes`), and `this` outside a class method has no answer
+-- this layer can give. They stay open with the default reason.
+handled(js, string_literal,     dataflow, r_value_core).
+handled(js, numeric_literal,    dataflow, r_value_core).
+handled(js, identifier,         dataflow, r_value_core).
+handled(js, object_expression,  dataflow, r_value_core).
+handled(js, array_expression,   dataflow, r_value_core).
+-- DESTRUCTURING, 2026-09-08. A declarator whose `id` is a pattern binds names
+-- `binder[code]` cannot see, because a destructured name evaluates to a MEMBER
+-- of the init rather than to the init. `destructures[code]` says which name
+-- comes from which key and the value arm joins it through `member_value`.
+handled(js, object_pattern,     dataflow, r_destructure).
+
+-- ...AND THE OTHER FOUR FORMS OF THE FAMILY, 2026-09-08
+-- (w_destructuring_rest_and_spread). Measured with the fixtures in and no rule
+-- written: the value layer answered NOTHING at seven of the eight new sites,
+-- and answered the eighth WRONGLY.
+--
+--   array_pattern       `r_destructure_index` — an array pattern counts to its
+--                       member where an object pattern names it, so the INDEX
+--                       is the content. `elem_at[flow]` is the new carrier.
+--   assignment_pattern  `r_param_default` — `param_of` reads `ast_name` off the
+--                       params child and a defaulted parameter has none, so it
+--                       had NO INDEX: neither the default reached the body nor
+--                       an argument passed at that position.
+--   rest_element        `r_object_rest` — the rest node IS the object it binds,
+--                       carrying every key the pattern did not take. The
+--                       EXCLUSION is the whole content and it is unobservable
+--                       on a runnable corpus, so its site is in shapes.ts.
+--   spread_element      `r_spread` — an object spread copies the keys of what
+--                       it spreads, and a spread ARGUMENT shifts every argument
+--                       after it. The second half is the one place this family
+--                       made the model say something FALSE rather than nothing:
+--                       `pair(...bench, cubed)` derived `pair -> cubed` while
+--                       the running fixture calls `chiselled` and `planed`.
+node_kind(js, array_pattern).
+node_kind(js, assignment_pattern).
+node_kind(js, rest_element).
+node_kind(js, spread_element).
+handled(js, array_pattern,      dataflow, r_destructure_index).
+handled(js, assignment_pattern, dataflow, r_param_default).
+handled(js, rest_element,       dataflow, r_object_rest).
+handled(js, spread_element,     dataflow, r_spread).
+
+-- and the three transparent wrappers, which `w_df_control_forms` claimed and
+-- this item closed by accident: a parenthesis, a cast and a non-null assertion
+-- change nothing about a value, so they are one rule over a table rather than
+-- three cells of work. The queue notices — a claim on a shut cell is a row.
+handled(js, parenthesized_expression, dataflow, r_value_core).
+handled(js, tsas_expression,          dataflow, r_value_core).
+handled(js, tsnon_null_expression,    dataflow, r_value_core).
+
+-- ---------------------------------------------------------------------------
+-- ACROSS A CALL (queue item w_df_function_forms). `r_call_flow` is the
+-- argument-into-parameter and return-value half of rules/js-dataflow.rofl.
+--
+-- `new_expression` is NOT ticked: its arguments reach the constructor's
+-- parameters like any other call, but the VALUE of `new C()` is an instance and
+-- this layer has no notion of one. That is the same cell `w_cg_new_expression`
+-- is about, seen from the other side.
+handled(js, function_declaration,      dataflow, r_call_flow).
+handled(js, function_expression,       dataflow, r_call_flow).
+handled(js, arrow_function_expression, dataflow, r_call_flow).
+handled(js, object_method,             dataflow, r_call_flow).
+handled(js, class_method,              dataflow, r_call_flow).
+handled(js, optional_call_expression,  dataflow, r_call_flow).
+handled(js, return_statement,          dataflow, r_call_flow).
+
+-- READING A PROPERTY OFF A VALUE, and `this` (queue item w_df_value_core,
+-- finished). `r_member_value` is the member_value / selects / this half of
+-- rules/js-dataflow.rofl. All three used to be answered privately inside the
+-- call graph's `denotes`; they are dataflow facts and they came home.
+handled(js, member_expression,          dataflow, r_member_value).
+handled(js, optional_member_expression, dataflow, r_member_value).
+handled(js, object_property,            dataflow, r_member_value).
+handled(js, this_expression,            dataflow, r_member_value).
+
+-- CONSTRUCTION (queue item w_df_function_forms, finished). `new C()` and the
+-- name `C` both reach the class node; the instance/class conflation that buys
+-- is declared in rules/js-dataflow.rofl and queued as w_df_instance_vs_class.
+handled(js, new_expression, dataflow, r_construct).
+
+-- BRANCHING VALUE FORMS, 2026-09-04. `a || b`, `a && b` and `a ?? b` are the
+-- same may-set union as a conditional's two branches — measured, not assumed:
+-- `(box || other).get()` resolved to nothing while `(flag ? box : other).get()`
+-- resolved, on the same corpus in the same run, and both reported the SAME
+-- callee shape. The two forms mean the same thing to a reader and one of them
+-- was invisible.
+--
+-- The callgraph cell for this kind stays open on purpose: the value rule is
+-- what is claimed here, and `(a || b)()` as a CALL callee has no site in the
+-- corpus, so a callgraph tick would be a claim nothing could check.
+handled(js, logical_expression, dataflow, r_value_logical).
+
+-- VALUES CROSSING A CONTROL CONSTRUCT, 2026-09-04 (queue item
+-- w_df_control_forms). Four of the item's five cells; the fifth is below.
+--
+-- `conditional_expression` and `sequence_expression` needed no rule at all —
+-- both were modelled when the value core landed and neither cell was ever
+-- ticked, so the matrix under-reported its own coverage for a day. That is the
+-- defect `unrecorded_coverage[audit]` reports at the CALLGRAPH layer and
+-- nothing reports at this one; the two ticks are the fix and the missing audit
+-- is a finding.
+handled(js, conditional_expression, dataflow, r_value_branch).
+handled(js, sequence_expression,    dataflow, r_value_branch).
+-- `await` is transparent, which is a claim about the may-set and not about
+-- promises; rules/js-dataflow.rofl states which case it is wrong about.
+-- A TEMPLATE WITH NO INTERPOLATION EVALUATES TO ITS COOKED TEXT, closed
+-- 2026-09-08 when the scanner's contract grew one property. An INTERPOLATED
+-- template still evaluates to a string this layer cannot name, and no arm
+-- claims otherwise — the cell says the kind participates, not that every
+-- instance of it is answered, which is the same reading `member_expression`
+-- has carried since tier 2.
+handled(js, template_literal,       dataflow, r_template_lit).
+handled(js, await_expression,       dataflow, r_await_transparent).
+-- for-of binds its variable to what the source hands out, and an array and a
+-- generator are reached differently on purpose.
+handled(js, for_of_statement,       dataflow, r_for_of).
+
+-- ...AND `yield_expression` STAYS OPEN, with the reason named rather than
+-- taking the default. `yields[flow]` models what a generator hands to its
+-- consumer, which is what for-of walks — but the value of the `yield`
+-- EXPRESSION itself is whatever the consumer passes to `.next(v)`, travelling
+-- in the opposite direction from every other edge in this layer. It is real
+-- work and it is not this item's: it needs a term for the generator protocol,
+-- which also covers `gen.next(v)`, `yield*` and a generator's return value.
+-- Queued as w_df_generator_protocol.
+-- RETIRED 2026-09-05: the cell is `handled` and `stale_reason[audit]` named
+-- this row the moment it was — an excuse outliving its cause.
+
+-- THE CLASS AS A VALUE GREW THREE ANSWERS AND THE CELL STAYS OPEN, 2026-09-04.
+-- The dataflow layer now says which methods a class has, which constructor it
+-- answers with (its own or the nearest ancestor's), and which members it
+-- inherits with a subclass's own declaration shadowing — the last of those
+-- found by ADDING A FIXTURE rather than by reading, since the corpus had no
+-- class extending another with a method to inherit.
+--
+-- AND NONE OF THAT TICKS THE CELL. `handled(js, class_declaration, dataflow,
+-- r_class_chain)` was written here and `queue_stale[audit]` named it in one
+-- run: `w_df_instance_vs_class` claims this very cell for a gap that is still
+-- open — `new C()` and the name `C` both reach the class node, so an instance
+-- is not told from its class. A kind-level cell at a layer with no refinement
+-- column is ALL of that layer's answers about the kind, and three new ones do
+-- not make it complete. The queue was the thing that knew.
+
+-- ===========================================================================
+-- THE DATAFLOW SWEEP, 2026-09-05. Twelve cells in the bucket, and the number
+-- that matters is not how many were residue but how many raised a NEW question:
+-- ZERO. The control-flow sweep spawned four items, the call-graph sweep two,
+-- and this one none — every cell that is not residue landed on an item that
+-- already existed. That is the first measured deceleration in this queue.
+
+-- ALREADY MODELLED AND NEVER RECORDED, the third instance of the matrix
+-- under-reporting its own coverage. `literal_kind(boolean_literal)` has been in
+-- rules/js-dataflow.rofl since the value core landed; `const b = true` derives
+-- `may_be_lit[flow](E, true)` at the literal, the binder and the use — three
+-- rows, measured. Nothing was written for this cell; it was already true.
+handled(js, boolean_literal, dataflow, r_value_literal).
+-- ...and `null_literal`, added 2026-09-06 when `catch { return null; }` entered
+-- the corpus with the propagation fixtures and `vocabulary_gap[audit]` named it
+-- within one run — the second time in two iterations that gate has caught a kind
+-- my own fixture introduced, which is the whole reason it counts rather than
+-- reporting nothing.
+node_kind(js, null_literal).
+handled(js, null_literal, dataflow, r_value_literal).
+
+-- UNREACHABLE UNDER THIS PARSER, and the same argument as its call-graph twin
+-- rather than a new one: babel's `Import` node is what `import` names, and
+-- scanners/js_ast.ts parses with `plugins: ['typescript']`, under which a
+-- dynamic import arrives as a single `import_expression` and never as `Import`.
+-- No corpus this scanner produces can fill the cell.
+ignored(js, import, dataflow, a_babel_emits_no_import_callee).
+
+-- ===========================================================================
+-- WHAT A CLASS-SHAPED NODE DENOTES, 2026-09-05 — queue item w_df_instance_vs_class.
+--
+-- THE FIXTURE CAME FIRST, because the item said so: the corpus had no site
+-- that could show the difference, and a split nothing can see is the shape this
+-- session has been bitten by twice. `Vat` with a static `tapped` and an
+-- instance `poured`, and four sites — two legal, two that are TypeErrors and
+-- are wrapped so the run reaches the end. The two false edges appeared BY NAME
+-- in the over-approximation list before a rule was written, and disappeared
+-- after: `useMethodOnClass -> poured` and `useStaticOnInstance -> tapped`.
+--
+-- THE FACT WAS ON THE STORE ALL ALONG. `ast_attr(M, static, true|false)` is
+-- emitted for every class method and no rule had ever read it.
+handled(js, class_declaration, dataflow, r_class_receiver).
+
+-- ...AND ITS EXPRESSION TWIN, 2026-09-08 (w_class_expression). Same rule, same
+-- row, and the item's premise was that the model already had an opinion here:
+-- `obj_like[flow]` and `node_value_kind` both name `class_expression` and both
+-- have since before this cell existed. WHAT THE OPINION DERIVED WAS NOTHING,
+-- and only a site could show it — `member_value` named the methods of a class
+-- expression correctly and no receiver could ever reach them, because
+-- `class_named[flow]` read the class's `id` CHILD and a class expression's
+-- binding is not its `id`.
+--
+-- ALL THREE FACES, the same three `class_declaration` earned above and each
+-- with a site in test/fixtures/js-call/shapes.ts.txt:
+--   instance   `new Crank().turn(n)`     -> turn      (prototype half)
+--   class      `Gantry.rated(n)`         -> rated     (static half)
+--   ancestor   `class Davit extends Crank` -> `this.turn` reaches Crank's
+-- The static/instance split is the sharp one: without the arm, `Gantry.rated`
+-- is not a `class_receiver` at all and the lookup answers with the PROTOTYPE
+-- half — an instance method returned for a static read, which is a TypeError at
+-- run time and was the exact defect `class_receiver` was written to stop.
+handled(js, class_expression, dataflow, r_class_receiver).
+
+-- AND THE THIRD FACE WAS ALREADY MODELLED, which only a site could show.
+-- `super.hold(n)` — a member read on a receiver that is a different class from
+-- the one you are in — resolves, and the runtime takes the edge: UNSOUND stayed
+-- 0 and over-approximation stayed 3 when the site was added. The value was
+-- there; the corpus had no site. Sixth instance of the matrix under-reporting.
+handled(js, super, dataflow, r_member_value).
+
+-- ===========================================================================
+-- THE GENERATOR PROTOCOL, 2026-09-05 — queue item w_df_generator_protocol.
+--
+-- `yield_expression x dataflow` carried `not_yet` with a reason that named its
+-- own difficulty: the value of a `yield` EXPRESSION arrives from the consumer's
+-- `.next(v)`, travelling from a call site into the middle of a suspended body,
+-- which is the opposite direction from every other edge in this layer. Both
+-- directions are now modelled — what a generator YIELDS was already there, and
+-- what it RECEIVES is the other half.
+--
+-- MEASURED AGAINST V8 FIRST, and all three claims came from the run rather than
+-- from the spec: `g.next(f)` makes the yield evaluate to `f`; `yield* inner()`
+-- passes the sent value THROUGH to inner's own yield; and the delegating
+-- expression evaluates to what inner RETURNED, which is the one place a
+-- generator's `return` is read at all.
+handled(js, yield_expression, dataflow, r_generator_protocol).
+
+-- ...AND THE CALL-GRAPH HALF FALLS OUT OF THE SAME RULE, which `false_done`
+-- was right to insist on: the item owned both cells and only one had been
+-- ticked. A yield expression in CALLEE position - `(yield 'go')(3)` - resolves
+-- because it now HAS a value. Asserted by a site the runtime takes, not
+-- claimed: UNSOUND stayed 0 when it was added.
+handled(js, yield_expression, s_yield_result, callgraph, r_generator_protocol).
+
+-- ---------------------------------------------------------------------------
+-- THE FOUR KINDS THE FRAME ADDED, 2026-09-06 (w_vocabulary_frame). The kind is
+-- re-declared here because a file that makes a claim declares the kind — the
+-- convention w_vocabulary_home exists to question, and the one in force.
+node_kind(js, binary_expression).
+node_kind(js, unary_expression).
+node_kind(js, class_body).
+node_kind(js, template_element).
+
+ignored(js, binary_expression, dataflow, a_a_primitive_is_not_a_node).
+ignored(js, unary_expression, dataflow, a_a_primitive_is_not_a_node).
+ignored(js, class_body, dataflow, a_a_statement_carries_no_value).
+ignored(js, template_element, dataflow, a_a_quasi_is_not_an_expression).
+
+-- THE MODULE BOUNDARY, 2026-09-07 (w_cg_module_boundary). An imported name MAY
+-- BE the function the exporting module declares under that name; the export
+-- declaration names a value rather than carrying one of its own. Entry 9 in
+-- rules/js-dataflow.rofl.
+handled(js, import_declaration,       dataflow, r_imported_name).
+handled(js, import_specifier,         dataflow, r_imported_name).
+ignored(js, import_attribute,         dataflow, a_a_value_the_grammar_reads_and_no_expression_can).
+handled(js, export_named_declaration, dataflow, r_imported_name).
+
+-- TEN TYPE NODES, 2026-09-07 (w_type_surface). A type annotation is erased
+-- before anything runs, so it holds no value for this layer to carry. NOT the
+-- same question as `which prototype does this VALUE have`, which is where the
+-- deferral put them and which no annotation in the corpus answers.
+node_kind(js, tsfunction_type).
+node_kind(js, tsnull_keyword).
+node_kind(js, tsnumber_keyword).
+node_kind(js, tsstring_keyword).
+node_kind(js, tstype_alias_declaration).
+node_kind(js, tstype_annotation).
+node_kind(js, tstype_parameter_instantiation).
+node_kind(js, tstype_query).
+node_kind(js, tstype_reference).
+node_kind(js, tsunion_type).
+
+ignored(js, tsfunction_type,                dataflow, a_type_only_no_runtime_value).
+ignored(js, tsnull_keyword,                 dataflow, a_type_only_no_runtime_value).
+ignored(js, tsnumber_keyword,               dataflow, a_type_only_no_runtime_value).
+ignored(js, tsstring_keyword,               dataflow, a_type_only_no_runtime_value).
+ignored(js, tstype_alias_declaration,       dataflow, a_type_only_no_runtime_value).
+ignored(js, tstype_annotation,              dataflow, a_type_only_no_runtime_value).
+ignored(js, tstype_parameter_instantiation, dataflow, a_type_only_no_runtime_value).
+ignored(js, tstype_query,                   dataflow, a_type_only_no_runtime_value).
+ignored(js, tstype_reference,               dataflow, a_type_only_no_runtime_value).
+ignored(js, tsunion_type,                   dataflow, a_type_only_no_runtime_value).
+
+-- DECLARED HERE AND ABSENT FROM THE CORPUS, with the reason written down;
+-- `kind_unexercised[audit]` demands one, and a row belongs where its kind is
+-- declared.
+kind_absent_ok(parenthesized_expression, a_babel_emits_no_parenthesized_node).
+
+-- ...and the two kinds those verdicts are about are declared HERE too, which
+-- `orphan_claim[audit]` demanded within one run: a world loading this pack
+-- and not facts/js-modules.rofl carried a claim about a cell it had no kind
+-- for. Third time this convention has bitten in one session — a row belongs
+-- in the pack that declares its subject, and a verdict declares the kind.
+node_kind(js, import_specifier).
+-- ...and the attribute, 2026-09-09. Declared in this pack as well as in
+-- facts/js-modules.rofl for the reason `import_specifier` is: a pack that
+-- CLAIMS a kind must also declare it, or a world loading this pack without
+-- the modules one carries a claim with no cell under it and
+-- `orphan_claim[audit]` says so. Measured: it did, in test/js-model.test.ts,
+-- the moment the claim went in without this line.
+node_kind(js, import_attribute).
+-- ...AND THE EXCUSE THAT GOES WITH IT. The kind is declared and the SHARED
+-- corpus has no site: `kind_unexercised[audit]` demands one or a reason, and
+-- this is the reason. It is deliberately the WEAK excuse and not one of the
+-- "babel emits no such node" kind, because the construct is emitted — the
+-- era corpus has two sites in test/fixtures/js-env/era-attributes.js and the
+-- rules in rules/js-modules.rofl section 8 fire there. What is missing is a
+-- SHARED-corpus site, and adding one moves node counts, kind censuses and
+-- cost pins across files this change has no business touching.
+-- EXPECT THIS ROW TO BE RETIRED the day a shared fixture imports JSON, and
+-- `kind_absent_stale[audit]` is what will say so — the same retirement this
+-- pack already records for `export_all_declaration`.
+kind_absent_ok(import_attribute, a_no_corpus_site).
+node_kind(js, export_named_declaration).
+
+-- THE OTHER TWO SPECIFIERS AND THE DEFAULT EXPORT, 2026-09-07. A namespace
+-- import binds the module object — the other file's `program` node — and a
+-- default import binds the one unnamed export. `export default` had a node
+-- and NO CONSUMER until alpha.mjs got one that beta.mjs imports; a form the
+-- harness calls is not a form the model can be checked on.
+handled(js, import_namespace_specifier, dataflow, r_imported_name).
+handled(js, import_default_specifier,   dataflow, r_imported_name).
+handled(js, export_default_declaration, dataflow, r_imported_name).
+-- ...and the kinds, declared here because their verdicts are.
+node_kind(js, import_namespace_specifier).
+node_kind(js, import_default_specifier).
+node_kind(js, export_default_declaration).
+node_kind(js, export_all_declaration).
+-- THE EXCUSE IS GONE BECAUSE THE SITE ARRIVED: gamma.mjs re-exports two
+-- modules, so `kind_absent_ok(export_all_declaration, a_no_corpus_site)` would
+-- be stale here and in the two other packs that declare the kind — the home
+-- rule again, from the direction of retirement rather than of addition.
+handled(js, export_all_declaration,     dataflow, r_reexported_name).
+
+-- THE TWO EXPORT FORMS WITH NO NODE IN THE VOCABULARY, 2026-09-08
+-- (w_export_specifier_forms). `export { a as b }` is where a module's EXTERNAL
+-- name for a binding stops being its internal one, and `export * as ns from` is
+-- where a module offers ANOTHER module under a name of its own. Both are read in
+-- rules/js-dataflow.rofl and both reach this layer through `may_be_node` like
+-- every other value — the fourth time in this loop the module boundary has cost
+-- a value fact and no mechanism at all.
+--
+-- MEASURED BEFORE THE RULE: with `export { hidden as shown }` beside `export
+-- function plain`, `exports_name` derived exactly one row — `plain` — and the
+-- cross-file call `usesShown -> hidden` was missing with its site reported as an
+-- unresolved `s_identifier`. SILENT, not wrong-named.
+node_kind(js, export_specifier).
+node_kind(js, export_namespace_specifier).
+handled(js, export_specifier,           dataflow, r_export_rename).
+handled(js, export_namespace_specifier, dataflow, r_namespace_reexport).
+
+
+-- AND THE TAGGED TEMPLATE'S VALUE HALF, 2026-09-07, which is the same rule
+-- read from the other side: `` mark`a` `` EVALUATES to what `mark` returns,
+-- because `may_be_node` already carries a call's value through `resolves[code]`
+-- and the tag arm puts a tagged template into `resolves`. Nothing was written
+-- at this layer at all — the cell closes because the call-graph arm landed, and
+-- the fixture calls the result so the claim has a site.
+node_kind(js, tagged_template_expression).
+handled(js, tagged_template_expression, dataflow, r_tag_call).
+
+-- ---------------------------------------------------------------------------
+-- THREE VALUE FORMS THE VOCABULARY NEVER NAMED, 2026-09-08
+-- (w_update_and_literals). Two of the three cells are answered and the third
+-- is a WAIVER the measurement earned rather than the pattern suggested.
+node_kind(js, update_expression).
+node_kind(js, big_int_literal).
+node_kind(js, reg_exp_literal).
+
+-- A BIGINT IS A LITERAL AND THE SCANNER WAS DROPPING IT. `literal_kind` gains
+-- one row; the work was in scanners/js_ast.ts, where `BigIntLiteral.value` —
+-- a native `bigint` — matched none of the four branches and produced an
+-- `ast_node` with no attributes at all. `BIG_TOTAL` in shapes.ts.txt travels
+-- through `binder`, so the row is exercised through the value layer and not
+-- only at the literal.
+handled(js, big_int_literal,   dataflow, r_value_core).
+
+-- A REGEXP LITERAL IS THE ONLY LITERAL WHOSE VALUE IS AN OBJECT, so it joins
+-- `node_value_kind` beside `object_expression` rather than `literal_kind`
+-- beside the bigint. `MATCHER` denotes the literal node through `binder`, and
+-- `prototype_of` reads `regexp` off the kind.
+handled(js, reg_exp_literal,   dataflow, r_value_core).
+
+-- ...AND THE WAIVER. `i++` is a READ AND A WRITE of one binding, and this
+-- layer can carry neither half.
+--
+-- THE VALUE: an update evaluates to ToNumeric(operand), plus one for the
+-- prefix form. `may_be_lit` carries a literal AS WRITTEN, and even a known
+-- literal operand does not give the answer — `"5"++` is the NUMBER 5, not the
+-- string this layer would hand back. That is `plain_assign`'s reason for
+-- refusing `x += y`, arriving at a second kind.
+--
+-- THE WRITE: `assigns[code]` has exactly one arm, over `assignment_expression`,
+-- so `let counter = 0; counter++` leaves `counter` carrying only its
+-- initialiser. MEASURED that this costs no false claim rather than argued:
+-- across the five rule packs there are ZERO occurrences of a value relation
+-- under negation — no `not may_be_lit`, `not may_be_node`, `not valued`, `not
+-- assigns`, `not binder`, `not var_flow` — so a missing write is an ABSENCE in
+-- a may-set and never a positive assertion. The one negation in this file,
+-- `binder_at_top`, reads a REGION and not a value.
+ignored(js, update_expression, dataflow, a_a_computed_primitive_and_a_write_with_no_value).
+-- ==========================================================================
+-- ES2022 CLASS SYNTAX, 2026-09-08 — queue item w_class_fields.
+node_kind(js, class_property).
+node_kind(js, class_private_property).
+node_kind(js, class_private_method).
+node_kind(js, private_name).
+node_kind(js, static_block).
+
+-- A FIELD IS A MEMBER HOLDING A VALUE, and the `static` flag on the FIELD
+-- decides which receiver sees it — read off the property node and not off the
+-- initialiser, which carries no such attribute. MEASURED BEFORE THE RULE:
+-- `member_value` on the fixture's class answered `["value"]`, the one
+-- `class_method`, and `own_key` the same.
+handled(js, class_property,         dataflow, r_field_value).
+
+-- A PRIVATE NAME IS BOUND BY THE CLASS BODY THAT DECLARES IT, not by the
+-- receiver's value — which makes the private half EXACT where the ordinary
+-- member lookup is a may-set, and makes it a separate namespace end to end.
+-- Both halves have a site: `rim` and `#rim` are two members of one class, and
+-- `{ '#edge': ... }` is a legal string key, measured by running it.
+--
+-- THE NESTING IS EXERCISED, not assumed: `Outer` and the `Inner` class inside
+-- its method both declare `#tag`, running the shape answers `inner/outer`, and
+-- `private_inner` is the shadowing test that makes the model agree.
+handled(js, class_private_property, dataflow, r_private_binding).
+handled(js, private_name,           dataflow, r_private_binding).
+
+-- A PRIVATE METHOD IS A VALUE AND A `this` BINDER. `this_binds_kind` already
+-- carried `class_private_method` and `class_method_of` did not read it, so
+-- `this` inside a private method reached no class — a row with no consumer,
+-- which is the shape this repository keeps finding on its own store.
+handled(js, class_private_method,   dataflow, r_call_flow).
+
+-- A STATIC BLOCK CARRIES NO VALUE AND STILL ANSWERS A VALUE QUESTION: `this`
+-- inside one is the CLASS OBJECT, measured by running the shape (`this === Coin`
+-- is true there), which is a different receiver role from every other `this` in
+-- a class body. Without `class_receiver[flow]` saying so, `this.mintMark` in the
+-- static block is looked up through the instance half and misses a static field.
+handled(js, static_block,           dataflow, r_static_block_this).
+
+-- ==========================================================================
+-- WHAT A DECORATOR DOES TO THE THING IT DECORATES, 2026-09-08 — queue item
+-- w_decorator_replaces_its_target (62). The kinds are re-declared here because
+-- a file that makes a claim declares the kind; `orphan_claim[audit]` has
+-- reported the omission within one run three separate times in this queue.
+node_kind(js, decorator).
+node_kind(js, class_accessor_property).
+
+-- A DECORATOR IS A CALL WHOSE RESULT REPLACES ITS TARGET, and this layer's
+-- share of that is the RESULT. `@decoFerrule class Swage {}` binds `Swage` to
+-- what `decoFerrule` returned, so a read of the name evaluates to the
+-- replacement — and `may_be_node` already carried what a call returns through
+-- `resolves[code]`, so `r_decorator_replacement` is a join over a relation the
+-- call half of this construct had already made true.
+--
+-- MEASURED BEFORE THE RULE, and it is why the corpus grew: `may_be_node` of
+-- BOTH decorator nodes then in the fixture was EMPTY, because `decoOnce` and
+-- `decoApplied` return a PARAMETER and a decorator call has no argument nodes
+-- in the grammar for `arg_at` to bind. A rule written against those two sites
+-- would have derived nothing while looking finished.
+handled(js, decorator,              dataflow, r_decorator_replacement).
+
+-- AN AUTO-ACCESSOR IS A FIELD AT THIS LAYER — one row in `class_field_kind`
+-- and not a rule, because `o.sling` evaluates to the initialiser exactly as a
+-- plain field does. THE CELL WAS OPEN FOR WANT OF A SITE: the corpus had held
+-- `accessor slot = 4` since decorators landed and nothing read it, so
+-- `member_value` had no key for it and no rule could be judged. `Thimble.sling`
+-- holds a function and `hauls` calls it, which is what makes the row visible at
+-- the call graph too.
+handled(js, class_accessor_property, dataflow, r_field_value).
+
+-- ===========================================================================
+-- THE FORM AXIS REACHES A THIRD LAYER, 2026-09-08 (w_meta_property)
+--
+-- `meta_property x dataflow` was one cell for two constructs whose value
+-- questions have nothing in common, and both halves were measured before this
+-- was written: `may_be_node`, `may_be_lit` and `prototype_of` are ALL EMPTY for
+-- both nodes, against 1 333 expressions the value layer does answer for in the
+-- same world.
+--
+-- WHY THE COLUMN AND NOT A KIND-LEVEL VERDICT. The two halves are irreducible
+-- for DIFFERENT reasons, and a kind-level cell carries one atom. That is
+-- exactly the condition `axis_earns[audit]` tests — an axis earns a layer when
+-- its refinement makes the model say something different about two shapes of
+-- the same kind there — so this row is falsifiable rather than declared:
+-- `unearned_axis[audit](shape, dataflow)` says no if the two reasons ever
+-- become one.
+--
+-- IT DOES NOT REFINE ANYTHING ELSE. `shape_kind[audit]` needs
+-- `shape_of(Lang, K, S), shape_in(S, dataflow)`, and the only two values gated
+-- into this layer are the two below — so every other kind keeps its single
+-- `none` cell here, which is what facts/js-shapes.rofl's refusal of a
+-- callee-shape vocabulary in this layer was actually about.
+axis_applies(shape, dataflow).
+shape_of(js, meta_property, new_target).
+shape_of(js, meta_property, import_meta).
+shape_in(new_target, dataflow).
+shape_in(import_meta, dataflow).
+node_kind(js, meta_property).
+
+-- `import.meta` IS A HOST OBJECT WITH NO NODE ANYWHERE, and the standard
+-- library cannot supply the missing half either: measured in TypeScript's own
+-- files, `interface ImportMeta` in `lib.es5.d.ts` is EMPTY, and `url` and
+-- `resolve` are declared in `lib.dom.d.ts` and `@types/node` — files
+-- `releaseOf` in scanners/ts_lib.ts refuses by construction because their names
+-- carry no release. So this is not `w_env_api_surface`'s residue arriving late;
+-- it is the residue that surface is structurally unable to hold.
+unknown_because(js, meta_property, import_meta, dataflow, no_source_target).
+-- `new.target` IS THE CONSTRUCTION MODE, and this model has no relation for the
+-- mode of a call at all. MEASURED on V8 13.6: `undefined` in a plain call, the
+-- MOST DERIVED constructor under `new` — `Derived`, not `Base`, inside `Base`'s
+-- constructor under `new Derived()`. So the value is a property of the
+-- invocation, which is what `runtime_dependent` says.
+--
+-- AND THE CORPUS CANNOT DISCRIMINATE THE MISSING NOTION EITHER, which is worth
+-- a row rather than a plan: 246 call targets against 14 transfer targets with an
+-- EMPTY intersection, so no function here is reached both by `f()` and by
+-- `new f()`. A call-mode relation would have nothing to be measured against
+-- until a fixture provides one, and that is a different item's fixture.
+unknown_because(js, meta_property, new_target, dataflow, runtime_dependent).

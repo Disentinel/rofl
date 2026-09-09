@@ -110,6 +110,40 @@ orphan_claim[audit](Lang, K, L)  :- orphan[audit](ignored, Lang, K, L).
 -- than as a bare count
 cell[audit](Lang, K, L)        :- node_kind(Lang, K), layer(L).
 
+-- ===========================================================================
+-- THE LAYER LIST IS THE OWNER'S, AND THAT IS NOW A ROW RATHER THAN A PROMISE.
+--
+-- Decided by Vadim 2026-09-05: the four layers standing in the ledger today
+-- are authorised; a new one needs his explicit word, one at a time. The reason
+-- is arithmetic and it is the whole shape of this programme — `layer(L)` is ONE
+-- FACT and it opens `node_kind` cells, 59 at today's vocabulary. Five candidate
+-- layers sit in the queue; declaring them would take the matrix from 285 cells
+-- to 580 in five lines. So the total size of the work is set by this list and
+-- by nothing else, and it is not a modelling decision.
+--
+-- WHY A RULE AND NOT A SENTENCE IN A COMMENT: an unattended loop works the
+-- queue, and the queue contains items whose natural next move is to declare a
+-- layer. A promise cannot refuse; a positive row can. `layer_unauthorised`
+-- fires on any layer nobody signed off, and every gate that asserts the audits
+-- are empty will carry it.
+edb(layer_authorised).
+layer_authorised(callgraph).
+layer_authorised(dataflow).
+layer_authorised(modules).
+layer_authorised(controlflow).
+-- THE FIFTH, AND IT IS THE FIRST ONE THE ROW ABOVE HAD TO BE ASKED FOR.
+-- Decided by Vadim 2026-09-09 and relayed with the item that builds it
+-- (`w_effect_layer`): the effect axis over Koka's basic set, and the
+-- instruction that came with it was that the declaration and the OWNERSHIP of
+-- its hundred cells belong in one commit, because a layer whose cells nobody
+-- owns is not a valid state of this queue. That is precisely what
+-- `layer_unauthorised` was written to make impossible to do quietly — it
+-- reported one row for `effect` until this line was added, which is the gate
+-- working rather than a formality.
+layer_authorised(effect).
+
+layer_unauthorised[audit](L) :- layer(L), not layer_authorised(L).
+
 -- WHERE THE LANGUAGES AGREE — and the first version of this was a TAUTOLOGY.
 -- It read `handled(A, _, L, Rule), handled(B, _, L, Rule), A != B` and reported
 -- eight rows of convergence, of which all four named rules EXISTED NOWHERE: I
@@ -173,6 +207,16 @@ verdict[audit](Lang, K, L, not_modelled) :- cell[audit](Lang, K, L),
 -- them is a property of the SUBJECT rather than of us:
 edb(unknown_type).
 unknown_type(runtime_dependent, irreducible).
+-- A SECOND IRREDUCIBLE REASON, added 2026-09-04 and NOT a scope call: the
+-- target exists and is statically known, and no source declares it, because
+-- the LANGUAGE synthesises it. `super()` whose whole ancestor chain has no
+-- explicit constructor reaches a function that has no node to point at, and no
+-- amount of rule-writing produces one — manufacturing a term for it is the
+-- defect this repository already refused once. It is `theirs` rather than
+-- `ours` for the same reason `runtime_dependent` is, and it is DIFFERENT from
+-- it: this one is decided at parse time, so borrowing `runtime_dependent`
+-- would have said something false about when the answer exists.
+unknown_type(no_source_target,  irreducible).
 unknown_type(not_yet,           ours).
 unknown_type(budget_exhausted,  ours).
 unknown_type(out_of_scope,      ours).
@@ -260,12 +304,26 @@ orphan_reason[audit](Lang, K, L) :- orphan[audit](unknown_because, Lang, K, L).
 edb(axis).
 edb(axis_applies).
 edb(shape_of).
+-- WHICH LAYER A REFINEMENT VALUE BELONGS TO. Added 2026-09-04, and the reason
+-- is a defect rather than a design: `import_declaration x modules` was `handled`
+-- AND carried two live excuses — the rule resolves a relative specifier while a
+-- bare one is out of scope and a subpath one is not done — so `stale_reason`
+-- reported three FALSE rows in the only world that holds all the fact packs.
+-- The cell is PARTIAL and a matrix keyed by kind cannot say so. That is the
+-- member_expression limit arriving in a second layer.
+--
+-- ONE COLUMN, PER-LAYER VOCABULARIES. A callee shape really does say nothing
+-- about a module graph, exactly as facts/js-shapes.rofl argues — so the column
+-- is shared and its VALUES are not. `shape_in` is what stops a specifier shape
+-- minting a phantom cell in the call graph, and it is why declaring the modules
+-- refinement costs one premise rather than a fifth argument.
+edb(shape_in).
 
 -- A kind the axis SPLITS. A kind with no declared shape is ATOMIC for this
 -- axis even in a layer where the axis applies, and it keeps exactly one cell.
 -- Without this the refinement would delete `if_statement x callgraph` — a cell
 -- somebody deliberately waived — from the table entirely.
-shape_kind[audit](Lang, K) :- shape_of(Lang, K, _).
+shape_kind[audit](Lang, K, Lay) :- shape_of(Lang, K, S), shape_in(S, Lay).
 
 -- THE CELL, AT THREE AXES. Same name, one more argument. This kernel keys a
 -- relation by NAME and unifies by ARITY, so `cell[audit]/3` above keeps
@@ -281,8 +339,8 @@ cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
                                     not axis_applies(shape, Lay).
 cell[audit](Lang, K, none, Lay)  :- node_kind(Lang, K), layer(Lay),
                                     axis_applies(shape, Lay),
-                                    not shape_kind[audit](Lang, K).
-cell[audit](Lang, K, Shape, Lay) :- shape_of(Lang, K, Shape), layer(Lay),
+                                    not shape_kind[audit](Lang, K, Lay).
+cell[audit](Lang, K, Shape, Lay) :- shape_of(Lang, K, Shape), shape_in(Shape, Lay),
                                     axis_applies(shape, Lay).
 
 -- THE REFINEMENT IS A PARTITION OF THE COARSE MATRIX, and both directions are
@@ -335,10 +393,10 @@ shaped_because[audit](Lang, K, none, Lay, R) :- unknown_because(Lang, K, Lay, R)
                                                 cell[audit](Lang, K, none, Lay).
 
 coarser_claim[audit](Lang, K, Lay, R) :- handled(Lang, K, Lay, R),
-                                         shape_kind[audit](Lang, K),
+                                         shape_kind[audit](Lang, K, Lay),
                                          axis_applies(shape, Lay).
 coarser_claim[audit](Lang, K, Lay, R) :- ignored(Lang, K, Lay, R),
-                                         shape_kind[audit](Lang, K),
+                                         shape_kind[audit](Lang, K, Lay),
                                          axis_applies(shape, Lay).
 
 -- THE DEFAULT SURVIVES THE REFINEMENT, which is the one property that may not
@@ -441,4 +499,109 @@ imports(code, main).
 -- [audit] READS [code]. Twenty-nine rules: every gate in this layer reads the
 -- scanner's facts and writes its verdict. An audit that could not read the
 -- book it audits would have nothing to say.
+-- ---------------------------------------------------------------------------
+-- THE FRAME ITSELF. Every audit above compares a DECLARED kind against a layer,
+-- so a kind nobody declared is not a hole in the matrix — it is outside it.
+-- That made the vocabulary a model of the CORPUS rather than of the language,
+-- and nothing said so.
+--
+-- MEASURED 2026-09-05, and the number is the point: one probe file containing
+-- the ordinary control constructs emitted 51 node kinds, of which THIRTY were
+-- undeclared — `try`, `catch`, `throw`, `switch`, `while`, `for`, `break`,
+-- `continue` among them. The matrix had four layers, 229 cells and every audit
+-- at zero while the language's whole exception machinery was invisible to it.
+--
+-- This is the one audit that cannot be satisfied by writing more rows: it grows
+-- when the CORPUS grows, and its job is to make the vocabulary a decision
+-- rather than a habit. A kind it names is either declared, or the decision not
+-- to is recorded somewhere a reader can find.
+-- `ast_node` is DECLARED edb here, and the declaration is load-bearing rather
+-- than tidy: this file is loaded in worlds with no corpus at all — the shape
+-- fixture, the coverage mutants — and without it the kernel reads the empty
+-- table as a misspelled premise and `undefined_premise[audit]` goes to two.
+-- That is the same reason `unknown_type` and `unknown_because` carry one.
+edb(ast_node).
+edb(lang_of_corpus).
+lang_of_corpus(js).
+
+-- THREE CLASSES, NOT TWO, measured 2026-09-06 on the seventeen this audit was
+-- reporting. The comment above already promised the remedy — "a kind it names
+-- is either declared, or the decision not to is recorded somewhere a reader can
+-- find" — and there was nowhere to record it, so the audit sat at seventeen on
+-- an honest checkout for a day. A gate red on an honest tree gets switched off.
+--
+-- 1. NOT A CONSTRUCT AT ALL. `file` and `program` are the SCANNER'S OWN ROOTS
+-- and `comment_line` is trivia; no layer can have an opinion about any of them,
+-- and giving them cells would be twelve waivers describing the scanner rather
+-- than the language. The audit's criterion was borrowed from what the scanner
+-- EMITS; the question is what the language CONTAINS.
+edb(not_a_construct).
+
+-- 2. OUTSIDE THE FRAME, WITH AN OWNER — the same move `mechanism_open` makes
+-- for a mechanism and `catch_from_call` for a value, and the third time this
+-- session that splitting a frontier from a defect is what takes an audit to
+-- zero honestly. A deferred kind is a DECISION with a name attached, not a
+-- silence.
+edb(frame_deferred).        -- frame_deferred(Kind, WorkItem)
+
+vocabulary_gap[audit](Lang, K) :- ast_node[code](_, K, _, _),
+                                  lang_of_corpus(Lang), not node_kind(Lang, K),
+                                  not not_a_construct(K), not frame_deferred(K, _).
+
+-- ...AND BOTH EXCLUSIONS HAVE TO BE HONEST THEMSELVES, or this is a hole with a
+-- vocabulary in front of it. A misspelling in either list silently readmits the
+-- kind to nothing: it is neither declared nor excluded by the row that meant to
+-- exclude it, and the gap audit is the only thing that would have said so.
+not_a_construct_unseen[audit](K) :- not_a_construct(K), not ast_node[code](_, K, _, _).
+frame_deferred_unseen[audit](K)  :- frame_deferred(K, _), not ast_node[code](_, K, _, _).
+double_excluded[audit](K)        :- not_a_construct(K), frame_deferred(K, _).
+declared_and_excluded[audit](K)  :- node_kind(_, K), not_a_construct(K).
+declared_and_deferred[audit](K)  :- node_kind(_, K), frame_deferred(K, _).
+
+-- ...AND THE THIRD LIST HAD NO SUCH CHECK, which is the hole the two rules above
+-- describe and do not cover. `not_a_construct` and `frame_deferred` are guarded
+-- against a misspelling; `node_kind` — the list that says what the model CLAIMS
+-- to describe — was not. Measured 2026-09-07: eight declared kinds produce no
+-- node in this corpus, and one of them, `ts_string_keyword`, is a spelling the
+-- scanner CANNOT produce. It carries four verdicts across four packs, all of
+-- them about a kind that does not exist, while the real `tsstring_keyword` sat
+-- in the deferral list — so a reader checking whether TypeScript's string
+-- keyword was handled found a row saying yes.
+--
+-- IT IS NOT AN ERROR TO DECLARE A KIND THE CORPUS LACKS. The vocabulary is
+-- allowed to be wider than any one corpus, exactly as `feature_unexercised` in
+-- the era layer is allowed to be non-empty. So this audit does not forbid it; it
+-- demands that the reason be WRITTEN DOWN, which is the move that has taken
+-- three audits to zero honestly in this loop. Writing the reason for
+-- `ts_string_keyword` is what exposes it as a synthetic fixture rather than a
+-- kind, because there is no honest sentence that does not say so.
+--
+-- THE GUARD IS `A CORPUS WAS SCANNED`, AND THE FIRST DRAFT GOT IT WRONG in a
+-- way worth keeping: it used `lang_of_corpus(Lang)`, which READS LIKE a corpus
+-- test and is a CONSTANT — `lang_of_corpus(js).` is an edb row three lines
+-- above. It guarded nothing, and the mutant written to prove the guard was
+-- load-bearing is what said so: the guarded world reported eight kinds where it
+-- had to report none. A premise that names the right noun is not a premise that
+-- asks the right question.
+--
+-- WITHOUT A GUARD this audit is red in the one place it means nothing: the
+-- matrix-machinery world loads no corpus at all, so every declared kind is
+-- unexercised there by construction.
+edb(kind_absent_ok).        -- kind_absent_ok(Kind, Reason)
+
+scanned[audit](Lang) :- lang_of_corpus(Lang), ast_node[code](_, _, _, _).
+
+kind_unexercised[audit](Lang, K) :- node_kind(Lang, K), scanned[audit](Lang),
+                                    not ast_node[code](_, K, _, _),
+                                    not kind_absent_ok(K, _).
+-- and the excuse cannot outlive its cause
+kind_absent_stale[audit](K) :- kind_absent_ok(K, _), ast_node[code](_, K, _, _).
+-- `kind_absent_undeclared` needs NO corpus guard and DOES need the same home
+-- rule every verdict here obeys: a `kind_absent_ok` row belongs in the pack
+-- that declares its kind. Three rows were written in facts/js-kinds.rofl for
+-- kinds facts/js-modules.rofl declares, and this audit named all three in the
+-- first run — the same defect `orphan_claim` catches for a verdict, arriving
+-- through a third relation.
+kind_absent_undeclared[audit](K) :- kind_absent_ok(K, _), not node_kind(_, K).
+
 imports(audit, code).

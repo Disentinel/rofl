@@ -1,0 +1,43 @@
+// export-surface.js — A MODULE WHOSE ENTIRE EXPORT SURFACE IS A SPECIFIER LIST.
+//
+// SCANNED, NEVER RUN, and a file of its own rather than three lines in
+// test/fixtures/js-call/alpha.mjs. The reason is measured rather than stylistic.
+//
+// The entry-surface arm for `export { f }` (rules/js-controlflow.rofl) has a
+// site in the call-graph corpus — `export { renamed as exposed }` — and DELETING
+// THE ARM COSTS NOTHING THERE. Measured 2026-09-08: `renamed` stays `reachable`
+// because `bviaRename` calls it and `bviaRename` is exported inline, so the walk
+// arrives from a seed the mutation does not touch. A mutant that survives
+// because every path to the answer is doubled is measuring the corpus.
+//
+// What the arm needs is a function whose ONLY road from a seed is the specifier
+// list, and in the runnable corpus that means a function nothing calls at
+// runtime — which would put two more names on the census's silent-but-wired
+// list for a question that has nothing to do with instrumentation. Here it costs
+// one file and no runtime at all.
+//
+// THE SHAPE:
+//   helper   is called by viaList and by nothing else
+//   viaList  is exported ONLY through the specifier list below
+//   lonely   is exported the same way and called by nobody
+//
+// With the arm: viaList is an entry point, the walk reaches helper, and
+// `may_not_be_reached` is empty. Without it: the file has no entry surface at
+// all, `no_entry_point[audit]` fires, and `helper` — a function this module
+// exports and calls — is reported maybe-dead. That is the dangerous direction,
+// and it is the same one `export_kind_unseen[audit]` exists to catch, arriving
+// through a FORM rather than through a misspelling.
+
+function helper(n) {
+  return n + 1;
+}
+
+function viaList(n) {
+  return helper(n);
+}
+
+function lonely(n) {
+  return n;
+}
+
+export { helper as h, viaList as v, lonely as l };

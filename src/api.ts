@@ -16,11 +16,34 @@ import { RoundEvaluation } from './rounds.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
-export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; }
-/** What an evaluation spent against the wall it was given. `peakRows` is the
- *  accumulator's high-water mark and `space` the wall it is compared with;
- *  both are in ROWS, which is not the unit `factCount()` reports. */
-export interface EvalOutcome { partial: boolean; peakRows: number; space: number; }
+
+/** `unpopulatable` separates the two empty answers a query used to give with
+ *  one voice: NO ROWS (the relation exists and nothing satisfies the literal)
+ *  and NO SUCH RELATION AT THIS ARITY (nothing in this world can ever put a
+ *  row there). Both are `rows: []` with no error, so an assertion that a
+ *  relation is EMPTY — the shape of nearly every audit gate above this kernel —
+ *  is satisfied by a typo, by a rename, and by a literal written at the wrong
+ *  arity. `undefined_premise[audit]` in boot.rofl says exactly this about a
+ *  RULE's premise; a query is not a rule, so nothing said it about a query.
+ *
+ *  It is a field rather than an error because an empty world is a legitimate
+ *  thing to ask about — a caller decides whether unpopulatable is a defect. */
+export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; }
+
+/** What an evaluation spent, beside whether it finished. `peakRows` is the most
+ *  rows held at once and `space` is the wall — so a caller can see it coming
+ *  instead of learning the distance by crossing it.
+ *
+ *  BOTH ARE IN ROWS, WHICH IS NOT THE UNIT `factCount()` REPORTS. Measured on
+ *  the JS model over real JavaScript the ratio is 0.507 rows per fact, and on a
+ *  control-flow world 0.614 — so a caller reading this wall as a fact count is
+ *  wrong by a factor that happens to be safe, which is how it went unnoticed.
+ *
+ *  NAMED `EvalReport` AND NOT `EvalOutcome`, because `src/engine.ts` already
+ *  exports an `EvalOutcome` of a different shape. Two interfaces of one name in
+ *  one kernel is a collision the merge of 2026-09-09 caught and the branch that
+ *  introduced it did not. */
+export interface EvalReport { partial: boolean; peakRows: number; space: number; }
 
 /** whynot's demonstration bounds. `depth` counts levels of literal
  *  explanation: 1 is the single-step form (name the failing premises and
@@ -30,6 +53,10 @@ export interface EvalOutcome { partial: boolean; peakRows: number; space: number
 export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; }
 
 const DEFAULT_BUDGET = 100_000;
+/** How large a relation `query` will enumerate to learn its arity. Small
+ *  enough that the scan is free on every query; the cost of the bound is that
+ *  a big BASE relation asked at the wrong arity goes unreported. */
+const ARITY_SCAN_MAX = 64;
 const DEFAULT_WHYNOT_DEPTH = 6;
 const DEFAULT_WHYNOT_NODES = 64;
 
@@ -74,6 +101,7 @@ export interface EvalOpts {
    *  workload this engine is FOR does not fit the default. Raise it knowing
    *  what the kernel says: the wall is protecting you from a cross product,
    *  and `test/rule-shape.test.ts` names the rules that can produce one. */
+
   space?: number;
 }
 
@@ -202,6 +230,10 @@ export class Rofl {
   // it is a failure. Held across a skipped evaluation because a world that
   // has not changed still has the peak its last fixpoint reached.
   private lastPeakRows = 0;
+  // AND THE WALL IT WAS MEASURED AGAINST, kept beside it: reporting the
+  // configured `space` rather than the one the evaluation actually ran with
+  // would answer a question about the settings and not about the run.
+  private lastSpace = 0;
   /** Whether the loaded program reads provenance in a rule body, as the last
    *  evaluation read the rules. Starts pessimistic: until an evaluation has
    *  actually looked, "it might" is the only honest answer, and it is the one
@@ -650,9 +682,9 @@ export class Rofl {
       : new RoundEvaluation(this.store, opts);
   }
 
-  private ensure(budget: number, holeId: Term): EvalOutcome {
+  private ensure(budget: number, holeId: Term): EvalReport {
     if (!this.store.dirty) {
-      return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.space ?? DEFAULT_SPACE };
+      return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.lastSpace };
     }
     const ev = this.newEval(budget, holeId);
     const out = ev.run();
@@ -668,20 +700,28 @@ export class Rofl {
     // budget of whatever ran last.
     this.store.noteEval(budget, ev.steps, out.partial);
     this.diagnostics.push(...out.diags);
-    return { partial: out.partial, peakRows: ev.peakRows, space: this.space ?? DEFAULT_SPACE };
+    // HOW CLOSE IT CAME, reported WITHOUT a failure. `peakRows` is the
+    // high-water mark of rows held at once and `space` is the wall it is
+    // measured against; until 2026-09-09 neither left the Evaluation, so the
+    // only way to learn the distance to the nearest hard ceiling in this system
+    // was to cross it and read `space_exhausted` off a hole. That is the defect
+    // CLAUDE.md names twice over — a gate whose criterion is borrowed from
+    // whichever tool produced the first red, and a capability nothing exercises
+    // — and it cost a real diagnosis: two mutants of a cost gate stopped
+    // fitting, and the distance had to be recovered by wrapping this method
+    // from a test. The information existed and breaking something was the only
+    // way to read it.
+    this.lastPeakRows = ev.peakRows;
+    this.lastSpace = ev.space;
+    return { partial: out.partial, peakRows: ev.peakRows, space: ev.space };
   }
 
   /** Evaluate now (mainly for tests); throws on unstratifiable programs.
    *
-   *  `peakRows` and `space` report the accumulator's high-water mark against
-   *  the wall it is measured against. Reporting the wall ONLY on the way
-   *  through it makes the margin invisible to everything except a failure,
-   *  and a ceiling nobody can read until they hit it is a ceiling nobody
-   *  budgets against — measured 2026-09-09, a collaborator reading a wall
-   *  counted in rows as if it counted facts, off by a factor that happened
-   *  to be safe. Rows are not facts: on the JS model over real JavaScript
-   *  the ratio is 0.507, and on a control-flow world 0.614. */
-  evaluate(budget: number = DEFAULT_BUDGET): EvalOutcome {
+   *  Reporting the wall ONLY on the way through it makes the margin invisible
+   *  to everything except a failure, and a ceiling nobody can read until they
+   *  hit it is a ceiling nobody budgets against. */
+  evaluate(budget: number = DEFAULT_BUDGET): EvalReport {
     return this.ensure(budget, mka('$adhoc'));
   }
 
@@ -740,6 +780,47 @@ export class Rofl {
         partial = true;
       } else throw e;
     }
+    // WHAT COULD EVER PUT A ROW HERE. Rule heads and stored facts both carry an
+    // arity; a bare `edb(Rel)` does not, so a declared-but-empty table counts as
+    // populatable and only a relation nothing declares, concludes or holds — or
+    // a literal at an arity none of those use — is reported. The knowledge is
+    // already in this file: `explainFailure` filters the same rules and compares
+    // the same lengths to tell whynot there is nothing to explain.
+    const arities = new Set<number>();
+    const persps = new Set<string>();
+    let anyPersp = false;   // some rule concludes into a ledger named by a VARIABLE
+    for (const r of ev.rules) {
+      if (r.clause.head.rel !== lit.rel) continue;
+      arities.add(r.clause.head.args.length);
+      if (isGround(r.clause.head.persp)) persps.add(canonTerm(r.clause.head.persp));
+      else anyPersp = true;
+    }
+    // THE STORE IS ASKED THE TWO CHEAP QUESTIONS AND NOT THE EXPENSIVE ONE.
+    // `perspectivesOf` and a key lookup are O(1)-ish; enumerating a relation is
+    // not, and this runs on EVERY query — `ast_node` carries a hundred thousand
+    // rows in the model's own world. So a base relation's ARITY is only read
+    // when the relation is small enough that reading it is free, and the honest
+    // consequence is stated rather than hidden: a LARGE relation asked at the
+    // wrong arity is not caught. Every relation a rule concludes is caught
+    // whatever its size, because a rule head carries its own arity.
+    for (const p of this.store.perspectivesOf(lit.rel)) persps.add(p);
+    if (arities.size === 0 && this.store.relCount(lit.rel) <= ARITY_SCAN_MAX) {
+      for (const f of this.store.relAll(lit.rel)) arities.add(f.args.length);
+    }
+    const declared = this.store.has(factKey(V.edb, MAIN, [mka(lit.rel)]));
+    // THE PERSPECTIVE IS PART OF THE NAME HERE, and it is the half a check keyed
+    // on the relation alone cannot see: `stale_reason[flow]` and
+    // `stale_reason[audit]` are one relation and two ledgers, and asking the
+    // wrong one is empty and errorless exactly like asking a name that does not
+    // exist. Only a GROUND perspective is judged, and only against positive
+    // knowledge — a rule that concludes into a ledger named by a variable makes
+    // every ledger possible, and a table nothing has written to yet says nothing
+    // about which ledger it will land in.
+    const wrongBook = isGround(lit.persp) && persps.size > 0 && !anyPersp
+                      && !persps.has(canonTerm(lit.persp));
+    const known = arities.size > 0 || persps.size > 0 || declared;
+    const unpopulatable = !known || (arities.size > 0 && !arities.has(lit.args.length)) || wrongBook;
+
     const rows = new Map<string, QueryRow>();
     for (const m of ms) {
       const bindings: Record<string, string> = {};
@@ -747,7 +828,7 @@ export class Rofl {
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       if (!rows.has(rtext)) rows.set(rtext, { text: rtext, bindings });
     }
-    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial };
+    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable };
   }
 
   holds(text: Ask): boolean {

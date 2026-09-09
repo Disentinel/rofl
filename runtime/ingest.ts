@@ -102,12 +102,17 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
       try {
         facts.push(scan(fs.readFileSync(path.join(o.root, rel), 'utf8'), { file: rel }).facts.join('\n'));
         parsed += 1;
-      } catch {
+      } catch (e) {
         // A FILE THAT WILL NOT PARSE IS RECORDED, NOT RETRIED. Left alone it
         // would sit on the frontier forever and the loop would never finish;
         // silently dropped it would be indistinguishable from an indexed file.
-        facts.push(`unparsable[code](${q(rel)}).`);
-        facts.push(`cooled[code](${q(rel)}, "<unparsable>").`);
+        //
+        // THIS PATH IS NOW THE UNEXPECTED ONE. `scanners/js_ast.ts` returns
+        // `ast_parse_error` as a FACT rather than throwing, and `indexed` in
+        // rules/ingest.rofl reads it — so a refusal leaves the frontier through
+        // the rules. What reaches here is something else going wrong, which is
+        // why the message is kept instead of being flattened to `unparsable`.
+        facts.push(`ast_parse_error[code](${q(rel)}, ${q(String((e as Error).message).slice(0, 120))}).`);
       }
     }
     const t1 = Date.now();

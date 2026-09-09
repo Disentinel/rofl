@@ -18,13 +18,51 @@ const seen = new Set();
  *  two apart is the census's job, not this file's. */
 const measured = new Set();
 
-/** V8 gives `Box.get`, `Object.hello`, `new Box`; the declared name is the
- *  last dot-segment. Documented as lossy: two same-named functions on
- *  different objects collapse, so fixture names are kept unique. */
-function frameName(cs) {
+/** The declared name, as V8 reports it. Documented as lossy: two same-named
+ *  functions on different objects collapse, so fixture names are kept unique.
+ *
+ *  SWEPT 2026-09-07 rather than assumed, because this comment said `V8 gives
+ *  Box.get, Object.hello, new Box` and that is not what this V8 gives. Sixteen
+ *  shapes measured on Node 22, and the qualified names are nearly all gone:
+ *
+ *    function / arrow / object method / class method / static / async /
+ *    generator / inherited / bound / named or anonymous fn expression
+ *                                              -> the bare name, no dots
+ *    new Box(), new Sub()                      -> `Box`, `Sub`; no `new ` prefix
+ *    a getter                                  -> `get acc`
+ *    a key that CONTAINS a dot, obj['a.b']     -> `dotted.a.b`  (still qualified)
+ *    a computed key                            -> `[Symbol.iterator]`
+ *    an arrow passed to a host API             -> null, so `<top>`
+ *
+ *  So the last-dot rule fires on exactly two shapes today. On `dotted.a.b` it
+ *  is doing its job. On `[Symbol.iterator]` it was CORRUPTING the name to
+ *  `iterator]` — a case it was never designed for, arriving at a rule written
+ *  for a V8 that no longer names things that way.
+ *
+ *  THE BRACKETS SAY THE WHOLE THING IS ONE KEY, so they are stripped first and
+ *  the dot rule then names the property: `[Symbol.iterator]` -> `iterator`,
+ *  which is what the model calls it too — every other method is named by its
+ *  key rather than by its receiver, and a computed key is still a key.
+ *
+ *  RE-SWEPT 2026-09-07 on V8 11.3 (node 20.20.0) and V8 13.6 (node 24.13.0)
+ *  — the two engines this checkout can actually run, and the version pair
+ *  printed by `process.versions.v8`, not the one this comment first claimed.
+ *  The raw names are IDENTICAL on both, shape for shape — including
+ *  `new Sub()`, which reports `Sub` only when the subclass declares its own
+ *  constructor — so the table above holds across two major V8 versions. Two
+ *  is what was measured; it is not a claim about the majors in between.
+ *
+ *  `frameName` IS EXPORTED so the transformation can be gated without an
+ *  engine in the loop: test/js-callgraph.test.ts pins raw string -> name,
+ *  which is ours, while the oracle test pins the invariant that no name this
+ *  file reports carries a bracket or a dot — which is what `iterator]`
+ *  violated, and the only half of the two that a second engine could argue
+ *  with. */
+export function frameName(cs) {
   let n = null;
   try { n = cs.getFunctionName() ?? cs.getMethodName(); } catch { n = null; }
   if (!n) return '<top>';
+  if (n.startsWith('[') && n.endsWith(']')) n = n.slice(1, -1);
   const dot = n.lastIndexOf('.');
   return dot < 0 ? n : n.slice(dot + 1);
 }

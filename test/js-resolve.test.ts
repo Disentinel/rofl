@@ -225,9 +225,18 @@ function build(opts: BuildOpts = {}): Rofl {
   return r;
 }
 
-const count = (r: Rofl, goal: string): number => r.query(goal).rows.length;
+// See the note in test/js-modules.test.ts: `unpopulatable` is the kernel
+// refusing to let an empty answer stand for a relation nothing in this world can
+// populate, and this file had been querying a model world unguarded since the
+// field existed — found the day the gate started deriving its own list.
+const ask = (r: Rofl, goal: string) => {
+  const res = r.query(goal);
+  assert.equal(res.unpopulatable, false, `query ${goal}: nothing in this world can populate it`);
+  return res;
+};
+const count = (r: Rofl, goal: string): number => ask(r, goal).rows.length;
 const col = (r: Rofl, goal: string, ...vars: string[]): string[] =>
-  r.query(goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join(' | ')).sort();
+  ask(r, goal).rows.map((row) => vars.map((v) => unq(row.bindings[v] ?? '') ?? row.bindings[v] ?? '').join(' | ')).sort();
 
 const W = build();
 
@@ -282,10 +291,27 @@ test('census: every place is enumerated, every place is spoken about', () => {
   assert.ok(tries > 20, `node was actually made to search: ${tries} candidates`);
   assert.ok(answers > 0 && failed > 0 && unasked > 0, 'all three verdicts occur');
 
-  // the `checked` rows are a count, and a count that nobody re-derives rots
+  // THE `checked` ROWS ARE A COUNT, AND A COUNT THAT NOBODY RE-DERIVES ROTS —
+  // so they are compared PER KIND against what the referee actually joined.
+  // Until 2026-09-08 this compared the import_declaration row against the total
+  // number of literal places, which happened to be equal only because every
+  // place with a literal specifier was an import; `checked_site_kind[audit]`
+  // was added with the re-export forms so the identity is per kind and stays
+  // true when a third kind of place exists.
+  const perKind = new Map<string, number>();
+  for (const row of ask(W, 'checked_site_kind[audit](K, S)').rows) {
+    const k = row.bindings['K'] ?? '?';
+    perKind.set(k, (perKind.get(k) ?? 0) + 1);
+  }
   const decl = col(W, 'checked(js, K, modules, R, o_node_resolver_traced, N)', 'K', 'N');
   console.log('  checked rows:', decl.join(' ; '));
-  assert.deepEqual(decl, [`import_declaration | ${literal}`, `import_expression | ${computed}`]);
+  console.log('  places the referee joined, by kind:',
+    [...perKind].map(([k, v]) => `${k} ${v}`).sort().join(', '));
+  assert.deepEqual(decl, [...perKind.entries()].map(([k, n]) => `${k} | ${n}`).sort(),
+    'every `checked` row states the number of places of that kind the referee compared');
+  assert.equal([...perKind.values()].reduce((a, b) => a + b, 0), places,
+    'and they sum to every place, so no kind is missing a row');
+  assert.ok(perKind.size >= 4, `all four site kinds occur: ${[...perKind.keys()].sort().join(', ')}`);
 });
 
 test('every declared mechanism occurs, and every mechanism that occurs is declared', () => {
@@ -573,9 +599,16 @@ const MUTANTS: Mutant[] = [
     plant: { rules: (s) => s.replace(/^resolve_divergence\[audit\]/gm, 'muted_resolve_divergence[audit]') },
     damage: (r) => {
       const n = count(r, 'uncompared[audit](S, E)');
-      const d = count(r, 'resolve_divergence[audit](S, R, H, E)');
-      return n > 0 ? `resolve_divergence ${BASE.divergence} -> ${d}, and uncompared reports ${n} site(s) ` +
-        'nobody compares any more' : null;
+      // NOT `count` HERE, and the guard is what said so. This mutant RENAMES the
+      // relation away, so in the mutated world it does not exist — and `count`
+      // now refuses an unpopulatable literal, correctly. The stronger statement
+      // was available all along and was being made as `0 rows`: the comparison
+      // did not stop finding divergences, it stopped EXISTING.
+      const gone = r.query('resolve_divergence[audit](S, R, H, E)').unpopulatable === true;
+      return n > 0 && gone
+        ? `resolve_divergence is GONE (was ${BASE.divergence}), and uncompared reports ${n} site(s) `
+          + 'nobody compares any more'
+        : null;
     },
   },
   {

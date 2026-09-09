@@ -160,6 +160,14 @@ host_emitter(js, modules, builtin_canonical,  a_the_node_prefix_is_added_by_the_
 -- resolution for `yield_expression` and friends, which would be false.
 handled(js, import_declaration, modules, r_host_observed_resolution).
 handled(js, import_expression,  modules, r_host_unasked_without_a_literal).
+-- ...AND THE RE-EXPORT FORMS, 2026-09-08 (w_mod_beyond_the_import). The SAME
+-- rule and not a new one: the observer asks node's resolver about a re-export's
+-- specifier with the same call it uses for an import's, and node answers by the
+-- same rules. What changed is `sitesOf` in scanners/js_resolve.ts, which
+-- enumerated two node types and now enumerates four — a difference in what is
+-- COLLECTED, which is why nothing about the mechanism vocabulary moves.
+handled(js, export_named_declaration, modules, r_host_observed_resolution).
+handled(js, export_all_declaration,   modules, r_host_observed_resolution).
 
 -- ...and no new `unknown_because` row, which is a measurement rather than an
 -- omission. rules/js-modules.rofl's `reason_unexercised` reports a reason
@@ -177,3 +185,8 @@ handled(js, import_expression,  modules, r_host_unasked_without_a_literal).
 --   checked(Lang, Kind, Layer, Rule, Oracle, Fixtures)
 checked(js, import_declaration, modules, r_host_observed_resolution,      o_node_resolver_traced, 10).
 checked(js, import_expression,  modules, r_host_unasked_without_a_literal, o_node_resolver_traced, 1).
+-- ...and the two re-export rows, each RE-DERIVED from `checked_site_kind[audit]`
+-- in test/js-resolve.test.ts rather than counted by hand, because a number
+-- nobody re-derives rots.
+checked(js, export_named_declaration, modules, r_host_observed_resolution, o_node_resolver_traced, 1).
+checked(js, export_all_declaration,   modules, r_host_observed_resolution, o_node_resolver_traced, 1).
