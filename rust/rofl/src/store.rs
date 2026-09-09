@@ -361,6 +361,13 @@ pub struct Store {
     /// nothing on a workload that never retracts. Kept — it is correctness,
     /// not optimisation — but recorded, because a filter that has never
     /// removed anything is a filter nothing has tested.
+    /// TIME INSIDE `absorb`, MEASURED RATHER THAN INFERRED. `absorb_canon`
+    /// grows x31.3 over 8 to 64 files where the work grows x15.9 and the
+    /// clock x40.0 — which says the merge grows like the clock and says
+    /// NOTHING about whether it IS the clock. Rows merged is not time; the
+    /// comparator is `cmp_args`, which walks terms, and estimating its cost
+    /// is exactly the arithmetic that has been wrong here twice.
+    pub absorb_ns: u128,
     pub relp_calls: u64,
     pub relp_cloned: u64,
     pub relp_dead: u64,
@@ -625,6 +632,7 @@ impl Store {
         if v[i].1.arrived.is_empty() {
             return;
         }
+        let t_absorb = std::time::Instant::now();
         let mut canon = std::mem::take(&mut v[i].1.canon);
         let mut fresh = std::mem::take(&mut v[i].1.arrived);
         self.absorb_calls += 1;
@@ -655,6 +663,7 @@ impl Store {
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         v[i].1.canon = canon;
+        self.absorb_ns += t_absorb.elapsed().as_nanos();
     }
 
     /// Facts of one relation in one perspective, in canonical key order.

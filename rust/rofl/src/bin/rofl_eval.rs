@@ -226,6 +226,7 @@ fn main() {
         eprintln!("absorb_calls\t{}", l.eval.store.absorb_calls);
         eprintln!("absorb_fresh\t{}", l.eval.store.absorb_fresh);
         eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
+        eprintln!("absorb_ms\t{:.2}", l.eval.store.absorb_ns as f64 / 1e6);
         eprintln!("relp_calls\t{}", l.eval.store.relp_calls);
         eprintln!("relp_cloned\t{}", l.eval.store.relp_cloned);
         eprintln!("relp_dead\t{}", l.eval.store.relp_dead);
