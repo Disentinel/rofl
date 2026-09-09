@@ -111,6 +111,14 @@ const CONTROLFLOW: WorldSpec = {
     // the era layer has its own world below, its own corpus, and its own number
     'facts/js-env.rofl', 'facts/js-lib-surface.rofl', 'rules/js-env.rofl',
     'rules/js-env-api.rofl',
+    // AND ITS GLOBAL HALF, 2026-09-09 (w_es_globals). `facts/js-globals.rofl`
+    // and `rules/js-globals.rofl` are the same subject one surface over —
+    // `lib_global`, `lib_static`, and the joins that date `JSON.parse` — so
+    // they belong wherever `js-lib-surface` and `js-env-api` do, which is not
+    // this world. Refused rather than loaded ON PURPOSE and the reason is this
+    // file's own: this world's TOTAL is a pinned number, and a pack added to it
+    // moves that number for a question it is not measuring.
+    'facts/js-globals.rofl', 'rules/js-globals.rofl',
     // the resolver and the attribute packs are their own subjects, each with a
     // test file that builds its own world; nothing in this corpus reads them
     'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
@@ -161,6 +169,13 @@ const ERA: WorldSpec = {
     'rules/js-pack-home.rofl',
     // w_env_api_surface's rules; the era gate is about the SYNTAX scale
     'rules/js-env-api.rofl',
+    // ...and w_es_globals' pair, 2026-09-09, refused for the same sentence one
+    // surface further out: this gate measures the cost of the SYNTAX era layer,
+    // and the library era — prototype methods and now global bindings — is a
+    // different question with a different corpus. The facts pack is refused as
+    // well as the rules, unlike `facts/js-lib-surface.rofl` above, because this
+    // world's number is pinned and 511 rows of table would move it.
+    'facts/js-globals.rofl', 'rules/js-globals.rofl',
   ],
   corpus: [
     ['era.js', 'test/fixtures/js-env/era.js.txt'],
@@ -200,6 +215,10 @@ const CALLGRAPH: WorldSpec = {
     'rules/js-controlflow.rofl', 'rules/js-env.rofl', 'rules/js-env-api.rofl',
     'rules/js-attrs.rofl', 'rules/js-resolve.rofl', 'rules/js-modules.rofl',
     'rules/js-vocabulary.rofl', 'rules/js-pack-home.rofl',
+    // ...and w_es_globals' pair, 2026-09-09: the library era, which this world
+    // refuses along with `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl`
+    // above and for the same reason.
+    'facts/js-globals.rofl', 'rules/js-globals.rofl',
   ],
   corpus: CALL_CORPUS,
 };

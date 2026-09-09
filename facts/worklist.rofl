@@ -2396,3 +2396,77 @@ work_state(w_connected_and_badly_ordered, open).
 -- on a 1.3% gap. What decides that body is the DIRECTION of the second literal,
 -- not either seed's size. So this item wants the count ON THE JOIN.
 work_needs(w_connected_and_badly_ordered, w_join_planner).
+
+-- ===========================================================================
+-- 68. THE ES GLOBALS — the half of the standard library that is not a
+-- prototype. Entered and closed 2026-09-09, in the wave the owner asked for
+-- with the words `globals must be covered, without them all of this is
+-- meaningless`.
+--
+-- WHAT `w_env_api_surface` LEFT, stated as the measurement that opened this
+-- item rather than as an opinion: 130 members of eight PROTOTYPES, ten stdlib
+-- calls in the corpus, ten attributed, zero unattributed — and NOT ONE static
+-- of an ES global anywhere in the five call fixtures. `JSON.parse`,
+-- `Promise.all`, `Object.entries` and `Math.max` were invisible to the era
+-- question, and no audit could say so because the corpus had no site.
+--
+-- THE SAME SCANNER AND THE SAME COMPOSITION. scanners/ts_lib.ts grew a second
+-- walk over the same `lib.es*.d.ts` files: 47 globals and 226 statics into
+-- facts/js-globals.rofl, each dated by the earliest release that declares it,
+-- by the `/// <reference lib=` graph that already dates the prototype half.
+-- rules/js-globals.rofl joins it to the corpus. New relations, and the three
+-- surfaces are three of them on purpose:
+--   free_global[code](E, Name, File)      a reference nothing in the file binds
+--   es_global[code](E, Name, Rel, Form)   ...and ECMAScript declares it
+--   global_unattributed[audit](E, Name)   ...and it does not — the RUNTIME half
+--   es_static[code](N, Name, Key, Rel)    `Object.entries`, dated
+--   es_static_key[code]                   a well-known symbol is a KEY
+--   es_static_call / es_global_invoke / es_global_construct
+--   es_static_unattributed[audit]         a host extension of a language global
+--   es_construct_not_constructor[audit]   `new Math()`, and WHY
+--   es_global_unsupported / es_static_unsupported   the era gate, both surfaces
+--
+-- IT IS THE ES HALF OF THE EFFECT LAYER'S INPUT and that is why the split is
+-- where it is. `layer(effect)` cannot derive `io` for `console.log` from the
+-- SPELLING of `console`; `free_global[code]` says this node is a reference to a
+-- name nothing binds, and `global_unattributed[audit]` is exactly the set a
+-- runtime table joins against. Both are keyed by NODE and by NAME, so an effect
+-- rule reaches `callee_of[code]` on one side and a runtime table on the other
+-- without re-deriving anything.
+--
+-- THE CORPUS GREW BY ONE FILE AND NOT BY A LINE IN alpha.mjs.
+-- test/fixtures/js-globals/globals.mjs.txt, thirteen sites each of which is the
+-- only one of its kind, listed in its own header. It is `.txt` because
+-- test/js-modules.test.ts imports every `.mjs` in test/fixtures/js-call and
+-- compares default exports set-for-set, so a sixth module there is another
+-- branch's oracle moving under it.
+work(w_es_globals, "DONE 2026-09-09: the ES globals — binding, statics and the bridge to the prototype surface — generated from TypeScript`s lib.es*.d.ts and joined to a corpus").
+work_state(w_es_globals, done).
+work_spawned(w_es_globals, f_a_global_has_three_surfaces_and_the_library_keeps_them_apart).
+work_spawned(w_es_globals, f_globalthis_is_the_one_global_the_library_cannot_date).
+work_spawned(w_es_globals, f_a_constructed_value_reaches_no_prototype_so_a_map_call_is_outside_both_halves).
+work_spawned(w_es_globals, f_a_generated_pack_with_no_regeneration_gate_has_already_rotted).
+
+-- ===========================================================================
+-- 69. THE PROTOTYPE OF A CONSTRUCTED VALUE — the hole the globals bridge made
+-- visible, entered 2026-09-09 by w_es_globals rather than found by reading.
+--
+-- `lib_global_prototype` bridges a global's NAME to the lower-case prototype
+-- atom `lib_member` is keyed by, and it covers EIGHT of forty-seven because
+-- eight is what `kind_prototype` in rules/js-dataflow.rofl can name a receiver
+-- for. `Promise`, `Map`, `Set`, `WeakMap`, `Date` and every typed array are in
+-- the other thirty-nine, so `holder.set(k, v)` after `const holder = new Map()`
+-- reaches NEITHER half of the library: `kind_prototype` has no arm for a
+-- `new_expression`, `prototype_of[flow]` is therefore empty, and
+-- `stdlib_member[audit]` does not fire — measured on the fixture, which calls
+-- `.set` and produces no residue row at all.
+--
+-- THE PIECES ARE STANDING AND THE DECISION IS NOT. `es_global_construct[code](X,
+-- Name, Rel)` already names a construction of an ES global, so the arm is a
+-- join from that to `lib_global_prototype` to `lib_member`. What it waits on is
+-- whether `prototype_of[flow]` should carry a value whose class is not in this
+-- program — the same question `w_prototype_of_a_value` answered for literals and
+-- left unasked for constructions — and what that costs `may_be_node` and the
+-- ambiguity audits.
+work(w_prototype_of_a_constructed_value, "`new Map()` reaches no prototype, so a call on the instance is outside both halves of the library; the join exists and the decision does not").
+work_state(w_prototype_of_a_constructed_value, open).

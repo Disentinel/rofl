@@ -203,10 +203,285 @@ export function emit(members: LibMember[], composition: [string, string][] = COM
   return head.concat(comp).concat(rows).concat(dep).join('\n') + '\n';
 }
 
+// ===========================================================================
+// THE GLOBALS — the half of the standard library that is not a prototype.
+//
+// EVERYTHING ABOVE IS A PROTOTYPE METHOD. `lib_member(string, "replaceAll",
+// es2021)` answers "which edition added this method to that prototype", and it
+// answers nothing about `JSON.parse`, `Promise.all`, `Object.entries` or
+// `Math.max` — which are on no prototype and were invisible to the era
+// question. That is the hole this section closes, from the SAME files and the
+// same `/// <reference lib=` composition.
+//
+// A GLOBAL HAS THREE SURFACES AND THEY ARE THREE QUESTIONS. TypeScript's own
+// declarations keep them apart and so does this scanner:
+//
+//   the BINDING       `declare var Promise: PromiseConstructor` — the name
+//                     exists at all, since es2015.           -> `lib_global`
+//   the STATICS       `interface PromiseConstructor { all(...) }` — what hangs
+//                     off the NAME.                          -> `lib_static`
+//   the PROTOTYPE     `interface Promise<T> { then(...) }` — what hangs off an
+//                     INSTANCE.                              -> `lib_member`,
+//                     for the eight prototypes `kind_prototype` can reach, with
+//                     `lib_global_prototype` as the bridge between the two
+//                     keys. A global with no bridge row has an instance surface
+//                     this model does not carry, and the bridge being PARTIAL
+//                     is how that gap is visible instead of assumed away.
+//
+// THEY ARE NOT UNIFORM AND THE SCANNER REFUSES TO AVERAGE THEM. Measured over
+// the ecmascript lib files, 2026-09-09: FOUR declaration forms, and each is a
+// different thing to say about a name.
+//
+//   constructor_binding 40  `declare var X: XConstructor` — new-able, statics
+//                           on `XConstructor`, instances on `X`.
+//   namespace_object     3  `declare var X: X` — Math, JSON, Atomics. There is
+//                           no constructor interface, `new Math` is not a
+//                           thing, and the members ARE the whole surface.
+//   namespace_block      2  `declare namespace X` — Reflect, Intl. TypeScript
+//                           declares no variable at all; the members are
+//                           function and var declarations inside a block.
+//   plain_value          2  `declare var NaN: number`, `Infinity`. A global
+//                           with NO member surface whatever.
+//
+// AND `globalThis` IS NOT HERE, which is a measured absence rather than an
+// oversight: no `lib.es*.d.ts` declares it — grepped 2026-09-09, the only
+// occurrence in the whole lib directory is `globalThis.IteratorObject` inside
+// lib.esnext.iterator.d.ts, which is a use and not a declaration. It is a
+// compiler intrinsic, so this source cannot date it and the scanner does not
+// invent a release for it.
+//
+// `lib_static_shape` IS THE `Symbol` CASE, TAKEN FROM THE SOURCE. A well-known
+// symbol is a KEY and not a call — `Symbol.iterator` exists to be written as a
+// computed property name — and TypeScript spells that difference structurally:
+// `iterator` is a PropertySignature and `keyFor` is a MethodSignature. So the
+// distinction is READ rather than asserted, and `Math.PI` and
+// `Number.MAX_SAFE_INTEGER` come out `data` by the same rule and for free.
+
+/** the four shapes a global's declaration takes in the ecmascript lib files */
+export type GlobalForm =
+  'constructor_binding' | 'namespace_object' | 'namespace_block' | 'plain_value';
+
+export interface LibGlobal {
+  name: string; since: string; file: string; form: GlobalForm;
+  /** the interface (or namespace) whose members are this global's STATICS.
+   *  `null` for `plain_value`, which has none. */
+  members: string | null;
+}
+
+export interface LibStatic {
+  global: string; member: string; since: string; file: string;
+  /** `callable` when the declaration is a method or a function — `Math.max`,
+   *  `Object.entries`; `data` otherwise — `Math.PI`, `Symbol.iterator`. */
+  shape: 'callable' | 'data';
+  deprecated: boolean;
+}
+
+/** the lib files that name a release, parsed once and shared by both walks */
+export function libSources(libDir: string): { file: string; since: string; src: ts.SourceFile }[] {
+  return fs.readdirSync(libDir)
+    .filter((f) => /^lib\.[a-z0-9.]*\.d\.ts$/.test(f) && releaseOf(f) !== null)
+    .sort()
+    .map((file) => ({
+      file, since: releaseOf(file)!,
+      src: ts.createSourceFile(file, fs.readFileSync(path.join(libDir, file), 'utf8'),
+                               ts.ScriptTarget.Latest, true),
+    }));
+}
+
+const hasDeclare = (st: ts.Statement): boolean =>
+  (ts.getModifiers(st as ts.HasModifiers) ?? []).some((m) => m.kind === ts.SyntaxKind.DeclareKeyword);
+
+/** the JSDoc immediately above a declaration, as text — the same reading
+ *  `scanLib` does, and for the same reason: the compiler hands back leading
+ *  comment ranges rather than parsed tags at this level. */
+const docOf = (node: ts.Node, src: ts.SourceFile): string =>
+  node.getFullText(src).slice(0, node.getStart(src) - node.getFullStart());
+
+/** every global binding the ecmascript lib files declare, with the EARLIEST
+ *  release that declares it — by the composition chain, never by the string. */
+export function scanGlobals(libDir: string,
+                            sources = libSources(libDir),
+                            inc: [string, string][] = COMPOSITION): LibGlobal[] {
+  const earliest = new Map<string, LibGlobal>();
+  const keep = (g: LibGlobal) => {
+    const prev = earliest.get(g.name);
+    if (!prev || before(g.since, prev.since, inc)) earliest.set(g.name, g);
+  };
+  for (const { file, since, src } of sources) {
+    for (const st of src.statements) {
+      // FORMS 1, 2 AND 4 — `declare var X: T`. Which of the three it is comes
+      // from the RELATION BETWEEN THE TWO NAMES and nothing else: `Promise:
+      // PromiseConstructor` is a constructor, `Math: Math` is a namespace
+      // object, `NaN: number` is a value.
+      if (ts.isVariableStatement(st) && hasDeclare(st)) {
+        for (const d of st.declarationList.declarations) {
+          if (!ts.isIdentifier(d.name)) continue;
+          const name = d.name.text;
+          const t = d.type && ts.isTypeReferenceNode(d.type) && ts.isIdentifier(d.type.typeName)
+            ? d.type.typeName.text : null;
+          if (t === `${name}Constructor`) keep({ name, since, file, form: 'constructor_binding', members: t });
+          else if (t === name) keep({ name, since, file, form: 'namespace_object', members: t });
+          else keep({ name, since, file, form: 'plain_value', members: null });
+        }
+      }
+      // FORM 3 — `declare namespace X { ... }`.
+      if (ts.isModuleDeclaration(st) && ts.isIdentifier(st.name)
+          && st.body && ts.isModuleBlock(st.body)) {
+        keep({ name: st.name.text, since, file, form: 'namespace_block', members: st.name.text });
+      }
+    }
+  }
+  return [...earliest.values()].sort((a, b) => (a.name < b.name ? -1 : 1));
+}
+
+/** every STATIC member of every global, with the earliest release declaring it */
+export function scanStatics(libDir: string,
+                            sources = libSources(libDir),
+                            globals = scanGlobals(libDir, sources),
+                            inc: [string, string][] = COMPOSITION): LibStatic[] {
+  // WHICH INTERFACE BELONGS TO WHICH GLOBAL, and the map is what makes this a
+  // walk over DECLARED GLOBALS rather than over every interface in the files.
+  // `interface Array<T>` is a prototype and `interface ArrayConstructor` is a
+  // static surface; only the second is in this map, and `interface Math` is in
+  // it only because `declare var Math: Math` put it there.
+  const owner = new Map<string, string>();
+  for (const g of globals) if (g.members) owner.set(g.members, g.name);
+  const declared = new Set(globals.map((g) => g.name));
+  const earliest = new Map<string, LibStatic>();
+  const keep = (s: LibStatic) => {
+    const key = `${s.global}.${s.member}`;
+    const prev = earliest.get(key);
+    if (!prev || before(s.since, prev.since, inc)) earliest.set(key, s);
+  };
+  for (const { file, since, src } of sources) {
+    for (const st of src.statements) {
+      if (ts.isInterfaceDeclaration(st)) {
+        const g = owner.get(st.name.text);
+        if (!g) continue;
+        for (const mem of st.members) {
+          // A COMPUTED NAME IS A SYMBOL, and the surface is keyed by names for
+          // the same reason `lib_member` is: `selects[flow]` answers a KEY.
+          if (!mem.name || !ts.isIdentifier(mem.name)) continue;
+          keep({ global: g, member: mem.name.text, since, file,
+                 shape: ts.isMethodSignature(mem) ? 'callable' : 'data',
+                 deprecated: /@deprecated/.test(docOf(mem, src)) });
+        }
+      }
+      if (ts.isModuleDeclaration(st) && ts.isIdentifier(st.name)
+          && st.body && ts.isModuleBlock(st.body) && declared.has(st.name.text)) {
+        const g = st.name.text;
+        for (const m of st.body.statements) {
+          // A NAMESPACE DECLARES VALUES AND TYPES IN ONE BLOCK. `function
+          // ownKeys` is a value; `interface NumberFormat` is a TYPE and is not
+          // a member anything can select at runtime, so only the value forms
+          // are read.
+          if (ts.isFunctionDeclaration(m) && m.name) {
+            keep({ global: g, member: m.name.text, since, file, shape: 'callable',
+                   deprecated: /@deprecated/.test(docOf(m, src)) });
+          } else if (ts.isVariableStatement(m)) {
+            for (const d of m.declarationList.declarations) {
+              if (!ts.isIdentifier(d.name)) continue;
+              keep({ global: g, member: d.name.text, since, file, shape: 'data',
+                     deprecated: /@deprecated/.test(docOf(m, src)) });
+            }
+          }
+        }
+      }
+    }
+  }
+  return [...earliest.values()].sort((a, b) => (a.global === b.global
+    ? (a.member < b.member ? -1 : 1) : (a.global < b.global ? -1 : 1)));
+}
+
+/** the globals pack, as text. Deterministic: sorted, and generated from the
+ *  same files and the same composition as facts/js-lib-surface.rofl. */
+export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string {
+  const forms = [...new Set(globals.map((g) => g.form))].sort();
+  const head = [
+    '-- js-globals.rofl — GENERATED by scanners/ts_lib.ts. Do not hand-edit;',
+    '-- test/js-globals.test.ts regenerates it and compares, so a hand edit',
+    '-- shows up as a failing test rather than as a silent divergence.',
+    '--',
+    '-- THE HALF OF THE STANDARD LIBRARY THAT IS NOT A PROTOTYPE.',
+    '-- facts/js-lib-surface.rofl answers `string.replaceAll` and `array.at`; it',
+    '-- knows nothing of `JSON.parse`, `Promise.all`, `Object.entries` or',
+    '-- `Math.max`, because those hang off a GLOBAL BINDING and not off a',
+    '-- prototype. Same source, same `/// <reference lib=` composition, same rule',
+    '-- that the earliest release declaring a name is the release it landed in.',
+    '--',
+    '-- `lib_global(Name, Release, Form)` — THE BINDING. The name exists as a',
+    '-- global from that release, in one of four declaration forms. The name is a',
+    '-- QUOTED STRING because it is joined against `ast_name`, whose values the',
+    '-- scanner quotes; the release and the form are atoms. Writing it as an atom',
+    '-- is the mistake MUTANT 5 of test/js-lib-surface.test.ts keeps alive.',
+    '-- `lib_static(Name, Member, Release)` — THE STATIC SURFACE: what hangs off',
+    '-- the binding. `lib_static_shape(Name, Member, callable|data)` is the same',
+    '-- declaration read structurally — a MethodSignature is `callable`, anything',
+    '-- else is `data` — which is how `Symbol.iterator` and `Math.PI` come out as',
+    '-- KEYS rather than as calls without anybody asserting that they are.',
+    '-- `lib_global_prototype(Name, Proto)` — THE BRIDGE to the third surface,',
+    '-- the instance one, which facts/js-lib-surface.rofl already carries under a',
+    '-- lower-case prototype atom. It is PARTIAL BY CONSTRUCTION: eight globals',
+    '-- have a row, because eight is what `kind_prototype` in',
+    '-- rules/js-dataflow.rofl can name a receiver for. `Promise`, `Map` and',
+    '-- `Set` have an instance surface this model does not carry, and the missing',
+    '-- bridge row is where that is visible.',
+    '--',
+    '-- `globalThis` IS ABSENT AND THAT IS A FACT ABOUT THE SOURCE: no',
+    '-- lib.es*.d.ts declares it, so nothing here can date it. It is not omitted',
+    '-- by choice, and a row for it would be invented rather than read.',
+    'edb(lib_global).',
+    'edb(lib_global_form).',
+    'edb(lib_static).',
+    'edb(lib_static_shape).',
+    'edb(lib_global_prototype).',
+    '',
+    '-- the four forms, so a rule can range over them by name rather than',
+    '-- spelling one and silently missing the other three.',
+    ...forms.map((f) => `lib_global_form(${f}).`),
+    '',
+  ];
+  const rows = globals.map((g) => `lib_global(${JSON.stringify(g.name)}, ${g.since}, ${g.form}).`);
+  const bridge = ['',
+    '-- the bridge to the prototype surface, for the eight prototypes',
+    '-- `kind_prototype` can name a receiver for.',
+    ...globals.filter((g) => PROTOTYPES.has(g.name))
+      .map((g) => `lib_global_prototype(${JSON.stringify(g.name)}, ${PROTOTYPES.get(g.name)}).`),
+    ''];
+  const sts = statics.map((s) =>
+    `lib_static(${JSON.stringify(s.global)}, ${JSON.stringify(s.member)}, ${s.since}).`);
+  const shapes = ['',
+    ...statics.map((s) =>
+      `lib_static_shape(${JSON.stringify(s.global)}, ${JSON.stringify(s.member)}, ${s.shape}).`)];
+  // NOT ONE DEPRECATED STATIC, MEASURED. `lib_deprecated` has seventeen rows on
+  // the eight prototypes and this walk finds ZERO across the static surface, so
+  // the number is written into the pack as prose rather than as an empty `edb`
+  // no rule could ever read. The branch below exists so that the day a static
+  // IS deprecated, the pack grows a relation instead of staying silent.
+  const dep = statics.filter((s) => s.deprecated);
+  const depBlock = dep.length === 0
+    ? ['',
+       '-- NO STATIC IN THE ECMASCRIPT LIB FILES CARRIES `@deprecated`, measured',
+       `-- over all ${statics.length} of them. \`lib_deprecated\` has seventeen rows on the`,
+       '-- eight prototypes; the static surface has none. No relation is declared',
+       '-- for a set that is empty in the SOURCE rather than empty here.']
+    : ['', 'edb(lib_static_deprecated).',
+       ...dep.map((s) => `lib_static_deprecated(${JSON.stringify(s.global)}, ${JSON.stringify(s.member)}).`)];
+  return head.concat(rows).concat(bridge).concat(sts).concat(shapes).concat(depBlock).join('\n') + '\n';
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-  const out = emit(scanLib(path.join(root, 'node_modules', 'typescript', 'lib')));
+  const lib = path.join(root, 'node_modules', 'typescript', 'lib');
+  const out = emit(scanLib(lib));
   const dest = path.join(root, 'facts', 'js-lib-surface.rofl');
   fs.writeFileSync(dest, out);
   console.log(`${dest}: ${out.split('\n').filter((l) => l.startsWith('lib_member')).length} members`);
+  const sources = libSources(lib);
+  const globals = scanGlobals(lib, sources);
+  const statics = scanStatics(lib, sources, globals);
+  const gout = emitGlobals(globals, statics);
+  const gdest = path.join(root, 'facts', 'js-globals.rofl');
+  fs.writeFileSync(gdest, gout);
+  console.log(`${gdest}: ${globals.length} globals, ${statics.length} statics`);
 }
