@@ -38,6 +38,8 @@
 //! What is deliberately NOT here: any way to mutate the world mid-evaluation,
 //! and any query that hides whether it probed or scanned.
 
+use std::collections::HashMap;
+
 use crate::engine::{Eval, Halt, Mode, TickOutcome};
 use crate::reflect::{bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
@@ -436,6 +438,30 @@ impl Session {
     /// cooling from 73 ms to 4 699 ms while the work per tick was constant.
     /// One pass, N prefixes.
     pub fn cool_many(&mut self, vols: &[(String, String)]) -> Result<Vec<Cooled>, String> {
+        // FOUR PHASES, TIMED SEPARATELY, because "cooling is 61 per cent of the
+        // run" is not a place you can optimise. Walking the world, matching a
+        // prefix, rendering a fact to text and writing bytes are four different
+        // costs and only one of them is the FORMAT.
+        // A FACT FINDS ITS VOLUME BY LOOKUP, NOT BY SEARCH.
+        //
+        // This asked, for every fact, whether any of the batch's prefixes
+        // matched any of its arguments — a product, and measured as one: over
+        // the whole of eslint, matching was 13 168 ms for 456 volumes and
+        // 28 852 ms for 658, against 150 ms of rendering and 78 ms of disk.
+        // NINETY-EIGHT PER CENT OF COOLING WAS THE SEARCH. `cool_many`'s own
+        // comment boasts of replacing one walk per volume with one walk for all
+        // of them, and the product had simply moved INSIDE the walk.
+        //
+        // Volume prefixes are fixed-length strings, so they group by length and
+        // each length costs one hash lookup: `name[..len]` against a map. Two
+        // volumes of different prefix lengths cost two lookups, not two scans.
+        let mut by_len: HashMap<usize, HashMap<&str, usize>> = HashMap::new();
+        for (i, (p, _)) in vols.iter().enumerate() {
+            by_len.entry(p.len()).or_default().insert(p.as_str(), i);
+        }
+        let t0 = std::time::Instant::now();
+        let mut ns_match = 0u128;
+        let mut ns_render = 0u128;
         let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
         let mut counts = vec![0usize; vols.len()];
         let mut drop: Vec<FactId> = Vec::new();
@@ -444,26 +470,91 @@ impl Session {
                 continue;
             }
             let args = self.eval.store.args(id).to_vec();
-            let Some(k) = vols.iter().position(|(p, _)| args.iter().any(|a| self.mentions(*a, p)))
-            else {
-                continue;
-            };
+            let m0 = std::time::Instant::now();
+            let hit = self.volume_of(&args, &by_len);
+            ns_match += m0.elapsed().as_nanos();
+            let Some(k) = hit else { continue };
             let r = *self.eval.store.rec(id);
             if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
+                let w0 = std::time::Instant::now();
                 write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);
                 texts[k].push_str(".\n");
+                ns_render += w0.elapsed().as_nanos();
                 counts[k] += 1;
             }
             drop.push(id);
         }
+        let t_walk = t0.elapsed().as_millis();
+        let t1 = std::time::Instant::now();
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
             std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
             out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone() });
         }
+        let t_write = t1.elapsed().as_millis();
+        let t2 = std::time::Instant::now();
         self.eval.store.remove_many(&drop);
+        if std::env::var("ROFL_COOL_PHASES").is_ok() {
+            eprintln!(
+                "cool: walk {}ms (match {}ms render {}ms) write {}ms remove {}ms | {} vols {} facts {} bytes",
+                t_walk, ns_match / 1_000_000, ns_render / 1_000_000, t_write,
+                t2.elapsed().as_millis(), vols.len(),
+                counts.iter().sum::<usize>(), texts.iter().map(|t| t.len()).sum::<usize>()
+            );
+        }
         self.eval.store.dirty = true;
         Ok(out)
+    }
+
+    /// Which of the batch's volumes this fact belongs to, by lookup.
+    ///
+    /// Walks the fact's terms once and, for each atom or functor name, tries
+    /// one map lookup per distinct prefix LENGTH in the batch — in practice
+    /// one, since a scanner mints ids of a single shape. The old form asked
+    /// every prefix about every argument, which is the product this replaces.
+    fn volume_of(
+        &self,
+        args: &[Term],
+        by_len: &HashMap<usize, HashMap<&str, usize>>,
+    ) -> Option<usize> {
+        for a in args {
+            if let Some(k) = self.volume_of_term(*a, by_len) {
+                return Some(k);
+            }
+        }
+        None
+    }
+
+    fn volume_of_term(
+        &self,
+        t: Term,
+        by_len: &HashMap<usize, HashMap<&str, usize>>,
+    ) -> Option<usize> {
+        match t.kind() {
+            TermK::Atom(a) => self.lookup_name(self.eval.h.name(a), by_len),
+            TermK::Func(i) => {
+                if let Some(k) = self.lookup_name(self.eval.h.name(self.eval.h.fname(i)), by_len) {
+                    return Some(k);
+                }
+                self.eval
+                    .h
+                    .fargs(i)
+                    .iter()
+                    .find_map(|x| self.volume_of_term(*x, by_len))
+            }
+            _ => None,
+        }
+    }
+
+    fn lookup_name(&self, n: &str, by_len: &HashMap<usize, HashMap<&str, usize>>) -> Option<usize> {
+        for (len, m) in by_len {
+            if n.len() >= *len {
+                if let Some(k) = m.get(&n[..*len]) {
+                    return Some(*k);
+                }
+            }
+        }
+        None
     }
 
     fn header(&self, prefix: &str) -> String {

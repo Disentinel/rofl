@@ -236,7 +236,16 @@ export class RoflPort {
     // A child that dies with requests outstanding must REJECT them. A protocol
     // whose failures are silent leaves the caller awaiting a promise that can
     // never settle, which is worse than the crash it came from.
-    this.child.stderr.on('data', (b: Buffer) => { this.err += b.toString(); });
+    // THE ENGINE'S STDERR IS KEPT FOR THE DEATH MESSAGE — and, when asked,
+    // forwarded live. Held only, it means an engine that DIAGNOSES ITSELF says
+    // it into a buffer nobody reads unless it dies, which is how a phase
+    // breakdown printed by the engine went missing while I was measuring with
+    // it. A diagnostic that only survives a crash is not a diagnostic.
+    this.child.stderr.on('data', (b: Buffer) => {
+      const t = b.toString();
+      this.err += t;
+      if (process.env.ROFL_PORT_TRACE || process.env.ROFL_COOL_PHASES) process.stderr.write(t);
+    });
     this.child.on('error', (e) => this.fail(`rofl-serve would not start (${e.message})`));
     this.child.on('exit', (code, sig) => this.fail(`rofl-serve exited (code ${code}, signal ${sig})`));
   }
