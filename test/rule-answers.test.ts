@@ -180,7 +180,15 @@ test('the corpus: every .rofl file, five answers, rule for rule', () => {
   // commit that removed the relation and stayed red through a merge, because
   // that commit's author — me — did not run the full suite after it. A count
   // over the WHOLE corpus is the one shape that notices a relation leaving it.
-  assert.equal(demandSeen, 7);
+  // 7 -> 8 on 2026-09-09, AND THE ASSERTION DID EXACTLY WHAT THE PARAGRAPH
+  // ABOVE SAYS IT IS FOR. The eighth is `runtime_separates` in
+  // rules/js-host.rofl, from the runtime-surface branch: it asks whether two
+  // runtime versions differ in any member, which is a question about a PAIR and
+  // is therefore worth answering only where it is asked. Named rather than
+  // bumped, because a count over the whole corpus earns its keep only if
+  // somebody says what entered it — the previous move was a relation LEAVING
+  // and it went unnoticed through a merge.
+  assert.equal(demandSeen, 8);
   assert.ok(refused <= 2, `${refused} files would not load`);
 });
 

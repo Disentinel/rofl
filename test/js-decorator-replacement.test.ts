@@ -257,6 +257,13 @@ const readRepo = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 const LEDGER_FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
   'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl',
   'facts/js-statements.rofl', 'facts/js-controlflow.rofl', 'facts/findings.rofl',
+  // AND THE FIFTH LAYER, 2026-09-09, because this world loads the PLAN and
+  // the plan now carries claims on effect cells. Without `facts/js-effects.rofl`
+  // the claims are here and the VERDICTS are not, so every effect cell reads as
+  // shut and `queue_stale[audit]` reports eighteen claims on nothing. Sixth
+  // instance in one day of a world answering about the packs it happens to
+  // hold, and the first where the missing pack made the queue accuse itself.
+  'facts/js-effects.rofl',
   'facts/worklist.rofl'];
 const LEDGER_RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
