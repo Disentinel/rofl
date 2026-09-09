@@ -24,6 +24,18 @@
 // The world is FORKED per load rather than rebuilt, so what is measured is the
 // load and not `bootstrap_kernel`.
 //
+// MEDIANS OVER MANY ROUNDS, NOT A MEAN OVER A FEW. The first version summed
+// each phase over however many rounds fitted the window, and on a 3.5 MB
+// program at load 115 that was TWO — at which point `check` came out CHEAPER
+// than the `convert` it strictly contains, and the reported share of the
+// checks was MINUS THIRTY-SEVEN PER CENT. A negative share is the instrument
+// saying it is broken, and it is the only reason that reading was thrown away
+// instead of believed. Per-phase medians over tens of rounds are what make the
+// interleaving worth anything; interleaving two samples interleaves nothing.
+//
+// So feed it a program small enough that a round is milliseconds. The shares
+// are a property of the WORK, not of how much of it is in one file.
+//
 //   rofl-load-bench <seconds> <boot.rofl> <program.rofl>
 use rofl::session::Session;
 
@@ -41,32 +53,43 @@ fn main() {
     let mut core = Session::fresh(200_000_000);
     core.load(&boot, None).expect("boot refused");
 
-    let (mut np, mut nv, mut nc, mut nl) = (0u64, 0u64, 0u64, 0u64);
-    let (mut tp, mut tv, mut tc, mut tl) = (0f64, 0f64, 0f64, 0f64);
+    let (mut tp, mut tv, mut tc, mut tl): (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     let mut sum = 0usize;
 
     // One warm-up of each, discarded, so no phase pays for a cold allocator.
-    sum += rofl::rofl_parse::parse(&text).map(|c| c.len()).unwrap_or(0);
+    sum += rofl::rofl_parse::parse(&mut core.fork().eval.h, &text).map(|c| c.len()).unwrap_or(0);
     core.fork().load(&text, None).expect("program refused");
 
     let t0 = std::time::Instant::now();
     while t0.elapsed().as_secs_f64() < secs {
+        // INTO A FORK'S HEAP, not a private one. A load parses into the world
+        // it is loading into, so a heap already holding the kernel's names and
+        // none of the program's is the honest starting state — and it is the
+        // same state the `convert` phase below starts from, which is what
+        // makes subtracting one from the other mean anything.
+        let mut pf = core.fork();
         let a0 = std::time::Instant::now();
-        sum += rofl::rofl_parse::parse(&text).map(|c| c.len()).unwrap_or(0);
-        tp += a0.elapsed().as_secs_f64();
-        np += 1;
+        sum += rofl::rofl_parse::parse(&mut pf.eval.h, &text).map(|c| c.len()).unwrap_or(0);
+        tp.push(a0.elapsed().as_secs_f64());
 
         let mut cv = core.fork();
+        // The vocabulary is cloned ONCE, outside the clock. Cloning it per
+        // clause is what the first version did — to dodge a borrow against the
+        // heap — and it inflated this phase past the one that CONTAINS it. The
+        // monotonicity guard below caught that, and it is worth saying plainly
+        // that the guard was written expecting contention and found a defect
+        // in the harness instead.
+        let voc = cv.eval.v.clone();
         let v0 = std::time::Instant::now();
-        if let Ok(pcs) = rofl::rofl_parse::parse(&text) {
+        if let Ok(pcs) = rofl::rofl_parse::parse(&mut cv.eval.h, &text) {
             for pc in &pcs {
-                if let Ok(c) = rofl::program::to_clause(&mut cv.eval.h, &cv.eval.v, pc) {
+                if let Ok(c) = rofl::program::to_clause(&mut cv.eval.h, &voc, pc) {
                     sum += c.head.args.len();
                 }
             }
         }
-        tv += v0.elapsed().as_secs_f64();
-        nv += 1;
+        tv.push(v0.elapsed().as_secs_f64());
 
         let mut f = core.fork();
         let b0 = std::time::Instant::now();
@@ -77,26 +100,45 @@ fn main() {
         // appended does everything but admit, and returns.
         let bad = format!("{text}\np[$kernel](x).\n");
         let _ = f.load(&bad, None);
-        tc += b0.elapsed().as_secs_f64();
-        nc += 1;
+        tc.push(b0.elapsed().as_secs_f64());
 
         let mut g = core.fork();
         let c0 = std::time::Instant::now();
         g.load(&text, None).expect("program refused");
-        tl += c0.elapsed().as_secs_f64();
-        nl += 1;
+        tl.push(c0.elapsed().as_secs_f64());
         sum += g.eval.store.fact_count();
     }
 
-    let ms = |t: f64, n: u64| if n == 0 { 0.0 } else { t / n as f64 * 1000.0 };
-    let (p, v, c, l) = (ms(tp, np), ms(tv, nv), ms(tc, nc), ms(tl, nl));
+    let ms = |mut t: Vec<f64>| -> f64 {
+        if t.is_empty() { return 0.0 }
+        t.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        t[t.len() / 2] * 1000.0
+    };
+    let n = tl.len();
+    let (p, v, c, l) = (ms(tp), ms(tv), ms(tc), ms(tl));
+    // A PHASE THAT STRICTLY CONTAINS ANOTHER CANNOT BE CHEAPER THAN IT, and
+    // when that fails nothing below is a measurement.
+    //
+    // Written expecting contention, it has now fired twice and been right
+    // about the cause NEITHER time. First on two rounds at load 115, where the
+    // variance of a single sample was the whole signal. Then on sixty rounds
+    // of medians, where the cause was a `Vocab` clone this harness was doing
+    // PER CLAUSE inside its own timed region — an instrument inflating the
+    // phase it exists to measure. A guard is worth more than the hypothesis
+    // that motivated it, which is the argument for spending a line on one.
+    if v < p || c < v || l < c {
+        eprintln!("INVALID: phases are not monotone (parse {p:.1} convert {v:.1} check {c:.1} load {l:.1}) \
+                   over {n} rounds. A phase cannot cost less than one it contains, so this is \
+                   either too few rounds, too much contention, or work the harness is doing \
+                   inside its own clock. Nothing below is a measurement.");
+    }
     // The SHARE columns are the point. Absolutes move with the machine; these
     // are four phases interleaved in one process, so what each one costs
     // RELATIVE to the others survives a load average this host cannot control.
     println!(
         "bytes={} kib={:.1} n={} | parse_ms={p:.1} convert_ms={v:.1} check_ms={c:.1} load_ms={l:.1} \
          | parse={:.0}% intern={:.0}% checks={:.0}% admit={:.0}% | load_kib_s={:.1} checksum={}",
-        text.len(), kib, nl,
+        text.len(), kib, n,
         p / l * 100.0, (v - p) / l * 100.0, (c - v) / l * 100.0, (l - c) / l * 100.0,
         kib / (l / 1000.0), sum
     );

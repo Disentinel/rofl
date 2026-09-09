@@ -12,35 +12,55 @@
 //! `parseProgram`'s own output — so the comparison is between two TREES and
 //! neither side owns the format.
 use crate::rofl_lex::{tokens, Span, Tok};
+use crate::term::{Heap, Sym, TermK};
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Term {
-    Atom(String),
-    Var(String),
-    Wild,
-    Int(String),
-    NegInt(String),
-    Str(String),
-    Comp(String, Vec<Term>),
-}
+/// THE PARSER BUILDS ENGINE TERMS, NOT ITS OWN.
+///
+/// It used to carry a `String` per atom, per variable and per functor name,
+/// and `program::to_clause` then interned every one of them into the heap —
+/// so every name in a program was allocated once by the parser and hashed
+/// again by the bridge.
+///
+/// WHAT COLLAPSING THEM WAS ACTUALLY WORTH, measured by running the old build
+/// and the new one CONCURRENTLY on one machine, four times: 5 to 7 per cent
+/// off a whole load and about 10 per cent off the parse-and-convert front end.
+/// Real, reproducible, and an order of magnitude less than the share table
+/// suggested — interning fell from 59 per cent of a load to 1, which looks
+/// like a saving of three fifths and is a saving of a twentieth, because THE
+/// WORK DID NOT VANISH, IT MOVED into the phase that now does it. A share says
+/// where the time goes. Only a paired absolute says what was saved.
+///
+/// So the case for this is mostly structural and only a little arithmetic:
+/// there is one representation of a name instead of two, `to_term` and
+/// `Session::lit_terms` are gone, and `to_clause` is left doing the job it
+/// always meant to do. It costs the parser a `&mut Heap`, which is the honest
+/// price for there being no second representation to keep in step.
+pub use crate::term::Term;
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Book { Bare, Named(String), Var(String) }
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Book { Bare, Named(Sym), Var(Sym) }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tense { Now, Init, Next }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Lit { pub rel: String, pub book: Book, pub args: Vec<Term>, pub tense: Tense }
+pub struct Lit { pub rel: Sym, pub book: Book, pub args: Vec<Term>, pub tense: Tense }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Elem { Pos(Lit), Neg(Lit), Builtin(String, Term, Term) }
+pub enum Elem { Pos(Lit), Neg(Lit), Builtin(Sym, Term, Term) }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Clause { pub head: Lit, pub body: Vec<Elem> }
 
 pub struct Parser<'a> {
     src: &'a [char],
+    /// Where names go. Held mutably for the length of the parse, which is what
+    /// lets a token become a `Sym` without becoming a `String` first.
+    h: &'a mut Heap,
+    /// ONE buffer, reused for every token. `text` built a fresh `String` per
+    /// token — including for the several comparisons that only ever ask
+    /// whether a token IS a particular word and threw the answer away.
+    buf: String,
     toks: Vec<Span>,
     at: usize,
     /// `_` becomes a fresh variable and the counter is CLAUSE-LOCAL, which
@@ -55,6 +75,20 @@ pub struct Parser<'a> {
 /// decide WHERE a name is and the host reads WHAT it says.
 impl<'a> Parser<'a> {
     fn text(&self, s: &Span) -> String { self.src[s.start..=s.end].iter().collect() }
+    /// A token's text, interned, with no `String` in between beyond one buffer
+    /// that is reused for the whole parse.
+    fn sym(&mut self, s: &Span) -> Sym {
+        self.buf.clear();
+        self.buf.extend(&self.src[s.start..=s.end]);
+        self.h.syms.intern(&self.buf)
+    }
+    /// Does a token read as this word? Compared in place, because asking the
+    /// question used to allocate the answer.
+    fn text_is(&self, s: &Span, w: &str) -> bool {
+        let n = s.end - s.start + 1;
+        if n != w.chars().count() { return false; }
+        self.src[s.start..=s.end].iter().copied().eq(w.chars())
+    }
     fn peek(&self) -> Option<&Span> { self.toks.get(self.at) }
     fn peek_at(&self, k: usize) -> Option<&Span> { self.toks.get(self.at + k) }
     fn bump(&mut self) -> Option<Span> { let t = self.toks.get(self.at).copied(); if t.is_some() { self.at += 1; } t }
@@ -66,7 +100,7 @@ impl<'a> Parser<'a> {
     }
     /// A word whose text is exactly this.
     fn is_word(&self, k: usize, w: &str) -> bool {
-        match self.peek_at(k) { Some(s) if s.tok == Tok::Word => self.text(s) == w, _ => false }
+        match self.peek_at(k) { Some(s) if s.tok == Tok::Word => self.text_is(s, w), _ => false }
     }
     /// `keyword(I) :- kw_not(I).` — and nothing else is one, which is why
     /// `is` and `mod` can still be read as ordinary names.
@@ -119,7 +153,7 @@ impl<'a> Parser<'a> {
                         k += 2;
                     } else { out.push(inner[k]); k += 1; }
                 }
-                Ok(Term::Str(out))
+                Ok(self.h.string(&out))
             }
             Tok::Arith("minus") => {
                 // a minus DIRECTLY before an integer is a negative literal and
@@ -128,7 +162,8 @@ impl<'a> Parser<'a> {
                     Some(n) if n.tok == Tok::Word && self.word_kind(n) == WordKind::Int => {
                         let n = *n;
                         self.at += 2;
-                        Ok(Term::NegInt(self.text(&n)))
+                        let d = self.text(&n);
+                        Ok(Term::int(-d.parse::<i64>().unwrap_or(0)))
                     }
                     _ => Err("term: a lone minus is not a term".into()),
                 }
@@ -137,21 +172,32 @@ impl<'a> Parser<'a> {
                 match self.word_kind(&s) {
                     WordKind::Wild => {
                         self.at += 1;
-                        let v = format!("_${}", self.fresh);
+                        // The counter is CLAUSE-LOCAL, which is what makes a
+                        // clause content-addressed: the same clause written
+                        // twice must canonicalise the same way.
+                        use std::fmt::Write;
+                        self.buf.clear();
+                        let _ = write!(self.buf, "_${}", self.fresh);
                         self.fresh += 1;
-                        Ok(Term::Var(v))
+                        Ok(Term::var(self.h.syms.intern(&self.buf)))
                     }
-                    WordKind::Var => { self.at += 1; Ok(Term::Var(self.text(&s))) }
-                    WordKind::Int => { self.at += 1; Ok(Term::Int(self.text(&s))) }
+                    WordKind::Var => { self.at += 1; let v = self.sym(&s); Ok(Term::var(v)) }
+                    WordKind::Int => {
+                        self.at += 1;
+                        let d = self.text(&s);
+                        Ok(Term::int(d.parse::<i64>().unwrap_or(0)))
+                    }
                     WordKind::Ident => {
                         if self.is_keyword(0) { return Err("term: a keyword is not a name".into()); }
-                        let name = self.text(&s);
+                        let name = self.sym(&s);
                         self.at += 1;
                         if self.eat_punct("lpar") {
                             let args = self.args()?;
-                            if !self.eat_punct("rpar") { return Err(format!("term: `{name}(` is not closed")); }
-                            Ok(Term::Comp(name, args))
-                        } else { Ok(Term::Atom(name)) }
+                            if !self.eat_punct("rpar") {
+                                return Err(format!("term: `{}(` is not closed", self.h.name(name)));
+                            }
+                            Ok(self.h.mkf(name, &args))
+                        } else { Ok(Term::atom(name)) }
                     }
                 }
             }
@@ -191,7 +237,7 @@ impl<'a> Parser<'a> {
             // that functor directly. The oracle is the host, so this does too —
             // a difference between two intermediate forms is not a difference
             // between two answers.
-            l = Term::Comp(op, vec![l, r]);
+            l = self.h.mkf(op, &[l, r]);
         }
         Ok(l)
     }
@@ -199,20 +245,20 @@ impl<'a> Parser<'a> {
         let mut l = self.mul()?;
         while let Some(op) = self.arith_op(&["plus", "minus"], &[]) {
             let r = self.mul()?;
-            l = Term::Comp(op, vec![l, r]);
+            l = self.h.mkf(op, &[l, r]);
         }
         Ok(l)
     }
     /// `plusminus(plus). plusminus(minus). timesdiv(star). timesdiv(slash). timesdiv(mod).`
-    fn arith_op(&mut self, syms: &[&str], words: &[&str]) -> Option<String> {
+    fn arith_op(&mut self, syms: &[&str], words: &[&str]) -> Option<Sym> {
         let s = *self.peek()?;
         if let Tok::Arith(name) = s.tok {
-            if syms.contains(&name) { self.at += 1; return Some(self.text(&s)); }
-            if name == "mod" && words.contains(&"mod") { self.at += 1; return Some(self.text(&s)); }
+            if syms.contains(&name) { self.at += 1; return Some(self.sym(&s)); }
+            if name == "mod" && words.contains(&"mod") { self.at += 1; return Some(self.sym(&s)); }
         }
-        if s.tok == Tok::Word && words.contains(&self.text(&s).as_str()) {
+        if s.tok == Tok::Word && words.iter().any(|w| self.text_is(&s, w)) {
             self.at += 1;
-            return Some(self.text(&s));
+            return Some(self.sym(&s));
         }
         None
     }
@@ -222,19 +268,19 @@ impl<'a> Parser<'a> {
     /// `relbook(I, J, A, bare) :- identtok(I, J), not keyword(I), tok_name(I, J, A).`
     /// `relbook(I, R, A, BA)   :- ident `[` ident `]`.`
     /// `relbook(I, R, A, var(BS)) :- ident `[` Var `]`.`
-    fn relbook(&mut self) -> P<(String, Book)> {
+    fn relbook(&mut self) -> P<(Sym, Book)> {
         let s = *self.peek().ok_or("relbook: end of input")?;
         if s.tok != Tok::Word || self.word_kind(&s) != WordKind::Ident || self.is_keyword(0) {
             return Err("relbook: not a relation name".into());
         }
-        let rel = self.text(&s);
+        let rel = self.sym(&s);
         self.at += 1;
         if !self.eat_punct("lbrack") { return Ok((rel, Book::Bare)); }
         let b = *self.peek().ok_or("relbook: unclosed book")?;
         if b.tok != Tok::Word { return Err("relbook: the book is not a name".into()); }
         let book = match self.word_kind(&b) {
-            WordKind::Var => Book::Var(self.text(&b)),
-            _ => Book::Named(self.text(&b)),
+            WordKind::Var => Book::Var(self.sym(&b)),
+            _ => Book::Named(self.sym(&b)),
         };
         self.at += 1;
         if !self.eat_punct("rbrack") { return Err("relbook: unclosed book".into()); }
@@ -293,13 +339,13 @@ impl<'a> Parser<'a> {
         Ok(Elem::Builtin(op, l, r))
     }
     fn at_operator(&self) -> bool {
-        matches!(self.peek(), Some(s) if matches!(s.tok, Tok::Op(_)) || (s.tok == Tok::Word && self.text(s) == "is"))
+        matches!(self.peek(), Some(s) if matches!(s.tok, Tok::Op(_)) || (s.tok == Tok::Word && self.text_is(s, "is")))
     }
-    fn take_operator(&mut self) -> Option<String> {
+    fn take_operator(&mut self) -> Option<Sym> {
         let s = *self.peek()?;
-        if matches!(s.tok, Tok::Op(_)) || (s.tok == Tok::Word && self.text(&s) == "is") {
+        if matches!(s.tok, Tok::Op(_)) || (s.tok == Tok::Word && self.text_is(&s, "is")) {
             self.at += 1;
-            return Some(self.text(&s));
+            return Some(self.sym(&s));
         }
         None
     }
@@ -322,15 +368,17 @@ impl<'a> Parser<'a> {
             self.at += 1;
             body = self.body()?;
         }
-        if !self.eat_punct("dot") { return Err(format!("clause: `{}` has no closing dot", head.rel)); }
+        if !self.eat_punct("dot") {
+            return Err(format!("clause: `{}` has no closing dot", self.h.name(head.rel)));
+        }
         Ok(Clause { head, body })
     }
 }
 
 /// `top(I) :- first_tok(I).`  `top(I2) :- top(I), clause_at(I, D, H, B), nexttok(D, I2).`
-pub fn parse(src: &str) -> Result<Vec<Clause>, String> {
+pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
     let ch: Vec<char> = src.chars().collect();
-    let mut p = Parser { src: &ch, toks: tokens(src), at: 0, fresh: 0 };
+    let mut p = Parser { src: &ch, h, buf: String::with_capacity(64), toks: tokens(src), at: 0, fresh: 0 };
     let mut out = Vec::new();
     while p.at < p.toks.len() {
         let before = p.at;
@@ -346,27 +394,34 @@ pub fn parse(src: &str) -> Result<Vec<Clause>, String> {
 
 fn esc(s: &str) -> String { format!("{s:?}") }
 
-pub fn show_term(t: &Term) -> String {
-    match t {
-        Term::Atom(a) => format!("a:{a}"),
-        Term::Var(v) => format!("v:{v}"),
-        Term::Wild => "wild".into(),
-        Term::Int(i) => format!("i:{i}"),
-        Term::NegInt(i) => format!("i:-{i}"),
-        Term::Str(s) => format!("s:{}", esc(s)),
-        Term::Comp(n, xs) => format!("({n} {})", xs.iter().map(show_term).collect::<Vec<_>>().join(" ")),
+pub fn show_term(h: &Heap, t: Term) -> String {
+    match t.kind() {
+        TermK::Atom(a) => format!("a:{}", h.name(a)),
+        TermK::Var(v) => format!("v:{}", h.name(v)),
+        TermK::Int(i) => format!("i:{i}"),
+        TermK::Str(s) => format!("s:{}", esc(h.name(s))),
+        TermK::Func(i) => format!(
+            "({} {})",
+            h.name(h.fname(i)),
+            h.fargs(i).iter().map(|a| show_term(h, *a)).collect::<Vec<_>>().join(" ")
+        ),
     }
 }
-pub fn show_lit(l: &Lit) -> String {
-    let book = match &l.book { Book::Bare => "main".into(), Book::Named(b) => b.clone(), Book::Var(v) => format!("v:{v}") };
+pub fn show_lit(h: &Heap, l: &Lit) -> String {
+    let book = match l.book {
+        Book::Bare => "main".to_string(),
+        Book::Named(b) => h.name(b).to_string(),
+        Book::Var(v) => format!("v:{}", h.name(v)),
+    };
     let tense = match l.tense { Tense::Now => "now", Tense::Init => "init", Tense::Next => "next" };
-    format!("(lit {} {} [{}] {})", l.rel, book, l.args.iter().map(show_term).collect::<Vec<_>>().join(" "), tense)
+    format!("(lit {} {} [{}] {})", h.name(l.rel), book,
+        l.args.iter().map(|a| show_term(h, *a)).collect::<Vec<_>>().join(" "), tense)
 }
-pub fn show(c: &Clause) -> String {
+pub fn show(h: &Heap, c: &Clause) -> String {
     let body = c.body.iter().map(|e| match e {
-        Elem::Pos(l) => show_lit(l),
-        Elem::Neg(l) => format!("(not {})", show_lit(l)),
-        Elem::Builtin(op, a, b) => format!("(bi {op} {} {})", show_term(a), show_term(b)),
+        Elem::Pos(l) => show_lit(h, l),
+        Elem::Neg(l) => format!("(not {})", show_lit(h, l)),
+        Elem::Builtin(op, a, b) => format!("(bi {} {} {})", h.name(*op), show_term(h, *a), show_term(h, *b)),
     }).collect::<Vec<_>>().join(" ");
-    format!("(clause {}{}{})", show_lit(&c.head), if body.is_empty() { "" } else { " " }, body)
+    format!("(clause {}{}{})", show_lit(h, &c.head), if body.is_empty() { "" } else { " " }, body)
 }

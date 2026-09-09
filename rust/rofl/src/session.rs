@@ -125,19 +125,19 @@ impl Session {
     /// packs — accepting one here would let a caller change what the world
     /// means without saying so.
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
-        let cs = rofl_parse::parse(src)?;
+        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let mut n = 0;
         for c in &cs {
             if !c.body.is_empty() {
-                return Err(format!("assert takes facts, not rules: {}", rofl_parse::show(c)));
+                return Err(format!("assert takes facts, not rules: {}", rofl_parse::show(&self.eval.h, c)));
             }
             if c.head.tense != Tense::Now {
-                return Err(format!("assert takes facts of the present tense: {}", rofl_parse::show(c)));
+                return Err(format!("assert takes facts of the present tense: {}", rofl_parse::show(&self.eval.h, c)));
             }
             let (rel, persp, args) = self.lit_terms(&c.head)?;
             for a in &args {
                 if a.is_var() {
-                    return Err(format!("a base fact may not carry a variable: {}", rofl_parse::show(c)));
+                    return Err(format!("a base fact may not carry a variable: {}", rofl_parse::show(&self.eval.h, c)));
                 }
             }
             if self.eval.store.add(&self.eval.h, rel, persp, &args, F_BASE) {
@@ -221,7 +221,7 @@ impl Session {
     pub fn ask(&mut self, query: &str) -> Result<Answer, String> {
         let t0 = std::time::Instant::now();
         let src = format!("{}.", query.trim().trim_end_matches('.'));
-        let cs = rofl_parse::parse(&src)?;
+        let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
         if cs.len() != 1 || !cs[0].body.is_empty() {
             return Err("ask takes exactly one literal".into());
         }
@@ -308,33 +308,23 @@ impl Session {
         Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros() })
     }
 
-    /// A parsed literal, interned into this world's heap.
+    /// A parsed literal, in this world's vocabulary.
+    ///
+    /// The terms arrive finished: the parser interns into this same heap, so
+    /// there is nothing left to convert. What remains is the book, which is a
+    /// SOURCE notion — absent, named, or a variable — and only the first two
+    /// mean anything to a question.
     fn lit_terms(&mut self, l: &rofl_parse::Lit) -> Result<(Sym, Sym, Vec<Term>), String> {
-        let rel = self.eval.h.intern(&l.rel);
-        let persp = match &l.book {
+        let persp = match l.book {
             Book::Bare => self.eval.v.main,
-            Book::Named(n) => self.eval.h.intern(n),
-            Book::Var(n) => return Err(format!("a book variable has nothing to bind to here: {n}")),
-        };
-        let args = l.args.iter().map(|a| self.term(a)).collect();
-        Ok((rel, persp, args))
-    }
-
-    fn term(&mut self, t: &rofl_parse::Term) -> Term {
-        match t {
-            rofl_parse::Term::Atom(s) => self.eval.h.atom(s),
-            // `_` never reaches here: the parser gives each wildcard a
-            // clause-local name (`_$0`, `_$1`), which is what makes two
-            // wildcards in one query two columns rather than one.
-            rofl_parse::Term::Var(s) => self.eval.h.var(s),
-            rofl_parse::Term::Wild => self.eval.h.var("_"),
-            rofl_parse::Term::Int(s) => Term::int(s.parse::<i64>().unwrap_or(0)),
-            rofl_parse::Term::NegInt(s) => Term::int(-s.parse::<i64>().unwrap_or(0)),
-            rofl_parse::Term::Str(s) => self.eval.h.string(s),
-            rofl_parse::Term::Comp(n, xs) => {
-                let args: Vec<Term> = xs.iter().map(|x| self.term(x)).collect();
-                self.eval.h.mkf_named(n, &args)
+            Book::Named(n) => n,
+            Book::Var(n) => {
+                return Err(format!(
+                    "a book variable has nothing to bind to here: {}",
+                    self.eval.h.name(n)
+                ))
             }
-        }
+        };
+        Ok((l.rel, persp, l.args.clone()))
     }
 }

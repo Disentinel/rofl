@@ -63,11 +63,21 @@ pub struct Loaded {
 
 /// One parsed clause, in the engine's own vocabulary.
 ///
-/// The two ASTs are separate on purpose: `rofl_parse::Clause` is what the
-/// SOURCE says and `reflect::Clause` is what the ENGINE runs, and the gap
-/// between them is exactly where a book resolves, a wildcard gets a name and a
-/// tense becomes a `Temporal`. Collapsing them would put the parser inside the
-/// evaluator's type and make a syntax change an evaluator change.
+/// THIS USED TO INTERN EVERY NAME IN THE PROGRAM, because `rofl_parse` carried
+/// a `String` per name and something had to turn it into a `Sym`. The parser
+/// interns directly now, so the terms arrive finished and what is left is the
+/// part that was always this function's job: turning a SOURCE literal into an
+/// ENGINE one, where a book resolves and a tense becomes a `Temporal`.
+///
+/// The move was worth 5 to 7 per cent of a load, measured by running both
+/// builds at once — not the three fifths its share of the profile implied. See
+/// the note on `rofl_parse::Term` for why a share is not a saving.
+///
+/// The two clause types stay separate even though the terms are now shared.
+/// `rofl_parse::Clause` is what the SOURCE says — a book that is absent is
+/// different from a book that is `main` — and `reflect::Clause` is what the
+/// engine runs. Collapsing them would put the parser inside the evaluator's
+/// type and make a syntax change an evaluator change.
 pub fn to_clause(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Clause, String> {
     let head = to_lit(h, v, &c.head)?;
     let mut body = Vec::with_capacity(c.body.len());
@@ -75,54 +85,33 @@ pub fn to_clause(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Clau
         body.push(match e {
             rofl_parse::Elem::Pos(l) => BodyElem::Pos(to_lit(h, v, l)?),
             rofl_parse::Elem::Neg(l) => BodyElem::Neg(to_lit(h, v, l)?),
-            rofl_parse::Elem::Builtin(op, l, r) => BodyElem::Bi {
-                op: h.intern(op),
-                l: to_term(h, l),
-                r: to_term(h, r),
-            },
+            rofl_parse::Elem::Builtin(op, l, r) => BodyElem::Bi { op: *op, l: *l, r: *r },
         });
     }
     Ok(Clause { head, body })
 }
 
 fn to_lit(h: &mut Heap, v: &Vocab, l: &rofl_parse::Lit) -> Result<Lit, String> {
-    let rel = h.intern(&l.rel);
+    let _ = h;
     // `persp_explicit` is what `check_kernel_book` reads, so it must record
     // whether the AUTHOR typed a bracket — not whether the clause ends up with
     // a book, which after `resolve_clause_books` is always true.
-    let (persp, explicit) = match &l.book {
+    let (persp, explicit) = match l.book {
         Book::Bare => (Term::atom(v.main), false),
-        Book::Named(n) => (h.atom(n), true),
-        Book::Var(n) => (h.var(n), true),
+        Book::Named(n) => (Term::atom(n), true),
+        Book::Var(n) => (Term::var(n), true),
     };
     Ok(Lit {
-        rel,
+        rel: l.rel,
         persp,
         persp_explicit: explicit,
-        args: l.args.iter().map(|a| to_term(h, a)).collect(),
+        args: l.args.clone(),
         temporal: match l.tense {
             Tense::Now => Temporal::Now,
             Tense::Init => Temporal::Init,
             Tense::Next => Temporal::Next,
         },
     })
-}
-
-fn to_term(h: &mut Heap, t: &rofl_parse::Term) -> Term {
-    match t {
-        rofl_parse::Term::Atom(s) => h.atom(s),
-        // The parser has already given every wildcard a clause-local name, so
-        // two `_` in one clause are two variables and not one.
-        rofl_parse::Term::Var(s) => h.var(s),
-        rofl_parse::Term::Wild => h.var("_"),
-        rofl_parse::Term::Int(s) => Term::int(s.parse::<i64>().unwrap_or(0)),
-        rofl_parse::Term::NegInt(s) => Term::int(-s.parse::<i64>().unwrap_or(0)),
-        rofl_parse::Term::Str(s) => h.string(s),
-        rofl_parse::Term::Comp(n, xs) => {
-            let args: Vec<Term> = xs.iter().map(|x| to_term(h, x)).collect();
-            h.mkf_named(n, &args)
-        }
-    }
 }
 
 // ------------------------------------------------------------------ the door
@@ -440,7 +429,7 @@ fn sealed_rels(e: &mut Eval) -> Vec<Sym> {
 /// `Rofl.load` (src/api.ts:268). Parse, check the kernel claim, admit every
 /// clause, and evaluate — or restore the store and return every diagnostic.
 pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
-    let mut clauses = match rofl_parse::parse(text) {
+    let mut clauses = match rofl_parse::parse(&mut e.h, text) {
         Ok(cs) => cs,
         Err(d) => return Loaded { ok: false, diagnostics: vec![d], admitted: 0 },
     };
@@ -451,7 +440,8 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // but the bootstrap tables — the way init runs before there is anyone to
     // stop it. After that the door is shut for the life of the store.
     let mut who_owned = who.map(|s| s.to_string());
-    let claims = |c: &rofl_parse::Clause| c.head.rel == KERNEL_CLAIM && c.body.is_empty();
+    let claim = e.h.intern(KERNEL_CLAIM);
+    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty();
     if !clauses.is_empty() {
         let first = match to_clause(&mut e.h, &e.v, &clauses[0]) {
             Ok(c) => c,
@@ -476,7 +466,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         who_owned = Some("$kernel".to_string());
         trusted = true;
         clauses.remove(0);
-    } else if clauses.iter().any(|c| c.head.rel == KERNEL_CLAIM) {
+    } else if clauses.iter().any(|c| c.head.rel == claim) {
         return Loaded {
             ok: false,
             admitted: 0,

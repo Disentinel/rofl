@@ -62,10 +62,16 @@ fn main() {
 
     // Warm-up, discarded. Also the refusal count: a file the parser cannot read
     // is not silently free, it is reported next to the time.
+    // ONE HEAP FOR THE WHOLE RUN, and it is the fair choice rather than the
+    // convenient one: the parser interns its names, and the host it is
+    // compared against interns through `mka`'s atom cache, which is likewise
+    // warm across iterations. Giving Rust a cold interner per pass would
+    // measure a first parse against the host's ten-thousandth.
+    let mut h = rofl::term::Heap::default();
     let mut refused = 0usize;
     let mut sum = 0usize;
     for s in &srcs {
-        match rofl::rofl_parse::parse(s) { Ok(cs) => sum += cs.len(), Err(_) => refused += 1 }
+        match rofl::rofl_parse::parse(&mut h, s) { Ok(cs) => sum += cs.len(), Err(_) => refused += 1 }
     }
 
     if secs > 0.0 {
@@ -73,7 +79,7 @@ fn main() {
         let mut passes = 0u64;
         while t0.elapsed().as_secs_f64() < secs {
             for s in &srcs {
-                if let Ok(cs) = rofl::rofl_parse::parse(s) { sum += cs.len() }
+                if let Ok(cs) = rofl::rofl_parse::parse(&mut h, s) { sum += cs.len() }
             }
             passes += 1;
         }
@@ -88,7 +94,7 @@ fn main() {
     for _ in 0..iters {
         let t0 = std::time::Instant::now();
         for s in &srcs {
-            if let Ok(cs) = rofl::rofl_parse::parse(s) { sum += cs.len() }
+            if let Ok(cs) = rofl::rofl_parse::parse(&mut h, s) { sum += cs.len() }
         }
         ms.push(t0.elapsed().as_secs_f64() * 1000.0);
     }
