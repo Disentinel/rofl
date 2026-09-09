@@ -19,10 +19,25 @@ KIND x LAYER   453 cells = modelled 189 + waived 229 + not_modelled 35
   answered (modelled | waived):  418 / 453 = 92.3%
 
 open_cell[audit] 6, every one owned BY NAME, sweeper 0 at all four layers.
-65 work items.  blocked[audit] 1 — the kernel question the owner holds.
+66 work items, 54 done.  blocked[audit] 1 — the kernel question the owner holds.
   callgraph  open  1, claimed 25     dataflow    open  1, claimed 24
   modules    open  3, claimed 19     controlflow open  1, claimed 30
+
+COST, and it moved further in one night than in the rest of the loop:
+  control-flow world   11 400 715 -> 3 521 279 rows   (-69%)
+  call-graph world      7 465 259 -> 3 244 319 rows   (-56.5%)
+  the control-flow LAYER 1 864 255 -> 252 165, its share 46.4% -> 7.2%
+  rows per fact 6.05 -> 8.07 — UP, and the shadowing layer bought it
 ```
+
+**THE ENGINE HAS A SPACE WALL AND NOTHING MEASURES HOW CLOSE WE ARE.**
+`DEFAULT_SPACE` is **500 000 rows** (src/engine.ts) and the merged control-flow
+world holds **434 149 facts** — 87% of it. `Rofl`'s constructor takes no
+`space` option, so it cannot be raised from the public API. This was found the
+hard way: two mutants of the new per-layer cost gate stopped fitting and came
+back `$rule(...)/space_exhausted` instead of a cost, which is what forced the
+`has_return` repair rather than the saving. Nothing reports `peakRows`, so the
+only signal is a probe that stops fitting. **Owner's to decide.**
 
 **THE OPEN SET IS SIX AND EVERY ONE OF THEM IS THE OWNER'S.** This is the
 first time the queue has been in that state, and it is why the open-cell pin
@@ -44,7 +59,7 @@ A seventh row is now a red test with a name in it rather than an off-by-one.
 `w_cost_gate_per_layer` and the rest — improve the model without touching a
 cell, which is the shape `f_a_blindness_can_have_no_cell` already names.
 
-**THE PLAN IS FLAT AND `next_work` IS FOURTEEN.** `work_order` — sixty-five
+**THE PLAN IS FLAT AND `next_work` IS TEN.** `work_order` — sixty-five
 hand-written numbers — is gone; the order is derived from `work_needs`, and an
 item something waits on comes before one nothing waits on. All eleven items
 anything waited on are now done, so nothing left has leverage and every takeable
@@ -403,6 +418,45 @@ across two runs:
 2 432 nodes left the corpus in one step — which read as 106 unrelated failures
 across nine files, none of them saying "a fixture is gone". `scripts/text_check.ts`
 now rejects markers and `test/js-ast.test.ts` asserts every fixture scans.
+
+**FOUR WAYS A MERGE WENT WRONG ON 2026-09-09, all met for real, and none of
+them is in the four-rules list above.**
+
+1. **A count both branches move to the SAME value for unrelated reasons.** The
+   first rule already says "a COUNT two branches both move" — but when they
+   move it to DIFFERENT values git raises a conflict and somebody looks, and
+   when they move it to the same value git **auto-merges in silence**. Two
+   branches each wrote `unproven(F)` 32 -> 31, for two different settled
+   findings; the merged tree held 30 and nothing in the conflict said so.
+   `scripts/witness_check.ts` re-run AFTER the merge is what named it. That
+   number then moved a THIRD time, 30 -> 32, when a later branch RECORDED
+   findings without witnesses. Three merges, three correct moves, three
+   different directions.
+2. **A mutant anchored to a rule's TEXT expires when the rule is REORDERED**,
+   even though the reorder changed no answer. Four mutants died that way in one
+   night — `MUTANT B` and `MUTANT A` in js-layer-cost, `s7` in
+   js-controlflow-scope, and the js-model shape mutants. This is
+   `f_a_mutant_anchored_to_an_item_name_expires_when_the_item_closes` in a
+   third guise. **If you reorder a body, grep the test suite for its text.**
+   Re-aim rather than delete: `MUTANT B` now plants the OLD order and guards
+   the repair against being reverted, which is stronger than what it replaced.
+3. **A comparison between two MOVING numbers is not a pin.** An assertion read
+   `rest < 20`; after one repair the layer walked 22.33 rows per derivation
+   against 45.14 for the rest of its world, so it was rewritten as
+   `layer < rest` and the inversion read as a result. A second repair took the
+   rest to 19.70 and the inversion was false again — **with neither side of it
+   having been the subject.** Report both, assert the one your gate measures.
+4. **A mutant's survival can be a property of the WORLD'S SIZE, not of the
+   check.** `MUTANT A` survived a 1.5 pp row-share band while the world was
+   large, because a fixed band is generous against a big denominator. A repair
+   halved the denominator and the same mutant became a kill at 9.29% against
+   7.16%. **A survivor list is only true at a stated scale**, and the scale
+   belongs in the note beside it.
+
+**And one sequencing error worth naming because only the FULL run finds it:**
+a gate was pinned, and then a rule was repaired in a pack that gate's world
+loads — pinned numbers invalidated by the next edit in the same sitting. The
+targeted files were all green. Run the full suite before you believe a pin pass.
 
 **Three operational traps, all paid for on 2026-09-08/09 and none of them
 about the model.**
