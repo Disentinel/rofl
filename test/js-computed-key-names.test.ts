@@ -108,9 +108,18 @@ test('no relation above the scanner names anything after the variable a key is s
   // FUNCTION NAME. Before this item the same sweep also returned `key_name`,
   // `fn_name`, `member_value`, `member_plain`, `class_member_proto`, `own_key`
   // and `obj_member_fn` — seven relations naming a property after a variable.
+  // SIX SINCE 2026-09-09, and the sixth is of the same class: `binds_name`
+  // arrived with w_scope_shadowing, which merged the same night, and it is a
+  // BINDING relation — it says a declarator binds a name, and `haspSpelling`
+  // is a `const` declarator that binds exactly that name. It belongs beside
+  // `binder` and `decl_binds` rather than beside the seven this item removed.
+  // The sweep is derived from the store, so a new relation of either class
+  // joins it without anybody remembering to look — which is the property that
+  // made this oracle worth writing.
   assert.deepEqual(namesTheHandle(w), [
     'ast_name',    // the identifier's own spelling, from the scanner
     'binder',      // ...and the `const` that binds it
+    'binds_name',  // ...and the four-form union over the same declarators
     'decl_binds',
     'ident',       // the identifier nodes, as identifiers
     'ident_in',

@@ -239,8 +239,13 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // BOTH C-STYLE `for`s IN THE CORPUS, NAMED. alpha.mjs:845 predates this item
   // entirely — it is the site the defect was measured on, and it is the
   // positive control that the row is not a fixture answering itself.
-  assert.deepEqual(forUpdates(b), ['alpha.mjs j guarded', 'shapes.ts k guarded',
-    'shapes.ts m guarded', 'shapes.ts p guarded']);
+  // FIVE SINCE 2026-09-09: `alpha.mjs n` arrived with w_scope_shadowing's
+  // fixture — a `for (let n = ...)` written to give the block-scope rule a real
+  // site, which incidentally gave this one a second C-style `for` in a file
+  // that had one. A set two branches grow merges as a union; the count that
+  // used to stand here would not have.
+  assert.deepEqual(forUpdates(b), ['alpha.mjs j guarded', 'alpha.mjs n guarded',
+    'shapes.ts k guarded', 'shapes.ts m guarded', 'shapes.ts p guarded']);
 
   // AND THE CONSEQUENCE, which is why the row is worth writing: a call in the
   // update slot was `reached_unguarded` and therefore kept OUT of
@@ -254,7 +259,7 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // MUTANT 9 — the row deleted. The update slots go back to `RUNS` and the
   // function called from one leaves the may-set, while the body control stays.
   const m9 = build(mut('guard_kind(for_statement,              update).', '', CF), false);
-  assert.deepEqual(forUpdates(m9), ['alpha.mjs j RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
+  assert.deepEqual(forUpdates(m9), ['alpha.mjs j RUNS', 'alpha.mjs n RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
      'shapes.ts p RUNS']);
   assert.equal(dead(m9).has('bumpedInUpdate'), false, 'the defect, reproduced');
   assert.equal(dead(m9).has('seenUpdate'), true, 'and the control is untouched by it');
@@ -265,11 +270,14 @@ test('CONTROLFLOW: a for-update may be skipped, and the model said it runs', () 
   // `guarded` would not tell them apart, so the oracle reads the FIELD.
   const m10 = build(mut('guard_kind(for_statement,              update).',
     'guard_kind(for_statement,              init).', CF), false);
-  assert.deepEqual(forUpdates(m10), ['alpha.mjs j RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
+  assert.deepEqual(forUpdates(m10), ['alpha.mjs j RUNS', 'alpha.mjs n RUNS', 'shapes.ts k RUNS', 'shapes.ts m RUNS',
      'shapes.ts p RUNS']);
   const inits = m10.q('ast_node[code](P, for_statement, F, L)')
     .flatMap(([p]) => m10.q(`ast_child[code](${p}, init, 0, I)`).map(([i]) => m10.n(`guarded[code](${i})`)));
-  assert.deepEqual(inits, [1, 1, 1, 1], 'the mis-aimed row guards the one child that always runs');
+  // ONE ENTRY PER C-STYLE `for` IN THE CORPUS, so this array grows with the
+  // named set above rather than independently — five since alpha.mjs gained a
+  // second one on 2026-09-09. The claim is still per-site and still `1`.
+  assert.deepEqual(inits, [1, 1, 1, 1, 1], 'the mis-aimed row guards the one child that always runs');
 });
 
 // ===========================================================================
