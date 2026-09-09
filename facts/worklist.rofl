@@ -1086,12 +1086,46 @@ work_needs(w_type_surface, w_vocabulary_frame).
 -- rows are worth writing down: `exn` is item 28, `read`/`write` are item 30,
 -- and `ndet` plus `io` are item 17 - which is to say the effect layer is not a
 -- new question at all, it is the JOIN of four questions already queued.
-work(w_effect_layer, "the effect axis over Koka's basic set: total, exn, div, ndet, read, write, io").
-work_state(w_effect_layer, open).
+-- DONE 2026-09-09, and the sentence above held literally: the layer IS the join
+-- of four questions already queued, and it needed no machinery of its own for
+-- three of them. `may_throw` became the `exn` projection of a general rule,
+-- `plain_assign` and `member_node_v` became the read/write split with a heap,
+-- and `resolves` carried every hidden call the destructuring and accessor work
+-- had already found. What the layer ADDED is the ORDER — a fourteen-point
+-- lattice with a derived bottom and top, a join and a meet, all four failure
+-- modes of "this is not a lattice" empty — and the propagation that discharges
+-- a label at a handler instead of a whole row.
+--
+-- THE ONE INDEPENDENT ORACLE, AND IT AGREES ROW FOR ROW. `eff_latent(F, exn,
+-- none)` against `may_throw[code](F)`: `eff_exn_only[audit]` 0 and
+-- `may_throw_only[audit]` 0 over 395 functions. Two different relations in two
+-- different packs written a week apart, and the general machinery reproduces
+-- the special-case one exactly — which is a cross-check on the discharge
+-- condition, the `nearest_v` boundary and the call closure at once.
+--
+-- COST: peakRows 260 568 -> 264 181 on the corpus world, +1.39%, which takes it
+-- from 52.1 to 52.8 per cent of the engine's 500 000-row space wall. A whole
+-- fifth layer for one and a third per cent, because the join happens at the
+-- FUNCTION BOUNDARY through `nearest_v` and not by a per-node walk over
+-- `ast_within`. The wall time moved too and is not quoted: this machine was at
+-- load average 30 with a dozen sibling worktrees running while it was measured,
+-- and a timing taken under a neighbour is a timing about the neighbour.
+--
+-- 100 CELLS: 29 modelled, 52 waived, 1 irreducible (`debugger` is
+-- `runtime_dependent`, not work), 18 open and every one of them owned by name
+-- by the four items below. `sweeper` at this layer is 0 and `unqueued[audit]`
+-- is 0.
+work(w_effect_layer, "DONE 2026-09-09: layer(effect) over Koka's basic set, modelled as a LATTICE - eff_leq/eff_join/eff_meet with a derived bottom and top - plus a concrete column (surface, operation) whose names are derived and whose map into the lattice the surface packs owe").
+work_state(w_effect_layer, done).
 work_needs(w_effect_layer, w_exn_propagation).
 work_needs(w_effect_layer, w_alias_store).
 work_needs(w_effect_layer, w_env_api_surface).
 work_spawned(w_effect_layer, f_the_effect_taxonomy_already_exists_and_it_is_a_lattice).
+work_spawned(w_effect_layer, f_the_join_is_free_and_the_order_is_the_work).
+work_spawned(w_effect_layer, f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does).
+work_spawned(w_effect_layer, f_a_fifth_layer_cost_one_per_cent_because_the_join_sits_at_the_function_boundary).
+work_spawned(w_effect_layer, f_a_layer_declared_without_owners_is_not_a_state_the_queue_can_be_in).
+work_spawned(w_effect_layer, f_a_cell_can_be_open_while_a_rule_fires_on_its_kind).
 
 -- ===========================================================================
 -- 33-34 — WHAT THE CALL-GRAPH SWEEP FOUND, 2026-09-05. Eleven of its eighteen
@@ -2513,3 +2547,158 @@ work_spawned(w_runtime_surface, f_a_free_identifier_is_a_negative_over_a_file_an
 -- es2024)` is a live row, so a runtime already reaches an ES release by
 -- composition. The missing piece is one `environment` at es2025 plus a
 -- `provides(es2025, import_attributes)`, and both are the owner's to write.
+
+-- ==========================================================================
+-- THE EFFECT LAYER, 2026-09-09 (w_effect_layer). `layer(effect).` opened one
+-- hundred cells and this block is where the eighteen it could not close are
+-- owned. Read facts/js-effects.rofl for the verdicts and rules/js-effects.rofl
+-- for the lattice; what is here is only the ownership, which is what
+-- `open_cell[audit]` demands and what makes the declaration a valid state of
+-- the queue rather than a hundred rows nobody answers for.
+--
+-- THE FOUR ITEMS BELOW ARE FOUR DIFFERENT REASONS AND NOT ONE REASON FOUR
+-- TIMES, which is the whole point of splitting them: one waits on a pack two
+-- other agents are writing, one is a rule this layer does not have, one is a
+-- hidden call in an operator, and one is an edge across the module boundary.
+-- Grouping them by their symptom - "the effect is unknown" - is the queue smell
+-- `f_an_invisible_call_is_two_different_blockers_and_only_one_is_ours` names.
+
+-- 65 - THE AMBIENT SURFACE, AND IT IS THE ONE THIS LAYER CANNOT WRITE ITSELF.
+-- 261 of this corpus's call sites do not resolve to a node in the program, and
+-- a call whose callee is outside the program has an effect nothing here can
+-- state. `console.log(...)` is `io` only if something says `console` is a
+-- runtime surface; `Math.max(...)` is `total` and `Math.random()` is `ndet`,
+-- and the two differ by the MEMBER rather than by the surface.
+--
+-- WHAT THIS ITEM NEEDS, stated as three relations rather than as a wish, and
+-- all three are declared `edb` in facts/js-effects.rofl so that a world with no
+-- surface reads them as empty rather than as a misspelling:
+--
+--   ambient_binding(File, Name, Surface)     which free NAME is which surface
+--   surface_origin(Surface, Origin)          which declaration file it came
+--                                            from: es_intrinsic (lib.es*.d.ts),
+--                                            host_runtime (lib.dom.d.ts or
+--                                            @types/node), builtin_prototype
+--   ambient_effect(Surface, Member, Effect)  the map into the lattice, ONE ROW
+--                                            PER MEMBER, naming an `eff_name`
+--
+-- THE FIRST TWO ARE FREE AND THE THIRD IS NOT, and saying which is which is
+-- most of this item. A declaration file fixes the surface and the member name
+-- with no judgement at all; NOTHING in a `.d.ts` signature says `readFileSync`
+-- reads and `writeFileSync` writes. So `ambient_effect` is a table somebody has
+-- to build member by member, and until it exists every ambient call is this
+-- open cell rather than a label - which is the honest answer to the majority
+-- case and the reason `ndet` has no seed anywhere in the rules.
+--
+-- MEASURED TODAY, so the item has a floor rather than a hope: ten call sites
+-- already carry a derived (surface, operation) pair with no `.d.ts` involved at
+-- all - `array:join` twice, `array:at`, `string:concat`, `string:replaceAll`,
+-- `string:substr`, `string:trimLeft`, `regexp:test` twice, `bigint:toString` -
+-- because `prototype_of[flow]` reads the receiver's KIND and `builtin_prototype`
+-- names the six the language owns. Eight distinct pairs, `ambient_effect` empty,
+-- so `concrete_unmapped[flow]` is eight rows and that is the in-tray.
+--
+-- AND IT IS WHAT DECIDES `axis_applies(shape, effect)`. The concrete column
+-- earns a refinement column exactly when one member is attributed and one is
+-- not - one `handled` shape beside one `not_yet` shape is what
+-- `axis_earns[audit]` asks for. Today all ten would carry the same reason, so
+-- declaring the row would multiply the table and answer nothing, which is what
+-- `unearned_axis[audit]` exists to refuse. test/js-effects.test.ts plants the
+-- attribution as a positive control, so that sentence is runnable.
+work(w_effect_ambient_call, "the effect of a call whose callee is not in this program: the (surface, operation) pair is derivable and the map into the lattice is a table the runtime and globals surfaces owe, one row per member").
+work_state(w_effect_ambient_call, open).
+work_spawned(w_effect_ambient_call, f_a_concrete_effect_is_two_halves_and_only_one_of_them_is_free).
+claim(queued, js, call_expression,          none, effect, w_effect_ambient_call).
+claim(queued, js, optional_call_expression, none, effect, w_effect_ambient_call).
+claim(queued, js, new_expression,           none, effect, w_effect_ambient_call).
+-- `identifier` is the same question one level down and NOT a fifth call kind: a
+-- bare name is a local (bottom, or `read<local>` if something reassigns it), an
+-- import (bottom), or a free global (`read<global>`, and a ReferenceError if it
+-- is not there). The rules derive the first two today; only the third needs the
+-- surface, and `ambient_binding` is exactly the relation that decides it.
+claim(queued, js, identifier,               none, effect, w_effect_ambient_call).
+
+-- 66 - WHAT RUNS WHEN A CLASS IS DEFINED. A static block and a field
+-- initialiser run at DECLARATION time, not at a call, so their effect belongs
+-- to the declaration site - and `eff_latent[flow]` has no arm for it, because
+-- the propagation rule hangs on a `resolves` row and there is no call site
+-- here to hang it on.
+--
+-- IT IS WHY `class_declaration` IS NOT IN THE LATENT GROUP. The other four
+-- definition kinds - `function_declaration`, `class_method`,
+-- `class_private_method`, `object_method` - really do perform nothing where
+-- they are written. A class declaration does: it evaluates `extends`, it runs
+-- every static block, and it runs every static field initialiser, in order.
+-- `static_block_of[flow]` and `field_of[flow]` already name the pieces; what is
+-- missing is the join from them to the declaration.
+work(w_effect_class_initialisers, "a static block and a field initialiser run when the class is DEFINED, so their latent effect belongs to the declaration site and the propagation rule has no call site to hang it on").
+work_state(w_effect_class_initialisers, open).
+claim(queued, js, class_declaration,        none, effect, w_effect_class_initialisers).
+claim(queued, js, class_property,           none, effect, w_effect_class_initialisers).
+claim(queued, js, class_private_property,   none, effect, w_effect_class_initialisers).
+claim(queued, js, class_accessor_property,  none, effect, w_effect_class_initialisers).
+claim(queued, js, static_block,             none, effect, w_effect_class_initialisers).
+
+-- 67 - AN OPERATOR THAT IS A CALL. `a + b` runs `valueOf` or `toString` on an
+-- operand that has one and throws a TypeError for a Symbol; `-x` coerces;
+-- a template interpolation coerces. This is `accessor_call` wearing a third
+-- syntax - a construct whose surface is an operator and whose semantics is a
+-- call - and it is the same shape `w_destructuring_hides_a_call` found in a
+-- binding.
+--
+-- WHY IT IS NOT SIMPLY THE AMBIENT ITEM. The conversion method is a member of
+-- the OPERAND's prototype, so half the cases are answerable from
+-- `prototype_of[flow]` with no surface pack at all - `"a" + "b"` cannot call
+-- anything user-written - and the other half need to know whether the operand's
+-- object declares `valueOf`, which `member_value[flow]` already answers for an
+-- in-program object. So this is a rule this layer could have and does not, and
+-- it is not waiting on anybody.
+--
+-- THE OPERATOR IS ALREADY IN THE FACTS: `ast_attr(N, operator, V)` is 233 rows
+-- over this corpus with thirteen distinct operators, and it separates the cases
+-- - `===` never coerces, `<` always may, `typeof` is total and `delete` is a
+-- WRITE. Two of those four have no site here (`typeof`, `delete`), which is
+-- what the item has to answer for before it writes a rule.
+work(w_effect_implicit_coercion, "a binary operator, a unary operator and a template interpolation all call a conversion method on their operand: an operator whose semantics is a call, which is accessor_call in a third syntax").
+work_state(w_effect_implicit_coercion, open).
+claim(queued, js, binary_expression,        none, effect, w_effect_implicit_coercion).
+claim(queued, js, unary_expression,         none, effect, w_effect_implicit_coercion).
+claim(queued, js, template_literal,         none, effect, w_effect_implicit_coercion).
+
+-- 68 - AN IMPORT EVALUATES A MODULE. `import './m.js'` runs m's whole top
+-- level, so its effect is m's top-level effect, and nothing joins one file's
+-- top level to another's. This is a MISSING EDGE and not a missing surface,
+-- which is what distinguishes it from item 65: the module is in the corpus, the
+-- modules layer already resolves the specifier to it, and
+-- `w_cg_module_boundary` already crossed the boundary for a NAME. Crossing it
+-- for a top-level EFFECT is the same join one relation over.
+--
+-- FIVE KINDS AND NOT TWO. `export * from` and the `export ... from` form of
+-- `export_named_declaration` evaluate the source module exactly as an import
+-- does; `import()` evaluates it too and returns a promise, so it carries the
+-- module's effect on top of whatever the dynamic form costs.
+work(w_effect_module_evaluation, "a static import EVALUATES the imported module, so an import's effect is that module's top-level effect - a missing edge across a boundary the modules layer already crosses for a name").
+work_state(w_effect_module_evaluation, open).
+claim(queued, js, import_declaration,       none, effect, w_effect_module_evaluation).
+claim(queued, js, import,                   none, effect, w_effect_module_evaluation).
+claim(queued, js, import_expression,        none, effect, w_effect_module_evaluation).
+claim(queued, js, export_all_declaration,   none, effect, w_effect_module_evaluation).
+claim(queued, js, export_named_declaration, none, effect, w_effect_module_evaluation).
+
+-- ...AND THE FIFTH `with_statement` CELL GOES TO THE ITEM THAT ALREADY HOLDS
+-- THE OTHER FOUR. `with (o) { x }` turns every bare name in its body into a
+-- member read on `o`, so it changes what a READ MEANS - which is this layer's
+-- `read<h>` seed, and it is the same decision about name resolution the other
+-- four cells wait on rather than a new one.
+claim(queued, js, with_statement,           none, effect, w_inert_statements).
+
+-- 69 - THE SWEEP, AND IT IS DONE BEFORE IT IS OFFERED. Every other layer has a
+-- sweeping item that owns whatever the named items leave behind; this one has
+-- nothing to sweep, because the eighteen open cells were all claimed by name in
+-- the same commit that declared the layer. The row exists so that the layer's
+-- residue is EXPLICITLY owned and finished rather than implicitly absent -
+-- `sweeper` is 0 here because there is no bucket, and `unqueued[audit]` is 0
+-- because every cell has a name, and those are two different facts.
+work(w_effect_sweep, "DONE 2026-09-09: the effect layer's residue, swept in the same commit that declared the layer - 100 cells, 82 answered and 18 claimed by name, nothing left over").
+work_state(w_effect_sweep, done).
+work_sweeps(w_effect_sweep, effect).

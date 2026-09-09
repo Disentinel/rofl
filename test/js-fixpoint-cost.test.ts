@@ -586,7 +586,7 @@ test('every read path above five per cent, by name', () => {
   // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
   // reproduced this pin exactly before it moved, which is the control that
   // says the two halves are what they are claimed to be.
-  assert.equal(c.total, 2800675, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 2800699, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the

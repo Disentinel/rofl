@@ -133,7 +133,14 @@ test('the same query means different things in two worlds, which is why merging 
   // argument. This is the measurement behind the argument: one literal, two
   // worlds, two correct and different answers. A checker with one world does
   // not widen the question, it picks one of them silently.
-  assert.equal(n(queue(), 'layer(L)'), 4, 'four layers are declared in the model');
+  // 4 -> 5 on 2026-09-09: the owner declared `layer(effect)` and w_effect_layer
+  // answered its hundred cells in the same commit. This is the THIRD place in
+  // the tree that holds this number — the other two are two `witness_in` rows in
+  // facts/findings.rofl, and both went stale in the same run, which is the shape
+  // HANDOFF opens with working as intended rather than a maintenance cost: the
+  // number is the OWNER'S and an agent moving it without his word is exactly
+  // what `layer_unauthorised[audit]` and these three rows exist to catch.
+  assert.equal(n(queue(), 'layer(L)'), 5, 'five layers are declared in the model');
   const inLedger = ledger().query('layer(L)');
   assert.equal(inLedger.rows.length, 0, 'and none at all in the ledger world');
   assert.equal(inLedger.unpopulatable, true,
@@ -181,8 +188,13 @@ test('the tree\'s own witnesses stand, each in its own world', () => {
     .map((v) => `${v.id} [${v.world}]: ${v.q} -> ${v.err ? v.err : v.got}`);
   assert.deepEqual(bad, [], 'a claim rests on something that has moved');
   const used = new Set(ws.map((w) => w.world));
-  assert.deepEqual([...used].sort(), ['w_js_corpus', 'w_ledger', 'w_queue'],
-    'all three declared worlds carry a witness, so none is a declaration nobody uses');
+  // A NAMED SET, so a world added on one branch grows it by a name a reader can
+  // see rather than moving a count two branches both write. `w_js_effects`
+  // arrived 2026-09-09 with the effect layer: the corpus world plus two packs,
+  // declared separately because `w_js_corpus` is asserted identical to the world
+  // test/js-corpus-world.ts builds and its row count is pinned elsewhere.
+  assert.deepEqual([...used].sort(), ['w_js_corpus', 'w_js_effects', 'w_ledger', 'w_queue'],
+    'every declared world carries a witness, so none is a declaration nobody uses');
   console.log(`  ${ws.length} witnesses over ${used.size} worlds, all standing`);
 });
 

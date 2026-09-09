@@ -115,6 +115,16 @@ const CONTROLFLOW: WorldSpec = {
     // denominator and no answer. Refused BY NAME rather than discovered later
     // as a silently missing pack.
     'facts/js-host-surface.rofl', 'facts/js-host.rofl', 'rules/js-host.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     // the era layer has its own world below, its own corpus, and its own number
     'facts/js-env.rofl', 'facts/js-lib-surface.rofl', 'rules/js-env.rofl',
     'rules/js-env-api.rofl',
@@ -164,6 +174,16 @@ const ERA: WorldSpec = {
     // denominator and no answer. Refused BY NAME rather than discovered later
     // as a silently missing pack.
     'facts/js-host-surface.rofl', 'facts/js-host.rofl', 'rules/js-host.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     // no call graph and no value flow: the era question is one pass over kinds
     // and one attribute, which is why this world costs 92 ms and the one above
     // costs 4.6 s
@@ -215,6 +235,16 @@ const CALLGRAPH: WorldSpec = {
     // denominator and no answer. Refused BY NAME rather than discovered later
     // as a silently missing pack.
     'facts/js-host-surface.rofl', 'facts/js-host.rofl', 'rules/js-host.rofl',
+    // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). Refused by all three
+    // worlds, by name. `layer(effect)` costs this corpus 3 600 rows — peakRows
+    // 260 568 -> 264 168, measured — and every number in this file is pinned
+    // against a world WITHOUT it. A layer added to a pinned world moves numbers
+    // that are not about it, which is the sequencing error the handoff records:
+    // a gate pinned, then a pack added to the world the gate loads. The effect
+    // layer has its own world (`w_js_effects` in facts/worlds.rofl) and its own
+    // file, and a fourth WorldSpec here is the integrator's call rather than
+    // this branch's, because adding one adds pins.
+    'facts/js-effects.rofl', 'rules/js-effects.rofl',
     'facts/js-controlflow.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl',
     'facts/js-shapes.rofl', 'facts/js-statements.rofl', 'facts/js-env.rofl',
     'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
@@ -516,7 +546,12 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // gap is the point: wip/curve's `nearest_v` rewrite had already removed the
   // quadratic the hold would otherwise have held. TWO REPAIRS THAT OVERLAP, so
   // the second one's measured saving is a property of which landed first.
-  assert.equal(L.world.total, 3065755, 'rows handed out by the store in the control-flow fixpoint');
+  // +24 on 2026-09-09, and the whole of it is ONE FACT: `layer_authorised(effect)`
+  // in rules/js-model.rofl, put there rather than in the effect pack so the
+  // owner's authorised list stays readable as a list. A FIFTH LAYER FOR
+  // TWENTY-FOUR ROWS of 3.07 million, because the effect join sits at the
+  // FUNCTION boundary through `nearest_v` rather than per node.
+  assert.equal(L.world.total, 3065779, 'rows handed out by the store in the control-flow fixpoint');
   assert.equal(L.world.firings, 171279, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
@@ -707,7 +742,7 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   assert.equal(L.firings, cf().firings, 'positive control: the ANSWERS do not move — this is cost only');
   assert.equal(L.world.q('after_abrupt[code](S)').n, cf().world.q('after_abrupt[code](S)').n);
 
-  assert.notEqual(L.world.total, 3065755, 'KILLED by the world total (+1.15%)');
+  assert.notEqual(L.world.total, 3065779, 'KILLED by the world total (+1.15%)');
   assert.deepEqual(L.paths.map(([k]) => k).filter((k) => !cf().paths.some(([b]) => b === k)),
     ['relPersp ast_child'],
     'KILLED by the layer\'s path SET, with the offender\'s own name in the diff');
@@ -832,7 +867,7 @@ test('MUTANT C: an expensive new rule added to the layer pack', () => {
   const L = layerCost(CONTROLFLOW, CF_CUT, [{ file: 'rules/js-controlflow.rofl', append: PROBE }], cf().without);
   showLayer('mutant C', L);
   assert.ok(L.world.q('cost_probe[audit](N, C)').n > 0, 'positive control: the injected rule fires');
-  assert.notEqual(L.world.total, 3065755, 'KILLED by the world total');
+  assert.notEqual(L.world.total, 3065779, 'KILLED by the world total');
   assert.notEqual(L.world.firings, 171279, 'KILLED by the world firings');
   assert.ok(Math.abs(L.firingShare - 6.373) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
   assert.ok(Math.abs(L.perFiring - 22.10) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
@@ -879,7 +914,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
 
   // THE WORLD SEES IT — and to the row it is the same cost as MUTANT C, which
   // is what makes this a controlled pair rather than an anecdote.
-  assert.notEqual(L.world.total, 3065755, 'the world total is what catches it');
+  assert.notEqual(L.world.total, 3065779, 'the world total is what catches it');
   // THE LAYER DOES NOT, and every layer figure is identical to the baseline.
   assert.equal(L.rows, cf().rows, 'SURVIVOR: the layer\'s rows do not move by ONE');
   assert.equal(L.firings, cf().firings, 'SURVIVOR: nor its derivations');
@@ -914,7 +949,7 @@ test('MUTANT D: the layer pack missing from the world', () => {
     [...dropped.packs.filter((p) => p !== 'boot.rofl'), ...dropped.omits].sort(),
     jsPacksOnDisk(),
     'KILLED by the closure: a pack that is neither loaded nor refused');
-  assert.ok(w.total < 3065755, `and the total falls, which on its own says nothing: ${w.total}`);
+  assert.ok(w.total < 3065779, `and the total falls, which on its own says nothing: ${w.total}`);
   console.log('      KILLED by unpopulatable and by the pack-list closure; the TOTAL alone ' +
               'only falls, which is the safe direction and is why it cannot be the check');
 });
@@ -924,7 +959,7 @@ test('MUTANT E: the fixpoint truncated at a budget', () => {
   // that was found in five files at once, one of them the first cost gate, which
   // had been pinning half a world.
   const w = build(CONTROLFLOW, { budget: 100_000 });
-  assert.ok(w.total < 3065755 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
+  assert.ok(w.total < 3065779 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
   assert.equal(w.holes.unpopulatable, false);
   assert.ok(w.holes.n > 0, 'KILLED by hole(Q, W), which the real gate asserts is empty');
   // AND A SECOND TELL, found by planting this mutant: in a truncated world the

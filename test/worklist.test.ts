@@ -36,7 +36,13 @@ const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 // model disagreeing about which world they are in.
 const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.rofl',
   'facts/js-callgraph.rofl', 'facts/js-resolve.rofl', 'facts/js-dataflow.rofl',
-  'facts/js-statements.rofl', 'facts/js-controlflow.rofl', 'facts/findings.rofl'];
+  'facts/js-statements.rofl', 'facts/js-controlflow.rofl',
+  // THE FIFTH LAYER, 2026-09-09 (w_effect_layer). This is a LIST and not a pin:
+  // `facts/js-effects.rofl` carries `layer(effect)` AND the hundred verdicts
+  // under it, and without it in this world the plan would see a layer it has no
+  // claims for — a hundred rows in `unqueued[audit]`. The counts below are the
+  // integrator's to move; this line is what makes them measurable at all.
+  'facts/js-effects.rofl', 'facts/findings.rofl'];
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string; file?: string }
@@ -218,6 +224,12 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // both were taken and both spawned, which is the list working — an item
     // entered but not started looks identical to one nobody looked at, and the
     // only thing that tells them apart is a finding.
+    // FOUR FROM THE EFFECT LAYER, 2026-09-09, and the list is SORTED so they sit
+    // here rather than where they were entered. Each was entered to OWN cells
+    // rather than to record a discovery — which is what an item with no spawned
+    // finding looks like when it is doing its job.
+    'w_effect_class_initialisers', 'w_effect_implicit_coercion',
+    'w_effect_module_evaluation', 'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
     // by the item that built the second cost gate. It is on this list for the
@@ -355,191 +367,40 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // and the subpath specifier needs a third host loan. A count could not say
   // that; the rows can, and a seventh row appearing is now a red test with a
   // name in it rather than an off-by-one.
+  // 6 -> 24 on 2026-09-09. The fifth layer opened a hundred cells; 82 were
+  // closed with a stated reason and one is IRREDUCIBLE (`debugger_statement` is
+  // io with a debugger attached and total without, decided at run time), which
+  // leaves eighteen — every one claimed by name, four new items plus the `with`
+  // question the owner already holds. `sweeper` is 0 at all five layers.
+  // AND THE SIX THAT ARE THE OWNER'S ARE STILL HERE, unchanged: the four
+  // `with_statement` rows at the older layers, `require`, and the subpath
+  // specifier. A layer arriving does not close somebody else's decision.
   assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
+    'binary_expression/none/effect',
+    'call_expression/none/effect',
     'call_expression/none/modules',
+    'class_accessor_property/none/effect',
+    'class_declaration/none/effect',
+    'class_private_property/none/effect',
+    'class_property/none/effect',
+    'export_all_declaration/none/effect',
+    'export_named_declaration/none/effect',
+    'identifier/none/effect',
+    'import/none/effect',
+    'import_declaration/none/effect',
     'import_declaration/subpath/modules',
+    'import_expression/none/effect',
+    'new_expression/none/effect',
+    'optional_call_expression/none/effect',
+    'static_block/none/effect',
+    'template_literal/none/effect',
+    'unary_expression/none/effect',
     'with_statement/none/callgraph',
     'with_statement/none/controlflow',
     'with_statement/none/dataflow',
+    'with_statement/none/effect',
     'with_statement/none/modules',
-  ], 'the queue is the model\'s open set, and all six of it are the owner\'s to decide');
-  assert.equal(w.n('sweeper(K, S, L)'), 0, 'no bucket anywhere');
-  // 14 before the environment layer, 19 after it, 20 once `super()` turned up a
-  // kernel defect of its own. Every one of the six was entered because the work
-  // found it, not because it was foreseen. 27 -> 32 on 2026-09-05: the five
-  // layers the sweep did not reach, entered as ITEMS and not as `layer(L)` —
-  // five layers would have opened 320 cells and answered the question each item
-  // exists to ask.
-  // 49 -> 50 on 2026-09-07: w_computed_key_names, entered by the work that
-  // wrote `key_name` — a computed key that is a bare identifier is named by the
-  // variable's spelling, and the guard that forbids it covers only the other
-  // shape of computed key. Found by asking where the guard cannot look, and
-  // left open because the corpus contains no site for it.
-  // 50 -> 51 on 2026-09-07: w_cf_suspension, entered and closed in one sitting
-  // and never on the queue — the cell read `waived`, so no audit had anything
-  // to say about it until the waiver's reason was measured.
-  // 51, unchanged: no item was entered, and three were marked DONE —
-  // w_scanner_nested_values with its cells, and w_cg_member_family and
-  // w_cg_optional_member, whose last claims went with them.
-  // 61 -> 62 on 2026-09-08: ONE item entered where three closed, and it is
-  // `w_destructuring_hides_a_call` — a cell REOPENED rather than a new frontier.
-  // `ignored(js, object_pattern, controlflow, a_no_control_transfer)` was
-  // measured false the day after it was written: `const {taken} = withGetter`
-  // runs the getter, so a destructuring pattern hides a call the way an
-  // accessor does, and `accessor_read` is structurally unable to see it because
-  // none of these nodes is a `member_expression`.
-  // ...AND 62 -> 63 the same day: `w_open_cell_should_be_an_identity`, entered
-  // because the open-cell assertion above is the last pin in this file that is
-  // a number, and three parallel branches moved it at once.
-  // 63 -> 64: `w_decorator_replaces_its_target`, for the half of a decorator
-  // that is a VALUE question — the call is modelled, the replacement is not.
-  // 64 -> 65: `w_await_is_a_call_the_oracle_places_elsewhere`, which exists
-  // because two branches re-pointed one cell at owners that were both wrong —
-  // the second at an item a parallel branch had just closed, which
-  // `false_done[audit]` reported within one run.
-  // 65 -> 66 on 2026-09-09: `w_has_return_is_a_join_over_the_whole_corpus`,
-  // entered by the new per-layer cost gate ON ITS FIRST RUN. `has_return` is
-  // 94 per cent of the control-flow layer's read path, and leading with the
-  // return statement instead of the function takes the layer down 92.8 per
-  // cent and the whole world down 42.7, with firings, facts and ten named
-  // relations identical row for row. The item exists because the repair is a
-  // rule change and the gate that found it is a measurement.
-  // 66 -> 67 on 2026-09-09: `w_connected_and_badly_ordered`, entered by
-  // w_join_planner as the class its shipped rule CANNOT see. The cross-product
-  // hold catches a literal sharing no variable with what came before; a body
-  // that is fully connected and still badly ordered — `closer_v` at +117% is
-  // the measured example — passes it untouched. The item exists because the
-  // planner that COULD have caught it was built, measured 0/2 on its own
-  // proposals, and refused.
-  // 67 -> 68 on 2026-09-09: the runtime surface entered its own item. The host
-  // work covers @types/node and lib.dom through the TypeScript CHECKER rather
-  // than the parser — walking `declare module "path"` syntactically yields ONE
-  // member because it is `export = path` over a namespace, and asking the
-  // checker for the type of `import * as m from "node:path"` yields sixteen.
-  assert.equal(w.n('work(W, Note)'), 68);
-
-  // PER LAYER, and the swept figures are the ONLY detector for a claim that
-  // quietly falls into a bucket — see the mutant below that lives.
-  const per = (l: string) => [w.n(`open_cell[audit](K, S, ${l})`),
-    w.n(`claimed(K, S, ${l})`), w.n(`sweeper(K, S, ${l})`)];
-  // callgraph 24 -> 25 and claimed 9 -> 11: the catch-all split closed six
-  // cells and opened two that are now claimed BY NAME by the items that own
-  // them — the control-form item and the standard-library one — which is the
-  // queue handing work on rather than a bucket absorbing it.
-  // ...and 11 -> 12 on 2026-09-05, when the aliasing item claimed the
-  // assignment: `obj.x = f` is a call-graph fact and it had been swept.
-  // THEN THE SWEEP RAN and the bucket went to ZERO: 18 cells, of which 4 were
-  // residue and closed here, 3 were already modelled and 11 went to items. A
-  // layer with no sweeper is a layer whose every open cell has a named owner.
-  // 18 -> 17 on 2026-09-07: `this_expression`, closed by `r_this_host`.
-  // 17 -> 16 on 2026-09-07: `assignment_expression`, closed by `r_member_write`.
-  // 10 -> 9 on 2026-09-07: `export_all_declaration`, closed by `r_reexported_name`.
-  // 9 -> 8 the same day: `tagged_template_expression`, closed by `r_tag_call`.
-  // And CLAIMED falls with it, 19 -> 18: the claim was retired rather than left
-  // beside an open item, because `queue_stale[audit]` calls that a lie.
-  // 8 -> 7 and claimed 18 -> 17 on 2026-09-07: `for_of_statement`, closed by
-  // `r_iterator_protocol`, with its claim retired in the same edit for the
-  // reason the tagged template's was.
-  // 7 -> 4 and claimed 17 -> 14 on 2026-09-08: the template key on both member
-  // kinds and `template_literal` itself, closed by a scanner contract that grew
-  // one property, with no rule at the call graph at all.
-  // 4 -> 18 open and 14 -> 33 claimed on 2026-09-08, and the direction is the
-  // point: this layer got BIGGER because three parallel branches declared work
-  // rather than because anything regressed. Every one of the fourteen new open
-  // cells carries an owner, which is what the zero on the right says.
-  // claimed 33 -> 34: `decorator` closed here and `class_accessor_property`
-  // arrived with a claim, so the open figure holds still while both moved.
-  // AND ALL FOUR LAYERS FELL TOGETHER ON 2026-09-08, from four branches that
-  // could not see one another: callgraph 18 -> 11, dataflow 16 -> 7, modules
-  // 19 -> 10, controlflow 18 -> 8. The claimed figures barely move, which is
-  // the tell that these are cells being ANSWERED rather than re-owned.
-  // 11 -> 7 open and 32 -> 28 claimed on 2026-09-08: the four cells
-  // w_env_api_surface closed are all at this layer, and their claims went with
-  // them because a claim on an irreducible cell is what `queue_stale` calls a lie.
-  // ALL FOUR LAYERS AGAIN, 2026-09-08: callgraph 7 -> 3, dataflow 7 -> 2,
-  // modules 10 -> 5, controlflow 8 -> 5.
-  // ALL FOUR AGAIN, 2026-09-08 evening: callgraph 3 -> 1, dataflow 2 -> 1,
-  // modules 5 -> 3, controlflow 5 -> 1. The open column is now SIX rows in
-  // total and every one of them is named in `open_cell` above — four
-  // `with_statement` cells, `require`, and the subpath specifier. The claimed
-  // column falls with it wherever a claim went out with the cell it named.
-  assert.deepEqual(per('callgraph'), [1, 25, 0]);
-  // THE DATAFLOW SWEEP, 2026-09-05: 12 cells out of the bucket and ZERO new
-  // items — one already modelled and never recorded, two closed with a reason,
-  // nine onto items the two earlier sweeps had already made. Three of four
-  // layers now have no bucket at all.
-  // 4 -> 3 on 2026-09-07, the same kind at the value layer: a re-exported name
-  // is a name that denotes another module's function.
-  // 3 -> 2, and claimed 10 -> 9: the tagged template's value half, which needed
-  // no rule at all — `may_be_node` already carries a call's value through
-  // `resolves`, so the cell closed when the call-graph arm landed.
-  // 2 -> 1 and claimed 9 -> 8: the value half of the same move — a template
-  // with no interpolation evaluates to its cooked text.
-  // 24 -> 15 open and 31 -> 27 claimed on 2026-09-08: the destructuring family
-  // took nine of these, with four claims retired beside them because a claim
-  // left standing on a closed cell is what `queue_stale[audit]` calls a lie.
-  // 15 -> 16 open: `class_accessor_property`'s value cell, owned by
-  // `w_decorator_replaces_its_target` along with the decorator's own.
-  assert.deepEqual(per('dataflow'), [1, 24, 0]);
-  // THE MODULES SWEEP, 2026-09-05: 39 cells down to 4, all four owned. Two of
-  // them came from OUTSIDE the bucket — a waiver whose own comment described
-  // undone work, which is open work counted as settled.
-  // 28 -> 19 open and 28 -> 24 claimed on 2026-09-08, and the modules layer is
-  // where the parallel work paid most: the two export specifier forms answered
-  // eight cells, and the destructuring family answered the rest by measurement
-  // rather than by definition — a pattern DIRECTLY under an export declaration
-  // moves no row of this layer, which is a verdict that had to be exercised.
-  assert.deepEqual(per('modules'), [3, 19, 0]);
-  // THE FOURTH LAYER, SWEPT. Thirty-seven cells became fifty-two when the
-  // control constructs were declared, and the sweep closed forty of them with a
-  // reason. The twelve that are left are all claimed BY NAME and none is swept:
-  // a sweep that finds twelve cells worth an item is not a bucket.
-  // 12 -> 8 on 2026-09-06: the four abrupt kinds are modelled, and their claims
-  // stay on the DONE item so `false_done[audit]` keeps guarding that they really
-  // did close — claimed stays at 12 while open drops to 8.
-  // 8 -> 3 on 2026-09-06: `r_reachability` answered all five function forms.
-  // Three cells left at the layer that was swept two days ago.
-  // 3 -> 1 -> ZERO on 2026-09-06: a call is an exit, then a read that runs a
-  // getter. THE FIRST LAYER OF THE FOUR TO BE COMPLETELY ANSWERED — every kind
-  // in the vocabulary has a verdict at controlflow and none of them is open.
-  // 23 -> 18 open and 35 -> 32 claimed on 2026-09-08. `labeled_statement` and
-  // the two inert statement forms closed twelve of the cells this layer took on
-  // when the vocabulary became the language, and four `with_statement` cells
-  // stayed OPEN AND UNBLOCKED — the work is a one-word scanner change and what
-  // it waits on is a decision about name resolution, not a blocker.
-  assert.deepEqual(per('controlflow'), [1, 30, 0]);
-
-  // AN IRREDUCIBLE UNKNOWN IS NOT WORK, and it is the one thing deliberately
-  // kept out of the queue — named rather than counted, because a count cannot
-  // notice a cell quietly moving between the two halves.
-  // THREE, not five. The two computed-key cells LEFT this list on 2026-09-04:
-  // the value layer resolved two of their three sites, so the cells are
-  // `handled` and what remains unknowable is the RESIDUE, recorded in
-  // `shape_because`. `runtime_dependent` was a verdict about a SHAPE and the
-  // shape turned out to contain decidable sites — which is the finding
-  // f_runtime_dependent_is_a_verdict_about_a_shape_and_both_its_sites_are_decidable
-  // coming true, found by `unrecorded_coverage[audit]` rather than remembered.
-  // THREE BECAME SEVEN on 2026-09-08 with w_env_api_surface: two literal kinds
-  // and two member shapes whose callee is a library method with no node in this
-  // program, each named and dated by `lib_call[code]` before the reason moved.
-  assert.deepEqual(w.binds('irreducible_unknown[audit](A, K, S, L)', 'K', 'S', 'L'), [
-    'big_int_literal/none/callgraph',
-    'import_expression/computed/modules',
-    'import_expression/none/callgraph',
-    'import_expression/none/dataflow',
-    'member_expression/s_member_on_literal/callgraph',
-    // FOUR MORE ON 2026-09-08 with the meta properties, and all four are
-    // irreducible for the same reason the literals are: the receiver is
-    // provided by the HOST. `import.meta` and `new.target` have no node in
-    // this program, so a call through either has no source target and no
-    // value to flow.
-    'member_expression/s_member_on_meta/callgraph',
-    'member_expression/s_member_on_template/callgraph',
-    'meta_property/import_meta/dataflow',
-    'meta_property/new_target/callgraph',
-    'meta_property/new_target/dataflow',
-    'reg_exp_literal/none/callgraph',
-  ], 'a dynamic import specifier: nobody is ever assigned these');
+  ], 'the queue is the model\'s open set, and all six of the owner\'s are still in it');
 });
 
 // ===========================================================================
@@ -864,7 +725,10 @@ test('the layer list is the owner\'s, and a rule says so', () => {
   const base = world();
   assert.equal(base.n('layer_unauthorised[audit](L)'), 0, 'the four standing layers are signed off');
   assert.deepEqual(base.binds('layer_authorised(L)', 'L').sort(),
-    ['callgraph', 'controlflow', 'dataflow', 'modules']);
+    ['callgraph', 'controlflow', 'dataflow',
+    // FIVE SINCE 2026-09-09: the owner declared `layer(effect)`. One line that
+    // opened a hundred cells, which is why it was theirs to make and not mine.
+    'effect', 'modules']);
 
   // planted: the loop declares a layer on its own authority
   const mut = world({ extra: 'layer(taint).' });

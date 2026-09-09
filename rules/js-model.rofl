@@ -131,6 +131,16 @@ layer_authorised(callgraph).
 layer_authorised(dataflow).
 layer_authorised(modules).
 layer_authorised(controlflow).
+-- THE FIFTH, AND IT IS THE FIRST ONE THE ROW ABOVE HAD TO BE ASKED FOR.
+-- Decided by Vadim 2026-09-09 and relayed with the item that builds it
+-- (`w_effect_layer`): the effect axis over Koka's basic set, and the
+-- instruction that came with it was that the declaration and the OWNERSHIP of
+-- its hundred cells belong in one commit, because a layer whose cells nobody
+-- owns is not a valid state of this queue. That is precisely what
+-- `layer_unauthorised` was written to make impossible to do quietly — it
+-- reported one row for `effect` until this line was added, which is the gate
+-- working rather than a formality.
+layer_authorised(effect).
 
 layer_unauthorised[audit](L) :- layer(L), not layer_authorised(L).
 

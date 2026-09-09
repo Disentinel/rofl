@@ -1,0 +1,632 @@
+-- js-effects.rofl — THE FIFTH LAYER, AND THE FIRST ONE THAT IS AN ORDER.
+--
+-- `layer(effect).` is the whole declaration, and it opens one hundred cells:
+-- one per declared node kind, because the shape axis does not apply here (the
+-- argument is in the LOCAL AXIS section below, and it is a refusal with a date
+-- on it rather than an omission).
+--
+-- WHOSE DECLARATION THIS IS, and it is recorded because the provenance did not
+-- arrive with the line. `layer(L)` is the owner's alone — a standing constraint
+-- in HANDOFF.md — and the owner declared `layer(effect)` on 2026-09-09. The
+-- line did not reach `origin/modeljs`: it was written in the owner's working
+-- tree AFTER the push and reverted there so that nothing competed with this
+-- branch, and the instruction that came with the correction was that the
+-- declaration and the ownership of its hundred cells belong in ONE commit,
+-- because a layer with unowned cells is not a valid state of this queue.
+-- Measured by the owner before reverting: `open_cell[audit]` 6 -> 100.
+--
+-- It is declared HERE and not in facts/js-statements.rofl, where the owner's
+-- own copy sat, for one reason that is not taste: `layer(effect)` and the
+-- hundred verdicts under it must be in the SAME pack, or a world that loads the
+-- declaration without the verdicts reports a hundred cells nobody owns. That is
+-- exactly the state the owner's correction says is invalid, and it is the shape
+-- `layer(controlflow)` and `layer(modules)` already have — each in the fact
+-- pack of its own layer.
+layer(effect).
+
+-- ===========================================================================
+-- THE TAXONOMY IS KOKA'S AND IT IS NOT OURS TO INVENT
+--
+-- Settled by `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` on
+-- 2026-09-05 and not re-litigated here. The set is closed, named and ORDERED:
+-- `total`, `exn`, `div`, `ndet`, `alloc<h>`, `read<h>`, `write<h>`, `io`, with
+-- the aliases `pure = <div, exn>`, `st<h> = <rd, wr, heap<h>>` and
+-- `io = <st<global>, div, exn, ndet>`.
+--
+-- A LATTICE WITH A BOTTOM AND A TOP IS THE POINT. Every question this layer is
+-- asked — what is a body's effect given its statements', is this call at least
+-- as effectful as that one — is a JOIN or a COMPARISON, and a flat list of
+-- labels gives neither. So what is modelled below is the ORDER, and the labels
+-- are what the order is over.
+--
+-- THE CARRIER IS A ROW, NOT A LABEL. An effect is a SET of labels; the order is
+-- set inclusion; the join is union; the bottom is the empty row and the top is
+-- the full one. The named points below are LANDMARKS in that lattice, and the
+-- family they form is closed under intersection and contains the full row —
+-- which is exactly the condition (a Moore family) that makes the least NAME
+-- above a union always exist and be unique. That is not asserted here as a
+-- claim about the design: `join_missing[audit]`, `join_ambiguous[audit]`,
+-- `meet_missing[audit]` and `meet_ambiguous[audit]` in rules/js-effects.rofl
+-- are the four ways it could fail, and they are the acceptance.
+
+edb(eff_heap).
+edb(eff_label).
+edb(eff_name).
+edb(eff_row).
+edb(eff_alias).
+
+-- ---------------------------------------------------------------------------
+-- THE HEAP PARAMETER, AND WHERE IT IS REFUSED.
+--
+-- Koka parameterises three of the eight by a heap: `alloc<h>`, `read<h>`,
+-- `write<h>`, and `io` is defined over the GLOBAL one. The parameter is what
+-- makes `io`'s definition say anything at all, so it is kept — with two
+-- constants and a rule for deciding between them that this model can actually
+-- run:
+--
+--   local   the object is one this program allocates. `may_be_node[flow]`
+--           reaches an allocation site for the receiver.
+--   global  it does not. An ambient name, an import, a receiver the value layer
+--           cannot trace. This is precisely the residue the runtime and globals
+--           surfaces are being built to name, which is why the parameter earns
+--           its place rather than decorating the labels.
+--
+-- `alloc` IS NOT PARAMETERISED AND THAT IS A DELIBERATE DEVIATION FROM KOKA.
+-- Deciding which heap an allocation lands in is escape analysis, which this
+-- model does not have and will not fake; a column whose two values the rules
+-- cannot tell apart is the 48-cells-no-questions arithmetic that
+-- `axis_applies` exists to prevent, arriving in a label instead of an axis. So
+-- `st<h>` here is `<read<h>, write<h>, alloc>` — the deviation is one line and
+-- it is this one.
+eff_heap(none).
+eff_heap(local).
+eff_heap(global).
+
+eff_label(exn,   none).
+eff_label(div,   none).
+eff_label(ndet,  none).
+eff_label(alloc, none).
+eff_label(read,  local).
+eff_label(read,  global).
+eff_label(write, local).
+eff_label(write, global).
+
+-- ---------------------------------------------------------------------------
+-- THE NAMED LANDMARKS. Fourteen, and eight of them are the singleton row of a
+-- label; the other six are DEFINED by `eff_alias` below rather than typed out,
+-- so that `pure = <div, exn>` is a definition the model closes rather than a
+-- pair of rows a reader has to trust.
+eff_name(total).
+eff_name(exn).
+eff_name(div).
+eff_name(ndet).
+eff_name(alloc).
+eff_name(rd_local).
+eff_name(wr_local).
+eff_name(rd_global).
+eff_name(wr_global).
+eff_name(pure).
+eff_name(st_local).
+eff_name(st_global).
+eff_name(io).
+eff_name(top).
+
+-- `total` gets no row: it IS the empty one, and that is what makes it the
+-- bottom rather than a name for nothing. `eff_name_empty[audit]` guards the
+-- difference — any OTHER name that ends up with no row is a misspelt alias
+-- silently becoming the bottom, which would be a lie in the safe direction.
+eff_row(exn,       exn,   none).
+eff_row(div,       div,   none).
+eff_row(ndet,      ndet,  none).
+eff_row(alloc,     alloc, none).
+eff_row(rd_local,  read,  local).
+eff_row(wr_local,  write, local).
+eff_row(rd_global, read,  global).
+eff_row(wr_global, write, global).
+
+-- KOKA'S ALIASES, AS DEFINITIONS. rules/js-effects.rofl closes `eff_row` over
+-- this table, so `join(div, exn) = pure` is DERIVED from the definition and not
+-- from a third place where the same thing is written down again.
+eff_alias(pure, div).
+eff_alias(pure, exn).
+eff_alias(st_local,  rd_local).
+eff_alias(st_local,  wr_local).
+eff_alias(st_local,  alloc).
+eff_alias(st_global, rd_global).
+eff_alias(st_global, wr_global).
+eff_alias(st_global, alloc).
+eff_alias(io, st_global).
+eff_alias(io, div).
+eff_alias(io, exn).
+eff_alias(io, ndet).
+-- ...AND THE TOP, WHICH KOKA DOES NOT NAME AND THIS MODEL NEEDS. `io` is the
+-- top of the GLOBAL tower — `total <= pure <= io` — and local state is not
+-- under it, which is not an accident of the encoding: Koka's `local<s>` is
+-- ENCAPSULATED, discharged by `run`, and that is why `io` does not contain it.
+-- A lattice needs a top, so the full row is named; `meet(io, st_local) = alloc`
+-- is the derived statement that the two branches share exactly the allocation.
+eff_alias(top, io).
+eff_alias(top, st_local).
+
+-- ===========================================================================
+-- THE CONCRETE COLUMN — `http:get` RATHER THAN `io`, AND WHY IT IS A SECOND
+-- THING AND NOT A REPLACEMENT.
+--
+-- The owner's amendment, 2026-09-09: "the Koka lattice is worth refining in a
+-- more human-readable language, because `http:get` is somewhat clearer than
+-- `io`". Both are kept, because they answer different questions and the model
+-- needs both:
+--
+--   `io`       answers the ALGEBRAIC question — the join of a body's
+--              statements, the comparison between two calls. It needs an
+--              order. It has one.
+--   `http:get` answers the HUMAN question — what does this function actually
+--              DO — which `io` answers uselessly. `http:get`, `fs:read` and
+--              `console:write` form NO order at all: there is no answer to
+--              which of `http:get` and `fs:write` is greater.
+--
+-- A CONCRETE EFFECT IS A PAIR, NOT AN ATOM. It is (Surface, Operation), and
+-- `http:get` is how the pair is WRITTEN for a reader. Manufacturing a joined
+-- atom would be making a term out of nothing, which this repository has refused
+-- before; the colon is a rendering, so `runtime/report.ts` can print it and no
+-- rule has to parse it back.
+--
+-- AND IT MAPS INTO THE LATTICE. `⊑` is `ambient_effect(Surface, Operation,
+-- EffectName)` — one row per member, naming a landmark above. Join and compare
+-- in the lattice; show the human the pair.
+--
+-- THE REAL RISK IS THE OPEN VOCABULARY AND THE CURE IS THE FINDING'S OWN.
+-- Koka's set is closed at eight; `http:get` opens an infinite one, which is
+-- what `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` refused when
+-- it said the taxonomy is not ours to invent. The same finding names the cure
+-- by example — it rejected `UNKNOWN` as a MEMBER because `unknown_type(R,
+-- irreducible|ours)` CLASSIFIES an unknown instead of making unknown a kind.
+-- So: A CONCRETE EFFECT IS DERIVED, NEVER AUTHORED, and this file authors not
+-- one of them.
+--
+-- WHERE EACH HALF OF THE NAME COMES FROM, per half, because the two halves have
+-- different provenance and only one of them is free:
+--
+--   THE SURFACE HALF IS A FACT and needs no judgement:
+--     * a builtin prototype        `prototype_of[flow]` from the receiver's
+--                                  KIND, plus `builtin_prototype` — derived in
+--                                  the tree TODAY: `array`, `string`, `regexp`,
+--                                  `bigint` over ten call sites
+--     * an ES intrinsic            the global's own name as `lib.es*.d.ts`
+--                                  declares it — `Promise`, `Map`, `JSON`,
+--                                  `Math`, `Symbol`, `globalThis`
+--     * a host runtime module      the import specifier, or the ambient
+--                                  global's name, as `lib.dom.d.ts` and
+--                                  `@types/node` declare it — `console`,
+--                                  `fetch`, `setTimeout`, `fs`, `path`,
+--                                  `process`
+--   THE OPERATION HALF is the member name, also a fact.
+--   THE MAP INTO THE LATTICE IS NEITHER. Nothing in a `.d.ts` signature says
+--   `readFileSync` reads and `writeFileSync` writes; the declaration FILE says
+--   which surface a member belongs to and says nothing about its effect. So
+--   `ambient_effect` is what the surface packs must supply, member by member,
+--   and until they do EVERY ambient call is an open cell with an owner rather
+--   than a label. That is the honest answer to the majority case and it is the
+--   answer this file gives.
+--
+-- WHAT THIS OWES grafema's effects-db, the owner's own prior art, which the
+-- founding finding already weighed: PURE / MUTATION / IO / THROW / ASYNC /
+-- NONDETERMINISTIC / SPAWN / MESSAGE_PASSING / UNKNOWN, split by runtime.
+--   * AGREED, and taken: PURE is `total`, MUTATION is `write<h>`, IO is `io`,
+--     THROW is `exn`, NONDETERMINISTIC is `ndet`.
+--   * AGREED AND PROMOTED: the RUNTIME SPLIT is half of what the amendment
+--     asks for, and it is exactly the SURFACE half of a concrete effect. A
+--     runtime is not an effect; it is where an effect's name comes from.
+--   * AGREED AND MOVED DOWN A LEVEL: SPAWN and MESSAGE_PASSING are not
+--     lattice elements, they are CONCRETE effects — `child_process:spawn`,
+--     `worker:postMessage` — each mapping into `io`. That is the whole
+--     argument for having two columns: they are the names a human wants and
+--     the join has nothing to do with them.
+--   * REFUSED: ASYNC. The founding finding measured the point — `await` is
+--     transparent to value flow and `yield` is not — so async-as-an-effect
+--     asserts a uniformity this repository's own measurement contradicts, and
+--     a concrete column must not smuggle it back as `async:*`.
+--     `concrete_async_smuggled[audit]` in rules/js-effects.rofl is that
+--     sentence as a row.
+--   * REFUSED: UNKNOWN, on the grounds the finding already gave.
+--
+-- WHAT THE SURFACE PACKS MUST SUPPLY, stated as the shape this layer reads. The
+-- relations are declared `edb` here so that a world holding this pack and no
+-- surface reads them as EMPTY rather than as a misspelling — the same reason
+-- `unknown_type` and `ast_node` carry one in rules/js-model.rofl.
+--
+--   surface_origin(Surface, Origin)
+--       one row per surface, saying which declaration file it came from.
+--       Origin is one of the three `eff_origin` values below.
+--   ambient_effect(Surface, Member, EffectName)
+--       the `⊑` map: one row per MEMBER, naming the lattice landmark the
+--       member's effect is at or below. EffectName must be an `eff_name` —
+--       `concrete_unnamed[audit]` says so.
+--
+--       THE MEMBER IS A STRING AND THE OTHER TWO ARE ATOMS, and this is not a
+--       style note: `ambient_effect(fs, readFileSync, io)` LOADS, holds, joins
+--       nothing and reports nothing, because the operation half comes from
+--       `selects[flow]`, which carries a key as a STRING. The right row is
+--       `ambient_effect(fs, "readFileSync", io).` Measured the hard way — the
+--       first planted control in test/js-effects.test.ts was written unquoted
+--       and derived zero — and it is the defect
+--       `f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant`
+--       already records: a misspelt CONSTANT in the right lexical form is a
+--       well-formed question about a real relation, and nothing objects.
+--   ambient_binding(File, Name, Surface)
+--       which free NAME in which file is which surface. Needed for
+--       `console.log(...)`: the receiver `console` is a free identifier and
+--       nothing in this program says what it is. Without this relation the
+--       `io` half of this layer cannot be derived at all, which is why
+--       `call_expression` and `identifier` are open cells below rather than
+--       stamped rows.
+edb(surface_origin).
+edb(ambient_effect).
+edb(ambient_binding).
+edb(eff_origin).
+-- `lib.es*.d.ts` — an ECMAScript intrinsic. Present in every host.
+eff_origin(es_intrinsic).
+-- `lib.dom.d.ts` or `@types/node` — a host surface. Present only in its host,
+-- which is the runtime split grafema's effects-db already makes.
+eff_origin(host_runtime).
+-- derived in this tree today, with no `.d.ts` at all: the receiver's KIND fixes
+-- the prototype, which is what `w_prototype_of_a_value` closed.
+eff_origin(builtin_prototype).
+
+-- ===========================================================================
+-- THE LOCAL AXIS, REFUSED WITH A DATE ON IT.
+--
+-- `axis_applies(shape, effect).` IS NOT DECLARED, and the reason is the one the
+-- machinery exists to enforce rather than an oversight. A refinement column
+-- must EARN its layer: `unearned_axis[audit]` reports an axis that splits a
+-- layer into rows all carrying the same answer, and `axis_earns[audit]` needs
+-- two shapes of ONE KIND to differ in verdict or in typed reason.
+--
+-- MEASURED TODAY: the concrete column derives TEN call sites — `array:join`
+-- twice, `string:concat`, `string:replaceAll`, `string:substr`,
+-- `string:trimLeft`, `regexp:test` twice, `array:at`, `bigint:toString` — and
+-- `ambient_effect` is EMPTY, so all ten would carry `not_yet` for the same
+-- reason. Ten shapes, one verdict: the column would multiply the table and
+-- answer nothing, which is the 48-cells-no-questions arithmetic by name.
+--
+-- AND THE CONDITION FOR DECLARING IT IS EXACT, which is why this is a refusal
+-- and not a shrug: `axis_applies(shape, effect).` becomes correct on the day
+-- the surface packs attribute AT LEAST ONE member and leave at least one
+-- unattributed — one `handled` shape beside one `not_yet` shape is what
+-- `axis_earns` asks for. test/js-effects.test.ts plants exactly that as a
+-- positive control, so the sentence above is a runnable claim rather than a
+-- prediction.
+--
+-- The refusal is the same one facts/js-shapes.rofl makes for `dataflow` and it
+-- is made here for the same reason, with the corpus measured first rather than
+-- the row tried first.
+
+-- ===========================================================================
+-- WHAT THE LAYER ANSWERS — 29 CELLS, BY MECHANISM
+--
+-- rules/js-effects.rofl carries the mechanisms and the audits that keep the
+-- vocabulary closed. The split below is by MECHANISM and not by kind, which is
+-- the shape facts/js-controlflow.rofl already uses.
+
+-- ---------------------------------------------------------------------------
+-- EXN, and it is the one label with an independent oracle. `may_throw[code]`
+-- was built by `w_exn_propagation` for the exception question alone; this layer
+-- re-derives it as ONE PROJECTION of a general rule — seed, then close over the
+-- call graph, minus what a handler discharges. The two must agree ROW FOR ROW,
+-- and `eff_exn_only[audit]` / `may_throw_only[audit]` are the two directions.
+-- That is a cross-check rather than a restatement: different relations,
+-- different rules, and a wrong discharge condition separates them at once.
+handled(js, throw_statement,            effect, r_effect_throw).
+
+-- ...AND A HANDLER REMOVES A LABEL FROM A ROW, which is the piece of an effect
+-- system that a flat list of labels cannot express at all. Koka types `catch`
+-- as `(() -> <exn|e> a, ...) -> e a`: the handler DISCHARGES `exn` and leaves
+-- the rest of the row alone. `eff_discharges(catch_clause, exn)` is that
+-- sentence, and the propagation rule reads it per LABEL — so a `try` around a
+-- call does not swallow the callee's writes, which a single `not caught_here`
+-- guard would have done.
+handled(js, try_statement,              effect, r_effect_handler).
+handled(js, catch_clause,               effect, r_effect_handler).
+
+-- ---------------------------------------------------------------------------
+-- DIV. Every loop MAY not terminate, and the model has no termination
+-- argument for any of them, so all five seed `div`. This is a MAY-set, which
+-- is the vocabulary the whole model uses, and it is stated rather than hidden:
+-- `for (let i = 0; i < 2; i += 1)` terminates and this layer says it may not.
+-- The over-approximation is in the safe direction for every question `div` is
+-- asked, and narrowing it is a termination analysis rather than a rule.
+handled(js, while_statement,            effect, r_effect_loop).
+handled(js, do_while_statement,         effect, r_effect_loop).
+handled(js, for_statement,              effect, r_effect_loop).
+handled(js, for_in_statement,           effect, r_effect_loop).
+handled(js, for_of_statement,           effect, r_effect_loop).
+
+-- ---------------------------------------------------------------------------
+-- ALLOC. A fresh MUTABLE IDENTITY is an allocation; a fresh immutable value is
+-- not. That distinction is the whole content of these three rows and it is
+-- where a mechanical sweep would have gone wrong: `reg_exp_literal` LOOKS like
+-- the five literals waived below and is not one of them, because `/x/g`
+-- evaluates to a new object with a mutable `lastIndex` every time it is
+-- reached. `template_literal` looks like it allocates and does not: a string
+-- has no identity to allocate.
+handled(js, object_expression,          effect, r_effect_alloc).
+handled(js, array_expression,           effect, r_effect_alloc).
+handled(js, reg_exp_literal,            effect, r_effect_alloc).
+
+-- ...and the three that allocate a CLOSURE. Evaluating them allocates; their
+-- BODY's effect is latent and joins only where the closure is called, which is
+-- the distinction `r_effect_latent` makes below and the reason these are not
+-- filed with the three above.
+handled(js, function_expression,        effect, r_effect_closure).
+handled(js, arrow_function_expression,  effect, r_effect_closure).
+handled(js, class_expression,           effect, r_effect_closure).
+
+-- ---------------------------------------------------------------------------
+-- LATENT. A function definition performs no operation: what its body does
+-- happens at a CALL, and `eff_latent[flow]` is where it is carried. These four
+-- kinds have no evaluation-site effect of their own, and saying that is a
+-- positive statement about the construct rather than an absence.
+--
+-- `class_declaration` IS NOT HERE, and that is the measured half of this
+-- group: a class declaration RUNS its static blocks and field initialisers at
+-- declaration time, so it is not latent at all. It is open below.
+handled(js, function_declaration,       effect, r_effect_latent).
+handled(js, class_method,               effect, r_effect_latent).
+handled(js, class_private_method,       effect, r_effect_latent).
+handled(js, object_method,              effect, r_effect_latent).
+
+-- ---------------------------------------------------------------------------
+-- STATE, WITH ITS HEAP. `w_alias_store` left `r_member_write` — a member
+-- written is a member read — and this layer reads that machinery rather than
+-- inventing one: `plain_assign[flow]` says which assignments are plain, and
+-- `member_node_v[flow]` with `selects[flow]` says which nodes select a member.
+-- What is added here is the DIRECTION and the HEAP.
+--
+--   `o.k = v`   write<h>            `o.k`      read<h>
+--   `o.k += v`  read<h> and write<h>   — a compound assignment is both, and
+--                                       `plain_assign` is exactly the relation
+--                                       that tells them apart
+--   `x = v`     write<local>        `x++`      read<local> and write<local>
+--
+-- READING AN IMMUTABLE BINDING IS NOT A `read<h>` AND THAT IS KOKA'S ANSWER,
+-- not a shortcut taken to make a number look better: `read<h>` is a read of a
+-- mutable CELL, and a `const` that nothing reassigns is a value. So the rule
+-- seeds `read<local>` for a name something assigns to and for nothing else.
+-- `identifier` is nevertheless an OPEN cell below, because a free name is a
+-- third case this model cannot decide.
+handled(js, assignment_expression,      effect, r_effect_state).
+handled(js, update_expression,          effect, r_effect_state).
+handled(js, member_expression,          effect, r_effect_state).
+handled(js, optional_member_expression, effect, r_effect_state).
+
+-- ---------------------------------------------------------------------------
+-- TRANSFER. Seven kinds whose evaluation calls something, where the callee is
+-- a node IN THIS PROGRAM and `resolves[code]` already names it — so the effect
+-- propagation picks them up with no arm of its own, which is the whole reason
+-- this layer could be built on top of the call graph rather than beside it.
+--
+-- FOUR OF THESE ARE HIDDEN CALLS and the control-flow layer had already found
+-- them: `w_destructuring_hides_a_call` measured at run time that an array
+-- pattern runs the iterator, an object spread runs the getters, and an object
+-- rest runs the source's getters. `pattern_iterates` and `pattern_accessor`
+-- turn each into a `resolves` row, so at this layer they are ordinary calls.
+-- The residue — an iterator that belongs to the standard library rather than
+-- to this program — is `call_expression`'s open cell and not four copies of it.
+handled(js, decorator,                  effect, r_effect_transfer).
+handled(js, super,                      effect, r_effect_transfer).
+handled(js, tagged_template_expression, effect, r_effect_transfer).
+handled(js, spread_element,             effect, r_effect_transfer).
+handled(js, rest_element,               effect, r_effect_transfer).
+handled(js, object_pattern,             effect, r_effect_transfer).
+handled(js, array_pattern,              effect, r_effect_transfer).
+
+-- ===========================================================================
+-- WHAT THE LAYER WAIVES — 52 CELLS, AND NOT ONE OF THEM IS `total` BY DEFAULT
+--
+-- A waiver here says the CONSTRUCT PERFORMS NO OPERATION, which in this
+-- taxonomy is the positive statement that its own contribution is the bottom of
+-- the lattice. That is a claim that can be wrong, and three of the traps it
+-- walks past are recorded beside the rows that avoided them.
+
+-- ---------------------------------------------------------------------------
+-- ELEVEN THAT NEVER RUN. A TypeScript type position is erased before anything
+-- executes, so it has no effect in the same sense that a comment has none —
+-- and this is the one waiver group in the file whose reason is about the
+-- COMPILER rather than about the language's semantics.
+ignored(js, ts_string_keyword,               effect, a_erased_before_execution).
+ignored(js, tsnull_keyword,                  effect, a_erased_before_execution).
+ignored(js, tsnumber_keyword,                effect, a_erased_before_execution).
+ignored(js, tsstring_keyword,                effect, a_erased_before_execution).
+ignored(js, tstype_alias_declaration,        effect, a_erased_before_execution).
+ignored(js, tstype_annotation,               effect, a_erased_before_execution).
+ignored(js, tstype_parameter_instantiation,  effect, a_erased_before_execution).
+ignored(js, tstype_query,                    effect, a_erased_before_execution).
+ignored(js, tstype_reference,                effect, a_erased_before_execution).
+ignored(js, tsunion_type,                    effect, a_erased_before_execution).
+ignored(js, tsfunction_type,                 effect, a_erased_before_execution).
+
+-- ---------------------------------------------------------------------------
+-- SIX LITERALS. A literal evaluates to a value with no identity and performs no
+-- operation, so its row is the bottom. `reg_exp_literal` is DELIBERATELY NOT
+-- HERE — it is `handled` above — and that one exclusion is what makes this
+-- group a judgement rather than a sweep over everything whose name ends in
+-- `_literal`. `template_literal` is not here either, for the opposite reason:
+-- it is OPEN, because `${x}` coerces.
+ignored(js, string_literal,             effect, a_a_literal_is_its_own_value).
+ignored(js, numeric_literal,            effect, a_a_literal_is_its_own_value).
+ignored(js, boolean_literal,            effect, a_a_literal_is_its_own_value).
+ignored(js, null_literal,               effect, a_a_literal_is_its_own_value).
+ignored(js, big_int_literal,            effect, a_a_literal_is_its_own_value).
+ignored(js, template_element,           effect, a_a_literal_is_its_own_value).
+
+-- ---------------------------------------------------------------------------
+-- THREE IMMUTABLE BINDINGS. `this`, `import.meta`, `new.target` and a private
+-- name are each fixed for the duration of an activation, so reading one is not
+-- a `read<h>`: there is no cell to read. `import.meta` is HOST-PROVIDED and
+-- that is not the same thing as host I/O — obtaining it performs no operation,
+-- and what a program does WITH it is the member's cell.
+ignored(js, this_expression,            effect, a_an_immutable_binding_is_its_own_value).
+ignored(js, meta_property,              effect, a_an_immutable_binding_is_its_own_value).
+ignored(js, private_name,               effect, a_an_immutable_binding_is_its_own_value).
+
+-- ---------------------------------------------------------------------------
+-- TWENTY-FIVE CONTAINERS. A container performs no operation; it SEQUENCES or
+-- SELECTS operations its parts perform, and those parts reach the enclosing
+-- function through `nearest_v[flow]` — which is where the JOIN happens in this
+-- layer. So the waiver is not "nothing happens here", it is "the join is not
+-- this node's contribution", and the join is modelled.
+--
+-- THE SHORT-CIRCUIT PAIR IS IN THIS GROUP ON PURPOSE. `a && b` and `c ? d : e`
+-- evaluate one arm sometimes and the other sometimes; the effect of the whole
+-- is the JOIN of both arms, because this layer is a may-set. The control-flow
+-- layer calls them `r_guard_arm` and this one calls them containers, and both
+-- are true of the same node — the layers are asking different questions.
+ignored(js, block_statement,            effect, a_a_container_performs_no_operation).
+ignored(js, expression_statement,       effect, a_a_container_performs_no_operation).
+ignored(js, sequence_expression,        effect, a_a_container_performs_no_operation).
+ignored(js, parenthesized_expression,   effect, a_a_container_performs_no_operation).
+ignored(js, if_statement,               effect, a_a_container_performs_no_operation).
+ignored(js, conditional_expression,     effect, a_a_container_performs_no_operation).
+ignored(js, logical_expression,         effect, a_a_container_performs_no_operation).
+ignored(js, return_statement,           effect, a_a_container_performs_no_operation).
+ignored(js, switch_statement,           effect, a_a_container_performs_no_operation).
+ignored(js, switch_case,                effect, a_a_container_performs_no_operation).
+ignored(js, labeled_statement,          effect, a_a_container_performs_no_operation).
+ignored(js, empty_statement,            effect, a_a_container_performs_no_operation).
+ignored(js, class_body,                 effect, a_a_container_performs_no_operation).
+-- A key/value pair in an object literal, INCLUDING the computed-key form:
+-- `{ [k()]: v }` runs `k` and `{ a: f() }` runs `f`, and in both the operation
+-- belongs to the child rather than to the pair. `object_method` is NOT here —
+-- it is a function definition and is filed with the latent group.
+ignored(js, object_property,            effect, a_a_container_performs_no_operation).
+-- A DECLARATION IS A CONTAINER AND ITS INITIALISER IS NOT. `const x = f()` runs
+-- `f` and the declarator performs nothing of its own. A `let` does create a
+-- mutable cell, which is an allocation in Koka's local heap — and it is not
+-- counted here, because the cell's whole observable life is the
+-- `read<local>` / `write<local>` pair this layer already derives, and counting
+-- its creation as well would double-count one binding.
+ignored(js, variable_declaration,       effect, a_a_container_performs_no_operation).
+ignored(js, variable_declarator,        effect, a_a_container_performs_no_operation).
+-- The two transparent TypeScript wrappers. `x!` and `x as T` are erased and
+-- their OPERAND remains, so they are containers rather than members of the
+-- erased group above — the distinction the value layer already makes when it
+-- lists them as shapes and reads through them.
+ignored(js, tsas_expression,            effect, a_a_container_performs_no_operation).
+ignored(js, tsnon_null_expression,      effect, a_a_container_performs_no_operation).
+-- A defaulted parameter is a container whose right arm runs conditionally,
+-- which is exactly `guard_kind(assignment_pattern, right)` at the control-flow
+-- layer seen from here.
+ignored(js, assignment_pattern,         effect, a_a_container_performs_no_operation).
+-- The specifiers. A specifier NAMES what an import or export moves; the module
+-- evaluation that the declaration triggers is the DECLARATION's cell, and all
+-- five of those are open below.
+ignored(js, import_specifier,           effect, a_a_container_performs_no_operation).
+ignored(js, import_default_specifier,   effect, a_a_container_performs_no_operation).
+ignored(js, import_namespace_specifier, effect, a_a_container_performs_no_operation).
+ignored(js, export_specifier,           effect, a_a_container_performs_no_operation).
+ignored(js, export_namespace_specifier, effect, a_a_container_performs_no_operation).
+ignored(js, export_default_declaration, effect, a_a_container_performs_no_operation).
+
+-- ---------------------------------------------------------------------------
+-- TWO PURE TRANSFERS. `break` and `continue` move control and perform no
+-- operation on any heap, throw nothing and allocate nothing. The control-flow
+-- layer has a great deal to say about both and this layer has nothing, which is
+-- the clearest case in the file of two layers disagreeing about how interesting
+-- one kind is.
+ignored(js, break_statement,            effect, a_a_transfer_performs_no_operation).
+ignored(js, continue_statement,         effect, a_a_transfer_performs_no_operation).
+
+-- ---------------------------------------------------------------------------
+-- TWO SUSPENSIONS, AND THIS IS THE TAXONOMY'S DECISION RATHER THAN THIS FILE'S.
+-- `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` refused ASYNC as
+-- an effect: Koka has no such effect — async is `io` plus first-class control —
+-- and this repository measured the point independently, because `await` is
+-- transparent to value flow and `yield` is not, so ASYNC-as-an-effect would
+-- assert a uniformity our own measurement contradicts.
+--
+-- AND `await` CALLS NOTHING, which was measured rather than assumed:
+-- `f_an_await_calls_no_library_method_and_two_notes_said_it_did` patched
+-- `Promise.prototype.then` and counted ZERO calls for `await <native promise>`,
+-- `await 5` and `await <user thenable>` alike, on two V8 versions, with
+-- `p.then(f)` at 1 as the control. The specification's `Await` uses an INTERNAL
+-- operation, so an await is not an observable call at all. The effect of
+-- `await e` is therefore exactly the effect of `e`, and the suspension is
+-- control rather than effect.
+ignored(js, await_expression,           effect, a_suspension_is_not_an_effect).
+ignored(js, yield_expression,           effect, a_suspension_is_not_an_effect).
+
+-- ---------------------------------------------------------------------------
+-- THREE DIRECTIVES. `'use strict'` and a hashbang are not evaluated
+-- constructs — and facts/js-statements.rofl already measured the one thing that
+-- could have made them one: strict mode's two reachable consequences are
+-- implicit throws and the `this` of a plain call, `may_throw` is seeded by
+-- `throw_statement` and nothing else, and every file this scanner sees is
+-- parsed as a module and therefore strict already.
+ignored(js, directive,                  effect, a_not_an_evaluated_construct).
+ignored(js, directive_literal,          effect, a_not_an_evaluated_construct).
+ignored(js, interpreter_directive,      effect, a_not_an_evaluated_construct).
+
+-- ===========================================================================
+-- ONE CELL THAT IS NOBODY'S WORK — `debugger` is IRREDUCIBLE, not open.
+--
+-- With a debugger attached the statement suspends the program and hands control
+-- to a host that can do anything, which is `io`; with none attached it does
+-- nothing at all, which is `total`. Both readings are correct and WHICH ONE
+-- HOLDS IS DECIDED AT RUN TIME, so this is `runtime_dependent` — the same
+-- irreducible reason `import(pathVar)` carries — and not `not_yet`. It
+-- therefore costs the queue nothing: `open_cell[audit]` requires
+-- `our_unknown`, and no amount of work moves this one.
+unknown_because(js, debugger_statement, effect, runtime_dependent).
+
+-- ===========================================================================
+-- WHAT IS OPEN — 18 CELLS, EVERY ONE OWNED BY NAME IN facts/worklist.rofl
+--
+-- The rows below are `not_yet` by DEFAULT and carry no `unknown_because`,
+-- because `not_yet` is exactly what they are and writing it out would add a
+-- word without adding a fact. What they DO carry is an owner, one
+-- `claim(queued, ...)` each, in facts/worklist.rofl beside the item that owns
+-- it. `sweeper` for this layer is 0 and `unqueued[audit]` is 0, which is the
+-- pair of numbers that says every one of the eighteen has a name against it.
+--
+--   FOUR — THE AMBIENT SURFACE          w_effect_ambient_call
+--     call_expression, optional_call_expression, new_expression, identifier
+--     261 of the corpus's call sites do not resolve to a node in this program.
+--     A call whose callee is outside the program has an effect this layer
+--     cannot state, and `console.log` is `io` only if something says `console`
+--     is a runtime surface. `identifier` is here for the same reason one level
+--     down: a bare name is a local (bottom or `read<local>`), an import
+--     (bottom), or a free global (`read<global>`, and a ReferenceError if it is
+--     not there), and only the third needs the surface.
+--
+--   FIVE — CLASS INITIALISERS           w_effect_class_initialisers
+--     class_declaration, class_property, class_private_property,
+--     class_accessor_property, static_block
+--     A static block and a field initialiser RUN when the class is defined, so
+--     their effect belongs to the declaration site and not to a call. Joining a
+--     latent effect into a declaration is a rule this layer does not have, and
+--     it is a different rule from the call propagation because there is no call
+--     site to hang it on.
+--
+--   THREE — IMPLICIT COERCION           w_effect_implicit_coercion
+--     binary_expression, unary_expression, template_literal
+--     `a + b` calls `valueOf` or `toString` on an operand that has one, and
+--     throws for a Symbol; `-x` coerces; `${x}` coerces. This is
+--     `accessor_call` wearing a third syntax — a construct whose surface is an
+--     operator and whose semantics is a call — and the model cannot tell which
+--     operands have a custom conversion without the prototype surface.
+--
+--   FIVE — MODULE EVALUATION            w_effect_module_evaluation
+--     import_declaration, import, import_expression, export_all_declaration,
+--     export_named_declaration
+--     A static import EVALUATES the imported module, so its effect is that
+--     module's top-level effect. The modules layer resolves a specifier to a
+--     file and nothing joins a file's top-level effect to the importer, so this
+--     is a real missing edge rather than a missing surface.
+--
+--   ONE — `with`                        w_inert_statements
+--     with_statement
+--     `with (o) { x }` turns every bare name in its body into a member read on
+--     `o`, so it changes what a READ MEANS — which is this layer's `read<h>`
+--     seed. It joins the four `with_statement` cells the owner already holds at
+--     the other four layers, under the same item, and it waits on the same
+--     decision about name resolution.

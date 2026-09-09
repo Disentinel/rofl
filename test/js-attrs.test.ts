@@ -77,7 +77,16 @@ const PACKS = [
   // LOADED rather than refused, for the reason the header gives: an audit over
   // the rules themselves has no defensible reason to refuse a pack of rules.
   'facts/js-host-surface.rofl', 'facts/js-host.rofl', 'rules/js-host.rofl',
-  RULES,
+
+  // AND THE FIFTH LAYER, 2026-09-09 (w_effect_layer). `layer(effect)` and its
+  // hundred verdicts live in `facts/js-effects.rofl` and the lattice in
+  // `rules/js-effects.rofl`. Both are LOADED rather than refused, and for this
+  // world the reason is not a preference: this file's subject is which
+  // attributes the JS layers READ, and the effect rules read `operator` — via
+  // `plain_assign` — and `handler`, so refusing them would make
+  // `attr_deferred` claim nobody reads an attribute a layer reads. Fifth pack
+  // in one week to redden this closure, and the fifth caught in a single run.
+  'facts/js-effects.rofl', 'rules/js-effects.rofl', RULES,
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER
@@ -105,7 +114,15 @@ function build(muts: Mut[] = []): World {
     }
     return t;
   });
-  const res = r.load(texts.join('\n'));
+  // A BUDGET ON THE LOAD, 2026-09-09, and it is the load-order defect arriving
+  // from the third direction. `r.load()` RE-EVALUATES under its own
+  // DEFAULT_BUDGET of 100 000 steps, and this world crossed that when the
+  // effect layer and the host surface joined its pack list — five packs more
+  // than it carried this morning. The tell is `$load(1)/budget_exhausted` in
+  // `hole`, and every one of this file's eighteen assertions went red at once
+  // because they all rest on the same fixpoint. The packs did nothing wrong;
+  // the world outgrew a default nobody had reason to look at.
+  const res = r.load(texts.join('\n'), { budget: 40_000_000 });
   assert.ok(res.ok, `world REJECTED:\n${res.diagnostics.slice(0, 5).join('\n')}`);
   for (const [logical, disk] of FILES) {
     const a = r.assert(scan(read(disk), { file: logical }).facts.join('\n'));

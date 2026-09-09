@@ -457,6 +457,15 @@ test('the world names every js pack on disk as loaded or deliberately absent', (
     'rules/js-resolve.rofl',
     'rules/js-vocabulary.rofl',
     'rules/js-attrs.rofl',
+    // THE FIFTH LAYER, 2026-09-09, landing on the same day from the branch
+    // beside this one. Refused rather than loaded, and the reason is the one
+    // this list's header gives: this world answers a question about the
+    // RUNTIME. The effect layer is the CONSUMER of that answer — its concrete
+    // column joins `ambient_effect(fs, "readFileSync", io)` — so loading it
+    // here would put the consumer inside the world that produces its input and
+    // make every number below a measurement of both.
+    'facts/js-effects.rofl',
+    'rules/js-effects.rofl',
   ]);
   const unaccounted = onDisk.filter((p) => !loaded.has(p) && !refused.has(p));
   assert.deepEqual(unaccounted, [],
