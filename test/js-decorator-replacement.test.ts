@@ -265,6 +265,13 @@ const LEDGER_FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-m
   // hold, and the first where the missing pack made the queue accuse itself.
   'facts/js-effects.rofl',
   'facts/worklist.rofl'];
+// `rules/js-ambient.rofl` IS DECIDED ABOUT AND NOT LOADED, 2026-09-09
+// (w_effect_ambient_call), for the same reason `rules/js-effects.rofl` is not
+// here: this world holds the PLAN and the VERDICTS, and the ambient pack is
+// rules over a corpus. It has no fact pack of its own — deliberately, since the
+// item's product is that nothing in it is authored — so there is no row it
+// could contribute to `facts/js-effects.rofl`'s claims, which are already
+// loaded above.
 const LEDGER_RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 function ledger(mut?: { file: string; find: string; replace: string }) {

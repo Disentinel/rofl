@@ -43,6 +43,13 @@ const FACTS = ['facts/js-kinds.rofl', 'facts/js-shapes.rofl', 'facts/js-modules.
   // claims for — a hundred rows in `unqueued[audit]`. The counts below are the
   // integrator's to move; this line is what makes them measurable at all.
   'facts/js-effects.rofl', 'facts/findings.rofl'];
+// `rules/js-ambient.rofl` IS DECIDED ABOUT AND NOT LOADED, 2026-09-09
+// (w_effect_ambient_call). It is the first JS pack in the tree with NO fact
+// pack beside it — the whole item is that nothing in it is authored — so there
+// is nothing here for this world to hold: the plan reads VERDICTS, and the four
+// ambient verdicts are `handled` rows in `facts/js-effects.rofl`, which is
+// already on the list above. Loading the rules would need a corpus this world
+// does not have, exactly as `rules/js-effects.rofl` would.
 const RULES = ['rules/js-model.rofl', 'rules/worklist.rofl'];
 
 interface Mut { find?: string; replace?: string; extra?: string; file?: string }
@@ -206,6 +213,14 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // instrument rather than the model — the callee-name oracle this layer
     // reads statement order through can only see a `completes_abruptly` row
     // whose successor holds a call, which on this corpus is 27 rows out of 789.
+    // THREE JOINED 2026-09-09, all entered on the day by
+    // `w_effect_ambient_call` out of ONE relation:
+    // `ambient_owed[flow](Origin, Surface)` splits by origin, and the three
+    // origins owe different work to different owners — the ECMAScript
+    // intrinsics, the builtin prototypes, and the shape axis whose refusal the
+    // item's own arrival expired. Entered today, not started, which is exactly
+    // the distinction this list cannot draw and does not pretend to.
+    'w_ambient_es_intrinsic_effects', 'w_ambient_prototype_effects',
     'w_cg_new_expression', 'w_cg_optional_member',
     'w_cg_syntactic_wrappers',
     // `w_connected_and_badly_ordered` JOINED 2026-09-09, entered by
@@ -229,7 +244,7 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // rather than to record a discovery — which is what an item with no spawned
     // finding looks like when it is doing its job.
     'w_effect_class_initialisers', 'w_effect_implicit_coercion',
-    'w_effect_module_evaluation', 'w_effect_sweep',
+    'w_effect_module_evaluation', 'w_effect_shape_axis', 'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
     // by the item that built the second cost gate. It is on this list for the
@@ -384,9 +399,14 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // AND THE SIX THAT ARE THE OWNER'S ARE STILL HERE, unchanged: the four
   // `with_statement` rows at the older layers, `require`, and the subpath
   // specifier. A layer arriving does not close somebody else's decision.
+  // 24 -> 20 on 2026-09-09 with `w_effect_ambient_call`: the four AMBIENT cells
+  // left — `call_expression`, `optional_call_expression`, `new_expression` and
+  // `identifier` at the effect layer. THE SET IS THE PIN AND NOT THE NUMBER, and
+  // this move is the argument for that: four rows disappear from the list and a
+  // reader can see WHICH four, where 24 -> 20 would have merged silently against
+  // any other branch that also moved it by four.
   assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
     'binary_expression/none/effect',
-    'call_expression/none/effect',
     'call_expression/none/modules',
     'class_accessor_property/none/effect',
     'class_declaration/none/effect',
@@ -394,13 +414,10 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     'class_property/none/effect',
     'export_all_declaration/none/effect',
     'export_named_declaration/none/effect',
-    'identifier/none/effect',
     'import/none/effect',
     'import_declaration/none/effect',
     'import_declaration/subpath/modules',
     'import_expression/none/effect',
-    'new_expression/none/effect',
-    'optional_call_expression/none/effect',
     'static_block/none/effect',
     'template_literal/none/effect',
     'unary_expression/none/effect',

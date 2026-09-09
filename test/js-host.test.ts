@@ -475,6 +475,15 @@ test('the world names every js pack on disk as loaded or deliberately absent', (
     // failed to attribute a global.
     'facts/js-globals.rofl',
     'rules/js-globals.rofl',
+    // AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). Refused, and
+    // it is the same refusal as the effect layer's two lines up seen from the
+    // other end: `rules/js-ambient.rofl` READS `member_effect[code]`,
+    // `host_module_effect` and `host_global_effect` — this world's product — and
+    // turns them into `ambient_effect(S, Member, EffectName)`. It is the
+    // consumer, and a world that held both could not say which half failed to
+    // attribute an API. Its own world is `w_js_ambient` in facts/worlds.rofl,
+    // over this world's fixtures plus the ES globals one.
+    'rules/js-ambient.rofl',
   ]);
   const unaccounted = onDisk.filter((p) => !loaded.has(p) && !refused.has(p));
   assert.deepEqual(unaccounted, [],

@@ -136,6 +136,14 @@ const CONTROLFLOW: WorldSpec = {
     // file's own: this world's TOTAL is a pinned number, and a pack added to it
     // moves that number for a question it is not measuring.
     'facts/js-globals.rofl', 'rules/js-globals.rofl',
+    // AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). Refused by
+    // all three worlds, by name, and the reason is this file's own sentence
+    // rather than a filing decision: `rules/js-ambient.rofl` reads the runtime
+    // surface and the ES globals, both of which every world here already
+    // refuses, so loading it would price a join whose two inputs are absent —
+    // and this world's TOTAL is a pinned number. Its cost is measured in its
+    // own world (`w_js_ambient`) by test/js-ambient.test.ts.
+    'rules/js-ambient.rofl',
     // the resolver and the attribute packs are their own subjects, each with a
     // test file that builds its own world; nothing in this corpus reads them
     'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
@@ -210,6 +218,14 @@ const ERA: WorldSpec = {
     // well as the rules, unlike `facts/js-lib-surface.rofl` above, because this
     // world's number is pinned and 511 rows of table would move it.
     'facts/js-globals.rofl', 'rules/js-globals.rofl',
+    // AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). Refused by
+    // all three worlds, by name, and the reason is this file's own sentence
+    // rather than a filing decision: `rules/js-ambient.rofl` reads the runtime
+    // surface and the ES globals, both of which every world here already
+    // refuses, so loading it would price a join whose two inputs are absent —
+    // and this world's TOTAL is a pinned number. Its cost is measured in its
+    // own world (`w_js_ambient`) by test/js-ambient.test.ts.
+    'rules/js-ambient.rofl',
   ],
   corpus: [
     ['era.js', 'test/fixtures/js-env/era.js.txt'],
@@ -270,6 +286,14 @@ const CALLGRAPH: WorldSpec = {
     // refuses along with `facts/js-lib-surface.rofl` and `rules/js-env-api.rofl`
     // above and for the same reason.
     'facts/js-globals.rofl', 'rules/js-globals.rofl',
+    // AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). Refused by
+    // all three worlds, by name, and the reason is this file's own sentence
+    // rather than a filing decision: `rules/js-ambient.rofl` reads the runtime
+    // surface and the ES globals, both of which every world here already
+    // refuses, so loading it would price a join whose two inputs are absent —
+    // and this world's TOTAL is a pinned number. Its cost is measured in its
+    // own world (`w_js_ambient`) by test/js-ambient.test.ts.
+    'rules/js-ambient.rofl',
   ],
   corpus: CALL_CORPUS,
 };

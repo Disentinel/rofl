@@ -94,6 +94,14 @@ const PACKS = [
   // the rules read", and a pack outside it is a pack whose reads are reported
   // as absent. Fifth time a pack added on one branch reddened this closure.
   'facts/js-globals.rofl', 'rules/js-globals.rofl', RULES,
+  // AND THE AMBIENT SURFACE, 2026-09-09 (w_effect_ambient_call). It has no fact
+  // pack — the whole item is that nothing in it is authored — and the rules read
+  // `selects[flow]` for a member key and `ast_child(N, object, 0, O)` for a
+  // receiver, so a world measuring which ATTRIBUTES the JS layers read is wrong
+  // about this pack's reads while it is outside the closure. LOADED, for the
+  // reason this list keeps restating: an audit over the rules themselves has no
+  // defensible reason to refuse a pack of rules. Sixth pack in one week.
+  'rules/js-ambient.rofl',
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER

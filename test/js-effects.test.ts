@@ -222,16 +222,29 @@ test('the effect layer answers 100 js cells and the partition closes', () => {
   const w = base();
   const v = (x: string) => w.n(`verdict[audit](js, K, S, effect, ${x})`);
   // A number that moves when the MODEL changes stays a number, and this one is
-  // re-stated on purpose: 29 modelled, 52 waived, 19 not modelled — of which
-  // ONE is irreducible (`debugger` is `runtime_dependent`) and eighteen are open
+  // re-stated on purpose: 33 modelled, 52 waived, 15 not modelled — of which
+  // ONE is irreducible (`debugger` is `runtime_dependent`) and fourteen are open
   // and owned by name in facts/worklist.rofl.
+  //
+  // MOVED 2026-09-09 by `w_effect_ambient_call`, 29 -> 33 and 19 -> 15, and the
+  // four are named below rather than left to the difference between two
+  // numbers. A count two branches both move is right on each branch and wrong
+  // in the merge; the SET says which kinds changed hands.
   assert.equal(v('modelled') + v('waived') + v('not_modelled'),
     w.n('cell[audit](js, K, S, effect)'), 'the three buckets partition the layer');
   assert.equal(w.n('cell[audit](js, K, S, effect)'), w.n('node_kind(js, K)'),
     'one cell per kind: the shape axis does not apply here');
-  assert.equal(v('modelled'), 29);
+  assert.equal(v('modelled'), 33);
   assert.equal(v('waived'), 52);
-  assert.equal(v('not_modelled'), 19);
+  assert.equal(v('not_modelled'), 15);
+  // THE AMBIENT GROUP, BY NAME. These four are `modelled` while
+  // `rules/js-ambient.rofl` — which this world deliberately does NOT load — is
+  // what derives their answer, and that is the point of asserting them here:
+  // the verdict is a claim about the CELL and the matrix reads claims rather
+  // than rules, so this world can hold the claim and refuse the pack.
+  assert.deepEqual(['call_expression', 'identifier', 'new_expression', 'optional_call_expression']
+    .filter((k) => w.n(`verdict[audit](js, ${k}, none, effect, modelled)`) === 1),
+    ['call_expression', 'identifier', 'new_expression', 'optional_call_expression']);
   // the reason vocabulary is closed and no excuse outlived its cause
   assert.deepEqual(w.binds('bad_reason[audit](A, K, S, L, R)'), []);
   assert.deepEqual(w.binds('orphan_claim[audit](A, K, S, L)'), []);
