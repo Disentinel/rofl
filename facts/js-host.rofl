@@ -1,0 +1,304 @@
+-- js-host.rofl — THE RUNTIME AXIS, AND WHAT EACH RUNTIME API DOES.
+--
+-- facts/js-host-surface.rofl is GENERATED and says what EXISTS: 939 globals
+-- across two hosts, 57 node modules, 1321 module members, 718 of them dated.
+-- This file is AUTHORED and says the two things no `.d.ts` can be read for:
+-- which runtimes we are asking about, and what an API DOES.
+--
+-- ===========================================================================
+-- 1. THE SECOND AXIS, ON THE OWNER'S DESIGN OF 2026-09-09: A RUNTIME VERSION
+--    IS A SUBKIND OF A RUNTIME FAMILY.
+--
+-- The era scale (facts/js-env.rofl, rules/js-env.rofl) is a COMPOSITION of
+-- named releases. `release(es2022)`, `includes(es2022, es2021)`, and every
+-- question over it is MEMBERSHIP: `reaches[audit](E, R)`. There is not one
+-- integer left in it, and removing the last one was
+-- f_an_era_is_a_composition_of_releases_and_not_a_year.
+--
+-- THE RUNTIME AXIS IS THE SAME PARTIAL ORDER OVER DIFFERENT THINGS, which is
+-- the owner's point and the reason the machinery is free: node 20 provides what
+-- node 18 does plus its own, so `runtime_includes` is `includes` and
+-- `runtime_reaches` is `reaches`, walked the same way. No second traversal is
+-- invented and no third kind of scale exists.
+--
+--     runtime(node)                      the FAMILY
+--     runtime_version(node18, node, 18)  a version OF that family
+--     runtime_includes(node20, node18)   the order WITHIN a family
+--     provides_release(node18, es2022)   THE BRIDGE BETWEEN THE AXES
+--     provides_api(node18, "node:fs", "cp")   its own surface, DERIVED
+--
+-- `release/1` IS NOT REUSED FOR A RUNTIME VERSION and never should be: es2022
+-- is a thing TC39 published and node18 is a thing that IMPLEMENTS it, and the
+-- bridge names that relation instead of collapsing it. With the bridge in
+-- place, `lib_unsupported[audit]` keeps working unchanged over the ES axis and
+-- `fetch`-as-a-global lives here without pretending to be an edition.
+--
+-- THE ORDER IS NOT TOTAL ACROSS FAMILIES, and that is a property rather than a
+-- gap. `node20` and a hypothetical `deno1_40` are INCOMPARABLE — neither
+-- includes the other and no amount of data would make one — so
+-- `runtime_includes` is only ever written within a family, and
+-- `runtime_cross_family[audit]` in rules/js-host.rofl is the row that says so
+-- if anyone writes one. The effect layer's lattice has a join; a runtime
+-- hierarchy does not, and a reader who expects one will be wrong quietly.
+edb(runtime).
+edb(runtime_version).
+edb(runtime_includes).
+edb(provides_release).
+edb(runtime_undated).
+
+-- ===========================================================================
+-- 2. THE FAMILIES AND THEIR VERSIONS.
+--
+-- node24 IS DELIBERATELY ABSENT AND THE REASON IS MEASURED. `@types/node`
+-- 22.20.1 is the source, and the highest `@since` anywhere in it is v22.20.0 —
+-- counted by major: 19 members at 18, 22 at 19, 19 at 20, 3 at 21, 50 at 22,
+-- and NOTHING at 23 or above. So a node24 row would separate nothing from
+-- node22, `runtime_pair_indistinct[audit]` would name the pair, and a gate that
+-- is red on an honest tree gets switched off. The scale is a record of what
+-- THIS SOURCE can tell apart, which is the same sentence facts/js-env.rofl
+-- writes about the years TC39 published.
+runtime(node).
+runtime_version(node18, node, 18).
+runtime_version(node20, node, 20).
+runtime_version(node22, node, 22).
+runtime_includes(node20, node18).
+runtime_includes(node22, node20).
+
+-- A BROWSER FAMILY WITH ONE UNVERSIONED MEMBER, because `lib.dom.d.ts` carries
+-- no `@since`, no year in its name and no composition — there is nothing in the
+-- source to order. Declaring the version WITHOUT a number and saying so in a
+-- row is the honest form: `runtime_unversioned[audit]` is the row that fires
+-- for a version that goes undated WITHOUT a waiver. An absence with a name is
+-- checkable; an absent row is not.
+runtime(browser).
+runtime_version(browser_evergreen, browser, 0).
+runtime_undated(browser_evergreen, a_source_with_no_version_axis).
+
+-- --------------------------------------------------------------------------
+-- 2a. THE INCLUSION IS ASSERTED, NOT DERIVED, AND THE OWNER'S CAVEAT IS WHY
+--     THIS PARAGRAPH EXISTS RATHER THAN A SILENT ROW.
+--
+-- `includes` assumes MONOTONE inclusion and runtimes REMOVE things. The
+-- instruction was: do not author the inclusion, derive it — and if it cannot be
+-- derived from what is on disk, say so and make it a claim with a witness
+-- rather than a bare row.
+--
+-- IT CANNOT BE DERIVED FROM THIS SOURCE, and the reason is structural rather
+-- than effortful. MEASURED 2026-09-09 over the whole of `@types/node` 22.20.1:
+--
+--     @since v<x>             718 member rows      ARRIVAL is recorded
+--     @deprecated              26 module exports   deprecation is recorded
+--     @deprecated Since v<x>   23 of those 26      ...and most are dated
+--     REMOVAL                   0 rows, no tag     NOT RECORDED, AT ALL
+--
+-- `@types/node` is ONE SNAPSHOT. A member removed upstream simply stops being
+-- in the file, and an absent symbol is indistinguishable from one that never
+-- existed — so no query over this package can produce a counterexample to
+-- monotone inclusion at any effort. Seeing one would take a SECOND snapshot,
+-- `@types/node@18` beside `@types/node@22`, which is a package this repository
+-- does not have on disk.
+--
+-- SO THE ROWS ABOVE ARE A CLAIM AND THEY CARRY THE MACHINERY TO BE REFUTED.
+-- `runtime_drops[audit]` in rules/js-host.rofl is the counterexample relation,
+-- written out in full and EMPTY BY THIS CONSTRUCTION rather than by luck; the
+-- day a second snapshot lands it is the row that populates, and nothing else
+-- has to change. What IS derivable is the deprecation, which is the visible
+-- half of a removal, and `host_call_deprecated[audit]` reports it at a site.
+-- NO WITNESS ROW, AND THE REASON IS THE INSTRUMENT: the claim is about the
+-- runtime world of test/js-host-world.ts, which facts/worlds.rofl does not
+-- declare, and scripts/witness_check.ts emits no `str_scheme` so the module door
+-- would witness as 0 while being true. w_runtime_surface in facts/worklist.rofl
+-- states that blocker in full; test/js-host.test.ts is where the claim is
+-- checked, with both of its positive controls.
+
+-- --------------------------------------------------------------------------
+-- 2b. THE BRIDGE. A runtime version REACHES an ECMAScript release, and this is
+-- the row that relates the two axes without merging them.
+--
+-- THESE THREE ARE AUTHORED AND THE SOURCE CANNOT CHECK THEM, which is said here
+-- because it is the weakest thing in this file. `@types/node` references
+-- `lib="es2020"` exactly twice, and that is a floor for its own DECLARATIONS —
+-- what TypeScript needs to typecheck the package — not a claim about what V8
+-- implements. So the mapping below is engineering knowledge:
+--
+--     node18  V8 10.2   ES2022 complete   (class fields, `at`, top-level await)
+--     node20  V8 11.3   ES2023            (`toSorted`, `findLast`, hashbang)
+--     node22  V8 12.4   ES2024            (`Object.groupBy`, `ArrayBuffer.transfer`)
+--
+-- ONE THING MAKES THEM CHECKABLE ANYWAY, and it is why the bridge points at a
+-- RELEASE rather than at an `environment`: `reaches[audit]` composes, so
+-- `runtime_reaches_release[audit](node20, es2015)` follows from
+-- `provides_release(node20, es2023)` and TypeScript's own `includes` chain. A
+-- wrong row here is wrong about ONE step and the whole chain below it stays
+-- read from the source.
+--
+-- AND IT DOES NOT TOUCH `environment/1`. The era scale has no es2022 and no
+-- es2024 environment — facts/js-env.rofl gives the reason, and it is a good one
+-- — but it HAS `release(es2022)` and `release(es2024)`, generated by
+-- scanners/ts_lib.ts from TypeScript's `/// <reference lib=` lines. So the
+-- bridge lands on rows that already exist and mints nothing on the owner's
+-- scale.
+provides_release(node18, es2022).
+provides_release(node20, es2023).
+provides_release(node22, es2024).
+
+-- AND THE BROWSER GETS ONE TOO, which is not a courtesy. Without a bridge row a
+-- runtime reaches NO release, so `runtime_lib_unsupported[audit]` reports every
+-- standard-library call in the corpus against it — the same shape of noise that
+-- comparing the browser against node's module surface produced before the
+-- family went into that join. `browser_evergreen` is exactly the runtime for
+-- which "the current edition" is the honest answer, which is why it is the one
+-- version of its family and why `runtime_no_release[audit]` is empty and alive
+-- rather than permanently occupied by it.
+provides_release(browser_evergreen, es2024).
+
+-- ===========================================================================
+-- 3. WHAT AN API DOES — THE ROW THE EFFECT LAYER JOINS AGAINST.
+--
+-- `w_effect_layer` models Koka's basic lattice — total, exn, div, ndet, alloc,
+-- read, write, io — and its own note says `io` cannot be derived for
+-- `console.log` or `fs.readFileSync` without this file. THE POINT OF THESE
+-- ROWS IS THAT THEY ARE ROWS: an effect rule joins `host_call_effect[audit]`
+-- in rules/js-host.rofl, and nothing anywhere has to recognise a spelling.
+--
+-- THIS PACK DOES NOT DECLARE THE LATTICE AND MUST NOT. `layer/1` is the
+-- owner's and the ordering between `total` and `io` belongs to whoever models
+-- Koka; what is declared here is only the ATOM each API is attributed, and
+-- `host_effect_atom/1` exists so that a misspelling is a row rather than a
+-- silence — the same job `feature_undeclared[audit]` does for the era table.
+edb(host_effect_atom).
+edb(host_module_effect).
+edb(host_member_effect).
+edb(host_global_effect).
+edb(host_no_effects).
+
+host_effect_atom(total).
+host_effect_atom(exn).
+host_effect_atom(div).
+host_effect_atom(ndet).
+host_effect_atom(alloc).
+host_effect_atom(read).
+host_effect_atom(write).
+host_effect_atom(io).
+
+-- --------------------------------------------------------------------------
+-- 3a. THE MODULE IS THE GRAIN, and choosing it that way is a decision with a
+-- price. 1321 members cannot be hand-classified honestly, and a table that
+-- claimed to have been would be the defect this repository records as a note
+-- nobody re-reads. So the DEFAULT is per module — `node:fs` is io because
+-- every reason to import it is io — and `host_member_effect` below carries
+-- only the members that DIFFER from their module, which is a table small
+-- enough to defend line by line.
+--
+-- TWENTY-TWO OF FIFTY-SEVEN MODULES ARE CLASSIFIED and the other THIRTY-FIVE
+-- are NOT silently total: `host_module_uneffected[audit]` names every one of
+-- them, so the residue is a set anyone can print rather than an assumption.
+-- Both numbers are read off the world in test/js-host.test.ts rather than
+-- counted by eye here, because a count in a comment is the thing this
+-- repository has been wrong about seven times.
+host_module_effect(node, "node:fs",               io).
+host_module_effect(node, "node:fs/promises",      io).
+host_module_effect(node, "node:child_process",    io).
+host_module_effect(node, "node:process",          io).
+host_module_effect(node, "node:console",          io).
+host_module_effect(node, "node:http",             io).
+host_module_effect(node, "node:https",            io).
+host_module_effect(node, "node:net",              io).
+host_module_effect(node, "node:readline",         io).
+host_module_effect(node, "node:readline/promises", io).
+host_module_effect(node, "node:timers",           io).
+host_module_effect(node, "node:timers/promises",  io).
+
+-- ...AND THE THREE THAT ARE NOT io, which is the half that makes the table
+-- worth having. A model in which every runtime import is io says nothing.
+--   node:os      READ. `hostname`, `cpus`, `freemem` interrogate the machine
+--                and change nothing about it.
+--   node:crypto  NDET. The module's reason to exist is key, IV and random
+--                generation; `createHash` is the exception and it is below.
+--   node:path    TOTAL. String algebra over separators, and the one member
+--                that is not — `resolve`, which reads `process.cwd()` — is
+--                below. This is the row that makes the override table
+--                necessary rather than decorative.
+host_module_effect(node, "node:os",               read).
+host_module_effect(node, "node:crypto",           ndet).
+host_module_effect(node, "node:path",             total).
+host_module_effect(node, "node:path/posix",       total).
+host_module_effect(node, "node:path/win32",       total).
+host_module_effect(node, "node:querystring",      total).
+host_module_effect(node, "node:buffer",           alloc).
+host_module_effect(node, "node:string_decoder",   alloc).
+host_module_effect(node, "node:url",              alloc).
+host_module_effect(node, "node:util",             total).
+
+-- --------------------------------------------------------------------------
+-- 3b. THE MEMBERS THAT DIFFER FROM THEIR MODULE. Six rows, and each one is a
+-- claim a reader can check against node's documentation in one look.
+--
+-- `path.resolve` IS THE WHOLE ARGUMENT FOR THIS TABLE. Every other member of
+-- `node:path` is a pure function of its arguments; `resolve` with a relative
+-- first segment reads the process's current directory, so a model that dated
+-- the effect by the module would call it total and be wrong about the one
+-- member of that module anybody's correctness depends on.
+host_member_effect(node, "node:path",   "resolve",         io).
+host_member_effect(node, "node:util",   "log",             io).
+host_member_effect(node, "node:util",   "debuglog",        io).
+host_member_effect(node, "node:util",   "debug",           io).
+host_member_effect(node, "node:crypto", "createHash",      alloc).
+host_member_effect(node, "node:crypto", "createHmac",      alloc).
+host_member_effect(node, "node:crypto", "timingSafeEqual", total).
+
+-- --------------------------------------------------------------------------
+-- 3c. THE GLOBALS, which arrive from nowhere rather than through the module
+-- boundary — see the two-doors paragraph at the head of rules/js-host.rofl.
+-- Twenty-two of node's seventy-three, and `host_global_uneffected[audit]`
+-- names the remaining fifty-one.
+host_global_effect(node, "console",         io).
+host_global_effect(node, "process",         io).
+host_global_effect(node, "fetch",           io).
+host_global_effect(node, "require",         io).
+host_global_effect(node, "gc",              io).
+host_global_effect(node, "localStorage",    io).
+host_global_effect(node, "sessionStorage",  io).
+
+-- SCHEDULING IS io HERE, AND IT IS THE ROW THE OWNER'S OPEN QUESTION LANDS ON.
+-- HANDOFF names a possible fifth `layer(scheduling)` and says its cells would
+-- be answered almost entirely by builtins — `setTimeout`,
+-- `Promise.prototype.then`. These seven rows are the builtin half of exactly
+-- that, and they are attributed `io` rather than given an effect of their own,
+-- because inventing a `sched` atom would be extending somebody else's lattice
+-- by fiat. If the layer is declared, this is the table it reads.
+host_global_effect(node, "setTimeout",      io).
+host_global_effect(node, "setInterval",     io).
+host_global_effect(node, "setImmediate",    io).
+host_global_effect(node, "clearTimeout",    io).
+host_global_effect(node, "clearInterval",   io).
+host_global_effect(node, "clearImmediate",  io).
+host_global_effect(node, "queueMicrotask",  io).
+
+-- ...AND THE ONES THAT ARE NOT io, again because a table where everything is
+-- io says nothing. `performance.now()` and `crypto.getRandomValues()` are
+-- NDET: they return a different answer each time and change nothing.
+-- `structuredClone`, `URL`, `TextEncoder` and `AbortController` ALLOCATE and
+-- do no more than that — which is precisely why they were safe to make
+-- globals in both hosts.
+host_global_effect(node, "performance",     ndet).
+host_global_effect(node, "crypto",          ndet).
+host_global_effect(node, "structuredClone", alloc).
+host_global_effect(node, "URL",             alloc).
+host_global_effect(node, "URLSearchParams", alloc).
+host_global_effect(node, "TextEncoder",     alloc).
+host_global_effect(node, "TextDecoder",     alloc).
+host_global_effect(node, "AbortController", alloc).
+
+-- --------------------------------------------------------------------------
+-- 3d. THE BROWSER IS A SURFACE WITHOUT EFFECTS, DECLARED. 866 globals came
+-- from `lib.dom.d.ts` and not one carries an effect row, because attributing
+-- 866 of them by hand is the thing section 3a refuses to do for 1321 members.
+--
+-- SAYING SO IS A ROW RATHER THAN A SILENCE. Without this waiver
+-- `host_global_uneffected[audit]` would report 866 browser names beside the 51
+-- node ones and be permanently, uselessly red — CLAUDE.md's own sentence about
+-- a gate that is red on an honest checkout. With it, the audit ranges over the
+-- hosts that CLAIM to be classified, and the browser's absence is a fact with
+-- a reason attached that anyone can query.
+host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).

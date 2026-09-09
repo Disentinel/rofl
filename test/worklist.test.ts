@@ -411,7 +411,12 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // the measured example — passes it untouched. The item exists because the
   // planner that COULD have caught it was built, measured 0/2 on its own
   // proposals, and refused.
-  assert.equal(w.n('work(W, Note)'), 67);
+  // 67 -> 68 on 2026-09-09: the runtime surface entered its own item. The host
+  // work covers @types/node and lib.dom through the TypeScript CHECKER rather
+  // than the parser — walking `declare module "path"` syntactically yields ONE
+  // member because it is `export = path` over a namespace, and asking the
+  // checker for the type of `import * as m from "node:path"` yields sixteen.
+  assert.equal(w.n('work(W, Note)'), 68);
 
   // PER LAYER, and the swept figures are the ONLY detector for a claim that
   // quietly falls into a bucket — see the mutant below that lives.

@@ -68,7 +68,16 @@ const PACKS = [
   // refuse a pack of facts about them. Fourth time in one morning that a pack
   // added on one branch reddened another's closure, and every one was caught in
   // a single run.
-  'facts/js-cost.rofl', RULES,
+  'facts/js-cost.rofl',
+  // AND THE FIFTH, 2026-09-09 from w_runtime_surface. The runtime layer reads
+  // `async`, `computed` and the identifier attributes through `selects[flow]`
+  // and `ident_in`, so a world measuring which ATTRIBUTES the rules read is
+  // wrong about this pack's reads while it is outside the closure — which is
+  // exactly the incident this list's own header records for rules/js-env.rofl.
+  // LOADED rather than refused, for the reason the header gives: an audit over
+  // the rules themselves has no defensible reason to refuse a pack of rules.
+  'facts/js-host-surface.rofl', 'facts/js-host.rofl', 'rules/js-host.rofl',
+  RULES,
 ];
 /** every JS pack in the tree, by name — the same closure
  *  test/js-layer-cost.test.ts takes, restated here because this world's ANSWER

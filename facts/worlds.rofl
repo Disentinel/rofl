@@ -64,6 +64,14 @@ world_omits(w_ledger, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_ledger, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world holds the findings ledger and nothing about JavaScript, so all three are
+-- refused for the reason every other js pack is refused here.
+world_omits(w_ledger, "facts/js-host-surface.rofl").
+world_omits(w_ledger, "facts/js-host.rofl").
+world_omits(w_ledger, "rules/js-host.rofl").
 
 -- ===========================================================================
 -- THE QUEUE WORLD — the plan, the coverage matrix and the ledger in one store,
@@ -118,6 +126,14 @@ world_omits(w_queue, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_queue, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world holds the plan and the matrix; a runtime surface is neither, and a
+-- witness about the queue must not be answerable out of node`s API list.
+world_omits(w_queue, "facts/js-host-surface.rofl").
+world_omits(w_queue, "facts/js-host.rofl").
+world_omits(w_queue, "rules/js-host.rofl").
 
 -- ===========================================================================
 -- THE CORPUS WORLD — the JS model over the call fixtures. This is the world
@@ -180,3 +196,14 @@ world_omits(w_js_corpus, "rules/js-pack-home.rofl").
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
 world_omits(w_js_corpus, "facts/js-cost.rofl").
+-- ...AND THE FOURTH OF THE SAME FAMILY, 2026-09-09 from w_runtime_surface.
+-- The runtime layer is three packs — `facts/js-host-surface.rofl` (GENERATED
+-- from @types/node and lib.dom.d.ts), `facts/js-host.rofl` (the runtime axis
+-- and the effect attribution) and `rules/js-host.rofl`. This world is the CALL corpus, whose five fixtures import nothing from node and
+-- reference no runtime global outside a comment — measured 2026-09-09, and
+-- the reason test/js-host-world.ts builds a world of its own rather than
+-- appending a sixth file here. Loading the packs would add 2 300 rows that
+-- nothing in this world can join against.
+world_omits(w_js_corpus, "facts/js-host-surface.rofl").
+world_omits(w_js_corpus, "facts/js-host.rofl").
+world_omits(w_js_corpus, "rules/js-host.rofl").
