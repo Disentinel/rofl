@@ -1932,6 +1932,23 @@ work(w_meta_property, "new.target and import.meta: one node kind and two questio
 -- false, because `axis_applies(shape, modules)` was already declared and the
 -- column is per-layer by design. See the three notes below.
 work_state(w_meta_property, done).
+-- ...AND THE ITEM'S WHOLE FINDING IS TWO ROWS NOW, 2026-09-09
+-- (w_note_is_not_evidence). `one node kind and two questions` was settled by
+-- `meta_form[code]` in rules/js-structure.rofl reading the two identifier
+-- children the scanner has always emitted, and until today the evidence for it
+-- was a paragraph. Re-measured in w_js_corpus: `new_target` 1 site,
+-- `import_meta` 2, `meta_unformed[audit]` 0, `meta_form_conflict[audit]` 0, and
+-- every `meta_property` node carries ZERO `ast_attr` rows with exactly two
+-- children, `meta` and `property`.
+--
+-- TWO FLOORS AND NOT ONE, because ONE would be satisfied by a kind that had
+-- collapsed back into a single construct — which is the exact failure the item
+-- exists to have prevented. And a floor is self-controlling against the only
+-- moving part here: the form atom is a bare constant, so `new_targe` returns 0
+-- and the floor goes red, where an absence witness on the same typo would read
+-- as satisfied.
+witness_in_atleast(w_meta_property, w_js_corpus, "meta_form[code](M, new_target)", 1).
+witness_in_atleast(w_meta_property, w_js_corpus, "meta_form[code](M, import_meta)", 1).
 -- ...AND THE DEPENDENCY IS WITHDRAWN, measured. It read: the item waits on the
 -- standard library by name for half of one cell, because `unresolved_call` on
 -- `import.meta.resolve` would sit in `w_env_api_surface`'s in-tray. It cannot:
@@ -2038,6 +2055,28 @@ work(w_export_specifier_forms, "export { a as b } and export * as ns: the two ex
 -- ExportNamespaceSpecifier carries an `exported` child and NO `local` child at
 -- all, so there is no name in this module for the entry surface to reach.
 work_state(w_export_specifier_forms, done).
+-- ...AND WHICH KIND OF MISSING KIND IT WAS, 2026-09-09 (w_note_is_not_evidence).
+-- The item's title says `the two export forms with no node in this vocabulary`,
+-- and that sentence has two readings the matrix cannot tell apart: a kind the
+-- vocabulary fails to DECLARE while the parser emits it (a real hole, which
+-- `vocabulary_gap[audit]` is for), and a kind the parser never emits at all
+-- (which is `w_plugin_gated_kinds`, and is a decision about an environment).
+-- MEASURED, and it is the first: w_js_corpus holds 8 `export_specifier` nodes
+-- across alpha.mjs, beta.mjs and shapes.ts, and 1 `export_namespace_specifier`
+-- in gamma.mjs. So the vocabulary was silent about a construct babel had been
+-- handing it all along, which is why the model was SILENT rather than
+-- wrong-named at three layers and NOT SAFE at the fourth.
+--
+-- THE SECOND FLOOR ALSO CARRIES THE WAIVER'S PREMISE. The one `ignored` row
+-- this item wrote is `export_namespace_specifier` at controlflow, on the ground
+-- that the node has an `exported` child and NO `local` child — re-measured
+-- today, that node has exactly one child and its field is `exported`. If the
+-- site ever leaves gamma.mjs the waiver stops being a claim about anything, and
+-- this row says so.
+witness_in_atleast(w_export_specifier_forms, w_js_corpus,
+                   "ast_node[code](N, export_specifier, F, L)", 1).
+witness_in_atleast(w_export_specifier_forms, w_js_corpus,
+                   "ast_node[code](N, export_namespace_specifier, F, L)", 1).
 
 -- 56 - labeled_statement.
 -- DONE 2026-09-08. THE ITEM'S NOTE CALLED IT "the one new statement form that
@@ -2168,6 +2207,20 @@ claim(queued, js, with_statement,              none, modules,      w_inert_state
 --     the scale fixes it - which is the owner's.
 work(w_directives, "'use strict' and the hashbang: directives are a real construct and the scanner emits them").
 work_state(w_directives, done).
+-- ...AND THE TITLE IS NOW A ROW, 2026-09-09 (w_note_is_not_evidence). `the
+-- scanner emits them` is the item's own premise and it was prose: measured in
+-- w_js_corpus, 3 `directive`, 3 `directive_literal` and 1 `interpreter_directive`
+-- over the five fixtures. Written as FLOORS rather than as those three numbers,
+-- for the reason this file records at every other pin: a fixture appended
+-- tomorrow must not redden a claim about whether the parser emits the kind at
+-- all. The hashbang floor is the load-bearing one — delta.mjs is the only file
+-- in the corpus with a `#!` and its line 1 is the only place one can legally
+-- sit, so this row goes red the day that fixture is edited without the
+-- `interpreter_directive` cells being re-asked.
+witness_in_atleast(w_directives, w_js_corpus,
+                   "ast_node[code](N, interpreter_directive, F, L)", 1).
+witness_in_atleast(w_directives, w_js_corpus,
+                   "ast_node[code](N, directive, F, L)", 1).
 work_spawned(w_directives, f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it).
 work_spawned(w_directives, f_use_strict_changes_two_things_this_model_has_neither_of).
 claim(queued, js, directive,                   none, callgraph,    w_directives).
