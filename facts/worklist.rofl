@@ -1373,9 +1373,29 @@ claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_i
 -- to be written out four times. The choice is the owner's: move every
 -- `node_kind` to the pack whose name promises them and load it everywhere, or
 -- keep `a file that makes a claim declares the kind` and accept the copies.
-work(w_vocabulary_home, "node_kind rows live in five packs; facts/js-kinds.rofl is named for them and holds a minority").
-work_state(w_vocabulary_home, open).
+-- ...AND THE CHOICE WAS MEASURED RATHER THAN MADE, 2026-09-09. It is seven
+-- packs now, not five, and 32 of 100 kinds. NOT ONE ROW MOVED, because the
+-- measurement refutes the branch that would have moved them: executing the
+-- proposal on a copy of the text and rebuilding the six distinct fact-pack
+-- worlds this suite builds, the mechanism fixture goes 32 -> 100 kinds, the
+-- call-graph fixpoint 84 -> 100, the shape axis 86 -> 100, the module boundary
+-- 86 -> 100 and the era scale 86 -> 100. EVERY PARTIAL WORLD BECOMES THE FULL
+-- ONE. The copies are not waste, they are what the partial worlds cost.
+-- WHAT THE ITEM ACTUALLY LACKED WAS THE RULE, which was a comment in three
+-- files: a `node_kind(js, K)` row belongs in the pack of layer P iff P SPEAKS
+-- ABOUT K - some fact P asserts carries K in a position that holds kinds - or P
+-- is the BASE pack every world loads. rules/js-pack-home.rofl derives that once
+-- from the reified facts rather than deciding it per row, discovering the
+-- thirty-two kind positions instead of listing them; `kind_home_unbacked[audit]`
+-- is EMPTY over all seven packs and 24 rows fire the moment the base clause
+-- goes. THE HALF THAT IS STILL THE OWNER'S is whether to gather anyway and pay
+-- for it, and that stays open in the finding rather than being decided here.
+work(w_vocabulary_home, "DONE 2026-09-09: the rows are already where the rule says they belong - measured, zero violations over seven packs - and the gather the item's name suggests would flatten all six partial worlds into the full one; the rule is stated and enforced in rules/js-pack-home.rofl").
+work_state(w_vocabulary_home, done).
 work_spawned(w_vocabulary_home, f_the_kind_vocabulary_is_scattered_across_the_packs_that_needed_it).
+work_spawned(w_vocabulary_home, f_the_pack_named_for_the_vocabulary_is_its_base_and_not_its_home).
+work_spawned(w_vocabulary_home, f_a_rule_has_no_file_and_a_fact_does).
+work_spawned(w_vocabulary_home, f_the_duplication_that_makes_a_partial_world_possible_blinds_the_full_one).
 
 -- 39 — RANGE RESTRICTION FOR NEGATION, entered 2026-09-05 by the work that
 -- fixed the ORDER half beside it. A variable appearing only inside `not p(...)`
