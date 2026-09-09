@@ -212,13 +212,37 @@ test('every read path above five per cent, by name', () => {
   // both arguments bound — but that is a hypothesis about a 5.8% move made from
   // a 3-row exclusion, and the arithmetic does not obviously work. Recorded
   // rather than explained.
+  // REWRITTEN 2026-09-09, AND THE TEST NAMED THE CHANGE BEFORE I DID.
+  // `nearest_v` stopped being an argmin subtracted out of a quadratic —
+  // `encloses_v` materialised every (function, descendant) pair and `closer_v`
+  // paired each descendant's enclosing functions against each other, 1 064 884
+  // accumulator elements for 2295 rows — and became two linear rules walking
+  // down from the function. Both `encloses_v` paths vanished with the relation,
+  // `argMatches ast_node pos=[1]` fell below five per cent, and ONE PATH ROSE:
+  // `relPersp asserted_by`, which is `forged`'s first premise. It did not grow;
+  // the denominator shrank, and an audit that walks every assertion in the
+  // world is now visible above the line. That is the next item on the list and
+  // this test is how it announced itself.
+  //
+  // Verified equal where it matters before the list was touched: `nearest_v` is
+  // 12 431 rows under both formulations with ZERO differing either way, and
+  // `may_throw` 62, `try_of` 18, `thrown_by` 127 and `abrupt_at` 354 are
+  // identical. The 32 663 facts that went are `encloses_v` and `closer_v`
+  // themselves.
+  //
+  // THE NUMBERS MOVED WITHOUT ANY PATH GROWING, which the assertion's own
+  // message cannot say and this comment therefore must. Removing `encloses_v`
+  // and `closer_v` took the total down by a third, so every surviving path's
+  // SHARE rose while its absolute cost stood still: `relPersp authority`
+  // 10.06 -> 12.40, `relPersp ast_node` 5.99 -> 7.38. The two that appear new
+  // — `relPersp asserted_by` at 5.51 and, in effect, `argMatches ast_within` at
+  // 5.28 — crossed the line the same way. A share is a ratio, and this test
+  // pins the numerator's fate to a denominator it does not mention.
   const SHARE: [string, number][] = [
-    ['relPersp authority', 10.06],
-    ['argMatches ast_within pos=[0]', 8.01],
-    ['argMatches ast_node pos=[1]', 6.23],
-    ['argMatches encloses_v pos=[1]', 6.02],
-    ['relPersp ast_node', 5.99],
-    ['relPersp encloses_v', 5.84],
+    ['relPersp authority', 12.40],
+    ['relPersp ast_node', 7.38],
+    ['relPersp asserted_by', 5.51],
+    ['argMatches ast_within pos=[0]', 5.28],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -228,6 +252,10 @@ test('every read path above five per cent, by name', () => {
   // membership; the share is what says a path grew.
   assert.deepEqual(c.share.map(([k]) => k).sort(), SHARE.map(([k]) => k).sort(),
     'a new path above five per cent is a body ordered so a big relation is enumerated first');
+  if (process.env.SHOW_SHARE) {
+    for (const [k, v] of c.share) console.log(`    SHARE ${k}  ${v.toFixed(2)}%`);
+    console.log(`    FACTS ${c.facts}  FIRINGS ${c.firings}  TOTAL ${c.total}`);
+  }
   const got = new Map(c.share);
   for (const [name, want] of SHARE) {
     const now = got.get(name)!;
@@ -481,7 +509,18 @@ test('every read path above five per cent, by name', () => {
   // more expensive. AND FIRINGS FELL AGAIN, 72 154 -> 70 625, on a corpus that
   // grew: the re-export edge and the directive fixtures both add facts that
   // GUARD rather than derive.
-  assert.equal(c.total, 1694517, 'total rows handed out by the store in one fixpoint');
+  //
+  // AND THEN A DAY OF RULE-WRITING WAS WORTH -18.9%, 2026-09-09, which is the
+  // first time this number has moved by more than a percent. 1 694 517 ->
+  // 1 374 910, on an UNCHANGED corpus: `nearest_v` stopped being an argmin
+  // subtracted out of a quadratic and became two linear rules, and `has_return`,
+  // both `fn_name` rules and `accessor_read` stopped laying one relation beside
+  // another before filtering. Measured on the other side too, from inside the
+  // join over sixteen files of eslint/lib: total accumulator width 5 331 063 ->
+  // 2 020 438. The derivations are the same — `nearest_v` is 12 431 rows under
+  // both formulations with zero differing either way, and `may_throw`,
+  // `try_of`, `thrown_by` and `abrupt_at` are identical.
+  assert.equal(c.total, 1374910, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -588,5 +627,18 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 70625, 'derivations, against 72 154 before the four-branch merge');
+  // 70 625 -> 70 612, DOWN THIRTEEN, and the size of that is what makes it worth
+  // a note. `nearest_v` stopped being `encloses_v` minus `closer_v` and became
+  // two linear rules; on sixteen files of eslint/lib that removes 32 663 facts,
+  // the two intermediate relations themselves. Here it removes thirteen
+  // derivations, and this fixture does NOT load rules/js-controlflow.rofl, so
+  // nothing in it reads `nearest_v` at all. WHY THIRTEEN IS NOT ESTABLISHED and
+  // is written down as unestablished rather than explained away.
+  //
+  // What IS established, measured on eslint/lib rather than here: `nearest_v`
+  // is 12 431 rows under both formulations with ZERO differing in either
+  // direction, and `may_throw` 62, `try_of` 18, `thrown_by` 127 and
+  // `abrupt_at` 354 are identical. js-controlflow 75/75, js-controlflow-values
+  // 83/83, js-class-expression 16/16.
+  assert.equal(c.firings, 70612, 'derivations, against 72 154 before the four-branch merge');
 });
