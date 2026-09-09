@@ -913,3 +913,75 @@ export async function awaitsThenable(n: number): Promise<number> {
 export function resolvesHere(spec: string): string {
   return import.meta.resolve(spec);
 }
+
+// ===========================================================================
+// A COMPUTED KEY THAT IS A BARE IDENTIFIER (w_computed_key_names, 2026-09-09),
+// and it is the site the item said had to exist before the fix could be
+// measured rather than argued.
+//
+// THE DEFECT. `key_name`'s first arm was `key_name(K, N) :- ast_name(K, N)`,
+// unguarded and in ANY position, so for `{ [haspSpelling]() {} }` — where the
+// key node IS the identifier — the model named the property `haspSpelling`.
+// That is the name of the VARIABLE. The property is really called `latch`, and
+// nothing in this program says so statically: the key is whatever the variable
+// held when the object was evaluated. The `Symbol` guard three lines below the
+// arm says exactly this must not happen, and it sits on the OTHER arm — the one
+// that reads a computed key written as a MEMBER expression, which
+// `[haspSpelling]` is not. `aliasedKey` above is the member form of the same
+// shape; this is the bare-identifier form the guard could not look at.
+//
+// IT IS HERE AND NOT IN A RUNNABLE FIXTURE, and that is the item's own reason
+// rather than convenience: a method the model must NOT name is a method the
+// execution oracle would see run under a name nobody derived. `jamb.latch(1)`
+// runs; `jamb.haspSpelling` is `undefined`. So the shape belongs where the
+// CLASSIFIER is measured against the grammar and the oracle is not consulted,
+// which is what this file's header says it is for.
+//
+// NOTHING CALLS THEM, DELIBERATELY. Adding a call would move `calls_in` and
+// `resolves` in the same diff as the naming change, and then no reader could
+// attribute either. What this site needs to be read by is `key_name`,
+// `member_value`, `obj_member_fn`, `own_key` and `fn_name`, and every one of
+// those derives over a declaration.
+//
+// THE SPELLING `haspSpelling` IS THE ORACLE'S HANDLE. It occurs nowhere else in
+// the corpus, so `no relation in this model names anything haspSpelling` is an
+// assertion no other branch's fixture can move.
+const haspSpelling = 'latch';
+export const jamb = {
+  [haspSpelling](n: number): number { return n; },
+  staple(n: number): number { return n; },
+};
+export class Clasp {
+  [haspSpelling](n: number): number { return n; }
+  hinge(n: number): number { return n; }
+}
+// ...AND THE PROPERTY FORM BESIDE THE METHOD FORM, because they are different
+// rules and only one of them was reached by the method site. `{ [k]() {} }` is
+// an `object_method`; `{ [k]: () => {} }` is an `object_property` whose value
+// is a function, and `fn_name`, `member_value` and `obj_member_fn` each have a
+// SEPARATE arm for it. Measured 2026-09-09: with only the method form here,
+// three of the six arms that name a key were never asked the question.
+export const sill = {
+  [haspSpelling]: (n: number): number => n,
+  bolt: (n: number): number => n,
+};
+// ...AND THE PATTERN FORM, which discharges a mutant that has been sitting in
+// test/js-controlflow-values.test.ts marked WAITING ON AN ITEM. That comment
+// says reading `ast_name` on a pattern's key where `destructures` reads
+// `key_name` derives a byte-identical world, because every key in a pattern in
+// this corpus is a plain identifier — and that it would bite on
+// `const { [k]: v } = o`, which could not be written honestly until this item
+// settled what a computed key is NAMED. It is settled: nothing.
+//
+// AND THE ANSWER HAS A PRICE THAT IS WORTH SEEING. `destructures` links a LOCAL
+// to a KEY, so a pattern with no derivable key binds no local: `pried` is a
+// name this program certainly binds and the model attributes to nothing, and
+// the declarator is therefore not a `scoped_binder` either. That is the honest
+// under-approximation — the key really is unknowable here — and it is the
+// opposite failure from the one this item removed, which invented a key.
+//
+// NOTHING USES `pried`, deliberately: a call on it would be an unresolved call
+// site, which moves the shape census for a reason that has nothing to do with
+// keys. What has to be observable is `destructures`, and a declaration is
+// enough for that.
+const { [haspSpelling]: pried } = jamb;

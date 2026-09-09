@@ -1228,9 +1228,47 @@ work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_v
 -- premise, and adding it answers the naming question and the cost question at
 -- once — but it CHANGES THE MODEL for a computed identifier key, so it needs
 -- the site above before it can be measured rather than argued.
-work(w_computed_key_names, "a computed key that is a bare identifier is named by the variable's spelling, the guard that forbids it covers only member-expression keys, and the same arm ranges over every named node rather than over keys").
-work_state(w_computed_key_names, open).
+-- DONE 2026-09-09, and the SITE was the item and the guard was the easy half.
+-- The site is `haspSpelling`, `jamb`, `sill` and `Clasp` at the END of
+-- test/fixtures/js-call/shapes.ts.txt — scanned and never run, for the reason
+-- this item's own note gives. `key_name`'s first arm is
+-- `ast_child(P, key, 0, K), not ast_attr(P, computed, true), ast_name(K, N)`
+-- and both arms range over keys now.
+-- WHAT THE FIX COULD NOT LOOK AT IS WHAT IT COST. Narrowing `key_name` fixes
+-- `key_name`, and FOUR readers never called it — both arms of `obj_member_fn`,
+-- the object_property arm of `fn_name`, and `own_key` — so with the site in
+-- place the model still said `haspSpelling` four times. `obj_member_fn` is
+-- TIER 2 of RESOLUTION, so that half was a call edge no execution produces,
+-- and `own_key` is the negated half of `member_value`, which had read
+-- `key_name` all along: a computed key was in the shadowing relation and not
+-- in the answering one. Recorded as
+-- f_the_one_place_a_key_is_named_was_four_more_places.
+-- THE COST HALF CAME OUT BACKWARDS AND THEN CAME RIGHT. `key_name` 2 148 rows
+-- -> 105 (with the site, 2 172 -> 108); firings -1.45%, facts -1.17% — and
+-- rows handed out UP 9 284, because an EDB copy became a derived relation and
+-- its readers re-ran their leading kind scans in every round it grew. Leading
+-- those four bodies with `key_name` instead: 2 107 604 -> 2 094 572 rows
+-- handed out, -0.62% against HEAD, same answers to the row. Recorded as
+-- f_a_relation_can_shrink_and_the_fixpoint_get_dearer. THE PINS IN
+-- test/js-fixpoint-cost.test.ts ARE NOT MOVED HERE — that file is the
+-- integrator's, and the numbers above are the measurement it needs.
+-- ORACLE: a sweep over the WHOLE store rather than a list of relations —
+-- `derived_by` reflects every derived fact, and the answer is the named set of
+-- relations in which the handle still appears: `ast_name`, `binder`,
+-- `decl_binds`, `ident`, `ident_in`, all of them about the IDENTIFIER, none
+-- about a key, a member or a function. Eight mutants, five killed and three
+-- surviving with the reason named: the positive `computed, false` guard (waits
+-- on `key_name` learning a private key — SEVEN key positions in this corpus
+-- carry no `computed` attribute at all, which is why the guard is a negation),
+-- the Symbol arm's key premise (no site: every `Symbol.x` here is a key), and
+-- the body order (an answer-preserving edit only the cost gate can see).
+work(w_computed_key_names, "DONE 2026-09-09: a computed key that is a bare identifier is named by the variable's spelling, the guard that forbids it covers only member-expression keys, and the same arm ranges over every named node rather than over keys").
+work_state(w_computed_key_names, done).
 work_spawned(w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).
+work_spawned(w_computed_key_names, f_the_one_place_a_key_is_named_was_four_more_places).
+work_spawned(w_computed_key_names, f_a_relation_can_shrink_and_the_fixpoint_get_dearer).
+work_spawned(w_computed_key_names, f_a_positive_attribute_test_is_blind_to_a_kind_that_has_no_such_attribute).
+work_spawned(w_computed_key_names, f_a_store_wide_sweep_finds_the_prose_that_explains_it).
 
 -- 41 — A SUSPENSION MAY NOT RESUME. Entered and closed 2026-09-07, and it was
 -- never on the queue: the control-flow layer WAIVED `suspend` with the reason

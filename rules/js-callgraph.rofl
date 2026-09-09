@@ -312,9 +312,16 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[co
 fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- fn_node[code](F), ast_node[code](P, object_property, _, _),
-                       ast_child[code](P, value, 0, F),
-                       ast_child[code](P, key, 0, K), ast_name[code](K, N).
+-- `key_name` HERE TOO, 2026-09-09 (w_computed_key_names). This arm read
+-- `ast_name` on the key directly and was therefore untouched by the guard three
+-- rules up: for `{ [haspSpelling]: (n) => n }` it named the function after the
+-- VARIABLE. Measured on the site at the end of shapes.ts.txt — one row before,
+-- none after — and it is the arm the method form of that site could not reach,
+-- because `{ [k]() {} }` is an `object_method` and this rule is about a
+-- property whose VALUE is a function.
+fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
+                       ast_node[code](P, object_property, _, _),
+                       ast_child[code](P, value, 0, F), fn_node[code](F).
 -- a constructor answers to the CLASS's name at runtime, which is what a stack
 -- frame says and therefore what an execution oracle can be compared against
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
@@ -427,15 +434,36 @@ top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
 
 -- TIER 2: `ns.method()` where ns is a local object literal.
 
-obj_member_fn[code](O, Key, M) :- ast_node[code](O, object_expression, _, _),
-                                  ast_child[code](O, properties, _, M),
+-- BOTH ARMS READ `key_name`, 2026-09-09 (w_computed_key_names). They read
+-- `ast_name` on the key until then, which is the shape that made
+-- `key_name` worth writing in the first place and was left behind when it was:
+-- `ns[haspSpelling]()` would RESOLVE here, under a key the variable happens to
+-- spell, to a method whose real name is whatever the variable held. Resolution
+-- is the worse half of this defect — a naming rule that over-approximates gives
+-- a wrong label, a RESOLUTION that over-approximates gives a call edge no
+-- execution produces. Measured on the site at the end of shapes.ts.txt: two
+-- rows before, none after.
+--
+-- AND BOTH BODIES NOW LEAD WITH THE KEY, which is the same edit paying for
+-- itself. `key_name` is DERIVED where `ast_name` was an EDB, so these rules
+-- moved into a later round and re-ran their leading `ast_node(O,
+-- object_expression, _, _)` — a kind scan — every time it grew. Measured
+-- 2026-09-09 on the whole fixpoint: reading `key_name` in the old order cost
+-- +10 680 rows on `argMatches ast_node pos=[1]` alone. Led by `key_name`
+-- instead, whose 105 rows bind K, every literal after it is an indexed lookup
+-- and the engine reads bodies left to right with no join planner
+-- (f_the_engine_has_no_join_planner).
+obj_member_fn[code](O, Key, M) :- key_name[code](K, Key),
+                                  ast_child[code](M, key, 0, K),
                                   ast_node[code](M, object_method, _, _),
-                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
-obj_member_fn[code](O, Key, F) :- ast_node[code](O, object_expression, _, _),
-                                  ast_child[code](O, properties, _, P),
+                                  ast_child[code](O, properties, _, M),
+                                  ast_node[code](O, object_expression, _, _).
+obj_member_fn[code](O, Key, F) :- key_name[code](K, Key),
+                                  ast_child[code](P, key, 0, K),
                                   ast_node[code](P, object_property, _, _),
-                                  ast_child[code](P, key, 0, K), ast_name[code](K, Key),
-                                  ast_child[code](P, value, 0, F), fn_node[code](F).
+                                  ast_child[code](P, value, 0, F), fn_node[code](F),
+                                  ast_child[code](O, properties, _, P),
+                                  ast_node[code](O, object_expression, _, _).
 
 
 -- TIER 3: an identifier callee naming a PARAMETER, resolved through the value

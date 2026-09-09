@@ -673,10 +673,23 @@ member_value[flow](O, Key, V) :- plain_assign[flow](A), ast_child[code](A, left,
 -- than a union: a subclass that declares `hold` answers with its own, and the
 -- ancestor's is not also an answer. The negation is stratified — `own_key`
 -- reads the class body directly and does not depend on `member_value`.
-own_key[flow](CD, Key)         :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                  ast_child[code](B, body, _, M),
+--
+-- `key_name` AND NOT `ast_name`, 2026-09-09 (w_computed_key_names), and here
+-- the mismatch was a DISAGREEMENT rather than an over-approximation: this is
+-- the negated half of `member_value`'s inheritance arm, which has read
+-- `key_name` since it was written. So `class Clasp { [haspSpelling]() {} }`
+-- put `haspSpelling` in `own_key` and NOT in `member_value` — the shadow of a
+-- member the lookup does not offer. A subclass could hide an inherited method
+-- under a name no object ever has. Measured on the site at the end of
+-- shapes.ts.txt: one row before, none after.
+-- ...and it LEADS WITH THE KEY for the reason rules/js-callgraph.rofl states at
+-- `obj_member_fn`: `key_name` is derived where `ast_name` was an EDB, so this
+-- body re-ran its leading literal in every round the key relation grew.
+own_key[flow](CD, Key)         :- key_name[code](K, Key),
+                                  ast_child[code](M, key, 0, K),
                                   ast_node[code](M, class_method, _, _),
-                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key).
+                                  ast_child[code](B, body, _, M),
+                                  ast_child[code](CD, body, 0, B), obj_like[flow](CD).
 --
 -- THE NEGATION GOES LAST, AND THAT IS NOT STYLE. Written with `not own_key`
 -- BEFORE the literal that binds `Key`, this rule silently under-derives: the
