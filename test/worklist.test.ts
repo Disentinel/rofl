@@ -228,8 +228,18 @@ test('THE THREE ROWS NO SUBSET WORLD CONTAINED, and what closed them', () => {
     // here rather than where they were entered. Each was entered to OWN cells
     // rather than to record a discovery — which is what an item with no spawned
     // finding looks like when it is doing its job.
-    'w_effect_class_initialisers', 'w_effect_implicit_coercion',
-    'w_effect_module_evaluation', 'w_effect_sweep',
+    // ...AND TWO OF THE FOUR LEFT IT LATER THE SAME DAY, which is the list
+    // working exactly as the blocks above describe. `w_effect_module_evaluation`
+    // was taken and spawned two — the join over a module graph being the same
+    // union the join over a body is, and the criterion that separates a missing
+    // FILE from a missing TABLE. `w_effect_implicit_coercion` was taken, closed
+    // NO cell, and spawned two anyway: the operand deciding a coercion rather
+    // than the operator, and a defect in a NEIGHBOUR'S landed gate — the effect
+    // layer's exn oracle cannot see a label that did not arrive through
+    // `resolves`, so the first surface row mapping to `io` turns it red. An
+    // item that closes nothing and finds something is exactly the case a count
+    // of closed cells cannot see.
+    'w_effect_class_initialisers', 'w_effect_sweep',
     'w_env_api_surface', 'w_export_specifier_forms',
     // `w_has_return_is_a_join_over_the_whole_corpus` JOINED 2026-09-09, entered
     // by the item that built the second cost gate. It is on this list for the
@@ -384,6 +394,20 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
   // AND THE SIX THAT ARE THE OWNER'S ARE STILL HERE, unchanged: the four
   // `with_statement` rows at the older layers, `require`, and the subpath
   // specifier. A layer arriving does not close somebody else's decision.
+  //
+  // FIVE LEFT THE SET 2026-09-09 (w_effect_module_evaluation), all of them
+  // effect cells of a module construct: `import_declaration`, `import`,
+  // `import_expression`, `export_all_declaration`, `export_named_declaration`.
+  // Thirteen remain. This is a SET and not a count on purpose — two branches
+  // closing different cells merge as a difference a reader can check, and the
+  // six the owner holds are named in it rather than counted.
+  //
+  // AND THREE DID NOT LEAVE IT ALTHOUGH A RULE NOW FIRES ON THEM.
+  // `binary_expression`, `unary_expression` and `template_literal` are modelled
+  // by section 5b of rules/js-effects.rofl and STAY OPEN, because 141 of 369
+  // coerced operands are values the value layer did not trace. That is
+  // `f_a_cell_can_be_open_while_a_rule_fires_on_its_kind` applied in advance
+  // rather than discovered afterwards.
   assert.deepEqual(w.binds('open_cell[audit](K, S, L)', 'K', 'S', 'L'), [
     'binary_expression/none/effect',
     'call_expression/none/effect',
@@ -392,13 +416,8 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
     'class_declaration/none/effect',
     'class_private_property/none/effect',
     'class_property/none/effect',
-    'export_all_declaration/none/effect',
-    'export_named_declaration/none/effect',
     'identifier/none/effect',
-    'import/none/effect',
-    'import_declaration/none/effect',
     'import_declaration/subpath/modules',
-    'import_expression/none/effect',
     'new_expression/none/effect',
     'optional_call_expression/none/effect',
     'static_block/none/effect',

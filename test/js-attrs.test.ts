@@ -308,10 +308,26 @@ test('the tables that supply a key are derived, and each one has a bridge', () =
     ['attr_needs/3/4', 'outside_attr_needs/3/4']);
   // ...and what the bridge then makes readable: the era layer's top-level-await
   // marker and the five operators `attr_needs` gates three features on.
+  //
+  // SEVEN MORE ARRIVED 2026-09-09 AND NOT THROUGH A BRIDGE — the effect layer's
+  // `eff_op_inspects[code]` names them one rule per spelling, with the value as
+  // a CONSTANT. That form is deliberate and the two sets above are why: reading
+  // `operator` with the value LEFT FREE would put it in `attr_key_read_free`,
+  // which switches `unconsumed_value[audit]` off for the key entirely and takes
+  // MUTANT 7 below with it. So a layer that models an operator pays one row per
+  // operator here, and the five era markers stay reportable.
+  //
+  // `instanceof` AND `delete` ARE IN THE LIST AND HAVE NO SITE. They are named
+  // by `eff_op_beyond[flow]` as the two operators whose hidden call is not a
+  // conversion — this list is what the RULES read, not what the corpus has, and
+  // that difference is the whole reason `unconsumed_value` joins `ast_attr`
+  // first.
   assert.deepEqual(m.q('attr_pair_read(K, V)')
     .filter(([k]) => k === 'async' || k === 'operator').map((r) => r.join('=')).sort(),
     ['async=true', 'operator=&&=', 'operator=**', 'operator==', 'operator=??',
-      'operator=??=', 'operator=||='].sort());
+      'operator=??=', 'operator=||=',
+      'operator=!', 'operator=!==', 'operator====', 'operator=delete',
+      'operator=instanceof', 'operator=typeof', 'operator=void'].sort());
 });
 
 test('MUTANT 7 — the bridge to the era table is cut', () => {
