@@ -340,7 +340,13 @@ is done rather than queued. **The rule now:**
   20, 22 and 24, so nothing in the oracle depends on the version.
 - `npm test` asks `os.availableParallelism()`. If a second agent works on the
   same machine in another worktree, both ask for every core and oversubscribe.
-  Pass `--test-concurrency` explicitly while iterating.
+  **DO NOT pass `--test-concurrency` on a SINGLE-FILE run** — this advice used
+  to say the opposite and it is now wrong twice over. Node's concurrency is
+  across FILES, so with one file the flag bounds nothing; and the flag string is
+  the readiness check below, so a targeted run carrying it reads to every other
+  agent as a resident full suite and the whole fleet waits on nobody. Run one
+  file plainly. Bound the parallelism of a FULL suite if you must bound
+  anything.
 
 ## What to do next
 
@@ -377,7 +383,7 @@ npm run findings                                    # the backlog
 npx tsc -p tsconfig.json
 npm run grepcheck && npm run textcheck && npm run flagcheck
 node --experimental-strip-types scripts/witness_check.ts
-node --experimental-strip-types --test --test-concurrency=4 test/<one>.test.ts
+node --experimental-strip-types --test --test-reporter=spec test/<one>.test.ts
 ```
 
 ## Standing constraints from the owner
@@ -426,6 +432,46 @@ across two runs:
      the file the assertion is not about.
    A set defined by a RANK (`the five heaviest`) is a fourth: put the cut where
    the data has a measured gap instead.
+
+   **A FIFTH, from the other session 2026-09-09 and the most disguised of them:
+   TWO COUNTERS WRITTEN BY THE SAME LINE OF CODE CANNOT CHECK EACH OTHER.** A
+   test there compared `asserted_by` against `in_perspective` and read as a
+   per-fact coverage check for months. It was a PAIRING check: it verified the
+   kernel emitted two rows TOGETHER, never that it emitted one per fact. It was
+   found only by deleting one of the two relations and being forced to ask what
+   the test had been protecting. The resemblance to a real invariant is very
+   good, and the tell is provenance rather than shape — ask which code writes
+   each side.
+
+   **AND THE TEST IS NOT "THE SAME CALL SITE", WHICH IS WHERE THE FIRST DRAFT
+   OF THIS ENTRY WAS TOO COARSE.** Corrected by the session that found it: two
+   counters written by one LINE is the strong case, but two written by one
+   FUNCTION is not automatically a tautology — a function that computes two
+   values independently and returns them together can still have them check
+   each other. **The test is whether one value can move without the other**,
+   not whether they share a call site. In the instance that produced this
+   entry, `factMetaFacts` emitted both from a single return and both were built
+   from the same `persp`, so neither could move alone; that is what made the
+   agreement empty, and it is the property to check rather than the co-location
+   that suggested it.
+
+   **AND NEXT TO EVERY PIN, WRITE THE ALARMING SHAPE AND WHAT TO TURN OFF.**
+   Also 2026-09-09, from both sides at once. A pinned number is only worth
+   having if the reader knows which delta should alarm them: the other session
+   moved 70/60/139 -> 63/54/129 and the useful part was that it was UNEVEN
+   across three worlds, where the previous move had been a uniform +4 — uneven
+   meant per-fact, uniform meant per-rule, and three worlds did the work.
+
+   That technique does not generalise and the second one does. Here the guard
+   `not one function reaches the top of the lattice because of an ambient call`
+   went two -> six, and two-to-six is two-to-six whether one contributor moved
+   it or four did; no resolution of the number contains the answer. It was
+   separated by DISABLING ONE RULE INSIDE THE PACK and re-measuring three
+   worlds: pack out — two; pack in with that one rule disconnected — two; pack
+   in whole — six. So write both: what delta means re-measure-and-accept, and
+   **which single contributor to turn off to find out who moved it.** The
+   second is what ends the investigation, and it is always available where
+   counting worlds is a lucky property of a fixture.
 3. Do not run the full suite; run the targeted files. Agents share the machine.
 4. Prefer a new fixture file; if you must append to `alpha.mjs`, append at the end.
 
@@ -474,7 +520,7 @@ a gate was pinned, and then a rule was repaired in a pack that gate's world
 loads — pinned numbers invalidated by the next edit in the same sitting. The
 targeted files were all green. Run the full suite before you believe a pin pass.
 
-**Four operational traps, all paid for on 2026-09-08/09 and none of them
+**Five operational traps, all paid for on 2026-09-08/09 and none of them
 about the model.**
 
 1. **The suite needs node 24 and the default node here is 20.** `npm test`
@@ -513,6 +559,202 @@ about the model.**
    If you `pkill` on this machine, match your own scratchpad path, not a flag
    every session's node shares. **A wrong cause in a handoff is worse than no
    entry**, which is why this correction is here rather than a quiet edit.
+
+5. **NOTHING RUNS BELOW ABOUT 100 MB FREE, AND THE KILL LOOKS LIKE A FLAKE.**
+   Measured 2026-09-09 by the other session and confirmed here at the same
+   minute: four subagents each told to attest with a FULL suite is four runs at
+   `--test-concurrency=availableParallelism`, which is four times the
+   parallelism this box has. Load 44, free memory 6 MB, and the neighbour's
+   single `npm test` was OOM-killed with **no output past its first line**. A
+   truncated log with no failure line is a kill, not a flake, and reading it as
+   one sends the diagnosis at the tests.
+
+   Check before LAUNCHING, and wait rather than start:
+
+   ```bash
+   psize=$(vm_stat | sed -n '1s/.*page size of \([0-9]*\).*/\1/p')
+   free_pages=$(vm_stat | awk '/Pages free/{gsub(/\./,"",$3); print $3}')
+   echo $(( free_pages * psize / 1048576 )) MB free      # floor: 400 MB
+   ```
+
+   **READ THE PAGE SIZE, DO NOT ASSUME 4096 — THE FIRST TWO DRAFTS OF THIS
+   ENTRY DID.** Caught 2026-09-09 by an agent running under the rule: `vm_stat`
+   on this machine reports `page size of 16384 bytes`, confirmed against
+   `sysctl -n hw.pagesize`. So the hardcoded 4096 understated free memory by a
+   factor of four and printed a figure labelled MB that was not MB. The floor
+   is restated here in real megabytes — **400 MB** — which is the same physical
+   amount everyone was quoting as "100" under the wrong constant, so no
+   measurement taken today is invalidated, only mislabelled.
+
+   That is the whole hazard in one line: **the rule was self-consistent and
+   therefore worked**, because every party used the same wrong constant and
+   compared like with like. **AND "THE OUTSIDE WORLD" IS THE WRONG WAY TO SAY
+   IT** — sharpened by the other session, whose formula was the thing this got
+   compared against: two instruments agreeing is evidence only when they are
+   INDEPENDENT, and two copies of one constant are one instrument. Had both
+   sessions hardcoded 4096 it would still be running today. That single
+   sentence covers this, the paired counters above, and the effect-lattice pin
+   below — in all three the agreement held for a reason unrelated to the thing
+   being checked.
+
+   The cheap general move falls out of it: **never hardcode a constant the
+   system will tell you.** `vm_stat` prints its page size in its own header.
+
+   **AND THE DIRECTION OF THE ERROR WAS ITSELF CONTESTED, WHICH IS WORTH
+   RECORDING BECAUSE IT IS WHAT THIS CLASS DOES TO THE PEOPLE FIXING IT.** The
+   other session read the same defect as making the floor four times LOWER —
+   "wait if under 100" really meaning 25 MB, a guard set below the danger. It
+   is the other way: multiplying by the smaller constant yields the smaller
+   number, so the naive print UNDERSTATES free memory and a printed 100 is 400
+   real MB, a conservative floor that costs throughput and nothing else.
+   Settled by computing it rather than by arguing it:
+
+   ```
+   pages free 4196 -> naive 16 "MB", real 65 MB
+   a printed naive 100 -> 25600 pages -> 400 real MB
+   ```
+
+   Two sessions, both correct about the defect, opposite about its sign. A unit
+   error does not only mislead the reader of the log; it misleads the repair.
+
+   **AND FREE MEMORY IS THE WRONG QUANTITY — MEASURE THE CONDITION ITSELF.**
+   The strongest correction of the day, from the other session, and verified
+   here rather than taken: the three points we had do not describe a threshold.
+
+   ```
+     14 MB free, KILLED     (two full suites resident: theirs + this fleet)
+     83 MB free, HEALTHY    (one full suite, mid-run, finished clean)
+   3295 MB free, START      (one full suite, nothing else)
+   ```
+
+   The 14 and the 83 are not on one axis. What killed the run was not a LEVEL —
+   it was that TWO FULL SUITES WERE RESIDENT AND THE BOX FITS ONE. Free memory
+   at launch is a proxy for "is anybody else already on this machine", and a bad
+   one, because it is confounded by everything else the machine happens to be
+   doing. So read the condition directly:
+
+   ```bash
+   ps ax -o pid,args | grep -c '[t]est-concurrency'     # >0: another suite is resident, wait
+   lsof -p <pid> -a -d cwd                              # ...and whose, by worktree
+   ```
+
+   It needs no constant and no page size — which is the point, after that
+   constant was wrong twice in one afternoon — and it would have made all four
+   of today's calls correctly: the kill (fleet resident), two refusals at 383
+   and 61 (fleet resident), and the healthy 83 MB run (nothing else resident,
+   correctly allowed).
+
+   **THREE LIMITS, MEASURED HERE while the other session's suite was running,
+   because a check adopted without its edges is the next entry in this list.**
+   1. It matches the WORKERS, not the parent: seven processes, every one
+      reading `--test-concurrency=0`, and nothing with the parent's non-zero
+      value. So there is a startup window in which a suite is resident and the
+      count still reads 0.
+   2. **A TARGETED RUN DOES NOT MATCH, AND THAT IS A FEATURE.** `npx tsx --test
+      test/x.test.ts` carries no such flag, so the check sees full `npm test`
+      runs specifically — the expensive ones. Do not "fix" it into matching
+      every node process.
+   3. **`--test-concurrency` IS NOW DOING THREE JOBS AND THEY COLLIDE.** Found
+      by an agent reading limit 2 above and checking it against its own
+      commands rather than believing it: it had been iterating with
+      `--test-concurrency=2` **on this file's own former advice**, so its
+      TARGETED runs matched the readiness pattern and would have read to
+      everybody as a resident full suite — a fleet waiting on nobody. The same
+      string is also the `pkill` pattern that killed an unrelated run in trap 4.
+      One flag is now a throttle, a kill pattern and a readiness signal, and
+      each use makes the others wrong. The advice above is corrected; if you
+      find yourself reinstating the flag on a single-file run, this is why not.
+   4. It sees SUITES ONLY. A cost measurement building a large world is
+      invisible to it and can be the heaviest thing on the box. Free memory
+      stays as a BACKSTOP for that, demoted from primary gate.
+
+   **AND THE CHECK MAKES A THUNDERING HERD IF EVERY WAITER TRUSTS ITS FIRST
+   ZERO.** Four agents plus a neighbour all monitoring one count means they
+   launch in the same instant it clears — two full suites resident, which is
+   precisely the condition the check exists to prevent. The fix for
+   oversubscription becomes the cause of it. Do not launch on the first zero:
+
+   ```bash
+   sleep $(( (RANDOM % 50) + 10 ))                    # 10-60s, per waiter
+   ps ax -o pid,args | grep -c '[t]est-concurrency'   # must STILL read 0
+   ```
+
+   The JITTER is what makes the second reading informative — without it every
+   waiter re-checks in the same instant and all of them see the same zero. This
+   applies to the FULL SUITE only; targeted single-file runs are cheap and, with
+   the flag dropped, do not match the pattern at all.
+
+   **AND THE PROTOCOL IS PROBABILISTIC, NOT EXCLUSIVE — stated here rather than
+   left to be discovered**, which is what this file asks of every gate it
+   records. There is a second window the jitter does not close: the gap between
+   a waiter's check reading 0 and its own suite becoming visible in `ps`, since
+   node takes a moment to spawn. A second waiter checking inside that gap sees
+   0 legitimately and fires. The jittered re-check narrows it to two agents
+   landing in the same few hundred milliseconds TWICE, which is why it is not
+   worth solving — but if a collision does happen, THAT is the mechanism, and
+   the first suspicion should not be that somebody skipped the jitter.
+
+   The general form, and it is why this replaced the number rather than
+   refining it: **a provisional number invites someone to measure it more
+   precisely; a named proxy invites them to measure the right thing.**
+
+   **AND 400 IS NOT A MEASURED FLOOR — IT IS AN ARBITRARY NUMBER IN CORRECTED
+   UNITS.** Stated here so the next reader does not find a bare 400 and assume
+   somebody measured it. "100" was invented while the units were believed to be
+   MB, on no measurement; converting it preserved an arbitrary number's
+   physical value, which is not the same as choosing a floor. TWO POINTS EXIST:
+   a kill at 14 real MB, and a healthy suite sitting at 83 real MB mid-run.
+   Nothing in between. So the floor stands about five times above the highest
+   observed healthy steady state and about twenty-eight times above the only
+   observed kill.
+
+   Its first real use was refusing the other session's suite at 383 MB, which
+   is very likely a FALSE POSITIVE by that arithmetic — the guard-that-fires-on-
+   correct-behaviour this file warns about two paragraphs up, arrived at from
+   the opposite direction. It has NOT been lowered on that, because two points
+   do not locate a floor and the experiment that would (start suites at
+   successively lower free memory and find where they die) costs the machine
+   the queue is for. Left provisional, with the provenance visible, so it can
+   be set from evidence rather than from inheritance.
+
+   **AND TWO RULES FROM THE OTHER SESSION THAT OUTLIVE THE NUMBER**, both
+   arrived at by it getting the sign wrong in the same message in which it
+   correctly named the class:
+
+   - **A claim about DIRECTION is a claim about ARITHMETIC, and arithmetic is
+     cheap.** It asserted an inversion without running two multiplications, in
+     a message whose whole subject was a constant nobody had run. Actionable
+     where "verify peers" is not, because nobody verifies every time and
+     everybody can multiply twice.
+   - **A peer with a good track record is a MORE dangerous single instrument
+     than one with a bad one**, because the prior does the work the check
+     should have done. It had been right about the start-check and right about
+     the paired counters; that record is exactly what made a third, wrong claim
+     credible enough to act on. The symmetric half is also true and was
+     conceded on this side: the inversion was checked only because the subject
+     was obviously arithmetic. A direction claim about something less obviously
+     numeric would have been taken.
+
+   **IT IS A START CHECK AND NOT A RUN CHECK, and the first draft of this entry
+   got that wrong.** Corrected within the hour by the other session, which was
+   running under it at the time: its suite STARTED at 3295 MB free, passed the
+   floor honestly, and sat at 83 MB mid-run — because eight concurrent node
+   processes ARE the consumption. An agent that re-checks mid-run stops on its
+   own footprint every time. So the number is headroom for OTHERS at the moment
+   of launch, never a live invariant. Written the other way it is a guard that
+   fires on correct behaviour, which is the kind this file records getting
+   switched off within a week.
+
+   **AND IT IS A CORRECTNESS RULE, NOT A COURTESY ONE.** A suite that SURVIVES
+   under swap pressure is still a suite measured under swap pressure, and this
+   file's whole attestation argument is that a green count from a bad run is
+   indistinguishable from a green count from a good one. The tree fingerprint
+   answers "did the tree move", the completeness check answers "did the run
+   finish" — neither was ever asked "did the machine have room", and their
+   confident output reads as though one of them had. Ask it.
+
+   For a fleet: targeted test files during development, the full suite ONCE at
+   the end, and stagger the ends.
 
 **Budget the integration, not the authoring.** Merging cost nine hunks and ten
 failing tests, of which six were pins and **four were real** — and three of the
