@@ -4,6 +4,16 @@ on:
   push:
   pull_request:
 
+# ONE RUN PER REF. Without this every push starts a run and nothing stops the
+# one it superseded, so six pushes to a branch in forty minutes leave six live
+# runs doing the same work — measured 2026-09-09: six concurrent in_progress
+# runs, the oldest 44 minutes in, one earlier run 1h01m. The node suite is
+# 19m43s of wall on its own, so a jammed queue is the default rather than the
+# accident. A superseded run's verdict is about a tree nobody has any more.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   node:
     runs-on: ubuntu-latest
