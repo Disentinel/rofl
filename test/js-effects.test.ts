@@ -1144,3 +1144,230 @@ test('MUTANT M14: a class declaration allocates nothing — `eff_latent` cannot 
     'KILLED by eff_here: only Coin is left, and through its static field rather than its kind');
   assert.ok(allocked(base()).size > 15, 'while every class declaration carried it');
 });
+
+// ===========================================================================
+// 5d. A HIDDEN CALL THAT REACHES `calls` AND NOT `resolves`
+//     w_destructuring_hides_a_call, second pass 2026-09-09.
+//
+// THE HOLE THIS SECTION REPAIRS WAS ASSERTED AWAY IN THE LEDGER. The note
+// beside `handled(js, object_pattern, effect, r_effect_transfer)` read
+// "`pattern_iterates` and `pattern_accessor` turn each into a `resolves` row,
+// so at this layer they are ordinary calls". Only the first half is true, and
+// `eff_latent` closes over `resolves` — so THREE of the four kinds contributed
+// nothing whatever while the cell said they were ordinary calls.
+//
+// IT IS A PROBE AND NOT A FIXTURE, for the reason `build` records and for one
+// more that is measured: every getter in the five shared files is PURE, so the
+// repair moves `eff_latent` by zero rows there — 401 with the arm and 401
+// without, gained 0, lost 0. A repair invisible on the corpus is exactly the
+// class that needs a probe rather than a number.
+
+/** ONE GETTER THAT WRITES AND THROWS, read five ways.
+ *
+ *  `readsByMember` is the CONTROL and not a case: it is the shape the layer
+ *  already handled, so every assertion below is "the other four now say what
+ *  this one has always said" rather than "the other four say something". */
+const GATE = `
+let sink = 0;
+const gate = { get hot() { sink = sink + 1; throw new Error('x'); } };
+export function readsByMember() { return gate.hot; }
+export function readsByPattern() { const { hot } = gate; return hot; }
+export function readsByRest() { const { other, ...rest } = gate; return rest; }
+export function readsBySpread() { return { ...gate }; }
+`;
+
+/** AN ITERATOR WHOSE `next` DOES SOMETHING, reached through three doors.
+ *
+ *  The corpus cannot carry this claim: its four for-of sites and its three
+ *  pattern sites all reach `bump` as their `next`, and `bump` has no operation
+ *  to propagate — so the second hop of the protocol was untestable here in
+ *  either direction. */
+const REEL = `
+let tally = 0;
+function stepper() { tally = tally + 1; return { done: true }; }
+const iterObj = { next: stepper };
+const reel = { iterator() { return iterObj; } };
+export function viaForOf() { for (const x of reel) { const y = x; } }
+export function viaArrayPattern() { const [a] = reel; return a; }
+export function viaSpreadArg() { return String(...reel); }
+`;
+
+/** a named function's row, as `<label><heap>` */
+const rowOf = (w: World, fn: string) => w.q('fn_name[code](F, N)').filter(([, n]) => n === fn)
+  .flatMap(([f]) => w.q(`eff_latent[flow](${f}, L, H)`).map(([l, h]) => `${l}<${h}>`)).sort();
+
+
+// ===========================================================================
+// THE DEMONSTRATION, AND IT IS A DEMONSTRATION RATHER THAN A GATE.
+//
+// The hole below is REAL, MEASURED and DELIBERATELY UNREPAIRED, by the owner's
+// decision on 2026-09-09: the arm that closes it belongs to the call-graph and
+// effect packs together and is not to arrive inside a destructuring merge. So
+// what these tests assert is that the hole IS THERE and that the instrument
+// which ought to have found it CANNOT — and they will go red the day somebody
+// closes it, which is the correct direction for a test whose subject is a
+// known defect. `w_effect_reads_only_what_resolves` owns the repair.
+
+test('THE HOLE: a getter reached through a BINDING contributes nothing to its caller', () => {
+  const p = build([], [], [['gate.ts', GATE]]);
+
+  // THE CONTROL FIRST, because "these three are empty" means nothing until the
+  // shape the layer DOES handle is shown to be full in the same world.
+  assert.deepEqual(rowOf(p, 'readsByMember'),
+    ['alloc<none>', 'exn<none>', 'read<local>', 'write<local>'],
+    'the control: a getter reached through a MEMBER carries its whole row');
+
+  // ...AND THE SAME GETTER THROUGH A BINDING CARRIES NOTHING. `pattern_accessor`
+  // reaches `calls[code]` and not `resolves[code]` — deliberately, because two
+  // `resolves` rows at one node is what `ambiguous_call[audit]` exists to report
+  // — and `eff_latent` closes over `resolves`.
+  assert.deepEqual(rowOf(p, 'readsByPattern'), [], 'object_pattern: nothing');
+  assert.deepEqual(rowOf(p, 'readsByRest'), [], 'rest_element: nothing');
+  assert.deepEqual(rowOf(p, 'readsBySpread'), ['alloc<none>'],
+    'spread_element: the literal\'s own allocation and no part of the getter');
+
+  // THE DOORS ARE NAMED even though nothing propagates through them, which is
+  // what makes the hole queryable rather than a paragraph.
+  assert.ok(p.n('eff_hidden_call[flow](N, M)') > 0, 'the doors are named');
+
+  // AND THE GATE THAT SHOULD HAVE CAUGHT IT IS GREEN IN THIS VERY WORLD. This
+  // is the finding rather than the missing arm: `eff_join_short[audit]` says a
+  // caller's row contains its callee's, and it reads `resolves` — the same
+  // relation the propagation reads — so it is structurally unable to see an
+  // edge the propagation never took.
+  assert.deepEqual(p.q('eff_join_short[audit](F, G, J)'), [],
+    'the gate for exactly this question cannot look where the hole is');
+  assert.deepEqual(p.q('eff_edge_unclosed[flow](F, G, L, H)').length > 0, true,
+    'while the relation that CAN look reports it');
+
+  // ...and every other gate in the pack is shut, so the world is honest apart
+  // from the one thing under measurement.
+  for (const a of ['eff_swallowed[audit](F, C, L, H)', 'may_throw_only[audit](F)',
+    'eff_unnamed[audit](F)', 'eff_conv_unaccounted[audit](N, X)'])
+    assert.deepEqual(p.q(a), [], a);
+});
+
+test('THE RESIDUE names what the layer drops, by caller, callee and label', () => {
+  const p = build([], [], [['gate.ts', GATE]]);
+  const unclosed = (w: World) => w.q('eff_edge_unclosed[flow](F, G, L, H)')
+    .map(([f, g, l, h]) => `${w.q(`fn_name[code](${f}, N)`)[0]?.[0]} -> `
+       + `${w.q(`fn_name[code](${g}, N)`)[0]?.[0]} : ${l}<${h}>`).sort();
+  // A NAMED SET: caller, callee and label. No file, no line, no count — a
+  // fixture appended anywhere else in the corpus moves nothing in it.
+  assert.deepEqual(unclosed(p), [
+    'readsByPattern -> hot : alloc<none>', 'readsByPattern -> hot : exn<none>',
+    'readsByPattern -> hot : read<local>', 'readsByPattern -> hot : write<local>',
+    'readsByRest -> hot : alloc<none>', 'readsByRest -> hot : exn<none>',
+    'readsByRest -> hot : read<local>', 'readsByRest -> hot : write<local>',
+    'readsBySpread -> hot : exn<none>', 'readsBySpread -> hot : read<local>',
+    'readsBySpread -> hot : write<local>',
+  ]);
+  // ...AND EMPTY ON THE SHARED CORPUS, which is a fact about the fixtures and
+  // not about the rule: every getter in the five files is pure, so there is no
+  // row for the relation to carry even though the doors are all there.
+  assert.deepEqual(base().q('eff_edge_unclosed[flow](F, G, L, H)'), []);
+  assert.ok(base().n('eff_hidden_call[flow](N, M)') > 0,
+    'positive control: the doors exist in the shared corpus, the labels do not');
+});
+
+test('THE SECOND HOP of the iterator protocol is dropped through every door', () => {
+  const p = build([], [], [['reel.ts', REEL]]);
+  // `pattern_iterates` IS a `resolves` row, so the iterator METHOD propagates —
+  // but the `next()` it implies is a `calls` row and does not. `stepper` writes;
+  // none of the three callers carries it.
+  assert.deepEqual(rowOf(p, 'stepper'), ['alloc<none>', 'read<local>', 'write<local>'],
+    'the control: the callee has a row to lose');
+  assert.deepEqual(rowOf(p, 'viaArrayPattern'), [], 'the array pattern drops it');
+  assert.deepEqual(rowOf(p, 'viaSpreadArg'), [], 'and the spread argument');
+  assert.deepEqual(rowOf(p, 'viaForOf'), ['div<none>'],
+    'and the loop, which carries only its own loop');
+  // ...AND THE CALL GRAPH HAS ALL THREE EDGES, which is what makes this a
+  // DROPPED edge rather than a missing one. The two layers disagree and only
+  // one of them is right.
+  const named = new Set(p.q('calls_named[code](A, B)').map(([a, b]) => `${a} -> ${b}`));
+  for (const e of ['viaArrayPattern -> stepper', 'viaSpreadArg -> stepper', 'viaForOf -> stepper'])
+    assert.ok(named.has(e), `the call graph carries ${e}`);
+  // ...and the same silent gate, in this world too.
+  assert.deepEqual(p.q('eff_join_short[audit](F, G, J)'), [],
+    'the gate for exactly this question cannot look where the hole is');
+});
+
+test('MUTANT M15: the residue relation reads `resolves` like the gate it corrects', () => {
+  // Targets: that `eff_edge_unclosed` ranges over `calls[code]` — the relation
+  // carrying EVERY door — and not over the one the propagation already reads.
+  // A version that read `resolves` would be a second copy of `eff_join_short`
+  // and would report nothing, which is the defect it exists to expose.
+  const p = build([{ file: EFF_RULES,
+    find: 'eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),',
+    replace: 'eff_edge_unclosed[flow](F, G, L, H) :- resolves[code](C, G), nearest_fn[code](F, C), fn_node[code](F),' }],
+    [], [['gate.ts', GATE]]);
+  assert.deepEqual(p.q('eff_edge_unclosed[flow](F, G, L, H)'), [],
+    'KILLED: reading `resolves` makes the residue blind to exactly what it is for');
+});
+
+test('MUTANT M16: the doors go unnamed and the residue has nothing to report about them', () => {
+  // Targets: `eff_hidden_call`'s two arms. It contributes NO label anywhere, so
+  // nothing in `eff_latent`, `effect_of` or any audit moves when it is removed —
+  // which is precisely why the relation had to be written to make the hole
+  // visible at all. The kill is the residue losing the getter rows while the
+  // call graph keeps the edges.
+  const mut = [{ file: EFF_RULES, find: 'eff_hidden_call[flow](N, M) :- pattern_accessor[code](N, M).',
+                 replace: '' }];
+  const m = build(mut);
+  assert.equal(m.n('eff_latent[flow](F, L, H)'), base().n('eff_latent[flow](F, L, H)'),
+    'SURVIVES the propagation, because this relation propagates nothing');
+  const p = build(mut, [], [['gate.ts', GATE]]);
+  assert.equal(p.n('eff_hidden_call[flow](N, M)'), 0, 'KILLED: no getter door is named');
+  // ...and the residue is UNMOVED, which is the honest reading and worth the
+  // line: `eff_edge_unclosed` ranges over `calls[code]` and never consulted
+  // `eff_hidden_call` at all. The two relations answer different halves —
+  // WHICH doors exist, and WHAT gets dropped — and this mutant says so.
+  assert.ok(p.n('eff_edge_unclosed[flow](F, G, L, H)') > 0,
+    'the residue is independent of the door list, and reports the drop anyway');
+});
+
+test('THE ARM THAT WOULD CLOSE IT IS ONE LINE, and it is not here', () => {
+  // NOT A MUTANT — the opposite. This plants the REPAIR the owner refused and
+  // measures what it would buy, so that the refusal is a decision with a number
+  // beside it rather than an omission. It is the same shape MUTANT B in
+  // test/js-layer-cost.test.ts took when a repair landed: plant the other state
+  // and hold the current one against it.
+  const REPAIR = 'eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).\n'
+    + 'eff_latent[flow](F, L, H) :- eff_hidden_call[flow](N, M), eff_latent[flow](M, L, H),\n'
+    + '                             nearest_v[flow](F, N), not eff_discharged_at[code](N, L).';
+  const p = build([{ file: EFF_RULES,
+    find: 'eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).', replace: REPAIR }],
+    [], [['gate.ts', GATE]]);
+  // ALL THREE BINDINGS WOULD CARRY THE CONTROL'S ROW...
+  const member = ['alloc<none>', 'exn<none>', 'read<local>', 'write<local>'];
+  for (const fn of ['readsByPattern', 'readsByRest', 'readsBySpread'])
+    assert.deepEqual(rowOf(p, fn), member, `${fn} would say what the member read says`);
+  // ...THE RESIDUE WOULD EMPTY...
+  assert.deepEqual(p.q('eff_edge_unclosed[flow](F, G, L, H)'), []);
+  // ...AND THE COST TO THE SHARED CORPUS WOULD BE ZERO ROWS, which is the
+  // measurement that makes this a decision about the MERGE and not about the
+  // model: every getter in the five fixtures is pure.
+  const c = build([{ file: EFF_RULES,
+    find: 'eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).', replace: REPAIR }]);
+  assert.equal(c.n('eff_latent[flow](F, L, H)'), base().n('eff_latent[flow](F, L, H)'),
+    'the repair moves the shared corpus by zero rows');
+  // ...AND NOTHING WOULD REACH THE TOP OF THE LATTICE, the standard
+  // test/js-ambient.test.ts sets: the arm propagates an EXISTING row over an
+  // edge and seeds nothing for a source the value layer did not trace.
+  const tops = (w: World) => [...new Set(w.q('effect_of[flow](F, top)')
+    .flatMap(([f]) => w.q(`fn_name[code](${f}, N)`).map(([n]) => n)))].sort();
+  assert.deepEqual(tops(c), tops(base()),
+    'not one function would reach the top of the lattice because of it');
+  // AND THE KNOWN `may_throw` DEFECT IS WHAT IT WOULD EXPOSE, which is a second
+  // reason the repair is not a one-liner in someone else's merge: with the arm
+  // in, this layer knows a throw its one independent oracle cannot follow.
+  // `may_throw[code]` closes over `resolves` and `throw_statement`, so a getter
+  // reached through a BINDING is exactly the shape it cannot see. Three
+  // branches met that relation on 2026-09-09 and all three left it alone.
+  assert.deepEqual(p.q('eff_exn_only[audit](F)')
+    .map(([f]) => p.q(`fn_name[code](${f}, N)`)[0]?.[0]).sort(),
+    ['readsByPattern', 'readsByRest', 'readsBySpread'],
+    'the repair would light up the oracle gap, which is somebody else\'s item');
+  assert.deepEqual(base().q('eff_exn_only[audit](F)'), [],
+    'and the honest tree is untouched either way');
+});

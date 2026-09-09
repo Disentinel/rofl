@@ -428,6 +428,34 @@ ignored(js, static_block,           controlflow, a_a_static_block_runs_when_the_
 -- spread copies keys and runs getters; in `elements` or `arguments` it exhausts
 -- an iterator. Those are two mechanisms, and this layer's own doctrine is that
 -- mechanisms sharing a bucket get one verdict between them.
+-- ...AND THE ARITHMETIC THAT LICENSES ALL FIVE ROWS, 2026-09-09. The rows above
+-- were written on the strength of an execution oracle that reports `missed`
+-- EMPTY, which says the model has no edge the runtime contradicts — and says
+-- NOTHING about the positions where the rule derives no edge at all. There are
+-- more of those than of the others:
+--
+--   24 destructuring positions = 9 the rule fires at
+--                              + 15 traced to something in this program that
+--                                   owns neither a getter for the key taken nor
+--                                   a `[Symbol.iterator]`
+--                              + 0 primitive + 0 UNTRACED + 0 unsourced
+--
+-- NINE OF TWENTY-FOUR IS THE RATIO AND IT IS NOT THE ANSWER. A rule that fires
+-- at three eighths of its sites is a lie if the other fifteen are unknown and a
+-- complete model if they are answered NO — and until `hidden_call_*` in
+-- rules/js-controlflow.rofl existed the two were the same silence, exactly the
+-- hole `eff_conv_untraced` fills for a coerced operand. The residue is EMPTY
+-- and now SAYS SO; that, and not the oracle, is what closes these cells.
+--
+-- THE FIFTH DOOR IS IN THE SAME CENSUS AND ITS RESIDUE IS NOT EMPTY.
+-- `for_of_statement` reaches the identical protocol: 4 positions = 2 fire + 1
+-- builtin + 1 untraced. The untraced one is `for (const drawn of pick())` — a
+-- generator object, which `may_be_node` does not carry — and it is exactly the
+-- site facts/js-callgraph.rofl describes in prose as calling "a BUILT-IN
+-- `[Symbol.iterator]`". Half of that sentence is measured true (the array
+-- literal beside it) and half of it is now measured UNKNOWN: a generator's
+-- `next` runs the generator BODY, which is user code in this program.
+-- `w_the_generator_is_not_a_builtin` owns that half by name.
 handled(js, object_pattern,  controlflow, r_destructure_accessor).
 handled(js, rest_element,    controlflow, r_destructure_accessor).
 handled(js, spread_element,  controlflow, r_destructure_accessor).

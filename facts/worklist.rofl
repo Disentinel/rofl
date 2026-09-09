@@ -2305,6 +2305,49 @@ claim(queued, js, rest_element,                none, controlflow,  w_destructuri
 claim(queued, js, spread_element,              none, controlflow,  w_destructuring_hides_a_call).
 work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_an_accessor_does).
 
+-- SECOND PASS 2026-09-09, ON AN ITEM ALREADY MARKED `done` AND FOUR CELLS
+-- ALREADY CLOSED, and what it found is what closing them never asked.
+--
+-- THE ORACLE THE CELLS CLOSED AGAINST MEASURES RECALL AND NOTHING ELSE.
+-- `missed` empty over the whole corpus says the model has no edge the runtime
+-- contradicts; it says nothing about a position where the rule derives no edge
+-- at all, and there are more of those. MEASURED: 24 destructuring positions,
+-- `pattern_accessor` and `pattern_iterates` fire at 9.
+--
+--   24 = 9 fire + 15 traced-and-owning-neither + 0 primitive + 0 UNTRACED
+--                                              + 0 unsourced
+--
+-- NINE OF TWENTY-FOUR IS A LIE IF THE OTHER FIFTEEN ARE UNKNOWN AND A COMPLETE
+-- MODEL IF THEY ARE ANSWERED NO, and until `hidden_call_*` in
+-- rules/js-controlflow.rofl existed the two were the SAME SILENCE — the exact
+-- hole `eff_conv_untraced` fills for a coerced operand one section over. So the
+-- cells stay closed, and they are closed on an EMPTY RESIDUE rather than on a
+-- ratio, which is the only thing that ever licensed them.
+--
+-- THE FIFTH DOOR IS IN THE SAME CENSUS AND ITS RESIDUE IS NOT EMPTY.
+-- `for_of_statement`: 4 positions = 2 fire + 1 builtin + 1 untraced, and the
+-- untraced one is a GENERATOR, whose `next` runs a body that IS in this program
+-- — which facts/js-callgraph.rofl called a builtin in the same clause as the
+-- array literal beside it. Not this item's door; the row is where the next
+-- reader will find it.
+--
+-- AND THE EFFECT LAYER HAS NOT ACTUALLY RECEIVED THREE OF THE FOUR KINDS.
+-- `pattern_accessor` reaches `calls[code]` and not `resolves[code]`, on purpose;
+-- `eff_latent` closes over `resolves`. MEASURED AND LEFT UNREPAIRED on the
+-- owner's decision — the arm belongs to the call-graph and effect packs
+-- together, not inside this merge — so what this pass leaves is the
+-- DEMONSTRATION: `eff_hidden_call[flow]` names the doors,
+-- `eff_edge_unclosed[flow]` names what they drop, and a test PLANTS the repair
+-- to price it. `w_effect_reads_only_what_resolves` owns it, and
+-- `w_the_generator_is_not_a_builtin` owns the fifth door.
+--
+-- `eff_join_short[audit]` — the gate for exactly this question — reads
+-- `resolves` too, so it was green while the layer was built, audited and
+-- closed, and it is green today in the very world where the residue is not.
+-- That clause is the finding; the missing arm is not.
+work_spawned(w_destructuring_hides_a_call, f_a_rule_that_derives_nothing_is_saying_one_of_two_opposite_things).
+work_spawned(w_destructuring_hides_a_call, f_a_gate_that_reads_what_the_propagation_reads_cannot_see_a_dropped_edge).
+
 -- 2026-09-08. The last pin in test/worklist.test.ts that is still a number, and
 -- the only assertion there whose SUBJECT is the size of the open set. Three
 -- parallel branches moved it from 102 to 70 in one afternoon; a fourth would
@@ -3067,3 +3110,79 @@ work_spawned(w_ambient_global_members, f_the_surface_enumerates_a_modules_member
 work(w_effect_shape_axis, "the refusal of `axis_applies(shape, effect)` has expired: one member is attributed and another is not, in one store. Declaring it re-opens cells and needs its own ownership in the same commit").
 work_state(w_effect_shape_axis, open).
 work_needs(w_effect_shape_axis, w_effect_ambient_call).
+
+-- ---------------------------------------------------------------------------
+-- 2026-09-09, both ENTERED BY THE SECOND PASS OF `w_destructuring_hides_a_call`
+-- and neither of them its work. An item that measures a hole and hands it over
+-- named is the shape this queue was built for; an item that quietly repairs
+-- somebody else`s pack inside its own merge is the shape it was built against.
+
+-- THE FIFTH DOOR. `for_of_statement` reaches the identical hidden-call protocol
+-- the four destructuring kinds do, and the census built for them
+-- (`hidden_call_*` in rules/js-controlflow.rofl) answers it too:
+--
+--   4 for-of positions = 2 the rule fires at + 1 builtin + 1 UNTRACED
+--
+-- THE UNTRACED ONE IS A GENERATOR and that is the whole item.
+-- `for (const drawn of pick())` iterates a generator object, which
+-- `may_be_node[flow]` does not carry — and a generator`s `next` runs the
+-- GENERATOR BODY, which IS a node in this program. So an edge may well be
+-- missing there.
+--
+-- AND facts/js-callgraph.rofl PUTS THAT SITE AND ITS NEIGHBOUR IN ONE CLAUSE:
+-- *iterating an array literal or a generator calls a BUILT-IN
+-- `[Symbol.iterator]`, a function that is not in the program*. For
+-- `for (const chosen of [alef, bet])` that is exactly right and is now a
+-- positive row — `hidden_call_builtin[flow]`, nothing user-written runs, no
+-- edge is missing. For the generator it is unproven, and the clause reads them
+-- as one because a KIND-LEVEL CELL CANNOT HOLD THE SPLIT. The census splits
+-- them; whether `for_of_statement/none/callgraph` should reopen on the strength
+-- of that is a VERDICT and therefore the owner`s, which is why this item
+-- carries no `claim` row and closes no cell.
+--
+-- WHAT IT WAITS ON is the generator protocol at the value layer, which
+-- `w_prototype_of_a_value` already measured from the other end: `identifier
+-- .next` has six sites and `may_be_node` is EMPTY for all six.
+work(w_the_generator_is_not_a_builtin, "a for-of over a generator is UNTRACED and not builtin - the generator`s `next` runs a body that is a node in this program, and one clause in facts/js-callgraph.rofl calls it the same thing as an array literal").
+work_state(w_the_generator_is_not_a_builtin, open).
+-- ...and the finding it spawned is the one the census was written for: the
+-- generator measurement is the sharpest half of it, and an item that spawns
+-- nothing is either trivial or was not looked at.
+work_spawned(w_the_generator_is_not_a_builtin, f_a_rule_that_derives_nothing_is_saying_one_of_two_opposite_things).
+
+-- THE EFFECT LAYER READS ONLY WHAT `resolves` CARRIES, and three of the four
+-- destructuring kinds therefore contribute nothing to it while their cells say
+-- `r_effect_transfer`. `pattern_accessor` reaches `calls[code]` and not
+-- `resolves[code]` — deliberately, because two `resolves` rows at one node is
+-- what `ambiguous_call[audit]` exists to report — and `eff_latent`'s second arm
+-- closes over `resolves`. Measured with a probe: a getter that writes and
+-- throws reaches its caller through `gate.hot` and through nothing else.
+--
+-- THE SAME HOLE ONE HOP ON, and it is not the destructuring family`s alone: the
+-- iterator`s `next()` is a `calls` row through THREE doors — the array pattern,
+-- the spread argument and `for_of_statement` — and the call graph carries every
+-- one of those edges by name while this layer drops all three.
+--
+-- AND THE GATE FOR EXACTLY THIS QUESTION CANNOT SEE IT. `eff_join_short[audit]`
+-- says a caller`s row contains its callee`s and RANGES OVER `resolves`, the
+-- same relation the propagation ranges over, so it is green in the very world
+-- where `eff_edge_unclosed[flow]` is not. That is the part worth the item: a
+-- gate sharing its blind spot with the thing it guards.
+--
+-- THE REPAIR IS ONE LINE AND IS REFUSED RATHER THAN UNKNOWN. Section 5b of
+-- rules/js-effects.rofl already writes it for a coercion; it was built,
+-- measured and reverted on the owner`s decision of 2026-09-09, because it
+-- belongs to the call-graph and effect packs together and not inside a
+-- destructuring merge. test/js-effects.test.ts PLANTS it and measures what it
+-- would buy: all three bindings gain the control`s row, `eff_edge_unclosed`
+-- empties, the shared corpus moves by ZERO rows, and nothing reaches the top of
+-- the lattice.
+--
+-- WHAT IT ALSO NEEDS DECIDED, because the repair exposes it: with the arm in,
+-- `eff_exn_only[audit]` lights at three functions, because `may_throw[code]`
+-- closes over `resolves` and `throw_statement` and cannot follow a getter
+-- reached through a BINDING. That is the same relation three branches met on
+-- 2026-09-09 and all three left alone.
+work(w_effect_reads_only_what_resolves, "the effect layer closes over `resolves` and three of its own hidden-call doors reach `calls` only, so three destructuring kinds contribute nothing while their cells claim a transfer - and `eff_join_short[audit]`, the gate for exactly that, reads `resolves` too").
+work_state(w_effect_reads_only_what_resolves, open).
+work_spawned(w_effect_reads_only_what_resolves, f_a_gate_that_reads_what_the_propagation_reads_cannot_see_a_dropped_edge).

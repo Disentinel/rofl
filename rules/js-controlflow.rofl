@@ -706,10 +706,167 @@ resolves[code](N, M)   :- pattern_iterates[code](N, M).
 -- ...and the iterator object's `next`, which no syntax names — the same join
 -- `for_of_iterates` makes, on the same three relations, because it is the same
 -- protocol reached through a different door.
-calls[code](Caller, Next) :- pattern_iterates[code](X, M), nearest_fn[code](Caller, X),
-                             returns[flow](M, E), may_be_node[flow](E, IterObj),
-                             member_value[flow](IterObj, "next", V),
-                             may_be_node[flow](V, Next), fn_node[code](Next).
+--
+-- THE CALLEE IS A RELATION AND NOT AN INLINE JOIN, 2026-09-09, and the split is
+-- a REFACTOR SHIPPED BEFORE ITS FEATURE with its own control: `calls[code]`
+-- compared row for row across the change, identical, over sixteen relations and
+-- with a positive control that deleting the arm loses exactly three edges.
+--
+-- The reason is that a second reader needs this callee, and it needs it to
+-- REPORT rather than to repair. The effect layer closes over `resolves` and
+-- this hop reaches `calls` only, so section 5d of rules/js-effects.rofl names
+-- the callee in order to say what that layer DROPS — a hole the owner has
+-- deliberately left open under `w_effect_reads_only_what_resolves`. A
+-- four-premise join copied into another pack is a defect waiting for one of the
+-- copies to be repaired.
+pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
+                               returns[flow](M, E), may_be_node[flow](E, IterObj),
+                               member_value[flow](IterObj, "next", V),
+                               may_be_node[flow](V, Next), fn_node[code](Next).
+calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Caller, X).
+
+-- ---------------------------------------------------------------------------
+-- THE SOURCE DECIDES, SO COUNT THE SOURCES — w_destructuring_hides_a_call,
+-- 2026-09-09, and it is the arithmetic section 5b of rules/js-effects.rofl runs
+-- for a coerced operand, run for the positions whose surface is a binding.
+--
+-- WHY THE CELL NEEDED IT. The four cells above closed on a rule that fires at
+-- NINE of the corpus's TWENTY-FOUR positions, and until this section existed
+-- nothing could tell the reader which of the two sentences the other fifteen
+-- were: *this source runs no user code* — a positive statement about a plain
+-- array or an object owning no getter — or *the value layer never traced this
+-- source*, which is an absence wearing the same silence. `pattern_accessor`
+-- and `pattern_iterates` derive nothing in both cases and are right in one.
+-- That is the same hole `eff_conv_untraced` exists to fill one section over.
+--
+-- MEASURED over the five corpus files, and the arithmetic is what let the cells
+-- stay closed rather than being reopened:
+--
+--   24 positions  = 9 user code + 15 builtin + 0 primitive + 0 untraced
+--                                             + 0 unsourced
+--   by kind: object_pattern 10 (4 fire), array_pattern 3 (1), rest_element 3
+--            (1), spread_element 8 (3 — one getter, two iterable)
+--
+-- SO THE RESIDUE IS EMPTY AND SAYS SO, which is a different claim from the
+-- ratio 9/24 and the only one that licenses `handled`. A rule that fires at
+-- three eighths of its sites is a lie if the rest are unknown and a complete
+-- model if the rest are answered NO — and this section is what makes the
+-- difference queryable instead of arguable.
+--
+-- `for_of_statement` IS IN THE DENOMINATOR, because the mechanism and not the
+-- kind is the unit: the loop reaches the identical protocol through a different
+-- door, `transfer_mechanism(for_of_statement, iterator_call)` already says so,
+-- and its residue is the same question asked at a fifth position.
+
+-- (1) THE DENOMINATOR. Every position that runs a protocol, by MECHANISM. Keyed
+-- on the kind AND the field for the spread, exactly as `spread_iterated` is,
+-- because `{ ...o }` and `[ ...o ]` are one kind doing two different things.
+hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).
+hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _, _),
+                                           ast_node[code](P, object_pattern, _, _),
+                                           ast_child[code](P, properties, _, R).
+hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _, _),
+                                           ast_child[code](O, properties, _, S),
+                                           ast_node[code](S, spread_element, _, _).
+hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _, _).
+hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
+hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _, _).
+
+-- (2) THE SOURCE each position reads. A REST reads the declarator's init rather
+-- than its own child, which is why it cannot borrow the arm above it.
+hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _, _),
+                                  pattern_source[code](P, Init).
+hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _, _),
+                                  pattern_source[code](P, Init).
+hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
+                                  ast_child[code](D, init, 0, Init).
+hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _, _),
+                                  hidden_call_pos[code](S, _),
+                                  ast_child[code](S, argument, 0, A).
+hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _, _),
+                                  ast_child[code](X, right, 0, R).
+
+-- (3) THE FIVE ANSWERS, and the first of them is the RULE'S OWN OUTPUT rather
+-- than a second criterion. Writing "the source owns a getter" again here would
+-- be a copy of `pattern_accessor` that can drift from it, and the question this
+-- section asks is exactly *at which positions does that rule fire*.
+hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
+hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
+hidden_call_user[flow](X, M) :- for_of_iterates[code](X, M).
+hidden_call_fires[code](N)   :- hidden_call_user[flow](N, _).
+
+-- ...a source the value layer TRACED to something in this program that owns no
+-- such member converts through the language's own — `Array.prototype`'s
+-- iterator, `Object.prototype` — and runs no user code. A positive statement,
+-- and the one a rule keyed on the SYNTAX could not make.
+--
+-- AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE FOUND. This class is `traced
+-- AND the rule did not fire`, so reading it as *no user code runs here* rests
+-- on the transfer rules being RIGHT, not merely on the source being traced.
+-- Where they can be wrong is narrow and known: `pattern_iterates` requires
+-- `fn_node[code](M)`, so a receiver holding a non-function under `iterator`
+-- would land here rather than in the frontier. There is no such site in this
+-- corpus — that is the third unkillable mutant named in
+-- test/js-destructuring-transfer.test.ts — and the mutant set beside it is
+-- what this class borrows its confidence from.
+hidden_call_builtin[flow](N, O) :- hidden_call_src[code](N, Src),
+                                   may_be_node[flow](Src, O),
+                                   not hidden_call_fires[code](N).
+-- ...a PRIMITIVE has no user member either: `const [a, b] = "xy"` runs the
+-- String iterator and `const { length } = "xy"` runs nothing. Same answer,
+-- different reason, so it is its own row rather than folded into the one above.
+hidden_call_primitive[flow](N, V) :- hidden_call_src[code](N, Src),
+                                     may_be_lit[flow](Src, V),
+                                     not hidden_call_traced[code](N).
+hidden_call_traced[code](N)       :- hidden_call_src[code](N, Src), may_be_node[flow](Src, _).
+-- ...and the FRONTIER, named rather than seeded. A source the value layer did
+-- not trace MAY own a getter or an iterator, and the honest answer is the one
+-- `eff_call_unattributed` gives for an unresolved call: a positive relation.
+-- Seeding a transfer here instead would put every plain array in the corpus on
+-- the frontier, which is the layer's sharpest statement destroyed to say
+-- something nobody can use.
+hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
+                                      not may_be_lit[flow](Src, _),
+                                      not may_be_node[flow](Src, _).
+-- ...and the fifth answer, which is about the MODEL rather than the source:
+-- `pattern_source` covers the DECLARATOR form only, so a pattern in a PARAMETER
+-- position has no source here at all. That silence was a comment; it is a row.
+hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
+hidden_call_unsourced[flow](N, K)  :- hidden_call_pos[code](N, _),
+                                      not hidden_call_sourced[code](N),
+                                      ast_node[code](N, K, _, _).
+
+-- (4) TOTALITY, in the shape section 5b of rules/js-effects.rofl uses. Every
+-- position is answered one of the five ways and never none of them — an
+-- IDENTITY, so it is true of any corpus rather than of this one.
+hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
+hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_primitive[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_untraced[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N, _).
+hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
+                                     not hidden_call_accounted[audit](N).
+
+-- ...AND THE MECHANISM COLUMN IS CHECKED AGAINST THE TABLE THAT OWNS IT.
+-- `hidden_call_pos` writes a mechanism by hand at six arms, and a hand-written
+-- column drifts: an arm that filed an `object_pattern` under `iterator_call`
+-- would classify it against the wrong member and nothing else here would care.
+-- `transfer_mechanism` is the table that says which kind carries which, so this
+-- reads it back. Empty and populatable — swapping the mechanism on the
+-- `object_pattern`, `rest_element`, `array_pattern` or `for_of_statement` arm
+-- fires it immediately.
+--
+-- AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE FOUND: it is BLIND to the two
+-- `spread_element` arms, because that kind is the one carrying BOTH mechanisms
+-- and every pair it could be given is already declared. Swapping those two is
+-- a survivor by construction, and the mutant that kills it is `d9` in
+-- test/js-destructuring-transfer.test.ts, which reads the EDGES instead.
+-- `member_expression` is not what this catches either: it really does carry
+-- `accessor_call`, so a stray row for it would pass. What is refused is a
+-- kind/mechanism PAIR the layer has not declared.
+hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
+                                      ast_node[code](N, K, _, _),
+                                      not transfer_mechanism(K, M).
 
 -- ---------------------------------------------------------------------------
 -- WHAT PROPAGATES, 2026-09-06 — queue item w_exn_propagation, the transitive

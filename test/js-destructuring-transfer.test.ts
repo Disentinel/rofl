@@ -193,10 +193,18 @@ const AS = `pattern_accessor[code](S, M) :- ast_node[code](O, object_expression,
 const IP = `pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
                                 pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
                                 member_value[flow](Obj, "iterator", M), fn_node[code](M).`;
-const NEXT = `calls[code](Caller, Next) :- pattern_iterates[code](X, M), nearest_fn[code](Caller, X),
-                             returns[flow](M, E), may_be_node[flow](E, IterObj),
-                             member_value[flow](IterObj, "next", V),
-                             may_be_node[flow](V, Next), fn_node[code](Next).`;
+// RE-AIMED 2026-09-09 AND NOT DELETED. The four-premise join this used to
+// anchor on was LIFTED into `pattern_next[code]` so section 5d of
+// rules/js-effects.rofl could name the callee without copying it — a reorder
+// that changed no answer and expired a mutant, which is the failure mode
+// HANDOFF.md names in its own words ("if you reorder a body, grep the test
+// suite for its text"). Two mutants stand where one did: the EDGE arm and the
+// RELATION, and they report different losses.
+const NEXT = 'calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Caller, X).';
+const PNEXT = `pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
+                               returns[flow](M, E), may_be_node[flow](E, IterObj),
+                               member_value[flow](IterObj, "next", V),
+                               may_be_node[flow](V, Next), fn_node[code](Next).`;
 const SRC = `pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
                                  ast_child[code](D, id, 0, P),
                                  ast_child[code](D, init, 0, Init).`;
@@ -382,7 +390,7 @@ const MUT: { name: string; targets: string; mut: Mut[]; expect: (m: World, b: Wo
   },
   {
     name: 'd14 the iterator is called and its `next` is not',
-    targets: 'the second hop of the iterator protocol',
+    targets: 'the EDGE arm of the second hop of the iterator protocol',
     mut: [{ find: NEXT, replace: '' }],
     expect: (m, b) => {
       assert.deepEqual(lost(m, b, famEdges), [
@@ -390,6 +398,24 @@ const MUT: { name: string; targets: string; mut: Mut[]; expect: (m: World, b: Wo
       ]);
       // ...and `for-of`'s own second hop is a DIFFERENT rule and stays.
       assert.ok(famEdges(m).includes('useIterable -> bump'));
+      // THE RELATION SURVIVES THE EDGE, which is what the lift bought and what
+      // tells this mutant apart from the one below it: the model still NAMES
+      // the callee, it has simply stopped drawing the edge to it.
+      assert.deepEqual(m.q('pattern_next[code](X, N)').length, b.q('pattern_next[code](X, N)').length);
+    },
+  },
+  {
+    name: 'd14b the second hop has no callee at all',
+    targets: '`pattern_next[code]`, the relation the effect layer reads',
+    mut: [{ find: PNEXT, replace: '' }],
+    expect: (m, b) => {
+      assert.deepEqual(m.q('pattern_next[code](X, N)'), [], 'the callee is unnamed');
+      // ...and the SAME three edges go, which is why the pair is two mutants and
+      // not one run twice: d14 loses the edge and keeps the name, this loses
+      // both, and the second is what section 5d of rules/js-effects.rofl reads.
+      assert.deepEqual(lost(m, b, famEdges), [
+        'useArrayPatternIter -> bump', 'useSpreadArgIter -> bump', 'useSpreadIter -> bump',
+      ]);
     },
   },
   {
@@ -479,6 +505,212 @@ for (const g of MUT) test(`${g.name} — targets ${g.targets}`, () => g.expect(b
 //     discipline here gives: a construct nothing else in the item needs is a
 //     second construct smuggled into a fixture for one. Named so the next reader
 //     does not re-measure it.
+
+// ===========================================================================
+// 4. THE DENOMINATOR — w_destructuring_hides_a_call, second pass 2026-09-09.
+//
+// WHAT SECTION 1 CANNOT SAY. `hidden` and `famEdges` are the edges the model
+// DRAWS, and the oracle above reports `missed` empty — so both instruments look
+// at the positions where something was derived, and neither can see a position
+// where nothing was. There are more of the second kind: the rule fires at NINE
+// of the corpus's twenty-four destructuring positions, and until `hidden_call_*`
+// existed the other fifteen and a source the value layer never traced were the
+// same silence.
+//
+// EVERY ASSERTION HERE IS AN IDENTITY OR A NAMED SET, and the reason is the
+// merge rather than taste: 24, 9 and 15 are numbers that move the moment
+// anybody adds a fixture with a pattern in it, and two branches moving one of
+// them is right on each branch and wrong in the merge. So the denominator is
+// re-derived HERE from `ast_node`/`ast_child` — a second instrument that reads
+// no rule of the section it measures — and the classes are asserted to
+// PARTITION it.
+
+/** the positions, re-derived from the grammar rather than read off the rule */
+const positions = (w: World): string[] => {
+  const spreadField = (n: string) => w.q(`ast_child[code](P, F, I, ${n})`).map((r) => r[1]);
+  const out: string[] = [];
+  for (const [n] of w.q('ast_node[code](N, object_pattern, F, L)')) out.push(n);
+  for (const [n] of w.q('ast_node[code](N, array_pattern, F, L)')) out.push(n);
+  for (const [n] of w.q('ast_node[code](N, for_of_statement, F, L)')) out.push(n);
+  for (const [n] of w.q('ast_node[code](N, rest_element, F, L)'))
+    if (spreadField(n).includes('properties')) out.push(n);
+  for (const [n] of w.q('ast_node[code](N, spread_element, F, L)')) {
+    const f = spreadField(n);
+    if (f.includes('properties') || f.includes('elements') || f.includes('arguments')) out.push(n);
+  }
+  return out.sort();
+};
+const cls = (w: World, rel: string) => [...new Set(w.q(rel).map((r) => r[0]))].sort();
+/** a position by CALLER and KIND — no file, no line, no index */
+const say = (w: World, n: string) => `${where(w, n)} / ${kindOf(w, n)}`;
+
+test('every position a destructuring form runs a protocol at is answered one of five ways', () => {
+  const m = base();
+
+  // (a) THE DENOMINATOR IS THE GRAMMAR'S, not the rule's.
+  assert.deepEqual(cls(m, 'hidden_call_pos[code](N, M)'), positions(m),
+    '`hidden_call_pos` is exactly the positions the grammar puts a protocol at');
+
+  // (b) THE FIVE CLASSES PARTITION IT. Totality is the rule's own audit; what
+  // this adds is DISJOINTNESS, which no audit in the pack asserts.
+  assert.deepEqual(m.q('hidden_call_unaccounted[audit](N)'), [], 'every position is answered');
+  assert.deepEqual(m.q('hidden_call_off_table[audit](K, M)'), [],
+    'and no arm files a kind under a mechanism `transfer_mechanism` does not give it');
+  const CLASSES = ['hidden_call_fires[code](N)', 'hidden_call_builtin[flow](N, O)',
+    'hidden_call_primitive[flow](N, V)', 'hidden_call_untraced[flow](N, S)',
+    'hidden_call_unsourced[flow](N, K)'].map((r) => cls(m, r));
+  for (const c of CLASSES) for (const other of CLASSES) if (c !== other)
+    assert.deepEqual(c.filter((x) => other.includes(x)), [], 'the classes are disjoint');
+  assert.deepEqual([...new Set(CLASSES.flat())].sort(), positions(m), 'and they cover it');
+
+  // (c) THE FIRING CLASS IS THE RULE'S OWN OUTPUT, stated as an identity so the
+  // census cannot drift from the thing it is a census of.
+  assert.deepEqual(cls(m, 'hidden_call_fires[code](N)'), [...new Set([
+    ...m.q('pattern_accessor[code](N, M)').map((r) => r[0]),
+    ...m.q('pattern_iterates[code](N, M)').map((r) => r[0]),
+    ...m.q('for_of_iterates[code](N, M)').map((r) => r[0]),
+  ])].sort());
+
+  // (d) THE RESIDUE, AS A NAMED SET, and it is the whole reason the four cells
+  // may stay closed. NOTHING in the destructuring family is untraced; the ONE
+  // untraced position in the census belongs to the fifth door, `for-of`, and it
+  // is a GENERATOR object — whose `next` runs the generator body, which IS a
+  // node in this program. Its neighbour `for (const chosen of [alef, bet])` is
+  // `builtin` in the same run, and facts/js-callgraph.rofl used to call both of
+  // them the same thing.
+  assert.deepEqual(m.q('hidden_call_untraced[flow](N, S)').map(([n]) => say(m, n)).sort(),
+    ['useForOfGen / for_of_statement']);
+  assert.deepEqual(m.q('hidden_call_primitive[flow](N, V)'), [], 'no primitive source in the corpus');
+  assert.deepEqual(m.q('hidden_call_unsourced[flow](N, K)'), [],
+    'and no pattern in a parameter position, which is the form `pattern_source` does not cover');
+  // ...so, restricted to the four kinds this item owns, the residue is EMPTY —
+  // which is the sentence the cell rests on, written as a query.
+  assert.deepEqual(m.q('hidden_call_untraced[flow](N, S)')
+    .filter(([n]) => kindOf(m, n) !== 'for_of_statement'), []);
+});
+
+const CENSUS: { name: string; targets: string; mut: Mut[]; expect: (m: World, b: World) => void }[] = [
+  {
+    name: 'c1 a position can be user code and builtin at once',
+    targets: 'the `not hidden_call_fires` guard — the whole content of the builtin class',
+    mut: [{ find: `hidden_call_builtin[flow](N, O) :- hidden_call_src[code](N, Src),
+                                   may_be_node[flow](Src, O),
+                                   not hidden_call_fires[code](N).`,
+            replace: `hidden_call_builtin[flow](N, O) :- hidden_call_src[code](N, Src),
+                                   may_be_node[flow](Src, O).` }],
+    // the classes stop partitioning and the TOTALITY AUDIT STAYS GREEN, which
+    // is why disjointness is asserted in the test and not left to the pack.
+    //
+    // THE ORACLE IS AN IDENTITY AND NOT A LIST OF NAMES: every firing position
+    // has a traced source BY CONSTRUCTION — it fires because the value layer
+    // reached an owner — so without the guard the overlap is the WHOLE firing
+    // set, and that is a sentence about the rule rather than about this corpus.
+    expect: (m, b) => {
+      assert.deepEqual(m.q('hidden_call_unaccounted[audit](N)'), [], 'the audit cannot see this');
+      const overlap = (w: World) => cls(w, 'hidden_call_fires[code](N)')
+        .filter((x) => cls(w, 'hidden_call_builtin[flow](N, O)').includes(x));
+      assert.deepEqual(overlap(b), [], 'the classes are disjoint on the honest tree');
+      assert.deepEqual(overlap(m), cls(m, 'hidden_call_fires[code](N)'),
+        'and with the guard gone every firing position is builtin as well');
+      assert.ok(overlap(m).length > 0, 'positive control: there is something to overlap');
+    },
+  },
+  {
+    name: 'c2 a source that is merely untraced is reported as running no user code',
+    targets: 'the `not may_be_node` premise of the untraced class',
+    mut: [{ find: `hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
+                                      not may_be_lit[flow](Src, _),
+                                      not may_be_node[flow](Src, _).`,
+            replace: '' }],
+    // the generator site falls off the residue and into NOTHING — and again the
+    // totality audit goes red, which is the arm of the pack that catches it.
+    // THE MUTANT WORLD IS NEVER ASKED FOR THE DELETED RELATION, and that is a
+    // constraint of the instrument rather than a style: with its only rule gone
+    // `hidden_call_untraced` is `unpopulatable`, and `q` refuses an empty answer
+    // to a question the world cannot answer — correctly, since an empty result
+    // and an unanswerable one are the confusion this whole section is about.
+    expect: (m, b) => {
+      assert.deepEqual(b.q('hidden_call_unaccounted[audit](N)'), []);
+      // AS AN IDENTITY: exactly what was frontier becomes unanswered, which is
+      // a sentence about the arm and not about which site the corpus happens to
+      // have. The audit is what notices — nothing else in the pack would.
+      assert.deepEqual(cls(m, 'hidden_call_unaccounted[audit](N)'),
+        cls(b, 'hidden_call_untraced[flow](N, S)'), 'the identity is what notices');
+      assert.ok(cls(b, 'hidden_call_untraced[flow](N, S)').length > 0, 'positive control');
+    },
+  },
+  {
+    name: 'c3 a rest reads its own pattern instead of the declarator it sits in',
+    targets: 'the rest arm of `hidden_call_src`',
+    mut: [{ find: `hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
+                                  ast_child[code](D, init, 0, Init).`,
+            replace: `hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
+                                  ast_child[code](D, id, 0, Init).` }],
+    // WHERE THE REST POSITIONS LAND IS THE INTERESTING HALF, and it is UNTRACED
+    // rather than unsourced: the mutant still gives each rest a source, and the
+    // source it gives is the PATTERN NODE, which is not a `node_value_kind` —
+    // so the value layer has nothing to say about it and the position becomes
+    // frontier. A source pointed at the wrong node does not look like a missing
+    // source; it looks like a source nobody can trace, which is exactly the
+    // confusion this whole section exists to make visible.
+    expect: (m, b) => {
+      const rests = (w: World) => positions(w).filter((n) => kindOf(w, n) === 'rest_element');
+      const frontier = (w: World) => cls(w, 'hidden_call_untraced[flow](N, S)')
+        .filter((n) => rests(w).includes(n));
+      assert.ok(rests(b).length > 0, 'positive control: the corpus has object rests');
+      assert.deepEqual(frontier(b), [], 'none of them is frontier on the honest tree');
+      assert.deepEqual(frontier(m), rests(m), 'and every one of them is under the mutant');
+    },
+  },
+  {
+    name: 'c4 an object pattern is filed under the iterator mechanism',
+    targets: 'hidden_call_off_table[audit] — the mechanism column against its own table',
+    mut: [{ find: 'hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).',
+            replace: 'hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, object_pattern, _, _).' }],
+    expect: (m) => assert.deepEqual(m.q('hidden_call_off_table[audit](K, M)'),
+      [['object_pattern', 'iterator_call']]),
+  },
+  {
+    name: 'c5 the fifth door is not in the census',
+    targets: 'the for-of arm of `hidden_call_pos` — the residue is entirely its',
+    mut: [{ find: 'hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _, _).',
+            replace: '' }],
+    // WHAT THIS MUTANT SAYS is the shape of the whole section, and it took two
+    // attempts to state: with the loop out of the DENOMINATOR every audit in the
+    // pack is still green — `hidden_call_unaccounted` quantifies over
+    // `hidden_call_pos`, so a position it no longer asks about cannot be
+    // unaccounted — and the model has simply stopped asking about a door it
+    // answers wrongly. The identity in the test above is the only thing that
+    // notices, which is why the denominator is re-derived from the grammar.
+    //
+    // AND THE FRONTIER ROW SURVIVES, which was a surprise worth keeping:
+    // `hidden_call_untraced` reads `hidden_call_src`, a SEPARATE arm, so the
+    // generator's loop is still named as residue while no longer being counted.
+    // Naming and accounting are two jobs and this mutant separates them.
+    expect: (m, b) => {
+      assert.deepEqual(m.q('hidden_call_unaccounted[audit](N)'), [],
+        'the totality audit cannot see this');
+      assert.deepEqual(cls(m, 'hidden_call_untraced[flow](N, S)'),
+        cls(b, 'hidden_call_untraced[flow](N, S)'), 'nor can the residue');
+      // AS AN IDENTITY: what the denominator loses is exactly the loops, which
+      // is a sentence about the arm rather than a list of the corpus's function
+      // names — the same reason `positions` is re-derived from the grammar.
+      const loops = (w: World) => positions(w).filter((n) => kindOf(w, n) === 'for_of_statement');
+      assert.ok(loops(b).length > 0, 'positive control: the corpus has for-of loops');
+      // ...and the DENOMINATOR is what shrinks, not the grammar: `positions` is
+      // re-derived from `ast_node` and is identical in both worlds, so the only
+      // thing that moved is what the census agrees to ask about.
+      assert.deepEqual(positions(m), positions(b), 'the grammar is untouched');
+      assert.notDeepEqual(cls(m, 'hidden_call_pos[code](N, M)'), positions(m),
+        'KILLED by the denominator identity, and by nothing else in the pack');
+      assert.deepEqual(lost(m, b, (w) => cls(w, 'hidden_call_pos[code](N, M)')).sort(),
+        loops(b).sort(), 'exactly the loops leave the denominator');
+    },
+  },
+];
+
+for (const g of CENSUS)
+  test(`${g.name} — targets ${g.targets}`, () => g.expect(build(g.mut), base()));
 
 test('the three unkillable mutants are unkillable for the reasons given', () => {
   const b = base();

@@ -749,6 +749,96 @@ eff_mod_join_short[audit](F, T, J) :- eff_evaluates_at[code](I, T), ast_node[cod
                                       eff_join(NF, NT, J), J != NF.
 
 -- ===========================================================================
+-- 5d. A HIDDEN CALL THAT REACHES `calls` AND NOT `resolves`
+--     w_destructuring_hides_a_call, 2026-09-09
+--
+-- THE LEDGER SAID THESE FOUR KINDS WERE ORDINARY CALLS HERE AND THREE OF THEM
+-- CONTRIBUTED NOTHING. facts/js-effects.rofl reads *`pattern_iterates` and
+-- `pattern_accessor` turn each into a `resolves` row, so at this layer they are
+-- ordinary calls* — and only the first half is true. `pattern_accessor` reaches
+-- `calls[code]` DIRECTLY and deliberately, because a rest over two getters is
+-- two true calls at one node and `ambiguous_call[audit]` reads two `resolves`
+-- at one node as an over-approximation. `eff_latent`'s second arm closes over
+-- `resolves`. So the getter side of a destructuring form landed in the call
+-- graph and nowhere in this layer.
+--
+-- MEASURED WITH A PROBE, four functions over one getter that writes and throws
+-- — `get hot() { sink = sink + 1; throw ... }`:
+--
+--   gate.hot            (a member read)     read<local> write<local> exn alloc
+--   const { hot } = gate                    NOTHING
+--   const { ...rest } = gate                NOTHING
+--   ({ ...gate })                           alloc only — the literal's own
+--
+-- ...and the same hole one hop further along the ITERATOR side, which the first
+-- half does not cover either: `pattern_iterates` IS a `resolves` row and the
+-- `next()` it implies is a `calls` row, so an iterator whose `next` writes is
+-- invisible while the iterator method itself propagates. `pattern_next[code]`
+-- in rules/js-controlflow.rofl exists so this section can NAME that callee
+-- without copying a four-premise join.
+--
+-- **THIS SECTION MEASURES THE HOLE AND DOES NOT CLOSE IT.** The arm that would
+-- close it is one line and section 5b already writes it — `eff_conv_call`
+-- propagates a coercion's hidden callee exactly this way — and it is REFUSED
+-- BY THE OWNER, on 2026-09-09, on a reason that is about the merge and not
+-- about the model: the repair belongs to the call-graph and effect packs
+-- together, and it is not to arrive inside a destructuring merge. Two other
+-- branches found `may_throw` defects of the same shape on the same day and all
+-- of them left the relation alone for the same reason.
+-- `w_effect_reads_only_what_resolves` in facts/worklist.rofl owns it.
+--
+-- AND THE REFUSAL CARRIES A NUMBER, which is what separates a decision from an
+-- omission. The arm was written and priced before it was reverted: with it in,
+-- `eff_latent` over the five shared fixtures is 401 rows and without it 401 —
+-- gained 0, lost 0, because every getter in this corpus is pure — so the repair
+-- costs the honest tree nothing and is worth exactly one probe. The test plants
+-- it and reports that, rather than leaving the reader to wonder.
+--
+-- WHAT IS BUILT INSTEAD IS THE DEMONSTRATION. `eff_hidden_call[flow]` names
+-- every door that reaches `calls[code]` without a `resolves[code]` row, and
+-- `eff_edge_unclosed[flow]` below reports what those doors DROP. Neither
+-- contributes a label to anything, so `eff_latent` is untouched BY
+-- CONSTRUCTION and not by luck.
+eff_hidden_call[flow](N, M) :- pattern_accessor[code](N, M).
+eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).
+
+-- ...AND THE RESIDUE, WHICH IS THE WHOLE POINT. `eff_join_short[audit]` is the
+-- gate that says a caller's row contains its callee's, and IT READS `resolves`
+-- — THE SAME RELATION THE PROPAGATION READS. A gate that looks where the
+-- propagation looks cannot see an edge the propagation missed, which is why
+-- this hole survived the layer being built, audited and closed, and why it is
+-- still green today in the very world where the rows below are non-empty. That
+-- sentence, and not the missing arm, is the finding.
+--
+-- IT IS A POSITIVE RELATION AND NOT AN `[audit]`, for the reason
+-- `eff_call_unattributed` and `concrete_unmapped` are: it reports a hole that
+-- is DELIBERATELY UNREPAIRED, and an audit red on an honest tree gets switched
+-- off. What it reports is every door that reaches `calls[code]` without a
+-- `resolves[code]` row — the destructuring getter side, the pattern's `next`,
+-- and `for_of_statement`'s own second hop, which reaches `calls` from
+-- rules/js-callgraph.rofl by exactly the same route.
+--
+-- AND IT IS EMPTY ON THIS CORPUS, WHICH IS A FACT ABOUT THE FIXTURES AND NOT
+-- ABOUT THE RULE — measured, not assumed. Every getter in the five fixtures is
+-- pure and every `next` they reach is `bump`, which has no operation to
+-- propagate, so there is nothing for a row to carry. Two probes in
+-- test/js-effects.test.ts supply what the corpus cannot: a getter that writes
+-- and throws, and an iterator whose `next` writes. Both make these rows appear
+-- WHILE `eff_join_short[audit]` STAYS EMPTY IN THE SAME WORLD.
+--
+-- MODULE-LEVEL CALLERS ARE OUT OF SCOPE BY A PREMISE, not by accident: a call
+-- written at a module's top level contributes to `eff_module[flow]`, which is a
+-- different relation with a different subject, so `fn_node[code](F)` is what
+-- keeps this row about functions.
+eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_fn[code](F, C).
+eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_v[flow](F, C).
+
+eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
+                                       not eff_edge_closed[flow](F, G),
+                                       eff_latent[flow](G, L, H),
+                                       not eff_latent[flow](F, L, H).
+
+-- ===========================================================================
 -- 6. WHERE THIS PACK CANNOT LOOK, STATED RATHER THAN DISCOVERED LATER
 -- 6. WHAT RUNS WHEN A CLASS IS DEFINED, AND WHAT RUNS WHEN ONE IS BUILT
 --    2026-09-09 — queue item w_effect_class_initialisers.
