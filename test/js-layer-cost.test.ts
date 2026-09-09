@@ -409,8 +409,17 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // call-graph fixpoint, over a different world.
   // FIRST MEASUREMENT 2026-09-09. There is no previous number for this world;
   // a per-layer gate did not exist (w_cost_gate_per_layer, item 41).
-  assert.equal(L.world.total, 3946681, 'rows handed out by the store in the control-flow fixpoint');
-  assert.equal(L.world.firings, 150885, 'derivations in the control-flow fixpoint');
+  // MOVED 2026-09-09 BY w_computed_key_names, IN THE DIRECTION ITS OWN ITEM
+  // PREDICTED WOULD BE CHEAPER AND MEASURED DEARER. Narrowing `key_name` from
+  // 2 148 rows to 105 turned an EDB copy into a derived relation, so its
+  // readers moved into a later stratum and re-ran their leading kind scan in
+  // every round it grew — fewer facts and fewer firings, more rows handed out.
+  // The layer's own figures barely move (1 814 160 -> 1 864 255, share 45.967
+  // -> 46.386) because the change is not in this pack; the WORLD carries it,
+  // which is exactly what f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door
+  // says a difference cannot see and the totals beside it can.
+  assert.equal(L.world.total, 4019034, 'rows handed out by the store in the control-flow fixpoint');
+  assert.equal(L.world.firings, 152816, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
   // 45.97% of the rows handed out in its own world, while being 5.13% of its
@@ -418,14 +427,14 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // everything else in the same world. A layer that reads more than a dozen
   // rows per derivation is doing a scan somewhere, and the path list below says
   // where.
-  assert.equal(L.rows, 1814160, 'rows the control-flow pack costs, by difference');
-  assert.equal(L.firings, 7740, 'derivations the control-flow pack adds');
-  assert.ok(Math.abs(L.rowShare - 45.967) < 1.5,
-    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 45.967%`);
-  assert.ok(Math.abs(L.firingShare - 5.130) < 0.5,
-    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 5.130%`);
-  assert.ok(Math.abs(L.perFiring - 234.39) < 5,
-    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 234.39`);
+  assert.equal(L.rows, 1864255, 'rows the control-flow pack costs, by difference');
+  assert.equal(L.firings, 7818, 'derivations the control-flow pack adds');
+  assert.ok(Math.abs(L.rowShare - 46.386) < 1.5,
+    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 46.386%`);
+  assert.ok(Math.abs(L.firingShare - 5.116) < 0.5,
+    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 5.116%`);
+  assert.ok(Math.abs(L.perFiring - 238.46) < 5,
+    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 238.46`);
 
   // AND THE COMPARISON THAT MAKES THAT NUMBER READABLE: the same ratio for the
   // world without this pack.
@@ -489,8 +498,8 @@ test('the era layer costs a number too, and it is half of its world\'s derivatio
   assert.equal(again.total, L.world.total, 'two identical worlds hand out the same rows');
 
   // FIRST MEASUREMENT 2026-09-09, same as above: this world had no cost gate.
-  assert.equal(L.world.total, 87255, 'rows handed out in the era fixpoint');
-  assert.equal(L.world.firings, 6199, 'derivations in the era fixpoint');
+  assert.equal(L.world.total, 87194, 'rows handed out in the era fixpoint');
+  assert.equal(L.world.firings, 6067, 'derivations in the era fixpoint');
   assert.equal(L.rows, 27228, 'rows the era pack costs, by difference');
   assert.equal(L.firings, 3208, 'derivations the era pack adds');
   // THE SHAPE IS THE OPPOSITE OF THE CONTROL-FLOW LAYER'S and that is the whole
@@ -499,10 +508,10 @@ test('the era layer costs a number too, and it is half of its world\'s derivatio
   // cheap layer. The other is 46% of the rows and 5% of the derivations at 234
   // rows per fact — a narrow, expensive one. A single gate over a merged world
   // would report their sum and name neither.
-  assert.ok(Math.abs(L.rowShare - 31.205) < 1.5,
-    `the era layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 31.205%`);
-  assert.ok(Math.abs(L.firingShare - 51.750) < 1.5,
-    `${L.firingShare.toFixed(3)}% of its derivations, and it has been 51.750%`);
+  assert.ok(Math.abs(L.rowShare - 31.227) < 1.5,
+    `the era layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 31.227%`);
+  assert.ok(Math.abs(L.firingShare - 52.876) < 1.5,
+    `${L.firingShare.toFixed(3)}% of its derivations, and it has been 52.876%`);
   assert.ok(Math.abs(L.perFiring - 8.49) < 0.5,
     `${L.perFiring.toFixed(2)} rows per derivation, and it has been 8.49`);
 
@@ -568,9 +577,9 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   // at all in the direction the band would catch. A mutant that adds rows
   // without adding derivations is visible in the totals and in the path list,
   // and invisible to every ratio here except `perFiring`.
-  assert.ok(Math.abs(L.rowShare - 45.967) < 1.5,
+  assert.ok(Math.abs(L.rowShare - 46.386) < 1.5,
     `SURVIVOR: the row-share band sleeps through it (${L.rowShare.toFixed(3)}%)`);
-  assert.ok(Math.abs(L.firingShare - 5.130) < 0.5,
+  assert.ok(Math.abs(L.firingShare - 5.116) < 0.5,
     `SURVIVOR: the firing-share band sleeps through it (${L.firingShare.toFixed(3)}%)`);
   console.log('      KILLED by the world total, the path set and the share band; ' +
               'SURVIVED the row-share and firing-share bands');
@@ -602,8 +611,8 @@ test('MUTANT B: the same rule reordered to constrain first — the repair, measu
   assert.equal(L.world.facts, cf().world.facts);
 
   assert.ok(L.world.total < 3946681 * 0.6, `KILLED by the world total: ${L.world.total} against 3946681`);
-  assert.ok(Math.abs(L.rowShare - 45.967) > 1.5, `KILLED by the row-share band: ${L.rowShare.toFixed(3)}%`);
-  assert.ok(Math.abs(L.perFiring - 234.39) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
+  assert.ok(Math.abs(L.rowShare - 46.386) > 1.5, `KILLED by the row-share band: ${L.rowShare.toFixed(3)}%`);
+  assert.ok(Math.abs(L.perFiring - 238.46) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
   assert.notDeepEqual(L.paths.map(([k]) => k).sort(), cf().paths.map(([k]) => k).sort(),
     'KILLED by the path set');
   console.log(`      KILLED four ways. The repair is worth ${(100 * (1 - L.world.total / 3946681)).toFixed(1)}% ` +
@@ -620,8 +629,8 @@ test('MUTANT C: an expensive new rule added to the layer pack', () => {
   assert.ok(L.world.q('cost_probe[audit](N, C)').n > 0, 'positive control: the injected rule fires');
   assert.notEqual(L.world.total, 3946681, 'KILLED by the world total');
   assert.notEqual(L.world.firings, 150885, 'KILLED by the world firings');
-  assert.ok(Math.abs(L.firingShare - 5.130) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
-  assert.ok(Math.abs(L.perFiring - 234.39) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
+  assert.ok(Math.abs(L.firingShare - 5.116) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
+  assert.ok(Math.abs(L.perFiring - 238.46) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
   // SURVIVOR, named: the layer's PATH SET does not change. A new rule that
   // reads relations already standing adds rows to paths that are already in the
   // list, so membership says nothing and only the shares and the totals do.
@@ -652,7 +661,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
   assert.deepEqual(L.paths, cf().paths, 'SURVIVOR: nor any of its read paths, to three decimals');
   // ...with one exception worth having, and it is the reason the SHARES are
   // pinned beside the differences: a share has the world in its denominator.
-  assert.ok(Math.abs(L.firingShare - 5.130) > 0.5,
+  assert.ok(Math.abs(L.firingShare - 5.116) > 0.5,
     `the firing SHARE catches it because the denominator grew: ${L.firingShare.toFixed(3)}%`);
   console.log('      SURVIVED every difference this gate takes. Killed only by the world ' +
               'totals and by the shares, which have the world in their denominator.');

@@ -254,7 +254,13 @@ test('every read path above five per cent, by name', () => {
   const SHARE: [string, number][] = [
     ['relPersp authority', 8.63],
     ['argMatches ast_within pos=[0]', 6.89],
-    ['argMatches ast_node pos=[1]', 6.06],
+    // 6.06 -> 5.35 on 2026-09-09 with w_computed_key_names, and this is the
+    // ONE share that moved: every other path here moved by 0.08 or less and
+    // the name set is unchanged. It fell because `key_name` stopped being an
+    // EDB copy, so the four bodies that lead with a kind scan now lead with
+    // the small relation instead. The item PREDICTED a saving and the total
+    // below went UP anyway — see f_a_relation_can_shrink_and_the_fixpoint_get_dearer.
+    ['argMatches ast_node pos=[1]', 5.35],
     ['relPersp ast_node', 5.48],
     ['argMatches encloses_v pos=[1]', 5.13],
     ['relPersp encloses_v', 4.99],
@@ -534,7 +540,12 @@ test('every read path above five per cent, by name', () => {
   //
   // NO 2x2 IS QUOTED FOR THIS MOVE, on purpose: the old number is not a smaller
   // measurement of the same thing, so there is no corner to compare against.
-  assert.equal(c.total, 2116345, 'total rows handed out by the store in one fixpoint');
+  // 2 116 345 -> 2 138 623 on 2026-09-09 (w_computed_key_names). The corpus
+  // grew by one computed-key site AND the rules narrowed `key_name` 2 148 ->
+  // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
+  // reproduced this pin exactly before it moved, which is the control that
+  // says the two halves are what they are claimed to be.
+  assert.equal(c.total, 2138623, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -641,5 +652,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 140644, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
+  assert.equal(c.firings, 142497, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
 });

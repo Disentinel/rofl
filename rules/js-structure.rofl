@@ -47,8 +47,38 @@ ast_name[code](N, V)   :- ast_attr[code](N, name, V).
 -- GUARDED ON `Symbol` DELIBERATELY: `obj[someVar]` has no static name and this
 -- must not invent one. The well-known symbols are the only computed keys whose
 -- text the LANGUAGE fixes rather than a value.
-key_name[code](K, N)   :- ast_name[code](K, N).
-key_name[code](K, N)   :- ast_node[code](K, member_expression, _, _),
+--
+-- ...AND THAT SENTENCE WAS FALSE OF THE RULE IT SAT ON UNTIL 2026-09-09
+-- (w_computed_key_names, f_the_guard_in_the_comment_is_not_the_guard_in_the_rule).
+-- The `Symbol` guard is on the SECOND arm — the one that reads a computed key
+-- written as a MEMBER EXPRESSION — and `obj[someVar]` is not one: for
+-- `{ [spoke]() {} }` the key node IS the identifier `spoke`, so the FIRST arm,
+-- `key_name(K, N) :- ast_name(K, N)`, named the property after the VARIABLE's
+-- spelling. The guard could never look at the case its own justification names.
+-- The site is `hub` at the end of test/fixtures/js-call/shapes.ts.txt, and it
+-- is in the SCANNED-ONLY fixture rather than a runnable one because a method
+-- the model must not name is a method the oracle would see run under a name
+-- nobody derived.
+--
+-- BOTH ARMS RANGE OVER KEYS NOW, and that is the same edit. `ast_name(K, N)`
+-- for K in ANY position derived 2 148 rows over a corpus with 115 key
+-- positions — a relation called `key_name` that was 95% not about keys, and
+-- the cost half of the same work item. Every reader already joined
+-- `ast_child(_, key, 0, K)` first, so narrowing here removes rows nothing read
+-- and no answer anywhere moves except the computed one above.
+--
+-- THE GUARD IS A NEGATION AND NOT `computed, false`, deliberately. Measured
+-- 2026-09-09: `class_private_property` and `class_private_method` carry NO
+-- `computed` attribute at all — babel gives a private name no such field — so
+-- eight key positions in this corpus have nothing for `computed, false` to
+-- match. It changes no row today, because `private_name` has no `name`
+-- attribute either and this relation has no arm for it (see the note in
+-- rules/js-dataflow.rofl); it decides what happens on the day it does.
+key_name[code](K, N)   :- ast_child[code](P, key, 0, K),
+                          not ast_attr[code](P, computed, true),
+                          ast_name[code](K, N).
+key_name[code](K, N)   :- ast_child[code](_, key, 0, K),
+                          ast_node[code](K, member_expression, _, _),
                           ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
                           ast_child[code](K, property, 0, P), ast_name[code](P, N).
 ast_value[code](N, V)  :- ast_attr[code](N, value, V).

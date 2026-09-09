@@ -522,7 +522,10 @@ const ITER: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
   },
   {
     name: 'h4 a computed well-known symbol stops being a name',
-    mut: [{ find: `key_name[code](K, N)   :- ast_node[code](K, member_expression, _, _),
+    // ANCHOR MOVED 2026-09-09 (w_computed_key_names): the arm gained a leading
+    // `ast_child(_, key, 0, K)` so that BOTH arms of `key_name` range over keys.
+    mut: [{ find: `key_name[code](K, N)   :- ast_child[code](_, key, 0, K),
+                          ast_node[code](K, member_expression, _, _),
                           ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
                           ast_child[code](K, property, 0, P), ast_name[code](P, N).`,
             replace: '', file: 'rules/js-structure.rofl' }],
@@ -581,16 +584,20 @@ const ITER: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
       assert.equal(m.n('member_value[flow](O, K, V)') - b.n('member_value[flow](O, K, V)'), 1,
         'one member appears, under a name that is the variable and not the property');
       // AND THE SHAPE OF THE COST IS THE SECOND THING IT SAYS, which a total
-      // could not: without the `Symbol` test the arm matches every member
-      // expression in the corpus, and all but ONE of the rows it adds are not
-      // in key position at all.
+      // could not. It read `all but ONE of the rows it adds are not in key
+      // position at all`, and INVERTED ON 2026-09-09 (w_computed_key_names):
+      // both arms of `key_name` lead with `ast_child(_, key, 0, K)` now, so
+      // dropping the `Symbol` test can no longer reach a member expression that
+      // is not a key. The claim the mutant makes is unchanged — the guard is
+      // what stops `wellKnown.spot` being a name — and what went away is the
+      // collateral, which was never part of the claim.
       const rows = (w: World) => new Set(w.q('key_name[code](K, N)').map((r) => r.join('|')));
       const inKeyPosition = new Set(b.q('ast_child[code](P, key, 0, K)').map(([, k]) => k));
       const added = [...rows(m)].filter((r) => !rows(b).has(r)).map((r) => r.split('|')[0]);
-      assert.equal(added.filter((k) => inKeyPosition.has(k)).length, 1,
-        'exactly one of the new rows is a key at all — the site in shapes.ts');
-      assert.ok(added.length > 10,
-        `and the arm reaches ${added.length} member expressions that are not keys`);
+      assert.deepEqual(added.filter((k) => !inKeyPosition.has(k)), [],
+        'the arm reaches no member expression that is not a key');
+      assert.equal(added.length, 1,
+        'exactly one row is added, and it is the site in shapes.ts');
     },
   },
   {
@@ -1006,11 +1013,16 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
         'fromDial<-plain', 'fromShim<-broken', 'inner<-fetchIt',
         'notch<-notch', 'notch<-notch', 'reading<-reading', 'taken<-pulled',
         'takenCaliper<-caliper', 'topSpare<-spare', 'usedBolted<-bolted']);
-      assert.deepEqual(bound(m), [
-        'bolted<-usedBolted', 'broken<-fromShim', 'caliper<-takenCaliper',
-        'fetchIt<-inner', 'notch<-notch', 'notch<-notch', 'plain<-fromDial',
-        'pulled<-taken', 'reading<-reading', 'spare<-topSpare'],
-        'read backwards');
+      // KILLED HARDER SINCE 2026-09-09 (w_computed_key_names), and the change is
+      // worth reading rather than just re-pinning. This used to derive every
+      // binding BACKWARDS — `bolted<-usedBolted` where the truth is
+      // `usedBolted<-bolted` — because `key_name`'s first arm was
+      // `ast_name(K, N)` for K in ANY position, so asking it about the VALUE
+      // node answered. It ranges over keys now, so a swapped body derives
+      // NOTHING: the mutant no longer produces a plausible wrong answer, it
+      // produces no answer. A relation narrowed to its own subject makes the
+      // rules that read it fail loudly instead of quietly.
+      assert.deepEqual(bound(m), [], 'read backwards — and now not read at all');
     },
   },
   {
@@ -1054,14 +1066,20 @@ const DESTR: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[
   },
 ];
 
-// ONE MUTANT SURVIVES AND IT IS WAITING ON ANOTHER ITEM. Reading `ast_name` on
-// the key where the rule reads `key_name` derives a byte-identical world,
-// because every key in a pattern in this corpus is a plain identifier and
-// `key_name`'s first arm IS `ast_name`. It would bite on a COMPUTED key in a
-// pattern — `const { [k]: v } = o` — which is exactly the shape
-// `w_computed_key_names` owns, and which cannot be written honestly until that
-// item settles what a computed key is named. Third category of survivor, after
-// "no site in this corpus" and "unkillable by the grammar": waiting on an item.
+// ONE MUTANT SURVIVED AND IT WAS WAITING ON ANOTHER ITEM, AND THE ITEM LANDED.
+// Reading `ast_name` on the key where the rule reads `key_name` derived a
+// byte-identical world, because every key in a pattern in this corpus was a
+// plain identifier and `key_name`'s first arm WAS `ast_name`. It bites on a
+// COMPUTED key in a pattern — `const { [k]: v } = o` — which is exactly the
+// shape `w_computed_key_names` owns, and which could not be written honestly
+// until that item settled what a computed key is named. It settled on
+// 2026-09-09: NOTHING. The site is `const { [haspSpelling]: pried } = jamb` at
+// the end of shapes.ts.txt and the mutant is m9 in
+// test/js-computed-key-names.test.ts, where the rest of that item's set lives.
+//
+// So the third category of survivor — after "no site in this corpus" and
+// "unkillable by the grammar" — is the one that PAYS OFF, and it paid off
+// exactly as its own note said it would: somebody came back and killed it.
 
 for (const g of DESTR) test(`${g.name} — a name bound by destructuring`, () => g.expect(build(g.mut), base()));
 
