@@ -18,6 +18,8 @@ pub mod ring1_lexer;
 pub mod ring1_preds;
 /// The driver for the generated tokenizer tables, written once.
 pub mod ring1_tok;
+/// A hand-written tokenizer, with ring1 as its specification and oracle.
+pub mod rofl_lex;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_spangen.ts.
 pub mod ring1_tables;
 pub mod seed;

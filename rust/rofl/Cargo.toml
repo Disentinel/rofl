@@ -26,3 +26,7 @@ path = "src/bin/ring1_preds_dump.rs"
 [[bin]]
 name = "ring1-tokens"
 path = "src/bin/ring1_tokens_dump.rs"
+
+[[bin]]
+name = "rofl-lex"
+path = "src/bin/rofl_lex_dump.rs"
