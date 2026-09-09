@@ -164,3 +164,40 @@ test('the volume is read off the key and nowhere else', () => {
   assert.equal(groupOf('plain_atom'), null);
   assert.equal(groupOf('"a string"'), null);
 });
+
+// A PROFILE OF A WORLD THAT DID NOT FINISH IS NOT A PROFILE, and the danger is
+// specific: every finding rests on `not disagrees`, so in a world that hit a
+// wall the contradicting row may simply NOT HAVE BEEN DERIVED. Silence would
+// mean "not reached" while reading as "not there" — the discovered/declared gap
+// with the corpus itself truncated.
+//
+// The kernel already says a wall happened, in the only word it has for it: a
+// `hole`. So the profile reads that and withdraws. Both directions are checked,
+// because a rule that withdrew always would pass the first half.
+test('an unfinished world withdraws the profile rather than answering', () => {
+  const r = world();
+  const shape = render(profile(r));
+
+  const whole = new Rofl();
+  whole.load(read('boot.rofl'));
+  whole.load(read('rules/profile.rofl'));
+  whole.load(shape);
+  whole.evaluate();
+  assert.ok(whole.query('fd_holds[profile](R, P)').rows.length > 0,
+    'a complete world should profile');
+  assert.equal(whole.query('unfinished[profile](W, R)').rows.length, 0);
+
+  // the same shape, in a world that carries a wall's `hole`
+  const cut = new Rofl();
+  cut.load(read('boot.rofl'));
+  cut.load(read('rules/profile.rofl'));
+  cut.load(shape);
+  cut.assert('hole($cut(demo), budget_exhausted).');
+  cut.evaluate();
+  assert.ok(cut.query('unfinished[profile](W, R)').rows.length > 0,
+    'the hole was not seen');
+  assert.equal(cut.query('fd_holds[profile](R, P)').rows.length, 0,
+    'a truncated world still reported a dependency — silence read as absence');
+  assert.equal(cut.query('undeclared_key[profile](R, P)').rows.length, 0);
+  assert.equal(cut.query('foreign_key[profile](R, P, W, Q)').rows.length, 0);
+});

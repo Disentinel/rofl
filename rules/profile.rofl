@@ -28,6 +28,29 @@ edb(unique_col).
 edb(included).
 edb(census).
 
+-- ------------------------------------------------------- an unfinished world
+
+-- A PROFILE OF A WORLD THAT DID NOT FINISH IS NOT A PROFILE.
+--
+-- Every finding below rests on `not disagrees` — on nobody having contradicted
+-- the dependency. In a world that hit a wall, the contradicting row may simply
+-- NOT HAVE BEEN DERIVED YET, so silence means `not reached` rather than `not
+-- there`. The discovered/declared gap is bad enough on a complete corpus; on a
+-- partial one the analysis would report the shape of an interruption.
+--
+-- The kernel already says so: a wall emits a `hole`, which is this system's
+-- word for `this is not an answer`. So the profile reads it and withdraws,
+-- rather than answering a question it cannot answer. Reported and not merely
+-- absent, because an empty profile and a refused one are the same two
+-- characters.
+unfinished[profile](W, R) :- hole(W, R).
+
+-- Zero-arity is not in this language (`complete.` does not parse, and both
+-- engines refuse it identically), so the subject is named. It reads better
+-- anyway: the claim is about THIS world and one day there may be another.
+sound[profile](this_world)         :- not unfinished_any[profile](this_world).
+unfinished_any[profile](this_world) :- unfinished[profile](_, _).
+
 -- ------------------------------------------------- the functional dependency
 
 -- A column is a function of the group its row belongs to. Both premises are
@@ -36,7 +59,8 @@ edb(census).
 -- Measured: `ast_file` has exactly one row per file and reports as collapsible
 -- beside the real finding, meaning nothing.
 fd_holds[profile](R, P) :- grouped[profile](R, P),
-                           not disagrees[profile](R, P).
+                           not disagrees[profile](R, P),
+                           sound[profile](this_world).
 
 -- ------------------------------------------------------------- the two tiers
 
@@ -73,14 +97,16 @@ grouped_any[profile](W)   :- grouped[profile](W, _).
 -- be keyed by its LAST argument: every node has at most one parent, so the
 -- relation is a function from child to (parent, field, position). Nothing in
 -- the vocabulary said so.
-undeclared_key[profile](R, P) :- unique_col[profile](R, P), P != 0.
+undeclared_key[profile](R, P) :- unique_col[profile](R, P), P != 0,
+                                 sound[profile](this_world).
 
 -- A foreign key that HOLDS. Reported rather than required: a model may
 -- legitimately name something it does not hold, and the moment this stops
 -- being reported is the moment to look.
 foreign_key[profile](R, P, W, Q) :- included[profile](R, P, W, Q),
                                     unique_col[profile](W, Q),
-                                    R != W.
+                                    R != W,
+                                    sound[profile](this_world).
 
 -- --------------------------------------------------------------- the trap
 

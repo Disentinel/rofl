@@ -149,6 +149,46 @@ So the profile is a pack a world loads when it wants to be profiled — not a
 thing added to the kernel and moved out later once somebody measures it. The
 sequence is known; there is no reason to walk it a second time.
 
+## On a world that did not finish
+
+**A profile of a truncated world is not a profile, and it fails in the
+flattering direction.** Every finding rests on `not disagrees` — on nobody
+having contradicted the dependency — so in a world that hit a wall the
+contradicting row may simply not have been derived. Silence would mean "not
+reached" while reading as "not there": the discovered/declared gap with the
+corpus itself cut short.
+
+The kernel already says a wall happened, in the only word it has for it — a
+`hole` — so the profile reads that and WITHDRAWS. Refused rather than empty,
+because an empty profile and a clean one are the same two characters.
+
+## What a wall does NOT tell you, and it is the more useful half
+
+If a run ran out of room, the natural question is what produced all those
+facts, and `derived_by` answers it: grouped by rule it attributes every derived
+fact to the rule that concluded it, and `concludes(R, Rel)` names the relation.
+Measured on a dense graph closure, two rules at 1 600 facts each and nothing
+else close.
+
+**But the rule that blows the wall is usually the one that produced the
+FEWEST.** The wall is counted in ROWS of the join accumulator, not in facts,
+and a rule can burn a great many rows and conclude almost nothing. Measured, on
+a 60-node complete graph with `both(X) :- e(X, Y), e(Z, X), Y = Z.`:
+
+    peak rows 219 599   —   facts produced by that rule: 60
+
+By fact count it ranks below `rule_known`. Counting `derived_by` by producer
+answers "who made the facts" and is the wrong instrument for "what cost the
+run".
+
+The right one exists and is not exposed: the Rust engine keeps `argm_by_rule`,
+index probes attributed to the rule whose body asked for them, and
+`f_the_engine_is_linear_in_the_work_it_is_asked_to_do` rests on it. Nothing
+surfaces it — not the JS side, not the port's surface, not a `hole`. And the
+`hole` a wall emits names the LOAD (`hole($load(3), budget_exhausted)`), not
+the rule, so the artefact a partial run leaves behind cannot say who spent the
+budget. That is the gap to close before anyone is asked to debug a wall.
+
 ## What this does not cover
 
 Only one grouping is implemented: the volume. The same rule accepts any
