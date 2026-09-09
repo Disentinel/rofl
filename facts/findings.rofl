@@ -1225,8 +1225,26 @@ finding_note(f_the_matrix_collapses_threefold_and_the_tail_does_not, "The owner'
 -- is needed for this to be a witness at all - without it the relation does not
 -- exist, the query answers 0 with no error, and the guard correctly refuses to
 -- read that as satisfied. The day the first layer is declared, this flips.
-edb(layer).
-witness(f_the_matrix_collapses_threefold_and_the_tail_does_not, "layer(L)", 0).
+--
+-- IT NEVER FLIPPED, AND FOUR LAYERS HAVE BEEN DECLARED SINCE 2026-09-01.
+-- Corrected 2026-09-09 (w_note_is_not_evidence). The author of the two lines
+-- above predicted the flip exactly and it did not happen, for a reason those
+-- lines contain: `edb(layer)` was added HERE, to the findings ledger, so that
+-- the checker's one world could answer the query at all. The checker then asked
+-- a store with no layers in it whether it had any layers, got 0, wanted 0, and
+-- reported ok for eight days. The `edb` line that made the witness possible is
+-- the same line that made it unfalsifiable, and both readings of it are in the
+-- comment above.
+--
+-- The repair is the one CLAUDE.md permits and the only one: ask it in the world
+-- the sentence is about. `layer(L)` is 4 in w_queue, and four is not a number
+-- two branches can both move — `layer(L)` is declared by the owner alone, and
+-- an agent declaring one is forbidden by a standing constraint. If he declares
+-- a fifth this goes red, which is what the two lines above asked for.
+-- `edb(layer)` is deleted with the witness that needed it: without it a witness
+-- naming `layer(L)` in this ledger is BROKEN rather than green-at-zero, which
+-- is the correct answer to asking a world a question it cannot hold.
+witness_in(f_the_matrix_collapses_threefold_and_the_tail_does_not, w_queue, "layer(L)", 4).
 
 -- ============ guardrails for the language-modelling loop ============
 -- Written BEFORE the work, on the owner's instruction and for his reason: a
@@ -1807,7 +1825,34 @@ demands(f_the_queue_now_refuses_unproven_work, doc).
 -- those two, 30 -> 32 by recording. That is the empirical case for the remedy
 -- named above rather than an argument for it: a number that moves three times
 -- in one night on four branches is not a pin, it is a reading.
-witness(f_the_queue_now_refuses_unproven_work, "unproven(F)", 32).
+-- THE COUNT IS GONE, 2026-09-09 (w_note_is_not_evidence), which is what the
+-- paragraph above sends here for. `unproven(F) -> 32` is deleted and NOT
+-- replaced by a better number; it is replaced by the three things the number
+-- was standing in for, each of which is the same on every branch and therefore
+-- survives a merge:
+--
+--   AIM       `unproven_misaimed[audit]` is EMPTY - the gate refuses only what
+--             demands CODE, and a finding demanding a doc or a decision passes
+--             untouched. This is the sentence in the note below, as a row. It
+--             is not a tautology of the rule: it goes red if a third arm is
+--             added over a different `demands` value, which is the only way the
+--             aim can drift.
+--   NOT BLIND `unproven(F) >= 1` - the gate says NO to something.
+--   NOT RED   `ready_proven(F) >= 1` - and YES to something else.
+--
+-- The note below already reports the second and third as `NO to 31 and YES to
+-- 118`, which is the same claim written as two numbers that move. A FLOOR does
+-- not move: two branches each assert `>= 1`, the merge asserts `>= 1`, and all
+-- three are right - which is exactly what a count could not manage on the night
+-- this was converted. What is LOST is the tripwire: nobody is now told when a
+-- branch records an unwitnessed finding. That was never worth what it cost -
+-- the number moved on four branches in one night, every move was correct, and
+-- the merge silently averaged two of them - and the thing it was watching for
+-- is watched better by `ready_proven` itself, which simply does not offer the
+-- item. f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin records the reasoning.
+witness(f_the_queue_now_refuses_unproven_work, "unproven_misaimed[audit](F)", 0).
+witness_atleast(f_the_queue_now_refuses_unproven_work, "unproven(F)", 1).
+witness_atleast(f_the_queue_now_refuses_unproven_work, "ready_proven(F)", 1).
 finding_note(f_the_queue_now_refuses_unproven_work, "The owner's instruction after the third instance in one session: CATCH IT AND FORBID EXECUTING ON IT. The pattern caught is mine and it is one step, not three - TAKING A DIAGNOSTIC MECHANISM, ARGUING ABOUT IT IN THE REGISTER OF DEFENCE, AND THEN BUILDING A GUARD FOR IT. Twice the work was reverted: an imperative refusal whose hole another agent had already closed, and a new relation proposed for the meta-kernel to silence two explained rows of a REPORT that blocks nothing. The shared step was never carelessness - it was starting work on a claim NOBODY HAD RUN. THE INSTRUMENT ALREADY EXISTED AND WAS SWITCHED OFF: `witness(F, Query, N)` states a finding's premise as a query anyone can execute, with the number it returned, and scripts/witness_check.ts already checks them. Measured at the moment of writing this: 150 open findings, FIVE with a witness, and of eight open DEFECTS exactly ONE. THE REPAIR IS NOT A RULE ABOUT ATTENTION, IT IS THE QUEUE ITSELF: `unproven(F)` holds for any finding demanding rule_and_test or kernel_test with no witness, and `ready_proven(F)` is `ready` minus those. Record whatever you like - an observation costs nothing and a ledger is a journal - but work is not OFFERED until someone has run the query and written what it returned. MEASURED BOTH WAYS, which is the test this repository applies to every gate: it says NO to 31 items and YES to 118, so it is neither blind nor permanently red. And aimed, not blanket: findings demanding a DECISION pass untouched, because a decision is made by argument and not by a query, and the two open ones about the language pass correctly. It catches the exact case that started this - the forgery finding demanded a kernel test, carried no witness, and I began building on it anyway.").
 
 finding(f_naming_yourself_is_itself_a_forgery, defect).
@@ -4140,3 +4185,62 @@ recorded(f_a_derived_pair_costs_what_its_first_unbound_literal_costs, "2026-09-0
 demands(f_a_derived_pair_costs_what_its_first_unbound_literal_costs, doc).
 finding_note(f_a_derived_pair_costs_what_its_first_unbound_literal_costs, "ONE RULE OF THE COMPLETION CLOSURE COST THIRTEEN SECONDS OF A TWENTY-TWO SECOND WORLD, and it was written under this file`s own `ORDERED FOR COST` discipline and still got it wrong. `completion_fn_between(P, S)` answers `is there a function between this container and this abrupt completion`, and the first draft read `completes_abruptly(S), fn_node_v(G), ast_within(G, S), ast_within(P, G)` - seeded from a small relation, exactly as the comment beside it claimed, and with `G` UNBOUND in the second literal. MEASURED by deleting rules one at a time from one world: as written 21.7 s, with the gate removed 8.8 s, with only the audit head removed and this rule kept 23.0 s. The thirteen seconds are this rule alone, and the last of those three numbers is what identifies it - removing the CONSUMER made it slower, because a bottom-up engine materialises the pair whether or not anybody reads it. THE FIX IS NOT LITERAL ORDER, IT IS WHICH RELATION YOU SEED FROM. The audit only ever asks about containers whose KIND the completion table does not know, so a `completion_outer(P, S)` carrying exactly those - a few hundred rows instead of every function crossed with every abrupt completion - and a pair rule seeded from IT gives the identical answer at 8.4 s. TWO LESSONS AND THE SECOND IS THE GENERAL ONE. (1) `seeded from a small relation` is not a property of the FIRST literal, it is a property of every literal that introduces a variable: the second literal here re-opened the search over the whole corpus and the phrase in the comment was true and irrelevant. (2) In a bottom-up engine a derived relation has no consumers in the cost sense - it is computed in full - so the way to make a helper cheap is to make the helper SMALLER, by moving the consumer`s filters into its own body, rather than to order the consumer`s literals well. The rules of this layer that are cheap - `throwing_call`, `accessor_of`, `label_target` - are all small BY THEIR HEAD rather than by their body order, which nobody had said out loud.").
 addressed_by(f_a_derived_pair_costs_what_its_first_unbound_literal_costs, "rules/js-controlflow.rofl").
+
+-- ============ w_note_is_not_evidence, 2026-09-09 ============
+-- A witness names its world now. These six are what naming it FOUND, in the
+-- order they were measured, and two of them are about the instrument rather
+-- than about the ledger.
+
+finding(f_the_plan_was_the_missing_world_before_the_corpus_was, defect).
+recorded(f_the_plan_was_the_missing_world_before_the_corpus_was, "2026-09-09").
+demands(f_the_plan_was_the_missing_world_before_the_corpus_was, rule_and_test).
+finding_note(f_the_plan_was_the_missing_world_before_the_corpus_was, "w_note_is_not_evidence's OWN NOTE NAMED THE WRONG MISSING WORLD, and the first query of the item found it. The note says a note's witness `needs a checker world that has the corpus`, citing f_a_witness_has_no_world. Measured before anything was built, in the checker's own world: `work(W, Note)` comes back UNPOPULATABLE - not zero rows, but nothing in that store can ever put a row under that name - because scripts/witness_check.ts loaded boot.rofl plus facts/findings.rofl plus rules/findings.rofl and THE PLAN IS NOT ONE OF THEM. So a work item's note could not have carried a witness even about the ledger it lives in, let alone about the corpus. The corpus was the SECOND missing world. THIS IS THE ITEM'S OWN SUBJECT ARRIVING IN THE ITEM'S OWN NOTE, which is the seventh consecutive instance of the pattern the item exists for and the first one caught by the mechanism instead of by a probe written from the note. It is also the exact asymmetry the parent finding names: a note claiming the model LACKS something is confirmed by every probe that agrees with it, and `it needs the corpus` is TRUE - it does, for three of the four witnesses this item wrote - which is why it read as a complete diagnosis for two days. A true half-diagnosis is worse than a false one, because nothing about it looks wrong. THE REPAIR IS THAT THE WORLD LIST IS NOW A FACT: facts/worlds.rofl declares w_ledger, w_queue and w_js_corpus, each with the packs it loads AND the packs it refuses, and test/note-witness.test.ts asserts the two lists cover the tree - so the next world that is missing is missing OUT LOUD.").
+addressed_by(f_the_plan_was_the_missing_world_before_the_corpus_was, "facts/worlds.rofl").
+addressed_by(f_the_plan_was_the_missing_world_before_the_corpus_was, "rules/worlds.rofl").
+addressed_by(f_the_plan_was_the_missing_world_before_the_corpus_was, "scripts/witness_check.ts").
+witness_in_atleast(f_the_plan_was_the_missing_world_before_the_corpus_was, w_queue, "note_witnessed(W)", 1).
+
+finding(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, defect).
+recorded(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, "2026-09-09").
+demands(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, rule_and_test).
+finding_note(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, "A LIVE DECORATION IN THIS LEDGER, EIGHT DAYS OLD, AND ITS AUTHOR PREDICTED IT EXACTLY. `witness(f_the_matrix_collapses_threefold_and_the_tail_does_not, layer(L), 0)` stands for the sentence THE PROGRAMME HAS NOT STARTED: NO SEMANTIC LAYER IS DECLARED YET, and the comment beside it ends `the day the first layer is declared, this flips`. Four layers were declared over the following week and it never flipped: scripts/witness_check.ts reported `ok layer(L) -> 0 (want 0)` every time anybody ran it. THE MECHANISM IS IN THE COMMENT ITSELF, one line above the prediction. `edb(layer)` was added TO THE FINDINGS LEDGER so that the query would be populatable in the checker's one world at all - otherwise the relation does not exist there and the guard correctly refuses to read an empty answer as satisfied. That declaration is what made the witness writable AND what made it unfalsifiable: it created an empty `layer` in a store that has no layers and never will, so the checker was asking a world with no layers in it whether it had any layers. Both readings sit in the same comment and nobody, me included, read the second one. THE GENERAL FORM IS WORTH MORE THAN THE INSTANCE. A gate whose subject is not in its world fails in the SAFE direction - green, silent, and saying nothing - which is the failure CLAUDE.md already records for the NUL check and the `# tests` grep, arriving here through a WORLD rather than through a borrowed criterion. And the tell was legible from the day it was written: A WITNESS WHOSE QUERY NEEDS AN `edb` LINE ADDED TO THE LEDGER TO BE ASKABLE IS A WITNESS ABOUT SOMETHING THE LEDGER DOES NOT HOLD. THE REPAIR: `witness_in(F, w_queue, layer(L), 4)` - asked where layers exist - and `edb(layer)` deleted from this file with it, so that a witness naming `layer(L)` in the ledger world is now BROKEN rather than green-at-zero. Four is not a number two branches can both move: `layer(L)` is declared by the owner alone and an agent declaring one is forbidden by a standing constraint, so if he declares a fifth this goes red and somebody looks, which is what the 2026-09-01 comment asked for.").
+addressed_by(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, "facts/findings.rofl").
+addressed_by(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, "test/note-witness.test.ts").
+witness_in(f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible, w_queue, "layer(L)", 4).
+
+finding(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, defect).
+recorded(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, "2026-09-09").
+demands(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, rule_and_test).
+finding_note(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, "THE WITNESS GATE'S OWN GUARD HAS A HOLE THE SHAPE OF EVERY ABSENCE CLAIM, and it was found by writing the first one. `query()` reports `unpopulatable` for a misspelt relation, a wrong arity and a wrong ledger, and CLAUDE.md records that replacing the hand-written copy with it was a strict widening. It is blind to a misspelt or mis-QUOTED CONSTANT, which is the only moving part an absence witness has. MEASURED IN THE CORPUS WORLD, AND THE TWO RELATIONS WANT OPPOSITE FORMS: `ast_name[code](N, twin)` written as a STRING returns 5 and written as an ATOM returns 0; `ast_node[code](N, if_statement, F, L)` written as an ATOM returns 16 and written as a STRING returns 0. Neither wrong one errors, neither is unpopulatable, and there is no rule of thumb to remember - names are strings and kinds are atoms, in a model whose whole subject is syntax. So a witness wanting ZERO reads as SATISFIED, which is precisely the defect scripts/witness_check.ts exists to catch, arriving one level further down than the version it already fixed. THE REMEDY IS A CONTROL, AND THE FIRST DRAFT OF THE CONTROL WAS ALSO WRONG - which is the part worth carrying. Requiring `some literal of the same shape returns rows` catches a world that cannot answer and does NOT catch this: a control on a different constant of the same relation stays live while the claim's constant is malformed, and both halves read green. Measured as MUTANT 2, which is why the design changed rather than being confirmed. The control must be THE CLAIM WITH ONE CONSTANT SWAPPED - token for token identical except at one position, quoted there if and only if the claim is - and then a mis-quoted constant cannot have a control at all. WHAT STILL SURVIVES, stated rather than discovered later: a constant MISSPELT in the right form is a well-formed question about a real relation, and no checker that cannot read the prose can tell it from the question the note meant. A witness buys `somebody ran something and wrote down what it returned`, not `the note is true`.").
+addressed_by(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, "scripts/witness_check.ts").
+addressed_by(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, "test/note-witness.test.ts").
+-- THE PREMISE IS A CONTRAST AND ONLY HALF OF IT IS WITNESSABLE, which is the
+-- finding restating itself. `ast_node[code](N, if_statement, F, L) >= 1` says
+-- the atom form is live in this world; the other half - that the QUOTED form
+-- answers 0 - cannot be a `witness_absent`, because its control would have to
+-- be a second quoted kind and would answer 0 too. A false zero has no live
+-- control by construction. test/note-witness.test.ts asserts both halves,
+-- which is what a test can do and a witness cannot.
+witness_in_atleast(f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant, w_js_corpus, "ast_node[code](N, if_statement, F, L)", 1).
+
+finding(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, defect).
+recorded(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, "2026-09-09").
+demands(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, rule_and_test).
+finding_note(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, "`unproven(F) :- finding_action(F, rule_and_test), not witness(F, _, _)` READ ONE OF THE TWO WITNESS FORMS THAT EXISTED WHEN IT WAS WRITTEN. A finding carrying only `witness_atleast` - a premise somebody had run and written down, in the form the checker judges with a floor rather than an equality - was refused by the queue as unproven. ZERO INSTANCES ON THE HONEST TREE, and that is the whole reason for recording it: both `witness_atleast` rows in this ledger sit on SETTLED findings, so `finding_action` never reaches them, the hole never fired, and nothing that exists here would ever have said it was there. It is CLAUDE.md's `orphan_claim[audit]` incident verbatim, one book over - a check written by hand for the relations that existed, silently reopened by the next relation over the same arguments - and the third addition of a witness form would have reopened it again. THE REMEDY IS THE ONE THAT FILE NAMES: derive it once. `proven(F)` has a clause per form and `unproven` reads `not proven(F)`, so the three forms added today - `witness_in/4`, `witness_in_atleast/4`, `witness_absent/4` - cost one clause each and INHERIT the gate rather than copying it. Measured both ways in test/note-witness.test.ts: a planted finding with only a floor witness is not unproven under the rule as it now stands, and IS unproven under the rule as it stood, with the old text restored as the mutant.").
+addressed_by(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, "rules/findings.rofl").
+addressed_by(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, "test/note-witness.test.ts").
+witness(f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it, "unproven_misaimed[audit](F)", 0).
+
+finding(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, decision).
+recorded(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, "2026-09-09").
+demands(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, doc).
+finding_note(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, "`witness(f_the_queue_now_refuses_unproven_work, unproven(F), 32)` IS DELETED AND NOT REPLACED BY A BETTER NUMBER. It moved three times in one night across four branches - 32 to 31 by settling a rule_and_test finding, 32 to 31 again on a different branch for a different finding, 31 to 30 when those two merged, 30 to 32 when a third branch recorded two unwitnessed findings - every move correct, and the merge of the two identical 31s auto-resolved in SILENCE because git had two equal numbers and no way to know they meant different things. HANDOFF already lists `a COUNT two branches both move` first among the ways a named set is not one; what this instance adds is that the worst case is not a conflict, it is the ABSENCE of one. THE OBVIOUS REMEDY WAS CONSIDERED AND REFUSED. HANDOFF prefers a named set because a set merges as a union, and `unproven` as thirty-two typed finding ids would indeed merge - but it would still MOVE on every branch, and CLAUDE.md's own conversion list puts an IDENTITY first for exactly that reason: `reason[audit] === f.not_modelled, not 73`. A set that merges correctly is better than a count that does not; a claim that does not move at all is better than both. WHAT THE COUNT WAS STANDING IN FOR, in three rows that are the same on every branch. AIM: `unproven_misaimed[audit]` is EMPTY - the gate refuses only findings that demand CODE, and one demanding a doc or a decision passes untouched. That is the sentence in the finding's own note, as a row, and it is not a tautology of the two clauses: it goes red the moment a third arm is added over a different `demands` value, which is the only way the aim can drift. NOT BLIND: `unproven(F) >= 1`. NOT PERMANENTLY RED: `ready_proven(F) >= 1`. Those two are the note's own `NO to 31 and YES to 118` written as FLOORS - two branches each assert `>= 1`, the merge asserts `>= 1`, and all three are right, which is what the counts could not manage. WHAT IS LOST, said plainly: nobody is now told when a branch records an unwitnessed finding. That tripwire was worth less than it cost - it fired four times in one night, correctly, and one firing merged away unnoticed - and the thing it watched for is watched better by `ready_proven` itself, which simply does not offer the item.").
+addressed_by(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, "facts/findings.rofl").
+addressed_by(f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin, "rules/findings.rofl").
+
+finding(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, defect).
+recorded(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, "2026-09-09").
+demands(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, rule_and_test).
+finding_note(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, "THE SEVENTH NOTE REFUTED BY A FIRST PROBE, AND THE FIRST ONE THE MECHANISM CAUGHT RATHER THAN A PROBE WRITTEN FROM THE NOTE. `w_plugin_gated_kinds` holds three kinds out of the vocabulary and its block reads `class_accessor_property - the scanner returns NO node at all for accessor a = 1 without the decorators plugin`. Asked of the corpus world while writing the item's witness: TWO NODES, shapes.ts lines 465 and 837. Every word of the note is still true and its conclusion has been false since 2026-09-08, when the decorator work added `decorators` and `decoratorAutoAccessors` to PARSER_PLUGINS for its own reasons and wrote both fixtures. Nobody re-read the note, because a note is prose and nothing watches prose - which is the whole content of f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes and of the item this was found under. THE DIFFERENCE FROM THE OTHER SIX IS THE DIRECTION OF THE MISTAKE, and it is instructive. Those six were absences the model had already closed by its own work; this one is an absence a SETTING closed - the note was about the scanner's configuration and became false when a different item changed that configuration for an unrelated reason. A NOTE ABOUT A DEPENDENCY YOU DO NOT OWN GOES STALE ON SOMEBODY ELSE'S SCHEDULE, which is the case a re-read at item time cannot cover and a witness can. THE ITEM IS NOT CLOSED BY THIS: the plugin half is discharged, the environment half is not - import attributes is ES2025 and `export v from` is a Babel proposal, and the era scale tops out at ts5/2022 - so both of those now carry an absence witness with a live control and the item's note says what is actually left.").
+addressed_by(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, "facts/worklist.rofl").
+witness_in_atleast(f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice, w_js_corpus, "ast_node[code](N, class_accessor_property, F, L)", 1).

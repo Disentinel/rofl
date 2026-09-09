@@ -921,9 +921,40 @@ work_spawned(w_query_names_nothing, f_the_probe_for_one_item_found_the_defect_in
 work_spawned(w_query_names_nothing, f_a_spread_over_an_unbounded_array_is_an_undeclared_size_limit).
 work_spawned(w_query_names_nothing, f_a_hand_written_list_goes_stale_on_a_refactor).
 
-work(w_note_is_not_evidence, "a work item's note asserting an absence is a claim about the store and carries no query, so six notes in a row were believed and refuted; give a note a witness, which needs a checker world that has the corpus (f_a_witness_has_no_world)").
-work_state(w_note_is_not_evidence, open).
+-- DONE 2026-09-09. A note can carry a witness now, and the world is a fact:
+-- `witness_in(Id, World, Query, N)`, `witness_in_atleast/4` and
+-- `witness_absent(Id, World, Query, Control)`, with the three worlds declared
+-- in facts/worlds.rofl and audited by rules/worlds.rofl. `witness/3` is
+-- unchanged and means `w_ledger`, so every witness written before today is
+-- asked of exactly the store it was asked of before.
+--
+-- THE NOTE ABOVE NAMED THE WRONG MISSING WORLD, and its own mechanism caught
+-- that first. It says a note's witness `needs a checker world that has the
+-- corpus`. Measured before anything was built: `work(W, Note)` is UNPOPULATABLE
+-- in the checker's world - the plan is not loaded there at all - so a note
+-- could not have carried a witness even about the ledger it lives in. The
+-- corpus was the second missing world, not the first, and the item's own note
+-- is the seventh instance of the thing the item is about.
+--
+-- WHAT A WITNESS COSTS TO WRITE, since that is what killed the last attempt:
+-- one row, and a query anyone can run. What it costs to write BADLY is the new
+-- part - `witness_absent` will not accept a claim without a live control,
+-- because zero rows is the answer both to a measured absence and to a constant
+-- written in the wrong lexical form, and nothing in the kernel tells them
+-- apart.
+work(w_note_is_not_evidence, "DONE 2026-09-09: a witness names its world - witness_in/4, witness_in_atleast/4 and witness_absent/4 over the three worlds facts/worlds.rofl declares - so a note asserting an absence carries a query, with a live control beside it, and goes stale by itself").
+work_state(w_note_is_not_evidence, done).
 work_spawned(w_note_is_not_evidence, f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes).
+work_spawned(w_note_is_not_evidence, f_the_witness_that_could_not_flip_was_held_green_by_the_edb_that_made_it_possible).
+work_spawned(w_note_is_not_evidence, f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant).
+work_spawned(w_note_is_not_evidence, f_the_plan_was_the_missing_world_before_the_corpus_was).
+work_spawned(w_note_is_not_evidence, f_a_count_over_the_ledger_is_a_reading_and_a_floor_is_a_pin).
+work_spawned(w_note_is_not_evidence, f_the_gate_read_one_of_the_witness_forms_and_had_no_instance_to_show_it).
+work_spawned(w_note_is_not_evidence, f_the_plugin_gate_opened_and_the_note_beside_it_did_not_notice).
+-- ...and the item's own claim, in the world where `work(W, Note)` exists. A
+-- FLOOR, not the count: every branch that gives a note a witness moves the
+-- count and none of them moves the claim, which is that a note CAN carry one.
+witness_in_atleast(w_note_is_not_evidence, w_queue, "note_witnessed(W)", 1).
 
 work(w_wire_the_witness_gate, "DONE 2026-09-07: test/witness-check.test.ts runs it, so a stale witness is CI's business rather than a thing somebody has to remember; the script keeps its CLI over the same two exported functions").
 work_state(w_wire_the_witness_gate, done).
@@ -1350,6 +1381,31 @@ work_spawned(w_mod_beyond_the_import, f_a_null_child_is_not_an_absent_one).
 work_spawned(w_mod_beyond_the_import, f_the_default_export_has_an_erasure_marker_that_lies).
 work_spawned(w_mod_beyond_the_import, f_the_subpath_specifier_resolves_inside_the_tree_and_the_bare_one_does_not).
 work_spawned(w_mod_beyond_the_import, f_a_require_site_moves_no_row_of_the_frontier).
+-- THE NOTE'S ABSENCE CLAIM, AS A QUERY, 2026-09-09 (w_note_is_not_evidence).
+-- `require has no site in the whole tree` was measured by a PURPOSE-BUILT WALK
+-- over 265 files, which is a world nobody else builds and nobody can re-run: it
+-- is exactly the shape CLAUDE.md forbids writing a witness from. What CAN be
+-- stated is the same claim in a world that is declared, cheaper, and NARROWER -
+-- the five call fixtures - and the honest thing is that the witness says less
+-- than the prose. The prose keeps the 265 files; the row keeps the part anyone
+-- can run, and goes red the day a fixture gains a `require`.
+--
+-- IT IS AN OVER-APPROXIMATION ON PURPOSE. `query` takes one literal, so
+-- `a call whose callee is the identifier require` cannot be joined; ANY
+-- identifier spelt `require` is asked instead. For an ABSENCE that is sound -
+-- zero over a superset is zero over the subset - and it would not be for a
+-- presence, which is the asymmetry worth carrying.
+--
+-- THE CONTROL IS THE OTHER HALF AND IT IS NOT DECORATION.
+-- `ast_name[code](N, require)` - the same literal with the constant written as
+-- an ATOM instead of a string - also answers 0, with no error and nothing
+-- `unpopulatable` can see, because names are strings in this relation and kinds
+-- are atoms in `ast_node`. A control returning rows is the only thing that
+-- separates a measured absence from a mis-quoted constant. `twin` is the
+-- control because test/js-controlflow-scope.test.ts pins it in eight
+-- assertions, so it cannot die quietly.
+witness_absent(w_mod_beyond_the_import, w_js_corpus,
+               "ast_name[code](N, \"require\")", "ast_name[code](N, \"twin\")").
 -- ...and the two claims go with their cells, because `queue_stale[audit]` calls
 -- a claim on a shut cell under an open item a lie and said so within one run.
 -- The default form's claim STAYS, and its reason is measured rather than
@@ -1922,6 +1978,15 @@ claim(queued, js, labeled_statement,           none, modules,      w_labelled_co
 work(w_inert_statements, "empty and debugger are answered at four layers each; `with` is open because the scanner parses every file as a module - a setting, measured - and because it redirects name resolution").
 work_state(w_inert_statements, open).
 work_spawned(w_inert_statements, f_with_is_a_scanner_setting_and_a_scoping_hazard).
+-- THE NOTE'S ABSENCE CLAIM, AS A QUERY, 2026-09-09 (w_note_is_not_evidence).
+-- `with` is open because no fixture can hold one: the scanner parses every file
+-- as a module and `with` is a syntax error in module code. The control is a
+-- KIND OF THE LANGUAGE rather than a name somebody typed - `call_expression`
+-- cannot leave a call corpus without every other gate here going red first - so
+-- it does not expire the way a mutant anchored to authored text does.
+witness_absent(w_inert_statements, w_js_corpus,
+               "ast_node[code](N, with_statement, F, L)",
+               "ast_node[code](N, call_expression, F, L)").
 claim(queued, js, with_statement,              none, callgraph,    w_inert_statements).
 claim(queued, js, with_statement,              none, dataflow,     w_inert_statements).
 claim(queued, js, with_statement,              none, controlflow,  w_inert_statements).
@@ -1984,6 +2049,9 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 -- a parser plugin and an environment.
 --   class_accessor_property   the scanner returns NO node at all for
 --                             `accessor a = 1` without the decorators plugin
+--                             STALE 2026-09-09: the plugin is on since the
+--                             decorator work and the corpus holds two of them.
+--                             See the witness rows under the item below.
 --   import_attribute          scannable today, but `import attributes` is
 --                             ES2025 and the highest environment on the scale
 --                             is ts5 at 2022, so the feature would sit in
@@ -1992,8 +2060,38 @@ claim(queued, js, interpreter_directive,       none, modules,      w_directives)
 --                             environment claims it, not even ts5
 -- The first two land with the decorator work, which needs the same plugin and
 -- will need the same question asked of the environment scale.
-work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: two need a parser plugin and two need an environment the scale does not have").
+work(w_plugin_gated_kinds, "class_accessor_property, import_attribute and export_default_specifier: the PLUGIN HALF IS DISCHARGED - the corpus holds two class_accessor_property nodes since the decorator work turned decoratorAutoAccessors on - and what is left for all three is an environment the era scale does not have").
 work_state(w_plugin_gated_kinds, open).
+-- THE NOTE WAS REFUTED BY ITS OWN WITNESS, 2026-09-09 (w_note_is_not_evidence),
+-- and this is the SEVENTH note in this file refuted by a first probe. It is
+-- also the first one found BY THE MECHANISM rather than by a probe written from
+-- the note, which is the whole difference the item was for: a probe written
+-- from a note agrees with the note by construction.
+--
+-- The line above used to read `the scanner returns NO node at all for
+-- `accessor a = 1` without the decorators plugin`. Every word of that is true
+-- and the conclusion drawn from it - that the kind waits on a plugin - stopped
+-- being true on 2026-09-08, when the decorator work added `decorators` and
+-- `decoratorAutoAccessors` to `PARSER_PLUGINS` for its own reasons. Nobody
+-- re-read this note, because a note is prose and nothing watches prose. Asked
+-- of the corpus world: TWO nodes, shapes.ts lines 465 and 837, both written by
+-- the decorator item itself.
+--
+-- So the witness is a FLOOR and it says the discharged half out loud. It is a
+-- floor rather than the count 2 because a fixture gaining a third accessor must
+-- not redden a claim about whether the parser emits the kind at all.
+witness_in_atleast(w_plugin_gated_kinds, w_js_corpus,
+                   "ast_node[code](N, class_accessor_property, F, L)", 1).
+-- ...and the two that ARE still absent, each with the same live control, so the
+-- remaining half of the item is a row rather than a sentence. Both are waiting
+-- on the ERA SCALE, which tops out at ts5/2022: `import attributes` is ES2025
+-- and `export v from` is a Babel proposal no environment claims.
+witness_absent(w_plugin_gated_kinds, w_js_corpus,
+               "ast_node[code](N, import_attribute, F, L)",
+               "ast_node[code](N, call_expression, F, L)").
+witness_absent(w_plugin_gated_kinds, w_js_corpus,
+               "ast_node[code](N, export_default_specifier, F, L)",
+               "ast_node[code](N, call_expression, F, L)").
 
 
 -- ==========================================================================
