@@ -165,6 +165,113 @@ separate atoms because they demand opposite repairs — more room versus more
 steps — and only the first is a case for materialising an intermediate and
 continuing on the next tick.
 
+## The aggregate: 205x smaller, and it is where cross-volume work belongs
+
+A volume has an INTERIOR and an INTERFACE, and only the interface can ever
+matter to another volume. Once a file's facts are extracted, the file is not
+needed; once a volume's interface is derived, the volume is not needed either —
+until somebody asks a question the interface cannot answer.
+
+Measured on the 64-file world. The interface taken as what a file offers and
+what it requires — its functions, their names, parameters, returns, call sites,
+resolutions and frontiers:
+
+| | facts | per file |
+|---|---|---|
+| a plausible interface | 14 464 | 226 |
+| the whole world | 2 968 422 | 46 382 |
+
+**0.49 per cent. Two hundred and five times smaller.** Extrapolated to eslint
+entire — 1426 files — the interface of the whole corpus is about 322 000 facts,
+which at the port's measured density is some 64 MB. The interface of an entire
+codebase fits in memory with room to spare, and a question asked of it is an
+index probe rather than a fixpoint.
+
+**And what the discarded 99.5 per cent actually IS, which is the reason the
+ratio is so favourable:**
+
+```
+derived_by       1 259 779    provenance
+ast_within         500 532    a transitive closure
+sees_binder        353 823    a transitive closure
+asserted_by        148 668    provenance
+in_perspective     148 668    provenance
+```
+
+Provenance is **52 per cent of the world** and the two transitive closures are
+another 29. Eighty-one per cent of what a volume holds is trace and internal
+reachability — by construction not interface material.
+
+So the layering the measurements support is three deep, not two:
+
+- **cold**: volume interiors, 99.5 per cent, on disk
+- **hot**: the aggregate interface, 0.49 per cent, always resident
+- **lifted on demand**: a volume, when its interior or its provenance is wanted
+
+### Three conditions, and the third is a price rather than a check
+
+**1. The interface's CONTENT must be derived from the rules, not chosen.** The
+table above is a plausible guess and that is its weakness. The correct content
+is exactly the relations read by rules whose premises span volumes — today an
+empty set, because nothing crosses; when cross-module resolution lands, it is
+whatever resolution reads. `scanners/rule_shape.ts` already computes
+`rule_leaves(R, B)`, rules that read outside their own book, which is the same
+shape of question. Deriving it once beats maintaining a list, for the reason
+this repository has already paid for twice: a hand-written list reopens
+silently the moment somebody adds a relation.
+
+**2. Negation must not reach into what was discarded.** Asking `not p(X)` for an
+X whose volume is gone gives a WRONG answer, not a missing one. This is not
+hypothetical: the planted defect above invented 622 facts by exactly this
+mechanism. Safe only while no cross-volume rule negates over a discarded
+relation, and that is statically checkable by the same classifier that found
+the three scans.
+
+**3. Provenance is 52 per cent of the world, and it is the half being thrown
+away.** Keep only the aggregate and `why` for a cross-volume conclusion bottoms
+out at the aggregate rather than at source. For a system whose identity is a
+provenance hypergraph that is a real loss and should be stated as one.
+
+It is RECOVERABLE rather than gone: the aggregate carries the reference, and
+expanding a step is precisely the cold-volume lift. Provenance becomes lazy,
+served by the mechanism that already has to exist. The kernel also already
+carries the other half of this lever and no demo exercises it — `retainTicks`,
+which prunes provenance at the tick boundary.
+
+## Building the volumes: the parts are NOT cheaper than the whole
+
+Stated because the opposite was predicted here, out loud, and measured false.
+
+The expectation was that since the fixpoint is superlinear, evaluating N volumes
+separately must beat evaluating one world of N files. Measured on 64 files of
+eslint/lib, both arms in one process, back to back, after a warm-up:
+
+```
+ONE WORLD    32.37 s    2 968 422 facts
+64 VOLUMES  190.17 s    4 231 326 facts summed
+   of which loading the core 64 times    47.57 s
+   of which asserting and evaluating    142.60 s
+
+parts / whole              5.87x
+parts minus core reloads   4.40x
+```
+
+**Nearly six times more expensive**, and the third column says why: the volumes
+together hold 1.26 MILLION more facts than the single world. That is 64 copies
+of the shared core — the vocabulary, the rules as data, the reflection, and
+boot.rofl's own audits, re-derived once per volume.
+
+The consequence for the design is concrete: **the core must be built once and
+shared, not rebuilt per volume.** Without that, cold volumes pay 5.87x in time
+for what they save in memory. With it, the per-volume price is the volume's own
+subject and nothing else.
+
+The memory result and the locality result are untouched by this — they were
+measured separately and they stand. What is refuted is a claim made here an hour
+earlier: that because volumes are independent, a corpus can be built as 1426
+short independent evaluations *and that this would be better*. Independent, yes,
+and proven. Cheaper, no.
+
 ## What differential Datalog did about this — and did not
 
 Worth stating plainly, because the overlap is easy to assume and it is not there.
