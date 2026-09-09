@@ -149,8 +149,98 @@ export function scanLib(libDir: string): LibMember[] {
     .sort((a, b) => (a.proto === b.proto ? (a.method < b.method ? -1 : 1) : (a.proto < b.proto ? -1 : 1)));
 }
 
+// ---------------------------------------------------------------------------
+// THE MUTATING HALF OF A PROTOTYPE, READ RATHER THAN TYPED.
+//
+// `w_ambient_prototype_effects` asks whether the array mutators — `push`,
+// `pop`, `splice`, `sort`, `reverse`, `fill`, `copyWithin`, `shift`, `unshift`
+// — can be READ from a declaration file rather than listed by hand, and its
+// note says the honest answer may be no. IT IS YES, AND TYPESCRIPT ALREADY
+// WROTE IT DOWN: every mutable collection interface in lib.es*.d.ts has a
+// `Readonly` TWIN, and the twin is the same surface WITH THE MUTATING MEMBERS
+// REMOVED. So the list is a SET DIFFERENCE over two interfaces in the files
+// this scanner already reads, and no part of it is a judgement of ours.
+//
+// MEASURED 2026-09-09 over the ecmascript lib files, all three twins:
+//
+//   Array \ ReadonlyArray   copyWithin fill pop push reverse shift sort
+//                           splice unshift          <- exactly the nine
+//   Map   \ ReadonlyMap     clear delete set
+//   Set   \ ReadonlySet     add clear delete
+//
+// and the REVERSE difference is empty in all three, which is the property the
+// subtraction needs: the readonly view declares nothing the mutable interface
+// does not, so a member missing from the view is missing because it mutates.
+// `viewOnly` carries that direction so it is checked rather than assumed.
+//
+// ONLY `Array` REACHES A ROW, and that is a fact about THIS model rather than
+// about the source. `PROTOTYPES` above is the eight prototypes
+// `kind_prototype` can name a receiver for; `Map` and `Set` are not among them
+// — their instance surface is what `es_prototype_gap[audit]` already names —
+// so rows for them would be rows no rule reads, which this file's own header
+// refuses. The measurement is kept and asserted in test/js-lib-surface.test.ts
+// off `scanReadonly`'s return value, so the generality of the construction is
+// checked without inventing rows for it.
+//
+// WHAT IT CANNOT SAY, AND IT IS THE OTHER FIVE PROTOTYPES. `String`, `Number`,
+// `Boolean`, `RegExp` and `BigInt` have NO readonly twin in any lib file, so
+// this source is SILENT about them — not "they have no mutators". The rule
+// that reads these rows is guarded on `lib_readonly_view` for exactly that
+// reason, and `amb_proto_unsplit[flow]` in rules/js-ambient.rofl is the row
+// that says which prototypes are in that state.
+
+export interface LibReadonly {
+  /** the lower-case prototype atom, when `PROTOTYPES` has one */
+  proto: string | null;
+  /** the mutable interface, e.g. `Array` */
+  base: string;
+  /** the readonly twin, e.g. `ReadonlyArray` */
+  view: string;
+  /** the members the readonly twin declares */
+  readonlyMembers: string[];
+  /** base minus twin — the members no readonly view can reach */
+  mutators: string[];
+  /** twin minus base. Empty for all three twins, and CHECKED rather than
+   *  assumed: a member the readonly view declares and the mutable interface
+   *  does not would make the subtraction mean something else. */
+  viewOnly: string[];
+}
+
+/** every `Readonly<X>`/`X` interface pair the ecmascript lib files declare,
+ *  with the set difference in both directions. */
+export function scanReadonly(libDir: string, sources = libSources(libDir)): LibReadonly[] {
+  const members = new Map<string, Set<string>>();
+  for (const { src } of sources) {
+    for (const st of src.statements) {
+      if (!ts.isInterfaceDeclaration(st)) continue;
+      for (const mem of st.members) {
+        if (!ts.isMethodSignature(mem) && !ts.isPropertySignature(mem)) continue;
+        if (!mem.name || !ts.isIdentifier(mem.name)) continue;
+        if (!members.has(st.name.text)) members.set(st.name.text, new Set());
+        members.get(st.name.text)!.add(mem.name.text);
+      }
+    }
+  }
+  const out: LibReadonly[] = [];
+  for (const view of [...members.keys()].sort()) {
+    if (!/^Readonly./.test(view)) continue;
+    const base = view.slice('Readonly'.length);
+    const b = members.get(base);
+    if (!b) continue;                    // a readonly twin with no mutable one
+    const v = members.get(view)!;
+    out.push({
+      proto: PROTOTYPES.get(base) ?? null, base, view,
+      readonlyMembers: [...v].sort(),
+      mutators: [...b].filter((m) => !v.has(m)).sort(),
+      viewOnly: [...v].filter((m) => !b.has(m)).sort(),
+    });
+  }
+  return out;
+}
+
 /** the pack, as text. Deterministic: sorted, and every row carries its source. */
-export function emit(members: LibMember[], composition: [string, string][] = COMPOSITION): string {
+export function emit(members: LibMember[], composition: [string, string][] = COMPOSITION,
+                     readonly_: LibReadonly[] = []): string {
   const head = [
     '-- js-lib-surface.rofl — GENERATED by scanners/ts_lib.ts. Do not hand-edit;',
     '-- test/js-lib-surface.test.ts regenerates it and compares, so a hand edit',
@@ -200,7 +290,37 @@ export function emit(members: LibMember[], composition: [string, string][] = COM
     ...members.filter((m) => m.replacedBy)
       .map((m) => `lib_replaced_by(${m.proto}, ${JSON.stringify(m.method)}, ${JSON.stringify(m.replacedBy)}).`),
   ];
-  return head.concat(comp).concat(rows).concat(dep).join('\n') + '\n';
+  // THE READONLY TWIN, AND THE SUBTRACTION IS NOT DONE HERE. What is emitted is
+  // what the declaration SAYS — this interface has a readonly view, and these
+  // are the members that view declares — and `lib_mutator` in
+  // rules/js-ambient.rofl is the difference. A scanner that emitted the
+  // mutators directly would put the one inference in the layer nobody can argue
+  // with; as two tables plus a rule, the criterion is a rule body and the check
+  // `lib_readonly_only[audit]` can go red.
+  const ro = readonly_.filter((r) => r.proto !== null);
+  const roBlock = ro.length === 0 ? [] : ['',
+    '-- `lib_readonly_view(Prototype, Interface)` — the mutable interface has a',
+    '-- `Readonly` TWIN in TypeScript`s own declarations, and',
+    '-- `lib_readonly_member` is what that twin declares. THE MUTATING HALF OF A',
+    '-- PROTOTYPE IS THE SET DIFFERENCE and it is taken in rules/js-ambient.rofl,',
+    '-- not here: `lib_member` minus `lib_readonly_member` over a prototype that',
+    '-- HAS a view. Measured over the ecmascript lib files: Array \\ ReadonlyArray',
+    '-- is exactly `copyWithin fill pop push reverse shift sort splice unshift`,',
+    '-- Map \\ ReadonlyMap is `clear delete set`, Set \\ ReadonlySet is',
+    '-- `add clear delete`, and the reverse difference is EMPTY in all three.',
+    '-- Only Array reaches a row because only Array is a prototype',
+    '-- `kind_prototype` can name a receiver for; the five that have no twin at',
+    '-- all are SILENT here rather than mutator-free, which is why the rule is',
+    '-- guarded on `lib_readonly_view` having a row.',
+    'edb(lib_readonly_view).',
+    'edb(lib_readonly_member).',
+    '',
+    ...ro.map((r) => `lib_readonly_view(${r.proto}, ${JSON.stringify(r.view)}).`),
+    '',
+    ...ro.flatMap((r) => r.readonlyMembers
+      .map((m) => `lib_readonly_member(${r.proto}, ${JSON.stringify(m)}).`)),
+  ];
+  return head.concat(comp).concat(rows).concat(dep).concat(roBlock).join('\n') + '\n';
 }
 
 // ===========================================================================
@@ -473,7 +593,7 @@ export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
   const lib = path.join(root, 'node_modules', 'typescript', 'lib');
-  const out = emit(scanLib(lib));
+  const out = emit(scanLib(lib), COMPOSITION, scanReadonly(lib));
   const dest = path.join(root, 'facts', 'js-lib-surface.rofl');
   fs.writeFileSync(dest, out);
   console.log(`${dest}: ${out.split('\n').filter((l) => l.startsWith('lib_member')).length} members`);

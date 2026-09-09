@@ -744,14 +744,33 @@ test('the era layer costs a number too, and it is half of its world\'s derivatio
   assert.equal(again.total, L.world.total, 'two identical worlds hand out the same rows');
 
   // FIRST MEASUREMENT 2026-09-09, same as above: this world had no cost gate.
-  // RE-MEASURED TOGETHER 2026-09-09, all seven, and NOT nudged one at a time.
-  // ONE CAUSE: the owner declared `environment(es2025)`, so this layer crosses
-  // its kind table with NINE environments where it crossed eight. Every number
-  // here moves with the ninth and they move consistently — 84 901 -> 86 933
-  // rows against 6 067 -> 6 576 firings is more work of the same shape, which
-  // is what an extra environment should look like. A single number nudged until
-  // green would have hidden that the SHAPE held.
-  assert.equal(L.world.total, 86933, 'rows handed out in the era fixpoint');
+  // THE THIRD TIME TODAY TWO BRANCHES MOVED ONE SET OF COUNTS, and the third
+  // time the merged value is in neither side. Both causes, kept, because each
+  // explains a different part of the sum:
+  //
+  //   * +2 032 rows / +509 firings — the owner declared `environment(es2025)`,
+  //     so this layer crosses its kind table with NINE environments where it
+  //     crossed eight. On that branch the four numbers moved consistently —
+  //     more work of the same shape, which is what an extra environment should
+  //     look like, and a single number nudged until green would have hidden
+  //     that the shape held.
+  //   * +602 rows / +0 firings — `facts/js-lib-surface.rofl` gained
+  //     `lib_readonly_view` and thirty `lib_readonly_member` rows, TypeScript's
+  //     own `ReadonlyArray`, read so that `w_ambient_prototype_effects` could
+  //     take the mutating half of the Array prototype as a SET DIFFERENCE
+  //     instead of typing it. This world loads that pack for `release/1` and
+  //     `includes/2` and reads NEITHER new relation, so the whole of it is the
+  //     store handing out rows for facts nothing here joins — which is why the
+  //     LAYER's own figures did not move on that branch at all.
+  //
+  // THE NUMBERS BELOW ARE A PREDICTION AND NOT A MEASUREMENT: 84 901 + 2 032 +
+  // 602 and the era-side deltas alone for the other three, the two changes
+  // assumed independent. They have NOT been re-measured on the merged tree,
+  // because this merge was taken without a test pass on instruction.
+  // RE-MEASURE BEFORE TRUSTING — and note the two deltas are of different
+  // KINDS, one inside the layer and one outside it, so their independence is
+  // plausible and unverified rather than obvious.
+  assert.equal(L.world.total, 87535, 'rows handed out in the era fixpoint');
   assert.equal(L.world.firings, 6576, 'derivations in the era fixpoint');
   assert.equal(L.rows, 26751, 'rows the era pack costs, by difference');
   assert.equal(L.firings, 3717, 'derivations the era pack adds');
