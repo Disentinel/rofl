@@ -30,14 +30,30 @@ COST, and it moved further in one night than in the rest of the loop:
   rows per fact 6.05 -> 8.07 — UP, and the shadowing layer bought it
 ```
 
-**THE ENGINE HAS A SPACE WALL AND NOTHING MEASURES HOW CLOSE WE ARE.**
-`DEFAULT_SPACE` is **500 000 rows** (src/engine.ts) and the merged control-flow
-world holds **434 149 facts** — 87% of it. `Rofl`'s constructor takes no
-`space` option, so it cannot be raised from the public API. This was found the
-hard way: two mutants of the new per-layer cost gate stopped fitting and came
-back `$rule(...)/space_exhausted` instead of a cost, which is what forced the
-`has_return` repair rather than the saving. Nothing reports `peakRows`, so the
-only signal is a probe that stops fitting. **Owner's to decide.**
+**THE ENGINE HAS A SPACE WALL, AND THE FIRST TWO ESTIMATES OF HOW CLOSE WE ARE
+WERE BOTH WRONG.** `DEFAULT_SPACE` is **500 000 ROWS** (src/engine.ts), and
+`Rofl`'s constructor takes no `space` option, so it cannot be raised from the
+public API. Found the hard way: two mutants of the per-layer cost gate stopped
+fitting and came back `$rule(...)/space_exhausted` instead of a cost, which is
+what forced the `has_return` repair — the saving was not the reason.
+
+**MEASURED 2026-09-09, and the number is 53%.** `peakRows` on the merged
+control-flow world is **266 505** against 434 149 facts — a rows-per-fact ratio
+of **0.614** — so the world sits at **53.3% of the wall**.
+
+Both earlier figures were wrong and in opposite directions, which is why this
+paragraph exists rather than a corrected number:
+- **87% was mine**, and it was wrong because I read the wall as facts when it
+  counts ROWS. A ceiling in one unit and a measurement in another.
+- **44% came from the peer session**, correctly measured at 0.507 rows/fact on
+  *its* workload and correctly caveated as not transferring unmeasured. It does
+  not transfer: this rule set runs 0.614, twenty per cent denser.
+
+`peakRows` is on `Evaluation` and NOTHING on the public surface reports it —
+reaching it takes wrapping `newEval`. So the only routine signal remains a
+probe that stops fitting, and that is the part worth fixing. **Owner's to
+decide**, and the decision is now against a measured number rather than two
+guesses.
 
 **THE OPEN SET IS SIX AND EVERY ONE OF THEM IS THE OWNER'S.** This is the
 first time the queue has been in that state, and it is why the open-cell pin
