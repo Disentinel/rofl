@@ -202,6 +202,41 @@ The control matters as much as the comparison: a fingerprint that cannot change
 certifies everything. On its first run this caught a moving tree and correctly
 discarded a 929-test result that would otherwise have been believed.
 
+**AND THE FINGERPRINT DOES NOT CERTIFY THAT THE RUN FINISHED.** Measured
+2026-09-09, on a machine at load average 19 with another session's benchmark
+running: the suite reported `TREE STILL — result valid`, `fail 7` — the same
+seven pre-existing failures quoted all night — and **739 tests of 1399**. Seven
+whole FILES had been killed at ~420 s with `Promise resolution is still pending
+but the event loop has already resolved`, and 660 tests never ran. Every word of
+the attestation was true and none of it was about the thing that went wrong.
+
+**A green count from a partial suite looks exactly like a green count from a
+whole one.** What caught it was arithmetic: 739 is not 665 + 7. So the ritual
+needs a second line, and it is one comparison:
+
+```bash
+[ "$(grep -c '^ℹ tests' /tmp/out.txt)" ] && \
+  awk '/^ℹ tests/{t=$3} /^ℹ pass/{p=$3} /^ℹ fail/{f=$3} \
+       END{ if (t != p+f) print "SUITE TRUNCATED — " p "+" f " of " t; \
+            else print "suite whole — " t " tests" }' /tmp/out.txt
+```
+
+Run against the failing output it prints `SUITE TRUNCATED — 665+7 of 739`, so
+it catches this incident. **AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE
+DISCOVERED**, because that is the defect being repaired: it compares the
+reporter's OWN three numbers, so it catches a run whose arithmetic does not
+close and NOT a run that was killed so early the reporter never counted the
+missing files at all. The second guard for that is the total: this suite is
+about 1400 tests, and `ℹ tests 739` is wrong on its face to anyone who knows
+the number. Neither check is the whole answer; both are cheaper than believing
+a partial run.
+
+The general form is the one this file already writes about a gate inheriting
+the scope of its incident: the attestation was built to catch a MOVING TREE and
+it catches a moving tree exactly. It was never asked whether the run completed,
+so it does not answer that, and its confident `result valid` reads as though it
+had.
+
 **`./.claude/*` IS EXCLUDED AND WAS NOT, AND THE OMISSION WAS 92 PER CENT OF THE
 FINGERPRINT.** Measured 2026-09-09: the ritual as first written covered **4 208**
 files, of which **334** are this working tree and **3 874** belong to twelve
