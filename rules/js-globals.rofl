@@ -22,10 +22,12 @@
 --                        the bridge, and it covers EIGHT of the forty-seven
 --                        globals because eight is what `kind_prototype` in
 --                        rules/js-dataflow.rofl can name a receiver for.
---                        `new Map()` reaches no prototype at all: there is no
---                        `kind_prototype` arm for a `new_expression`, so a call
---                        on a Map instance is outside both halves and the
---                        missing bridge row is where that is visible.
+--                        SECTION 6 BELOW joins a CONSTRUCTION to that bridge
+--                        (w_prototype_of_a_constructed_value, 2026-09-09), so
+--                        `new RegExp(s).test(x)` reaches the prototype surface
+--                        and `new Map().set(k, v)` still does not — the missing
+--                        bridge row is where that is visible, and
+--                        `es_prototype_gap[audit]` is where it is a ROW.
 --
 -- AND THE FORMS ARE NOT UNIFORM EITHER. `lib_global_form` has four rows because
 -- TypeScript's declarations have four shapes, and averaging them would make
@@ -219,3 +221,85 @@ es_global_unsupported[audit](E, X, Name) :- es_global[code](X, Name, Rel, _),
                                             environment(E), not reaches[audit](E, Rel).
 es_static_unsupported[audit](E, N, Name, Key) :- es_static[code](N, Name, Key, Rel),
                                                  environment(E), not reaches[audit](E, Rel).
+
+-- ===========================================================================
+-- 6. WHAT THE PROTOTYPE OF A CONSTRUCTED VALUE IS
+--    (w_prototype_of_a_constructed_value; the hole
+--     f_a_constructed_value_reaches_no_prototype_so_a_map_call_is_outside_both_halves
+--     named the day the bridge above made it visible).
+--
+-- THE DECISION, IN ONE SENTENCE AND MADE HERE RATHER THAN BY HAND: a `new X()`
+-- whose callee is an ES GLOBAL NOTHING IN THIS PROGRAM BINDS evaluates to a
+-- value whose prototype is that global's, and THE CONSTRUCTION SITE STANDS FOR
+-- THE VALUE. `w_prototype_of_a_value` answered the question for literals and
+-- left it unasked for constructions; this is the same answer in the same shape.
+--
+-- WHY IT IS `may_be_node[flow](X, X)` AND NOT A NEW `kind_prototype` ROW. The
+-- finding said the repair is not more `kind_prototype` rows and it was right:
+-- a kind cannot carry it, because `new Map()` and `new Box()` are the same KIND
+-- and different questions. What it IS is the abstraction rules/js-dataflow.rofl
+-- already writes for `array_expression` and `reg_exp_literal` — a value with no
+-- node of its own is named by the site that makes it, `may_be_node(E, E)`,
+-- which "names the site rather than the object" and is a new object every time
+-- round a loop. Standing on that relation is what makes `const holder = new
+-- Map(); holder.set(k, v)` reach anything at all: the binder, assignment and
+-- transparent-wrapper arms of `may_be_node` then carry the instance to the
+-- receiver position for free, and nothing here re-plumbs them.
+--
+-- THREE THINGS IT DELIBERATELY DOES NOT DO.
+--
+--   IT DOES NOT TOUCH `new Foo()` WHERE `Foo` IS A CLASS IN THIS PROGRAM. That
+--   case is answered — `may_be_node` maps the construction to the class
+--   declaration and `resolves[code]` draws the constructor edge — and the two
+--   never meet, because `free_global` is `not declares_name`, so a name this
+--   program declares is not an ES global by construction. A spelling match on
+--   `Map` would have collided with a program that declares its own; the
+--   IDENTITY does not.
+--
+--   IT DOES NOT VALUE A FORM THAT CANNOT BE CONSTRUCTED. `new Math()` is a
+--   TypeError, `es_construct_not_constructor[audit]` above says so, and giving
+--   it an instance would make the model contradict its own audit one relation
+--   later. `constructible_form` is read here for exactly that.
+--
+--   IT DOES NOT INVENT A PROTOTYPE FOR THE THIRTY-NINE GLOBALS WITH NO BRIDGE
+--   ROW. Thirty-two of those are constructor bindings whose instance surface
+--   the library does not carry and `es_prototype_gap[audit]` names them by row;
+--   the other seven are the namespace and plain-value forms, which have no
+--   instance to have a prototype and are therefore not a gap at all.
+es_instance[flow](X, Name, Rel) :- es_global_construct[code](X, Name, Rel),
+                                   lib_global(Name, _, Form), constructible_form(Form).
+
+may_be_node[flow](X, X) :- es_instance[flow](X, _, _).
+
+prototype_of[flow](E, P) :- may_be_node[flow](E, X), es_instance[flow](X, Name, _),
+                            lib_global_prototype(Name, P).
+
+-- ...AND WHERE THAT ARM CANNOT LOOK, AS ROWS RATHER THAN AS THIS PARAGRAPH.
+-- The bridge is eight of forty-seven, so the answer above is available for
+-- eight globals and unavailable for the rest — and an unavailable answer that
+-- is merely absent is indistinguishable from a corpus with no site. These two
+-- audits are the difference, and they are the frontier this item OWNS rather
+-- than closes.
+--
+-- `es_prototype_gap[audit]` is the library side: a global that CAN be
+-- constructed and whose instance surface facts/js-lib-surface.rofl does not
+-- carry. `Map`, `Set`, `Promise`, `WeakMap`, `Date` and every typed array are
+-- in it, and `.set`, `.add`, `.then`, `.getTime` are ordinary calls in real
+-- code. It is a claim about the LIBRARY and needs no corpus, which is why it
+-- ranges over `lib_global` rather than over a construction site.
+--
+-- `es_instance_unattributed[audit]` is the corpus side and the mirror of
+-- `stdlib_unattributed[audit]` and `es_static_unattributed[audit]`: a member
+-- call on a value this model knows was constructed from a named ES global, and
+-- whose prototype it cannot name. `holder.set` produces a row saying `Map` and
+-- `set` where before it produced nothing at all — which was the whole of the
+-- finding: the call was outside BOTH halves and no relation said so.
+es_prototype_gap[audit](Name, Rel) :- lib_global(Name, Rel, Form), constructible_form(Form),
+                                      not lib_global_prototype(Name, _).
+
+es_instance_unattributed[audit](C, Name, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                                                 ast_child[code](N, object, 0, O),
+                                                 may_be_node[flow](O, X),
+                                                 es_instance[flow](X, Name, _),
+                                                 not lib_global_prototype(Name, _),
+                                                 selects[flow](N, Key).
