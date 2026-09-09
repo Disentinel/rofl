@@ -191,7 +191,7 @@ test('KNOWN BLIND SPOT: a helper that ignores the option still counts', () => {
 test('a real call at the right door IS exercise', () => {
   const res = census(API, one(`
     import { Rofl } from '../../src/api.ts';
-    export const r = new Rofl({ retainTicks: 3, reuse: false, naive: true, evaluator: 'strata' });
+    export const r = new Rofl({ retainTicks: 3, reuse: false, naive: true, evaluator: 'strata', space: 500000 });
     export const s = Rofl.fromSnapshot(r.save(), { retainTicks: 0 });
     r.tickAdvance({ onFixpoint: (x) => x.factKeys().length });
     r.run({ maxTicks: 4, onBoundary: (x) => x.factKeys().length });

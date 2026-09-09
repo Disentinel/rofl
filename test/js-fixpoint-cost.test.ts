@@ -262,9 +262,22 @@ test('every read path above five per cent, by name', () => {
   // THE CUT SITS IN A GAP, checked rather than assumed: 6.398% then 4.347%, a
   // gap of 2.05 pp against 1.29 for the next largest.
   const SHARE: [string, number][] = [
-    ['relPersp hidden_at', 21.92],
-    ['argMatches ast_within pos=[0]', 7.69],
-    ['relPersp authority', 6.40],
+    // MOVED AGAIN 2026-09-09 with the wip/curve merge, and the NAME SET is
+    // unchanged while every share moved — `nearest_v` was rewritten and
+    // `encloses_v`/`closer_v` deleted, so the denominator fell 3 253 649 ->
+    // 2 854 920 and each surviving path is a larger slice of a smaller world.
+    // That is the shape to expect from a repair somewhere else, and it is why
+    // a share is pinned beside a total rather than instead of it.
+    ['relPersp hidden_at', 24.99],
+    ['relPersp authority', 7.30],
+    ['argMatches ast_within pos=[0]', 6.04],
+    // FOUR, NOT THREE, and the fourth is a property of this file's own world
+    // rather than of the model: `cost()` installs the tally BEFORE its own
+    // verification queries, so their reads are in the denominator and in this
+    // path. A probe outside the test puts `relPersp ast_node` at 4.946% and
+    // therefore below the cut; here it clears it. Same world, two subjects —
+    // the note at the top of this file says so and this is the instance.
+    ['relPersp ast_node', 4.95],
   ];
   // AS A SET AND NOT A SEQUENCE, corrected within the day it was written. The
   // first version pinned the ORDER, and the fourth and fifth paths are 5.25%
@@ -326,6 +339,11 @@ test('every read path above five per cent, by name', () => {
   // here: `hidden_at` is negated inside both arms of `sees_binder`, so the cost
   // is in the shape of the negation and not in the order of a body, which is a
   // different repair and somebody's item rather than a line in a pin pass.
+  // 8.07 -> 7.29 on 2026-09-09 with the merge, and DOWN for once: the deleted
+  // quadratic pair was rows without facts, so removing it took more off the
+  // numerator than off the denominator. The ceiling stays at 8.5 — it is a
+  // ceiling and not a pin, and lowering it to hug a good day is how a gate
+  // becomes red on an honest checkout.
   assert.ok(c.total / c.facts < 8.5,
     `rows handed out per fact asserted: ${(c.total / c.facts).toFixed(3)}`);
   // 508 763 -> 508 688 on 2026-09-05, DOWN 75, with facts and firings identical
@@ -560,7 +578,7 @@ test('every read path above five per cent, by name', () => {
   // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
   // reproduced this pin exactly before it moved, which is the control that
   // says the two halves are what they are claimed to be.
-  assert.equal(c.total, 3253649, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 2854920, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
@@ -667,5 +685,5 @@ test('every read path above five per cent, by name', () => {
   // decorator rules ADD derivations (two resolutions, a mechanism, a guard) and
   // the total fell, because the `encloses` guard withdraws a handful of
   // enclosure facts that `closer` and everything downstream were deriving over.
-  assert.equal(c.firings, 163423, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
+  assert.equal(c.firings, 157485, 'derivations in the WHOLE fixpoint, against 70 625 in the truncated one');
 });
