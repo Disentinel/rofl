@@ -13,10 +13,16 @@ Grafema is 1212 source files and ~338 000 lines across eleven languages
 model this engine runs reads JavaScript, so the target has to be a JS tree of
 that size rather than grafema itself.
 
-**eslint** at `/tmp/eslint-corpus` (shallow clone, MIT): **1426 JS files,
-531 415 lines** — 1.6x grafema's whole line count and 1.2x its file count, so
-it has headroom rather than being a near miss. It is plain JavaScript with no
-build step, which keeps the scanner honest: what babel parses is what shipped.
+**eslint** at `~/eslint-corpus` (shallow clone, MIT): **1426 JS files, 531 415
+lines** — 1.6x grafema's whole line count and 1.2x its file count, so it has
+headroom rather than being a near miss. It is plain JavaScript with no build
+step, which keeps the scanner honest: what babel parses is what shipped.
+
+It lives in the home directory and not in `/tmp`, which is a correction rather
+than a preference: a reboot on 2026-09-09 emptied `/tmp` and took the corpus and
+four built seeds with it — an hour of measurement lost to a directory the
+operating system is entitled to clear. Anything a multi-day loop must be able to
+re-measure against belongs somewhere the OS does not own.
 
 ## The ladder
 
