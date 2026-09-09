@@ -377,3 +377,139 @@ function main(): void {
 }
 
 if (import.meta.filename === process.argv[1]) main();
+
+// ---------------------------------------------------------------------------
+// AN INTERPRETER OF THE EXTRACTED FORM, so the extraction can be checked before
+// any of it is rendered into Rust. The automaton half was validated this way
+// and it was the right order: the risky half is READING the rules, and turning
+// a validated tree into code is mechanical. A generator checked only through
+// its output makes every mistake look like a compiler error.
+
+export interface World { ch: string[]; kind: string[]; state: string[] }
+
+/** Every span of every expressible relation, as `start,end` keys. */
+export function evaluate(w: World, ex: ReturnType<typeof extract>): Map<string, Set<string>> {
+  const spans = new Map<string, Set<string>>();
+  const valuedAt = new Map<string, Map<number, string>>();
+  const n = w.ch.length;
+
+  for (const p of ex.projected) spans.set(p.rel, new Set());
+
+  // ONE FIXPOINT OVER EVERYTHING, not two ordered phases. The first draft
+  // computed the valued relations FIRST and they came out empty: `punct(I,
+  // lpar) :- kind(I, lpar), code_at(I)` needs `code_at`, which is a span, and
+  // the span table had not been built yet. Ordering the phases by what looked
+  // like the layering is the same mistake the two generators made before they
+  // merged — the dependency graph is mutual, so the evaluation is a fixpoint.
+  const recomputeValued = (): void => {
+    for (const v of ex.valued) {
+      const m = new Map<number, string>();
+      for (let i = 0; i < n; i++) {
+        for (const c of v.cases) if (c.tests.every((t) => holds(w, spans, valuedAt, t, i))) { m.set(i, c.value); break; }
+      }
+      valuedAt.set(v.rel, m);
+    }
+  };
+
+  for (let round = 0; round < 6; round++) {
+  const sizeBefore = [...spans.values()].reduce((k, x) => k + x.size, 0)
+    + [...valuedAt.values()].reduce((k, x) => k + x.size, 0);
+  recomputeValued();
+  for (const r of ex.rels) {
+    const out = spans.get(r.rel) ?? new Set<string>();
+    for (let pass = 0; pass < n + 2; pass++) {
+      const before = out.size;
+      for (let i = 0; i < n; i++) {
+        for (const prod of r.prods) {
+          if (prod.p === 'while') {
+            // extend every span already known for this relation
+            // THE GUARD CARRIES ITS OWN OFFSET. `wext(I, J2) :- wext(I, J),
+            // J2 is J + 1, wordch(J2)` extracts as a test at offset +1 from
+            // the cursor, so evaluating it at the ALREADY-advanced position
+            // counts the step twice and every word came out one character
+            // short of itself. Sixth offset mistake of the day, same family:
+            // the tool's frame reported as the rule's.
+            for (const key of [...out]) {
+              const [s, e] = key.split(',').map(Number) as [number, number];
+              if (e + 1 >= n) continue;
+              if (prod.step.every((t) => holds(w, spans, valuedAt, t, e))) out.add(`${s},${e + 1}`);
+            }
+            continue;
+          }
+          for (const end of runChain(w, spans, valuedAt, prod, i, n)) out.add(`${i},${end}`);
+        }
+      }
+      // projections of THIS relation become available immediately
+      for (const p of ex.projected) {
+        if (p.of !== r.rel) continue;
+        const s = spans.get(p.rel) ?? new Set<string>();
+        for (const key of out) {
+          const [a, b] = key.split(',').map(Number) as [number, number];
+          const at = p.end ? b : a;
+          s.add(`${at},${at}`);
+        }
+        spans.set(p.rel, s);
+      }
+      if (out.size === before) break;
+    }
+    spans.set(r.rel, out);
+  }
+  const sizeAfter = [...spans.values()].reduce((k, x) => k + x.size, 0)
+    + [...valuedAt.values()].reduce((k, x) => k + x.size, 0);
+  if (sizeAfter === sizeBefore) break;
+  }
+  return spans;
+}
+
+/** Every end position a chain production can reach from `start`. */
+function runChain(w: World, spans: Map<string, Set<string>>, valued: Map<string, Map<number, string>>,
+                  prod: Extract<Prod, { p: 'chain' }>, start: number, n: number): number[] {
+  let states: { cursor: number; frames: number[] }[] = [{ cursor: start, frames: [start] }];
+  for (const st of prod.steps) {
+    const next: { cursor: number; frames: number[] }[] = [];
+    for (const s of states) {
+      if (st.k === 'test') {
+        const base = s.frames[Math.min(st.frame, s.frames.length - 1)]!;
+        if (holds(w, spans, valued, st.test, base)) next.push(s);
+      } else if (st.k === 'valued') {
+        const m = valued.get(st.rel);
+        if (m ? m.has(s.cursor) : s.cursor < n) next.push(s);
+      } else if (st.k === 'consume') {
+        const set = spans.get(st.rel) ?? new Set<string>();
+        for (const key of set) {
+          const [a, b] = key.split(',').map(Number) as [number, number];
+          if (a === s.cursor) next.push({ cursor: b, frames: [...s.frames, b] });
+        }
+      } else if (st.k === 'search') {
+        for (let j = s.cursor + 1; j < n; j++) {
+          if (holds(w, spans, valued, st.test, j)) { next.push({ cursor: j, frames: [...s.frames, j] }); break; }
+        }
+      } else {
+        // `projected` never reaches a chain: it is turned into a `test` where
+        // it is used, and kept as a step kind only so the emitter can name it.
+        next.push(s);
+      }
+    }
+    states = next;
+    if (states.length === 0) break;
+  }
+  const ends = states.map((s) => (prod.endOff === null ? s.cursor : start + prod.endOff));
+  return ends.filter((e) => e >= 0 && e < n);
+}
+
+function holds(w: World, spans: Map<string, Set<string>>, valued: Map<string, Map<number, string>>,
+               t: Test, at: number): boolean {
+  switch (t.t) {
+    case 'kind': { const i = at + t.off; return i >= 0 && i < w.kind.length && w.kind[i] === t.kind; }
+    case 'char': { const i = at + t.off; return i >= 0 && i < w.ch.length && w.ch[i] === t.ch; }
+    case 'state': { const i = at + t.off; return i >= 0 && i < w.state.length && w.state[i] === t.state; }
+    case 'not': return !holds(w, spans, valued, t.x, at);
+    case 'pred': {
+      const i = at + t.off;
+      const s = spans.get(t.rel);
+      if (s) return s.has(`${i},${i}`);
+      const m = valued.get(t.rel);
+      return m ? m.has(i) : false;
+    }
+  }
+}
