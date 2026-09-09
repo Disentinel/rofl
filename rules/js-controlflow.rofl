@@ -361,8 +361,17 @@ accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
                                   accessor_kind(K), ast_attr[code](M, kind, K).
 -- ORDERED FOR COST: `accessor_of` is a handful of rows and binds Obj and Key,
 -- so the receiver walk is a probe rather than a scan of every member read.
-accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
-                             selects[flow](N, Key), ast_child[code](N, object, 0, O),
+-- ...AND `selects` BEFORE `member_node_v`, which the note above got half
+-- right. Putting `accessor_of` first does bind Obj and Key, but the NEXT
+-- premise was `member_node_v(N)` with N sharing nothing with them — every
+-- accessor laid beside every member read, and `selects` filtering afterwards.
+-- Measured by scanners/js_cost.ts on sixteen files of eslint/lib: 88 980
+-- accumulator elements to conclude NOTHING. Asking `selects(N, Key)` with Key
+-- already bound names the reads of that key and leaves `member_node_v(N)` a
+-- check, which is what "a probe rather than a scan" was meant to be.
+accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key), member_node_v[flow](N),
+                             ast_child[code](N, object, 0, O),
                              may_be_node[flow](O, Obj).
 -- ...AND A PRIVATE ACCESSOR, 2026-09-08 (w_class_fields). `get #face()` is a
 -- `class_private_method` carrying `kind: "get"`, and `this.#face` is a member

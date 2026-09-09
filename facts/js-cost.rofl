@@ -45,12 +45,6 @@ fires("r12a6a943", 46).  conc("r12a6a943", 18).  fresh("r12a6a943", 13).  head("
   width("r12a6a943", 3, 3325).  yield("r12a6a943", 3, 2121).  slot("r12a6a943", 3, pos, selects).
   width("r12a6a943", 4, 2121).  yield("r12a6a943", 4, 1073).  slot("r12a6a943", 4, pos, member_value).
   width("r12a6a943", 5, 1073).  yield("r12a6a943", 5, 18).  slot("r12a6a943", 5, pos, may_be_lit).
-fires("r8c89b58a", 30).  conc("r8c89b58a", 0).  fresh("r8c89b58a", 0).  head("r8c89b58a", accessor_read).
-  width("r8c89b58a", 0, 30).  yield("r8c89b58a", 0, 78).  slot("r8c89b58a", 0, pos, accessor_of).
-  width("r8c89b58a", 1, 78).  yield("r8c89b58a", 1, 88452).  slot("r8c89b58a", 1, pos, member_node_v).
-  width("r8c89b58a", 2, 88452).  yield("r8c89b58a", 2, 210).  slot("r8c89b58a", 2, pos, selects).
-  width("r8c89b58a", 3, 210).  yield("r8c89b58a", 3, 210).  slot("r8c89b58a", 3, pos, ast_child).
-  width("r8c89b58a", 4, 210).  yield("r8c89b58a", 4, 0).  slot("r8c89b58a", 4, pos, may_be_node).
 fires("rcd5d4387", 1).  conc("rcd5d4387", 0).  fresh("rcd5d4387", 0).  head("rcd5d4387", unattributed).
   width("rcd5d4387", 0, 1).  yield("rcd5d4387", 0, 42101).  slot("rcd5d4387", 0, pos, asserted_by).
   width("rcd5d4387", 1, 42101).  yield("rcd5d4387", 1, 42101).  slot("rcd5d4387", 1, pos, in_perspective).
@@ -722,6 +716,12 @@ fires("r4678f8c3", 2).  conc("r4678f8c3", 243).  fresh("r4678f8c3", 243).  head(
   width("r4678f8c3", 0, 2).  yield("r4678f8c3", 0, 496).  slot("r4678f8c3", 0, pos, ast_node).
   width("r4678f8c3", 1, 496).  yield("r4678f8c3", 1, 248).  slot("r4678f8c3", 1, pos, nearest_v).
   width("r4678f8c3", 2, 248).  yield("r4678f8c3", 2, 243).  slot("r4678f8c3", 2, pos, ast_child).
+fires("rc0f66c44", 30).  conc("rc0f66c44", 0).  fresh("rc0f66c44", 0).  head("rc0f66c44", accessor_read).
+  width("rc0f66c44", 0, 30).  yield("rc0f66c44", 0, 78).  slot("rc0f66c44", 0, pos, accessor_of).
+  width("rc0f66c44", 1, 78).  yield("rc0f66c44", 1, 210).  slot("rc0f66c44", 1, pos, selects).
+  width("rc0f66c44", 2, 210).  yield("rc0f66c44", 2, 210).  slot("rc0f66c44", 2, pos, member_node_v).
+  width("rc0f66c44", 3, 210).  yield("rc0f66c44", 3, 210).  slot("rc0f66c44", 3, pos, ast_child).
+  width("rc0f66c44", 4, 210).  yield("rc0f66c44", 4, 0).  slot("rc0f66c44", 4, pos, may_be_node).
 fires("r196654f5", 3).  conc("r196654f5", 2).  fresh("r196654f5", 1).  head("r196654f5", field_of).
   width("r196654f5", 0, 3).  yield("r196654f5", 0, 334).  slot("r196654f5", 0, pos, obj_like).
   width("r196654f5", 1, 334).  yield("r196654f5", 1, 28).  slot("r196654f5", 1, pos, ast_child).
@@ -1476,6 +1476,6 @@ fires("r0764bf3c", 1).  conc("r0764bf3c", 0).  fresh("r0764bf3c", 0).  head("r07
   width("r0764bf3c", 0, 1).  yield("r0764bf3c", 0, 0).  slot("r0764bf3c", 0, pos, super_of).
 
 total_rules(436).
-total_width(3112843).
+total_width(3024601).
 total_conc(639219).
 total_fresh(399799).
