@@ -400,9 +400,56 @@ work_needs(w_has_return_is_a_join_over_the_whole_corpus, w_cost_gate_per_layer).
 -- sibling index. Same schema move CLAUDE.md names — derive the check once from
 -- the rules rather than noticing it per case — and the third instance of that
 -- schema this session.
-work(w_unconsumed_attribute, "an attribute key the scanner emits that no rule reads: four design notes lost to facts already on the store").
-work_state(w_unconsumed_attribute, open).
+--- DONE 2026-09-09, AND THE AUDIT THAT CLOSED IT HAD THE ITEM'S OWN DEFECT IN
+--- IT. rules/js-attrs.rofl and facts/js-attrs.rofl already answered the first
+--- two shapes — a key no rule names (13 excused or deferred by name) and a value
+--- no rule names (14 pairs) — and both were measured green here before anything
+--- was added. What they could not see was measured instead of assumed, and there
+--- were three holes, of which the first is a FIFTH INSTANCE of the shape this
+--- item is named for:
+---
+--- 1. THE AUDIT ANSWERED ABOUT THE PACKS ITS WORLD HAPPENED TO HOLD. Six of the
+---    thirteen JS packs were loaded and rules/js-env.rofl was not one of them, so
+---    `attr_deferred(async, w_unconsumed_attribute)` — a row asserting nobody
+---    reads `async` — was written beside a layer that reads it 398 times through
+---    `outside_attr_needs(js, await_expression, async, true, top_level_await)`.
+---    A missing pack is a rule that reads nothing, so the error direction is a
+---    QUEUE ENTRY FOR WORK ALREADY DONE. Every JS pack is loaded now and the
+---    closure is asserted, with the positive control test/js-layer-cost.test.ts
+---    already uses.
+--- 2. A KEY READ THROUGH A TABLE HAS NO LITERAL TO FIND. `attr_table_read`
+---    derives which relations supply a key at evaluation time — exactly two over
+---    the whole tree, both at (Key = 3, Value = 4) — and `attr_table_unbridged`
+---    reddens for a third. Both co-literals must be POSITIVE or the audit reports
+---    itself, which mutant 13 shows.
+--- 3. WHICH KINDS IN THIS POSITION CARRY NO SUCH ATTRIBUTE AT ALL, which is the
+---    question `f_a_positive_attribute_test_is_blind_to_a_kind_that_has_no_such_attribute`
+---    ends on with the sentence *it is one query and it is not the query anybody
+---    runs*. It is one query now: four guards derived from the clauses, five gap
+---    rows, three excused as populations this audit cannot narrow and two real.
+---    Its gate is polarity-sensitive, so it KILLS m6 in
+---    test/js-computed-key-names.test.ts — a survivor recorded that day as
+---    waiting on another item, because no oracle over what the model DERIVES can
+---    see a guard that reaches fewer nodes and derives the same rows.
+---
+--- AND THE KIND-LEVEL EXPLANATION IN THAT FINDING IS WRONG BY ONE NODE.
+--- `class_private_method` carries `computed` on ONE of its three nodes: babel
+--- emits the field for the accessor forms and not the plain one, so the presence
+--- of an attribute depends on the VALUE of another attribute on the same node.
+--- `attr_kind_split[audit]` is the rule that can say so and the corpus holds
+--- exactly two such splits, one of them behind a key no layer reads.
+---
+--- WITHOUT A SITE THE BRIDGE IS UNFALSIFIABLE, so the item ships a fixture:
+--- test/fixtures/js-attrs/eras.mjs.txt is the only place in the tree carrying
+--- `**`, `??`, `??=`, `||=` and `&&=`, and cutting the bridge kills nothing at
+--- all without it.
+work(w_unconsumed_attribute, "DONE 2026-09-09: the audit was already built and already right about two shapes; what it could not see was its own world, a key read through a table, and which kinds in a guard's position carry no such key").
+work_state(w_unconsumed_attribute, done).
 work_spawned(w_unconsumed_attribute, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
+work_spawned(w_unconsumed_attribute, f_an_audit_over_the_rules_reports_the_packs_its_world_happens_to_hold).
+work_spawned(w_unconsumed_attribute, f_a_key_read_through_a_table_is_invisible_to_a_check_over_literals).
+work_spawned(w_unconsumed_attribute, f_the_presence_of_an_attribute_can_depend_on_the_value_of_another).
+work_spawned(w_unconsumed_attribute, f_an_oracle_over_derived_rows_cannot_see_what_a_guard_reaches).
 
 -- 43 — A MUTANT COSTS A WHOLE WORLD, and test/js-controlflow.test.ts now holds
 -- TWENTY-THREE of them. Each one rebuilds the corpus fixpoint from scratch
