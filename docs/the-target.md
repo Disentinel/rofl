@@ -42,7 +42,37 @@ a **16–17x** stored-per-base multiplier. The second replaces the 1.96–3.85 i
 `docs/medium-and-large.md`, which came from the demo corpus and is wrong for
 this workload by four to eight times.
 
-## Where the engine actually stands
+## Where the engine actually stands, 2026-09-09
+
+Measured on real eslint/lib source at 8, 16, 32 and 64 files, both engines on
+the same worlds, seeds built by `scanners/js_seed.ts` and required to
+round-trip on the reference before they count.
+
+| | 8 files | 16 | 32 | 64 |
+|---|---|---|---|---|
+| facts | 186 224 | 853 567 | 1 176 561 | 2 968 422 |
+| JS bytes/fact | 799 | 880 | 894 | 911 |
+| **Rust bytes/fact** | **182** | **191** | **232** | **179** |
+| JS seconds | 1.16 | 6.85 | 9.71 | 39.87 |
+| **Rust seconds** | **0.42** | **2.80** | **4.43** | **16.81** |
+
+Four to five times denser and twice as fast, and the density gap WIDENS with
+size because the JS figure drifts up while the Rust one does not.
+
+**L3** (eslint/lib entire, 388 files, ~17.0M facts): about 3.0 GB and a few
+minutes on the port; 15.5 GB on the reference, which needs
+`--max-old-space-size=14000` above 32 files and dies at node's 4 GB default.
+**L4** (all 1426 files, ~91.3M facts): 16.4–21.2 GB and about 28 minutes on the
+port, against 83.2 GB on the reference. The machine has 21.5 GB. So L4 is at
+the edge of feasible with the port and out of reach by four times without it.
+
+The port's remaining difference from the reference is **434 facts, constant at
+every size measured** — `derived_by` rows the reference loses to a stale firing
+(`f_a_stale_firing_outlives_the_premise_it_rests_on`), where the port is right.
+
+### The old table
+
+
 
 - The **Rust engine** passes 34/34 on both conformance oracles, and the largest
   world it has ever evaluated is **11 591 facts** (the `spat` corpus case). It
