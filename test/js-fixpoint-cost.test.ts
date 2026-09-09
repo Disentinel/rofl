@@ -30,9 +30,17 @@
 //
 // WHAT TO DO WHEN IT GOES RED: look at which path grew. A premise that hands out
 // hundreds of rows per call is a body ordered so that a big relation is
-// enumerated before it is constrained. The engine reads a body LEFT TO RIGHT and
-// has no join planner — see f_the_engine_has_no_join_planner — so lead with the
-// literal that binds, and the store's argument index does the rest.
+// enumerated before it is constrained. The engine reads a body LEFT TO RIGHT, so
+// lead with the literal that binds and the store's argument index does the rest.
+//
+// AMENDED 2026-09-09 (w_join_planner): `planBody` now HOLDS a positive literal
+// that shares no variable with anything before it — a cross product — until
+// something binds it, so one class of bad order no longer reaches this number at
+// all. The class that DOES is a body whose literals are all connected and still
+// ordered badly (`w_connected_and_badly_ordered`, measured at +117% of the
+// control-flow world on `closer_v`), and that is what a red path here now means.
+// The pins in this file moved with the planner and the reason is in
+// f_a_cross_product_is_the_half_of_join_order_that_needs_no_statistics.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -268,7 +276,7 @@ test('every read path above five per cent, by name', () => {
     // 2 854 920 and each surviving path is a larger slice of a smaller world.
     // That is the shape to expect from a repair somewhere else, and it is why
     // a share is pinned beside a total rather than instead of it.
-    ['relPersp hidden_at', 24.99],
+    ['relPersp hidden_at', 25.39],
     ['relPersp authority', 7.30],
     ['argMatches ast_within pos=[0]', 6.04],
     // FOUR, NOT THREE, and the fourth is a property of this file's own world
@@ -578,7 +586,7 @@ test('every read path above five per cent, by name', () => {
   // 105; the 2x2 on that branch separates them, and the (HEAD, HEAD) corner
   // reproduced this pin exactly before it moved, which is the control that
   // says the two halves are what they are claimed to be.
-  assert.equal(c.total, 2854920, 'total rows handed out by the store in one fixpoint');
+  assert.equal(c.total, 2800675, 'total rows handed out by the store in one fixpoint');
   // FIRINGS ROSE BY 589 AND THAT IS THE WHOLE CHANGE TO WHAT IS DERIVED:
   // `ident_in[code]` is 587 new facts plus its own bookkeeping. The ANSWERS are
   // identical — test/js-callgraph.test.ts still reports 83 edges against the
