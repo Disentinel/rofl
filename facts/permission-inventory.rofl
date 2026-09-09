@@ -11,7 +11,7 @@
 -- world_rows(World, Rel, N)          rows Rel holds in that examples/ world at tick 0
 -- doc_lists(Rel)                     docs/books-and-permission.md has an inventory row for Rel
 
-corpus_files(80).  corpus_unparsed(1).  worlds_built(26).
+corpus_files(340).  corpus_unparsed(2).  worlds_built(27).
 
 -- ---------------------------------------------------------- boot.rofl
 boot_rule(rb_1, rule_known, main, now).
@@ -59,49 +59,47 @@ boot_body(rb_16, collects_from, main, pos).
 boot_rule(rb_17, leak, audit, now).
 boot_body(rb_17, crossing, main, pos).
 boot_body(rb_17, gathered, main, neg).
-boot_rule(rb_18, forged, audit, now).
-boot_body(rb_18, asserted_by, $kernel, pos).
-boot_body(rb_18, in_perspective, $kernel, pos).
-boot_body(rb_18, authority, main, neg).
-boot_rule(rb_19, unmoded, audit, now).
-boot_body(rb_19, uses_builtin, $kernel, pos).
-boot_body(rb_19, mode, main, neg).
-boot_rule(rb_20, undefined_premise, audit, now).
-boot_body(rb_20, premise_pos, $kernel, pos).
-boot_body(rb_20, concludes, $kernel, neg).
-boot_body(rb_20, edb, main, neg).
-boot_rule(rb_21, unattributed, audit, now).
-boot_body(rb_21, asserted_by, $kernel, pos).
-boot_body(rb_21, in_perspective, $kernel, pos).
-boot_body(rb_21, demands_authorship, main, pos).
-boot_rule(rb_22, negated_under, main, now).
-boot_body(rb_22, premise_lit, $kernel, pos).
-boot_rule(rb_23, loader, main, now).
-boot_body(rb_23, asserted_by, $kernel, pos).
-boot_rule(rb_24, widened, audit, now).
-boot_body(rb_24, negated_under, main, pos).
-boot_body(rb_24, loader, main, pos).
-boot_body(rb_24, loader, main, pos).
-boot_rule(rb_25, imports, main, next).
-boot_body(rb_25, imports, main, pos).
-boot_rule(rb_26, collects, main, next).
-boot_body(rb_26, collects, main, pos).
-boot_rule(rb_27, exports, main, next).
-boot_body(rb_27, exports, main, pos).
-boot_rule(rb_28, exported_to, main, now).
-boot_body(rb_28, exports, main, pos).
-boot_body(rb_28, flow, main, pos).
-boot_body(rb_28, perspective, main, neg).
-boot_rule(rb_29, exported, audit, now).
-boot_body(rb_29, exported_to, main, pos).
-boot_rule(rb_30, gathered, main, now).
-boot_body(rb_30, sees, main, pos).
-boot_body(rb_30, exported_to, main, pos).
+boot_rule(rb_18, unmoded, audit, now).
+boot_body(rb_18, uses_builtin, $kernel, pos).
+boot_body(rb_18, mode, main, neg).
+boot_rule(rb_19, undefined_premise, audit, now).
+boot_body(rb_19, premise_pos, $kernel, pos).
+boot_body(rb_19, concludes, $kernel, neg).
+boot_body(rb_19, edb, main, neg).
+boot_rule(rb_20, negated_under, main, now).
+boot_body(rb_20, premise_lit, $kernel, pos).
+boot_rule(rb_21, imports, main, next).
+boot_body(rb_21, imports, main, pos).
+boot_rule(rb_22, collects, main, next).
+boot_body(rb_22, collects, main, pos).
+boot_rule(rb_23, exports, main, next).
+boot_body(rb_23, exports, main, pos).
+boot_rule(rb_24, exported_to, main, now).
+boot_body(rb_24, exports, main, pos).
+boot_body(rb_24, flow, main, pos).
+boot_body(rb_24, perspective, main, neg).
+boot_rule(rb_25, exported, audit, now).
+boot_body(rb_25, exported_to, main, pos).
+boot_rule(rb_26, gathered, main, now).
+boot_body(rb_26, sees, main, pos).
+boot_body(rb_26, exported_to, main, pos).
+boot_rule(rb_27, forged, audit, now).
+boot_body(rb_27, asserted_by, $kernel, pos).
+boot_body(rb_27, authority, main, neg).
+boot_rule(rb_28, unattributed, audit, now).
+boot_body(rb_28, asserted_by, $kernel, pos).
+boot_body(rb_28, demands_authorship, main, pos).
+boot_rule(rb_29, loader, main, now).
+boot_body(rb_29, asserted_by, $kernel, pos).
+boot_rule(rb_30, widened, audit, now).
+boot_body(rb_30, negated_under, main, pos).
+boot_body(rb_30, loader, main, pos).
+boot_body(rb_30, loader, main, pos).
 
 boot_edb(imports).
 boot_edb(collects).
-boot_edb(demands_authorship).
 boot_edb(exports).
+boot_edb(demands_authorship).
 
 -- ------------------------------------------------------------- corpus
 corpus_fact("boot.rofl", $kernel_authority, main, 1).
@@ -137,6 +135,7 @@ corpus_fact("examples/npc", collects, main, 1).
 corpus_fact("examples/npc", edb, main, 3).
 corpus_fact("examples/npc", exports, main, 1).
 corpus_fact("examples/npc", imports, main, 4).
+corpus_fact("examples/reach", edb, main, 1).
 corpus_fact("examples/ring1", edb, main, 5).
 corpus_fact("examples/rip", authority, main, 2).
 corpus_fact("examples/rip", edb, main, 4).
@@ -152,6 +151,7 @@ corpus_fact("examples/sus", imports, main, 3).
 corpus_fact("facts/findings.rofl", edb, main, 6).
 corpus_fact("facts/js-kinds.rofl", edb, main, 4).
 corpus_fact("facts/js-resolve.rofl", authority, main, 4).
+corpus_fact("facts/rule-shape.rofl", edb, main, 15).
 corpus_fact("facts/spec.rofl", authority, main, 10).
 corpus_fact("policy.rofl", edb, main, 1).
 corpus_fact("rules/eval-cost.rofl", edb, main, 11).
@@ -168,6 +168,7 @@ corpus_fact("rules/js-resolve.rofl", edb, main, 11).
 corpus_fact("rules/kernel-policy.rofl", edb, main, 2).
 corpus_fact("rules/parse-cost.rofl", edb, main, 6).
 corpus_fact("rules/permission-model.rofl", edb, main, 12).
+corpus_fact("rules/self-audit.rofl", edb, main, 1).
 corpus_fact("rules/spec-coverage.rofl", collects, main, 1).
 corpus_fact("rules/spec-coverage.rofl", edb, main, 11).
 corpus_fact("rules/spec-coverage.rofl", imports, main, 2).
@@ -176,6 +177,10 @@ corpus_rule("examples/aka", crossing, recon).
 corpus_rule("examples/ditto", exported, main).
 corpus_rule("examples/npc", collects, main).
 corpus_rule("examples/npc", imports, main).
+corpus_rule("rules/self-audit.rofl", forged, audit).
+corpus_rule("rules/self-audit.rofl", loader, main).
+corpus_rule("rules/self-audit.rofl", unattributed, audit).
+corpus_rule("rules/self-audit.rofl", widened, audit).
 corpus_read("examples/aka", crossing, recon).
 corpus_read("examples/ditto", exported, main).
 corpus_read("examples/loot", imports, main).
@@ -187,6 +192,11 @@ corpus_read("policy.rofl", premise_pos, $kernel).
 corpus_read("rules/kernel-policy.rofl", concludes, $kernel).
 corpus_read("rules/kernel-policy.rofl", premise_pos, $kernel).
 corpus_read("rules/kernel-policy.rofl", reserved, main).
+corpus_read("rules/self-audit.rofl", asserted_by, $kernel).
+corpus_read("rules/self-audit.rofl", authority, main).
+corpus_read("rules/self-audit.rofl", demands_authorship, main).
+corpus_read("rules/self-audit.rofl", loader, main).
+corpus_read("rules/self-audit.rofl", negated_under, main).
 corpus_read("rules/strata.rofl", concludes, $kernel).
 corpus_read("rules/strata.rofl", edb, main).
 corpus_read("rules/strata.rofl", premise_pos, $kernel).
@@ -212,7 +222,6 @@ doc_lists(flows_to).
 doc_lists(forged).
 doc_lists(gathered).
 doc_lists(imports).
-doc_lists(in_perspective).
 doc_lists(leak).
 doc_lists(loader).
 doc_lists(negated_under).
@@ -358,6 +367,7 @@ host_call("test/phase4.test.ts", malformed, query).
 host_call("test/phase4.test.ts", sees, holds).
 host_call("test/phase4.test.ts", undefined_premise, query).
 host_call("test/phase4.test.ts", unmoded, query).
+host_call("test/port-client.test.ts", authority, load).
 host_call("test/rings.test.ts", concludes, startsWith).
 host_call("test/rings.test.ts", edb, startsWith).
 host_call("test/rings.test.ts", imports, replace).
@@ -397,21 +407,20 @@ host_call("test/widened-negation.test.ts", widened, why).
 world_rows("aka", asserted_by, 108).
 world_rows("aka", authority, 23).
 world_rows("aka", concludes, 102).
-world_rows("aka", edb, 36).
+world_rows("aka", edb, 35).
 world_rows("aka", flow, 11).
 world_rows("aka", flows_to, 12).
 world_rows("aka", has_conclusion, 102).
-world_rows("aka", has_premise, 195).
+world_rows("aka", has_premise, 193).
 world_rows("aka", imports, 9).
-world_rows("aka", in_perspective, 108).
 world_rows("aka", loader, 15).
 world_rows("aka", mode, 14).
 world_rows("aka", negated_under, 18).
 world_rows("aka", perspective, 9).
-world_rows("aka", premise_lit, 195).
-world_rows("aka", premise_pos, 143).
+world_rows("aka", premise_lit, 193).
+world_rows("aka", premise_pos, 141).
 world_rows("aka", reads_from, 121).
-world_rows("aka", reserved, 21).
+world_rows("aka", reserved, 20).
 world_rows("aka", rule_known, 102).
 world_rows("aka", sees, 19).
 world_rows("aka", uses_builtin, 21).
@@ -419,21 +428,20 @@ world_rows("aka", writes_to, 102).
 world_rows("atlas-launch", asserted_by, 49).
 world_rows("atlas-launch", authority, 7).
 world_rows("atlas-launch", concludes, 30).
-world_rows("atlas-launch", edb, 39).
+world_rows("atlas-launch", edb, 38).
 world_rows("atlas-launch", flow, 4).
 world_rows("atlas-launch", flows_to, 4).
 world_rows("atlas-launch", has_conclusion, 30).
-world_rows("atlas-launch", has_premise, 58).
+world_rows("atlas-launch", has_premise, 56).
 world_rows("atlas-launch", imports, 3).
-world_rows("atlas-launch", in_perspective, 49).
 world_rows("atlas-launch", loader, 14).
 world_rows("atlas-launch", mode, 14).
 world_rows("atlas-launch", negated_under, 9).
 world_rows("atlas-launch", perspective, 4).
-world_rows("atlas-launch", premise_lit, 58).
-world_rows("atlas-launch", premise_pos, 42).
+world_rows("atlas-launch", premise_lit, 56).
+world_rows("atlas-launch", premise_pos, 40).
 world_rows("atlas-launch", reads_from, 36).
-world_rows("atlas-launch", reserved, 21).
+world_rows("atlas-launch", reserved, 20).
 world_rows("atlas-launch", rule_known, 30).
 world_rows("atlas-launch", sees, 7).
 world_rows("atlas-launch", uses_builtin, 5).
@@ -441,21 +449,20 @@ world_rows("atlas-launch", writes_to, 30).
 world_rows("blam", asserted_by, 47).
 world_rows("blam", authority, 5).
 world_rows("blam", concludes, 35).
-world_rows("blam", edb, 29).
+world_rows("blam", edb, 28).
 world_rows("blam", flow, 4).
 world_rows("blam", flows_to, 4).
 world_rows("blam", has_conclusion, 35).
-world_rows("blam", has_premise, 65).
+world_rows("blam", has_premise, 63).
 world_rows("blam", imports, 3).
-world_rows("blam", in_perspective, 47).
 world_rows("blam", loader, 4).
 world_rows("blam", mode, 14).
 world_rows("blam", negated_under, 9).
 world_rows("blam", perspective, 3).
-world_rows("blam", premise_lit, 65).
-world_rows("blam", premise_pos, 49).
+world_rows("blam", premise_lit, 63).
+world_rows("blam", premise_pos, 47).
 world_rows("blam", reads_from, 41).
-world_rows("blam", reserved, 21).
+world_rows("blam", reserved, 20).
 world_rows("blam", rule_known, 35).
 world_rows("blam", sees, 6).
 world_rows("blam", undefined_premise, 1).
@@ -464,21 +471,20 @@ world_rows("blam", writes_to, 35).
 world_rows("bleep", asserted_by, 25).
 world_rows("bleep", authority, 5).
 world_rows("bleep", concludes, 42).
-world_rows("bleep", edb, 29).
+world_rows("bleep", edb, 28).
 world_rows("bleep", flow, 4).
 world_rows("bleep", flows_to, 4).
 world_rows("bleep", has_conclusion, 42).
-world_rows("bleep", has_premise, 89).
+world_rows("bleep", has_premise, 87).
 world_rows("bleep", imports, 3).
-world_rows("bleep", in_perspective, 25).
 world_rows("bleep", loader, 4).
 world_rows("bleep", mode, 14).
 world_rows("bleep", negated_under, 9).
 world_rows("bleep", perspective, 3).
-world_rows("bleep", premise_lit, 89).
-world_rows("bleep", premise_pos, 61).
+world_rows("bleep", premise_lit, 87).
+world_rows("bleep", premise_pos, 59).
 world_rows("bleep", reads_from, 48).
-world_rows("bleep", reserved, 21).
+world_rows("bleep", reserved, 20).
 world_rows("bleep", rule_known, 42).
 world_rows("bleep", sees, 6).
 world_rows("bleep", uses_builtin, 13).
@@ -486,21 +492,20 @@ world_rows("bleep", writes_to, 42).
 world_rows("counter", asserted_by, 8).
 world_rows("counter", authority, 5).
 world_rows("counter", concludes, 32).
-world_rows("counter", edb, 26).
+world_rows("counter", edb, 25).
 world_rows("counter", flow, 4).
 world_rows("counter", flows_to, 4).
 world_rows("counter", has_conclusion, 32).
-world_rows("counter", has_premise, 62).
+world_rows("counter", has_premise, 60).
 world_rows("counter", imports, 3).
-world_rows("counter", in_perspective, 8).
 world_rows("counter", loader, 1).
 world_rows("counter", mode, 14).
 world_rows("counter", negated_under, 9).
 world_rows("counter", perspective, 3).
-world_rows("counter", premise_lit, 62).
-world_rows("counter", premise_pos, 44).
+world_rows("counter", premise_lit, 60).
+world_rows("counter", premise_pos, 42).
 world_rows("counter", reads_from, 38).
-world_rows("counter", reserved, 21).
+world_rows("counter", reserved, 20).
 world_rows("counter", rule_known, 32).
 world_rows("counter", sees, 6).
 world_rows("counter", uses_builtin, 7).
@@ -508,21 +513,20 @@ world_rows("counter", writes_to, 32).
 world_rows("cram", asserted_by, 147).
 world_rows("cram", authority, 9).
 world_rows("cram", concludes, 58).
-world_rows("cram", edb, 35).
+world_rows("cram", edb, 34).
 world_rows("cram", flow, 7).
 world_rows("cram", flows_to, 7).
 world_rows("cram", has_conclusion, 58).
-world_rows("cram", has_premise, 102).
+world_rows("cram", has_premise, 100).
 world_rows("cram", imports, 4).
-world_rows("cram", in_perspective, 147).
 world_rows("cram", loader, 11).
 world_rows("cram", mode, 14).
 world_rows("cram", negated_under, 15).
 world_rows("cram", perspective, 5).
-world_rows("cram", premise_lit, 102).
-world_rows("cram", premise_pos, 76).
+world_rows("cram", premise_lit, 100).
+world_rows("cram", premise_pos, 74).
 world_rows("cram", reads_from, 64).
-world_rows("cram", reserved, 21).
+world_rows("cram", reserved, 20).
 world_rows("cram", rule_known, 58).
 world_rows("cram", sees, 9).
 world_rows("cram", undefined_premise, 1).
@@ -535,22 +539,21 @@ world_rows("ditto", collects, 1).
 world_rows("ditto", collects_from, 1).
 world_rows("ditto", concludes, 104).
 world_rows("ditto", crossing, 2).
-world_rows("ditto", edb, 49).
+world_rows("ditto", edb, 48).
 world_rows("ditto", flow, 8).
 world_rows("ditto", flows_to, 12).
 world_rows("ditto", gathered, 2).
 world_rows("ditto", has_conclusion, 104).
-world_rows("ditto", has_premise, 203).
+world_rows("ditto", has_premise, 201).
 world_rows("ditto", imports, 9).
-world_rows("ditto", in_perspective, 101).
 world_rows("ditto", loader, 13).
 world_rows("ditto", mode, 14).
 world_rows("ditto", negated_under, 22).
 world_rows("ditto", perspective, 6).
-world_rows("ditto", premise_lit, 203).
-world_rows("ditto", premise_pos, 160).
+world_rows("ditto", premise_lit, 201).
+world_rows("ditto", premise_pos, 158).
 world_rows("ditto", reads_from, 123).
-world_rows("ditto", reserved, 21).
+world_rows("ditto", reserved, 20).
 world_rows("ditto", rule_known, 104).
 world_rows("ditto", sees, 15).
 world_rows("ditto", uses_builtin, 9).
@@ -558,21 +561,20 @@ world_rows("ditto", writes_to, 104).
 world_rows("drip", asserted_by, 500).
 world_rows("drip", authority, 11).
 world_rows("drip", concludes, 106).
-world_rows("drip", edb, 50).
+world_rows("drip", edb, 49).
 world_rows("drip", flow, 6).
 world_rows("drip", flows_to, 8).
 world_rows("drip", has_conclusion, 106).
-world_rows("drip", has_premise, 226).
+world_rows("drip", has_premise, 224).
 world_rows("drip", imports, 7).
-world_rows("drip", in_perspective, 500).
 world_rows("drip", loader, 27).
 world_rows("drip", mode, 14).
 world_rows("drip", negated_under, 24).
 world_rows("drip", perspective, 5).
-world_rows("drip", premise_lit, 226).
-world_rows("drip", premise_pos, 181).
+world_rows("drip", premise_lit, 224).
+world_rows("drip", premise_pos, 179).
 world_rows("drip", reads_from, 137).
-world_rows("drip", reserved, 21).
+world_rows("drip", reserved, 20).
 world_rows("drip", rule_known, 106).
 world_rows("drip", sees, 12).
 world_rows("drip", uses_builtin, 8).
@@ -584,7 +586,7 @@ world_rows("goof", collects, 1).
 world_rows("goof", collects_from, 2).
 world_rows("goof", concludes, 58).
 world_rows("goof", crossing, 7).
-world_rows("goof", edb, 36).
+world_rows("goof", edb, 35).
 world_rows("goof", exported, 1).
 world_rows("goof", exported_to, 1).
 world_rows("goof", exports, 1).
@@ -592,17 +594,16 @@ world_rows("goof", flow, 8).
 world_rows("goof", flows_to, 12).
 world_rows("goof", gathered, 8).
 world_rows("goof", has_conclusion, 58).
-world_rows("goof", has_premise, 120).
+world_rows("goof", has_premise, 118).
 world_rows("goof", imports, 3).
-world_rows("goof", in_perspective, 227).
 world_rows("goof", loader, 30).
 world_rows("goof", mode, 14).
 world_rows("goof", negated_under, 10).
 world_rows("goof", perspective, 12).
-world_rows("goof", premise_lit, 120).
-world_rows("goof", premise_pos, 89).
+world_rows("goof", premise_lit, 118).
+world_rows("goof", premise_pos, 87).
 world_rows("goof", reads_from, 77).
-world_rows("goof", reserved, 21).
+world_rows("goof", reserved, 20).
 world_rows("goof", rule_known, 58).
 world_rows("goof", sees, 15).
 world_rows("goof", uses_builtin, 13).
@@ -610,21 +611,20 @@ world_rows("goof", writes_to, 58).
 world_rows("heck", asserted_by, 22).
 world_rows("heck", authority, 7).
 world_rows("heck", concludes, 65).
-world_rows("heck", edb, 39).
+world_rows("heck", edb, 38).
 world_rows("heck", flow, 5).
 world_rows("heck", flows_to, 6).
 world_rows("heck", has_conclusion, 65).
-world_rows("heck", has_premise, 138).
+world_rows("heck", has_premise, 136).
 world_rows("heck", imports, 4).
-world_rows("heck", in_perspective, 22).
 world_rows("heck", loader, 2).
 world_rows("heck", mode, 14).
 world_rows("heck", negated_under, 27).
 world_rows("heck", perspective, 4).
-world_rows("heck", premise_lit, 138).
-world_rows("heck", premise_pos, 94).
+world_rows("heck", premise_lit, 136).
+world_rows("heck", premise_pos, 92).
 world_rows("heck", reads_from, 71).
-world_rows("heck", reserved, 21).
+world_rows("heck", reserved, 20).
 world_rows("heck", rule_known, 65).
 world_rows("heck", sees, 9).
 world_rows("heck", uses_builtin, 6).
@@ -632,20 +632,19 @@ world_rows("heck", writes_to, 65).
 world_rows("huh", asserted_by, 7).
 world_rows("huh", authority, 5).
 world_rows("huh", concludes, 34).
-world_rows("huh", edb, 25).
+world_rows("huh", edb, 24).
 world_rows("huh", flow, 4).
 world_rows("huh", flows_to, 4).
 world_rows("huh", has_conclusion, 34).
-world_rows("huh", has_premise, 66).
+world_rows("huh", has_premise, 64).
 world_rows("huh", imports, 3).
-world_rows("huh", in_perspective, 7).
 world_rows("huh", mode, 14).
 world_rows("huh", negated_under, 9).
 world_rows("huh", perspective, 3).
-world_rows("huh", premise_lit, 66).
-world_rows("huh", premise_pos, 48).
+world_rows("huh", premise_lit, 64).
+world_rows("huh", premise_pos, 46).
 world_rows("huh", reads_from, 40).
-world_rows("huh", reserved, 21).
+world_rows("huh", reserved, 20).
 world_rows("huh", rule_known, 34).
 world_rows("huh", sees, 6).
 world_rows("huh", undefined_premise, 3).
@@ -654,21 +653,20 @@ world_rows("huh", writes_to, 34).
 world_rows("iffy", asserted_by, 21).
 world_rows("iffy", authority, 10).
 world_rows("iffy", concludes, 139).
-world_rows("iffy", edb, 36).
+world_rows("iffy", edb, 35).
 world_rows("iffy", flow, 7).
 world_rows("iffy", flows_to, 8).
 world_rows("iffy", has_conclusion, 139).
-world_rows("iffy", has_premise, 327).
+world_rows("iffy", has_premise, 325).
 world_rows("iffy", imports, 5).
-world_rows("iffy", in_perspective, 21).
 world_rows("iffy", loader, 3).
 world_rows("iffy", mode, 14).
 world_rows("iffy", negated_under, 28).
 world_rows("iffy", perspective, 5).
-world_rows("iffy", premise_lit, 327).
-world_rows("iffy", premise_pos, 261).
+world_rows("iffy", premise_lit, 325).
+world_rows("iffy", premise_pos, 259).
 world_rows("iffy", reads_from, 177).
-world_rows("iffy", reserved, 21).
+world_rows("iffy", reserved, 20).
 world_rows("iffy", rule_known, 139).
 world_rows("iffy", sees, 12).
 world_rows("iffy", undefined_premise, 54).
@@ -677,21 +675,20 @@ world_rows("iffy", writes_to, 139).
 world_rows("jopa", asserted_by, 143).
 world_rows("jopa", authority, 12).
 world_rows("jopa", concludes, 42).
-world_rows("jopa", edb, 45).
+world_rows("jopa", edb, 44).
 world_rows("jopa", flow, 6).
 world_rows("jopa", flows_to, 8).
 world_rows("jopa", has_conclusion, 42).
-world_rows("jopa", has_premise, 106).
+world_rows("jopa", has_premise, 104).
 world_rows("jopa", imports, 7).
-world_rows("jopa", in_perspective, 143).
 world_rows("jopa", loader, 23).
 world_rows("jopa", mode, 14).
 world_rows("jopa", negated_under, 11).
 world_rows("jopa", perspective, 5).
-world_rows("jopa", premise_lit, 106).
-world_rows("jopa", premise_pos, 78).
+world_rows("jopa", premise_lit, 104).
+world_rows("jopa", premise_pos, 76).
 world_rows("jopa", reads_from, 57).
-world_rows("jopa", reserved, 21).
+world_rows("jopa", reserved, 20).
 world_rows("jopa", rule_known, 42).
 world_rows("jopa", sees, 12).
 world_rows("jopa", uses_builtin, 10).
@@ -703,22 +700,21 @@ world_rows("loot", collects, 1).
 world_rows("loot", collects_from, 2).
 world_rows("loot", concludes, 67).
 world_rows("loot", crossing, 2).
-world_rows("loot", edb, 62).
+world_rows("loot", edb, 61).
 world_rows("loot", flow, 12).
 world_rows("loot", flows_to, 12).
 world_rows("loot", gathered, 2).
 world_rows("loot", has_conclusion, 67).
-world_rows("loot", has_premise, 141).
+world_rows("loot", has_premise, 139).
 world_rows("loot", imports, 6).
-world_rows("loot", in_perspective, 182).
 world_rows("loot", loader, 25).
 world_rows("loot", mode, 14).
 world_rows("loot", negated_under, 27).
 world_rows("loot", perspective, 19).
-world_rows("loot", premise_lit, 141).
-world_rows("loot", premise_pos, 103).
+world_rows("loot", premise_lit, 139).
+world_rows("loot", premise_pos, 101).
 world_rows("loot", reads_from, 98).
-world_rows("loot", reserved, 21).
+world_rows("loot", reserved, 20).
 world_rows("loot", rule_known, 67).
 world_rows("loot", sees, 26).
 world_rows("loot", uses_builtin, 7).
@@ -726,21 +722,20 @@ world_rows("loot", writes_to, 67).
 world_rows("moot", asserted_by, 19).
 world_rows("moot", authority, 5).
 world_rows("moot", concludes, 73).
-world_rows("moot", edb, 37).
+world_rows("moot", edb, 36).
 world_rows("moot", flow, 4).
 world_rows("moot", flows_to, 4).
 world_rows("moot", has_conclusion, 73).
-world_rows("moot", has_premise, 182).
+world_rows("moot", has_premise, 180).
 world_rows("moot", imports, 3).
-world_rows("moot", in_perspective, 19).
 world_rows("moot", loader, 1).
 world_rows("moot", mode, 14).
 world_rows("moot", negated_under, 26).
 world_rows("moot", perspective, 3).
-world_rows("moot", premise_lit, 182).
-world_rows("moot", premise_pos, 127).
+world_rows("moot", premise_lit, 180).
+world_rows("moot", premise_pos, 125).
 world_rows("moot", reads_from, 79).
-world_rows("moot", reserved, 21).
+world_rows("moot", reserved, 20).
 world_rows("moot", rule_known, 73).
 world_rows("moot", sees, 6).
 world_rows("moot", uses_builtin, 15).
@@ -748,21 +743,20 @@ world_rows("moot", writes_to, 73).
 world_rows("nope", asserted_by, 86).
 world_rows("nope", authority, 5).
 world_rows("nope", concludes, 66).
-world_rows("nope", edb, 46).
+world_rows("nope", edb, 45).
 world_rows("nope", flow, 4).
 world_rows("nope", flows_to, 4).
 world_rows("nope", has_conclusion, 66).
-world_rows("nope", has_premise, 142).
+world_rows("nope", has_premise, 140).
 world_rows("nope", imports, 3).
-world_rows("nope", in_perspective, 86).
 world_rows("nope", loader, 21).
 world_rows("nope", mode, 14).
 world_rows("nope", negated_under, 12).
 world_rows("nope", perspective, 3).
-world_rows("nope", premise_lit, 142).
-world_rows("nope", premise_pos, 118).
+world_rows("nope", premise_lit, 140).
+world_rows("nope", premise_pos, 116).
 world_rows("nope", reads_from, 72).
-world_rows("nope", reserved, 21).
+world_rows("nope", reserved, 20).
 world_rows("nope", rule_known, 66).
 world_rows("nope", sees, 6).
 world_rows("nope", uses_builtin, 7).
@@ -774,7 +768,7 @@ world_rows("npc", collects, 1).
 world_rows("npc", collects_from, 1).
 world_rows("npc", concludes, 107).
 world_rows("npc", crossing, 3).
-world_rows("npc", edb, 44).
+world_rows("npc", edb, 43).
 world_rows("npc", exported, 1).
 world_rows("npc", exported_to, 1).
 world_rows("npc", exports, 1).
@@ -782,17 +776,16 @@ world_rows("npc", flow, 13).
 world_rows("npc", flows_to, 15).
 world_rows("npc", gathered, 3).
 world_rows("npc", has_conclusion, 107).
-world_rows("npc", has_premise, 287).
+world_rows("npc", has_premise, 285).
 world_rows("npc", imports, 7).
-world_rows("npc", in_perspective, 80).
 world_rows("npc", loader, 21).
 world_rows("npc", mode, 14).
 world_rows("npc", negated_under, 18).
 world_rows("npc", perspective, 16).
-world_rows("npc", premise_lit, 287).
-world_rows("npc", premise_pos, 194).
+world_rows("npc", premise_lit, 285).
+world_rows("npc", premise_pos, 192).
 world_rows("npc", reads_from, 130).
-world_rows("npc", reserved, 21).
+world_rows("npc", reserved, 20).
 world_rows("npc", rule_known, 107).
 world_rows("npc", sees, 24).
 world_rows("npc", uses_builtin, 50).
@@ -800,43 +793,62 @@ world_rows("npc", writes_to, 107).
 world_rows("oops", asserted_by, 53).
 world_rows("oops", authority, 5).
 world_rows("oops", concludes, 55).
-world_rows("oops", edb, 30).
+world_rows("oops", edb, 29).
 world_rows("oops", flow, 4).
 world_rows("oops", flows_to, 4).
 world_rows("oops", has_conclusion, 55).
-world_rows("oops", has_premise, 118).
+world_rows("oops", has_premise, 116).
 world_rows("oops", imports, 3).
-world_rows("oops", in_perspective, 53).
 world_rows("oops", loader, 5).
 world_rows("oops", mode, 14).
 world_rows("oops", negated_under, 13).
 world_rows("oops", perspective, 3).
-world_rows("oops", premise_lit, 118).
-world_rows("oops", premise_pos, 84).
+world_rows("oops", premise_lit, 116).
+world_rows("oops", premise_pos, 82).
 world_rows("oops", reads_from, 61).
-world_rows("oops", reserved, 21).
+world_rows("oops", reserved, 20).
 world_rows("oops", rule_known, 55).
 world_rows("oops", sees, 6).
 world_rows("oops", uses_builtin, 18).
 world_rows("oops", writes_to, 55).
+world_rows("reach", asserted_by, 8).
+world_rows("reach", authority, 5).
+world_rows("reach", concludes, 34).
+world_rows("reach", edb, 25).
+world_rows("reach", flow, 4).
+world_rows("reach", flows_to, 4).
+world_rows("reach", has_conclusion, 34).
+world_rows("reach", has_premise, 61).
+world_rows("reach", imports, 3).
+world_rows("reach", loader, 1).
+world_rows("reach", mode, 14).
+world_rows("reach", negated_under, 9).
+world_rows("reach", perspective, 3).
+world_rows("reach", premise_lit, 61).
+world_rows("reach", premise_pos, 45).
+world_rows("reach", reads_from, 40).
+world_rows("reach", reserved, 20).
+world_rows("reach", rule_known, 34).
+world_rows("reach", sees, 6).
+world_rows("reach", uses_builtin, 5).
+world_rows("reach", writes_to, 34).
 world_rows("rip", asserted_by, 83).
 world_rows("rip", authority, 9).
 world_rows("rip", concludes, 95).
-world_rows("rip", edb, 43).
+world_rows("rip", edb, 42).
 world_rows("rip", flow, 5).
 world_rows("rip", flows_to, 6).
 world_rows("rip", has_conclusion, 95).
-world_rows("rip", has_premise, 198).
+world_rows("rip", has_premise, 196).
 world_rows("rip", imports, 5).
-world_rows("rip", in_perspective, 83).
 world_rows("rip", loader, 16).
 world_rows("rip", mode, 14).
 world_rows("rip", negated_under, 16).
 world_rows("rip", perspective, 4).
-world_rows("rip", premise_lit, 198).
-world_rows("rip", premise_pos, 126).
+world_rows("rip", premise_lit, 196).
+world_rows("rip", premise_pos, 124).
 world_rows("rip", reads_from, 105).
-world_rows("rip", reserved, 21).
+world_rows("rip", reserved, 20).
 world_rows("rip", rule_known, 95).
 world_rows("rip", sees, 9).
 world_rows("rip", uses_builtin, 32).
@@ -848,23 +860,22 @@ world_rows("sensors", collects, 1).
 world_rows("sensors", collects_from, 2).
 world_rows("sensors", concludes, 34).
 world_rows("sensors", crossing, 8).
-world_rows("sensors", edb, 26).
+world_rows("sensors", edb, 25).
 world_rows("sensors", flow, 10).
 world_rows("sensors", flows_to, 14).
 world_rows("sensors", gathered, 4).
 world_rows("sensors", has_conclusion, 34).
-world_rows("sensors", has_premise, 69).
+world_rows("sensors", has_premise, 67).
 world_rows("sensors", imports, 4).
-world_rows("sensors", in_perspective, 15).
 world_rows("sensors", leak, 4).
 world_rows("sensors", loader, 6).
 world_rows("sensors", mode, 14).
 world_rows("sensors", negated_under, 10).
 world_rows("sensors", perspective, 8).
-world_rows("sensors", premise_lit, 69).
-world_rows("sensors", premise_pos, 47).
+world_rows("sensors", premise_lit, 67).
+world_rows("sensors", premise_pos, 45).
 world_rows("sensors", reads_from, 43).
-world_rows("sensors", reserved, 21).
+world_rows("sensors", reserved, 20).
 world_rows("sensors", rule_known, 34).
 world_rows("sensors", sees, 12).
 world_rows("sensors", uses_builtin, 9).
@@ -872,21 +883,20 @@ world_rows("sensors", writes_to, 34).
 world_rows("slop", asserted_by, 33).
 world_rows("slop", authority, 5).
 world_rows("slop", concludes, 184).
-world_rows("slop", edb, 51).
+world_rows("slop", edb, 50).
 world_rows("slop", flow, 4).
 world_rows("slop", flows_to, 4).
 world_rows("slop", has_conclusion, 184).
-world_rows("slop", has_premise, 581).
+world_rows("slop", has_premise, 579).
 world_rows("slop", imports, 3).
-world_rows("slop", in_perspective, 33).
 world_rows("slop", loader, 2).
 world_rows("slop", mode, 14).
 world_rows("slop", negated_under, 17).
 world_rows("slop", perspective, 3).
-world_rows("slop", premise_lit, 581).
-world_rows("slop", premise_pos, 304).
+world_rows("slop", premise_lit, 579).
+world_rows("slop", premise_pos, 302).
 world_rows("slop", reads_from, 190).
-world_rows("slop", reserved, 21).
+world_rows("slop", reserved, 20).
 world_rows("slop", rule_known, 184).
 world_rows("slop", sees, 6).
 world_rows("slop", uses_builtin, 139).
@@ -894,21 +904,20 @@ world_rows("slop", writes_to, 184).
 world_rows("spat", asserted_by, 181).
 world_rows("spat", authority, 5).
 world_rows("spat", concludes, 161).
-world_rows("spat", edb, 65).
+world_rows("spat", edb, 64).
 world_rows("spat", flow, 4).
 world_rows("spat", flows_to, 4).
 world_rows("spat", has_conclusion, 161).
-world_rows("spat", has_premise, 449).
+world_rows("spat", has_premise, 447).
 world_rows("spat", imports, 3).
-world_rows("spat", in_perspective, 181).
 world_rows("spat", loader, 29).
 world_rows("spat", mode, 14).
 world_rows("spat", negated_under, 41).
 world_rows("spat", perspective, 3).
-world_rows("spat", premise_lit, 449).
-world_rows("spat", premise_pos, 288).
+world_rows("spat", premise_lit, 447).
+world_rows("spat", premise_pos, 286).
 world_rows("spat", reads_from, 167).
-world_rows("spat", reserved, 21).
+world_rows("spat", reserved, 20).
 world_rows("spat", rule_known, 161).
 world_rows("spat", sees, 6).
 world_rows("spat", uses_builtin, 79).
@@ -920,22 +929,21 @@ world_rows("sus", collects, 1).
 world_rows("sus", collects_from, 1).
 world_rows("sus", concludes, 108).
 world_rows("sus", crossing, 2).
-world_rows("sus", edb, 37).
+world_rows("sus", edb, 36).
 world_rows("sus", flow, 20).
 world_rows("sus", flows_to, 21).
 world_rows("sus", gathered, 2).
 world_rows("sus", has_conclusion, 108).
-world_rows("sus", has_premise, 255).
+world_rows("sus", has_premise, 253).
 world_rows("sus", imports, 6).
-world_rows("sus", in_perspective, 78).
 world_rows("sus", loader, 22).
 world_rows("sus", mode, 14).
 world_rows("sus", negated_under, 15).
 world_rows("sus", perspective, 14).
-world_rows("sus", premise_lit, 255).
-world_rows("sus", premise_pos, 193).
+world_rows("sus", premise_lit, 253).
+world_rows("sus", premise_pos, 191).
 world_rows("sus", reads_from, 141).
-world_rows("sus", reserved, 21).
+world_rows("sus", reserved, 20).
 world_rows("sus", rule_known, 108).
 world_rows("sus", sees, 21).
 world_rows("sus", uses_builtin, 28).
@@ -943,21 +951,20 @@ world_rows("sus", writes_to, 108).
 world_rows("tm", asserted_by, 14).
 world_rows("tm", authority, 5).
 world_rows("tm", concludes, 38).
-world_rows("tm", edb, 27).
+world_rows("tm", edb, 26).
 world_rows("tm", flow, 4).
 world_rows("tm", flows_to, 4).
 world_rows("tm", has_conclusion, 38).
-world_rows("tm", has_premise, 68).
+world_rows("tm", has_premise, 66).
 world_rows("tm", imports, 3).
-world_rows("tm", in_perspective, 14).
 world_rows("tm", loader, 2).
 world_rows("tm", mode, 14).
 world_rows("tm", negated_under, 9).
 world_rows("tm", perspective, 3).
-world_rows("tm", premise_lit, 68).
-world_rows("tm", premise_pos, 48).
+world_rows("tm", premise_lit, 66).
+world_rows("tm", premise_pos, 46).
 world_rows("tm", reads_from, 40).
-world_rows("tm", reserved, 21).
+world_rows("tm", reserved, 20).
 world_rows("tm", rule_known, 38).
 world_rows("tm", sees, 6).
 world_rows("tm", uses_builtin, 9).
@@ -965,21 +972,20 @@ world_rows("tm", writes_to, 38).
 world_rows("tm_diverge", asserted_by, 10).
 world_rows("tm_diverge", authority, 5).
 world_rows("tm_diverge", concludes, 37).
-world_rows("tm_diverge", edb, 27).
+world_rows("tm_diverge", edb, 26).
 world_rows("tm_diverge", flow, 4).
 world_rows("tm_diverge", flows_to, 4).
 world_rows("tm_diverge", has_conclusion, 37).
-world_rows("tm_diverge", has_premise, 67).
+world_rows("tm_diverge", has_premise, 65).
 world_rows("tm_diverge", imports, 3).
-world_rows("tm_diverge", in_perspective, 10).
 world_rows("tm_diverge", loader, 2).
 world_rows("tm_diverge", mode, 14).
 world_rows("tm_diverge", negated_under, 9).
 world_rows("tm_diverge", perspective, 3).
-world_rows("tm_diverge", premise_lit, 67).
-world_rows("tm_diverge", premise_pos, 47).
+world_rows("tm_diverge", premise_lit, 65).
+world_rows("tm_diverge", premise_pos, 45).
 world_rows("tm_diverge", reads_from, 39).
-world_rows("tm_diverge", reserved, 21).
+world_rows("tm_diverge", reserved, 20).
 world_rows("tm_diverge", rule_known, 37).
 world_rows("tm_diverge", sees, 6).
 world_rows("tm_diverge", uses_builtin, 9).
@@ -987,21 +993,20 @@ world_rows("tm_diverge", writes_to, 37).
 world_rows("wtf", asserted_by, 337).
 world_rows("wtf", authority, 5).
 world_rows("wtf", concludes, 221).
-world_rows("wtf", edb, 53).
+world_rows("wtf", edb, 52).
 world_rows("wtf", flow, 4).
 world_rows("wtf", flows_to, 4).
 world_rows("wtf", has_conclusion, 221).
-world_rows("wtf", has_premise, 554).
+world_rows("wtf", has_premise, 552).
 world_rows("wtf", imports, 3).
-world_rows("wtf", in_perspective, 337).
 world_rows("wtf", loader, 28).
 world_rows("wtf", mode, 14).
 world_rows("wtf", negated_under, 43).
 world_rows("wtf", perspective, 3).
-world_rows("wtf", premise_lit, 554).
-world_rows("wtf", premise_pos, 418).
+world_rows("wtf", premise_lit, 552).
+world_rows("wtf", premise_pos, 416).
 world_rows("wtf", reads_from, 227).
-world_rows("wtf", reserved, 21).
+world_rows("wtf", reserved, 20).
 world_rows("wtf", rule_known, 221).
 world_rows("wtf", sees, 6).
 world_rows("wtf", uses_builtin, 45).

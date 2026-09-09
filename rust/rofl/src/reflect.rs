@@ -90,7 +90,6 @@ pub struct Vocab {
     pub hole: Sym,
     pub edb: Sym,
     pub bridge_decl: Sym,
-    pub in_perspective: Sym,
     pub uses_builtin: Sym,
     pub premise_lit: Sym,
     pub conclusion_lit: Sym,
@@ -168,7 +167,6 @@ pub const RESERVED_NAMES: &[&str] = &[
     "hole",
     "edb",
     "bridge_decl",
-    "in_perspective",
     "uses_builtin",
     "premise_lit",
     "conclusion_lit",
@@ -188,7 +186,6 @@ const KERNEL_BOOK_NAMES: &[&str] = &[
     "reads_from",
     "writes_to",
     "uses_builtin",
-    "in_perspective",
     "asserted_by",
     "bridge_decl",
     "derived_by",
@@ -207,7 +204,6 @@ const ARITY_TABLE: &[(&str, usize)] = &[
     ("has_conclusion", 2),
     ("has_premise", 2),
     ("hole", 2),
-    ("in_perspective", 2),
     ("mode", 2),
     ("premise_lit", 3),
     ("premise_neg", 2),
@@ -255,7 +251,6 @@ impl Vocab {
             hole: i("hole"),
             edb: i("edb"),
             bridge_decl: i("bridge_decl"),
-            in_perspective: i("in_perspective"),
             uses_builtin: i("uses_builtin"),
             premise_lit: i("premise_lit"),
             conclusion_lit: i("conclusion_lit"),
@@ -326,7 +321,7 @@ impl Vocab {
         if b == self.sealed_rules {
             vec![self.has_conclusion, self.reads_from, self.writes_to, self.uses_builtin]
         } else if b == self.sealed_assertions {
-            vec![self.in_perspective, self.asserted_by]
+            vec![self.asserted_by]
         } else if b == self.sealed_provenance {
             vec![self.derived_by]
         } else {

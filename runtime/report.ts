@@ -25,7 +25,11 @@ const FINDINGS_RULES = path.join(ROOT, 'rules', 'findings.rofl');
 
 export function loadInquiryKernel(r: Rofl): void {
   const boot = path.join(ROOT, 'boot.rofl');
-  for (const f of [boot, ...INQUIRY_RULES, EVIDENCE_POLICY, FINDINGS_RULES]) {
+  // The audit pack rides with the kernel here: an inquiry world admits results
+  // from agents (runtime/admission.ts), which is exactly the multi-writer case
+  // `forged` exists for. See rules/self-audit.rofl.
+  const audit = path.join(ROOT, 'rules/self-audit.rofl');
+  for (const f of [boot, audit, ...INQUIRY_RULES, EVIDENCE_POLICY, FINDINGS_RULES]) {
     const res = r.load(fs.readFileSync(f, 'utf8'));
     if (!res.ok) throw new Error(`${f} REJECTED:\n` + res.diagnostics.join('\n'));
   }

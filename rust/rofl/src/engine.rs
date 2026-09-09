@@ -2387,11 +2387,19 @@ mod tests {
         // the alarming one. The CARRIED column did not move at all, because
         // none of the four stages anything here.
         //
+        // Re-measured again the same day, after `in_perspective` was removed
+        // and the trail-reading audits moved to rules/self-audit.rofl:
+        // 70/60/139 became 63/54/129. MINUS SEVEN, SIX AND TEN — and this time
+        // the UNEVENNESS is the expected shape, where last time evenness was.
+        // Four new rules add the same four firings to every world; removing a
+        // relation emitted once per asserted fact, and audits that read it,
+        // removes an amount proportional to what each world asserts. The
+        // CARRIED column did not move at all either time.
+        //
         // If this goes red after a change to boot.rofl, re-measure — do not
-        // adjust one number until it passes. The two columns moving by
-        // different amounts, or one world moving and another not, is the
-        // signal this test exists to give.
-        for (name, at_tick_0, carried) in [("tm", 70, 10), ("counter", 60, 4), ("oops", 139, 49)] {
+        // adjust one number until it passes. What the test exists to show is
+        // the SHAPE of the change: whether it matches the change made.
+        for (name, at_tick_0, carried) in [("tm", 63, 10), ("counter", 54, 4), ("oops", 129, 49)] {
             let mut l = crate::load(&seed(name), 1_000_000).unwrap();
             let before = l.eval.store.firing_keys().len();
             assert_eq!(before, 0, "{name}: a restored seed carries no live firing");

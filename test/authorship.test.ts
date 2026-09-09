@@ -47,11 +47,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Rofl } from '../src/api.ts';
-import { ANON_WHO, KERNEL_WHO } from '../src/reflect.ts';
+import { ANON_WHO, KERNEL_WHO, factTerm, isKernelLedger } from '../src/reflect.ts';
+import { canonTerm, isGround } from '../src/unify.ts';
+import { parseProgram } from '../src/parser.ts';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
-const BOOT = read('boot.rofl');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = read('boot.rofl')
+  + '\n' + read('rules/self-audit.rofl');
 const SENSORS = read('examples', 'sensors.rofl');
 
 function world(): Rofl {
@@ -81,9 +87,42 @@ test('the honest corpus is green: forged[audit] is empty on a loaded world', () 
 
 test('every asserted fact carries an author, and it is a real principal', () => {
   const r = world();
-  // one per asserted base fact, with no gap for the unsigned ones
-  assert.equal(n(r, 'asserted_by(F, W, T)'), n(r, 'in_perspective(F, P)'),
-    'no fact is authorless: the trail and the ledger index agree row for row');
+  // EVERY FACT WRITTEN IN A FILE HAS AN AUTHOR, and that is what this test has
+  // always been about: an unsigned load used to be TRACELESS, so anonymity was
+  // not a weaker claim but invisibility.
+  //
+  // It used to say this by comparing the `asserted_by` count against the
+  // `in_perspective` count. That checked the kernel emitted two rows TOGETHER,
+  // not that it emitted one PER FACT — and `in_perspective` is gone, being a
+  // projection of the fact term's own second argument. So the invariant is now
+  // stated against the SOURCE: every ground clause in the files this world
+  // loaded is named in the trail.
+  //
+  // Deliberately not stated over the store's base facts. The kernel writes its
+  // own bookkeeping straight through `store.add` — the bootstrap tables,
+  // `registerPersp`'s standing grants, the automatic `edb` registration — and
+  // none of that is anybody's assertion. Chasing those one at a time was the
+  // first attempt here and it is the anti-pattern this repository names: a
+  // criterion borrowed from whichever exception produced the last red.
+  const trail = new Set<string>();
+  for (const f of r.store.relAll('asserted_by')) trail.add(canonTerm(f.args[0]));
+  let checked = 0;
+  for (const src of [BOOT, SENSORS]) {
+    for (const c of parseProgram(src)) {
+      if (c.body.length > 0 || c.head.persp.k !== 'a') continue;
+      if (!c.head.args.every(isGround)) continue;
+      // The claim is the one clause `load` CONSUMES rather than asserts: it is
+      // in the file and by design never in the world.
+      if (c.head.rel === '$kernel_authority') continue;
+      const k = canonTerm(factTerm(c.head.rel, c.head.persp.name, c.head.args));
+      assert.ok(trail.has(k), `a fact written in a file has no author: ${k}`);
+      checked += 1;
+    }
+  }
+  // 15 measured on boot.rofl + sensors.rofl, 2026-09-09. Named rather than
+  // rounded down, so that a file losing its ground facts shows up here.
+  assert.ok(checked >= 15, `only ${checked} written facts checked, expected 15`);
+
   // TWO PRINCIPALS AND NO THIRD, which is the whole model in one assertion.
   // boot.rofl claimed the ring with `$kernel_authority` and everything in it is
   // the kernel's; sensors.rofl named nobody and is the user's. Before the

@@ -567,7 +567,8 @@ export class Rofl {
       // the tick of the ASSERTION: read now, at the call, never at evaluation.
       // The trail is the kernel's own writing about this call, so it goes in
       // the kernel's book — not in the ledger the fact went to, and not in the
-      // default one. `in_perspective` is what carries the fact's own ledger.
+      // default one. The fact TERM carries its own ledger, as its second
+      // argument, so no separate relation records it.
       const withheld = sealedRels(sealedBodies(this.store));
       for (const m of factMetaFacts(h.rel, persp, h.args, this.store.tick, who)) {
         if (withheld.has(m.rel)) continue;
@@ -627,7 +628,7 @@ export class Rofl {
     if (!rec.base) return { ok: false, diagnostics: [`${key} is derived; retract its supports instead`] };
     this.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
-    for (const rel of [V.in_perspective, V.asserted_by]) {
+    for (const rel of [V.asserted_by]) {
       for (const f of this.store.relAll(rel)) {
         if (canonTerm(f.args[0]) === canonTerm(ft)) this.store.remove(f.key);
       }
@@ -1006,7 +1007,7 @@ export class Rofl {
     const scratch = this.fork();
     scratch.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
-    for (const rel of [V.in_perspective, V.asserted_by]) {
+    for (const rel of [V.asserted_by]) {
       for (const f of scratch.store.relAll(rel)) {
         if (canonTerm(f.args[0]) === canonTerm(ft)) scratch.store.remove(f.key);
       }

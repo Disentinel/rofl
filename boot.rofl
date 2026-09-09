@@ -134,11 +134,11 @@ gathered(A, B)        :- collects_from(B, A).
 -- the walk declared nowhere — reports NOTHING. This form reports it.
 leak[audit](A, B)     :- crossing(A, B), not gathered(A, B).
 
--- The trail is dated: `asserted_by(F, Who, T)` records WHEN the assertion was
--- made, so that a past state can be replayed rather than stored. Forgery is a
--- question about authority and not about time, so the tick is a wildcard here.
-forged[audit](F)      :- asserted_by(F, Who, _), in_perspective(F, P),
-                         not authority(P, Who).
+-- `forged[audit]`, `unattributed[audit]` and `widened[audit]` USED TO STAND
+-- HERE and now live in `rules/self-audit.rofl`, which a world loads when it
+-- wants them. See that file for the measurement that moved them; the short
+-- version is that they were 100 per cent of the evaluation of an AST index and
+-- have never fired on any world in this repository.
 
 unmoded[audit](R)     :- uses_builtin(R, B), not mode(B, _).
 
@@ -198,10 +198,6 @@ undefined_premise[audit](R, Rel) :- premise_pos(R, Rel),
 -- nothing keeps exactly what it had, and a ledger that asks gets every
 -- unsigned fact in it named. Same shape as `collects`, for the same reason —
 -- the alternative was a sentence in a README, and a README is not auditable.
-edb(demands_authorship).
-
-unattributed[audit](F, P) :- asserted_by(F, user, _), in_perspective(F, P),
-                             demands_authorship(P).
 
 -- Required result, appended to the list above:
 --   ? unattributed[audit](F, P) -> empty UNLESS a ledger declared
@@ -368,10 +364,6 @@ negated_under(Rel, P) :- premise_lit(R, _, $not($lit(Rel, P, _, _))).
 -- program. With it, 0. Subtracting the principal rather than exempting the
 -- relation is deliberate: `$kernel` plus alice plus bob is still two files,
 -- and an exemption keyed on the relation would have gone quiet on it.
-loader(Rel, P, Who)   :- asserted_by($fact(Rel, P, _), Who, _), Who != $kernel.
-
-widened[audit](Rel, P) :- negated_under(Rel, P),
-                          loader(Rel, P, W1), loader(Rel, P, W2), W1 != W2.
 
 -- Required result, appended to the list above:
 --   ? widened[audit](Rel, P) -> empty in this repository (measured over 19

@@ -26,7 +26,11 @@ const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.resolve(HERE, '..', '..');
 const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 
-export const BOOT = read('boot.rofl');
+// The audit pack is loaded beside the kernel: `forged`, `unattributed` and
+// `widened` moved to rules/self-audit.rofl, which a world loads when its
+// writers are not all its own. This demo exercises them, so it asks.
+export const BOOT = read('boot.rofl')
+  + '\n' + read('rules/self-audit.rofl');
 export const LOOT = read('examples', 'loot', 'loot.rofl');
 
 /** The demo's own bookkeeping budget. Generous: it is not the NPC's. */

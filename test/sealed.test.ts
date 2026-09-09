@@ -30,7 +30,11 @@ import { Rofl } from '../src/api.ts';
 import { V, SEALED_REASON, SEALED_BODY } from '../src/reflect.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 
 // Every row this file talks about has to be LIVE in the unsealed arm, or the
 // comparison measures emptiness. So the program carries a builtin
@@ -132,7 +136,6 @@ test('sealed(assertions) withholds the per-fact trail', () => {
   const open = load('q(1).  q(2).');
   assert.ok(open.store.relCount(V.asserted_by) > 0);
   assert.equal(sealed.store.relCount(V.asserted_by), 0);
-  assert.equal(sealed.store.relCount(V.in_perspective), 0);
 });
 
 test('sealed(provenance) withholds derived_by, and says so to a rule that reads it', () => {

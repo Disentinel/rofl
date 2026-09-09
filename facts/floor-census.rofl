@@ -14,20 +14,19 @@
 -- corpus_files(N) / corpus_unparsed(File)
 
 -- ring1_unsealed: the same grammar with its sealed(rules) clause struck out
-program(ring1_unsealed).  store_facts(ring1_unsealed, 2450).  store_bytes(ring1_unsealed, 122434).
+program(ring1_unsealed).  store_facts(ring1_unsealed, 2355).  store_bytes(ring1_unsealed, 115566).
   bucket_facts(ring1_unsealed, world, 91).  bucket_bytes(ring1_unsealed, world, 1812).
   bucket_facts(ring1_unsealed, executable, 675).  bucket_bytes(ring1_unsealed, executable, 54210).
   bucket_facts(ring1_unsealed, about_rule, 1435).  bucket_bytes(ring1_unsealed, about_rule, 51058).
-  bucket_facts(ring1_unsealed, about_fact, 186).  bucket_bytes(ring1_unsealed, about_fact, 13533).
+  bucket_facts(ring1_unsealed, about_fact, 93).  bucket_bytes(ring1_unsealed, about_fact, 6720).
   bucket_facts(ring1_unsealed, provenance, 0).  bucket_bytes(ring1_unsealed, provenance, 0).
-  bucket_facts(ring1_unsealed, kernel_table, 63).  bucket_bytes(ring1_unsealed, kernel_table, 1821).
+  bucket_facts(ring1_unsealed, kernel_table, 61).  bucket_bytes(ring1_unsealed, kernel_table, 1766).
   rel_facts(ring1_unsealed, asserted_by, 93).  rel_bytes(ring1_unsealed, asserted_by, 6720).
   rel_facts(ring1_unsealed, concludes, 140).  rel_bytes(ring1_unsealed, concludes, 4990).
   rel_facts(ring1_unsealed, conclusion_lit, 140).  rel_bytes(ring1_unsealed, conclusion_lit, 14215).
   rel_facts(ring1_unsealed, conclusion_tense, 140).  rel_bytes(ring1_unsealed, conclusion_tense, 5600).
   rel_facts(ring1_unsealed, has_conclusion, 140).  rel_bytes(ring1_unsealed, has_conclusion, 5040).
   rel_facts(ring1_unsealed, has_premise, 395).  rel_bytes(ring1_unsealed, has_premise, 13037).
-  rel_facts(ring1_unsealed, in_perspective, 93).  rel_bytes(ring1_unsealed, in_perspective, 6813).
   rel_facts(ring1_unsealed, premise_lit, 395).  rel_bytes(ring1_unsealed, premise_lit, 36635).
   rel_facts(ring1_unsealed, premise_neg, 33).  rel_bytes(ring1_unsealed, premise_neg, 1317).
   rel_facts(ring1_unsealed, premise_pos, 266).  rel_bytes(ring1_unsealed, premise_pos, 9884).
@@ -37,167 +36,160 @@ program(ring1_unsealed).  store_facts(ring1_unsealed, 2450).  store_bytes(ring1_
   rel_facts(ring1_unsealed, writes_to, 140).  rel_bytes(ring1_unsealed, writes_to, 4760).
 
 -- ring1_image: charclass + ring1 AS SHIPPED (sealed), what parseFile forks per clause
-program(ring1_image).  store_facts(ring1_image, 1994).  store_bytes(ring1_image, 106418).
+program(ring1_image).  store_facts(ring1_image, 1898).  store_bytes(ring1_image, 99484).
   bucket_facts(ring1_image, world, 92).  bucket_bytes(ring1_image, world, 1831).
   bucket_facts(ring1_image, executable, 675).  bucket_bytes(ring1_image, executable, 54210).
   bucket_facts(ring1_image, about_rule, 974).  bucket_bytes(ring1_image, about_rule, 34828).
-  bucket_facts(ring1_image, about_fact, 188).  bucket_bytes(ring1_image, about_fact, 13664).
+  bucket_facts(ring1_image, about_fact, 94).  bucket_bytes(ring1_image, about_fact, 6785).
   bucket_facts(ring1_image, provenance, 0).  bucket_bytes(ring1_image, provenance, 0).
-  bucket_facts(ring1_image, kernel_table, 65).  bucket_bytes(ring1_image, kernel_table, 1885).
+  bucket_facts(ring1_image, kernel_table, 63).  bucket_bytes(ring1_image, kernel_table, 1830).
   rel_facts(ring1_image, asserted_by, 94).  rel_bytes(ring1_image, asserted_by, 6785).
   rel_facts(ring1_image, concludes, 140).  rel_bytes(ring1_image, concludes, 4990).
   rel_facts(ring1_image, conclusion_lit, 140).  rel_bytes(ring1_image, conclusion_lit, 14215).
   rel_facts(ring1_image, conclusion_tense, 140).  rel_bytes(ring1_image, conclusion_tense, 5600).
   rel_facts(ring1_image, has_premise, 395).  rel_bytes(ring1_image, has_premise, 13037).
-  rel_facts(ring1_image, in_perspective, 94).  rel_bytes(ring1_image, in_perspective, 6879).
   rel_facts(ring1_image, premise_lit, 395).  rel_bytes(ring1_image, premise_lit, 36635).
   rel_facts(ring1_image, premise_neg, 33).  rel_bytes(ring1_image, premise_neg, 1317).
   rel_facts(ring1_image, premise_pos, 266).  rel_bytes(ring1_image, premise_pos, 9884).
   rel_facts(ring1_image, rule, 140).  rel_bytes(ring1_image, rule, 3360).
 
 -- ring1_world: boot + charclass + ring1, what the tower audits
-program(ring1_world).  store_facts(ring1_world, 2653).  store_bytes(ring1_world, 140289).
-  bucket_facts(ring1_world, world, 273).  bucket_bytes(ring1_world, world, 6673).
-  bucket_facts(ring1_world, executable, 758).  bucket_bytes(ring1_world, executable, 60739).
-  bucket_facts(ring1_world, about_rule, 1167).  bucket_bytes(ring1_world, about_rule, 41957).
-  bucket_facts(ring1_world, about_fact, 200).  bucket_bytes(ring1_world, about_fact, 14574).
-  bucket_facts(ring1_world, provenance, 185).  bucket_bytes(ring1_world, provenance, 14338).
-  bucket_facts(ring1_world, kernel_table, 70).  bucket_bytes(ring1_world, kernel_table, 2008).
-  rel_facts(ring1_world, asserted_by, 100).  rel_bytes(ring1_world, asserted_by, 7246).
-  rel_facts(ring1_world, concludes, 161).  rel_bytes(ring1_world, concludes, 5789).
-  rel_facts(ring1_world, conclusion_lit, 161).  rel_bytes(ring1_world, conclusion_lit, 16191).
-  rel_facts(ring1_world, conclusion_tense, 161).  rel_bytes(ring1_world, conclusion_tense, 6440).
-  rel_facts(ring1_world, derived_by, 185).  rel_bytes(ring1_world, derived_by, 14338).
-  rel_facts(ring1_world, has_conclusion, 21).  rel_bytes(ring1_world, has_conclusion, 756).
-  rel_facts(ring1_world, has_premise, 436).  rel_bytes(ring1_world, has_premise, 14390).
-  rel_facts(ring1_world, in_perspective, 100).  rel_bytes(ring1_world, in_perspective, 7328).
-  rel_facts(ring1_world, premise_lit, 436).  rel_bytes(ring1_world, premise_lit, 40684).
-  rel_facts(ring1_world, premise_neg, 42).  rel_bytes(ring1_world, premise_neg, 1678).
-  rel_facts(ring1_world, premise_pos, 296).  rel_bytes(ring1_world, premise_pos, 11135).
-  rel_facts(ring1_world, reads_from, 27).  rel_bytes(ring1_world, reads_from, 972).
-  rel_facts(ring1_world, rule, 161).  rel_bytes(ring1_world, rule, 3864).
-  rel_facts(ring1_world, uses_builtin, 2).  rel_bytes(ring1_world, uses_builtin, 74).
-  rel_facts(ring1_world, writes_to, 21).  rel_bytes(ring1_world, writes_to, 723).
+program(ring1_world).  store_facts(ring1_world, 2667).  store_bytes(ring1_world, 139296).
+  bucket_facts(ring1_world, world, 307).  bucket_bytes(ring1_world, world, 7806).
+  bucket_facts(ring1_world, executable, 773).  bucket_bytes(ring1_world, executable, 61800).
+  bucket_facts(ring1_world, about_rule, 1200).  bucket_bytes(ring1_world, about_rule, 43139).
+  bucket_facts(ring1_world, about_fact, 100).  bucket_bytes(ring1_world, about_fact, 7235).
+  bucket_facts(ring1_world, provenance, 219).  bucket_bytes(ring1_world, provenance, 17374).
+  bucket_facts(ring1_world, kernel_table, 68).  bucket_bytes(ring1_world, kernel_table, 1942).
+  rel_facts(ring1_world, asserted_by, 100).  rel_bytes(ring1_world, asserted_by, 7235).
+  rel_facts(ring1_world, concludes, 166).  rel_bytes(ring1_world, concludes, 5983).
+  rel_facts(ring1_world, conclusion_lit, 166).  rel_bytes(ring1_world, conclusion_lit, 16682).
+  rel_facts(ring1_world, conclusion_tense, 166).  rel_bytes(ring1_world, conclusion_tense, 6643).
+  rel_facts(ring1_world, derived_by, 219).  rel_bytes(ring1_world, derived_by, 17374).
+  rel_facts(ring1_world, has_conclusion, 26).  rel_bytes(ring1_world, has_conclusion, 936).
+  rel_facts(ring1_world, has_premise, 441).  rel_bytes(ring1_world, has_premise, 14555).
+  rel_facts(ring1_world, premise_lit, 441).  rel_bytes(ring1_world, premise_lit, 41134).
+  rel_facts(ring1_world, premise_neg, 42).  rel_bytes(ring1_world, premise_neg, 1680).
+  rel_facts(ring1_world, premise_pos, 300).  rel_bytes(ring1_world, premise_pos, 11265).
+  rel_facts(ring1_world, reads_from, 30).  rel_bytes(ring1_world, reads_from, 1074).
+  rel_facts(ring1_world, rule, 166).  rel_bytes(ring1_world, rule, 3984).
+  rel_facts(ring1_world, uses_builtin, 3).  rel_bytes(ring1_world, uses_builtin, 111).
+  rel_facts(ring1_world, writes_to, 26).  rel_bytes(ring1_world, writes_to, 892).
 
 -- spat: boot + spat + one week
-program(spat).  store_facts(spat, 11380).  store_bytes(spat, 670445).
-  bucket_facts(spat, world, 4350).  bucket_bytes(spat, world, 123142).
-  bucket_facts(spat, executable, 736).  bucket_bytes(spat, executable, 69633).
-  bucket_facts(spat, about_rule, 1609).  bucket_bytes(spat, about_rule, 57955).
-  bucket_facts(spat, about_fact, 360).  bucket_bytes(spat, about_fact, 30374).
-  bucket_facts(spat, provenance, 4221).  bucket_bytes(spat, provenance, 386772).
-  bucket_facts(spat, kernel_table, 104).  bucket_bytes(spat, kernel_table, 2569).
-  rel_facts(spat, asserted_by, 180).  rel_bytes(spat, asserted_by, 15106).
-  rel_facts(spat, concludes, 152).  rel_bytes(spat, concludes, 5690).
-  rel_facts(spat, conclusion_lit, 152).  rel_bytes(spat, conclusion_lit, 17541).
-  rel_facts(spat, conclusion_tense, 152).  rel_bytes(spat, conclusion_tense, 6080).
-  rel_facts(spat, derived_by, 4221).  rel_bytes(spat, derived_by, 386772).
-  rel_facts(spat, has_conclusion, 152).  rel_bytes(spat, has_conclusion, 5472).
-  rel_facts(spat, has_premise, 432).  rel_bytes(spat, has_premise, 14256).
-  rel_facts(spat, in_perspective, 180).  rel_bytes(spat, in_perspective, 15268).
-  rel_facts(spat, premise_lit, 432).  rel_bytes(spat, premise_lit, 48444).
-  rel_facts(spat, premise_neg, 59).  rel_bytes(spat, premise_neg, 2319).
-  rel_facts(spat, premise_pos, 276).  rel_bytes(spat, premise_pos, 10613).
-  rel_facts(spat, reads_from, 158).  rel_bytes(spat, reads_from, 5557).
-  rel_facts(spat, rule, 152).  rel_bytes(spat, rule, 3648).
-  rel_facts(spat, uses_builtin, 76).  rel_bytes(spat, uses_builtin, 2791).
-  rel_facts(spat, writes_to, 152).  rel_bytes(spat, writes_to, 5177).
+program(spat).  store_facts(spat, 11336).  store_bytes(spat, 662869).
+  bucket_facts(spat, world, 4395).  bucket_bytes(spat, world, 124640).
+  bucket_facts(spat, executable, 751).  bucket_bytes(spat, executable, 70694).
+  bucket_facts(spat, about_rule, 1642).  bucket_bytes(spat, about_rule, 59137).
+  bucket_facts(spat, about_fact, 180).  bucket_bytes(spat, about_fact, 15095).
+  bucket_facts(spat, provenance, 4266).  bucket_bytes(spat, provenance, 390800).
+  bucket_facts(spat, kernel_table, 102).  bucket_bytes(spat, kernel_table, 2503).
+  rel_facts(spat, asserted_by, 180).  rel_bytes(spat, asserted_by, 15095).
+  rel_facts(spat, concludes, 157).  rel_bytes(spat, concludes, 5884).
+  rel_facts(spat, conclusion_lit, 157).  rel_bytes(spat, conclusion_lit, 18032).
+  rel_facts(spat, conclusion_tense, 157).  rel_bytes(spat, conclusion_tense, 6283).
+  rel_facts(spat, derived_by, 4266).  rel_bytes(spat, derived_by, 390800).
+  rel_facts(spat, has_conclusion, 157).  rel_bytes(spat, has_conclusion, 5652).
+  rel_facts(spat, has_premise, 437).  rel_bytes(spat, has_premise, 14421).
+  rel_facts(spat, premise_lit, 437).  rel_bytes(spat, premise_lit, 48894).
+  rel_facts(spat, premise_neg, 59).  rel_bytes(spat, premise_neg, 2321).
+  rel_facts(spat, premise_pos, 280).  rel_bytes(spat, premise_pos, 10743).
+  rel_facts(spat, reads_from, 161).  rel_bytes(spat, reads_from, 5659).
+  rel_facts(spat, rule, 157).  rel_bytes(spat, rule, 3768).
+  rel_facts(spat, uses_builtin, 77).  rel_bytes(spat, uses_builtin, 2828).
+  rel_facts(spat, writes_to, 157).  rel_bytes(spat, writes_to, 5346).
 
 -- goof: boot + goof, nine geometries in nine ledgers
-program(goof).  store_facts(goof, 4742).  store_bytes(goof, 285778).
-  bucket_facts(goof, world, 1834).  bucket_bytes(goof, world, 59661).
-  bucket_facts(goof, executable, 201).  bucket_bytes(goof, executable, 15639).
-  bucket_facts(goof, about_rule, 464).  bucket_bytes(goof, about_rule, 17091).
-  bucket_facts(goof, about_fact, 450).  bucket_bytes(goof, about_fact, 39099).
-  bucket_facts(goof, provenance, 1690).  bucket_bytes(goof, provenance, 151354).
-  bucket_facts(goof, kernel_table, 103).  bucket_bytes(goof, kernel_table, 2934).
-  rel_facts(goof, asserted_by, 225).  rel_bytes(goof, asserted_by, 19451).
-  rel_facts(goof, concludes, 49).  rel_bytes(goof, concludes, 1862).
-  rel_facts(goof, conclusion_lit, 49).  rel_bytes(goof, conclusion_lit, 4686).
-  rel_facts(goof, conclusion_tense, 49).  rel_bytes(goof, conclusion_tense, 1960).
-  rel_facts(goof, derived_by, 1690).  rel_bytes(goof, derived_by, 151354).
-  rel_facts(goof, has_conclusion, 49).  rel_bytes(goof, has_conclusion, 1764).
-  rel_facts(goof, has_premise, 103).  rel_bytes(goof, has_premise, 3399).
-  rel_facts(goof, in_perspective, 225).  rel_bytes(goof, in_perspective, 19648).
-  rel_facts(goof, premise_lit, 103).  rel_bytes(goof, premise_lit, 9777).
-  rel_facts(goof, premise_neg, 10).  rel_bytes(goof, premise_neg, 398).
-  rel_facts(goof, premise_pos, 77).  rel_bytes(goof, premise_pos, 3022).
-  rel_facts(goof, reads_from, 68).  rel_bytes(goof, reads_from, 2532).
-  rel_facts(goof, rule, 49).  rel_bytes(goof, rule, 1176).
-  rel_facts(goof, uses_builtin, 10).  rel_bytes(goof, uses_builtin, 369).
-  rel_facts(goof, writes_to, 49).  rel_bytes(goof, writes_to, 1785).
+program(goof).  store_facts(goof, 4728).  store_bytes(goof, 278191).
+  bucket_facts(goof, world, 1886).  bucket_bytes(goof, world, 61388).
+  bucket_facts(goof, executable, 234).  bucket_bytes(goof, executable, 18414).
+  bucket_facts(goof, about_rule, 538).  bucket_bytes(goof, about_rule, 19793).
+  bucket_facts(goof, about_fact, 227).  bucket_bytes(goof, about_fact, 19597).
+  bucket_facts(goof, provenance, 1741).  bucket_bytes(goof, provenance, 156102).
+  bucket_facts(goof, kernel_table, 102).  bucket_bytes(goof, kernel_table, 2897).
+  rel_facts(goof, asserted_by, 227).  rel_bytes(goof, asserted_by, 19597).
+  rel_facts(goof, concludes, 58).  rel_bytes(goof, concludes, 2207).
+  rel_facts(goof, conclusion_lit, 58).  rel_bytes(goof, conclusion_lit, 5639).
+  rel_facts(goof, conclusion_tense, 58).  rel_bytes(goof, conclusion_tense, 2323).
+  rel_facts(goof, derived_by, 1741).  rel_bytes(goof, derived_by, 156102).
+  rel_facts(goof, has_conclusion, 58).  rel_bytes(goof, has_conclusion, 2088).
+  rel_facts(goof, has_premise, 118).  rel_bytes(goof, has_premise, 3894).
+  rel_facts(goof, premise_lit, 118).  rel_bytes(goof, premise_lit, 11383).
+  rel_facts(goof, premise_neg, 11).  rel_bytes(goof, premise_neg, 441).
+  rel_facts(goof, premise_pos, 87).  rel_bytes(goof, premise_pos, 3414).
+  rel_facts(goof, reads_from, 77).  rel_bytes(goof, reads_from, 2853).
+  rel_facts(goof, rule, 58).  rel_bytes(goof, rule, 1392).
+  rel_facts(goof, uses_builtin, 13).  rel_bytes(goof, uses_builtin, 480).
+  rel_facts(goof, writes_to, 58).  rel_bytes(goof, writes_to, 2093).
 
 -- wtf: boot + wtf
-program(wtf).  store_facts(wtf, 7595).  store_bytes(wtf, 426376).
-  bucket_facts(wtf, world, 2042).  bucket_bytes(wtf, world, 63535).
-  bucket_facts(wtf, executable, 961).  bucket_bytes(wtf, executable, 76424).
-  bucket_facts(wtf, about_rule, 2106).  bucket_bytes(wtf, about_rule, 75219).
-  bucket_facts(wtf, about_fact, 672).  bucket_bytes(wtf, about_fact, 56198).
-  bucket_facts(wtf, provenance, 1722).  bucket_bytes(wtf, provenance, 152618).
-  bucket_facts(wtf, kernel_table, 92).  bucket_bytes(wtf, kernel_table, 2382).
-  rel_facts(wtf, asserted_by, 336).  rel_bytes(wtf, asserted_by, 27940).
-  rel_facts(wtf, concludes, 212).  rel_bytes(wtf, concludes, 7537).
-  rel_facts(wtf, conclusion_lit, 212).  rel_bytes(wtf, conclusion_lit, 20923).
-  rel_facts(wtf, conclusion_tense, 212).  rel_bytes(wtf, conclusion_tense, 8480).
-  rel_facts(wtf, derived_by, 1722).  rel_bytes(wtf, derived_by, 152618).
-  rel_facts(wtf, has_conclusion, 212).  rel_bytes(wtf, has_conclusion, 7632).
-  rel_facts(wtf, has_premise, 537).  rel_bytes(wtf, has_premise, 17721).
-  rel_facts(wtf, in_perspective, 336).  rel_bytes(wtf, in_perspective, 28258).
-  rel_facts(wtf, premise_lit, 537).  rel_bytes(wtf, premise_lit, 50413).
-  rel_facts(wtf, premise_neg, 55).  rel_bytes(wtf, premise_neg, 2111).
-  rel_facts(wtf, premise_pos, 406).  rel_bytes(wtf, premise_pos, 15314).
-  rel_facts(wtf, reads_from, 218).  rel_bytes(wtf, reads_from, 7657).
-  rel_facts(wtf, rule, 212).  rel_bytes(wtf, rule, 5088).
-  rel_facts(wtf, uses_builtin, 42).  rel_bytes(wtf, uses_builtin, 1550).
-  rel_facts(wtf, writes_to, 212).  rel_bytes(wtf, writes_to, 7217).
+program(wtf).  store_facts(wtf, 7526).  store_bytes(wtf, 413354).
+  bucket_facts(wtf, world, 2122).  bucket_bytes(wtf, world, 66053).
+  bucket_facts(wtf, executable, 994).  bucket_bytes(wtf, executable, 79199).
+  bucket_facts(wtf, about_rule, 2180).  bucket_bytes(wtf, about_rule, 77921).
+  bucket_facts(wtf, about_fact, 337).  bucket_bytes(wtf, about_fact, 28007).
+  bucket_facts(wtf, provenance, 1802).  bucket_bytes(wtf, provenance, 159829).
+  bucket_facts(wtf, kernel_table, 91).  bucket_bytes(wtf, kernel_table, 2345).
+  rel_facts(wtf, asserted_by, 337).  rel_bytes(wtf, asserted_by, 28007).
+  rel_facts(wtf, concludes, 221).  rel_bytes(wtf, concludes, 7882).
+  rel_facts(wtf, conclusion_lit, 221).  rel_bytes(wtf, conclusion_lit, 21876).
+  rel_facts(wtf, conclusion_tense, 221).  rel_bytes(wtf, conclusion_tense, 8843).
+  rel_facts(wtf, derived_by, 1802).  rel_bytes(wtf, derived_by, 159829).
+  rel_facts(wtf, has_conclusion, 221).  rel_bytes(wtf, has_conclusion, 7956).
+  rel_facts(wtf, has_premise, 552).  rel_bytes(wtf, has_premise, 18216).
+  rel_facts(wtf, premise_lit, 552).  rel_bytes(wtf, premise_lit, 52019).
+  rel_facts(wtf, premise_neg, 56).  rel_bytes(wtf, premise_neg, 2154).
+  rel_facts(wtf, premise_pos, 416).  rel_bytes(wtf, premise_pos, 15706).
+  rel_facts(wtf, reads_from, 227).  rel_bytes(wtf, reads_from, 7978).
+  rel_facts(wtf, rule, 221).  rel_bytes(wtf, rule, 5304).
+  rel_facts(wtf, uses_builtin, 45).  rel_bytes(wtf, uses_builtin, 1661).
+  rel_facts(wtf, writes_to, 221).  rel_bytes(wtf, writes_to, 7525).
 
 -- loot: boot + loot + the wanderer
-program(loot).  store_facts(loot, 1731).  store_bytes(loot, 90108).
-  bucket_facts(loot, world, 271).  bucket_bytes(loot, world, 7232).
-  bucket_facts(loot, executable, 240).  bucket_bytes(loot, executable, 18205).
-  bucket_facts(loot, about_rule, 568).  bucket_bytes(loot, about_rule, 20940).
-  bucket_facts(loot, about_fact, 367).  bucket_bytes(loot, about_fact, 26995).
-  bucket_facts(loot, provenance, 163).  bucket_bytes(loot, provenance, 13316).
-  bucket_facts(loot, kernel_table, 122).  bucket_bytes(loot, kernel_table, 3420).
-  rel_facts(loot, asserted_by, 184).  rel_bytes(loot, asserted_by, 13388).
-  rel_facts(loot, concludes, 58).  rel_bytes(loot, concludes, 2195).
-  rel_facts(loot, conclusion_lit, 58).  rel_bytes(loot, conclusion_lit, 5254).
-  rel_facts(loot, conclusion_tense, 58).  rel_bytes(loot, conclusion_tense, 2320).
-  rel_facts(loot, derived_by, 163).  rel_bytes(loot, derived_by, 13316).
-  rel_facts(loot, has_conclusion, 58).  rel_bytes(loot, has_conclusion, 2088).
-  rel_facts(loot, has_premise, 124).  rel_bytes(loot, has_premise, 4092).
-  rel_facts(loot, in_perspective, 183).  rel_bytes(loot, in_perspective, 13607).
-  rel_facts(loot, premise_lit, 124).  rel_bytes(loot, premise_lit, 11559).
-  rel_facts(loot, premise_neg, 28).  rel_bytes(loot, premise_neg, 1126).
-  rel_facts(loot, premise_pos, 91).  rel_bytes(loot, premise_pos, 3664).
-  rel_facts(loot, reads_from, 89).  rel_bytes(loot, reads_from, 3298).
-  rel_facts(loot, rule, 58).  rel_bytes(loot, rule, 1392).
-  rel_facts(loot, uses_builtin, 4).  rel_bytes(loot, uses_builtin, 148).
-  rel_facts(loot, writes_to, 58).  rel_bytes(loot, writes_to, 2009).
+program(loot).  store_facts(loot, 1781).  store_bytes(loot, 89815).
+  bucket_facts(loot, world, 334).  bucket_bytes(loot, world, 9277).
+  bucket_facts(loot, executable, 273).  bucket_bytes(loot, executable, 20980).
+  bucket_facts(loot, about_rule, 642).  bucket_bytes(loot, about_rule, 23642).
+  bucket_facts(loot, about_fact, 185).  bucket_bytes(loot, about_fact, 13455).
+  bucket_facts(loot, provenance, 226).  bucket_bytes(loot, provenance, 19078).
+  bucket_facts(loot, kernel_table, 121).  bucket_bytes(loot, kernel_table, 3383).
+  rel_facts(loot, asserted_by, 185).  rel_bytes(loot, asserted_by, 13455).
+  rel_facts(loot, concludes, 67).  rel_bytes(loot, concludes, 2540).
+  rel_facts(loot, conclusion_lit, 67).  rel_bytes(loot, conclusion_lit, 6207).
+  rel_facts(loot, conclusion_tense, 67).  rel_bytes(loot, conclusion_tense, 2683).
+  rel_facts(loot, derived_by, 226).  rel_bytes(loot, derived_by, 19078).
+  rel_facts(loot, has_conclusion, 67).  rel_bytes(loot, has_conclusion, 2412).
+  rel_facts(loot, has_premise, 139).  rel_bytes(loot, has_premise, 4587).
+  rel_facts(loot, premise_lit, 139).  rel_bytes(loot, premise_lit, 13165).
+  rel_facts(loot, premise_neg, 29).  rel_bytes(loot, premise_neg, 1169).
+  rel_facts(loot, premise_pos, 101).  rel_bytes(loot, premise_pos, 4056).
+  rel_facts(loot, reads_from, 98).  rel_bytes(loot, reads_from, 3619).
+  rel_facts(loot, rule, 67).  rel_bytes(loot, rule, 1608).
+  rel_facts(loot, uses_builtin, 7).  rel_bytes(loot, uses_builtin, 259).
+  rel_facts(loot, writes_to, 67).  rel_bytes(loot, writes_to, 2317).
 
 -- cram: boot + cram + flight_log
-program(cram).  store_facts(cram, 1644).  store_bytes(cram, 91315).
-  bucket_facts(cram, world, 402).  bucket_bytes(cram, world, 14043).
-  bucket_facts(cram, executable, 183).  bucket_bytes(cram, executable, 13413).
-  bucket_facts(cram, about_rule, 421).  bucket_bytes(cram, about_rule, 15313).
-  bucket_facts(cram, about_fact, 290).  bucket_bytes(cram, about_fact, 21179).
-  bucket_facts(cram, provenance, 270).  bucket_bytes(cram, provenance, 25206).
-  bucket_facts(cram, kernel_table, 78).  bucket_bytes(cram, kernel_table, 2161).
-  rel_facts(cram, asserted_by, 145).  rel_bytes(cram, asserted_by, 10665).
-  rel_facts(cram, concludes, 49).  rel_bytes(cram, concludes, 1821).
-  rel_facts(cram, conclusion_lit, 49).  rel_bytes(cram, conclusion_lit, 4411).
-  rel_facts(cram, conclusion_tense, 49).  rel_bytes(cram, conclusion_tense, 1974).
-  rel_facts(cram, derived_by, 270).  rel_bytes(cram, derived_by, 25206).
-  rel_facts(cram, has_conclusion, 49).  rel_bytes(cram, has_conclusion, 1764).
-  rel_facts(cram, has_premise, 85).  rel_bytes(cram, has_premise, 2805).
-  rel_facts(cram, in_perspective, 145).  rel_bytes(cram, in_perspective, 10514).
-  rel_facts(cram, premise_lit, 85).  rel_bytes(cram, premise_lit, 7826).
-  rel_facts(cram, premise_neg, 16).  rel_bytes(cram, premise_neg, 628).
-  rel_facts(cram, premise_pos, 64).  rel_bytes(cram, premise_pos, 2562).
-  rel_facts(cram, reads_from, 55).  rel_bytes(cram, reads_from, 1928).
-  rel_facts(cram, rule, 49).  rel_bytes(cram, rule, 1176).
-  rel_facts(cram, uses_builtin, 5).  rel_bytes(cram, uses_builtin, 184).
-  rel_facts(cram, writes_to, 49).  rel_bytes(cram, writes_to, 1647).
+program(cram).  store_facts(cram, 1679).  store_bytes(cram, 90743).
+  bucket_facts(cram, world, 438).  bucket_bytes(cram, world, 15192).
+  bucket_facts(cram, executable, 216).  bucket_bytes(cram, executable, 16188).
+  bucket_facts(cram, about_rule, 495).  bucket_bytes(cram, about_rule, 18015).
+  bucket_facts(cram, about_fact, 147).  bucket_bytes(cram, about_fact, 10813).
+  bucket_facts(cram, provenance, 306).  bucket_bytes(cram, provenance, 28411).
+  bucket_facts(cram, kernel_table, 77).  bucket_bytes(cram, kernel_table, 2124).
+  rel_facts(cram, asserted_by, 147).  rel_bytes(cram, asserted_by, 10813).
+  rel_facts(cram, concludes, 58).  rel_bytes(cram, concludes, 2166).
+  rel_facts(cram, conclusion_lit, 58).  rel_bytes(cram, conclusion_lit, 5364).
+  rel_facts(cram, conclusion_tense, 58).  rel_bytes(cram, conclusion_tense, 2337).
+  rel_facts(cram, derived_by, 306).  rel_bytes(cram, derived_by, 28411).
+  rel_facts(cram, has_conclusion, 58).  rel_bytes(cram, has_conclusion, 2088).
+  rel_facts(cram, has_premise, 100).  rel_bytes(cram, has_premise, 3300).
+  rel_facts(cram, premise_lit, 100).  rel_bytes(cram, premise_lit, 9432).
+  rel_facts(cram, premise_neg, 17).  rel_bytes(cram, premise_neg, 671).
+  rel_facts(cram, premise_pos, 74).  rel_bytes(cram, premise_pos, 2954).
+  rel_facts(cram, reads_from, 64).  rel_bytes(cram, reads_from, 2249).
+  rel_facts(cram, rule, 58).  rel_bytes(cram, rule, 1392).
+  rel_facts(cram, uses_builtin, 8).  rel_bytes(cram, uses_builtin, 295).
+  rel_facts(cram, writes_to, 58).  rel_bytes(cram, writes_to, 1955).
 
 -- the bucket a relation belongs to, so the rules need no list of their own
 in_bucket(asserted_by, about_fact).
@@ -211,7 +203,6 @@ in_bucket(edb, kernel_table).
 in_bucket(has_conclusion, about_rule).
 in_bucket(has_premise, about_rule).
 in_bucket(hole, kernel_table).
-in_bucket(in_perspective, about_fact).
 in_bucket(mode, kernel_table).
 in_bucket(premise_lit, executable).
 in_bucket(premise_neg, about_rule).
@@ -237,12 +228,12 @@ ablation(ring1_unsealed, conclusion_tense, 140, identical).
 ablation(ring1_unsealed, reads_from, 140, identical).
 ablation(ring1_unsealed, writes_to, 140, identical).
 ablation(ring1_unsealed, uses_builtin, 41, identical).
-ablation(ring1_unsealed, in_perspective, 93, identical).
 ablation(ring1_unsealed, asserted_by, 93, identical).
 ablation(ring1_unsealed, derived_by, 0, not_live).
 
-corpus_files(80).
+corpus_files(343).
 corpus_unparsed("examples/ring1/l1.dense.rofl").
+corpus_unparsed("rust/target/volumes/nb4ac4a57.rofl").
 refl_reader("boot.rofl", has_conclusion, rule_known, pos).
 refl_reader("boot.rofl", has_premise, malformed, neg).
 refl_reader("boot.rofl", has_premise, malformed, pos).
@@ -250,13 +241,10 @@ refl_reader("boot.rofl", has_conclusion, malformed, neg).
 refl_reader("boot.rofl", concludes, breach, pos).
 refl_reader("boot.rofl", reads_from, flow, pos).
 refl_reader("boot.rofl", writes_to, flow, pos).
-refl_reader("boot.rofl", asserted_by, forged, pos).
-refl_reader("boot.rofl", in_perspective, forged, pos).
 refl_reader("boot.rofl", uses_builtin, unmoded, pos).
 refl_reader("boot.rofl", premise_pos, undefined_premise, pos).
 refl_reader("boot.rofl", concludes, undefined_premise, neg).
-refl_reader("boot.rofl", asserted_by, unattributed, pos).
-refl_reader("boot.rofl", in_perspective, unattributed, pos).
+refl_reader("boot.rofl", premise_lit, negated_under, pos).
 refl_reader("examples/cram/flight_log.rofl", derived_by, fired_at, pos).
 refl_reader("examples/loot/loot.rofl", derived_by, fired, pos).
 refl_reader("examples/loot/loot.rofl", writes_to, uninvited, pos).
@@ -273,6 +261,9 @@ refl_reader("rules/kernel-policy.rofl", concludes, late_rule, pos).
 refl_reader("rules/kernel-policy.rofl", concludes, demand_rel, pos).
 refl_reader("rules/kernel-policy.rofl", conclusion_tense, demand_rel, pos).
 refl_reader("rules/kernel-policy.rofl", premise_pos, demand_rel, pos).
+refl_reader("rules/self-audit.rofl", asserted_by, forged, pos).
+refl_reader("rules/self-audit.rofl", asserted_by, unattributed, pos).
+refl_reader("rules/self-audit.rofl", asserted_by, loader, pos).
 refl_reader("rules/strata.rofl", concludes, dep, pos).
 refl_reader("rules/strata.rofl", conclusion_tense, dep, pos).
 refl_reader("rules/strata.rofl", premise_pos, dep, pos).

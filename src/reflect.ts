@@ -30,7 +30,6 @@ export const V = {
   edb: 'edb',
   // reflection detail relations (documented §2 extension, per Appendix A note)
   bridge_decl: 'bridge_decl',
-  in_perspective: 'in_perspective',
   uses_builtin: 'uses_builtin',
   premise_lit: 'premise_lit',
   conclusion_lit: 'conclusion_lit',
@@ -68,7 +67,7 @@ export const RESERVED: ReadonlySet<string> = new Set(Object.values(V));
 export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
   V.rule, V.has_premise, V.has_conclusion, V.premise_pos, V.premise_neg,
   V.premise_lit, V.conclusion_lit, V.conclusion_tense, V.concludes,
-  V.reads_from, V.writes_to, V.uses_builtin, V.in_perspective, V.asserted_by,
+  V.reads_from, V.writes_to, V.uses_builtin, V.asserted_by,
   V.bridge_decl, V.derived_by, V.hole,
 ]);
 
@@ -156,7 +155,7 @@ export const IFACE = {
 export const ARITY: Readonly<Record<string, number>> = {
   asserted_by: 3, authority: 2, bridge_decl: 3, concludes: 2,
   conclusion_lit: 3, conclusion_tense: 2, derived_by: 3, edb: 1,
-  has_conclusion: 2, has_premise: 2, hole: 2, in_perspective: 2,
+  has_conclusion: 2, has_premise: 2, hole: 2,
   mode: 2, premise_lit: 3, premise_neg: 2, premise_pos: 2,
   reads_from: 2, reserved: 1, rule: 1, uses_builtin: 2, writes_to: 2,
   semantics: 1, stratum: 2, unknown: 1, unstratified: 1,
@@ -322,7 +321,7 @@ export const SEALED_PROVENANCE = 'provenance';
 
 export const SEALED_BODY: ReadonlyMap<string, readonly string[]> = new Map([
   [SEALED_RULES, [V.has_conclusion, V.reads_from, V.writes_to, V.uses_builtin]],
-  [SEALED_ASSERTIONS, [V.in_perspective, V.asserted_by]],
+  [SEALED_ASSERTIONS, [V.asserted_by]],
   [SEALED_PROVENANCE, [V.derived_by]],
 ]);
 
@@ -1079,8 +1078,9 @@ export function registerPersp(store: FactStore, p: string, who: string = KERNEL_
  *  3 and 7, and not who did which. Keeping the assertion whole also makes the
  *  trail symmetric with `derived_by`, which the vocabulary already has.
  *
- *  `in_perspective` stays a pair: a fact's ledger is a property of the fact,
- *  and re-asserting it at another tick does not move it.
+ *  `in_perspective` USED TO STAND BESIDE IT and is gone: a fact's ledger is a
+ *  property of the fact, and the fact term already carries it as its second
+ *  argument, so the relation was a projection of its own key.
  *
  *  WHY THE ROW IS UNCONDITIONAL. It used to be emitted only when the caller
  *  named a `who`, which made authorship opt-in — and opt-in the wrong way
@@ -1093,10 +1093,13 @@ export function registerPersp(store: FactStore, p: string, who: string = KERNEL_
  *  attack than impersonation, which inverts what the trail is for. */
 export function factMetaFacts(rel: string, persp: string, args: Term[], tick: number, who?: string): EncFact[] {
   const f = factTerm(rel, persp, args);
-  return [
-    { rel: V.in_perspective, args: [f, mka(persp)] },
-    { rel: V.asserted_by, args: [f, mka(who ?? ANON_WHO), mki(tick)] },
-  ];
+  // ONE ROW, NOT TWO. `in_perspective(f, persp)` stood here and was a
+  // projection of its own left-hand side: `f` IS `$fact(rel, persp, args)`, so
+  // the relation stored the second argument of the term it was keyed by.
+  // Measured before removing it, on 16 eslint files: 41 722 rows, a third of
+  // the world. Every rule that read it now destructures the term instead,
+  // which is what `loader` in rules/self-audit.rofl always did.
+  return [{ rel: V.asserted_by, args: [f, mka(who ?? ANON_WHO), mki(tick)] }];
 }
 
 /* THE KERNEL'S TWO PROGRAMS USED TO STAND HERE, as 223 lines of ROFL source

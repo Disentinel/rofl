@@ -43,7 +43,11 @@ import { mki } from '../src/unify.ts';
 import { world } from '../examples/spat/spat.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
-const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 const SENSORS = fs.readFileSync(path.join(ROOT, 'examples/sensors.rofl'), 'utf8');
 const TM = fs.readFileSync(path.join(ROOT, 'examples/tm.rofl'), 'utf8');
 

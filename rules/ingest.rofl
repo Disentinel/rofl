@@ -86,9 +86,14 @@ coolable[code](F) :- indexed[code](F), not needed_hot[code](F).
 -- rules decide WHAT to cool; the host decides WHETHER it must. Neither half
 -- can do the other's job: the host cannot see which book is still wanted, and
 -- the rules cannot see how much room is left.
-candidate_intent(cool, C, F) :- coolable[code](F),
+-- PREMISE ORDER IS THE AUTHOR'S AND IT MATTERS HERE. `must_index` leads
+-- because it binds BOTH C and F; leading with `coolable(F)` and
+-- `under_pressure(C)` pairs two relations that share no variable, which is a
+-- cross product — `test/rule-shape.test.ts` counts those against a baseline
+-- and caught this one the first time it ran.
+candidate_intent(cool, C, F) :- must_index[code](C, F),
                                 under_pressure[code](C),
-                                must_index[code](C, F),
+                                coolable[code](F),
                                 not cooled[code](F, _).
 
 -- WHAT A COLD BOOK OWES A QUESTION, and it is a refusal rather than silence.

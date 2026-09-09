@@ -24,7 +24,11 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 const booted = (): Rofl => { const r = new Rofl(); r.load(BOOT); return r; };
 const forged = (r: Rofl): number => r.query('forged[audit](F)').rows.length;
 

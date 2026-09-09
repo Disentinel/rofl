@@ -134,7 +134,11 @@ function fsFacts(root: string): string[] {
 // ---------------------------------------------------------------------------
 // building the world
 
-const BOOT = readRepo('boot.rofl');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = readRepo('boot.rofl')
+  + '\n' + readRepo('rules/self-audit.rofl');
 const STRUCTURE = readRepo('rules/js-structure.rofl');
 const KINDS = readRepo('facts/js-kinds.rofl');
 const MODEL = readRepo('rules/js-model.rofl');

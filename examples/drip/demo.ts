@@ -19,7 +19,11 @@ import {
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.resolve(HERE, '../..');
-export const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// The audit pack is loaded beside the kernel: `forged`, `unattributed` and
+// `widened` moved to rules/self-audit.rofl, which a world loads when its
+// writers are not all its own. This demo exercises them, so it asks.
+export const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 export const DRIP = fs.readFileSync(path.join(HERE, 'drip.rofl'), 'utf8');
 
 /** Evidence tiers for the rename guess, as probabilities. They are weights on

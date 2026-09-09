@@ -9,7 +9,11 @@ import { canonClause } from '../src/reflect.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
-const BOOT = read('boot.rofl');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = read('boot.rofl')
+  + '\n' + read('rules/self-audit.rofl');
 const SENSORS = read('examples', 'sensors.rofl');
 const COUNTER = read('examples', 'counter.rofl');
 const TM = read('examples', 'tm.rofl');

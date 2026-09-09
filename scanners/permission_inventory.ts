@@ -141,7 +141,14 @@ const stripComments = (s: string): string =>
   s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
 
 function main(): void {
-  const boot = readFileSync(join(ROOT, 'boot.rofl'), 'utf8');
+  // THE PERMISSION FAMILY SPANS TWO FILES SINCE 2026-09-09. `forged`,
+  // `unattributed` and `widened` moved to rules/self-audit.rofl, which a world
+  // loads when its writers are not all its own — they were 100 per cent of the
+  // evaluation of an AST index and had never fired on any world here. They are
+  // still the same family and this inventory still has to see all of it, so it
+  // reads both rather than pretending the kernel is the whole story.
+  const boot = readFileSync(join(ROOT, 'boot.rofl'), 'utf8')
+    + '\n' + readFileSync(join(ROOT, 'rules/self-audit.rofl'), 'utf8');
   const bs = bootStructure(boot);
   const known = bs.rels;
 

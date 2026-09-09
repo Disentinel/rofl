@@ -68,7 +68,10 @@ export function cyclicFacts(r: Rofl): Set<string> {
 export function run(): string[] {
   const out: string[] = [];
   const r = new Rofl();
-  r.load(fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8'));
+    // The audit pack rides with the kernel: `forged` moved to
+  // rules/self-audit.rofl, and this fragment measures `forged`'s cache key.
+r.load(fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8'));
+  r.load(fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8'));
   r.load(CRAFT);
   r.evaluate();
 

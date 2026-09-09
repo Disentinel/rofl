@@ -16,7 +16,11 @@ import { unlist, relOfFactTerm } from '../src/reflect.ts';
 import { RESERVED, IFACE } from '../src/reflect.ts';
 
 const ROOT = new URL('..', import.meta.url);
-const BOOT = fs.readFileSync(new URL('boot.rofl', ROOT), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(new URL('boot.rofl', ROOT), 'utf8')
+  + '\n' + fs.readFileSync(new URL('rules/self-audit.rofl', ROOT), 'utf8');
 const SENSORS = fs.readFileSync(new URL('examples/sensors.rofl', ROOT), 'utf8');
 
 /** A store whose clock never stops: every tick stages a successor, so

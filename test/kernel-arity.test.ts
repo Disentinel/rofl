@@ -31,7 +31,11 @@ import { ARITY, V, IFACE, MAIN } from '../src/reflect.ts';
 import { mka } from '../src/unify.ts';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 
 const CONFIGS: { name: string; opts: EvalOpts; decl: string }[] = [
   { name: 'rounds', opts: {}, decl: '' },
@@ -71,7 +75,12 @@ test('the sweep: no kernel name at any width in any configuration crashes the ho
   // kernel and destructured positionally (`sealedBodies` in src/reflect.ts
   // tests `args[0].k`), which is exactly what every other row of this table is
   // here for, so the sweep must cover it at every width like the rest.
-  assert.equal(names.length, 26, 'the table covers the whole kernel vocabulary');
+  //
+  // 26 -> 25: `in_perspective/2` is GONE. It held exactly when its first
+  // argument was `$fact(_, P, _)` — the same `persp` built both — so the
+  // relation stored a projection of its own key, at 41 722 rows on 16 eslint
+  // files. Every rule that read it destructures the term instead.
+  assert.equal(names.length, 25, 'the table covers the whole kernel vocabulary');
   const crashes: string[] = [];
   let refusals = 0;
   for (const cfg of CONFIGS) {

@@ -1,0 +1,107 @@
+-- rules/self-audit.rofl — THE AUDITS THAT READ THE ASSERTION TRAIL, OPT-IN.
+--
+-- These three used to live in boot.rofl, which every world loads. They are
+-- here because of one measurement, taken 2026-09-09 on 16 real eslint files
+-- and 43 078 base AST facts, with boot.rofl and nothing else:
+--
+--   boot.rofl as it was      125 263 peak rows      1219 ms
+--   without these rules          140 peak rows         0 ms
+--
+-- Eight hundred and ninety-five times on the number that hits the row wall,
+-- and the whole evaluation. WHAT THEY SHARE IS THE SHAPE: each leads with
+-- `asserted_by` UNBOUND, so each enumerates every assertion in the world on
+-- every evaluation — and the trail is two rows per asserted fact, so the
+-- enumeration grows exactly as fast as the corpus does. The audits left in
+-- boot.rofl cost nothing by comparison because they read the RULE tables:
+-- rules are hundreds, facts are millions.
+--
+-- THEY ARE NOT WRONG, THEY WERE UNCONDITIONAL. A single-writer ingest has no
+-- forger — asking whether a program forged its own facts is asking whether it
+-- lied to itself. The pair protocol is the opposite case: `runtime/admission
+-- .ts` admits an agent's results into a world it did not build, and there
+-- authorship is exactly the question. So the condition is now explicit, which
+-- is all that changed.
+--
+-- AND THE LEDGER ALREADY KNEW. `f_naming_yourself_is_itself_a_forgery` records
+-- `forged` as 0 on bare boot, on sensors, on the js model, on the ledger and
+-- on the inquiry layer — and 0 ONLY BECAUSE NOBODY CAN BE NAMED, since naming
+-- an author makes it fire on the `authority` declaration itself.
+-- `f_a_forgery_shutdown_at_load_time_disarms_the_audit` records what making it
+-- bite cost: 811/701/110 against 948/941/7, with two test files failing to
+-- load so that 137 tests never ran. Nobody had put the never-fires and the
+-- costs-everything halves together.
+--
+-- LOAD IT WHEN THE WRITERS ARE NOT ALL YOURS.
+--
+--   const audit = fs.readFileSync('rules/self-audit.rofl', 'utf8');
+--   r.load(audit);            // JS kernel
+--   await session.load(audit) // Rust port
+--
+-- Required results, unchanged from when they lived in boot.rofl:
+--   ? forged[audit](F)        -> empty
+--   ? unattributed[audit](F, P) -> empty UNLESS a ledger declared
+--     `demands_authorship(P)`, in which case its unsigned facts, each with a
+--     `why`
+--   ? widened[audit](Rel, P)  -> empty (measured over 19 example worlds)
+
+-- ------------------------------------------------------------------ forged
+
+-- A fact signed by a principal with no standing in the book it landed in.
+--
+-- The trail is dated: `asserted_by(F, Who, T)` records WHEN the assertion was
+-- made, so that a past state can be replayed rather than stored. Forgery is a
+-- question about authority and not about time, so the tick is a wildcard here.
+--
+-- It REPORTS and does not refuse. The attempt to make it stop a load cost 110
+-- failures and stopped two test files from loading at all, for two structural
+-- reasons: it ran before `registerPersp`, so a named author could never create
+-- a book; and it turns an audit into a load-time refusal, after which
+-- `forged[audit]` can never be made to fire, because a forgery cannot be
+-- planted. A gate that cannot be made red is indistinguishable from an absent
+-- one. So the kernel reports and the host decides to stop, the way `errno` and
+-- a shell divide the work.
+-- THE BOOK COMES OUT OF THE FACT TERM, not out of a second relation.
+-- `in_perspective(F, P)` held exactly when `F` is `$fact(_, P, _)` — the same
+-- `persp` builds both in `factMetaFacts` — so the join was against a
+-- projection of its own left-hand side. `loader` below always destructured
+-- instead; these two now do too, and `in_perspective` is gone from the kernel.
+forged[audit]($fact(R, P, A)) :- asserted_by($fact(R, P, A), Who, _),
+                                 not authority(P, Who).
+
+-- ------------------------------------------------------------ unattributed
+
+-- ANONYMITY IS RECORDED BY THE KERNEL AND JUDGED BY A LEDGER.
+--
+-- Withholding `authority(P, user)` would make anonymity a forgery outright and
+-- needs no rule at all. It is refused because the honest corpus is anonymous
+-- end to end — a bare boot+sensors world holds 9 asserted facts — so `forged`
+-- would be red on the first load of every program here and green on nothing. A
+-- gate in that state is switched off within a week, and what is left is the
+-- appearance of one.
+--
+-- `demands_authorship` is host data, declared like `imports` and `collects`: a
+-- ledger that says nothing keeps exactly what it had, and a ledger that asks
+-- gets every unsigned fact in it named. The alternative was a sentence in a
+-- README, and a README is not auditable.
+edb(demands_authorship).
+
+unattributed[audit]($fact(R, P, A), P) :- asserted_by($fact(R, P, A), user, _),
+                                          demands_authorship(P).
+
+-- ----------------------------------------------------------------- widened
+
+-- A RELATION NEGATED UNDER A BOOK THAT TWO NAMED AUTHORS BOTH WRITE.
+--
+-- `loader` exists only to feed this, and it subtracts `$kernel` rather than
+-- exempting a relation. Measured: without the subtraction the audit reports 13
+-- rows over 19 worlds, ALL of them `edb` or `imports` in [main] and every one
+-- of them `$kernel` plus exactly one program. With it, 0. Subtracting the
+-- principal is deliberate — `$kernel` plus alice plus bob is still two files,
+-- and an exemption keyed on the relation would have gone quiet on that.
+--
+-- A REPORT, like `unattributed` and `collected`, because a co-written table
+-- under two named authors is a thing an author may legitimately want.
+loader(Rel, P, Who)   :- asserted_by($fact(Rel, P, _), Who, _), Who != $kernel.
+
+widened[audit](Rel, P) :- negated_under(Rel, P),
+                          loader(Rel, P, W1), loader(Rel, P, W2), W1 != W2.

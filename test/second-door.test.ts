@@ -34,7 +34,11 @@ import { encodeRule } from '../src/reflect.ts';
 import { canonTerm } from '../src/unify.ts';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'rules/self-audit.rofl'), 'utf8');
 
 /** A legitimate two-place rule, and its reflection rendered as SURFACE TEXT.
  *  Two places so the forged head matches `authority/2`: a rule that writes the

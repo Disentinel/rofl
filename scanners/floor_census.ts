@@ -71,7 +71,7 @@ export const EXECUTABLE = [V.rule, V.conclusion_lit, V.premise_lit];
 export const ABOUT_RULE = [V.has_premise, V.premise_pos, V.premise_neg,
   V.has_conclusion, V.concludes, V.conclusion_tense, V.reads_from,
   V.writes_to, V.uses_builtin];
-export const ABOUT_FACT = [V.in_perspective, V.asserted_by];
+export const ABOUT_FACT = [V.asserted_by];
 export const PROVENANCE = [V.derived_by];
 export const KERNEL_TABLE = [V.reserved, V.edb, V.mode, V.authority, V.hole];
 

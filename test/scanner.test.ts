@@ -12,7 +12,11 @@ import { Rofl } from '../src/api.ts';
 import { extractFacts } from '../scanners/js.ts';
 import { materialize, SCANNER_WHO, PREAMBLE_FILE } from '../scanners/materialize.ts';
 
-const BOOT = fs.readFileSync(new URL('../boot.rofl', import.meta.url), 'utf8');
+// `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
+// world loads when its writers are not all its own. This one plants forgeries,
+// so it says so here rather than inheriting the audit from the kernel.
+const BOOT = fs.readFileSync(new URL('../boot.rofl', import.meta.url), 'utf8')
+  + '\n' + fs.readFileSync(new URL('../rules/self-audit.rofl', import.meta.url), 'utf8');
 
 const A_JS = `
 import { helper } from './lib/b.ts';

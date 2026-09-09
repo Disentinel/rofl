@@ -384,10 +384,11 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
         let n = who.unwrap_or("user").to_string();
         e.h.atom(&n)
     };
-    let meta = [
-        (e.v.in_perspective, vec![f, Term::atom(persp)]),
-        (e.v.asserted_by, vec![f, wt, Term::int(tick)]),
-    ];
+    // ONE ROW, NOT TWO. `in_perspective(f, persp)` stood beside this and was a
+    // projection of its own left-hand side — `f` IS `$fact(rel, persp, args)`.
+    // 41 722 rows on 16 eslint files, a third of the world, for the second
+    // argument of the term it was keyed by.
+    let meta = [(e.v.asserted_by, vec![f, wt, Term::int(tick)])];
     for (rel, margs) in meta {
         if withheld.contains(&rel) {
             continue;

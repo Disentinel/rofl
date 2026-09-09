@@ -136,7 +136,6 @@ perspective VARIABLE to one.
 | relation | what it supplies | read by |
 |---|---|---|
 | `asserted_by`/3 | who asserted a fact, and when. A call that named no author is signed `user` (`ANON_WHO`, `src/reflect.ts`) — **not** `$anon`, which is what boot.rofl's own comments and about twenty sites in `src/` still say | `forged`, `unattributed`, `loader` |
-| `in_perspective`/2 | which book a fact landed in | `forged`, `unattributed` |
 | `reads_from`/2 | which book a rule's body reads | `flow` |
 | `writes_to`/2 | which book a rule's head writes | `flow` |
 | `premise_lit`/3 | a premise reified, carrying the literal's book — the only place a negation's book is recorded | `negated_under` |
