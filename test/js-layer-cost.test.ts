@@ -96,6 +96,18 @@ const CONTROLFLOW: WorldSpec = {
     'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
     'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl'],
   omits: [
+    // ONE PACK FROM THE wip/curve MERGE, 2026-09-09. `facts/js-cost.rofl` is
+    // INSTRUMENTATION — it prices the rules themselves, the same class as
+    // `js-vocabulary` and `js-pack-home` above, and says nothing about the
+    // corpus this world measures. Refused by name rather than discovered later
+    // as a silently missing pack.
+    // The merge also brought `facts/rule-shape.rofl` and `rules/rule-shape.rofl`
+    // and I listed them here first: WRONG, and the closure said so in one run.
+    // It ranges over `js-*` only, so a `rule-shape` pack is outside its subject
+    // altogether and naming it here made the two lists over-cover. A closure
+    // that catches a pack it should not have been asked about is doing the same
+    // job as one that catches a pack nobody decided on.
+    'facts/js-cost.rofl',
     // the era layer has its own world below, its own corpus, and its own number
     'facts/js-env.rofl', 'facts/js-lib-surface.rofl', 'rules/js-env.rofl',
     'rules/js-env-api.rofl',
@@ -126,6 +138,18 @@ const ERA: WorldSpec = {
     'facts/js-env.rofl',
     'rules/js-structure.rofl', 'rules/js-env.rofl'],
   omits: [
+    // ONE PACK FROM THE wip/curve MERGE, 2026-09-09. `facts/js-cost.rofl` is
+    // INSTRUMENTATION — it prices the rules themselves, the same class as
+    // `js-vocabulary` and `js-pack-home` above, and says nothing about the
+    // corpus this world measures. Refused by name rather than discovered later
+    // as a silently missing pack.
+    // The merge also brought `facts/rule-shape.rofl` and `rules/rule-shape.rofl`
+    // and I listed them here first: WRONG, and the closure said so in one run.
+    // It ranges over `js-*` only, so a `rule-shape` pack is outside its subject
+    // altogether and naming it here made the two lists over-cover. A closure
+    // that catches a pack it should not have been asked about is doing the same
+    // job as one that catches a pack nobody decided on.
+    'facts/js-cost.rofl',
     // no call graph and no value flow: the era question is one pass over kinds
     // and one attribute, which is why this world costs 92 ms and the one above
     // costs 4.6 s
@@ -158,6 +182,18 @@ const CALLGRAPH: WorldSpec = {
     'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
     'rules/js-callgraph.rofl'],
   omits: [
+    // ONE PACK FROM THE wip/curve MERGE, 2026-09-09. `facts/js-cost.rofl` is
+    // INSTRUMENTATION — it prices the rules themselves, the same class as
+    // `js-vocabulary` and `js-pack-home` above, and says nothing about the
+    // corpus this world measures. Refused by name rather than discovered later
+    // as a silently missing pack.
+    // The merge also brought `facts/rule-shape.rofl` and `rules/rule-shape.rofl`
+    // and I listed them here first: WRONG, and the closure said so in one run.
+    // It ranges over `js-*` only, so a `rule-shape` pack is outside its subject
+    // altogether and naming it here made the two lists over-cover. A closure
+    // that catches a pack it should not have been asked about is doing the same
+    // job as one that catches a pack nobody decided on.
+    'facts/js-cost.rofl',
     'facts/js-controlflow.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl',
     'facts/js-shapes.rofl', 'facts/js-statements.rofl', 'facts/js-env.rofl',
     'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
@@ -443,8 +479,13 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // -> 46.386) because the change is not in this pack; the WORLD carries it,
   // which is exactly what f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door
   // says a difference cannot see and the totals beside it can.
-  assert.equal(L.world.total, 3521279, 'rows handed out by the store in the control-flow fixpoint');
-  assert.equal(L.world.firings, 177218, 'derivations in the control-flow fixpoint');
+  // 3 521 279 -> 3 121 025 on 2026-09-09 with the wip/curve merge: `nearest_v`
+  // stopped being an argmin subtracted out of a quadratic — `encloses_v` and
+  // `closer_v` are DELETED, replaced by two linear rules walking down from the
+  // function — and the facts fell with them, 434 149 -> 422 256, because those
+  // two relations were themselves rows in the store.
+  assert.equal(L.world.total, 3121025, 'rows handed out by the store in the control-flow fixpoint');
+  assert.equal(L.world.firings, 171279, 'derivations in the control-flow fixpoint');
 
   // THE LAYER, by difference. THE HEADLINE: the layer nobody was measuring is
   // 45.97% of the rows handed out in its own world, while being 5.13% of its
@@ -452,14 +493,14 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // everything else in the same world. A layer that reads more than a dozen
   // rows per derivation is doing a scan somewhere, and the path list below says
   // where.
-  assert.equal(L.rows, 252165, 'rows the control-flow pack costs, by difference');
-  assert.equal(L.firings, 11294, 'derivations the control-flow pack adds');
-  assert.ok(Math.abs(L.rowShare - 7.161) < 1.5,
-    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 7.161%`);
-  assert.ok(Math.abs(L.firingShare - 6.373) < 0.5,
-    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 6.373%`);
-  assert.ok(Math.abs(L.perFiring - 22.33) < 5,
-    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.33`);
+  assert.equal(L.rows, 250621, 'rows the control-flow pack costs, by difference');
+  assert.equal(L.firings, 11293, 'derivations the control-flow pack adds');
+  assert.ok(Math.abs(L.rowShare - 8.030) < 1.5,
+    `the layer is ${L.rowShare.toFixed(3)}% of its world's rows, and it has been 8.030%`);
+  assert.ok(Math.abs(L.firingShare - 6.593) < 0.5,
+    `the layer is ${L.firingShare.toFixed(3)}% of its world's derivations, and it has been 6.593%`);
+  assert.ok(Math.abs(L.perFiring - 22.19) < 5,
+    `${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.19`);
 
   // AND THE COMPARISON THAT MAKES THAT NUMBER READABLE: the same ratio for the
   // world without this pack.
@@ -473,8 +514,8 @@ test('the control-flow layer costs a number, and it is nearly half of its world'
   // only the layer's is asserted, because the layer is what this gate measures.
   const rest = L.without.total / L.without.firings;
   console.log(`    rows per derivation: layer ${L.perFiring.toFixed(2)}, rest of the world ${rest.toFixed(2)}`);
-  assert.ok(Math.abs(L.perFiring - 22.33) < 5,
-    `the layer walks ${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.33`);
+  assert.ok(Math.abs(L.perFiring - 22.19) < 5,
+    `the layer walks ${L.perFiring.toFixed(2)} rows per derivation, and it has been 22.19`);
 
   // AND THE DISTANCE TO THE WALL, STATED RATHER THAN DISCOVERED. This is the
   // gate that found the ceiling by crossing it — MUTANT C and C' came back
@@ -629,7 +670,7 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   assert.equal(L.firings, cf().firings, 'positive control: the ANSWERS do not move — this is cost only');
   assert.equal(L.world.q('after_abrupt[code](S)').n, cf().world.q('after_abrupt[code](S)').n);
 
-  assert.notEqual(L.world.total, 3521279, 'KILLED by the world total (+1.15%)');
+  assert.notEqual(L.world.total, 3121025, 'KILLED by the world total (+1.15%)');
   assert.deepEqual(L.paths.map(([k]) => k).filter((k) => !cf().paths.some(([b]) => b === k)),
     ['relPersp ast_child'],
     'KILLED by the layer\'s path SET, with the offender\'s own name in the diff');
@@ -654,9 +695,9 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
   // moves the share 7.161% -> 9.292% and the band catches it. A MUTANT'S
   // SURVIVAL CAN BE A PROPERTY OF THE WORLD'S SIZE RATHER THAN OF THE CHECK,
   // which means a survivor list is only true at a stated scale.
-  assert.ok(Math.abs(L.rowShare - 7.161) > 1.5,
+  assert.ok(Math.abs(L.rowShare - 8.030) > 1.5,
     `KILLED by the row-share band now: ${L.rowShare.toFixed(3)}% against 7.161%`);
-  assert.ok(Math.abs(L.firingShare - 6.373) < 0.5,
+  assert.ok(Math.abs(L.firingShare - 6.593) < 0.5,
     `SURVIVOR: the firing-share band sleeps through it (${L.firingShare.toFixed(3)}%)`);
   console.log('      KILLED by the world total, the path set, the share band and ' +
               'now the ROW-SHARE band too; SURVIVED only the firing-share band');
@@ -740,10 +781,10 @@ test('MUTANT C: an expensive new rule added to the layer pack', () => {
   const L = layerCost(CONTROLFLOW, CF_CUT, [{ file: 'rules/js-controlflow.rofl', append: PROBE }], cf().without);
   showLayer('mutant C', L);
   assert.ok(L.world.q('cost_probe[audit](N, C)').n > 0, 'positive control: the injected rule fires');
-  assert.notEqual(L.world.total, 3521279, 'KILLED by the world total');
-  assert.notEqual(L.world.firings, 177218, 'KILLED by the world firings');
+  assert.notEqual(L.world.total, 3121025, 'KILLED by the world total');
+  assert.notEqual(L.world.firings, 171279, 'KILLED by the world firings');
   assert.ok(Math.abs(L.firingShare - 6.373) > 0.5, `KILLED by the firing share: ${L.firingShare.toFixed(3)}%`);
-  assert.ok(Math.abs(L.perFiring - 22.33) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
+  assert.ok(Math.abs(L.perFiring - 22.19) > 5, `KILLED by rows-per-derivation: ${L.perFiring.toFixed(2)}`);
   // SURVIVOR, named: the layer's PATH SET does not change. A new rule that
   // reads relations already standing adds rows to paths that are already in the
   // list, so membership says nothing and only the shares and the totals do.
@@ -787,7 +828,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
 
   // THE WORLD SEES IT — and to the row it is the same cost as MUTANT C, which
   // is what makes this a controlled pair rather than an anecdote.
-  assert.notEqual(L.world.total, 3521279, 'the world total is what catches it');
+  assert.notEqual(L.world.total, 3121025, 'the world total is what catches it');
   // THE LAYER DOES NOT, and every layer figure is identical to the baseline.
   assert.equal(L.rows, cf().rows, 'SURVIVOR: the layer\'s rows do not move by ONE');
   assert.equal(L.firings, cf().firings, 'SURVIVOR: nor its derivations');
@@ -803,7 +844,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
   // TO THE NEIGHBOUR'S SIZE, which means it is a detector of large neighbours
   // and not a detector of neighbours. A rule one pack away that is merely
   // expensive-ish is invisible to every figure this gate has.
-  assert.ok(Math.abs(L.firingShare - 6.373) > 0.2,
+  assert.ok(Math.abs(L.firingShare - 6.593) > 0.2,
     `the firing SHARE catches it because the denominator grew: ${L.firingShare.toFixed(3)}%`);
   console.log('      SURVIVED every difference this gate takes. Killed only by the world ' +
               'totals and by the shares, which have the world in their denominator.');
@@ -822,7 +863,7 @@ test('MUTANT D: the layer pack missing from the world', () => {
     [...dropped.packs.filter((p) => p !== 'boot.rofl'), ...dropped.omits].sort(),
     jsPacksOnDisk(),
     'KILLED by the closure: a pack that is neither loaded nor refused');
-  assert.ok(w.total < 3521279, `and the total falls, which on its own says nothing: ${w.total}`);
+  assert.ok(w.total < 3121025, `and the total falls, which on its own says nothing: ${w.total}`);
   console.log('      KILLED by unpopulatable and by the pack-list closure; the TOTAL alone ' +
               'only falls, which is the safe direction and is why it cannot be the check');
 });
@@ -832,7 +873,7 @@ test('MUTANT E: the fixpoint truncated at a budget', () => {
   // that was found in five files at once, one of them the first cost gate, which
   // had been pinning half a world.
   const w = build(CONTROLFLOW, { budget: 100_000 });
-  assert.ok(w.total < 3521279 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
+  assert.ok(w.total < 3121025 * 0.5, `a truncated world looks CHEAP: ${w.total} rows`);
   assert.equal(w.holes.unpopulatable, false);
   assert.ok(w.holes.n > 0, 'KILLED by hole(Q, W), which the real gate asserts is empty');
   // AND A SECOND TELL, found by planting this mutant: in a truncated world the

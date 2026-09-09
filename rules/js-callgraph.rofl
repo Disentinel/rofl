@@ -309,8 +309,15 @@ ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, _, _),
-                       ast_child[code](D, init, 0, F),
+-- THE DECLARATOR FIRST, and it is the same repair `has_return` took. Written
+-- `fn_node(F)` then `ast_node(D, variable_declarator, _, _)`, F and D share
+-- nothing, so every function is laid beside every declarator and
+-- `ast_child(D, init, 0, F)` filters afterwards: measured by
+-- scanners/js_cost.ts on sixteen files of eslint/lib, 271 982 accumulator
+-- elements reaching that filter to conclude NOTHING AT ALL. Asking
+-- `ast_child(D, init, 0, F)` with D already bound reads one child instead.
+fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _, _),
+                       ast_child[code](D, init, 0, F), fn_node[code](F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 -- `key_name` HERE TOO, 2026-09-09 (w_computed_key_names). This arm read
 -- `ast_name` on the key directly and was therefore untouched by the guard three
@@ -319,6 +326,18 @@ fn_name[code](F, N) :- fn_node[code](F), ast_node[code](D, variable_declarator, 
 -- none after — and it is the arm the method form of that site could not reach,
 -- because `{ [k]() {} }` is an `object_method` and this rule is about a
 -- property whose VALUE is a function.
+--
+-- AND THIS IS THE ONE PLACE THE wip/curve MERGE WAS NOT A COMMENT DIFFERENCE,
+-- 2026-09-09. The other session repaired the SAME clause for COST and its
+-- version reads `ast_name[code](K, N)` directly — 236 132 accumulator elements
+-- for nothing, correctly measured — which is precisely the unguarded read this
+-- arm was repaired to stop making. Taking theirs would have bought a real
+-- saving and silently reverted a correctness fix, and git offered them as
+-- equals. CORRECTNESS WINS THE CONFLICT AND THE COST IDEA IS KEPT: their
+-- ordering insight was to ask the cheap thing first, and `key_name` IS now the
+-- cheap thing — narrowed from 2 148 rows to 105 by the same item — so leading
+-- with it is their repair and mine at once. Measured after the merge rather
+-- than argued: see the cost gate's SHARE table.
 fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_node[code](P, object_property, _, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F).

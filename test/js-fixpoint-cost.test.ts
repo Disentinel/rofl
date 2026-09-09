@@ -274,6 +274,10 @@ test('every read path above five per cent, by name', () => {
   // membership; the share is what says a path grew.
   assert.deepEqual(c.share.map(([k]) => k).sort(), SHARE.map(([k]) => k).sort(),
     'a new path above five per cent is a body ordered so a big relation is enumerated first');
+  if (process.env.SHOW_SHARE) {
+    for (const [k, v] of c.share) console.log(`    SHARE ${k}  ${v.toFixed(2)}%`);
+    console.log(`    FACTS ${c.facts}  FIRINGS ${c.firings}  TOTAL ${c.total}`);
+  }
   const got = new Map(c.share);
   for (const [name, want] of SHARE) {
     const now = got.get(name)!;

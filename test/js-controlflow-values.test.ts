@@ -54,11 +54,20 @@ const ACC: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[] 
   },
   {
     name: 'c4 the receiver is not checked',
-    mut: [{ find: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
-                             selects[flow](N, Key), ast_child[code](N, object, 0, O),
+    // THE ANCHOR MOVED WHEN THE RULE WAS REORDERED FOR COST, 2026-09-09, and
+    // that is the whole reason this comment exists: a mutant keyed on verbatim
+    // source text is the line-anchor trap in another costume. It went red on a
+    // change that altered no answer — 98 of 99 tests in this file passed,
+    // including c3 which reads `accessor_read` downstream, and the fact count
+    // over 886 230 facts of eslint/lib was identical before and after. What
+    // the mutant MEANS is unchanged: delete the receiver check and a plain
+    // property of the same name reads as an accessor.
+    mut: [{ find: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key), member_node_v[flow](N),
+                             ast_child[code](N, object, 0, O),
                              may_be_node[flow](O, Obj).`,
-            replace: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M), member_node_v[flow](N),
-                             selects[flow](N, Key).` }],
+            replace: `accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key), member_node_v[flow](N).` }],
     expect: (m, b) => {
       assert.equal(names(m).has('alsoReads'), true, 'a plain property of the same name reads as an accessor');
       assert.equal(names(b).has('alsoReads'), false, 'positive control');

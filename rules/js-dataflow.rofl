@@ -699,10 +699,30 @@ fn_node_v[flow](F) :- ast_node[code](F, K, _, _), fn_kind_v(K).
 -- `nearest_fn`, restricted to sites. Two computations of one relation is a
 -- smell and consolidating them is a separate change, because the call graph's
 -- copy is the target of a mutant that would lose its anchor.
-encloses_v[flow](F, X) :- fn_node_v[flow](F), ast_within[code](F, X).
-closer_v[flow](F, X)   :- encloses_v[flow](F, X), encloses_v[flow](G, X),
-                          ast_within[code](F, G), F != G.
-nearest_v[flow](F, X)  :- encloses_v[flow](F, X), not closer_v[flow](F, X).
+-- WALKED DOWN FROM THE FUNCTION, not sieved out of a quadratic.
+--
+-- Until 2026-09-09 this was three relations: `encloses_v` materialised every
+-- (function, descendant) pair, `closer_v` paired each descendant's enclosing
+-- functions against each OTHER to find a nearer one, and `nearest_v` subtracted
+-- the second from the first. That is an argmin written as a negation over a
+-- quadratic, and it cost: measured from inside the join by scanners/js_cost.ts
+-- on sixteen files of eslint/lib, `closer_v` alone was 1 064 884 accumulator
+-- elements — 35.2 percent of the whole fixpoint — to conclude 2295 rows.
+--
+-- IT IS NOT A CROSS PRODUCT and no reorder fixes it: both `encloses_v`
+-- positions join on X, so `test/rule-shape.test.ts` has nothing to say, and
+-- one plausible reorder measured 65 percent WORSE. The cost is the shape, so
+-- the shape changed.
+--
+-- Two rules, each linear. The first names the children of a function; the
+-- second carries a nearest function down through nodes that are not themselves
+-- functions, and stops at one that is — which is exactly what "nearest" means,
+-- said forwards instead of by exclusion. rules/js-structure.rofl already says
+-- in its own comment that an ancestor query here "should be answered by
+-- walking ast_in from the node rather than by materialising the closure".
+nearest_v[flow](F, X)  :- fn_node_v[flow](F), ast_in[code](F, X).
+nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node_v[flow](P),
+                          ast_in[code](P, X).
 
 -- ARGUMENT INTO PARAMETER. The INDEX is the content — argument 0 and argument 1
 -- are different facts about the program, which is why the scanner carries it.

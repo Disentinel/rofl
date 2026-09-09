@@ -72,6 +72,8 @@ export interface EvalOpts {
   retainTicks?: number;
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
+  /** The materialization wall, in rows. See branch nextver, examples/reach. */
+  space?: number;
 }
 
 /** REFUSED AT THE DOOR: a negation whose meaning depends on where it stands.
@@ -183,6 +185,7 @@ export class Rofl {
    *  for ever. See `frozenRetention` for what the number means and for the
    *  second gate that can override it. */
   retainTicks: number | undefined;
+  private readonly space: number | undefined;
   diagnostics: string[] = [];
   private qn = 0;
   private loadn = 0;
@@ -203,6 +206,7 @@ export class Rofl {
     this.reuse = opts.reuse ?? true;
     this.evaluator = opts.evaluator ?? 'rounds';
     this.retainTicks = opts.retainTicks;
+    this.space = opts.space;
     this.store = new Store();
     bootstrapKernel(this.store);
   }
@@ -632,7 +636,7 @@ export class Rofl {
    *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
    *  through `ensure`/`prepared` and must not be able to disagree about it. */
   private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId };
+    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space };
     return this.evaluator === 'strata'
       ? new Evaluation(this.store, opts)
       : new RoundEvaluation(this.store, opts);
