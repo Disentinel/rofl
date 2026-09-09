@@ -47,7 +47,7 @@ use crate::reflect::{
     sealed_bodies, BodyElem, Clause, Lit, Temporal, Vocab,
 };
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{Store, F_BASE, F_FROZEN, F_TICK};
+use crate::store::{F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term};
 
 pub const KERNEL_CLAIM: &str = "$kernel_authority";
@@ -219,40 +219,94 @@ fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
     ))
 }
 
-/// `addClause` (src/api.ts:481). Returns a diagnostic, or `None` on admission.
-fn add_clause(e: &mut Eval, c0: &Clause, who: Option<&str>, trusted: bool) -> Option<String> {
-    // BEFORE any check, because the checks and the diagnostics must speak about
-    // the clause that will actually be stored — and the `$` ledger check reads
-    // the clause AS WRITTEN, since the resolver puts `$kernel` on a bare
-    // `concludes(...)` and refusing that would be refusing the resolver's work
-    // rather than the author's.
-    if let Some(d) = check_kernel_book(&e.h, c0) {
+/// EVERY REASON A CLAUSE CAN BE REFUSED, and nothing that changes the world.
+///
+/// `addClause` (src/api.ts:481) interleaves its checks with its writes and
+/// undoes the writes from a `store.clone()` when a later clause is refused.
+/// That is correct and it costs a FULL COPY OF THE WORLD PER LOAD — which on a
+/// 5.7M-fact world is the difference between an ingest path and a toy, since a
+/// caller loading 1426 files would copy the world 1426 times.
+///
+/// It is avoidable here because EVERY refusal in `addClause` is a pure
+/// function of the clause: the kernel ledger, the `$` author, the arity, the
+/// orderability, a non-atom perspective, a non-ground fact, `@next`, granting
+/// a `$` principal, and a rule concluding into a kernel relation. Not one of
+/// them reads the store. The only store read on any refusal path is
+/// `store.tick` for `@init`, and that is a DIAGNOSTIC rather than a refusal
+/// and the tick does not move during a load.
+///
+/// So the two are split: this decides, `admit_clause` writes, and `load`
+/// checks every clause before admitting any. Admission then has no refusal in
+/// it at all, which is a stronger guarantee than a rollback — there is nothing
+/// to roll back FROM. The gate that proves it is
+/// `a_refused_load_is_atomic_and_complete`: a good clause sharing a file with
+/// three bad ones must leave no trace.
+fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bool) -> Option<String> {
+    if let Some(d) = check_kernel_book(h, c0) {
         return Some(d);
     }
     let mut c = c0.clone();
-    resolve_clause_books(&e.v, &mut c);
+    resolve_clause_books(v, &mut c);
     if !trusted {
-        if let Some(d) = check_who(&e.h, who, &c) {
+        if let Some(d) = check_who(h, who, &c) {
             return Some(d);
         }
     }
-    if let Some(d) = check_arity(&e.h, &e.v, &c) {
+    if let Some(d) = check_arity(h, v, &c) {
         return Some(d);
     }
-    if let Some(d) = check_orderable(&e.h, &c) {
+    if let Some(d) = check_orderable(h, &c) {
         return Some(d);
     }
-
     if c.body.is_empty() {
-        return add_fact(e, &c, who);
+        let head = &c.head;
+        let Some(_) = head.persp.as_atom() else {
+            return Some(format!("fact {}: perspective must be an atom", canon_clause(h, &c)));
+        };
+        if !head.args.iter().all(|a| h.is_ground(*a)) {
+            return Some(format!("fact {}: must be ground", canon_clause(h, &c)));
+        }
+        if head.temporal == Temporal::Next {
+            return Some(format!("fact {}: '@next' facts are not assertable", canon_clause(h, &c)));
+        }
+        // NOBODY MAY GRANT THE KERNEL. The `$` prefix is the test, not the
+        // single name `$kernel`: a program may not hand standing to ANY kernel
+        // principal, which is the line `check_who` draws for the author slot,
+        // said about the other slot. The kernel grants itself from
+        // `register_persp` and never through this path.
+        if head.rel == v.authority && head.args.len() == 2 {
+            if let Some(w) = head.args[1].as_atom() {
+                if h.name(w).starts_with('$') {
+                    return Some(format!(
+                        "fact {}: '{}' is a kernel principal and cannot be granted authority by a program",
+                        canon_clause(h, &c),
+                        h.name(w)
+                    ));
+                }
+            }
+        }
+        return None;
     }
-
-    if e.v.is_reserved(c.head.rel) {
+    if v.is_reserved(c.head.rel) {
         return Some(format!(
             "rule rejected: '{}' is a kernel relation (write-protected): {}",
-            e.h.name(c.head.rel),
-            canon_clause(&e.h, &c)
+            h.name(c.head.rel),
+            canon_clause(h, &c)
         ));
+    }
+    None
+}
+
+/// The writing half of `addClause` (src/api.ts:481). NO REFUSAL LIVES HERE —
+/// `check_clause` has already run over every clause in the load, so anything
+/// that reaches this function is admissible. It returns nothing for the same
+/// reason.
+fn admit_clause(e: &mut Eval, c0: &Clause, who: Option<&str>) {
+    let mut c = c0.clone();
+    resolve_clause_books(&e.v, &mut c);
+    if c.body.is_empty() {
+        add_fact(e, &c, who);
+        return;
     }
     if let Some(p) = c.head.persp.as_atom() {
         register_persp(&mut e.h, &e.v, &mut e.store, p);
@@ -278,39 +332,16 @@ fn add_clause(e: &mut Eval, c0: &Clause, who: Option<&str>, trusted: bool) -> Op
         e.store.add(&e.h, f.rel, kp, &f.args, F_BASE);
     }
     e.store.dirty = true;
-    None
 }
 
-fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) -> Option<String> {
+fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
     let h_ = &c.head;
-    let Some(persp) = h_.persp.as_atom() else {
-        return Some(format!("fact {}: perspective must be an atom", canon_clause(&e.h, c)));
-    };
-    if !h_.args.iter().all(|a| e.h.is_ground(*a)) {
-        return Some(format!("fact {}: must be ground", canon_clause(&e.h, c)));
-    }
-    if h_.temporal == Temporal::Next {
-        return Some(format!("fact {}: '@next' facts are not assertable", canon_clause(&e.h, c)));
-    }
+    let persp = h_.persp.as_atom().expect("checked");
+    // NOT A REFUSAL: an `@init` fact arriving after tick 0 is IGNORED with a
+    // diagnostic, which is why it is here and not in `check_clause`.
     if h_.temporal == Temporal::Init && e.store.tick != 0 {
         e.diags.push(format!("fact {}: '@init' ignored after tick 0", canon_clause(&e.h, c)));
-        return None;
-    }
-    // NOBODY MAY GRANT THE KERNEL. The `$` prefix is the test, not the single
-    // name `$kernel`: a program may not hand standing to ANY kernel principal,
-    // which is the line `check_who` draws for the author slot, said about the
-    // other slot. The kernel grants itself from `register_persp` and never
-    // through this path, so the refusal costs the kernel nothing.
-    if h_.rel == e.v.authority && h_.args.len() == 2 {
-        if let Some(w) = h_.args[1].as_atom() {
-            if e.h.name(w).starts_with('$') {
-                return Some(format!(
-                    "fact {}: '{}' is a kernel principal and cannot be granted authority by a program",
-                    canon_clause(&e.h, c),
-                    e.h.name(w)
-                ));
-            }
-        }
+        return;
     }
     register_persp(&mut e.h, &e.v, &mut e.store, persp);
 
@@ -367,7 +398,6 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) -> Option<String> {
         }
     }
     e.store.dirty = true;
-    None
 }
 
 fn is_sealed_body(v: &Vocab, b: Sym) -> bool {
@@ -432,23 +462,28 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         };
     }
 
-    // ATOMIC. A program with three bad clauses hears about all three and
-    // leaves nothing behind.
-    let backup: Store = e.store.clone();
+    // ATOMIC, WITHOUT COPYING THE WORLD. A program with three bad clauses
+    // hears about all three and leaves nothing behind — and it leaves nothing
+    // behind because nothing was written, not because a backup was restored.
+    // See `check_clause` for why every refusal can be decided before any write.
+    let mut cs: Vec<Clause> = Vec::with_capacity(clauses.len());
     let mut diags: Vec<String> = Vec::new();
-    let mut admitted = 0usize;
     for pc in &clauses {
         match to_clause(&mut e.h, &e.v, pc) {
-            Ok(c) => match add_clause(e, &c, who_owned.as_deref(), trusted) {
-                Some(d) => diags.push(d),
-                None => admitted += 1,
-            },
+            Ok(c) => cs.push(c),
             Err(d) => diags.push(d),
         }
     }
+    for c in &cs {
+        if let Some(d) = check_clause(&e.h, &e.v, c, who_owned.as_deref(), trusted) {
+            diags.push(d);
+        }
+    }
     if !diags.is_empty() {
-        e.store = backup;
         return Loaded { ok: false, diagnostics: diags, admitted: 0 };
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted }
+    for c in &cs {
+        admit_clause(e, c, who_owned.as_deref());
+    }
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: cs.len() }
 }

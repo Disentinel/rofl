@@ -205,6 +205,19 @@ and it is not built.
   `f_a_stale_firing_outlives_the_premise_it_rests_on` and the repair is a
   measured trade — see
   `f_the_third_repair_makes_the_engines_agree_and_still_costs_twenty_tests`.
+- **The Rust parser is 1.75x `src/parser.ts`, and that is measured**: 112 063
+  KiB/s against 64 195 over 66 files and 733 KiB, three runs at 1.76 / 1.75 /
+  1.74. Both sides run a FIXED WALL WINDOW started at the same moment and the
+  work finished is counted, so the two share the contention — the machine was
+  never quiet this session. The ratio held to within 1% while the absolute
+  throughputs moved 19%, which is what makes it a statement about the parsers
+  rather than about the afternoon. It is smaller than anyone would guess, and
+  the reason is the other side: V8 on a warm tight loop is fast and
+  `src/parser.ts` is itself a tuned hand-written parser. There is headroom here
+  — `rofl_parse::Term` allocates a `String` per atom and per variable name
+  where the host interns — and until that is measured, 1.75 is a number about
+  this implementation, not about the language. Against ring1 at 9 758x, both
+  are the same answer.
 - Density and time are measured on one workload: the JS model over JavaScript,
   plus the demo corpus. 198 B/fact and 45.7 s at 5.68M facts is what that
   workload does, not what the engine does.

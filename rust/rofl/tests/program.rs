@@ -201,6 +201,14 @@ fn the_door_refuses_what_the_kernel_refuses() {
             Err(d) => assert!(d.iter().any(|x| x.contains("already claimed")), "{d:?}"),
         }
     }
+    // A FACT whose book is a variable — refused, while the same book on a RULE
+    // is legal and must still load. This pair is the one place `check_clause`
+    // and `admit_clause` could drift apart: admission asserts the perspective
+    // is an atom, so a refusal that stopped being decided up front would come
+    // out as a panic. Verified message-for-message against the kernel,
+    // 2026-09-09: `fact p[?B](a)@now: perspective must be an atom`.
+    refused(&mut fresh(), "p[B](a).", "perspective must be an atom");
+    fresh().load("p[B](X) :- q(X).", None).expect("a rule may have a variable book");
     // And a syntax error is a diagnostic, not a panic.
     refused(&mut fresh(), "p(a", "");
 }
@@ -215,9 +223,15 @@ fn a_refused_load_is_atomic_and_complete() {
     s.evaluate().expect("evaluate");
     let before = s.eval.store.canonical_state(&s.eval.h);
 
+    // The good clause is FIRST, so a load that wrote as it went would have
+    // written it before meeting the first refusal.
     let bad = "$good_one(a).\nauthority(b, $kernel).\np[$kernel](c).\nstratum(x, y, z, w).";
     let d = s.load(bad, None).expect_err("a bad program was accepted");
     assert!(d.len() >= 3, "only {} diagnostics for three bad clauses: {d:?}", d.len());
+    // Nothing was written, rather than written and rolled back: `load` no
+    // longer copies the store, so this is the assertion that stands in for the
+    // backup it used to take.
+    assert_eq!(s.eval.store.rel_count(s.eval.h.intern("$good_one")), 0);
 
     s.evaluate().expect("re-evaluate");
     assert_eq!(
