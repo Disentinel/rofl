@@ -512,8 +512,13 @@ test('TIER 3: an identifier callee that names a PARAMETER', () => {
     // the tree says 1, and `duo(cubed, ...bench)` keeps `cubed` in slot 0 and
     // starts the array at slot 1. Plus `shaped(n, shape = squared)`, where a
     // DEFAULTED parameter has an index at all for the first time.
+    // THREE MORE ON 2026-09-09 with `w_scope_shadowing`, and all three are
+    // slot 0: the shadowing fixture hands a function to a parameter whose name
+    // is rebound inside the function, which is the only way to make "the inner
+    // use does not mean the parameter" an EDGE the runtime oracle can judge.
     ['0 -> chiselled', '0 -> cubed', '0 -> leaf', '0 -> mid', '0 -> neverSettle',
-     '0 -> pickedA', '0 -> pickedB', '1 -> chiselled', '1 -> cubed', '1 -> mid',
+     '0 -> pickedA', '0 -> pickedB', '0 -> shBlockHit', '0 -> shInnerHit',
+     '0 -> shParamHit', '1 -> chiselled', '1 -> cubed', '1 -> mid',
      '1 -> planed', '2 -> planed']);
 
   // AND THE SHAPE IS STILL NOT FINISHED, which is why `shape_because` for
@@ -597,11 +602,16 @@ test('argument position is content: which function is in which slot', () => {
   // `cubed` is at slot 2 here and at child index 1 in the tree, because `bench`
   // has two elements. `2 -> planed` cannot be produced by any rule that reads
   // the child index, which is the whole point of the row.
+  // ...AND THREE MORE ON 2026-09-09 (w_scope_shadowing), every one of them in
+  // slot 0: `shadowParam(shParamHit)`, `shadowsOuterByParam(shInnerHit)` and
+  // `shInnerCall(shBlockHit)` hand a function to a parameter whose NAME is
+  // rebound somewhere inside the receiving function.
   assert.deepEqual(passed,
     ['0 -> chiselled', '0 -> cubed', '0 -> leaf', '0 -> mid', '0 -> neverSettle',
-     '0 -> pickedA', '0 -> pickedB', '1 -> chiselled', '1 -> cubed', '1 -> mid',
+     '0 -> pickedA', '0 -> pickedB', '0 -> shBlockHit', '0 -> shInnerHit',
+     '0 -> shParamHit', '1 -> chiselled', '1 -> cubed', '1 -> mid',
      '1 -> planed', '2 -> planed'],
-    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), the two sends, and the spreads');
+    'apply2(leaf, mid), applyFirst(leaf, mid), useCb(mid), the two sends, the spreads and the shadowed parameters');
 });
 
 // ===========================================================================
@@ -1538,11 +1548,16 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
     // RE-AIMED 2026-09-05 with the cost reordering: `ast_within` moved ahead of
     // `ident`, and dropping it is still exactly the defect — a parameter read
     // from anywhere instead of from inside its own function.
+    // RE-AIMED AGAIN 2026-09-09: `not param_hidden` joined the rule with
+    // w_scope_shadowing, and the mutant still deletes exactly one premise —
+    // the one that keeps a parameter read inside its own function.
     find: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
         + '                               ast_within[code](F, U),\n'
-        + '                               ident[code](U, Name).',
+        + '                               ident[code](U, Name),\n'
+        + '                               not param_hidden[flow](F, Name, U).',
     replace: 'param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),\n'
-        + '                               ident[code](U, Name).',
+        + '                               ident[code](U, Name),\n'
+        + '                               not param_hidden[flow](F, Name, U).',
   }]);
   // ...AND ON 2026-09-08 IT STOPPED FITTING, which is mutant 7's ending arriving
   // here. Three parallel branches tripled the corpus, and a rule that reads a
@@ -1568,19 +1583,46 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
   // to finish, and what the mutation does there is exact: every row the baseline
   // has, plus rows binding a parameter's name to a use OUTSIDE the function that
   // declares it.
-  const uses = (m: Rofl) => new Set(m.query('param_use[flow](F, Name, U)', { budget: 400_000_000 })
-    .rows.map((row) => `${row.bindings.F}/${row.bindings.Name}/${row.bindings.U}`));
+  // ...AND ON 2026-09-09 `param_use` FOLLOWED `calls_in` OVER THE SAME WALL,
+  // which is this paragraph happening a second time to its own replacement.
+  // w_scope_shadowing added nine functions to alpha.mjs and the mutant's
+  // `param_use` — quadratic in exactly the thing that grew — stopped fitting
+  // 400M steps too.
+  //
+  // AND A PARTIAL ANSWER IS NOT A SMALL ANSWER. Measured before this was
+  // rewritten: the mutant's truncated `param_use` is a strict SUBSET of the
+  // baseline's, containing not one of the rows the mutation exists to invent,
+  // so the row-level oracle proves NEITHER direction any more. Asking a smaller
+  // question does not recover it either — the truncation is in the world, not
+  // in the question, so every query out of this world is partial.
+  //
+  // WHAT IS LEFT IS THE BUDGET ITSELF, and that is the weakest kind of kill:
+  // it says the mutation makes the program stop fitting, which is true and
+  // checkable and says nothing about WHICH row is wrong. The three assertions
+  // below are exactly what was measured, including the empty one — pinning the
+  // ABSENCE of the invented rows is what makes the loss visible instead of
+  // silent, and it is what will go red on the day somebody raises the budget
+  // and the row-level oracle can come back.
+  const uses = (m: Rofl) => {
+    const res = m.query('param_use[flow](F, Name, U)', { budget: 400_000_000 });
+    return {
+      partial: res.partial,
+      set: new Set(res.rows.map((row) => `${row.bindings.F}/${row.bindings.Name}/${row.bindings.U}`)),
+    };
+  };
   const baseUses = uses(baseStore());
   const mutUses = uses(mut.store);
-  assert.ok(baseUses.size > 0, 'positive control: the baseline binds parameter uses at all');
-  assert.deepEqual([...baseUses].filter((u) => !mutUses.has(u)), [],
-    'the mutant loses nothing: it only widens');
-  const widened = [...mutUses].filter((u) => !baseUses.has(u));
-  assert.ok(widened.length > 0,
-    'a parameter read from anywhere merges two parameters that share a name');
-  console.log(`  KILLED: the unscoped parameter read invents ${widened.length} parameter uses`
-    + ` (baseline ${baseUses.size}), and `
-    + `calls_in stops fitting 400M steps`);
+  assert.equal(baseUses.partial, false, 'positive control: the BASELINE still finishes');
+  assert.ok(baseUses.set.size > 0, 'positive control: the baseline binds parameter uses at all');
+  assert.equal(mutUses.partial, true,
+    'the unscoped parameter read does not fit 400M steps in `param_use` either');
+  assert.deepEqual([...mutUses.set].filter((u) => !baseUses.set.has(u)), [],
+    'and its answer is TRUNCATED rather than widened — not one invented row survives the cut');
+  assert.ok(mutUses.set.size < baseUses.set.size,
+    `strictly fewer rows: ${mutUses.set.size} against ${baseUses.set.size}`);
+  console.log(`  KILLED (budget only): the unscoped parameter read fits neither calls_in nor`
+    + ` param_use at 400M steps — ${mutUses.set.size} truncated rows against a complete`
+    + ` baseline of ${baseUses.set.size}`);
 });
 
 test('mutant 10 — delete the value flow across a call', () => {
@@ -1595,8 +1637,12 @@ test('mutant 10 — delete the value flow across a call', () => {
   // spread argument (`pair`, `duo`) and a defaulted parameter (`shaped`) both
   // end in `arg_at` -> `param_of`, so deleting the value flow across a call
   // takes them with it. The set says which, where a count would only say more.
+  // TWO MORE ON 2026-09-09 (w_scope_shadowing): `shInnerCall -> shBlockHit` and
+  // `shadowsOuterByParam -> shInnerHit` are the two parameters the shadowing
+  // fixture calls, and they reach this arm like every other callback does.
   assert.deepEqual(lost, ['apply2 -> leaf', 'apply2 -> mid', 'applyFirst -> leaf',
     'duo -> chiselled', 'duo -> cubed', 'pair -> chiselled', 'pair -> planed',
+    'shInnerCall -> shBlockHit', 'shadowsOuterByParam -> shInnerHit',
     'shaped -> cubed', 'useCb -> mid'],
     'exactly the callback edges, and nothing else');
   console.log(`  KILLED (liveness): ${lost.length} edges lost`);

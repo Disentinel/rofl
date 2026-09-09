@@ -789,9 +789,69 @@ work_spawned(w_scope_binding, f_a_declared_over_approximation_is_a_defect_with_a
 -- scope are all in here. The direction is the safe one — an extra candidate in
 -- a may-set — and it needs block regions plus a nearest-wins rule, which is a
 -- different shape from the containment rule that closed the function half.
-work(w_scope_shadowing, "an inner binder does not hide an outer one: block regions, nearest-wins, the TDZ and parameter scope").
-work_state(w_scope_shadowing, open).
+--
+-- CLOSED 2026-09-09, and the corpus had NO SHADOWING SITE AT ALL. Measured
+-- before a rule was written, over every pair of `scoped_binder` declarators
+-- sharing a name in one file: EIGHTY-FOUR such pairs, and zero where one
+-- binder`s region contained the other`s, zero sharing a region, zero with one
+-- binder at the top of its file. All eighty-four were two functions side by
+-- side, which w_scope_binding`s containment rule already told apart - so the
+-- blindness this item was written for had no site anywhere, for the second
+-- time in this area (f_the_corpus_was_bent_around_the_defect_until_it_could_
+-- not_be_seen), and one of the bends is in alpha.mjs in as many words:
+-- `RENAMED rather than shorthand: the local would otherwise be a file-scoped
+-- `broken``.
+--
+-- FOUR PIECES AND THE FIRST IS WHAT MAKES THE OTHERS STATABLE. `binder_region`
+-- is the nearest enclosing BLOCK for a `let`/`const` and stays the nearest
+-- enclosing FUNCTION for a `var`; without that, two `const x` in one function
+-- have the same region and no nearest-wins rule can order them. Then
+-- `shadowed_by` + `hidden_at` hide an outer binder over the inner one`s whole
+-- region, `shadowed_by_param` does the same for a parameter (which no
+-- declarator relation has a row for), `param_hidden` closes the
+-- over-approximation `param_use` declared in its own comment and handed to
+-- this item BY NAME, and the dead zone is `tdz_at`.
+--
+-- THE DIRECTION WAS THE SAFE ONE THROUGHOUT: an extra candidate in a may-set,
+-- so this is precision and not soundness. NINE RUNNABLE SITES went into the end
+-- of alpha.mjs and V8`s own stack judges them; the acceptance is a named set of
+-- eleven call edges plus four named relation sets, and `ambiguous_call[audit]`
+-- did not move (14 before, 14 after), because every new collision RESOLVES.
+--
+-- SIXTEEN MUTANTS, THIRTEEN KILLED, THREE SURVIVED, and all three survive BY
+-- CONSTRUCTION rather than for want of a corpus: `ast_within` is irreflexive so
+-- `RO != RI` and `Outer != Inner` can never fire, and the name literal in
+-- `hidden_at` is a cost narrowing every consumer already applies. TWO OF THE
+-- THIRTEEN KILL BY SUBTRACTION - the dead zone without its closure guard, and
+-- `var` read as lexical - and those are the only two that catch a rule which
+-- deletes a real binding, which every over-approximation check in the file
+-- would sleep through.
+--
+-- AND TWO SURVIVORS WERE CLOSED BY FIXTURES RATHER THAN ARGUED AWAY, which is
+-- the sharper half of the measurement. `for_statement` was on the scope-kind
+-- list with FOUR regions to its name and its mutant still survived, because a
+-- kind can be exercised as a REGION and unexercised as a SCOPE BOUNDARY - two
+-- different claims, and only the second is what the list is for. `var` was
+-- worse: this corpus had NO `var` at all, so the arm that keeps it
+-- function-scoped could not be wrong. One `for (let x)` under an outer
+-- `const x`, and one `var` read past the end of the block it is written in,
+-- turned both into kills - the second by DELETING a real edge.
+--
+-- AND ONE THING THIS ITEM BROKE RATHER THAN BUILT, recorded because it is the
+-- second time the same mechanism has taken the same oracle: nine functions in
+-- alpha.mjs pushed mutant 9 of test/js-callgraph.test.ts - a parameter read
+-- from ANYWHERE, quadratic by design - over the 400M budget in `param_use` as
+-- well as in `calls_in`, and its truncated answer is a strict SUBSET of the
+-- baseline holding none of the rows it exists to invent. The row-level oracle
+-- is gone and the budget assertion is still green, which is
+-- f_a_budget_kill_decays_into_a_green_gate_that_says_nothing.
+work(w_scope_shadowing, "DONE 2026-09-09: block regions for let/const, nearest-wins over regions, a parameter that shadows and one that is shadowed, and the dead zone as a region plus one line").
+work_state(w_scope_shadowing, done).
 work_needs(w_scope_shadowing, w_scope_binding).
+work_spawned(w_scope_shadowing, f_shadowing_stops_where_binds_name_stops).
+work_spawned(w_scope_shadowing, f_a_scope_kind_no_declarator_reaches).
+work_spawned(w_scope_shadowing, f_the_dead_zone_is_a_region_and_one_line).
+work_spawned(w_scope_shadowing, f_a_budget_kill_decays_into_a_green_gate_that_says_nothing).
 
 work(w_mutant_anchor_decay, "DONE 2026-09-07: the plant is computed from `takeable(W)` rather than written by hand, so it expires never - five re-aimings were what it cost. Re-aimed again 2026-09-08 when `work_order` was replaced by a derived order, and the mutation got SHARPER: one `work_needs` row now blocks the dependent and promotes the premise at once, exercising both arms of `next_work`").
 work_state(w_mutant_anchor_decay, done).

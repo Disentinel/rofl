@@ -1528,6 +1528,18 @@ export async function main() {
     useSpreadArgIter(1),
     run(1),
     seeded,
+    shadowNested(1),
+    shadowOuterUse(1),
+    shadowBlock(1),
+    shadowParam(shParamHit),
+    shadowsOuterByParam(shInnerHit),
+    shadowNestedParam(shParamHit),
+    shadowTdz(1),
+    shadowClosure(1),
+    shParamHit(1),
+    shTdzHit(1),
+    shadowLoopHead(1),
+    shadowVarNotBlockScoped(1),
   ];
 }
 
@@ -1689,4 +1701,179 @@ export function usePatternPlainKey(n) {
   trace();
   const { broken: fromShim } = shim;
   return fromShim + n;
+}
+
+// ---- SHADOWING (w_scope_shadowing, 2026-09-09).
+//
+// MEASURED BEFORE A RULE WAS WRITTEN, and the measurement is why this block
+// exists at all. Over every pair of `scoped_binder` declarators sharing a name
+// in one file, this corpus had EIGHTY-FOUR such pairs and ZERO of them were a
+// shadow: no pair where one binder's region contained the other's, no pair
+// sharing a region, no pair with one binder at the top of its file. All
+// eighty-four were two functions side by side, which the containment rule of
+// w_scope_binding already tells apart. The blindness `sees_binder` declared in
+// its own comment therefore had no site anywhere, and neither did the
+// over-approximation `param_use` declared in its own.
+//
+// This is the same trap w_scope_binding recorded as
+// `f_the_corpus_was_bent_around_the_defect_until_it_could_not_be_seen`, and
+// this very file carries one of the bends: `usePatternPlainKey` says "RENAMED
+// rather than shorthand: the local would otherwise be a file-scoped `broken`".
+//
+// EVERY NAME BELOW IS UNIQUE TO THIS BLOCK, on purpose. A shadowing fixture
+// that reused a name the rest of the corpus binds would move rows that belong
+// to other items, and the rows this one needs are rows nothing else produces.
+
+function shOuterHit(n) {
+  trace();
+  return n + 1;
+}
+
+function shInnerHit(n) {
+  trace();
+  return n + 2;
+}
+
+function shBlockHit(n) {
+  trace();
+  return n + 3;
+}
+
+function shParamHit(n) {
+  trace();
+  return n + 4;
+}
+
+function shTdzHit(n) {
+  trace();
+  return n + 5;
+}
+
+// 1. A FUNCTION REGION INSIDE A FILE REGION. `shPick` is bound at module scope
+// and again inside `shadowNested`; the inner use names the inner one and the
+// module binder must not answer it. `shadowOuterUse` is the other half of the
+// pair and is what keeps the module binder honest: the fix must silence it
+// INSIDE the rebinding function and nowhere else.
+const shPick = shOuterHit;
+
+export function shadowNested(n) {
+  trace();
+  const shPick = shInnerHit;
+  return shPick(n);
+}
+
+export function shadowOuterUse(n) {
+  trace();
+  return shPick(n);
+}
+
+// 2. BLOCK SCOPE, both binders in ONE function — the case the region rule of
+// w_scope_binding cannot reach at all, because `nearest_v` gives both of these
+// the same region and neither contains the other.
+//
+// THE OUTER `shHold` IS NEVER READ, deliberately. Reading it would make
+// `shadowBlock -> shOuterHit` a real edge and the over-approximation would stop
+// being observable in the runtime oracle's over-approximation list, which is
+// the only instrument here that judges this without being written by the same
+// hand as the rule.
+export function shadowBlock(n) {
+  trace();
+  const shHold = shOuterHit;
+  {
+    const shHold = shBlockHit;
+    return shHold(n);
+  }
+}
+
+// 3. PARAMETER SCOPE. `shTake` is a parameter of `shadowParam` and a `const` in
+// a block inside it; the block's use is the const's. The parameter is read
+// nowhere else in the function, so an edge to whatever was PASSED is an edge
+// the runtime never takes.
+export function shadowParam(shTake) {
+  trace();
+  {
+    const shTake = shBlockHit;
+    return shTake(1);
+  }
+}
+
+// 4. ...AND THE OTHER DIRECTION: a PARAMETER hiding an outer binder. No
+// declarator relation has a row for a parameter, so a nearest-wins rule built
+// only out of declarators is silent here — and this is the arm that says so.
+export function shadowsOuterByParam(shPick) {
+  trace();
+  return shPick(1);
+}
+
+// 5. A NESTED FUNCTION'S OWN PARAMETER, which is the case `param_use` named in
+// its own comment: two functions, one inside the other, one parameter name.
+export function shadowNestedParam(shTake2) {
+  trace();
+  const shInnerCall = (shTake2) => {
+    trace();
+    return shTake2(1);
+  };
+  return shInnerCall(shBlockHit);
+}
+
+// 6. THE TEMPORAL DEAD ZONE. `shLate` on the guarded line is the `const` two
+// lines below it, not the module-scope binding of the same name — the inner
+// binder hides the outer one over the WHOLE block, above its own declaration
+// included, and it has no value there. So the model must say NOTHING at that
+// site: not `shOuterHit`, which shadowing removes, and not `shTdzHit`, which
+// the dead zone removes. The guard is never taken and the line throws if it
+// ever is, which is what a dead-zone read IS.
+const shLate = shOuterHit;
+
+export function shadowTdz(n) {
+  trace();
+  {
+    if (n > 100) return shLate(n);
+    const shLate = shTdzHit;
+    return n;
+  }
+}
+
+// 7. THE CONTROL FOR IT, and it is the reason the dead-zone rule needs a
+// function test rather than a line test. `shDeferred` is read on an EARLIER
+// line than its declaration and the program is correct, because the read
+// happens inside an arrow that runs afterwards. A rule that compared lines and
+// stopped there would delete this edge, and the oracle would report a MISS
+// rather than an over-approximation.
+export function shadowClosure(n) {
+  trace();
+  const shVia = () => {
+    trace();
+    return shDeferred(n);
+  };
+  const shDeferred = shOuterHit;
+  return shVia();
+}
+
+// 8. A `for` HEAD IS A SCOPE OF ITS OWN, and this site is what makes
+// `for_statement` more than a region nothing shadows through: without it the
+// kind is on the scope list and no mutant of this corpus can take it off.
+// `shStep` is bound in the function body and again in the loop head; the loop
+// head is not a block, so only the for-statement itself can be the inner
+// region. The outer one is never read, for the reason case 2 gives.
+export function shadowLoopHead(n) {
+  trace();
+  const shStep = shOuterHit;
+  for (let shStep = shBlockHit; n > 0; n = n - 1) {
+    return shStep(n);
+  }
+  return n;
+}
+
+// 9. AND THE NEGATIVE OF THE WHOLE BLOCK-REGION RULE: `var` IS NOT BLOCK
+// SCOPED. `shVar` is declared inside a block and read after it, which is legal
+// and is exactly what a lexical reading would break — a model that gave `var`
+// the nearest BLOCK would lose this edge rather than invent one, so the mutant
+// that makes `var` lexical is killed by a MISS and not by an over-derivation.
+export function shadowVarNotBlockScoped(n) {
+  trace();
+  {
+    var shVar = shOuterHit;
+  }
+  return shVar(n);
 }
