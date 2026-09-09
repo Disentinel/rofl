@@ -105,6 +105,11 @@ const CONTROLFLOW: WorldSpec = {
     'rules/js-attrs.rofl', 'rules/js-resolve.rofl', 'rules/js-modules.rofl',
     // the vocabulary audit reads the RULES as facts, not the corpus
     'rules/js-vocabulary.rofl',
+    // ...and the pack-home audit reads the PACKS, not the corpus. It also needs
+    // each pack loaded under a `who` of its own, which no world here does, so
+    // loading it would cost a walk over every asserted fact and report on one
+    // writer. See rules/js-pack-home.rofl and test/js-pack-home.test.ts.
+    'rules/js-pack-home.rofl',
   ],
   corpus: CALL_CORPUS,
 };
@@ -129,6 +134,7 @@ const ERA: WorldSpec = {
     'rules/js-controlflow.rofl', 'rules/js-modules.rofl',
     'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
     'rules/js-attrs.rofl', 'rules/js-resolve.rofl', 'rules/js-vocabulary.rofl',
+    'rules/js-pack-home.rofl',
     // w_env_api_surface's rules; the era gate is about the SYNTAX scale
     'rules/js-env-api.rofl',
   ],
@@ -157,7 +163,7 @@ const CALLGRAPH: WorldSpec = {
     'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl', 'facts/js-resolve.rofl',
     'rules/js-controlflow.rofl', 'rules/js-env.rofl', 'rules/js-env-api.rofl',
     'rules/js-attrs.rofl', 'rules/js-resolve.rofl', 'rules/js-modules.rofl',
-    'rules/js-vocabulary.rofl',
+    'rules/js-vocabulary.rofl', 'rules/js-pack-home.rofl',
   ],
   corpus: CALL_CORPUS,
 };
