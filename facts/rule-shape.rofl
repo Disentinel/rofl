@@ -9270,6 +9270,31 @@ pos_site("examples/oops/oops.rofl#70@1", "examples/oops/oops.rofl#70", "tainted_
 pos_nvars("examples/oops/oops.rofl#70@1", 2).
 pos_shares("examples/oops/oops.rofl#70@1").
 base_clause("edb", "main").
+concl("examples/reach/reach.rofl#1", "reaches", "main", "examples", "examples/reach/reach.rofl").
+reads("examples/reach/reach.rofl#1", "calls", "main").
+pos_site("examples/reach/reach.rofl#1@0", "examples/reach/reach.rofl#1", "calls", "main", "examples").
+pos_nvars("examples/reach/reach.rofl#1@0", 2).
+pos_first("examples/reach/reach.rofl#1@0").
+concl("examples/reach/reach.rofl#2", "reaches", "main", "examples", "examples/reach/reach.rofl").
+reads("examples/reach/reach.rofl#2", "reaches", "main").
+reads("examples/reach/reach.rofl#2", "calls", "main").
+pos_site("examples/reach/reach.rofl#2@0", "examples/reach/reach.rofl#2", "reaches", "main", "examples").
+pos_nvars("examples/reach/reach.rofl#2@0", 2).
+pos_first("examples/reach/reach.rofl#2@0").
+pos_site("examples/reach/reach.rofl#2@1", "examples/reach/reach.rofl#2", "calls", "main", "examples").
+pos_nvars("examples/reach/reach.rofl#2@1", 2).
+pos_shares("examples/reach/reach.rofl#2@1").
+concl("examples/reach/reach.rofl#3", "serves", "main", "examples", "examples/reach/reach.rofl").
+reads("examples/reach/reach.rofl#3", "reaches", "main").
+pos_site("examples/reach/reach.rofl#3@0", "examples/reach/reach.rofl#3", "reaches", "main", "examples").
+pos_nvars("examples/reach/reach.rofl#3@0", 2).
+pos_first("examples/reach/reach.rofl#3@0").
+concl("examples/reach/reach.rofl#4", "reachable", "main", "examples", "examples/reach/reach.rofl").
+reads("examples/reach/reach.rofl#4", "reaches", "main").
+pos_site("examples/reach/reach.rofl#4@0", "examples/reach/reach.rofl#4", "reaches", "main", "examples").
+pos_nvars("examples/reach/reach.rofl#4@0", 2).
+pos_first("examples/reach/reach.rofl#4@0").
+base_clause("edb", "main").
 base_clause("cls", "main").
 base_clause("cls", "main").
 base_clause("cls", "main").

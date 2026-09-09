@@ -1074,8 +1074,14 @@ impl Eval {
         }
         let mut pos = Vec::new();
         let mut vals = Vec::new();
-        for (i, a) in l.args.clone().iter().enumerate() {
-            let t = resolve(&mut self.h, *a, s);
+        // NO CLONE OF THE ARGUMENT LIST. `Term` is a Copy newtype over a u64,
+        // so the element can be copied out and the borrow of `l` released
+        // before `resolve` takes `&mut self.h` — which is what the clone was
+        // buying. It bought it with a heap allocation on EVERY probe, and
+        // there are 15 512 558 probes in a 128-file world.
+        for i in 0..l.args.len() {
+            let a = l.args[i];
+            let t = resolve(&mut self.h, a, s);
             if !self.h.is_ground(t) {
                 continue;
             }
