@@ -14,8 +14,8 @@
 //      not find that name the citation dangles. Renaming a test therefore
 //      breaks the link loudly instead of leaving a stale claim of coverage.
 //
-//   2. CITATIONS. Every duty names File, Line and an anchor string. This
-//      reads the line and checks the anchor is there. A duty whose anchor has
+//   2. CITATIONS. Every duty names a File and an anchor string. This looks
+//      for the anchor IN the file. A duty whose anchor has
 //      moved surfaces as `unfounded[coverage]` — the model cannot tell a
 //      document that shifted from a sentence that was never there, so it
 //      reports the citation rather than a verdict.
@@ -36,7 +36,13 @@ export interface Census { checks: Check[]; testFiles: string[]; }
 /** A top-level `test('...'` or `test("...")`, with backslash escapes undone.
  *  Top-level only: a nested test is part of its parent's subject, and the
  *  citations in facts/spec.rofl name testable units, not sub-steps. */
-const TEST_RE = /^test\(\s*(['"])((?:[^\\]|\\.)*?)\1/;
+// `mutant(` COUNTS TOO. It is test/helpers/mutant.ts — the marker that replaced
+// a regex on a test's TITLE for deciding what the fast loop skips — and this
+// census did not know it existed. test/bridges.test.ts marked all nineteen of
+// its tests and went silently EMPTY here, taking `s7_no_nondeterministic_iteration`
+// and `s_canonical_order` out of `covered` with it. A census that names one
+// spelling of "a test" goes blind the day a second one is introduced.
+const TEST_RE = /^(?:test|mutant)\(\s*(['"])((?:[^\\]|\\.)*?)\1/;
 
 function unescape(s: string): string {
   return s.replace(/\\(.)/g, '$1');
@@ -103,7 +109,7 @@ export function censusFacts(c: Census): string {
 // citations
 
 export interface Duty {
-  id: string; kind: string; ledger: string; file: string; line: number; anchor: string;
+  id: string; kind: string; ledger: string; file: string; anchor: string;
 }
 export interface CiteResult { duty: Duty; ok: boolean; why: string; }
 
@@ -117,18 +123,27 @@ function lines(rel: string): string[] {
   return v;
 }
 
-/** Does the anchor stand at the line the duty names? Whitespace is collapsed
- *  on both sides — a reflowed paragraph is not a moved sentence — and nothing
- *  else is normalised, so a rewritten sentence fails. */
+/** IS THE ANCHOR IN THE FILE? Not "at line N" — a duty used to carry a LINE
+ *  NUMBER and this read that line, which is identity by POSITION: the sentence
+ *  is still there, the paragraph above it grew, and the citation reports a
+ *  duty that never moved as unfounded. Thirteen of them were in that state,
+ *  every one a false negative, and the repository had already written the
+ *  lesson down once — `BY NAME, NOT BY RANGE` in test/policy-ladder.test.ts,
+ *  where four assertions used to pin `src/engine.ts` line ranges.
+ *
+ *  Whitespace is collapsed on both sides, so a reflowed paragraph is not a
+ *  moved sentence; nothing else is normalised, so a REWRITTEN sentence still
+ *  fails, which is the failure worth keeping. A duty whose anchor appears more
+ *  than once is reported: an identity that matches twice is not one. */
 export function checkCitation(d: Duty): CiteResult {
   const ls = lines(d.file);
   if (ls.length === 0) return { duty: d, ok: false, why: `no such file: ${d.file}` };
-  if (d.line < 1 || d.line > ls.length) {
-    return { duty: d, ok: false, why: `${d.file} has ${ls.length} lines, cited ${d.line}` };
-  }
-  const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
-  const found = flat(ls[d.line - 1]).includes(flat(d.anchor));
-  return { duty: d, ok: found, why: found ? '' : `not at ${d.file}:${d.line}: ${flat(ls[d.line - 1]).slice(0, 60)}` };
+  const flat = (s: string): string => s.replace(/\s+/g, ' ').trim();
+  const want = flat(d.anchor);
+  const hits = ls.filter((l) => flat(l).includes(want)).length;
+  if (hits === 1) return { duty: d, ok: true, why: '' };
+  if (hits === 0) return { duty: d, ok: false, why: `anchor not in ${d.file}: ${want.slice(0, 60)}` };
+  return { duty: d, ok: false, why: `anchor is in ${d.file} ${hits} times: ${want.slice(0, 60)}` };
 }
 
 // ---------------------------------------------------------------------------
@@ -186,7 +201,7 @@ export function world(opts: WorldOpts = {}): SpecWorld {
   if (opts.extra && opts.extra.trim()) must(r.load(opts.extra, { who: 'librarian' }), 'extra');
   r.evaluate(BUDGET);
 
-  const duties: Duty[] = r.query('duty_of[coverage](O, K, P, F, L, A)').rows.map((row) => ({
+  const duties: Duty[] = r.query('duty_of[coverage](O, K, P, F, A)').rows.map((row) => ({
     id: row.bindings['O'], kind: row.bindings['K'], ledger: row.bindings['P'],
     file: unq(row.bindings['F']), line: Number(row.bindings['L']), anchor: unq(row.bindings['A']),
   }));
@@ -213,7 +228,7 @@ export function report(w: SpecWorld = world()): string[] {
   const byId = new Map(duties.map((d) => [d.id, d]));
   const cite = (id: string): string => {
     const d = byId.get(id);
-    return d ? `${d.file}:${d.line}` : '?';
+    return d ? d.file : '?';
   };
 
   const ledgers = [...new Set(duties.map((d) => d.ledger))].sort();
@@ -262,7 +277,7 @@ export function report(w: SpecWorld = world()): string[] {
   say(`  undefined (the guard names a check id nothing declares): ${undef.length}`);
   for (const x of undef) say(`    ${x}`);
   const unfounded = col(r, 'unfounded[coverage](O)', 'O');
-  say(`  unfounded (the anchor is not at the line the duty names): ${unfounded.length}`);
+  say(`  unfounded (the anchor is not in the file, or is in it twice): ${unfounded.length}`);
   for (const o of unfounded) {
     const why = citations.find((x) => x.duty.id === o);
     say(`    ${o.padEnd(38)} ${why ? why.why : ''}`);

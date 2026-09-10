@@ -14,7 +14,7 @@
 -- longer resolves (`unfounded`), which is the failure mode that survives.
 --
 -- EDB — one ledger per source document (facts/spec.rofl):
---   duty[Doc](Id, Kind, File, Line, Anchor)
+--   duty[Doc](Id, Kind, File, Anchor)
 --       Kind: guaranteed | prohibited | limit | acceptance | done
 --       Anchor: text that must occur at File:Line, verified by scanners/spec.ts
 --
@@ -54,7 +54,7 @@ edb(artifact_present).
 -- The working relation, gathered out of the document ledgers with the ledger
 -- kept as an ordinary argument. The bracket on the head IS the declaration of
 -- the crossing (`test/persp-var.test.ts`), so this is a bridge and not a leak.
-duty_of[coverage](O, K, P, F, L, A) :- duty[P](O, K, F, L, A).
+duty_of[coverage](O, K, P, F, A) :- duty[P](O, K, F, A).
 
 -- ---------------------------------------------------------------- change ---
 
@@ -70,7 +70,7 @@ superseded[coverage](Old) :- amends[map](_, Old).
 -- `test/phase3.test.ts` still holds — the model lying in the direction that
 -- flatters it.
 qualified[coverage](Old, New) :- qualifies[map](New, Old).
-live_duty[coverage](O)    :- duty_of[coverage](O, _, _, _, _, _),
+live_duty[coverage](O)    :- duty_of[coverage](O, _, _, _, _),
                              not superseded[coverage](O).
 
 -- ------------------------------------------------------------- coverage ---
@@ -112,14 +112,14 @@ unattended[coverage](O)       :- uncovered[coverage](O),
 -- The sharp end: a PROHIBITION with no mechanical check. Nothing at all
 -- stands between the next author and the shortcut.
 open_shortcut[coverage](O) :- uncovered[coverage](O),
-                              duty_of[coverage](O, prohibited, _, _, _, _).
+                              duty_of[coverage](O, prohibited, _, _, _).
 
 -- ---------------------------------------------------------- fabrication ---
 
 -- A duty whose anchor is not at the line it names. Either the document moved
 -- under the model, or the sentence was never there — and the model cannot
 -- tell those apart, which is why it reports the citation and not a verdict.
-unfounded[coverage](O)     :- duty_of[coverage](O, _, _, _, _, _),
+unfounded[coverage](O)     :- duty_of[coverage](O, _, _, _, _),
                               not citation_ok[checks](O).
 
 -- --------------------------------------------------------- the converse ---
@@ -149,8 +149,8 @@ imports(coverage, map).
 -- it names, and there is no way to do that without reading both books.
 imports(coverage, checks).
 
--- AND the gather `imports` cannot express. `duty_of[coverage](O, K, P, F, L,
--- A) :- duty[P](O, K, F, L, A).` reads a VARIABLE ledger: seven documents each
+-- AND the gather `imports` cannot express. `duty_of[coverage](O, K, P, F,
+-- A) :- duty[P](O, K, F, A).` reads a VARIABLE ledger: seven documents each
 -- keep their duties in their own book ([boot], [decided], [limits], [perf],
 -- [readme], [spec], [wfs]), and the point of the relation is that it does not
 -- care which. `collects` is the only sentence available for that, and it is

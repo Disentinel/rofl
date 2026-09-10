@@ -222,3 +222,23 @@ and it is not built.
 - Density and time are measured on one workload: the JS model over JavaScript,
   plus the demo corpus. 198 B/fact and 45.7 s at 5.68M facts is what that
   workload does, not what the engine does.
+
+## The port owes explanation
+
+`why` and `whynot` are REQUIRED of the port. Decided 2026-09-10, after the two
+library surfaces were compared for the first time: `Rofl` has seventeen public
+methods, `Session` has fourteen, and they share four names. Some of the rest is
+spelling — `ask` is `query` — but two whole families are absent on one side
+each, and they are not symmetric.
+
+Residency is the port's alone and stays there (LIMITS.md). Explanation is not:
+a store that can say WHICH firing produced a fact, and why a fact does NOT
+hold, is the difference between an engine and a table, and it is the property
+this whole system is organised around — `derived_by` is kernel-emitted, the
+loose corpus oracle IS the derivation hypergraph, and every demo but two calls
+one of the two.
+
+So the port is incomplete without them, and the corpus cannot see it: it only
+ever asks both engines to EVALUATE, and a byte-identical `canonicalState` says
+nothing about whether either can be asked a question afterwards.
+

@@ -490,6 +490,8 @@ bit-identical state, tick log, and provenance regardless of insertion order
 
 ## Deviations from START.md (and why)
 
+<!-- BEGIN deviations: generated from facts/deviations.rofl -->
+
 - **Vocabulary additions.** `bridge_decl`, `uses_builtin`
   are added to the §2 table as the appendix note instructs; `premise_lit` /
   `conclusion_lit` are added because the §2 reflection relations alone don't
@@ -705,6 +707,8 @@ bit-identical state, tick log, and provenance regardless of insertion order
   stripping, which shipped in 22.6. Nothing in the code needs Node 22 —
   compiling with `tsc` would restore Node 20 support at the cost of a build
   step; zero-toolchain execution was judged closer to the spec's intent.
+
+<!-- END deviations -->
 
 ## Acceptance status
 

@@ -42,34 +42,23 @@ const n = (q: string): number => R.query(q).rows.length;
  *  guards one of these, or writing a document that retires it, is expected to
  *  turn this red — that is the point of pinning it rather than a count. */
 const UNCOVERED = [
-  'b_collected_declared_only',
-  'd_veto_belongs_inside',
-  'l_comparisons_need_ground_ints',
-  'l_demand_depth_512',
-  'l_demand_no_enumeration',
-  'l_init_after_zero_inert',
-  'l_next_not_assertable',
-  'l_no_aggregation',
-  'l_no_floats_no_bignums',
-  'l_no_occurs_check',
-  'l_queries_are_god_view',
-  'l_reflection_in_main',
-  'l_retraction_leaves_no_trail',
-  'l_reuse_switchable',
-  'l_undefined_silenced_by_one_fact',
-  'p_i2_self_audit_tracks_program_size',
-  'p_p2_provenance_is_not_the_cost',
-  'r_perspective_registration',
-  'r_timeless_kernel_facts',
-  's8_out_of_scope',
-  's_document_no_occurs_check',
-  's_done_limits',
-  's_done_readme',
-  's_init_at_tick_zero',
-  's_main_is_named',
-  's_persistence_is_a_rule',
-  's_report_loc_overrun',
-  's_zero_deps',
+  // ADDED 2026-09-10, both deliberately unguarded and for opposite reasons.
+  // `l_no_residency_in_js` is a LIMIT — this host will not grow `cool`,
+  // `reheat` or `volume`, and a limit is discharged by not doing the thing.
+  // `d_port_owes_why` is the other half of the same comparison: the port has
+  // no `why`/`whynot`, so nothing can guard the duty until it does. It is
+  // recorded UNGUARDED on purpose — that is what an obligation the code does
+  // not yet meet looks like in this ledger.
+  'b_collected_declared_only', 'd_port_owes_why', 'd_veto_belongs_inside',
+  'l_comparisons_need_ground_ints', 'l_demand_depth_512', 'l_demand_no_enumeration',
+  'l_init_after_zero_inert', 'l_next_not_assertable', 'l_no_aggregation',
+  'l_no_floats_no_bignums', 'l_no_occurs_check', 'l_no_residency_in_js',
+  'l_queries_are_god_view', 'l_reflection_in_main', 'l_retraction_leaves_no_trail',
+  'l_reuse_switchable', 'l_undefined_silenced_by_one_fact', 'p_i2_self_audit_tracks_program_size',
+  'p_p2_provenance_is_not_the_cost', 'r_perspective_registration', 'r_timeless_kernel_facts',
+  's8_out_of_scope', 's_document_no_occurs_check', 's_done_limits',
+  's_done_readme', 's_init_at_tick_zero', 's_main_is_named',
+  's_persistence_is_a_rule', 's_report_loc_overrun', 's_zero_deps',
 ];
 
 // ---------------------------------------------------------------------------
@@ -201,28 +190,33 @@ test('every duty in the ledger reached the model, and every one carries a citati
   const written = read('facts', 'spec.rofl').split('\n')
     .filter((l) => /^duty\[/.test(l)).length;
   assert.equal(W.duties.length, written, 'a duty in the file that the model did not load');
-  assert.equal(W.duties.length, 129);
+  assert.equal(W.duties.length, 131);
   for (const d of W.duties) {
-    assert.ok(d.file.length > 0 && d.line > 0 && d.anchor.length > 0, d.id);
+    assert.ok(d.file.length > 0 && d.anchor.length > 0, d.id);
   }
 });
 
-test('every citation resolves at the line it names', () => {
+test('every citation resolves — the anchor is in the file, exactly once', () => {
   const broken = W.citations.filter((x) => !x.ok).map((x) => `${x.duty.id}: ${x.why}`);
   assert.deepEqual(broken, []);
   assert.deepEqual(col('unfounded[coverage](O)', 'O'), []);
 });
 
-test('POSITIVE CONTROL: a duty whose anchor is not at the cited line is unfounded', () => {
+test('POSITIVE CONTROL: a duty whose anchor is nowhere in the file is unfounded', () => {
+  // A CITATION NO LONGER NAMES A LINE. It used to, and that made a duty`s
+  // identity POSITIONAL: thirteen citations were reported unfounded while
+  // every sentence was still in README, because the paragraphs above them had
+  // grown. The anchor is the identity now, and it is required to appear
+  // exactly ONCE — a sentence that matches twice identifies nothing.
   const planted: Duty = {
     id: 'x_planted', kind: 'guaranteed', ledger: 'spec',
-    file: 'START.md', line: 1, anchor: 'the kernel shall be written in Fortran',
+    file: 'START.md', anchor: 'the kernel shall be written in Fortran',
   };
   assert.equal(checkCitation(planted).ok, false, 'the verifier believed an invented sentence');
-  const w = world({ extra: 'duty[spec](x_planted, guaranteed, "START.md", 1, "the kernel shall be written in Fortran").\n' });
+  const w = world({ extra: 'duty[spec](x_planted, guaranteed, "START.md", "the kernel shall be written in Fortran").\n' });
   assert.deepEqual(w.r.query('unfounded[coverage](O)').rows.map((x) => x.bindings['O']), ['x_planted']);
-  // and the same sentence at the line that really carries it is believed
-  assert.equal(checkCitation({ ...planted, line: 133, anchor: 'Hardcoding any boot.rofl rule' }).ok, true);
+  // and a sentence the file really carries is believed, wherever it sits
+  assert.equal(checkCitation({ ...planted, anchor: 'Hardcoding any boot.rofl rule' }).ok, true);
 });
 
 test('POSITIVE CONTROL: a guard naming a check id nothing declares is reported, not silent', () => {
@@ -259,7 +253,7 @@ test('the uncovered set is exactly this, and it is not empty', () => {
   // the rest have nothing at all
   assert.deepEqual(col('prose_discharged[coverage](O)', 'O'),
     ['s_document_no_occurs_check', 's_done_limits', 's_done_readme']);
-  assert.equal(col('unattended[coverage](O)', 'O').length, 25);
+  assert.equal(col('unattended[coverage](O)', 'O').length, 27);
   // the sharp end: a prohibition nothing mechanical stands in front of
   assert.deepEqual(col('open_shortcut[coverage](O)', 'O'), ['s8_out_of_scope']);
 });
@@ -343,9 +337,12 @@ test('the converse: what a test file guards is a partition, and one side is not 
 
 test('the report renders, and its headline numbers are the model\'s own', () => {
   const text = report(W).join('\n');
-  assert.match(text, /129 duties in 7 ledgers/);
-  assert.match(text, /covered 98, uncovered 28, superseded 7/);
-  assert.match(text, /s_report_loc_overrun\s+START\.md:107/);
+  assert.match(text, /131 duties in 7 ledgers/);
+  assert.match(text, /covered 98, uncovered 30, superseded 7/);
+  // WAS `START.md:107` UNTIL 2026-09-10. A citation no longer names a line:
+  // the duty is identified by its anchor, which is why thirteen README duties
+  // stopped being reported unfounded for sentences that had never moved.
+  assert.match(text, /s_report_loc_overrun\s+START\.md/);
 });
 
 // ---------------------------------------------------------------------------
