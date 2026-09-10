@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 697 artifacts, 3363 edges, 231 unreadable path expressions.
+-- 698 artifacts, 3363 edges, 231 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -280,6 +280,7 @@ artifact[dep]("npm:forkclone", script).
 artifact[dep]("npm:forkctl", script).
 artifact[dep]("npm:forkpar", script).
 artifact[dep]("npm:forkstages", script).
+artifact[dep]("npm:history", script).
 artifact[dep]("npm:keycoupling", script).
 artifact[dep]("npm:laddercheck", script).
 artifact[dep]("npm:layercheck", script).

@@ -1,0 +1,79 @@
+-- rules/history.rofl — THE EVIDENTIAL AXIS: is this file DEVELOPED or FED?
+--
+-- `rules/cleanliness.rofl` asks, of every artifact, WHO POINTS AT THIS. That
+-- gave `scripts/kernel_grep.ts` a perfect score on the morning of the day it
+-- was deleted. Reachability measures INTEGRATION, and integration and
+-- usefulness run OPPOSITE ways over time — the longer a useless thing
+-- survives, the more things point at it.
+--
+-- This file is the other axis, and its subject is the SHAPE OF A FILE'S
+-- HISTORY, which every file has. One measure, and two dead ones named so
+-- nobody re-derives them:
+--
+--   DEAD: `only ever grows`. Measured over this tree, kernel_grep is 93%
+--   additions and so are src/store.ts and boot.rofl, while src/unify.ts is 97%
+--   and scripts/text_check.ts is 100%. In a young repository everything grows.
+--
+--   DEAD: co-change direction. 331 non-merge commits is not enough history to
+--   separate `A follows B` from `A and B are both busy`.
+--
+--   ALIVE: WHERE THE ADDED LINES LAND. A line that is nothing but a string
+--   literal and punctuation carried no logic — it carried a NAME SOMEBODY
+--   ADDED TO A LIST.
+
+-- `fed_share(F, Pct)` — of the code lines ever added to F, what per cent were
+-- pure list elements. Integer per cent, because this is a smell and not a
+-- measurement: two files at 28 and 31 are the same file.
+fed_share(F, Pct) :- landed[hist](F, Code, Listy), Code > 20,
+                     H is Listy * 100, Pct is H / Code.
+
+-- THERE IS NO NATURAL THRESHOLD AND MY FIRST DRAFT CLAIMED ONE. It said the
+-- population was bimodal with a gap between 1% and 11%, and that sentence was
+-- drawn from a HAND SAMPLE OF EIGHT FILES. Measured over all 533 files with
+-- more than twenty added code lines, it is a continuum:
+--
+--     0%  375        6-8%   14
+--   1-2%   63       9-14%   32
+--   3-5%   37      15-24%    7        25%+   5
+--
+-- A sampled boundary is an assumption wearing a test's face, and this
+-- repository already writes that sentence about a byte sweep. Corrected here
+-- rather than quietly re-tuned.
+--
+-- SO THE MEASURE RANKS AND DOES NOT CLASSIFY, and the reason is a second
+-- question it cannot answer: IS THE LIST DERIVABLE? A whitelist of relation
+-- names is — every relation in the tree is computable — and that one should
+-- go. A named set of expected globals in a test is NOT: it is the ORACLE, and
+-- writing it as a set rather than a count is this repository's own prescribed
+-- practice. Both look identical from here, and the top of the ranking is full
+-- of the first while its middle is full of the second.
+--
+-- The cut is therefore DECLARED by the owner (`fed_cut(Pct)` in
+-- facts/cleanliness.rofl) rather than derived, and what the audit produces is
+-- a QUEUE FOR A PERSON rather than a verdict. That is the honest shape: the
+-- instrument found `test/rule-shape.test.ts` at 39% without being told, and it
+-- cannot tell a baseline that should be derived from an oracle that should not.
+edb(fed_cut).
+being_fed[audit](F, Pct) :- fed_share(F, Pct), fed_cut(C), Pct >= C.
+
+-- AND THE ROLE DECIDES WHETHER THAT IS A DEFECT. A ledger or a fact pack is
+-- SUPPOSED to be a list being fed — that is what a ledger IS. The audit is
+-- about files that are supposed to carry LOGIC and carry a list instead.
+fed_and_should_not_be[audit](F, Pct) :- being_fed[audit](F, Pct), has_role(F, gate).
+fed_and_should_not_be[audit](F, Pct) :- being_fed[audit](F, Pct), has_role(F, scanner).
+fed_and_should_not_be[audit](F, Pct) :- being_fed[audit](F, Pct), has_role(F, kernel).
+fed_and_should_not_be[audit](F, Pct) :- being_fed[audit](F, Pct), has_role(F, runtime).
+
+-- NO DUTY IS DECLARED FROM THIS YET, and that is the discipline this table
+-- already paid for four times: a duty whose rule cannot separate the good case
+-- from the bad opens a cell nobody can close. `not_fed` would charge every
+-- test carrying a named-set oracle with a defect that is the practice this
+-- repository recommends. Rank first, read the queue, THEN decide what a duty
+-- would say.
+
+-- WHAT THIS CANNOT SEE, and it is the reason the verdict is `[audit]` and not
+-- a deletion: a list that is RIGHT to keep by hand looks identical to one that
+-- should be derived. `SYNTAX` in a tokenizer is a language's keywords and no
+-- rule can produce them. What the audit says is `this file is being fed` —
+-- whether that is correct is a person's call, and the row is where they make
+-- it rather than a place they never look.

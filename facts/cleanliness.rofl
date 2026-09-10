@@ -113,8 +113,14 @@ duty_decl(document, indexed).
 -- for the fourth time on its own instrument, and the fourth argument for not
 -- putting it in CI until the model stops moving.
 --
+-- RAISED TO 126 ON 2026-09-10: scanners/history.ts, rules/history.rofl and
+-- facts/history.rofl entered the tree. That is the FIFTH raise caused by the
+-- table's own instrument growing, and the fifth argument for the same thing —
+-- the ceiling is not a measurement of cleanliness until the model under it
+-- stops moving.
+--
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(125).
+queue_ceiling(126).
 
 -- ==================================================== THE EVIDENTIAL AXIS
 -- ADDED 2026-09-10 AFTER THE TABLE FAILED ITS FIRST REAL TEST. Asked about
@@ -159,3 +165,10 @@ queue_ceiling(125).
 -- would open a cell per artifact that nobody can close, which is the false
 -- work this table has already produced four times from its own model moving.
 -- Write the rule, measure what it opens, THEN declare.
+
+-- THE `being_fed` CUT. Declared, because the measure ranks and does not
+-- classify — see rules/history.rofl. 15 puts the queue at twelve files and
+-- keeps the top of the ranking, where the derivable baselines are; lowering it
+-- to 8 pulls in twenty-seven, most of them tests carrying named-set oracles,
+-- which is the practice this repository recommends rather than a defect.
+fed_cut(15).
