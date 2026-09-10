@@ -17,9 +17,6 @@
 // sentence beside a filename says anything true about that document, and
 // whether the file is in the right one of the four groups. Both would need a
 // second source for a document's subject, and there is none. It also says
-// nothing about `docs/dogfood/`, whose pages are dated session records rather
-// than standing decisions — the index names the DIRECTORY and that is the
-// intended granularity, checked by mutant 3 rather than assumed.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -31,7 +28,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const README = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 
 /** Every `*.md` directly in `docs/`, which is the set the index is about;
- *  `docs/dogfood/` is a directory and is named as one. */
+ */
 function onDisk(): string[] {
   return fs.readdirSync(path.join(ROOT, 'docs'))
     .filter((f) => f.endsWith('.md'))
@@ -93,26 +90,13 @@ mutant('mutant 2: an index line for a document that is gone goes red', () => {
   assert.ok(!onDisk().includes('vanished.md'), 'and the disk does not have it');
 });
 
-mutant('mutant 3 (NEGATIVE CONTROL): docs/dogfood/ is a directory and stays out', () => {
-  // targets: a criterion that has gone slack in the other direction. The
-  // dogfood pages are dated session records, not standing decisions; if this
-  // gate ever demanded a line per page, adding one would go red for no reason
-  // and the gate would be switched off. Both sides must agree it is excluded.
-  const dogfood = fs.readdirSync(path.join(ROOT, 'docs', 'dogfood'))
-    .filter((f) => f.endsWith('.md'));
-  assert.ok(dogfood.length > 10, 'there are dogfood pages to be wrong about');
-  const listed = named(indexSection(README));
-  for (const f of dogfood) assert.ok(!listed.includes(f), `${f} is not indexed individually`);
-  assert.ok(indexSection(README).includes('docs/dogfood/'), 'and the DIRECTORY is named');
-});
-
 mutant('mutant 4 (THE SURVIVOR): a description that lies about a document stays GREEN', () => {
   // targets: nothing — it states where this gate cannot look. The comparison
   // is over FILENAMES, so the sentence beside a name, and the group it sits
   // in, are both invisible. A reader is the only check on those.
   const lying = README.replace(
-    '`benchmark-protocol.md`',
-    '`benchmark-protocol.md` (the SQLite adapter\'s schema)');
+    '`failure-modes.md`',
+    '`failure-modes.md` (the SQLite adapter\'s schema)');
   assert.notEqual(lying, README, 'the anchor was found');
   assert.deepEqual(named(indexSection(lying)), named(indexSection(README)),
     'SURVIVED: this gate compares filenames, never claims');

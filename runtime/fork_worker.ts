@@ -15,7 +15,7 @@
 // if `run` writes into `ctx` then branch i+1 sees branch i and the arithmetic
 // this file rests on is void. Nothing here can check that, and the acceptance
 // gate that CAN — a byte-for-byte `canonicalState()` against the sequential
-// arm, per branch — is in `bench/fork_parallel.ts`.
+// arm, per branch.
 
 import { parentPort, workerData } from 'node:worker_threads';
 

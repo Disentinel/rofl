@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 710 artifacts, 4078 edges, 232 unreadable path expressions.
+-- 625 artifacts, 2997 edges, 217 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -19,67 +19,12 @@ artifact[dep]("README.md", md).
 artifact[dep]("START.md", md).
 artifact[dep]("adapters/index.ts", ts).
 artifact[dep]("adapters/sqlite-store.ts", ts).
-artifact[dep]("bench/fork_clone_cost.ts", ts).
-artifact[dep]("bench/fork_control.ts", ts).
-artifact[dep]("bench/fork_parallel.ts", ts).
-artifact[dep]("bench/fork_stages.ts", ts).
-artifact[dep]("bench/fork_task_alloc.ts", ts).
-artifact[dep]("bench/fork_task_leaky.ts", ts).
-artifact[dep]("bench/fork_task_noreuse.ts", ts).
-artifact[dep]("bench/fork_task_spin.ts", ts).
-artifact[dep]("bench/fork_task_wtf.ts", ts).
-artifact[dep]("bench/landscape/claims.rofl", rofl).
-artifact[dep]("bench/landscape/facts.rofl", rofl).
-artifact[dep]("bench/landscape/frame.md", md).
-artifact[dep]("bench/landscape/profiles.json", json).
-artifact[dep]("bench/landscape/profiles/c_argumentation.md", md).
-artifact[dep]("bench/landscape/profiles/c_clingo.md", md).
-artifact[dep]("bench/landscape/profiles/c_codeql.md", md).
-artifact[dep]("bench/landscape/profiles/c_ddlog.md", md).
-artifact[dep]("bench/landscape/profiles/c_glean.md", md).
-artifact[dep]("bench/landscape/profiles/c_kr_owl.md", md).
-artifact[dep]("bench/landscape/profiles/c_lean_itp.md", md).
-artifact[dep]("bench/landscape/profiles/c_llm_hybrids.md", md).
-artifact[dep]("bench/landscape/profiles/c_prolog.md", md).
-artifact[dep]("bench/landscape/profiles/c_smt.md", md).
-artifact[dep]("bench/landscape/profiles/c_souffle.md", md).
-artifact[dep]("bench/landscape/profiles/c_tms.md", md).
-artifact[dep]("bench/landscape/reports.rofl", rofl).
-artifact[dep]("bench/landscape/seed.rofl", rofl).
-artifact[dep]("bench/lic-haiku45-amnesiac.json", json).
-artifact[dep]("bench/lic-haiku45-results.json", json).
-artifact[dep]("bench/mem_census.ts", ts).
-artifact[dep]("bench/mem_scale.ts", ts).
-artifact[dep]("bench/pilot.ts", ts).
 artifact[dep]("boot.rofl", rofl).
-artifact[dep]("docs/benchmark-protocol.md", md).
 artifact[dep]("docs/books-and-permission.md", md).
 artifact[dep]("docs/choosing-perspectives.md", md).
 artifact[dep]("docs/claims-outside-the-store.md", md).
-artifact[dep]("docs/comment-migration-brief.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-amnesiac.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-bundle.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-pair.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-pilot.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-pr1.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-pr2.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-pr5.md", md).
-artifact[dep]("docs/dogfood/2026-08-28-swarm.md", md).
-artifact[dep]("docs/dogfood/2026-08-29-cold-agent.md", md).
-artifact[dep]("docs/dogfood/2026-08-30-honk-huh.md", md).
-artifact[dep]("docs/dogfood/2026-09-04-environment-layer.md", md).
-artifact[dep]("docs/dogfood/2026-09-04-self-application.md", md).
-artifact[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", md).
-artifact[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", md).
-artifact[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", md).
-artifact[dep]("docs/dogfood/2026-09-08-storage-backends.md", md).
-artifact[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", md).
-artifact[dep]("docs/dogfood/2026-09-09-join-planner.md", md).
-artifact[dep]("docs/dogfood/2026-09-09-reading-the-complement.md", md).
 artifact[dep]("docs/failure-modes.md", md).
 artifact[dep]("docs/formal-reasoning-landscape.md", md).
-artifact[dep]("docs/guided-formal-reasoning-roadmap.md", md).
 artifact[dep]("docs/inquiry-kinds.md", md).
 artifact[dep]("docs/ledger-as-an-instrument.md", md).
 artifact[dep]("docs/medium-and-large.md", md).
@@ -241,7 +186,6 @@ artifact[dep]("facts/depends.rofl", rofl).
 artifact[dep]("facts/eval-cost.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
 artifact[dep]("facts/floor-census.rofl", rofl).
-artifact[dep]("facts/history.rofl", rofl).
 artifact[dep]("facts/js-attrs.rofl", rofl).
 artifact[dep]("facts/js-callgraph.rofl", rofl).
 artifact[dep]("facts/js-controlflow.rofl", rofl).
@@ -259,10 +203,8 @@ artifact[dep]("facts/js-resolve.rofl", rofl).
 artifact[dep]("facts/js-shapes.rofl", rofl).
 artifact[dep]("facts/js-statements.rofl", rofl).
 artifact[dep]("facts/layering.rofl", rofl).
-artifact[dep]("facts/ledger-census.rofl", rofl).
 artifact[dep]("facts/parse-cost.rofl", rofl).
 artifact[dep]("facts/permission-inventory.rofl", rofl).
-artifact[dep]("facts/rule-shape.rofl", rofl).
 artifact[dep]("facts/spec.rofl", rofl).
 artifact[dep]("facts/worklist.rofl", rofl).
 artifact[dep]("facts/worlds.rofl", rofl).
@@ -280,18 +222,12 @@ artifact[dep]("npm:evalcost", script).
 artifact[dep]("npm:findings", script).
 artifact[dep]("npm:flagcheck", script).
 artifact[dep]("npm:floorcensus", script).
-artifact[dep]("npm:forkclone", script).
-artifact[dep]("npm:forkctl", script).
-artifact[dep]("npm:forkpar", script).
-artifact[dep]("npm:forkstages", script).
-artifact[dep]("npm:history", script).
 artifact[dep]("npm:keycoupling", script).
 artifact[dep]("npm:laddercheck", script).
 artifact[dep]("npm:layercheck", script).
 artifact[dep]("npm:layering", script).
 artifact[dep]("npm:loop", script).
 artifact[dep]("npm:measurecheck", script).
-artifact[dep]("npm:memcensus", script).
 artifact[dep]("npm:necessity", script).
 artifact[dep]("npm:noparser", script).
 artifact[dep]("npm:nullary", script).
@@ -327,7 +263,6 @@ artifact[dep]("rules/engine-split.rofl", rofl).
 artifact[dep]("rules/eval-cost.rofl", rofl).
 artifact[dep]("rules/findings.rofl", rofl).
 artifact[dep]("rules/floor-census.rofl", rofl).
-artifact[dep]("rules/history.rofl", rofl).
 artifact[dep]("rules/ingest.rofl", rofl).
 artifact[dep]("rules/inquiry/epistemic.rofl", rofl).
 artifact[dep]("rules/inquiry/intents.rofl", rofl).
@@ -445,50 +380,30 @@ artifact[dep]("scanners/depends.ts", ts).
 artifact[dep]("scanners/engine_split.ts", ts).
 artifact[dep]("scanners/eval_cost.ts", ts).
 artifact[dep]("scanners/floor_census.ts", ts).
-artifact[dep]("scanners/history.ts", ts).
 artifact[dep]("scanners/host_lib.ts", ts).
 artifact[dep]("scanners/js.ts", ts).
 artifact[dep]("scanners/js_ast.ts", ts).
-artifact[dep]("scanners/js_cost.ts", ts).
 artifact[dep]("scanners/js_resolve.ts", ts).
-artifact[dep]("scanners/js_seed.ts", ts).
-artifact[dep]("scanners/js_volume.ts", ts).
 artifact[dep]("scanners/key_coupling.ts", ts).
 artifact[dep]("scanners/layering_report.ts", ts).
-artifact[dep]("scanners/ledger_census.ts", ts).
 artifact[dep]("scanners/materialize.ts", ts).
 artifact[dep]("scanners/mutant_files.ts", ts).
 artifact[dep]("scanners/necessity.ts", ts).
 artifact[dep]("scanners/nullary_report.ts", ts).
-artifact[dep]("scanners/order_census.ts", ts).
-artifact[dep]("scanners/parse_bench.ts", ts).
 artifact[dep]("scanners/parse_cost.ts", ts).
 artifact[dep]("scanners/permission_inventory.ts", ts).
 artifact[dep]("scanners/policy_ladder.ts", ts).
 artifact[dep]("scanners/profile_shape.ts", ts).
 artifact[dep]("scanners/ring1_lexgen.ts", ts).
-artifact[dep]("scanners/ring1_pargen.ts", ts).
 artifact[dep]("scanners/ring1_predgen.ts", ts).
 artifact[dep]("scanners/ring1_spangen.ts", ts).
 artifact[dep]("scanners/round_bytes.ts", ts).
-artifact[dep]("scanners/round_shape.ts", ts).
 artifact[dep]("scanners/rule_shape.ts", ts).
 artifact[dep]("scanners/rule_shape_report.ts", ts).
 artifact[dep]("scanners/side_files.ts", ts).
 artifact[dep]("scanners/spec.ts", ts).
 artifact[dep]("scanners/store_boundary.ts", ts).
 artifact[dep]("scanners/store_trace.ts", ts).
-artifact[dep]("scanners/tasks/compile-fixture.ts", ts).
-artifact[dep]("scanners/tasks/t1-evaluate.ts", ts).
-artifact[dep]("scanners/tasks/t10-l0.ts", ts).
-artifact[dep]("scanners/tasks/t2-ticks.ts", ts).
-artifact[dep]("scanners/tasks/t3-explain.ts", ts).
-artifact[dep]("scanners/tasks/t4-persist.ts", ts).
-artifact[dep]("scanners/tasks/t5-refuse.ts", ts).
-artifact[dep]("scanners/tasks/t6-selfapply.ts", ts).
-artifact[dep]("scanners/tasks/t7-wellfounded.ts", ts).
-artifact[dep]("scanners/tasks/t8-semiring.ts", ts).
-artifact[dep]("scanners/tasks/t9-noparse.ts", ts).
 artifact[dep]("scanners/ts_lib.ts", ts).
 artifact[dep]("scanners/volume_locality.ts", ts).
 artifact[dep]("schemas/intent-result.json", json).
@@ -727,73 +642,6 @@ edge[dep]("adapters/sqlite-store.ts", "src/store.ts", reads_path).
 edge[dep]("adapters/sqlite-store.ts", "src/store.ts", ts_import).
 edge[dep]("adapters/sqlite-store.ts", "src/unify.ts", reads_path).
 edge[dep]("adapters/sqlite-store.ts", "src/unify.ts", ts_import).
-edge[dep]("bench/fork_clone_cost.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_clone_cost.ts", "src/api.ts", ts_import).
-edge[dep]("bench/fork_control.ts", "bench/fork_task_alloc.ts", reads_path).
-edge[dep]("bench/fork_control.ts", "bench/fork_task_alloc.ts", ts_import).
-edge[dep]("bench/fork_control.ts", "bench/fork_task_spin.ts", reads_path).
-edge[dep]("bench/fork_control.ts", "bench/fork_task_spin.ts", ts_import).
-edge[dep]("bench/fork_control.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_control.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_control.ts", "runtime/fork_pool.ts", reads_path).
-edge[dep]("bench/fork_control.ts", "runtime/fork_pool.ts", ts_import).
-edge[dep]("bench/fork_parallel.ts", "bench/fork_task_leaky.ts", reads_path).
-edge[dep]("bench/fork_parallel.ts", "bench/fork_task_leaky.ts", ts_import).
-edge[dep]("bench/fork_parallel.ts", "bench/fork_task_wtf.ts", reads_path).
-edge[dep]("bench/fork_parallel.ts", "bench/fork_task_wtf.ts", ts_import).
-edge[dep]("bench/fork_parallel.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_parallel.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_parallel.ts", "runtime/fork_pool.ts", reads_path).
-edge[dep]("bench/fork_parallel.ts", "runtime/fork_pool.ts", ts_import).
-edge[dep]("bench/fork_parallel.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_parallel.ts", "src/api.ts", ts_import).
-edge[dep]("bench/fork_stages.ts", "bench/fork_task_wtf.ts", reads_path).
-edge[dep]("bench/fork_stages.ts", "bench/fork_task_wtf.ts", ts_import).
-edge[dep]("bench/fork_stages.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_stages.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_stages.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_stages.ts", "src/api.ts", ts_import).
-edge[dep]("bench/fork_task_leaky.ts", "bench/fork_task_wtf.ts", reads_path).
-edge[dep]("bench/fork_task_leaky.ts", "bench/fork_task_wtf.ts", ts_import).
-edge[dep]("bench/fork_task_leaky.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_task_leaky.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_task_leaky.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_task_leaky.ts", "src/api.ts", ts_import).
-edge[dep]("bench/fork_task_noreuse.ts", "bench/fork_task_wtf.ts", reads_path).
-edge[dep]("bench/fork_task_noreuse.ts", "bench/fork_task_wtf.ts", ts_import).
-edge[dep]("bench/fork_task_noreuse.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_task_noreuse.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_task_noreuse.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_task_noreuse.ts", "src/api.ts", ts_import).
-edge[dep]("bench/fork_task_wtf.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/fork_task_wtf.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/fork_task_wtf.ts", "src/api.ts", reads_path).
-edge[dep]("bench/fork_task_wtf.ts", "src/api.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "boot.rofl", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/goof/demo.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/goof/demo.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "examples/loot/demo.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/loot/demo.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "examples/ring1/demo.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/ring1/demo.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "examples/spat/spat.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/spat/spat.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "examples/sus/demo.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/sus/demo.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "src/api.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "src/api.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "src/engine.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "src/engine.ts", ts_import).
-edge[dep]("bench/mem_census.ts", "src/store.ts", reads_path).
-edge[dep]("bench/mem_census.ts", "src/store.ts", ts_import).
-edge[dep]("bench/mem_scale.ts", "src/api.ts", reads_path).
-edge[dep]("bench/mem_scale.ts", "src/api.ts", ts_import).
-edge[dep]("bench/pilot.ts", "runtime/report.ts", reads_path).
-edge[dep]("bench/pilot.ts", "runtime/report.ts", ts_import).
-edge[dep]("bench/pilot.ts", "src/api.ts", reads_path).
-edge[dep]("bench/pilot.ts", "src/api.ts", ts_import).
 edge[dep]("boot.rofl", "facts/spec.rofl", doc_ref).
 edge[dep]("boot.rofl", "policy.rofl", doc_ref).
 edge[dep]("boot.rofl", "rules/findings.rofl", doc_ref).
@@ -805,35 +653,7 @@ edge[dep]("boot.rofl", "safety.rofl", doc_ref).
 edge[dep]("boot.rofl", "src/api.ts", doc_ref).
 edge[dep]("boot.rofl", "src/reflect.ts", doc_ref).
 edge[dep]("boot.rofl", "src/rounds.ts", doc_ref).
-edge[dep]("CLAUDE.md", ".github/workflows/ci.yml", doc_ref).
-edge[dep]("CLAUDE.md", "boot.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "docs/books-and-permission.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/choosing-perspectives.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/failure-modes.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/guided-formal-reasoning-roadmap.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/inquiry-kinds.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/normalisation-and-profiling.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/scaling-a-corpus.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/test-maintenance-cost.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/the-target.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/time-and-continuity.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/volumes-and-residency.md", doc_ref).
-edge[dep]("CLAUDE.md", "docs/working-with-ledgers.md", doc_ref).
 edge[dep]("CLAUDE.md", "facts/findings.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "facts/worlds.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "policy.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "rules/eval-cost.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "rules/findings.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "rules/parse-cost.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "safety.rofl", doc_ref).
-edge[dep]("CLAUDE.md", "scanners/eval_cost.ts", doc_ref).
-edge[dep]("CLAUDE.md", "scripts/text_check.ts", doc_ref).
-edge[dep]("CLAUDE.md", "scripts/witness_check.ts", doc_ref).
-edge[dep]("CLAUDE.md", "src/api.ts", doc_ref).
-edge[dep]("CLAUDE.md", "src/reflect.ts", doc_ref).
-edge[dep]("CLAUDE.md", "test/kernel-policy-program.test.ts", doc_ref).
-edge[dep]("CLAUDE.md", "test/permission-doc.test.ts", doc_ref).
-edge[dep]("docs/benchmark-protocol.md", "docs/dogfood/2026-08-28-lic-haiku45.md", doc_ref).
 edge[dep]("docs/books-and-permission.md", "boot.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("docs/books-and-permission.md", "examples/cram/flight_log.rofl", doc_ref).
@@ -870,117 +690,9 @@ edge[dep]("docs/claims-outside-the-store.md", "rules/js-ambient.rofl", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "rules/js-controlflow.rofl", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "rules/js-dataflow.rofl", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "scripts/witness_check.ts", doc_ref).
-edge[dep]("docs/comment-migration-brief.md", "docs/claims-outside-the-store.md", doc_ref).
-edge[dep]("docs/comment-migration-brief.md", "docs/failure-modes.md", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-amnesiac.md", "bench/lic-haiku45-amnesiac.json", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-bundle.md", "scripts/build_skill.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "bench/lic-haiku45-results.json", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "docs/benchmark-protocol.md", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "docs/dogfood/2026-08-28-pilot.md", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pair.md", "runtime/pair.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pair.md", "test/pair.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pilot.md", "bench/pilot.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pr2.md", "facts/findings.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pr2.md", "schemas/intent-result.json", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-pr5.md", "rules/inquiry/perspectives.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/claims.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/frame.md", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/reports.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-swarm.md", "docs/formal-reasoning-landscape.md", doc_ref).
-edge[dep]("docs/dogfood/2026-08-28-swarm.md", "rules/swarm.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "boot.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "docs/choosing-perspectives.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "examples/sensors.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "facts/js-env.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "rules/js-env.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "rules/js-resolve.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "scanners/js_ast.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "test/js-env.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-self-application.md", "boot.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-self-application.md", "src/parser.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-self-application.md", "src/reflect.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-04-self-application.md", "test/escapes.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "bench/fork_control.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "bench/fork_parallel.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "bench/fork_task_leaky.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "bench/fork_task_spin.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "bench/fork_task_wtf.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "docs/performance-invariants.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "examples/iffy/README.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "LIMITS.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "runtime/fork_pool.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "runtime/fork_worker.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "runtime/pair.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "test/derived-reuse.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "test/kernel-arity.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scanners/engine_split.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scanners/necessity.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scripts/parser_optional.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/api.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/dense.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/kernel-dense.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/parser.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/reflect.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/tokens.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/unify.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "test/necessity.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "test/parser-optional.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "adapters/sqlite-store.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "bench/mem_scale.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "docs/performance-invariants.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "scanners/key_coupling.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/api.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/engine.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/reflect.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/repl.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/rounds.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/semiring.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/store.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "src/unify.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/bootstrap-dag.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/engine-split.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/example-spat.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/firing-signature.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/index-arrival.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/key-bytes.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-07-tier-2-interning.md", "test/store-conformance.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "docs/medium-and-large.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "docs/performance-invariants.md", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "rust/share_curve.sh", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "scanners/store_boundary.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "scanners/store_trace.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-08-storage-backends.md", "scripts/derivations.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "facts/js-attrs.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "facts/js-effects.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-dataflow.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-effects.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-modules.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "scripts/witness_check.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-attrs.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-effects.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-fixpoint-cost.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-host.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-layer-cost.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-model.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-modules.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/worklist.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-join-planner.md", "rules/js-dataflow.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-join-planner.md", "test/join-planner.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-join-planner.md", "test/js-fixpoint-cost.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-join-planner.md", "test/js-layer-cost.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-join-planner.md", "test/worklist.test.ts", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-reading-the-complement.md", "facts/js-lib-surface.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-reading-the-complement.md", "rules/js-ambient.rofl", doc_ref).
-edge[dep]("docs/dogfood/2026-09-09-reading-the-complement.md", "scanners/ts_lib.ts", doc_ref).
 edge[dep]("docs/failure-modes.md", "docs/claims-outside-the-store.md", doc_ref).
-edge[dep]("docs/failure-modes.md", "docs/comment-migration-brief.md", doc_ref).
 edge[dep]("docs/failure-modes.md", "docs/test-maintenance-cost.md", doc_ref).
 edge[dep]("docs/formal-reasoning-landscape.md", "rules/swarm.rofl", doc_ref).
-edge[dep]("docs/guided-formal-reasoning-roadmap.md", "facts/spec.rofl", doc_ref).
-edge[dep]("docs/guided-formal-reasoning-roadmap.md", "rules/inquiry/epistemic.rofl", doc_ref).
-edge[dep]("docs/guided-formal-reasoning-roadmap.md", "runtime/tick.ts", doc_ref).
-edge[dep]("docs/guided-formal-reasoning-roadmap.md", "schemas/intent-result.json", doc_ref).
-edge[dep]("docs/guided-formal-reasoning-roadmap.md", "skills/guided-formal-reasoning/SKILL.md", doc_ref).
 edge[dep]("docs/ledger-as-an-instrument.md", "docs/claims-outside-the-store.md", doc_ref).
 edge[dep]("docs/ledger-as-an-instrument.md", "docs/test-maintenance-cost.md", doc_ref).
 edge[dep]("docs/ledger-as-an-instrument.md", "docs/working-with-ledgers.md", doc_ref).
@@ -991,10 +703,7 @@ edge[dep]("docs/modelling-a-language.md", "test/js-model.test.ts", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "boot.rofl", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "docs/volumes-and-residency.md", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "scanners/js_ast.ts", doc_ref).
-edge[dep]("docs/performance-invariants.md", "bench/mem_scale.ts", doc_ref).
 edge[dep]("docs/performance-invariants.md", "boot.rofl", doc_ref).
-edge[dep]("docs/performance-invariants.md", "docs/dogfood/2026-09-07-fork-parallelism.md", doc_ref).
-edge[dep]("docs/performance-invariants.md", "docs/dogfood/2026-09-07-tier-2-interning.md", doc_ref).
 edge[dep]("docs/performance-invariants.md", "LIMITS.md", doc_ref).
 edge[dep]("docs/performance-invariants.md", "runtime/fork_pool.ts", doc_ref).
 edge[dep]("docs/performance-invariants.md", "runtime/fork_worker.ts", doc_ref).
@@ -1019,8 +728,6 @@ edge[dep]("docs/test-maintenance-cost.md", "test/js-fixpoint-cost.test.ts", doc_
 edge[dep]("docs/test-maintenance-cost.md", "test/js-layer-cost.test.ts", doc_ref).
 edge[dep]("docs/test-maintenance-cost.md", "test/js-model.test.ts", doc_ref).
 edge[dep]("docs/the-target.md", "docs/medium-and-large.md", doc_ref).
-edge[dep]("docs/the-target.md", "scanners/js_seed.ts", doc_ref).
-edge[dep]("docs/the-target.md", "scanners/js_volume.ts", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "src/rounds.ts", doc_ref).
 edge[dep]("docs/time-and-continuity.md", "boot.rofl", doc_ref).
@@ -1566,38 +1273,18 @@ edge[dep]("facts/cleanliness.rofl", "scanners/side_files.ts", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/eval-cost.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/floor-census.rofl", doc_ref).
-edge[dep]("facts/cross-products.rofl", "rules/history.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/layering.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/parse-cost.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/policies/evidence.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", "adapters/sqlite-store.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "bench/fork_clone_cost.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "bench/fork_control.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "bench/fork_task_leaky.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "bench/pilot.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "boot.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "CLAUDE.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/benchmark-protocol.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/books-and-permission.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/choosing-perspectives.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-28-amnesiac.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-28-lic-haiku45.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-28-pilot.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-28-pr1.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-28-swarm.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-08-30-honk-huh.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-04-environment-layer.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-04-self-application.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-07-fork-parallelism.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-07-grammar-and-lexis.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-07-tier-2-interning.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-08-storage-backends.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/dogfood/2026-09-09-join-planner.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/failure-modes.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/formal-reasoning-landscape.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/guided-formal-reasoning-roadmap.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/medium-and-large.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/modelling-a-language.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/normalisation-and-profiling.md", ledger_ref).
@@ -1636,7 +1323,6 @@ edge[dep]("facts/findings.rofl", "facts/js-lib-surface.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-modules.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-shapes.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-statements.rofl", ledger_ref).
-edge[dep]("facts/findings.rofl", "facts/rule-shape.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/spec.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/worklist.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/worlds.rofl", ledger_ref).
@@ -1648,7 +1334,6 @@ edge[dep]("facts/findings.rofl", "rules/engine-split.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/eval-cost.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/findings.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/floor-census.rofl", ledger_ref).
-edge[dep]("facts/findings.rofl", "rules/history.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/ingest.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/inquiry/epistemic.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/inquiry/intents.rofl", ledger_ref).
@@ -1710,26 +1395,17 @@ edge[dep]("facts/findings.rofl", "scanners/eval_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/floor_census.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/host_lib.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/js_ast.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/js_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/js_resolve.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/js_volume.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/ledger_census.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/materialize.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/necessity.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/order_census.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/parse_bench.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/parse_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/policy_ladder.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/ring1_lexgen.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/ring1_pargen.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/round_bytes.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/round_shape.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/rule_shape.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/spec.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/store_boundary.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/store_trace.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/tasks/t10-l0.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "scanners/tasks/t9-noparse.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/ts_lib.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/derivations.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/flag_census.ts", ledger_ref).
@@ -1858,591 +1534,6 @@ edge[dep]("facts/floor-census.rofl", "rules/kernel-policy.rofl", doc_ref).
 edge[dep]("facts/floor-census.rofl", "rules/self-audit.rofl", doc_ref).
 edge[dep]("facts/floor-census.rofl", "rules/strata.rofl", doc_ref).
 edge[dep]("facts/floor-census.rofl", "safety.rofl", doc_ref).
-edge[dep]("facts/history.rofl", ".claude-plugin/marketplace.json", doc_ref).
-edge[dep]("facts/history.rofl", ".claude-plugin/plugin.json", doc_ref).
-edge[dep]("facts/history.rofl", ".claude/hooks/session-start.sh", doc_ref).
-edge[dep]("facts/history.rofl", ".claude/settings.json", doc_ref).
-edge[dep]("facts/history.rofl", ".github/workflows/ci.yml", doc_ref).
-edge[dep]("facts/history.rofl", "adapters/index.ts", doc_ref).
-edge[dep]("facts/history.rofl", "adapters/sqlite-store.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_clone_cost.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_control.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_parallel.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_stages.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_task_alloc.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_task_leaky.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_task_noreuse.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_task_spin.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/fork_task_wtf.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/claims.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/facts.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/frame.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles.json", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_argumentation.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_clingo.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_codeql.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_ddlog.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_glean.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_kr_owl.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_lean_itp.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_llm_hybrids.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_prolog.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_smt.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_souffle.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/profiles/c_tms.md", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/reports.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "bench/landscape/seed.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "bench/lic-haiku45-amnesiac.json", doc_ref).
-edge[dep]("facts/history.rofl", "bench/lic-haiku45-results.json", doc_ref).
-edge[dep]("facts/history.rofl", "bench/mem_census.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/mem_scale.ts", doc_ref).
-edge[dep]("facts/history.rofl", "bench/pilot.ts", doc_ref).
-edge[dep]("facts/history.rofl", "boot.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "CLAUDE.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/benchmark-protocol.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/books-and-permission.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/choosing-perspectives.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/claims-outside-the-store.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/comment-migration-brief.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-amnesiac.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-bundle.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-lic-haiku45.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-pair.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-pilot.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-pr1.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-pr2.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-pr5.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-28-swarm.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-29-cold-agent.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-08-30-honk-huh.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-04-environment-layer.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-04-self-application.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-07-fork-parallelism.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-07-grammar-and-lexis.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-07-tier-2-interning.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-08-storage-backends.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-09-join-planner.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/dogfood/2026-09-09-reading-the-complement.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/failure-modes.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/formal-reasoning-landscape.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/guided-formal-reasoning-roadmap.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/inquiry-kinds.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/ledger-as-an-instrument.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/medium-and-large.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/modelling-a-language.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/normalisation-and-profiling.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/performance-invariants.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/port-surface.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/scaling-a-corpus.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/test-maintenance-cost.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/the-target.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/three-valued-answers.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/time-and-continuity.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/volumes-and-residency.md", doc_ref).
-edge[dep]("facts/history.rofl", "docs/working-with-ledgers.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/aka/aka.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/aka/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/aka/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/atlas-launch/context.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/atlas-launch/evidence.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/atlas-launch/frame.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/blam/blam.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/blam/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/blam/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/bleep/bleep.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/bleep/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/bleep/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/counter.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/cram/cram.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/cram/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/cram/flight_log.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/cram/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/audit.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/notify.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/orders.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/payments.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/pricing.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/storage/db.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/after/types.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/audit.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/db.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/notify.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/orders.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/payments.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/pricing.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/before/types.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/ditto.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ditto/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/drip/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/drip/drip.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/drip/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/flag/flag.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/flag/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/goof/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/goof/goof.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/goof/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/heck/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/heck/heck.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/heck/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/huh/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/huh/huh.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/huh/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/iffy/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/iffy/iffy.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/iffy/policy.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/iffy/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/iffy/statute.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/jopa/calibration.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/jopa/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/jopa/facts.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/jopa/jopa.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/jopa/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/loot/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/loot/loot.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/loot/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/moot/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/moot/moot.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/moot/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/nope/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/nope/nope.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/nope/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/npc/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/npc/npc.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/npc/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/oops/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/oops/oops.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/oops/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/reach/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/reach/reach.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/reach/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/charclass.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/dense.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/l0.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/l1.dense.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/l1.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/ring1/ring1.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/rip/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/rip/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/rip/rip.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/sensors.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/formula.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/revolver.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/slop.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/world.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/slop/xlsx.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/spat/html.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/spat/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/spat/spat.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/spat/spat.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/spat/week.example.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/sus/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/sus/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/sus/sus.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/tm_diverge.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/tm.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/wtf/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/wtf/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "examples/wtf/wtf.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/demo.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/01-sediment.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/02-scc.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/03-metadep.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/04-false-miss.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/05-diverging-semiring.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/06-stale-model.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/07-not-needed.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/08-golden-accident.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/09-wrong-premise.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/fragments/hygiene.ts", doc_ref).
-edge[dep]("facts/history.rofl", "examples/yak/README.md", doc_ref).
-edge[dep]("facts/history.rofl", "facts/cleanliness.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/cross-products.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/depends.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/eval-cost.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/findings.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/floor-census.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-attrs.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-callgraph.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-controlflow.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-cost.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-dataflow.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-effects.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-env.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-globals.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-host-surface.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-host.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-kinds.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-lib-surface.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-modules.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-resolve.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-shapes.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/js-statements.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/layering.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/ledger-census.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/parse-cost.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/permission-inventory.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/rule-shape.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/spec.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/worklist.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "facts/worlds.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "LIMITS.md", doc_ref).
-edge[dep]("facts/history.rofl", "package-lock.json", doc_ref).
-edge[dep]("facts/history.rofl", "package.json", doc_ref).
-edge[dep]("facts/history.rofl", "policy.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "README.md", doc_ref).
-edge[dep]("facts/history.rofl", "rules/cleanliness.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/depends.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/engine-split.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/eval-cost.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/findings.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/floor-census.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/history.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/ingest.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/epistemic.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/intents.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/obligations.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/ontology.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/perspectives.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/inquiry/terminology.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-ambient.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-attrs.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-callgraph.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-controlflow.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-dataflow.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-effects.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-env-api.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-env.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-globals.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-host.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-model.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-modules.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-pack-home.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-resolve.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-structure.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/js-vocabulary.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/kernel-policy.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/layering.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/nullary.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/parse-cost.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/permission-model.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/policies/authority.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/policies/evidence.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/profile.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/rule-shape.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/self-audit.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/spec-coverage.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/strata.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/swarm.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/worklist.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "rules/worlds.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/admission.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/fork_pool.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/fork_worker.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/ingest.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/pair.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/port.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/report.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/round_eval.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/scheduler.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/semirings.ts", doc_ref).
-edge[dep]("facts/history.rofl", "runtime/tick.ts", doc_ref).
-edge[dep]("facts/history.rofl", "rust/bytes_table.sh", doc_ref).
-edge[dep]("facts/history.rofl", "rust/colbench/src/main.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/mutants.sh", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/build.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/ring1_lex.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/ring1_preds_dump.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/ring1_tokens_dump.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_eval.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_lex_dump.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_load_bench.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_load_dump.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_parse_bench.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_parse_dump.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_serve.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/bin/rofl_session_bench.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/dense.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/engine.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/lib.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/program.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/reflect.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/ring1_lexer.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/ring1_preds.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/ring1_tables.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/ring1_tok.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/rofl_lex.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/rofl_parse.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/seed.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/session.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/store.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/src/term.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/tests/cool.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/tests/program.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/rofl/tests/session.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/run_corpus.sh", doc_ref).
-edge[dep]("facts/history.rofl", "rust/share_curve.sh", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/backend.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/colfile.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/column.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/kv_fjall.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/kv_heed.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/kv_redb.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/kv_rocks.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/kv.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/main.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/native.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/scale.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/storebench/src/trace.rs", doc_ref).
-edge[dep]("facts/history.rofl", "rust/tools/mem_js.ts", doc_ref).
-edge[dep]("facts/history.rofl", "rust/tools/probe.ts", doc_ref).
-edge[dep]("facts/history.rofl", "safety.rofl", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ablate.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/book_locality.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/bootstrap_dag.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/cleanliness_report.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/cli.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/depends.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/engine_split.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/eval_cost.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/floor_census.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/history.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/host_lib.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js_ast.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js_cost.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js_resolve.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js_seed.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js_volume.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/js.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/key_coupling.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/layering_report.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ledger_census.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/materialize.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/necessity.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/nullary_report.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/order_census.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/parse_bench.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/parse_cost.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/permission_inventory.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/policy_ladder.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/profile_shape.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ring1_lexgen.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ring1_pargen.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ring1_predgen.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ring1_spangen.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/round_bytes.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/round_shape.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/rule_shape_report.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/rule_shape.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/side_files.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/spec.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/store_boundary.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/store_trace.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/compile-fixture.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t1-evaluate.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t10-l0.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t2-ticks.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t3-explain.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t4-persist.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t5-refuse.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t6-selfapply.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t7-wellfounded.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t8-semiring.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/tasks/t9-noparse.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/ts_lib.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scanners/volume_locality.ts", doc_ref).
-edge[dep]("facts/history.rofl", "schemas/intent-result.json", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/build_kernel_dense.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/build_skill.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/derivations.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/flag_census.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/measurement_check.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/parser_optional.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/port_corpus.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/text_check.ts", doc_ref).
-edge[dep]("facts/history.rofl", "scripts/witness_check.ts", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/challenge.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/clarify.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/confirm.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/discriminate.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/escalate.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/instruments.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/normalise.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/SKILL.md", doc_ref).
-edge[dep]("facts/history.rofl", "skills/guided-formal-reasoning/verify.md", doc_ref).
-edge[dep]("facts/history.rofl", "src/api.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/dense.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/engine.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/kernel-dense.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/parser.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/reflect.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/repl.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/rounds.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/semiring.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/store.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/tokens.ts", doc_ref).
-edge[dep]("facts/history.rofl", "src/unify.ts", doc_ref).
-edge[dep]("facts/history.rofl", "START.md", doc_ref).
-edge[dep]("facts/history.rofl", "test/ablate.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/admission.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/arg-index.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/arith-hole.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/ask-by-term.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/asserted-tick.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/authority-grant.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/authorship.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/body-order.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/bootstrap-dag.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/bridges.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/budget-space.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/cleanliness.check.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/clear-derived.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/comparison-sink.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/confirmation.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/depends.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/derived-reuse.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/docs-index.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/engine-split.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/escapes.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/evaluator-primary.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-aka.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-blam.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-bleep.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-cram.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-ditto.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-drip.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-goof.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-heck.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-huh.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-iffy.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-jopa.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-loot.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-moot.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-nope.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-npc.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-oops.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-ring1-self.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-ring1.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-rip.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-slop.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-spat.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-sus.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-wtf.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/example-yak.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/exports.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/findings.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/firing-signature.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-call/alpha.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-call/beta.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-call/delta.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-call/gamma.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-call/trace.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-host/clock.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-host/runtime.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/fixtures/js-host/shadow.mjs", doc_ref).
-edge[dep]("facts/history.rofl", "test/flag-census.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/flow-closure.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/head-vars.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/helpers/roundtrip_child.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/index-arrival.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/ingest-rules.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/inquiry.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/join-planner.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-ambient.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-ast.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-attrs.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-callgraph.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-class-expression.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-computed-key-names.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-controlflow-scope.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-controlflow-values.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-controlflow.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-corpus-world.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-decorator-replacement.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-decorators.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-destructuring-transfer.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-directives.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-effects.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-env.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-export-forms.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-fixpoint-cost.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-globals.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-host-world.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-host.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-layer-cost.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-lib-surface.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-meta-and-await.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-model.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-modules.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-pack-home.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-resolve.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-update-and-literals.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/js-vocabulary.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/kernel-arity.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/kernel-edge.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/kernel-policy-program.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/key-bytes.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/layering.check.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/necessity.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/next-tense.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/note-witness.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/pair.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/parser-optional.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/permission-doc.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/persp-var.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/perspectives.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/phase1.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/phase2.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/phase3.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/phase4.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/policy-ladder.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/port-client.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/production-readiness.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/profile-shape.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/provenance-retention.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/query-unpopulatable.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/reject-budget-invariance.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/ring1-lexgen.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/ring1-predgen.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/ring1-spangen.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rings.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rofl-lex.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rofl-parse.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rofl-safety.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/round-eval-demand.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/round-eval.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rule-answers.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/rule-shape.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/scanner.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/sealed.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/second-door.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/semiring.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/skill-bundle.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/space.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/spec-coverage.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/store-conformance.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/str-ops.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/strata-fixture.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/string-destructors.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/swarm.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/terminology.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/text-check.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/tick.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/undefined-premise.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/vocabulary-doc.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/volume-locality.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/well-founded.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/whynot.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/widened-negation.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/witness-check.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "test/worklist.test.ts", doc_ref).
-edge[dep]("facts/history.rofl", "tsconfig.json", doc_ref).
 edge[dep]("facts/js-effects.rofl", "rules/js-ambient.rofl", doc_ref).
 edge[dep]("facts/js-effects.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("facts/js-env.rofl", "scanners/js_ast.ts", doc_ref).
@@ -2453,25 +1544,6 @@ edge[dep]("facts/layering.rofl", "policy.rofl", doc_ref).
 edge[dep]("facts/layering.rofl", "safety.rofl", doc_ref).
 edge[dep]("facts/layering.rofl", "src/api.ts", doc_ref).
 edge[dep]("facts/layering.rofl", "src/store.ts", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "boot.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "examples/tm_diverge.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "examples/tm.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "policy.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/engine-split.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/eval-cost.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/findings.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-callgraph.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-dataflow.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-model.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-modules.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-resolve.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/js-structure.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/kernel-policy.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/parse-cost.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/spec-coverage.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/strata.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "rules/swarm.rofl", doc_ref).
-edge[dep]("facts/ledger-census.rofl", "safety.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "boot.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "examples/aka/demo.ts", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "examples/goof/demo.ts", doc_ref).
@@ -2484,7 +1556,6 @@ edge[dep]("facts/permission-inventory.rofl", "examples/yak/fragments/01-sediment
 edge[dep]("facts/permission-inventory.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "facts/js-kinds.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "facts/js-resolve.rofl", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "facts/rule-shape.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "facts/spec.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "policy.rofl", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "rules/eval-cost.rofl", doc_ref).
@@ -2546,86 +1617,6 @@ edge[dep]("facts/permission-inventory.rofl", "test/string-destructors.test.ts", 
 edge[dep]("facts/permission-inventory.rofl", "test/undefined-premise.test.ts", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "test/well-founded.test.ts", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "test/widened-negation.test.ts", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "boot.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/aka/aka.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/blam/blam.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/bleep/bleep.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/counter.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/cram/cram.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/cram/flight_log.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/ditto/ditto.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/drip/drip.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/flag/flag.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/goof/goof.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/heck/heck.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/huh/huh.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/iffy/iffy.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/iffy/policy.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/iffy/statute.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/jopa/jopa.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/loot/loot.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/moot/moot.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/nope/nope.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/npc/npc.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/oops/oops.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/reach/reach.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/ring1/l1.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/ring1/ring1.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/rip/rip.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/sensors.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/slop/slop.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/spat/spat.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/sus/sus.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/tm_diverge.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/tm.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "examples/wtf/wtf.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "policy.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/cleanliness.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/depends.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/engine-split.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/eval-cost.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/findings.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/floor-census.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/history.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/ingest.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/inquiry/epistemic.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/inquiry/intents.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/inquiry/obligations.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/inquiry/perspectives.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/inquiry/terminology.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-ambient.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-attrs.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-callgraph.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-controlflow.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-dataflow.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-effects.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-env-api.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-env.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-globals.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-host.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-model.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-modules.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-pack-home.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-resolve.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-structure.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/js-vocabulary.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/kernel-policy.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/layering.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/nullary.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/parse-cost.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/permission-model.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/policies/authority.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/policies/evidence.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/profile.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/rule-shape.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/self-audit.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/spec-coverage.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/strata.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/swarm.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/worklist.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "rules/worlds.rofl", doc_ref).
-edge[dep]("facts/rule-shape.rofl", "safety.rofl", doc_ref).
 edge[dep]("facts/spec.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/spec.rofl", "boot.rofl", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/performance-invariants.md", ledger_ref).
@@ -2730,18 +1721,12 @@ edge[dep]("npm:findings", "facts/findings.rofl", npm_script).
 edge[dep]("npm:findings", "runtime/report.ts", npm_script).
 edge[dep]("npm:flagcheck", "scripts/flag_census.ts", npm_script).
 edge[dep]("npm:floorcensus", "scanners/floor_census.ts", npm_script).
-edge[dep]("npm:forkclone", "bench/fork_clone_cost.ts", npm_script).
-edge[dep]("npm:forkctl", "bench/fork_control.ts", npm_script).
-edge[dep]("npm:forkpar", "bench/fork_parallel.ts", npm_script).
-edge[dep]("npm:forkstages", "bench/fork_stages.ts", npm_script).
-edge[dep]("npm:history", "scanners/history.ts", npm_script).
 edge[dep]("npm:keycoupling", "scanners/key_coupling.ts", npm_script).
 edge[dep]("npm:laddercheck", "scanners/policy_ladder.ts", npm_script).
 edge[dep]("npm:layercheck", "test/layering.check.ts", npm_script).
 edge[dep]("npm:layering", "scanners/layering_report.ts", npm_script).
 edge[dep]("npm:loop", "scanners/side_files.ts", npm_script).
 edge[dep]("npm:measurecheck", "scripts/measurement_check.ts", npm_script).
-edge[dep]("npm:memcensus", "bench/mem_census.ts", npm_script).
 edge[dep]("npm:necessity", "scanners/necessity.ts", npm_script).
 edge[dep]("npm:noparser", "scripts/parser_optional.ts", npm_script).
 edge[dep]("npm:nullary", "scanners/nullary_report.ts", npm_script).
@@ -2777,14 +1762,11 @@ edge[dep]("npm:whyslow", "runtime/report.ts", npm_script).
 edge[dep]("policy.rofl", "examples/ring1/l1.dense.rofl", doc_ref).
 edge[dep]("README.md", ".github/workflows/ci.yml", doc_ref).
 edge[dep]("README.md", "boot.rofl", doc_ref).
-edge[dep]("README.md", "docs/benchmark-protocol.md", doc_ref).
 edge[dep]("README.md", "docs/books-and-permission.md", doc_ref).
 edge[dep]("README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("README.md", "docs/claims-outside-the-store.md", doc_ref).
-edge[dep]("README.md", "docs/comment-migration-brief.md", doc_ref).
 edge[dep]("README.md", "docs/failure-modes.md", doc_ref).
 edge[dep]("README.md", "docs/formal-reasoning-landscape.md", doc_ref).
-edge[dep]("README.md", "docs/guided-formal-reasoning-roadmap.md", doc_ref).
 edge[dep]("README.md", "docs/inquiry-kinds.md", doc_ref).
 edge[dep]("README.md", "docs/ledger-as-an-instrument.md", doc_ref).
 edge[dep]("README.md", "docs/medium-and-large.md", doc_ref).
@@ -2838,12 +1820,10 @@ edge[dep]("README.md", "test/sealed.test.ts", doc_ref).
 edge[dep]("README.md", "test/vocabulary-doc.test.ts", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "facts/depends.rofl", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "facts/findings.rofl", doc_ref).
-edge[dep]("rules/cleanliness.rofl", "facts/rule-shape.rofl", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "README.md", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "scripts/witness_check.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/depends.rofl", "facts/findings.rofl", doc_ref).
-edge[dep]("rules/depends.rofl", "facts/rule-shape.rofl", doc_ref).
 edge[dep]("rules/depends.rofl", "scanners/rule_shape.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "scripts/witness_check.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "test/cleanliness.check.ts", doc_ref).
@@ -2853,8 +1833,6 @@ edge[dep]("rules/findings.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("rules/floor-census.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/floor-census.rofl", "policy.rofl", doc_ref).
 edge[dep]("rules/floor-census.rofl", "safety.rofl", doc_ref).
-edge[dep]("rules/history.rofl", "rules/cleanliness.rofl", doc_ref).
-edge[dep]("rules/history.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("rules/ingest.rofl", "scanners/js_ast.ts", doc_ref).
 edge[dep]("rules/ingest.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("rules/js-ambient.rofl", "facts/js-globals.rofl", doc_ref).
@@ -3013,74 +1991,14 @@ edge[dep]("scanners/floor_census.ts", "src/reflect.ts", reads_path).
 edge[dep]("scanners/floor_census.ts", "src/reflect.ts", ts_import).
 edge[dep]("scanners/floor_census.ts", "src/store.ts", reads_path).
 edge[dep]("scanners/floor_census.ts", "src/store.ts", ts_import).
-edge[dep]("scanners/history.ts", "facts/history.rofl", generates).
 edge[dep]("scanners/host_lib.ts", "package.json", reads_path).
-edge[dep]("scanners/js_cost.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-cost.rofl", generates).
-edge[dep]("scanners/js_cost.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("scanners/js_cost.ts", "scanners/eval_cost.ts", reads_path).
-edge[dep]("scanners/js_cost.ts", "scanners/eval_cost.ts", ts_import).
-edge[dep]("scanners/js_cost.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("scanners/js_cost.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("scanners/js_cost.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/js_cost.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/js_resolve.ts", "package.json", reads_path).
-edge[dep]("scanners/js_seed.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("scanners/js_seed.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("scanners/js_seed.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("scanners/js_seed.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/js_seed.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/js_volume.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("scanners/js_volume.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("scanners/js_volume.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("scanners/js_volume.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/js_volume.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/layering_report.ts", "facts/depends.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "facts/layering.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "rules/depends.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "rules/layering.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/layering_report.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/ledger_census.ts", "facts/ledger-census.rofl", generates).
-edge[dep]("scanners/ledger_census.ts", "src/parser.ts", reads_path).
-edge[dep]("scanners/ledger_census.ts", "src/parser.ts", ts_import).
-edge[dep]("scanners/ledger_census.ts", "src/unify.ts", reads_path).
-edge[dep]("scanners/ledger_census.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/materialize.ts", "scanners/js.ts", reads_path).
 edge[dep]("scanners/materialize.ts", "scanners/js.ts", ts_import).
 edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", reads_path).
@@ -3092,27 +2010,6 @@ edge[dep]("scanners/nullary_report.ts", "rules/nullary.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "safety.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/nullary_report.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/goof/demo.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/goof/demo.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "examples/loot/demo.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/loot/demo.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "examples/ring1/demo.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/ring1/demo.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "examples/spat/spat.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/spat/spat.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "examples/sus/demo.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/sus/demo.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "src/engine.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "src/engine.ts", ts_import).
-edge[dep]("scanners/order_census.ts", "src/store.ts", reads_path).
-edge[dep]("scanners/order_census.ts", "src/store.ts", ts_import).
-edge[dep]("scanners/parse_bench.ts", "src/parser.ts", reads_path).
-edge[dep]("scanners/parse_bench.ts", "src/parser.ts", ts_import).
 edge[dep]("scanners/parse_cost.ts", "examples/ring1/demo.ts", reads_path).
 edge[dep]("scanners/parse_cost.ts", "examples/ring1/demo.ts", ts_import).
 edge[dep]("scanners/parse_cost.ts", "src/api.ts", reads_path).
@@ -3164,11 +2061,6 @@ edge[dep]("scanners/ring1_lexgen.ts", "src/parser.ts", reads_path).
 edge[dep]("scanners/ring1_lexgen.ts", "src/parser.ts", ts_import).
 edge[dep]("scanners/ring1_lexgen.ts", "src/unify.ts", reads_path).
 edge[dep]("scanners/ring1_lexgen.ts", "src/unify.ts", ts_import).
-edge[dep]("scanners/ring1_pargen.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("scanners/ring1_pargen.ts", "src/parser.ts", reads_path).
-edge[dep]("scanners/ring1_pargen.ts", "src/parser.ts", ts_import).
-edge[dep]("scanners/ring1_pargen.ts", "src/unify.ts", reads_path).
-edge[dep]("scanners/ring1_pargen.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/ring1_predgen.ts", "examples/ring1/ring1.rofl", reads_path).
 edge[dep]("scanners/ring1_predgen.ts", "rust/rofl/src/ring1_preds.rs", reads_path).
 edge[dep]("scanners/ring1_predgen.ts", "src/parser.ts", reads_path).
@@ -3187,21 +2079,11 @@ edge[dep]("scanners/round_bytes.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/round_bytes.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/round_bytes.ts", "src/engine.ts", reads_path).
 edge[dep]("scanners/round_bytes.ts", "src/engine.ts", ts_import).
-edge[dep]("scanners/round_shape.ts", "examples/ring1/demo.ts", reads_path).
-edge[dep]("scanners/round_shape.ts", "examples/ring1/demo.ts", ts_import).
-edge[dep]("scanners/round_shape.ts", "src/engine.ts", reads_path).
-edge[dep]("scanners/round_shape.ts", "src/engine.ts", ts_import).
-edge[dep]("scanners/round_shape.ts", "src/rounds.ts", reads_path).
-edge[dep]("scanners/round_shape.ts", "src/rounds.ts", ts_import).
-edge[dep]("scanners/round_shape.ts", "src/unify.ts", reads_path).
-edge[dep]("scanners/round_shape.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/rule_shape_report.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/rule_shape_report.ts", "facts/rule-shape.rofl", reads_path).
 edge[dep]("scanners/rule_shape_report.ts", "rules/rule-shape.rofl", reads_path).
 edge[dep]("scanners/rule_shape_report.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/rule_shape_report.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/rule_shape.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/rule_shape.ts", "facts/rule-shape.rofl", generates).
 edge[dep]("scanners/rule_shape.ts", "policy.rofl", reads_path).
 edge[dep]("scanners/rule_shape.ts", "safety.rofl", reads_path).
 edge[dep]("scanners/rule_shape.ts", "src/engine.ts", reads_path).
@@ -3235,54 +2117,6 @@ edge[dep]("scanners/store_trace.ts", "src/store.ts", reads_path).
 edge[dep]("scanners/store_trace.ts", "src/store.ts", ts_import).
 edge[dep]("scanners/store_trace.ts", "src/unify.ts", reads_path).
 edge[dep]("scanners/store_trace.ts", "src/unify.ts", ts_import).
-edge[dep]("scanners/tasks/compile-fixture.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/compile-fixture.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("scanners/tasks/compile-fixture.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/compile-fixture.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t1-evaluate.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t1-evaluate.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("scanners/tasks/t1-evaluate.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t1-evaluate.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t10-l0.ts", "examples/ring1/l0.ts", reads_path).
-edge[dep]("scanners/tasks/t10-l0.ts", "examples/ring1/l0.ts", ts_import).
-edge[dep]("scanners/tasks/t10-l0.ts", "examples/ring1/l1.dense.rofl", reads_path).
-edge[dep]("scanners/tasks/t10-l0.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t10-l0.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t2-ticks.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t2-ticks.ts", "examples/tm.rofl", reads_path).
-edge[dep]("scanners/tasks/t2-ticks.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t2-ticks.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t3-explain.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t3-explain.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("scanners/tasks/t3-explain.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t3-explain.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t4-persist.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t4-persist.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("scanners/tasks/t4-persist.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t4-persist.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t5-refuse.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t5-refuse.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t5-refuse.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t6-selfapply.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t6-selfapply.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("scanners/tasks/t6-selfapply.ts", "safety.rofl", reads_path).
-edge[dep]("scanners/tasks/t6-selfapply.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t6-selfapply.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t7-wellfounded.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t7-wellfounded.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t7-wellfounded.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t8-semiring.ts", "boot.rofl", reads_path).
-edge[dep]("scanners/tasks/t8-semiring.ts", "examples/blam/blam.rofl", reads_path).
-edge[dep]("scanners/tasks/t8-semiring.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("scanners/tasks/t8-semiring.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("scanners/tasks/t8-semiring.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t8-semiring.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t8-semiring.ts", "src/semiring.ts", reads_path).
-edge[dep]("scanners/tasks/t8-semiring.ts", "src/semiring.ts", ts_import).
-edge[dep]("scanners/tasks/t9-noparse.ts", "src/api.ts", reads_path).
-edge[dep]("scanners/tasks/t9-noparse.ts", "src/api.ts", ts_import).
-edge[dep]("scanners/tasks/t9-noparse.ts", "src/dense.ts", reads_path).
-edge[dep]("scanners/tasks/t9-noparse.ts", "src/dense.ts", ts_import).
 edge[dep]("scanners/volume_locality.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/volume_locality.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("scanners/volume_locality.ts", "facts/js-controlflow.rofl", reads_path).
@@ -3497,7 +2331,7 @@ edge[dep]("test/confirmation.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/depends.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/depends.test.ts", "facts/depends.rofl", reads_path).
 edge[dep]("test/depends.test.ts", "facts/eval-cost.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "facts/rule-shape.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "facts/findings.rofl", reads_path).
 edge[dep]("test/depends.test.ts", "README.md", reads_path).
 edge[dep]("test/depends.test.ts", "rules/depends.rofl", reads_path).
 edge[dep]("test/depends.test.ts", "scanners/depends.ts", reads_path).
@@ -4797,4 +3631,4 @@ edge[dep]("test/worklist.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", reads_path).
 edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", ts_import).
 
-dark_paths[dep](232).
+dark_paths[dep](217).

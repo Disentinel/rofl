@@ -72,7 +72,7 @@ test('a blast radius is different for different targets', () => {
   // apiece, because the closure ran over prose. Unequal answers are the
   // property; the numbers themselves are the corpus and are not pinned.
   const facts = live();
-  const sizes = ['boot.rofl', 'facts/rule-shape.rofl', 'src/repl.ts']
+  const sizes = ['boot.rofl', 'facts/findings.rofl', 'src/repl.ts']
     .map((t) => col(world(facts, t), 'blast[dep](D, T)', 'D').length);
   assert.equal(new Set(sizes).size, sizes.length,
     `three unrelated targets gave ${sizes.join('/')} — a closure over a near-total relation answers "all of it"`);

@@ -33,3 +33,4 @@ rust/target/
 rust/*/target/
 rust/storebench/traces/
 rust/target/volumes/
+facts/rule-shape.rofl

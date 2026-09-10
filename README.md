@@ -27,7 +27,7 @@ points; the whole list is in `package.json`.
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
 | `rust/` | **the Rust engine** — the port this branch is instrumental to (`docs/the-target.md`), plus its benchmark crates | `cargo test` under `rust/` |
-| `bench/` `examples/` `test/` `facts/` `docs/` | measurements, 29 runnable demos, the suite, the ledgers, the design decisions | `memcensus` `test` |
+| `examples/` `test/` `facts/` `docs/` | runnable demos, the suite, the ledgers, the design decisions | `test` |
 
 ### Documents
 
@@ -53,11 +53,7 @@ stays cold), `working-with-ledgers.md`, `test-maintenance-cost.md`,
 effects and contradictions rather than as a log. `claims-outside-the-store.md`
 measures the gap: `measured` holds **3 rows** while the word MEASURED appears
 in **436 comment lines**, and 2 210 comment blocks over 78 files carry no
-verdict at all. `comment-migration-brief.md` is the proposed remedy — proposed,
-not implemented, and it says so — one file at a time, every block read, with a
-closed vocabulary of `kept` reasons defined *before* any block is classified,
-because `kept` turns the alarm green as effectively as migration and costs a
-tenth as much. Failure mode 17 in `failure-modes.md` is the entry they answer.
+verdict at all. Failure mode 17 in `failure-modes.md` is the entry they answer.
 
 **The engine and the port** — `the-target.md` (what everything on this branch
 is instrumental to), `medium-and-large.md` (two engines, and the line between
@@ -65,11 +61,9 @@ them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `modelling-a-language.md` (the JS model as a research programme).
 
-**The programme** — `guided-formal-reasoning-roadmap.md` (the plan; amend via
-findings), `formal-reasoning-landscape.md` (ROFL among the formal reasoning
-systems, and why the projection is ROFL-centric by construction),
-`benchmark-protocol.md`, and `docs/dogfood/` — one page per session that paid
-for something.
+**The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
+reasoning systems, and why the projection is ROFL-centric by construction).
+The plan itself is the ledger.
 
 ## How to run
 
@@ -124,7 +118,6 @@ that a rule pack then argues with, so every row has a `why`:
 | `npm run perminv` + `npm run whyperm` | who may write what |
 | `npm run ruleshape` | which rule bodies pay a cross product |
 | `npm run keycoupling` `npm run booklocality` `npm run boundary` | how coupled the store's key spelling, books and port surface are |
-| `npm run memcensus` `npm run roundbytes` `npm run storetrace` | what the store costs in bytes |
 | `npm run ablate` `npm run necessity` `npm run splitcheck` `npm run dagcheck` | what is load-bearing and what is not |
 
 REPL commands: `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`,
@@ -162,8 +155,7 @@ preamble granting `authority(code, scanner)`, fact files are loaded with
 ## Inquiry layer
 
 `rules/inquiry/` is the Phase 1 guided-formal-reasoning kernel
-(`docs/guided-formal-reasoning-roadmap.md`, `docs/inquiry-kinds.md`,
-`docs/choosing-perspectives.md`): a typed inquiry root, epistemic states as
+(`docs/inquiry-kinds.md`, `docs/choosing-perspectives.md`): a typed inquiry root, epistemic states as
 a derived `[epistemic]` ledger over an `[obs]` evidence journal
 (authority: runtime only), proof obligations, and candidate-intent
 generation. `runtime/report.ts` renders the anytime epistemic report:
@@ -428,7 +420,6 @@ negated anywhere cannot be answered from a part of the corpus.
   first run is why it exists: the design says "`ask(query)`" without ever
   writing a query down, and the first implementation invented `rel@book(args)`
   for a language whose book is `rel[book](args)` and whose `@` is the TENSE.
-- `rust/colbench/` `rust/storebench/` — the benchmark crates.
 - `runtime/port.ts` is the JS-side client; `npm run portcorpus` builds the
   corpus both engines are diffed over, and the oracle is a byte-identical
   `canonicalState()`.

@@ -12,7 +12,7 @@
 // world crosses as the snapshot STRING `Rofl.save()` already produces —
 // **once per worker**, not once per branch. Per branch what crosses is the
 // branch descriptor in and the task's answer out, both of which the host sizes.
-// The measured arithmetic is in `bench/fork_parallel.ts`; the shape of it is
+// The shape of it is
 // that the boundary is amortised over the branches and the per-branch message
 // is small, so the ratio that decides is (branch work) vs (message), not
 // (branch work) vs (snapshot).

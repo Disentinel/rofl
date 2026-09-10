@@ -57,7 +57,6 @@ cross_allowed("rules/floor-census.rofl", saved_bytes, store_bytes, bounded_looku
 cross_allowed("rules/parse-cost.rofl", cache_costs, cache, bounded_lookup).
 cross_allowed("rules/parse-cost.rofl", overhead_exceeds_work, work_costs, bounded_lookup).
 cross_allowed("rules/policies/evidence.rofl", stale_evidence, current_version, bounded_lookup).
-cross_allowed("rules/history.rofl", being_fed, fed_cut, bounded_lookup).
 cross_allowed("rules/layering.rofl", starts_with, library_decl, bounded_lookup).
 cross_allowed("rules/layering.rofl", serves_other, library_decl, bounded_lookup).
 

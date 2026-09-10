@@ -126,7 +126,12 @@ duty_decl(document, indexed).
 -- CI restated as arithmetic.
 --
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(130).
+-- LOWERED TO 100 ON 2026-09-10, the first time it has come down for work
+-- rather than for wiring. 45 120 lines and 44 artifacts left the tree in one
+-- pass: bench/, scanners/tasks/, docs/dogfood/, eight orphan scanners, the
+-- 38 391-line generated facts/rule-shape.rofl that only its own report read,
+-- and the git-history axis whose duty was never wired in.
+queue_ceiling(100).
 
 -- ==================================================== THE EVIDENTIAL AXIS
 -- ADDED 2026-09-10 AFTER THE TABLE FAILED ITS FIRST REAL TEST. Asked about
@@ -172,9 +177,3 @@ queue_ceiling(130).
 -- work this table has already produced four times from its own model moving.
 -- Write the rule, measure what it opens, THEN declare.
 
--- THE `being_fed` CUT. Declared, because the measure ranks and does not
--- classify — see rules/history.rofl. 15 puts the queue at twelve files and
--- keeps the top of the ranking, where the derivable baselines are; lowering it
--- to 8 pulls in twenty-seven, most of them tests carrying named-set oracles,
--- which is the practice this repository recommends rather than a defect.
-fed_cut(15).
