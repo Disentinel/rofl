@@ -39,12 +39,13 @@ for (let i = 0; i < argv.length; i++) if (argv[i] === '--out') out = argv[++i];
 const boot = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
 /** Every world this repository can build from `.rofl` text alone: a single
- *  file under examples/, or a directory of them loaded together. A demo whose
- *  world is assembled in TypeScript is NOT here — the seed must be reachable
- *  from the corpus, not from a host program. */
+ *  file under examples/, a directory of them loaded together, or a rule pack
+ *  beside the facts of the same name. A demo whose world is assembled in
+ *  TypeScript is NOT here — the seed must be reachable from the corpus, not
+ *  from a host program. */
 function worlds(): [string, string[]][] {
-  const ex = path.join(ROOT, 'examples');
   const out: [string, string[]][] = [];
+  const ex = path.join(ROOT, 'examples');
   for (const e of fs.readdirSync(ex).sort()) {
     const p = path.join(ex, e);
     if (fs.statSync(p).isDirectory()) {
@@ -52,7 +53,40 @@ function worlds(): [string, string[]][] {
       if (files.length > 0) out.push([e, files]);
     } else if (e.endsWith('.rofl')) out.push([e.replace(/\.rofl$/, ''), [p]]);
   }
+
+  // THE RULE PACKS, added 2026-09-10, and they were the larger half of the
+  // language all along: 46 packs and 12 464 lines against the examples' 40
+  // files, and the ONLY user in the tree of `str_pre`, `str_seg` and
+  // `str_segs`. Measured before adding them, the second engine had never
+  // evaluated one — which is why rust/rofl/src/engine.rs carries the comments
+  // "No corpus case exercises these" and "nothing in the corpus reaches
+  // `atom_of`" without saying why.
+  //
+  // A pack's world is the pack plus `facts/<same name>.rofl` when there is
+  // one; a pack whose inputs live elsewhere simply derives less, and a pack
+  // that cannot stand alone is refused by the round-trip test below like any
+  // other world.
+  for (const r of glob('rules')) {
+    const name = 'rules_' + path.relative(path.join(ROOT, 'rules'), r).replace(/\.rofl$/, '').replace(/[/]/g, '_');
+    const facts = path.join(ROOT, 'facts', path.basename(r));
+    out.push([name, fs.existsSync(facts) ? [facts, r] : [r]]);
+  }
+
   out.push(['boot_only', []]);
+  return out;
+}
+
+/** Every `.rofl` under a directory, one level of nesting included — `rules/`
+ *  has `inquiry/`, `policies/` and `decisions/` under it. */
+function glob(dir: string): string[] {
+  const base = path.join(ROOT, dir);
+  const out: string[] = [];
+  for (const e of fs.readdirSync(base).sort()) {
+    const p = path.join(base, e);
+    if (fs.statSync(p).isDirectory()) {
+      for (const f of fs.readdirSync(p).sort()) if (f.endsWith('.rofl')) out.push(path.join(p, f));
+    } else if (e.endsWith('.rofl')) out.push(p);
+  }
   return out;
 }
 
@@ -65,11 +99,23 @@ let ok = 0, skipped = 0, ticked = 0;
 for (const [name, files] of worlds()) {
   let seed: string, want: string, deriv: string, facts: number, partial: boolean;
   try {
+    // A FILE THAT IS NOT A PROGRAM DROPS ITSELF, NOT THE WORLD. `examples/
+    // ring1/l1.dense.rofl` is a dense ENCODING of l1.rofl's rules, checked for
+    // reproducibility by test/example-ring1.test.ts and not loadable as a
+    // program — and because this loop refused the whole directory on it,
+    // `ring1` was absent from the corpus, taking with it the only user of
+    // `str_char`, `str_sub` and `atom_of` among the examples. One file that is
+    // data cost seven destructors their only conformance case.
+    const dropped: string[] = [];
     const direct = new Rofl(); direct.load(boot);
     for (const f of files) {
       const res = direct.load(fs.readFileSync(f, 'utf8'));
-      if (!res.ok) throw new Error(`load refused: ${JSON.stringify(res).slice(0, 90)}`);
+      if (!res.ok) dropped.push(path.basename(f));
     }
+    if (files.length > 0 && dropped.length === files.length) {
+      throw new Error(`no file loaded: ${dropped.join(', ')}`);
+    }
+    if (dropped.length > 0) console.log(`  drop ${name.padEnd(14)} not a program: ${dropped.join(', ')}`);
     const ev = direct.evaluate();
     partial = ev.partial;
     want = direct.store.canonicalState();
@@ -77,7 +123,7 @@ for (const [name, files] of worlds()) {
     facts = direct.store.allFactKeys().length;
 
     const seedR = new Rofl(); seedR.load(boot);
-    for (const f of files) seedR.load(fs.readFileSync(f, 'utf8'));
+    for (const f of files) if (!dropped.includes(path.basename(f))) seedR.load(fs.readFileSync(f, 'utf8'));
     seedR.store.clearDerived();
     seed = seedR.store.snapshot();
 

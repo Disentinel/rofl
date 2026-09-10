@@ -42,7 +42,12 @@ OUTERR="$OUT/corpus-gen.err"
 REGEN=1
 for a in "$@"; do [ "$a" = "--no-regen" ] && REGEN=0; done
 if [ "$REGEN" = "1" ]; then
-  if ! node --experimental-strip-types "$ROOT/scripts/port_corpus.ts" > /dev/null 2>"$OUTERR"; then
+  # THE GENERATOR'S OWN REPORT IS NOT NOISE. It used to go to /dev/null, and
+  # the line it swallowed was `skip ring1` — the world holding the only use of
+  # four string destructors, absent from every PASS this harness ever printed.
+  # A harness that hides what its oracle does not cover is reporting on a
+  # corpus nobody can see the edges of.
+  if ! node --experimental-strip-types "$ROOT/scripts/port_corpus.ts" > "$OUT/corpus-gen.out" 2>"$OUTERR"; then
     echo "corpus generation FAILED — the oracle is not current, refusing to report a pass" >&2
     sed 's/^/  /' "$OUTERR" >&2
     # The commonest cause by far, and it is silent otherwise: this repository
@@ -55,6 +60,9 @@ if [ "$REGEN" = "1" ]; then
 else
   echo "NOTE: --no-regen, the corpus on disk is whatever was last generated" >&2
 fi
+grep -E '^  (skip|drop) ' "$OUT/corpus-gen.out" >&2
+tail -1 "$OUT/corpus-gen.out" >&2
+
 sp=0; sf=0; lp=0; lf=0
 printf '%-14s %-6s %7s  %-6s %7s %s\n' case strict diff loose diff reason
 while IFS=$'\t' read -r name facts _ _ _ ticks; do
