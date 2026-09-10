@@ -39,13 +39,6 @@ Anything you want to write down that is not code goes in the ledger.
 `facts/findings.rofl`, rendered by `npm run findings` and printed at session
 start. Ids are `f_<slug>`.
 
-This file was 403 lines on 2026-09-10 and is 47. Comments across the tree still
-cite it for disciplines that now live in the ledger and in the gates that
-enforce them — `scripts/flag_census.ts`, `scripts/witness_check.ts`,
-`f_a_measurement_must_certify_its_own_conditions`,
-`f_model_the_task_in_rofl_because_a_model_can_say_none`. Those citations are
-stale, not wrong; trim them when you touch the file.
-
 - **React to every open finding whose area you touch**: address it
   (`addressed_by(F, "path")`), dismiss it (`dismissed(F, reason)`), or defer it
   out loud in your summary. Never silently ignore.
