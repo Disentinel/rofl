@@ -257,6 +257,51 @@ Four hundred lines and twelve lines failed identically. Distance is not the
 variable. A rule that has been read, re-recorded and still not applied needs a
 mechanism, not better placement.
 
+## 17. Writing a process fact where nothing can check it
+
+The model of the work is itself the subject of the work, and facts about the
+work are written as prose in `.rofl` comments rather than into the relations
+that exist for them.
+
+Measured 2026-09-09:
+
+| | Count |
+| --- | --- |
+| `measured/` rows in the store | **3** |
+| Comment lines containing "MEASURED" | **436** |
+| Comment blocks with no verdict of any kind (consecutive comment lines = one event) | 2,210 |
+| Comment lines in hand-written packs | 19,661, or 54% of those files |
+| Note records carrying any witness | 38 of 788, about 5% |
+
+The relation exists, is the correct home, and is used a hundred and forty times
+less often than the prose that belongs in it. A relation can carry a witness, a
+supersession, an owner and a date. A comment carries none of those, and no query
+can reach it.
+
+The cost is already recorded by the repository against itself: 14 stale markers,
+11 corrections, 5 notes explicitly refuted by a probe, and five separate
+findings whose subject is a note being wrong — one of which records itself as the
+seventh consecutive instance and the first found by a mechanism rather than by a
+probe written from the note.
+
+**This is mode 9 in the opposite direction and it is the more expensive half.**
+Mode 9 is reading the prose when a relation holds the state. This is *writing*
+into prose when a relation exists to hold it. Same defect, same cause — prose is
+cheaper at the moment of writing and the cost lands on whoever reads it next —
+and this direction is worse because it creates the material that mode 9 then
+misreads.
+
+**Proposed remedy, not implemented and not validated.** Treat a comment block as
+a cell awaiting a verdict, in the same shape the coverage matrix already uses:
+`comment_block(Id, File)` generated with a content-derived identifier,
+`migrated(Id, Relation)` or `kept(Id, Reason)` as verdicts, and
+`open_comment[audit]` as the backlog worked down like `open_cell[audit]`. The
+analysis is in `docs/claims-outside-the-store.md` and the task definition in
+`docs/comment-migration-brief.md`. **No part of it has been built or run.** The
+obvious risk is named there: `kept` turns the alarm green as effectively as
+migration and costs a tenth as much, which is a failure this session already
+committed once with a different waiver.
+
 ---
 
 ## What actually caught things, second pass

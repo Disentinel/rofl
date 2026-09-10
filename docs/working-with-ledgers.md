@@ -10,7 +10,9 @@ description of the kernel.
 
 Related: `docs/choosing-perspectives.md` (what belongs in a perspective slot),
 `docs/three-valued-answers.md` (empty vs. unpopulatable), `docs/failure-modes.md`
-(long-horizon process failures).
+(long-horizon process failures), and `docs/ledger-as-an-instrument.md`, which
+asks what having these ledgers does to the people and programs working on top of
+them — including the side effects nobody asked for.
 
 ## What a ledger is here
 
