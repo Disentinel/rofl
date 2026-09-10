@@ -38,3 +38,13 @@ check_opt("budget_wall", budget, 50).
 -- different attribution. Whether a load evaluates is a decision about the host
 -- contract and not something to patch under a green bar.
 check_opt("budget_wall", one_engine, 1).
+
+-- ================================================ DEMOS THAT ARE NOT GOLDENS
+-- `npm run test:hosts` hashes each demo's output, because 21 of 23 demos call
+-- `why`, `whynot`, `excise`, `retract`, `fromSnapshot` or `tickAdvance` — the
+-- half of the system a `.rofl` world cannot reach. Two answer about something
+-- other than the tree and say so here rather than being chased with a wider
+-- mask.
+edb(demo_unhashable).
+demo_unhashable("npc", "prints a benchmark table whose columns carry no units, so a timing and a row count are indistinguishable line by line").
+demo_unhashable("slop", "measures itself against a headless LibreOffice and answers about whatever is installed").

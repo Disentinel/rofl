@@ -10,6 +10,7 @@
 
 edb(golden_state).
 edb(golden_rel).
+edb(golden_host).
 
 golden_state("aka", "22744d1c72d8d5bb", 3530).
 golden_state("atlas-launch", "cdf0fa0a4892a39b", 608).
@@ -45,7 +46,7 @@ golden_state("rules_decisions_production-readiness", "df65d00d61216f2f", 665).
 golden_state("rules_depends", "2c958eeefcc8bc2b", 15784).
 golden_state("rules_engine-split", "d1222225f9fe93f7", 708).
 golden_state("rules_eval-cost", "472dc5657e4f237b", 5704).
-golden_state("rules_findings", "6ea2e4dcda08ce8a", 12340).
+golden_state("rules_findings", "f0c201ce1d48b5a4", 12352).
 golden_state("rules_floor-census", "7b93e1e6ce802232", 2005).
 golden_state("rules_ingest", "a1a342452fb584ad", 808).
 golden_state("rules_inquiry_epistemic", "a7df1d966583a8b5", 837).
@@ -90,6 +91,28 @@ golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("destructor_hole", "b6818aae8a179730", 524).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
 golden_state("budget_wall", "53f0e5d10669a7fc", 459).
+
+golden_host("aka", "b270886e061521b6", 0, 341).
+golden_host("blam", "240bc0d48075cb61", 0, 251).
+golden_host("bleep", "d9403eaac329d7d6", 0, 183).
+golden_host("cram", "070a213dcc02bcc6", 0, 210).
+golden_host("ditto", "39545e1d1a3ba273", 0, 255).
+golden_host("drip", "0c8ab8935aecfca1", 0, 332).
+golden_host("goof", "7090f0bc4b9454a6", 0, 328).
+golden_host("heck", "0ad760fccc4ace36", 0, 215).
+golden_host("huh", "0a3bb41c1fc24351", 0, 116).
+golden_host("iffy", "ef87d1378307aad1", 0, 254).
+golden_host("jopa", "e9c3c46e0b70633c", 0, 311).
+golden_host("loot", "209dd82ea7c3bb55", 0, 456).
+golden_host("moot", "af58e46fef1aaa38", 1, 368).
+golden_host("nope", "6cf28baf34db6105", 0, 175).
+golden_host("oops", "012d40f715163c70", 0, 214).
+golden_host("reach", "7bcb38a4b0ac1448", 0, 37).
+golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
+golden_host("rip", "b6be7e21b8485b59", 0, 377).
+golden_host("sus", "60f08349f9d03e6f", 0, 335).
+golden_host("wtf", "f35fe2efb1348bbe", 0, 586).
+golden_host("yak", "ea76c84e28b96947", 0, 208).
 
 golden_rel("aka", "@other", 1).
 golden_rel("aka", "@wit", 986).
@@ -1764,9 +1787,9 @@ golden_rel("rules_eval-cost", "worth_measuring[main]", 9).
 golden_rel("rules_eval-cost", "writes_to[$kernel]", 47).
 golden_rel("rules_eval-cost", "yield[main]", 239).
 golden_rel("rules_findings", "@other", 1).
-golden_rel("rules_findings", "@wit", 1548).
-golden_rel("rules_findings", "addressed_by[main]", 837).
-golden_rel("rules_findings", "asserted_by[$kernel]", 4309).
+golden_rel("rules_findings", "@wit", 1549).
+golden_rel("rules_findings", "addressed_by[main]", 838).
+golden_rel("rules_findings", "asserted_by[$kernel]", 4314).
 golden_rel("rules_findings", "authority[main]", 5).
 golden_rel("rules_findings", "blocked_by[main]", 3).
 golden_rel("rules_findings", "blocks[main]", 10).
@@ -1774,13 +1797,13 @@ golden_rel("rules_findings", "concludes[$kernel]", 44).
 golden_rel("rules_findings", "conclusion_lit[$kernel]", 44).
 golden_rel("rules_findings", "conclusion_tense[$kernel]", 44).
 golden_rel("rules_findings", "corrected[main]", 15).
-golden_rel("rules_findings", "demands[main]", 769).
-golden_rel("rules_findings", "derived_by[$kernel]", 1568).
+golden_rel("rules_findings", "demands[main]", 770).
+golden_rel("rules_findings", "derived_by[$kernel]", 1569).
 golden_rel("rules_findings", "dismissed[main]", 32).
 golden_rel("rules_findings", "edb[main]", 37).
-golden_rel("rules_findings", "finding[main]", 840).
+golden_rel("rules_findings", "finding[main]", 841).
 golden_rel("rules_findings", "finding_action[main]", 184).
-golden_rel("rules_findings", "finding_note[main]", 859).
+golden_rel("rules_findings", "finding_note[main]", 860).
 golden_rel("rules_findings", "flow[main]", 4).
 golden_rel("rules_findings", "flows_to[main]", 4).
 golden_rel("rules_findings", "guardrail[main]", 16).
@@ -1799,12 +1822,12 @@ golden_rel("rules_findings", "proven[main]", 59).
 golden_rel("rules_findings", "reads_from[$kernel]", 48).
 golden_rel("rules_findings", "ready[main]", 185).
 golden_rel("rules_findings", "ready_proven[main]", 141).
-golden_rel("rules_findings", "recorded[main]", 840).
+golden_rel("rules_findings", "recorded[main]", 841).
 golden_rel("rules_findings", "reserved[main]", 20).
 golden_rel("rules_findings", "rule[$kernel]", 44).
 golden_rel("rules_findings", "rule_known[main]", 44).
 golden_rel("rules_findings", "sees[main]", 6).
-golden_rel("rules_findings", "settled[main]", 653).
+golden_rel("rules_findings", "settled[main]", 654).
 golden_rel("rules_findings", "unproven[main]", 44).
 golden_rel("rules_findings", "uses_builtin[$kernel]", 4).
 golden_rel("rules_findings", "waiting[main]", 3).

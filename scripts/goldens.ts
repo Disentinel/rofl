@@ -204,7 +204,90 @@ export function answerRust(w: World): Answer | null {
 }
 
 
+// ------------------------------------------------------------- the hosts
+//
+// THE HALF A WORLD CANNOT REACH. A `.rofl` file says what holds; it cannot ask
+// `why`, retract a fact, excise one and watch the blast radius, fork a store or
+// advance a tick. Measured over the 23 demos, TWENTY-ONE call at least one of
+// `why`, `whynot`, `excise`, `retract`, `fromSnapshot`, `tickAdvance` or a
+// runtime `assert` — so the demos are not scaffolding round the language, they
+// ARE the demonstration of the host contract, and that contract had no oracle.
+//
+// Their stdout is one. Measured: two runs of a demo differ in exactly the line
+// carrying its own elapsed milliseconds and nowhere else, so masking that makes
+// the output hashable. The EXIT CODE is part of the answer — `moot` exits 1
+// because it found a disagreement and says so, and a demo that stopped
+// disagreeing would be a change worth seeing.
+//
+// One engine by nature: these are TypeScript programs.
+
+// A MEASUREMENT LINE LOSES ITS NUMBERS, and the rule is one sentence rather
+// than a list of formats. The first mask took `N ms` and five demos still moved
+// between runs; the second added every time unit and `npc` still moved on
+// `7.2 ticks/s`, where the number touches no unit at all. Enumerating formats
+// is widening a guess — so instead: a line that reports a DURATION OR A RATE is
+// a measurement, and none of its numbers are part of what the demo demonstrates.
+//
+// The cost is stated: a line that mixes a count with a timing loses the count
+// too. What it buys is that a demo printing a benchmark is still hashable, and
+// the rest of its output — the answers, the explanations, the refusals — is
+// compared exactly.
+// ...OR AN ENVIRONMENT READING. `cram` prints the machine's load average
+// beside its own numbers, which is a property of the hardware and not of the
+// tree — the same class as `slop` measuring itself against whatever
+// LibreOffice is installed, and the same answer: it is not part of what the
+// demo demonstrates.
+const TIMED = /\b(ms|us|µs|ns)\b|\b\d\s*s\b|\/(s|tick|fact|row)\b|\b\d+(\.\d+)?x\b|load average/;
+const NUMS = /\d+(\.\d+)?/g;
+
+function maskTimings(out: string): string {
+  // WHITESPACE COLLAPSES ON A MASKED LINE TOO: `153` and `1` mask to the same
+  // `#` but leave different column padding behind, so the alignment carried the
+  // timing the number no longer did.
+  return out.split('\n')
+    .map((l) => (TIMED.test(l) ? l.replace(NUMS, '#').replace(/ +/g, ' ') : l))
+    .join('\n');
+}
+
+/** A DEMO WHOSE OUTPUT IS NOT A FUNCTION OF THE TREE, declared in
+ *  facts/checks.rofl with its reason. Two of the twenty-three: `npc` prints a
+ *  benchmark TABLE whose columns carry no units, so a timing and a row count
+ *  are indistinguishable line by line and no mask can separate them; `slop`
+ *  measures itself against a headless LibreOffice and answers about whatever
+ *  is installed. Enumerating more number formats to chase the first is
+ *  widening a guess, which is how the mask got to its third version. */
+function unhashable(): Set<string> {
+  const f = path.join(ROOT, 'facts/checks.rofl');
+  if (!fs.existsSync(f)) return new Set();
+  return new Set([...fs.readFileSync(f, 'utf8').matchAll(/^demo_unhashable\("([^"]+)"/gm)].map((m) => m[1]));
+}
+
+export function demos(): string[] {
+  const ex = path.join(ROOT, 'examples');
+  const skip = unhashable();
+  return fs.readdirSync(ex).sort()
+    .filter((e) => !skip.has(e))
+    .map((e) => path.join(ex, e, 'demo.ts'))
+    .filter((p) => fs.existsSync(p));
+}
+
+export function answerDemo(file: string): { hash: string; exit: number; lines: number } {
+  let out = ''; let exit = 0;
+  try {
+    out = execFileSync(process.execPath, ['--experimental-strip-types', file],
+      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000 });
+  } catch (e) {
+    const err = e as { status?: number; stdout?: string; stderr?: string };
+    exit = err.status ?? -1;
+    out = (err.stdout ?? '') + (err.stderr ?? '');
+  }
+  const masked = maskTimings(out);
+  return { hash: digest(masked), exit, lines: masked.split('\n').length };
+}
+
 // --------------------------------------------------------------- the pack
+
+let hostRows: [string, { hash: string; exit: number; lines: number }][] = [];
 
 function render(rows: [World, Answer][]): string {
   const L = [
@@ -220,9 +303,12 @@ function render(rows: [World, Answer][]): string {
     '',
     'edb(golden_state).',
     'edb(golden_rel).',
+    'edb(golden_host).',
     '',
   ];
   for (const [w, a] of rows) L.push(`golden_state("${w.name}", "${a.hash}", ${a.facts}).`);
+  L.push('');
+  for (const [name, h] of hostRows) L.push(`golden_host("${name}", "${h.hash}", ${h.exit}, ${h.lines}).`);
   L.push('');
   for (const [w, a] of rows)
     for (const [rel, n] of [...a.census].sort()) L.push(`golden_rel("${w.name}", "${rel}", ${n}).`);
@@ -236,6 +322,14 @@ function parse(): Map<string, { hash: string; facts: number; census: Map<string,
     out.set(m[1], { hash: m[2], facts: Number(m[3]), census: new Map() });
   for (const m of src.matchAll(/^golden_rel\("([^"]+)", "([^"]+)", (\d+)\)/gm))
     out.get(m[1])?.census.set(m[2], Number(m[3]));
+  return out;
+}
+
+function parseHosts(): Map<string, { hash: string; exit: number; lines: number }> {
+  const src = fs.existsSync(GOLDEN) ? fs.readFileSync(GOLDEN, 'utf8') : '';
+  const out = new Map<string, { hash: string; exit: number; lines: number }>();
+  for (const m of src.matchAll(/^golden_host\("([^"]+)", "([^"]+)", (-?\d+), (\d+)\)/gm))
+    out.set(m[1], { hash: m[2], exit: Number(m[3]), lines: Number(m[4]) });
   return out;
 }
 
@@ -253,6 +347,13 @@ if (isMain) {
     // guard — changing a rule IS the reason to bless — so the guard is that the
     // delta is printed and lands in the commit for a person to read.
     const before = fs.existsSync(GOLDEN) ? parse() : new Map();
+    const hostsBefore = parseHosts();
+    // THE DEMOS ARE BLESSED ONLY WHEN ASKED. They take two minutes; the worlds
+    // take seven seconds, and a bless that always paid for both would be run
+    // less often, which is the way a golden goes stale.
+    hostRows = process.argv.includes('--hosts')
+      ? demos().map((f) => [path.basename(path.dirname(f)), answerDemo(f)] as [string, { hash: string; exit: number; lines: number }])
+      : [...hostsBefore];
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
@@ -269,8 +370,29 @@ if (isMain) {
       moved++;
     }
     for (const n of before.keys()) if (!rows.some(([w]) => w.name === n)) { console.log(`  GONE ${n}`); moved++; }
-    console.log(`blessed ${rows.length} worlds, ${moved} changed -> facts/goldens.rofl`);
+    for (const [n, h] of hostRows) {
+      const b = hostsBefore.get(n);
+      if (!b) { console.log(`  NEW  demo ${n} (exit ${h.exit})`); moved++; }
+      else if (b.hash !== h.hash) { console.log(`  MOVED demo ${n.padEnd(20)} exit ${b.exit}->${h.exit}, ${b.lines}->${h.lines} lines`); moved++; }
+    }
+    console.log(`blessed ${rows.length} worlds${hostRows.length ? ` + ${hostRows.length} demos` : ''}, ${moved} changed -> facts/goldens.rofl`);
     process.exit(0);
+  }
+
+  if (process.argv.includes('--hosts')) {
+    const g = parseHosts(); const t = Date.now();
+    let ok = 0; const bad: string[] = [];
+    for (const f of demos()) {
+      const n = path.basename(path.dirname(f));
+      const e = g.get(n);
+      const a = answerDemo(f);
+      if (!e) { bad.push(`${n}: no golden — bless with \`npm run bless -- --hosts\``); continue; }
+      if (e.hash === a.hash) { ok++; continue; }
+      bad.push(`${n.padEnd(10)} exit ${e.exit}->${a.exit}, ${e.lines}->${a.lines} lines`);
+    }
+    for (const b of bad) console.log(`FAIL ${b}`);
+    console.log(`\n${ok}/${demos().length} demos, one engine (they are TypeScript), ${((Date.now() - t) / 1000).toFixed(0)} s`);
+    process.exit(bad.length === 0 ? 0 : 1);
   }
 
   const want = parse();
