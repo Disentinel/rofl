@@ -4,6 +4,9 @@
   "description": "ROFL kernel v0 - Relation-Oriented Fixpoint Language",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/Disentinel/rofl",
+  "repository": { "type": "git", "url": "git+https://github.com/Disentinel/rofl.git" },
+  "engines": { "node": ">=22.6" },
   "scripts": {
     "test": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec test/*.test.ts",
     "test:bun": "bun test --timeout 60000",

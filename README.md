@@ -11,6 +11,54 @@ graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
 optional code scanner under `scanners/` is the only component with one,
 `@babel/parser`). TypeScript, runs under Bun or Node ≥ 22.
 
+## What is in the tree
+
+The kernel is one of several things here, and the rest of the file says which
+of them a claim is about. `npm run …` names in the right column are the entry
+points; the whole list is in `package.json`.
+
+| where | what it is | entry point |
+|---|---|---|
+| `src/` | the kernel: parser, store, evaluator, reflection, API, REPL. Zero runtime dependencies, closed vocabulary (below), mechanically checked | `repl` |
+| `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
+| `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by `test/kernel-policy-program.test.ts` |
+| `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
+| `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` |
+| `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
+| `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
+| `rust/` | **the Rust engine** — the port this branch is instrumental to (`docs/the-target.md`), plus its benchmark crates | `cargo test` under `rust/` |
+| `bench/` `examples/` `test/` `facts/` `docs/` | measurements, 29 runnable demos, the suite, the ledgers, the design decisions | `memcensus` `test` |
+
+### Documents
+
+`docs/` fixes decisions so they do not have to be re-argued. They are grouped
+by what they bind.
+
+**The model** — `time-and-continuity.md` (what `not p` means, where a veto
+belongs), `choosing-perspectives.md` (perspective = ledger, never status or
+modality), `books-and-permission.md` (every relation with who may write it,
+derived from `boot.rofl` and gated by `test/permission-doc.test.ts`),
+`inquiry-kinds.md` (typed inquiry roots), `three-valued-answers.md` (the
+alternating fixpoint and what `unknown` means).
+
+**A run** — `scaling-a-corpus.md` (the incremental ingest loop over the whole
+of eslint, and the four defects the run found that reading did not),
+`normalisation-and-profiling.md`, `volumes-and-residency.md` (how a corpus
+stays cold), `working-with-ledgers.md`, `test-maintenance-cost.md`,
+`failure-modes.md` (the process failures, catalogued and priced).
+
+**The engine and the port** — `the-target.md` (what everything on this branch
+is instrumental to), `medium-and-large.md` (two engines, and the line between
+them, which negation decides), `port-surface.md` (what the Rust engine has to
+expose), `performance-invariants.md` (what this kernel costs and what the field
+costs), `modelling-a-language.md` (the JS model as a research programme).
+
+**The programme** — `guided-formal-reasoning-roadmap.md` (the plan; amend via
+findings), `formal-reasoning-landscape.md` (ROFL among the formal reasoning
+systems, and why the projection is ROFL-centric by construction),
+`benchmark-protocol.md`, and `docs/dogfood/` — one page per session that paid
+for something.
+
 ## How to run
 
 ```sh
@@ -28,6 +76,44 @@ node --experimental-strip-types src/repl.ts examples/sensors.rofl
 # typecheck (dev-only dependency; the runtime has none)
 npm i && npx tsc -p tsconfig.json
 ```
+
+**Node ≥ 22.6 is not optional and the failure is quiet.** The sources are
+erasable-syntax TypeScript run through Node's built-in type stripping. On an
+older Node `npm test` dies in five lines with `node: bad option:
+--experimental-strip-types` and prints **no `ℹ tests` line at all** — so a
+guard that only compares the reporter's numbers reads the absence as
+agreement. `package.json` declares the floor in `engines`; check what you are
+about to run with `node -v` before believing a green.
+
+### The gates
+
+Every one of these is a check somebody paid for. `npm test` and `npm run
+grepcheck` are what CI runs (`.github/workflows/ci.yml`, node and bun);
+the rest are run by hand and several are also asserted from `test/`.
+
+| command | what it refuses |
+|---|---|
+| `npm test` | the suite — 1 508 top-level tests over 137 files by the census `npm run speccheck` takes, 19 m 43 s of wall measured 2026-09-09 |
+| `npm run grepcheck` | a relation name in `src/` outside the kernel vocabulary below |
+| `npm run textcheck` | a byte in the tree that a human or `grep` cannot read |
+| `npm run speccheck` | a duty in `START.md` that nothing in the tree discharges |
+| `npm run measurecheck` | a number quoted without the run that produced it |
+| `npm run flagcheck` | an API flag that no demo in `examples/` EXERCISES (CLAUDE.md) |
+| `npm run findings` | the open findings backlog — every one demands a reaction |
+
+And the scanners that MODEL something rather than check it — each writes facts
+that a rule pack then argues with, so every row has a `why`:
+
+| command | the question it answers |
+|---|---|
+| `npm run evalcost` + `npm run whyjoin` | where the join actually goes |
+| `npm run parsecost` + `npm run whyslow` | what a parse costs, by stage |
+| `npm run floorcensus` + `npm run whyfloor` | which reflection relations may be sealed |
+| `npm run perminv` + `npm run whyperm` | who may write what |
+| `npm run ruleshape` | which rule bodies pay a cross product |
+| `npm run keycoupling` `npm run booklocality` `npm run boundary` | how coupled the store's key spelling, books and port surface are |
+| `npm run memcensus` `npm run roundbytes` `npm run storetrace` | what the store costs in bytes |
+| `npm run ablate` `npm run necessity` `npm run splitcheck` `npm run dagcheck` | what is load-bearing and what is not |
 
 REPL commands: `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`,
 `load FILE`, `who NAME`, `retract F`, `tick`, `run [N]`, `save FILE`,
@@ -149,6 +235,61 @@ enforced by `scripts/kernel_grep.ts` in CI.
 the spec names these two as the whole stratification contract between kernel
 and boot, and they are in the grep-test whitelist.
 
+**It is no longer two names, and the whole set is below.** Every row is a
+relation whose name appears in kernel source because a PROGRAM writes it and
+the kernel reads it, or the other way round — never because the kernel
+hardcodes a domain. The table is the grep-test whitelist's `IFACE_RELS`, and
+that is a measured identity rather than a promise: `test/vocabulary-doc.test.ts`
+re-derives both sides on every run and refuses a name that is in one and not
+the other. Every relation from `policy.rofl` and `safety.rofl` down is
+concluded by *the kernel's own programs* — see the section under this one.
+
+| relation | written by | read by | what it says |
+|---|---|---|---|
+| `stratum(Rel, N)` | the program | the kernel | the phase a relation settles in. Computed on the primary path instead (`peelRounds`), so only the stock evaluator reads it |
+| `unstratified(Rel)` | the program | the kernel | the program is unstratifiable — the stock evaluator's refusal |
+| `semantics(Sem)` | the program | the kernel | `semantics(well_founded)` asks for the alternating fixpoint instead of the phase-ordered run |
+| `unknown(Atom)` | the kernel | the program | one row per atom the alternating fixpoint leaves undefined, in the atom's own perspective. `why unknown(win(a))` is answerable |
+| `sealed(Body)` | the program | the kernel | the floor-sealing declaration — one of `rules`, `assertions`, `provenance` is no longer published. READ, never inferred; see the last section of this file |
+| `rule_reads(A, B)` | `policy.rofl` | the kernel | A's rules look at B, positively or negatively, ACROSS the tick boundary |
+| `rule_relation(A)` | `policy.rofl` | the kernel | every relation the rules mention, on either side |
+| `cone(A, C)` | `policy.rofl` | the kernel | the reflexive-transitive closure of `rule_reads` — the dependency cone the reuse plan needs |
+| `opaque_closed(A)` | `policy.rofl` | the kernel | A holds something the evaluation cannot promise to reproduce, closed upward through reads |
+| `opaque_seed(A)` | the host | `policy.rofl` | the seed of that closure. It stays with the host because it needs a premise's tense and a store-shape fact the reflection does not carry flat |
+| `unsafe_rule(R)` | `safety.rofl` | the kernel | R's body does not bind everything its head or its builtins name — the range-restriction verdict, which used to be a fold in TypeScript |
+| `premise_var(R, K, Slot, I, V)` `slot_arity(R, K, Slot, N)` | the host | `safety.rofl` | the two inputs the reflection does not carry flat: which variable stands where in a premise, and how wide a slot is |
+| `late_rule(R)` | `safety.rofl` | the kernel | a monotone rule that may not run before the program has judged itself |
+| `demand_rel(Rel)` | `safety.rofl` | the kernel | Rel is unfolded top-down at call sites rather than materialized |
+| `trigger_of(P, X)` | `safety.rofl` | the kernel | what a positive premise on P can set off |
+| `neg_relation(A)` | `safety.rofl` | the kernel | some rule negates A |
+| `provenance_reader(R)` | `safety.rofl` | the kernel | R reads `derived_by` — so provenance cannot be pruned out from under it |
+
+**Term and string destructors** (`Out is op(In, …)`, seven of them). They are
+not relations and they are not arithmetic: the parser has exactly one
+term-producing builtin form, so the output is the LEFT operand of `is` and the
+declared `mode` is `[out, in, …]`. **Indices are CODE POINTS, not UTF-16 code
+units** — indexing by code unit can cut a surrogate pair in half and hand back
+half a character, which the store would then carry. Operands compose, so
+`str_len(str_seg(S, Sep, 0))` is the length of the first segment.
+
+| destructor | inputs | what it answers |
+|---|---|---|
+| `str_len(S)` | 1 | length of S in code points |
+| `str_char(S, I)` | 2 | the code point at I |
+| `str_sub(S, I, L)` | 3 | the substring by RANGE — what the separator-based cuts cannot say |
+| `str_pre(S, Sep)` | 2 | the part before the FIRST `Sep`, and **empty when there is none** — the one thing `str_seg(S, Sep, 0)` cannot say, since that answers the whole string when the separator is absent |
+| `str_seg(S, Sep, N)` | 3 | the Nth segment. The argument list admits TERMS and not expressions, so the last segment is `N is str_segs(S, Sep), K is N - 1, T is str_seg(S, Sep, K)` |
+| `str_segs(S, Sep)` | 2 | how many segments — and it is what tells `str_pre`'s empty answer apart from an empty first segment |
+| `atom_of(S)` | 1 | the atom of a string. It crosses a sort boundary and produces a TERM; a term only becomes an executable rule through the reflection rows, which `breach[audit]` and the write protection on `conclusion_lit` already watch |
+
+Three refusals, kept apart because they demand three different repairs, and
+each arrives as a `hole` rather than as silence: `str_type_error` (the program
+is wrong — no data makes a number into a string), `str_index_error` (the data
+reached a boundary the program did not guard; the repair is a premise),
+`str_empty_separator` (an empty `Sep`, which two of five operations once
+accepted in silence). An UNBOUND operand is not a refusal, for the same reason
+it is not one in arithmetic.
+
 **They are no longer on the primary path.** The default evaluator peels its
 phase order off the decoded rules before a single rule fires (`src/rounds.ts`,
 `peelRounds`): round 0 is every relation no `@now` rule concludes, round *N* is
@@ -192,9 +333,98 @@ relation comes from outside the program, which is why boot.rofl declares
 `edb(imports)` for its own host-supplied perspective-import graph.
 
 `$`-prefixed atoms/functors (`$lit`, `$not`, `$builtin`, `$var`, `$fact`,
-`$cons`, `$nil`, `$any`, `$kernel`, `$q`, `$tick`, `$load`, `$rule`, `$init`,
-`$now`, `$next`) are kernel-internal reification markers; `$` is not writable in ROFL
-source syntax, so they can never collide with user terms.
+`$cons`, `$nil`, `$any`, `$kernel`, `$q`, `$tick`, `$load`, `$rule`, `$sealed`,
+`$init`, `$now`, `$next`, plus `$adhoc` for an evaluation nobody named and
+`$t` for a query's own term) are kernel-internal reification markers; `$` is
+not writable in ROFL source syntax, so they can never collide with user terms.
+`$kernel_authority` is the one a FILE may carry: as the FIRST clause of the
+FIRST load it says the text being read is the kernel's own, so everything in
+it is signed `$kernel` rather than `user`. Both conditions are load-bearing —
+a file cannot slip the claim in halfway, and after that first load the door is
+shut for the life of the store, with a second claim REFUSED rather than
+ignored.
+
+## The kernel's own programs
+
+**Every rule in `policy.rofl` and `safety.rofl` was a decision the evaluator
+made in TypeScript.** They are the same move the kernel already makes with
+`boot.rofl`, taken one ring further in: the kernel does not merely READ a
+program that describes rules, it SHIPS one, the way `bootstrapKernel` already
+ships facts into every store.
+
+- `safety.rofl` — **range restriction**, and everything that rests on the
+  verdict. A left-to-right fold over the body tracking bound variables was
+  `Evaluation.classify`; it is now `unsafe_rule/1`, plus `late_rule`,
+  `demand_rel`, `trigger_of`, `neg_relation` and `provenance_reader` derived
+  from it. No negation stands inside the fold, so the program is stratified and
+  the default evaluator answers it.
+- `policy.rofl` — **what the reuse plan may keep**: `rule_reads` (which is
+  `dep` from `rules/strata.rofl` WITHOUT its same-tick filter, because a
+  `@next` conclusion is still something the rule read), the dependency `cone`,
+  and `opaque_closed`. Measured set for set against the host's own walk over
+  `Evaluation.rules`: boot alone 35 pairs, +strata 52, +findings 51,
+  +kernel-policy 64, +the ring 1 grammar 248 — agreeing on every one.
+
+**Why it has to be shipped rather than loaded.** A rule that is not loaded is
+not a conservative answer, it is a wrong one, and 22 of the 95 worlds in this
+repository never load `boot.rofl`. So each file is the SOURCE and `src/reflect.ts`
+carries a copy — the shape `examples/ring1/l1.dense.rofl` already has, a
+program in two forms, one readable and one the machine installs. That is only
+honest with a gate keeping them identical, which `test/kernel-policy-program.test.ts`
+is.
+
+Two inputs travel the other way, from the host INTO the programs, because the
+reflection does not carry them flat: `opaque_seed` needs a premise's tense and
+a store-shape fact, and `premise_var`/`slot_arity` need which variable stands
+where in a premise. They are declared `edb` for exactly that reason.
+
+## The Rust engine
+
+`rust/` is the port, and `docs/the-target.md` is what it is for: *a Rust engine
+that can chew all of grafema's code*. Everything on this branch is instrumental
+to that, and a piece of work that cannot say which rung it moves is not on the
+path. `docs/medium-and-large.md` draws the line to the engine after it, and the
+line is not a size threshold — **negation decides it**, because `not p(X)`
+asserts something about a relation's WHOLE extension, so a relation that is
+negated anywhere cannot be answered from a part of the corpus.
+
+- `rust/rofl/` — the engine. `session.rs` is the surface `docs/port-surface.md`
+  designs, gated by `rust/rofl/tests/session.rs`. What that gate found on its
+  first run is why it exists: the design says "`ask(query)`" without ever
+  writing a query down, and the first implementation invented `rel@book(args)`
+  for a language whose book is `rel[book](args)` and whose `@` is the TENSE.
+- `rust/colbench/` `rust/storebench/` — the benchmark crates.
+- `runtime/port.ts` is the JS-side client; `npm run portcorpus` builds the
+  corpus both engines are diffed over, and the oracle is a byte-identical
+  `canonicalState()`.
+
+The engine is checked with `cargo test` under `rust/`. **It is not in
+`.github/workflows/ci.yml`** — the CI jobs are node and bun only.
+
+## Storage adapters
+
+`adapters/` puts a `FactStore` behind an interface and ships a SQLite adapter
+over `node:sqlite` (a Node builtin, so the zero-dependency claim is unchanged).
+The conformance oracle is a byte-identical `canonicalState()` against the
+in-memory reference, and **what it does NOT see is measured rather than
+assumed** (CLAUDE.md, *one mutant is liveness, a set is coverage*): of five
+mutants it killed unsorted keys and dropped witnesses, and slept through
+reversed read order, sorted-instead-of-arrival order, and a dropped
+variable-holding fact — because `matchPremise` sorts before returning,
+`negHolds` reads for existence, and no program here holds a fact with a
+variable in it.
+
+## The JS model
+
+`rules/js-*.rofl` is a model OF JAVASCRIPT — structure, modules, resolution,
+call graph, data flow, control flow, effects, environments, globals, hosts —
+fed by `scanners/js_ast.ts` and indexed as a matrix of (node kind × layer)
+cells, each `modelled`, `waived` with a reason, or `not_modelled`. The
+methodology, and the one measurement that decides whether it is science or
+bookkeeping, is `docs/modelling-a-language.md`; `docs/scaling-a-corpus.md` is
+the run over the whole of eslint (1 426 files, 29.9 s, 1 290 volumes cooled to
+200 MB, the world never above 1 938 540 facts against a 2 000 000 ceiling) and
+the four defects that run found which reading did not.
 
 ## Pipeline
 
@@ -300,8 +530,16 @@ bit-identical state, tick log, and provenance regardless of insertion order
   kernel to read them while §5's grep test forbids non-§2 names. Resolved by
   documenting them as the kernel's read-interface (they cannot be reserved —
   a program may conclude into them, and `rules/strata.rofl` does). The grep
-  whitelist equals this README's tables. The primary path reads neither, so on
-  that path the two names survive in kernel source only for the stock
+  whitelist equals this README's tables — **and that sentence was a promise
+  until 2026-09-10, when it was measured and was false by twenty names**: the
+  read interface had grown from two to eighteen and the destructors from zero
+  to seven while the document said neither. It went stale in the SAFE
+  direction, which is why nothing noticed — a whitelist wider than the
+  document turns nothing red, it only stops the document describing the
+  kernel. `test/vocabulary-doc.test.ts` now re-derives both sides on every run
+  and refuses a name that is in one and not the other, so the sentence is a
+  measurement. The primary path reads neither `stratum` nor `unstratified`, so
+  on that path the two names survive in kernel source only for the stock
   evaluator and the alternating fixpoint.
 - **Perspective registration.** On first use of a perspective the kernel
   emits `authority(P, $kernel)`. Without it, boot's `perspective(P) :-
@@ -405,9 +643,33 @@ bit-identical state, tick log, and provenance regardless of insertion order
   (default 64) bounds it outright — the node cap alone is what guarantees
   termination, since it caps how many literals the whole tree may explain.
   Both announce themselves in the output when they fire.
-- **File layout.** `api.ts` carries `?`/`why`/`whynot`/`excise`/`load` per
-  §4's `repl.ts / api.ts` line; the REPL is a thin shell. Total ≈ 1,900 LOC —
-  inside the 1,500–2,000 target.
+- **File layout, and the size target is exceeded by 3.5x.** `api.ts` carries
+  `?`/`why`/`whynot`/`excise`/`load` per §4's `repl.ts / api.ts` line; the
+  REPL is a thin shell. `src/` was 1 909 lines over seven files when the
+  1 500–2 000 target was met; **measured 2026-09-10 it is 6 778 over twelve**
+  — `engine.ts` 1 924, `api.ts` 1 235, `reflect.ts` 1 115, `store.ts` 884,
+  `unify.ts` 310, `rounds.ts` 307, `semiring.ts` 262, `parser.ts` 224,
+  `dense.ts` 200, `tokens.ts` 141, `repl.ts` 93, `kernel-dense.ts` 83. The
+  number is written down rather than the target quietly restated: the growth
+  bought a second evaluator (`rounds.ts`), the well-founded semantics, the
+  dense form, semirings, and a store that can cool volumes to disk, and
+  whether that trade was worth 4 800 lines is a judgement a reader should be
+  able to make against the original figure.
+
+  **AND THIS PARAGRAPH IS A DELIVERABLE, NOT A FOOTNOTE.** START.md:107 does
+  not merely set a target, it sets a STOP: *"If it grows past ~2,500, stop:
+  something that belongs in boot.rofl as rules has leaked into the host. That
+  signal is itself a deliverable — report it rather than pushing through."*
+  `src/` is **2.7x past that line** and the duty (`s_report_loc_overrun` in
+  `facts/spec.rofl`) is one of the 28 `npm run speccheck` reports as covered
+  by nothing mechanical — so the stop was passed without the report the spec
+  asks for, which is what this is. The signal is delivered; whether it means
+  what START.md predicts is the owner's to judge, and the evidence cuts both
+  ways. FOR: `engine.ts` alone is 1 924 lines, as large as the whole kernel
+  once was. AGAINST: the prescribed remedy is already running in the other
+  direction — `policy.rofl` and `safety.rofl` are code that LEFT `src/` and
+  became rules, and `rules/strata.rofl` is ten more, so the leak is being
+  paid back rather than accumulating unexamined.
 - **tm.rofl uses one `@next` rule plus moded helpers** (`step`, `move`) and
   explicit carry rules for `delta` and the halted `cfg` — Appendix C is a
   sketch; carrying `delta` forward is the "persistence is not a storage
@@ -420,7 +682,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
 
 ## Acceptance status
 
-All Phase 1–4 criteria are covered by `test/phase{1..4}.test.ts` (28 tests):
+All Phase 1–4 criteria are covered by `test/phase{1..4}.test.ts` (31 tests):
 transitive closure & structured terms; naive ≡ seminaive over 120 seeds;
 `why` to EDB axioms; perspective isolation; strata read from `stratum/2`
 facts; unstratifiable rejection (with the reach-trace on the stock path, with

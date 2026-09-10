@@ -2,17 +2,27 @@
 
 Layers: `src/` is the generic kernel (zero deps, closed vocabulary — the
 kernel grep test in CI scans it; domain code NEVER goes there), `scanners/`
-turns code into facts, `rules/` holds the inquiry kernel and disciplines,
-`runtime/` renders reports, `docs/` fixes design decisions.
+turns code into facts, `rules/` holds the inquiry kernel, the disciplines and
+the JS model's packs (`js-*.rofl`), `runtime/` renders reports and speaks to
+the port, `adapters/` holds the storage port, `rust/` is the engine
+(`docs/the-target.md`) and is NOT in CI, `docs/` fixes design decisions.
+`policy.rofl` and `safety.rofl` are the kernel's own two programs — code that
+LEFT `src/` and became data — with `src/reflect.ts` carrying a copy and
+`test/kernel-policy-program.test.ts` keeping the two identical. README.md's
+*What is in the tree* is the same map with the entry points on it.
 
 Commands: `npm test` · `npm run grepcheck` · `npx tsc -p tsconfig.json` ·
 `npm run repl` · `npm run scan -- <dir>` · `npm run report -- <files>` ·
 `npm run findings`.
 
 **The development loop is `npm test` (node) only.** Do not run `bun test`
-locally and never put it in a subagent brief: measured 2026-08-30, node runs
-the suite in 117 s and bun in 295 s, so a bun run per change costs five
-minutes to re-confirm what node already confirmed. Bun has its own CI job
+locally and never put it in a subagent brief: measured 2026-08-30, node ran
+the suite in 117 s and bun in 295 s, so a bun run per change cost five
+minutes to re-confirm what node already confirmed. **BOTH NUMBERS ARE FROM A
+SUITE A THIRD THE SIZE AND THE RATIO IS THE PART THAT SURVIVED**: re-measured
+2026-09-09 on the merged tree, node alone is **19 m 43 s** over 136 files, so
+the cost of the redundant run is now twenty minutes rather than five and the
+instruction binds harder, not less. Bun has its own CI job
 (`.github/workflows/ci.yml`) and that is where the second runner is checked —
 both runners must stay green *in CI*, which is not the same instruction as
 running both by hand. While iterating, run the single test file you are

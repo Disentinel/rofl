@@ -4,6 +4,32 @@
 
 Draft roadmap and architecture specification.
 
+**THE CHECKBOXES ARE NOT MAINTAINED AND THIS NOTE IS THE REPAIR, dated
+2026-09-10.** There are 265 `- [ ]` items in this file and **zero** ticked
+ones, while a great many of them are demonstrably done — `skills/guided-formal-reasoning/SKILL.md`
+exists with `clarify`, `verify` and `challenge` beside it, `schemas/intent-result.json`
+is the agent result schema, and `runtime/tick.ts` runs the
+`derive → execute → admit → recompute` loop. So the boxes are not a state:
+they are the plan as it was first written, and a reader should treat every
+one as *proposed*, never as *outstanding*.
+
+They are deliberately NOT being ticked. A hand-maintained list of 265 booleans
+is the exact shape this repository has paid for three times (CLAUDE.md, *a
+hand-written list goes stale on a refactor*), and ticking them would replace a
+list that is obviously stale with one that looks current and is not. What is
+maintained, and is checked mechanically, is elsewhere:
+
+- **`npm run speccheck`** joins the census of every test, check script and CI
+  step against the obligations in `facts/spec.rofl`, and answers the question
+  a checkbox cannot: which duty has nothing behind it.
+- **`npm run findings`** is the live backlog — CLAUDE.md's protocol is that
+  the roadmap is amended *via findings*, so a finding that changes the plan is
+  where the change is recorded.
+
+Sections below that describe DESIGN — the core hypothesis, the ontology, the
+inquiry kinds, the perspective discipline — are still current and are what
+this file is for. It is the plan and the reasoning behind it, not a tracker.
+
 ## Objective
 
 Build a guided formal inquiry system on top of Codefacts that:

@@ -124,7 +124,7 @@ scanned a relation.
 - **A tick is `tick()` N times and nothing else.** The gate mirrors the corpus
   generator rather than calling `evaluate()` beside it — calling both re-derives
   a layer the tick already has and re-dates every witness, which is the harness
-  defect recorded at the top of `src/bin/rofl_eval.rs`.
+  defect recorded at the top of `rust/rofl/src/bin/rofl_eval.rs`.
 
 ### What the gate compares against
 

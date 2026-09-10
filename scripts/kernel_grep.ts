@@ -19,7 +19,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 // §2 kernel vocabulary (reserved) + documented reflection-detail extension.
-const KERNEL_RELS = [
+export const KERNEL_RELS = [
   'derived_by', 'rule', 'has_premise', 'premise_pos', 'premise_neg',
   'concludes', 'has_conclusion', 'reads_from', 'writes_to', 'mode',
   'reserved', 'authority', 'asserted_by', 'hole', 'edb',
@@ -30,7 +30,7 @@ const KERNEL_RELS = [
 // `semantics` is read the same way — the PROGRAM writes it to choose the
 // three-valued semantics — and `unknown` is the one relation of the pair the
 // kernel WRITES: one row per atom the alternating fixpoint leaves undefined.
-const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
+export const IFACE_RELS = ['stratum', 'unstratified', 'semantics', 'unknown',
   // THE KERNEL'S OWN PROGRAM, policy.rofl, whose text is carried in
   // src/reflect.ts. Its relation names appear in kernel source for the same
   // reason `stratum` does — the kernel reads them from a program — and the
@@ -113,7 +113,7 @@ const CONSTANTS = ['budget_exhausted', 'space_exhausted', 'arith_type_error', 'a
 // name - but it produces a TERM, and a term only becomes an executable
 // rule through the reflection rows, which `breach[audit]` and the write
 // protection on conclusion_lit already watch.
-const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs',
+export const BUILTINS = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs',
                   'str_sub', 'atom_of'];
 // Implementation tokens: tokenizer tags, term/premise kind tags, snapshot
 // field names, REPL command words. Not relation names; listed exhaustively.
