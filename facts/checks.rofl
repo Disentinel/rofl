@@ -48,3 +48,9 @@ check_opt("budget_wall", one_engine, 1).
 edb(demo_unhashable).
 demo_unhashable("npc", "prints a benchmark table whose columns carry no units, so a timing and a row count are indistinguishable line by line").
 demo_unhashable("slop", "measures itself against a headless LibreOffice and answers about whatever is installed").
+
+-- THE FOUR OPERATORS NO DEMO REACHED. `%` had no user anywhere in the tree;
+-- `str_pre`, `str_seg` and `str_segs` are used by four to eight rule packs and
+-- by nothing a golden could see. Now both engines answer for them.
+check_world("operators").
+check_file("operators", "examples/checks/operators.rofl").

@@ -31,23 +31,19 @@ feature("api:why", entry_point).
 feature("api:whynot", entry_point).
 feature("flag:budget", contract_flag).
 feature("flag:depth", contract_flag).
-feature("flag:error", contract_flag).
 feature("flag:evaluator", contract_flag).
 feature("flag:maxTicks", contract_flag).
 feature("flag:naive", contract_flag).
 feature("flag:nodes", contract_flag).
 feature("flag:onBoundary", contract_flag).
 feature("flag:onFixpoint", contract_flag).
-feature("flag:rel", contract_flag).
 feature("flag:retainTicks", contract_flag).
 feature("flag:reuse", contract_flag).
 feature("flag:space", contract_flag).
-feature("flag:unpopulatable", contract_flag).
 feature("flag:who", contract_flag).
 feature("negation", construct).
 feature("nullary head", construct).
 feature("op:!=", language).
-feature("op:%", language).
 feature("op:*", language).
 feature("op:+", language).
 feature("op:-", language).
@@ -59,6 +55,7 @@ feature("op:>", language).
 feature("op:>=", language).
 feature("op:atom_of", language).
 feature("op:is", language).
+feature("op:mod", language).
 feature("op:str_char", language).
 feature("op:str_len", language).
 feature("op:str_pre", language).
@@ -117,8 +114,14 @@ demo_uses("bleep", "op:-").
 demo_uses("bleep", "op:/").
 demo_uses("bleep", "op:is").
 demo_uses("bleep", "tense:now").
+demo_uses("checks", "op:-").
+demo_uses("checks", "op:=").
 demo_uses("checks", "op:is").
+demo_uses("checks", "op:mod").
 demo_uses("checks", "op:str_len").
+demo_uses("checks", "op:str_pre").
+demo_uses("checks", "op:str_seg").
+demo_uses("checks", "op:str_segs").
 demo_uses("checks", "tense:now").
 demo_uses("cram", "api:fromSnapshot").
 demo_uses("cram", "api:load").
@@ -128,7 +131,6 @@ demo_uses("cram", "api:tickAdvance").
 demo_uses("cram", "flag:budget").
 demo_uses("cram", "flag:naive").
 demo_uses("cram", "flag:onFixpoint").
-demo_uses("cram", "flag:rel").
 demo_uses("cram", "flag:retainTicks").
 demo_uses("cram", "flag:reuse").
 demo_uses("cram", "flag:who").
@@ -270,7 +272,6 @@ demo_uses("loot", "api:whynot").
 demo_uses("loot", "flag:budget").
 demo_uses("loot", "flag:depth").
 demo_uses("loot", "flag:nodes").
-demo_uses("loot", "flag:rel").
 demo_uses("loot", "flag:who").
 demo_uses("loot", "negation").
 demo_uses("loot", "op:!=").
@@ -285,7 +286,6 @@ demo_uses("moot", "api:whynot").
 demo_uses("moot", "flag:budget").
 demo_uses("moot", "flag:depth").
 demo_uses("moot", "flag:nodes").
-demo_uses("moot", "flag:rel").
 demo_uses("moot", "flag:who").
 demo_uses("moot", "negation").
 demo_uses("moot", "op:!=").
@@ -326,7 +326,6 @@ demo_uses("npc", "api:why").
 demo_uses("npc", "api:whynot").
 demo_uses("npc", "flag:budget").
 demo_uses("npc", "flag:depth").
-demo_uses("npc", "flag:rel").
 demo_uses("npc", "flag:who").
 demo_uses("npc", "negation").
 demo_uses("npc", "op:!=").
@@ -374,7 +373,6 @@ demo_uses("ring1", "api:fromSnapshot").
 demo_uses("ring1", "api:load").
 demo_uses("ring1", "api:save").
 demo_uses("ring1", "flag:budget").
-demo_uses("ring1", "flag:rel").
 demo_uses("ring1", "flag:reuse").
 demo_uses("ring1", "negation").
 demo_uses("ring1", "op:+").
@@ -420,6 +418,7 @@ demo_uses("slop", "op:<=").
 demo_uses("slop", "op:>").
 demo_uses("slop", "op:>=").
 demo_uses("slop", "op:is").
+demo_uses("slop", "op:mod").
 demo_uses("slop", "tense:now").
 demo_uses("spat", "negation").
 demo_uses("spat", "op:!=").
@@ -478,6 +477,7 @@ demo_uses("wtf", "op:<").
 demo_uses("wtf", "op:<=").
 demo_uses("wtf", "op:>").
 demo_uses("wtf", "op:is").
+demo_uses("wtf", "op:mod").
 demo_uses("wtf", "tense:now").
 demo_uses("yak", "api:run").
 
@@ -494,14 +494,12 @@ check_uses(c_arrival_order, "api:assert").
 check_uses(c_arrival_order, "api:evaluate").
 check_uses(c_arrival_order, "api:load").
 check_uses(c_arrival_order, "api:query").
-check_uses(c_arrival_order, "flag:rel").
 check_uses(c_asserted_tick, "api:assert").
 check_uses(c_asserted_tick, "api:assertClauses").
 check_uses(c_asserted_tick, "api:evaluate").
 check_uses(c_asserted_tick, "api:load").
 check_uses(c_asserted_tick, "api:query").
 check_uses(c_asserted_tick, "api:tickAdvance").
-check_uses(c_asserted_tick, "flag:rel").
 check_uses(c_asserted_tick, "flag:who").
 check_uses(c_asserted_who_and_when, "api:assert").
 check_uses(c_asserted_who_and_when, "api:assertClauses").
@@ -509,7 +507,6 @@ check_uses(c_asserted_who_and_when, "api:evaluate").
 check_uses(c_asserted_who_and_when, "api:load").
 check_uses(c_asserted_who_and_when, "api:query").
 check_uses(c_asserted_who_and_when, "api:tickAdvance").
-check_uses(c_asserted_who_and_when, "flag:rel").
 check_uses(c_asserted_who_and_when, "flag:who").
 check_uses(c_async_rejected, "api:assert").
 check_uses(c_async_rejected, "api:holds").
@@ -932,7 +929,6 @@ check_uses(c_shuffled_arrival_cost, "api:assert").
 check_uses(c_shuffled_arrival_cost, "api:evaluate").
 check_uses(c_shuffled_arrival_cost, "api:load").
 check_uses(c_shuffled_arrival_cost, "api:query").
-check_uses(c_shuffled_arrival_cost, "flag:rel").
 check_uses(c_sorted_keys, "api:holds").
 check_uses(c_sorted_keys, "api:load").
 check_uses(c_stratum_order, "api:evaluate").
@@ -1068,4 +1064,4 @@ check_uses(c_witness_load_order, "api:query").
 check_uses(c_witness_load_order, "api:save").
 check_uses(c_witness_load_order, "api:tickAdvance").
 
--- 56 features, 26 demos, 76 checks, 118 guard rows.
+-- 53 features, 26 demos, 76 checks, 118 guard rows.

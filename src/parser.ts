@@ -21,7 +21,12 @@ export type { Temporal, Lit, BodyElem, Clause } from './unify.ts';
 import { type Tok, ParseError, tokenize } from './tokens.ts';
 export { ParseError, UnwritableString, tokenize, escapeString } from './tokens.ts';
 
-const CMP_OPS = new Set(['=', '!=', '<', '<=', '>', '>=']);
+/** Exported so a model of this system's own features can be DERIVED from the
+ *  set the parser dispatches on rather than typed beside it. A hand-typed copy
+ *  of this list in scanners/features.ts spelled modulo `%`, which this language
+ *  writes `mod` — so the census reported a feature that does not exist and then
+ *  reported that nobody uses it. */
+export const CMP_OPS = new Set(['=', '!=', '<', '<=', '>', '>=']);
 
 class P {
   toks: Tok[];

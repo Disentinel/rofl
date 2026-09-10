@@ -1,0 +1,24 @@
+-- examples/checks/operators.rofl — THE FOUR OPERATORS NO DEMO REACHES.
+--
+-- `mod`, `str_pre`, `str_seg` and `str_segs` were orphan capabilities: no demo
+-- shows them and no duty stands over them. `%` had no user anywhere in the
+-- tree; the three destructors are used by four to eight rule packs and
+-- by nothing a golden could see. A world is cheaper than an argument and holds
+-- both engines to them.
+edb(path).
+path("rules/js-dataflow.rofl").
+path("src/api.ts").
+
+n(7). n(12).
+
+-- %  — the one operator with no user anywhere before this file.
+-- `mod`, and the spelling is the point: a hand-typed feature list called it
+-- `%` and reported an operator this language does not have.
+odd(N)      :- n(N), R is N mod 2, R = 1.
+
+-- str_pre — everything before the first separator.
+dir(P, D)   :- path(P), D is str_pre(P, "/").
+
+-- str_segs / str_seg — how many parts, and the last one.
+parts(P, N) :- path(P), N is str_segs(P, "/").
+base(P, B)  :- parts(P, N), L is N - 1, B is str_seg(P, "/", L).

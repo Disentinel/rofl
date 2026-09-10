@@ -27,13 +27,21 @@ import { Rofl } from '../src/api.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parse } from '@babel/parser';
+import { ARITH_OPS } from '../src/unify.ts';
+import { CMP_OPS } from '../src/parser.ts';
+import { STR_ARITY } from '../src/reflect.ts';
+import { declaredFlags } from '../scripts/flag_census.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const unq = (t: unknown): string => String(t).replace(/^"|"$/g, '');
 
-const DESTR = ['str_char', 'str_len', 'str_pre', 'str_seg', 'str_segs', 'str_sub', 'atom_of'];
-const ARITH = ['+', '-', '*', '/', '%'];
-const CMP = ['<', '>', '<=', '>=', '!=', '=', 'is'];
+// EVERY LIST HERE IS THE ONE THE CODE DISPATCHES ON. Typed beside it, two of
+// the three were wrong: the arithmetic set spelled modulo `%`, which this
+// language writes `mod`, so the census reported a feature that does not exist —
+// and then reported that no demo uses it, which was true and meaningless.
+const DESTR = [...STR_ARITY.keys()];
+const ARITH = [...ARITH_OPS];
+const CMP = [...CMP_OPS, 'is'];
 
 /** The class's own methods. A list typed here would go stale on the day a
  *  method is added, which is the day it matters. */
@@ -97,14 +105,16 @@ export function hostFeatures(file: string, surface: Set<string>): Set<string> {
 
 /** The optional properties of the options objects the public methods take —
  *  the same definition scripts/flag_census.ts uses, read off the same file. */
-const FLAGS = new Set<string>((() => {
-  // Every optional property of every options type in the public file — the
-  // same definition scripts/flag_census.ts uses. The first regex here required
-  // the property to sit at one indentation and found 5 of them where the
-  // census finds 9.
-  const src = fs.readFileSync(path.join(ROOT, 'src/api.ts'), 'utf8');
-  return [...src.matchAll(/\b([a-z][A-Za-z0-9]*)\?\s*:/g)].map((m) => m[1]);
-})());
+/** A FLAG IS AN OPTIONAL PROPERTY OF AN OPTIONS OBJECT A PUBLIC METHOD TAKES,
+ *  and that definition is already written and already parsed — in
+ *  scripts/flag_census.ts, which exists to keep every flag exercised by a demo.
+ *  Re-deriving it here with a regex produced `error` and `unpopulatable` as
+ *  flags: they are fields of `QueryResult`, OUTPUTS, and the regex matched any
+ *  optional property of any interface in the file. Both then read as orphan
+ *  capabilities, which is a defect wearing a finding's clothes. A second
+ *  crude pass also truncated `maxTicks` to `max` and `onFixpoint` to `on`. */
+const FLAGS = new Set<string>(
+  declaredFlags(fs.readFileSync(path.join(ROOT, 'src/api.ts'), 'utf8')).map((f) => f.name));
 
 export interface Demo { name: string; features: Set<string>; }
 
