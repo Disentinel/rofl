@@ -60,7 +60,8 @@
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl",
     "test:full": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec test/*.test.ts",
     "bless": "node --experimental-strip-types scripts/goldens.ts --bless",
-    "test:hosts": "node --experimental-strip-types scripts/goldens.ts --hosts"
+    "test:hosts": "node --experimental-strip-types scripts/goldens.ts --hosts",
+    "features": "node --experimental-strip-types scanners/features.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",

@@ -1,0 +1,96 @@
+-- rules/features.rofl — A FEATURE IS AN EQUIVALENCE CLASS, NOT A NAME.
+--
+-- The model is Grafema's (`_ai/research/feature-taxonomy.md`), applied to this
+-- kernel by pointing the JS model at `src/`:
+--
+--   ENTRY_POINT   a concrete access modality at one call site. Here: a public
+--                 method of `Rofl` in src/api.ts.
+--   BEHAVIOR      the bounded transitive call closure rooted at the handler —
+--                 what the code DOES, abstracted from how it is reached.
+--   FEATURE       the equivalence class of ENTRY_POINTs under
+--                 SHARES_BEHAVIOR_WITH. One capability, one or more modalities.
+--
+-- THE HASH IS NOT NEEDED. Grafema identifies a BEHAVIOR by
+-- `sha256(sort(transitive_call_targets))` because a graph database wants a key.
+-- Datalog wants no key: "A and B reach the same set" is the absence of a
+-- witness that they differ, in both directions, which is two rules and a
+-- negation. The equivalence is DERIVED rather than encoded.
+--
+-- WHY THIS MATTERS HERE, and it is why the first list was wrong: a flat
+-- enumeration of names conflates an ENTRY_POINT (`why`), a language construct
+-- (`str_len`) and a CONTRACT modifier (`retainTicks`). They sit at three
+-- different levels of the taxonomy — L2, L1 and L2's contract — and counting
+-- them together answers no question anybody has.
+--
+-- THE GRAPH IS NAME-MATCHED AND THE PRICE IS MEASURED. `src_call` carries the
+-- caller QUALIFIED (`Rofl.why`) and the callee as written (`E.activate`,
+-- `Array.from`, `add`), so the two sides do not join: 0 of 557 callees matched
+-- a caller. Normalising both to the LAST SEGMENT joins them — 204 of 220
+-- callers are reached — and over-approximates, because any `.activate` now
+-- matches every `activate`. That cost is four names: exactly FOUR method names
+-- in src/ are carried by more than one class. Measured before the model was
+-- built on it, which is the only reason the number is here.
+
+edb(src_call).
+edb(src_method).
+edb(src_export).
+edb(src_file).
+
+-- ---------------------------------------------------------- ENTRY_POINT
+-- A method whose name the outside may say. The rest of the class is reached
+-- THROUGH an entry point and is never one.
+--
+-- STRINGS, NOT ATOMS. The first version wrote `private_name(addClause).` and
+-- the facts carry `"addClause"`; `not private_name(M)` then excluded nothing
+-- and all 34 methods read as entry points. `ast_name[code](N, twin)` against
+-- `ast_name[code](N, "twin")` is the same trap, already in the ledger.
+private_name("addClause").    private_name("asked").
+private_name("checkArity").   private_name("checkKernelBook").
+private_name("checkWho").     private_name("cycleKey").
+private_name("ensure").       private_name("explainDeeper").
+private_name("explainFailure"). private_name("failingPremises").
+private_name("frozenRetention"). private_name("newEval").
+private_name("prepared").     private_name("renderWhy").
+private_name("unknownCtx").   private_name("whynotStruct").
+private_name("constructor").
+
+entry_point(M) :- src_method[code]("api.ts", "Rofl", M, _), not private_name(M).
+
+-- ------------------------------------------------------------- BEHAVIOR
+-- Both ends normalised to the last segment, so `Rofl.why` and `E.activate`
+-- become `why` and `activate` and the graph joins.
+-- COUNT THE SEGMENTS, DO NOT PROBE FOR AN EMPTY ONE. The first version wrote
+-- `N is str_seg(Q, ".", 1), N != ""` with a second clause for the empty case —
+-- but `str_seg` on a name with no dot does not RETURN empty, it REFUSES with
+-- `str_index_error`, so the guard never fired and every unqualified name fell
+-- out of the graph. Five holes and two entry points reaching nothing were the
+-- symptom. `str_pre(P, "/") = ""` cost the same lesson this morning.
+seg_count(Q, N) :- src_call[code](_, Q, _), N is str_segs(Q, ".").
+seg_count(C, N) :- src_call[code](_, _, C), N is str_segs(C, ".").
+
+last_seg(Q, Q) :- seg_count(Q, 1).
+last_seg(Q, T) :- seg_count(Q, N), N > 1, L is N - 1, T is str_seg(Q, ".", L).
+
+calls(A, B) :- src_call[code](_, Q, C), last_seg(Q, A), last_seg(C, B).
+
+reaches(A, B) :- calls(A, B).
+reaches(A, C) :- reaches(A, B), calls(B, C).
+
+entry_reach(M, X) :- entry_point(M), reaches(M, X).
+
+-- ------------------------------------- SHARES_BEHAVIOR_WITH, without a hash
+-- Grafema keys a BEHAVIOR by `sha256(sort(transitive_call_targets))` because a
+-- graph database wants a key. Datalog wants none: "A and B reach the same set"
+-- is the absence of a witness that they differ, in both directions.
+differs(A, B) :- entry_reach(A, X), entry_point(B), not entry_reach(B, X).
+shares_behavior(A, B) :- entry_point(A), entry_point(B), A != B,
+                         not differs(A, B), not differs(B, A).
+
+-- An entry point that reaches nothing is its own behaviour and shares with
+-- nobody; named so an empty closure is not read as an equivalence.
+leaf_entry[audit](M) :- entry_point(M), not entry_reach(M, _).
+
+-- ----------------------------------------------------------------- FEATURE
+-- The equivalence class. Reported as its pairs, because materialising a class
+-- is the decision the taxonomy says to defer until an attribute needs it.
+multi_modal[audit](A, B) :- shares_behavior(A, B), A < B.
