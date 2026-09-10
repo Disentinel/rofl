@@ -47,6 +47,8 @@
     "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts",
     "ruleshape": "node --experimental-strip-types scanners/rule_shape.ts && node --experimental-strip-types scanners/rule_shape_report.ts",
     "perminv": "node --experimental-strip-types scanners/permission_inventory.ts",
+    "depends": "node --experimental-strip-types scanners/depends.ts",
+    "blast": "node --experimental-strip-types scanners/depends.ts --blast",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl"
   },
   "devDependencies": {
