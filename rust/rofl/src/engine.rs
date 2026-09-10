@@ -2096,6 +2096,10 @@ pub const ATOM_NAME: u8 = 6;
 fn hole_reason_of(v: &Vocab, code: u8) -> Sym {
     match code {
         ARITH_ZERO => v.arith_zero_reason,
+        STR_TYPE => v.str_type_reason,
+        STR_INDEX => v.str_index_reason,
+        STR_SEP => v.str_sep_reason,
+        ATOM_NAME => v.atom_name_reason,
         _ => v.arith_type_reason,
     }
 }

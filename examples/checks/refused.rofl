@@ -1,0 +1,5 @@
+-- examples/checks/refused.rofl — A PROGRAM THAT MUST BE REFUSED.
+-- Its whole content is the syntax error, and the golden holds the diagnostic
+-- the loader answers with. If the parser stops refusing this, or starts
+-- refusing it differently, `npm test` says so.
+p(X) :- q(X

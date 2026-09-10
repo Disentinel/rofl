@@ -1,0 +1,6 @@
+-- examples/checks/destructor-hole.rofl — A RUNTIME REFUSAL, IN THE STATE.
+-- `str_len` takes a string; handed an atom it does not guess, it refuses, and
+-- the kernel records `hole[$kernel]($rule(...), str_type_error)`. A refusal
+-- that lands in the store is golden material with no host help at all.
+t(a).
+len(X, N) :- t(X), N is str_len(X).

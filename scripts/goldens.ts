@@ -39,7 +39,7 @@ const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
 const RUST = path.join(ROOT, 'rust/target/release/rofl-load');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
-export interface World { name: string; files: string[]; }
+export interface World { name: string; files: string[]; ticks?: number; budget?: number }
 
 /** Every world buildable from `.rofl` text alone. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
@@ -49,6 +49,10 @@ export function worlds(): World[] {
   const ex = path.join(ROOT, 'examples');
   for (const e of fs.readdirSync(ex).sort()) {
     const p = path.join(ex, e);
+    // `examples/checks/` holds one file per declared world and is never a world
+    // itself: loading its members together would answer about their union,
+    // which is nobody's question.
+    if (e === 'checks') continue;
     if (fs.statSync(p).isDirectory()) {
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push({ name: e, files });
@@ -67,10 +71,32 @@ export function worlds(): World[] {
   };
   pack(rl, '');
   out.push({ name: 'boot_only', files: [] });
-  return out;
+  return [...out, ...declared()];
 }
 
 export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; }
+
+/** WORLDS THE TREE CANNOT DISCOVER, declared in facts/checks.rofl. Everything
+ *  under examples/ and rules/ is found by walking; a world that needs a TICK
+ *  COUNT or a BUDGET, or that exists to be REFUSED, has nothing to be walked to
+ *  and is named there instead. That file is where the 19 test files whose whole
+ *  subject is host behaviour — arithmetic holes, budget walls, escapes — become
+ *  worlds rather than TypeScript string literals. */
+function declared(): World[] {
+  const f = path.join(ROOT, 'facts/checks.rofl');
+  if (!fs.existsSync(f)) return [];
+  const src = fs.readFileSync(f, 'utf8');
+  const out = new Map<string, World>();
+  for (const m of src.matchAll(/^check_world\("([^"]+)"\)/gm)) out.set(m[1], { name: m[1], files: [] });
+  for (const m of src.matchAll(/^check_file\("([^"]+)", "([^"]+)"\)/gm))
+    out.get(m[1])?.files.push(path.join(ROOT, m[2]));
+  for (const m of src.matchAll(/^check_opt\("([^"]+)", (ticks|budget), (\d+)\)/gm)) {
+    const w = out.get(m[1]);
+    if (w && m[2] === 'ticks') w.ticks = Number(m[3]);
+    if (w && m[2] === 'budget') w.budget = Number(m[3]);
+  }
+  return [...out.values()];
+}
 
 /** Rows per relation, read off the canonical state. `wit` lines are counted as
  *  one pseudo-relation: which support a store records among equals is not fixed
@@ -111,30 +137,60 @@ const digest = (s: string): string =>
 export function answerTS(w: World): Answer {
   const r = new Rofl();
   r.load(BOOT);
+  // A REFUSAL IS AN ANSWER AND IT BELONGS IN THE GOLDEN. Until now a file that
+  // would not load was dropped and the world carried on — which hid `ring1`
+  // for as long as the corpus existed, and left "this program must be refused"
+  // unassertable by anything but a test. The diagnostics are part of the
+  // expected output now, so a program that stops being refused, or starts
+  // being refused for a different reason, is a red.
+  // THE FACT OF THE REFUSAL IS HASHED, THE MESSAGE IS NOT. Two implementations
+  // word a syntax error differently and always will; that a file is refused,
+  // and which one, is the part both must agree on. The message is printed by
+  // `--bless` so a person can still read it.
+  const diags: string[] = [];
   const dropped: string[] = [];
   for (const f of w.files) {
-    // A FILE THAT IS NOT A PROGRAM DROPS ITSELF, NOT THE WORLD.
-    // `examples/ring1/l1.dense.rofl` is a dense encoding of l1.rofl's rules,
-    // checked for reproducibility by test/example-ring1.test.ts and not
-    // loadable — and refusing the directory on it hid ring1, which is the only
-    // user among the examples of `str_char`, `str_sub` and `atom_of`.
-    if (!r.load(fs.readFileSync(f, 'utf8')).ok) dropped.push(path.basename(f));
+    const res = r.load(fs.readFileSync(f, 'utf8'));
+    if (res.ok) continue;
+    dropped.push(`${path.basename(f)}: ${res.diagnostics[0] ?? ''}`);
+    diags.push(`refused ${path.basename(f)}`);
   }
-  r.evaluate();
-  const state = r.store.canonicalState();
+  if (w.ticks) for (let i = 0; i < w.ticks; i++) r.tickAdvance();
+  else r.evaluate(w.budget);
+  const state = diags.sort().join('\n') + (diags.length ? '\n' : '') + r.store.canonicalState();
   return { hash: digest(state), facts: r.store.allFactKeys().length, census: census(state), dropped };
 }
 
 export function answerRust(w: World): Answer | null {
   if (!fs.existsSync(RUST)) return null;
-  const files = w.files.filter((f) => !answerTSDropped.has(path.basename(f)));
-  // stderr is PIPED, not inherited: the engine prints `diag:` lines there and
-  // an inherited stream puts them in the middle of this report.
-  const state = execFileSync(RUST, [path.join(ROOT, 'boot.rofl'), ...files],
+  // THE RUST BINARY TAKES `--ticks` AND NOT A BUDGET, so a world that declares
+  // one is checked by ONE engine and says so, rather than half the oracle
+  // running quietly.
+  if (w.budget) return null;
+
+  // A REFUSED FILE IS OBSERVED, NOT FATAL. `rofl-load` exits non-zero and
+  // prints to stderr when it will not load a program — which IS the answer for
+  // a world written to be refused. The first version let execFileSync throw,
+  // and the whole check died on the one world whose point is the refusal. Each
+  // file is offered alone first; what loads goes into the world, what does not
+  // becomes a `refused` line exactly as on the TypeScript side.
+  //
+  // The MESSAGE is not hashed. Two implementations word a syntax error
+  // differently and always will; that a file is refused, and which one, is the
+  // part both must agree on.
+  const run = (args: string[]): string => execFileSync(RUST, args,
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-  return { hash: digest(state), facts: 0, census: census(state), dropped: [] };
+  const boot = path.join(ROOT, 'boot.rofl');
+  const diags: string[] = []; const keep: string[] = [];
+  for (const f of w.files) {
+    try { run([boot, f]); keep.push(f); }
+    catch { diags.push(`refused ${path.basename(f)}`); }
+  }
+  const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...keep]);
+  const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
+  return { hash: digest(full), facts: 0, census: census(full), dropped: [] };
 }
-const answerTSDropped = new Set<string>(['l1.dense.rofl']);
+
 
 // --------------------------------------------------------------- the pack
 
@@ -188,7 +244,7 @@ if (isMain) {
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
-      console.log(`  drop ${w.name}: ${a.dropped.join(', ')} (not a program)`);
+      console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
     let moved = 0;
     for (const [w, a] of rows) {
       const g = before.get(w.name);

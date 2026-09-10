@@ -1,0 +1,25 @@
+-- facts/checks.rofl — WORLDS THE TREE CANNOT BE WALKED TO.
+--
+-- `scripts/goldens.ts` finds every world under examples/ and rules/ by walking
+-- directories. A world that needs a TICK COUNT or a BUDGET, or whose whole
+-- point is to be REFUSED, has no directory shape to be found by, so it is
+-- declared here.
+--
+-- This is where a test whose subject is host behaviour stops being a
+-- TypeScript string literal and becomes a world two engines can be held to.
+
+edb(check_world).
+edb(check_file).
+edb(check_opt).
+
+check_world("refused").
+check_file("refused", "examples/checks/refused.rofl").
+
+check_world("destructor_hole").
+check_file("destructor_hole", "examples/checks/destructor-hole.rofl").
+
+-- The same world advanced three ticks: `rofl-load --ticks N` takes it, so both
+-- engines answer.
+check_world("sensors_t3").
+check_file("sensors_t3", "examples/sensors.rofl").
+check_opt("sensors_t3", ticks, 3).

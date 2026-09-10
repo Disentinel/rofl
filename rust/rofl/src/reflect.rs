@@ -148,6 +148,16 @@ pub struct Vocab {
     pub space_reason: Sym,
     pub arith_type_reason: Sym,
     pub arith_zero_reason: Sym,
+    // FOUR REASONS THE PORT COLLAPSED INTO ONE. `hole_reason_of` had two arms
+    // where src/reflect.ts has six, so every string-operation failure came out
+    // as `arith_type_error` — which is precisely what the reference refuses to
+    // do, and says why: the repair a reader needs is about the string
+    // operation, and an arithmetic reason sends them looking at an expression
+    // that is not there.
+    pub str_type_reason: Sym,
+    pub str_index_reason: Sym,
+    pub str_sep_reason: Sym,
+    pub atom_name_reason: Sym,
 }
 
 pub const RESERVED_NAMES: &[&str] = &[
@@ -302,6 +312,10 @@ impl Vocab {
             space_reason: i("space_exhausted"),
             arith_type_reason: i("arith_type_error"),
             arith_zero_reason: i("arith_zero_divisor"),
+            str_type_reason: i("str_type_error"),
+            str_index_reason: i("str_index_error"),
+            str_sep_reason: i("str_empty_separator"),
+            atom_name_reason: i("atom_unwritable"),
         }
     }
 
