@@ -14,23 +14,28 @@
 -- for that reason since the gate was written — so the engine's fifteen carry
 -- the strict promise and the library's are counted.
 --
--- THE THREE REASONS, closed, and the first is a finding about the LANGUAGE:
+-- THE REASONS, CLOSED — two live and one already expired. The first was a
+-- finding about the LANGUAGE, and it is kept here struck through rather
+-- than deleted because a register's value is that a decision cannot go
+-- quiet, and that includes a decision to stop needing one:
 --
---   no_nullary_head   The body carries a GUARD — `does anything satisfy X`,
---                     `is this semantics declared` — and this language has no
+--   no_nullary_head   GONE ON 2026-09-10, AND THE ROWS WITH IT. It read: "the
+--                     body carries a GUARD — `does anything satisfy X`, `is
+--                     this semantics declared` — and this language has no
 --                     nullary relation, so the guard must be written as a
 --                     literal with an argument, and the argument shares
---                     nothing with the generator beside it. `rules/kernel-policy.rofl`
---                     shows the shape at its purest: `wf_declared(yes) :-
---                     semantics(well_founded).` is a PROPOSITION WEARING A
---                     DUMMY ARGUMENT, and `yes` is there because the grammar
---                     says `terms := term ("," term)*` and cannot produce an
---                     empty list. Nothing in START.md or LIMITS.md gives a
---                     reason for that; the store accepts a zero-argument fact
---                     today (measured: `store.add('ready','main',[])` is
---                     accepted, appears in `canonicalState`, counts 1), so the
---                     restriction lives in the PARSER alone. Five of these
---                     fifteen rows exist because of it.
+--                     nothing with the generator beside it." Three rows carried
+--                     it. The parser took a nullary head that afternoon and all
+--                     three were repaired rather than re-priced:
+--                     `any_unblocker(W)` became `anything_unblocks()` and its
+--                     consumer's negation, `ci_runs` split its `npm test`
+--                     lookup into `ci_suite_runs[dep]()`, and
+--                     `wf_inadmissible` put its now-nullary guard behind the
+--                     generator, where a one-row premise multiplies nothing.
+--                     A REASON THAT NAMES A LANGUAGE LIMIT IS A REASON WITH AN
+--                     EXPIRY DATE, and this is what it looks like when it
+--                     expires: the rows leave the register, they are not
+--                     renamed into another one.
 --
 --   bounded_lookup    The crossed relation is a total or a declaration with a
 --                     known small extent — `total_width` is one row by
@@ -43,11 +48,6 @@
 --                     recorded decision rather than a silent addition.
 
 edb(cross_allowed).
-
--- ---- no_nullary_head: a guard with nothing to hang on ----------------------
-cross_allowed("rules/kernel-policy.rofl", wf_inadmissible, demand_rel, no_nullary_head).
-cross_allowed("rules/worklist.rofl", any_unblocker, unblocking_work, no_nullary_head).
-cross_allowed("rules/depends.rofl", ci_runs, edge, no_nullary_head).
 
 -- ---- bounded_lookup: a total, or a declaration of known small extent -------
 cross_allowed("rules/eval-cost.rofl", share, total_width, bounded_lookup).

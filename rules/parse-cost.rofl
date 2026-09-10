@@ -23,9 +23,19 @@ edb(declines).
 -- evaluation instead of re-derived. Whether it EARNED its time is not a
 -- matter of opinion: run the same clause twice and count.
 
-saves_no_firing(yes) :- cache(on, firings, N), cache(off, firings, N).
-same_store(yes)      :- cache(on, facts, M), cache(off, facts, M).
-saves_nothing(reuse_plan) :- saves_no_firing(yes), same_store(yes).
+-- `yes` WAS THE WHOLE ARGUMENT AND IT SAID NOTHING. Both of these are
+-- propositions — the cache either fired the same number of times or it did
+-- not — and until 2026-09-10 the grammar had no nullary head, so they wore a
+-- dummy. `dressed_constant[audit]` found them off the reflection.
+--
+-- `saves_nothing(reuse_plan)` KEEPS ITS ARGUMENT and the same audit says why:
+-- `pure_overhead(P) :- saves_nothing(P), ...` binds it, so `reuse_plan`
+-- travels out through P into `slow_because(parse, reuse_plan)`. That constant
+-- is the answer's NAME, not a dress, and a rule that reads an argument into a
+-- variable is the test the audit now applies.
+saves_no_firing() :- cache(on, firings, N), cache(off, firings, N).
+same_store()      :- cache(on, facts, M), cache(off, facts, M).
+saves_nothing(reuse_plan) :- saves_no_firing(), same_store().
 
 cache_costs(D)   :- cache(on, ms, A), cache(off, ms, B), D is A - B.
 work_costs(B)    :- cache(off, ms, B).
@@ -59,15 +69,21 @@ per_firing_rises(A, B) :- bigger(A, B), ms_at(A, MA), ms_at(B, MB),
                           firings_at(A, FA), firings_at(B, FB),
                           L is MB * FA, Rr is MA * FB, L > Rr.
 store_grows(A, B)      :- bigger(A, B), facts_at(A, SA), facts_at(B, SB), SB > SA.
-cost_tracks_store(fixpoint) :- per_firing_rises(A, B), store_grows(A, B).
+-- THE PHASE NAME WAS ASSERTED AND NOT DERIVED. `cost_tracks_store(fixpoint)`
+-- read as a claim about one phase among several, and the body mentions no
+-- phase at all — the sweep is the fixpoint and nothing here could ever
+-- conclude a second one. So the label was a constant the derivation did not
+-- earn, which is worse than a dummy. The phase is written where it is meant,
+-- in `slow_because(parse, fixpoint)` below.
+cost_tracks_store() :- per_firing_rises(A, B), store_grows(A, B).
 
 -- SO THE TIME IS A PRODUCT OF TWO GROWING THINGS, and that is the whole of the
 -- superlinearity: more firings per byte, and each firing dearer than the last.
 -- The second factor is the one that does not belong there -- a firing should
 -- cost what its own premises cost, not what the store happens to hold.
-both_factors_grow(fixpoint) :- firings_outpace_input(A, B), cost_tracks_store(fixpoint).
-scans_what_it_reads(fixpoint) :- both_factors_grow(fixpoint), cost_tracks_store(fixpoint).
-slow_because(parse, fixpoint) :- scans_what_it_reads(fixpoint).
+both_factors_grow() :- firings_outpace_input(A, B), cost_tracks_store().
+scans_what_it_reads() :- both_factors_grow(), cost_tracks_store().
+slow_because(parse, fixpoint) :- scans_what_it_reads().
 
 -- ---------------------------------------------------------------------------
 -- THE PRIMITIVE UNDERNEATH BOTH BRANCHES.

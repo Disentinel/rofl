@@ -5,7 +5,7 @@
 -- The reasoning over these rows is rules/history.rofl; nothing here
 -- concludes anything. A number here is a SHAPE, never a verdict: a commit
 -- that widens a whitelist and a commit that fixes a bug are both `+3 -0`.
--- 654 tracked files over 334 non-merge commits.
+-- 656 tracked files over 335 non-merge commits.
 
 touched[hist](".claude-plugin/marketplace.json", 1, 14, 0).
 landed[hist](".claude-plugin/marketplace.json", 14, 1).
@@ -23,8 +23,8 @@ touched[hist]("CLAUDE.md", 10, 392, 8).
 landed[hist]("CLAUDE.md", 313, 0).
 touched[hist]("LIMITS.md", 3, 196, 22).
 landed[hist]("LIMITS.md", 187, 0).
-touched[hist]("README.md", 13, 815, 55).
-landed[hist]("README.md", 706, 7).
+touched[hist]("README.md", 14, 831, 57).
+landed[hist]("README.md", 719, 7).
 touched[hist]("START.md", 2, 223, 2).
 landed[hist]("START.md", 128, 0).
 touched[hist]("adapters/index.ts", 1, 24, 0).
@@ -265,6 +265,10 @@ touched[hist]("examples/drip/drip.rofl", 1, 889, 0).
 landed[hist]("examples/drip/drip.rofl", 583, 0).
 touched[hist]("examples/drip/page.html", 1, 994, 0).
 landed[hist]("examples/drip/page.html", 853, 0).
+touched[hist]("examples/flag/README.md", 1, 30, 0).
+landed[hist]("examples/flag/README.md", 22, 0).
+touched[hist]("examples/flag/flag.rofl", 1, 44, 0).
+landed[hist]("examples/flag/flag.rofl", 10, 0).
 touched[hist]("examples/goof/README.md", 1, 675, 0).
 landed[hist]("examples/goof/README.md", 534, 0).
 touched[hist]("examples/goof/demo.ts", 2, 897, 1).
@@ -462,16 +466,16 @@ touched[hist]("facts/cleanliness.rofl", 7, 185, 5).
 landed[hist]("facts/cleanliness.rofl", 29, 0).
 touched[hist]("facts/cross-products.rofl", 1, 70, 0).
 landed[hist]("facts/cross-products.rofl", 16, 0).
-touched[hist]("facts/depends.rofl", 8, 4720, 43).
-landed[hist]("facts/depends.rofl", 4702, 0).
+touched[hist]("facts/depends.rofl", 9, 4736, 45).
+landed[hist]("facts/depends.rofl", 4717, 0).
 touched[hist]("facts/eval-cost.rofl", 2, 469, 67).
 landed[hist]("facts/eval-cost.rofl", 448, 0).
-touched[hist]("facts/findings.rofl", 256, 6235, 71).
-landed[hist]("facts/findings.rofl", 4695, 0).
+touched[hist]("facts/findings.rofl", 257, 6242, 71).
+landed[hist]("facts/findings.rofl", 4701, 0).
 touched[hist]("facts/floor-census.rofl", 2, 441, 147).
 landed[hist]("facts/floor-census.rofl", 405, 0).
-touched[hist]("facts/history.rofl", 3, 1951, 32).
-landed[hist]("facts/history.rofl", 1938, 0).
+touched[hist]("facts/history.rofl", 4, 1977, 53).
+landed[hist]("facts/history.rofl", 1963, 0).
 touched[hist]("facts/js-attrs.rofl", 3, 199, 7).
 landed[hist]("facts/js-attrs.rofl", 35, 0).
 touched[hist]("facts/js-callgraph.rofl", 36, 783, 78).
@@ -514,8 +518,8 @@ touched[hist]("facts/permission-inventory.rofl", 3, 1224, 211).
 landed[hist]("facts/permission-inventory.rofl", 1200, 0).
 touched[hist]("facts/rule-shape.rofl", 3, 55120, 0).
 landed[hist]("facts/rule-shape.rofl", 55086, 0).
-touched[hist]("facts/spec.rofl", 4, 598, 51).
-landed[hist]("facts/spec.rofl", 412, 0).
+touched[hist]("facts/spec.rofl", 5, 611, 64).
+landed[hist]("facts/spec.rofl", 425, 0).
 touched[hist]("facts/worklist.rofl", 91, 3833, 428).
 landed[hist]("facts/worklist.rofl", 828, 3).
 touched[hist]("facts/worlds.rofl", 6, 397, 1).
@@ -592,8 +596,8 @@ touched[hist]("rules/kernel-policy.rofl", 1, 66, 0).
 landed[hist]("rules/kernel-policy.rofl", 19, 0).
 touched[hist]("rules/layering.rofl", 1, 107, 0).
 landed[hist]("rules/layering.rofl", 29, 0).
-touched[hist]("rules/nullary.rofl", 1, 116, 0).
-landed[hist]("rules/nullary.rofl", 27, 0).
+touched[hist]("rules/nullary.rofl", 2, 123, 1).
+landed[hist]("rules/nullary.rofl", 28, 0).
 touched[hist]("rules/parse-cost.rofl", 1, 100, 0).
 landed[hist]("rules/parse-cost.rofl", 38, 0).
 touched[hist]("rules/permission-model.rofl", 1, 190, 0).
@@ -702,8 +706,8 @@ touched[hist]("rust/rofl/src/ring1_tok.rs", 1, 228, 0).
 landed[hist]("rust/rofl/src/ring1_tok.rs", 170, 0).
 touched[hist]("rust/rofl/src/rofl_lex.rs", 1, 147, 0).
 landed[hist]("rust/rofl/src/rofl_lex.rs", 88, 0).
-touched[hist]("rust/rofl/src/rofl_parse.rs", 3, 489, 62).
-landed[hist]("rust/rofl/src/rofl_parse.rs", 355, 1).
+touched[hist]("rust/rofl/src/rofl_parse.rs", 4, 508, 62).
+landed[hist]("rust/rofl/src/rofl_parse.rs", 359, 1).
 touched[hist]("rust/rofl/src/seed.rs", 1, 119, 0).
 landed[hist]("rust/rofl/src/seed.rs", 109, 0).
 touched[hist]("rust/rofl/src/session.rs", 6, 737, 39).
@@ -912,8 +916,8 @@ touched[hist]("src/engine.ts", 17, 2485, 553).
 landed[hist]("src/engine.ts", 1390, 3).
 touched[hist]("src/kernel-dense.ts", 1, 83, 0).
 landed[hist]("src/kernel-dense.ts", 69, 0).
-touched[hist]("src/parser.ts", 5, 374, 150).
-landed[hist]("src/parser.ts", 271, 2).
+touched[hist]("src/parser.ts", 6, 402, 151).
+landed[hist]("src/parser.ts", 276, 2).
 touched[hist]("src/reflect.ts", 11, 1399, 284).
 landed[hist]("src/reflect.ts", 515, 0).
 touched[hist]("src/repl.ts", 1, 93, 0).
@@ -1413,12 +1417,14 @@ together[hist]("facts/cleanliness.rofl", "facts/layering.rofl", 2).
 together[hist]("facts/cleanliness.rofl", "package.json", 6).
 together[hist]("facts/cleanliness.rofl", "rules/history.rofl", 2).
 together[hist]("facts/cleanliness.rofl", "test/spec-coverage.test.ts", 2).
-together[hist]("facts/depends.rofl", "facts/findings.rofl", 7).
-together[hist]("facts/depends.rofl", "facts/history.rofl", 3).
+together[hist]("facts/depends.rofl", "facts/findings.rofl", 8).
+together[hist]("facts/depends.rofl", "facts/history.rofl", 4).
 together[hist]("facts/depends.rofl", "facts/layering.rofl", 2).
+together[hist]("facts/depends.rofl", "facts/spec.rofl", 2).
 together[hist]("facts/depends.rofl", "package.json", 7).
 together[hist]("facts/depends.rofl", "rules/depends.rofl", 2).
 together[hist]("facts/depends.rofl", "rules/history.rofl", 2).
+together[hist]("facts/depends.rofl", "rules/nullary.rofl", 2).
 together[hist]("facts/depends.rofl", "scanners/depends.ts", 2).
 together[hist]("facts/depends.rofl", "test/spec-coverage.test.ts", 2).
 together[hist]("facts/eval-cost.rofl", "facts/findings.rofl", 2).
@@ -1427,7 +1433,7 @@ together[hist]("facts/eval-cost.rofl", "scanners/eval_cost.ts", 2).
 together[hist]("facts/eval-cost.rofl", "src/engine.ts", 2).
 together[hist]("facts/eval-cost.rofl", "test/bootstrap-dag.test.ts", 2).
 together[hist]("facts/eval-cost.rofl", "test/engine-split.test.ts", 2).
-together[hist]("facts/findings.rofl", "facts/history.rofl", 3).
+together[hist]("facts/findings.rofl", "facts/history.rofl", 4).
 together[hist]("facts/findings.rofl", "facts/js-attrs.rofl", 2).
 together[hist]("facts/findings.rofl", "facts/js-callgraph.rofl", 17).
 together[hist]("facts/findings.rofl", "facts/js-controlflow.rofl", 9).
@@ -1443,7 +1449,7 @@ together[hist]("facts/findings.rofl", "facts/js-statements.rofl", 5).
 together[hist]("facts/findings.rofl", "facts/layering.rofl", 2).
 together[hist]("facts/findings.rofl", "facts/parse-cost.rofl", 3).
 together[hist]("facts/findings.rofl", "facts/rule-shape.rofl", 2).
-together[hist]("facts/findings.rofl", "facts/spec.rofl", 3).
+together[hist]("facts/findings.rofl", "facts/spec.rofl", 4).
 together[hist]("facts/findings.rofl", "facts/worklist.rofl", 62).
 together[hist]("facts/findings.rofl", "facts/worlds.rofl", 3).
 together[hist]("facts/findings.rofl", "package.json", 17).
@@ -1462,6 +1468,7 @@ together[hist]("facts/findings.rofl", "rules/js-env.rofl", 4).
 together[hist]("facts/findings.rofl", "rules/js-globals.rofl", 2).
 together[hist]("facts/findings.rofl", "rules/js-model.rofl", 4).
 together[hist]("facts/findings.rofl", "rules/js-modules.rofl", 2).
+together[hist]("facts/findings.rofl", "rules/nullary.rofl", 2).
 together[hist]("facts/findings.rofl", "rules/profile.rofl", 2).
 together[hist]("facts/findings.rofl", "rules/worklist.rofl", 6).
 together[hist]("facts/findings.rofl", "runtime/ingest.ts", 2).
@@ -1475,7 +1482,7 @@ together[hist]("facts/findings.rofl", "rust/rofl/src/bin/rofl_serve.rs", 3).
 together[hist]("facts/findings.rofl", "rust/rofl/src/engine.rs", 3).
 together[hist]("facts/findings.rofl", "rust/rofl/src/lib.rs", 2).
 together[hist]("facts/findings.rofl", "rust/rofl/src/program.rs", 3).
-together[hist]("facts/findings.rofl", "rust/rofl/src/rofl_parse.rs", 2).
+together[hist]("facts/findings.rofl", "rust/rofl/src/rofl_parse.rs", 3).
 together[hist]("facts/findings.rofl", "rust/rofl/src/session.rs", 4).
 together[hist]("facts/findings.rofl", "rust/rofl/src/store.rs", 5).
 together[hist]("facts/findings.rofl", "rust/rofl/tests/cool.rs", 2).
@@ -1496,7 +1503,7 @@ together[hist]("facts/findings.rofl", "scripts/witness_check.ts", 3).
 together[hist]("facts/findings.rofl", "src/api.ts", 7).
 together[hist]("facts/findings.rofl", "src/dense.ts", 2).
 together[hist]("facts/findings.rofl", "src/engine.ts", 12).
-together[hist]("facts/findings.rofl", "src/parser.ts", 2).
+together[hist]("facts/findings.rofl", "src/parser.ts", 3).
 together[hist]("facts/findings.rofl", "src/reflect.ts", 6).
 together[hist]("facts/findings.rofl", "src/store.ts", 5).
 together[hist]("facts/findings.rofl", "src/unify.ts", 2).
@@ -1549,6 +1556,7 @@ together[hist]("facts/findings.rofl", "test/witness-check.test.ts", 2).
 together[hist]("facts/findings.rofl", "test/worklist.test.ts", 55).
 together[hist]("facts/history.rofl", "package.json", 2).
 together[hist]("facts/history.rofl", "rules/history.rofl", 2).
+together[hist]("facts/history.rofl", "rules/nullary.rofl", 2).
 together[hist]("facts/js-attrs.rofl", "facts/worklist.rofl", 2).
 together[hist]("facts/js-attrs.rofl", "rules/js-attrs.rofl", 2).
 together[hist]("facts/js-attrs.rofl", "test/js-attrs.test.ts", 3).
@@ -1699,8 +1707,9 @@ together[hist]("package.json", "test/spec-coverage.test.ts", 2).
 together[hist]("package.json", "test/vocabulary-doc.test.ts", 2).
 together[hist]("package.json", "tsconfig.json", 2).
 together[hist]("policy.rofl", "test/kernel-policy-program.test.ts", 2).
-together[hist]("README.md", "facts/findings.rofl", 3).
-together[hist]("README.md", "facts/spec.rofl", 3).
+together[hist]("README.md", "facts/depends.rofl", 2).
+together[hist]("README.md", "facts/findings.rofl", 4).
+together[hist]("README.md", "facts/spec.rofl", 4).
 together[hist]("README.md", "package.json", 5).
 together[hist]("README.md", "test/vocabulary-doc.test.ts", 2).
 together[hist]("README.md", "tsconfig.json", 2).
@@ -1921,4 +1930,4 @@ together[hist]("test/js-modules.test.ts", "test/worklist.test.ts", 2).
 together[hist]("test/js-vocabulary.test.ts", "test/worklist.test.ts", 2).
 together[hist]("test/query-unpopulatable.test.ts", "test/worklist.test.ts", 2).
 
-history_commits[hist](334).
+history_commits[hist](335).

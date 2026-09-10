@@ -127,8 +127,14 @@ export function answerCheck(w: World): Check[] {
     ['mono_rule', new Set(mono.map((x) => x.id)), col(r, 'mono_rule(R)', 'R')],
     ['demand_rel', new Set(ev.demandRels.keys()), col(r, 'demand_rel(Rel)', 'Rel')],
     ['late_rule', coneMirror(mono), col(r, 'late_rule(R)', 'R')],
+    // A PROPOSITION ON BOTH SIDES SINCE 2026-09-10. `program_negates` used to
+    // be `program_negates(yes)` because the grammar had no nullary head, and
+    // this pair compared the two sets of atoms `{yes}` and `{}`. The rule side
+    // is now a nullary head, so its answer is a ROW COUNT rather than a column,
+    // and the atom is kept on both sides only to keep the two sets comparable
+    // with every other row of this table.
     ['program_negates', new Set(ev.rules.some((x) => x.safe && x.hasNeg) ? ['yes'] : []),
-      col(r, 'program_negates(X)', 'X')],
+      new Set(r.query('program_negates()').rows.length > 0 ? ['yes'] : [])],
   ];
   return pairs.map(([rel, host, rules]) => ({
     rel, host: host.size, rules: rules.size,

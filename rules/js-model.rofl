@@ -589,7 +589,15 @@ declared_and_deferred[audit](K)  :- node_kind(_, K), frame_deferred(K, _).
 -- unexercised there by construction.
 edb(kind_absent_ok).        -- kind_absent_ok(Kind, Reason)
 
-scanned[audit](Lang) :- lang_of_corpus(Lang), ast_node[code](_, _, _, _).
+-- THE GUARD IS A PROPOSITION AND THE LANGUAGE IS A LOOKUP, and they were one
+-- rule until 2026-09-10. `wants_nullary[audit]` named it off the reflection:
+-- `ast_node[code](_, _, _, _)` binds nothing, shares nothing and asks one
+-- yes-or-no question, so the old clause crossed every corpus node against
+-- `lang_of_corpus` to answer it. Split, the existential is at most one row and
+-- `scanned` keeps `Lang` — which it needs, because the day there are two
+-- languages the question is per corpus and not per tree.
+corpus_scanned[audit]() :- ast_node[code](_, _, _, _).
+scanned[audit](Lang)    :- lang_of_corpus(Lang), corpus_scanned[audit]().
 
 kind_unexercised[audit](Lang, K) :- node_kind(Lang, K), scanned[audit](Lang),
                                     not ast_node[code](_, K, _, _),

@@ -174,7 +174,10 @@ test('the corpus: every .rofl file, five answers, rule for rule', () => {
   // `work_order` became a derivation over `work_needs` and `earlier_takeable`
   // — which existed only to say `some takeable item has a smaller number` —
   // went with it. The relations that replaced it (`unblocks`,
-  // `unblocking_work`, `any_unblocker`) are not demand-backed.
+  // `unblocking_work`, `anything_unblocks`) are not demand-backed. The third of
+  // those was `any_unblocker(W)` until 2026-09-10, when it became the nullary
+  // head it had always wanted to be; the relation is the same one and the
+  // demand-backed count did not move.
   //
   // AND THIS ASSERTION IS WHY THE NUMBER IS WORTH KEEPING. It went red on the
   // commit that removed the relation and stayed red through a merge, because

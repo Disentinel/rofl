@@ -108,7 +108,14 @@ ci_runs[dep](X) :- ci_runs[dep](Y), edge[dep](Y, X, _).
 -- CLOSURE with it means a helper or a fixture that a test imports is reached
 -- too. Seeding the verdict instead left every `test/` helper reading as unrun,
 -- which is thirteen rows of work nobody could do.
-ci_runs[dep](T) :- test_file[dep](T), edge[dep](W, "npm:test", ci_step), artifact[dep](W, yml).
+-- The right half is a PROPOSITION — does the referee run the suite at all —
+-- and it wore `T` until 2026-09-10 because the grammar had no nullary head.
+-- `wants_nullary[audit]` in rules/nullary.rofl named this rule off the
+-- reflection: `T`'s only binder was `test_file` and the other two premises
+-- shared nothing with it, so every test file in the tree was crossed against
+-- the same two-row lookup.
+ci_suite_runs[dep]() :- edge[dep](W, "npm:test", ci_step), artifact[dep](W, yml).
+ci_runs[dep](T) :- test_file[dep](T), ci_suite_runs[dep]().
 
 script[dep](S) :- artifact[dep](S, script).
 unrun_gate[dep](S) :- script[dep](S), not ci_runs[dep](S).

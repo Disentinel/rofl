@@ -255,16 +255,24 @@ nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_worka
 -- AND `next_work` IS A SET NOW, honestly. A partial order has no unique least
 -- element, and pretending otherwise is what the hand number was doing: with two
 -- items at 40 the old rule handed out whichever the join reached first.
--- THE FALLBACK ARM IS RANGE-RESTRICTED, which is why `any_unblocker` carries a
--- variable it does not read: this kernel has no nullary head, and a body that
--- only asks `does anything at all unblock` still has to name the item it is
--- answering about. Measured — the first draft wrote `takeable_unblocker :- ...`
--- and the parser refused it at the door.
+-- THE FALLBACK ARM ASKS A PROPOSITION AND NOW SAYS SO. It read
+-- `any_unblocker(W) :- takeable(W), unblocking_work(_).` and the comment here
+-- said why: "this kernel has no nullary head, and a body that only asks does
+-- anything at all unblock still has to name the item it is answering about.
+-- Measured — the first draft wrote `takeable_unblocker :- ...` and the parser
+-- refused it at the door."
+--
+-- The parser stopped refusing it on 2026-09-10, and this rule is the one the
+-- finding quoted when it argued for the change. THE COST IT NAMED IS PAID
+-- HERE: `takeable(W)` was a cross product against a body that never read W,
+-- so the old rule built one row per takeable item to answer a yes-or-no
+-- question, and the negation below then had to scan them. `anything_unblocks`
+-- is at most one row.
 unblocks(P)            :- work_needs(_, P).
 unblocking_work(W)     :- takeable(W), unblocks(W).
-any_unblocker(W)       :- takeable(W), unblocking_work(_).
+anything_unblocks()    :- unblocking_work(_).
 next_work[audit](W)    :- unblocking_work(W).
-next_work[audit](W)    :- takeable(W), not any_unblocker(W).
+next_work[audit](W)    :- takeable(W), not anything_unblocks().
 
 -- ...AND THE AUDIT THE CHANGE MAKES NECESSARY. A hand-written number cannot be
 -- less than itself, so acyclicity came free and nobody had to state it. Derive

@@ -118,7 +118,12 @@ test('the ENGINE\'s own rule packs carry exactly the priced register, no more', 
 
   // EVERY ROW CARRIES A REASON FROM THE CLOSED LIST. A register whose reasons
   // are free text is a list of strings again.
-  const REASONS = new Set(['no_nullary_head', 'bounded_lookup', 'real_and_accepted']);
+  // `no_nullary_head` LEFT THE LIST ON 2026-09-10 with the three rows that
+  // carried it: the parser took a nullary head and all three bodies were
+  // repaired rather than re-priced. A reason naming a language limit is a
+  // reason with an expiry date, and it is removed here so a new row cannot
+  // claim it.
+  const REASONS = new Set(['bounded_lookup', 'real_and_accepted']);
   for (const [k, why] of reg) assert.ok(REASONS.has(why), `${k}: unknown reason '${why}'`);
 });
 

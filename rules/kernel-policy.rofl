@@ -56,11 +56,21 @@ demand_rel(Rel)      :- concludes(R, Rel), conclusion_tense(R, now),
 -- any negation to schedule — the condition the rejection path is gated on.
 safe_rule(R)         :- executable(R), not unsafe(R).
 neg_rule(R)          :- safe_rule(R), has_neg_rule(R).
-program_negates(yes) :- neg_rule(_).
+-- A PROPOSITION, AND `yes` WAS THE DUMMY THE OLD GRAMMAR DEMANDED. The
+-- kernel asks one bit here — does this program negate anything — and until
+-- 2026-09-10 a head could not be nullary. `scanners/policy_ladder.ts`
+-- mirrors it against the host as a bit for the same reason.
+program_negates()    :- neg_rule(_).
 
 -- src/engine.ts 666-681. Under the alternating fixpoint no round can hold a
 -- demand-backed relation fixed, because it materialises as a side effect of
 -- matching at a call site. `semantics/1` is not emitted reflection — the
 -- PROGRAM writes it and the kernel reads it — so it is available here already.
-wf_declared(yes)     :- semantics(well_founded).
-wf_inadmissible(Rel) :- wf_declared(yes), demand_rel(Rel).
+wf_declared()        :- semantics(well_founded).
+-- THE GUARD GOES LAST NOW THAT IT IS NULLARY. Written `wf_declared(),
+-- demand_rel(Rel)` the proposition leads, binds nothing, and every
+-- demand-backed relation reads as a cross product against it — which is
+-- what facts/cross-products.rofl registered under `no_nullary_head`. A
+-- proposition is at most one row and multiplies nothing, so it belongs
+-- behind the generator and the register loses its last row of that kind.
+wf_inadmissible(Rel) :- demand_rel(Rel), wf_declared().

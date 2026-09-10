@@ -45,11 +45,18 @@ edb(census).
 -- characters.
 unfinished[profile](W, R) :- hole(W, R).
 
--- Zero-arity is not in this language (`complete.` does not parse, and both
--- engines refuse it identically), so the subject is named. It reads better
--- anyway: the claim is about THIS world and one day there may be another.
-sound[profile](this_world)         :- not unfinished_any[profile](this_world).
-unfinished_any[profile](this_world) :- unfinished[profile](_, _).
+-- THESE TWO ARE PROPOSITIONS AND NOW SAY SO. They read `sound[profile](
+-- this_world)` and `unfinished_any[profile](this_world)` until 2026-09-10,
+-- with a comment here explaining that zero arity is not in this language and
+-- so the subject had to be named. Both halves of that were repaired the same
+-- day: the language took a nullary head, and `dressed_constant[audit]` in
+-- rules/nullary.rofl named these two off the reflection without anybody
+-- reading the file. `this_world` carried no information — the SUBJECT is the
+-- book, `[profile]`, which is what docs/choosing-perspectives.md says a
+-- perspective is for, and a second world is a second book rather than a
+-- second argument.
+sound[profile]()          :- not unfinished_any[profile]().
+unfinished_any[profile]() :- unfinished[profile](_, _).
 
 -- ------------------------------------------------- the functional dependency
 
@@ -60,7 +67,7 @@ unfinished_any[profile](this_world) :- unfinished[profile](_, _).
 -- beside the real finding, meaning nothing.
 fd_holds[profile](R, P) :- grouped[profile](R, P),
                            not disagrees[profile](R, P),
-                           sound[profile](this_world).
+                           sound[profile]().
 
 -- ------------------------------------------------------------- the two tiers
 
@@ -98,7 +105,7 @@ grouped_any[profile](W)   :- grouped[profile](W, _).
 -- relation is a function from child to (parent, field, position). Nothing in
 -- the vocabulary said so.
 undeclared_key[profile](R, P) :- unique_col[profile](R, P), P != 0,
-                                 sound[profile](this_world).
+                                 sound[profile]().
 
 -- A foreign key that HOLDS. Reported rather than required: a model may
 -- legitimately name something it does not hold, and the moment this stops
@@ -106,7 +113,7 @@ undeclared_key[profile](R, P) :- unique_col[profile](R, P), P != 0,
 foreign_key[profile](R, P, W, Q) :- included[profile](R, P, W, Q),
                                     unique_col[profile](W, Q),
                                     R != W,
-                                    sound[profile](this_world).
+                                    sound[profile]().
 
 -- --------------------------------------------------------------- the trap
 
