@@ -1,0 +1,111 @@
+-- facts/cleanliness.rofl — THE DECLARATIONS. Hand-written, never generated.
+--
+-- This file is to `rules/cleanliness.rofl` what `layer(L)` is to the JS model:
+-- the part the OWNER declares and an executor may not. Three vocabularies and
+-- one register, and the reason each is closed is the same — a queue that an
+-- executor can empty by widening its own vocabulary is not a queue.
+--
+--   role_decl(R)             what an artifact may BE here
+--   duty_decl(R, D)          what a role OWES to earn its place
+--   waived_cell(P, D, Why)   a named exemption, with a reason from the list
+--   cell_owner(P, D, W)      who is doing it — a work item id
+--
+-- PROPOSED 2026-09-10 AND NOT YET AUTHORISED. Every row below is a proposal
+-- from the session that built the table; `layer(L)` in the JS model is the
+-- owner's alone and this is the same kind of declaration. Read the numbers the
+-- table produces first, then keep, cut or rename.
+
+-- ==================================================================== ROLES
+-- Thirteen, and the test asserts they COVER the tree — an artifact with no
+-- role is `roleless[audit]`, which is the `vocabulary_gap` of this table.
+role_decl(kernel).       -- src/            the engine
+role_decl(semantics).    -- boot/policy/safety.rofl, the engine carried as data
+role_decl(port).         -- rust/, adapters/
+role_decl(scanner).      -- scanners/       turns something into facts
+role_decl(rule_pack).    -- rules/          the reasoning
+role_decl(runtime).      -- runtime/        renders, admits, schedules
+role_decl(data).         -- facts/          packs and ledgers
+role_decl(demo).         -- examples/       exercises a capability
+role_decl(gate).         -- test/, scripts/ refuses something
+role_decl(measurement).  -- bench/          measures, never refuses
+role_decl(document).     -- docs/, *.md
+role_decl(skill).        -- skills/         the user-facing surface
+role_decl(script).       -- npm run <name>
+
+-- ==================================================================== DUTIES
+-- START DELIBERATELY SMALL. Four duties over five roles is enough to find out
+-- whether the instrument works; a table that opens two hundred cells on its
+-- first run is a table nobody reads. Widen it after the first pass, and widen
+-- it on evidence — a duty is worth adding when something rotted for want of it.
+
+-- EVERY artifact owes a consumer. Nothing can reach it => it is dead weight.
+-- Applied first to the roles where the answer is unambiguous; `document` and
+-- `demo` are deliberately NOT here on the first pass, because a document is
+-- reached by being read by a person and this model cannot see that.
+duty_decl(kernel, has_consumer).
+duty_decl(scanner, has_consumer).
+duty_decl(runtime, has_consumer).
+duty_decl(rule_pack, has_consumer).
+
+-- A GATE THE REFEREE DOES NOT RUN runs when somebody remembers.
+duty_decl(gate, run_by_ci).
+duty_decl(script, run_by_ci).
+
+-- A GENERATED PACK WITH NO COMPARE-AND-FAIL GATE cannot go stale loudly.
+-- Paid for by facts/rule-shape.rofl: 4 903 lines of drift, nothing red.
+duty_decl(data, regenerable).
+
+-- A SCANNER WHOSE FACTS NO RULE PACK READS IS A REPORT WITH EXTRA STEPS.
+-- CLAUDE.md says exactly this and nothing checked it until now.
+duty_decl(scanner, read_by_rules).
+
+-- A DOCUMENT NOTHING INDEXES is one nobody finds. Seven of nineteen were in
+-- that state on 2026-09-10 and `the-target.md` — which says what the whole
+-- branch is instrumental to — was one of them.
+duty_decl(document, indexed).
+
+-- ================================================================== WAIVERS
+-- A CLOSED LIST OF REASONS, defined BEFORE any cell is classified, because
+-- `kept` turns the alarm green as effectively as the work and costs a tenth as
+-- much — docs/comment-migration-brief.md says so about its own remedy, and the
+-- author of that brief admits doing it in the same session.
+--
+-- Reasons, and nothing else may be used:
+--   entry_point            a human runs it; nothing in the tree should reach it
+--   owner_decision         the owner has ruled on this cell by name
+--   superseded_by_work     a work item will remove the artifact entirely
+--
+-- EMPTY ON PURPOSE ON THE FIRST PASS. Every waiver here should be a decision
+-- somebody made after reading the number, not a way of getting the first run
+-- to look clean.
+
+-- ================================================================== OWNERS
+-- `cell_owner(Path, Duty, WorkItem)` — an open cell with an owner is
+-- scheduled; one without is `unowned[audit]`, and that is what CI refuses.
+-- Also empty on the first pass: nothing has been assigned yet, so the first
+-- run's `unowned` count IS the backlog this table was built to produce.
+
+-- =================================================================== RATCHET
+-- THE QUEUE MAY NOT GROW. A count over a growing tree measures the tree, so
+-- this is not a pin on the queue's size — it is a CEILING that only ever comes
+-- down, which is a claim about the WORK rather than about the corpus. It also
+-- merges: two branches lowering it conflict visibly, where two branches moving
+-- a count both stay green and agree on a wrong third number.
+--
+-- 117 on 2026-09-10. It was 127 an hour earlier and came down by ten without
+-- anybody cleaning anything: `scanners/cleanliness_report.ts` and
+-- `test/cleanliness.test.ts` gave ten artifacts consumers they did not have.
+-- THAT IS THE RATCHET WORKING AND IT IS ALSO ITS LIMIT — the queue shrinks
+-- when the tree is wired up as much as when it is cleaned, so the ceiling
+-- measures reachability and not virtue. Banked anyway: a ceiling that is not
+-- lowered when the number falls stops binding.
+--
+-- Decomposed so the next reader knows what they are lowering:
+--   run_by_ci      89   npm scripts and gates the referee never runs
+--   has_consumer   28   part real orphans, part loaded by a runtime-built path
+--   read_by_rules   6   a scanner whose facts no rule pack reads
+--   indexed         3   CLAUDE.md, HANDOFF.md, LIMITS.md — README links none
+--   regenerable     1   facts/ledger-census.rofl has no compare-and-fail gate
+--
+-- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
+queue_ceiling(120).

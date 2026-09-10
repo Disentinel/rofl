@@ -1,0 +1,166 @@
+-- rules/cleanliness.rofl — THE MATRIX THAT GENERATES CLEANUP WORK.
+--
+-- The owner's ask, 2026-09-10, and it is deliberately the same instrument the
+-- JS model already runs on: not a list of candidates somebody walks with their
+-- eyes, but a TABLE indexed by two axes, where every cell is answered or is a
+-- work item, and the table itself says when the work is finished.
+--
+--   JS model:   (node kind x layer)   -> modelled | waived(reason) | not_modelled
+--   this table: (role x duty)         -> earns    | waived(reason) | unmet
+--
+-- `open_cell[audit]` is the queue. It is EMPTY or every row in it is owned by
+-- a named work item; that is the invariant CI checks, and it is the whole
+-- protocol. A cell is never closed by deleting the question.
+--
+-- WHY A TABLE AND NOT TESTS. Most of what this file derives was previously a
+-- hand-written test per instance — a list of gates, a list of documents, a
+-- baseline of cross products — and a hand-written list goes stale on a
+-- refactor, which this repository has now recorded four times. A duty stated
+-- once over a ROLE covers every artifact that ever enters that role, including
+-- the ones nobody has written yet. That is the difference the owner is asking
+-- for: the check is derived, not enumerated.
+--
+-- TWO THINGS THE OWNER DECLARES AND NOBODY ELSE, on the model of `layer(L)`:
+-- the ROLE vocabulary and the WAIVER reasons. An executor may not invent a
+-- role to make a cell go away, and may not waive a duty; it may only report.
+
+-- ============================================================ THE FIRST AXIS
+-- ROLE — what an artifact IS here. A closed list. An artifact with no role is
+-- itself a finding (`roleless[audit]`), because it means the tree grew a kind
+-- of thing this table does not know about, which is exactly the gap the JS
+-- model calls `vocabulary_gap`.
+edb(role_decl).
+edb(duty_decl).
+edb(waived_cell).
+edb(cell_owner).
+
+role(R) :- role_decl(R).
+
+-- Assignment is by location, and stated HERE rather than in a scanner so the
+-- criterion is readable and arguable. `dir` comes from the depends pack.
+dir_of(P, D)   :- artifact[dep](P, _), D is str_pre(P, "/"), D != "".
+-- `str_pre(P, "/") = ""` PARSES AND NEVER FIRES: the language has exactly one
+-- term-producing builtin form, `Out is op(In, ...)`, so a destructor on the
+-- LEFT of `=` is a relational literal over a relation nothing populates — the
+-- `unpopulatable` shape, silent by construction. It cost 18 roleless rows
+-- including boot.rofl, and nothing said a word.
+root_file(P)   :- artifact[dep](P, _), D is str_pre(P, "/"), D = "".
+
+has_role(P, kernel)      :- dir_of(P, "src").
+has_role(P, port)        :- dir_of(P, "rust").
+has_role(P, port)        :- dir_of(P, "adapters").
+has_role(P, scanner)     :- dir_of(P, "scanners").
+has_role(P, rule_pack)   :- dir_of(P, "rules").
+has_role(P, demo)        :- dir_of(P, "examples").
+has_role(P, gate)        :- dir_of(P, "test").
+has_role(P, gate)        :- dir_of(P, "scripts").
+has_role(P, measurement) :- dir_of(P, "bench").
+has_role(P, document)    :- dir_of(P, "docs").
+has_role(P, runtime)     :- dir_of(P, "runtime").
+has_role(P, skill)       :- dir_of(P, "skills").
+has_role(P, data)        :- dir_of(P, "facts").
+has_role(P, document)    :- root_file(P), artifact[dep](P, md).
+has_role(P, semantics)   :- root_file(P), artifact[dep](P, rofl).
+has_role(P, script)      :- artifact[dep](P, script).
+has_role(P, config)      :- dir_of(P, ".github").
+has_role(P, config)      :- dir_of(P, ".claude").
+has_role(P, config)      :- dir_of(P, ".claude-plugin").
+has_role(P, config)      :- dir_of(P, "schemas").
+has_role(P, config)      :- root_file(P), artifact[dep](P, json).
+has_role(P, config)      :- root_file(P), artifact[dep](P, other).
+
+roled(P)          :- has_role(P, _).
+roleless[audit](P) :- artifact[dep](P, _), not roled(P).
+
+-- ============================================================ THE SECOND AXIS
+-- DUTY — what an artifact of a role OWES in order to earn its place. Declared
+-- per role, so adding a role without duties is visible rather than silent.
+duty(R, D) :- duty_decl(R, D).
+
+-- A cell exists for every (role, duty) the owner declared AND that some
+-- artifact actually occupies. A duty over an empty role is `vacant[audit]`:
+-- not an error, but a table with vacant cells is measuring nothing there and
+-- should say so rather than counting them as answered.
+occupied(R)      :- has_role(_, R).
+cell(R, D)       :- duty(R, D), occupied(R).
+vacant[audit](R, D) :- duty(R, D), not occupied(R).
+
+-- ================================================================ THE DUTIES
+-- Each one is a property of an artifact, derived from `facts/depends.rofl`.
+-- The point of writing them here is that the CRITERION is executable and can
+-- be argued with, rather than living in a reviewer's head.
+
+-- has_consumer: something reaches it through a CODE edge. The duty every role
+-- owes, because an artifact nothing can reach is dead weight by definition.
+consumed(P) :- code_edge[dep](_, P).
+meets(P, has_consumer) :- consumed(P).
+
+-- run_by_ci: the referee actually runs it. A gate nobody runs is a gate that
+-- runs when somebody remembers (`witness_check.ts` exited non-zero on a stale
+-- witness from the day it was written and nothing ran it).
+meets(P, run_by_ci) :- ci_runs[dep](P).
+-- The `npm test` glob is seeded into `ci_runs` itself in rules/depends.rofl,
+-- so it propagates to the helpers and fixtures a test imports. Stating it as a
+-- VERDICT here instead covered the test files and not what they reach.
+-- A SCRIPT REACHED BY ANOTHER SCRIPT'S COMMAND is run too.
+meets(S, run_by_ci) :- artifact[dep](S, script), ci_runs[dep](S).
+
+-- regenerable: a generated artifact has a generator AND a gate that compares.
+-- `facts/rule-shape.rofl` has the first and not the second, and rotted by
+-- 4 903 lines without anything going red.
+meets(P, regenerable) :- regenerates[dep](_, P), regenerated_by_test[dep](P).
+generated_here(P) :- regenerates[dep](_, P).
+
+-- read_by_rules: A SCANNER WHOSE FACTS NO RULE PACK READS IS A REPORT WITH
+-- EXTRA STEPS. That is CLAUDE.md's own sentence, and until now nothing checked
+-- it. The scanner writes a pack; some rules/ file must name that pack.
+writes_pack(S, P)  :- regenerates[dep](S, P).
+pack_read(P)       :- edge[dep](R, P, reads_path), has_role(R, rule_pack).
+pack_read(P)       :- edge[dep](R, P, doc_ref), has_role(R, rule_pack).
+meets(S, read_by_rules) :- writes_pack(S, P), pack_read(P).
+meets(S, read_by_rules) :- has_role(S, scanner), not writes_pack(S, _).
+
+-- indexed: a document is reachable from README's index. Already gated by
+-- test/docs-index.test.ts; stated here so the table is complete and so that
+-- gate can eventually be deleted in favour of this one.
+meets(P, indexed) :- edge[dep]("README.md", P, doc_ref).
+meets(P, indexed) :- P = "README.md".
+-- THE DOGFOOD PAGES ARE INDEXED AS A DIRECTORY, not one by one — dated session
+-- records, and a table demanding a line per page would go red for adding one.
+-- test/docs-index.test.ts carries the same carve-out as its negative control.
+meets(P, indexed) :- D is str_pre(P, "/"), D = "docs", R is str_sub(P, 5, 8), R = "dogfood/".
+
+-- ==================================================================== VERDICT
+-- A cell is answered when EVERY artifact in the role meets the duty, or the
+-- ones that do not are waived by name. The unit of work is the artifact, so
+-- the audit reports artifacts; the CELL is what says whether the question has
+-- been settled at all.
+in_role(P, R) :- has_role(P, R).
+
+-- A DUTY IS ONLY OWED WHERE IT MAKES SENSE, and getting this wrong charged
+-- `facts/findings.rofl` — a hand-written ledger — with failing to be
+-- regenerable. A duty that fires on artifacts it cannot apply to produces work
+-- nobody can do, which is worse than no queue.
+applies(P, D)  :- in_role(P, R), cell(R, D), D != regenerable.
+applies(P, regenerable) :- in_role(P, R), cell(R, regenerable), generated_here(P).
+
+owes(P, D)    :- applies(P, D).
+fails(P, D)   :- owes(P, D), not meets(P, D).
+waived(P, D)  :- waived_cell(P, D, _).
+
+-- THE QUEUE. Every row is cleanup work: either the artifact earns its place,
+-- or it is waived with a reason from the closed list, or it goes.
+open_cell[audit](P, D) :- fails(P, D), not waived(P, D).
+
+-- ...AND THE OWNED HALF, which is what makes the table a plan rather than a
+-- complaint. An open cell with a named owner is scheduled; one without is not.
+owned(P, D)         :- cell_owner(P, D, _).
+unowned[audit](P, D) :- open_cell[audit](P, D), not owned(P, D).
+
+-- ================================================================ THE FINISH
+-- The table is DONE when `open_cell[audit]` is empty. Until then `unowned`
+-- must be empty, which is the same discipline the JS model runs: every open
+-- cell owned BY NAME, and a sweeper of zero.
+--
+-- Deliberately NOT pinned as a number anywhere: a count over a growing tree
+-- measures the tree. `test/cleanliness.test.ts` asserts the identities.

@@ -103,6 +103,12 @@ only_prose[dep](X) :- depended_on[dep](X), not code_needs[dep](X).
 -- non-zero on a stale witness since the day it was written and nothing ran it).
 ci_runs[dep](X) :- edge[dep](W, X, ci_step), artifact[dep](W, yml).
 ci_runs[dep](X) :- ci_runs[dep](Y), edge[dep](Y, X, _).
+-- THE GLOB IS SEEDED HERE AND NOT AT THE VERDICT, so it propagates. `npm test`
+-- names `test/*.test.ts`, which no scanner can expand into edges; seeding the
+-- CLOSURE with it means a helper or a fixture that a test imports is reached
+-- too. Seeding the verdict instead left every `test/` helper reading as unrun,
+-- which is thirteen rows of work nobody could do.
+ci_runs[dep](T) :- test_file[dep](T), edge[dep](W, "npm:test", ci_step), artifact[dep](W, yml).
 
 script[dep](S) :- artifact[dep](S, script).
 unrun_gate[dep](S) :- script[dep](S), not ci_runs[dep](S).
@@ -116,7 +122,17 @@ regenerated_by_test[dep](P) :- edge[dep](T, P, reads_path), test_file[dep](T).
 -- into per-file edges, so a test file is identified by where it LIVES. Stated
 -- as a rule rather than hidden in the scanner, because it is the one place
 -- this model substitutes a convention for a measurement.
-test_file[dep](T) :- artifact[dep](T, ts), str_pre(T, "/") = "test", T != "test".
+-- THE SAME `str_pre` ON THE LEFT OF `=` DEFECT AS IN rules/cleanliness.rofl,
+-- and it was silent here too: `str_pre(T, "/") = "test"` is a relational
+-- literal over a relation nothing populates, so `test_file` was EMPTY and
+-- `regenerated_by_test` with it. The destructor must produce into a variable.
+-- AND THE DIRECTORY IS NOT THE GLOB. `npm test` runs `test/*.test.ts`, so a
+-- `.ts` in `test/` that is not named `*.test.ts` is NOT run — which is exactly
+-- how `test/cleanliness.check.ts` was deliberately held out of CI. A rule that
+-- said `everything under test/` would have reported it as run by the referee,
+-- and the one file whose whole point is that it is not.
+test_file[dep](T) :- artifact[dep](T, ts), D is str_pre(T, "/"), D = "test",
+                     N is str_segs(T, ".test.ts"), N = 2.
 
 -- A generated pack that no test reads back is one nothing can find stale.
 ungated_pack[audit](P) :- generated[dep](P), not regenerated_by_test[dep](P).

@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 679 artifacts, 3201 edges, 228 unreadable path expressions.
+-- 685 artifacts, 3333 edges, 230 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -234,6 +234,7 @@ artifact[dep]("examples/yak/fragments/08-golden-accident.ts", ts).
 artifact[dep]("examples/yak/fragments/09-wrong-premise.ts", ts).
 artifact[dep]("examples/yak/fragments/hygiene.ts", ts).
 artifact[dep]("examples/yak/page.html", other).
+artifact[dep]("facts/depends.rofl", rofl).
 artifact[dep]("facts/eval-cost.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
 artifact[dep]("facts/floor-census.rofl", rofl).
@@ -266,6 +267,8 @@ artifact[dep]("npm:booklocality", script).
 artifact[dep]("npm:boundary", script).
 artifact[dep]("npm:build:dense", script).
 artifact[dep]("npm:build:skill", script).
+artifact[dep]("npm:cleancheck", script).
+artifact[dep]("npm:cleanliness", script).
 artifact[dep]("npm:dagcheck", script).
 artifact[dep]("npm:depends", script).
 artifact[dep]("npm:evalcost", script).
@@ -306,6 +309,7 @@ artifact[dep]("package-lock.json", json).
 artifact[dep]("package.json", json).
 artifact[dep]("policy.rofl", rofl).
 artifact[dep]("rules/decisions/production-readiness.rofl", rofl).
+artifact[dep]("rules/depends.rofl", rofl).
 artifact[dep]("rules/engine-split.rofl", rofl).
 artifact[dep]("rules/eval-cost.rofl", rofl).
 artifact[dep]("rules/findings.rofl", rofl).
@@ -420,6 +424,7 @@ artifact[dep]("scanners/ablate.ts", ts).
 artifact[dep]("scanners/book_locality.ts", ts).
 artifact[dep]("scanners/bootstrap_dag.ts", ts).
 artifact[dep]("scanners/cli.ts", ts).
+artifact[dep]("scanners/depends.ts", ts).
 artifact[dep]("scanners/engine_split.ts", ts).
 artifact[dep]("scanners/eval_cost.ts", ts).
 artifact[dep]("scanners/floor_census.ts", ts).
@@ -511,6 +516,7 @@ artifact[dep]("test/budget-space.test.ts", ts).
 artifact[dep]("test/clear-derived.test.ts", ts).
 artifact[dep]("test/comparison-sink.test.ts", ts).
 artifact[dep]("test/confirmation.test.ts", ts).
+artifact[dep]("test/depends.test.ts", ts).
 artifact[dep]("test/derived-reuse.test.ts", ts).
 artifact[dep]("test/docs-index.test.ts", ts).
 artifact[dep]("test/engine-split.test.ts", ts).
@@ -807,6 +813,8 @@ edge[dep]("CLAUDE.md", "test/permission-doc.test.ts", doc_ref).
 edge[dep]("docs/benchmark-protocol.md", "docs/dogfood/2026-08-28-lic-haiku45.md", doc_ref).
 edge[dep]("docs/books-and-permission.md", "boot.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("docs/books-and-permission.md", "examples/cram/flight_log.rofl", doc_ref).
+edge[dep]("docs/books-and-permission.md", "examples/iffy/statute.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "facts/findings.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "facts/permission-inventory.rofl", doc_ref).
@@ -828,6 +836,7 @@ edge[dep]("docs/books-and-permission.md", "test/flow-closure.test.ts", doc_ref).
 edge[dep]("docs/books-and-permission.md", "test/permission-doc.test.ts", doc_ref).
 edge[dep]("docs/books-and-permission.md", "test/widened-negation.test.ts", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "boot.rofl", doc_ref).
+edge[dep]("docs/choosing-perspectives.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "rules/inquiry/epistemic.rofl", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "test/scanner.test.ts", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "boot.rofl", doc_ref).
@@ -845,15 +854,22 @@ edge[dep]("docs/dogfood/2026-08-28-amnesiac.md", "bench/lic-haiku45-amnesiac.jso
 edge[dep]("docs/dogfood/2026-08-28-bundle.md", "scripts/build_skill.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "bench/lic-haiku45-results.json", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "docs/benchmark-protocol.md", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-lic-haiku45.md", "docs/dogfood/2026-08-28-pilot.md", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-pair.md", "runtime/pair.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-pair.md", "test/pair.test.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-pilot.md", "bench/pilot.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-pr1.md", "scripts/kernel_grep.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-pr2.md", "facts/findings.rofl", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-pr2.md", "schemas/intent-result.json", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-pr5.md", "rules/inquiry/perspectives.rofl", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/claims.rofl", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/frame.md", doc_ref).
+edge[dep]("docs/dogfood/2026-08-28-swarm.md", "bench/landscape/reports.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-swarm.md", "docs/formal-reasoning-landscape.md", doc_ref).
 edge[dep]("docs/dogfood/2026-08-28-swarm.md", "rules/swarm.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "boot.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "facts/js-env.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "rules/js-env.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-04-environment-layer.md", "rules/js-resolve.rofl", doc_ref).
@@ -879,6 +895,7 @@ edge[dep]("docs/dogfood/2026-09-07-fork-parallelism.md", "test/kernel-arity.test
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scanners/engine_split.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scanners/necessity.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "scripts/parser_optional.ts", doc_ref).
+edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/api.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/dense.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/kernel-dense.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-07-grammar-and-lexis.md", "src/parser.ts", doc_ref).
@@ -917,6 +934,7 @@ edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "facts/js
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-dataflow.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-effects.rofl", doc_ref).
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "rules/js-modules.rofl", doc_ref).
+edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "scripts/witness_check.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-attrs.test.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-effects.test.ts", doc_ref).
 edge[dep]("docs/dogfood/2026-09-09-coercion-and-module-evaluation.md", "test/js-fixpoint-cost.test.ts", doc_ref).
@@ -1006,7 +1024,11 @@ edge[dep]("examples/aka/demo.ts", "src/engine.ts", ts_import).
 edge[dep]("examples/aka/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/aka/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/aka/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/aka/README.md", "examples/aka/aka.rofl", doc_ref).
+edge[dep]("examples/aka/README.md", "examples/aka/demo.ts", doc_ref).
+edge[dep]("examples/aka/README.md", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/aka/README.md", "src/reflect.ts", doc_ref).
+edge[dep]("examples/aka/README.md", "test/example-aka.test.ts", doc_ref).
 edge[dep]("examples/blam/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/blam/demo.ts", "runtime/semirings.ts", ts_import).
 edge[dep]("examples/blam/demo.ts", "src/api.ts", reads_path).
@@ -1014,6 +1036,8 @@ edge[dep]("examples/blam/demo.ts", "src/api.ts", ts_import).
 edge[dep]("examples/blam/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/blam/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/blam/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/blam/README.md", "examples/blam/blam.rofl", doc_ref).
+edge[dep]("examples/blam/README.md", "examples/blam/demo.ts", doc_ref).
 edge[dep]("examples/blam/README.md", "package.json", doc_ref).
 edge[dep]("examples/blam/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/blam/README.md", "test/example-blam.test.ts", doc_ref).
@@ -1026,12 +1050,16 @@ edge[dep]("examples/bleep/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/bleep/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/bleep/demo.ts", "src/store.ts", reads_path).
 edge[dep]("examples/bleep/demo.ts", "src/store.ts", ts_import).
+edge[dep]("examples/bleep/README.md", "examples/bleep/bleep.rofl", doc_ref).
+edge[dep]("examples/bleep/README.md", "examples/bleep/demo.ts", doc_ref).
 edge[dep]("examples/bleep/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/bleep/README.md", "test/example-bleep.test.ts", doc_ref).
 edge[dep]("examples/cram/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/cram/demo.ts", "src/api.ts", reads_path).
 edge[dep]("examples/cram/demo.ts", "src/api.ts", ts_import).
 edge[dep]("examples/cram/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/cram/README.md", "examples/cram/demo.ts", doc_ref).
+edge[dep]("examples/cram/README.md", "examples/cram/flight_log.rofl", doc_ref).
 edge[dep]("examples/ditto/after/notify.ts", "examples/ditto/after/audit.ts", reads_path).
 edge[dep]("examples/ditto/after/notify.ts", "examples/ditto/after/audit.ts", ts_import).
 edge[dep]("examples/ditto/after/notify.ts", "examples/ditto/after/types.ts", reads_path).
@@ -1085,6 +1113,8 @@ edge[dep]("examples/ditto/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/ditto/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/ditto/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/ditto/README.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("examples/ditto/README.md", "examples/ditto/demo.ts", doc_ref).
+edge[dep]("examples/ditto/README.md", "examples/ditto/ditto.rofl", doc_ref).
 edge[dep]("examples/ditto/README.md", "facts/findings.rofl", doc_ref).
 edge[dep]("examples/ditto/README.md", "scanners/js.ts", doc_ref).
 edge[dep]("examples/ditto/README.md", "src/store.ts", doc_ref).
@@ -1098,6 +1128,8 @@ edge[dep]("examples/drip/demo.ts", "src/engine.ts", reads_path).
 edge[dep]("examples/drip/demo.ts", "src/engine.ts", ts_import).
 edge[dep]("examples/drip/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/drip/demo.ts", "src/semiring.ts", ts_import).
+edge[dep]("examples/drip/README.md", "examples/drip/demo.ts", doc_ref).
+edge[dep]("examples/drip/README.md", "examples/drip/drip.rofl", doc_ref).
 edge[dep]("examples/drip/README.md", "test/example-drip.test.ts", doc_ref).
 edge[dep]("examples/goof/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/goof/demo.ts", "runtime/semirings.ts", reads_path).
@@ -1109,8 +1141,12 @@ edge[dep]("examples/goof/demo.ts", "src/engine.ts", ts_import).
 edge[dep]("examples/goof/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/goof/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/goof/goof.rofl", "boot.rofl", doc_ref).
+edge[dep]("examples/goof/goof.rofl", "examples/goof/demo.ts", doc_ref).
 edge[dep]("examples/goof/goof.rofl", "src/reflect.ts", doc_ref).
 edge[dep]("examples/goof/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/goof/README.md", "examples/goof/demo.ts", doc_ref).
+edge[dep]("examples/goof/README.md", "examples/goof/goof.rofl", doc_ref).
+edge[dep]("examples/goof/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/goof/README.md", "src/reflect.ts", doc_ref).
 edge[dep]("examples/goof/README.md", "test/example-goof.test.ts", doc_ref).
 edge[dep]("examples/heck/demo.ts", "boot.rofl", reads_path).
@@ -1122,6 +1158,7 @@ edge[dep]("examples/heck/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/heck/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/heck/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/heck/README.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("examples/heck/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/heck/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/heck/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/heck/README.md", "test/example-heck.test.ts", doc_ref).
@@ -1147,7 +1184,12 @@ edge[dep]("examples/iffy/demo.ts", "src/engine.ts", ts_import).
 edge[dep]("examples/iffy/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/iffy/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/iffy/README.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("examples/iffy/README.md", "examples/iffy/demo.ts", doc_ref).
+edge[dep]("examples/iffy/README.md", "examples/iffy/iffy.rofl", doc_ref).
+edge[dep]("examples/iffy/README.md", "examples/iffy/statute.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "examples/jopa/facts.rofl", doc_ref).
+edge[dep]("examples/iffy/README.md", "examples/jopa/jopa.rofl", doc_ref).
+edge[dep]("examples/iffy/README.md", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "policy.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "test/example-iffy.test.ts", doc_ref).
 edge[dep]("examples/jopa/demo.ts", "boot.rofl", reads_path).
@@ -1161,6 +1203,10 @@ edge[dep]("examples/jopa/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/jopa/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/jopa/demo.ts", "src/store.ts", reads_path).
 edge[dep]("examples/jopa/demo.ts", "src/store.ts", ts_import).
+edge[dep]("examples/jopa/README.md", "examples/jopa/calibration.rofl", doc_ref).
+edge[dep]("examples/jopa/README.md", "examples/jopa/demo.ts", doc_ref).
+edge[dep]("examples/jopa/README.md", "examples/jopa/facts.rofl", doc_ref).
+edge[dep]("examples/jopa/README.md", "examples/jopa/jopa.rofl", doc_ref).
 edge[dep]("examples/jopa/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/jopa/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/jopa/README.md", "test/example-jopa.test.ts", doc_ref).
@@ -1182,11 +1228,14 @@ edge[dep]("examples/loot/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/loot/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/loot/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/loot/README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("examples/loot/README.md", "examples/loot/demo.ts", doc_ref).
+edge[dep]("examples/loot/README.md", "examples/loot/loot.rofl", doc_ref).
 edge[dep]("examples/loot/README.md", "src/engine.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/reflect.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/unify.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "test/derived-reuse.test.ts", doc_ref).
+edge[dep]("examples/loot/README.md", "test/example-loot.test.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "test/scanner.test.ts", doc_ref).
 edge[dep]("examples/moot/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/moot/demo.ts", "runtime/semirings.ts", reads_path).
@@ -1204,6 +1253,8 @@ edge[dep]("examples/moot/demo.ts", "src/rounds.ts", ts_import).
 edge[dep]("examples/moot/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/moot/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/moot/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/moot/README.md", "examples/moot/demo.ts", doc_ref).
+edge[dep]("examples/moot/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/moot/README.md", "README.md", doc_ref).
 edge[dep]("examples/moot/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/moot/README.md", "test/example-moot.test.ts", doc_ref).
@@ -1217,6 +1268,8 @@ edge[dep]("examples/nope/demo.ts", "src/engine.ts", ts_import).
 edge[dep]("examples/nope/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/nope/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/nope/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/nope/README.md", "examples/nope/demo.ts", doc_ref).
+edge[dep]("examples/nope/README.md", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("examples/nope/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/nope/README.md", "test/example-nope.test.ts", doc_ref).
 edge[dep]("examples/npc/demo.ts", "boot.rofl", reads_path).
@@ -1239,6 +1292,7 @@ edge[dep]("examples/npc/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/npc/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/npc/README.md", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/npc/README.md", "examples/loot/README.md", doc_ref).
+edge[dep]("examples/npc/README.md", "examples/npc/npc.rofl", doc_ref).
 edge[dep]("examples/npc/README.md", "test/example-npc.test.ts", doc_ref).
 edge[dep]("examples/oops/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/oops/demo.ts", "runtime/semirings.ts", reads_path).
@@ -1250,12 +1304,16 @@ edge[dep]("examples/oops/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/oops/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/oops/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/oops/README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("examples/oops/README.md", "examples/oops/demo.ts", doc_ref).
+edge[dep]("examples/oops/README.md", "examples/oops/oops.rofl", doc_ref).
 edge[dep]("examples/oops/README.md", "LIMITS.md", doc_ref).
+edge[dep]("examples/oops/README.md", "test/example-oops.test.ts", doc_ref).
 edge[dep]("examples/reach/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/reach/demo.ts", "examples/reach/reach.rofl", reads_path).
 edge[dep]("examples/reach/demo.ts", "src/api.ts", reads_path).
 edge[dep]("examples/reach/demo.ts", "src/api.ts", ts_import).
 edge[dep]("examples/reach/reach.rofl", "test/rule-shape.test.ts", doc_ref).
+edge[dep]("examples/reach/README.md", "examples/reach/demo.ts", doc_ref).
 edge[dep]("examples/reach/README.md", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("examples/ring1/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/ring1/demo.ts", "examples/ring1/charclass.rofl", reads_path).
@@ -1280,6 +1338,9 @@ edge[dep]("examples/ring1/l0.ts", "src/parser.ts", reads_path).
 edge[dep]("examples/ring1/l0.ts", "src/parser.ts", ts_import).
 edge[dep]("examples/ring1/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/ring1/README.md", "examples/counter.rofl", doc_ref).
+edge[dep]("examples/ring1/README.md", "examples/ring1/charclass.rofl", doc_ref).
+edge[dep]("examples/ring1/README.md", "examples/ring1/demo.ts", doc_ref).
+edge[dep]("examples/ring1/README.md", "examples/ring1/ring1.rofl", doc_ref).
 edge[dep]("examples/ring1/README.md", "rules/strata.rofl", doc_ref).
 edge[dep]("examples/ring1/README.md", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/ring1/README.md", "src/parser.ts", doc_ref).
@@ -1296,6 +1357,8 @@ edge[dep]("examples/rip/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/rip/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/rip/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/rip/README.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("examples/rip/README.md", "examples/rip/demo.ts", doc_ref).
+edge[dep]("examples/rip/README.md", "examples/rip/rip.rofl", doc_ref).
 edge[dep]("examples/rip/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/rip/README.md", "test/example-rip.test.ts", doc_ref).
 edge[dep]("examples/slop/demo.ts", "examples/slop/formula.ts", reads_path).
@@ -1315,7 +1378,9 @@ edge[dep]("examples/slop/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/slop/formula.ts", "examples/slop/xlsx.ts", reads_path).
 edge[dep]("examples/slop/formula.ts", "examples/slop/xlsx.ts", ts_import).
 edge[dep]("examples/slop/README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("examples/slop/README.md", "examples/huh/huh.rofl", doc_ref).
 edge[dep]("examples/slop/README.md", "examples/slop/revolver.ts", doc_ref).
+edge[dep]("examples/slop/README.md", "examples/slop/slop.rofl", doc_ref).
 edge[dep]("examples/slop/README.md", "examples/slop/xlsx.ts", doc_ref).
 edge[dep]("examples/slop/README.md", "LIMITS.md", doc_ref).
 edge[dep]("examples/slop/README.md", "runtime/semirings.ts", doc_ref).
@@ -1331,6 +1396,8 @@ edge[dep]("examples/spat/html.ts", "examples/spat/spat.ts", reads_path).
 edge[dep]("examples/spat/html.ts", "examples/spat/spat.ts", ts_import).
 edge[dep]("examples/spat/html.ts", "src/api.ts", reads_path).
 edge[dep]("examples/spat/html.ts", "src/api.ts", ts_import).
+edge[dep]("examples/spat/README.md", "examples/spat/spat.rofl", doc_ref).
+edge[dep]("examples/spat/README.md", "examples/spat/week.example.rofl", doc_ref).
 edge[dep]("examples/spat/spat.ts", "boot.rofl", reads_path).
 edge[dep]("examples/spat/spat.ts", "examples/spat/html.ts", reads_path).
 edge[dep]("examples/spat/spat.ts", "examples/spat/html.ts", ts_import).
@@ -1351,6 +1418,8 @@ edge[dep]("examples/sus/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/sus/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/sus/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/sus/README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("examples/sus/README.md", "examples/sus/demo.ts", doc_ref).
+edge[dep]("examples/sus/README.md", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/sus/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/sus/README.md", "test/example-sus.test.ts", doc_ref).
 edge[dep]("examples/wtf/demo.ts", "boot.rofl", reads_path).
@@ -1365,6 +1434,8 @@ edge[dep]("examples/wtf/demo.ts", "src/rounds.ts", ts_import).
 edge[dep]("examples/wtf/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/wtf/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/wtf/README.md", "boot.rofl", doc_ref).
+edge[dep]("examples/wtf/README.md", "examples/wtf/demo.ts", doc_ref).
+edge[dep]("examples/wtf/README.md", "examples/wtf/wtf.rofl", doc_ref).
 edge[dep]("examples/yak/demo.ts", "examples/yak/fragments/01-sediment.ts", reads_path).
 edge[dep]("examples/yak/demo.ts", "examples/yak/fragments/01-sediment.ts", ts_import).
 edge[dep]("examples/yak/demo.ts", "examples/yak/fragments/02-scc.ts", reads_path).
@@ -1444,8 +1515,21 @@ edge[dep]("examples/yak/fragments/hygiene.ts", "src/api.ts", ts_import).
 edge[dep]("examples/yak/README.md", ".github/workflows/ci.yml", doc_ref).
 edge[dep]("examples/yak/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/yak/README.md", "CLAUDE.md", doc_ref).
+edge[dep]("examples/yak/README.md", "docs/performance-invariants.md", doc_ref).
 edge[dep]("examples/yak/README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/blam/blam.rofl", doc_ref).
 edge[dep]("examples/yak/README.md", "examples/counter.rofl", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/moot/moot.rofl", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/demo.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/01-sediment.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/02-scc.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/03-metadep.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/04-false-miss.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/05-diverging-semiring.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/06-stale-model.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/07-not-needed.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/08-golden-accident.ts", doc_ref).
+edge[dep]("examples/yak/README.md", "examples/yak/fragments/09-wrong-premise.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "src/semiring.ts", doc_ref).
@@ -1495,8 +1579,10 @@ edge[dep]("facts/findings.rofl", "examples/loot/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/moot/moot.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/npc/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/reach/demo.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/ring1/charclass.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/l0.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/ring1/l1.dense.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/ring1.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/rip/README.md", ledger_ref).
@@ -1522,6 +1608,7 @@ edge[dep]("facts/findings.rofl", "facts/worlds.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "package.json", ledger_ref).
 edge[dep]("facts/findings.rofl", "policy.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "README.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "rules/depends.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/engine-split.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/eval-cost.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/findings.rofl", ledger_ref).
@@ -1979,6 +2066,7 @@ edge[dep]("HANDOFF.md", "facts/worklist.rofl", doc_ref).
 edge[dep]("HANDOFF.md", "runtime/report.ts", doc_ref).
 edge[dep]("HANDOFF.md", "scripts/text_check.ts", doc_ref).
 edge[dep]("HANDOFF.md", "scripts/witness_check.ts", doc_ref).
+edge[dep]("HANDOFF.md", "test/fixtures/js-call/alpha.mjs", doc_ref).
 edge[dep]("HANDOFF.md", "test/js-ast.test.ts", doc_ref).
 edge[dep]("HANDOFF.md", "test/js-callgraph.test.ts", doc_ref).
 edge[dep]("HANDOFF.md", "test/js-corpus-world.ts", doc_ref).
@@ -1988,16 +2076,20 @@ edge[dep]("HANDOFF.md", "test/js-model.test.ts", doc_ref).
 edge[dep]("HANDOFF.md", "test/worklist.test.ts", doc_ref).
 edge[dep]("LIMITS.md", "boot.rofl", doc_ref).
 edge[dep]("LIMITS.md", "examples/counter.rofl", doc_ref).
+edge[dep]("LIMITS.md", "examples/sensors.rofl", doc_ref).
+edge[dep]("LIMITS.md", "examples/tm.rofl", doc_ref).
 edge[dep]("LIMITS.md", "facts/spec.rofl", doc_ref).
 edge[dep]("LIMITS.md", "rules/strata.rofl", doc_ref).
 edge[dep]("LIMITS.md", "test/derived-reuse.test.ts", doc_ref).
 edge[dep]("LIMITS.md", "test/phase2.test.ts", doc_ref).
 edge[dep]("npm:ablate", "scanners/ablate.ts", npm_script).
+edge[dep]("npm:blast", "scanners/depends.ts", npm_script).
 edge[dep]("npm:booklocality", "scanners/book_locality.ts", npm_script).
 edge[dep]("npm:boundary", "scanners/store_boundary.ts", npm_script).
 edge[dep]("npm:build:dense", "scripts/build_kernel_dense.ts", npm_script).
 edge[dep]("npm:build:skill", "scripts/build_skill.ts", npm_script).
 edge[dep]("npm:dagcheck", "scanners/bootstrap_dag.ts", npm_script).
+edge[dep]("npm:depends", "scanners/depends.ts", npm_script).
 edge[dep]("npm:evalcost", "scanners/eval_cost.ts", npm_script).
 edge[dep]("npm:findings", "facts/findings.rofl", npm_script).
 edge[dep]("npm:findings", "runtime/report.ts", npm_script).
@@ -2043,16 +2135,28 @@ edge[dep]("npm:whyslow", "runtime/report.ts", npm_script).
 edge[dep]("policy.rofl", "examples/ring1/l1.dense.rofl", doc_ref).
 edge[dep]("README.md", ".github/workflows/ci.yml", doc_ref).
 edge[dep]("README.md", "boot.rofl", doc_ref).
+edge[dep]("README.md", "docs/benchmark-protocol.md", doc_ref).
 edge[dep]("README.md", "docs/books-and-permission.md", doc_ref).
 edge[dep]("README.md", "docs/choosing-perspectives.md", doc_ref).
+edge[dep]("README.md", "docs/claims-outside-the-store.md", doc_ref).
+edge[dep]("README.md", "docs/comment-migration-brief.md", doc_ref).
+edge[dep]("README.md", "docs/failure-modes.md", doc_ref).
+edge[dep]("README.md", "docs/formal-reasoning-landscape.md", doc_ref).
 edge[dep]("README.md", "docs/guided-formal-reasoning-roadmap.md", doc_ref).
 edge[dep]("README.md", "docs/inquiry-kinds.md", doc_ref).
+edge[dep]("README.md", "docs/ledger-as-an-instrument.md", doc_ref).
 edge[dep]("README.md", "docs/medium-and-large.md", doc_ref).
 edge[dep]("README.md", "docs/modelling-a-language.md", doc_ref).
+edge[dep]("README.md", "docs/normalisation-and-profiling.md", doc_ref).
+edge[dep]("README.md", "docs/performance-invariants.md", doc_ref).
 edge[dep]("README.md", "docs/port-surface.md", doc_ref).
 edge[dep]("README.md", "docs/scaling-a-corpus.md", doc_ref).
+edge[dep]("README.md", "docs/test-maintenance-cost.md", doc_ref).
 edge[dep]("README.md", "docs/the-target.md", doc_ref).
 edge[dep]("README.md", "docs/three-valued-answers.md", doc_ref).
+edge[dep]("README.md", "docs/time-and-continuity.md", doc_ref).
+edge[dep]("README.md", "docs/volumes-and-residency.md", doc_ref).
+edge[dep]("README.md", "docs/working-with-ledgers.md", doc_ref).
 edge[dep]("README.md", "examples/ring1/l1.dense.rofl", doc_ref).
 edge[dep]("README.md", "examples/ring1/ring1.rofl", doc_ref).
 edge[dep]("README.md", "facts/findings.rofl", doc_ref).
@@ -2073,8 +2177,17 @@ edge[dep]("README.md", "safety.rofl", doc_ref).
 edge[dep]("README.md", "scanners/js_ast.ts", doc_ref).
 edge[dep]("README.md", "schemas/intent-result.json", doc_ref).
 edge[dep]("README.md", "scripts/kernel_grep.ts", doc_ref).
+edge[dep]("README.md", "src/api.ts", doc_ref).
+edge[dep]("README.md", "src/engine.ts", doc_ref).
+edge[dep]("README.md", "src/kernel-dense.ts", doc_ref).
+edge[dep]("README.md", "src/parser.ts", doc_ref).
 edge[dep]("README.md", "src/reflect.ts", doc_ref).
+edge[dep]("README.md", "src/repl.ts", doc_ref).
 edge[dep]("README.md", "src/rounds.ts", doc_ref).
+edge[dep]("README.md", "src/semiring.ts", doc_ref).
+edge[dep]("README.md", "src/store.ts", doc_ref).
+edge[dep]("README.md", "src/tokens.ts", doc_ref).
+edge[dep]("README.md", "src/unify.ts", doc_ref).
 edge[dep]("README.md", "START.md", doc_ref).
 edge[dep]("README.md", "test/flow-closure.test.ts", doc_ref).
 edge[dep]("README.md", "test/kernel-policy-program.test.ts", doc_ref).
@@ -2082,6 +2195,12 @@ edge[dep]("README.md", "test/permission-doc.test.ts", doc_ref).
 edge[dep]("README.md", "test/reject-budget-invariance.test.ts", doc_ref).
 edge[dep]("README.md", "test/sealed.test.ts", doc_ref).
 edge[dep]("README.md", "test/vocabulary-doc.test.ts", doc_ref).
+edge[dep]("rules/depends.rofl", "boot.rofl", doc_ref).
+edge[dep]("rules/depends.rofl", "facts/findings.rofl", doc_ref).
+edge[dep]("rules/depends.rofl", "facts/rule-shape.rofl", doc_ref).
+edge[dep]("rules/depends.rofl", "scanners/rule_shape.ts", doc_ref).
+edge[dep]("rules/depends.rofl", "scripts/witness_check.ts", doc_ref).
+edge[dep]("rules/depends.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("rules/engine-split.rofl", "scanners/engine_split.ts", doc_ref).
 edge[dep]("rules/findings.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("rules/floor-census.rofl", "boot.rofl", doc_ref).
@@ -2185,6 +2304,10 @@ edge[dep]("scanners/cli.ts", "scanners/materialize.ts", reads_path).
 edge[dep]("scanners/cli.ts", "scanners/materialize.ts", ts_import).
 edge[dep]("scanners/cli.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/cli.ts", "src/api.ts", ts_import).
+edge[dep]("scanners/depends.ts", "facts/depends.rofl", generates).
+edge[dep]("scanners/depends.ts", "facts/findings.rofl", reads_path).
+edge[dep]("scanners/depends.ts", "facts/spec.rofl", reads_path).
+edge[dep]("scanners/depends.ts", "package.json", reads_path).
 edge[dep]("scanners/engine_split.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/engine_split.ts", "examples/sensors.rofl", reads_path).
 edge[dep]("scanners/engine_split.ts", "rules/engine-split.rofl", reads_path).
@@ -2526,11 +2649,14 @@ edge[dep]("scripts/witness_check.ts", "src/api.ts", ts_import).
 edge[dep]("skills/guided-formal-reasoning/escalate.md", "rules/inquiry/obligations.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/escalate.md", "rules/policies/authority.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/instruments.md", "docs/failure-modes.md", doc_ref).
+edge[dep]("skills/guided-formal-reasoning/instruments.md", "skills/guided-formal-reasoning/normalise.md", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/normalise.md", "docs/normalisation-and-profiling.md", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/SKILL.md", "facts/findings.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/SKILL.md", "rules/self-audit.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/SKILL.md", "runtime/admission.ts", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/SKILL.md", "schemas/intent-result.json", doc_ref).
+edge[dep]("skills/guided-formal-reasoning/SKILL.md", "skills/guided-formal-reasoning/instruments.md", doc_ref).
+edge[dep]("skills/guided-formal-reasoning/SKILL.md", "skills/guided-formal-reasoning/normalise.md", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/verify.md", "rules/policies/evidence.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/verify.md", "schemas/intent-result.json", doc_ref).
 edge[dep]("src/api.ts", "src/engine.ts", reads_path).
@@ -2584,6 +2710,7 @@ edge[dep]("src/store.ts", "src/unify.ts", reads_path).
 edge[dep]("src/store.ts", "src/unify.ts", ts_import).
 edge[dep]("START.md", "LIMITS.md", doc_ref).
 edge[dep]("START.md", "README.md", doc_ref).
+edge[dep]("START.md", "src/reflect.ts", doc_ref).
 edge[dep]("test/ablate.test.ts", "scanners/ablate.ts", reads_path).
 edge[dep]("test/ablate.test.ts", "scanners/ablate.ts", ts_import).
 edge[dep]("test/admission.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
@@ -2673,6 +2800,17 @@ edge[dep]("test/confirmation.test.ts", "runtime/report.ts", reads_path).
 edge[dep]("test/confirmation.test.ts", "runtime/report.ts", ts_import).
 edge[dep]("test/confirmation.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/confirmation.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/depends.test.ts", "boot.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "facts/depends.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "facts/eval-cost.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "facts/rule-shape.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "README.md", reads_path).
+edge[dep]("test/depends.test.ts", "rules/depends.rofl", reads_path).
+edge[dep]("test/depends.test.ts", "scanners/depends.ts", reads_path).
+edge[dep]("test/depends.test.ts", "scanners/depends.ts", ts_import).
+edge[dep]("test/depends.test.ts", "src/api.ts", reads_path).
+edge[dep]("test/depends.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/depends.test.ts", "src/repl.ts", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "examples/sensors.rofl", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "examples/spat/spat.ts", reads_path).
@@ -3889,4 +4027,4 @@ edge[dep]("test/worklist.test.ts", "rules/worklist.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", ts_import).
 
-dark_paths[dep](228).
+dark_paths[dep](230).

@@ -164,12 +164,35 @@ export function scan(): { artifacts: Map<string, string>; edges: Edge[]; holes: 
         const args = code.slice(start, j);
         if (!literals(args).some((l) => REPO_PATH.test(l))) holes++;
       }
+    } else if (f === 'facts/depends.rofl') {
+      // THIS SCANNER'S OWN OUTPUT NAMES EVERY FILE IN THE TREE, so reading it
+      // as a `.rofl` document made it an edge SOURCE to all 683 artifacts —
+      // edges 3 201 -> 3 791 — and the run stopped converging: regenerating
+      // changed the pack, which changed the edges, which changed the pack.
+      // A model that includes its own output is measuring itself.
+      continue;
     } else if (kind === 'md' || kind === 'rofl') {
       // Comments are NOT stripped here: in a document and in the ledger, a
       // mention IS the dependency — it is what goes stale when the file dies.
       for (const m of src.matchAll(/[`"]([A-Za-z0-9_.\/-]+\.(?:ts|tsx|mjs|rofl|md|json|yml|rs|sh))[`"]/g)) {
-        if (!has(m[1])) continue;
-        add(f, m[1], f === 'facts/findings.rofl' || f === 'facts/spec.rofl' ? 'ledger_ref' : 'doc_ref');
+        // A DOCUMENT NAMES A SIBLING BY ITS BARE FILENAME — README's index says
+        // `benchmark-protocol.md`, not `docs/benchmark-protocol.md`. Without
+        // this, fifteen documents that ARE indexed read as unindexed, which is
+        // the false-work shape a table gets switched off for.
+        const rel = path.posix.join(path.posix.dirname(f), m[1]);
+        let to: string | null = has(m[1]) ? m[1] : (has(rel) ? rel : null);
+        if (!to && !m[1].includes('/')) {
+          // A bare name anywhere in the tree, ACCEPTED ONLY IF UNIQUE. README's
+          // index sits at the root and names `benchmark-protocol.md`, which is
+          // in `docs/`; resolving relative to the citing file finds nothing.
+          // Ambiguity is refused rather than guessed — two files with one
+          // basename would make the edge a coin toss, and a blast radius built
+          // on a coin toss is worse than a missing edge.
+          const cands = [...artifacts.keys()].filter((k) => path.posix.basename(k) === m[1]);
+          if (cands.length === 1) to = cands[0];
+        }
+        if (!to) continue;
+        add(f, to, f === 'facts/findings.rofl' || f === 'facts/spec.rofl' ? 'ledger_ref' : 'doc_ref');
       }
     }
   }

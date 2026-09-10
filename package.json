@@ -49,6 +49,8 @@
     "perminv": "node --experimental-strip-types scanners/permission_inventory.ts",
     "depends": "node --experimental-strip-types scanners/depends.ts",
     "blast": "node --experimental-strip-types scanners/depends.ts --blast",
+    "cleanliness": "node --experimental-strip-types scanners/cleanliness_report.ts",
+    "cleancheck": "node --experimental-strip-types --test --test-reporter=spec test/cleanliness.check.ts",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl"
   },
   "devDependencies": {
