@@ -1,0 +1,116 @@
+-- rules/nullary.rofl — WHICH RULES ARE PROPOSITIONS WEARING A SUBJECT?
+--
+-- The owner asked whether reflection can derive this rather than a person
+-- reading bodies. IT CAN, ENTIRELY FROM THE PUBLIC SURFACE, and the first
+-- draft of this file got that wrong in a way worth keeping.
+--
+-- THE FIRST DRAFT READ `premise_var` AND `slot_arity` and answered ZERO on
+-- boot.rofl. The zero was meaningless: those two are seeded by the host into
+-- the kernel's OWN private store for `safety.rofl`, and in an ordinary store
+-- they are EMPTY — measured, 0 rows beside 29 rules and 29 `concludes`. A
+-- model over an unpopulated relation returns a clean-looking negative, which
+-- is the failure this repository has a word for.
+--
+-- `conclusion_lit` and `premise_lit` are RESERVED but READABLE, `$` IS
+-- writable in a rule body (safety.rofl already matches `$builtin(_, _)`), and
+-- the reified shape is `$lit(Rel, Persp, Args, Tense)` with `Args` a
+-- `$cons`/`$nil` list and a variable reified as `$var("Name")`. Everything
+-- this file needs is there. K IS 1-BASED: the first draft asked for K = 0 and
+-- got nothing from that too.
+--
+-- A nullary relation is a PROPOSITION: arity n is a set of n-tuples, there is
+-- exactly one 0-tuple, so the extension is empty or the singleton — a truth
+-- value. This language has no nullary head, so a rule concluding a proposition
+-- must dress it. This file finds the dresses.
+
+-- ===================================================== WALKING AN ARGUMENT LIST
+-- The reflection hands a list; Datalog walks it. Range-restricted at every
+-- step: the tail is bound by the match that produced it.
+head_args(R, Args)  :- conclusion_lit(R, 1, $lit(_, _, Args, _)).
+body_args(R, K, Args) :- premise_lit(R, K, $lit(_, _, Args, _)).
+
+head_cell(R, L)     :- head_args(R, L).
+head_cell(R, T)     :- head_cell(R, $cons(_, T)).
+head_var(R, V)      :- head_cell(R, $cons($var(V), _)).
+
+body_cell(R, K, L)  :- body_args(R, K, L).
+body_cell(R, K, T)  :- body_cell(R, K, $cons(_, T)).
+body_var(R, K, V)   :- body_cell(R, K, $cons($var(V), _)).
+
+-- A NEGATED PREMISE BINDS NOTHING AND CONNECTS EVERYTHING, and the first draft
+-- of this file got that backwards. It read only `$lit(...)`, wrote down that
+-- ignoring `$not(...)` was `safe in this direction` because a negation cannot
+-- be a sole binder — and that sentence is true about BINDING and false about
+-- CONNECTEDNESS. `coverage_gap(I, Con) :- pack(I, ...), concern(..., Con), not
+-- concern_covered(I, Con).` has its two positive premises joined THROUGH the
+-- negation, and with the negation invisible they read as disconnected and both
+-- head variables reported as passengers. The sweep returned 103 passengers,
+-- most of them that shape.
+--
+-- So the two questions need two relations. `binds` is positive only — that is
+-- what binding MEANS. `mentions` is both, because sharing a variable with a
+-- negated premise is still sharing.
+neg_args(R, K, Args) :- premise_lit(R, K, $not($lit(_, _, Args, _))).
+neg_cell(R, K, L)    :- neg_args(R, K, L).
+neg_cell(R, K, T)    :- neg_cell(R, K, $cons(_, T)).
+neg_var(R, K, V)     :- neg_cell(R, K, $cons($var(V), _)).
+
+mentions(R, K, V)    :- body_var(R, K, V).
+mentions(R, K, V)    :- neg_var(R, K, V).
+
+-- ============================================ SHAPE 1: A CONSTANT SUBJECT
+-- The head has no variables at all. That alone is not enough: `sealed(rules)`,
+-- `sealed(assertions)` and `sealed(provenance)` are three propositions and the
+-- argument is what tells them apart. The argument carries information exactly
+-- when the relation takes MORE THAN ONE shape — so the discriminator is
+-- whether ANY rule concluding that relation has a variable head, and it is
+-- derived rather than assumed.
+const_head(R)       :- head_args(R, _), not head_var(R, _).
+varying_head(Rel)   :- concludes(R, Rel), head_var(R, _).
+dressed_constant[audit](Rel) :- const_head(R), concludes(R, Rel), not varying_head(Rel).
+
+-- ============================================ SHAPE 2: A PASSENGER SUBJECT
+-- The head carries a VARIABLE the body binds only so there is something to
+-- name. `any_unblocker(W) :- takeable(W), unblocking_work(_).` — W is in the
+-- head, `takeable(W)` is its only binder, and that premise shares nothing with
+-- the rest of the body. Drop both and the rule is a proposition.
+--
+-- THIS IS THE SAME SET `rule_shape` REPORTS AS A CROSS PRODUCT, from the other
+-- side: a disconnected premise that is the sole binder of the head's variables
+-- is not an accident of join order, it is a head that wanted to be nullary.
+occurs_in(R, V, K)  :- body_var(R, K, V).
+elsewhere(R, V, K)  :- occurs_in(R, V, J), occurs_in(R, V, K), J != K.
+sole_binder(R, V, K) :- head_var(R, V), occurs_in(R, V, K), not elsewhere(R, V, K).
+
+shares(R, K, J)     :- mentions(R, K, V), mentions(R, J, V), K != J.
+connected(R, K)     :- shares(R, K, _).
+disconnected(R, K)  :- body_var(R, K, _), not connected(R, K).
+
+-- A ONE-PREMISE BODY IS ALWAYS `disconnected` AND THAT IS NOT A PASSENGER.
+-- The first run reported 28 of them — every recursive walk in this very file
+-- among them, because `head_cell(R, T) :- head_cell(R, $cons(_, T))` has one
+-- premise and nothing to be apart FROM. A passenger needs a body it stands
+-- apart from, so the rule must have two premises before the question means
+-- anything. Caught by the positive control on the first run; without it the
+-- audit would have been 28 rows of noise around 2 real ones.
+multi_premise(R)       :- mentions(R, K, _), mentions(R, J, _), K != J.
+passenger[audit](R, V) :- sole_binder(R, V, K), disconnected(R, K), multi_premise(R).
+
+-- ============================================================ THE VERDICT
+wants_nullary[audit](Rel) :- dressed_constant[audit](Rel).
+wants_nullary[audit](Rel) :- passenger[audit](R, _), concludes(R, Rel).
+
+-- WHAT THIS CANNOT SEE:
+--   * A head variable bound by a premise that IS connected but whose
+--     connection is incidental — `p(X) :- q(X, Y), r(Y).` X may still be a
+--     passenger, and "nothing downstream reads X" is a fact about the CALLERS
+--     that one rule's reflection cannot hold.
+--   * WHETHER THE PROPOSITION SHOULD EXIST. A rule wanting a nullary head
+--     might instead want inlining into its one caller. That is a judgement
+--     about the program, and the row is where somebody makes it.
+--   * A BUILTIN premise. `premise_lit` carries `$builtin(Op, ...)` and this
+--     file does not open it, so `p(X) :- q(X), r(Y), X < Y.` reads as two
+--     disconnected premises although the comparison joins them. Same shape as
+--     the `$not` defect above and NOT repaired here, because it needs the
+--     operand terms walked and the fix should be measured rather than
+--     assumed — the `$not` one was assumed safe and was not.

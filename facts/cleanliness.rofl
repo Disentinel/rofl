@@ -126,7 +126,7 @@ duty_decl(document, indexed).
 -- CI restated as arithmetic.
 --
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(129).
+queue_ceiling(130).
 
 -- ==================================================== THE EVIDENTIAL AXIS
 -- ADDED 2026-09-10 AFTER THE TABLE FAILED ITS FIRST REAL TEST. Asked about

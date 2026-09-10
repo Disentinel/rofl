@@ -54,6 +54,7 @@
     "blast": "node --experimental-strip-types scanners/depends.ts --blast",
     "cleanliness": "node --experimental-strip-types scanners/cleanliness_report.ts",
     "history": "node --experimental-strip-types scanners/history.ts",
+    "nullary": "node --experimental-strip-types scanners/nullary_report.ts",
     "cleancheck": "node --experimental-strip-types --test --test-reporter=spec test/cleanliness.check.ts",
     "layering": "node --experimental-strip-types scanners/layering_report.ts",
     "layercheck": "node --experimental-strip-types --test --test-reporter=spec test/layering.check.ts",

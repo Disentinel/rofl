@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 701 artifacts, 3949 edges, 231 unreadable path expressions.
+-- 703 artifacts, 3962 edges, 231 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -234,6 +234,7 @@ artifact[dep]("examples/yak/fragments/09-wrong-premise.ts", ts).
 artifact[dep]("examples/yak/fragments/hygiene.ts", ts).
 artifact[dep]("examples/yak/page.html", other).
 artifact[dep]("facts/cleanliness.rofl", rofl).
+artifact[dep]("facts/cross-products.rofl", rofl).
 artifact[dep]("facts/depends.rofl", rofl).
 artifact[dep]("facts/eval-cost.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
@@ -291,6 +292,7 @@ artifact[dep]("npm:measurecheck", script).
 artifact[dep]("npm:memcensus", script).
 artifact[dep]("npm:necessity", script).
 artifact[dep]("npm:noparser", script).
+artifact[dep]("npm:nullary", script).
 artifact[dep]("npm:pair", script).
 artifact[dep]("npm:parsecost", script).
 artifact[dep]("npm:perminv", script).
@@ -1553,6 +1555,17 @@ edge[dep]("facts/cleanliness.rofl", "docs/the-target.md", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "rules/cleanliness.rofl", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "scanners/cleanliness_report.ts", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "scanners/side_files.ts", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/depends.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/eval-cost.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/floor-census.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/history.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/kernel-policy.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/layering.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/parse-cost.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/policies/evidence.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "rules/worklist.rofl", doc_ref).
+edge[dep]("facts/cross-products.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", "adapters/sqlite-store.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "bench/fork_clone_cost.ts", ledger_ref).
@@ -2038,6 +2051,7 @@ edge[dep]("facts/history.rofl", "examples/yak/fragments/09-wrong-premise.ts", do
 edge[dep]("facts/history.rofl", "examples/yak/fragments/hygiene.ts", doc_ref).
 edge[dep]("facts/history.rofl", "examples/yak/README.md", doc_ref).
 edge[dep]("facts/history.rofl", "facts/cleanliness.rofl", doc_ref).
+edge[dep]("facts/history.rofl", "facts/cross-products.rofl", doc_ref).
 edge[dep]("facts/history.rofl", "facts/depends.rofl", doc_ref).
 edge[dep]("facts/history.rofl", "facts/eval-cost.rofl", doc_ref).
 edge[dep]("facts/history.rofl", "facts/findings.rofl", doc_ref).
@@ -4489,6 +4503,7 @@ edge[dep]("test/rule-answers.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/rule-answers.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/rule-answers.test.ts", "src/engine.ts", reads_path).
 edge[dep]("test/rule-answers.test.ts", "src/engine.ts", ts_import).
+edge[dep]("test/rule-shape.test.ts", "facts/cross-products.rofl", reads_path).
 edge[dep]("test/rule-shape.test.ts", "facts/layering.rofl", reads_path).
 edge[dep]("test/rule-shape.test.ts", "scanners/rule_shape.ts", reads_path).
 edge[dep]("test/rule-shape.test.ts", "scanners/rule_shape.ts", ts_import).
