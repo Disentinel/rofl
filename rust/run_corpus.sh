@@ -61,7 +61,44 @@ else
   echo "NOTE: --no-regen, the corpus on disk is whatever was last generated" >&2
 fi
 grep -E '^  (skip|drop) ' "$OUT/corpus-gen.out" >&2
+grep -A9 'DOES NOT ROUND-TRIP' "$OUT/corpus-gen.out" >&2
 tail -1 "$OUT/corpus-gen.out" >&2
+
+# THE ORACLE COMPARES WHAT THE SEMANTICS FIXES, AND A WITNESS IS NOT IT.
+#
+# A fact derivable more than one way has no distinguished support: which one the
+# store records falls out of iteration order, so two engines that order
+# differently disagree forever. Measured 2026-09-10 over the four cases that had
+# been red since anybody looked — drip, spat, sus, wtf: EVERY differing line was
+# a witness line, ZERO were fact lines, the non-witness part of canonicalState
+# was byte-identical, the witness counts were equal, and the differing lines
+# agreed on head, rule id, tick and SUPPORT CARDINALITY. Only the tuple differed.
+#
+# So the comparison drops the tuple and keeps the count. What still bites: a
+# fact derived by the wrong RULE, at the wrong TICK, or from a support of the
+# wrong SIZE, and every fact-level difference untouched. What it can no longer
+# see is a port that picks a different support of the same size via the same
+# rule at the same tick — which is the choice among equals this was red about.
+# `--strict-witness` keeps the old comparison for anyone measuring that cost.
+WITNESS=loose
+for a in "$@"; do [ "$a" = "--strict-witness" ] && WITNESS=strict; done
+norm() {
+  if [ "$WITNESS" = "strict" ]; then cat "$1"; return; fi
+  # THE SUPPORT BRACKET IS THE ONE AFTER `<- rID@TICK `, NOT THE FIRST `[` IN
+  # THE LINE. The first draft anchored on `index($0, "[")`, which finds the
+  # bracket in the HEAD — `wit ab1[main](...)` — and so replaced the head, the
+  # rule and the tick with a count as well. It reported 150/150 green, and the
+  # mutant set caught it: a witness naming a different RULE survived, and so did
+  # one at a different TICK. Anchor on the rule instead.
+  awk '
+    match($0, /^wit .* <- r[0-9a-f]+@[0-9]+ \[/) {
+        head = substr($0, 1, RLENGTH - 1);
+        sup  = substr($0, RLENGTH + 1); sub(/\]$/, "", sup);
+        printf "%s[%d]\n", head, split(sup, a, "; "); next }
+    /^  d r/ { n = split($0, f, "|"); printf "%s|%d\n", f[1], n - 1; next }
+    { print }
+  ' "$1"
+}
 
 sp=0; sf=0; lp=0; lf=0
 printf '%-14s %-6s %7s  %-6s %7s %s\n' case strict diff loose diff reason
@@ -76,10 +113,11 @@ while IFS=$'\t' read -r name facts _ _ _ ticks; do
   if [ $? -ne 0 ]; then
     sv=FAIL; sd=-; sf=$((sf+1)); reason="$(grep -v '^[a-z_]*\s' "$err" | head -1)"
   else
-    sd=$(diff "$DIR/$name.expected.txt" "$got" | grep -c '^[<>]')
+    norm "$DIR/$name.expected.txt" > "$got.want"; norm "$got" > "$got.norm"
+    sd=$(diff "$got.want" "$got.norm" | grep -c '^[<>]')
     if [ "$sd" = "0" ]; then sv=PASS; sp=$((sp+1)); else
       sv=FAIL; sf=$((sf+1))
-      reason="strict: $(diff "$DIR/$name.expected.txt" "$got" | grep '^[<>]' | head -1 | cut -c1-70)"
+      reason="strict: $(diff "$got.want" "$got.norm" | grep '^[<>]' | head -1 | cut -c1-70)"
     fi
   fi
 
@@ -88,10 +126,11 @@ while IFS=$'\t' read -r name facts _ _ _ ticks; do
   if [ $? -ne 0 ]; then
     lv=FAIL; ld=-; lf=$((lf+1)); reason="${reason:-$(head -1 "$derr")}"
   else
-    ld=$(diff "$DIR/$name.derivations.txt" "$dgot" | grep -c '^[<>]')
+    norm "$DIR/$name.derivations.txt" > "$dgot.want"; norm "$dgot" > "$dgot.norm"
+    ld=$(diff "$dgot.want" "$dgot.norm" | grep -c '^[<>]')
     if [ "$ld" = "0" ]; then lv=PASS; lp=$((lp+1)); else
       lv=FAIL; lf=$((lf+1))
-      reason="loose: $(diff "$DIR/$name.derivations.txt" "$dgot" | grep '^[<>]' | head -1 | cut -c1-70)"
+      reason="loose: $(diff "$dgot.want" "$dgot.norm" | grep '^[<>]' | head -1 | cut -c1-70)"
     fi
   fi
   printf '%-14s %-6s %7s  %-6s %7s %s\n' "$name" "$sv" "$sd" "$lv" "$ld" "$reason"

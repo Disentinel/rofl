@@ -96,6 +96,7 @@ for (const f of fs.readdirSync(out)) fs.rmSync(path.join(out, f));
 const index: string[] = [];
 const TICKS = 3;
 let ok = 0, skipped = 0, ticked = 0;
+const roundTrip: string[] = [];
 for (const [name, files] of worlds()) {
   let seed: string, want: string, deriv: string, facts: number, partial: boolean;
   try {
@@ -118,22 +119,35 @@ for (const [name, files] of worlds()) {
     if (dropped.length > 0) console.log(`  drop ${name.padEnd(14)} not a program: ${dropped.join(', ')}`);
     const ev = direct.evaluate();
     partial = ev.partial;
-    want = direct.store.canonicalState();
-    deriv = derivations(direct.store);
-    facts = direct.store.allFactKeys().length;
 
     const seedR = new Rofl(); seedR.load(boot);
     for (const f of files) if (!dropped.includes(path.basename(f))) seedR.load(fs.readFileSync(f, 'utf8'));
     seedR.store.clearDerived();
     seed = seedR.store.snapshot();
 
-    // THE CASE IS ONLY A CASE IF THE REFERENCE ITSELF ROUND-TRIPS IT. A world
-    // this host cannot reproduce from its own seed is a defect here, not a
-    // target for anyone else, and shipping it would hand a second engine an
-    // oracle the first one fails.
+    // THE EXPECTATION COMES FROM THE INPUT THE PORT IS GIVEN, and until
+    // 2026-09-10 it did not. `want` was `direct.canonicalState()` — the
+    // reference run over the FILES — while the port is handed the SEED, so the
+    // corpus compared two engines on two different inputs and papered over the
+    // gap with an admission test: a world where the two disagreed was thrown
+    // out with "reference does not round-trip its own seed". That threw out
+    // `rules_js-controlflow` and told nobody why.
+    //
+    // Taking the expectation from the replay makes the comparison the one
+    // anybody wanted — same input, two engines — and the round-trip question
+    // becomes what it always was: a property OF THE REFERENCE, reported below
+    // rather than used to hide a case.
     const replay = Rofl.fromSnapshot(seed);
     replay.evaluate();
-    if (replay.store.canonicalState() !== want) throw new Error('reference does not round-trip its own seed');
+    want = replay.store.canonicalState();
+    deriv = derivations(replay.store);
+    facts = replay.store.allFactKeys().length;
+
+    const straight = direct.store.canonicalState();
+    if (straight !== want) {
+      const d = direct.store.allFactKeys().length - facts;
+      roundTrip.push(`${name}: ${d > 0 ? `${d} fact(s) fewer` : d < 0 ? `${-d} more` : 'same count'} from the seed`);
+    }
   } catch (e) {
     console.log(`  skip ${name.padEnd(14)} ${(e as Error).message.slice(0, 70)}`);
     skipped++; continue;
@@ -189,5 +203,14 @@ for (const [name, files] of worlds()) {
 }
 fs.writeFileSync(path.join(out, 'INDEX.tsv'),
   '-- name\tfacts\tseed_bytes\texpected_bytes\tevaluation\tticks\n' + index.join('\n') + '\n');
+// A PROPERTY OF THE REFERENCE, NOT AN ADMISSION TEST. Loading the files and
+// evaluating should give what restoring the seed and evaluating gives; where it
+// does not, the reference is recording something that depends on evaluation
+// history rather than on the program. Reported by name so it cannot be a case
+// that quietly is not there.
+if (roundTrip.length > 0) {
+  console.log(`\n  REFERENCE DOES NOT ROUND-TRIP ${roundTrip.length} world(s) — a defect here, not the port's:`);
+  for (const r of roundTrip) console.log(`    ${r}`);
+}
 console.log(`\nport corpus: ${ok} plain + ${ticked} ticked = ${ok + ticked} cases, ${skipped} skipped -> ${path.relative(ROOT, out)}`);
 console.log(index.map((l) => '  ' + l.split('\t').slice(0, 2).join('  ')).join('\n'));
