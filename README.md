@@ -205,7 +205,7 @@ blit       := literal | "not" literal | builtin
 literal    := rel persp? "(" terms ")" temporal?
 persp      := "[" (name | Var) "]"              -- omitted => [main]
 temporal   := "@init" | "@now" | "@next"        -- omitted => @now
-terms      := term ("," term)*
+terms      := (term ("," term)*)?          -- may be EMPTY: `p()` is a proposition
 term       := Var | int | string | atom | functor "(" terms ")"
 builtin    := expr OP expr                      -- OP ∈ {=, !=, <, <=, >, >=, is}
 expr       := arithmetic over +, -, *, /, mod   -- ints; / truncates toward 0
@@ -215,7 +215,21 @@ comment    := "--" to end of line
 ```
 
 `@async` parses and is rejected with *"not in v0"*. `@next` is not allowed in
-bodies; `@init` is not allowed on rule heads. Relations take ≥ 1 argument.
+bodies; `@init` is not allowed on rule heads.
+
+**A relation may take ZERO arguments, spelled `p()`** — added 2026-09-10, and
+the grammar above says so (`terms` may be empty). A relation of arity *n* is a
+set of *n*-tuples and there is exactly one 0-tuple, so a nullary relation's
+extension is either empty or that singleton: **it is a truth value**, and a
+proposition is the base case of the predicate logic this language already was.
+It was excluded until then by one production written the obvious way, with no
+reason recorded anywhere and with the store already able to hold one.
+
+The spelling is `p()` and never a bare `p`: a body element is tried as an
+expression before it is re-read as a literal, and a term is also an atom, so
+`ident ( )` is the one shape that needs no lookahead into what follows.
+`examples/flag/` exercises it; `npm run nullary` reports which existing rules
+are propositions wearing a dummy argument or a passenger variable.
 
 ## Kernel vocabulary
 

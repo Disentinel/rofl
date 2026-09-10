@@ -158,19 +158,19 @@ duty[limits](l_no_aggregation, limit, "LIMITS.md", 156, "No aggregation, no opti
 -- six name the sentence they replace. This ledger is why `superseded` exists:
 -- an obligation nobody owes any more is not an obligation with no test.
 
-duty[readme](r_vocabulary_additions, guaranteed, "README.md", 488, "Vocabulary additions.").
-duty[readme](r_conclusion_tense, guaranteed, "README.md", 494, "conclusion_tense").
-duty[readme](r_flows_to, guaranteed, "README.md", 509, "the transitive closure of").
-duty[readme](r_collects, guaranteed, "README.md", 526, "the collection graph").
-duty[readme](r_stratum_in_kernel_source, guaranteed, "README.md", 550, "appear in kernel source").
-duty[readme](r_perspective_registration, guaranteed, "README.md", 565, "Perspective registration.").
-duty[readme](r_variable_perspectives, guaranteed, "README.md", 571, "Variable perspectives.").
-duty[readme](r_moded_relations, guaranteed, "README.md", 582, "Moded (demand) relations.").
-duty[readme](r_timeless_kernel_facts, guaranteed, "README.md", 591, "Timeless kernel facts.").
-duty[readme](r_facts_into_reserved, guaranteed, "README.md", 598, "Facts may be asserted into reserved relations.").
-duty[readme](r_edb_for_reserved, guaranteed, "README.md", 603, "for reserved relations.").
-duty[readme](r_unstratifiable_is_budgeted, guaranteed, "README.md", 608, "Unstratifiable rejection is budget-mediated").
-duty[readme](r_rounds_replace_strata, guaranteed, "README.md", 617, "Rounds replace the stratum table").
+duty[readme](r_vocabulary_additions, guaranteed, "README.md", 502, "Vocabulary additions.").
+duty[readme](r_conclusion_tense, guaranteed, "README.md", 508, "conclusion_tense").
+duty[readme](r_flows_to, guaranteed, "README.md", 523, "the transitive closure of").
+duty[readme](r_collects, guaranteed, "README.md", 540, "the collection graph").
+duty[readme](r_stratum_in_kernel_source, guaranteed, "README.md", 564, "appear in kernel source").
+duty[readme](r_perspective_registration, guaranteed, "README.md", 579, "Perspective registration.").
+duty[readme](r_variable_perspectives, guaranteed, "README.md", 585, "Variable perspectives.").
+duty[readme](r_moded_relations, guaranteed, "README.md", 596, "Moded (demand) relations.").
+duty[readme](r_timeless_kernel_facts, guaranteed, "README.md", 605, "Timeless kernel facts.").
+duty[readme](r_facts_into_reserved, guaranteed, "README.md", 612, "Facts may be asserted into reserved relations.").
+duty[readme](r_edb_for_reserved, guaranteed, "README.md", 617, "for reserved relations.").
+duty[readme](r_unstratifiable_is_budgeted, guaranteed, "README.md", 622, "Unstratifiable rejection is budget-mediated").
+duty[readme](r_rounds_replace_strata, guaranteed, "README.md", 631, "Rounds replace the stratum table").
 
 -- ======================================================= boot.rofl [boot] ===
 -- The meta-kernel's own required results, stated in a comment block at the

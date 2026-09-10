@@ -1,0 +1,44 @@
+-- examples/flag/flag.rofl — A PROPOSITION IS A RELATION OF ARITY ZERO.
+--
+-- The capability added 2026-09-10, exercised on a demo's real path because
+-- CLAUDE.md is right that nothing else can see it: a grammar production that
+-- nothing uses cannot go red.
+--
+-- WHAT A NULLARY RELATION IS. A relation of arity n is a set of n-TUPLES.
+-- There is exactly ONE 0-tuple, the empty one, so a nullary relation's
+-- extension is either the empty set or that singleton — it is a TRUTH VALUE.
+-- `deploy_blocked()` is not "a relation to nothing"; it is a proposition, and
+-- propositional logic is the base case of the predicate logic this language
+-- already was.
+
+-- The world: three services, two of them healthy.
+service(auth).
+service(billing).
+service(search).
+healthy(auth).
+healthy(billing).
+
+-- THE PROPOSITION. One rule, one row, no subject — and the subject it does
+-- not need is supplied by the BOOK it lives in, which is what perspectives
+-- are for. `in whose book is this entry` answers: in `main`'s.
+deploy_blocked() :- service(S), not healthy(S).
+
+-- WHAT IT BUYS, and it is the whole point. Before nullary heads this had to
+-- be written `blocked(S) :- service(S), unhealthy_somewhere(_).` — a variable
+-- carried only so the head had something to name, re-derived once per
+-- service, and a cross product against the whole unhealthy set. Now the guard
+-- is ONE ROW and the join against it is a constant.
+releasable(S) :- service(S), not deploy_blocked().
+
+-- ...AND THE NEGATION SAYS WHAT IT READS. `not deploy_blocked()` is
+-- "nothing blocks the deploy". Written the old way, `not blocked(S)` reads as
+-- "this S is not blocked" and MEANS the global thing only because the dummy
+-- variable made the relation uniform — a fact the author had to prove and the
+-- reader had to trust. Here there is nothing to prove.
+
+-- TWO BOOKS, TWO PROPOSITIONS. The same name in two ledgers is two different
+-- truths, which is the answer to "a fact must be ABOUT something": a
+-- proposition is about the book it is in.
+frozen[prod]().
+ship[prod](S)  :- service(S), not frozen[prod]().
+ship[stage](S) :- service(S), not frozen[stage]().

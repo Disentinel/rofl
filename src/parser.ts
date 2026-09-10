@@ -123,7 +123,22 @@ class P {
       perspExplicit = true;
     }
     this.expect('(');
-    const args = this.termList();
+    // A NULLARY LITERAL IS `p()`, ADDED 2026-09-10 by the owner's decision.
+    // A relation of arity n is a set of n-TUPLES and there is exactly one
+    // 0-tuple, so a nullary relation's extension is empty or the singleton —
+    // it is a TRUTH VALUE, and a proposition is the base case that makes
+    // propositional logic a special case of the predicate logic this language
+    // already is. It was excluded by one grammar production written the
+    // obvious way (`terms := term ("," term)*`), with no reason recorded
+    // anywhere and with the store already able to hold one.
+    //
+    // THE SPELLING IS `p()` AND NOT BARE `p`, which is the whole of the
+    // caution. `bodyElem` dispatches on `ident` followed by `[` or `(`, and a
+    // term is also an atom — a bare `p` in a body would need lookahead to tell
+    // a nullary literal from an atom in term position, and every future
+    // syntax would have to keep telling them apart. Empty parens are
+    // unambiguous at every site and say what they are.
+    const args = this.peek().t === ')' ? [] : this.termList();
     this.expect(')');
     const temporal = this.temporal();
     return { rel, persp, perspExplicit, args, temporal };
@@ -148,6 +163,18 @@ class P {
     }
     // A relational literal starts ident + '[' (perspective form is unambiguous).
     if (t.t === 'ident' && this.toks[this.pos + 1].t === '[') {
+      return { t: 'pos', lit: this.literal() };
+    }
+    // A NULLARY LITERAL IS `ident ( )` AND MUST BE TAKEN HERE, before the
+    // expression attempt below. A positive body literal is parsed FIRST as an
+    // expression and only rewound if that produced a functor — and `expr()`
+    // reaches `term()`, which demands at least one argument, so `flag()` died
+    // with `expected a term, got ')'` while `not flag()` parsed fine through
+    // the `neg` arm above. Measured on the first probe set: three of six
+    // shapes worked and this was the one that did not. Two tokens of lookahead
+    // decide it exactly; there is nothing else `ident ( )` can be.
+    if (t.t === 'ident' && this.toks[this.pos + 1].t === '(' &&
+        this.toks[this.pos + 2].t === ')') {
       return { t: 'pos', lit: this.literal() };
     }
     // Otherwise parse an expression; if a comparison/'is' operator follows it

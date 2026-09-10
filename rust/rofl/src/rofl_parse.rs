@@ -207,7 +207,15 @@ impl<'a> Parser<'a> {
 
     /// `args(I, J, cons(T, nil)) :- term(I, J, T).`
     /// `args(I, J2, cons(T, R)) :- term(I, J, T), p(K, comma), args(I2, J2, R).`
+    /// A NULLARY LITERAL IS `p()`, and this engine must accept exactly what the
+    /// TypeScript one does. The corpus is diffed byte for byte on
+    /// `canonicalState`, and since `scripts/kernel_grep.ts` was deleted on
+    /// 2026-09-10 that comparison is what holds the `semantics as data` duty —
+    /// so a grammar the two hosts disagree about is the one change that can
+    /// quietly unmake it. Changed here in the same commit as `src/parser.ts`
+    /// for that reason and no other.
     fn args(&mut self) -> P<Vec<Term>> {
+        if self.is_punct(0, "rpar") { return Ok(vec![]); }
         let mut out = vec![self.expr()?];
         while self.eat_punct("comma") { out.push(self.expr()?); }
         Ok(out)
@@ -326,6 +334,17 @@ impl<'a> Parser<'a> {
         // that each pass CONSUMES wildcards, so a rewind that only restores the
         // token position renames every `_` after it and two identical clauses
         // stop canonicalising alike.
+        // `ident ( )` IS A NULLARY LITERAL AND MUST BE TAKEN BEFORE THE
+        // EXPRESSION ATTEMPT, for the reason `src/parser.ts` records: a
+        // positive body literal is tried as an expression first, and an
+        // expression reaches `term`, which demands an argument. Measured on
+        // the TypeScript side, `flag()` in a body died with `expected a term`
+        // while `not flag()` parsed, because the negation arm takes `lit`
+        // directly. Two tokens of lookahead decide it; nothing else is
+        // `ident ( )`.
+        if self.is_punct(1, "lpar") && self.is_punct(2, "rpar") {
+            return Ok(Elem::Pos(self.lit()?));
+        }
         let save = self.at;
         let save_fresh = self.fresh;
         if let Ok(l) = self.lit() {

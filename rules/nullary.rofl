@@ -65,7 +65,13 @@ mentions(R, K, V)    :- neg_var(R, K, V).
 -- when the relation takes MORE THAN ONE shape — so the discriminator is
 -- whether ANY rule concluding that relation has a variable head, and it is
 -- derived rather than assumed.
-const_head(R)       :- head_args(R, _), not head_var(R, _).
+-- A HEAD THAT IS ALREADY NULLARY IS THE DESTINATION, NOT A CANDIDATE, and the
+-- first demo caught this the moment nullary heads existed: `deploy_blocked()`
+-- has `$nil` for its arguments, therefore no variables, therefore read as a
+-- constant head — the model recommending the thing it was looking at. The
+-- head must have at least one argument for the question to mean anything, and
+-- `$cons(_, _)` is how a list says it is not empty.
+const_head(R)       :- head_args(R, $cons(_, _)), not head_var(R, _).
 varying_head(Rel)   :- concludes(R, Rel), head_var(R, _).
 dressed_constant[audit](Rel) :- const_head(R), concludes(R, Rel), not varying_head(Rel).
 
