@@ -39,6 +39,24 @@ const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
 const RUST = path.join(ROOT, 'rust/target/release/rofl-load');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
+/** A FACT PACK IS READ BY LOADING IT, NOT BY MATCHING IT. Every reader here was
+ *  a regex over `.rofl` text — a duplicate parser, in a repository whose whole
+ *  point is that rules are data and `query` is how you ask. Ten such sites went
+ *  in during one session that had just catalogued seven of them as the class to
+ *  remove. A regex reads what it was told to expect; the loader reads what is
+ *  written, and refuses what is malformed instead of silently missing it. */
+function pack(file: string): Rofl | null {
+  const p = path.join(ROOT, file);
+  if (!fs.existsSync(p)) return null;
+  const r = new Rofl();
+  r.load(BOOT);
+  if (!r.load(fs.readFileSync(p, 'utf8')).ok) throw new Error(`${file} does not load`);
+  r.evaluate();
+  return r;
+}
+const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
+  r.query(lit).rows.map((x) => vs.map((v) => String(x.bindings[v]).replace(/^"|"$/g, '')));
+
 export interface World { name: string; files: string[]; ticks?: number; budget?: number; oneEngine?: boolean }
 
 /** Every world buildable from `.rofl` text alone. A demo whose world is
@@ -83,20 +101,19 @@ export interface Answer { hash: string; facts: number; census: Map<string, numbe
  *  subject is host behaviour — arithmetic holes, budget walls, escapes — become
  *  worlds rather than TypeScript string literals. */
 function declared(): World[] {
-  const f = path.join(ROOT, 'facts/checks.rofl');
-  if (!fs.existsSync(f)) return [];
-  const src = fs.readFileSync(f, 'utf8');
+  const r = pack('facts/checks.rofl');
+  if (!r) return [];
   const out = new Map<string, World>();
-  for (const m of src.matchAll(/^check_world\("([^"]+)"\)/gm)) out.set(m[1], { name: m[1], files: [] });
-  for (const m of src.matchAll(/^check_file\("([^"]+)", "([^"]+)"\)/gm))
-    out.get(m[1])?.files.push(path.join(ROOT, m[2]));
-  for (const m of src.matchAll(/^check_opt\("([^"]+)", one_engine, 1\)/gm)) {
-    const w = out.get(m[1]); if (w) w.oneEngine = true;
+  for (const [n] of col(r, 'check_world(N)', 'N')) out.set(n, { name: n, files: [] });
+  for (const [n, f] of col(r, 'check_file(N, F)', 'N', 'F')) out.get(n)?.files.push(path.join(ROOT, f));
+  for (const [n] of col(r, 'check_opt(N, one_engine, 1)', 'N')) {
+    const w = out.get(n); if (w) w.oneEngine = true;
   }
-  for (const m of src.matchAll(/^check_opt\("([^"]+)", (ticks|budget), (\d+)\)/gm)) {
-    const w = out.get(m[1]);
-    if (w && m[2] === 'ticks') w.ticks = Number(m[3]);
-    if (w && m[2] === 'budget') w.budget = Number(m[3]);
+  for (const [n, v] of col(r, 'check_opt(N, ticks, V)', 'N', 'V')) {
+    const w = out.get(n); if (w) w.ticks = Number(v);
+  }
+  for (const [n, v] of col(r, 'check_opt(N, budget, V)', 'N', 'V')) {
+    const w = out.get(n); if (w) w.budget = Number(v);
   }
   return [...out.values()];
 }
@@ -257,9 +274,8 @@ function maskTimings(out: string): string {
  *  is installed. Enumerating more number formats to chase the first is
  *  widening a guess, which is how the mask got to its third version. */
 function unhashable(): Set<string> {
-  const f = path.join(ROOT, 'facts/checks.rofl');
-  if (!fs.existsSync(f)) return new Set();
-  return new Set([...fs.readFileSync(f, 'utf8').matchAll(/^demo_unhashable\("([^"]+)"/gm)].map((m) => m[1]));
+  const r = pack('facts/checks.rofl');
+  return new Set(r ? col(r, 'demo_unhashable(N, Why)', 'N').map(([n]) => n) : []);
 }
 
 export function demos(): string[] {
@@ -315,21 +331,26 @@ function render(rows: [World, Answer][]): string {
   return L.join('\n') + '\n';
 }
 
+let goldenPack: Rofl | null | undefined;
+const golden = (): Rofl | null => (goldenPack ??= pack('facts/goldens.rofl'));
+
 function parse(): Map<string, { hash: string; facts: number; census: Map<string, number> }> {
-  const src = fs.readFileSync(GOLDEN, 'utf8');
+  const r = golden();
   const out = new Map<string, { hash: string; facts: number; census: Map<string, number> }>();
-  for (const m of src.matchAll(/^golden_state\("([^"]+)", "([^"]+)", (\d+)\)/gm))
-    out.set(m[1], { hash: m[2], facts: Number(m[3]), census: new Map() });
-  for (const m of src.matchAll(/^golden_rel\("([^"]+)", "([^"]+)", (\d+)\)/gm))
-    out.get(m[1])?.census.set(m[2], Number(m[3]));
+  if (!r) return out;
+  for (const [n, h, f] of col(r, 'golden_state(N, H, F)', 'N', 'H', 'F'))
+    out.set(n, { hash: h, facts: Number(f), census: new Map() });
+  for (const [n, rel, c] of col(r, 'golden_rel(N, Rel, C)', 'N', 'Rel', 'C'))
+    out.get(n)?.census.set(rel, Number(c));
   return out;
 }
 
 function parseHosts(): Map<string, { hash: string; exit: number; lines: number }> {
-  const src = fs.existsSync(GOLDEN) ? fs.readFileSync(GOLDEN, 'utf8') : '';
+  const r = golden();
   const out = new Map<string, { hash: string; exit: number; lines: number }>();
-  for (const m of src.matchAll(/^golden_host\("([^"]+)", "([^"]+)", (-?\d+), (\d+)\)/gm))
-    out.set(m[1], { hash: m[2], exit: Number(m[3]), lines: Number(m[4]) });
+  if (!r) return out;
+  for (const [n, h, e, l] of col(r, 'golden_host(N, H, E, L)', 'N', 'H', 'E', 'L'))
+    out.set(n, { hash: h, exit: Number(e), lines: Number(l) });
   return out;
 }
 

@@ -46,9 +46,36 @@ const CMP = [...CMP_OPS, 'is'];
 /** The class's own methods. A list typed here would go stale on the day a
  *  method is added, which is the day it matters. */
 function apiSurface(): string[] {
-  const src = fs.readFileSync(path.join(ROOT, 'src/api.ts'), 'utf8');
-  const m = [...src.matchAll(/^ {2}(?:static |async )*([a-z][A-Za-z0-9]*)\(/gm)].map((x) => x[1]);
-  return [...new Set(m)].filter((x) => x !== 'constructor').sort();
+  // THE METHODS OF `Rofl`, FROM THE CLASS BODY. Parsed rather than matched —
+  // the regex this replaced anchored on two spaces of indentation. And the
+  // first parse was wrong the other way: it took every ClassMethod AND
+  // ClassProperty anywhere in the file, so `store`, `diagnostics` and four
+  // option FIELDS read as entry points, while `fromSnapshot` — static, and as
+  // public as anything here — was excluded for being static.
+  const ast = parse(fs.readFileSync(path.join(ROOT, 'src/api.ts'), 'utf8'),
+    { sourceType: 'module', plugins: ['typescript'] });
+  const out = new Set<string>();
+  const body = (n: unknown): void => {
+    const o = n as Record<string, unknown>;
+    for (const m of (o.body as Record<string, unknown>[]) ?? []) {
+      if (m.type !== 'ClassMethod' || m.computed) continue;
+      if (m.kind === 'get' || m.kind === 'set') continue;
+      if (m.accessibility === 'private') continue;
+      const k = (m.key as Record<string, unknown> | undefined)?.name;
+      if (typeof k === 'string' && k !== 'constructor' && !k.startsWith('#')) out.add(k);
+    }
+  };
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== 'object') return;
+    const o = n as Record<string, unknown>;
+    const id = (o.id as Record<string, unknown> | undefined)?.name;
+    if (o.type === 'ClassDeclaration' && id === 'Rofl') body(o.body);
+    for (const v of Object.values(o)) {
+      if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === 'object') walk(v);
+    }
+  };
+  walk(ast);
+  return [...out].sort();
 }
 
 /** Every feature a `.rofl` text uses. The operands of `$builtin(Op, Args)` are
@@ -171,17 +198,26 @@ export function cover(demos: Demo[], all: string[]): { pick: string[]; got: Set<
  *  demo gets. So: duty -> check -> file -> feature, with nothing typed by hand
  *  in between. */
 export function checkFeatures(): { guards: [string, string][]; uses: Map<string, Set<string>> } {
-  const spec = fs.readFileSync(path.join(ROOT, 'facts/spec.rofl'), 'utf8');
-  const guards = [...spec.matchAll(/^guards\[map\]\((\w+), (\w+)\)/gm)].map((m) => [m[1], m[2]] as [string, string]);
+  // A FACT PACK IS READ BY LOADING IT. facts/spec.rofl is 547 lines of data
+  // this system can answer questions about; matching it with a regex is a
+  // second parser for a language that ships one.
+  const r = new Rofl();
+  r.load(fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8'));
+  if (!r.load(fs.readFileSync(path.join(ROOT, 'facts/spec.rofl'), 'utf8')).ok)
+    throw new Error('facts/spec.rofl does not load');
+  r.evaluate();
+  const col = (lit: string, ...vs: string[]): string[][] =>
+    r.query(lit).rows.map((x) => vs.map((v) => String(x.bindings[v]).replace(/^"|"$/g, '')));
+  const guards = col('guards[map](C, D)', 'C', 'D').map(([c, d]) => [c, d] as [string, string]);
   const surface = new Set(apiSurface());
   const uses = new Map<string, Set<string>>();
-  for (const m of spec.matchAll(/^cited_check\[map\]\((\w+), "([^"]+)"/gm)) {
-    const file = path.join(ROOT, m[2]);
+  for (const [check, rel] of col('cited_check[map](C, F, T)', 'C', 'F')) {
+    const file = path.join(ROOT, rel);
     if (!fs.existsSync(file)) continue;
-    const f = uses.get(m[1]) ?? new Set<string>();
+    const f = uses.get(check) ?? new Set<string>();
     if (file.endsWith('.ts')) for (const k of hostFeatures(file, surface)) f.add(k);
     if (file.endsWith('.rofl')) for (const k of langFeatures(fs.readFileSync(file, 'utf8'))) f.add(k);
-    uses.set(m[1], f);
+    uses.set(check, f);
   }
   return { guards, uses };
 }
