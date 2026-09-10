@@ -1,0 +1,37 @@
+-- facts/layering.rofl — THE DECLARATIONS FOR THE ENGINE/LIBRARY SPLIT.
+--
+-- The owner's, like `layer(L)` and `role_decl(R)`. An executor may not add a
+-- library to make a crossing legal, and may not widen the surface to make an
+-- audit go quiet.
+
+-- ============================================================== THE SURFACE
+-- WHAT A LIBRARY MAY ENTER THE ENGINE THROUGH. Two files, and the second is
+-- there for the storage port rather than for a domain library.
+--
+-- MEASURED: 26 of the 28 imports the JS model makes into `src/` already go to
+-- `src/api.ts`. The surface is small because the tree already treats it as
+-- small, not because a rule was imposed.
+surface_decl("src/api.ts").
+surface_decl("src/store.ts").
+-- AND `boot.rofl`, WHICH THE FIRST RUN GOT WRONG. It reported 29 deep
+-- crossings and 26 of them were a library LOADING THE SEMANTICS — which is not
+-- reaching into the engine's insides, it is the engine's front door in its
+-- other form. A library that could not load boot.rofl could not use the
+-- language at all. The tell was that the audit named one target 26 times: an
+-- audit whose rows are mostly one destination is usually wrong about that
+-- destination rather than right about the sources.
+surface_decl("boot.rofl").
+
+-- ============================================================= THE LIBRARIES
+-- `library_decl(Name, PathPrefix)`. One library today; the whole point of the
+-- decision is that there will be more, and a second one costs four facts.
+library_decl(js, "rules/js-").
+library_decl(js, "facts/js-").
+library_decl(js, "scanners/js").
+library_decl(js, "test/js-").
+library_decl(js, "test/fixtures/js-").
+
+-- ================================================================== RULINGS
+-- `side_decl(Path, Side)` overrides location. Empty on the first pass: every
+-- assignment below is currently by location, and a ruling here should be a
+-- decision somebody made after reading the audit.

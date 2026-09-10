@@ -1,0 +1,107 @@
+-- rules/layering.rofl — THE ENGINE, THE LIBRARIES, AND THE LINE BETWEEN THEM.
+--
+-- The owner's decision, 2026-09-10: ROFL is an ENGINE, valuable on its own and
+-- minimal. The JS model is a LIBRARY for that engine, and there will be many
+-- such libraries. So the tree has to say which side each artifact is on, and
+-- the boundary has to be a thing that can go red rather than a thing people
+-- remember.
+--
+-- MEASURED BEFORE ANY OF THIS WAS WRITTEN, and the number is why the split is
+-- cheap: of the 28 imports from the JS model into `src/`, TWENTY-SIX go to
+-- `src/api.ts`. The two that do not are both in one test file
+-- (`test/js-ast.test.ts` reaches `src/parser.ts` and `src/unify.ts`). The
+-- library is already using the engine as a library, without anyone having
+-- required it to — so the boundary below is a description of the tree today,
+-- not an aspiration, and `deep_crossing[audit]` starts at 2 rather than at 200.
+--
+-- WHAT THIS FILE IS FOR, beyond the census: once a library may only enter the
+-- engine through its public surface, the engine's surface becomes a THING WITH
+-- A SHAPE — something to keep small, document, and version — instead of
+-- whatever happened to be exported. That is the difference between a repo with
+-- an engine in it and an engine with users.
+
+edb(side_decl).
+edb(surface_decl).
+edb(library_decl).
+
+-- ================================================================ THE SIDES
+-- Assignment is by declaration where the owner has ruled, and by location
+-- otherwise. Location is the fallback and NEVER the authority: a file that
+-- moves house should not change sides silently.
+-- THE FIRST DRAFT WAS UNSTRATIFIABLE AND THE ENGINE SAID SO BEFORE A RULE
+-- FIRED. `side(P, harness) :- artifact(P), not sided(P)` with
+-- `sided(P) :- side(P, _)` is a cycle through negation: harness-ness is
+-- defined by the absence of a side, and `side` contains harness. The refusal
+-- named the whole stuck set — crossing, deep_crossing, inversion, moves_with,
+-- serves, serves_engine, serves_other, side, sided — at zero derivation steps.
+-- Fixed by giving each side its own relation and composing `side` at the end,
+-- so nothing negates a relation it belongs to.
+declared(P) :- side_decl(P, _).
+
+-- THE ENGINE: the kernel, the two programs it carries as data, the storage
+-- port. Nothing domain-specific, which is the kernel grep test's promise one
+-- level up.
+engine_side(P) :- not declared(P), D is str_pre(P, "/"), D = "src".
+engine_side(P) :- not declared(P), D is str_pre(P, "/"), D = "adapters".
+engine_side(P) :- not declared(P), D is str_pre(P, "/"), D = "rust".
+engine_side(P) :- not declared(P), P = "boot.rofl".
+engine_side(P) :- not declared(P), P = "policy.rofl".
+engine_side(P) :- not declared(P), P = "safety.rofl".
+
+-- A LIBRARY: a named body of rules, facts and scanners ABOUT a domain, which
+-- the engine knows nothing of. `library_decl(L, Prefix)` says which names
+-- belong to which library, so a second library costs one fact and not a rule.
+library_side(P) :- not declared(P), library_decl(_, Pfx), starts_with(P, Pfx).
+
+-- The prefix test, written out because the language has no `starts_with`:
+-- take as many characters as the prefix is long and compare.
+starts_with(P, Pfx) :- artifact[dep](P, _), library_decl(_, Pfx),
+                       N is str_len(Pfx), L is str_len(P), L >= N,
+                       H is str_sub(P, 0, N), H = Pfx.
+
+belongs(P, L) :- library_decl(L, Pfx), starts_with(P, Pfx).
+
+-- EVERYTHING ELSE is the HARNESS: the gates, the docs, the ledgers, the demos,
+-- the measurement rigs. Not a judgement — a third category, because forcing
+-- `README.md` or `facts/findings.rofl` onto one of the two sides is what makes
+-- a boundary model lie.
+harness_side(P) :- artifact[dep](P, _), not engine_side(P), not library_side(P), not declared(P).
+
+-- ...and only now is `side` composed, from three relations none of which
+-- negates it.
+side(P, engine)  :- engine_side(P).
+side(P, library) :- library_side(P).
+side(P, harness) :- harness_side(P).
+side(P, S)       :- side_decl(P, S).
+
+-- ============================================================== THE SURFACE
+-- What a library is allowed to enter the engine through. Declared, small, and
+-- the point of the whole exercise: an engine whose surface is `whatever is
+-- exported` has no surface.
+surface(P) :- surface_decl(P).
+
+-- ============================================================= THE BOUNDARY
+-- A crossing is any code edge from a library into the engine. Most are fine —
+-- that is what a library DOES. The audit is the ones that land somewhere other
+-- than the declared surface.
+crossing(A, B) :- code_edge[dep](A, B), side(A, library), side(B, engine).
+deep_crossing[audit](A, B) :- crossing(A, B), not surface(B).
+
+-- AND THE OTHER DIRECTION, WHICH IS THE ONE THAT MATTERS MORE. The engine
+-- knowing about a library is the defect the kernel grep test exists to prevent,
+-- one level out: `src/` may not name a domain, and now neither may `boot.rofl`,
+-- `policy.rofl`, `safety.rofl` or the port.
+inversion[audit](A, B) :- code_edge[dep](A, B), side(A, engine), side(B, library).
+
+-- A HARNESS ARTIFACT THAT SERVES EXACTLY ONE LIBRARY belongs to it. This is
+-- the relation that actually does the repacking: it names, per library, the
+-- tests, fixtures and documents that would move with it — computed rather than
+-- listed, so it stays true while the split is carried out.
+serves(H, L) :- side(H, harness), code_edge[dep](H, B), belongs(B, L).
+serves_other(H, L) :- serves(H, M), library_decl(L, _), M != L.
+serves_engine(H) :- side(H, harness), code_edge[dep](H, B), side(B, engine),
+                    not surface(B).
+
+-- Moves with the library: serves it, serves no other, and needs nothing from
+-- the engine's insides.
+moves_with[audit](H, L) :- serves(H, L), not serves_other(H, L), not serves_engine(H).

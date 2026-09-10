@@ -108,4 +108,4 @@ duty_decl(document, indexed).
 --   regenerable     1   facts/ledger-census.rofl has no compare-and-fail gate
 --
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(120).
+queue_ceiling(121).

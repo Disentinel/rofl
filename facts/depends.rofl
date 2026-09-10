@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 685 artifacts, 3333 edges, 230 unreadable path expressions.
+-- 691 artifacts, 3355 edges, 231 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -234,6 +234,7 @@ artifact[dep]("examples/yak/fragments/08-golden-accident.ts", ts).
 artifact[dep]("examples/yak/fragments/09-wrong-premise.ts", ts).
 artifact[dep]("examples/yak/fragments/hygiene.ts", ts).
 artifact[dep]("examples/yak/page.html", other).
+artifact[dep]("facts/cleanliness.rofl", rofl).
 artifact[dep]("facts/depends.rofl", rofl).
 artifact[dep]("facts/eval-cost.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
@@ -282,6 +283,8 @@ artifact[dep]("npm:forkstages", script).
 artifact[dep]("npm:grepcheck", script).
 artifact[dep]("npm:keycoupling", script).
 artifact[dep]("npm:laddercheck", script).
+artifact[dep]("npm:layercheck", script).
+artifact[dep]("npm:layering", script).
 artifact[dep]("npm:measurecheck", script).
 artifact[dep]("npm:memcensus", script).
 artifact[dep]("npm:necessity", script).
@@ -308,6 +311,7 @@ artifact[dep]("npm:whyslow", script).
 artifact[dep]("package-lock.json", json).
 artifact[dep]("package.json", json).
 artifact[dep]("policy.rofl", rofl).
+artifact[dep]("rules/cleanliness.rofl", rofl).
 artifact[dep]("rules/decisions/production-readiness.rofl", rofl).
 artifact[dep]("rules/depends.rofl", rofl).
 artifact[dep]("rules/engine-split.rofl", rofl).
@@ -423,6 +427,7 @@ artifact[dep]("safety.rofl", rofl).
 artifact[dep]("scanners/ablate.ts", ts).
 artifact[dep]("scanners/book_locality.ts", ts).
 artifact[dep]("scanners/bootstrap_dag.ts", ts).
+artifact[dep]("scanners/cleanliness_report.ts", ts).
 artifact[dep]("scanners/cli.ts", ts).
 artifact[dep]("scanners/depends.ts", ts).
 artifact[dep]("scanners/engine_split.ts", ts).
@@ -513,6 +518,7 @@ artifact[dep]("test/body-order.test.ts", ts).
 artifact[dep]("test/bootstrap-dag.test.ts", ts).
 artifact[dep]("test/bridges.test.ts", ts).
 artifact[dep]("test/budget-space.test.ts", ts).
+artifact[dep]("test/cleanliness.check.ts", ts).
 artifact[dep]("test/clear-derived.test.ts", ts).
 artifact[dep]("test/comparison-sink.test.ts", ts).
 artifact[dep]("test/confirmation.test.ts", ts).
@@ -1537,6 +1543,9 @@ edge[dep]("examples/yak/README.md", "src/store.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "test/example-yak.test.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "test/firing-signature.test.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "test/undefined-premise.test.ts", doc_ref).
+edge[dep]("facts/cleanliness.rofl", "docs/the-target.md", doc_ref).
+edge[dep]("facts/cleanliness.rofl", "rules/cleanliness.rofl", doc_ref).
+edge[dep]("facts/cleanliness.rofl", "scanners/cleanliness_report.ts", doc_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", "adapters/sqlite-store.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "bench/fork_clone_cost.ts", ledger_ref).
@@ -1722,6 +1731,7 @@ edge[dep]("facts/findings.rofl", "test/authorship.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/body-order.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/bridges.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/budget-space.test.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "test/cleanliness.check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/clear-derived.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/comparison-sink.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/derived-reuse.test.ts", ledger_ref).
@@ -2088,6 +2098,8 @@ edge[dep]("npm:booklocality", "scanners/book_locality.ts", npm_script).
 edge[dep]("npm:boundary", "scanners/store_boundary.ts", npm_script).
 edge[dep]("npm:build:dense", "scripts/build_kernel_dense.ts", npm_script).
 edge[dep]("npm:build:skill", "scripts/build_skill.ts", npm_script).
+edge[dep]("npm:cleancheck", "test/cleanliness.check.ts", npm_script).
+edge[dep]("npm:cleanliness", "scanners/cleanliness_report.ts", npm_script).
 edge[dep]("npm:dagcheck", "scanners/bootstrap_dag.ts", npm_script).
 edge[dep]("npm:depends", "scanners/depends.ts", npm_script).
 edge[dep]("npm:evalcost", "scanners/eval_cost.ts", npm_script).
@@ -2195,11 +2207,17 @@ edge[dep]("README.md", "test/permission-doc.test.ts", doc_ref).
 edge[dep]("README.md", "test/reject-budget-invariance.test.ts", doc_ref).
 edge[dep]("README.md", "test/sealed.test.ts", doc_ref).
 edge[dep]("README.md", "test/vocabulary-doc.test.ts", doc_ref).
+edge[dep]("rules/cleanliness.rofl", "facts/depends.rofl", doc_ref).
+edge[dep]("rules/cleanliness.rofl", "facts/findings.rofl", doc_ref).
+edge[dep]("rules/cleanliness.rofl", "facts/rule-shape.rofl", doc_ref).
+edge[dep]("rules/cleanliness.rofl", "README.md", doc_ref).
+edge[dep]("rules/cleanliness.rofl", "scripts/witness_check.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/depends.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("rules/depends.rofl", "facts/rule-shape.rofl", doc_ref).
 edge[dep]("rules/depends.rofl", "scanners/rule_shape.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "scripts/witness_check.ts", doc_ref).
+edge[dep]("rules/depends.rofl", "test/cleanliness.check.ts", doc_ref).
 edge[dep]("rules/depends.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("rules/engine-split.rofl", "scanners/engine_split.ts", doc_ref).
 edge[dep]("rules/findings.rofl", "runtime/report.ts", doc_ref).
@@ -2299,6 +2317,12 @@ edge[dep]("scanners/book_locality.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/bootstrap_dag.ts", "scanners/engine_split.ts", reads_path).
 edge[dep]("scanners/bootstrap_dag.ts", "scanners/engine_split.ts", ts_import).
 edge[dep]("scanners/bootstrap_dag.ts", "src/engine.ts", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "facts/cleanliness.rofl", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "facts/depends.rofl", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "rules/cleanliness.rofl", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "rules/depends.rofl", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "src/api.ts", reads_path).
+edge[dep]("scanners/cleanliness_report.ts", "src/api.ts", ts_import).
 edge[dep]("scanners/cli.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/cli.ts", "scanners/materialize.ts", reads_path).
 edge[dep]("scanners/cli.ts", "scanners/materialize.ts", ts_import).
@@ -2786,6 +2810,10 @@ edge[dep]("test/budget-space.test.ts", "src/reflect.ts", reads_path).
 edge[dep]("test/budget-space.test.ts", "src/reflect.ts", ts_import).
 edge[dep]("test/budget-space.test.ts", "src/rounds.ts", reads_path).
 edge[dep]("test/budget-space.test.ts", "src/rounds.ts", ts_import).
+edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", reads_path).
+edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", ts_import).
+edge[dep]("test/cleanliness.check.ts", "src/api.ts", reads_path).
+edge[dep]("test/cleanliness.check.ts", "src/api.ts", ts_import).
 edge[dep]("test/clear-derived.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/clear-derived.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/clear-derived.test.ts", "src/api.ts", ts_import).
@@ -4027,4 +4055,4 @@ edge[dep]("test/worklist.test.ts", "rules/worklist.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", ts_import).
 
-dark_paths[dep](230).
+dark_paths[dep](231).
