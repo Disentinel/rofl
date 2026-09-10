@@ -29,6 +29,7 @@ import assert from 'node:assert/strict';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { read, FILES, FACTS, RULES } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const EFF_FACTS = 'facts/js-effects.rofl';
 const EFF_RULES = 'rules/js-effects.rofl';
@@ -608,7 +609,7 @@ unknown_because(js, call_expression, s_eff_unmapped, effect, not_yet).
 //     check: it is a defect in `caught_here` with no site in this corpus. It is
 //     recorded as a finding with a live control rather than repaired blind.
 
-test('MUTANT M1: dropping the discharge entirely — the oracle kills it', () => {
+mutant('MUTANT M1: dropping the discharge entirely — the oracle kills it', () => {
   // Targets: that a handler discharges anything at all.
   const m = build([{ file: EFF_RULES,
     find: 'nearest_v[flow](F, C), not eff_discharged_at[code](C, L).',
@@ -617,7 +618,7 @@ test('MUTANT M1: dropping the discharge entirely — the oracle kills it', () =>
     'KILLED: a caught throw propagates and may_throw disagrees');
 });
 
-test('MUTANT M2: a LABEL-BLIND discharge — the exn oracle cannot see it', () => {
+mutant('MUTANT M2: a LABEL-BLIND discharge — the exn oracle cannot see it', () => {
   // Targets: that a handler removes ONE label rather than the whole row. This
   // is the mutant the design changed for.
   const m = build([{ file: EFF_RULES,
@@ -630,7 +631,7 @@ test('MUTANT M2: a LABEL-BLIND discharge — the exn oracle cannot see it', () =
     'KILLED by eff_swallowed, which exists because this mutant survived everything else');
 });
 
-test('MUTANT M3: `caught_here` with no handler test — SURVIVES, and it is a finding', () => {
+mutant('MUTANT M3: `caught_here` with no handler test — SURVIVES, and it is a finding', () => {
   // Targets: the repair `eff_catch_here` makes over `caught_here`. It cannot be
   // killed by this corpus, because all eleven try statements have a handler —
   // which is the finding, measured, with `eff_try_arm` as its live control.
@@ -644,7 +645,7 @@ test('MUTANT M3: `caught_here` with no handler test — SURVIVES, and it is a fi
     'SURVIVES by the corpus: not one try in these five files lacks a handler');
 });
 
-test('MUTANT M4: the heap arms swapped — the unexercised-label set kills it', () => {
+mutant('MUTANT M4: the heap arms swapped — the unexercised-label set kills it', () => {
   // Targets: which heap a traced receiver belongs to. Nothing in the lattice
   // cares, and no count would have moved; the SET of labels this corpus never
   // reaches is what sees it.
@@ -655,7 +656,7 @@ test('MUTANT M4: the heap arms swapped — the unexercised-label set kills it', 
     'KILLED: write/global stops being unreachable');
 });
 
-test('MUTANT M5: `eff_alias(io, ndet)` deleted — the named set below io kills it', () => {
+mutant('MUTANT M5: `eff_alias(io, ndet)` deleted — the named set below io kills it', () => {
   // Targets: that `io` really is `<st<global>, div, exn, ndet>`. A COUNT of the
   // rows under `io` would have moved and said nothing; the set says which name
   // left.
@@ -668,7 +669,7 @@ test('MUTANT M5: `eff_alias(io, ndet)` deleted — the named set below io kills 
     'the four lattice audits are structurally unable to see a missing alias');
 });
 
-test('MUTANT M6: the join is no longer LEAST — join_ambiguous kills it', () => {
+mutant('MUTANT M6: the join is no longer LEAST — join_ambiguous kills it', () => {
   // Targets: minimality of the upper bound, which is what makes `effect_of`
   // single-valued.
   const m = build([{ file: EFF_RULES,
@@ -677,7 +678,7 @@ test('MUTANT M6: the join is no longer LEAST — join_ambiguous kills it', () =>
   assert.ok(m.n('join_ambiguous[audit](A, B, C, D)') > 0, 'KILLED');
 });
 
-test('MUTANT M7: a read site that is also a write target — the partition kills it', () => {
+mutant('MUTANT M7: a read site that is also a write target — the partition kills it', () => {
   // Targets: the read/write DIRECTION, which no count of `eff_here` rows would
   // separate from a read the rule simply missed.
   const m = build([{ file: EFF_RULES,
@@ -687,7 +688,7 @@ test('MUTANT M7: a read site that is also a write target — the partition kills
     m.n('member_node_v[flow](M)'), 'KILLED by the partition identity');
 });
 
-test('MUTANT M8: recursion no longer seeds div — SURVIVES the shared corpus entirely', () => {
+mutant('MUTANT M8: recursion no longer seeds div — SURVIVES the shared corpus entirely', () => {
   // Targets: the `div` seed that has no syntax. A call that can come back to the
   // function it is written in may not terminate for exactly the reason a
   // `while (true)` may not, and nothing in the tree shows it.
@@ -795,7 +796,7 @@ test('WHICH OPERATORS THIS CORPUS HAS THAT RUN NO USER CODE, by name', () => {
   assert.deepEqual(w.binds('eff_op_off_kind[audit](N, K)'), []);
 });
 
-test('MUTANT M9: `void` is no longer inspected — the operator set kills it', () => {
+mutant('MUTANT M9: `void` is no longer inspected — the operator set kills it', () => {
   // Targets: that the operator table separates anything at all. A count of
   // `eff_coerced` rows would move and say nothing about WHICH operator leaked.
   const m = build([{ file: EFF_RULES,
@@ -805,7 +806,7 @@ test('MUTANT M9: `void` is no longer inspected — the operator set kills it', (
     'KILLED: five `void` operands become conversion sites');
 });
 
-test('MUTANT M10: an in-program object is treated as untraceable — the partition kills it', () => {
+mutant('MUTANT M10: an in-program object is treated as untraceable — the partition kills it', () => {
   // Targets: that a traced object discharges through `Object.prototype` rather
   // than falling into the residue. Both halves move, so the SUM is what sees it.
   const m = build([{ file: EFF_RULES,
@@ -966,7 +967,7 @@ export function fromC(n) { return n; }
   assert.ok(named.has('later'), `a dynamic import carries its module's row — got ${[...named].join(' ')}`);
 });
 
-test('MUTANT M11: the erasure guard is dropped — a type-only import evaluates', () => {
+mutant('MUTANT M11: the erasure guard is dropped — a type-only import evaluates', () => {
   // Targets: that `import type` evaluates NOTHING. There is no type-only import
   // in the shared corpus (`ast_attr(_, import_kind, "type")` is empty), so this
   // mutant is measured against a probe that has one.
@@ -992,7 +993,7 @@ export function fromB(n) { return n; }
     'KILLED: the erased import now runs the module');
 });
 
-test('MUTANT M12: the top-level test is dropped — every function becomes its module', () => {
+mutant('MUTANT M12: the top-level test is dropped — every function becomes its module', () => {
   // Targets: `not eff_in_fn(N)`, which is the whole definition of "a module's
   // own top level". Without it a module's row is every node in the file, so the
   // distinction between what a module DOES and what its functions MAY do is
@@ -1055,7 +1056,7 @@ ambient_effect(array, "join", rd_local).
 //   M13  drop the construction seed        survives EVERY relation, KILLED by KILN
 //   M14  drop the class-declaration alloc  survives `eff_latent`, KILLED by `eff_here`
 
-test('MUTANT M9: the two moments collapsed — the partition identity kills it', () => {
+mutant('MUTANT M9: the two moments collapsed — the partition identity kills it', () => {
   // Targets: that `static` is what decides WHEN an initialiser runs. Both arms
   // now read the same attribute value, so a non-static field lands in both
   // moments and a static one in neither.
@@ -1068,7 +1069,7 @@ test('MUTANT M9: the two moments collapsed — the partition identity kills it',
   assert.ok(m.n('eff_moment_unplaced[audit](P)') > 0, 'and one at neither');
 });
 
-test('MUTANT M10: the walk descends THROUGH a closure — survives the corpus, dies on the probe', () => {
+mutant('MUTANT M10: the walk descends THROUGH a closure — survives the corpus, dies on the probe', () => {
   // Targets: that a static field holding a function allocates at definition and
   // does NOT perform what its body performs. Without the guard the walk sweeps
   // every latent body into the definition moment, which is the exact confusion
@@ -1085,7 +1086,7 @@ test('MUTANT M10: the walk descends THROUGH a closure — survives the corpus, d
     'KILLED by the probe: `static tongs = () => spin()` diverges only when called');
 });
 
-test('MUTANT M11: the class-part handler dropped — survives ROW FOR ROW, dies on the probe', () => {
+mutant('MUTANT M11: the class-part handler dropped — survives ROW FOR ROW, dies on the probe', () => {
   // Targets: the arm that repairs `caught_here` inside a class part. It is the
   // clearest survivor of the set, because deleting it changes NOTHING here —
   // not one try in these five files sits in a static block or an initialiser.
@@ -1105,7 +1106,7 @@ test('MUTANT M11: the class-part handler dropped — survives ROW FOR ROW, dies 
     'KILLED by the probe: a handler in plain sight, ignored');
 });
 
-test('MUTANT M12: a subclass stops running its ancestors\' initialisers — the corpus kills it', () => {
+mutant('MUTANT M12: a subclass stops running its ancestors\' initialisers — the corpus kills it', () => {
   // Targets: that constructing a subclass runs the BASE's instance initialisers
   // too, INCLUDING the shadowed ones. `Doubloon` declares `tint = punched(0)`
   // and nothing that allocates, so its whole construction row is this arm.
@@ -1117,7 +1118,7 @@ test('MUTANT M12: a subclass stops running its ancestors\' initialisers — the 
     'KILLED: Doubloon leaves the relation entirely');
 });
 
-test('MUTANT M13: the construction seed dropped — survives EVERYTHING here, dies on the probe', () => {
+mutant('MUTANT M13: the construction seed dropped — survives EVERYTHING here, dies on the probe', () => {
   // Targets: the edge from an instance initialiser to the `new` that runs it. It
   // survives every relation in this pack over the shared corpus for a reason
   // worth stating rather than counting: the only construction-time label those
@@ -1138,7 +1139,7 @@ test('MUTANT M13: the construction seed dropped — survives EVERYTHING here, di
     'KILLED by the probe: `fires` stops carrying the throw its construction performs');
 });
 
-test('MUTANT M14: a class declaration allocates nothing — `eff_latent` cannot see it', () => {
+mutant('MUTANT M14: a class declaration allocates nothing — `eff_latent` cannot see it', () => {
   // Targets: the one-row claim that evaluating a class declaration creates a
   // fresh mutable identity, exactly as `class_expression` does. It survives
   // `eff_latent` and `effect_of` on this corpus because every class here is
@@ -1303,7 +1304,7 @@ test('THE SECOND HOP of the iterator protocol is dropped through every door', ()
     'the gate for exactly this question cannot look where the hole is');
 });
 
-test('MUTANT M15: the residue relation reads `resolves` like the gate it corrects', () => {
+mutant('MUTANT M15: the residue relation reads `resolves` like the gate it corrects', () => {
   // Targets: that `eff_edge_unclosed` ranges over `calls[code]` — the relation
   // carrying EVERY door — and not over the one the propagation already reads.
   // A version that read `resolves` would be a second copy of `eff_join_short`
@@ -1316,7 +1317,7 @@ test('MUTANT M15: the residue relation reads `resolves` like the gate it correct
     'KILLED: reading `resolves` makes the residue blind to exactly what it is for');
 });
 
-test('MUTANT M16: the doors go unnamed and the residue has nothing to report about them', () => {
+mutant('MUTANT M16: the doors go unnamed and the residue has nothing to report about them', () => {
   // Targets: `eff_hidden_call`'s two arms. It contributes NO label anywhere, so
   // nothing in `eff_latent`, `effect_of` or any audit moves when it is removed —
   // which is precisely why the relation had to be written to make the hole

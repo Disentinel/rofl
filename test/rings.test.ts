@@ -35,6 +35,7 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { Evaluation } from '../src/engine.ts';
 import { KERNEL_PERSP, KERNEL_BOOK, MAIN, V, IFACE } from '../src/reflect.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 // `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
@@ -90,7 +91,7 @@ test('the same rule WITH the declaration is silent, and the silence is the decla
   assert.ok(declared.holds(`sees(myaudit, ${KERNEL_PERSP})`), 'the sentence is in force');
 });
 
-test('MUTANT — boot.rofl\'s own two declarations, each struck separately', () => {
+mutant('MUTANT — boot.rofl\'s own two declarations, each struck separately', () => {
   // TARGET: "the split produced TWO sentences where there was one, and each of
   // them says something different." One line covering both books is a line
   // that says neither, which is what `imports(audit, main)` was doing.

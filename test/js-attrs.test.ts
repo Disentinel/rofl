@@ -19,6 +19,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -201,17 +202,17 @@ test('every attribute the scanner emits is read, excused or deferred by name', (
 // ---------------------------------------------------------------------------
 // 2. SIX MUTANTS, SIX ORACLES
 
-test('MUTANT 1 — an excuse is withdrawn', () => {
+mutant('MUTANT 1 — an excuse is withdrawn', () => {
   const m = build([{ file: ATTRS, find: 'attr_unread_ok(optional,   a_the_kind_carries_it).', replace: '' }]);
   assert.deepEqual(m.q('unconsumed_attr[audit](K)').flat(), ['optional']);
 });
 
-test('MUTANT 2 — a deferral is withdrawn', () => {
+mutant('MUTANT 2 — a deferral is withdrawn', () => {
   const m = build([{ file: ATTRS, find: 'attr_deferred(pattern,     w_unconsumed_attribute).', replace: '' }]);
   assert.deepEqual(m.q('unconsumed_attr[audit](K)').flat(), ['pattern']);
 });
 
-test('MUTANT 3 — an excuse names a key the scanner never emits', () => {
+mutant('MUTANT 3 — an excuse names a key the scanner never emits', () => {
   const m = build([{ file: ATTRS, find: 'attr_unread_ok(tail,       a_the_child_index_carries_it).',
     replace: 'attr_unread_ok(tale,       a_the_child_index_carries_it).' }]);
   // BOTH HALVES, because a misspelling does two things at once: the key it
@@ -221,14 +222,14 @@ test('MUTANT 3 — an excuse names a key the scanner never emits', () => {
   assert.deepEqual(m.q('unconsumed_attr[audit](K)').flat(), ['tail']);
 });
 
-test('MUTANT 4 — a key that IS read is excused anyway', () => {
+mutant('MUTANT 4 — a key that IS read is excused anyway', () => {
   const m = build([{ file: ATTRS, find: 'attr_unread_ok(optional,   a_the_kind_carries_it).',
     replace: 'attr_unread_ok(optional,   a_the_kind_carries_it).\nattr_unread_ok(computed, a_pretending).' }]);
   assert.deepEqual(m.q('attr_unread_ok_read[audit](K)').flat(), ['computed'],
     'an excuse for a key some rule already reads is a row about nothing');
 });
 
-test('MUTANT 5 — the free-value exclusion is dropped', () => {
+mutant('MUTANT 5 — the free-value exclusion is dropped', () => {
   const m = build([{ file: RULES,
     find: 'not attr_key_read_free(K), not attr_pair_read(K, V),',
     replace: 'not attr_pair_read(K, V),' }]);
@@ -240,7 +241,7 @@ test('MUTANT 5 — the free-value exclusion is dropped', () => {
   assert.ok(rows.some(([k]) => k === 'name'), 'and `name` is the bulk of them');
 });
 
-test('MUTANT 6 — a reified variable counts as a key', () => {
+mutant('MUTANT 6 — a reified variable counts as a key', () => {
   const m = build([{ file: RULES,
     find: 'attr_key_read(K)       :- attr_lit(L, K, _), not attr_lit_kvar(L, K).',
     replace: 'attr_key_read(K)       :- attr_lit(L, K, _).' }]);
@@ -338,7 +339,7 @@ test('the tables that supply a key are derived, and each one has a bridge', () =
       'operator=instanceof', 'operator=typeof', 'operator=void'].sort());
 });
 
-test('MUTANT 7 — the bridge to the era table is cut', () => {
+mutant('MUTANT 7 — the bridge to the era table is cut', () => {
   const m = build([{ file: RULES, find: 'attr_pair_read(K, V) :- attr_needs(_, _, K, V, _).',
     replace: '' }]);
   // THE FIVE VALUES test/fixtures/js-attrs/eras.mjs.txt EXISTS FOR. Without a
@@ -349,7 +350,7 @@ test('MUTANT 7 — the bridge to the era table is cut', () => {
     ['operator=&&=', 'operator=**', 'operator=??', 'operator=??=', 'operator=||='].sort());
 });
 
-test('MUTANT 8 — a table loses its declaration', () => {
+mutant('MUTANT 8 — a table loses its declaration', () => {
   const m = build([{ file: ATTRS, find: 'attr_table_bridged(outside_attr_needs).', replace: '' }]);
   assert.deepEqual(m.q('attr_table_unbridged[audit](Rel, I, J)').map((r) => r.join('/')),
     ['outside_attr_needs/3/4'],
@@ -384,7 +385,7 @@ test('the guards, their positions, and the kinds those positions hold with no su
     ['computed/key/class_private_method', 'computed/key/class_private_property']);
 });
 
-test('MUTANT 9 — the negation in key_name becomes a positive test', () => {
+mutant('MUTANT 9 — the negation in key_name becomes a positive test', () => {
   // THE SURVIVOR f_a_positive_attribute_test_is_blind_to_a_kind_that_has_no_such_attribute
   // RECORDED WITH NO ORACLE, killed here. Its own note says the swap moves no
   // row today because `key_name` has no arm for a private key, so nothing the
@@ -397,7 +398,7 @@ test('MUTANT 9 — the negation in key_name becomes a positive test', () => {
     ['computed/key/class_private_method', 'computed/key/class_private_property']);
 });
 
-test('MUTANT 10 — a population excuse is withdrawn', () => {
+mutant('MUTANT 10 — a population excuse is withdrawn', () => {
   const m = build([{ file: ATTRS,
     find: 'attr_slot_gap_ok(static, value, directive,        a_the_rules_population_is_a_mechanism_table).',
     replace: '' }]);
@@ -434,7 +435,7 @@ test('one kind in this corpus carries an attribute on some of its nodes only', (
     'the one that carries `computed` is the accessor form');
 });
 
-test('MUTANT 11 — the split excuse is withdrawn', () => {
+mutant('MUTANT 11 — the split excuse is withdrawn', () => {
   const m = build([{ file: ATTRS,
     find: 'attr_split_ok(computed, class_private_method, a_babel_emits_it_for_the_accessor_forms_only).',
     replace: '' }]);
@@ -442,7 +443,7 @@ test('MUTANT 11 — the split excuse is withdrawn', () => {
     ['computed/class_private_method']);
 });
 
-test('MUTANT 12 — the population narrowing is dropped', () => {
+mutant('MUTANT 12 — the population narrowing is dropped', () => {
   const m = build([{ file: RULES,
     find: 'attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F), not attr_guard_pinned(R, K, S),',
     replace: 'attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F),' }]);
@@ -457,7 +458,7 @@ test('MUTANT 12 — the population narrowing is dropped', () => {
   ]);
 });
 
-test('MUTANT 13 — a NEGATED co-literal counts as a table', () => {
+mutant('MUTANT 13 — a NEGATED co-literal counts as a table', () => {
   const m = build([{ file: RULES,
     find: `attr_table_read(Rel, I, J) :- pos_prem(R, L), attr_lit_kvvar(L), attr_lit(L, K, V),
                               pos_prem(R, L2), lit_rel(L2, Rel), Rel != ast_attr,`,

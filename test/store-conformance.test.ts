@@ -37,6 +37,7 @@ import { bootstrapKernel } from '../src/reflect.ts';
 import { Store, type FactStore, type FactRec, type Witness } from '../src/store.ts';
 import { mka, mkv, mki } from '../src/unify.ts';
 import { SqliteStore } from '../adapters/sqlite-store.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
@@ -165,7 +166,7 @@ class NoWitnesses extends SqliteStore {
   override allWitnesses(): Map<string, Witness> { return new Map(); }
 }
 
-test('MUTANT: unsorted keys turn the end-to-end oracle red', () => {
+mutant('MUTANT: unsorted keys turn the end-to-end oracle red', () => {
   const mem = build(GAME, null);
   const bad = new UnsortedKeys();
   try {
@@ -176,7 +177,7 @@ test('MUTANT: unsorted keys turn the end-to-end oracle red', () => {
   } finally { bad.close(); }
 });
 
-test('MUTANT: dropped witnesses turn the end-to-end oracle red', () => {
+mutant('MUTANT: dropped witnesses turn the end-to-end oracle red', () => {
   const mem = build(GAME, null);
   const bad = new NoWitnesses();
   try {
@@ -185,7 +186,7 @@ test('MUTANT: dropped witnesses turn the end-to-end oracle red', () => {
   } finally { bad.close(); }
 });
 
-test('MUTANT: reversed reads are INVISIBLE end-to-end and caught by the differential', () => {
+mutant('MUTANT: reversed reads are INVISIBLE end-to-end and caught by the differential', () => {
   const mem = build(GAME, null);
   const bad = new ReversedReads();
   try {
@@ -199,7 +200,7 @@ test('MUTANT: reversed reads are INVISIBLE end-to-end and caught by the differen
   } finally { bad.close(); }
 });
 
-test('MUTANT: sorted arrival order is INVISIBLE end-to-end and caught by the differential', () => {
+mutant('MUTANT: sorted arrival order is INVISIBLE end-to-end and caught by the differential', () => {
   const mem = build(GAME, null);
   const bad = new SortedArrival();
   try {

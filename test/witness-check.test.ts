@@ -26,6 +26,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { world, worldMap, witnesses, judge, worldsFor } from '../scripts/witness_check.ts';
+import { mutant } from './helpers/mutant.ts';
 
 test('every witness the ledger records still holds', () => {
   const map = worldMap();
@@ -41,7 +42,7 @@ test('every witness the ledger records still holds', () => {
   console.log(`  ${vs.length} witnesses, all standing`);
 });
 
-test('MUTANT: a witness whose number moved is STALE, and one that names nothing is BROKEN', () => {
+mutant('MUTANT: a witness whose number moved is STALE, and one that names nothing is BROKEN', () => {
   const r = world();
   const real = witnesses(r);
   // THE PLANT IS DERIVED FROM THE LEDGER rather than written here, for the

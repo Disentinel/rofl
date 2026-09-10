@@ -26,6 +26,7 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { encodeRule } from '../src/reflect.ts';
 import { parseProgram } from '../src/parser.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 // `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
@@ -67,7 +68,7 @@ datum[secret](x).
 digest[report](X) :- datum[secret](X).
 `;
 
-test('MUTANT 1 — a single-hop crossing nobody declared is a LEAK', () => {
+mutant('MUTANT 1 — a single-hop crossing nobody declared is a LEAK', () => {
   // TARGET: "an explicit head perspective does not license the read it makes."
   // This is the whole of the change; before it, both numbers below were 0.
   const r = load(BOOT, ONE_HOP);
@@ -87,7 +88,7 @@ test('MUTANT 1 — a single-hop crossing nobody declared is a LEAK', () => {
   assert.match(why, /flow\[main\]\(secret, ?report\)/, `the hop must be named:\n${why}`);
 });
 
-test('MUTANT 2 — the same hop WITH `imports` declared is silent', () => {
+mutant('MUTANT 2 — the same hop WITH `imports` declared is silent', () => {
   // TARGET: "the licence is real and not a permanent red." A gate that cannot
   // be satisfied is abolished, and then its absence is invisible.
   const r = load(BOOT, 'imports(report, secret).\n' + ONE_HOP);
@@ -101,7 +102,7 @@ test('MUTANT 2 — the same hop WITH `imports` declared is silent', () => {
   assert.notDeepEqual(leaks(load(BOOT, ONE_HOP)), leaks(r));
 });
 
-test('MUTANT 3 — the two-hop walk did not stop being caught', () => {
+mutant('MUTANT 3 — the two-hop walk did not stop being caught', () => {
   // TARGET: "the closure still reports the far end." The change removes a
   // premise from `crossing`, which can only widen it; this asserts the widening
   // did not come at the cost of the case that already worked.
@@ -131,7 +132,7 @@ test('MUTANT 3 — the two-hop walk did not stop being caught', () => {
 // ---------------------------------------------------------------------------
 // THE DECLARATIONS THIS FILE'S OWN LEDGER NEEDED
 
-test('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and by how much', () => {
+mutant('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and by how much', () => {
   // TARGET: "the declaration added to boot.rofl is load-bearing and is not
   // WIDER than it needs to be." If the count came out larger than the crossing
   // it was written for, the sentence covered more than it claimed.
@@ -180,7 +181,7 @@ test('MUTANT 4 — striking `imports(audit, main)` reddens boot.rofl itself, and
   assert.deepEqual(leaks(w), ['euclid -> audit', 'euclid -> main']);
 });
 
-test('MUTANT 5 — a rule with a VARIABLE ledger reading a NAMED one', () => {
+mutant('MUTANT 5 — a rule with a VARIABLE ledger reading a NAMED one', () => {
   // TARGET: "the polymorphic read into [audit] is licensable AT ALL, and by a
   // sentence that licenses NOTHING ELSE." A rule that quantifies over the
   // ledger reads `$var("E")`, which has no `authority` fact and so can never
@@ -215,7 +216,7 @@ test('MUTANT 5 — a rule with a VARIABLE ledger reading a NAMED one', () => {
   assert.match(r.why('collected[audit](audit)').text, /collects\[main\]\(audit\) \[axiom\]/);
 });
 
-test('MUTANT 5b — boot.rofl does NOT carry `collects(audit)`, and that is deliberate', () => {
+mutant('MUTANT 5b — boot.rofl does NOT carry `collects(audit)`, and that is deliberate', () => {
   // WHERE IT COULD NOT LOOK: every probe here loads boot.rofl, so a licence
   // sitting in boot.rofl would be invisible — it would simply make things
   // green. The check is therefore of the FILE, not of a query over it.
@@ -231,7 +232,7 @@ test('MUTANT 5b — boot.rofl does NOT carry `collects(audit)`, and that is deli
   assert.deepEqual(leaks(load(bootWithout('imports(audit, main).'))), ['main -> audit']);
 });
 
-test('MUTANT 6 — `collects` / `gathered` still work for a ledger other than [audit]', () => {
+mutant('MUTANT 6 — `collects` / `gathered` still work for a ledger other than [audit]', () => {
   // TARGET: "the collection mechanism is orthogonal to this change." It was
   // built for a different problem (a source with no name) and must keep its
   // own meaning, including its narrowness.
@@ -263,7 +264,7 @@ test('MUTANT 6 — `collects` / `gathered` still work for a ledger other than [a
 // rather than of the code. Every mutant below was written from it, and the
 // ones that SURVIVED are reported as results, not fixed into silence.
 
-test('MUTANT 7 — the bracket no longer decides anything, in EITHER direction', () => {
+mutant('MUTANT 7 — the bracket no longer decides anything, in EITHER direction', () => {
   // WHERE IT COULD NOT LOOK: every probe above writes the head bracket. The
   // old emission fired on `perspExplicit`, so an UNBRACKETED head was the one
   // shape the old audit could see — and a check written from the bracketed
@@ -289,7 +290,7 @@ test('MUTANT 7 — the bracket no longer decides anything, in EITHER direction',
                    brac.query('flow(A, B)').rows.map((x) => x.text).sort());
 });
 
-test('MUTANT 8 — nothing emits bridge_decl, and no program may write one', () => {
+mutant('MUTANT 8 — nothing emits bridge_decl, and no program may write one', () => {
   // WHERE IT COULD NOT LOOK: `leak` is the only reader of `bridge_decl`, so
   // once the premise leaves `crossing`, every leak-shaped probe is blind to
   // whether the row is still being MANUFACTURED. This looks at the encoder
@@ -314,7 +315,7 @@ test('MUTANT 8 — nothing emits bridge_decl, and no program may write one', () 
   assert.match(res.diagnostics.join('\n'), /'bridge_decl' is a kernel relation \(write-protected\)/);
 });
 
-test('MUTANT 9 — the audit sees a crossing the CONTENT makes, not one a rule declares', () => {
+mutant('MUTANT 9 — the audit sees a crossing the CONTENT makes, not one a rule declares', () => {
   // WHERE IT COULD NOT LOOK: `flow` is built from `reads_from`/`writes_to`,
   // which are per-RULE signatures. A ledger reached only through an argument
   // column — the name carried as data and then projected away — is invisible
@@ -336,7 +337,7 @@ test('MUTANT 9 — the audit sees a crossing the CONTENT makes, not one a rule d
   assert.ok(leaks(r).includes('$var("P") -> report'), JSON.stringify(leaks(r)));
 });
 
-test('MUTANT 10 — a FACT asserted straight into a ledger crosses nothing', () => {
+mutant('MUTANT 10 — a FACT asserted straight into a ledger crosses nothing', () => {
   // WHERE IT COULD NOT LOOK: the audit reads the RULE graph. A host that
   // simply asserts secret content into [report] under [report]'s own authority
   // moves it with no rule at all, so `flow` is empty and the audit is silent —
@@ -365,7 +366,7 @@ test('MUTANT 10 — a FACT asserted straight into a ledger crosses nothing', () 
     'KNOWN HOLE: a host that moves content by asserting it is seen by neither audit');
 });
 
-test('MUTANT 11 — a crossing staged at the TICK BOUNDARY is still a crossing', () => {
+mutant('MUTANT 11 — a crossing staged at the TICK BOUNDARY is still a crossing', () => {
   // WHERE IT COULD NOT LOOK: every probe above writes a same-tick head.
   // `peelRounds` treats a '@next' conclusion specially — it contributes no
   // dependency edge and settles no relation — so it would have been easy for
@@ -382,7 +383,7 @@ test('MUTANT 11 — a crossing staged at the TICK BOUNDARY is still a crossing',
     'staging a conclusion for the next tick does not launder the ledger it read');
 });
 
-test('MUTANT 12 — the audited program can still write its OWN `imports`', () => {
+mutant('MUTANT 12 — the audited program can still write its OWN `imports`', () => {
   // WHERE IT COULD NOT LOOK: every probe above hands the declaration to the
   // program from outside, as the owner of a ledger would. Nothing makes that
   // so. `imports` is host data in [main], and the program under audit can put
@@ -448,7 +449,7 @@ function ticked(boot: string, program: string, n = 1): Rofl {
   return r;
 }
 
-test('MUTANT 13 — bare boot.rofl leaks its OWN three crossings without the carry', () => {
+mutant('MUTANT 13 — bare boot.rofl leaks its OWN three crossings without the carry', () => {
   // TARGET: "a licence expires at the tick boundary." The incident itself, and
   // the subject is this file rather than any program: boot.rofl declares three
   // crossings and audits them, so with the carry struck it reddens on itself.
@@ -469,7 +470,7 @@ test('MUTANT 13 — bare boot.rofl leaks its OWN three crossings without the car
   assert.deepEqual(crossings(withCarry), []);
 });
 
-test('MUTANT 14 — the two carries are independent, and each covers its own half', () => {
+mutant('MUTANT 14 — the two carries are independent, and each covers its own half', () => {
   // TARGET: "one clause is doing both jobs." Two declarations, two clauses;
   // striking either must leave the OTHER half silent, or the set is really one
   // mutant wearing two names.
@@ -501,7 +502,7 @@ test('MUTANT 14 — the two carries are independent, and each covers its own hal
     'and the imports half is untouched');
 });
 
-test('MUTANT 15 — the carry carries a LICENCE and never a CROSSING', () => {
+mutant('MUTANT 15 — the carry carries a LICENCE and never a CROSSING', () => {
   // WHERE IT COULD NOT LOOK: every check above reads a ZERO after the tick,
   // and an audit that stopped looking would read the same zero. So: an
   // UNDECLARED crossing must still be reported after the boundary, and a
@@ -529,7 +530,7 @@ test('MUTANT 15 — the carry carries a LICENCE and never a CROSSING', () => {
   assert.deepEqual(leaks(revoked), ['secret -> report']);
 });
 
-test('MUTANT 16 — the declaration survives every tick, not only the first', () => {
+mutant('MUTANT 16 — the declaration survives every tick, not only the first', () => {
   // WHERE IT COULD NOT LOOK: a carry that installed the fact once and then
   // lost it would pass a one-tick probe exactly. Four ticks, checked at each.
   const r = load(BOOT, `
@@ -548,7 +549,7 @@ test('MUTANT 16 — the declaration survives every tick, not only the first', ()
   }
 });
 
-test('MUTANT 17 — a declaration written AFTER a tick is carried like any other', () => {
+mutant('MUTANT 17 — a declaration written AFTER a tick is carried like any other', () => {
   // WHERE IT COULD NOT LOOK: every probe above declares at load, in tick 0.
   // A carry keyed on the load rather than on the fact would pass all of them.
   const r = load(BOOT, `
@@ -568,7 +569,7 @@ test('MUTANT 17 — a declaration written AFTER a tick is carried like any other
   assert.deepEqual(leaks(r), [], 'and still declared in tick 2');
 });
 
-test('MUTANT 18 — every program in the tree audits the same at load and after a tick', () => {
+mutant('MUTANT 18 — every program in the tree audits the same at load and after a tick', () => {
   // THE NEGATIVE OVER A POPULATION, which no probe above can give: 55 programs
   // — every `examples/*` world, every `rules/*.rofl` and `facts/*.rofl` layer,
   // `safety.rofl` and `policy.rofl` — loaded on boot.rofl, evaluated, advanced

@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
@@ -58,7 +59,7 @@ test('one declaration closes the gap in each demo, and is exercised', () => {
   assert.ok(!world(BOOT, GOOF).holds('exports($kernel, anyone)'));
 });
 
-test('MUTANTS: what the instrument covers, and what it must refuse', () => {
+mutant('MUTANTS: what the instrument covers, and what it must refuse', () => {
   // M1 -- the declaration is load-bearing, not decoration.
   const m1 = bootWith('exported_to(A, B)     :- exports(A, anyone), flow(A, B)',
                       'exported_to(A, B)    :- publishes(zzz_nothing), flow(A, B)');

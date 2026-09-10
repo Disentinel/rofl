@@ -25,6 +25,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -602,7 +603,7 @@ test('CLOSED: a top-level await is ES2022, and the same word inside async is ES2
     'positive control: both awaits are seen, so the 1 above is a distinction');
 });
 
-test('MUTANT — the position stops mattering, and es2020 accepts es2022 again', () => {
+mutant('MUTANT — the position stops mattering, and es2020 accepts es2022 again', () => {
   const base = build();
   const mut = build([{ file: RULES,
     find: '                     not within_attr[audit](N, Key, V).',
@@ -613,7 +614,7 @@ test('MUTANT — the position stops mattering, and es2020 accepts es2022 again',
   console.log(`  KILLED: top_level_await sites 1 -> 2`);
 });
 
-test('MUTANT — a misspelled feature in the SECOND gate table, which used to be silent', () => {
+mutant('MUTANT — a misspelled feature in the SECOND gate table, which used to be silent', () => {
   // MEASURED ON THE HONEST TREE BEFORE THE FIX. `feature_undeclared[audit]` was
   // written against `kind_needs` alone, and its own comment says "a typo here
   // is invisible to every other check" — which was true of the table it reads
@@ -669,7 +670,7 @@ test('CLOSED: a file the scanner refuses is INVALID in every environment', () =>
   assert.equal(m.n('scanned_file[audit](F)'), clean.n('scanned_file[audit](F)') + 1);
 });
 
-test('MUTANT — the scanner throws again, and the file vanishes from the model', () => {
+mutant('MUTANT — the scanner throws again, and the file vanishes from the model', () => {
   // THE GATE SHIPS WITH ITS DEFECT PLANTED. Without the refusal fact the file
   // contributes nothing, so it is neither valid nor invalid: the exact state
   // this item existed to end. The mutation is on the SCANNER rather than on a

@@ -37,6 +37,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -817,7 +818,7 @@ test('WHAT A FORM DOES SAY: `new Math()` THROWS, and the constructible ones '
 // AGREE, M5 survives because of the corpus, and M4 survives because the
 // difference it makes is in ANOTHER world's corpus and was measured there.
 
-test('MUTANT M1: the identity arm loses its guard — SURVIVES, and the arms agree', () => {
+mutant('MUTANT M1: the identity arm loses its guard — SURVIVES, and the arms agree', () => {
   // Targets: that `eff_of_host(A, A)` is restricted to atoms that are not
   // labels. Without the guard, `alloc`, `exn`, `div` and `ndet` are derived
   // twice — once by the closure and once by the identity — and both arms give
@@ -831,7 +832,7 @@ test('MUTANT M1: the identity arm loses its guard — SURVIVES, and the arms agr
     'and the ambiguity audit is structurally unable to see an agreement');
 });
 
-test('MUTANT M2: the ambient heap is LOCAL — the denotation set kills it', () => {
+mutant('MUTANT M2: the ambient heap is LOCAL — the denotation set kills it', () => {
   // Targets: that an ambient surface is not this program's heap. Nothing in the
   // lattice audits cares, `eff_label_unseen` stays empty because member reads
   // seed read<global> anyway, and no COUNT moves — the denotation set is what
@@ -843,7 +844,7 @@ test('MUTANT M2: the ambient heap is LOCAL — the denotation set kills it', () 
     'and the call site denotes the wrong heap, by name');
 });
 
-test('MUTANT M3: the member override dropped — path.resolve goes total', () => {
+mutant('MUTANT M3: the member override dropped — path.resolve goes total', () => {
   // Targets: that `member_effect[code]`'s override survives the translation.
   // `node:path` is total and `path.resolve` reads `process.cwd()`; a model that
   // dated the effect by the MODULE would be wrong about the one member of that
@@ -856,7 +857,7 @@ test('MUTANT M3: the member override dropped — path.resolve goes total', () =>
     'KILLED: the override is gone and resolve reads as pure string algebra');
 });
 
-test('MUTANT M4: the global door reads host_global_ref — SURVIVES HERE, and it is measured elsewhere', () => {
+mutant('MUTANT M4: the global door reads host_global_ref — SURVIVES HERE, and it is measured elsewhere', () => {
   // Targets: the reference-position restriction. `host_global_ref[code]` joins
   // `ident_in[code]` with no position test, so a PROPERTY name of a matching
   // word qualifies. Over THIS corpus the two relations agree; over the five
@@ -876,7 +877,7 @@ test('MUTANT M4: the global door reads host_global_ref — SURVIVES HERE, and it
   assert.deepEqual(m.binds('concrete_denotes[flow](S, Op, E)'), base().binds('concrete_denotes[flow](S, Op, E)'));
 });
 
-test('MUTANT M5: a construction that RESOLVES is treated as ambient — SURVIVES by the corpus', () => {
+mutant('MUTANT M5: a construction that RESOLVES is treated as ambient — SURVIVES by the corpus', () => {
   // Targets: `not resolved_site[code](X)` on the construction arm. The
   // constructor edge in rules/js-callgraph.rofl resolves `new Box()` to a class
   // in this program, and such a `new` is not ambient. These four files construct
@@ -893,7 +894,7 @@ test('MUTANT M5: a construction that RESOLVES is treated as ambient — SURVIVES
   assert.ok(base().n('resolved_site[code](X)') >= 1, 'the control is live');
 });
 
-test('MUTANT M6: the ES intrinsic door removed — the IN-TRAY kills it', () => {
+mutant('MUTANT M6: the ES intrinsic door removed — the IN-TRAY kills it', () => {
   // Targets: that this model NAMES what it cannot answer. Without the ES arm,
   // `Math.max` and `JSON.parse` are not ambient at all — they simply vanish from
   // every relation, which is the silence the frontier exists to replace. No
@@ -937,7 +938,7 @@ test('MUTANT M6: the ES intrinsic door removed — the IN-TRAY kills it', () => 
   assert.ok(gone.length > 0, 'the control is live: they are owed before the door is removed');
 });
 
-test('MUTANT M7: `read<global>` for a free global dropped — the seeded set kills it', () => {
+mutant('MUTANT M7: `read<global>` for a free global dropped — the seeded set kills it', () => {
   // Targets: the `identifier` cell's third case. A COUNT of `eff_here(_, read,
   // global)` would have moved and said nothing, because member reads on an
   // untraced receiver seed the same label; the set of NAMES that seed it is
@@ -983,7 +984,7 @@ test('the carrier closure is EXERCISED, on a probe rather than in a comment', ()
     'and the narrowed oracle is still empty with the indirect case in');
 });
 
-test('MUTANT M8: the exn carrier stops following calls — SURVIVES the corpus, dies on the probe', () => {
+mutant('MUTANT M8: the exn carrier stops following calls — SURVIVES the corpus, dies on the probe', () => {
   // Targets: that the repaired oracle follows the CALL GRAPH rather than only
   // the site. A function whose own body has no ambient call but whose callee
   // has one carries `exn` through `eff_latent`, and without the closure arm it
@@ -1025,7 +1026,7 @@ test('the preorder the map induces is bounded by the CALL SITES, not by the surf
     'and not the other way round');
 });
 
-test('MUTANT M9: a plain call writes the surface in the operation column', () => {
+mutant('MUTANT M9: a plain call writes the surface in the operation column', () => {
   // Targets: the one relation that exists to tell the four site shapes apart.
   // `host_site[code]` in rules/js-host.rofl says in so many words that writing
   // the name in BOTH columns would make a member call and a plain call
@@ -1044,7 +1045,7 @@ test('MUTANT M9: a plain call writes the surface in the operation column', () =>
 // where are THESE rules structurally unable to look. M11 is the one that
 // answers it — the guard it removes has no site in this world at all.
 
-test('MUTANT M10: `lib_mutator` loses its readonly-view guard — the in-tray kills it', () => {
+mutant('MUTANT M10: `lib_mutator` loses its readonly-view guard — the in-tray kills it', () => {
   // Targets: that a prototype with NO `Readonly` twin yields no mutators.
   // Without the guard the negation inverts the source's meaning wholesale —
   // every member of every prototype the lib files declare no twin for becomes a
@@ -1062,7 +1063,7 @@ test('MUTANT M10: `lib_mutator` loses its readonly-view guard — the in-tray ki
     'and a surface leaves the in-tray for a reason nothing in the source supports');
 });
 
-test('MUTANT M11: every prototype is heap-decided — SURVIVES the corpus, dies on a probe', () => {
+mutant('MUTANT M11: every prototype is heap-decided — SURVIVES the corpus, dies on a probe', () => {
   // Targets: `not amb_proto_untraced(P)` — the structural argument that only a
   // prototype whose every `kind_prototype` kind is a `node_value_kind` can have
   // its heap decided without the site.
@@ -1085,7 +1086,7 @@ test('MUTANT M11: every prototype is heap-decided — SURVIVES the corpus, dies 
     'KILLED on a string LITERAL receiver, which is untraced and therefore global');
 });
 
-test('MUTANT M12: `construct` counts as an off-surface member — the in-tray kills it', () => {
+mutant('MUTANT M12: `construct` counts as an off-surface member — the in-tray kills it', () => {
   // Targets: `not amb_operation_word(Op)` in `ambient_off_surface`. `itself` and
   // `construct` name a call and a `new`; no declaration file carries them as
   // KEYS, so without the guard every construction of an ES global is "not on the

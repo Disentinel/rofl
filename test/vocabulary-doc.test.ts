@@ -34,6 +34,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { RESERVED, STR_ARITY } from '../src/reflect.ts';
+import { mutant } from './helpers/mutant.ts';
 
 // THE SOURCE MOVED, 2026-09-10, AND THE NEW ONE IS STRICTLY BETTER. This gate
 // used to compare README against three arrays in `scripts/kernel_grep.ts` —
@@ -135,7 +136,7 @@ test('README.md documents exactly the vocabulary the kernel actually has', () =>
 // negative control that must stay GREEN, and a survivor that says where this
 // gate is structurally unable to look.
 
-test('mutant 1: a name allowed by the grep check with no README row goes red', () => {
+mutant('mutant 1: a name allowed by the grep check with no README row goes red', () => {
   // targets: the failure this gate exists for, and the exact one measured on
   // 2026-09-10 — the whitelist grew thirteen relations and the document did
   // not. Simulated on the WHITELIST side, since that array is the import.
@@ -145,7 +146,7 @@ test('mutant 1: a name allowed by the grep check with no README row goes red', (
   assert.ok(!doc.iface.includes('volume_of'), 'and it is missing on the document side, by name');
 });
 
-test('mutant 2: a README row deleted goes red, naming it', () => {
+mutant('mutant 2: a README row deleted goes red, naming it', () => {
   // targets: the other direction — a table row lost to an edit.
   const cut = README.replace(/\n\| `demand_rel\(Rel\)`[^\n]*\n/, '\n');
   assert.notEqual(cut, README, 'the row to delete was found');
@@ -154,7 +155,7 @@ test('mutant 2: a README row deleted goes red, naming it', () => {
   assert.notDeepEqual(doc.iface, sorted(IFACE_RELS));
 });
 
-test('mutant 3: a README row for a name the grep check does not allow goes red', () => {
+mutant('mutant 3: a README row for a name the grep check does not allow goes red', () => {
   // targets: a relation documented as kernel vocabulary that the kernel may
   // not actually name — the direction a "document everything" gate misses.
   const grown = README.replace(
@@ -166,7 +167,7 @@ test('mutant 3: a README row for a name the grep check does not allow goes red',
   assert.notDeepEqual(doc.iface, sorted(IFACE_RELS));
 });
 
-test('mutant 4: a rename goes red on BOTH sides, which a size check would sleep through', () => {
+mutant('mutant 4: a rename goes red on BOTH sides, which a size check would sleep through', () => {
   // targets: the mutant a `length ===` comparison cannot see. Renaming keeps
   // both counts identical and changes the sets.
   const renamed = README.replace('| `late_rule(R)` |', '| `tardy_rule(R)` |');
@@ -177,7 +178,7 @@ test('mutant 4: a rename goes red on BOTH sides, which a size check would sleep 
   assert.notDeepEqual(doc.iface, sorted(IFACE_RELS));
 });
 
-test('mutant 5 (NEGATIVE CONTROL): a relation named only in a DESCRIPTION stays green', () => {
+mutant('mutant 5 (NEGATIVE CONTROL): a relation named only in a DESCRIPTION stays green', () => {
   // targets: a slack criterion. If the reader scanned the whole section for
   // backticked names rather than the first column, every relation mentioned in
   // passing — and the descriptions mention many — would count as documented,
@@ -190,7 +191,7 @@ test('mutant 5 (NEGATIVE CONTROL): a relation named only in a DESCRIPTION stays 
   assert.deepEqual(doc.iface, sorted(IFACE_RELS), 'a mention in prose is not a row');
 });
 
-test('mutant 6 (THE SURVIVOR): a row whose meaning is replaced with a lie stays GREEN', () => {
+mutant('mutant 6 (THE SURVIVOR): a row whose meaning is replaced with a lie stays GREEN', () => {
   // targets: nothing — it says where this gate cannot look, and that is why it
   // is written down. The sets are names; the meanings have no second source in
   // the tree to check against, so a wrong description survives every assertion

@@ -35,6 +35,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mutant } from './helpers/mutant.ts';
 import {
   BLOCKS, DECLS, ABSORBED, split, report, resolve, definitions, contamination,
   world, rows, facts, demandAsRules, maxStratumAsRules, type Decl,
@@ -107,7 +108,7 @@ test('the split is keyed by names, not by line numbers', () => {
 const mutate = (fn: (lines: string[]) => string[], decls: Decl[] = DECLS): string[] =>
   resolve(fn([...SRC]), decls).drift;
 
-test('MUTANTS: what the drift gate catches, and what it does not', () => {
+mutant('MUTANTS: what the drift gate catches, and what it does not', () => {
   // POSITIVE CONTROL FIRST: the unmutated file is clean, so a mutant going red
   // is the mutation and not a permanently-broken gate.
   assert.deepEqual(resolve([...SRC], DECLS).drift, []);

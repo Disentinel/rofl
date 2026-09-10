@@ -30,6 +30,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { bootStructure, docListed } from '../scanners/permission_inventory.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string): string => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -86,7 +87,7 @@ test('the document lists exactly the permission family boot.rofl defines', () =>
 // negative control that must stay GREEN, and a survivor that says where this
 // gate is structurally unable to look.
 
-test('mutant 1: a new permission relation in boot.rofl with no doc row goes red', () => {
+mutant('mutant 1: a new permission relation in boot.rofl with no doc row goes red', () => {
   // targets: the failure this gate exists for. A fifth declaration, in the
   // shape of the four that exist, plus an audit reading it.
   const mutated = BOOT + '\nedb(revokes).\nrevoked[audit](A, B) :- revokes(A), crossing(A, B).\n';
@@ -96,14 +97,14 @@ test('mutant 1: a new permission relation in boot.rofl with no doc row goes red'
   assert.deepEqual(col(r, 'doc_extra(Rel)'), []);
 });
 
-test('mutant 2: deleting a row from the document goes red, and names it', () => {
+mutant('mutant 2: deleting a row from the document goes red, and names it', () => {
   // targets: the document drifting behind by deletion.
   const mutated = DOC.split('\n').filter((l) => !/^\|\s*`collects`/.test(l)).join('\n');
   const r = derive(BOOT, mutated);
   assert.deepEqual(col(r, 'doc_missing(Rel)'), ['collects']);
 });
 
-test('mutant 3: a document row for a relation boot.rofl does not have goes red', () => {
+mutant('mutant 3: a document row for a relation boot.rofl does not have goes red', () => {
   // targets: a rename that leaves the old row standing — the way a document
   // rots without anyone deleting anything.
   const mutated = DOC + '\n| `publishes`/1 | the source | the old name of exports |\n';
@@ -111,7 +112,7 @@ test('mutant 3: a document row for a relation boot.rofl does not have goes red',
   assert.deepEqual(col(r, 'doc_extra(Rel)'), ['publishes']);
 });
 
-test('mutant 4: renaming a family relation in boot.rofl fires BOTH directions', () => {
+mutant('mutant 4: renaming a family relation in boot.rofl fires BOTH directions', () => {
   // targets: the case where the set changes without changing size. A gate
   // that only counted would sleep through this.
   const mutated = BOOT.replace(/\bgathered\b/g, 'discharged');
@@ -120,7 +121,7 @@ test('mutant 4: renaming a family relation in boot.rofl fires BOTH directions', 
   assert.deepEqual(col(r, 'doc_extra(Rel)'), ['gathered']);
 });
 
-test('mutant 5, NEGATIVE CONTROL: a structural audit in boot.rofl stays green', () => {
+mutant('mutant 5, NEGATIVE CONTROL: a structural audit in boot.rofl stays green', () => {
   // targets: the criterion itself. The family is NOT "every relation in
   // boot.rofl" — it is what hangs off `perspective`. A new audit over the
   // SHAPE of a rule, in the register of `breach` and `unmoded`, must not be
@@ -133,7 +134,7 @@ test('mutant 5, NEGATIVE CONTROL: a structural audit in boot.rofl stays green', 
   assert.deepEqual(col(r, 'doc_extra(Rel)'), []);
 });
 
-test('mutant 6, THE SURVIVOR: rewriting what a row SAYS stays green', () => {
+mutant('mutant 6, THE SURVIVOR: rewriting what a row SAYS stays green', () => {
   // targets: nothing — it is the measurement of where this gate cannot look,
   // recorded because a gate whose blind spot is undocumented gets mistaken
   // for coverage. Every claim in the document's prose is outside it.

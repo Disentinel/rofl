@@ -5,14 +5,19 @@
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/Disentinel/rofl",
-  "repository": { "type": "git", "url": "git+https://github.com/Disentinel/rofl.git" },
-  "engines": { "node": ">=22.6" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Disentinel/rofl.git"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "test": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec test/*.test.ts",
-    "loop": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec --test-skip-pattern=\"^(MUTANT|mutant|[a-z][0-9]+[a-z]?'?[ :]|M[0-9]+)\" $(node --experimental-strip-types scanners/side_files.ts engine)",
+    "loop": "ROFL_TESTS=loop NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts engine)",
     "test:engine": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts engine)",
     "test:library": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts library)",
-    "test:mutants": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec --test-name-pattern=\"^(MUTANT|mutant|[a-z][0-9]+[a-z]?'?[ :]|M[0-9]+)\" test/*.test.ts",
+    "test:mutants": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/mutant_files.ts)",
     "test:bun": "bun test --timeout 60000",
     "textcheck": "node --experimental-strip-types scripts/text_check.ts",
     "repl": "node --experimental-strip-types src/repl.ts",

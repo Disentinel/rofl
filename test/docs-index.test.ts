@@ -25,6 +25,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const README = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
@@ -75,14 +76,14 @@ test('README\'s Documents index names every document in docs/', () => {
 
 // ------------------------------------------------------------ the mutants
 
-test('mutant 1: a new document with no index line goes red, naming it', () => {
+mutant('mutant 1: a new document with no index line goes red, naming it', () => {
   // targets: the failure this gate exists for. Simulated on the DISK side by
   // asking the comparison of a name that is certainly not in the index.
   const listed = named(indexSection(README));
   assert.ok(!listed.includes('a-document-nobody-indexed.md'));
 });
 
-test('mutant 2: an index line for a document that is gone goes red', () => {
+mutant('mutant 2: an index line for a document that is gone goes red', () => {
   // targets: the other direction — a rename that updated the file and not the
   // index. A `.md` that does not exist must not be silently tolerated.
   const grown = README.replace('`the-target.md`', '`the-target.md` and `vanished.md`');
@@ -92,7 +93,7 @@ test('mutant 2: an index line for a document that is gone goes red', () => {
   assert.ok(!onDisk().includes('vanished.md'), 'and the disk does not have it');
 });
 
-test('mutant 3 (NEGATIVE CONTROL): docs/dogfood/ is a directory and stays out', () => {
+mutant('mutant 3 (NEGATIVE CONTROL): docs/dogfood/ is a directory and stays out', () => {
   // targets: a criterion that has gone slack in the other direction. The
   // dogfood pages are dated session records, not standing decisions; if this
   // gate ever demanded a line per page, adding one would go red for no reason
@@ -105,7 +106,7 @@ test('mutant 3 (NEGATIVE CONTROL): docs/dogfood/ is a directory and stays out', 
   assert.ok(indexSection(README).includes('docs/dogfood/'), 'and the DIRECTORY is named');
 });
 
-test('mutant 4 (THE SURVIVOR): a description that lies about a document stays GREEN', () => {
+mutant('mutant 4 (THE SURVIVOR): a description that lies about a document stays GREEN', () => {
   // targets: nothing — it states where this gate cannot look. The comparison
   // is over FILENAMES, so the sentence beside a name, and the group it sits
   // in, are both invisible. A reader is the only check on those.

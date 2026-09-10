@@ -19,6 +19,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan, render } from '../scanners/depends.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const RULES = fs.readFileSync(path.join(ROOT, 'rules/depends.rofl'), 'utf8');
@@ -110,7 +111,7 @@ test('prose is one hop and code is a closure, and they are separate answers', ()
 //
 // Planted into the FACT TEXT, so no file is edited and the plant is exact.
 
-test('mutant 1: a new code edge into a target enlarges its blast radius', () => {
+mutant('mutant 1: a new code edge into a target enlarges its blast radius', () => {
   const facts = live();
   const before = col(world(facts, 'facts/eval-cost.rofl'), 'blast[dep](D, T)', 'D');
   const after = col(world(facts + '\nedge[dep]("src/repl.ts", "facts/eval-cost.rofl", reads_path).\n',
@@ -120,7 +121,7 @@ test('mutant 1: a new code edge into a target enlarges its blast radius', () => 
   assert.ok(after.length > before.length, 'and it is an ENLARGEMENT, not a swap');
 });
 
-test('mutant 2: the closure is transitive over code, so a second hop counts', () => {
+mutant('mutant 2: the closure is transitive over code, so a second hop counts', () => {
   const facts = live()
     + '\nedge[dep]("aaa_probe_one.ts", "facts/eval-cost.rofl", reads_path).'
     + '\nedge[dep]("aaa_probe_two.ts", "aaa_probe_one.ts", ts_import).'
@@ -130,7 +131,7 @@ test('mutant 2: the closure is transitive over code, so a second hop counts', ()
     'a dependent of a dependent breaks too');
 });
 
-test('mutant 3 (NEGATIVE CONTROL): a prose edge does NOT enter the blast radius', () => {
+mutant('mutant 3 (NEGATIVE CONTROL): a prose edge does NOT enter the blast radius', () => {
   // The mutant that would catch a slack criterion. If `doc_ref` leaked back
   // into `code_edge`, version two's hairball returns and nothing would say so.
   const facts = live() + '\nedge[dep]("README.md", "facts/eval-cost.rofl", doc_ref).\n';
@@ -139,7 +140,7 @@ test('mutant 3 (NEGATIVE CONTROL): a prose edge does NOT enter the blast radius'
   assert.ok(col(r, 'stale_prose[dep](D, T)', 'D').includes('README.md'), '...but it IS reported, elsewhere');
 });
 
-test('mutant 4 (THE SURVIVOR): a path built at runtime is invisible, and counted', () => {
+mutant('mutant 4 (THE SURVIVOR): a path built at runtime is invisible, and counted', () => {
   // targets nothing — it states the model's blind spot and measures its size,
   // which is the difference between a limitation and an unknown. A dependency
   // expressed as `join(ROOT, dir, name + ".rofl")` produces no literal, so it

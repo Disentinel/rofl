@@ -91,6 +91,7 @@ import { Rofl } from '../src/api.ts';
 import { planBody } from '../src/engine.ts';
 import { parseProgram } from '../src/parser.ts';
 import type { BodyElem, Clause } from '../src/unify.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const B = 20_000_000;
 
@@ -308,7 +309,7 @@ test('a body whose every literal is connected is left exactly as written', () =>
     [1], 'the criterion discriminates: an unshared variable IS a cross product');
 });
 
-test('MUTANTS: where this gate cannot look', () => {
+mutant('MUTANTS: where this gate cannot look', () => {
   // (1) A ONE-ELEMENT BODY, and a body of one positive plus one negation: there
   //     is nothing to hold and the hold must not choke on the empty case.
   assert.deepEqual(plan('p(X) :- q(X).'), ['q(X)']);

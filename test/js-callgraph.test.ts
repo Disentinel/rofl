@@ -35,6 +35,7 @@ import * as path from 'node:path';
 import { parse } from '@babel/parser';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const FIX = path.join(ROOT, 'test', 'fixtures', 'js-call');
@@ -1126,7 +1127,7 @@ function probe(mutations: Mutation[]): Probe {
   };
 }
 
-test('mutant 1 — drop `not closer`: a call is attributed to every enclosing function', () => {
+mutant('mutant 1 — drop `not closer`: a call is attributed to every enclosing function', () => {
   const base = probe([]);
   const mut = probe([{
     find: 'nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).',
@@ -1137,7 +1138,7 @@ test('mutant 1 — drop `not closer`: a call is attributed to every enclosing fu
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 2 — read the computed key as a NAME: the trap springs', () => {
+mutant('mutant 2 — read the computed key as a NAME: the trap springs', () => {
   // RE-AIMED. The computed/static distinction lives in `selects` now, not in
   // the call graph: `o.pick` and `o[k]` differ only in where the text is, so
   // one relation answers both. Reading the computed branch's property by NAME
@@ -1156,7 +1157,7 @@ test('mutant 2 — read the computed key as a NAME: the trap springs', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 3 — forget which file a function was declared in', () => {
+mutant('mutant 3 — forget which file a function was declared in', () => {
   // RE-AIMED to the dataflow entry that reaches a function declaration by name.
   // Two files define `run`; without the File column both answer every call.
   const base = probe([]);
@@ -1184,7 +1185,7 @@ test('mutant 3 — forget which file a function was declared in', () => {
   console.log(`  KILLED: ambiguous resolutions 8 -> ${mut.ambiguous}`);
 });
 
-test('mutant 4 — drop the argument index: which value lands in which slot', () => {
+mutant('mutant 4 — drop the argument index: which value lands in which slot', () => {
   // RE-AIMED to the value flow across a call. The index is the content:
   // argument 0 and argument 1 are different facts about the program.
   const base = probe([]);
@@ -1201,7 +1202,7 @@ test('mutant 4 — drop the argument index: which value lands in which slot', ()
   console.log(`  KILLED: ambiguous ${base.ambiguous} -> ${mut.ambiguous}, edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 5 — unresolved_call derives nothing: is the frontier checked for totality?', () => {
+mutant('mutant 5 — unresolved_call derives nothing: is the frontier checked for totality?', () => {
   const base = probe([]);
   const mut = build([{
     find: 'unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).',
@@ -1351,7 +1352,7 @@ test('mutant 5 — unresolved_call derives nothing: is the frontier checked for 
   console.log(`  KILLED: residue ${base.residue} -> 0, but shape_stale went ${0} -> ${stale.length}`);
 });
 
-test('mutant 6 — delete one function\'s instrumentation: can the probe tell "not called" from "not measured"?', async () => {
+mutant('mutant 6 — delete one function\'s instrumentation: can the probe tell "not called" from "not measured"?', async () => {
   const dir = copyFixtures();
   const before = census(dir, RUN_FILES);
   assert.deepEqual([...before.silent].sort(), [], 'positive control: the copy is fully instrumented');
@@ -1381,7 +1382,7 @@ test('mutant 6 — delete one function\'s instrumentation: can the probe tell "n
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goes blind', async () => {
+mutant('mutant 7 — un-declare `new` as a transfer site: the attribution gate goes blind', async () => {
   // THE ATTRIBUTION GATE'S OWN POSITIVE CONTROL. It reported every missed edge
   // as explained; a gate that has never refused is an assumption wearing a
   // gate's interface. `new Box(1)` is the one miss that is NOT a callee shape,
@@ -1473,7 +1474,7 @@ test('mutant 7 — un-declare `new` as a transfer site: the attribution gate goe
 // with apply2's and is handed a different function. Both defects now cost an
 // edge the runtime never ran, which is the one thing the oracle can see.
 
-test('mutant 8 — sever the cycle: bind parameters without asking who is called', () => {
+mutant('mutant 8 — sever the cycle: bind parameters without asking who is called', () => {
   // RE-AIMED TWICE, and the second time named the WALL instead of guessing at
   // it. Without `resolves` in the body, every function's parameters take every
   // value passed at that index anywhere in the corpus.
@@ -1537,7 +1538,7 @@ test('mutant 8 — sever the cycle: bind parameters without asking who is called
   console.log('  KILLED: the severed cycle stops FITTING — hole(space_exhausted)');
 });
 
-test('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
+mutant('mutant 9 — a parameter read from anywhere, not from inside its function', () => {
   const base = probe([]);
   const baseStore = () => build([]).store;
   // THE KILL GOT LOUDER ON 2026-09-05, like mutant 8's — and on 2026-09-07 it
@@ -1628,7 +1629,7 @@ test('mutant 9 — a parameter read from anywhere, not from inside its function'
     + ` baseline of ${baseUses.set.size}`);
 });
 
-test('mutant 10 — delete the value flow across a call', () => {
+mutant('mutant 10 — delete the value flow across a call', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1651,7 +1652,7 @@ test('mutant 10 — delete the value flow across a call', () => {
   console.log(`  KILLED (liveness): ${lost.length} edges lost`);
 });
 
-test('mutant 11 — a computed key stops being a key at all', () => {
+mutant('mutant 11 — a computed key stops being a key at all', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1665,7 +1666,7 @@ test('mutant 11 — a computed key stops being a key at all', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 12 — drop the recursion: a.b.c() loses its middle', () => {
+mutant('mutant 12 — drop the recursion: a.b.c() loses its middle', () => {
   const base = probe([]);
   // THREE ENTRIES, NOT ONE, since the lookup split by receiver role on
   // 2026-09-05: the head is identical in all three rules and `String.replace`
@@ -1683,7 +1684,7 @@ test('mutant 12 — drop the recursion: a.b.c() loses its middle', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 13 — a class is not an object: drop the class-method lookup', () => {
+mutant('mutant 13 — a class is not an object: drop the class-method lookup', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1696,7 +1697,7 @@ test('mutant 13 — a class is not an object: drop the class-method lookup', () 
   console.log(`  KILLED: ${lost.length} edges lost`);
 });
 
-test('mutant 14 — ignore the key: any member answers any call', () => {
+mutant('mutant 14 — ignore the key: any member answers any call', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1717,7 +1718,7 @@ test('mutant 14 — ignore the key: any member answers any call', () => {
   console.log(`  KILLED: ${extra.length} invented edges, ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
 });
 
-test('mutant 15 — a sequence evaluates to its FIRST element', () => {
+mutant('mutant 15 — a sequence evaluates to its FIRST element', () => {
   // the `not seq_later` idiom is how a maximum is written without aggregation;
   // dropping it makes `(a, b)` mean both, which is what an unguarded index does.
   const base = probe([]);
@@ -1732,7 +1733,7 @@ test('mutant 15 — a sequence evaluates to its FIRST element', () => {
   console.log(`  edges ${base.edges.size} -> ${mut.edges.size}, ambiguous ${base.ambiguous} -> ${mut.ambiguous}`);
 });
 
-test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
+mutant('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', () => {
   const base = probe([]);
   // THE ANCHOR MOVED 2026-09-07 and the mutant moved with it. The rule this
   // used to break read `this` as the class of ANY enclosing class method, and
@@ -1758,7 +1759,7 @@ test('mutant 16 — `this` unscoped: killed by the AUDIT, not by the oracle', ()
   console.log(`  KILLED by ambiguous_call: 8 -> ${mut.ambiguous}, edge set UNMOVED`);
 });
 
-test('mutant 18 — a catch-all that is waived as empty must be able to fill', () => {
+mutant('mutant 18 — a catch-all that is waived as empty must be able to fill', () => {
   // `s_member_on_other` is waived in facts/js-shapes.rofl as EMPTY BY DESIGN:
   // every object position the classifier meets has a name of its own, so the
   // catcher holds nothing and `not_yet` would be a backlog item for a form
@@ -1776,7 +1777,7 @@ test('mutant 18 — a catch-all that is waived as empty must be able to fill', (
   console.log('  KILLED: catch_all_occupied 0 -> 1, and it names the kind');
 });
 
-test('mutant 23 — the receiver stops deciding: a static answers on an instance', () => {
+mutant('mutant 23 — the receiver stops deciding: a static answers on an instance', () => {
   // THE GATE THIS ITEM ADDED, planted. Put the undifferentiated lookup back —
   // one rule over `member_value` instead of three over the split — and the two
   // edges the runtime answers with a TypeError come back BY NAME in the
@@ -1797,7 +1798,7 @@ test('mutant 23 — the receiver stops deciding: a static answers on an instance
     + ' named: ' + invented.join(', '));
 });
 
-test('mutant 24 — the generator protocol, planted in three places', () => {
+mutant('mutant 24 — the generator protocol, planted in three places', () => {
   // ONE MUTANT IS LIVENESS, A SET IS COVERAGE, and the set here is the three
   // separate claims the rules make: that a value sent to `.next` reaches the
   // yield, that DELEGATION passes it through, and that the sent value is found
@@ -1844,7 +1845,7 @@ test('mutant 24 — the generator protocol, planted in three places', () => {
     + ` no delegation -> ${noDeleg.edges.size}, via returns -> ${viaReturns.edges.size}`);
 });
 
-test('mutant 19 — the OTHER catch-all, the one that had no gate for three days', () => {
+mutant('mutant 19 — the OTHER catch-all, the one that had no gate for three days', () => {
   // `s_unclassified` is the CALLEE-position bucket and `s_member_on_other` is
   // the OBJECT-position copy of it. Mutant 18 above watches the copy; until
   // 2026-09-05 nothing watched the original, and the two are twenty lines apart
@@ -1917,7 +1918,7 @@ test('BLIND SPOT: the branch over-approximation is real, and the oracle cannot s
   assert.ok(named.has('useOr -> pick'));
 });
 
-test('mutant 19 — `super()` loses its rule: the call, not the member', () => {
+mutant('mutant 19 — `super()` loses its rule: the call, not the member', () => {
   const base = probe([]);
   const mut = probe([{
     find: 'resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),\n'
@@ -1934,7 +1935,7 @@ test('mutant 19 — `super()` loses its rule: the call, not the member', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 20 — the constructor walk stops at the first class', () => {
+mutant('mutant 20 — the constructor walk stops at the first class', () => {
   // `Keg` declares no constructor, so `super()` inside `Cask` must pass through
   // it to `Barrel`. V8 does exactly that — measured — and without the inherited
   // clause the model stops one level short and says nothing at all.
@@ -1950,7 +1951,7 @@ test('mutant 20 — the constructor walk stops at the first class', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 21 — a class stops inheriting its ancestors\' methods', () => {
+mutant('mutant 21 — a class stops inheriting its ancestors\' methods', () => {
   const base = probe([]);
   const mut = probe([{
     file: 'rules/js-dataflow.rofl',
@@ -1964,7 +1965,7 @@ test('mutant 21 — a class stops inheriting its ancestors\' methods', () => {
   console.log(`  KILLED: edges ${base.edges.size} -> ${mut.edges.size}`);
 });
 
-test('mutant 22 — THE ORDER OF A NEGATED LITERAL, and it is not style', () => {
+mutant('mutant 22 — THE ORDER OF A NEGATED LITERAL, and it is not style', () => {
   // This mutant only swaps two premises. In Datalog that must change nothing,
   // and here it changes the answer: with `not own_key` BEFORE the literal that
   // binds `Key`, the negation is evaluated with `Key` unbound and reads as

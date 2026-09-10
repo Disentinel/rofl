@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 707 artifacts, 3974 edges, 232 unreadable path expressions.
+-- 710 artifacts, 4078 edges, 232 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -457,6 +457,7 @@ artifact[dep]("scanners/key_coupling.ts", ts).
 artifact[dep]("scanners/layering_report.ts", ts).
 artifact[dep]("scanners/ledger_census.ts", ts).
 artifact[dep]("scanners/materialize.ts", ts).
+artifact[dep]("scanners/mutant_files.ts", ts).
 artifact[dep]("scanners/necessity.ts", ts).
 artifact[dep]("scanners/nullary_report.ts", ts).
 artifact[dep]("scanners/order_census.ts", ts).
@@ -620,6 +621,7 @@ artifact[dep]("test/fixtures/js/order.ts.txt", other).
 artifact[dep]("test/flag-census.test.ts", ts).
 artifact[dep]("test/flow-closure.test.ts", ts).
 artifact[dep]("test/head-vars.test.ts", ts).
+artifact[dep]("test/helpers/mutant.ts", ts).
 artifact[dep]("test/helpers/roundtrip_child.ts", ts).
 artifact[dep]("test/index-arrival.test.ts", ts).
 artifact[dep]("test/ingest-rules.test.ts", ts).
@@ -663,6 +665,7 @@ artifact[dep]("test/layering.check.ts", ts).
 artifact[dep]("test/necessity.test.ts", ts).
 artifact[dep]("test/next-tense.test.ts", ts).
 artifact[dep]("test/note-witness.test.ts", ts).
+artifact[dep]("test/nullary.test.ts", ts).
 artifact[dep]("test/pair.test.ts", ts).
 artifact[dep]("test/parser-optional.test.ts", ts).
 artifact[dep]("test/permission-doc.test.ts", ts).
@@ -1815,6 +1818,7 @@ edge[dep]("facts/findings.rofl", "test/key-bytes.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/necessity.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/next-tense.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/note-witness.test.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "test/nullary.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/parser-optional.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/permission-doc.test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "test/persp-var.test.ts", ledger_ref).
@@ -1974,6 +1978,8 @@ edge[dep]("facts/history.rofl", "examples/ditto/README.md", doc_ref).
 edge[dep]("facts/history.rofl", "examples/drip/demo.ts", doc_ref).
 edge[dep]("facts/history.rofl", "examples/drip/drip.rofl", doc_ref).
 edge[dep]("facts/history.rofl", "examples/drip/README.md", doc_ref).
+edge[dep]("facts/history.rofl", "examples/flag/flag.rofl", doc_ref).
+edge[dep]("facts/history.rofl", "examples/flag/README.md", doc_ref).
 edge[dep]("facts/history.rofl", "examples/goof/demo.ts", doc_ref).
 edge[dep]("facts/history.rofl", "examples/goof/goof.rofl", doc_ref).
 edge[dep]("facts/history.rofl", "examples/goof/README.md", doc_ref).
@@ -2549,6 +2555,7 @@ edge[dep]("facts/rule-shape.rofl", "examples/cram/cram.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/cram/flight_log.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/ditto/ditto.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/drip/drip.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "examples/flag/flag.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/goof/goof.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/heck/heck.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/huh/huh.rofl", doc_ref).
@@ -2561,6 +2568,7 @@ edge[dep]("facts/rule-shape.rofl", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/npc/npc.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/oops/oops.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "examples/reach/reach.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/ring1/l1.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/ring1/ring1.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/rip/rip.rofl", doc_ref).
@@ -2572,35 +2580,51 @@ edge[dep]("facts/rule-shape.rofl", "examples/tm_diverge.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/tm.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "examples/wtf/wtf.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "policy.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/cleanliness.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/depends.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/engine-split.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/eval-cost.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/findings.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/floor-census.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/history.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/ingest.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/inquiry/epistemic.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/inquiry/intents.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/inquiry/obligations.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/inquiry/perspectives.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/inquiry/terminology.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-ambient.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-attrs.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-callgraph.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-controlflow.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-dataflow.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-effects.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-env-api.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-env.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-globals.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-host.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-model.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-modules.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/js-pack-home.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-resolve.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-structure.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/js-vocabulary.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/kernel-policy.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/layering.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/nullary.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/parse-cost.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/permission-model.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/policies/authority.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/policies/evidence.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/profile.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/rule-shape.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/self-audit.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/spec-coverage.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/strata.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/swarm.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "rules/worklist.rofl", doc_ref).
+edge[dep]("facts/rule-shape.rofl", "rules/worlds.rofl", doc_ref).
 edge[dep]("facts/rule-shape.rofl", "safety.rofl", doc_ref).
 edge[dep]("facts/spec.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/spec.rofl", "boot.rofl", ledger_ref).
@@ -2736,6 +2760,7 @@ edge[dep]("npm:splitcheck", "scanners/engine_split.ts", npm_script).
 edge[dep]("npm:storetrace", "scanners/store_trace.ts", npm_script).
 edge[dep]("npm:test:engine", "scanners/side_files.ts", npm_script).
 edge[dep]("npm:test:library", "scanners/side_files.ts", npm_script).
+edge[dep]("npm:test:mutants", "scanners/mutant_files.ts", npm_script).
 edge[dep]("npm:textcheck", "scripts/text_check.ts", npm_script).
 edge[dep]("npm:whyfloor", "facts/floor-census.rofl", npm_script).
 edge[dep]("npm:whyfloor", "rules/floor-census.rofl", npm_script).
@@ -3058,6 +3083,9 @@ edge[dep]("scanners/ledger_census.ts", "src/unify.ts", reads_path).
 edge[dep]("scanners/ledger_census.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/materialize.ts", "scanners/js.ts", reads_path).
 edge[dep]("scanners/materialize.ts", "scanners/js.ts", ts_import).
+edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", reads_path).
+edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", ts_import).
+edge[dep]("scanners/mutant_files.ts", "test/helpers/mutant.ts", reads_path).
 edge[dep]("scanners/nullary_report.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "policy.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "rules/nullary.rofl", reads_path).
@@ -3423,6 +3451,8 @@ edge[dep]("test/body-order.test.ts", "src/engine.ts", reads_path).
 edge[dep]("test/body-order.test.ts", "src/engine.ts", ts_import).
 edge[dep]("test/body-order.test.ts", "src/parser.ts", reads_path).
 edge[dep]("test/body-order.test.ts", "src/parser.ts", ts_import).
+edge[dep]("test/body-order.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/body-order.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/bootstrap-dag.test.ts", "scanners/bootstrap_dag.ts", reads_path).
 edge[dep]("test/bootstrap-dag.test.ts", "scanners/bootstrap_dag.ts", ts_import).
 edge[dep]("test/bootstrap-dag.test.ts", "scanners/engine_split.ts", reads_path).
@@ -3436,12 +3466,16 @@ edge[dep]("test/bridges.test.ts", "src/parser.ts", reads_path).
 edge[dep]("test/bridges.test.ts", "src/parser.ts", ts_import).
 edge[dep]("test/bridges.test.ts", "src/reflect.ts", reads_path).
 edge[dep]("test/bridges.test.ts", "src/reflect.ts", ts_import).
+edge[dep]("test/bridges.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/bridges.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/budget-space.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/budget-space.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/budget-space.test.ts", "src/reflect.ts", reads_path).
 edge[dep]("test/budget-space.test.ts", "src/reflect.ts", ts_import).
 edge[dep]("test/budget-space.test.ts", "src/rounds.ts", reads_path).
 edge[dep]("test/budget-space.test.ts", "src/rounds.ts", ts_import).
+edge[dep]("test/budget-space.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/budget-space.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", reads_path).
 edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", ts_import).
 edge[dep]("test/cleanliness.check.ts", "src/api.ts", reads_path).
@@ -3471,6 +3505,8 @@ edge[dep]("test/depends.test.ts", "scanners/depends.ts", ts_import).
 edge[dep]("test/depends.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/depends.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/depends.test.ts", "src/repl.ts", reads_path).
+edge[dep]("test/depends.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/depends.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/derived-reuse.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "examples/sensors.rofl", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "examples/spat/spat.ts", reads_path).
@@ -3489,8 +3525,12 @@ edge[dep]("test/derived-reuse.test.ts", "src/unify.ts", ts_import).
 edge[dep]("test/derived-reuse.test.ts", "test/strata-fixture.ts", reads_path).
 edge[dep]("test/derived-reuse.test.ts", "test/strata-fixture.ts", ts_import).
 edge[dep]("test/docs-index.test.ts", "README.md", reads_path).
+edge[dep]("test/docs-index.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/docs-index.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/engine-split.test.ts", "scanners/engine_split.ts", reads_path).
 edge[dep]("test/engine-split.test.ts", "scanners/engine_split.ts", ts_import).
+edge[dep]("test/engine-split.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/engine-split.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/escapes.test.ts", "src/parser.ts", reads_path).
 edge[dep]("test/escapes.test.ts", "src/parser.ts", ts_import).
 edge[dep]("test/evaluator-primary.test.ts", "boot.rofl", reads_path).
@@ -3735,6 +3775,8 @@ edge[dep]("test/example-yak.test.ts", "src/unify.ts", ts_import).
 edge[dep]("test/exports.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/exports.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/exports.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/exports.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/exports.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/findings.test.ts", "facts/findings.rofl", reads_path).
 edge[dep]("test/findings.test.ts", "runtime/report.ts", reads_path).
 edge[dep]("test/findings.test.ts", "runtime/report.ts", ts_import).
@@ -3798,6 +3840,8 @@ edge[dep]("test/join-planner.test.ts", "src/parser.ts", reads_path).
 edge[dep]("test/join-planner.test.ts", "src/parser.ts", ts_import).
 edge[dep]("test/join-planner.test.ts", "src/unify.ts", reads_path).
 edge[dep]("test/join-planner.test.ts", "src/unify.ts", ts_import).
+edge[dep]("test/join-planner.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/join-planner.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-ambient.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-ambient.test.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-ambient.test.ts", "facts/js-controlflow.rofl", reads_path).
@@ -3833,6 +3877,8 @@ edge[dep]("test/js-ambient.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/clock.mjs", reads_path).
 edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/runtime.mjs", reads_path).
 edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/shadow.mjs", reads_path).
+edge[dep]("test/js-ambient.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-ambient.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-ast.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-ast.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-ast.test.ts", "scanners/js_ast.ts", ts_import).
@@ -3879,6 +3925,8 @@ edge[dep]("test/js-attrs.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-attrs.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-attrs.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-attrs.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-attrs.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-attrs.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-callgraph.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-callgraph.test.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-callgraph.test.ts", "facts/js-kinds.rofl", reads_path).
@@ -3891,6 +3939,8 @@ edge[dep]("test/js-callgraph.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-callgraph.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-callgraph.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-callgraph.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-callgraph.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-callgraph.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-class-expression.test.ts", "rules/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-class-expression.test.ts", "rules/js-dataflow.rofl", reads_path).
 edge[dep]("test/js-class-expression.test.ts", "test/js-corpus-world.ts", reads_path).
@@ -3956,10 +4006,14 @@ edge[dep]("test/js-decorator-replacement.test.ts", "rules/js-model.rofl", reads_
 edge[dep]("test/js-decorator-replacement.test.ts", "rules/worklist.rofl", reads_path).
 edge[dep]("test/js-decorator-replacement.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-decorator-replacement.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-decorator-replacement.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-decorator-replacement.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-decorator-replacement.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-decorator-replacement.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-decorators.test.ts", "rules/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-decorators.test.ts", "rules/js-controlflow.rofl", reads_path).
+edge[dep]("test/js-decorators.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-decorators.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-decorators.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-decorators.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-destructuring-transfer.test.ts", "boot.rofl", reads_path).
@@ -3989,6 +4043,8 @@ edge[dep]("test/js-directives.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-directives.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-directives.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-directives.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-directives.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-directives.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-directives.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-directives.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-effects.test.ts", "boot.rofl", reads_path).
@@ -3999,6 +4055,8 @@ edge[dep]("test/js-effects.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-effects.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-effects.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-effects.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-effects.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-effects.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-effects.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-effects.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-env.test.ts", "boot.rofl", reads_path).
@@ -4017,6 +4075,8 @@ edge[dep]("test/js-env.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-env.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/js-env.test.ts", "test/fixtures/js-call/alpha.mjs", reads_path).
 edge[dep]("test/js-env.test.ts", "test/fixtures/js-call/beta.mjs", reads_path).
+edge[dep]("test/js-env.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-env.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-export-forms.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-export-forms.test.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-export-forms.test.ts", "facts/js-controlflow.rofl", reads_path).
@@ -4035,6 +4095,8 @@ edge[dep]("test/js-export-forms.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-export-forms.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-export-forms.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-export-forms.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-export-forms.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-export-forms.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-export-forms.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-export-forms.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-fixpoint-cost.test.ts", "boot.rofl", reads_path).
@@ -4073,6 +4135,8 @@ edge[dep]("test/js-globals.test.ts", "scanners/ts_lib.ts", reads_path).
 edge[dep]("test/js-globals.test.ts", "scanners/ts_lib.ts", ts_import).
 edge[dep]("test/js-globals.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-globals.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-globals.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-globals.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-host-world.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-host-world.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-host-world.ts", "facts/js-dataflow.rofl", reads_path).
@@ -4114,6 +4178,8 @@ edge[dep]("test/js-host.test.ts", "rules/js-resolve.rofl", reads_path).
 edge[dep]("test/js-host.test.ts", "rules/js-vocabulary.rofl", reads_path).
 edge[dep]("test/js-host.test.ts", "scanners/host_lib.ts", reads_path).
 edge[dep]("test/js-host.test.ts", "scanners/host_lib.ts", ts_import).
+edge[dep]("test/js-host.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-host.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-host.test.ts", "test/js-host-world.ts", reads_path).
 edge[dep]("test/js-host.test.ts", "test/js-host-world.ts", ts_import).
 edge[dep]("test/js-layer-cost.test.ts", "boot.rofl", reads_path).
@@ -4157,6 +4223,8 @@ edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/alpha.mjs", reads
 edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/beta.mjs", reads_path).
 edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/delta.mjs", reads_path).
 edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/gamma.mjs", reads_path).
+edge[dep]("test/js-layer-cost.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-layer-cost.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-layer-cost.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-layer-cost.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-lib-surface.test.ts", "boot.rofl", reads_path).
@@ -4182,6 +4250,8 @@ edge[dep]("test/js-lib-surface.test.ts", "scanners/ts_lib.ts", reads_path).
 edge[dep]("test/js-lib-surface.test.ts", "scanners/ts_lib.ts", ts_import).
 edge[dep]("test/js-lib-surface.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-lib-surface.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-lib-surface.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-lib-surface.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-meta-and-await.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-meta-and-await.test.ts", "facts/js-kinds.rofl", reads_path).
 edge[dep]("test/js-meta-and-await.test.ts", "facts/js-modules.rofl", reads_path).
@@ -4194,6 +4264,8 @@ edge[dep]("test/js-meta-and-await.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-meta-and-await.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-meta-and-await.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/js-meta-and-await.test.ts", "test/fixtures/js-call/trace.mjs", reads_path).
+edge[dep]("test/js-meta-and-await.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-meta-and-await.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-meta-and-await.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-meta-and-await.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-model.test.ts", "boot.rofl", reads_path).
@@ -4209,6 +4281,8 @@ edge[dep]("test/js-model.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-model.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-model.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-model.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-model.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-model.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-modules.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-modules.test.ts", "facts/js-kinds.rofl", reads_path).
 edge[dep]("test/js-modules.test.ts", "facts/js-modules.rofl", reads_path).
@@ -4219,6 +4293,8 @@ edge[dep]("test/js-modules.test.ts", "scanners/js_ast.ts", reads_path).
 edge[dep]("test/js-modules.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-modules.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-modules.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-modules.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-modules.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-pack-home.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-pack-home.test.ts", "facts/js-callgraph.rofl", reads_path).
 edge[dep]("test/js-pack-home.test.ts", "facts/js-controlflow.rofl", reads_path).
@@ -4237,6 +4313,8 @@ edge[dep]("test/js-pack-home.test.ts", "rules/js-structure.rofl", reads_path).
 edge[dep]("test/js-pack-home.test.ts", "rules/js-vocabulary.rofl", reads_path).
 edge[dep]("test/js-pack-home.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-pack-home.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-pack-home.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-pack-home.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-resolve.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/js-resolve.test.ts", "facts/js-kinds.rofl", reads_path).
 edge[dep]("test/js-resolve.test.ts", "facts/js-modules.rofl", reads_path).
@@ -4259,6 +4337,8 @@ edge[dep]("test/js-update-and-literals.test.ts", "scanners/js_ast.ts", reads_pat
 edge[dep]("test/js-update-and-literals.test.ts", "scanners/js_ast.ts", ts_import).
 edge[dep]("test/js-update-and-literals.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/js-update-and-literals.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/js-update-and-literals.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/js-update-and-literals.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/js-update-and-literals.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/js-update-and-literals.test.ts", "test/js-corpus-world.ts", ts_import).
 edge[dep]("test/js-vocabulary.test.ts", "boot.rofl", reads_path).
@@ -4340,8 +4420,15 @@ edge[dep]("test/note-witness.test.ts", "scripts/witness_check.ts", reads_path).
 edge[dep]("test/note-witness.test.ts", "scripts/witness_check.ts", ts_import).
 edge[dep]("test/note-witness.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/note-witness.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/note-witness.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/note-witness.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/note-witness.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/note-witness.test.ts", "test/js-corpus-world.ts", ts_import).
+edge[dep]("test/nullary.test.ts", "rules/nullary.rofl", reads_path).
+edge[dep]("test/nullary.test.ts", "src/api.ts", reads_path).
+edge[dep]("test/nullary.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/nullary.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/nullary.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/pair.test.ts", "examples/atlas-launch/evidence.rofl", reads_path).
 edge[dep]("test/pair.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
 edge[dep]("test/pair.test.ts", "runtime/admission.ts", reads_path).
@@ -4358,6 +4445,8 @@ edge[dep]("test/permission-doc.test.ts", "scanners/permission_inventory.ts", rea
 edge[dep]("test/permission-doc.test.ts", "scanners/permission_inventory.ts", ts_import).
 edge[dep]("test/permission-doc.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/permission-doc.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/permission-doc.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/permission-doc.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/persp-var.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/persp-var.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/persp-var.test.ts", "src/api.ts", ts_import).
@@ -4413,6 +4502,8 @@ edge[dep]("test/provenance-retention.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/query-unpopulatable.test.ts", "facts/js-kinds.rofl", reads_path).
 edge[dep]("test/query-unpopulatable.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/query-unpopulatable.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/query-unpopulatable.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/query-unpopulatable.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/query-unpopulatable.test.ts", "test/js-corpus-world.ts", reads_path).
 edge[dep]("test/reject-budget-invariance.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/reject-budget-invariance.test.ts", "src/api.ts", reads_path).
@@ -4465,6 +4556,8 @@ edge[dep]("test/rings.test.ts", "src/engine.ts", reads_path).
 edge[dep]("test/rings.test.ts", "src/engine.ts", ts_import).
 edge[dep]("test/rings.test.ts", "src/reflect.ts", reads_path).
 edge[dep]("test/rings.test.ts", "src/reflect.ts", ts_import).
+edge[dep]("test/rings.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/rings.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/rofl-lex.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/rofl-lex.test.ts", "examples/counter.rofl", reads_path).
 edge[dep]("test/rofl-lex.test.ts", "examples/ring1/charclass.rofl", reads_path).
@@ -4492,6 +4585,8 @@ edge[dep]("test/rofl-safety.test.ts", "src/store.ts", reads_path).
 edge[dep]("test/rofl-safety.test.ts", "src/store.ts", ts_import).
 edge[dep]("test/rofl-safety.test.ts", "src/unify.ts", reads_path).
 edge[dep]("test/rofl-safety.test.ts", "src/unify.ts", ts_import).
+edge[dep]("test/rofl-safety.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/rofl-safety.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/round-eval-demand.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/round-eval-demand.test.ts", "runtime/round_eval.ts", reads_path).
 edge[dep]("test/round-eval-demand.test.ts", "runtime/round_eval.ts", ts_import).
@@ -4519,6 +4614,8 @@ edge[dep]("test/rule-answers.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/rule-answers.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/rule-answers.test.ts", "src/engine.ts", reads_path).
 edge[dep]("test/rule-answers.test.ts", "src/engine.ts", ts_import).
+edge[dep]("test/rule-answers.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/rule-answers.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/rule-shape.test.ts", "facts/cross-products.rofl", reads_path).
 edge[dep]("test/rule-shape.test.ts", "facts/layering.rofl", reads_path).
 edge[dep]("test/rule-shape.test.ts", "scanners/rule_shape.ts", reads_path).
@@ -4597,6 +4694,8 @@ edge[dep]("test/store-conformance.test.ts", "src/store.ts", reads_path).
 edge[dep]("test/store-conformance.test.ts", "src/store.ts", ts_import).
 edge[dep]("test/store-conformance.test.ts", "src/unify.ts", reads_path).
 edge[dep]("test/store-conformance.test.ts", "src/unify.ts", ts_import).
+edge[dep]("test/store-conformance.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/store-conformance.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/str-ops.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/str-ops.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/str-ops.test.ts", "src/api.ts", ts_import).
@@ -4650,6 +4749,8 @@ edge[dep]("test/vocabulary-doc.test.ts", "facts/layering.rofl", reads_path).
 edge[dep]("test/vocabulary-doc.test.ts", "README.md", reads_path).
 edge[dep]("test/vocabulary-doc.test.ts", "src/reflect.ts", reads_path).
 edge[dep]("test/vocabulary-doc.test.ts", "src/reflect.ts", ts_import).
+edge[dep]("test/vocabulary-doc.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/vocabulary-doc.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/volume-locality.test.ts", "scanners/volume_locality.ts", reads_path).
 edge[dep]("test/volume-locality.test.ts", "scanners/volume_locality.ts", ts_import).
 edge[dep]("test/well-founded.test.ts", "boot.rofl", reads_path).
@@ -4671,8 +4772,12 @@ edge[dep]("test/widened-negation.test.ts", "examples/aka/demo.ts", reads_path).
 edge[dep]("test/widened-negation.test.ts", "examples/aka/demo.ts", ts_import).
 edge[dep]("test/widened-negation.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/widened-negation.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/widened-negation.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/widened-negation.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/witness-check.test.ts", "scripts/witness_check.ts", reads_path).
 edge[dep]("test/witness-check.test.ts", "scripts/witness_check.ts", ts_import).
+edge[dep]("test/witness-check.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/witness-check.test.ts", "test/helpers/mutant.ts", ts_import).
 edge[dep]("test/worklist.test.ts", "boot.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "facts/findings.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "facts/js-callgraph.rofl", reads_path).
@@ -4689,5 +4794,7 @@ edge[dep]("test/worklist.test.ts", "rules/js-model.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "rules/worklist.rofl", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/worklist.test.ts", "src/api.ts", ts_import).
+edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", reads_path).
+edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", ts_import).
 
 dark_paths[dep](232).

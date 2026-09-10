@@ -29,6 +29,7 @@ import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { build, base, read, ROOT } from './js-corpus-world.ts';
 import type { Mut } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const CG = 'rules/js-callgraph.rofl';
 const ST = 'rules/js-structure.rofl';
@@ -70,7 +71,7 @@ test('one node kind, two constructs, and the discriminator was on the store all 
     'meta_form is a total function on meta_property nodes');
 });
 
-test('MUTANT 1 — the form is keyed on the wrong child: the gate names the node', () => {
+mutant('MUTANT 1 — the form is keyed on the wrong child: the gate names the node', () => {
   // `meta` is the reserved word the grammar switches on. Reading the same child
   // for the wrong word makes `new.target` match neither arm, and the audit that
   // exists for a THIRD form of the construct is what notices.
@@ -122,7 +123,7 @@ test('import.meta.resolve() is classified rather than swept into the catch-all',
     'and it leaves the work queue rather than sitting in it as if a rule were owed');
 });
 
-test('MUTANT 2 — withdraw the receiver class: the waiver next door goes false', () => {
+mutant('MUTANT 2 — withdraw the receiver class: the waiver next door goes false', () => {
   // The exact objection w_meta_property recorded, run as a mutant instead of
   // being taken on trust: without `o_meta` the site lands in
   // `s_member_on_other`, whose waiver is `a_catch_all_empty_by_design`.
@@ -168,7 +169,7 @@ test('an await performs a call, and the model refuses to name a caller for it', 
     'and the gate that says so is silent on the baseline');
 });
 
-test('MUTANT 3 — route the performed call into `calls`: the gate goes red', () => {
+mutant('MUTANT 3 — route the performed call into `calls`: the gate goes red', () => {
   const mut = build([{
     file: CG,
     find: 'performed_call[code](A, F) :- awaited_then[code](A, F).',
@@ -183,7 +184,7 @@ test('MUTANT 3 — route the performed call into `calls`: the gate goes red', ()
     'and the invented edge is the one the runtime never reports a caller for');
 });
 
-test('MUTANT 4 — read the member as if it were the function: the trap this rule fell into', () => {
+mutant('MUTANT 4 — read the member as if it were the function: the trap this rule fell into', () => {
   // `member_value` NAMES THE NODE A MEMBER HOLDS, which for `{ then: settleThen }`
   // is the IDENTIFIER. The first draft of `awaited_then` joined `fn_node`
   // straight onto it and derived NOTHING while looking finished — the same
@@ -201,7 +202,7 @@ test('MUTANT 4 — read the member as if it were the function: the trap this rul
     'and the site moves into "performs no call", which is the FALSE half of the split');
 });
 
-test('MUTANT 5 — merge the two silences: "no call here" and "no answer here"', () => {
+mutant('MUTANT 5 — merge the two silences: "no call here" and "no answer here"', () => {
   // Without the `await_value_known` guard, an await whose value the layer below
   // cannot name reads as an await that performs no call — a positive claim made
   // out of an absence, which is the reading this repository forbids by name.
@@ -400,7 +401,7 @@ test('import.meta is the module graph`s one self-reference, and new.target is no
   // corpus world below, which loads every pack.
 });
 
-test('MUTANT 6 — the module half stops being read: the self-reference disappears', () => {
+mutant('MUTANT 6 — the module half stops being read: the self-reference disappears', () => {
   const q = modWorld([{
     file: 'rules/js-structure.rofl',
     find: 'meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _, _),',

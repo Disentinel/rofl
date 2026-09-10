@@ -27,6 +27,7 @@ import { createRequire } from 'node:module';
 import { parse } from '@babel/parser';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const REPO = new URL('../', import.meta.url);
 const readRepo = (p: string): string => fs.readFileSync(new URL(p, REPO), 'utf8');
@@ -544,7 +545,7 @@ test('the `checked` ledger is RE-DERIVED from the oracle, per site kind', () => 
     'every kind the oracle enumerated has a `checked` row, with the count it enumerated');
 });
 
-test('MUTANT 6: an oracle pointed at an empty directory reports NOTHING TO SEE, not agreement', () => {
+mutant('MUTANT 6: an oracle pointed at an empty directory reports NOTHING TO SEE, not agreement', () => {
   // TARGETS: whether the probe can tell "nothing to resolve" from "the
   // resolver never ran". Both produce zero mismatches and they are opposite
   // facts. This is the measurement that says the previous test's zeros mean

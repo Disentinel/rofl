@@ -44,6 +44,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 import {
   worldMap, build, witnesses, judge, worldsFor, controlShape, MAP_PACKS,
   type W, type WorldSpec,
@@ -99,7 +100,7 @@ test('every world classifies every pack in the tree, as loaded or as refused', (
   console.log(`  ${onDisk.length} packs on disk, each classified by ${MAP.size} worlds`);
 });
 
-test('MUTANT 5: a new pack in the tree reddens every world until it decides', () => {
+mutant('MUTANT 5: a new pack in the tree reddens every world until it decides', () => {
   // The positive control for the test above: if the closure could not see a new
   // pack it would certify anything.
   const withNew = packsOnDisk(['rules/js-whatever.rofl']);
@@ -244,7 +245,7 @@ test('every declared world is a COHERENT program, not just a pile of packs', () 
 // ---------------------------------------------------------------------------
 // THE MUTANTS
 
-test('MUTANT 1: a witness naming a world nobody declares is BROKEN, not asked somewhere else', () => {
+mutant('MUTANT 1: a witness naming a world nobody declares is BROKEN, not asked somewhere else', () => {
   // Substituting a world is precisely how a query about the corpus came to be
   // answered by the ledger, so the fallback must not exist.
   const ws = witnesses(queue(), MAP);
@@ -264,7 +265,7 @@ test('MUTANT 1: a witness naming a world nobody declares is BROKEN, not asked so
   assert.equal(r.query('witness_world_unknown[audit](Id, W)').rows.length, 1);
 });
 
-test('MUTANT 2: an absence witness whose constant is in the wrong LEXICAL FORM', () => {
+mutant('MUTANT 2: an absence witness whose constant is in the wrong LEXICAL FORM', () => {
   // THE MUTANT THAT CHANGED THE DESIGN. `ast_node`'s kind column holds atoms
   // and `ast_name`'s name column holds strings; both wrong forms answer 0 with
   // no error and nothing `unpopulatable` can see, because the relation, the
@@ -301,7 +302,7 @@ test('MUTANT 2: an absence witness whose constant is in the wrong LEXICAL FORM',
   assert.match(controlShape('a(N, x)', 'a(N, x, F)'), /ONE constant swapped/);
 });
 
-test('MUTANT 2b: a control that returns nothing is refused even when its shape is right', () => {
+mutant('MUTANT 2b: a control that returns nothing is refused even when its shape is right', () => {
   const c = corpus();
   const worlds = new Map([['w_js_corpus', c]]);
   const dead: W = { id: 'w_planted', world: 'w_js_corpus', want: 0, floor: false,
@@ -312,7 +313,7 @@ test('MUTANT 2b: a control that returns nothing is refused even when its shape i
   assert.match(v.err, /control returned nothing/);
 });
 
-test('MUTANT 3: the gate read ONE of the witness forms and had no instance to show it', () => {
+mutant('MUTANT 3: the gate read ONE of the witness forms and had no instance to show it', () => {
   // `unproven(F) :- finding_action(F, rule_and_test), not witness(F, _, _)`.
   // Both `witness_atleast` rows in this ledger sit on SETTLED findings, so the
   // hole has zero instances on the honest tree and could never announce itself
@@ -350,7 +351,7 @@ test('MUTANT 3: the gate read ONE of the witness forms and had no instance to sh
   }
 });
 
-test('MUTANT 4: a note goes STALE by itself when the store grows what it says is missing', () => {
+mutant('MUTANT 4: a note goes STALE by itself when the store grows what it says is missing', () => {
   // The property the whole item exists for. A note claiming an absence is
   // confirmed by every probe written from it — that is the asymmetry
   // f_the_note_is_my_own_prior_guess_wearing_a_measurements_clothes names — and
@@ -370,7 +371,7 @@ test('MUTANT 4: a note goes STALE by itself when the store grows what it says is
   assert.ok(v.got >= 1, `the query now returns ${v.got}`);
 });
 
-test('MUTANT 6: a witness on an id that is neither a finding nor a work item', () => {
+mutant('MUTANT 6: a witness on an id that is neither a finding nor a work item', () => {
   // A green row about nothing: the same defect as an unknown world, one column
   // to the left. Nothing in `witness_in`'s shape says the id must exist.
   const r = new Rofl();

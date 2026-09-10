@@ -36,6 +36,7 @@ import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
 import { RoundEvaluation } from '../src/rounds.ts';
 import { SPACE_REASON, BUDGET_REASON } from '../src/reflect.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
@@ -107,7 +108,7 @@ test('the three-way join answers with a hole instead of a corpse', () => {
 // about the SHAPE of the rule: same three variables, different input; same
 // input, different arity.
 
-test('MUTANT 4: p(X, Y) :- q(X), q(Y) over 200 facts -- 40 000 rows, honest', () => {
+mutant('MUTANT 4: p(X, Y) :- q(X), q(Y) over 200 facts -- 40 000 rows, honest', () => {
   const run = evaluate(join(200, 2));
   assert.equal(run.partial, false, run.holes.join(' | '));
   assert.deepEqual(run.holes, []);
@@ -115,7 +116,7 @@ test('MUTANT 4: p(X, Y) :- q(X), q(Y) over 200 facts -- 40 000 rows, honest', ()
   assert.equal(run.steps, 40_000);
 });
 
-test('MUTANT 5: the SAME three-way join over 40 facts -- 64 000 rows, honest', () => {
+mutant('MUTANT 5: the SAME three-way join over 40 facts -- 64 000 rows, honest', () => {
   const run = evaluate(join(40, 3));
   assert.equal(run.partial, false, run.holes.join(' | '));
   assert.deepEqual(run.holes, []);
@@ -146,7 +147,7 @@ test('the default sits above every peak measured in this tree', () => {
 // two is opposite: `budget_exhausted` is fixed by offering more budget, and
 // offering more budget to a `space_exhausted` program is what kills the host.
 
-test('MUTANT 6: a program that runs out of STEPS still says budget_exhausted', () => {
+mutant('MUTANT 6: a program that runs out of STEPS still says budget_exhausted', () => {
   const run = evaluate(join(60, 2), { budget: 500 });
   assert.equal(run.partial, true);
   assert.deepEqual(reasons(run), [BUDGET_REASON], run.holes.join(' | '));
@@ -171,7 +172,7 @@ test('and the step wall is still invariant in the budget it is given', () => {
 // when mis-set -- otherwise the number in DEFAULT_SPACE is decoration. This is
 // the mutant that says the default is doing work.
 
-test('MUTANT 2: a wall set below an honest program refuses it, loudly', () => {
+mutant('MUTANT 2: a wall set below an honest program refuses it, loudly', () => {
   const honest = join(200, 2);
   const ok = evaluate(honest);
   assert.equal(ok.partial, false, 'positive control: honest at the shipped wall');
@@ -231,7 +232,7 @@ function child(space: string): { code: number; out: string } {
   }
 }
 
-test('MUTANT 1: with the wall raised out of reach, the host dies again', () => {
+mutant('MUTANT 1: with the wall raised out of reach, the host dies again', () => {
   // POSITIVE CONTROL FIRST, so that a red mutant is the mutation and not a
   // permanently broken harness: the same child, same heap, wall in place.
   const alive = child('500000');
@@ -257,7 +258,7 @@ test('MUTANT 1: with the wall raised out of reach, the host dies again', () => {
 // the first test of this file is the ONLY thing in the repository that would
 // go red. That is stated here rather than left as a comforting silence.
 
-test('MUTANT 3: nothing but this file can see the provenance disappear', () => {
+mutant('MUTANT 3: nothing but this file can see the provenance disappear', () => {
   const run = evaluate(join(200, 3));
   // what the rest of the tree reads, and what stays true under the mutant
   assert.equal(run.partial, true);
@@ -281,7 +282,7 @@ test('MUTANT 3: nothing but this file can see the provenance disappear', () => {
 // with the defect present; the six mutants of the brief are all two-valued
 // and never enter the loop at all.
 
-test('SURVIVOR: the alternation releases what each round clears', () => {
+mutant('SURVIVOR: the alternation releases what each round clears', () => {
   const K = 30, W = 40;
   const moves: string[] = [];
   for (let c = 0; c < W; c++) {

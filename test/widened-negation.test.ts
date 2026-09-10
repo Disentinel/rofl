@@ -27,6 +27,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { widenedWorld } from '../examples/aka/demo.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 // `forged`/`unattributed`/`widened` moved to rules/self-audit.rofl, which a
@@ -129,7 +130,7 @@ function mutate(from: string, to: string): string {
   return out;
 }
 
-test('mutant: the book is dropped from the negation — a cross-book pair goes red', () => {
+mutant('mutant: the book is dropped from the negation — a cross-book pair goes red', () => {
   // TARGETS: the perspective in `negated_under`. `safety.rofl` already derives
   // `neg_relation(A)` = negated ANYWHERE, book-blind; if that were enough this
   // clause would not need `premise_lit`.
@@ -149,7 +150,7 @@ test('mutant: the book is dropped from the negation — a cross-book pair goes r
   assert.deepEqual(widened(bad), ['p[blue]']);
 });
 
-test('mutant: the ring is not subtracted — every honest program goes red', () => {
+mutant('mutant: the ring is not subtracted — every honest program goes red', () => {
   // TARGETS: `Who != $kernel` in `loader`. boot.rofl writes `edb`, `imports`
   // and `authority` rows as `$kernel`; a program writing one more is the
   // co-written declaration table src/reflect.ts documents, not two files.
@@ -166,7 +167,7 @@ test('mutant: the ring is not subtracted — every honest program goes red', () 
     'one program declaring one input is enough to redden the unsubtracted rule');
 });
 
-test('mutant: two writers become one — the audit fires on a singly-written relation', () => {
+mutant('mutant: two writers become one — the audit fires on a singly-written relation', () => {
   // TARGETS: `W1 != W2` in the audit clause. Without it, any negated relation
   // with a single named writer is a row.
   const honest = twoFiles({ both: false });
@@ -179,7 +180,7 @@ test('mutant: two writers become one — the audit fires on a singly-written rel
   assert.deepEqual(widened(bad), ['authority[main]', 'bad[main]'], 'MUTANT DID NOT MUTATE');
 });
 
-test('mutant: the negation requirement is dropped — an honest union goes red', () => {
+mutant('mutant: the negation requirement is dropped — an honest union goes red', () => {
   // TARGETS: `negated_under` in the audit clause. Two files writing one
   // relation is a UNION and usually what was wanted; only a negation over it
   // is damage. Without this conjunct the audit reports the union.

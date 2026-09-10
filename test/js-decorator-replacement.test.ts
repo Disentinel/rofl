@@ -36,6 +36,7 @@ import * as fs from 'node:fs';
 import { Rofl } from '../src/api.ts';
 import { build, base, edges } from './js-corpus-world.ts';
 import type { Mut, World } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const DF = 'rules/js-dataflow.rofl';
 
@@ -147,12 +148,15 @@ const PROTO_ARM =
   `class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N),
                                          ast_attr[code](M, static, false).`;
 
-const mutant = (muts: Mut[]) => build(muts);
+// RENAMED FROM `mutant` ON 2026-09-10: the marker `mutant()` from
+// test/helpers/mutant.ts now owns that name. This one builds a mutated
+// world; that one declares that a test plants a defect.
+const mutated = (muts: Mut[]) => build(muts);
 /** what a mutation costs, as the named edges it removes */
 const lost = (w: World) => WHOLE.filter((e) => !repl(w).includes(e));
 
-test('MUTANT 1 — an auto-accessor is not a field', () => {
-  const m = mutant([{ file: DF, find: ACCESSOR_ROW, replace: '' }]);
+mutant('MUTANT 1 — an auto-accessor is not a field', () => {
+  const m = mutated([{ file: DF, find: ACCESSOR_ROW, replace: '' }]);
   assert.deepEqual(lost(m), ['hauls -> slung']);
   // ITS OWN SIGNATURE: the member is gone, not merely unreachable — which is
   // what separates it from every mutant below, all of which leave `sling`
@@ -161,8 +165,8 @@ test('MUTANT 1 — an auto-accessor is not a field', () => {
   assert.equal(m.n('member_value[flow](O, "seized", V)') > 0, true, 'positive control');
 });
 
-test('MUTANT 2 — the decorator node has no value', () => {
-  const m = mutant([{ file: DF, find: DECORATED_BY, replace: '' }]);
+mutant('MUTANT 2 — the decorator node has no value', () => {
+  const m = mutated([{ file: DF, find: DECORATED_BY, replace: '' }]);
   assert.deepEqual(lost(m),
     ['usesSwage -> spliced', 'usesThimble -> bitted', 'usesThimble -> crimped']);
   // ITS OWN SIGNATURE, and the one that tells it from mutants 3 and 4: the
@@ -171,8 +175,8 @@ test('MUTANT 2 — the decorator node has no value', () => {
   assert.ok(repl(m).includes('top -> decoFerrule') && repl(m).includes('top -> decoCrimp'));
 });
 
-test('MUTANT 3 — a decorated class name still denotes the original', () => {
-  const m = mutant([{ file: DF, find: CLASS_NAME_ARM, replace: '' }]);
+mutant('MUTANT 3 — a decorated class name still denotes the original', () => {
+  const m = mutated([{ file: DF, find: CLASS_NAME_ARM, replace: '' }]);
   assert.deepEqual(lost(m), ['usesSwage -> spliced']);
   // ITS OWN SIGNATURE: `Ferrule` still HAS the member — what is lost is the
   // name `Swage` reaching it, which is a statement about the binding and not
@@ -180,8 +184,8 @@ test('MUTANT 3 — a decorated class name still denotes the original', () => {
   assert.equal(m.n('member_value[flow](O, "spliced", V)'), 1);
 });
 
-test('MUTANT 4 — a decorated member does not hold the replacement', () => {
-  const m = mutant([{ file: DF, find: DECORATED_MEMBER, replace: '' }]);
+mutant('MUTANT 4 — a decorated member does not hold the replacement', () => {
+  const m = mutated([{ file: DF, find: DECORATED_MEMBER, replace: '' }]);
   assert.deepEqual(lost(m), ['usesThimble -> bitted', 'usesThimble -> crimped']);
   // ITS OWN SIGNATURE: BOTH receiver halves go at once, because both read
   // `decorated_member`. Mutants 5 and 6 take exactly one each, and mutant 2
@@ -194,8 +198,8 @@ test('MUTANT 4 — a decorated member does not hold the replacement', () => {
   assert.ok(repl(m).includes('usesSwage -> spliced'));
 });
 
-test('MUTANT 5 — the static receiver loses the replacement', () => {
-  const m = mutant([{ file: DF, find: STATIC_ARM, replace: '' }]);
+mutant('MUTANT 5 — the static receiver loses the replacement', () => {
+  const m = mutated([{ file: DF, find: STATIC_ARM, replace: '' }]);
   assert.deepEqual(lost(m), ['usesThimble -> bitted']);
   // ITS OWN SIGNATURE: the instance half survives, which is the whole content
   // of reading the `static` flag off the DECORATED MEMBER rather than off what
@@ -204,13 +208,13 @@ test('MUTANT 5 — the static receiver loses the replacement', () => {
   assert.ok(repl(m).includes('usesThimble -> crimped'));
 });
 
-test('MUTANT 6 — the instance receiver loses the replacement', () => {
-  const m = mutant([{ file: DF, find: PROTO_ARM, replace: '' }]);
+mutant('MUTANT 6 — the instance receiver loses the replacement', () => {
+  const m = mutated([{ file: DF, find: PROTO_ARM, replace: '' }]);
   assert.deepEqual(lost(m), ['usesThimble -> crimped']);
   assert.ok(repl(m).includes('usesThimble -> bitted'));
 });
 
-test('MUTANT 7 LIVES — a private decorated method is unreachable for a second reason', () => {
+mutant('MUTANT 7 LIVES — a private decorated method is unreachable for a second reason', () => {
   // WHERE THIS CHECK CANNOT LOOK, asked of the rule rather than of the corpus.
   // `decorated_member` carries `ast_node[code](M, class_method, _, _)` as a
   // guard, because `class_method_of[flow]` reaches a PRIVATE method too and a
@@ -230,7 +234,7 @@ test('MUTANT 7 LIVES — a private decorated method is unreachable for a second 
   // rules/js-callgraph.rofl: `F != G` is carried there explicitly "so the rule
   // does not silently depend on ast_within being irreflexive". This one is not
   // to depend silently on `key_name` being blind to a private key.
-  const m = mutant([{
+  const m = mutated([{
     file: DF,
     find: 'ast_node[code](M, class_method, _, _),\n'
         + '                                         class_method_of[flow](CD, M),',
@@ -321,7 +325,7 @@ test('the three cells this item claimed are closed, and the item claims none', (
   assert.deepEqual(q('double_owned[audit](K, S, L, A, B)'), []);
 });
 
-test('MUTANT 8 — the verdict is withdrawn and the cell reopens under nobody', () => {
+mutant('MUTANT 8 — the verdict is withdrawn and the cell reopens under nobody', () => {
   // The gate above can only fail if the cells are actually derived from these
   // rows; this is that control, one row at a time is enough to show the join.
   const q = ledger({ file: 'facts/js-callgraph.rofl',

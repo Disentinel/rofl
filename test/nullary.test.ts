@@ -29,6 +29,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const NULLARY = fs.readFileSync(path.join(ROOT, 'rules/nullary.rofl'), 'utf8');
@@ -84,7 +85,7 @@ test('POSITIVE CONTROL: a head variable riding on an existential is named', () =
 
 // ------------------------- the guards on `dressed_constant`, one mutant each
 
-test('mutant: TWO constant tuples are a table, not a proposition', () => {
+mutant('mutant: TWO constant tuples are a table, not a proposition', () => {
   // `slow_because(fixpoint, barren_rules)` and `slow_because(fixpoint,
   // late_filter)` — no variable in either head, and the argument is the entire
   // content of the relation. `not varying_head` alone said proposition.
@@ -98,7 +99,7 @@ test('mutant: TWO constant tuples are a table, not a proposition', () => {
   assert.ok(a.constants.includes('one'), 'positive control: the same rule with one shape IS named');
 });
 
-test('mutant: an argument a consumer BINDS is data, not a dress', () => {
+mutant('mutant: an argument a consumer BINDS is data, not a dress', () => {
   // `saves_nothing(reuse_plan)` feeds `pure_overhead(P) :- saves_nothing(P),
   // ...` and the constant travels out as the answer's name.
   const a = audit(`
@@ -112,7 +113,7 @@ test('mutant: an argument a consumer BINDS is data, not a dress', () => {
   assert.ok(a.constants.includes('kept'), 'positive control: the one read back as a constant IS named');
 });
 
-test('mutant: a variable NESTED in a head term is still a head variable', () => {
+mutant('mutant: a variable NESTED in a head term is still a head variable', () => {
   // `forged[audit]($fact(R, P, A))` — the `$cons` spine carries `$fact(...)`,
   // not `$var(...)`, so the head read as constant until `$fact` was named.
   const a = audit(`
@@ -125,7 +126,7 @@ test('mutant: a variable NESTED in a head term is still a head variable', () => 
 
 // ---------------------------- the guards on `passenger`, one mutant each
 
-test('mutant: a BUILTIN joins two premises that share no argument', () => {
+mutant('mutant: a BUILTIN joins two premises that share no argument', () => {
   // `being_fed(F, Pct) :- fed_share(F, Pct), fed_cut(C), Pct >= C.` — the hole
   // this model recorded and deliberately left open for a day.
   const a = audit(`
@@ -136,7 +137,7 @@ test('mutant: a BUILTIN joins two premises that share no argument', () => {
   assert.ok(!a.wants.includes('fed'));
 });
 
-test('mutant: a PERSPECTIVE variable joins two premises', () => {
+mutant('mutant: a PERSPECTIVE variable joins two premises', () => {
   // `mechanism_seen[audit](M) :- env_ran(E), resolve_via[E](_, M, _).` — the
   // join runs through the book, which is a slot of `$lit` the walk skipped.
   const a = audit(`
@@ -148,7 +149,7 @@ test('mutant: a PERSPECTIVE variable joins two premises', () => {
   assert.ok(!a.wants.includes('seen'));
 });
 
-test('mutant: a DELIBERATE product whose head is the product', () => {
+mutant('mutant: a DELIBERATE product whose head is the product', () => {
   // `cell[audit](Lang, K, L) :- node_kind(Lang, K), layer(L).` — two
   // disconnected premises, and every variable of both is read downstream.
   const a = audit(`
@@ -159,7 +160,7 @@ test('mutant: a DELIBERATE product whose head is the product', () => {
   assert.ok(!a.wants.includes('grid'));
 });
 
-test('mutant: ONE passenger among two head variables is not a nullary head', () => {
+mutant('mutant: ONE passenger among two head variables is not a nullary head', () => {
   // `share(R, P) :- touched(R, T), total_width(A), P is T * 100 / A.` — drop R
   // and the relation narrows; it does not become a proposition.
   const a = audit(`
@@ -170,7 +171,7 @@ test('mutant: ONE passenger among two head variables is not a nullary head', () 
     `a head with a stayer is not a proposition; wants was ${a.wants.join(', ')}`);
 });
 
-test('mutant: a NEGATED premise is a test and never makes a passenger', () => {
+mutant('mutant: a NEGATED premise is a test and never makes a passenger', () => {
   // Range restriction means a negation can never feed the head, so counting
   // negations as guards would make every `p(X) :- q(X), not r(_).` a passenger
   // rule — and X is that relation's subject.
@@ -197,7 +198,7 @@ test('NEGATIVE CONTROL: a head that is ALREADY nullary is not a candidate', () =
 
 // ----------------------------------------------------------- the survivors
 
-test('SURVIVOR: a variable inside an ARITHMETIC operand is invisible', () => {
+mutant('SURVIVOR: a variable inside an ARITHMETIC operand is invisible', () => {
   // `P is T * 100 / A` reifies its right operand as a compound, and the walk
   // sees the `$cons` spine only — so `T` never appears and `touched(R, T)`
   // reads as disconnected from a comparison that in fact uses it. Measured:
@@ -218,7 +219,7 @@ test('SURVIVOR: a variable inside an ARITHMETIC operand is invisible', () => {
     'SURVIVED: T hides inside the arithmetic, so its premise reads disconnected');
 });
 
-test('SURVIVOR: a USER functor in a head reads as a constant', () => {
+mutant('SURVIVOR: a USER functor in a head reads as a constant', () => {
   // `$fact` is named because it is the kernel's own reified fact, the way
   // safety.rofl names `$lit`, `$not` and `$builtin`. An arbitrary functor
   // cannot be — safety.rofl says why in as many words, "a term carries an

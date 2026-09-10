@@ -15,6 +15,7 @@ import assert from 'node:assert';
 import { Rofl } from '../src/api.ts';
 import { planBody } from '../src/engine.ts';
 import { parseProgram } from '../src/parser.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const B = 5_000_000;
 const rows = (r: Rofl, q: string) => r.query(q, { budget: B }).rows.map((x) => x.text).sort();
@@ -118,7 +119,7 @@ test('permuting a body does not change the answer, over every permutation', () =
     'positive control: the rule derives three facts, so the equality above is not equality of nothing');
 });
 
-test('MUTANTS: where this gate cannot look', () => {
+mutant('MUTANTS: where this gate cannot look', () => {
   // (1) a negation whose only free variable is the PERSPECTIVE, not an argument.
   //     WRITTEN WRONG THE FIRST TIME and it passed anyway: `[k] q(1).` puts the
   //     bracket BEFORE the relation, which does not parse at all, so `ok:false`

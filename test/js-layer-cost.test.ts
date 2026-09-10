@@ -51,6 +51,7 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { FACTS as SHARED_FACTS, RULES as SHARED_RULES, FILES as SHARED_FILES } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -836,7 +837,7 @@ test('the era layer\'s read paths, by name', () => {
 //    constraint it targets, and the ones that SURVIVE are reported as survivors
 //    rather than quietly dropped.
 
-test('MUTANT A: a rule in the layer reordered to enumerate before it constrains', () => {
+mutant('MUTANT A: a rule in the layer reordered to enumerate before it constrains', () => {
   // TARGET: `a body ordered so that a big relation is enumerated before it is
   // constrained`. Same answers, same derivations, more rows — the exact defect
   // a cost gate exists for and the one no correctness test can see.
@@ -888,7 +889,7 @@ test('MUTANT A: a rule in the layer reordered to enumerate before it constrains'
               'now the ROW-SHARE band too; SURVIVED only the firing-share band');
 });
 
-test('MUTANT B: the repair REVERTED — the regression, and the gate must catch it', () => {
+mutant('MUTANT B: the repair REVERTED — the regression, and the gate must catch it', () => {
   // TARGET: `the gate can see a rule getting CHEAPER` — and it did, which is
   // why this mutant now points the other way. THE REPAIR WAS APPLIED on
   // 2026-09-09 (w_has_return_is_a_join_over_the_whole_corpus), so the text this
@@ -951,7 +952,7 @@ test('MUTANT B: the repair REVERTED — the regression, and the gate must catch 
               `and ${(100 * (L.rows / cf().rows - 1)).toFixed(1)}% of the layer, answers identical.`);
 });
 
-test('MUTANT C: an expensive new rule added to the layer pack', () => {
+mutant('MUTANT C: an expensive new rule added to the layer pack', () => {
   // TARGET: `a rule added to this layer can be arbitrarily expensive and no
   // number moves` — the sentence f_the_cost_gate_cannot_see_the_layer... had to
   // write about the first gate. It must be false here.
@@ -993,7 +994,7 @@ test('MUTANT C: an expensive new rule added to the layer pack', () => {
               'SURVIVED the path set');
 });
 
-test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', () => {
+mutant('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', () => {
   // TARGET: the attribution half of this instrument. A difference between two
   // worlds attributes cost BY PACK. The identical rule, housed in
   // rules/js-dataflow.rofl instead of rules/js-controlflow.rofl, is present in
@@ -1049,7 +1050,7 @@ test('MUTANT C\': the same rule one pack away — WHERE THIS GATE CANNOT LOOK', 
               'totals and by the shares, which have the world in their denominator.');
 });
 
-test('MUTANT D: the layer pack missing from the world', () => {
+mutant('MUTANT D: the layer pack missing from the world', () => {
   // TARGET: `an instrument\'s world is part of its claim`. A missing pack
   // subtracts rows and a subtracted row cannot make an assertion fail, so this
   // has to be caught by something other than a number.
@@ -1067,7 +1068,7 @@ test('MUTANT D: the layer pack missing from the world', () => {
               'only falls, which is the safe direction and is why it cannot be the check');
 });
 
-test('MUTANT E: the fixpoint truncated at a budget', () => {
+mutant('MUTANT E: the fixpoint truncated at a budget', () => {
   // TARGET: `a truncated fixpoint is not a cheap fixpoint`. This is the defect
   // that was found in five files at once, one of them the first cost gate, which
   // had been pinning half a world.
@@ -1085,7 +1086,7 @@ test('MUTANT E: the fixpoint truncated at a budget', () => {
               'a budget wall reads as a 66% saving to every number in this file but that one');
 });
 
-test('MUTANT F: a JS pack in the tree that no world has decided about', () => {
+mutant('MUTANT F: a JS pack in the tree that no world has decided about', () => {
   // TARGET: `adding a pack to the tree forces a decision about each world`.
   const withNew = jsPacksOnDisk(['rules/js-scheduling.rofl']);
   for (const w of [CONTROLFLOW, ERA, CALLGRAPH])
@@ -1094,7 +1095,7 @@ test('MUTANT F: a JS pack in the tree that no world has decided about', () => {
   console.log('      KILLED for all three worlds by the closure assertion');
 });
 
-test('MUTANT G: a positive control aimed at a relation that does not exist', () => {
+mutant('MUTANT G: a positive control aimed at a relation that does not exist', () => {
   // TARGET: `an empty answer from a misspelled relation is indistinguishable
   // from an empty answer otherwise`. Two of this file's era controls were
   // written with the wrong arity on the first draft and came back with zero

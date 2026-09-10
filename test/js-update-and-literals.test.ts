@@ -40,6 +40,7 @@ import assert from 'node:assert/strict';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { build, base, read, FILES, FACTS, RULES, unq, type Mut, type World } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 // ===========================================================================
 // HELPERS
@@ -338,7 +339,7 @@ test('MATRIX: ten cells answered, two handed on, and the waivers are the ones th
 // asserted rather than described, so a future change that makes one of them
 // bite goes red here instead of passing quietly.
 
-test('SURVIVORS: two mis-classifications this model cannot feel, and one that needed a site', () => {
+mutant('SURVIVORS: two mis-classifications this model cannot feel, and one that needed a site', () => {
   const b = base();
 
   // SURVIVOR A — `reg_exp_literal` added to `literal_kind` as WELL as to

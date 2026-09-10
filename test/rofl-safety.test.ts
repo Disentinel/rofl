@@ -28,6 +28,7 @@ import { Rofl } from '../src/api.ts';
 import { Evaluation } from '../src/engine.ts';
 import { Store } from '../src/store.ts';
 import { parseProgram } from '../src/parser.ts';
+import { mutant } from './helpers/mutant.ts';
 import {
   encodeRule, resolveClauseBooks, decodeRules, KERNEL_PERSP, MAIN, RESERVED, V,
 } from '../src/reflect.ts';
@@ -255,7 +256,7 @@ function verdicts(rule: string, prog: Row[]) {
   };
 }
 
-test('MUTANTS: one per branch of the host fold, and the two instruments agree on each', () => {
+mutant('MUTANTS: one per branch of the host fold, and the two instruments agree on each', () => {
   const wrong: string[] = [];
   for (const [name, rule, want] of MUTANTS) {
     const v = verdicts(rule, PROG);

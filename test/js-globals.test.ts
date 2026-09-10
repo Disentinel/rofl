@@ -25,6 +25,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 import {
   scanLib, scanGlobals, scanStatics, libSources, emitGlobals, PROTOTYPES,
 } from '../scanners/ts_lib.ts';
@@ -461,7 +462,7 @@ test('without the globals FACTS the rules derive nothing and say so', () => {
 // ---------------------------------------------------------------------------
 // 6. THE MUTANTS
 
-test('MUTANT 1 — the member position leaves the reference table', () => {
+mutant('MUTANT 1 — the member position leaves the reference table', () => {
   // TARGET: `the ceiling of this pack is the position table`. Drop the member
   // object and every static goes, while the callee positions keep answering —
   // which separates the two halves of `global_ref` rather than killing the pack.
@@ -476,7 +477,7 @@ test('MUTANT 1 — the member position leaves the reference table', () => {
     ['Array', 'Map', 'Math', 'RegExp', 'String']);
 });
 
-test('MUTANT 2 — a bound name is no longer a bound name', () => {
+mutant('MUTANT 2 — a bound name is no longer a bound name', () => {
   // TARGET: `a name the file declares is not a global`. Drop the negation and
   // the local `Set` in globals.mjs is reported as the ES global `Set`, dated
   // es2015 — a false attribution rather than a missing one, which is the
@@ -494,7 +495,7 @@ test('MUTANT 2 — a bound name is no longer a bound name', () => {
     'and the residue audit fills with names this program declares');
 });
 
-test('MUTANT 3 — the pattern arm of the declaration walk is withdrawn', () => {
+mutant('MUTANT 3 — the pattern arm of the declaration walk is withdrawn', () => {
   // TARGET: `a name a PATTERN introduces is bound too`. A declarator whose `id`
   // is an object_pattern has no `ast_name`, so without this arm every
   // destructured local reads as a global. The corpus has many; the fixture has
@@ -512,7 +513,7 @@ test('MUTANT 3 — the pattern arm of the declaration walk is withdrawn', () => 
     `KILLED: names a pattern binds are reported as globals; ${[...grew].sort().join(' ')}`);
 });
 
-test('MUTANT 4 — the static join is withdrawn', () => {
+mutant('MUTANT 4 — the static join is withdrawn', () => {
   const m = build([{ file: RULES,
     find: 'es_static[code](N, Name, Key, Rel) :- es_global[code](O, Name, _, _),',
     replace: 'es_static_unused[code](N, Name, Key, Rel) :- es_global[code](O, Name, _, _),' }]);
@@ -531,7 +532,7 @@ test('MUTANT 4 — the static join is withdrawn', () => {
     ['Error.captureStackTrace']);
 });
 
-test('MUTANT 5 — the residue audit stops subtracting what it attributed', () => {
+mutant('MUTANT 5 — the residue audit stops subtracting what it attributed', () => {
   const m = build([{ file: RULES,
     find: '                                               selects[flow](N, Key),\n'
         + '                                               not lib_static(Name, Key, _).',
@@ -546,7 +547,7 @@ test('MUTANT 5 — the residue audit stops subtracting what it attributed', () =
     'and the attribution is untouched, which is what the negation is for');
 });
 
-test('MUTANT 6 — a well-known symbol is declared callable', () => {
+mutant('MUTANT 6 — a well-known symbol is declared callable', () => {
   // TARGET: `the key/call split is READ from the source`. Flip one row of the
   // generated table and `Symbol.iterator` stops being a key — while
   // `Symbol.for`, which is genuinely callable, is unmoved.
@@ -559,7 +560,7 @@ test('MUTANT 6 — a well-known symbol is declared callable', () => {
     'and what is actually CALLED is unchanged, because the shape does not gate it');
 });
 
-test('MUTANT 7 — a global is given the wrong form', () => {
+mutant('MUTANT 7 — a global is given the wrong form', () => {
   const m = build([{ file: GLOBALS, find: 'lib_global("Math", es5, namespace_object).',
     replace: 'lib_global("Math", es5, constructor_binding).' }]);
   assert.deepEqual(mine(m, 'es_construct_not_constructor[audit](X, Name, Form)',
@@ -571,7 +572,7 @@ test('MUTANT 7 — a global is given the wrong form', () => {
     .includes('Math.max'));
 });
 
-test('MUTANT 8 — a static is dated wrongly in the generated pack', () => {
+mutant('MUTANT 8 — a static is dated wrongly in the generated pack', () => {
   const m = build([{ file: GLOBALS, find: 'lib_static("Object", "hasOwn", es2022).',
     replace: 'lib_static("Object", "hasOwn", es5).' }]);
   // ...and it leaves the gate entirely rather than moving within it: es5 is at
@@ -588,7 +589,7 @@ test('MUTANT 8 — a static is dated wrongly in the generated pack', () => {
   ]);
 });
 
-test('MUTANT 9 — the release membership test is inverted', () => {
+mutant('MUTANT 9 — the release membership test is inverted', () => {
   // RE-AIMED FROM AN OFF-BY-ONE, for the reason rules/js-env.rofl records: a
   // rank is a LABEL now and the question is membership, so the boundary error
   // one step further out is dropping the `not`. Every environment then reports
@@ -611,7 +612,7 @@ test('MUTANT 9 — the release membership test is inverted', () => {
     `expected a ts5 row, got ${JSON.stringify(rows)}`);
 });
 
-test('MUTANT 10 — a global name is written as an atom instead of a string', () => {
+mutant('MUTANT 10 — a global name is written as an atom instead of a string', () => {
   // THE MISTAKE THE PROTOTYPE HALF ACTUALLY MADE, kept alive here because this
   // pack repeats the shape: `free_global` gets its name from `ast_name`, and
   // every attribute value the scanner emits is QUOTED. Written as an atom the
@@ -625,7 +626,7 @@ test('MUTANT 10 — a global name is written as an atom instead of a string', ()
     ['JSON', 'console', 'globalThis']);
 });
 
-test('MUTANT 11 — a function declaration stops binding its own name', () => {
+mutant('MUTANT 11 — a function declaration stops binding its own name', () => {
   // TARGET: `declares_name is written rather than borrowed from sees_binder`.
   // This is the one row that separates the two: `sees_binder[code]` covers
   // declarators and patterns and CANNOT see a `function Box() {}`, so borrowing
@@ -873,7 +874,7 @@ test('WHERE THIS CANNOT LOOK: a construction whose callee is a member expression
 // else could I break", which CLAUDE.md records as the only question whose
 // mutants survive. Seven planted, and each names the constraint it targets.
 
-test('MUTANT 12 — the value arm of a construction is withdrawn', () => {
+mutant('MUTANT 12 — the value arm of a construction is withdrawn', () => {
   // TARGET: `a construction is a value site and the site stands for the value`.
   // This is the decision itself; without it every downstream join is starved,
   // and the world goes back to the state the finding measured.
@@ -891,7 +892,7 @@ test('MUTANT 12 — the value arm of a construction is withdrawn', () => {
   assert.equal(m.q('es_prototype_gap[audit](Name, Rel)').length, 32);
 });
 
-test('MUTANT 13 — the prototype is read off the site and never travels', () => {
+mutant('MUTANT 13 — the prototype is read off the site and never travels', () => {
   // TARGET: `the binder arm of may_be_node carries the instance to the
   // receiver`. The q1/q2 pair in test/js-controlflow-values.test.ts asks this
   // of `prototype_of`'s two original arms; this asks it of the third. Only the
@@ -906,7 +907,7 @@ test('MUTANT 13 — the prototype is read off the site and never travels', () =>
     'the two receivers written in place survive; the bound one does not');
 });
 
-test('MUTANT 14 — a form that cannot be constructed is given an instance', () => {
+mutant('MUTANT 14 — a form that cannot be constructed is given an instance', () => {
   // TARGET: `constructible_form gates the value`. `new Math()` is a TypeError
   // and `es_construct_not_constructor[audit]` says so two sections up; without
   // this premise the model gives it a value one relation later and contradicts
@@ -923,7 +924,7 @@ test('MUTANT 14 — a form that cannot be constructed is given an instance', () 
     'KILLED: the same site is both `cannot be constructed` and `has an instance`');
 });
 
-test('MUTANT 15 — the gap audit stops asking whether the form is constructible', () => {
+mutant('MUTANT 15 — the gap audit stops asking whether the form is constructible', () => {
   // TARGET: `a namespace object has no instance surface to be missing`. Without
   // the premise the audit reports `Math`, `JSON`, `Atomics`, `Intl`, `Reflect`,
   // `Infinity` and `NaN` as globals whose instances the library does not carry —
@@ -937,7 +938,7 @@ test('MUTANT 15 — the gap audit stops asking whether the form is constructible
     ['Atomics', 'Infinity', 'Intl', 'JSON', 'Math', 'NaN', 'Reflect']);
 });
 
-test('MUTANT 16 — the residue audit stops subtracting what it attributed', () => {
+mutant('MUTANT 16 — the residue audit stops subtracting what it attributed', () => {
   // TARGET: `es_instance_unattributed names what is NOT carried`. The same
   // mutant MUTANT 5 plants on the static surface, on the instance one: without
   // the negation the audit reports the three calls the model just attributed,
@@ -950,7 +951,7 @@ test('MUTANT 16 — the residue audit stops subtracting what it attributed', () 
     ['Array.fill', 'Map.set', 'RegExp.test', 'String.substr']);
 });
 
-test('MUTANT 17 — the identity becomes a spelling', () => {
+mutant('MUTANT 17 — the identity becomes a spelling', () => {
   // TARGET: `a global is a name NOTHING IN THIS PROGRAM BINDS`. Replace the
   // `es_global_construct` premise with a raw match on the callee's name and
   // site 17's `class Number` is attributed to the standard library: the
@@ -971,7 +972,7 @@ test('MUTANT 17 — the identity becomes a spelling', () => {
     'and a call on this program\'s own instance is attributed to the standard library');
 });
 
-test('MUTANT 18 — the value arm is widened to every construction', () => {
+mutant('MUTANT 18 — the value arm is widened to every construction', () => {
   // TARGET: `only an ES-GLOBAL construction is a value site`. This is the
   // tempting shortcut the finding warned against in another guise —
   // `node_value_kind(new_expression)` in rules/js-dataflow.rofl would say the

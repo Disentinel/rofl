@@ -19,6 +19,7 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { scanLib, scanReadonly, emit, releaseOf, PROTOTYPES } from '../scanners/ts_lib.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -238,7 +239,7 @@ test('a library method is gated by year, and three years discriminate', () => {
 // ---------------------------------------------------------------------------
 // 4. FIVE MUTANTS, FIVE ORACLES
 
-test('MUTANT 1 — the attribution rule is withdrawn', () => {
+mutant('MUTANT 1 — the attribution rule is withdrawn', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
     find: 'lib_call[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),',
     replace: 'lib_call_unused[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),' }]);
@@ -246,7 +247,7 @@ test('MUTANT 1 — the attribution rule is withdrawn', () => {
   assert.deepEqual(unsupported(m), [], 'and the era answer goes with it');
 });
 
-test('MUTANT 2 — the residue audit stops subtracting what it attributed', () => {
+mutant('MUTANT 2 — the residue audit stops subtracting what it attributed', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
     find: 'stdlib_unattributed[audit](C, P, Key) :- stdlib_member[audit](C, P, Key),\n'
         + '                                         not lib_member(P, Key, _).',
@@ -260,7 +261,7 @@ test('MUTANT 2 — the residue audit stops subtracting what it attributed', () =
      'string.substr', 'string.trimLeft']);
 });
 
-test('MUTANT 3 — the year comparison includes the environment itself', () => {
+mutant('MUTANT 3 — the year comparison includes the environment itself', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
     // RE-AIMED 2026-09-08 with the move to composition. The off-by-one it
     // planted was `Since >= R` on a year; the same defect on a membership test
@@ -283,7 +284,7 @@ test('MUTANT 3 — the year comparison includes the environment itself', () => {
     `expected es5 to report its own methods, got ${JSON.stringify(unsupported(m))}`);
 });
 
-test('MUTANT 4 — a method is dated wrongly in the pack', () => {
+mutant('MUTANT 4 — a method is dated wrongly in the pack', () => {
   const m = build([{ file: SURFACE,
     find: 'lib_member(array, "at", es2022).', replace: 'lib_member(array, "at", es5).' }]);
   // ...and it leaves the gate entirely rather than moving within it: 2009 is at
@@ -297,7 +298,7 @@ test('MUTANT 4 — a method is dated wrongly in the pack', () => {
   ]);
 });
 
-test('MUTANT 5 — the method is written as an atom instead of a string', () => {
+mutant('MUTANT 5 — the method is written as an atom instead of a string', () => {
   // THE MISTAKE THE FIRST DRAFT ACTUALLY MADE, kept as a mutant. `stdlib_member`
   // gets its key from `selects[flow]`, which reads an `ast_attr` VALUE, and every
   // attribute value the scanner emits is quoted. Written as atoms the join
@@ -392,7 +393,7 @@ test('the generated tables carry the ratio the source has', () => {
     ['string.trimLeft -> trimStart', 'string.trimRight -> trimEnd']);
 });
 
-test('MUTANT 6 — the deprecation join is withdrawn', () => {
+mutant('MUTANT 6 — the deprecation join is withdrawn', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
     find: 'lib_call_deprecated[audit](C, P, Key) :- lib_call[code](C, P, Key, _),',
     replace: 'lib_call_deprecated_unused[audit](C, P, Key) :- lib_call[code](C, P, Key, _),' }]);
@@ -400,7 +401,7 @@ test('MUTANT 6 — the deprecation join is withdrawn', () => {
   assert.deepEqual(remedy(m), [], 'and the remedy goes with it, being derived from it');
 });
 
-test('MUTANT 7 — the remedy join is withdrawn', () => {
+mutant('MUTANT 7 — the remedy join is withdrawn', () => {
   const m = build([{ file: 'rules/js-env-api.rofl',
     find: 'lib_replaced_by(P, Key, R).', replace: 'lib_replaced_by_unused(P, Key, R).' }]);
   // ITS OWN SIGNATURE, and it is what separates this mutant from the one above:
@@ -409,7 +410,7 @@ test('MUTANT 7 — the remedy join is withdrawn', () => {
   assert.deepEqual(remedy(m), []);
 });
 
-test('MUTANT 8 — a deprecation is dropped from the generated pack', () => {
+mutant('MUTANT 8 — a deprecation is dropped from the generated pack', () => {
   const m = build([{ file: SURFACE,
     find: 'lib_deprecated(string, "substr").', replace: '' }]);
   assert.deepEqual(deprecated(m), ['string.trimLeft'],

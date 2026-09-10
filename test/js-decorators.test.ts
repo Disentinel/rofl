@@ -23,6 +23,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { build, base, edges } from './js-corpus-world.ts';
 import type { Mut, World } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const CG = 'rules/js-callgraph.rofl';
 const CF = 'rules/js-controlflow.rofl';
@@ -89,10 +90,13 @@ test('the layer answers the decorator as a transfer, and names its mechanism', (
 // which is the point of giving each its own oracle rather than one shared
 // assertion: two mutations with the same edge signature are not one mutant.
 
-const mutant = (muts: Mut[]) => build(muts);
+// RENAMED FROM `mutant` ON 2026-09-10: the marker `mutant()` from
+// test/helpers/mutant.ts now owns that name. This one builds a mutated
+// world; that one declares that a test plants a defect.
+const mutated = (muts: Mut[]) => build(muts);
 
-test('MUTANT 1 — the decorator is not a transfer site at all', () => {
-  const m = mutant([{ file: CG, find: 'transfer_kind(decorator).', replace: '' }]);
+mutant('MUTANT 1 — the decorator is not a transfer site at all', () => {
+  const m = mutated([{ file: CG, find: 'transfer_kind(decorator).', replace: '' }]);
   assert.deepEqual(decoEdges(m), ['top -> decoFactory'],
     'the visible factory call survives; both invisible calls go');
   // ITS OWN SIGNATURE: the sites themselves are gone, which mutant 2 leaves.
@@ -100,8 +104,8 @@ test('MUTANT 1 — the decorator is not a transfer site at all', () => {
   assert.equal(m.n('transfer_site[code](X, decorator)'), 0, 'and no other block has one either');
 });
 
-test('MUTANT 2 — the site stands and nothing resolves it', () => {
-  const m = mutant([{ file: CG, find:
+mutant('MUTANT 2 — the site stands and nothing resolves it', () => {
+  const m = mutated([{ file: CG, find:
     'resolves[code](X, F) :- transfer_site[code](X, decorator),\n'
   + '                        ast_child[code](X, expression, 0, E),\n'
   + '                        may_be_node[flow](E, F), fn_node[code](F).', replace: '' }]);
@@ -111,8 +115,8 @@ test('MUTANT 2 — the site stands and nothing resolves it', () => {
   assert.deepEqual(ownSites(m), ['decoFactory', 'decoOnce']);
 });
 
-test('MUTANT 3 — a decorator runs inside the thing it decorates', () => {
-  const m = mutant([{ file: CG, find:
+mutant('MUTANT 3 — a decorator runs inside the thing it decorates', () => {
+  const m = mutated([{ file: CG, find:
     'in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).',
     replace: '' }]);
   // THE ORIGINAL DEFECT, planted: the factory call goes back inside `marked`.
@@ -121,18 +125,18 @@ test('MUTANT 3 — a decorator runs inside the thing it decorates', () => {
   assert.ok(!decoEdges(m).includes('top -> decoFactory'));
 });
 
-test('MUTANT 4 — the decorator NODE is enclosed by what it decorates', () => {
+mutant('MUTANT 4 — the decorator NODE is enclosed by what it decorates', () => {
   // The second arm exists only because `ast_within` is irreflexive, so the
   // first cannot reach the decorator node itself. Without it the invisible call
   // is attributed to the decorated method rather than to the class definition.
-  const m = mutant([{ file: CG, find:
+  const m = mutated([{ file: CG, find:
     'in_own_decorator[code](F, D)  :- decorates[code](F, D).', replace: '' }]);
   assert.ok(decoEdges(m).includes('marked -> decoApplied'),
     'the method is credited with a call that ran before it existed');
 });
 
-test('MUTANT 5 — top_call goes back to call_site', () => {
-  const m = mutant([{ file: CG, find:
+mutant('MUTANT 5 — top_call goes back to call_site', () => {
+  const m = mutated([{ file: CG, find:
     'top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),\n'
   + '                          ast_file[code](R, File), not enclosed[code](C).',
     replace:
@@ -146,13 +150,13 @@ test('MUTANT 5 — top_call goes back to call_site', () => {
     'resolution is untouched; only the attribution of an un-enclosed site is lost');
 });
 
-test('MUTANT 6 — the mechanism is claimed by nothing', () => {
-  const m = mutant([{ file: CF, find: 'mechanism_modelled(definition_time_call).', replace: '' }]);
+mutant('MUTANT 6 — the mechanism is claimed by nothing', () => {
+  const m = mutated([{ file: CF, find: 'mechanism_modelled(definition_time_call).', replace: '' }]);
   assert.deepEqual(m.q('mechanism_unanswered[audit](M)').flat(), ['definition_time_call']);
 });
 
-test('MUTANT 7 — the kind is not named as guarded', () => {
-  const m = mutant([{ file: CF, find: 'guard_named[code](decorator).', replace: '' }]);
+mutant('MUTANT 7 — the kind is not named as guarded', () => {
+  const m = mutated([{ file: CF, find: 'guard_named[code](decorator).', replace: '' }]);
   assert.deepEqual(m.q('guard_unmodelled[audit](K)').flat(), ['decorator'],
     'a mechanism answered by a rule that reaches none of the kinds carrying it');
 });

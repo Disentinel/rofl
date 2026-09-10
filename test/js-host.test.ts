@@ -26,6 +26,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { base, build, read, ROOT, PACKS, type World } from './js-host-world.ts';
 import { emit, scanHosts } from '../scanners/host_lib.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const set = (xs: string[]): Set<string> => new Set(xs);
 const sorted = (s: Set<string>): string[] => [...s].sort();
@@ -501,7 +502,7 @@ test('the world names every js pack on disk as loaded or deliberately absent', (
 // together is what makes the reason falsifiable: the day the cause goes away
 // this test goes red and says so, which a deleted mutant could not.
 
-test('SURVIVOR m_family_out_of_arrived_by — and the reason it cannot be killed here', () => {
+mutant('SURVIVOR m_family_out_of_arrived_by — and the reason it cannot be killed here', () => {
   const b = base();
   const m = build([{
     file: HOST,

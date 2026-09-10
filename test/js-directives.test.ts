@@ -44,6 +44,7 @@ import assert from 'node:assert/strict';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { build, base, read, FILES, FACTS, RULES, unq, type Mut, type World } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const DF = 'rules/js-dataflow.rofl';
 const CF = 'rules/js-controlflow.rofl';
@@ -569,7 +570,7 @@ test('ERA: the hashbang is gated on its true year, and the scale reaches it', ()
   assert.deepEqual(q('kind_unaccounted[audit](L, K)'), []);
 });
 
-test('ERA: MUTANT 8 — the falsehood put back, and the audit that could not name it', () => {
+mutant('ERA: MUTANT 8 — the falsehood put back, and the audit that could not name it', () => {
   // MUTANT 8 — `kind_baseline(js, interpreter_directive)` replaced by the gate
   // that says what the hashbang actually is. `feature_since(hashbang, 2023)` is
   // above every `env_rank` on the scale, so `env_has` is empty for it and the

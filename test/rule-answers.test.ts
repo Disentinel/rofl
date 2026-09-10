@@ -26,6 +26,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Rofl } from '../src/api.ts';
 import { Evaluation } from '../src/engine.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
@@ -218,7 +219,7 @@ function build(prog: string): Evaluation {
   return new Evaluation(r.store);
 }
 
-test('MUTANTS: the corpus is thin on demand, so the demand is planted', () => {
+mutant('MUTANTS: the corpus is thin on demand, so the demand is planted', () => {
   for (const [name, prog, demand] of MUTANTS) {
     const ev = build(prog);
     assert.deepEqual(differences(ev), [], name);

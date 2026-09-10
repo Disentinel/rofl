@@ -25,6 +25,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { Rofl } from '../src/api.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = new URL('../', import.meta.url);
 const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
@@ -461,7 +462,7 @@ test('the queue covers the model: every open cell owned by name, none swept', ()
 // ===========================================================================
 // THE MUTANT SET. Seven planted defects, six killed, one alive and named.
 
-test('MUTANT 1 — a claim on a kind nobody declares', () => {
+mutant('MUTANT 1 — a claim on a kind nobody declares', () => {
   // THE DESIGN ARGUMENT, MEASURED. This is caught by `orphan[audit]`, a rule
   // written before this pack existed, because the queue is spelled as a
   // `claim` rather than as a relation of its own. CLAUDE.md records what the
@@ -479,7 +480,7 @@ test('MUTANT 1 — a claim on a kind nobody declares', () => {
   assert.equal(w.n('queue_stale[audit](W, K, S, L)'), 1, 'and the queue says it points at nothing open');
 });
 
-test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
+mutant('MUTANT 2 — a real shape claimed in the wrong layer', () => {
   // `s_member_on_this` exists, `dataflow` exists, and the CELL does not: the
   // shape axis applies to callgraph only. A pair of legal names is not a legal
   // cell, which is the check a per-argument vocabulary test would miss.
@@ -487,7 +488,7 @@ test('MUTANT 2 — a real shape claimed in the wrong layer', () => {
   assert.equal(w.n('orphan[audit](Q, A, K, S, L)'), 1);
 });
 
-test('MUTANT 3 — the sweeps stopped being load-bearing, and that is the milestone', () => {
+mutant('MUTANT 3 — the sweeps stopped being load-bearing, and that is the milestone', () => {
   // WHAT THIS TEST USED TO PLANT: a sweep marked `done` while its layer still
   // had open cells, so the residue went straight back on the unqueued list.
   // By 2026-09-05 all four sweeps are done AND every cell they left open is
@@ -503,7 +504,7 @@ test('MUTANT 3 — the sweeps stopped being load-bearing, and that is the milest
     + ' so a sweep\'s state is no longer load-bearing');
 });
 
-test('MUTANT 4 — a named item marked done while its cells are open', () => {
+mutant('MUTANT 4 — a named item marked done while its cells are open', () => {
   // the defect docs/modelling-a-language.md fears by name: a filled matrix
   // looks finished. Here the model contradicts the claim of completion.
   // ONE row now, not two: the split closed every cell this item owned except
@@ -531,17 +532,17 @@ test('MUTANT 4 — a named item marked done while its cells are open', () => {
   assert.equal(base.n('false_done[audit](W, K, S, L)'), 0, 'and none on the honest tree');
 });
 
-test('MUTANT 5 — two items owning one cell', () => {
+mutant('MUTANT 5 — two items owning one cell', () => {
   const w = world({ extra: 'claim(queued, js, tsas_expression, s_ts_as, callgraph, w_cg_member_family).' });
   assert.equal(w.n('double_owned[audit](K, S, L, A, B)'), 2, 'both orderings of the pair');
 });
 
-test('MUTANT 6 — a spawned finding that is not in the ledger', () => {
+mutant('MUTANT 6 — a spawned finding that is not in the ledger', () => {
   const w = world({ extra: 'work_spawned(w_cg_sweep, f_no_such_finding).' });
   assert.equal(w.n('spawn_orphan[audit](W, F)'), 1);
 });
 
-test('MUTANT 7 — an item with no state, and a plan that waits on itself', () => {
+mutant('MUTANT 7 — an item with no state, and a plan that waits on itself', () => {
   // `work_unordered[audit]` WENT WITH THE NUMBER on 2026-09-08, when the order
   // became a derivation over `work_needs` instead of a hand-written integer.
   const w = world({ extra: 'work(w_ghost, "stateless").' });
@@ -574,7 +575,7 @@ test('MUTANT 7 — an item with no state, and a plan that waits on itself', () =
   }
 });
 
-test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
+mutant('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
   // FOR TWO DAYS THIS MUTANT WAS ALIVE BY CONSTRUCTION and the comment said so:
   // delete a claim, and the layer's sweeping item absorbs the cell, so every
   // lie-detector stays quiet and only a COUNT moves. A bucket buys coverage and
@@ -644,7 +645,7 @@ test('MUTANT 8 — THE ONE THAT LIVED, AND IS NOW DEAD AT EVERY LAYER', () => {
   console.log(`  KILLED at all four layers: a deleted claim is now a named row, not a count`);
 });
 
-test('MUTANT 9 — a dependency the plan does not honour', () => {
+mutant('MUTANT 9 — a dependency the plan does not honour', () => {
   // THE DEFECT THIS RELATION WAS ADDED FOR, planted: `w_cg_call_result` says in
   // its note that it waits on dataflow returns, and for three commits it sat
   // AHEAD of the item it waits on. A note cannot refuse to hand out an item.
@@ -793,7 +794,7 @@ test('the layer list is the owner\'s, and a rule says so', () => {
     + ` ${mut.n('cell[audit](A, K, S, L)') - base.n('cell[audit](A, K, S, L)')} cells on one line`);
 });
 
-test('MUTANT — a hold on an item nobody declared, and a hold withdrawn', () => {
+mutant('MUTANT — a hold on an item nobody declared, and a hold withdrawn', () => {
   // THE HOLD IS A ROW BECAUSE THE ORDINAL STOPPED SAYING IT, and a row can be
   // wrong in two ways that a position cannot: it can name nothing, and it can
   // be missing. Both are planted.
@@ -807,7 +808,7 @@ test('MUTANT — a hold on an item nobody declared, and a hold withdrawn', () =>
     + ' w_leak_variable_on_the_right, seven tests red on it');
 });
 
-test('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
+mutant('MUTANT 10 — a dependency on an item nobody declared, and a cycle', () => {
   const unknown = world({ extra: 'work_needs(w_cg_syntactic_wrappers, w_no_such_item).' });
   assert.equal(unknown.n('needs_unknown[audit](W, O)'), 1);
   const cyc = world({ extra: 'work_needs(w_cf_abrupt_transfer, w_cg_syntactic_wrappers).\nwork_needs(w_cg_syntactic_wrappers, w_cf_abrupt_transfer).' });
@@ -885,7 +886,7 @@ test('a decision already taken is not work', () => {
     'adding a reason forces a decision about whether it means work');
 });
 
-test('MUTANT 11 — a blocker on a cell that is no longer open', () => {
+mutant('MUTANT 11 — a blocker on a cell that is no longer open', () => {
   const mut = world({ extra: 'cell_blocked(js_no_such, none, callgraph, scanner_contract).' });
   assert.equal(mut.n('blocker_stale[audit](K, S, L)'), 1, 'a blocker outliving its cell');
   const bad = world({ extra: 'cell_blocked(member_expression, s_member_on_other, callgraph, vibes).' });

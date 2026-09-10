@@ -45,6 +45,7 @@ import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { build, base, edges, type Mut, type World } from './js-corpus-world.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const readRepo = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -411,7 +412,7 @@ test('SURFACE: a module exported entirely through a specifier list has an entry 
   assert.deepEqual(w.q('no_entry_point[audit](File)'), [], 'and the file has an entry point');
 });
 
-test('CORPUS MUTANT C7 the entry surface stops reading the specifier list', () => {
+mutant('CORPUS MUTANT C7 the entry surface stops reading the specifier list', () => {
   // TARGETS: `exported_fn`, and the DANGEROUS direction — a smaller seed reports
   // live functions as maybe-dead. This is the measurement that was taken BEFORE
   // the arm existed, replayed as a mutant.

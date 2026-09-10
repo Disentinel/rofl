@@ -43,6 +43,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { mutant } from './helpers/mutant.ts';
 
 /** one world with every shape of relation the question has an answer for */
 function world(): Rofl {
@@ -104,7 +105,7 @@ test('a ledger named by a VARIABLE makes every ledger possible, and is not flagg
   assert.equal(r.query('carried[code](X)').rows.length, 2, 'positive control: it derives');
 });
 
-test('MUTANT: a misspelled audit is caught, and the correct spelling is not', () => {
+mutant('MUTANT: a misspelled audit is caught, and the correct spelling is not', () => {
   // The planted defect this gate exists for, in the exact shape the repository
   // writes it: an audit asserted EMPTY, with one letter wrong.
   const r = world();
@@ -116,7 +117,7 @@ test('MUTANT: a misspelled audit is caught, and the correct spelling is not', ()
     'and ONLY unpopulatable tells them apart — if this fails the gate is blind');
 });
 
-test('MUTANT: the check is not the store — a populated relation asked wrongly still fails', () => {
+mutant('MUTANT: the check is not the store — a populated relation asked wrongly still fails', () => {
   // WHERE A CHEAPER CHECK WOULD HAVE STOPPED: "does the store hold any fact
   // under this name" is satisfied by `inled[code]` having rows, and says
   // nothing about the ledger the caller asked for. Measured, not argued.
@@ -169,7 +170,7 @@ test('a relation big enough to overflow a spread still answers', () => {
   assert.equal(r.query('wide(X)').unpopulatable, false);
 });
 
-test('MUTANT: a hole in the LIST is a hole in the gate — every guarded helper reads it', () => {
+mutant('MUTANT: a hole in the LIST is a hole in the gate — every guarded helper reads it', () => {
   // THE GATE IS A FIELD AND A FIELD IS ONLY AS GOOD AS ITS READERS. This is
   // where the check is structurally unable to look, so it is asserted from the
   // outside: whatever calls `r.query` must consult it, and a new test file that

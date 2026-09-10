@@ -29,6 +29,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { Rofl } from '../src/api.ts';
 import { scan } from '../scanners/js_ast.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = new URL('../', import.meta.url);
 const read = (p: string) => fs.readFileSync(new URL(p, ROOT), 'utf8');
@@ -191,7 +192,7 @@ test('the three verdicts partition the cell space, exactly and without overlap',
     /blocked: handled\[main\]\(js,call_expression,dataflow,r_call_args_flow\) holds/);
 });
 
-test('MUTANT 1: deleting the default rule breaks the partition, and only it', () => {
+mutant('MUTANT 1: deleting the default rule breaks the partition, and only it', () => {
   const stripped = RULES.replace(
     /verdict\[audit\]\(Lang, K, L, not_modelled\) :-[\s\S]*?\.\n/, '');
   // positive control on the MUTATION itself: a replace that silently matched
@@ -231,7 +232,7 @@ test('unaccounted and verdict(..., not_modelled) agree row for row', () => {
 // MUTANT 2 — move by exactly one. Target: the default is derived from the
 // authored facts and not from a frozen list. KILLED.
 
-test('MUTANT 2: one handled fact moves exactly one cell, in both directions', () => {
+mutant('MUTANT 2: one handled fact moves exactly one cell, in both directions', () => {
   const before = counts(world());
   show('before', before);
   const r = world({ extra: 'handled(js, yield_expression, dataflow, r_yield_flow).\n' });
@@ -276,7 +277,7 @@ test('every not_modelled cell carries a reason, and the split is a work queue', 
 // MUTANT 3 — an invented reason atom. Target: `bad_reason`, and the silent
 // half of the same defect (the split stops summing). KILLED, both halves.
 
-test('MUTANT 3: a reason whose atom is in no taxonomy is reported', () => {
+mutant('MUTANT 3: a reason whose atom is in no taxonomy is reported', () => {
   const r = world({ extra: 'unknown_because(js, yield_expression, dataflow, a_bit_tricky).\n' });
   assert.ok(r.holds('unknown_because(js, yield_expression, dataflow, a_bit_tricky)'),
             'positive control: the injected fact reached the store');
@@ -295,7 +296,7 @@ test('MUTANT 3: a reason whose atom is in no taxonomy is reported', () => {
 // ---------------------------------------------------------------------------
 // MUTANT 4 — an excuse that outlived its cause. Target: `stale_reason`. KILLED.
 
-test('MUTANT 4: a reason declared for a cell that is no longer not_modelled', () => {
+mutant('MUTANT 4: a reason declared for a cell that is no longer not_modelled', () => {
   const r = world({ extra: 'unknown_because(js, call_expression, dataflow, not_yet).\n' });
   assert.ok(r.holds('unknown_because(js, call_expression, dataflow, not_yet)'),
             'positive control: the injected fact reached the store');
@@ -320,7 +321,7 @@ test('MUTANT 4: a reason declared for a cell that is no longer not_modelled', ()
 // design decision that a waived cell stays counted. KILLED: the audit cannot
 // be driven to "success" by declaring the whole matrix ignored.
 
-test('MUTANT 5: waiving every cell does not report success', () => {
+mutant('MUTANT 5: waiving every cell does not report success', () => {
   const base = world();
   const every = base.query('cell[audit](A, B, C)').rows
     .map((x) => `ignored(${x.bindings['A']}, ${x.bindings['B']}, ${x.bindings['C']}, a_plausible_reason).`)
@@ -350,7 +351,7 @@ test('MUTANT 5: waiving every cell does not report success', () => {
 // SLEPT THROUGH before `orphan_reason` was added; KILLED after. Both arms are
 // measured here, because "the gate is green" says nothing without the red.
 
-test('MUTANT 6: without orphan_reason the claim evaporates silently', () => {
+mutant('MUTANT 6: without orphan_reason the claim evaporates silently', () => {
   const stripped = RULES.replace(/orphan_reason\[audit\][\s\S]*$/, '');
   assert.ok(stripped.length < RULES.length, 'the mutation did not apply');
   assert.doesNotMatch(stripped, /orphan_reason/);
@@ -372,7 +373,7 @@ test('MUTANT 6: without orphan_reason the claim evaporates silently', () => {
   assert.equal(n(r, 'reason[audit](A, B, C, R)'), 60, 'the orphan reason reaches no cell at all');
 });
 
-test('MUTANT 6: orphan_reason objects to both halves of the vocabulary', () => {
+mutant('MUTANT 6: orphan_reason objects to both halves of the vocabulary', () => {
   const r = world({
     extra: 'unknown_because(js, no_such_kind, dataflow, not_yet).\n' +
            'unknown_because(js, call_expression, no_such_layer, not_yet).\n',
@@ -394,7 +395,7 @@ test('MUTANT 6: orphan_reason objects to both halves of the vocabulary', () => {
 // written in a comment and nothing read it, which is the same defect as a
 // reason nothing exercises. KILLED, both halves.
 
-test('MUTANT 7: an orphan claim breaks the partition, and orphan_claim names it', () => {
+mutant('MUTANT 7: an orphan claim breaks the partition, and orphan_claim names it', () => {
   // pristine control first, or the break below proves only that the model has
   // orphans in it already
   const clean = world();
@@ -428,7 +429,7 @@ test('MUTANT 7: an orphan claim breaks the partition, and orphan_claim names it'
 // EXTRA PROBE, unasked and reported as a survivor: two reasons for one cell.
 // Target: whether `reason` is a function. It is not, and nothing objects.
 
-test('PROBE (survivor): two reasons for one cell are accepted, and hide in the counts', () => {
+mutant('PROBE (survivor): two reasons for one cell are accepted, and hide in the counts', () => {
   const r = world({
     extra: 'unknown_because(js, yield_expression, dataflow, budget_exhausted).\n' +
            'unknown_because(js, yield_expression, dataflow, out_of_scope).\n',
@@ -1037,7 +1038,7 @@ test('every declared kind either appears in the corpus or says why not', () => {
     'and the spelling the scanner cannot emit says so by name');
 });
 
-test('MUTANT: an excuse withdrawn names the kind, and a misspelled one names it twice', () => {
+mutant('MUTANT: an excuse withdrawn names the kind, and a misspelled one names it twice', () => {
   // TWO MUTANTS IN ONE TEST because they are the same defect from either side.
   //
   // THE ANCHOR IS DERIVED, 2026-09-07, and it is the SIXTH time in this
@@ -1084,13 +1085,13 @@ test('MUTANT: an excuse withdrawn names the kind, and a misspelled one names it 
     'AND the excuse names something nobody declares — the guard the excuse list needs itself');
 });
 
-test('MUTANT: an excuse for a kind that IS present', () => {
+mutant('MUTANT: an excuse for a kind that IS present', () => {
   const r = corpus({ cg: CG + '\nkind_absent_ok(identifier, a_no_corpus_site).\n' });
   assert.deepEqual(binds(r, 'kind_absent_stale[audit](K)', 'K'), ['identifier'],
     'an excuse cannot outlive its cause');
 });
 
-test('MUTANT: the corpus guard dropped — in the world where it matters', () => {
+mutant('MUTANT: the corpus guard dropped — in the world where it matters', () => {
   // WHERE THIS CHECK IS STRUCTURALLY UNABLE TO LOOK, asked before it shipped.
   // The audit reads the corpus, and the matrix-machinery world below loads NO
   // corpus at all — so unguarded, every declared kind is unexercised there and
@@ -1114,7 +1115,7 @@ test('MUTANT: the corpus guard dropped — in the world where it matters', () =>
     + n(unguarded, 'kind_unexercised[audit](A, K)'));
 });
 
-test('MUTANT: one type-node verdict deleted reopens exactly one cell', () => {
+mutant('MUTANT: one type-node verdict deleted reopens exactly one cell', () => {
   // The per-arm delete for the forty rows this iteration wrote. `unqueued`
   // is what makes it bite: an open cell nobody claims.
   const r = corpus({
@@ -1406,7 +1407,7 @@ const NONE_UNSPLIT =
 // ---------------------------------------------------------------------------
 // SHAPE MUTANT 1 — applicability really cuts. KILLED.
 
-test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse one', () => {
+mutant('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse one', () => {
   const shapes = shapeMut('axis_applies(shape, callgraph).', '-- removed by the mutant');
   assert.ok(shapes.length < SHAPES.length, 'the mutation did not apply');
 
@@ -1505,7 +1506,7 @@ test('SHAPE MUTANT 1: removing axis_applies collapses the matrix onto the coarse
 // `unearned_axis[audit]`, which is the relation that answers the brief's
 // question: yes, something can say no.
 
-test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refused', () => {
+mutant('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refused', () => {
   const before = fine(shapeWorld());
   const r = shapeWorld({ extra: 'layer(modules).\naxis_applies(shape, modules).\n' });
   assert.ok(r.holds('axis_applies(shape, modules)'),
@@ -1543,7 +1544,7 @@ test('SHAPE MUTANT 2: declaring the shape axis applicable to `modules` is refuse
   console.log('      KILLED: cells 114 -> 159 (none-cells only), unearned_axis[audit](shape, modules)');
 });
 
-test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft declared', () => {
+mutant('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft declared', () => {
   // This one is not hypothetical: the draft of facts/js-shapes.rofl carried
   // `axis_applies(shape, dataflow)` on the argument that a callee's shape
   // matters to data flow too. It may well, one day; nothing models it today,
@@ -1574,7 +1575,7 @@ test('SHAPE MUTANT 2b: the same refusal for `dataflow`, which the first draft de
 // SHAPE MUTANT 3 — the vocabulary hole, reopened by a THIRD relation over the
 // same arguments. KILLED by two independent relations; the PARTITION sleeps.
 
-test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
+mutant('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
   const r = shapeWorld({ extra: 'shape_of(js, no_such_kind, s_identifier).\n' });
   assert.ok(r.holds('shape_of(js, no_such_kind, s_identifier)'),
             'positive control: the injected fact reached the store');
@@ -1603,7 +1604,7 @@ test('SHAPE MUTANT 3: a shape declared for a kind nobody declared', () => {
 // SHAPE MUTANT 4 — a kind counted twice. KILLED by `double_cell`; the
 // PARTITION sleeps, which is the measurement worth having.
 
-test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
+mutant('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
   const rules = ruleMut(
     '                                    axis_applies(shape, Lay),\n' +
     '                                    not shape_kind[audit](Lang, K, Lay).\n',
@@ -1639,7 +1640,7 @@ test('SHAPE MUTANT 4: a split kind that also keeps its unrefined cell', () => {
 // ---------------------------------------------------------------------------
 // SHAPE MUTANT 5 — kinds without shapes must not vanish. KILLED, both arms.
 
-test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from callgraph', () => {
+mutant('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from callgraph', () => {
   const rules = ruleMut(NONE_UNSPLIT, '');
   assert.ok(rules.length < RULES.length, 'the mutation did not apply');
   const r = shapeWorld({ rules });
@@ -1668,7 +1669,7 @@ test('SHAPE MUTANT 5a: dropping the unsplit-`none` branch deletes 26 kinds from 
   console.log('      KILLED: lost_cell names 27, including a deliberately waived cell');
 });
 
-test('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole layer', () => {
+mutant('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole layer', () => {
   const rules = ruleMut(NONE_NOT_APPLICABLE, '');
   assert.ok(rules.length < RULES.length, 'the mutation did not apply');
   const r = shapeWorld({ rules });
@@ -1686,7 +1687,7 @@ test('SHAPE MUTANT 5b: dropping the not-applicable-`none` branch deletes a whole
 // cross-check ONLY: every audit inside the model stays green, which is the
 // point of running the corpus rather than trusting the list.
 
-test('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-one', () => {
+mutant('SHAPE MUTANT 6: member_expression left with one shape instead of twenty-one', () => {
   const shapes = SHAPES.replace(
     /^shape_of\(js, member_expression, (?!s_member_on_ident\b)\w+\)\.\n/gm, '');
   const removed = (SHAPES.match(/^shape_of\(js, member_expression/gm) ?? []).length

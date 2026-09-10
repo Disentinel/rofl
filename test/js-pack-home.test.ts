@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { mutant } from './helpers/mutant.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -130,7 +131,7 @@ test('the audit is empty because the rows are placed, not because it is blind', 
 // 2. THE MUTANT SET. Three of the four are named in the brief that asked for
 //    this item; the fourth is the one the brief invited by name and it SURVIVES.
 
-test('MUTANT: a row in a pack that says nothing about the kind', () => {
+mutant('MUTANT: a row in a pack that says nothing about the kind', () => {
   // `while_statement` is judged by facts/js-statements.rofl and
   // facts/js-controlflow.rofl and by nothing in the shape pack, so a row parked
   // there is earned by nothing. This is the wholesale gather in miniature.
@@ -139,7 +140,7 @@ test('MUTANT: a row in a pack that says nothing about the kind', () => {
     ['p_js_shapes while_statement']);
 });
 
-test('MUTANT: a duplicate in a pack that DOES speak about the kind survives', () => {
+mutant('MUTANT: a duplicate in a pack that DOES speak about the kind survives', () => {
   // The brief asked whether anything notices a duplicate. Nothing does, and
   // that is the finding rather than a gap: 274 rows for 100 kinds is what packs
   // that load independently COST, and `f_the_kind_vocabulary_is_scattered...`
@@ -152,7 +153,7 @@ test('MUTANT: a duplicate in a pack that DOES speak about the kind survives', ()
   assert.deepEqual(pairs(r, 'orphan_claim[audit](L, K, X)', 'K', 'L'), []);
 });
 
-test('MUTANT: gathering every row into the base pack survives THIS audit', () => {
+mutant('MUTANT: gathering every row into the base pack survives THIS audit', () => {
   // ...and it is the mutant the item's own statement proposes. The base clause
   // absorbs it, because a base pack is allowed to declare what it does not
   // judge — that is what a base pack IS. The audit that would catch it does not
@@ -163,7 +164,7 @@ test('MUTANT: gathering every row into the base pack survives THIS audit', () =>
   assert.deepEqual(pairs(r, 'kind_home_unbacked[audit](P, K)', 'P', 'K'), []);
 });
 
-test('MUTANT: deleting an earned row is caught in the partial world and NOT in the full one', () => {
+mutant('MUTANT: deleting an earned row is caught in the partial world and NOT in the full one', () => {
   // The other direction, and it is NOT this file's audit that catches it — a
   // deleted row is not a misplaced row. `facts/js-callgraph.rofl` carries
   // `handled(js, identifier, callgraph, r_call_edge)`; take its declaration
