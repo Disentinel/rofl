@@ -1,5 +1,26 @@
 # HANDOFF — the model-coverage loop on `modeljs`
 
+> **MIGRATED 2026-09-10. READ THE LEDGER, NOT THIS FILE.** Every claim below
+> that `facts/findings.rofl` did not already hold has been moved into it — see
+> the block headed *MIGRATED OUT OF HANDOFF.md* at the end of that file, and
+> `f_the_handoff_was_a_process_fact_written_where_nothing_could_check_it` for
+> what the reading found. Eleven claims were unrecorded, three of them live.
+> **FOUR CLAIMS BELOW ARE FALSE and are corrected in the ledger rather than
+> here**, because a document cannot be superseded and a finding can:
+> `w_computed_key_names` is DONE (2026-09-09, one day after this was written),
+> not "the sharpest open thing"; the queue is 82 items / 67 done / 15 open, not
+> 66 / 54; `example-yak` was repaired in `0331631` and is green on Linux, so the
+> pre-existing-failure count no longer depends on your laptop; and `modeljs`
+> merged into `nextver` at `c30daa8`, so "develop and push on `modeljs` only" is
+> a dead instruction and **the branch in this file's title receives no work**.
+>
+> This file is itself failure mode 17 (`docs/failure-modes.md`) — a process fact
+> written where nothing can check it — and it is the largest instance in the
+> tree. The owner deleted it on 2026-09-07 for that reason; a nightly loop
+> recreated it on 2026-09-08. Whether it should exist at all is open in the
+> ledger as a decision. Until it is settled, treat everything below as dated
+> 2026-09-08 and unchecked.
+
 Written 2026-09-08 by the nightly loop (iterations 35-40). The tree is **green** apart from the
 seven pre-existing failures named below. Everything here is measured unless it
 says otherwise.

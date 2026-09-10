@@ -47,6 +47,18 @@ of eslint, and the four defects the run found that reading did not),
 stays cold), `working-with-ledgers.md`, `test-maintenance-cost.md`,
 `failure-modes.md` (the process failures, catalogued and priced).
 
+**The process as its own subject** — three documents that turn the question
+*where does a claim about this work live* into something checkable.
+`ledger-as-an-instrument.md` reads the ledger as a thing with functions, side
+effects and contradictions rather than as a log. `claims-outside-the-store.md`
+measures the gap: `measured` holds **3 rows** while the word MEASURED appears
+in **436 comment lines**, and 2 210 comment blocks over 78 files carry no
+verdict at all. `comment-migration-brief.md` is the proposed remedy — proposed,
+not implemented, and it says so — one file at a time, every block read, with a
+closed vocabulary of `kept` reasons defined *before* any block is classified,
+because `kept` turns the alarm green as effectively as migration and costs a
+tenth as much. Failure mode 17 in `failure-modes.md` is the entry they answer.
+
 **The engine and the port** — `the-target.md` (what everything on this branch
 is instrumental to), `medium-and-large.md` (two engines, and the line between
 them, which negation decides), `port-surface.md` (what the Rust engine has to
