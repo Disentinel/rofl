@@ -22,8 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: kernel grep test (vocabulary check)
-        run: npm run grepcheck
       - name: typecheck
         run: |
           npm ci
@@ -38,8 +36,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: kernel grep test (vocabulary check)
-        run: bun scripts/kernel_grep.ts
       - name: install dependencies (the scanner needs @babel/parser)
         run: bun install
       - name: tests (bun test)

@@ -35,3 +35,40 @@ library_decl(js, "test/fixtures/js-").
 -- `side_decl(Path, Side)` overrides location. Empty on the first pass: every
 -- assignment below is currently by location, and a ruling here should be a
 -- decision somebody made after reading the audit.
+
+-- ======================================================= THE READ INTERFACE
+-- `kernel_reads(Rel)` — the relations a PROGRAM writes and the kernel reads, or
+-- the reverse. Eighteen names, and they are the whole contract between the two.
+--
+-- DECLARED AND NOT DERIVED, on purpose, and it is the one list in this file
+-- that cannot be computed. `RESERVED` in src/reflect.ts is what the kernel
+-- OWNS and is readable off the running code; the destructor table likewise.
+-- These are the opposite: relations the kernel deliberately does NOT own, so
+-- there is nothing in the kernel to read them off. Parsing `policy.rofl` and
+-- `safety.rofl` for their heads over-answers — it returns `analysed`, `slot`,
+-- `binds_at` and twelve more that are those programs' own internals and no
+-- part of any contract.
+--
+-- IT LIVED IN `scripts/kernel_grep.ts` UNTIL 2026-09-10, inside a check that
+-- was deleted. Eighteen names in a declaration a reader can see at once beats
+-- eighteen names inside a 120-entry whitelist that also held host tags, REPL
+-- words, tokenizer tags — and `in_perspective`, which the kernel had removed.
+edb(kernel_reads).
+kernel_reads(stratum).            -- the phase a relation settles in
+kernel_reads(unstratified).       -- the stock evaluator's refusal
+kernel_reads(semantics).          -- the program asks for the alternating fixpoint
+kernel_reads(unknown).            -- the kernel writes what that fixpoint leaves open
+kernel_reads(sealed).             -- the floor-sealing declaration
+kernel_reads(rule_reads).         -- policy.rofl, from here down
+kernel_reads(rule_relation).
+kernel_reads(cone).
+kernel_reads(opaque_closed).
+kernel_reads(opaque_seed).        -- and this one the host seeds
+kernel_reads(unsafe_rule).        -- safety.rofl, from here down
+kernel_reads(premise_var).        -- seeded by the host
+kernel_reads(slot_arity).         -- seeded by the host
+kernel_reads(late_rule).
+kernel_reads(demand_rel).
+kernel_reads(trigger_of).
+kernel_reads(neg_relation).
+kernel_reads(provenance_reader).

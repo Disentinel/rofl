@@ -158,19 +158,19 @@ duty[limits](l_no_aggregation, limit, "LIMITS.md", 156, "No aggregation, no opti
 -- six name the sentence they replace. This ledger is why `superseded` exists:
 -- an obligation nobody owes any more is not an obligation with no test.
 
-duty[readme](r_vocabulary_additions, guaranteed, "README.md", 479, "Vocabulary additions.").
-duty[readme](r_conclusion_tense, guaranteed, "README.md", 485, "conclusion_tense").
-duty[readme](r_flows_to, guaranteed, "README.md", 500, "the transitive closure of").
-duty[readme](r_collects, guaranteed, "README.md", 517, "the collection graph").
-duty[readme](r_stratum_in_kernel_source, guaranteed, "README.md", 541, "appear in kernel source").
-duty[readme](r_perspective_registration, guaranteed, "README.md", 556, "Perspective registration.").
-duty[readme](r_variable_perspectives, guaranteed, "README.md", 562, "Variable perspectives.").
-duty[readme](r_moded_relations, guaranteed, "README.md", 573, "Moded (demand) relations.").
-duty[readme](r_timeless_kernel_facts, guaranteed, "README.md", 582, "Timeless kernel facts.").
-duty[readme](r_facts_into_reserved, guaranteed, "README.md", 589, "Facts may be asserted into reserved relations.").
-duty[readme](r_edb_for_reserved, guaranteed, "README.md", 594, "for reserved relations.").
-duty[readme](r_unstratifiable_is_budgeted, guaranteed, "README.md", 599, "Unstratifiable rejection is budget-mediated").
-duty[readme](r_rounds_replace_strata, guaranteed, "README.md", 608, "Rounds replace the stratum table").
+duty[readme](r_vocabulary_additions, guaranteed, "README.md", 488, "Vocabulary additions.").
+duty[readme](r_conclusion_tense, guaranteed, "README.md", 494, "conclusion_tense").
+duty[readme](r_flows_to, guaranteed, "README.md", 509, "the transitive closure of").
+duty[readme](r_collects, guaranteed, "README.md", 526, "the collection graph").
+duty[readme](r_stratum_in_kernel_source, guaranteed, "README.md", 550, "appear in kernel source").
+duty[readme](r_perspective_registration, guaranteed, "README.md", 565, "Perspective registration.").
+duty[readme](r_variable_perspectives, guaranteed, "README.md", 571, "Variable perspectives.").
+duty[readme](r_moded_relations, guaranteed, "README.md", 582, "Moded (demand) relations.").
+duty[readme](r_timeless_kernel_facts, guaranteed, "README.md", 591, "Timeless kernel facts.").
+duty[readme](r_facts_into_reserved, guaranteed, "README.md", 598, "Facts may be asserted into reserved relations.").
+duty[readme](r_edb_for_reserved, guaranteed, "README.md", 603, "for reserved relations.").
+duty[readme](r_unstratifiable_is_budgeted, guaranteed, "README.md", 608, "Unstratifiable rejection is budget-mediated").
+duty[readme](r_rounds_replace_strata, guaranteed, "README.md", 617, "Rounds replace the stratum table").
 
 -- ======================================================= boot.rofl [boot] ===
 -- The meta-kernel's own required results, stated in a comment block at the
@@ -245,8 +245,20 @@ duty[wfs](t_stratum_table_survives, guaranteed, "docs/three-valued-answers.md", 
 
 -- ---- checks, as cited -----------------------------------------------------
 
-cited_check[map](c_grep_test, "test/phase3.test.ts", "kernel grep test: no relation name outside the vocabulary in kernel source").
-cited_check[map](c_grepcheck_gate, "scripts/kernel_grep.ts", "npm run grepcheck").
+-- THE KERNEL GREP TEST AND ITS GATE ARE DELETED, 2026-09-10, by the owner's
+-- decision, and the duties they guarded are RE-AIMED rather than dropped. The
+-- check had no model of the language: 120 whitelisted words of which 72 were
+-- host tokens, plus 39 hand-typed relation names against the tree's 1 168.
+-- Fifteen commits widened it, not one because it caught anything, and it was
+-- carrying `in_perspective` after the kernel deleted that relation.
+--
+-- What discharges the duties now is DERIVED and not typed: the second engine,
+-- which is diffed byte for byte on `canonicalState()` over the whole corpus,
+-- so a domain relation hardcoded into one host makes the two disagree; and
+-- `test/vocabulary-doc.test.ts`, which since today reads the vocabulary off
+-- the RUNNING kernel (`RESERVED`, `STR_ARITY`) rather than off a list.
+cited_check[map](c_vocab_doc, "test/vocabulary-doc.test.ts", "README.md documents exactly the vocabulary the kernel actually has").
+cited_check[map](c_two_engines, "test/port-client.test.ts", "the node client reproduces the corpus through the pipe").
 cited_check[map](c_reserved_reject, "test/phase3.test.ts", "rules concluding into kernel relations are rejected at load").
 cited_check[map](c_breach_surfaces, "test/phase3.test.ts", "hand-asserted reflection concluding into reserved surfaces as breach").
 cited_check[map](c_runtime_rule, "test/phase3.test.ts", "a rule added at runtime (as facts, same assert path) derives without reload").
@@ -336,9 +348,9 @@ cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 
 -- ---- what stands behind what ----------------------------------------------
 
-guards[map](c_grepcheck_gate, s_semantics_as_data).
-guards[map](c_grep_test, s_semantics_as_data).
-guards[map](c_grepcheck_gate, s_vocabulary_closed).
+guards[map](c_two_engines, s_semantics_as_data).
+guards[map](c_vocab_doc, s_semantics_as_data).
+guards[map](c_vocab_doc, s_vocabulary_closed).
 guards[map](c_ci_bun, s_two_runtimes).
 guards[map](c_ci_node, s_two_runtimes).
 guards[map](c_structured_terms, s_structured_terms).
@@ -347,8 +359,8 @@ guards[map](c_breach_surfaces, s_reserved_rejected_at_load).
 guards[map](c_perspective_isolation, s_reads_only_what_it_sees).
 guards[map](c_persp_var_same_ledger, s_no_silent_crossing).
 guards[map](c_flow_closure, s_no_silent_crossing).
-guards[map](c_grepcheck_gate, s_sees_computed_by_boot).
-guards[map](c_grepcheck_gate, s_no_stratification_checker).
+guards[map](c_two_engines, s_sees_computed_by_boot).
+guards[map](c_two_engines, s_no_stratification_checker).
 guards[map](c_no_boot_no_strata, s_no_stratification_checker).
 guards[map](c_stratum_order, s_strata_read_from_facts).
 guards[map](c_unstratified_rejected, s_reject_unstratified).
@@ -376,7 +388,7 @@ guards[map](c_differential_negation, s_a_naive_eq_seminaive).
 guards[map](c_why_tree, s_a_why_tree).
 guards[map](c_perspective_isolation, s_a_perspective_isolation).
 guards[map](c_stratum_order, s_a_stratum_order).
-guards[map](c_grep_test, s_a_kernel_grep).
+guards[map](c_vocab_doc, s_a_kernel_grep).
 guards[map](c_runtime_rule, s_a_runtime_rule).
 guards[map](c_malformed_sibling, s_a_malformed_sibling).
 guards[map](c_round_trip, s_a_round_trip).
@@ -389,8 +401,8 @@ guards[map](c_sensors_scenario, s_a_sensors_scenario).
 guards[map](c_ci_node, s_done_ci_green).
 guards[map](c_ci_bun, s_done_ci_green).
 
-guards[map](c_grep_test, s7_no_hardcoded_boot).
-guards[map](c_grepcheck_gate, s7_no_hardcoded_boot).
+guards[map](c_vocab_doc, s7_no_hardcoded_boot).
+guards[map](c_two_engines, s7_no_hardcoded_boot).
 guards[map](c_round_trip, s7_no_clause_objects).
 guards[map](c_provenance_queryable, s7_no_log_provenance).
 guards[map](c_excise_multiple_support, s7_no_witness_excise).
@@ -423,8 +435,8 @@ guards[map](c_retain_default, l_frozen_never_collected).
 guards[map](c_undefined_misspelling, l_undefined_is_a_dictionary).
 guards[map](c_undefined_negation, l_undefined_silent_on_negation).
 
-guards[map](c_grepcheck_gate, r_vocabulary_additions).
-guards[map](c_grepcheck_gate, r_stratum_in_kernel_source).
+guards[map](c_vocab_doc, r_vocabulary_additions).
+guards[map](c_vocab_doc, r_stratum_in_kernel_source).
 guards[map](c_next_no_dep_edge, r_conclusion_tense).
 guards[map](c_flow_closure, r_flows_to).
 guards[map](c_collects_narrow, r_collects).

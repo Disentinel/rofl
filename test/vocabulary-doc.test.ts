@@ -33,10 +33,36 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { KERNEL_RELS, IFACE_RELS, BUILTINS } from '../scripts/kernel_grep.ts';
+import { RESERVED, STR_ARITY } from '../src/reflect.ts';
+
+// THE SOURCE MOVED, 2026-09-10, AND THE NEW ONE IS STRICTLY BETTER. This gate
+// used to compare README against three arrays in `scripts/kernel_grep.ts` —
+// hand-written lists that the check itself carried. That check is gone (see
+// the commit that removed it: it was scaffolding, it never once caught a real
+// hardcode in 15 commits, and its FORBIDDEN list covered 39 of the tree's
+// 1 168 relations). So the tables are now compared against WHAT THE KERNEL
+// ACTUALLY DOES: `RESERVED` is the set the kernel emits `reserved(Rel)` rows
+// for at bootstrap, and `STR_ARITY` is the destructor table the evaluator
+// dispatches on. Neither is a list somebody keeps in step — they are the
+// running code, so a name added to the kernel appears here whether or not
+// anybody remembered this file.
+const KERNEL_RELS = [...RESERVED];
+const BUILTINS = [...STR_ARITY.keys()];
+
+// THE READ INTERFACE IS DECLARED, in `facts/layering.rofl` as `kernel_reads(R)`,
+// and it is the one list here that cannot be computed. `RESERVED` is what the
+// kernel OWNS and reads off its own running code; these are the opposite —
+// relations the kernel deliberately does not own, so there is nothing in the
+// kernel to read them off. Parsing `policy.rofl` and `safety.rofl` for heads
+// OVER-ANSWERS: measured, it returns `analysed`, `slot`, `binds_at` and twelve
+// more that are those programs' internals and no part of any contract.
+function kernelReads(src: string): string[] {
+  return [...src.matchAll(/^kernel_reads\(([a-z][A-Za-z0-9_]*)\)/gm)].map((m) => m[1]);
+}
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const README = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const IFACE_RELS = kernelReads(fs.readFileSync(path.join(ROOT, 'facts/layering.rofl'), 'utf8'));
 
 /** The markdown section between one `## heading` and the next. A section is
  *  addressed by heading rather than by line number for the reason the
@@ -85,7 +111,7 @@ function documented(doc: string) {
 const sorted = (xs: readonly string[]): string[] => [...xs].sort();
 
 // ---------------------------------------------------------------- the gate
-test('README.md documents exactly the vocabulary the grep check allows', () => {
+test('README.md documents exactly the vocabulary the kernel actually has', () => {
   const doc = documented(README);
 
   // The positive control for all three: the tables are not empty, so "they
@@ -95,11 +121,11 @@ test('README.md documents exactly the vocabulary the grep check allows', () => {
   assert.ok(doc.builtins.length >= 5, `the destructor table is ${doc.builtins.length} rows`);
 
   assert.deepEqual(doc.reserved, sorted(KERNEL_RELS),
-    'the reserved table in README.md and KERNEL_RELS in scripts/kernel_grep.ts');
+    'the reserved table in README.md and RESERVED in src/reflect.ts');
   assert.deepEqual(doc.iface, sorted(IFACE_RELS),
-    'the read-interface table in README.md and IFACE_RELS in scripts/kernel_grep.ts');
+    'the read-interface table in README.md and kernel_reads/1 in facts/layering.rofl');
   assert.deepEqual(doc.builtins, sorted(BUILTINS),
-    'the destructor table in README.md and BUILTINS in scripts/kernel_grep.ts');
+    'the destructor table in README.md and STR_ARITY in src/reflect.ts');
 });
 
 // ------------------------------------------------------- the mutant set

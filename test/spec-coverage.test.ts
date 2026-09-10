@@ -188,12 +188,11 @@ test('the gates and CI steps are a closed list, and it is exact on purpose', () 
   const names = (kind: string) => W.census.checks.filter((x) => x.kind === kind)
     .map((x) => x.name).sort();
   assert.deepEqual(names('gate'), [
-    'npm run grepcheck', 'npm run measurecheck', 'npm run test', 'npm run test:bun',
-    'npm run textcheck',
+    'npm run measurecheck', 'npm run test', 'npm run test:bun', 'npm run textcheck',
   ]);
   assert.deepEqual(names('ci'), [
     'install dependencies (the scanner needs @babel/parser)',
-    'kernel grep test (vocabulary check)', 'tests (bun test)', 'tests (node --test)',
+    'tests (bun test)', 'tests (node --test)',
     'typecheck',
   ]);
 });
@@ -272,7 +271,16 @@ test('coverage is reported by INSTRUMENT, so a gate is not confused with a test'
     if (!kinds.has(o)) kinds.set(o, new Set());
     kinds.get(o)!.add(row.bindings['K']);
   }
-  assert.deepEqual([...(kinds.get('s_semantics_as_data') ?? [])].sort(), ['gate', 'test']);
+  // WAS `['gate', 'test']` UNTIL 2026-09-10 and is now `['test']`, because the
+  // gate half was `npm run grepcheck` and it is deleted. The duty is not
+  // weaker for it: what held it was a list of 39 hand-typed relation names
+  // covering 3% of the tree, and what holds it now is the SECOND ENGINE —
+  // `canonicalState()` diffed byte for byte between the TypeScript kernel and
+  // the Rust one over the whole corpus, so a domain relation hardcoded into
+  // one host makes the two disagree on the first program that touches it.
+  // A `test` kind that runs two independent implementations against each other
+  // is a stronger instrument than a `gate` kind that greps for words.
+  assert.deepEqual([...(kinds.get('s_semantics_as_data') ?? [])].sort(), ['test']);
   assert.deepEqual([...(kinds.get('s_two_runtimes') ?? [])], ['ci'],
     'the two-runtime obligation is held by CI alone: no test can check it from inside one runtime');
 });

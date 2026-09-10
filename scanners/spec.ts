@@ -53,7 +53,7 @@ export function testNames(source: string): string[] {
 
 /** npm scripts that are CHECKS rather than entry points. A check is a script
  *  the tree can fail on; `repl`, `scan`, `report` cannot fail a build. */
-const GATE_SCRIPTS = new Set(['test', 'test:bun', 'grepcheck', 'textcheck', 'measurecheck']);
+const GATE_SCRIPTS = new Set(['test', 'test:bun', 'textcheck', 'measurecheck']);
 
 export function census(): Census {
   const checks: Check[] = [];

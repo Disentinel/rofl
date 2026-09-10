@@ -115,3 +115,47 @@ duty_decl(document, indexed).
 --
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
 queue_ceiling(125).
+
+-- ==================================================== THE EVIDENTIAL AXIS
+-- ADDED 2026-09-10 AFTER THE TABLE FAILED ITS FIRST REAL TEST. Asked about
+-- `scripts/kernel_grep.ts` it answered ZERO OPEN CELLS — perfect health — and
+-- the owner deleted the file that afternoon as fifteen commits of appeasement
+-- at three per cent coverage. Every duty above is derived from the DEPENDENCY
+-- GRAPH, so every one asks WHO POINTS AT THIS. That is integration, not
+-- usefulness, and the two run opposite ways over time: the longer a useless
+-- thing survives the more things point at it, so it scores BETTER the worse it
+-- is. A table built on reachability is a seniority ranking wearing a health
+-- check.
+--
+-- THESE FOUR ARE DECLARED AND NOT YET DERIVED, and that is stated rather than
+-- hidden — a duty with no rule behind it is a promise, and this file is where
+-- promises are visible. Their sources are already in the tree and the depends
+-- model reads NEITHER of them: the findings ledger (`addressed_by`, what
+-- caught what) and git history (did a commit ACT on this check's output, or
+-- WIDEN it to shut it up).
+--
+--   has_fired          Did it ever go red on something that became a finding?
+--                      A gate that has never caught anything has never done
+--                      its job. Source: addressed_by + git.
+--
+--   not_only_appeased  Of the commits touching it, how many widened it rather
+--                      than acted on it? kernel_grep: fifteen of fifteen.
+--                      Source: git. THE MOST DAMNING AND THE MOST COMPUTABLE.
+--
+--   criterion_is_the_claim
+--                      Does it judge by the property the claim is about, or by
+--                      a proxy? Computable smell: A CHECK WHOSE EXCEPTION LIST
+--                      IS LARGER THAN ITS SUBJECT LIST IS MEASURING THE WRONG
+--                      THING — 72 host tokens against 48 relation names here.
+--
+--   not_the_only_holder
+--                      If it goes, who else holds the duty? `guards[map]` in
+--                      facts/spec.rofl already models exactly this, and the
+--                      depends model never read it. The counterfactual is the
+--                      question the whole table was missing: it only ever
+--                      asked what IS, never what would CHANGE.
+--
+-- They are NOT in `duty_decl` yet on purpose. Declaring a duty with no rule
+-- would open a cell per artifact that nobody can close, which is the false
+-- work this table has already produced four times from its own model moving.
+-- Write the rule, measure what it opens, THEN declare.

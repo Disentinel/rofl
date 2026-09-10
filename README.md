@@ -233,7 +233,6 @@ enforced by `scripts/kernel_grep.ts` in CI.
 | `conclusion_tense(Id,Tense)` | 2 | the head's temporal marker, `now` or `next` — the one part of a rule's tense a rule can read, since the marker itself lives inside the `$lit` of `conclusion_lit` |
 | `reads_from(Id,Persp)` `writes_to(Id,Persp)` | 2 | perspective signature of a rule (a variable perspective is recorded by name, as `$var("S")`) |
 | `bridge_decl(Id,From,To)` | 3 | explicit head annotation crossing perspectives |
-| `in_perspective(Fact,Persp)` | 2 | fact metadata, emitted on every assert |
 | `asserted_by(Fact,Who,Tick)` | 3 | the dated assertion trail: who asserted the fact, and in which tick — emitted only when a `who` is given. The tick is the clock at the moment of the assert, never of a later evaluation, so replaying the trail rebuilds a past state instead of storing it. A fact asserted twice keeps two rows, and each pairs its own who with its own tick |
 | `uses_builtin(Id,Op)` | 2 | rule uses builtin `Op` (a string) |
 | `mode(Builtin, ModeList)` | 2 | declared directionality of builtins, kernel-emitted at boot |
@@ -241,6 +240,16 @@ enforced by `scripts/kernel_grep.ts` in CI.
 | `authority(Persp, Who)` | 2 | who may assert; kernel registers each perspective on first use as `authority(P, $kernel)` |
 | `hole(QueryId, Reason)` | 2 | inability marker — the kernel could not finish, said so rather than returning an empty answer that reads like an honest no. Ids: `$q(N)`, `$tick(T)`, `$load(N)`, `$rule(Id)`. Reasons: `budget_exhausted` and `space_exhausted` when an evaluation runs out of steps or of rows it may hold; `arith_type_error` and `arith_zero_divisor` for an `is` whose expression could not be evaluated (see *Arithmetic that cannot be evaluated* below); and `str_type_error`, `str_index_error`, `str_empty_separator` for a string destructor given an operand it cannot take; and `reflection_sealed`, the one reason that is not a failure — the program declared `sealed(Body)` and the kernel stopped keeping that body, so the answer is missing on purpose. Id `$sealed(Body)` for the standing declaration, `$q(N)` for a query that asked a sealed body |
 | `edb(Rel)` | 1 | relation has base facts (also emitted for all reserved relations at boot) |
+
+**`in_perspective(Fact, Persp)` WAS IN THIS TABLE AND IS GONE**, removed from
+the kernel because it was a projection of its own key — `Fact` IS
+`$fact(rel, persp, args)`, so the relation stored the second argument of the
+term it was keyed by. Measured before removing it, on 16 eslint files: 41 722
+rows, a third of the world. Every rule that read it destructures the term
+instead. **The row survived here, and in the grep check's whitelist, until
+2026-09-10** — which is the tidiest possible argument against a hand-kept
+vocabulary list: the check whose job was to keep this table honest was itself
+carrying a name the kernel had deleted.
 
 **Read interface (not reserved):** the kernel *reads* `stratum(Rel,N)` and
 `unstratified(Rel)`, never writes them; rules may conclude into them. §3.2 of
@@ -476,7 +485,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
 
 ## Deviations from START.md (and why)
 
-- **Vocabulary additions.** `bridge_decl`, `in_perspective`, `uses_builtin`
+- **Vocabulary additions.** `bridge_decl`, `uses_builtin`
   are added to the §2 table as the appendix note instructs; `premise_lit` /
   `conclusion_lit` are added because the §2 reflection relations alone don't
   carry argument terms, and the evaluator must read rules *only* from the

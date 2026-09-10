@@ -5,16 +5,41 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
-import { checkKernelVocabulary } from '../scripts/kernel_grep.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 const SENSORS = fs.readFileSync(path.join(ROOT, 'examples', 'sensors.rofl'), 'utf8');
 
-test('kernel grep test: no relation name outside the vocabulary in kernel source', () => {
-  const violations = checkKernelVocabulary(ROOT);
-  assert.deepEqual(violations, [], violations.map((v) => `${v.file}:${v.line}: ${v.what}`).join('\n'));
-});
+// THE KERNEL GREP TEST WAS HERE AND IS DELETED, 2026-09-10, by the owner's
+// decision. START.md §5 Phase 3 asks for it and the duty is not abandoned —
+// what changed is what discharges it.
+//
+// WHAT IT ACTUALLY DID: it had no model of the language at all. Check 1 took
+// every identifier-shaped string literal in `src/` and demanded it be in a
+// 120-word list; check 2 grepped for 39 hand-typed relation names. All the
+// "understanding" was one person's two lists and `indexOf`.
+//
+// WHY IT WENT: measured over its 15 commits, not one widened it because it
+// caught a hardcode — every one widened it because the kernel legitimately
+// grew and the check had to be fed a word. 72 of its 120 whitelist entries
+// were host tokens, tokenizer tags and REPL words. Its FORBIDDEN list covered
+// 39 of the tree's 1 168 relations, 3%, and had already fallen three behind.
+// And it was carrying `in_perspective`, WHICH THE KERNEL HAD DELETED — the
+// check whose job was keeping the vocabulary honest was itself stale.
+//
+// WHAT DISCHARGES THE DUTY NOW, and both are derived rather than typed:
+//   * THE SECOND ENGINE. `scripts/port_corpus.ts` compares `canonicalState()`
+//     BYTE FOR BYTE between the TypeScript kernel and the Rust one over the
+//     whole corpus. A domain relation hardcoded into one host makes the two
+//     diverge on the first program that touches it. To defeat that you must
+//     hardcode the same thing twice, consistently, in two languages — which is
+//     not an oversight any more.
+//   * `inversion[audit]` in `rules/layering.rofl`, which reports any code edge
+//     from the engine into a library, computed from the dependency graph.
+//
+// `test/vocabulary-doc.test.ts` keeps README's vocabulary tables honest, and
+// since today it reads `RESERVED` and `STR_ARITY` off the running kernel
+// instead of off a list.
 
 test('a rule added at runtime (as facts, same assert path) derives without reload', () => {
   const r = new Rofl();
