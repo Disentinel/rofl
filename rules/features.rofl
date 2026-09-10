@@ -94,3 +94,31 @@ leaf_entry[audit](M) :- entry_point(M), not entry_reach(M, _).
 -- The equivalence class. Reported as its pairs, because materialising a class
 -- is the decision the taxonomy says to defer until an attribute needs it.
 multi_modal[audit](A, B) :- shares_behavior(A, B), A < B.
+
+-- =========================================================== GOAL -> FEATURE
+-- facts/spec.rofl carries 129 DUTIES — what this system promises (`guaranteed`),
+-- refuses (`prohibited`), will not do (`limit`), or has delivered (`done`) —
+-- and 118 `guards[map]` rows saying which CHECK stands for which duty.
+-- `cited_check[map]` names the file each check lives in, and a file's features
+-- are the same parse a demo gets. So the bridge from a promise to a capability
+-- is a join over things that already existed, with nothing labelled by hand.
+edb(feature).
+edb(demo_uses).
+edb(check_uses).
+edb(guards).
+edb(duty).
+
+duty_feature(D, F) :- guards[map](C, D), check_uses(C, F).
+
+-- A CAPABILITY NOTHING PROMISES. The system can do it, no duty stands over it,
+-- so nothing says what it is FOR and nothing goes red when it changes meaning.
+unpromised[audit](F) :- feature(F, _), not duty_feature(_, F).
+
+-- A PROMISE NO CAPABILITY ANSWERS. Either the duty is about something other
+-- than a feature — many are, `l_no_async` promises an ABSENCE — or its guard
+-- exercises nothing this model can see.
+unanswered[audit](D) :- guards[map](_, D), not duty_feature(D, _).
+
+-- AND THE ONE THAT COSTS: a capability no demo shows AND no duty promises.
+-- Neither documented by example nor answerable for.
+orphan_capability[audit](F) :- unpromised[audit](F), not demo_uses(_, F).
