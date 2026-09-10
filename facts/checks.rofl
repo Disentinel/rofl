@@ -23,3 +23,18 @@ check_file("destructor_hole", "examples/checks/destructor-hole.rofl").
 check_world("sensors_t3").
 check_file("sensors_t3", "examples/sensors.rofl").
 check_opt("sensors_t3", ticks, 3).
+
+-- A WALL, ON BOTH ENGINES. `rofl-load` grew `--budget` for this: it always
+-- had `Session::fresh(budget)` and hard-coded the number, so a world that runs
+-- out was checked by one engine.
+check_world("budget_wall").
+check_file("budget_wall", "examples/checks/budget-wall.rofl").
+check_opt("budget_wall", budget, 50).
+-- ONE ENGINE, AND THE REASON IS A CONTRACT QUESTION RATHER THAN A DEFECT. The
+-- two hosts attribute the wall differently: this one evaluates on every `load`
+-- and names which one ran out -- `hole($load(1), budget_exhausted)`,
+-- `hole($load(2), ...)` -- while `rofl-load` loads every file and evaluates
+-- once, recording `hole($adhoc, budget_exhausted)`. Same wall, same reason atom,
+-- different attribution. Whether a load evaluates is a decision about the host
+-- contract and not something to patch under a green bar.
+check_opt("budget_wall", one_engine, 1).

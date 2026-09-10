@@ -39,7 +39,7 @@ const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
 const RUST = path.join(ROOT, 'rust/target/release/rofl-load');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
-export interface World { name: string; files: string[]; ticks?: number; budget?: number }
+export interface World { name: string; files: string[]; ticks?: number; budget?: number; oneEngine?: boolean }
 
 /** Every world buildable from `.rofl` text alone. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
@@ -90,6 +90,9 @@ function declared(): World[] {
   for (const m of src.matchAll(/^check_world\("([^"]+)"\)/gm)) out.set(m[1], { name: m[1], files: [] });
   for (const m of src.matchAll(/^check_file\("([^"]+)", "([^"]+)"\)/gm))
     out.get(m[1])?.files.push(path.join(ROOT, m[2]));
+  for (const m of src.matchAll(/^check_opt\("([^"]+)", one_engine, 1\)/gm)) {
+    const w = out.get(m[1]); if (w) w.oneEngine = true;
+  }
   for (const m of src.matchAll(/^check_opt\("([^"]+)", (ticks|budget), (\d+)\)/gm)) {
     const w = out.get(m[1]);
     if (w && m[2] === 'ticks') w.ticks = Number(m[3]);
@@ -136,7 +139,15 @@ const digest = (s: string): string =>
 
 export function answerTS(w: World): Answer {
   const r = new Rofl();
-  r.load(BOOT);
+  // THE BUDGET GOES ON EVERY LOAD, NOT ONLY ON `evaluate`. In this host a load
+  // evaluates what it can with the budget it is given, so a world whose budget
+  // reaches `evaluate` alone has already been derived and never walls; in Rust
+  // `Session::fresh(budget)` sets it once for the session. Passing it
+  // everywhere is what makes the two comparable — measured: with the budget on
+  // `evaluate` only, TypeScript completed a world Rust walled on, and that
+  // looked exactly like an engine divergence until the instrument was checked.
+  const opt = w.budget ? { budget: w.budget } : undefined;
+  r.load(BOOT, opt);
   // A REFUSAL IS AN ANSWER AND IT BELONGS IN THE GOLDEN. Until now a file that
   // would not load was dropped and the world carried on — which hid `ring1`
   // for as long as the corpus existed, and left "this program must be refused"
@@ -150,7 +161,7 @@ export function answerTS(w: World): Answer {
   const diags: string[] = [];
   const dropped: string[] = [];
   for (const f of w.files) {
-    const res = r.load(fs.readFileSync(f, 'utf8'));
+    const res = r.load(fs.readFileSync(f, 'utf8'), opt);
     if (res.ok) continue;
     dropped.push(`${path.basename(f)}: ${res.diagnostics[0] ?? ''}`);
     diags.push(`refused ${path.basename(f)}`);
@@ -163,11 +174,11 @@ export function answerTS(w: World): Answer {
 
 export function answerRust(w: World): Answer | null {
   if (!fs.existsSync(RUST)) return null;
-  // THE RUST BINARY TAKES `--ticks` AND NOT A BUDGET, so a world that declares
-  // one is checked by ONE engine and says so, rather than half the oracle
-  // running quietly.
-  if (w.budget) return null;
-
+  // A WORLD MAY DECLARE THAT ONE ENGINE ANSWERS IT, and the declaration is in
+  // facts/checks.rofl with its reason. Not an escape hatch: the alternative is
+  // a permanent red, which this repository has already recorded as the state in
+  // which a check gets switched off.
+  if (w.oneEngine) return null;
   // A REFUSED FILE IS OBSERVED, NOT FATAL. `rofl-load` exits non-zero and
   // prints to stderr when it will not load a program — which IS the answer for
   // a world written to be refused. The first version let execFileSync throw,
@@ -186,7 +197,8 @@ export function answerRust(w: World): Answer | null {
     try { run([boot, f]); keep.push(f); }
     catch { diags.push(`refused ${path.basename(f)}`); }
   }
-  const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...keep]);
+  const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
+    ...(w.budget ? ['--budget', String(w.budget)] : []), ...keep]);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   return { hash: digest(full), facts: 0, census: census(full), dropped: [] };
 }
