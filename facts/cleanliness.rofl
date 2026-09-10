@@ -107,5 +107,11 @@ duty_decl(document, indexed).
 --   indexed         3   CLAUDE.md, HANDOFF.md, LIMITS.md — README links none
 --   regenerable     1   facts/ledger-census.rofl has no compare-and-fail gate
 --
+-- RAISED TO 125 ON 2026-09-10, and the reason is written because raising is a
+-- decision: `scanners/side_files.ts` and four new npm scripts entered the tree
+-- and owe duties nothing has met yet. That is the ratchet behaving correctly
+-- for the fourth time on its own instrument, and the fourth argument for not
+-- putting it in CI until the model stops moving.
+--
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(121).
+queue_ceiling(125).

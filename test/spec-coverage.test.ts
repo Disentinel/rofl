@@ -387,8 +387,19 @@ test('FINDING: the kernel is past the size START.md called a stop signal', () =>
     code += ls.filter((l) => !/^\s*$|^\s*(\/\/|\*|\/\*)/.test(l)).length;
   }
   assert.ok(code > 2500, `src/ is ${code} code lines (${physical} physical) — under the threshold now?`);
-  // and the signal the spec asks for is nowhere: neither document mentions it
-  assert.equal(/2,?500|leaked into the host/.test(read('README.md')), false);
+
+  // AND THE SIGNAL IS NOW DELIVERED, WHICH IS WHY THIS ASSERTION IS INVERTED.
+  // Until 2026-09-10 the two lines below read `=== false` and were a standing
+  // finding written as a test: the stop had been passed and NOBODY HAD
+  // REPORTED, so the test asserted the absence of the report. It went red the
+  // hour the report was written, which is exactly right — a test that records
+  // an unmet duty must fail when the duty is met, or it is a padlock on the
+  // repair. README.md's file-layout deviation now carries the per-file
+  // breakdown and both readings of what the number means.
+  assert.match(read('README.md'), /2,?500|leaked into the host/);
+  // LIMITS.md is deliberately NOT asked to carry it: the report belongs where
+  // the size deviation is registered, and duplicating it into a second
+  // document is a second thing to keep true.
   assert.equal(/2,?500|leaked into the host/.test(read('LIMITS.md')), false);
 });
 

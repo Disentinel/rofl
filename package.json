@@ -9,6 +9,10 @@
   "engines": { "node": ">=22.6" },
   "scripts": {
     "test": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec test/*.test.ts",
+    "loop": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec --test-skip-pattern=\"^(MUTANT|mutant|[a-z][0-9]+[a-z]?'?[ :]|M[0-9]+)\" $(node --experimental-strip-types scanners/side_files.ts engine)",
+    "test:engine": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts engine)",
+    "test:library": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts library)",
+    "test:mutants": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec --test-name-pattern=\"^(MUTANT|mutant|[a-z][0-9]+[a-z]?'?[ :]|M[0-9]+)\" test/*.test.ts",
     "test:bun": "bun test --timeout 60000",
     "grepcheck": "node --experimental-strip-types scripts/kernel_grep.ts",
     "textcheck": "node --experimental-strip-types scripts/text_check.ts",
