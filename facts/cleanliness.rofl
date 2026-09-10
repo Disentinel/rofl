@@ -119,8 +119,14 @@ duty_decl(document, indexed).
 -- the ceiling is not a measurement of cleanliness until the model under it
 -- stops moving.
 --
+-- RAISED TO 129 ON 2026-09-10: facts/cross-products.rofl entered the tree when
+-- the cross-product register moved out of test/rule-shape.test.ts. SIXTH raise
+-- from the instrument's own growth, and the queue has now been raised five
+-- times and lowered once — which is the whole argument for keeping it out of
+-- CI restated as arithmetic.
+--
 -- LOWER IT WHEN WORK LANDS. Raising it is a decision that must say why.
-queue_ceiling(126).
+queue_ceiling(129).
 
 -- ==================================================== THE EVIDENTIAL AXIS
 -- ADDED 2026-09-10 AFTER THE TABLE FAILED ITS FIRST REAL TEST. Asked about

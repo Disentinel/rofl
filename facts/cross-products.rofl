@@ -1,0 +1,70 @@
+-- facts/cross-products.rofl — THE PRICED REGISTER OF CROSS PRODUCTS.
+--
+-- `RULES_BASELINE` was 24 hand-typed strings inside `test/rule-shape.test.ts`,
+-- it was 36 behind the tree, and it made that file the most FED artifact in
+-- the repository: 39 per cent of every code line ever added to it was a list
+-- element (rules/history.rofl). A list of exceptions is DATA — in `facts/` a
+-- rule can read it and `why` can explain it — and every row here carries a
+-- REASON, which is the difference between a register of decisions and a list
+-- somebody types to keep a gate quiet.
+--
+-- AND THE GATE IS SPLIT BY SIDE, which the register alone would have missed.
+-- Of the 36 cross products in `rules/`, THIRTY-ONE are the JS library's. A
+-- library owns its own join order — `examples/` has been counted and not gated
+-- for that reason since the gate was written — so the engine's fifteen carry
+-- the strict promise and the library's are counted.
+--
+-- THE THREE REASONS, closed, and the first is a finding about the LANGUAGE:
+--
+--   no_nullary_head   The body carries a GUARD — `does anything satisfy X`,
+--                     `is this semantics declared` — and this language has no
+--                     nullary relation, so the guard must be written as a
+--                     literal with an argument, and the argument shares
+--                     nothing with the generator beside it. `rules/kernel-policy.rofl`
+--                     shows the shape at its purest: `wf_declared(yes) :-
+--                     semantics(well_founded).` is a PROPOSITION WEARING A
+--                     DUMMY ARGUMENT, and `yes` is there because the grammar
+--                     says `terms := term ("," term)*` and cannot produce an
+--                     empty list. Nothing in START.md or LIMITS.md gives a
+--                     reason for that; the store accepts a zero-argument fact
+--                     today (measured: `store.add('ready','main',[])` is
+--                     accepted, appears in `canonicalState`, counts 1), so the
+--                     restriction lives in the PARSER alone. Five of these
+--                     fifteen rows exist because of it.
+--
+--   bounded_lookup    The crossed relation is a total or a declaration with a
+--                     known small extent — `total_width` is one row by
+--                     construction, `fed_cut` one, `library_decl` five. The
+--                     product is a constant multiplier, not a quadratic.
+--
+--   real_and_accepted The product is genuine and somebody decided to pay it:
+--                     a pairwise comparison, or a deliberate cross of two
+--                     dimensions. The reason exists so that paying one is a
+--                     recorded decision rather than a silent addition.
+
+edb(cross_allowed).
+
+-- ---- no_nullary_head: a guard with nothing to hang on ----------------------
+cross_allowed("rules/kernel-policy.rofl", wf_inadmissible, demand_rel, no_nullary_head).
+cross_allowed("rules/worklist.rofl", any_unblocker, unblocking_work, no_nullary_head).
+cross_allowed("rules/depends.rofl", ci_runs, edge, no_nullary_head).
+
+-- ---- bounded_lookup: a total, or a declaration of known small extent -------
+cross_allowed("rules/eval-cost.rofl", share, total_width, bounded_lookup).
+cross_allowed("rules/eval-cost.rofl", slow_because, total_fresh, bounded_lookup).
+cross_allowed("rules/floor-census.rofl", saved_facts, store_facts, bounded_lookup).
+cross_allowed("rules/floor-census.rofl", saved_bytes, store_bytes, bounded_lookup).
+cross_allowed("rules/parse-cost.rofl", cache_costs, cache, bounded_lookup).
+cross_allowed("rules/parse-cost.rofl", overhead_exceeds_work, work_costs, bounded_lookup).
+cross_allowed("rules/policies/evidence.rofl", stale_evidence, current_version, bounded_lookup).
+cross_allowed("rules/history.rofl", being_fed, fed_cut, bounded_lookup).
+cross_allowed("rules/layering.rofl", starts_with, library_decl, bounded_lookup).
+cross_allowed("rules/layering.rofl", serves_other, library_decl, bounded_lookup).
+
+-- ---- real_and_accepted: the product IS the answer --------------------------
+-- `bigger(A, B) :- sweep(A,_,_,_), sweep(B,_,_,_), A < B.` — every ordered
+-- pair of a small sweep table, which is what a comparison over a set IS.
+cross_allowed("rules/parse-cost.rofl", bigger, sweep, real_and_accepted).
+-- Every item against every concern of one pack: two dimensions, deliberately
+-- crossed, then filtered by `not concern_covered(I, Con)`.
+cross_allowed("rules/decisions/production-readiness.rofl", coverage_gap, concern, real_and_accepted).

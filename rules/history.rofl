@@ -71,6 +71,15 @@ fed_and_should_not_be[audit](F, Pct) :- being_fed[audit](F, Pct), has_role(F, ru
 -- repository recommends. Rank first, read the queue, THEN decide what a duty
 -- would say.
 
+-- AND A REPAIR IS NOT VISIBLE HERE THE DAY IT LANDS. `test/rule-shape.test.ts`
+-- had its 24-string baseline removed on 2026-09-10 and still reads 39 per
+-- cent, because this measure is a claim about the file's HISTORY and removing
+-- a list does not rewrite the commits that added it. The number decays as the
+-- file gains new code lines and never falls to zero. So the ranking answers
+-- `has this file been fed`, never `is it being fed now` — a distinction worth
+-- keeping, because the first is what identifies a habit and the second is what
+-- a person confirms by opening the file.
+--
 -- WHAT THIS CANNOT SEE, and it is the reason the verdict is `[audit]` and not
 -- a deletion: a list that is RIGHT to keep by hand looks identical to one that
 -- should be derived. `SYNTAX` in a tokenizer is a language's keywords and no
