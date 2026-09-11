@@ -1,0 +1,54 @@
+-- facts/commands.rofl — WHICH COMMANDS A WORKING SESSION NEEDS, AND WHAT EACH IS.
+--
+-- The SET a document may show is declared here; whether each name EXISTS is
+-- checked against package.json by scripts/render_docs.ts, and the block in
+-- CLAUDE.md is rendered from the two together. A name that leaves package.json
+-- fails the render instead of sitting in the file as advice — which is what
+-- `npm run history` did for a day after it was deleted.
+--
+-- NOT EVERY SCRIPT IS HERE. package.json has forty-odd; a document that lists
+-- all of them is a document nobody reads. What is missing from this file is a
+-- decision, and the one thing that cannot happen is a name here that is not a
+-- script there.
+
+edb(command_shown).   -- (name, ordinal) — the order the block is written in
+edb(command_note).
+
+command_shown("test", 0).
+command_note("test", "81 worlds, both engines, one committed golden — 11 s. THIS IS THE LOOP.").
+
+command_shown("bless", 1).
+command_note("bless", "rewrite the golden, printing every world and demo it moves").
+
+command_shown("test:hosts", 2).
+command_note("test:hosts", "21 demos by their stdout, one engine — 100 s").
+
+command_shown("docs", 3).
+command_note("docs", "regenerate every generated block; `-- --check` fails if one is stale").
+
+command_shown("textcheck", 4).
+command_note("textcheck", "no unreadable byte reached a source file").
+
+command_shown("findings", 5).
+command_note("findings", "the ledger, rendered").
+
+command_shown("features", 6).
+command_note("features", "what the system can do, which demo shows it, what promises it").
+
+command_shown("repl", 7).
+command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`").
+
+command_shown("scan", 8).
+command_note("scan", "-- <dir>   turn TypeScript into facts under facts/generated").
+
+command_shown("report", 9).
+command_note("report", "-- <files>   the epistemic report over a set of packs").
+
+command_shown("depends", 10).
+command_note("depends", "· cleanliness · layering · nullary — the models over the tree itself").
+
+command_shown("speccheck", 11).
+command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it").
+
+command_shown("test:full", 12).
+command_note("test:full", "the old node suite — half an hour on four cores, ONLY WHEN ASKED BY NAME").

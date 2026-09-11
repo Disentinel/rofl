@@ -297,7 +297,7 @@ a cell awaiting a verdict, in the same shape the coverage matrix already uses:
 `migrated(Id, Relation)` or `kept(Id, Reason)` as verdicts, and
 `open_comment[audit]` as the backlog worked down like `open_cell[audit]`. The
 analysis is in `docs/claims-outside-the-store.md` and the task definition in
-`docs/comment-migration-brief.md`. **No part of it has been built or run.** The
+a brief that was deleted unbuilt on 2026-09-10. **No part of it was ever built or run.** The
 obvious risk is named there: `kept` turns the alarm green as effectively as
 migration and costs a tenth as much, which is a failure this session already
 committed once with a different waiver.

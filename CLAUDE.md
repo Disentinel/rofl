@@ -5,16 +5,23 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 ## Commands
 
-    npm test                      81 worlds, both engines, one committed
-                                  golden — 11 s. This IS the loop.
-    npm run bless                 rewrite the golden, printing what it moves
-    npm run test:hosts            21 demos by their stdout, one engine — 100 s
-    npx tsc -p tsconfig.json      typecheck
-    npm run textcheck             · findings · repl · readme -- --check
-    npm run scan -- <dir>         · report -- <files>
-    npm run features · depends · cleanliness · layering · nullary
-    npm run test:full             the old node suite — half an hour on four
-                                  cores, ONLY WHEN ASKED BY NAME
+<!-- BEGIN commands: generated from package.json + facts/commands.rofl -->
+
+    npm test            81 worlds, both engines, one committed golden — 11 s. THIS IS THE LOOP.
+    npm run bless       rewrite the golden, printing every world and demo it moves
+    npm run test:hosts  21 demos by their stdout, one engine — 100 s
+    npm run docs        regenerate every generated block; `-- --check` fails if one is stale
+    npm run textcheck   no unreadable byte reached a source file
+    npm run findings    the ledger, rendered
+    npm run features    what the system can do, which demo shows it, what promises it
+    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`
+    npm run scan        -- <dir>   turn TypeScript into facts under facts/generated
+    npm run report      -- <files>   the epistemic report over a set of packs
+    npm run depends     · cleanliness · layering · nullary — the models over the tree itself
+    npm run speccheck   every duty in facts/spec.rofl, and which check stands for it
+    npm run test:full   the old node suite — half an hour on four cores, ONLY WHEN ASKED BY NAME
+
+<!-- END commands -->
 
 `npm test` loads every `.rofl` world in the tree with both engines and compares
 a hash and a per-relation census against `facts/goldens.rofl`. A red names the

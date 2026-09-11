@@ -32,7 +32,7 @@ import { Rofl } from '../src/api.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -439,6 +439,15 @@ if (isMain) {
   // and a run that quietly checked one engine would read exactly like one that
   // checked two.
   if (rustMissing) console.log(`!! ${path.relative(ROOT, RUST)} is not built — checking ONE engine, not two`);
+  // A DOCUMENT THAT LIES ABOUT THE TREE IS AS RED AS A FACT THAT MOVED, and it
+  // costs about a second. CLAUDE.md was hand-patched three times in two days
+  // because nothing here could see it.
+  const docs = spawnSync(process.execPath,
+    ['--experimental-strip-types', path.join(ROOT, 'scripts/render_docs.ts'), '--check'],
+    { encoding: 'utf8' });
+  if (docs.status !== 0) {
+    for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
+  }
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);

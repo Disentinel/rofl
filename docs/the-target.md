@@ -37,7 +37,7 @@ Each rung is a measurement, not an intention. The engine is at rung 0.
 | **L4** | eslint entire | 1426 | 531 415 | ~5 000 000 | ~85 000 000 |
 
 Estimates use the two figures measured on real code 2026-09-08
-(`scanners/js_volume.ts`, branch `wip/jsvolume`): **9.4 AST facts per line** and
+(the js-volume scanner, deleted 2026-09-10; branch `wip/jsvolume`): **9.4 AST facts per line** and
 a **16–17x** stored-per-base multiplier. The second replaces the 1.96–3.85 in
 `docs/medium-and-large.md`, which came from the demo corpus and is wrong for
 this workload by four to eight times.
@@ -45,7 +45,7 @@ this workload by four to eight times.
 ## Where the engine actually stands, 2026-09-09
 
 Measured on real eslint/lib source at 8, 16, 32 and 64 files, both engines on
-the same worlds, seeds built by `scanners/js_seed.ts` and required to
+the same worlds, seeds built by the js-seed scanner (deleted 2026-09-10) and required to
 round-trip on the reference before they count.
 
 | | 8 files | 16 | 32 | 64 | 128 |

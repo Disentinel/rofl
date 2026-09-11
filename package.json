@@ -62,7 +62,7 @@
     "bless": "node --experimental-strip-types scripts/goldens.ts --bless",
     "test:hosts": "node --experimental-strip-types scripts/goldens.ts --hosts",
     "features": "node --experimental-strip-types scanners/features.ts",
-    "readme": "node --experimental-strip-types scripts/render_readme.ts"
+    "docs": "node --experimental-strip-types scripts/render_docs.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",

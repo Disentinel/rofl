@@ -229,7 +229,8 @@ Reserved, write-protected: domain rules may **read** these, never conclude
 into them (a rule concluding into one is rejected at load; hand-asserted
 reflection surfaces as `breach` in boot.rofl). This is the closed list of
 relation names the kernel knows, plus the read-interface below — mechanically
-enforced by `scripts/kernel_grep.ts` in CI.
+enforced by the two engines agreeing, since scripts/kernel_grep.ts was
+deleted on 2026-09-10 (15 commits of appeasement, 3% coverage).
 
 | relation | arity | meaning |
 |---|---|---|

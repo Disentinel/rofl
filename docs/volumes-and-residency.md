@@ -74,7 +74,7 @@ the only mechanism that will cross a volume — which is the best possible shape
 for a design problem: everything is local except one thing, and that thing is
 known by name.
 
-The fixture `test/fixtures/js-volume/gamma.js` requires `alpha.js` on purpose.
+The js-volume fixture gamma required alpha on purpose (fixtures deleted 2026-09-10).
 When resolution crosses files, the volume gate should go red there first, and
 that redness is the feature.
 

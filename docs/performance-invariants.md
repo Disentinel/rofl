@@ -458,7 +458,7 @@ and the fixpoint is 80%. A free fork moves that branch to about 75 ms.
 I4 says strata are sequential and parallelism lives only inside one. That leaves
 the coarse grain — a FORK is an independent world — and it was measured rather
 than assumed. Full account in
-`docs/dogfood/2026-09-07-fork-parallelism.md`; the load-bearing results:
+the fork-parallelism session (page deleted with docs/dogfood/, 2026-09-10); the load-bearing results:
 
 - **There is no thousand-fork search in this repository.** The largest is
   `test/kernel-arity.test.ts` at ~800 worlds; the largest that is both
@@ -495,7 +495,7 @@ than assumed. Full account in
 
 "The memory decision, in three tiers" prices tier 2 — *intern names and
 perspectives, typed tuples for small arity* — at **2–3×**. Tier 2 was built and
-measured. Full account in `docs/dogfood/2026-09-07-tier-2-interning.md`; the
+measured. Full account was the tier-2-interning session page, deleted with docs/dogfood/; the
 load-bearing results:
 
 - **Interning the relation and perspective STRINGS measures exactly zero**, on
@@ -521,7 +521,7 @@ load-bearing results:
 
 ### The marginal byte, which is the number an extrapolation needs
 
-A demo's average charges every fact a share of the program. `bench/mem_scale.ts`
+A demo's average charges every fact a share of the program. The memory-scale rig (deleted with bench/, 2026-09-10)
 measures one rule over a flat EDB at 20,000 and 40,000 base facts:
 
 | | before | after |

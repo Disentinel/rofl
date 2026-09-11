@@ -436,7 +436,7 @@ the next one from being written without the bracket. `breach[audit]` refuses a
 rule concluding into a RESERVED relation; none of boot.rofl's own vocabulary
 is reserved.
 
-**`scripts/kernel_grep.ts` keeps a hand-copied list of boot.rofl's relation
+**scripts/kernel_grep.ts (DELETED 2026-09-10) kept a hand-copied list of boot.rofl's relation
 names** and has fallen behind it once already, by three names. The list is
 derivable from exactly the facts this scanner emits.
 
