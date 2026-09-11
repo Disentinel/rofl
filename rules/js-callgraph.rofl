@@ -244,7 +244,9 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
 -- itself a site and `ast_within` is irreflexive. `F != G` in `closer` is
 -- carried so the rule does not silently depend on that irreflexivity.
 -- `top_call` reads `site` and not `call_site`: a transfer site at module top
--- level reaches `calls` only through here.
+-- level reaches `calls` only through here. (`top_site` was its twin, written
+-- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
+-- repair made them one rule and 2026-09-11 made them one name.)
 decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
                                  ast_node[code](D, decorator, _, _).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
@@ -258,8 +260,6 @@ nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
 enclosed[code](C)      :- encloses[code](_, C).
 top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
                           ast_file[code](R, File), not enclosed[code](C).
-top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
-                          ast_file[code](R, File), not enclosed[code](X).
 
 -- =========================================================================
 -- 4. RESOLUTION — scope-blind on purpose: a name bound anywhere in the file
@@ -378,7 +378,7 @@ frontier_at[code](F, S) :- nearest_fn[code](F, C), unresolved_call[code](C, S).
 frontier_at[code](R, S) :- top_call[code](C, R), unresolved_call[code](C, S).
 frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K),
                            not resolved_site[code](X).
-frontier_at[code](R, K) :- top_site[code](X, R), transfer_site[code](X, K),
+frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
                            not resolved_site[code](X).
 
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).

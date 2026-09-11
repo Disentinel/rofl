@@ -1558,8 +1558,8 @@ block_mentions("rules/js-attrs.rofl:208", computed, bare).
 block_mentions("rules/js-attrs.rofl:208", get, bare).
 block_mentions("rules/js-attrs.rofl:208", attr_slot_gap, bare).
 mention_snake(attr_slot_gap).
-lint_file("rules/js-callgraph.rofl", 289, 135, 62).
-file_clauses("rules/js-callgraph.rofl", 125, 88).
+lint_file("rules/js-callgraph.rofl", 287, 137, 62).
+file_clauses("rules/js-callgraph.rofl", 124, 88).
 block("rules/js-callgraph.rofl:1", "rules/js-callgraph.rofl", 1, 11).
 block_next("rules/js-callgraph.rofl:1", comment).
 block_mentions("rules/js-callgraph.rofl:1", ast_within, bare).
@@ -1634,9 +1634,10 @@ block("rules/js-callgraph.rofl:225", "rules/js-callgraph.rofl", 225, 4).
 block_next("rules/js-callgraph.rofl:225", clause).
 block_before("rules/js-callgraph.rofl:225", "rules/js-callgraph.rofl:229").
 block_mentions("rules/js-callgraph.rofl:225", const, bare).
-block("rules/js-callgraph.rofl:241", "rules/js-callgraph.rofl", 241, 7).
+block("rules/js-callgraph.rofl:241", "rules/js-callgraph.rofl", 241, 9).
 block_next("rules/js-callgraph.rofl:241", clause).
-block_before("rules/js-callgraph.rofl:241", "rules/js-callgraph.rofl:248").
+block_before("rules/js-callgraph.rofl:241", "rules/js-callgraph.rofl:250").
+block_dated("rules/js-callgraph.rofl:241", 2).
 block_mentions("rules/js-callgraph.rofl:241", marked, bare).
 block_mentions("rules/js-callgraph.rofl:241", ast_within, bare).
 block_mentions("rules/js-callgraph.rofl:241", closer, bare).
@@ -1645,6 +1646,8 @@ mention_snake(top_call).
 block_mentions("rules/js-callgraph.rofl:241", site, bare).
 block_mentions("rules/js-callgraph.rofl:241", call_site, bare).
 block_mentions("rules/js-callgraph.rofl:241", calls, bare).
+block_mentions("rules/js-callgraph.rofl:241", top_site, bare).
+mention_snake(top_site).
 block("rules/js-callgraph.rofl:264", "rules/js-callgraph.rofl", 264, 10).
 block_next("rules/js-callgraph.rofl:264", clause).
 block_before("rules/js-callgraph.rofl:264", "rules/js-callgraph.rofl:274").
@@ -6801,8 +6804,8 @@ block_next("facts/floor-census.rofl:194", clause).
 block("facts/floor-census.rofl:216", "facts/floor-census.rofl", 216, 2).
 block_next("facts/floor-census.rofl:216", clause).
 block_mentions("facts/floor-census.rofl:216", nothing, bare).
-lint_file("facts/goldens.rofl", 3783, 9, 5).
-file_clauses("facts/goldens.rofl", 0, 3783).
+lint_file("facts/goldens.rofl", 3781, 9, 5).
+file_clauses("facts/goldens.rofl", 0, 3781).
 block("facts/goldens.rofl:1", "facts/goldens.rofl", 1, 9).
 block_next("facts/goldens.rofl:1", clause).
 block_mentions("facts/goldens.rofl:1", npm, bare).
@@ -15485,87 +15488,76 @@ clause_nneg("rules/js-callgraph.rofl:233", 0).
 clause_nbi("rules/js-callgraph.rofl:233", 0).
 body_sig("rules/js-callgraph.rofl:233", "ast_node[code](V0,class_method,_,_), ast_attr[code](V0,kind,\"constructor\"), ast_child[code](V1,body,0,V2), ast_child[code](V2,body,_,V0), anon_class[code](V1), ast_node[code](V3,variable_declarator,_,_), ast_child[code](V3,init,0,V1), ast_child[code](V3,id,0,V4), ast_name[code](V4,V5)").
 shape_sig("rules/js-callgraph.rofl:233", "R0[code](V0,class_method,_,_), R1[code](V0,kind,\"constructor\"), R2[code](V1,body,0,V2), R2[code](V2,body,_,V0), R3[code](V1), R0[code](V3,variable_declarator,_,_), R2[code](V3,init,0,V1), R2[code](V3,id,0,V4), R4[code](V4,V5)").
-clause("rules/js-callgraph.rofl:248", "rules/js-callgraph.rofl", 248, decorates, code, 2).
-head_pat("rules/js-callgraph.rofl:248", "Owner,D").
-premise("rules/js-callgraph.rofl:248", 0, ast_child, code, pos, "Owner,decorators,_,D").
-premise("rules/js-callgraph.rofl:248", 1, ast_node, code, pos, "D,decorator,_,_").
-clause_npos("rules/js-callgraph.rofl:248", 2).
-clause_nneg("rules/js-callgraph.rofl:248", 0).
-clause_nbi("rules/js-callgraph.rofl:248", 0).
-body_sig("rules/js-callgraph.rofl:248", "ast_child[code](V0,decorators,_,V1), ast_node[code](V1,decorator,_,_)").
-shape_sig("rules/js-callgraph.rofl:248", "R0[code](V0,decorators,_,V1), R1[code](V1,decorator,_,_)").
-clause("rules/js-callgraph.rofl:250", "rules/js-callgraph.rofl", 250, in_own_decorator, code, 2).
-head_pat("rules/js-callgraph.rofl:250", "F,C").
-premise("rules/js-callgraph.rofl:250", 0, decorates, code, pos, "F,D").
-premise("rules/js-callgraph.rofl:250", 1, ast_within, code, pos, "D,C").
+clause("rules/js-callgraph.rofl:250", "rules/js-callgraph.rofl", 250, decorates, code, 2).
+head_pat("rules/js-callgraph.rofl:250", "Owner,D").
+premise("rules/js-callgraph.rofl:250", 0, ast_child, code, pos, "Owner,decorators,_,D").
+premise("rules/js-callgraph.rofl:250", 1, ast_node, code, pos, "D,decorator,_,_").
 clause_npos("rules/js-callgraph.rofl:250", 2).
 clause_nneg("rules/js-callgraph.rofl:250", 0).
 clause_nbi("rules/js-callgraph.rofl:250", 0).
-body_sig("rules/js-callgraph.rofl:250", "decorates[code](V0,V1), ast_within[code](V1,V2)").
-shape_sig("rules/js-callgraph.rofl:250", "R0[code](V0,V1), R1[code](V1,V2)").
-clause("rules/js-callgraph.rofl:251", "rules/js-callgraph.rofl", 251, in_own_decorator, code, 2).
-head_pat("rules/js-callgraph.rofl:251", "F,D").
-premise("rules/js-callgraph.rofl:251", 0, decorates, code, pos, "F,D").
-clause_npos("rules/js-callgraph.rofl:251", 1).
-clause_nneg("rules/js-callgraph.rofl:251", 0).
-clause_nbi("rules/js-callgraph.rofl:251", 0).
-body_sig("rules/js-callgraph.rofl:251", "decorates[code](V0,V1)").
-shape_sig("rules/js-callgraph.rofl:251", "R0[code](V0,V1)").
-clause("rules/js-callgraph.rofl:252", "rules/js-callgraph.rofl", 252, encloses, code, 2).
+body_sig("rules/js-callgraph.rofl:250", "ast_child[code](V0,decorators,_,V1), ast_node[code](V1,decorator,_,_)").
+shape_sig("rules/js-callgraph.rofl:250", "R0[code](V0,decorators,_,V1), R1[code](V1,decorator,_,_)").
+clause("rules/js-callgraph.rofl:252", "rules/js-callgraph.rofl", 252, in_own_decorator, code, 2).
 head_pat("rules/js-callgraph.rofl:252", "F,C").
-premise("rules/js-callgraph.rofl:252", 0, fn_node, code, pos, "F").
-premise("rules/js-callgraph.rofl:252", 1, ast_within, code, pos, "F,C").
-premise("rules/js-callgraph.rofl:252", 2, site, code, pos, "C").
-premise("rules/js-callgraph.rofl:252", 3, in_own_decorator, code, neg, "F,C").
-clause_npos("rules/js-callgraph.rofl:252", 3).
-clause_nneg("rules/js-callgraph.rofl:252", 1).
+premise("rules/js-callgraph.rofl:252", 0, decorates, code, pos, "F,D").
+premise("rules/js-callgraph.rofl:252", 1, ast_within, code, pos, "D,C").
+clause_npos("rules/js-callgraph.rofl:252", 2).
+clause_nneg("rules/js-callgraph.rofl:252", 0).
 clause_nbi("rules/js-callgraph.rofl:252", 0).
-body_sig("rules/js-callgraph.rofl:252", "fn_node[code](V0), ast_within[code](V0,V1), site[code](V1), not in_own_decorator[code](V0,V1)").
-shape_sig("rules/js-callgraph.rofl:252", "R0[code](V0), R1[code](V0,V1), R2[code](V1), not R3[code](V0,V1)").
-clause("rules/js-callgraph.rofl:254", "rules/js-callgraph.rofl", 254, closer, code, 2).
+body_sig("rules/js-callgraph.rofl:252", "decorates[code](V0,V1), ast_within[code](V1,V2)").
+shape_sig("rules/js-callgraph.rofl:252", "R0[code](V0,V1), R1[code](V1,V2)").
+clause("rules/js-callgraph.rofl:253", "rules/js-callgraph.rofl", 253, in_own_decorator, code, 2).
+head_pat("rules/js-callgraph.rofl:253", "F,D").
+premise("rules/js-callgraph.rofl:253", 0, decorates, code, pos, "F,D").
+clause_npos("rules/js-callgraph.rofl:253", 1).
+clause_nneg("rules/js-callgraph.rofl:253", 0).
+clause_nbi("rules/js-callgraph.rofl:253", 0).
+body_sig("rules/js-callgraph.rofl:253", "decorates[code](V0,V1)").
+shape_sig("rules/js-callgraph.rofl:253", "R0[code](V0,V1)").
+clause("rules/js-callgraph.rofl:254", "rules/js-callgraph.rofl", 254, encloses, code, 2).
 head_pat("rules/js-callgraph.rofl:254", "F,C").
-premise("rules/js-callgraph.rofl:254", 0, encloses, code, pos, "F,C").
-premise("rules/js-callgraph.rofl:254", 1, encloses, code, pos, "G,C").
-premise("rules/js-callgraph.rofl:254", 2, ast_within, code, pos, "F,G").
+premise("rules/js-callgraph.rofl:254", 0, fn_node, code, pos, "F").
+premise("rules/js-callgraph.rofl:254", 1, ast_within, code, pos, "F,C").
+premise("rules/js-callgraph.rofl:254", 2, site, code, pos, "C").
+premise("rules/js-callgraph.rofl:254", 3, in_own_decorator, code, neg, "F,C").
 clause_npos("rules/js-callgraph.rofl:254", 3).
-clause_nneg("rules/js-callgraph.rofl:254", 0).
-clause_nbi("rules/js-callgraph.rofl:254", 1).
-body_sig("rules/js-callgraph.rofl:254", "encloses[code](V0,V1), encloses[code](V2,V1), ast_within[code](V0,V2), V0 != V2").
-shape_sig("rules/js-callgraph.rofl:254", "R0[code](V0,V1), R0[code](V2,V1), R1[code](V0,V2), V0 != V2").
-clause("rules/js-callgraph.rofl:256", "rules/js-callgraph.rofl", 256, nearest_fn, code, 2).
+clause_nneg("rules/js-callgraph.rofl:254", 1).
+clause_nbi("rules/js-callgraph.rofl:254", 0).
+body_sig("rules/js-callgraph.rofl:254", "fn_node[code](V0), ast_within[code](V0,V1), site[code](V1), not in_own_decorator[code](V0,V1)").
+shape_sig("rules/js-callgraph.rofl:254", "R0[code](V0), R1[code](V0,V1), R2[code](V1), not R3[code](V0,V1)").
+clause("rules/js-callgraph.rofl:256", "rules/js-callgraph.rofl", 256, closer, code, 2).
 head_pat("rules/js-callgraph.rofl:256", "F,C").
 premise("rules/js-callgraph.rofl:256", 0, encloses, code, pos, "F,C").
-premise("rules/js-callgraph.rofl:256", 1, closer, code, neg, "F,C").
-clause_npos("rules/js-callgraph.rofl:256", 1).
-clause_nneg("rules/js-callgraph.rofl:256", 1).
-clause_nbi("rules/js-callgraph.rofl:256", 0).
-body_sig("rules/js-callgraph.rofl:256", "encloses[code](V0,V1), not closer[code](V0,V1)").
-shape_sig("rules/js-callgraph.rofl:256", "R0[code](V0,V1), not R1[code](V0,V1)").
-clause("rules/js-callgraph.rofl:258", "rules/js-callgraph.rofl", 258, enclosed, code, 1).
-head_pat("rules/js-callgraph.rofl:258", "C").
-premise("rules/js-callgraph.rofl:258", 0, encloses, code, pos, "_,C").
+premise("rules/js-callgraph.rofl:256", 1, encloses, code, pos, "G,C").
+premise("rules/js-callgraph.rofl:256", 2, ast_within, code, pos, "F,G").
+clause_npos("rules/js-callgraph.rofl:256", 3).
+clause_nneg("rules/js-callgraph.rofl:256", 0).
+clause_nbi("rules/js-callgraph.rofl:256", 1).
+body_sig("rules/js-callgraph.rofl:256", "encloses[code](V0,V1), encloses[code](V2,V1), ast_within[code](V0,V2), V0 != V2").
+shape_sig("rules/js-callgraph.rofl:256", "R0[code](V0,V1), R0[code](V2,V1), R1[code](V0,V2), V0 != V2").
+clause("rules/js-callgraph.rofl:258", "rules/js-callgraph.rofl", 258, nearest_fn, code, 2).
+head_pat("rules/js-callgraph.rofl:258", "F,C").
+premise("rules/js-callgraph.rofl:258", 0, encloses, code, pos, "F,C").
+premise("rules/js-callgraph.rofl:258", 1, closer, code, neg, "F,C").
 clause_npos("rules/js-callgraph.rofl:258", 1).
-clause_nneg("rules/js-callgraph.rofl:258", 0).
+clause_nneg("rules/js-callgraph.rofl:258", 1).
 clause_nbi("rules/js-callgraph.rofl:258", 0).
-body_sig("rules/js-callgraph.rofl:258", "encloses[code](_,V0)").
-shape_sig("rules/js-callgraph.rofl:258", "R0[code](_,V0)").
-clause("rules/js-callgraph.rofl:259", "rules/js-callgraph.rofl", 259, top_call, code, 2).
-head_pat("rules/js-callgraph.rofl:259", "C,R").
-premise("rules/js-callgraph.rofl:259", 0, site, code, pos, "C").
-premise("rules/js-callgraph.rofl:259", 1, ast_node, code, pos, "C,_,File,_").
-premise("rules/js-callgraph.rofl:259", 2, ast_file, code, pos, "R,File").
-premise("rules/js-callgraph.rofl:259", 3, enclosed, code, neg, "C").
-clause_npos("rules/js-callgraph.rofl:259", 3).
-clause_nneg("rules/js-callgraph.rofl:259", 1).
-clause_nbi("rules/js-callgraph.rofl:259", 0).
-body_sig("rules/js-callgraph.rofl:259", "site[code](V0), ast_node[code](V0,_,V1,_), ast_file[code](V2,V1), not enclosed[code](V0)").
-shape_sig("rules/js-callgraph.rofl:259", "R0[code](V0), R1[code](V0,_,V1,_), R2[code](V2,V1), not R3[code](V0)").
-clause("rules/js-callgraph.rofl:261", "rules/js-callgraph.rofl", 261, top_site, code, 2).
-head_pat("rules/js-callgraph.rofl:261", "X,R").
-premise("rules/js-callgraph.rofl:261", 0, site, code, pos, "X").
-premise("rules/js-callgraph.rofl:261", 1, ast_node, code, pos, "X,_,File,_").
+body_sig("rules/js-callgraph.rofl:258", "encloses[code](V0,V1), not closer[code](V0,V1)").
+shape_sig("rules/js-callgraph.rofl:258", "R0[code](V0,V1), not R1[code](V0,V1)").
+clause("rules/js-callgraph.rofl:260", "rules/js-callgraph.rofl", 260, enclosed, code, 1).
+head_pat("rules/js-callgraph.rofl:260", "C").
+premise("rules/js-callgraph.rofl:260", 0, encloses, code, pos, "_,C").
+clause_npos("rules/js-callgraph.rofl:260", 1).
+clause_nneg("rules/js-callgraph.rofl:260", 0).
+clause_nbi("rules/js-callgraph.rofl:260", 0).
+body_sig("rules/js-callgraph.rofl:260", "encloses[code](_,V0)").
+shape_sig("rules/js-callgraph.rofl:260", "R0[code](_,V0)").
+clause("rules/js-callgraph.rofl:261", "rules/js-callgraph.rofl", 261, top_call, code, 2).
+head_pat("rules/js-callgraph.rofl:261", "C,R").
+premise("rules/js-callgraph.rofl:261", 0, site, code, pos, "C").
+premise("rules/js-callgraph.rofl:261", 1, ast_node, code, pos, "C,_,File,_").
 premise("rules/js-callgraph.rofl:261", 2, ast_file, code, pos, "R,File").
-premise("rules/js-callgraph.rofl:261", 3, enclosed, code, neg, "X").
+premise("rules/js-callgraph.rofl:261", 3, enclosed, code, neg, "C").
 clause_npos("rules/js-callgraph.rofl:261", 3).
 clause_nneg("rules/js-callgraph.rofl:261", 1).
 clause_nbi("rules/js-callgraph.rofl:261", 0).
@@ -15849,13 +15841,13 @@ body_sig("rules/js-callgraph.rofl:379", "nearest_fn[code](V0,V1), transfer_site[
 shape_sig("rules/js-callgraph.rofl:379", "R0[code](V0,V1), R1[code](V1,V2), not R2[code](V1)").
 clause("rules/js-callgraph.rofl:381", "rules/js-callgraph.rofl", 381, frontier_at, code, 2).
 head_pat("rules/js-callgraph.rofl:381", "R,K").
-premise("rules/js-callgraph.rofl:381", 0, top_site, code, pos, "X,R").
+premise("rules/js-callgraph.rofl:381", 0, top_call, code, pos, "X,R").
 premise("rules/js-callgraph.rofl:381", 1, transfer_site, code, pos, "X,K").
 premise("rules/js-callgraph.rofl:381", 2, resolved_site, code, neg, "X").
 clause_npos("rules/js-callgraph.rofl:381", 2).
 clause_nneg("rules/js-callgraph.rofl:381", 1).
 clause_nbi("rules/js-callgraph.rofl:381", 0).
-body_sig("rules/js-callgraph.rofl:381", "top_site[code](V0,V1), transfer_site[code](V0,V2), not resolved_site[code](V0)").
+body_sig("rules/js-callgraph.rofl:381", "top_call[code](V0,V1), transfer_site[code](V0,V2), not resolved_site[code](V0)").
 shape_sig("rules/js-callgraph.rofl:381", "R0[code](V0,V1), R1[code](V0,V2), not R2[code](V0)").
 clause("rules/js-callgraph.rofl:384", "rules/js-callgraph.rofl", 384, frontier_named, code, 2).
 head_pat("rules/js-callgraph.rofl:384", "Name,Item").
@@ -28414,7 +28406,6 @@ head_arms(closer, 2, 1).
 head_arms(nearest_fn, 2, 1).
 head_arms(enclosed, 1, 1).
 head_arms(top_call, 2, 1).
-head_arms(top_site, 2, 1).
 head_arms(obj_member_fn, 3, 2).
 head_arms(class_ctor, 2, 1).
 head_arms(resolves, 2, 8).
@@ -29755,7 +29746,6 @@ defined(closer, "rules/js-callgraph.rofl").
 defined(nearest_fn, "rules/js-callgraph.rofl").
 defined(enclosed, "rules/js-callgraph.rofl").
 defined(top_call, "rules/js-callgraph.rofl").
-defined(top_site, "rules/js-callgraph.rofl").
 defined(obj_member_fn, "rules/js-callgraph.rofl").
 defined(class_ctor, "rules/js-callgraph.rofl").
 defined(resolves, "rules/js-callgraph.rofl").
@@ -31584,7 +31574,6 @@ read_by_rule(returns).
 read_by_rule(top_call).
 read_by_rule(fn_name).
 read_by_rule(arg_at).
-read_by_rule(top_site).
 read_by_rule(frontier_at).
 read_by_rule(shape_vocab).
 read_by_rule(shape_seen).

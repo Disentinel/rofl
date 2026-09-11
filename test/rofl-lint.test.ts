@@ -61,8 +61,9 @@ test('positive controls: the rows the instrument was built to find', () => {
   const r = treeWorld();
   const cg = '"rules/js-callgraph.rofl"';
   const ef = '"rules/js-effects.rofl"';
-  // one body, two heads — `top_call` and `top_site` are the same rule
-  assert.equal(rows(r, `twin(_, _, top_call, top_site, ${cg})`).length, 1);
+  // `top_call` and `top_site` were one body under two heads until the twin
+  // row named them; `top_site` is gone, so the row is asserted absent.
+  assert.deepEqual(rows(r, `twin(_, _, _, _, ${cg})`), []);
   // The comment-side controls — twelve orphan tier paragraphs in js-callgraph,
   // `fn_binding` cited and defined nowhere, section 6 twice and a list
   // restarting at 6 in js-effects — were repaired the same day the instrument
