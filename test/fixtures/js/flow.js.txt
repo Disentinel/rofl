@@ -1,4 +1,0 @@
-let source = 1;
-let middle = source;
-let sink = middle;
-let unrelated = 9;

@@ -38,5 +38,5 @@ jobs:
           bun-version: latest
       - name: install dependencies (the scanner needs @babel/parser)
         run: bun install
-      - name: tests (bun test)
-        run: bun test --timeout 60000
+      - name: goldens (bun)
+        run: bun run scripts/goldens.ts
