@@ -115,6 +115,25 @@ function danglingPaths(): string[] {
   return out;
 }
 
+/** A SETTLEMENT MUST CITE SOMETHING THAT EXISTS. `addressed_by(F, Path)` is
+ *  the ledger's claim that a finding is closed BECAUSE that artifact is in the
+ *  tree; delete the artifact and the claim has no evidence left, silently. The
+ *  document check above found nine such references in the prose; the first run
+ *  of this one found thirty-three in the ledger, all from the same afternoon.
+ *
+ *  Only `addressed_by` is checked. A `finding_note` that names a file is a
+ *  record of a past measurement, and history does not become false when the
+ *  file is deleted. */
+function danglingSettlements(): string[] {
+  const out: string[] = [];
+  const src = fs.readFileSync(path.join(ROOT, 'facts/findings.rofl'), 'utf8');
+  for (const m of src.matchAll(/addressed_by\(([a-z0-9_]+),\s*"([^"]+)"\)/g)) {
+    const ref = m[2].replace(/:\d+$/, '');
+    if (!fs.existsSync(path.join(ROOT, ref))) out.push(`${m[1]} \u2192 ${ref}`);
+  }
+  return out;
+}
+
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'render_docs.ts';
 if (isMain) {
   const check = process.argv.includes('--check');
@@ -133,7 +152,7 @@ if (isMain) {
     fs.writeFileSync(p, out);
     console.log(`  wrote ${b.file} ${b.name}`);
   }
-  const dangling = danglingPaths();
+  const dangling = [...danglingPaths(), ...danglingSettlements()];
   for (const d of dangling) console.error(`  DANGLING ${d}`);
   process.exit(bad === 0 && dangling.length === 0 ? 0 : 1);
 }

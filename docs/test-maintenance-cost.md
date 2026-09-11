@@ -8,6 +8,13 @@ elapsed time, and the work was almost entirely mechanical. This document
 measures that and proposes changes. It is a criticism of the current test
 design, not of testing.
 
+**Carried out 2026-09-11.** `npm test` is now a golden set over 81 worlds on
+both engines, eleven seconds, and the three cost gates named below were
+deleted — js-layer-cost, js-fixpoint-cost and volume-locality, 1893 lines.
+Every figure they held was a measurement of this repository. The counts in the
+inventory below are kept as they were measured; the two files they name are
+gone.
+
 ## Why this is worth a document
 
 The JavaScript modeling sessions cost roughly **US$5,000 in subscription
@@ -34,8 +41,8 @@ derived total or percentage that moved because the vocabulary grew by one:
 
 - 14 cell counts in `test/js-model.test.ts` (`91 → 92` kinds, and thirteen
   predictions derived from it);
-- 7 row and derivation counts plus 1 threshold in `test/js-layer-cost.test.ts`;
-- 2 in `test/js-fixpoint-cost.test.ts`, 1 in `test/js-callgraph.test.ts`;
+- 7 row and derivation counts plus 1 threshold in js-layer-cost (deleted);
+- 2 in js-fixpoint-cost (deleted), 1 in `test/js-callgraph.test.ts`;
 - 4 named sets that legitimately gained an element.
 
 The four named sets were quick and informative: each one gained exactly the

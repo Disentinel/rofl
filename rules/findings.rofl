@@ -11,9 +11,25 @@
 --   finding_note(F, Note)      one-line human summary (prose lives in docs/dogfood/)
 --   addressed_by(F, Artifact)  path of the rule/test/doc that settles it
 --   dismissed(F, Reason)       explicit refusal, with a named reason
+--   artifact_removed(F, What)  the artifact that settled it left the tree
 
 settled(F)           :- addressed_by(F, _).
 settled(F)           :- dismissed(F, _).
+settled(F)           :- artifact_removed(F, _).
+
+-- A SETTLEMENT MUST CITE SOMETHING THAT EXISTS, and for a whole afternoon
+-- thirty-three of them did not: `scripts/render_docs.ts --check` walks every
+-- `addressed_by` path and one day of deleting had left a third of the closed
+-- ledger pointing at bench/, at docs/dogfood/ and at eight scanners. A citation
+-- that resolves to nothing is a finding that reads settled and is not, so the
+-- disposition is made explicit: the artifact is gone, the NOTE is what remains,
+-- and a note is the only thing left to hold the knowledge.
+note_lost[audit](F)  :- artifact_removed(F, _), not finding_note(F, _).
+
+-- AND A FINDING CANNOT BE BOTH REPAIRED AND REFUSED. The sweep above wrote
+-- three of these before the file was read back: a finding whose gate was
+-- deleted still carried a live `addressed_by` to the repair itself.
+two_minds[audit](F) :- addressed_by(F, _), dismissed(F, _).
 
 open_finding(F)      :- finding(F, _), not settled(F).
 
