@@ -19,3 +19,8 @@ work(w_implied_premises_priced,
   "Eighteen positive premises tree-wide follow from another premise of the same body (`implied(Id, File, Head, P, Q)` in facts/rofl-lint.rofl): eff_heap_of's member_node_v, eff_catch_here's ast_node, shape_known's computed_member among them. Dropping one changes no extension and may change cost, because the planner keeps the written order and a cheap implied premise can be the seed. Price each with scanners/js_cost.ts before removing; a premise that is a seed stays and says so in one line.").
 work_state(w_implied_premises_priced, open).
 work_spawned(w_implied_premises_priced, f_a_moved_rule_leaves_its_prose_behind_and_a_lexical_rule_sees_it).
+
+work(w_two_closures_of_work_needs,
+  "rules/worklist.rofl computes the transitive closure of work_needs twice under two names: needs_reach (feeding needs_cycle[audit]) and waits_on (feeding work_needs_cycle[audit]), one body up to renaming, and the two audits are therefore one audit. The twin row in facts/rofl-lint.rofl found it the day the file was cut to its notes. Beside it, held_by :- held is a pure rename that nothing reads. One closure, one cycle audit, and held_by either gets a reader or goes.").
+work_state(w_two_closures_of_work_needs, open).
+work_spawned(w_two_closures_of_work_needs, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
