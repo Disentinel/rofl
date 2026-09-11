@@ -1,10 +1,13 @@
 -- examples/rofl-release/context.rofl — pack activation and the concern map.
 --
--- FIVE OF NINE CONCERNS ARE UNMAPPED AND THAT IS THE HONEST ANSWER, not an
--- omission: load, monitoring, rollback, billing and customer_acceptance are
--- concerns of a deployed service and this is a language. The pack cannot tell
--- `nobody covered it` from `nobody can`, so the gaps stand and the verdict
--- pays for them.
+-- WHICH AXES THIS INQUIRY HAS, DECIDED ONE AT A TIME.
+--
+-- The first draft called five of the nine inapplicable in one breath, and the
+-- owner took three of them back: LOAD is the engine's central question, not a
+-- service's; MONITORING has a library form -- what a caller reads back about a
+-- run; and CUSTOMER_ACCEPTANCE is not inapplicable at all, it is the axis this
+-- release actually fails. Two survive as genuine exclusions, and each says why
+-- in its own row rather than in a comment above a list.
 
 pack(rofl_1_0, production_readiness).
 decision_authority(rofl_1_0, owner).
@@ -12,6 +15,12 @@ decision_authority(rofl_1_0, owner).
 concern_claim(rofl_1_0, requirements, release_contract_is_current).
 concern_claim(rofl_1_0, testing, two_engines_agree).
 concern_claim(rofl_1_0, product_coverage, every_feature_has_a_world).
-concern_claim(rofl_1_0, dependencies, kernel_has_no_runtime_dependency).
+concern_claim(rofl_1_0, dependencies, package_declares_what_it_ships).
+concern_claim(rofl_1_0, load, holds_a_realistic_corpus).
+concern_claim(rofl_1_0, monitoring, a_run_reports_on_itself).
+concern_claim(rofl_1_0, customer_acceptance, used_by_somebody_other_than_its_author).
+
+excluded_concern(rofl_1_0, rollback, "backing out a release of a library is pinning the previous version, which is the registry's job and not the engine's. The engine HAS retract, excise and fromSnapshot, and mapping the axis to them would answer a distribution question with an evaluation answer -- the borrowed reason this ledger already records three times").
+excluded_concern(rofl_1_0, billing, "nothing is charged for").
 
 current_version("0.1.0").

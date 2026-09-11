@@ -20,8 +20,14 @@ inquiry(rofl_1_0, decide).
 -- (rules/inquiry/obligations.rofl). So an authority who judges a blocking
 -- claim not to be a blocker says so HERE, in the framing, where it is one line
 -- and visible, rather than by retiring the evidence against it.
+-- NOT AN OBLIGATION OF THIS RELEASE AT ALL, which is where the last edit
+-- stopped one step short. Moving it out of `blocking` left it a REQUIREMENT,
+-- and a contested requirement bars a conditional go just as surely -- so the
+-- authority's judgement that two names of sixteen are not owed had been
+-- half-applied. If they are not owed, literal completeness is not something
+-- this release requires. THE CLAIM AND BOTH ITS MEASUREMENTS STAY, unsettled
+-- and on the record: what changed is that nothing here demands it.
 claim(port_surface_complete).
-requires(rofl_1_0, port_surface_complete).
 observable(port_surface_complete).
 
 -- BLOCKING: one language, two engines, or it is two languages.
@@ -43,9 +49,39 @@ claim(every_feature_has_a_world).
 requires(rofl_1_0, every_feature_has_a_world).
 observable(every_feature_has_a_world).
 
-claim(kernel_has_no_runtime_dependency).
-requires(rofl_1_0, kernel_has_no_runtime_dependency).
-observable(kernel_has_no_runtime_dependency).
+-- SPLIT, 2026-09-11. The one claim was CONTESTED because both polarities were
+-- true of different things, and a claim two measurements can both be right
+-- about is a claim asking to be two. The host kernel takes nothing; the port
+-- takes crates by construction and that is what a Rust library IS; and what
+-- was actually hiding under the disagreement is the PACKAGE, which declares a
+-- dependency the kernel never imports and declares no entry point at all.
+claim(js_kernel_takes_nothing).
+requires(rofl_1_0, js_kernel_takes_nothing).
+observable(js_kernel_takes_nothing).
+
+claim(package_declares_what_it_ships).
+requires(rofl_1_0, package_declares_what_it_ships).
+observable(package_declares_what_it_ships).
+
+-- THE ENGINE'S OWN LOAD AXIS, and it is not inapplicable: an engine that
+-- cannot hold a realistic corpus has failed at the only thing it does.
+claim(holds_a_realistic_corpus).
+requires(rofl_1_0, holds_a_realistic_corpus).
+observable(holds_a_realistic_corpus).
+
+-- NOR IS MONITORING. A library's form of it is what a caller can read back
+-- about a run without instrumenting the engine themselves.
+claim(a_run_reports_on_itself).
+requires(rofl_1_0, a_run_reports_on_itself).
+observable(a_run_reports_on_itself).
+
+-- AND THE ONE THAT IS GENUINELY MISSING RATHER THAN INAPPLICABLE. For a
+-- launch this axis is sign-off by whoever asked for the thing; for a language
+-- at 1.0 it is whether anybody outside the author has used it and said it
+-- works. Nobody has, and that is an answer.
+claim(used_by_somebody_other_than_its_author).
+requires(rofl_1_0, used_by_somebody_other_than_its_author).
+observable(used_by_somebody_other_than_its_author).
 
 claim(release_contract_is_current).
 requires(rofl_1_0, release_contract_is_current).

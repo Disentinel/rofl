@@ -48,18 +48,51 @@ refutes[obs](feature_census, every_feature_has_a_world).
 evidence_kind[obs](feature_census, measured).
 evidence_version[obs](feature_census, "0.1.0").
 
--- BOTH POLARITIES, AND BOTH ARE TRUE OF DIFFERENT THINGS. Nothing under src/
--- or runtime/ imports anything but node: builtins and itself; package.json
--- declares `@babel/parser` under `dependencies`, for the scanners. The claim
--- as written does not say which, so the journal records the disagreement
--- rather than picking a side.
-supports[obs](src_import_walk, kernel_has_no_runtime_dependency).
+-- THE HOST KERNEL TAKES NOTHING, and the walk says so: no file under `src/` or
+-- `runtime/` imports anything but `node:` builtins and itself. The Rust port
+-- takes crates by construction, which is what a Rust library is and is not a
+-- claim anybody made otherwise.
+supports[obs](src_import_walk, js_kernel_takes_nothing).
 evidence_kind[obs](src_import_walk, measured).
 evidence_version[obs](src_import_walk, "0.1.0").
 
-refutes[obs](package_manifest, kernel_has_no_runtime_dependency).
+-- WHAT WAS ACTUALLY HIDING UNDER THE CONTESTED CLAIM, and it is a real
+-- release item rather than a philosophical one: `package.json` declares
+-- `@babel/parser` under `dependencies` while the only importers are seven
+-- files under `scanners/` and `scripts/` -- so anybody installing the engine
+-- pulls a parser the engine never calls. And there is no `files`, no `main`
+-- and no `exports`, so the package neither says what it ships nor what to
+-- import.
+refutes[obs](package_manifest, package_declares_what_it_ships).
 evidence_kind[obs](package_manifest, measured).
 evidence_version[obs](package_manifest, "0.1.0").
+
+-- LOAD. 5 676 864 facts over a 128-file world at 198 B/fact and 45.7 s
+-- (docs/the-target.md, docs/port-surface.md), and the two walls a caller can
+-- set and read -- `budget` in steps and `space` in rows -- are distinct atoms
+-- demanding opposite repairs, with `examples/reach` built to show the
+-- difference rather than assert it. The honest caveat travels with the number
+-- and is in the doc: that is what THAT workload does, not what the engine does.
+supports[obs](corpus_5_6m, holds_a_realistic_corpus).
+evidence_kind[obs](corpus_5_6m, measured).
+evidence_version[obs](corpus_5_6m, "0.1.0").
+
+-- MONITORING, in the form a library can have it. A caller reads back
+-- `partial`, `steps`, `peak_rows` against `space` -- how close to the wall,
+-- reported WITHOUT a failure -- and per question `scanned`, `probed` and
+-- `micros`, which is the difference between an index served and a relation
+-- walked. A run that stops writes `hole(...)` naming WHY into the world
+-- itself, so the record is a fact and not a log line.
+supports[obs](caller_side_instruments, a_run_reports_on_itself).
+evidence_kind[obs](caller_side_instruments, measured).
+evidence_version[obs](caller_side_instruments, "0.1.0").
+
+-- CUSTOMER ACCEPTANCE, AND IT IS THE ONE THAT FAILS. No user outside this
+-- repository's author has built anything with it; the 21 demos, the 84 golden
+-- worlds and the JS model are all the author's. Not inapplicable -- unmet.
+refutes[obs](no_outside_user, used_by_somebody_other_than_its_author).
+evidence_kind[obs](no_outside_user, human_assertion).
+evidence_version[obs](no_outside_user, "0.1.0").
 
 -- START.md is `ROFL Kernel v0 — Implementation Handoff`, a pre-implementation
 -- brief, and `npm run speccheck` reports 18 rows amending or qualifying it.

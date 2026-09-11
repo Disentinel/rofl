@@ -5,6 +5,7 @@
 -- EDB (in addition to the inquiry kernel's frame):
 --   pack(I, production_readiness)
 --   concern_claim(I, Concern, Claim)   -- maps a pack concern to a claim
+--   excluded_concern(I, Concern, Why)  -- an axis this inquiry cannot have
 
 -- the concern axes every production launch must cover (roadmap Phase 3)
 concern(production_readiness, requirements).
@@ -18,9 +19,26 @@ concern(production_readiness, dependencies).
 concern(production_readiness, customer_acceptance).
 
 concern_covered(I, Con) :- concern_claim(I, Con, C), claim(C).
+
+-- A CONCERN NOBODY CAN COVER READ AS ONE NOBODY COVERED, and for a library
+-- five of the nine did. `coverage_gap` is a closed-world read over a fixed
+-- list written for a deployed service, so `billing` scored against a language
+-- exactly as an unmeasured load test would against a service -- and a
+-- CONDITIONAL GO became unreachable for a reason with nothing to do with
+-- readiness. The judgement belongs where the authority is, so it is asserted
+-- in the frame and subtracted here, one visible line per axis, rather than
+-- being softened inside the rule.
+not_applicable(I, Con) :- excluded_concern(I, Con, _),
+                          decision_authority(I, _).
+
 coverage_gap(I, Con)    :- pack(I, production_readiness),
                            concern(production_readiness, Con),
-                           not concern_covered(I, Con).
+                           not concern_covered(I, Con),
+                           not not_applicable(I, Con).
+
+-- AND AN EXCLUSION THAT ALSO HAS A CLAIM IS A CONTRADICTION, not a belt and
+-- braces: somebody covered the axis and somebody said it could not be covered.
+both_minds[audit](I, Con) :- not_applicable(I, Con), concern_covered(I, Con).
 
 -- an open non-blocking obligation that nobody with authority accepted
 unaccepted_open(I)      :- pack(I, production_readiness),
