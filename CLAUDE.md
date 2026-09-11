@@ -5,23 +5,27 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 ## Commands
 
+    npm test                      81 worlds, both engines, one committed
+                                  golden — 11 s. This IS the loop.
+    npm run bless                 rewrite the golden, printing what it moves
+    npm run test:hosts            21 demos by their stdout, one engine — 100 s
     npx tsc -p tsconfig.json      typecheck
-    npm run loop                  engine tests, planted defects skipped
-    npm run test:engine           · test:library · test:mutants
-    npm test                      the whole suite — ONLY WHEN ASKED BY NAME
-    npm run textcheck             · findings · repl
+    npm run textcheck             · findings · repl · readme -- --check
     npm run scan -- <dir>         · report -- <files>
-    npm run depends · cleanliness · layering · nullary · history
+    npm run features · depends · cleanliness · layering · nullary
+    npm run test:full             the old node suite — half an hour on four
+                                  cores, ONLY WHEN ASKED BY NAME
+
+`npm test` loads every `.rofl` world in the tree with both engines and compares
+a hash and a per-relation census against `facts/goldens.rofl`. A red names the
+relation that moved and by how much. Blessing is a decision and shows up as a
+diff.
 
 ## Testing has a hard limit
 
 **No single run longer than two minutes. No more than three turns in a row on
 testing.** Put a timeout on every invocation; when it trips, kill it and narrow
 the scope rather than wait.
-
-`npm test` is not the development loop. It is a half-hour on four cores and it
-runs only when the owner asks for it by name. While working, run the one file
-you are touching.
 
 When the third testing turn ends without an answer, stop: say plainly what is
 unverified and go on. Waiting for a run is not work and never counts as
