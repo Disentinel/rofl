@@ -40,27 +40,53 @@ coverage_gap(I, Con)    :- pack(I, production_readiness),
 -- braces: somebody covered the axis and somebody said it could not be covered.
 both_minds[audit](I, Con) :- not_applicable(I, Con), concern_covered(I, Con).
 
--- an open non-blocking obligation that nobody with authority accepted
-unaccepted_open(I)      :- pack(I, production_readiness),
+-- A GAP IS A GAP WHETHER IT IS UNKNOWN OR KNOWN FALSE.
+--
+-- Until 2026-09-11 this read `open_obligation` alone, so a requirement the
+-- evidence REFUTED was invisible to every verdict while an UNKNOWN one had to
+-- be accepted by name -- an ordering exactly inverted, and demonstrated rather
+-- than argued: this pack returned `conditional_go` for an inquiry whose
+-- refuted requirements included `nobody outside the author has used it`. The
+-- fixture never met it because its own refutation sits on a BLOCKING claim,
+-- where `violated_blocking` catches it; a refuted claim that merely `requires`
+-- is the arrangement a real inquiry reached on its first outing.
+--
+-- Both now demand the same thing -- an authority who accepts them BY NAME --
+-- and the claim is named here rather than counted, so a reader is told which.
+unaccepted_gap(I, C)    :- pack(I, production_readiness),
                            open_obligation(I, C),
                            not gap_accepted(I, C).
+unaccepted_gap(I, C)    :- pack(I, production_readiness),
+                           refuted_obligation(I, C),
+                           not gap_accepted(I, C).
 
--- GO: nothing blocks, nothing open, nothing contested, full coverage.
+-- What a CONDITIONAL go is conditional ON: the residual risk somebody with
+-- authority took. `open_obligation(I, _)` stood here before and said something
+-- narrower by accident -- that the residue happened to be an UNKNOWN.
+accepted_residual(I, C) :- gap_accepted(I, C), obligation(I, C).
+
+-- AND ACCEPTING WHAT IS NOT A GAP IS NOISE IN THE RECORD, not extra safety:
+-- an authority's acceptance is a decision about risk, and a resolved
+-- obligation carries none.
+idle_acceptance[audit](I, C) :- gap_accepted(I, C), resolved_obligation(I, C).
+
+-- GO: nothing blocks, nothing unresolved in any direction, full coverage.
 recommendation(I, go) :-
     pack(I, production_readiness),
     inquiry(I, decide),
     not go_blocked(I, _),
     not open_obligation(I, _),
+    not refuted_obligation(I, _),
     not contested_obligation(I, _),
     not coverage_gap(I, _).
 
--- CONDITIONAL GO: nothing blocks and nothing is contested, but open
--- non-blocking gaps remain — every one of them accepted by authority.
+-- CONDITIONAL GO: nothing blocks and nothing is contested, but gaps remain --
+-- every one of them accepted by authority, and at least one of them there.
 recommendation(I, conditional_go) :-
     pack(I, production_readiness),
     inquiry(I, decide),
     not go_blocked(I, _),
     not contested_obligation(I, _),
     not coverage_gap(I, _),
-    open_obligation(I, _),
-    not unaccepted_open(I).
+    accepted_residual(I, _),
+    not unaccepted_gap(I, _).
