@@ -22,6 +22,7 @@
 import { Rofl } from '../src/api.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -130,6 +131,18 @@ function danglingSettlements(): string[] {
   for (const m of src.matchAll(/addressed_by\(([a-z0-9_]+),\s*"([^"]+)"\)/g)) {
     const ref = m[2].replace(/:\d+$/, '');
     if (!fs.existsSync(path.join(ROOT, ref))) out.push(`${m[1]} \u2192 ${ref}`);
+  }
+  // AND A GRAVE MUST HOLD A BODY. `artifact_removed` names what left; the
+  // `removed_in` sha is the address it left for, and an address nobody dials
+  // is the same dead end one indirection further out.
+  const grave = new Map<string, string>();
+  for (const m of src.matchAll(/removed_in\("([^"]+)",\s*"([0-9a-f]{7,40})"\)/g)) grave.set(m[1], m[2]);
+  for (const m of src.matchAll(/artifact_removed\(([a-z0-9_]+),\s*"([^"]+)"\)/g)) {
+    const [fid, ref] = [m[1], m[2]];
+    const sha = grave.get(ref);
+    if (!sha) { out.push(`${fid} \u2192 ${ref} (no removed_in)`); continue; }
+    const r = spawnSync('git', ['cat-file', '-e', `${sha}^:${ref}`], { cwd: ROOT });
+    if (r.status !== 0) out.push(`${fid} \u2192 ${ref} not in ${sha}^`);
   }
   return out;
 }

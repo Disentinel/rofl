@@ -6124,4 +6124,47 @@ artifact_removed(f_a_cost_gate_prices_only_the_packs_that_were_in_its_world, "te
 finding(f_a_settlement_must_cite_something_that_exists, defect).
 recorded(f_a_settlement_must_cite_something_that_exists, "2026-09-11").
 finding_note(f_a_settlement_must_cite_something_that_exists, "THE LEDGER WAS AS ROTTEN AS THE DOCUMENTS, AND NOTHING LOOKED. `scripts/render_docs.ts --check` grew a walk over every `addressed_by(F, Path)` and the first run found FIFTY-ONE closed findings citing a file that is not in the tree -- bench/ (4), docs/dogfood/ (17), eight deleted scanners, scanners/tasks/, scripts/kernel_grep.ts, rules/history.rofl, two deleted test files -- almost all of them from ONE afternoon of deleting, the same afternoon that left nine dangling paths in the prose. The prose check was built that day; the closure was not taken, so a third of the settled ledger read settled on evidence that had been removed. THE FIX IS A WORD RATHER THAN A REPOINT. Aiming the dead citations at `facts/findings.rofl` would have made the gate green and toothless in one edit, which is the failure mode the gate exists for. `artifact_removed(F, What)` settles the finding and says WHAT went, `note_lost[audit]` catches one with no note left to hold the knowledge, and `two_minds[audit]` catches a finding that is both repaired and refused -- which the sweep itself wrote three times before the file was read back.").
+finding_note(f_a_settlement_must_cite_something_that_exists,
+  "THE OWNER'S CORRECTION, THE SAME HOUR: a deleted file is not a lost file, so a dead citation should change ADDRESS rather than be given up. `removed_in(Path, Sha)` names the commit that deleted it and the artifact is at `<sha>^:<path>`, one `git show` away. Thirty-three graves, and TWENTY-NINE OF THEM ARE ONE COMMIT - the afternoon of deleting, which the ledger could not previously state as a number at all. THE CHECK IS THE POINT, because a sha is exactly as good as whatever dials it: `scripts/render_docs.ts --check` runs `git cat-file -e <sha>^:<path>` for every removed artifact, so a grave with no body and a grave with no address are both red. Both arms proven by planting - a bad sha reads `not in 7fb522f^`, a missing row reads `(no removed_in)` - and the tree is clean on neither. WHAT THIS MAKES POSSIBLE and is the reason it is worth a relation instead of a comment: `artifact_removed` was a full stop, and it is now a POINTER. A finding settled by work that left the tree can be read again by anyone who wants the measurement back.").
 addressed_by(f_a_settlement_must_cite_something_that_exists, "scripts/render_docs.ts").
+
+-- ================================================== WHERE THE REMOVED ARE KEPT
+-- A deleted file is not a lost file, and an `artifact_removed` without this row
+-- is a dead end where a `git show` would do. The commit is the one that DELETED
+-- it, so the artifact is at `<sha>^:<path>`; `scripts/render_docs.ts --check`
+-- verifies exactly that, which is why the sha is here rather than in prose.
+-- Twenty-nine of the thirty-three are one commit: the afternoon of deleting.
+edb(removed_in).
+removed_in("bench/fork_clone_cost.ts", "c6f0f0f912c9").
+removed_in("bench/fork_control.ts", "c6f0f0f912c9").
+removed_in("bench/fork_task_leaky.ts", "c6f0f0f912c9").
+removed_in("bench/pilot.ts", "c6f0f0f912c9").
+removed_in("docs/benchmark-protocol.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-28-amnesiac.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-28-lic-haiku45.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-28-pilot.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-28-pr1.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-28-swarm.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-08-30-honk-huh.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-04-environment-layer.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-04-self-application.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-07-fork-parallelism.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-07-grammar-and-lexis.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-07-tier-2-interning.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-08-storage-backends.md", "c6f0f0f912c9").
+removed_in("docs/dogfood/2026-09-09-join-planner.md", "c6f0f0f912c9").
+removed_in("docs/guided-formal-reasoning-roadmap.md", "c6f0f0f912c9").
+removed_in("rules/history.rofl", "c6f0f0f912c9").
+removed_in("scanners/js_cost.ts", "c6f0f0f912c9").
+removed_in("scanners/js_volume.ts", "c6f0f0f912c9").
+removed_in("scanners/ledger_census.ts", "c6f0f0f912c9").
+removed_in("scanners/order_census.ts", "c6f0f0f912c9").
+removed_in("scanners/parse_bench.ts", "c6f0f0f912c9").
+removed_in("scanners/ring1_pargen.ts", "c6f0f0f912c9").
+removed_in("scanners/round_shape.ts", "c6f0f0f912c9").
+removed_in("scanners/tasks/t10-l0.ts", "c6f0f0f912c9").
+removed_in("scanners/tasks/t9-noparse.ts", "c6f0f0f912c9").
+removed_in("scripts/kernel_grep.ts", "c6b3048ce06c").
+removed_in("test/js-layer-cost.test.ts", "7fb522fb44f3").
+removed_in("test/publishes.test.ts", "37b73307927f").
+removed_in("test/version-plan.test.ts", "5cbb9e9e872a").
