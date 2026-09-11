@@ -1,151 +1,100 @@
--- rules/depends.rofl — WHAT BREAKS IF I DELETE THIS FILE?
+-- rules/depends.rofl — WHAT BREAKS IF I DELETE THIS FILE? The facts are
+-- scanners/depends.ts; the reasoning is here so every row has a `why`.
 --
--- The facts are scanners/depends.ts; the reasoning is here, so that a reader
--- who disagrees with an answer argues with a rule body rather than with a
--- number, and so that every row has a `why`.
+-- THE DIRECTION IS THE THING TO GET RIGHT. `edge(A, B, _)` means A NEEDS B,
+-- so the blast radius of deleting B is every A that reaches B — the closure
+-- taken UPSTREAM. Downstream is a different question, answered apart.
 --
--- THE DIRECTION IS THE THING TO GET RIGHT AND IT IS EASY TO GET BACKWARDS.
--- `edge(A, B, _)` means A NEEDS B. So the blast radius of deleting B is every
--- A that reaches B — the closure taken UPSTREAM, not downstream. Downstream is
--- the other question, `what becomes unreachable`, and it is answered separately
--- below because the two get confused every time they are not named apart.
+-- Two models were wrong before this one. The full closure over 677 artifacts
+-- and 3208 edges died at 88 472 rows against the engine's wall: nobody asks
+-- "what is the closure", they ask "what breaks if I delete THIS", so the walk
+-- is seeded from `target[dep](X)`, one fact from the caller, and is linear in
+-- the reachable set. Then the seeded walk answered 322 and 411 for three
+-- unrelated files, because `doc_ref` and `ledger_ref` run both ways through
+-- prose and make the graph one component. A deletion breaks CODE or makes
+-- PROSE wrong, and those are different verdicts.
 
--- ------------------------------------------------------------------ closure
---
--- THE FIRST VERSION OF THIS FILE DID NOT FIT, AND THE FAILURE IS THE USEFUL
--- PART. It computed the full closure `needs(A, B) :- needs(A, X), edge(X, B, _)`
--- and asked the blast question as a projection of it. Measured 2026-09-10 on
--- this repository's own graph — 677 artifacts, 3 208 edges — that reaches
--- 88 472 rows and then dies with `hole($rule(...), space_exhausted)` against
--- the engine's 500 000-row wall, with every query answering 0. Not a bug: the
--- closure of a graph this dense is genuinely near-quadratic (677 squared is
--- 458 329), and the join accumulator is larger than its own result.
---
--- THE MODEL WAS WRONG BEFORE THE ENGINE WAS SMALL. Nobody ever asks `what is
--- the closure`; they ask `what breaks if I delete THIS`. Seeding the walk from
--- the target makes it linear in the reachable set, and the answer to the
--- question actually asked is identical. The general form is the one this
--- repository already writes about instruments: a quantity that CONTAINS the
--- answer is not the answer, and computing it can cost more than the question.
---
--- `target[dep](X)` is supplied by the caller — one fact — so this pack is
--- inert until somebody asks something.
 edb(target).
 
--- AND THE SECOND VERSION WAS WRONG TOO, IN A WAY ONLY A CONTROL FOUND. Seeded
--- from three targets as different as `boot.rofl`, `facts/rule-shape.rofl` and
--- `scanners/rule_shape.ts`, it answered 322 and 411 FOR ALL THREE. Identical
--- numbers for unrelated files is not a blast radius, it is a report that the
--- graph has one component — and it does, because `doc_ref` and `ledger_ref`
--- run BOTH WAYS through prose: `facts/findings.rofl` names most of the tree,
--- README names findings, so everything reaches everything through two hops of
--- text. A closure over a relation that is nearly total answers `all of it` and
--- looks like an answer.
---
--- The distinction the scanner kept separable is what rescues it: a deletion
--- breaks CODE or it makes PROSE wrong, and those want different verdicts and
--- different work. Three relations, never one:
+-- `generates` is deliberately NOT a code edge: a generator does not break
+-- when its output is deleted, it recreates it. With it in the closure
+-- test/rule-shape.test.ts appeared in the blast radius of the pack it was
+-- written to re-derive from source. The edge was real and its direction was
+-- wrong.
 code_edge[dep](A, B) :- edge[dep](A, B, ts_import).
 code_edge[dep](A, B) :- edge[dep](A, B, reads_path).
 code_edge[dep](A, B) :- edge[dep](A, B, npm_script).
 code_edge[dep](A, B) :- edge[dep](A, B, ci_step).
 
--- `generates` IS DELIBERATELY NOT A CODE EDGE, and leaving it in was the third
--- error this model made. A generator does not BREAK when its output is
--- deleted — it recreates it. With `generates` in the closure,
--- `test/rule-shape.test.ts` appeared in the blast radius of
--- `facts/rule-shape.rofl` through `scanners/rule_shape.ts`, which is the exact
--- opposite of the truth: that test was written to re-derive from source
--- BECAUSE reading the generated pack would be green by construction, and its
--- header says so. THE EDGE WAS REAL AND ITS DIRECTION WAS WRONG, which no
--- amount of checking the edge count would have caught.
 regenerates[dep](G, P) :- edge[dep](G, P, generates).
 
--- 1. WHAT BREAKS. Backward closure over code edges only — the build, the
---    gates, the generators. This is the number a refactor is judged by.
+-- =========================================================================
+-- 1. WHAT BREAKS: backward closure over code edges — the build, the gates,
+-- the generators. The number a refactor is judged by.
 blast[dep](D, T) :- target[dep](T), code_edge[dep](D, T).
 blast[dep](D, T) :- blast[dep](M, T), code_edge[dep](D, M).
 
--- 2. WHAT GOES STALE. One hop, not a closure: prose is not transitive — a
---    document naming a file that names another file says nothing about the
---    third. Treating it as transitive is exactly what produced the hairball.
+-- 2. WHAT GOES STALE: one hop, not a closure. Prose is not transitive, and
+-- treating it so is what produced the hairball.
 stale_prose[dep](D, T) :- target[dep](T), edge[dep](D, T, doc_ref).
 stale_prose[dep](D, T) :- target[dep](T), edge[dep](D, T, ledger_ref).
 
--- 3. WHAT IS LEFT BEHIND. Forward over code edges: reached only through the
---    target, so it becomes dead weight rather than a broken build.
+-- 3. WHAT IS LEFT BEHIND: forward over code edges, reached only through the
+-- target, so dead weight rather than a broken build.
 downstream[dep](X, T) :- target[dep](T), code_edge[dep](T, X).
 downstream[dep](X, T) :- downstream[dep](M, T), code_edge[dep](M, X).
 
--- ----------------------------------------------------- what nothing needs
--- An artifact nothing points at. NOT the same as `safe to delete`: an entry
--- point is an orphan by construction, and so is a document nobody cites.
+-- =========================================================================
+-- WHAT NOTHING NEEDS — not "safe to delete": an entry point is an orphan by
+-- construction, and so is a document nobody cites.
 depended_on[dep](B) :- edge[dep](_, B, _).
 orphan[dep](X) :- artifact[dep](X, _), not depended_on[dep](X).
 
--- ------------------------------------------------- what only prose needs
--- THE CATEGORY THAT MATTERS FOR A CLEANUP, and the reason `doc_ref` was kept
--- separable in the scanner. If every edge into X is a mention in a document or
--- a citation in the ledger, then deleting X breaks NO CODE — it only makes
--- some prose wrong, which is a text edit and not a refactor. That is a very
--- different verdict from `orphan`, and the two are the whole cleanup triage.
+-- WHAT ONLY PROSE NEEDS, the category that matters for a cleanup: deleting it
+-- breaks no code, only makes some prose wrong, a text edit and not a
+-- refactor. `generates` counts here: a generator is a writer, and it does
+-- mean somebody owns the file.
 code_needs[dep](B) :- edge[dep](_, B, ts_import).
 code_needs[dep](B) :- edge[dep](_, B, reads_path).
 code_needs[dep](B) :- edge[dep](_, B, npm_script).
 code_needs[dep](B) :- edge[dep](_, B, ci_step).
-code_needs[dep](B) :- edge[dep](_, B, generates).   -- a generator is a writer, but it does mean somebody owns the file
+code_needs[dep](B) :- edge[dep](_, B, generates).
 
 only_prose[dep](X) :- depended_on[dep](X), not code_needs[dep](X).
 
--- ------------------------------------------------------- what the referee runs
--- A gate that CI does not run is a gate that runs when somebody remembers,
--- which this repository has already paid for once (`witness_check.ts` exited
--- non-zero on a stale witness since the day it was written and nothing ran it).
+-- =========================================================================
+-- WHAT THE REFEREE RUNS. A gate CI does not run runs when somebody remembers
+-- (scripts/witness_check.ts exited non-zero on a stale witness since the day
+-- it was written and nothing ran it). The glob is seeded into the CLOSURE, not the
+-- verdict, so a helper a test imports is reached too; whether the referee
+-- runs the suite at all is a proposition, and `ci_suite_runs` is the nullary
+-- head `wants_nullary[audit]` in rules/nullary.rofl named off the reflection.
 ci_runs[dep](X) :- edge[dep](W, X, ci_step), artifact[dep](W, yml).
 ci_runs[dep](X) :- ci_runs[dep](Y), edge[dep](Y, X, _).
--- THE GLOB IS SEEDED HERE AND NOT AT THE VERDICT, so it propagates. `npm test`
--- names `test/*.test.ts`, which no scanner can expand into edges; seeding the
--- CLOSURE with it means a helper or a fixture that a test imports is reached
--- too. Seeding the verdict instead left every `test/` helper reading as unrun,
--- which is thirteen rows of work nobody could do.
--- The right half is a PROPOSITION — does the referee run the suite at all —
--- and it wore `T` until 2026-09-10 because the grammar had no nullary head.
--- `wants_nullary[audit]` in rules/nullary.rofl named this rule off the
--- reflection: `T`'s only binder was `test_file` and the other two premises
--- shared nothing with it, so every test file in the tree was crossed against
--- the same two-row lookup.
 ci_suite_runs[dep]() :- edge[dep](W, "npm:test", ci_step), artifact[dep](W, yml).
 ci_runs[dep](T) :- test_file[dep](T), ci_suite_runs[dep]().
 
 script[dep](S) :- artifact[dep](S, script).
 unrun_gate[dep](S) :- script[dep](S), not ci_runs[dep](S).
 
--- --------------------------------------------------------- generated packs
--- A pack with a generator and no regeneration gate is the defect already
--- recorded twice in the ledger; here it is derivable rather than remembered.
+-- =========================================================================
+-- GENERATED PACKS. A pack with a generator and no regeneration gate is the
+-- defect the ledger records twice; here it is derivable.
 generated[dep](P) :- edge[dep](_, P, generates).
 regenerated_by_test[dep](P) :- edge[dep](T, P, reads_path), test_file[dep](T).
--- `npm:test` names `test/*.test.ts` as a glob, which the scanner cannot expand
--- into per-file edges, so a test file is identified by where it LIVES. Stated
--- as a rule rather than hidden in the scanner, because it is the one place
--- this model substitutes a convention for a measurement.
--- THE SAME `str_pre` ON THE LEFT OF `=` DEFECT AS IN rules/cleanliness.rofl,
--- and it was silent here too: `str_pre(T, "/") = "test"` is a relational
--- literal over a relation nothing populates, so `test_file` was EMPTY and
--- `regenerated_by_test` with it. The destructor must produce into a variable.
--- AND THE DIRECTORY IS NOT THE GLOB. `npm test` runs `test/*.test.ts`, so a
--- `.ts` in `test/` that is not named `*.test.ts` is NOT run — which is exactly
--- how `test/cleanliness.check.ts` was deliberately held out of CI. A rule that
--- said `everything under test/` would have reported it as run by the referee,
--- and the one file whose whole point is that it is not.
+
+-- `npm test` runs `test/*.test.ts`, a glob no scanner expands, so a test
+-- file is identified by where it lives — the one place this model
+-- substitutes a convention for a measurement. The directory is NOT the glob:
+-- test/cleanliness.check.ts is deliberately held out of CI. And the
+-- destructor must produce into a variable: `str_pre(T, "/") = "test"` is a
+-- relational literal over a relation nothing populates, and `test_file` was
+-- silently empty (the same defect as in rules/cleanliness.rofl).
 test_file[dep](T) :- artifact[dep](T, ts), D is str_pre(T, "/"), D = "test",
                      N is str_segs(T, ".test.ts"), N = 2.
 
--- A generated pack that no test reads back is one nothing can find stale.
+-- a generated pack no test reads back is one nothing can find stale.
+-- No counts pinned here: the pack grows with the tree
+-- (`f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus`);
+-- test/depends.test.ts asserts identities and named sets.
 ungated_pack[audit](P) :- generated[dep](P), not regenerated_by_test[dep](P).
-
--- ------------------------------------------------------------------ counts
--- Deliberately NOT pinned as numbers here: this file is loaded against a
--- generated pack that grows with the tree, and a count over it would be
--- measuring the corpus (`f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus`).
--- test/depends.test.ts asserts identities and named sets instead.

@@ -24,3 +24,8 @@ work(w_two_closures_of_work_needs,
   "rules/worklist.rofl computes the transitive closure of work_needs twice under two names: needs_reach (feeding needs_cycle[audit]) and waits_on (feeding work_needs_cycle[audit]), one body up to renaming, and the two audits are therefore one audit. The twin row in facts/rofl-lint.rofl found it the day the file was cut to its notes. Beside it, held_by :- held is a pure rename that nothing reads. One closure, one cycle audit, and held_by either gets a reader or goes.").
 work_state(w_two_closures_of_work_needs, open).
 work_spawned(w_two_closures_of_work_needs, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
+
+work(w_ingest_declares_half_its_host_relations,
+  "rules/ingest.rofl declares the five pressure signals edb and reads five other host-asserted relations (must_index, cooled, needed_hot, ast_file, ast_parse_error) with no declaration, so its own world carries ten undefined_premise rows and needed_hot is a name nothing in the tree defines, asserts or declares. One convention: every relation the host owes this pack is an edb line with its signature beside it.").
+work_state(w_ingest_declares_half_its_host_relations, open).
+work_spawned(w_ingest_declares_half_its_host_relations, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).

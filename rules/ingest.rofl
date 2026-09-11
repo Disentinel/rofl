@@ -1,116 +1,63 @@
 -- rules/ingest.rofl — INDEXING A CORPUS, AS A PROGRAM THAT DRIVES ITSELF.
+-- The caller states a goal, `must_index[code](Corpus, File)`, and this file
+-- derives whether it is met, which files are missing and what to do next.
+-- Nothing here parses or touches a disk; the host does, and reaches the world
+-- only as facts it asserts back. A driver written as rules can be ASKED —
+-- after a crash, from a snapshot, by someone who did not write the loop.
 --
--- The caller states a GOAL and nothing else:
---
---   must_index[code](Corpus, File).   one per file a named corpus must hold
---
--- and this file derives the three things a driver needs: whether the goal is
--- met, WHICH files are missing, and what to do next. Nothing here parses
--- anything or touches a disk; those are the host's, and they reach the world
--- only as facts it asserts back.
---
--- WHY THIS IS RULES AND NOT A LOOP IN TYPESCRIPT. A driver written as code
--- knows what it did; a driver written as rules can be ASKED. `needs_index` is
--- a query, not a variable — so "is the corpus indexed" and "what is left" are
--- the same kind of question as anything else in this system, answerable after
--- a crash, from a snapshot, by someone who did not write the loop. And when
--- the answer is wrong, the disagreement is with a rule that can be read.
---
--- THE TICK IS WHAT MAKES IT SAFE, and it is not a detail. `Assumption` freezes
--- what `not p` is judged against for a whole ROUND (docs/volumes-and-residency
--- .md), so `needs_index` is computed against a world that does not move while
--- the host works through it. A file parsed mid-round does not silently vanish
--- from the frontier the host is holding. It vanishes at the BOUNDARY, which is
--- also the only place a volume may be lifted or dropped — and that is the same
--- sentence said twice, because loading and cooling are the same operation with
--- opposite sign.
+-- The tick is what makes it safe: `Assumption` freezes what `not p` is judged
+-- against for a whole round, so a file parsed mid-round leaves the frontier
+-- at the BOUNDARY, which is also the only place a volume may be lifted or
+-- dropped. The status relations carry the corpus they are about, so one world
+-- can hold several indexing goals, which is what a corpus split into volumes
+-- looks like.
 
--- ZERO-ARITY IS NOT IN THIS LANGUAGE, and the goal is better for it. `complete.`
--- does not parse — `args` requires at least one term, and both engines refuse
--- it identically — so the status relations carry the CORPUS they are about.
--- Which is what you want anyway: one world can hold several indexing goals,
--- and that is exactly the shape a corpus split into volumes takes.
-
--- ---------------------------------------------------------------- indexed
-
--- A file is indexed when its AST root is in the world. `ast_file` is
--- scanners/js_ast.ts's one-per-parsed-file fact, so this asks the data rather
--- than a bookkeeping flag the host would have to remember to set.
+-- =========================================================================
+-- INDEXED: the AST root is in the world; or the facts were cooled to disk and
+-- the knowledge that they existed is not (else cooling puts the file straight
+-- back on the frontier); or the scanner REFUSED it. The third arm is the one
+-- that bit: when the refusal became a fact instead of a throw, the file
+-- counted as parsed, emitted no `ast_file`, and the loop took the same eight
+-- files every tick while reporting progress. A file the scanner has ruled on
+-- is indexed, whether the ruling was a tree or a refusal.
+--
+-- `cooled[code](File, Path)` is written by the host after the book is on
+-- disk, never before: a crash between the two costs a re-parse, the cheap
+-- direction.
 indexed[code](F) :- ast_file[code](_, F).
 
--- ...OR WHEN ITS FACTS HAVE BEEN COOLED TO DISK. This is the load-bearing
--- clause of the whole file. The facts are gone; the knowledge that they
--- existed, and where they went, is not — otherwise cooling would put the file
--- straight back on the frontier and the loop would index it forever.
---
--- `cooled[code](File, Path)` is written by the host at the moment it finishes
--- writing the book out, never before: a crash between the write and the fact
--- costs a re-parse, which is the cheap direction. The other order would claim
--- a file is on disk when it is not.
 indexed[code](F) :- cooled[code](F, _).
 
--- ...OR WHEN IT REFUSED TO PARSE, AND THAT IS THE HALF THAT BITES.
---
--- `scanners/js_ast.ts` used to THROW on a file it could not read, and this
--- loop caught it and wrote `cooled(F, "<unparsable>")` so the file left the
--- frontier. The merge of 2026-09-09 made the refusal a FACT instead — the
--- right change, and the sibling scanner had done it all along — and the throw
--- stopped happening. So the catch stopped firing, the file counted as PARSED,
--- no `ast_file` was ever emitted, and it stayed on the frontier: the loop
--- would take the same eight files every tick, for ever, reporting progress.
---
--- A LOOP THAT REPORTS PROGRESS WHILE MAKING NONE is worse than one that
--- stalls, and the stall detector could not see it because `parsed` was eight.
--- The repair is here rather than in the driver: a file the scanner has RULED
--- ON is indexed, whether the ruling was a tree or a refusal.
 indexed[code](F) :- ast_parse_error[code](F, _).
 
--- --------------------------------------------------------------- the goal
-
--- THE FRONTIER, and the list the caller asked for.
+-- =========================================================================
+-- THE GOAL. `index_complete` is a FACT a driver can stop on; `not
+-- needs_index(_)` at the call site is a question whose answer depends on
+-- which round asked it.
 needs_index[code](C, F) :- must_index[code](C, F), not indexed[code](F).
 
--- WHETHER THE GOAL IS MET. Two relations rather than one negation at the call
--- site, because `complete` has to be a FACT a driver can stop on, and `not
--- needs_index(_)` is not a fact — it is a question whose answer depends on
--- which round asked it.
 index_incomplete[code](C) :- needs_index[code](C, _).
 index_complete[code](C)   :- must_index[code](C, _),
                              not index_incomplete[code](C).
 
--- ------------------------------------------------------------- the intent
-
--- Identity is the tuple `(Kind, Inquiry, Target)` and there are no fresh ids
--- in logic — the same discipline rules/inquiry/intents.rofl states, for the
--- same reason: an id minted in a rule is an id that changes when the rule
--- fires twice, and then nothing downstream can be compared across ticks.
+-- Identity is the tuple (Kind, Inquiry, Target): an id minted in a rule
+-- changes when the rule fires twice, and nothing downstream compares across
+-- ticks (rules/inquiry/intents.rofl).
 candidate_intent(parse, C, F) :- needs_index[code](C, F).
 
--- ------------------------------------------------------------- cooling
-
--- A file's book may be cooled once it is indexed and nothing still hot needs
--- it. `needed_hot` is EMPTY for a pure AST index, and that is exactly why 128
--- volumes came out self-sufficient — the JS model does not resolve across
--- module boundaries yet. When it does, this is the relation that stops the
--- loop from cooling a book somebody is still reading, and it is stated here
--- now so that the day it fills, nothing else has to change.
+-- =========================================================================
+-- COOLING. A book may be cooled once indexed and nothing hot needs it.
+-- `needed_hot` is empty for a pure AST index, which is why 128 volumes came
+-- out self-sufficient; the day the JS model resolves across module
+-- boundaries, this is the relation that stops a book being cooled under a
+-- reader.
 coolable[code](F) :- indexed[code](F), not needed_hot[code](F).
 
--- WHEN TO COOL IS A DISJUNCTION, AND ONE SIGNAL WAS NOT ENOUGH.
---
--- This began as a single premise on `peak_rows` against `space`, and that is
--- the WRONG INSTRUMENT for the workload it was written for. Measured on the
--- whole of eslint, 1426 files: the world grew to 5 896 383 facts while
--- `peak_rows` sat at 7 437 against a 25 000 threshold, so cooling never fired
--- once. The join accumulator is empty on a pure AST index, because every fact
--- is BASE and nothing is derived from it — the store grows and the accumulator
--- does not. Rows are not facts, and a threshold on one is blind to the other.
---
--- So the reasons are separate facts and any of them is enough. Each is
--- measured by a DIFFERENT instrument and none can stand in for another, which
--- is the whole lesson: a single number that correlates with pressure is not
--- pressure. The host asserts whichever hold; the rules still decide WHAT may
--- be cooled and never why.
+-- WHEN TO COOL IS A DISJUNCTION. A threshold on the join accumulator's
+-- peak alone never fired over 1426 files: a pure AST index is all base facts and the join
+-- accumulator stays empty while the store grows. Rows are not facts. Each
+-- reason is measured by a different instrument and the host asserts whichever
+-- hold; the rules decide WHAT may be cooled and never whether.
 under_pressure[code](C) :- rows_pressure[code](C).
 under_pressure[code](C) :- world_pressure[code](C).
 under_pressure[code](C) :- memory_pressure[code](C).
@@ -122,45 +69,23 @@ edb(world_pressure).     -- the STORE nears its fact ceiling; the one that was m
 edb(memory_pressure).    -- resident memory, which only the host can see at all
 edb(volume_settled).     -- the work is done and nothing pending refers to it
 edb(eviction_asked).     -- a checkpoint, a shutdown, a snapshot: somebody said so
+
+-- `must_index` leads because it binds both C and F; `coolable(F)` before
+-- `under_pressure(C)` is a cross product, and rules/rule-shape.rofl counts it.
 --
--- The rules decide WHAT to cool; the host decides WHETHER it must. Neither
--- half can do the other's job: the host cannot see which book is still wanted,
--- and the rules cannot see how much room is left.
--- PREMISE ORDER IS THE AUTHOR'S AND IT MATTERS HERE. `must_index` leads
--- because it binds BOTH C and F; leading with `coolable(F)` and
--- `under_pressure(C)` pairs two relations that share no variable, which is a
--- cross product — `test/rule-shape.test.ts` counts those against a baseline
--- and caught this one the first time it ran.
+-- After cooling, a question about the file must REFUSE rather than answer
+-- empty; `hole` is a kernel relation a rule may not conclude into, so the
+-- host asserts both at the moment the book leaves memory:
+--     cooled[code](File, Path).
+--     hole($cold(File), cooled_to_disk).
 candidate_intent(cool, C, F) :- must_index[code](C, F),
                                 under_pressure[code](C),
                                 coolable[code](F),
                                 not cooled[code](F, _).
 
--- WHAT A COLD BOOK OWES A QUESTION, and it is a refusal rather than silence.
---
--- After cooling, the file's facts are not in the world. A question about them
--- must therefore REFUSE — `hole` is this kernel's word for "this is not an
--- answer" — because an empty answer and a clean one are the same two
--- characters, and a corpus that cooled half of itself would otherwise report
--- half of everything as absent rather than as unloaded.
---
--- THE HOST WRITES THE HOLE, not this file: `hole` is a kernel relation and a
--- rule may not conclude into one. That is the right division anyway. Cooling
--- IS a host act — it writes bytes to a disk — and the kernel records what the
--- host says it did, which is the same shape as every other assertion trail
--- here. The rule below is what a reader should look for when a question about
--- a cold file comes back empty instead of refusing.
---
---   the host asserts, at the moment the book leaves memory:
---     cooled[code](File, Path).
---     hole($cold(File), cooled_to_disk).
-
--- ------------------------------------------------------------ the census
-
--- The two numbers a driver prints, derived rather than counted in the host:
--- what was asked for, and what is left. A count is not expressible here, so
--- these are the SETS and the host counts them — which keeps the arithmetic
--- outside the rules and the membership inside, where it can be argued with.
+-- =========================================================================
+-- THE CENSUS a driver prints, as sets: a count is not expressible here, so
+-- the host counts and the membership stays where it can be argued with.
 index_target[code](C, F) :- must_index[code](C, F).
 index_left[code](C, F)   :- needs_index[code](C, F).
 index_done[code](C, F)   :- must_index[code](C, F), indexed[code](F).

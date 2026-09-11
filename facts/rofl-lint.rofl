@@ -541,98 +541,66 @@ block_before("rules/decisions/production-readiness.rofl:73", "rules/decisions/pr
 block("rules/decisions/production-readiness.rofl:83", "rules/decisions/production-readiness.rofl", 83, 2).
 block_next("rules/decisions/production-readiness.rofl:83", clause).
 block_before("rules/decisions/production-readiness.rofl:83", "rules/decisions/production-readiness.rofl:85").
-lint_file("rules/depends.rofl", 31, 106, 15).
+lint_file("rules/depends.rofl", 31, 55, 15).
 file_clauses("rules/depends.rofl", 29, 1).
-block("rules/depends.rofl:1", "rules/depends.rofl", 1, 11).
-block_next("rules/depends.rofl:1", comment).
+block("rules/depends.rofl:1", "rules/depends.rofl", 1, 15).
+block_next("rules/depends.rofl:1", clause).
 block_mentions("rules/depends.rofl:1", why, bare).
 block_mentions("rules/depends.rofl:1", edge, called).
-block_mentions("rules/depends.rofl:1", what, bare).
-block("rules/depends.rofl:13", "rules/depends.rofl", 13, 20).
-block_next("rules/depends.rofl:13", clause).
-block_banner("rules/depends.rofl:13").
-block_dated("rules/depends.rofl:13", 1).
-block_mentions("rules/depends.rofl:13", needs, called).
-block_mentions("rules/depends.rofl:13", hole, bare).
-block_mentions("rules/depends.rofl:13", what, bare).
-block_mentions("rules/depends.rofl:13", target, called).
-block("rules/depends.rofl:35", "rules/depends.rofl", 35, 13).
-block_next("rules/depends.rofl:35", clause).
-block_before("rules/depends.rofl:35", "rules/depends.rofl:48").
-block_mentions("rules/depends.rofl:35", boot, bare).
-block_mentions("rules/depends.rofl:35", facts, bare).
-block_mentions("rules/depends.rofl:35", scanners, bare).
-block_mentions("rules/depends.rofl:35", doc_ref, bare).
+block_mentions("rules/depends.rofl:1", target, called).
+block_mentions("rules/depends.rofl:1", doc_ref, bare).
 mention_snake(doc_ref).
-block_mentions("rules/depends.rofl:35", ledger_ref, bare).
+block_mentions("rules/depends.rofl:1", ledger_ref, bare).
 mention_snake(ledger_ref).
-block_mentions("rules/depends.rofl:35", all, bare).
-block("rules/depends.rofl:53", "rules/depends.rofl", 53, 9).
+block("rules/depends.rofl:19", "rules/depends.rofl", 19, 5).
+block_next("rules/depends.rofl:19", clause).
+block_before("rules/depends.rofl:19", "rules/depends.rofl:24").
+block_mentions("rules/depends.rofl:19", generates, bare).
+block("rules/depends.rofl:31", "rules/depends.rofl", 31, 3).
+block_next("rules/depends.rofl:31", clause).
+block_before("rules/depends.rofl:31", "rules/depends.rofl:34").
+block_banner("rules/depends.rofl:31").
+section("rules/depends.rofl", 32, 1, "WHAT BREAKS: backward closure over code edges — the build, the gates,").
+block("rules/depends.rofl:37", "rules/depends.rofl", 37, 2).
+block_next("rules/depends.rofl:37", clause).
+block_before("rules/depends.rofl:37", "rules/depends.rofl:39").
+list_item("rules/depends.rofl:37", 37, 2).
+block("rules/depends.rofl:42", "rules/depends.rofl", 42, 2).
+block_next("rules/depends.rofl:42", clause).
+block_before("rules/depends.rofl:42", "rules/depends.rofl:44").
+list_item("rules/depends.rofl:42", 42, 3).
+block("rules/depends.rofl:47", "rules/depends.rofl", 47, 3).
+block_next("rules/depends.rofl:47", clause).
+block_before("rules/depends.rofl:47", "rules/depends.rofl:50").
+block_banner("rules/depends.rofl:47").
+block("rules/depends.rofl:53", "rules/depends.rofl", 53, 4).
 block_next("rules/depends.rofl:53", clause).
-block_before("rules/depends.rofl:53", "rules/depends.rofl:62").
+block_before("rules/depends.rofl:53", "rules/depends.rofl:57").
 block_mentions("rules/depends.rofl:53", generates, bare).
-block_mentions("rules/depends.rofl:53", test, bare).
-block_mentions("rules/depends.rofl:53", facts, bare).
-block_mentions("rules/depends.rofl:53", scanners, bare).
-block("rules/depends.rofl:64", "rules/depends.rofl", 64, 2).
-block_next("rules/depends.rofl:64", clause).
-block_before("rules/depends.rofl:64", "rules/depends.rofl:66").
-list_item("rules/depends.rofl:64", 64, 1).
-block("rules/depends.rofl:69", "rules/depends.rofl", 69, 3).
-block_next("rules/depends.rofl:69", clause).
-block_before("rules/depends.rofl:69", "rules/depends.rofl:72").
-list_item("rules/depends.rofl:69", 69, 2).
-block("rules/depends.rofl:75", "rules/depends.rofl", 75, 2).
-block_next("rules/depends.rofl:75", clause).
-block_before("rules/depends.rofl:75", "rules/depends.rofl:77").
-list_item("rules/depends.rofl:75", 75, 3).
+block("rules/depends.rofl:65", "rules/depends.rofl", 65, 7).
+block_next("rules/depends.rofl:65", clause).
+block_before("rules/depends.rofl:65", "rules/depends.rofl:72").
+block_banner("rules/depends.rofl:65").
+block_mentions("rules/depends.rofl:65", ci_suite_runs, bare).
+mention_snake(ci_suite_runs).
+block_mentions("rules/depends.rofl:65", wants_nullary, called).
+mention_snake(wants_nullary).
 block("rules/depends.rofl:80", "rules/depends.rofl", 80, 3).
 block_next("rules/depends.rofl:80", clause).
 block_before("rules/depends.rofl:80", "rules/depends.rofl:83").
 block_banner("rules/depends.rofl:80").
-block_mentions("rules/depends.rofl:80", safe, bare).
-block("rules/depends.rofl:86", "rules/depends.rofl", 86, 6).
+block("rules/depends.rofl:86", "rules/depends.rofl", 86, 7).
 block_next("rules/depends.rofl:86", clause).
-block_before("rules/depends.rofl:86", "rules/depends.rofl:92").
-block_banner("rules/depends.rofl:86").
-block_mentions("rules/depends.rofl:86", doc_ref, bare).
-block_mentions("rules/depends.rofl:86", orphan, bare).
-block("rules/depends.rofl:100", "rules/depends.rofl", 100, 4).
-block_next("rules/depends.rofl:100", clause).
-block_before("rules/depends.rofl:100", "rules/depends.rofl:104").
-block_banner("rules/depends.rofl:100").
-block_mentions("rules/depends.rofl:100", witness_check, bare).
-block("rules/depends.rofl:106", "rules/depends.rofl", 106, 11).
-block_next("rules/depends.rofl:106", clause).
-block_before("rules/depends.rofl:106", "rules/depends.rofl:117").
-block_dated("rules/depends.rofl:106", 1).
-block_mentions("rules/depends.rofl:106", npm, bare).
-block_mentions("rules/depends.rofl:106", test, bare).
-block_mentions("rules/depends.rofl:106", wants_nullary, called).
-mention_snake(wants_nullary).
-block_mentions("rules/depends.rofl:106", test_file, bare).
+block_before("rules/depends.rofl:86", "rules/depends.rofl:93").
+block_mentions("rules/depends.rofl:86", npm, bare).
+block_mentions("rules/depends.rofl:86", test, bare).
+block_mentions("rules/depends.rofl:86", str_pre, called).
+block_mentions("rules/depends.rofl:86", test_file, bare).
 mention_snake(test_file).
-block("rules/depends.rofl:123", "rules/depends.rofl", 123, 3).
-block_next("rules/depends.rofl:123", clause).
-block_before("rules/depends.rofl:123", "rules/depends.rofl:126").
-block_banner("rules/depends.rofl:123").
-block("rules/depends.rofl:128", "rules/depends.rofl", 128, 13).
-block_next("rules/depends.rofl:128", clause).
-block_before("rules/depends.rofl:128", "rules/depends.rofl:141").
-block_mentions("rules/depends.rofl:128", npm, bare).
-block_mentions("rules/depends.rofl:128", test, bare).
-block_mentions("rules/depends.rofl:128", str_pre, called).
-block_mentions("rules/depends.rofl:128", test_file, bare).
-block_mentions("rules/depends.rofl:128", regenerated_by_test, bare).
-mention_snake(regenerated_by_test).
-block_mentions("rules/depends.rofl:128", everything, bare).
-block("rules/depends.rofl:144", "rules/depends.rofl", 144, 1).
-block_next("rules/depends.rofl:144", clause).
-block_before("rules/depends.rofl:144", "rules/depends.rofl:145").
-block("rules/depends.rofl:147", "rules/depends.rofl", 147, 5).
-block_next("rules/depends.rofl:147", eof).
-block_banner("rules/depends.rofl:147").
-block_mentions("rules/depends.rofl:147", f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus, bare).
+block("rules/depends.rofl:96", "rules/depends.rofl", 96, 4).
+block_next("rules/depends.rofl:96", clause).
+block_before("rules/depends.rofl:96", "rules/depends.rofl:100").
+block_mentions("rules/depends.rofl:96", f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus, bare).
 mention_snake(f_a_pin_that_moves_with_the_corpus_is_measuring_the_corpus).
 lint_file("rules/engine-split.rofl", 12, 48, 9).
 file_clauses("rules/engine-split.rofl", 12, 0).
@@ -933,85 +901,50 @@ block("rules/floor-census.rofl:118", "rules/floor-census.rofl", 118, 1).
 block_next("rules/floor-census.rofl:118", clause).
 block_before("rules/floor-census.rofl:118", "rules/floor-census.rofl:119").
 block_banner("rules/floor-census.rofl:118").
-lint_file("rules/ingest.rofl", 27, 123, 18).
+lint_file("rules/ingest.rofl", 27, 54, 12).
 file_clauses("rules/ingest.rofl", 18, 5).
-block("rules/ingest.rofl:1", "rules/ingest.rofl", 1, 26).
+block("rules/ingest.rofl:1", "rules/ingest.rofl", 1, 13).
 block_next("rules/ingest.rofl:1", comment).
-block_mentions("rules/ingest.rofl:1", needs_index, bare).
-mention_snake(needs_index).
-block_mentions("rules/ingest.rofl:1", not, bare).
-block("rules/ingest.rofl:28", "rules/ingest.rofl", 28, 5).
-block_next("rules/ingest.rofl:28", comment).
-block_mentions("rules/ingest.rofl:28", complete, bare).
-block_mentions("rules/ingest.rofl:28", args, bare).
-block("rules/ingest.rofl:34", "rules/ingest.rofl", 34, 1).
-block_next("rules/ingest.rofl:34", comment).
-block_banner("rules/ingest.rofl:34").
-block("rules/ingest.rofl:36", "rules/ingest.rofl", 36, 3).
-block_next("rules/ingest.rofl:36", clause).
-block_before("rules/ingest.rofl:36", "rules/ingest.rofl:39").
-block_mentions("rules/ingest.rofl:36", ast_file, bare).
-mention_snake(ast_file).
-block("rules/ingest.rofl:41", "rules/ingest.rofl", 41, 9).
-block_next("rules/ingest.rofl:41", clause).
-block_before("rules/ingest.rofl:41", "rules/ingest.rofl:50").
-block_mentions("rules/ingest.rofl:41", cooled, called).
-block("rules/ingest.rofl:52", "rules/ingest.rofl", 52, 14).
-block_next("rules/ingest.rofl:52", clause).
-block_before("rules/ingest.rofl:52", "rules/ingest.rofl:66").
-block_dated("rules/ingest.rofl:52", 1).
-block_mentions("rules/ingest.rofl:52", scanners, bare).
-block_mentions("rules/ingest.rofl:52", cooled, called).
-block_mentions("rules/ingest.rofl:52", ast_file, bare).
-block_mentions("rules/ingest.rofl:52", parsed, bare).
-block("rules/ingest.rofl:68", "rules/ingest.rofl", 68, 1).
-block_next("rules/ingest.rofl:68", comment).
-block_banner("rules/ingest.rofl:68").
-block("rules/ingest.rofl:70", "rules/ingest.rofl", 70, 1).
-block_next("rules/ingest.rofl:70", clause).
-block_before("rules/ingest.rofl:70", "rules/ingest.rofl:71").
-block("rules/ingest.rofl:73", "rules/ingest.rofl", 73, 4).
-block_next("rules/ingest.rofl:73", clause).
-block_before("rules/ingest.rofl:73", "rules/ingest.rofl:77").
-block_mentions("rules/ingest.rofl:73", complete, bare).
-block("rules/ingest.rofl:81", "rules/ingest.rofl", 81, 1).
-block_next("rules/ingest.rofl:81", comment).
-block_banner("rules/ingest.rofl:81").
-block("rules/ingest.rofl:83", "rules/ingest.rofl", 83, 4).
-block_next("rules/ingest.rofl:83", clause).
-block_before("rules/ingest.rofl:83", "rules/ingest.rofl:87").
-block("rules/ingest.rofl:89", "rules/ingest.rofl", 89, 1).
-block_next("rules/ingest.rofl:89", comment).
-block_banner("rules/ingest.rofl:89").
-block("rules/ingest.rofl:91", "rules/ingest.rofl", 91, 6).
-block_next("rules/ingest.rofl:91", clause).
-block_before("rules/ingest.rofl:91", "rules/ingest.rofl:97").
-block_mentions("rules/ingest.rofl:91", needed_hot, bare).
-mention_snake(needed_hot).
-block("rules/ingest.rofl:99", "rules/ingest.rofl", 99, 15).
-block_next("rules/ingest.rofl:99", clause).
-block_before("rules/ingest.rofl:99", "rules/ingest.rofl:114").
-block_mentions("rules/ingest.rofl:99", peak_rows, bare).
-mention_snake(peak_rows).
-block_mentions("rules/ingest.rofl:99", space, bare).
-block("rules/ingest.rofl:125", "rules/ingest.rofl", 125, 9).
-block_next("rules/ingest.rofl:125", clause).
-block_before("rules/ingest.rofl:125", "rules/ingest.rofl:134").
-block_mentions("rules/ingest.rofl:125", must_index, bare).
+block_mentions("rules/ingest.rofl:1", must_index, called).
 mention_snake(must_index).
-block_mentions("rules/ingest.rofl:125", coolable, called).
-block_mentions("rules/ingest.rofl:125", under_pressure, called).
+block_mentions("rules/ingest.rofl:1", not, bare).
+block("rules/ingest.rofl:15", "rules/ingest.rofl", 15, 12).
+block_next("rules/ingest.rofl:15", clause).
+block_before("rules/ingest.rofl:15", "rules/ingest.rofl:27").
+block_banner("rules/ingest.rofl:15").
+block_mentions("rules/ingest.rofl:15", ast_file, bare).
+mention_snake(ast_file).
+block_mentions("rules/ingest.rofl:15", cooled, called).
+block("rules/ingest.rofl:33", "rules/ingest.rofl", 33, 4).
+block_next("rules/ingest.rofl:33", clause).
+block_before("rules/ingest.rofl:33", "rules/ingest.rofl:37").
+block_banner("rules/ingest.rofl:33").
+block_mentions("rules/ingest.rofl:33", index_complete, bare).
+mention_snake(index_complete).
+block("rules/ingest.rofl:43", "rules/ingest.rofl", 43, 3).
+block_next("rules/ingest.rofl:43", clause).
+block_before("rules/ingest.rofl:43", "rules/ingest.rofl:46").
+block("rules/ingest.rofl:48", "rules/ingest.rofl", 48, 6).
+block_next("rules/ingest.rofl:48", clause).
+block_before("rules/ingest.rofl:48", "rules/ingest.rofl:54").
+block_banner("rules/ingest.rofl:48").
+block_mentions("rules/ingest.rofl:48", needed_hot, bare).
+mention_snake(needed_hot).
+block("rules/ingest.rofl:56", "rules/ingest.rofl", 56, 5).
+block_next("rules/ingest.rofl:56", clause).
+block_before("rules/ingest.rofl:56", "rules/ingest.rofl:61").
+block("rules/ingest.rofl:73", "rules/ingest.rofl", 73, 8).
+block_next("rules/ingest.rofl:73", clause).
+block_before("rules/ingest.rofl:73", "rules/ingest.rofl:81").
+block_mentions("rules/ingest.rofl:73", must_index, bare).
+block_mentions("rules/ingest.rofl:73", coolable, called).
+block_mentions("rules/ingest.rofl:73", under_pressure, called).
 mention_snake(under_pressure).
-block_mentions("rules/ingest.rofl:125", test, bare).
-block("rules/ingest.rofl:139", "rules/ingest.rofl", 139, 18).
-block_next("rules/ingest.rofl:139", comment).
-block_mentions("rules/ingest.rofl:139", hole, bare).
-block("rules/ingest.rofl:158", "rules/ingest.rofl", 158, 1).
-block_next("rules/ingest.rofl:158", comment).
-block_banner("rules/ingest.rofl:158").
-block("rules/ingest.rofl:160", "rules/ingest.rofl", 160, 4).
-block_next("rules/ingest.rofl:160", clause).
-block_before("rules/ingest.rofl:160", "rules/ingest.rofl:164").
+block_mentions("rules/ingest.rofl:73", hole, bare).
+block("rules/ingest.rofl:86", "rules/ingest.rofl", 86, 3).
+block_next("rules/ingest.rofl:86", clause).
+block_before("rules/ingest.rofl:86", "rules/ingest.rofl:89").
+block_banner("rules/ingest.rofl:86").
 lint_file("rules/inquiry/epistemic.rofl", 27, 20, 9).
 file_clauses("rules/inquiry/epistemic.rofl", 10, 0).
 block("rules/inquiry/epistemic.rofl:1", "rules/inquiry/epistemic.rofl", 1, 8).
@@ -3784,78 +3717,65 @@ block_banner("rules/profile.rofl:118").
 block("rules/profile.rofl:120", "rules/profile.rofl", 120, 5).
 block_next("rules/profile.rofl:120", clause).
 block_before("rules/profile.rofl:120", "rules/profile.rofl:125").
-lint_file("rules/rule-shape.rofl", 44, 112, 17).
+lint_file("rules/rule-shape.rofl", 44, 62, 17).
 file_clauses("rules/rule-shape.rofl", 43, 0).
-block("rules/rule-shape.rofl:1", "rules/rule-shape.rofl", 1, 27).
+block("rules/rule-shape.rofl:1", "rules/rule-shape.rofl", 1, 13).
 block_next("rules/rule-shape.rofl:1", comment).
-block_mentions("rules/rule-shape.rofl:1", docs, bare).
-block_mentions("rules/rule-shape.rofl:1", main, bare).
 block_mentions("rules/rule-shape.rofl:1", plan, bare).
-block_mentions("rules/rule-shape.rofl:1", add, bare).
 block_mentions("rules/rule-shape.rofl:1", not, bare).
 block_mentions("rules/rule-shape.rofl:1", neg_unkeyed, bare).
 mention_snake(neg_unkeyed).
-block("rules/rule-shape.rofl:29", "rules/rule-shape.rofl", 29, 5).
-block_next("rules/rule-shape.rofl:29", clause).
-block_before("rules/rule-shape.rofl:29", "rules/rule-shape.rofl:34").
-block_banner("rules/rule-shape.rofl:29").
-block("rules/rule-shape.rofl:39", "rules/rule-shape.rofl", 39, 5).
-block_next("rules/rule-shape.rofl:39", clause).
-block_before("rules/rule-shape.rofl:39", "rules/rule-shape.rofl:44").
-block("rules/rule-shape.rofl:47", "rules/rule-shape.rofl", 47, 5).
-block_next("rules/rule-shape.rofl:47", clause).
-block_before("rules/rule-shape.rofl:47", "rules/rule-shape.rofl:52").
-block_banner("rules/rule-shape.rofl:47").
-block_mentions("rules/rule-shape.rofl:47", not, bare).
-block("rules/rule-shape.rofl:54", "rules/rule-shape.rofl", 54, 1).
-block_next("rules/rule-shape.rofl:54", clause).
-block_before("rules/rule-shape.rofl:54", "rules/rule-shape.rofl:55").
-block("rules/rule-shape.rofl:58", "rules/rule-shape.rofl", 58, 1).
-block_next("rules/rule-shape.rofl:58", clause).
-block_before("rules/rule-shape.rofl:58", "rules/rule-shape.rofl:59").
-block("rules/rule-shape.rofl:61", "rules/rule-shape.rofl", 61, 10).
-block_next("rules/rule-shape.rofl:61", clause).
-block_before("rules/rule-shape.rofl:61", "rules/rule-shape.rofl:71").
-block_banner("rules/rule-shape.rofl:61").
-block_mentions("rules/rule-shape.rofl:61", not, bare).
-block("rules/rule-shape.rofl:76", "rules/rule-shape.rofl", 76, 4).
+block("rules/rule-shape.rofl:15", "rules/rule-shape.rofl", 15, 3).
+block_next("rules/rule-shape.rofl:15", clause).
+block_before("rules/rule-shape.rofl:15", "rules/rule-shape.rofl:18").
+block_banner("rules/rule-shape.rofl:15").
+block("rules/rule-shape.rofl:23", "rules/rule-shape.rofl", 23, 4).
+block_next("rules/rule-shape.rofl:23", clause).
+block_before("rules/rule-shape.rofl:23", "rules/rule-shape.rofl:27").
+block("rules/rule-shape.rofl:30", "rules/rule-shape.rofl", 30, 5).
+block_next("rules/rule-shape.rofl:30", clause).
+block_before("rules/rule-shape.rofl:30", "rules/rule-shape.rofl:35").
+block_banner("rules/rule-shape.rofl:30").
+block("rules/rule-shape.rofl:42", "rules/rule-shape.rofl", 42, 6).
+block_next("rules/rule-shape.rofl:42", clause).
+block_before("rules/rule-shape.rofl:42", "rules/rule-shape.rofl:48").
+block_banner("rules/rule-shape.rofl:42").
+block_mentions("rules/rule-shape.rofl:42", not, bare).
+block("rules/rule-shape.rofl:53", "rules/rule-shape.rofl", 53, 2).
+block_next("rules/rule-shape.rofl:53", clause).
+block_before("rules/rule-shape.rofl:53", "rules/rule-shape.rofl:55").
+block("rules/rule-shape.rofl:57", "rules/rule-shape.rofl", 57, 3).
+block_next("rules/rule-shape.rofl:57", clause).
+block_before("rules/rule-shape.rofl:57", "rules/rule-shape.rofl:60").
+block_banner("rules/rule-shape.rofl:57").
+block("rules/rule-shape.rofl:63", "rules/rule-shape.rofl", 63, 5).
+block_next("rules/rule-shape.rofl:63", clause).
+block_before("rules/rule-shape.rofl:63", "rules/rule-shape.rofl:68").
+block_banner("rules/rule-shape.rofl:63").
+block_mentions("rules/rule-shape.rofl:63", kernel, bare).
+block_mentions("rules/rule-shape.rofl:63", examples, bare).
+block_mentions("rules/rule-shape.rofl:63", rules, bare).
+block("rules/rule-shape.rofl:76", "rules/rule-shape.rofl", 76, 9).
 block_next("rules/rule-shape.rofl:76", clause).
-block_before("rules/rule-shape.rofl:76", "rules/rule-shape.rofl:80").
-block("rules/rule-shape.rofl:82", "rules/rule-shape.rofl", 82, 5).
-block_next("rules/rule-shape.rofl:82", clause).
-block_before("rules/rule-shape.rofl:82", "rules/rule-shape.rofl:87").
-block_banner("rules/rule-shape.rofl:82").
-block("rules/rule-shape.rofl:90", "rules/rule-shape.rofl", 90, 12).
-block_next("rules/rule-shape.rofl:90", clause).
-block_before("rules/rule-shape.rofl:90", "rules/rule-shape.rofl:102").
-block_banner("rules/rule-shape.rofl:90").
-block_mentions("rules/rule-shape.rofl:90", why, bare).
-block_mentions("rules/rule-shape.rofl:90", kernel, bare).
-block_mentions("rules/rule-shape.rofl:90", examples, bare).
-block_mentions("rules/rule-shape.rofl:90", rules, bare).
-block("rules/rule-shape.rofl:110", "rules/rule-shape.rofl", 110, 19).
-block_next("rules/rule-shape.rofl:110", clause).
-block_before("rules/rule-shape.rofl:110", "rules/rule-shape.rofl:129").
-block_banner("rules/rule-shape.rofl:110").
-block_mentions("rules/rule-shape.rofl:110", neg_rel_derived, bare).
-mention_snake(neg_rel_derived).
-block("rules/rule-shape.rofl:132", "rules/rule-shape.rofl", 132, 3).
-block_next("rules/rule-shape.rofl:132", clause).
-block_before("rules/rule-shape.rofl:132", "rules/rule-shape.rofl:135").
-block("rules/rule-shape.rofl:139", "rules/rule-shape.rofl", 139, 1).
-block_next("rules/rule-shape.rofl:139", clause).
-block_before("rules/rule-shape.rofl:139", "rules/rule-shape.rofl:140").
-block("rules/rule-shape.rofl:149", "rules/rule-shape.rofl", 149, 11).
-block_next("rules/rule-shape.rofl:149", clause).
-block_before("rules/rule-shape.rofl:149", "rules/rule-shape.rofl:160").
-block_banner("rules/rule-shape.rofl:149").
-block_mentions("rules/rule-shape.rofl:149", plan, bare).
-block("rules/rule-shape.rofl:163", "rules/rule-shape.rofl", 163, 2).
-block_next("rules/rule-shape.rofl:163", clause).
-block_before("rules/rule-shape.rofl:163", "rules/rule-shape.rofl:165").
-block("rules/rule-shape.rofl:168", "rules/rule-shape.rofl", 168, 1).
-block_next("rules/rule-shape.rofl:168", clause).
-block_before("rules/rule-shape.rofl:168", "rules/rule-shape.rofl:169").
+block_before("rules/rule-shape.rofl:76", "rules/rule-shape.rofl:85").
+block_banner("rules/rule-shape.rofl:76").
+block("rules/rule-shape.rofl:88", "rules/rule-shape.rofl", 88, 2).
+block_next("rules/rule-shape.rofl:88", clause).
+block_before("rules/rule-shape.rofl:88", "rules/rule-shape.rofl:90").
+block("rules/rule-shape.rofl:94", "rules/rule-shape.rofl", 94, 1).
+block_next("rules/rule-shape.rofl:94", clause).
+block_before("rules/rule-shape.rofl:94", "rules/rule-shape.rofl:95").
+block("rules/rule-shape.rofl:104", "rules/rule-shape.rofl", 104, 7).
+block_next("rules/rule-shape.rofl:104", clause).
+block_before("rules/rule-shape.rofl:104", "rules/rule-shape.rofl:111").
+block_banner("rules/rule-shape.rofl:104").
+block_mentions("rules/rule-shape.rofl:104", plan, bare).
+block("rules/rule-shape.rofl:114", "rules/rule-shape.rofl", 114, 1).
+block_next("rules/rule-shape.rofl:114", clause).
+block_before("rules/rule-shape.rofl:114", "rules/rule-shape.rofl:115").
+block("rules/rule-shape.rofl:118", "rules/rule-shape.rofl", 118, 1).
+block_next("rules/rule-shape.rofl:118", clause).
+block_before("rules/rule-shape.rofl:118", "rules/rule-shape.rofl:119").
 lint_file("rules/self-audit.rofl", 8, 91, 9).
 file_clauses("rules/self-audit.rofl", 4, 1).
 block("rules/self-audit.rofl:1", "rules/self-audit.rofl", 1, 45).
@@ -4269,7 +4189,6 @@ block_mentions("facts/cross-products.rofl:1", anything_unblocks, bare).
 block_mentions("facts/cross-products.rofl:1", ci_runs, bare).
 block_mentions("facts/cross-products.rofl:1", npm, bare).
 block_mentions("facts/cross-products.rofl:1", ci_suite_runs, called).
-mention_snake(ci_suite_runs).
 block_mentions("facts/cross-products.rofl:1", wf_inadmissible, bare).
 mention_snake(wf_inadmissible).
 block_mentions("facts/cross-products.rofl:1", total_width, bare).
@@ -7702,8 +7621,8 @@ block_banner("facts/permission-inventory.rofl:236").
 block("facts/permission-inventory.rofl:406", "facts/permission-inventory.rofl", 406, 1).
 block_next("facts/permission-inventory.rofl:406", clause).
 block_banner("facts/permission-inventory.rofl:406").
-lint_file("facts/refactoring.rofl", 12, 6, 4).
-file_clauses("facts/refactoring.rofl", 0, 9).
+lint_file("facts/refactoring.rofl", 20, 6, 6).
+file_clauses("facts/refactoring.rofl", 0, 15).
 block("facts/refactoring.rofl:1", "facts/refactoring.rofl", 1, 6).
 block_next("facts/refactoring.rofl:1", clause).
 block_dated("facts/refactoring.rofl:1", 1).
@@ -10595,253 +10514,253 @@ clause_nneg("rules/decisions/production-readiness.rofl:85", 4).
 clause_nbi("rules/decisions/production-readiness.rofl:85", 0).
 body_sig("rules/decisions/production-readiness.rofl:85", "pack[main](V0,production_readiness), inquiry[main](V0,decide), not go_blocked[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_), accepted_residual[main](V0,_), not unaccepted_gap[main](V0,_)").
 shape_sig("rules/decisions/production-readiness.rofl:85", "R0[main](V0,production_readiness), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), R5[main](V0,_), not R6[main](V0,_)").
-clause("rules/depends.rofl:48", "rules/depends.rofl", 48, code_edge, dep, 2).
-head_pat("rules/depends.rofl:48", "A,B").
-premise("rules/depends.rofl:48", 0, edge, dep, pos, "A,B,ts_import").
-clause_npos("rules/depends.rofl:48", 1).
-clause_nneg("rules/depends.rofl:48", 0).
-clause_nbi("rules/depends.rofl:48", 0).
-body_sig("rules/depends.rofl:48", "edge[dep](V0,V1,ts_import)").
-shape_sig("rules/depends.rofl:48", "R0[dep](V0,V1,ts_import)").
-clause("rules/depends.rofl:49", "rules/depends.rofl", 49, code_edge, dep, 2).
-head_pat("rules/depends.rofl:49", "A,B").
-premise("rules/depends.rofl:49", 0, edge, dep, pos, "A,B,reads_path").
-clause_npos("rules/depends.rofl:49", 1).
-clause_nneg("rules/depends.rofl:49", 0).
-clause_nbi("rules/depends.rofl:49", 0).
-body_sig("rules/depends.rofl:49", "edge[dep](V0,V1,reads_path)").
-shape_sig("rules/depends.rofl:49", "R0[dep](V0,V1,reads_path)").
-clause("rules/depends.rofl:50", "rules/depends.rofl", 50, code_edge, dep, 2).
-head_pat("rules/depends.rofl:50", "A,B").
-premise("rules/depends.rofl:50", 0, edge, dep, pos, "A,B,npm_script").
+clause("rules/depends.rofl:24", "rules/depends.rofl", 24, code_edge, dep, 2).
+head_pat("rules/depends.rofl:24", "A,B").
+premise("rules/depends.rofl:24", 0, edge, dep, pos, "A,B,ts_import").
+clause_npos("rules/depends.rofl:24", 1).
+clause_nneg("rules/depends.rofl:24", 0).
+clause_nbi("rules/depends.rofl:24", 0).
+body_sig("rules/depends.rofl:24", "edge[dep](V0,V1,ts_import)").
+shape_sig("rules/depends.rofl:24", "R0[dep](V0,V1,ts_import)").
+clause("rules/depends.rofl:25", "rules/depends.rofl", 25, code_edge, dep, 2).
+head_pat("rules/depends.rofl:25", "A,B").
+premise("rules/depends.rofl:25", 0, edge, dep, pos, "A,B,reads_path").
+clause_npos("rules/depends.rofl:25", 1).
+clause_nneg("rules/depends.rofl:25", 0).
+clause_nbi("rules/depends.rofl:25", 0).
+body_sig("rules/depends.rofl:25", "edge[dep](V0,V1,reads_path)").
+shape_sig("rules/depends.rofl:25", "R0[dep](V0,V1,reads_path)").
+clause("rules/depends.rofl:26", "rules/depends.rofl", 26, code_edge, dep, 2).
+head_pat("rules/depends.rofl:26", "A,B").
+premise("rules/depends.rofl:26", 0, edge, dep, pos, "A,B,npm_script").
+clause_npos("rules/depends.rofl:26", 1).
+clause_nneg("rules/depends.rofl:26", 0).
+clause_nbi("rules/depends.rofl:26", 0).
+body_sig("rules/depends.rofl:26", "edge[dep](V0,V1,npm_script)").
+shape_sig("rules/depends.rofl:26", "R0[dep](V0,V1,npm_script)").
+clause("rules/depends.rofl:27", "rules/depends.rofl", 27, code_edge, dep, 2).
+head_pat("rules/depends.rofl:27", "A,B").
+premise("rules/depends.rofl:27", 0, edge, dep, pos, "A,B,ci_step").
+clause_npos("rules/depends.rofl:27", 1).
+clause_nneg("rules/depends.rofl:27", 0).
+clause_nbi("rules/depends.rofl:27", 0).
+body_sig("rules/depends.rofl:27", "edge[dep](V0,V1,ci_step)").
+shape_sig("rules/depends.rofl:27", "R0[dep](V0,V1,ci_step)").
+clause("rules/depends.rofl:29", "rules/depends.rofl", 29, regenerates, dep, 2).
+head_pat("rules/depends.rofl:29", "G,P").
+premise("rules/depends.rofl:29", 0, edge, dep, pos, "G,P,generates").
+clause_npos("rules/depends.rofl:29", 1).
+clause_nneg("rules/depends.rofl:29", 0).
+clause_nbi("rules/depends.rofl:29", 0).
+body_sig("rules/depends.rofl:29", "edge[dep](V0,V1,generates)").
+shape_sig("rules/depends.rofl:29", "R0[dep](V0,V1,generates)").
+clause("rules/depends.rofl:34", "rules/depends.rofl", 34, blast, dep, 2).
+head_pat("rules/depends.rofl:34", "D,T").
+premise("rules/depends.rofl:34", 0, target, dep, pos, "T").
+premise("rules/depends.rofl:34", 1, code_edge, dep, pos, "D,T").
+clause_npos("rules/depends.rofl:34", 2).
+clause_nneg("rules/depends.rofl:34", 0).
+clause_nbi("rules/depends.rofl:34", 0).
+body_sig("rules/depends.rofl:34", "target[dep](V0), code_edge[dep](V1,V0)").
+shape_sig("rules/depends.rofl:34", "R0[dep](V0), R1[dep](V1,V0)").
+clause("rules/depends.rofl:35", "rules/depends.rofl", 35, blast, dep, 2).
+head_pat("rules/depends.rofl:35", "D,T").
+premise("rules/depends.rofl:35", 0, blast, dep, pos, "M,T").
+premise("rules/depends.rofl:35", 1, code_edge, dep, pos, "D,M").
+clause_npos("rules/depends.rofl:35", 2).
+clause_nneg("rules/depends.rofl:35", 0).
+clause_nbi("rules/depends.rofl:35", 0).
+body_sig("rules/depends.rofl:35", "blast[dep](V0,V1), code_edge[dep](V2,V0)").
+shape_sig("rules/depends.rofl:35", "R0[dep](V0,V1), R1[dep](V2,V0)").
+clause("rules/depends.rofl:39", "rules/depends.rofl", 39, stale_prose, dep, 2).
+head_pat("rules/depends.rofl:39", "D,T").
+premise("rules/depends.rofl:39", 0, target, dep, pos, "T").
+premise("rules/depends.rofl:39", 1, edge, dep, pos, "D,T,doc_ref").
+clause_npos("rules/depends.rofl:39", 2).
+clause_nneg("rules/depends.rofl:39", 0).
+clause_nbi("rules/depends.rofl:39", 0).
+body_sig("rules/depends.rofl:39", "target[dep](V0), edge[dep](V1,V0,doc_ref)").
+shape_sig("rules/depends.rofl:39", "R0[dep](V0), R1[dep](V1,V0,doc_ref)").
+clause("rules/depends.rofl:40", "rules/depends.rofl", 40, stale_prose, dep, 2).
+head_pat("rules/depends.rofl:40", "D,T").
+premise("rules/depends.rofl:40", 0, target, dep, pos, "T").
+premise("rules/depends.rofl:40", 1, edge, dep, pos, "D,T,ledger_ref").
+clause_npos("rules/depends.rofl:40", 2).
+clause_nneg("rules/depends.rofl:40", 0).
+clause_nbi("rules/depends.rofl:40", 0).
+body_sig("rules/depends.rofl:40", "target[dep](V0), edge[dep](V1,V0,ledger_ref)").
+shape_sig("rules/depends.rofl:40", "R0[dep](V0), R1[dep](V1,V0,ledger_ref)").
+clause("rules/depends.rofl:44", "rules/depends.rofl", 44, downstream, dep, 2).
+head_pat("rules/depends.rofl:44", "X,T").
+premise("rules/depends.rofl:44", 0, target, dep, pos, "T").
+premise("rules/depends.rofl:44", 1, code_edge, dep, pos, "T,X").
+clause_npos("rules/depends.rofl:44", 2).
+clause_nneg("rules/depends.rofl:44", 0).
+clause_nbi("rules/depends.rofl:44", 0).
+body_sig("rules/depends.rofl:44", "target[dep](V0), code_edge[dep](V0,V1)").
+shape_sig("rules/depends.rofl:44", "R0[dep](V0), R1[dep](V0,V1)").
+clause("rules/depends.rofl:45", "rules/depends.rofl", 45, downstream, dep, 2).
+head_pat("rules/depends.rofl:45", "X,T").
+premise("rules/depends.rofl:45", 0, downstream, dep, pos, "M,T").
+premise("rules/depends.rofl:45", 1, code_edge, dep, pos, "M,X").
+clause_npos("rules/depends.rofl:45", 2).
+clause_nneg("rules/depends.rofl:45", 0).
+clause_nbi("rules/depends.rofl:45", 0).
+body_sig("rules/depends.rofl:45", "downstream[dep](V0,V1), code_edge[dep](V0,V2)").
+shape_sig("rules/depends.rofl:45", "R0[dep](V0,V1), R1[dep](V0,V2)").
+clause("rules/depends.rofl:50", "rules/depends.rofl", 50, depended_on, dep, 1).
+head_pat("rules/depends.rofl:50", "B").
+premise("rules/depends.rofl:50", 0, edge, dep, pos, "_,B,_").
 clause_npos("rules/depends.rofl:50", 1).
 clause_nneg("rules/depends.rofl:50", 0).
 clause_nbi("rules/depends.rofl:50", 0).
-body_sig("rules/depends.rofl:50", "edge[dep](V0,V1,npm_script)").
-shape_sig("rules/depends.rofl:50", "R0[dep](V0,V1,npm_script)").
-clause("rules/depends.rofl:51", "rules/depends.rofl", 51, code_edge, dep, 2).
-head_pat("rules/depends.rofl:51", "A,B").
-premise("rules/depends.rofl:51", 0, edge, dep, pos, "A,B,ci_step").
+body_sig("rules/depends.rofl:50", "edge[dep](_,V0,_)").
+shape_sig("rules/depends.rofl:50", "R0[dep](_,V0,_)").
+clause("rules/depends.rofl:51", "rules/depends.rofl", 51, orphan, dep, 1).
+head_pat("rules/depends.rofl:51", "X").
+premise("rules/depends.rofl:51", 0, artifact, dep, pos, "X,_").
+premise("rules/depends.rofl:51", 1, depended_on, dep, neg, "X").
 clause_npos("rules/depends.rofl:51", 1).
-clause_nneg("rules/depends.rofl:51", 0).
+clause_nneg("rules/depends.rofl:51", 1).
 clause_nbi("rules/depends.rofl:51", 0).
-body_sig("rules/depends.rofl:51", "edge[dep](V0,V1,ci_step)").
-shape_sig("rules/depends.rofl:51", "R0[dep](V0,V1,ci_step)").
-clause("rules/depends.rofl:62", "rules/depends.rofl", 62, regenerates, dep, 2).
-head_pat("rules/depends.rofl:62", "G,P").
-premise("rules/depends.rofl:62", 0, edge, dep, pos, "G,P,generates").
-clause_npos("rules/depends.rofl:62", 1).
-clause_nneg("rules/depends.rofl:62", 0).
-clause_nbi("rules/depends.rofl:62", 0).
-body_sig("rules/depends.rofl:62", "edge[dep](V0,V1,generates)").
-shape_sig("rules/depends.rofl:62", "R0[dep](V0,V1,generates)").
-clause("rules/depends.rofl:66", "rules/depends.rofl", 66, blast, dep, 2).
-head_pat("rules/depends.rofl:66", "D,T").
-premise("rules/depends.rofl:66", 0, target, dep, pos, "T").
-premise("rules/depends.rofl:66", 1, code_edge, dep, pos, "D,T").
-clause_npos("rules/depends.rofl:66", 2).
-clause_nneg("rules/depends.rofl:66", 0).
-clause_nbi("rules/depends.rofl:66", 0).
-body_sig("rules/depends.rofl:66", "target[dep](V0), code_edge[dep](V1,V0)").
-shape_sig("rules/depends.rofl:66", "R0[dep](V0), R1[dep](V1,V0)").
-clause("rules/depends.rofl:67", "rules/depends.rofl", 67, blast, dep, 2).
-head_pat("rules/depends.rofl:67", "D,T").
-premise("rules/depends.rofl:67", 0, blast, dep, pos, "M,T").
-premise("rules/depends.rofl:67", 1, code_edge, dep, pos, "D,M").
-clause_npos("rules/depends.rofl:67", 2).
-clause_nneg("rules/depends.rofl:67", 0).
-clause_nbi("rules/depends.rofl:67", 0).
-body_sig("rules/depends.rofl:67", "blast[dep](V0,V1), code_edge[dep](V2,V0)").
-shape_sig("rules/depends.rofl:67", "R0[dep](V0,V1), R1[dep](V2,V0)").
-clause("rules/depends.rofl:72", "rules/depends.rofl", 72, stale_prose, dep, 2).
-head_pat("rules/depends.rofl:72", "D,T").
-premise("rules/depends.rofl:72", 0, target, dep, pos, "T").
-premise("rules/depends.rofl:72", 1, edge, dep, pos, "D,T,doc_ref").
+body_sig("rules/depends.rofl:51", "artifact[dep](V0,_), not depended_on[dep](V0)").
+shape_sig("rules/depends.rofl:51", "R0[dep](V0,_), not R1[dep](V0)").
+clause("rules/depends.rofl:57", "rules/depends.rofl", 57, code_needs, dep, 1).
+head_pat("rules/depends.rofl:57", "B").
+premise("rules/depends.rofl:57", 0, edge, dep, pos, "_,B,ts_import").
+clause_npos("rules/depends.rofl:57", 1).
+clause_nneg("rules/depends.rofl:57", 0).
+clause_nbi("rules/depends.rofl:57", 0).
+body_sig("rules/depends.rofl:57", "edge[dep](_,V0,ts_import)").
+shape_sig("rules/depends.rofl:57", "R0[dep](_,V0,ts_import)").
+clause("rules/depends.rofl:58", "rules/depends.rofl", 58, code_needs, dep, 1).
+head_pat("rules/depends.rofl:58", "B").
+premise("rules/depends.rofl:58", 0, edge, dep, pos, "_,B,reads_path").
+clause_npos("rules/depends.rofl:58", 1).
+clause_nneg("rules/depends.rofl:58", 0).
+clause_nbi("rules/depends.rofl:58", 0).
+body_sig("rules/depends.rofl:58", "edge[dep](_,V0,reads_path)").
+shape_sig("rules/depends.rofl:58", "R0[dep](_,V0,reads_path)").
+clause("rules/depends.rofl:59", "rules/depends.rofl", 59, code_needs, dep, 1).
+head_pat("rules/depends.rofl:59", "B").
+premise("rules/depends.rofl:59", 0, edge, dep, pos, "_,B,npm_script").
+clause_npos("rules/depends.rofl:59", 1).
+clause_nneg("rules/depends.rofl:59", 0).
+clause_nbi("rules/depends.rofl:59", 0).
+body_sig("rules/depends.rofl:59", "edge[dep](_,V0,npm_script)").
+shape_sig("rules/depends.rofl:59", "R0[dep](_,V0,npm_script)").
+clause("rules/depends.rofl:60", "rules/depends.rofl", 60, code_needs, dep, 1).
+head_pat("rules/depends.rofl:60", "B").
+premise("rules/depends.rofl:60", 0, edge, dep, pos, "_,B,ci_step").
+clause_npos("rules/depends.rofl:60", 1).
+clause_nneg("rules/depends.rofl:60", 0).
+clause_nbi("rules/depends.rofl:60", 0).
+body_sig("rules/depends.rofl:60", "edge[dep](_,V0,ci_step)").
+shape_sig("rules/depends.rofl:60", "R0[dep](_,V0,ci_step)").
+clause("rules/depends.rofl:61", "rules/depends.rofl", 61, code_needs, dep, 1).
+head_pat("rules/depends.rofl:61", "B").
+premise("rules/depends.rofl:61", 0, edge, dep, pos, "_,B,generates").
+clause_npos("rules/depends.rofl:61", 1).
+clause_nneg("rules/depends.rofl:61", 0).
+clause_nbi("rules/depends.rofl:61", 0).
+body_sig("rules/depends.rofl:61", "edge[dep](_,V0,generates)").
+shape_sig("rules/depends.rofl:61", "R0[dep](_,V0,generates)").
+clause("rules/depends.rofl:63", "rules/depends.rofl", 63, only_prose, dep, 1).
+head_pat("rules/depends.rofl:63", "X").
+premise("rules/depends.rofl:63", 0, depended_on, dep, pos, "X").
+premise("rules/depends.rofl:63", 1, code_needs, dep, neg, "X").
+clause_npos("rules/depends.rofl:63", 1).
+clause_nneg("rules/depends.rofl:63", 1).
+clause_nbi("rules/depends.rofl:63", 0).
+body_sig("rules/depends.rofl:63", "depended_on[dep](V0), not code_needs[dep](V0)").
+shape_sig("rules/depends.rofl:63", "R0[dep](V0), not R1[dep](V0)").
+clause("rules/depends.rofl:72", "rules/depends.rofl", 72, ci_runs, dep, 1).
+head_pat("rules/depends.rofl:72", "X").
+premise("rules/depends.rofl:72", 0, edge, dep, pos, "W,X,ci_step").
+premise("rules/depends.rofl:72", 1, artifact, dep, pos, "W,yml").
 clause_npos("rules/depends.rofl:72", 2).
 clause_nneg("rules/depends.rofl:72", 0).
 clause_nbi("rules/depends.rofl:72", 0).
-body_sig("rules/depends.rofl:72", "target[dep](V0), edge[dep](V1,V0,doc_ref)").
-shape_sig("rules/depends.rofl:72", "R0[dep](V0), R1[dep](V1,V0,doc_ref)").
-clause("rules/depends.rofl:73", "rules/depends.rofl", 73, stale_prose, dep, 2).
-head_pat("rules/depends.rofl:73", "D,T").
-premise("rules/depends.rofl:73", 0, target, dep, pos, "T").
-premise("rules/depends.rofl:73", 1, edge, dep, pos, "D,T,ledger_ref").
+body_sig("rules/depends.rofl:72", "edge[dep](V0,V1,ci_step), artifact[dep](V0,yml)").
+shape_sig("rules/depends.rofl:72", "R0[dep](V0,V1,ci_step), R1[dep](V0,yml)").
+clause("rules/depends.rofl:73", "rules/depends.rofl", 73, ci_runs, dep, 1).
+head_pat("rules/depends.rofl:73", "X").
+premise("rules/depends.rofl:73", 0, ci_runs, dep, pos, "Y").
+premise("rules/depends.rofl:73", 1, edge, dep, pos, "Y,X,_").
 clause_npos("rules/depends.rofl:73", 2).
 clause_nneg("rules/depends.rofl:73", 0).
 clause_nbi("rules/depends.rofl:73", 0).
-body_sig("rules/depends.rofl:73", "target[dep](V0), edge[dep](V1,V0,ledger_ref)").
-shape_sig("rules/depends.rofl:73", "R0[dep](V0), R1[dep](V1,V0,ledger_ref)").
-clause("rules/depends.rofl:77", "rules/depends.rofl", 77, downstream, dep, 2).
-head_pat("rules/depends.rofl:77", "X,T").
-premise("rules/depends.rofl:77", 0, target, dep, pos, "T").
-premise("rules/depends.rofl:77", 1, code_edge, dep, pos, "T,X").
-clause_npos("rules/depends.rofl:77", 2).
+body_sig("rules/depends.rofl:73", "ci_runs[dep](V0), edge[dep](V0,V1,_)").
+shape_sig("rules/depends.rofl:73", "R0[dep](V0), R1[dep](V0,V1,_)").
+clause("rules/depends.rofl:74", "rules/depends.rofl", 74, ci_suite_runs, dep, 0).
+head_pat("rules/depends.rofl:74", "").
+premise("rules/depends.rofl:74", 0, edge, dep, pos, "W,\"npm:test\",ci_step").
+premise("rules/depends.rofl:74", 1, artifact, dep, pos, "W,yml").
+clause_npos("rules/depends.rofl:74", 2).
+clause_nneg("rules/depends.rofl:74", 0).
+clause_nbi("rules/depends.rofl:74", 0).
+body_sig("rules/depends.rofl:74", "edge[dep](V0,\"npm:test\",ci_step), artifact[dep](V0,yml)").
+shape_sig("rules/depends.rofl:74", "R0[dep](V0,\"npm:test\",ci_step), R1[dep](V0,yml)").
+clause("rules/depends.rofl:75", "rules/depends.rofl", 75, ci_runs, dep, 1).
+head_pat("rules/depends.rofl:75", "T").
+premise("rules/depends.rofl:75", 0, test_file, dep, pos, "T").
+premise("rules/depends.rofl:75", 1, ci_suite_runs, dep, pos, "").
+clause_npos("rules/depends.rofl:75", 2).
+clause_nneg("rules/depends.rofl:75", 0).
+clause_nbi("rules/depends.rofl:75", 0).
+body_sig("rules/depends.rofl:75", "test_file[dep](V0), ci_suite_runs[dep]()").
+shape_sig("rules/depends.rofl:75", "R0[dep](V0), R1[dep]()").
+clause("rules/depends.rofl:77", "rules/depends.rofl", 77, script, dep, 1).
+head_pat("rules/depends.rofl:77", "S").
+premise("rules/depends.rofl:77", 0, artifact, dep, pos, "S,script").
+clause_npos("rules/depends.rofl:77", 1).
 clause_nneg("rules/depends.rofl:77", 0).
 clause_nbi("rules/depends.rofl:77", 0).
-body_sig("rules/depends.rofl:77", "target[dep](V0), code_edge[dep](V0,V1)").
-shape_sig("rules/depends.rofl:77", "R0[dep](V0), R1[dep](V0,V1)").
-clause("rules/depends.rofl:78", "rules/depends.rofl", 78, downstream, dep, 2).
-head_pat("rules/depends.rofl:78", "X,T").
-premise("rules/depends.rofl:78", 0, downstream, dep, pos, "M,T").
-premise("rules/depends.rofl:78", 1, code_edge, dep, pos, "M,X").
-clause_npos("rules/depends.rofl:78", 2).
-clause_nneg("rules/depends.rofl:78", 0).
+body_sig("rules/depends.rofl:77", "artifact[dep](V0,script)").
+shape_sig("rules/depends.rofl:77", "R0[dep](V0,script)").
+clause("rules/depends.rofl:78", "rules/depends.rofl", 78, unrun_gate, dep, 1).
+head_pat("rules/depends.rofl:78", "S").
+premise("rules/depends.rofl:78", 0, script, dep, pos, "S").
+premise("rules/depends.rofl:78", 1, ci_runs, dep, neg, "S").
+clause_npos("rules/depends.rofl:78", 1).
+clause_nneg("rules/depends.rofl:78", 1).
 clause_nbi("rules/depends.rofl:78", 0).
-body_sig("rules/depends.rofl:78", "downstream[dep](V0,V1), code_edge[dep](V0,V2)").
-shape_sig("rules/depends.rofl:78", "R0[dep](V0,V1), R1[dep](V0,V2)").
-clause("rules/depends.rofl:83", "rules/depends.rofl", 83, depended_on, dep, 1).
-head_pat("rules/depends.rofl:83", "B").
-premise("rules/depends.rofl:83", 0, edge, dep, pos, "_,B,_").
+body_sig("rules/depends.rofl:78", "script[dep](V0), not ci_runs[dep](V0)").
+shape_sig("rules/depends.rofl:78", "R0[dep](V0), not R1[dep](V0)").
+clause("rules/depends.rofl:83", "rules/depends.rofl", 83, generated, dep, 1).
+head_pat("rules/depends.rofl:83", "P").
+premise("rules/depends.rofl:83", 0, edge, dep, pos, "_,P,generates").
 clause_npos("rules/depends.rofl:83", 1).
 clause_nneg("rules/depends.rofl:83", 0).
 clause_nbi("rules/depends.rofl:83", 0).
-body_sig("rules/depends.rofl:83", "edge[dep](_,V0,_)").
-shape_sig("rules/depends.rofl:83", "R0[dep](_,V0,_)").
-clause("rules/depends.rofl:84", "rules/depends.rofl", 84, orphan, dep, 1).
-head_pat("rules/depends.rofl:84", "X").
-premise("rules/depends.rofl:84", 0, artifact, dep, pos, "X,_").
-premise("rules/depends.rofl:84", 1, depended_on, dep, neg, "X").
-clause_npos("rules/depends.rofl:84", 1).
-clause_nneg("rules/depends.rofl:84", 1).
+body_sig("rules/depends.rofl:83", "edge[dep](_,V0,generates)").
+shape_sig("rules/depends.rofl:83", "R0[dep](_,V0,generates)").
+clause("rules/depends.rofl:84", "rules/depends.rofl", 84, regenerated_by_test, dep, 1).
+head_pat("rules/depends.rofl:84", "P").
+premise("rules/depends.rofl:84", 0, edge, dep, pos, "T,P,reads_path").
+premise("rules/depends.rofl:84", 1, test_file, dep, pos, "T").
+clause_npos("rules/depends.rofl:84", 2).
+clause_nneg("rules/depends.rofl:84", 0).
 clause_nbi("rules/depends.rofl:84", 0).
-body_sig("rules/depends.rofl:84", "artifact[dep](V0,_), not depended_on[dep](V0)").
-shape_sig("rules/depends.rofl:84", "R0[dep](V0,_), not R1[dep](V0)").
-clause("rules/depends.rofl:92", "rules/depends.rofl", 92, code_needs, dep, 1).
-head_pat("rules/depends.rofl:92", "B").
-premise("rules/depends.rofl:92", 0, edge, dep, pos, "_,B,ts_import").
-clause_npos("rules/depends.rofl:92", 1).
-clause_nneg("rules/depends.rofl:92", 0).
-clause_nbi("rules/depends.rofl:92", 0).
-body_sig("rules/depends.rofl:92", "edge[dep](_,V0,ts_import)").
-shape_sig("rules/depends.rofl:92", "R0[dep](_,V0,ts_import)").
-clause("rules/depends.rofl:93", "rules/depends.rofl", 93, code_needs, dep, 1).
-head_pat("rules/depends.rofl:93", "B").
-premise("rules/depends.rofl:93", 0, edge, dep, pos, "_,B,reads_path").
+body_sig("rules/depends.rofl:84", "edge[dep](V0,V1,reads_path), test_file[dep](V0)").
+shape_sig("rules/depends.rofl:84", "R0[dep](V0,V1,reads_path), R1[dep](V0)").
+clause("rules/depends.rofl:93", "rules/depends.rofl", 93, test_file, dep, 1).
+head_pat("rules/depends.rofl:93", "T").
+premise("rules/depends.rofl:93", 0, artifact, dep, pos, "T,ts").
 clause_npos("rules/depends.rofl:93", 1).
 clause_nneg("rules/depends.rofl:93", 0).
-clause_nbi("rules/depends.rofl:93", 0).
-body_sig("rules/depends.rofl:93", "edge[dep](_,V0,reads_path)").
-shape_sig("rules/depends.rofl:93", "R0[dep](_,V0,reads_path)").
-clause("rules/depends.rofl:94", "rules/depends.rofl", 94, code_needs, dep, 1).
-head_pat("rules/depends.rofl:94", "B").
-premise("rules/depends.rofl:94", 0, edge, dep, pos, "_,B,npm_script").
-clause_npos("rules/depends.rofl:94", 1).
-clause_nneg("rules/depends.rofl:94", 0).
-clause_nbi("rules/depends.rofl:94", 0).
-body_sig("rules/depends.rofl:94", "edge[dep](_,V0,npm_script)").
-shape_sig("rules/depends.rofl:94", "R0[dep](_,V0,npm_script)").
-clause("rules/depends.rofl:95", "rules/depends.rofl", 95, code_needs, dep, 1).
-head_pat("rules/depends.rofl:95", "B").
-premise("rules/depends.rofl:95", 0, edge, dep, pos, "_,B,ci_step").
-clause_npos("rules/depends.rofl:95", 1).
-clause_nneg("rules/depends.rofl:95", 0).
-clause_nbi("rules/depends.rofl:95", 0).
-body_sig("rules/depends.rofl:95", "edge[dep](_,V0,ci_step)").
-shape_sig("rules/depends.rofl:95", "R0[dep](_,V0,ci_step)").
-clause("rules/depends.rofl:96", "rules/depends.rofl", 96, code_needs, dep, 1).
-head_pat("rules/depends.rofl:96", "B").
-premise("rules/depends.rofl:96", 0, edge, dep, pos, "_,B,generates").
-clause_npos("rules/depends.rofl:96", 1).
-clause_nneg("rules/depends.rofl:96", 0).
-clause_nbi("rules/depends.rofl:96", 0).
-body_sig("rules/depends.rofl:96", "edge[dep](_,V0,generates)").
-shape_sig("rules/depends.rofl:96", "R0[dep](_,V0,generates)").
-clause("rules/depends.rofl:98", "rules/depends.rofl", 98, only_prose, dep, 1).
-head_pat("rules/depends.rofl:98", "X").
-premise("rules/depends.rofl:98", 0, depended_on, dep, pos, "X").
-premise("rules/depends.rofl:98", 1, code_needs, dep, neg, "X").
-clause_npos("rules/depends.rofl:98", 1).
-clause_nneg("rules/depends.rofl:98", 1).
-clause_nbi("rules/depends.rofl:98", 0).
-body_sig("rules/depends.rofl:98", "depended_on[dep](V0), not code_needs[dep](V0)").
-shape_sig("rules/depends.rofl:98", "R0[dep](V0), not R1[dep](V0)").
-clause("rules/depends.rofl:104", "rules/depends.rofl", 104, ci_runs, dep, 1).
-head_pat("rules/depends.rofl:104", "X").
-premise("rules/depends.rofl:104", 0, edge, dep, pos, "W,X,ci_step").
-premise("rules/depends.rofl:104", 1, artifact, dep, pos, "W,yml").
-clause_npos("rules/depends.rofl:104", 2).
-clause_nneg("rules/depends.rofl:104", 0).
-clause_nbi("rules/depends.rofl:104", 0).
-body_sig("rules/depends.rofl:104", "edge[dep](V0,V1,ci_step), artifact[dep](V0,yml)").
-shape_sig("rules/depends.rofl:104", "R0[dep](V0,V1,ci_step), R1[dep](V0,yml)").
-clause("rules/depends.rofl:105", "rules/depends.rofl", 105, ci_runs, dep, 1).
-head_pat("rules/depends.rofl:105", "X").
-premise("rules/depends.rofl:105", 0, ci_runs, dep, pos, "Y").
-premise("rules/depends.rofl:105", 1, edge, dep, pos, "Y,X,_").
-clause_npos("rules/depends.rofl:105", 2).
-clause_nneg("rules/depends.rofl:105", 0).
-clause_nbi("rules/depends.rofl:105", 0).
-body_sig("rules/depends.rofl:105", "ci_runs[dep](V0), edge[dep](V0,V1,_)").
-shape_sig("rules/depends.rofl:105", "R0[dep](V0), R1[dep](V0,V1,_)").
-clause("rules/depends.rofl:117", "rules/depends.rofl", 117, ci_suite_runs, dep, 0).
-head_pat("rules/depends.rofl:117", "").
-premise("rules/depends.rofl:117", 0, edge, dep, pos, "W,\"npm:test\",ci_step").
-premise("rules/depends.rofl:117", 1, artifact, dep, pos, "W,yml").
-clause_npos("rules/depends.rofl:117", 2).
-clause_nneg("rules/depends.rofl:117", 0).
-clause_nbi("rules/depends.rofl:117", 0).
-body_sig("rules/depends.rofl:117", "edge[dep](V0,\"npm:test\",ci_step), artifact[dep](V0,yml)").
-shape_sig("rules/depends.rofl:117", "R0[dep](V0,\"npm:test\",ci_step), R1[dep](V0,yml)").
-clause("rules/depends.rofl:118", "rules/depends.rofl", 118, ci_runs, dep, 1).
-head_pat("rules/depends.rofl:118", "T").
-premise("rules/depends.rofl:118", 0, test_file, dep, pos, "T").
-premise("rules/depends.rofl:118", 1, ci_suite_runs, dep, pos, "").
-clause_npos("rules/depends.rofl:118", 2).
-clause_nneg("rules/depends.rofl:118", 0).
-clause_nbi("rules/depends.rofl:118", 0).
-body_sig("rules/depends.rofl:118", "test_file[dep](V0), ci_suite_runs[dep]()").
-shape_sig("rules/depends.rofl:118", "R0[dep](V0), R1[dep]()").
-clause("rules/depends.rofl:120", "rules/depends.rofl", 120, script, dep, 1).
-head_pat("rules/depends.rofl:120", "S").
-premise("rules/depends.rofl:120", 0, artifact, dep, pos, "S,script").
-clause_npos("rules/depends.rofl:120", 1).
-clause_nneg("rules/depends.rofl:120", 0).
-clause_nbi("rules/depends.rofl:120", 0).
-body_sig("rules/depends.rofl:120", "artifact[dep](V0,script)").
-shape_sig("rules/depends.rofl:120", "R0[dep](V0,script)").
-clause("rules/depends.rofl:121", "rules/depends.rofl", 121, unrun_gate, dep, 1).
-head_pat("rules/depends.rofl:121", "S").
-premise("rules/depends.rofl:121", 0, script, dep, pos, "S").
-premise("rules/depends.rofl:121", 1, ci_runs, dep, neg, "S").
-clause_npos("rules/depends.rofl:121", 1).
-clause_nneg("rules/depends.rofl:121", 1).
-clause_nbi("rules/depends.rofl:121", 0).
-body_sig("rules/depends.rofl:121", "script[dep](V0), not ci_runs[dep](V0)").
-shape_sig("rules/depends.rofl:121", "R0[dep](V0), not R1[dep](V0)").
-clause("rules/depends.rofl:126", "rules/depends.rofl", 126, generated, dep, 1).
-head_pat("rules/depends.rofl:126", "P").
-premise("rules/depends.rofl:126", 0, edge, dep, pos, "_,P,generates").
-clause_npos("rules/depends.rofl:126", 1).
-clause_nneg("rules/depends.rofl:126", 0).
-clause_nbi("rules/depends.rofl:126", 0).
-body_sig("rules/depends.rofl:126", "edge[dep](_,V0,generates)").
-shape_sig("rules/depends.rofl:126", "R0[dep](_,V0,generates)").
-clause("rules/depends.rofl:127", "rules/depends.rofl", 127, regenerated_by_test, dep, 1).
-head_pat("rules/depends.rofl:127", "P").
-premise("rules/depends.rofl:127", 0, edge, dep, pos, "T,P,reads_path").
-premise("rules/depends.rofl:127", 1, test_file, dep, pos, "T").
-clause_npos("rules/depends.rofl:127", 2).
-clause_nneg("rules/depends.rofl:127", 0).
-clause_nbi("rules/depends.rofl:127", 0).
-body_sig("rules/depends.rofl:127", "edge[dep](V0,V1,reads_path), test_file[dep](V0)").
-shape_sig("rules/depends.rofl:127", "R0[dep](V0,V1,reads_path), R1[dep](V0)").
-clause("rules/depends.rofl:141", "rules/depends.rofl", 141, test_file, dep, 1).
-head_pat("rules/depends.rofl:141", "T").
-premise("rules/depends.rofl:141", 0, artifact, dep, pos, "T,ts").
-clause_npos("rules/depends.rofl:141", 1).
-clause_nneg("rules/depends.rofl:141", 0).
-clause_nbi("rules/depends.rofl:141", 4).
-body_sig("rules/depends.rofl:141", "artifact[dep](V0,ts), V1 is str_pre(V0,\"/\"), V1 = \"test\", V2 is str_segs(V0,\".test.ts\"), V2 = 2").
-shape_sig("rules/depends.rofl:141", "R0[dep](V0,ts), V1 is str_pre(V0,\"/\"), V1 = \"test\", V2 is str_segs(V0,\".test.ts\"), V2 = 2").
-clause("rules/depends.rofl:145", "rules/depends.rofl", 145, ungated_pack, audit, 1).
-head_pat("rules/depends.rofl:145", "P").
-premise("rules/depends.rofl:145", 0, generated, dep, pos, "P").
-premise("rules/depends.rofl:145", 1, regenerated_by_test, dep, neg, "P").
-clause_npos("rules/depends.rofl:145", 1).
-clause_nneg("rules/depends.rofl:145", 1).
-clause_nbi("rules/depends.rofl:145", 0).
-body_sig("rules/depends.rofl:145", "generated[dep](V0), not regenerated_by_test[dep](V0)").
-shape_sig("rules/depends.rofl:145", "R0[dep](V0), not R1[dep](V0)").
+clause_nbi("rules/depends.rofl:93", 4).
+body_sig("rules/depends.rofl:93", "artifact[dep](V0,ts), V1 is str_pre(V0,\"/\"), V1 = \"test\", V2 is str_segs(V0,\".test.ts\"), V2 = 2").
+shape_sig("rules/depends.rofl:93", "R0[dep](V0,ts), V1 is str_pre(V0,\"/\"), V1 = \"test\", V2 is str_segs(V0,\".test.ts\"), V2 = 2").
+clause("rules/depends.rofl:100", "rules/depends.rofl", 100, ungated_pack, audit, 1).
+head_pat("rules/depends.rofl:100", "P").
+premise("rules/depends.rofl:100", 0, generated, dep, pos, "P").
+premise("rules/depends.rofl:100", 1, regenerated_by_test, dep, neg, "P").
+clause_npos("rules/depends.rofl:100", 1).
+clause_nneg("rules/depends.rofl:100", 1).
+clause_nbi("rules/depends.rofl:100", 0).
+body_sig("rules/depends.rofl:100", "generated[dep](V0), not regenerated_by_test[dep](V0)").
+shape_sig("rules/depends.rofl:100", "R0[dep](V0), not R1[dep](V0)").
 clause("rules/engine-split.rofl:22", "rules/engine-split.rofl", 22, block, main, 3).
 head_pat("rules/engine-split.rofl:22", "File,L,Cat").
 premise("rules/engine-split.rofl:22", 0, code_line, main, pos, "File,L,K").
@@ -11688,158 +11607,158 @@ clause_nneg("rules/floor-census.rofl:123", 0).
 clause_nbi("rules/floor-census.rofl:123", 0).
 body_sig("rules/floor-census.rofl:123", "top_heavy[main](V0)").
 shape_sig("rules/floor-census.rofl:123", "R0[main](V0)").
-clause("rules/ingest.rofl:39", "rules/ingest.rofl", 39, indexed, code, 1).
-head_pat("rules/ingest.rofl:39", "F").
-premise("rules/ingest.rofl:39", 0, ast_file, code, pos, "_,F").
+clause("rules/ingest.rofl:27", "rules/ingest.rofl", 27, indexed, code, 1).
+head_pat("rules/ingest.rofl:27", "F").
+premise("rules/ingest.rofl:27", 0, ast_file, code, pos, "_,F").
+clause_npos("rules/ingest.rofl:27", 1).
+clause_nneg("rules/ingest.rofl:27", 0).
+clause_nbi("rules/ingest.rofl:27", 0).
+body_sig("rules/ingest.rofl:27", "ast_file[code](_,V0)").
+shape_sig("rules/ingest.rofl:27", "R0[code](_,V0)").
+clause("rules/ingest.rofl:29", "rules/ingest.rofl", 29, indexed, code, 1).
+head_pat("rules/ingest.rofl:29", "F").
+premise("rules/ingest.rofl:29", 0, cooled, code, pos, "F,_").
+clause_npos("rules/ingest.rofl:29", 1).
+clause_nneg("rules/ingest.rofl:29", 0).
+clause_nbi("rules/ingest.rofl:29", 0).
+body_sig("rules/ingest.rofl:29", "cooled[code](V0,_)").
+shape_sig("rules/ingest.rofl:29", "R0[code](V0,_)").
+clause("rules/ingest.rofl:31", "rules/ingest.rofl", 31, indexed, code, 1).
+head_pat("rules/ingest.rofl:31", "F").
+premise("rules/ingest.rofl:31", 0, ast_parse_error, code, pos, "F,_").
+clause_npos("rules/ingest.rofl:31", 1).
+clause_nneg("rules/ingest.rofl:31", 0).
+clause_nbi("rules/ingest.rofl:31", 0).
+body_sig("rules/ingest.rofl:31", "ast_parse_error[code](V0,_)").
+shape_sig("rules/ingest.rofl:31", "R0[code](V0,_)").
+clause("rules/ingest.rofl:37", "rules/ingest.rofl", 37, needs_index, code, 2).
+head_pat("rules/ingest.rofl:37", "C,F").
+premise("rules/ingest.rofl:37", 0, must_index, code, pos, "C,F").
+premise("rules/ingest.rofl:37", 1, indexed, code, neg, "F").
+clause_npos("rules/ingest.rofl:37", 1).
+clause_nneg("rules/ingest.rofl:37", 1).
+clause_nbi("rules/ingest.rofl:37", 0).
+body_sig("rules/ingest.rofl:37", "must_index[code](V0,V1), not indexed[code](V1)").
+shape_sig("rules/ingest.rofl:37", "R0[code](V0,V1), not R1[code](V1)").
+clause("rules/ingest.rofl:39", "rules/ingest.rofl", 39, index_incomplete, code, 1).
+head_pat("rules/ingest.rofl:39", "C").
+premise("rules/ingest.rofl:39", 0, needs_index, code, pos, "C,_").
 clause_npos("rules/ingest.rofl:39", 1).
 clause_nneg("rules/ingest.rofl:39", 0).
 clause_nbi("rules/ingest.rofl:39", 0).
-body_sig("rules/ingest.rofl:39", "ast_file[code](_,V0)").
-shape_sig("rules/ingest.rofl:39", "R0[code](_,V0)").
-clause("rules/ingest.rofl:50", "rules/ingest.rofl", 50, indexed, code, 1).
-head_pat("rules/ingest.rofl:50", "F").
-premise("rules/ingest.rofl:50", 0, cooled, code, pos, "F,_").
-clause_npos("rules/ingest.rofl:50", 1).
-clause_nneg("rules/ingest.rofl:50", 0).
-clause_nbi("rules/ingest.rofl:50", 0).
-body_sig("rules/ingest.rofl:50", "cooled[code](V0,_)").
-shape_sig("rules/ingest.rofl:50", "R0[code](V0,_)").
-clause("rules/ingest.rofl:66", "rules/ingest.rofl", 66, indexed, code, 1).
-head_pat("rules/ingest.rofl:66", "F").
-premise("rules/ingest.rofl:66", 0, ast_parse_error, code, pos, "F,_").
-clause_npos("rules/ingest.rofl:66", 1).
-clause_nneg("rules/ingest.rofl:66", 0).
-clause_nbi("rules/ingest.rofl:66", 0).
-body_sig("rules/ingest.rofl:66", "ast_parse_error[code](V0,_)").
-shape_sig("rules/ingest.rofl:66", "R0[code](V0,_)").
-clause("rules/ingest.rofl:71", "rules/ingest.rofl", 71, needs_index, code, 2).
-head_pat("rules/ingest.rofl:71", "C,F").
-premise("rules/ingest.rofl:71", 0, must_index, code, pos, "C,F").
-premise("rules/ingest.rofl:71", 1, indexed, code, neg, "F").
-clause_npos("rules/ingest.rofl:71", 1).
-clause_nneg("rules/ingest.rofl:71", 1).
-clause_nbi("rules/ingest.rofl:71", 0).
-body_sig("rules/ingest.rofl:71", "must_index[code](V0,V1), not indexed[code](V1)").
-shape_sig("rules/ingest.rofl:71", "R0[code](V0,V1), not R1[code](V1)").
-clause("rules/ingest.rofl:77", "rules/ingest.rofl", 77, index_incomplete, code, 1).
-head_pat("rules/ingest.rofl:77", "C").
-premise("rules/ingest.rofl:77", 0, needs_index, code, pos, "C,_").
-clause_npos("rules/ingest.rofl:77", 1).
-clause_nneg("rules/ingest.rofl:77", 0).
-clause_nbi("rules/ingest.rofl:77", 0).
-body_sig("rules/ingest.rofl:77", "needs_index[code](V0,_)").
-shape_sig("rules/ingest.rofl:77", "R0[code](V0,_)").
-clause("rules/ingest.rofl:78", "rules/ingest.rofl", 78, index_complete, code, 1).
-head_pat("rules/ingest.rofl:78", "C").
-premise("rules/ingest.rofl:78", 0, must_index, code, pos, "C,_").
-premise("rules/ingest.rofl:78", 1, index_incomplete, code, neg, "C").
-clause_npos("rules/ingest.rofl:78", 1).
-clause_nneg("rules/ingest.rofl:78", 1).
-clause_nbi("rules/ingest.rofl:78", 0).
-body_sig("rules/ingest.rofl:78", "must_index[code](V0,_), not index_incomplete[code](V0)").
-shape_sig("rules/ingest.rofl:78", "R0[code](V0,_), not R1[code](V0)").
-clause("rules/ingest.rofl:87", "rules/ingest.rofl", 87, candidate_intent, main, 3).
-head_pat("rules/ingest.rofl:87", "parse,C,F").
-premise("rules/ingest.rofl:87", 0, needs_index, code, pos, "C,F").
-clause_npos("rules/ingest.rofl:87", 1).
-clause_nneg("rules/ingest.rofl:87", 0).
-clause_nbi("rules/ingest.rofl:87", 0).
-body_sig("rules/ingest.rofl:87", "needs_index[code](V0,V1)").
-shape_sig("rules/ingest.rofl:87", "R0[code](V0,V1)").
-clause("rules/ingest.rofl:97", "rules/ingest.rofl", 97, coolable, code, 1).
-head_pat("rules/ingest.rofl:97", "F").
-premise("rules/ingest.rofl:97", 0, indexed, code, pos, "F").
-premise("rules/ingest.rofl:97", 1, needed_hot, code, neg, "F").
-clause_npos("rules/ingest.rofl:97", 1).
-clause_nneg("rules/ingest.rofl:97", 1).
-clause_nbi("rules/ingest.rofl:97", 0).
-body_sig("rules/ingest.rofl:97", "indexed[code](V0), not needed_hot[code](V0)").
-shape_sig("rules/ingest.rofl:97", "R0[code](V0), not R1[code](V0)").
-clause("rules/ingest.rofl:114", "rules/ingest.rofl", 114, under_pressure, code, 1).
-head_pat("rules/ingest.rofl:114", "C").
-premise("rules/ingest.rofl:114", 0, rows_pressure, code, pos, "C").
-clause_npos("rules/ingest.rofl:114", 1).
-clause_nneg("rules/ingest.rofl:114", 0).
-clause_nbi("rules/ingest.rofl:114", 0).
-body_sig("rules/ingest.rofl:114", "rows_pressure[code](V0)").
-shape_sig("rules/ingest.rofl:114", "R0[code](V0)").
-clause("rules/ingest.rofl:115", "rules/ingest.rofl", 115, under_pressure, code, 1).
-head_pat("rules/ingest.rofl:115", "C").
-premise("rules/ingest.rofl:115", 0, world_pressure, code, pos, "C").
-clause_npos("rules/ingest.rofl:115", 1).
-clause_nneg("rules/ingest.rofl:115", 0).
-clause_nbi("rules/ingest.rofl:115", 0).
-body_sig("rules/ingest.rofl:115", "world_pressure[code](V0)").
-shape_sig("rules/ingest.rofl:115", "R0[code](V0)").
-clause("rules/ingest.rofl:116", "rules/ingest.rofl", 116, under_pressure, code, 1).
-head_pat("rules/ingest.rofl:116", "C").
-premise("rules/ingest.rofl:116", 0, memory_pressure, code, pos, "C").
-clause_npos("rules/ingest.rofl:116", 1).
-clause_nneg("rules/ingest.rofl:116", 0).
-clause_nbi("rules/ingest.rofl:116", 0).
-body_sig("rules/ingest.rofl:116", "memory_pressure[code](V0)").
-shape_sig("rules/ingest.rofl:116", "R0[code](V0)").
-clause("rules/ingest.rofl:117", "rules/ingest.rofl", 117, under_pressure, code, 1).
-head_pat("rules/ingest.rofl:117", "C").
-premise("rules/ingest.rofl:117", 0, volume_settled, code, pos, "C").
-clause_npos("rules/ingest.rofl:117", 1).
-clause_nneg("rules/ingest.rofl:117", 0).
-clause_nbi("rules/ingest.rofl:117", 0).
-body_sig("rules/ingest.rofl:117", "volume_settled[code](V0)").
-shape_sig("rules/ingest.rofl:117", "R0[code](V0)").
-clause("rules/ingest.rofl:118", "rules/ingest.rofl", 118, under_pressure, code, 1).
-head_pat("rules/ingest.rofl:118", "C").
-premise("rules/ingest.rofl:118", 0, eviction_asked, code, pos, "C").
-clause_npos("rules/ingest.rofl:118", 1).
-clause_nneg("rules/ingest.rofl:118", 0).
-clause_nbi("rules/ingest.rofl:118", 0).
-body_sig("rules/ingest.rofl:118", "eviction_asked[code](V0)").
-shape_sig("rules/ingest.rofl:118", "R0[code](V0)").
-clause("rules/ingest.rofl:134", "rules/ingest.rofl", 134, candidate_intent, main, 3).
-head_pat("rules/ingest.rofl:134", "cool,C,F").
-premise("rules/ingest.rofl:134", 0, must_index, code, pos, "C,F").
-premise("rules/ingest.rofl:134", 1, under_pressure, code, pos, "C").
-premise("rules/ingest.rofl:134", 2, coolable, code, pos, "F").
-premise("rules/ingest.rofl:134", 3, cooled, code, neg, "F,_").
-clause_npos("rules/ingest.rofl:134", 3).
-clause_nneg("rules/ingest.rofl:134", 1).
-clause_nbi("rules/ingest.rofl:134", 0).
-body_sig("rules/ingest.rofl:134", "must_index[code](V0,V1), under_pressure[code](V0), coolable[code](V1), not cooled[code](V1,_)").
-shape_sig("rules/ingest.rofl:134", "R0[code](V0,V1), R1[code](V0), R2[code](V1), not R3[code](V1,_)").
-clause("rules/ingest.rofl:164", "rules/ingest.rofl", 164, index_target, code, 2).
-head_pat("rules/ingest.rofl:164", "C,F").
-premise("rules/ingest.rofl:164", 0, must_index, code, pos, "C,F").
-clause_npos("rules/ingest.rofl:164", 1).
-clause_nneg("rules/ingest.rofl:164", 0).
-clause_nbi("rules/ingest.rofl:164", 0).
-body_sig("rules/ingest.rofl:164", "must_index[code](V0,V1)").
-shape_sig("rules/ingest.rofl:164", "R0[code](V0,V1)").
-clause("rules/ingest.rofl:165", "rules/ingest.rofl", 165, index_left, code, 2).
-head_pat("rules/ingest.rofl:165", "C,F").
-premise("rules/ingest.rofl:165", 0, needs_index, code, pos, "C,F").
-clause_npos("rules/ingest.rofl:165", 1).
-clause_nneg("rules/ingest.rofl:165", 0).
-clause_nbi("rules/ingest.rofl:165", 0).
-body_sig("rules/ingest.rofl:165", "needs_index[code](V0,V1)").
-shape_sig("rules/ingest.rofl:165", "R0[code](V0,V1)").
-clause("rules/ingest.rofl:166", "rules/ingest.rofl", 166, index_done, code, 2).
-head_pat("rules/ingest.rofl:166", "C,F").
-premise("rules/ingest.rofl:166", 0, must_index, code, pos, "C,F").
-premise("rules/ingest.rofl:166", 1, indexed, code, pos, "F").
-clause_npos("rules/ingest.rofl:166", 2).
-clause_nneg("rules/ingest.rofl:166", 0).
-clause_nbi("rules/ingest.rofl:166", 0).
-body_sig("rules/ingest.rofl:166", "must_index[code](V0,V1), indexed[code](V1)").
-shape_sig("rules/ingest.rofl:166", "R0[code](V0,V1), R1[code](V1)").
-clause("rules/ingest.rofl:167", "rules/ingest.rofl", 167, index_cold, code, 2).
-head_pat("rules/ingest.rofl:167", "C,F").
-premise("rules/ingest.rofl:167", 0, must_index, code, pos, "C,F").
-premise("rules/ingest.rofl:167", 1, cooled, code, pos, "F,_").
-clause_npos("rules/ingest.rofl:167", 2).
-clause_nneg("rules/ingest.rofl:167", 0).
-clause_nbi("rules/ingest.rofl:167", 0).
-body_sig("rules/ingest.rofl:167", "must_index[code](V0,V1), cooled[code](V1,_)").
-shape_sig("rules/ingest.rofl:167", "R0[code](V0,V1), R1[code](V1,_)").
+body_sig("rules/ingest.rofl:39", "needs_index[code](V0,_)").
+shape_sig("rules/ingest.rofl:39", "R0[code](V0,_)").
+clause("rules/ingest.rofl:40", "rules/ingest.rofl", 40, index_complete, code, 1).
+head_pat("rules/ingest.rofl:40", "C").
+premise("rules/ingest.rofl:40", 0, must_index, code, pos, "C,_").
+premise("rules/ingest.rofl:40", 1, index_incomplete, code, neg, "C").
+clause_npos("rules/ingest.rofl:40", 1).
+clause_nneg("rules/ingest.rofl:40", 1).
+clause_nbi("rules/ingest.rofl:40", 0).
+body_sig("rules/ingest.rofl:40", "must_index[code](V0,_), not index_incomplete[code](V0)").
+shape_sig("rules/ingest.rofl:40", "R0[code](V0,_), not R1[code](V0)").
+clause("rules/ingest.rofl:46", "rules/ingest.rofl", 46, candidate_intent, main, 3).
+head_pat("rules/ingest.rofl:46", "parse,C,F").
+premise("rules/ingest.rofl:46", 0, needs_index, code, pos, "C,F").
+clause_npos("rules/ingest.rofl:46", 1).
+clause_nneg("rules/ingest.rofl:46", 0).
+clause_nbi("rules/ingest.rofl:46", 0).
+body_sig("rules/ingest.rofl:46", "needs_index[code](V0,V1)").
+shape_sig("rules/ingest.rofl:46", "R0[code](V0,V1)").
+clause("rules/ingest.rofl:54", "rules/ingest.rofl", 54, coolable, code, 1).
+head_pat("rules/ingest.rofl:54", "F").
+premise("rules/ingest.rofl:54", 0, indexed, code, pos, "F").
+premise("rules/ingest.rofl:54", 1, needed_hot, code, neg, "F").
+clause_npos("rules/ingest.rofl:54", 1).
+clause_nneg("rules/ingest.rofl:54", 1).
+clause_nbi("rules/ingest.rofl:54", 0).
+body_sig("rules/ingest.rofl:54", "indexed[code](V0), not needed_hot[code](V0)").
+shape_sig("rules/ingest.rofl:54", "R0[code](V0), not R1[code](V0)").
+clause("rules/ingest.rofl:61", "rules/ingest.rofl", 61, under_pressure, code, 1).
+head_pat("rules/ingest.rofl:61", "C").
+premise("rules/ingest.rofl:61", 0, rows_pressure, code, pos, "C").
+clause_npos("rules/ingest.rofl:61", 1).
+clause_nneg("rules/ingest.rofl:61", 0).
+clause_nbi("rules/ingest.rofl:61", 0).
+body_sig("rules/ingest.rofl:61", "rows_pressure[code](V0)").
+shape_sig("rules/ingest.rofl:61", "R0[code](V0)").
+clause("rules/ingest.rofl:62", "rules/ingest.rofl", 62, under_pressure, code, 1).
+head_pat("rules/ingest.rofl:62", "C").
+premise("rules/ingest.rofl:62", 0, world_pressure, code, pos, "C").
+clause_npos("rules/ingest.rofl:62", 1).
+clause_nneg("rules/ingest.rofl:62", 0).
+clause_nbi("rules/ingest.rofl:62", 0).
+body_sig("rules/ingest.rofl:62", "world_pressure[code](V0)").
+shape_sig("rules/ingest.rofl:62", "R0[code](V0)").
+clause("rules/ingest.rofl:63", "rules/ingest.rofl", 63, under_pressure, code, 1).
+head_pat("rules/ingest.rofl:63", "C").
+premise("rules/ingest.rofl:63", 0, memory_pressure, code, pos, "C").
+clause_npos("rules/ingest.rofl:63", 1).
+clause_nneg("rules/ingest.rofl:63", 0).
+clause_nbi("rules/ingest.rofl:63", 0).
+body_sig("rules/ingest.rofl:63", "memory_pressure[code](V0)").
+shape_sig("rules/ingest.rofl:63", "R0[code](V0)").
+clause("rules/ingest.rofl:64", "rules/ingest.rofl", 64, under_pressure, code, 1).
+head_pat("rules/ingest.rofl:64", "C").
+premise("rules/ingest.rofl:64", 0, volume_settled, code, pos, "C").
+clause_npos("rules/ingest.rofl:64", 1).
+clause_nneg("rules/ingest.rofl:64", 0).
+clause_nbi("rules/ingest.rofl:64", 0).
+body_sig("rules/ingest.rofl:64", "volume_settled[code](V0)").
+shape_sig("rules/ingest.rofl:64", "R0[code](V0)").
+clause("rules/ingest.rofl:65", "rules/ingest.rofl", 65, under_pressure, code, 1).
+head_pat("rules/ingest.rofl:65", "C").
+premise("rules/ingest.rofl:65", 0, eviction_asked, code, pos, "C").
+clause_npos("rules/ingest.rofl:65", 1).
+clause_nneg("rules/ingest.rofl:65", 0).
+clause_nbi("rules/ingest.rofl:65", 0).
+body_sig("rules/ingest.rofl:65", "eviction_asked[code](V0)").
+shape_sig("rules/ingest.rofl:65", "R0[code](V0)").
+clause("rules/ingest.rofl:81", "rules/ingest.rofl", 81, candidate_intent, main, 3).
+head_pat("rules/ingest.rofl:81", "cool,C,F").
+premise("rules/ingest.rofl:81", 0, must_index, code, pos, "C,F").
+premise("rules/ingest.rofl:81", 1, under_pressure, code, pos, "C").
+premise("rules/ingest.rofl:81", 2, coolable, code, pos, "F").
+premise("rules/ingest.rofl:81", 3, cooled, code, neg, "F,_").
+clause_npos("rules/ingest.rofl:81", 3).
+clause_nneg("rules/ingest.rofl:81", 1).
+clause_nbi("rules/ingest.rofl:81", 0).
+body_sig("rules/ingest.rofl:81", "must_index[code](V0,V1), under_pressure[code](V0), coolable[code](V1), not cooled[code](V1,_)").
+shape_sig("rules/ingest.rofl:81", "R0[code](V0,V1), R1[code](V0), R2[code](V1), not R3[code](V1,_)").
+clause("rules/ingest.rofl:89", "rules/ingest.rofl", 89, index_target, code, 2).
+head_pat("rules/ingest.rofl:89", "C,F").
+premise("rules/ingest.rofl:89", 0, must_index, code, pos, "C,F").
+clause_npos("rules/ingest.rofl:89", 1).
+clause_nneg("rules/ingest.rofl:89", 0).
+clause_nbi("rules/ingest.rofl:89", 0).
+body_sig("rules/ingest.rofl:89", "must_index[code](V0,V1)").
+shape_sig("rules/ingest.rofl:89", "R0[code](V0,V1)").
+clause("rules/ingest.rofl:90", "rules/ingest.rofl", 90, index_left, code, 2).
+head_pat("rules/ingest.rofl:90", "C,F").
+premise("rules/ingest.rofl:90", 0, needs_index, code, pos, "C,F").
+clause_npos("rules/ingest.rofl:90", 1).
+clause_nneg("rules/ingest.rofl:90", 0).
+clause_nbi("rules/ingest.rofl:90", 0).
+body_sig("rules/ingest.rofl:90", "needs_index[code](V0,V1)").
+shape_sig("rules/ingest.rofl:90", "R0[code](V0,V1)").
+clause("rules/ingest.rofl:91", "rules/ingest.rofl", 91, index_done, code, 2).
+head_pat("rules/ingest.rofl:91", "C,F").
+premise("rules/ingest.rofl:91", 0, must_index, code, pos, "C,F").
+premise("rules/ingest.rofl:91", 1, indexed, code, pos, "F").
+clause_npos("rules/ingest.rofl:91", 2).
+clause_nneg("rules/ingest.rofl:91", 0).
+clause_nbi("rules/ingest.rofl:91", 0).
+body_sig("rules/ingest.rofl:91", "must_index[code](V0,V1), indexed[code](V1)").
+shape_sig("rules/ingest.rofl:91", "R0[code](V0,V1), R1[code](V1)").
+clause("rules/ingest.rofl:92", "rules/ingest.rofl", 92, index_cold, code, 2).
+head_pat("rules/ingest.rofl:92", "C,F").
+premise("rules/ingest.rofl:92", 0, must_index, code, pos, "C,F").
+premise("rules/ingest.rofl:92", 1, cooled, code, pos, "F,_").
+clause_npos("rules/ingest.rofl:92", 2).
+clause_nneg("rules/ingest.rofl:92", 0).
+clause_nbi("rules/ingest.rofl:92", 0).
+body_sig("rules/ingest.rofl:92", "must_index[code](V0,V1), cooled[code](V1,_)").
+shape_sig("rules/ingest.rofl:92", "R0[code](V0,V1), R1[code](V1,_)").
 clause("rules/inquiry/epistemic.rofl:14", "rules/inquiry/epistemic.rofl", 14, supported, epistemic, 1).
 head_pat("rules/inquiry/epistemic.rofl:14", "C").
 premise("rules/inquiry/epistemic.rofl:14", 0, claim, main, pos, "C").
@@ -24902,385 +24821,385 @@ clause_nneg("rules/profile.rofl:128", 0).
 clause_nbi("rules/profile.rofl:128", 0).
 body_sig("rules/profile.rofl:128", "looks_redundant[profile](V0,V1), disagrees[profile](V0,V1)").
 shape_sig("rules/profile.rofl:128", "R0[profile](V0,V1), R1[profile](V0,V1)").
-clause("rules/rule-shape.rofl:34", "rules/rule-shape.rofl", 34, neg_point, main, 1).
-head_pat("rules/rule-shape.rofl:34", "S").
-premise("rules/rule-shape.rofl:34", 0, neg_nbound, main, pos, "S,N").
-premise("rules/rule-shape.rofl:34", 1, neg_arity, main, pos, "S,N").
-clause_npos("rules/rule-shape.rofl:34", 2).
-clause_nneg("rules/rule-shape.rofl:34", 0).
-clause_nbi("rules/rule-shape.rofl:34", 0).
-body_sig("rules/rule-shape.rofl:34", "neg_nbound[main](V0,V1), neg_arity[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:34", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:35", "rules/rule-shape.rofl", 35, neg_keyed, main, 1).
+clause("rules/rule-shape.rofl:18", "rules/rule-shape.rofl", 18, neg_point, main, 1).
+head_pat("rules/rule-shape.rofl:18", "S").
+premise("rules/rule-shape.rofl:18", 0, neg_nbound, main, pos, "S,N").
+premise("rules/rule-shape.rofl:18", 1, neg_arity, main, pos, "S,N").
+clause_npos("rules/rule-shape.rofl:18", 2).
+clause_nneg("rules/rule-shape.rofl:18", 0).
+clause_nbi("rules/rule-shape.rofl:18", 0).
+body_sig("rules/rule-shape.rofl:18", "neg_nbound[main](V0,V1), neg_arity[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:18", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:19", "rules/rule-shape.rofl", 19, neg_keyed, main, 1).
+head_pat("rules/rule-shape.rofl:19", "S").
+premise("rules/rule-shape.rofl:19", 0, neg_bound, main, pos, "S,_").
+clause_npos("rules/rule-shape.rofl:19", 1).
+clause_nneg("rules/rule-shape.rofl:19", 0).
+clause_nbi("rules/rule-shape.rofl:19", 0).
+body_sig("rules/rule-shape.rofl:19", "neg_bound[main](V0,_)").
+shape_sig("rules/rule-shape.rofl:19", "R0[main](V0,_)").
+clause("rules/rule-shape.rofl:20", "rules/rule-shape.rofl", 20, neg_unkeyed, main, 1).
+head_pat("rules/rule-shape.rofl:20", "S").
+premise("rules/rule-shape.rofl:20", 0, neg_site, main, pos, "S,_,_,_,_").
+premise("rules/rule-shape.rofl:20", 1, neg_keyed, main, neg, "S").
+clause_npos("rules/rule-shape.rofl:20", 1).
+clause_nneg("rules/rule-shape.rofl:20", 1).
+clause_nbi("rules/rule-shape.rofl:20", 0).
+body_sig("rules/rule-shape.rofl:20", "neg_site[main](V0,_,_,_,_), not neg_keyed[main](V0)").
+shape_sig("rules/rule-shape.rofl:20", "R0[main](V0,_,_,_,_), not R1[main](V0)").
+clause("rules/rule-shape.rofl:21", "rules/rule-shape.rofl", 21, neg_prefix, main, 1).
+head_pat("rules/rule-shape.rofl:21", "S").
+premise("rules/rule-shape.rofl:21", 0, neg_keyed, main, pos, "S").
+premise("rules/rule-shape.rofl:21", 1, neg_point, main, neg, "S").
+clause_npos("rules/rule-shape.rofl:21", 1).
+clause_nneg("rules/rule-shape.rofl:21", 1).
+clause_nbi("rules/rule-shape.rofl:21", 0).
+body_sig("rules/rule-shape.rofl:21", "neg_keyed[main](V0), not neg_point[main](V0)").
+shape_sig("rules/rule-shape.rofl:21", "R0[main](V0), not R1[main](V0)").
+clause("rules/rule-shape.rofl:27", "rules/rule-shape.rofl", 27, neg_contiguous, main, 1).
+head_pat("rules/rule-shape.rofl:27", "S").
+premise("rules/rule-shape.rofl:27", 0, neg_left_run, main, pos, "S,K").
+premise("rules/rule-shape.rofl:27", 1, neg_nbound, main, pos, "S,K").
+premise("rules/rule-shape.rofl:27", 2, neg_keyed, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:27", 3).
+clause_nneg("rules/rule-shape.rofl:27", 0).
+clause_nbi("rules/rule-shape.rofl:27", 0).
+body_sig("rules/rule-shape.rofl:27", "neg_left_run[main](V0,V1), neg_nbound[main](V0,V1), neg_keyed[main](V0)").
+shape_sig("rules/rule-shape.rofl:27", "R0[main](V0,V1), R1[main](V0,V1), R2[main](V0)").
+clause("rules/rule-shape.rofl:28", "rules/rule-shape.rofl", 28, neg_scattered, main, 1).
+head_pat("rules/rule-shape.rofl:28", "S").
+premise("rules/rule-shape.rofl:28", 0, neg_keyed, main, pos, "S").
+premise("rules/rule-shape.rofl:28", 1, neg_contiguous, main, neg, "S").
+clause_npos("rules/rule-shape.rofl:28", 1).
+clause_nneg("rules/rule-shape.rofl:28", 1).
+clause_nbi("rules/rule-shape.rofl:28", 0).
+body_sig("rules/rule-shape.rofl:28", "neg_keyed[main](V0), not neg_contiguous[main](V0)").
+shape_sig("rules/rule-shape.rofl:28", "R0[main](V0), not R1[main](V0)").
+clause("rules/rule-shape.rofl:35", "rules/rule-shape.rofl", 35, neg_book_free, main, 1).
 head_pat("rules/rule-shape.rofl:35", "S").
-premise("rules/rule-shape.rofl:35", 0, neg_bound, main, pos, "S,_").
+premise("rules/rule-shape.rofl:35", 0, neg_persp_var, main, pos, "S").
 clause_npos("rules/rule-shape.rofl:35", 1).
 clause_nneg("rules/rule-shape.rofl:35", 0).
 clause_nbi("rules/rule-shape.rofl:35", 0).
-body_sig("rules/rule-shape.rofl:35", "neg_bound[main](V0,_)").
-shape_sig("rules/rule-shape.rofl:35", "R0[main](V0,_)").
-clause("rules/rule-shape.rofl:36", "rules/rule-shape.rofl", 36, neg_unkeyed, main, 1).
-head_pat("rules/rule-shape.rofl:36", "S").
-premise("rules/rule-shape.rofl:36", 0, neg_site, main, pos, "S,_,_,_,_").
-premise("rules/rule-shape.rofl:36", 1, neg_keyed, main, neg, "S").
-clause_npos("rules/rule-shape.rofl:36", 1).
-clause_nneg("rules/rule-shape.rofl:36", 1).
-clause_nbi("rules/rule-shape.rofl:36", 0).
-body_sig("rules/rule-shape.rofl:36", "neg_site[main](V0,_,_,_,_), not neg_keyed[main](V0)").
-shape_sig("rules/rule-shape.rofl:36", "R0[main](V0,_,_,_,_), not R1[main](V0)").
-clause("rules/rule-shape.rofl:37", "rules/rule-shape.rofl", 37, neg_prefix, main, 1).
+body_sig("rules/rule-shape.rofl:35", "neg_persp_var[main](V0)").
+shape_sig("rules/rule-shape.rofl:35", "R0[main](V0)").
+clause("rules/rule-shape.rofl:37", "rules/rule-shape.rofl", 37, pins_everything, main, 1).
 head_pat("rules/rule-shape.rofl:37", "S").
-premise("rules/rule-shape.rofl:37", 0, neg_keyed, main, pos, "S").
-premise("rules/rule-shape.rofl:37", 1, neg_point, main, neg, "S").
+premise("rules/rule-shape.rofl:37", 0, neg_unkeyed, main, pos, "S").
 clause_npos("rules/rule-shape.rofl:37", 1).
-clause_nneg("rules/rule-shape.rofl:37", 1).
+clause_nneg("rules/rule-shape.rofl:37", 0).
 clause_nbi("rules/rule-shape.rofl:37", 0).
-body_sig("rules/rule-shape.rofl:37", "neg_keyed[main](V0), not neg_point[main](V0)").
-shape_sig("rules/rule-shape.rofl:37", "R0[main](V0), not R1[main](V0)").
-clause("rules/rule-shape.rofl:44", "rules/rule-shape.rofl", 44, neg_contiguous, main, 1).
-head_pat("rules/rule-shape.rofl:44", "S").
-premise("rules/rule-shape.rofl:44", 0, neg_left_run, main, pos, "S,K").
-premise("rules/rule-shape.rofl:44", 1, neg_nbound, main, pos, "S,K").
-premise("rules/rule-shape.rofl:44", 2, neg_keyed, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:44", 3).
-clause_nneg("rules/rule-shape.rofl:44", 0).
-clause_nbi("rules/rule-shape.rofl:44", 0).
-body_sig("rules/rule-shape.rofl:44", "neg_left_run[main](V0,V1), neg_nbound[main](V0,V1), neg_keyed[main](V0)").
-shape_sig("rules/rule-shape.rofl:44", "R0[main](V0,V1), R1[main](V0,V1), R2[main](V0)").
-clause("rules/rule-shape.rofl:45", "rules/rule-shape.rofl", 45, neg_scattered, main, 1).
-head_pat("rules/rule-shape.rofl:45", "S").
-premise("rules/rule-shape.rofl:45", 0, neg_keyed, main, pos, "S").
-premise("rules/rule-shape.rofl:45", 1, neg_contiguous, main, neg, "S").
-clause_npos("rules/rule-shape.rofl:45", 1).
-clause_nneg("rules/rule-shape.rofl:45", 1).
-clause_nbi("rules/rule-shape.rofl:45", 0).
-body_sig("rules/rule-shape.rofl:45", "neg_keyed[main](V0), not neg_contiguous[main](V0)").
-shape_sig("rules/rule-shape.rofl:45", "R0[main](V0), not R1[main](V0)").
-clause("rules/rule-shape.rofl:52", "rules/rule-shape.rofl", 52, neg_book_free, main, 1).
-head_pat("rules/rule-shape.rofl:52", "S").
-premise("rules/rule-shape.rofl:52", 0, neg_persp_var, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:52", 1).
-clause_nneg("rules/rule-shape.rofl:52", 0).
-clause_nbi("rules/rule-shape.rofl:52", 0).
-body_sig("rules/rule-shape.rofl:52", "neg_persp_var[main](V0)").
-shape_sig("rules/rule-shape.rofl:52", "R0[main](V0)").
-clause("rules/rule-shape.rofl:55", "rules/rule-shape.rofl", 55, pins_everything, main, 1).
-head_pat("rules/rule-shape.rofl:55", "S").
-premise("rules/rule-shape.rofl:55", 0, neg_unkeyed, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:55", 1).
+body_sig("rules/rule-shape.rofl:37", "neg_unkeyed[main](V0)").
+shape_sig("rules/rule-shape.rofl:37", "R0[main](V0)").
+clause("rules/rule-shape.rofl:38", "rules/rule-shape.rofl", 38, pins_everything, main, 1).
+head_pat("rules/rule-shape.rofl:38", "S").
+premise("rules/rule-shape.rofl:38", 0, neg_book_free, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:38", 1).
+clause_nneg("rules/rule-shape.rofl:38", 0).
+clause_nbi("rules/rule-shape.rofl:38", 0).
+body_sig("rules/rule-shape.rofl:38", "neg_book_free[main](V0)").
+shape_sig("rules/rule-shape.rofl:38", "R0[main](V0)").
+clause("rules/rule-shape.rofl:40", "rules/rule-shape.rofl", 40, cold_ok_shape, main, 1).
+head_pat("rules/rule-shape.rofl:40", "S").
+premise("rules/rule-shape.rofl:40", 0, neg_site, main, pos, "S,_,_,_,_").
+premise("rules/rule-shape.rofl:40", 1, pins_everything, main, neg, "S").
+clause_npos("rules/rule-shape.rofl:40", 1).
+clause_nneg("rules/rule-shape.rofl:40", 1).
+clause_nbi("rules/rule-shape.rofl:40", 0).
+body_sig("rules/rule-shape.rofl:40", "neg_site[main](V0,_,_,_,_), not pins_everything[main](V0)").
+shape_sig("rules/rule-shape.rofl:40", "R0[main](V0,_,_,_,_), not R1[main](V0)").
+clause("rules/rule-shape.rofl:48", "rules/rule-shape.rofl", 48, concl_into, main, 2).
+head_pat("rules/rule-shape.rofl:48", "Rel,B").
+premise("rules/rule-shape.rofl:48", 0, concl, main, pos, "_,Rel,B,_,_").
+clause_npos("rules/rule-shape.rofl:48", 1).
+clause_nneg("rules/rule-shape.rofl:48", 0).
+clause_nbi("rules/rule-shape.rofl:48", 0).
+body_sig("rules/rule-shape.rofl:48", "concl[main](_,V0,V1,_,_)").
+shape_sig("rules/rule-shape.rofl:48", "R0[main](_,V0,V1,_,_)").
+clause("rules/rule-shape.rofl:49", "rules/rule-shape.rofl", 49, neg_rel, main, 2).
+head_pat("rules/rule-shape.rofl:49", "Rel,B").
+premise("rules/rule-shape.rofl:49", 0, neg_site, main, pos, "_,_,Rel,B,_").
+clause_npos("rules/rule-shape.rofl:49", 1).
+clause_nneg("rules/rule-shape.rofl:49", 0).
+clause_nbi("rules/rule-shape.rofl:49", 0).
+body_sig("rules/rule-shape.rofl:49", "neg_site[main](_,_,V0,V1,_)").
+shape_sig("rules/rule-shape.rofl:49", "R0[main](_,_,V0,V1,_)").
+clause("rules/rule-shape.rofl:50", "rules/rule-shape.rofl", 50, neg_rel_base, main, 2).
+head_pat("rules/rule-shape.rofl:50", "Rel,B").
+premise("rules/rule-shape.rofl:50", 0, neg_rel, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:50", 1, concl_into, main, neg, "Rel,B").
+clause_npos("rules/rule-shape.rofl:50", 1).
+clause_nneg("rules/rule-shape.rofl:50", 1).
+clause_nbi("rules/rule-shape.rofl:50", 0).
+body_sig("rules/rule-shape.rofl:50", "neg_rel[main](V0,V1), not concl_into[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:50", "R0[main](V0,V1), not R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:51", "rules/rule-shape.rofl", 51, neg_rel_derived, main, 2).
+head_pat("rules/rule-shape.rofl:51", "Rel,B").
+premise("rules/rule-shape.rofl:51", 0, neg_rel, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:51", 1, concl_into, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:51", 2).
+clause_nneg("rules/rule-shape.rofl:51", 0).
+clause_nbi("rules/rule-shape.rofl:51", 0).
+body_sig("rules/rule-shape.rofl:51", "neg_rel[main](V0,V1), concl_into[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:51", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:55", "rules/rule-shape.rofl", 55, neg_rel_written_by, main, 3).
+head_pat("rules/rule-shape.rofl:55", "Rel,B,File").
+premise("rules/rule-shape.rofl:55", 0, neg_rel, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:55", 1, concl, main, pos, "_,Rel,B,_,File").
+clause_npos("rules/rule-shape.rofl:55", 2).
 clause_nneg("rules/rule-shape.rofl:55", 0).
 clause_nbi("rules/rule-shape.rofl:55", 0).
-body_sig("rules/rule-shape.rofl:55", "neg_unkeyed[main](V0)").
-shape_sig("rules/rule-shape.rofl:55", "R0[main](V0)").
-clause("rules/rule-shape.rofl:56", "rules/rule-shape.rofl", 56, pins_everything, main, 1).
-head_pat("rules/rule-shape.rofl:56", "S").
-premise("rules/rule-shape.rofl:56", 0, neg_book_free, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:56", 1).
-clause_nneg("rules/rule-shape.rofl:56", 0).
-clause_nbi("rules/rule-shape.rofl:56", 0).
-body_sig("rules/rule-shape.rofl:56", "neg_book_free[main](V0)").
-shape_sig("rules/rule-shape.rofl:56", "R0[main](V0)").
-clause("rules/rule-shape.rofl:59", "rules/rule-shape.rofl", 59, cold_ok_shape, main, 1).
-head_pat("rules/rule-shape.rofl:59", "S").
-premise("rules/rule-shape.rofl:59", 0, neg_site, main, pos, "S,_,_,_,_").
-premise("rules/rule-shape.rofl:59", 1, pins_everything, main, neg, "S").
-clause_npos("rules/rule-shape.rofl:59", 1).
-clause_nneg("rules/rule-shape.rofl:59", 1).
-clause_nbi("rules/rule-shape.rofl:59", 0).
-body_sig("rules/rule-shape.rofl:59", "neg_site[main](V0,_,_,_,_), not pins_everything[main](V0)").
-shape_sig("rules/rule-shape.rofl:59", "R0[main](V0,_,_,_,_), not R1[main](V0)").
-clause("rules/rule-shape.rofl:71", "rules/rule-shape.rofl", 71, concl_into, main, 2).
-head_pat("rules/rule-shape.rofl:71", "Rel,B").
-premise("rules/rule-shape.rofl:71", 0, concl, main, pos, "_,Rel,B,_,_").
-clause_npos("rules/rule-shape.rofl:71", 1).
+body_sig("rules/rule-shape.rofl:55", "neg_rel[main](V0,V1), concl[main](_,V0,V1,_,V2)").
+shape_sig("rules/rule-shape.rofl:55", "R0[main](V0,V1), R1[main](_,V0,V1,_,V2)").
+clause("rules/rule-shape.rofl:60", "rules/rule-shape.rofl", 60, cold_safe, main, 1).
+head_pat("rules/rule-shape.rofl:60", "S").
+premise("rules/rule-shape.rofl:60", 0, neg_site, main, pos, "S,_,Rel,B,_").
+premise("rules/rule-shape.rofl:60", 1, cold_ok_shape, main, pos, "S").
+premise("rules/rule-shape.rofl:60", 2, neg_rel_base, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:60", 3).
+clause_nneg("rules/rule-shape.rofl:60", 0).
+clause_nbi("rules/rule-shape.rofl:60", 0).
+body_sig("rules/rule-shape.rofl:60", "neg_site[main](V0,_,V1,V2,_), cold_ok_shape[main](V0), neg_rel_base[main](V1,V2)").
+shape_sig("rules/rule-shape.rofl:60", "R0[main](V0,_,V1,V2,_), R1[main](V0), R2[main](V1,V2)").
+clause("rules/rule-shape.rofl:61", "rules/rule-shape.rofl", 61, needs_rules, main, 1).
+head_pat("rules/rule-shape.rofl:61", "S").
+premise("rules/rule-shape.rofl:61", 0, neg_site, main, pos, "S,_,Rel,B,_").
+premise("rules/rule-shape.rofl:61", 1, cold_ok_shape, main, pos, "S").
+premise("rules/rule-shape.rofl:61", 2, neg_rel_derived, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:61", 3).
+clause_nneg("rules/rule-shape.rofl:61", 0).
+clause_nbi("rules/rule-shape.rofl:61", 0).
+body_sig("rules/rule-shape.rofl:61", "neg_site[main](V0,_,V1,V2,_), cold_ok_shape[main](V0), neg_rel_derived[main](V1,V2)").
+shape_sig("rules/rule-shape.rofl:61", "R0[main](V0,_,V1,V2,_), R1[main](V0), R2[main](V1,V2)").
+clause("rules/rule-shape.rofl:68", "rules/rule-shape.rofl", 68, g_point, main, 2).
+head_pat("rules/rule-shape.rofl:68", "G,S").
+premise("rules/rule-shape.rofl:68", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:68", 1, neg_point, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:68", 2).
+clause_nneg("rules/rule-shape.rofl:68", 0).
+clause_nbi("rules/rule-shape.rofl:68", 0).
+body_sig("rules/rule-shape.rofl:68", "neg_site[main](V0,_,_,_,V1), neg_point[main](V0)").
+shape_sig("rules/rule-shape.rofl:68", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:69", "rules/rule-shape.rofl", 69, g_prefix, main, 2).
+head_pat("rules/rule-shape.rofl:69", "G,S").
+premise("rules/rule-shape.rofl:69", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:69", 1, neg_prefix, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:69", 2).
+clause_nneg("rules/rule-shape.rofl:69", 0).
+clause_nbi("rules/rule-shape.rofl:69", 0).
+body_sig("rules/rule-shape.rofl:69", "neg_site[main](V0,_,_,_,V1), neg_prefix[main](V0)").
+shape_sig("rules/rule-shape.rofl:69", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:70", "rules/rule-shape.rofl", 70, g_scan, main, 2).
+head_pat("rules/rule-shape.rofl:70", "G,S").
+premise("rules/rule-shape.rofl:70", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:70", 1, neg_unkeyed, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:70", 2).
+clause_nneg("rules/rule-shape.rofl:70", 0).
+clause_nbi("rules/rule-shape.rofl:70", 0).
+body_sig("rules/rule-shape.rofl:70", "neg_site[main](V0,_,_,_,V1), neg_unkeyed[main](V0)").
+shape_sig("rules/rule-shape.rofl:70", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:71", "rules/rule-shape.rofl", 71, g_bookvar, main, 2).
+head_pat("rules/rule-shape.rofl:71", "G,S").
+premise("rules/rule-shape.rofl:71", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:71", 1, neg_book_free, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:71", 2).
 clause_nneg("rules/rule-shape.rofl:71", 0).
 clause_nbi("rules/rule-shape.rofl:71", 0).
-body_sig("rules/rule-shape.rofl:71", "concl[main](_,V0,V1,_,_)").
-shape_sig("rules/rule-shape.rofl:71", "R0[main](_,V0,V1,_,_)").
-clause("rules/rule-shape.rofl:72", "rules/rule-shape.rofl", 72, neg_rel, main, 2).
-head_pat("rules/rule-shape.rofl:72", "Rel,B").
-premise("rules/rule-shape.rofl:72", 0, neg_site, main, pos, "_,_,Rel,B,_").
-clause_npos("rules/rule-shape.rofl:72", 1).
+body_sig("rules/rule-shape.rofl:71", "neg_site[main](V0,_,_,_,V1), neg_book_free[main](V0)").
+shape_sig("rules/rule-shape.rofl:71", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:72", "rules/rule-shape.rofl", 72, g_base, main, 2).
+head_pat("rules/rule-shape.rofl:72", "G,S").
+premise("rules/rule-shape.rofl:72", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:72", 1, cold_safe, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:72", 2).
 clause_nneg("rules/rule-shape.rofl:72", 0).
 clause_nbi("rules/rule-shape.rofl:72", 0).
-body_sig("rules/rule-shape.rofl:72", "neg_site[main](_,_,V0,V1,_)").
-shape_sig("rules/rule-shape.rofl:72", "R0[main](_,_,V0,V1,_)").
-clause("rules/rule-shape.rofl:73", "rules/rule-shape.rofl", 73, neg_rel_base, main, 2).
-head_pat("rules/rule-shape.rofl:73", "Rel,B").
-premise("rules/rule-shape.rofl:73", 0, neg_rel, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:73", 1, concl_into, main, neg, "Rel,B").
-clause_npos("rules/rule-shape.rofl:73", 1).
-clause_nneg("rules/rule-shape.rofl:73", 1).
+body_sig("rules/rule-shape.rofl:72", "neg_site[main](V0,_,_,_,V1), cold_safe[main](V0)").
+shape_sig("rules/rule-shape.rofl:72", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:73", "rules/rule-shape.rofl", 73, g_derived, main, 2).
+head_pat("rules/rule-shape.rofl:73", "G,S").
+premise("rules/rule-shape.rofl:73", 0, neg_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:73", 1, needs_rules, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:73", 2).
+clause_nneg("rules/rule-shape.rofl:73", 0).
 clause_nbi("rules/rule-shape.rofl:73", 0).
-body_sig("rules/rule-shape.rofl:73", "neg_rel[main](V0,V1), not concl_into[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:73", "R0[main](V0,V1), not R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:74", "rules/rule-shape.rofl", 74, neg_rel_derived, main, 2).
-head_pat("rules/rule-shape.rofl:74", "Rel,B").
-premise("rules/rule-shape.rofl:74", 0, neg_rel, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:74", 1, concl_into, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:74", 2).
+body_sig("rules/rule-shape.rofl:73", "neg_site[main](V0,_,_,_,V1), needs_rules[main](V0)").
+shape_sig("rules/rule-shape.rofl:73", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:74", "rules/rule-shape.rofl", 74, g_site, main, 2).
+head_pat("rules/rule-shape.rofl:74", "G,S").
+premise("rules/rule-shape.rofl:74", 0, neg_site, main, pos, "S,_,_,_,G").
+clause_npos("rules/rule-shape.rofl:74", 1).
 clause_nneg("rules/rule-shape.rofl:74", 0).
 clause_nbi("rules/rule-shape.rofl:74", 0).
-body_sig("rules/rule-shape.rofl:74", "neg_rel[main](V0,V1), concl_into[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:74", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:80", "rules/rule-shape.rofl", 80, neg_rel_written_by, main, 3).
-head_pat("rules/rule-shape.rofl:80", "Rel,B,File").
-premise("rules/rule-shape.rofl:80", 0, neg_rel, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:80", 1, concl, main, pos, "_,Rel,B,_,File").
-clause_npos("rules/rule-shape.rofl:80", 2).
-clause_nneg("rules/rule-shape.rofl:80", 0).
-clause_nbi("rules/rule-shape.rofl:80", 0).
-body_sig("rules/rule-shape.rofl:80", "neg_rel[main](V0,V1), concl[main](_,V0,V1,_,V2)").
-shape_sig("rules/rule-shape.rofl:80", "R0[main](V0,V1), R1[main](_,V0,V1,_,V2)").
-clause("rules/rule-shape.rofl:87", "rules/rule-shape.rofl", 87, cold_safe, main, 1).
-head_pat("rules/rule-shape.rofl:87", "S").
-premise("rules/rule-shape.rofl:87", 0, neg_site, main, pos, "S,_,Rel,B,_").
-premise("rules/rule-shape.rofl:87", 1, cold_ok_shape, main, pos, "S").
-premise("rules/rule-shape.rofl:87", 2, neg_rel_base, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:87", 3).
-clause_nneg("rules/rule-shape.rofl:87", 0).
-clause_nbi("rules/rule-shape.rofl:87", 0).
-body_sig("rules/rule-shape.rofl:87", "neg_site[main](V0,_,V1,V2,_), cold_ok_shape[main](V0), neg_rel_base[main](V1,V2)").
-shape_sig("rules/rule-shape.rofl:87", "R0[main](V0,_,V1,V2,_), R1[main](V0), R2[main](V1,V2)").
-clause("rules/rule-shape.rofl:88", "rules/rule-shape.rofl", 88, needs_rules, main, 1).
-head_pat("rules/rule-shape.rofl:88", "S").
-premise("rules/rule-shape.rofl:88", 0, neg_site, main, pos, "S,_,Rel,B,_").
-premise("rules/rule-shape.rofl:88", 1, cold_ok_shape, main, pos, "S").
-premise("rules/rule-shape.rofl:88", 2, neg_rel_derived, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:88", 3).
-clause_nneg("rules/rule-shape.rofl:88", 0).
-clause_nbi("rules/rule-shape.rofl:88", 0).
-body_sig("rules/rule-shape.rofl:88", "neg_site[main](V0,_,V1,V2,_), cold_ok_shape[main](V0), neg_rel_derived[main](V1,V2)").
-shape_sig("rules/rule-shape.rofl:88", "R0[main](V0,_,V1,V2,_), R1[main](V0), R2[main](V1,V2)").
-clause("rules/rule-shape.rofl:102", "rules/rule-shape.rofl", 102, g_point, main, 2).
-head_pat("rules/rule-shape.rofl:102", "G,S").
-premise("rules/rule-shape.rofl:102", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:102", 1, neg_point, main, pos, "S").
+body_sig("rules/rule-shape.rofl:74", "neg_site[main](V0,_,_,_,V1)").
+shape_sig("rules/rule-shape.rofl:74", "R0[main](V0,_,_,_,V1)").
+clause("rules/rule-shape.rofl:85", "rules/rule-shape.rofl", 85, rule_leaves, main, 2).
+head_pat("rules/rule-shape.rofl:85", "R,B").
+premise("rules/rule-shape.rofl:85", 0, concl, main, pos, "R,_,B,_,_").
+premise("rules/rule-shape.rofl:85", 1, reads, main, pos, "R,_,B2").
+clause_npos("rules/rule-shape.rofl:85", 2).
+clause_nneg("rules/rule-shape.rofl:85", 0).
+clause_nbi("rules/rule-shape.rofl:85", 2).
+body_sig("rules/rule-shape.rofl:85", "concl[main](V0,_,V1,_,_), reads[main](V0,_,V2), V2 != V1, V2 != \"$kernel\"").
+shape_sig("rules/rule-shape.rofl:85", "R0[main](V0,_,V1,_,_), R1[main](V0,_,V2), V2 != V1, V2 != \"$kernel\"").
+clause("rules/rule-shape.rofl:86", "rules/rule-shape.rofl", 86, rule_self_contained, main, 2).
+head_pat("rules/rule-shape.rofl:86", "R,B").
+premise("rules/rule-shape.rofl:86", 0, concl, main, pos, "R,_,B,_,_").
+premise("rules/rule-shape.rofl:86", 1, rule_leaves, main, neg, "R,B").
+clause_npos("rules/rule-shape.rofl:86", 1).
+clause_nneg("rules/rule-shape.rofl:86", 1).
+clause_nbi("rules/rule-shape.rofl:86", 0).
+body_sig("rules/rule-shape.rofl:86", "concl[main](V0,_,V1,_,_), not rule_leaves[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:86", "R0[main](V0,_,V1,_,_), not R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:90", "rules/rule-shape.rofl", 90, rel_has_leaver, main, 2).
+head_pat("rules/rule-shape.rofl:90", "Rel,B").
+premise("rules/rule-shape.rofl:90", 0, neg_rel, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:90", 1, concl, main, pos, "R,Rel,B,_,_").
+premise("rules/rule-shape.rofl:90", 2, rule_leaves, main, pos, "R,B").
+clause_npos("rules/rule-shape.rofl:90", 3).
+clause_nneg("rules/rule-shape.rofl:90", 0).
+clause_nbi("rules/rule-shape.rofl:90", 0).
+body_sig("rules/rule-shape.rofl:90", "neg_rel[main](V0,V1), concl[main](V2,V0,V1,_,_), rule_leaves[main](V2,V1)").
+shape_sig("rules/rule-shape.rofl:90", "R0[main](V0,V1), R1[main](V2,V0,V1,_,_), R2[main](V2,V1)").
+clause("rules/rule-shape.rofl:91", "rules/rule-shape.rofl", 91, neg_rel_cacheable, main, 2).
+head_pat("rules/rule-shape.rofl:91", "Rel,B").
+premise("rules/rule-shape.rofl:91", 0, neg_rel_derived, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:91", 1, rel_has_leaver, main, neg, "Rel,B").
+clause_npos("rules/rule-shape.rofl:91", 1).
+clause_nneg("rules/rule-shape.rofl:91", 1).
+clause_nbi("rules/rule-shape.rofl:91", 0).
+body_sig("rules/rule-shape.rofl:91", "neg_rel_derived[main](V0,V1), not rel_has_leaver[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:91", "R0[main](V0,V1), not R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:92", "rules/rule-shape.rofl", 92, neg_rel_hot, main, 2).
+head_pat("rules/rule-shape.rofl:92", "Rel,B").
+premise("rules/rule-shape.rofl:92", 0, neg_rel_derived, main, pos, "Rel,B").
+premise("rules/rule-shape.rofl:92", 1, rel_has_leaver, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:92", 2).
+clause_nneg("rules/rule-shape.rofl:92", 0).
+clause_nbi("rules/rule-shape.rofl:92", 0).
+body_sig("rules/rule-shape.rofl:92", "neg_rel_derived[main](V0,V1), rel_has_leaver[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:92", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:95", "rules/rule-shape.rofl", 95, cold_lookup, main, 2).
+head_pat("rules/rule-shape.rofl:95", "Rel,B").
+premise("rules/rule-shape.rofl:95", 0, neg_rel_base, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:95", 1).
+clause_nneg("rules/rule-shape.rofl:95", 0).
+clause_nbi("rules/rule-shape.rofl:95", 0).
+body_sig("rules/rule-shape.rofl:95", "neg_rel_base[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:95", "R0[main](V0,V1)").
+clause("rules/rule-shape.rofl:96", "rules/rule-shape.rofl", 96, cold_cached, main, 2).
+head_pat("rules/rule-shape.rofl:96", "Rel,B").
+premise("rules/rule-shape.rofl:96", 0, neg_rel_cacheable, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:96", 1).
+clause_nneg("rules/rule-shape.rofl:96", 0).
+clause_nbi("rules/rule-shape.rofl:96", 0).
+body_sig("rules/rule-shape.rofl:96", "neg_rel_cacheable[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:96", "R0[main](V0,V1)").
+clause("rules/rule-shape.rofl:97", "rules/rule-shape.rofl", 97, must_be_hot, main, 2).
+head_pat("rules/rule-shape.rofl:97", "Rel,B").
+premise("rules/rule-shape.rofl:97", 0, neg_rel_hot, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:97", 1).
+clause_nneg("rules/rule-shape.rofl:97", 0).
+clause_nbi("rules/rule-shape.rofl:97", 0).
+body_sig("rules/rule-shape.rofl:97", "neg_rel_hot[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:97", "R0[main](V0,V1)").
+clause("rules/rule-shape.rofl:99", "rules/rule-shape.rofl", 99, neg_rel_g, main, 3).
+head_pat("rules/rule-shape.rofl:99", "Rel,B,G").
+premise("rules/rule-shape.rofl:99", 0, neg_site, main, pos, "_,_,Rel,B,G").
+clause_npos("rules/rule-shape.rofl:99", 1).
+clause_nneg("rules/rule-shape.rofl:99", 0).
+clause_nbi("rules/rule-shape.rofl:99", 0).
+body_sig("rules/rule-shape.rofl:99", "neg_site[main](_,_,V0,V1,V2)").
+shape_sig("rules/rule-shape.rofl:99", "R0[main](_,_,V0,V1,V2)").
+clause("rules/rule-shape.rofl:100", "rules/rule-shape.rofl", 100, g_lookup, main, 3).
+head_pat("rules/rule-shape.rofl:100", "G,Rel,B").
+premise("rules/rule-shape.rofl:100", 0, neg_rel_g, main, pos, "Rel,B,G").
+premise("rules/rule-shape.rofl:100", 1, cold_lookup, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:100", 2).
+clause_nneg("rules/rule-shape.rofl:100", 0).
+clause_nbi("rules/rule-shape.rofl:100", 0).
+body_sig("rules/rule-shape.rofl:100", "neg_rel_g[main](V0,V1,V2), cold_lookup[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:100", "R0[main](V0,V1,V2), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:101", "rules/rule-shape.rofl", 101, g_cached, main, 3).
+head_pat("rules/rule-shape.rofl:101", "G,Rel,B").
+premise("rules/rule-shape.rofl:101", 0, neg_rel_g, main, pos, "Rel,B,G").
+premise("rules/rule-shape.rofl:101", 1, cold_cached, main, pos, "Rel,B").
+clause_npos("rules/rule-shape.rofl:101", 2).
+clause_nneg("rules/rule-shape.rofl:101", 0).
+clause_nbi("rules/rule-shape.rofl:101", 0).
+body_sig("rules/rule-shape.rofl:101", "neg_rel_g[main](V0,V1,V2), cold_cached[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:101", "R0[main](V0,V1,V2), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:102", "rules/rule-shape.rofl", 102, g_hot, main, 3).
+head_pat("rules/rule-shape.rofl:102", "G,Rel,B").
+premise("rules/rule-shape.rofl:102", 0, neg_rel_g, main, pos, "Rel,B,G").
+premise("rules/rule-shape.rofl:102", 1, must_be_hot, main, pos, "Rel,B").
 clause_npos("rules/rule-shape.rofl:102", 2).
 clause_nneg("rules/rule-shape.rofl:102", 0).
 clause_nbi("rules/rule-shape.rofl:102", 0).
-body_sig("rules/rule-shape.rofl:102", "neg_site[main](V0,_,_,_,V1), neg_point[main](V0)").
-shape_sig("rules/rule-shape.rofl:102", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:103", "rules/rule-shape.rofl", 103, g_prefix, main, 2).
-head_pat("rules/rule-shape.rofl:103", "G,S").
-premise("rules/rule-shape.rofl:103", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:103", 1, neg_prefix, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:103", 2).
-clause_nneg("rules/rule-shape.rofl:103", 0).
-clause_nbi("rules/rule-shape.rofl:103", 0).
-body_sig("rules/rule-shape.rofl:103", "neg_site[main](V0,_,_,_,V1), neg_prefix[main](V0)").
-shape_sig("rules/rule-shape.rofl:103", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:104", "rules/rule-shape.rofl", 104, g_scan, main, 2).
-head_pat("rules/rule-shape.rofl:104", "G,S").
-premise("rules/rule-shape.rofl:104", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:104", 1, neg_unkeyed, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:104", 2).
-clause_nneg("rules/rule-shape.rofl:104", 0).
-clause_nbi("rules/rule-shape.rofl:104", 0).
-body_sig("rules/rule-shape.rofl:104", "neg_site[main](V0,_,_,_,V1), neg_unkeyed[main](V0)").
-shape_sig("rules/rule-shape.rofl:104", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:105", "rules/rule-shape.rofl", 105, g_bookvar, main, 2).
-head_pat("rules/rule-shape.rofl:105", "G,S").
-premise("rules/rule-shape.rofl:105", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:105", 1, neg_book_free, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:105", 2).
-clause_nneg("rules/rule-shape.rofl:105", 0).
-clause_nbi("rules/rule-shape.rofl:105", 0).
-body_sig("rules/rule-shape.rofl:105", "neg_site[main](V0,_,_,_,V1), neg_book_free[main](V0)").
-shape_sig("rules/rule-shape.rofl:105", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:106", "rules/rule-shape.rofl", 106, g_base, main, 2).
-head_pat("rules/rule-shape.rofl:106", "G,S").
-premise("rules/rule-shape.rofl:106", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:106", 1, cold_safe, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:106", 2).
-clause_nneg("rules/rule-shape.rofl:106", 0).
-clause_nbi("rules/rule-shape.rofl:106", 0).
-body_sig("rules/rule-shape.rofl:106", "neg_site[main](V0,_,_,_,V1), cold_safe[main](V0)").
-shape_sig("rules/rule-shape.rofl:106", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:107", "rules/rule-shape.rofl", 107, g_derived, main, 2).
-head_pat("rules/rule-shape.rofl:107", "G,S").
-premise("rules/rule-shape.rofl:107", 0, neg_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:107", 1, needs_rules, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:107", 2).
-clause_nneg("rules/rule-shape.rofl:107", 0).
-clause_nbi("rules/rule-shape.rofl:107", 0).
-body_sig("rules/rule-shape.rofl:107", "neg_site[main](V0,_,_,_,V1), needs_rules[main](V0)").
-shape_sig("rules/rule-shape.rofl:107", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:108", "rules/rule-shape.rofl", 108, g_site, main, 2).
-head_pat("rules/rule-shape.rofl:108", "G,S").
-premise("rules/rule-shape.rofl:108", 0, neg_site, main, pos, "S,_,_,_,G").
-clause_npos("rules/rule-shape.rofl:108", 1).
-clause_nneg("rules/rule-shape.rofl:108", 0).
-clause_nbi("rules/rule-shape.rofl:108", 0).
-body_sig("rules/rule-shape.rofl:108", "neg_site[main](V0,_,_,_,V1)").
-shape_sig("rules/rule-shape.rofl:108", "R0[main](V0,_,_,_,V1)").
-clause("rules/rule-shape.rofl:129", "rules/rule-shape.rofl", 129, rule_leaves, main, 2).
-head_pat("rules/rule-shape.rofl:129", "R,B").
-premise("rules/rule-shape.rofl:129", 0, concl, main, pos, "R,_,B,_,_").
-premise("rules/rule-shape.rofl:129", 1, reads, main, pos, "R,_,B2").
-clause_npos("rules/rule-shape.rofl:129", 2).
-clause_nneg("rules/rule-shape.rofl:129", 0).
-clause_nbi("rules/rule-shape.rofl:129", 2).
-body_sig("rules/rule-shape.rofl:129", "concl[main](V0,_,V1,_,_), reads[main](V0,_,V2), V2 != V1, V2 != \"$kernel\"").
-shape_sig("rules/rule-shape.rofl:129", "R0[main](V0,_,V1,_,_), R1[main](V0,_,V2), V2 != V1, V2 != \"$kernel\"").
-clause("rules/rule-shape.rofl:130", "rules/rule-shape.rofl", 130, rule_self_contained, main, 2).
-head_pat("rules/rule-shape.rofl:130", "R,B").
-premise("rules/rule-shape.rofl:130", 0, concl, main, pos, "R,_,B,_,_").
-premise("rules/rule-shape.rofl:130", 1, rule_leaves, main, neg, "R,B").
-clause_npos("rules/rule-shape.rofl:130", 1).
-clause_nneg("rules/rule-shape.rofl:130", 1).
-clause_nbi("rules/rule-shape.rofl:130", 0).
-body_sig("rules/rule-shape.rofl:130", "concl[main](V0,_,V1,_,_), not rule_leaves[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:130", "R0[main](V0,_,V1,_,_), not R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:135", "rules/rule-shape.rofl", 135, rel_has_leaver, main, 2).
-head_pat("rules/rule-shape.rofl:135", "Rel,B").
-premise("rules/rule-shape.rofl:135", 0, neg_rel, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:135", 1, concl, main, pos, "R,Rel,B,_,_").
-premise("rules/rule-shape.rofl:135", 2, rule_leaves, main, pos, "R,B").
-clause_npos("rules/rule-shape.rofl:135", 3).
-clause_nneg("rules/rule-shape.rofl:135", 0).
-clause_nbi("rules/rule-shape.rofl:135", 0).
-body_sig("rules/rule-shape.rofl:135", "neg_rel[main](V0,V1), concl[main](V2,V0,V1,_,_), rule_leaves[main](V2,V1)").
-shape_sig("rules/rule-shape.rofl:135", "R0[main](V0,V1), R1[main](V2,V0,V1,_,_), R2[main](V2,V1)").
-clause("rules/rule-shape.rofl:136", "rules/rule-shape.rofl", 136, neg_rel_cacheable, main, 2).
-head_pat("rules/rule-shape.rofl:136", "Rel,B").
-premise("rules/rule-shape.rofl:136", 0, neg_rel_derived, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:136", 1, rel_has_leaver, main, neg, "Rel,B").
-clause_npos("rules/rule-shape.rofl:136", 1).
-clause_nneg("rules/rule-shape.rofl:136", 1).
-clause_nbi("rules/rule-shape.rofl:136", 0).
-body_sig("rules/rule-shape.rofl:136", "neg_rel_derived[main](V0,V1), not rel_has_leaver[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:136", "R0[main](V0,V1), not R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:137", "rules/rule-shape.rofl", 137, neg_rel_hot, main, 2).
-head_pat("rules/rule-shape.rofl:137", "Rel,B").
-premise("rules/rule-shape.rofl:137", 0, neg_rel_derived, main, pos, "Rel,B").
-premise("rules/rule-shape.rofl:137", 1, rel_has_leaver, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:137", 2).
-clause_nneg("rules/rule-shape.rofl:137", 0).
-clause_nbi("rules/rule-shape.rofl:137", 0).
-body_sig("rules/rule-shape.rofl:137", "neg_rel_derived[main](V0,V1), rel_has_leaver[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:137", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:140", "rules/rule-shape.rofl", 140, cold_lookup, main, 2).
-head_pat("rules/rule-shape.rofl:140", "Rel,B").
-premise("rules/rule-shape.rofl:140", 0, neg_rel_base, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:140", 1).
-clause_nneg("rules/rule-shape.rofl:140", 0).
-clause_nbi("rules/rule-shape.rofl:140", 0).
-body_sig("rules/rule-shape.rofl:140", "neg_rel_base[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:140", "R0[main](V0,V1)").
-clause("rules/rule-shape.rofl:141", "rules/rule-shape.rofl", 141, cold_cached, main, 2).
-head_pat("rules/rule-shape.rofl:141", "Rel,B").
-premise("rules/rule-shape.rofl:141", 0, neg_rel_cacheable, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:141", 1).
-clause_nneg("rules/rule-shape.rofl:141", 0).
-clause_nbi("rules/rule-shape.rofl:141", 0).
-body_sig("rules/rule-shape.rofl:141", "neg_rel_cacheable[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:141", "R0[main](V0,V1)").
-clause("rules/rule-shape.rofl:142", "rules/rule-shape.rofl", 142, must_be_hot, main, 2).
-head_pat("rules/rule-shape.rofl:142", "Rel,B").
-premise("rules/rule-shape.rofl:142", 0, neg_rel_hot, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:142", 1).
-clause_nneg("rules/rule-shape.rofl:142", 0).
-clause_nbi("rules/rule-shape.rofl:142", 0).
-body_sig("rules/rule-shape.rofl:142", "neg_rel_hot[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:142", "R0[main](V0,V1)").
-clause("rules/rule-shape.rofl:144", "rules/rule-shape.rofl", 144, neg_rel_g, main, 3).
-head_pat("rules/rule-shape.rofl:144", "Rel,B,G").
-premise("rules/rule-shape.rofl:144", 0, neg_site, main, pos, "_,_,Rel,B,G").
-clause_npos("rules/rule-shape.rofl:144", 1).
-clause_nneg("rules/rule-shape.rofl:144", 0).
-clause_nbi("rules/rule-shape.rofl:144", 0).
-body_sig("rules/rule-shape.rofl:144", "neg_site[main](_,_,V0,V1,V2)").
-shape_sig("rules/rule-shape.rofl:144", "R0[main](_,_,V0,V1,V2)").
-clause("rules/rule-shape.rofl:145", "rules/rule-shape.rofl", 145, g_lookup, main, 3).
-head_pat("rules/rule-shape.rofl:145", "G,Rel,B").
-premise("rules/rule-shape.rofl:145", 0, neg_rel_g, main, pos, "Rel,B,G").
-premise("rules/rule-shape.rofl:145", 1, cold_lookup, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:145", 2).
-clause_nneg("rules/rule-shape.rofl:145", 0).
-clause_nbi("rules/rule-shape.rofl:145", 0).
-body_sig("rules/rule-shape.rofl:145", "neg_rel_g[main](V0,V1,V2), cold_lookup[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:145", "R0[main](V0,V1,V2), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:146", "rules/rule-shape.rofl", 146, g_cached, main, 3).
-head_pat("rules/rule-shape.rofl:146", "G,Rel,B").
-premise("rules/rule-shape.rofl:146", 0, neg_rel_g, main, pos, "Rel,B,G").
-premise("rules/rule-shape.rofl:146", 1, cold_cached, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:146", 2).
-clause_nneg("rules/rule-shape.rofl:146", 0).
-clause_nbi("rules/rule-shape.rofl:146", 0).
-body_sig("rules/rule-shape.rofl:146", "neg_rel_g[main](V0,V1,V2), cold_cached[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:146", "R0[main](V0,V1,V2), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:147", "rules/rule-shape.rofl", 147, g_hot, main, 3).
-head_pat("rules/rule-shape.rofl:147", "G,Rel,B").
-premise("rules/rule-shape.rofl:147", 0, neg_rel_g, main, pos, "Rel,B,G").
-premise("rules/rule-shape.rofl:147", 1, must_be_hot, main, pos, "Rel,B").
-clause_npos("rules/rule-shape.rofl:147", 2).
-clause_nneg("rules/rule-shape.rofl:147", 0).
-clause_nbi("rules/rule-shape.rofl:147", 0).
-body_sig("rules/rule-shape.rofl:147", "neg_rel_g[main](V0,V1,V2), must_be_hot[main](V0,V1)").
-shape_sig("rules/rule-shape.rofl:147", "R0[main](V0,V1,V2), R1[main](V0,V1)").
-clause("rules/rule-shape.rofl:160", "rules/rule-shape.rofl", 160, cross_product, main, 1).
-head_pat("rules/rule-shape.rofl:160", "S").
-premise("rules/rule-shape.rofl:160", 0, pos_site, main, pos, "S,_,_,_,_").
-premise("rules/rule-shape.rofl:160", 1, pos_nvars, main, pos, "S,N").
-premise("rules/rule-shape.rofl:160", 3, pos_first, main, neg, "S").
-premise("rules/rule-shape.rofl:160", 4, pos_shares, main, neg, "S").
-clause_npos("rules/rule-shape.rofl:160", 2).
-clause_nneg("rules/rule-shape.rofl:160", 2).
-clause_nbi("rules/rule-shape.rofl:160", 1).
-body_sig("rules/rule-shape.rofl:160", "pos_site[main](V0,_,_,_,_), pos_nvars[main](V0,V1), V1 > 0, not pos_first[main](V0), not pos_shares[main](V0)").
-shape_sig("rules/rule-shape.rofl:160", "R0[main](V0,_,_,_,_), R1[main](V0,V1), V1 > 0, not R2[main](V0), not R3[main](V0)").
-clause("rules/rule-shape.rofl:165", "rules/rule-shape.rofl", 165, pos_ground, main, 1).
-head_pat("rules/rule-shape.rofl:165", "S").
-premise("rules/rule-shape.rofl:165", 0, pos_nvars, main, pos, "S,0").
-clause_npos("rules/rule-shape.rofl:165", 1).
-clause_nneg("rules/rule-shape.rofl:165", 0).
-clause_nbi("rules/rule-shape.rofl:165", 0).
-body_sig("rules/rule-shape.rofl:165", "pos_nvars[main](V0,0)").
-shape_sig("rules/rule-shape.rofl:165", "R0[main](V0,0)").
-clause("rules/rule-shape.rofl:166", "rules/rule-shape.rofl", 166, pos_joined, main, 1).
-head_pat("rules/rule-shape.rofl:166", "S").
-premise("rules/rule-shape.rofl:166", 0, pos_shares, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:166", 1).
-clause_nneg("rules/rule-shape.rofl:166", 0).
-clause_nbi("rules/rule-shape.rofl:166", 0).
-body_sig("rules/rule-shape.rofl:166", "pos_shares[main](V0)").
-shape_sig("rules/rule-shape.rofl:166", "R0[main](V0)").
-clause("rules/rule-shape.rofl:169", "rules/rule-shape.rofl", 169, rule_cross, main, 1).
-head_pat("rules/rule-shape.rofl:169", "R").
-premise("rules/rule-shape.rofl:169", 0, pos_site, main, pos, "S,R,_,_,_").
-premise("rules/rule-shape.rofl:169", 1, cross_product, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:169", 2).
-clause_nneg("rules/rule-shape.rofl:169", 0).
-clause_nbi("rules/rule-shape.rofl:169", 0).
-body_sig("rules/rule-shape.rofl:169", "pos_site[main](V0,V1,_,_,_), cross_product[main](V0)").
-shape_sig("rules/rule-shape.rofl:169", "R0[main](V0,V1,_,_,_), R1[main](V0)").
-clause("rules/rule-shape.rofl:170", "rules/rule-shape.rofl", 170, rule_cross_at, main, 2).
-head_pat("rules/rule-shape.rofl:170", "R,Rel").
-premise("rules/rule-shape.rofl:170", 0, pos_site, main, pos, "S,R,Rel,_,_").
-premise("rules/rule-shape.rofl:170", 1, cross_product, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:170", 2).
-clause_nneg("rules/rule-shape.rofl:170", 0).
-clause_nbi("rules/rule-shape.rofl:170", 0).
-body_sig("rules/rule-shape.rofl:170", "pos_site[main](V0,V1,V2,_,_), cross_product[main](V0)").
-shape_sig("rules/rule-shape.rofl:170", "R0[main](V0,V1,V2,_,_), R1[main](V0)").
-clause("rules/rule-shape.rofl:171", "rules/rule-shape.rofl", 171, g_cross, main, 2).
-head_pat("rules/rule-shape.rofl:171", "G,S").
-premise("rules/rule-shape.rofl:171", 0, pos_site, main, pos, "S,_,_,_,G").
-premise("rules/rule-shape.rofl:171", 1, cross_product, main, pos, "S").
-clause_npos("rules/rule-shape.rofl:171", 2).
-clause_nneg("rules/rule-shape.rofl:171", 0).
-clause_nbi("rules/rule-shape.rofl:171", 0).
-body_sig("rules/rule-shape.rofl:171", "pos_site[main](V0,_,_,_,V1), cross_product[main](V0)").
-shape_sig("rules/rule-shape.rofl:171", "R0[main](V0,_,_,_,V1), R1[main](V0)").
-clause("rules/rule-shape.rofl:172", "rules/rule-shape.rofl", 172, g_pos, main, 2).
-head_pat("rules/rule-shape.rofl:172", "G,S").
-premise("rules/rule-shape.rofl:172", 0, pos_site, main, pos, "S,_,_,_,G").
-clause_npos("rules/rule-shape.rofl:172", 1).
-clause_nneg("rules/rule-shape.rofl:172", 0).
-clause_nbi("rules/rule-shape.rofl:172", 0).
-body_sig("rules/rule-shape.rofl:172", "pos_site[main](V0,_,_,_,V1)").
-shape_sig("rules/rule-shape.rofl:172", "R0[main](V0,_,_,_,V1)").
+body_sig("rules/rule-shape.rofl:102", "neg_rel_g[main](V0,V1,V2), must_be_hot[main](V0,V1)").
+shape_sig("rules/rule-shape.rofl:102", "R0[main](V0,V1,V2), R1[main](V0,V1)").
+clause("rules/rule-shape.rofl:111", "rules/rule-shape.rofl", 111, cross_product, main, 1).
+head_pat("rules/rule-shape.rofl:111", "S").
+premise("rules/rule-shape.rofl:111", 0, pos_site, main, pos, "S,_,_,_,_").
+premise("rules/rule-shape.rofl:111", 1, pos_nvars, main, pos, "S,N").
+premise("rules/rule-shape.rofl:111", 3, pos_first, main, neg, "S").
+premise("rules/rule-shape.rofl:111", 4, pos_shares, main, neg, "S").
+clause_npos("rules/rule-shape.rofl:111", 2).
+clause_nneg("rules/rule-shape.rofl:111", 2).
+clause_nbi("rules/rule-shape.rofl:111", 1).
+body_sig("rules/rule-shape.rofl:111", "pos_site[main](V0,_,_,_,_), pos_nvars[main](V0,V1), V1 > 0, not pos_first[main](V0), not pos_shares[main](V0)").
+shape_sig("rules/rule-shape.rofl:111", "R0[main](V0,_,_,_,_), R1[main](V0,V1), V1 > 0, not R2[main](V0), not R3[main](V0)").
+clause("rules/rule-shape.rofl:115", "rules/rule-shape.rofl", 115, pos_ground, main, 1).
+head_pat("rules/rule-shape.rofl:115", "S").
+premise("rules/rule-shape.rofl:115", 0, pos_nvars, main, pos, "S,0").
+clause_npos("rules/rule-shape.rofl:115", 1).
+clause_nneg("rules/rule-shape.rofl:115", 0).
+clause_nbi("rules/rule-shape.rofl:115", 0).
+body_sig("rules/rule-shape.rofl:115", "pos_nvars[main](V0,0)").
+shape_sig("rules/rule-shape.rofl:115", "R0[main](V0,0)").
+clause("rules/rule-shape.rofl:116", "rules/rule-shape.rofl", 116, pos_joined, main, 1).
+head_pat("rules/rule-shape.rofl:116", "S").
+premise("rules/rule-shape.rofl:116", 0, pos_shares, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:116", 1).
+clause_nneg("rules/rule-shape.rofl:116", 0).
+clause_nbi("rules/rule-shape.rofl:116", 0).
+body_sig("rules/rule-shape.rofl:116", "pos_shares[main](V0)").
+shape_sig("rules/rule-shape.rofl:116", "R0[main](V0)").
+clause("rules/rule-shape.rofl:119", "rules/rule-shape.rofl", 119, rule_cross, main, 1).
+head_pat("rules/rule-shape.rofl:119", "R").
+premise("rules/rule-shape.rofl:119", 0, pos_site, main, pos, "S,R,_,_,_").
+premise("rules/rule-shape.rofl:119", 1, cross_product, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:119", 2).
+clause_nneg("rules/rule-shape.rofl:119", 0).
+clause_nbi("rules/rule-shape.rofl:119", 0).
+body_sig("rules/rule-shape.rofl:119", "pos_site[main](V0,V1,_,_,_), cross_product[main](V0)").
+shape_sig("rules/rule-shape.rofl:119", "R0[main](V0,V1,_,_,_), R1[main](V0)").
+clause("rules/rule-shape.rofl:120", "rules/rule-shape.rofl", 120, rule_cross_at, main, 2).
+head_pat("rules/rule-shape.rofl:120", "R,Rel").
+premise("rules/rule-shape.rofl:120", 0, pos_site, main, pos, "S,R,Rel,_,_").
+premise("rules/rule-shape.rofl:120", 1, cross_product, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:120", 2).
+clause_nneg("rules/rule-shape.rofl:120", 0).
+clause_nbi("rules/rule-shape.rofl:120", 0).
+body_sig("rules/rule-shape.rofl:120", "pos_site[main](V0,V1,V2,_,_), cross_product[main](V0)").
+shape_sig("rules/rule-shape.rofl:120", "R0[main](V0,V1,V2,_,_), R1[main](V0)").
+clause("rules/rule-shape.rofl:121", "rules/rule-shape.rofl", 121, g_cross, main, 2).
+head_pat("rules/rule-shape.rofl:121", "G,S").
+premise("rules/rule-shape.rofl:121", 0, pos_site, main, pos, "S,_,_,_,G").
+premise("rules/rule-shape.rofl:121", 1, cross_product, main, pos, "S").
+clause_npos("rules/rule-shape.rofl:121", 2).
+clause_nneg("rules/rule-shape.rofl:121", 0).
+clause_nbi("rules/rule-shape.rofl:121", 0).
+body_sig("rules/rule-shape.rofl:121", "pos_site[main](V0,_,_,_,V1), cross_product[main](V0)").
+shape_sig("rules/rule-shape.rofl:121", "R0[main](V0,_,_,_,V1), R1[main](V0)").
+clause("rules/rule-shape.rofl:122", "rules/rule-shape.rofl", 122, g_pos, main, 2).
+head_pat("rules/rule-shape.rofl:122", "G,S").
+premise("rules/rule-shape.rofl:122", 0, pos_site, main, pos, "S,_,_,_,G").
+clause_npos("rules/rule-shape.rofl:122", 1).
+clause_nneg("rules/rule-shape.rofl:122", 0).
+clause_nbi("rules/rule-shape.rofl:122", 0).
+body_sig("rules/rule-shape.rofl:122", "pos_site[main](V0,_,_,_,V1)").
+shape_sig("rules/rule-shape.rofl:122", "R0[main](V0,_,_,_,V1)").
 clause("rules/self-audit.rofl:68", "rules/self-audit.rofl", 68, forged, audit, 1).
 head_pat("rules/self-audit.rofl:68", "$fact(R,P,A)").
 premise("rules/self-audit.rofl:68", 0, asserted_by, main, pos, "$fact(R,P,A),Who,_").
@@ -31429,10 +31348,7 @@ named_in_ts(str_pre).
 named_in_ts(test).
 named_in_ts(pack).
 named_in_ts(requires).
-named_in_ts(needs).
 named_in_ts(target).
-named_in_ts(all).
-named_in_ts(safe).
 named_in_ts(code_line).
 named_in_ts(cat_of).
 named_in_ts(dirty).
@@ -31447,10 +31363,9 @@ named_in_ts(activate).
 named_in_ts(str_seg).
 named_in_ts(limit).
 named_in_ts(parse).
-named_in_ts(args).
+named_in_ts(must_index).
 named_in_ts(ast_file).
 named_in_ts(cooled).
-named_in_ts(must_index).
 named_in_ts(read).
 named_in_ts(write).
 named_in_ts(total).
@@ -31590,6 +31505,7 @@ named_in_ts(contains).
 named_in_ts(broken).
 named_in_ts(twin).
 named_in_ts(classify).
+named_in_ts(safe).
 named_in_ts(some).
 named_in_ts(derived_by).
 named_in_ts(one).
@@ -33983,6 +33899,8 @@ atom_seen(replace).
 atom_seen(w_value_layer_written_twice).
 atom_seen(w_relations_nothing_reads).
 atom_seen(w_implied_premises_priced).
+atom_seen(w_two_closures_of_work_needs).
+atom_seen(w_ingest_declares_half_its_host_relations).
 atom_seen(librarian).
 atom_seen(spec).
 atom_seen(limits).
