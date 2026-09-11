@@ -149,3 +149,17 @@ because it lives in `facts/`; the head's variables were not counted when
 deciding what a wildcard was, so a bound `File` read as droppable; and the
 atom census took only a fact's first argument, which reported `not_modelled`
 and `import_declaration` as relations nothing defines (228 rows, then 52).
+
+## Afterwards, the same day
+
+Both files were cut to the notes that explain a decision plus the list of
+what the pack cannot see: js-effects 791 to 222 comment lines (72 % to 42 %),
+js-callgraph 570 to 135 (66 % to 31 %). No rule text moved, so every golden
+is unchanged and every mutant anchor still holds. The instrument re-run on the
+result: orphan blocks 0 and 0, dangling names 0 and 1 (the deliberate
+`ts_non_null_expression`), section and list numbering clean. What it still
+reports is on the clause side and is left for a decision: `top_call` =
+`top_site`, the two `*_subject` renames, the implied `member_node_v`, and the
+four unread relations. `caught_here` was repaired at the source in the same
+branch (`catches_via`), which is the one comment the owner asked to have
+written out of the file rather than explained beside it.

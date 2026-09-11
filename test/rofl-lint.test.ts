@@ -63,14 +63,16 @@ test('positive controls: the rows the instrument was built to find', () => {
   const ef = '"rules/js-effects.rofl"';
   // one body, two heads — `top_call` and `top_site` are the same rule
   assert.equal(rows(r, `twin(_, _, top_call, top_site, ${cg})`).length, 1);
-  // the resolution tiers moved to rules/js-dataflow.rofl and left their prose
-  assert.ok(rows(r, `orphan_block(_, ${cg}, 449, _)`).length === 1, 'TIER 1 paragraph is an orphan');
-  assert.ok(rows(r, `orphan_block(_, ${cg}, _, _)`).length >= 10, 'the whole tier block is orphaned');
-  // `fn_binding` "went when the resolution tiers did" and is still cited
-  assert.equal(rows(r, `dangling_bare(_, ${cg}, _, fn_binding)`).length, 1);
-  // section 6 twice, and the limitations list restarting at 6
-  assert.equal(rows(r, `section_twice(${ef}, 6, _, _)`).length, 1);
-  assert.equal(rows(r, `list_repeats(_, ${ef}, 6, _, _)`).length, 1);
+  // The comment-side controls — twelve orphan tier paragraphs in js-callgraph,
+  // `fn_binding` cited and defined nowhere, section 6 twice and a list
+  // restarting at 6 in js-effects — were repaired the same day the instrument
+  // found them (both files were cut to the notes that explain a decision), so
+  // the rows are asserted ABSENT now, with the mutants below as the liveness.
+  assert.deepEqual(rows(r, `orphan_block(_, ${cg}, _, _)`), []);
+  assert.deepEqual(rows(r, `orphan_block(_, ${ef}, _, _)`), []);
+  assert.deepEqual(rows(r, `dangling_bare(_, ${cg}, _, fn_binding)`), []);
+  assert.deepEqual(rows(r, `section_twice(${ef}, _, _, _)`), []);
+  assert.deepEqual(rows(r, `list_repeats(_, ${ef}, _, _, _)`), []);
   // a rename, an implied premise, an unread relation
   assert.equal(rows(r, `alias(_, ${ef}, eff_subject, fn_node)`).length, 1);
   assert.equal(rows(r, `implied(_, ${ef}, eff_heap_of, member_node_v, eff_obj_traced)`).length, 1);
