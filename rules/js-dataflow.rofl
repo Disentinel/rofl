@@ -408,7 +408,7 @@ may_be_node[flow](C, N) :- resolves[code](C, F), returns[flow](F, E), may_be_nod
 --
 -- An object literal and a class are identical to the question "can it answer
 -- `.k`". `member_value` names the node a member HOLDS and judges nothing about
--- it; what that node may be is `may_be_*`, one step later.
+-- it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 obj_like[flow](O) :- ast_node[code](O, object_expression, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).

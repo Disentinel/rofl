@@ -10,7 +10,7 @@
 -- 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), and
 -- the vocabulary is closed: `guard_unmodelled[audit]` reports a kind that
 -- branches and is not here. `&&`, `||`, `??` all short-circuit, so the kind
--- suffices. `do_while` is NOT here: its body runs before the test. A `for`'s
+-- suffices. `do_while_statement` is NOT here: its body runs before the test. A `for`'s
 -- `update` runs zero times when the test fails at once. A default value (the
 -- `right` of an `assignment_pattern`) runs only when the argument is absent;
 -- the `left` is a name and not conditional. Of a `try` only the HANDLER is a
@@ -140,7 +140,7 @@ completion_unreached[audit](K) :- completion_kind(K), ast_node[code](_, K, _, _)
 
 -- Seven kinds can hold a `return` and still complete normally, declared rather
 -- than left to fall through the block arm: a loop body may run zero times (its
--- condition); `do_while` and `switch` need the completion REASON — a
+-- condition); `do_while_statement` and `switch` need the completion REASON — a
 -- `continue` or `break` completes the loop or switch normally — which this
 -- relation does not carry; a `try`'s handler may swallow the transfer and
 -- `finally` may override it.
@@ -457,7 +457,7 @@ no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File, _),
 -- 8. THE GATES. Every kind that transfers control carries a MECHANISM, and
 -- mechanisms are not one bucket: `skip_arm`; `short_circuit` (`a?.b()` guards
 -- the site itself, not a child); `suspend`; `abrupt`; `accessor_call`;
--- `loop_at_least_once` (`do_while`, waived: its body always runs);
+-- `loop_at_least_once` (`do_while_statement`, waived: its body always runs);
 -- `label_boundary` (a label RECEIVES a transfer); `definition_time_call` (a
 -- decorator runs once, at definition); `per_construction` (a field
 -- initialiser); `iterator_call`. `spread_element` and `for_of_statement` carry
