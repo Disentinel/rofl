@@ -888,8 +888,22 @@ hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
 try_of[code](TS, F)        :- ast_node[code](TS, try_statement, _, _), nearest_v[flow](F, TS).
 in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
                               ast_child[code](TS, block, 0, B), ast_within[code](B, N).
+-- A TRY DISCHARGES THROUGH ITS HANDLER, AND A FINALIZER DISCHARGES NOTHING:
+-- `try { throw e } finally { close() }` runs `close` on the way out and the
+-- throw continues. Babel's `TryStatement` carries `handler` and `finalizer`,
+-- both nullable, so WHICH child makes a try catch is a row and not a premise,
+-- and `finalizer`'s absence from the table is the statement. Until 2026-09-11
+-- this rule read the block alone; the corpus had eleven try statements and
+-- eleven handlers, so the defect had no site
+-- (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does) and
+-- the effect layer carried the guard by itself. `leaky` in alpha.mjs is the
+-- site now, and the guard lives here, where every reader of `caught_here` gets it.
+edb(catches_via).
+catches_via(try_statement, handler).
+try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _, _),
+                              ast_child[code](TS, Field, 0, _).
 caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
-                              nearest_v[flow](F, N).
+                              nearest_v[flow](F, N), try_catches[code](TS).
 
 -- A THROW THAT LEAVES ITS FUNCTION. Note `rethrown`: its throw sits in a
 -- HANDLER, and a clause does not catch what its own handler throws — the

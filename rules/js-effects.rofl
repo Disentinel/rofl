@@ -110,27 +110,18 @@ eff_label_unnamed[audit](L, H) :- eff_label(L, H), not eff_row(_, L, H).
 -- needed a join operation at every step, and a set needs none.
 
 -- ---------------------------------------------------------------------------
--- EXN. Seeded from a `throw` that its own function does not catch, which is the
--- same seed `throws_outright[code]` uses — deliberately, so that the exn
--- projection of this layer can be compared row for row against `may_throw`.
---
--- AND THE HANDLER TEST IS STRICTER HERE THAN THE ONE IT COPIES, which is a
--- repair rather than a divergence. `caught_here[code]` asks whether a node sits
--- in the `block` of a `try` in the same function and does NOT ask whether that
--- try has a HANDLER — so `try { risky(); } finally { close(); }` would be
--- reported as catching, and it catches nothing. There is no such site in this
--- corpus (11 try statements, 11 handlers, and the one `finalizer` sits on a try
--- that also has a handler), so the two relations agree today and the agreement
--- is not evidence that the guard is unnecessary. It is
--- `f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does`.
-eff_catch_here[code](N) :- caught_here[code](N), in_try_block[code](TS, N),
-                           ast_child[code](TS, handler, 0, _).
+-- EXN. Seeded from a `throw` that its own function does not catch — the same
+-- seed `throws_outright[code]` uses, so the exn projection of this layer can be
+-- compared row for row against `may_throw`. What a try discharges through is
+-- `catches_via` in rules/js-controlflow.rofl: the handler, and never a
+-- finalizer alone. That guard sat here, on this relation only, from 2026-09-09
+-- until the corpus gained a site (`leaky` in alpha.mjs) and it moved to the
+-- source on 2026-09-11.
+eff_catch_here[code](N) :- caught_here[code](N).
 
--- ...AND THE ABSENCE IS A WITNESS RATHER THAN A SENTENCE. Two arms of ONE
--- relation, so that "no try in this corpus lacks a handler" can be written as
--- `witness_absent` with a control that is the same literal with ONE CONSTANT
--- swapped — which is what the witness format demands and what a pair of
--- differently-named relations could only fake.
+-- ...the two arms of ONE relation, so that "how many try statements lack a
+-- handler" is a query with a control that is the same literal with ONE
+-- CONSTANT swapped — the form a witness demands.
 eff_try_arm[flow](T, handled)   :- ast_node[code](T, try_statement, _, _),
                                    ast_child[code](T, handler, 0, _).
 eff_try_arm[flow](T, unhandled) :- ast_node[code](T, try_statement, _, _),
@@ -1010,12 +1001,11 @@ eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node_v[flow](Y),
 --
 -- The same equality one level over: `eff_runs_in` for the part is what
 -- `nearest_v` is for the function, so the two literals below are `caught_here`'s
--- two literals with the walk swapped. The handler test is the strict one section
--- 2 already argues for — a `finally` with no `catch` discharges nothing.
+-- two literals with the walk swapped, and `try_catches` is the same table.
 eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
                            ast_node[code](TS, try_statement, _, _),
                            in_try_block[code](TS, N), eff_runs_in[flow](P, N),
-                           ast_child[code](TS, handler, 0, _).
+                           try_catches[code](TS).
 
 -- THE TWO CARRIERS. Each is a join over its parts (arm one) closed over the
 -- call graph (arm two), and arm two is `eff_latent`'s propagation with

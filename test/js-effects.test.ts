@@ -259,14 +259,17 @@ test('WHICH LABELS THIS CORPUS DOES NOT EXERCISE, by name', () => {
     ['ndet/none', 'write/global']);
 });
 
-test('a try with no handler catches nothing — and there is no such site here', () => {
+test('a try with no handler catches nothing — `leaky` is the site, and both layers agree', () => {
   const w = base();
-  // f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does. The
-  // absence carries its control, which is the same literal with ONE CONSTANT
-  // swapped — the form facts/findings.rofl's `witness_absent` demands.
-  assert.deepEqual(w.binds('eff_try_arm[flow](T, unhandled)'), []);
-  assert.ok(w.n('eff_try_arm[flow](T, handled)') >= 1,
-    'the control is live: this world can answer the question');
+  // f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does: until
+  // 2026-09-11 this asserted the ABSENCE of such a site. `leaky` in alpha.mjs
+  // is one now, `caught_here` reads `catches_via`, and the exn oracle holds.
+  assert.equal(w.n('eff_try_arm[flow](T, unhandled)'), 1, 'one try with only a finalizer');
+  assert.ok(w.n('eff_try_arm[flow](T, handled)') >= 1, 'the control is live');
+  const leaky = w.q('fn_name[code](F, "leaky")').map(([f]) => f)[0];
+  assert.ok(leaky, 'positive control: the fixture is in the corpus');
+  assert.equal(w.n(`eff_latent[flow](${leaky}, exn, none)`), 1, 'its throw leaves it');
+  assert.equal(w.n(`may_throw[code](${leaky})`), 1, 'and the control-flow layer says so too');
 });
 
 // ===========================================================================
@@ -605,9 +608,10 @@ unknown_because(js, call_expression, s_eff_unmapped, effect, not_yet).
 //     difference lives in the other seven. It was a survivor until
 //     `eff_swallowed[audit]` was written for it, which is the rule that exists
 //     because the mutant did.
-//   * M3 — the try with no handler — SURVIVES, and it is not a hole in the
-//     check: it is a defect in `caught_here` with no site in this corpus. It is
-//     recorded as a finding with a live control rather than repaired blind.
+//   * M3 — the try with no handler — SURVIVED until 2026-09-11, when `leaky`
+//     entered the corpus and the guard moved into `caught_here` itself. It is
+//     killed by the corpus now, and the exn oracle is still blind to it,
+//     because `may_throw` stands on the same relation.
 
 mutant('MUTANT M1: dropping the discharge entirely — the oracle kills it', () => {
   // Targets: that a handler discharges anything at all.
@@ -631,18 +635,20 @@ mutant('MUTANT M2: a LABEL-BLIND discharge — the exn oracle cannot see it', ()
     'KILLED by eff_swallowed, which exists because this mutant survived everything else');
 });
 
-mutant('MUTANT M3: `caught_here` with no handler test — SURVIVES, and it is a finding', () => {
-  // Targets: the repair `eff_catch_here` makes over `caught_here`. It cannot be
-  // killed by this corpus, because all eleven try statements have a handler —
-  // which is the finding, measured, with `eff_try_arm` as its live control.
-  const m = build([{ file: EFF_RULES,
-    find: `eff_catch_here[code](N) :- caught_here[code](N), in_try_block[code](TS, N),
-                           ast_child[code](TS, handler, 0, _).`,
-    replace: 'eff_catch_here[code](N) :- caught_here[code](N).' }]);
-  assert.deepEqual(m.binds('eff_exn_only[audit](F)'), []);
-  assert.deepEqual(m.binds('eff_swallowed[audit](F, C, L, H)'), []);
-  assert.equal(m.n('eff_catch_here[code](N)'), base().n('eff_catch_here[code](N)'),
-    'SURVIVES by the corpus: not one try in these five files lacks a handler');
+mutant('MUTANT M3: `caught_here` without its handler test — KILLED by `leaky`, unseen by the oracle', () => {
+  // Targets: the `try_catches` premise of `caught_here` in
+  // rules/js-controlflow.rofl, which both exception layers now stand on.
+  const m = build([{ file: 'rules/js-controlflow.rofl',
+    find: 'nearest_v[flow](F, N), try_catches[code](TS).',
+    replace: 'nearest_v[flow](F, N).' }]);
+  const b = base();
+  const leaky = (w: World) => w.q('fn_name[code](F, "leaky")').map(([f]) => f)[0];
+  assert.equal(b.n(`eff_latent[flow](${leaky(b)}, exn, none)`), 1, 'positive control');
+  assert.equal(m.n(`eff_latent[flow](${leaky(m)}, exn, none)`), 0,
+    'KILLED: a finalizer is read as a handler and the throw is swallowed');
+  assert.deepEqual(m.binds('eff_exn_only[audit](F)'), [],
+    'and the exn oracle cannot see it: may_throw lost the same row');
+  assert.deepEqual(m.binds('may_throw_only[audit](F)'), []);
 });
 
 mutant('MUTANT M4: the heap arms swapped — the unexercised-label set kills it', () => {
@@ -1094,7 +1100,7 @@ mutant('MUTANT M11: the class-part handler dropped — survives ROW FOR ROW, die
     find: `eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
                            ast_node[code](TS, try_statement, _, _),
                            in_try_block[code](TS, N), eff_runs_in[flow](P, N),
-                           ast_child[code](TS, handler, 0, _).`,
+                           try_catches[code](TS).`,
     replace: '' };
   const m = build([mut]);
   assert.equal(m.n('eff_catch_here[code](N)'), base().n('eff_catch_here[code](N)'),

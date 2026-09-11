@@ -661,6 +661,34 @@ function rethrown(n) {
   }
 }
 
+// A TRY WITH ONLY A FINALLY CATCHES NOTHING. `leaky` throws inside a try whose
+// only clause is a finalizer: `unfinished` runs on the way out and the throw
+// leaves `leaky`, to be caught one level up in `useLeaky`. Added 2026-09-11 with
+// the repair of `caught_here` — until then the corpus had eleven try statements
+// and eleven handlers, so the defect
+// (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does) had no
+// site and the two exception layers agreed by accident.
+function unfinished(n) {
+  trace();
+  return n;
+}
+function leaky(n) {
+  trace();
+  try {
+    throw new Error('leaky ' + n);
+  } finally {
+    unfinished(n);
+  }
+}
+function useLeaky(n) {
+  trace();
+  try {
+    return leaky(n);
+  } catch {
+    return unfinished(n) + 1;
+  }
+}
+
 // AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX — queue item w_cf_accessor, and
 // the corpus contained ZERO accessors: the `kind` attribute the scanner emits
 // for every method held only `method` and `constructor`. Fourth item running
@@ -1472,6 +1500,7 @@ export async function main() {
     useNested(1),
     useWithReturn(1),
     rethrown(1),
+    useLeaky(1),
     useCaught(1),
     useGauge(1),
     useShim(1),

@@ -207,14 +207,14 @@ const PROP: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
             replace: ', nearest_v[flow](F, C).' }],
     expect: (m, b) => assert.deepEqual(
       thrower(m).filter((f) => !thrower(b).includes(f)),
-      ['useCaught', 'useFuse', 'useGauge', 'useTry', 'useTwoHops'],
+      ['useCaught', 'useFuse', 'useGauge', 'useLeaky', 'useTry', 'useTwoHops'],
       'every function that CATCHES is reported as throwing'),
   },
   {
     name: 'x3 a try catches what a nested function calls',
     mut: [{ find: `caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
-                              nearest_v[flow](F, N).`,
-            replace: 'caught_here[code](N)       :- in_try_block[code](TS, N).' }],
+                              nearest_v[flow](F, N), try_catches[code](TS).`,
+            replace: 'caught_here[code](N)       :- in_try_block[code](TS, N), try_catches[code](TS).' }],
     // `boom` is written inside a try block and RUNS ELSEWHERE. Without the
     // enclosing-function equality the model calls its throw caught.
     expect: (m, b) => assert.deepEqual(
@@ -229,6 +229,18 @@ const PROP: { name: string; mut: Mut[]; expect: (m: World, b: World) => void }[]
         'a throw in a handler stops being reported');
       assert.ok(thrower(m).length > thrower(b).length - 1, 'and five catchers start being');
     },
+  },
+  {
+    name: 'x8 a try with only a finalizer is read as catching',
+    // 2026-09-11. `leaky` throws inside `try { } finally { }`; without the
+    // `try_catches` premise the model reports the throw caught and `leaky`
+    // leaves the thrower set. Two days earlier this mutant could not be
+    // written, because no try in the corpus lacked a handler.
+    mut: [{ find: 'nearest_v[flow](F, N), try_catches[code](TS).',
+            replace: 'nearest_v[flow](F, N).' }],
+    expect: (m, b) => assert.deepEqual(
+      thrower(b).filter((f) => !thrower(m).includes(f)), ['leaky'],
+      'a finalizer is not a handler'),
   },
   {
     name: 'x5 the value no longer travels the call edge',
