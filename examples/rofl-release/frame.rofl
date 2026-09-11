@@ -1,0 +1,37 @@
+-- examples/rofl-release/frame.rofl — the release question, asked in the
+-- language it is about. NOT synthetic: every claim here is decidable from
+-- this tree, and evidence.rofl says by which command.
+--
+-- The tree carried a production-readiness decision pack and a synthetic
+-- fixture for six days while the release question was answered in prose.
+
+inquiry(rofl_1_0, decide).
+
+-- BLOCKING: the port owes the half of the system a `.rofl` world cannot reach.
+claim(port_surface_complete).
+blocking(rofl_1_0, port_surface_complete).
+observable(port_surface_complete).
+
+-- BLOCKING: one language, two engines, or it is two languages.
+claim(two_engines_agree).
+blocking(rofl_1_0, two_engines_agree).
+observable(two_engines_agree).
+
+claim(every_duty_has_a_guard).
+requires(rofl_1_0, every_duty_has_a_guard).
+observable(every_duty_has_a_guard).
+
+claim(every_feature_has_a_world).
+requires(rofl_1_0, every_feature_has_a_world).
+observable(every_feature_has_a_world).
+
+claim(kernel_has_no_runtime_dependency).
+requires(rofl_1_0, kernel_has_no_runtime_dependency).
+observable(kernel_has_no_runtime_dependency).
+
+claim(release_contract_is_current).
+requires(rofl_1_0, release_contract_is_current).
+
+-- No evidence either way, and that is the point: `unknown` is not `false`.
+claim(docs_derived_from_ledger).
+requires(rofl_1_0, docs_derived_from_ledger).

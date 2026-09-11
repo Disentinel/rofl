@@ -54,3 +54,42 @@ demo_unhashable("slop", "measures itself against a headless LibreOffice and answ
 -- by nothing a golden could see. Now both engines answer for them.
 check_world("operators").
 check_file("operators", "examples/checks/operators.rofl").
+
+-- ===================================== THE DECISION PACK, ACTUALLY ASSEMBLED
+-- `rules/decisions/production-readiness.rofl` and `examples/atlas-launch/`
+-- were BOTH golden worlds and neither answered anything: the walk over
+-- rules/ loads a pack beside the facts of its own name -- there are none --
+-- and the walk over examples/ loads a directory's `.rofl` files and no rules.
+-- So the pack sat with `undefined_premise[audit]` at 10 and the fixture sat
+-- with no rule to read it, and both were green. A world is the two halves
+-- together, and this is the only place that can say so.
+check_world("readiness_atlas").
+check_file("readiness_atlas", "rules/inquiry/ontology.rofl").
+check_file("readiness_atlas", "rules/inquiry/terminology.rofl").
+check_file("readiness_atlas", "rules/inquiry/epistemic.rofl").
+check_file("readiness_atlas", "rules/inquiry/obligations.rofl").
+check_file("readiness_atlas", "rules/inquiry/intents.rofl").
+check_file("readiness_atlas", "rules/inquiry/perspectives.rofl").
+check_file("readiness_atlas", "rules/policies/evidence.rofl").
+check_file("readiness_atlas", "rules/policies/authority.rofl").
+check_file("readiness_atlas", "rules/decisions/production-readiness.rofl").
+check_file("readiness_atlas", "examples/atlas-launch/frame.rofl").
+check_file("readiness_atlas", "examples/atlas-launch/context.rofl").
+check_file("readiness_atlas", "examples/atlas-launch/evidence.rofl").
+
+-- AND THE SAME PACK POINTED AT THIS TREE. examples/rofl-release/ is the release
+-- question asked in the language it is about; the verdict is a golden, so it
+-- moves when the tree does and the move is a diff.
+check_world("readiness_rofl").
+check_file("readiness_rofl", "rules/inquiry/ontology.rofl").
+check_file("readiness_rofl", "rules/inquiry/terminology.rofl").
+check_file("readiness_rofl", "rules/inquiry/epistemic.rofl").
+check_file("readiness_rofl", "rules/inquiry/obligations.rofl").
+check_file("readiness_rofl", "rules/inquiry/intents.rofl").
+check_file("readiness_rofl", "rules/inquiry/perspectives.rofl").
+check_file("readiness_rofl", "rules/policies/evidence.rofl").
+check_file("readiness_rofl", "rules/policies/authority.rofl").
+check_file("readiness_rofl", "rules/decisions/production-readiness.rofl").
+check_file("readiness_rofl", "examples/rofl-release/frame.rofl").
+check_file("readiness_rofl", "examples/rofl-release/context.rofl").
+check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").

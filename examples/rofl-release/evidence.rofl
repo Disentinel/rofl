@@ -1,0 +1,48 @@
+-- examples/rofl-release/evidence.rofl — the observation journal, taken
+-- 2026-09-11 on this checkout. Every entry names the command that produced it,
+-- because an observation whose provenance is prose is a human_assertion
+-- wearing a measurement's clothes.
+
+-- `npm test` — 82 worlds, both engines, one committed golden, 12.7 s.
+supports[obs](golden_82, two_engines_agree).
+evidence_kind[obs](golden_82, measured).
+evidence_version[obs](golden_82, "0.1.0").
+
+-- `npm run speccheck` — 30 duties UNCOVERED, and `d_port_owes_why` is one of
+-- them: `why`, `whynot` and `retract` have no Rust surface at all.
+refutes[obs](speccheck_port, port_surface_complete).
+evidence_kind[obs](speccheck_port, measured).
+evidence_version[obs](speccheck_port, "0.1.0").
+
+refutes[obs](speccheck_uncovered, every_duty_has_a_guard).
+evidence_kind[obs](speccheck_uncovered, measured).
+evidence_version[obs](speccheck_uncovered, "0.1.0").
+
+-- `npm run features` — greedy cover reaches 52 of 53; `api:assertClauses` is
+-- reachable by no demo.
+refutes[obs](feature_census, every_feature_has_a_world).
+evidence_kind[obs](feature_census, measured).
+evidence_version[obs](feature_census, "0.1.0").
+
+-- BOTH POLARITIES, AND BOTH ARE TRUE OF DIFFERENT THINGS. Nothing under src/
+-- or runtime/ imports anything but node: builtins and itself; package.json
+-- declares `@babel/parser` under `dependencies`, for the scanners. The claim
+-- as written does not say which, so the journal records the disagreement
+-- rather than picking a side.
+supports[obs](src_import_walk, kernel_has_no_runtime_dependency).
+evidence_kind[obs](src_import_walk, measured).
+evidence_version[obs](src_import_walk, "0.1.0").
+
+refutes[obs](package_manifest, kernel_has_no_runtime_dependency).
+evidence_kind[obs](package_manifest, measured).
+evidence_version[obs](package_manifest, "0.1.0").
+
+-- START.md is `ROFL Kernel v0 — Implementation Handoff`, a pre-implementation
+-- brief, and `npm run speccheck` reports 18 rows amending or qualifying it.
+refutes[obs](start_md_amendments, release_contract_is_current).
+evidence_kind[obs](start_md_amendments, measured).
+evidence_version[obs](start_md_amendments, "0.1.0").
+
+-- `docs_derived_from_ledger` HAS NO ENTRY ON PURPOSE. w_docs_from_ledger is
+-- open in the worklist; absence of evidence does not derive falsehood here,
+-- and the claim comes out `unknown` rather than refuted.

@@ -1,0 +1,17 @@
+-- examples/rofl-release/context.rofl — pack activation and the concern map.
+--
+-- FIVE OF NINE CONCERNS ARE UNMAPPED AND THAT IS THE HONEST ANSWER, not an
+-- omission: load, monitoring, rollback, billing and customer_acceptance are
+-- concerns of a deployed service and this is a language. The pack cannot tell
+-- `nobody covered it` from `nobody can`, so the gaps stand and the verdict
+-- pays for them.
+
+pack(rofl_1_0, production_readiness).
+decision_authority(rofl_1_0, owner).
+
+concern_claim(rofl_1_0, requirements, release_contract_is_current).
+concern_claim(rofl_1_0, testing, two_engines_agree).
+concern_claim(rofl_1_0, product_coverage, every_feature_has_a_world).
+concern_claim(rofl_1_0, dependencies, kernel_has_no_runtime_dependency).
+
+current_version("0.1.0").
