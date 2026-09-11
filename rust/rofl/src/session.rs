@@ -684,6 +684,37 @@ impl Session {
     /// there is nothing left to convert. What remains is the book, which is a
     /// SOURCE notion — absent, named, or a variable — and only the first two
     /// mean anything to a question.
+    /// `Rofl.save` (src/api.ts:261): this world as a seed, which `open` reads
+    /// back. The way OUT existed on one side only until now — a port that can
+    /// be handed a world and cannot hand one back is half a pipe.
+    ///
+    /// ONE FIELD GOES OUT EMPTY AND IT IS NOT A ROUNDING ERROR: `evals`, the
+    /// per-tick record of what the standing evaluation was allowed and what it
+    /// spent. This store does not keep it; `crate::seed` says why it matters.
+    pub fn save(&self) -> String {
+        crate::seed::snapshot(&self.eval.h, &self.eval.store)
+    }
+
+    /// `Rofl.run` (src/api.ts:1199): boundaries until the world stops moving.
+    ///
+    /// `quiescent` is the answer the caller wants; `partial` is the one they
+    /// have to handle. Running out of budget mid-tick is NOT a pause — the
+    /// hole is written into the world and a later, larger budget does not undo
+    /// it (f_the_cost_pin_measures_a_fixpoint_that_never_finishes). A caller
+    /// who wants to stop and continue stops AT A BOUNDARY, with `tick`.
+    pub fn run(&mut self, max_ticks: usize) -> Result<(u32, bool, bool), String> {
+        for _ in 0..max_ticks {
+            let r = self.tick().map_err(|h| describe(&h))?;
+            if r.partial {
+                return Ok((self.eval.store.tick, false, true));
+            }
+            if r.quiescent {
+                return Ok((self.eval.store.tick, true, false));
+            }
+        }
+        Ok((self.eval.store.tick, false, false))
+    }
+
     /// `Rofl.holds` (src/api.ts:834). The question with its answer thrown
     /// away — kept because `ask(...)?.rows.is_empty()` at every call site is
     /// how a caller starts writing their own query layer.

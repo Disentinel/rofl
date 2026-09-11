@@ -13,9 +13,12 @@ evidence_version[obs](golden_82, "0.1.0").
 -- reference host's own output, string for string, by
 -- `rust/rofl/tests/explain.rs` (16 tests) -- so `d_port_owes_why` is
 -- discharged and no longer reads UNCOVERED. What the claim still fails on is
--- narrower and is named: `save` has no Rust form, so a world can be opened
--- from a snapshot and never written back to one; `run` and `strataPlan` are
--- absent too.
+-- narrower still after `save` and `run` landed the same day, and is now ONE
+-- field: a snapshot written by the port carries no `evals`, the per-tick record
+-- of what each evaluation was allowed and spent, which
+-- `docs/time-and-continuity.md` requires for a faithful replay. `strataPlan`
+-- is not counted against the port: it reads a relation that is empty in a
+-- settled store on BOTH hosts.
 refutes[obs](port_surface_gap, port_surface_complete).
 evidence_kind[obs](port_surface_gap, measured).
 evidence_version[obs](port_surface_gap, "0.1.0").

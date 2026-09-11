@@ -1173,6 +1173,16 @@ impl Store {
         n
     }
 
+    /// The records the store still holds that are NOT live: removed, or
+    /// carried out of a tick by the boundary. They are in no answer and in no
+    /// canonical state, and a WITNESS may still name one — which is why a
+    /// snapshot has to carry them (`crate::seed`).
+    pub fn dead_ids(&self) -> Vec<FactId> {
+        (0..self.facts.recs.len() as FactId)
+            .filter(|id| !self.alive(*id) && self.wit_head.get(*id as usize).is_some())
+            .collect()
+    }
+
     /// Every live fact, in id order. `canonical_state` walks the same range
     /// inline; this is that walk for the readers who want the facts and not
     /// the rendering.
@@ -1222,6 +1232,24 @@ impl Store {
 
     /// `sigOf` (src/engine.ts) plus the rule id, spelled the way the JS kernel
     /// spells it. Rendered on demand and dropped.
+    /// Every firing recorded for a fact, with its signature — what
+    /// `Store.firings` is a map of on the reference side. `witness_of` picks
+    /// ONE of these; a snapshot carries them all, because which one a store
+    /// would pick back is a property of the store and not of the world.
+    pub fn supports_of(&self, h: &Heap, id: FactId) -> Vec<(String, Sym, u32, Vec<PremRef>)> {
+        let mut out = Vec::new();
+        let Some(&head) = self.wit_head.get(id as usize) else { return out };
+        let mut c = head;
+        while c != EMPTY {
+            let v = self.view(c);
+            let mut sig = String::new();
+            self.write_sig(h, &v, &mut sig);
+            out.push((sig, v.rule, v.tick, v.prems.to_vec()));
+            c = self.wits[c as usize].next;
+        }
+        out
+    }
+
     pub fn write_sig(&self, h: &Heap, w: &WitView<'_>, out: &mut String) {
         out.push_str(h.name(w.rule));
         for p in w.prems {

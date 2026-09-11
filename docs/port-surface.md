@@ -260,10 +260,36 @@ else, so a duty about the PORT had no check it could name and
 `d_port_owes_why` would have gone on reading UNCOVERED on the day it was
 discharged. The census now walks `rust/rofl/tests/*.rs` as well.
 
-What is still absent on the Rust side, named rather than implied:
-`save` (a snapshot out — `open` is the way in and there is no way back),
-`run` (the tick loop, and its budget-exhausted hole), `strataPlan`, and
-`assertClauses`, which `npm run features` reports as reachable by no demo at
-all and which is a question about the TypeScript surface rather than about the
-port.
+**`save` and `run` followed the same day.** `Session` now answers `why`,
+`whynot`, `retract`, `excise`, `holds`, `fact_keys`, `save` and `run`.
+
+`save` found a defect the corpus could not: a world snapshotted AT A TICK
+BOUNDARY lost the provenance of everything carried across it. `counter(2)` is
+derived from `counter(1)`, the boundary takes `counter(1)` out of the world,
+and the reference store keeps that premise as a STRING so it survives with
+nothing to point at — where this store keeps a `FactId`, which needs a record.
+`restore` was counting those as `dangling` and dropping the firing. The dead
+records now travel in a `ghosts` field of their own, read back and killed
+again; they are in no answer and in no canonical state, and the witness has
+its id. The field is separate because the reference's `restore` would read
+them out of `facts` and make them LIVE, and a snapshot that resurrects five
+ticks of history is worse than one that forgets a witness.
+
+**One field still goes out empty**: `evals`, the per-tick record of what the
+standing evaluation was allowed and what it spent. This store does not keep
+it, and `docs/time-and-continuity.md` is explicit that a past tick replays
+bit-identically only if the replay is given the same budget. A world saved
+here and replayed there has lost that.
+
+**`strataPlan` is not ported, and the reason is not the port's.** It reads the
+`stratum` relation, and measured on both hosts — with boot.rofl and without —
+that relation has zero rows in a settled store. The reference answers a level
+only because `Rofl.strataPlan` calls `prepared()` first and reads the table
+the evaluation builds while it is still standing. A port accessor over the
+settled store would answer `None` for every rule in every world and pass a
+test written against it. The honest form re-runs the stratifier and is a piece
+of work, not an accessor.
+
+`assertClauses` is left alone: `npm run features` reports it reachable by no
+demo at all, which is a question about the TypeScript surface.
 
