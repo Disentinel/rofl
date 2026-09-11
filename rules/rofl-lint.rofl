@@ -1,0 +1,146 @@
+-- rules/rofl-lint.rofl — WHAT IN A RULE FILE COULD BE SHORTER, as rows.
+--
+-- Over facts/rofl-lint.rofl from scanners/rofl_lint.ts. The scanner emits what
+-- a clause reads and concludes, an alpha-normalised body, and where each
+-- comment block sits; every criterion below is a rule body, so "this can be
+-- cut" is a query anyone can re-run and argue with.
+--
+-- NOTHING HERE IS AN `[audit]`. Every relation is a CANDIDATE list — non-empty
+-- on an honest checkout by design — and a gate red on an honest checkout gets
+-- switched off (CLAUDE.md). Which candidates become edits is a person's call,
+-- for the reason each section states beside its rule.
+
+-- ================================================================ comments ==
+-- A COMMENT BLOCK THAT INTRODUCES NOTHING. Followed, blank lines skipped, by
+-- another comment block rather than by a clause. A section banner is exempt:
+-- it introduces a section, not a clause. What is left is prose whose rules are
+-- elsewhere — typically MOVED to another file with the paragraph left behind.
+-- The file header is exempt too: a block at line 1 introduces the FILE.
+orphan_block(B, File, Line, N) :- block(B, File, Line, N), block_next(B, comment),
+                                  not block_banner(B), Line != 1.
+
+-- A BLOCK LONGER THAN THE RULE IT INTRODUCES BY A WIDE MARGIN. Thirty lines of
+-- prose over one clause is a design note wearing a comment's clothes; the
+-- repository keeps design notes in docs/ and findings in the ledger. The bound
+-- is a choice and is stated once, here.
+long_block(B, File, Line, N) :- block(B, File, Line, N), N >= 30.
+
+-- HISTORY IN A RULE FILE. A dated line or a MEASURED line records WHEN and WHAT
+-- WAS SEEN, which is a finding's business (`facts/findings.rofl`) rather than a
+-- rule's; the rule needs the CONCLUSION and not the date it was reached.
+dated_block(B, File, Line, N)    :- block(B, File, Line, _), block_dated(B, N).
+measured_block(B, File, Line, N) :- block(B, File, Line, _), block_measured(B, N).
+
+-- A COMMENT THAT NAMES A RELATION NOTHING DEFINES. Backticked, written as a
+-- call (`name(...)` or `name[book]`), and concluded by no clause and declared
+-- by no `edb` anywhere the census read. Prose that cites a relation that no
+-- longer exists is prose about a previous version of the program.
+--
+-- A RELATION A SCANNER EMITS IS DEFINED, although no .rofl in the tree
+-- concludes or declares it: `ast_child` and `ast_attr` come from
+-- scanners/js_ast.ts and nowhere else. So a name that any .ts file writes as
+-- `name(` counts as defined here. That is a wide net — it also catches a
+-- JavaScript function that happens to share a relation's name — and it errs
+-- towards REPORTING LESS, which for a "delete this prose" list is the safe
+-- direction.
+defined_anywhere(Rel)  :- defined(Rel, _).
+defined_anywhere(Rel)  :- declared_edb(Rel).
+defined_anywhere(Rel)  :- named_in_ts(Rel).
+dangling_mention(B, File, Line, Name) :- block(B, File, Line, _),
+                                         block_mentions(B, Name, called),
+                                         not defined_anywhere(Name).
+-- ...AND THE BARE FORM, one notch weaker: `fn_binding` in prose, no arguments,
+-- no book. Only a snake_case name qualifies, so a quoted JavaScript identifier
+-- or a plain English word in backticks stays out; and a name some fact carries
+-- as its first argument — a finding id, a work item, a verdict atom — is an
+-- ATOM the prose cites, not a relation it misremembers.
+dangling_bare(B, File, Line, Name) :- block(B, File, Line, _),
+                                      block_mentions(B, Name, bare), mention_snake(Name),
+                                      not defined_anywhere(Name), not atom_seen(Name).
+
+-- A NUMBERED SECTION USED TWICE, and a numbered LIST that restarts. Both are
+-- what a header left behind by a rename looks like.
+section_twice(File, N, L1, L2)   :- section(File, L1, N, _), section(File, L2, N, _), L1 < L2.
+title_twice(File, T, L1, L2)     :- section(File, L1, _, T), section(File, L2, _, T), L1 < L2.
+list_repeats(B, File, N, L1, L2) :- block(B, File, _, _), list_item(B, L1, N),
+                                    list_item(B, L2, N), L1 < L2.
+
+-- ============================================================ the clauses ==
+-- TWO RULES WITH ONE BODY. Same alpha-normalised body — same relations, same
+-- books, same argument pattern up to variable names — under two heads. The
+-- engine computes the join twice; the reader reads it twice. A twin whose
+-- heads differ only in name is one relation with two names.
+twin(A, B, HA, HB, File) :- body_sig(A, S), body_sig(B, S), A != B,
+                            clause(A, File, LA, HA, _, _), clause(B, File, LB, HB, _, _),
+                            LA < LB, HA != HB.
+
+-- ...AND TWO ARMS OF ONE HEAD WITH ONE BODY, which differ only in a constant
+-- the head carries: `eff_here(U, read, local)` and `eff_here(U, write, local)`
+-- over the same two premises. That is a two-row table written as two rules,
+-- and whether the table is better is exactly the argument rules/js-effects.rofl
+-- makes AGAINST it for `eff_op_inspects` — so a row, not a verdict.
+paired_arm(A, B, H, File) :- body_sig(A, S), body_sig(B, S), A != B,
+                             clause(A, File, LA, H, _, _), clause(B, File, LB, H, _, _),
+                             LA < LB.
+
+-- ...AND THE SAME SHAPE WITH THE RELATIONS RENAMED, over bodies of at least
+-- three premises so that every two-premise projection does not qualify. This
+-- is the "template written out twice" case — a closure over functions and the
+-- same closure over modules — and it is a WEAKER claim than `twin`: the rows
+-- are structurally alike and may well be two different things that happen to
+-- rhyme. Reported apart so that the strong claim stays strong.
+shape_twin(A, B, HA, HB, File) :- shape_sig(A, S), shape_sig(B, S), A != B,
+                                  clause(A, File, LA, HA, _, _), clause(B, File, LB, HB, _, _),
+                                  LA < LB, HA != HB, clause_npos(A, NP), clause_nneg(A, NN),
+                                  N is NP + NN, N >= 3.
+
+-- A RULE THAT RENAMES ANOTHER. One positive premise, nothing else, and the
+-- head's argument list is the premise's argument list verbatim. Every reader
+-- of the head could read the premise instead. There are honest reasons to keep
+-- one — a name that says WHY, a book boundary — and the row says which
+-- relation is being renamed so the reason can be checked rather than assumed.
+--
+-- ONE ARM ONLY. A head with several single-premise arms is a UNION — three
+-- ways to be `eff_conv_accounted` — and a union is content, not a rename.
+alias(Id, File, Head, Of) :- clause(Id, File, _, Head, _, Ar), head_arms(Head, Ar, 1),
+                             clause_npos(Id, 1), clause_nneg(Id, 0), clause_nbi(Id, 0),
+                             head_pat(Id, P), premise(Id, _, Of, _, pos, P), Head != Of.
+
+-- A PREMISE ANOTHER PREMISE ALREADY IMPLIES. The scanner did the unification:
+-- every arm defining Q carries P with the same arguments, so `Q, P` has the
+-- same extension as `Q`. Removing P changes nothing the rule concludes. It MAY
+-- change what the rule costs — a cheap P written first is a seed the planner
+-- does not choose for you (f_the_engine_has_no_join_planner) — which is why
+-- this is a candidate and not a gate.
+implied(Id, File, Head, P, Q) :- premise_implied(Id, P, Q), clause(Id, File, _, Head, _, _).
+
+-- A RELATION CONCLUDED HERE THAT NOTHING READS. Not a premise of any rule in
+-- the census, not named as `rel(` or `rel[` in any TypeScript file. Two
+-- populations are excluded on purpose: a `report` row is written to be
+-- rendered, and an `[audit]` head is read by whoever runs the world — but an
+-- audit that no test NAMES is an audit nobody asserts on, and that is worth
+-- its own row rather than an exemption.
+concluded(Rel, File, Book) :- clause(_, File, _, Rel, Book, _).
+unread(Rel, File, Book) :- concluded(Rel, File, Book), not read_by_rule(Rel),
+                           not named_in_ts(Rel), Rel != report, Book != audit.
+unasserted_audit(Rel, File) :- concluded(Rel, File, audit), not read_by_rule(Rel),
+                               not named_in_ts(Rel).
+
+-- =========================================================== per file ====
+-- THE CENSUS, as ratios a reader can compare across files. Integer per cent,
+-- because the engine's arithmetic is integer and a decimal would be a lie
+-- about precision anyway.
+comment_pct(File, P)        :- lint_file(File, C, M, _), P is (M * 100) / (C + M).
+comment_lines_per_rule(File, P) :- lint_file(File, _, M, _), file_clauses(File, R, _), R > 0,
+                                   P is M / R.
+
+-- what to report, in the shape runtime/report.ts and the renderer read
+report(orphan_block, B)      :- orphan_block(B, _, _, _).
+report(dangling_mention, B)  :- dangling_mention(B, _, _, _).
+report(dangling_bare, B)     :- dangling_bare(B, _, _, _).
+report(twin, A)              :- twin(A, _, _, _, _).
+report(paired_arm, A)        :- paired_arm(A, _, _, _).
+report(alias, Id)            :- alias(Id, _, _, _).
+report(implied, Id)          :- implied(Id, _, _, _, _).
+report(unread, Rel)          :- unread(Rel, _, _).
+report(unasserted_audit, Rel) :- unasserted_audit(Rel, _).

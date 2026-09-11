@@ -48,6 +48,7 @@
     "booklocality": "node --experimental-strip-types scanners/book_locality.ts",
     "storetrace": "node --experimental-strip-types scanners/store_trace.ts && node --experimental-strip-types scanners/store_trace.ts --noreuse",
     "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts",
+    "rofllint": "node --experimental-strip-types scanners/rofl_lint.ts && node --experimental-strip-types scanners/rofl_lint_report.ts",
     "ruleshape": "node --experimental-strip-types scanners/rule_shape.ts && node --experimental-strip-types scanners/rule_shape_report.ts",
     "perminv": "node --experimental-strip-types scanners/permission_inventory.ts",
     "depends": "node --experimental-strip-types scanners/depends.ts",
