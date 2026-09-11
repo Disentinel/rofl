@@ -7,9 +7,21 @@
 
 inquiry(rofl_1_0, decide).
 
--- BLOCKING: the port owes the half of the system a `.rofl` world cannot reach.
+-- NO LONGER BLOCKING, 2026-09-11, by the decision authority: two names of
+-- sixteen -- `strataPlan` and `assertClauses` -- are not what a base version
+-- owes a user. THE FRAME IS WHAT CHANGED AND NOT THE JOURNAL: both
+-- observations still stand, the claim still reads CONTESTED, and what the
+-- authority settled is whether a contested surface stops a release. That is a
+-- framing decision and framing is the authority's; the evidence is not.
+--
+-- The pack has no other lever for this. `accepted_gap_by` reaches an OPEN
+-- obligation only, and `go_blocked` has no acceptance path at all -- a
+-- contested blocking claim prevents GO, conservatively and on purpose
+-- (rules/inquiry/obligations.rofl). So an authority who judges a blocking
+-- claim not to be a blocker says so HERE, in the framing, where it is one line
+-- and visible, rather than by retiring the evidence against it.
 claim(port_surface_complete).
-blocking(rofl_1_0, port_surface_complete).
+requires(rofl_1_0, port_surface_complete).
 observable(port_surface_complete).
 
 -- BLOCKING: one language, two engines, or it is two languages.

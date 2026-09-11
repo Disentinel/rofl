@@ -70,3 +70,12 @@ evidence_version[obs](start_md_amendments, "0.1.0").
 -- `docs_derived_from_ledger` HAS NO ENTRY ON PURPOSE. w_docs_from_ledger is
 -- open in the worklist; absence of evidence does not derive falsehood here,
 -- and the claim comes out `unknown` rather than refuted.
+
+-- THE AUTHORITY'S OWN WORDS, as an observation rather than as a silent edit.
+-- Kind `human_assertion` and not `measured`, because it is a judgement about
+-- what a base version owes and not a count of anything. It does not settle the
+-- claim -- the two measurements above still disagree and the claim still reads
+-- CONTESTED -- and it was never meant to: what it settled is in frame.rofl.
+supports[obs](owner_accepts_two_names, port_surface_complete).
+evidence_kind[obs](owner_accepts_two_names, human_assertion).
+evidence_version[obs](owner_accepts_two_names, "0.1.0").
