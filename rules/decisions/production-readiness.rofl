@@ -18,58 +18,6 @@ concern(production_readiness, billing).
 concern(production_readiness, dependencies).
 concern(production_readiness, customer_acceptance).
 
-concern_covered(I, Con) :- concern_claim(I, Con, C), claim(C).
-
--- A CONCERN NOBODY CAN COVER READ AS ONE NOBODY COVERED, and for a library
--- five of the nine did. `coverage_gap` is a closed-world read over a fixed
--- list written for a deployed service, so `billing` scored against a language
--- exactly as an unmeasured load test would against a service -- and a
--- CONDITIONAL GO became unreachable for a reason with nothing to do with
--- readiness. The judgement belongs where the authority is, so it is asserted
--- in the frame and subtracted here, one visible line per axis, rather than
--- being softened inside the rule.
-not_applicable(I, Con) :- excluded_concern(I, Con, _),
-                          decision_authority(I, _).
-
-coverage_gap(I, Con)    :- pack(I, production_readiness),
-                           concern(production_readiness, Con),
-                           not concern_covered(I, Con),
-                           not not_applicable(I, Con).
-
--- AND AN EXCLUSION THAT ALSO HAS A CLAIM IS A CONTRADICTION, not a belt and
--- braces: somebody covered the axis and somebody said it could not be covered.
-both_minds[audit](I, Con) :- not_applicable(I, Con), concern_covered(I, Con).
-
--- A GAP IS A GAP WHETHER IT IS UNKNOWN OR KNOWN FALSE.
---
--- Until 2026-09-11 this read `open_obligation` alone, so a requirement the
--- evidence REFUTED was invisible to every verdict while an UNKNOWN one had to
--- be accepted by name -- an ordering exactly inverted, and demonstrated rather
--- than argued: this pack returned `conditional_go` for an inquiry whose
--- refuted requirements included `nobody outside the author has used it`. The
--- fixture never met it because its own refutation sits on a BLOCKING claim,
--- where `violated_blocking` catches it; a refuted claim that merely `requires`
--- is the arrangement a real inquiry reached on its first outing.
---
--- Both now demand the same thing -- an authority who accepts them BY NAME --
--- and the claim is named here rather than counted, so a reader is told which.
-unaccepted_gap(I, C)    :- pack(I, production_readiness),
-                           open_obligation(I, C),
-                           not gap_accepted(I, C).
-unaccepted_gap(I, C)    :- pack(I, production_readiness),
-                           refuted_obligation(I, C),
-                           not gap_accepted(I, C).
-
--- What a CONDITIONAL go is conditional ON: the residual risk somebody with
--- authority took. `open_obligation(I, _)` stood here before and said something
--- narrower by accident -- that the residue happened to be an UNKNOWN.
-accepted_residual(I, C) :- gap_accepted(I, C), obligation(I, C).
-
--- AND ACCEPTING WHAT IS NOT A GAP IS NOISE IN THE RECORD, not extra safety:
--- an authority's acceptance is a decision about risk, and a resolved
--- obligation carries none.
-idle_acceptance[audit](I, C) :- gap_accepted(I, C), resolved_obligation(I, C).
-
 -- GO: nothing blocks, nothing unresolved in any direction, full coverage.
 recommendation(I, go) :-
     pack(I, production_readiness),

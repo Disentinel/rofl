@@ -59,8 +59,10 @@ claim(js_kernel_takes_nothing).
 requires(rofl_1_0, js_kernel_takes_nothing).
 observable(js_kernel_takes_nothing).
 
+-- MOVED TO THE PUBLICATION DECISION, where it belongs: an engine with no
+-- `exports` field does real work every day in this tree.
 claim(package_declares_what_it_ships).
-requires(rofl_1_0, package_declares_what_it_ships).
+requires(rofl_public, package_declares_what_it_ships).
 observable(package_declares_what_it_ships).
 
 -- THE ENGINE'S OWN LOAD AXIS, and it is not inapplicable: an engine that
@@ -75,12 +77,50 @@ claim(a_run_reports_on_itself).
 requires(rofl_1_0, a_run_reports_on_itself).
 observable(a_run_reports_on_itself).
 
--- AND THE ONE THAT IS GENUINELY MISSING RATHER THAN INAPPLICABLE. For a
--- launch this axis is sign-off by whoever asked for the thing; for a language
--- at 1.0 it is whether anybody outside the author has used it and said it
--- works. Nobody has, and that is an answer.
+-- CUSTOMER ACCEPTANCE IS SIGN-OFF BY WHOEVER ASKED FOR THE THING, and I read
+-- it as ADOPTION -- which cannot be a precondition of the decision that would
+-- enable it. The asker is the author, and what he accepted it for is running
+-- this repository: the axis is answered by USE and not by a user count.
+claim(the_asker_runs_the_project_on_it).
+requires(rofl_1_0, the_asker_runs_the_project_on_it).
+observable(the_asker_runs_the_project_on_it).
+
+-- ======================================================== THE OTHER DECISION
+-- Publication is not readiness. Everything between a working engine and a
+-- stranger running a world of their own is packaging, licence and prose --
+-- none of it inference -- so it gets its own inquiry and its own pack.
+inquiry(rofl_public, decide).
+
+-- BLOCKING, and it is the whole dependency between the two decisions: there is
+-- no honest way to publish an engine that is not ready.
+claim(engine_is_ready).
+blocking(rofl_public, engine_is_ready).
+observable(engine_is_ready).
+
+claim(installable_and_importable).
+blocking(rofl_public, installable_and_importable).
+observable(installable_and_importable).
+
+claim(licence_text_ships).
+requires(rofl_public, licence_text_ships).
+observable(licence_text_ships).
+
+claim(a_newcomer_can_run_a_world_from_the_readme).
+requires(rofl_public, a_newcomer_can_run_a_world_from_the_readme).
+observable(a_newcomer_can_run_a_world_from_the_readme).
+
+claim(the_version_means_something).
+requires(rofl_public, the_version_means_something).
+observable(the_version_means_something).
+
+claim(a_defect_has_somewhere_to_go).
+requires(rofl_public, a_defect_has_somewhere_to_go).
+observable(a_defect_has_somewhere_to_go).
+
+-- ADOPTION LIVES HERE AND IS NOBODY'S OBLIGATION, because it is the CONSEQUENCE
+-- of publishing and not a condition on it. It stays a claim so the journal can
+-- keep saying `nobody yet`, which is true and is not a gate.
 claim(used_by_somebody_other_than_its_author).
-requires(rofl_1_0, used_by_somebody_other_than_its_author).
 observable(used_by_somebody_other_than_its_author).
 
 claim(release_contract_is_current).

@@ -27,6 +27,46 @@ go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
 go_blocked(I, C)           :- inquiry(I, _), blocks_on(I, C),
                               contested[epistemic](C).
 
+-- A GAP IS A GAP WHETHER IT IS UNKNOWN OR KNOWN FALSE, and until 2026-09-11
+-- only the unknown ones were counted -- so a requirement the evidence REFUTED
+-- was invisible to every verdict while an unknown one had to be accepted by
+-- name, an ordering exactly inverted. Both now demand the same thing: an
+-- authority who accepts them BY NAME. The claim is named in the row rather
+-- than counted, so a reader is told which.
+--
+-- HERE RATHER THAN IN A PACK, because it is a property of an OBLIGATION and
+-- not of a domain -- which is what the second decision pack made visible: the
+-- rules were written once for production readiness and were about neither
+-- production nor readiness.
+unaccepted_gap(I, C)       :- open_obligation(I, C), not gap_accepted(I, C).
+unaccepted_gap(I, C)       :- refuted_obligation(I, C), not gap_accepted(I, C).
+
+-- What a CONDITIONAL verdict is conditional ON: the residual risk somebody
+-- with authority took.
+accepted_residual(I, C)    :- gap_accepted(I, C), obligation(I, C).
+
+-- ACCEPTING WHAT IS NOT A GAP IS NOISE IN THE RECORD, not extra safety: an
+-- acceptance is a decision about risk and a resolved obligation carries none.
+idle_acceptance[audit](I, C) :- gap_accepted(I, C), resolved_obligation(I, C).
+
+-- COVERAGE, over whatever concern list the activated pack declares. Generic
+-- because the SHAPE is generic; the axes themselves are the pack's.
+concern_covered(I, Con)    :- concern_claim(I, Con, C), claim(C).
+
+-- A CONCERN NOBODY CAN COVER READ AS ONE NOBODY COVERED, and for a library
+-- five of nine did -- `billing` scored against a language exactly as an
+-- unmeasured load test would against a service. The judgement belongs where
+-- the authority is, so it is asserted in the frame and subtracted here.
+not_applicable(I, Con)     :- excluded_concern(I, Con, _), decision_authority(I, _).
+
+coverage_gap(I, Con)       :- pack(I, P), concern(P, Con),
+                              not concern_covered(I, Con),
+                              not not_applicable(I, Con).
+
+-- AND AN EXCLUSION THAT ALSO HAS A CLAIM IS A CONTRADICTION, not belt and
+-- braces: somebody covered the axis and somebody said it could not be covered.
+both_minds[audit](I, Con)  :- not_applicable(I, Con), concern_covered(I, Con).
+
 -- preliminary verdicts; a full GO is a domain certificate (Phase 3),
 -- derived per decision pack, never by a generic kernel rule.
 recommendation(I, no_go)   :- violated_blocking(I, _).

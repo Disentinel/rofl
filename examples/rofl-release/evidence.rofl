@@ -90,9 +90,7 @@ evidence_version[obs](caller_side_instruments, "0.1.0").
 -- CUSTOMER ACCEPTANCE, AND IT IS THE ONE THAT FAILS. No user outside this
 -- repository's author has built anything with it; the 21 demos, the 84 golden
 -- worlds and the JS model are all the author's. Not inapplicable -- unmet.
-refutes[obs](no_outside_user, used_by_somebody_other_than_its_author).
-evidence_kind[obs](no_outside_user, human_assertion).
-evidence_version[obs](no_outside_user, "0.1.0").
+
 
 -- START.md is `ROFL Kernel v0 — Implementation Handoff`, a pre-implementation
 -- brief, and `npm run speccheck` reports 18 rows amending or qualifying it.
@@ -112,3 +110,52 @@ evidence_version[obs](start_md_amendments, "0.1.0").
 supports[obs](owner_accepts_two_names, port_surface_complete).
 evidence_kind[obs](owner_accepts_two_names, human_assertion).
 evidence_version[obs](owner_accepts_two_names, "0.1.0").
+
+-- ======================================================== THE OTHER DECISION
+-- Measured 2026-09-11 by reading package.json and the tree, not by recalling
+-- what either used to say.
+
+-- THE ASKER'S ACCEPTANCE IS USE. 46 rule packs, 12 560 lines of ROFL, and the
+-- instruments this repository is run with are models written in it: the
+-- findings ledger, the worklist, the spec coverage, the feature census, the
+-- layering and cleanliness audits, the dependency graph, the JS model of its
+-- own source -- and this release decision. Whatever else is unproven, the
+-- engine does real work daily for the person who asked for it.
+supports[obs](self_application_46_packs, the_asker_runs_the_project_on_it).
+evidence_kind[obs](self_application_46_packs, measured).
+evidence_version[obs](self_application_46_packs, "0.1.0").
+
+-- There is no `main`, no `exports` and no `types` in package.json, so `npm i`
+-- followed by an import has no target at all.
+refutes[obs](no_entry_point, installable_and_importable).
+evidence_kind[obs](no_entry_point, measured).
+evidence_version[obs](no_entry_point, "0.1.0").
+
+-- `license: "MIT"` is declared and there is NO LICENSE FILE in the tree, which
+-- is the one thing the MIT licence itself requires of a distribution.
+refutes[obs](no_licence_file, licence_text_ships).
+evidence_kind[obs](no_licence_file, measured).
+evidence_version[obs](no_licence_file, "0.1.0").
+
+-- README's first instruction is `npm i && npx tsc -p tsconfig.json`, which is
+-- a contributor's path. There is no install-and-import path in it.
+refutes[obs](readme_is_for_contributors, a_newcomer_can_run_a_world_from_the_readme).
+evidence_kind[obs](readme_is_for_contributors, measured).
+evidence_version[obs](readme_is_for_contributors, "0.1.0").
+
+-- 0.1.0 against a tree that calls itself v0 in START.md, 1.0 in this inquiry
+-- and `ROFL Kernel v0` in the README title. Three numbers for one thing.
+refutes[obs](three_version_numbers, the_version_means_something).
+evidence_kind[obs](three_version_numbers, measured).
+evidence_version[obs](three_version_numbers, "0.1.0").
+
+-- No `bugs` field; the repository is public and its issues are the only place
+-- a defect could go, which nothing states.
+refutes[obs](no_bugs_field, a_defect_has_somewhere_to_go).
+evidence_kind[obs](no_bugs_field, measured).
+evidence_version[obs](no_bugs_field, "0.1.0").
+
+-- ADOPTION, recorded and gating nothing.
+refutes[obs](no_outside_user_yet, used_by_somebody_other_than_its_author).
+evidence_kind[obs](no_outside_user_yet, human_assertion).
+evidence_version[obs](no_outside_user_yet, "0.1.0").
