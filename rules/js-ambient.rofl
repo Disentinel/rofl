@@ -1,45 +1,23 @@
--- js-ambient.rofl — THE AMBIENT SURFACE: WHICH FREE NAME IS WHICH SURFACE, AND
--- THE MAP INTO THE LATTICE. Both DERIVED, and that is the whole of the item.
+-- js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
+-- and the map into the effect lattice. Both DERIVED: this pack authors not one
+-- effect row. Every `ambient_effect` is a JOIN over a table another layer
+-- generated (`host_module_effect`, `host_member_effect`, `host_global_effect`
+-- in facts/js-host.rofl; lib.es*.d.ts through facts/js-lib-surface.rofl) plus
+-- a TRANSLATION of its atoms into lattice landmarks, both arguable as rules.
 --
--- THERE IS NO `facts/js-ambient.rofl` AND THE ABSENCE IS THE HEADLINE. The
--- effect layer's own note says the map into the lattice "is a table somebody
--- has to build member by member", and building it here by hand is exactly what
--- `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` refused: a
--- concrete effect somebody TYPED is the taxonomy being invented after all. So
--- this pack authors NOT ONE effect row. Every `ambient_effect` here comes from
--- a table another layer already wrote for another purpose and defends line by
--- line — `host_module_effect`, `host_member_effect`, `host_global_effect` in
--- facts/js-host.rofl, twenty-two modules, seven member overrides and
--- twenty-two globals — and the two halves this file adds are a JOIN and a
--- TRANSLATION, both of which can be argued with as rules.
+-- rules/js-effects.rofl declares three relations `edb` and reads them here:
+--   ambient_binding(File, Name, Surface)     which free NAME is which surface
+--   surface_origin(Surface, Origin)          es_intrinsic | host_runtime | builtin_prototype
+--   ambient_effect(Surface, Member, Effect)  one row per member
+-- The member is a STRING because `selects[flow]` carries keys as strings; an
+-- atom in that column joins nothing. Nothing here is written as a constant.
 --
--- WHAT IT PLUGS INTO. rules/js-effects.rofl declares three relations `edb` and
--- waits for them:
---
---   ambient_binding(File, Name, Surface)         which free NAME is which surface
---   surface_origin(Surface, Origin)              es_intrinsic | host_runtime |
---                                                builtin_prototype
---   ambient_effect(Surface, Member, EffectName)  the map, ONE ROW PER MEMBER
---
--- THE MEMBER IS A STRING, and the distinction is not style: the operation half
--- arrives from `selects[flow]`, which carries a key as a STRING, so
--- `ambient_effect(fs, readFileSync, io)` loads, holds, joins nothing and
--- reports nothing. Nothing in this file is written as a constant — every
--- surface and every member is a variable bound from a generated table — which
--- is the one construction in which that defect cannot occur.
---
--- WHAT IT NEEDS LOADED. `rules/js-effects.rofl` (the lattice),
--- `rules/js-host.rofl` + its two fact packs (the runtime surface),
--- `rules/js-globals.rofl` + `facts/js-globals.rofl` (the ES globals). A world
--- holding this pack and not those reports the missing premises as undefined
--- rather than deriving a smaller answer, which is the right thing for it to do.
+-- Needs rules/js-effects, rules/js-host with its fact packs, and
+-- rules/js-globals with facts/js-globals loaded; without them the premises
+-- are undefined rather than empty.
 
--- THE CROSSING. This pack's contract relations are [main] — that is where
--- rules/js-effects.rofl reads them, unbracketed — and their premises are the
--- scanner's book: `free_global[code]`, `host_module_ns[code]`,
--- `member_effect[code]`. Saying so is one line, and boot.rofl's own note about
--- `imports(main, $kernel)` is why it is said rather than left to the fact that
--- a single undeclared hop is invisible to `crossing`.
+-- The contract relations are [main], where js-effects reads them unbracketed;
+-- their premises are the scanner's book.
 imports(main, code).
 imports(flow, code).
 imports(flow, main).
@@ -47,149 +25,81 @@ imports(audit, code).
 imports(audit, flow).
 imports(audit, main).
 
--- ===========================================================================
--- 1. THE SURFACES AND WHERE EACH ONE'S NAME CAME FROM
---
--- `surface_origin` is the relation that keeps the concrete column DERIVED: a
--- surface that cannot say which declaration file it came from is a name
--- somebody typed, and `concrete_no_origin[audit]` refuses it. All four arms
--- below read a GENERATED table, so no surface in this model can fail to name
--- one.
---
--- THE SURFACE IS THE NAME THE DECLARATION USES AND NOT A NICKNAME. A host
--- module's surface is its canonical specifier — `"node:fs"`, the string
--- `builtin_canonical[code]` produces — and a global's surface is its own name.
--- Coining `fs` for `"node:fs"` would have been a name this pack has no
--- authority over, in a column whose entire argument is that its names come
--- from a declaration file.
+-- =========================================================================
+-- 1. THE SURFACES AND WHERE EACH NAME CAME FROM. `surface_origin` keeps the
+-- column derived: all four arms read a generated table, so no surface here
+-- can fail to name a declaration file. The surface is the name the
+-- declaration uses — the canonical specifier `"node:fs"` for a module, its
+-- own name for a global — never a nickname.
 surface_origin(Spec, host_runtime)   :- host_module(node, Spec).
 surface_origin(Name, host_runtime)   :- host_global(_, Name).
 surface_origin(Name, es_intrinsic)   :- lib_global(Name, _, _).
 surface_origin(P, builtin_prototype) :- builtin_prototype(P).
 
--- ...AND THE ONE WAY THAT TABLE CAN BE WRONG, as a row. `scanners/host_lib.ts`
--- SUBTRACTS the ECMAScript baseline from both hosts on purpose — "crediting a
--- host with `JSON` or `Math` would make `host_global` a second, rival copy of a
--- table this repository already generates from a better source" — and this is
--- that sentence as something that can go red. A surface with two origins is
--- two different declaration files claiming one name, and every effect
--- attributed to it would be attributed twice.
+-- scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
+-- surface with two origins would have every effect attributed twice.
 surface_two_origins[audit](S, A, B) :- surface_origin(S, A), surface_origin(S, B), A != B.
 
--- ===========================================================================
--- 2. WHICH FREE NAME IS WHICH SURFACE
---
--- TWO DOORS AND NOT THREE, which is rules/js-host.rofl's design read from the
--- other side. A NAMESPACE stands for a whole surface and a member off it is
--- that surface's member; a FREE GLOBAL stands for itself. A NAMED IMPORT is
--- neither — `import { join } from "node:path"` binds a FUNCTION, not the module
--- — so it gets no `ambient_binding` row at all and is handled by its own site
--- rule in section 5. Emitting one would have said `join.foo()` is a member of
--- `node:path`, which is false about every named import in existence.
+-- =========================================================================
+-- 2. WHICH FREE NAME IS WHICH SURFACE. Two doors, not three: a NAMESPACE
+-- stands for a whole surface, a FREE GLOBAL stands for itself, and a NAMED
+-- IMPORT binds a function rather than the module, so it gets no row here and
+-- has its own site rule in section 5.
 ambient_binding(File, Local, Spec) :- host_module_ns[code](File, Local, Spec).
 
--- THE GLOBAL DOOR READS `free_global[code]` AND NOT `host_global_ref[code]`,
--- and the difference is measured rather than stylistic. `host_global_ref` joins
--- `ident_in[code]` against the surface with NO reference-position restriction,
--- so every identifier of a matching name qualifies — including a PROPERTY name.
--- Over the five shared call fixtures it reports `length` and `toString` as
--- references to browser globals, because `x.length` and `y.toString` write
--- those words as identifiers. `free_global[code]` stands on
--- `global_ref_position`, which is the five positions a reference can occupy, so
--- it cannot make that mistake. Attributing io to a program that does none is
--- the failure rules/js-host.rofl's own ceiling paragraph says this direction
--- must avoid.
+-- The global door reads `free_global[code]`, not `host_global_ref[code]`: the
+-- latter has no reference-position restriction and reports `x.length` as a
+-- reference to a browser global. Attributing io to a program that does none
+-- is the direction this layer must not err in.
 ambient_binding(File, Name, Name) :- free_global[code](_, Name, File), host_global(_, Name).
 ambient_binding(File, Name, Name) :- free_global[code](_, Name, File), lib_global(Name, _, _).
 
--- a binding whose surface no declaration file claims. Empty by construction —
--- all three arms above join a surface table — and it is here because those arms
--- are the place a fourth door would be added without one.
+-- empty by construction; the place a fourth door would arrive without an origin
 ambient_binding_unowned[audit](File, Name, S) :- ambient_binding(File, Name, S),
                                                  not surface_origin(S, _).
 
--- ===========================================================================
--- 3. THE TRANSLATION — A HOST EFFECT ATOM IS A LATTICE LANDMARK, DERIVED
---
--- facts/js-host.rofl attributes an API one of eight atoms: `total`, `exn`,
--- `div`, `ndet`, `alloc`, `read`, `write`, `io`. Six of the eight are already
--- `eff_name` landmarks. TWO ARE NOT, and they are not because they are LABELS
--- rather than names: Koka parameterises `read` and `write` by a heap, and
--- `read` alone denotes nothing in this lattice.
---
--- THE HEAP IS NOT A CHOICE MADE HERE. rules/js-effects.rofl already decides it,
--- and this reads that decision rather than repeating it: `eff_heap_of[flow]`
--- says a receiver the value layer cannot trace to an allocation in this program
--- is `global`. An ambient surface is BY DEFINITION not allocated in this
--- program — that is what makes it ambient — so an ambient read is `read<global>`
--- and an ambient write is `write<global>`, with no arm and no exception.
+-- =========================================================================
+-- 3. THE TRANSLATION — a host effect atom is a lattice landmark, derived.
+-- facts/js-host.rofl attributes one of eight atoms; six are `eff_name`
+-- landmarks, but `read` and `write` are LABELS parameterised by a heap. The
+-- heap is not chosen here: `eff_heap_of[flow]` already calls a receiver the
+-- value layer cannot trace `global`, and an ambient surface is by definition
+-- not allocated in this program.
 edb(amb_heap).
 amb_heap(none).
 amb_heap(global).
 amb_atom_label(A, H) :- host_effect_atom(A), eff_label(A, H), amb_heap(H).
 
--- ...AND THE LANDMARK IS THE LEAST NAME CONTAINING THAT LABEL, computed by the
--- lattice's own closure rather than by a table of eight rows. That is the same
--- Moore-family argument `effect_of[flow]` stands on, applied to a singleton row
--- instead of to a function's: it exists and is unique exactly because
--- `join_missing`, `join_ambiguous`, `meet_missing` and `meet_ambiguous` are
--- empty, which rules/js-effects.rofl asserts. A hand-written
--- `eff_of_host(read, rd_global).` would have been eight rows nobody could
--- argue with; this is a derivation that moves if the lattice does.
---
--- IT IS WRITTEN OVER (LABEL, HEAP) AND NOT OVER (ATOM), AND THE GENERALISATION
--- WAS PAID FOR 2026-09-09. Sections 7 and 8 need the SAME closure on a heap
--- this section refuses — a builtin prototype's receiver is in this program's
--- heap, which is exactly what makes it not like `node:fs` — and copying four
--- lines per caller is the family-of-hand-written-twins CLAUDE.md names
--- (`orphan_claim[audit]`, written by hand for `handled` and then again for
--- `ignored`). `eff_of_label(Label, Heap, Name)` is the whole closure once;
--- `amb_heap` stays where it is, so which heap an AMBIENT surface gets is still
--- one relation and still this section's decision.
+-- The landmark is the LEAST name containing the label — the lattice's own
+-- closure, the same Moore argument `effect_of[flow]` stands on, unique because
+-- the join and meet audits in js-effects are empty. Written over (Label, Heap)
+-- rather than (Atom) because sections 7 and 8 need the same closure on a heap
+-- this section refuses.
 amb_short_at(L, H, N)      :- eff_label(L, H), eff_name(N), not eff_row(N, L, H).
 amb_covers_at(L, H, N)     :- eff_label(L, H), eff_name(N), not amb_short_at(L, H, N).
 amb_covers_at_low(L, H, N) :- amb_covers_at(L, H, M), eff_lt(M, N).
 eff_of_label(L, H, N)      :- amb_covers_at(L, H, N), not amb_covers_at_low(L, H, N).
 
 eff_of_host(A, N)    :- amb_atom_label(A, H), eff_of_label(A, H, N).
--- ...and an atom that is a landmark and NOT a label denotes itself. `total` and
--- `io` are the two: neither is in `eff_label`, so the arm above cannot reach
--- them and this one says the obvious thing once.
+
+-- an atom that is a landmark and not a label (`total`, `io`) denotes itself
 eff_of_host(A, A)    :- host_effect_atom(A), eff_name(A), not eff_label(A, _).
 
--- THE TWO WAYS THAT TRANSLATION CAN BE WRONG, and both are rows rather than a
--- comment. An atom with no landmark is an attribution that silently disappears;
--- an atom with two is the ambiguity the lattice audits forbid arriving through
--- a surface instead of through a pair.
+-- an atom with no landmark disappears silently; one with two is ambiguity
 host_atom_unmapped[audit](A)        :- host_effect_atom(A), not eff_of_host(A, _).
 host_atom_two_names[audit](A, X, Y) :- eff_of_host(A, X), eff_of_host(A, Y), X != Y.
 
--- ===========================================================================
--- 4. `ambient_effect` — THE MAP, ONE ROW PER MEMBER, DERIVED
+-- =========================================================================
+-- 4. `ambient_effect` — THE MAP, ONE ROW PER MEMBER.
 --
--- 4a. THE MODULE HALF, AND IT IS CORPUS-INDEPENDENT. `member_effect[code]` in
--- rules/js-host.rofl is the module default with the member override subtracted
--- — the pattern `path.resolve` exists to justify — and it ranges over
--- `host_module_member`, which the TypeScript checker enumerated. So this arm
--- produces a row for every member of every attributed module whether or not any
--- program in any corpus calls it, which is what a surface table should be.
+-- 4a. The module half is corpus-independent: `member_effect[code]` ranges
+-- over `host_module_member`, which the TypeScript checker enumerated.
 ambient_effect(Spec, Key, E) :- member_effect[code](Spec, Key, A), eff_of_host(A, E).
 
--- 4b. THE GLOBAL HALF, AND IT IS NOT, AND THE REASON IS A GAP IN THE SCANNER
--- RATHER THAN A CHOICE HERE. `scanners/host_lib.ts` walks
--- `checker.getTypeAtLocation(init).getProperties()` for a MODULE and gets 1321
--- members; for the globals it walks the properties of `globalThis` and stops at
--- their NAMES. So `host_global(node, "console")` exists and there is no
--- `host_global_member(node, "console", "log")` anywhere in the tree — the same
--- checker call one level down would produce it, and that is a separate item
--- (`w_ambient_global_members`).
---
--- WHAT THIS PACK DOES WITH THAT, stated rather than smuggled: a global's effect
--- is its SURFACE DEFAULT, and the members it lands on are the ones a program in
--- the corpus actually selects. It is the same default-with-override shape as
--- 4a with the override table empty and the member list supplied by the corpus,
--- and `ambient_unenumerated[flow]` below is the row that says which surfaces
--- are in that state.
+-- 4b. The global half is NOT, because scanners/host_lib.ts stops at the
+-- NAMES of the properties of globalThis (`w_ambient_global_members`). So a
+-- global's effect is its surface default, landing on the members the corpus
+-- selects; `ambient_unenumerated[flow]` names the surfaces in that state.
 ambient_global_default(Name, E) :- host_global_effect(_, Name, A), eff_of_host(A, E).
 amb_global_member[flow](Name, Key) :- free_global[code](O, Name, _),
                                       ast_child[code](M, object, 0, O),
@@ -198,79 +108,46 @@ amb_global_member[flow](Name, Key) :- free_global[code](O, Name, _),
 ambient_effect(Name, Key, E)       :- amb_global_member[flow](Name, Key),
                                       ambient_global_default(Name, E).
 
--- ...AND THE TWO OPERATIONS THAT ARE NOT MEMBERS. `fetch(u)` calls the surface
--- ITSELF and `new URL(s)` CONSTRUCTS it; neither selects a key, so neither has
--- a member name, and writing the surface's own name in the operation column
--- would make the two shapes indistinguishable in the one relation that exists
--- to tell them apart. `itself` is rules/js-host.rofl's word for the first and
--- is borrowed rather than coined; `construct` is new here, because the host
--- layer has no `new` shape at all — its own fixture records that
--- `new TextDecoder().decode(b)` could not be its site.
+-- `fetch(u)` calls the surface itself and `new URL(s)` constructs it; neither
+-- selects a key, so the operation column carries a word rather than the
+-- surface's own name. `itself` is js-host's word; `construct` is new here.
 edb(amb_operation_word).
 amb_operation_word(itself).
 amb_operation_word(construct).
 ambient_effect(Name, W, E) :- amb_operation_word(W), ambient_global_default(Name, E).
 
--- WHICH SURFACES THIS MODEL CAN LIST THE MEMBERS OF. A positive relation and
--- not an audit, for the reason CLAUDE.md gives: it is non-empty on an honest
--- tree BY DESIGN, and it is the row that says how much of the attributed
--- surface is corpus-bounded rather than declared.
+-- Which surfaces this model can list the members of — positive, non-empty by
+-- design. `lib_global` and not `lib_static` for the ES globals: a
+-- `plain_value` like `NaN` has no members, and an empty enumeration is still
+-- an enumeration.
 ambient_enumerated(S)         :- host_module_member(node, S, _).
--- ...AND THE TWO ECMASCRIPT MEMBER LISTS, which are enumerated by exactly the
--- same kind of source and were missing here only because no ECMAScript surface
--- had an `ambient_effect` row until sections 7 and 8. `lib_static` is the 226
--- statics of the 47 globals and `lib_member` the 130 methods of the eight
--- prototypes, both walked out of lib.es*.d.ts; a model that can list `Math`'s
--- members and reports it unenumerated says something false about its own
--- source.
---
--- THE BINDING AND NOT THE STATICS, which is not the same line and the
--- difference is `NaN`. A `plain_value` global has NO members and `lib_static`
--- has no row for it, so keying on the statics would report `NaN` as a surface
--- whose members the model cannot list — when what the source says is that it
--- HAS none. An empty enumeration is an enumeration; a missing one is the gap
--- this relation exists to name, and `host_global` is where that gap is.
 ambient_enumerated(S)         :- lib_global(S, _, _).
 ambient_enumerated(S)         :- lib_member(S, _, _).
 ambient_unenumerated[flow](S) :- ambient_effect(S, _, _), not ambient_enumerated(S).
 
--- ===========================================================================
--- 5. THE THREE SITE SHAPES THE EFFECT PACK'S PLUG DOES NOT COVER
+-- =========================================================================
+-- 5. THE THREE SITE SHAPES `eff_surface[flow]` DOES NOT COVER. Both its arms
+-- read a member call; the other three ways to reach an ambient callee are
+-- here because `ambient_binding` alone cannot express them.
 --
--- `eff_surface[flow]` in rules/js-effects.rofl has two arms and both read
--- `ast_child(N, object, 0, O)` — a MEMBER call. That is the shape
--- `console.log(x)` and `fs.readFileSync(p)` have, and it is one of four ways to
--- reach an ambient callee. The other three are here, in this pack, because they
--- are what `ambient_binding` alone cannot express: two of them have no member
--- at all and the third's member is the IMPORTED name rather than the selected
--- one.
-
--- 5a. A PLAIN CALL OF A NAMED IMPORT — `join(a, b)`. The local name is the
--- BINDING and the imported name is the MEMBER, so `import { readFile as rf }`
--- resolves to `node:fs/promises` + `"readFile"` with no rename test, which is
--- the move `host_module_named[code]` already makes and this reads.
+-- 5a. A plain call of a named import — `join(a, b)`. The local name is the
+-- binding and the imported name the member, as `host_module_named` reads it.
 amb_named_call[flow](C, Spec, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
                                       ident_in[code](N, Local, File),
                                       host_module_named[code](File, Local, Spec, Key).
 eff_surface[flow](C, Spec)  :- amb_named_call[flow](C, Spec, _).
 eff_operation[flow](C, Key) :- amb_named_call[flow](C, _, Key).
 
--- 5b. A PLAIN CALL OF AN AMBIENT GLOBAL — `fetch(u)`, `structuredClone(v)`,
--- `BigInt(n)`.
+-- 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
 amb_global_call[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C, N),
                                   free_global[code](N, Name, File),
                                   ambient_binding(File, Name, Name).
 eff_surface[flow](C, Name)     :- amb_global_call[flow](C, Name).
 eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 
--- 5c. A CONSTRUCTION — `new URL(s)`, `new Map()`. THIS IS THE HALF OF
--- `new_expression` THAT WAS OPEN: the allocation is seeded for all of them by
--- `eff_alloc_kind`, and what a constructor DOES beyond allocating is this row.
--- A `new_expression` is a `transfer_site` and not a `call_site`, so
--- `unresolved_call` cannot see it and the negation is written against
--- `resolved_site[code]` — the constructor edge rules/js-callgraph.rofl added
--- resolves `new Box()` to a class in this program, and one that resolves is not
--- ambient.
+-- 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
+-- and not a `call_site`, so the negation is on `resolved_site[code]`: a
+-- `new Box()` resolved to a class in this program is not ambient.
 amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
                                 not resolved_site[code](X),
                                 ast_child[code](X, callee, 0, N),
@@ -279,160 +156,72 @@ amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
 eff_surface[flow](X, Name)        :- amb_construct[flow](X, Name).
 eff_operation[flow](X, construct) :- amb_construct[flow](X, _).
 
--- ===========================================================================
--- 6. `identifier` — THE THIRD CASE, AND IT IS THE WHOLE OF THAT CELL
---
--- rules/js-effects.rofl derives two of the three: a name something in this
--- program reassigns is `read<local>`, and a name nothing reassigns is a VALUE
--- with no cell to read, which is Koka's answer and not a shortcut. The third is
--- a FREE GLOBAL, and it is a read of a property of the host's global object —
--- a cell this program did not allocate and cannot trace, which is `global` by
--- exactly the test `eff_heap_of[flow]` applies to a receiver.
---
--- THE CEILING IS `global_ref_position` AND IT IS NOT MINE. rules/js-globals.rofl
--- names five reference positions — the object of a member expression, of an
--- optional member expression, and the callee of a call, an optional call and a
--- `new` — so a BARE mention is invisible: `n > 0 ? n : Infinity` and
--- `typeof Promise` read a global and seed nothing here. That is stated in that
--- pack and asserted by name in its test; this rule inherits it exactly.
+-- =========================================================================
+-- 6. `identifier` — THE THIRD CASE. js-effects derives a reassigned name as
+-- `read<local>` and an unreassigned one as a value with no cell. A FREE
+-- GLOBAL is a read of the host's global object, a cell this program did not
+-- allocate: `global` by the test `eff_heap_of` applies to a receiver. The
+-- ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
+-- (`typeof Promise`) seeds nothing.
 eff_here[flow](E, read, global) :- free_global[code](E, _, _).
 
--- ===========================================================================
--- 7. THE BUILTIN PROTOTYPES — THE MUTATING HALF, READ AND NOT TYPED
---    (w_ambient_prototype_effects)
---
--- THE ITEM ASKED ONE QUESTION AND THE ANSWER IS YES. "The array mutators are a
--- closed list and whether it can be READ from a declaration file rather than
--- typed is the question this item has to answer before it writes a row, and
--- the honest answer may be no." It is not no. Every mutable collection
--- interface in lib.es*.d.ts has a `Readonly` TWIN, the twin is the same
--- surface with the mutating members removed, and the list is therefore a SET
--- DIFFERENCE over two interfaces in a file this repository already reads
--- through TypeScript's own parser. Measured over the ecmascript lib files:
--- `Array \ ReadonlyArray` is EXACTLY `copyWithin fill pop push reverse shift
--- sort splice unshift` — the nine the item names, in the item's own words —
--- and `Map \ ReadonlyMap` and `Set \ ReadonlySet` are the mutating halves of
--- those two by the same construction.
---
--- THE SUBTRACTION IS HERE AND NOT IN THE SCANNER, deliberately. What
--- facts/js-lib-surface.rofl carries is what the declaration SAYS — this
--- prototype has a readonly view, and these are the members that view declares.
--- A scanner emitting `lib_mutator` directly would put the one inference of the
--- whole item in the layer nobody can argue with. As two generated tables plus
--- this rule, the criterion is a rule body and it is executable.
+-- =========================================================================
+-- 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every
+-- mutable collection interface in lib.es*.d.ts has a `Readonly` twin with the
+-- mutating members removed, so the mutator list is a set difference over two
+-- generated tables; Array minus ReadonlyArray is exactly the nine mutators.
+-- The subtraction is here rather than in the scanner so the inference is a
+-- rule.
 lib_mutator(P, Key) :- lib_member(P, Key, _), lib_readonly_view(P, _),
                        not lib_readonly_member(P, Key).
 
--- ...AND THE GUARD IS THE HALF THAT COULD BE WRONG SILENTLY. Without
--- `lib_readonly_view(P, _)` the negation would call EVERY member of every
--- prototype with no twin a mutator — `string.concat`, `number.toFixed` — which
--- is the safe-looking direction and a total inversion of the source's meaning.
--- The five prototypes with no twin are SILENT here rather than mutator-free,
--- and that is a row rather than this paragraph.
+-- Without `lib_readonly_view(P, _)` every member of a prototype with no twin
+-- would read as a mutator. Those prototypes are SILENT here, as a row.
 amb_proto_unsplit[flow](P) :- builtin_prototype(P), not lib_readonly_view(P, _).
--- ...and the reverse difference, which is the property the subtraction rests
--- on: the readonly view declares nothing the mutable interface does not. Empty
--- over the ecmascript lib files, measured, and a row here would mean the
--- subtraction has stopped meaning "the members you cannot reach readonly".
+
+-- the property the subtraction rests on: the readonly view declares nothing extra
 lib_readonly_only[audit](P, Key) :- lib_readonly_member(P, Key),
                                     not lib_member(P, Key, _).
 
--- THE HEAP IS THE PART `ambient_effect` CANNOT CARRY, AND IT IS WHY THIS IS A
--- DIFFERENT DERIVATION FROM SECTION 4 RATHER THAN MORE ROWS IN IT. Section 3
--- decides the ambient heap once and for all: a surface this program did not
--- allocate is `global`. A BUILTIN PROTOTYPE BREAKS THAT ARGUMENT — the surface
--- is ambient and the RECEIVER is a value in this program, so `[3,1,2].sort()`
--- writes a cell this program made. `ambient_effect(Surface, Member, Name)` has
--- no heap column, so the row can only be written for a prototype whose
--- receiver's heap is decided by the model rather than by the site.
---
--- AND FOR TWO OF THE SIX IT IS, STRUCTURALLY AND WITH NO CORPUS. `eff_heap_of`
--- says `local` exactly when `may_be_node[flow]` reaches the receiver. Every arm
--- of `prototype_of[flow]` except the first is a `may_be_node` join, so the only
--- way to get an untraced receiver is the first arm: the receiver's own KIND. So
--- a prototype every one of whose `kind_prototype` kinds is a `node_value_kind`
--- can have no untraced receiver, and `array` and `regexp` are those two —
--- `array_expression` and `reg_exp_literal` are both values the model carries.
--- `string`, `number`, `boolean` and `bigint` come from literal kinds that are
--- NOT, so `"ab".concat(x)` really is a read of an untraced receiver and no
--- surface-grain row could be right about it.
+-- `ambient_effect` has no heap column, and a prototype's receiver is a value
+-- in THIS program, so a row can only be written where the receiver's heap is
+-- decided by the model: a prototype every one of whose `kind_prototype` kinds
+-- is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
+-- `"ab".concat(x)` is a read of an untraced receiver.
 amb_proto_untraced(P) :- kind_prototype(K, P), not node_value_kind(K).
 amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).
 
--- ...AND THE STRUCTURAL ARGUMENT AS SOMETHING THAT CAN GO RED, because it is
--- an argument about two of this model's own tables and either can move. A
--- receiver whose prototype this pack calls heap-decided and whose heap the
--- effect layer calls `global` is the exact contradiction, per site.
+-- the structural argument as a row: heap-decided here, `global` in js-effects
 amb_proto_recv[flow](M, P) :- member_node_v[flow](M), ast_child[code](M, object, 0, O),
                               prototype_of[flow](O, P), builtin_prototype(P).
 amb_proto_heap_split[audit](P, M) :- amb_proto_heap(P, local), amb_proto_recv[flow](M, P),
                                      eff_heap_of[flow](M, global).
 
--- THE MAP, AND THE TRANSLATION IS ONE WORD. A member absent from the
--- declaration's own readonly view is a member you cannot call through a
--- readonly reference — that is what `readonly` MEANS in that file — and
--- `write` is the label this lattice has for it. The landmark is not typed:
--- `eff_of_label` computes the least name containing that label on that heap by
--- the same closure section 3 uses, so `wr_local` appears nowhere in this file
--- and moves if the lattice does.
---
--- WHAT IS NOT CLAIMED, AND IT IS THE COMPLEMENT. A member that is NOT a
--- mutator is not thereby effect-free: `join` calls each element's `toString`,
--- `toSorted` takes a comparator, and the declaration says nothing about
--- either. So the non-mutating half stays owed, which is why `array` does not
--- leave the in-tray on this rule.
+-- A member absent from the readonly view is a `write`; the landmark comes
+-- from the section 3 closure, so `wr_local` is typed nowhere. The
+-- non-mutating half stays owed: `join` calls each element's `toString`.
 ambient_effect(P, Key, E) :- lib_mutator(P, Key), amb_proto_heap(P, H),
                              eff_of_label(write, H, E).
 
--- ===========================================================================
--- 8. A FORM THAT CANNOT BE CONSTRUCTED, CONSTRUCTED — AND THE ONE SORT OF
---    ECMASCRIPT EFFECT A DECLARATION FILE DOES STATE
+-- =========================================================================
+-- 8. A FORM THAT CANNOT BE CONSTRUCTED, CONSTRUCTED. The member map of the
+-- ES intrinsics is not derivable (`Math.max` and `Math.random` are the same
+-- MethodSignature), but the FORM of a binding is, and `new Math()` is a
+-- TypeError always — `constructible_form` in rules/js-globals.rofl, arriving
+-- in the lattice as `exn`. Corpus-independent, like 4a.
 --
--- `w_ambient_es_intrinsic_effects` is right that the MEMBER map is not
--- derivable: `Math.max` and `Math.random` are the same MethodSignature in every
--- declaration file there is, and no scan will separate `total` from `ndet`.
--- What a declaration file DOES state is the FORM of the binding, and one
--- consequence of the form is an effect the language guarantees.
---
--- `new Math()` IS A TypeError, ALWAYS. rules/js-globals.rofl already reads the
--- form and says so — `constructible_form(constructor_binding)` is the whole
--- table and `es_construct_not_constructor[audit]` is the row — and this is that
--- sentence arriving in the lattice. It is not a guess about a member; it is the
--- declaration's own shape, and it is exact rather than an over-approximation:
--- the construction throws and evaluates to nothing.
---
--- IT IS CORPUS-INDEPENDENT, like section 4a and unlike 4b: every global whose
--- form has no constructor gets the row whether or not any program constructs
--- it. Seven do — `Math`, `JSON`, `Atomics`, `Reflect`, `Intl`, `NaN`,
--- `Infinity` — and one of them has a site.
+-- The construction of a constructible form is refused: `new RegExp(s)`
+-- allocates AND may throw, the least name over both is `io`, and naming a
+-- landmark between `alloc` and `io` is the effect layer's move. Those rows
+-- stay in `ambient_owed`.
 amb_not_constructible(Name) :- lib_global(Name, _, Form), not constructible_form(Form).
 ambient_effect(Name, construct, E) :- amb_not_constructible(Name),
                                       eff_of_label(exn, none, E).
 
--- ...AND THE CONSTRUCTION OF A FORM THAT CAN BE CONSTRUCTED IS REFUSED, with
--- the measurement rather than with caution. `new Map()` allocates; `new
--- Array(n)`, `new String(s)` and `new RegExp(src)` allocate AND throw, on a bad
--- length, a symbol and a bad pattern. The lattice's least name containing both
--- `alloc` and `exn` is `io` — `eff_join(alloc, exn, io)`, measured — so the two
--- available answers are `alloc`, which is an UNDER-approximation of a
--- constructor whose body is not in this program, and `io`, which says a
--- `new Map()` does input and output. Naming a landmark between them is the
--- effect layer's move and not this pack's, exactly as
--- test/js-ambient.test.ts already says about the row above `st_local`. So
--- `Array/construct`, `Map/construct`, `RegExp/construct` and `String/construct`
--- stay in the in-tray, and the reason is a row in `ambient_owed` rather than a
--- silence.
-
--- ...AND AN OPERATION THAT IS NOT ON THE SURFACE AT ALL, which is a DIFFERENT
--- debt and was being counted as this one's. `Error.captureStackTrace` is V8's:
--- TypeScript declares it in @types/node and nowhere in lib.es*.d.ts, so
--- `lib_static("Error", "captureStackTrace", _)` does not exist and no table of
--- ECMAScript effects will ever map it. Reporting `es_intrinsic/Error` as owed
--- says the ECMAScript surface owes an effect for a member the ECMAScript
--- surface does not declare, which is false about the surface and hides whose
--- debt it is. The two operation WORDS are excluded because they are not members
--- — `itself` and `construct` name a call and a `new`, and no declaration
--- carries them as keys.
+-- An operation not on the surface at all is a different debt:
+-- `Error.captureStackTrace` is V8's, declared in @types/node and not in
+-- lib.es*.d.ts, so no ECMAScript table will ever map it. The two operation
+-- words are excluded because no declaration carries them as keys.
 ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
                                     surface_origin(S, es_intrinsic),
                                     not amb_operation_word(Op),
@@ -442,67 +231,29 @@ ambient_off_surface[flow](S, Op) :- concrete_effect[flow](_, S, Op),
                                     not amb_operation_word(Op),
                                     not lib_member(S, Op, _).
 
--- ===========================================================================
--- 9. THE FRONTIER, AS POSITIVE RELATIONS
---
--- Neither of these is an `[audit]` and both are non-empty on an honest tree,
--- which is the distinction CLAUDE.md records: a gate red on an honest checkout
--- gets switched off. rules/js-effects.rofl already has `concrete_unmapped[flow]`
--- per (surface, member); these are the coarser question the queue actually
--- asks, which is WHICH SURFACE nobody has attributed and therefore who owes it.
+-- =========================================================================
+-- 9. THE FRONTIER, AS POSITIVE RELATIONS — which SURFACE nobody has
+-- attributed, and therefore whose debt it is. Non-empty by design.
 amb_surface_attributed(S)              :- ambient_effect(S, _, _).
 ambient_surface_unattributed[flow](S)  :- concrete_effect[flow](_, S, _),
                                           not amb_surface_attributed(S).
--- ...and the same question with the ORIGIN in the row, because the answer is
--- different per origin and that is the finding this item leaves behind: the
--- host surface has an effect table, the ECMAScript one has none, and the
--- builtin prototypes have none either.
---
--- IT RANGES OVER THE UNMAPPED OPERATIONS AND NOT OVER `not
--- amb_surface_attributed`, CHANGED 2026-09-09, and the reason is that the old
--- form could be emptied without paying for it. "No member of this surface is
--- attributed" stops being true the moment ONE member is — so a row saying
--- `Math.PI` is `total`, or that `new JSON()` throws, would take `Math` and
--- `JSON` out of the in-tray while `Math.max`, `JSON.parse` and
--- `JSON.stringify` stayed exactly as unanswered as before. That is a number
--- moving without the debt moving, which is the failure this repository's own
--- pin discipline is about; the honest question is whether any operation a CALL
--- SITE REACHES is still unmapped, and `concrete_unmapped[flow]` in
--- rules/js-effects.rofl already asks it per pair.
---
--- MEASURED BEFORE ANYTHING WAS ATTRIBUTED: over `w_js_ambient` the two forms
--- agree ROW FOR ROW, sixteen surfaces, so the redefinition is not what moves
--- the set. `ambient_surface_unattributed[flow]` is kept beside it, unread by
--- this rule, because it is the weaker statement and the difference between the
--- two is now something a reader can query.
+
+-- `ambient_owed` ranges over the unmapped OPERATIONS a call site reaches
+-- (`concrete_unmapped[flow]`), not over unattributed surfaces: one row for
+-- `Math.PI` would otherwise take `Math` out of the in-tray while `Math.max`
+-- stayed unanswered. The weaker relation is kept beside it, queryable.
 amb_owed_op[flow](S, Op) :- concrete_unmapped[flow](S, Op),
                             not ambient_off_surface[flow](S, Op).
 ambient_owed[flow](O, S) :- amb_owed_op[flow](S, Op), surface_origin(S, O).
 
--- ===========================================================================
--- 10. THE ORACLE THIS PACK BREAKS, AND THE STRONGER ONE THAT REPLACES IT
---
--- `eff_exn_only[audit]` and `may_throw_only[audit]` in rules/js-effects.rofl
--- are the fifth layer's ONE independent oracle: the `exn` projection of the
--- general machinery must reproduce `may_throw[code]` ROW FOR ROW. That
--- agreement was true and is now false in ONE DIRECTION, and the reason is this
--- pack rather than a defect in either relation.
---
--- `may_throw[code]` is seeded by `throw_statement` AND NOTHING ELSE — its own
--- pack says so, and rules/js-effects.rofl copies the seed deliberately so that
--- the two can be compared. `io` is `<st<global>, div, exn, ndet>`, so the
--- moment an ambient call is attributed `io` the enclosing function carries
--- `exn`, and `console.log` really can throw. THE EFFECT LAYER IS NOW RIGHT AND
--- THE ORACLE IS NOW INCOMPLETE; measured over the ambient world, twelve
--- functions and every one of them reaches an ambient `io`.
---
--- SO THE ORACLE IS NARROWED RATHER THAN DROPPED, and what is left is strictly
--- stronger than a count would have been: `may_throw_only` must still be EMPTY
--- in both trees (this layer may not LOSE a throw the exception layer has), and
--- an `eff_exn_only` function that reaches no ambient `exn` source is a real
--- divergence. The carrier closure below is the propagation rule's own shape —
--- one hop per `resolves` edge, minus what a handler discharges — so a
--- divergence cannot hide behind the call graph.
+-- =========================================================================
+-- 10. THE ORACLE THIS PACK NARROWS. `may_throw[code]` is seeded by
+-- `throw_statement` only; once an ambient call is attributed `io` (which
+-- contains `exn`) the enclosing function carries `exn` and the layers
+-- disagree in ONE direction. So `may_throw_only` must still be empty, and an
+-- `eff_exn_only` function that reaches no ambient `exn` source is a real
+-- divergence. The carrier closure is the propagation rule's own shape: one
+-- hop per `resolves` edge, minus what a handler discharges.
 amb_exn_source[flow](C)  :- concrete_effect[flow](C, S, Op), ambient_effect(S, Op, E),
                             eff_row(E, exn, none).
 amb_exn_carrier[flow](F) :- amb_exn_source[flow](C), nearest_v[flow](F, C).
