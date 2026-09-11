@@ -295,3 +295,82 @@ fn run_reports_partial_rather_than_pretending_to_have_finished() {
 // That is a clean-looking negative over an unpopulated relation, which this
 // repository has a name for. So it is not shipped: the honest form re-runs the
 // stratifier, and that is a piece of work rather than an accessor.
+
+// ----------------------------------------------------- what each tick spent
+//
+// `evals` was the last field the port's snapshot went out empty on.
+// `docs/time-and-continuity.md`: a past tick replays bit-identically ONLY if
+// the replay is given the same budget — a tick cut short at 100 000 steps and
+// replayed at 500 000 derives more, and the replay disagrees with history
+// while claiming to be it. The numbers below are the reference host's, taken
+// on the same program.
+
+fn evals_of(s: &Session) -> Vec<(u32, i64, i64, bool)> {
+    s.eval
+        .store
+        .eval_log
+        .iter()
+        .map(|(t, e)| (*t, e.budget, e.steps, e.partial))
+        .collect()
+}
+
+#[test]
+fn every_tick_records_what_it_was_allowed_and_what_it_spent() {
+    let mut s = Session::fresh(100_000);
+    s.load(COUNTER, None).expect("load");
+    s.evaluate().expect("evaluate");
+    for _ in 0..3 {
+        s.tick().expect("tick");
+    }
+    assert_eq!(
+        evals_of(&s),
+        [(0, 100_000, 2, false), (1, 100_000, 2, false), (2, 100_000, 2, false)]
+    );
+}
+
+#[test]
+fn the_record_survives_a_snapshot() {
+    let mut s = Session::fresh(100_000);
+    s.load(COUNTER, None).expect("load");
+    s.evaluate().expect("evaluate");
+    for _ in 0..3 {
+        s.tick().expect("tick");
+    }
+    let back = Session::open(&s.save(), 100_000).expect("open");
+    assert_eq!(evals_of(&back), evals_of(&s));
+}
+
+/// THE CASE THE FIELD EXISTS FOR. A tick that ran out records the budget that
+/// was too small, so a replay is given the same wall instead of sailing past
+/// it and deriving a history that never happened.
+#[test]
+fn a_tick_that_ran_out_records_the_budget_that_stopped_it() {
+    let mut s = Session::fresh(1);
+    s.load(COUNTER, None).expect("load");
+    let (_, _, partial) = s.run(100).unwrap();
+    assert!(partial);
+    assert_eq!(s.eval.store.eval_of(0), Some(rofl::store::EvalRecord { budget: 1, steps: 2, partial: true }));
+
+    // and it is still there on the other side of a snapshot, which is the
+    // whole claim: the wall travels with the world
+    let back = Session::open(&s.save(), 1_000_000).expect("open");
+    assert_eq!(back.eval.store.eval_of(0).map(|e| (e.budget, e.partial)), Some((1, true)));
+}
+
+/// A later evaluation of the same tick REPLACES the record: the last one is
+/// the one that produced the state a replay has to reproduce.
+#[test]
+fn re_evaluating_a_tick_replaces_its_record() {
+    let mut s = Session::fresh(100_000);
+    s.load(COUNTER, None).expect("load");
+    s.evaluate().expect("evaluate");
+    let first = s.eval.store.eval_of(0).unwrap();
+    // A fact a rule CONSUMES, not merely one the store holds: `emit(N) :-
+    // counter(N)` fires on it, where a base fact nothing reads costs nothing
+    // and leaves the control flat.
+    s.assert("counter(9).").expect("assert");
+    s.evaluate().expect("re-evaluate");
+    let second = s.eval.store.eval_of(0).unwrap();
+    assert_eq!(evals_of(&s).len(), 1, "one record per tick, not one per evaluation");
+    assert!(second.steps > first.steps, "{first:?} -> {second:?}");
+}

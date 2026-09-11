@@ -11,18 +11,29 @@ evidence_version[obs](golden_82, "0.1.0").
 -- THE BLOCKER MOVED AND DID NOT CLEAR, 2026-09-11. `why`, `whynot`, `retract`,
 -- `excise`, `holds` and `fact_keys` are on `Session` and gated against the
 -- reference host's own output, string for string, by
--- `rust/rofl/tests/explain.rs` (16 tests) -- so `d_port_owes_why` is
+-- `rust/rofl/tests/explain.rs` (24 tests) -- so `d_port_owes_why` is
 -- discharged and no longer reads UNCOVERED. What the claim still fails on is
--- narrower still after `save` and `run` landed the same day, and is now ONE
--- field: a snapshot written by the port carries no `evals`, the per-tick record
--- of what each evaluation was allowed and spent, which
--- `docs/time-and-continuity.md` requires for a faithful replay. `strataPlan`
--- is not counted against the port: it reads a relation that is empty in a
--- settled store on BOTH hosts.
-refutes[obs](port_surface_gap, port_surface_complete).
-evidence_kind[obs](port_surface_gap, measured).
-evidence_version[obs](port_surface_gap, "0.1.0").
+-- narrower again with `evals`, and it is now TWO NAMES out of sixteen, both
+-- with a written reason rather than a gap: `strataPlan`, which reads a
+-- relation measured EMPTY in a settled store on both hosts, and
+-- `assertClauses`, which `npm run features` reports reachable by no demo at
+-- all. Recounted by walking both surfaces: 16 public on `Rofl`, 22 on
+-- `Session`, and every other name answered.
+refutes[obs](two_names_of_sixteen, port_surface_complete).
+evidence_kind[obs](two_names_of_sixteen, measured).
+evidence_version[obs](two_names_of_sixteen, "0.1.0").
 
+-- AND THE OTHER SIDE, because a claim settled by deleting the evidence against
+-- it is not settled. `rust/rofl/tests/explain.rs` is 24 tests holding the port
+-- to the reference host's own output; the surface a caller actually reaches --
+-- ask, assert, evaluate, tick, run, save, open, fork, why, whynot, retract,
+-- excise, holds, fact_keys, and the residency verbs that are the port's alone
+-- -- is answered. Both polarities stand and the disagreement is the answer:
+-- whether two deliberately-refused names make a surface incomplete is the
+-- decision authority's call, not the journal's.
+supports[obs](surface_walk_22, port_surface_complete).
+evidence_kind[obs](surface_walk_22, measured).
+evidence_version[obs](surface_walk_22, "0.1.0").
 supports[obs](explain_parity_16, port_explains).
 evidence_kind[obs](explain_parity_16, measured).
 evidence_version[obs](explain_parity_16, "0.1.0").

@@ -482,6 +482,7 @@ impl Eval {
             self.run_well_founded()?;
             self.store.dirty = false;
             self.store.partial_eval = false;
+            self.store.note_eval(self.budget, self.steps, false);
             return Ok(Outcome {
                 partial: false,
                 staged: self.staged.len(),
@@ -575,6 +576,10 @@ impl Eval {
         }
         self.store.dirty = false;
         self.store.partial_eval = partial;
+        // EVERY EXIT NOTES, including this one, because the record is what a
+        // replay of THIS tick needs and a tick that finished is as replayable
+        // as one that did not.
+        self.store.note_eval(self.budget, self.steps, partial);
         Ok(Outcome {
             partial,
             staged: self.staged.len(),

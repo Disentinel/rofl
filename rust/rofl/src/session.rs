@@ -206,6 +206,10 @@ impl Session {
         let o = match self.eval.run() {
             Ok(o) => o,
             Err(Halt::Budget(_, _)) => {
+                // The wall unwinds past `run`'s own exits, so the record is
+                // written here: a tick that ran out is exactly the one whose
+                // budget a replay must be given.
+                self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
                 return Ok(Evaluated {
                     partial: true,
                     staged: 0,

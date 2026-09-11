@@ -275,11 +275,15 @@ its id. The field is separate because the reference's `restore` would read
 them out of `facts` and make them LIVE, and a snapshot that resurrects five
 ticks of history is worse than one that forgets a witness.
 
-**One field still goes out empty**: `evals`, the per-tick record of what the
-standing evaluation was allowed and what it spent. This store does not keep
-it, and `docs/time-and-continuity.md` is explicit that a past tick replays
-bit-identically only if the replay is given the same budget. A world saved
-here and replayed there has lost that.
+**`evals` followed.** `Store::eval_log` keeps, per tick, the budget the
+standing evaluation ran under, the steps it spent and whether it finished, and
+the snapshot carries it both ways. Every exit of `Eval::run` notes it, and so
+does the budget wall in `Session::evaluate`, which unwinds past them — a tick
+that ran out is exactly the one whose budget a replay must be given. Measured
+against the reference on the counter world: ticks 0, 1, 2 at budget 100 000
+and 2 steps each, identical on both hosts and across a save. A later
+evaluation of the same tick replaces its record, because the last one is what
+produced the state a replay has to reproduce.
 
 **`strataPlan` is not ported, and the reason is not the port's.** It reads the
 `stratum` relation, and measured on both hosts — with boot.rofl and without —
@@ -292,4 +296,11 @@ of work, not an accessor.
 
 `assertClauses` is left alone: `npm run features` reports it reachable by no
 demo at all, which is a question about the TypeScript surface.
+
+**Where that leaves the count**, walked rather than remembered: 16 public
+methods on `Rofl`, 22 on `Session`, and the two names above are the whole
+remainder. Both carry a reason. Whether a surface with two deliberate
+refusals in it is COMPLETE is a decision rather than a measurement, and
+`examples/rofl-release/` records both polarities so that it reads as contested
+instead of being settled by whoever wrote the last line.
 

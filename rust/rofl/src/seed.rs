@@ -3,7 +3,7 @@
 //! the program.
 
 use crate::reflect::Vocab;
-use crate::store::{PremRef, Store, Witness, F_BASE, F_FROZEN, F_TICK};
+use crate::store::{EvalRecord, PremRef, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{cmp_js, Heap, Term, TermK};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -143,6 +143,18 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
             }
         }
     }
+    for e in d.get("evals").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
+        let Some(t) = e["tick"].as_u64() else { continue };
+        s.eval_log.insert(
+            t as u32,
+            EvalRecord {
+                budget: e["budget"].as_i64().unwrap_or(0),
+                steps: e["steps"].as_i64().unwrap_or(0),
+                partial: e["partial"].as_bool().unwrap_or(false),
+            },
+        );
+    }
+
     // Killed only now: `remove_many` drops a record's witnesses with it, so a
     // ghost put down before its own firings were read would take them along.
     s.remove_many(&ghost_ids);
@@ -156,14 +168,12 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
 // `Store.snapshot` (src/store.ts:776), the inverse of `restore` above and in
 // the same file for that reason: a format with its two halves apart drifts.
 //
-// WHAT THE PORT CANNOT WRITE, said here rather than discovered by a reader.
-// The TypeScript store keeps an `evalLog` — per tick, the budget the standing
-// evaluation ran under, the steps it took and whether it finished — and
-// `docs/time-and-continuity.md` is explicit that a past tick replays
-// bit-identically ONLY if the replay is given the same budget. This store has
-// no such log, so `evals` goes out EMPTY and a world saved here and replayed
-// there has lost the record of what each tick was allowed. That is a real hole
-// and it is the one this file can name but not fill.
+// `evals` IS THE FIELD THIS FILE ONCE WENT OUT EMPTY ON, and the hole it left
+// is the reason it is now written: `docs/time-and-continuity.md` is explicit
+// that a past tick replays bit-identically ONLY if the replay is given the
+// same budget, so a snapshot without the per-tick record carries a history
+// nobody can reproduce. `Store::eval_log` keeps it and both directions read
+// it.
 
 fn term_to_json(h: &Heap, t: Term) -> Value {
     match t.kind() {
@@ -274,7 +284,13 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
         })
         .collect();
 
+    let evals: Vec<Value> = s
+        .eval_log
+        .iter()
+        .map(|(t, e)| json!({ "tick": t, "budget": e.budget, "steps": e.steps, "partial": e.partial }))
+        .collect();
+
     json!({ "tick": s.tick, "facts": facts, "wits": wits, "firings": firings,
-            "tickLog": s.tick_log, "evals": [], "ghosts": ghosts })
+            "tickLog": s.tick_log, "evals": evals, "ghosts": ghosts })
     .to_string()
 }

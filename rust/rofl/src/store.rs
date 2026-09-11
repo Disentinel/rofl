@@ -46,7 +46,7 @@
 
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub type FactId = u32;
 
@@ -111,6 +111,16 @@ impl FactRec {
     pub fn dead(&self) -> bool {
         self.flags() & F_DEAD != 0
     }
+}
+
+/// What one tick's standing evaluation cost and was allowed (`EvalRecord`,
+/// src/store.ts:29). `budget` and `steps` are what a replay needs in order to
+/// REPRODUCE a past tick rather than approximate it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct EvalRecord {
+    pub budget: i64,
+    pub steps: i64,
+    pub partial: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -330,6 +340,20 @@ pub struct Store {
     pub dirty: bool,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
+    /// WHAT EACH TICK'S STANDING EVALUATION WAS ALLOWED AND WHAT IT SPENT.
+    ///
+    /// `partial_eval` above answers the same question about the LAST
+    /// evaluation only. A past tick is reconstructable exactly -- same
+    /// program, same dated inputs, bit-identical fixpoint
+    /// (docs/time-and-continuity.md) -- but ONLY if the replay is given the
+    /// same budget: a tick cut short at 100 000 steps and replayed at 500 000
+    /// derives more, and the replay disagrees with history while claiming to
+    /// be it. So the number sits beside the boolean it completes.
+    ///
+    /// Ordered, because a snapshot writes it in tick order and a snapshot that
+    /// depends on a hash map's iteration is a snapshot that differs from
+    /// itself.
+    pub eval_log: BTreeMap<u32, EvalRecord>,
     /// WHAT `absorb` COSTS, which nothing else in this engine can see.
     ///
     /// `steps` counts rule firings and `peak_rows` the join accumulator; both
@@ -1177,6 +1201,17 @@ impl Store {
     /// carried out of a tick by the boundary. They are in no answer and in no
     /// canonical state, and a WITNESS may still name one — which is why a
     /// snapshot has to carry them (`crate::seed`).
+    /// Record what the evaluation standing at the current tick ran under. A
+    /// later evaluation of the same tick REPLACES it: the last one is the one
+    /// that produced the state a replay has to reproduce.
+    pub fn note_eval(&mut self, budget: i64, steps: i64, partial: bool) {
+        self.eval_log.insert(self.tick, EvalRecord { budget, steps, partial });
+    }
+
+    pub fn eval_of(&self, tick: u32) -> Option<EvalRecord> {
+        self.eval_log.get(&tick).copied()
+    }
+
     pub fn dead_ids(&self) -> Vec<FactId> {
         (0..self.facts.recs.len() as FactId)
             .filter(|id| !self.alive(*id) && self.wit_head.get(*id as usize).is_some())
