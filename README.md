@@ -112,7 +112,7 @@ points; the whole list is in `package.json`.
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
 | `rust/` | **the Rust engine** — the port this branch is instrumental to (`docs/the-target.md`), plus its benchmark crates | `cargo test` under `rust/` |
-| `examples/` `test/` `facts/` `docs/` | runnable demos, the suite, the ledgers, the design decisions | `test` |
+| `examples/` `facts/` `docs/` | runnable demos, the ledgers and goldens, the design decisions | `test` |
 
 ### Documents
 
@@ -180,7 +180,7 @@ about to run with `node -v` before believing a green.
 
 Every one of these is a check somebody paid for. `npm test` and `npm run
 grepcheck` are what CI runs (`.github/workflows/ci.yml`, node and bun);
-the rest are run by hand and several are also asserted from `test/`.
+the rest are run by hand.
 
 | command | what it refuses |
 |---|---|
@@ -798,7 +798,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
 
 ## Acceptance status
 
-All Phase 1–4 criteria are covered by `test/phase{1..4}.test.ts` (31 tests):
+All Phase 1–4 criteria were covered by test/phase{1..4}.test.ts, 31 tests (suite removed 2026-09-11):
 transitive closure & structured terms; naive ≡ seminaive over 120 seeds;
 `why` to EDB axioms; perspective isolation; strata read from `stratum/2`
 facts; unstratifiable rejection (with the reach-trace on the stock path, with
