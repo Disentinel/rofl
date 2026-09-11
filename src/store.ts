@@ -767,7 +767,15 @@ export class Store implements FactStore {
     const wkeys = [...this.firings.keys()].sort();
     for (const k of wkeys) {
       const w = this.witnessOf(k)!;
-      lines.push(`wit ${k} <- ${w.ruleId}@${w.tick} [${w.prems.map((p) => p.t + ':' + (p.t === 'bi' ? p.desc : p.key)).join('; ')}]`);
+      // SORTED, for the same reason the fact list is: order never depends on
+      // insertion. A body's premises are solved in whatever order the planner
+      // chose, and the semantics does not fix that choice — two engines that
+      // agree on every fact and on this witness's rule, tick and premise SET
+      // are one language, and a rendering that prints the sequence makes them
+      // look like two. Measured: `drip` differed on exactly this, in two
+      // witnesses of 9439 lines, with every fact line identical.
+      const prems = w.prems.map((p) => p.t + ':' + (p.t === 'bi' ? p.desc : p.key)).sort();
+      lines.push(`wit ${k} <- ${w.ruleId}@${w.tick} [${prems.join('; ')}]`);
     }
     lines.push(...this.tickLog);
     return lines.join('\n');
