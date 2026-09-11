@@ -1,4 +1,4 @@
-# ROFL Kernel v0
+# ROFL v1
 
 **ROFL** — *Relation-Oriented Fixpoint Language*. A Datalog-family language with
 perspectives (first-class truth contexts), explicit time, kernel-emitted
@@ -44,6 +44,51 @@ path[main](a,c)  <= rd2f1f53d @tick 0
 Plain `node`, no flags, no dependencies — the published tarball is the compiled
 engine and nothing else. `boot.rofl` is the semantics as data and carries the
 audits; a program loads without it and answers less about itself.
+
+### The libraries that ship with it
+
+`rules/inquiry/` is a discipline for deciding things under incomplete
+evidence — claims, evidence with polarity and freshness, four epistemic grades
+(`supported`, `refuted`, `contested`, `unknown`), obligations that block or
+merely require, and authority-gated acceptance of a residual gap. `rules/policies/`
+holds the two policies it reads. `rules/decisions/` holds two decision packs
+built on it. They are written in ROFL and shipped as ROFL: read them, change
+them, or take the four lines you want.
+
+```js
+import { fileURLToPath } from 'node:url';
+const at = (s) => fileURLToPath(import.meta.resolve(s));
+
+// ORDER MATTERS: a pack is loaded before the packs that read it.
+for (const f of ['inquiry/ontology.rofl', 'inquiry/terminology.rofl',
+                 'inquiry/epistemic.rofl', 'inquiry/obligations.rofl',
+                 'inquiry/intents.rofl', 'inquiry/perspectives.rofl',
+                 'policies/evidence.rofl', 'policies/authority.rofl',
+                 'decisions/production-readiness.rofl']) {
+  r.load(readFileSync(at(`rofl/${f}`), 'utf8'), f);
+}
+r.load(`
+  inquiry(ship_it, decide).
+  pack(ship_it, production_readiness).
+  decision_authority(ship_it, vadim).
+  claim(tests_pass). blocking(ship_it, tests_pass). observable(tests_pass).
+  refutes[obs](ci_run, tests_pass). evidence_kind[obs](ci_run, measured).
+`, 'mine.rofl');
+r.evaluate();
+r.query('recommendation(I, V)').rows;   // ship_it -> no_go
+```
+
+and `why` answers for the verdict the same way it answers for anything else:
+
+```
+recommendation[main](ship_it,no_go)  <= r989a9b8b @tick 0
+  violated_blocking[main](ship_it,tests_pass)  <= r05e01676 @tick 0
+    inquiry[main](ship_it,decide) [axiom]
+    blocks_on[main](ship_it,tests_pass)  <= r6e89f9d7 @tick 0
+```
+
+The other forty rule packs in this repository are models OF this repository —
+its JavaScript, its ledger, its own layering — and do not ship.
 
 **Large worlds are the other engine's.** `src/` is built for small ones; the
 Rust engine is reached through the same JSON protocol from `rofl/port`, and the

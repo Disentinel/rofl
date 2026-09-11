@@ -6,7 +6,7 @@
 -- `npm test` — 82 worlds, both engines, one committed golden, 12.7 s.
 supports[obs](golden_82, two_engines_agree).
 evidence_kind[obs](golden_82, measured).
-evidence_version[obs](golden_82, "0.1.0").
+evidence_version[obs](golden_82, "1.0.0").
 
 -- THE BLOCKER MOVED AND DID NOT CLEAR, 2026-09-11. `why`, `whynot`, `retract`,
 -- `excise`, `holds` and `fact_keys` are on `Session` and gated against the
@@ -21,7 +21,7 @@ evidence_version[obs](golden_82, "0.1.0").
 -- `Session`, and every other name answered.
 refutes[obs](two_names_of_sixteen, port_surface_complete).
 evidence_kind[obs](two_names_of_sixteen, measured).
-evidence_version[obs](two_names_of_sixteen, "0.1.0").
+evidence_version[obs](two_names_of_sixteen, "1.0.0").
 
 -- AND THE OTHER SIDE, because a claim settled by deleting the evidence against
 -- it is not settled. `rust/rofl/tests/explain.rs` is 24 tests holding the port
@@ -33,20 +33,20 @@ evidence_version[obs](two_names_of_sixteen, "0.1.0").
 -- decision authority's call, not the journal's.
 supports[obs](surface_walk_22, port_surface_complete).
 evidence_kind[obs](surface_walk_22, measured).
-evidence_version[obs](surface_walk_22, "0.1.0").
+evidence_version[obs](surface_walk_22, "1.0.0").
 supports[obs](explain_parity_16, port_explains).
 evidence_kind[obs](explain_parity_16, measured).
-evidence_version[obs](explain_parity_16, "0.1.0").
+evidence_version[obs](explain_parity_16, "1.0.0").
 
 refutes[obs](speccheck_uncovered, every_duty_has_a_guard).
 evidence_kind[obs](speccheck_uncovered, measured).
-evidence_version[obs](speccheck_uncovered, "0.1.0").
+evidence_version[obs](speccheck_uncovered, "1.0.0").
 
 -- `npm run features` — greedy cover reaches 52 of 53; `api:assertClauses` is
 -- reachable by no demo.
 refutes[obs](feature_census, every_feature_has_a_world).
 evidence_kind[obs](feature_census, measured).
-evidence_version[obs](feature_census, "0.1.0").
+evidence_version[obs](feature_census, "1.0.0").
 
 -- THE HOST KERNEL TAKES NOTHING, and the walk says so: no file under `src/` or
 -- `runtime/` imports anything but `node:` builtins and itself. The Rust port
@@ -54,7 +54,7 @@ evidence_version[obs](feature_census, "0.1.0").
 -- claim anybody made otherwise.
 supports[obs](src_import_walk, js_kernel_takes_nothing).
 evidence_kind[obs](src_import_walk, measured).
-evidence_version[obs](src_import_walk, "0.1.0").
+evidence_version[obs](src_import_walk, "1.0.0").
 
 -- `@babel/parser` was in `dependencies` while its only importers are seven
 -- files under `scanners/` and `scripts/`, neither of which ships -- so anybody
@@ -63,7 +63,7 @@ evidence_version[obs](src_import_walk, "0.1.0").
 -- unpacked.
 supports[obs](package_manifest, package_declares_what_it_ships).
 evidence_kind[obs](package_manifest, measured).
-evidence_version[obs](package_manifest, "0.1.0").
+evidence_version[obs](package_manifest, "1.0.0").
 
 -- LOAD. 5 676 864 facts over a 128-file world at 198 B/fact and 45.7 s
 -- (docs/the-target.md, docs/port-surface.md), and the two walls a caller can
@@ -73,7 +73,7 @@ evidence_version[obs](package_manifest, "0.1.0").
 -- and is in the doc: that is what THAT workload does, not what the engine does.
 supports[obs](corpus_5_6m, holds_a_realistic_corpus).
 evidence_kind[obs](corpus_5_6m, measured).
-evidence_version[obs](corpus_5_6m, "0.1.0").
+evidence_version[obs](corpus_5_6m, "1.0.0").
 
 -- MONITORING, in the form a library can have it. A caller reads back
 -- `partial`, `steps`, `peak_rows` against `space` -- how close to the wall,
@@ -83,7 +83,7 @@ evidence_version[obs](corpus_5_6m, "0.1.0").
 -- itself, so the record is a fact and not a log line.
 supports[obs](caller_side_instruments, a_run_reports_on_itself).
 evidence_kind[obs](caller_side_instruments, measured).
-evidence_version[obs](caller_side_instruments, "0.1.0").
+evidence_version[obs](caller_side_instruments, "1.0.0").
 
 -- CUSTOMER ACCEPTANCE, AND IT IS THE ONE THAT FAILS. No user outside this
 -- repository's author has built anything with it; the 21 demos, the 84 golden
@@ -94,7 +94,7 @@ evidence_version[obs](caller_side_instruments, "0.1.0").
 -- brief, and `npm run speccheck` reports 18 rows amending or qualifying it.
 refutes[obs](start_md_amendments, release_contract_is_current).
 evidence_kind[obs](start_md_amendments, measured).
-evidence_version[obs](start_md_amendments, "0.1.0").
+evidence_version[obs](start_md_amendments, "1.0.0").
 
 -- `docs_derived_from_ledger` HAS NO ENTRY ON PURPOSE. w_docs_from_ledger is
 -- open in the worklist; absence of evidence does not derive falsehood here,
@@ -107,7 +107,7 @@ evidence_version[obs](start_md_amendments, "0.1.0").
 -- CONTESTED -- and it was never meant to: what it settled is in frame.rofl.
 supports[obs](owner_accepts_two_names, port_surface_complete).
 evidence_kind[obs](owner_accepts_two_names, human_assertion).
-evidence_version[obs](owner_accepts_two_names, "0.1.0").
+evidence_version[obs](owner_accepts_two_names, "1.0.0").
 
 -- ======================================================== THE OTHER DECISION
 -- Measured 2026-09-11 by reading package.json and the tree, not by recalling
@@ -121,7 +121,7 @@ evidence_version[obs](owner_accepts_two_names, "0.1.0").
 -- engine does real work daily for the person who asked for it.
 supports[obs](self_application_46_packs, the_asker_runs_the_project_on_it).
 evidence_kind[obs](self_application_46_packs, measured).
-evidence_version[obs](self_application_46_packs, "0.1.0").
+evidence_version[obs](self_application_46_packs, "1.0.0").
 
 -- PROVEN BY DOING IT, 2026-09-11: `npm pack`, then `npm i` of the tarball into
 -- an empty project, then `import { Rofl } from "rofl"` -- boot.rofl loaded,
@@ -130,7 +130,7 @@ evidence_version[obs](self_application_46_packs, "0.1.0").
 -- the tarball is 20 files and no dependencies.
 supports[obs](tarball_installed_and_used, installable_and_importable).
 evidence_kind[obs](tarball_installed_and_used, measured).
-evidence_version[obs](tarball_installed_and_used, "0.1.0").
+evidence_version[obs](tarball_installed_and_used, "1.0.0").
 
 -- AND THE `ship the TypeScript` FORK IS CLOSED BY MEASUREMENT RATHER THAN BY
 -- TASTE. The first attempt shipped `src/*.ts` and Node refused it:
@@ -140,13 +140,13 @@ evidence_version[obs](tarball_installed_and_used, "0.1.0").
 -- `dist/` with declarations and maps; `src/` ships beside it to be read.
 supports[obs](build_is_not_optional, package_declares_what_it_ships).
 evidence_kind[obs](build_is_not_optional, measured).
-evidence_version[obs](build_is_not_optional, "0.1.0").
+evidence_version[obs](build_is_not_optional, "1.0.0").
 
 -- The MIT text is in LICENSE and ships in the tarball, which is the one thing
 -- the licence itself requires of a distribution.
 supports[obs](licence_in_tarball, licence_text_ships).
 evidence_kind[obs](licence_in_tarball, measured).
-evidence_version[obs](licence_in_tarball, "0.1.0").
+evidence_version[obs](licence_in_tarball, "1.0.0").
 
 -- README now opens with `npm i rofl` and eleven lines that load boot, evaluate
 -- a transitive closure and print a derivation tree -- the same program run
@@ -155,20 +155,24 @@ evidence_version[obs](licence_in_tarball, "0.1.0").
 -- the contributor half starts.
 supports[obs](readme_opens_with_use, a_newcomer_can_run_a_world_from_the_readme).
 evidence_kind[obs](readme_opens_with_use, measured).
-evidence_version[obs](readme_opens_with_use, "0.1.0").
+evidence_version[obs](readme_opens_with_use, "1.0.0").
 
--- 0.1.0 against a tree that calls itself v0 in START.md, 1.0 in this inquiry
--- and `ROFL Kernel v0` in the README title. Three numbers for one thing.
-refutes[obs](three_version_numbers, the_version_means_something).
-evidence_kind[obs](three_version_numbers, measured).
-evidence_version[obs](three_version_numbers, "0.1.0").
+-- ONE NUMBER NOW, and it is the owner's call rather than a measurement: the
+-- kernel showed what it is during the development of this tree, so 1.0.0 in
+-- package.json, `ROFL v1` in the README, and START.md marked HISTORICAL --
+-- which it always was, a pre-implementation handoff carried as a live
+-- contract. What 1.0 PROMISES is the exported surface: `Rofl`, the port
+-- client, and the language's closed vocabulary, which is mechanically checked.
+supports[obs](one_version_number, the_version_means_something).
+evidence_kind[obs](one_version_number, human_assertion).
+evidence_version[obs](one_version_number, "1.0.0").
 
 -- `bugs.url` points at the repository's issues, which is where a defect goes.
 supports[obs](bugs_url, a_defect_has_somewhere_to_go).
 evidence_kind[obs](bugs_url, measured).
-evidence_version[obs](bugs_url, "0.1.0").
+evidence_version[obs](bugs_url, "1.0.0").
 
 -- ADOPTION, recorded and gating nothing.
 refutes[obs](no_outside_user_yet, used_by_somebody_other_than_its_author).
 evidence_kind[obs](no_outside_user_yet, human_assertion).
-evidence_version[obs](no_outside_user_yet, "0.1.0").
+evidence_version[obs](no_outside_user_yet, "1.0.0").

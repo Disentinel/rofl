@@ -1,7 +1,7 @@
 {
   "name": "rofl",
-  "version": "0.1.0",
-  "description": "ROFL kernel v0 - Relation-Oriented Fixpoint Language",
+  "version": "1.0.0",
+  "description": "ROFL \u2014 Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -17,13 +17,19 @@
       "default": "./dist/runtime/port.js"
     },
     "./boot.rofl": "./boot.rofl",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./inquiry/*": "./rules/inquiry/*",
+    "./policies/*": "./rules/policies/*",
+    "./decisions/*": "./rules/decisions/*"
   },
   "types": "./dist/src/api.d.ts",
   "files": [
     "dist/",
     "src/",
     "runtime/port.ts",
+    "rules/inquiry/",
+    "rules/policies/",
+    "rules/decisions/",
     "boot.rofl",
     "policy.rofl",
     "safety.rofl",

@@ -23,7 +23,7 @@ concern_claim(rofl_1_0, customer_acceptance, the_asker_runs_the_project_on_it).
 excluded_concern(rofl_1_0, rollback, "backing out a release of a library is pinning the previous version, which is the registry's job and not the engine's. The engine HAS retract, excise and fromSnapshot, and mapping the axis to them would answer a distribution question with an evaluation answer -- the borrowed reason this ledger already records three times").
 excluded_concern(rofl_1_0, billing, "nothing is charged for").
 
-current_version("0.1.0").
+current_version("1.0.0").
 
 -- ====================================================== THE OTHER DECISION
 -- Seven axes, and none of them is inference. `readiness` is the dependency on
