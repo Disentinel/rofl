@@ -461,7 +461,7 @@ than assumed. Full account in
 the fork-parallelism session (page deleted with docs/dogfood/, 2026-09-10); the load-bearing results:
 
 - **There is no thousand-fork search in this repository.** The largest is
-  `test/kernel-arity.test.ts` at ~800 worlds; the largest that is both
+  test/kernel-arity.test.ts (gate removed 2026-09-11) at ~800 worlds; the largest that is both
   many-branch and expensive per branch is `examples/wtf`'s order sweep at 41.
   **IFFY does not fork at all** — its arms are a column in one world — and its
   own numbers say why (2.1× fewer facts per arm than per fork). Nothing in the

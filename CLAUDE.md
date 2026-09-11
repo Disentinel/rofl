@@ -19,7 +19,6 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run report      -- <files>   the epistemic report over a set of packs
     npm run depends     · cleanliness · layering · nullary — the models over the tree itself
     npm run speccheck   every duty in facts/spec.rofl, and which check stands for it
-    npm run test:full   the old node suite — half an hour on four cores, ONLY WHEN ASKED BY NAME
 
 <!-- END commands -->
 

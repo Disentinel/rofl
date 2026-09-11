@@ -97,7 +97,10 @@ export function splice(doc: string, b: Block, body: string): string {
  *
  *  A trailing `:123` is stripped (a citation to a line still names a file) and
  *  anything with a `*` is skipped: a glob is a pattern, not a path. */
-const PATHY = /`((?:src|rules|facts|scanners|test|scripts|runtime|examples|adapters|bench|docs|skills|rust)\/[A-Za-z0-9_./-]+)`/g;
+// A TRAILING SLASH IS A PATH TOO, and `+` made a bare directory reference
+// invisible: README listed `test/` in its own map of the tree for a whole
+// commit after the folder was deleted, and this check read it as prose.
+const PATHY = /`((?:src|rules|facts|scanners|test|scripts|runtime|examples|adapters|bench|docs|skills|rust)\/[A-Za-z0-9_./-]*)`/g;
 
 function danglingPaths(): string[] {
   const out: string[] = [];

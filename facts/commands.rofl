@@ -50,5 +50,3 @@ command_note("depends", "· cleanliness · layering · nullary — the models ov
 command_shown("speccheck", 11).
 command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it").
 
-command_shown("test:full", 12).
-command_note("test:full", "the old node suite — half an hour on four cores, ONLY WHEN ASKED BY NAME").

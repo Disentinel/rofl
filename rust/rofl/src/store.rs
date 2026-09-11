@@ -1362,25 +1362,24 @@ impl Store {
             out.push('@');
             out.push_str(&w.tick.to_string());
             out.push_str(" [");
-            for (i, p) in w.prems.iter().enumerate() {
-                if i > 0 {
-                    out.push_str("; ");
-                }
-                match p {
-                    PremRef::Fact(f) => {
-                        out.push_str("fact:");
-                        self.write_key(h, *f, &mut out);
-                    }
-                    PremRef::Neg(s) => {
-                        out.push_str("neg:");
-                        out.push_str(h.name(*s));
-                    }
-                    PremRef::Bi(s) => {
-                        out.push_str("bi:");
-                        out.push_str(h.name(*s));
-                    }
-                }
-            }
+            // SORTED, for the same reason the fact list is: order never
+            // depends on insertion. A body's premises are solved in whatever
+            // order the planner chose and the semantics does not fix that
+            // choice, so a rendering that prints the SEQUENCE makes two
+            // engines that agree on the premise SET look like two languages.
+            // Measured: `drip` differed on exactly this, two witnesses of
+            // 9439 lines, every fact line identical.
+            let mut prems: Vec<String> = w
+                .prems
+                .iter()
+                .map(|p| match p {
+                    PremRef::Fact(f) => format!("fact:{}", self.key(h, *f)),
+                    PremRef::Neg(s) => format!("neg:{}", h.name(*s)),
+                    PremRef::Bi(s) => format!("bi:{}", h.name(*s)),
+                })
+                .collect();
+            prems.sort_by(|a, b| cmp_js(a, b));
+            out.push_str(&prems.join("; "));
             out.push(']');
         }
         for l in &self.tick_log {

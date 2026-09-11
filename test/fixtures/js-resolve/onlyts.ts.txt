@@ -1,2 +1,0 @@
-// resolvable only where a TypeScript loader has registered ".ts"
-export const o = 1;

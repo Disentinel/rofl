@@ -90,6 +90,7 @@ check_file("readiness_rofl", "rules/inquiry/perspectives.rofl").
 check_file("readiness_rofl", "rules/policies/evidence.rofl").
 check_file("readiness_rofl", "rules/policies/authority.rofl").
 check_file("readiness_rofl", "rules/decisions/production-readiness.rofl").
+check_file("readiness_rofl", "rules/decisions/public-release.rofl").
 check_file("readiness_rofl", "examples/rofl-release/frame.rofl").
 check_file("readiness_rofl", "examples/rofl-release/context.rofl").
 check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").

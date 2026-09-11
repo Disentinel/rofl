@@ -1,0 +1,49 @@
+-- rules/decisions/public-release.rofl — the second decision pack, and the
+-- reason there is one.
+--
+-- `production_readiness` answers `is this ready to do real work`. It was asked
+-- to carry `has anybody outside the author used it` as well, and that question
+-- CANNOT be a precondition of the decision that would enable it: nothing is
+-- published, so nobody can use it, so the readiness verdict is withheld, so
+-- nothing is published. A circular obligation, and the readiness pack has no
+-- shape in which to notice one.
+--
+-- So the two decisions are two inquiries. Readiness is about the ENGINE.
+-- Publication is about everything between a working engine and a stranger
+-- running a world of their own, and none of it is inference.
+--
+-- EDB (in addition to the inquiry kernel's frame):
+--   pack(I, public_release)
+--   concern_claim(I, Concern, Claim)
+--   excluded_concern(I, Concern, Why)
+
+concern(public_release, readiness).
+concern(public_release, entry_point).
+concern(public_release, licence).
+concern(public_release, provenance).
+concern(public_release, first_hour).
+concern(public_release, versioning).
+concern(public_release, support).
+
+-- PUBLISH: nothing blocks, nothing unresolved in any direction, full coverage.
+recommendation(I, publish) :-
+    pack(I, public_release),
+    inquiry(I, decide),
+    not go_blocked(I, _),
+    not open_obligation(I, _),
+    not refuted_obligation(I, _),
+    not contested_obligation(I, _),
+    not coverage_gap(I, _).
+
+-- PUBLISH WITH KNOWN GAPS: nothing blocks and nothing is contested, but gaps
+-- remain — every one of them accepted by authority, and at least one there.
+-- A first public release is normally this and not the one above; what makes it
+-- honest is that the gaps are named in the record rather than in a mood.
+recommendation(I, publish_with_known_gaps) :-
+    pack(I, public_release),
+    inquiry(I, decide),
+    not go_blocked(I, _),
+    not contested_obligation(I, _),
+    not coverage_gap(I, _),
+    accepted_residual(I, _),
+    not unaccepted_gap(I, _).

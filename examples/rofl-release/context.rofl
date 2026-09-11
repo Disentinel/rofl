@@ -15,12 +15,29 @@ decision_authority(rofl_1_0, owner).
 concern_claim(rofl_1_0, requirements, release_contract_is_current).
 concern_claim(rofl_1_0, testing, two_engines_agree).
 concern_claim(rofl_1_0, product_coverage, every_feature_has_a_world).
-concern_claim(rofl_1_0, dependencies, package_declares_what_it_ships).
+concern_claim(rofl_1_0, dependencies, js_kernel_takes_nothing).
 concern_claim(rofl_1_0, load, holds_a_realistic_corpus).
 concern_claim(rofl_1_0, monitoring, a_run_reports_on_itself).
-concern_claim(rofl_1_0, customer_acceptance, used_by_somebody_other_than_its_author).
+concern_claim(rofl_1_0, customer_acceptance, the_asker_runs_the_project_on_it).
 
 excluded_concern(rofl_1_0, rollback, "backing out a release of a library is pinning the previous version, which is the registry's job and not the engine's. The engine HAS retract, excise and fromSnapshot, and mapping the axis to them would answer a distribution question with an evaluation answer -- the borrowed reason this ledger already records three times").
 excluded_concern(rofl_1_0, billing, "nothing is charged for").
 
-current_version("0.1.0").
+current_version("1.0.0").
+
+-- ====================================================== THE OTHER DECISION
+-- Seven axes, and none of them is inference. `readiness` is the dependency on
+-- the other inquiry, carried by a blocking claim rather than by a rule: the
+-- inquiry kernel relates an inquiry to its CLAIMS and has no word for one
+-- inquiry resting on another, so the dependency is an observation about the
+-- first decision's verdict. That is honest and it is also a gap -- recorded.
+pack(rofl_public, public_release).
+decision_authority(rofl_public, owner).
+
+concern_claim(rofl_public, readiness, engine_is_ready).
+concern_claim(rofl_public, entry_point, installable_and_importable).
+concern_claim(rofl_public, licence, licence_text_ships).
+concern_claim(rofl_public, provenance, package_declares_what_it_ships).
+concern_claim(rofl_public, first_hour, a_newcomer_can_run_a_world_from_the_readme).
+concern_claim(rofl_public, versioning, the_version_means_something).
+concern_claim(rofl_public, support, a_defect_has_somewhere_to_go).

@@ -270,222 +270,35 @@ duty[wfs](t_stratum_table_survives, guaranteed, "docs/three-valued-answers.md", 
 -- so a domain relation hardcoded into one host makes the two disagree; and
 -- `test/vocabulary-doc.test.ts`, which since today reads the vocabulary off
 -- the RUNNING kernel (`RESERVED`, `STR_ARITY`) rather than off a list.
-cited_check[map](c_vocab_doc, "test/vocabulary-doc.test.ts", "README.md documents exactly the vocabulary the kernel actually has").
-cited_check[map](c_two_engines, "test/port-client.test.ts", "the node client reproduces the corpus through the pipe").
-cited_check[map](c_reserved_reject, "test/phase3.test.ts", "rules concluding into kernel relations are rejected at load").
-cited_check[map](c_breach_surfaces, "test/phase3.test.ts", "hand-asserted reflection concluding into reserved surfaces as breach").
-cited_check[map](c_runtime_rule, "test/phase3.test.ts", "a rule added at runtime (as facts, same assert path) derives without reload").
-cited_check[map](c_malformed_sibling, "test/phase3.test.ts", "boot's malformed validator, premise deleted via API, is condemned by its sibling").
-cited_check[map](c_round_trip, "test/phase3.test.ts", "round-trip: serialize store -> new process -> load -> identical evaluation, no re-parse").
 
-cited_check[map](c_tc_seminaive, "test/phase1.test.ts", "transitive closure derives the correct closure (seminaive)").
-cited_check[map](c_tc_naive, "test/phase1.test.ts", "transitive closure derives the correct closure (naive)").
-cited_check[map](c_structured_terms, "test/phase1.test.ts", "structured terms: list append via moded rules").
-cited_check[map](c_async_rejected, "test/phase1.test.ts", "@async parses but is rejected with a diagnostic").
-cited_check[map](c_next_body_rejected, "test/phase1.test.ts", "@next is rejected in rule bodies").
-cited_check[map](c_arith_builtins, "test/phase1.test.ts", "arithmetic builtins: is, mod, comparisons, negatives").
 
-cited_check[map](c_differential, "test/phase2.test.ts", "differential: naive ≡ seminaive on 120 random seeded programs").
-cited_check[map](c_differential_negation, "test/phase2.test.ts", "differential with stratified negation: naive ≡ seminaive on 30 seeds").
-cited_check[map](c_why_tree, "test/phase2.test.ts", "why returns a derivation tree ending in EDB facts").
-cited_check[map](c_perspective_isolation, "test/phase2.test.ts", "a rule reading a perspective it cannot see matches nothing").
-cited_check[map](c_stratum_order, "test/phase2.test.ts", "negation executes in stratum order read from stratum/2 facts").
-cited_check[map](c_no_boot_no_strata, "test/phase2.test.ts", "without boot meta-rules there are no stratum facts and the plan says so").
-cited_check[map](c_unstratified_rejected, "test/phase2.test.ts", "unstratifiable program is rejected with a reach-trace diagnostic").
-cited_check[map](c_provenance_queryable, "test/phase2.test.ts", "provenance: derived_by facts are queryable and support counting works").
 
-cited_check[map](c_counter, "test/phase4.test.ts", "counter.rofl: intention facts 1..5 at tick boundaries, silent fixpoint after").
-cited_check[map](c_replay_shuffled, "test/phase4.test.ts", "replay: bit-identical states across 100 runs with shuffled insertion order").
-cited_check[map](c_busy_beaver, "test/phase4.test.ts", "tm.rofl: 3-state busy beaver halts under budget with the correct tape").
-cited_check[map](c_diverging_hole, "test/phase4.test.ts", "tm_diverge.rofl: budget exhausts, hole emitted, partial trace queryable, no hang").
-cited_check[map](c_boot_four_audits, "test/phase4.test.ts", "boot.rofl loads; all six audit queries empty; whynot flows_to(red, blue) finite").
-cited_check[map](c_rounds_primary, "test/phase2.test.ts", "...and the PRIMARY path orders the same program with no table at all").
-cited_check[map](c_reject_is_free, "test/reject-budget-invariance.test.ts", "refusing a program costs the same at 16x the budget").
-cited_check[map](c_sensors_scenario, "test/phase4.test.ts", "sensors.rofl: the full acceptance scenario").
-cited_check[map](c_excise_multiple_support, "test/phase4.test.ts", "excise survives multiple support (not witness-based)").
-cited_check[map](c_forged_audit, "test/phase4.test.ts", "forged audit: asserting into a perspective without authority").
-cited_check[map](c_budget_partial, "test/phase4.test.ts", "budgeted query on a heavy program returns partial and emits hole").
 
-cited_check[map](c_arrival_order, "test/index-arrival.test.ts", "ascending, shuffled and descending arrival build the same store, byte for byte").
-cited_check[map](c_sorted_keys, "test/store-conformance.test.ts", "MUTANT: unsorted keys turn the end-to-end oracle red").
-cited_check[map](c_witness_canonical, "test/semiring.test.ts", "the store retains every witness, in canonical order, and round-trips it").
-cited_check[map](c_witness_load_order, "test/semiring.test.ts", "witness order does not depend on the order the rules were loaded").
-cited_check[map](c_semiring_boundary, "test/semiring.test.ts", "the witness tick stamp cannot tell a boundary support from a fresh one").
 
-cited_check[map](c_undefined_boot_clean, "test/undefined-premise.test.ts", "boot.rofl audits itself clean, and its other audits stay clean").
-cited_check[map](c_undefined_negation, "test/undefined-premise.test.ts", "a negated premise on an unpopulatable relation is deliberately NOT flagged").
-cited_check[map](c_reserved_never_flagged, "test/undefined-premise.test.ts", "reserved relations are never flagged, even when they hold nothing").
-cited_check[map](c_undefined_misspelling, "test/undefined-premise.test.ts", "a premise misspelled by one character is caught; the correct spelling is not").
 
-cited_check[map](c_reuse_boot, "test/derived-reuse.test.ts", "boot.rofl alone: reuse ≡ scratch across asserts, new relations, new perspectives").
-cited_check[map](c_reuse_no_read_reused, "test/derived-reuse.test.ts", "a new relation moves `undefined_premise` and leaves `flows_to` alone; a new fact of an existing one moves neither").
-cited_check[map](c_reuse_stratum_gate, "test/derived-reuse.test.ts", "the schedule is gated globally: a stratum table that moves refuses reuse").
-cited_check[map](c_reuse_tick_boundary, "test/derived-reuse.test.ts", "a tick boundary drops every fingerprint: nothing derived crosses one").
-cited_check[map](c_reuse_provenance_off, "test/derived-reuse.test.ts", "a rule that reads provenance turns reuse off entirely").
-cited_check[map](c_save_restore, "test/derived-reuse.test.ts", "save/restore: a restored store starts cold and lands on the same state").
 
-cited_check[map](c_whynot_names_stage, "test/whynot.test.ts", "the pipe: whynot names the stage that ate the row, down to the builtin").
-cited_check[map](c_whynot_single_step, "test/whynot.test.ts", "depth 1 is the single-step form whynot has always produced").
-cited_check[map](c_whynot_recursion, "test/whynot.test.ts", "an open query recurses on the existential reading of the failure").
-cited_check[map](c_whynot_caps, "test/whynot.test.ts", "the depth cap fires, and announces itself").
 
-cited_check[map](c_next_no_dep_edge, "test/next-tense.test.ts", "a relation only ever concluded @next draws no same-tick edge, and is ordered by nothing").
-cited_check[map](c_next_loop_opens, "test/next-tense.test.ts", "the SAME loop written across the tick boundary loads and runs").
-cited_check[map](c_next_cycle_refused, "test/next-tense.test.ts", "a same-tick negative cycle is still refused, and the same program opened is not").
 
-cited_check[map](c_retain_default, "test/provenance-retention.test.ts", "an unconfigured Rofl keeps every completed tick, exactly as before").
-cited_check[map](c_retain_window, "test/provenance-retention.test.ts", "the window is off unless asked for, and keeps exactly N completed ticks").
-cited_check[map](c_retain_conditional, "test/provenance-retention.test.ts", "a program that reads derived_by keeps its provenance, and its answers").
-cited_check[map](c_tick_budget_logged, "test/provenance-retention.test.ts", "each tick records the budget it ran under, and a replay can read it").
-cited_check[map](c_asserted_tick, "test/asserted-tick.test.ts", "an assertion records the tick it was made in").
-cited_check[map](c_asserted_who_and_when, "test/asserted-tick.test.ts", "two authors of the same fact keep who and when together").
 
-cited_check[map](c_persp_var_same_ledger, "test/persp-var.test.ts", "a rule that reads and writes the SAME ledger variable is not a leak").
-cited_check[map](c_flow_closure, "test/flow-closure.test.ts", "the closure ADDS the walk and does not swallow the direct crossing").
-cited_check[map](c_collects_narrow, "test/flow-closure.test.ts", "the declaration licenses the gather and does NOT license the named walk").
-cited_check[map](c_collects_askable, "test/flow-closure.test.ts", "the licence can be ASKED about: `why` names the declaration and its author").
 
-cited_check[map](c_firing_counts_once, "test/firing-signature.test.ts", "a demand-backed derivation counts once, as its range-restricted twin does").
-cited_check[map](c_firing_two_stay_two, "test/firing-signature.test.ts", "two derivations that differ only in bound values stay two").
-cited_check[map](c_shuffled_arrival_cost, "test/index-arrival.test.ts", "shuffled arrival costs about what ascending arrival costs").
-cited_check[map](c_arith_zero_divisor, "test/arith-hole.test.ts", "a zero divisor is its own reason, and the other rows still derive").
-cited_check[map](c_wf_three_values, "test/well-founded.test.ts", "three values in ONE store: true, false, and undefined are all distinguishable").
-cited_check[map](c_wf_budget_no_unknown, "test/well-founded.test.ts", "a run cut short is a hole, and claims no unknowns at all").
-cited_check[map](c_wf_stratum_untouched, "test/well-founded.test.ts", "stratum is not computed under the alternation, and the peel still answers").
-cited_check[map](c_wf_demand_refused, "test/well-founded.test.ts", "a demand-backed relation is refused rather than silently assumed").
 
-cited_check[map](c_text_reviewable, "test/text-check.test.ts", "every tracked source file is reviewable text").
 cited_check[map](c_ci_node, ".github/workflows/ci.yml", "tests (node --test)").
 cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "tests (bun test)").
 cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 
 -- ---- what stands behind what ----------------------------------------------
 
-guards[map](c_two_engines, s_semantics_as_data).
-guards[map](c_vocab_doc, s_semantics_as_data).
-guards[map](c_vocab_doc, s_vocabulary_closed).
 guards[map](c_ci_bun, s_two_runtimes).
 guards[map](c_ci_node, s_two_runtimes).
-guards[map](c_structured_terms, s_structured_terms).
-guards[map](c_reserved_reject, s_reserved_rejected_at_load).
-guards[map](c_breach_surfaces, s_reserved_rejected_at_load).
-guards[map](c_perspective_isolation, s_reads_only_what_it_sees).
-guards[map](c_persp_var_same_ledger, s_no_silent_crossing).
-guards[map](c_flow_closure, s_no_silent_crossing).
-guards[map](c_two_engines, s_sees_computed_by_boot).
-guards[map](c_two_engines, s_no_stratification_checker).
-guards[map](c_no_boot_no_strata, s_no_stratification_checker).
-guards[map](c_stratum_order, s_strata_read_from_facts).
-guards[map](c_unstratified_rejected, s_reject_unstratified).
-guards[map](c_async_rejected, s_async_reserved_rejected).
-guards[map](c_replay_shuffled, s_determinism).
-guards[map](c_arrival_order, s_determinism).
-guards[map](c_sorted_keys, s_canonical_order).
-guards[map](c_provenance_queryable, s_provenance_per_firing).
-guards[map](c_witness_canonical, s_witness_is_first_canonical).
-guards[map](c_witness_load_order, s_witness_is_first_canonical).
-guards[map](c_excise_multiple_support, s_excise_not_from_witness).
-guards[map](c_budget_partial, s_budget_emits_hole).
-guards[map](c_budget_partial, s_budgets_are_semantics).
-guards[map](c_diverging_hole, s_budgets_are_semantics).
-guards[map](c_whynot_names_stage, s_whynot_is_abduction).
-guards[map](c_diverging_hole, s_never_hang).
-guards[map](c_round_trip, s_rules_are_subgraphs).
-guards[map](c_round_trip, s_evaluator_reads_store).
 
-guards[map](c_tc_seminaive, s_a_transitive_closure).
-guards[map](c_tc_naive, s_a_transitive_closure).
-guards[map](c_structured_terms, s_a_structured_term_test).
-guards[map](c_differential, s_a_naive_eq_seminaive).
-guards[map](c_differential_negation, s_a_naive_eq_seminaive).
-guards[map](c_why_tree, s_a_why_tree).
-guards[map](c_perspective_isolation, s_a_perspective_isolation).
-guards[map](c_stratum_order, s_a_stratum_order).
-guards[map](c_vocab_doc, s_a_kernel_grep).
-guards[map](c_runtime_rule, s_a_runtime_rule).
-guards[map](c_malformed_sibling, s_a_malformed_sibling).
-guards[map](c_round_trip, s_a_round_trip).
-guards[map](c_counter, s_a_counter).
-guards[map](c_replay_shuffled, s_a_replay_shuffled).
-guards[map](c_busy_beaver, s_a_busy_beaver).
-guards[map](c_diverging_hole, s_a_diverging_hole).
-guards[map](c_boot_four_audits, s_a_boot_audits_empty).
-guards[map](c_sensors_scenario, s_a_sensors_scenario).
 guards[map](c_ci_node, s_done_ci_green).
 guards[map](c_ci_bun, s_done_ci_green).
 
-guards[map](c_vocab_doc, s7_no_hardcoded_boot).
-guards[map](c_two_engines, s7_no_hardcoded_boot).
-guards[map](c_round_trip, s7_no_clause_objects).
-guards[map](c_provenance_queryable, s7_no_log_provenance).
-guards[map](c_excise_multiple_support, s7_no_witness_excise).
-guards[map](c_sorted_keys, s7_no_nondeterministic_iteration).
-guards[map](c_arrival_order, s7_no_nondeterministic_iteration).
-guards[map](c_budget_partial, s7_no_silent_overrun).
-guards[map](c_unstratified_rejected, s7_no_skipping_reject_path).
-guards[map](c_async_rejected, s7_no_pretend_async).
 
-guards[map](c_async_rejected, l_no_async).
-guards[map](c_excise_multiple_support, l_no_incremental_maintenance).
-guards[map](c_reuse_boot, l_reuse_fingerprint).
-guards[map](c_reuse_no_read_reused, l_reuse_a_no_read_reused).
-guards[map](c_reuse_stratum_gate, l_reuse_b_stratum_gate).
-guards[map](c_reuse_tick_boundary, l_reuse_c_tick_boundary).
-guards[map](c_whynot_single_step, l_no_multi_fact_abduction).
-guards[map](c_whynot_recursion, l_whynot_recurses).
-guards[map](c_whynot_caps, l_whynot_recurses).
-guards[map](c_save_restore, l_no_persistence).
-guards[map](c_no_boot_no_strata, l_partial_strata).
-guards[map](c_no_boot_no_strata, l_unchecked_without_boot).
-guards[map](c_wf_demand_refused, l_demand_premise_order).
-guards[map](c_arith_zero_divisor, l_zero_divisor_fails).
-guards[map](c_firing_counts_once, l_budget_counts_firings).
-guards[map](c_firing_two_stay_two, p_p1_one_witness_per_derivation).
-guards[map](c_shuffled_arrival_cost, p_i1_insertion_order_is_the_cost).
-guards[map](c_asserted_tick, l_asserted_by_needs_who).
-guards[map](c_asserted_who_and_when, l_asserted_by_needs_who).
-guards[map](c_retain_default, l_frozen_never_collected).
-guards[map](c_undefined_misspelling, l_undefined_is_a_dictionary).
-guards[map](c_undefined_negation, l_undefined_silent_on_negation).
 
-guards[map](c_vocab_doc, r_vocabulary_additions).
-guards[map](c_vocab_doc, r_stratum_in_kernel_source).
-guards[map](c_next_no_dep_edge, r_conclusion_tense).
-guards[map](c_flow_closure, r_flows_to).
-guards[map](c_collects_narrow, r_collects).
-guards[map](c_collects_askable, r_collects).
-guards[map](c_persp_var_same_ledger, r_variable_perspectives).
-guards[map](c_breach_surfaces, r_facts_into_reserved).
-guards[map](c_unstratified_rejected, r_unstratifiable_is_budgeted).
-guards[map](c_structured_terms, r_moded_relations).
-guards[map](c_reserved_never_flagged, r_edb_for_reserved).
 
-guards[map](c_boot_four_audits, b_malformed_empty).
-guards[map](c_boot_four_audits, b_breach_empty).
-guards[map](c_boot_four_audits, b_leak_empty).
-guards[map](c_boot_four_audits, b_forged_empty).
-guards[map](c_boot_four_audits, b_unmoded_empty).
-guards[map](c_undefined_boot_clean, b_undefined_premise_empty).
-guards[map](c_boot_four_audits, b_whynot_finite).
-guards[map](c_boot_four_audits, b_stratifiable_by_loading).
-guards[map](c_rounds_primary, r_rounds_replace_strata).
-guards[map](c_reject_is_free, r_rounds_replace_strata).
-guards[map](c_no_boot_no_strata, r_rounds_replace_strata).
 
-guards[map](c_next_cycle_refused, d_not_p_is_this_tick).
-guards[map](c_next_no_dep_edge, d_dep_graph_is_one_tick).
-guards[map](c_next_loop_opens, d_dep_graph_is_one_tick).
-guards[map](c_semiring_boundary, d_semiring_is_one_tick).
-guards[map](c_next_body_rejected, d_next_in_body_rejected).
-guards[map](c_retain_window, d_retain_ticks).
-guards[map](c_retain_default, d_retention_off_by_default).
-guards[map](c_retain_window, d_retention_off_by_default).
-guards[map](c_retain_conditional, d_retention_conditional).
-guards[map](c_tick_budget_logged, d_tick_records_budget).
 
-guards[map](c_wf_three_values, t_alternating_fixpoint).
-guards[map](c_wf_budget_no_unknown, t_budget_emits_no_unknown).
-guards[map](c_wf_stratum_untouched, t_stratum_table_survives).
 
 -- ---- what changed ---------------------------------------------------------
 -- The amendment that matters: LIMITS.md still says provenance is never

@@ -31,7 +31,7 @@ statement *about tick 5* and its why-tree says so.
 **Consequence, implemented:** the dependency graph is about ONE tick. A rule
 whose head is `@next` contributes no edge to it, and its conclusion relation
 gets stratum 0, because a fact arriving at the tick boundary is base for the
-tick that sees it. See `boot.rofl` and `test/next-tense.test.ts`.
+tick that sees it. See `boot.rofl` and test/next-tense.test.ts (gate removed 2026-09-11).
 
 **Second consequence, implemented: the semiring fold is about one tick too.**
 "In how many ways is this true" is a question about the current tick by the
@@ -50,7 +50,7 @@ not the clock: `advanceTick` stamps a staged fact's witness with the tick just
 entered, so a fact carried into tick 1 carries a witness stamped 1 and "older
 than now" names nothing. And the narrowing must not blind the fold to cycles
 *inside* one tick, which stay INFINITE and are the answer the metric exists to
-give — `test/semiring.test.ts` asserts both halves on one fixture that holds
+give — test/semiring.test.ts (gate removed 2026-09-11) asserts both halves on one fixture that holds
 both kinds of loop. `why` had made the honest choice first, printing the
 self-loop and stopping at `[cycle]`; the fold now agrees with the renderer.
 

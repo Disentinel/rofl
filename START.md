@@ -1,4 +1,4 @@
-# ROFL Kernel v0 — Implementation Handoff
+# ROFL Kernel v0 — Implementation Handoff (HISTORICAL)
 
 **ROFL** — *Relation-Oriented Fixpoint Language*. File extension: `.rofl`.
 

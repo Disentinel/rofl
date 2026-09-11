@@ -500,47 +500,32 @@ block_banner("rules/cleanliness.rofl:160").
 block_mentions("rules/cleanliness.rofl:160", open_cell, called).
 block_mentions("rules/cleanliness.rofl:160", unowned, bare).
 block_mentions("rules/cleanliness.rofl:160", test, bare).
-lint_file("rules/decisions/production-readiness.rofl", 41, 41, 11).
-file_clauses("rules/decisions/production-readiness.rofl", 10, 9).
+lint_file("rules/decisions/production-readiness.rofl", 25, 12, 4).
+file_clauses("rules/decisions/production-readiness.rofl", 2, 9).
 block("rules/decisions/production-readiness.rofl:1", "rules/decisions/production-readiness.rofl", 1, 8).
 block_next("rules/decisions/production-readiness.rofl:1", comment).
 block_mentions("rules/decisions/production-readiness.rofl:1", pack, called).
 block("rules/decisions/production-readiness.rofl:10", "rules/decisions/production-readiness.rofl", 10, 1).
 block_next("rules/decisions/production-readiness.rofl:10", clause).
-block("rules/decisions/production-readiness.rofl:23", "rules/decisions/production-readiness.rofl", 23, 8).
-block_next("rules/decisions/production-readiness.rofl:23", clause).
-block_before("rules/decisions/production-readiness.rofl:23", "rules/decisions/production-readiness.rofl:31").
-block_mentions("rules/decisions/production-readiness.rofl:23", coverage_gap, bare).
-mention_snake(coverage_gap).
-block_mentions("rules/decisions/production-readiness.rofl:23", billing, bare).
-block("rules/decisions/production-readiness.rofl:39", "rules/decisions/production-readiness.rofl", 39, 2).
-block_next("rules/decisions/production-readiness.rofl:39", clause).
-block_before("rules/decisions/production-readiness.rofl:39", "rules/decisions/production-readiness.rofl:41").
-block("rules/decisions/production-readiness.rofl:43", "rules/decisions/production-readiness.rofl", 43, 13).
-block_next("rules/decisions/production-readiness.rofl:43", clause).
-block_before("rules/decisions/production-readiness.rofl:43", "rules/decisions/production-readiness.rofl:56").
-block_dated("rules/decisions/production-readiness.rofl:43", 1).
-block_mentions("rules/decisions/production-readiness.rofl:43", open_obligation, bare).
-mention_snake(open_obligation).
-block_mentions("rules/decisions/production-readiness.rofl:43", conditional_go, bare).
-mention_snake(conditional_go).
-block_mentions("rules/decisions/production-readiness.rofl:43", nobody, bare).
-block_mentions("rules/decisions/production-readiness.rofl:43", violated_blocking, bare).
-mention_snake(violated_blocking).
-block_mentions("rules/decisions/production-readiness.rofl:43", requires, bare).
-block("rules/decisions/production-readiness.rofl:63", "rules/decisions/production-readiness.rofl", 63, 3).
-block_next("rules/decisions/production-readiness.rofl:63", clause).
-block_before("rules/decisions/production-readiness.rofl:63", "rules/decisions/production-readiness.rofl:66").
-block_mentions("rules/decisions/production-readiness.rofl:63", open_obligation, called).
-block("rules/decisions/production-readiness.rofl:68", "rules/decisions/production-readiness.rofl", 68, 3).
-block_next("rules/decisions/production-readiness.rofl:68", clause).
-block_before("rules/decisions/production-readiness.rofl:68", "rules/decisions/production-readiness.rofl:71").
-block("rules/decisions/production-readiness.rofl:73", "rules/decisions/production-readiness.rofl", 73, 1).
-block_next("rules/decisions/production-readiness.rofl:73", clause).
-block_before("rules/decisions/production-readiness.rofl:73", "rules/decisions/production-readiness.rofl:74").
-block("rules/decisions/production-readiness.rofl:83", "rules/decisions/production-readiness.rofl", 83, 2).
-block_next("rules/decisions/production-readiness.rofl:83", clause).
-block_before("rules/decisions/production-readiness.rofl:83", "rules/decisions/production-readiness.rofl:85").
+block("rules/decisions/production-readiness.rofl:21", "rules/decisions/production-readiness.rofl", 21, 1).
+block_next("rules/decisions/production-readiness.rofl:21", clause).
+block_before("rules/decisions/production-readiness.rofl:21", "rules/decisions/production-readiness.rofl:22").
+block("rules/decisions/production-readiness.rofl:31", "rules/decisions/production-readiness.rofl", 31, 2).
+block_next("rules/decisions/production-readiness.rofl:31", clause).
+block_before("rules/decisions/production-readiness.rofl:31", "rules/decisions/production-readiness.rofl:33").
+lint_file("rules/decisions/public-release.rofl", 23, 23, 4).
+file_clauses("rules/decisions/public-release.rofl", 2, 7).
+block("rules/decisions/public-release.rofl:1", "rules/decisions/public-release.rofl", 1, 18).
+block_next("rules/decisions/public-release.rofl:1", clause).
+block_mentions("rules/decisions/public-release.rofl:1", production_readiness, bare).
+mention_snake(production_readiness).
+block_mentions("rules/decisions/public-release.rofl:1", has, bare).
+block("rules/decisions/public-release.rofl:28", "rules/decisions/public-release.rofl", 28, 1).
+block_next("rules/decisions/public-release.rofl:28", clause).
+block_before("rules/decisions/public-release.rofl:28", "rules/decisions/public-release.rofl:29").
+block("rules/decisions/public-release.rofl:38", "rules/decisions/public-release.rofl", 38, 4).
+block_next("rules/decisions/public-release.rofl:38", clause).
+block_before("rules/decisions/public-release.rofl:38", "rules/decisions/public-release.rofl:42").
 lint_file("rules/depends.rofl", 31, 55, 15).
 file_clauses("rules/depends.rofl", 29, 1).
 block("rules/depends.rofl:1", "rules/depends.rofl", 1, 15).
@@ -781,8 +766,8 @@ mention_snake(l_no_async).
 block("rules/features.rofl:122", "rules/features.rofl", 122, 2).
 block_next("rules/features.rofl:122", clause).
 block_before("rules/features.rofl:122", "rules/features.rofl:124").
-lint_file("rules/findings.rofl", 27, 104, 14).
-file_clauses("rules/findings.rofl", 21, 5).
+lint_file("rules/findings.rofl", 29, 104, 14).
+file_clauses("rules/findings.rofl", 21, 7).
 block("rules/findings.rofl:1", "rules/findings.rofl", 1, 14).
 block_next("rules/findings.rofl:1", clause).
 block_before("rules/findings.rofl:1", "rules/findings.rofl:16").
@@ -792,47 +777,47 @@ block_before("rules/findings.rofl:20", "rules/findings.rofl:27").
 block_mentions("rules/findings.rofl:20", scripts, bare).
 block_mentions("rules/findings.rofl:20", addressed_by, bare).
 mention_snake(addressed_by).
-block("rules/findings.rofl:29", "rules/findings.rofl", 29, 3).
-block_next("rules/findings.rofl:29", clause).
-block_before("rules/findings.rofl:29", "rules/findings.rofl:32").
-block_mentions("rules/findings.rofl:29", addressed_by, bare).
-block("rules/findings.rofl:36", "rules/findings.rofl", 36, 17).
-block_next("rules/findings.rofl:36", clause).
-block_before("rules/findings.rofl:36", "rules/findings.rofl:53").
-block_dated("rules/findings.rofl:36", 1).
-block_mentions("rules/findings.rofl:36", finding_note, bare).
+block("rules/findings.rofl:30", "rules/findings.rofl", 30, 3).
+block_next("rules/findings.rofl:30", clause).
+block_before("rules/findings.rofl:30", "rules/findings.rofl:33").
+block_mentions("rules/findings.rofl:30", addressed_by, bare).
+block("rules/findings.rofl:38", "rules/findings.rofl", 38, 17).
+block_next("rules/findings.rofl:38", clause).
+block_before("rules/findings.rofl:38", "rules/findings.rofl:55").
+block_dated("rules/findings.rofl:38", 1).
+block_mentions("rules/findings.rofl:38", finding_note, bare).
 mention_snake(finding_note).
-block_mentions("rules/findings.rofl:36", runtime, bare).
-block("rules/findings.rofl:55", "rules/findings.rofl", 55, 5).
-block_next("rules/findings.rofl:55", clause).
-block_before("rules/findings.rofl:55", "rules/findings.rofl:60").
-block("rules/findings.rofl:64", "rules/findings.rofl", 64, 6).
-block_next("rules/findings.rofl:64", clause).
-block_before("rules/findings.rofl:64", "rules/findings.rofl:70").
-block_dated("rules/findings.rofl:64", 1).
-block_mentions("rules/findings.rofl:64", blocks, called).
-block("rules/findings.rofl:74", "rules/findings.rofl", 74, 38).
-block_next("rules/findings.rofl:74", clause).
-block_dated("rules/findings.rofl:74", 1).
-block_mentions("rules/findings.rofl:74", witness, called).
-block_mentions("rules/findings.rofl:74", ready, bare).
-block_mentions("rules/findings.rofl:74", unproven, bare).
-block_mentions("rules/findings.rofl:74", not, bare).
-block_mentions("rules/findings.rofl:74", witness_atleast, bare).
+block_mentions("rules/findings.rofl:38", runtime, bare).
+block("rules/findings.rofl:57", "rules/findings.rofl", 57, 5).
+block_next("rules/findings.rofl:57", clause).
+block_before("rules/findings.rofl:57", "rules/findings.rofl:62").
+block("rules/findings.rofl:66", "rules/findings.rofl", 66, 6).
+block_next("rules/findings.rofl:66", clause).
+block_before("rules/findings.rofl:66", "rules/findings.rofl:72").
+block_dated("rules/findings.rofl:66", 1).
+block_mentions("rules/findings.rofl:66", blocks, called).
+block("rules/findings.rofl:76", "rules/findings.rofl", 76, 38).
+block_next("rules/findings.rofl:76", clause).
+block_dated("rules/findings.rofl:76", 1).
+block_mentions("rules/findings.rofl:76", witness, called).
+block_mentions("rules/findings.rofl:76", ready, bare).
+block_mentions("rules/findings.rofl:76", unproven, bare).
+block_mentions("rules/findings.rofl:76", not, bare).
+block_mentions("rules/findings.rofl:76", witness_atleast, bare).
 mention_snake(witness_atleast).
-block_mentions("rules/findings.rofl:74", orphan_claim, bare).
+block_mentions("rules/findings.rofl:76", orphan_claim, bare).
 mention_snake(orphan_claim).
-block_mentions("rules/findings.rofl:74", undefined_premise, called).
-block_mentions("rules/findings.rofl:74", proven, called).
-block_mentions("rules/findings.rofl:74", edb, bare).
-block("rules/findings.rofl:127", "rules/findings.rofl", 127, 13).
-block_next("rules/findings.rofl:127", clause).
-block_before("rules/findings.rofl:127", "rules/findings.rofl:140").
-block_mentions("rules/findings.rofl:127", unproven, called).
-block_mentions("rules/findings.rofl:127", demands, bare).
-block("rules/findings.rofl:143", "rules/findings.rofl", 143, 1).
-block_next("rules/findings.rofl:143", clause).
-block_before("rules/findings.rofl:143", "rules/findings.rofl:144").
+block_mentions("rules/findings.rofl:76", undefined_premise, called).
+block_mentions("rules/findings.rofl:76", proven, called).
+block_mentions("rules/findings.rofl:76", edb, bare).
+block("rules/findings.rofl:129", "rules/findings.rofl", 129, 13).
+block_next("rules/findings.rofl:129", clause).
+block_before("rules/findings.rofl:129", "rules/findings.rofl:142").
+block_mentions("rules/findings.rofl:129", unproven, called).
+block_mentions("rules/findings.rofl:129", demands, bare).
+block("rules/findings.rofl:145", "rules/findings.rofl", 145, 1).
+block_next("rules/findings.rofl:145", clause).
+block_before("rules/findings.rofl:145", "rules/findings.rofl:146").
 lint_file("rules/floor-census.rofl", 47, 63, 14).
 file_clauses("rules/floor-census.rofl", 26, 17).
 block("rules/floor-census.rofl:1", "rules/floor-census.rofl", 1, 21).
@@ -969,8 +954,8 @@ block_before("rules/inquiry/intents.rofl:6", "rules/inquiry/intents.rofl:8").
 block("rules/inquiry/intents.rofl:21", "rules/inquiry/intents.rofl", 21, 2).
 block_next("rules/inquiry/intents.rofl:21", clause).
 block_before("rules/inquiry/intents.rofl:21", "rules/inquiry/intents.rofl:23").
-lint_file("rules/inquiry/obligations.rofl", 15, 12, 6).
-file_clauses("rules/inquiry/obligations.rofl", 10, 0).
+lint_file("rules/inquiry/obligations.rofl", 27, 35, 13).
+file_clauses("rules/inquiry/obligations.rofl", 18, 2).
 block("rules/inquiry/obligations.rofl:1", "rules/inquiry/obligations.rofl", 1, 2).
 block_next("rules/inquiry/obligations.rofl:1", comment).
 block("rules/inquiry/obligations.rofl:4", "rules/inquiry/obligations.rofl", 4, 2).
@@ -982,9 +967,29 @@ block_before("rules/inquiry/obligations.rofl:16", "rules/inquiry/obligations.rof
 block("rules/inquiry/obligations.rofl:21", "rules/inquiry/obligations.rofl", 21, 4).
 block_next("rules/inquiry/obligations.rofl:21", clause).
 block_before("rules/inquiry/obligations.rofl:21", "rules/inquiry/obligations.rofl:25").
-block("rules/inquiry/obligations.rofl:30", "rules/inquiry/obligations.rofl", 30, 2).
+block("rules/inquiry/obligations.rofl:30", "rules/inquiry/obligations.rofl", 30, 11).
 block_next("rules/inquiry/obligations.rofl:30", clause).
-block_before("rules/inquiry/obligations.rofl:30", "rules/inquiry/obligations.rofl:32").
+block_before("rules/inquiry/obligations.rofl:30", "rules/inquiry/obligations.rofl:41").
+block_dated("rules/inquiry/obligations.rofl:30", 1).
+block("rules/inquiry/obligations.rofl:44", "rules/inquiry/obligations.rofl", 44, 2).
+block_next("rules/inquiry/obligations.rofl:44", clause).
+block_before("rules/inquiry/obligations.rofl:44", "rules/inquiry/obligations.rofl:46").
+block("rules/inquiry/obligations.rofl:48", "rules/inquiry/obligations.rofl", 48, 2).
+block_next("rules/inquiry/obligations.rofl:48", clause).
+block_before("rules/inquiry/obligations.rofl:48", "rules/inquiry/obligations.rofl:50").
+block("rules/inquiry/obligations.rofl:53", "rules/inquiry/obligations.rofl", 53, 2).
+block_next("rules/inquiry/obligations.rofl:53", clause).
+block_before("rules/inquiry/obligations.rofl:53", "rules/inquiry/obligations.rofl:55").
+block("rules/inquiry/obligations.rofl:57", "rules/inquiry/obligations.rofl", 57, 4).
+block_next("rules/inquiry/obligations.rofl:57", clause).
+block_before("rules/inquiry/obligations.rofl:57", "rules/inquiry/obligations.rofl:61").
+block_mentions("rules/inquiry/obligations.rofl:57", billing, bare).
+block("rules/inquiry/obligations.rofl:67", "rules/inquiry/obligations.rofl", 67, 2).
+block_next("rules/inquiry/obligations.rofl:67", clause).
+block_before("rules/inquiry/obligations.rofl:67", "rules/inquiry/obligations.rofl:69").
+block("rules/inquiry/obligations.rofl:72", "rules/inquiry/obligations.rofl", 72, 2).
+block_next("rules/inquiry/obligations.rofl:72", clause).
+block_before("rules/inquiry/obligations.rofl:72", "rules/inquiry/obligations.rofl:74").
 lint_file("rules/inquiry/ontology.rofl", 5, 52, 6).
 file_clauses("rules/inquiry/ontology.rofl", 0, 5).
 block("rules/inquiry/ontology.rofl:1", "rules/inquiry/ontology.rofl", 1, 23).
@@ -4072,8 +4077,8 @@ mention_snake(world_omits).
 list_item("rules/worlds.rofl:98", 100, 1).
 list_item("rules/worlds.rofl:98", 105, 2).
 list_item("rules/worlds.rofl:98", 112, 3).
-lint_file("facts/checks.rofl", 49, 45, 11).
-file_clauses("facts/checks.rofl", 0, 49).
+lint_file("facts/checks.rofl", 50, 45, 11).
+file_clauses("facts/checks.rofl", 0, 50).
 block("facts/checks.rofl:1", "facts/checks.rofl", 1, 9).
 block_next("facts/checks.rofl:1", clause).
 block_mentions("facts/checks.rofl:1", scripts, bare).
@@ -4111,8 +4116,8 @@ block_mentions("facts/checks.rofl:58", examples, bare).
 block_mentions("facts/checks.rofl:58", undefined_premise, called).
 block("facts/checks.rofl:80", "facts/checks.rofl", 80, 3).
 block_next("facts/checks.rofl:80", clause).
-block("facts/checks.rofl:97", "facts/checks.rofl", 97, 4).
-block_next("facts/checks.rofl:97", clause).
+block("facts/checks.rofl:98", "facts/checks.rofl", 98, 4).
+block_next("facts/checks.rofl:98", clause).
 lint_file("facts/cleanliness.rofl", 23, 144, 13).
 file_clauses("facts/cleanliness.rofl", 0, 23).
 block("facts/cleanliness.rofl:1", "facts/cleanliness.rofl", 1, 16).
@@ -4167,8 +4172,8 @@ block_mentions("facts/cleanliness.rofl:136", addressed_by, bare).
 block_mentions("facts/cleanliness.rofl:136", guards, called).
 block_mentions("facts/cleanliness.rofl:136", duty_decl, bare).
 mention_snake(duty_decl).
-lint_file("facts/commands.rofl", 28, 12, 15).
-file_clauses("facts/commands.rofl", 0, 28).
+lint_file("facts/commands.rofl", 26, 12, 15).
+file_clauses("facts/commands.rofl", 0, 26).
 block("facts/commands.rofl:1", "facts/commands.rofl", 1, 12).
 block_next("facts/commands.rofl:1", clause).
 block_mentions("facts/commands.rofl:1", npm, bare).
@@ -4230,8 +4235,8 @@ block_next("facts/feature-map.rofl:1", clause).
 block_mentions("facts/feature-map.rofl:1", feature, bare).
 block("facts/feature-map.rofl:1067", "facts/feature-map.rofl", 1067, 1).
 block_next("facts/feature-map.rofl:1067", eof).
-lint_file("facts/findings.rofl", 4858, 550, 855).
-file_clauses("facts/findings.rofl", 0, 4461).
+lint_file("facts/findings.rofl", 4990, 552, 866).
+file_clauses("facts/findings.rofl", 0, 4592).
 block("facts/findings.rofl:1", "facts/findings.rofl", 1, 3).
 block_next("facts/findings.rofl:1", comment).
 block("facts/findings.rofl:5", "facts/findings.rofl", 5, 1).
@@ -4530,138 +4535,141 @@ block("facts/findings.rofl:4612", "facts/findings.rofl", 4612, 2).
 block_next("facts/findings.rofl:4612", clause).
 block_banner("facts/findings.rofl:4612").
 block_dated("facts/findings.rofl:4612", 1).
-block("facts/findings.rofl:4680", "facts/findings.rofl", 4680, 3).
-block_next("facts/findings.rofl:4680", clause).
-block_banner("facts/findings.rofl:4680").
-block_dated("facts/findings.rofl:4680", 1).
-block("facts/findings.rofl:4712", "facts/findings.rofl", 4712, 5).
-block_next("facts/findings.rofl:4712", clause).
-block_dated("facts/findings.rofl:4712", 1).
-block_mentions("facts/findings.rofl:4712", addressed_by, bare).
-block_mentions("facts/findings.rofl:4712", w_effect_ambient_call, bare).
+block("facts/findings.rofl:4679", "facts/findings.rofl", 4679, 3).
+block_next("facts/findings.rofl:4679", clause).
+block_banner("facts/findings.rofl:4679").
+block_dated("facts/findings.rofl:4679", 1).
+block("facts/findings.rofl:4711", "facts/findings.rofl", 4711, 5).
+block_next("facts/findings.rofl:4711", clause).
+block_dated("facts/findings.rofl:4711", 1).
+block_mentions("facts/findings.rofl:4711", addressed_by, bare).
+block_mentions("facts/findings.rofl:4711", w_effect_ambient_call, bare).
 mention_snake(w_effect_ambient_call).
-block("facts/findings.rofl:4761", "facts/findings.rofl", 4761, 1).
-block_next("facts/findings.rofl:4761", clause).
-block_dated("facts/findings.rofl:4761", 1).
-block("facts/findings.rofl:4801", "facts/findings.rofl", 4801, 4).
-block_next("facts/findings.rofl:4801", clause).
-block("facts/findings.rofl:4807", "facts/findings.rofl", 4807, 4).
-block_next("facts/findings.rofl:4807", clause).
-block_dated("facts/findings.rofl:4807", 1).
-block_mentions("facts/findings.rofl:4807", corrected, called).
-block("facts/findings.rofl:4820", "facts/findings.rofl", 4820, 7).
-block_next("facts/findings.rofl:4820", clause).
-block_dated("facts/findings.rofl:4820", 1).
-block_mentions("facts/findings.rofl:4820", eff_exn_only, bare).
-block("facts/findings.rofl:4829", "facts/findings.rofl", 4829, 4).
-block_next("facts/findings.rofl:4829", clause).
-block_dated("facts/findings.rofl:4829", 1).
-block_mentions("facts/findings.rofl:4829", may_throw, called).
-block("facts/findings.rofl:4835", "facts/findings.rofl", 4835, 5).
-block_next("facts/findings.rofl:4835", clause).
-block_banner("facts/findings.rofl:4835").
-block_dated("facts/findings.rofl:4835", 1).
-block("facts/findings.rofl:4874", "facts/findings.rofl", 4874, 5).
-block_next("facts/findings.rofl:4874", comment).
-block("facts/findings.rofl:4880", "facts/findings.rofl", 4880, 3).
-block_next("facts/findings.rofl:4880", clause).
-block_dated("facts/findings.rofl:4880", 1).
-block("facts/findings.rofl:4885", "facts/findings.rofl", 4885, 3).
-block_next("facts/findings.rofl:4885", clause).
-block_banner("facts/findings.rofl:4885").
-block_dated("facts/findings.rofl:4885", 1).
-block("facts/findings.rofl:4910", "facts/findings.rofl", 4910, 6).
-block_next("facts/findings.rofl:4910", clause).
-block_banner("facts/findings.rofl:4910").
-block_dated("facts/findings.rofl:4910", 1).
-block("facts/findings.rofl:4921", "facts/findings.rofl", 4921, 3).
-block_next("facts/findings.rofl:4921", clause).
-block_banner("facts/findings.rofl:4921").
-block_dated("facts/findings.rofl:4921", 1).
-block("facts/findings.rofl:4935", "facts/findings.rofl", 4935, 6).
-block_next("facts/findings.rofl:4935", clause).
-block_dated("facts/findings.rofl:4935", 1).
-block_mentions("facts/findings.rofl:4935", npm, bare).
-block_mentions("facts/findings.rofl:4935", process, bare).
-block("facts/findings.rofl:4985", "facts/findings.rofl", 4985, 2).
-block_next("facts/findings.rofl:4985", clause).
-block_banner("facts/findings.rofl:4985").
-block_dated("facts/findings.rofl:4985", 1).
-block("facts/findings.rofl:5011", "facts/findings.rofl", 5011, 1).
-block_next("facts/findings.rofl:5011", clause).
-block("facts/findings.rofl:5055", "facts/findings.rofl", 5055, 4).
-block_next("facts/findings.rofl:5055", clause).
-block_dated("facts/findings.rofl:5055", 1).
-block("facts/findings.rofl:5173", "facts/findings.rofl", 5173, 3).
-block_next("facts/findings.rofl:5173", clause).
-block_dated("facts/findings.rofl:5173", 1).
-block("facts/findings.rofl:5178", "facts/findings.rofl", 5178, 4).
-block_next("facts/findings.rofl:5178", clause).
-block_dated("facts/findings.rofl:5178", 2).
-block("facts/findings.rofl:5226", "facts/findings.rofl", 5226, 1).
-block_next("facts/findings.rofl:5226", clause).
-block_banner("facts/findings.rofl:5226").
-block_dated("facts/findings.rofl:5226", 1).
-block("facts/findings.rofl:5269", "facts/findings.rofl", 5269, 18).
-block_next("facts/findings.rofl:5269", clause).
-block_dated("facts/findings.rofl:5269", 1).
-block_mentions("facts/findings.rofl:5269", imports, bare).
-block_mentions("facts/findings.rofl:5269", sees, bare).
-block_mentions("facts/findings.rofl:5269", crossing, bare).
-block_mentions("facts/findings.rofl:5269", leak, bare).
-block("facts/findings.rofl:5494", "facts/findings.rofl", 5494, 4).
-block_next("facts/findings.rofl:5494", clause).
-block_banner("facts/findings.rofl:5494").
-block_dated("facts/findings.rofl:5494", 1).
-block("facts/findings.rofl:5759", "facts/findings.rofl", 5759, 4).
-block_next("facts/findings.rofl:5759", clause).
-block_dated("facts/findings.rofl:5759", 1).
-block_mentions("facts/findings.rofl:5759", nextver, bare).
-block_mentions("facts/findings.rofl:5759", main, bare).
-block("facts/findings.rofl:5805", "facts/findings.rofl", 5805, 18).
-block_next("facts/findings.rofl:5805", comment).
-block_banner("facts/findings.rofl:5805").
-block_dated("facts/findings.rofl:5805", 2).
-block("facts/findings.rofl:5824", "facts/findings.rofl", 5824, 1).
-block_next("facts/findings.rofl:5824", clause).
-block("facts/findings.rofl:5831", "facts/findings.rofl", 5831, 1).
-block_next("facts/findings.rofl:5831", clause).
-block("facts/findings.rofl:5838", "facts/findings.rofl", 5838, 1).
-block_next("facts/findings.rofl:5838", clause).
-block("facts/findings.rofl:5846", "facts/findings.rofl", 5846, 1).
-block_next("facts/findings.rofl:5846", clause).
-block("facts/findings.rofl:5854", "facts/findings.rofl", 5854, 1).
-block_next("facts/findings.rofl:5854", clause).
-block("facts/findings.rofl:5861", "facts/findings.rofl", 5861, 1).
-block_next("facts/findings.rofl:5861", clause).
-block("facts/findings.rofl:5868", "facts/findings.rofl", 5868, 1).
-block_next("facts/findings.rofl:5868", clause).
-block("facts/findings.rofl:5876", "facts/findings.rofl", 5876, 1).
-block_next("facts/findings.rofl:5876", clause).
-block("facts/findings.rofl:5883", "facts/findings.rofl", 5883, 1).
-block_next("facts/findings.rofl:5883", clause).
-block("facts/findings.rofl:5891", "facts/findings.rofl", 5891, 1).
-block_next("facts/findings.rofl:5891", clause).
-block("facts/findings.rofl:5898", "facts/findings.rofl", 5898, 1).
-block_next("facts/findings.rofl:5898", clause).
-block("facts/findings.rofl:5905", "facts/findings.rofl", 5905, 1).
-block_next("facts/findings.rofl:5905", clause).
-block("facts/findings.rofl:5913", "facts/findings.rofl", 5913, 3).
-block_next("facts/findings.rofl:5913", clause).
-block("facts/findings.rofl:5919", "facts/findings.rofl", 5919, 4).
-block_next("facts/findings.rofl:5919", clause).
-block_banner("facts/findings.rofl:5919").
-block_dated("facts/findings.rofl:5919", 1).
-block("facts/findings.rofl:6114", "facts/findings.rofl", 6114, 1).
-block_next("facts/findings.rofl:6114", clause).
-block_banner("facts/findings.rofl:6114").
-block("facts/findings.rofl:6132", "facts/findings.rofl", 6132, 6).
-block_next("facts/findings.rofl:6132", clause).
-block_banner("facts/findings.rofl:6132").
-block_mentions("facts/findings.rofl:6132", artifact_removed, bare).
+block("facts/findings.rofl:4760", "facts/findings.rofl", 4760, 1).
+block_next("facts/findings.rofl:4760", clause).
+block_dated("facts/findings.rofl:4760", 1).
+block("facts/findings.rofl:4800", "facts/findings.rofl", 4800, 4).
+block_next("facts/findings.rofl:4800", clause).
+block("facts/findings.rofl:4806", "facts/findings.rofl", 4806, 4).
+block_next("facts/findings.rofl:4806", clause).
+block_dated("facts/findings.rofl:4806", 1).
+block_mentions("facts/findings.rofl:4806", corrected, called).
+block("facts/findings.rofl:4819", "facts/findings.rofl", 4819, 7).
+block_next("facts/findings.rofl:4819", clause).
+block_dated("facts/findings.rofl:4819", 1).
+block_mentions("facts/findings.rofl:4819", eff_exn_only, bare).
+block("facts/findings.rofl:4828", "facts/findings.rofl", 4828, 4).
+block_next("facts/findings.rofl:4828", clause).
+block_dated("facts/findings.rofl:4828", 1).
+block_mentions("facts/findings.rofl:4828", may_throw, called).
+block("facts/findings.rofl:4834", "facts/findings.rofl", 4834, 5).
+block_next("facts/findings.rofl:4834", clause).
+block_banner("facts/findings.rofl:4834").
+block_dated("facts/findings.rofl:4834", 1).
+block("facts/findings.rofl:4873", "facts/findings.rofl", 4873, 5).
+block_next("facts/findings.rofl:4873", comment).
+block("facts/findings.rofl:4879", "facts/findings.rofl", 4879, 3).
+block_next("facts/findings.rofl:4879", clause).
+block_dated("facts/findings.rofl:4879", 1).
+block("facts/findings.rofl:4884", "facts/findings.rofl", 4884, 3).
+block_next("facts/findings.rofl:4884", clause).
+block_banner("facts/findings.rofl:4884").
+block_dated("facts/findings.rofl:4884", 1).
+block("facts/findings.rofl:4909", "facts/findings.rofl", 4909, 6).
+block_next("facts/findings.rofl:4909", clause).
+block_banner("facts/findings.rofl:4909").
+block_dated("facts/findings.rofl:4909", 1).
+block("facts/findings.rofl:4920", "facts/findings.rofl", 4920, 3).
+block_next("facts/findings.rofl:4920", clause).
+block_banner("facts/findings.rofl:4920").
+block_dated("facts/findings.rofl:4920", 1).
+block("facts/findings.rofl:4934", "facts/findings.rofl", 4934, 6).
+block_next("facts/findings.rofl:4934", clause).
+block_dated("facts/findings.rofl:4934", 1).
+block_mentions("facts/findings.rofl:4934", npm, bare).
+block_mentions("facts/findings.rofl:4934", process, bare).
+block("facts/findings.rofl:4984", "facts/findings.rofl", 4984, 2).
+block_next("facts/findings.rofl:4984", clause).
+block_banner("facts/findings.rofl:4984").
+block_dated("facts/findings.rofl:4984", 1).
+block("facts/findings.rofl:5010", "facts/findings.rofl", 5010, 1).
+block_next("facts/findings.rofl:5010", clause).
+block("facts/findings.rofl:5054", "facts/findings.rofl", 5054, 4).
+block_next("facts/findings.rofl:5054", clause).
+block_dated("facts/findings.rofl:5054", 1).
+block("facts/findings.rofl:5172", "facts/findings.rofl", 5172, 3).
+block_next("facts/findings.rofl:5172", clause).
+block_dated("facts/findings.rofl:5172", 1).
+block("facts/findings.rofl:5177", "facts/findings.rofl", 5177, 4).
+block_next("facts/findings.rofl:5177", clause).
+block_dated("facts/findings.rofl:5177", 2).
+block("facts/findings.rofl:5225", "facts/findings.rofl", 5225, 1).
+block_next("facts/findings.rofl:5225", clause).
+block_banner("facts/findings.rofl:5225").
+block_dated("facts/findings.rofl:5225", 1).
+block("facts/findings.rofl:5268", "facts/findings.rofl", 5268, 18).
+block_next("facts/findings.rofl:5268", clause).
+block_dated("facts/findings.rofl:5268", 1).
+block_mentions("facts/findings.rofl:5268", imports, bare).
+block_mentions("facts/findings.rofl:5268", sees, bare).
+block_mentions("facts/findings.rofl:5268", crossing, bare).
+block_mentions("facts/findings.rofl:5268", leak, bare).
+block("facts/findings.rofl:5493", "facts/findings.rofl", 5493, 4).
+block_next("facts/findings.rofl:5493", clause).
+block_banner("facts/findings.rofl:5493").
+block_dated("facts/findings.rofl:5493", 1).
+block("facts/findings.rofl:5758", "facts/findings.rofl", 5758, 4).
+block_next("facts/findings.rofl:5758", clause).
+block_dated("facts/findings.rofl:5758", 1).
+block_mentions("facts/findings.rofl:5758", nextver, bare).
+block_mentions("facts/findings.rofl:5758", main, bare).
+block("facts/findings.rofl:5804", "facts/findings.rofl", 5804, 18).
+block_next("facts/findings.rofl:5804", comment).
+block_banner("facts/findings.rofl:5804").
+block_dated("facts/findings.rofl:5804", 2).
+block("facts/findings.rofl:5823", "facts/findings.rofl", 5823, 1).
+block_next("facts/findings.rofl:5823", clause).
+block("facts/findings.rofl:5830", "facts/findings.rofl", 5830, 1).
+block_next("facts/findings.rofl:5830", clause).
+block("facts/findings.rofl:5837", "facts/findings.rofl", 5837, 1).
+block_next("facts/findings.rofl:5837", clause).
+block("facts/findings.rofl:5845", "facts/findings.rofl", 5845, 1).
+block_next("facts/findings.rofl:5845", clause).
+block("facts/findings.rofl:5853", "facts/findings.rofl", 5853, 1).
+block_next("facts/findings.rofl:5853", clause).
+block("facts/findings.rofl:5860", "facts/findings.rofl", 5860, 1).
+block_next("facts/findings.rofl:5860", clause).
+block("facts/findings.rofl:5867", "facts/findings.rofl", 5867, 1).
+block_next("facts/findings.rofl:5867", clause).
+block("facts/findings.rofl:5875", "facts/findings.rofl", 5875, 1).
+block_next("facts/findings.rofl:5875", clause).
+block("facts/findings.rofl:5882", "facts/findings.rofl", 5882, 1).
+block_next("facts/findings.rofl:5882", clause).
+block("facts/findings.rofl:5890", "facts/findings.rofl", 5890, 1).
+block_next("facts/findings.rofl:5890", clause).
+block("facts/findings.rofl:5897", "facts/findings.rofl", 5897, 1).
+block_next("facts/findings.rofl:5897", clause).
+block("facts/findings.rofl:5904", "facts/findings.rofl", 5904, 1).
+block_next("facts/findings.rofl:5904", clause).
+block("facts/findings.rofl:5912", "facts/findings.rofl", 5912, 3).
+block_next("facts/findings.rofl:5912", clause).
+block("facts/findings.rofl:5918", "facts/findings.rofl", 5918, 4).
+block_next("facts/findings.rofl:5918", clause).
+block_banner("facts/findings.rofl:5918").
+block_dated("facts/findings.rofl:5918", 1).
+block("facts/findings.rofl:6113", "facts/findings.rofl", 6113, 1).
+block_next("facts/findings.rofl:6113", clause).
+block_banner("facts/findings.rofl:6113").
+block("facts/findings.rofl:6131", "facts/findings.rofl", 6131, 6).
+block_next("facts/findings.rofl:6131", clause).
+block_banner("facts/findings.rofl:6131").
+block_mentions("facts/findings.rofl:6131", artifact_removed, bare).
 mention_snake(artifact_removed).
-block_mentions("facts/findings.rofl:6132", git, bare).
-block_mentions("facts/findings.rofl:6132", scripts, bare).
+block_mentions("facts/findings.rofl:6131", git, bare).
+block_mentions("facts/findings.rofl:6131", scripts, bare).
+block("facts/findings.rofl:6300", "facts/findings.rofl", 6300, 2).
+block_next("facts/findings.rofl:6300", clause).
+block_dated("facts/findings.rofl:6300", 1).
 lint_file("facts/floor-census.rofl", 258, 24, 13).
 file_clauses("facts/floor-census.rofl", 0, 428).
 block("facts/floor-census.rofl:1", "facts/floor-census.rofl", 1, 5).
@@ -4689,8 +4697,8 @@ block_next("facts/floor-census.rofl:194", clause).
 block("facts/floor-census.rofl:216", "facts/floor-census.rofl", 216, 2).
 block_next("facts/floor-census.rofl:216", clause).
 block_mentions("facts/floor-census.rofl:216", nothing, bare).
-lint_file("facts/goldens.rofl", 3843, 9, 5).
-file_clauses("facts/goldens.rofl", 0, 3843).
+lint_file("facts/goldens.rofl", 3743, 9, 5).
+file_clauses("facts/goldens.rofl", 0, 3743).
 block("facts/goldens.rofl:1", "facts/goldens.rofl", 1, 9).
 block_next("facts/goldens.rofl:1", clause).
 block_mentions("facts/goldens.rofl:1", npm, bare).
@@ -7621,14 +7629,14 @@ block_banner("facts/permission-inventory.rofl:236").
 block("facts/permission-inventory.rofl:406", "facts/permission-inventory.rofl", 406, 1).
 block_next("facts/permission-inventory.rofl:406", clause).
 block_banner("facts/permission-inventory.rofl:406").
-lint_file("facts/refactoring.rofl", 20, 6, 6).
-file_clauses("facts/refactoring.rofl", 0, 15).
+lint_file("facts/refactoring.rofl", 24, 6, 7).
+file_clauses("facts/refactoring.rofl", 0, 18).
 block("facts/refactoring.rofl:1", "facts/refactoring.rofl", 1, 6).
 block_next("facts/refactoring.rofl:1", clause).
 block_dated("facts/refactoring.rofl:1", 1).
 block_mentions("facts/refactoring.rofl:1", npm, bare).
-lint_file("facts/spec.rofl", 365, 130, 66).
-file_clauses("facts/spec.rofl", 0, 365).
+lint_file("facts/spec.rofl", 178, 130, 66).
+file_clauses("facts/spec.rofl", 0, 178).
 block("facts/spec.rofl:1", "facts/spec.rofl", 1, 16).
 block_next("facts/spec.rofl:1", clause).
 block_mentions("facts/spec.rofl:1", duty, called).
@@ -7706,32 +7714,32 @@ block_dated("facts/spec.rofl:261", 1).
 block_mentions("facts/spec.rofl:261", in_perspective, bare).
 block_mentions("facts/spec.rofl:261", canonical, bare).
 block_mentions("facts/spec.rofl:261", test, bare).
-block("facts/spec.rofl:362", "facts/spec.rofl", 362, 1).
-block_next("facts/spec.rofl:362", clause).
-block("facts/spec.rofl:490", "facts/spec.rofl", 490, 5).
-block_next("facts/spec.rofl:490", clause).
-block_mentions("facts/spec.rofl:490", retain, bare).
-block("facts/spec.rofl:498", "facts/spec.rofl", 498, 17).
-block_next("facts/spec.rofl:498", clause).
-block_mentions("facts/spec.rofl:498", src, bare).
-block_mentions("facts/spec.rofl:498", s_no_stratification_checker, bare).
+block("facts/spec.rofl:289", "facts/spec.rofl", 289, 1).
+block_next("facts/spec.rofl:289", clause).
+block("facts/spec.rofl:303", "facts/spec.rofl", 303, 5).
+block_next("facts/spec.rofl:303", clause).
+block_mentions("facts/spec.rofl:303", retain, bare).
+block("facts/spec.rofl:311", "facts/spec.rofl", 311, 17).
+block_next("facts/spec.rofl:311", clause).
+block_mentions("facts/spec.rofl:311", src, bare).
+block_mentions("facts/spec.rofl:311", s_no_stratification_checker, bare).
 mention_snake(s_no_stratification_checker).
-block_mentions("facts/spec.rofl:498", s_reject_unstratified, bare).
+block_mentions("facts/spec.rofl:311", s_reject_unstratified, bare).
 mention_snake(s_reject_unstratified).
-block_mentions("facts/spec.rofl:498", r_unstratifiable_is_budgeted, bare).
+block_mentions("facts/spec.rofl:311", r_unstratifiable_is_budgeted, bare).
 mention_snake(r_unstratifiable_is_budgeted).
-block_mentions("facts/spec.rofl:498", stratum, bare).
-block_mentions("facts/spec.rofl:498", test, bare).
-block("facts/spec.rofl:528", "facts/spec.rofl", 528, 6).
-block_next("facts/spec.rofl:528", clause).
-block_mentions("facts/spec.rofl:528", amends, bare).
-block("facts/spec.rofl:540", "facts/spec.rofl", 540, 5).
-block_next("facts/spec.rofl:540", clause).
-block("facts/spec.rofl:554", "facts/spec.rofl", 554, 3).
-block_next("facts/spec.rofl:554", clause).
-block_mentions("facts/spec.rofl:554", document, bare).
-lint_file("facts/worklist.rofl", 528, 2808, 114).
-file_clauses("facts/worklist.rofl", 0, 507).
+block_mentions("facts/spec.rofl:311", stratum, bare).
+block_mentions("facts/spec.rofl:311", test, bare).
+block("facts/spec.rofl:341", "facts/spec.rofl", 341, 6).
+block_next("facts/spec.rofl:341", clause).
+block_mentions("facts/spec.rofl:341", amends, bare).
+block("facts/spec.rofl:353", "facts/spec.rofl", 353, 5).
+block_next("facts/spec.rofl:353", clause).
+block("facts/spec.rofl:367", "facts/spec.rofl", 367, 3).
+block_next("facts/spec.rofl:367", clause).
+block_mentions("facts/spec.rofl:367", document, bare).
+lint_file("facts/worklist.rofl", 530, 2808, 115).
+file_clauses("facts/worklist.rofl", 0, 508).
 block("facts/worklist.rofl:1", "facts/worklist.rofl", 1, 13).
 block_next("facts/worklist.rofl:1", clause).
 block_dated("facts/worklist.rofl:1", 1).
@@ -10410,110 +10418,62 @@ clause_nneg("rules/cleanliness.rofl:158", 1).
 clause_nbi("rules/cleanliness.rofl:158", 0).
 body_sig("rules/cleanliness.rofl:158", "open_cell[audit](V0,V1), not owned[main](V0,V1)").
 shape_sig("rules/cleanliness.rofl:158", "R0[audit](V0,V1), not R1[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:21", "rules/decisions/production-readiness.rofl", 21, concern_covered, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:21", "I,Con").
-premise("rules/decisions/production-readiness.rofl:21", 0, concern_claim, main, pos, "I,Con,C").
-premise("rules/decisions/production-readiness.rofl:21", 1, claim, main, pos, "C").
-clause_npos("rules/decisions/production-readiness.rofl:21", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:21", 0).
-clause_nbi("rules/decisions/production-readiness.rofl:21", 0).
-body_sig("rules/decisions/production-readiness.rofl:21", "concern_claim[main](V0,V1,V2), claim[main](V2)").
-shape_sig("rules/decisions/production-readiness.rofl:21", "R0[main](V0,V1,V2), R1[main](V2)").
-clause("rules/decisions/production-readiness.rofl:31", "rules/decisions/production-readiness.rofl", 31, not_applicable, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:31", "I,Con").
-premise("rules/decisions/production-readiness.rofl:31", 0, excluded_concern, main, pos, "I,Con,_").
-premise("rules/decisions/production-readiness.rofl:31", 1, decision_authority, main, pos, "I,_").
-clause_npos("rules/decisions/production-readiness.rofl:31", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:31", 0).
-clause_nbi("rules/decisions/production-readiness.rofl:31", 0).
-body_sig("rules/decisions/production-readiness.rofl:31", "excluded_concern[main](V0,V1,_), decision_authority[main](V0,_)").
-shape_sig("rules/decisions/production-readiness.rofl:31", "R0[main](V0,V1,_), R1[main](V0,_)").
-clause("rules/decisions/production-readiness.rofl:34", "rules/decisions/production-readiness.rofl", 34, coverage_gap, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:34", "I,Con").
-premise("rules/decisions/production-readiness.rofl:34", 0, pack, main, pos, "I,production_readiness").
-premise("rules/decisions/production-readiness.rofl:34", 1, concern, main, pos, "production_readiness,Con").
-premise("rules/decisions/production-readiness.rofl:34", 2, concern_covered, main, neg, "I,Con").
-premise("rules/decisions/production-readiness.rofl:34", 3, not_applicable, main, neg, "I,Con").
-clause_npos("rules/decisions/production-readiness.rofl:34", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:34", 2).
-clause_nbi("rules/decisions/production-readiness.rofl:34", 0).
-body_sig("rules/decisions/production-readiness.rofl:34", "pack[main](V0,production_readiness), concern[main](production_readiness,V1), not concern_covered[main](V0,V1), not not_applicable[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:34", "R0[main](V0,production_readiness), R1[main](production_readiness,V1), not R2[main](V0,V1), not R3[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:41", "rules/decisions/production-readiness.rofl", 41, both_minds, audit, 2).
-head_pat("rules/decisions/production-readiness.rofl:41", "I,Con").
-premise("rules/decisions/production-readiness.rofl:41", 0, not_applicable, main, pos, "I,Con").
-premise("rules/decisions/production-readiness.rofl:41", 1, concern_covered, main, pos, "I,Con").
-clause_npos("rules/decisions/production-readiness.rofl:41", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:41", 0).
-clause_nbi("rules/decisions/production-readiness.rofl:41", 0).
-body_sig("rules/decisions/production-readiness.rofl:41", "not_applicable[main](V0,V1), concern_covered[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:41", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:56", "rules/decisions/production-readiness.rofl", 56, unaccepted_gap, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:56", "I,C").
-premise("rules/decisions/production-readiness.rofl:56", 0, pack, main, pos, "I,production_readiness").
-premise("rules/decisions/production-readiness.rofl:56", 1, open_obligation, main, pos, "I,C").
-premise("rules/decisions/production-readiness.rofl:56", 2, gap_accepted, main, neg, "I,C").
-clause_npos("rules/decisions/production-readiness.rofl:56", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:56", 1).
-clause_nbi("rules/decisions/production-readiness.rofl:56", 0).
-body_sig("rules/decisions/production-readiness.rofl:56", "pack[main](V0,production_readiness), open_obligation[main](V0,V1), not gap_accepted[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:56", "R0[main](V0,production_readiness), R1[main](V0,V1), not R2[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:59", "rules/decisions/production-readiness.rofl", 59, unaccepted_gap, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:59", "I,C").
-premise("rules/decisions/production-readiness.rofl:59", 0, pack, main, pos, "I,production_readiness").
-premise("rules/decisions/production-readiness.rofl:59", 1, refuted_obligation, main, pos, "I,C").
-premise("rules/decisions/production-readiness.rofl:59", 2, gap_accepted, main, neg, "I,C").
-clause_npos("rules/decisions/production-readiness.rofl:59", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:59", 1).
-clause_nbi("rules/decisions/production-readiness.rofl:59", 0).
-body_sig("rules/decisions/production-readiness.rofl:59", "pack[main](V0,production_readiness), refuted_obligation[main](V0,V1), not gap_accepted[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:59", "R0[main](V0,production_readiness), R1[main](V0,V1), not R2[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:66", "rules/decisions/production-readiness.rofl", 66, accepted_residual, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:66", "I,C").
-premise("rules/decisions/production-readiness.rofl:66", 0, gap_accepted, main, pos, "I,C").
-premise("rules/decisions/production-readiness.rofl:66", 1, obligation, main, pos, "I,C").
-clause_npos("rules/decisions/production-readiness.rofl:66", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:66", 0).
-clause_nbi("rules/decisions/production-readiness.rofl:66", 0).
-body_sig("rules/decisions/production-readiness.rofl:66", "gap_accepted[main](V0,V1), obligation[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:66", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:71", "rules/decisions/production-readiness.rofl", 71, idle_acceptance, audit, 2).
-head_pat("rules/decisions/production-readiness.rofl:71", "I,C").
-premise("rules/decisions/production-readiness.rofl:71", 0, gap_accepted, main, pos, "I,C").
-premise("rules/decisions/production-readiness.rofl:71", 1, resolved_obligation, main, pos, "I,C").
-clause_npos("rules/decisions/production-readiness.rofl:71", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:71", 0).
-clause_nbi("rules/decisions/production-readiness.rofl:71", 0).
-body_sig("rules/decisions/production-readiness.rofl:71", "gap_accepted[main](V0,V1), resolved_obligation[main](V0,V1)").
-shape_sig("rules/decisions/production-readiness.rofl:71", "R0[main](V0,V1), R1[main](V0,V1)").
-clause("rules/decisions/production-readiness.rofl:74", "rules/decisions/production-readiness.rofl", 74, recommendation, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:74", "I,go").
-premise("rules/decisions/production-readiness.rofl:74", 0, pack, main, pos, "I,production_readiness").
-premise("rules/decisions/production-readiness.rofl:74", 1, inquiry, main, pos, "I,decide").
-premise("rules/decisions/production-readiness.rofl:74", 2, go_blocked, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:74", 3, open_obligation, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:74", 4, refuted_obligation, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:74", 5, contested_obligation, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:74", 6, coverage_gap, main, neg, "I,_").
-clause_npos("rules/decisions/production-readiness.rofl:74", 2).
-clause_nneg("rules/decisions/production-readiness.rofl:74", 5).
-clause_nbi("rules/decisions/production-readiness.rofl:74", 0).
-body_sig("rules/decisions/production-readiness.rofl:74", "pack[main](V0,production_readiness), inquiry[main](V0,decide), not go_blocked[main](V0,_), not open_obligation[main](V0,_), not refuted_obligation[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_)").
-shape_sig("rules/decisions/production-readiness.rofl:74", "R0[main](V0,production_readiness), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), not R5[main](V0,_), not R6[main](V0,_)").
-clause("rules/decisions/production-readiness.rofl:85", "rules/decisions/production-readiness.rofl", 85, recommendation, main, 2).
-head_pat("rules/decisions/production-readiness.rofl:85", "I,conditional_go").
-premise("rules/decisions/production-readiness.rofl:85", 0, pack, main, pos, "I,production_readiness").
-premise("rules/decisions/production-readiness.rofl:85", 1, inquiry, main, pos, "I,decide").
-premise("rules/decisions/production-readiness.rofl:85", 2, go_blocked, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:85", 3, contested_obligation, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:85", 4, coverage_gap, main, neg, "I,_").
-premise("rules/decisions/production-readiness.rofl:85", 5, accepted_residual, main, pos, "I,_").
-premise("rules/decisions/production-readiness.rofl:85", 6, unaccepted_gap, main, neg, "I,_").
-clause_npos("rules/decisions/production-readiness.rofl:85", 3).
-clause_nneg("rules/decisions/production-readiness.rofl:85", 4).
-clause_nbi("rules/decisions/production-readiness.rofl:85", 0).
-body_sig("rules/decisions/production-readiness.rofl:85", "pack[main](V0,production_readiness), inquiry[main](V0,decide), not go_blocked[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_), accepted_residual[main](V0,_), not unaccepted_gap[main](V0,_)").
-shape_sig("rules/decisions/production-readiness.rofl:85", "R0[main](V0,production_readiness), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), R5[main](V0,_), not R6[main](V0,_)").
+clause("rules/decisions/production-readiness.rofl:22", "rules/decisions/production-readiness.rofl", 22, recommendation, main, 2).
+head_pat("rules/decisions/production-readiness.rofl:22", "I,go").
+premise("rules/decisions/production-readiness.rofl:22", 0, pack, main, pos, "I,production_readiness").
+premise("rules/decisions/production-readiness.rofl:22", 1, inquiry, main, pos, "I,decide").
+premise("rules/decisions/production-readiness.rofl:22", 2, go_blocked, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:22", 3, open_obligation, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:22", 4, refuted_obligation, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:22", 5, contested_obligation, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:22", 6, coverage_gap, main, neg, "I,_").
+clause_npos("rules/decisions/production-readiness.rofl:22", 2).
+clause_nneg("rules/decisions/production-readiness.rofl:22", 5).
+clause_nbi("rules/decisions/production-readiness.rofl:22", 0).
+body_sig("rules/decisions/production-readiness.rofl:22", "pack[main](V0,production_readiness), inquiry[main](V0,decide), not go_blocked[main](V0,_), not open_obligation[main](V0,_), not refuted_obligation[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_)").
+shape_sig("rules/decisions/production-readiness.rofl:22", "R0[main](V0,production_readiness), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), not R5[main](V0,_), not R6[main](V0,_)").
+clause("rules/decisions/production-readiness.rofl:33", "rules/decisions/production-readiness.rofl", 33, recommendation, main, 2).
+head_pat("rules/decisions/production-readiness.rofl:33", "I,conditional_go").
+premise("rules/decisions/production-readiness.rofl:33", 0, pack, main, pos, "I,production_readiness").
+premise("rules/decisions/production-readiness.rofl:33", 1, inquiry, main, pos, "I,decide").
+premise("rules/decisions/production-readiness.rofl:33", 2, go_blocked, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:33", 3, contested_obligation, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:33", 4, coverage_gap, main, neg, "I,_").
+premise("rules/decisions/production-readiness.rofl:33", 5, accepted_residual, main, pos, "I,_").
+premise("rules/decisions/production-readiness.rofl:33", 6, unaccepted_gap, main, neg, "I,_").
+clause_npos("rules/decisions/production-readiness.rofl:33", 3).
+clause_nneg("rules/decisions/production-readiness.rofl:33", 4).
+clause_nbi("rules/decisions/production-readiness.rofl:33", 0).
+body_sig("rules/decisions/production-readiness.rofl:33", "pack[main](V0,production_readiness), inquiry[main](V0,decide), not go_blocked[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_), accepted_residual[main](V0,_), not unaccepted_gap[main](V0,_)").
+shape_sig("rules/decisions/production-readiness.rofl:33", "R0[main](V0,production_readiness), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), R5[main](V0,_), not R6[main](V0,_)").
+clause("rules/decisions/public-release.rofl:29", "rules/decisions/public-release.rofl", 29, recommendation, main, 2).
+head_pat("rules/decisions/public-release.rofl:29", "I,publish").
+premise("rules/decisions/public-release.rofl:29", 0, pack, main, pos, "I,public_release").
+premise("rules/decisions/public-release.rofl:29", 1, inquiry, main, pos, "I,decide").
+premise("rules/decisions/public-release.rofl:29", 2, go_blocked, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:29", 3, open_obligation, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:29", 4, refuted_obligation, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:29", 5, contested_obligation, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:29", 6, coverage_gap, main, neg, "I,_").
+clause_npos("rules/decisions/public-release.rofl:29", 2).
+clause_nneg("rules/decisions/public-release.rofl:29", 5).
+clause_nbi("rules/decisions/public-release.rofl:29", 0).
+body_sig("rules/decisions/public-release.rofl:29", "pack[main](V0,public_release), inquiry[main](V0,decide), not go_blocked[main](V0,_), not open_obligation[main](V0,_), not refuted_obligation[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_)").
+shape_sig("rules/decisions/public-release.rofl:29", "R0[main](V0,public_release), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), not R5[main](V0,_), not R6[main](V0,_)").
+clause("rules/decisions/public-release.rofl:42", "rules/decisions/public-release.rofl", 42, recommendation, main, 2).
+head_pat("rules/decisions/public-release.rofl:42", "I,publish_with_known_gaps").
+premise("rules/decisions/public-release.rofl:42", 0, pack, main, pos, "I,public_release").
+premise("rules/decisions/public-release.rofl:42", 1, inquiry, main, pos, "I,decide").
+premise("rules/decisions/public-release.rofl:42", 2, go_blocked, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:42", 3, contested_obligation, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:42", 4, coverage_gap, main, neg, "I,_").
+premise("rules/decisions/public-release.rofl:42", 5, accepted_residual, main, pos, "I,_").
+premise("rules/decisions/public-release.rofl:42", 6, unaccepted_gap, main, neg, "I,_").
+clause_npos("rules/decisions/public-release.rofl:42", 3).
+clause_nneg("rules/decisions/public-release.rofl:42", 4).
+clause_nbi("rules/decisions/public-release.rofl:42", 0).
+body_sig("rules/decisions/public-release.rofl:42", "pack[main](V0,public_release), inquiry[main](V0,decide), not go_blocked[main](V0,_), not contested_obligation[main](V0,_), not coverage_gap[main](V0,_), accepted_residual[main](V0,_), not unaccepted_gap[main](V0,_)").
+shape_sig("rules/decisions/public-release.rofl:42", "R0[main](V0,public_release), R1[main](V0,decide), not R2[main](V0,_), not R3[main](V0,_), not R4[main](V0,_), R5[main](V0,_), not R6[main](V0,_)").
 clause("rules/depends.rofl:24", "rules/depends.rofl", 24, code_edge, dep, 2).
 head_pat("rules/depends.rofl:24", "A,B").
 premise("rules/depends.rofl:24", 0, edge, dep, pos, "A,B,ts_import").
@@ -11238,71 +11198,53 @@ clause_nneg("rules/findings.rofl:27", 1).
 clause_nbi("rules/findings.rofl:27", 0).
 body_sig("rules/findings.rofl:27", "artifact_removed[main](V0,_), not finding_note[main](V0,_)").
 shape_sig("rules/findings.rofl:27", "R0[main](V0,_), not R1[main](V0,_)").
-clause("rules/findings.rofl:32", "rules/findings.rofl", 32, two_minds, audit, 1).
-head_pat("rules/findings.rofl:32", "F").
-premise("rules/findings.rofl:32", 0, addressed_by, main, pos, "F,_").
-premise("rules/findings.rofl:32", 1, dismissed, main, pos, "F,_").
-clause_npos("rules/findings.rofl:32", 2).
-clause_nneg("rules/findings.rofl:32", 0).
-clause_nbi("rules/findings.rofl:32", 0).
-body_sig("rules/findings.rofl:32", "addressed_by[main](V0,_), dismissed[main](V0,_)").
-shape_sig("rules/findings.rofl:32", "R0[main](V0,_), R1[main](V0,_)").
-clause("rules/findings.rofl:34", "rules/findings.rofl", 34, open_finding, main, 1).
-head_pat("rules/findings.rofl:34", "F").
-premise("rules/findings.rofl:34", 0, finding, main, pos, "F,_").
-premise("rules/findings.rofl:34", 1, settled, main, neg, "F").
-clause_npos("rules/findings.rofl:34", 1).
-clause_nneg("rules/findings.rofl:34", 1).
-clause_nbi("rules/findings.rofl:34", 0).
-body_sig("rules/findings.rofl:34", "finding[main](V0,_), not settled[main](V0)").
-shape_sig("rules/findings.rofl:34", "R0[main](V0,_), not R1[main](V0)").
-clause("rules/findings.rofl:53", "rules/findings.rofl", 53, corrected, main, 1).
-head_pat("rules/findings.rofl:53", "F").
-premise("rules/findings.rofl:53", 0, finding_note, main, pos, "F,A").
-premise("rules/findings.rofl:53", 1, finding_note, main, pos, "F,B").
-clause_npos("rules/findings.rofl:53", 2).
-clause_nneg("rules/findings.rofl:53", 0).
-clause_nbi("rules/findings.rofl:53", 1).
-body_sig("rules/findings.rofl:53", "finding_note[main](V0,V1), finding_note[main](V0,V2), V1 != V2").
-shape_sig("rules/findings.rofl:53", "R0[main](V0,V1), R0[main](V0,V2), V1 != V2").
-clause("rules/findings.rofl:60", "rules/findings.rofl", 60, corrected_unsettled, audit, 1).
-head_pat("rules/findings.rofl:60", "F").
-premise("rules/findings.rofl:60", 0, corrected, main, pos, "F").
-premise("rules/findings.rofl:60", 1, settled, main, neg, "F").
-clause_npos("rules/findings.rofl:60", 1).
-clause_nneg("rules/findings.rofl:60", 1).
-clause_nbi("rules/findings.rofl:60", 0).
-body_sig("rules/findings.rofl:60", "corrected[main](V0), not settled[main](V0)").
-shape_sig("rules/findings.rofl:60", "R0[main](V0), not R1[main](V0)").
-clause("rules/findings.rofl:62", "rules/findings.rofl", 62, finding_action, main, 2).
-head_pat("rules/findings.rofl:62", "F,W").
-premise("rules/findings.rofl:62", 0, open_finding, main, pos, "F").
-premise("rules/findings.rofl:62", 1, demands, main, pos, "F,W").
-clause_npos("rules/findings.rofl:62", 2).
-clause_nneg("rules/findings.rofl:62", 0).
+clause("rules/findings.rofl:33", "rules/findings.rofl", 33, two_minds, audit, 1).
+head_pat("rules/findings.rofl:33", "F").
+premise("rules/findings.rofl:33", 0, addressed_by, main, pos, "F,_").
+premise("rules/findings.rofl:33", 1, dismissed, main, pos, "F,_").
+clause_npos("rules/findings.rofl:33", 2).
+clause_nneg("rules/findings.rofl:33", 0).
+clause_nbi("rules/findings.rofl:33", 0).
+body_sig("rules/findings.rofl:33", "addressed_by[main](V0,_), dismissed[main](V0,_)").
+shape_sig("rules/findings.rofl:33", "R0[main](V0,_), R1[main](V0,_)").
+clause("rules/findings.rofl:36", "rules/findings.rofl", 36, open_finding, main, 1).
+head_pat("rules/findings.rofl:36", "F").
+premise("rules/findings.rofl:36", 0, finding, main, pos, "F,_").
+premise("rules/findings.rofl:36", 1, settled, main, neg, "F").
+clause_npos("rules/findings.rofl:36", 1).
+clause_nneg("rules/findings.rofl:36", 1).
+clause_nbi("rules/findings.rofl:36", 0).
+body_sig("rules/findings.rofl:36", "finding[main](V0,_), not settled[main](V0)").
+shape_sig("rules/findings.rofl:36", "R0[main](V0,_), not R1[main](V0)").
+clause("rules/findings.rofl:55", "rules/findings.rofl", 55, corrected, main, 1).
+head_pat("rules/findings.rofl:55", "F").
+premise("rules/findings.rofl:55", 0, finding_note, main, pos, "F,A").
+premise("rules/findings.rofl:55", 1, finding_note, main, pos, "F,B").
+clause_npos("rules/findings.rofl:55", 2).
+clause_nneg("rules/findings.rofl:55", 0).
+clause_nbi("rules/findings.rofl:55", 1).
+body_sig("rules/findings.rofl:55", "finding_note[main](V0,V1), finding_note[main](V0,V2), V1 != V2").
+shape_sig("rules/findings.rofl:55", "R0[main](V0,V1), R0[main](V0,V2), V1 != V2").
+clause("rules/findings.rofl:62", "rules/findings.rofl", 62, corrected_unsettled, audit, 1).
+head_pat("rules/findings.rofl:62", "F").
+premise("rules/findings.rofl:62", 0, corrected, main, pos, "F").
+premise("rules/findings.rofl:62", 1, settled, main, neg, "F").
+clause_npos("rules/findings.rofl:62", 1).
+clause_nneg("rules/findings.rofl:62", 1).
 clause_nbi("rules/findings.rofl:62", 0).
-body_sig("rules/findings.rofl:62", "open_finding[main](V0), demands[main](V0,V1)").
-shape_sig("rules/findings.rofl:62", "R0[main](V0), R1[main](V0,V1)").
-clause("rules/findings.rofl:70", "rules/findings.rofl", 70, waiting, main, 1).
-head_pat("rules/findings.rofl:70", "F").
-premise("rules/findings.rofl:70", 0, blocks, main, pos, "A,F").
-premise("rules/findings.rofl:70", 1, settled, main, neg, "A").
-clause_npos("rules/findings.rofl:70", 1).
-clause_nneg("rules/findings.rofl:70", 1).
-clause_nbi("rules/findings.rofl:70", 0).
-body_sig("rules/findings.rofl:70", "blocks[main](V0,V1), not settled[main](V0)").
-shape_sig("rules/findings.rofl:70", "R0[main](V0,V1), not R1[main](V0)").
-clause("rules/findings.rofl:71", "rules/findings.rofl", 71, ready, main, 1).
-head_pat("rules/findings.rofl:71", "F").
-premise("rules/findings.rofl:71", 0, open_finding, main, pos, "F").
-premise("rules/findings.rofl:71", 1, waiting, main, neg, "F").
-clause_npos("rules/findings.rofl:71", 1).
-clause_nneg("rules/findings.rofl:71", 1).
-clause_nbi("rules/findings.rofl:71", 0).
-body_sig("rules/findings.rofl:71", "open_finding[main](V0), not waiting[main](V0)").
-shape_sig("rules/findings.rofl:71", "R0[main](V0), not R1[main](V0)").
-clause("rules/findings.rofl:72", "rules/findings.rofl", 72, blocked_by, main, 2).
-head_pat("rules/findings.rofl:72", "F,A").
+body_sig("rules/findings.rofl:62", "corrected[main](V0), not settled[main](V0)").
+shape_sig("rules/findings.rofl:62", "R0[main](V0), not R1[main](V0)").
+clause("rules/findings.rofl:64", "rules/findings.rofl", 64, finding_action, main, 2).
+head_pat("rules/findings.rofl:64", "F,W").
+premise("rules/findings.rofl:64", 0, open_finding, main, pos, "F").
+premise("rules/findings.rofl:64", 1, demands, main, pos, "F,W").
+clause_npos("rules/findings.rofl:64", 2).
+clause_nneg("rules/findings.rofl:64", 0).
+clause_nbi("rules/findings.rofl:64", 0).
+body_sig("rules/findings.rofl:64", "open_finding[main](V0), demands[main](V0,V1)").
+shape_sig("rules/findings.rofl:64", "R0[main](V0), R1[main](V0,V1)").
+clause("rules/findings.rofl:72", "rules/findings.rofl", 72, waiting, main, 1).
+head_pat("rules/findings.rofl:72", "F").
 premise("rules/findings.rofl:72", 0, blocks, main, pos, "A,F").
 premise("rules/findings.rofl:72", 1, settled, main, neg, "A").
 clause_npos("rules/findings.rofl:72", 1).
@@ -11310,83 +11252,101 @@ clause_nneg("rules/findings.rofl:72", 1).
 clause_nbi("rules/findings.rofl:72", 0).
 body_sig("rules/findings.rofl:72", "blocks[main](V0,V1), not settled[main](V0)").
 shape_sig("rules/findings.rofl:72", "R0[main](V0,V1), not R1[main](V0)").
-clause("rules/findings.rofl:118", "rules/findings.rofl", 118, proven, main, 1).
-head_pat("rules/findings.rofl:118", "F").
-premise("rules/findings.rofl:118", 0, witness, main, pos, "F,_,_").
-clause_npos("rules/findings.rofl:118", 1).
-clause_nneg("rules/findings.rofl:118", 0).
-clause_nbi("rules/findings.rofl:118", 0).
-body_sig("rules/findings.rofl:118", "witness[main](V0,_,_)").
-shape_sig("rules/findings.rofl:118", "R0[main](V0,_,_)").
-clause("rules/findings.rofl:119", "rules/findings.rofl", 119, proven, main, 1).
-head_pat("rules/findings.rofl:119", "F").
-premise("rules/findings.rofl:119", 0, witness_atleast, main, pos, "F,_,_").
-clause_npos("rules/findings.rofl:119", 1).
-clause_nneg("rules/findings.rofl:119", 0).
-clause_nbi("rules/findings.rofl:119", 0).
-body_sig("rules/findings.rofl:119", "witness_atleast[main](V0,_,_)").
-shape_sig("rules/findings.rofl:119", "R0[main](V0,_,_)").
+clause("rules/findings.rofl:73", "rules/findings.rofl", 73, ready, main, 1).
+head_pat("rules/findings.rofl:73", "F").
+premise("rules/findings.rofl:73", 0, open_finding, main, pos, "F").
+premise("rules/findings.rofl:73", 1, waiting, main, neg, "F").
+clause_npos("rules/findings.rofl:73", 1).
+clause_nneg("rules/findings.rofl:73", 1).
+clause_nbi("rules/findings.rofl:73", 0).
+body_sig("rules/findings.rofl:73", "open_finding[main](V0), not waiting[main](V0)").
+shape_sig("rules/findings.rofl:73", "R0[main](V0), not R1[main](V0)").
+clause("rules/findings.rofl:74", "rules/findings.rofl", 74, blocked_by, main, 2).
+head_pat("rules/findings.rofl:74", "F,A").
+premise("rules/findings.rofl:74", 0, blocks, main, pos, "A,F").
+premise("rules/findings.rofl:74", 1, settled, main, neg, "A").
+clause_npos("rules/findings.rofl:74", 1).
+clause_nneg("rules/findings.rofl:74", 1).
+clause_nbi("rules/findings.rofl:74", 0).
+body_sig("rules/findings.rofl:74", "blocks[main](V0,V1), not settled[main](V0)").
+shape_sig("rules/findings.rofl:74", "R0[main](V0,V1), not R1[main](V0)").
 clause("rules/findings.rofl:120", "rules/findings.rofl", 120, proven, main, 1).
 head_pat("rules/findings.rofl:120", "F").
-premise("rules/findings.rofl:120", 0, witness_in, main, pos, "F,_,_,_").
+premise("rules/findings.rofl:120", 0, witness, main, pos, "F,_,_").
 clause_npos("rules/findings.rofl:120", 1).
 clause_nneg("rules/findings.rofl:120", 0).
 clause_nbi("rules/findings.rofl:120", 0).
-body_sig("rules/findings.rofl:120", "witness_in[main](V0,_,_,_)").
-shape_sig("rules/findings.rofl:120", "R0[main](V0,_,_,_)").
+body_sig("rules/findings.rofl:120", "witness[main](V0,_,_)").
+shape_sig("rules/findings.rofl:120", "R0[main](V0,_,_)").
 clause("rules/findings.rofl:121", "rules/findings.rofl", 121, proven, main, 1).
 head_pat("rules/findings.rofl:121", "F").
-premise("rules/findings.rofl:121", 0, witness_in_atleast, main, pos, "F,_,_,_").
+premise("rules/findings.rofl:121", 0, witness_atleast, main, pos, "F,_,_").
 clause_npos("rules/findings.rofl:121", 1).
 clause_nneg("rules/findings.rofl:121", 0).
 clause_nbi("rules/findings.rofl:121", 0).
-body_sig("rules/findings.rofl:121", "witness_in_atleast[main](V0,_,_,_)").
-shape_sig("rules/findings.rofl:121", "R0[main](V0,_,_,_)").
+body_sig("rules/findings.rofl:121", "witness_atleast[main](V0,_,_)").
+shape_sig("rules/findings.rofl:121", "R0[main](V0,_,_)").
 clause("rules/findings.rofl:122", "rules/findings.rofl", 122, proven, main, 1).
 head_pat("rules/findings.rofl:122", "F").
-premise("rules/findings.rofl:122", 0, witness_absent, main, pos, "F,_,_,_").
+premise("rules/findings.rofl:122", 0, witness_in, main, pos, "F,_,_,_").
 clause_npos("rules/findings.rofl:122", 1).
 clause_nneg("rules/findings.rofl:122", 0).
 clause_nbi("rules/findings.rofl:122", 0).
-body_sig("rules/findings.rofl:122", "witness_absent[main](V0,_,_,_)").
+body_sig("rules/findings.rofl:122", "witness_in[main](V0,_,_,_)").
 shape_sig("rules/findings.rofl:122", "R0[main](V0,_,_,_)").
-clause("rules/findings.rofl:124", "rules/findings.rofl", 124, unproven, main, 1).
+clause("rules/findings.rofl:123", "rules/findings.rofl", 123, proven, main, 1).
+head_pat("rules/findings.rofl:123", "F").
+premise("rules/findings.rofl:123", 0, witness_in_atleast, main, pos, "F,_,_,_").
+clause_npos("rules/findings.rofl:123", 1).
+clause_nneg("rules/findings.rofl:123", 0).
+clause_nbi("rules/findings.rofl:123", 0).
+body_sig("rules/findings.rofl:123", "witness_in_atleast[main](V0,_,_,_)").
+shape_sig("rules/findings.rofl:123", "R0[main](V0,_,_,_)").
+clause("rules/findings.rofl:124", "rules/findings.rofl", 124, proven, main, 1).
 head_pat("rules/findings.rofl:124", "F").
-premise("rules/findings.rofl:124", 0, finding_action, main, pos, "F,rule_and_test").
-premise("rules/findings.rofl:124", 1, proven, main, neg, "F").
+premise("rules/findings.rofl:124", 0, witness_absent, main, pos, "F,_,_,_").
 clause_npos("rules/findings.rofl:124", 1).
-clause_nneg("rules/findings.rofl:124", 1).
+clause_nneg("rules/findings.rofl:124", 0).
 clause_nbi("rules/findings.rofl:124", 0).
-body_sig("rules/findings.rofl:124", "finding_action[main](V0,rule_and_test), not proven[main](V0)").
-shape_sig("rules/findings.rofl:124", "R0[main](V0,rule_and_test), not R1[main](V0)").
-clause("rules/findings.rofl:125", "rules/findings.rofl", 125, unproven, main, 1).
-head_pat("rules/findings.rofl:125", "F").
-premise("rules/findings.rofl:125", 0, finding_action, main, pos, "F,kernel_test").
-premise("rules/findings.rofl:125", 1, proven, main, neg, "F").
-clause_npos("rules/findings.rofl:125", 1).
-clause_nneg("rules/findings.rofl:125", 1).
-clause_nbi("rules/findings.rofl:125", 0).
-body_sig("rules/findings.rofl:125", "finding_action[main](V0,kernel_test), not proven[main](V0)").
-shape_sig("rules/findings.rofl:125", "R0[main](V0,kernel_test), not R1[main](V0)").
-clause("rules/findings.rofl:140", "rules/findings.rofl", 140, unproven_misaimed, audit, 1).
-head_pat("rules/findings.rofl:140", "F").
-premise("rules/findings.rofl:140", 0, unproven, main, pos, "F").
-premise("rules/findings.rofl:140", 1, demands, main, neg, "F,rule_and_test").
-premise("rules/findings.rofl:140", 2, demands, main, neg, "F,kernel_test").
-clause_npos("rules/findings.rofl:140", 1).
-clause_nneg("rules/findings.rofl:140", 2).
-clause_nbi("rules/findings.rofl:140", 0).
-body_sig("rules/findings.rofl:140", "unproven[main](V0), not demands[main](V0,rule_and_test), not demands[main](V0,kernel_test)").
-shape_sig("rules/findings.rofl:140", "R0[main](V0), not R1[main](V0,rule_and_test), not R1[main](V0,kernel_test)").
-clause("rules/findings.rofl:144", "rules/findings.rofl", 144, ready_proven, main, 1).
-head_pat("rules/findings.rofl:144", "F").
-premise("rules/findings.rofl:144", 0, ready, main, pos, "F").
-premise("rules/findings.rofl:144", 1, unproven, main, neg, "F").
-clause_npos("rules/findings.rofl:144", 1).
-clause_nneg("rules/findings.rofl:144", 1).
-clause_nbi("rules/findings.rofl:144", 0).
-body_sig("rules/findings.rofl:144", "ready[main](V0), not unproven[main](V0)").
-shape_sig("rules/findings.rofl:144", "R0[main](V0), not R1[main](V0)").
+body_sig("rules/findings.rofl:124", "witness_absent[main](V0,_,_,_)").
+shape_sig("rules/findings.rofl:124", "R0[main](V0,_,_,_)").
+clause("rules/findings.rofl:126", "rules/findings.rofl", 126, unproven, main, 1).
+head_pat("rules/findings.rofl:126", "F").
+premise("rules/findings.rofl:126", 0, finding_action, main, pos, "F,rule_and_test").
+premise("rules/findings.rofl:126", 1, proven, main, neg, "F").
+clause_npos("rules/findings.rofl:126", 1).
+clause_nneg("rules/findings.rofl:126", 1).
+clause_nbi("rules/findings.rofl:126", 0).
+body_sig("rules/findings.rofl:126", "finding_action[main](V0,rule_and_test), not proven[main](V0)").
+shape_sig("rules/findings.rofl:126", "R0[main](V0,rule_and_test), not R1[main](V0)").
+clause("rules/findings.rofl:127", "rules/findings.rofl", 127, unproven, main, 1).
+head_pat("rules/findings.rofl:127", "F").
+premise("rules/findings.rofl:127", 0, finding_action, main, pos, "F,kernel_test").
+premise("rules/findings.rofl:127", 1, proven, main, neg, "F").
+clause_npos("rules/findings.rofl:127", 1).
+clause_nneg("rules/findings.rofl:127", 1).
+clause_nbi("rules/findings.rofl:127", 0).
+body_sig("rules/findings.rofl:127", "finding_action[main](V0,kernel_test), not proven[main](V0)").
+shape_sig("rules/findings.rofl:127", "R0[main](V0,kernel_test), not R1[main](V0)").
+clause("rules/findings.rofl:142", "rules/findings.rofl", 142, unproven_misaimed, audit, 1).
+head_pat("rules/findings.rofl:142", "F").
+premise("rules/findings.rofl:142", 0, unproven, main, pos, "F").
+premise("rules/findings.rofl:142", 1, demands, main, neg, "F,rule_and_test").
+premise("rules/findings.rofl:142", 2, demands, main, neg, "F,kernel_test").
+clause_npos("rules/findings.rofl:142", 1).
+clause_nneg("rules/findings.rofl:142", 2).
+clause_nbi("rules/findings.rofl:142", 0).
+body_sig("rules/findings.rofl:142", "unproven[main](V0), not demands[main](V0,rule_and_test), not demands[main](V0,kernel_test)").
+shape_sig("rules/findings.rofl:142", "R0[main](V0), not R1[main](V0,rule_and_test), not R1[main](V0,kernel_test)").
+clause("rules/findings.rofl:146", "rules/findings.rofl", 146, ready_proven, main, 1).
+head_pat("rules/findings.rofl:146", "F").
+premise("rules/findings.rofl:146", 0, ready, main, pos, "F").
+premise("rules/findings.rofl:146", 1, unproven, main, neg, "F").
+clause_npos("rules/findings.rofl:146", 1).
+clause_nneg("rules/findings.rofl:146", 1).
+clause_nbi("rules/findings.rofl:146", 0).
+body_sig("rules/findings.rofl:146", "ready[main](V0), not unproven[main](V0)").
+shape_sig("rules/findings.rofl:146", "R0[main](V0), not R1[main](V0)").
 clause("rules/floor-census.rofl:41", "rules/floor-census.rofl", 41, about, main, 2).
 head_pat("rules/floor-census.rofl:41", "P,N").
 premise("rules/floor-census.rofl:41", 0, bucket_facts, main, pos, "P,about_rule,N").
@@ -11999,14 +11959,88 @@ clause_nneg("rules/inquiry/obligations.rofl:27", 0).
 clause_nbi("rules/inquiry/obligations.rofl:27", 0).
 body_sig("rules/inquiry/obligations.rofl:27", "inquiry[main](V0,_), blocks_on[main](V0,V1), contested[epistemic](V1)").
 shape_sig("rules/inquiry/obligations.rofl:27", "R0[main](V0,_), R1[main](V0,V1), R2[epistemic](V1)").
-clause("rules/inquiry/obligations.rofl:32", "rules/inquiry/obligations.rofl", 32, recommendation, main, 2).
-head_pat("rules/inquiry/obligations.rofl:32", "I,no_go").
-premise("rules/inquiry/obligations.rofl:32", 0, violated_blocking, main, pos, "I,_").
-clause_npos("rules/inquiry/obligations.rofl:32", 1).
-clause_nneg("rules/inquiry/obligations.rofl:32", 0).
-clause_nbi("rules/inquiry/obligations.rofl:32", 0).
-body_sig("rules/inquiry/obligations.rofl:32", "violated_blocking[main](V0,_)").
-shape_sig("rules/inquiry/obligations.rofl:32", "R0[main](V0,_)").
+clause("rules/inquiry/obligations.rofl:41", "rules/inquiry/obligations.rofl", 41, unaccepted_gap, main, 2).
+head_pat("rules/inquiry/obligations.rofl:41", "I,C").
+premise("rules/inquiry/obligations.rofl:41", 0, open_obligation, main, pos, "I,C").
+premise("rules/inquiry/obligations.rofl:41", 1, gap_accepted, main, neg, "I,C").
+clause_npos("rules/inquiry/obligations.rofl:41", 1).
+clause_nneg("rules/inquiry/obligations.rofl:41", 1).
+clause_nbi("rules/inquiry/obligations.rofl:41", 0).
+body_sig("rules/inquiry/obligations.rofl:41", "open_obligation[main](V0,V1), not gap_accepted[main](V0,V1)").
+shape_sig("rules/inquiry/obligations.rofl:41", "R0[main](V0,V1), not R1[main](V0,V1)").
+clause("rules/inquiry/obligations.rofl:42", "rules/inquiry/obligations.rofl", 42, unaccepted_gap, main, 2).
+head_pat("rules/inquiry/obligations.rofl:42", "I,C").
+premise("rules/inquiry/obligations.rofl:42", 0, refuted_obligation, main, pos, "I,C").
+premise("rules/inquiry/obligations.rofl:42", 1, gap_accepted, main, neg, "I,C").
+clause_npos("rules/inquiry/obligations.rofl:42", 1).
+clause_nneg("rules/inquiry/obligations.rofl:42", 1).
+clause_nbi("rules/inquiry/obligations.rofl:42", 0).
+body_sig("rules/inquiry/obligations.rofl:42", "refuted_obligation[main](V0,V1), not gap_accepted[main](V0,V1)").
+shape_sig("rules/inquiry/obligations.rofl:42", "R0[main](V0,V1), not R1[main](V0,V1)").
+clause("rules/inquiry/obligations.rofl:46", "rules/inquiry/obligations.rofl", 46, accepted_residual, main, 2).
+head_pat("rules/inquiry/obligations.rofl:46", "I,C").
+premise("rules/inquiry/obligations.rofl:46", 0, gap_accepted, main, pos, "I,C").
+premise("rules/inquiry/obligations.rofl:46", 1, obligation, main, pos, "I,C").
+clause_npos("rules/inquiry/obligations.rofl:46", 2).
+clause_nneg("rules/inquiry/obligations.rofl:46", 0).
+clause_nbi("rules/inquiry/obligations.rofl:46", 0).
+body_sig("rules/inquiry/obligations.rofl:46", "gap_accepted[main](V0,V1), obligation[main](V0,V1)").
+shape_sig("rules/inquiry/obligations.rofl:46", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/inquiry/obligations.rofl:50", "rules/inquiry/obligations.rofl", 50, idle_acceptance, audit, 2).
+head_pat("rules/inquiry/obligations.rofl:50", "I,C").
+premise("rules/inquiry/obligations.rofl:50", 0, gap_accepted, main, pos, "I,C").
+premise("rules/inquiry/obligations.rofl:50", 1, resolved_obligation, main, pos, "I,C").
+clause_npos("rules/inquiry/obligations.rofl:50", 2).
+clause_nneg("rules/inquiry/obligations.rofl:50", 0).
+clause_nbi("rules/inquiry/obligations.rofl:50", 0).
+body_sig("rules/inquiry/obligations.rofl:50", "gap_accepted[main](V0,V1), resolved_obligation[main](V0,V1)").
+shape_sig("rules/inquiry/obligations.rofl:50", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/inquiry/obligations.rofl:55", "rules/inquiry/obligations.rofl", 55, concern_covered, main, 2).
+head_pat("rules/inquiry/obligations.rofl:55", "I,Con").
+premise("rules/inquiry/obligations.rofl:55", 0, concern_claim, main, pos, "I,Con,C").
+premise("rules/inquiry/obligations.rofl:55", 1, claim, main, pos, "C").
+clause_npos("rules/inquiry/obligations.rofl:55", 2).
+clause_nneg("rules/inquiry/obligations.rofl:55", 0).
+clause_nbi("rules/inquiry/obligations.rofl:55", 0).
+body_sig("rules/inquiry/obligations.rofl:55", "concern_claim[main](V0,V1,V2), claim[main](V2)").
+shape_sig("rules/inquiry/obligations.rofl:55", "R0[main](V0,V1,V2), R1[main](V2)").
+clause("rules/inquiry/obligations.rofl:61", "rules/inquiry/obligations.rofl", 61, not_applicable, main, 2).
+head_pat("rules/inquiry/obligations.rofl:61", "I,Con").
+premise("rules/inquiry/obligations.rofl:61", 0, excluded_concern, main, pos, "I,Con,_").
+premise("rules/inquiry/obligations.rofl:61", 1, decision_authority, main, pos, "I,_").
+clause_npos("rules/inquiry/obligations.rofl:61", 2).
+clause_nneg("rules/inquiry/obligations.rofl:61", 0).
+clause_nbi("rules/inquiry/obligations.rofl:61", 0).
+body_sig("rules/inquiry/obligations.rofl:61", "excluded_concern[main](V0,V1,_), decision_authority[main](V0,_)").
+shape_sig("rules/inquiry/obligations.rofl:61", "R0[main](V0,V1,_), R1[main](V0,_)").
+clause("rules/inquiry/obligations.rofl:63", "rules/inquiry/obligations.rofl", 63, coverage_gap, main, 2).
+head_pat("rules/inquiry/obligations.rofl:63", "I,Con").
+premise("rules/inquiry/obligations.rofl:63", 0, pack, main, pos, "I,P").
+premise("rules/inquiry/obligations.rofl:63", 1, concern, main, pos, "P,Con").
+premise("rules/inquiry/obligations.rofl:63", 2, concern_covered, main, neg, "I,Con").
+premise("rules/inquiry/obligations.rofl:63", 3, not_applicable, main, neg, "I,Con").
+clause_npos("rules/inquiry/obligations.rofl:63", 2).
+clause_nneg("rules/inquiry/obligations.rofl:63", 2).
+clause_nbi("rules/inquiry/obligations.rofl:63", 0).
+body_sig("rules/inquiry/obligations.rofl:63", "pack[main](V0,V1), concern[main](V1,V2), not concern_covered[main](V0,V2), not not_applicable[main](V0,V2)").
+shape_sig("rules/inquiry/obligations.rofl:63", "R0[main](V0,V1), R1[main](V1,V2), not R2[main](V0,V2), not R3[main](V0,V2)").
+clause("rules/inquiry/obligations.rofl:69", "rules/inquiry/obligations.rofl", 69, both_minds, audit, 2).
+head_pat("rules/inquiry/obligations.rofl:69", "I,Con").
+premise("rules/inquiry/obligations.rofl:69", 0, not_applicable, main, pos, "I,Con").
+premise("rules/inquiry/obligations.rofl:69", 1, concern_covered, main, pos, "I,Con").
+clause_npos("rules/inquiry/obligations.rofl:69", 2).
+clause_nneg("rules/inquiry/obligations.rofl:69", 0).
+clause_nbi("rules/inquiry/obligations.rofl:69", 0).
+body_sig("rules/inquiry/obligations.rofl:69", "not_applicable[main](V0,V1), concern_covered[main](V0,V1)").
+shape_sig("rules/inquiry/obligations.rofl:69", "R0[main](V0,V1), R1[main](V0,V1)").
+clause("rules/inquiry/obligations.rofl:74", "rules/inquiry/obligations.rofl", 74, recommendation, main, 2).
+head_pat("rules/inquiry/obligations.rofl:74", "I,no_go").
+premise("rules/inquiry/obligations.rofl:74", 0, violated_blocking, main, pos, "I,_").
+clause_npos("rules/inquiry/obligations.rofl:74", 1).
+clause_nneg("rules/inquiry/obligations.rofl:74", 0).
+clause_nbi("rules/inquiry/obligations.rofl:74", 0).
+body_sig("rules/inquiry/obligations.rofl:74", "violated_blocking[main](V0,_)").
+shape_sig("rules/inquiry/obligations.rofl:74", "R0[main](V0,_)").
 clause("rules/inquiry/perspectives.rofl:15", "rules/inquiry/perspectives.rofl", 15, agent_disputed, main, 1).
 head_pat("rules/inquiry/perspectives.rofl:15", "C").
 premise("rules/inquiry/perspectives.rofl:15", 0, agent_state, $var, pos, "C,supported").
@@ -26164,14 +26198,7 @@ head_arms(waived, 2, 1).
 head_arms(open_cell, 2, 1).
 head_arms(owned, 2, 1).
 head_arms(unowned, 2, 1).
-head_arms(concern_covered, 2, 1).
-head_arms(not_applicable, 2, 1).
-head_arms(coverage_gap, 2, 1).
-head_arms(both_minds, 2, 1).
-head_arms(unaccepted_gap, 2, 2).
-head_arms(accepted_residual, 2, 1).
-head_arms(idle_acceptance, 2, 1).
-head_arms(recommendation, 2, 3).
+head_arms(recommendation, 2, 5).
 head_arms(code_edge, 2, 4).
 head_arms(regenerates, 2, 1).
 head_arms(blast, 2, 2).
@@ -26288,6 +26315,13 @@ head_arms(resolved_obligation, 2, 1).
 head_arms(refuted_obligation, 2, 1).
 head_arms(violated_blocking, 2, 1).
 head_arms(go_blocked, 2, 2).
+head_arms(unaccepted_gap, 2, 2).
+head_arms(accepted_residual, 2, 1).
+head_arms(idle_acceptance, 2, 1).
+head_arms(concern_covered, 2, 1).
+head_arms(not_applicable, 2, 1).
+head_arms(coverage_gap, 2, 1).
+head_arms(both_minds, 2, 1).
 head_arms(agent_disputed, 1, 1).
 head_arms(maps_to, 2, 1).
 head_arms(canonical, 2, 2).
@@ -27468,14 +27502,9 @@ defined(open_cell, "rules/worklist.rofl").
 defined(owned, "rules/cleanliness.rofl").
 defined(unowned, "rules/cleanliness.rofl").
 defined(concern, "rules/decisions/production-readiness.rofl").
-defined(concern_covered, "rules/decisions/production-readiness.rofl").
-defined(not_applicable, "rules/decisions/production-readiness.rofl").
-defined(coverage_gap, "rules/decisions/production-readiness.rofl").
-defined(both_minds, "rules/decisions/production-readiness.rofl").
-defined(unaccepted_gap, "rules/decisions/production-readiness.rofl").
-defined(accepted_residual, "rules/decisions/production-readiness.rofl").
-defined(idle_acceptance, "rules/decisions/production-readiness.rofl").
+defined(concern, "rules/decisions/public-release.rofl").
 defined(recommendation, "rules/decisions/production-readiness.rofl").
+defined(recommendation, "rules/decisions/public-release.rofl").
 defined(recommendation, "rules/inquiry/obligations.rofl").
 defined(code_edge, "rules/depends.rofl").
 defined(regenerates, "rules/depends.rofl").
@@ -27548,6 +27577,8 @@ defined(unanswered, "rules/features.rofl").
 defined(orphan_capability, "rules/features.rofl").
 defined(settled, "rules/findings.rofl").
 defined(note_lost, "rules/findings.rofl").
+defined(alarm, "rules/findings.rofl").
+defined(alarm, "rules/inquiry/obligations.rofl").
 defined(two_minds, "rules/findings.rofl").
 defined(open_finding, "rules/findings.rofl").
 defined(corrected, "rules/findings.rofl").
@@ -27608,6 +27639,13 @@ defined(resolved_obligation, "rules/inquiry/obligations.rofl").
 defined(refuted_obligation, "rules/inquiry/obligations.rofl").
 defined(violated_blocking, "rules/inquiry/obligations.rofl").
 defined(go_blocked, "rules/inquiry/obligations.rofl").
+defined(unaccepted_gap, "rules/inquiry/obligations.rofl").
+defined(accepted_residual, "rules/inquiry/obligations.rofl").
+defined(idle_acceptance, "rules/inquiry/obligations.rofl").
+defined(concern_covered, "rules/inquiry/obligations.rofl").
+defined(not_applicable, "rules/inquiry/obligations.rofl").
+defined(coverage_gap, "rules/inquiry/obligations.rofl").
+defined(both_minds, "rules/inquiry/obligations.rofl").
 defined(authority, "rules/inquiry/ontology.rofl").
 defined(authority, "facts/js-resolve.rofl").
 defined(authority, "facts/spec.rofl").
@@ -28765,8 +28803,8 @@ defined(recorded, "facts/findings.rofl").
 defined(finding_note, "facts/findings.rofl").
 defined(demands, "facts/findings.rofl").
 defined(addressed_by, "facts/findings.rofl").
-defined(dismissed, "facts/findings.rofl").
 defined(artifact_removed, "facts/findings.rofl").
+defined(dismissed, "facts/findings.rofl").
 defined(blocks, "facts/findings.rofl").
 defined(witness_atleast, "facts/findings.rofl").
 defined(witness, "facts/findings.rofl").
@@ -29276,21 +29314,11 @@ read_by_rule(waived).
 read_by_rule(cell_owner).
 read_by_rule(open_cell).
 read_by_rule(owned).
-read_by_rule(concern_claim).
-read_by_rule(claim).
-read_by_rule(excluded_concern).
-read_by_rule(decision_authority).
 read_by_rule(pack).
-read_by_rule(concern).
-read_by_rule(concern_covered).
-read_by_rule(not_applicable).
-read_by_rule(open_obligation).
-read_by_rule(gap_accepted).
-read_by_rule(refuted_obligation).
-read_by_rule(obligation).
-read_by_rule(resolved_obligation).
 read_by_rule(inquiry).
 read_by_rule(go_blocked).
+read_by_rule(open_obligation).
+read_by_rule(refuted_obligation).
 read_by_rule(contested_obligation).
 read_by_rule(coverage_gap).
 read_by_rule(accepted_residual).
@@ -29402,6 +29430,7 @@ read_by_rule(volume_settled).
 read_by_rule(eviction_asked).
 read_by_rule(under_pressure).
 read_by_rule(coolable).
+read_by_rule(claim).
 read_by_rule(supports).
 read_by_rule(canonical).
 read_by_rule(stale_evidence).
@@ -29413,6 +29442,8 @@ read_by_rule(agent_attached).
 read_by_rule(confirmed_polarity).
 read_by_rule(observable).
 read_by_rule(ambiguous).
+read_by_rule(obligation).
+read_by_rule(resolved_obligation).
 read_by_rule(requires_authority).
 read_by_rule(blocks_on).
 read_by_rule(pending_polarity).
@@ -29421,6 +29452,13 @@ read_by_rule(unknown).
 read_by_rule(contested).
 read_by_rule(refuted_confirmed).
 read_by_rule(supported_confirmed).
+read_by_rule(gap_accepted).
+read_by_rule(concern_claim).
+read_by_rule(excluded_concern).
+read_by_rule(decision_authority).
+read_by_rule(concern).
+read_by_rule(concern_covered).
+read_by_rule(not_applicable).
 read_by_rule(violated_blocking).
 read_by_rule(agent_state).
 read_by_rule(agent_disputed).
@@ -30312,43 +30350,31 @@ read_by_rule(world_corpus).
 read_by_rule(witnessed_thing).
 named_in_ts(rule_known).
 named_in_ts(perspective).
-named_in_ts(sees).
 named_in_ts(edb).
 named_in_ts(malformed).
 named_in_ts(breach).
 named_in_ts(flow).
-named_in_ts(flows_to).
 named_in_ts(crossing).
 named_in_ts(collects_from).
 named_in_ts(collected).
-named_in_ts(gathered).
 named_in_ts(leak).
 named_in_ts(unmoded).
 named_in_ts(undefined_premise).
 named_in_ts(imports).
 named_in_ts(negated_under).
 named_in_ts(collects).
-named_in_ts(exports).
-named_in_ts(exported_to).
 named_in_ts(exported).
 named_in_ts(slot).
-named_in_ts(analysed).
-named_in_ts(binds).
 named_in_ts(eq_or_is).
-named_in_ts(blocked_head).
 named_in_ts(executable).
 named_in_ts(has_neg_rule).
 named_in_ts(mono_rule).
 named_in_ts(stratum_cone).
 named_in_ts(late_rule).
 named_in_ts(demand_rel).
-named_in_ts(neg_relation).
 named_in_ts(stratum).
-named_in_ts(rule_reads).
-named_in_ts(rule_relation).
 named_in_ts(role).
 named_in_ts(roleless).
-named_in_ts(duty).
 named_in_ts(cell).
 named_in_ts(vacant).
 named_in_ts(consumed).
@@ -30356,712 +30382,89 @@ named_in_ts(applies).
 named_in_ts(owes).
 named_in_ts(waived).
 named_in_ts(open_cell).
-named_in_ts(owned).
 named_in_ts(unowned).
-named_in_ts(coverage_gap).
 named_in_ts(recommendation).
-named_in_ts(blast).
-named_in_ts(stale_prose).
 named_in_ts(orphan).
 named_in_ts(script).
-named_in_ts(generated).
 named_in_ts(test_file).
 named_in_ts(block).
 named_in_ts(policy).
-named_in_ts(decides).
-named_in_ts(enforces).
 named_in_ts(policy_when).
-named_in_ts(cut_method).
 named_in_ts(hand_judged).
 named_in_ts(owed).
 named_in_ts(work).
-named_in_ts(touched).
 named_in_ts(carried).
 named_in_ts(share).
-named_in_ts(hot).
-named_in_ts(slow_because).
 named_in_ts(entry_point).
 named_in_ts(calls).
 named_in_ts(reaches).
 named_in_ts(settled).
+named_in_ts(alarm).
 named_in_ts(open_finding).
-named_in_ts(corrected).
-named_in_ts(corrected_unsettled).
 named_in_ts(finding_action).
 named_in_ts(ready).
-named_in_ts(proven).
-named_in_ts(unproven).
-named_in_ts(measured).
 named_in_ts(boot).
-named_in_ts(sealable).
 named_in_ts(unread).
 named_in_ts(report).
 named_in_ts(indexed).
 named_in_ts(needs_index).
-named_in_ts(index_incomplete).
-named_in_ts(index_complete).
 named_in_ts(candidate_intent).
-named_in_ts(coolable).
-named_in_ts(index_done).
-named_in_ts(index_cold).
-named_in_ts(supported).
-named_in_ts(refuted).
-named_in_ts(contested).
 named_in_ts(unknown).
-named_in_ts(refuted_confirmed).
-named_in_ts(obligation).
 named_in_ts(open_obligation).
 named_in_ts(contested_obligation).
 named_in_ts(resolved_obligation).
 named_in_ts(refuted_obligation).
 named_in_ts(go_blocked).
 named_in_ts(authority).
-named_in_ts(agent_disputed).
 named_in_ts(blocks_on).
-named_in_ts(mapping_proposal).
-named_in_ts(surface_origin).
-named_in_ts(surface_two_origins).
-named_in_ts(ambient_binding).
-named_in_ts(ambient_binding_unowned).
-named_in_ts(amb_heap).
-named_in_ts(eff_of_label).
-named_in_ts(eff_of_host).
-named_in_ts(host_atom_unmapped).
-named_in_ts(host_atom_two_names).
-named_in_ts(ambient_effect).
-named_in_ts(amb_operation_word).
-named_in_ts(ambient_unenumerated).
-named_in_ts(eff_operation).
-named_in_ts(amb_global_call).
-named_in_ts(amb_construct).
-named_in_ts(eff_here).
-named_in_ts(lib_mutator).
 named_in_ts(amb_proto_unsplit).
 named_in_ts(lib_readonly_only).
-named_in_ts(amb_proto_untraced).
-named_in_ts(amb_proto_heap).
-named_in_ts(amb_proto_recv).
-named_in_ts(amb_proto_heap_split).
-named_in_ts(amb_not_constructible).
-named_in_ts(ambient_off_surface).
-named_in_ts(amb_surface_attributed).
-named_in_ts(ambient_surface_unattributed).
-named_in_ts(ambient_owed).
-named_in_ts(amb_exn_carrier).
-named_in_ts(eff_exn_unexplained).
-named_in_ts(attr_lit).
-named_in_ts(attr_lit_kvar).
-named_in_ts(attr_key_read).
-named_in_ts(attr_key_read_free).
-named_in_ts(attr_pair_read).
-named_in_ts(unconsumed_attr).
-named_in_ts(unconsumed_value).
-named_in_ts(attr_unread_ok_unseen).
-named_in_ts(attr_unread_ok_read).
-named_in_ts(attr_value_ok_unseen).
-named_in_ts(attr_deferred_unseen).
-named_in_ts(attr_deferred_read).
-named_in_ts(attr_double_excused).
-named_in_ts(pos_prem).
-named_in_ts(attr_lit_kvvar).
-named_in_ts(attr_table_read).
-named_in_ts(attr_table_unbridged).
-named_in_ts(attr_table_bridged_unread).
-named_in_ts(rule_prem).
-named_in_ts(attr_guard_slot).
-named_in_ts(attr_guard_pinned).
-named_in_ts(attr_slot_gap).
-named_in_ts(attr_guard_slot_pos).
-named_in_ts(attr_pos_slot_gap).
-named_in_ts(attr_blind_guard).
-named_in_ts(attr_slot_gap_ok_unseen).
-named_in_ts(attr_kind_lacks).
-named_in_ts(attr_kind_split).
-named_in_ts(attr_split_ok_unseen).
 named_in_ts(call_site).
-named_in_ts(callee_of).
-named_in_ts(callee_kind).
-named_in_ts(transfer_kind).
-named_in_ts(transfer_site).
 named_in_ts(site).
-named_in_ts(callee_shape).
-named_in_ts(computed_member).
-named_in_ts(obj_kind_class).
-named_in_ts(shape).
-named_in_ts(catch_all_occupied).
-named_in_ts(unnamed_callee).
-named_in_ts(shaped).
-named_in_ts(unshaped).
-named_in_ts(multi_shape).
 named_in_ts(fn_node).
-named_in_ts(fn_name).
-named_in_ts(class_has_id).
-named_in_ts(anon_class).
-named_in_ts(decorates).
-named_in_ts(in_own_decorator).
-named_in_ts(encloses).
-named_in_ts(closer).
-named_in_ts(nearest_fn).
 named_in_ts(enclosed).
-named_in_ts(top_call).
-named_in_ts(obj_member_fn).
 named_in_ts(resolves).
-named_in_ts(for_of_iterates).
-named_in_ts(ambiguous_call).
-named_in_ts(calls_named).
-named_in_ts(calls_in).
-named_in_ts(passes_function).
-named_in_ts(resolved_site).
-named_in_ts(resolved_call).
-named_in_ts(unresolved_call).
-named_in_ts(unresolved_shape).
 named_in_ts(stdlib_member).
 named_in_ts(frontier_at).
-named_in_ts(frontier_line).
-named_in_ts(shape_vocab).
-named_in_ts(shape_seen).
-named_in_ts(shape_verdict).
-named_in_ts(shape_reason).
-named_in_ts(shape_unexplained).
-named_in_ts(shape_bad_reason).
-named_in_ts(shape_orphan).
-named_in_ts(shape_stale).
-named_in_ts(shape_unexercised).
-named_in_ts(shape_irreducible).
-named_in_ts(unrecorded_coverage).
-named_in_ts(shape_ours).
-named_in_ts(kind_undeclared).
-named_in_ts(await_arg).
-named_in_ts(awaited_then).
-named_in_ts(performed_call).
-named_in_ts(callerless_call).
-named_in_ts(await_value_known).
-named_in_ts(await_no_call).
-named_in_ts(await_value_unknown).
-named_in_ts(performed_as_edge).
-named_in_ts(guard_kind).
-named_in_ts(guard_arm).
-named_in_ts(field_init).
-named_in_ts(guarded).
 named_in_ts(abrupt_kind).
-named_in_ts(stmt_seq_field).
-named_in_ts(after_abrupt).
-named_in_ts(suspend_at).
-named_in_ts(after_suspend).
-named_in_ts(stmt_seq_unseen).
-named_in_ts(label_name).
-named_in_ts(label_ref).
-named_in_ts(label_target).
-named_in_ts(abrupt_at).
-named_in_ts(completion_kind).
-named_in_ts(completes_abruptly).
-named_in_ts(label_escaped).
-named_in_ts(completion_decided).
-named_in_ts(completion_unreached).
-named_in_ts(completion_deferred).
-named_in_ts(completion_unaccounted).
-named_in_ts(has_return).
-named_in_ts(top_throw).
-named_in_ts(always_throws).
-named_in_ts(throwing_call).
-named_in_ts(accessor_kind).
-named_in_ts(accessor_of).
-named_in_ts(accessor_read).
-named_in_ts(pattern_source).
-named_in_ts(pattern_accessor).
-named_in_ts(spread_iterable_field).
-named_in_ts(pattern_iterates).
-named_in_ts(pattern_next).
-named_in_ts(hidden_call_pos).
-named_in_ts(hidden_call_src).
-named_in_ts(hidden_call_fires).
-named_in_ts(hidden_call_builtin).
-named_in_ts(hidden_call_primitive).
-named_in_ts(hidden_call_untraced).
-named_in_ts(hidden_call_unsourced).
-named_in_ts(hidden_call_unaccounted).
-named_in_ts(hidden_call_off_table).
-named_in_ts(try_of).
-named_in_ts(in_try_block).
-named_in_ts(try_catches).
-named_in_ts(caught_here).
-named_in_ts(throws_outright).
-named_in_ts(may_throw).
-named_in_ts(thrown_by).
-named_in_ts(caught_value).
-named_in_ts(try_stops).
-named_in_ts(may_not_run).
-named_in_ts(export_kind).
-named_in_ts(in_fn).
-named_in_ts(exported_fn).
 named_in_ts(reachable).
-named_in_ts(may_not_be_reached).
-named_in_ts(export_kind_unseen).
-named_in_ts(no_entry_point).
-named_in_ts(transfer_mechanism).
-named_in_ts(mechanism_modelled).
-named_in_ts(mechanism_unanswered).
-named_in_ts(guard_named).
-named_in_ts(guard_unmodelled).
-named_in_ts(guard_arm_unseen).
-named_in_ts(ident).
-named_in_ts(ident_in).
-named_in_ts(var_flow).
-named_in_ts(var_reaches).
-named_in_ts(literal_kind).
-named_in_ts(may_be_lit).
-named_in_ts(interpolated).
-named_in_ts(node_value_kind).
-named_in_ts(may_be_node).
-named_in_ts(binder).
-named_in_ts(scoped_binder).
-named_in_ts(binder_region).
-named_in_ts(binder_at_top).
-named_in_ts(sees_binder).
-named_in_ts(block_scope_kind).
-named_in_ts(scope_node).
-named_in_ts(lexical_decl).
-named_in_ts(lexical_binder).
-named_in_ts(encloses_s).
-named_in_ts(nearest_s).
-named_in_ts(binds_name).
-named_in_ts(shadowed_by).
-named_in_ts(shadowed_by_param).
-named_in_ts(hidden_at).
-named_in_ts(tdz_cand).
-named_in_ts(tdz_deferred).
-named_in_ts(tdz_at).
-named_in_ts(kind_prototype).
-named_in_ts(prototype_of).
-named_in_ts(builtin_prototype).
-named_in_ts(destructures).
-named_in_ts(destructures_at).
-named_in_ts(elem_at).
-named_in_ts(param_of).
-named_in_ts(param_default).
-named_in_ts(pattern_takes).
-named_in_ts(rest_in_pattern).
-named_in_ts(rest_binds).
-named_in_ts(member_value).
-named_in_ts(member_plain).
-named_in_ts(valued).
-named_in_ts(fn_node_v).
-named_in_ts(nearest_v).
-named_in_ts(spread_arg).
-named_in_ts(after_spread).
-named_in_ts(arg_at).
-named_in_ts(param_hidden).
-named_in_ts(param_use).
-named_in_ts(returns).
-named_in_ts(obj_like).
 named_in_ts(own_key).
-named_in_ts(member_node_v).
 named_in_ts(selects).
-named_in_ts(class_member_static).
-named_in_ts(class_member_proto).
-named_in_ts(class_receiver).
-named_in_ts(this_binds_kind).
-named_in_ts(this_over).
-named_in_ts(this_nearer).
-named_in_ts(this_host).
-named_in_ts(class_method_of).
-named_in_ts(class_field_kind).
-named_in_ts(field_of).
-named_in_ts(inherited_field).
-named_in_ts(private_key).
-named_in_ts(private_member).
-named_in_ts(private_ref).
-named_in_ts(private_inner).
-named_in_ts(private_binds).
-named_in_ts(static_block_of).
-named_in_ts(imports_name).
-named_in_ts(module_source).
-named_in_ts(import_target).
-named_in_ts(exports_name).
-named_in_ts(reexport_decl).
-named_in_ts(export_list_erased).
-named_in_ts(export_item_erased).
-named_in_ts(export_local).
-named_in_ts(export_ns_name).
-named_in_ts(imports_ns).
-named_in_ts(module_object).
-named_in_ts(imports_default).
-named_in_ts(exports_default).
-named_in_ts(import_outside_corpus).
-named_in_ts(class_named).
-named_in_ts(super_of).
-named_in_ts(has_own_ctor).
-named_in_ts(ctor_of).
-named_in_ts(seq_later).
-named_in_ts(bound_to_call).
-named_in_ts(next_send).
-named_in_ts(delegates).
-named_in_ts(plain_assign).
-named_in_ts(catch_of).
-named_in_ts(catch_param).
-named_in_ts(try_block).
-named_in_ts(thrown_in).
-named_in_ts(catch_from_call).
-named_in_ts(catch_from_host).
-named_in_ts(catch_unsourced).
-named_in_ts(decorated_by).
-named_in_ts(decorated_member).
-named_in_ts(eff_leq).
-named_in_ts(eff_lt).
-named_in_ts(eff_ub).
-named_in_ts(eff_ub_lower).
-named_in_ts(eff_join).
-named_in_ts(eff_meet).
-named_in_ts(join_missing).
-named_in_ts(join_ambiguous).
-named_in_ts(meet_missing).
-named_in_ts(meet_ambiguous).
-named_in_ts(eff_top).
-named_in_ts(eff_bot).
-named_in_ts(eff_row_unknown).
-named_in_ts(eff_label_unknown).
-named_in_ts(eff_alias_unknown).
-named_in_ts(eff_alias_unnamed).
-named_in_ts(eff_name_empty).
-named_in_ts(eff_heap_unknown).
-named_in_ts(eff_label_unnamed).
-named_in_ts(eff_catch_here).
-named_in_ts(eff_try_arm).
-named_in_ts(eff_reaches).
-named_in_ts(eff_alloc_kind).
-named_in_ts(eff_obj_traced).
-named_in_ts(eff_heap_of).
-named_in_ts(eff_member_target).
-named_in_ts(eff_read_site).
-named_in_ts(eff_member_both).
-named_in_ts(eff_label_unseen).
-named_in_ts(eff_latent).
-named_in_ts(eff_discharged_at).
-named_in_ts(eff_discharge_unknown).
-named_in_ts(eff_exn_only).
-named_in_ts(may_throw_only).
-named_in_ts(eff_swallowed).
-named_in_ts(effect_of).
-named_in_ts(eff_unnamed).
-named_in_ts(eff_two_names).
-named_in_ts(eff_join_short).
-named_in_ts(concrete_effect).
-named_in_ts(concrete_denotes).
-named_in_ts(concrete_leq).
-named_in_ts(concrete_unmapped).
-named_in_ts(eff_call_unattributed).
-named_in_ts(concrete_unnamed).
-named_in_ts(concrete_no_origin).
-named_in_ts(concrete_bad_origin).
-named_in_ts(concrete_async_smuggled).
-named_in_ts(eff_op_inspects).
-named_in_ts(eff_op_beyond).
-named_in_ts(eff_coerced).
-named_in_ts(eff_conv_object).
-named_in_ts(eff_conv_call).
-named_in_ts(eff_conv_default).
-named_in_ts(eff_conv_primitive).
-named_in_ts(eff_conv_untraced).
-named_in_ts(eff_conv_unaccounted).
-named_in_ts(eff_op_off_kind).
-named_in_ts(eff_mod_src).
-named_in_ts(eff_erased).
-named_in_ts(eff_mod_target).
-named_in_ts(eff_mod_target_disagrees).
-named_in_ts(eff_evaluates_at).
-named_in_ts(eff_import_outside).
-named_in_ts(eff_in_fn).
-named_in_ts(eff_module).
-named_in_ts(eff_import_invented).
-named_in_ts(effect_of_module).
-named_in_ts(eff_mod_unnamed).
-named_in_ts(eff_mod_two_names).
-named_in_ts(eff_mod_join_short).
-named_in_ts(eff_hidden_call).
-named_in_ts(eff_edge_unclosed).
-named_in_ts(eff_field_value).
-named_in_ts(eff_field_moment).
-named_in_ts(eff_runs_in).
-named_in_ts(class_define_eff).
-named_in_ts(class_construct_eff).
-named_in_ts(eff_moment_both).
-named_in_ts(eff_moment_unplaced).
-named_in_ts(eff_define_unreached).
-named_in_ts(lib_call).
 named_in_ts(stdlib_unattributed).
-named_in_ts(lib_unsupported).
-named_in_ts(lib_call_deprecated).
-named_in_ts(lib_call_remedy).
-named_in_ts(env_has).
-named_in_ts(uses).
-named_in_ts(within_attr).
-named_in_ts(unsupported).
-named_in_ts(uses_at).
-named_in_ts(uses_kind).
-named_in_ts(unsupported_in).
-named_in_ts(file_broken).
-named_in_ts(scanned_file).
-named_in_ts(valid).
-named_in_ts(invalid).
 named_in_ts(lost).
-named_in_ts(lost_feature).
-named_in_ts(lost_at).
-named_in_ts(kind_gated).
-named_in_ts(kind_unaccounted).
-named_in_ts(kind_double_booked).
-named_in_ts(feature_undeclared).
 named_in_ts(feature_unreachable).
-named_in_ts(feature_unexercised).
-named_in_ts(unscannable_seen).
-named_in_ts(kind_ungoverned).
-named_in_ts(env_unranked).
-named_in_ts(env_pair_indistinct).
-named_in_ts(global_ref_position).
-named_in_ts(global_ref).
-named_in_ts(declaring_position).
-named_in_ts(declares_name).
-named_in_ts(free_global).
-named_in_ts(es_global).
-named_in_ts(global_unattributed).
-named_in_ts(es_static).
-named_in_ts(es_static_unattributed).
-named_in_ts(es_static_key).
-named_in_ts(es_static_call).
-named_in_ts(es_global_invoke).
-named_in_ts(es_global_construct).
-named_in_ts(constructible_form).
-named_in_ts(es_construct_not_constructor).
-named_in_ts(es_global_unsupported).
-named_in_ts(es_static_unsupported).
-named_in_ts(es_instance).
 named_in_ts(es_prototype_gap).
-named_in_ts(es_instance_unattributed).
-named_in_ts(name_bound_in).
-named_in_ts(host_global_ref).
-named_in_ts(host_global_only_in).
-named_in_ts(host_module_ns).
-named_in_ts(host_module_named).
-named_in_ts(host_import_unknown).
-named_in_ts(host_member_call).
-named_in_ts(host_global_call).
-named_in_ts(host_module_call).
-named_in_ts(host_site).
-named_in_ts(member_effect).
-named_in_ts(host_call_effect).
-named_in_ts(host_effect_used).
-named_in_ts(host_call_uneffected).
-named_in_ts(runtime_reaches).
-named_in_ts(runtime_vnum).
-named_in_ts(arrived_by).
-named_in_ts(provides_api).
-named_in_ts(has_api).
 named_in_ts(runtime_drops).
-named_in_ts(runtime_reaches_release).
-named_in_ts(runtime_no_release).
-named_in_ts(runtime_lib_unsupported).
-named_in_ts(host_member_absent).
-named_in_ts(host_call_absent_at).
-named_in_ts(host_lost).
-named_in_ts(host_call_deprecated).
-named_in_ts(host_call_remedy).
-named_in_ts(host_effect_undeclared).
-named_in_ts(host_effect_orphan).
-named_in_ts(host_global_effect_orphan).
-named_in_ts(host_module_uneffected).
-named_in_ts(runtime_unversioned).
-named_in_ts(runtime_pair_indistinct).
-named_in_ts(bare_builtin_unlisted).
-named_in_ts(runtime_family_undeclared).
-named_in_ts(runtime_cross_family).
-named_in_ts(host_family_mismatch).
-named_in_ts(modelled).
-named_in_ts(unaccounted).
-named_in_ts(double_claimed).
 named_in_ts(claim).
 named_in_ts(handled).
-named_in_ts(ignored).
-named_in_ts(unknown_because).
-named_in_ts(unknown_ledger).
-named_in_ts(orphan_claim).
-named_in_ts(layer_authorised).
-named_in_ts(layer_unauthorised).
-named_in_ts(verified).
-named_in_ts(converges).
-named_in_ts(unverified).
 named_in_ts(verdict).
-named_in_ts(unknown_type).
-named_in_ts(reason).
-named_in_ts(irreducible_unknown).
-named_in_ts(our_unknown).
-named_in_ts(bad_reason).
 named_in_ts(stale_reason).
-named_in_ts(orphan_reason).
-named_in_ts(shape_kind).
-named_in_ts(lost_cell).
-named_in_ts(invented_cell).
-named_in_ts(double_cell).
-named_in_ts(orphan_shape).
-named_in_ts(orphan_axis).
-named_in_ts(shaped_because).
-named_in_ts(coarser_claim).
-named_in_ts(axis_earns).
-named_in_ts(unearned_axis).
-named_in_ts(lang_of_corpus).
-named_in_ts(vocabulary_gap).
-named_in_ts(not_a_construct_unseen).
-named_in_ts(frame_deferred_unseen).
-named_in_ts(declared_and_excluded).
-named_in_ts(declared_and_deferred).
-named_in_ts(scanned).
-named_in_ts(kind_unexercised).
-named_in_ts(kind_absent_stale).
-named_in_ts(kind_absent_undeclared).
-named_in_ts(import_site).
-named_in_ts(reexport_site).
-named_in_ts(module_site).
-named_in_ts(site_kind).
-named_in_ts(site_file).
-named_in_ts(site_line).
-named_in_ts(site_source_node).
-named_in_ts(site_source).
-named_in_ts(site_source_computed).
-named_in_ts(has_explicit_shape).
-named_in_ts(src_shape).
-named_in_ts(site_shape).
 named_in_ts(walk).
-named_in_ts(resolved_import).
 named_in_ts(builtin_canonical).
 named_in_ts(resolved_builtin).
-named_in_ts(dangling_import).
-named_in_ts(spec_imported).
-named_in_ts(binding).
-named_in_ts(export_site).
-named_in_ts(export_specifier_node).
-named_in_ts(spec_external).
-named_in_ts(spec_internal).
-named_in_ts(export_binding).
-named_in_ts(export_renamed).
-named_in_ts(export_decl_type_only).
-named_in_ts(export_spec_type_only).
-named_in_ts(export_value_binding).
-named_in_ts(export_binding_missing).
-named_in_ts(export_binding_conflict).
-named_in_ts(export_internal_conflict).
-named_in_ts(export_default_site).
-named_in_ts(default_external).
-named_in_ts(default_declaration).
-named_in_ts(default_internal).
-named_in_ts(has_default_internal).
-named_in_ts(default_anonymous).
-named_in_ts(default_export_file).
-named_in_ts(default_unaccounted).
-named_in_ts(default_internal_conflict).
-named_in_ts(default_conflict).
-named_in_ts(decl_type_only).
-named_in_ts(spec_type_only).
-named_in_ts(value_binding).
-named_in_ts(depends).
-named_in_ts(flows).
-named_in_ts(evaluates).
-named_in_ts(reexport_spec).
-named_in_ts(reexport_value_spec).
-named_in_ts(reexport_value).
-named_in_ts(no_reexport_specifiers).
-named_in_ts(reexport_offers).
-named_in_ts(local_export_site).
-named_in_ts(export_internal_in).
-named_in_ts(export_internal_unplaced).
-named_in_ts(export_internal_elsewhere).
-named_in_ts(export_internal_homeless).
-named_in_ts(unresolved_import).
-named_in_ts(unaccounted_site).
-named_in_ts(resolve_gap).
-named_in_ts(site_without_kind).
-named_in_ts(shape_conflict).
-named_in_ts(shape_missing).
-named_in_ts(shape_without_verdict).
-named_in_ts(reason_missing).
-named_in_ts(reason_unexercised).
-named_in_ts(module_meta).
-named_in_ts(self_referential_module).
-named_in_ts(not_module_meta).
-named_in_ts(import_attr).
-named_in_ts(import_attr_of).
-named_in_ts(module_attr).
-named_in_ts(module_type).
-named_in_ts(module_is_data).
-named_in_ts(import_attr_unsited).
-named_in_ts(import_attr_unread).
-named_in_ts(fkind_slot).
-named_in_ts(pack_declares).
-named_in_ts(pack_speaks).
-named_in_ts(base_pack).
-named_in_ts(kind_home_unbacked).
-named_in_ts(pack_borrows).
-named_in_ts(resolve_place).
 named_in_ts(reached).
-named_in_ts(arrival).
 named_in_ts(resolves_to).
-named_in_ts(host_verdict).
-named_in_ts(resolve_divergence).
-named_in_ts(resolve_agreement).
-named_in_ts(uncompared).
-named_in_ts(env_divergence).
-named_in_ts(env_divergent_site).
-named_in_ts(answer_without_trace).
-named_in_ts(answer_without_mechanism).
-named_in_ts(resolve_silent).
-named_in_ts(answer_ambiguous).
-named_in_ts(env_unobserved).
-named_in_ts(env_undeclared).
-named_in_ts(site_unseen_by_model).
 named_in_ts(site_unseen_by_host).
-named_in_ts(checked_site_kind).
-named_in_ts(site_key_ambiguous).
-named_in_ts(mechanism_seen).
-named_in_ts(mechanism_undeclared).
-named_in_ts(mechanism_unexercised).
-named_in_ts(ast_in).
-named_in_ts(ast_within).
 named_in_ts(ast_name).
-named_in_ts(key_name).
-named_in_ts(ast_value).
-named_in_ts(meta_form).
-named_in_ts(meta_unformed).
-named_in_ts(meta_form_conflict).
-named_in_ts(body_lit).
-named_in_ts(lit_rel).
-named_in_ts(slot_term).
-named_in_ts(slot_var).
-named_in_ts(slot_atom).
-named_in_ts(kind_slot).
-named_in_ts(kind_named_by_rule).
-named_in_ts(rule_opinion_unlisted).
 named_in_ts(safe_rule).
 named_in_ts(neg_rule).
 named_in_ts(program_negates).
-named_in_ts(wf_declared).
 named_in_ts(declared).
 named_in_ts(side).
 named_in_ts(deep_crossing).
 named_in_ts(inversion).
 named_in_ts(moves_with).
 named_in_ts(head_args).
-named_in_ts(head_var).
 named_in_ts(const_head).
 named_in_ts(dressed_constant).
 named_in_ts(shares).
 named_in_ts(passenger).
 named_in_ts(all_passengers).
-named_in_ts(wants_nullary).
-named_in_ts(saves_nothing).
-named_in_ts(pure_overhead).
 named_in_ts(flat).
 named_in_ts(feeds).
 named_in_ts(family).
 named_in_ts(outside).
 named_in_ts(evidence).
-named_in_ts(inventory).
 named_in_ts(declaration).
 named_in_ts(derived).
 named_in_ts(audit_row).
@@ -31071,17 +30474,10 @@ named_in_ts(terminal).
 named_in_ts(terminal_non_audit).
 named_in_ts(never_declared).
 named_in_ts(quiet_audit).
-named_in_ts(dead).
 named_in_ts(untaken_offer).
 named_in_ts(doc_missing).
 named_in_ts(doc_extra).
-named_in_ts(gap_accepted).
-named_in_ts(stale_evidence).
-named_in_ts(unfinished).
-named_in_ts(fd_holds).
 named_in_ts(redundant).
-named_in_ts(undeclared_key).
-named_in_ts(foreign_key).
 named_in_ts(neg_point).
 named_in_ts(neg_unkeyed).
 named_in_ts(neg_prefix).
@@ -31100,73 +30496,27 @@ named_in_ts(cold_cached).
 named_in_ts(must_be_hot).
 named_in_ts(forged).
 named_in_ts(unattributed).
-named_in_ts(loader).
 named_in_ts(widened).
 named_in_ts(duty_of).
 named_in_ts(superseded).
 named_in_ts(qualified).
-named_in_ts(live_duty).
 named_in_ts(dangling).
 named_in_ts(undefined_citation).
-named_in_ts(guarded_by).
 named_in_ts(covered).
 named_in_ts(uncovered).
 named_in_ts(prose_discharged).
 named_in_ts(unattended).
 named_in_ts(open_shortcut).
 named_in_ts(unfounded).
-named_in_ts(named_file).
 named_in_ts(unwritten).
-named_in_ts(dep).
 named_in_ts(dep_neg).
 named_in_ts(reach).
 named_in_ts(unstratified).
-named_in_ts(swarm_done).
-named_in_ts(swarm_pending).
-named_in_ts(swarm_available).
-named_in_ts(swarm_retryable).
-named_in_ts(reason_is_work).
-named_in_ts(reason_not_work).
-named_in_ts(scope_unowned).
-named_in_ts(reason_unclassified).
-named_in_ts(workable).
-named_in_ts(blocker_unknown).
-named_in_ts(blocker_stale).
-named_in_ts(claimed).
-named_in_ts(sweeper).
-named_in_ts(unqueued).
-named_in_ts(queue_stale).
-named_in_ts(double_owned).
-named_in_ts(false_done).
-named_in_ts(work_unstated).
-named_in_ts(frame_owner_unknown).
-named_in_ts(frame_owner_done).
-named_in_ts(work_stateless).
-named_in_ts(work_bad_state).
-named_in_ts(work_sweeps_nolayer).
 named_in_ts(blocked).
-named_in_ts(needs_unknown).
-named_in_ts(needs_cycle).
-named_in_ts(held_unknown).
-named_in_ts(takeable).
-named_in_ts(nothing_workable).
-named_in_ts(unblocking_work).
-named_in_ts(next_work).
-named_in_ts(work_needs_cycle).
-named_in_ts(spawn_orphan).
-named_in_ts(world_undeclared).
-named_in_ts(world_unnamed).
-named_in_ts(world_confused).
-named_in_ts(world_corpus_only).
-named_in_ts(witness_world_unknown).
-named_in_ts(note_witnessed).
-named_in_ts(witness_orphan).
 named_in_ts(check_world).
 named_in_ts(check_file).
 named_in_ts(check_opt).
 named_in_ts(demo_unhashable).
-named_in_ts(role_decl).
-named_in_ts(queue_ceiling).
 named_in_ts(command_shown).
 named_in_ts(command_note).
 named_in_ts(artifact).
@@ -31187,11 +30537,8 @@ named_in_ts(feature).
 named_in_ts(demo_uses).
 named_in_ts(check_uses).
 named_in_ts(finding).
-named_in_ts(recorded).
 named_in_ts(finding_note).
-named_in_ts(demands).
 named_in_ts(addressed_by).
-named_in_ts(dismissed).
 named_in_ts(blocks).
 named_in_ts(witness_atleast).
 named_in_ts(witness).
@@ -31214,33 +30561,11 @@ named_in_ts(refl_reader).
 named_in_ts(golden_state).
 named_in_ts(golden_host).
 named_in_ts(golden_rel).
-named_in_ts(attr_unread_ok).
-named_in_ts(attr_deferred).
-named_in_ts(attr_value_unread_ok).
-named_in_ts(attr_table_bridged).
-named_in_ts(attr_slot_gap_ok).
-named_in_ts(attr_split_ok).
-named_in_ts(node_kind).
-named_in_ts(shape_because).
 named_in_ts(checked).
-named_in_ts(kind_absent_ok).
 named_in_ts(layer).
-named_in_ts(axis_applies).
-named_in_ts(shape_of).
-named_in_ts(shape_in).
-named_in_ts(eff_label).
 named_in_ts(eff_name).
-named_in_ts(eff_alias).
-named_in_ts(environment).
-named_in_ts(env_rank).
 named_in_ts(release).
 named_in_ts(includes).
-named_in_ts(provides).
-named_in_ts(kind_needs).
-named_in_ts(kind_baseline).
-named_in_ts(attr_needs).
-named_in_ts(outside_attr_needs).
-named_in_ts(child_needs).
 named_in_ts(lib_global_form).
 named_in_ts(lib_global).
 named_in_ts(lib_global_prototype).
@@ -31255,22 +30580,13 @@ named_in_ts(host_member_since).
 named_in_ts(host_member_deprecated).
 named_in_ts(host_member_deprecated_since).
 named_in_ts(host_member_replaced_by).
-named_in_ts(runtime_version).
 named_in_ts(runtime_includes).
-named_in_ts(provides_release).
-named_in_ts(host_effect_atom).
-named_in_ts(host_module_effect).
-named_in_ts(host_member_effect).
-named_in_ts(not_a_construct).
 named_in_ts(lib_member).
 named_in_ts(lib_deprecated).
 named_in_ts(lib_replaced_by).
 named_in_ts(lib_readonly_view).
 named_in_ts(lib_readonly_member).
-named_in_ts(node_builtin_bare).
-named_in_ts(axis).
 named_in_ts(library_decl).
-named_in_ts(kernel_reads).
 named_in_ts(cache).
 named_in_ts(sweep).
 named_in_ts(primitive).
@@ -31286,14 +30602,10 @@ named_in_ts(corpus_read).
 named_in_ts(doc_lists).
 named_in_ts(host_call).
 named_in_ts(world_rows).
-named_in_ts(work_state).
-named_in_ts(work_spawned).
 named_in_ts(cited_check).
 named_in_ts(amends).
-named_in_ts(qualifies).
 named_in_ts(restates).
 named_in_ts(discharged_by).
-named_in_ts(work_needs).
 named_in_ts(held).
 named_in_ts(witness_default_world).
 named_in_ts(witness_index).
@@ -31304,14 +30616,12 @@ named_in_ts(world_corpus).
 named_in_ts(not).
 named_in_ts(src).
 named_in_ts(conclusion_tense).
-named_in_ts(red).
 named_in_ts(digest).
 named_in_ts(why).
 named_in_ts(rules).
 named_in_ts(whynot).
 named_in_ts(facts).
 named_in_ts(spec).
-named_in_ts(asserted_by).
 named_in_ts(demands_authorship).
 named_in_ts(bridge_decl).
 named_in_ts(reads_from).
@@ -31332,22 +30642,17 @@ named_in_ts(scope).
 named_in_ts(semantics).
 named_in_ts(sealed).
 named_in_ts(sneak).
-named_in_ts(left).
-named_in_ts(right).
 named_in_ts(plan).
 named_in_ts(premise_var).
 named_in_ts(for).
 named_in_ts(unsafe).
 named_in_ts(slot_arity).
-named_in_ts(seen).
 named_in_ts(premise_pos).
 named_in_ts(reads).
 named_in_ts(rels).
-named_in_ts(dir).
-named_in_ts(str_pre).
 named_in_ts(test).
 named_in_ts(pack).
-named_in_ts(requires).
+named_in_ts(has).
 named_in_ts(target).
 named_in_ts(code_line).
 named_in_ts(cat_of).
@@ -31355,7 +30660,6 @@ named_in_ts(dirty).
 named_in_ts(check).
 named_in_ts(match).
 named_in_ts(punct).
-named_in_ts(sha256).
 named_in_ts(str_len).
 named_in_ts(src_call).
 named_in_ts(add).
@@ -31373,16 +30677,12 @@ named_in_ts(new).
 named_in_ts(join).
 named_in_ts(alloc).
 named_in_ts(premise_lit).
-named_in_ts(frame_deferred).
-named_in_ts(optional).
 named_in_ts(ast_attr).
 named_in_ts(ast_child).
 named_in_ts(computed).
 named_in_ts(ast_node).
 named_in_ts(import).
 named_in_ts(value).
-named_in_ts(rim).
-named_in_ts(marked).
 named_in_ts(super).
 named_in_ts(tag).
 named_in_ts(next).
@@ -31391,21 +30691,14 @@ named_in_ts(update).
 named_in_ts(body).
 named_in_ts(get).
 named_in_ts(arguments).
-named_in_ts(leaky).
 named_in_ts(live).
 named_in_ts(raw).
 named_in_ts(var).
-named_in_ts(function).
-named_in_ts(taken).
-named_in_ts(hold).
-named_in_ts(undefined).
 named_in_ts(missing).
 named_in_ts(ambiguous).
 named_in_ts(top).
 named_in_ts(delete).
 named_in_ts(load).
-named_in_ts(hammered).
-named_in_ts(prototype).
 named_in_ts(trim).
 named_in_ts(blink).
 named_in_ts(query).
@@ -31418,91 +30711,60 @@ named_in_ts(bare).
 named_in_ts(relative).
 named_in_ts(str_segs).
 named_in_ts(sub).
-named_in_ts(default).
 named_in_ts(name).
-named_in_ts(helper).
 named_in_ts(require).
 named_in_ts(resolve_via).
 named_in_ts(resolve_answer).
-named_in_ts(iterator).
-named_in_ts(obj).
 named_in_ts(conclusion_lit).
-named_in_ts(register).
 named_in_ts(resolve).
 named_in_ts(disagrees).
 named_in_ts(grouped).
 named_in_ts(fact).
-named_in_ts(scope_decided).
 named_in_ts(rofl).
 named_in_ts(excise).
 named_in_ts(retract).
 named_in_ts(from).
 named_in_ts(tick).
-named_in_ts(kept).
 named_in_ts(does).
-named_in_ts(any_unblocker).
-named_in_ts(fed_cut).
 named_in_ts(kind).
 named_in_ts(key).
 named_in_ts(catch).
-named_in_ts(extra).
 named_in_ts(pair).
 named_in_ts(use).
 named_in_ts(run).
-named_in_ts(bag).
-named_in_ts(absent).
 named_in_ts(plain).
 named_in_ts(strike).
 named_in_ts(str_sub).
 named_in_ts(str_char).
 named_in_ts(after).
-named_in_ts(fasten).
-named_in_ts(turn).
-named_in_ts(mount).
-named_in_ts(chiselled).
-named_in_ts(planed).
-named_in_ts(gen).
-named_in_ts(tapped).
-named_in_ts(poured).
 named_in_ts(mark).
 named_in_ts(bigint).
 named_in_ts(inner).
-named_in_ts(deco).
 named_in_ts(string).
 named_in_ts(last).
-named_in_ts(feature_since).
 named_in_ts(str_scheme).
 named_in_ts(find).
 named_in_ts(cpus).
 named_in_ts(substr).
 named_in_ts(clear).
 named_in_ts(str_char0).
-named_in_ts(fs_file_in).
 named_in_ts(exp).
 named_in_ts(env_ran).
 named_in_ts(reading).
 named_in_ts(env_extension).
 named_in_ts(concat).
-named_in_ts(thrower).
-named_in_ts(never).
-named_in_ts(directives).
-named_in_ts(interpreter).
 named_in_ts(candidates).
 named_in_ts(index).
 named_in_ts(open).
 named_in_ts(only).
-named_in_ts(param_bind).
-named_in_ts(closer_v).
 named_in_ts(rel).
 named_in_ts(evaluate).
-named_in_ts(residue).
 named_in_ts(round).
 named_in_ts(constructor).
 named_in_ts(cell_blocked).
 named_in_ts(src_parse_error).
 named_in_ts(pick).
 named_in_ts(contains).
-named_in_ts(broken).
 named_in_ts(twin).
 named_in_ts(classify).
 named_in_ts(safe).
@@ -31511,8 +30773,6 @@ named_in_ts(derived_by).
 named_in_ts(one).
 named_in_ts(label).
 named_in_ts(nodes).
-named_in_ts(caller).
-named_in_ts(encloses_v).
 named_in_ts(now).
 named_in_ts(push).
 named_in_ts(pop).
@@ -31524,7 +30784,6 @@ named_in_ts(shift).
 named_in_ts(scan).
 named_in_ts(number).
 named_in_ts(boolean).
-named_in_ts(padded).
 named_in_ts(worlds).
 atom_seen(boot).
 atom_seen(imports).
@@ -31606,6 +30865,16 @@ atom_seen(customer_acceptance).
 atom_seen(go).
 atom_seen(decide).
 atom_seen(conditional_go).
+atom_seen(public_release).
+atom_seen(readiness).
+atom_seen(entry_point).
+atom_seen(licence).
+atom_seen(provenance).
+atom_seen(first_hour).
+atom_seen(versioning).
+atom_seen(support).
+atom_seen(publish).
+atom_seen(publish_with_known_gaps).
 atom_seen(target).
 atom_seen(ts_import).
 atom_seen(npm_script).
@@ -31643,6 +30912,8 @@ atom_seen(demo_uses).
 atom_seen(check_uses).
 atom_seen(guards).
 atom_seen(duty).
+atom_seen(note_lost).
+atom_seen(two_minds).
 atom_seen(witness).
 atom_seen(witness_atleast).
 atom_seen(witness_in).
@@ -31669,7 +30940,6 @@ atom_seen(identical).
 atom_seen(diverged).
 atom_seen(refused).
 atom_seen(not_live).
-atom_seen(provenance).
 atom_seen(ring1_unsealed).
 atom_seen(ring1_image).
 atom_seen(sealable).
@@ -31689,6 +30959,8 @@ atom_seen(clarify).
 atom_seen(discriminate).
 atom_seen(escalate).
 atom_seen(confirm).
+atom_seen(idle_acceptance).
+atom_seen(both_minds).
 atom_seen(no_go).
 atom_seen(obs).
 atom_seen(epistemic).
@@ -32270,7 +31542,6 @@ atom_seen(starts_op2).
 atom_seen(wild).
 atom_seen(wild_rank).
 atom_seen(wild_between).
-atom_seen(entry_point).
 atom_seen(contract_flag).
 atom_seen(language).
 atom_seen(c_arith_builtins).
@@ -33272,6 +32543,15 @@ atom_seen(f_the_tripwire_fired_on_purpose_and_the_guard_moved_to_the_source).
 atom_seen(f_a_name_beats_a_mode_column_until_the_boilerplate_is_tenfold).
 atom_seen(f_one_abstract_value_many_entry_points_and_library_meaning_is_a_table).
 atom_seen(f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
+atom_seen(f_adoption_cannot_gate_the_release_that_would_cause_it).
+atom_seen(f_the_readiness_rules_were_about_neither_production_nor_readiness).
+atom_seen(f_the_kernel_has_no_word_for_one_inquiry_resting_on_another).
+atom_seen(f_node_will_not_strip_types_under_node_modules).
+atom_seen(f_the_tree_never_said_which_packs_are_the_library).
+atom_seen(f_what_a_one_point_oh_promises_is_the_surface_and_not_the_quality).
+atom_seen(f_the_kernel_reifies_everything_about_a_rule_except_where_it_came_from).
+atom_seen(f_the_golden_pinned_a_number_where_the_rule_meant_none).
+atom_seen(f_a_trailing_slash_is_a_path_and_the_check_could_not_see_one).
 atom_seen(kernel_table).
 atom_seen(asserted_by).
 atom_seen(concludes).
@@ -33901,6 +33181,7 @@ atom_seen(w_relations_nothing_reads).
 atom_seen(w_implied_premises_priced).
 atom_seen(w_two_closures_of_work_needs).
 atom_seen(w_ingest_declares_half_its_host_relations).
+atom_seen(w_twins_in_depends_and_ingest).
 atom_seen(librarian).
 atom_seen(spec).
 atom_seen(limits).
@@ -34030,8 +33311,6 @@ atom_seen(p_i2_self_audit_tracks_program_size).
 atom_seen(t_alternating_fixpoint).
 atom_seen(t_budget_emits_no_unknown).
 atom_seen(t_stratum_table_survives).
-atom_seen(c_vocab_doc).
-atom_seen(c_text_reviewable).
 atom_seen(c_ci_node).
 atom_seen(c_ci_bun).
 atom_seen(c_ci_typecheck).
@@ -34123,4 +33402,5 @@ atom_seen(w_express_semantics).
 atom_seen(w_service_graph).
 atom_seen(w_docs_from_ledger).
 atom_seen(w_docs_what_cannot_be_derived).
+atom_seen(w_a_rule_should_know_its_unit).
 atom_seen(w_ledger).

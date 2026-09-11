@@ -92,7 +92,7 @@ export function worlds(): World[] {
   return [...out, ...declared()];
 }
 
-export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; }
+export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[]; }
 
 /** WORLDS THE TREE CANNOT DISCOVER, declared in facts/checks.rofl. Everything
  *  under examples/ and rules/ is found by walking; a world that needs a TICK
@@ -154,6 +154,26 @@ export function normalise(state: string): string {
 const digest = (s: string): string =>
   createHash('sha256').update(normalise(s)).digest('hex').slice(0, 16);
 
+/** AN ALARM IS NOT A COUNT, AND UNTIL NOW THE LOOP COULD NOT TELL.
+ *
+ *  The golden pins a census, so a relation meaning "this must not happen" is
+ *  GREEN at whatever number it was blessed at — measured 2026-09-11: 118 audit
+ *  rows non-zero and passing. Some of those are censuses (`collected[audit]`
+ *  counts, it does not accuse); some are accusations. Nothing said which.
+ *
+ *  `alarm(Rel)` is declared beside the rule that concludes it, by the person
+ *  who knows which it is. A world raising one FAILS whatever the golden says,
+ *  so blessing cannot paper over it — which is the whole difference between a
+ *  check and a record. */
+function alarmsRaised(r: Rofl, c: Map<string, number>): string[] {
+  const out: string[] = [];
+  for (const row of r.query('alarm(R)').rows) {
+    const rel = row.bindings['R'];
+    for (const [key, n] of c) if (n > 0 && key.startsWith(`${rel}[`)) out.push(`${key} ${n}`);
+  }
+  return out.sort();
+}
+
 export function answerTS(w: World): Answer {
   const r = new Rofl();
   // THE BUDGET GOES ON EVERY LOAD, NOT ONLY ON `evaluate`. In this host a load
@@ -186,7 +206,8 @@ export function answerTS(w: World): Answer {
   if (w.ticks) for (let i = 0; i < w.ticks; i++) r.tickAdvance();
   else r.evaluate(w.budget);
   const state = diags.sort().join('\n') + (diags.length ? '\n' : '') + r.store.canonicalState();
-  return { hash: digest(state), facts: r.store.allFactKeys().length, census: census(state), dropped };
+  return { hash: digest(state), facts: r.store.allFactKeys().length, census: census(state),
+           dropped, alarms: alarmsRaised(r, census(state)) };
 }
 
 export function answerRust(w: World): Answer | null {
@@ -217,7 +238,7 @@ export function answerRust(w: World): Answer | null {
   const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
     ...(w.budget ? ['--budget', String(w.budget)] : []), ...keep]);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
-  return { hash: digest(full), facts: 0, census: census(full), dropped: [] };
+  return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: [] };
 }
 
 
@@ -433,6 +454,10 @@ if (isMain) {
         .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);
       bad.push(`${who}: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
     }
+    // AN ALARM IS RED WHATEVER THE GOLDEN SAYS. Blessing records a number;
+    // this is a claim that the number must be none, and the two must not be
+    // confusable — a world that raises one fails even when its census matches.
+    for (const a of ts.alarms) bad.push(`ALARM ${a}`);
     if (bad.length === 0) pass++; else fail.push(`${w.name.padEnd(28)} ${bad.join('  |  ')}`);
   }
   // A CHECK THAT CANNOT RUN SAYS SO. A missing Rust binary halves the oracle,

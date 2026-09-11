@@ -1,3 +1,0 @@
-// ./pick as a FILE. Both this and pick/index.js exist, and which one wins is
-// the environment's answer, not the specifier's.
-export const p = 1;

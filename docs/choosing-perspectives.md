@@ -80,7 +80,7 @@ asserting into `[obs]` is `forged[audit]`, mechanically.
 
 The scanner is the working precedent: facts live in `[code]`,
 `authority(code, scanner)` is granted in a preamble, fact files load with
-`who=scanner`, and the impostor test in `test/scanner.test.ts` shows the
+`who=scanner`, and the impostor test in test/scanner.test.ts (gate removed 2026-09-11) shows the
 forgery surfacing.
 
 ## Why one slot is enough
