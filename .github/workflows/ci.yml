@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # THE GRAVES NEED HISTORY. `removed_in(Path, Sha)` is checked by
+        # `git cat-file -e <sha>^:<path>`, and a depth-1 checkout has no parent
+        # tree to look in — which made every grave unverifiable and CI red on
+        # six consecutive pushes before anybody looked at CI.
+        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -33,6 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # THE GRAVES NEED HISTORY. `removed_in(Path, Sha)` is checked by
+        # `git cat-file -e <sha>^:<path>`, and a depth-1 checkout has no parent
+        # tree to look in — which made every grave unverifiable and CI red on
+        # six consecutive pushes before anybody looked at CI.
+        with: { fetch-depth: 0 }
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest

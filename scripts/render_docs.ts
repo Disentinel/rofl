@@ -113,7 +113,13 @@ function danglingPaths(): string[] {
       const ref = m[1].replace(/:\d+$/, '');
       if (ref.includes('*') || seen.has(ref)) continue;
       seen.add(ref);
-      if (!fs.existsSync(path.join(ROOT, ref))) out.push(`${d} → ${ref}`);
+      if (fs.existsSync(path.join(ROOT, ref))) continue;
+      // A GENERATED DIRECTORY IS ABSENT ON PURPOSE. `.gitignore` is the tree's
+      // own declaration that a path is built, not kept, and in a fresh clone
+      // every such path is missing — which read as nine dangling references
+      // the first time this ran anywhere but on a working machine.
+      if (spawnSync('git', ['check-ignore', '-q', ref], { cwd: ROOT }).status === 0) continue;
+      out.push(`${d} → ${ref}`);
     }
   }
   return out;
@@ -128,8 +134,9 @@ function danglingPaths(): string[] {
  *  Only `addressed_by` is checked. A `finding_note` that names a file is a
  *  record of a past measurement, and history does not become false when the
  *  file is deleted. */
-function danglingSettlements(): string[] {
+function danglingSettlements(): { dangling: string[]; unverifiable: string[] } {
   const out: string[] = [];
+  const unverifiable: string[] = [];
   const src = fs.readFileSync(path.join(ROOT, 'facts/findings.rofl'), 'utf8');
   for (const m of src.matchAll(/addressed_by\(([a-z0-9_]+),\s*"([^"]+)"\)/g)) {
     const ref = m[2].replace(/:\d+$/, '');
@@ -144,10 +151,20 @@ function danglingSettlements(): string[] {
     const [fid, ref] = [m[1], m[2]];
     const sha = grave.get(ref);
     if (!sha) { out.push(`${fid} \u2192 ${ref} (no removed_in)`); continue; }
+    // A SHA THIS CLONE CANNOT SEE IS NOT A MISSING BODY. `git cat-file -e`
+    // fails the same way for "the grave is empty" and for "you fetched one
+    // commit", and reading the second as the first is the clean-looking
+    // negative this repository has a name for. So the commit is checked for
+    // FIRST, and an absent one is reported as unverifiable rather than
+    // counted as a dangling settlement.
+    if (spawnSync('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: ROOT }).status !== 0) {
+      unverifiable.push(`${fid} \u2192 ${ref} (${sha} not in this clone)`);
+      continue;
+    }
     const r = spawnSync('git', ['cat-file', '-e', `${sha}^:${ref}`], { cwd: ROOT });
     if (r.status !== 0) out.push(`${fid} \u2192 ${ref} not in ${sha}^`);
   }
-  return out;
+  return { dangling: out, unverifiable };
 }
 
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'render_docs.ts';
@@ -168,7 +185,14 @@ if (isMain) {
     fs.writeFileSync(p, out);
     console.log(`  wrote ${b.file} ${b.name}`);
   }
-  const dangling = [...danglingPaths(), ...danglingSettlements()];
+  const graves = danglingSettlements();
+  const dangling = [...danglingPaths(), ...graves.dangling];
   for (const d of dangling) console.error(`  DANGLING ${d}`);
+  // SAID, NOT FAILED. A shallow clone cannot answer, and a check that cannot
+  // answer must say so rather than pass quietly or accuse.
+  if (graves.unverifiable.length) {
+    console.error(`  UNVERIFIABLE ${graves.unverifiable.length} grave(s) — shallow clone, run with full history to check them`);
+    for (const u of graves.unverifiable.slice(0, 3)) console.error(`    ${u}`);
+  }
   process.exit(bad === 0 && dangling.length === 0 ? 0 : 1);
 }
