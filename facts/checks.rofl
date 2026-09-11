@@ -93,3 +93,12 @@ check_file("readiness_rofl", "rules/decisions/production-readiness.rofl").
 check_file("readiness_rofl", "examples/rofl-release/frame.rofl").
 check_file("readiness_rofl", "examples/rofl-release/context.rofl").
 check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").
+
+-- THE QUEUE WITH ITS SECOND VOLUME. rules_worklist pairs rules/worklist.rofl
+-- with facts/worklist.rofl by name; facts/refactoring.rofl shares the
+-- vocabulary and has no rules file of its own, so the world that reads both
+-- is declared here.
+check_world("refactoring_queue").
+check_file("refactoring_queue", "facts/worklist.rofl").
+check_file("refactoring_queue", "facts/refactoring.rofl").
+check_file("refactoring_queue", "rules/worklist.rofl").
