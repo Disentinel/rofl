@@ -11,6 +11,46 @@ graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
 optional code scanner under `scanners/` is the only component with one,
 `@babel/parser`). TypeScript, runs under Bun or Node ≥ 22.
 
+## Using it
+
+```bash
+npm i rofl
+```
+
+```js
+import { readFileSync } from 'node:fs';
+import { Rofl } from 'rofl';
+
+const r = new Rofl();
+r.load(readFileSync('node_modules/rofl/boot.rofl', 'utf8'), 'boot.rofl');
+r.load(`
+  edge(a, b). edge(b, c).
+  path(X, Y) :- edge(X, Y).
+  path(X, Z) :- path(X, Y), edge(Y, Z).
+`, 'p.rofl');
+r.evaluate();
+
+r.query('path(X, Y)').rows;   // a->b, a->c, b->c
+console.log(r.why('path(a, c)').text);
+```
+
+```
+path[main](a,c)  <= rd2f1f53d @tick 0
+  path[main](a,b)  <= r7e93750a @tick 0
+    edge[main](a,b) [axiom]
+  edge[main](b,c) [axiom]
+```
+
+Plain `node`, no flags, no dependencies — the published tarball is the compiled
+engine and nothing else. `boot.rofl` is the semantics as data and carries the
+audits; a program loads without it and answers less about itself.
+
+**Large worlds are the other engine's.** `src/` is built for small ones; the
+Rust engine is reached through the same JSON protocol from `rofl/port`, and the
+division is deliberate rather than a staging post — see `docs/port-surface.md`.
+
+Everything below this line is for working ON the engine rather than with it.
+
 ## What is in the tree
 
 The kernel is one of several things here, and the rest of the file says which

@@ -1,0 +1,21 @@
+{
+  // THE PACKAGE, COMPILED. `tsconfig.json` typechecks the whole tree and emits
+  // nothing; this emits the shippable half.
+  //
+  // WHY THERE IS A BUILD AT ALL, measured rather than assumed: shipping the
+  // TypeScript itself was tried and Node refuses it —
+  // `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. Type stripping is not
+  // applied to files under `node_modules`, in any version, so raw `.ts` works
+  // for this repository's own scripts and cannot work for a dependency.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts", "runtime/port.ts"]
+}

@@ -56,14 +56,12 @@ supports[obs](src_import_walk, js_kernel_takes_nothing).
 evidence_kind[obs](src_import_walk, measured).
 evidence_version[obs](src_import_walk, "0.1.0").
 
--- WHAT WAS ACTUALLY HIDING UNDER THE CONTESTED CLAIM, and it is a real
--- release item rather than a philosophical one: `package.json` declares
--- `@babel/parser` under `dependencies` while the only importers are seven
--- files under `scanners/` and `scripts/` -- so anybody installing the engine
--- pulls a parser the engine never calls. And there is no `files`, no `main`
--- and no `exports`, so the package neither says what it ships nor what to
--- import.
-refutes[obs](package_manifest, package_declares_what_it_ships).
+-- `@babel/parser` was in `dependencies` while its only importers are seven
+-- files under `scanners/` and `scripts/`, neither of which ships -- so anybody
+-- installing the engine pulled a parser it never calls. Moved to
+-- devDependencies: the tarball now has NO dependencies, 20 files, 472 kB
+-- unpacked.
+supports[obs](package_manifest, package_declares_what_it_ships).
 evidence_kind[obs](package_manifest, measured).
 evidence_version[obs](package_manifest, "0.1.0").
 
@@ -125,23 +123,39 @@ supports[obs](self_application_46_packs, the_asker_runs_the_project_on_it).
 evidence_kind[obs](self_application_46_packs, measured).
 evidence_version[obs](self_application_46_packs, "0.1.0").
 
--- There is no `main`, no `exports` and no `types` in package.json, so `npm i`
--- followed by an import has no target at all.
-refutes[obs](no_entry_point, installable_and_importable).
-evidence_kind[obs](no_entry_point, measured).
-evidence_version[obs](no_entry_point, "0.1.0").
+-- PROVEN BY DOING IT, 2026-09-11: `npm pack`, then `npm i` of the tarball into
+-- an empty project, then `import { Rofl } from "rofl"` -- boot.rofl loaded,
+-- a transitive closure evaluated, `why` printing its derivation tree, on plain
+-- `node` with no flags. `main`, `exports`, `types` and `files` now exist and
+-- the tarball is 20 files and no dependencies.
+supports[obs](tarball_installed_and_used, installable_and_importable).
+evidence_kind[obs](tarball_installed_and_used, measured).
+evidence_version[obs](tarball_installed_and_used, "0.1.0").
 
--- `license: "MIT"` is declared and there is NO LICENSE FILE in the tree, which
--- is the one thing the MIT licence itself requires of a distribution.
-refutes[obs](no_licence_file, licence_text_ships).
-evidence_kind[obs](no_licence_file, measured).
-evidence_version[obs](no_licence_file, "0.1.0").
+-- AND THE `ship the TypeScript` FORK IS CLOSED BY MEASUREMENT RATHER THAN BY
+-- TASTE. The first attempt shipped `src/*.ts` and Node refused it:
+-- ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING. Stripping is not applied under
+-- `node_modules` in ANY version, so raw `.ts` works for this repository's own
+-- scripts and cannot work for a dependency. `tsconfig.build.json` emits
+-- `dist/` with declarations and maps; `src/` ships beside it to be read.
+supports[obs](build_is_not_optional, package_declares_what_it_ships).
+evidence_kind[obs](build_is_not_optional, measured).
+evidence_version[obs](build_is_not_optional, "0.1.0").
 
--- README's first instruction is `npm i && npx tsc -p tsconfig.json`, which is
--- a contributor's path. There is no install-and-import path in it.
-refutes[obs](readme_is_for_contributors, a_newcomer_can_run_a_world_from_the_readme).
-evidence_kind[obs](readme_is_for_contributors, measured).
-evidence_version[obs](readme_is_for_contributors, "0.1.0").
+-- The MIT text is in LICENSE and ships in the tarball, which is the one thing
+-- the licence itself requires of a distribution.
+supports[obs](licence_in_tarball, licence_text_ships).
+evidence_kind[obs](licence_in_tarball, measured).
+evidence_version[obs](licence_in_tarball, "0.1.0").
+
+-- README now opens with `npm i rofl` and eleven lines that load boot, evaluate
+-- a transitive closure and print a derivation tree -- the same program run
+-- against the packed tarball in an empty project before it was written down,
+-- so the snippet is a transcript rather than an intention. A line says where
+-- the contributor half starts.
+supports[obs](readme_opens_with_use, a_newcomer_can_run_a_world_from_the_readme).
+evidence_kind[obs](readme_opens_with_use, measured).
+evidence_version[obs](readme_opens_with_use, "0.1.0").
 
 -- 0.1.0 against a tree that calls itself v0 in START.md, 1.0 in this inquiry
 -- and `ROFL Kernel v0` in the README title. Three numbers for one thing.
@@ -149,11 +163,10 @@ refutes[obs](three_version_numbers, the_version_means_something).
 evidence_kind[obs](three_version_numbers, measured).
 evidence_version[obs](three_version_numbers, "0.1.0").
 
--- No `bugs` field; the repository is public and its issues are the only place
--- a defect could go, which nothing states.
-refutes[obs](no_bugs_field, a_defect_has_somewhere_to_go).
-evidence_kind[obs](no_bugs_field, measured).
-evidence_version[obs](no_bugs_field, "0.1.0").
+-- `bugs.url` points at the repository's issues, which is where a defect goes.
+supports[obs](bugs_url, a_defect_has_somewhere_to_go).
+evidence_kind[obs](bugs_url, measured).
+evidence_version[obs](bugs_url, "0.1.0").
 
 -- ADOPTION, recorded and gating nothing.
 refutes[obs](no_outside_user_yet, used_by_somebody_other_than_its_author).
