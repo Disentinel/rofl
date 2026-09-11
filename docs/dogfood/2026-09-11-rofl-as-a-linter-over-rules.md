@@ -155,11 +155,22 @@ and `import_declaration` as relations nothing defines (228 rows, then 52).
 Both files were cut to the notes that explain a decision plus the list of
 what the pack cannot see: js-effects 791 to 222 comment lines (72 % to 42 %),
 js-callgraph 570 to 135 (66 % to 31 %). No rule text moved, so every golden
-is unchanged and every mutant anchor still holds. The instrument re-run on the
-result: orphan blocks 0 and 0, dangling names 0 and 1 (the deliberate
-`ts_non_null_expression`), section and list numbering clean. What it still
-reports is on the clause side and is left for a decision: `top_call` =
-`top_site`, the two `*_subject` renames, the implied `member_node_v`, and the
-four unread relations. `caught_here` was repaired at the source in the same
-branch (`catches_via`), which is the one comment the owner asked to have
-written out of the file rather than explained beside it.
+is unchanged and every mutant anchor still holds. `caught_here` was repaired
+at the source in the same branch (`catches_via`), which is the one comment
+the owner asked to have written out of the file rather than explained beside
+it.
+
+Then the other fourteen `rules/js-*` files, by the same loop: strip every
+comment, write back a header and one note per decision anchored to its
+clause, run the scanner, read the report for that file, bless, run the golden
+set. Sixteen files, 6 174 comment lines to 1 605, 3 287 lines of rule text
+untouched, and on every bless the only world that moved was `rules_rofl-lint`
+itself. The comment-side rows are zero over all sixteen; the instrument
+caught its own author four times on the way (`do_while`, `may_be_*`,
+`resolve_*`, `replaced_by` — each a real relation's spelling shortened by
+hand in a fresh note).
+
+What the instrument still reports is on the clause side and is left for a
+decision, recorded in `facts/refactoring.rofl`: the `*_subject` renames, the
+implied `member_node_v`, the unread relations, `may_be_node`/`may_be_lit`
+written twice, and the twins that are polarity pairs by the owner's ruling.
