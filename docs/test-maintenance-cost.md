@@ -39,10 +39,10 @@ Ten existing test files had to be edited. Thirty-two assertions were restated.
 Of those, **not one was a change in behaviour** — every single one was a
 derived total or percentage that moved because the vocabulary grew by one:
 
-- 14 cell counts in `test/js-model.test.ts` (`91 → 92` kinds, and thirteen
+- 14 cell counts in test/js-model.test.ts (gate removed 2026-09-11) (`91 → 92` kinds, and thirteen
   predictions derived from it);
 - 7 row and derivation counts plus 1 threshold in js-layer-cost (deleted);
-- 2 in js-fixpoint-cost (deleted), 1 in `test/js-callgraph.test.ts`;
+- 2 in js-fixpoint-cost (deleted), 1 in test/js-callgraph.test.ts (gate removed 2026-09-11);
 - 4 named sets that legitimately gained an element.
 
 The four named sets were quick and informative: each one gained exactly the

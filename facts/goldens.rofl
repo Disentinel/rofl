@@ -49,7 +49,7 @@ golden_state("rules_depends", "2c958eeefcc8bc2b", 15784).
 golden_state("rules_engine-split", "d1222225f9fe93f7", 708).
 golden_state("rules_eval-cost", "472dc5657e4f237b", 5704).
 golden_state("rules_features", "4c669f63e883f0ad", 891).
-golden_state("rules_findings", "0926fe7fa8b23f0c", 12834).
+golden_state("rules_findings", "98e110d3e8fab2a5", 13103).
 golden_state("rules_floor-census", "7b93e1e6ce802232", 2005).
 golden_state("rules_ingest", "a1a342452fb584ad", 808).
 golden_state("rules_inquiry_epistemic", "a7df1d966583a8b5", 837).
@@ -1894,9 +1894,9 @@ golden_rel("rules_features", "uses_builtin[$kernel]", 12).
 golden_rel("rules_features", "writes_to[$kernel]", 43).
 golden_rel("rules_findings", "@other", 1).
 golden_rel("rules_findings", "@wit", 1606).
-golden_rel("rules_findings", "addressed_by[main]", 802).
-golden_rel("rules_findings", "artifact_removed[main]", 52).
-golden_rel("rules_findings", "asserted_by[$kernel]", 4472).
+golden_rel("rules_findings", "addressed_by[main]", 595).
+golden_rel("rules_findings", "artifact_removed[main]", 259).
+golden_rel("rules_findings", "asserted_by[$kernel]", 4568).
 golden_rel("rules_findings", "authority[main]", 5).
 golden_rel("rules_findings", "blocked_by[main]", 3).
 golden_rel("rules_findings", "blocks[main]", 10).
@@ -1905,7 +1905,7 @@ golden_rel("rules_findings", "conclusion_lit[$kernel]", 47).
 golden_rel("rules_findings", "conclusion_tense[$kernel]", 47).
 golden_rel("rules_findings", "corrected[main]", 18).
 golden_rel("rules_findings", "demands[main]", 785).
-golden_rel("rules_findings", "derived_by[$kernel]", 1641).
+golden_rel("rules_findings", "derived_by[$kernel]", 1718).
 golden_rel("rules_findings", "dismissed[main]", 38).
 golden_rel("rules_findings", "edb[main]", 39).
 golden_rel("rules_findings", "finding[main]", 869).
@@ -1930,7 +1930,7 @@ golden_rel("rules_findings", "reads_from[$kernel]", 51).
 golden_rel("rules_findings", "ready[main]", 193).
 golden_rel("rules_findings", "ready_proven[main]", 148).
 golden_rel("rules_findings", "recorded[main]", 869).
-golden_rel("rules_findings", "removed_in[main]", 33).
+golden_rel("rules_findings", "removed_in[main]", 129).
 golden_rel("rules_findings", "reserved[main]", 20).
 golden_rel("rules_findings", "rule[$kernel]", 47).
 golden_rel("rules_findings", "rule_known[main]", 47).

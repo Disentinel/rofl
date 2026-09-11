@@ -29,7 +29,7 @@ the rest are v0 implementation boundaries.
   asserted fact, 3.6–4.2 s → 0.7–0.9 s; `excise`, 4.0 s → 0.9 s. The FIRST
   evaluation of a program is unchanged — nothing exists to reuse yet.
   `incremental ≡ scratch` is consequently no longer trivially true, and is
-  held by a permanent test (`test/derived-reuse.test.ts`) that compares
+  held by a permanent test (test/derived-reuse.test.ts (gate removed 2026-09-11)) that compares
   `canonicalState()` byte-for-byte against a store that reuses nothing, over
   `boot.rofl`, `sensors.rofl`, `tm.rofl` and `examples/spat/`.
 - **Reuse stops at anything whose schedule it would change.** Three
@@ -66,7 +66,7 @@ the rest are v0 implementation boundaries.
 - **Reuse can be switched off.** `new Rofl({ reuse: false })` (and
   `Rofl.fromSnapshot(json, { reuse: false })`) rebuilds the whole derived
   layer on every evaluation, which is what the engine did before reuse
-  existed. It is the reference path `test/derived-reuse.test.ts` compares
+  existed. It is the reference path test/derived-reuse.test.ts (gate removed 2026-09-11) compares
   against, so it is exercised by every claim above rather than being an
   untested escape hatch.
 - **No multi-fact abduction** (spec). Every level of `whynot` is single-step:
@@ -106,7 +106,7 @@ the rest are v0 implementation boundaries.
   the same fourteen-layer `examples/wtf/` model come out RIGHT with no
   meta-rules loaded at all and `stratum/2` empty, because the schedule is peeled
   off the decoded rules before anything fires
-  (`test/derived-reuse.test.ts`, `test/phase2.test.ts`). What the kernel
+  (test/derived-reuse.test.ts (gate removed 2026-09-11), test/phase2.test.ts (gate removed 2026-09-11)). What the kernel
   deliberately does not contain is a stratification checker *written against
   parsed clause objects*: `peelRounds` reads the same decoded rules the
   evaluator runs, which are store data like everything else.

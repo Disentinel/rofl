@@ -106,7 +106,7 @@ points; the whole list is in `package.json`.
 |---|---|---|
 | `src/` | the kernel: parser, store, evaluator, reflection, API, REPL. Zero runtime dependencies, closed vocabulary (below), mechanically checked | `repl` |
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
-| `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by `test/kernel-policy-program.test.ts` |
+| `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
 | `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
 | `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
@@ -122,7 +122,7 @@ by what they bind.
 **The model** — `time-and-continuity.md` (what `not p` means, where a veto
 belongs), `choosing-perspectives.md` (perspective = ledger, never status or
 modality), `books-and-permission.md` (every relation with who may write it,
-derived from `boot.rofl` and gated by `test/permission-doc.test.ts`),
+derived from `boot.rofl` and gated by test/permission-doc.test.ts (gate removed 2026-09-11)),
 `inquiry-kinds.md` (typed inquiry roots), `three-valued-answers.md` (the
 alternating fixpoint and what `unknown` means).
 
@@ -352,7 +352,7 @@ and boot, and they are in the grep-test whitelist.
 relation whose name appears in kernel source because a PROGRAM writes it and
 the kernel reads it, or the other way round — never because the kernel
 hardcodes a domain. The table is the grep-test whitelist's `IFACE_RELS`, and
-that is a measured identity rather than a promise: `test/vocabulary-doc.test.ts`
+that is a measured identity rather than a promise: test/vocabulary-doc.test.ts (gate removed 2026-09-11)
 re-derives both sides on every run and refuses a name that is in one and not
 the other. Every relation from `policy.rofl` and `safety.rofl` down is
 concluded by *the kernel's own programs* — see the section under this one.
@@ -434,7 +434,7 @@ something on the cycle. See `docs/three-valued-answers.md`.
 BOOKS AND PERMISSION — `leak`, `forged`, `collected`, `exported`,
 `unattributed`, `widened` — and **the whole model for those is in one place:
 `docs/books-and-permission.md`**, derived from boot.rofl and gated by
-`test/permission-doc.test.ts`. Four are STRUCTURAL and required empty on load:
+test/permission-doc.test.ts (gate removed 2026-09-11). Four are STRUCTURAL and required empty on load:
 `malformed` — a rule with no premises or no conclusion; `breach` — a rule
 concluding into a reserved relation; `unmoded` — a rule using a builtin with
 no declared mode; and `undefined_premise(RuleId, Rel)` — a rule with a
@@ -483,7 +483,7 @@ not a conservative answer, it is a wrong one, and 22 of the 95 worlds in this
 repository never load `boot.rofl`. So each file is the SOURCE and `src/reflect.ts`
 carries a copy — the shape `examples/ring1/l1.dense.rofl` already has, a
 program in two forms, one readable and one the machine installs. That is only
-honest with a gate keeping them identical, which `test/kernel-policy-program.test.ts`
+honest with a gate keeping them identical, which test/kernel-policy-program.test.ts (gate removed 2026-09-11)
 is.
 
 Two inputs travel the other way, from the host INTO the programs, because the
@@ -613,7 +613,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
   reflexive-transitive closure of `imports`; `flow` was the half that was not
   closed. boot.rofl adds `flows_to(A,B) :- flow(A,B).` and
   `flows_to(A,B) :- flows_to(A,X), flow(X,B).`, and the leak rule reads
-  `flows_to`. `test/flow-closure.test.ts` carries the old single-hop rule
+  `flows_to`. test/flow-closure.test.ts (gate removed 2026-09-11) carries the old single-hop rule
   beside the new one in one store, so "the closure did not swallow the direct
   crossing" is a measurement and not a claim.
 - **`collects`, the collection graph.** The closure above made one class of
@@ -625,7 +625,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
   not go stale loudly, and no check reads. `collects(X)` is host data declared
   like `imports`, and says: X deliberately gathers from ledgers it does not
   name. Three properties, each measured rather than asserted, in
-  `test/flow-closure.test.ts`. **Narrow**: it licenses a crossing only where
+  test/flow-closure.test.ts (gate removed 2026-09-11). **Narrow**: it licenses a crossing only where
   the SOURCE is not a registered perspective, so `imports` still gates every
   named ledger. The wide form (`not collects(B)` as a bare premise on `leak`)
   silences a walk from a named `[secret]` into a collecting `[case]`, which
@@ -650,7 +650,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
   to seven while the document said neither. It went stale in the SAFE
   direction, which is why nothing noticed — a whitelist wider than the
   document turns nothing red, it only stops the document describing the
-  kernel. `test/vocabulary-doc.test.ts` now re-derives both sides on every run
+  kernel. test/vocabulary-doc.test.ts (gate removed 2026-09-11) now re-derives both sides on every run
   and refuses a name that is in one and not the other, so the sentence is a
   measurement. The primary path reads neither `stratum` nor `unstratified`, so
   on that path the two names survive in kernel source only for the stock
@@ -706,7 +706,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
   back. This is budgets-as-semantics (§5.6), not a special case. **The primary
   path is not budget-mediated at all**: the peel stalls before a rule fires, so
   the refusal costs zero derivation steps and is identical at any budget
-  (`test/reject-budget-invariance.test.ts` pins that at 2 000 and 32 000).
+  (test/reject-budget-invariance.test.ts (gate removed 2026-09-11) pins that at 2 000 and 32 000).
 - **Rounds replace the stratum table, and the table left boot.rofl with it.**
   §3.2 of the spec puts stratification in boot.rofl as data and keeps it out of
   the kernel; `peelRounds` is a stratification computation in `src/`, so that
@@ -837,7 +837,7 @@ published. `sealed(rules)` withholds `has_conclusion`, `reads_from`,
 `derived_by`. Nothing else may be sealed, and the boundary is measured rather
 than chosen: `rules/floor-census.rofl` derives it from an ablation over every
 reflection relation plus a census of who reads each one, and
-`test/sealed.test.ts` asserts that the derived set equals the kernel's table.
+test/sealed.test.ts (gate removed 2026-09-11) asserts that the derived set equals the kernel's table.
 The relations the evaluator reads to RUN a program (`rule`, `conclusion_lit`,
 `premise_lit`) and the ones the kernel's own two programs read about it
 (`has_premise`, `concludes`, `premise_pos`, `premise_neg`,

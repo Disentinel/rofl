@@ -174,7 +174,7 @@ a hand-written one was 260x faster than it. The owner's decision, 2026-09-09:
 
 That keeps what the tower was built for. A syntax change is still a change to
 the RULES first — ring1 defines every production, each one is quoted above the
-Rust that implements it, and `test/rofl-parse.test.ts` renders BOTH trees into
+Rust that implements it, and test/rofl-parse.test.ts (gate removed 2026-09-11) renders BOTH trees into
 one s-expression so a divergence cannot be silent. The syntax is not back in
 the code; the code is held to the syntax.
 

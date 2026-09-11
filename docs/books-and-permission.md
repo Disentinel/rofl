@@ -20,7 +20,7 @@ that was itself wrong. All three are recorded in `facts/findings.rofl`.
 **The inventory below is DERIVED, not written.** `scanners/permission_inventory.ts`
 reads boot.rofl, the corpus and the hosts and emits facts;
 `rules/permission-model.rofl` derives the family, the roles and the negatives
-from them; `test/permission-doc.test.ts` re-derives both sides live and fails
+from them; test/permission-doc.test.ts (gate removed 2026-09-11) re-derives both sides live and fails
 if this document's tables and boot.rofl disagree as SETS. A new relation added
 to boot.rofl's permission machinery without a row here turns that test red.
 Rebuild with `npm run perminv`, read the derivation with `npm run whyperm`.
@@ -98,7 +98,7 @@ tick).
 | `imports`/2 | any program; **unauthenticated** — see §4 | `imports(To, From)`: the book `To` declares that it reads `From`. Both ends must be REGISTERED books. Closes into `sees`, which is its reflexive-transitive closure. Carried `@next`. | 45 facts across 15 programs, including boot.rofl's own 3 |
 | `exports`/2 | in principle only a holder of `authority` over the source — the reason this is the AUTHENTICATED half; **not enforced today** | `exports(From, To)`: permission from the side being taken from. Only the nameless-reader case `exports(A, anyone)` is built: it licenses a crossing into a reader that has no name to be granted, and `not perspective(B)` keeps it from being an off switch for a book's named readers. Carried `@next`. | 2 facts, 2 programs (`exports(main, anyone)` in goof, `exports(world, anyone)` in npc) |
 | `collects`/1 | any program | `collects(X)`: X deliberately gathers from books it does not name. The mirror of `exports`: here the GATHERER is the only named party, so the declaration is the gatherer's. Narrow by construction — `collects_from` requires `not perspective(A)`, so declaring it never silences a crossing FROM a book that has a name. Carried `@next`. | 9 facts, 9 programs |
-| `demands_authorship`/1 | any program | `demands_authorship(P)`: the book P asks for every unsigned fact in it to be named. Opt-in: a book that says nothing keeps exactly what it had. | **0 facts in 0 programs.** Written once, in `test/authorship.test.ts`. See §3.3. |
+| `demands_authorship`/1 | any program | `demands_authorship(P)`: the book P asks for every unsigned fact in it to be named. Opt-in: a book that says nothing keeps exactly what it had. | **0 facts in 0 programs.** Written once, in test/authorship.test.ts (gate removed 2026-09-11). See §3.3. |
 
 ### 2.2 Standing
 
@@ -157,7 +157,7 @@ apart (`quiet_audit` against `dead`).
 | relation | what it catches | rows over 26 worlds | what it structurally CANNOT see |
 |---|---|---|---|
 | `leak`/2 | a crossing between two books that nothing licensed | 4 rows in 1 world (sensors, deliberate — §5.8) | (a) it cannot tell an honest `imports` from a self-granted one, because `imports` is unauthenticated — the program declares what it reads and the source is never asked (`f_self_licensing_is_not_gone_it_is_now_a_line_someone_typed`); (b) a crossing that does not exist until a book is READ AT RUNTIME — `examples/loot` installs books from `demo.ts` and is clean on a bare world (`f_a_corpus_sweep_that_only_loads_misses_what_a_runtime_load_makes`); (c) a walk whose start is `[main]` cannot be distinguished from a helper relation nobody bracketed (§5.1) |
-| `forged`/1 | a fact signed by a principal with no standing in the book it landed in | 0 | (a) **who granted the standing.** Nothing authenticates an anonymous load, so the operator and an attacker are one principal, `user`; a laundered self-grant is indistinguishable from an honest one, pinned by the second test in `test/authority-grant.test.ts`. (b) **rules.** `encodeRule` writes reflection facts directly and bypasses the signing path, so `who` does not apply to a rule under any value. (c) anonymity: an unsigned fact is signed `user`, and `user` has standing over every ordinary book by a measured decision (§4). |
+| `forged`/1 | a fact signed by a principal with no standing in the book it landed in | 0 | (a) **who granted the standing.** Nothing authenticates an anonymous load, so the operator and an attacker are one principal, `user`; a laundered self-grant is indistinguishable from an honest one, pinned by the second test in test/authority-grant.test.ts (gate removed 2026-09-11). (b) **rules.** `encodeRule` writes reflection facts directly and bypasses the signing path, so `who` does not apply to a rule under any value. (c) anonymity: an unsigned fact is signed `user`, and `user` has standing over every ordinary book by a measured decision (§4). |
 | `collected`/1 | the declared gathers, as a positive row with a `why` — a licence nobody can ask about is an invisible absence | 6 rows in 6 worlds | whether the gather was APPROPRIATE. It reports that a declaration was exercised, never that it was warranted. |
 | `exported`/1 | the declared exports to nameless readers, same shape and same reason | 2 rows in 2 worlds | the NAMED half of `exports` is not built, so it says nothing about `exports(A, some_named_book)` (§5.3). |
 | `unattributed`/2 | unsigned facts in a book that asked to have them named | 0 | it is **opt-in and nothing in the corpus opts in**. Zero `.rofl` files declare `demands_authorship`. A survey that enumerates audits and reads silence as absence will miss it, which happened on 2026-09-08 (`f_i_measured_a_ceiling_with_the_instrument_switched_off`): with `demands_authorship(main).` declared, this audit names the laundering grant `forged` cannot see, exactly. **A survey of gates must ask which are OFF, not only which are quiet.** |
@@ -196,7 +196,7 @@ that.
 
 ## 4. The standing model
 
-Read `test/authority-grant.test.ts`; it is the executable form of this
+Read test/authority-grant.test.ts (gate removed 2026-09-11); it is the executable form of this
 section.
 
 1. **`registerPersp` (`src/reflect.ts`) grants two principals on a book's
@@ -460,9 +460,9 @@ comments are the twelve places for the kernel.
 | the scanner | `scanners/permission_inventory.ts` — `npm run perminv` |
 | the derivation | `rules/permission-model.rofl` — `npm run whyperm` |
 | the generated facts | `facts/permission-inventory.rofl` |
-| the gate | `test/permission-doc.test.ts` |
-| the standing model, executable | `test/authority-grant.test.ts` |
-| the crossing audits, executable | `test/bridges.test.ts`, `test/exports.test.ts`, `test/flow-closure.test.ts` |
-| authorship, executable | `test/authorship.test.ts` |
-| the widened negation, executable | `test/widened-negation.test.ts` |
+| the gate | test/permission-doc.test.ts (gate removed 2026-09-11) |
+| the standing model, executable | test/authority-grant.test.ts (gate removed 2026-09-11) |
+| the crossing audits, executable | test/bridges.test.ts (gate removed 2026-09-11), test/exports.test.ts (gate removed 2026-09-11), test/flow-closure.test.ts (gate removed 2026-09-11) |
+| authorship, executable | test/authorship.test.ts (gate removed 2026-09-11) |
+| the widened negation, executable | test/widened-negation.test.ts (gate removed 2026-09-11) |
 | what a book may MEAN | `docs/choosing-perspectives.md` |

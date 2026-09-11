@@ -244,7 +244,7 @@ two-dimensional and that both dimensions work — only one had been tested.
 > covered, 14 unaccounted** — and `unaccounted` is 14 AGAIN, by coincidence,
 > while both other numbers moved. A stale figure that happens to still match is
 > the one an eye cannot catch, and an ad-hoc run cannot notice it at all. They
-> are now pinned in `test/js-model.test.ts`, which is where a number in this
+> are now pinned in test/js-model.test.ts (gate removed 2026-09-11), which is where a number in this
 > document should have been from the start.
 
 **What this settles is the ENUMERATION of work, not the work.** 1022 cells remain
