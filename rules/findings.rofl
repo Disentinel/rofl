@@ -25,11 +25,13 @@ settled(F)           :- artifact_removed(F, _).
 -- disposition is made explicit: the artifact is gone, the NOTE is what remains,
 -- and a note is the only thing left to hold the knowledge.
 note_lost[audit](F)  :- artifact_removed(F, _), not finding_note(F, _).
+alarm(note_lost).
 
 -- AND A FINDING CANNOT BE BOTH REPAIRED AND REFUSED. The sweep above wrote
 -- three of these before the file was read back: a finding whose gate was
 -- deleted still carried a live `addressed_by` to the repair itself.
 two_minds[audit](F) :- addressed_by(F, _), dismissed(F, _).
+alarm(two_minds).
 
 open_finding(F)      :- finding(F, _), not settled(F).
 
