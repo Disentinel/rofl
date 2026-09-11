@@ -29,3 +29,8 @@ work(w_ingest_declares_half_its_host_relations,
   "rules/ingest.rofl declares the five pressure signals edb and reads five other host-asserted relations (must_index, cooled, needed_hot, ast_file, ast_parse_error) with no declaration, so its own world carries ten undefined_premise rows and needed_hot is a name nothing in the tree defines, asserts or declares. One convention: every relation the host owes this pack is an edb line with its signature beside it.").
 work_state(w_ingest_declares_half_its_host_relations, open).
 work_spawned(w_ingest_declares_half_its_host_relations, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
+
+work(w_twins_in_depends_and_ingest,
+  "rules/depends.rofl concludes code_needs and generated from one body, edge[dep](_, P, generates); rules/ingest.rofl concludes candidate_intent(parse, C, F) and index_left from one body, and index_left and index_target are renames of needs_index and must_index that no rule and no .ts reads. One head each, or a reader.").
+work_state(w_twins_in_depends_and_ingest, open).
+work_spawned(w_twins_in_depends_and_ingest, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
