@@ -3485,99 +3485,76 @@ block_before("rules/layering.rofl:96", "rules/layering.rofl:100").
 block("rules/layering.rofl:105", "rules/layering.rofl", 105, 2).
 block_next("rules/layering.rofl:105", clause).
 block_before("rules/layering.rofl:105", "rules/layering.rofl:107").
-lint_file("rules/nullary.rofl", 52, 204, 22).
+lint_file("rules/nullary.rofl", 52, 87, 22).
 file_clauses("rules/nullary.rofl", 48, 0).
-block("rules/nullary.rofl:1", "rules/nullary.rofl", 1, 24).
+block("rules/nullary.rofl:1", "rules/nullary.rofl", 1, 12).
 block_next("rules/nullary.rofl:1", comment).
-block_mentions("rules/nullary.rofl:1", premise_var, bare).
-block_mentions("rules/nullary.rofl:1", slot_arity, bare).
-block_mentions("rules/nullary.rofl:1", safety, bare).
-block_mentions("rules/nullary.rofl:1", concludes, bare).
 block_mentions("rules/nullary.rofl:1", conclusion_lit, bare).
 mention_snake(conclusion_lit).
 block_mentions("rules/nullary.rofl:1", premise_lit, bare).
-block("rules/nullary.rofl:26", "rules/nullary.rofl", 26, 3).
-block_next("rules/nullary.rofl:26", clause).
-block_before("rules/nullary.rofl:26", "rules/nullary.rofl:29").
-block_banner("rules/nullary.rofl:26").
-block("rules/nullary.rofl:40", "rules/nullary.rofl", 40, 9).
-block_next("rules/nullary.rofl:40", clause).
-block_before("rules/nullary.rofl:40", "rules/nullary.rofl:49").
-block_mentions("rules/nullary.rofl:40", mechanism_seen, called).
+block_mentions("rules/nullary.rofl:1", premise_var, bare).
+block_mentions("rules/nullary.rofl:1", slot_arity, bare).
+block("rules/nullary.rofl:14", "rules/nullary.rofl", 14, 3).
+block_next("rules/nullary.rofl:14", clause).
+block_before("rules/nullary.rofl:14", "rules/nullary.rofl:17").
+block_banner("rules/nullary.rofl:14").
+block("rules/nullary.rofl:28", "rules/nullary.rofl", 28, 3).
+block_next("rules/nullary.rofl:28", clause).
+block_before("rules/nullary.rofl:28", "rules/nullary.rofl:31").
+block_mentions("rules/nullary.rofl:28", mechanism_seen, called).
 mention_snake(mechanism_seen).
-block("rules/nullary.rofl:53", "rules/nullary.rofl", 53, 13).
-block_next("rules/nullary.rofl:53", clause).
-block_before("rules/nullary.rofl:53", "rules/nullary.rofl:66").
-block_mentions("rules/nullary.rofl:53", safe, bare).
-block_mentions("rules/nullary.rofl:53", binds, bare).
-block_mentions("rules/nullary.rofl:53", mentions, bare).
-block("rules/nullary.rofl:72", "rules/nullary.rofl", 72, 35).
-block_next("rules/nullary.rofl:72", clause).
-block_before("rules/nullary.rofl:72", "rules/nullary.rofl:107").
-block_dated("rules/nullary.rofl:72", 1).
-block_measured("rules/nullary.rofl:72", 1).
-block_mentions("rules/nullary.rofl:72", disconnected, bare).
-block_mentions("rules/nullary.rofl:72", mentions, bare).
-block_mentions("rules/nullary.rofl:72", multi_premise, bare).
+block("rules/nullary.rofl:35", "rules/nullary.rofl", 35, 4).
+block_next("rules/nullary.rofl:35", clause).
+block_before("rules/nullary.rofl:35", "rules/nullary.rofl:39").
+block_mentions("rules/nullary.rofl:35", body_var, bare).
+mention_snake(body_var).
+block_mentions("rules/nullary.rofl:35", mentions, bare).
+block_mentions("rules/nullary.rofl:35", not, bare).
+block("rules/nullary.rofl:45", "rules/nullary.rofl", 45, 11).
+block_next("rules/nullary.rofl:45", clause).
+block_before("rules/nullary.rofl:45", "rules/nullary.rofl:56").
+block_mentions("rules/nullary.rofl:45", disconnected, bare).
+block_mentions("rules/nullary.rofl:45", multi_premise, bare).
 mention_snake(multi_premise).
-block("rules/nullary.rofl:118", "rules/nullary.rofl", 118, 32).
-block_next("rules/nullary.rofl:118", clause).
-block_before("rules/nullary.rofl:118", "rules/nullary.rofl:150").
-block_banner("rules/nullary.rofl:118").
-block_mentions("rules/nullary.rofl:118", sealed, bare).
-block_mentions("rules/nullary.rofl:118", deploy_blocked, bare).
-mention_snake(deploy_blocked).
-block_mentions("rules/nullary.rofl:118", head_cell, bare).
-mention_snake(head_cell).
-block_mentions("rules/nullary.rofl:118", forged, bare).
-block_mentions("rules/nullary.rofl:118", str_len, bare).
-block_mentions("rules/nullary.rofl:118", premise_var, bare).
-block("rules/nullary.rofl:157", "rules/nullary.rofl", 157, 7).
-block_next("rules/nullary.rofl:157", clause).
-block_before("rules/nullary.rofl:157", "rules/nullary.rofl:164").
-block_mentions("rules/nullary.rofl:157", not, bare).
-block_mentions("rules/nullary.rofl:157", slow_because, bare).
+block_mentions("rules/nullary.rofl:45", str_pre, bare).
+block("rules/nullary.rofl:67", "rules/nullary.rofl", 67, 12).
+block_next("rules/nullary.rofl:67", clause).
+block_before("rules/nullary.rofl:67", "rules/nullary.rofl:79").
+block_banner("rules/nullary.rofl:67").
+block_mentions("rules/nullary.rofl:67", forged, called).
+block("rules/nullary.rofl:86", "rules/nullary.rofl", 86, 4).
+block_next("rules/nullary.rofl:86", clause).
+block_before("rules/nullary.rofl:86", "rules/nullary.rofl:90").
+block_mentions("rules/nullary.rofl:86", slow_because, bare).
 mention_snake(slow_because).
-block("rules/nullary.rofl:167", "rules/nullary.rofl", 167, 5).
-block_next("rules/nullary.rofl:167", clause).
-block_before("rules/nullary.rofl:167", "rules/nullary.rofl:172").
-block_mentions("rules/nullary.rofl:167", reuse_plan, bare).
+block("rules/nullary.rofl:93", "rules/nullary.rofl", 93, 3).
+block_next("rules/nullary.rofl:93", clause).
+block_before("rules/nullary.rofl:93", "rules/nullary.rofl:96").
+block_mentions("rules/nullary.rofl:93", reuse_plan, bare).
 mention_snake(reuse_plan).
-block_mentions("rules/nullary.rofl:167", slow_because, bare).
-block("rules/nullary.rofl:179", "rules/nullary.rofl", 179, 9).
-block_next("rules/nullary.rofl:179", clause).
-block_before("rules/nullary.rofl:179", "rules/nullary.rofl:188").
-block_banner("rules/nullary.rofl:179").
-block_mentions("rules/nullary.rofl:179", any_unblocker, called).
-mention_snake(any_unblocker).
-block_mentions("rules/nullary.rofl:179", takeable, called).
-block_mentions("rules/nullary.rofl:179", rule_shape, bare).
-mention_snake(rule_shape).
-block("rules/nullary.rofl:196", "rules/nullary.rofl", 196, 7).
-block_next("rules/nullary.rofl:196", clause).
-block_before("rules/nullary.rofl:196", "rules/nullary.rofl:203").
-block_mentions("rules/nullary.rofl:196", disconnected, bare).
-block_mentions("rules/nullary.rofl:196", head_cell, called).
-block("rules/nullary.rofl:205", "rules/nullary.rofl", 205, 16).
-block_next("rules/nullary.rofl:205", clause).
-block_before("rules/nullary.rofl:205", "rules/nullary.rofl:221").
-block_mentions("rules/nullary.rofl:205", cell, called).
-block_mentions("rules/nullary.rofl:205", unblocking_work, called).
-mention_snake(unblocking_work).
-block_mentions("rules/nullary.rofl:205", ast_node, called).
-block_mentions("rules/nullary.rofl:205", layer, called).
-block("rules/nullary.rofl:228", "rules/nullary.rofl", 228, 14).
-block_next("rules/nullary.rofl:228", clause).
-block_before("rules/nullary.rofl:228", "rules/nullary.rofl:242").
-block_banner("rules/nullary.rofl:228").
-block_mentions("rules/nullary.rofl:228", passenger, bare).
-block("rules/nullary.rofl:248", "rules/nullary.rofl", 248, 30).
-block_next("rules/nullary.rofl:248", eof).
-block_dated("rules/nullary.rofl:248", 1).
-block_mentions("rules/nullary.rofl:248", passenger, bare).
-block_mentions("rules/nullary.rofl:248", const_head, bare).
-mention_snake(const_head).
-block_mentions("rules/nullary.rofl:248", premise_lit, bare).
+block_mentions("rules/nullary.rofl:93", pure_overhead, called).
+mention_snake(pure_overhead).
+block("rules/nullary.rofl:103", "rules/nullary.rofl", 103, 6).
+block_next("rules/nullary.rofl:103", clause).
+block_before("rules/nullary.rofl:103", "rules/nullary.rofl:109").
+block_banner("rules/nullary.rofl:103").
+block_mentions("rules/nullary.rofl:103", takeable, called).
+block("rules/nullary.rofl:117", "rules/nullary.rofl", 117, 3).
+block_next("rules/nullary.rofl:117", clause).
+block_before("rules/nullary.rofl:117", "rules/nullary.rofl:120").
+block_mentions("rules/nullary.rofl:117", disconnected, bare).
+block("rules/nullary.rofl:122", "rules/nullary.rofl", 122, 6).
+block_next("rules/nullary.rofl:122", clause).
+block_before("rules/nullary.rofl:122", "rules/nullary.rofl:128").
+block_mentions("rules/nullary.rofl:122", cell, called).
+block_mentions("rules/nullary.rofl:122", unblocks, called).
+block("rules/nullary.rofl:135", "rules/nullary.rofl", 135, 6).
+block_next("rules/nullary.rofl:135", clause).
+block_before("rules/nullary.rofl:135", "rules/nullary.rofl:141").
+block_banner("rules/nullary.rofl:135").
+block("rules/nullary.rofl:147", "rules/nullary.rofl", 147, 14).
+block_next("rules/nullary.rofl:147", eof).
+block_mentions("rules/nullary.rofl:147", passenger, bare).
 lint_file("rules/parse-cost.rofl", 38, 63, 16).
 file_clauses("rules/parse-cost.rofl", 28, 6).
 block("rules/parse-cost.rofl:1", "rules/parse-cost.rofl", 1, 10).
@@ -3596,7 +3573,6 @@ mention_snake(dressed_constant).
 block_mentions("rules/parse-cost.rofl:26", saves_nothing, bare).
 mention_snake(saves_nothing).
 block_mentions("rules/parse-cost.rofl:26", pure_overhead, called).
-mention_snake(pure_overhead).
 block_mentions("rules/parse-cost.rofl:26", reuse_plan, bare).
 block_mentions("rules/parse-cost.rofl:26", slow_because, bare).
 block("rules/parse-cost.rofl:44", "rules/parse-cost.rofl", 44, 2).
@@ -4031,150 +4007,96 @@ file_clauses("rules/swarm.rofl", 6, 0).
 block("rules/swarm.rofl:1", "rules/swarm.rofl", 1, 13).
 block_next("rules/swarm.rofl:1", clause).
 block_before("rules/swarm.rofl:1", "rules/swarm.rofl:15").
-lint_file("rules/worklist.rofl", 81, 186, 28).
+lint_file("rules/worklist.rofl", 81, 75, 27).
 file_clauses("rules/worklist.rofl", 48, 22).
-block("rules/worklist.rofl:1", "rules/worklist.rofl", 1, 26).
+block("rules/worklist.rofl:1", "rules/worklist.rofl", 1, 13).
 block_next("rules/worklist.rofl:1", clause).
-block_mentions("rules/worklist.rofl:1", rules, bare).
 block_mentions("rules/worklist.rofl:1", claim, bare).
-block_mentions("rules/worklist.rofl:1", orphan_claim, called).
-block_mentions("rules/worklist.rofl:1", handled, bare).
-block_mentions("rules/worklist.rofl:1", ignored, bare).
-block_mentions("rules/worklist.rofl:1", orphan, called).
 block_mentions("rules/worklist.rofl:1", claim_kind, bare).
+block_mentions("rules/worklist.rofl:1", orphan, called).
 block_mentions("rules/worklist.rofl:1", cell, called).
 block_mentions("rules/worklist.rofl:1", none, bare).
 block_mentions("rules/worklist.rofl:1", verdict, called).
-block("rules/worklist.rofl:39", "rules/worklist.rofl", 39, 14).
-block_next("rules/worklist.rofl:39", clause).
-block_banner("rules/worklist.rofl:39").
-block_mentions("rules/worklist.rofl:39", import, bare).
-block_mentions("rules/worklist.rofl:39", our_unknown, bare).
-mention_snake(our_unknown).
-block_mentions("rules/worklist.rofl:39", unknown_type, bare).
-block_mentions("rules/worklist.rofl:39", irreducible, bare).
-block_mentions("rules/worklist.rofl:39", ours, bare).
-block_mentions("rules/worklist.rofl:39", out_of_scope, bare).
-block_mentions("rules/worklist.rofl:39", budget_exhausted, bare).
-block_mentions("rules/worklist.rofl:39", reason_unclassified, bare).
+block_mentions("rules/worklist.rofl:1", handled, bare).
+block_mentions("rules/worklist.rofl:1", ignored, bare).
+block("rules/worklist.rofl:26", "rules/worklist.rofl", 26, 6).
+block_next("rules/worklist.rofl:26", clause).
+block_banner("rules/worklist.rofl:26").
+block_mentions("rules/worklist.rofl:26", unknown_type, bare).
+block_mentions("rules/worklist.rofl:26", irreducible, bare).
+block_mentions("rules/worklist.rofl:26", out_of_scope, bare).
+block_mentions("rules/worklist.rofl:26", budget_exhausted, bare).
+block_mentions("rules/worklist.rofl:26", reason_unclassified, bare).
 mention_snake(reason_unclassified).
-block("rules/worklist.rofl:59", "rules/worklist.rofl", 59, 13).
-block_next("rules/worklist.rofl:59", clause).
-block_dated("rules/worklist.rofl:59", 1).
-block_mentions("rules/worklist.rofl:59", out_of_scope, bare).
-block_mentions("rules/worklist.rofl:59", scope_decided, bare).
+block("rules/worklist.rofl:38", "rules/worklist.rofl", 38, 4).
+block_next("rules/worklist.rofl:38", clause).
+block_mentions("rules/worklist.rofl:38", out_of_scope, bare).
+block_mentions("rules/worklist.rofl:38", scope_decided, bare).
 mention_snake(scope_decided).
-block("rules/worklist.rofl:83", "rules/worklist.rofl", 83, 7).
-block_next("rules/worklist.rofl:83", clause).
-block_banner("rules/worklist.rofl:83").
-block_mentions("rules/worklist.rofl:83", work_needs, bare).
+block("rules/worklist.rofl:53", "rules/worklist.rofl", 53, 5).
+block_next("rules/worklist.rofl:53", clause).
+block_banner("rules/worklist.rofl:53").
+block_mentions("rules/worklist.rofl:53", work_needs, bare).
 mention_snake(work_needs).
-block("rules/worklist.rofl:93", "rules/worklist.rofl", 93, 2).
-block_next("rules/worklist.rofl:93", clause).
-block("rules/worklist.rofl:96", "rules/worklist.rofl", 96, 1).
-block_next("rules/worklist.rofl:96", clause).
-block_mentions("rules/worklist.rofl:96", declare, bare).
-block("rules/worklist.rofl:98", "rules/worklist.rofl", 98, 1).
-block_next("rules/worklist.rofl:98", clause).
-block("rules/worklist.rofl:100", "rules/worklist.rofl", 100, 1).
-block_next("rules/worklist.rofl:100", clause).
-block("rules/worklist.rofl:106", "rules/worklist.rofl", 106, 1).
-block_next("rules/worklist.rofl:106", clause).
-block_before("rules/worklist.rofl:106", "rules/worklist.rofl:107").
-block("rules/worklist.rofl:110", "rules/worklist.rofl", 110, 7).
-block_next("rules/worklist.rofl:110", clause).
-block_before("rules/worklist.rofl:110", "rules/worklist.rofl:117").
-block_banner("rules/worklist.rofl:110").
-block_mentions("rules/worklist.rofl:110", nobody, bare).
-block("rules/worklist.rofl:118", "rules/worklist.rofl", 118, 3).
-block_next("rules/worklist.rofl:118", clause).
-block_before("rules/worklist.rofl:118", "rules/worklist.rofl:121").
-block_mentions("rules/worklist.rofl:118", false_done, bare).
-mention_snake(false_done).
-block("rules/worklist.rofl:124", "rules/worklist.rofl", 124, 1).
-block_next("rules/worklist.rofl:124", clause).
-block_before("rules/worklist.rofl:124", "rules/worklist.rofl:125").
-block("rules/worklist.rofl:128", "rules/worklist.rofl", 128, 7).
-block_next("rules/worklist.rofl:128", clause).
-block_before("rules/worklist.rofl:128", "rules/worklist.rofl:135").
-block("rules/worklist.rofl:138", "rules/worklist.rofl", 138, 3).
-block_next("rules/worklist.rofl:138", clause).
-block_before("rules/worklist.rofl:138", "rules/worklist.rofl:141").
-block("rules/worklist.rofl:144", "rules/worklist.rofl", 144, 3).
-block_next("rules/worklist.rofl:144", clause).
-block_before("rules/worklist.rofl:144", "rules/worklist.rofl:147").
-block("rules/worklist.rofl:150", "rules/worklist.rofl", 150, 14).
-block_next("rules/worklist.rofl:150", comment).
-block_banner("rules/worklist.rofl:150").
-block_mentions("rules/worklist.rofl:150", claim, bare).
-block_mentions("rules/worklist.rofl:150", sweeper, bare).
-block("rules/worklist.rofl:165", "rules/worklist.rofl", 165, 1).
-block_next("rules/worklist.rofl:165", clause).
-block_before("rules/worklist.rofl:165", "rules/worklist.rofl:166").
-block("rules/worklist.rofl:168", "rules/worklist.rofl", 168, 3).
-block_next("rules/worklist.rofl:168", clause).
-block_before("rules/worklist.rofl:168", "rules/worklist.rofl:171").
-block_mentions("rules/worklist.rofl:168", held_unknown, bare).
-mention_snake(held_unknown).
-block("rules/worklist.rofl:178", "rules/worklist.rofl", 178, 5).
-block_next("rules/worklist.rofl:178", comment).
-block_dated("rules/worklist.rofl:178", 1).
-block_mentions("rules/worklist.rofl:178", order_collision, called).
-mention_snake(order_collision).
-block_mentions("rules/worklist.rofl:178", work_needs_cycle, called).
-mention_snake(work_needs_cycle).
-block("rules/worklist.rofl:184", "rules/worklist.rofl", 184, 6).
-block_next("rules/worklist.rofl:184", clause).
-block_before("rules/worklist.rofl:184", "rules/worklist.rofl:190").
-block_banner("rules/worklist.rofl:184").
-block_dated("rules/worklist.rofl:184", 1).
-block_mentions("rules/worklist.rofl:184", w_cg_call_result, bare).
-mention_snake(w_cg_call_result).
-block_mentions("rules/worklist.rofl:184", waits, bare).
-block("rules/worklist.rofl:192", "rules/worklist.rofl", 192, 1).
-block_next("rules/worklist.rofl:192", clause).
-block_before("rules/worklist.rofl:192", "rules/worklist.rofl:193").
-block("rules/worklist.rofl:198", "rules/worklist.rofl", 198, 8).
-block_next("rules/worklist.rofl:198", clause).
-block_before("rules/worklist.rofl:198", "rules/worklist.rofl:206").
-block_banner("rules/worklist.rofl:198").
-block_mentions("rules/worklist.rofl:198", w_controlflow_layer, bare).
-mention_snake(w_controlflow_layer).
-block("rules/worklist.rofl:211", "rules/worklist.rofl", 211, 11).
-block_next("rules/worklist.rofl:211", clause).
-block_mentions("rules/worklist.rofl:211", w_leak_variable_on_the_right, bare).
-mention_snake(w_leak_variable_on_the_right).
-block_mentions("rules/worklist.rofl:211", work_needs, bare).
-block_mentions("rules/worklist.rofl:211", held_by, bare).
+block("rules/worklist.rofl:61", "rules/worklist.rofl", 61, 4).
+block_next("rules/worklist.rofl:61", clause).
+block_mentions("rules/worklist.rofl:61", declare, bare).
+block("rules/worklist.rofl:73", "rules/worklist.rofl", 73, 1).
+block_next("rules/worklist.rofl:73", clause).
+block_before("rules/worklist.rofl:73", "rules/worklist.rofl:74").
+block("rules/worklist.rofl:77", "rules/worklist.rofl", 77, 4).
+block_next("rules/worklist.rofl:77", clause).
+block_before("rules/worklist.rofl:77", "rules/worklist.rofl:81").
+block_banner("rules/worklist.rofl:77").
+block("rules/worklist.rofl:85", "rules/worklist.rofl", 85, 1).
+block_next("rules/worklist.rofl:85", clause).
+block_before("rules/worklist.rofl:85", "rules/worklist.rofl:86").
+list_item("rules/worklist.rofl:85", 85, 1).
+block("rules/worklist.rofl:89", "rules/worklist.rofl", 89, 3).
+block_next("rules/worklist.rofl:89", clause).
+block_before("rules/worklist.rofl:89", "rules/worklist.rofl:92").
+list_item("rules/worklist.rofl:89", 89, 2).
+block("rules/worklist.rofl:95", "rules/worklist.rofl", 95, 1).
+block_next("rules/worklist.rofl:95", clause).
+block_before("rules/worklist.rofl:95", "rules/worklist.rofl:96").
+list_item("rules/worklist.rofl:95", 95, 3).
+block("rules/worklist.rofl:99", "rules/worklist.rofl", 99, 2).
+block_next("rules/worklist.rofl:99", clause).
+block_before("rules/worklist.rofl:99", "rules/worklist.rofl:101").
+list_item("rules/worklist.rofl:99", 99, 4).
+block("rules/worklist.rofl:104", "rules/worklist.rofl", 104, 8).
+block_next("rules/worklist.rofl:104", clause).
+block_before("rules/worklist.rofl:104", "rules/worklist.rofl:112").
+block_mentions("rules/worklist.rofl:104", sweeper, bare).
+block("rules/worklist.rofl:121", "rules/worklist.rofl", 121, 3).
+block_next("rules/worklist.rofl:121", clause).
+block_before("rules/worklist.rofl:121", "rules/worklist.rofl:124").
+block_banner("rules/worklist.rofl:121").
+block("rules/worklist.rofl:131", "rules/worklist.rofl", 131, 4).
+block_next("rules/worklist.rofl:131", clause).
+block_before("rules/worklist.rofl:131", "rules/worklist.rofl:135").
+block_banner("rules/worklist.rofl:131").
+block("rules/worklist.rofl:140", "rules/worklist.rofl", 140, 2).
+block_next("rules/worklist.rofl:140", clause).
+block_mentions("rules/worklist.rofl:140", held_by, bare).
 mention_snake(held_by).
-block("rules/worklist.rofl:234", "rules/worklist.rofl", 234, 5).
-block_next("rules/worklist.rofl:234", clause).
-block_before("rules/worklist.rofl:234", "rules/worklist.rofl:239").
-block("rules/worklist.rofl:240", "rules/worklist.rofl", 240, 31).
-block_next("rules/worklist.rofl:240", clause).
-block_before("rules/worklist.rofl:240", "rules/worklist.rofl:271").
-block_dated("rules/worklist.rofl:240", 2).
-block_mentions("rules/worklist.rofl:240", takeable, called).
-block_mentions("rules/worklist.rofl:240", order_collision, called).
-block_mentions("rules/worklist.rofl:240", w_env_api_surface, bare).
-block_mentions("rules/worklist.rofl:240", next_work, bare).
+block("rules/worklist.rofl:154", "rules/worklist.rofl", 154, 2).
+block_next("rules/worklist.rofl:154", clause).
+block_before("rules/worklist.rofl:154", "rules/worklist.rofl:156").
+block("rules/worklist.rofl:158", "rules/worklist.rofl", 158, 7).
+block_next("rules/worklist.rofl:158", clause).
+block_before("rules/worklist.rofl:158", "rules/worklist.rofl:165").
+block_mentions("rules/worklist.rofl:158", next_work, bare).
 mention_snake(next_work).
-block_mentions("rules/worklist.rofl:240", any_unblocker, called).
-block_mentions("rules/worklist.rofl:240", takeable_unblocker, bare).
-mention_snake(takeable_unblocker).
-block_mentions("rules/worklist.rofl:240", anything_unblocks, bare).
+block_mentions("rules/worklist.rofl:158", anything_unblocks, bare).
 mention_snake(anything_unblocks).
-block("rules/worklist.rofl:277", "rules/worklist.rofl", 277, 8).
-block_next("rules/worklist.rofl:277", clause).
-block_before("rules/worklist.rofl:277", "rules/worklist.rofl:285").
-block_dated("rules/worklist.rofl:277", 1).
-block_mentions("rules/worklist.rofl:277", work_needs, bare).
-block_mentions("rules/worklist.rofl:277", w_env_api_surface, bare).
-block_mentions("rules/worklist.rofl:277", w_prototype_of_a_value, bare).
-mention_snake(w_prototype_of_a_value).
-block("rules/worklist.rofl:290", "rules/worklist.rofl", 290, 3).
-block_next("rules/worklist.rofl:290", clause).
-block_before("rules/worklist.rofl:290", "rules/worklist.rofl:293").
+block_mentions("rules/worklist.rofl:158", takeable, called).
+block("rules/worklist.rofl:171", "rules/worklist.rofl", 171, 3).
+block_next("rules/worklist.rofl:171", clause).
+block_before("rules/worklist.rofl:171", "rules/worklist.rofl:174").
+block("rules/worklist.rofl:179", "rules/worklist.rofl", 179, 2).
+block_next("rules/worklist.rofl:179", clause).
+block_before("rules/worklist.rofl:179", "rules/worklist.rofl:181").
 lint_file("rules/worlds.rofl", 28, 79, 10).
 file_clauses("rules/worlds.rofl", 16, 12).
 block("rules/worlds.rofl:1", "rules/worlds.rofl", 1, 24).
@@ -4342,6 +4264,7 @@ block_mentions("facts/cross-products.rofl:1", rules, bare).
 block_mentions("facts/cross-products.rofl:1", examples, bare).
 block_mentions("facts/cross-products.rofl:1", does, bare).
 block_mentions("facts/cross-products.rofl:1", any_unblocker, called).
+mention_snake(any_unblocker).
 block_mentions("facts/cross-products.rofl:1", anything_unblocks, bare).
 block_mentions("facts/cross-products.rofl:1", ci_runs, bare).
 block_mentions("facts/cross-products.rofl:1", npm, bare).
@@ -4388,8 +4311,8 @@ block_next("facts/feature-map.rofl:1", clause).
 block_mentions("facts/feature-map.rofl:1", feature, bare).
 block("facts/feature-map.rofl:1067", "facts/feature-map.rofl", 1067, 1).
 block_next("facts/feature-map.rofl:1067", eof).
-lint_file("facts/findings.rofl", 4852, 550, 854).
-file_clauses("facts/findings.rofl", 0, 4456).
+lint_file("facts/findings.rofl", 4858, 550, 855).
+file_clauses("facts/findings.rofl", 0, 4461).
 block("facts/findings.rofl:1", "facts/findings.rofl", 1, 3).
 block_next("facts/findings.rofl:1", comment).
 block("facts/findings.rofl:5", "facts/findings.rofl", 5, 1).
@@ -4644,8 +4567,10 @@ block_mentions("facts/findings.rofl:4118", work_order, bare).
 mention_snake(work_order).
 block_mentions("facts/findings.rofl:4118", work_needs, bare).
 block_mentions("facts/findings.rofl:4118", order_collision, called).
+mention_snake(order_collision).
 block_mentions("facts/findings.rofl:4118", unpopulatable, bare).
 block_mentions("facts/findings.rofl:4118", work_needs_cycle, called).
+mention_snake(work_needs_cycle).
 block("facts/findings.rofl:4138", "facts/findings.rofl", 4138, 1).
 block_next("facts/findings.rofl:4138", clause).
 block_dated("facts/findings.rofl:4138", 1).
@@ -5384,6 +5309,7 @@ block_next("facts/js-callgraph.rofl:640", clause).
 block_banner("facts/js-callgraph.rofl:640").
 block_dated("facts/js-callgraph.rofl:640", 1).
 block_mentions("facts/js-callgraph.rofl:640", w_prototype_of_a_value, bare).
+mention_snake(w_prototype_of_a_value).
 block_mentions("facts/js-callgraph.rofl:640", array_expression, bare).
 block_mentions("facts/js-callgraph.rofl:640", kind_prototype, bare).
 block_mentions("facts/js-callgraph.rofl:640", unresolved_call, bare).
@@ -5843,6 +5769,7 @@ block_mentions("facts/js-dataflow.rofl:255", return, bare).
 block("facts/js-dataflow.rofl:272", "facts/js-dataflow.rofl", 272, 5).
 block_next("facts/js-dataflow.rofl:272", clause).
 block_mentions("facts/js-dataflow.rofl:272", false_done, bare).
+mention_snake(false_done).
 block("facts/js-dataflow.rofl:279", "facts/js-dataflow.rofl", 279, 4).
 block_next("facts/js-dataflow.rofl:279", clause).
 block_banner("facts/js-dataflow.rofl:279").
@@ -6366,6 +6293,7 @@ block_mentions("facts/js-effects.rofl:742", import, bare).
 block_mentions("facts/js-effects.rofl:742", not_yet, bare).
 block_mentions("facts/js-effects.rofl:742", open_cell, called).
 block_mentions("facts/js-effects.rofl:742", our_unknown, bare).
+mention_snake(our_unknown).
 block("facts/js-effects.rofl:754", "facts/js-effects.rofl", 754, 52).
 block_next("facts/js-effects.rofl:754", eof).
 block_banner("facts/js-effects.rofl:754").
@@ -23702,415 +23630,415 @@ clause_nneg("rules/layering.rofl:107", 2).
 clause_nbi("rules/layering.rofl:107", 0).
 body_sig("rules/layering.rofl:107", "serves[main](V0,V1), not serves_other[main](V0,V1), not serves_engine[main](V0)").
 shape_sig("rules/layering.rofl:107", "R0[main](V0,V1), not R1[main](V0,V1), not R2[main](V0)").
-clause("rules/nullary.rofl:29", "rules/nullary.rofl", 29, head_args, main, 2).
-head_pat("rules/nullary.rofl:29", "R,Args").
-premise("rules/nullary.rofl:29", 0, conclusion_lit, main, pos, "R,1,$lit(_,_,Args,_)").
-clause_npos("rules/nullary.rofl:29", 1).
-clause_nneg("rules/nullary.rofl:29", 0).
-clause_nbi("rules/nullary.rofl:29", 0).
-body_sig("rules/nullary.rofl:29", "conclusion_lit[main](V0,1,$lit(_,_,V1,_))").
-shape_sig("rules/nullary.rofl:29", "R0[main](V0,1,$lit(_,_,V1,_))").
-clause("rules/nullary.rofl:30", "rules/nullary.rofl", 30, body_args, main, 3).
-head_pat("rules/nullary.rofl:30", "R,K,Args").
-premise("rules/nullary.rofl:30", 0, premise_lit, main, pos, "R,K,$lit(_,_,Args,_)").
-clause_npos("rules/nullary.rofl:30", 1).
-clause_nneg("rules/nullary.rofl:30", 0).
-clause_nbi("rules/nullary.rofl:30", 0).
-body_sig("rules/nullary.rofl:30", "premise_lit[main](V0,V1,$lit(_,_,V2,_))").
-shape_sig("rules/nullary.rofl:30", "R0[main](V0,V1,$lit(_,_,V2,_))").
-clause("rules/nullary.rofl:32", "rules/nullary.rofl", 32, head_cell, main, 2).
-head_pat("rules/nullary.rofl:32", "R,L").
-premise("rules/nullary.rofl:32", 0, head_args, main, pos, "R,L").
+clause("rules/nullary.rofl:17", "rules/nullary.rofl", 17, head_args, main, 2).
+head_pat("rules/nullary.rofl:17", "R,Args").
+premise("rules/nullary.rofl:17", 0, conclusion_lit, main, pos, "R,1,$lit(_,_,Args,_)").
+clause_npos("rules/nullary.rofl:17", 1).
+clause_nneg("rules/nullary.rofl:17", 0).
+clause_nbi("rules/nullary.rofl:17", 0).
+body_sig("rules/nullary.rofl:17", "conclusion_lit[main](V0,1,$lit(_,_,V1,_))").
+shape_sig("rules/nullary.rofl:17", "R0[main](V0,1,$lit(_,_,V1,_))").
+clause("rules/nullary.rofl:18", "rules/nullary.rofl", 18, body_args, main, 3).
+head_pat("rules/nullary.rofl:18", "R,K,Args").
+premise("rules/nullary.rofl:18", 0, premise_lit, main, pos, "R,K,$lit(_,_,Args,_)").
+clause_npos("rules/nullary.rofl:18", 1).
+clause_nneg("rules/nullary.rofl:18", 0).
+clause_nbi("rules/nullary.rofl:18", 0).
+body_sig("rules/nullary.rofl:18", "premise_lit[main](V0,V1,$lit(_,_,V2,_))").
+shape_sig("rules/nullary.rofl:18", "R0[main](V0,V1,$lit(_,_,V2,_))").
+clause("rules/nullary.rofl:20", "rules/nullary.rofl", 20, head_cell, main, 2).
+head_pat("rules/nullary.rofl:20", "R,L").
+premise("rules/nullary.rofl:20", 0, head_args, main, pos, "R,L").
+clause_npos("rules/nullary.rofl:20", 1).
+clause_nneg("rules/nullary.rofl:20", 0).
+clause_nbi("rules/nullary.rofl:20", 0).
+body_sig("rules/nullary.rofl:20", "head_args[main](V0,V1)").
+shape_sig("rules/nullary.rofl:20", "R0[main](V0,V1)").
+clause("rules/nullary.rofl:21", "rules/nullary.rofl", 21, head_cell, main, 2).
+head_pat("rules/nullary.rofl:21", "R,T").
+premise("rules/nullary.rofl:21", 0, head_cell, main, pos, "R,$cons(_,T)").
+clause_npos("rules/nullary.rofl:21", 1).
+clause_nneg("rules/nullary.rofl:21", 0).
+clause_nbi("rules/nullary.rofl:21", 0).
+body_sig("rules/nullary.rofl:21", "head_cell[main](V0,$cons(_,V1))").
+shape_sig("rules/nullary.rofl:21", "R0[main](V0,$cons(_,V1))").
+clause("rules/nullary.rofl:22", "rules/nullary.rofl", 22, head_var, main, 2).
+head_pat("rules/nullary.rofl:22", "R,V").
+premise("rules/nullary.rofl:22", 0, head_cell, main, pos, "R,$cons($var(V),_)").
+clause_npos("rules/nullary.rofl:22", 1).
+clause_nneg("rules/nullary.rofl:22", 0).
+clause_nbi("rules/nullary.rofl:22", 0).
+body_sig("rules/nullary.rofl:22", "head_cell[main](V0,$cons($var(V1),_))").
+shape_sig("rules/nullary.rofl:22", "R0[main](V0,$cons($var(V1),_))").
+clause("rules/nullary.rofl:24", "rules/nullary.rofl", 24, body_cell, main, 3).
+head_pat("rules/nullary.rofl:24", "R,K,L").
+premise("rules/nullary.rofl:24", 0, body_args, main, pos, "R,K,L").
+clause_npos("rules/nullary.rofl:24", 1).
+clause_nneg("rules/nullary.rofl:24", 0).
+clause_nbi("rules/nullary.rofl:24", 0).
+body_sig("rules/nullary.rofl:24", "body_args[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:24", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:25", "rules/nullary.rofl", 25, body_cell, main, 3).
+head_pat("rules/nullary.rofl:25", "R,K,T").
+premise("rules/nullary.rofl:25", 0, body_cell, main, pos, "R,K,$cons(_,T)").
+clause_npos("rules/nullary.rofl:25", 1).
+clause_nneg("rules/nullary.rofl:25", 0).
+clause_nbi("rules/nullary.rofl:25", 0).
+body_sig("rules/nullary.rofl:25", "body_cell[main](V0,V1,$cons(_,V2))").
+shape_sig("rules/nullary.rofl:25", "R0[main](V0,V1,$cons(_,V2))").
+clause("rules/nullary.rofl:26", "rules/nullary.rofl", 26, body_var, main, 3).
+head_pat("rules/nullary.rofl:26", "R,K,V").
+premise("rules/nullary.rofl:26", 0, body_cell, main, pos, "R,K,$cons($var(V),_)").
+clause_npos("rules/nullary.rofl:26", 1).
+clause_nneg("rules/nullary.rofl:26", 0).
+clause_nbi("rules/nullary.rofl:26", 0).
+body_sig("rules/nullary.rofl:26", "body_cell[main](V0,V1,$cons($var(V2),_))").
+shape_sig("rules/nullary.rofl:26", "R0[main](V0,V1,$cons($var(V2),_))").
+clause("rules/nullary.rofl:31", "rules/nullary.rofl", 31, persp_var, main, 3).
+head_pat("rules/nullary.rofl:31", "R,K,V").
+premise("rules/nullary.rofl:31", 0, premise_lit, main, pos, "R,K,$lit(_,$var(V),_,_)").
+clause_npos("rules/nullary.rofl:31", 1).
+clause_nneg("rules/nullary.rofl:31", 0).
+clause_nbi("rules/nullary.rofl:31", 0).
+body_sig("rules/nullary.rofl:31", "premise_lit[main](V0,V1,$lit(_,$var(V2),_,_))").
+shape_sig("rules/nullary.rofl:31", "R0[main](V0,V1,$lit(_,$var(V2),_,_))").
+clause("rules/nullary.rofl:32", "rules/nullary.rofl", 32, body_var, main, 3).
+head_pat("rules/nullary.rofl:32", "R,K,V").
+premise("rules/nullary.rofl:32", 0, persp_var, main, pos, "R,K,V").
 clause_npos("rules/nullary.rofl:32", 1).
 clause_nneg("rules/nullary.rofl:32", 0).
 clause_nbi("rules/nullary.rofl:32", 0).
-body_sig("rules/nullary.rofl:32", "head_args[main](V0,V1)").
-shape_sig("rules/nullary.rofl:32", "R0[main](V0,V1)").
-clause("rules/nullary.rofl:33", "rules/nullary.rofl", 33, head_cell, main, 2).
-head_pat("rules/nullary.rofl:33", "R,T").
-premise("rules/nullary.rofl:33", 0, head_cell, main, pos, "R,$cons(_,T)").
+body_sig("rules/nullary.rofl:32", "persp_var[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:32", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:33", "rules/nullary.rofl", 33, head_var, main, 2).
+head_pat("rules/nullary.rofl:33", "R,V").
+premise("rules/nullary.rofl:33", 0, conclusion_lit, main, pos, "R,1,$lit(_,$var(V),_,_)").
 clause_npos("rules/nullary.rofl:33", 1).
 clause_nneg("rules/nullary.rofl:33", 0).
 clause_nbi("rules/nullary.rofl:33", 0).
-body_sig("rules/nullary.rofl:33", "head_cell[main](V0,$cons(_,V1))").
-shape_sig("rules/nullary.rofl:33", "R0[main](V0,$cons(_,V1))").
-clause("rules/nullary.rofl:34", "rules/nullary.rofl", 34, head_var, main, 2).
-head_pat("rules/nullary.rofl:34", "R,V").
-premise("rules/nullary.rofl:34", 0, head_cell, main, pos, "R,$cons($var(V),_)").
-clause_npos("rules/nullary.rofl:34", 1).
-clause_nneg("rules/nullary.rofl:34", 0).
-clause_nbi("rules/nullary.rofl:34", 0).
-body_sig("rules/nullary.rofl:34", "head_cell[main](V0,$cons($var(V1),_))").
-shape_sig("rules/nullary.rofl:34", "R0[main](V0,$cons($var(V1),_))").
-clause("rules/nullary.rofl:36", "rules/nullary.rofl", 36, body_cell, main, 3).
-head_pat("rules/nullary.rofl:36", "R,K,L").
-premise("rules/nullary.rofl:36", 0, body_args, main, pos, "R,K,L").
-clause_npos("rules/nullary.rofl:36", 1).
-clause_nneg("rules/nullary.rofl:36", 0).
-clause_nbi("rules/nullary.rofl:36", 0).
-body_sig("rules/nullary.rofl:36", "body_args[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:36", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:37", "rules/nullary.rofl", 37, body_cell, main, 3).
-head_pat("rules/nullary.rofl:37", "R,K,T").
-premise("rules/nullary.rofl:37", 0, body_cell, main, pos, "R,K,$cons(_,T)").
-clause_npos("rules/nullary.rofl:37", 1).
-clause_nneg("rules/nullary.rofl:37", 0).
-clause_nbi("rules/nullary.rofl:37", 0).
-body_sig("rules/nullary.rofl:37", "body_cell[main](V0,V1,$cons(_,V2))").
-shape_sig("rules/nullary.rofl:37", "R0[main](V0,V1,$cons(_,V2))").
-clause("rules/nullary.rofl:38", "rules/nullary.rofl", 38, body_var, main, 3).
-head_pat("rules/nullary.rofl:38", "R,K,V").
-premise("rules/nullary.rofl:38", 0, body_cell, main, pos, "R,K,$cons($var(V),_)").
-clause_npos("rules/nullary.rofl:38", 1).
-clause_nneg("rules/nullary.rofl:38", 0).
-clause_nbi("rules/nullary.rofl:38", 0).
-body_sig("rules/nullary.rofl:38", "body_cell[main](V0,V1,$cons($var(V2),_))").
-shape_sig("rules/nullary.rofl:38", "R0[main](V0,V1,$cons($var(V2),_))").
-clause("rules/nullary.rofl:49", "rules/nullary.rofl", 49, persp_var, main, 3).
-head_pat("rules/nullary.rofl:49", "R,K,V").
-premise("rules/nullary.rofl:49", 0, premise_lit, main, pos, "R,K,$lit(_,$var(V),_,_)").
-clause_npos("rules/nullary.rofl:49", 1).
-clause_nneg("rules/nullary.rofl:49", 0).
-clause_nbi("rules/nullary.rofl:49", 0).
-body_sig("rules/nullary.rofl:49", "premise_lit[main](V0,V1,$lit(_,$var(V2),_,_))").
-shape_sig("rules/nullary.rofl:49", "R0[main](V0,V1,$lit(_,$var(V2),_,_))").
-clause("rules/nullary.rofl:50", "rules/nullary.rofl", 50, body_var, main, 3).
-head_pat("rules/nullary.rofl:50", "R,K,V").
-premise("rules/nullary.rofl:50", 0, persp_var, main, pos, "R,K,V").
-clause_npos("rules/nullary.rofl:50", 1).
-clause_nneg("rules/nullary.rofl:50", 0).
-clause_nbi("rules/nullary.rofl:50", 0).
-body_sig("rules/nullary.rofl:50", "persp_var[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:50", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:51", "rules/nullary.rofl", 51, head_var, main, 2).
-head_pat("rules/nullary.rofl:51", "R,V").
-premise("rules/nullary.rofl:51", 0, conclusion_lit, main, pos, "R,1,$lit(_,$var(V),_,_)").
-clause_npos("rules/nullary.rofl:51", 1).
-clause_nneg("rules/nullary.rofl:51", 0).
-clause_nbi("rules/nullary.rofl:51", 0).
-body_sig("rules/nullary.rofl:51", "conclusion_lit[main](V0,1,$lit(_,$var(V1),_,_))").
-shape_sig("rules/nullary.rofl:51", "R0[main](V0,1,$lit(_,$var(V1),_,_))").
-clause("rules/nullary.rofl:66", "rules/nullary.rofl", 66, neg_args, main, 3).
-head_pat("rules/nullary.rofl:66", "R,K,Args").
-premise("rules/nullary.rofl:66", 0, premise_lit, main, pos, "R,K,$not($lit(_,_,Args,_))").
-clause_npos("rules/nullary.rofl:66", 1).
-clause_nneg("rules/nullary.rofl:66", 0).
-clause_nbi("rules/nullary.rofl:66", 0).
-body_sig("rules/nullary.rofl:66", "premise_lit[main](V0,V1,$not($lit(_,_,V2,_)))").
-shape_sig("rules/nullary.rofl:66", "R0[main](V0,V1,$not($lit(_,_,V2,_)))").
-clause("rules/nullary.rofl:67", "rules/nullary.rofl", 67, neg_cell, main, 3).
-head_pat("rules/nullary.rofl:67", "R,K,L").
-premise("rules/nullary.rofl:67", 0, neg_args, main, pos, "R,K,L").
-clause_npos("rules/nullary.rofl:67", 1).
-clause_nneg("rules/nullary.rofl:67", 0).
-clause_nbi("rules/nullary.rofl:67", 0).
-body_sig("rules/nullary.rofl:67", "neg_args[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:67", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:68", "rules/nullary.rofl", 68, neg_cell, main, 3).
-head_pat("rules/nullary.rofl:68", "R,K,T").
-premise("rules/nullary.rofl:68", 0, neg_cell, main, pos, "R,K,$cons(_,T)").
-clause_npos("rules/nullary.rofl:68", 1).
-clause_nneg("rules/nullary.rofl:68", 0).
-clause_nbi("rules/nullary.rofl:68", 0).
-body_sig("rules/nullary.rofl:68", "neg_cell[main](V0,V1,$cons(_,V2))").
-shape_sig("rules/nullary.rofl:68", "R0[main](V0,V1,$cons(_,V2))").
-clause("rules/nullary.rofl:69", "rules/nullary.rofl", 69, neg_var, main, 3).
-head_pat("rules/nullary.rofl:69", "R,K,V").
-premise("rules/nullary.rofl:69", 0, neg_cell, main, pos, "R,K,$cons($var(V),_)").
-clause_npos("rules/nullary.rofl:69", 1).
-clause_nneg("rules/nullary.rofl:69", 0).
-clause_nbi("rules/nullary.rofl:69", 0).
-body_sig("rules/nullary.rofl:69", "neg_cell[main](V0,V1,$cons($var(V2),_))").
-shape_sig("rules/nullary.rofl:69", "R0[main](V0,V1,$cons($var(V2),_))").
-clause("rules/nullary.rofl:70", "rules/nullary.rofl", 70, neg_var, main, 3).
-head_pat("rules/nullary.rofl:70", "R,K,V").
-premise("rules/nullary.rofl:70", 0, premise_lit, main, pos, "R,K,$not($lit(_,$var(V),_,_))").
-clause_npos("rules/nullary.rofl:70", 1).
-clause_nneg("rules/nullary.rofl:70", 0).
-clause_nbi("rules/nullary.rofl:70", 0).
-body_sig("rules/nullary.rofl:70", "premise_lit[main](V0,V1,$not($lit(_,$var(V2),_,_)))").
-shape_sig("rules/nullary.rofl:70", "R0[main](V0,V1,$not($lit(_,$var(V2),_,_)))").
-clause("rules/nullary.rofl:107", "rules/nullary.rofl", 107, bi_args, main, 3).
-head_pat("rules/nullary.rofl:107", "R,K,Args").
-premise("rules/nullary.rofl:107", 0, premise_lit, main, pos, "R,K,$builtin(_,Args)").
-clause_npos("rules/nullary.rofl:107", 1).
-clause_nneg("rules/nullary.rofl:107", 0).
-clause_nbi("rules/nullary.rofl:107", 0).
-body_sig("rules/nullary.rofl:107", "premise_lit[main](V0,V1,$builtin(_,V2))").
-shape_sig("rules/nullary.rofl:107", "R0[main](V0,V1,$builtin(_,V2))").
-clause("rules/nullary.rofl:108", "rules/nullary.rofl", 108, bi_cell, main, 3).
-head_pat("rules/nullary.rofl:108", "R,K,L").
-premise("rules/nullary.rofl:108", 0, bi_args, main, pos, "R,K,L").
-clause_npos("rules/nullary.rofl:108", 1).
-clause_nneg("rules/nullary.rofl:108", 0).
-clause_nbi("rules/nullary.rofl:108", 0).
-body_sig("rules/nullary.rofl:108", "bi_args[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:108", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:109", "rules/nullary.rofl", 109, bi_cell, main, 3).
-head_pat("rules/nullary.rofl:109", "R,K,T").
-premise("rules/nullary.rofl:109", 0, bi_cell, main, pos, "R,K,$cons(_,T)").
+body_sig("rules/nullary.rofl:33", "conclusion_lit[main](V0,1,$lit(_,$var(V1),_,_))").
+shape_sig("rules/nullary.rofl:33", "R0[main](V0,1,$lit(_,$var(V1),_,_))").
+clause("rules/nullary.rofl:39", "rules/nullary.rofl", 39, neg_args, main, 3).
+head_pat("rules/nullary.rofl:39", "R,K,Args").
+premise("rules/nullary.rofl:39", 0, premise_lit, main, pos, "R,K,$not($lit(_,_,Args,_))").
+clause_npos("rules/nullary.rofl:39", 1).
+clause_nneg("rules/nullary.rofl:39", 0).
+clause_nbi("rules/nullary.rofl:39", 0).
+body_sig("rules/nullary.rofl:39", "premise_lit[main](V0,V1,$not($lit(_,_,V2,_)))").
+shape_sig("rules/nullary.rofl:39", "R0[main](V0,V1,$not($lit(_,_,V2,_)))").
+clause("rules/nullary.rofl:40", "rules/nullary.rofl", 40, neg_cell, main, 3).
+head_pat("rules/nullary.rofl:40", "R,K,L").
+premise("rules/nullary.rofl:40", 0, neg_args, main, pos, "R,K,L").
+clause_npos("rules/nullary.rofl:40", 1).
+clause_nneg("rules/nullary.rofl:40", 0).
+clause_nbi("rules/nullary.rofl:40", 0).
+body_sig("rules/nullary.rofl:40", "neg_args[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:40", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:41", "rules/nullary.rofl", 41, neg_cell, main, 3).
+head_pat("rules/nullary.rofl:41", "R,K,T").
+premise("rules/nullary.rofl:41", 0, neg_cell, main, pos, "R,K,$cons(_,T)").
+clause_npos("rules/nullary.rofl:41", 1).
+clause_nneg("rules/nullary.rofl:41", 0).
+clause_nbi("rules/nullary.rofl:41", 0).
+body_sig("rules/nullary.rofl:41", "neg_cell[main](V0,V1,$cons(_,V2))").
+shape_sig("rules/nullary.rofl:41", "R0[main](V0,V1,$cons(_,V2))").
+clause("rules/nullary.rofl:42", "rules/nullary.rofl", 42, neg_var, main, 3).
+head_pat("rules/nullary.rofl:42", "R,K,V").
+premise("rules/nullary.rofl:42", 0, neg_cell, main, pos, "R,K,$cons($var(V),_)").
+clause_npos("rules/nullary.rofl:42", 1).
+clause_nneg("rules/nullary.rofl:42", 0).
+clause_nbi("rules/nullary.rofl:42", 0).
+body_sig("rules/nullary.rofl:42", "neg_cell[main](V0,V1,$cons($var(V2),_))").
+shape_sig("rules/nullary.rofl:42", "R0[main](V0,V1,$cons($var(V2),_))").
+clause("rules/nullary.rofl:43", "rules/nullary.rofl", 43, neg_var, main, 3).
+head_pat("rules/nullary.rofl:43", "R,K,V").
+premise("rules/nullary.rofl:43", 0, premise_lit, main, pos, "R,K,$not($lit(_,$var(V),_,_))").
+clause_npos("rules/nullary.rofl:43", 1).
+clause_nneg("rules/nullary.rofl:43", 0).
+clause_nbi("rules/nullary.rofl:43", 0).
+body_sig("rules/nullary.rofl:43", "premise_lit[main](V0,V1,$not($lit(_,$var(V2),_,_)))").
+shape_sig("rules/nullary.rofl:43", "R0[main](V0,V1,$not($lit(_,$var(V2),_,_)))").
+clause("rules/nullary.rofl:56", "rules/nullary.rofl", 56, bi_args, main, 3).
+head_pat("rules/nullary.rofl:56", "R,K,Args").
+premise("rules/nullary.rofl:56", 0, premise_lit, main, pos, "R,K,$builtin(_,Args)").
+clause_npos("rules/nullary.rofl:56", 1).
+clause_nneg("rules/nullary.rofl:56", 0).
+clause_nbi("rules/nullary.rofl:56", 0).
+body_sig("rules/nullary.rofl:56", "premise_lit[main](V0,V1,$builtin(_,V2))").
+shape_sig("rules/nullary.rofl:56", "R0[main](V0,V1,$builtin(_,V2))").
+clause("rules/nullary.rofl:57", "rules/nullary.rofl", 57, bi_cell, main, 3).
+head_pat("rules/nullary.rofl:57", "R,K,L").
+premise("rules/nullary.rofl:57", 0, bi_args, main, pos, "R,K,L").
+clause_npos("rules/nullary.rofl:57", 1).
+clause_nneg("rules/nullary.rofl:57", 0).
+clause_nbi("rules/nullary.rofl:57", 0).
+body_sig("rules/nullary.rofl:57", "bi_args[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:57", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:58", "rules/nullary.rofl", 58, bi_cell, main, 3).
+head_pat("rules/nullary.rofl:58", "R,K,T").
+premise("rules/nullary.rofl:58", 0, bi_cell, main, pos, "R,K,$cons(_,T)").
+clause_npos("rules/nullary.rofl:58", 1).
+clause_nneg("rules/nullary.rofl:58", 0).
+clause_nbi("rules/nullary.rofl:58", 0).
+body_sig("rules/nullary.rofl:58", "bi_cell[main](V0,V1,$cons(_,V2))").
+shape_sig("rules/nullary.rofl:58", "R0[main](V0,V1,$cons(_,V2))").
+clause("rules/nullary.rofl:59", "rules/nullary.rofl", 59, bi_var, main, 3).
+head_pat("rules/nullary.rofl:59", "R,K,V").
+premise("rules/nullary.rofl:59", 0, bi_cell, main, pos, "R,K,$cons($var(V),_)").
+clause_npos("rules/nullary.rofl:59", 1).
+clause_nneg("rules/nullary.rofl:59", 0).
+clause_nbi("rules/nullary.rofl:59", 0).
+body_sig("rules/nullary.rofl:59", "bi_cell[main](V0,V1,$cons($var(V2),_))").
+shape_sig("rules/nullary.rofl:59", "R0[main](V0,V1,$cons($var(V2),_))").
+clause("rules/nullary.rofl:61", "rules/nullary.rofl", 61, mentions, main, 3).
+head_pat("rules/nullary.rofl:61", "R,K,V").
+premise("rules/nullary.rofl:61", 0, body_var, main, pos, "R,K,V").
+clause_npos("rules/nullary.rofl:61", 1).
+clause_nneg("rules/nullary.rofl:61", 0).
+clause_nbi("rules/nullary.rofl:61", 0).
+body_sig("rules/nullary.rofl:61", "body_var[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:61", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:62", "rules/nullary.rofl", 62, mentions, main, 3).
+head_pat("rules/nullary.rofl:62", "R,K,V").
+premise("rules/nullary.rofl:62", 0, neg_var, main, pos, "R,K,V").
+clause_npos("rules/nullary.rofl:62", 1).
+clause_nneg("rules/nullary.rofl:62", 0).
+clause_nbi("rules/nullary.rofl:62", 0).
+body_sig("rules/nullary.rofl:62", "neg_var[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:62", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:64", "rules/nullary.rofl", 64, joins, main, 3).
+head_pat("rules/nullary.rofl:64", "R,K,V").
+premise("rules/nullary.rofl:64", 0, mentions, main, pos, "R,K,V").
+clause_npos("rules/nullary.rofl:64", 1).
+clause_nneg("rules/nullary.rofl:64", 0).
+clause_nbi("rules/nullary.rofl:64", 0).
+body_sig("rules/nullary.rofl:64", "mentions[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:64", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:65", "rules/nullary.rofl", 65, joins, main, 3).
+head_pat("rules/nullary.rofl:65", "R,K,V").
+premise("rules/nullary.rofl:65", 0, bi_var, main, pos, "R,K,V").
+clause_npos("rules/nullary.rofl:65", 1).
+clause_nneg("rules/nullary.rofl:65", 0).
+clause_nbi("rules/nullary.rofl:65", 0).
+body_sig("rules/nullary.rofl:65", "bi_var[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:65", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:79", "rules/nullary.rofl", 79, head_var, main, 2).
+head_pat("rules/nullary.rofl:79", "R,V").
+premise("rules/nullary.rofl:79", 0, head_cell, main, pos, "R,$cons($fact($var(V),_,_),_)").
+clause_npos("rules/nullary.rofl:79", 1).
+clause_nneg("rules/nullary.rofl:79", 0).
+clause_nbi("rules/nullary.rofl:79", 0).
+body_sig("rules/nullary.rofl:79", "head_cell[main](V0,$cons($fact($var(V1),_,_),_))").
+shape_sig("rules/nullary.rofl:79", "R0[main](V0,$cons($fact($var(V1),_,_),_))").
+clause("rules/nullary.rofl:80", "rules/nullary.rofl", 80, head_var, main, 2).
+head_pat("rules/nullary.rofl:80", "R,V").
+premise("rules/nullary.rofl:80", 0, head_cell, main, pos, "R,$cons($fact(_,$var(V),_),_)").
+clause_npos("rules/nullary.rofl:80", 1).
+clause_nneg("rules/nullary.rofl:80", 0).
+clause_nbi("rules/nullary.rofl:80", 0).
+body_sig("rules/nullary.rofl:80", "head_cell[main](V0,$cons($fact(_,$var(V1),_),_))").
+shape_sig("rules/nullary.rofl:80", "R0[main](V0,$cons($fact(_,$var(V1),_),_))").
+clause("rules/nullary.rofl:81", "rules/nullary.rofl", 81, head_var, main, 2).
+head_pat("rules/nullary.rofl:81", "R,V").
+premise("rules/nullary.rofl:81", 0, head_cell, main, pos, "R,$cons($fact(_,_,$var(V)),_)").
+clause_npos("rules/nullary.rofl:81", 1).
+clause_nneg("rules/nullary.rofl:81", 0).
+clause_nbi("rules/nullary.rofl:81", 0).
+body_sig("rules/nullary.rofl:81", "head_cell[main](V0,$cons($fact(_,_,$var(V1)),_))").
+shape_sig("rules/nullary.rofl:81", "R0[main](V0,$cons($fact(_,_,$var(V1)),_))").
+clause("rules/nullary.rofl:83", "rules/nullary.rofl", 83, const_head, main, 1).
+head_pat("rules/nullary.rofl:83", "R").
+premise("rules/nullary.rofl:83", 0, head_args, main, pos, "R,$cons(_,_)").
+premise("rules/nullary.rofl:83", 1, head_var, main, neg, "R,_").
+clause_npos("rules/nullary.rofl:83", 1).
+clause_nneg("rules/nullary.rofl:83", 1).
+clause_nbi("rules/nullary.rofl:83", 0).
+body_sig("rules/nullary.rofl:83", "head_args[main](V0,$cons(_,_)), not head_var[main](V0,_)").
+shape_sig("rules/nullary.rofl:83", "R0[main](V0,$cons(_,_)), not R1[main](V0,_)").
+clause("rules/nullary.rofl:84", "rules/nullary.rofl", 84, varying_head, main, 1).
+head_pat("rules/nullary.rofl:84", "Rel").
+premise("rules/nullary.rofl:84", 0, concludes, main, pos, "R,Rel").
+premise("rules/nullary.rofl:84", 1, head_var, main, pos, "R,_").
+clause_npos("rules/nullary.rofl:84", 2).
+clause_nneg("rules/nullary.rofl:84", 0).
+clause_nbi("rules/nullary.rofl:84", 0).
+body_sig("rules/nullary.rofl:84", "concludes[main](V0,V1), head_var[main](V0,_)").
+shape_sig("rules/nullary.rofl:84", "R0[main](V0,V1), R1[main](V0,_)").
+clause("rules/nullary.rofl:90", "rules/nullary.rofl", 90, multi_shape, main, 1).
+head_pat("rules/nullary.rofl:90", "Rel").
+premise("rules/nullary.rofl:90", 0, concludes, main, pos, "P,Rel").
+premise("rules/nullary.rofl:90", 1, head_args, main, pos, "P,A").
+premise("rules/nullary.rofl:90", 2, concludes, main, pos, "Q,Rel").
+premise("rules/nullary.rofl:90", 3, head_args, main, pos, "Q,B").
+clause_npos("rules/nullary.rofl:90", 4).
+clause_nneg("rules/nullary.rofl:90", 0).
+clause_nbi("rules/nullary.rofl:90", 1).
+body_sig("rules/nullary.rofl:90", "concludes[main](V0,V1), head_args[main](V0,V2), concludes[main](V3,V1), head_args[main](V3,V4), V2 != V4").
+shape_sig("rules/nullary.rofl:90", "R0[main](V0,V1), R1[main](V0,V2), R0[main](V3,V1), R1[main](V3,V4), V2 != V4").
+clause("rules/nullary.rofl:96", "rules/nullary.rofl", 96, read_as_var, main, 1).
+head_pat("rules/nullary.rofl:96", "Rel").
+premise("rules/nullary.rofl:96", 0, premise_lit, main, pos, "R,K,$lit(Rel,_,_,_)").
+premise("rules/nullary.rofl:96", 1, body_var, main, pos, "R,K,_").
+clause_npos("rules/nullary.rofl:96", 2).
+clause_nneg("rules/nullary.rofl:96", 0).
+clause_nbi("rules/nullary.rofl:96", 0).
+body_sig("rules/nullary.rofl:96", "premise_lit[main](V0,V1,$lit(V2,_,_,_)), body_var[main](V0,V1,_)").
+shape_sig("rules/nullary.rofl:96", "R0[main](V0,V1,$lit(V2,_,_,_)), R1[main](V0,V1,_)").
+clause("rules/nullary.rofl:97", "rules/nullary.rofl", 97, read_as_var, main, 1).
+head_pat("rules/nullary.rofl:97", "Rel").
+premise("rules/nullary.rofl:97", 0, premise_lit, main, pos, "R,K,$not($lit(Rel,_,_,_))").
+premise("rules/nullary.rofl:97", 1, neg_var, main, pos, "R,K,_").
+clause_npos("rules/nullary.rofl:97", 2).
+clause_nneg("rules/nullary.rofl:97", 0).
+clause_nbi("rules/nullary.rofl:97", 0).
+body_sig("rules/nullary.rofl:97", "premise_lit[main](V0,V1,$not($lit(V2,_,_,_))), neg_var[main](V0,V1,_)").
+shape_sig("rules/nullary.rofl:97", "R0[main](V0,V1,$not($lit(V2,_,_,_))), R1[main](V0,V1,_)").
+clause("rules/nullary.rofl:99", "rules/nullary.rofl", 99, dressed_constant, audit, 1).
+head_pat("rules/nullary.rofl:99", "Rel").
+premise("rules/nullary.rofl:99", 0, const_head, main, pos, "R").
+premise("rules/nullary.rofl:99", 1, concludes, main, pos, "R,Rel").
+premise("rules/nullary.rofl:99", 2, varying_head, main, neg, "Rel").
+premise("rules/nullary.rofl:99", 3, multi_shape, main, neg, "Rel").
+premise("rules/nullary.rofl:99", 4, read_as_var, main, neg, "Rel").
+clause_npos("rules/nullary.rofl:99", 2).
+clause_nneg("rules/nullary.rofl:99", 3).
+clause_nbi("rules/nullary.rofl:99", 0).
+body_sig("rules/nullary.rofl:99", "const_head[main](V0), concludes[main](V0,V1), not varying_head[main](V1), not multi_shape[main](V1), not read_as_var[main](V1)").
+shape_sig("rules/nullary.rofl:99", "R0[main](V0), R1[main](V0,V1), not R2[main](V1), not R3[main](V1), not R4[main](V1)").
+clause("rules/nullary.rofl:109", "rules/nullary.rofl", 109, occurs_in, main, 3).
+head_pat("rules/nullary.rofl:109", "R,V,K").
+premise("rules/nullary.rofl:109", 0, body_var, main, pos, "R,K,V").
 clause_npos("rules/nullary.rofl:109", 1).
 clause_nneg("rules/nullary.rofl:109", 0).
 clause_nbi("rules/nullary.rofl:109", 0).
-body_sig("rules/nullary.rofl:109", "bi_cell[main](V0,V1,$cons(_,V2))").
-shape_sig("rules/nullary.rofl:109", "R0[main](V0,V1,$cons(_,V2))").
-clause("rules/nullary.rofl:110", "rules/nullary.rofl", 110, bi_var, main, 3).
-head_pat("rules/nullary.rofl:110", "R,K,V").
-premise("rules/nullary.rofl:110", 0, bi_cell, main, pos, "R,K,$cons($var(V),_)").
-clause_npos("rules/nullary.rofl:110", 1).
+body_sig("rules/nullary.rofl:109", "body_var[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:109", "R0[main](V0,V1,V2)").
+clause("rules/nullary.rofl:110", "rules/nullary.rofl", 110, elsewhere, main, 3).
+head_pat("rules/nullary.rofl:110", "R,V,K").
+premise("rules/nullary.rofl:110", 0, occurs_in, main, pos, "R,V,J").
+premise("rules/nullary.rofl:110", 1, occurs_in, main, pos, "R,V,K").
+clause_npos("rules/nullary.rofl:110", 2).
 clause_nneg("rules/nullary.rofl:110", 0).
-clause_nbi("rules/nullary.rofl:110", 0).
-body_sig("rules/nullary.rofl:110", "bi_cell[main](V0,V1,$cons($var(V2),_))").
-shape_sig("rules/nullary.rofl:110", "R0[main](V0,V1,$cons($var(V2),_))").
-clause("rules/nullary.rofl:112", "rules/nullary.rofl", 112, mentions, main, 3).
-head_pat("rules/nullary.rofl:112", "R,K,V").
-premise("rules/nullary.rofl:112", 0, body_var, main, pos, "R,K,V").
-clause_npos("rules/nullary.rofl:112", 1).
-clause_nneg("rules/nullary.rofl:112", 0).
-clause_nbi("rules/nullary.rofl:112", 0).
-body_sig("rules/nullary.rofl:112", "body_var[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:112", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:113", "rules/nullary.rofl", 113, mentions, main, 3).
-head_pat("rules/nullary.rofl:113", "R,K,V").
-premise("rules/nullary.rofl:113", 0, neg_var, main, pos, "R,K,V").
-clause_npos("rules/nullary.rofl:113", 1).
+clause_nbi("rules/nullary.rofl:110", 1).
+body_sig("rules/nullary.rofl:110", "occurs_in[main](V0,V1,V2), occurs_in[main](V0,V1,V3), V2 != V3").
+shape_sig("rules/nullary.rofl:110", "R0[main](V0,V1,V2), R0[main](V0,V1,V3), V2 != V3").
+clause("rules/nullary.rofl:111", "rules/nullary.rofl", 111, sole_binder, main, 3).
+head_pat("rules/nullary.rofl:111", "R,V,K").
+premise("rules/nullary.rofl:111", 0, head_var, main, pos, "R,V").
+premise("rules/nullary.rofl:111", 1, occurs_in, main, pos, "R,V,K").
+premise("rules/nullary.rofl:111", 2, elsewhere, main, neg, "R,V,K").
+clause_npos("rules/nullary.rofl:111", 2).
+clause_nneg("rules/nullary.rofl:111", 1).
+clause_nbi("rules/nullary.rofl:111", 0).
+body_sig("rules/nullary.rofl:111", "head_var[main](V0,V1), occurs_in[main](V0,V1,V2), not elsewhere[main](V0,V1,V2)").
+shape_sig("rules/nullary.rofl:111", "R0[main](V0,V1), R1[main](V0,V1,V2), not R2[main](V0,V1,V2)").
+clause("rules/nullary.rofl:113", "rules/nullary.rofl", 113, shares, main, 3).
+head_pat("rules/nullary.rofl:113", "R,K,J").
+premise("rules/nullary.rofl:113", 0, joins, main, pos, "R,K,V").
+premise("rules/nullary.rofl:113", 1, joins, main, pos, "R,J,V").
+clause_npos("rules/nullary.rofl:113", 2).
 clause_nneg("rules/nullary.rofl:113", 0).
-clause_nbi("rules/nullary.rofl:113", 0).
-body_sig("rules/nullary.rofl:113", "neg_var[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:113", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:115", "rules/nullary.rofl", 115, joins, main, 3).
-head_pat("rules/nullary.rofl:115", "R,K,V").
-premise("rules/nullary.rofl:115", 0, mentions, main, pos, "R,K,V").
+clause_nbi("rules/nullary.rofl:113", 1).
+body_sig("rules/nullary.rofl:113", "joins[main](V0,V1,V2), joins[main](V0,V3,V2), V1 != V3").
+shape_sig("rules/nullary.rofl:113", "R0[main](V0,V1,V2), R0[main](V0,V3,V2), V1 != V3").
+clause("rules/nullary.rofl:114", "rules/nullary.rofl", 114, connected, main, 2).
+head_pat("rules/nullary.rofl:114", "R,K").
+premise("rules/nullary.rofl:114", 0, shares, main, pos, "R,K,_").
+clause_npos("rules/nullary.rofl:114", 1).
+clause_nneg("rules/nullary.rofl:114", 0).
+clause_nbi("rules/nullary.rofl:114", 0).
+body_sig("rules/nullary.rofl:114", "shares[main](V0,V1,_)").
+shape_sig("rules/nullary.rofl:114", "R0[main](V0,V1,_)").
+clause("rules/nullary.rofl:115", "rules/nullary.rofl", 115, disconnected, main, 2).
+head_pat("rules/nullary.rofl:115", "R,K").
+premise("rules/nullary.rofl:115", 0, body_var, main, pos, "R,K,_").
+premise("rules/nullary.rofl:115", 1, connected, main, neg, "R,K").
 clause_npos("rules/nullary.rofl:115", 1).
-clause_nneg("rules/nullary.rofl:115", 0).
+clause_nneg("rules/nullary.rofl:115", 1).
 clause_nbi("rules/nullary.rofl:115", 0).
-body_sig("rules/nullary.rofl:115", "mentions[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:115", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:116", "rules/nullary.rofl", 116, joins, main, 3).
-head_pat("rules/nullary.rofl:116", "R,K,V").
-premise("rules/nullary.rofl:116", 0, bi_var, main, pos, "R,K,V").
-clause_npos("rules/nullary.rofl:116", 1).
-clause_nneg("rules/nullary.rofl:116", 0).
-clause_nbi("rules/nullary.rofl:116", 0).
-body_sig("rules/nullary.rofl:116", "bi_var[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:116", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:150", "rules/nullary.rofl", 150, head_var, main, 2).
-head_pat("rules/nullary.rofl:150", "R,V").
-premise("rules/nullary.rofl:150", 0, head_cell, main, pos, "R,$cons($fact($var(V),_,_),_)").
-clause_npos("rules/nullary.rofl:150", 1).
-clause_nneg("rules/nullary.rofl:150", 0).
-clause_nbi("rules/nullary.rofl:150", 0).
-body_sig("rules/nullary.rofl:150", "head_cell[main](V0,$cons($fact($var(V1),_,_),_))").
-shape_sig("rules/nullary.rofl:150", "R0[main](V0,$cons($fact($var(V1),_,_),_))").
-clause("rules/nullary.rofl:151", "rules/nullary.rofl", 151, head_var, main, 2).
-head_pat("rules/nullary.rofl:151", "R,V").
-premise("rules/nullary.rofl:151", 0, head_cell, main, pos, "R,$cons($fact(_,$var(V),_),_)").
-clause_npos("rules/nullary.rofl:151", 1).
-clause_nneg("rules/nullary.rofl:151", 0).
-clause_nbi("rules/nullary.rofl:151", 0).
-body_sig("rules/nullary.rofl:151", "head_cell[main](V0,$cons($fact(_,$var(V1),_),_))").
-shape_sig("rules/nullary.rofl:151", "R0[main](V0,$cons($fact(_,$var(V1),_),_))").
-clause("rules/nullary.rofl:152", "rules/nullary.rofl", 152, head_var, main, 2).
-head_pat("rules/nullary.rofl:152", "R,V").
-premise("rules/nullary.rofl:152", 0, head_cell, main, pos, "R,$cons($fact(_,_,$var(V)),_)").
-clause_npos("rules/nullary.rofl:152", 1).
-clause_nneg("rules/nullary.rofl:152", 0).
-clause_nbi("rules/nullary.rofl:152", 0).
-body_sig("rules/nullary.rofl:152", "head_cell[main](V0,$cons($fact(_,_,$var(V1)),_))").
-shape_sig("rules/nullary.rofl:152", "R0[main](V0,$cons($fact(_,_,$var(V1)),_))").
-clause("rules/nullary.rofl:154", "rules/nullary.rofl", 154, const_head, main, 1).
-head_pat("rules/nullary.rofl:154", "R").
-premise("rules/nullary.rofl:154", 0, head_args, main, pos, "R,$cons(_,_)").
-premise("rules/nullary.rofl:154", 1, head_var, main, neg, "R,_").
-clause_npos("rules/nullary.rofl:154", 1).
-clause_nneg("rules/nullary.rofl:154", 1).
-clause_nbi("rules/nullary.rofl:154", 0).
-body_sig("rules/nullary.rofl:154", "head_args[main](V0,$cons(_,_)), not head_var[main](V0,_)").
-shape_sig("rules/nullary.rofl:154", "R0[main](V0,$cons(_,_)), not R1[main](V0,_)").
-clause("rules/nullary.rofl:155", "rules/nullary.rofl", 155, varying_head, main, 1).
-head_pat("rules/nullary.rofl:155", "Rel").
-premise("rules/nullary.rofl:155", 0, concludes, main, pos, "R,Rel").
-premise("rules/nullary.rofl:155", 1, head_var, main, pos, "R,_").
-clause_npos("rules/nullary.rofl:155", 2).
-clause_nneg("rules/nullary.rofl:155", 0).
-clause_nbi("rules/nullary.rofl:155", 0).
-body_sig("rules/nullary.rofl:155", "concludes[main](V0,V1), head_var[main](V0,_)").
-shape_sig("rules/nullary.rofl:155", "R0[main](V0,V1), R1[main](V0,_)").
-clause("rules/nullary.rofl:164", "rules/nullary.rofl", 164, multi_shape, main, 1).
-head_pat("rules/nullary.rofl:164", "Rel").
-premise("rules/nullary.rofl:164", 0, concludes, main, pos, "P,Rel").
-premise("rules/nullary.rofl:164", 1, head_args, main, pos, "P,A").
-premise("rules/nullary.rofl:164", 2, concludes, main, pos, "Q,Rel").
-premise("rules/nullary.rofl:164", 3, head_args, main, pos, "Q,B").
-clause_npos("rules/nullary.rofl:164", 4).
-clause_nneg("rules/nullary.rofl:164", 0).
-clause_nbi("rules/nullary.rofl:164", 1).
-body_sig("rules/nullary.rofl:164", "concludes[main](V0,V1), head_args[main](V0,V2), concludes[main](V3,V1), head_args[main](V3,V4), V2 != V4").
-shape_sig("rules/nullary.rofl:164", "R0[main](V0,V1), R1[main](V0,V2), R0[main](V3,V1), R1[main](V3,V4), V2 != V4").
-clause("rules/nullary.rofl:172", "rules/nullary.rofl", 172, read_as_var, main, 1).
-head_pat("rules/nullary.rofl:172", "Rel").
-premise("rules/nullary.rofl:172", 0, premise_lit, main, pos, "R,K,$lit(Rel,_,_,_)").
-premise("rules/nullary.rofl:172", 1, body_var, main, pos, "R,K,_").
-clause_npos("rules/nullary.rofl:172", 2).
-clause_nneg("rules/nullary.rofl:172", 0).
-clause_nbi("rules/nullary.rofl:172", 0).
-body_sig("rules/nullary.rofl:172", "premise_lit[main](V0,V1,$lit(V2,_,_,_)), body_var[main](V0,V1,_)").
-shape_sig("rules/nullary.rofl:172", "R0[main](V0,V1,$lit(V2,_,_,_)), R1[main](V0,V1,_)").
-clause("rules/nullary.rofl:173", "rules/nullary.rofl", 173, read_as_var, main, 1).
-head_pat("rules/nullary.rofl:173", "Rel").
-premise("rules/nullary.rofl:173", 0, premise_lit, main, pos, "R,K,$not($lit(Rel,_,_,_))").
-premise("rules/nullary.rofl:173", 1, neg_var, main, pos, "R,K,_").
-clause_npos("rules/nullary.rofl:173", 2).
-clause_nneg("rules/nullary.rofl:173", 0).
-clause_nbi("rules/nullary.rofl:173", 0).
-body_sig("rules/nullary.rofl:173", "premise_lit[main](V0,V1,$not($lit(V2,_,_,_))), neg_var[main](V0,V1,_)").
-shape_sig("rules/nullary.rofl:173", "R0[main](V0,V1,$not($lit(V2,_,_,_))), R1[main](V0,V1,_)").
-clause("rules/nullary.rofl:175", "rules/nullary.rofl", 175, dressed_constant, audit, 1).
-head_pat("rules/nullary.rofl:175", "Rel").
-premise("rules/nullary.rofl:175", 0, const_head, main, pos, "R").
-premise("rules/nullary.rofl:175", 1, concludes, main, pos, "R,Rel").
-premise("rules/nullary.rofl:175", 2, varying_head, main, neg, "Rel").
-premise("rules/nullary.rofl:175", 3, multi_shape, main, neg, "Rel").
-premise("rules/nullary.rofl:175", 4, read_as_var, main, neg, "Rel").
-clause_npos("rules/nullary.rofl:175", 2).
-clause_nneg("rules/nullary.rofl:175", 3).
-clause_nbi("rules/nullary.rofl:175", 0).
-body_sig("rules/nullary.rofl:175", "const_head[main](V0), concludes[main](V0,V1), not varying_head[main](V1), not multi_shape[main](V1), not read_as_var[main](V1)").
-shape_sig("rules/nullary.rofl:175", "R0[main](V0), R1[main](V0,V1), not R2[main](V1), not R3[main](V1), not R4[main](V1)").
-clause("rules/nullary.rofl:188", "rules/nullary.rofl", 188, occurs_in, main, 3).
-head_pat("rules/nullary.rofl:188", "R,V,K").
-premise("rules/nullary.rofl:188", 0, body_var, main, pos, "R,K,V").
-clause_npos("rules/nullary.rofl:188", 1).
-clause_nneg("rules/nullary.rofl:188", 0).
-clause_nbi("rules/nullary.rofl:188", 0).
-body_sig("rules/nullary.rofl:188", "body_var[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:188", "R0[main](V0,V1,V2)").
-clause("rules/nullary.rofl:189", "rules/nullary.rofl", 189, elsewhere, main, 3).
-head_pat("rules/nullary.rofl:189", "R,V,K").
-premise("rules/nullary.rofl:189", 0, occurs_in, main, pos, "R,V,J").
-premise("rules/nullary.rofl:189", 1, occurs_in, main, pos, "R,V,K").
-clause_npos("rules/nullary.rofl:189", 2).
-clause_nneg("rules/nullary.rofl:189", 0).
-clause_nbi("rules/nullary.rofl:189", 1).
-body_sig("rules/nullary.rofl:189", "occurs_in[main](V0,V1,V2), occurs_in[main](V0,V1,V3), V2 != V3").
-shape_sig("rules/nullary.rofl:189", "R0[main](V0,V1,V2), R0[main](V0,V1,V3), V2 != V3").
-clause("rules/nullary.rofl:190", "rules/nullary.rofl", 190, sole_binder, main, 3).
-head_pat("rules/nullary.rofl:190", "R,V,K").
-premise("rules/nullary.rofl:190", 0, head_var, main, pos, "R,V").
-premise("rules/nullary.rofl:190", 1, occurs_in, main, pos, "R,V,K").
-premise("rules/nullary.rofl:190", 2, elsewhere, main, neg, "R,V,K").
-clause_npos("rules/nullary.rofl:190", 2).
-clause_nneg("rules/nullary.rofl:190", 1).
-clause_nbi("rules/nullary.rofl:190", 0).
-body_sig("rules/nullary.rofl:190", "head_var[main](V0,V1), occurs_in[main](V0,V1,V2), not elsewhere[main](V0,V1,V2)").
-shape_sig("rules/nullary.rofl:190", "R0[main](V0,V1), R1[main](V0,V1,V2), not R2[main](V0,V1,V2)").
-clause("rules/nullary.rofl:192", "rules/nullary.rofl", 192, shares, main, 3).
-head_pat("rules/nullary.rofl:192", "R,K,J").
-premise("rules/nullary.rofl:192", 0, joins, main, pos, "R,K,V").
-premise("rules/nullary.rofl:192", 1, joins, main, pos, "R,J,V").
-clause_npos("rules/nullary.rofl:192", 2).
-clause_nneg("rules/nullary.rofl:192", 0).
-clause_nbi("rules/nullary.rofl:192", 1).
-body_sig("rules/nullary.rofl:192", "joins[main](V0,V1,V2), joins[main](V0,V3,V2), V1 != V3").
-shape_sig("rules/nullary.rofl:192", "R0[main](V0,V1,V2), R0[main](V0,V3,V2), V1 != V3").
-clause("rules/nullary.rofl:193", "rules/nullary.rofl", 193, connected, main, 2).
-head_pat("rules/nullary.rofl:193", "R,K").
-premise("rules/nullary.rofl:193", 0, shares, main, pos, "R,K,_").
-clause_npos("rules/nullary.rofl:193", 1).
-clause_nneg("rules/nullary.rofl:193", 0).
-clause_nbi("rules/nullary.rofl:193", 0).
-body_sig("rules/nullary.rofl:193", "shares[main](V0,V1,_)").
-shape_sig("rules/nullary.rofl:193", "R0[main](V0,V1,_)").
-clause("rules/nullary.rofl:194", "rules/nullary.rofl", 194, disconnected, main, 2).
-head_pat("rules/nullary.rofl:194", "R,K").
-premise("rules/nullary.rofl:194", 0, body_var, main, pos, "R,K,_").
-premise("rules/nullary.rofl:194", 1, connected, main, neg, "R,K").
-clause_npos("rules/nullary.rofl:194", 1).
-clause_nneg("rules/nullary.rofl:194", 1).
-clause_nbi("rules/nullary.rofl:194", 0).
-body_sig("rules/nullary.rofl:194", "body_var[main](V0,V1,_), not connected[main](V0,V1)").
-shape_sig("rules/nullary.rofl:194", "R0[main](V0,V1,_), not R1[main](V0,V1)").
-clause("rules/nullary.rofl:203", "rules/nullary.rofl", 203, multi_premise, main, 1).
-head_pat("rules/nullary.rofl:203", "R").
-premise("rules/nullary.rofl:203", 0, mentions, main, pos, "R,K,_").
-premise("rules/nullary.rofl:203", 1, mentions, main, pos, "R,J,_").
-clause_npos("rules/nullary.rofl:203", 2).
-clause_nneg("rules/nullary.rofl:203", 0).
-clause_nbi("rules/nullary.rofl:203", 1).
-body_sig("rules/nullary.rofl:203", "mentions[main](V0,V1,_), mentions[main](V0,V2,_), V1 != V2").
-shape_sig("rules/nullary.rofl:203", "R0[main](V0,V1,_), R0[main](V0,V2,_), V1 != V2").
-clause("rules/nullary.rofl:221", "rules/nullary.rofl", 221, feeds_head, main, 2).
-head_pat("rules/nullary.rofl:221", "R,K").
-premise("rules/nullary.rofl:221", 0, body_var, main, pos, "R,K,V").
-premise("rules/nullary.rofl:221", 1, head_var, main, pos, "R,V").
-clause_npos("rules/nullary.rofl:221", 2).
-clause_nneg("rules/nullary.rofl:221", 0).
-clause_nbi("rules/nullary.rofl:221", 0).
-body_sig("rules/nullary.rofl:221", "body_var[main](V0,V1,V2), head_var[main](V0,V2)").
-shape_sig("rules/nullary.rofl:221", "R0[main](V0,V1,V2), R1[main](V0,V2)").
-clause("rules/nullary.rofl:222", "rules/nullary.rofl", 222, guard_premise, main, 2).
-head_pat("rules/nullary.rofl:222", "R,K").
-premise("rules/nullary.rofl:222", 0, body_args, main, pos, "R,K,_").
-premise("rules/nullary.rofl:222", 1, feeds_head, main, neg, "R,K").
-clause_npos("rules/nullary.rofl:222", 1).
-clause_nneg("rules/nullary.rofl:222", 1).
-clause_nbi("rules/nullary.rofl:222", 0).
-body_sig("rules/nullary.rofl:222", "body_args[main](V0,V1,_), not feeds_head[main](V0,V1)").
-shape_sig("rules/nullary.rofl:222", "R0[main](V0,V1,_), not R1[main](V0,V1)").
-clause("rules/nullary.rofl:223", "rules/nullary.rofl", 223, has_guard, main, 1).
-head_pat("rules/nullary.rofl:223", "R").
-premise("rules/nullary.rofl:223", 0, guard_premise, main, pos, "R,_").
-clause_npos("rules/nullary.rofl:223", 1).
-clause_nneg("rules/nullary.rofl:223", 0).
-clause_nbi("rules/nullary.rofl:223", 0).
-body_sig("rules/nullary.rofl:223", "guard_premise[main](V0,_)").
-shape_sig("rules/nullary.rofl:223", "R0[main](V0,_)").
-clause("rules/nullary.rofl:225", "rules/nullary.rofl", 225, passenger, audit, 2).
-head_pat("rules/nullary.rofl:225", "R,V").
-premise("rules/nullary.rofl:225", 0, sole_binder, main, pos, "R,V,K").
-premise("rules/nullary.rofl:225", 1, disconnected, main, pos, "R,K").
-premise("rules/nullary.rofl:225", 2, multi_premise, main, pos, "R").
-premise("rules/nullary.rofl:225", 3, has_guard, main, pos, "R").
-clause_npos("rules/nullary.rofl:225", 4).
-clause_nneg("rules/nullary.rofl:225", 0).
-clause_nbi("rules/nullary.rofl:225", 0).
-body_sig("rules/nullary.rofl:225", "sole_binder[main](V0,V1,V2), disconnected[main](V0,V2), multi_premise[main](V0), has_guard[main](V0)").
-shape_sig("rules/nullary.rofl:225", "R0[main](V0,V1,V2), R1[main](V0,V2), R2[main](V0), R3[main](V0)").
-clause("rules/nullary.rofl:242", "rules/nullary.rofl", 242, head_has_stayer, main, 1).
-head_pat("rules/nullary.rofl:242", "R").
-premise("rules/nullary.rofl:242", 0, head_var, main, pos, "R,V").
-premise("rules/nullary.rofl:242", 1, passenger, audit, neg, "R,V").
-clause_npos("rules/nullary.rofl:242", 1).
-clause_nneg("rules/nullary.rofl:242", 1).
-clause_nbi("rules/nullary.rofl:242", 0).
-body_sig("rules/nullary.rofl:242", "head_var[main](V0,V1), not passenger[audit](V0,V1)").
-shape_sig("rules/nullary.rofl:242", "R0[main](V0,V1), not R1[audit](V0,V1)").
-clause("rules/nullary.rofl:243", "rules/nullary.rofl", 243, all_passengers, main, 1).
-head_pat("rules/nullary.rofl:243", "R").
-premise("rules/nullary.rofl:243", 0, passenger, audit, pos, "R,_").
-premise("rules/nullary.rofl:243", 1, head_has_stayer, main, neg, "R").
-clause_npos("rules/nullary.rofl:243", 1).
-clause_nneg("rules/nullary.rofl:243", 1).
-clause_nbi("rules/nullary.rofl:243", 0).
-body_sig("rules/nullary.rofl:243", "passenger[audit](V0,_), not head_has_stayer[main](V0)").
-shape_sig("rules/nullary.rofl:243", "R0[audit](V0,_), not R1[main](V0)").
-clause("rules/nullary.rofl:245", "rules/nullary.rofl", 245, wants_nullary, audit, 1).
-head_pat("rules/nullary.rofl:245", "Rel").
-premise("rules/nullary.rofl:245", 0, dressed_constant, audit, pos, "Rel").
-clause_npos("rules/nullary.rofl:245", 1).
-clause_nneg("rules/nullary.rofl:245", 0).
-clause_nbi("rules/nullary.rofl:245", 0).
-body_sig("rules/nullary.rofl:245", "dressed_constant[audit](V0)").
-shape_sig("rules/nullary.rofl:245", "R0[audit](V0)").
-clause("rules/nullary.rofl:246", "rules/nullary.rofl", 246, wants_nullary, audit, 1).
-head_pat("rules/nullary.rofl:246", "Rel").
-premise("rules/nullary.rofl:246", 0, all_passengers, main, pos, "R").
-premise("rules/nullary.rofl:246", 1, concludes, main, pos, "R,Rel").
-clause_npos("rules/nullary.rofl:246", 2).
-clause_nneg("rules/nullary.rofl:246", 0).
-clause_nbi("rules/nullary.rofl:246", 0).
-body_sig("rules/nullary.rofl:246", "all_passengers[main](V0), concludes[main](V0,V1)").
-shape_sig("rules/nullary.rofl:246", "R0[main](V0), R1[main](V0,V1)").
+body_sig("rules/nullary.rofl:115", "body_var[main](V0,V1,_), not connected[main](V0,V1)").
+shape_sig("rules/nullary.rofl:115", "R0[main](V0,V1,_), not R1[main](V0,V1)").
+clause("rules/nullary.rofl:120", "rules/nullary.rofl", 120, multi_premise, main, 1).
+head_pat("rules/nullary.rofl:120", "R").
+premise("rules/nullary.rofl:120", 0, mentions, main, pos, "R,K,_").
+premise("rules/nullary.rofl:120", 1, mentions, main, pos, "R,J,_").
+clause_npos("rules/nullary.rofl:120", 2).
+clause_nneg("rules/nullary.rofl:120", 0).
+clause_nbi("rules/nullary.rofl:120", 1).
+body_sig("rules/nullary.rofl:120", "mentions[main](V0,V1,_), mentions[main](V0,V2,_), V1 != V2").
+shape_sig("rules/nullary.rofl:120", "R0[main](V0,V1,_), R0[main](V0,V2,_), V1 != V2").
+clause("rules/nullary.rofl:128", "rules/nullary.rofl", 128, feeds_head, main, 2).
+head_pat("rules/nullary.rofl:128", "R,K").
+premise("rules/nullary.rofl:128", 0, body_var, main, pos, "R,K,V").
+premise("rules/nullary.rofl:128", 1, head_var, main, pos, "R,V").
+clause_npos("rules/nullary.rofl:128", 2).
+clause_nneg("rules/nullary.rofl:128", 0).
+clause_nbi("rules/nullary.rofl:128", 0).
+body_sig("rules/nullary.rofl:128", "body_var[main](V0,V1,V2), head_var[main](V0,V2)").
+shape_sig("rules/nullary.rofl:128", "R0[main](V0,V1,V2), R1[main](V0,V2)").
+clause("rules/nullary.rofl:129", "rules/nullary.rofl", 129, guard_premise, main, 2).
+head_pat("rules/nullary.rofl:129", "R,K").
+premise("rules/nullary.rofl:129", 0, body_args, main, pos, "R,K,_").
+premise("rules/nullary.rofl:129", 1, feeds_head, main, neg, "R,K").
+clause_npos("rules/nullary.rofl:129", 1).
+clause_nneg("rules/nullary.rofl:129", 1).
+clause_nbi("rules/nullary.rofl:129", 0).
+body_sig("rules/nullary.rofl:129", "body_args[main](V0,V1,_), not feeds_head[main](V0,V1)").
+shape_sig("rules/nullary.rofl:129", "R0[main](V0,V1,_), not R1[main](V0,V1)").
+clause("rules/nullary.rofl:130", "rules/nullary.rofl", 130, has_guard, main, 1).
+head_pat("rules/nullary.rofl:130", "R").
+premise("rules/nullary.rofl:130", 0, guard_premise, main, pos, "R,_").
+clause_npos("rules/nullary.rofl:130", 1).
+clause_nneg("rules/nullary.rofl:130", 0).
+clause_nbi("rules/nullary.rofl:130", 0).
+body_sig("rules/nullary.rofl:130", "guard_premise[main](V0,_)").
+shape_sig("rules/nullary.rofl:130", "R0[main](V0,_)").
+clause("rules/nullary.rofl:132", "rules/nullary.rofl", 132, passenger, audit, 2).
+head_pat("rules/nullary.rofl:132", "R,V").
+premise("rules/nullary.rofl:132", 0, sole_binder, main, pos, "R,V,K").
+premise("rules/nullary.rofl:132", 1, disconnected, main, pos, "R,K").
+premise("rules/nullary.rofl:132", 2, multi_premise, main, pos, "R").
+premise("rules/nullary.rofl:132", 3, has_guard, main, pos, "R").
+clause_npos("rules/nullary.rofl:132", 4).
+clause_nneg("rules/nullary.rofl:132", 0).
+clause_nbi("rules/nullary.rofl:132", 0).
+body_sig("rules/nullary.rofl:132", "sole_binder[main](V0,V1,V2), disconnected[main](V0,V2), multi_premise[main](V0), has_guard[main](V0)").
+shape_sig("rules/nullary.rofl:132", "R0[main](V0,V1,V2), R1[main](V0,V2), R2[main](V0), R3[main](V0)").
+clause("rules/nullary.rofl:141", "rules/nullary.rofl", 141, head_has_stayer, main, 1).
+head_pat("rules/nullary.rofl:141", "R").
+premise("rules/nullary.rofl:141", 0, head_var, main, pos, "R,V").
+premise("rules/nullary.rofl:141", 1, passenger, audit, neg, "R,V").
+clause_npos("rules/nullary.rofl:141", 1).
+clause_nneg("rules/nullary.rofl:141", 1).
+clause_nbi("rules/nullary.rofl:141", 0).
+body_sig("rules/nullary.rofl:141", "head_var[main](V0,V1), not passenger[audit](V0,V1)").
+shape_sig("rules/nullary.rofl:141", "R0[main](V0,V1), not R1[audit](V0,V1)").
+clause("rules/nullary.rofl:142", "rules/nullary.rofl", 142, all_passengers, main, 1).
+head_pat("rules/nullary.rofl:142", "R").
+premise("rules/nullary.rofl:142", 0, passenger, audit, pos, "R,_").
+premise("rules/nullary.rofl:142", 1, head_has_stayer, main, neg, "R").
+clause_npos("rules/nullary.rofl:142", 1).
+clause_nneg("rules/nullary.rofl:142", 1).
+clause_nbi("rules/nullary.rofl:142", 0).
+body_sig("rules/nullary.rofl:142", "passenger[audit](V0,_), not head_has_stayer[main](V0)").
+shape_sig("rules/nullary.rofl:142", "R0[audit](V0,_), not R1[main](V0)").
+clause("rules/nullary.rofl:144", "rules/nullary.rofl", 144, wants_nullary, audit, 1).
+head_pat("rules/nullary.rofl:144", "Rel").
+premise("rules/nullary.rofl:144", 0, dressed_constant, audit, pos, "Rel").
+clause_npos("rules/nullary.rofl:144", 1).
+clause_nneg("rules/nullary.rofl:144", 0).
+clause_nbi("rules/nullary.rofl:144", 0).
+body_sig("rules/nullary.rofl:144", "dressed_constant[audit](V0)").
+shape_sig("rules/nullary.rofl:144", "R0[audit](V0)").
+clause("rules/nullary.rofl:145", "rules/nullary.rofl", 145, wants_nullary, audit, 1).
+head_pat("rules/nullary.rofl:145", "Rel").
+premise("rules/nullary.rofl:145", 0, all_passengers, main, pos, "R").
+premise("rules/nullary.rofl:145", 1, concludes, main, pos, "R,Rel").
+clause_npos("rules/nullary.rofl:145", 2).
+clause_nneg("rules/nullary.rofl:145", 0).
+clause_nbi("rules/nullary.rofl:145", 0).
+body_sig("rules/nullary.rofl:145", "all_passengers[main](V0), concludes[main](V0,V1)").
+shape_sig("rules/nullary.rofl:145", "R0[main](V0), R1[main](V0,V1)").
 clause("rules/parse-cost.rofl:36", "rules/parse-cost.rofl", 36, saves_no_firing, main, 0).
 head_pat("rules/parse-cost.rofl:36", "").
 premise("rules/parse-cost.rofl:36", 0, cache, main, pos, "on,firings,N").
@@ -25674,440 +25602,440 @@ clause_nneg("rules/swarm.rofl:20", 1).
 clause_nbi("rules/swarm.rofl:20", 0).
 body_sig("rules/swarm.rofl:20", "claimed[main](V0,V1,V2,V3), lease_expired[main](V3), not swarm_done[main](V0,V1,V2)").
 shape_sig("rules/swarm.rofl:20", "R0[main](V0,V1,V2,V3), R1[main](V3), not R2[main](V0,V1,V2)").
-clause("rules/worklist.rofl:74", "rules/worklist.rofl", 74, scope_unowned, audit, 3).
-head_pat("rules/worklist.rofl:74", "K,S,L").
-premise("rules/worklist.rofl:74", 0, reason, audit, pos, "js,K,S,L,out_of_scope").
-premise("rules/worklist.rofl:74", 1, scope_decided, main, neg, "K,S,L").
+clause("rules/worklist.rofl:44", "rules/worklist.rofl", 44, scope_unowned, audit, 3).
+head_pat("rules/worklist.rofl:44", "K,S,L").
+premise("rules/worklist.rofl:44", 0, reason, audit, pos, "js,K,S,L,out_of_scope").
+premise("rules/worklist.rofl:44", 1, scope_decided, main, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:44", 1).
+clause_nneg("rules/worklist.rofl:44", 1).
+clause_nbi("rules/worklist.rofl:44", 0).
+body_sig("rules/worklist.rofl:44", "reason[audit](js,V0,V1,V2,out_of_scope), not scope_decided[main](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:44", "R0[audit](js,V0,V1,V2,out_of_scope), not R1[main](V0,V1,V2)").
+clause("rules/worklist.rofl:47", "rules/worklist.rofl", 47, reason_unclassified, audit, 1).
+head_pat("rules/worklist.rofl:47", "R").
+premise("rules/worklist.rofl:47", 0, unknown_type, main, pos, "R,ours").
+premise("rules/worklist.rofl:47", 1, reason_is_work, main, neg, "R").
+premise("rules/worklist.rofl:47", 2, reason_not_work, main, neg, "R").
+clause_npos("rules/worklist.rofl:47", 1).
+clause_nneg("rules/worklist.rofl:47", 2).
+clause_nbi("rules/worklist.rofl:47", 0).
+body_sig("rules/worklist.rofl:47", "unknown_type[main](V0,ours), not reason_is_work[main](V0), not reason_not_work[main](V0)").
+shape_sig("rules/worklist.rofl:47", "R0[main](V0,ours), not R1[main](V0), not R2[main](V0)").
+clause("rules/worklist.rofl:50", "rules/worklist.rofl", 50, open_cell, audit, 3).
+head_pat("rules/worklist.rofl:50", "K,S,L").
+premise("rules/worklist.rofl:50", 0, our_unknown, audit, pos, "js,K,S,L").
+premise("rules/worklist.rofl:50", 1, reason, audit, pos, "js,K,S,L,R").
+premise("rules/worklist.rofl:50", 2, reason_is_work, main, pos, "R").
+clause_npos("rules/worklist.rofl:50", 3).
+clause_nneg("rules/worklist.rofl:50", 0).
+clause_nbi("rules/worklist.rofl:50", 0).
+body_sig("rules/worklist.rofl:50", "our_unknown[audit](js,V0,V1,V2), reason[audit](js,V0,V1,V2,V3), reason_is_work[main](V3)").
+shape_sig("rules/worklist.rofl:50", "R0[audit](js,V0,V1,V2), R1[audit](js,V0,V1,V2,V3), R2[main](V3)").
+clause("rules/worklist.rofl:70", "rules/worklist.rofl", 70, blocked_cell, audit, 3).
+head_pat("rules/worklist.rofl:70", "K,S,L").
+premise("rules/worklist.rofl:70", 0, cell_blocked, main, pos, "K,S,L,_").
+clause_npos("rules/worklist.rofl:70", 1).
+clause_nneg("rules/worklist.rofl:70", 0).
+clause_nbi("rules/worklist.rofl:70", 0).
+body_sig("rules/worklist.rofl:70", "cell_blocked[main](V0,V1,V2,_)").
+shape_sig("rules/worklist.rofl:70", "R0[main](V0,V1,V2,_)").
+clause("rules/worklist.rofl:71", "rules/worklist.rofl", 71, workable, main, 3).
+head_pat("rules/worklist.rofl:71", "K,S,L").
+premise("rules/worklist.rofl:71", 0, open_cell, audit, pos, "K,S,L").
+premise("rules/worklist.rofl:71", 1, blocked_cell, audit, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:71", 1).
+clause_nneg("rules/worklist.rofl:71", 1).
+clause_nbi("rules/worklist.rofl:71", 0).
+body_sig("rules/worklist.rofl:71", "open_cell[audit](V0,V1,V2), not blocked_cell[audit](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:71", "R0[audit](V0,V1,V2), not R1[audit](V0,V1,V2)").
+clause("rules/worklist.rofl:74", "rules/worklist.rofl", 74, blocker_unknown, audit, 4).
+head_pat("rules/worklist.rofl:74", "K,S,L,C").
+premise("rules/worklist.rofl:74", 0, cell_blocked, main, pos, "K,S,L,C").
+premise("rules/worklist.rofl:74", 1, blocker_kind, main, neg, "C").
 clause_npos("rules/worklist.rofl:74", 1).
 clause_nneg("rules/worklist.rofl:74", 1).
 clause_nbi("rules/worklist.rofl:74", 0).
-body_sig("rules/worklist.rofl:74", "reason[audit](js,V0,V1,V2,out_of_scope), not scope_decided[main](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:74", "R0[audit](js,V0,V1,V2,out_of_scope), not R1[main](V0,V1,V2)").
-clause("rules/worklist.rofl:77", "rules/worklist.rofl", 77, reason_unclassified, audit, 1).
-head_pat("rules/worklist.rofl:77", "R").
-premise("rules/worklist.rofl:77", 0, unknown_type, main, pos, "R,ours").
-premise("rules/worklist.rofl:77", 1, reason_is_work, main, neg, "R").
-premise("rules/worklist.rofl:77", 2, reason_not_work, main, neg, "R").
-clause_npos("rules/worklist.rofl:77", 1).
-clause_nneg("rules/worklist.rofl:77", 2).
-clause_nbi("rules/worklist.rofl:77", 0).
-body_sig("rules/worklist.rofl:77", "unknown_type[main](V0,ours), not reason_is_work[main](V0), not reason_not_work[main](V0)").
-shape_sig("rules/worklist.rofl:77", "R0[main](V0,ours), not R1[main](V0), not R2[main](V0)").
-clause("rules/worklist.rofl:80", "rules/worklist.rofl", 80, open_cell, audit, 3).
-head_pat("rules/worklist.rofl:80", "K,S,L").
-premise("rules/worklist.rofl:80", 0, our_unknown, audit, pos, "js,K,S,L").
-premise("rules/worklist.rofl:80", 1, reason, audit, pos, "js,K,S,L,R").
-premise("rules/worklist.rofl:80", 2, reason_is_work, main, pos, "R").
-clause_npos("rules/worklist.rofl:80", 3).
-clause_nneg("rules/worklist.rofl:80", 0).
-clause_nbi("rules/worklist.rofl:80", 0).
-body_sig("rules/worklist.rofl:80", "our_unknown[audit](js,V0,V1,V2), reason[audit](js,V0,V1,V2,V3), reason_is_work[main](V3)").
-shape_sig("rules/worklist.rofl:80", "R0[audit](js,V0,V1,V2), R1[audit](js,V0,V1,V2,V3), R2[main](V3)").
-clause("rules/worklist.rofl:103", "rules/worklist.rofl", 103, blocked_cell, audit, 3).
-head_pat("rules/worklist.rofl:103", "K,S,L").
-premise("rules/worklist.rofl:103", 0, cell_blocked, main, pos, "K,S,L,_").
-clause_npos("rules/worklist.rofl:103", 1).
-clause_nneg("rules/worklist.rofl:103", 0).
-clause_nbi("rules/worklist.rofl:103", 0).
-body_sig("rules/worklist.rofl:103", "cell_blocked[main](V0,V1,V2,_)").
-shape_sig("rules/worklist.rofl:103", "R0[main](V0,V1,V2,_)").
-clause("rules/worklist.rofl:104", "rules/worklist.rofl", 104, workable, main, 3).
-head_pat("rules/worklist.rofl:104", "K,S,L").
-premise("rules/worklist.rofl:104", 0, open_cell, audit, pos, "K,S,L").
-premise("rules/worklist.rofl:104", 1, blocked_cell, audit, neg, "K,S,L").
-clause_npos("rules/worklist.rofl:104", 1).
-clause_nneg("rules/worklist.rofl:104", 1).
-clause_nbi("rules/worklist.rofl:104", 0).
-body_sig("rules/worklist.rofl:104", "open_cell[audit](V0,V1,V2), not blocked_cell[audit](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:104", "R0[audit](V0,V1,V2), not R1[audit](V0,V1,V2)").
-clause("rules/worklist.rofl:107", "rules/worklist.rofl", 107, blocker_unknown, audit, 4).
-head_pat("rules/worklist.rofl:107", "K,S,L,C").
-premise("rules/worklist.rofl:107", 0, cell_blocked, main, pos, "K,S,L,C").
-premise("rules/worklist.rofl:107", 1, blocker_kind, main, neg, "C").
-clause_npos("rules/worklist.rofl:107", 1).
-clause_nneg("rules/worklist.rofl:107", 1).
-clause_nbi("rules/worklist.rofl:107", 0).
-body_sig("rules/worklist.rofl:107", "cell_blocked[main](V0,V1,V2,V3), not blocker_kind[main](V3)").
-shape_sig("rules/worklist.rofl:107", "R0[main](V0,V1,V2,V3), not R1[main](V3)").
-clause("rules/worklist.rofl:108", "rules/worklist.rofl", 108, blocker_stale, audit, 3).
-head_pat("rules/worklist.rofl:108", "K,S,L").
-premise("rules/worklist.rofl:108", 0, cell_blocked, main, pos, "K,S,L,_").
-premise("rules/worklist.rofl:108", 1, open_cell, audit, neg, "K,S,L").
-clause_npos("rules/worklist.rofl:108", 1).
-clause_nneg("rules/worklist.rofl:108", 1).
-clause_nbi("rules/worklist.rofl:108", 0).
-body_sig("rules/worklist.rofl:108", "cell_blocked[main](V0,V1,V2,_), not open_cell[audit](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:108", "R0[main](V0,V1,V2,_), not R1[audit](V0,V1,V2)").
-clause("rules/worklist.rofl:117", "rules/worklist.rofl", 117, claimed, main, 3).
-head_pat("rules/worklist.rofl:117", "K,S,L").
-premise("rules/worklist.rofl:117", 0, claim, main, pos, "queued,js,K,S,L,_").
+body_sig("rules/worklist.rofl:74", "cell_blocked[main](V0,V1,V2,V3), not blocker_kind[main](V3)").
+shape_sig("rules/worklist.rofl:74", "R0[main](V0,V1,V2,V3), not R1[main](V3)").
+clause("rules/worklist.rofl:75", "rules/worklist.rofl", 75, blocker_stale, audit, 3).
+head_pat("rules/worklist.rofl:75", "K,S,L").
+premise("rules/worklist.rofl:75", 0, cell_blocked, main, pos, "K,S,L,_").
+premise("rules/worklist.rofl:75", 1, open_cell, audit, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:75", 1).
+clause_nneg("rules/worklist.rofl:75", 1).
+clause_nbi("rules/worklist.rofl:75", 0).
+body_sig("rules/worklist.rofl:75", "cell_blocked[main](V0,V1,V2,_), not open_cell[audit](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:75", "R0[main](V0,V1,V2,_), not R1[audit](V0,V1,V2)").
+clause("rules/worklist.rofl:81", "rules/worklist.rofl", 81, claimed, main, 3).
+head_pat("rules/worklist.rofl:81", "K,S,L").
+premise("rules/worklist.rofl:81", 0, claim, main, pos, "queued,js,K,S,L,_").
+clause_npos("rules/worklist.rofl:81", 1).
+clause_nneg("rules/worklist.rofl:81", 0).
+clause_nbi("rules/worklist.rofl:81", 0).
+body_sig("rules/worklist.rofl:81", "claim[main](queued,js,V0,V1,V2,_)").
+shape_sig("rules/worklist.rofl:81", "R0[main](queued,js,V0,V1,V2,_)").
+clause("rules/worklist.rofl:82", "rules/worklist.rofl", 82, sweeper, main, 3).
+head_pat("rules/worklist.rofl:82", "K,S,L").
+premise("rules/worklist.rofl:82", 0, work_sweeps, main, pos, "W,L").
+premise("rules/worklist.rofl:82", 1, work_state, main, neg, "W,done").
+premise("rules/worklist.rofl:82", 2, open_cell, audit, pos, "K,S,L").
+premise("rules/worklist.rofl:82", 3, claimed, main, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:82", 2).
+clause_nneg("rules/worklist.rofl:82", 2).
+clause_nbi("rules/worklist.rofl:82", 0).
+body_sig("rules/worklist.rofl:82", "work_sweeps[main](V0,V1), not work_state[main](V0,done), open_cell[audit](V2,V3,V1), not claimed[main](V2,V3,V1)").
+shape_sig("rules/worklist.rofl:82", "R0[main](V0,V1), not R1[main](V0,done), R2[audit](V2,V3,V1), not R3[main](V2,V3,V1)").
+clause("rules/worklist.rofl:86", "rules/worklist.rofl", 86, unqueued, audit, 3).
+head_pat("rules/worklist.rofl:86", "K,S,L").
+premise("rules/worklist.rofl:86", 0, open_cell, audit, pos, "K,S,L").
+premise("rules/worklist.rofl:86", 1, claimed, main, neg, "K,S,L").
+premise("rules/worklist.rofl:86", 2, sweeper, main, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:86", 1).
+clause_nneg("rules/worklist.rofl:86", 2).
+clause_nbi("rules/worklist.rofl:86", 0).
+body_sig("rules/worklist.rofl:86", "open_cell[audit](V0,V1,V2), not claimed[main](V0,V1,V2), not sweeper[main](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:86", "R0[audit](V0,V1,V2), not R1[main](V0,V1,V2), not R2[main](V0,V1,V2)").
+clause("rules/worklist.rofl:92", "rules/worklist.rofl", 92, queue_stale, audit, 4).
+head_pat("rules/worklist.rofl:92", "W,K,S,L").
+premise("rules/worklist.rofl:92", 0, claim, main, pos, "queued,js,K,S,L,W").
+premise("rules/worklist.rofl:92", 1, work_state, main, neg, "W,done").
+premise("rules/worklist.rofl:92", 2, open_cell, audit, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:92", 1).
+clause_nneg("rules/worklist.rofl:92", 2).
+clause_nbi("rules/worklist.rofl:92", 0).
+body_sig("rules/worklist.rofl:92", "claim[main](queued,js,V0,V1,V2,V3), not work_state[main](V3,done), not open_cell[audit](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:92", "R0[main](queued,js,V0,V1,V2,V3), not R1[main](V3,done), not R2[audit](V0,V1,V2)").
+clause("rules/worklist.rofl:96", "rules/worklist.rofl", 96, double_owned, audit, 5).
+head_pat("rules/worklist.rofl:96", "K,S,L,A,B").
+premise("rules/worklist.rofl:96", 0, claim, main, pos, "queued,js,K,S,L,A").
+premise("rules/worklist.rofl:96", 1, claim, main, pos, "queued,js,K,S,L,B").
+clause_npos("rules/worklist.rofl:96", 2).
+clause_nneg("rules/worklist.rofl:96", 0).
+clause_nbi("rules/worklist.rofl:96", 1).
+body_sig("rules/worklist.rofl:96", "claim[main](queued,js,V0,V1,V2,V3), claim[main](queued,js,V0,V1,V2,V4), V3 != V4").
+shape_sig("rules/worklist.rofl:96", "R0[main](queued,js,V0,V1,V2,V3), R0[main](queued,js,V0,V1,V2,V4), V3 != V4").
+clause("rules/worklist.rofl:101", "rules/worklist.rofl", 101, false_done, audit, 4).
+head_pat("rules/worklist.rofl:101", "W,K,S,L").
+premise("rules/worklist.rofl:101", 0, work_state, main, pos, "W,done").
+premise("rules/worklist.rofl:101", 1, claim, main, pos, "queued,js,K,S,L,W").
+premise("rules/worklist.rofl:101", 2, open_cell, audit, pos, "K,S,L").
+clause_npos("rules/worklist.rofl:101", 3).
+clause_nneg("rules/worklist.rofl:101", 0).
+clause_nbi("rules/worklist.rofl:101", 0).
+body_sig("rules/worklist.rofl:101", "work_state[main](V0,done), claim[main](queued,js,V1,V2,V3,V0), open_cell[audit](V1,V2,V3)").
+shape_sig("rules/worklist.rofl:101", "R0[main](V0,done), R1[main](queued,js,V1,V2,V3,V0), R2[audit](V1,V2,V3)").
+clause("rules/worklist.rofl:112", "rules/worklist.rofl", 112, stated_state, main, 1).
+head_pat("rules/worklist.rofl:112", "W").
+premise("rules/worklist.rofl:112", 0, work_state, main, pos, "W,_").
+clause_npos("rules/worklist.rofl:112", 1).
+clause_nneg("rules/worklist.rofl:112", 0).
+clause_nbi("rules/worklist.rofl:112", 0).
+body_sig("rules/worklist.rofl:112", "work_state[main](V0,_)").
+shape_sig("rules/worklist.rofl:112", "R0[main](V0,_)").
+clause("rules/worklist.rofl:113", "rules/worklist.rofl", 113, work_unstated, audit, 1).
+head_pat("rules/worklist.rofl:113", "W").
+premise("rules/worklist.rofl:113", 0, claim, main, pos, "queued,js,_,_,_,W").
+premise("rules/worklist.rofl:113", 1, work, main, neg, "W,_").
+clause_npos("rules/worklist.rofl:113", 1).
+clause_nneg("rules/worklist.rofl:113", 1).
+clause_nbi("rules/worklist.rofl:113", 0).
+body_sig("rules/worklist.rofl:113", "claim[main](queued,js,_,_,_,V0), not work[main](V0,_)").
+shape_sig("rules/worklist.rofl:113", "R0[main](queued,js,_,_,_,V0), not R1[main](V0,_)").
+clause("rules/worklist.rofl:114", "rules/worklist.rofl", 114, frame_owner_unknown, audit, 2).
+head_pat("rules/worklist.rofl:114", "K,W").
+premise("rules/worklist.rofl:114", 0, frame_deferred, main, pos, "K,W").
+premise("rules/worklist.rofl:114", 1, work, main, neg, "W,_").
+clause_npos("rules/worklist.rofl:114", 1).
+clause_nneg("rules/worklist.rofl:114", 1).
+clause_nbi("rules/worklist.rofl:114", 0).
+body_sig("rules/worklist.rofl:114", "frame_deferred[main](V0,V1), not work[main](V1,_)").
+shape_sig("rules/worklist.rofl:114", "R0[main](V0,V1), not R1[main](V1,_)").
+clause("rules/worklist.rofl:115", "rules/worklist.rofl", 115, frame_owner_done, audit, 2).
+head_pat("rules/worklist.rofl:115", "K,W").
+premise("rules/worklist.rofl:115", 0, frame_deferred, main, pos, "K,W").
+premise("rules/worklist.rofl:115", 1, work_state, main, pos, "W,done").
+clause_npos("rules/worklist.rofl:115", 2).
+clause_nneg("rules/worklist.rofl:115", 0).
+clause_nbi("rules/worklist.rofl:115", 0).
+body_sig("rules/worklist.rofl:115", "frame_deferred[main](V0,V1), work_state[main](V1,done)").
+shape_sig("rules/worklist.rofl:115", "R0[main](V0,V1), R1[main](V1,done)").
+clause("rules/worklist.rofl:116", "rules/worklist.rofl", 116, work_unstated, audit, 1).
+head_pat("rules/worklist.rofl:116", "W").
+premise("rules/worklist.rofl:116", 0, work_sweeps, main, pos, "W,_").
+premise("rules/worklist.rofl:116", 1, work, main, neg, "W,_").
+clause_npos("rules/worklist.rofl:116", 1).
+clause_nneg("rules/worklist.rofl:116", 1).
+clause_nbi("rules/worklist.rofl:116", 0).
+body_sig("rules/worklist.rofl:116", "work_sweeps[main](V0,_), not work[main](V0,_)").
+shape_sig("rules/worklist.rofl:116", "R0[main](V0,_), not R1[main](V0,_)").
+clause("rules/worklist.rofl:117", "rules/worklist.rofl", 117, work_stateless, audit, 1).
+head_pat("rules/worklist.rofl:117", "W").
+premise("rules/worklist.rofl:117", 0, work, main, pos, "W,_").
+premise("rules/worklist.rofl:117", 1, stated_state, main, neg, "W").
 clause_npos("rules/worklist.rofl:117", 1).
-clause_nneg("rules/worklist.rofl:117", 0).
+clause_nneg("rules/worklist.rofl:117", 1).
 clause_nbi("rules/worklist.rofl:117", 0).
-body_sig("rules/worklist.rofl:117", "claim[main](queued,js,V0,V1,V2,_)").
-shape_sig("rules/worklist.rofl:117", "R0[main](queued,js,V0,V1,V2,_)").
-clause("rules/worklist.rofl:121", "rules/worklist.rofl", 121, sweeper, main, 3).
-head_pat("rules/worklist.rofl:121", "K,S,L").
-premise("rules/worklist.rofl:121", 0, work_sweeps, main, pos, "W,L").
-premise("rules/worklist.rofl:121", 1, work_state, main, neg, "W,done").
-premise("rules/worklist.rofl:121", 2, open_cell, audit, pos, "K,S,L").
-premise("rules/worklist.rofl:121", 3, claimed, main, neg, "K,S,L").
-clause_npos("rules/worklist.rofl:121", 2).
-clause_nneg("rules/worklist.rofl:121", 2).
-clause_nbi("rules/worklist.rofl:121", 0).
-body_sig("rules/worklist.rofl:121", "work_sweeps[main](V0,V1), not work_state[main](V0,done), open_cell[audit](V2,V3,V1), not claimed[main](V2,V3,V1)").
-shape_sig("rules/worklist.rofl:121", "R0[main](V0,V1), not R1[main](V0,done), R2[audit](V2,V3,V1), not R3[main](V2,V3,V1)").
-clause("rules/worklist.rofl:125", "rules/worklist.rofl", 125, unqueued, audit, 3).
-head_pat("rules/worklist.rofl:125", "K,S,L").
-premise("rules/worklist.rofl:125", 0, open_cell, audit, pos, "K,S,L").
-premise("rules/worklist.rofl:125", 1, claimed, main, neg, "K,S,L").
-premise("rules/worklist.rofl:125", 2, sweeper, main, neg, "K,S,L").
-clause_npos("rules/worklist.rofl:125", 1).
-clause_nneg("rules/worklist.rofl:125", 2).
-clause_nbi("rules/worklist.rofl:125", 0).
-body_sig("rules/worklist.rofl:125", "open_cell[audit](V0,V1,V2), not claimed[main](V0,V1,V2), not sweeper[main](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:125", "R0[audit](V0,V1,V2), not R1[main](V0,V1,V2), not R2[main](V0,V1,V2)").
-clause("rules/worklist.rofl:135", "rules/worklist.rofl", 135, queue_stale, audit, 4).
-head_pat("rules/worklist.rofl:135", "W,K,S,L").
-premise("rules/worklist.rofl:135", 0, claim, main, pos, "queued,js,K,S,L,W").
-premise("rules/worklist.rofl:135", 1, work_state, main, neg, "W,done").
-premise("rules/worklist.rofl:135", 2, open_cell, audit, neg, "K,S,L").
+body_sig("rules/worklist.rofl:117", "work[main](V0,_), not stated_state[main](V0)").
+shape_sig("rules/worklist.rofl:117", "R0[main](V0,_), not R1[main](V0)").
+clause("rules/worklist.rofl:118", "rules/worklist.rofl", 118, work_bad_state, audit, 2).
+head_pat("rules/worklist.rofl:118", "W,S").
+premise("rules/worklist.rofl:118", 0, work_state, main, pos, "W,S").
+premise("rules/worklist.rofl:118", 1, work_state_kind, main, neg, "S").
+clause_npos("rules/worklist.rofl:118", 1).
+clause_nneg("rules/worklist.rofl:118", 1).
+clause_nbi("rules/worklist.rofl:118", 0).
+body_sig("rules/worklist.rofl:118", "work_state[main](V0,V1), not work_state_kind[main](V1)").
+shape_sig("rules/worklist.rofl:118", "R0[main](V0,V1), not R1[main](V1)").
+clause("rules/worklist.rofl:119", "rules/worklist.rofl", 119, work_sweeps_nolayer, audit, 2).
+head_pat("rules/worklist.rofl:119", "W,L").
+premise("rules/worklist.rofl:119", 0, work_sweeps, main, pos, "W,L").
+premise("rules/worklist.rofl:119", 1, layer, main, neg, "L").
+clause_npos("rules/worklist.rofl:119", 1).
+clause_nneg("rules/worklist.rofl:119", 1).
+clause_nbi("rules/worklist.rofl:119", 0).
+body_sig("rules/worklist.rofl:119", "work_sweeps[main](V0,V1), not layer[main](V1)").
+shape_sig("rules/worklist.rofl:119", "R0[main](V0,V1), not R1[main](V1)").
+clause("rules/worklist.rofl:124", "rules/worklist.rofl", 124, blocked, audit, 1).
+head_pat("rules/worklist.rofl:124", "W").
+premise("rules/worklist.rofl:124", 0, work_needs, main, pos, "W,O").
+premise("rules/worklist.rofl:124", 1, work_state, main, neg, "O,done").
+clause_npos("rules/worklist.rofl:124", 1).
+clause_nneg("rules/worklist.rofl:124", 1).
+clause_nbi("rules/worklist.rofl:124", 0).
+body_sig("rules/worklist.rofl:124", "work_needs[main](V0,V1), not work_state[main](V1,done)").
+shape_sig("rules/worklist.rofl:124", "R0[main](V0,V1), not R1[main](V1,done)").
+clause("rules/worklist.rofl:126", "rules/worklist.rofl", 126, needs_unknown, audit, 2).
+head_pat("rules/worklist.rofl:126", "W,O").
+premise("rules/worklist.rofl:126", 0, work_needs, main, pos, "W,O").
+premise("rules/worklist.rofl:126", 1, work, main, neg, "O,_").
+clause_npos("rules/worklist.rofl:126", 1).
+clause_nneg("rules/worklist.rofl:126", 1).
+clause_nbi("rules/worklist.rofl:126", 0).
+body_sig("rules/worklist.rofl:126", "work_needs[main](V0,V1), not work[main](V1,_)").
+shape_sig("rules/worklist.rofl:126", "R0[main](V0,V1), not R1[main](V1,_)").
+clause("rules/worklist.rofl:127", "rules/worklist.rofl", 127, needs_reach, main, 2).
+head_pat("rules/worklist.rofl:127", "A,B").
+premise("rules/worklist.rofl:127", 0, work_needs, main, pos, "A,B").
+clause_npos("rules/worklist.rofl:127", 1).
+clause_nneg("rules/worklist.rofl:127", 0).
+clause_nbi("rules/worklist.rofl:127", 0).
+body_sig("rules/worklist.rofl:127", "work_needs[main](V0,V1)").
+shape_sig("rules/worklist.rofl:127", "R0[main](V0,V1)").
+clause("rules/worklist.rofl:128", "rules/worklist.rofl", 128, needs_reach, main, 2).
+head_pat("rules/worklist.rofl:128", "A,C").
+premise("rules/worklist.rofl:128", 0, needs_reach, main, pos, "A,B").
+premise("rules/worklist.rofl:128", 1, work_needs, main, pos, "B,C").
+clause_npos("rules/worklist.rofl:128", 2).
+clause_nneg("rules/worklist.rofl:128", 0).
+clause_nbi("rules/worklist.rofl:128", 0).
+body_sig("rules/worklist.rofl:128", "needs_reach[main](V0,V1), work_needs[main](V1,V2)").
+shape_sig("rules/worklist.rofl:128", "R0[main](V0,V1), R1[main](V1,V2)").
+clause("rules/worklist.rofl:129", "rules/worklist.rofl", 129, needs_cycle, audit, 1).
+head_pat("rules/worklist.rofl:129", "W").
+premise("rules/worklist.rofl:129", 0, needs_reach, main, pos, "W,W").
+clause_npos("rules/worklist.rofl:129", 1).
+clause_nneg("rules/worklist.rofl:129", 0).
+clause_nbi("rules/worklist.rofl:129", 0).
+body_sig("rules/worklist.rofl:129", "needs_reach[main](V0,V0)").
+shape_sig("rules/worklist.rofl:129", "R0[main](V0,V0)").
+clause("rules/worklist.rofl:135", "rules/worklist.rofl", 135, claims_cell, main, 1).
+head_pat("rules/worklist.rofl:135", "W").
+premise("rules/worklist.rofl:135", 0, claim, main, pos, "queued,js,_,_,_,W").
 clause_npos("rules/worklist.rofl:135", 1).
-clause_nneg("rules/worklist.rofl:135", 2).
+clause_nneg("rules/worklist.rofl:135", 0).
 clause_nbi("rules/worklist.rofl:135", 0).
-body_sig("rules/worklist.rofl:135", "claim[main](queued,js,V0,V1,V2,V3), not work_state[main](V3,done), not open_cell[audit](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:135", "R0[main](queued,js,V0,V1,V2,V3), not R1[main](V3,done), not R2[audit](V0,V1,V2)").
-clause("rules/worklist.rofl:141", "rules/worklist.rofl", 141, double_owned, audit, 5).
-head_pat("rules/worklist.rofl:141", "K,S,L,A,B").
-premise("rules/worklist.rofl:141", 0, claim, main, pos, "queued,js,K,S,L,A").
-premise("rules/worklist.rofl:141", 1, claim, main, pos, "queued,js,K,S,L,B").
-clause_npos("rules/worklist.rofl:141", 2).
-clause_nneg("rules/worklist.rofl:141", 0).
-clause_nbi("rules/worklist.rofl:141", 1).
-body_sig("rules/worklist.rofl:141", "claim[main](queued,js,V0,V1,V2,V3), claim[main](queued,js,V0,V1,V2,V4), V3 != V4").
-shape_sig("rules/worklist.rofl:141", "R0[main](queued,js,V0,V1,V2,V3), R0[main](queued,js,V0,V1,V2,V4), V3 != V4").
-clause("rules/worklist.rofl:147", "rules/worklist.rofl", 147, false_done, audit, 4).
-head_pat("rules/worklist.rofl:147", "W,K,S,L").
-premise("rules/worklist.rofl:147", 0, work_state, main, pos, "W,done").
-premise("rules/worklist.rofl:147", 1, claim, main, pos, "queued,js,K,S,L,W").
-premise("rules/worklist.rofl:147", 2, open_cell, audit, pos, "K,S,L").
-clause_npos("rules/worklist.rofl:147", 3).
-clause_nneg("rules/worklist.rofl:147", 0).
+body_sig("rules/worklist.rofl:135", "claim[main](queued,js,_,_,_,V0)").
+shape_sig("rules/worklist.rofl:135", "R0[main](queued,js,_,_,_,V0)").
+clause("rules/worklist.rofl:136", "rules/worklist.rofl", 136, has_workable, main, 1).
+head_pat("rules/worklist.rofl:136", "W").
+premise("rules/worklist.rofl:136", 0, claim, main, pos, "queued,js,K,S,L,W").
+premise("rules/worklist.rofl:136", 1, workable, main, pos, "K,S,L").
+clause_npos("rules/worklist.rofl:136", 2).
+clause_nneg("rules/worklist.rofl:136", 0).
+clause_nbi("rules/worklist.rofl:136", 0).
+body_sig("rules/worklist.rofl:136", "claim[main](queued,js,V0,V1,V2,V3), workable[main](V0,V1,V2)").
+shape_sig("rules/worklist.rofl:136", "R0[main](queued,js,V0,V1,V2,V3), R1[main](V0,V1,V2)").
+clause("rules/worklist.rofl:137", "rules/worklist.rofl", 137, sweep_workable, main, 1).
+head_pat("rules/worklist.rofl:137", "W").
+premise("rules/worklist.rofl:137", 0, work_sweeps, main, pos, "W,L").
+premise("rules/worklist.rofl:137", 1, workable, main, pos, "K,S,L").
+premise("rules/worklist.rofl:137", 2, claimed, main, neg, "K,S,L").
+clause_npos("rules/worklist.rofl:137", 2).
+clause_nneg("rules/worklist.rofl:137", 1).
+clause_nbi("rules/worklist.rofl:137", 0).
+body_sig("rules/worklist.rofl:137", "work_sweeps[main](V0,V1), workable[main](V2,V3,V1), not claimed[main](V2,V3,V1)").
+shape_sig("rules/worklist.rofl:137", "R0[main](V0,V1), R1[main](V2,V3,V1), not R2[main](V2,V3,V1)").
+clause("rules/worklist.rofl:138", "rules/worklist.rofl", 138, unclaimed_item, main, 1).
+head_pat("rules/worklist.rofl:138", "W").
+premise("rules/worklist.rofl:138", 0, work, main, pos, "W,_").
+premise("rules/worklist.rofl:138", 1, claims_cell, main, neg, "W").
+premise("rules/worklist.rofl:138", 2, work_sweeps, main, neg, "W,_").
+clause_npos("rules/worklist.rofl:138", 1).
+clause_nneg("rules/worklist.rofl:138", 2).
+clause_nbi("rules/worklist.rofl:138", 0).
+body_sig("rules/worklist.rofl:138", "work[main](V0,_), not claims_cell[main](V0), not work_sweeps[main](V0,_)").
+shape_sig("rules/worklist.rofl:138", "R0[main](V0,_), not R1[main](V0), not R2[main](V0,_)").
+clause("rules/worklist.rofl:143", "rules/worklist.rofl", 143, held_by, main, 2).
+head_pat("rules/worklist.rofl:143", "W,Who").
+premise("rules/worklist.rofl:143", 0, held, main, pos, "W,Who").
+clause_npos("rules/worklist.rofl:143", 1).
+clause_nneg("rules/worklist.rofl:143", 0).
+clause_nbi("rules/worklist.rofl:143", 0).
+body_sig("rules/worklist.rofl:143", "held[main](V0,V1)").
+shape_sig("rules/worklist.rofl:143", "R0[main](V0,V1)").
+clause("rules/worklist.rofl:144", "rules/worklist.rofl", 144, on_hold, main, 1).
+head_pat("rules/worklist.rofl:144", "W").
+premise("rules/worklist.rofl:144", 0, held, main, pos, "W,_").
+clause_npos("rules/worklist.rofl:144", 1).
+clause_nneg("rules/worklist.rofl:144", 0).
+clause_nbi("rules/worklist.rofl:144", 0).
+body_sig("rules/worklist.rofl:144", "held[main](V0,_)").
+shape_sig("rules/worklist.rofl:144", "R0[main](V0,_)").
+clause("rules/worklist.rofl:145", "rules/worklist.rofl", 145, held_unknown, audit, 1).
+head_pat("rules/worklist.rofl:145", "W").
+premise("rules/worklist.rofl:145", 0, held, main, pos, "W,_").
+premise("rules/worklist.rofl:145", 1, work, main, neg, "W,_").
+clause_npos("rules/worklist.rofl:145", 1).
+clause_nneg("rules/worklist.rofl:145", 1).
+clause_nbi("rules/worklist.rofl:145", 0).
+body_sig("rules/worklist.rofl:145", "held[main](V0,_), not work[main](V0,_)").
+shape_sig("rules/worklist.rofl:145", "R0[main](V0,_), not R1[main](V0,_)").
+clause("rules/worklist.rofl:147", "rules/worklist.rofl", 147, takeable, main, 1).
+head_pat("rules/worklist.rofl:147", "W").
+premise("rules/worklist.rofl:147", 0, work_state, main, pos, "W,open").
+premise("rules/worklist.rofl:147", 1, blocked, audit, neg, "W").
+premise("rules/worklist.rofl:147", 2, has_workable, main, pos, "W").
+premise("rules/worklist.rofl:147", 3, on_hold, main, neg, "W").
+clause_npos("rules/worklist.rofl:147", 2).
+clause_nneg("rules/worklist.rofl:147", 2).
 clause_nbi("rules/worklist.rofl:147", 0).
-body_sig("rules/worklist.rofl:147", "work_state[main](V0,done), claim[main](queued,js,V1,V2,V3,V0), open_cell[audit](V1,V2,V3)").
-shape_sig("rules/worklist.rofl:147", "R0[main](V0,done), R1[main](queued,js,V1,V2,V3,V0), R2[audit](V1,V2,V3)").
-clause("rules/worklist.rofl:166", "rules/worklist.rofl", 166, stated_state, main, 1).
+body_sig("rules/worklist.rofl:147", "work_state[main](V0,open), not blocked[audit](V0), has_workable[main](V0), not on_hold[main](V0)").
+shape_sig("rules/worklist.rofl:147", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
+clause("rules/worklist.rofl:149", "rules/worklist.rofl", 149, takeable, main, 1).
+head_pat("rules/worklist.rofl:149", "W").
+premise("rules/worklist.rofl:149", 0, work_state, main, pos, "W,open").
+premise("rules/worklist.rofl:149", 1, blocked, audit, neg, "W").
+premise("rules/worklist.rofl:149", 2, sweep_workable, main, pos, "W").
+premise("rules/worklist.rofl:149", 3, on_hold, main, neg, "W").
+clause_npos("rules/worklist.rofl:149", 2).
+clause_nneg("rules/worklist.rofl:149", 2).
+clause_nbi("rules/worklist.rofl:149", 0).
+body_sig("rules/worklist.rofl:149", "work_state[main](V0,open), not blocked[audit](V0), sweep_workable[main](V0), not on_hold[main](V0)").
+shape_sig("rules/worklist.rofl:149", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
+clause("rules/worklist.rofl:151", "rules/worklist.rofl", 151, takeable, main, 1).
+head_pat("rules/worklist.rofl:151", "W").
+premise("rules/worklist.rofl:151", 0, work_state, main, pos, "W,open").
+premise("rules/worklist.rofl:151", 1, blocked, audit, neg, "W").
+premise("rules/worklist.rofl:151", 2, unclaimed_item, main, pos, "W").
+premise("rules/worklist.rofl:151", 3, on_hold, main, neg, "W").
+clause_npos("rules/worklist.rofl:151", 2).
+clause_nneg("rules/worklist.rofl:151", 2).
+clause_nbi("rules/worklist.rofl:151", 0).
+body_sig("rules/worklist.rofl:151", "work_state[main](V0,open), not blocked[audit](V0), unclaimed_item[main](V0), not on_hold[main](V0)").
+shape_sig("rules/worklist.rofl:151", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
+clause("rules/worklist.rofl:156", "rules/worklist.rofl", 156, nothing_workable, audit, 1).
+head_pat("rules/worklist.rofl:156", "W").
+premise("rules/worklist.rofl:156", 0, work_state, main, pos, "W,open").
+premise("rules/worklist.rofl:156", 1, claims_cell, main, pos, "W").
+premise("rules/worklist.rofl:156", 2, has_workable, main, neg, "W").
+clause_npos("rules/worklist.rofl:156", 2).
+clause_nneg("rules/worklist.rofl:156", 1).
+clause_nbi("rules/worklist.rofl:156", 0).
+body_sig("rules/worklist.rofl:156", "work_state[main](V0,open), claims_cell[main](V0), not has_workable[main](V0)").
+shape_sig("rules/worklist.rofl:156", "R0[main](V0,open), R1[main](V0), not R2[main](V0)").
+clause("rules/worklist.rofl:165", "rules/worklist.rofl", 165, unblocks, main, 1).
+head_pat("rules/worklist.rofl:165", "P").
+premise("rules/worklist.rofl:165", 0, work_needs, main, pos, "_,P").
+clause_npos("rules/worklist.rofl:165", 1).
+clause_nneg("rules/worklist.rofl:165", 0).
+clause_nbi("rules/worklist.rofl:165", 0).
+body_sig("rules/worklist.rofl:165", "work_needs[main](_,V0)").
+shape_sig("rules/worklist.rofl:165", "R0[main](_,V0)").
+clause("rules/worklist.rofl:166", "rules/worklist.rofl", 166, unblocking_work, main, 1).
 head_pat("rules/worklist.rofl:166", "W").
-premise("rules/worklist.rofl:166", 0, work_state, main, pos, "W,_").
-clause_npos("rules/worklist.rofl:166", 1).
+premise("rules/worklist.rofl:166", 0, takeable, main, pos, "W").
+premise("rules/worklist.rofl:166", 1, unblocks, main, pos, "W").
+clause_npos("rules/worklist.rofl:166", 2).
 clause_nneg("rules/worklist.rofl:166", 0).
 clause_nbi("rules/worklist.rofl:166", 0).
-body_sig("rules/worklist.rofl:166", "work_state[main](V0,_)").
-shape_sig("rules/worklist.rofl:166", "R0[main](V0,_)").
-clause("rules/worklist.rofl:167", "rules/worklist.rofl", 167, work_unstated, audit, 1).
-head_pat("rules/worklist.rofl:167", "W").
-premise("rules/worklist.rofl:167", 0, claim, main, pos, "queued,js,_,_,_,W").
-premise("rules/worklist.rofl:167", 1, work, main, neg, "W,_").
+body_sig("rules/worklist.rofl:166", "takeable[main](V0), unblocks[main](V0)").
+shape_sig("rules/worklist.rofl:166", "R0[main](V0), R1[main](V0)").
+clause("rules/worklist.rofl:167", "rules/worklist.rofl", 167, anything_unblocks, main, 0).
+head_pat("rules/worklist.rofl:167", "").
+premise("rules/worklist.rofl:167", 0, unblocking_work, main, pos, "_").
 clause_npos("rules/worklist.rofl:167", 1).
-clause_nneg("rules/worklist.rofl:167", 1).
+clause_nneg("rules/worklist.rofl:167", 0).
 clause_nbi("rules/worklist.rofl:167", 0).
-body_sig("rules/worklist.rofl:167", "claim[main](queued,js,_,_,_,V0), not work[main](V0,_)").
-shape_sig("rules/worklist.rofl:167", "R0[main](queued,js,_,_,_,V0), not R1[main](V0,_)").
-clause("rules/worklist.rofl:171", "rules/worklist.rofl", 171, frame_owner_unknown, audit, 2).
-head_pat("rules/worklist.rofl:171", "K,W").
-premise("rules/worklist.rofl:171", 0, frame_deferred, main, pos, "K,W").
-premise("rules/worklist.rofl:171", 1, work, main, neg, "W,_").
-clause_npos("rules/worklist.rofl:171", 1).
-clause_nneg("rules/worklist.rofl:171", 1).
-clause_nbi("rules/worklist.rofl:171", 0).
-body_sig("rules/worklist.rofl:171", "frame_deferred[main](V0,V1), not work[main](V1,_)").
-shape_sig("rules/worklist.rofl:171", "R0[main](V0,V1), not R1[main](V1,_)").
-clause("rules/worklist.rofl:172", "rules/worklist.rofl", 172, frame_owner_done, audit, 2).
-head_pat("rules/worklist.rofl:172", "K,W").
-premise("rules/worklist.rofl:172", 0, frame_deferred, main, pos, "K,W").
-premise("rules/worklist.rofl:172", 1, work_state, main, pos, "W,done").
-clause_npos("rules/worklist.rofl:172", 2).
-clause_nneg("rules/worklist.rofl:172", 0).
-clause_nbi("rules/worklist.rofl:172", 0).
-body_sig("rules/worklist.rofl:172", "frame_deferred[main](V0,V1), work_state[main](V1,done)").
-shape_sig("rules/worklist.rofl:172", "R0[main](V0,V1), R1[main](V1,done)").
-clause("rules/worklist.rofl:173", "rules/worklist.rofl", 173, work_unstated, audit, 1).
-head_pat("rules/worklist.rofl:173", "W").
-premise("rules/worklist.rofl:173", 0, work_sweeps, main, pos, "W,_").
-premise("rules/worklist.rofl:173", 1, work, main, neg, "W,_").
-clause_npos("rules/worklist.rofl:173", 1).
-clause_nneg("rules/worklist.rofl:173", 1).
-clause_nbi("rules/worklist.rofl:173", 0).
-body_sig("rules/worklist.rofl:173", "work_sweeps[main](V0,_), not work[main](V0,_)").
-shape_sig("rules/worklist.rofl:173", "R0[main](V0,_), not R1[main](V0,_)").
-clause("rules/worklist.rofl:174", "rules/worklist.rofl", 174, work_stateless, audit, 1).
-head_pat("rules/worklist.rofl:174", "W").
-premise("rules/worklist.rofl:174", 0, work, main, pos, "W,_").
-premise("rules/worklist.rofl:174", 1, stated_state, main, neg, "W").
+body_sig("rules/worklist.rofl:167", "unblocking_work[main](_)").
+shape_sig("rules/worklist.rofl:167", "R0[main](_)").
+clause("rules/worklist.rofl:168", "rules/worklist.rofl", 168, next_work, audit, 1).
+head_pat("rules/worklist.rofl:168", "W").
+premise("rules/worklist.rofl:168", 0, unblocking_work, main, pos, "W").
+clause_npos("rules/worklist.rofl:168", 1).
+clause_nneg("rules/worklist.rofl:168", 0).
+clause_nbi("rules/worklist.rofl:168", 0).
+body_sig("rules/worklist.rofl:168", "unblocking_work[main](V0)").
+shape_sig("rules/worklist.rofl:168", "R0[main](V0)").
+clause("rules/worklist.rofl:169", "rules/worklist.rofl", 169, next_work, audit, 1).
+head_pat("rules/worklist.rofl:169", "W").
+premise("rules/worklist.rofl:169", 0, takeable, main, pos, "W").
+premise("rules/worklist.rofl:169", 1, anything_unblocks, main, neg, "").
+clause_npos("rules/worklist.rofl:169", 1).
+clause_nneg("rules/worklist.rofl:169", 1).
+clause_nbi("rules/worklist.rofl:169", 0).
+body_sig("rules/worklist.rofl:169", "takeable[main](V0), not anything_unblocks[main]()").
+shape_sig("rules/worklist.rofl:169", "R0[main](V0), not R1[main]()").
+clause("rules/worklist.rofl:174", "rules/worklist.rofl", 174, waits_on, main, 2).
+head_pat("rules/worklist.rofl:174", "W,P").
+premise("rules/worklist.rofl:174", 0, work_needs, main, pos, "W,P").
 clause_npos("rules/worklist.rofl:174", 1).
-clause_nneg("rules/worklist.rofl:174", 1).
+clause_nneg("rules/worklist.rofl:174", 0).
 clause_nbi("rules/worklist.rofl:174", 0).
-body_sig("rules/worklist.rofl:174", "work[main](V0,_), not stated_state[main](V0)").
-shape_sig("rules/worklist.rofl:174", "R0[main](V0,_), not R1[main](V0)").
-clause("rules/worklist.rofl:175", "rules/worklist.rofl", 175, work_bad_state, audit, 2).
-head_pat("rules/worklist.rofl:175", "W,S").
-premise("rules/worklist.rofl:175", 0, work_state, main, pos, "W,S").
-premise("rules/worklist.rofl:175", 1, work_state_kind, main, neg, "S").
-clause_npos("rules/worklist.rofl:175", 1).
-clause_nneg("rules/worklist.rofl:175", 1).
+body_sig("rules/worklist.rofl:174", "work_needs[main](V0,V1)").
+shape_sig("rules/worklist.rofl:174", "R0[main](V0,V1)").
+clause("rules/worklist.rofl:175", "rules/worklist.rofl", 175, waits_on, main, 2).
+head_pat("rules/worklist.rofl:175", "W,P").
+premise("rules/worklist.rofl:175", 0, work_needs, main, pos, "W,Q").
+premise("rules/worklist.rofl:175", 1, waits_on, main, pos, "Q,P").
+clause_npos("rules/worklist.rofl:175", 2).
+clause_nneg("rules/worklist.rofl:175", 0).
 clause_nbi("rules/worklist.rofl:175", 0).
-body_sig("rules/worklist.rofl:175", "work_state[main](V0,V1), not work_state_kind[main](V1)").
-shape_sig("rules/worklist.rofl:175", "R0[main](V0,V1), not R1[main](V1)").
-clause("rules/worklist.rofl:176", "rules/worklist.rofl", 176, work_sweeps_nolayer, audit, 2).
-head_pat("rules/worklist.rofl:176", "W,L").
-premise("rules/worklist.rofl:176", 0, work_sweeps, main, pos, "W,L").
-premise("rules/worklist.rofl:176", 1, layer, main, neg, "L").
+body_sig("rules/worklist.rofl:175", "work_needs[main](V0,V1), waits_on[main](V1,V2)").
+shape_sig("rules/worklist.rofl:175", "R0[main](V0,V1), R1[main](V1,V2)").
+clause("rules/worklist.rofl:176", "rules/worklist.rofl", 176, work_needs_cycle, audit, 1).
+head_pat("rules/worklist.rofl:176", "W").
+premise("rules/worklist.rofl:176", 0, waits_on, main, pos, "W,W").
 clause_npos("rules/worklist.rofl:176", 1).
-clause_nneg("rules/worklist.rofl:176", 1).
+clause_nneg("rules/worklist.rofl:176", 0).
 clause_nbi("rules/worklist.rofl:176", 0).
-body_sig("rules/worklist.rofl:176", "work_sweeps[main](V0,V1), not layer[main](V1)").
-shape_sig("rules/worklist.rofl:176", "R0[main](V0,V1), not R1[main](V1)").
-clause("rules/worklist.rofl:190", "rules/worklist.rofl", 190, blocked, audit, 1).
-head_pat("rules/worklist.rofl:190", "W").
-premise("rules/worklist.rofl:190", 0, work_needs, main, pos, "W,O").
-premise("rules/worklist.rofl:190", 1, work_state, main, neg, "O,done").
-clause_npos("rules/worklist.rofl:190", 1).
-clause_nneg("rules/worklist.rofl:190", 1).
-clause_nbi("rules/worklist.rofl:190", 0).
-body_sig("rules/worklist.rofl:190", "work_needs[main](V0,V1), not work_state[main](V1,done)").
-shape_sig("rules/worklist.rofl:190", "R0[main](V0,V1), not R1[main](V1,done)").
-clause("rules/worklist.rofl:193", "rules/worklist.rofl", 193, needs_unknown, audit, 2).
-head_pat("rules/worklist.rofl:193", "W,O").
-premise("rules/worklist.rofl:193", 0, work_needs, main, pos, "W,O").
-premise("rules/worklist.rofl:193", 1, work, main, neg, "O,_").
-clause_npos("rules/worklist.rofl:193", 1).
-clause_nneg("rules/worklist.rofl:193", 1).
-clause_nbi("rules/worklist.rofl:193", 0).
-body_sig("rules/worklist.rofl:193", "work_needs[main](V0,V1), not work[main](V1,_)").
-shape_sig("rules/worklist.rofl:193", "R0[main](V0,V1), not R1[main](V1,_)").
-clause("rules/worklist.rofl:194", "rules/worklist.rofl", 194, needs_reach, main, 2).
-head_pat("rules/worklist.rofl:194", "A,B").
-premise("rules/worklist.rofl:194", 0, work_needs, main, pos, "A,B").
-clause_npos("rules/worklist.rofl:194", 1).
-clause_nneg("rules/worklist.rofl:194", 0).
-clause_nbi("rules/worklist.rofl:194", 0).
-body_sig("rules/worklist.rofl:194", "work_needs[main](V0,V1)").
-shape_sig("rules/worklist.rofl:194", "R0[main](V0,V1)").
-clause("rules/worklist.rofl:195", "rules/worklist.rofl", 195, needs_reach, main, 2).
-head_pat("rules/worklist.rofl:195", "A,C").
-premise("rules/worklist.rofl:195", 0, needs_reach, main, pos, "A,B").
-premise("rules/worklist.rofl:195", 1, work_needs, main, pos, "B,C").
-clause_npos("rules/worklist.rofl:195", 2).
-clause_nneg("rules/worklist.rofl:195", 0).
-clause_nbi("rules/worklist.rofl:195", 0).
-body_sig("rules/worklist.rofl:195", "needs_reach[main](V0,V1), work_needs[main](V1,V2)").
-shape_sig("rules/worklist.rofl:195", "R0[main](V0,V1), R1[main](V1,V2)").
-clause("rules/worklist.rofl:196", "rules/worklist.rofl", 196, needs_cycle, audit, 1).
-head_pat("rules/worklist.rofl:196", "W").
-premise("rules/worklist.rofl:196", 0, needs_reach, main, pos, "W,W").
-clause_npos("rules/worklist.rofl:196", 1).
-clause_nneg("rules/worklist.rofl:196", 0).
-clause_nbi("rules/worklist.rofl:196", 0).
-body_sig("rules/worklist.rofl:196", "needs_reach[main](V0,V0)").
-shape_sig("rules/worklist.rofl:196", "R0[main](V0,V0)").
-clause("rules/worklist.rofl:206", "rules/worklist.rofl", 206, claims_cell, main, 1).
-head_pat("rules/worklist.rofl:206", "W").
-premise("rules/worklist.rofl:206", 0, claim, main, pos, "queued,js,_,_,_,W").
-clause_npos("rules/worklist.rofl:206", 1).
-clause_nneg("rules/worklist.rofl:206", 0).
-clause_nbi("rules/worklist.rofl:206", 0).
-body_sig("rules/worklist.rofl:206", "claim[main](queued,js,_,_,_,V0)").
-shape_sig("rules/worklist.rofl:206", "R0[main](queued,js,_,_,_,V0)").
-clause("rules/worklist.rofl:207", "rules/worklist.rofl", 207, has_workable, main, 1).
-head_pat("rules/worklist.rofl:207", "W").
-premise("rules/worklist.rofl:207", 0, claim, main, pos, "queued,js,K,S,L,W").
-premise("rules/worklist.rofl:207", 1, workable, main, pos, "K,S,L").
-clause_npos("rules/worklist.rofl:207", 2).
-clause_nneg("rules/worklist.rofl:207", 0).
-clause_nbi("rules/worklist.rofl:207", 0).
-body_sig("rules/worklist.rofl:207", "claim[main](queued,js,V0,V1,V2,V3), workable[main](V0,V1,V2)").
-shape_sig("rules/worklist.rofl:207", "R0[main](queued,js,V0,V1,V2,V3), R1[main](V0,V1,V2)").
-clause("rules/worklist.rofl:208", "rules/worklist.rofl", 208, sweep_workable, main, 1).
-head_pat("rules/worklist.rofl:208", "W").
-premise("rules/worklist.rofl:208", 0, work_sweeps, main, pos, "W,L").
-premise("rules/worklist.rofl:208", 1, workable, main, pos, "K,S,L").
-premise("rules/worklist.rofl:208", 2, claimed, main, neg, "K,S,L").
-clause_npos("rules/worklist.rofl:208", 2).
-clause_nneg("rules/worklist.rofl:208", 1).
-clause_nbi("rules/worklist.rofl:208", 0).
-body_sig("rules/worklist.rofl:208", "work_sweeps[main](V0,V1), workable[main](V2,V3,V1), not claimed[main](V2,V3,V1)").
-shape_sig("rules/worklist.rofl:208", "R0[main](V0,V1), R1[main](V2,V3,V1), not R2[main](V2,V3,V1)").
-clause("rules/worklist.rofl:209", "rules/worklist.rofl", 209, unclaimed_item, main, 1).
-head_pat("rules/worklist.rofl:209", "W").
-premise("rules/worklist.rofl:209", 0, work, main, pos, "W,_").
-premise("rules/worklist.rofl:209", 1, claims_cell, main, neg, "W").
-premise("rules/worklist.rofl:209", 2, work_sweeps, main, neg, "W,_").
-clause_npos("rules/worklist.rofl:209", 1).
-clause_nneg("rules/worklist.rofl:209", 2).
-clause_nbi("rules/worklist.rofl:209", 0).
-body_sig("rules/worklist.rofl:209", "work[main](V0,_), not claims_cell[main](V0), not work_sweeps[main](V0,_)").
-shape_sig("rules/worklist.rofl:209", "R0[main](V0,_), not R1[main](V0), not R2[main](V0,_)").
-clause("rules/worklist.rofl:223", "rules/worklist.rofl", 223, held_by, main, 2).
-head_pat("rules/worklist.rofl:223", "W,Who").
-premise("rules/worklist.rofl:223", 0, held, main, pos, "W,Who").
-clause_npos("rules/worklist.rofl:223", 1).
-clause_nneg("rules/worklist.rofl:223", 0).
-clause_nbi("rules/worklist.rofl:223", 0).
-body_sig("rules/worklist.rofl:223", "held[main](V0,V1)").
-shape_sig("rules/worklist.rofl:223", "R0[main](V0,V1)").
-clause("rules/worklist.rofl:224", "rules/worklist.rofl", 224, on_hold, main, 1).
-head_pat("rules/worklist.rofl:224", "W").
-premise("rules/worklist.rofl:224", 0, held, main, pos, "W,_").
-clause_npos("rules/worklist.rofl:224", 1).
-clause_nneg("rules/worklist.rofl:224", 0).
-clause_nbi("rules/worklist.rofl:224", 0).
-body_sig("rules/worklist.rofl:224", "held[main](V0,_)").
-shape_sig("rules/worklist.rofl:224", "R0[main](V0,_)").
-clause("rules/worklist.rofl:225", "rules/worklist.rofl", 225, held_unknown, audit, 1).
-head_pat("rules/worklist.rofl:225", "W").
-premise("rules/worklist.rofl:225", 0, held, main, pos, "W,_").
-premise("rules/worklist.rofl:225", 1, work, main, neg, "W,_").
-clause_npos("rules/worklist.rofl:225", 1).
-clause_nneg("rules/worklist.rofl:225", 1).
-clause_nbi("rules/worklist.rofl:225", 0).
-body_sig("rules/worklist.rofl:225", "held[main](V0,_), not work[main](V0,_)").
-shape_sig("rules/worklist.rofl:225", "R0[main](V0,_), not R1[main](V0,_)").
-clause("rules/worklist.rofl:227", "rules/worklist.rofl", 227, takeable, main, 1).
-head_pat("rules/worklist.rofl:227", "W").
-premise("rules/worklist.rofl:227", 0, work_state, main, pos, "W,open").
-premise("rules/worklist.rofl:227", 1, blocked, audit, neg, "W").
-premise("rules/worklist.rofl:227", 2, has_workable, main, pos, "W").
-premise("rules/worklist.rofl:227", 3, on_hold, main, neg, "W").
-clause_npos("rules/worklist.rofl:227", 2).
-clause_nneg("rules/worklist.rofl:227", 2).
-clause_nbi("rules/worklist.rofl:227", 0).
-body_sig("rules/worklist.rofl:227", "work_state[main](V0,open), not blocked[audit](V0), has_workable[main](V0), not on_hold[main](V0)").
-shape_sig("rules/worklist.rofl:227", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
-clause("rules/worklist.rofl:229", "rules/worklist.rofl", 229, takeable, main, 1).
-head_pat("rules/worklist.rofl:229", "W").
-premise("rules/worklist.rofl:229", 0, work_state, main, pos, "W,open").
-premise("rules/worklist.rofl:229", 1, blocked, audit, neg, "W").
-premise("rules/worklist.rofl:229", 2, sweep_workable, main, pos, "W").
-premise("rules/worklist.rofl:229", 3, on_hold, main, neg, "W").
-clause_npos("rules/worklist.rofl:229", 2).
-clause_nneg("rules/worklist.rofl:229", 2).
-clause_nbi("rules/worklist.rofl:229", 0).
-body_sig("rules/worklist.rofl:229", "work_state[main](V0,open), not blocked[audit](V0), sweep_workable[main](V0), not on_hold[main](V0)").
-shape_sig("rules/worklist.rofl:229", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
-clause("rules/worklist.rofl:231", "rules/worklist.rofl", 231, takeable, main, 1).
-head_pat("rules/worklist.rofl:231", "W").
-premise("rules/worklist.rofl:231", 0, work_state, main, pos, "W,open").
-premise("rules/worklist.rofl:231", 1, blocked, audit, neg, "W").
-premise("rules/worklist.rofl:231", 2, unclaimed_item, main, pos, "W").
-premise("rules/worklist.rofl:231", 3, on_hold, main, neg, "W").
-clause_npos("rules/worklist.rofl:231", 2).
-clause_nneg("rules/worklist.rofl:231", 2).
-clause_nbi("rules/worklist.rofl:231", 0).
-body_sig("rules/worklist.rofl:231", "work_state[main](V0,open), not blocked[audit](V0), unclaimed_item[main](V0), not on_hold[main](V0)").
-shape_sig("rules/worklist.rofl:231", "R0[main](V0,open), not R1[audit](V0), R2[main](V0), not R3[main](V0)").
-clause("rules/worklist.rofl:239", "rules/worklist.rofl", 239, nothing_workable, audit, 1).
-head_pat("rules/worklist.rofl:239", "W").
-premise("rules/worklist.rofl:239", 0, work_state, main, pos, "W,open").
-premise("rules/worklist.rofl:239", 1, claims_cell, main, pos, "W").
-premise("rules/worklist.rofl:239", 2, has_workable, main, neg, "W").
-clause_npos("rules/worklist.rofl:239", 2).
-clause_nneg("rules/worklist.rofl:239", 1).
-clause_nbi("rules/worklist.rofl:239", 0).
-body_sig("rules/worklist.rofl:239", "work_state[main](V0,open), claims_cell[main](V0), not has_workable[main](V0)").
-shape_sig("rules/worklist.rofl:239", "R0[main](V0,open), R1[main](V0), not R2[main](V0)").
-clause("rules/worklist.rofl:271", "rules/worklist.rofl", 271, unblocks, main, 1).
-head_pat("rules/worklist.rofl:271", "P").
-premise("rules/worklist.rofl:271", 0, work_needs, main, pos, "_,P").
-clause_npos("rules/worklist.rofl:271", 1).
-clause_nneg("rules/worklist.rofl:271", 0).
-clause_nbi("rules/worklist.rofl:271", 0).
-body_sig("rules/worklist.rofl:271", "work_needs[main](_,V0)").
-shape_sig("rules/worklist.rofl:271", "R0[main](_,V0)").
-clause("rules/worklist.rofl:272", "rules/worklist.rofl", 272, unblocking_work, main, 1).
-head_pat("rules/worklist.rofl:272", "W").
-premise("rules/worklist.rofl:272", 0, takeable, main, pos, "W").
-premise("rules/worklist.rofl:272", 1, unblocks, main, pos, "W").
-clause_npos("rules/worklist.rofl:272", 2).
-clause_nneg("rules/worklist.rofl:272", 0).
-clause_nbi("rules/worklist.rofl:272", 0).
-body_sig("rules/worklist.rofl:272", "takeable[main](V0), unblocks[main](V0)").
-shape_sig("rules/worklist.rofl:272", "R0[main](V0), R1[main](V0)").
-clause("rules/worklist.rofl:273", "rules/worklist.rofl", 273, anything_unblocks, main, 0).
-head_pat("rules/worklist.rofl:273", "").
-premise("rules/worklist.rofl:273", 0, unblocking_work, main, pos, "_").
-clause_npos("rules/worklist.rofl:273", 1).
-clause_nneg("rules/worklist.rofl:273", 0).
-clause_nbi("rules/worklist.rofl:273", 0).
-body_sig("rules/worklist.rofl:273", "unblocking_work[main](_)").
-shape_sig("rules/worklist.rofl:273", "R0[main](_)").
-clause("rules/worklist.rofl:274", "rules/worklist.rofl", 274, next_work, audit, 1).
-head_pat("rules/worklist.rofl:274", "W").
-premise("rules/worklist.rofl:274", 0, unblocking_work, main, pos, "W").
-clause_npos("rules/worklist.rofl:274", 1).
-clause_nneg("rules/worklist.rofl:274", 0).
-clause_nbi("rules/worklist.rofl:274", 0).
-body_sig("rules/worklist.rofl:274", "unblocking_work[main](V0)").
-shape_sig("rules/worklist.rofl:274", "R0[main](V0)").
-clause("rules/worklist.rofl:275", "rules/worklist.rofl", 275, next_work, audit, 1).
-head_pat("rules/worklist.rofl:275", "W").
-premise("rules/worklist.rofl:275", 0, takeable, main, pos, "W").
-premise("rules/worklist.rofl:275", 1, anything_unblocks, main, neg, "").
-clause_npos("rules/worklist.rofl:275", 1).
-clause_nneg("rules/worklist.rofl:275", 1).
-clause_nbi("rules/worklist.rofl:275", 0).
-body_sig("rules/worklist.rofl:275", "takeable[main](V0), not anything_unblocks[main]()").
-shape_sig("rules/worklist.rofl:275", "R0[main](V0), not R1[main]()").
-clause("rules/worklist.rofl:285", "rules/worklist.rofl", 285, waits_on, main, 2).
-head_pat("rules/worklist.rofl:285", "W,P").
-premise("rules/worklist.rofl:285", 0, work_needs, main, pos, "W,P").
-clause_npos("rules/worklist.rofl:285", 1).
-clause_nneg("rules/worklist.rofl:285", 0).
-clause_nbi("rules/worklist.rofl:285", 0).
-body_sig("rules/worklist.rofl:285", "work_needs[main](V0,V1)").
-shape_sig("rules/worklist.rofl:285", "R0[main](V0,V1)").
-clause("rules/worklist.rofl:286", "rules/worklist.rofl", 286, waits_on, main, 2).
-head_pat("rules/worklist.rofl:286", "W,P").
-premise("rules/worklist.rofl:286", 0, work_needs, main, pos, "W,Q").
-premise("rules/worklist.rofl:286", 1, waits_on, main, pos, "Q,P").
-clause_npos("rules/worklist.rofl:286", 2).
-clause_nneg("rules/worklist.rofl:286", 0).
-clause_nbi("rules/worklist.rofl:286", 0).
-body_sig("rules/worklist.rofl:286", "work_needs[main](V0,V1), waits_on[main](V1,V2)").
-shape_sig("rules/worklist.rofl:286", "R0[main](V0,V1), R1[main](V1,V2)").
-clause("rules/worklist.rofl:287", "rules/worklist.rofl", 287, work_needs_cycle, audit, 1).
-head_pat("rules/worklist.rofl:287", "W").
-premise("rules/worklist.rofl:287", 0, waits_on, main, pos, "W,W").
-clause_npos("rules/worklist.rofl:287", 1).
-clause_nneg("rules/worklist.rofl:287", 0).
-clause_nbi("rules/worklist.rofl:287", 0).
-body_sig("rules/worklist.rofl:287", "waits_on[main](V0,V0)").
-shape_sig("rules/worklist.rofl:287", "R0[main](V0,V0)").
-clause("rules/worklist.rofl:288", "rules/worklist.rofl", 288, in_flight, audit, 1).
-head_pat("rules/worklist.rofl:288", "W").
-premise("rules/worklist.rofl:288", 0, work_state, main, pos, "W,taken").
-clause_npos("rules/worklist.rofl:288", 1).
-clause_nneg("rules/worklist.rofl:288", 0).
-clause_nbi("rules/worklist.rofl:288", 0).
-body_sig("rules/worklist.rofl:288", "work_state[main](V0,taken)").
-shape_sig("rules/worklist.rofl:288", "R0[main](V0,taken)").
-clause("rules/worklist.rofl:293", "rules/worklist.rofl", 293, spawned_by, audit, 2).
-head_pat("rules/worklist.rofl:293", "W,F").
-premise("rules/worklist.rofl:293", 0, work_spawned, main, pos, "W,F").
-premise("rules/worklist.rofl:293", 1, finding, main, pos, "F,_").
-clause_npos("rules/worklist.rofl:293", 2).
-clause_nneg("rules/worklist.rofl:293", 0).
-clause_nbi("rules/worklist.rofl:293", 0).
-body_sig("rules/worklist.rofl:293", "work_spawned[main](V0,V1), finding[main](V1,_)").
-shape_sig("rules/worklist.rofl:293", "R0[main](V0,V1), R1[main](V1,_)").
-clause("rules/worklist.rofl:294", "rules/worklist.rofl", 294, spawn_orphan, audit, 2).
-head_pat("rules/worklist.rofl:294", "W,F").
-premise("rules/worklist.rofl:294", 0, work_spawned, main, pos, "W,F").
-premise("rules/worklist.rofl:294", 1, finding, main, neg, "F,_").
-clause_npos("rules/worklist.rofl:294", 1).
-clause_nneg("rules/worklist.rofl:294", 1).
-clause_nbi("rules/worklist.rofl:294", 0).
-body_sig("rules/worklist.rofl:294", "work_spawned[main](V0,V1), not finding[main](V1,_)").
-shape_sig("rules/worklist.rofl:294", "R0[main](V0,V1), not R1[main](V1,_)").
+body_sig("rules/worklist.rofl:176", "waits_on[main](V0,V0)").
+shape_sig("rules/worklist.rofl:176", "R0[main](V0,V0)").
+clause("rules/worklist.rofl:177", "rules/worklist.rofl", 177, in_flight, audit, 1).
+head_pat("rules/worklist.rofl:177", "W").
+premise("rules/worklist.rofl:177", 0, work_state, main, pos, "W,taken").
+clause_npos("rules/worklist.rofl:177", 1).
+clause_nneg("rules/worklist.rofl:177", 0).
+clause_nbi("rules/worklist.rofl:177", 0).
+body_sig("rules/worklist.rofl:177", "work_state[main](V0,taken)").
+shape_sig("rules/worklist.rofl:177", "R0[main](V0,taken)").
+clause("rules/worklist.rofl:181", "rules/worklist.rofl", 181, spawned_by, audit, 2).
+head_pat("rules/worklist.rofl:181", "W,F").
+premise("rules/worklist.rofl:181", 0, work_spawned, main, pos, "W,F").
+premise("rules/worklist.rofl:181", 1, finding, main, pos, "F,_").
+clause_npos("rules/worklist.rofl:181", 2).
+clause_nneg("rules/worklist.rofl:181", 0).
+clause_nbi("rules/worklist.rofl:181", 0).
+body_sig("rules/worklist.rofl:181", "work_spawned[main](V0,V1), finding[main](V1,_)").
+shape_sig("rules/worklist.rofl:181", "R0[main](V0,V1), R1[main](V1,_)").
+clause("rules/worklist.rofl:182", "rules/worklist.rofl", 182, spawn_orphan, audit, 2).
+head_pat("rules/worklist.rofl:182", "W,F").
+premise("rules/worklist.rofl:182", 0, work_spawned, main, pos, "W,F").
+premise("rules/worklist.rofl:182", 1, finding, main, neg, "F,_").
+clause_npos("rules/worklist.rofl:182", 1).
+clause_nneg("rules/worklist.rofl:182", 1).
+clause_nbi("rules/worklist.rofl:182", 0).
+body_sig("rules/worklist.rofl:182", "work_spawned[main](V0,V1), not finding[main](V1,_)").
+shape_sig("rules/worklist.rofl:182", "R0[main](V0,V1), not R1[main](V1,_)").
 clause("rules/worlds.rofl:54", "rules/worlds.rofl", 54, world_declared, main, 1).
 head_pat("rules/worlds.rofl:54", "W").
 premise("rules/worlds.rofl:54", 0, world_pack, main, pos, "W,_").
@@ -31584,7 +31512,6 @@ named_in_ts(resolve_answer).
 named_in_ts(iterator).
 named_in_ts(obj).
 named_in_ts(conclusion_lit).
-named_in_ts(any_unblocker).
 named_in_ts(register).
 named_in_ts(resolve).
 named_in_ts(disagrees).
@@ -31598,6 +31525,7 @@ named_in_ts(from).
 named_in_ts(tick).
 named_in_ts(kept).
 named_in_ts(does).
+named_in_ts(any_unblocker).
 named_in_ts(fed_cut).
 named_in_ts(kind).
 named_in_ts(key).
@@ -33427,6 +33355,7 @@ atom_seen(f_a_moved_rule_leaves_its_prose_behind_and_a_lexical_rule_sees_it).
 atom_seen(f_the_tripwire_fired_on_purpose_and_the_guard_moved_to_the_source).
 atom_seen(f_a_name_beats_a_mode_column_until_the_boilerplate_is_tenfold).
 atom_seen(f_one_abstract_value_many_entry_points_and_library_meaning_is_a_table).
+atom_seen(f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
 atom_seen(kernel_table).
 atom_seen(asserted_by).
 atom_seen(concludes).
