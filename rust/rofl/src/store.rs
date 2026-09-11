@@ -1173,6 +1173,13 @@ impl Store {
         n
     }
 
+    /// Every live fact, in id order. `canonical_state` walks the same range
+    /// inline; this is that walk for the readers who want the facts and not
+    /// the rendering.
+    pub fn live_ids(&self) -> Vec<FactId> {
+        (0..self.facts.recs.len() as FactId).filter(|id| self.alive(*id)).collect()
+    }
+
     pub fn firing_keys(&self) -> Vec<FactId> {
         (0..self.wit_head.len() as FactId)
             .filter(|&i| self.wit_head[i as usize] != EMPTY)

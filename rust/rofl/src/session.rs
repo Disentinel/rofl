@@ -40,8 +40,10 @@
 
 use std::collections::HashMap;
 
-use crate::engine::{Eval, Halt, Mode, TickOutcome};
-use crate::reflect::{bootstrap_kernel, is_kernel_ledger, Vocab};
+use crate::describe;
+use crate::engine::{Eval, Halt, Mode, TickOutcome, WhynotBounds};
+use crate::program;
+use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE};
 use crate::term::{Heap, Sym, Term, TermK};
@@ -682,6 +684,147 @@ impl Session {
     /// there is nothing left to convert. What remains is the book, which is a
     /// SOURCE notion — absent, named, or a variable — and only the first two
     /// mean anything to a question.
+    /// `Rofl.holds` (src/api.ts:834). The question with its answer thrown
+    /// away — kept because `ask(...)?.rows.is_empty()` at every call site is
+    /// how a caller starts writing their own query layer.
+    pub fn holds(&mut self, query: &str) -> Result<bool, String> {
+        Ok(!self.ask(query)?.rows.is_empty())
+    }
+
+    /// `Rofl.factKeys` (src/api.ts:1220), in canonical order. `rel` narrows.
+    pub fn fact_keys(&mut self, rel: Option<&str>) -> Vec<String> {
+        let want = rel.map(|r| self.eval.h.intern(r));
+        let mut out = Vec::new();
+        for id in self.eval.store.live_ids() {
+            if want.is_some_and(|w| self.eval.store.rec(id).rel != w) {
+                continue;
+            }
+            out.push(self.eval.store.key(&self.eval.h, id));
+        }
+        out.sort_by(|a, b| crate::term::cmp_js(a, b));
+        out
+    }
+
+    /// `Rofl.retract` (src/api.ts:651): take a BASE fact out, and the
+    /// `asserted_by` row that recorded who put it there with it.
+    ///
+    /// A DERIVED FACT IS REFUSED BY NAME rather than removed, because removing
+    /// it would leave the rule that concluded it still concluding it — the
+    /// caller wants `excise` and is told so.
+    pub fn retract(&mut self, query: &str) -> Result<(), String> {
+        let (id, key) = self.ground_fact(query)?;
+        let Some(id) = id else { return Err(format!("no such fact: {key}")) };
+        if !self.eval.store.rec(id).base() {
+            return Err(format!("{key} is derived; retract its supports instead"));
+        }
+        let mut doomed = vec![id];
+        let ft = self.fact_term(id);
+        let ab = self.eval.v.asserted_by;
+        for f in self.eval.store.rel_all(&self.eval.h, ab) {
+            if self.eval.store.args(f).first() == Some(&ft) {
+                doomed.push(f);
+            }
+        }
+        self.eval.store.remove_many(&doomed);
+        self.eval.store.dirty = true;
+        Ok(())
+    }
+
+    /// `Rofl.excise` (src/api.ts:1070): what this base fact is holding up.
+    ///
+    /// A FORK, THE FACT REMOVED, A CLEAN RE-EVALUATION, AND THE DIFF IS THE
+    /// BLAST RADIUS. This world is not touched — the question is counterfactual
+    /// and an instrument that answers it by damaging its subject has only one
+    /// use.
+    pub fn excise(&mut self, query: &str) -> Result<(Vec<String>, Vec<String>), String> {
+        let (id, key) = self.ground_fact(query)?;
+        let Some(id) = id else { return Err(format!("{key} is not a base fact")) };
+        if !self.eval.store.rec(id).base() {
+            return Err(format!("{key} is not a base fact"));
+        }
+        self.evaluate().map_err(|h| describe(&h))?;
+        let before = self.visible();
+        let mut scratch = self.fork();
+        scratch.retract(query)?;
+        scratch.evaluate().map_err(|h| describe(&h))?;
+        let after = scratch.visible();
+        let removed: Vec<String> = before.iter().filter(|k| !after.contains(*k)).cloned().collect();
+        let added: Vec<String> = after.iter().filter(|k| !before.contains(*k)).cloned().collect();
+        Ok((removed, added))
+    }
+
+    /// The keys a caller can see: the kernel's own ledgers are the engine
+    /// talking to itself and would put the whole reification in every diff.
+    fn visible(&mut self) -> std::collections::BTreeSet<String> {
+        let hide: std::collections::HashSet<Sym> = self
+            .eval
+            .v
+            .reserved_set
+            .iter()
+            .copied()
+            .chain([self.eval.v.stratum, self.eval.v.unstratified])
+            .collect();
+        let mut out = std::collections::BTreeSet::new();
+        for id in self.eval.store.live_ids() {
+            if hide.contains(&self.eval.store.rec(id).rel) {
+                continue;
+            }
+            out.insert(self.eval.store.key(&self.eval.h, id));
+        }
+        out
+    }
+
+    /// One ground literal, as the fact it names: the id when the store holds
+    /// it, and the key either way so the caller is told WHICH fact was meant.
+    fn ground_fact(&mut self, query: &str) -> Result<(Option<FactId>, String), String> {
+        let lit = self.one_lit(query)?;
+        let Some(p) = lit.persp.as_atom() else {
+            return Err("this needs a ground fact".into());
+        };
+        if !lit.args.iter().all(|a| self.eval.h.is_ground(*a)) {
+            return Err("this needs a ground fact".into());
+        }
+        let mut key = String::new();
+        write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
+        Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
+    }
+
+    /// `$fact(rel, persp, args)` — how `asserted_by` names the fact it is about.
+    fn fact_term(&mut self, id: FactId) -> Term {
+        let r = self.eval.store.rec(id);
+        let (rel, persp) = (r.rel, r.persp);
+        let args = self.eval.store.args(id).to_vec();
+        crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, rel, persp, &args)
+    }
+
+    /// `Rofl.why` (src/api.ts:841). The question is written in the SOURCE
+    /// language, as `ask` is: a caller who can write a rule can write a why.
+    pub fn why(&mut self, query: &str) -> Result<String, String> {
+        let lit = self.one_lit(query)?;
+        self.eval.why_text(&lit)
+    }
+
+    /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
+    /// is the answer, not an error, and says so in the same shape.
+    pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
+        let lit = self.one_lit(query)?;
+        self.eval.whynot_text(&lit, b).map_err(|h| describe(&h))
+    }
+
+    /// One literal, parsed and lowered. `ask` open-codes the same first three
+    /// lines because it goes on to read the columns; these two want the
+    /// evaluator's `Lit` and nothing else.
+    fn one_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {
+        let src = format!("{}.", query.trim().trim_end_matches('.'));
+        let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
+        if cs.len() != 1 || !cs[0].body.is_empty() {
+            return Err("this takes exactly one literal".into());
+        }
+        let mut c = program::to_clause(&mut self.eval.h, &self.eval.v, &cs[0])?;
+        reflect::resolve_clause_books(&self.eval.v, &mut c);
+        Ok(c.head)
+    }
+
     fn lit_terms(&mut self, l: &rofl_parse::Lit) -> Result<(Sym, Sym, Vec<Term>), String> {
         let persp = match l.book {
             Book::Bare => self.eval.v.main,

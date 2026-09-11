@@ -242,3 +242,28 @@ So the port is incomplete without them, and the corpus cannot see it: it only
 ever asks both engines to EVALUATE, and a byte-identical `canonicalState` says
 nothing about whether either can be asked a question afterwards.
 
+**Done 2026-09-11**, with `retract`, `excise`, `holds` and `factKeys` — the
+counterfactual half of the same family — alongside. `Session` now answers
+`why`, `whynot`, `retract`, `excise`, `holds` and `fact_keys`.
+
+THE TEXT IS THE CONTRACT AND THAT IS WHAT IS GATED. Two engines that explain
+the same world differently are two languages, so the sixteen expected strings
+in `rust/rofl/tests/explain.rs` were taken from `src/api.ts` on the same
+program and pasted in unedited — the content-addressed rule ids, the `@tick`
+numbers, the `#1` and `#3` renaming suffixes the evaluator assigns, the
+`-- blocked: K holds` clause, and the single-step `whynot` that `why` inlines
+under a negated premise. Every one of them matches.
+
+**And the citation could not be written until the census could see it.**
+`scanners/spec.ts` built its list of checks from `test/*.test.ts` and nothing
+else, so a duty about the PORT had no check it could name and
+`d_port_owes_why` would have gone on reading UNCOVERED on the day it was
+discharged. The census now walks `rust/rofl/tests/*.rs` as well.
+
+What is still absent on the Rust side, named rather than implied:
+`save` (a snapshot out — `open` is the way in and there is no way back),
+`run` (the tick loop, and its budget-exhausted hole), `strataPlan`, and
+`assertClauses`, which `npm run features` reports as reachable by no demo at
+all and which is a question about the TypeScript surface rather than about the
+port.
+

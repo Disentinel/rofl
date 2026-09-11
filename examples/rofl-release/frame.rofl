@@ -17,6 +17,12 @@ claim(two_engines_agree).
 blocking(rofl_1_0, two_engines_agree).
 observable(two_engines_agree).
 
+-- The half of `port_surface_complete` that IS done, stated on its own so the
+-- journal can carry both answers without either hiding the other.
+claim(port_explains).
+requires(rofl_1_0, port_explains).
+observable(port_explains).
+
 claim(every_duty_has_a_guard).
 requires(rofl_1_0, every_duty_has_a_guard).
 observable(every_duty_has_a_guard).

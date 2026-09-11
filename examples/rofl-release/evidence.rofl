@@ -8,11 +8,21 @@ supports[obs](golden_82, two_engines_agree).
 evidence_kind[obs](golden_82, measured).
 evidence_version[obs](golden_82, "0.1.0").
 
--- `npm run speccheck` — 30 duties UNCOVERED, and `d_port_owes_why` is one of
--- them: `why`, `whynot` and `retract` have no Rust surface at all.
-refutes[obs](speccheck_port, port_surface_complete).
-evidence_kind[obs](speccheck_port, measured).
-evidence_version[obs](speccheck_port, "0.1.0").
+-- THE BLOCKER MOVED AND DID NOT CLEAR, 2026-09-11. `why`, `whynot`, `retract`,
+-- `excise`, `holds` and `fact_keys` are on `Session` and gated against the
+-- reference host's own output, string for string, by
+-- `rust/rofl/tests/explain.rs` (16 tests) -- so `d_port_owes_why` is
+-- discharged and no longer reads UNCOVERED. What the claim still fails on is
+-- narrower and is named: `save` has no Rust form, so a world can be opened
+-- from a snapshot and never written back to one; `run` and `strataPlan` are
+-- absent too.
+refutes[obs](port_surface_gap, port_surface_complete).
+evidence_kind[obs](port_surface_gap, measured).
+evidence_version[obs](port_surface_gap, "0.1.0").
+
+supports[obs](explain_parity_16, port_explains).
+evidence_kind[obs](explain_parity_16, measured).
+evidence_version[obs](explain_parity_16, "0.1.0").
 
 refutes[obs](speccheck_uncovered, every_duty_has_a_guard).
 evidence_kind[obs](speccheck_uncovered, measured).

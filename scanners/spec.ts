@@ -57,6 +57,23 @@ export function testNames(source: string): string[] {
   return out;
 }
 
+/** A Rust integration test is `#[test]` and then the function it attaches to,
+ *  which may be one line down or several — `#[ignore]`, a doc comment and an
+ *  attribute all sit between. The name is the FUNCTION's, because that is what
+ *  `cargo test` prints and therefore what a citation can be checked against. */
+export function rustTestNames(source: string): string[] {
+  const out: string[] = [];
+  let armed = false;
+  for (const line of source.split('\n')) {
+    const t = line.trim();
+    if (t === '#[test]') { armed = true; continue; }
+    if (!armed) continue;
+    const m = /^(?:pub )?fn ([a-z_][a-z0-9_]*)\s*\(/.exec(t);
+    if (m) { out.push(m[1]); armed = false; }
+  }
+  return out;
+}
+
 /** npm scripts that are CHECKS rather than entry points. A check is a script
  *  the tree can fail on; `repl`, `scan`, `report` cannot fail a build. */
 const GATE_SCRIPTS = new Set(['test', 'test:bun', 'textcheck', 'measurecheck']);
@@ -68,6 +85,21 @@ export function census(): Census {
   for (const f of testFiles) {
     const rel = `test/${f}`;
     for (const name of testNames(fs.readFileSync(path.join(testDir, f), 'utf8'))) {
+      checks.push({ file: rel, name, kind: 'test' });
+    }
+  }
+
+  // THE PORT'S TESTS WERE OUTSIDE THE CENSUS, AND SO NO DUTY ABOUT THE PORT
+  // COULD EVER BE GUARDED. `d_port_owes_why` read UNCOVERED on the day it was
+  // discharged, because a citation is checked against this list and this list
+  // was `test/*.test.ts` and nothing else — the same blindness the comment
+  // above records about `mutant()`, one language further out.
+  const rustDir = path.join(ROOT, 'rust/rofl/tests');
+  const rustFiles = fs.existsSync(rustDir)
+    ? fs.readdirSync(rustDir).filter((f) => f.endsWith('.rs')).sort() : [];
+  for (const f of rustFiles) {
+    const rel = `rust/rofl/tests/${f}`;
+    for (const name of rustTestNames(fs.readFileSync(path.join(rustDir, f), 'utf8'))) {
       checks.push({ file: rel, name, kind: 'test' });
     }
   }

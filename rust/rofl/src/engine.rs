@@ -12,7 +12,8 @@ use std::rc::Rc;
 use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
-    write_fact_key, FactId, FactRec, PremRef, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
+    resolved_lit_key, write_fact_key, FactId, FactRec, PremRef, StagedHead, Store, Witness, F_BASE,
+    F_FROZEN, F_TICK,
 };
 use crate::term::*;
 
@@ -2458,5 +2459,387 @@ mod tests {
             after > 50,
             "one evaluate restores the witness table: {after}"
         );
+    }
+}
+
+// ------------------------------------------------------------------ explain
+//
+// `why` and `whynot`, the two the port owed (docs/port-surface.md, "The port
+// owes explanation"). A store that can say WHICH firing produced a fact, and
+// why a fact does NOT hold, is the difference between an engine and a table.
+//
+// THE TEXT IS THE CONTRACT. `src/api.ts` renders both as a tree and every
+// marker in it is load-bearing — `[axiom]`, `[past tick]`, `[cycle]`,
+// `<= rule @tick N`, `not K [finite failure]`, `-- blocked: K holds`. Two
+// engines that explain the same world differently are two languages, so this
+// renders the same strings rather than an equivalent structure, and
+// `rust/rofl/tests/explain.rs` holds them against the reference output.
+
+/// The bounds `whynot` carries. Every one of them announces itself in the
+/// output rather than truncating quietly (src/api.ts:1000).
+pub struct WhynotBounds {
+    pub max_depth: usize,
+    pub max_nodes: usize,
+}
+
+impl Default for WhynotBounds {
+    fn default() -> Self {
+        WhynotBounds { max_depth: 3, max_nodes: 64 }
+    }
+}
+
+struct WnCtx {
+    max_depth: usize,
+    max_nodes: usize,
+    nodes: usize,
+    path: HashSet<String>,
+}
+
+impl Eval {
+    /// `Rofl.why` (src/api.ts:841): the derivation tree of a fact that holds.
+    pub fn why_text(&mut self, lit: &Lit) -> Result<String, String> {
+        let Some(p) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else {
+            return Err("why needs a ground literal".into());
+        };
+        if !lit.args.iter().all(|a| self.h.is_ground(*a)) {
+            return Err("why needs a ground literal".into());
+        }
+        let mut key = String::new();
+        write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
+        let Some(id) = self.store.get(lit.rel, p, &lit.args) else {
+            return Err(format!("{key} does not hold; try: whynot {key}"));
+        };
+        let mut seen = HashSet::new();
+        Ok(self.render_why(id, 0, &mut seen))
+    }
+
+    fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>) -> String {
+        let mut key = String::new();
+        let r = self.store.rec(id);
+        write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
+        let pad = "  ".repeat(indent);
+        if seen.contains(&id) {
+            return format!("{pad}{key} [cycle]");
+        }
+        seen.insert(id);
+        // The witness is copied out before anything else borrows the store:
+        // `WitView` holds the arena's own slice and the recursion writes.
+        let w = self
+            .store
+            .witness_of(&self.h, id)
+            .map(|w| (w.rule, w.tick, w.prems.to_vec()));
+        let out = match w {
+            // A LIVE FACT WITH NO FIRING IS ONE OF TWO THINGS, and the store
+            // cannot tell them apart from the witness alone: a base assertion,
+            // or a fact carried across a boundary whose witness table belongs
+            // to a tick that is gone.
+            None => {
+                let mark = if self.store.alive(id) && self.store.rec(id).base() {
+                    "[axiom]"
+                } else {
+                    "[past tick]"
+                };
+                format!("{pad}{key} {mark}")
+            }
+            Some((rule, tick, prems)) => {
+                let mut lines = vec![format!("{pad}{key}  <= {} @tick {tick}", self.h.name(rule))];
+                for pr in prems {
+                    match pr {
+                        PremRef::Fact(f) => lines.push(self.render_why(f, indent + 1, seen)),
+                        PremRef::Neg(k) => {
+                            let key = self.h.name(k).to_string();
+                            lines.push(format!("{}not {key} [finite failure]", "  ".repeat(indent + 1)));
+                            // WHY INLINES THE SINGLE-STEP whynot, because a
+                            // negation that held is a claim and `[finite
+                            // failure]` alone is the claim without its
+                            // evidence. A key carrying a variable is not a
+                            // literal anybody can ask, so it is left bare.
+                            if !key.contains('?') {
+                                if let Some(sub) = self.neg_demo(&key) {
+                                    let pad = "  ".repeat(indent + 2);
+                                    lines.push(
+                                        sub.lines().map(|l| format!("{pad}{l}")).collect::<Vec<_>>().join("\n"),
+                                    );
+                                }
+                            }
+                        }
+                        PremRef::Bi(d) => lines.push(format!(
+                            "{}{} [builtin]",
+                            "  ".repeat(indent + 1),
+                            self.h.name(d)
+                        )),
+                    }
+                }
+                lines.join("\n")
+            }
+        };
+        seen.remove(&id);
+        out
+    }
+
+    /// The demonstration `why` inlines under a negated premise: one step, and
+    /// silently elided when the key does not parse back — a premise key is the
+    /// store's spelling and the parser is the only thing that decides whether
+    /// it is also a question.
+    fn neg_demo(&mut self, key: &str) -> Option<String> {
+        let lit = self.parse_lit(key).ok()?;
+        let b = WhynotBounds { max_depth: 1, max_nodes: 64 };
+        self.whynot_text(&lit, &b).ok().map(|(_, t)| t)
+    }
+
+    /// One literal, written as ROFL, lowered to what the evaluator runs.
+    pub fn parse_lit(&mut self, query: &str) -> Result<Lit, String> {
+        let src = format!("{}.", query.trim().trim_end_matches('.'));
+        let cs = crate::rofl_parse::parse(&mut self.h, &src)?;
+        if cs.len() != 1 || !cs[0].body.is_empty() {
+            return Err("this takes exactly one literal".into());
+        }
+        let v = self.v.clone();
+        let mut c = crate::program::to_clause(&mut self.h, &v, &cs[0])?;
+        crate::reflect::resolve_clause_books(&v, &mut c);
+        Ok(c.head)
+    }
+
+    /// `Rofl.whynot` (src/api.ts:927): the demonstration that a literal fails.
+    /// Returns `(holds, text)` — a literal that HOLDS is not an error, it is
+    /// the answer, and the caller is told so in the same shape.
+    pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds) -> Result<(bool, String), Halt> {
+        let mut ctx = WnCtx {
+            max_depth: b.max_depth.max(1),
+            max_nodes: b.max_nodes.max(1),
+            nodes: 0,
+            path: HashSet::new(),
+        };
+        let s = Subst::default();
+        if !self.match_premise(lit, &s, 0, None)?.is_empty() {
+            let mut k = String::new();
+            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+            return Ok((true, format!("{k} holds; nothing to demonstrate")));
+        }
+        let mut k = String::new();
+        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+        let mut lines = vec![format!("whynot {k}:")];
+        ctx.path.insert(self.cycle_key(lit));
+        lines.extend(self.explain_failure(lit, 1, &mut ctx)?);
+        Ok((false, lines.join("\n")))
+    }
+
+    /// One node: for every rule that could conclude the literal, the failing
+    /// premise instances, each recursively explained in turn.
+    fn explain_failure(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
+        ctx.nodes += 1;
+        let pad = "  ".repeat(2 * level - 1);
+        let mut lines = Vec::new();
+        let rules: Vec<Rc<ERule>> = self
+            .rules
+            .iter()
+            .filter(|r| r.clause.head.rel == lit.rel)
+            .cloned()
+            .collect();
+        if rules.is_empty() {
+            lines.push(format!(
+                "{pad}no rule concludes '{}' and no matching base fact exists",
+                self.h.name(lit.rel)
+            ));
+            return Ok(lines);
+        }
+        for r in rules {
+            let rn = self.rename_clause(&r.clause);
+            let mut s = Some(Subst::default());
+            if let Some(cur) = s.take() {
+                s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &cur, None);
+            }
+            let n = rn.head.args.len().min(lit.args.len());
+            for i in 0..n {
+                let Some(cur) = s.take() else { break };
+                s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
+            }
+            let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else {
+                lines.push(format!("{pad}rule {}: head does not unify", self.h.name(r.id)));
+                continue;
+            };
+            let failures = self.failing_premises(&rn, &s0)?;
+            lines.push(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon));
+            let mut keys: Vec<&String> = failures.keys().collect();
+            keys.sort_by(|a, b| cmp_js(a, b));
+            let keys: Vec<String> = keys.into_iter().take(12).cloned().collect();
+            if keys.is_empty() {
+                lines.push(format!("{pad}  (no failing premise found within exploration bounds)"));
+            }
+            for f in keys {
+                lines.push(format!("{pad}  failed premise: {f}"));
+                if let Some(Some(sub)) = failures.get(&f).cloned() {
+                    lines.extend(self.explain_deeper(&sub, level + 1, ctx)?);
+                }
+            }
+        }
+        Ok(lines)
+    }
+
+    /// Everything that makes the recursion terminate is here — the cycle path,
+    /// the depth cap, the node cap — and each says so in the output.
+    fn explain_deeper(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
+        let pad = "  ".repeat(2 * level - 1);
+        if level > ctx.max_depth {
+            // depth 1 is the single-step form: nothing below the named
+            // premises was promised, so nothing there is cut off.
+            return Ok(if ctx.max_depth > 1 {
+                vec![format!("{pad}[depth limit {} reached]", ctx.max_depth)]
+            } else {
+                Vec::new()
+            });
+        }
+        if ctx.nodes >= ctx.max_nodes {
+            return Ok(vec![format!("{pad}[node limit {} reached]", ctx.max_nodes)]);
+        }
+        let ck = self.cycle_key(lit);
+        if ctx.path.contains(&ck) {
+            let mut k = String::new();
+            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+            return Ok(vec![format!("{pad}{k} [cycle]")]);
+        }
+        ctx.path.insert(ck.clone());
+        let out = self.explain_failure(lit, level, ctx);
+        ctx.path.remove(&ck);
+        out
+    }
+
+    /// Single-step failure analysis of one body under a head substitution.
+    ///
+    /// IN THE ORDER THE EVALUATOR SOLVES IN, and the two engines' hosts once
+    /// disagreed about exactly this: `whynot` is top-down, so the goal has
+    /// already bound the head's arguments and a negation is read with them
+    /// bound, where the bottom-up run read the same negation with them free.
+    fn failing_premises(&mut self, rn: &Clause, s0: &Subst) -> Result<HashMap<String, Option<Lit>>, Halt> {
+        let mut out: HashMap<String, Option<Lit>> = HashMap::new();
+        let body = plan_body(&self.h, rn).0;
+        let mut nodes = 0usize;
+        self.explore_body(&body, 0, s0, &mut out, &mut nodes)?;
+        Ok(out)
+    }
+
+    fn explore_body(
+        &mut self,
+        body: &[BodyElem],
+        k: usize,
+        s: &Subst,
+        out: &mut HashMap<String, Option<Lit>>,
+        nodes: &mut usize,
+    ) -> Result<(), Halt> {
+        *nodes += 1;
+        if *nodes > 2000 || k >= body.len() {
+            return Ok(()); // a surviving branch is not a failure (demand)
+        }
+        match &body[k] {
+            BodyElem::Pos(l) => {
+                let mm = self.match_premise(l, s, 0, None)?;
+                if mm.is_empty() {
+                    let mut key = String::new();
+                    resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                    let inst = self.instantiate(l, s);
+                    out.entry(key).or_insert(Some(inst));
+                } else {
+                    for (s2, _) in mm.into_iter().take(16) {
+                        self.explore_body(body, k + 1, &s2, out, nodes)?;
+                    }
+                }
+            }
+            BodyElem::Neg(l) => {
+                let mm = self.match_premise(l, s, 0, None)?;
+                if let Some((s2, r)) = mm.into_iter().next() {
+                    let wit = match r {
+                        PremRef::Fact(f) => {
+                            let rec = self.store.rec(f);
+                            let (rel, persp) = (rec.rel, rec.persp);
+                            let args = self.store.args(f).to_vec();
+                            let mut w = String::new();
+                            write_fact_key(&self.h, rel, persp, &args, &mut w);
+                            w
+                        }
+                        _ => {
+                            let mut w = String::new();
+                            resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, &s2, &mut w);
+                            w
+                        }
+                    };
+                    let mut key = String::new();
+                    resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                    out.entry(format!("not {key} -- blocked: {wit} holds")).or_insert(None);
+                } else {
+                    self.explore_body(body, k + 1, s, out, nodes)?;
+                }
+            }
+            BodyElem::Bi { op, l, r } => {
+                match self.eval_builtin(*op, *l, *r, s, None) {
+                    Some(s2) => self.explore_body(body, k + 1, &s2, out, nodes)?,
+                    None => {
+                        let lt = resolve(&mut self.h, *l, s);
+                        let rt = resolve(&mut self.h, *r, s);
+                        let (mut a, mut b) = (String::new(), String::new());
+                        self.h.canon_term(lt, &mut a);
+                        self.h.canon_term(rt, &mut b);
+                        out.entry(format!("{a} {} {b} [builtin fails]", self.h.name(*op)))
+                            .or_insert(None);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn instantiate(&mut self, l: &Lit, s: &Subst) -> Lit {
+        Lit {
+            rel: l.rel,
+            persp: walk(&self.h, l.persp, s),
+            persp_explicit: l.persp_explicit,
+            args: l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect(),
+            temporal: l.temporal,
+        }
+    }
+
+    /// The literal with its variables renumbered by first appearance, so two
+    /// instances that differ only in the evaluator's renaming suffix compare
+    /// equal and a loop is recognised.
+    fn cycle_key(&mut self, l: &Lit) -> String {
+        let mut seen: HashMap<Sym, String> = HashMap::new();
+        let mut out = String::new();
+        out.push_str(self.h.name(l.rel));
+        out.push('[');
+        let p = self.renumber(l.persp, &mut seen);
+        self.h.canon_term(p, &mut out);
+        out.push_str("](");
+        for (i, a) in l.args.clone().iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            let t = self.renumber(*a, &mut seen);
+            self.h.canon_term(t, &mut out);
+        }
+        out.push(')');
+        out.push('@');
+        out.push_str(match l.temporal {
+            Temporal::Now => "now",
+            Temporal::Init => "init",
+            Temporal::Next => "next",
+        });
+        out
+    }
+
+    fn renumber(&mut self, t: Term, seen: &mut HashMap<Sym, String>) -> Term {
+        match t.kind() {
+            TermK::Var(s) => {
+                let n = seen.len();
+                let name = seen.entry(s).or_insert_with(|| format!("${n}")).clone();
+                let sy = self.h.intern(&name);
+                Term::var(sy)
+            }
+            TermK::Func(i) => {
+                let name = self.h.fname(i);
+                let args = self.h.fargs(i).to_vec();
+                let mapped: Vec<Term> = args.into_iter().map(|a| self.renumber(a, seen)).collect();
+                self.h.mkf(name, &mapped)
+            }
+            _ => t,
+        }
     }
 }
