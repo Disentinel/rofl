@@ -135,3 +135,15 @@ check_file("async_reserved", "examples/checks/async-reserved.rofl").
 
 check_world("unstratifiable").
 check_file("unstratifiable", "examples/checks/unstratifiable.rofl").
+
+-- PROVENANCE, JOINED RATHER THAN PRINTED. The third prohibition a world can
+-- carry: `Provenance as a log string` is refuted by joining a firing's rule
+-- column against the program, which is something no string supports.
+check_world("provenance_relational").
+check_file("provenance_relational", "examples/checks/provenance-relational.rofl").
+
+-- AN ARITY IN A PREMISE, which both engines read past until 2026-09-12. The
+-- gate was built from crashes and a premise cannot crash a reader, so a
+-- two-column `derived_by` loaded clean and matched nothing for ever.
+check_world("premise_arity").
+check_file("premise_arity", "examples/checks/premise-arity.rofl").

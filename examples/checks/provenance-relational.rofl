@@ -1,0 +1,34 @@
+-- examples/checks/provenance-relational.rofl — PROVENANCE IS A RELATION.
+--
+-- START.md section 7 forbids `Provenance as a log string` and section 4 promises
+-- that `On every successful rule firing the kernel emits` it. A log string can
+-- be printed and cannot be JOINED, so the probe is a join: the middle column of
+-- a firing is a rule id that `rule[$kernel]` also holds, and the relation that
+-- firing concluded into comes back through `concludes[$kernel]`. Three-way,
+-- inside the language, with no host help.
+--
+-- WHY EVERY HEAD HERE PROJECTS THE FACT ID AWAY. Reading provenance is
+-- self-feeding: `w(F, R, T) :- derived_by[$kernel](F, R, T).` does not
+-- terminate, because firing `w` emits a row that matches `w`'s own premise and
+-- the fact ids never repeat. That is not a defect on its face -- it is what
+-- `emits on every firing` MEANS, seen from inside -- but it is not a check.
+-- Projected onto the rule, or onto the rule and the tick, or onto the relation
+-- concluded into, the answer is finite: there are finitely many rules,
+-- finitely many ticks, finitely many relations, so each new firing lands on a
+-- row that is already there and the fixpoint closes.
+--
+-- `d` is derivable TWO ways on purpose. A kernel that emitted one row per FACT
+-- rather than one per FIRING would move this world's census.
+
+edb(seed).
+seed(1).
+seed(2).
+
+b(X) :- seed(X).
+c(X) :- b(X).
+d(X) :- b(X).
+d(X) :- c(X).
+
+fired_rule(R)   :- derived_by[$kernel](_, R, _), rule[$kernel](R).
+fired_into(Rel) :- derived_by[$kernel](_, R, _), concludes[$kernel](R, Rel).
+fired_at(R, T)  :- derived_by[$kernel](_, R, T).

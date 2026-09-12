@@ -148,21 +148,45 @@ fn check_who(h: &Heap, who: Option<&str>, c: &Clause) -> Option<String> {
     ))
 }
 
-/// `checkArity` (src/api.ts:473). A CRASH GATE, not tidiness: the kernel's
-/// readers destructure positionally, so a row of the wrong width dereferences
-/// nothing on the JS side rather than sitting inert.
+/// `checkArity` (src/api.ts). A CRASH GATE, not tidiness: the kernel's readers
+/// destructure positionally, so a row of the wrong width dereferences nothing
+/// on the JS side rather than sitting inert.
+///
+/// A PREMISE HAS AN ARITY TOO, and both engines read only the head until
+/// 2026-09-12: `w(F, R) :- derived_by[$kernel](F, R).` loaded clean on both and
+/// answered zero, `derived_by` being arity three, with no diagnostic and
+/// nothing from `undefined_premise[audit]`, which reads a relation NAME and
+/// this name is correct. The gate inherited the shape of the crashes it was
+/// built to stop -- a premise cannot crash a reader, it just matches nothing
+/// for ever.
 fn check_arity(h: &Heap, v: &Vocab, c: &Clause) -> Option<String> {
-    let want = v.arity_of(c.head.rel)?;
-    if c.head.args.len() == want {
-        return None;
-    }
     let kind = if c.body.is_empty() { "fact" } else { "rule" };
-    Some(format!(
-        "{kind} {}: '{}' is a kernel relation of arity {want}, written here with {}",
-        canon_clause(h, c),
-        h.name(c.head.rel),
-        c.head.args.len()
-    ))
+    let at = |l: &Lit, where_: &str| -> Option<String> {
+        let want = v.arity_of(l.rel)?;
+        if l.args.len() == want {
+            return None;
+        }
+        Some(format!(
+            "{kind} {}: '{}' is a kernel relation of arity {want}, written here with {}{where_}",
+            canon_clause(h, c),
+            h.name(l.rel),
+            l.args.len()
+        ))
+    };
+    if let Some(d) = at(&c.head, "") {
+        return Some(d);
+    }
+    for b in &c.body {
+        let d = match b {
+            BodyElem::Pos(l) => at(l, " in a premise"),
+            BodyElem::Neg(l) => at(l, " in a negated premise"),
+            BodyElem::Bi { .. } => None,
+        };
+        if d.is_some() {
+            return d;
+        }
+    }
+    None
 }
 
 /// `checkOrderable` (src/api.ts:98). ONLY A RULE THAT WOULD OTHERWISE PASS

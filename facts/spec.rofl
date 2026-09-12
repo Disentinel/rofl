@@ -346,6 +346,19 @@ guards[map](c_port_pack, s7_no_hardcoded_boot).
 guards[map](c_port_pack, l_unchecked_without_boot).
 guards[map](c_port_pack, s_reserved_rejected_at_load).
 
+-- PROVENANCE, JOINED RATHER THAN PRINTED. A log string can be shown and cannot
+-- be JOINED, so the world joins a firing's middle column against `rule` and
+-- against `concludes` and gets rows -- three-way, inside the language, no host
+-- help. Every head there projects the fact id away, because reading provenance
+-- is self-feeding: a rule keeping F in its head fires on the row its own firing
+-- emitted and the ids never repeat. That non-termination is what `emits on
+-- every firing` MEANS seen from inside, and it is the reason the obvious probe
+-- is not the one written.
+cited_check[map](c_w_provenance, "facts/goldens.rofl", "provenance_relational").
+
+guards[map](c_w_provenance, s_provenance_per_firing).
+guards[map](c_w_provenance, p_p1_one_witness_per_derivation).
+
 -- ---- what stands behind what ----------------------------------------------
 
 guards[map](c_ci_bun, s_two_runtimes).

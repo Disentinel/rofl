@@ -136,6 +136,8 @@ check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
+check[checks]("facts/goldens.rofl", "premise_arity", world).
+check[checks]("facts/goldens.rofl", "provenance_relational", world).
 check[checks]("facts/goldens.rofl", "readiness_atlas", world).
 check[checks]("facts/goldens.rofl", "readiness_rofl", world).
 check[checks]("facts/goldens.rofl", "refactoring_queue", world).

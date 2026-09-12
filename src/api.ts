@@ -503,11 +503,35 @@ export class Rofl {
    *  end, so a hand-edited snapshot carrying `stratum/1` can still reach it.
    *  That residue is named rather than papered over. */
   private checkArity(c: Clause): string | null {
-    const want = ARITY[c.head.rel];
-    if (want === undefined || c.head.args.length === want) return null;
     const kind = c.body.length === 0 ? 'fact' : 'rule';
-    return `${kind} ${canonClause(c)}: '${c.head.rel}' is a kernel relation of `
-      + `arity ${want}, written here with ${c.head.args.length}`;
+    const at = (lit: Lit, where: string): string | null => {
+      const want = ARITY[lit.rel];
+      if (want === undefined || lit.args.length === want) return null;
+      return `${kind} ${canonClause(c)}: '${lit.rel}' is a kernel relation of `
+        + `arity ${want}, written here with ${lit.args.length}${where}`;
+    };
+    const bad = at(c.head, '');
+    if (bad) return bad;
+    // A PREMISE HAS AN ARITY TOO, and this check read only the head until
+    // 2026-09-12. `witnessed(F, R) :- derived_by[$kernel](F, R).` loaded
+    // CLEAN and answered ZERO — `derived_by` is arity three — with no
+    // diagnostic, and `undefined_premise[audit]` said nothing because it reads
+    // a relation NAME and this name is correct. An arity is a misspelling of
+    // the SHAPE rather than of the word, and the one thing a closed vocabulary
+    // buys over an open one is that a misspelling is catchable.
+    //
+    // I spent a probe concluding `provenance is not populated` from that empty
+    // answer, which is this repository's own clean-looking negative arriving
+    // through the front door. The head check has been here since the crash
+    // gate was built; it inherited the shape of the crashes it was built to
+    // stop, and a premise cannot crash a reader — it just quietly matches
+    // nothing for ever.
+    for (const b of c.body) {
+      if (b.t === 'bi') continue;
+      const badPrem = at(b.lit, ` in a ${b.t === 'neg' ? 'negated ' : ''}premise`);
+      if (badPrem) return badPrem;
+    }
+    return null;
   }
 
   private addClause(c0: Clause, who?: string, trusted = false): string | null {

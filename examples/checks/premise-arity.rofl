@@ -1,0 +1,15 @@
+-- examples/checks/premise-arity.rofl — A PROGRAM THAT MUST BE REFUSED.
+--
+-- `derived_by` is arity THREE (fact, rule, tick). Written with two, this rule
+-- used to LOAD CLEAN on both engines and answer ZERO for ever: the arity gate
+-- read only the clause HEAD, and `undefined_premise[audit]` says nothing
+-- because it reads a relation NAME and this name is correct. An arity is a
+-- misspelling of the SHAPE rather than of the word, and the one thing a closed
+-- vocabulary buys over an open one is that a misspelling is catchable.
+--
+-- The negated premise is here for the same reason and was the same hole: a gate
+-- built from CRASHES inherited their shape, and a premise cannot crash a
+-- reader -- it just quietly matches nothing.
+
+a(1).
+w(F, R) :- derived_by[$kernel](F, R), not hole(F).
