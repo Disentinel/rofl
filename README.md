@@ -793,6 +793,20 @@ bit-identical state, tick log, and provenance regardless of insertion order
   stripping, which shipped in 22.6. Nothing in the code needs Node 22 —
   compiling with `tsc` would restore Node 20 support at the cost of a build
   step; zero-toolchain execution was judged closer to the spec's intent.
+- **Optimization passes exist, and START.md section 8 said not to build them.**
+  The engine is a SEMINAIVE fixpoint (`src/engine.ts` line 1), the derived
+  layer is REUSED per relation under an exact fingerprint with the switch
+  defaulting to on, and premises against a demand-backed relation are solved
+  TOP-DOWN with the recursion capped at 512. Each was a deliberate decision
+  and each already carries its own limit in LIMITS.md — `l_reuse_fingerprint`,
+  `l_reuse_a_no_read_reused`, `l_reuse_b_stratum_gate`, `l_reuse_c_tick_boundary`,
+  `l_reuse_switchable`, `l_demand_premise_order`, `l_demand_depth_512`,
+  `l_demand_no_enumeration`. So the prohibition was not quietly broken; it was
+  replaced, in detail, by eight sentences in the document that came after it,
+  and `l_no_aggregation` is the one line that never caught up: it still reads
+  `No aggregation, no optimization passes, no syntax sugar, no GPU anything` in
+  the same file as those eight. Aggregation, GPU and sugar hold; the middle
+  clause does not.
 
 <!-- END deviations -->
 

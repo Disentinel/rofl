@@ -163,6 +163,7 @@ duty[limits](l_no_residency_in_js, limit, "LIMITS.md", "No residency in the Java
 -- six name the sentence they replace. This ledger is why `superseded` exists:
 -- an obligation nobody owes any more is not an obligation with no test.
 
+duty[readme](r_optimizations_exist, guaranteed, "facts/deviations.rofl", "deviation(r_optimizations_exist,").
 duty[readme](r_vocabulary_additions, guaranteed, "facts/deviations.rofl", "deviation(r_vocabulary_additions,").
 duty[readme](r_conclusion_tense, guaranteed, "facts/deviations.rofl", "deviation(r_conclusion_tense,").
 duty[readme](r_flows_to, guaranteed, "facts/deviations.rofl", "deviation(r_flows_to,").
@@ -408,6 +409,42 @@ qualifies[map](r_unstratifiable_is_budgeted, s_reject_unstratified).
 qualifies[map](r_timeless_kernel_facts, s_persistence_is_a_rule).
 qualifies[map](r_edb_for_reserved, l_undefined_silenced_by_one_fact).
 qualifies[map](r_moded_relations, l_demand_premise_order).
+
+-- ---- START.md section 8 WAS REPLACED, ITEM BY ITEM, BY LIMITS.md ----------
+-- `s8_out_of_scope` is ONE fact citing ONE sentence that names EIGHT things:
+-- incremental maintenance, the @async executor, multi-fact abduction,
+-- aggregation, GPU anything, persistence layers, optimization passes, syntax
+-- sugar. A compound prohibition can only be accepted or refused WHOLE -- the
+-- duty inherits the granularity of the sentence it cites -- so while three of
+-- the eight had moved it could be neither covered nor honestly called open.
+--
+-- It does not need to be. LIMITS.md already decomposed it, and every one of the
+-- eight has a mirror there, so retiring the sentence loses nothing the tree
+-- still owes. That is the test `qualifies` exists for and this one passes it:
+--
+--   incremental maintenance -> l_no_incremental_maintenance
+--   @async executor         -> l_no_async
+--   multi-fact abduction    -> l_no_multi_fact_abduction
+--   persistence layers      -> l_no_persistence, narrowed to
+--                              `beyond store serialization` -- and `save`/`open`
+--                              IS store serialization, so the persistence that
+--                              was written is the permitted half, not a breach
+--   aggregation, GPU,
+--   optimization, sugar     -> l_no_aggregation
+amends[map](l_no_incremental_maintenance, s8_out_of_scope).
+amends[map](l_no_async, s8_out_of_scope).
+amends[map](l_no_multi_fact_abduction, s8_out_of_scope).
+amends[map](l_no_persistence, s8_out_of_scope).
+amends[map](l_no_aggregation, s8_out_of_scope).
+
+-- ...AND THE LINE THAT INHERITED THE COMPOUND NEVER CAUGHT UP. `l_no_aggregation`
+-- reads `No aggregation, no optimization passes, no syntax sugar, no GPU
+-- anything` and sits in the SAME FILE as eight sentences describing this
+-- engine's optimizations in detail. Three quarters of it hold; the middle
+-- clause is false of the tree. So it is QUALIFIED and not retired -- narrowing
+-- is what the honest half deserves, and recording this as an amendment would
+-- retire a prohibition on aggregation that nothing else in the tree carries.
+qualifies[map](r_optimizations_exist, l_no_aggregation).
 
 -- ---- the same obligation, written twice -----------------------------------
 -- Seven of the eight prohibited shortcuts in §7 are a §3 or §4 guarantee

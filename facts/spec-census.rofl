@@ -223,6 +223,7 @@ citation_ok[checks](r_edb_for_reserved).
 citation_ok[checks](r_facts_into_reserved).
 citation_ok[checks](r_flows_to).
 citation_ok[checks](r_moded_relations).
+citation_ok[checks](r_optimizations_exist).
 citation_ok[checks](r_perspective_registration).
 citation_ok[checks](r_rounds_replace_strata).
 citation_ok[checks](r_stratum_in_kernel_source).
