@@ -359,6 +359,25 @@ cited_check[map](c_w_provenance, "facts/goldens.rofl", "provenance_relational").
 guards[map](c_w_provenance, s_provenance_per_firing).
 guards[map](c_w_provenance, p_p1_one_witness_per_derivation).
 
+-- ---- accepted by name, because the observance is structural ---------------
+-- THE LAST OF THE ELEVEN, AND THE OWNER'S CALL RATHER THAN A MEASUREMENT.
+-- `Evaluator reading parsed clause objects` is the mechanical form of START.md's
+-- prime directive, and the honest position is that it is already so by
+-- construction: `src/engine.ts` line 2 says `The evaluator reads rules ONLY from
+-- the reflected store (decodeRules)`, and the code agrees -- ONE assignment to
+-- the rule set in the whole file, `this.rules = kept` at line 488, fed by
+-- `decodeRules(this.store)` at 468. The port is the same shape:
+-- `decode_rules(&mut self.h, &self.v, &mut self.store)` at `engine.rs:246`.
+--
+-- WHAT THIS IS NOT is a check. START.md says in as many words that the likely
+-- failure mode is `a kernel that hardcodes semantics and passes tests anyway`,
+-- and this acceptance does not close that -- it says a person looked at the one
+-- call site and signed for it. A probe would have to change the store's rule
+-- rows by a route the parser never took and watch the evaluation honour them;
+-- it is not written, and `accepted` rather than `guards` is how the report
+-- keeps saying so.
+accepted[map](s7_no_clause_objects, "satisfied by construction: one call site, decodeRules(store), in both engines -- signed for by the owner 2026-09-12, not measured").
+
 -- ---- what stands behind what ----------------------------------------------
 
 guards[map](c_ci_bun, s_two_runtimes).

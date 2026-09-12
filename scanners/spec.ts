@@ -341,6 +341,18 @@ export function report(w: SpecWorld = world()): string[] {
   for (const o of shortcuts) say(`    ${o.padEnd(38)} ${cite(o)}`);
   say('');
 
+  // AN ACCEPTANCE KEEPS ITS OWN ROW. Subtracting it from `open_shortcut` and
+  // printing nothing would make the report quieter than the tree, which is the
+  // one thing this model exists to prevent.
+  const accepted = r.query('accepted_shortcut[coverage](O, Why)').rows
+    .map((x) => [x.bindings['O'], unq(x.bindings['Why'])] as const)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  if (accepted.length) {
+    say(`-- PROHIBITIONS ACCEPTED BY NAME, not measured (${accepted.length}) --------`);
+    for (const [o, why] of accepted) say(`    ${o.padEnd(38)} ${why}`);
+    say('');
+  }
+
   const dangling = r.query('dangling[coverage](C, O)').rows
     .map((x) => `${x.bindings['C']} -> ${x.bindings['O']}`).sort();
   const undef = r.query('undefined_citation[coverage](C, O)').rows

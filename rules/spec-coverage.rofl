@@ -130,10 +130,45 @@ prose_discharged[coverage](O) :- uncovered[coverage](O), artifact_present[checks
 unattended[coverage](O)       :- uncovered[coverage](O),
                                  not prose_discharged[coverage](O).
 
--- The sharp end: a PROHIBITION with no mechanical check. Nothing at all
--- stands between the next author and the shortcut.
+-- A PROHIBITION SATISFIED BY CONSTRUCTION, ACCEPTED BY NAME. Until 2026-09-12
+-- this model had no way to say it: `open_shortcut` reads `uncovered`, and the
+-- only exits from `uncovered` are a citation or a supersession, so a prohibition
+-- whose observance is a property of the code's SHAPE rather than of a test had
+-- nowhere to go and sat in the sharpest row of the report for ever.
+--
+-- `discharged_by` does not serve, and the reason is worth stating: it feeds
+-- `prose_discharged` and thence `unattended`, and `open_shortcut` never reads
+-- either. An artefact discharges an obligation TO DOCUMENT something; this is an
+-- obligation to BE something.
+--
+-- THE SHAPE IS BORROWED RATHER THAN INVENTED. `rules/inquiry/obligations.rofl`
+-- already answers this question for an inquiry: `gap_accepted(I, C)` lets an
+-- authority accept a measured gap BY NAME, `accepted_residual` keeps it visible
+-- as the risk somebody took, and `idle_acceptance[audit]` catches an acceptance
+-- of something already resolved. Three rules, the same three here.
+--
+-- AN ACCEPTANCE IS NOT A MEASUREMENT and the report says so by keeping its own
+-- row. What it buys is that the acceptance is written down with a reason
+-- somebody signed, instead of a prohibition quietly leaving the list.
+edb(accepted).            -- accepted[map](Duty, Reason)
+
+accepted_shortcut[coverage](O, Why) :- accepted[map](O, Why),
+                                       duty_of[coverage](O, prohibited, _, _, _).
+
+-- The sharp end: a PROHIBITION with no mechanical check and nobody's name on
+-- it. Nothing at all stands between the next author and the shortcut.
 open_shortcut[coverage](O) :- uncovered[coverage](O),
-                              duty_of[coverage](O, prohibited, _, _, _).
+                              duty_of[coverage](O, prohibited, _, _, _),
+                              not accepted[map](O, _).
+
+-- ...AND AN ACCEPTANCE OF SOMETHING ALREADY GUARDED IS IDLE. An acceptance is a
+-- decision about RISK, and a covered obligation carries none -- so this row
+-- means somebody signed for a gap that a check had already closed, and the
+-- signature is now the only reason the report looks quieter than it is. Empty
+-- on the honest tree, and an alarm rather than a census: no golden may bless a
+-- number for it.
+idle_shortcut[audit](O) :- accepted[map](O, _), covered[coverage](O).
+alarm(idle_shortcut).
 
 -- ---------------------------------------------------------- fabrication ---
 
