@@ -48,5 +48,5 @@ command_shown("depends", 10).
 command_note("depends", "· cleanliness · layering · nullary — the models over the tree itself").
 
 command_shown("speccheck", 11).
-command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it").
+command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book").
 

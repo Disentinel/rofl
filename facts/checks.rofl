@@ -113,3 +113,16 @@ check_file("keyword_atom", "examples/checks/keyword-atom.rofl").
 
 check_world("not_as_a_name").
 check_file("not_as_a_name", "examples/checks/not-as-a-name.rofl").
+
+-- THE SPECIFICATION, WHICH WAS IN NO WORLD AT ALL. `rules_spec-coverage` was
+-- already golden and already green, and it held ZERO duties: the walker pairs
+-- `rules/X.rofl` with `facts/X.rofl` by name, the specification is
+-- `facts/spec.rofl`, and so every verdict in that pack was a negation over an
+-- empty relation. The two books the verdicts are computed FROM cannot be
+-- walked to by a world made of files -- which check exists in the tree, and
+-- which citation still resolves -- so `scanners/spec.ts --write` writes them
+-- down and `--check` refuses a stale copy.
+check_world("spec_coverage").
+check_file("spec_coverage", "rules/spec-coverage.rofl").
+check_file("spec_coverage", "facts/spec.rofl").
+check_file("spec_coverage", "facts/spec-census.rofl").

@@ -33,29 +33,13 @@ export type CheckKind = 'test' | 'gate' | 'ci';
 export interface Check { file: string; name: string; kind: CheckKind; }
 export interface Census { checks: Check[]; testFiles: string[]; }
 
-/** A top-level `test('...'` or `test("...")`, with backslash escapes undone.
- *  Top-level only: a nested test is part of its parent's subject, and the
- *  citations in facts/spec.rofl name testable units, not sub-steps. */
-// `mutant(` COUNTS TOO. It is test/helpers/mutant.ts — the marker that replaced
-// a regex on a test's TITLE for deciding what the fast loop skips — and this
-// census did not know it existed. test/bridges.test.ts marked all nineteen of
-// its tests and went silently EMPTY here, taking `s7_no_nondeterministic_iteration`
-// and `s_canonical_order` out of `covered` with it. A census that names one
-// spelling of "a test" goes blind the day a second one is introduced.
-const TEST_RE = /^(?:test|mutant)\(\s*(['"])((?:[^\\]|\\.)*?)\1/;
-
-function unescape(s: string): string {
-  return s.replace(/\\(.)/g, '$1');
-}
-
-export function testNames(source: string): string[] {
-  const out: string[] = [];
-  for (const line of source.split('\n')) {
-    const m = TEST_RE.exec(line);
-    if (m) out.push(unescape(m[2]));
-  }
-  return out;
-}
+// THE HOST READER IS GONE WITH `test/`, AND ITS LESSON IS NOT. It matched
+// `test(` and then, one incident later, `mutant(` too: test/bridges.test.ts
+// marked all nineteen of its tests with the second spelling and went silently
+// EMPTY here, taking `s7_no_nondeterministic_iteration` and `s_canonical_order`
+// out of `covered` with it. A census that names ONE spelling of `a test` goes
+// blind the day a second one is introduced — which is what `rustTestNames`
+// below is now the only instance of.
 
 /** A Rust integration test is `#[test]` and then the function it attaches to,
  *  which may be one line down or several — `#[ignore]`, a doc comment and an
@@ -80,20 +64,22 @@ const GATE_SCRIPTS = new Set(['test', 'test:bun', 'textcheck', 'measurecheck']);
 
 export function census(): Census {
   const checks: Check[] = [];
-  const testDir = path.join(ROOT, 'test');
-  const testFiles = fs.readdirSync(testDir).filter((f) => f.endsWith('.test.ts')).sort();
-  for (const f of testFiles) {
-    const rel = `test/${f}`;
-    for (const name of testNames(fs.readFileSync(path.join(testDir, f), 'utf8'))) {
-      checks.push({ file: rel, name, kind: 'test' });
-    }
-  }
 
+  // `test/` IS GONE AND THE CENSUS DIED WITH IT. The suite was removed on
+  // 2026-09-11 and this function kept walking the directory, so
+  // `npm run speccheck` — the one instrument that answers WHICH OBLIGATION HAS
+  // NOTHING BEHIND IT — crashed with ENOENT for a day and nobody ran it. The
+  // walk is deleted rather than guarded: a guard would make the host census
+  // silently empty, which is the shape this repository spends its audits on.
+  //
   // THE PORT'S TESTS WERE OUTSIDE THE CENSUS, AND SO NO DUTY ABOUT THE PORT
   // COULD EVER BE GUARDED. `d_port_owes_why` read UNCOVERED on the day it was
   // discharged, because a citation is checked against this list and this list
   // was `test/*.test.ts` and nothing else — the same blindness the comment
-  // above records about `mutant()`, one language further out.
+  // above records about `mutant()`, one language further out. They are now the
+  // WHOLE census of tests, and `testFiles` is them: `unwritten[coverage]` asks
+  // which test file no duty cites, and pointing it at a directory that no
+  // longer exists made it structurally empty.
   const rustDir = path.join(ROOT, 'rust/rofl/tests');
   const rustFiles = fs.existsSync(rustDir)
     ? fs.readdirSync(rustDir).filter((f) => f.endsWith('.rs')).sort() : [];
@@ -121,7 +107,7 @@ export function census(): Census {
     seen.add(m[1]);
     checks.push({ file: '.github/workflows/ci.yml', name: m[1], kind: 'ci' });
   }
-  return { checks, testFiles: testFiles.map((f) => `test/${f}`) };
+  return { checks, testFiles: rustFiles.map((f) => `rust/rofl/tests/${f}`) };
 }
 
 const q = (s: string): string => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -204,7 +190,13 @@ function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
   if (!res.ok) throw new Error(`${what} failed to load:\n${res.diagnostics.join('\n')}`);
 }
 
-export interface SpecWorld { r: Rofl; duties: Duty[]; citations: CiteResult[]; census: Census; }
+export interface SpecWorld {
+  r: Rofl; duties: Duty[]; citations: CiteResult[]; census: Census;
+  /** the [checks] book this run computed, as ROFL text: the census plus the
+   *  citation verdicts. Carried out so `facts/spec-census.rofl` is the SAME
+   *  text the report was computed from rather than a second derivation. */
+  checksBook: string;
+}
 
 /** boot.rofl + the discipline + the ledger + the census, evaluated, with the
  *  citation verdicts asserted back into [checks] and evaluated again. The
@@ -242,9 +234,46 @@ export function world(opts: WorldOpts = {}): SpecWorld {
   const present = r.query('discharged_by[map](O, Path)').rows
     .filter((row) => fs.existsSync(path.join(ROOT, unq(row.bindings['Path']))))
     .map((row) => `artifact_present[checks](${row.bindings['O']}).`);
-  must(r.load([...ok, ...present].join('\n') + '\n', { who: 'census' }), 'citation verdicts');
+  const verdicts = [...ok, ...present].join('\n') + '\n';
+  must(r.load(verdicts, { who: 'census' }), 'citation verdicts');
   r.evaluate(BUDGET);
-  return { r, duties, citations, census: c };
+  return { r, duties, citations, census: c, checksBook: censusFacts(c) + verdicts };
+}
+
+// ---------------------------------------------------------------------------
+// the census as a committed pack
+//
+// WHY THIS EXISTS. `rules/spec-coverage.rofl` was already a golden world and it
+// was EMPTY: `scripts/goldens.ts` pairs `rules/X.rofl` with `facts/X.rofl` by
+// name, the specification lives in `facts/spec.rofl`, and so the world loaded
+// the discipline and zero duties — 32 relations in the census and not one
+// `duty`, `covered` or `uncovered` row. Every verdict in it was a negation over
+// an empty relation, green for a day after `npm run speccheck` had stopped
+// running at all.
+//
+// A world assembled from `.rofl` files cannot walk the filesystem, so the two
+// books the verdicts are computed FROM — which checks exist, and which
+// citations resolve — have to be written down. That is what this pack is, and
+// `--check` is what keeps it from becoming a photograph: regenerate, compare,
+// fail. `scripts/goldens.ts` spawns it, so a stale census is a red `npm test`
+// rather than a number nobody re-measured.
+
+const CENSUS_PACK = 'facts/spec-census.rofl';
+
+export function censusPack(w: SpecWorld = world()): string {
+  return [
+    `-- ${CENSUS_PACK} — GENERATED by \`npm run speccheck -- --write\`.`,
+    '--',
+    '-- The [checks] book: which checks exist in the tree, which test files do,',
+    '-- and which duty citations resolve. A world made of `.rofl` files cannot',
+    '-- walk a filesystem or open a cited document, so the answers are written',
+    '-- here and `npm test` fails when they are stale.',
+    '--',
+    '-- @who census',
+    '',
+    w.checksBook.trimEnd(),
+    '',
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -337,6 +366,21 @@ export function report(w: SpecWorld = world()): string[] {
 }
 
 function main(): void {
+  const argv = process.argv.slice(2);
+  if (argv.includes('--write') || argv.includes('--check')) {
+    const fresh = censusPack();
+    const file = path.join(ROOT, CENSUS_PACK);
+    const held = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    if (argv.includes('--write')) {
+      if (held === fresh) { console.log(`  ok    ${CENSUS_PACK}`); return; }
+      fs.writeFileSync(file, fresh);
+      console.log(`  wrote ${CENSUS_PACK}`);
+      return;
+    }
+    if (held === fresh) { console.log(`  ok    ${CENSUS_PACK}`); return; }
+    console.error(`  STALE ${CENSUS_PACK} — run \`npm run speccheck -- --write\``);
+    process.exit(1);
+  }
   for (const line of report()) console.log(line);
 }
 

@@ -282,8 +282,15 @@ duty[wfs](t_stratum_table_survives, guaranteed, "docs/three-valued-answers.md", 
 
 
 
-cited_check[map](c_ci_node, ".github/workflows/ci.yml", "tests (node --test)").
-cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "tests (bun test)").
+-- BOTH OF THESE WERE STALE AND ONE OF THEM DANGLED. The jobs stopped running
+-- `node --test` and `bun test` when the suite became one golden loop, so
+-- `c_ci_bun` named a step that no longer existed -- and `s_two_runtimes` and
+-- `s_done_ci_green` quietly lost their bun-side guard. Nothing said so for as
+-- long as `npm run speccheck` was dead. The node label still RESOLVED while
+-- naming a runner it had stopped using, which is the worse half: a citation
+-- that is correct and describes nothing.
+cited_check[map](c_ci_node, ".github/workflows/ci.yml", "goldens (node)").
+cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "goldens (bun)").
 cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 
 -- ---- what stands behind what ----------------------------------------------

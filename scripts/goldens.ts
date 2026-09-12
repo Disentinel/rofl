@@ -473,6 +473,19 @@ if (isMain) {
   if (docs.status !== 0) {
     for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
   }
+  // AND THE [checks] BOOK, for the same reason and by the same means. The
+  // coverage world reads `facts/spec-census.rofl` — which checks exist, which
+  // citations resolve — and a world cannot walk a filesystem, so the pack is
+  // generated. A generated pack a golden reads is a photograph pinned against
+  // itself unless something regenerates and compares
+  // (f_a_golden_over_a_generated_census_pins_the_photograph_against_itself),
+  // so this is that something.
+  const spec = spawnSync(process.execPath,
+    ['--experimental-strip-types', path.join(ROOT, 'scanners/spec.ts'), '--check'],
+    { encoding: 'utf8' });
+  if (spec.status !== 0) {
+    for (const l of (spec.stdout + spec.stderr).split('\n').filter((l) => /STALE|Error/.test(l))) fail.push(l.trim());
+  }
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);
