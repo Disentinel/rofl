@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 625 artifacts, 2997 edges, 217 unreadable path expressions.
+-- 463 artifacts, 1563 edges, 127 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -14,6 +14,7 @@ artifact[dep](".claude/settings.json", json).
 artifact[dep](".github/workflows/ci.yml", yml).
 artifact[dep](".gitignore", other).
 artifact[dep]("CLAUDE.md", md).
+artifact[dep]("LICENSE", other).
 artifact[dep]("LIMITS.md", md).
 artifact[dep]("README.md", md).
 artifact[dep]("START.md", md).
@@ -54,6 +55,12 @@ artifact[dep]("examples/bleep/README.md", md).
 artifact[dep]("examples/bleep/bleep.rofl", rofl).
 artifact[dep]("examples/bleep/demo.ts", ts).
 artifact[dep]("examples/bleep/page.html", other).
+artifact[dep]("examples/checks/budget-wall.rofl", rofl).
+artifact[dep]("examples/checks/destructor-hole.rofl", rofl).
+artifact[dep]("examples/checks/keyword-atom.rofl", rofl).
+artifact[dep]("examples/checks/not-as-a-name.rofl", rofl).
+artifact[dep]("examples/checks/operators.rofl", rofl).
+artifact[dep]("examples/checks/refused.rofl", rofl).
 artifact[dep]("examples/counter.rofl", rofl).
 artifact[dep]("examples/cram/README.md", md).
 artifact[dep]("examples/cram/cram.rofl", rofl).
@@ -142,6 +149,9 @@ artifact[dep]("examples/rip/README.md", md).
 artifact[dep]("examples/rip/demo.ts", ts).
 artifact[dep]("examples/rip/page.html", other).
 artifact[dep]("examples/rip/rip.rofl", rofl).
+artifact[dep]("examples/rofl-release/context.rofl", rofl).
+artifact[dep]("examples/rofl-release/evidence.rofl", rofl).
+artifact[dep]("examples/rofl-release/frame.rofl", rofl).
 artifact[dep]("examples/sensors.rofl", rofl).
 artifact[dep]("examples/slop/README.md", md).
 artifact[dep]("examples/slop/demo.ts", ts).
@@ -180,12 +190,17 @@ artifact[dep]("examples/yak/fragments/08-golden-accident.ts", ts).
 artifact[dep]("examples/yak/fragments/09-wrong-premise.ts", ts).
 artifact[dep]("examples/yak/fragments/hygiene.ts", ts).
 artifact[dep]("examples/yak/page.html", other).
+artifact[dep]("facts/checks.rofl", rofl).
 artifact[dep]("facts/cleanliness.rofl", rofl).
+artifact[dep]("facts/commands.rofl", rofl).
 artifact[dep]("facts/cross-products.rofl", rofl).
 artifact[dep]("facts/depends.rofl", rofl).
+artifact[dep]("facts/deviations.rofl", rofl).
 artifact[dep]("facts/eval-cost.rofl", rofl).
+artifact[dep]("facts/feature-map.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
 artifact[dep]("facts/floor-census.rofl", rofl).
+artifact[dep]("facts/goldens.rofl", rofl).
 artifact[dep]("facts/js-attrs.rofl", rofl).
 artifact[dep]("facts/js-callgraph.rofl", rofl).
 artifact[dep]("facts/js-controlflow.rofl", rofl).
@@ -205,26 +220,30 @@ artifact[dep]("facts/js-statements.rofl", rofl).
 artifact[dep]("facts/layering.rofl", rofl).
 artifact[dep]("facts/parse-cost.rofl", rofl).
 artifact[dep]("facts/permission-inventory.rofl", rofl).
+artifact[dep]("facts/refactoring.rofl", rofl).
+artifact[dep]("facts/rofl-lint.rofl", rofl).
 artifact[dep]("facts/spec.rofl", rofl).
 artifact[dep]("facts/worklist.rofl", rofl).
 artifact[dep]("facts/worlds.rofl", rofl).
 artifact[dep]("npm:ablate", script).
 artifact[dep]("npm:blast", script).
+artifact[dep]("npm:bless", script).
 artifact[dep]("npm:booklocality", script).
 artifact[dep]("npm:boundary", script).
+artifact[dep]("npm:build", script).
 artifact[dep]("npm:build:dense", script).
 artifact[dep]("npm:build:skill", script).
-artifact[dep]("npm:cleancheck", script).
 artifact[dep]("npm:cleanliness", script).
 artifact[dep]("npm:dagcheck", script).
 artifact[dep]("npm:depends", script).
+artifact[dep]("npm:docs", script).
 artifact[dep]("npm:evalcost", script).
+artifact[dep]("npm:features", script).
 artifact[dep]("npm:findings", script).
 artifact[dep]("npm:flagcheck", script).
 artifact[dep]("npm:floorcensus", script).
 artifact[dep]("npm:keycoupling", script).
 artifact[dep]("npm:laddercheck", script).
-artifact[dep]("npm:layercheck", script).
 artifact[dep]("npm:layering", script).
 artifact[dep]("npm:loop", script).
 artifact[dep]("npm:measurecheck", script).
@@ -235,8 +254,10 @@ artifact[dep]("npm:pair", script).
 artifact[dep]("npm:parsecost", script).
 artifact[dep]("npm:perminv", script).
 artifact[dep]("npm:portcorpus", script).
+artifact[dep]("npm:prepack", script).
 artifact[dep]("npm:repl", script).
 artifact[dep]("npm:report", script).
+artifact[dep]("npm:rofllint", script).
 artifact[dep]("npm:roundbytes", script).
 artifact[dep]("npm:ruleshape", script).
 artifact[dep]("npm:scan", script).
@@ -246,6 +267,7 @@ artifact[dep]("npm:storetrace", script).
 artifact[dep]("npm:test", script).
 artifact[dep]("npm:test:bun", script).
 artifact[dep]("npm:test:engine", script).
+artifact[dep]("npm:test:hosts", script).
 artifact[dep]("npm:test:library", script).
 artifact[dep]("npm:test:mutants", script).
 artifact[dep]("npm:textcheck", script).
@@ -258,9 +280,11 @@ artifact[dep]("package.json", json).
 artifact[dep]("policy.rofl", rofl).
 artifact[dep]("rules/cleanliness.rofl", rofl).
 artifact[dep]("rules/decisions/production-readiness.rofl", rofl).
+artifact[dep]("rules/decisions/public-release.rofl", rofl).
 artifact[dep]("rules/depends.rofl", rofl).
 artifact[dep]("rules/engine-split.rofl", rofl).
 artifact[dep]("rules/eval-cost.rofl", rofl).
+artifact[dep]("rules/features.rofl", rofl).
 artifact[dep]("rules/findings.rofl", rofl).
 artifact[dep]("rules/floor-census.rofl", rofl).
 artifact[dep]("rules/ingest.rofl", rofl).
@@ -294,6 +318,7 @@ artifact[dep]("rules/permission-model.rofl", rofl).
 artifact[dep]("rules/policies/authority.rofl", rofl).
 artifact[dep]("rules/policies/evidence.rofl", rofl).
 artifact[dep]("rules/profile.rofl", rofl).
+artifact[dep]("rules/rofl-lint.rofl", rofl).
 artifact[dep]("rules/rule-shape.rofl", rofl).
 artifact[dep]("rules/self-audit.rofl", rofl).
 artifact[dep]("rules/spec-coverage.rofl", rofl).
@@ -349,6 +374,7 @@ artifact[dep]("rust/rofl/src/session.rs", rs).
 artifact[dep]("rust/rofl/src/store.rs", rs).
 artifact[dep]("rust/rofl/src/term.rs", rs).
 artifact[dep]("rust/rofl/tests/cool.rs", rs).
+artifact[dep]("rust/rofl/tests/explain.rs", rs).
 artifact[dep]("rust/rofl/tests/program.rs", rs).
 artifact[dep]("rust/rofl/tests/session.rs", rs).
 artifact[dep]("rust/run_corpus.sh", sh).
@@ -379,6 +405,7 @@ artifact[dep]("scanners/cli.ts", ts).
 artifact[dep]("scanners/depends.ts", ts).
 artifact[dep]("scanners/engine_split.ts", ts).
 artifact[dep]("scanners/eval_cost.ts", ts).
+artifact[dep]("scanners/features.ts", ts).
 artifact[dep]("scanners/floor_census.ts", ts).
 artifact[dep]("scanners/host_lib.ts", ts).
 artifact[dep]("scanners/js.ts", ts).
@@ -397,6 +424,8 @@ artifact[dep]("scanners/profile_shape.ts", ts).
 artifact[dep]("scanners/ring1_lexgen.ts", ts).
 artifact[dep]("scanners/ring1_predgen.ts", ts).
 artifact[dep]("scanners/ring1_spangen.ts", ts).
+artifact[dep]("scanners/rofl_lint.ts", ts).
+artifact[dep]("scanners/rofl_lint_report.ts", ts).
 artifact[dep]("scanners/round_bytes.ts", ts).
 artifact[dep]("scanners/rule_shape.ts", ts).
 artifact[dep]("scanners/rule_shape_report.ts", ts).
@@ -411,9 +440,11 @@ artifact[dep]("scripts/build_kernel_dense.ts", ts).
 artifact[dep]("scripts/build_skill.ts", ts).
 artifact[dep]("scripts/derivations.ts", ts).
 artifact[dep]("scripts/flag_census.ts", ts).
+artifact[dep]("scripts/goldens.ts", ts).
 artifact[dep]("scripts/measurement_check.ts", ts).
 artifact[dep]("scripts/parser_optional.ts", ts).
 artifact[dep]("scripts/port_corpus.ts", ts).
+artifact[dep]("scripts/render_docs.ts", ts).
 artifact[dep]("scripts/text_check.ts", ts).
 artifact[dep]("scripts/witness_check.ts", ts).
 artifact[dep]("skills/guided-formal-reasoning/SKILL.md", md).
@@ -437,203 +468,11 @@ artifact[dep]("src/semiring.ts", ts).
 artifact[dep]("src/store.ts", ts).
 artifact[dep]("src/tokens.ts", ts).
 artifact[dep]("src/unify.ts", ts).
-artifact[dep]("test/ablate.test.ts", ts).
-artifact[dep]("test/admission.test.ts", ts).
-artifact[dep]("test/arg-index.test.ts", ts).
-artifact[dep]("test/arith-hole.test.ts", ts).
-artifact[dep]("test/ask-by-term.test.ts", ts).
-artifact[dep]("test/asserted-tick.test.ts", ts).
-artifact[dep]("test/authority-grant.test.ts", ts).
-artifact[dep]("test/authorship.test.ts", ts).
-artifact[dep]("test/body-order.test.ts", ts).
-artifact[dep]("test/bootstrap-dag.test.ts", ts).
-artifact[dep]("test/bridges.test.ts", ts).
-artifact[dep]("test/budget-space.test.ts", ts).
-artifact[dep]("test/cleanliness.check.ts", ts).
-artifact[dep]("test/clear-derived.test.ts", ts).
-artifact[dep]("test/comparison-sink.test.ts", ts).
-artifact[dep]("test/confirmation.test.ts", ts).
-artifact[dep]("test/depends.test.ts", ts).
-artifact[dep]("test/derived-reuse.test.ts", ts).
-artifact[dep]("test/docs-index.test.ts", ts).
-artifact[dep]("test/engine-split.test.ts", ts).
-artifact[dep]("test/escapes.test.ts", ts).
-artifact[dep]("test/evaluator-primary.test.ts", ts).
-artifact[dep]("test/example-aka.test.ts", ts).
-artifact[dep]("test/example-blam.test.ts", ts).
-artifact[dep]("test/example-bleep.test.ts", ts).
-artifact[dep]("test/example-cram.test.ts", ts).
-artifact[dep]("test/example-ditto.test.ts", ts).
-artifact[dep]("test/example-drip.test.ts", ts).
-artifact[dep]("test/example-goof.test.ts", ts).
-artifact[dep]("test/example-heck.test.ts", ts).
-artifact[dep]("test/example-huh.test.ts", ts).
-artifact[dep]("test/example-iffy.test.ts", ts).
-artifact[dep]("test/example-jopa.test.ts", ts).
-artifact[dep]("test/example-loot.test.ts", ts).
-artifact[dep]("test/example-moot.test.ts", ts).
-artifact[dep]("test/example-nope.test.ts", ts).
-artifact[dep]("test/example-npc.test.ts", ts).
-artifact[dep]("test/example-oops.test.ts", ts).
-artifact[dep]("test/example-ring1-self.test.ts", ts).
-artifact[dep]("test/example-ring1.test.ts", ts).
-artifact[dep]("test/example-rip.test.ts", ts).
-artifact[dep]("test/example-slop.test.ts", ts).
-artifact[dep]("test/example-spat.test.ts", ts).
-artifact[dep]("test/example-sus.test.ts", ts).
-artifact[dep]("test/example-wtf.test.ts", ts).
-artifact[dep]("test/example-yak.test.ts", ts).
-artifact[dep]("test/exports.test.ts", ts).
-artifact[dep]("test/findings.test.ts", ts).
-artifact[dep]("test/firing-signature.test.ts", ts).
-artifact[dep]("test/fixtures/js-attrs/eras.mjs.txt", other).
-artifact[dep]("test/fixtures/js-call/alpha.mjs", ts).
-artifact[dep]("test/fixtures/js-call/beta.mjs", ts).
-artifact[dep]("test/fixtures/js-call/delta.mjs", ts).
-artifact[dep]("test/fixtures/js-call/gamma.mjs", ts).
-artifact[dep]("test/fixtures/js-call/shapes.ts.txt", other).
-artifact[dep]("test/fixtures/js-call/trace.mjs", ts).
-artifact[dep]("test/fixtures/js-env/era-attributes.js.txt", other).
-artifact[dep]("test/fixtures/js-env/era-fields.js.txt", other).
-artifact[dep]("test/fixtures/js-env/era-hashbang.js.txt", other).
-artifact[dep]("test/fixtures/js-env/era-position.js.txt", other).
-artifact[dep]("test/fixtures/js-env/era.js.txt", other).
-artifact[dep]("test/fixtures/js-env/era.ts.txt", other).
-artifact[dep]("test/fixtures/js-env/refused.js.txt", other).
-artifact[dep]("test/fixtures/js-globals/globals.mjs.txt", other).
-artifact[dep]("test/fixtures/js-host/clock.mjs", ts).
-artifact[dep]("test/fixtures/js-host/runtime.mjs", ts).
-artifact[dep]("test/fixtures/js-host/shadow.mjs", ts).
-artifact[dep]("test/fixtures/js-mod/a.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/b.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/c.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/def.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/defid.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/dyn.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/exp.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/package.json.txt", other).
-artifact[dep]("test/fixtures/js-mod/side.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/sub/c.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/sub/deep.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/types.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/types2.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/types3.ts.txt", other).
-artifact[dep]("test/fixtures/js-mod/types4.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/a.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/b.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/idx2/index.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/onlyts.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/package.json.txt", other).
-artifact[dep]("test/fixtures/js-resolve/pick.ts.txt", other).
-artifact[dep]("test/fixtures/js-resolve/pick/index.js.txt", other).
-artifact[dep]("test/fixtures/js-resolve/sub/deep.ts.txt", other).
-artifact[dep]("test/fixtures/js-volume/alpha.js.txt", other).
-artifact[dep]("test/fixtures/js-volume/beta.js.txt", other).
-artifact[dep]("test/fixtures/js-volume/gamma.js.txt", other).
-artifact[dep]("test/fixtures/js/export-surface.js.txt", other).
-artifact[dep]("test/fixtures/js/flow.js.txt", other).
-artifact[dep]("test/fixtures/js/order.ts.txt", other).
-artifact[dep]("test/flag-census.test.ts", ts).
-artifact[dep]("test/flow-closure.test.ts", ts).
-artifact[dep]("test/head-vars.test.ts", ts).
-artifact[dep]("test/helpers/mutant.ts", ts).
-artifact[dep]("test/helpers/roundtrip_child.ts", ts).
-artifact[dep]("test/index-arrival.test.ts", ts).
-artifact[dep]("test/ingest-rules.test.ts", ts).
-artifact[dep]("test/inquiry.test.ts", ts).
-artifact[dep]("test/join-planner.test.ts", ts).
-artifact[dep]("test/js-ambient.test.ts", ts).
-artifact[dep]("test/js-ast.test.ts", ts).
-artifact[dep]("test/js-attrs.test.ts", ts).
-artifact[dep]("test/js-callgraph.test.ts", ts).
-artifact[dep]("test/js-class-expression.test.ts", ts).
-artifact[dep]("test/js-computed-key-names.test.ts", ts).
-artifact[dep]("test/js-controlflow-scope.test.ts", ts).
-artifact[dep]("test/js-controlflow-values.test.ts", ts).
-artifact[dep]("test/js-controlflow.test.ts", ts).
-artifact[dep]("test/js-corpus-world.ts", ts).
-artifact[dep]("test/js-decorator-replacement.test.ts", ts).
-artifact[dep]("test/js-decorators.test.ts", ts).
-artifact[dep]("test/js-destructuring-transfer.test.ts", ts).
-artifact[dep]("test/js-directives.test.ts", ts).
-artifact[dep]("test/js-effects.test.ts", ts).
-artifact[dep]("test/js-env.test.ts", ts).
-artifact[dep]("test/js-export-forms.test.ts", ts).
-artifact[dep]("test/js-fixpoint-cost.test.ts", ts).
-artifact[dep]("test/js-globals.test.ts", ts).
-artifact[dep]("test/js-host-world.ts", ts).
-artifact[dep]("test/js-host.test.ts", ts).
-artifact[dep]("test/js-layer-cost.test.ts", ts).
-artifact[dep]("test/js-lib-surface.test.ts", ts).
-artifact[dep]("test/js-meta-and-await.test.ts", ts).
-artifact[dep]("test/js-model.test.ts", ts).
-artifact[dep]("test/js-modules.test.ts", ts).
-artifact[dep]("test/js-pack-home.test.ts", ts).
-artifact[dep]("test/js-resolve.test.ts", ts).
-artifact[dep]("test/js-update-and-literals.test.ts", ts).
-artifact[dep]("test/js-vocabulary.test.ts", ts).
-artifact[dep]("test/kernel-arity.test.ts", ts).
-artifact[dep]("test/kernel-edge.test.ts", ts).
-artifact[dep]("test/kernel-policy-program.test.ts", ts).
-artifact[dep]("test/key-bytes.test.ts", ts).
-artifact[dep]("test/layering.check.ts", ts).
-artifact[dep]("test/necessity.test.ts", ts).
-artifact[dep]("test/next-tense.test.ts", ts).
-artifact[dep]("test/note-witness.test.ts", ts).
-artifact[dep]("test/nullary.test.ts", ts).
-artifact[dep]("test/pair.test.ts", ts).
-artifact[dep]("test/parser-optional.test.ts", ts).
-artifact[dep]("test/permission-doc.test.ts", ts).
-artifact[dep]("test/persp-var.test.ts", ts).
-artifact[dep]("test/perspectives.test.ts", ts).
-artifact[dep]("test/phase1.test.ts", ts).
-artifact[dep]("test/phase2.test.ts", ts).
-artifact[dep]("test/phase3.test.ts", ts).
-artifact[dep]("test/phase4.test.ts", ts).
-artifact[dep]("test/policy-ladder.test.ts", ts).
-artifact[dep]("test/port-client.test.ts", ts).
-artifact[dep]("test/production-readiness.test.ts", ts).
-artifact[dep]("test/profile-shape.test.ts", ts).
-artifact[dep]("test/provenance-retention.test.ts", ts).
-artifact[dep]("test/query-unpopulatable.test.ts", ts).
-artifact[dep]("test/reject-budget-invariance.test.ts", ts).
-artifact[dep]("test/ring1-lexgen.test.ts", ts).
-artifact[dep]("test/ring1-predgen.test.ts", ts).
-artifact[dep]("test/ring1-spangen.test.ts", ts).
-artifact[dep]("test/rings.test.ts", ts).
-artifact[dep]("test/rofl-lex.test.ts", ts).
-artifact[dep]("test/rofl-parse.test.ts", ts).
-artifact[dep]("test/rofl-safety.test.ts", ts).
-artifact[dep]("test/round-eval-demand.test.ts", ts).
-artifact[dep]("test/round-eval.test.ts", ts).
-artifact[dep]("test/rule-answers.test.ts", ts).
-artifact[dep]("test/rule-shape.test.ts", ts).
-artifact[dep]("test/scanner.test.ts", ts).
-artifact[dep]("test/sealed.test.ts", ts).
-artifact[dep]("test/second-door.test.ts", ts).
-artifact[dep]("test/semiring.test.ts", ts).
-artifact[dep]("test/skill-bundle.test.ts", ts).
-artifact[dep]("test/space.test.ts", ts).
-artifact[dep]("test/spec-coverage.test.ts", ts).
-artifact[dep]("test/store-conformance.test.ts", ts).
-artifact[dep]("test/str-ops.test.ts", ts).
-artifact[dep]("test/strata-fixture.ts", ts).
-artifact[dep]("test/string-destructors.test.ts", ts).
-artifact[dep]("test/swarm.test.ts", ts).
-artifact[dep]("test/terminology.test.ts", ts).
-artifact[dep]("test/text-check.test.ts", ts).
-artifact[dep]("test/tick.test.ts", ts).
-artifact[dep]("test/undefined-premise.test.ts", ts).
-artifact[dep]("test/vocabulary-doc.test.ts", ts).
-artifact[dep]("test/volume-locality.test.ts", ts).
-artifact[dep]("test/well-founded.test.ts", ts).
-artifact[dep]("test/whynot.test.ts", ts).
-artifact[dep]("test/widened-negation.test.ts", ts).
-artifact[dep]("test/witness-check.test.ts", ts).
-artifact[dep]("test/worklist.test.ts", ts).
+artifact[dep]("tsconfig.build.json", json).
 artifact[dep]("tsconfig.json", json).
 
 edge[dep](".github/workflows/ci.yml", "npm:test", ci_step).
+edge[dep](".github/workflows/ci.yml", "scripts/goldens.ts", ci_step).
 edge[dep]("adapters/index.ts", "adapters/sqlite-store.ts", reads_path).
 edge[dep]("adapters/index.ts", "adapters/sqlite-store.ts", ts_import).
 edge[dep]("adapters/index.ts", "src/store.ts", reads_path).
@@ -654,6 +493,7 @@ edge[dep]("boot.rofl", "src/api.ts", doc_ref).
 edge[dep]("boot.rofl", "src/reflect.ts", doc_ref).
 edge[dep]("boot.rofl", "src/rounds.ts", doc_ref).
 edge[dep]("CLAUDE.md", "facts/findings.rofl", doc_ref).
+edge[dep]("CLAUDE.md", "facts/goldens.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "boot.rofl", doc_ref).
 edge[dep]("docs/books-and-permission.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("docs/books-and-permission.md", "examples/cram/flight_log.rofl", doc_ref).
@@ -670,17 +510,9 @@ edge[dep]("docs/books-and-permission.md", "src/api.ts", doc_ref).
 edge[dep]("docs/books-and-permission.md", "src/engine.ts", doc_ref).
 edge[dep]("docs/books-and-permission.md", "src/reflect.ts", doc_ref).
 edge[dep]("docs/books-and-permission.md", "src/store.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/authority-grant.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/authorship.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/bridges.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/exports.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/flow-closure.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/permission-doc.test.ts", doc_ref).
-edge[dep]("docs/books-and-permission.md", "test/widened-negation.test.ts", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "boot.rofl", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/choosing-perspectives.md", "rules/inquiry/epistemic.rofl", doc_ref).
-edge[dep]("docs/choosing-perspectives.md", "test/scanner.test.ts", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "boot.rofl", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "docs/ledger-as-an-instrument.md", doc_ref).
 edge[dep]("docs/claims-outside-the-store.md", "docs/working-with-ledgers.md", doc_ref).
@@ -699,7 +531,6 @@ edge[dep]("docs/ledger-as-an-instrument.md", "docs/working-with-ledgers.md", doc
 edge[dep]("docs/modelling-a-language.md", "facts/js-kinds.rofl", doc_ref).
 edge[dep]("docs/modelling-a-language.md", "package.json", doc_ref).
 edge[dep]("docs/modelling-a-language.md", "rules/js-model.rofl", doc_ref).
-edge[dep]("docs/modelling-a-language.md", "test/js-model.test.ts", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "boot.rofl", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "docs/volumes-and-residency.md", doc_ref).
 edge[dep]("docs/normalisation-and-profiling.md", "scanners/js_ast.ts", doc_ref).
@@ -709,30 +540,25 @@ edge[dep]("docs/performance-invariants.md", "runtime/fork_pool.ts", doc_ref).
 edge[dep]("docs/performance-invariants.md", "runtime/fork_worker.ts", doc_ref).
 edge[dep]("docs/performance-invariants.md", "scanners/key_coupling.ts", doc_ref).
 edge[dep]("docs/performance-invariants.md", "src/unify.ts", doc_ref).
-edge[dep]("docs/performance-invariants.md", "test/kernel-arity.test.ts", doc_ref).
 edge[dep]("docs/port-surface.md", "docs/volumes-and-residency.md", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/rofl/src/bin/rofl_eval.rs", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/rofl/src/program.rs", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/rofl/src/rofl_parse.rs", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/rofl/src/session.rs", doc_ref).
+edge[dep]("docs/port-surface.md", "rust/rofl/tests/explain.rs", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/rofl/tests/session.rs", doc_ref).
 edge[dep]("docs/port-surface.md", "rust/run_corpus.sh", doc_ref).
+edge[dep]("docs/port-surface.md", "scanners/spec.ts", doc_ref).
+edge[dep]("docs/port-surface.md", "src/api.ts", doc_ref).
 edge[dep]("docs/port-surface.md", "src/parser.ts", doc_ref).
-edge[dep]("docs/port-surface.md", "test/rofl-parse.test.ts", doc_ref).
 edge[dep]("docs/scaling-a-corpus.md", "docs/normalisation-and-profiling.md", doc_ref).
 edge[dep]("docs/scaling-a-corpus.md", "docs/test-maintenance-cost.md", doc_ref).
 edge[dep]("docs/scaling-a-corpus.md", "docs/volumes-and-residency.md", doc_ref).
 edge[dep]("docs/scaling-a-corpus.md", "docs/working-with-ledgers.md", doc_ref).
-edge[dep]("docs/test-maintenance-cost.md", "test/js-callgraph.test.ts", doc_ref).
-edge[dep]("docs/test-maintenance-cost.md", "test/js-fixpoint-cost.test.ts", doc_ref).
-edge[dep]("docs/test-maintenance-cost.md", "test/js-layer-cost.test.ts", doc_ref).
-edge[dep]("docs/test-maintenance-cost.md", "test/js-model.test.ts", doc_ref).
 edge[dep]("docs/the-target.md", "docs/medium-and-large.md", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "src/rounds.ts", doc_ref).
 edge[dep]("docs/time-and-continuity.md", "boot.rofl", doc_ref).
-edge[dep]("docs/time-and-continuity.md", "test/next-tense.test.ts", doc_ref).
-edge[dep]("docs/time-and-continuity.md", "test/semiring.test.ts", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "rules/rule-shape.rofl", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "scanners/js_ast.ts", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "scanners/rule_shape.ts", doc_ref).
@@ -756,7 +582,6 @@ edge[dep]("examples/aka/README.md", "examples/aka/aka.rofl", doc_ref).
 edge[dep]("examples/aka/README.md", "examples/aka/demo.ts", doc_ref).
 edge[dep]("examples/aka/README.md", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/aka/README.md", "src/reflect.ts", doc_ref).
-edge[dep]("examples/aka/README.md", "test/example-aka.test.ts", doc_ref).
 edge[dep]("examples/blam/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/blam/demo.ts", "runtime/semirings.ts", ts_import).
 edge[dep]("examples/blam/demo.ts", "src/api.ts", reads_path).
@@ -768,7 +593,6 @@ edge[dep]("examples/blam/README.md", "examples/blam/blam.rofl", doc_ref).
 edge[dep]("examples/blam/README.md", "examples/blam/demo.ts", doc_ref).
 edge[dep]("examples/blam/README.md", "package.json", doc_ref).
 edge[dep]("examples/blam/README.md", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/blam/README.md", "test/example-blam.test.ts", doc_ref).
 edge[dep]("examples/bleep/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/bleep/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/bleep/demo.ts", "runtime/semirings.ts", ts_import).
@@ -781,7 +605,8 @@ edge[dep]("examples/bleep/demo.ts", "src/store.ts", ts_import).
 edge[dep]("examples/bleep/README.md", "examples/bleep/bleep.rofl", doc_ref).
 edge[dep]("examples/bleep/README.md", "examples/bleep/demo.ts", doc_ref).
 edge[dep]("examples/bleep/README.md", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/bleep/README.md", "test/example-bleep.test.ts", doc_ref).
+edge[dep]("examples/checks/operators.rofl", "rules/js-dataflow.rofl", doc_ref).
+edge[dep]("examples/checks/operators.rofl", "src/api.ts", doc_ref).
 edge[dep]("examples/cram/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/cram/demo.ts", "src/api.ts", reads_path).
 edge[dep]("examples/cram/demo.ts", "src/api.ts", ts_import).
@@ -846,7 +671,6 @@ edge[dep]("examples/ditto/README.md", "examples/ditto/ditto.rofl", doc_ref).
 edge[dep]("examples/ditto/README.md", "facts/findings.rofl", doc_ref).
 edge[dep]("examples/ditto/README.md", "scanners/js.ts", doc_ref).
 edge[dep]("examples/ditto/README.md", "src/store.ts", doc_ref).
-edge[dep]("examples/ditto/README.md", "test/example-ditto.test.ts", doc_ref).
 edge[dep]("examples/drip/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/drip/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/drip/demo.ts", "runtime/semirings.ts", ts_import).
@@ -858,7 +682,6 @@ edge[dep]("examples/drip/demo.ts", "src/semiring.ts", reads_path).
 edge[dep]("examples/drip/demo.ts", "src/semiring.ts", ts_import).
 edge[dep]("examples/drip/README.md", "examples/drip/demo.ts", doc_ref).
 edge[dep]("examples/drip/README.md", "examples/drip/drip.rofl", doc_ref).
-edge[dep]("examples/drip/README.md", "test/example-drip.test.ts", doc_ref).
 edge[dep]("examples/flag/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/goof/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/goof/demo.ts", "runtime/semirings.ts", reads_path).
@@ -877,7 +700,6 @@ edge[dep]("examples/goof/README.md", "examples/goof/demo.ts", doc_ref).
 edge[dep]("examples/goof/README.md", "examples/goof/goof.rofl", doc_ref).
 edge[dep]("examples/goof/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/goof/README.md", "src/reflect.ts", doc_ref).
-edge[dep]("examples/goof/README.md", "test/example-goof.test.ts", doc_ref).
 edge[dep]("examples/heck/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/heck/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/heck/demo.ts", "runtime/semirings.ts", ts_import).
@@ -890,8 +712,6 @@ edge[dep]("examples/heck/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/heck/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/heck/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/heck/README.md", "src/semiring.ts", doc_ref).
-edge[dep]("examples/heck/README.md", "test/example-heck.test.ts", doc_ref).
-edge[dep]("examples/heck/README.md", "test/semiring.test.ts", doc_ref).
 edge[dep]("examples/huh/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/huh/demo.ts", "runtime/semirings.ts", ts_import).
 edge[dep]("examples/huh/demo.ts", "src/api.ts", reads_path).
@@ -920,7 +740,6 @@ edge[dep]("examples/iffy/README.md", "examples/jopa/facts.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "examples/jopa/jopa.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("examples/iffy/README.md", "policy.rofl", doc_ref).
-edge[dep]("examples/iffy/README.md", "test/example-iffy.test.ts", doc_ref).
 edge[dep]("examples/jopa/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/jopa/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/jopa/demo.ts", "runtime/semirings.ts", ts_import).
@@ -938,7 +757,6 @@ edge[dep]("examples/jopa/README.md", "examples/jopa/facts.rofl", doc_ref).
 edge[dep]("examples/jopa/README.md", "examples/jopa/jopa.rofl", doc_ref).
 edge[dep]("examples/jopa/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/jopa/README.md", "src/semiring.ts", doc_ref).
-edge[dep]("examples/jopa/README.md", "test/example-jopa.test.ts", doc_ref).
 edge[dep]("examples/loot/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/loot/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/loot/demo.ts", "runtime/semirings.ts", ts_import).
@@ -963,9 +781,6 @@ edge[dep]("examples/loot/README.md", "src/engine.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/reflect.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/loot/README.md", "src/unify.ts", doc_ref).
-edge[dep]("examples/loot/README.md", "test/derived-reuse.test.ts", doc_ref).
-edge[dep]("examples/loot/README.md", "test/example-loot.test.ts", doc_ref).
-edge[dep]("examples/loot/README.md", "test/scanner.test.ts", doc_ref).
 edge[dep]("examples/moot/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/moot/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/moot/demo.ts", "runtime/semirings.ts", ts_import).
@@ -986,7 +801,6 @@ edge[dep]("examples/moot/README.md", "examples/moot/demo.ts", doc_ref).
 edge[dep]("examples/moot/README.md", "examples/moot/moot.rofl", doc_ref).
 edge[dep]("examples/moot/README.md", "README.md", doc_ref).
 edge[dep]("examples/moot/README.md", "src/semiring.ts", doc_ref).
-edge[dep]("examples/moot/README.md", "test/example-moot.test.ts", doc_ref).
 edge[dep]("examples/nope/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/nope/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/nope/demo.ts", "runtime/semirings.ts", ts_import).
@@ -1000,7 +814,6 @@ edge[dep]("examples/nope/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/nope/README.md", "examples/nope/demo.ts", doc_ref).
 edge[dep]("examples/nope/README.md", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("examples/nope/README.md", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/nope/README.md", "test/example-nope.test.ts", doc_ref).
 edge[dep]("examples/npc/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/npc/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/npc/demo.ts", "runtime/semirings.ts", ts_import).
@@ -1022,7 +835,6 @@ edge[dep]("examples/npc/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/npc/README.md", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/npc/README.md", "examples/loot/README.md", doc_ref).
 edge[dep]("examples/npc/README.md", "examples/npc/npc.rofl", doc_ref).
-edge[dep]("examples/npc/README.md", "test/example-npc.test.ts", doc_ref).
 edge[dep]("examples/oops/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/oops/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/oops/demo.ts", "runtime/semirings.ts", ts_import).
@@ -1036,14 +848,11 @@ edge[dep]("examples/oops/README.md", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/oops/README.md", "examples/oops/demo.ts", doc_ref).
 edge[dep]("examples/oops/README.md", "examples/oops/oops.rofl", doc_ref).
 edge[dep]("examples/oops/README.md", "LIMITS.md", doc_ref).
-edge[dep]("examples/oops/README.md", "test/example-oops.test.ts", doc_ref).
 edge[dep]("examples/reach/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/reach/demo.ts", "examples/reach/reach.rofl", reads_path).
 edge[dep]("examples/reach/demo.ts", "src/api.ts", reads_path).
 edge[dep]("examples/reach/demo.ts", "src/api.ts", ts_import).
-edge[dep]("examples/reach/reach.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("examples/reach/README.md", "examples/reach/demo.ts", doc_ref).
-edge[dep]("examples/reach/README.md", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("examples/ring1/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/ring1/demo.ts", "examples/ring1/charclass.rofl", reads_path).
 edge[dep]("examples/ring1/demo.ts", "examples/ring1/ring1.rofl", reads_path).
@@ -1073,8 +882,6 @@ edge[dep]("examples/ring1/README.md", "examples/ring1/ring1.rofl", doc_ref).
 edge[dep]("examples/ring1/README.md", "rules/strata.rofl", doc_ref).
 edge[dep]("examples/ring1/README.md", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/ring1/README.md", "src/parser.ts", doc_ref).
-edge[dep]("examples/ring1/README.md", "test/example-ring1-self.test.ts", doc_ref).
-edge[dep]("examples/ring1/README.md", "test/example-ring1.test.ts", doc_ref).
 edge[dep]("examples/rip/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/rip/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/rip/demo.ts", "runtime/semirings.ts", ts_import).
@@ -1089,7 +896,8 @@ edge[dep]("examples/rip/README.md", "docs/choosing-perspectives.md", doc_ref).
 edge[dep]("examples/rip/README.md", "examples/rip/demo.ts", doc_ref).
 edge[dep]("examples/rip/README.md", "examples/rip/rip.rofl", doc_ref).
 edge[dep]("examples/rip/README.md", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/rip/README.md", "test/example-rip.test.ts", doc_ref).
+edge[dep]("examples/rofl-release/evidence.rofl", "rust/rofl/tests/explain.rs", doc_ref).
+edge[dep]("examples/rofl-release/evidence.rofl", "tsconfig.build.json", doc_ref).
 edge[dep]("examples/slop/demo.ts", "examples/slop/formula.ts", reads_path).
 edge[dep]("examples/slop/demo.ts", "examples/slop/formula.ts", ts_import).
 edge[dep]("examples/slop/demo.ts", "examples/slop/revolver.ts", reads_path).
@@ -1113,7 +921,6 @@ edge[dep]("examples/slop/README.md", "examples/slop/slop.rofl", doc_ref).
 edge[dep]("examples/slop/README.md", "examples/slop/xlsx.ts", doc_ref).
 edge[dep]("examples/slop/README.md", "LIMITS.md", doc_ref).
 edge[dep]("examples/slop/README.md", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/slop/README.md", "test/semiring.test.ts", doc_ref).
 edge[dep]("examples/slop/world.ts", "boot.rofl", reads_path).
 edge[dep]("examples/slop/world.ts", "examples/slop/formula.ts", reads_path).
 edge[dep]("examples/slop/world.ts", "examples/slop/formula.ts", ts_import).
@@ -1150,7 +957,6 @@ edge[dep]("examples/sus/README.md", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/sus/README.md", "examples/sus/demo.ts", doc_ref).
 edge[dep]("examples/sus/README.md", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/sus/README.md", "src/semiring.ts", doc_ref).
-edge[dep]("examples/sus/README.md", "test/example-sus.test.ts", doc_ref).
 edge[dep]("examples/wtf/demo.ts", "boot.rofl", reads_path).
 edge[dep]("examples/wtf/demo.ts", "runtime/semirings.ts", reads_path).
 edge[dep]("examples/wtf/demo.ts", "runtime/semirings.ts", ts_import).
@@ -1263,9 +1069,33 @@ edge[dep]("examples/yak/README.md", "runtime/semirings.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "src/semiring.ts", doc_ref).
 edge[dep]("examples/yak/README.md", "src/store.ts", doc_ref).
-edge[dep]("examples/yak/README.md", "test/example-yak.test.ts", doc_ref).
-edge[dep]("examples/yak/README.md", "test/firing-signature.test.ts", doc_ref).
-edge[dep]("examples/yak/README.md", "test/undefined-premise.test.ts", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/atlas-launch/context.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/atlas-launch/evidence.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/atlas-launch/frame.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/budget-wall.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/destructor-hole.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/keyword-atom.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/not-as-a-name.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/operators.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/refused.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/rofl-release/context.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/rofl-release/evidence.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/rofl-release/frame.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/sensors.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "facts/refactoring.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "facts/worklist.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/decisions/public-release.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/epistemic.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/intents.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/obligations.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/ontology.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/perspectives.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/inquiry/terminology.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/policies/authority.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/policies/evidence.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "rules/worklist.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "scripts/goldens.ts", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "docs/the-target.md", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "rules/cleanliness.rofl", doc_ref).
 edge[dep]("facts/cleanliness.rofl", "scanners/cleanliness_report.ts", doc_ref).
@@ -1276,7 +1106,21 @@ edge[dep]("facts/cross-products.rofl", "rules/floor-census.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/layering.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/parse-cost.rofl", doc_ref).
 edge[dep]("facts/cross-products.rofl", "rules/policies/evidence.rofl", doc_ref).
-edge[dep]("facts/cross-products.rofl", "test/rule-shape.test.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "facts/spec.rofl", doc_ref).
+edge[dep]("facts/deviations.rofl", "policy.rofl", doc_ref).
+edge[dep]("facts/deviations.rofl", "rules/strata.rofl", doc_ref).
+edge[dep]("facts/deviations.rofl", "safety.rofl", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/api.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/engine.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/kernel-dense.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/parser.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/reflect.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/repl.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/rounds.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/semiring.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/store.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/tokens.ts", doc_ref).
+edge[dep]("facts/deviations.rofl", "src/unify.ts", doc_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", "adapters/sqlite-store.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "boot.rofl", ledger_ref).
@@ -1289,10 +1133,15 @@ edge[dep]("facts/findings.rofl", "docs/medium-and-large.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/modelling-a-language.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/normalisation-and-profiling.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/performance-invariants.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "docs/port-surface.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/time-and-continuity.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/volumes-and-residency.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/aka/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/atlas-launch/evidence.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/destructor-hole.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/keyword-atom.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/not-as-a-name.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/operators.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/cram/flight_log.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/flag/flag.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/heck/demo.ts", ledger_ref).
@@ -1309,9 +1158,14 @@ edge[dep]("facts/findings.rofl", "examples/ring1/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/ring1.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/rip/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/rip/rip.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/rofl-release/frame.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/slop/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/spat/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/sus/sus.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/checks.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/commands.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/deviations.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/feature-map.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-callgraph.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-controlflow.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-effects.rofl", ledger_ref).
@@ -1323,20 +1177,25 @@ edge[dep]("facts/findings.rofl", "facts/js-lib-surface.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-modules.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-shapes.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/js-statements.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/refactoring.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "facts/rofl-lint.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/spec.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/worklist.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "facts/worlds.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "package.json", ledger_ref).
 edge[dep]("facts/findings.rofl", "policy.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "README.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "rules/decisions/public-release.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/depends.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/engine-split.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/eval-cost.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "rules/features.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/findings.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/floor-census.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/ingest.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/inquiry/epistemic.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/inquiry/intents.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "rules/inquiry/obligations.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/inquiry/terminology.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/js-ambient.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/js-attrs.rofl", ledger_ref).
@@ -1359,6 +1218,7 @@ edge[dep]("facts/findings.rofl", "rules/nullary.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/parse-cost.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/permission-model.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/profile.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "rules/rofl-lint.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/rule-shape.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/self-audit.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "rules/spec-coverage.rofl", ledger_ref).
@@ -1378,9 +1238,11 @@ edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl_load_bench.rs", ledger_
 edge[dep]("facts/findings.rofl", "rust/rofl/src/engine.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/program.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/rofl_parse.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/src/seed.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/session.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/store.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/term.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/tests/explain.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/session.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/run_corpus.sh", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/share_curve.sh", ledger_ref).
@@ -1392,6 +1254,7 @@ edge[dep]("facts/findings.rofl", "scanners/ablate.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/book_locality.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/engine_split.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/eval_cost.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scanners/features.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/floor_census.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/host_lib.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/js_ast.ts", ledger_ref).
@@ -1401,6 +1264,7 @@ edge[dep]("facts/findings.rofl", "scanners/necessity.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/parse_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/policy_ladder.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/ring1_lexgen.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scanners/rofl_lint.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/round_bytes.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/rule_shape.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/spec.ts", ledger_ref).
@@ -1409,9 +1273,11 @@ edge[dep]("facts/findings.rofl", "scanners/store_trace.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/ts_lib.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/derivations.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/flag_census.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/goldens.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/measurement_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/parser_optional.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/port_corpus.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/render_docs.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/text_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/witness_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "skills/guided-formal-reasoning/escalate.md", ledger_ref).
@@ -1427,104 +1293,7 @@ edge[dep]("facts/findings.rofl", "src/store.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/tokens.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/unify.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "START.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/arg-index.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/arith-hole.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/ask-by-term.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/asserted-tick.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/authority-grant.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/authorship.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/body-order.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/bridges.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/budget-space.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/cleanliness.check.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/clear-derived.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/comparison-sink.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/derived-reuse.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/engine-split.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/escapes.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-heck.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-loot.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-ring1-self.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-ring1.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-rip.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/example-yak.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/findings.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/firing-signature.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-call/alpha.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-call/beta.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-call/delta.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-call/gamma.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-call/trace.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/fixtures/js-host/shadow.mjs", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/flag-census.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/head-vars.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/index-arrival.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/inquiry.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/join-planner.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-ambient.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-ast.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-attrs.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-callgraph.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-computed-key-names.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-controlflow-scope.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-controlflow-values.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-controlflow.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-corpus-world.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-decorators.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-destructuring-transfer.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-directives.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-effects.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-env.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-export-forms.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-fixpoint-cost.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-globals.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-host.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-layer-cost.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-lib-surface.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-meta-and-await.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-model.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-modules.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-pack-home.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-resolve.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-update-and-literals.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/js-vocabulary.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/kernel-edge.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/kernel-policy-program.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/key-bytes.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/necessity.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/next-tense.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/note-witness.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/nullary.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/parser-optional.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/permission-doc.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/persp-var.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/phase3.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/phase4.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/policy-ladder.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/port-client.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/production-readiness.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/query-unpopulatable.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/reject-budget-invariance.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/rings.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/rofl-parse.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/rofl-safety.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/round-eval-demand.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/round-eval.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/rule-shape.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/sealed.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/second-door.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/semiring.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/spec-coverage.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/store-conformance.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/str-ops.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/string-destructors.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/text-check.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/undefined-premise.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/vocabulary-doc.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/well-founded.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/widened-negation.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/witness-check.test.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "test/worklist.test.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "tsconfig.build.json", ledger_ref).
 edge[dep]("facts/floor-census.rofl", "boot.rofl", doc_ref).
 edge[dep]("facts/floor-census.rofl", "examples/cram/flight_log.rofl", doc_ref).
 edge[dep]("facts/floor-census.rofl", "examples/loot/loot.rofl", doc_ref).
@@ -1578,81 +1347,106 @@ edge[dep]("facts/permission-inventory.rofl", "scripts/witness_check.ts", doc_ref
 edge[dep]("facts/permission-inventory.rofl", "src/api.ts", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "src/engine.ts", doc_ref).
 edge[dep]("facts/permission-inventory.rofl", "src/reflect.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/admission.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/arith-hole.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/ask-by-term.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/asserted-tick.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/authority-grant.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/authorship.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/bridges.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/budget-space.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/comparison-sink.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/derived-reuse.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-aka.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-ditto.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-goof.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-heck.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-jopa.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-moot.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-npc.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-rip.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-slop.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/example-sus.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/exports.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/flow-closure.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/inquiry.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/kernel-arity.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/next-tense.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/persp-var.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/perspectives.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/phase3.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/phase4.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/port-client.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/rings.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/scanner.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/sealed.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/second-door.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/spec-coverage.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/string-destructors.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/undefined-premise.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/well-founded.test.ts", doc_ref).
-edge[dep]("facts/permission-inventory.rofl", "test/widened-negation.test.ts", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "boot.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/checks.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/cleanliness.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/commands.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/cross-products.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/depends.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/deviations.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/eval-cost.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/feature-map.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/findings.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/floor-census.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/goldens.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-attrs.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-callgraph.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-controlflow.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-cost.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-dataflow.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-effects.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-env.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-globals.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-host-surface.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-host.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-kinds.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-lib-surface.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-modules.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-resolve.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-shapes.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/js-statements.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/layering.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/parse-cost.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/permission-inventory.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/refactoring.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/spec.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/worklist.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "facts/worlds.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "policy.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/cleanliness.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/decisions/public-release.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/depends.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/engine-split.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/eval-cost.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/features.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/findings.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/floor-census.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/ingest.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/epistemic.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/intents.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/obligations.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/ontology.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/perspectives.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/inquiry/terminology.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-ambient.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-attrs.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-callgraph.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-controlflow.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-dataflow.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-effects.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-env-api.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-env.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-globals.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-host.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-model.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-modules.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-pack-home.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-resolve.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-structure.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/js-vocabulary.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/kernel-policy.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/layering.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/nullary.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/parse-cost.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/permission-model.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/policies/authority.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/policies/evidence.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/profile.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/rule-shape.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/self-audit.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/spec-coverage.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/strata.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/swarm.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/worklist.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "rules/worlds.rofl", doc_ref).
+edge[dep]("facts/rofl-lint.rofl", "safety.rofl", doc_ref).
 edge[dep]("facts/spec.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/spec.rofl", "boot.rofl", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/performance-invariants.md", ledger_ref).
+edge[dep]("facts/spec.rofl", "docs/port-surface.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/three-valued-answers.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/time-and-continuity.md", ledger_ref).
+edge[dep]("facts/spec.rofl", "facts/deviations.rofl", ledger_ref).
 edge[dep]("facts/spec.rofl", "LIMITS.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "README.md", ledger_ref).
+edge[dep]("facts/spec.rofl", "rust/rofl/tests/explain.rs", ledger_ref).
 edge[dep]("facts/spec.rofl", "scanners/spec.ts", ledger_ref).
 edge[dep]("facts/spec.rofl", "src/rounds.ts", ledger_ref).
 edge[dep]("facts/spec.rofl", "START.md", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/arith-hole.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/asserted-tick.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/derived-reuse.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/firing-signature.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/flow-closure.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/index-arrival.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/next-tense.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/persp-var.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/phase1.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/phase2.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/phase3.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/phase4.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/port-client.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/provenance-retention.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/reject-budget-invariance.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/semiring.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/store-conformance.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/text-check.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/undefined-premise.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/vocabulary-doc.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/well-founded.test.ts", ledger_ref).
-edge[dep]("facts/spec.rofl", "test/whynot.test.ts", ledger_ref).
 edge[dep]("facts/worklist.rofl", "facts/js-kinds.rofl", doc_ref).
 edge[dep]("facts/worklist.rofl", "facts/worlds.rofl", doc_ref).
 edge[dep]("facts/worklist.rofl", "rules/js-ambient.rofl", doc_ref).
-edge[dep]("facts/worklist.rofl", "test/js-model.test.ts", doc_ref).
 edge[dep]("facts/worlds.rofl", "boot.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/js-attrs.rofl", doc_ref).
@@ -1671,6 +1465,7 @@ edge[dep]("facts/worlds.rofl", "facts/js-modules.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/js-resolve.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/js-shapes.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/js-statements.rofl", doc_ref).
+edge[dep]("facts/worlds.rofl", "facts/refactoring.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "facts/worklist.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "rules/findings.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "rules/js-ambient.rofl", doc_ref).
@@ -1691,39 +1486,32 @@ edge[dep]("facts/worlds.rofl", "rules/js-structure.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "rules/js-vocabulary.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "rules/worklist.rofl", doc_ref).
 edge[dep]("facts/worlds.rofl", "rules/worlds.rofl", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-call/alpha.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-call/beta.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-call/delta.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-call/gamma.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-host/clock.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-host/runtime.mjs", doc_ref).
-edge[dep]("facts/worlds.rofl", "test/fixtures/js-host/shadow.mjs", doc_ref).
 edge[dep]("LIMITS.md", "boot.rofl", doc_ref).
+edge[dep]("LIMITS.md", "docs/volumes-and-residency.md", doc_ref).
 edge[dep]("LIMITS.md", "examples/counter.rofl", doc_ref).
 edge[dep]("LIMITS.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("LIMITS.md", "examples/tm.rofl", doc_ref).
 edge[dep]("LIMITS.md", "facts/spec.rofl", doc_ref).
 edge[dep]("LIMITS.md", "rules/strata.rofl", doc_ref).
-edge[dep]("LIMITS.md", "test/derived-reuse.test.ts", doc_ref).
-edge[dep]("LIMITS.md", "test/phase2.test.ts", doc_ref).
 edge[dep]("npm:ablate", "scanners/ablate.ts", npm_script).
 edge[dep]("npm:blast", "scanners/depends.ts", npm_script).
+edge[dep]("npm:bless", "scripts/goldens.ts", npm_script).
 edge[dep]("npm:booklocality", "scanners/book_locality.ts", npm_script).
 edge[dep]("npm:boundary", "scanners/store_boundary.ts", npm_script).
 edge[dep]("npm:build:dense", "scripts/build_kernel_dense.ts", npm_script).
 edge[dep]("npm:build:skill", "scripts/build_skill.ts", npm_script).
-edge[dep]("npm:cleancheck", "test/cleanliness.check.ts", npm_script).
 edge[dep]("npm:cleanliness", "scanners/cleanliness_report.ts", npm_script).
 edge[dep]("npm:dagcheck", "scanners/bootstrap_dag.ts", npm_script).
 edge[dep]("npm:depends", "scanners/depends.ts", npm_script).
+edge[dep]("npm:docs", "scripts/render_docs.ts", npm_script).
 edge[dep]("npm:evalcost", "scanners/eval_cost.ts", npm_script).
+edge[dep]("npm:features", "scanners/features.ts", npm_script).
 edge[dep]("npm:findings", "facts/findings.rofl", npm_script).
 edge[dep]("npm:findings", "runtime/report.ts", npm_script).
 edge[dep]("npm:flagcheck", "scripts/flag_census.ts", npm_script).
 edge[dep]("npm:floorcensus", "scanners/floor_census.ts", npm_script).
 edge[dep]("npm:keycoupling", "scanners/key_coupling.ts", npm_script).
 edge[dep]("npm:laddercheck", "scanners/policy_ladder.ts", npm_script).
-edge[dep]("npm:layercheck", "test/layering.check.ts", npm_script).
 edge[dep]("npm:layering", "scanners/layering_report.ts", npm_script).
 edge[dep]("npm:loop", "scanners/side_files.ts", npm_script).
 edge[dep]("npm:measurecheck", "scripts/measurement_check.ts", npm_script).
@@ -1736,6 +1524,8 @@ edge[dep]("npm:perminv", "scanners/permission_inventory.ts", npm_script).
 edge[dep]("npm:portcorpus", "scripts/port_corpus.ts", npm_script).
 edge[dep]("npm:repl", "src/repl.ts", npm_script).
 edge[dep]("npm:report", "runtime/report.ts", npm_script).
+edge[dep]("npm:rofllint", "scanners/rofl_lint_report.ts", npm_script).
+edge[dep]("npm:rofllint", "scanners/rofl_lint.ts", npm_script).
 edge[dep]("npm:roundbytes", "scanners/round_bytes.ts", npm_script).
 edge[dep]("npm:ruleshape", "scanners/rule_shape_report.ts", npm_script).
 edge[dep]("npm:ruleshape", "scanners/rule_shape.ts", npm_script).
@@ -1743,9 +1533,12 @@ edge[dep]("npm:scan", "scanners/cli.ts", npm_script).
 edge[dep]("npm:speccheck", "scanners/spec.ts", npm_script).
 edge[dep]("npm:splitcheck", "scanners/engine_split.ts", npm_script).
 edge[dep]("npm:storetrace", "scanners/store_trace.ts", npm_script).
+edge[dep]("npm:test:bun", "scripts/goldens.ts", npm_script).
 edge[dep]("npm:test:engine", "scanners/side_files.ts", npm_script).
+edge[dep]("npm:test:hosts", "scripts/goldens.ts", npm_script).
 edge[dep]("npm:test:library", "scanners/side_files.ts", npm_script).
 edge[dep]("npm:test:mutants", "scanners/mutant_files.ts", npm_script).
+edge[dep]("npm:test", "scripts/goldens.ts", npm_script).
 edge[dep]("npm:textcheck", "scripts/text_check.ts", npm_script).
 edge[dep]("npm:whyfloor", "facts/floor-census.rofl", npm_script).
 edge[dep]("npm:whyfloor", "rules/floor-census.rofl", npm_script).
@@ -1812,45 +1605,16 @@ edge[dep]("README.md", "src/store.ts", doc_ref).
 edge[dep]("README.md", "src/tokens.ts", doc_ref).
 edge[dep]("README.md", "src/unify.ts", doc_ref).
 edge[dep]("README.md", "START.md", doc_ref).
-edge[dep]("README.md", "test/flow-closure.test.ts", doc_ref).
-edge[dep]("README.md", "test/kernel-policy-program.test.ts", doc_ref).
-edge[dep]("README.md", "test/permission-doc.test.ts", doc_ref).
-edge[dep]("README.md", "test/reject-budget-invariance.test.ts", doc_ref).
-edge[dep]("README.md", "test/sealed.test.ts", doc_ref).
-edge[dep]("README.md", "test/vocabulary-doc.test.ts", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "facts/depends.rofl", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "README.md", doc_ref).
 edge[dep]("rules/cleanliness.rofl", "scripts/witness_check.ts", doc_ref).
-edge[dep]("rules/depends.rofl", "boot.rofl", doc_ref).
-edge[dep]("rules/depends.rofl", "facts/findings.rofl", doc_ref).
-edge[dep]("rules/depends.rofl", "scanners/rule_shape.ts", doc_ref).
-edge[dep]("rules/depends.rofl", "scripts/witness_check.ts", doc_ref).
-edge[dep]("rules/depends.rofl", "test/cleanliness.check.ts", doc_ref).
-edge[dep]("rules/depends.rofl", "test/rule-shape.test.ts", doc_ref).
 edge[dep]("rules/engine-split.rofl", "scanners/engine_split.ts", doc_ref).
+edge[dep]("rules/features.rofl", "src/api.ts", doc_ref).
 edge[dep]("rules/findings.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("rules/floor-census.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/floor-census.rofl", "policy.rofl", doc_ref).
 edge[dep]("rules/floor-census.rofl", "safety.rofl", doc_ref).
-edge[dep]("rules/ingest.rofl", "scanners/js_ast.ts", doc_ref).
-edge[dep]("rules/ingest.rofl", "test/rule-shape.test.ts", doc_ref).
-edge[dep]("rules/js-ambient.rofl", "facts/js-globals.rofl", doc_ref).
-edge[dep]("rules/js-ambient.rofl", "rules/js-effects.rofl", doc_ref).
-edge[dep]("rules/js-ambient.rofl", "rules/js-globals.rofl", doc_ref).
-edge[dep]("rules/js-ambient.rofl", "rules/js-host.rofl", doc_ref).
-edge[dep]("rules/js-ambient.rofl", "scanners/host_lib.ts", doc_ref).
-edge[dep]("rules/js-attrs.rofl", "rules/js-env.rofl", doc_ref).
-edge[dep]("rules/js-dataflow.rofl", "rules/js-modules.rofl", doc_ref).
-edge[dep]("rules/js-dataflow.rofl", "test/rule-shape.test.ts", doc_ref).
-edge[dep]("rules/js-host.rofl", "test/js-host.test.ts", doc_ref).
-edge[dep]("rules/js-model.rofl", "src/reflect.ts", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "facts/js-callgraph.rofl", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "facts/js-kinds.rofl", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "rules/js-callgraph.rofl", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "test/js-model.test.ts", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "test/js-pack-home.test.ts", doc_ref).
-edge[dep]("rules/js-pack-home.rofl", "test/js-vocabulary.test.ts", doc_ref).
 edge[dep]("rules/kernel-policy.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/kernel-policy.rofl", "scanners/engine_split.ts", doc_ref).
 edge[dep]("rules/kernel-policy.rofl", "scanners/policy_ladder.ts", doc_ref).
@@ -1862,15 +1626,10 @@ edge[dep]("rules/layering.rofl", "safety.rofl", doc_ref).
 edge[dep]("rules/layering.rofl", "src/api.ts", doc_ref).
 edge[dep]("rules/layering.rofl", "src/parser.ts", doc_ref).
 edge[dep]("rules/layering.rofl", "src/unify.ts", doc_ref).
-edge[dep]("rules/layering.rofl", "test/js-ast.test.ts", doc_ref).
-edge[dep]("rules/nullary.rofl", "safety.rofl", doc_ref).
-edge[dep]("rules/rule-shape.rofl", "docs/medium-and-large.md", doc_ref).
+edge[dep]("rules/rofl-lint.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("rules/spec-coverage.rofl", "boot.rofl", doc_ref).
-edge[dep]("rules/spec-coverage.rofl", "test/persp-var.test.ts", doc_ref).
-edge[dep]("rules/spec-coverage.rofl", "test/phase3.test.ts", doc_ref).
 edge[dep]("rules/strata.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/strata.rofl", "src/rounds.ts", doc_ref).
-edge[dep]("rules/worklist.rofl", "rules/js-model.rofl", doc_ref).
 edge[dep]("rules/worlds.rofl", "boot.rofl", doc_ref).
 edge[dep]("rules/worlds.rofl", "scripts/witness_check.ts", doc_ref).
 edge[dep]("runtime/admission.ts", "src/api.ts", reads_path).
@@ -1967,6 +1726,19 @@ edge[dep]("scanners/eval_cost.ts", "src/engine.ts", reads_path).
 edge[dep]("scanners/eval_cost.ts", "src/engine.ts", ts_import).
 edge[dep]("scanners/eval_cost.ts", "src/unify.ts", reads_path).
 edge[dep]("scanners/eval_cost.ts", "src/unify.ts", ts_import).
+edge[dep]("scanners/features.ts", "boot.rofl", reads_path).
+edge[dep]("scanners/features.ts", "facts/feature-map.rofl", generates).
+edge[dep]("scanners/features.ts", "facts/spec.rofl", reads_path).
+edge[dep]("scanners/features.ts", "scripts/flag_census.ts", reads_path).
+edge[dep]("scanners/features.ts", "scripts/flag_census.ts", ts_import).
+edge[dep]("scanners/features.ts", "src/api.ts", reads_path).
+edge[dep]("scanners/features.ts", "src/api.ts", ts_import).
+edge[dep]("scanners/features.ts", "src/parser.ts", reads_path).
+edge[dep]("scanners/features.ts", "src/parser.ts", ts_import).
+edge[dep]("scanners/features.ts", "src/reflect.ts", reads_path).
+edge[dep]("scanners/features.ts", "src/reflect.ts", ts_import).
+edge[dep]("scanners/features.ts", "src/unify.ts", reads_path).
+edge[dep]("scanners/features.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/floor_census.ts", "examples/cram/demo.ts", reads_path).
 edge[dep]("scanners/floor_census.ts", "examples/cram/demo.ts", ts_import).
 edge[dep]("scanners/floor_census.ts", "examples/goof/demo.ts", reads_path).
@@ -2003,7 +1775,6 @@ edge[dep]("scanners/materialize.ts", "scanners/js.ts", reads_path).
 edge[dep]("scanners/materialize.ts", "scanners/js.ts", ts_import).
 edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", reads_path).
 edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", ts_import).
-edge[dep]("scanners/mutant_files.ts", "test/helpers/mutant.ts", reads_path).
 edge[dep]("scanners/nullary_report.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "policy.rofl", reads_path).
 edge[dep]("scanners/nullary_report.ts", "rules/nullary.rofl", reads_path).
@@ -2073,6 +1844,23 @@ edge[dep]("scanners/ring1_spangen.ts", "src/parser.ts", reads_path).
 edge[dep]("scanners/ring1_spangen.ts", "src/parser.ts", ts_import).
 edge[dep]("scanners/ring1_spangen.ts", "src/unify.ts", reads_path).
 edge[dep]("scanners/ring1_spangen.ts", "src/unify.ts", ts_import).
+edge[dep]("scanners/rofl_lint_report.ts", "boot.rofl", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "facts/rofl-lint.rofl", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "rules/js-callgraph.rofl", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "rules/js-effects.rofl", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "rules/rofl-lint.rofl", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "src/api.ts", reads_path).
+edge[dep]("scanners/rofl_lint_report.ts", "src/api.ts", ts_import).
+edge[dep]("scanners/rofl_lint.ts", "boot.rofl", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "facts/rofl-lint.rofl", generates).
+edge[dep]("scanners/rofl_lint.ts", "policy.rofl", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "safety.rofl", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "src/parser.ts", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "src/parser.ts", ts_import).
+edge[dep]("scanners/rofl_lint.ts", "src/tokens.ts", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "src/tokens.ts", ts_import).
+edge[dep]("scanners/rofl_lint.ts", "src/unify.ts", reads_path).
+edge[dep]("scanners/rofl_lint.ts", "src/unify.ts", ts_import).
 edge[dep]("scanners/round_bytes.ts", "boot.rofl", reads_path).
 edge[dep]("scanners/round_bytes.ts", "examples/sensors.rofl", reads_path).
 edge[dep]("scanners/round_bytes.ts", "src/api.ts", reads_path).
@@ -2149,6 +1937,12 @@ edge[dep]("scripts/derivations.ts", "src/engine.ts", ts_import).
 edge[dep]("scripts/derivations.ts", "src/store.ts", reads_path).
 edge[dep]("scripts/derivations.ts", "src/store.ts", ts_import).
 edge[dep]("scripts/flag_census.ts", "src/api.ts", reads_path).
+edge[dep]("scripts/goldens.ts", "boot.rofl", reads_path).
+edge[dep]("scripts/goldens.ts", "facts/checks.rofl", reads_path).
+edge[dep]("scripts/goldens.ts", "facts/goldens.rofl", reads_path).
+edge[dep]("scripts/goldens.ts", "scripts/render_docs.ts", reads_path).
+edge[dep]("scripts/goldens.ts", "src/api.ts", reads_path).
+edge[dep]("scripts/goldens.ts", "src/api.ts", ts_import).
 edge[dep]("scripts/parser_optional.ts", "package.json", reads_path).
 edge[dep]("scripts/parser_optional.ts", "src/reflect.ts", reads_path).
 edge[dep]("scripts/parser_optional.ts", "tsconfig.json", reads_path).
@@ -2157,6 +1951,17 @@ edge[dep]("scripts/port_corpus.ts", "scripts/derivations.ts", reads_path).
 edge[dep]("scripts/port_corpus.ts", "scripts/derivations.ts", ts_import).
 edge[dep]("scripts/port_corpus.ts", "src/api.ts", reads_path).
 edge[dep]("scripts/port_corpus.ts", "src/api.ts", ts_import).
+edge[dep]("scripts/render_docs.ts", "boot.rofl", reads_path).
+edge[dep]("scripts/render_docs.ts", "CLAUDE.md", reads_path).
+edge[dep]("scripts/render_docs.ts", "facts/commands.rofl", reads_path).
+edge[dep]("scripts/render_docs.ts", "facts/deviations.rofl", reads_path).
+edge[dep]("scripts/render_docs.ts", "facts/findings.rofl", reads_path).
+edge[dep]("scripts/render_docs.ts", "LIMITS.md", reads_path).
+edge[dep]("scripts/render_docs.ts", "package.json", reads_path).
+edge[dep]("scripts/render_docs.ts", "README.md", reads_path).
+edge[dep]("scripts/render_docs.ts", "src/api.ts", reads_path).
+edge[dep]("scripts/render_docs.ts", "src/api.ts", ts_import).
+edge[dep]("scripts/render_docs.ts", "START.md", reads_path).
 edge[dep]("scripts/witness_check.ts", "boot.rofl", reads_path).
 edge[dep]("scripts/witness_check.ts", "facts/worlds.rofl", reads_path).
 edge[dep]("scripts/witness_check.ts", "rules/worlds.rofl", reads_path).
@@ -2229,1406 +2034,5 @@ edge[dep]("src/store.ts", "src/unify.ts", ts_import).
 edge[dep]("START.md", "LIMITS.md", doc_ref).
 edge[dep]("START.md", "README.md", doc_ref).
 edge[dep]("START.md", "src/reflect.ts", doc_ref).
-edge[dep]("test/ablate.test.ts", "scanners/ablate.ts", reads_path).
-edge[dep]("test/ablate.test.ts", "scanners/ablate.ts", ts_import).
-edge[dep]("test/admission.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/admission.test.ts", "runtime/admission.ts", reads_path).
-edge[dep]("test/admission.test.ts", "runtime/admission.ts", ts_import).
-edge[dep]("test/admission.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/admission.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/admission.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/admission.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/arg-index.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/arg-index.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/arg-index.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/arg-index.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/arg-index.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/arg-index.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/arg-index.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/arg-index.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/arg-index.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/arith-hole.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/arith-hole.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/ask-by-term.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/ask-by-term.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/ask-by-term.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/ask-by-term.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/ask-by-term.test.ts", "src/dense.ts", reads_path).
-edge[dep]("test/ask-by-term.test.ts", "src/dense.ts", ts_import).
-edge[dep]("test/ask-by-term.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/ask-by-term.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/asserted-tick.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/asserted-tick.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/asserted-tick.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/asserted-tick.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/asserted-tick.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/authority-grant.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/authority-grant.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/authority-grant.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/authorship.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/authorship.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/authorship.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/authorship.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/authorship.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/authorship.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/authorship.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/authorship.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/authorship.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/body-order.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/body-order.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/body-order.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/body-order.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/body-order.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/body-order.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/body-order.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/body-order.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/bootstrap-dag.test.ts", "scanners/bootstrap_dag.ts", reads_path).
-edge[dep]("test/bootstrap-dag.test.ts", "scanners/bootstrap_dag.ts", ts_import).
-edge[dep]("test/bootstrap-dag.test.ts", "scanners/engine_split.ts", reads_path).
-edge[dep]("test/bootstrap-dag.test.ts", "scanners/engine_split.ts", ts_import).
-edge[dep]("test/bridges.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/bridges.test.ts", "policy.rofl", reads_path).
-edge[dep]("test/bridges.test.ts", "safety.rofl", reads_path).
-edge[dep]("test/bridges.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/bridges.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/bridges.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/bridges.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/bridges.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/bridges.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/bridges.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/bridges.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/budget-space.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/budget-space.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/budget-space.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/budget-space.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/budget-space.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/budget-space.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/budget-space.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/budget-space.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", reads_path).
-edge[dep]("test/cleanliness.check.ts", "scanners/cleanliness_report.ts", ts_import).
-edge[dep]("test/cleanliness.check.ts", "src/api.ts", reads_path).
-edge[dep]("test/cleanliness.check.ts", "src/api.ts", ts_import).
-edge[dep]("test/clear-derived.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/clear-derived.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/clear-derived.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/comparison-sink.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/comparison-sink.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/comparison-sink.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/confirmation.test.ts", "examples/atlas-launch/evidence.rofl", reads_path).
-edge[dep]("test/confirmation.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/confirmation.test.ts", "runtime/admission.ts", reads_path).
-edge[dep]("test/confirmation.test.ts", "runtime/admission.ts", ts_import).
-edge[dep]("test/confirmation.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/confirmation.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/confirmation.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/confirmation.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/depends.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "facts/depends.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "facts/eval-cost.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "facts/findings.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "README.md", reads_path).
-edge[dep]("test/depends.test.ts", "rules/depends.rofl", reads_path).
-edge[dep]("test/depends.test.ts", "scanners/depends.ts", reads_path).
-edge[dep]("test/depends.test.ts", "scanners/depends.ts", ts_import).
-edge[dep]("test/depends.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/depends.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/depends.test.ts", "src/repl.ts", reads_path).
-edge[dep]("test/depends.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/depends.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "examples/spat/spat.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "examples/spat/spat.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/derived-reuse.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/derived-reuse.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/docs-index.test.ts", "README.md", reads_path).
-edge[dep]("test/docs-index.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/docs-index.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/engine-split.test.ts", "scanners/engine_split.ts", reads_path).
-edge[dep]("test/engine-split.test.ts", "scanners/engine_split.ts", ts_import).
-edge[dep]("test/engine-split.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/engine-split.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/escapes.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/escapes.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/evaluator-primary.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/evaluator-primary.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/evaluator-primary.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/evaluator-primary.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/evaluator-primary.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/example-aka.test.ts", "examples/aka/demo.ts", reads_path).
-edge[dep]("test/example-aka.test.ts", "examples/aka/demo.ts", ts_import).
-edge[dep]("test/example-aka.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-aka.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-aka.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-aka.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-blam.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/example-blam.test.ts", "examples/blam/blam.rofl", reads_path).
-edge[dep]("test/example-blam.test.ts", "examples/blam/demo.ts", reads_path).
-edge[dep]("test/example-blam.test.ts", "examples/blam/demo.ts", ts_import).
-edge[dep]("test/example-blam.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-blam.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-blam.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-blam.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-blam.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-blam.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-blam.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-blam.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-bleep.test.ts", "examples/bleep/demo.ts", reads_path).
-edge[dep]("test/example-bleep.test.ts", "examples/bleep/demo.ts", ts_import).
-edge[dep]("test/example-bleep.test.ts", "README.md", reads_path).
-edge[dep]("test/example-bleep.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-bleep.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-bleep.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-bleep.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-bleep.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-bleep.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-bleep.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-bleep.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-cram.test.ts", "examples/cram/demo.ts", reads_path).
-edge[dep]("test/example-cram.test.ts", "examples/cram/demo.ts", ts_import).
-edge[dep]("test/example-cram.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-cram.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-ditto.test.ts", "examples/ditto/demo.ts", reads_path).
-edge[dep]("test/example-ditto.test.ts", "examples/ditto/demo.ts", ts_import).
-edge[dep]("test/example-ditto.test.ts", "README.md", reads_path).
-edge[dep]("test/example-ditto.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-ditto.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-ditto.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-ditto.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-ditto.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-ditto.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-drip.test.ts", "examples/drip/demo.ts", reads_path).
-edge[dep]("test/example-drip.test.ts", "examples/drip/demo.ts", ts_import).
-edge[dep]("test/example-drip.test.ts", "README.md", reads_path).
-edge[dep]("test/example-drip.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-drip.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-drip.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-drip.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-drip.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-drip.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-goof.test.ts", "examples/goof/demo.ts", reads_path).
-edge[dep]("test/example-goof.test.ts", "examples/goof/demo.ts", ts_import).
-edge[dep]("test/example-goof.test.ts", "README.md", reads_path).
-edge[dep]("test/example-goof.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-goof.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-goof.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-goof.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-heck.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/example-heck.test.ts", "examples/heck/demo.ts", reads_path).
-edge[dep]("test/example-heck.test.ts", "examples/heck/demo.ts", ts_import).
-edge[dep]("test/example-heck.test.ts", "README.md", reads_path).
-edge[dep]("test/example-heck.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-heck.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-heck.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-heck.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-huh.test.ts", "examples/huh/demo.ts", reads_path).
-edge[dep]("test/example-huh.test.ts", "examples/huh/demo.ts", ts_import).
-edge[dep]("test/example-huh.test.ts", "README.md", reads_path).
-edge[dep]("test/example-huh.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-huh.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-iffy.test.ts", "examples/iffy/demo.ts", reads_path).
-edge[dep]("test/example-iffy.test.ts", "examples/iffy/demo.ts", ts_import).
-edge[dep]("test/example-iffy.test.ts", "examples/iffy/policy.rofl", reads_path).
-edge[dep]("test/example-iffy.test.ts", "examples/iffy/statute.rofl", reads_path).
-edge[dep]("test/example-iffy.test.ts", "examples/jopa/jopa.rofl", reads_path).
-edge[dep]("test/example-iffy.test.ts", "examples/nope/nope.rofl", reads_path).
-edge[dep]("test/example-iffy.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-iffy.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-iffy.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-iffy.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-jopa.test.ts", "examples/jopa/demo.ts", reads_path).
-edge[dep]("test/example-jopa.test.ts", "examples/jopa/demo.ts", ts_import).
-edge[dep]("test/example-jopa.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-jopa.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-jopa.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-jopa.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-jopa.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-jopa.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-jopa.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-jopa.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-loot.test.ts", "examples/loot/demo.ts", reads_path).
-edge[dep]("test/example-loot.test.ts", "examples/loot/demo.ts", ts_import).
-edge[dep]("test/example-loot.test.ts", "README.md", reads_path).
-edge[dep]("test/example-loot.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-loot.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-loot.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-loot.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-loot.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/example-loot.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/example-loot.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/example-loot.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/example-moot.test.ts", "examples/moot/demo.ts", reads_path).
-edge[dep]("test/example-moot.test.ts", "examples/moot/demo.ts", ts_import).
-edge[dep]("test/example-moot.test.ts", "README.md", reads_path).
-edge[dep]("test/example-moot.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-moot.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "examples/nope/demo.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "examples/nope/demo.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/example-nope.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-nope.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "examples/npc/demo.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "examples/npc/demo.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "README.md", reads_path).
-edge[dep]("test/example-npc.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/example-npc.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-npc.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-oops.test.ts", "examples/oops/demo.ts", reads_path).
-edge[dep]("test/example-oops.test.ts", "examples/oops/demo.ts", ts_import).
-edge[dep]("test/example-oops.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-oops.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-oops.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-oops.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-oops.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/example-oops.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/example-ring1-self.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "examples/ring1/demo.ts", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "examples/ring1/demo.ts", ts_import).
-edge[dep]("test/example-ring1-self.test.ts", "examples/ring1/l1.rofl", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/example-ring1-self.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/example-ring1-self.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/demo.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/demo.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/dense.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/dense.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/l0.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "examples/ring1/l0.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "rules/strata.rofl", reads_path).
-edge[dep]("test/example-ring1.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/example-ring1.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/example-ring1.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/example-rip.test.ts", "examples/rip/demo.ts", reads_path).
-edge[dep]("test/example-rip.test.ts", "examples/rip/demo.ts", ts_import).
-edge[dep]("test/example-rip.test.ts", "README.md", reads_path).
-edge[dep]("test/example-rip.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-rip.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-rip.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-rip.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-rip.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-rip.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-rip.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/example-rip.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/example-slop.test.ts", "examples/slop/demo.ts", reads_path).
-edge[dep]("test/example-slop.test.ts", "examples/slop/demo.ts", ts_import).
-edge[dep]("test/example-slop.test.ts", "examples/slop/formula.ts", reads_path).
-edge[dep]("test/example-slop.test.ts", "examples/slop/formula.ts", ts_import).
-edge[dep]("test/example-slop.test.ts", "examples/slop/revolver.ts", reads_path).
-edge[dep]("test/example-slop.test.ts", "examples/slop/revolver.ts", ts_import).
-edge[dep]("test/example-slop.test.ts", "examples/slop/world.ts", reads_path).
-edge[dep]("test/example-slop.test.ts", "examples/slop/world.ts", ts_import).
-edge[dep]("test/example-slop.test.ts", "examples/slop/xlsx.ts", reads_path).
-edge[dep]("test/example-slop.test.ts", "examples/slop/xlsx.ts", ts_import).
-edge[dep]("test/example-spat.test.ts", "examples/spat/html.ts", reads_path).
-edge[dep]("test/example-spat.test.ts", "examples/spat/html.ts", ts_import).
-edge[dep]("test/example-spat.test.ts", "examples/spat/spat.ts", reads_path).
-edge[dep]("test/example-spat.test.ts", "examples/spat/spat.ts", ts_import).
-edge[dep]("test/example-spat.test.ts", "examples/spat/week.example.rofl", reads_path).
-edge[dep]("test/example-spat.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-spat.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-spat.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-spat.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-sus.test.ts", "examples/sus/demo.ts", reads_path).
-edge[dep]("test/example-sus.test.ts", "examples/sus/demo.ts", ts_import).
-edge[dep]("test/example-sus.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/example-sus.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/example-sus.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-sus.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-sus.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-sus.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-wtf.test.ts", "examples/wtf/demo.ts", reads_path).
-edge[dep]("test/example-wtf.test.ts", "examples/wtf/demo.ts", ts_import).
-edge[dep]("test/example-wtf.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/example-wtf.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/example-wtf.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/example-wtf.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/demo.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/demo.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/01-sediment.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/01-sediment.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/02-scc.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/02-scc.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/03-metadep.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/03-metadep.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/04-false-miss.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/04-false-miss.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/05-diverging-semiring.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/05-diverging-semiring.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/06-stale-model.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/06-stale-model.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/07-not-needed.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/07-not-needed.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/08-golden-accident.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/08-golden-accident.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/09-wrong-premise.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/09-wrong-premise.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/hygiene.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "examples/yak/fragments/hygiene.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "README.md", reads_path).
-edge[dep]("test/example-yak.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/example-yak.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/example-yak.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/exports.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/exports.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/exports.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/exports.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/exports.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/findings.test.ts", "facts/findings.rofl", reads_path).
-edge[dep]("test/findings.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/findings.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/findings.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/findings.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/firing-signature.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/firing-signature.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/firing-signature.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/firing-signature.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/firing-signature.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/firing-signature.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/fixtures/js-call/alpha.mjs", "test/fixtures/js-call/trace.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/alpha.mjs", "test/fixtures/js-call/trace.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/alpha.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/alpha.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/gamma.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/gamma.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/trace.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/beta.mjs", "test/fixtures/js-call/trace.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/delta.mjs", "test/fixtures/js-call/trace.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/delta.mjs", "test/fixtures/js-call/trace.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/gamma.mjs", "test/fixtures/js-call/alpha.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/gamma.mjs", "test/fixtures/js-call/alpha.mjs", ts_import).
-edge[dep]("test/fixtures/js-call/gamma.mjs", "test/fixtures/js-call/delta.mjs", reads_path).
-edge[dep]("test/fixtures/js-call/gamma.mjs", "test/fixtures/js-call/delta.mjs", ts_import).
-edge[dep]("test/fixtures/js-host/shadow.mjs", "test/fixtures/js-host/clock.mjs", reads_path).
-edge[dep]("test/fixtures/js-host/shadow.mjs", "test/fixtures/js-host/clock.mjs", ts_import).
-edge[dep]("test/flag-census.test.ts", "scripts/flag_census.ts", reads_path).
-edge[dep]("test/flag-census.test.ts", "scripts/flag_census.ts", ts_import).
-edge[dep]("test/flow-closure.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/flow-closure.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/flow-closure.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/head-vars.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/head-vars.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/head-vars.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/head-vars.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/head-vars.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/helpers/roundtrip_child.ts", "src/api.ts", reads_path).
-edge[dep]("test/helpers/roundtrip_child.ts", "src/api.ts", ts_import).
-edge[dep]("test/index-arrival.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/index-arrival.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/index-arrival.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/index-arrival.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/index-arrival.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/index-arrival.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/ingest-rules.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/ingest-rules.test.ts", "rules/ingest.rofl", reads_path).
-edge[dep]("test/ingest-rules.test.ts", "runtime/port.ts", reads_path).
-edge[dep]("test/ingest-rules.test.ts", "runtime/port.ts", ts_import).
-edge[dep]("test/inquiry.test.ts", "examples/atlas-launch/evidence.rofl", reads_path).
-edge[dep]("test/inquiry.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/inquiry.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/inquiry.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/inquiry.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/inquiry.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/join-planner.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/join-planner.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/join-planner.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/join-planner.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/join-planner.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/join-planner.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/join-planner.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/join-planner.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/join-planner.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/join-planner.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-ambient.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-globals.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-host-surface.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-host.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "facts/worlds.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-ambient.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-effects.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-globals.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-host.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "rules/worlds.rofl", reads_path).
-edge[dep]("test/js-ambient.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-ambient.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-ambient.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-ambient.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/clock.mjs", reads_path).
-edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/runtime.mjs", reads_path).
-edge[dep]("test/js-ambient.test.ts", "test/fixtures/js-host/shadow.mjs", reads_path).
-edge[dep]("test/js-ambient.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-ambient.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-ast.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-ast.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-ast.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-ast.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-ast.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-ast.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/js-ast.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/js-ast.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/js-ast.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/js-attrs.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-attrs.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-cost.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-globals.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-host-surface.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-host.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-ambient.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-attrs.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-effects.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-globals.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-host.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-pack-home.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-resolve.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-attrs.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-attrs.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-attrs.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-attrs.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-attrs.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-attrs.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-callgraph.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-callgraph.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-callgraph.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-callgraph.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-class-expression.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-class-expression.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-class-expression.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-class-expression.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-computed-key-names.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-computed-key-names.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-computed-key-names.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-computed-key-names.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-computed-key-names.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-controlflow-scope.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-controlflow-scope.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-controlflow-scope.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-controlflow-scope.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-controlflow-values.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-controlflow-values.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-controlflow.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-controlflow.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-controlflow.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-controlflow.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-controlflow.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-controlflow.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-corpus-world.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-corpus-world.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-corpus-world.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-corpus-world.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-corpus-world.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-decorator-replacement.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/findings.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "facts/worklist.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "rules/worklist.rofl", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-decorator-replacement.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-decorator-replacement.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-decorator-replacement.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-decorators.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-decorators.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-decorators.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-decorators.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-decorators.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-decorators.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-destructuring-transfer.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-destructuring-transfer.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-destructuring-transfer.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-destructuring-transfer.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-destructuring-transfer.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-destructuring-transfer.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-directives.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-directives.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-directives.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-directives.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-directives.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-directives.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-directives.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-directives.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-directives.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-effects.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-effects.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-effects.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-effects.test.ts", "rules/js-effects.rofl", reads_path).
-edge[dep]("test/js-effects.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-effects.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-effects.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-effects.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-effects.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-effects.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-effects.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-effects.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-env.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-env.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-env.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-env.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-env.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-env.test.ts", "test/fixtures/js-call/alpha.mjs", reads_path).
-edge[dep]("test/js-env.test.ts", "test/fixtures/js-call/beta.mjs", reads_path).
-edge[dep]("test/js-env.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-env.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-export-forms.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-export-forms.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-export-forms.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-export-forms.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-export-forms.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-fixpoint-cost.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-fixpoint-cost.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-fixpoint-cost.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-globals.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-globals.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-globals.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-globals.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-globals.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-globals.test.ts", "scanners/ts_lib.ts", reads_path).
-edge[dep]("test/js-globals.test.ts", "scanners/ts_lib.ts", ts_import).
-edge[dep]("test/js-globals.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-globals.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-globals.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-globals.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-host-world.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-host-surface.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-host.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-host.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-host-world.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-host-world.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-host-world.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-host-world.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-host.test.ts", "facts/js-attrs.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-cost.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-globals.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-host-surface.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-ambient.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-attrs.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-effects.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-globals.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-host.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-pack-home.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-resolve.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-host.test.ts", "scanners/host_lib.ts", reads_path).
-edge[dep]("test/js-host.test.ts", "scanners/host_lib.ts", ts_import).
-edge[dep]("test/js-host.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-host.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-host.test.ts", "test/js-host-world.ts", reads_path).
-edge[dep]("test/js-host.test.ts", "test/js-host-world.ts", ts_import).
-edge[dep]("test/js-layer-cost.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-attrs.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-cost.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-globals.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-host-surface.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-host.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-ambient.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-attrs.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-effects.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-globals.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-host.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-pack-home.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-resolve.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-layer-cost.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/alpha.mjs", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/beta.mjs", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/delta.mjs", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/fixtures/js-call/gamma.mjs", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-layer-cost.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-layer-cost.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-lib-surface.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-env.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-lib-surface.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-env-api.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-env.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-lib-surface.test.ts", "scanners/ts_lib.ts", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "scanners/ts_lib.ts", ts_import).
-edge[dep]("test/js-lib-surface.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-lib-surface.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-lib-surface.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-meta-and-await.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-meta-and-await.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-meta-and-await.test.ts", "test/fixtures/js-call/trace.mjs", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-meta-and-await.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-meta-and-await.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-model.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-model.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-model.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-model.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-model.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-model.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-model.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-modules.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-modules.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-modules.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-modules.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-modules.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-modules.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-modules.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-pack-home.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-pack-home.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-pack-home.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-pack-home.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-resolve.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "rules/js-resolve.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-resolve.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-resolve.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-resolve.test.ts", "scanners/js_resolve.ts", reads_path).
-edge[dep]("test/js-resolve.test.ts", "scanners/js_resolve.ts", ts_import).
-edge[dep]("test/js-resolve.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-resolve.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-update-and-literals.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/js-update-and-literals.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/js-update-and-literals.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/js-update-and-literals.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/js-update-and-literals.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/js-vocabulary.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-callgraph.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-controlflow.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-modules.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-structure.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "rules/js-vocabulary.rofl", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/js-vocabulary.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/kernel-arity.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/kernel-arity.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/kernel-arity.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/kernel-arity.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/kernel-arity.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/kernel-arity.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/kernel-arity.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/kernel-edge.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/kernel-edge.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/kernel-edge.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/kernel-edge.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "policy.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "rules/strata.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "safety.rofl", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "scripts/build_kernel_dense.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "scripts/build_kernel_dense.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/dense.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/dense.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/kernel-dense.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/kernel-dense.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/kernel-policy-program.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/kernel-policy-program.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/key-bytes.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/key-bytes.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/key-bytes.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/key-bytes.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/layering.check.ts", "scanners/layering_report.ts", reads_path).
-edge[dep]("test/layering.check.ts", "scanners/layering_report.ts", ts_import).
-edge[dep]("test/necessity.test.ts", "scanners/necessity.ts", reads_path).
-edge[dep]("test/necessity.test.ts", "scanners/necessity.ts", ts_import).
-edge[dep]("test/necessity.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/next-tense.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/next-tense.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/next-tense.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/next-tense.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/next-tense.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/next-tense.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/next-tense.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/note-witness.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/note-witness.test.ts", "facts/findings.rofl", reads_path).
-edge[dep]("test/note-witness.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/note-witness.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/note-witness.test.ts", "rules/findings.rofl", reads_path).
-edge[dep]("test/note-witness.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/note-witness.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/note-witness.test.ts", "scripts/witness_check.ts", reads_path).
-edge[dep]("test/note-witness.test.ts", "scripts/witness_check.ts", ts_import).
-edge[dep]("test/note-witness.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/note-witness.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/note-witness.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/note-witness.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/note-witness.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/note-witness.test.ts", "test/js-corpus-world.ts", ts_import).
-edge[dep]("test/nullary.test.ts", "rules/nullary.rofl", reads_path).
-edge[dep]("test/nullary.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/nullary.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/nullary.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/nullary.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/pair.test.ts", "examples/atlas-launch/evidence.rofl", reads_path).
-edge[dep]("test/pair.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/pair.test.ts", "runtime/admission.ts", reads_path).
-edge[dep]("test/pair.test.ts", "runtime/admission.ts", ts_import).
-edge[dep]("test/pair.test.ts", "runtime/pair.ts", reads_path).
-edge[dep]("test/pair.test.ts", "runtime/pair.ts", ts_import).
-edge[dep]("test/parser-optional.test.ts", "scripts/parser_optional.ts", reads_path).
-edge[dep]("test/parser-optional.test.ts", "scripts/parser_optional.ts", ts_import).
-edge[dep]("test/permission-doc.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/permission-doc.test.ts", "docs/books-and-permission.md", reads_path).
-edge[dep]("test/permission-doc.test.ts", "facts/permission-inventory.rofl", reads_path).
-edge[dep]("test/permission-doc.test.ts", "rules/permission-model.rofl", reads_path).
-edge[dep]("test/permission-doc.test.ts", "scanners/permission_inventory.ts", reads_path).
-edge[dep]("test/permission-doc.test.ts", "scanners/permission_inventory.ts", ts_import).
-edge[dep]("test/permission-doc.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/permission-doc.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/permission-doc.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/permission-doc.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/persp-var.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/persp-var.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/persp-var.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/perspectives.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/perspectives.test.ts", "runtime/admission.ts", reads_path).
-edge[dep]("test/perspectives.test.ts", "runtime/admission.ts", ts_import).
-edge[dep]("test/perspectives.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/perspectives.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/perspectives.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/perspectives.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/phase1.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/phase1.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/phase2.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/phase2.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/phase2.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/phase2.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/phase2.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/phase2.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/phase2.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/phase3.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/phase3.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/phase3.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/phase4.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/phase4.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/phase4.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/phase4.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/phase4.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/phase4.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/phase4.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/policy-ladder.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/policy-ladder.test.ts", "scanners/policy_ladder.ts", reads_path).
-edge[dep]("test/policy-ladder.test.ts", "scanners/policy_ladder.ts", ts_import).
-edge[dep]("test/policy-ladder.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/policy-ladder.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/port-client.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/port-client.test.ts", "examples/counter.rofl", reads_path).
-edge[dep]("test/port-client.test.ts", "runtime/port.ts", reads_path).
-edge[dep]("test/port-client.test.ts", "runtime/port.ts", ts_import).
-edge[dep]("test/port-client.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/port-client.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/production-readiness.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/production-readiness.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/production-readiness.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/production-readiness.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/profile-shape.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/profile-shape.test.ts", "rules/profile.rofl", reads_path).
-edge[dep]("test/profile-shape.test.ts", "scanners/profile_shape.ts", reads_path).
-edge[dep]("test/profile-shape.test.ts", "scanners/profile_shape.ts", ts_import).
-edge[dep]("test/profile-shape.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/profile-shape.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/provenance-retention.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/provenance-retention.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/query-unpopulatable.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/query-unpopulatable.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/query-unpopulatable.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/query-unpopulatable.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/query-unpopulatable.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/query-unpopulatable.test.ts", "test/js-corpus-world.ts", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/reject-budget-invariance.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/reject-budget-invariance.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/ring1-lexgen.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "examples/counter.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "rules/js-dataflow.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "rules/policies/authority.rofl", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "rust/rofl/src/ring1_lexer.rs", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "scanners/ring1_lexgen.ts", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "scanners/ring1_lexgen.ts", ts_import).
-edge[dep]("test/ring1-lexgen.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/ring1-lexgen.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/ring1-predgen.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "examples/counter.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "rules/policies/authority.rofl", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "scanners/ring1_predgen.ts", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "scanners/ring1_predgen.ts", ts_import).
-edge[dep]("test/ring1-predgen.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/ring1-predgen.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/ring1-spangen.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "examples/counter.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "rules/policies/authority.rofl", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "scanners/ring1_lexgen.ts", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "scanners/ring1_lexgen.ts", ts_import).
-edge[dep]("test/ring1-spangen.test.ts", "scanners/ring1_spangen.ts", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "scanners/ring1_spangen.ts", ts_import).
-edge[dep]("test/ring1-spangen.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/ring1-spangen.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/rings.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/rings.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/rings.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/rings.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/rings.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/rings.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/rings.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/rings.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/rings.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/rings.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/rofl-lex.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "examples/counter.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "examples/ring1/charclass.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "examples/ring1/ring1.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "examples/tm.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "rules/policies/authority.rofl", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/rofl-lex.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/rofl-parse.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/rofl-parse.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/rofl-parse.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/rofl-parse.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/rofl-parse.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "safety.rofl", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/rofl-safety.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/rofl-safety.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/round-eval-demand.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/round-eval-demand.test.ts", "runtime/round_eval.ts", reads_path).
-edge[dep]("test/round-eval-demand.test.ts", "runtime/round_eval.ts", ts_import).
-edge[dep]("test/round-eval-demand.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/round-eval-demand.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/round-eval-demand.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/round-eval-demand.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/round-eval-demand.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/round-eval-demand.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/round-eval.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/aka/aka.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/blam/blam.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/cram/cram.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/npc/npc.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "examples/wtf/wtf.rofl", reads_path).
-edge[dep]("test/round-eval.test.ts", "runtime/round_eval.ts", reads_path).
-edge[dep]("test/round-eval.test.ts", "runtime/round_eval.ts", ts_import).
-edge[dep]("test/round-eval.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/round-eval.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/round-eval.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/round-eval.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/rule-answers.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/rule-answers.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/rule-answers.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/rule-answers.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/rule-answers.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/rule-answers.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/rule-answers.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/rule-shape.test.ts", "facts/cross-products.rofl", reads_path).
-edge[dep]("test/rule-shape.test.ts", "facts/layering.rofl", reads_path).
-edge[dep]("test/rule-shape.test.ts", "scanners/rule_shape.ts", reads_path).
-edge[dep]("test/rule-shape.test.ts", "scanners/rule_shape.ts", ts_import).
-edge[dep]("test/scanner.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/scanner.test.ts", "scanners/js_ast.ts", reads_path).
-edge[dep]("test/scanner.test.ts", "scanners/js_ast.ts", ts_import).
-edge[dep]("test/scanner.test.ts", "scanners/js.ts", reads_path).
-edge[dep]("test/scanner.test.ts", "scanners/js.ts", ts_import).
-edge[dep]("test/scanner.test.ts", "scanners/materialize.ts", reads_path).
-edge[dep]("test/scanner.test.ts", "scanners/materialize.ts", ts_import).
-edge[dep]("test/scanner.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/scanner.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/sealed.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/sealed.test.ts", "facts/floor-census.rofl", reads_path).
-edge[dep]("test/sealed.test.ts", "rules/floor-census.rofl", reads_path).
-edge[dep]("test/sealed.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/sealed.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/sealed.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/sealed.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/second-door.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/second-door.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/second-door.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/second-door.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/second-door.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/second-door.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/second-door.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/second-door.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/second-door.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/second-door.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/second-door.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/semiring.test.ts", "runtime/semirings.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "runtime/semirings.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "src/semiring.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/semiring.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/semiring.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/skill-bundle.test.ts", "package.json", reads_path).
-edge[dep]("test/skill-bundle.test.ts", "README.md", reads_path).
-edge[dep]("test/skill-bundle.test.ts", "scripts/build_skill.ts", reads_path).
-edge[dep]("test/skill-bundle.test.ts", "scripts/build_skill.ts", ts_import).
-edge[dep]("test/space.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/space.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/space.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/spec-coverage.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "LIMITS.md", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "README.md", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "scanners/spec.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "scanners/spec.ts", ts_import).
-edge[dep]("test/spec-coverage.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/spec-coverage.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/spec-coverage.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/spec-coverage.test.ts", "START.md", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "test/arg-index.test.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "test/kernel-edge.test.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "test/key-bytes.test.ts", reads_path).
-edge[dep]("test/spec-coverage.test.ts", "test/phase3.test.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "adapters/sqlite-store.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "adapters/sqlite-store.ts", ts_import).
-edge[dep]("test/store-conformance.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/store-conformance.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/store-conformance.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/store-conformance.test.ts", "src/store.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "src/store.ts", ts_import).
-edge[dep]("test/store-conformance.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/store-conformance.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/store-conformance.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/str-ops.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/str-ops.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/str-ops.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/str-ops.test.ts", "src/parser.ts", reads_path).
-edge[dep]("test/str-ops.test.ts", "src/parser.ts", ts_import).
-edge[dep]("test/string-destructors.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/string-destructors.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/string-destructors.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/string-destructors.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/string-destructors.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/string-destructors.test.ts", "src/unify.ts", reads_path).
-edge[dep]("test/string-destructors.test.ts", "src/unify.ts", ts_import).
-edge[dep]("test/swarm.test.ts", "rules/swarm.rofl", reads_path).
-edge[dep]("test/swarm.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/swarm.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/swarm.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/swarm.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/terminology.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/terminology.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/terminology.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/terminology.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/text-check.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/text-check.test.ts", "scripts/text_check.ts", reads_path).
-edge[dep]("test/text-check.test.ts", "scripts/text_check.ts", ts_import).
-edge[dep]("test/tick.test.ts", "examples/atlas-launch/evidence.rofl", reads_path).
-edge[dep]("test/tick.test.ts", "examples/atlas-launch/frame.rofl", reads_path).
-edge[dep]("test/tick.test.ts", "runtime/admission.ts", reads_path).
-edge[dep]("test/tick.test.ts", "runtime/admission.ts", ts_import).
-edge[dep]("test/tick.test.ts", "runtime/report.ts", reads_path).
-edge[dep]("test/tick.test.ts", "runtime/report.ts", ts_import).
-edge[dep]("test/tick.test.ts", "runtime/scheduler.ts", reads_path).
-edge[dep]("test/tick.test.ts", "runtime/scheduler.ts", ts_import).
-edge[dep]("test/tick.test.ts", "runtime/tick.ts", reads_path).
-edge[dep]("test/tick.test.ts", "runtime/tick.ts", ts_import).
-edge[dep]("test/tick.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/tick.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "examples/huh/demo.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "examples/huh/demo.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "examples/nope/demo.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "examples/nope/demo.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "examples/oops/demo.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "examples/oops/demo.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/undefined-premise.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/undefined-premise.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/vocabulary-doc.test.ts", "facts/layering.rofl", reads_path).
-edge[dep]("test/vocabulary-doc.test.ts", "README.md", reads_path).
-edge[dep]("test/vocabulary-doc.test.ts", "src/reflect.ts", reads_path).
-edge[dep]("test/vocabulary-doc.test.ts", "src/reflect.ts", ts_import).
-edge[dep]("test/vocabulary-doc.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/vocabulary-doc.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/volume-locality.test.ts", "scanners/volume_locality.ts", reads_path).
-edge[dep]("test/volume-locality.test.ts", "scanners/volume_locality.ts", ts_import).
-edge[dep]("test/well-founded.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/well-founded.test.ts", "examples/sensors.rofl", reads_path).
-edge[dep]("test/well-founded.test.ts", "examples/wtf/wtf.rofl", reads_path).
-edge[dep]("test/well-founded.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/well-founded.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/well-founded.test.ts", "src/engine.ts", reads_path).
-edge[dep]("test/well-founded.test.ts", "src/engine.ts", ts_import).
-edge[dep]("test/well-founded.test.ts", "src/rounds.ts", reads_path).
-edge[dep]("test/well-founded.test.ts", "src/rounds.ts", ts_import).
-edge[dep]("test/well-founded.test.ts", "test/strata-fixture.ts", reads_path).
-edge[dep]("test/well-founded.test.ts", "test/strata-fixture.ts", ts_import).
-edge[dep]("test/whynot.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/whynot.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/whynot.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/widened-negation.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/widened-negation.test.ts", "examples/aka/demo.ts", reads_path).
-edge[dep]("test/widened-negation.test.ts", "examples/aka/demo.ts", ts_import).
-edge[dep]("test/widened-negation.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/widened-negation.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/widened-negation.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/widened-negation.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/witness-check.test.ts", "scripts/witness_check.ts", reads_path).
-edge[dep]("test/witness-check.test.ts", "scripts/witness_check.ts", ts_import).
-edge[dep]("test/witness-check.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/witness-check.test.ts", "test/helpers/mutant.ts", ts_import).
-edge[dep]("test/worklist.test.ts", "boot.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/findings.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-callgraph.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-controlflow.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-dataflow.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-effects.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-kinds.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-modules.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-resolve.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-shapes.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/js-statements.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "facts/worklist.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "rules/js-model.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "rules/worklist.rofl", reads_path).
-edge[dep]("test/worklist.test.ts", "src/api.ts", reads_path).
-edge[dep]("test/worklist.test.ts", "src/api.ts", ts_import).
-edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", reads_path).
-edge[dep]("test/worklist.test.ts", "test/helpers/mutant.ts", ts_import).
 
-dark_paths[dep](217).
+dark_paths[dep](127).

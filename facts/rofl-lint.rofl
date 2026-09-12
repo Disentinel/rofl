@@ -4077,8 +4077,8 @@ mention_snake(world_omits).
 list_item("rules/worlds.rofl:98", 100, 1).
 list_item("rules/worlds.rofl:98", 105, 2).
 list_item("rules/worlds.rofl:98", 112, 3).
-lint_file("facts/checks.rofl", 50, 45, 11).
-file_clauses("facts/checks.rofl", 0, 50).
+lint_file("facts/checks.rofl", 54, 49, 13).
+file_clauses("facts/checks.rofl", 0, 54).
 block("facts/checks.rofl:1", "facts/checks.rofl", 1, 9).
 block_next("facts/checks.rofl:1", clause).
 block_mentions("facts/checks.rofl:1", scripts, bare).
@@ -4118,6 +4118,10 @@ block("facts/checks.rofl:80", "facts/checks.rofl", 80, 3).
 block_next("facts/checks.rofl:80", clause).
 block("facts/checks.rofl:98", "facts/checks.rofl", 98, 4).
 block_next("facts/checks.rofl:98", clause).
+block("facts/checks.rofl:107", "facts/checks.rofl", 107, 4).
+block_next("facts/checks.rofl:107", clause).
+block_dated("facts/checks.rofl:107", 1).
+block_mentions("facts/checks.rofl:107", not, bare).
 lint_file("facts/cleanliness.rofl", 23, 144, 13).
 file_clauses("facts/cleanliness.rofl", 0, 23).
 block("facts/cleanliness.rofl:1", "facts/cleanliness.rofl", 1, 16).
@@ -4209,8 +4213,8 @@ block_mentions("facts/cross-products.rofl:63", bigger, called).
 block("facts/cross-products.rofl:67", "facts/cross-products.rofl", 67, 2).
 block_next("facts/cross-products.rofl:67", clause).
 block_mentions("facts/cross-products.rofl:67", not, bare).
-lint_file("facts/depends.rofl", 3623, 8, 4).
-file_clauses("facts/depends.rofl", 0, 3623).
+lint_file("facts/depends.rofl", 2027, 8, 4).
+file_clauses("facts/depends.rofl", 0, 2027).
 block("facts/depends.rofl:1", "facts/depends.rofl", 1, 8).
 block_next("facts/depends.rofl:1", clause).
 block_mentions("facts/depends.rofl:1", npm, bare).
@@ -4228,15 +4232,15 @@ block_next("facts/eval-cost.rofl:1", comment).
 block("facts/eval-cost.rofl:7", "facts/eval-cost.rofl", 7, 11).
 block_next("facts/eval-cost.rofl:7", clause).
 block_mentions("facts/eval-cost.rofl:7", slot, bare).
-lint_file("facts/feature-map.rofl", 1052, 10, 6).
-file_clauses("facts/feature-map.rofl", 0, 1052).
+lint_file("facts/feature-map.rofl", 471, 10, 6).
+file_clauses("facts/feature-map.rofl", 0, 471).
 block("facts/feature-map.rofl:1", "facts/feature-map.rofl", 1, 9).
 block_next("facts/feature-map.rofl:1", clause).
 block_mentions("facts/feature-map.rofl:1", feature, bare).
-block("facts/feature-map.rofl:1067", "facts/feature-map.rofl", 1067, 1).
-block_next("facts/feature-map.rofl:1067", eof).
-lint_file("facts/findings.rofl", 4990, 552, 866).
-file_clauses("facts/findings.rofl", 0, 4592).
+block("facts/feature-map.rofl:486", "facts/feature-map.rofl", 486, 1).
+block_next("facts/feature-map.rofl:486", eof).
+lint_file("facts/findings.rofl", 5014, 552, 871).
+file_clauses("facts/findings.rofl", 0, 4616).
 block("facts/findings.rofl:1", "facts/findings.rofl", 1, 3).
 block_next("facts/findings.rofl:1", comment).
 block("facts/findings.rofl:5", "facts/findings.rofl", 5, 1).
@@ -4697,8 +4701,60 @@ block_next("facts/floor-census.rofl:194", clause).
 block("facts/floor-census.rofl:216", "facts/floor-census.rofl", 216, 2).
 block_next("facts/floor-census.rofl:216", clause).
 block_mentions("facts/floor-census.rofl:216", nothing, bare).
-lint_file("facts/goldens.rofl", 3743, 9, 5).
-file_clauses("facts/goldens.rofl", 0, 3743).
+lint_file("facts/generated/_authority.rofl", 1, 2, 1).
+file_clauses("facts/generated/_authority.rofl", 0, 1).
+block("facts/generated/_authority.rofl:1", "facts/generated/_authority.rofl", 1, 2).
+block_next("facts/generated/_authority.rofl:1", clause).
+lint_file("facts/generated/api.ts.216c63c6.rofl", 301, 2, 1).
+file_clauses("facts/generated/api.ts.216c63c6.rofl", 0, 301).
+block("facts/generated/api.ts.216c63c6.rofl:1", "facts/generated/api.ts.216c63c6.rofl", 1, 2).
+block_next("facts/generated/api.ts.216c63c6.rofl:1", clause).
+lint_file("facts/generated/dense.ts.f66e7915.rofl", 70, 2, 1).
+file_clauses("facts/generated/dense.ts.f66e7915.rofl", 0, 70).
+block("facts/generated/dense.ts.f66e7915.rofl:1", "facts/generated/dense.ts.f66e7915.rofl", 1, 2).
+block_next("facts/generated/dense.ts.f66e7915.rofl:1", clause).
+lint_file("facts/generated/engine.ts.efacb48b.rofl", 518, 2, 1).
+file_clauses("facts/generated/engine.ts.efacb48b.rofl", 0, 518).
+block("facts/generated/engine.ts.efacb48b.rofl:1", "facts/generated/engine.ts.efacb48b.rofl", 1, 2).
+block_next("facts/generated/engine.ts.efacb48b.rofl:1", clause).
+lint_file("facts/generated/kernel-dense.ts.7b5dca34.rofl", 3, 2, 1).
+file_clauses("facts/generated/kernel-dense.ts.7b5dca34.rofl", 0, 3).
+block("facts/generated/kernel-dense.ts.7b5dca34.rofl:1", "facts/generated/kernel-dense.ts.7b5dca34.rofl", 1, 2).
+block_next("facts/generated/kernel-dense.ts.7b5dca34.rofl:1", clause).
+lint_file("facts/generated/parser.ts.8c9ca66f.rofl", 100, 2, 1).
+file_clauses("facts/generated/parser.ts.8c9ca66f.rofl", 0, 100).
+block("facts/generated/parser.ts.8c9ca66f.rofl:1", "facts/generated/parser.ts.8c9ca66f.rofl", 1, 2).
+block_next("facts/generated/parser.ts.8c9ca66f.rofl:1", clause).
+lint_file("facts/generated/reflect.ts.dc10401e.rofl", 224, 2, 1).
+file_clauses("facts/generated/reflect.ts.dc10401e.rofl", 0, 224).
+block("facts/generated/reflect.ts.dc10401e.rofl:1", "facts/generated/reflect.ts.dc10401e.rofl", 1, 2).
+block_next("facts/generated/reflect.ts.dc10401e.rofl:1", clause).
+lint_file("facts/generated/repl.ts.4920e173.rofl", 45, 2, 1).
+file_clauses("facts/generated/repl.ts.4920e173.rofl", 0, 45).
+block("facts/generated/repl.ts.4920e173.rofl:1", "facts/generated/repl.ts.4920e173.rofl", 1, 2).
+block_next("facts/generated/repl.ts.4920e173.rofl:1", clause).
+lint_file("facts/generated/rounds.ts.a4a96a42.rofl", 85, 2, 1).
+file_clauses("facts/generated/rounds.ts.a4a96a42.rofl", 0, 85).
+block("facts/generated/rounds.ts.a4a96a42.rofl:1", "facts/generated/rounds.ts.a4a96a42.rofl", 1, 2).
+block_next("facts/generated/rounds.ts.a4a96a42.rofl:1", clause).
+lint_file("facts/generated/semiring.ts.c8425fc1.rofl", 61, 2, 1).
+file_clauses("facts/generated/semiring.ts.c8425fc1.rofl", 0, 61).
+block("facts/generated/semiring.ts.c8425fc1.rofl:1", "facts/generated/semiring.ts.c8425fc1.rofl", 1, 2).
+block_next("facts/generated/semiring.ts.c8425fc1.rofl:1", clause).
+lint_file("facts/generated/store.ts.b3bcfa1b.rofl", 203, 2, 1).
+file_clauses("facts/generated/store.ts.b3bcfa1b.rofl", 0, 203).
+block("facts/generated/store.ts.b3bcfa1b.rofl:1", "facts/generated/store.ts.b3bcfa1b.rofl", 1, 2).
+block_next("facts/generated/store.ts.b3bcfa1b.rofl:1", clause).
+lint_file("facts/generated/tokens.ts.9ce847f4.rofl", 22, 2, 1).
+file_clauses("facts/generated/tokens.ts.9ce847f4.rofl", 0, 22).
+block("facts/generated/tokens.ts.9ce847f4.rofl:1", "facts/generated/tokens.ts.9ce847f4.rofl", 1, 2).
+block_next("facts/generated/tokens.ts.9ce847f4.rofl:1", clause).
+lint_file("facts/generated/unify.ts.a8038017.rofl", 91, 2, 1).
+file_clauses("facts/generated/unify.ts.a8038017.rofl", 0, 91).
+block("facts/generated/unify.ts.a8038017.rofl:1", "facts/generated/unify.ts.a8038017.rofl", 1, 2).
+block_next("facts/generated/unify.ts.a8038017.rofl:1", clause).
+lint_file("facts/goldens.rofl", 3942, 9, 5).
+file_clauses("facts/goldens.rofl", 0, 3942).
 block("facts/goldens.rofl:1", "facts/goldens.rofl", 1, 9).
 block_next("facts/goldens.rofl:1", clause).
 block_mentions("facts/goldens.rofl:1", npm, bare).
@@ -27647,6 +27703,7 @@ defined(not_applicable, "rules/inquiry/obligations.rofl").
 defined(coverage_gap, "rules/inquiry/obligations.rofl").
 defined(both_minds, "rules/inquiry/obligations.rofl").
 defined(authority, "rules/inquiry/ontology.rofl").
+defined(authority, "facts/generated/_authority.rofl").
 defined(authority, "facts/js-resolve.rofl").
 defined(authority, "facts/spec.rofl").
 defined(agent_disputed, "rules/inquiry/perspectives.rofl").
@@ -28797,7 +28854,6 @@ defined(total_fresh, "facts/js-cost.rofl").
 defined(feature, "facts/feature-map.rofl").
 defined(feature, "facts/js-env.rofl").
 defined(demo_uses, "facts/feature-map.rofl").
-defined(check_uses, "facts/feature-map.rofl").
 defined(finding, "facts/findings.rofl").
 defined(recorded, "facts/findings.rofl").
 defined(finding_note, "facts/findings.rofl").
@@ -28831,6 +28887,72 @@ defined(corpus_files, "facts/permission-inventory.rofl").
 defined(corpus_unparsed, "facts/floor-census.rofl").
 defined(corpus_unparsed, "facts/permission-inventory.rofl").
 defined(refl_reader, "facts/floor-census.rofl").
+defined(src_call, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_call, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_call, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_call, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_call, "facts/generated/reflect.ts.dc10401e.rofl").
+defined(src_call, "facts/generated/repl.ts.4920e173.rofl").
+defined(src_call, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_call, "facts/generated/semiring.ts.c8425fc1.rofl").
+defined(src_call, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_call, "facts/generated/tokens.ts.9ce847f4.rofl").
+defined(src_call, "facts/generated/unify.ts.a8038017.rofl").
+defined(src_class, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_class, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_class, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_class, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_class, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_class, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_class, "facts/generated/tokens.ts.9ce847f4.rofl").
+defined(src_export, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_export, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_export, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_export, "facts/generated/kernel-dense.ts.7b5dca34.rofl").
+defined(src_export, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_export, "facts/generated/reflect.ts.dc10401e.rofl").
+defined(src_export, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_export, "facts/generated/semiring.ts.c8425fc1.rofl").
+defined(src_export, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_export, "facts/generated/tokens.ts.9ce847f4.rofl").
+defined(src_export, "facts/generated/unify.ts.a8038017.rofl").
+defined(src_file, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_file, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_file, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_file, "facts/generated/kernel-dense.ts.7b5dca34.rofl").
+defined(src_file, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_file, "facts/generated/reflect.ts.dc10401e.rofl").
+defined(src_file, "facts/generated/repl.ts.4920e173.rofl").
+defined(src_file, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_file, "facts/generated/semiring.ts.c8425fc1.rofl").
+defined(src_file, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_file, "facts/generated/tokens.ts.9ce847f4.rofl").
+defined(src_file, "facts/generated/unify.ts.a8038017.rofl").
+defined(src_func, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_func, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_func, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_func, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_func, "facts/generated/reflect.ts.dc10401e.rofl").
+defined(src_func, "facts/generated/repl.ts.4920e173.rofl").
+defined(src_func, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_func, "facts/generated/semiring.ts.c8425fc1.rofl").
+defined(src_func, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_func, "facts/generated/tokens.ts.9ce847f4.rofl").
+defined(src_func, "facts/generated/unify.ts.a8038017.rofl").
+defined(src_import, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_import, "facts/generated/dense.ts.f66e7915.rofl").
+defined(src_import, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_import, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_import, "facts/generated/reflect.ts.dc10401e.rofl").
+defined(src_import, "facts/generated/repl.ts.4920e173.rofl").
+defined(src_import, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_import, "facts/generated/semiring.ts.c8425fc1.rofl").
+defined(src_import, "facts/generated/store.ts.b3bcfa1b.rofl").
+defined(src_method, "facts/generated/api.ts.216c63c6.rofl").
+defined(src_method, "facts/generated/engine.ts.efacb48b.rofl").
+defined(src_method, "facts/generated/parser.ts.8c9ca66f.rofl").
+defined(src_method, "facts/generated/rounds.ts.a4a96a42.rofl").
+defined(src_method, "facts/generated/store.ts.b3bcfa1b.rofl").
 defined(golden_state, "facts/goldens.rofl").
 defined(golden_host, "facts/goldens.rofl").
 defined(golden_rel, "facts/goldens.rofl").
@@ -30535,7 +30657,6 @@ named_in_ts(total_conc).
 named_in_ts(total_fresh).
 named_in_ts(feature).
 named_in_ts(demo_uses).
-named_in_ts(check_uses).
 named_in_ts(finding).
 named_in_ts(finding_note).
 named_in_ts(addressed_by).
@@ -30558,6 +30679,13 @@ named_in_ts(ablation).
 named_in_ts(corpus_files).
 named_in_ts(corpus_unparsed).
 named_in_ts(refl_reader).
+named_in_ts(src_call).
+named_in_ts(src_class).
+named_in_ts(src_export).
+named_in_ts(src_file).
+named_in_ts(src_func).
+named_in_ts(src_import).
+named_in_ts(src_method).
 named_in_ts(golden_state).
 named_in_ts(golden_host).
 named_in_ts(golden_rel).
@@ -30661,7 +30789,6 @@ named_in_ts(check).
 named_in_ts(match).
 named_in_ts(punct).
 named_in_ts(str_len).
-named_in_ts(src_call).
 named_in_ts(add).
 named_in_ts(activate).
 named_in_ts(str_seg).
@@ -31544,77 +31671,6 @@ atom_seen(wild_rank).
 atom_seen(wild_between).
 atom_seen(contract_flag).
 atom_seen(language).
-atom_seen(c_arith_builtins).
-atom_seen(c_arith_zero_divisor).
-atom_seen(c_arrival_order).
-atom_seen(c_asserted_tick).
-atom_seen(c_asserted_who_and_when).
-atom_seen(c_async_rejected).
-atom_seen(c_boot_four_audits).
-atom_seen(c_breach_surfaces).
-atom_seen(c_budget_partial).
-atom_seen(c_busy_beaver).
-atom_seen(c_collects_askable).
-atom_seen(c_collects_narrow).
-atom_seen(c_counter).
-atom_seen(c_differential).
-atom_seen(c_differential_negation).
-atom_seen(c_diverging_hole).
-atom_seen(c_excise_multiple_support).
-atom_seen(c_firing_counts_once).
-atom_seen(c_firing_two_stay_two).
-atom_seen(c_flow_closure).
-atom_seen(c_forged_audit).
-atom_seen(c_malformed_sibling).
-atom_seen(c_next_body_rejected).
-atom_seen(c_next_cycle_refused).
-atom_seen(c_next_loop_opens).
-atom_seen(c_next_no_dep_edge).
-atom_seen(c_no_boot_no_strata).
-atom_seen(c_persp_var_same_ledger).
-atom_seen(c_perspective_isolation).
-atom_seen(c_provenance_queryable).
-atom_seen(c_reject_is_free).
-atom_seen(c_replay_shuffled).
-atom_seen(c_reserved_never_flagged).
-atom_seen(c_reserved_reject).
-atom_seen(c_retain_conditional).
-atom_seen(c_retain_default).
-atom_seen(c_retain_window).
-atom_seen(c_reuse_boot).
-atom_seen(c_reuse_no_read_reused).
-atom_seen(c_reuse_provenance_off).
-atom_seen(c_reuse_stratum_gate).
-atom_seen(c_reuse_tick_boundary).
-atom_seen(c_round_trip).
-atom_seen(c_rounds_primary).
-atom_seen(c_runtime_rule).
-atom_seen(c_save_restore).
-atom_seen(c_semiring_boundary).
-atom_seen(c_sensors_scenario).
-atom_seen(c_shuffled_arrival_cost).
-atom_seen(c_sorted_keys).
-atom_seen(c_stratum_order).
-atom_seen(c_structured_terms).
-atom_seen(c_tc_naive).
-atom_seen(c_tc_seminaive).
-atom_seen(c_tick_budget_logged).
-atom_seen(c_two_engines).
-atom_seen(c_undefined_boot_clean).
-atom_seen(c_undefined_misspelling).
-atom_seen(c_undefined_negation).
-atom_seen(c_unstratified_rejected).
-atom_seen(c_wf_budget_no_unknown).
-atom_seen(c_wf_demand_refused).
-atom_seen(c_wf_stratum_untouched).
-atom_seen(c_wf_three_values).
-atom_seen(c_why_tree).
-atom_seen(c_whynot_caps).
-atom_seen(c_whynot_names_stage).
-atom_seen(c_whynot_recursion).
-atom_seen(c_whynot_single_step).
-atom_seen(c_witness_canonical).
-atom_seen(c_witness_load_order).
 atom_seen(f_key_spelling_reaches_the_answer_at_two_sites).
 atom_seen(insight).
 atom_seen(doc).
@@ -32552,6 +32608,11 @@ atom_seen(f_what_a_one_point_oh_promises_is_the_surface_and_not_the_quality).
 atom_seen(f_the_kernel_reifies_everything_about_a_rule_except_where_it_came_from).
 atom_seen(f_the_golden_pinned_a_number_where_the_rule_meant_none).
 atom_seen(f_a_trailing_slash_is_a_path_and_the_check_could_not_see_one).
+atom_seen(f_the_grave_check_could_not_tell_a_shallow_clone_from_an_empty_grave).
+atom_seen(f_sixty_runs_on_this_branch_and_not_one_green).
+atom_seen(f_the_two_hosts_disagreed_about_the_word_not_in_three_places).
+atom_seen(f_a_golden_over_a_generated_census_pins_the_photograph_against_itself).
+atom_seen(f_the_comment_cut_had_no_rule_for_an_edb_and_the_lint_cannot_see_an_unread_input).
 atom_seen(kernel_table).
 atom_seen(asserted_by).
 atom_seen(concludes).
