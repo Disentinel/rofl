@@ -1,0 +1,15 @@
+-- examples/checks/async-reserved.rofl — A PROGRAM THAT MUST BE REFUSED.
+--
+-- START.md section 7 forbids shipping `@async` `as implemented instead of
+-- explicitly rejected`, and section 1 reserves the syntax. A prohibition of that
+-- shape has exactly one mechanical form: write the forbidden thing down and
+-- require the loader to say no. Both spellings were probed and both are
+-- refused -- the tense marker on a PREMISE and on a HEAD -- and the head form
+-- is the one kept here, because it is the one a person reaching for async
+-- would write.
+--
+-- The golden holds the refusal, so a kernel that quietly starts ACCEPTING this
+-- is a red. That is the whole difference between a reserved word and an
+-- unimplemented feature.
+
+p(X) @async :- q(X).

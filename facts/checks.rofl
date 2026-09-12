@@ -126,3 +126,12 @@ check_world("spec_coverage").
 check_file("spec_coverage", "rules/spec-coverage.rofl").
 check_file("spec_coverage", "facts/spec.rofl").
 check_file("spec_coverage", "facts/spec-census.rofl").
+
+-- TWO PROHIBITIONS, WRITTEN DOWN SO THE LOADER CAN REFUSE THEM. A `prohibited`
+-- duty has one mechanical form -- do the forbidden thing and require a no --
+-- and eleven of them had no check at all until 2026-09-12.
+check_world("async_reserved").
+check_file("async_reserved", "examples/checks/async-reserved.rofl").
+
+check_world("unstratifiable").
+check_file("unstratifiable", "examples/checks/unstratifiable.rofl").

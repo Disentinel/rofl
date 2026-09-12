@@ -374,3 +374,112 @@ fn re_evaluating_a_tick_replaces_its_record() {
     assert_eq!(evals_of(&s).len(), 1, "one record per tick, not one per evaluation");
     assert!(second.steps > first.steps, "{first:?} -> {second:?}");
 }
+
+/// EXCISE IS COUNTERFACTUAL AND NOT A WALK OVER STORED WITNESSES, which
+/// START.md forbids in as many words: `must NOT be computed from witnesses`.
+///
+/// `t(1)` has TWO independent supports and the store records ONE witness for
+/// it — which one is not fixed by the semantics, so a test that excised only
+/// `p(1)` would pass by luck half the time. Both are excised, separately, and
+/// in each case `t(1)` SURVIVES: whichever support the witness happens to
+/// hold, an implementation that read it would delete a fact that is still
+/// derivable the other way.
+///
+/// The control is the third case: excising the only support of `u(1)` does
+/// remove it, so the probe is not reporting "excise removes nothing".
+#[test]
+fn excise_recomputes_rather_than_reading_the_witness() {
+    const TWO: &str = r#"
+edb(p).
+edb(q).
+p(1).
+q(1).
+t(X) :- p(X).
+t(X) :- q(X).
+u(X) :- p(X), q(X).
+"#;
+    let fresh = || {
+        let mut s = Session::fresh(1_000_000);
+        s.load(TWO, None).expect("load");
+        s.evaluate().expect("evaluate");
+        s
+    };
+    for base in ["p(1)", "q(1)"] {
+        let (removed, added) = fresh().excise(base).unwrap();
+        assert!(added.is_empty(), "{base}: a counterfactual adds nothing here");
+        assert!(
+            !removed.contains(&"t[main](1)".to_string()),
+            "{base}: t(1) is still derivable the other way, and excise removed it: {removed:?}"
+        );
+        assert!(
+            removed.contains(&"u[main](1)".to_string()),
+            "{base}: u(1) needed both and excise kept it: {removed:?}"
+        );
+    }
+}
+
+/// THE ANSWER DOES NOT DEPEND ON THE ORDER THE FACTS ARRIVED IN, which is
+/// START.md's `regardless of insertion order`. The same program is loaded
+/// twice into two fresh sessions with its FACTS reversed, and the settled
+/// stores are compared key for key — not a hash of one run against itself,
+/// which is what a golden can check, but two different insertion orders
+/// against each other, which it cannot.
+#[test]
+fn the_settled_world_is_the_same_whichever_order_the_facts_arrived_in() {
+    const RULES: &str = "
+edb(calls).
+reaches(A, B) :- calls(A, B).
+reaches(A, C) :- reaches(A, B), calls(B, C).
+";
+    let settle = |facts: &str| {
+        let mut s = Session::fresh(1_000_000);
+        s.load(&format!("{RULES}{facts}"), None).expect("load");
+        s.evaluate().expect("evaluate");
+        s.fact_keys(None)
+    };
+    let forward = settle("calls(a, b).\ncalls(b, c).\ncalls(c, d).\n");
+    let backward = settle("calls(c, d).\ncalls(b, c).\ncalls(a, b).\n");
+    assert_eq!(forward, backward, "insertion order reached the answer");
+    // control: the probe is comparing something, and a DIFFERENT world differs
+    assert_ne!(forward, settle("calls(a, b).\n"), "control: fewer facts, fewer answers");
+}
+
+/// THE DISCIPLINE IS IN boot.rofl AND NOT IN THE EVALUATOR, which START.md
+/// forbids hardcoding. The same program is settled twice — once with the boot
+/// pack and once without — and the audit that catches it EXISTS in one case and
+/// does not exist in the other. An evaluator carrying the rule in code would
+/// report it either way.
+///
+/// THE FIRST PROBE WRITTEN HERE WAS WRONG AND THE WRONGNESS IS WORTH KEEPING.
+/// It used `breach[audit]`, which reads `concludes(R, Rel), reserved(Rel)` —
+/// and a rule whose head names a kernel relation never reaches an audit,
+/// because the LOADER refuses it, boot or no boot. `breach` is belt and braces
+/// behind a door the engine already holds shut, which is why `b_breach_empty`
+/// says it is empty. So the test asserts BOTH halves: what the engine owes by
+/// itself, and what it owes only because a pack was loaded.
+#[test]
+fn the_audits_are_a_loaded_pack_and_not_a_property_of_the_engine() {
+    // ENGINE, WITH NO PACK: a rule writing a reserved relation is refused at
+    // load. That is START.md section 3 and it is not delegated to data.
+    let mut bare = Session::fresh(1_000_000);
+    let refused = bare.load("edb(src).\nsrc(1).\nconcludes(X, mine) :- src(X).\n", None);
+    assert!(
+        refused.unwrap_err().iter().any(|d| d.contains("write-protected")),
+        "a reserved head is refused by the engine, with no boot pack in sight"
+    );
+
+    // PACK: `undefined_premise` is boot.rofl's, and a premise nothing defines
+    // is invisible until that file is loaded.
+    const P: &str = "edb(src).\nsrc(1).\nlonely(X) :- src(X), nosuch(X).\n";
+    let settle = |boot: bool| {
+        let mut s = Session::fresh(1_000_000);
+        if boot {
+            s.load(include_str!("../../../boot.rofl"), None).expect("boot");
+        }
+        s.load(P, None).expect("load");
+        s.evaluate().expect("evaluate");
+        s.fact_keys(Some("undefined_premise"))
+    };
+    assert!(settle(false).is_empty(), "without the pack nothing accuses");
+    assert!(!settle(true).is_empty(), "with the pack loaded the gap is reported");
+}

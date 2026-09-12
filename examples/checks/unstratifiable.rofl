@@ -1,0 +1,17 @@
+-- examples/checks/unstratifiable.rofl — A PROGRAM THAT MUST BE REFUSED.
+--
+-- `q` needs `not r` and `r` needs `not q`: there is no order in which either
+-- can be settled before the other is read under a negation. START.md section 7
+-- forbids `Skipping the stratification reject path`, and section 4 forbids a
+-- kernel `that hangs instead of emitting` -- the two are one sentence about
+-- this file, because the way to skip the reject path is to keep going round.
+--
+-- The engine does not reject by a stratification CHECKER -- rounds replaced
+-- strata (facts/deviations.rofl, r_rounds_replace_strata) -- so what it says is
+-- `round 4 settled nothing while q, r remained`: it notices that a round
+-- bought nothing and refuses, rather than spinning. That is the reject path
+-- arrived at from the other side, and the golden holds it.
+
+p(1).
+q(X) :- p(X), not r(X).
+r(X) :- p(X), not q(X).

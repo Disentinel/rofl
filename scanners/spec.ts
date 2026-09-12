@@ -25,11 +25,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { worlds } from '../scripts/goldens.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-export type CheckKind = 'test' | 'gate' | 'ci';
+export type CheckKind = 'test' | 'gate' | 'ci' | 'world';
 export interface Check { file: string; name: string; kind: CheckKind; }
 export interface Census { checks: Check[]; testFiles: string[]; }
 
@@ -88,6 +89,17 @@ export function census(): Census {
     for (const name of rustTestNames(fs.readFileSync(path.join(rustDir, f), 'utf8'))) {
       checks.push({ file: rel, name, kind: 'test' });
     }
+  }
+
+  // A WORLD IS A CHECK, and until 2026-09-12 the census could not say so. It
+  // counted Rust tests, gate scripts and CI steps — three shapes of host
+  // program — while the tree's own answer to `what checks the engine` is the
+  // ENGINE: 90 worlds loaded by both implementations and compared against a
+  // committed golden. Every duty about evaluation had to be guarded by a
+  // TypeScript program or by nothing, so a prohibition provable as a world had
+  // no citable guard and read `open_shortcut` while the world sat in the loop.
+  for (const w of worlds()) {
+    checks.push({ file: 'facts/goldens.rofl', name: w.name, kind: 'world' });
   }
 
   const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
@@ -300,7 +312,8 @@ export function report(w: SpecWorld = world()): string[] {
   say(`${c.checks.length} checks in the census ` +
     `(${c.checks.filter((x) => x.kind === 'test').length} tests in ${c.testFiles.length} files, ` +
     `${c.checks.filter((x) => x.kind === 'gate').length} gate scripts, ` +
-    `${c.checks.filter((x) => x.kind === 'ci').length} CI steps)`);
+    `${c.checks.filter((x) => x.kind === 'ci').length} CI steps, ` +
+    `${c.checks.filter((x) => x.kind === 'world').length} worlds)`);
 
   const covered = col(r, 'covered[coverage](O)', 'O');
   const uncovered = col(r, 'uncovered[coverage](O)', 'O');

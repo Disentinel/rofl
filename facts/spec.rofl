@@ -293,6 +293,58 @@ cited_check[map](c_ci_node, ".github/workflows/ci.yml", "goldens (node)").
 cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "goldens (bun)").
 cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 
+-- ---- the prohibitions, which had nothing behind them at all -------------
+-- Eleven `prohibited` duties read `open_shortcut` on 2026-09-12, the day the
+-- coverage model was first wired into a world and first ran since `test/` was
+-- removed. A prohibition has ONE mechanical form -- write the forbidden thing
+-- down and require a refusal -- and two of these now have it. The rest are
+-- cited against checks that already existed and were never written down: the
+-- census holds 139 checks against 4 citations, so the gap the report measures
+-- is mostly a MISSING BIBLIOGRAPHY rather than missing instruments.
+--
+-- Each body below was READ before it was cited. `run_reports_partial` asserts
+-- `partial && !quiescent`, a non-empty `hole`, and a control that the wall is
+-- the budget; `excise_recomputes_rather_than_reading_the_witness` excises BOTH
+-- supports of a two-support fact, separately, because which witness the store
+-- records is not fixed by the semantics -- and carries a single-support control
+-- so it cannot pass by removing nothing.
+cited_check[map](c_w_async_reserved, "facts/goldens.rofl", "async_reserved").
+cited_check[map](c_w_unstratifiable, "facts/goldens.rofl", "unstratifiable").
+cited_check[map](c_w_budget_wall, "facts/goldens.rofl", "budget_wall").
+cited_check[map](c_port_partial, "rust/rofl/tests/explain.rs", "run_reports_partial_rather_than_pretending_to_have_finished").
+cited_check[map](c_port_canonical, "rust/rofl/tests/explain.rs", "fact_keys_narrows_by_relation_and_comes_back_in_canonical_order").
+cited_check[map](c_port_excise, "rust/rofl/tests/explain.rs", "excise_recomputes_rather_than_reading_the_witness").
+
+guards[map](c_w_async_reserved, s_async_reserved_rejected).
+guards[map](c_w_unstratifiable, s_reject_unstratified).
+-- TWO SHAPES OF NOT HANGING, because the duty is about both. A negation cycle
+-- is the loop that never settles and the loader refuses it by noticing that a
+-- round bought nothing; a budget wall is the search too large to finish and the
+-- kernel records why it stopped. A check for only one of them would leave the
+-- other spelling of the same prohibition unguarded.
+guards[map](c_w_unstratifiable, s_never_hang).
+guards[map](c_w_budget_wall, s_never_hang).
+guards[map](c_w_budget_wall, s_budget_emits_hole).
+guards[map](c_port_partial, s_budget_emits_hole).
+guards[map](c_port_canonical, s_canonical_order).
+guards[map](c_port_excise, s_excise_not_from_witness).
+
+-- TWO THAT A GOLDEN CANNOT HOLD, and the reason is the same in both: a golden
+-- compares ONE run of one world against its own pin, and these duties are
+-- about two runs differing. `regardless of insertion order` needs the same
+-- program loaded twice with its facts reversed and the two settled stores
+-- compared to EACH OTHER; `Hardcoding any boot.rofl rule` needs the same
+-- program settled with the pack and without it, and the audit present in one
+-- and absent in the other. Neither question fits inside a world.
+cited_check[map](c_port_shuffle, "rust/rofl/tests/explain.rs", "the_settled_world_is_the_same_whichever_order_the_facts_arrived_in").
+cited_check[map](c_port_pack, "rust/rofl/tests/explain.rs", "the_audits_are_a_loaded_pack_and_not_a_property_of_the_engine").
+
+guards[map](c_port_shuffle, s_determinism).
+guards[map](c_port_shuffle, s_a_replay_shuffled).
+guards[map](c_port_pack, s7_no_hardcoded_boot).
+guards[map](c_port_pack, l_unchecked_without_boot).
+guards[map](c_port_pack, s_reserved_rejected_at_load).
+
 -- ---- what stands behind what ----------------------------------------------
 
 guards[map](c_ci_bun, s_two_runtimes).

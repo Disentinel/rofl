@@ -102,6 +102,27 @@ covered[coverage](O)       :- guarded_by[coverage](O, _).
 -- behind it: it holds because the prose says so.
 uncovered[coverage](O)     :- live_duty[coverage](O), not covered[coverage](O).
 
+-- A PROHIBITION IS OFTEN A GUARANTEE WRITTEN BACKWARDS, and `restates[map]`
+-- has said so since the ledger was written while NOTHING READ IT. Seven of the
+-- eight shortcuts in START.md section 7 are declared restatements of a section 3
+-- or 4 guarantee -- `s7_no_log_provenance` of `s_provenance_per_firing`,
+-- `s7_no_silent_overrun` of `s_budget_emits_hole` -- and the check that stands
+-- behind the positive sentence is, by the ledger's own claim, the check that
+-- stands behind the negative one. Until this rule existed that claim was a
+-- comment: `restates` was declared `edb` and joined by no clause, so eleven
+-- prohibitions read `open_shortcut` while seven of them were the same
+-- obligation as something else in the list. The same shape the tree keeps
+-- finding -- a relation declared and never read -- and here it cost the
+-- sharpest number in the report.
+--
+-- INHERITED IS NOT THE SAME AS GUARDED, and the report says which. A
+-- restatement's coverage is exactly as good as its twin's and no better, so
+-- the join is to `covered` rather than to `guarded_by`: if the twin is
+-- uncovered, so is the restatement, and no chain of restatements can
+-- manufacture a guard nobody wrote.
+inherits_cover[coverage](O, Twin) :- restates[map](O, Twin), covered[coverage](Twin).
+covered[coverage](O)              :- inherits_cover[coverage](O, _).
+
 -- Not every uncovered duty is unattended. `document the omission` is
 -- discharged by a document; the model says which document, and the census
 -- says whether it is still there.
