@@ -3405,6 +3405,37 @@ work_state(w_effect_reads_only_what_resolves, open).
 work_spawned(w_effect_reads_only_what_resolves, f_a_gate_that_reads_what_the_propagation_reads_cannot_see_a_dropped_edge).
 
 -- ===========================================================================
+-- THE SERVICE GRAPH — calls that cross a process boundary, 2026-09-11.
+-- Four packs, one join, and the abstraction that makes the URL side one
+-- question. Order: the value abstraction first (two packs stand on it), url
+-- second (measurable with no corpus), the two library semantics, the join last.
+
+work(w_concat_value,
+  "One abstract value SEQUENCE OF PARTS with many entry points: parts(E, I, P) plus joined(E, Kind), Kind in raw | path_sep | url_resolve. Entry points: template literal (quasis and expressions are already in the facts as value_cooked and indexed children; may_be_lit refuses the interpolated case on purpose because the kernel builds no strings), binary +, and library members through an authored table ambient_value(Surface, Member, concat, Kind) with surface_origin as provenance - path.join, String.prototype.concat, Array.prototype.join, new URL. Language forms are rules; library semantics is a table, exactly as ambient_effect is the one authored part of the effect column. The Kind column is not decoration: path.join normalises .. and new URL replaces the base on an absolute path, so a matcher that reads only raw would join a request to a service it never reaches. Where every part is literal, may_be_lit follows from parts by one rule.").
+work_state(w_concat_value, open).
+
+work(w_url_pack,
+  "A URL library that knows nothing about JavaScript: a path as a sequence of segments (the kernel cuts strings with str_pre, str_seg, str_segs, str_sub, str_char and never builds one, so a URL in the model is segments, not text), prefix composition for app.use(prefix, router), and a matcher over patterns with :param and * that consumes parts(E, I, P) - a literal part is cut into segments, a dyn part covers exactly one segment between literal slashes. The unknown-prefix case (`${base}/users` with base untraced) is a DECISION written as a row, not a default: match every service (over-report, the safe direction for a may-set) or none. Testable in a world of one pack with no corpus.").
+work_state(w_url_pack, open).
+work_needs(w_url_pack, w_concat_value).
+
+work(w_fetch_semantics,
+  "Client-side semantics as a pack: fetch(u, {method}), axios/got/undici client.get(u) -> requests(Site, Method, UrlParts). Reads callee_of, selects, arg_at, may_be_node, parts. Knows nothing about servers.").
+work_state(w_fetch_semantics, open).
+work_needs(w_fetch_semantics, w_url_pack).
+
+work(w_express_semantics,
+  "Server-side semantics as a pack: app.get(p, h), router.post, app.use(prefix, router), app.use(middleware) -> serves(App, Method, PatternParts, Handler), prefixes composed through the url pack, middleware as an edge that precedes every handler. Reads passes_function (the handler is a passed function the call graph knows is passed and not called), may_be_node for what router denotes. Knows nothing about clients.").
+work_state(w_express_semantics, open).
+work_needs(w_express_semantics, w_url_pack).
+
+work(w_service_graph,
+  "The one join and its frontier: calls(Caller, H) :- requests(C, M, U), nearest_fn(Caller, C), serves(_, M, P, H), matches(P, U). Into calls itself, so may_throw, the effect layer, frontier_at and why see a cross-service edge with no change. Frontier both ways as positive relations: a request no service serves, a route no request reaches. Corpus: two services in test/fixtures scanned into one world as volumes; oracle: the services run and their access log is compared to calls_in across files, the same way V8 frames are compared today. A layer(service) and its cells, or unaccounted[audit] will say so.").
+work_state(w_service_graph, open).
+work_needs(w_service_graph, w_fetch_semantics).
+work_needs(w_service_graph, w_express_semantics).
+
+-- ===========================================================================
 -- DOCUMENTATION DERIVED FROM THE LEDGER
 -- ===========================================================================
 

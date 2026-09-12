@@ -79,6 +79,7 @@
     "repl": "node --experimental-strip-types src/repl.ts",
     "report": "node --experimental-strip-types runtime/report.ts",
     "roundbytes": "node --experimental-strip-types scanners/round_bytes.ts",
+    "rofllint": "node --experimental-strip-types scanners/rofl_lint.ts && node --experimental-strip-types scanners/rofl_lint_report.ts",
     "ruleshape": "node --experimental-strip-types scanners/rule_shape.ts && node --experimental-strip-types scanners/rule_shape_report.ts",
     "scan": "node --experimental-strip-types scanners/cli.ts",
     "speccheck": "node --experimental-strip-types scanners/spec.ts",

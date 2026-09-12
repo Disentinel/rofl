@@ -1,40 +1,22 @@
--- js-resolve.rofl — the SECOND model of import resolution, and the referee
--- between it and the first.
+-- js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
+-- between it and the first. rules/js-modules.rofl resolves by REASONING over
+-- the disk listing; this pack records node's own resolver, asked out loud with
+-- its search written down, and a relation that says where the two disagree.
+-- Resolution depends on the machine (registered extensions, `exports`
+-- conditions, where node_modules sits), none of which is in the AST, so
+-- what the observer emits is an OBSERVATION and `resolves_to` is derived
+-- from it.
 --
--- THE MOVE THIS FILE MAKES. rules/js-modules.rofl resolves an import by
--- REASONING: the host cuts the specifier into segments, says what is on the
--- disk, and about twenty rules walk the directory tree. That model is not
--- deleted and not weakened; it stays exactly as it is. What this file adds is
--- the OTHER kind of answer to the same question — node's own resolver, asked
--- out loud, with its search recorded — and a relation that says where the two
--- disagree.
---
--- Why the other kind is needed at all: resolution depends on the machine. The
--- loader's registered extensions, the conditions in `exports`, where
--- node_modules sits — none of it is in the AST, so a rule that concludes a
--- resolution is answering a question about a world it cannot see. That is why
--- `resolve_*` is an OBSERVATION here and `resolves_to` is derived from
--- observations rather than from the code.
---
--- WHY THE ANSWER IS DERIVED AND NOT ASSERTED. The observer could simply write
--- `resolves_to[E](Site, File)` and be done. Then `why resolves_to(...)` prints
--- `[axiom]` and the explanation is "node said so", which is the one thing this
--- engine exists not to say. So the observer writes the SEARCH — every
--- candidate node put to the disk, in order, with what the disk answered — and
--- §2 below replays it. `resolves_to` then stands on the failed attempts as
--- much as on the successful one: the answer is the candidate that arrived
--- BECAUSE every earlier candidate missed, and each of those misses is a node
--- in the why-tree.
---
--- WHAT THE TWO MODELS ARE FOR. facts/spec.rofl records that the structural
--- layer has no executable oracle, and that the only check available there is
--- the agreement of two independent modellers. This is the first such pair in
--- the tree: rules that reason from the disk listing, and a host that asks the
--- runtime. Their disagreement is not an error to be silenced; it is a queue,
--- and `resolve_divergence` prints its length.
+-- DERIVED, NOT ASSERTED: an observer writing `resolves_to` directly would make
+-- `why` print `[axiom]`, "node said so". So the observer writes the SEARCH —
+-- every candidate put to the disk, in order, with the disk's answer — and
+-- section 2 replays it; the answer stands on the failed attempts as much as
+-- on the hit. Disagreement between the two models is not an error to silence
+-- but a queue, and `resolve_divergence` prints its length (facts/spec.rofl:
+-- the structural layer's only oracle is the agreement of two modellers).
 
--- ---------------------------------------------------------------------------
--- what the host supplies (scanners/js_resolve.ts)
+-- what the host supplies (scanners/js_resolve.ts), then what the ledger side
+-- declares (facts/js-resolve.rofl)
 edb(resolve_site).           -- resolve_site[code](Site, File, Line, Spec)
 edb(resolve_site_computed).  -- resolve_site_computed[code](Site, File, Line)
 edb(resolve_try).            -- resolve_try[E](Site, K, Path, Outcome)
@@ -45,83 +27,59 @@ edb(resolve_via).            -- resolve_via[E](Site, Mechanism, Detail)
 edb(env_ran).                -- env_ran(Env)          the configuration that ran
 edb(env_extension).          -- env_extension(Env, K, Ext)
 
--- ...and what the ledger side declares (facts/js-resolve.rofl)
 edb(env_declared).           -- env_declared(Env)
 edb(resolve_mechanism).      -- resolve_mechanism(Mechanism)
 
--- ---------------------------------------------------------------------------
--- 1. THE PLACES. Both kinds, unioned, so that "every place" is a relation and
---    not a convention about which of two relations to read.
-
+-- =========================================================================
+-- 1. THE PLACES, both kinds unioned, so that "every place" is a relation.
 resolve_place[code](S) :- resolve_site[code](S, _, _, _).
 resolve_place[code](S) :- resolve_site_computed[code](S, _, _).
 
--- ---------------------------------------------------------------------------
--- 2. THE SEARCH, REPLAYED.
---
--- node's resolver stops at the first candidate that IS a file. A directory and
--- an absent path both mean "keep looking", and they are different observations
--- worth keeping apart: a directory is what makes an index file possible.
-
+-- =========================================================================
+-- 2. THE SEARCH, REPLAYED. node stops at the first candidate that IS a file;
+-- a directory and an absent path both mean "keep looking" and are kept apart
+-- because a directory is what makes an index file possible.
 candidate_missed[E](S, K) :- resolve_try[E](S, K, _, miss).
 candidate_missed[E](S, K) :- resolve_try[E](S, K, _, dir).
 
--- The search reaches candidate 0 by starting; it reaches K+1 only BECAUSE
--- candidate K missed. This is the chain that puts every failed attempt into
--- the why-tree of the answer — remove the misses and `reached` cannot climb.
+-- candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
+-- every failed attempt into the why-tree of the answer
 reached[E](S, 0)  :- resolve_try[E](S, 0, _, _).
 reached[E](S, K1) :- reached[E](S, K), candidate_missed[E](S, K), K1 is K + 1.
 
 arrival[E](S, K, P) :- reached[E](S, K), resolve_try[E](S, K, P, file).
 
--- ---------------------------------------------------------------------------
--- 3. THE ANSWER.
---
--- Three premises, and each one is a different thing that has to be true: the
--- search arrived HERE, node returned THIS, and a named mechanism accounts for
--- it. An answer failing any of them is reported by §7 rather than published.
-
+-- =========================================================================
+-- 3. THE ANSWER: the search arrived HERE, node returned THIS, and a named
+-- mechanism accounts for it. An answer failing any premise is reported by
+-- section 7 rather than published.
 has_via[E](S) :- resolve_via[E](S, _, _).
 
 resolves_to[E](S, P) :- arrival[E](S, _, P), resolve_answer[E](S, P), has_via[E](S).
 
--- A builtin resolves without touching the disk — measured: the trace of
--- `require.resolve("node:path")` is EMPTY, because node answers from its own
--- table. So the arrival chain cannot explain it and must not pretend to; the
--- mechanism row is the whole explanation, and it carries the canonical
--- `node:` spelling, which is what makes a builtin comparable with the rule
--- model's answer instead of nearly comparable.
+-- a builtin resolves without touching the disk (the trace of
+-- `require.resolve("node:path")` is empty), so the mechanism row is the whole
+-- explanation and carries the canonical `node:` spelling
 resolves_to[E](S, C) :- resolve_via[E](S, builtin, C), resolve_answer[E](S, _).
 
 explained[E](S) :- resolves_to[E](S, _).
 
--- ---------------------------------------------------------------------------
--- 4. WHAT THE ENVIRONMENT SAID — including that it said nothing.
---
--- Three ways to speak and one way to be silent. The silence is §7's business;
--- these three are what an environment is allowed to answer.
-
+-- =========================================================================
+-- 4. WHAT THE ENVIRONMENT SAID — three ways to speak; silence is section 7's.
 env_spoke[E](S) :- resolve_answer[E](S, _).
 env_spoke[E](S) :- resolve_failed[E](S, _).
 env_spoke[E](S) :- resolve_unasked[E](S, _).
 
--- The host verdict, TOTAL over the places the environment spoke about: a site
--- with no answer gets the atom `no_answer` rather than no row, so that the
--- comparison in §6 is a join over two total relations and cannot lose a site
--- by having nothing to join against.
+-- TOTAL over the places the environment spoke about: `no_answer` is an atom
+-- rather than a missing row, so the comparison in section 6 cannot lose a site
 host_has_answer[E](S)         :- resolves_to[E](S, _).
 host_verdict[E](S, P)         :- resolves_to[E](S, P).
 host_verdict[E](S, no_answer) :- env_spoke[E](S), not host_has_answer[E](S).
 
--- ---------------------------------------------------------------------------
--- 5. THE BRIDGE TO THE FIRST MODEL.
---
--- The two models name a site differently ON PURPOSE. The rule model names it
--- by babel node id; the observer names it (file, line, specifier), the way a
--- person does, because it enumerated its own sites from its own parse. Neither
--- can see the other's identifiers, so the JOIN is here, in a rule, and §7
--- reports both directions of failure.
-
+-- =========================================================================
+-- 5. THE BRIDGE TO THE FIRST MODEL. The rule model names a site by babel node
+-- id; the observer by (file, line, specifier), from its own parse. The JOIN is
+-- here, and section 7 reports both directions of failure.
 model_site[audit](S, I) :- resolve_site[code](S, F, L, Sp),
                            site_file[code](I, F), site_line[code](I, L),
                            site_source[code](I, Sp).
@@ -137,20 +95,16 @@ rules_has_answer[audit](S) :- rules_answer[audit](S, _).
 rules_verdict[audit](S, T)         :- rules_answer[audit](S, T).
 rules_verdict[audit](S, no_answer) :- model_site[audit](S, _), not rules_has_answer[audit](S).
 
--- ---------------------------------------------------------------------------
--- 6. THE TWO COMPARISONS. Both are joins of TOTAL relations, so a site cannot
---    drop out of either by being absent from one side.
-
--- (a) rules against host, per environment. THE WORK QUEUE: every row is a
---     resolution node performs and the rule model does not, and the count is
---     the measurable distance between the two models.
+-- =========================================================================
+-- 6. THE TWO COMPARISONS, both joins of TOTAL relations.
+--
+-- (a) rules against host, per environment — THE WORK QUEUE: every row is a
+-- resolution node performs and the rule model does not.
 resolve_divergence[audit](S, ByRules, ByHost, Env) :-
     rules_verdict[audit](S, ByRules), host_verdict[Env](S, ByHost), ByRules != ByHost.
 
--- Agreement is a POSITIVE relation for the same reason `unresolved_import` is
--- one in rules/js-modules.rofl: so that "compared" can be defined, and a site
--- that stopped being compared by either relation shows up as a row instead of
--- as a smaller number nobody was watching.
+-- agreement is positive so that "compared" can be defined and a site that
+-- stopped being compared is a row rather than a smaller number
 resolve_agreement[audit](S, V, Env) :-
     rules_verdict[audit](S, V), host_verdict[Env](S, V).
 
@@ -160,100 +114,58 @@ compared[audit](S, Env) :- resolve_divergence[audit](S, _, _, Env).
 uncompared[audit](S, Env) :- rules_verdict[audit](S, _), host_verdict[Env](S, _),
                              not compared[audit](S, Env).
 
--- (b) environment against environment. This is the whole point of putting the
---     environment in the perspective slot: the two rows are not a
---     contradiction, they are two books, and their disagreement is the answer
---     to "how will this resolve on the other machine?".
+-- (b) environment against environment: the two rows are two books, and their
+-- disagreement answers "how will this resolve on the other machine?"
 env_divergence[audit](S, A, VA, B, VB) :- host_verdict[A](S, VA), host_verdict[B](S, VB),
                                           A != B, VA != VB.
 
 env_divergent_site[audit](S) :- env_divergence[audit](S, _, _, _, _).
 
--- ---------------------------------------------------------------------------
--- 7. THE GATES. Each is a statement this model makes about itself, and each
---    must be able to say no; test/js-resolve.test.ts plants a defect for every
---    one of them and asserts the row appears.
-
--- AN ANSWER THE TRACE CANNOT ACCOUNT FOR. This is the gate that makes the
--- trace load-bearing: an observer that returns a path without asking the
--- resolver, or one that records only the successful attempt, produces answers
--- whose search does not reach them.
+-- =========================================================================
+-- 7. THE GATES. Each must be able to say no; test/js-resolve.test.ts plants a
+-- defect for every one.
+--
+-- an answer the trace cannot account for: the gate that makes the trace
+-- load-bearing
 answer_without_trace[audit](S, Env, P) :- resolve_answer[Env](S, P), not explained[Env](S).
 
--- AN ANSWER WITH NO NAMED MECHANISM. The observer emits no `resolve_via` row
--- when nothing it can observe accounts for the answer, rather than inventing a
--- label; this is where that silence becomes visible.
+-- the observer emits no `resolve_via` rather than inventing a label
 answer_without_mechanism[audit](S, Env) :- resolve_answer[Env](S, _), not has_via[Env](S).
 
--- A PLACE AN ENVIRONMENT SAID NOTHING ABOUT — no answer, no failure, not even
--- "there was nothing to ask". An observer that swallows the resolver's
--- exception produces exactly this, and from the outside it is indistinguishable
--- from a site that resolves to nothing. It is distinguishable HERE.
+-- no answer, no failure, not even "nothing to ask": an observer that swallows
+-- the resolver's exception, indistinguishable from the outside
 resolve_silent[audit](S, Env) :- resolve_place[code](S), env_ran(Env),
                                  not env_spoke[Env](S).
 
--- ONE LEDGER, TWO ANSWERS FOR ONE PLACE. Resolution is a function of (place,
--- environment). If two configurations are filed in one book this stops being
--- true, and the row says so.
+-- resolution is a function of (place, environment)
 answer_ambiguous[audit](S, Env, A, B) :- resolves_to[Env](S, A), resolves_to[Env](S, B), A != B.
 
--- A DECLARED ENVIRONMENT NOTHING OBSERVED, and an observed one nobody
--- declared. Both directions, because a ledger that exists only in the facts
--- file is decoration and one that exists only in the run is unaccountable.
+-- a ledger only in the facts file is decoration; only in the run, unaccountable
 env_unobserved[audit](Env) :- env_declared(Env), not env_ran(Env).
 env_undeclared[audit](Env) :- env_ran(Env), not env_declared(Env).
 
--- THE TWO ENUMERATIONS, BOTH DIRECTIONS. The observer parses the files itself,
--- so a site the rule model never saw is reportable — which is the only reason
--- the enumerations are kept separate at all.
+-- the two enumerations, both directions; `module_site` and not `import_site`,
+-- because a re-export names a module and node resolves it by the same rules
 model_site_known[audit](S) :- model_site[audit](S, _).
 site_unseen_by_model[audit](S) :- resolve_place[code](S), not model_site_known[audit](S).
 
--- `module_site` AND NOT `import_site`, corrected 2026-09-08. The rule model
--- grew two more kinds of place — a re-export names a module and node resolves
--- its specifier by exactly the import's rules — and a gate reading the narrower
--- relation would have gone on comparing two enumerations that were blind to the
--- same forms, which is agreement about a set neither side contained.
 host_saw[audit](I) :- model_site[audit](_, I).
 site_unseen_by_host[audit](I) :- module_site[code](I, _), not host_saw[audit](I).
 
--- WHICH KIND OF PLACE THE REFEREE ACTUALLY COMPARED. The `checked` ledger is
--- keyed on the kind and the observer's own enumeration is not, so without this
--- the ledger's per-kind counts can only be checked against a total — and a
--- number nobody re-derives rots. The join is through `model_site`, so a place
--- the two enumerations did not agree on is absent here rather than counted.
+-- which kind of place the referee compared, so the `checked` ledger's per-kind
+-- counts are re-derived rather than checked against a total
 checked_site_kind[audit](K, S) :- model_site[audit](S, I), site_kind[code](I, K).
 
--- ...and the key itself. (file, line, specifier) is a key only as long as no
--- two sites share all three; if that stops holding, the join above silently
--- multiplies rows and every count downstream is wrong.
+-- (file, line, specifier) is a key only while no two sites share all three
 site_key_ambiguous[audit](S, I, J) :- model_site[audit](S, I), model_site[audit](S, J), I != J.
 
--- THE MECHANISM VOCABULARY, both directions, the same shape the frontier
--- reasons have in rules/js-modules.rofl: a mechanism that occurs and is not
--- declared is a hole in the vocabulary, and one that is declared and never
--- occurs is decoration.
+-- the mechanism vocabulary, both directions, as the frontier reasons in js-modules
 mechanism_seen[audit](M) :- env_ran(E), resolve_via[E](_, M, _).
 mechanism_undeclared[audit](M) :- mechanism_seen[audit](M), not resolve_mechanism(M).
 mechanism_unexercised[audit](M) :- resolve_mechanism(M), not mechanism_seen[audit](M).
 
--- ============ the gather this file's audits perform ============
---
--- The environment ledger here is a VARIABLE — `resolve_answer[Env](S, P)` —
--- which is the case `collects` exists for (docs/books-and-permission.md 2.1),
--- and it is true of this file specifically: comparing one environment's answer
--- against another's is the whole point of the referee, so [audit] gathers here
--- from ledgers it deliberately does not name.
---
--- Seven rules read `$var("Env")` (`answer_ambiguous`, `answer_without_trace`,
--- `answer_without_mechanism`, `uncompared`, `resolve_divergence`, ...), one
--- reads `$var("E")` (`mechanism_seen`) and one reads `$var("A")` and
--- `$var("B")` together (`env_divergence`).
---
--- It is NOT in boot.rofl, and that was measured rather than assumed: bare
--- boot.rofl has no polymorphic audit rule, so the sentence would license
--- nothing there while standing as a blanket permanent licence for every
--- program that ever loads the kernel. It stays narrow here for the reason in
--- docs/books-and-permission.md 2.1 — `code -> audit` still needs its own
--- `imports`, and gets one in rules/js-model.rofl.
+-- The environment ledger is a VARIABLE here (`resolve_answer[Env](S, P)`),
+-- which is the case `collects` exists for (docs/books-and-permission.md 2.1):
+-- comparing one environment against another is the referee's whole point.
+-- Not in boot.rofl, where it would license nothing and permit everything.
 collects(audit).

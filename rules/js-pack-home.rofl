@@ -1,157 +1,61 @@
--- js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, AS A RULE RATHER THAN
--- AS A CONVENTION WRITTEN OUT IN THREE COMMENTS.
+-- js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
+-- a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
+-- vocabulary's home: it is the deliberately tiny BASE every world loads.
 --
--- `w_vocabulary_home` asked whether the `node_kind` rows scattered over seven
--- fact packs should be gathered into `facts/js-kinds.rofl`, the pack whose NAME
--- promises them. Measured 2026-09-09 before moving anything:
---
---     100 js kinds, 274 rows, 7 packs.  facts/js-kinds.rofl declares 32.
---     35 kinds declared once, 11 declared five times.
---
--- The minority is real and it is not what the file name suggests, because that
--- file's own first line says what it is: *a DELIBERATELY TINY sample, enough to
--- test the mechanism and not one node more*. It is the fixture
--- `test/js-model.test.ts` pins number for number, plus the twenty-three kinds
--- declared on 2026-09-08 to make the denominator the LANGUAGE. It was never the
--- vocabulary's home; it is the BASE every world in the suite loads.
---
--- THE RULE THE TREE ALREADY OBEYS, stated here for the first time:
---
---     A `node_kind(js, K)` row belongs in the pack of layer P iff
---       (1) P SPEAKS ABOUT K — some fact P asserts carries K in a position that
---           holds kinds: a verdict in one of the six ledgers, or a row in one of
---           the twenty-six kind tables the rules assert beside themselves — or
---       (2) P is the BASE pack, which every world loads and which therefore
---           declares what a layer pack may borrow.
---
--- Clause (1) is not a new convention. It is the two audits that already exist,
--- read backwards. `orphan_claim[audit]` refuses a claim whose kind the world
--- does not know — that is what put `boolean_literal` and thirty more into the
--- layer packs on 2026-09-05. `kind_undeclared[audit]` and
--- `rule_opinion_unlisted[audit]` refuse an opinion held in the rules and absent
--- from the vocabulary — that is what put `tsas_expression` into
--- facts/js-callgraph.rofl, which carries no verdict about it at all and whose
--- rules read it as a callee shape and a cast.
---
--- MEASURED OVER ALL SEVEN PACKS, honest tree, 2026-09-09: `kind_home_unbacked`
--- is EMPTY, and 24 rows fire the moment the base clause is removed. **The rows
--- are already where the rule says they belong.** What was missing is that
--- nothing said so, and that is what this file is.
---
--- AND THE COPIES ARE THE PRICE OF PACKS THAT LOAD INDEPENDENTLY, which is the
--- half of the decision the item's statement does not mention. Gathering the
--- rows into facts/js-kinds.rofl would not tidy the tree, it would ENLARGE every
--- partial world in the suite — the world `test/js-model.test.ts` builds from
--- that pack alone goes from 32 declared kinds to 100 — and it would put 68 rows
--- in a pack that speaks about none of them, which is exactly what clause (1)
--- forbids. `test/js-pack-home.test.ts` measures that counterfactual world by
--- world instead of arguing about it.
+-- A `node_kind(js, K)` row belongs in the pack of layer P iff
+--   (1) P SPEAKS ABOUT K: some fact P asserts carries K in a position that
+--       holds kinds — a verdict ledger or a kind table the rules assert
+--       beside themselves — or
+--   (2) P is the BASE pack, which declares what a layer may borrow.
+-- Clause (1) is `orphan_claim[audit]` and `rule_opinion_unlisted[audit]`
+-- read backwards, and the tree already obeys it: `kind_home_unbacked` is
+-- empty. Gathering the rows into the base would enlarge every partial world
+-- and put 68 rows in a pack that speaks about none of them;
+-- test/js-pack-home.test.ts measures that counterfactual.
 
--- ===========================================================================
--- WHICH PACK A ROW CAME FROM. There is no file identity in this kernel — the
--- finest grain the store records is the PRINCIPAL a load named, which boot.rofl
--- says where `loader/3` is defined — so a loader that wants this audit gives
--- each pack a `who` of its own. `test/js-pack-home.test.ts` is that loader.
---
--- A LAYER IS TWO FILES AND ONE PRINCIPAL. `facts/js-callgraph.rofl` and
--- `rules/js-callgraph.rofl` load under the same `who`, because the question
--- this file asks is which LAYER should carry a kind and a layer is both of its
--- files. The price is stated rather than hidden: a row in the wrong FILE of the
--- right layer is invisible here. The alternative — one principal per file —
--- was tried and measured worse: it needs a hand-written table pairing each
--- fact pack with its rule pack, and a hand table of packs is the thing
--- `fkind_slot` below exists to avoid.
---
--- THE OTHER LIMIT IS THE HOST'S DISCIPLINE ABOUT `who`, exactly as it is for
--- `widened[audit]`: packs concatenated into a single `load()` — which is what
--- most test files in this suite do — are one pack here, and this audit says
--- nothing at all about them. That is why it lives in its own pack with its own
--- loader rather than being switched on for every world.
+-- =========================================================================
+-- WHICH PACK A ROW CAME FROM. The finest grain the store records is the
+-- PRINCIPAL a load named, so the loader (test/js-pack-home.test.ts) gives
+-- each pack a `who`. A layer is two files and one principal: a row in the
+-- wrong FILE of the right layer is invisible here, and packs concatenated
+-- into one `load()` are one pack, which is why this is its own pack with its
+-- own loader.
 pack_fact(P, Rel, Args) :- asserted_by($fact(Rel, main, Args), P, _).
 
--- THE ARGUMENT WALK, one position at a time. Same shape as the one
--- rules/js-vocabulary.rofl runs over `premise_lit`, and for the same reason:
--- the reified argument list is a cons chain and Datalog cannot index into one.
--- That file walks what the RULES MATCH; this one walks what the FACTS SAY, and
--- between them the two cover both halves of "the model has an opinion about K".
+-- the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
+-- that file walks what the RULES MATCH, this one what the FACTS SAY
 fwalk(P, Rel, 1, Args) :- pack_fact(P, Rel, Args).
 fwalk(P, Rel, J, T)    :- fwalk(P, Rel, I, $cons(_, T)), J is I + 1.
 fslot(P, Rel, I, A)    :- fwalk(P, Rel, I, $cons(A, _)).
 
--- WHICH POSITIONS CARRY A KIND — DISCOVERED, NOT DECLARED, which is the
--- load-bearing choice and it is taken deliberately from
--- rules/js-vocabulary.rofl. A hand table of ledgers rots: the day somebody adds
--- a seventh relation whose second argument is a kind, a list nobody updated
--- reports zero and means nothing. A position IS a kind position when a DECLARED
--- kind stands in it, so the audit configures itself from the facts it audits.
---
--- MEASURED 2026-09-09 over the seven fact packs and six rule packs: THIRTY-TWO
--- positions qualify — the six verdict ledgers (`handled`, `ignored`,
--- `unknown_because`, `checked`, `shape_of`, `kind_absent_ok`) plus twenty-six
--- kind TABLES the rule packs assert beside themselves: `abrupt_kind`,
--- `callee_shape`, `value_transparent`, `obj_kind_class`, `block_scope_kind`,
--- `completion_kind` and the rest. A hand list would have had the six and missed
--- the twenty-six, and the twenty-six are exactly what makes `tsas_expression`
--- legitimate where it sits.
---
--- `node_kind` ITSELF IS EXCLUDED and the exclusion is the whole audit: without
--- it every declaration would back itself and the rule would say nothing. Same
--- exemption `test/js-vocabulary.test.ts` writes as KIND_TABLE_EXEMPT, arrived
--- at from the other end — there because the table is the declaration rather
--- than a consumer of it, here because a row must be earned by something OTHER
--- than its own existence.
+-- Which positions carry a kind — DISCOVERED, not declared: a position is a
+-- kind position when a declared kind stands in it, so the audit configures
+-- itself. `node_kind` itself is excluded, or every declaration would back
+-- itself.
 fkind_slot(Rel, I) :- fslot(_, Rel, I, A), node_kind(js, A).
 
 pack_declares(P, K) :- fslot(P, node_kind, 2, K), node_kind(js, K).
 pack_speaks(P, K)   :- fslot(P, Rel, I, K), fkind_slot(Rel, I), Rel != node_kind.
 
--- THE BASE PACK, one row and not a waiver list. It names the pack every world
--- loads, whose job is to declare what a layer may borrow; it names no kind, so
--- it cannot go quiet on a row somebody parks there. The difference is the
--- point: a per-kind exemption table would have absorbed all 68 rows a wholesale
--- gather creates, and this row absorbs none of them.
+-- one row, not a waiver list: it names no kind and cannot go quiet on one
 edb(base_pack).
 base_pack(p_js_kinds).
 
--- ===========================================================================
+-- =========================================================================
 -- THE VERDICT. A row in a pack that does not speak about the kind opens cells
--- nobody in that world can answer. That is the defect in BOTH directions of the
--- decision `w_vocabulary_home` records — what a wholesale gather into
--- facts/js-kinds.rofl would do 68 times over, and what a sweep dropping a row
--- in the nearest open file does once.
---
--- WHERE THIS CHECK IS STRUCTURALLY UNABLE TO LOOK, three answers and none of
--- them the obvious one:
---   * it cannot tell facts/js-X.rofl from rules/js-X.rofl — see the principal
---     note above;
---   * it cannot see a kind a layer's rules only MATCH on. `premise_lit` has no
---     file and never will, so a kind backed by a premise and by no asserted row
---     would be a FALSE POSITIVE here. Measured 2026-09-09: there are none, in
---     any of the six layer packs — every kind a layer declares stands in some
---     row that layer asserts. Recorded as `f_a_rule_has_no_file_and_a_fact_does`.
---   * it says nothing about a world it is not loaded into, which is every world
---     in the suite but one. It is a check on the PACKS, and `orphan_claim` stays
---     the check on the worlds.
+-- nobody in that world can answer. Where this cannot look: it cannot tell
+-- facts/js-X.rofl from rules/js-X.rofl; it cannot see a kind a layer's rules
+-- only MATCH on, since `premise_lit` has no file
+-- (`f_a_rule_has_no_file_and_a_fact_does`); and it says nothing about a world
+-- it is not loaded into, where `orphan_claim` stays the check.
 kind_home_unbacked[audit](P, K) :- pack_declares(P, K), not pack_speaks(P, K),
                                    not base_pack(P).
 
--- THE OTHER DIRECTION IS A REPORT, NOT A GATE, and saying which is which is
--- most of what this file decides. A pack that speaks about a kind it does not
--- declare is BORROWING from a pack it is always loaded beside; there are 118 of
--- those on the honest tree and every one is legitimate, because
--- `orphan_claim[audit]` is what refuses the illegitimate case per WORLD.
--- Written as a gate this would be red on an honest checkout, and CLAUDE.md
--- already says what happens to a gate in that state.
+-- The other direction is a REPORT, not a gate: a pack speaking about a kind
+-- it does not declare borrows from one it is loaded beside, 118 times on the
+-- honest tree, and `orphan_claim[audit]` refuses the illegitimate case per
+-- world. The tempting third rule — a base kind some layer now speaks about
+-- should have moved — was written, run and deleted: every row is a legitimate
+-- borrow, and separating stale from borrowed needs the LOADERS.
 pack_borrows[audit](P, K) :- pack_speaks(P, K), not pack_declares(P, K),
                              node_kind(js, K).
-
--- A CHECK MEASURED AND NOT BUILT, with the measurement as the reason. The
--- tempting third rule is *a kind the base pack declares that some layer now
--- speaks about should have moved to that layer* — `residue_stale`. It was
--- written, run, and deleted: it reports 24 rows on an honest tree and every one
--- is a legitimate BORROW from the base, because a layer pack is allowed to
--- judge a kind the base declares and `orphan_claim` is content. The criterion
--- that would separate stale from borrowed is *no world loads this layer without
--- the base*, which is a fact about the LOADERS and not about the packs, and
--- this file cannot see a loader. So the rule would have been a gate red on an
--- honest checkout — the state CLAUDE.md says ends with the gate switched off.

@@ -1,130 +1,64 @@
--- js-dataflow.rofl — ONE cell, modelled: variable-to-variable value flow
--- through a declarator initialiser. Written over the scanner's four relations
--- plus rules/js-structure.rofl (which is where `ast_name` now comes from —
--- LOAD IT FIRST, or every rule here is silent for want of a premise). The
--- scanner judged nothing and this file does the judging.
+-- js-dataflow.rofl — THE VALUE LAYER: what an expression may evaluate to.
 --
--- DELIBERATELY NARROW. It sees `let x = y` and nothing more: not `x = y`
--- (assignment expression), not `let x = y + 1` (the init is not an identifier),
--- not a flow through a call or a property. Those are separate cells and the
--- audit is what remembers they are missing.
+-- Two carriers and no third. `may_be_lit(E, Text)`: E may evaluate to this
+-- literal, as written. `may_be_node(E, N)`: E may evaluate to the object,
+-- function or class AT node N, by identity. No `unknown`: the absence of a row
+-- already says "nothing here says so". Both are MAY-sets — rows mean "either
+-- of these", a value the rules cannot see leaves no row, so a reader may add
+-- an edge on a row and may never conclude an absence. Every value comes from
+-- the parsed program, so the domain is finite and the fixpoint terminates.
+--
+-- Loads after rules/js-structure.rofl (`ast_name`, `key_name`, `ast_within`).
+-- This layer and the call graph are ONE fixpoint: rules here read
+-- `resolves[code]` and rules/js-callgraph.rofl reads `may_be_node`; the
+-- recursion is positive. Loaded alone, this half is silent rather than wrong.
 
--- an identifier node, with its name.
--- ARITY NOTE: ast_node carries File since the scanner became complete, and
--- ast_child carries Index. Both extra columns are `_` here because this cell
--- is about names and not about position — but the Index column is why the
--- scanner can now tell `f(a, b)` from `f(b, a)`, which this cell does not
--- need and the next one will.
+-- =========================================================================
+-- 1. NAMES
+--
+-- `ident_in` carries the file so a rule can lead with (Name, File), which the
+-- store indexes; leading with `ast_node(E, identifier, …)` enumerated every
+-- identifier in the corpus — 39 % of a fixpoint.
 ident[code](N, Name)        :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name).
--- ...AND THE SAME JOIN CARRYING ITS FILE, added 2026-09-05 for a reason that is
--- entirely about COST and not at all about meaning. Eight rules below used to
--- spell `ast_node[code](E, identifier, File, _), ast_name[code](E, Name)` as
--- their FIRST two literals, which enumerates every identifier in the corpus and
--- only then filters by name. Measured: that one premise handed out 876 391 of
--- the fixpoint's 2 246 605 rows — 39% of the whole evaluation — because the
--- engine reads a body left to right and has no join planner. Written as one
--- relation the store can index on (Name, File), the same eight rules ask a
--- selective question instead of a scan.
 ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
 
--- a declarator binds Name (its `id`) and reads Src (its `init`), both identifiers
+-- Name-to-name flow through a declarator initialiser: the first cell, kept.
 decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
                                ast_child[code](D, id, _, N), ident[code](N, Name).
 decl_reads[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
                                ast_child[code](D, init, _, N), ident[code](N, Name).
 
--- THE MODELLED CLAIM: a value flows from the name read to the name bound.
 var_flow[code](From, To)    :- decl_reads[code](D, From), decl_binds[code](D, To).
 
--- and its transitive closure, because a chain is what a dataflow trace is
 var_reaches[code](A, B)     :- var_flow[code](A, B).
 var_reaches[code](A, C)     :- var_reaches[code](A, B), var_flow[code](B, C).
 
--- ===========================================================================
--- THE VALUE CORE — 2026-09-04, queue item w_df_value_core
+-- =========================================================================
+-- 2. WHAT A VALUE IS
 --
--- Everything above moves values between NAMES and never says what a value IS.
--- That is why the layer had three ticks and thirty-five open cells: three ways
--- to move a thing, and no notion of the thing.
---
--- WHAT A VALUE IS HERE, and the choice is the whole design:
---
---   may_be_lit[flow](E, Text)  — E may evaluate to this literal, as written
---   may_be_node[flow](E, N)    — E may evaluate to the object, function or
---                                class AT NODE N — the thing itself, by identity
---
--- TWO CARRIERS AND NO THIRD, and in particular NO `unknown`. In a relational
--- language the absence of a row already means `nothing here says so`, and
--- adding a value to spell it would force every rule downstream to handle a
--- case the engine handles by not firing. This is the same argument that keeps
--- `not_modelled` a DERIVED default in the coverage model rather than a fact
--- somebody writes.
---
--- IT IS A MAY-SET AND THE NAME SAYS SO. Two rows mean `either of these`, never
--- `exactly these two`: a value the rules cannot see leaves no row, so the set
--- is an UNDER-approximation and a reader may add an edge on it but may never
--- conclude an absence from it. That is exactly the direction the call graph
--- needs — a missing row costs an edge, which the execution oracle measures as
--- an under-report — and exactly the direction a `this is definitely not X`
--- rule must never be written in.
---
--- THE DOMAIN IS FINITE BY CONSTRUCTION, which is what makes this safe to put
--- in rules at all: a literal's text and a node's identity both come FROM the
--- parsed program, so no rule here can manufacture a value the tree does not
--- already contain. Nothing widens, nothing needs a join, and the fixpoint
--- terminates for the same reason the string destructors do.
-
--- ENTRY 1 — a literal is its own value. `ast_value` is the scanner's `value`
--- attribute under the name rules/js-structure.rofl gives it.
+-- A literal is its own value. A bigint's term is its decimal string, so `1n`
+-- and `"1"` collide here, as `1e21` and its spelling already do. A regexp is
+-- NOT a literal: it has identity and methods, so it is a node value below.
 edb(literal_kind).
 literal_kind(string_literal).
 literal_kind(numeric_literal).
 literal_kind(boolean_literal).
--- A BIGINT IS A LITERAL LIKE ANY OTHER AND ITS VALUE WAS NOT ON THE STORE,
--- 2026-09-08 (w_update_and_literals). This row is one word and the measurement
--- under it is the item: `BigIntLiteral.value` is a native `bigint`, which
--- matched none of the four branches in scanners/js_ast.ts, so `const b = 1n`
--- emitted one `ast_node` fact and NO `ast_attr` — the only literal in the
--- language whose value the scanner dropped, silently, while its own contract
--- line said `every scalar own property`. Adding the row without the scanner
--- fix would have derived nothing at all, which is why the fix came first and
--- the mutant that removes it kills this arm rather than the row.
---
--- ITS TERM IS THE DECIMAL STRING and the collision is stated: `1n` and the
--- string `"1"` are the same term here, exactly as `1e21` and its decimal
--- spelling already are. See scanners/js_ast.ts for why the alternative — a
--- bare integer, colliding with the NUMBER `1` — is the worse of the two.
 literal_kind(big_int_literal).
 
 may_be_lit[flow](E, V) :- ast_node[code](E, K, _, _), literal_kind(K), ast_value[code](E, V).
 
--- A TEMPLATE WITH NO INTERPOLATION IS A STRING WRITTEN THE OTHER WAY, and
--- until 2026-09-08 this model could not say so. The text lives in
--- `TemplateElement.value`, a nested object, and scanners/js_ast.ts emitted
--- scalar own properties only — a sentence that blocked FOUR cells under the
--- cause `scanner_contract` with the note `it moves when the scanner`s contract
--- moves`. Measured before moving it: over 223 files and 422 482 nodes, with
--- babel`s `extra` scratch declared out, that contract excluded exactly ONE
--- property in the whole language. So the contract moved, and this is a join
--- rather than a mechanism.
---
--- `cooked` AND NOT `raw`. `raw` is the source text with its escapes still in
--- it; what a template EVALUATES to is the cooked form. They differ exactly
--- where an escape appears, which is the only place the choice is observable —
--- and a key written `` obj[`a\tb`] `` selects a tab, not a backslash and a t.
---
--- NO ARM FOR AN INTERPOLATED TEMPLATE, deliberately: `` `a${n}b` `` evaluates
--- to a string this layer cannot name, and `may_be_lit` carrying a partial one
--- would be a wrong answer where silence is the right one. Same reasoning as
--- `plain_assign` refusing a compound assignment because it evaluates to a sum.
+-- A template with no interpolation is a string — `cooked`, which is what it
+-- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
+-- strings and a partial answer is wrong where silence is right (w_concat_value).
 interpolated[code](T)  :- ast_child[code](T, expressions, _, _).
 may_be_lit[flow](T, V) :- ast_node[code](T, template_literal, _, _),
                           not interpolated[code](T),
                           ast_child[code](T, quasis, 0, Q),
                           ast_attr[code](Q, value_cooked, V).
 
--- ENTRY 2 — an object, function or class expression is its own node. The
--- expression IS the thing; there is nothing to look up.
+-- An object, array, function, class or regexp expression is its own node.
+-- `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
+-- each time round.
 edb(node_value_kind).
 node_value_kind(object_expression).
 node_value_kind(array_expression).
@@ -132,144 +66,42 @@ node_value_kind(function_expression).
 node_value_kind(arrow_function_expression).
 node_value_kind(class_declaration).
 node_value_kind(class_expression).
--- THE ONE LITERAL IN JAVASCRIPT WHOSE VALUE IS AN OBJECT, 2026-09-08
--- (w_update_and_literals). `/ab+c/gi` is written like `1n` and behaves like
--- `{}`: it has methods, it has identity, and `/x/ === /x/` is false. So it
--- belongs to THIS list and not to `literal_kind` — a `may_be_lit` row would
--- have to name a text, and the text of a regexp is not what the expression
--- evaluates to. The scanner gives it `pattern` and `flags` and NO `value`
--- attribute, so the `literal_kind` arm could not have reached it anyway;
--- measured before the row was written, `may_be_node` and `prototype_of` were
--- both EMPTY for both receivers in the fixture.
---
--- SAME OVER-APPROXIMATION AS ITS NEIGHBOURS, stated because a regexp is where
--- it is easiest to notice: a literal inside a loop evaluates to a NEW object
--- each time round, so `may_be_node(E, E)` names the site rather than the
--- object — which is exactly what `object_expression` and `array_expression`
--- have always meant here.
 node_value_kind(reg_exp_literal).
 
 may_be_node[flow](E, E) :- ast_node[code](E, K, _, _), node_value_kind(K).
 
--- ENTRY 3 — a name may be whatever its binder's initialiser may be.
+-- =========================================================================
+-- 3. A NAME IS WHAT ITS BINDER'S INITIALISER IS, WHERE THE BINDER IS IN SCOPE
 --
--- FILE-SCOPED UNTIL 2026-09-07, and the sentence that stood here said so: two
--- `const k` in two functions of one file were one name, so a name bound twice
--- carried both values, declared as honest over-approximation for a may-set.
---
--- IT HAD NO WITNESS, AND THE REASON IS THE FINDING. `binder` is bound twice in
--- this corpus — `const c = new Crate()` in `useCrate` and `const c = new
--- Cask(n)` in `useSuper` — and the collision derived nothing wrong for as long
--- as the two classes SHARED NO METHOD NAME. Five fixture renames over the
--- preceding week were made specifically to dodge this limitation, so the corpus
--- had been bent around the defect until the defect could not be seen. Giving
--- `Crate` a `hold` to match `Barrel`'s took `ambiguous_call[audit]` from 8 to
--- 12 in one method.
+-- `binder` is a declarator whose id is a plain name. Destructuring forms bind
+-- names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
+-- not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
 binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File, _),
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name),
                                      ast_child[code](D, init, 0, Init).
 
--- A BINDER'S REGION is the function it sits in, or the FILE when it sits in
--- none. A use sees a binder when the binder's region contains the use — which
--- is what makes two `const c` in two functions two names again.
--- ONE NOTION OF SCOPE, AND MORE THAN ONE WAY TO BIND. `scoped_binder` exists so
--- that the three rules below name the thing they care about — a declarator that
--- introduces names in a region — rather than the one relation that happened to
--- be the only such thing. Added 2026-09-08 with destructuring, which binds
--- names from a PATTERN and therefore cannot be a `binder` row: `binder`'s third
--- argument is the node the name evaluates to, and a destructured name evaluates
--- to a MEMBER of that node rather than to the node.
---
--- THE REFACTOR SHIPPED BEFORE THE FEATURE AND WITH ITS OWN CONTROL: with only
--- this indirection in place and no second arm, fifteen relations of this layer
--- were compared row for row against the previous form and came back IDENTICAL.
 scoped_binder[code](D, File) :- binder[code](D, _, _, File).
 
--- A REGION IS A BLOCK WHEN THE DECLARATION IS LEXICAL, and the whole of the
--- difference between `var` and `let` lives in those two arms. `var` is
--- function-scoped and hoisted, so its region stays the nearest enclosing
--- FUNCTION — which is what this relation said for every binder until
--- 2026-09-09. `let` and `const` are scoped to the nearest enclosing BLOCK, and
--- without that a `const x` in a nested block and a `const x` in the function
--- around it have the same region, neither contains the other, and no
--- nearest-wins rule below could tell them apart. Block regions are therefore
--- not an independent feature: they are what makes shadowing STATABLE.
+-- A binder's region: the nearest block for `let`/`const`, the nearest function
+-- for `var` (function-scoped, hoisted), none at the top of a file. Block
+-- regions are what makes shadowing statable. `sees_binder` carries
+-- `not hidden_at` on both arms so every consumer inherits shadowing;
+-- `ident_in(E, _, _)` there is a cost literal only — without it the body built
+-- a (node × binder) product nothing reads.
 binder_region[code](D, R)    :- lexical_binder[code](D), nearest_s[code](R, D).
 binder_region[code](D, R)    :- scoped_binder[code](D, _), not lexical_binder[code](D),
                                 nearest_v[flow](R, D).
 binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).
---
--- `ident_in[code](E, _, _)` IS A COST LITERAL AND NOTHING ELSE, and it is here
--- because the first version of this paragraph nearly doubled the fixpoint. A
--- USE is an identifier; the two consumers below both join `sees_binder` against
--- `ident_in`, so ranging E over every node under the region materialised a
--- (node x binder) product that no rule could ever read. Measured as a 2x2 over
--- {HEAD rules, these rules} x {HEAD corpus, this corpus}, so the rules and the
--- fixture are separated rather than argued about:
---
---     wide E: rules alone   facts +51.8%  firings +71.8%
---     narrow: rules alone   facts +18.2%  firings +25.0%
---
--- Fifteen relations compared row-for-row between the two forms and IDENTICAL,
--- with a positive control (removing `object_method` from `this_binds_kind`
--- moves seven of them). The cheaper form is the same model.
---
--- `not hidden_at[code](E, D)` IS THE NEAREST-WINS HALF and it is written here,
--- on both arms, rather than in the five consumers below. Keeping the negation
--- inside `sees_binder` is what let every reader of this relation — the plain
--- binder, the object pattern, the array pattern, the rest element — inherit
--- shadowing without a line of its own.
 sees_binder[code](E, D)      :- binder_region[code](D, R), ast_within[code](R, E),
                                 ident_in[code](E, _, _), not hidden_at[code](E, D).
--- ...and a top-level binder is visible everywhere in its own file, which is the
--- honest reading: `const seeded = run(1)` at module scope really is in scope
--- inside every function below it.
 sees_binder[code](E, D)      :- binder_at_top[code](D), scoped_binder[code](D, File),
                                 ident_in[code](E, _, File), not hidden_at[code](E, D).
 
--- ===========================================================================
--- NEAREST WINS — w_scope_shadowing, 2026-09-09.
---
--- WHAT THIS PARAGRAPH REPLACED said the quiet part already: "two binders of one
--- name where one region contains the other are both visible at a use inside the
--- inner one, and nothing here prefers the nearer". That was true, it was the
--- SAFE direction — an extra candidate in a may-set, never a missing one — and
--- it is a precision defect rather than a soundness one. It is closed here.
---
--- THE CORPUS HAD NO SITE, AND THAT WAS MEASURED BEFORE A RULE WAS WRITTEN.
--- Over every pair of `scoped_binder` declarators sharing a name in one file:
--- pairs where one binder's region contains the other's region, ZERO; pairs
--- sharing a region, ZERO; pairs where one is a top-level binder and the other
--- is not, ZERO. So all 84 same-name pairs in this corpus were two functions
--- side by side, which the containment rule of w_scope_binding already told
--- apart. This is the same trap w_scope_binding hit and recorded as
--- `f_the_corpus_was_bent_around_the_defect_until_it_could_not_be_seen` — one
--- fixture in this very file carries the comment "RENAMED rather than shorthand:
--- the local would otherwise be a file-scoped `broken`". The sites are in
--- alpha.mjs now, they RUN, and V8's own stack is the oracle that judges them.
-
--- A SCOPE NODE is a function or a block, and the LIST IS SHORTER THAN JS'S
--- because every kind on it was required to have a declarator that actually
--- reaches it AND a fixture that makes its presence on the list observable.
--- Measured over this corpus, the nearest scope of a `scoped_binder` is
--- `block_statement` 54 times and `for_statement` 5; one more binder is scoped
--- to a `function_declaration`, and that one is the `var` arm below.
---
--- FOUR KINDS WERE WRITTEN AND THEN REMOVED, each with its own reason, because
--- an arm nothing exercises cannot go red:
---   catch_clause, switch_case  — neither can EVER be the nearest scope of a
---     declarator: a catch always has a block body, and a `case` body is scoped
---     to the whole switch. Unkillable by the grammar.
---   for_of_statement, for_in_statement — unkillable by THIS MODEL rather than
---     by the grammar, and that is a different fact. A for-of head binds without
---     an initialiser, so `binder` (whose third argument is the node the name
---     evaluates to) has no row for it and the loop variable reaches the value
---     layer through `iter_elem[flow]` instead. Only a DESTRUCTURING for-of head
---     would be a `scoped_binder`, and this corpus has none.
---   switch_statement, static_block — unkillable by this corpus: no declaration
---     sits directly in either. Recorded as f_a_scope_kind_no_declarator_reaches.
--- Leaving any of them out widens the region, which is the same safe direction
--- the whole of this item moves in.
+-- Scope kinds are only those a declarator can be nearest to AND a fixture
+-- reaches. `catch_clause`/`switch_case` never are (grammar); a for-of/for-in
+-- head has no initialiser and is not a `binder`; `switch_statement`/
+-- `static_block` hold no declaration in this corpus. Leaving one out widens a
+-- region, the safe direction.
 edb(block_scope_kind).
 block_scope_kind(block_statement).
 block_scope_kind(for_statement).
@@ -277,59 +109,31 @@ block_scope_kind(for_statement).
 scope_node[code](R) :- ast_node[code](R, K, _, _), block_scope_kind(K).
 scope_node[code](R) :- fn_node_v[flow](R).
 
--- LEXICAL IS `let` AND `const` AND THE SCANNER ALREADY CARRIED IT: the `kind`
--- attribute of the `variable_declaration` that owns the declarator. Reading it
--- off the DECLARATION rather than the declarator is the whole subtlety —
--- `binder` is a declarator relation and the keyword is one node up.
+-- `let`/`const` is read off the DECLARATION, one node above the declarator.
 lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
                            ast_attr[code](V, kind, "let").
 lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
                            ast_attr[code](V, kind, "const").
 lexical_binder[code](D) :- lexical_decl[code](V), ast_child[code](V, declarations, _, D).
 
--- THE NEAREST ENCLOSING SCOPE, AND IT RANGES OVER DECLARATORS ONLY. `nearest_v`
--- above ranges over every node because its callers ask about calls, throws and
--- returns; nothing here needs the nearest block of an arbitrary node, and
--- ranging over one would have built the (node x scope) product that the
--- `ident_in` cost note two paragraphs up exists to warn about.
--- ORDERED FOR COST, MEASURED 2026-09-09 AND NOT ARGUED. `scope_node(R)` in
--- position 2 leaves R unbound, so the body built the (binder x scope) product
--- the comment above warns about — the very product it names. Asking
--- `ast_within(R, D)` first with D bound walks D's ANCESTORS, a short chain,
--- and `scope_node` then filters it: control-flow world 11 400 715 -> 10 088 161
--- rows, -11.5%, with firings 177 218 and facts 434 149 IDENTICAL on both sides.
--- The same reorder applied to `tdz_deferred` in the same run was worth 1 508
--- rows, 0.013%, and was NOT kept — see the note there.
+-- Nearest scope, over declarators only. `ast_within(R, D)` first, with D
+-- bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
+-- product, −11.5 % of a world.
 encloses_s[code](R, D) :- scoped_binder[code](D, _), ast_within[code](R, D), scope_node[code](R).
 closer_s[code](R, D)   :- encloses_s[code](R, D), encloses_s[code](S, D),
                           ast_within[code](R, S), R != S.
 nearest_s[code](R, D)  :- encloses_s[code](R, D), not closer_s[code](R, D).
 
--- ONE NAME, FOUR WAYS TO BIND IT. `scoped_binder` says a declarator introduces
--- names in a region and deliberately does NOT say which; shadowing is a
--- question about a NAME, so it needs the projection that carries one. The four
--- arms are the four binding forms this layer knows, and they are the same four
--- that already write `scoped_binder`.
+-- Shadowing is a question about a NAME; this is the projection that carries one.
 binds_name[code](D, Name, File) :- binder[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- destructures[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- destructures_at[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 
--- SHADOWING IS CONTAINMENT BETWEEN REGIONS, not distance in the source. Both
--- arms are the same claim over the two ways an outer binder can be outer: it
--- has a region that strictly contains the inner one, or it has no region at all
--- because it is at the top of its file, in which case every region in that file
--- is inside it.
---
--- TWO GUARDS HERE ARE UNKILLABLE BY CONSTRUCTION and are named rather than
--- removed, because a mutant that survives for a REASON is worth more than a
--- line deleted. `RO != RI` is implied by `ast_within` being irreflexive - it is
--- the transitive closure of a parent-child relation, so no node contains
--- itself - and `Outer != Inner` follows from that on the first arm and from
--- `binder_at_top`s own negation on the second, since a declarator cannot both
--- have a region and lack one. Both mutants move NOTHING, in either arm, and
--- that is a statement about the shape of `ast_within` rather than about this
--- corpus: no fixture can make either fire.
+-- Shadowing is containment between REGIONS, not distance in the source: the
+-- outer binder's region strictly contains the inner's, or the outer has no
+-- region at all (top of file). `RO != RI` and `Outer != Inner` follow from
+-- `ast_within` being irreflexive and are kept explicit.
 shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
                                          binds_name[code](Inner, Name, File),
                                          Outer != Inner,
@@ -341,11 +145,7 @@ shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
                                          Outer != Inner, binder_at_top[code](Outer),
                                          binder_region[code](Inner, _).
 
--- A PARAMETER SHADOWS TOO, and it is the arm a purely declarator-shaped rule
--- would have missed: `function f(seeded)` hides a module-scope `const seeded`
--- through the whole of `f`, and no `binds_name` row exists for a parameter.
--- The file join is `ast_file` + `ast_within` because `param_of` carries a
--- function rather than a file.
+-- A parameter shadows too, and no `binds_name` row exists for it.
 shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, _),
                                            binder_region[code](Outer, RO),
                                            param_of[flow](F, _, Name),
@@ -355,41 +155,19 @@ shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, File),
                                            param_of[flow](F, _, Name),
                                            ast_file[code](Root, File), ast_within[code](Root, F).
 
--- ...AND WHERE THE OUTER ONE IS HIDDEN. The inner binder's REGION is the extent
--- of the hiding, which is why this is regional and not positional: a `let x`
--- hides an outer `x` over the whole block, INCLUDING the lines above its own
--- declaration. That is the temporal dead zone stated as scope, and it is what
--- makes the TDZ arm below a claim about silence rather than about the outer
--- value coming back.
---
--- `ident_in[code](E, Name, _)` IS A COST NARROWING AND NOT A SEMANTIC ONE, and
--- it is said here because its mutant SURVIVES: every consumer of `sees_binder`
--- already joins `ident_in(E, Name, File)` against the binder`s own name, so
--- hiding a binder at an identifier spelled something else suppresses a row
--- nothing would have read. Replacing `Name` with `_` changes no derived
--- relation in this corpus and makes `hidden_at` larger. Same reason the
--- `ident_in(E, _, _)` literal in `sees_binder` above is there.
+-- The inner binder's whole REGION is the extent of the hiding, including the
+-- lines above its declaration — the temporal dead zone stated as scope.
+-- `ident_in(E, Name, _)` is a cost narrowing: every consumer joins the name.
 hidden_at[code](E, Outer) :- shadowed_by[code](Outer, Inner, Name),
                              binder_region[code](Inner, RI),
                              ast_within[code](RI, E), ident_in[code](E, Name, _).
 hidden_at[code](E, Outer) :- shadowed_by_param[code](Outer, F, Name),
                              ast_within[code](F, E), ident_in[code](E, Name, _).
 
--- THE TEMPORAL DEAD ZONE — the one place in this layer where the LINE matters.
--- Everything else here is flow-insensitive on purpose (the `assigns` paragraph
--- below says so in as many words), and the TDZ is not an exception to that so
--- much as a fact about syntax: a `let`/`const` binding is not initialised until
--- its own declaration is evaluated, so a read of the name ABOVE the declaration
--- in the same region throws. The model must therefore say NOTHING there —
--- not the outer binder's value, which the shadowing arms already removed, and
--- not the inner binder's, which is what this removes.
---
--- A CLOSURE IS THE COUNTER-CASE AND IT IS EXCLUDED BY CONSTRUCTION. `const via
--- = () => later; const later = f;` reads `later` on an earlier line and is
--- perfectly legal, because the arrow body runs after the declaration. So a use
--- with a FUNCTION between it and the binder's region is deferred and keeps its
--- value. Dropping `not tdz_deferred` loses a real edge rather than adding a
--- false one, which is why the fixture for it is a closure the oracle RUNS.
+-- The TDZ, the one place the LINE matters: a read of a `let`/`const` name
+-- above its declaration in the same region throws, so the model says nothing
+-- there. A closure between the use and the region is deferred and keeps its
+-- value: `const via = () => later; const later = f;` is legal.
 tdz_cand[code](E, D)     :- lexical_binder[code](D), binds_name[code](D, Name, _),
                             binder_region[code](D, R), ast_within[code](R, E),
                             ident_in[code](E, Name, _),
@@ -405,12 +183,9 @@ may_be_lit[flow](E, V)  :- binder[code](D, Name, Init, File), may_be_lit[flow](I
 may_be_node[flow](E, N) :- binder[code](D, Name, Init, File), may_be_node[flow](Init, N),
                            ident_in[code](E, Name, File), sees_binder[code](E, D).
 
--- ENTRY 4 — assignment. `x = "a"` makes `x` may-be "a" WHEREVER x appears in
--- the file, which is the flow-insensitive reading and is stated rather than
--- hidden: this layer has no notion of before and after, so it cannot say that
--- the value at line 10 is not the value at line 3. A flow-SENSITIVE reading
--- needs the control-flow layer, which does not exist yet, and that dependency
--- is the reason `w_controlflow_layer` sits in the queue at all.
+-- =========================================================================
+-- 4. ASSIGNMENT, FLOW-INSENSITIVELY: `x = "a"` makes `x` may-be "a" wherever
+-- x appears in the file. This layer has no before and after.
 assigns[code](Name, Src, File) :- ast_node[code](A, assignment_expression, File, _),
                                   ast_child[code](A, left, 0, L), ast_name[code](L, Name),
                                   ast_child[code](A, right, 0, Src).
@@ -420,10 +195,8 @@ may_be_lit[flow](E, V)  :- assigns[code](Name, Src, File), may_be_lit[flow](Src,
 may_be_node[flow](E, N) :- assigns[code](Name, Src, File), may_be_node[flow](Src, N),
                            ident_in[code](E, Name, File).
 
--- ENTRY 5 — the transparent wrappers. A parenthesis, a TS cast and a non-null
--- assertion change nothing about the value, which is exactly why the call
--- graph lists them as separate SHAPES and this layer does not: they are one
--- rule over a table of kinds.
+-- A parenthesis, a TS cast and a non-null assertion change nothing about the
+-- value; the call graph lists them as shapes and this layer does not.
 edb(value_transparent).
 value_transparent(parenthesized_expression).
 value_transparent(tsas_expression).
@@ -434,38 +207,14 @@ may_be_lit[flow](E, V)  :- value_transparent(K), ast_node[code](E, K, _, _),
 may_be_node[flow](E, N) :- value_transparent(K), ast_node[code](E, K, _, _),
                            ast_child[code](E, expression, 0, X), may_be_node[flow](X, N).
 
--- WHAT THE LAYER CAN SAY ABOUT ITSELF: an expression the rules can value at
--- all. A site with no row is not `no value` — it is `nothing here says so`.
--- ---------------------------------------------------------------------------
--- WHICH PROTOTYPE A VALUE HAS (w_prototype_of_a_value, 49).
---
--- THE ITEM SAID THERE WAS NO SITE AND THE MODEL SAYS THERE ARE TWELVE. Its note
--- read `NO SITE IN THE CORPUS, measured 2026-09-07: 13 member calls unresolved,
--- zero with a literal receiver`, and that measurement asked `may_be_lit` — does
--- the model carry this receiver as a VALUE. A prototype is not a value question.
--- `[1, 2, 3].join(",")` needs nothing carried at all: the receiver is an
--- `array_expression` and the KIND is the answer. Re-measured 2026-09-08, every
--- unresolved member call with its receiver named:
---
---   template_literal .concat   1     the String prototype
---   array_expression .join     1     the Array prototype
---   identifier       .next     6     a generator object, and `may_be_node` is
---                                    EMPTY for all six - the value half of the
---                                    generator protocol, not this question
---   new_expression / identifier 2    a class IN this program; not a prototype
---                                    question at all
---
--- So the site count for this relation is TWO, the six `.next` calls belong to a
--- different item, and `no site in the corpus` was true of the question it was
--- asked and false of the question the item names.
---
--- FROM THE KIND, AND SEPARATELY THROUGH THE VALUE LAYER. The first arm answers
--- a receiver written in place; the second answers one reached through a binder,
--- an assignment or a return, and it costs nothing because `may_be_node` is
--- already standing. A template literal is in NEITHER `literal_kind` nor
--- `node_value_kind`, so only the first arm reaches it — which is why the arm on
--- the kind exists rather than being folded into the value one.
-edb(kind_prototype).   -- kind_prototype(Kind, Prototype)
+-- =========================================================================
+-- 5. WHICH PROTOTYPE A VALUE HAS — from the KIND of a receiver written in
+-- place, and through the value layer for one reached by a binder. A template
+-- literal is in neither value table, so only the kind arm reaches it.
+-- `builtin_prototype` names the prototypes whose methods live in a library
+-- this model has not got; `object` and `function` are deliberately absent
+-- (`member_value` and the language answer those).
+edb(kind_prototype).
 kind_prototype(array_expression,          array).
 kind_prototype(string_literal,            string).
 kind_prototype(template_literal,          string).
@@ -474,14 +223,6 @@ kind_prototype(boolean_literal,           boolean).
 kind_prototype(object_expression,         object).
 kind_prototype(function_expression,       function).
 kind_prototype(arrow_function_expression, function).
--- TWO MORE, 2026-09-08 (w_update_and_literals), and both were measured as
--- SILENT before they were written rather than assumed to be missing.
--- `/x[0-9]/.test(s)` and `255n.toString(16)` are member calls on a literal;
--- both were `unresolved_call` with `prototype_of` EMPTY, so `stdlib_member`
--- could not name them and the residue was invisible at the one place the model
--- collects it. A regexp goes through both arms — the inline receiver by KIND,
--- `MATCHER.test(s)` through `may_be_node` — which is why the fixture writes
--- it twice.
 kind_prototype(reg_exp_literal,           regexp).
 kind_prototype(big_int_literal,           bigint).
 
@@ -489,54 +230,21 @@ prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
 prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
                             ast_node[code](N, K, _, _).
 
--- WHOSE PROTOTYPE IS THE STANDARD LIBRARY'S. `object` and `function` are NOT on
--- this list and the omission is the point: a member on an object literal is
--- answered by `member_value`, and a member on a function is `.call`/`.bind`,
--- which is a question about the language rather than a gap in this model. The
--- four that remain are the ones whose methods live in a library this model does
--- not have — which is what `w_env_api_surface` is for, and it waits on this
--- relation by name.
 edb(builtin_prototype).
 builtin_prototype(array).
 builtin_prototype(string).
 builtin_prototype(number).
 builtin_prototype(boolean).
--- ...AND TWO WHOSE METHODS ARE THE WHOLE POINT OF THE FORM, 2026-09-08. A
--- regexp literal is USED by calling `.test`/`.exec` on it, so unlike `object`
--- and `function` above there is no in-program answer to route to first: every
--- member of a regexp lives in the library. `bigint` is here for the same
--- reason `number` is. The atom `bigint` is also a `feature` in
--- facts/js-env.rofl; different relation, and the two never meet.
 builtin_prototype(regexp).
 builtin_prototype(bigint).
 
--- ---------------------------------------------------------------------------
--- DESTRUCTURING: A NAME BOUND FROM A PATTERN RATHER THAN FROM A VALUE.
---
--- `const { pulled: taken } = drawer` binds `taken` to the MEMBER `pulled` of
--- whatever `drawer` is, and `binder[code]` cannot say that: its third argument
--- is the node the name evaluates to, and here the name evaluates to a member of
--- that node. A declarator whose `id` is an `object_pattern` has no `ast_name`
--- at all, so it produced no `binder` row and the names it introduces were
--- invisible to the whole value layer.
---
--- MEASURED BEFORE ANY OF THIS: on a three-line probe with `const { pick } =
--- holder` beside a direct `holder.pick(n)`, the model derived the direct edge
--- and lost the destructured one entirely, and `vocabulary_gap[audit]` named
--- `object_pattern` the same run. So the hole was DECLARED rather than silent —
--- it was waiting for a fixture, which is exactly what that audit is for.
---
--- EVERY FACT THIS NEEDS WAS ALREADY THERE. `member_value[flow]` answers what a
--- key holds and `may_be_node` carries it, so the arm is a join: the local name
--- may be whatever the init`s member of that key may be. `key_name` rather than
--- `ast_name` on the key, for the reason four other readers of a key learned.
---
--- SHORTHAND AND RENAME ARE ONE CASE, not two. `{ pulled }` gives an
--- `object_property` whose key and value are two identifiers of the same name,
--- and `{ pulled: taken }` gives two of different names — so reading the key for
--- the member and the value for the local covers both without a `shorthand`
--- test, and the corpus`s fixture uses the rename because the shorthand form
--- would shadow the function it binds.
+-- =========================================================================
+-- 6. DESTRUCTURING — a name bound from a PATTERN. `{ pulled: taken }` binds
+-- `taken` to member `pulled` of the init; shorthand and rename are one case
+-- (key for the member, value for the local). An array pattern binds by
+-- POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
+-- arm for array patterns: nothing exercises it and an arm nothing exercises
+-- cannot go red.
 destructures[code](D, Local, Key, File) :- ast_node[code](D, variable_declarator, File, _),
                                            ast_child[code](D, id, 0, P),
                                            ast_node[code](P, object_pattern, _, _),
@@ -550,21 +258,6 @@ may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
                            member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
--- ---------------------------------------------------------------------------
--- THE OTHER FOUR FORMS OF THE SAME FAMILY (w_destructuring_rest_and_spread).
---
--- `object_pattern` landed one iteration ago and `array_pattern`,
--- `assignment_pattern`, `rest_element` and `spread_element` had no site in the
--- corpus at all. MEASURED WITH THE FIXTURES IN AND NO RULE WRITTEN: the value
--- layer answered NOTHING at seven of the eight new sites, and answered the
--- eighth WRONGLY — see the spread-argument paragraph below, which is the one
--- place this family made the model say something false rather than nothing.
-
--- AN ARRAY PATTERN BINDS BY POSITION, which is the whole difference from an
--- object pattern: `{ a }` names its member and `[a, b]` counts to it. The
--- INDEX the scanner carries is therefore the content of the relation, exactly
--- as it is for an argument — and it is counted over the RAW array, so a hole
--- in `[, second]` leaves `second` at index 1 rather than sliding it to 0.
 destructures_at[code](D, Local, Index, File) :- ast_node[code](D, variable_declarator, File, _),
                                                 ast_child[code](D, id, 0, P),
                                                 ast_node[code](P, array_pattern, _, _),
@@ -572,10 +265,6 @@ destructures_at[code](D, Local, Index, File) :- ast_node[code](D, variable_decla
                                                 ast_name[code](L, Local).
 scoped_binder[code](D, File) :- destructures_at[code](D, _, _, File).
 
--- WHAT AN ARRAY HOLDS AT A POSITION. `iter_elem[flow]` further down answers
--- the same question for `for-of` and deliberately DROPS the index, because a
--- loop variable takes every element in turn. Two readers, two questions, and
--- the index is the difference: this one is also what expands a spread argument.
 elem_at[flow](X, I, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
                           ast_child[code](A, elements, I, E).
 
@@ -584,18 +273,8 @@ may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
                            may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
--- NO `may_be_lit` ARM HERE, and it is left out on purpose rather than
--- forgotten: nothing in this corpus destructures a literal out of an array, so
--- the arm would be a clause no mutant could kill. The rule this repository
--- already paid for — an arm nothing exercises cannot go red — applies to a
--- symmetry as much as to a feature.
-
--- A DEFAULTED PARAMETER WAS INVISIBLE TWICE OVER. `param_of[flow]` reads
--- `ast_name` off the `params` child and an `assignment_pattern` has none, so a
--- defaulted parameter had NO INDEX: neither did the default reach the body,
--- nor did an argument PASSED at that position. Both halves are below and they
--- are separate arms because they are separate claims — measured apart with two
--- call sites, one omitting the argument and one supplying it.
+-- A defaulted parameter has an index (the `left` of its `assignment_pattern`)
+-- and a default that reaches the body.
 param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
                               ast_node[code](P, assignment_pattern, _, _),
                               ast_child[code](P, left, 0, L), ast_name[code](L, Name).
@@ -608,11 +287,10 @@ param_default[flow](F, Name, Init) :- fn_node_v[flow](F), ast_child[code](F, par
 may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow](Init, N),
                            param_use[flow](F, Name, U).
 
--- AN OBJECT REST BINDS A FRESH OBJECT and that object has no node of its own
--- in the source — so the model gives it the `rest_element` node's identity.
--- The rest node IS the object, in the same sense that an `object_expression`
--- is the object it writes: both are values named by a node the store already
--- has, which is the whole point of `may_be_node` carrying identity.
+-- An object rest binds a FRESH object with no node of its own, so the
+-- `rest_element` node stands for it. It holds every key EXCEPT the ones the
+-- pattern took — the exclusion is the whole content. It is `member_plain` (no
+-- `static` anywhere), as a module namespace is.
 pattern_takes[code](P, Key) :- ast_node[code](P, object_pattern, _, _),
                                ast_child[code](P, properties, _, Prop),
                                ast_child[code](Prop, key, 0, K), key_name[code](K, Key).
@@ -626,34 +304,18 @@ rest_binds[code](D, R, Local, File) :- rest_in_pattern[code](D, R, File),
                                        ast_child[code](R, argument, 0, L), ast_name[code](L, Local).
 scoped_binder[code](D, File) :- rest_binds[code](D, _, _, File).
 
--- ...AND THE EXCLUSION IS THE WHOLE CONTENT OF THE RELATION. `{ a, ...rest }`
--- gives `rest` every key EXCEPT `a`, and a rule that copied them all would
--- answer `rest.a` — which is `undefined` and throws when called. No runnable
--- fixture can hold that site, so it lives in shapes.ts and it is the only
--- thing that tells the two rules apart.
 member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _),
                                  ast_child[code](D, id, 0, P),
                                  ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
                                  member_value[flow](Obj, Key, V),
                                  not pattern_takes[code](P, Key).
--- a rest object is PLAIN in the sense `member_plain` means: no `static`
--- attribute anywhere on it, so neither class arm reaches it and the member
--- lookup would find nothing without this row. Same reason the module namespace
--- needed one, and measured the same way.
 member_plain[flow](R, Key, V) :- rest_in_pattern[code](_, R, _), member_value[flow](R, Key, V).
 
 may_be_node[flow](E, R) :- rest_binds[code](D, R, Local, File),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
--- AN OBJECT SPREAD COPIES THE KEYS OF WHAT IT SPREADS, so a member of the
--- result is a member of the source reached through one more node. This is an
--- ordinary `member_value` arm and it needs no new carrier at all.
---
--- OVER-APPROXIMATION DECLARED: `{ ...o, k: v }` overrides `o`'s own `k`, and
--- this rule keeps both. The direction is the safe one for a may-set — an extra
--- candidate, never a missing one — and narrowing it needs an order this layer
--- does not have, which is the same sentence `assigns` carries about `x = a`
--- then `x = b`.
+-- Spread copies the source's keys. `{ ...o, k: v }` keeps both `k`s — the safe
+-- direction; narrowing needs an order this layer has not got.
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, S),
                                  ast_node[code](S, spread_element, _, _),
@@ -663,22 +325,8 @@ member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).
 
--- ===========================================================================
--- ACROSS A CALL — 2026-09-04, queue item w_df_function_forms
---
--- THE HONEST STATEMENT FIRST, BECAUSE IT BREAKS THE LAYER PICTURE: to know what
--- an argument gives a parameter you must know WHICH FUNCTION the call reaches,
--- and to resolve a callee you must know what its expression MAY BE. The call
--- graph and the value flow are ONE FIXPOINT, not two floors stacked. So the
--- rules below read `resolves[code]` from rules/js-callgraph.rofl while that
--- file reads `may_be_lit[flow]` from here, and neither can be computed first.
--- The kernel takes it for the same reason it took tier 3's smaller cycle: the
--- recursion is positive and the negations both packs stand on sit outside it.
---
--- Loaded alone this half is simply silent — nothing concludes `resolves`, so
--- nothing fires — which is the correct behaviour for a pack whose partner is
--- absent, and is why test/js-ast.test.ts can still exercise the old cell.
-
+-- =========================================================================
+-- 7. ACROSS A CALL
 edb(fn_kind_v).
 fn_kind_v(function_declaration).
 fn_kind_v(function_expression).
@@ -694,50 +342,18 @@ call_like_v(new_expression).
 
 fn_node_v[flow](F) :- ast_node[code](F, K, _, _), fn_kind_v(K).
 
--- THE NEAREST ENCLOSING FUNCTION, over ANY node rather than over call sites.
--- DUPLICATION DECLARED: rules/js-callgraph.rofl computes the same thing under
--- `nearest_fn`, restricted to sites. Two computations of one relation is a
--- smell and consolidating them is a separate change, because the call graph's
--- copy is the target of a mutant that would lose its anchor.
--- WALKED DOWN FROM THE FUNCTION, not sieved out of a quadratic.
---
--- Until 2026-09-09 this was three relations: `encloses_v` materialised every
--- (function, descendant) pair, `closer_v` paired each descendant's enclosing
--- functions against each OTHER to find a nearer one, and `nearest_v` subtracted
--- the second from the first. That is an argmin written as a negation over a
--- quadratic, and it cost: measured from inside the join by scanners/js_cost.ts
--- on sixteen files of eslint/lib, `closer_v` alone was 1 064 884 accumulator
--- elements — 35.2 percent of the whole fixpoint — to conclude 2295 rows.
---
--- IT IS NOT A CROSS PRODUCT and no reorder fixes it: both `encloses_v`
--- positions join on X, so `test/rule-shape.test.ts` has nothing to say, and
--- one plausible reorder measured 65 percent WORSE. The cost is the shape, so
--- the shape changed.
---
--- Two rules, each linear. The first names the children of a function; the
--- second carries a nearest function down through nodes that are not themselves
--- functions, and stops at one that is — which is exactly what "nearest" means,
--- said forwards instead of by exclusion. rules/js-structure.rofl already says
--- in its own comment that an ancestor query here "should be answered by
--- walking ast_in from the node rather than by materialising the closure".
+-- Nearest enclosing function over ANY node, walked DOWN from the function in
+-- two linear rules. The argmin-as-negation-over-a-quadratic form was 35 % of a
+-- fixpoint and no reorder fixes a shape. rules/js-callgraph.rofl keeps
+-- `nearest_fn` over sites only; a mutant anchors on that copy.
 nearest_v[flow](F, X)  :- fn_node_v[flow](F), ast_in[code](F, X).
 nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node_v[flow](P),
                           ast_in[code](P, X).
 
--- ARGUMENT INTO PARAMETER. The INDEX is the content — argument 0 and argument 1
--- are different facts about the program, which is why the scanner carries it.
--- A SPREAD ARGUMENT DESTROYS THE CORRESPONDENCE THIS RELATION EXISTS TO
--- CARRY, and the model said something FALSE about it before this was written.
--- MEASURED on `pair(...bench, cubed)` with `bench = [chiselled, planed]` and
--- the fixture running: the model derived `pair -> cubed`, because argument 1 in
--- the TREE is `cubed` while argument 1 at RUN TIME is `planed` — `bench`
--- contributes two arguments and everything after it shifts. The oracle says
--- `pair` calls `chiselled` and `planed` and nothing else.
---
--- A may-set is allowed to be SILENT and is not allowed to be WRONG, so the
--- positional arm stops at the first spread. Note this is not the spread node
--- itself being unvalued — that is silence and costs an edge; this is a
--- DIFFERENT argument getting an index that is not its own.
+-- Argument into parameter by INDEX. A spread destroys the correspondence for
+-- everything after it, and a may-set may be silent but not wrong, so `arg_at`
+-- stops at the first spread; a spread of an array this layer can see
+-- contributes element K at position J + K. `f(...a, ...b)` is unexercised.
 spread_arg[code](C, I)   :- ast_node[code](C, K, _, _), call_like_v(K),
                             ast_child[code](C, arguments, I, S),
                             ast_node[code](S, spread_element, _, _).
@@ -748,18 +364,6 @@ arg_at[flow](C, I, A)      :- ast_node[code](C, K, _, _), call_like_v(K),
                               not ast_node[code](A, spread_element, _, _),
                               not after_spread[code](C, I).
 
--- ...AND THE CASE WHERE THE CORRESPONDENCE SURVIVES EXACTLY, which is not the
--- narrow one it first looks like. A spread at argument position J contributes
--- its element I at argument J + I — the arguments BEFORE it are unshifted by
--- definition, and the ones after it are already silenced above. So a spread of
--- an array this layer can see is answerable wherever it sits, and `elem_at` is
--- already the relation that says which element is where.
---
--- THE GUARD IS ON THE SPREAD ITSELF, not on what follows it: a spread that is
--- after another spread has been shifted by a count this layer does not carry.
--- DECLARED UNEXERCISED — `f(...a, ...b)` is in no fixture here, so no mutant of
--- this corpus can kill that literal, and the site that would is a call with two
--- spreads whose first array has a length other than one.
 arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, J),
                               ast_child[code](C, arguments, J, S),
                               ast_child[code](S, argument, 0, A), elem_at[flow](A, K, E),
@@ -767,44 +371,17 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
 param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 
--- WHERE A PARAMETER IS READ. The over-approximation this comment used to
--- declare — "any identifier of that name anywhere under F, so a nested function
--- redeclaring the name is claimed here and should not be. Shadowing is the
--- scope layer's cell" — is closed by `not param_hidden` since 2026-09-09, and
--- the hand-off was literal: w_scope_shadowing owned the cell and this is it.
--- ORDERED FOR COST, and the order is the whole rule: `param_of` binds F and
--- Name, `ast_within` with F bound hands back what is under that function, and
--- `ident` is then a two-bound probe. The other way round it asked for every
--- identifier of that name in the corpus first — measured at 168 rows a call
--- for a parameter named `n`, 1110 times.
---
--- TWO WAYS TO HIDE A PARAMETER AND THEY ARE NOT THE SAME CLAIM. A declarator
--- whose region is strictly INSIDE F rebinds the name for that region — and
--- "strictly inside" is exactly right rather than merely convenient: `function
--- f(x) { var x = 1; }` is legal and is the SAME binding, and its region is F
--- itself, so the containment fails and the parameter is correctly not hidden.
--- The second arm is a nested function with its own parameter of the name,
--- which no declarator relation can see at all.
+-- Where a parameter is read: every identifier of its name under F, minus two
+-- ways of hiding it — a declarator whose region is STRICTLY inside F
+-- (`function f(x) { var x }` is the same binding: region F itself, not hidden)
+-- and a nested function with its own parameter of the name. `ast_within(F, G)`
+-- before `fn_node_v(G)`: the other order read all of `fn_node_v` once per
+-- parameter, 58.7 % of a world.
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   binds_name[code](D, Name, _),
                                   binder_region[code](D, R),
                                   ast_within[code](F, R), ast_within[code](R, U),
                                   ident[code](U, Name).
--- ORDERED FOR COST, MEASURED 2026-09-09. `fn_node_v(G)` in position 2 left G
--- unbound, so this body READ THE WHOLE `fn_node_v` RELATION once per parameter:
--- `relPersp fn_node_v` was 58.7 PER CENT of everything the call-graph world
--- handed out, the single heaviest path in the tree after `has_return` was
--- repaired the same night. Asking `ast_within(F, G)` first with F bound walks
--- F's descendants and `fn_node_v` then filters them: 7 465 259 -> 3 244 319
--- rows, -56.5%, and `fn_node_v` leaves the top of the distribution entirely.
--- Answers unchanged: js-controlflow-scope 48/48 including the mutant that
--- deletes this very arm, js-callgraph 38/38.
--- IT IS ALSO WHY `param_use` BLEW ITS BUDGET. w_scope_shadowing reported that
--- nine new functions pushed `param_use` past 400M steps and cost a mutant its
--- row-level oracle; this is the rule that was spending it.
--- AND THE RULE I EXPECTED WAS THE WRONG ONE. `tdz_deferred` carries the same
--- unbound `fn_node_v(G)` shape and reordering it moved 0.02%. The signature
--- names a CANDIDATE, never a cause.
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   ast_within[code](F, G), fn_node_v[flow](G),
                                   param_of[flow](G, _, Name),
@@ -819,36 +396,23 @@ may_be_lit[flow](U, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_l
 may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),
                            param_of[flow](F, I, Name), param_use[flow](F, Name, U).
 
--- WHAT A CALL EVALUATES TO. `return E` inside F makes F's value E's value, and
--- a call that resolves to F may be whatever F returns. This is the rule
--- `f().g()` waits on: the call is not a name, so nothing about it could be
--- looked up until the layer could say what it EVALUATES to.
+-- A call may be whatever the function it resolves to returns.
 returns[flow](F, E) :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R),
                        ast_child[code](R, argument, 0, E).
 
 may_be_lit[flow](C, V)  :- resolves[code](C, F), returns[flow](F, E), may_be_lit[flow](E, V).
 may_be_node[flow](C, N) :- resolves[code](C, F), returns[flow](F, E), may_be_node[flow](E, N).
 
--- ===========================================================================
--- READING A PROPERTY OFF A VALUE — the rest of w_df_value_core
+-- =========================================================================
+-- 8. READING A PROPERTY OFF A VALUE
 --
--- This is the question the call graph has been answering privately. `denotes`
--- there carries an object-literal lookup, a class lookup and a `this` rule, and
--- every one of them is a DATAFLOW fact that happened to be written where it was
--- first needed — the same way `param_bind` was. They come home here, and the
--- call graph keeps only the projection it actually asks for.
---
--- WHAT AN OBJECT IS, for a value question: a node that can answer `.k`. An
--- object literal and a class are not alike in the language and are identical to
--- this question, which is the whole reason one relation covers both.
+-- An object literal and a class are identical to the question "can it answer
+-- `.k`". `member_value` names the node a member HOLDS and judges nothing about
+-- it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 obj_like[flow](O) :- ast_node[code](O, object_expression, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).
 
--- MEMBER VALUE, over BOTH — a shorthand method, a property holding anything,
--- and a class method. Note what is NOT here: any judgement about what the value
--- IS. `member_value` says the member exists and names the node it holds; asking
--- what that node may be is `may_be_*`'s job, one step later.
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, M),
                                  ast_node[code](M, object_method, _, _),
@@ -863,99 +427,32 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
                                   ast_node[code](M, class_method, _, _),
                                   ast_child[code](M, key, 0, K), key_name[code](K, Key).
 
--- A MEMBER WRITTEN IS A MEMBER READ — `obj.x = f`, and then `obj.x()`.
---
--- WHAT THE QUEUE ITEM SAID, and it is the sixth design note in this loop to
--- lose to one probe: "there is no store, so a property written is not a
--- property read". THE STORE WAS NEVER THE MISSING THING. Entry 4 above already
--- reads an assignment to an IDENTIFIER flow-insensitively — `x = "a"` makes `x`
--- may-be "a" wherever x appears in the file — and this is that same reading one
--- step over. It needs no notion of before and after for exactly the same
--- reason, and it inherits the same declared imprecision: a property written
--- late is answered early, and every write to the same key is an alternative
--- rather than a replacement. That is a MAY-set, which is what this layer is.
---
--- MEASURED FIRST, and every piece was already standing: `selects[flow]` fires
--- on the member on the LEFT (it ranges over `member_node_v`, not over callee
--- positions), `may_be_node` answers the object half — including a `this`, which
--- is why `this.v = v` lands here too — and the right-hand side is already
--- valued. The arm joins them and adds no mechanism.
---
--- `plain_assign` IS LOAD-BEARING: `rack.tally += 5` evaluates to a SUM, and
--- this layer knows nothing about sums, so the compound forms contribute no
--- value rather than the wrong one.
---
--- ORDERED FOR COST: `plain_assign` is the smallest relation in the body and it
--- binds A, so nothing here enumerates the member nodes of the corpus.
--- AND ONE LITERAL WAS MEASURED DEAD BEFORE IT SHIPPED. The first draft led with
--- `member_node_v[flow](L)` to say "the left is a member expression"; deleting it
--- moved not one row, because `selects[flow]` is ITSELF defined over
--- `member_node_v` and says the same thing while binding Key. Written from a
--- model of what the rule needs rather than from the relations that exist —
--- the same shape as the `super` arm deleted five items ago, caught the same way,
--- by planting a delete-mutant on every literal rather than only on the arm.
+-- A member written is a member read, flow-insensitively — `assigns` one step
+-- over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
 member_value[flow](O, Key, V) :- plain_assign[flow](A), ast_child[code](A, left, 0, L),
                                  selects[flow](L, Key),
                                  ast_child[code](L, object, 0, Obj),
                                  may_be_node[flow](Obj, O),
                                  ast_child[code](A, right, 0, V).
 
--- AND WHAT THE CLASS INHERITS. A method declared on an ancestor is reachable on
--- an instance of the subclass, and the rule above sees only a class's OWN body,
--- so `new Cask(n).hold(n)` — `hold` declared two levels up — resolved to
--- nothing. FOUND BY ADDING THE `super()` FIXTURE rather than by reading: the
--- inheritance chain that exercise needed made the gap produce a site, and the
--- site made it a row. Before that the corpus had no class extending another
--- with a method to inherit, so the hole was invisible to every count.
---
--- `not own_key[flow]` is SHADOWING and it is what makes this a lookup rather
--- than a union: a subclass that declares `hold` answers with its own, and the
--- ancestor's is not also an answer. The negation is stratified — `own_key`
--- reads the class body directly and does not depend on `member_value`.
---
--- `key_name` AND NOT `ast_name`, 2026-09-09 (w_computed_key_names), and here
--- the mismatch was a DISAGREEMENT rather than an over-approximation: this is
--- the negated half of `member_value`'s inheritance arm, which has read
--- `key_name` since it was written. So `class Clasp { [haspSpelling]() {} }`
--- put `haspSpelling` in `own_key` and NOT in `member_value` — the shadow of a
--- member the lookup does not offer. A subclass could hide an inherited method
--- under a name no object ever has. Measured on the site at the end of
--- shapes.ts.txt: one row before, none after.
--- ...and it LEADS WITH THE KEY for the reason rules/js-callgraph.rofl states at
--- `obj_member_fn`: `key_name` is derived where `ast_name` was an EDB, so this
--- body re-ran its leading literal in every round the key relation grew.
+-- Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
+-- than a union: a subclass declaring `hold` answers with its own. `own_key`
+-- reads the class body only, so the negation is stratified; it leads with
+-- `key_name` because that relation is derived and a leading kind scan re-ran
+-- every round. The negation is written last: until 2026-09-05 the evaluator
+-- read it with `Key` unbound as "no own key at all"; the kernel now defers a
+-- negation until its variables are bound, and the order is kept for the reader.
 own_key[flow](CD, Key)         :- key_name[code](K, Key),
                                   ast_child[code](M, key, 0, K),
                                   ast_node[code](M, class_method, _, _),
                                   ast_child[code](B, body, _, M),
                                   ast_child[code](CD, body, 0, B), obj_like[flow](CD).
---
--- THE NEGATION GOES LAST, AND THAT IS NOT STYLE. Written with `not own_key`
--- BEFORE the literal that binds `Key`, this rule silently under-derives: the
--- chain Cask -> Keg -> Barrel stops one level short, because `Cask` declares a
--- `constructor` and the negation, evaluated with `Key` still unbound, reads as
--- "Cask has no own key AT ALL". Isolated to ten lines: the same rule with the
--- two literals swapped answers `b c k` one way and `b k` the other, over
--- identical facts. `whynot` reports NO FAILING PREMISE for the missing row —
--- it binds the goal's arguments first, so it evaluates the negation with `Key`
--- bound and disagrees with the evaluator. Recorded as a kernel finding.
---
--- FIXED IN THE KERNEL 2026-09-05. `Evaluation.evalOrder` defers a negative
--- literal to the earliest point where every variable in it is bound, so the two
--- spellings above are one program again and mutant 22 in
--- test/js-callgraph.test.ts - which existed to STOP KILLING on this day - now
--- asserts they agree edge for edge. THE ORDER BELOW IS KEPT AS WRITTEN
--- ANYWAY: it is the order a reader follows, and after 2026-09-05 it is also the
--- order the cost work chose. What changed is that it is no longer LOAD-BEARING,
--- and a rule written the other way would answer the same.
 member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
                                   member_value[flow](SD, Key, V),
                                   not own_key[flow](CD, Key).
 
--- THE KEY AN EXPRESSION SELECTS. Static and computed collapse here for the same
--- reason they collapsed in the call graph: `o.pick` and `o[k]` differ only in
--- where the text is, and `may_be_lit` is what closes the distance. A key nobody
--- can value reaches no row, which is the refusal arriving as an absence.
+-- The key an expression selects. Static and computed collapse here:
+-- `may_be_lit` closes the distance for `o[k]`.
 member_kind_v(member_expression).
 member_kind_v(optional_member_expression).
 edb(member_kind_v).
@@ -966,51 +463,25 @@ selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, compute
 selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, true),
                                ast_child[code](N, property, 0, P), may_be_lit[flow](P, Key).
 
--- ENTRY 6 — a member expression may be whatever the member it selects may be.
--- RECURSIVE THROUGH may_be_node: `deep.layer.dig` is `.dig` in whatever
--- `deep.layer` may be, and `deep.layer` is `.layer` in whatever `deep` may be.
---
--- AND THE RECEIVER DECIDES WHICH HALF OF A CLASS IT CAN SEE, added 2026-09-05.
--- `Vat.poured()` and `new Vat().tapped()` are both TypeErrors at runtime and
--- both resolved here, because `new Vat()` and the name `Vat` reach the SAME
--- class node and `member_value` returns the whole body. The fixture that shows
--- it was written first and the two false edges appeared by name in the
--- over-approximation list — `useMethodOnClass -> poured` and
--- `useStaticOnInstance -> tapped` — which is the only reason this is a fix
--- rather than a guess.
---
--- THE FACT WAS ALWAYS THERE. scanners/js_ast.ts emits `ast_attr(M, static,
--- true|false)` for every class method and not one rule had ever read it. Same
--- shape as the flags the census keeps finding: information on the store that
--- nothing consumes cannot go red, so its absence is unobservable.
+-- The receiver decides which half of a class it sees: `Vat.poured()` and
+-- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
+-- attribute — emitted for every method, read by nothing — was read. An object
+-- literal's members carry no `static`, so they get `member_plain`; so does a
+-- module namespace.
 class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M),
                                          ast_attr[code](M, static, true).
 class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
                                          ast_attr[code](M, static, false).
--- an object literal's members carry no `static` attribute at all, so neither of
--- the two above reaches them and they need their own row rather than a negation
 member_plain[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  member_value[flow](O, Key, V).
--- ...AND A MODULE NAMESPACE IS PLAIN IN EXACTLY THIS SENSE, 2026-09-07. It has
--- no `static` attribute on anything and no prototype half, so the two class
--- arms cannot reach it and the object-literal arm is the one it belongs in.
--- Measured, not assumed: without this row `alphaNs.crossed(n)` resolves to
--- nothing even though `member_value` names the export, because all three
--- lookups guard their receiver and a `program` node passes none of the guards.
 member_plain[flow](P, Key, V) :- module_object[flow](P, _),
                                  member_value[flow](P, Key, V).
 
--- WHICH ROLE THE RECEIVER IS IN, syntactically and narrowly: a bare name that
--- IS a class name in this file denotes the CLASS OBJECT; anything else that
--- reaches a class node is an instance of it. DECLARED LIMITATION: `const A =
--- Vat; A.tapped()` reads as an instance and loses the static. Widening it needs
--- the value layer to carry the two roles apart rather than the syntax, which is
--- a bigger change than the defect being fixed.
+-- Which role the receiver is in, syntactically: a bare name that IS a class
+-- name denotes the class object; anything else reaching a class node is an
+-- instance. `const A = Vat; A.tapped()` therefore loses the static — declared.
 class_receiver[flow](E) :- class_named[flow](_, Name, File), ident_in[code](E, Name, File).
 
--- THE THREE LOOKUPS. The negation goes LAST, for the reason spelled out over
--- the prototype chain above: with `O` still unbound it reads as "no receiver
--- anywhere is a class", and the rule silently derives nothing.
 may_be_node[flow](N, V2) :- member_node_v[flow](N), ast_child[code](N, object, 0, O),
                             class_receiver[flow](O),
                             may_be_node[flow](O, Obj), selects[flow](N, Key),
@@ -1026,59 +497,34 @@ may_be_lit[flow](N, L)   :- member_node_v[flow](N), ast_child[code](N, object, 0
                             may_be_node[flow](O, Obj), selects[flow](N, Key),
                             member_value[flow](Obj, Key, V), may_be_lit[flow](V, L).
 
--- A METHOD IS A VALUE. `member_value` names the method node, and a method is
--- not in `node_value_kind` because a method is not an expression — so without
--- this it would be a member with no value and `o.m` would evaluate to nothing.
+-- A method is a value; a declared function is reached by its name with no
+-- declarator.
 may_be_node[flow](M, M) :- ast_node[code](M, object_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, class_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _, _).
 
--- ENTRY 6b — A FUNCTION DECLARATION IS REACHED BY ITS NAME. `function f(){}`
--- binds `f` without a declarator, so entry 3 — which reads an initialiser —
--- cannot see it, and every name of a declared function evaluated to nothing.
--- Found by a sequence: `(0, curried)(n)` reaches `curried` and stopped there.
--- DUPLICATION DECLARED: `fn_binding` in rules/js-callgraph.rofl says the same
--- thing for the call graph's own tier 1. Same class as `param_bind`, and it
--- retires the same way — by that tier going through the value question.
 may_be_node[flow](E, F) :- ast_node[code](F, function_declaration, File, _),
                            ast_child[code](F, id, 0, I), ast_name[code](I, Name),
                            ident_in[code](E, Name, File).
 
--- ENTRY 7 — an object property IS its value.
 may_be_node[flow](P, N) :- ast_node[code](P, object_property, _, _),
                            ast_child[code](P, value, 0, X), may_be_node[flow](X, N).
 may_be_lit[flow](P, V)  :- ast_node[code](P, object_property, _, _),
                            ast_child[code](P, value, 0, X), may_be_lit[flow](X, V).
 
--- ENTRY 8 — `this`, AND WHICH FUNCTION BINDS IT.
---
--- WHAT THIS REPLACED, because the correction is the content: the first version
--- read `anywhere under the method`, and said so — a declared over-approximation
--- with the note that no corpus site exercised it. That note was the defect. An
--- ordinary nested `function () {}` REBINDS `this`; an arrow does not. Under the
--- old premise a `this` inside a nested function or inside an object literal's
--- own method was claimed for the enclosing CLASS, and the corpus contained no
--- such site to say so — the same shape as every other blindness this loop has
--- found by writing the fixture first.
---
--- THE SCOPE QUESTION, EXACTLY: `this` is not a lexical binder, but WHICH
--- construct binds it is decided lexically, and the answer is the nearest
--- enclosing function that is not an arrow. That is why this paragraph is the
--- last cell `w_scope_binding` owned: `this_expression x callgraph` could not be
--- closed while the receiver could be attributed to a function that does not
--- bind it.
+-- =========================================================================
+-- 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
+-- ordinary nested function rebinds it), by a field initialiser (the instance)
+-- and by a static block (the class); a private method binds it too. `this_over`
+-- binds T first: a handful of nodes, then their ancestors.
 edb(this_binds_kind).
 this_binds_kind(function_declaration).
 this_binds_kind(function_expression).
 this_binds_kind(object_method).
 this_binds_kind(class_method).
 this_binds_kind(class_private_method).
--- NOT arrow_function_expression, and that ABSENCE is the whole rule.
 
 this_binder[flow](F)    :- ast_node[code](F, K, _, _), this_binds_kind(K).
--- ORDERED FOR COST: `this_expression` binds T first (a handful of nodes), then
--- `ast_within` with the CONTAINED node bound hands back that node's ancestors
--- rather than every function's contents.
 this_over[flow](F, T)   :- ast_node[code](T, this_expression, _, _),
                            ast_within[code](F, T), this_binder[flow](F).
 this_nearer[flow](F, T) :- this_over[flow](F, T), this_over[flow](G, T),
@@ -1090,55 +536,16 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _, _).
 may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
 
--- ===========================================================================
--- ES2022 CLASS SYNTAX AT THE VALUE LAYER, 2026-09-08 — queue item
--- w_class_fields. Five kinds: `class_property`, `class_private_property`,
--- `class_private_method`, `private_name`, `static_block`.
+-- =========================================================================
+-- 10. ES2022 CLASS SYNTAX
 --
--- MEASURED BEFORE A LINE OF THIS WAS WRITTEN, with the fixture in and no rule:
--- `member_value` on the fixture's class answered `["value"]` — the one
--- `class_method` — and nothing else; `own_key` the same; `selects[flow]` on
--- every one of the six private member reads answered NOTHING; `fn_name` on both
--- `class_private_method` nodes was empty; and the two calls in `value` came back
--- as `unresolved_call ... s_member_on_this`. So the model was SILENT about all
--- five, which is the safe direction — except for one row, and that one is in
--- section 3 below.
-
--- ---------------------------------------------------------------------------
--- 1. A FIELD IS A MEMBER. `class_property` is to a class what `object_property`
---    is to an object literal, and the two are not alike in the language for one
---    reason this model must carry: a field's initialiser is evaluated ONCE PER
---    CONSTRUCTION rather than once. That is a control-flow fact and it lives in
---    rules/js-controlflow.rofl; here a field is a member holding a value.
---
--- THE `static` ATTRIBUTE IS READ OFF THE FIELD AND NOT OFF ITS VALUE, which is
--- why `field_of` carries the property node P beside the value V. The existing
--- `class_member_static`/`class_member_proto` arms read `ast_attr(M, static, _)`
--- on whatever `member_value` returned, and for a method that IS the member —
--- for a field it is the initialiser expression, which carries no such flag. So
--- the two lookup halves need their own arms or a class field would be visible
--- through neither receiver.
+-- A field is a member holding its initialiser. The `static` flag sits on the
+-- PROPERTY node, not on the value, so fields need their own receiver arms and
+-- an inherited field needs `inherited_field` (a method carries its own flag
+-- through `super_of`). An auto-accessor is a field on this layer's question. A
+-- field with no initialiser is no row: the layer has no `undefined`.
 edb(class_field_kind).
 class_field_kind(class_property).
--- AN AUTO-ACCESSOR IS A FIELD WITH A PAIR OF SYNTHESISED FUNCTIONS IN FRONT OF
--- IT, 2026-09-08 — queue item w_decorator_replaces_its_target (62). `accessor
--- sling = slung` declares a private backing slot, a getter that reads it and a
--- setter that writes it, and on the only question THIS layer asks — what does
--- `o.sling` evaluate to — the three collapse into one answer: the initialiser,
--- exactly as for a plain field. So it is a ROW here rather than a rule, and the
--- `static` flag it carries decides the receiver half the same way.
---
--- IT WAS NOT A RULE THAT WAS MISSING. Measured before this row, over a corpus
--- that had held `accessor slot = 4` since decorators landed: `member_value` had
--- no `slot` key, `own_key` had none, and the kind's two open cells were open
--- because the corpus had a DECLARATION AND NO READ. The site came first —
--- `Thimble.sling` holds a function and `hauls` calls it — and then this row.
---
--- WHAT IT DOES NOT SAY: that reading `o.sling` transfers control. It does, into
--- a getter the LANGUAGE wrote, and `ignored(js, class_accessor_property,
--- controlflow, a_both_accessors_are_synthesised)` is that verdict — a
--- `class_accessor_property` carries no `kind` attribute, so `accessor_of` can
--- never reach one and this row cannot manufacture an accessor call by accident.
 class_field_kind(class_accessor_property).
 
 field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
@@ -1150,39 +557,11 @@ member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).
 own_key[flow](CD, Key)         :- field_of[flow](CD, Key, _, _).
 class_member_static[flow](CD, Key, V) :- field_of[flow](CD, Key, P, V),
                                          ast_attr[code](P, static, true).
--- `proto` IS THE WRONG WORD FOR A FIELD AND THE RIGHT RELATION. An instance
--- field is an OWN property of the instance, not a prototype property; what this
--- relation is consumed for is "visible through an instance receiver", and on
--- that question a field and a prototype method answer the same.
 class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
                                          ast_attr[code](P, static, false).
 
--- AND A SUBCLASS INHERITS THEM. `member_value` already walks `super_of` for a
--- METHOD, and the two receiver halves get it for free there because the method
--- node carries its own `static` flag — a field's flag is on the property node,
--- which the inherited row does not carry, so an inherited field was reachable
--- through NO receiver until these two arms. Both are true of the language:
--- `new Doubloon().strike` exists because the base constructor runs Coin's
--- initialisers on the subclass instance, and `Doubloon.forge` because a class's
--- prototype is its parent.
---
--- FOUND BY A MUTANT, not by reading: deleting `member_value :- field_of` moved
--- NOT ONE ROW, because everything downstream read `field_of` directly. An arm
--- whose deletion changes nothing is decoration, and the fix was a site — a
--- subclass — which then needed these two.
---
--- `not own_key` IS SHADOWING and goes LAST for the reason the method arm above
--- spells out: with `Key` unbound the negation reads as "the subclass has no own
--- key at all". The negation is stratified — `own_key` reads the class body and
--- nothing here.
---
--- IT WALKS FIELDS AND NOT MEMBERS, and the first draft did the opposite and was
--- CAUGHT BY SOMEBODY ELSE'S MUTANT within one run: written over
--- `class_member_proto[flow](SD, Key, V)` it inherited METHODS too, and `mutant
--- 21 — a class stops inheriting its ancestors' methods` in
--- test/js-callgraph.test.ts stopped killing, because a second path to
--- `useSuper -> hold` had appeared. A rule that answers an existing question a
--- second way silently disarms the mutant that guards it.
+-- Walks FIELDS and not members: written over `class_member_proto` it inherited
+-- methods a second way and silently disarmed the mutant guarding the method arm.
 inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD), field_of[flow](SD, Key, P, V),
                                          not own_key[flow](CD, Key).
 inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD),
@@ -1193,31 +572,12 @@ class_member_proto[flow](CD, Key, V)  :- inherited_field[flow](CD, Key, P, V),
 class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, P, V),
                                          ast_attr[code](P, static, true).
 
--- A FIELD WITH NO INITIALISER IS NOT A ROW HERE, and `blank;` in the fixture is
--- the site that says so rather than a sentence: babel emits the property with no
--- `value` child, so `field_of` derives nothing for it. The member exists at run
--- time and holds `undefined`, and this layer has no `undefined` to give it —
--- naming the member with no value would make `member_value` mean two things.
-
--- ---------------------------------------------------------------------------
--- 2. A PRIVATE NAME IS LEXICAL, NOT A LOOKUP — and that is the whole item.
---
--- `this.#edge` does not ask the receiver what `#edge` is. A private name is
--- bound by the class body that DECLARES it, at parse time, and cannot be
--- inherited, deleted, computed or reached from outside that body. So the rules
--- below never touch `may_be_node` on the receiver, and they are EXACT where the
--- ordinary member lookup is a may-set.
---
--- IT IS ALSO A DIFFERENT NAMESPACE, and the fixture holds both proofs:
---   * `rim` and `#rim` are two members of ONE class in the fixture. A model
---     that read a private key as the bare identifier under its `private_name`
---     would answer both for `this.#rim(n)`.
---   * `{ '#edge': ... }` is an ordinary string key and a legal one — measured by
---     running it. A model that spelled the private key `#edge` would answer that
---     object for a private read and the class for `plated['#edge']`.
--- That is why `key_name[code]` gets NO arm for `private_name` and `selects`
--- stays empty on a private member read: the private half is a separate relation
--- from top to bottom, and the two namespaces never meet.
+-- A private name is LEXICAL, not a lookup: bound by the declaring class body,
+-- never inherited, computed or reached from outside, so these rules never ask
+-- the receiver and are exact. It is a separate namespace — `rim` and `#rim` are
+-- two members of one class, `{ '#edge': … }` is a legal string key — so
+-- `key_name` gets no arm for `private_name` and `selects` stays empty on a
+-- private read. `private_inner` is the shadowing test for nested classes.
 private_key[code](P, Name) :- ast_node[code](P, private_name, _, _),
                               ast_child[code](P, id, 0, I), ast_name[code](I, Name).
 
@@ -1233,12 +593,6 @@ private_ref[code](N, Name)        :- member_node_v[flow](N),
                                      ast_child[code](N, property, 0, P),
                                      private_key[code](P, Name).
 
--- THE NEAREST DECLARING CLASS, and the fixture has the nesting that needs it:
--- `Outer` declares `#tag` and the `Inner` class inside `Outer.make` declares its
--- own. Running it answers `inner/outer`, so a rule that took every enclosing
--- class would be wrong about one of the two reads. `private_inner` is the
--- shadowing test and the negation is stratified — it reads `private_member` and
--- `private_ref`, neither of which reads `private_binds`.
 private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](CD, Name, _),
                               ast_within[code](CD, N),
                               private_member[code](CD2, Name, _),
@@ -1246,9 +600,6 @@ private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](C
 private_binds[code](N, M)  :- private_ref[code](N, Name), private_member[code](CD, Name, M),
                               ast_within[code](CD, N), not private_inner[code](N, CD).
 
--- AND WHAT A PRIVATE READ EVALUATES TO. A private method is its own value, the
--- same way `may_be_node(M, M)` above says a `class_method` is; a private field
--- evaluates to its initialiser.
 may_be_node[flow](M, M)  :- ast_node[code](M, class_private_method, _, _).
 may_be_node[flow](N, M)  :- private_binds[code](N, M),
                             ast_node[code](M, class_private_method, _, _).
@@ -1259,23 +610,10 @@ may_be_lit[flow](N, L)   :- private_binds[code](N, M),
                             ast_node[code](M, class_private_property, _, _),
                             ast_child[code](M, value, 0, V), may_be_lit[flow](V, L).
 
--- ---------------------------------------------------------------------------
--- 3. WHICH CONSTRUCTS BIND `this`, and three of these five kinds do.
---
--- `this_binds_kind(class_private_method)` WAS ALREADY DECLARED above and
--- `class_method_of` did not read it, so `this` inside a private method reached
--- no class and `this.#edge` inside `#rim` had no receiver. The row existed and
--- the consumer did not — the shape this repository keeps finding on its own
--- store, and the one place in these five kinds where the model was INCOMPLETE
--- about something it had already declared.
 class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                 ast_child[code](B, body, _, M),
                                 ast_node[code](M, class_private_method, _, _).
 
--- A FIELD INITIALISER BINDS `this` TO THE INSTANCE and a static block binds it
--- to the CLASS — measured by running the shape: `this === Coin` inside the
--- static block. Neither is a function and both are `this` binders, which is why
--- `this_binds_kind` is not the same list as `fn_kind`.
 this_binds_kind(class_property).
 this_binds_kind(class_private_property).
 this_binds_kind(static_block).
@@ -1289,36 +627,17 @@ static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0
                                  ast_child[code](B, body, _, SB),
                                  ast_node[code](SB, static_block, _, _).
 may_be_node[flow](T, CD)      :- static_block_of[flow](CD, SB), this_host[flow](SB, T).
--- ...AND IT IS THE CLASS OBJECT, NOT AN INSTANCE. `class_receiver[flow]` decides
--- the two roles syntactically — a bare name that is a class name in this file —
--- and a `this_expression` is not a name, so without this row `this.mintMark`
--- inside the static block would be looked up through `class_member_proto` and
--- miss a static field. Measured on the fixture, where `mintMark` is static and
--- assigned from the static block.
+
+-- `this` in a static block is the CLASS object and must read the static half.
 class_receiver[flow](T)       :- static_block_of[flow](_, SB), this_host[flow](SB, T).
 
--- ENTRY 9 — AN IMPORTED NAME (w_cg_module_boundary).
---
--- WHAT THE QUEUE ITEM SAID: "a call graph that stops at the file: an imported
--- name resolves to nothing". True, and MEASURED FIRST, because seven notes in a
--- row have been wrong about what was missing. Three things came back:
---
---   * the corpus had exactly TWO import declarations, both `./trace.mjs`, and
---     that module is deliberately NOT scanned — it is the instrument. So the
---     boundary had no site where crossing it was possible at all, and 152 of
---     the 167 unresolved call sites are one imported name, `trace`, used once
---     per instrumented function.
---   * `rules/js-modules.rofl` loaded into the call-graph world derives NOTHING
---     here — `resolved_import` 0, `dangling_import` 0, and `calls_in` and
---     `unresolved_call` byte-identical with and without it. That layer resolves
---     against HOST facts about the disk, which this corpus does not supply.
---   * the scanner already carries every part of the binding: an
---     `import_specifier` with an `imported` and a `local` child, and the
---     declaration's `source` value.
---
--- SO THE ANSWER IS A VALUE FACT, not a call-graph mechanism: an imported name
--- MAY BE the function the other module exports under that name, and the call
--- graph reads it through `may_be_node` like every other receiver.
+-- =========================================================================
+-- 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
+-- other module exports under it. Specifier resolution here is what SYNTAX can
+-- do — a single-segment relative specifier against the corpus's basenames;
+-- the rest is the modules layer's, which needs the disk. `str_pre(S, Sep)`
+-- takes a separator, not a length: the first draft passed `2`, the kernel
+-- refused it with `hole(..., str_type_error)`, and no world read the hole.
 imports_name[code](Local, Name, Src, File) :-
     ast_node[code](D, import_declaration, File, _),
     ast_child[code](D, source, 0, S), ast_value[code](S, Src),
@@ -1326,31 +645,15 @@ imports_name[code](Local, Name, Src, File) :-
     ast_child[code](Sp, local, 0, L), ast_name[code](L, Local),
     ast_child[code](Sp, imported, 0, I), ast_name[code](I, Name).
 
--- ONE ROW PER FILE, from the `program` node. `ast_node[code](_, _, File, _)`
--- would enumerate a hundred thousand facts to learn three strings.
+-- one row per file, from `program`; `ast_node(_, _, File, _)` would enumerate
+-- the corpus to learn three strings
 corpus_file[code](File) :- ast_node[code](_, program, File, _).
 
--- WHERE A SPECIFIER POINTS, whether it is an IMPORT or a RE-EXPORT. Both carry
--- a `source` and neither cares which it is at this step; separating them here
--- would be two copies of one sentence.
 module_source[code](N, Src, File) :- ast_node[code](N, import_declaration, File, _),
                                      ast_child[code](N, source, 0, S), ast_value[code](S, Src).
 module_source[code](N, Src, File) :- ast_node[code](N, export_all_declaration, File, _),
                                      ast_child[code](N, source, 0, S), ast_value[code](S, Src).
 
--- WHAT SYNTAX CAN DO OF MODULE RESOLUTION, AND NO MORE. A relative specifier
--- with a single path segment names a file by its basename, and the host has
--- already told the model each file's logical name. `./sub/x.mjs` has three
--- segments and is not answered here; a bare specifier is a package and is not
--- a file at all. Both are the modules layer's question and it needs facts about
--- the DISK that no AST can see — `a_no_ast_can_see_the_disk` is already the
--- reason atom for exactly that.
---
--- `str_pre(S, Sep)` IS THE PART BEFORE THE FIRST SEPARATOR, not the first N
--- characters, and the first draft here passed `2` where a separator belongs.
--- The kernel refused it EXACTLY — `hole($rule(...), str_type_error)`, naming
--- the rule — and the rule stayed silently empty, because no world the model is
--- measured in read `hole`. It does now.
 module_basename[code](Src, Base) :- module_source[code](_, Src, _),
                                     Head is str_pre(Src, "/"), Head = ".",
                                     N is str_segs(Src, "/"), N = 2,
@@ -1358,61 +661,25 @@ module_basename[code](Src, Base) :- module_source[code](_, Src, _),
 import_target[code](Src, File) :- module_basename[code](Src, Base),
                                   corpus_file[code](File), File = Base.
 
--- WHAT A MODULE EXPORTS UNDER A NAME. `export function f()` only — a re-export
--- and a default are different questions and neither is claimed here.
 exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File, _),
                                      ast_child[code](E, declaration, 0, F),
                                      fn_kind_v(K), ast_node[code](F, K, _, _),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 
--- ...AND A RE-EXPORT IS THE SAME QUESTION ASKED OF ANOTHER MODULE. `export *
--- from './x'` makes every NAME x exports an export of this module too — and not
--- x's default, which `export *` deliberately leaves behind. The recursion is
--- positive and is what makes a chain of re-exports work at any depth.
---
--- THE KIND GUARD IS NOT REDUNDANT WITH `module_source`, and this is the price
--- of sharing that relation between the two forms: it holds of an IMPORT too, so
--- without the first literal every `import { x } from './y'` would make the
--- importing file re-export everything y exports. The join is on the same node,
--- so the two literals together say "this source belongs to an export-all".
+-- `export * from` re-exports every NAME (not the default), recursively. The
+-- kind guard is not redundant with `module_source`, which holds of imports too.
 exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
                                      module_source[code](E, Src, File),
                                      import_target[code](Src, Target),
                                      exports_name[code](F, Name, Target).
 
--- ...AND THE FORM WHOSE EXTERNAL NAME IS NOT ITS INTERNAL ONE
--- (w_export_specifier_forms, 2026-09-08). `export { a as b }` is an
--- ExportNamedDeclaration with NO `declaration` child and a `specifiers` list,
--- so the first arm above — which reads `declaration` — derives NOTHING for it.
---
--- MEASURED BEFORE THE RULE, because the item's brief allowed either answer and
--- the difference matters: on a two-file probe with `export { hidden as shown }`
--- beside `export function plain`, `exports_name` returned exactly ONE row,
--- `plain`, and the cross-file call `usesShown -> hidden` was absent from
--- `calls_in` with its site reported as an unresolved `s_identifier`. So the
--- model was SILENT rather than wrong-named. It did not believe the module
--- exported `hidden`; it believed the module exported nothing.
---
--- `may_be_node` ON THE `local` CHILD IS THE WHOLE RESOLUTION, and no new
--- mechanism was needed for the second time in this loop: entry 6 already says
--- an identifier naming a declared function IN THIS FILE evaluates to that
--- function, and the specifier's `local` child is exactly such an identifier.
--- Reading `exported` here instead would name the function `b` denotes, which
--- outside this file is nothing.
---
--- A SPECIFIER UNDER A DECLARATION WITH A `source` IS A DIFFERENT SENTENCE.
--- `export { q } from './d'` re-exports someone ELSE'S binding: its `local`
--- child is a name in the OTHER module and there is no local function for it
--- here. Without this negation a `local` that happened to collide with a
--- function of this file would be re-exported instead — the file-scope defect
--- delta.mjs exists to catch, arriving through a different door.
+-- `export { a as b }`: the `local` child is an identifier of this file and
+-- resolves through `may_be_node`; under a declaration WITH a `source` it names
+-- a binding of the OTHER module and must not resolve here. Erasure has two
+-- markers, on the declaration and on the specifier, neither implying the other.
 reexport_decl[code](E) :- ast_node[code](E, export_named_declaration, _, _),
                           ast_child[code](E, source, 0, _).
 
--- ERASURE, THE SAME TWO MARKERS AN IMPORT CARRIES AND NEITHER IMPLYING THE
--- OTHER: `export type { X }` marks the DECLARATION and leaves the specifier
--- saying "value"; `export { type X }` marks the SPECIFIER. A type-only export
--- names nothing at runtime, so it must not reach `may_be_node`.
 export_list_erased[code](E)  :- ast_attr[code](E, export_kind, "type").
 export_item_erased[code](Sp) :- ast_attr[code](Sp, export_kind, "type").
 
@@ -1427,19 +694,8 @@ export_local[code](L, Ext, File) :-
 exports_name[code](F, Ext, File) :- export_local[code](L, Ext, File),
                                     may_be_node[flow](L, F).
 
--- ...AND THE NAMESPACE RE-EXPORT, which exports a MODULE rather than a name in
--- it. `export * as ns from './m'` is an ExportNamedDeclaration whose one
--- specifier is an ExportNamespaceSpecifier — measured from the scanner, not
--- recalled — with the source on the DECLARATION, an `exported` child on the
--- specifier and NO `local` child anywhere: there is no local name for `* as ns`
--- at all.
---
--- WHAT IT EXPORTS UNDER THAT NAME IS THE OTHER MODULE'S OBJECT, and that node
--- already has a name here: `module_object` is the target file's `program`. So
--- an importer's `ns.f()` is an ordinary member lookup through `member_value`
--- over the exports, exactly as a namespace IMPORT is, and the call graph needs
--- nothing new — the third time in this loop the module boundary has cost a
--- value fact and no mechanism.
+-- `export * as ns from` exports the other module's OBJECT — its `program` node —
+-- so `ns.f()` is an ordinary member lookup.
 module_source[code](N, Src, File) :- ast_node[code](N, export_named_declaration, File, _),
                                      ast_child[code](N, source, 0, S), ast_value[code](S, Src).
 
@@ -1459,16 +715,8 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, Src, File),
                            exports_name[code](F, Name, Target),
                            ident_in[code](E, Local, File).
 
--- A NAMESPACE IMPORT BINDS THE MODULE ITSELF, and the module object is a node
--- the store already has: the other file's `program`. Then `alphaNs.crossed(n)`
--- is an ordinary member lookup on it — `member_value` over the exports — and
--- the call graph needs nothing new for the second time in two iterations.
---
--- NEITHER SPECIFIER CARRIES AN `imported` CHILD, which is why `imports_name`
--- above correctly does not fire for them: a namespace binds no single name, and
--- a default's imported name is implicit. Measured from the scanner's output
--- rather than assumed — and the first probe that asked hid the answer behind
--- its own filter, which is the third time in this loop a probe has done that.
+-- A namespace import binds the module object. A default import binds the one
+-- unnamed export, whose syntactic name is NOT the importer's name.
 imports_ns[code](Local, Src, File) :-
     ast_node[code](D, import_declaration, File, _),
     ast_child[code](D, source, 0, S), ast_value[code](S, Src),
@@ -1483,10 +731,6 @@ may_be_node[flow](E, P) :- imports_ns[code](Local, Src, File), import_target[cod
 member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
--- A DEFAULT IMPORT BINDS THE ONE UNNAMED EXPORT. `export default function f()`
--- carries a name in the syntax and it is NOT the name the importer uses, which
--- is the whole reason this is a separate rule rather than a case of the named
--- one: `import adefault from './alpha.mjs'` would work spelled any other way.
 imports_default[code](Local, Src, File) :-
     ast_node[code](D, import_declaration, File, _),
     ast_child[code](D, source, 0, S), ast_value[code](S, Src),
@@ -1503,126 +747,50 @@ may_be_node[flow](E, F) :- imports_default[code](Local, Src, File),
                            exports_default[code](F, Target),
                            ident_in[code](E, Local, File).
 
--- AND THE OTHER HALF IS A FRONTIER WITH A NAME, not a silence: an import whose
--- module this corpus does not contain. `trace` is the one row, and it is one
--- row rather than 152 because the QUESTION is about the module, not about each
--- use of the name.
+-- The frontier: a module this corpus does not contain, one row per module.
 import_outside_corpus[audit](Src, File) :- module_source[code](_, Src, File),
                                            not import_target[code](Src, _).
 
--- ENTRY 8b — `this` inside an OBJECT LITERAL'S OWN METHOD is that object.
---
--- The half the old premise could not have: an object method binds `this` to its
--- object, and nothing here said so, so a `this` in an object method nested in a
--- class method answered with the CLASS. Narrowing entry 8 without adding this
--- would have turned a wrong answer into no answer at all.
+-- `this` in an object literal's own method is that object.
 obj_method_of[flow](O, M) :- ast_node[code](O, object_expression, _, _),
                              ast_child[code](O, properties, _, M),
                              ast_node[code](M, object_method, _, _).
 may_be_node[flow](T, O) :- obj_method_of[flow](O, M), this_host[flow](M, T).
 
--- ===========================================================================
--- CONSTRUCTION — the rest of w_df_function_forms
+-- =========================================================================
+-- 12. CONSTRUCTION
 --
--- `new C()` and the name `C` both reach the class node, and the model does NOT
--- tell an instance from its class. DECLARED, because the difference is real:
--- a static method belongs to the class and an ordinary method to an instance,
--- so this conflation would accept `inst.staticOne()` and `C.instanceOne()`.
--- It is not fixed here for a reason this repository keeps running into — the
--- corpus contains no site that could show the difference, so a split would be
--- a distinction no gate can see. It is queued as `w_df_instance_vs_class`
--- rather than silently done or silently ignored.
+-- An instance is represented by its class: enough to answer `.m`, not enough
+-- to refuse a static (`w_df_instance_vs_class`). `class_named` is WHICH NAME
+-- REACHES THIS CLASS in this file — the `id`, and for a class expression its
+-- binding too (`const W = class Hoist {}` is reached by both; V8 reports
+-- `Hoist`). The binding arm is file-scoped through `ident_in`, unlike
+-- `sees_binder`: declared.
 class_named[flow](CD, Name, File) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
                                      ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
 
--- ...AND A CLASS EXPRESSION ANSWERS TO ITS BINDING, NOT TO ITS OWN `id`
--- (w_class_expression, 2026-09-08). This relation is not `.name`: every one of
--- its four consumers — the two `may_be_node` arms below, `class_receiver` and
--- `super_of` — asks WHICH NAME REACHES THIS CLASS IN THIS FILE, and for a
--- declaration the `id` is that name only because a declaration's id is also its
--- binding. A class expression separates the two: `const C = class {}` has no
--- `id` at all, and `const W = class Hoist {}` binds `W` on the outside while
--- `Hoist` is in scope only inside the class's own body.
---
--- MEASURED BEFORE THE RULE, with the control in the same file, which is the
--- only reason this is a fix rather than a guess: `new Declared().hold()`
--- resolved and `new (class {})().hold()` and `new (class Hoist {})().hold()`
--- resolved to NOTHING, both reported as unresolved `s_member_on_ident`. So the
--- model's opinion about `class_expression` — `obj_like` and `node_value_kind`
--- both name the kind — reached `member_value` and stopped one relation short of
--- anything that could USE it.
---
--- THE `id` ARM IS NOT REPLACED AND MUST NOT BE. A named class expression is
--- reached by BOTH names inside its own file, and `Hoist` is the one V8 reports:
--- measured on this engine, `const W = class Hoist {}` gives `W.name === "Hoist"`
--- and a `new W()` frame reads `Hoist`, while `const C = class {}` gives
--- `C.name === "C"`.
---
--- AND THE `id` ARM OVER-APPROXIMATES FOR THIS FORM, which is measured and left
--- standing rather than hidden. `class_named` is consumed through
--- `ident_in[code]`, which is FILE-scoped, while `sees_binder[code]` above is
--- scoped properly — so `Hoist` written in a function that is not the class's
--- own body reaches the class here and would reach nothing at run time. Probed:
--- a `function leak() { return Hoist; }` beside the class derives
--- `may_be_node(Hoist, <the class>)`. Narrowing it is the same widening
--- `class_receiver` already defers — the scope layer knows the answer and this
--- relation does not ask it — and it is recorded as a finding rather than
--- patched here, because a class expression is the first form where the two
--- disagree at all.
 class_named[flow](CD, Name, File) :- ast_node[code](CD, class_expression, File, _),
                                      ast_node[code](D, variable_declarator, File, _),
                                      ast_child[code](D, init, 0, CD),
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name).
 
--- the name of a class denotes the class
 may_be_node[flow](E, CD) :- class_named[flow](CD, Name, File),
                             ident_in[code](E, Name, File).
 
--- and so does an expression that constructs one. THE ABSTRACTION IS THE
--- CONFLATION ABOVE: an instance is represented by the class it came from,
--- which is exactly enough to answer `.m` and not enough to refuse a static.
 may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, File, _),
                             ast_child[code](E, callee, 0, CE), ast_name[code](CE, Name),
                             class_named[flow](CD, Name, File).
 
--- ---------------------------------------------------------------------------
--- `super` — the receiver that is a DIFFERENT class from the one you are in.
---
--- `class Sub extends Base { m() { return super.m() } }` calls Base's `m`, not
--- its own, and that is the whole content: `this` denotes the class you are in,
--- `super` denotes the one above. One relation and one entry, and the member
--- lookup that already exists does the rest.
---
--- SCOPE-BLIND LIKE ITS NEIGHBOURS: the superclass is found by NAME in the same
--- file, so a class extending an imported one reaches nothing. That is the same
--- boundary `class_named` already draws and it is not widened here.
+-- `super` denotes the class above, found by NAME in the same file, so a class
+-- extending an imported one reaches nothing.
 super_of[flow](CD, SD) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
                           ast_child[code](CD, super_class, 0, SC), ast_name[code](SC, Name),
                           class_named[flow](SD, Name, File).
 
--- ---------------------------------------------------------------------------
--- WHICH CONSTRUCTOR A CLASS ANSWERS WITH, and it is not always its own.
--- `class B extends A {}` has no constructor node at all — the language
--- synthesises one that forwards to A's — so a rule that looked only at B's own
--- body would say the chain ends there.
---
--- MEASURED BEFORE IT WAS WRITTEN, because the two constructions that reach a
--- constructor DO NOT AGREE and no reading of the spec would have told me which
--- shape to give this. With `class A { constructor(){} }`, `class B extends A {}`
--- and `class C extends B { constructor(){ super(); } }`, V8's own CallSite
--- frames report:
---
---     super() inside C   ->   C -> A        the synthesised B frame is SKIPPED
---     new Cask()         ->   Cask -> ...   the synthesised frame IS created,
---                                           and it is the CALLER
---
--- So the walk below is exactly right for `super()` and is deliberately NOT
--- wired into the `new` rule, which stays on the explicit constructor; the
--- caller a synthesised `new` frame should be attributed to is a separate
--- question with no node to point at, recorded as a finding and queued.
---
--- The negation is stratified: `has_own_ctor` reads `own_ctor`, which reads the
--- class body and nothing else, so it does not depend on `ctor_of`.
+-- A class with no constructor answers with its nearest ancestor's. Measured on
+-- V8: `super()` inside C reports `C -> A`, skipping the synthesised B frame.
+-- The `new` rule in js-callgraph deliberately does NOT use this walk: there V8
+-- creates the synthesised frame and makes it the caller.
 own_ctor[flow](CD, M)  :- class_method_of[flow](CD, M),
                           ast_attr[code](M, kind, "constructor").
 has_own_ctor[flow](CD) :- own_ctor[flow](CD, _).
@@ -1635,15 +803,13 @@ may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
                             class_method_of[flow](CD, M), ast_within[code](M, S),
                             super_of[flow](CD, SD).
 
--- ---------------------------------------------------------------------------
--- TWO MORE EXPRESSION FORMS, and the first one is the interesting one.
---
--- A SEQUENCE EVALUATES TO ITS LAST ELEMENT — `(a, b, c)` is `c`. "Last" is a
--- MAXIMUM over the index column, and this kernel has no aggregation, so it is
--- written the way a maximum is written here: as the absence of a later one.
--- The negation is stratified because `seq_later` does not depend on `seq_last`,
--- and the pair is worth reading as the general shape — `max` is `not exists a
--- bigger`, and it costs one extra relation rather than a language feature.
+-- =========================================================================
+-- 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
+-- the absence of a later one because the kernel has no aggregation. A
+-- conditional and a logical operator (`||`, `&&`, `??`) are both operands.
+-- `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
+-- promise constructed and awaited later reaches the Promise class, which no
+-- corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
 seq_later[flow](E, I) :- ast_node[code](E, sequence_expression, _, _),
                          ast_child[code](E, expressions, I, _),
                          ast_child[code](E, expressions, J, _), I < J.
@@ -1655,84 +821,41 @@ may_be_lit[flow](E, V)  :- ast_node[code](E, sequence_expression, _, _),
                            ast_child[code](E, expressions, I, X),
                            not seq_later[flow](E, I), may_be_lit[flow](X, V).
 
--- A CONDITIONAL MAY BE EITHER BRANCH, and this is the may-set earning its name:
--- `c ? f : g` is f OR g, both rows, and no flow sensitivity is needed to say so
--- because the relation was never claiming to know which. A must-analysis would
--- have to decide; this one does not have to.
 may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, consequent, 0, X), may_be_node[flow](X, N).
 may_be_node[flow](E, N) :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, alternate, 0, X), may_be_node[flow](X, N).
 
--- ...and the same for a literal, which the branch rules above did not have.
--- The asymmetry was invisible while no site needed it: `o[c ? "a" : "b"]()` is
--- a computed key whose two possible values are both known at parse time, and
--- without these two rows it reads as `s_computed_dynamic_key` — the one shape
--- allowed to spend `runtime_dependent`. A may-set that carries nodes and not
--- literals sends a decidable site to the irreducible verdict.
 may_be_lit[flow](E, V)  :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, consequent, 0, X), may_be_lit[flow](X, V).
 may_be_lit[flow](E, V)  :- ast_node[code](E, conditional_expression, _, _),
                            ast_child[code](E, alternate, 0, X), may_be_lit[flow](X, V).
 
--- ---------------------------------------------------------------------------
--- AWAIT IS TRANSPARENT TO THIS LAYER, and that is a claim about the MAY-SET
--- rather than a claim about promises. `await X` yields whatever the promise X
--- settles to, and this layer has no term for a promise at all — but the two
--- cases it can reach both come out right: `await v` on a plain value is `v`,
--- and `await f()` where `f` is an `async function` reaches f's returns, which
--- is exactly what `may_be_node` already gives a call. The case it is wrong
--- about — a promise CONSTRUCTED and awaited later — reaches the Promise class,
--- and nothing in a corpus this analyser is pointed at declares that, so the
--- over-approximation has nowhere to land. It is the sound direction: a may-set
--- that lost the value would report a smaller call graph and look correct.
 may_be_node[flow](E, N) :- ast_node[code](E, await_expression, _, _),
                            ast_child[code](E, argument, 0, X), may_be_node[flow](X, N).
 may_be_lit[flow](E, V)  :- ast_node[code](E, await_expression, _, _),
                            ast_child[code](E, argument, 0, X), may_be_lit[flow](X, V).
 
--- ---------------------------------------------------------------------------
--- WHAT A GENERATOR YIELDS, which is not what it returns. `returns[flow]` reads
--- `return_statement`; this reads `yield_expression`, and the two are different
--- facts about the same function — `for (const x of gen())` walks the YIELDS and
--- never touches the return value.
---
+-- =========================================================================
+-- 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
+-- walks the yields. The value a `yield` RECEIVES comes from the consumer's
+-- `.next(v)` — through `bound_to_call`, because `may_be_node` of a name bound
+-- to a call gives the call's RETURNS, the wrong object for a generator — and
+-- passes through `yield*`; the delegating expression itself is the inner
+-- generator's return. `selects(N, "next")`: the key is a string.
 yields[flow](F, E) :- ast_node[code](Y, yield_expression, _, _), nearest_v[flow](F, Y),
                       ast_child[code](Y, argument, 0, E).
 
--- ---------------------------------------------------------------------------
--- ...AND THE OTHER HALF, 2026-09-05: THE VALUE A GENERATOR RECEIVES.
---
--- `const sent = yield v` evaluates to whatever the CONSUMER passes to
--- `.next(sent)`. Every other edge in this layer runs from a definition
--- outwards; this one arrives from a call site into the middle of a suspended
--- body, which is why it was left out with a note rather than guessed at.
---
--- MEASURED AGAINST V8 BEFORE ANY OF IT WAS WRITTEN:
---   g.next(pickedA)        the yield evaluates to `pickedA`, and calling it works
---   yield* inner()         the sent value passes THROUGH to inner's own yield,
---                          and the delegating expression is inner's RETURN
---   for (x of gen())       never sends anything, so nothing arrives
---
--- WHICH CALL A NAME WAS BOUND TO, and it needs its own relation: `may_be_node`
--- of an identifier bound to a call gives that call's RETURNS, which for a
--- generator is the wrong object entirely — `const g = chooser()` makes `g` the
--- generator, not what `chooser` returns.
 bound_to_call[flow](E, C) :- ident_in[code](E, Name, File),
                              binder[code](_, Name, C, File),
                              ast_node[code](C, call_expression, _, _).
 
--- THE CONSUMER'S SIDE: `g.next(v)` where `g` is bound to a call of generator G.
 next_send[flow](G, V) :- call_site[code](C, _), callee_of[code](C, N),
-                         -- the KEY IS A STRING, not an atom: `selects` reads
-                         -- `ast_name`, and this cost a run to find out
                          selects[flow](N, "next"),
                          ast_child[code](N, object, 0, O), bound_to_call[flow](O, GC),
                          resolves[code](GC, G),
                          ast_child[code](C, arguments, 0, V).
 
--- DELEGATION PASSES IT THROUGH. `yield* inner()` inside G means a value sent to
--- G's `.next` reaches inner's yields — measured, not assumed.
 delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _, _),
                                  ast_attr[code](Y, delegate, true),
                                  nearest_v[flow](Outer, Y),
@@ -1740,24 +863,19 @@ delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _, _),
                                  resolves[code](A, Inner).
 next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, Inner).
 
--- ...and what a yield expression may then BE. Only a non-delegating one: the
--- value of `yield* inner()` is not what the consumer sent, it is what inner
--- RETURNED, which is the rule after this.
 may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
                            ast_node[code](Y, yield_expression, _, _),
                            ast_attr[code](Y, delegate, false),
                            may_be_node[flow](V, X).
 
--- THE DELEGATING EXPRESSION IS THE INNER GENERATOR'S RETURN VALUE, which is the
--- one place a generator's `return` is read at all: `for-of` walks the yields and
--- never touches it.
 may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _, _),
                            ast_attr[code](Y, delegate, true),
                            ast_child[code](Y, argument, 0, A), resolves[code](A, Inner),
                            returns[flow](Inner, E), may_be_node[flow](E, X).
 
--- ---------------------------------------------------------------------------
--- FOR-OF: the loop variable takes the elements of what is iterated.
+-- FOR-OF: the loop variable takes the elements. An array is a VALUE (through
+-- `may_be_node`); a generator is a CALL, read at the site, because its returns
+-- are not what for-of walks.
 for_of_src[flow](S, X)     :- ast_node[code](S, for_of_statement, _, _),
                               ast_child[code](S, right, 0, X).
 for_of_name[flow](S, Name) :- ast_node[code](S, for_of_statement, _, _),
@@ -1768,12 +886,6 @@ for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
                                 ast_child[code](S, body, 0, B), ast_within[code](B, U),
                                 ident[code](U, Name).
 
--- WHAT AN ITERABLE HANDS OUT, one element at a time. Two sources and they are
--- reached differently on purpose: an array is a VALUE, so the first rule goes
--- through `may_be_node` and covers both `for (x of [a, b])` and a variable
--- holding that array; a generator is a CALL, so the second reads the call site
--- directly — `may_be_node` of a call gives its RETURNS, and a generator's
--- return value is not what for-of walks.
 iter_elem[flow](X, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
                          ast_child[code](A, elements, _, E).
 iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
@@ -1783,18 +895,6 @@ may_be_node[flow](U, N) :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
 may_be_lit[flow](U, V)  :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
                            iter_elem[flow](X, E), may_be_lit[flow](E, V).
 
--- ---------------------------------------------------------------------------
--- A LOGICAL OPERATOR IS A CONDITIONAL WITH THE CONDITION SPELT AS AN OPERAND.
--- `a || b` is `a` when a is truthy and `b` otherwise; `a && b` is `a` when a is
--- falsy and `b` otherwise; `a ?? b` is `a` unless a is nullish. In all three
--- BOTH operands are possible values and neither is excluded by anything this
--- layer can see, so the may-set is the union — the same answer as a
--- conditional's two branches, and for the same reason.
---
--- Measured before it was written: `(box || other).get(n)` resolved to nothing,
--- and `(flag ? box : other).get(n)` resolved, on the same corpus, in the same
--- run. The two forms mean the same thing to a reader and one of them was
--- invisible.
 may_be_node[flow](E, N) :- ast_node[code](E, logical_expression, _, _),
                            ast_child[code](E, left, 0, X), may_be_node[flow](X, N).
 may_be_node[flow](E, N) :- ast_node[code](E, logical_expression, _, _),
@@ -1804,12 +904,6 @@ may_be_lit[flow](E, V)  :- ast_node[code](E, logical_expression, _, _),
 may_be_lit[flow](E, V)  :- ast_node[code](E, logical_expression, _, _),
                            ast_child[code](E, right, 0, X), may_be_lit[flow](X, V).
 
--- ---------------------------------------------------------------------------
--- AN ASSIGNMENT'S VALUE IS ITS RIGHT-HAND SIDE — and only for a PLAIN one.
--- `(x = o).m()` is `o.m()`; `(x += o).m()` is not, because the value is the sum
--- and this layer knows nothing about sums. The `operator` guard is the whole
--- difference and it is the same lesson the era layer paid for one commit ago:
--- the KIND is not the operation, the operator attribute is.
 plain_assign[flow](E) :- ast_node[code](E, assignment_expression, _, _),
                          ast_attr[code](E, operator, "=").
 
@@ -1818,178 +912,64 @@ may_be_node[flow](E, N) :- plain_assign[flow](E),
 may_be_lit[flow](E, V)  :- plain_assign[flow](E),
                            ast_child[code](E, right, 0, X), may_be_lit[flow](X, V).
 
--- ===========================================================================
--- THE CROSSINGS THIS LAYER PERFORMS, DECLARED — and they had never been
--- declared, because no test had ever asked. `leak[audit]` was asserted at zero
--- in two worlds that do not load this file and in a third that does not either;
--- the first world to load rules/js-dataflow.rofl AND look was
--- test/js-controlflow.test.ts on 2026-09-04, and it found five rows that had
--- been standing since the value layer was written.
---
--- All five are real and all five are intended:
---   code  -> flow   every rule here reads the scanner's tree and writes a value
---   main  -> flow   ...and reads the unperspectived tables that classify kinds
---                   (`node_value_kind`, `value_transparent`, `literal_kind`)
---   $kernel -> flow the `edb` declarations above are kernel reflection
+-- The crossings this layer performs: the scanner's tree, the unperspectived
+-- kind tables, and the kernel's `edb` reflection.
 imports(flow, code).
 imports(flow, main).
 imports(flow, $kernel).
 
--- ---------------------------------------------------------------------------
--- THE VALUE A `throw` DELIVERS TO A `catch`, 2026-09-06 — queue item
--- w_exception_flow, and it is the first edge in this layer that travels along
--- the EXCEPTION PATH rather than along the syntax. Every other rule here reads
--- a binder, a parameter position or a member key; a catch parameter is bound by
--- something that happens somewhere else in the block.
---
--- THE CORPUS HAD ONE CATCH WITH A PARAMETER AND IT ONLY VOIDED IT, so there was
--- nothing to test against and the fixture came first — the third item running
--- for which that was true.
+-- =========================================================================
+-- 15. THE EXCEPTION PATH. A catch parameter may be what the guarded BLOCK
+-- throws — the block, not the handler or the finalizer. A throw in a nested
+-- try is offered to the outer handler too (safe direction). A catch with no
+-- lexical throw is three things: sourced through a call edge (`caught_value`
+-- names it), sourced by the HOST — nothing the model sees can throw, which is
+-- `w_env_api_surface`'s question — or a dead handler with no call at all, the
+-- one row that is an audit.
 catch_of[flow](T, H)     :- ast_node[code](T, try_statement, _, _),
                             ast_child[code](T, handler, 0, H).
 catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _, _),
                             ast_child[code](H, param, 0, P).
--- THE GUARDED BLOCK, not the handler and not the finalizer. `try` carries all
--- three under different fields, and a throw inside the HANDLER is not caught by
--- the same clause — reading `ast_within(T, Th)` instead of `ast_within(B, Th)`
--- would have said it was.
 try_block[flow](T, B)    :- ast_node[code](T, try_statement, _, _),
                             ast_child[code](T, block, 0, B).
 thrown_in[flow](T, V)    :- try_block[flow](T, B), ast_within[code](B, Th),
                             ast_node[code](Th, throw_statement, _, _),
                             ast_child[code](Th, argument, 0, V).
 
--- A MAY-SET, and it over-approximates in one named way: a throw inside a NESTED
--- try is delivered to the inner handler and this rule offers it to the outer one
--- as well. That is the safe direction for a value layer — an extra candidate,
--- never a missing one — and it is the shape `w_cf_completion` would settle.
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).
 may_be_node[flow](P, V)  :- caught_value[flow](P, V).
 
--- A CATCH PARAMETER WITH NO LEXICAL THROW IS THREE DIFFERENT THINGS, and the
--- first draft called them all a defect — which put the audit at 1 on an honest
--- checkout, the failure mode this repository has already paid for once. The
--- split was made on 2026-09-06 with TWO classes and gained a third the same day
--- when w_exn_propagation answered the middle one, which is what a frontier with
--- an owner is supposed to do when its owner lands.
 call_in_try[flow](T)     :- try_block[flow](T, B), ast_within[code](B, C),
                             call_site[code](C, _).
--- 1. SOURCED THROUGH A CALL EDGE, and ANSWERED rather than deferred since
--- w_exn_propagation: `useTry`'s `catch (e)` receives what `thrower()` throws,
--- and `caught_value` now names the value. The relation stays because the
--- DISTINCTION is still worth reporting — a value that arrives along the call
--- graph is a different kind of answer from one the same block threw.
 catch_from_call[flow](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             not thrown_in[flow](T, _), call_in_try[flow](T).
--- 2. ...AND THE ONE THE CALL EDGE CANNOT SOURCE. `rethrown`'s block calls only
--- `risky`, which the model says cannot throw — so the only thing that can
--- deliver a value there is the HOST: a TypeError, a RangeError, an allocation
--- failure. That is w_env_api_surface's question and this row is where it is
--- recorded, so the audit below stays exact instead of absorbing it.
 catch_from_host[flow](P) :- catch_from_call[flow](P), not caught_value[flow](P, _).
 
--- ...and THIS is the hole: a handler that binds a name where nothing in the
--- guarded block can throw at all — no `throw`, no call. The parameter has no
--- source under any reading, which is a dead handler rather than a limit of the
--- model, and it is the one of the two worth going red for.
--- 3. AND THIS IS STILL THE HOLE: a handler that binds a name where nothing in
--- the guarded block can throw AND nothing is even called. No source under any
--- reading, host included — a dead handler rather than a limit of the model.
 catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
                              not thrown_in[flow](T, _), not call_in_try[flow](T).
 
--- ---------------------------------------------------------------------------
--- WHAT A DECORATOR DOES TO THE THING IT DECORATES — `r_decorator_replacement`,
--- 2026-09-08, queue item w_decorator_replaces_its_target (62). It is the VALUE
--- half of a call whose other half landed the same day as `r_decorator_call`.
---
--- `@decoFerrule class Swage {}` does not merely CALL `decoFerrule` with the
--- class: it binds `Swage` to whatever came back. So the name evaluates to the
--- decorator's return and, until these rules, this layer answered the original
--- class for every read of it. Nothing new is needed to get the return —
--- `may_be_node` already carries what a call gave back through `resolves[code]`,
--- and a decorator node IS a `resolves` site — so this is a join and not a
--- mechanism, which is the same shape the tagged template's value half took.
---
--- MEASURED BEFORE A LINE OF IT WAS WRITTEN, and the measurement is why the
--- fixture grew rather than the rules being written against the sites that
--- existed: `may_be_node` of BOTH decorator nodes in the corpus was EMPTY.
--- `decoOnce` and `decoApplied` both `return value`, a PARAMETER, and a
--- decorator call has no argument nodes in the grammar at all — so `arg_at` has
--- nothing to bind and the parameter has no value. A rule written then would
--- have derived nothing while looking finished.
+-- =========================================================================
+-- 16. A DECORATOR REPLACES ITS TARGET. The class name evaluates to what the
+-- decorator RETURNED, added beside the class rather than replacing it
+-- (`@decoOnce` returns its argument). A decorated method is a member holding
+-- the replacement, its `static` flag read off the METHOD. No `own_key` arm: the
+-- draft had one and the program became unstratifiable — `own_key` must not
+-- depend on `member_value`. No `member_value` arm: deleting it moved rows and
+-- no edge, every consumer reads the receiver halves directly. No arm for a
+-- decorated field or auto-accessor: those decorators return a transformer or a
+-- `{get, set, init}` triple, not the member's value. The `class_method`
+-- literal is redundant today (a private key never reaches `key_name`) and kept
+-- so the rule does not depend silently on another relation's blindness.
 decorated_by[flow](Owner, N) :- decorates[code](Owner, D), may_be_node[flow](D, N).
 
--- 1. A DECORATED CLASS ANSWERS TO ITS NAME, and the name is what the binding
---    holds. `class_named` is already the relation that says which name reaches
---    this class in this file — the same one `new C()` and `super` read — so the
---    replacement enters through it and inherits its declared file scope.
---
--- IT ADDS RATHER THAN REPLACES, and that is the may-set discipline and not a
--- hedge: `may_be_node` is an UNDER-approximation whose rows mean `either of
--- these`, and a rule that RETRACTED the class would have to be sure the
--- decorator returns something, which for `@decoOnce` — a decorator that returns
--- its argument — is the class again. So the model says `Swage` may be `Swage`
--- or may be `Ferrule`, both of which are true of some decorator.
 may_be_node[flow](E, N) :- decorated_by[flow](CD, N), class_named[flow](CD, Name, File),
                            ident_in[code](E, Name, File).
 
--- 2. A DECORATED METHOD IS A MEMBER HOLDING THE REPLACEMENT. The `static` flag
---    is read off the METHOD and not off what came back, for the reason
---    `field_of` already records one section up: the replacement is an ordinary
---    function and carries no such attribute, so a member built on it would be
---    visible through NEITHER receiver.
---
--- `class_method` AND NOT `class_private_method`, deliberately: a private method
--- is reached by `private_binds` and never by `member_value`, so an arm here
--- would be a row with no consumer. Named rather than left as an absence.
---
--- THAT LITERAL IS REDUNDANT TODAY AND IS KEPT ANYWAY, measured with a site
--- rather than argued: `@decoCrimp #tucked(n)` is in the fixture, deleting the
--- literal moves NOT ONE ROW, and the reason is a THIRD relation — `key_name`
--- reads a `name` attribute and a private method's `key` child is a
--- `private_name` NODE whose name sits on the identifier beneath it, so
--- `decorated_member` cannot fire for a private member either way. Same
--- precedent as `closer[code]` in rules/js-callgraph.rofl carrying `F != G`
--- explicitly: a guard is kept so the rule does not depend SILENTLY on another
--- relation's blindness. If `key_name` ever learns a private key — which needs a
--- string operation this kernel has not got, see
--- f_a_private_method_resolves_and_cannot_be_named — this literal starts
--- earning its keep the same hour.
---
--- AND NO ARM FOR A DECORATED FIELD OR AUTO-ACCESSOR, which is a statement about
--- the LANGUAGE rather than about effort: a field decorator returns an
--- initialiser TRANSFORMER and an auto-accessor decorator returns a `{get, set,
--- init}` triple — neither is the member's value, and a rule that treated the
--- return as one would answer `o.k` with the wrong object. Recorded as
--- f_a_decorator_returns_a_different_shape_for_every_position.
 decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          ast_node[code](M, class_method, _, _),
                                          class_method_of[flow](CD, M),
                                          ast_child[code](M, key, 0, K), key_name[code](K, Key).
---
--- NO `own_key` ARM, AND THE FIRST DRAFT HAD ONE. It made the program
--- UNSTRATIFIABLE and the kernel said so on the next load, naming seventy
--- relations that "negate something that never settles": `member_value` reads
--- `not own_key` to make an inherited member a lookup rather than a union, and
--- `own_key` here would have depended on `may_be_node` and so on `member_value`
--- itself. The invariant is written above the structural arm in this same file —
--- "`own_key` reads the class body directly and does not depend on
--- `member_value`" — and it costs nothing to keep: a decorated method's key is
--- already an own key through that arm, because the METHOD is still in the body.
---
--- AND NO `member_value` ARM EITHER, WHICH IS THE SAME MUTANT THE FIELD RULES
--- PAID FOR ONE SECTION UP. The draft had `member_value(CD, Key, N) :-
--- decorated_member(...)` and deleting it moved TWO ROWS OF `member_value` AND
--- NOT ONE EDGE, because every consumer that can reach a decorated method reads
--- `class_member_static` / `class_member_proto` directly. It would not have
--- become load-bearing through inheritance either: `member_value` walks
--- `super_of`, but the inherited row carries the REPLACEMENT, which is an
--- ordinary function with no `static` attribute, so neither receiver half could
--- read it — exactly the hole `inherited_field` exists to close for a field. An
--- arm whose deletion changes nothing is decoration, and this one is left out
--- rather than left in with a mutant that cannot die.
 class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N),
                                          ast_attr[code](M, static, true).
 class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N),

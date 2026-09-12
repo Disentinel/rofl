@@ -95,6 +95,15 @@ check_file("readiness_rofl", "examples/rofl-release/frame.rofl").
 check_file("readiness_rofl", "examples/rofl-release/context.rofl").
 check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").
 
+-- THE QUEUE WITH ITS SECOND VOLUME. rules_worklist pairs rules/worklist.rofl
+-- with facts/worklist.rofl by name; facts/refactoring.rofl shares the
+-- vocabulary and has no rules file of its own, so the world that reads both
+-- is declared here.
+check_world("refactoring_queue").
+check_file("refactoring_queue", "facts/worklist.rofl").
+check_file("refactoring_queue", "facts/refactoring.rofl").
+check_file("refactoring_queue", "rules/worklist.rofl").
+
 -- THE WORD `not` ON BOTH SIDES OF THE GRAMMAR. Free as an argument, reserved as
 -- a relation name, and the two hosts disagreed about both halves until
 -- 2026-09-12. Each is a one-file world because the second one must be REFUSED

@@ -1,0 +1,36 @@
+-- facts/refactoring.rofl — REFACTORING WORK, a second volume of the queue.
+--
+-- Same vocabulary as facts/worklist.rofl (rules/worklist.rofl derives the
+-- rest); kept apart because these items change no answer — they change how
+-- many rules say it. Every item here was found by `npm run rofllint` on
+-- 2026-09-11 and priced before it was queued.
+
+work(w_value_layer_written_twice,
+  "rules/js-dataflow.rofl carries the value layer twice: 43 arms of may_be_node and 18 of may_be_lit, and fourteen of them are the same arm with one relation swapped (await, both conditional branches, both logical branches, object_property, sequence, assignment, private field, parameter, ...). A new value form is taught twice or literals silently stop flowing through it. Candidate: one carrier may_be(E, V) with V a node id or $lit(Text), the fourteen pairs collapse to seven. Price before doing: 116 reader sites of may_be_node in six files and 42 of may_be_lit in three, most already guarded by fn_node/ast_node; the arity and every golden move; and at least one absence is deliberate (js-dataflow.rofl near `NO may_be_lit ARM HERE`) and must become an explicit exclusion. The measurement that decides it: over the 43 arms, how many coincide with a literal arm, how many diverge by design.").
+work_state(w_value_layer_written_twice, open).
+work_spawned(w_value_layer_written_twice, f_a_moved_rule_leaves_its_prose_behind_and_a_lexical_rule_sees_it).
+
+work(w_relations_nothing_reads,
+  "Four relations concluded and read by no rule and named by no .ts file: eff_purer_callee in rules/js-effects.rofl (written `rather than left as a query in a comment`, then never queried), call_arg, call_line and frontier_named in rules/js-callgraph.rofl. Each gets a reader or goes. The census is `unread(Rel, File, Book)` over facts/rofl-lint.rofl and it over-reports readers that build a name at run time, so check the .ts side by hand before deleting. 54 such relations tree-wide; these four are the two files that were read.").
+work_state(w_relations_nothing_reads, open).
+work_spawned(w_relations_nothing_reads, f_a_moved_rule_leaves_its_prose_behind_and_a_lexical_rule_sees_it).
+
+work(w_implied_premises_priced,
+  "Eighteen positive premises tree-wide follow from another premise of the same body (`implied(Id, File, Head, P, Q)` in facts/rofl-lint.rofl): eff_heap_of's member_node_v, eff_catch_here's ast_node, shape_known's computed_member among them. Dropping one changes no extension and may change cost, because the planner keeps the written order and a cheap implied premise can be the seed. Price each with scanners/js_cost.ts before removing; a premise that is a seed stays and says so in one line.").
+work_state(w_implied_premises_priced, open).
+work_spawned(w_implied_premises_priced, f_a_moved_rule_leaves_its_prose_behind_and_a_lexical_rule_sees_it).
+
+work(w_two_closures_of_work_needs,
+  "rules/worklist.rofl computes the transitive closure of work_needs twice under two names: needs_reach (feeding needs_cycle[audit]) and waits_on (feeding work_needs_cycle[audit]), one body up to renaming, and the two audits are therefore one audit. The twin row in facts/rofl-lint.rofl found it the day the file was cut to its notes. Beside it, held_by :- held is a pure rename that nothing reads. One closure, one cycle audit, and held_by either gets a reader or goes.").
+work_state(w_two_closures_of_work_needs, open).
+work_spawned(w_two_closures_of_work_needs, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
+
+work(w_ingest_declares_half_its_host_relations,
+  "rules/ingest.rofl declares the five pressure signals edb and reads five other host-asserted relations (must_index, cooled, needed_hot, ast_file, ast_parse_error) with no declaration, so its own world carries ten undefined_premise rows and needed_hot is a name nothing in the tree defines, asserts or declares. One convention: every relation the host owes this pack is an edb line with its signature beside it.").
+work_state(w_ingest_declares_half_its_host_relations, open).
+work_spawned(w_ingest_declares_half_its_host_relations, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).
+
+work(w_twins_in_depends_and_ingest,
+  "rules/depends.rofl concludes code_needs and generated from one body, edge[dep](_, P, generates); rules/ingest.rofl concludes candidate_intent(parse, C, F) and index_left from one body, and index_left and index_target are renames of needs_index and must_index that no rule and no .ts reads. One head each, or a reader.").
+work_state(w_twins_in_depends_and_ingest, open).
+work_spawned(w_twins_in_depends_and_ingest, f_sixteen_rule_packs_cut_by_row_and_not_by_ratio).

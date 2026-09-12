@@ -1,23 +1,17 @@
 -- js-callgraph.rofl — ONE construct, the FUNCTION CALL, at the call-graph
--- layer. Written over the scanner's four relations plus js-structure's
--- ast_within / ast_name / ast_value, and nothing else: the scanner judged
--- nothing and every classification below is this file's.
+-- layer. Over the scanner's four relations plus js-structure's `ast_within`,
+-- `ast_name`, `ast_value` and `key_name`; resolution itself asks the value
+-- layer (`may_be_node`, rules/js-dataflow.rofl) what the callee expression
+-- denotes.
 --
--- THE FINISH LINE IS NOT "the rule fires". It is that every callee SHAPE in
--- the corpus either has a rule or has a typed verdict saying why not. A model
--- that resolves `f(x)` and says nothing about `o.m()` reports a SMALLER call
--- graph that looks correct, and that silent under-report is the failure this
--- file is built against. So the classification is a TOTAL function — every
--- call site gets exactly one shape, including the shapes nothing resolves —
--- and `unresolved_call` is a POSITIVE relation, countable and queryable,
--- rather than the absence of a row.
---
--- Depends on rules/js-model.rofl for the `unknown_type` taxonomy (which
--- reasons are irreducible and which are ours). Load both.
+-- The finish line is not "the rule fires": every callee SHAPE either has a
+-- rule or a typed verdict saying why not. Classification is TOTAL — every call
+-- site gets exactly one shape — and `unresolved_call` is a POSITIVE relation,
+-- countable, rather than the absence of a row. Loads with rules/js-model.rofl
+-- for the `unknown_type` taxonomy.
 
--- ===========================================================================
+-- =========================================================================
 -- 1. CALL SITES
-
 edb(call_kind).
 call_kind(call_expression).
 call_kind(optional_call_expression).
@@ -29,55 +23,34 @@ call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, 
 callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
 callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _, _).
 
--- NOT EVERY CONTROL TRANSFER IS A CALL EXPRESSION. `new C()` runs C's
--- constructor and is not a call site under any reading of the grammar, so a
--- model built only on CallExpression misses that edge with nothing to point
--- at. Declaring it a TRANSFER SITE does not resolve it — it makes the miss
--- attributable, which is the difference between a gap and a silence.
+-- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
+-- iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
+-- does not resolve them; it makes a miss attributable instead of silent.
 edb(transfer_kind).
 transfer_kind(new_expression).
--- ...AND THE SAME ARGUMENT A SECOND TIME, 2026-09-07. `` tag`x` `` calls `tag`
--- and the grammar gives that call no CallExpression node either, so it was
--- outside every totality audit this file owns — `unshaped[audit]` reads 0
--- because it cannot see past `call_site`. A transfer site does not resolve it;
--- it makes the miss ATTRIBUTABLE, which is the difference between a gap and a
--- silence, and that sentence was written here for `new` and applied once.
 transfer_kind(tagged_template_expression).
--- ...and a THIRD, which is the first one that is two calls at one node.
 transfer_kind(for_of_statement).
--- A DECORATOR IS A CALL WITH NO CALL EXPRESSION, 2026-09-08, and it is the
--- fourth of that family this layer models: `new`, a tagged template's tag, and
--- `for-of`'s iterator are the others. `@decoOnce class Decorated {}` evaluates
--- `decoOnce` and calls it with the class and a context object, and the grammar
--- shows no `call_expression` whatever.
 transfer_kind(decorator).
 transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
 
--- what an enclosing function can be asked about: a call site or a transfer site
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
 
--- arguments, WITH THEIR POSITION. The index is not decoration: without it
--- `f(a, b)` and `f(b, a)` are the same fact set, so which function is passed
--- in the callback slot becomes unanswerable.
+-- The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 call_arg[code](C, I, A)       :- call_site[code](C, _), ast_child[code](C, arguments, I, A).
 
--- ===========================================================================
+-- =========================================================================
 -- 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 --
--- Two mapping tables and a catch-all, rather than a chain of negations: a
--- rule that says "everything else" by negating its own head is unstratifiable,
--- and the table makes the closed set of shapes readable in one place.
-
+-- Tables plus one catch-all rather than a chain of negations: a rule that says
+-- "everything else" by negating its own head is unstratifiable.
+-- `tsnon_null_expression`, not `ts_non_null_expression`: atomise() breaks only
+-- between a lower-case and an upper-case letter, so `TSN` survives whole.
 edb(callee_shape).
 callee_shape(identifier,                s_identifier).
 callee_shape(arrow_function_expression, s_iife).
 callee_shape(function_expression,       s_iife).
 callee_shape(super,                     s_super).
--- NOT `ts_non_null_expression`: atomise() inserts a break only between a
--- lower-case and an upper-case letter, so the acronym `TSN` survives whole.
--- The first version of this table guessed the split, matched nothing, and the
--- site landed in s_unclassified — which is exactly what the catch-all is for.
 callee_shape(tsnon_null_expression,     s_non_null).
 callee_shape(call_expression,           s_call_result).
 callee_shape(optional_call_expression,  s_call_result).
@@ -87,14 +60,8 @@ callee_shape(sequence_expression,       s_sequence).
 callee_shape(parenthesized_expression,  s_parenthesized).
 callee_shape(tsas_expression,           s_ts_as).
 callee_shape(conditional_expression,    s_conditional).
--- ADDED 2026-09-05 by the item that gave a yield expression a value. The callee
--- sweep measured `yield_expression` as one of the twelve occupants of the
--- catch-all and handed it to `w_df_generator_protocol`; the corpus now holds
--- `(yield 'go')(3)` and it RESOLVES, so the shape comes out of the bucket with
--- an answer rather than an excuse.
 callee_shape(yield_expression,          s_yield_result).
 
--- member callees need two more bits: `computed`, and the object's kind.
 edb(member_kind).
 member_kind(member_expression).
 member_kind(optional_member_expression).
@@ -108,6 +75,13 @@ callee_obj[code](C, O)      :- member_like[code](C, N), ast_child[code](N, objec
 callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _, _).
 callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
+-- A member callee needs two more bits: `computed`, and the object's kind.
+-- Receivers are classed by VERDICT, not by type: a member on a string, number,
+-- bigint or regexp is answered by the standard library, so all four are
+-- `o_literal`. `import.meta` is `o_meta` and not `o_literal` because its
+-- members are the HOST's — `interface ImportMeta` in lib.es5.d.ts is empty —
+-- so the era axis cannot date them and `o_literal` would promise an answer
+-- that cannot arrive.
 edb(obj_kind_class).
 obj_kind_class(identifier,                 o_ident).
 obj_kind_class(member_expression,          o_member).
@@ -121,34 +95,9 @@ obj_kind_class(new_expression,             o_new).
 obj_kind_class(object_expression,          o_object_literal).
 obj_kind_class(string_literal,             o_literal).
 obj_kind_class(numeric_literal,            o_literal).
--- TWO MORE, 2026-09-08 (w_update_and_literals), AND THE AUDIT ASKED FOR THEM
--- BY NAME. `catch_all_occupied[audit]` is waived as empty in
--- facts/js-shapes.rofl, and the comment beside it already listed `a regular
--- expression` among the forms that would land in the bucket. The fixture put
--- `/x[0-9]/.test(s)` and `255n.toString(16)` in the corpus and the audit went
--- from 0 to 2 within one run, naming both kinds — a waiver that could fill,
--- filling, exactly as it was written to.
---
--- BOTH GO TO `o_literal` BECAUSE THE CRITERION IS THE VERDICT, not the type: a
--- member on a string, a number, a bigint or a regexp is answered by the
--- STANDARD LIBRARY and by nothing in this program, which is one verdict and
--- therefore one bucket. That is the same test the eight-way split below was
--- made on, applied rather than re-argued, and it needs no new shape and no new
--- cell — `s_member_on_literal` already carries `not_yet` under
--- `w_env_api_surface`, which is where these two receivers belong.
 obj_kind_class(big_int_literal,            o_literal).
 obj_kind_class(reg_exp_literal,            o_literal).
 
--- EIGHT KINDS THAT USED TO SHARE THE CATCH-ALL, split because they do not
--- share a VERDICT. Measured on a probe corpus with one site per kind, all in
--- one run: `conditional`, `sequence`, the two TypeScript wrappers and the
--- parenthesis already RESOLVED and needed nothing but a name; `logical` and
--- `assignment` needed one value rule each, now in rules/js-dataflow.rofl;
--- `await` belongs to the control-form item and `template` answers through the
--- String prototype, which is the standard library and a different programme.
--- One bucket carrying four different answers reports the same `not_yet` for a
--- form that works and a form nobody has started, which is the defect
--- `s_parenthesized` already paid for one layer down.
 obj_kind_class(conditional_expression,     o_conditional).
 obj_kind_class(sequence_expression,        o_sequence).
 obj_kind_class(logical_expression,         o_logical).
@@ -157,26 +106,6 @@ obj_kind_class(await_expression,           o_await).
 obj_kind_class(template_literal,           o_template).
 obj_kind_class(tsas_expression,            o_cast).
 obj_kind_class(tsnon_null_expression,      o_non_null).
--- A NINTH RECEIVER CLASS, 2026-09-08 (w_meta_property), AND THE AUDIT ASKED FOR
--- IT WITHIN ONE RUN. `import.meta.resolve(spec)` is a member call whose object
--- is a `meta_property`, and w_meta_property's own note kept the site OUT of the
--- corpus rather than let it land in `s_member_on_other` — whose waiver
--- `a_catch_all_empty_by_design` would then have been false for a reason
--- belonging to another item. Measured with the site in and this row out:
--- `catch_all_occupied[audit]` went from 0 to 1 naming `meta_property`, exactly
--- as that waiver's own comment predicts. One row is the whole cost of the
--- objection, so the note is discharged rather than deferred.
---
--- ITS OWN CLASS AND NOT `o_literal`, because the criterion here is the VERDICT
--- and this receiver's verdict is a different one. A member on a string or a
--- regexp is answered by the standard LIBRARY, which `lib_member` carries from
--- TypeScript's `lib.es*.d.ts`. `import.meta`'s members are the HOST's — measured
--- in TypeScript's own files, `interface ImportMeta` in `lib.es5.d.ts` is EMPTY,
--- and `url`/`resolve` are declared in `lib.dom.d.ts` and `@types/node`, neither
--- of which `releaseOf` in scanners/ts_lib.ts will name, by construction, since
--- neither file name carries a release. So the era axis is structurally unable
--- to date this member, and `o_literal` would have promised an answer that
--- cannot arrive.
 obj_kind_class(meta_property,              o_meta).
 
 obj_kind_known(K)           :- obj_kind_class(K, _).
@@ -204,10 +133,11 @@ member_shape(o_non_null,       s_member_on_non_null).
 member_shape(o_meta,           s_member_on_meta).
 member_shape(o_other,          s_member_on_other).
 
--- A COMPUTED callee is the one place the taxonomy's `runtime_dependent` is
--- honest: `o[k]()` with a non-literal k names a method that does not exist
--- until the program runs. `a.b.c()` does NOT qualify and must never borrow
--- that reason.
+-- `o[k]()` with a non-literal k is the one honest `runtime_dependent`.
+-- `o[`fixed`]()` is a third case: fixed at parse time but not derivable,
+-- because the scanner carries scalar own properties only and a template's
+-- `value` is `{raw, cooked}`. So `not_yet` with a named cause, not either
+-- neighbour.
 edb(static_key_kind).
 static_key_kind(string_literal).
 static_key_kind(numeric_literal).
@@ -215,14 +145,6 @@ static_key_kind(numeric_literal).
 computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
                                 ast_node[code](P, K, _, _), static_key_kind(K).
 
--- A THIRD CASE, and it is the interesting one: `o[`fixed`]()`. The key is
--- fixed at parse time, so calling it `runtime_dependent` would be a lie — and
--- it is not derivable either, because the scanner's contract carries only
--- SCALAR own properties and `TemplateElement.value` is `{raw, cooked}`, an
--- object. The text of the template is simply not in the fact vocabulary. That
--- is `not_yet` with a named cause in the layer below, which is a different
--- verdict from both of its neighbours, and collapsing it into either would
--- misreport where the work is.
 computed_key_template[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
                                   ast_node[code](P, template_literal, _, _).
 
@@ -238,47 +160,24 @@ shape_known[code](C, s_optional_member)      :- static_member[code](C, _),
 shape_known[code](C, S) :- static_member[code](C, _), not optional_member[code](C),
                            obj_class[code](C, Cl), member_shape(Cl, S).
 
--- THE CATCH-ALL, and the reason shape_known exists as a separate relation:
--- `shape` may negate `has_shape` because `has_shape` does not depend on
--- `shape`. A grammar form nobody anticipated lands here rather than vanishing.
+-- `shape` may negate `has_shape` because `has_shape` does not depend on `shape`.
+-- A grammar form nobody anticipated lands in `s_unclassified` rather than
+-- vanishing; the two audits below name what sits in each catch-all.
 has_shape[code](C)             :- shape_known[code](C, _).
 shape[code](C, S)              :- shape_known[code](C, S).
 shape[code](C, s_unclassified) :- call_site[code](C, _), not has_shape[code](C).
 
--- ...AND THE SAME NEWS ONE LEVEL DOWN. `s_member_on_other` is the object-kind
--- catcher, waived in facts/js-shapes.rofl as empty by design, and that waiver
--- is only honest while it IS empty. A member callee whose object is a form
--- `obj_kind_class` does not name — a function expression, a boolean literal, a
--- regular expression, a class expression — lands here, and the row says so with
--- the kind named so the split can continue rather than the bucket growing.
 catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
                                 callee_obj_kind[code](C, K).
 
--- ...AND THE SAME NEWS ONE LEVEL UP, WHICH IS WHERE IT SHOULD HAVE BEEN FIRST.
--- `s_unclassified` is the OTHER catch-all — the callee-position one, the
--- original of which `s_member_on_other` is the copy — and until 2026-09-05 no
--- audit asked what was in it. The gate above was written when the OBJECT
--- bucket was split and it inherited the scope of that incident exactly: it
--- names the kinds under `s_member_on_other` and is structurally unable to look
--- at the bucket one level up.
---
--- MEASURED by sweeping the boundary rather than sampling it — every declared
--- expression kind placed in callee position, one at a time — the callee bucket
--- held TWELVE kinds: array, assignment, await, boolean, import_expression,
--- logical, numeric, object, string, template, this and yield. Three of them
--- already RESOLVED (assignment 1 edge, await 1, logical 2, the last a correct
--- two-element may-set), so the bucket's single `not_yet` was false about a
--- quarter of its contents.
 unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_kind[code](C, K).
 
--- and the two ways totality can fail, each a positive row
 shaped[code](C)         :- shape[code](C, _).
 unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C).
 multi_shape[audit](C, A, B) :- shape[code](C, A), shape[code](C, B), A != B.
 
--- ===========================================================================
--- 3. THE ENCLOSING FUNCTION — nearest, which is where negation earns its keep
-
+-- =========================================================================
+-- 3. THE ENCLOSING FUNCTION
 edb(fn_kind).
 fn_kind(function_declaration).
 fn_kind(function_expression).
@@ -290,100 +189,43 @@ fn_kind(class_private_method).
 fn_node[code](F)     :- ast_node[code](F, K, _, _), fn_kind(K).
 fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
 
--- A function's name is whatever binds it. Several rules, because JS has
--- several ways, and a relation may hold more than one name for one node.
+-- A function's name is whatever binds it — several arms, and a node may hold
+-- more than one name. `key_name` rather than `ast_name` on a key, so a computed
+-- well-known symbol is a name too. A constructor answers to the CLASS's name:
+-- V8 reports the frame as `new Box`, and without `not ctor_method` the edge
+-- was derived twice, once as `-> constructor`, which no execution produces.
+-- The declarator arm leads with the declarator: written `fn_node(F)` first it
+-- laid every function beside every declarator (271 982 accumulator rows on
+-- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
+-- store holds `rim`, and the kernel has no operation that builds a string.
 fn_name[code](F, N) :- ast_node[code](F, function_declaration, _, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
 fn_name[code](F, N) :- ast_node[code](F, function_expression, _, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
--- `key_name` and not `ast_name`, so a computed well-known symbol is a name
--- here too — rules/js-structure.rofl says once what a key stands for.
 fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
--- ...except a CONSTRUCTOR, which does not answer to the word `constructor` at
--- run time: V8 reports the frame as `new Box`, and the rule below gives it the
--- CLASS's name. Without this exclusion the constructor edge is derived twice —
--- once correctly and once as `-> constructor`, an edge no execution produces.
--- Measured the moment the constructor edge landed: over-approximation 0 to 2.
 ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
--- THE DECLARATOR FIRST, and it is the same repair `has_return` took. Written
--- `fn_node(F)` then `ast_node(D, variable_declarator, _, _)`, F and D share
--- nothing, so every function is laid beside every declarator and
--- `ast_child(D, init, 0, F)` filters afterwards: measured by
--- scanners/js_cost.ts on sixteen files of eslint/lib, 271 982 accumulator
--- elements reaching that filter to conclude NOTHING AT ALL. Asking
--- `ast_child(D, init, 0, F)` with D already bound reads one child instead.
 fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, F), fn_node[code](F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
--- `key_name` HERE TOO, 2026-09-09 (w_computed_key_names). This arm read
--- `ast_name` on the key directly and was therefore untouched by the guard three
--- rules up: for `{ [haspSpelling]: (n) => n }` it named the function after the
--- VARIABLE. Measured on the site at the end of shapes.ts.txt — one row before,
--- none after — and it is the arm the method form of that site could not reach,
--- because `{ [k]() {} }` is an `object_method` and this rule is about a
--- property whose VALUE is a function.
---
--- AND THIS IS THE ONE PLACE THE wip/curve MERGE WAS NOT A COMMENT DIFFERENCE,
--- 2026-09-09. The other session repaired the SAME clause for COST and its
--- version reads `ast_name[code](K, N)` directly — 236 132 accumulator elements
--- for nothing, correctly measured — which is precisely the unguarded read this
--- arm was repaired to stop making. Taking theirs would have bought a real
--- saving and silently reverted a correctness fix, and git offered them as
--- equals. CORRECTNESS WINS THE CONFLICT AND THE COST IDEA IS KEPT: their
--- ordering insight was to ask the cheap thing first, and `key_name` IS now the
--- cheap thing — narrowed from 2 148 rows to 105 by the same item — so leading
--- with it is their repair and mine at once. Measured after the merge rather
--- than argued: see the cost gate's SHARE table.
 fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_node[code](P, object_property, _, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
--- a constructor answers to the CLASS's name at runtime, which is what a stack
--- frame says and therefore what an execution oracle can be compared against
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
                        ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
--- A CLASS FIELD NAMES THE FUNCTION IT HOLDS, 2026-09-08 (w_class_fields), the
--- same way an `object_property` two rules up does. MEASURED AGAINST A FRAME
--- rather than assumed: for `strike = (n) => ...`, V8 reports
--- `getFunctionName() === "strike"` and `getMethodName() === "strike"`, so this
--- is the name an execution oracle would have to be compared against.
 fn_name[code](F, N) :- fn_node[code](F), class_field_kind(K), ast_node[code](P, K, _, _),
                        ast_child[code](P, value, 0, F),
                        ast_child[code](P, key, 0, KN), key_name[code](KN, N).
--- ...AND A PRIVATE METHOD GETS NO NAME HERE, which is a MEASURED refusal and
--- not an omission. V8 reports the frame as `#rim` — with the hash — and the
--- store holds `rim`, on the `identifier` under the `private_name`. The two
--- namespaces are disjoint (`rim` and `#rim` are both members of the fixture's
--- class), so naming a private method `rim` would make `calls_named` conflate
--- two different functions, and the kernel has no string operation that BUILDS a
--- string: `str_pre`, `str_seg`, `str_segs`, `str_sub` and `str_char` all cut one
--- up. So `resolves[code]` reaches a private method and `calls_named` cannot
--- spell it — recorded as f_a_private_method_resolves_and_cannot_be_named.
 
--- ...AND A CLASS WITH NO `id` TAKES THE NAME OF ITS BINDING, which is the
--- LANGUAGE'S OWN inference and not a convenience (w_class_expression,
--- 2026-09-08). The rule above reads the `id` child, so `const G = class {
--- constructor(){} }` gave its constructor NO NAME AT ALL — and `calls_in`
--- joins `fn_name` on both ends, so the constructor edge would have been
--- derived by `resolves` and then dropped on the way to the graph, which is the
--- worst of the two failures available: present in one relation and absent from
--- the one an oracle is compared against.
---
--- MEASURED ON THIS ENGINE rather than recalled, because the two class
--- expression forms DO NOT AGREE and no reading of the spec would have said
--- which way round:
---
---     const A = class { constructor(){} }         A.name "A"     frame `A`
---     const W = class Hoist { constructor(){} }   W.name "Hoist" frame `Hoist`
---     class D { constructor(){} }                 D.name "D"     frame `D`
---
--- So the binding wins only when there is no `id`, and this arm carries that
--- negation instead of firing beside the one above and naming the class twice.
+-- A class expression with no `id` takes its binding's name — the language's own
+-- inference: `const A = class {}` has `A.name === "A"`, but
+-- `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
+-- the two constructor arms never both fire.
 class_has_id[code](CD) :- ast_node[code](CD, class_expression, _, _),
                           ast_child[code](CD, id, 0, _).
 anon_class[code](CD)   :- ast_node[code](CD, class_expression, _, _),
@@ -396,82 +238,39 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_child[code](D, init, 0, CD),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 
--- ORDERED FOR COST: `ast_within` with F bound is a probe, `site` with C bound
--- is a hash hit; the other way round every function scanned all 184 sites.
--- A DECORATOR IS INSIDE THE THING IT DECORATES AND DOES NOT RUN THERE, which
--- is the one place containment and attribution come apart in this grammar.
--- `@decoFactory('m') marked() { ... }` puts the factory call in the SUBTREE of
--- `marked` and evaluates it at CLASS-DEFINITION time, in whatever scope the
--- class sits in, before `marked` has ever been called. MEASURED on the fixture
--- the day decorators were enabled: the model derived `marked -> decoFactory`,
--- an edge from a function to something it never calls.
---
--- Two arms because the decorator node is ITSELF a site once `transfer_kind`
--- names it, and `ast_within` is irreflexive, so the first arm cannot reach it.
+-- A decorator is INSIDE the thing it decorates and does not run there:
+-- `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
+-- evaluates it at class definition. Two arms because the decorator node is
+-- itself a site and `ast_within` is irreflexive. `F != G` in `closer` is
+-- carried so the rule does not silently depend on that irreflexivity.
+-- `top_call` reads `site` and not `call_site`: a transfer site at module top
+-- level reaches `calls` only through here. (`top_site` was its twin, written
+-- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
+-- repair made them one rule and 2026-09-11 made them one name.)
 decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
                                  ast_node[code](D, decorator, _, _).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
 encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C),
                           not in_own_decorator[code](F, C).
--- F is not the nearest if some OTHER enclosing G sits inside it. `F != G`
--- is carried explicitly so the rule does not silently depend on ast_within
--- being irreflexive.
 closer[code](F, C)     :- encloses[code](F, C), encloses[code](G, C),
                           ast_within[code](F, G), F != G.
 nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
 
 enclosed[code](C)      :- encloses[code](_, C).
--- `site` AND NOT `call_site`, corrected 2026-09-08. The two differ by exactly
--- the transfer sites — `new`, a tagged template, a `for-of`, and now a
--- decorator — and a transfer site at the top level of a module was therefore
--- resolving a callee and drawing NO EDGE, because `calls` reaches an
--- un-enclosed site only through here.
---
--- IT WAS ALREADY WRONG BEFORE DECORATORS EXISTED. Measured on the corpus as it
--- stood: ONE un-enclosed `new_expression`, silently edgeless. Decorators are
--- what made it visible rather than what caused it — the class-level decorator
--- `@decoOnce class Decorated {}` is un-enclosed by construction, since a class
--- at module scope has no enclosing function and there is nowhere else the call
--- could be attributed.
 top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
                           ast_file[code](R, File), not enclosed[code](C).
-top_site[code](X, R)   :- site[code](X), ast_node[code](X, _, File, _),
-                          ast_file[code](R, File), not enclosed[code](X).
 
--- ===========================================================================
--- 4. RESOLUTION
+-- =========================================================================
+-- 4. RESOLUTION — scope-blind on purpose: a name bound anywhere in the file
+-- answers a call anywhere in the file. Shadowing is the scope layer's job.
 --
--- Scope-blind ON PURPOSE and this is a declared over-approximation: a name
--- bound anywhere in the file answers a call anywhere in the file. Shadowing
--- and block scope are the scope layer's job, not this one's.
-
--- TIER 1: identifier callee naming a function bound in the SAME file.
-
-
--- TIER 1b: an IIFE resolves to its own callee. Exact, with no name involved.
-
--- TIER 2: `ns.method()` where ns is a local object literal.
-
--- BOTH ARMS READ `key_name`, 2026-09-09 (w_computed_key_names). They read
--- `ast_name` on the key until then, which is the shape that made
--- `key_name` worth writing in the first place and was left behind when it was:
--- `ns[haspSpelling]()` would RESOLVE here, under a key the variable happens to
--- spell, to a method whose real name is whatever the variable held. Resolution
--- is the worse half of this defect — a naming rule that over-approximates gives
--- a wrong label, a RESOLUTION that over-approximates gives a call edge no
--- execution produces. Measured on the site at the end of shapes.ts.txt: two
--- rows before, none after.
---
--- AND BOTH BODIES NOW LEAD WITH THE KEY, which is the same edit paying for
--- itself. `key_name` is DERIVED where `ast_name` was an EDB, so these rules
--- moved into a later round and re-ran their leading `ast_node(O,
--- object_expression, _, _)` — a kind scan — every time it grew. Measured
--- 2026-09-09 on the whole fixpoint: reading `key_name` in the old order cost
--- +10 680 rows on `argMatches ast_node pos=[1]` alone. Led by `key_name`
--- instead, whose 105 rows bind K, every literal after it is an indexed lookup
--- and the engine reads bodies left to right with no join planner
--- (f_the_engine_has_no_join_planner).
+-- Every member shape is the same question — resolve the OBJECT half, look the
+-- KEY up in it — so there is one resolution rule (the last in this section)
+-- over `may_be_node`, and the shapes are entry points into the value layer.
+-- Both `obj_member_fn` arms lead with `key_name` for correctness AND cost:
+-- `ns[haspSpelling]()` must not resolve under the variable's spelling, and
+-- `key_name`'s 105 rows bind K so every later literal is an indexed lookup.
 obj_member_fn[code](O, Key, M) :- key_name[code](K, Key),
                                   ast_child[code](M, key, 0, K),
                                   ast_node[code](M, object_method, _, _),
@@ -484,283 +283,116 @@ obj_member_fn[code](O, Key, F) :- key_name[code](K, Key),
                                   ast_child[code](O, properties, _, P),
                                   ast_node[code](O, object_expression, _, _).
 
-
--- TIER 3: an identifier callee naming a PARAMETER, resolved through the value
--- the caller passed at that index. This is the hole that lives INSIDE a shape
--- the model claims to handle, and no shape census can show it: the axis is
--- syntactic and `f(n)` where `f` is a parameter is spelled exactly like `f(n)`
--- where `f` is a declaration. The execution oracle found it — `apply2 -> leaf`
--- and `apply2 -> mid` were two of eleven under-reported edges — and the frontier
--- attributed them to `s_identifier`, which is why they were worth closing first.
---
--- IT IS A CYCLE, and that is the whole reason this needed measuring before it
--- was written: `param_bind` reads `resolves` to know which function a call site
--- goes to, and `resolves` reads `param_bind` to answer a parameter callee. The
--- kernel takes it — the recursion is positive, the negations it stands on
--- (`not closer`, `not has_shape`) sit outside the cycle, and the fixpoint
--- settles. A kill set — `not rebound` inside the cycle — is refused under
--- stratified semantics and admitted under `semantics(well_founded)` at about
--- five times the cost; neither is needed here, because binding a parameter to
--- every function that reaches it is the sound direction for a call graph.
---
--- CONTEXT-INSENSITIVE, declared: a function called twice with two different
--- callbacks binds its parameter to BOTH, at every site. That is an
--- over-approximation of the same family as tier 1's scope blindness, and it is
--- visible rather than averaged away — `ambiguous_call[audit]` reports a site
--- resolving two ways, and the oracle comparison counts an edge the runtime
--- never ran. A context-sensitive version is a different analysis, not a fix.
-
-
--- TIER 4: WHAT OBJECT DOES THIS EXPRESSION DENOTE?
---
--- The shape census lists `o.m()`, `a.b.c()`, `this.m()`, `f().g()`, `o[k]()`,
--- `new C().m()` as six different shapes, and tier 2 answered exactly one of
--- them. Writing five more resolution rules would have been the obvious move and
--- it is the wrong one: THEY ARE NOT SIX QUESTIONS. Every one of them is
---
---     resolve the OBJECT half, then look the KEY up in it
---
--- and they differ only in how the object half is spelled. So the rule is one
--- rule, and the shapes become ENTRY POINTS into a single relation that answers
--- `what does this expression denote`. That is also why this closes shapes the
--- corpus does not contain — `new C().m()` has no site here and needs no rule of
--- its own once `new C()` denotes the class.
---
--- WHAT AN OBJECT IS, for this layer: a node that can answer `.k`. Two kinds do,
--- and they are not alike in the language but are identical in this question.
-
-
-
--- THE KEY, and the computed/static distinction collapses HERE rather than in
--- the shape table: `o.pick` and `o["pick"]` select the same member and differ
--- only in where the text is. `o[k]` with a variable k has no key at all and
--- therefore never reaches this relation — which is the same refusal the shape
--- axis records as `runtime_dependent`, arriving as an absence instead of a
--- special case.
--- ...and the computed branch now asks the DATAFLOW layer what the key may be,
--- which makes the literal case and the const case ONE rule. `o["pick"]()` and
--- `const k = "pick"; o[k]()` differ only in how far the value travelled, and
--- `may_be_lit` is what closes that distance. Requires rules/js-dataflow.rofl.
-
--- ENTRY 1 — an identifier bound to an object literal. This is tier 2's premise,
--- lifted out of the resolution rule so the other four can share it.
-
--- ENTRY 2 — an identifier bound to `new C()`. `const b = new Box(1); b.both()`
--- was a miss the oracle caught, and it is NOT the constructor edge: this rule
--- says what `b` IS, and says nothing about `new Box(1)` being a call.
-
--- ENTRIES 3 AND 4 WENT HOME 2026-09-04. `this` inside a class method, and the
--- recursion through a member of something that already denotes, were both
--- DATAFLOW facts written here because here is where they were first needed —
--- the same way `param_bind` was. rules/js-dataflow.rofl answers both now
--- (`may_be_node` entries 6 and 8), and entry 5 below projects them, so the
--- deletion cost nothing: `useDeep -> dig` and `both -> get` are still derived,
--- through one relation instead of two copies of it.
-
--- ENTRY 5 — WHATEVER THE DATAFLOW LAYER CAN VALUE, which after the move above
--- is most of it: an object literal reached through a name, a member of one at
--- any depth, `this` in a class method, and a call's return value. This one rule
--- is what makes the deletion above free.
-
--- THE ONE RESOLUTION RULE the entries feed. Note what is NOT here: the
--- shape. A rule keyed by shape would have to be repeated per shape and would
--- silently stop covering a shape nobody thought of; keyed by the QUESTION, it
--- covers every spelling the entries can reach, including ones this corpus has
--- no site for.
-
--- THE CONSTRUCTOR EDGE. `new Box(1)` is the one edge the execution oracle saw
--- from the beginning and no callee shape could ever carry, because it is not a
--- CallExpression: the shape axis classifies what stands in the callee position,
--- and here there is no callee position at all. It took a value question to
--- answer — which class does this expression construct — and that is why the
--- queue had it after the dataflow items rather than beside its neighbours.
+-- The constructor edge is not a CallExpression at all; it needed the value
+-- question "which class does this expression construct". `super()` walks
+-- `ctor_of` (a class with no constructor forwards to its ancestor's — V8 skips
+-- the synthesised frame); `new` deliberately does NOT, because V8 names the
+-- frame after the class and makes it the caller.
 class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
                            ast_attr[code](M, kind, "constructor").
 
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, CD), class_ctor[code](CD, M).
 
--- `super()` — the CALL, not `super.m()`. The callee node is `super`, whose
--- value is the parent class, and what it reaches is that class's constructor:
--- its own if it has one, otherwise the nearest ancestor's, because a class with
--- no constructor synthesises one that forwards. `ctor_of[flow]` does that walk
--- and rules/js-dataflow.rofl records the measurement that says it is the right
--- one — V8 reports `C -> A` for a `super()` that passes through a
--- constructor-less B, skipping the synthesised frame entirely.
---
--- THE `new` RULE ABOVE DELIBERATELY DOES NOT USE THE WALK. The same measurement
--- shows `new Cask()` behaving the OTHER way: V8 creates a frame named after the
--- class and makes it the CALLER, so a model that resolved the site to the
--- ancestor's constructor would name the wrong caller and disagree with every
--- execution. That is a separate question with no node to point at.
 resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
 
--- THE TAG OF A TAGGED TEMPLATE, which is a callee in every sense but the
--- grammar's: `` tag`x` `` evaluates `tag` and calls it with the strings and the
--- substitutions. There is no `callee` child to read — the field is `tag` — and
--- once that is said the value layer answers the rest, so this is one line and
--- no new mechanism, like the namespace import and the alias store before it.
---
--- AND THE VALUE HALF COMES WITH IT, which is why this closes two cells. A
--- tagged template EVALUATES to what the tag returns, and `may_be_node` already
--- carries a call's value through `resolves[code]` — so `` const f = mark`a` ``
--- followed by `f()` reaches what `mark` returns with nothing added here.
+-- A tag is a callee in every sense but the grammar's (the field is `tag`, not
+-- `callee`); a decorator's `expression` is either the function or a factory
+-- call, and `may_be_node` carries what a call returns, so one arm covers both.
 resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
                         may_be_node[flow](T, F), fn_node[code](F).
 
--- THE DECORATOR'S CALLEE, and it is ONE ARM FOR TWO SHAPES on purpose.
--- `@decoOnce` names the function directly; `@decoFactory('m')` names a CALL
--- whose result is what gets applied, and the value layer already carries what a
--- call returns — so reading `expression` through `may_be_node` should reach
--- `decoApplied` without a second rule. Whether it does was measured rather than
--- hoped: it does, and the factory's own call stays visible beside it because
--- that one IS in the grammar.
 resolves[code](X, F) :- transfer_site[code](X, decorator),
                         ast_child[code](X, expression, 0, E),
                         may_be_node[flow](E, F), fn_node[code](F).
 
--- THE ITERATOR PROTOCOL. `for (x of E)` calls `E[Symbol.iterator]()` and then
--- `next()` on whatever that returned, and the grammar shows neither. Both are
--- attributed by V8 to the enclosing function — measured before this was
--- written — so unlike an `await`'s `.then` the model can be held to them.
---
--- ONLY THE FIRST HOP IS A `resolves`, AND THE SECOND DELIBERATELY IS NOT.
--- `ambiguous_call[audit]` reads a site with two answers as an
--- over-approximation that must be visible, which is exactly right for a callee
--- POSITION and exactly wrong here: a for-of makes two calls and both are true,
--- so routing the second through `resolves` would turn a correct model into an
--- audit row. The second hop goes straight to `calls`, which is where "who calls
--- whom" lives and where two callees from one statement is an ordinary fact.
--- Measured both ways: through `resolves` it takes `ambiguous_call` 8 -> 9.
+-- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
+-- hop is a `resolves`: `ambiguous_call[audit]` reads two answers at one site
+-- as an over-approximation, and a for-of really makes two calls, so the second
+-- goes straight to `calls`. `member_value` names the node a member HOLDS — for
+-- `{ next: bump }` the identifier — hence the second `may_be_node` hop.
 for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
                                ast_child[code](X, right, 0, R),
                                may_be_node[flow](R, Obj),
                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
 
--- ...and the iterator object's `next`, which the loop calls and no syntax
--- names. `returns[flow]` carries what the method gave back and `member_value`
--- reads that object's members — both already standing, so this is a join and
--- not a mechanism.
--- `member_value` NAMES THE NODE A MEMBER HOLDS, which for `{ next: bump }` is
--- the IDENTIFIER and not the function — the relation's own comment says it does
--- not judge what the value IS. So the last step is `may_be_node` again, exactly
--- as every other consumer of a member does it.
 calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
                              returns[flow](M, E), may_be_node[flow](E, IterObj),
                              member_value[flow](IterObj, "next", V),
                              may_be_node[flow](V, Next), fn_node[code](Next).
 
--- THE GENERAL CALLEE RULE. Everything above resolves a callee by recognising
--- its SPELLING — an identifier, a member, an IIFE. This one asks the value
--- question instead: whatever the callee expression may BE, if it is a function,
--- the site calls it. That covers the five syntactic wrappers in one line —
--- `(f)()`, `f as T ()`, `f!()`, `(a, f)()`, `c ? f : g ()` — because the
--- dataflow layer already sees through a parenthesis, a cast, an assertion, a
--- sequence and a conditional, and it will cover the next wrapper somebody adds
--- to the grammar without a rule here at all.
+-- THE GENERAL RULE: whatever the callee expression may BE, if it is a function
+-- the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
+-- `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 resolves[code](C, F) :- callee_of[code](C, N), may_be_node[flow](N, F), fn_node[code](F).
 
--- A site resolving two ways is an over-approximation that must be VISIBLE,
--- not averaged away.
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
 
--- ===========================================================================
--- 5. THE EDGE
-
+-- =========================================================================
+-- 5. THE EDGE — by node, by name (a stack frame carries a name), and by file
+-- (an oracle can only be compared against the files it ran).
+-- `passes_function` is recorded and NOT folded into `calls`: passing a
+-- function is not calling it.
 calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Caller, C).
 calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 
--- by name, because a stack frame carries a name and not a node id
 calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_name[code](Y, B).
 calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_name[code](Y, B).
 
--- the same edge, carrying the file it was derived in. An oracle can only be
--- compared against the files it actually ran, and mixing in a scanned-but-
--- never-executed fixture would count its edges as over-approximation.
 calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _),
                                 fn_name[code](X, A), fn_name[code](Y, B).
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
                                 fn_name[code](Y, B).
 
--- HIGHER-ORDER, recorded and NOT folded into `calls`: passing a function is
--- not calling it. The index is the content — argument 0 and argument 1 are
--- different facts about the program.
--- REGROUNDED 2026-09-04. This used to stand on `fn_binding`, the call graph's
--- own name-to-function table, which went when the resolution tiers did. The
--- relation itself is worth keeping — it is what makes ARGUMENT ORDER visible as
--- a fact rather than as a comment — and it now stands on the value layer, so it
--- covers a function reached any way the dataflow layer can reach one.
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), ast_name[code](A, Name),
                                         may_be_node[flow](A, F), fn_node[code](F).
 
--- ===========================================================================
+-- =========================================================================
 -- 6. THE FRONTIER, AS A POSITIVE RELATION
-
+--
+-- `stdlib_member` resolves nothing: it moves "the receiver is a builtin
+-- prototype, so the method is not a node in this program" from prose into a
+-- row `w_env_api_surface` reads. `shape_because(Lang, Shape, Layer, Reason)`
+-- is the verdict ledger for SHAPES, separate from js-model's kind-level
+-- `unknown_because`, because a kind cannot express partial coverage.
 resolved_site[code](C)      :- resolves[code](C, _).
--- ...and the same restricted to CALL sites. `resolves` covers transfer sites
--- since the constructor edge landed, so `resolved_site` no longer partitions
--- the call sites on its own — the totality identity needs the narrower half.
 resolved_call[code](C)      :- resolved_site[code](C), call_site[code](C, _).
 unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
 unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
 
--- THE RESIDUE THAT IS THE STANDARD LIBRARY, NAMED RATHER THAN DESCRIBED.
--- rules/js-callgraph.rofl has said `the String prototype, which is the standard
--- library and a different programme` in a comment since the shape split, and
--- facts/js-callgraph.rofl says the same about a literal receiver. A sentence in
--- a comment cannot go red and cannot be counted. This is the same statement as
--- a row: a call this model does not resolve, whose RECEIVER has a builtin
--- prototype, and whose method is therefore not a node in this program.
---
--- IT RESOLVES NOTHING and is not meant to. It moves the residue from prose into
--- `w_env_api_surface`'s in-tray, which is the item that waits on
--- `prototype_of[flow]` by name.
 stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
                                    ast_child[code](N, object, 0, O),
                                    prototype_of[flow](O, P), builtin_prototype(P),
                                    selects[flow](N, Key).
 
--- The verdict ledger for SHAPES. It is separate from js-model's
--- `unknown_because`, which is keyed by node KIND, because a kind's verdict
--- cannot express partial coverage: `member_expression` has a rule (tier 2)
--- and still misses seven of its eight shapes, and the kind-level matrix reads
--- that cell as `modelled`. The shape ledger is where the residue is counted.
---   shape_because(Lang, Shape, Layer, Reason)
 edb(shape_because).
 
--- WHERE THE FRONTIER SITS. An unresolved site or an unmodelled transfer,
--- attributed to the caller unit that contains it. A missing edge whose caller
--- has no row here is a SILENT under-report: the model lost a call and has
--- nothing to point at as the reason.
+-- An unresolved site attributed to the unit that contains it; a missing edge
+-- whose caller has no row here is a SILENT under-report. A transfer site that
+-- resolves is no longer frontier. `frontier_line` is what a stack frame can be
+-- matched against.
 frontier_at[code](F, S) :- nearest_fn[code](F, C), unresolved_call[code](C, S).
 frontier_at[code](R, S) :- top_call[code](C, R), unresolved_call[code](C, S).
--- ...and a transfer site that RESOLVES is no longer frontier. Until the
--- constructor edge existed every transfer site was residue by construction, so
--- the negation had nothing to do and was left out; with a rule that can resolve
--- one, leaving it out would keep an excuse alive beside the answer.
 frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K),
                            not resolved_site[code](X).
-frontier_at[code](R, K) :- top_site[code](X, R), transfer_site[code](X, K),
+frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
                            not resolved_site[code](X).
 
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
 frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
 
--- the same frontier, located by FILE AND LINE rather than by caller. A stack
--- frame carries the line of the call site, so this is what turns "the caller
--- has some unresolved site somewhere" — which every function does, since every
--- one of them calls the imported `trace` — into "the exact site the runtime
--- transferred from is on the list".
 frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File, Line).
 frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
                                       ast_node[code](X, _, File, Line).
 
--- the CLOSED vocabulary of shapes, read off the classification tables rather
--- than listed again: the denominator is the grammar, so a shape the corpus
--- never produces still exists and still wants an answer.
+-- The closed vocabulary of shapes, read off the tables: the denominator is the
+-- grammar, so a shape the corpus never produces still wants an answer.
+-- `shape_stale` is an excuse that outlived its cause; `unrecorded_coverage` is
+-- the opposite direction — rules doing the work while the cell says
+-- `not_modelled`, which every other gate stays green through.
 shape_vocab[audit](S) :- callee_shape(_, S).
 shape_vocab[audit](S) :- member_shape(_, S).
 shape_vocab[audit](s_computed_literal_key).
@@ -772,8 +404,6 @@ shape_vocab[audit](s_unclassified).
 shape_seen[audit](S)     :- shape[code](_, S).
 resolved_shape[audit](S) :- resolves[code](C, _), shape[code](C, S).
 
--- three verdicts that partition the vocabulary, and the middle one is the
--- one a coverage list cannot say: a shape SOME of whose sites resolve.
 shape_verdict[audit](S, absent)         :- shape_vocab[audit](S), not shape_seen[audit](S).
 shape_verdict[audit](S, fully_resolved) :- shape_seen[audit](S), not unresolved_shape[audit](S).
 shape_verdict[audit](S, has_residue)    :- unresolved_shape[audit](S).
@@ -782,33 +412,17 @@ shape_reason[audit](S, R)     :- unresolved_shape[audit](S), shape_because(js, S
 shape_unexplained[audit](S)   :- unresolved_shape[audit](S), not shape_because(js, S, callgraph, _).
 shape_bad_reason[audit](S, R) :- shape_because(js, S, callgraph, R), not unknown_type(R, _).
 shape_orphan[audit](S)        :- shape_because(js, S, callgraph, _), not shape_vocab[audit](S).
--- an excuse that outlived its cause: the shape occurs and every one of its
--- sites now resolves, and the reason stayed behind.
 shape_stale[audit](S)         :- shape_because(js, S, callgraph, _), shape_seen[audit](S),
                                  not unresolved_shape[audit](S).
--- a verdict the corpus does not exercise. Expected, not an error.
 shape_unexercised[audit](S)   :- shape_because(js, S, callgraph, _), not shape_seen[audit](S).
 shape_irreducible[audit](S)   :- shape_reason[audit](S, R), unknown_type(R, irreducible).
 
--- COVERAGE THAT EXISTS AND WAS NEVER RECORDED. Added 2026-09-04 after finding
--- `s_member_on_call` fully resolving while its cell read `not_modelled` — the
--- rules did the work and nobody ticked the box. `shape_stale` catches the
--- opposite direction (a reason with no residue left) and there was nothing
--- watching this one, so the matrix could under-report coverage indefinitely
--- while every gate stayed green.
---
--- ANY resolved site is enough, not `fully resolved`: a shape whose sites
--- partly resolve is a PARTIAL cell, and a partial cell is `handled` with a
--- residue reason beside it — the pattern `s_non_null` already follows.
 unrecorded_coverage[audit](K, S) :- resolved_shape[audit](S), shape_of(js, K, S),
                                     verdict[audit](js, K, S, callgraph, not_modelled).
 shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours).
 
--- WHAT MODELLING THIS CELL DRAGGED IN. The kinds the call-graph layer must
--- now have an opinion about are DERIVED from what the rules actually touch —
--- the kind of every call node, of every callee, and of every callee's object.
--- A kind here that no `node_kind` declares is a cell the matrix does not yet
--- know exists, which is the same silence the whole audit forbids.
+-- What modelling this layer dragged in: every kind its rules touch must be a
+-- declared `node_kind`, or the matrix has a cell it does not know exists.
 fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _, _),
                          ast_child[code](D, init, 0, F), fn_node[code](F).
 fn_binder[code](P, F) :- ast_node[code](P, object_property, _, _),
@@ -823,120 +437,49 @@ callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _, _).
 callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _, _).
 kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
 
--- ===========================================================================
--- 8. WHAT THIS LAYER MEANS BY A CALLER, WHEN THE LANGUAGE PERFORMS THE CALL
---    (w_await_is_a_call_the_oracle_places_elsewhere, 2026-09-08)
+-- =========================================================================
+-- 7. A CALL THE LANGUAGE PERFORMS, WITH NO CALLER
 --
--- `calls[code]` has exactly two arms and both say the caller is a LEXICAL
--- REGION of this program: the nearest enclosing function, or the module root.
--- That is the whole notion of a caller here, and an `await` is the construct
--- that breaks it.
+-- `calls` says a caller is a lexical region: the nearest function or the
+-- module root. `await` breaks that. Measured on V8 11.3 and 13.6 with
+-- `Promise.prototype.then` monkey-patched: `await <native promise>` and
+-- `await 5` call it ZERO times (the spec's Await uses PerformPromiseThen, an
+-- internal operation); only a user thenable's own `then` is called, and it is
+-- called on a stack of depth ONE — no caller frame at all. The execution
+-- oracle drops caller-less edges before comparing, so it can neither confirm
+-- nor refute this section.
 --
--- THE ITEM'S PREMISE WAS FALSE AND THE PROBE IS THREE LINES. The queue recorded
--- the callee as `Promise.prototype.then`, "a library method with no node", and
--- pointed the cell at `w_env_api_surface`. Measured with that method
--- monkey-patched and a POSITIVE CONTROL that the patch is live (`p.then(f)`
--- counts 1), on V8 11.3 (node 20.20.0) and V8 13.6 (node 24.13.0) alike:
---
---   await <native promise>   Promise.prototype.then called 0 times
---   await 5                  Promise.prototype.then called 0 times
---   await <user thenable>    Promise.prototype.then 0, the thenable's own
---                            `then` exactly 1
---
--- The specification's `Await` uses PerformPromiseThen, an INTERNAL operation:
--- there is no observable call at all. So the standard library is not this
--- cell's blocker, the residue is not `w_env_api_surface`'s, and the only await
--- that calls anything calls a `then` this program may well contain.
---
--- AND ITS CALLER IS NOBODY. The same probe reports that `then` on a stack of
--- DEPTH ONE — `st[1]` is undefined — so there is no caller frame whatsoever.
--- `<top>` in test/fixtures/js-call/trace.mjs is what that ABSENCE renders as,
--- and it is the same string that file writes for a call made from module top
--- level, which is a real region with real code. Two different facts under one
--- name, which is why the queue read the oracle as a contradiction.
---
--- IT IS NOT A CONTRADICTION, IT IS A BLIND SPOT, and that is measured too:
--- `runOracle` keeps a frame only when the CALLER's file is a run file, and
--- trace.mjs writes `file: st[1] ? st[1].getFileName() : ''`. A caller-less edge
--- therefore carries `""`, `path.basename("")` is `""`, and the edge is dropped
--- before any comparison. Run on a real thenable: the instrument records
--- `<top> -> settle  file="" line=0` and the harness keeps nothing. So the
--- acceptance oracle can neither confirm nor refute anything in this section —
--- ASK WHERE THE CHECK CANNOT LOOK, and this is where.
---
--- WHAT THE MODEL SAYS INSTEAD OF AN EDGE: the call happens, the callee has a
--- name, and there is NO CALLER. `performed_call[code]` is deliberately not
--- `calls[code]` and deliberately never reaches `calls_named`/`calls_in`, so
--- nothing this section derives can be compared against a stack frame — which
--- is correct, because there is no stack frame to compare it with.
+-- So `performed_call` is one column short of `calls` on purpose and never
+-- reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
+-- last step the iterator protocol takes: `member_value` names the identifier.
 await_arg[code](A, X) :- ast_node[code](A, await_expression, _, _),
                          ast_child[code](A, argument, 0, X).
 
--- the awaited value's own `then`, through the value layer. TWO `may_be_node`
--- hops and not one, because `member_value` NAMES THE NODE A MEMBER HOLDS and
--- for `{ then: settleThen }` that is the IDENTIFIER — the same last step
--- `r_iterator_protocol` takes for `next`, and the same one this rule was
--- written without: `awaited_then` came back EMPTY on a corpus that had the
--- site, which is the relation's own comment being ignored for the second time.
--- `fn_node` is the guard that keeps a non-callable `then` — a thenable is a
--- duck-type and any property may be spelled that way — out of a call relation.
 awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
                             member_value[flow](O, "then", V),
                             may_be_node[flow](V, F), fn_node[code](F).
 
--- THE CALL WITH NO CALLER. One argument short of `calls[code]` on purpose: the
--- missing column is the caller, and the missing column is the answer.
 performed_call[code](A, F) :- awaited_then[code](A, F).
 callerless_call[audit](Name) :- performed_call[code](_, F), fn_name[code](F, Name).
 
--- ...AND THE THREE-WAY SPLIT OF EVERY AWAIT IN THE CORPUS, because "no call
--- here" and "no answer here" are opposite readings of the same silence and a
--- single negation would have merged them.
+-- Three-way split of every await: value known and no `then` (the language
+-- performs NO call — a positive statement, and the one arm here that can be
+-- WRONG rather than silent, since `may_be_node` is a may-set); value unknown
+-- (the frontier, deliberately not wired into `frontier_at`, which is keyed by
+-- a caller this call has not got).
 await_value_known[code](A)    :- await_arg[code](A, X), may_be_node[flow](X, _).
--- the value is known and carries no `then`: the language performs NO call, and
--- that is a statement rather than an absence.
---
--- ITS CEILING, STATED, because this is the one arm here that can be WRONG
--- rather than merely silent. `may_be_node` is a MAY-set and may be incomplete,
--- so a value the layer answers for partially — one arm reaching an object
--- literal with no `then`, another arm the layer cannot see — reads as "performs
--- no call" while a call may happen. Every other relation in this section fails
--- towards silence; this one fails towards a positive claim. It has no site in
--- this corpus (all three of its rows are a native promise or a plain value) and
--- the fixture that would exercise it is a union whose arms disagree, which is
--- `w_df_value_core`'s shape rather than this item's.
 await_no_call[code](A)        :- await_value_known[code](A), not awaited_then[code](A, _).
--- the value layer answered nothing, so whether a call happens is unknown. This
--- is the frontier of this section, and it is NOT wired into `frontier_at`:
--- that relation is keyed by the CALLER, and the whole finding above is that
--- this class of call has none, so an attribution keyed on the caller is the
--- wrong instrument by construction.
 await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[code](A).
 
--- THE GATE, in the one direction that matters: a performed call must never
--- become an ordinary edge. It goes red the moment somebody routes
--- `performed_call` into `calls`, which is the mutant this section is written
--- against, and it is empty on an honest tree because the corpus's one thenable
--- method is reached no other way.
---
--- AND IT CANNOT USE `nearest_fn`, WHICH IS THE FINDING ONE LEVEL DOWN. Measured
--- when this gate came back permanently silent: `encloses[code]` demands
--- `site[code](C)` and an `await_expression` is not a site, so `nearest_fn`
--- reaches no await at all and a gate written over it can never fire — a check
--- that is wrong in the SAFE direction, which CLAUDE.md names as worse than a
--- red one. The caller machinery of this layer is keyed on SITES, and the
--- construct whose caller is in question is not one of them.
+-- The gate: a performed call must never become an ordinary edge. It cannot use
+-- `nearest_fn`, because `encloses` demands `site(C)` and an await is not a site
+-- — written that way it was permanently silent.
 awaiting_fn[code](Fn, A) :- performed_call[code](A, _), fn_node[code](Fn),
                             ast_within[code](Fn, A).
 performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
                                    awaiting_fn[code](Fn, A),
                                    calls[code](Fn, F).
 
--- THE CALL GRAPH READS THE VALUE LAYER, which is the whole shape of this model
--- since resolution collapsed into one rule: `resolves` asks what the callee
--- expression may BE. Declared here rather than in rules/js-dataflow.rofl,
--- because the crossing belongs to the reader.
+-- The call graph reads the value layer; declared by the reader.
 imports(code, flow).
--- ...and the audits over both. `imports(audit, code)` is in rules/js-model.rofl;
--- this is its twin for the ledger the value questions live in.
 imports(audit, flow).

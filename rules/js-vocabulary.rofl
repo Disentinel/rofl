@@ -1,39 +1,17 @@
--- js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, CHECKED AGAINST THE
--- LIST OF KINDS IT CLAIMS TO DESCRIBE.
+-- js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
+-- list of kinds it claims to describe. `vocabulary_gap[audit]` in js-model
+-- watches the CORPUS: a kind the scanner emits that the vocabulary does not
+-- name. This watches the RULES: a kind a rule reads by name and the
+-- vocabulary does not declare can never be reported unmodelled. The two fail
+-- in opposite directions (`class_expression` was in a rule and in no corpus).
 --
--- `vocabulary_gap[audit]` in rules/js-model.rofl watches the CORPUS: a kind the
--- scanner emits that the vocabulary does not name. This file watches the
--- RULES, and the hole it closes was named by the ledger on 2026-09-08 and left
--- as a decision:
---
---     "Diffing the kinds a RULE READS BY NAME against the declared vocabulary
---      finds two: `program`, which is structural, and `class_expression` —
---      which `obj_like[flow]` and `node_value_kind` both read, so the model HAS
---      an opinion about it, and the matrix has NO CELL for it at any layer. A
---      kind the vocabulary does not declare can never be reported unmodelled,
---      so an opinion held in the rules is invisible to the ledger that exists
---      to count opinions."
---
--- The two audits fail in OPPOSITE directions and neither implies the other. A
--- kind can be in the corpus and in no rule (`vocabulary_gap` sees it, this file
--- does not); a kind can be in a rule and in no corpus (this file sees it,
--- `vocabulary_gap` does not) — which is exactly what `class_expression` was,
--- since the corpus that would contain one is written by whoever models it.
---
--- THIS IS THE FIRST RULE IN THE CORPUS THAT READS THE KERNEL'S OWN
--- REIFICATION. Every clause is stored as facts after parsing — that is how the
--- evaluator reads them — and `premise_lit(RuleId, K, Lit)` carries the whole
--- body element as a term: `$lit(Rel, Persp, $cons(A1, $cons(A2, ...)), Tense)`,
--- with an argument that is a variable appearing as `$var("Name")`. So the
--- question "which kinds does a rule name" is a QUERY rather than a script, and
--- the check lives in the language it checks.
+-- Reads the kernel's own reification: `premise_lit(RuleId, K, Lit)` carries
+-- each body element as `$lit(Rel, Persp, $cons(A1, $cons(A2, ...)), Tense)`,
+-- variables as `$var("Name")`, so "which kinds does a rule name" is a query.
 
--- WHAT A RULE'S BODY SAYS, WALKED ONE ARGUMENT AT A TIME. The reified argument
--- list is a cons chain and Datalog cannot index into one, so the walk is a
--- recursion that carries the position. `$not(...)` gets its own arm and is not
--- an afterthought: `not ast_node[code](X, with_statement, _, _)` is an OPINION
--- ABOUT `with_statement` in exactly the sense this audit is about, and the
--- first draft of this file saw only positive premises.
+-- the walk, one argument at a time: a cons chain cannot be indexed. `$not`
+-- gets its own arm because `not ast_node(X, with_statement, _, _)` is an
+-- opinion about `with_statement`.
 body_lit(L)         :- premise_lit(_, _, L), L = $lit(_, _, _, _).
 body_lit(L)         :- premise_lit(_, _, $not(L)).
 lit_rel(L, Rel)     :- body_lit(L), L = $lit(Rel, _, _, _).
@@ -41,38 +19,22 @@ arg_at(L, 1, Args)  :- body_lit(L), L = $lit(_, _, Args, _).
 arg_at(L, J, T)     :- arg_at(L, I, $cons(_, T)), J is I + 1.
 lit_arg(L, I, A)    :- arg_at(L, I, $cons(A, _)).
 
--- A CONSTANT, WHICH IS EVERYTHING THAT IS NOT A VARIABLE. There is no type test
--- among the kernel's builtins — `=`, `!=`, the four comparisons and `is` — so
--- the variable case is derived positively and subtracted, which is the same
--- move `slot_atom` would make in any language without one.
+-- a constant is everything that is not a variable; no type test among the
+-- builtins, so the variable case is derived and subtracted
 slot_term(Rel, I, A)      :- lit_rel(L, Rel), lit_arg(L, I, A).
 slot_var(Rel, I, $var(V)) :- lit_rel(L, Rel), lit_arg(L, I, $var(V)).
 slot_atom(Rel, I, A)      :- slot_term(Rel, I, A), not slot_var(Rel, I, A).
 
--- WHICH ARGUMENT POSITIONS CARRY A KIND — DISCOVERED, NOT DECLARED, and that
--- is the load-bearing choice in this file. A hand-written table of kind slots
--- is a list that rots silently: the day somebody adds a relation whose second
--- argument is a kind, a table nobody updated reports zero and means nothing.
--- Instead a position IS a kind position when a DECLARED kind appears in it, so
--- the audit configures itself from the rules it is auditing.
---
--- MEASURED 2026-09-08 on the five js rule packs: exactly two positions qualify,
--- `ast_node/2` with 39 declared kinds and `transfer_site/2` with 3. A hand
--- table would have had `ast_node` and missed `transfer_site`.
---
--- THE LIMIT IS STATABLE AND WORTH STATING: a position in which EVERY constant
--- is an undeclared kind is invisible to this rule, because nothing marks it as
--- a kind position. That is the price of not hand-writing the list, and it is
--- the cheaper mistake — a self-configuring check that misses a wholly new
--- relation beats a hand list that misses a wholly new relation AND rots.
+-- Which positions carry a kind — DISCOVERED, not declared, so the table
+-- cannot rot: a position is a kind position when a declared kind appears in
+-- it (`ast_node/2` and `transfer_site/2`; a hand list would have missed the
+-- second). The limit: a position where EVERY constant is an undeclared kind
+-- is invisible, which is the cheaper mistake.
 kind_slot(Rel, I)     :- slot_atom(Rel, I, A), node_kind(js, A).
 kind_named_by_rule(K) :- slot_atom(Rel, I, K), kind_slot(Rel, I).
 
--- AND THE VERDICT. The two exclusions are the ones `vocabulary_gap` already
--- uses, for the same reason and with the same guards against a misspelling:
--- `not_a_construct` for the scanner's own roots, `frame_deferred` for a kind
--- outside the frame with an owner. `program` is the only name this audit
--- reports on an honest tree and it is excluded by the first of them.
+-- the verdict, with the two exclusions `vocabulary_gap` uses; `program` is
+-- the only name reported on an honest tree and `not_a_construct` excludes it
 rule_opinion_unlisted[audit](Lang, K) :- kind_named_by_rule(K), lang_of_corpus(Lang),
                                          not node_kind(Lang, K),
                                          not not_a_construct(K),

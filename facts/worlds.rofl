@@ -112,6 +112,7 @@ world_pack(w_queue, "rules/findings.rofl").
 world_pack(w_queue, "facts/findings.rofl").
 world_pack(w_queue, "rules/worklist.rofl").
 world_pack(w_queue, "facts/worklist.rofl").
+world_pack(w_queue, "facts/refactoring.rofl").
 world_pack(w_queue, "rules/js-model.rofl").
 world_pack(w_queue, "facts/js-kinds.rofl").
 world_pack(w_queue, "facts/js-shapes.rofl").

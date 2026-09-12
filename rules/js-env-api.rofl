@@ -1,73 +1,37 @@
 -- js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
---
 -- `stdlib_member[audit](C, P, Key)` names a member call whose receiver has a
--- known PROTOTYPE and whose method is not a node in this program: `array.join`,
--- `regexp.test`, `string.concat`, `bigint.toString`. Naming it was
--- w_prototype_of_a_value. Saying WHICH method it is, and SINCE WHEN, is
--- w_env_api_surface — and the facts come from facts/js-lib-surface.rofl, which
--- scanners/ts_lib.ts generates from TypeScript's own `lib.es*.d.ts`.
+-- known PROTOTYPE and whose method is not a node in this program; this says
+-- WHICH method and SINCE WHEN, from facts/js-lib-surface.rofl, which
+-- scanners/ts_lib.ts generates from TypeScript's lib.es*.d.ts.
 --
--- THIS PACK NEEDS TWO WORLDS THAT ARE NEVER LOADED TOGETHER, and that is the
--- finding rather than an inconvenience. `stdlib_member` is derived in the
--- CALL-GRAPH world (test/js-corpus-world.ts: js-kinds, js-callgraph, js-dataflow,
--- js-modules, js-shapes, js-statements, js-controlflow) and `environment` /
--- `env_rank` are declared in facts/js-env.rofl, which that world does not load;
--- the ERA world in turn has no call graph. Each half has been complete for
--- days and no world could ask the question.
---
--- The rules are written once and each world derives what it can: the first two
--- need only the call graph, and `lib_unsupported[audit]` needs both, so a pack
--- loaded without facts/js-env.rofl will report `environment` through
--- `undefined_premise[audit]` — which is the kernel saying "you brought half a
--- question", and is the right thing for it to say.
+-- Two worlds: `stdlib_member` is derived in the call-graph world and
+-- `environment` declared in facts/js-env.rofl, which that world does not
+-- load. Each world derives what it can; a pack loaded without the era facts
+-- reports `environment` through `undefined_premise[audit]`, the kernel saying
+-- "you brought half a question".
 
--- ---------------------------------------------------------------------------
--- THE ATTRIBUTION. One join, and it is one join because both halves already
--- existed: the residue is keyed by (prototype, key) and so is the library.
+-- one join: the residue is keyed by (prototype, key) and so is the library
 lib_call[code](C, P, Key, Rel) :- stdlib_member[audit](C, P, Key),
                                   lib_member(P, Key, Rel).
 
--- ...AND WHAT IT DOES NOT ATTRIBUTE, which is the row worth watching. A member
--- call on a KNOWN prototype whose name TypeScript's declarations do not carry
--- is one of three things and the audit does not guess which: a method of a
--- newer edition than this TypeScript ships, a name the model gave the wrong
--- prototype, or a genuine typo in the corpus. It is empty today and it is the
--- only thing that would notice `prototype_of` becoming wrong.
+-- a member call on a KNOWN prototype whose name TypeScript does not carry: a
+-- newer edition, a wrong prototype, or a typo; the only thing that would
+-- notice `prototype_of` going wrong
 stdlib_unattributed[audit](C, P, Key) :- stdlib_member[audit](C, P, Key),
                                          not lib_member(P, Key, _).
 
--- ---------------------------------------------------------------------------
--- THE ERA QUESTION, and it is the same question `unsupported[audit]` asks of
--- syntax, on the same scale and in the same years. `Array.prototype.at` is
--- declared in lib.es2022.array.d.ts, so a corpus that calls it is not valid
--- under es2020 — and until now the model could say that about `??=` and not
--- about `.at`, which is the half of the environment question the item's own
--- note calls "what syntax cannot answer".
--- BY COMPOSITION SINCE 2026-09-08, like everything else on this axis. This read
--- `env_rank(E, R), Since > R` while `Since` was a YEAR; it is a RELEASE now —
--- `lib.es2022.array.d.ts` names `es2022` and the file name was always the
--- release rather than the number — so the question is membership and not
--- comparison: does this environment REACH the release that introduced the
--- method. Which is the same question `has_feature` asks of a syntax feature,
--- in the same words, for the first time.
+-- THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
+-- composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so
+-- the question is whether the environment REACHES it, in the same words
+-- `has_feature` uses.
 lib_unsupported[audit](E, C, P, Key) :- lib_call[code](C, P, Key, Rel),
                                         environment(E), not reaches[audit](E, Rel).
 
--- ---------------------------------------------------------------------------
--- AND WHETHER THE METHOD IS STILL THE ONE TO USE. `lib_deprecated` is read from
--- the same declarations as everything else here — TypeScript carries
--- `@deprecated` in the JSDoc and the scanner reads it — so a call to a method
--- the standard says not to use is one join away from the residue.
---
--- `lib_replaced_by` IS NEARLY EMPTY AND THAT IS THE ANSWER, not a gap. Measured
--- 2026-09-08: forty-one `@deprecated` tags across the ecmascript libs and TWO
--- name a replacement, `trimStart` and `trimEnd`. The other thirty-nine read
--- `A legacy feature for browser compatibility` and name nothing, because there
--- IS no replacement for `blink()` or `substr()`. w_env_api_surface asked for
--- `replaced_by/2` as if it were the missing half of the surface; it is a
--- relation whose subject barely exists on this axis, and the place it would
--- earn its keep is a RUNTIME's API — `fs.rmdir` for `fs.rm` — which is a source
--- this repository does not have.
+-- `@deprecated` in the JSDoc, read by the scanner. `lib_replaced_by` is
+-- nearly empty and that is the answer: of forty-one deprecations two name a
+-- replacement (`trimStart`, `trimEnd`); there is none for `blink()`. A
+-- replacement table earns its keep on a runtime's API:
+-- `host_member_replaced_by` in rules/js-host.rofl.
 lib_call_deprecated[audit](C, P, Key) :- lib_call[code](C, P, Key, _),
                                          lib_deprecated(P, Key).
 lib_call_remedy[audit](C, P, Key, R)  :- lib_call_deprecated[audit](C, P, Key),

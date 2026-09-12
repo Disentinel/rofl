@@ -1,77 +1,34 @@
--- js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is not in
--- the program and not in the language.
+-- js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
+-- neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
+-- parses; rules/js-env-api.rofl whether a PROTOTYPE METHOD exists; neither can
+-- see `console.log`, `fs.readFileSync` or `fetch`, which come from the HOST.
 --
--- rules/js-env.rofl asks whether SYNTAX parses in an environment.
--- rules/js-env-api.rofl asks whether a PROTOTYPE METHOD exists in an edition.
--- Neither can see `console.log`, `fs.readFileSync` or `fetch`, because none of
--- those is ECMAScript at all: they come from the HOST, and until this pack the
--- model had no term for a host.
---
--- ===========================================================================
--- TWO DOORS, AND THEY ARE NOT ONE QUESTION.
---
--- The brief that opened this item asked whether `import fs from "node:fs"` and
--- `console` are the same question. They are not, and forcing them into one
--- relation would lose the only fact that distinguishes them:
---
---   A MODULE ARRIVES THROUGH A BOUNDARY THE MODEL ALREADY OWNS. `node:fs` is
---   a specifier; rules/js-modules.rofl classifies it (`src_shape` ->
---   node_builtin), canonicalises it (`builtin_canonical`), resolves it
---   (`resolved_builtin`) and BINDS a local name for it (`binding`). Four
---   relations already exist and this pack reads all four. The name `fs` is
---   local, it can be renamed at the import, and it is scoped to one file.
---
---   A GLOBAL ARRIVES FROM NOWHERE. `console` has no declaration, no specifier
---   and no binding site anywhere in the program. The ONLY thing that makes an
---   identifier a global is that NOTHING IN THE PROGRAM BINDS IT — which is a
---   NEGATIVE over the file, and therefore a completely different rule shape
---   from the module door's four positive joins.
---
--- So there are two doors, `host_module_ns` + `host_module_named` and
--- `host_global_ref[code]`, and ONE place they meet: `host_call_effect[audit]`,
--- which is the row the effect layer joins against. That is the whole design —
--- two doors, one product.
---
--- ===========================================================================
--- THE CROSSING. This pack's audits read the scanner's book, the same row
--- rules/js-env.rofl and rules/js-model.rofl already declare. A fact is
--- idempotent and the declaration belongs where the crossing is.
+-- TWO DOORS, ONE PRODUCT. A MODULE arrives through a boundary the model owns:
+-- rules/js-modules.rofl classifies, canonicalises, resolves and BINDS
+-- `node:fs`, four positive joins. A GLOBAL arrives from nowhere: the only
+-- thing that makes `console` a global is that NOTHING IN THE PROGRAM BINDS
+-- IT, a negation over the file. The doors are `host_module_ns` with
+-- `host_module_named`, and `host_global_ref[code]`; they meet at
+-- `host_call_effect[audit]`, the row the effect layer joins against.
+
+-- the audits read the scanner's book; `ast_parse_error` is `edb` because
+-- corpus-free worlds load this pack with no AST at all
 imports(audit, code).
 
--- `edb` because this pack is loaded in corpus-free worlds — the era world and
--- the ledger world both hold it with no AST at all — and an empty scanner table
--- must read as an empty answer rather than as a misspelled premise. Same
--- correction `ast_node` and `ast_parse_error` already needed.
 edb(ast_parse_error).
 
--- ===========================================================================
--- 1. THE GLOBAL DOOR — an identifier NOTHING IN THIS FILE BINDS.
---
--- THE CEILING IS STATED BEFORE THE RULE, because it is the whole of what this
--- relation can be wrong about. `name_bound_in` is FILE-scoped, not
--- scope-scoped: if any construct anywhere in a file binds the name `console`,
--- this pack reports no global reference for `console` ANYWHERE in that file,
--- including in functions the binder does not reach.
---
--- THAT IS THE SAFE DIRECTION AND IT WAS CHOSEN, not fallen into. The precise
--- question — is this USE in the scope of that binder — is what
--- `sees_binder[code]` answers, and `sees_binder` covers declarators and the
--- three destructuring forms and NOT parameters, function names, class names or
--- import locals. A rule reading `not sees_binder[code](E, _)` would therefore
--- call every parameter named `url` a reference to the global `URL`'s
--- neighbour, which is an OVER-report of a runtime effect: it would attribute
--- io to a program that does none. Under-reporting a global that a file also
--- shadows is a missed row; over-reporting one is a false accusation, and the
--- effect layer downstream cannot tell the two apart. So the coarse negation is
--- the correct one until every binding form writes a name into one relation.
+-- =========================================================================
+-- 1. THE GLOBAL DOOR — an identifier nothing in this FILE binds. The ceiling
+-- is that `name_bound_in` is file-scoped, not scope-scoped: a name bound
+-- anywhere in a file suppresses the global everywhere in it. Chosen: the
+-- precise relation `sees_binder[code]` covers declarators and destructuring
+-- only, so `not sees_binder` would call every parameter named `url` a global
+-- reference and attribute io to a program that does none. Under-reporting a
+-- shadowed global is a missed row; over-reporting is a false accusation.
 name_bound_in[code](File, Name) :- binds_name[code](_, Name, File).
--- A FUNCTION DECLARATION BINDS ITS OWN NAME, and this arm reads the `id` CHILD
--- rather than `fn_name[code]`. MEASURED before it was narrowed: `fn_name` is a
--- superset that covers OBJECT AND CLASS METHODS, so a file containing
--- `{ log() {} }` would have suppressed the global `console` — a method name is
--- not a binding in any scope, and borrowing a relation because it carries the
--- right-looking arguments is the mistake this pack's own `gate_feature` note
--- warns about one layer up.
+
+-- the `id` child and not `fn_name[code]`, which also covers object and class
+-- METHODS: `{ log() {} }` would have suppressed `console`
 name_bound_in[code](File, Name) :- ast_node[code](F, function_declaration, File, _),
                                    ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 name_bound_in[code](File, Name) :- param_of[flow](F, _, Name),
@@ -79,35 +36,20 @@ name_bound_in[code](File, Name) :- param_of[flow](F, _, Name),
 name_bound_in[code](File, Name) :- class_named[flow](_, Name, File).
 name_bound_in[code](File, Name) :- binding[code](I, _, Name, _), site_file[code](I, File).
 
--- A REFERENCE TO A HOST GLOBAL. The join is on the NAME and the host stays in
--- the row, so `console` in a node file and `console` in a browser file are two
--- rows and never one — which is the promise the surface pack's first paragraph
--- makes and the only way this relation can keep it.
+-- The host stays in the row: `console` under node and under browser are two rows.
 host_global_ref[code](E, H, Name) :- ident_in[code](E, Name, File),
                                      host_global(H, Name),
                                      not name_bound_in[code](File, Name).
 
--- ...AND THE ONE THAT IS NOT IN EVERY HOST, which is the row that pays for
--- carrying the host at all. `document` is a reference under `browser` and
--- there is no `node` row for it; a model with one flat global table would say
--- a node program can reach it.
+-- `document` is a reference under `browser` and there is no `node` row for it.
 host_global_only_in[code](E, H, Name) :- host_global_ref[code](E, H, Name),
                                          host(G), G != H,
                                          not host_global(G, Name).
 
--- ===========================================================================
--- 2. THE MODULE DOOR — a local name bound to a node builtin.
---
--- EVERY PIECE OF THIS WAS ALREADY ON THE STORE. `resolved_builtin[code](I, C)`
--- gives the canonical `node:fs` for both spellings of the specifier,
--- `binding[code](I, Sp, Local, Imported)` gives the local name and the
--- imported one, `site_file` gives the file. This pack adds no scanner contract
--- and no fact table for the module door at all — it is four joins over work
--- rules/js-modules.rofl finished days ago, which is the argument for having
--- modelled the module boundary before the module CONTENTS.
---
--- THE NAMESPACE FORM: `import * as fs` and `import fs` both bind a name that
--- stands for the whole module, so a member off it is the module's member.
+-- =========================================================================
+-- 2. THE MODULE DOOR — a local name bound to a node builtin. Four joins over
+-- rules/js-modules.rofl's work, no new scanner contract. The NAMESPACE form
+-- (`import * as fs`, `import fs`) binds a name standing for the whole module.
 host_module_ns[code](File, Local, Spec) :- resolved_builtin[code](I, Spec),
                                            site_file[code](I, File),
                                            binding[code](I, _, Local, "*").
@@ -115,93 +57,59 @@ host_module_ns[code](File, Local, Spec) :- resolved_builtin[code](I, Spec),
                                            site_file[code](I, File),
                                            binding[code](I, _, Local, "default").
 
--- THE NAMED FORM: `import { readFileSync } from "node:fs"` binds ONE member
--- under a local name that need not be its own — `import { readFile as rf }`.
--- Reading `Imported` for the member and `Local` for the name covers the rename
--- without a `renamed` test, which is the same move `destructures[code]` makes
--- for shorthand and rename in rules/js-dataflow.rofl.
+-- The NAMED form binds ONE member under a local name that need not be its
+-- own; reading `Imported` for the member covers the rename without a test.
 host_module_named[code](File, Local, Spec, Key) :- resolved_builtin[code](I, Spec),
                                                    site_file[code](I, File),
                                                    binding[code](I, _, Local, Key),
                                                    Key != "*", Key != "default".
 
--- A NAME THE MODULE DOES NOT EXPORT. The surface is generated from the host's
--- own declarations, so an import naming something absent from it is one of
--- three things and this row does not guess which: a typo, a member newer than
--- @types/node 22.20.1, or a name the type declarations do not carry. It is the
--- module door's twin of `stdlib_unattributed[audit]` and it exists for the
--- same reason — it is the only row that notices the surface going wrong.
+-- An import naming something the generated surface lacks: a typo, a member
+-- newer than @types/node, or one the declarations do not carry. The module
+-- door's twin of `stdlib_unattributed[audit]`.
 host_import_unknown[audit](File, Spec, Key) :- host_module_named[code](File, _, Spec, Key),
                                                not host_module_member(node, Spec, Key).
 
--- ===========================================================================
--- 3. THE SITES. Four shapes, because there are four ways to reach a runtime
---    API and a rule covering three of them would report a program as pure.
---
---    console.log(x)         a member call on a global
---    fetch(u)               a plain call of a global
---    fs.readFileSync(p)     a member call on a module namespace
---    readFileSync(p)        a plain call of a named import
-
--- 3a. A MEMBER CALL ON A HOST GLOBAL. `selects[flow]` answers the key for both
--- the dotted and the computed form, which is why this needs no `computed` test
--- — the same reason rules/js-callgraph.rofl's `stdlib_member` needs none.
+-- =========================================================================
+-- 3. THE SITES — four shapes, because a rule covering three would report a
+-- program as pure:
+--    console.log(x)         3a. a member call on a global
+--    fetch(u)               3b. a plain call of a global
+--    fs.readFileSync(p)     3c. a member call on a module namespace
+--    readFileSync(p)        3d. a plain call of a named import
+-- `selects[flow]` answers the key for the dotted and the computed form alike.
 host_member_call[code](C, H, Name, Key) :- callee_of[code](C, N),
                                            ast_child[code](N, object, 0, O),
                                            host_global_ref[code](O, H, Name),
                                            selects[flow](N, Key).
 
--- 3b. A PLAIN CALL OF A HOST GLOBAL.
 host_global_call[code](C, H, Name) :- callee_of[code](C, N), host_global_ref[code](N, H, Name).
 
--- 3c. A MEMBER CALL ON A MODULE NAMESPACE.
 host_module_call[code](C, Spec, Key) :- callee_of[code](C, N),
                                         ast_child[code](N, object, 0, O),
                                         ident_in[code](O, Local, File),
                                         host_module_ns[code](File, Local, Spec),
                                         selects[flow](N, Key).
 
--- 3d. A PLAIN CALL OF A NAMED IMPORT. The callee is an identifier whose name
--- is the LOCAL one and whose member is the IMPORTED one.
 host_module_call[code](C, Spec, Key) :- callee_of[code](C, N),
                                         ident_in[code](N, Local, File),
                                         host_module_named[code](File, Local, Spec, Key).
 
--- ...AND THE UNION, at a coordinate a human can find. `query` takes ONE
--- literal, so a projection carrying the file and the line is what makes this
--- askable rather than assemblable — the argument rules/js-env.rofl makes for
--- `unsupported_at`, and these are this layer's actual product.
--- THE ORIGIN COLUMN CARRIES THE RECEIVER, not a constant. For a module call it
--- is the canonical specifier, for a member call on a global it is the global's
--- own name, and for a plain call of a global the key is the atom `itself` —
--- because `fetch(u)` calls the global rather than a member of it, and writing
--- the name in BOTH columns would make the two shapes indistinguishable in the
--- one relation that exists to tell a reader which shape it was.
+-- The union, with the receiver in the origin column: the canonical specifier
+-- for a module, the global's own name for a member call, and the atom `itself`
+-- for a plain call of a global, so the two shapes stay distinguishable.
 host_site[code](C, node, Spec, Key) :- host_module_call[code](C, Spec, Key).
 host_site[code](C, H, Name, Key)    :- host_member_call[code](C, H, Name, Key).
 host_site[code](C, H, Name, itself) :- host_global_call[code](C, H, Name).
 host_site_at[code](H, File, Line, Origin, Key) :- host_site[code](C, H, Origin, Key),
                                                   ast_node[code](C, _, File, Line).
 
--- ===========================================================================
--- 4. THE EFFECT ROW — THE ONE THE EFFECT LAYER JOINS AGAINST.
---
--- `w_effect_layer` models Koka's lattice and its note says `io` cannot be
--- derived for `console.log` or `fs.readFileSync` without this pack. THIS is
--- the shape that pack should read, and the whole point of it is that it is a
--- ROW AT A CALL SITE: an effect rule writes
---
---     effect_of[...](C, E) :- host_call_effect[audit](C, E, _).
---
--- and never has to recognise a spelling, a prefix or a module name. The third
--- argument is the PROVENANCE — which of the four tables said so — because an
--- effect attributed by a module default and one attributed to the member by
--- name are not equally strong, and a layer that cannot tell them apart cannot
--- report its own precision.
-
--- A MEMBER'S OWN ROW WINS OVER ITS MODULE'S DEFAULT, and the negation is what
--- makes it a default rather than a second opinion. Without it `path.resolve`
--- would be BOTH total and io and every consumer would have to pick.
+-- =========================================================================
+-- 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
+-- PROVENANCE as third argument: an effect by module default and one by member
+-- name are not equally strong. A member's own row wins over its module's
+-- default; the negation is what makes it a default rather than a second
+-- opinion (`path.resolve` would otherwise be both total and io).
 member_effect[code](Spec, Key, E) :- host_member_effect(node, Spec, Key, E).
 member_effect[code](Spec, Key, E) :- host_module_member(node, Spec, Key),
                                      host_module_effect(node, Spec, E),
@@ -217,132 +125,73 @@ host_call_effect[audit](C, E, by_global) :- host_global_call[code](C, H, Name),
 host_call_effect[audit](C, E, by_global) :- host_member_call[code](C, H, Name, _),
                                             host_global_effect(H, Name, E).
 
--- ...at a coordinate, and by effect over the corpus. `host_effect_at` is what
--- a report prints; `host_effect_used` is the set of effects the corpus
--- actually exercises, which is the number that says how much of the table
--- above the fixtures reach.
+-- at a coordinate, and the set of effects the corpus exercises
 host_effect_at[audit](E, File, Line, Why) :- host_call_effect[audit](C, E, Why),
                                              ast_node[code](C, _, File, Line).
 host_effect_used[audit](E) :- host_call_effect[audit](_, E, _).
 
--- A RUNTIME CALL WITH NO EFFECT ROW. This is the layer's FRONTIER and it is
--- expected to be non-zero: 38 of 57 modules and 51 of 73 node globals carry no
--- attribution, and the residue is the number that says how far the effect
--- table is from the surface. A site here is one the effect layer will see as
--- silent, which is exactly what it must not mistake for `total`.
+-- The FRONTIER, expected non-zero: a site here is one the effect layer sees
+-- as silent, which it must not mistake for `total`.
 host_call_uneffected[audit](C, Origin, Key) :- host_site[code](C, _, Origin, Key),
                                              not host_call_effect[audit](C, _, _).
 
--- ===========================================================================
--- 5. THE RUNTIME AXIS — A COMPOSITION, ON THE OWNER'S DESIGN, AND THE BRIDGE.
---
--- «Есть ли этот API в node18?» и «а что именно перестанет работать?» are this
--- section, and the shape is the ES scale's shape rather than a second
--- mechanism: a runtime version is a SUBKIND of a family, `runtime_includes`
--- orders them, and the walk below is `reaches` with a different name over
--- different atoms. facts/js-host.rofl carries the design and the caveat.
-
--- THE WALK. Reflexive on purpose, for the reason rules/js-env.rofl gives about
--- `reaches`: a version provides its own surface, and writing that as a second
--- arm of `has_api` would put the same fact in two places.
+-- =========================================================================
+-- 5. THE RUNTIME AXIS — a composition in the ES scale's shape: a runtime
+-- version is a subkind of a family, `runtime_includes` orders them, and the
+-- walk is `reaches` over different atoms. Reflexive on purpose: a version
+-- provides its own surface.
 runtime_reaches[audit](R, R) :- runtime_version(R, _, _).
 runtime_reaches[audit](R, P) :- runtime_includes(R, Q), runtime_reaches[audit](Q, P).
 
--- --------------------------------------------------------------------------
--- `provides_api` IS DERIVED AND NOT AUTHORED, which is the whole reason the
--- composition is worth having. The source is a semver point — `@since v18.9.0`
--- — so ONE comparison turns it into a set, and the composition then carries
--- inheritance. The arithmetic is confined to these three rules and appears
--- nowhere else in this pack.
---
--- THE ENCODING IS THE SURFACE PACK'S: maj*1000000 + min*1000 + patch. A
--- runtime declares a MAJOR, so `18` becomes 18000000 — which is `v18.0.0`, and
--- that is the correct reading: a runtime named `node18` is node 18.0.0 and does
--- NOT have `os.machine`, which arrived in v18.9.0. A model that rounded the
--- major up would silently promise nine minors of API.
+-- `provides_api` is DERIVED from a semver point (`@since v18.9.0`) with one
+-- comparison; the arithmetic lives in these three rules only. The encoding
+-- is the surface pack's, maj*1000000 + min*1000 + patch, and a runtime
+-- declares a MAJOR: `node18` is v18.0.0 and does NOT have `os.machine`.
 runtime_vnum[code](R, VN) :- runtime_version(R, _, V), VN is V * 1000000.
 
--- THE FAMILY IS IN THE JOIN AND IT WAS NOT, AND THE DEFECT WAS A LIVE ROW.
--- The first form read `host_member_since(node, ...)` with the family hard-coded,
--- so `browser_evergreen` — version 0 of the browser family — was compared
--- against NODE's surface and came back missing all 718 members. Eleven of the
--- twenty-two `host_call_absent_at` rows were the browser being told it has no
--- `fs.readFileSync`, which is true, meaningless, and exactly the cross-family
--- comparison facts/js-host.rofl says this axis must not make. Binding F once
--- and using it in both premises is the whole fix.
+-- The family is bound once and used in both premises; hard-coding `node`
+-- compared the browser against node's surface and reported 718 absences.
 arrived_by[code](R, Spec, Key) :- runtime_vnum[code](R, VN), runtime_version(R, F, _),
                                   host_member_since(F, Spec, Key, _, Sv), Sv <= VN.
 
--- WHAT A VERSION ADDS OF ITS OWN: what arrived by it and not by what it
--- includes. ONE HOP IS ENOUGH and it is enough for a MEASURED reason rather
--- than by luck — `arrived_by` is a numeric threshold, so it is monotone along
--- the chain and the immediate predecessor already carries everything before it.
--- The rule subtracts EVERY predecessor's set rather than the nearest one, so it
--- keeps working the day a version includes two.
+-- What a version adds of its own. `arrived_by` is a threshold, hence monotone
+-- along the chain; subtracting every predecessor keeps working the day a
+-- version includes two.
 inherited[code](R, Spec, Key)    :- runtime_includes(R, P), arrived_by[code](P, Spec, Key).
 provides_api[code](R, Spec, Key) :- arrived_by[code](R, Spec, Key),
                                     not inherited[code](R, Spec, Key).
 
--- ...AND THE COMPOSITION PUTS IT BACK TOGETHER. This is the relation every
--- question below reads, and `test/js-host.test.ts` asserts the IDENTITY
--- `has_api == arrived_by` set for set — which is the oracle for this whole
--- section: the walk over subkinds and the comparison over semver must agree,
--- and if they ever disagree one of them is wrong.
+-- test/js-host.test.ts asserts `has_api` equals `arrived_by` set for set:
+-- the walk and the comparison must agree.
 has_api[audit](R, Spec, Key) :- runtime_reaches[audit](R, P), provides_api[code](P, Spec, Key).
 
--- THE COUNTEREXAMPLE RELATION, AND IT IS EMPTY BY CONSTRUCTION RATHER THAN BY
--- LUCK. `runtime_includes` is the owner's caveat: it assumes MONOTONE inclusion
--- and runtimes remove things. The instruction was to derive the inclusion
--- rather than author it, and facts/js-host.rofl section 2a records why that
--- cannot be done from this source — `@types/node` is ONE snapshot, it records
--- arrival and deprecation, and a removed member simply STOPS BEING IN THE FILE.
---
--- So the row that would refute the claim is written out in full, here, and the
--- reason it reports nothing is named: with one snapshot `arrived_by` is a
--- threshold on one number and a threshold is monotone. A SECOND snapshot —
--- @types/node@18 beside @types/node@22 — populates it with no other change to
--- this pack, and that is the difference between a claim with a hole in it and a
--- claim whose hole has a shape.
+-- The counterexample to monotone inclusion, empty by construction: with ONE
+-- @types/node snapshot a removed member simply stops being in the file. A
+-- second snapshot populates it with no other change.
 runtime_drops[audit](A, B, Spec, Key) :- runtime_includes(A, B),
                                          has_api[audit](B, Spec, Key),
                                          not has_api[audit](A, Spec, Key).
 
--- --------------------------------------------------------------------------
--- THE BRIDGE BETWEEN THE TWO AXES, and it is one rule.
---
--- `provides_release(node18, es2022)` says a runtime version implements an
--- ECMAScript RELEASE, and `reaches[audit]` — rules/js-env.rofl's walk over
--- TypeScript's own `/// <reference lib=` composition — carries it the rest of
--- the way. So the era scale is read and never widened: no `release`, no
--- `includes`, no `environment` row is minted here, and the ES half of the
--- question keeps being answered by the ES half of the model.
+-- -------------------------------------------------------------------------
+-- THE BRIDGE between the axes, one rule: `provides_release(node18, es2022)`
+-- and `reaches[audit]` from rules/js-env.rofl carries it the rest of the way.
+-- No `release`, `includes` or `environment` row is minted here.
 runtime_reaches_release[audit](R, Rel) :- runtime_reaches[audit](R, P),
                                           provides_release(P, Rel0),
                                           reaches[audit](Rel0, Rel).
 
--- ...AND THE BRIDGE DOES REAL WORK, which is the row that proves it is not
--- decoration. `lib_unsupported[audit]` in rules/js-env-api.rofl asks whether an
--- ENVIRONMENT reaches the release that introduced a standard-library method;
--- this asks the identical question of a RUNTIME, over the identical
--- `lib_call[code]`, and the only new thing is which walk answers `reaches`.
--- `[3,1,2].toSorted()` is es2023, so it is a live row under node18 and not
--- under node20 — one method, three runtimes, and the two axes joined once.
---
--- `runtime_has_release` IS A GUARD AND NOT A CONVENIENCE. A runtime with no
--- bridge row reaches no release at all, so without this premise every
--- standard-library call in the corpus reports unsupported against it — an
--- avalanche from ONE missing fact, and one that reads as a finding. The row
--- that says which runtimes are in that state is `runtime_no_release[audit]`,
--- and it is empty on the honest tree.
+-- `runtime_has_release` is a GUARD: a runtime with no bridge row reaches no
+-- release, and without the premise every stdlib call reports unsupported
+-- against it. `runtime_lib_unsupported` is `lib_unsupported[audit]` asked of
+-- a runtime over the same `lib_call[code]`.
 runtime_has_release(R) :- runtime_reaches_release[audit](R, _).
 runtime_no_release[audit](R) :- runtime_version(R, _, _), not runtime_has_release(R).
 runtime_lib_unsupported[audit](R, C, P, Key) :- lib_call[code](C, P, Key, Rel),
                                                 runtime_has_release(R),
                                                 not runtime_reaches_release[audit](R, Rel).
 
--- --------------------------------------------------------------------------
--- THE VERSION QUESTION AT A SITE, which is the row this section exists for:
--- not "node18 is older" but THIS call, THIS member, and here is the line.
+-- -------------------------------------------------------------------------
+-- THE VERSION QUESTION AT A SITE: this call, this member, this line.
 host_member_absent[audit](R, Spec, Key) :- runtime_version(R, F, _),
                                            host_member_since(F, Spec, Key, _, _),
                                            not has_api[audit](R, Spec, Key).
@@ -351,50 +200,32 @@ host_call_absent[audit](R, C, Spec, Key) :- host_module_call[code](C, Spec, Key)
 host_call_absent_at[audit](R, File, Line, Spec, Key) :- host_call_absent[audit](R, C, Spec, Key),
                                                         ast_node[code](C, _, File, Line).
 
--- «А что именно перестанет работать на node18?» — the set difference between
--- two runtimes, attributed to a site. The same shape as `lost[audit]` in
--- rules/js-env.rofl and for the same reason: no ordering premise, so the
--- direction falls out of the data rather than out of a comparison this rule
--- would have to get right.
--- ...WITHIN ONE FAMILY, because a difference between a node version and a
--- browser is not something either of them LOST. The families are incomparable
--- and `lost` is a set difference along an order; asking it across an order that
--- does not exist produces rows that are true and answer no question.
+-- The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
+-- not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
 host_lost[audit](From, To, C, Spec, Key) :- host_call_absent[audit](To, C, Spec, Key),
                                             runtime_version(To, F, _),
                                             runtime_version(From, F, _), From != To,
                                             not host_call_absent[audit](From, C, Spec, Key).
 
--- --------------------------------------------------------------------------
--- THE DEPRECATION, which is the visible half of a removal and the ONLY half
--- this source records. `fs.exists` carries `@deprecated Since v1.0.0 - Use
--- {@link stat} or {@link access} instead`, so a call to it is one join from a
--- remedy — and rules/js-env-api.rofl says in so many words that the place
--- `replaced_by` would earn its keep is a runtime's API, "which is a source this
--- repository does not have". It has it now.
+-- -------------------------------------------------------------------------
+-- THE DEPRECATION — the visible half of a removal and the only half this
+-- source records; a deprecation note naming its replacement is one join from
+-- a remedy.
 host_call_deprecated[audit](C, Spec, Key) :- host_module_call[code](C, Spec, Key),
                                              host_member_deprecated(node, Spec, Key).
 host_call_remedy[audit](C, Spec, Key, Use) :- host_call_deprecated[audit](C, Spec, Key),
                                               host_member_replaced_by(node, Spec, Key, Use).
 
--- ===========================================================================
--- 6. THE GATES. Each is a statement this layer makes about ITSELF, and
---    test/js-host.test.ts plants a defect for every one.
-
--- AN EFFECT ATOM NOBODY DECLARED. A typo in the effect table is invisible to
--- every other check here: the site gets an effect, the effect layer joins it,
--- and a misspelt `ioo` propagates as a real attribution. Same job
--- `feature_undeclared[audit]` does for the era table, and it is here because
--- that audit's own comment says a typo is what it exists for.
+-- =========================================================================
+-- 6. THE GATES. Each is a statement this layer makes about itself, and
+-- test/js-host.test.ts plants a defect for every one.
+--
+-- an effect atom nobody declared: a misspelt `ioo` would propagate as real
 host_effect_undeclared[audit](E) :- host_module_effect(_, _, E), not host_effect_atom(E).
 host_effect_undeclared[audit](E) :- host_member_effect(_, _, _, E), not host_effect_atom(E).
 host_effect_undeclared[audit](E) :- host_global_effect(_, _, E), not host_effect_atom(E).
 
--- AN EFFECT ROW ABOUT SOMETHING THE SURFACE DOES NOT HAVE. The surface is
--- GENERATED and the effect table is AUTHORED, so the two drift the moment
--- @types/node moves: a member renamed upstream leaves an effect row pointing
--- at nothing, and nothing else would notice. This is the row that makes the
--- authored half accountable to the generated one.
+-- the authored effect table accountable to the generated surface
 host_effect_orphan[audit](Spec, Key) :- host_member_effect(node, Spec, Key, _),
                                         not host_module_member(node, Spec, Key).
 host_effect_orphan[audit](Spec, global) :- host_module_effect(node, Spec, _),
@@ -402,32 +233,20 @@ host_effect_orphan[audit](Spec, global) :- host_module_effect(node, Spec, _),
 host_global_effect_orphan[audit](H, Name) :- host_global_effect(H, Name, _),
                                              not host_global(H, Name).
 
--- THE RESIDUE, NAMED. Neither is an error — the surface is allowed to be wider
--- than the effect table — and both are the numbers that say how wide. They
--- range only over hosts that CLAIM to be attributed, because a host declared
--- `host_no_effects` has said so in a row and a permanently red gate gets
--- switched off (CLAUDE.md).
+-- The residue, over hosts that CLAIM attribution; `host_no_effects` is a
+-- declared absence rather than a permanently red gate.
 effects_claimed(H) :- host(H), not host_no_effects(H, _).
 host_module_uneffected[audit](Spec) :- host_module(node, Spec),
                                        not host_module_effect(node, Spec, _).
 host_global_uneffected[audit](H, Name) :- host_global(H, Name), effects_claimed(H),
                                           not host_global_effect(H, Name, _).
 
--- A RUNTIME WITH NO VERSION AND NO WAIVER. `runtime_version` is what every
--- comparison in section 5 reads, so a runtime missing one silently answers NO
--- to every version question and looks like a very new runtime rather than a
--- broken row — the failure mode `env_unranked[audit]` was written for, in the
--- other direction. The waiver is a row so that `browser` is a declared absence
--- and not this audit's permanent occupant.
+-- a runtime with no version answers NO to every version question and looks
+-- new rather than broken; `runtime_undated` is the waiver for `browser`
 runtime_unversioned[audit](R) :- runtime_version(R, _, 0), not runtime_undated(R, _).
 
--- A RUNTIME THAT DISTINGUISHES NOTHING. Two runtimes that agree on every
--- member of the surface are one runtime as far as any measurement here can
--- tell. NO ORDERING PREMISE, for the reason `env_pair_indistinct` records:
--- its first form required `RA < RB` and two runtimes given the SAME version —
--- precisely the indistinct case — then failed the comparison and were never
--- considered. `host_member_absent` already carries the direction, so asking it
--- both ways is the whole test.
+-- two runtimes agreeing on every member are one runtime; no ordering premise,
+-- for the reason `env_pair_indistinct` records
 runtime_separates[audit](A, B) :- host_member_absent[audit](B, Spec, Key),
                                   not host_member_absent[audit](A, Spec, Key).
 runtime_pair_indistinct[audit](A, B) :- runtime_version(A, F, _), runtime_version(B, F, _),
@@ -435,32 +254,20 @@ runtime_pair_indistinct[audit](A, B) :- runtime_version(A, F, _), runtime_versio
                                         not runtime_separates[audit](A, B),
                                         not runtime_separates[audit](B, A).
 
--- A CANONICAL MODULE NO IMPORT IN THIS MODEL COULD REACH BY ITS BARE NAME.
--- `explicit_shape[code](S, node_builtin)` fires on the `node:` scheme for all
--- 57, and on the BARE spelling only through `node_builtin_bare`, which
--- facts/js-modules.rofl carries 22 rows of. So `import x from "fs/promises"`
--- classifies as a `bare` specifier — a third-party package — and resolves
--- nowhere. That is a modules-layer gap this pack can SEE and must not fix by
--- itself, and a row is how one layer tells another without editing it.
+-- a builtin no bare import can reach: `explicit_shape` knows the `node:`
+-- scheme for all 57 and the bare spelling only through `node_builtin_bare`,
+-- so `"fs/promises"` classifies as a third-party package. A modules-layer
+-- gap this pack can see and must not fix.
 bare_listed(Spec) :- node_builtin_bare(_, Spec).
 bare_builtin_unlisted[audit](Spec) :- host_module(node, Spec), not bare_listed(Spec).
 
--- A RUNTIME VERSION WHOSE FAMILY IS NOT DECLARED, and its twin: an inclusion
--- ACROSS families. The order is not total across families — `node20` and a
--- `deno1_40` are incomparable and no amount of data would make them otherwise —
--- so an `includes` row spanning two of them is not a fact about the world, it
--- is a claim that one runtime is a later edition of another. There is no such
--- thing, and the effect layer's lattice has a join where this hierarchy does
--- not.
+-- an inclusion ACROSS families claims one runtime is a later edition of
+-- another; the order is not total across families
 runtime_family_undeclared[audit](R, F) :- runtime_version(R, F, _), not runtime(F).
 runtime_cross_family[audit](A, B) :- runtime_includes(A, B),
                                      runtime_version(A, FA, _), runtime_version(B, FB, _),
                                      FA != FB.
 
--- THE GENERATED AND THE AUTHORED HALVES MUST NAME THE SAME FAMILIES.
--- `host/1` comes from the scanner and says whose declarations a surface row was
--- read from; `runtime/1` is authored and says which families we ask about. They
--- are the same set today and nothing said so, which is how a generated pack and
--- a hand table drift for a week without a red.
+-- `host/1` is generated, `runtime/1` authored; they must name the same families
 host_family_mismatch[audit](H) :- host(H), not runtime(H).
 host_family_mismatch[audit](F) :- runtime(F), not host(F).

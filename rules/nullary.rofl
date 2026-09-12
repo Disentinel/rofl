@@ -1,31 +1,19 @@
 -- rules/nullary.rofl — WHICH RULES ARE PROPOSITIONS WEARING A SUBJECT?
+-- Derived entirely from the public reflection: `conclusion_lit` and
+-- `premise_lit` are reserved but readable, the reified shape is
+-- `$lit(Rel, Persp, Args, Tense)` with `Args` a `$cons`/`$nil` list and a
+-- variable as `$var("Name")`, and K is 1-based. Not from `premise_var` or
+-- `slot_arity`: those are seeded by the host into the kernel's private store
+-- for safety.rofl and are EMPTY in an ordinary store, so a model over them
+-- returns a clean-looking zero.
 --
--- The owner asked whether reflection can derive this rather than a person
--- reading bodies. IT CAN, ENTIRELY FROM THE PUBLIC SURFACE, and the first
--- draft of this file got that wrong in a way worth keeping.
---
--- THE FIRST DRAFT READ `premise_var` AND `slot_arity` and answered ZERO on
--- boot.rofl. The zero was meaningless: those two are seeded by the host into
--- the kernel's OWN private store for `safety.rofl`, and in an ordinary store
--- they are EMPTY — measured, 0 rows beside 29 rules and 29 `concludes`. A
--- model over an unpopulated relation returns a clean-looking negative, which
--- is the failure this repository has a word for.
---
--- `conclusion_lit` and `premise_lit` are RESERVED but READABLE, `$` IS
--- writable in a rule body (safety.rofl already matches `$builtin(_, _)`), and
--- the reified shape is `$lit(Rel, Persp, Args, Tense)` with `Args` a
--- `$cons`/`$nil` list and a variable reified as `$var("Name")`. Everything
--- this file needs is there. K IS 1-BASED: the first draft asked for K = 0 and
--- got nothing from that too.
---
--- A nullary relation is a PROPOSITION: arity n is a set of n-tuples, there is
--- exactly one 0-tuple, so the extension is empty or the singleton — a truth
--- value. This language has no nullary head, so a rule concluding a proposition
--- must dress it. This file finds the dresses.
+-- A nullary relation is a PROPOSITION: exactly one 0-tuple, so the extension
+-- is empty or the singleton. A rule concluding a proposition must dress it in
+-- an argument; this file finds the dresses.
 
--- ===================================================== WALKING AN ARGUMENT LIST
--- The reflection hands a list; Datalog walks it. Range-restricted at every
--- step: the tail is bound by the match that produced it.
+-- =========================================================================
+-- WALKING AN ARGUMENT LIST — range-restricted at every step; the tail is
+-- bound by the match that produced it.
 head_args(R, Args)  :- conclusion_lit(R, 1, $lit(_, _, Args, _)).
 body_args(R, K, Args) :- premise_lit(R, K, $lit(_, _, Args, _)).
 
@@ -37,73 +25,34 @@ body_cell(R, K, L)  :- body_args(R, K, L).
 body_cell(R, K, T)  :- body_cell(R, K, $cons(_, T)).
 body_var(R, K, V)   :- body_cell(R, K, $cons($var(V), _)).
 
--- THE PERSPECTIVE IS A SLOT AND THE FIRST THREE DRAFTS WALKED PAST IT. A
--- reified literal is `$lit(Rel, Persp, Args, Tense)` and every walk above reads
--- ARGS; a variable standing in the PERSPECTIVE is bound by the premise exactly
--- as an argument is, and it joins premises exactly as an argument does.
--- `mechanism_seen[audit](M) :- env_ran(E), resolve_via[E](_, M, _).` is the
--- case that measured it — the two premises are joined THROUGH the book, and
--- with the slot invisible they read as a cross product and `M` as a passenger.
--- That is the same defect as the `$not` blind spot and the `$builtin` one,
--- arriving a third time in a different slot of the same term.
+-- THE PERSPECTIVE IS A SLOT TOO: a variable standing in it is bound by the
+-- premise and joins premises exactly as an argument does
+-- (`mechanism_seen[audit](M) :- env_ran(E), resolve_via[E](_, M, _).`).
 persp_var(R, K, V)  :- premise_lit(R, K, $lit(_, $var(V), _, _)).
 body_var(R, K, V)   :- persp_var(R, K, V).
 head_var(R, V)      :- conclusion_lit(R, 1, $lit(_, $var(V), _, _)).
 
--- A NEGATED PREMISE BINDS NOTHING AND CONNECTS EVERYTHING, and the first draft
--- of this file got that backwards. It read only `$lit(...)`, wrote down that
--- ignoring `$not(...)` was `safe in this direction` because a negation cannot
--- be a sole binder — and that sentence is true about BINDING and false about
--- CONNECTEDNESS. `coverage_gap(I, Con) :- pack(I, ...), concern(..., Con), not
--- concern_covered(I, Con).` has its two positive premises joined THROUGH the
--- negation, and with the negation invisible they read as disconnected and both
--- head variables reported as passengers. The sweep returned 103 passengers,
--- most of them that shape.
---
--- So the two questions need two relations. `binds` is positive only — that is
--- what binding MEANS. `mentions` is both, because sharing a variable with a
--- negated premise is still sharing.
+-- A NEGATED PREMISE BINDS NOTHING AND CONNECTS EVERYTHING. Binding is
+-- positive only (`body_var`), which is what binding means; `mentions` is
+-- both, because sharing a variable with a negated premise is still sharing —
+-- two positive premises joined THROUGH a `not` are not a cross product.
 neg_args(R, K, Args) :- premise_lit(R, K, $not($lit(_, _, Args, _))).
 neg_cell(R, K, L)    :- neg_args(R, K, L).
 neg_cell(R, K, T)    :- neg_cell(R, K, $cons(_, T)).
 neg_var(R, K, V)     :- neg_cell(R, K, $cons($var(V), _)).
 neg_var(R, K, V)     :- premise_lit(R, K, $not($lit(_, $var(V), _, _))).
 
--- AND A BUILTIN PREMISE JOINS TWO PREMISES WITHOUT BINDING EITHER. This was
--- written down as a KNOWN HOLE on 2026-09-10 and deliberately left open —
--- "the `$not` one was assumed safe and was not, so this one gets measured
--- before it gets fixed". Measured now: the operands of `$builtin(Op, Args)`
--- are a `$cons` list in exactly the shape `$lit` uses, so the same three-line
--- walk opens it. `being_fed(F, Pct) :- fed_share(F, Pct), fed_cut(C), Pct >=
--- C.` was the case that named the hole — two premises reading as disconnected
--- although the comparison joins them, and `Pct` reported as a passenger it is
--- not.
---
--- A BUILTIN JOINS AND NEVER CARRIES, and the split is the whole repair. A
--- comparison binds nothing, so it can never be a passenger's sole binder and
--- can never be `disconnected` itself; it can only put two premises in touch.
--- So the question splits in two and the two feed different consumers:
---
+-- A BUILTIN JOINS AND NEVER CARRIES. A comparison binds nothing, so it can
+-- never be a sole binder or be `disconnected` itself; it can only put two
+-- premises in touch. Hence two relations with different consumers:
 --   mentions   positive and negated premises — what the rule is ABOUT, and
---              therefore what "this body has more than one premise" counts
+--              what `multi_premise` counts
 --   joins      those plus builtin operands — what makes two premises touch
---
--- MEASURED WHEN THEY WERE ONE RELATION, which is why they are two: feeding
--- builtins into `mentions` killed the three rows the hole was named for and
--- OPENED NINE NEW ONES. `test_file(T) :- artifact(T, ts), D is str_pre(T, "/"),
--- D = "test".` has ONE positive premise and nothing to stand apart from, and
--- the two builtins pushed it over `multi_premise` — so a rule that was
--- correctly silent became a passenger. Net minus three, and thirteen rows
--- wrong in both directions.
---
--- THE NESTING LIMIT IS WHY, and it is the same one the head walk has. `D is
--- str_pre(T, "/")` reifies its right operand as the compound `str_pre($var(
--- "T"), "/")`, so this walk sees `$var("D")` on the spine and never sees T.
--- With builtins counted as premises that is a MISSED join on a rule that has
--- been made to look joinable — the two errors compound. With them counted as
--- joins only, a missed mention can at worst leave a premise reading
--- disconnected on a rule that already had two real premises, which
--- over-reports rather than hides.
+-- Counting builtins as premises made a one-premise rule with two builtins
+-- look joinable, and the nesting limit (the walk sees the `$cons` spine only,
+-- never the variable inside `str_pre(...)`) then compounds into a missed
+-- join. As joins only, a missed mention can at most over-report a
+-- disconnection.
 bi_args(R, K, Args)  :- premise_lit(R, K, $builtin(_, Args)).
 bi_cell(R, K, L)     :- bi_args(R, K, L).
 bi_cell(R, K, T)     :- bi_cell(R, K, $cons(_, T)).
@@ -115,38 +64,18 @@ mentions(R, K, V)    :- neg_var(R, K, V).
 joins(R, K, V)       :- mentions(R, K, V).
 joins(R, K, V)       :- bi_var(R, K, V).
 
--- ============================================ SHAPE 1: A CONSTANT SUBJECT
--- The head has no variables at all. That alone is not enough: `sealed(rules)`,
--- `sealed(assertions)` and `sealed(provenance)` are three propositions and the
--- argument is what tells them apart. The argument carries information exactly
--- when the relation takes MORE THAN ONE shape — so the discriminator is
--- whether ANY rule concluding that relation has a variable head, and it is
--- derived rather than assumed.
--- A HEAD THAT IS ALREADY NULLARY IS THE DESTINATION, NOT A CANDIDATE, and the
--- first demo caught this the moment nullary heads existed: `deploy_blocked()`
--- has `$nil` for its arguments, therefore no variables, therefore read as a
--- constant head — the model recommending the thing it was looking at. The
--- head must have at least one argument for the question to mean anything, and
--- `$cons(_, _)` is how a list says it is not empty.
--- A VARIABLE NESTED INSIDE A HEAD TERM IS ONE THIS MODEL CANNOT SEE, and the
--- limit is the language's rather than this file's. `forged[audit]($fact(R, P,
--- A))` names three variables and `head_cell` walks the `$cons` SPINE only, so
--- the top of that cell is `$fact(...)` and not `$var(...)` — the head read as
--- constant and `forged` was reported as a proposition it is not. There is no
--- generic term destructor here (measured: `str_len` refuses an atom, a number
--- and a compound alike, so it is not an "is this atomic" test), and safety.rofl
--- says why in as many words — "a term carries an arbitrary functor and Datalog
--- cannot destructure one it does not name", which is exactly why the kernel
--- seeds `premise_var` from the host instead.
+-- =========================================================================
+-- SHAPE 1: A CONSTANT SUBJECT. The head has no variables, has at least one
+-- argument (`$cons(_, _)`: a head already nullary is the destination, not a
+-- candidate), and the argument carries no information.
 --
--- So the functor is NAMED, the way safety.rofl names `$lit`, `$not` and
--- `$builtin`: `$fact` is the kernel's own reified fact and part of the same
--- vocabulary. THE RESIDUAL IS STATED AND CANNOT BE DERIVED — a USER functor in
--- a head (`p($pair(X, Y)) :- ...`) is still invisible and would still read as
--- constant, and there is no rule that can find it for the reason above. It has
--- no audit row because an audit row would be a lie about its own coverage;
--- what it has instead is a NUMBER the scanner measures textually and prints
--- beside the verdict, so the size of the blind spot is on the report.
+-- A variable nested inside a head term is invisible to a walk over the
+-- `$cons` spine, and there is no generic term destructor. So the functor is
+-- NAMED, as safety.rofl names `$lit`, `$not` and `$builtin`: `$fact` is the
+-- kernel's own reified fact (`forged[audit]($fact(R, P, A))` read as a
+-- constant head before this). A USER functor in a head is still invisible
+-- and cannot be derived; the scanner counts that blind spot textually and
+-- prints it beside the verdict.
 head_var(R, V)      :- head_cell(R, $cons($fact($var(V), _, _), _)).
 head_var(R, V)      :- head_cell(R, $cons($fact(_, $var(V), _), _)).
 head_var(R, V)      :- head_cell(R, $cons($fact(_, _, $var(V)), _)).
@@ -154,21 +83,16 @@ head_var(R, V)      :- head_cell(R, $cons($fact(_, _, $var(V)), _)).
 const_head(R)       :- head_args(R, $cons(_, _)), not head_var(R, _).
 varying_head(Rel)   :- concludes(R, Rel), head_var(R, _).
 
--- TWO CONSTANT TUPLES ARE A DISCRIMINATING ARGUMENT. `not varying_head` asks
--- whether any rule writes a VARIABLE there and that is only half the question:
--- `slow_because(fixpoint, barren_rules)`, `slow_because(fixpoint, late_filter)`
--- and `slow_because(fixpoint, re_derivation)` are three constant heads, no
--- variable among them, and the second argument is the entire content of the
--- relation. A proposition has ONE row; a relation with two distinct head
--- shapes is a table.
+-- The argument carries information when the relation takes MORE THAN ONE
+-- shape: any rule with a variable head, or two constant heads that differ
+-- (`slow_because(fixpoint, barren_rules)` beside `slow_because(fixpoint,
+-- late_filter)` — a proposition has ONE row).
 multi_shape(Rel)    :- concludes(P, Rel), head_args(P, A),
                        concludes(Q, Rel), head_args(Q, B), A != B.
 
--- AND A CONSUMER THAT BINDS THE ARGUMENT IS READING IT. `saves_nothing(
--- reuse_plan)` has one constant head and no twin, and `pure_overhead(P) :-
--- saves_nothing(P), overhead_exceeds_work(P).` carries `reuse_plan` out
--- through P into `slow_because(parse, reuse_plan)` — the constant is the
--- answer's NAME, not a dress. A dummy argument is one nothing ever binds.
+-- and a consumer that binds the argument is reading it: `saves_nothing(
+-- reuse_plan)` carries `reuse_plan` out through `pure_overhead(P)`. A dummy
+-- argument is one nothing ever binds.
 read_as_var(Rel)    :- premise_lit(R, K, $lit(Rel, _, _, _)), body_var(R, K, _).
 read_as_var(Rel)    :- premise_lit(R, K, $not($lit(Rel, _, _, _))), neg_var(R, K, _).
 
@@ -176,15 +100,12 @@ dressed_constant[audit](Rel) :- const_head(R), concludes(R, Rel),
                                 not varying_head(Rel), not multi_shape(Rel),
                                 not read_as_var(Rel).
 
--- ============================================ SHAPE 2: A PASSENGER SUBJECT
--- The head carries a VARIABLE the body binds only so there is something to
--- name. `any_unblocker(W) :- takeable(W), unblocking_work(_).` — W is in the
--- head, `takeable(W)` is its only binder, and that premise shares nothing with
--- the rest of the body. Drop both and the rule is a proposition.
---
--- THIS IS THE SAME SET `rule_shape` REPORTS AS A CROSS PRODUCT, from the other
--- side: a disconnected premise that is the sole binder of the head's variables
--- is not an accident of join order, it is a head that wanted to be nullary.
+-- =========================================================================
+-- SHAPE 2: A PASSENGER SUBJECT. The head carries a variable the body binds
+-- only so there is something to name: `p(W) :- takeable(W), unblocks(_).` —
+-- `takeable(W)` is W's only binder and shares nothing with the rest. This is
+-- the cross product rules/rule-shape.rofl reports, seen from the head: a disconnected
+-- sole binder is a head that wanted to be nullary.
 occurs_in(R, V, K)  :- body_var(R, K, V).
 elsewhere(R, V, K)  :- occurs_in(R, V, J), occurs_in(R, V, K), J != K.
 sole_binder(R, V, K) :- head_var(R, V), occurs_in(R, V, K), not elsewhere(R, V, K).
@@ -193,31 +114,17 @@ shares(R, K, J)     :- joins(R, K, V), joins(R, J, V), K != J.
 connected(R, K)     :- shares(R, K, _).
 disconnected(R, K)  :- body_var(R, K, _), not connected(R, K).
 
--- A ONE-PREMISE BODY IS ALWAYS `disconnected` AND THAT IS NOT A PASSENGER.
--- The first run reported 28 of them — every recursive walk in this very file
--- among them, because `head_cell(R, T) :- head_cell(R, $cons(_, T))` has one
--- premise and nothing to be apart FROM. A passenger needs a body it stands
--- apart from, so the rule must have two premises before the question means
--- anything. Caught by the positive control on the first run; without it the
--- audit would have been 28 rows of noise around 2 real ones.
+-- a one-premise body is always `disconnected` and is not a passenger: it has
+-- nothing to stand apart from (28 rows of noise on the first run, every
+-- recursive walk in this file among them)
 multi_premise(R)       :- mentions(R, K, _), mentions(R, J, _), K != J.
 
--- AND A BODY EVERY PREMISE OF WHICH FEEDS THE HEAD IS A PRODUCT ON PURPOSE.
--- `cell[audit](Lang, K, L) :- node_kind(Lang, K), layer(L).` is the matrix of
--- the JS model: two disconnected premises, three head variables, and the head
--- IS the product — every one of the three is read downstream and none can be
--- dropped. Without this premise the audit called all three passengers and
--- recommended emptying a head that is the whole point of the relation.
---
--- So a passenger needs something to be a passenger ON: a POSITIVE premise that
--- puts nothing into the head, which is a cross-product factor asking an
--- existential question. `unblocking_work(_)` and `ast_node[code](_, _, _, _)`
--- are the shape; `layer(L)` is not.
---
--- POSITIVE ONLY, and the negative case is why the restriction is written
--- rather than left implicit: range restriction means a NEGATED premise can
--- never feed the head, so counting negations here would make `p(X) :- q(X),
--- not r(_).` a passenger rule — and X is that relation's subject.
+-- and a body every premise of which feeds the head is a product on purpose:
+-- `cell[audit](Lang, K, L) :- node_kind(Lang, K), layer(L).` is the JS
+-- matrix. A passenger needs a POSITIVE premise that puts nothing into the
+-- head — an existential guard like `unblocks(_)`. Positive only: a negated
+-- premise can never feed the head, so counting it would make `p(X) :- q(X),
+-- not r(_).` a passenger rule.
 feeds_head(R, K)       :- body_var(R, K, V), head_var(R, V).
 guard_premise(R, K)    :- body_args(R, K, _), not feeds_head(R, K).
 has_guard(R)           :- guard_premise(R, _).
@@ -225,20 +132,12 @@ has_guard(R)           :- guard_premise(R, _).
 passenger[audit](R, V) :- sole_binder(R, V, K), disconnected(R, K),
                           multi_premise(R), has_guard(R).
 
--- ============================================================ THE VERDICT
---
--- ONE PASSENGER IS NOT A NULLARY HEAD. The first version of this line fired on
--- ANY passenger, and a head with two variables of which one is a passenger is
--- a head with one variable — not a proposition. `share(R, P) :- touched(R, T),
--- total_width(A), P is T * 100 / A.` is the case that measured it: `R` reads
--- as a passenger (falsely, see the nesting limit above — `T` hides inside the
--- arithmetic), `P` does not, and the rule was reported as wanting a nullary
--- head when dropping `R` at most narrows it. You may drop the head only when
--- EVERY variable in it is droppable.
---
--- AND IT IS THE CHEAPEST GUARD AGAINST THE NESTING LIMIT ON THIS TREE: a false
--- passenger has to be the rule's ONLY head variable to reach the verdict now,
--- so the arithmetic blind spot costs a `passenger` row and not a work item.
+-- =========================================================================
+-- THE VERDICT. One passenger is not a nullary head: a head with two variables
+-- of which one is a passenger is a head with one variable. Drop the head only
+-- when EVERY variable in it is droppable — which is also the cheapest guard
+-- against the nesting limit below: a false passenger has to be the rule's
+-- only head variable to reach the verdict.
 head_has_stayer(R)  :- head_var(R, V), not passenger[audit](R, V).
 all_passengers(R)   :- passenger[audit](R, _), not head_has_stayer(R).
 
@@ -246,32 +145,16 @@ wants_nullary[audit](Rel) :- dressed_constant[audit](Rel).
 wants_nullary[audit](Rel) :- all_passengers(R), concludes(R, Rel).
 
 -- WHAT THIS CANNOT SEE:
---   * A head variable bound by a premise that IS connected but whose
---     connection is incidental — `p(X) :- q(X, Y), r(Y).` X may still be a
---     passenger, and "nothing downstream reads X" is a fact about the CALLERS
---     that one rule's reflection cannot hold.
---   * WHETHER THE PROPOSITION SHOULD EXIST. A rule wanting a nullary head
---     might instead want inlining into its one caller. That is a judgement
---     about the program, and the row is where somebody makes it.
---   * A VARIABLE INSIDE AN ARITHMETIC OPERAND, and this one can never be
---     fixed. `P is T * 100 / A` reifies its right operand as a compound and
---     the walk sees the `$cons` spine only, so `T` never appears and its
---     premise reads as disconnected from a comparison that in fact uses it.
---     The seven string destructors ARE writable as term patterns (`str_pre(
---     $var(V), _)` matches) and could be named the way `$fact` is; an
---     OPERATOR functor is not — `*(A, B)` is refused with `expected a term,
---     got '*'`. A hole closed for seven cases and open for arithmetic reads
---     as closed, which is worse than one written down. What it costs is
---     bounded: a false `passenger` row, which cannot reach the verdict unless
---     it is the rule's only head variable.
---   * A VARIABLE INSIDE A USER FUNCTOR IN A HEAD, for the reason above the
---     `$fact` clauses. Counted rather than assumed: the report prints how many
---     `const_head` rules hold a `$var` somewhere inside a term this file
---     cannot open, so the blind spot has a number every run.
---
--- THE BUILTIN HOLE WAS THE THIRD ITEM HERE UNTIL 2026-09-10 and is repaired
--- above. It read: "`premise_lit` carries `$builtin(Op, ...)` and this file does
--- not open it... NOT repaired here, because it needs the operand terms walked
--- and the fix should be measured rather than assumed — the `$not` one was
--- assumed safe and was not." It was measured, and the measurement earned its
--- caution: the obvious repair killed three rows and opened nine.
+--   * a head variable bound by a premise that is connected only incidentally
+--     (`p(X) :- q(X, Y), r(Y).`): whether anything downstream reads X is a
+--     fact about the callers;
+--   * whether the proposition should exist at all, or the rule be inlined
+--     into its one caller — the row is where somebody decides;
+--   * a variable inside an arithmetic operand: `P is T * 100 / A` reifies its
+--     right operand as a compound and the walk sees the spine only, so `T`
+--     never appears. The string destructors could be named the way `$fact`
+--     is; an operator functor cannot (`*(A, B)` is refused by the parser), and
+--     a hole closed for seven cases and open for arithmetic would read as
+--     closed. The cost is bounded to a false `passenger` row;
+--   * a variable inside a user functor in a head, counted by the scanner
+--     rather than derived.
