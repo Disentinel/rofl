@@ -1,0 +1,23 @@
+-- examples/checks/keyword-atom.rofl — `not` AS A WORD, NOT AS NEGATION.
+--
+-- The two hosts disagreed about this for as long as both have existed.
+-- `p(not, bare).` loaded on the TypeScript side and was refused by the Rust
+-- parser, whose `term` rejected a keyword wherever it appeared. Nothing in the
+-- tree ever wrote the word down as data, so nothing said so — until a lint
+-- recorded the words it found in comments as atoms, and a 33 406-row fact pack
+-- was refused WHOLE by one engine while the other answered it.
+--
+-- The word is free in ARGUMENT POSITION, where there is no body element to
+-- confuse it with, and reserved as a RELATION NAME, which is where the
+-- ambiguity actually lives. That half is examples/checks/not-as-a-name.rofl.
+--
+-- The last clause is the probe worth having: one body carrying the word as an
+-- argument AND as negation, a comma apart.
+
+mention(a, not).
+mention(b, and).
+keyword_word(not).
+quoted(b, "not").
+
+flagged(X)  :- mention(X, W), keyword_word(W).
+unquoted(X) :- mention(X, not), not quoted(X, "not").

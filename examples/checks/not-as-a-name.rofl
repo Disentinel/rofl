@@ -1,0 +1,12 @@
+-- examples/checks/not-as-a-name.rofl — A PROGRAM THAT MUST BE REFUSED.
+--
+-- `not(1).` is a fact about a relation called `not`, and for a while the
+-- TypeScript parser took it — `literal()` read the name and asked no questions,
+-- so the reading of `not` depended on whether an `(` or an identifier followed
+-- it, one token apart. The Rust parser refused it at `relbook`. Both refuse it
+-- now, and the golden holds that they do.
+--
+-- The complement is examples/checks/keyword-atom.rofl: the same word in
+-- argument position is a word, and both hosts load it.
+
+not(1).

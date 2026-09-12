@@ -112,6 +112,16 @@ class P {
   // --- literals ---------------------------------------------------------
   literal(): Lit {
     const rel = this.expect('ident').v;
+    // A KEYWORD IS NOT A RELATION NAME. `not` was accepted here and `not(1).`
+    // loaded as a fact about a relation called `not`, while the Rust engine
+    // refused it at `relbook` — one of three spellings the two hosts disagreed
+    // about, found when a 33 406-row fact pack was refused whole by one of
+    // them. Negation is decided by what FOLLOWS `not` in a body, so the two
+    // readings are one token apart: `not p(X)` is a negation and `not(X)` was
+    // a literal. Nothing in the tree named a relation `not`, and the word
+    // stays free in ARGUMENT position, where there is nothing to confuse it
+    // with.
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
     return this.literalAfterRel(rel);
   }
 

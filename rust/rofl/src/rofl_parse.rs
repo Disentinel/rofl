@@ -188,7 +188,17 @@ impl<'a> Parser<'a> {
                         Ok(Term::int(d.parse::<i64>().unwrap_or(0)))
                     }
                     WordKind::Ident => {
-                        if self.is_keyword(0) { return Err("term: a keyword is not a name".into()); }
+                        // A KEYWORD IS NOT A RELATION NAME; IN ARGUMENT POSITION
+                        // IT IS JUST A WORD. `relbook` below keeps the
+                        // rejection, which is where the ambiguity actually
+                        // lives: `not` starting a body element is negation and
+                        // can never be a relation. Inside `args` there is no
+                        // body element to confuse it with, so rejecting here
+                        // only made the two hosts disagree about a grammar —
+                        // `p(not, bare).` loaded on the TypeScript side and was
+                        // refused here, and the first world to write a word it
+                        // found in a comment down as an atom (33 406 rows of
+                        // rofl-lint census) was refused WHOLE by one engine.
                         let name = self.sym(&s);
                         self.at += 1;
                         if self.eat_punct("lpar") {
