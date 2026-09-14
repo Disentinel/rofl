@@ -24,6 +24,7 @@ import { Evaluation } from '../../src/engine.ts';
 import { SPAT } from './spat.ts';
 import { RU_BROKEN } from './html.ts';
 import { SpatError, bookClauses, env, openStore } from './store.ts';
+import { parseEdit } from './edits.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'spat-demo-'));
@@ -165,12 +166,14 @@ async function breaks(): Promise<Group> {
 async function tomorrow(): Promise<Group> {
   const g = new Group('5. tomorrow — by SPAT_TZ, never by the process clock');
   const root = fresh();
-  const a = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-14T21:30:00+03:00', TZ: 'UTC' });
-  g.check('SPAT_NOW=2026-09-14T21:30+03:00, Nicosia, процесс в UTC → завтра вт (15.09 — вторник)', /ЗАВТРА, вт/.test(a.out), a.out.split('\n')[0]);
-  const b = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-14T00:30:00+03:00', TZ: 'UTC' });
-  g.check('00:30+03:00 — в UTC ещё 13-е: SPAT_TZ решает, завтра вт', /ЗАВТРА, вт/.test(b.out), b.out.split('\n')[0]);
-  const c = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-14T00:30:00+03:00', SPAT_TZ: 'UTC' });
-  g.check('та же минута под SPAT_TZ=UTC — завтра пн', /ЗАВТРА, пн/.test(c.out), c.out.split('\n')[0]);
+  // the brief's shape (21:30+03:00 is 18:30Z, the same calendar day either way) on a
+  // Sunday the world has a next week for; then the minute that DOES tell the zones apart
+  const a = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-06T21:30:00+03:00', TZ: 'UTC' });
+  g.check('SPAT_NOW=вс 06.09 21:30+03:00, Nicosia, процесс в UTC → завтра пн 07.09', /ЗАВТРА, пн 2026-09-07/.test(a.out), a.out.split('\n')[0]);
+  const b = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-07T00:30:00+03:00', TZ: 'UTC' });
+  g.check('пн 07.09 00:30+03:00 — в UTC ещё вс: SPAT_TZ решает, завтра вт 08.09', /ЗАВТРА, вт 2026-09-08/.test(b.out), b.out.split('\n')[0]);
+  const c = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-07T00:30:00+03:00', SPAT_TZ: 'UTC' });
+  g.check('та же минута под SPAT_TZ=UTC — завтра пн 07.09', /ЗАВТРА, пн 2026-09-07/.test(c.out), c.out.split('\n')[0]);
   g.check('me читает все книги (правка няни в сетке пн)', /evening/.test((await spat(root, 'me', ['show', 'mon'])).out));
   return g;
 }
@@ -224,6 +227,62 @@ async function operator(): Promise<Group> {
   return g;
 }
 
+// ---------------------------------- 9. nothing handed in becomes a second line
+async function injection(): Promise<Group> {
+  const g = new Group('9. nothing handed in becomes a second line — the book after each refusal is byte-identical');
+  const root = fresh();
+  const book = path.join(root, 'example/ledgers/robin.rofl');
+  const before = bytes(book);
+  const same = (name: string): void => g.check(`${name}: robin.rofl байт-в-байт`, bytes(book) === before);
+  g.code('правка с переводом строки (вторая строка — факт чужой книги)', await spat(root, 'robin', ['edit', 'add errand tue 18:30-20:00 robin office\ne_skip[p_alex](e_evil, walk, mon).']), 2);
+  same('после \\n');
+  g.code('правка с \\r', await spat(root, 'robin', ['edit', 'skip walk mon\re_skip[p_alex](e_evil, walk, mon).']), 2);
+  same('после \\r');
+  let nul = 'no throw';
+  try { parseEdit(openStoreAs(root).r, 'skip walk mon\0e_skip[p_alex](e_evil, walk, mon).'); } catch (e) { nul = e instanceof SpatError && e.code === 2 ? 'code 2' : String(e); }
+  g.check('правка с NUL (в процессе: argv не переносит NUL) → код 2', nul === 'code 2', nul);
+  g.code('хвост после последнего поля: person[p_robin](robin, operator).', await spat(root, 'robin', ['edit', 'skip walk mon person[p_robin](robin, operator).']), 2);
+  same('после хвоста');
+  g.code('SPAT_AS с клаузой внутри', await spat(root, 'me', ['whoami'], { SPAT_AS: 'robin). tg_user(robin, 1, example, operator' }), 5);
+  g.code('SPAT_VIA с клаузой внутри', await spat(root, 'robin', ['edit', 'skip walk tue'], { SPAT_VIA: 'cli). e_skip[p_alex](e, walk, mon' }), 5);
+  same('после SPAT_VIA');
+  g.code('--week-of с клаузой внутри', await spat(root, 'robin', ['show', 'mon', '--week-of', 'w0831). e_skip[p_alex](e, walk, mon']), 2);
+  g.code('--week-of неизвестной недели', await spat(root, 'robin', ['show', 'mon', '--week-of', 'w9999']), 2);
+  const ok = await spat(root, 'robin', ['edit', 'skip walk tue']);
+  g.code('и обычная правка после всего этого', ok, 0);
+  g.check('след правки — одна строка комментария, факты — ровно те, что задуманы', bytes(book).slice(before.length).split('\n').filter((l) => l !== '').length === 5);
+  return g;
+}
+function openStoreAs(root: string): ReturnType<typeof openStore> {
+  const saved = { ...process.env };
+  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) delete process.env[k];
+  Object.assign(process.env, { SPAT_ROOT: root, SPAT_FROM_ID: FROM.robin, SPAT_NOW: NOW });
+  try { return openStore(env()); } finally {
+    for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_FROM_ID', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  }
+}
+
+// ------------------------------------ 10. a dated day is shown under its own week
+async function weekOfDate(): Promise<Group> {
+  const g = new Group('10. tomorrow across the week boundary — a date is in one week, and never another');
+  const root = fresh();
+  // Sunday 06.09 21:30, week in force w0831: tomorrow is Monday 07.09 = w0907,
+  // where the садик is open (w0831 had it shut on Monday) and walk is skipped all week
+  const a = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
+  g.code('вс 06.09 21:30, в силе w0831: tomorrow', a, 0);
+  g.check('заголовок: пн 2026-09-07, неделя w0907', /ЗАВТРА, пн 2026-09-07 \(неделя w0907\)/.test(a.out), a.out.split('\n')[0]);
+  g.check('содержание — понедельник w0907, не w0831: садик открыт, прогулки нет (правка на w0907)', /sadik_nico/.test(a.out) && !/прогулка/.test(a.out), a.out);
+  const b = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-08-31T21:30:00+03:00' });
+  g.check('пн 31.08: tomorrow — вт w0831 (садик закрыт)', /ЗАВТРА, вт 2026-09-01 \(неделя w0831\)/.test(b.out) && !/sadik_nico/.test(b.out), b.out.split('\n')[0]);
+  const c = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-27T21:30:00+03:00' });
+  g.code('вс 27.09: завтра 28.09 — недели нет', c, 2);
+  g.check('отказ называет понедельник и что нужно', /2026-09-28.*не заведена.*week_starts/.test(c.out), c.out);
+  g.code('show (сегодня) 2026-09-28 — та же неделя, тот же отказ', await spat(root, 'robin', ['show'], { SPAT_NOW: '2026-09-28T09:00:00+03:00' }), 2);
+  const w = await spat(root, 'robin', ['whoami'], { SPAT_NOW: '2026-09-07T10:00:00+03:00' });
+  g.check('пн 07.09 при w0831 в силе: предупреждение «нужен roll w0907» (правило stale_week)', /в силе неделя w0831.*сегодня неделя w0907.*roll w0907/.test(w.out), w.out);
+  return g;
+}
+
 // ------------------- 8. the rules materialise; every reason has Russian
 function reasons(): Group {
   const g = new Group('8. every rule of the store materialises; every reason has Russian (from a scan, not a list)');
@@ -248,7 +307,7 @@ function reasons(): Group {
 }
 
 const t0 = Date.now();
-const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator()]);
+const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate()]);
 groups.push(reasons());
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);

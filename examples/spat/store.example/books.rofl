@@ -4,6 +4,9 @@
 tenant(example).
 caller(robin).
 from_id(100002).     -- robin called by her sender id; `sender(robin, example)` is the rule's answer
+-- she called on Sunday 06.09 evening: today's Monday is w0831's, tomorrow's is w0907's
+date_monday(today, "2026-08-31").
+date_monday(tomorrow, "2026-09-07").
 authority(p_alex, alex).
 authority(p_me, me).
 authority(p_nanny, nanny).

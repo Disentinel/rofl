@@ -5,21 +5,7 @@
 
 import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, pickedTrips, ru, sayConstraint, table, whoWasBusy } from './spat.ts';
-import { SpatError, type Env, type Store } from './store.ts';
-
-const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-/** The ISO weekday 1..7 of the day `days` from now IN THE STORE'S ZONE; the
- *  world's `day(D, N)` is keyed the same, and that is the only calendar. */
-export function weekdayIn(e: Env, days = 0): number {
-  const wd = new Intl.DateTimeFormat('en-US', { timeZone: e.tz, weekday: 'short' }).format(new Date(e.now.getTime() + days * 86_400_000));
-  return WD.indexOf(wd.toLowerCase()) || 7;
-}
-export function todayAtom(s: Store, days = 0): string {
-  const n = weekdayIn(s.env, days);
-  const d = table(s.r, 'day', 'D, N').find((x) => Number(x.N) === n);
-  if (!d) throw new SpatError(2, `в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
-  return d.D;
-}
+import { SpatError, type Store } from './store.ts';
 
 /** A day — or the whole week when `day` is undefined — problems first:
  *  holes, chains with no slack, late arrivals; then the grid by person. */

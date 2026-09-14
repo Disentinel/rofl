@@ -37,7 +37,7 @@ golden_state("rip", "85988e10f83b48d2", 5571).
 golden_state("rofl-release", "c22794092b6d24d2", 796).
 golden_state("sensors", "999bc4d6044ae06f", 719).
 golden_state("slop", "34d951182437c39b", 3412).
-golden_state("spat", "b3747dfd6c1ee6e7", 16880).
+golden_state("spat", "19c797a6489397fd", 16948).
 golden_state("sus", "9bccfcd180e1c17f", 4540).
 golden_state("tm", "aa790ce25a0d0936", 626).
 golden_state("tm_diverge", "d2e05e19e68bd2b7", 604).
@@ -98,8 +98,8 @@ golden_state("readiness_atlas", "41849b577a0670ca", 1744).
 golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spat_store", "3f8c9addaf84ad7e", 17750).
-golden_state("spat_trial", "30f3469718590567", 17766).
+golden_state("spat_store", "f19b5ceaaebd7715", 17826).
+golden_state("spat_trial", "ea438e7b9d8169b2", 17842).
 
 golden_host("aka", "b270886e061521b6", 0, 341).
 golden_host("blam", "240bc0d48075cb61", 0, 251).
@@ -119,7 +119,7 @@ golden_host("oops", "012d40f715163c70", 0, 214).
 golden_host("reach", "7bcb38a4b0ac1448", 0, 37).
 golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
 golden_host("rip", "b6be7e21b8485b59", 0, 377).
-golden_host("spat", "615d2e802fec590e", 0, 79).
+golden_host("spat", "f875e68a846fef1a", 0, 105).
 golden_host("sus", "60f08349f9d03e6f", 0, 335).
 golden_host("wtf", "f35fe2efb1348bbe", 0, 586).
 golden_host("yak", "9f3bd0ccd881163f", 0, 208).
@@ -1315,13 +1315,13 @@ golden_rel("slop", "sees[main]", 6).
 golden_rel("slop", "uses_builtin[$kernel]", 137).
 golden_rel("slop", "writes_to[$kernel]", 180).
 golden_rel("spat", "@other", 1).
-golden_rel("spat", "@wit", 5555).
+golden_rel("spat", "@wit", 5562).
 golden_rel("spat", "account[main]", 4).
 golden_rel("spat", "added[main]", 1).
 golden_rel("spat", "adjacent[main]", 29).
 golden_rel("spat", "any_duty[main]", 231).
 golden_rel("spat", "applies_on[main]", 31).
-golden_rel("spat", "asserted_by[$kernel]", 228).
+golden_rel("spat", "asserted_by[$kernel]", 229).
 golden_rel("spat", "assume[main]", 1).
 golden_rel("spat", "at[main]", 81).
 golden_rel("spat", "at_between[main]", 94).
@@ -1348,9 +1348,9 @@ golden_rel("spat", "collected[audit]", 1).
 golden_rel("spat", "collects[main]", 1).
 golden_rel("spat", "collects_from[main]", 1).
 golden_rel("spat", "compatible_pair[main]", 36).
-golden_rel("spat", "concludes[$kernel]", 315).
-golden_rel("spat", "conclusion_lit[$kernel]", 315).
-golden_rel("spat", "conclusion_tense[$kernel]", 315).
+golden_rel("spat", "concludes[$kernel]", 319).
+golden_rel("spat", "conclusion_lit[$kernel]", 319).
+golden_rel("spat", "conclusion_tense[$kernel]", 319).
 golden_rel("spat", "constraint[main]", 22).
 golden_rel("spat", "coverer[main]", 4).
 golden_rel("spat", "crossing[main]", 2).
@@ -1362,9 +1362,9 @@ golden_rel("spat", "day_tight[main]", 10).
 golden_rel("spat", "day_wake[main]", 1).
 golden_rel("spat", "day_work[main]", 5).
 golden_rel("spat", "defect[main]", 2).
-golden_rel("spat", "derived_by[$kernel]", 5946).
+golden_rel("spat", "derived_by[$kernel]", 5953).
 golden_rel("spat", "driver[main]", 2).
-golden_rel("spat", "edb[main]", 90).
+golden_rel("spat", "edb[main]", 91).
 golden_rel("spat", "external[main]", 12).
 golden_rel("spat", "faster[main]", 1).
 golden_rel("spat", "fastest[main]", 1).
@@ -1377,10 +1377,10 @@ golden_rel("spat", "give[main]", 3).
 golden_rel("spat", "give_cost[main]", 22).
 golden_rel("spat", "goes[main]", 52).
 golden_rel("spat", "grid[main]", 1).
-golden_rel("spat", "has_conclusion[$kernel]", 315).
+golden_rel("spat", "has_conclusion[$kernel]", 319).
 golden_rel("spat", "has_give[main]", 3).
 golden_rel("spat", "has_next[main]", 29).
-golden_rel("spat", "has_premise[$kernel]", 889).
+golden_rel("spat", "has_premise[$kernel]", 897).
 golden_rel("spat", "has_prev[main]", 29).
 golden_rel("spat", "here[main]", 502).
 golden_rel("spat", "hh[main]", 15).
@@ -1408,7 +1408,7 @@ golden_rel("spat", "moved_alone[main]", 16).
 golden_rel("spat", "needs_a_driver[main]", 2).
 golden_rel("spat", "needs_cover[main]", 429).
 golden_rel("spat", "needy[main]", 233).
-golden_rel("spat", "negated_under[main]", 71).
+golden_rel("spat", "negated_under[main]", 72).
 golden_rel("spat", "never_alone[main]", 2).
 golden_rel("spat", "no_need[main]", 82).
 golden_rel("spat", "no_walk[main]", 1).
@@ -1430,11 +1430,11 @@ golden_rel("spat", "pick_first[main]", 2).
 golden_rel("spat", "pick_free[main]", 5).
 golden_rel("spat", "pick_later[main]", 3).
 golden_rel("spat", "place[main]", 10).
-golden_rel("spat", "premise_lit[$kernel]", 889).
-golden_rel("spat", "premise_neg[$kernel]", 113).
-golden_rel("spat", "premise_pos[$kernel]", 595).
+golden_rel("spat", "premise_lit[$kernel]", 897).
+golden_rel("spat", "premise_neg[$kernel]", 114).
+golden_rel("spat", "premise_pos[$kernel]", 601).
 golden_rel("spat", "present_window[main]", 2).
-golden_rel("spat", "reads_from[$kernel]", 348).
+golden_rel("spat", "reads_from[$kernel]", 352).
 golden_rel("spat", "reserved[main]", 20).
 golden_rel("spat", "ride[main]", 2).
 golden_rel("spat", "ride_range[main]", 1).
@@ -1444,8 +1444,8 @@ golden_rel("spat", "room_any[main]", 3).
 golden_rel("spat", "room_before[main]", 3).
 golden_rel("spat", "room_later[main]", 3).
 golden_rel("spat", "round_trip[main]", 32).
-golden_rel("spat", "rule[$kernel]", 315).
-golden_rel("spat", "rule_known[main]", 315).
+golden_rel("spat", "rule[$kernel]", 319).
+golden_rel("spat", "rule_known[main]", 319).
 golden_rel("spat", "run[main]", 6).
 golden_rel("spat", "run_alt[main]", 2).
 golden_rel("spat", "run_fragile[main]", 4).
@@ -1468,7 +1468,7 @@ golden_rel("spat", "trip_len[main]", 1).
 golden_rel("spat", "tt[main]", 32).
 golden_rel("spat", "uncovered[main]", 4).
 golden_rel("spat", "uses[main]", 32).
-golden_rel("spat", "uses_builtin[$kernel]", 134).
+golden_rel("spat", "uses_builtin[$kernel]", 135).
 golden_rel("spat", "usual[main]", 14).
 golden_rel("spat", "usual_on[main]", 1).
 golden_rel("spat", "usual_on_day[main]", 1).
@@ -1478,6 +1478,7 @@ golden_rel("spat", "way[main]", 10).
 golden_rel("spat", "way_blocked[main]", 14).
 golden_rel("spat", "week[main]", 2).
 golden_rel("spat", "week_changed[main]", 4).
+golden_rel("spat", "week_known[main]", 2).
 golden_rel("spat", "week_starts[main]", 2).
 golden_rel("spat", "weekday[main]", 5).
 golden_rel("spat", "with[main]", 7).
@@ -1489,7 +1490,7 @@ golden_rel("spat", "work_has_next[main]", 6).
 golden_rel("spat", "work_has_prev[main]", 6).
 golden_rel("spat", "work_next[main]", 6).
 golden_rel("spat", "work_run[main]", 11).
-golden_rel("spat", "writes_to[$kernel]", 315).
+golden_rel("spat", "writes_to[$kernel]", 319).
 golden_rel("spat", "zero_slack[main]", 2).
 golden_rel("sus", "@other", 1).
 golden_rel("sus", "@wit", 1396).
@@ -3855,7 +3856,7 @@ golden_rel("sensors_t3", "sees[main]", 12).
 golden_rel("sensors_t3", "uses_builtin[$kernel]", 7).
 golden_rel("sensors_t3", "writes_to[$kernel]", 30).
 golden_rel("spat_store", "@other", 119).
-golden_rel("spat_store", "@wit", 5825).
+golden_rel("spat_store", "@wit", 5834).
 golden_rel("spat_store", "absent_on[main]", 2).
 golden_rel("spat_store", "account[main]", 5).
 golden_rel("spat_store", "acts[main]", 16).
@@ -3863,7 +3864,7 @@ golden_rel("spat_store", "added[main]", 3).
 golden_rel("spat_store", "adjacent[main]", 25).
 golden_rel("spat_store", "any_duty[main]", 255).
 golden_rel("spat_store", "applies_on[main]", 31).
-golden_rel("spat_store", "asserted_by[$kernel]", 359).
+golden_rel("spat_store", "asserted_by[$kernel]", 362).
 golden_rel("spat_store", "assume[main]", 1).
 golden_rel("spat_store", "at[main]", 74).
 golden_rel("spat_store", "at_between[main]", 78).
@@ -3893,24 +3894,25 @@ golden_rel("spat_store", "collected[audit]", 1).
 golden_rel("spat_store", "collects[main]", 1).
 golden_rel("spat_store", "collects_from[main]", 1).
 golden_rel("spat_store", "compatible_pair[main]", 36).
-golden_rel("spat_store", "concludes[$kernel]", 315).
-golden_rel("spat_store", "conclusion_lit[$kernel]", 315).
-golden_rel("spat_store", "conclusion_tense[$kernel]", 315).
+golden_rel("spat_store", "concludes[$kernel]", 319).
+golden_rel("spat_store", "conclusion_lit[$kernel]", 319).
+golden_rel("spat_store", "conclusion_tense[$kernel]", 319).
 golden_rel("spat_store", "confirmed_edit[main]", 1).
 golden_rel("spat_store", "constraint[main]", 46).
 golden_rel("spat_store", "coverer[main]", 4).
 golden_rel("spat_store", "crossing[main]", 2).
 golden_rel("spat_store", "crowded[main]", 25).
 golden_rel("spat_store", "current[main]", 1).
+golden_rel("spat_store", "date_monday[main]", 2).
 golden_rel("spat_store", "day[main]", 7).
 golden_rel("spat_store", "day_end[main]", 1).
 golden_rel("spat_store", "day_tight[main]", 9).
 golden_rel("spat_store", "day_wake[main]", 1).
 golden_rel("spat_store", "day_work[main]", 5).
 golden_rel("spat_store", "defect[main]", 5).
-golden_rel("spat_store", "derived_by[$kernel]", 6276).
+golden_rel("spat_store", "derived_by[$kernel]", 6285).
 golden_rel("spat_store", "driver[main]", 2).
-golden_rel("spat_store", "edb[main]", 90).
+golden_rel("spat_store", "edb[main]", 91).
 golden_rel("spat_store", "edit_by[main]", 27).
 golden_rel("spat_store", "edit_week[main]", 27).
 golden_rel("spat_store", "edit_without_right[audit]", 8).
@@ -3928,10 +3930,10 @@ golden_rel("spat_store", "give[main]", 3).
 golden_rel("spat_store", "give_cost[main]", 46).
 golden_rel("spat_store", "goes[main]", 41).
 golden_rel("spat_store", "grid[main]", 1).
-golden_rel("spat_store", "has_conclusion[$kernel]", 315).
+golden_rel("spat_store", "has_conclusion[$kernel]", 319).
 golden_rel("spat_store", "has_give[main]", 3).
 golden_rel("spat_store", "has_next[main]", 25).
-golden_rel("spat_store", "has_premise[$kernel]", 889).
+golden_rel("spat_store", "has_premise[$kernel]", 897).
 golden_rel("spat_store", "has_prev[main]", 25).
 golden_rel("spat_store", "here[main]", 507).
 golden_rel("spat_store", "hh[main]", 15).
@@ -3963,7 +3965,7 @@ golden_rel("spat_store", "moved_alone[main]", 14).
 golden_rel("spat_store", "needs_a_driver[main]", 2).
 golden_rel("spat_store", "needs_cover[main]", 460).
 golden_rel("spat_store", "needy[main]", 257).
-golden_rel("spat_store", "negated_under[main]", 71).
+golden_rel("spat_store", "negated_under[main]", 72).
 golden_rel("spat_store", "never_alone[main]", 2).
 golden_rel("spat_store", "no_need[main]", 58).
 golden_rel("spat_store", "no_right[main]", 8).
@@ -3988,12 +3990,12 @@ golden_rel("spat_store", "pick_first[main]", 2).
 golden_rel("spat_store", "pick_free[main]", 5).
 golden_rel("spat_store", "pick_later[main]", 3).
 golden_rel("spat_store", "place[main]", 10).
-golden_rel("spat_store", "premise_lit[$kernel]", 889).
-golden_rel("spat_store", "premise_neg[$kernel]", 113).
-golden_rel("spat_store", "premise_pos[$kernel]", 595).
+golden_rel("spat_store", "premise_lit[$kernel]", 897).
+golden_rel("spat_store", "premise_neg[$kernel]", 114).
+golden_rel("spat_store", "premise_pos[$kernel]", 601).
 golden_rel("spat_store", "present_window[main]", 2).
 golden_rel("spat_store", "proposed_edit[main]", 2).
-golden_rel("spat_store", "reads_from[$kernel]", 348).
+golden_rel("spat_store", "reads_from[$kernel]", 352).
 golden_rel("spat_store", "reported[main]", 2).
 golden_rel("spat_store", "reserved[main]", 20).
 golden_rel("spat_store", "retracted_edit[main]", 2).
@@ -4005,8 +4007,8 @@ golden_rel("spat_store", "room_any[main]", 5).
 golden_rel("spat_store", "room_before[main]", 7).
 golden_rel("spat_store", "room_later[main]", 4).
 golden_rel("spat_store", "round_trip[main]", 32).
-golden_rel("spat_store", "rule[$kernel]", 315).
-golden_rel("spat_store", "rule_known[main]", 315).
+golden_rel("spat_store", "rule[$kernel]", 319).
+golden_rel("spat_store", "rule_known[main]", 319).
 golden_rel("spat_store", "run[main]", 6).
 golden_rel("spat_store", "run_alt[main]", 3).
 golden_rel("spat_store", "run_fragile[main]", 3).
@@ -4036,7 +4038,7 @@ golden_rel("spat_store", "trip_len[main]", 1).
 golden_rel("spat_store", "tt[main]", 32).
 golden_rel("spat_store", "uncovered[main]", 4).
 golden_rel("spat_store", "uses[main]", 32).
-golden_rel("spat_store", "uses_builtin[$kernel]", 134).
+golden_rel("spat_store", "uses_builtin[$kernel]", 135).
 golden_rel("spat_store", "usual[main]", 14).
 golden_rel("spat_store", "usual_on[main]", 1).
 golden_rel("spat_store", "usual_on_day[main]", 1).
@@ -4047,6 +4049,8 @@ golden_rel("spat_store", "way[main]", 11).
 golden_rel("spat_store", "way_blocked[main]", 12).
 golden_rel("spat_store", "week[main]", 2).
 golden_rel("spat_store", "week_changed[main]", 10).
+golden_rel("spat_store", "week_known[main]", 2).
+golden_rel("spat_store", "week_of[main]", 2).
 golden_rel("spat_store", "week_starts[main]", 2).
 golden_rel("spat_store", "weekday[main]", 5).
 golden_rel("spat_store", "with[main]", 7).
@@ -4058,10 +4062,10 @@ golden_rel("spat_store", "work_has_next[main]", 6).
 golden_rel("spat_store", "work_has_prev[main]", 6).
 golden_rel("spat_store", "work_next[main]", 6).
 golden_rel("spat_store", "work_run[main]", 11).
-golden_rel("spat_store", "writes_to[$kernel]", 315).
+golden_rel("spat_store", "writes_to[$kernel]", 319).
 golden_rel("spat_store", "zero_slack[main]", 2).
 golden_rel("spat_trial", "@other", 119).
-golden_rel("spat_trial", "@wit", 5828).
+golden_rel("spat_trial", "@wit", 5837).
 golden_rel("spat_trial", "absent_on[main]", 2).
 golden_rel("spat_trial", "account[main]", 5).
 golden_rel("spat_trial", "acts[main]", 16).
@@ -4069,7 +4073,7 @@ golden_rel("spat_trial", "added[main]", 3).
 golden_rel("spat_trial", "adjacent[main]", 25).
 golden_rel("spat_trial", "any_duty[main]", 255).
 golden_rel("spat_trial", "applies_on[main]", 31).
-golden_rel("spat_trial", "asserted_by[$kernel]", 364).
+golden_rel("spat_trial", "asserted_by[$kernel]", 367).
 golden_rel("spat_trial", "assume[main]", 1).
 golden_rel("spat_trial", "at[main]", 74).
 golden_rel("spat_trial", "at_between[main]", 78).
@@ -4102,24 +4106,25 @@ golden_rel("spat_trial", "collected[audit]", 1).
 golden_rel("spat_trial", "collects[main]", 1).
 golden_rel("spat_trial", "collects_from[main]", 1).
 golden_rel("spat_trial", "compatible_pair[main]", 36).
-golden_rel("spat_trial", "concludes[$kernel]", 315).
-golden_rel("spat_trial", "conclusion_lit[$kernel]", 315).
-golden_rel("spat_trial", "conclusion_tense[$kernel]", 315).
+golden_rel("spat_trial", "concludes[$kernel]", 319).
+golden_rel("spat_trial", "conclusion_lit[$kernel]", 319).
+golden_rel("spat_trial", "conclusion_tense[$kernel]", 319).
 golden_rel("spat_trial", "confirmed_edit[main]", 1).
 golden_rel("spat_trial", "constraint[main]", 46).
 golden_rel("spat_trial", "coverer[main]", 4).
 golden_rel("spat_trial", "crossing[main]", 2).
 golden_rel("spat_trial", "crowded[main]", 25).
 golden_rel("spat_trial", "current[main]", 1).
+golden_rel("spat_trial", "date_monday[main]", 2).
 golden_rel("spat_trial", "day[main]", 7).
 golden_rel("spat_trial", "day_end[main]", 1).
 golden_rel("spat_trial", "day_tight[main]", 9).
 golden_rel("spat_trial", "day_wake[main]", 1).
 golden_rel("spat_trial", "day_work[main]", 5).
 golden_rel("spat_trial", "defect[main]", 5).
-golden_rel("spat_trial", "derived_by[$kernel]", 6279).
+golden_rel("spat_trial", "derived_by[$kernel]", 6288).
 golden_rel("spat_trial", "driver[main]", 2).
-golden_rel("spat_trial", "edb[main]", 90).
+golden_rel("spat_trial", "edb[main]", 91).
 golden_rel("spat_trial", "edit_by[main]", 27).
 golden_rel("spat_trial", "edit_week[main]", 27).
 golden_rel("spat_trial", "edit_without_right[audit]", 8).
@@ -4137,10 +4142,10 @@ golden_rel("spat_trial", "give[main]", 3).
 golden_rel("spat_trial", "give_cost[main]", 46).
 golden_rel("spat_trial", "goes[main]", 41).
 golden_rel("spat_trial", "grid[main]", 1).
-golden_rel("spat_trial", "has_conclusion[$kernel]", 315).
+golden_rel("spat_trial", "has_conclusion[$kernel]", 319).
 golden_rel("spat_trial", "has_give[main]", 3).
 golden_rel("spat_trial", "has_next[main]", 25).
-golden_rel("spat_trial", "has_premise[$kernel]", 889).
+golden_rel("spat_trial", "has_premise[$kernel]", 897).
 golden_rel("spat_trial", "has_prev[main]", 25).
 golden_rel("spat_trial", "here[main]", 507).
 golden_rel("spat_trial", "hh[main]", 15).
@@ -4173,7 +4178,7 @@ golden_rel("spat_trial", "needs_a_driver[main]", 2).
 golden_rel("spat_trial", "needs_confirm[main]", 1).
 golden_rel("spat_trial", "needs_cover[main]", 460).
 golden_rel("spat_trial", "needy[main]", 257).
-golden_rel("spat_trial", "negated_under[main]", 71).
+golden_rel("spat_trial", "negated_under[main]", 72).
 golden_rel("spat_trial", "never_alone[main]", 2).
 golden_rel("spat_trial", "no_need[main]", 58).
 golden_rel("spat_trial", "no_right[main]", 8).
@@ -4198,12 +4203,12 @@ golden_rel("spat_trial", "pick_first[main]", 2).
 golden_rel("spat_trial", "pick_free[main]", 5).
 golden_rel("spat_trial", "pick_later[main]", 3).
 golden_rel("spat_trial", "place[main]", 10).
-golden_rel("spat_trial", "premise_lit[$kernel]", 889).
-golden_rel("spat_trial", "premise_neg[$kernel]", 113).
-golden_rel("spat_trial", "premise_pos[$kernel]", 595).
+golden_rel("spat_trial", "premise_lit[$kernel]", 897).
+golden_rel("spat_trial", "premise_neg[$kernel]", 114).
+golden_rel("spat_trial", "premise_pos[$kernel]", 601).
 golden_rel("spat_trial", "present_window[main]", 2).
 golden_rel("spat_trial", "proposed_edit[main]", 2).
-golden_rel("spat_trial", "reads_from[$kernel]", 348).
+golden_rel("spat_trial", "reads_from[$kernel]", 352).
 golden_rel("spat_trial", "reported[main]", 2).
 golden_rel("spat_trial", "reserved[main]", 20).
 golden_rel("spat_trial", "retracted_edit[main]", 2).
@@ -4215,8 +4220,8 @@ golden_rel("spat_trial", "room_any[main]", 5).
 golden_rel("spat_trial", "room_before[main]", 7).
 golden_rel("spat_trial", "room_later[main]", 4).
 golden_rel("spat_trial", "round_trip[main]", 32).
-golden_rel("spat_trial", "rule[$kernel]", 315).
-golden_rel("spat_trial", "rule_known[main]", 315).
+golden_rel("spat_trial", "rule[$kernel]", 319).
+golden_rel("spat_trial", "rule_known[main]", 319).
 golden_rel("spat_trial", "run[main]", 6).
 golden_rel("spat_trial", "run_alt[main]", 3).
 golden_rel("spat_trial", "run_fragile[main]", 3).
@@ -4247,7 +4252,7 @@ golden_rel("spat_trial", "trip_len[main]", 1).
 golden_rel("spat_trial", "tt[main]", 32).
 golden_rel("spat_trial", "uncovered[main]", 4).
 golden_rel("spat_trial", "uses[main]", 32).
-golden_rel("spat_trial", "uses_builtin[$kernel]", 134).
+golden_rel("spat_trial", "uses_builtin[$kernel]", 135).
 golden_rel("spat_trial", "usual[main]", 14).
 golden_rel("spat_trial", "usual_on[main]", 1).
 golden_rel("spat_trial", "usual_on_day[main]", 1).
@@ -4258,6 +4263,8 @@ golden_rel("spat_trial", "way[main]", 11).
 golden_rel("spat_trial", "way_blocked[main]", 12).
 golden_rel("spat_trial", "week[main]", 2).
 golden_rel("spat_trial", "week_changed[main]", 10).
+golden_rel("spat_trial", "week_known[main]", 2).
+golden_rel("spat_trial", "week_of[main]", 2).
 golden_rel("spat_trial", "week_starts[main]", 2).
 golden_rel("spat_trial", "weekday[main]", 5).
 golden_rel("spat_trial", "with[main]", 7).
@@ -4269,5 +4276,5 @@ golden_rel("spat_trial", "work_has_next[main]", 6).
 golden_rel("spat_trial", "work_has_prev[main]", 6).
 golden_rel("spat_trial", "work_next[main]", 6).
 golden_rel("spat_trial", "work_run[main]", 11).
-golden_rel("spat_trial", "writes_to[$kernel]", 315).
+golden_rel("spat_trial", "writes_to[$kernel]", 319).
 golden_rel("spat_trial", "zero_slack[main]", 2).

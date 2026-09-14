@@ -7,10 +7,10 @@ import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import { dayOrder, hhmm, parseTime, ru, sayConstraint, table } from './spat.ts';
-import { ACCESS, SpatError, append, editId, isoNow, must, myBook, resolve, trial, type Env, type Store } from './store.ts';
-import { BOOT } from './spat.ts';
+import { ACCESS, SpatError, append, dateIn, editId, isoNow, must, myBook, resolve, trial, type Env, type Store } from './store.ts';
+import { BOOT, bust } from './spat.ts';
 import * as fs from 'node:fs';
-import { renderDay, renderIcs, todayAtom } from './tomorrow.ts';
+import { renderDay, renderIcs } from './tomorrow.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -48,9 +48,15 @@ export interface Edit { kind: string; summary: string; facts: (id: string) => st
 
 /** TEXT -> FACTS. One line of a person's Russian or English into the fact
  *  shapes access.rofl reads. Names resolve through the world, so a block or
- *  a person the world does not know is a code-2 answer and never a fact. */
+ *  a person the world does not know is a code-2 answer and never a fact.
+ *  ONE LINE, EVERY TOKEN SPOKEN FOR: a control character anywhere, or a token
+ *  after the last field, is code 2 — measured on 33832b7, a second line in
+ *  the text became a second fact in the book and bricked it for every adult. */
 export function parseEdit(r: Rofl, text: string): Edit {
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(text)) bad('в правке управляющий символ (перевод строки, табуляция, NUL); правка — одна строка');
   const w = text.trim().split(/\s+/).filter((x) => x.length > 0);
+  const done = <T,>(used: number, out: T): T => (w.length > used ? bad(`лишнее в конце: '${w.slice(used).join(' ')}'`) : out);
   const N = names(r);
   const days = new Set(table(r, 'day', 'D, N').map((x) => x.D));
   const name = (t: string | undefined, what: string): string => {
@@ -78,12 +84,12 @@ export function parseEdit(r: Rofl, text: string): Edit {
     const ev = block(w[1]);
     const d = isDay(w[2]) ? day(w[2]) : 'all';
     const t = time(w[isDay(w[2]) ? 3 : 2]);
-    return { kind: 'move', summary: `${ru(ev)} → ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_move(${id}, ${ev}, ${d}, ${t}).`] };
+    return done(isDay(w[2]) ? 4 : 3, { kind: 'move', summary: `${ru(ev)} → ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_move(${id}, ${ev}, ${d}, ${t}).`] });
   }
   if (verb === 'skip') {
     const ev = block(w[1]);
     const d = w[2] === undefined ? 'all' : day(w[2]);
-    return { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, facts: (id) => [`e_skip(${id}, ${ev}, ${d}).`] };
+    return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, facts: (id) => [`e_skip(${id}, ${ev}, ${d}).`] });
   }
   if (verb === 'add') {
     const what = w[1] !== undefined && ATOM.test(w[1]) ? w[1] : bad(`что: '${w[1] ?? ''}' — латиницей, как в файле недели`);
@@ -91,28 +97,30 @@ export function parseEdit(r: Rofl, text: string): Edit {
     const [f, t] = range(w[3]);
     const who = w[4] === undefined ? undefined : name(w[4], 'кто');
     const where = w[5] === undefined ? table(r, 'base', 'B')[0].B : name(w[5], 'где');
-    return { kind: 'add', summary: `${what} ${ru(d)} ${hhmm(f)}–${hhmm(t)}`,
-      facts: (id) => [`e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).`] };
+    return done(6, { kind: 'add', summary: `${what} ${ru(d)} ${hhmm(f)}–${hhmm(t)}`,
+      facts: (id) => [`e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).`] });
   }
   if (verb === 'sick') {
     const p = name(w[1], 'кто');
     const d = w[2] === undefined ? 'all' : day(w[2]);
-    return { kind: 'sick', summary: `${ru(p)} болеет ${ru(d)}`, facts: (id) => [`e_sick(${id}, ${p}, ${d}).`] };
+    return done(3, { kind: 'sick', summary: `${ru(p)} болеет ${ru(d)}`, facts: (id) => [`e_sick(${id}, ${p}, ${d}).`] });
   }
   if (verb === 'car') {
     if (!/^(out|нет)$/i.test(w[1] ?? '')) bad(`'${w.slice(0, 2).join(' ')}' — пиши car out / машины нет`);
     const d = day(w[2]);
     const wake = table(r, 'day_wake', 'F, T')[0];
     const [f, t] = w[3] === undefined ? [Number(wake?.F ?? 0), Number(wake?.T ?? 1440)] : range(w[3]);
-    return { kind: 'car', summary: `машины нет ${ru(d)} ${hhmm(f)}–${hhmm(t)}`, facts: (id) => [`e_car_out(${id}, ${d}, ${f}, ${t}).`] };
+    return done(4, { kind: 'car', summary: `машины нет ${ru(d)} ${hhmm(f)}–${hhmm(t)}`, facts: (id) => [`e_car_out(${id}, ${d}, ${f}, ${t}).`] });
   }
   const c = name(w[1], 'ограничение');
   const d = day(w[2]); const t = time(w[3]);
-  return { kind: 'report', summary: `${c}: ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_report(${id}, ${c}, ${d}, ${t}).`] };
+  return done(4, { kind: 'report', summary: `${c}: ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_report(${id}, ${c}, ${d}, ${t}).`] });
 }
 
-const via = (): string => process.env.SPAT_VIA ?? 'cli';
 const tag = (book: string, line: string): string => line.replace(/^([a-z_]+)\(/, `$1[${book}](`);
+/** The comment line is one line whatever it was handed: whitespace collapsed,
+ *  so a trail can never become a clause. The facts are validated separately. */
+const trail = (s: Store, what: string): string => `-- ${isoNow(s.env)} ${s.env.via} ${s.env.as}: ${what.replace(/\s+/g, ' ').trim()}`;
 
 /** `spat edit '<text>'`: the trial in a world with the candidate, then one
  *  append — or none. Codes 0, 2, 3, 4 as the contract lists them. */
@@ -122,7 +130,7 @@ export function edit(s: Store, text: string): number {
   const at = isoNow(s.env);
   const id = editId(s.env.as, at, text.trim());
   const lines = [...e.facts(id).map((l) => l.replace('$ME', s.env.as)),
-    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${via()}).`, `for_week(${id}, ${s.week}).`];
+    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${s.week}).`];
   const v = trial(s, id, parseProgram(lines.map((l) => tag(book.book, l)).join('\n')));
   if (v.noRight) {
     const o = v.owner!;
@@ -131,9 +139,9 @@ export function edit(s: Store, text: string): number {
     console.log(`  может: ${may.length > 0 ? may.join(', ') : 'никто; внешнее ограничение только сообщают (report)'}`);
     return 4;
   }
-  const entry = [`-- ${at} ${via()} ${s.env.as}: ${text.trim()}`, ...lines.map((l) => tag(book.book, l))];
+  const entry = [trail(s, text), ...lines.map((l) => tag(book.book, l))];
   if (v.breaks.length > 0) {
-    append(book.file, [...entry, tag(book.book, `proposed(${id}).`)].join('\n'));
+    append(book, [...entry, tag(book.book, `proposed(${id}).`)].join('\n'), lines.length + 1);
     const ord = dayOrder(s.r);
     const on = table(s.r, 'breaks_on', 'E, D, R').filter((x) => x.E === id).sort((a, b) => ord.get(a.D)! - ord.get(b.D)!);
     console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует: ${e.summary}`);
@@ -144,8 +152,8 @@ export function edit(s: Store, text: string): number {
     console.log(`  подтвердить: spat confirm ${id}`);
     return 3;
   }
-  append(book.file, entry.join('\n'));
-  console.log(`применено: ${e.summary} (${id})`);
+  append(book, entry.join('\n'), lines.length);
+  console.log(`применено: ${e.summary} (${id}) — неделя ${s.week}${stale(s)}`);
   return 0;
 }
 
@@ -164,19 +172,17 @@ export function mark(s: Store, what: 'confirmed' | 'retracted', id: string): num
   }
   const already = what === 'confirmed' && !s.r.holds(`pending(${id})`);
   if (already) { console.log(`${id}: уже действует, ничего не записано`); return 0; }
-  const at = isoNow(s.env);
-  append(book.file, `-- ${at} ${via()} ${s.env.as}: ${what} ${id}\n${tag(book.book, `${what}(${id}, "${at}", ${via()}).`)}`);
+  append(book, `${trail(s, `${what} ${id}`)}\n${tag(book.book, `${what}(${id}, "${isoNow(s.env)}", ${s.env.via}).`)}`, 1);
   console.log(`${id}: ${what === 'confirmed' ? 'подтверждена, действует' : 'отозвана'}`);
   return 0;
 }
 
 export function roll(s: Store, week: string): number {
   if (!s.r.holds(`role(${s.env.as}, operator)`)) { console.log(`отказано: roll — только оператор, ${s.env.as} им не является`); return 4; }
-  if (!s.r.holds(`week(${week})`)) throw new SpatError(2, `нет такой недели в мире: ${week}; есть ${table(s.r, 'week', 'W').map((x) => x.W).join(', ')}`);
+  if (!table(s.r, 'week', 'W').some((x) => x.W === week)) throw new SpatError(2, `нет такой недели в мире: ${week}; есть ${table(s.r, 'week', 'W').map((x) => x.W).join(', ')}`);
   const me = s.books.find((b) => b.user === 'me');
   if (!me) throw new SpatError(6, `${path.join(s.dir, 'me.rofl')} отсутствует`);
-  const at = isoNow(s.env);
-  append(me.file, `-- ${at} ${via()} ${s.env.as}: roll ${week}\nrolled[p_me](${week}, "${at}").`);
+  append(me, `${trail(s, `roll ${week}`)}\nrolled[p_me](${week}, "${isoNow(s.env)}").`, 1);
   console.log(`неделя теперь ${week} (была ${s.week})`);
   return 0;
 }
@@ -208,15 +214,34 @@ export function init(e0: Env, tenant: string, weekFile: string): string[] {
 
 export function whoami(s: Store): number {
   const roles = table(s.r, 'role', 'U, R').filter((x) => x.U === s.env.as).map((x) => ru(x.R));
-  console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${ru(todayAtom(s))}`);
+  console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${dateIn(s.env).ymd}`);
   console.log(`  книги мне открыты: ${s.open.map((b) => b.book).join(' ') || 'ни одной'}`);
-  console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.file ?? 'никуда'}`);
+  console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.file ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);
   const st = (e: string): string => (s.r.holds(`retracted_edit(${e})`) ? 'отозвана' : s.r.holds(`pending(${e})`) ? 'ждёт confirm'
     : s.r.holds(`no_right(${e})`) ? 'без права' : 'действует');
   for (const e of mine) console.log(`  ${e}  ${st(e)}`);
   return 0;
 }
+
+/** A DATED DAY IS SHOWN UNDER ITS OWN WEEK. `week_of(today|tomorrow, W)` is
+ *  the rules' answer over `week_starts`; when W is not the week in force the
+ *  world is re-read under W, so the day carries W's own moved/added and the
+ *  edits recorded for W — never the same weekday of another week. A date
+ *  with no `week_starts` is refused: the world does not have that week. */
+function dated(s: Store, which: 'today' | 'tomorrow'): { day: string; ymd: string; week: string } {
+  const { ymd, n, monday } = dateIn(s.env, which === 'today' ? 0 : 1);
+  const w = table(s.r, 'week_of', 'Which, W').find((x) => x.Which === which)?.W;
+  if (!w) throw new SpatError(2, `неделя с понедельника ${monday} не заведена: в мире нет week_starts(W, "${monday}") — ${ru(which === 'today' ? 'сегодня' : 'завтра')} ${ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
+  if (w !== s.week) { s.r.retract(`current(${s.week})`); s.r.assert(`current(${w}).`); s.r.evaluate(); bust(s.r); }
+  return { day: dayAtom(s, n), ymd, week: w };
+}
+const dayAtom = (s: Store, n: number): string => table(s.r, 'day', 'D, N').find((x) => Number(x.N) === n)?.D ?? bad(`в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
+/** «неделя в силе не сегодняшняя» — a rule's row, printed wherever a week is named. */
+const stale = (s: Store): string => {
+  const x = table(s.r, 'stale_week', 'C, W')[0];
+  return x ? `\n  !! в силе неделя ${x.C}, а сегодня неделя ${x.W}: правки ложатся в ${x.C}; оператору нужен roll ${x.W}` : '';
+};
 
 /** Dispatch for the store verbs; the classic verbs stay in spat.ts. */
 export function run(s: Store, cmd: string, rest: string[]): number {
@@ -226,11 +251,12 @@ export function run(s: Store, cmd: string, rest: string[]): number {
     case 'confirm': return mark(s, 'confirmed', rest[0] ?? bad('confirm <edit-id>'));
     case 'retract': return mark(s, 'retracted', rest[0] ?? bad('retract <edit-id>'));
     case 'roll': return roll(s, rest[0] ?? bad('roll <week>'));
-    case 'tomorrow': { const d = todayAtom(s, 1); console.log(renderDay(s.r, d, `ЗАВТРА, ${ru(d)}`)); return 0; }
+    case 'tomorrow': { const d = dated(s, 'tomorrow'); console.log(renderDay(s.r, d.day, `ЗАВТРА, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
     case 'show': {
-      if (rest[0] === 'week' || rest[0] === 'неделя') { console.log(renderDay(s.r, undefined, 'НЕДЕЛЯ')); return 0; }
-      const d = rest[0] === undefined ? todayAtom(s) : (names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`));
-      console.log(renderDay(s.r, d, `${ru(d)}`)); return 0;
+      if (rest[0] === 'week' || rest[0] === 'неделя') { console.log(renderDay(s.r, undefined, `НЕДЕЛЯ ${s.week}${stale(s)}`)); return 0; }
+      if (rest[0] === undefined) { const d = dated(s, 'today'); console.log(renderDay(s.r, d.day, `СЕГОДНЯ, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
+      const d = names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`);
+      console.log(renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
     }
     case 'ics': { process.stdout.write(renderIcs(s, rest.indexOf('--for') >= 0 ? rest[rest.indexOf('--for') + 1] : undefined)); return 0; }
     default: return bad(`глагол '${cmd}'`);

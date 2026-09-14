@@ -9,9 +9,8 @@
 //
 // THE TAG IS THE FILE NAME. A line in a book is loaded into the book's
 // perspective whatever it says; a line that names another book is refused
-// with the file and the line, and nothing from that file is loaded.
-// Identity comes from the environment only: SPAT_ROOT, SPAT_TENANT, SPAT_AS,
-// SPAT_TZ, and SPAT_NOW for tests. There is no --as.
+// with the file and the line, and nothing from that file is loaded. Identity
+// comes from the environment only (STORE.md); there is no --as.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -24,20 +23,29 @@ import { BOOT, SPAT, bust, setSource, table, world } from './spat.ts';
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 export const ACCESS = fs.readFileSync(path.join(HERE, 'access.rofl'), 'utf8');
 
-/** One exit code per contract line; the message is what stdout gets. */
+/** One exit code per contract line; the message is what stdout gets;
+ *  `opened` is what the loader had read when it refused. */
 export class SpatError extends Error {
-  code: 2 | 3 | 4 | 5 | 6;
-  /** the files the loader had opened when it refused — a stranger's is two */
-  opened: string[] = [];
+  code: 2 | 3 | 4 | 5 | 6; opened: string[] = [];
   constructor(code: 2 | 3 | 4 | 5 | 6, msg: string) { super(msg); this.code = code; }
 }
 
-/** `as` and `tenant` are settled by `resolve` when the call carries a sender
- *  id rather than a name; until then they may be empty. */
-export interface Env { root: string; tenant: string; as: string; fromId?: number; tz: string; now: Date; }
+/** `as`/`tenant` are settled by `resolve` when the call carries a sender id; until then they may be empty. */
+export interface Env { root: string; tenant: string; as: string; fromId?: number; via: string; tz: string; now: Date; }
+/** EVERYTHING THAT BECOMES PART OF A FACT IS AN ATOM FIRST. SPAT_AS, SPAT_TENANT
+ *  and SPAT_VIA are written into `caller(...)`, `tenant(...)`, `edit_via(...)`;
+ *  a value like `robin). tg_user(robin, 1, example, operator` would be two
+ *  clauses. Measured on 33832b7 as the edit-text hole; this is the same
+ *  hole one door over. */
+export const ATOM = /^[a-z][a-z0-9_]*$/;
+const atom = (v: string | undefined, what: string, code: 2 | 5 = 5): string | undefined => {
+  if (v !== undefined && !ATOM.test(v)) throw new SpatError(code, `${what} не атом (a-z, 0-9, _): ${JSON.stringify(v)}`);
+  return v;
+};
 export function env(): Env {
-  const { SPAT_ROOT, SPAT_TENANT, SPAT_AS, SPAT_FROM_ID, SPAT_TZ, SPAT_NOW } = process.env;
+  const { SPAT_ROOT, SPAT_TENANT, SPAT_AS, SPAT_FROM_ID, SPAT_TZ, SPAT_NOW, SPAT_VIA } = process.env;
   if (!SPAT_ROOT) throw new SpatError(5, 'нет корня: SPAT_ROOT не задан');
+  atom(SPAT_AS, 'SPAT_AS'); atom(SPAT_TENANT, 'SPAT_TENANT'); atom(SPAT_VIA, 'SPAT_VIA');
   // EXACTLY ONE SOURCE OF IDENTITY: a book by name (me, the operator by hand)
   // or a Telegram sender id that users.rofl must know. Both is a call that
   // cannot say who it is; neither is the same.
@@ -47,7 +55,8 @@ export function env(): Env {
   const now = SPAT_NOW ? new Date(SPAT_NOW) : new Date();
   if (Number.isNaN(now.getTime())) throw new SpatError(5, `SPAT_NOW не разобран: ${SPAT_NOW}`);
   try { new Intl.DateTimeFormat('en-US', { timeZone: SPAT_TZ ?? 'UTC' }); } catch { throw new SpatError(5, `SPAT_TZ не распознан: ${SPAT_TZ}`); }
-  return { root: SPAT_ROOT, tenant: SPAT_TENANT ?? '', as: SPAT_AS ?? '', fromId: SPAT_FROM_ID ? Number(SPAT_FROM_ID) : undefined, tz: SPAT_TZ ?? 'UTC', now };
+  return { root: SPAT_ROOT, tenant: SPAT_TENANT ?? '', as: SPAT_AS ?? '', fromId: SPAT_FROM_ID ? Number(SPAT_FROM_ID) : undefined,
+    via: SPAT_VIA ?? 'cli', tz: SPAT_TZ ?? 'UTC', now };
 }
 
 /** WHO IS CALLING, before any file of any tenant is opened. A sender id is
@@ -72,13 +81,8 @@ export function resolve(e: Env, opened: string[] = []): Env {
 export interface Book { book: string; user: string; file: string; }
 export const bookOf = (user: string): string => `p_${user}`;
 
-export interface Store {
-  env: Env; dir: string; books: Book[]; open: Book[]; week: string;
-  /** every file the loader opened, in order — the proof `stranger` opened none */
-  opened: string[];
-  r: Rofl;
-}
-
+/** `opened`: every file the loader read, in order — a stranger's proof. */
+export interface Store { env: Env; dir: string; books: Book[]; open: Book[]; week: string; opened: string[]; r: Rofl; }
 
 function booksIn(dir: string): Book[] {
   const out: Book[] = [];
@@ -95,10 +99,23 @@ function booksIn(dir: string): Book[] {
   return out;
 }
 
-/** What the loader asserts about a call: the tenant, the caller, and one
- *  `authority` line per book file — the book's one writer, by its name. */
+/** What the loader asserts about a call: tenant, caller, the Monday of today
+ *  and of tomorrow in the store's zone (WHICH week those are is the rules'
+ *  question), and one `authority` line per book — its one writer, by name. */
 const loaderFacts = (e: Env, books: Book[]): string =>
-  `tenant(${e.tenant}).\ncaller(${e.as}).\n` + books.map((b) => `authority(${b.book}, ${b.user}).`).join('\n');
+  `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
+  + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\n` + books.map((b) => `authority(${b.book}, ${b.user}).`).join('\n');
+
+const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+/** The date `days` from now IN THE STORE'S ZONE: its ISO weekday 1..7 (the
+ *  world's `day(D, N)` is keyed the same) and the Monday it belongs to. */
+export function dateIn(e: Env, days = 0): { ymd: string; n: number; monday: string } {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: e.tz, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })
+    .formatToParts(new Date(e.now.getTime() + days * 86_400_000));
+  const g = (k: string): string => f.find((x) => x.type === k)?.value ?? '';
+  const ymd = `${g('year')}-${g('month')}-${g('day')}`; const n = WD.indexOf(g('weekday').toLowerCase()) || 7;
+  return { ymd, n, monday: new Date(Date.parse(`${ymd}T00:00:00Z`) - (n - 1) * 86_400_000).toISOString().slice(0, 10) };
+}
 
 /** A BOOK, LINE BY LINE. One clause per line, a fact, and its tag is the
  *  file's. The whole file is checked before one fact of it is asserted. */
@@ -156,26 +173,22 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     // THE WEEK IN FORCE, decided before the first evaluation so it costs one:
     // --week-of, else the operator's latest roll, else the world's own.
     const cur = baseArgs(r, 'current')[0]?.[0];
+    if (opts.weekOf !== undefined && !baseArgs(r, 'week').some((w) => w[0] === atom(opts.weekOf, '--week-of', 2))) {
+      throw new SpatError(2, `нет такой недели: ${opts.weekOf}; есть ${baseArgs(r, 'week').map((w) => w[0]).join(', ')}`);
+    }
     week = opts.weekOf ?? rolledWeek(r) ?? cur ?? '?';
     if (cur && week !== cur) { r.retract(`current(${cur})`); must(r.assert(`current(${week}).`), 'current'); }
   };
   setSource(source);
-  const r = world(undefined, { extra: opts.extra });
+  const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
   return { env: e, dir, books, open, week, opened, r };
 }
 
-/** The base facts of one relation, read off the store's own keys — no
- *  evaluation, so the week can be swapped before the first one runs. */
-const baseArgs = (r: Rofl, rel: string): string[][] =>
-  r.factKeys(rel).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
+/** Base facts of one relation off the store's keys — no evaluation, so the week can be swapped before the first. */
+const baseArgs = (r: Rofl, rel: string): string[][] => r.factKeys(rel).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
 
-/** The operator's `roll` lives in me.rofl as `rolled(W, Iso)`; the latest
- *  one is the week the store is read under, unless --week-of says otherwise.
- *  Applied by the same swap `--week-of` uses, so `current/1` stays one fact. */
-function rolledWeek(r: Rofl): string | undefined {
-  const rows = baseArgs(r, 'rolled').sort((a, b) => (a[1] < b[1] ? 1 : -1));
-  return rows[0]?.[0];
-}
+/** The operator's latest `rolled(W, Iso)` in me.rofl: the week the store is read under unless --week-of says. */
+const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
 
 export function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
   if (!res.ok) throw new SpatError(6, `${what}: ${res.diagnostics.join('; ')}`);
@@ -189,26 +202,28 @@ export function must(res: { ok: boolean; diagnostics: string[] }, what: string):
  *  each write atomically at the current end; an entry is a few hundred bytes,
  *  well under the page. No lock file, so no stale lock after a crash, and no
  *  read-modify-write, so no lost update. The choice is argued in STORE.md. */
-export function append(file: string, entry: string): void {
+export function append(b: Book, entry: string, clauses: number): void {
   const text = entry.endsWith('\n') ? entry : entry + '\n';
-  if (Buffer.byteLength(text) > 4096) throw new SpatError(6, `${file}: запись длиннее 4096 байт`);
-  const fd = fs.openSync(file, 'a');
+  // THE WALL STANDS AT THE WRITER TOO: the entry is read back exactly as the
+  // loader will read it, and must be exactly the facts intended, all in this
+  // book — so nothing the writer can be handed becomes a second line.
+  let n = -1;
+  try { n = bookClauses(b, text).length; } catch (e) { throw new SpatError(2, `запись не прошла бы стену книги: ${(e as Error).message}`); }
+  if (n !== clauses) throw new SpatError(2, `запись держит ${n} фактов вместо ${clauses}; ничего не записано`);
+  if (Buffer.byteLength(text) > 4096) throw new SpatError(6, `${b.file}: запись длиннее 4096 байт`);
+  const fd = fs.openSync(b.file, 'a');
   try { fs.writeSync(fd, text); } finally { fs.closeSync(fd); }
 }
 
-/** An id is the entry's content and its moment: the same person saying the
- *  same thing at the same instant is one edit, not two. */
+/** An id is the entry's content and its moment: one person, one instant, one text — one edit. */
 export const editId = (user: string, iso: string, text: string): string =>
   'e_' + createHash('sha1').update(`${user}\n${iso}\n${text}`).digest('hex').slice(0, 8);
 
 export const isoNow = (e: Env): string => process.env.SPAT_NOW ?? e.now.toISOString();
 
 /** The book the caller writes; nobody writes another's. */
-export function myBook(s: Store): Book {
-  const b = s.books.find((x) => x.user === s.env.as);
-  if (!b) throw new SpatError(6, `у ${s.env.as} нет книги в ${s.dir}/ledgers — spat init создаёт их`);
-  return b;
-}
+export const myBook = (s: Store): Book => s.books.find((x) => x.user === s.env.as)
+  ?? (() => { throw new SpatError(6, `у ${s.env.as} нет книги в ${s.dir}/ledgers — spat init создаёт их`); })();
 
 /** THE TRIAL. The world already evaluated without the candidate is the
  *  baseline: its defects go in as `before(D, R, K)`, the candidate goes

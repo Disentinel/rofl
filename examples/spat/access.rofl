@@ -197,6 +197,26 @@ car_here(Cr, D, Home, X) :- car_away(D, _, X), car(Cr), base(Home).
 reported(C, D, T, U) :- e_report[L](E, C, D, T), ledger(L, U), not retracted_edit(E).
 
 -- =========================================================================
+-- 5b. WHICH WEEK A DATE IS IN
+-- =========================================================================
+-- `tomorrow` and `show` are asked about a DATE, and a date is in one week:
+-- the one whose `week_starts(W, Monday)` is that date's Monday. The loader
+-- asserts `date_monday(today|tomorrow, "YYYY-MM-DD")` from SPAT_TZ; which
+-- week that is, and whether it exists, is decided here. A day of another
+-- week under the heading «завтра» is a wrong answer, so a date whose week
+-- the world does not know is refused, and a date in a week other than the
+-- one in force is answered under ITS week.
+
+-- for: the week a date falls in
+week_of(Which, W) :- date_monday(Which, M), week_starts(W, M).
+-- for: a date the world has no week for — «неделя не заведена»
+week_known(M)     :- week_starts(_, M).
+no_week(Which, M) :- date_monday(Which, M), not week_known(M).
+-- for: the week in force is not today's — a warning on every answer, since
+--      an edit is recorded for the week in force and the operator rolls
+stale_week(C, W)  :- current(C), week_of(today, W), W != C.
+
+-- =========================================================================
 -- 6. DOES THE EDIT BREAK THE DAY — asked in a TRIAL world
 -- =========================================================================
 -- The writer loads the world with the candidate marked `trial(E)`, and with
@@ -237,6 +257,7 @@ needs_confirm(E)   :- breaks(E, _).
 -- The book relations and the loader's facts, declared so a tenant with empty
 -- books loads clean and `undefined_premise[audit]` stays quiet.
 edb(tg_user).    edb(tenant).    edb(caller).    edb(from_id).  edb(trial).    edb(before).
+edb(date_monday).
 edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
