@@ -94,3 +94,11 @@ check_file("readiness_rofl", "rules/decisions/public-release.rofl").
 check_file("readiness_rofl", "examples/rofl-release/frame.rofl").
 check_file("readiness_rofl", "examples/rofl-release/context.rofl").
 check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").
+
+-- f_a_demand_backed_relation_that_negates_is_refused_on_one_path_and_evaluated_wrong_on_the_other:
+-- nine clauses, wrongly written by a documented convention (a builtin before its
+-- binder), on which both engines derive through `not regular(bob)` while
+-- regular(bob) holds. The census carries the WRONG fact until the kernel is
+-- fixed; the fix moves it, and that move is the acceptance.
+check_world("demand_negation").
+check_file("demand_negation", "examples/checks/demand_negation.rofl").

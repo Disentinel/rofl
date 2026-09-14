@@ -137,11 +137,53 @@ span(C, Ev, W, P, D, F, T) :- added(C, Ev, W, P, Wk, D, F, T), person(W, _),
 -- schedule needs is the minutes, and `long_easy` versus `yards_brisk` is the
 -- distinction a person can actually report.
 
-tt(A, B, M) :- assume(C), travel_as(C, A, B, M).
-tt(B, A, M) :- assume(C), travel_as(C, A, B, M), A != B.
-tt(A, B, M) :- travel(A, B, M), not measured(A, B).
-tt(B, A, M) :- travel(A, B, M), A != B, not measured(A, B).
+-- И ЕЩЁ ОДИН УРОВЕНЬ ВЫШЕ ДОПУЩЕНИЯ СТОИТ ЗАМЕР. `ride(Когда, Откуда, Куда,
+-- Минут)` — одна состоявшаяся поездка, одна строка. Спрошено прямо: «стоит
+-- трекать успеваю или не успеваю или за сколько доехали». Тогда время дороги
+-- перестаёт быть константой, которую кто-то однажды вписал, и становится
+-- ДИАПАЗОНОМ по наблюдениям: он сам сужается, сам расширяется, и каждое его
+-- число имеет дату.
+--
+-- Порядок старшинства ровно один и он проверяем: замер > условие > оценка.
+-- Пара, по которой ездили, больше не слушает ни travel_as, ни travel.
+--
+-- Ядро не умеет агрегировать, но КРАЙНИЕ точки берутся отрицанием, а не
+-- сложением: самый медленный замер — это тот, медленнее которого нет. Ровно
+-- та же фигура, что `tightest` в тропическом полукольце, только без фолда.
+slower(A, B, M)  :- ride(_, A, B, M), ride(_, A, B, M2), M2 > M.
+faster(A, B, M)  :- ride(_, A, B, M), ride(_, A, B, M2), M2 < M.
+slowest(A, B, M) :- ride(_, A, B, M), not slower(A, B, M).
+fastest(A, B, M) :- ride(_, A, B, M), not faster(A, B, M).
+
+rode(A, B) :- ride(_, A, B, _).
+rode(B, A) :- ride(_, A, B, _), A != B.
+
+-- ПО ХУДШЕМУ ИЗ НАБЛЮДЁННЫХ, потому что вопрос стоит «влезет ли», а не
+-- «сколько обычно». Быстрый заезд не двигает расписание — он расширяет
+-- диапазон вниз, и это видно отдельной строкой в отчёте.
+tt(A, B, M) :- slowest(A, B, M).
+tt(B, A, M) :- slowest(A, B, M), A != B.
+
+ride_range(A, B, Lo, Hi) :- fastest(A, B, Lo), slowest(A, B, Hi), Lo != Hi.
+
+tt(A, B, M) :- assume(C), travel_as(C, A, B, M), not rode(A, B).
+tt(B, A, M) :- assume(C), travel_as(C, A, B, M), A != B, not rode(B, A).
+tt(A, B, M) :- travel(A, B, M), not measured(A, B), not rode(A, B).
+tt(B, A, M) :- travel(A, B, M), A != B, not measured(A, B), not rode(B, A).
 tt(A, A, 0) :- place(A).
+
+-- ПЕШКОМ НЕ БЫВАЕТ БЫСТРЕЕ, ЧЕМ НА МАШИНЕ, и равно тоже не бывает. Если
+-- такая пара нашлась — одно из двух чисел выдумано, и модель обязана назвать
+-- пару, а не молча считать по ней запас. Это НЕ `broken`: расписание тут ни
+-- при чём, спорят данные.
+faster_on_foot(A, B, F, T) :- foot(A, B, F), tt(A, B, T), F <= T.
+
+-- РОВНО ОДНО ДОПУЩЕНИЕ, и это не пожелание в комментарии. Два `assume` дают
+-- одной паре два времени сразу, и дальше КАЖДЫЙ запас в неделе считается по
+-- тому из них, которое подвернулось первым — ответ остаётся булевым и
+-- правдоподобным, а числа под ним описывают разные миры. Ядро не умеет
+-- сказать «ровно один», но пару с двумя числами оно называет, и этого хватает.
+two_ways(A, B, M1, M2) :- tt(A, B, M1), tt(A, B, M2), M1 < M2.
 
 measured(A, B) :- assume(C), travel_as(C, A, B, _).
 measured(B, A) :- assume(C), travel_as(C, A, B, _).
@@ -230,6 +272,19 @@ minding(P, Ch, D, S) :- span(_, Ev, P, Pl, D, _, T), with(Ev, Ch), base(B), Pl !
 minded(Ch, D, S)   :- minding(_, Ch, D, S).
 
 needs_cover(Ch, D, S) :- awake_at(Ch, D, S), not at_sup(Ch, D, S), not minded(Ch, D, S).
+
+-- AND NOT ALONE WHEN ASLEEP EITHER. `awake` says when a child needs somebody
+-- to be WITH them; it does not say when the house may be empty, and those are
+-- different sentences. Measured: with both adults out from 21:00 and both
+-- children at home, this model reported ZERO holes, because Рома's awake
+-- window closes at 20:00 - while the same departure at 15:00 reported two.
+-- The probe could tell the difference, so the zero was real.
+--
+-- `never_alone(Child)` is opt-in per child, because a fifteen-year-old is a
+-- different question from a five-year-old. The grid runs 07:00-21:40, so this
+-- adds exactly the evening the awake window drops and no night at all.
+needs_cover(Ch, D, S) :- never_alone(Ch), person(Ch, child), slot(D, S),
+                         not at_sup(Ch, D, S), not minded(Ch, D, S).
 
 -- `needy` must have exactly ONE derivation per slot. Written the obvious way
 -- (`needy(D,S) :- needs_cover(_,D,S)`) it has one per CHILD, and that
@@ -363,10 +418,163 @@ attempt(T, lift(Cr), nobody, D, L, Arr) :-
     run(T, Ch, From, To, D, depart_at, At), offers(Cr, Ch, From, To, D, L, Arr, _),
     L >= At.
 
+-- A LIFT YOU HAVE TO BE DRIVEN TO. The school bus leaves from the stop by the
+-- neighbours and the child is at home; the model knew a lift (one hop) and a
+-- drive (one hop) and had no way to SAY THE TWO TOGETHER, so the bus simply
+-- never appeared among the ways and the morning looked like it had one
+-- option. It has two, and which of them is open on a given day is the whole
+-- question this model exists to answer.
+--
+-- Written as its own `attempt` rather than as a general path search: the
+-- household knows its stops, and a two-hop composition is where a scheduler
+-- turns into a router. If a third hop is ever needed, that is the moment to
+-- stop and think, not to add another rule.
+attempt(T, ferry(Dr, Stop, Giver), Dr, D, Dep, Ret) :-
+    run(T, Ch, From, To, D, arrive_by, By),
+    offers(Giver, Ch, Stop, To, D, Lv, Arr, _), Arr <= By,
+    From != Stop, tt(From, Stop, M),
+    driver(Dr), person(Dr, adult), car(_), not off(Dr, D),
+    Dep is Lv - M, Ret is Lv.
+-- A DROP-OFF ENDS WHEN THE RIDER IS DROPPED. `Ret is Lv + M` said the driver
+-- goes home afterwards, and with that the model called this way closed for
+-- the parent who actually does it every morning: he does not go home, he
+-- carries straight on to the садик. Where the driver goes next is the rest of
+-- the day's business, and the day already knows it - `at/5` has positions now.
+
+-- ...AND THE SAME LIFT RUN BACKWARDS. The bus that leaves from the stop by
+-- the neighbours RETURNS TO THAT STOP, and home is not walkable from it - so
+-- the afternoon is `lift` then `drive`, exactly as the morning is `drive` then
+-- `lift`. Written because the mirror was MISSING and its absence was silent:
+-- the return lift had been recorded as ending at home, the composition was
+-- never needed, and the model reported a school run that meets itself.
+--
+-- The two halves differ in where the driver's obligation ENDS. A drop-off ends
+-- at the drop - `ferry` sets `Ret is Lv` because the parent carries on to the
+-- садик. A pickup ends AT HOME: whoever meets the bus owes the ride back, so
+-- `Ret is Arr + M` and the return minutes are part of what the way costs.
+attempt(T, meet(Dr, Stop, Giver), Dr, D, Dep, Ret) :-
+    run(T, Ch, From, To, D, depart_at, At),
+    offers(Giver, Ch, From, Stop, D, Lv, Arr, _), Lv >= At,
+    To != Stop, tt(Stop, To, M),
+    driver(Dr), person(Dr, adult), car(_), not off(Dr, D),
+    Dep is Arr - M, Ret is Arr + M.
+
+-- ...AND A DROP-OFF YOU CAN BE LATE FOR. `can_wait(Stop)` says the stop is
+-- somewhere a child may sit - the neighbours' porch, the school lobby - so the
+-- bus landing does not APPOINT the pickup, it opens a window. That changes who
+-- can do it: an adult busy at the moment the bus arrives and free an hour later
+-- was being refused on the wrong grounds.
+--
+-- AND THE WINDOW HAS NO NUMBER IN IT. Asked how late the wait may run, the
+-- household said "technically as late as you like, even till night, but of
+-- course it would be unseemly" - so a hard limit would be an invention, and
+-- picking one would smuggle a judgement into a fact file. What the model
+-- computes instead is THE EARLIEST MOMENT EACH ADULT IS ACTUALLY FREE after
+-- the drop, and how many minutes of somebody else's hospitality that costs.
+-- The household reads the minutes and decides; nobody has to name a threshold
+-- for "unseemly", which is exactly the kind of number that is wrong for every
+-- family that is not the one who wrote it.
+--
+-- The extremum is taken by negation, the third time in this file: the earliest
+-- free moment is the free moment nothing is earlier than. Candidates are the
+-- drop itself and the END of every block that adult has that day, which is the
+-- only place a busy adult can become free.
+waitable_drop(T, D, Stop, Arr) :-
+    run(T, Ch, From, To, D, depart_at, At),
+    offers(Giver, Ch, From, Stop, D, Lv, Arr, _), Lv >= At, To != Stop,
+    can_wait(Stop).
+
+pick_at(T, Dr, D, Arr)   :- waitable_drop(T, D, _, Arr),
+                            driver(Dr), person(Dr, adult), not off(Dr, D).
+pick_at(T, Dr, D, X)     :- waitable_drop(T, D, _, Arr),
+                            driver(Dr), person(Dr, adult), not off(Dr, D),
+                            span(_, _, Dr, _, D, _, X), X > Arr.
+-- BUSY FOR THE WHOLE ERRAND, not busy at the instant. Written the weak way
+-- first and it was wrong in the expensive direction: an adult whose block ENDS
+-- exactly at the drop counted as free at that minute, so the earliest pickup
+-- came out equal to the drop for everybody and the late option was never
+-- generated at all. The overlap test is the same one `way_blocked` uses.
+trip_len(T, MM) :- waitable_drop(T, D, Stop, _),
+                   run(T, _, _, To, D, depart_at, _), round_trip(Stop, To, MM).
+pick_end(T, Dr, D, X, End) :- pick_at(T, Dr, D, X), trip_len(T, MM), End is X + MM.
+pick_busy(T, Dr, D, X)   :- pick_end(T, Dr, D, X, End), span(_, _, Dr, _, D, F, Y),
+                            X < Y, F < End.
+pick_free(T, Dr, D, X)   :- pick_at(T, Dr, D, X), not pick_busy(T, Dr, D, X).
+pick_later(T, Dr, D, X)  :- pick_free(T, Dr, D, X), pick_free(T, Dr, D, X2), X2 < X.
+pick_first(T, Dr, D, X)  :- pick_free(T, Dr, D, X), not pick_later(T, Dr, D, X).
+
+round_trip(A, B, MM) :- tt(A, B, M), MM is M + M.
+
+attempt(T, wait_meet(Dr, Stop, Giver), Dr, D, Dep, Ret) :-
+    waitable_drop(T, D, Stop, Arr),
+    offers(Giver, _, _, Stop, D, _, Arr, _),
+    run(T, _, _, To, D, depart_at, _), round_trip(Stop, To, MM),
+    pick_first(T, Dr, D, Dep), car(_),
+    Ret is Dep + MM.
+
+-- WHOSE HOSPITALITY, AND HOW MUCH OF IT. The wait is a favour asked of a
+-- person, not a property of a place, so it is reported with the host's name
+-- and in minutes - the only two things anybody needs to judge "unseemly".
+lands_at(T, Dr, Stop, D, L) :-
+    attempt(T, wait_meet(Dr, Stop, _), Dr, D, Dep, _),
+    run(T, _, _, To, D, depart_at, _), tt(Stop, To, M), L is Dep + M.
+waited(T, Dr, Stop, D, Mins) :-
+    lands_at(T, Dr, Stop, D, L), waitable_drop(T, D, Stop, Arr), Mins is L - Arr.
+imposes_on(T, Dr, Host, D, Mins) :-
+    waited(T, Dr, Stop, D, Mins), hosted(Stop, Host).
+
+-- Nobody leaves before the household is awake, and a ferry that would need
+-- them to is not a way. Written as a `way_blocked` so `whynot` names it.
+way_blocked(T, ferry(Dr, Stop, Giver), before_waking) :-
+    attempt(T, ferry(Dr, Stop, Giver), Dr, _, Dep, _), day_wake(Wake, _), Dep < Wake.
+
 way_blocked(T, W, C) :- attempt(T, W, H, D, Dep, Ret), person(H, adult),
                         span(C, _, H, _, D, F, X), Dep < X, F < Ret.
 blocked(T, W) :- way_blocked(T, W, _).
 way(T, W)     :- attempt(T, W, _, _, _, _), not blocked(T, W).
+
+-- =========================================================================
+-- WHAT A WAY TAKES, AND WHICH WAYS CANNOT BOTH HAPPEN
+-- =========================================================================
+-- Three rules in this file were asking one question in three shapes:
+-- `overbooked` (a person in two blocks), `teleport` (the car not where the
+-- driver set off), and the plan enumeration in the host (two journeys, one
+-- car). The question is A RESOURCE TAKEN BY TWO THINGS AT ONCE, and the only
+-- thing that differs between them is WHICH resources a thing takes.
+--
+-- That difference is small and belongs to the CLASS, which is what makes this
+-- worth generalising: a lift by somebody else takes nothing of ours, a drive
+-- takes the driver and the car, a walk takes only the walker.
+uses(T, W, H)  :- attempt(T, W, H, _, _, _), person(H, adult).
+uses(T, W, Cr) :- attempt(T, W, H, _, _, _), person(H, adult), car(Cr), not has_cars(2).
+
+-- INCOMPATIBLE IS PAIRWISE, and that is the whole reason this belongs in the
+-- rules rather than in a host loop. Measured on this household: 25 open ways
+-- make 300 pairs, against 1024 whole-day plans for the same week - and the
+-- pairs stay quadratic while the plans stay exponential. A plan is then an
+-- independent set over this relation, which anyone can ask for; nothing has
+-- to enumerate plans to know which two cannot go together.
+incompatible(T1, W1, T2, W2) :-
+    attempt(T1, W1, _, D, F1, X1), attempt(T2, W2, _, D, F2, X2),
+    T1 != T2, F1 < X2, F2 < X1,
+    uses(T1, W1, R), uses(T2, W2, R).
+
+-- ...and a trip whose every open way is incompatible with every open way of
+-- another trip has no plan containing both. That is a QUESTION about the pair,
+-- not a defect: which of the two gives is a household decision.
+forced_apart(T1, T2) :-
+    way(T1, _), way(T2, _), T1 != T2,
+    not compatible_pair(T1, T2).
+compatible_pair(T1, T2) :-
+    way(T1, W1), way(T2, W2), not incompatible(T1, W1, T2, W2).
+-- A TRIP NOBODY HAS TO MAKE, and one that somebody does. A lift given by
+-- somebody else costs the household nothing; every other way costs an adult
+-- half an hour. The distinction was invisible while a bus that stops short was
+-- recorded as reaching the door, and that is precisely the case where it
+-- matters - five weekday afternoons that looked free are five car trips.
+free_ride(T)      :- way(T, W), attempt(T, W, nobody, _, _, _).
+needs_a_driver(T) :- run(T, _, _, _, _, _, _), way(T, _), not free_ride(T).
+
 run_ok(T)     :- way(T, _).
 run_stuck(T)  :- run(T, _, _, _, _, _, _), not run_ok(T).
 
@@ -482,8 +690,143 @@ admissible(A, D, S) :- cand(A, D, S), not cand_bad(A, D, S, _).
 -- =========================================================================
 -- Feasibility is the wider question and coverage is one component of it.
 
+-- A PERSON IN TWO PLACES is caught by `overbooked` below and by
+-- `negative_slack` above: one for overlap, one for not enough time to get
+-- between them. THE CAR IS NOT, and that is a different problem, because a
+-- person's position is DECLARED by their blocks while a car's has to be
+-- worked out from who last drove it.
+--
+-- The cheap half of it is exact and needs no positions at all: two people
+-- travelling AT THE SAME TIME need two vehicles. A leg is the gap between two
+-- blocks at different places - the model already knows both ends.
+
+-- WHERE SOMEBODY IS, AND FROM WHEN TO WHEN. The day is a sequence of
+-- positions and the moves between them - which is what the household says
+-- when it describes a morning, and what this model did not have. Three
+-- separate patches stood here instead: legs only for drivers, legs that were
+-- not the whole gap, legs for the first trip out of the house. All three were
+-- symptoms of the same absence, and all three go away once position exists.
+--
+-- INTERVALS, NOT A GRID. The slot grid costs about a thousand facts and sits
+-- behind `deep`; positions are a handful per person per day and are the same
+-- language the rest of the model already speaks.
+
+at(P, D, Pl, F, T) :- span(_, _, P, Pl, D, F, T).
+-- and at home before the first commitment and after the last
+-- HOME ENDS WHEN YOU LEAVE, not when you arrive somewhere else. The first
+-- version ended it at the next block's start, so the model had a person at
+-- home at 07:55 and at the садик at 07:55 - teleporting, and every leg came
+-- out zero minutes long.
+at(P, D, Home, Wake, Lv) :-
+    base(Home), span(_, E, P, Pl, D, F, _), person(P, _), Pl != Home,
+    not has_prev(P, D, E), day_wake(Wake, _), tt(Home, Pl, M),
+    Lv is F - M, Wake < Lv.
+at(P, D, Home, Back, Sleep) :-
+    base(Home), span(_, E, P, Pl, D, _, T), person(P, _), Pl != Home,
+    not has_next(P, D, E), day_wake(_, Sleep), tt(Pl, Home, M),
+    Back is T + M, Back < Sleep.
+
+-- A MOVE IS BETWEEN CONSECUTIVE POSITIONS, which is what makes a CHAIN work:
+-- Сейидовы then straight on to the садик, without the invented trip home that
+-- made the model call that morning impossible. Nothing here says "return".
+-- RANGE-RESTRICTED: `A` and `B` are the two ends the leg rule compares, and
+-- they must be BOUND by positions, not merely constrained by them. Written
+-- the other way this rule is unsafe and the engine unfolds it top-down.
+at_between(P, D, A, B) :-
+    at(P, D, _, _, A), at(P, D, _, B, _), A < B,
+    at(P, D, _, F, _), F > A, F < B.
+leg(P, D, From, To, Dep, Arr, Need) :-
+    driver(P), at(P, D, From, _, Dep), at(P, D, To, Arr, _),
+    From != To, Dep <= Arr, not at_between(P, D, Dep, Arr), tt(From, To, Need).
+
+-- A CAR IS A RESOURCE WITH A POSITION, exactly like the people are. Two
+-- people and a car are three things that can each be in one place at a time,
+-- and the model had position for the first two and nothing for the third.
+-- What it had instead was a clash rule over TIME OVERLAP, and that is a
+-- weaker and different question: it asked whether two journeys fit end to
+-- end, never whether the car was where the driver started.
+--
+-- Found by looking at a printed table and asking "а машина к ней
+-- телепортируется?" - one plan had Регина drive to the stop at 07:30 and
+-- Вадим set off from home at 07:40 in the same car. Time overlap said fine.
+--
+-- HOW FAR THIS REACHES: one car, exactly. With two, which car a journey takes
+-- is an assignment, and an assignment is a search - which belongs in the host
+-- with the rest of the enumeration, not here. Stated so an audit can read it.
+car_check_covers(1).
+has_cars(2) :- car(A), car(B), A != B.
+
+-- Every journey by a driver takes the car; there is nothing else to take.
+car_leg(Cr, D, From, To, Dep, Arr) :-
+    car(Cr), driver(P), leg(P, D, From, To, Dep, Arr, _), not has_cars(2).
+
+-- Where the car is, and from when: at home when the day starts, and wherever
+-- the last journey left it.
+car_here(Cr, D, Home, Wake) :- car(Cr), base(Home), day(D, _), day_wake(Wake, _).
+car_here(Cr, D, To, Arr)    :- car_leg(Cr, D, _, To, _, Arr).
+
+-- ...and it is still there only if nobody drove it away in between.
+-- RANGE-RESTRICTED: both ends come from positions and journeys, not from
+-- comparisons. Fourth time this session that an interval got written with its
+-- bounds only constrained; the tell is a variable that appears nowhere but in
+-- a `<` or `>=`.
+car_taken(Cr, D, T0, T) :-
+    car_here(Cr, D, _, T0), car_leg(Cr, D, _, _, T, _), T0 <= T,
+    car_leg(Cr, D, _, _, Dep, _), Dep >= T0, Dep < T.
+car_stands(Cr, D, Pl, T) :-
+    car_here(Cr, D, Pl, T0), car_leg(Cr, D, _, _, T, _), T0 <= T,
+    not car_taken(Cr, D, T0, T).
+
+-- =========================================================================
+-- EVERY JOURNEY HAS MODES, AND AN ADULT'S TOO
+-- =========================================================================
+-- A child's journey had alternatives (`run` + `way`); an adult's had none -
+-- `leg` simply said "he drove". That asymmetry is why walking had to be
+-- bolted on beside the model as a special mechanism, and why the household
+-- could not ask "could you walk instead" about a grown-up.
+--
+-- So: a mode is available when its requirements are met, and the ONLY part
+-- that differs between modes is what they need and what they take. Driving
+-- needs the car to be where you set off from; walking needs a walking time
+-- and takes nobody else's anything.
+goes(P, D, From, To, Dep, Arr, drive) :-
+    leg(P, D, From, To, Dep, Arr, _), driver(P), car(Cr), not has_cars(2),
+    car_stands(Cr, D, From, Dep).
+-- With a fleet, WHICH car a journey takes is an assignment and this check
+-- stands down - `car_check_covers(1)` says so. Without this second rule the
+-- mode vanished entirely at two cars and every journey read as a teleport:
+-- the boundary was written into the OPTION instead of into the check.
+goes(P, D, From, To, Dep, Arr, drive) :-
+    leg(P, D, From, To, Dep, Arr, _), driver(P), has_cars(2).
+goes(P, D, From, To, Dep, Arr, walk) :-
+    leg(P, D, From, To, Dep, Arr, _), may_walk(P), foot(From, To, _).
+
+-- WHAT A MODE TAKES. Same shape as `uses/3` for a way, and the same reason:
+-- this is the whole class-specific part of the model.
+takes(P, D, Dep, drive, P)  :- goes(P, D, _, _, Dep, _, drive).
+takes(P, D, Dep, drive, Cr) :- goes(P, D, _, _, Dep, _, drive), car(Cr), not has_cars(2).
+takes(P, D, Dep, walk,  P)  :- goes(P, D, _, _, Dep, _, walk).
+
+-- THE TELEPORT IS NOW A VIEW: driving is simply not among the modes. What was
+-- a bespoke check becomes the absence of an option, which is the difference
+-- between a rule that says "this is wrong" and a model that says "this is not
+-- available".
+teleport(P, D, From, Dep) :-
+    leg(P, D, From, To, Dep, Arr, _), driver(P),
+    not goes(P, D, From, To, Dep, Arr, drive).
+
+
+-- WORK YIELDS. "Если я куда-то еду - я в это время не работаю": a working
+-- day is not a commitment that competes with the dentist, it is what is left
+-- when the dentist and the drive there have taken their minutes. Counting a
+-- работа/приём overlap as being in two places at once reported four
+-- collisions on this household, and every one of them was the same false
+-- shape: the appointment is real, the work block is elastic around it.
+--
+-- So an overlap is a defect only between two blocks that BOTH insist.
 overbooked(P, D, E1, E2) :- span(_, E1, P, _, D, F1, T1), span(_, E2, P, _, D, F2, T2),
-                            E1 != E2, F1 < T2, F2 < T1.
+                            E1 != E2, F1 < T2, F2 < T1,
+                            not kind(E1, work), not kind(E2, work).
 broken(double_booked) :- overbooked(_, _, _, _).
 broken(uncovered)     :- uncovered(_, _, _).
 broken(no_time)       :- negative_slack(_, _, _, _).
@@ -491,6 +834,117 @@ broken(no_way)        :- run_stuck(_).
 broken(short_day)     :- short_day(_, _, _, _).
 broken(missed_window) :- too_early(_, _, _, _, _).
 broken(missed_window) :- too_late(_, _, _, _, _).
+-- A CAR COLLISION IS NOT A DEFECT, it is a MODE SWITCH. "У нас нет
+-- опциональности: если машина не заблокирована - едет, если заблокирована -
+-- идёт пешком." So the model must not offer a choice it does not have; it
+-- must follow the rule and then ask whether the slower journey still fits.
+-- A TELEPORT IS NOT A DEFECT, IT IS THE MODE SWITCH. The car not being there
+-- means you walk; whether that still works is `too_slow`'s question. Making
+-- the teleport itself a failure would be the same mistake as making the old
+-- car collision one - reporting the branch instead of its consequence.
+-- =========================================================================
+-- PASSENGERS: a child moves because somebody takes them
+-- =========================================================================
+-- The table had the child as `·` for the fifteen minutes of the journey -
+-- present before, present after, nowhere in between - because `leg` is for
+-- drivers and a child is not one. That is the same hole the car had an hour
+-- ago, in the third of three places: PEOPLE, THE CAR, AND THE CHILDREN are
+-- one kind of thing, and each of them can be in one place at a time.
+--
+-- A child rode along if an adult made exactly that journey while the child's
+-- own position changed across it. Nothing is asserted about seats or who sat
+-- where - the model says WHO WAS TAKEN BY WHOM, which is what a household
+-- argues about.
+passenger(Ch, P, D, From, To, Dep, Arr) :-
+    leg(P, D, From, To, Dep, Arr, _), person(Ch, child),
+    at(Ch, D, From, _, Dep), at(Ch, D, To, Arr, _).
+
+-- ...or somebody else's vehicle took them, which the model already knew about
+carried_by(Ch, Giver, D, From, To, Lv, Arr) :-
+    offers(Giver, Ch, From, To, D, Lv, Arr, _),
+    at(Ch, D, From, _, Lv), at(Ch, D, To, Arr, _).
+
+-- A CHILD WHOSE POSITION CHANGES WITH NOBODY TAKING THEM. Kept as a QUESTION
+-- rather than a defect, and the reason is worth writing down: it measures the
+-- gap between TWO ACCOUNTS OF THE SAME JOURNEY that this model now carries.
+--
+--   `run` + `way`      the trip must happen, and here is how it could go -
+--                      which knows the bus leaves from the stop
+--   `at` + `passenger` he was here, then there, and X took him -
+--                      which only sees the endpoints
+--
+-- Measured: 15 movements look unaccompanied under the second account while
+-- `run_stuck` - the first account's own verdict - is ZERO. The child is not
+-- stranded; the two accounts simply do not talk. Which way was taken is a
+-- CHOICE, and choices live in the host with the rest of the enumeration, so
+-- `passenger` can only name the taker once a plan has fixed one.
+--
+-- So this is not `broken`. Making it broken would report the model's own
+-- seam as a defect in somebody's week.
+moved_alone(Ch, D, From, To, Dep) :-
+    person(Ch, child), at(Ch, D, From, _, Dep), at(Ch, D, To, Arr, _),
+    From != To, Dep < Arr,
+    not passenger(Ch, _, D, From, To, Dep, Arr),
+    not carried_by(Ch, _, D, From, To, Dep, Arr),
+    not walks_alone(Ch, D).
+walks_alone(Ch, D) :- walks_alone(C, Ch), not waived(C), day(D, _).
+
+-- =========================================================================
+-- WHEN THE CAR IS NOT THERE: THE WALK
+-- =========================================================================
+-- "У нас нет опциональности. Если машина не заблокирована - Регина едет, если
+-- заблокирована - идёт пешком. Пешком на дорогу уходит больше времени."
+--
+-- A journey that starts where the car is NOT is exactly the blocked case, so
+-- the fallback hangs off `teleport`. The two halves were built a day apart
+-- and turn out to be one rule: giving the car a position produced the walking
+-- rule for free, and the time-overlap heuristic it replaced could not have.
+on_foot_leg(P, D, From, To, Dep, Arr) :-
+    teleport(P, D, From, Dep), leg(P, D, From, To, Dep, Arr, _).
+
+-- Walking is symmetric the way driving is: the household writes the pair once.
+foot(A, B, M) :- on_foot(A, B, M).
+foot(B, A, M) :- on_foot(A, B, M), A != B.
+
+-- SOME LEGS CANNOT BE WALKED AT ALL, and that is a different fact from not
+-- knowing how long. "Возле них ближайшая остановка, но пешком оттуда не дойти,
+-- надо ехать на машине" - no number makes that journey possible, so the
+-- fallback must not go looking for one.
+cannot_walk(A, B) :- no_walk(A, B).
+cannot_walk(B, A) :- no_walk(A, B), A != B.
+
+walk_impossible(P, D, F, T) :- on_foot_leg(P, D, F, T, _, _), cannot_walk(F, T).
+walk_unknown(P, D, F, T)    :- on_foot_leg(P, D, F, T, _, _),
+                               not foot(F, T, _), not cannot_walk(F, T).
+
+-- HOW MUCH ROOM THERE REALLY IS: from the end of whatever came before - and
+-- work does not count, because work yields - to the appointment. Comparing
+-- against the DRIVING window would be circular: that window is the car's.
+room_before(P, D, Arr, End) :-
+    on_foot_leg(P, D, _, _, _, Arr),
+    span(_, E, P, _, D, _, End), End <= Arr, not kind(E, work),
+    not room_later(P, D, Arr, End).
+room_later(P, D, Arr, End) :-
+    on_foot_leg(P, D, _, _, _, Arr),
+    span(_, E, P, _, D, _, End), End <= Arr, not kind(E, work),
+    span(_, E2, P, _, D, _, End2), End2 <= Arr, End2 > End, not kind(E2, work).
+room_before(P, D, Arr, Wake) :-
+    on_foot_leg(P, D, _, _, _, Arr), person(P, adult), day_wake(Wake, _),
+    not room_any(P, D, Arr).
+room_any(P, D, Arr) :-
+    on_foot_leg(P, D, _, _, _, Arr),
+    span(_, E, P, _, D, _, End), End <= Arr, not kind(E, work).
+
+-- ONLY A JOURNEY TO SOMETHING CAN BE LATE. The way home has no appointment at
+-- the end of it: walking back simply gets you home later.
+too_slow(P, D, F, T) :- on_foot_leg(P, D, F, T, _, Arr), base(Home), T != Home,
+                        foot(F, T, M),
+                        room_before(P, D, Arr, Start), Room is Arr - Start, Room < M.
+
+broken(cannot_get_there) :- too_slow(_, _, _, _).
+broken(on_foot_unknown)  :- walk_unknown(_, _, _, _).
+broken(no_way_on_foot)   :- walk_impossible(_, _, _, _).
+broken(travel_ambiguous) :- two_ways(_, _, _, _).
 holds_together(week)  :- not broken(_).
 
 -- =========================================================================
@@ -517,3 +971,5 @@ edb(work_needed).
 edb(travel_as).       edb(assume).
 edb(ru_name).
 edb(must_start).
+edb(never_alone).
+edb(no_walk).        edb(ride).       edb(can_wait).   edb(hosted).

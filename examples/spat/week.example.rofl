@@ -72,7 +72,7 @@ base(home).
 
 place(home).    place(school).  place(sadik).   place(physio).
 place(pool).    place(office).  place(shop).    place(park).
-place(clinic).
+place(clinic).  place(bus_stop).
 
 supervised(school).
 supervised(sadik).
@@ -80,7 +80,34 @@ supervised(sadik).
 -- travel(A, B, Minutes) — BY CAR. Write each pair ONCE; the other direction
 -- is derived, and A-to-A is zero. Travel is what turns "плавание until 18:00"
 -- into "not home until 18:20", so it is worth getting right.
-travel(home,   school, 20).   -- the one journey the source gives exactly
+-- ON FOOT, for when the car is already out. Taken at the pessimistic end of
+-- what the household reports: the question is whether the slower journey
+-- still fits, and an optimistic figure would wave through a trip that fails.
+no_walk(home, bus_stop).
+
+on_foot(home, physio, 30).
+on_foot(home, clinic, 30).
+on_foot(home, shop,   30).
+on_foot(home, park,   10).
+on_foot(home, office, 45).
+
+-- TRAVEL IS NOT ONE NUMBER, and this household says so in both available
+-- ways. A CONDITION is a named story about the road - the long way round in
+-- light traffic, the same road in the morning rush - and `assume/1` picks
+-- which one the week is read under.
+assume(long_easy).
+travel_as(long_easy,    home, school, 20).
+travel_as(morning_rush, home, school, 35).   -- inert until you assume it
+
+-- A RIDE is a journey that actually happened, with a date. Rides outrank both
+-- a condition and an estimate, the schedule is computed from the SLOWEST one
+-- observed - the question is "does it fit", not "how long usually" - and
+-- `spat check` prints the range so a fast run is visible without moving the
+-- plan. Add a line per trip; nothing else needs touching.
+ride(day1, home, sadik, 12).
+ride(day2, home, sadik, 15).
+
+travel(home,   school, 20).   -- superseded by travel_as above
 travel(home,   sadik,  15).   -- INFERRED
 travel(home,   physio, 20).   -- INFERRED
 travel(home,   pool,   20).   -- INFERRED
@@ -88,6 +115,7 @@ travel(home,   office, 25).   -- INFERRED
 travel(home,   shop,   15).   -- INFERRED
 travel(home,   park,    5).   -- INFERRED
 travel(home,   clinic, 20).   -- INFERRED
+travel(home,   bus_stop, 8).  -- the stop is close by road and unreachable on foot
 travel(school, sadik,   5).   -- INFERRED, both in the same town
 travel(physio, sadik,   5).   -- INFERRED, and load-bearing: see `spat fragile`
 
@@ -118,6 +146,12 @@ day_wake(420, 1320).          -- 07:00-22:00
 -- nobody. Inside it, every minute not at school, not at садик and not in
 -- somebody's `with` block is a minute that must be covered — and if it is
 -- not, that is the red block.
+
+-- Children are never left in the house on their own, asleep or not.
+-- `awake` says when somebody must be WITH them; this says when the house
+-- may not be empty. Different sentences, and the second was missing.
+never_alone(nico).
+never_alone(kit).
 
 awake(c_sleep, nico,   alldays, 420, 1200).   -- 07:00-20:00
 awake(c_sleep, kit, alldays, 420, 1260).   -- 07:00-21:00
@@ -298,4 +332,23 @@ present_window(c_nextdoor, nextdoor, weekdays,    800,  860).   -- 13:20-14:20
 -- cannot control.
 
 lift(c_bus,     school_bus, kit, school, home, bus_days, 840, 870).  -- 14:00->14:30
-lift(c_bus_fri, school_bus, kit, school, home, fri,      800, 830).  -- 13:20->13:50
+-- FRIDAY THE BUS STOPS SHORT, at the stop by the neighbours, and home is not
+-- walkable from there. So Friday's return is TWO HOPS - the bus, then somebody
+-- in a car - the mirror of a morning that is a drive and then the bus. Both
+-- shapes are here on purpose: Mon-Thu the bus reaches the door and costs the
+-- household nothing, Friday it does not and costs an adult half an hour.
+lift(c_bus_fri, school_bus, kit, school, bus_stop, fri, 800, 830).  -- 13:20->13:50
+-- An earlier run of the same bus, which leaves BEFORE school lets out. It is
+-- here so the direction check has something to reject: a lift home that
+-- departs before the child is free is not a way, and a rule that forgot to
+-- say so would look identical on a week where every bus happens to be late
+-- enough.
+lift(c_bus_early, school_bus, kit, school, bus_stop, fri, 720, 750).  -- 12:00->12:30
+
+-- WAITING IS ALLOWED AT THE STOP, because the neighbours are there and Кит can
+-- sit with them. `can_wait` carries no time in it on purpose: a hard limit
+-- would be invented, and the real limit is what the family finds decent. What
+-- the model computes instead is the earliest each adult is genuinely free, and
+-- how many minutes of the neighbours' afternoon that costs.
+can_wait(bus_stop).
+hosted(bus_stop, nextdoor).

@@ -116,10 +116,18 @@ const TABLES = new WeakMap<object, Map<string, Record<string, string>[]>>();
 export function table(r: Rofl, rel: string, vars: string): Record<string, string>[] {
   let m = TABLES.get(r.store);
   if (!m) { m = new Map(); TABLES.set(r.store, m); }
-  const hit = m.get(rel);
+  // KEYED ON THE WHOLE QUERY, not on the relation. It used to be keyed on the
+  // name alone, and the rows come back keyed by the VARIABLE NAMES the caller
+  // wrote - so a second caller asking for the same relation with different
+  // names silently received the first caller's keys and read `undefined` off
+  // every column it had renamed. Three relations here are asked for under two
+  // sets of names (`run`, `leg`, `negative_slack`), and the failure is invisible
+  // because `undefined` prints rather than throws.
+  const key = `${rel}(${vars})`;
+  const hit = m.get(key);
   if (hit) return hit;
-  const got = r.query(`${rel}(${vars})`).rows.map((x) => x.bindings);
-  m.set(rel, got);
+  const got = r.query(key).rows.map((x) => x.bindings);
+  m.set(key, got);
   return got;
 }
 const bust = (r: Rofl): void => { TABLES.delete(r.store); FOLDS.delete(r.store); };
@@ -570,11 +578,64 @@ export function findFact(r: Rofl, name: string): string | null {
 const HR = (t: string) => `\n── ${t} ${'─'.repeat(Math.max(2, 68 - t.length))}`;
 const plural = (n: number, w: string): string => `${n} ${w}${n === 1 ? '' : 's'}`;
 
+// A SCHEDULE IS A CHOICE, and until now this tool listed options and left the
+// choosing to a human reading four screens of them. One line per required trip,
+// with the rule stated so it can be argued with: prefer a way where nobody
+// waits, then the earliest departure, then alphabetically for determinism. Who
+// else could have gone is printed beside it, because the alternative is what
+// makes a plan survive a sick day.
+export interface Trip {
+  day: string; dep: number; ret: number; who: string; what: string;
+  alts: string[]; wait: number;
+}
+export function pickedTrips(r: Rofl): Trip[] {
+  const need = new Set(table(r, 'needs_a_driver', 'T').map((x) => x.T));
+  const runs = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => need.has(x.T));
+  const openW = new Set(table(r, 'way', 'T, W').map((x) => `${x.T}|${x.W}`));
+  const att = table(r, 'attempt', 'T, W, H, D, Dep, Ret');
+  const cost = table(r, 'imposes_on', 'T, Dr, Host, D, Mins');
+  const mine = blocks(r);
+  const out: Trip[] = [];
+  for (const t of runs) {
+    const ways = att.filter((a) => a.T === t.T && a.H !== 'nobody'
+      && openW.has(`${a.T}|${a.W}`));
+    if (ways.length === 0) continue;
+    const waitOf = (a: Record<string, string>): number =>
+      (String(a.W).startsWith('wait_meet(')
+        ? Number(cost.find((c) => c.T === a.T && c.Dr === a.H)?.Mins ?? 0) : 0);
+    // ORDER, and each key earned its place by picking wrong without it.
+    // 1. LEAST DRIVING. Earliest-first chose `drive to the school and back`
+    //    (30 min, out of town) over `meet the bus at the stop` (20 min) purely
+    //    because it started sooner. Sooner is not better; less driving is.
+    // 2. LEAST WAITING for the child at somebody else's home.
+    // 3. WHOEVER IS ALREADY THERE - an adult with a commitment within half an
+    //    hour on either side is passing anyway. Without this the morning went
+    //    to whoever sorts first alphabetically, and the household's actual
+    //    arrangement (one takes them out, the other collects) was inverted.
+    const near = (a: Record<string, string>): number =>
+      (mine.some((b) => b.who === a.H && b.day === a.D
+        && ((b.from >= Number(a.Ret) && b.from - Number(a.Ret) <= 30)
+          || (b.to <= Number(a.Dep) && Number(a.Dep) - b.to <= 30))) ? 0 : 1);
+    ways.sort((x, y) => (Number(x.Ret) - Number(x.Dep)) - (Number(y.Ret) - Number(y.Dep))
+      || waitOf(x) - waitOf(y) || near(x) - near(y)
+      || Number(x.Dep) - Number(y.Dep) || (x.H < y.H ? -1 : 1));
+    const p = ways[0];
+    out.push({
+      day: t.D, dep: Number(p.Dep), ret: Number(p.Ret), who: p.H,
+      what: `${ru(t.Ch)}: ${ru(t.From)} → ${ru(t.To)}`,
+      alts: [...new Set(ways.slice(1).map((a) => a.H))].filter((h) => h !== p.H),
+      wait: waitOf(p),
+    });
+  }
+  return out;
+}
+
 export function renderWeek(r: Rofl): string {
   const ord = dayOrder(r);
   const hs = holes(r);
   const out: string[] = [];
   const by = index(blocks(r), (b) => b.day);
+  const trips = pickedTrips(r);
   for (const day of [...by.keys()].sort((a, b) => ord.get(a)! - ord.get(b)!)) {
     out.push(`\n${ru(day)}`);
     const lines: { at: number; text: string }[] = [];
@@ -586,6 +647,15 @@ export function renderWeek(r: Rofl): string {
         text: `   ${hhmm(b.from)}–${hhmm(b.to)}  ${ru(b.who).padEnd(8)}`
           + ` ${ru(b.ev).padEnd(18)} ${ru(b.place).padEnd(10)}`
           + `${withs.length > 0 ? ' + ' + withs.join(', ') : ''}`,
+      });
+    }
+    for (const t of trips.filter((x) => x.day === day)) {
+      lines.push({
+        at: t.dep,
+        text: `   ${hhmm(t.dep)}–${hhmm(t.ret)}  ${ru(t.who).padEnd(8)}`
+          + ` ${('ВЕЗЁТ ' + t.what).padEnd(29)}`
+          + (t.wait > 0 ? ` ждёт ${t.wait}м` : '')
+          + (t.alts.length > 0 ? `  (или ${t.alts.map(ru).join(', ')})` : ''),
       });
     }
     for (const h of hs.filter((x) => x.day === day)) {
@@ -779,6 +849,69 @@ export function whynot(r: Rofl, child: string, day: string, at: number): string 
 }
 
 export interface Relaxation { cs: string[]; cost: number; }
+// Дорога, как её ЗАМЕРИЛИ, а не как её однажды вписали. Расписание считается
+// по худшему наблюдённому — быстрый заезд не двигает план, он расширяет
+// диапазон вниз, и увидеть это можно только здесь.
+// ПОЕЗДКИ, КОТОРЫЕ КТО-ТО ОБЯЗАН СДЕЛАТЬ. A lift somebody else gives costs
+// the household nothing and needs no line here; every other way costs an adult
+// half an hour, and until the return bus was recorded as stopping short those
+// two were indistinguishable in the report. Blocked ways are printed WITH THE
+// CONSTRAINT that killed them, because "why not me" is the question actually
+// being asked.
+export function renderMustDrive(r: Rofl): string {
+  const need = new Set(table(r, 'needs_a_driver', 'T').map((x) => x.T));
+  if (need.size === 0) return '';
+  const runs = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => need.has(x.T));
+  const att = table(r, 'attempt', 'T, W, H, D, Dep, Ret').filter((x) => need.has(x.T));
+  const open = new Set(table(r, 'way', 'T, W').map((x) => `${x.T}|${x.W}`));
+  const why = new Map(table(r, 'way_blocked', 'T, W, C').map((x) => [`${x.T}|${x.W}`, x.C]));
+  const cost = table(r, 'imposes_on', 'T, Dr, Host, D, Mins');
+  const dur = (m: number): string => (m >= 60 ? `${Math.floor(m / 60)}ч${String(m % 60).padStart(2, '0')}м` : `${m}м`);
+  const order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  runs.sort((a, b) => order.indexOf(a.D) - order.indexOf(b.D));
+  const out: string[] = [HR('поездки, которые кто-то обязан сделать')];
+  out.push(`  ${runs.length} за неделю. Подвоза со стороны нет ни у одной — `
+    + 'каждую делает кто-то из своих.\n');
+  for (const t of runs) {
+    out.push(`  ${ru(t.D)}  ${ru(t.Ch)}  ${ru(t.From)} → ${ru(t.To)}`);
+    for (const a of att.filter((x) => x.T === t.T && x.H !== 'nobody')) {
+      const key = `${a.T}|${a.W}`;
+      const how = String(a.W).replace(/^(\w+)\((.*)\)$/, '$1 $2');
+      const c = cost.find((x) => x.T === a.T && x.Dr === a.H
+        && String(a.W).startsWith('wait_meet('));
+      // the price is minutes of somebody else's day, named. No threshold for
+      // "unseemly" is invented here: the household reads the number.
+      const price = c === undefined ? ''
+        : `  · ожидание ${dur(Number(c.Mins))} (${ru(c.Host)})`;
+      out.push(open.has(key)
+        ? `      ${ru(a.H).padEnd(8)} ${hhmm(a.Dep)}–${hhmm(a.Ret)}   ${how}${price}`
+        : `      ${ru(a.H).padEnd(8)} нет            — ${ru(why.get(key) ?? '?')}`);
+    }
+  }
+  return out.join('\n');
+}
+
+export function renderRides(r: Rofl): string {
+  const rng = table(r, 'ride_range', 'A, B, Lo, Hi');
+  const lies = table(r, 'faster_on_foot', 'A, B, F, T')
+    .filter((x) => x.A < x.B);
+  if (rng.length === 0 && lies.length === 0) return '';
+  const out: string[] = [HR('дорога по замерам')];
+  for (const x of rng) {
+    out.push(`  ${ru(x.A)} → ${ru(x.B)}   ${x.Lo}–${x.Hi} мин  `
+      + `(считаем по ${x.Hi})`);
+  }
+  if (lies.length > 0) {
+    out.push('');
+    out.push('  ДАННЫЕ СПОРЯТ — пешком выходит не медленнее, чем на машине:');
+    for (const x of lies) {
+      out.push(`  ${ru(x.A)} → ${ru(x.B)}   пешком ${x.F}, на машине ${x.T} — `
+        + 'одно из чисел выдумано');
+    }
+  }
+  return out.join('\n');
+}
+
 export function relax(r: Rofl, weekFile: string, weekOf: string | undefined,
                      child: string, day: string, at: number):
     { ok: boolean; note: string; found: Relaxation[] } {
@@ -856,6 +989,16 @@ async function main(argv: string[]): Promise<void> {
     : cmd === 'hours' ? ['asking(hours).'] : [];
   const r = world(weekFile, { weekOf, extra });
 
+  if (cmd === 'plan') {
+    // ПЕРЕБОР ЖИВЁТ В ХОСТЕ, а не в правилах: ветвление в правилах — это
+    // столько же версий КАЖДОГО производного факта в одном сторе, сколько
+    // планов. Дни независимы (измерено), поэтому перебор идёт по дню.
+    const { renderPlans } = await import('./plan.ts');
+    console.log(renderPlans(weekFile, rest[0] ?? 'mon'));
+    console.log(`\n(${Date.now() - t0} ms)`);
+    return;
+  }
+
   if (cmd === 'html') {
     // THE GRID IS A VIEW, NOT A SECOND MODEL. Every number in it comes from a
     // relation the rules derived; if the grid and the text ever disagree the
@@ -882,6 +1025,7 @@ async function main(argv: string[]): Promise<void> {
     }
     console.log(HR('неделя'));
     console.log(renderWeek(r));
+    console.log(renderMustDrive(r));
     console.log(HR('НЕ ПОКРЫТО'));
     console.log(renderHoles(r));
     const zero = backup(r).filter((b) => b.n === 0);
@@ -928,6 +1072,8 @@ async function main(argv: string[]): Promise<void> {
     }
     console.log(HR('запас'));
     console.log(renderChains(r));
+    console.log(renderMustDrive(r));
+    console.log(renderRides(r));
   } else if (cmd === 'fragile') {
     console.log(renderChains(r));
   } else if (cmd === 'backup') {
@@ -1149,6 +1295,7 @@ const USAGE = [
   '               --move <блок> <дни> <время> | --week-of <неделя>',
   '  spat fragile                            цепочки без запаса, поездки без замены',
   '  spat html    [файл.html]                  сетка недели: экран и печать (A4 landscape)',
+  '  spat plan    <день>                       все планы дня, каждый посчитан настоящим миром',
   '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя',
 ].join('\n');

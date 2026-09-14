@@ -17,8 +17,7 @@ import type { Rofl } from '../../src/api.ts';
 import {
   blocks, holes, chains, whoWasBusy, ownerOf, table, index,
   ru, hhmm, dayOrder, gridOf, runs,
-  type Block, type Hole,
-} from './spat.ts';
+  pickedTrips, type Block, type Hole } from './spat.ts';
 
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -31,13 +30,21 @@ const HUES = [205, 12, 145, 275, 45, 330, 185, 95];
 /** `broken/1` names its reasons as atoms; these are the same words a person
  *  uses about them. An atom with no entry prints as itself, so a new reason
  *  announces itself instead of vanishing. */
-const RU_BROKEN: Record<string, string> = {
+// EVERY reason the rules can raise, and the test proves the list is complete
+// by scanning spat.rofl rather than by having been written on the day each
+// reason was added. Four were missing when that scan was first run: a table
+// written per incident only ever covers the incidents that happened.
+export const RU_BROKEN: Record<string, string> = {
   uncovered: 'ребёнок без присмотра',
   double_booked: 'кто-то в двух местах сразу',
   no_time: 'на переезд не хватает времени',
-  unreachable: 'ребёнка некому отвезти',
   no_way: 'ребёнка некому отвезти',
   short_day: 'рабочий день не добирает часов',
+  missed_window: 'не попадает в окно',
+  cannot_get_there: 'пешком не успеть',
+  on_foot_unknown: 'пешком — сколько идти, неизвестно',
+  no_way_on_foot: 'пешком туда нельзя',
+  travel_ambiguous: 'у дороги два времени сразу',
 };
 
 interface Lane { block: Block; lane: number; }
@@ -68,7 +75,13 @@ export interface WeekHtmlOpts {
 export function weekHtml(r: Rofl, opts: WeekHtmlOpts = {}): string {
   const g = gridOf(r);
   const ord = dayOrder(r);
-  const bs = blocks(r);
+  // TRIPS ARE DRAWN TOO. They are not blocks - nobody wrote them down, the
+  // rules derived that somebody has to make them - and a printed week that
+  // omits them is exactly the week that read as free for five afternoons.
+  const bs = [...blocks(r), ...pickedTrips(r).map((t) => ({
+    c: 'c_trip', ev: `везёт — ${t.what}`, who: t.who, place: 'дорога',
+    day: t.day, from: t.dep, to: t.ret,
+  }))];
   const hs = holes(r);
   const days = [...new Set([...bs.map((b) => b.day), ...hs.map((h) => h.day)])]
     .sort((a, b) => (ord.get(a) ?? 99) - (ord.get(b) ?? 99));

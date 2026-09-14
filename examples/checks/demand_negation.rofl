@@ -1,0 +1,22 @@
+-- demand_negation.rofl -- a NINE-CLAUSE program on which both engines derive a
+-- conclusion through `not regular[mind](bob)` while `regular[mind](bob)` holds.
+-- Found 2026-09-12 by a design sketch (finding
+-- f_a_demand_backed_relation_that_negates_is_refused_on_one_path_and_evaluated_wrong_on_the_other).
+-- The program is WRONGLY WRITTEN by a documented convention: `A < Id` before the
+-- premise that binds Id makes `prior_one` demand-backed, and demand-ness spreads
+-- to allowed, register and same_register_twice through positive reads. The
+-- kernel's own classification says so (unsafe = prior_one's rule). What it does
+-- not do is refuse or warn: the well-founded path refuses this shape by name,
+-- the stratified path evaluates it and emits the false fact.
+-- Expected: refusal, or allowed[mind](113, plain_refusal) ABSENT. Actual: PRESENT.
+-- Reorder `prior_one` so `msg` binds Id before `A < Id`, and it is absent.
+-- Synthetic names; nothing here is data.
+regular[mind](W)   :- kind[world](W, human), not newcomer[mind](W).
+prior_one[mind](W, Id)  :- jab[world](W, A), A < Id, msg[world](Id, W, _, _), not prior_two[mind](W, Id).
+allowed[mind](Id, aphorism)      :- act[world](Id, identity_probe), msg[world](Id, W, Th, _), regular[mind](W), prior_one[mind](W, Id), not hot[mind](Th), theatre_ok[mind](ok).
+allowed[mind](Id, plain_refusal) :- act[world](Id, command), msg[world](Id, W, _, _), not authorized[world](W), not regular[mind](W).
+register[mind](Id, plain)  :- allowed[mind](Id, _), not fresh[mind](Id).
+same_register_twice[audit](Th, R) :- register[mind](A, R), register[mind](B, R), msg[world](A, _, Th, _), msg[world](B, _, Th, _), A < B.
+kind[world](bob, human).
+msg[world](113, bob,  t13, 1000).
+act[world](113, command).
