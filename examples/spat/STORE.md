@@ -17,10 +17,21 @@ The rules of access — `examples/spat/access.rofl` — are code and live beside
 version drift between the image and the volume. What is particular to a
 household is a fact in `world.rofl`, never a rule.
 
-Identity and root come from the environment and nowhere else: `SPAT_ROOT`,
-`SPAT_TENANT`, `SPAT_AS`, `SPAT_TZ` (and `SPAT_NOW` for tests, `SPAT_VIA`
-for the channel a bot writes as — `telegram`; the default is `cli`). There is
-no `--as`. A call with no identity or no tenant is code 5 and writes nothing.
+Identity and root come from the environment and nowhere else. `SPAT_ROOT`,
+`SPAT_TZ` (and `SPAT_NOW` for tests, `SPAT_VIA` for the channel a bot writes
+as — `telegram`; the default is `cli`), and EXACTLY ONE of two sources of
+identity:
+
+    SPAT_AS + SPAT_TENANT   a book by name — `me` (the scheduler) and the operator by hand
+    SPAT_FROM_ID            the Telegram sender's id; users.rofl says who and which family
+
+Both set, or neither, is code 5. A sender id users.rofl does not list is
+`stranger(N)` — a rule, not a string — and code 5 with «я вас не знаю;
+добавить может владелец», decided over `users.rofl` alone, before a file of
+any tenant is opened. Under `SPAT_FROM_ID` the tenant comes from
+`users.rofl`; `SPAT_TENANT` is optional and, if given, must agree (else 5);
+an id listed in two families needs it. There is no `--as`, and the core
+knows nothing of chats or message files — that is the bot's shim.
 
 ## The eight principles, and where each one is
 
@@ -38,7 +49,8 @@ no `--as`. A call with no identity or no tenant is code 5 and writes nothing.
    books that answered yes. The store asks the model which files to open. An
    adult reads every book of the family and the tool's; a helper reads their
    own and the tool's; `me` reads all; the operator reads all; a stranger is
-   code 5 with two files opened (`world.rofl`, `users.rofl`) and no book.
+   code 5 with two files opened (`world.rofl`, `users.rofl`) and no book —
+   one file (`users.rofl`) when the stranger is an unknown sender id.
 
 3. **Writing is your own book, and only what `may_edit` allows.** `spat edit`
    turns text into facts, loads the world *with the candidate* marked
@@ -128,8 +140,10 @@ proof. One call reads the files once and evaluates twice.
 ## What is deliberately not decided
 
 - **A helper in two households.** `users.rofl` keys a user to one tenant per
-  row; a nanny with two families is two rows and two identities, and nothing
-  here says they are the same person. Left open.
+  row; a nanny with two families is two rows under one sender id, and a call
+  from that id without `SPAT_TENANT` is code 5 («в нескольких семьях: задайте
+  SPAT_TENANT»). Which family a message is about is the shim's question, not
+  the core's. Left there.
 - **The operator's own edits.** An operator who is not a member has no book;
   `edit` as operator is code 4. If the operator should also edit, they are an
   adult in `world.rofl` and an operator in `users.rofl` — both roles hold.
@@ -161,9 +175,10 @@ proof. One call reads the files once and evaluates twice.
   census and 14 go silently inert — a rule with no binder is not refused,
   it is unfolded on demand and derives nothing — and those 14 are caught by
   the demo's own check that no rule of the store is demand-backed).
-- `npm run test:hosts`: `examples/spat/demo.ts`, 51 scenarios in seven
+- `npm run test:hosts`: `examples/spat/demo.ts`, 60 scenarios in seven
   groups run at once against copies of `store.example/` in a temp dir — the
-  tag wall, the rights, the stranger's two opened files, breaks/confirm/
+  tag wall, the rights, the stranger (by name: two files opened; by sender
+  id: one; both sources or neither: 5), breaks/confirm/
   retract, `tomorrow` under `SPAT_TZ` with the process in UTC, six writers at
   once, roll, ics, init, the materialisation check and the reasons table.
   Exit 1 on any FAIL, so the golden's exit code is part of the answer; 47 s

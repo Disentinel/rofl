@@ -32,16 +32,41 @@ export class SpatError extends Error {
   constructor(code: 2 | 3 | 4 | 5 | 6, msg: string) { super(msg); this.code = code; }
 }
 
-export interface Env { root: string; tenant: string; as: string; tz: string; now: Date; }
+/** `as` and `tenant` are settled by `resolve` when the call carries a sender
+ *  id rather than a name; until then they may be empty. */
+export interface Env { root: string; tenant: string; as: string; fromId?: number; tz: string; now: Date; }
 export function env(): Env {
-  const { SPAT_ROOT, SPAT_TENANT, SPAT_AS, SPAT_TZ, SPAT_NOW } = process.env;
+  const { SPAT_ROOT, SPAT_TENANT, SPAT_AS, SPAT_FROM_ID, SPAT_TZ, SPAT_NOW } = process.env;
   if (!SPAT_ROOT) throw new SpatError(5, 'нет корня: SPAT_ROOT не задан');
-  if (!SPAT_TENANT) throw new SpatError(5, 'нет арендатора: SPAT_TENANT не задан');
-  if (!SPAT_AS) throw new SpatError(5, 'нет личности: SPAT_AS не задан');
+  // EXACTLY ONE SOURCE OF IDENTITY: a book by name (me, the operator by hand)
+  // or a Telegram sender id that users.rofl must know. Both is a call that
+  // cannot say who it is; neither is the same.
+  if (!!SPAT_AS === !!SPAT_FROM_ID) throw new SpatError(5, SPAT_AS ? 'личность задана дважды: SPAT_AS и SPAT_FROM_ID' : 'нет личности: ни SPAT_AS, ни SPAT_FROM_ID');
+  if (SPAT_FROM_ID && !/^\d+$/.test(SPAT_FROM_ID)) throw new SpatError(5, `SPAT_FROM_ID не число: ${SPAT_FROM_ID}`);
+  if (SPAT_AS && !SPAT_TENANT) throw new SpatError(5, 'нет арендатора: SPAT_TENANT не задан');
   const now = SPAT_NOW ? new Date(SPAT_NOW) : new Date();
   if (Number.isNaN(now.getTime())) throw new SpatError(5, `SPAT_NOW не разобран: ${SPAT_NOW}`);
   try { new Intl.DateTimeFormat('en-US', { timeZone: SPAT_TZ ?? 'UTC' }); } catch { throw new SpatError(5, `SPAT_TZ не распознан: ${SPAT_TZ}`); }
-  return { root: SPAT_ROOT, tenant: SPAT_TENANT, as: SPAT_AS, tz: SPAT_TZ ?? 'UTC', now };
+  return { root: SPAT_ROOT, tenant: SPAT_TENANT ?? '', as: SPAT_AS ?? '', fromId: SPAT_FROM_ID ? Number(SPAT_FROM_ID) : undefined, tz: SPAT_TZ ?? 'UTC', now };
+}
+
+/** WHO IS CALLING, before any file of any tenant is opened. A sender id is
+ *  asked of access.rofl over users.rofl alone: `sender(U, T)` names the
+ *  person and their family, `stranger(N)` is the rule's own verdict. */
+export function resolve(e: Env, opened: string[] = []): Env {
+  if (e.fromId === undefined) return e;
+  const usersFile = path.join(e.root, 'users.rofl');
+  if (!fs.existsSync(usersFile)) throw Object.assign(new SpatError(5, `я вас не знаю: ${usersFile} отсутствует`), { opened });
+  opened.push(usersFile);
+  const r = new Rofl();
+  must(r.load(BOOT), 'boot.rofl');
+  must(r.assert(`${ACCESS}\n${fs.readFileSync(usersFile, 'utf8')}\nfrom_id(${e.fromId}).\n`), usersFile);
+  r.evaluate();
+  if (r.holds(`stranger(${e.fromId})`)) throw Object.assign(new SpatError(5, `я вас не знаю (${e.fromId}); добавить может владелец — строкой в users.rofl`), { opened });
+  const rows = table(r, 'sender', 'U, T').filter((x) => e.tenant === '' || x.T === e.tenant);
+  if (rows.length === 0) throw Object.assign(new SpatError(5, `${e.fromId} не состоит в семье ${e.tenant} по users.rofl`), { opened });
+  if (new Set(rows.map((x) => x.T)).size > 1) throw Object.assign(new SpatError(5, `${e.fromId} в нескольких семьях (${rows.map((x) => x.T).join(', ')}): задайте SPAT_TENANT`), { opened });
+  return { ...e, as: rows[0].U, tenant: rows[0].T };
 }
 
 export interface Book { book: string; user: string; file: string; }
@@ -101,15 +126,16 @@ export function bookClauses(b: Book, text: string): Clause[] {
  *  world file, users.rofl, the loader's facts — answers `stranger` and
  *  `may_read`; the full one is built from the books that answer allowed.
  *  Every file is read once; `opened` lists them in the order they were. */
-export function openStore(e: Env, opts: { weekOf?: string; extra?: string[] } = {}): Store {
-  const dir = path.join(e.root, e.tenant);
-  if (!fs.existsSync(path.join(dir, 'world.rofl'))) throw new SpatError(5, `нет арендатора: ${path.join(dir, 'world.rofl')} не существует`);
-  const books = booksIn(dir);
+export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } = {}): Store {
   const opened: string[] = [];
+  const e = resolve(e0, opened);
+  const dir = path.join(e.root, e.tenant);
+  if (!fs.existsSync(path.join(dir, 'world.rofl'))) throw Object.assign(new SpatError(5, `нет арендатора: ${path.join(dir, 'world.rofl')} не существует`), { opened });
+  const books = booksIn(dir);
   const read = (f: string): string => { opened.push(f); return fs.readFileSync(f, 'utf8'); };
   const worldText = read(path.join(dir, 'world.rofl'));
   const usersFile = path.join(e.root, 'users.rofl');
-  const usersText = fs.existsSync(usersFile) ? read(usersFile) : '';
+  const usersText = fs.existsSync(usersFile) ? (opened.includes(usersFile) ? fs.readFileSync(usersFile, 'utf8') : read(usersFile)) : '';
   const shared = `${ACCESS}\n${worldText}\n${usersText}\n${loaderFacts(e, books)}\n`;
 
   const small = new Rofl();
@@ -151,7 +177,7 @@ function rolledWeek(r: Rofl): string | undefined {
   return rows[0]?.[0];
 }
 
-function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
+export function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
   if (!res.ok) throw new SpatError(6, `${what}: ${res.diagnostics.join('; ')}`);
 }
 
@@ -205,43 +231,3 @@ export function trial(s: Store, id: string, clauses: Clause[]): Verdict {
     owner: c ? { c, owner: String(own?.O ?? c), scope: String(own?.S ?? 'person') } : undefined };
 }
 
-// ---------------------------------------------------------------------------
-// today, by SPAT_TZ and nothing else
-
-const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-/** The ISO weekday 1..7 of the day `days` from now IN THE STORE'S ZONE; the
- *  world's `day(D, N)` is keyed the same, and that is the only calendar. */
-export function weekdayIn(e: Env, days = 0): number {
-  const wd = new Intl.DateTimeFormat('en-US', { timeZone: e.tz, weekday: 'short' }).format(new Date(e.now.getTime() + days * 86_400_000));
-  return WD.indexOf(wd.toLowerCase()) || 7;
-}
-export function dayAtom(r: Rofl, n: number): string {
-  const d = table(r, 'day', 'D, N').find((x) => Number(x.N) === n);
-  if (!d) throw new SpatError(2, `в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
-  return d.D;
-}
-
-/** `spat init <tenant> --world <file>`: the directory, the world, an empty
- *  book per adult and helper, an empty me.rofl. Operator only. */
-export function init(e: Env, tenant: string, weekFile: string): string[] {
-  const usersFile = path.join(e.root, 'users.rofl');
-  const r = new Rofl();
-  must(r.load(BOOT), 'boot.rofl');
-  must(r.assert(ACCESS + '\n' + (fs.existsSync(usersFile) ? fs.readFileSync(usersFile, 'utf8') : '')
-    + `\ntenant(${tenant}).\ncaller(${e.as}).\n`), 'users.rofl');
-  r.evaluate();
-  if (!r.holds(`role(${e.as}, operator)`)) throw new SpatError(4, `init: ${e.as} не оператор арендатора ${tenant} по ${usersFile}`);
-  const dir = path.join(e.root, tenant);
-  if (fs.existsSync(dir)) throw new SpatError(6, `${dir} уже существует`);
-  const w = new Rofl();
-  must(w.load(BOOT), 'boot.rofl'); must(w.assert(fs.readFileSync(weekFile, 'utf8')), weekFile);
-  const made: string[] = [];
-  fs.mkdirSync(path.join(dir, 'ledgers'), { recursive: true });
-  fs.copyFileSync(weekFile, path.join(dir, 'world.rofl')); made.push('world.rofl');
-  for (const p of table(w, 'person', 'P, K').filter((x) => x.K === 'adult' || x.K === 'helper')) {
-    fs.writeFileSync(path.join(dir, 'ledgers', `${p.P}.rofl`), `-- книга ${p.P}: правки, отчёты, confirm/retract. Только добавление.\n`);
-    made.push(`ledgers/${p.P}.rofl`);
-  }
-  fs.writeFileSync(path.join(dir, 'me.rofl'), '-- книга инструмента: rolled(Week, Iso).\n'); made.push('me.rofl');
-  return made;
-}

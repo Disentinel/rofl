@@ -6,8 +6,10 @@
 -- THE BOOK IS THE FILE. `ledgers/<user>.rofl` loads into `[p_<user>]`,
 -- `me.rofl` into `[p_me]`, `world.rofl` and `users.rofl` into `[main]`; the
 -- loader asserts `authority(Book, User)` for every book it finds and
--- `caller(U)`, `tenant(T)` for the call. Nothing in a book can say which
--- book it is in: the loader refuses a line tagged with another book.
+-- `caller(U)`, `tenant(T)` for the call — `caller` named directly by
+-- SPAT_AS, or resolved from a Telegram sender id (`from_id(N)`, SPAT_FROM_ID)
+-- through users.rofl. Nothing in a book can say which book it is in: the
+-- loader refuses a line tagged with another book.
 --
 -- FOUR LAYERS, and each answers one question:
 --   accounts      who exists here, in which role
@@ -38,6 +40,13 @@ account(U)       :- role(U, _).
 -- for: whoever the call names and no account knows is a stranger, and the
 --      loader turns that into code 5 before any book is opened
 stranger(U)      :- caller(U), not account(U).
+-- for: a Telegram SENDER is whoever users.rofl lists under that id, in that
+--      tenant — the chat is only where the answer goes; an id nobody listed
+--      is a stranger («я вас не знаю»), decided here and refused by the
+--      loader before a file of any tenant is opened
+sender(U, T)     :- from_id(N), tg_user(U, N, T, _).
+known_id(N)      :- tg_user(_, N, _, _).
+stranger(N)      :- from_id(N), not known_id(N).
 
 -- for: a book exists when a file with an account's name exists; a file for
 --      nobody is not a book and is never opened
@@ -227,7 +236,7 @@ needs_confirm(E)   :- breaks(E, _).
 -- =========================================================================
 -- The book relations and the loader's facts, declared so a tenant with empty
 -- books loads clean and `undefined_premise[audit]` stays quiet.
-edb(tg_user).    edb(tenant).    edb(caller).    edb(trial).    edb(before).
+edb(tg_user).    edb(tenant).    edb(caller).    edb(from_id).  edb(trial).    edb(before).
 edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).

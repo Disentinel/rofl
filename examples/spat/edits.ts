@@ -7,7 +7,9 @@ import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import { dayOrder, hhmm, parseTime, ru, sayConstraint, table } from './spat.ts';
-import { SpatError, append, editId, isoNow, myBook, trial, type Store } from './store.ts';
+import { ACCESS, SpatError, append, editId, isoNow, must, myBook, resolve, trial, type Env, type Store } from './store.ts';
+import { BOOT } from './spat.ts';
+import * as fs from 'node:fs';
 import { renderDay, renderIcs, todayAtom } from './tomorrow.ts';
 
 const GRAMMAR = [
@@ -179,9 +181,34 @@ export function roll(s: Store, week: string): number {
   return 0;
 }
 
+/** `spat init <tenant> --world <file>`: the directory, the world, an empty
+ *  book per adult and helper, an empty me.rofl. Operator only — and the
+ *  operator has already admitted themself for this tenant in users.rofl. */
+export function init(e0: Env, tenant: string, weekFile: string): string[] {
+  const e = resolve({ ...e0, tenant });
+  const usersFile = path.join(e.root, 'users.rofl');
+  const r = new Rofl();
+  must(r.load(BOOT), 'boot.rofl');
+  must(r.assert(ACCESS + '\n' + (fs.existsSync(usersFile) ? fs.readFileSync(usersFile, 'utf8') : '') + `\ntenant(${tenant}).\ncaller(${e.as}).\n`), 'users.rofl');
+  if (!r.holds(`role(${e.as}, operator)`)) throw new SpatError(4, `init: ${e.as} не оператор арендатора ${tenant} по ${usersFile}`);
+  const dir = path.join(e.root, tenant);
+  if (fs.existsSync(dir)) throw new SpatError(6, `${dir} уже существует`);
+  const w = new Rofl();
+  must(w.load(BOOT), 'boot.rofl'); must(w.assert(fs.readFileSync(weekFile, 'utf8')), weekFile);
+  const made: string[] = [];
+  fs.mkdirSync(path.join(dir, 'ledgers'), { recursive: true });
+  fs.copyFileSync(weekFile, path.join(dir, 'world.rofl')); made.push('world.rofl');
+  for (const p of table(w, 'person', 'P, K').filter((x) => x.K === 'adult' || x.K === 'helper')) {
+    fs.writeFileSync(path.join(dir, 'ledgers', `${p.P}.rofl`), `-- книга ${p.P}: правки, отчёты, confirm/retract. Только добавление.\n`);
+    made.push(`ledgers/${p.P}.rofl`);
+  }
+  fs.writeFileSync(path.join(dir, 'me.rofl'), '-- книга инструмента: rolled(Week, Iso).\n'); made.push('me.rofl');
+  return made;
+}
+
 export function whoami(s: Store): number {
   const roles = table(s.r, 'role', 'U, R').filter((x) => x.U === s.env.as).map((x) => ru(x.R));
-  console.log(`я: ${ru(s.env.as)} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${ru(todayAtom(s))}`);
+  console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${ru(todayAtom(s))}`);
   console.log(`  книги мне открыты: ${s.open.map((b) => b.book).join(' ') || 'ни одной'}`);
   console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.file ?? 'никуда'}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);

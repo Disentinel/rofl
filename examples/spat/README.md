@@ -128,7 +128,9 @@ day are rules in `access.rofl`, and `spat why` reaches into the books. The
 design, the invariants and what is left open are in [STORE.md](STORE.md).
 
 ```sh
-export SPAT_ROOT=/state/spat SPAT_TENANT=example SPAT_AS=robin SPAT_TZ=Europe/Nicosia
+export SPAT_ROOT=/state/spat SPAT_TZ=Europe/Nicosia
+export SPAT_FROM_ID=100002        # a Telegram sender: users.rofl says who and which family
+#   or SPAT_AS=me SPAT_TENANT=example — a book by name, for the scheduler and the operator
 spat whoami                       who I am, which books I was given
 spat tomorrow                     tomorrow: holes, chains, late arrivals, then the grid
 spat show [day|week]              a day (today by default) or the week

@@ -59,9 +59,13 @@ function fresh(): string {
 }
 
 interface Res { code: number; out: string; }
+/** The people call as Telegram senders — SPAT_FROM_ID, and users.rofl says
+ *  who and which family; `me` calls by name, as the scheduler does. */
+const FROM: Record<string, string> = { alex: '100001', robin: '100002', nanny: '100003', mallory: '100004', uncle: '100005' };
 function spat(root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> {
-  const e: Record<string, string | undefined> = { ...process.env, SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: as,
-    SPAT_TZ: 'Europe/Nicosia', SPAT_NOW: NOW, ...extra };
+  const who = FROM[as] ? { SPAT_FROM_ID: FROM[as] } : { SPAT_AS: as, SPAT_TENANT: 'example' };
+  const e: Record<string, string | undefined> = { ...process.env, SPAT_ROOT: root, SPAT_TZ: 'Europe/Nicosia', SPAT_NOW: NOW, ...who, ...extra };
+  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) if (!(k in who) && !(k in extra)) delete e[k];
   for (const k of Object.keys(extra)) if (extra[k] === undefined) delete e[k];
   return new Promise((resolve) => {
     const p = spawn(process.execPath, ['--experimental-strip-types', CLI, ...args], { env: e });
@@ -104,17 +108,32 @@ async function rights(): Promise<Group> {
 }
 
 // -------------------------------------------------------- 3. the stranger
+/** What the loader had opened when it refused, asked in-process. */
+function openedBy(vars: Record<string, string>): string {
+  const saved = { ...process.env };
+  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) delete process.env[k];
+  Object.assign(process.env, { SPAT_NOW: NOW, ...vars });
+  let opened = ['opened nothing and did not refuse'];
+  try { openStore(env()); } catch (e) { opened = (e as SpatError).opened.map((f) => path.relative(vars.SPAT_ROOT, f)); }
+  for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_FROM_ID', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  return opened.join(' ');
+}
 async function stranger(): Promise<Group> {
   const g = new Group('3. the stranger — code 5 before a book is opened');
   const root = fresh();
-  g.code('SPAT_AS=mallory (другой арендатор)', await spat(root, 'mallory', ['show']), 5);
-  g.code('без SPAT_AS', await spat(root, 'robin', ['show'], { SPAT_AS: undefined }), 5);
-  const saved = { ...process.env };
-  Object.assign(process.env, { SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'mallory', SPAT_NOW: NOW });
-  let opened: string[] = ['?'];
-  try { openStore(env()); } catch (e) { opened = (e as SpatError).opened.map((f) => path.relative(root, f)); }
-  for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
-  g.check('до отказа открыты только world.rofl и users.rofl, ни одной книги', opened.join(' ') === 'example/world.rofl users.rofl', opened.join(' '));
+  g.code('SPAT_AS=mallory (другой арендатор)', await spat(root, 'me', ['show'], { SPAT_AS: 'mallory' }), 5);
+  g.check('до отказа открыты только world.rofl и users.rofl, ни одной книги',
+    openedBy({ SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'mallory' }) === 'example/world.rofl users.rofl');
+  const r = await spat(root, 'me', ['show'], { SPAT_AS: undefined, SPAT_FROM_ID: '424242' });
+  g.code('SPAT_FROM_ID неизвестный', r, 5);
+  g.check('текст: «я вас не знаю; добавить может владелец»', /я вас не знаю.*добавить может владелец/.test(r.out), r.out);
+  g.check('до отказа открыт только users.rofl — ни мира, ни книг', openedBy({ SPAT_ROOT: root, SPAT_FROM_ID: '424242' }) === 'users.rofl');
+  g.code('SPAT_AS и SPAT_FROM_ID вместе', await spat(root, 'robin', ['show'], { SPAT_AS: 'robin', SPAT_TENANT: 'example' }), 5);
+  g.code('ни SPAT_AS, ни SPAT_FROM_ID', await spat(root, 'me', ['show'], { SPAT_AS: undefined }), 5);
+  g.code('SPAT_FROM_ID robin + SPAT_TENANT другой семьи', await spat(root, 'robin', ['show'], { SPAT_TENANT: 'elsewhere' }), 5);
+  const w = await spat(root, 'robin', ['whoami']);
+  g.check('SPAT_FROM_ID robin без SPAT_TENANT: семья из users.rofl', w.code === 0 && /я: robin \(from_id 100002\).*семья example/.test(w.out), w.out.split('\n')[0]);
+  g.code('mallory по id: её семья elsewhere не развёрнута', await spat(root, 'mallory', ['show']), 5);
   g.code('неизвестный глагол', await spat(root, 'robin', ['dance']), 2);
   return g;
 }
@@ -190,14 +209,18 @@ async function operator(): Promise<Group> {
   g.code('ics --for kit', ics, 0);
   const ev = ics.out.split('BEGIN:VEVENT').length - 1;
   g.check('ics: только блоки kit и блоки с ним, датированные из week_starts', ev > 0 && /DTSTART;TZID=Europe\/Nicosia:202609/.test(ics.out) && !/работа/.test(ics.out), `${ev} events`);
-  // the operator admits the new tenant by hand in users.rofl first; that is the whole admission
-  g.code('alex init fam2 без строки в users.rofl', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 4);
-  fs.appendFileSync(path.join(root, 'users.rofl'), 'tg_user(alex, 100001, fam2, operator).\n');
-  g.code('robin init (не оператор)', await spat(root, 'robin', ['init', 'fam2', '--world', WEEK]), 4);
+  // the operator admits the new tenant by hand in users.rofl first; that is the
+  // whole admission — a sender the new family does not list is not even a
+  // caller there (5), a listed one who is not its operator is refused (4)
+  g.code('alex init fam2 без строки в users.rofl', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 5);
+  fs.appendFileSync(path.join(root, 'users.rofl'), 'tg_user(alex, 100001, fam2, operator).\ntg_user(robin, 100002, fam2, adult).\n');
+  g.code('robin init (в fam2, не оператор)', await spat(root, 'robin', ['init', 'fam2', '--world', WEEK]), 4);
+  g.code('alex теперь в двух семьях, без SPAT_TENANT', await spat(root, 'alex', ['whoami']), 5);
   g.code('alex init fam2', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 0);
   g.check('init разложил каталог: world, книги взрослых и няни, me', ['world.rofl', 'me.rofl', 'ledgers/alex.rofl', 'ledgers/robin.rofl', 'ledgers/nanny.rofl']
     .every((f) => fs.existsSync(path.join(root, 'fam2', f))) && !fs.existsSync(path.join(root, 'fam2/ledgers/kit.rofl')));
   g.code('init повторно', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 6);
+  g.check('whoami с SPAT_TENANT=fam2: тот же alex, новая семья', /семья fam2/.test((await spat(root, 'alex', ['whoami'], { SPAT_TENANT: 'fam2' })).out));
   return g;
 }
 

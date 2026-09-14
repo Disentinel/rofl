@@ -3,6 +3,7 @@
 -- books (facts/checks.rofl, world `spat_store`). Not read by the tool.
 tenant(example).
 caller(robin).
+from_id(100002).     -- robin called by her sender id; `sender(robin, example)` is the rule's answer
 authority(p_alex, alex).
 authority(p_me, me).
 authority(p_nanny, nanny).

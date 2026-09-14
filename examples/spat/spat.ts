@@ -1018,19 +1018,16 @@ async function main(argv: string[]): Promise<void> {
   let r: Rofl;
   if (cmd === 'init' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd)) {
     const st = await import('./store.ts');
+    const ed = await import('./edits.ts');
     const e = st.env();
     if (cmd === 'init') {
       const w = rest.indexOf('--world');
-      const made = st.init(e, rest[0] ?? '', w >= 0 ? path.resolve(rest[w + 1]) : weekFile);
+      const made = ed.init(e, rest[0] ?? '', w >= 0 ? path.resolve(rest[w + 1]) : weekFile);
       console.log(`${path.join(e.root, rest[0])}: ${made.join(', ')}`);
       return;
     }
     const store = st.openStore(e, { weekOf, extra });
-    if (STORE_VERBS.has(cmd)) {
-      const { run } = await import('./edits.ts');
-      process.exitCode = run(store, cmd, rest);
-      return;
-    }
+    if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
     r = store.r;
   } else r = world(weekFile, { weekOf, extra });
 
@@ -1343,7 +1340,7 @@ const USAGE = [
   '  spat html    [файл.html]                  сетка недели: экран и печать (A4 landscape)',
   '  spat plan    <день>                       все планы дня, каждый посчитан настоящим миром',
   '',
-  '  с SPAT_ROOT/SPAT_TENANT/SPAT_AS в окружении (см. STORE.md):',
+  '  с SPAT_ROOT и SPAT_AS+SPAT_TENANT или SPAT_FROM_ID в окружении (см. STORE.md):',
   '  spat whoami · show [день|week] · tomorrow · edit \'<правка>\' · confirm <id> · retract <id>',
   '  spat ics [--for <кто>] · roll <неделя> (оператор) · init <семья> --world <файл> (оператор)',
   '',
