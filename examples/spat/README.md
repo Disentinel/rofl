@@ -118,6 +118,30 @@ spat fragile                             chains with no slack, trips with no bac
   --week <file>      a different week file      --week-of <w>   a different week
 ```
 
+## Many people, one household: the store
+
+The same rules, read over a directory of books instead of one file. Each
+person of the household has a book (`ledgers/<user>.rofl`) that only they
+write; the world file is never written; who may read which book, who may
+edit which constraint, what an edit does to the week and whether it breaks a
+day are rules in `access.rofl`, and `spat why` reaches into the books. The
+design, the invariants and what is left open are in [STORE.md](STORE.md).
+
+```sh
+export SPAT_ROOT=/state/spat SPAT_TENANT=example SPAT_AS=robin SPAT_TZ=Europe/Nicosia
+spat whoami                       who I am, which books I was given
+spat tomorrow                     tomorrow: holes, chains, late arrivals, then the grid
+spat show [day|week]              a day (today by default) or the week
+spat edit 'skip walk mon'         0 applied · 3 written as proposed, breaks the day · 4 no right · 2 not parsed
+spat confirm <id> · retract <id>  my own edit, one more fact in my book
+spat ics [--for kit]              the week as a calendar
+spat roll w0907 · init fam2 --world week.rofl        operator only
+```
+
+Everything above — `why`, `whynot`, `relax`, `plan`, `fragile` — works over
+the same store when `SPAT_ROOT` is set. `examples/spat/demo.ts` is the
+contract exercised end to end; `store.example/` is the household it runs on.
+
 ## Engine disciplines, all load-bearing and all tested
 
 * **No `@next` ticks.** The day is an ordinary fact argument and the week is

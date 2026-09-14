@@ -1,0 +1,12 @@
+-- trial.rofl — WHAT THE WRITER ASSERTS FOR A TRIAL, as a file, so both engines
+-- answer `breaks`. store.ts marks the candidate `trial(E)` and lists every
+-- defect the world had without it as `before(Day, Reason, Where)`. Here two
+-- entries of the fixture are tried: e_nannyadd touches Monday, whose three
+-- on-foot defects are all listed, so it breaks nothing; e_schoolmv touches
+-- Thursday, whose red block is not listed, so it breaks — which is the
+-- positive control. Not read by the tool.
+trial(e_nannyadd).
+trial(e_schoolmv).
+before(mon, on_foot_unknown, home).
+before(mon, on_foot_unknown, sadik).
+before(mon, on_foot_unknown, school).

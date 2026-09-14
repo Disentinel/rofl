@@ -287,6 +287,10 @@ usual(c_clean, cleaning, robin, home, sat, 600,  720).              -- 10:00-12:
 week(w0831).      -- 31.08 - 06.09
 week(w0907).      -- 07.09 - 13.09
 current(w0831).
+-- week_starts(Week, Monday) dates a week, which `spat ics` needs and nothing
+-- else does; a week without one still answers every other question.
+week_starts(w0831, "2026-08-31").
+week_starts(w0907, "2026-09-07").
 
 -- --- week of 31.08 ---------------------------------------------------------
 -- садик was shut until the Wednesday.

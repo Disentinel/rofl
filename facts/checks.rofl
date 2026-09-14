@@ -102,3 +102,40 @@ check_file("readiness_rofl", "examples/rofl-release/evidence.rofl").
 -- fixed; the fix moves it, and that move is the acceptance.
 check_world("demand_negation").
 check_file("demand_negation", "examples/checks/demand_negation.rofl").
+
+-- THE MULTI-USER STORE, AS RULES OVER BOOKS. examples/spat/access.rofl decides
+-- who reads, who edits, what an entry does and what breaks; store.ts only
+-- loads files into books. The books of the shipped fixture carry their tags
+-- in the text — exactly what the loader would have stamped from the file
+-- names — and books.rofl holds what the loader asserts, so both engines
+-- answer `may_read`, `may_edit`, `no_right`, `acts`, `stray` and the derived
+-- `moved`/`skipped`/`added`/`absent_on` over the same store. A premise
+-- dropped from access.rofl moves this census; examples/spat/demo.ts holds
+-- the half a world cannot reach — exit codes, the tag wall, the append.
+check_world("spat_store").
+check_file("spat_store", "examples/spat/spat.rofl").
+check_file("spat_store", "examples/spat/access.rofl").
+check_file("spat_store", "examples/spat/week.example.rofl").
+check_file("spat_store", "examples/spat/store.example/users.rofl").
+check_file("spat_store", "examples/spat/store.example/books.rofl").
+check_file("spat_store", "examples/spat/store.example/ledgers/alex.rofl").
+check_file("spat_store", "examples/spat/store.example/ledgers/nanny.rofl").
+check_file("spat_store", "examples/spat/store.example/ledgers/robin.rofl").
+check_file("spat_store", "examples/spat/store.example/ledgers/uncle.rofl").
+check_file("spat_store", "examples/spat/store.example/me.rofl").
+
+-- ...AND THE SAME STORE UNDER A TRIAL: the candidate marked and the baseline
+-- listed, as store.ts does before it decides code 3. One entry breaks nothing
+-- (every defect of its day is in `before`), one breaks Thursday.
+check_world("spat_trial").
+check_file("spat_trial", "examples/spat/spat.rofl").
+check_file("spat_trial", "examples/spat/access.rofl").
+check_file("spat_trial", "examples/spat/week.example.rofl").
+check_file("spat_trial", "examples/spat/store.example/users.rofl").
+check_file("spat_trial", "examples/spat/store.example/books.rofl").
+check_file("spat_trial", "examples/spat/store.example/ledgers/alex.rofl").
+check_file("spat_trial", "examples/spat/store.example/ledgers/nanny.rofl").
+check_file("spat_trial", "examples/spat/store.example/ledgers/robin.rofl").
+check_file("spat_trial", "examples/spat/store.example/ledgers/uncle.rofl").
+check_file("spat_trial", "examples/spat/store.example/me.rofl").
+check_file("spat_trial", "examples/spat/store.example/trial.rofl").

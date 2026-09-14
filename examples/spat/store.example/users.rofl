@@ -1,0 +1,10 @@
+-- users.rofl — WHO MAY CALL, from the operator's hand. The tool reads it and
+-- never writes it. tg_user(User, ChatId, Tenant, Role): the role is what the
+-- world file does not say — `operator` above all — and a row of another
+-- tenant is invisible to this one.
+tg_user(alex,   100001, example, operator).
+tg_user(robin,  100002, example, adult).
+tg_user(nanny,  100003, example, helper).
+tg_user(mallory, 100004, elsewhere, adult).
+-- a role no rule of access.rofl reads: an account, a book, and nothing open
+tg_user(uncle,  100005, example, guest).

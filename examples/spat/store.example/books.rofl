@@ -1,0 +1,10 @@
+-- books.rofl — WHAT store.ts ASSERTS when it opens store.example as robin,
+-- written down so both engines can be held to access.rofl over the same
+-- books (facts/checks.rofl, world `spat_store`). Not read by the tool.
+tenant(example).
+caller(robin).
+authority(p_alex, alex).
+authority(p_me, me).
+authority(p_nanny, nanny).
+authority(p_robin, robin).
+authority(p_uncle, uncle).

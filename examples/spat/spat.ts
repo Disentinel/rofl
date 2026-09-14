@@ -79,10 +79,18 @@ export const ru = (a: string): string => RU[a] ?? a;
 
 export interface WorldOpts { weekOf?: string; extra?: string[]; }
 
+// WHERE THE WEEK COMES FROM. One file by default; the multi-user store
+// (store.ts) installs a source that asserts the world, the books the caller
+// may read, and the week in force — so every command below, `relax` and
+// `whatif` and `plan` included, builds its worlds from the same books.
+let SOURCE: ((r: Rofl) => void) | undefined;
+export const setSource = (f: (r: Rofl) => void): void => { SOURCE = f; };
+
 export function world(weekFile: string = DEFAULT_WEEK, opts: WorldOpts = {}): Rofl {
   const r = new Rofl();
   must(r.load(BOOT), 'boot.rofl');
-  must(r.load(SPAT + '\n' + fs.readFileSync(weekFile, 'utf8')), weekFile);
+  if (SOURCE) SOURCE(r);
+  else must(r.load(SPAT + '\n' + fs.readFileSync(weekFile, 'utf8')), weekFile);
   if (opts.weekOf) {
     const cur = table(r, 'current', 'W')[0]?.W;
     if (cur && cur !== opts.weekOf) {
@@ -130,7 +138,7 @@ export function table(r: Rofl, rel: string, vars: string): Record<string, string
   m.set(key, got);
   return got;
 }
-const bust = (r: Rofl): void => { TABLES.delete(r.store); FOLDS.delete(r.store); };
+export const bust = (r: Rofl): void => { TABLES.delete(r.store); FOLDS.delete(r.store); };
 
 export function index<T>(xs: T[], key: (x: T) => string): Map<string, T[]> {
   const m = new Map<string, T[]>();
@@ -183,8 +191,10 @@ export const mins = (n: number): string =>
 
 interface Folds { count: Map<string, Count>; prov: Map<string, Polynomial>; tight: Map<string, number>; }
 const FOLDS = new WeakMap<object, Folds>();
+// A BOOK'S ENTRY IS A SOURCE TOO: an edit in `ledgers/<u>.rofl` stands under
+// a block exactly as a `usual` line does, and `why` must reach it.
 const NAMED_SOURCE =
-  /^(usual|usual_on|moved|skipped|added|lift|present_window|absent|absent_on|awake|constraint|person|car|driver|travel|with|kind)\[main\]\(/;
+  /^(usual|usual_on|moved|skipped|added|lift|present_window|absent|absent_on|awake|constraint|person|car|driver|travel|with|kind|e_move|e_skip|e_add|e_sick|e_car_out|confirmed)\[[a-z_]+\]\(/;
 /** Weight offset: slack may be negative and tropical's discipline is stated
  *  for non-negative weights, so every chain is charged M + OFFSET and the
  *  offset is taken back off the answer. */
@@ -778,6 +788,19 @@ export function why(r: Rofl, block: string): string {
   for (const s of table(r, 'skipped', 'C, E, W, D').filter((x) => x.E === block && x.W === cur)) {
     out.push(`  на этой неделе:  ${sayConstraint(r, s.C)}  ${ru(s.D)}: отменено`);
   }
+  for (const a of table(r, 'added', 'C, E, W, P, Wk, D, F, T').filter((x) => x.E === block && x.Wk === cur)) {
+    out.push(`  на этой неделе:  ${sayConstraint(r, a.C)}  ${ru(a.D)} ${hhmm(a.F)}–${hhmm(a.T)}: добавлено`);
+  }
+  // an edit is a constraint with a book behind it: say whose, when, from where
+  for (const c of new Set([...table(r, 'moved', 'C, E, W, D1, D2, F, T'), ...table(r, 'skipped', 'C, E, W, D'),
+    ...table(r, 'added', 'C, E, W, P, Wk, D, F, T')].filter((x) => x.E === block).map((x) => x.C))) {
+    for (const e of table(r, 'entry', 'E, L').filter((x) => x.E === c)) {
+      const at = rows(r, `edit_at[${e.L}](${c}, At)`)[0]?.At ?? '?';
+      const via = rows(r, `edit_via[${e.L}](${c}, V)`)[0]?.V ?? '?';
+      out.push(`  правка ${c}:  книга [${e.L}], ${String(at).replace(/^"|"$/g, '')}, ${via}`
+        + (r.holds(`pending(${c})`) ? ', ждёт confirm' : '') + (r.holds(`retracted_edit(${c})`) ? ', отозвана' : ''));
+    }
+  }
   out.push(`\n  идёт: ${bs.sort((a, b) => ord.get(a.day)! - ord.get(b.day)!)
     .map((b) => `${ru(b.day)} ${hhmm(b.from)}–${hhmm(b.to)}`).join(', ')}`);
   const cs = chains(r).filter((c) => c.a === block || c.b === block)
@@ -971,6 +994,8 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll']);
+
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
   let weekFile = DEFAULT_WEEK;
@@ -987,7 +1012,27 @@ async function main(argv: string[]): Promise<void> {
   // free-time block switched on, which nothing else pays for.
   const extra = cmd === 'free' ? ['asking(free).']
     : cmd === 'hours' ? ['asking(hours).'] : [];
-  const r = world(weekFile, { weekOf, extra });
+  // THE STORE, when SPAT_ROOT is set or a store verb is asked for: identity
+  // and books come from the environment (store.ts), the classic verbs below
+  // then run over the same world. `init` alone needs no tenant to exist yet.
+  let r: Rofl;
+  if (cmd === 'init' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd)) {
+    const st = await import('./store.ts');
+    const e = st.env();
+    if (cmd === 'init') {
+      const w = rest.indexOf('--world');
+      const made = st.init(e, rest[0] ?? '', w >= 0 ? path.resolve(rest[w + 1]) : weekFile);
+      console.log(`${path.join(e.root, rest[0])}: ${made.join(', ')}`);
+      return;
+    }
+    const store = st.openStore(e, { weekOf, extra });
+    if (STORE_VERBS.has(cmd)) {
+      const { run } = await import('./edits.ts');
+      process.exitCode = run(store, cmd, rest);
+      return;
+    }
+    r = store.r;
+  } else r = world(weekFile, { weekOf, extra });
 
   if (cmd === 'plan') {
     // ПЕРЕБОР ЖИВЁТ В ХОСТЕ, а не в правилах: ветвление в правилах — это
@@ -1186,6 +1231,7 @@ async function main(argv: string[]): Promise<void> {
   } else {
     console.log(`неизвестная команда: ${cmd}\n`);
     console.log(USAGE);
+    process.exitCode = 2;
   }
   console.log(`\n(${Date.now() - t0} ms)`);
 }
@@ -1297,6 +1343,10 @@ const USAGE = [
   '  spat html    [файл.html]                  сетка недели: экран и печать (A4 landscape)',
   '  spat plan    <день>                       все планы дня, каждый посчитан настоящим миром',
   '',
+  '  с SPAT_ROOT/SPAT_TENANT/SPAT_AS в окружении (см. STORE.md):',
+  '  spat whoami · show [день|week] · tomorrow · edit \'<правка>\' · confirm <id> · retract <id>',
+  '  spat ics [--for <кто>] · roll <неделя> (оператор) · init <семья> --world <файл> (оператор)',
+  '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя',
 ].join('\n');
 
@@ -1305,6 +1355,10 @@ const isMain = process.argv[1]
   && real(path.resolve(process.argv[1])) === real(new URL(import.meta.url).pathname);
 if (isMain) {
   main(process.argv.slice(2)).catch((e) => {
+    // A STORE REFUSAL IS AN ANSWER: its code is the contract's, its text is
+    // for the person; anything else is a crash and says so on stderr.
+    const code = (e as { code?: number }).code;
+    if (typeof code === 'number') { console.log(e.message); process.exit(code); }
     console.error(e instanceof Error ? e.message : String(e));
     process.exit(1);
   });

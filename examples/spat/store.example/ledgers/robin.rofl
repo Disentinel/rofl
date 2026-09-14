@@ -1,0 +1,47 @@
+-- книга robin: правки, отчёты, confirm/retract. Только добавление.
+-- 2026-08-30T20:00:00+03:00 cli robin: skip walk mon
+e_skip[p_robin](e_skipwalk, walk, mon).
+edit_at[p_robin](e_skipwalk, "2026-08-30T20:00:00+03:00").
+edit_via[p_robin](e_skipwalk, cli).
+for_week[p_robin](e_skipwalk, w0831).
+-- 2026-08-30T20:05:00+03:00 telegram robin: move pickup tue 15:00  (breaks the day: proposed)
+e_move[p_robin](e_movepick, pickup, tue, 900).
+edit_at[p_robin](e_movepick, "2026-08-30T20:05:00+03:00").
+edit_via[p_robin](e_movepick, telegram).
+for_week[p_robin](e_movepick, w0831).
+proposed[p_robin](e_movepick).
+-- 2026-08-31T14:12:00+03:00 telegram robin: report c_bus mon 14:10
+e_report[p_robin](e_busreport, c_bus, mon, 850).
+edit_at[p_robin](e_busreport, "2026-08-31T14:12:00+03:00").
+edit_via[p_robin](e_busreport, telegram).
+for_week[p_robin](e_busreport, w0831).
+-- a line the CLI would have refused with code 4; here to show it never acts
+e_move[p_robin](e_schoolmv, school_kit, thu, 600).
+edit_at[p_robin](e_schoolmv, "2026-08-31T15:00:00+03:00").
+edit_via[p_robin](e_schoolmv, cli).
+for_week[p_robin](e_schoolmv, w0831).
+-- 2026-08-31T16:00:00+03:00 cli robin: skip cleaning sat — proposed (broke the day), then confirmed
+e_skip[p_robin](e_skipclean, cleaning, sat).
+edit_at[p_robin](e_skipclean, "2026-08-31T16:00:00+03:00").
+edit_via[p_robin](e_skipclean, cli).
+for_week[p_robin](e_skipclean, w0831).
+proposed[p_robin](e_skipclean).
+-- 2026-08-31T16:05:00+03:00 cli robin: confirmed e_skipclean
+confirmed[p_robin](e_skipclean, "2026-08-31T16:05:00+03:00", cli).
+-- 2026-08-31T17:00:00+03:00 telegram robin: report c_sadik tue 13:20 — then retracted
+e_report[p_robin](e_sadikrep, c_sadik, tue, 800).
+edit_at[p_robin](e_sadikrep, "2026-08-31T17:00:00+03:00").
+edit_via[p_robin](e_sadikrep, telegram).
+for_week[p_robin](e_sadikrep, w0831).
+-- 2026-08-31T17:30:00+03:00 telegram robin: retracted e_sadikrep
+retracted[p_robin](e_sadikrep, "2026-08-31T17:30:00+03:00", telegram).
+-- 2026-09-01T07:30:00+03:00 telegram robin: sick nico wed
+e_sick[p_robin](e_nicosick, nico, wed).
+edit_at[p_robin](e_nicosick, "2026-09-01T07:30:00+03:00").
+edit_via[p_robin](e_nicosick, telegram).
+for_week[p_robin](e_nicosick, w0831).
+-- 2026-09-06T20:00:00+03:00 cli robin: skip walk — every day of NEXT week; inert until roll
+e_skip[p_robin](e_skipwalkall, walk, all).
+edit_at[p_robin](e_skipwalkall, "2026-09-06T20:00:00+03:00").
+edit_via[p_robin](e_skipwalkall, cli).
+for_week[p_robin](e_skipwalkall, w0907).

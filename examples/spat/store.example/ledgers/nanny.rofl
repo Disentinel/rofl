@@ -1,0 +1,43 @@
+-- книга nanny: правки, отчёты, confirm/retract. Только добавление.
+-- a line the CLI would have refused with code 4 (robin's pickup); never acts
+e_move[p_nanny](e_nannymv, pickup, wed, 900).
+edit_at[p_nanny](e_nannymv, "2026-08-31T09:00:00+03:00").
+edit_via[p_nanny](e_nannymv, telegram).
+for_week[p_nanny](e_nannymv, w0831).
+-- 2026-08-31T09:05:00+03:00 telegram nanny: add evening mon 19:00-21:00 nanny home
+e_add[p_nanny](e_nannyadd, evening, mon, 1140, 1260, nanny, home).
+edit_at[p_nanny](e_nannyadd, "2026-08-31T09:05:00+03:00").
+edit_via[p_nanny](e_nannyadd, telegram).
+for_week[p_nanny](e_nannyadd, w0831).
+-- 2026-08-31T09:10:00+03:00 telegram nanny: report c_nanny fri 20:00 (her own hours: external, reportable)
+e_report[p_nanny](e_nannyrep, c_nanny, fri, 1200).
+edit_at[p_nanny](e_nannyrep, "2026-08-31T09:10:00+03:00").
+edit_via[p_nanny](e_nannyrep, telegram).
+for_week[p_nanny](e_nannyrep, w0831).
+-- six lines the CLI would have refused with code 4 — robin's blocks, a child,
+-- the car — one per operation and per shape, so that `acts` is seen to
+-- hold every one of them back
+e_move[p_nanny](e_nannymvall, pickup, all, 900).
+edit_at[p_nanny](e_nannymvall, "2026-08-31T09:11:00+03:00").
+edit_via[p_nanny](e_nannymvall, telegram).
+for_week[p_nanny](e_nannymvall, w0831).
+e_skip[p_nanny](e_nannyskip, lunch, thu).
+edit_at[p_nanny](e_nannyskip, "2026-08-31T09:12:00+03:00").
+edit_via[p_nanny](e_nannyskip, telegram).
+for_week[p_nanny](e_nannyskip, w0831).
+e_skip[p_nanny](e_nannyskipall, walk, all).
+edit_at[p_nanny](e_nannyskipall, "2026-08-31T09:13:00+03:00").
+edit_via[p_nanny](e_nannyskipall, telegram).
+for_week[p_nanny](e_nannyskipall, w0831).
+e_add[p_nanny](e_nannyaddkit, tutoring, tue, 900, 960, kit, home).
+edit_at[p_nanny](e_nannyaddkit, "2026-08-31T09:14:00+03:00").
+edit_via[p_nanny](e_nannyaddkit, telegram).
+for_week[p_nanny](e_nannyaddkit, w0831).
+e_sick[p_nanny](e_nannysickall, kit, all).
+edit_at[p_nanny](e_nannysickall, "2026-08-31T09:15:00+03:00").
+edit_via[p_nanny](e_nannysickall, telegram).
+for_week[p_nanny](e_nannysickall, w0831).
+e_car_out[p_nanny](e_nannycar, thu, 600, 700).
+edit_at[p_nanny](e_nannycar, "2026-08-31T09:16:00+03:00").
+edit_via[p_nanny](e_nannycar, telegram).
+for_week[p_nanny](e_nannycar, w0831).

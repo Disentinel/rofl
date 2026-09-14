@@ -1,0 +1,239 @@
+-- access.rofl — WHO MAY READ, WHO MAY EDIT, WHAT AN EDIT DOES. The rules of
+-- the multi-user store; store.ts is the loader and the writer and decides
+-- nothing. Every verdict the CLI turns into an exit code is a relation here,
+-- and `spat why` can be asked for any of them.
+--
+-- THE BOOK IS THE FILE. `ledgers/<user>.rofl` loads into `[p_<user>]`,
+-- `me.rofl` into `[p_me]`, `world.rofl` and `users.rofl` into `[main]`; the
+-- loader asserts `authority(Book, User)` for every book it finds and
+-- `caller(U)`, `tenant(T)` for the call. Nothing in a book can say which
+-- book it is in: the loader refuses a line tagged with another book.
+--
+-- FOUR LAYERS, and each answers one question:
+--   accounts      who exists here, in which role
+--   may_read      which books a call may open — asked BEFORE they are opened
+--   may_edit      which constraint a user may change with an edit
+--   acts          which entries of the books are in force this week
+--
+-- Every rule range-restricted in written order; premise order is the
+-- cheapest relation first, as everywhere in spat.rofl.
+
+-- =========================================================================
+-- 1. ACCOUNTS AND ROLES
+-- =========================================================================
+-- An adult or a helper of the household has a book; a child does not. A
+-- Telegram user of this tenant has whatever role users.rofl gives them, and
+-- the operator lives only there. `me` is the tool itself — the scheduled
+-- `tomorrow`, the `ics` feed — and needs no line anywhere.
+
+-- for: a household member's role comes from the world file, never retyped
+role(U, adult)   :- person(U, adult).
+role(U, helper)  :- person(U, helper).
+-- for: users.rofl adds roles (operator) and admits people the world does not
+--      list, but only rows of THIS tenant count
+role(U, R)       :- tg_user(U, _, T, R), tenant(T).
+role(me, me).
+account(U)       :- role(U, _).
+
+-- for: whoever the call names and no account knows is a stranger, and the
+--      loader turns that into code 5 before any book is opened
+stranger(U)      :- caller(U), not account(U).
+
+-- for: a book exists when a file with an account's name exists; a file for
+--      nobody is not a book and is never opened
+ledger(L, U)     :- authority(L, U), account(U).
+
+-- =========================================================================
+-- 2. READING
+-- =========================================================================
+-- for: an adult of the family reads every book of the family and the tool's
+may_read(U, L)   :- role(U, adult), ledger(L, _).
+-- for: a helper reads only their own book and the tool's — not the parents'
+may_read(U, L)   :- role(U, helper), ledger(L, U).
+may_read(U, L)   :- role(U, helper), ledger(L, me).
+-- for: the tool reads everything of the tenant; it writes only me.rofl
+may_read(me, L)  :- ledger(L, _).
+-- for: the operator reads everything
+may_read(U, L)   :- role(U, operator), ledger(L, _).
+
+-- =========================================================================
+-- 3. EDITING
+-- =========================================================================
+-- `constraint(Id, Owner, Scope)` already says whose a thing is; the right to
+-- edit is read off that field and off the role, and off nothing else.
+
+-- for: an adult may renegotiate any household constraint round the table —
+--      Регина moves the school run even though it is Вадим's
+may_edit(U, C)   :- role(U, adult), household(C).
+-- for: your own constraint is yours whatever its scope (the nanny's hours)
+may_edit(U, C)   :- constraint(C, U, _), account(U).
+-- for: `sick <person>` and `add ... <who>` touch a person: an adult may
+--      speak for anyone in the house, a helper only for themselves
+may_edit(U, P)   :- role(U, adult), person(P, adult).
+may_edit(U, P)   :- role(U, adult), person(P, child).
+may_edit(U, U)   :- role(U, helper).
+-- for: `car out` touches the car, and the car is the household's
+may_edit(U, Cr)  :- role(U, adult), car(Cr).
+-- for: an external constraint is REPORTED, never edited, by any member
+may_report(U, C) :- account(U), external(C).
+
+-- =========================================================================
+-- 4. THE ENTRIES OF A BOOK
+-- =========================================================================
+-- One edit is one id E and a handful of facts in ONE book:
+--   e_move(E, Block, Day|all, Time)          e_skip(E, Block, Day|all)
+--   e_add(E, What, Day, From, To, Who, Where) e_sick(E, Person, Day|all)
+--   e_car_out(E, Day, From, To)               e_report(E, Constraint, Day, Time)
+--   edit_at(E, Iso)  edit_via(E, telegram|cli)  for_week(E, Week)
+--   proposed(E)      confirmed(E, Iso, Via)      retracted(E, Iso, Via)
+-- Nothing is ever deleted: a retraction is one more fact in the same book,
+-- and every fact carries its moment and its channel.
+
+-- for: which book an entry sits in. The facts ABOUT an entry — its week, a
+--      confirm, a retraction — are joined on L through `entry`, so a fact
+--      about E in ANOTHER book (a stray confirm, a forged retraction) is
+--      inert; the op literal itself binds L and needs no second join.
+entry(E, L)      :- e_move[L](E, _, _, _).
+entry(E, L)      :- e_skip[L](E, _, _).
+entry(E, L)      :- e_add[L](E, _, _, _, _, _, _).
+entry(E, L)      :- e_sick[L](E, _, _).
+entry(E, L)      :- e_car_out[L](E, _, _, _).
+entry(E, L)      :- e_report[L](E, _, _, _).
+edit_by(E, U)    :- entry(E, L), ledger(L, U).
+edit_week(E, W)  :- entry(E, L), for_week[L](E, W).
+is_report(E)     :- e_report[L](E, _, _, _).
+retracted_edit(E) :- entry(E, L), retracted[L](E, _, _).
+confirmed_edit(E) :- entry(E, L), confirmed[L](E, _, _).
+proposed_edit(E)  :- entry(E, L), proposed[L](E).
+-- for: a confirm or a retract written into a book other than the edit's own
+--      is visible, so a hand-edited file does not fail silently
+stray[audit](E, L) :- confirmed[L](E, _, _), not entry(E, L).
+stray[audit](E, L) :- retracted[L](E, _, _), not entry(E, L).
+stray[audit](E, L) :- proposed[L](E), not entry(E, L).
+stray[audit](E, L) :- for_week[L](E, _), not entry(E, L).
+
+-- for: an edit IS a constraint, owned by its author: `why` names the person,
+--      `relax` can waive it, the unowned-lint holds for edits too. A helper's
+--      arrangement is external to the household exactly as `c_nanny` is.
+constraint(E, U, household) :- edit_by(E, U), role(U, adult), not is_report(E).
+constraint(E, U, external)  :- edit_by(E, U), role(U, helper), not is_report(E).
+
+-- WHAT AN EDIT TOUCHES: the constraint of the block, the person, the car.
+-- for: a block may carry two constraints (`c_school` and `c_school_fri`) and
+--      touching it touches both, so a Friday-only external end still refuses
+touches(E, C)    :- e_move[L](E, Ev, _, _), usual(C, Ev, _, _, _, _, _).
+touches(E, C)    :- e_move[L](E, Ev, _, _), usual_on(C, Ev, _, _, _).
+touches(E, C)    :- e_skip[L](E, Ev, _), usual(C, Ev, _, _, _, _, _).
+touches(E, C)    :- e_skip[L](E, Ev, _), usual_on(C, Ev, _, _, _).
+touches(E, P)    :- e_add[L](E, _, _, _, _, P, _).
+touches(E, P)    :- e_sick[L](E, P, _).
+touches(E, Cr)   :- e_car_out[L](E, _, _, _), car(Cr).
+
+-- for: THE REFUSAL. An entry touching something its author may not edit, or
+--      a report on something that is not external. Code 4 at the door; and
+--      if such a line ever reaches a file, it never acts. `no_right` is the
+--      fact in main that `acts` reads; the audit row is its projection, so
+--      main never reads the audit book.
+no_right(E)      :- touches(E, X), edit_by(E, U), not may_edit(U, X).
+no_right(E)      :- e_report[L](E, C, _, _), ledger(L, U), not may_report(U, C).
+edit_without_right[audit](E) :- no_right(E).
+
+-- for: a proposed edit waits for its author's confirm; only then it acts
+pending(E)       :- proposed_edit(E), not confirmed_edit(E).
+-- for: WHAT IS IN FORCE — written, not retracted, within its right, and not
+--      waiting. Everything the schedule derives from a book goes through this.
+acts(E)          :- edit_by(E, _), not retracted_edit(E), not no_right(E), not pending(E).
+
+-- =========================================================================
+-- 5. WHAT THE ENTRIES DO TO THE WEEK
+-- =========================================================================
+-- Into the four layers spat.rofl already has: moved/7, skipped/4, added/8,
+-- absent_on/4. The edit id is the constraint id, the edit's week is the
+-- week, so an old week stays answerable under --week-of with its own edits.
+
+-- for: move a block to a time on one day, or on every day it applies
+moved(E, Ev, W, D, D, T, T2) :- e_move[L](E, Ev, D, T), acts(E),
+                                edit_week(E, W), day(D, _),
+                                usual(_, Ev, _, _, _, F0, T0), T2 is T + T0 - F0.
+moved(E, Ev, W, D, D, T, T2) :- e_move[L](E, Ev, all, T), acts(E),
+                                edit_week(E, W), usual(_, Ev, _, _, Spec, F0, T0),
+                                applies_on(Spec, D), T2 is T + T0 - F0.
+-- for: skip a block on one day, or on every day it applies
+skipped(E, Ev, W, D) :- e_skip[L](E, Ev, D), acts(E), edit_week(E, W), day(D, _).
+skipped(E, Ev, W, D) :- e_skip[L](E, Ev, all), acts(E), edit_week(E, W),
+                        usual(_, Ev, _, _, Spec, _, _), applies_on(Spec, D).
+-- for: a one-off block, owned by its author
+added(E, What, Who, Where, W, D, F, T) :- e_add[L](E, What, D, F, T, Who, Where),
+                                          acts(E), edit_week(E, W).
+-- for: SICK — the host writes one line and the consequences are derived:
+--      every block of the person that day is off, every block that has them
+--      in it (`with`) is off, and the person is away, so they cover nobody
+sick_day(E, P, D) :- e_sick[L](E, P, D), acts(E), day(D, _).
+sick_day(E, P, D) :- e_sick[L](E, P, all), acts(E), day(D, _).
+skipped(E, Ev, W, D)   :- sick_day(E, P, D), edit_week(E, W),
+                          usual(_, Ev, P, _, Spec, _, _), applies_on(Spec, D).
+skipped(E, Ev, W, D)   :- sick_day(E, P, D), edit_week(E, W), with(Ev, P),
+                          usual(_, Ev, _, _, Spec, _, _), applies_on(Spec, D).
+absent_on(E, P, W, D)  :- sick_day(E, P, D), edit_week(E, W).
+-- for: CAR OUT — the car is nowhere from F to T, so every journey that would
+--      take it in that window has no car standing where it starts; walking
+--      is then the only mode and `too_slow` says whether it still fits.
+--      At T the car is home again.
+car_away(D, F, T) :- e_car_out[L](E, D, F, T), acts(E), edit_week(E, W), current(W).
+car_taken(Cr, D, T0, T) :- car_away(D, F, X), car_here(Cr, D, _, T0),
+                           car_leg(Cr, D, _, _, T, _), T0 <= T, F <= T, T < X.
+car_here(Cr, D, Home, X) :- car_away(D, _, X), car(Cr), base(Home).
+-- for: a REPORT changes nothing in the world; it is first-hand and waits for
+--      the operator to carry it into world.rofl
+reported(C, D, T, U) :- e_report[L](E, C, D, T), ledger(L, U), not retracted_edit(E).
+
+-- =========================================================================
+-- 6. DOES THE EDIT BREAK THE DAY — asked in a TRIAL world
+-- =========================================================================
+-- The writer loads the world with the candidate marked `trial(E)`, and with
+-- `before(D, R, K)` for every defect the same world had WITHOUT the candidate.
+-- An edit breaks a day it touches when that day has a defect it did not
+-- have before. Code 3: written as proposed, waiting for confirm.
+
+-- for: the days an entry can change. `day(D, _)` is the guard against a
+--      day the world does not know: a hand-typed `funday` touches nothing.
+touches_day(E, D) :- e_move[L](E, _, D, _), day(D, _).
+touches_day(E, D) :- e_move[L](E, Ev, all, _), usual(_, Ev, _, _, Spec, _, _), applies_on(Spec, D).
+touches_day(E, D) :- e_skip[L](E, _, D), day(D, _).
+touches_day(E, D) :- e_skip[L](E, Ev, all), usual(_, Ev, _, _, Spec, _, _), applies_on(Spec, D).
+touches_day(E, D) :- e_add[L](E, _, D, _, _, _, _), day(D, _).
+touches_day(E, D) :- sick_day(E, _, D).
+touches_day(E, D) :- e_car_out[L](E, D, _, _), day(D, _).
+
+-- for: the defects of a day, by name and by WHERE — the slot, the block,
+--      the run — so a day that already had one red block is not a licence
+--      to add a second: only a defect the day did not have before counts
+defect(D, uncovered, S)        :- uncovered(_, D, S).
+defect(D, no_time, E2)         :- negative_slack(_, D, _, E2).
+defect(D, double_booked, E1)   :- overbooked(_, D, E1, _).
+defect(D, missed_window, Ev)   :- too_late(_, Ev, D, _, _).
+defect(D, missed_window, Ev)   :- too_early(_, Ev, D, _, _).
+defect(D, no_way, T)           :- run_stuck(T), run(T, _, _, _, D, _, _).
+defect(D, cannot_get_there, F) :- too_slow(_, D, F, _).
+defect(D, no_way_on_foot, F)   :- walk_impossible(_, D, F, _).
+defect(D, on_foot_unknown, F)  :- walk_unknown(_, D, F, _).
+
+breaks_on(E, D, R) :- trial(E), touches_day(E, D), defect(D, R, K), not before(D, R, K).
+breaks(E, R)       :- breaks_on(E, _, R).
+needs_confirm(E)   :- breaks(E, _).
+
+-- =========================================================================
+-- 7. DECLARED INPUTS
+-- =========================================================================
+-- The book relations and the loader's facts, declared so a tenant with empty
+-- books loads clean and `undefined_premise[audit]` stays quiet.
+edb(tg_user).    edb(tenant).    edb(caller).    edb(trial).    edb(before).
+edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
+edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
+edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
+
+-- for: the rules above read books by a VARIABLE name — `e_move[L]` — which
+--      the flow audit sees as a crossing from a book it cannot name.
+--      `collects(main)` is the declaration that main gathers from the books
+--      on purpose; without it every load carries a leak[audit] row.
+collects(main).

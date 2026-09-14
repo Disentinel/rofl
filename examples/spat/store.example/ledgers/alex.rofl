@@ -1,0 +1,57 @@
+-- книга alex: правки, отчёты, confirm/retract. Только добавление.
+-- 2026-08-30T21:00:00+03:00 cli alex: car out mon 07:00-10:00
+e_car_out[p_alex](e_carout, mon, 420, 600).
+edit_at[p_alex](e_carout, "2026-08-30T21:00:00+03:00").
+edit_via[p_alex](e_carout, cli).
+for_week[p_alex](e_carout, w0831).
+-- 2026-08-30T21:10:00+03:00 cli alex: sick kit fri — then retracted
+e_sick[p_alex](e_kitsick, kit, fri).
+edit_at[p_alex](e_kitsick, "2026-08-30T21:10:00+03:00").
+edit_via[p_alex](e_kitsick, cli).
+for_week[p_alex](e_kitsick, w0831).
+-- 2026-08-30T22:00:00+03:00 cli alex: retracted e_kitsick
+retracted[p_alex](e_kitsick, "2026-08-30T22:00:00+03:00", cli).
+-- a confirm of somebody else's edit, in the wrong book: stray, inert
+confirmed[p_alex](e_movepick, "2026-08-30T22:30:00+03:00", cli).
+-- 2026-09-01T20:00:00+03:00 cli alex: car out wed 15:00-17:00 — a window that opens after the morning legs
+e_car_out[p_alex](e_carout3, wed, 900, 1020).
+edit_at[p_alex](e_carout3, "2026-09-01T20:00:00+03:00").
+edit_via[p_alex](e_carout3, cli).
+for_week[p_alex](e_carout3, w0831).
+-- 2026-09-04T22:00:00+03:00 cli alex: sick alex sat — a day none of his blocks stand on
+e_sick[p_alex](e_alexsick, alex, sat).
+edit_at[p_alex](e_alexsick, "2026-09-04T22:00:00+03:00").
+edit_via[p_alex](e_alexsick, cli).
+for_week[p_alex](e_alexsick, w0831).
+-- 2026-09-06T21:00:00+03:00 cli alex: car out tue 10:00-11:40 — for NEXT week, inert until roll
+e_car_out[p_alex](e_carout2, tue, 600, 700).
+edit_at[p_alex](e_carout2, "2026-09-06T21:00:00+03:00").
+edit_via[p_alex](e_carout2, cli).
+for_week[p_alex](e_carout2, w0907).
+-- two hand-typed lines naming a day the world does not know: they touch nothing
+e_skip[p_alex](e_badday, walk, funday).
+edit_at[p_alex](e_badday, "2026-08-31T23:00:00+03:00").
+edit_via[p_alex](e_badday, cli).
+for_week[p_alex](e_badday, w0831).
+e_sick[p_alex](e_badsick, nico, funday).
+edit_at[p_alex](e_badsick, "2026-08-31T23:01:00+03:00").
+edit_via[p_alex](e_badsick, cli).
+for_week[p_alex](e_badsick, w0831).
+e_move[p_alex](e_badmove, walk, funday, 1000).
+edit_at[p_alex](e_badmove, "2026-08-31T23:02:00+03:00").
+edit_via[p_alex](e_badmove, cli).
+for_week[p_alex](e_badmove, w0831).
+e_add[p_alex](e_badadd, errand, funday, 600, 660, alex, home).
+edit_at[p_alex](e_badadd, "2026-08-31T23:03:00+03:00").
+edit_via[p_alex](e_badadd, cli).
+for_week[p_alex](e_badadd, w0831).
+e_car_out[p_alex](e_badcar, funday, 600, 700).
+edit_at[p_alex](e_badcar, "2026-08-31T23:04:00+03:00").
+edit_via[p_alex](e_badcar, cli).
+for_week[p_alex](e_badcar, w0831).
+-- three lines ABOUT robin's edits, hand-typed into alex's book: each is joined
+-- to its entry through the book and so is inert here — a week, a retraction
+-- and a proposal can only be stated in the book the edit lives in
+for_week[p_alex](e_skipwalk, w0907).
+retracted[p_alex](e_skipwalk, "2026-08-31T23:05:00+03:00", cli).
+proposed[p_alex](e_skipwalk).
