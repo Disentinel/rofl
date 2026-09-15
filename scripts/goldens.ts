@@ -29,6 +29,7 @@
 // the state a world evaluates to.
 
 import { Rofl } from '../src/api.ts';
+import { parseProgram } from '../src/parser.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -91,11 +92,35 @@ function ignored(files: string[]): Set<string> {
   return new Set(r.stdout.split('\0').filter(Boolean).map((p) => path.join(ROOT, p)));
 }
 
-/** Every world buildable from `.rofl` text alone. A demo whose world is
+/** A PRIVATE BOOK'S DUMP SAYS SO IN ITS FIRST CLAUSE — `dump_of(Tenant,
+ *  Book, private).`, written by `spat volume dump` (examples/spat/volume.ts)
+ *  the way boot.rofl claims the kernel ring on line one — and the walk
+ *  refuses to load one into a public world, by name and with the reason.
+ *  Measured 2026-09-15 without this: a dump planted as examples/spat/
+ *  leak-dump.rofl moved the census (`awake 2->3, may_edit 32->34`) and
+ *  nothing said why; a bless would have taken it. The claim is READ BY
+ *  PARSING, not by matching text: the first clause of the file, whatever
+ *  the comments above it say. Memoised by path — the walk runs four times
+ *  a check, and parsing everything under examples/ is 91 ms once. */
+const marked = new Map<string, string | null>();
+function dumpMarker(file: string): string | null {
+  let m = marked.get(file);
+  if (m === undefined) {
+    let first;
+    try { first = parseProgram(fs.readFileSync(file, 'utf8'))[0]?.head; } catch { first = undefined; }
+    m = first?.rel === 'dump_of' ? `dump_of(${first.args.map((a) => (a.k === 'a' ? a.name : '?')).join(', ')})` : null;
+    marked.set(file, m);
+  }
+  return m;
+}
+
+/** Every world buildable from `.rofl` text alone, and the files the walk
+ *  REFUSED with the reason — a private dump in a public tree is not a world,
+ *  it is a finding, and `npm test` prints it as one. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
  *  files, not from a host program. */
-export function worlds(): World[] {
-  const out: World[] = [];
+export function walk(): { worlds: World[]; refused: string[] } {
+  const out: World[] = []; const refused: string[] = [];
   const ex = path.join(ROOT, 'examples');
   const rofl = (dir: string): string[] =>
     fs.readdirSync(dir).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(dir, x));
@@ -111,7 +136,11 @@ export function worlds(): World[] {
   }
   const skip = ignored(found.flatMap(([, files]) => files));
   for (const [name, all] of found) {
-    const files = all.filter((f) => !skip.has(f));
+    const files = all.filter((f) => !skip.has(f)).filter((f) => {
+      const m = dumpMarker(f);
+      if (m) refused.push(`${name}: private dump in public tree: ${path.relative(ROOT, f)} (${m})`);
+      return !m;
+    });
     if (files.length > 0) out.push({ name, files });
   }
   const rl = path.join(ROOT, 'rules');
@@ -127,7 +156,28 @@ export function worlds(): World[] {
   };
   pack(rl, '');
   out.push({ name: 'boot_only', files: [] });
-  return [...out, ...declared()];
+  return { worlds: [...out, ...declared()], refused };
+}
+export const worlds = (): World[] => walk().worlds;
+
+/** THE DUMP GATE PLANTS ITS OWN DEFECT: a dump of a private book under a
+ *  name git would take, beside the shipped example. The walk must refuse it
+ *  by name, the `spat` world must be built without it, and the shipped week
+ *  must still be in — the control that the walk looked at the directory. */
+export function plantedDumpRefused(): string | null {
+  const planted = path.join(ROOT, 'examples/spat/zzz-leak-dump.rofl');
+  const mine = !fs.existsSync(planted);
+  if (mine) fs.writeFileSync(planted, '-- SPAT VOLUME DUMP tenant=zzz book=world private\ndump_of(zzz, world, private).\nperson(zed, child).\nru_name(zed, "Зед").\n');
+  try {
+    const w = walk();
+    const names = w.worlds.find((x) => x.name === 'spat')?.files.map((f) => path.basename(f)) ?? [];
+    if (!names.includes('week.example.rofl')) return 'spat: the walk did not see week.example.rofl — its silence about the planted dump means nothing';
+    if (names.includes(path.basename(planted))) return `spat: the walk loaded ${path.basename(planted)} — a private book's dump entered the public world`;
+    if (!w.refused.some((r) => r.includes(path.basename(planted)) && r.includes('private dump in public tree'))) return `spat: the walk dropped ${path.basename(planted)} without saying why (${w.refused.join('; ') || 'no refusal recorded'})`;
+    return null;
+  } finally {
+    if (mine) fs.rmSync(planted, { force: true });
+  }
 }
 
 /** The planted week: the name is under `.gitignore`'s `examples/spat/week-*.rofl`,
@@ -460,7 +510,7 @@ function parseHosts(): Map<string, { hash: string; exit: number; lines: number }
 
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
-  const ws = worlds();
+  const { worlds: ws, refused } = walk();
   if (process.argv.includes('--bless')) {
     // BLESSING SAYS WHAT IT CHANGES. The one real hazard of a committed golden
     // is blessing over a defect, and it was paid for within an hour of this
@@ -479,6 +529,7 @@ if (isMain) {
       : [...hostsBefore];
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
     fs.writeFileSync(GOLDEN, render(rows));
+    for (const r of refused) console.log(`  REFUSED ${r}`);
     for (const [w, a] of rows) if (a.dropped.length > 0)
       console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
     let moved = 0;
@@ -561,10 +612,13 @@ if (isMain) {
   // the second is the control that the walk looked at the directory at all.
   // Measured 2026-09-15 without the `ignored` filter: hash 19c797a6489397fd
   // -> b63f5a51f85b9441, facts 16948 -> 18362, needs_cover 429 -> 744.
+  for (const r of refused) fail.push(r);
   const planted = walkLoadedIgnored();
   if (planted) fail.push(planted);
   const volume = plantedVolumeIgnored();
   if (volume) fail.push(volume);
+  const dump = plantedDumpRefused();
+  if (dump) fail.push(dump);
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);

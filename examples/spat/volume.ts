@@ -81,7 +81,11 @@ const writable = (t: Term): boolean =>
 interface Row { seq: number; pred: string; args: string; at: string; via: string; edit: string | null; }
 const rowsOf = (v: Volume, ledger: string): Row[] =>
   v.db.prepare('SELECT seq, pred, args, at, via, edit FROM facts WHERE ledger = ? ORDER BY seq').all(ledger) as unknown as Row[];
+/** A row's relation and terms, or the refusal that names the row: the
+ *  relation is an atom (a tag smuggled into `pred` would render as a line
+ *  no parser takes) and every term is one the parser would read back. */
 const termsOf = (v: Volume, ledger: string, r: Row): Term[] => {
+  if (!ATOM.test(r.pred)) throw new SpatError(6, `${v.file}/${ledger} seq ${r.seq}: pred не атом: ${r.pred}`);
   try {
     const ts = (JSON.parse(r.args) as unknown[]).map(termFromJson);
     if (ts.every(writable)) return ts;
@@ -107,6 +111,7 @@ export function write(v: Volume, ledger: string, clauses: Clause[], trail: Trail
   for (const c of clauses) {
     const p = c.head.persp;
     if (c.body.length > 0 || c.head.temporal !== 'now') throw new SpatError(6, `${ledger}: правило в книге; книга держит только факты`);
+    if (c.head.rel === MARKER) throw new SpatError(6, `${ledger}: ${MARKER} — метка дампа, не факт книги`);
     if (p.k !== 'a' || p.name !== persp) throw new SpatError(6, `${ledger}: факт помечен [${p.k === 'a' ? p.name : '?'}], а книга — [${persp}]`);
     if (!ATOM.test(c.head.rel) || !c.head.args.every(writable)) throw new SpatError(6, `${ledger}: ${c.head.rel} — не замкнутый факт`);
   }
@@ -125,16 +130,32 @@ export function write(v: Volume, ledger: string, clauses: Clause[], trail: Trail
   return clauses.length;
 }
 
-/** `volume load`: a hand-written book through the text wall (bookClauses —
- *  the tag is the file name) into ITS OWN ledger, never the caller's. A line
- *  naming another book, or a rule, refuses the whole file: not one row. */
+/** A DUMP SAYS WHAT IT IS, IN ITS FIRST CLAUSE: `dump_of(Tenant, Book,
+ *  private).` — the way boot.rofl claims the kernel ring on line one. A
+ *  public loader (scripts/goldens.ts) refuses a file that opens so; this
+ *  reader strips it, and refuses a dump of another book than the one it is
+ *  being read into. */
+export const MARKER = 'dump_of';
+export function fromText(file: string, ledger: string): Clause[] {
+  if (!fs.existsSync(file)) throw new SpatError(2, `${file}: нет такого файла`);
+  const user = ledger.startsWith('p_') ? ledger.slice(2) : ledger;
+  const cs = bookClauses({ book: perspOf(ledger), user, where: file }, fs.readFileSync(file, 'utf8'));
+  const m = cs[0]?.head;
+  if (m?.rel !== MARKER) return cs;
+  const book = m.args[1];
+  if (book?.k !== 'a' || book.name !== ledger) throw new SpatError(6, `${file}: дамп книги ${book?.k === 'a' ? book.name : '?'}, а грузится в ${ledger}`);
+  return cs.slice(1);
+}
+
+/** `volume load`: a hand-written book (or a dump) through the text wall —
+ *  the tag is the file name — into ITS OWN ledger, never the caller's. A
+ *  line naming another book, or a rule, refuses the whole file: not one row. */
 export function load(v: Volume, file: string, trail: Trail, ledger?: string): { ledger: string; rows: number } {
   const name = path.basename(file).replace(/\.rofl$/, '');
   const led = ledger ?? (name === 'world' || name === 'users' ? name : `p_${name}`);
   if (!ATOM.test(led)) throw new SpatError(2, `${file}: имя книги не атом: ${led}`);
-  if (!fs.existsSync(file)) throw new SpatError(2, `${file}: нет такого файла`);
+  const cs = fromText(file, led);
   const user = led.startsWith('p_') ? led.slice(2) : led;
-  const cs = bookClauses({ book: perspOf(led), user, where: file }, fs.readFileSync(file, 'utf8'));
   const rows = write(v, led, cs, trail);
   if (led.startsWith('p_')) addBook(v, led, user);
   return { ledger: led, rows };
@@ -149,7 +170,8 @@ const show = (t: Term): string =>
  *  same bytes, and loading the dump is the same book again. */
 export function render(v: Volume, ledger: string): string {
   const user = books(v).find((b) => b.book === ledger)?.user ?? ledger;
-  const out = [`-- ${v.tenant}.sqlite/${ledger}: книга ${user}, dump; load этого файла — та же книга`];
+  const out = [`-- SPAT VOLUME DUMP tenant=${v.tenant} book=${ledger} private — книга ${user}; load этого файла в ${ledger} — та же книга;`,
+    '-- в публичном дереве этому файлу не место: эталон отказывает по первой клаузе', `${MARKER}(${v.tenant}, ${ledger}, private).`];
   let last = '';
   for (const r of rowsOf(v, ledger)) {
     const key = `-- ${r.at} ${r.via} ${user}: ${r.edit ?? ''}`;

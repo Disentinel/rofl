@@ -8,10 +8,9 @@ import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
 import { dayOrder, hhmm, parseTime, ru, sayConstraint, table } from './spat.ts';
-import { SpatError, bookClauses, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
-import { addBook, openVolume, write } from './volume.ts';
+import { SpatError, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
+import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
-import * as fs from 'node:fs';
 import { renderDay, renderIcs } from './tomorrow.ts';
 
 const GRAMMAR = [
@@ -193,10 +192,9 @@ export function roll(s: Store, week: string): number {
  *  line IS the admission, and it is checked before the volume exists. */
 export function init(e0: Env, tenant: string, weekFile: string, usersFile?: string): string[] {
   if (!usersFile) throw new SpatError(2, 'init <семья> --world <файл> --users <файл>: без книги users некому быть оператором');
-  const text = (f: string): string => { if (!fs.existsSync(f)) throw new SpatError(2, `${f}: нет такого файла`); return fs.readFileSync(f, 'utf8'); };
-  const users = bookClauses({ book: 'main', user: 'users', where: usersFile }, text(usersFile));
+  const users = fromText(usersFile, 'users');
   const e = operator(e0, tenant, users);
-  const world = bookClauses({ book: 'main', user: 'world', where: weekFile }, text(weekFile));
+  const world = fromText(weekFile, 'world');
   const w = new Rofl();
   must(w.load(BOOT), 'boot.rofl'); must(w.assertClauses(world), weekFile);
   const v = openVolume(e.root, tenant, true);

@@ -55,6 +55,13 @@ public_args($fact(R, P, L), L) :- from_public($fact(R, P, L), _).
 public_args(F, T) :- public_args(F, $cons(_, T)).
 names(F, A)       :- public_args(F, $cons(A, _)).
 private_in_public[audit](A) :- names(_, A), private_atom(A).
+-- for: THE OTHER DOOR — a dump of a private book (`spat volume dump`) opens
+--      with `dump_of(Tenant, Book, private)` as its first clause, so a world
+--      that holds the marker has swallowed a private book whole, and every
+--      person it names is in public. The public loader refuses such a file
+--      before it is loaded (scripts/goldens.ts); this is the row for a world
+--      that got one anyway.
+private_in_public[audit](A) :- dump_of(_, _, private), private_atom(A).
 
 -- for: both are claims that the number must be none — a world raising one
 --      fails whatever the golden says (scripts/goldens.ts)
@@ -64,3 +71,4 @@ alarm(private_in_public).
 -- for: `book_source` is the loader's, `volume` and `book` are declared here;
 --      a world with no loader (the rules alone) must still load clean
 edb(book_source).
+edb(dump_of).

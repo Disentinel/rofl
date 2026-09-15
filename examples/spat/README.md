@@ -144,6 +144,13 @@ spat roll w0907 · init fam2 --world week.rofl --users users.rofl          opera
 spat volume load fam2 robin.rofl · volume dump fam2 [p_robin]             operator only: a book in, a book out, as text
 ```
 
+A host that runs `spat` sets `NODE_OPTIONS=--disable-warning=ExperimentalWarning`:
+`node:sqlite` on Node 22.x prints an experimental-feature warning to stderr on
+first use, with the process id in it. A dump of a private book opens with
+`dump_of(<tenant>, <book>, private).` and `npm test` refuses one found under
+`examples/` by name — the tree ships the rules and a made-up household, never
+a real one.
+
 Everything above — `why`, `whynot`, `relax`, `plan`, `fragile` — works over
 the same store when `SPAT_ROOT` is set. `examples/spat/demo.ts` is the
 contract exercised end to end; `store.example/` is the household it runs on.

@@ -43,7 +43,11 @@ chats or message files — that is the bot's shim.
    `termToJson`), stamped with the perspective the `ledger` column names.
    No text is parsed, so no row can say which book it is in: a row put into
    the base by hand under `ledger = 'p_alex'` IS in alex's book, whoever put
-   it there, and the readers alex's book is closed to never see it. Text is
+   it there, and the readers alex's book is closed to never see it; a row
+   whose `pred` is not an atom (`e_skip[p_alex]`, a tag smuggled into the
+   column) or whose `args` hold a term the parser would not read back
+   refuses the whole book, code 6 with the file and the `seq`, at the
+   loader and at `dump` alike. Text is
    parsed only where there is text — the program's own files, and a
    hand-written book on its way in through `spat volume load` — and there
    the old wall stands unchanged: the tag is the file name, a line that
@@ -259,12 +263,30 @@ raising one fails `npm test` whatever the golden says:
     spat volume load <tenant> <dir>                            the legacy layout in one command: <dir>/ledgers/*.rofl and
                                                                <dir>/me.rofl, each into its own book; world and users are init's
     spat volume dump <tenant> [<book>]                         a book (or every book) out as .rofl text, deterministic: seq order,
-                                                               no clock, no path; the same book dumps to the same bytes
+                                                               no clock, no path; the same book dumps to the same bytes.
+                                                               ITS FIRST CLAUSE SAYS WHAT IT IS: `dump_of(<tenant>, <book>, private).`
 
 The round trip is a test, not a promise: `demo.ts` dumps every book of the
 fixture, loads the dumps into a second volume and compares the books as
 sets of terms — strings stay strings, numbers stay numbers, nothing
-crosses a book.
+crosses a book. `load` strips the marker (it is a claim about the file,
+not a fact of the book; `write` refuses it as one) and refuses a dump of
+another book than the one it is read into.
+
+**A dump in the public tree is refused, not blessed.** The marker is the
+file's first clause — the way boot.rofl claims the kernel ring on line
+one — and `scripts/goldens.ts` reads it by PARSING the file, never by
+matching its text. A `.rofl` under `examples/` that opens with `dump_of`
+is dropped from its world and `npm test` prints `FAIL spat: private dump
+in public tree: examples/spat/<file> (dump_of(...))`; `bless` prints the
+same as `REFUSED` and writes the golden without it. Measured 2026-09-15
+before this: a dump planted as `examples/spat/leak-dump.rofl` moved the
+census (`awake 2->3, may_edit 32->34`) with nothing saying why, and a
+bless would have taken it. The gate plants its own dump on every run and
+requires the refusal by name, with `week.example.rofl` still loaded as the
+control. And the rule side has the same door: `private_in_public[audit](A)
+:- dump_of(_, _, private), private_atom(A)` — a world that swallowed a
+dump names every person of the household (demo group 11: eight).
 
 **Migration of the stand.** The text layout (`users.rofl`,
 `<tenant>/{world.rofl, ledgers/*.rofl, me.rofl}`) is not read by the tool
@@ -287,15 +309,15 @@ The fixture `store.example/` stays public text (a made-up household) and
 is the SOURCE the demo imports; a real household is a `.sqlite` under
 `$SPAT_ROOT` and nothing in the tree reads one.
 
-**`node:sqlite`.** Built into Node ≥ 22.13 without a flag; this laptop is
-22.22.0 with SQLite 3.50.4. On 22.x the module still emits
-`ExperimentalWarning: SQLite is an experimental feature` to stderr on first
-use, with the process id in the line — `demo.ts` spawns the CLI with
-`--disable-warning=ExperimentalWarning` so its output hashes, and the
-stand's shim should pass the same flag (or `NODE_OPTIONS`) so the warning
-does not reach an outbox. The `node:22-slim` image must be ≥ 22.13; the
-minor it resolves to today is not something this tree can measure —
-check `node --version` in the image before the rollout.
+**`node:sqlite` — a requirement on the host.** Built into Node ≥ 22.13
+without a flag; this laptop is 22.22.0 with SQLite 3.50.4, and
+`node:22-slim` resolved to 22.23.2 on 2026-09-15 (Docker Hub, built
+2026-08-25). On every 22.x the module emits `ExperimentalWarning: SQLite is
+an experimental feature … (node:<pid>)` to STDERR on first use — stdout is
+clean (measured) — with the process id in the line. THE HOST THAT RUNS
+`spat` MUST SET `NODE_OPTIONS=--disable-warning=ExperimentalWarning` (or
+pass the flag): `demo.ts` does so on every spawn so its output hashes, and
+the stand's shim must too, or the line rides into whatever reads stderr.
 
 ## What is deliberately not decided
 
@@ -358,18 +380,20 @@ check `node --version` in the image before the rollout.
   — a rule with no binder is not refused, it is unfolded on demand and
   derives nothing — and those 14 are caught by the demo's own check that
   no rule of the store is demand-backed). Measured 2026-09-15 over
-  `volumes.rofl` the same way, 18 drops: 18 killed — 9 by the file being
-  refused (a body dropped to nothing is a fact with a variable), 4 by an
+  `volumes.rofl` the same way, 20 drops: 20 killed — 9 by the file being
+  refused (a body dropped to nothing is a fact with a variable), 5 by an
   `alarm` (`misplaced` 8 rows, `private_in_public` 10), 3 by the demo's
-  signed check, and the two positive premises of `misplaced` — a rule left
-  unsafe, deriving nothing — by the reflection census alone in `npm test`
-  and by the demo's demand-backed check (measured: `misplaced` is the one
-  unsafe rule the check names).
-- `npm run test:hosts`: `examples/spat/demo.ts`, 100 scenarios in eleven
+  signed check, and 3 — the two positive premises of `misplaced` and
+  `private_atom` under the dump rule — rules left unsafe, deriving nothing,
+  by the reflection census alone in `npm test` and by the demo's
+  demand-backed check (measured: `misplaced` is the one unsafe rule the
+  check names when its premise is dropped).
+- `npm run test:hosts`: `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under
   another ledger (the loader puts it in that book; the nanny does not see
-  it), the rights (including `volume` verbs refused to a non-operator),
+  it), a tag smuggled into `pred` (the loader and `dump` refuse the book
+  by `seq`), the rights (including `volume` verbs refused to a non-operator),
   the stranger (by name: `users` and `world` opened; by sender id: `users`;
   both sources or neither: 5), breaks/confirm/retract with the base's row
   count as the proof that the book only grew, `tomorrow` under `SPAT_TZ`
@@ -379,7 +403,10 @@ check `node --version` in the image before the rollout.
   across the week boundary, the volume itself (UPDATE and DELETE refused
   by the trigger with INSERT as the positive control, a rule in an
   imported file refused whole, dump → load → the same sets of terms in
-  every book, the signed program clean and red on a planted `ru_name`),
-  the materialisation check and the reasons table. Exit 1 on any FAIL, so
+  every book, the marker as the dump's first clause and stripped on the
+  way back, a dump of one book refused into another, the signed program
+  clean and red on a planted `ru_name`, a swallowed dump naming all eight
+  people), the one-command migration of the legacy directory, the
+  materialisation check and the reasons table. Exit 1 on any FAIL, so
   the golden's exit code is part of the answer; 66 s on a quiet laptop
   (the host's limit is 120 s per demo).

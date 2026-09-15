@@ -389,13 +389,34 @@ async function volume(): Promise<Group> {
   g.check('dump детерминирован: два рендера одной книги байт-в-байт', render(v, 'p_alex') === render(v, 'p_alex') && render(v2, 'p_alex').split('\n').filter((x) => !x.startsWith('--')).join('\n') === render(v, 'p_alex').split('\n').filter((x) => !x.startsWith('--')).join('\n'));
   const strings = readBook(v2, 'world').filter((c) => c.head.rel === 'week_starts').flatMap((c) => c.head.args.filter((t) => t.k === 's')).length;
   g.check('строки мира остались строками после круга (week_starts: 2 даты)', strings === 2, String(strings));
+  // THE DUMP SAYS WHAT IT IS: its first clause is the marker, a load into
+  // another book is refused, and a load into its own strips the marker
+  const first = (t: string): string => t.split('\n').find((l) => l !== '' && !l.startsWith('--')) ?? '';
+  g.check('первая клауза дампа — dump_of(example, p_alex, private), в книге после круга её нет', first(render(v, 'p_alex')) === 'dump_of(example, p_alex, private).' && !factSet(v2, 'p_alex').has('dump_of(example,p_alex,private)'), first(render(v, 'p_alex')));
+  const wrong = codeOf(() => load(v2, path.join(root2, 'world.rofl'), TRAIL, 'p_robin'));
+  g.check('дамп world в книгу p_robin → код 6 по метке, ни одной строки', wrong.startsWith('code 6') && /дамп книги world/.test(wrong) && factSet(v2, 'p_robin').size === factSet(v, 'p_robin').size, wrong);
   v.db.close(); v2.db.close();
+  // PLANTED (P2-A): a tag smuggled into `pred` by hand — the loader and the dump refuse the book, naming the row
+  const root3 = fresh();
+  const v3 = openVolume(root3, 'example');
+  v3.db.prepare("INSERT INTO facts(ledger, pred, args, at, via, edit) VALUES ('p_robin', 'e_skip[p_alex]', '[{\"k\":\"a\",\"name\":\"e_forge1\"},{\"k\":\"a\",\"name\":\"walk\"},{\"k\":\"a\",\"name\":\"tue\"}]', 'x', 'cli', 'planted by hand')").run();
+  const seq = (v3.db.prepare('SELECT max(seq) s FROM facts').get() as { s: number }).s;
+  v3.db.close();
+  const pr = await spat(root3, 'robin', ['whoami']);
+  g.code('строка pred=e_skip[p_alex] в p_robin, вставленная руками: whoami', pr, 6);
+  g.check('код 6 называет книгу, seq и pred', new RegExp(`example\\.sqlite/p_robin seq ${seq}: pred не атом: e_skip\\[p_alex\\]`).test(pr.out), pr.out);
+  g.code('volume dump той же книги', await spat(root3, 'alex', ['volume', 'dump', 'example', 'p_robin']), 6);
   // PLANTED (4): a person's Russian name in a PUBLIC book — the audit names her
   const clean = signed('');
   const dirty = signed('ru_name(robin, "Робин").');
   const rows = (r: Rofl): string => r.query('private_in_public[audit](A)').rows.map((x) => String(x.bindings.A)).sort().join(',');
   g.check('чистая программа: private_in_public пуст, from_public непуст (подпись `rules` работает)', rows(clean) === '' && clean.query('from_public(F, B)').rows.length > 50, `${rows(clean)} / ${clean.query('from_public(F, B)').rows.length}`);
   g.check('ru_name(robin, …) в публичной книге → private_in_public[audit](robin)', rows(dirty) === 'robin', rows(dirty));
+  // ...and the other door: a dump loaded into a public world unsigned, as a walk would — the marker is the second source
+  const swallowed = new Rofl();
+  swallowed.load(BOOT); swallowed.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}`); swallowed.assert(fs.readFileSync(path.join(root2, 'world.rofl'), 'utf8')); swallowed.evaluate();
+  const people = swallowed.query('person(P, K)').rows.map((x) => String(x.bindings.P)).sort().join(',');
+  g.check(`дамп мира в публичном мире (без подписи) → private_in_public называет каждого из дома: ${people}`, rows(swallowed) === people && people.split(',').length === 8, rows(swallowed));
   const live = withEnv({ SPAT_ROOT: root, SPAT_FROM_ID: FROM.robin }, () => openStore(env()).r);
   g.check('живой том: аудиты молчат, объявления есть (book 9, book_source 8), программа подписана',
     live.query('private_in_public[audit](A)').rows.length === 0 && live.query('misplaced[audit](B, W)').rows.length === 0
