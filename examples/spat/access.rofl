@@ -72,7 +72,7 @@ may_read(U, L)   :- role(U, operator), ledger(L, _).
 -- edit is read off that field and off the role, and off nothing else.
 
 -- for: an adult may renegotiate any household constraint round the table —
---      Регина moves the school run even though it is Вадим's
+--      robin moves the school run even though it is alex's
 may_edit(U, C)   :- role(U, adult), household(C).
 -- for: your own constraint is yours whatever its scope (the nanny's hours)
 may_edit(U, C)   :- constraint(C, U, _), account(U).

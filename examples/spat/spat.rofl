@@ -276,7 +276,7 @@ needs_cover(Ch, D, S) :- awake_at(Ch, D, S), not at_sup(Ch, D, S), not minded(Ch
 -- AND NOT ALONE WHEN ASLEEP EITHER. `awake` says when a child needs somebody
 -- to be WITH them; it does not say when the house may be empty, and those are
 -- different sentences. Measured: with both adults out from 21:00 and both
--- children at home, this model reported ZERO holes, because Рома's awake
+-- children at home, this model reported ZERO holes, because nico's awake
 -- window closes at 20:00 - while the same departure at 15:00 reported two.
 -- The probe could tell the difference, so the zero was real.
 --
@@ -326,8 +326,8 @@ crowded(P, D, E1, E2) :-
 adjacent(P, D, E1, E2) :- pair_next(P, D, E1, E2, _, _), not crowded(P, D, E1, E2).
 
 -- A TIME IS NOT ALWAYS A TIME. Some blocks must begin exactly when they say;
--- others have a WINDOW - "Рому можно сдать с 7:45 до 8:15" - and some have
--- only a far edge - "Родион должен быть у остановки не позднее 7:45". Inside a
+-- others have a WINDOW - "Нико можно сдать с 7:45 до 8:15" - and some have
+-- only a far edge - "Кит должен быть у остановки не позднее 7:45". Inside a
 -- window there is room to manoeuvre, and a model that reads the observed
 -- arrival as the requirement CANNOT SEE THAT ROOM. It reported zero slack on a
 -- morning that had twenty minutes in hand, because the drop-off was recorded
@@ -612,7 +612,7 @@ work_slot(P, D, S) :- deep(slots), span(_, Ev, P, _, D, F, T), kind(Ev, work),
 eff_work(P, D, S)  :- work_slot(P, D, S), not sole(P, D, S).
 diluted(P, D, S)   :- work_slot(P, D, S), sole(P, D, S).
 -- and the weaker reading, which is the one the original schedule annotates
--- ("с Ромой рядом — реально часа 3-4"): work done while a child is in the
+-- ("с Нико рядом — реально часа 3-4"): work done while a child is in the
 -- house needing somebody, whether or not the other adult is also around.
 shared_work(P, D, S) :- work_slot(P, D, S), on_duty(P, D, S).
 
@@ -747,8 +747,8 @@ leg(P, D, From, To, Dep, Arr, Need) :-
 -- end, never whether the car was where the driver started.
 --
 -- Found by looking at a printed table and asking "а машина к ней
--- телепортируется?" - one plan had Регина drive to the stop at 07:30 and
--- Вадим set off from home at 07:40 in the same car. Time overlap said fine.
+-- телепортируется?" - one plan had robin drive to the stop at 07:30 and
+-- alex set off from home at 07:40 in the same car. Time overlap said fine.
 --
 -- HOW FAR THIS REACHES: one car, exactly. With two, which car a journey takes
 -- is an assignment, and an assignment is a search - which belongs in the host
@@ -892,7 +892,7 @@ walks_alone(Ch, D) :- walks_alone(C, Ch), not waived(C), day(D, _).
 -- =========================================================================
 -- WHEN THE CAR IS NOT THERE: THE WALK
 -- =========================================================================
--- "У нас нет опциональности. Если машина не заблокирована - Регина едет, если
+-- "У нас нет опциональности. Если машина не заблокирована - Робин едет, если
 -- заблокирована - идёт пешком. Пешком на дорогу уходит больше времени."
 --
 -- A journey that starts where the car is NOT is exactly the blocked case, so

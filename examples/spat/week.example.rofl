@@ -169,7 +169,7 @@ awake(c_sleep, kit, alldays, 420, 1260).   -- 07:00-21:00
 --            `external` if it belongs to someone outside and changes without
 --            warning.
 --
--- This is where "садик Ромы до 13:30 — это решение или ограничение?" gets its
+-- This is where "садик Нико до 13:30 — это решение или ограничение?" gets its
 -- answer, and the answer is a field, not an opinion. The scope is not
 -- decoration: external constraints are where perturbation comes from, and
 -- when the tool tells you what would have to give it tells you whose it is
@@ -241,7 +241,7 @@ usual_on(c_school_fri, school_kit, fri, 480, 800).                -- bus at 13:2
 -- --- Алекс's working day ---------------------------------------------------
 -- Acme's Thursday 18:00-20:30 is from the source. The two home blocks are
 -- INFERRED from the badge «работа ~6:00» and the annotation on the morning
--- block («с Ромой рядом — реально часа 3-4»), which `spat hours` reproduces.
+-- block («с Нико рядом — реально часа 3-4»), which `spat hours` reproduces.
 usual(c_work, work_am, alex, home,   weekdays, 540, 780).           -- 09:00-13:00
 usual(c_work, work_pm, alex, home,   weekdays, 840, 960).           -- 14:00-16:00
 usual(c_acme, acme, alex, office, thu,   1080, 1230).         -- 18:00-20:30
