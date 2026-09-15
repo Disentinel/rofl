@@ -1018,7 +1018,7 @@ key_of(day, 1).            key_of(in_group, 2).       key_of(place, 1).        k
 key_of(supervised, 1).     key_of(travel, 2).         key_of(on_foot, 2).
 key_of(person, 1).         key_of(driver, 1).         key_of(car, 1).          key_of(walks_alone, 1).
 key_of(constraint, 1).     key_of(give, 1).           key_of(kind, 1).         key_of(with, 2).
-key_of(week, 1).           key_of(current, 0).
+key_of(current, 0).
 key_of(present_window, 1). key_of(absent, 1).         key_of(awake, 1).
 key_of(lift, 1).           key_of(day_wake, 0).
 key_of(work_needed, 1).
@@ -1035,6 +1035,10 @@ key_of(no_walk, 2).        key_of(ride, 4).           key_of(can_wait, 1).     k
 not_extended(usual, books).    not_extended(usual_on, books).  not_extended(moved, books).
 not_extended(skipped, books).  not_extended(added, books).     not_extended(absent_on, books).
 not_extended(want, query).     not_extended(asking, query).    not_extended(waived, query).
+-- `weeks`: a week is the operator's — it comes with its Monday (`week_starts`, a
+-- book relation of access.rofl) and a `roll`; a week the book named alone
+-- would be a week with no date under it
+not_extended(week, weeks).
 -- extends_unless(R, I, V): argument I may not be V. An adult or a helper is
 -- an ACCOUNT — who may read which book is decided over world + users before
 -- any book is opened (STORE.md, 2), and a guest made `adult` by one line of

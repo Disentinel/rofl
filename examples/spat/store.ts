@@ -217,11 +217,14 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   return { env: e, vol, books, open, maybes, week, opened, r };
 }
 
-/** Base facts of one relation off the store's keys — no evaluation, so the week can be swapped before the first. */
-const baseArgs = (r: Rofl, rel: string): string[][] => r.factKeys(rel).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
+/** Base facts of one relation IN ONE BOOK off the store's keys — no evaluation, so the week can be swapped before the
+ *  first. The book is named because the keys carry every perspective and sort `[hh]` before `[main]`: measured on 7c20d85,
+ *  `rule add 'current(w0907).'` was «НЕ ДЕЙСТВУЕТ» by the rules and the week in force for everyone by this line. */
+const baseArgs = (r: Rofl, rel: string, book = 'main'): string[][] =>
+  r.factKeys(rel).filter((k) => k.startsWith(`${rel}[${book}](`)).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
 
-/** The operator's latest `rolled(W, Iso)` in the tool's book: the week the store is read under unless --week-of says. */
-const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
+/** The operator's latest `rolled(W, Iso)` in the tool's book — that book and no other: the week the store is read under unless --week-of says. */
+const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled', 'p_me').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
 
 export function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
   if (!res.ok) throw new SpatError(6, `${what}: ${res.diagnostics.join('; ')}`);

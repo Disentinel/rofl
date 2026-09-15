@@ -65,7 +65,8 @@ export function parsePlace(text: string): Place {
 export const bookPlaces = (s: Store): { id: string; atom: string; name: string; by: string; min?: number }[] => {
   const home = table(s.r, 'base', 'B')[0]?.B;
   const names = new Map(rows(s.r, 'ru_name[hh](A, N)').map((x) => [x.A, String(x.N).replace(/^"|"$/g, '')]));
-  const mins = new Map(rows(s.r, 'travel[hh](H, A, M)').filter((x) => x.H === home).map((x) => [x.A, Number(x.M)]));
+  // the minutes as the world holds them (main, the bridge applied) — not the book's line, which may be an override
+  const mins = new Map(table(s.r, 'travel', 'A, B, M').filter((x) => x.A === home).map((x) => [x.B, Number(x.M)]));
   const by = new Map(rows(s.r, 'rule_by[hh](R, U)').map((x) => [x.R, x.U]));
   const idOf = new Map(readClauses(s.vol, HH).filter((c) => c.clause.body.length === 0 && c.clause.head.rel === 'place').map((c) => [c.clause.head.args[0]?.k === 'a' ? c.clause.head.args[0].name : '', c.id]));
   return rows(s.r, 'place[hh](A)').map((x) => ({ id: idOf.get(x.A) ?? '?', atom: x.A, name: names.get(x.A) ?? x.A, by: by.get(idOf.get(x.A) ?? '') ?? '?', min: mins.get(x.A) }));

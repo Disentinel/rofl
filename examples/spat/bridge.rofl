@@ -59,8 +59,7 @@ overrides[audit](kind, k(X1)) :- kind[hh](X1, X2), world_kind(X1), not kind(X1, 
 -- with/2, a set
 with(X1, X2) :- with[hh](X1, X2), not person(X2, helper).
 withheld[audit](with, k(X1, X2)) :- with[hh](X1, X2), person(X2, helper).
--- week/1, a set
-week(X1) :- week[hh](X1).
+-- week: not extended (weeks)
 -- current/1, key 0
 world_current() :- asserted_by($fact(current, main, _), _, _).
 current(X1) :- current[hh](X1), not world_current().

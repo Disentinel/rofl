@@ -89,7 +89,7 @@ function worldSaid(f: Store['r'], cs: Clause[], had: Set<string>): string[] {
     const rel = c.head.rel; const l = lit(c); const args = c.head.args.map(term);
     const key = f.query(`key_of(${rel}, N)`).rows[0]?.bindings.N;
     const why = f.query(`not_extended(${rel}, W)`).rows[0]?.bindings.W;
-    if (key === undefined) { out.push(why === undefined ? `${l} — факт правил семьи, миру не виден (${rel} не edb)` : `${l} — миру не передаётся: ${why === 'books' ? 'блоки недели идут через add/skip/move' : 'переключатель одного вызова'}; правилам семьи видно`); continue; }
+    if (key === undefined) { out.push(why === undefined ? `${l} — факт правил семьи, миру не виден (${rel} не edb)` : `${l} — миру не передаётся: ${why === 'books' ? 'блоки недели идут через add/skip/move' : why === 'weeks' ? 'неделю заводит оператор (week_starts в мире, roll)' : 'переключатель одного вызова'}; правилам семьи видно`); continue; }
     if (had.has(l)) { out.push(`${l} — уже в мире`); continue; }
     if (f.holds(l)) {
       // a place by its name, and what the rules do with one that has no road from home — measured 2026-09-15: no tt, so a

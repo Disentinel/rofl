@@ -434,6 +434,23 @@ k(...))` for a fact, the reason in `rule add`'s answer:
   fact there would skip the school without the right to.
 - `not_extended(_, query)`: `want`, `asking`, `waived` are a verb's switch for
   one call (`place`, `free`, `relax`), not a fact of the household.
+- `not_extended(week, weeks)`: a week is the operator's — it comes with its
+  Monday (`week_starts`, a book relation of access.rofl, not bridged) and a
+  `roll`; a week the book named alone would be a week with no date under it.
+- `current`, `base`, `assume`, `day_wake` are singletons (`key_of` 0): a family
+  line is an override wherever the world has one, and it does. AND THE HOST
+  READS THEM FROM ONE BOOK: measured on 7c20d85, `rule add 'current(w0907).'`
+  was «НЕ ДЕЙСТВУЕТ» by the rules and the week in force for everyone by
+  `store.ts`, which took `current` (and `rolled`) off the store's raw keys of
+  every perspective — `[hh]` sorts before `[main]`. `baseArgs` now names the
+  book (`current`/`week` from `main`, `rolled` from `p_me`); everything else
+  the host reads goes through `table`/`query`, i.e. `main` after the bridge —
+  `current` for the swap, `week_starts`, `base`, `day_wake`, `names()`; the
+  book itself is read on purpose in four places: the extension points
+  (`warn[hh]`, `defect[hh]`, `busy[hh]`, `needs_cover[hh]`), the rules'
+  status facts, `place[hh]`/`ru_name[hh]` for `whoami`'s list, and `e_*[L]`
+  by a variable book in whoami/`held` — the last filtered by `edit_by`/`acts`,
+  which a `[hh]` row never passes (`hh` is no ledger).
 - `extends_unless(person, 2, adult|helper)`: an adult or a helper is an
   ACCOUNT. Who may read which book is decided over `world` + `users` before
   any book is opened (2 above), and `person(uncle, adult)` in a family rule
@@ -487,6 +504,10 @@ a lunch ending 14:45) and a child is driven — from home only; the owner's
 Thursday block is code 3 by `no_way` because school → academy is a number
 nobody gave, and `rule add 'travel(school, american_academy, 10).'` is that
 number: the same block is then 0. Any pair is one more line.
+
+Demo group 21 is `examples/spat_book/demo.ts` — a file of its own so that
+`spat_places` stays under a demo's 120 s on a loaded machine (42 scenarios in
+one file were 124 s at load 10).
 
 Fixture (`store.example/hh.rofl`): robin's `r_gym` (place 10→11, ru_name
 0→1, travel 11→12, tt 32→35), alex's `r_shortcut` (`travel(home, school, 5)`:
@@ -716,9 +737,11 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 41 scenarios in four
-  groups (18–21: places, the one-off «every», the author's own book at the
-  door, the book extending the world) in 50–75 s; `examples/spat_edits/demo.ts` (groups 12–17); and
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 30 scenarios in three
+  groups (18–20: places, the one-off «every», the author's own book at the
+  door) and `examples/spat_book/demo.ts`, 12 scenarios (21: the book
+  extending the world, the host reading the week from one book) — 60 + 70 s
+  at load 12; `examples/spat_edits/demo.ts` (groups 12–17); and
   `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under
