@@ -59,22 +59,60 @@ const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
 
 export interface World { name: string; files: string[]; ticks?: number; budget?: number; oneEngine?: boolean }
 
+/** WHAT GIT WOULD NOT COMMIT IS NOT IN THE WORLD. The walk over examples/
+ *  loads every `.rofl` a directory holds, and on the owner's laptop
+ *  examples/spat/ holds the real household's weeks — gitignored, never
+ *  pushed. So `spat` there was spat.rofl plus three weeks, two of them
+ *  declaring `day_wake`, and `npm run bless` on that tree would have written
+ *  the real family's counts into facts/goldens.rofl for CI to fail on a
+ *  census nobody can reproduce. Same class .gitignore already records for
+ *  node_modules: a rule written for a directory's usual shape rather than for
+ *  what may be in it.
+ *
+ *  IGNORED, NOT UNTRACKED. A file that is merely not yet `git add`ed is on
+ *  its way into the tree, and the loop should greet it with "no golden —
+ *  bless it" BEFORE the commit rather than let CI find it after the push. An
+ *  ignored file is one the owner has said never leaves the machine, and
+ *  `check-ignore` names exactly those: a tracked file is never reported,
+ *  whatever pattern it matches. One call for the whole walk, not one per file.
+ *
+ *  A WALK THAT CANNOT ASK REFUSES TO ANSWER: without git the world is
+ *  undefined, and loading everything quietly would be the defect this exists
+ *  to remove. `npm test` in a tree with no repository is not a case anybody
+ *  has — CI checks out with history, and the tarball ships no examples/. */
+function ignored(files: string[]): Set<string> {
+  if (files.length === 0) return new Set();
+  const rel = files.map((f) => path.relative(ROOT, f));
+  const r = spawnSync('git', ['-C', ROOT, 'check-ignore', '--stdin', '-z'],
+    { input: rel.join('\0') + '\0', encoding: 'utf8' });
+  // 0: some are ignored, 1: none is; anything else is git failing to answer
+  if (r.status !== 0 && r.status !== 1)
+    throw new Error(`git check-ignore did not answer (${r.status ?? r.error}): the walk cannot tell a shipped .rofl from a private one`);
+  return new Set(r.stdout.split('\0').filter(Boolean).map((p) => path.join(ROOT, p)));
+}
+
 /** Every world buildable from `.rofl` text alone. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
  *  files, not from a host program. */
 export function worlds(): World[] {
   const out: World[] = [];
   const ex = path.join(ROOT, 'examples');
+  const rofl = (dir: string): string[] =>
+    fs.readdirSync(dir).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(dir, x));
+  const found: [string, string[]][] = [];
   for (const e of fs.readdirSync(ex).sort()) {
     const p = path.join(ex, e);
     // `examples/checks/` holds one file per declared world and is never a world
     // itself: loading its members together would answer about their union,
     // which is nobody's question.
     if (e === 'checks') continue;
-    if (fs.statSync(p).isDirectory()) {
-      const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
-      if (files.length > 0) out.push({ name: e, files });
-    } else if (e.endsWith('.rofl')) out.push({ name: e.replace(/\.rofl$/, ''), files: [p] });
+    if (fs.statSync(p).isDirectory()) found.push([e, rofl(p)]);
+    else if (e.endsWith('.rofl')) found.push([e.replace(/\.rofl$/, ''), [p]]);
+  }
+  const skip = ignored(found.flatMap(([, files]) => files));
+  for (const [name, all] of found) {
+    const files = all.filter((f) => !skip.has(f));
+    if (files.length > 0) out.push({ name, files });
   }
   const rl = path.join(ROOT, 'rules');
   const pack = (dir: string, prefix: string): void => {
@@ -90,6 +128,23 @@ export function worlds(): World[] {
   pack(rl, '');
   out.push({ name: 'boot_only', files: [] });
   return [...out, ...declared()];
+}
+
+/** The planted week: the name is under `.gitignore`'s `examples/spat/week-*.rofl`,
+ *  the facts move the census if loaded. If a file of that name already exists
+ *  it is somebody's and is left exactly as found. */
+export function walkLoadedIgnored(): string | null {
+  const planted = path.join(ROOT, 'examples/spat/week-zzz-planted.rofl');
+  const mine = !fs.existsSync(planted);
+  if (mine) fs.writeFileSync(planted, 'person(zed, child).\nnever_alone(zed).\n');
+  try {
+    const names = worlds().find((w) => w.name === 'spat')?.files.map((f) => path.basename(f)) ?? [];
+    if (!names.includes('week.example.rofl')) return 'spat: the walk did not see week.example.rofl — it looked at nothing, so its silence about the planted week means nothing';
+    if (names.includes(path.basename(planted))) return `spat: the walk loaded the gitignored ${path.basename(planted)} — a private week on this machine would enter the world and its bless`;
+    return null;
+  } finally {
+    if (mine) fs.rmSync(planted, { force: true });
+  }
 }
 
 export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[]; }
@@ -473,6 +528,15 @@ if (isMain) {
   if (docs.status !== 0) {
     for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
   }
+  // THE WALK IS CHECKED BY PLANTING WHAT IT MUST NOT SEE. A gate that has
+  // never said no is a guess with a gate's interface, so every run puts a
+  // gitignored week beside the shipped one and asks the walk again: the
+  // planted file must be absent from `spat` and the shipped week present —
+  // the second is the control that the walk looked at the directory at all.
+  // Measured 2026-09-15 without the `ignored` filter: hash 19c797a6489397fd
+  // -> b63f5a51f85b9441, facts 16948 -> 18362, needs_cover 429 -> 744.
+  const planted = walkLoadedIgnored();
+  if (planted) fail.push(planted);
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);
