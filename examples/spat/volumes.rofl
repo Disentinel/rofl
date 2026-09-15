@@ -1,0 +1,66 @@
+-- volumes.rofl — WHERE A BOOK LIVES, AS A PROPERTY OF ITS VOLUME. access.rofl
+-- says who may open a book and decides nothing about storage; this file says
+-- which volume holds each book, whether that volume is private and where it
+-- resides. It declares the volumes and never their contents: a private
+-- volume is one SQLite file per tenant under $SPAT_ROOT (volume.ts), a
+-- public one is text in the repository. The loader asserts
+-- `book_source(B, Where)` for every book it actually read, so a declaration
+-- and a loader that disagree are an audit row rather than a surprise.
+--
+-- THE MODEL DOES NOT KNOW WHAT A VOLUME IS (docs/volumes-and-residency.md):
+-- no rule of spat.rofl or access.rofl reads anything here, and nothing here
+-- changes what a book means — a perspective is a ledger with one writer,
+-- exactly as before. This file is the scanner's declaration of which unit
+-- of storage a book is in, plus the two audits that hold it to the tree.
+
+-- =========================================================================
+-- 1. THE VOLUMES AND THEIR BOOKS
+-- =========================================================================
+-- volume(V, Kind, Where): Kind is public|private, Where is repo|store.
+volume(program,   public,  repo).     -- the rules and the shipped example week
+volume(household, private, store).    -- one tenant: its world, its users, one book per account, the tool's
+
+-- for: the program's books — the rules (spat.rofl, access.rofl, this file),
+--      loaded into [main] and signed `rules`, and the example week
+book(rules, program).
+book(example_world, program).
+-- for: the household's — the world and the users load into [main]; every
+--      ledger the rules admit is a book of its own
+book(world, household).
+book(users, household).
+book(L, household)  :- ledger(L, _).
+
+lives_in(B, Kind, Where) :- book(B, V), volume(V, Kind, Where).
+private_book(B)  :- lives_in(B, private, _).
+public_book(B)   :- lives_in(B, public, _).
+
+-- =========================================================================
+-- 2. THE AUDITS
+-- =========================================================================
+-- for: the loader says where it read each book from; a book read from
+--      somewhere its volume is not declared to be is misplaced
+misplaced[audit](B, Where) :- book_source(B, Where), lives_in(B, _, Declared), Where != Declared.
+
+-- for: WHO LIVES IN THE HOUSE IS NOT CODE. A person's name, their Russian
+--      reading and their Telegram id are the household's, in private books;
+--      a fact of a PUBLIC book that names one of them has put a person into
+--      the repository. The loader signs a public book's load with the
+--      book's name, so the kernel's own trail (`asserted_by`) says which
+--      facts came from it; the arguments are walked as the list it recorded.
+private_atom(A)  :- person(A, _).
+private_atom(A)  :- ru_name(A, _).
+private_atom(A)  :- tg_user(A, _, _, _).
+from_public($fact(R, P, L), B) :- public_book(B), asserted_by($fact(R, P, L), B, _).
+public_args($fact(R, P, L), L) :- from_public($fact(R, P, L), _).
+public_args(F, T) :- public_args(F, $cons(_, T)).
+names(F, A)       :- public_args(F, $cons(A, _)).
+private_in_public[audit](A) :- names(_, A), private_atom(A).
+
+-- for: both are claims that the number must be none — a world raising one
+--      fails whatever the golden says (scripts/goldens.ts)
+alarm(misplaced).
+alarm(private_in_public).
+
+-- for: `book_source` is the loader's, `volume` and `book` are declared here;
+--      a world with no loader (the rules alone) must still load clean
+edb(book_source).

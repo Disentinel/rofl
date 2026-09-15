@@ -12,3 +12,15 @@ authority(p_me, me).
 authority(p_nanny, nanny).
 authority(p_robin, robin).
 authority(p_uncle, uncle).
+-- the program is signed `rules` (volumes.rofl reads the trail); and where
+-- each book was read from — the rules from the repository, the household's
+-- books from its volume — for `misplaced[audit]` to hold against
+authority(main, rules).
+book_source(rules, repo).
+book_source(world, store).
+book_source(users, store).
+book_source(p_alex, store).
+book_source(p_me, store).
+book_source(p_nanny, store).
+book_source(p_robin, store).
+book_source(p_uncle, store).

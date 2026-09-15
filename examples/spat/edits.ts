@@ -6,8 +6,10 @@
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
+import type { Clause } from '../../src/unify.ts';
 import { dayOrder, hhmm, parseTime, ru, sayConstraint, table } from './spat.ts';
-import { ACCESS, SpatError, append, dateIn, editId, isoNow, must, myBook, resolve, trial, type Env, type Store } from './store.ts';
+import { SpatError, bookClauses, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
+import { addBook, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import * as fs from 'node:fs';
 import { renderDay, renderIcs } from './tomorrow.ts';
@@ -117,21 +119,19 @@ export function parseEdit(r: Rofl, text: string): Edit {
   return done(4, { kind: 'report', summary: `${c}: ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_report(${id}, ${c}, ${d}, ${t}).`] });
 }
 
-const tag = (book: string, line: string): string => line.replace(/^([a-z_]+)\(/, `$1[${book}](`);
-/** The comment line is one line whatever it was handed: whitespace collapsed,
- *  so a trail can never become a clause. The facts are validated separately. */
-const trail = (s: Store, what: string): string => `-- ${isoNow(s.env)} ${s.env.via} ${s.env.as}: ${what.replace(/\s+/g, ' ').trim()}`;
+/** A fact of the caller's book, tagged as the book's — parsed once, tried and written as the same clauses. */
+const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.map((l) => l.replace(/^([a-z_]+)\(/, `$1[${book}](`)).join('\n'));
 
 /** `spat edit '<text>'`: the trial in a world with the candidate, then one
- *  append — or none. Codes 0, 2, 3, 4 as the contract lists them. */
+ *  transaction — or none. Codes 0, 2, 3, 4 as the contract lists them. */
 export function edit(s: Store, text: string): number {
   const book = myBook(s);
   const e = parseEdit(s.r, text);
   const at = isoNow(s.env);
   const id = editId(s.env.as, at, text.trim());
-  const lines = [...e.facts(id).map((l) => l.replace('$ME', s.env.as)),
-    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${s.week}).`];
-  const v = trial(s, id, parseProgram(lines.map((l) => tag(book.book, l)).join('\n')));
+  const clauses = tagged(book.book, [...e.facts(id).map((l) => l.replace('$ME', s.env.as)),
+    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${s.week}).`]);
+  const v = trial(s, id, clauses);
   if (v.noRight) {
     const o = v.owner!;
     const may = table(s.r, 'may_edit', 'U, X').filter((x) => x.X === o.c).map((x) => ru(x.U)).sort();
@@ -139,9 +139,8 @@ export function edit(s: Store, text: string): number {
     console.log(`  может: ${may.length > 0 ? may.join(', ') : 'никто; внешнее ограничение только сообщают (report)'}`);
     return 4;
   }
-  const entry = [trail(s, text), ...lines.map((l) => tag(book.book, l))];
   if (v.breaks.length > 0) {
-    append(book, [...entry, tag(book.book, `proposed(${id}).`)].join('\n'), lines.length + 1);
+    put(s, book, [...clauses, ...tagged(book.book, [`proposed(${id}).`])], text);
     const ord = dayOrder(s.r);
     const on = table(s.r, 'breaks_on', 'E, D, R').filter((x) => x.E === id).sort((a, b) => ord.get(a.D)! - ord.get(b.D)!);
     console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует: ${e.summary}`);
@@ -152,7 +151,7 @@ export function edit(s: Store, text: string): number {
     console.log(`  подтвердить: spat confirm ${id}`);
     return 3;
   }
-  append(book, entry.join('\n'), lines.length);
+  put(s, book, clauses, text);
   console.log(`применено: ${e.summary} (${id}) — неделя ${s.week}${stale(s)}`);
   return 0;
 }
@@ -172,7 +171,7 @@ export function mark(s: Store, what: 'confirmed' | 'retracted', id: string): num
   }
   const already = what === 'confirmed' && !s.r.holds(`pending(${id})`);
   if (already) { console.log(`${id}: уже действует, ничего не записано`); return 0; }
-  append(book, `${trail(s, `${what} ${id}`)}\n${tag(book.book, `${what}(${id}, "${isoNow(s.env)}", ${s.env.via}).`)}`, 1);
+  put(s, book, tagged(book.book, [`${what}(${id}, "${isoNow(s.env)}", ${s.env.via}).`]), `${what} ${id}`);
   console.log(`${id}: ${what === 'confirmed' ? 'подтверждена, действует' : 'отозвана'}`);
   return 0;
 }
@@ -181,34 +180,32 @@ export function roll(s: Store, week: string): number {
   if (!s.r.holds(`role(${s.env.as}, operator)`)) { console.log(`отказано: roll — только оператор, ${s.env.as} им не является`); return 4; }
   if (!table(s.r, 'week', 'W').some((x) => x.W === week)) throw new SpatError(2, `нет такой недели в мире: ${week}; есть ${table(s.r, 'week', 'W').map((x) => x.W).join(', ')}`);
   const me = s.books.find((b) => b.user === 'me');
-  if (!me) throw new SpatError(6, `${path.join(s.dir, 'me.rofl')} отсутствует`);
-  append(me, `${trail(s, `roll ${week}`)}\nrolled[p_me](${week}, "${isoNow(s.env)}").`, 1);
+  if (!me) throw new SpatError(6, `${s.vol.file}: книги p_me нет`);
+  put(s, me, tagged('p_me', [`rolled(${week}, "${isoNow(s.env)}").`]), `roll ${week}`, week);
   console.log(`неделя теперь ${week} (была ${s.week})`);
   return 0;
 }
 
-/** `spat init <tenant> --world <file>`: the directory, the world, an empty
- *  book per adult and helper, an empty me.rofl. Operator only — and the
- *  operator has already admitted themself for this tenant in users.rofl. */
-export function init(e0: Env, tenant: string, weekFile: string): string[] {
-  const e = resolve({ ...e0, tenant });
-  const usersFile = path.join(e.root, 'users.rofl');
-  const r = new Rofl();
-  must(r.load(BOOT), 'boot.rofl');
-  must(r.assert(ACCESS + '\n' + (fs.existsSync(usersFile) ? fs.readFileSync(usersFile, 'utf8') : '') + `\ntenant(${tenant}).\ncaller(${e.as}).\n`), 'users.rofl');
-  if (!r.holds(`role(${e.as}, operator)`)) throw new SpatError(4, `init: ${e.as} не оператор арендатора ${tenant} по ${usersFile}`);
-  const dir = path.join(e.root, tenant);
-  if (fs.existsSync(dir)) throw new SpatError(6, `${dir} уже существует`);
+/** `spat init <tenant> --world <file> --users <file>`: the volume, the world
+ *  and the users as its first two books, an empty book per adult and helper,
+ *  an empty one for the tool. Operator only — and the operator has already
+ *  admitted themself for this tenant in the users file they hand in: that
+ *  line IS the admission, and it is checked before the volume exists. */
+export function init(e0: Env, tenant: string, weekFile: string, usersFile?: string): string[] {
+  if (!usersFile) throw new SpatError(2, 'init <семья> --world <файл> --users <файл>: без книги users некому быть оператором');
+  const text = (f: string): string => { if (!fs.existsSync(f)) throw new SpatError(2, `${f}: нет такого файла`); return fs.readFileSync(f, 'utf8'); };
+  const users = bookClauses({ book: 'main', user: 'users', where: usersFile }, text(usersFile));
+  const e = operator(e0, tenant, users);
+  const world = bookClauses({ book: 'main', user: 'world', where: weekFile }, text(weekFile));
   const w = new Rofl();
-  must(w.load(BOOT), 'boot.rofl'); must(w.assert(fs.readFileSync(weekFile, 'utf8')), weekFile);
-  const made: string[] = [];
-  fs.mkdirSync(path.join(dir, 'ledgers'), { recursive: true });
-  fs.copyFileSync(weekFile, path.join(dir, 'world.rofl')); made.push('world.rofl');
-  for (const p of table(w, 'person', 'P, K').filter((x) => x.K === 'adult' || x.K === 'helper')) {
-    fs.writeFileSync(path.join(dir, 'ledgers', `${p.P}.rofl`), `-- книга ${p.P}: правки, отчёты, confirm/retract. Только добавление.\n`);
-    made.push(`ledgers/${p.P}.rofl`);
-  }
-  fs.writeFileSync(path.join(dir, 'me.rofl'), '-- книга инструмента: rolled(Week, Iso).\n'); made.push('me.rofl');
+  must(w.load(BOOT), 'boot.rofl'); must(w.assertClauses(world), weekFile);
+  const v = openVolume(e.root, tenant, true);
+  const trail = { at: isoNow(e), via: e.via, edit: `init ${path.basename(usersFile)} ${path.basename(weekFile)}` };
+  write(v, 'users', users, trail); write(v, 'world', world, trail);
+  const made = ['users', 'world'];
+  for (const p of table(w, 'person', 'P, K').filter((x) => x.K === 'adult' || x.K === 'helper')) { addBook(v, bookOf(p.P), p.P); made.push(bookOf(p.P)); }
+  addBook(v, 'p_me', 'me'); made.push('p_me');
+  v.db.close();
   return made;
 }
 
@@ -216,7 +213,7 @@ export function whoami(s: Store): number {
   const roles = table(s.r, 'role', 'U, R').filter((x) => x.U === s.env.as).map((x) => ru(x.R));
   console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${dateIn(s.env).ymd}`);
   console.log(`  книги мне открыты: ${s.open.map((b) => b.book).join(' ') || 'ни одной'}`);
-  console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.file ?? 'никуда'}${stale(s)}`);
+  console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.where ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);
   const st = (e: string): string => (s.r.holds(`retracted_edit(${e})`) ? 'отозвана' : s.r.holds(`pending(${e})`) ? 'ждёт confirm'
     : s.r.holds(`no_right(${e})`) ? 'без права' : 'действует');

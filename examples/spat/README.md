@@ -120,16 +120,19 @@ spat fragile                             chains with no slack, trips with no bac
 
 ## Many people, one household: the store
 
-The same rules, read over a directory of books instead of one file. Each
-person of the household has a book (`ledgers/<user>.rofl`) that only they
-write; the world file is never written; who may read which book, who may
-edit which constraint, what an edit does to the week and whether it breaks a
-day are rules in `access.rofl`, and `spat why` reaches into the books. The
-design, the invariants and what is left open are in [STORE.md](STORE.md).
+The same rules, read over a household's books instead of one file. Each
+person of the household has a book (`p_<user>`) that only they write; the
+world is never written; who may read which book, who may edit which
+constraint, what an edit does to the week and whether it breaks a day are
+rules in `access.rofl`, and `spat why` reaches into the books. The books of
+a household are private and live in one SQLite file per tenant under
+`$SPAT_ROOT` (`volume.ts`); the rules and this example are public text in
+the repository — which is which is declared in `volumes.rofl`. The design,
+the invariants and what is left open are in [STORE.md](STORE.md).
 
 ```sh
 export SPAT_ROOT=/state/spat SPAT_TZ=Europe/Nicosia
-export SPAT_FROM_ID=100002        # a Telegram sender: users.rofl says who and which family
+export SPAT_FROM_ID=100002        # a Telegram sender: the users book says who and which family
 #   or SPAT_AS=me SPAT_TENANT=example — a book by name, for the scheduler and the operator
 spat whoami                       who I am, which books I was given
 spat tomorrow                     tomorrow: holes, chains, late arrivals, then the grid
@@ -137,7 +140,8 @@ spat show [day|week]              a day (today by default) or the week
 spat edit 'skip walk mon'         0 applied · 3 written as proposed, breaks the day · 4 no right · 2 not parsed
 spat confirm <id> · retract <id>  my own edit, one more fact in my book
 spat ics [--for kit]              the week as a calendar
-spat roll w0907 · init fam2 --world week.rofl        operator only
+spat roll w0907 · init fam2 --world week.rofl --users users.rofl          operator only
+spat volume load fam2 robin.rofl · volume dump fam2 [p_robin]             operator only: a book in, a book out, as text
 ```
 
 Everything above — `why`, `whynot`, `relax`, `plan`, `fragile` — works over

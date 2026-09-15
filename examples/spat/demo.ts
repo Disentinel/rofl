@@ -2,12 +2,13 @@
 // outside. `npm run test:hosts` hashes this output and its exit code; a
 // planted defect flips a line to FAIL and the exit to 1, so every scenario
 // below is a test that can say no. Each group is one of the defects the
-// brief plants, named after it, and runs against its own copy of
-// examples/spat/store.example in a temp dir — the shipped household, never a
-// real one.
+// brief plants, named after it, and runs against its own volume, imported
+// from examples/spat/store.example into a temp dir — the shipped household,
+// public and made up, never a real one; the real ones are SQLite files under
+// $SPAT_ROOT and nothing here reads one.
 //
 // THE GROUPS RUN AT ONCE AND PRINT IN ORDER. One `spat` call is a node
-// process that evaluates the whole model, 1.7 s on a quiet machine; fifty of
+// process that evaluates the whole model, 1.5 s on a quiet machine; fifty of
 // them in a row is 100 s, which is inside the host's 120 s limit only while
 // nothing else runs. Measured 2026-09-14: the first bless of this demo caught
 // it mid-run and recorded exit -1. Groups are independent, so they share the
@@ -20,19 +21,23 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawn } from 'node:child_process';
+import { Rofl } from '../../src/api.ts';
 import { Evaluation } from '../../src/engine.ts';
-import { SPAT } from './spat.ts';
+import { canonTerm } from '../../src/unify.ts';
+import { BOOT, SPAT } from './spat.ts';
 import { RU_BROKEN } from './html.ts';
-import { SpatError, bookClauses, env, openStore } from './store.ts';
+import { ACCESS, SpatError, VOLUMES, env, openStore } from './store.ts';
 import { parseEdit } from './edits.ts';
+import { load, openVolume, readBook, render, type Volume } from './volume.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'spat-demo-'));
 const CLI = path.join(HERE, 'spat.ts');
 const NOW = '2026-08-31T21:30:00+03:00';
 const WEEK = path.join(HERE, 'week.example.rofl');
+const FIX = path.join(HERE, 'store.example');
 const mask = (s: string): string => s.split(ROOT).join('$ROOT');
-const bytes = (f: string): string => fs.readFileSync(f, 'utf8');
+const TRAIL = { at: NOW, via: 'cli', edit: 'load store.example' };
 
 /** One group's lines and verdicts, printed together when every group is done. */
 class Group {
@@ -48,19 +53,30 @@ class Group {
   }
 }
 
-/** A fresh tenant from the shipped fixture, under its own root. */
+/** A fresh tenant under its own root: the shipped fixture imported into a
+ *  volume the way the stand migrates — one `volume load` per book. */
 function fresh(): string {
   const root = fs.mkdtempSync(path.join(ROOT, 'r-'));
-  const dir = path.join(root, 'example');
-  fs.cpSync(path.join(HERE, 'store.example'), dir, { recursive: true });
-  fs.renameSync(path.join(dir, 'users.rofl'), path.join(root, 'users.rofl'));
-  fs.rmSync(path.join(dir, 'books.rofl')); fs.rmSync(path.join(dir, 'trial.rofl'));
-  fs.copyFileSync(WEEK, path.join(dir, 'world.rofl'));
+  const v = openVolume(root, 'example', true);
+  load(v, path.join(FIX, 'users.rofl'), TRAIL);
+  load(v, WEEK, TRAIL, 'world');
+  for (const f of fs.readdirSync(path.join(FIX, 'ledgers')).sort()) load(v, path.join(FIX, 'ledgers', f), TRAIL);
+  load(v, path.join(FIX, 'me.rofl'), TRAIL);
+  v.db.close();
   return root;
 }
+/** The database, asked directly — what a demo may do and the tool may not. */
+function sql<T>(root: string, q: string, ...args: (string | number)[]): T {
+  const v = openVolume(root, 'example');
+  try { return v.db.prepare(q).all(...args) as unknown as T; } finally { v.db.close(); }
+}
+const count = (root: string, ledger: string): number =>
+  sql<{ n: number }[]>(root, 'SELECT count(*) n FROM facts WHERE ledger = ?', ledger)[0].n;
+const top = (root: string, ledger: string): number =>
+  sql<{ s: number }[]>(root, 'SELECT coalesce(max(seq), 0) s FROM facts WHERE ledger = ?', ledger)[0].s;
 
 interface Res { code: number; out: string; }
-/** The people call as Telegram senders — SPAT_FROM_ID, and users.rofl says
+/** The people call as Telegram senders — SPAT_FROM_ID, and the users book says
  *  who and which family; `me` calls by name, as the scheduler does. */
 const FROM: Record<string, string> = { alex: '100001', robin: '100002', nanny: '100003', mallory: '100004', uncle: '100005' };
 function spat(root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> {
@@ -69,25 +85,48 @@ function spat(root: string, as: string, args: string[], extra: Record<string, st
   for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) if (!(k in who) && !(k in extra)) delete e[k];
   for (const k of Object.keys(extra)) if (extra[k] === undefined) delete e[k];
   return new Promise((resolve) => {
-    const p = spawn(process.execPath, ['--experimental-strip-types', CLI, ...args], { env: e });
+    // node:sqlite still warns `ExperimentalWarning` on 22.x, with the pid in the line; the stand silences it the same way
+    const p = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', CLI, ...args], { env: e });
     let out = '';
     p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
     p.on('close', (code) => resolve({ code: code ?? -1, out: mask(out) }));
   });
 }
+const withEnv = <T,>(vars: Record<string, string>, f: () => T): T => {
+  const saved = { ...process.env };
+  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) delete process.env[k];
+  Object.assign(process.env, { SPAT_NOW: NOW, ...vars });
+  try { return f(); } finally {
+    for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_FROM_ID', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  }
+};
+const codeOf = (f: () => unknown): string => { try { f(); return 'no throw'; } catch (e) { return e instanceof SpatError ? `code ${e.code}: ${e.message}` : String(e); } };
 
 // ------------------------------------------------------- 1. the tag wall
 async function tagWall(): Promise<Group> {
-  const g = new Group('1. the tag wall — a line of another book');
+  const g = new Group('1. the tag wall — a line of another book, at the import and inside the volume');
   const root = fresh();
-  const book = path.join(root, 'example/ledgers/robin.rofl');
-  fs.appendFileSync(book, 'e_skip[p_alex](e_forged, walk, tue).\n');
-  const r = await spat(root, 'robin', ['whoami']);
-  g.code('строка [p_alex] в robin.rofl', r, 6);
+  const bad = path.join(root, 'robin.rofl');
+  fs.writeFileSync(bad, `${fs.readFileSync(path.join(FIX, 'ledgers/robin.rofl'), 'utf8')}e_skip[p_alex](e_forged, walk, tue).\n`);
+  const before = count(root, 'p_robin');
+  const r = await spat(root, 'alex', ['volume', 'load', 'example', bad]);
+  g.code('volume load robin.rofl со строкой [p_alex]', r, 6);
   g.check('код 6 называет файл и строку', /robin\.rofl:\d+.*\[p_alex\].*\[p_robin\]/.test(r.out), r.out);
-  let loaded: number | string = 'threw';
-  try { loaded = bookClauses({ book: 'p_robin', user: 'robin', file: book }, bytes(book)).length; } catch (e) { loaded = (e as Error).message.includes('robin.rofl:') ? 'threw' : 'other'; }
-  g.check('ни один факт файла не загружен: валидные строки перед плохой не возвращены', loaded === 'threw');
+  g.check('ни одна строка файла не записана: валидные строки перед плохой не вставлены', count(root, 'p_robin') === before, `${before} -> ${count(root, 'p_robin')}`);
+  // PLANTED (2): a row put into the base by hand, ledger = p_alex. The column
+  // IS the book: the loader puts it in [p_alex] whatever the demo meant, so
+  // alex's readers see the walk skipped and the nanny — who may not open
+  // alex's book — still sees it standing.
+  const v = openVolume(root, 'example');
+  for (const [pred, args] of [['e_skip', '[{"k":"a","name":"e_planted"},{"k":"a","name":"walk"},{"k":"a","name":"tue"}]'],
+    ['edit_at', '[{"k":"a","name":"e_planted"},{"k":"s","v":"2026-08-31T10:00:00+03:00"}]'],
+    ['edit_via', '[{"k":"a","name":"e_planted"},{"k":"a","name":"cli"}]'], ['for_week', '[{"k":"a","name":"e_planted"},{"k":"a","name":"w0831"}]']]) {
+    v.db.prepare("INSERT INTO facts(ledger, pred, args, at, via, edit) VALUES ('p_alex', ?, ?, 'x', 'cli', 'planted by hand')").run(pred, args);
+  }
+  v.db.close();
+  const alex = await spat(root, 'alex', ['show', 'tue']); const nanny = await spat(root, 'nanny', ['show', 'tue']);
+  g.check('строка ledger=p_alex, вставленная руками: у alex прогулка вт отменена (грузится в [p_alex])', alex.code === 0 && !/прогулка/.test(alex.out), alex.out);
+  g.check('няня её не видит: may_read не открывает ей p_alex, прогулка вт на месте', nanny.code === 0 && /прогулка/.test(nanny.out), nanny.out);
   return g;
 }
 
@@ -99,41 +138,40 @@ async function rights(): Promise<Group> {
   const r = await spat(root, 'robin', ['edit', 'skip school_kit fri']);
   g.code('robin: skip school_kit (c_school — external)', r, 4);
   g.check('код 4 называет владельца и что внешнее', /c_school.*ВНЕШНЕЕ/.test(r.out) && /report/.test(r.out), r.out);
+  const before = count(root, 'p_nanny');
   const n = await spat(root, 'nanny', ['edit', 'move pickup wed 15:00']);
   g.code('nanny: move pickup (c_pickup — robin, household)', n, 4);
   g.check('код 4 говорит, кто может', /может: alex, robin/.test(n.out), n.out);
-  g.check('на диск ничего: nanny.rofl как был', bytes(path.join(root, 'example/ledgers/nanny.rofl')) === bytes(path.join(HERE, 'store.example/ledgers/nanny.rofl')));
+  g.check('в базу ничего: книга няни как была', count(root, 'p_nanny') === before);
   g.code('robin: report c_pickup (не внешнее)', await spat(root, 'robin', ['edit', 'report c_pickup mon 14:10']), 4);
   g.code('правка не разобрана', await spat(root, 'robin', ['edit', 'move nothing 25:00']), 2);
+  g.code('robin volume dump (не оператор)', await spat(root, 'robin', ['volume', 'dump', 'example']), 4);
+  g.code('robin volume load (не оператор)', await spat(root, 'robin', ['volume', 'load', 'example', path.join(FIX, 'me.rofl')]), 4);
   return g;
 }
 
 // -------------------------------------------------------- 3. the stranger
 /** What the loader had opened when it refused, asked in-process. */
 function openedBy(vars: Record<string, string>): string {
-  const saved = { ...process.env };
-  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) delete process.env[k];
-  Object.assign(process.env, { SPAT_NOW: NOW, ...vars });
-  let opened = ['opened nothing and did not refuse'];
-  try { openStore(env()); } catch (e) { opened = (e as SpatError).opened.map((f) => path.relative(vars.SPAT_ROOT, f)); }
-  for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_FROM_ID', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
-  return opened.join(' ');
+  return withEnv(vars, () => {
+    try { openStore(env()); return 'opened nothing and did not refuse'; } catch (e) { return (e as SpatError).opened.map((f) => path.relative(vars.SPAT_ROOT, f)).join(' '); }
+  });
 }
 async function stranger(): Promise<Group> {
   const g = new Group('3. the stranger — code 5 before a book is opened');
   const root = fresh();
   g.code('SPAT_AS=mallory (другой арендатор)', await spat(root, 'me', ['show'], { SPAT_AS: 'mallory' }), 5);
-  g.check('до отказа открыты только world.rofl и users.rofl, ни одной книги',
-    openedBy({ SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'mallory' }) === 'example/world.rofl users.rofl');
+  g.check('до отказа открыты только users и world, ни одной книги',
+    openedBy({ SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'mallory' }) === 'example.sqlite/users example.sqlite/world');
   const r = await spat(root, 'me', ['show'], { SPAT_AS: undefined, SPAT_FROM_ID: '424242' });
   g.code('SPAT_FROM_ID неизвестный', r, 5);
   g.check('текст: «я вас не знаю; добавить может владелец»', /я вас не знаю.*добавить может владелец/.test(r.out), r.out);
-  g.check('до отказа открыт только users.rofl — ни мира, ни книг', openedBy({ SPAT_ROOT: root, SPAT_FROM_ID: '424242' }) === 'users.rofl');
+  g.check('до отказа открыта только книга users — ни мира, ни книг', openedBy({ SPAT_ROOT: root, SPAT_FROM_ID: '424242' }) === 'example.sqlite/users');
   g.code('SPAT_AS и SPAT_FROM_ID вместе', await spat(root, 'robin', ['show'], { SPAT_AS: 'robin', SPAT_TENANT: 'example' }), 5);
   g.code('ни SPAT_AS, ни SPAT_FROM_ID', await spat(root, 'me', ['show'], { SPAT_AS: undefined }), 5);
   g.code('SPAT_FROM_ID robin + SPAT_TENANT другой семьи', await spat(root, 'robin', ['show'], { SPAT_TENANT: 'elsewhere' }), 5);
   const w = await spat(root, 'robin', ['whoami']);
-  g.check('SPAT_FROM_ID robin без SPAT_TENANT: семья из users.rofl', w.code === 0 && /я: robin \(from_id 100002\).*семья example/.test(w.out), w.out.split('\n')[0]);
+  g.check('SPAT_FROM_ID robin без SPAT_TENANT: семья из книги users', w.code === 0 && /я: robin \(from_id 100002\).*семья example/.test(w.out), w.out.split('\n')[0]);
   g.code('mallory по id: её семья elsewhere не развёрнута', await spat(root, 'mallory', ['show']), 5);
   g.code('неизвестный глагол', await spat(root, 'robin', ['dance']), 2);
   return g;
@@ -143,12 +181,14 @@ async function stranger(): Promise<Group> {
 async function breaks(): Promise<Group> {
   const g = new Group('4. breaks the day — proposed, confirmed by its author, retracted');
   const root = fresh();
+  const before = count(root, 'p_robin');
   g.code('robin: sick alex tue', await spat(root, 'robin', ['edit', 'sick alex tue']), 0);
   const r = await spat(root, 'robin', ['edit', 'add errand tue 18:30-20:00 robin office'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
   g.code('robin: errand вт 18:30 — дети одни', r, 3);
   const id = /confirm (e_[0-9a-f]+)/.exec(r.out)?.[1] ?? '';
   g.check('код 3 называет дыру, чьё ограничение и id', /НЕ ПОКРЫТ вт.*nico/s.test(r.out) && /robin\s+e_[0-9a-f]+\s+robin\s+наше/.test(r.out) && id !== '', r.out);
-  g.check('записано как proposed', new RegExp(`proposed\\[p_robin\\]\\(${id}\\)`).test(bytes(path.join(root, 'example/ledgers/robin.rofl'))));
+  const proposed = sql<{ args: string }[]>(root, "SELECT args FROM facts WHERE ledger = 'p_robin' AND pred = 'proposed'").map((x) => x.args);
+  g.check('записано как proposed, в книге robin, термом', proposed.some((a) => a.includes(`"name":"${id}"`)), proposed.join(' '));
   g.check('show вт: правка не действует', !/errand/.test((await spat(root, 'robin', ['show', 'tue'])).out));
   g.code('alex confirm чужой правки', await spat(root, 'alex', ['confirm', id]), 4);
   g.code('robin confirm своей', await spat(root, 'robin', ['confirm', id]), 0);
@@ -156,7 +196,7 @@ async function breaks(): Promise<Group> {
   g.check('show вт: правка действует, дыра видна', /errand/.test(after) && /НЕ ПОКРЫТ вт/.test(after), after);
   g.code('robin retract', await spat(root, 'robin', ['retract', id]), 0);
   g.code('confirm отозванной', await spat(root, 'robin', ['confirm', id]), 2);
-  g.check('книга только росла: ни одной строки не пропало', bytes(path.join(root, 'example/ledgers/robin.rofl')).startsWith(bytes(path.join(HERE, 'store.example/ledgers/robin.rofl'))));
+  g.check('книга только росла: 4 + 5 + 1 + 1 строк, ни одна не пропала', count(root, 'p_robin') === before + 11, `${before} -> ${count(root, 'p_robin')}`);
   const why = (await spat(root, 'robin', ['why', 'evening'])).out;
   g.check('why над многопользовательским миром доходит до книги няни', /e_add\[p_nanny\]/.test(why) && /книга \[p_nanny\].*telegram/.test(why), why);
   return g;
@@ -180,19 +220,20 @@ async function tomorrow(): Promise<Group> {
 
 // ---------------------------------------------- 6. six writers, one book
 async function writers(): Promise<Group> {
-  const g = new Group('6. six writers at once into one book');
+  const g = new Group('6. six writers at once into one book — every one lands, whole, with its own seq (WAL)');
   const root = fresh();
   // 0 and 3 are both a write, and each trial sees only the fixture, so the
   // codes do not depend on the order the six land in
   const texts = ['skip walk tue', 'skip lunch wed', 'move lunch thu 14:30', 'skip cleaning sat', 'report c_sadik wed 13:35', 'car out wed 15:00-17:00'];
+  const fixture = sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'edit_at'")[0].n;
   const codes = await Promise.all(texts.map((t, i) => spat(root, 'robin', ['edit', t], { SPAT_NOW: `2026-08-31T21:3${i}:00+03:00` })));
   g.check('каждая записана (0 или 3), ни одна не отвергнута', codes.every((c) => c.code === 0 || c.code === 3), codes.map((c) => c.code).join(','));
-  const book = path.join(root, 'example/ledgers/robin.rofl');
-  let entries = -1;
-  try { entries = bookClauses({ book: 'p_robin', user: 'robin', file: book }, bytes(book)).filter((c) => c.head.rel === 'edit_at').length; } catch { entries = -1; }
-  const fixture = (bytes(path.join(HERE, 'store.example/ledgers/robin.rofl')).match(/^edit_at\[/gm) ?? []).length;
-  g.check('книга цела: разбирается, записи фикстуры + 6 новых', entries === fixture + 6, `edit_at rows: ${entries}, fixture ${fixture}`);
-  g.check('ни одна строка не потеряна: каждая правка в книге', texts.every((t) => bytes(book).includes(`: ${t}\n`)));
+  const rows = sql<{ seq: number; pred: string; edit: string }[]>(root, "SELECT seq, pred, edit FROM facts WHERE ledger = 'p_robin' ORDER BY seq");
+  const entries = rows.filter((r) => r.pred === 'edit_at').length;
+  g.check('книга цела: записи фикстуры + 6 новых', entries === fixture + 6, `edit_at rows: ${entries}, fixture ${fixture}`);
+  g.check('ни одна правка не потеряна: каждая в столбце edit', texts.every((t) => rows.some((r) => r.edit === t)));
+  g.check('у каждой строки свой seq, и записи не перемешаны: четыре факта правки идут подряд',
+    new Set(rows.map((r) => r.seq)).size === rows.length && texts.every((t) => { const s = rows.filter((r) => r.edit === t).map((r) => r.seq); return s.length >= 4 && s[s.length - 1] - s[0] === s.length - 1; }));
   return g;
 }
 
@@ -200,47 +241,64 @@ async function writers(): Promise<Group> {
 async function operator(): Promise<Group> {
   const g = new Group('7. roll, ics, init — the operator and the calendar');
   const root = fresh();
+  const [worldN, usersN, worldTop] = [count(root, 'world'), count(root, 'users'), top(root, 'world')];
   g.code('robin roll (не оператор)', await spat(root, 'robin', ['roll', 'w0907']), 4);
   g.code('alex roll w0907', await spat(root, 'alex', ['roll', 'w0907']), 0);
-  g.check('roll ушёл в me.rofl, не в книгу alex', /rolled\[p_me\]\(w0907/.test(bytes(path.join(root, 'example/me.rofl'))) && !/rolled/.test(bytes(path.join(root, 'example/ledgers/alex.rofl'))));
+  const rolled = sql<{ ledger: string }[]>(root, "SELECT ledger FROM facts WHERE pred = 'rolled'").map((x) => x.ledger);
+  g.check('roll ушёл в p_me, не в книгу alex; meta.week = w0907', rolled.join(',') === 'p_me,p_me' && sql<{ value: string }[]>(root, "SELECT value FROM meta WHERE key = 'week'")[0]?.value === 'w0907', rolled.join(','));
   g.check('whoami: неделя w0907', /неделя w0907/.test((await spat(root, 'robin', ['whoami'])).out));
   g.check('--week-of w0831 отвечает по-старому (walk пн отменён правкой)', !/прогулка/.test((await spat(root, 'robin', ['show', 'mon', '--week-of', 'w0831'])).out));
   g.check('nanny не видит книгу robin (правка walk не в её сетке)', /прогулка/.test((await spat(root, 'nanny', ['show', 'mon', '--week-of', 'w0831'])).out));
-  g.check('world.rofl и users.rofl не тронуты', bytes(path.join(root, 'example/world.rofl')) === bytes(WEEK)
-    && bytes(path.join(root, 'users.rofl')) === bytes(path.join(HERE, 'store.example/users.rofl')));
+  g.check('world и users не тронуты: те же строки, тот же последний seq', count(root, 'world') === worldN && count(root, 'users') === usersN && top(root, 'world') === worldTop);
   const ics = await spat(root, 'robin', ['ics', '--for', 'kit']);
   g.code('ics --for kit', ics, 0);
   const ev = ics.out.split('BEGIN:VEVENT').length - 1;
   g.check('ics: только блоки kit и блоки с ним, датированные из week_starts', ev > 0 && /DTSTART;TZID=Europe\/Nicosia:202609/.test(ics.out) && !/работа/.test(ics.out), `${ev} events`);
-  // the operator admits the new tenant by hand in users.rofl first; that is the
-  // whole admission — a sender the new family does not list is not even a
+  // the operator admits the new tenant by hand in the users file init is given;
+  // that is the whole admission — a sender the file does not list is not even a
   // caller there (5), a listed one who is not its operator is refused (4)
-  g.code('alex init fam2 без строки в users.rofl', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 5);
-  fs.appendFileSync(path.join(root, 'users.rofl'), 'tg_user(alex, 100001, fam2, operator).\ntg_user(robin, 100002, fam2, adult).\n');
-  g.code('robin init (в fam2, не оператор)', await spat(root, 'robin', ['init', 'fam2', '--world', WEEK]), 4);
+  const users2 = path.join(root, 'fam2-users.rofl');
+  g.code('alex init fam2 без --users', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 2);
+  fs.writeFileSync(users2, 'tg_user(robin, 100002, fam2, adult).\n');
+  g.code('alex init fam2, в users нет строки alex', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK, '--users', users2]), 5);
+  fs.appendFileSync(users2, 'tg_user(alex, 100001, fam2, operator).\n');
+  g.code('robin init (в fam2, не оператор)', await spat(root, 'robin', ['init', 'fam2', '--world', WEEK, '--users', users2]), 4);
+  g.check('том fam2 не создан отказом', !fs.existsSync(path.join(root, 'fam2.sqlite')));
+  g.code('alex init fam2', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK, '--users', users2]), 0);
+  g.check('init разложил том: users, world, книги взрослых и няни, p_me', fs.existsSync(path.join(root, 'fam2.sqlite')) && (() => {
+    const v = openVolume(root, 'fam2');
+    try { return v.db.prepare('SELECT ledger FROM books ORDER BY ledger').all().map((x) => x.ledger).join(',') === 'p_alex,p_me,p_nanny,p_robin' && readBook(v, 'world').length > 0 && readBook(v, 'users').length === 2; } finally { v.db.close(); }
+  })());
+  // the stand's migration in one command: the legacy directory's ledgers/*.rofl and me.rofl, each into its own book
+  const mig = await spat(root, 'alex', ['volume', 'load', 'fam2', FIX], { SPAT_TENANT: 'fam2' });
+  g.code('alex volume load fam2 <каталог store.example>', mig, 0);
+  g.check('каталог: четыре книги ledgers/ и me, каждая в свою; books.rofl и trial.rofl не тронуты', (() => {
+    const v = openVolume(root, 'fam2');
+    try {
+      const n = (l: string): number => (v.db.prepare('SELECT count(*) n FROM facts WHERE ledger = ?').get(l) as { n: number }).n;
+      return n('p_alex') === 45 && n('p_robin') === 36 && n('p_nanny') === 36 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
+        && (v.db.prepare('SELECT count(DISTINCT ledger) n FROM facts').get() as { n: number }).n === 6;
+    } finally { v.db.close(); }
+  })(), mig.out);
   g.code('alex теперь в двух семьях, без SPAT_TENANT', await spat(root, 'alex', ['whoami']), 5);
-  g.code('alex init fam2', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 0);
-  g.check('init разложил каталог: world, книги взрослых и няни, me', ['world.rofl', 'me.rofl', 'ledgers/alex.rofl', 'ledgers/robin.rofl', 'ledgers/nanny.rofl']
-    .every((f) => fs.existsSync(path.join(root, 'fam2', f))) && !fs.existsSync(path.join(root, 'fam2/ledgers/kit.rofl')));
-  g.code('init повторно', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK]), 6);
+  g.code('init повторно', await spat(root, 'alex', ['init', 'fam2', '--world', WEEK, '--users', users2], { SPAT_TENANT: 'fam2' }), 6);
   g.check('whoami с SPAT_TENANT=fam2: тот же alex, новая семья', /семья fam2/.test((await spat(root, 'alex', ['whoami'], { SPAT_TENANT: 'fam2' })).out));
   return g;
 }
 
-// ---------------------------------- 9. nothing handed in becomes a second line
+// ---------------------------------- 9. nothing handed in becomes a second row
 async function injection(): Promise<Group> {
-  const g = new Group('9. nothing handed in becomes a second line — the book after each refusal is byte-identical');
+  const g = new Group('9. nothing handed in becomes a second row — the book after each refusal has the same rows');
   const root = fresh();
-  const book = path.join(root, 'example/ledgers/robin.rofl');
-  const before = bytes(book);
-  const same = (name: string): void => g.check(`${name}: robin.rofl байт-в-байт`, bytes(book) === before);
+  const before = [count(root, 'p_robin'), top(root, 'p_robin')].join('/');
+  const same = (name: string): void => g.check(`${name}: книга robin — те же строки, тот же seq`, [count(root, 'p_robin'), top(root, 'p_robin')].join('/') === before);
+  // PLANTED (3): a newline in the edit text — code 2, and SELECT count(*) is what it was
   g.code('правка с переводом строки (вторая строка — факт чужой книги)', await spat(root, 'robin', ['edit', 'add errand tue 18:30-20:00 robin office\ne_skip[p_alex](e_evil, walk, mon).']), 2);
   same('после \\n');
   g.code('правка с \\r', await spat(root, 'robin', ['edit', 'skip walk mon\re_skip[p_alex](e_evil, walk, mon).']), 2);
   same('после \\r');
-  let nul = 'no throw';
-  try { parseEdit(openStoreAs(root).r, 'skip walk mon\0e_skip[p_alex](e_evil, walk, mon).'); } catch (e) { nul = e instanceof SpatError && e.code === 2 ? 'code 2' : String(e); }
-  g.check('правка с NUL (в процессе: argv не переносит NUL) → код 2', nul === 'code 2', nul);
+  const nul = withEnv({ SPAT_ROOT: root, SPAT_FROM_ID: FROM.robin }, () => codeOf(() => parseEdit(openStore(env()).r, 'skip walk mon\0e_skip[p_alex](e_evil, walk, mon).')));
+  g.check('правка с NUL (в процессе: argv не переносит NUL) → код 2', nul.startsWith('code 2'), nul);
   g.code('хвост после последнего поля: person[p_robin](robin, operator).', await spat(root, 'robin', ['edit', 'skip walk mon person[p_robin](robin, operator).']), 2);
   same('после хвоста');
   g.code('SPAT_AS с клаузой внутри', await spat(root, 'me', ['whoami'], { SPAT_AS: 'robin). tg_user(robin, 1, example, operator' }), 5);
@@ -250,16 +308,9 @@ async function injection(): Promise<Group> {
   g.code('--week-of неизвестной недели', await spat(root, 'robin', ['show', 'mon', '--week-of', 'w9999']), 2);
   const ok = await spat(root, 'robin', ['edit', 'skip walk tue']);
   g.code('и обычная правка после всего этого', ok, 0);
-  g.check('след правки — одна строка комментария, факты — ровно те, что задуманы', bytes(book).slice(before.length).split('\n').filter((l) => l !== '').length === 5);
+  const rows = sql<{ pred: string; edit: string; via: string }[]>(root, "SELECT pred, edit, via FROM facts WHERE ledger = 'p_robin' AND seq > ?", Number(before.split('/')[1]));
+  g.check('след правки — столбцы, факты — ровно те, что задуманы', rows.map((r) => r.pred).join(',') === 'e_skip,edit_at,edit_via,for_week' && rows.every((r) => r.edit === 'skip walk tue' && r.via === 'cli'), JSON.stringify(rows));
   return g;
-}
-function openStoreAs(root: string): ReturnType<typeof openStore> {
-  const saved = { ...process.env };
-  for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) delete process.env[k];
-  Object.assign(process.env, { SPAT_ROOT: root, SPAT_FROM_ID: FROM.robin, SPAT_NOW: NOW });
-  try { return openStore(env()); } finally {
-    for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_FROM_ID', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
-  }
 }
 
 // ------------------------------------ 10. a dated day is shown under its own week
@@ -283,6 +334,75 @@ async function weekOfDate(): Promise<Group> {
   return g;
 }
 
+// ------------------- 11. the volume: only INSERT, a round trip, and what is public
+/** The facts of a book as a set: relation and canonical terms, no trail. */
+const factSet = (v: Volume, ledger: string): Set<string> =>
+  new Set(readBook(v, ledger).map((c) => `${c.head.rel}(${c.head.args.map(canonTerm).join(',')})`));
+/** The store's world built the way the loader builds it — the program signed
+ *  `rules`, the household anonymous — with one line more in the program. */
+function signed(planted: string): Rofl {
+  const r = new Rofl();
+  const ok = [r.load(BOOT),
+    r.assert('authority(main, rules).\ntenant(example).\ncaller(robin).\nauthority(p_robin, robin).\ndate_monday(today, "2026-08-31").\ndate_monday(tomorrow, "2026-08-31").'),
+    r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}\n${planted}`, { who: 'rules' }),
+    r.assert(fs.readFileSync(WEEK, 'utf8') + fs.readFileSync(path.join(FIX, 'users.rofl'), 'utf8'))];
+  if (!ok.every((x) => x.ok)) throw new Error(ok.flatMap((x) => x.diagnostics).join('; '));
+  r.evaluate();
+  return r;
+}
+async function volume(): Promise<Group> {
+  const g = new Group('11. the volume — INSERT only, a book round-trips through text, a person in a public book is an audit row');
+  const root = fresh();
+  const v = openVolume(root, 'example');
+  const n = count(root, 'p_robin');
+  // PLANTED (1): an UPDATE and a DELETE, by hand — the trigger, not the tool, says no
+  const upd = codeOf(() => v.db.exec("UPDATE facts SET pred = 'e_skip' WHERE ledger = 'p_robin'"));
+  const del = codeOf(() => v.db.exec("DELETE FROM facts WHERE ledger = 'p_robin'"));
+  g.check('UPDATE facts → триггер отказывает', /INSERT only/.test(upd), upd);
+  g.check('DELETE facts → триггер отказывает', /INSERT only/.test(del), del);
+  g.check('строк столько же', count(root, 'p_robin') === n, `${n} -> ${count(root, 'p_robin')}`);
+  v.db.prepare("INSERT INTO facts(ledger, pred, args, at, via, edit) VALUES ('p_robin', 'edit_via', '[{\"k\":\"a\",\"name\":\"e_x\"},{\"k\":\"a\",\"name\":\"cli\"}]', 'x', 'cli', null)").run();
+  g.check('положительный контроль: INSERT проходит, строк на одну больше', count(root, 'p_robin') === n + 1);
+  // a rule in a book, at the import: refused whole
+  const ruled = path.join(root, 'uncle.rofl');
+  fs.writeFileSync(ruled, 'e_skip[p_uncle](e_u1, walk, mon).\nacts(E) :- e_skip[p_uncle](E, _, _).\n');
+  const rl = codeOf(() => load(v, ruled, TRAIL));
+  g.check('volume load файла с правилом → код 6, ни одной строки', rl.startsWith('code 6') && /правило в книге/.test(rl) && count(root, 'p_uncle') === 0, rl);
+  // THE ROUND TRIP: dump every book of the fixture, load the dumps into a
+  // second volume, compare the books as sets of terms — the trail differs,
+  // the facts may not. A wrong term encoding, a lost string, a swapped
+  // book would all show here as a set difference.
+  const root2 = fs.mkdtempSync(path.join(ROOT, 'r-'));
+  const v2 = openVolume(root2, 'example', true);
+  const ledgers = ['world', 'users', 'p_alex', 'p_me', 'p_nanny', 'p_robin', 'p_uncle'];
+  const diffs: string[] = [];
+  for (const l of ledgers) {
+    const text = render(v, l);
+    fs.writeFileSync(path.join(root2, `${l}.rofl`), text);
+    load(v2, path.join(root2, `${l}.rofl`), { at: '2026-09-01T00:00:00+03:00', via: 'cli', edit: 'reload' }, l);
+    const a = factSet(v, l); const b = factSet(v2, l);
+    for (const x of a) if (!b.has(x)) diffs.push(`${l}: -${x}`);
+    for (const x of b) if (!a.has(x)) diffs.push(`${l}: +${x}`);
+    if (a.size === 0 && l !== 'p_uncle') diffs.push(`${l}: empty`);
+  }
+  g.check(`dump → load → те же факты в каждой из ${ledgers.length} книг (множества термов; строки со строками, числа с числами)`, diffs.length === 0, diffs.slice(0, 5).join(' | '));
+  g.check('dump детерминирован: два рендера одной книги байт-в-байт', render(v, 'p_alex') === render(v, 'p_alex') && render(v2, 'p_alex').split('\n').filter((x) => !x.startsWith('--')).join('\n') === render(v, 'p_alex').split('\n').filter((x) => !x.startsWith('--')).join('\n'));
+  const strings = readBook(v2, 'world').filter((c) => c.head.rel === 'week_starts').flatMap((c) => c.head.args.filter((t) => t.k === 's')).length;
+  g.check('строки мира остались строками после круга (week_starts: 2 даты)', strings === 2, String(strings));
+  v.db.close(); v2.db.close();
+  // PLANTED (4): a person's Russian name in a PUBLIC book — the audit names her
+  const clean = signed('');
+  const dirty = signed('ru_name(robin, "Робин").');
+  const rows = (r: Rofl): string => r.query('private_in_public[audit](A)').rows.map((x) => String(x.bindings.A)).sort().join(',');
+  g.check('чистая программа: private_in_public пуст, from_public непуст (подпись `rules` работает)', rows(clean) === '' && clean.query('from_public(F, B)').rows.length > 50, `${rows(clean)} / ${clean.query('from_public(F, B)').rows.length}`);
+  g.check('ru_name(robin, …) в публичной книге → private_in_public[audit](robin)', rows(dirty) === 'robin', rows(dirty));
+  const live = withEnv({ SPAT_ROOT: root, SPAT_FROM_ID: FROM.robin }, () => openStore(env()).r);
+  g.check('живой том: аудиты молчат, объявления есть (book 9, book_source 8), программа подписана',
+    live.query('private_in_public[audit](A)').rows.length === 0 && live.query('misplaced[audit](B, W)').rows.length === 0
+    && live.query('book(B, V)').rows.length === 9 && live.query('book_source(B, W)').rows.length === 8 && live.query('from_public(F, B)').rows.length > 50);
+  return g;
+}
+
 // ------------------- 8. the rules materialise; every reason has Russian
 function reasons(): Group {
   const g = new Group('8. every rule of the store materialises; every reason has Russian (from a scan, not a list)');
@@ -292,10 +412,7 @@ function reasons(): Group {
   // dropped premises leave a rule unsafe, and the census sees none of them.
   // This is the check that does — the same one the deleted suite carried.
   const root = fresh();
-  const saved = { ...process.env };
-  Object.assign(process.env, { SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'robin', SPAT_NOW: NOW });
-  const ev = new Evaluation(openStore(env()).r.store, {});
-  for (const k of ['SPAT_ROOT', 'SPAT_TENANT', 'SPAT_AS', 'SPAT_NOW']) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  const ev = withEnv({ SPAT_ROOT: root, SPAT_TENANT: 'example', SPAT_AS: 'robin' }, () => new Evaluation(openStore(env()).r.store, {}));
   const unsafe = ev.rules.filter((x) => !x.safe).map((x) => x.canon);
   g.check('ни одно правило не demand-backed: все материализуются', unsafe.length === 0 && ev.demandRels.size === 0, `unsafe: ${unsafe.join(' | ')}; demand: ${[...ev.demandRels].join(',')}`);
   const heads = new Set([...SPAT.matchAll(/^broken\((\w+)\)\s*:-/gm)].map((m) => m[1]));
@@ -307,7 +424,7 @@ function reasons(): Group {
 }
 
 const t0 = Date.now();
-const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate()]);
+const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate(), volume()]);
 groups.push(reasons());
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);

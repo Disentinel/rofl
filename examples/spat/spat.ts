@@ -1016,16 +1016,17 @@ async function main(argv: string[]): Promise<void> {
   // and books come from the environment (store.ts), the classic verbs below
   // then run over the same world. `init` alone needs no tenant to exist yet.
   let r: Rofl;
-  if (cmd === 'init' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd)) {
+  if (cmd === 'init' || cmd === 'volume' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd)) {
     const st = await import('./store.ts');
     const ed = await import('./edits.ts');
     const e = st.env();
     if (cmd === 'init') {
-      const w = rest.indexOf('--world');
-      const made = ed.init(e, rest[0] ?? '', w >= 0 ? path.resolve(rest[w + 1]) : weekFile);
-      console.log(`${path.join(e.root, rest[0])}: ${made.join(', ')}`);
+      const w = rest.indexOf('--world'); const u = rest.indexOf('--users');
+      const made = ed.init(e, rest[0] ?? '', w >= 0 ? path.resolve(rest[w + 1]) : weekFile, u >= 0 ? path.resolve(rest[u + 1]) : undefined);
+      console.log(`${path.join(e.root, `${rest[0]}.sqlite`)}: ${made.join(', ')}`);
       return;
     }
+    if (cmd === 'volume') { process.exitCode = (await import('./volume.ts')).run(e, rest); return; }
     const store = st.openStore(e, { weekOf, extra });
     if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
     r = store.r;
@@ -1342,7 +1343,8 @@ const USAGE = [
   '',
   '  с SPAT_ROOT и SPAT_AS+SPAT_TENANT или SPAT_FROM_ID в окружении (см. STORE.md):',
   '  spat whoami · show [день|week] · tomorrow · edit \'<правка>\' · confirm <id> · retract <id>',
-  '  spat ics [--for <кто>] · roll <неделя> (оператор) · init <семья> --world <файл> (оператор)',
+  '  spat ics [--for <кто>] · roll <неделя> (оператор) · init <семья> --world <файл> --users <файл> (оператор)',
+  '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя',
 ].join('\n');

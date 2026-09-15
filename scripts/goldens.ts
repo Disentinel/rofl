@@ -147,6 +147,32 @@ export function walkLoadedIgnored(): string | null {
   }
 }
 
+/** A HOUSEHOLD'S VOLUME NEVER ENTERS THE WALK OR A COMMIT. A tenant's private
+ *  books are one SQLite file (examples/spat/volume.ts) under $SPAT_ROOT, and
+ *  the only way one reaches the tree is somebody copying it there. Two gates
+ *  stand, and both are asked with a planted file: the walk builds the same
+ *  `spat` world with it as without, and `.gitignore` names it so `git add -A`
+ *  cannot take it. The control is a tracked `.rofl` in the same call, which
+ *  check-ignore must NOT report — so an answer of "ignored" is the pattern
+ *  and not an instrument that ignores everything. */
+export function plantedVolumeIgnored(): string | null {
+  const vol = path.join(ROOT, 'examples/spat/zzz-planted.sqlite');
+  const shipped = path.join(ROOT, 'examples/spat/spat.rofl');
+  const before = worlds().find((w) => w.name === 'spat')?.files.join(' ') ?? '';
+  const mine = !fs.existsSync(vol);
+  if (mine) fs.writeFileSync(vol, '');
+  try {
+    const ig = ignored([vol, shipped]);
+    if (ig.has(shipped)) return 'spat: check-ignore reports the shipped spat.rofl as ignored — it cannot tell a volume from a program';
+    if (!ig.has(vol)) return `spat: ${path.basename(vol)} is not gitignored — a household's volume copied into the tree would ride into a commit`;
+    const after = worlds().find((w) => w.name === 'spat')?.files.join(' ') ?? '';
+    if (after !== before || before === '') return `spat: the walk changed with a planted volume beside it (${before} -> ${after})`;
+    return null;
+  } finally {
+    if (mine) fs.rmSync(vol, { force: true });
+  }
+}
+
 export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[]; }
 
 /** WORLDS THE TREE CANNOT DISCOVER, declared in facts/checks.rofl. Everything
@@ -537,6 +563,8 @@ if (isMain) {
   // -> b63f5a51f85b9441, facts 16948 -> 18362, needs_cover 429 -> 744.
   const planted = walkLoadedIgnored();
   if (planted) fail.push(planted);
+  const volume = plantedVolumeIgnored();
+  if (volume) fail.push(volume);
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);

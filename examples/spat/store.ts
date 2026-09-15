@@ -1,16 +1,20 @@
 // store.ts — THE LOADER AND THE WRITER of the multi-user store. Nothing here
 // decides: who may read, who may edit, what breaks, who is a stranger are
-// relations in access.rofl, and this file asks them and moves bytes.
+// relations in access.rofl, and this file asks them and moves rows.
 //
-//   $SPAT_ROOT/users.rofl                tg_user(User, ChatId, Tenant, Role).
-//   $SPAT_ROOT/<tenant>/world.rofl       the household — never written here
-//   $SPAT_ROOT/<tenant>/ledgers/<u>.rofl one book per user, loaded as [p_<u>]
-//   $SPAT_ROOT/<tenant>/me.rofl          the tool's own book, [p_me]
+//   $SPAT_ROOT/<tenant>.sqlite   the household's volume (volume.ts): its books
+//     users                      tg_user(User, ChatId, Tenant, Role) — the operator's hand; loaded as [main]
+//     world                      the household — never written here; loaded as [main]
+//     p_<user>                   that user's book, loaded as [p_<user>]
+//     p_me                       the tool's own book, [p_me]
 //
-// THE TAG IS THE FILE NAME. A line in a book is loaded into the book's
-// perspective whatever it says; a line that names another book is refused
-// with the file and the line, and nothing from that file is loaded. Identity
-// comes from the environment only (STORE.md); there is no --as.
+// THE LEDGER IS THE COLUMN. A row is loaded into the book its ledger names
+// whatever it says; the writer refuses a fact tagged with another book, and
+// text is parsed only where there is text (the program's own files, a book
+// handed to `volume load`). Identity comes from the environment only
+// (STORE.md); there is no --as. Which books are private, and where they
+// live, is volumes.rofl — the loader signs the program's load `rules` and
+// says where it read each book from, so the audits there can see it.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -19,9 +23,11 @@ import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
 import { BOOT, SPAT, bust, setSource, table, world } from './spat.ts';
+import { books as booksOf, openVolume, readBook, volumes, write, type Volume } from './volume.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 export const ACCESS = fs.readFileSync(path.join(HERE, 'access.rofl'), 'utf8');
+export const VOLUMES = fs.readFileSync(path.join(HERE, 'volumes.rofl'), 'utf8');
 
 /** One exit code per contract line; the message is what stdout gets;
  *  `opened` is what the loader had read when it refused. */
@@ -47,8 +53,8 @@ export function env(): Env {
   if (!SPAT_ROOT) throw new SpatError(5, 'нет корня: SPAT_ROOT не задан');
   atom(SPAT_AS, 'SPAT_AS'); atom(SPAT_TENANT, 'SPAT_TENANT'); atom(SPAT_VIA, 'SPAT_VIA');
   // EXACTLY ONE SOURCE OF IDENTITY: a book by name (me, the operator by hand)
-  // or a Telegram sender id that users.rofl must know. Both is a call that
-  // cannot say who it is; neither is the same.
+  // or a Telegram sender id that the users book must know. Both is a call
+  // that cannot say who it is; neither is the same.
   if (!!SPAT_AS === !!SPAT_FROM_ID) throw new SpatError(5, SPAT_AS ? 'личность задана дважды: SPAT_AS и SPAT_FROM_ID' : 'нет личности: ни SPAT_AS, ни SPAT_FROM_ID');
   if (SPAT_FROM_ID && !/^\d+$/.test(SPAT_FROM_ID)) throw new SpatError(5, `SPAT_FROM_ID не число: ${SPAT_FROM_ID}`);
   if (SPAT_AS && !SPAT_TENANT) throw new SpatError(5, 'нет арендатора: SPAT_TENANT не задан');
@@ -59,52 +65,61 @@ export function env(): Env {
     via: SPAT_VIA ?? 'cli', tz: SPAT_TZ ?? 'UTC', now };
 }
 
-/** WHO IS CALLING, before any file of any tenant is opened. A sender id is
- *  asked of access.rofl over users.rofl alone: `sender(U, T)` names the
- *  person and their family, `stranger(N)` is the rule's own verdict. */
-export function resolve(e: Env, opened: string[] = []): Env {
-  if (e.fromId === undefined) return e;
-  const usersFile = path.join(e.root, 'users.rofl');
-  if (!fs.existsSync(usersFile)) throw Object.assign(new SpatError(5, `я вас не знаю: ${usersFile} отсутствует`), { opened });
-  opened.push(usersFile);
+const bookPath = (v: Volume, ledger: string): string => path.join(v.file, ledger);
+/** A small world: access.rofl over some rows and the call's facts, for the questions asked before any book is opened. */
+function small(rows: Clause[], facts: string): Rofl {
   const r = new Rofl();
   must(r.load(BOOT), 'boot.rofl');
-  must(r.assert(`${ACCESS}\n${fs.readFileSync(usersFile, 'utf8')}\nfrom_id(${e.fromId}).\n`), usersFile);
+  must(r.assert(`${ACCESS}\n${facts}`), 'access.rofl');
+  must(r.assertClauses(rows), 'rows');
   r.evaluate();
-  if (r.holds(`stranger(${e.fromId})`)) throw Object.assign(new SpatError(5, `я вас не знаю (${e.fromId}); добавить может владелец — строкой в users.rofl`), { opened });
-  const rows = table(r, 'sender', 'U, T').filter((x) => e.tenant === '' || x.T === e.tenant);
-  if (rows.length === 0) throw Object.assign(new SpatError(5, `${e.fromId} не состоит в семье ${e.tenant} по users.rofl`), { opened });
-  if (new Set(rows.map((x) => x.T)).size > 1) throw Object.assign(new SpatError(5, `${e.fromId} в нескольких семьях (${rows.map((x) => x.T).join(', ')}): задайте SPAT_TENANT`), { opened });
-  return { ...e, as: rows[0].U, tenant: rows[0].T };
+  return r;
 }
 
-export interface Book { book: string; user: string; file: string; }
-export const bookOf = (user: string): string => `p_${user}`;
-
-/** `opened`: every file the loader read, in order — a stranger's proof. */
-export interface Store { env: Env; dir: string; books: Book[]; open: Book[]; week: string; opened: string[]; r: Rofl; }
-
-function booksIn(dir: string): Book[] {
-  const out: Book[] = [];
-  const led = path.join(dir, 'ledgers');
-  if (fs.existsSync(led)) {
-    for (const f of fs.readdirSync(led).sort()) {
-      if (!f.endsWith('.rofl')) continue;
-      const user = f.slice(0, -5);
-      if (!/^[a-z][a-z0-9_]*$/.test(user)) throw new SpatError(6, `${path.join(led, f)}: имя книги не атом`);
-      out.push({ book: bookOf(user), user, file: path.join(led, f) });
+/** WHO IS CALLING, before any book of any tenant is opened. A sender id is
+ *  asked of access.rofl over the users books alone — the named tenant's, or
+ *  every volume's under the root, or the rows handed in (init): `sender(U, T)`
+ *  names the person and their family, `stranger(N)` is the rule's own verdict. */
+export function resolve(e: Env, opened: string[] = [], users?: Clause[]): Env {
+  if (e.fromId === undefined) return e;
+  const rows: Clause[] = users ?? [];
+  if (!users) {
+    for (const t of e.tenant ? [e.tenant] : volumes(e.root)) {
+      const v = openVolume(e.root, t);
+      opened.push(bookPath(v, 'users')); rows.push(...readBook(v, 'users')); v.db.close();
     }
   }
-  if (fs.existsSync(path.join(dir, 'me.rofl'))) out.push({ book: 'p_me', user: 'me', file: path.join(dir, 'me.rofl') });
-  return out;
+  const r = small(rows, `from_id(${e.fromId}).`);
+  const refuse = (msg: string): never => { throw Object.assign(new SpatError(5, msg), { opened }); };
+  if (r.holds(`stranger(${e.fromId})`)) refuse(`я вас не знаю (${e.fromId}); добавить может владелец — строкой в книге users`);
+  const found = table(r, 'sender', 'U, T').filter((x) => e.tenant === '' || x.T === e.tenant);
+  if (found.length === 0) refuse(`${e.fromId} не состоит в семье ${e.tenant} по книге users`);
+  if (new Set(found.map((x) => x.T)).size > 1) refuse(`${e.fromId} в нескольких семьях (${found.map((x) => x.T).join(', ')}): задайте SPAT_TENANT`);
+  return { ...e, as: found[0].U, tenant: found[0].T };
 }
+/** The caller resolved over one tenant's users, and refused unless the rules make them its operator. */
+export function operator(e0: Env, tenant: string, users: Clause[]): Env {
+  atom(tenant, 'семья', 2);
+  const e = resolve({ ...e0, tenant }, [], users);
+  if (!small(users, `tenant(${tenant}).\ncaller(${e.as}).`).holds(`role(${e.as}, operator)`)) throw new SpatError(4, `${e.as} не оператор арендатора ${tenant} по книге users`);
+  return e;
+}
+
+export interface Book { book: string; user: string; where: string; }
+export const bookOf = (user: string): string => `p_${user}`;
+
+/** `opened`: every book the loader read, in order — a stranger's proof. */
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; week: string; opened: string[]; r: Rofl; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
- *  question), and one `authority` line per book — its one writer, by name. */
+ *  question), one `authority` line per book — its one writer, by name — and
+ *  where each book was read from, for volumes.rofl to hold against. */
 const loaderFacts = (e: Env, books: Book[]): string =>
   `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
-  + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\n` + books.map((b) => `authority(${b.book}, ${b.user}).`).join('\n');
+  + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nauthority(main, rules).\nbook_source(rules, repo).\n`
+  + `book_source(world, store).\nbook_source(users, store).\n`
+  + books.map((b) => `authority(${b.book}, ${b.user}).\nbook_source(${b.book}, store).`).join('\n');
 
 const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 /** The date `days` from now IN THE STORE'S ZONE: its ISO weekday 1..7 (the
@@ -117,14 +132,15 @@ export function dateIn(e: Env, days = 0): { ymd: string; n: number; monday: stri
   return { ymd, n, monday: new Date(Date.parse(`${ymd}T00:00:00Z`) - (n - 1) * 86_400_000).toISOString().slice(0, 10) };
 }
 
-/** A BOOK, LINE BY LINE. One clause per line, a fact, and its tag is the
- *  file's. The whole file is checked before one fact of it is asserted. */
+/** A TEXT BOOK, LINE BY LINE — the wall for what is still text: a hand-written
+ *  book on its way into a volume. One clause per line, a fact, and its tag is
+ *  the book's. The whole file is checked before one fact of it is returned. */
 export function bookClauses(b: Book, text: string): Clause[] {
   const out: Clause[] = [];
   text.split('\n').forEach((raw, i) => {
     const line = raw.trim();
     if (line === '' || line.startsWith('--')) return;
-    const where = `${b.file}:${i + 1}`;
+    const where = `${b.where}:${i + 1}`;
     let cs: Clause[];
     try { cs = parseProgram(line); } catch (err) { throw new SpatError(6, `${where}: не разобрана: ${(err as Error).message}`); }
     for (const c of cs) {
@@ -140,36 +156,35 @@ export function bookClauses(b: Book, text: string): Clause[] {
 }
 
 /** OPEN THE STORE FOR ONE CALL. Two worlds: a small one — access.rofl, the
- *  world file, users.rofl, the loader's facts — answers `stranger` and
+ *  world book, the users book, the loader's facts — answers `stranger` and
  *  `may_read`; the full one is built from the books that answer allowed.
- *  Every file is read once; `opened` lists them in the order they were. */
+ *  Every book is read once; `opened` lists them in the order they were. */
 export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } = {}): Store {
   const opened: string[] = [];
   const e = resolve(e0, opened);
-  const dir = path.join(e.root, e.tenant);
-  if (!fs.existsSync(path.join(dir, 'world.rofl'))) throw Object.assign(new SpatError(5, `нет арендатора: ${path.join(dir, 'world.rofl')} не существует`), { opened });
-  const books = booksIn(dir);
-  const read = (f: string): string => { opened.push(f); return fs.readFileSync(f, 'utf8'); };
-  const worldText = read(path.join(dir, 'world.rofl'));
-  const usersFile = path.join(e.root, 'users.rofl');
-  const usersText = fs.existsSync(usersFile) ? (opened.includes(usersFile) ? fs.readFileSync(usersFile, 'utf8') : read(usersFile)) : '';
-  const shared = `${ACCESS}\n${worldText}\n${usersText}\n${loaderFacts(e, books)}\n`;
-
-  const small = new Rofl();
-  must(small.load(BOOT), 'boot.rofl');
-  must(small.assert(shared), 'access.rofl + world.rofl + users.rofl');
-  small.evaluate();
-  if (small.holds(`stranger(${e.as})`)) {
-    throw Object.assign(new SpatError(5, `${e.as}: не член семьи ${e.tenant} и не в users.rofl`), { opened });
-  }
-  const allowed = new Set(table(small, 'may_read', 'U, L').filter((x) => x.U === e.as).map((x) => x.L));
+  const vol = openVolume(e.root, e.tenant);
+  const books = booksOf(vol).map((b) => ({ ...b, where: bookPath(vol, b.book) }));
+  const read = (ledger: string): Clause[] => {
+    const p = bookPath(vol, ledger);
+    if (!opened.includes(p)) opened.push(p);
+    return readBook(vol, ledger);
+  };
+  const users = read('users'); const worldRows = read('world');
+  const facts = loaderFacts(e, books);
+  const s = small([...users, ...worldRows], facts);
+  if (s.holds(`stranger(${e.as})`)) throw Object.assign(new SpatError(5, `${e.as}: не член семьи ${e.tenant} и не в книге users`), { opened });
+  const allowed = new Set(table(s, 'may_read', 'U, L').filter((x) => x.U === e.as).map((x) => x.L));
   const open = books.filter((b) => allowed.has(b.book));
-  const texts = open.map((b) => bookClauses(b, read(b.file)));
+  const texts = open.map((b) => read(b.book));
 
   let week = '?';
   const source = (r: Rofl): void => {
-    must(r.assert(SPAT + '\n' + shared), 'spat.rofl + store');
-    open.forEach((b, i) => must(r.assertClauses(texts[i], { who: b.user }), b.file));
+    // THE PROGRAM IS SIGNED `rules` — the public book's name — so volumes.rofl
+    // can tell its facts from the household's; everything else is anonymous.
+    must(r.assert(facts), 'loader');
+    must(r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}`, { who: 'rules' }), 'spat.rofl + access.rofl + volumes.rofl');
+    must(r.assertClauses([...worldRows, ...users]), 'world + users');
+    open.forEach((b, i) => must(r.assertClauses(texts[i], { who: b.user }), b.where));
     // THE WEEK IN FORCE, decided before the first evaluation so it costs one:
     // --week-of, else the operator's latest roll, else the world's own.
     const cur = baseArgs(r, 'current')[0]?.[0];
@@ -181,13 +196,13 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   };
   setSource(source);
   const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
-  return { env: e, dir, books, open, week, opened, r };
+  return { env: e, vol, books, open, week, opened, r };
 }
 
 /** Base facts of one relation off the store's keys — no evaluation, so the week can be swapped before the first. */
 const baseArgs = (r: Rofl, rel: string): string[][] => r.factKeys(rel).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
 
-/** The operator's latest `rolled(W, Iso)` in me.rofl: the week the store is read under unless --week-of says. */
+/** The operator's latest `rolled(W, Iso)` in the tool's book: the week the store is read under unless --week-of says. */
 const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
 
 export function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
@@ -197,23 +212,12 @@ export function must(res: { ok: boolean; diagnostics: string[] }, what: string):
 // ---------------------------------------------------------------------------
 // writing
 
-/** APPEND-ONLY, ONE write() PER ENTRY, O_APPEND. Two processes appending to
- *  one book both land, whole and in some order, because the kernel appends
- *  each write atomically at the current end; an entry is a few hundred bytes,
- *  well under the page. No lock file, so no stale lock after a crash, and no
- *  read-modify-write, so no lost update. The choice is argued in STORE.md. */
-export function append(b: Book, entry: string, clauses: number): void {
-  const text = entry.endsWith('\n') ? entry : entry + '\n';
-  // THE WALL STANDS AT THE WRITER TOO: the entry is read back exactly as the
-  // loader will read it, and must be exactly the facts intended, all in this
-  // book — so nothing the writer can be handed becomes a second line.
-  let n = -1;
-  try { n = bookClauses(b, text).length; } catch (e) { throw new SpatError(2, `запись не прошла бы стену книги: ${(e as Error).message}`); }
-  if (n !== clauses) throw new SpatError(2, `запись держит ${n} фактов вместо ${clauses}; ничего не записано`);
-  if (Buffer.byteLength(text) > 4096) throw new SpatError(6, `${b.file}: запись длиннее 4096 байт`);
-  const fd = fs.openSync(b.file, 'a');
-  try { fs.writeSync(fd, text); } finally { fs.closeSync(fd); }
-}
+/** THE CALLER'S ENTRY, ONE TRANSACTION: the clauses exactly as the trial saw
+ *  them, the trail (moment, channel, what was said) as columns rather than a
+ *  comment line — so nothing the writer can be handed becomes a second row.
+ *  The choice against O_APPEND text is argued in STORE.md, «Тома». */
+export const put = (s: Store, b: Book, clauses: Clause[], what: string, week?: string): number =>
+  write(s.vol, b.book, clauses, { at: isoNow(s.env), via: s.env.via, edit: what.replace(/\s+/g, ' ').trim() }, week);
 
 /** An id is the entry's content and its moment: one person, one instant, one text — one edit. */
 export const editId = (user: string, iso: string, text: string): string =>
@@ -223,7 +227,7 @@ export const isoNow = (e: Env): string => process.env.SPAT_NOW ?? e.now.toISOStr
 
 /** The book the caller writes; nobody writes another's. */
 export const myBook = (s: Store): Book => s.books.find((x) => x.user === s.env.as)
-  ?? (() => { throw new SpatError(6, `у ${s.env.as} нет книги в ${s.dir}/ledgers — spat init создаёт их`); })();
+  ?? (() => { throw new SpatError(6, `у ${s.env.as} нет книги в ${s.vol.file} — spat init создаёт их`); })();
 
 /** THE TRIAL. The world already evaluated without the candidate is the
  *  baseline: its defects go in as `before(D, R, K)`, the candidate goes
@@ -245,4 +249,3 @@ export function trial(s: Store, id: string, clauses: Clause[]): Verdict {
   return { noRight, breaks,
     owner: c ? { c, owner: String(own?.O ?? c), scope: String(own?.S ?? 'person') } : undefined };
 }
-
