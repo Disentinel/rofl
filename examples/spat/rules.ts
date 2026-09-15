@@ -95,6 +95,9 @@ function add(s: Store, text: string): number {
   // THE KERNEL'S CHECKS, on a fork of the week in force
   const f = s.r.fork();
   const before = { leak: f.query('leak[audit](A, B)').rows.length, undef: f.query('undefined_premise[audit](R, Rel)').rows.length, points: pointRows(f) };
+  // the author's own book is the candidate's to read: the loader declares `imports(hh, p_<author>)` per author of an
+  // ACTIVE rule, so a first rule by this author was refused as leak[audit] (measured on 1a78e14) — declared here for the trial
+  must(f.assert(`imports(${HH}, p_${s.env.as}).`), 'imports');
   must(f.assertClauses(cs, { who: HH }), 'правило');
   let partial = false;
   try { partial = f.evaluate().partial; } catch (e) {

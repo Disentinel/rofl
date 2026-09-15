@@ -1,8 +1,9 @@
 // demo.ts — SPAT, 2026-09-15 evening: a place of the world is a line a book
-// added (group 18), and a one-off block has no «every» to take off (19). A
-// file of its own for the reason demolib.ts states — a demo has 120 s in
-// scripts/goldens.ts and spat_edits is at 97 — on the same fixture through
-// the same helpers.
+// added (group 18), a one-off block has no «every» to take off (19), and a
+// family rule may read its author's own book at the door, not only once the
+// author has a rule in force (20). A file of its own for the reason
+// demolib.ts states — a demo has 120 s in scripts/goldens.ts and spat_edits
+// is at 97 — on the same fixture through the same helpers.
 //
 //   node --experimental-strip-types examples/spat_places/demo.ts
 
@@ -96,11 +97,25 @@ async function skipEvery(): Promise<Group> {
   return g;
 }
 
+// ------------------- 20. a family rule may read its author's own book at the door
+async function ownBook(): Promise<Group> {
+  const g = new Group('20. rule add reading the author\'s own book — the trial declares imports(hh, p_<author>) for the candidate (measured on 1a78e14: leak[audit] for a first rule); another member\'s book is still 2');
+  const root = fresh();   // hh is empty here: robin has no rule in force, so the loader declares no imports for her
+  const r = await spat(root, 'robin', ['rule', 'add', 'warn[hh](mine, "моя отмена", D) :- e_skip[p_robin](E, B, D), day(D, N).'], at(0));
+  g.check('robin (первое правило): тело читает e_skip[p_robin] → 0, «warn[hh]: 2 строк: … mon · … sat» — e_skipwalk пн, e_skipclean сб; e_skipwalkall (all) не день',
+    r.code === 0 && /warn\[hh\]: 2 строк: warn\[hh\]\(mine, "моя отмена", mon\) · warn\[hh\]\(mine, "моя отмена", sat\)/.test(r.out), r.out);
+  g.check('show mon: «!! mine: моя отмена (пн, правило семьи)» — правило в силе, чтение своей книги при загрузке без leak', /!! mine: моя отмена\s+\(пн, правило семьи\)/.test((await spat(root, 'robin', ['show', 'mon'], at(1))).out));
+  const foreign = await spat(root, 'alex', ['rule', 'add', 'warn[hh](x, "y", D) :- e_skip[p_robin](E, B, D), day(D, N).'], at(2));
+  g.check('alex: тело читает [p_robin] → 2 «читает только main, hh и свою книгу p_alex» (положительный контроль)', foreign.code === 2 && /читает только main, hh и свою книгу p_alex/.test(foreign.out), foreign.out);
+  g.check('в clauses одно правило', sql<{ n: number }[]>(root, 'SELECT count(*) n FROM clauses')[0].n === 1);
+  return g;
+}
+
 const t0 = Date.now();
-const todo = [places, skipEvery];
+const todo = [places, skipEvery, ownBook];
 const groups: Group[] = new Array(todo.length);
 let next = 0;
-await Promise.all(Array.from({ length: 2 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));
+await Promise.all(Array.from({ length: 3 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);
 const fails = groups.reduce((a, g) => a + g.fails, 0);

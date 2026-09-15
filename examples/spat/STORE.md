@@ -534,7 +534,7 @@ Thursday (`breaks` 1→2) — a confirmed `warn` from the bot, a `needs_cover`
 row for the Friday guest (468→469), a `busy` row the census cannot see
 (gated) and the forged `may_edit[hh]`.
 
-## A defect of v4, from the stand
+## Two defects of v4, from the stand
 
 - `skip <added block> every <day>` was code 0 «отменён каждую неделю» with no
   effect: `block()` accepted a book's one-off, `e_unusual` was written, and
@@ -542,6 +542,12 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   no other week, so it is code 2 naming the entry and the take-back («chess —
   разовая правка этой недели (пн [правка e_…]) … отзыв: skip chess <день>»);
   a recurring line and a world block are as before (demo group 19).
+- `rule add` with a body reading the author's OWN book (`e_skip[p_robin]`) was
+  refused as `leak[audit]` for an author with no rule in force: the loader
+  declares `imports(hh, p_<author>)` per author of an ACTIVE rule, and the
+  trial fork had none for a first rule. The trial now declares it for the
+  candidate's author; a body reading another member's book is still 2 at the
+  door (demo group 20).
 
 ## What is deliberately not decided
 
@@ -632,8 +638,9 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 28 scenarios in two
-  groups (18: places, 19: the one-off «every») in 45 s; `examples/spat_edits/demo.ts` (groups 12–17); and
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 31 scenarios in three
+  groups (18–20: places, the one-off «every», the author's own book at the
+  door) in 50 s; `examples/spat_edits/demo.ts` (groups 12–17); and
   `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under
