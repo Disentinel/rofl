@@ -77,8 +77,12 @@ export function hhRules(v: Volume, facts: Clause[]): { clauses: Clause[]; author
   return { clauses: out, authors: [...authors].sort() };
 }
 
-const pointRows = (r: { query: (q: string) => { rows: { text: string }[] } }): string[] =>
-  POINTS.flatMap((p) => r.query(`${p}[hh](A, B, C)`).rows.map((x) => `${p}[hh](${x.text.replace(/[A-C] = /g, '').replace(/, /g, ', ')})`)).sort();
+/** The rows at the four points, per point — the preview counts them, so a rule that
+ *  gives 504 warnings is confirmed as 504, not as its first two lines. */
+const pointRows = (r: { query: (q: string) => { rows: { text: string }[] } }): Map<string, string[]> =>
+  new Map(POINTS.map((p) => [p, r.query(`${p}[hh](A, B, C)`).rows.map((x) => `${p}[hh](${x.text.replace(/[A-C] = /g, '')})`).sort()]));
+const preview = (before: Map<string, string[]>, after: Map<string, string[]>): string[] =>
+  POINTS.map((p) => { const was = new Set(before.get(p)); const now = after.get(p)!.filter((x) => !was.has(x)); return now.length === 0 ? '' : `${p}[hh]: ${now.length} строк${now.length > 3 ? `, первые 3: ${now.slice(0, 3).join(' · ')} …` : `: ${now.join(' · ')}`}`; }).filter((x) => x !== '');
 
 /** `rule add '<clauses>'`: the wall, the kernel's checks on a fork, the trial, one transaction. */
 function add(s: Store, text: string): number {
@@ -104,7 +108,7 @@ function add(s: Store, text: string): number {
   if (undef.length > before.undef) refuse(`undefined_premise[audit] — правило читает то, чего в мире нет: ${undef.join('; ')}`);
   const unsafe = new Evaluation(f.store, {}).rules.filter((x) => !x.safe).map((x) => x.canon);
   if (unsafe.length > 0) refuse(`правило не материализуется (demand-backed): ${unsafe.join(' | ')}`);
-  const gives = pointRows(f).filter((x) => !before.points.includes(x));
+  const gives = preview(before.points, pointRows(f));
   // WRITTEN: the clauses under one id, the trail as facts of the book; from the bot it waits for a person
   const at = isoNow(s.env);
   const id = 'r' + editId(s.env.as, at, text.trim()).slice(1);

@@ -353,9 +353,12 @@ the right is `retract_without_right[audit]` and never acts. `move <name>
 written again under a new id through the ordinary trial (0 or 3). The
 answer names what happened: «отозвана e_3a5414ea (chess пн)», «отозвана по
 праву семьи e_… (chess ср, правка robin)». A recurring block skipped on one
-day is that week's `skipped`; `retract <id>` takes the recurrence off. An
-unknown name is code 2 with the blocks that stand that day, added ones
-included, so the model need not ask. Fixture: alex's `retracts` of robin's
+day is that week's `skipped`; named with no day, the recurrence itself is
+taken back («отозвана e_greek (greek вт)»). An unknown name is code 2 with
+the blocks that stand that day — the world's and a book's, the latter marked
+`[правка e_…]` — and no grammar, so the model need not ask. `rule add`'s
+preview counts per extension point («warn[hh]: 7 строк, первые 3: …»), so a
+person confirms a volume, not two lines of it. Fixture: alex's `retracts` of robin's
 `e_skipclean` (by right: `retracted_edit`, `skipped` 13→12), of the nanny's
 `e_nannyadd` (no right: audit, the evening stands) and of `e_nowhere` (audit).
 

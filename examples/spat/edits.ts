@@ -106,16 +106,23 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   // THE BLOCKS AS THE HUMAN SEES THEM: the typical week (a recurring line included), and what a
   // book added this week. An added block named with its day is taken back by its entry.
   const adds = table(r, 'added', 'C, E, W, P, Wk, D, F, T');
+  const usuals = table(r, 'usual', 'C, E, W, P, Sp, F, T');
+  const edits = new Set(table(r, 'edit_by', 'E, U').map((x) => x.E));
   const block = (t: string | undefined, d?: string): string => {
     const a = t === undefined ? undefined : N.get(t.toLowerCase());
-    if (a !== undefined && (table(r, 'usual', 'C, E, W, P, Sp, F, T').some((x) => x.E === a) || adds.some((x) => x.E === a))) return a;
-    const seen = [...new Set(table(r, 'span', 'C, E, W, P, D, F, T').filter((x) => d === undefined || d === 'all' || x.D === d).map((x) => x.E))].sort();
-    return bad(`блок: '${t ?? ''}' — ${d && d !== 'all' ? `${ru(d)}: стоят` : 'в расписании'} ${seen.map(ru).join(', ')}`);
+    if (a !== undefined && (usuals.some((x) => x.E === a) || adds.some((x) => x.E === a))) return a;
+    // THE BLOCKS OF THAT DAY, so the model has nothing to ask the person: the world's and a book's, marked
+    const seen = new Map<string, string>();
+    for (const x of table(r, 'span', 'C, E, W, P, D, F, T').filter((x) => d === undefined || d === 'all' || x.D === d)) seen.set(x.E, edits.has(x.C) ? ` [правка ${x.C}]` : '');
+    throw new SpatError(2, `блок: '${t ?? ''}' — ${d && d !== 'all' ? `${ru(d)}: стоят` : 'в расписании стоят'} ${[...seen].sort().map(([e, m]) => ru(e) + m).join(', ')}`);
   };
+  // a recurring line named with no day: the recurrence itself, taken back
+  const recurringOf = (ev: string): { id: string; ev: string; day: string }[] =>
+    usuals.filter((x) => x.E === ev && edits.has(x.C)).map((x) => ({ id: x.C, ev, day: x.Sp }));
   const addedOn = (ev: string, d: string): { id: string; ev: string; day: string; row: (typeof adds)[number] }[] | undefined => {
     if (!adds.some((x) => x.E === ev)) return undefined;
     const rows = adds.filter((x) => x.E === ev && (d === 'all' || x.D === d));
-    if (rows.length === 0 && !table(r, 'usual', 'C, E, W, P, Sp, F, T').some((x) => x.E === ev)) bad(`${ev} стоит ${adds.filter((x) => x.E === ev).map((x) => ru(x.D)).join(', ')}, не ${ru(d)}`);
+    if (rows.length === 0 && !usuals.some((x) => x.E === ev)) throw new SpatError(2, `${ev} стоит ${adds.filter((x) => x.E === ev).map((x) => ru(x.D)).join(', ')}, не ${ru(d)}`);
     return rows.length === 0 ? undefined : rows.map((x) => ({ id: x.C, ev, day: x.D, row: x }));
   };
   const backs = (xs: { id: string }[]): string[] => xs.map((x) => `retracts(${x.id}, "$AT", $VIA).`);
@@ -138,7 +145,7 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
     }
     const d = w[2] === undefined ? 'all' : day(w[2]);
     const ev = block(w[1], d);
-    const taken = addedOn(ev, d);
+    const taken = addedOn(ev, d) ?? (d === 'all' && recurringOf(ev).length > 0 ? recurringOf(ev) : undefined);
     if (taken) return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, entries: taken, facts: () => backs(taken) });
     return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, facts: (id) => [`e_skip(${id}, ${ev}, ${d}).`] });
   }

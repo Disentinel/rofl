@@ -198,7 +198,7 @@ async function asSeen(): Promise<Group> {
   const b = await spat(root, 'robin', ['edit', 'add chess wed 16:00-17:00 kit home'], { SPAT_NOW: '2026-08-31T21:32:00+03:00' });
   const B = eid(b);
   const unknown = inproc({ ...asRobin(root), SPAT_NOW: '2026-08-31T21:33:00+03:00' }, (s) => verb(s, 'edit', ['skip chesss wed']));
-  g.check('skip несуществующего → код 2 с блоками среды, добавленный chess в списке', unknown.code === 2 && /ср: стоят .*chess/.test(unknown.out), unknown.out.split('\n')[0]);
+  g.check('skip несуществующего → код 2 с блоками среды: добавленный chess с пометкой [правка e_…], без грамматики', unknown.code === 2 && new RegExp(`ср: стоят .*chess \\[правка ${B}\\]`).test(unknown.out) && !/Допустимо/.test(unknown.out), unknown.out.split('\n')[0]);
   const al = await spat(root, 'alex', ['edit', 'skip chess wed'], { SPAT_NOW: '2026-08-31T21:34:00+03:00' });
   g.code('alex: skip chess wed (правка robin, по праву семьи)', al, 0);
   g.check(`«отозвана по праву семьи ${B} (chess ср, правка robin)»; retracts(${B}) в книге alex; show wed без chess`,
@@ -214,8 +214,10 @@ async function asSeen(): Promise<Group> {
   g.check(`«отозвана ${C}» и «применено: chess → чт 17:30 (${D})»; show thu: chess 17:30–18:30 [правка ${D}]`,
     new RegExp(`отозвана ${C} \\(chess чт\\)`).test(mv.out) && D !== '' && D !== C && new RegExp(`17:30–18:30\\s+chess.*правка ${D}`).test((await spat(root, 'robin', ['show', 'thu'])).out), mv.out);
   // a recurring block skipped on one day is that week's skip; the recurrence stands
-  g.code('robin: skip greek tue (every-блок фикстуры)', await spat(root, 'robin', ['edit', 'skip greek tue'], { SPAT_NOW: '2026-08-31T21:37:00+03:00' }), 0);
+  g.code('robin: skip greek tue (every-блок фикстуры, с днём — только эта неделя)', await spat(root, 'robin', ['edit', 'skip greek tue'], { SPAT_NOW: '2026-08-31T21:37:00+03:00' }), 0);
   g.check('вт w0831 без greek, вт w0907 с greek', !/greek/.test((await spat(root, 'robin', ['show', 'tue'])).out) && /greek/.test((await spat(root, 'robin', ['show', 'tue', '--week-of', 'w0907'])).out));
+  const rec = await spat(root, 'robin', ['edit', 'skip greek'], { SPAT_NOW: '2026-08-31T21:38:00+03:00' });
+  g.check('skip greek без дня — отзыв повторения: «отозвана e_greek (greek вт)», вт w0907 без greek', rec.code === 0 && /отозвана e_greek \(greek вт\)/.test(rec.out) && !/greek/.test((await spat(root, 'robin', ['show', 'tue', '--week-of', 'w0907'])).out), rec.out);
   // the fixture: alex's retracts by right, without right, of nothing
   const fx = inproc(asRobin(root), (s) => { console.log(`${s.r.holds('retracted_edit(e_skipclean)')} ${s.r.holds('retracted_edit(e_nannyadd)')} ${s.r.query('retract_without_right[audit](E, L)').rows.map((x) => x.bindings.E).sort().join(',')}`); return 0; });
   g.check('фикстура: retracts(e_skipclean) alex — отозвана; retracts(e_nannyadd) — нет права, действует; аудит: e_nannyadd, e_nowhere', fx.out === 'true false e_nannyadd,e_nowhere', fx.out);

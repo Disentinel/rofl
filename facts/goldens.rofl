@@ -117,7 +117,7 @@ golden_host("reach", "7bcb38a4b0ac1448", 0, 37).
 golden_host("yak", "9f3bd0ccd881163f", 0, 208).
 golden_host("aka", "b270886e061521b6", 0, 341).
 golden_host("rip", "b6be7e21b8485b59", 0, 377).
-golden_host("spat_edits", "cb40de8e157beb6e", 0, 81).
+golden_host("spat_edits", "9ca3b52906037c47", 0, 82).
 golden_host("bleep", "d9403eaac329d7d6", 0, 183).
 golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
 golden_host("jopa", "e9c3c46e0b70633c", 0, 311).
