@@ -55,3 +55,26 @@ e_unusual[p_robin](e_nowalkfri, walk, fri).
 edit_at[p_robin](e_nowalkfri, "2026-09-01T18:05:00+03:00").
 edit_via[p_robin](e_nowalkfri, telegram).
 for_week[p_robin](e_nowalkfri, w0831).
+-- 2026-09-02T18:00:00+03:00 cli robin: add piano every thu 16:00-17:00 kit home — then retracted: off every week
+e_usual[p_robin](e_oldpiano, piano, thu, 960, 1020, kit, home).
+edit_at[p_robin](e_oldpiano, "2026-09-02T18:00:00+03:00").
+edit_via[p_robin](e_oldpiano, cli).
+for_week[p_robin](e_oldpiano, w0831).
+-- 2026-09-02T18:30:00+03:00 cli robin: retracted e_oldpiano
+retracted[p_robin](e_oldpiano, "2026-09-02T18:30:00+03:00", cli).
+-- 2026-09-02T19:00:00+03:00 telegram robin: add choir every sat 10:00-11:00 kit home — proposed (broke the day), never confirmed: waits
+e_usual[p_robin](e_maybechoir, choir, sat, 600, 660, kit, home).
+edit_at[p_robin](e_maybechoir, "2026-09-02T19:00:00+03:00").
+edit_via[p_robin](e_maybechoir, telegram).
+for_week[p_robin](e_maybechoir, w0831).
+proposed[p_robin](e_maybechoir).
+-- 2026-09-02T19:30:00+03:00 cli robin: skip cleaning every alldays — the block stands on Saturday only, so the skip is one day, not seven
+e_unusual[p_robin](e_noclean, cleaning, alldays).
+edit_at[p_robin](e_noclean, "2026-09-02T19:30:00+03:00").
+edit_via[p_robin](e_noclean, cli).
+for_week[p_robin](e_noclean, w0831).
+-- a recurring skip the CLI would have refused with code 4 (c_school and c_school_fri are the school's): never acts
+e_unusual[p_robin](e_noschoolfri, school_kit, fri).
+edit_at[p_robin](e_noschoolfri, "2026-09-02T20:00:00+03:00").
+edit_via[p_robin](e_noschoolfri, cli).
+for_week[p_robin](e_noschoolfri, w0831).

@@ -86,7 +86,8 @@ give_cost(C, 200)  :- constraint(C, _, external), not has_give(C).
 -- 2. THE WEEK: ONE TYPICAL PATTERN, PLUS WHAT THIS WEEK DID DIFFERENTLY
 -- =========================================================================
 -- Four layers, in order of authority:
---   usual/7      the typical week
+--   usual/7      the typical week — the world's lines, and a household's
+--                recurring edits (access.rofl §5, `e_usual`)
 --   usual_on/5   a day that is always different (the Friday bus)
 --   moved/7      this week only, possibly to a different day
 --   skipped/4    this week only, not on at all

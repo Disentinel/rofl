@@ -139,6 +139,11 @@ spat tomorrow                     tomorrow: holes, chains, late arrivals, then t
 spat show [day|week]              a day (today by default) or the week
 spat edit 'skip walk mon'         0 applied · 3 written as proposed, breaks the day · 4 no right · 2 not parsed
 spat confirm <id> · retract <id>  my own edit, one more fact in my book
+spat edit 'add greek сегодня 16:00-17:00 kit'   a date — сегодня/завтра/15.09 — is resolved in SPAT_TZ and lands in ITS week
+spat edit 'add piano every thu 16:00-17:00 kit'  every week: one more line of the typical week; retract takes it off every week
+spat maybe 'add greek mon 16:00-17:00' · maybe compare · maybe apply <id>   a hypothesis is a book; compare builds the world under each
+spat place <what> <minutes> [who]     the best slots, each tried as a hypothesis
+spat rule add '<clauses>' · rule list · rule confirm/retract <id>   the household's own rules (adult/operator), checked by the kernel
 spat ics [--for kit]              the week as a calendar
 spat roll w0907 · init fam2 --world week.rofl --users users.rofl          operator only
 spat volume load fam2 robin.rofl · volume dump fam2 [p_robin]             operator only: a book in, a book out, as text

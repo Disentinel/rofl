@@ -252,7 +252,9 @@ raising one fails `npm test` whatever the golden says:
 
     facts(seq INTEGER PRIMARY KEY, ledger TEXT, pred TEXT, args TEXT /* JSON array of kernel terms */,
           at TEXT, via TEXT, edit TEXT)      -- INSERT only: BEFORE UPDATE / BEFORE DELETE → RAISE(ABORT)
-    books(ledger TEXT PRIMARY KEY, user TEXT) -- which books exist and whose they are (init, volume load)
+    clauses(seq INTEGER PRIMARY KEY, book TEXT, head TEXT, body TEXT /* the kernel's AST, terms as termToJson */,
+          at TEXT, via TEXT, id TEXT)        -- the household's rules (schema 2); INSERT only the same way
+    books(ledger TEXT PRIMARY KEY, user TEXT) -- which books exist and whose they are (init, volume load, maybe)
     meta(key TEXT PRIMARY KEY, value TEXT)    -- tenant, schema, week
 
 **The operator's verbs** (`spat volume …`, code 4 for anyone else):
@@ -319,6 +321,115 @@ clean (measured) — with the process id in the line. THE HOST THAT RUNS
 pass the flag): `demo.ts` does so on every spawn so its output hashes, and
 the stand's shim must too, or the line rides into whatever reads stderr.
 
+## A date is a fact of the environment
+
+Decided 2026-09-15, after the owner said «сегодня у ребёнка греческий в
+16:00» on a Tuesday and the model wrote Monday: the model had computed the
+weekday itself. `сегодня`/`today`, `завтра`/`tomorrow`, `послезавтра`,
+`15.09` (this year) and `2026-09-15` are accepted wherever the edit grammar
+takes a day, and by `show`, and are resolved by the CLI in `SPAT_TZ` (and
+`SPAT_NOW` for tests) — never by the person or the model. A dated edit lands
+in the DATE's own week (`for_week`), is tried under that week, and `show
+<date>` shows the date under its week; a date whose week the world does not
+know is code 2 with the Monday it needs (`edits.ts`, `dateToken`, `weekOf`).
+Measured in demo group 12: `SPAT_NOW` Tuesday 01.09 + «сегодня» → `tue`,
+`w0831`; Sunday 06.09 21:30 + «завтра» → `mon`, `w0907`; `28.09` → 2.
+
+## Every week: a recurring line is one more line of the typical week
+
+`add <what> every <days> <from>-<to> [who] [where]` writes
+`e_usual(E, What, Days, From, To, Who, Where)`, `skip <block> every <days>`
+writes `e_unusual(E, Block, Days)`; `<days>` is a day, `weekdays`, `alldays`
+or a day group the world names (`in_group`). access.rofl derives
+`usual/7` from an accepted recurring line — the same three questions `acts`
+asks (within the right, not retracted, not waiting), asked as
+`acts_recurring` WITHOUT going through `no_right`: `touches` reads `usual`
+to name a block's constraints, so `usual :- acts` would close a negative
+cycle and the program would be refused (measured: the rounds evaluator
+stalls with 22 relations unsettled) — and `skipped/4` from a recurring
+skip on whichever week is in force. A retraction takes the line off every
+week; `whoami` lists recurring lines apart. Rights are `add`'s (a helper
+speaks only for themself). The fixture carries robin's `e_greek` (every
+Tuesday), `e_nowalkfri`, `e_noclean` (a skip on `alldays` of a block that
+stands on Saturday only — one skipped day, not seven), a retracted and a
+proposed recurring line, the nanny's `e_nannyusual` refused by right and
+robin's `e_noschoolfri` refused by the school's constraint; every premise of
+the new rules moves the census when dropped (measured 2026-09-15, 38
+mutants: 37 killed by the census or by the demand-backed check, `busy`'s
+bridge only by the demo's `free`).
+
+## A hypothesis is a book
+
+«Понедельник или среда», «где-нибудь на следующей неделе» are `whatif` and
+`place` — but WRITTEN. `spat maybe '<правка>' [--as-of <day>]` parses the
+edit and writes its facts into a book of its own, `[m_<id>]`, registered in
+the volume for its author; the loader lists `m_` books apart (`Store.maybes`)
+and never gives one to the rules, so `show` is the same world and no rule of
+access.rofl reads a hypothesis. `spat maybe compare [<id>…]` builds the world
+under each live hypothesis of the caller (not applied, `edit_at` within 24
+hours) in a FORK of the store — the book given its author's `authority`,
+`trial(M)` and `before(...)` beside it, exactly as `edit` tries a candidate —
+and prints two columns (day, what breaks, holes, slack) and, per hypothesis,
+the day's problems and the kernel's own `why` down to the axiom in `[m_…]`.
+`spat maybe apply <id>` re-tags the facts into the author's own book under a
+new edit id through `commit()` — the wall, the trial, code 0/3/4 — and
+appends `applied(M, E, Iso)` to the hypothesis, which stays as history.
+`spat place <what> <minutes> [who] [where] [--week-of W]` over the store:
+the rules' `admissible`/`cand_bad` over `want/4`, the best start of each of
+three days tried as a hypothesis, the three best printed with breaks, holes
+and slack and the `maybe` line to write one; nothing is kept.
+
+## The household's own rules, without a release
+
+«Когда я начну вводить новые constraints (нужен ноутбук, согласовать время)
+— потребуется новый релиз» — a new KIND of constraint is a rule, and a rule
+is data. `spat rule add '<clauses>'` (adult or operator) parses with the
+kernel's parser and stores the AST — `clauses(seq, book, head, body, at,
+via, id)`, terms as `termToJson`, INSERT only, schema 2; a schema-1 volume
+gets the table on open — under an id `r_<hash>`, with the trail and the
+status as facts of the book `hh` (`rule_by`, `rule_at`, `rule_via`,
+`rule_proposed`, `rule_confirmed`, `rule_retracted`). The loader asserts the
+book for every member's call, like the world, signed `hh`.
+
+**The wall.** Every head of the book gets `[hh]` from the loader whatever
+the text said: `may_edit[main](nanny, c_pickup) :- …` concludes
+`may_edit[hh]`, which nothing reads — `may_edit` in main does not move and
+the nanny's edit is still 4. A body reads the world (unbracketed or
+`[main]`), the book (`[hh]`) or the author's own book (`[p_<author>]`,
+declared `imports(hh, p_<author>)` by the loader per active author); any
+other tag is 2 at the door and 6 at the loader. An unbracketed body literal
+whose relation the same submission concludes reads `[hh]` — `needs(B,
+laptop)` in the laptop rule reads the `needs(work_am, laptop).` written
+beside it — except the four extension points, which always mean the whole
+picture.
+
+**Four extension points, and nothing else.** `defect[hh](Kind, Block, Day)`
+→ `defect`/`breaks` (access.rofl §6), `busy[hh](P, D, S)` → `busy` and
+`needs_cover[hh](Ch, D, S)` → `needs_cover` (spat.rofl §12, `imports` both
+ways so the flow audit is quiet), `warn[hh](Kind, Text, Day)` → a «!!» line
+of `tomorrow`/`show`. `uncovered(kit, mon, 600).` in a family rule is
+accepted and inert.
+
+**The checks are the kernel's**, on a fork of the week in force, each a code
+2 with the diagnostic verbatim: an unstratified program («program rejected:
+round N settled nothing while … remained»), a new `leak[audit]` or
+`undefined_premise[audit]` row, a rule the engine would only demand-back
+(`Evaluation.rules[].safe`), the budget/space wall (`hole` rows,
+`space_exhausted`/`budget_exhausted`). A rule that passes answers with what
+it derives today at the four points. A rule that came through the bot
+(`SPAT_VIA=telegram`) is `rule_proposed` and code 3 until its author
+confirms (`spat rule confirm`); `spat rule retract` is the author's or the
+operator's; `spat rule list` renders the AST as text, and so does `volume
+dump hh` (a dump with rules is not loadable by `volume load`, which refuses
+a rule in a text book — `rule add` is the way in).
+
+The fixture `store.example/hh.rofl` holds four rules for the golden worlds
+(not read by the tool): the laptop rule with `acme` at the office —
+`defect` 5→6, and in `spat_trial` one more reason `e_schoolmv` breaks
+Thursday (`breaks` 1→2) — a confirmed `warn` from the bot, a `needs_cover`
+row for the Friday guest (468→469), a `busy` row the census cannot see
+(gated) and the forged `may_edit[hh]`.
+
 ## What is deliberately not decided
 
 - **A helper in two households.** The users book keys a user to one tenant
@@ -362,6 +473,16 @@ the stand's shim must too, or the line rides into whatever reads stderr.
   edit. Two *different* entries under one id would need a collision of
   SHA-1 prefixes; not guarded.
 - **SQLite on NFS.** Locking is unreliable there; see 6.
+- **`DD.MM` is this year.** `02.01` typed on 30 December means the January
+  that has passed; write `2027-01-02`.
+- **A rule that reads another member's book.** `imports(hh, p_<author>)` is
+  the author's own book only; a rule over everyone's edits reads `main`,
+  where `acts`, `edit_by`, `moved`, `added` already are.
+- **Loading a dump of `hh`.** `volume dump hh` renders the rules; `volume
+  load` refuses a rule in a text book, so a book of rules moves by `rule
+  add` of each rule's text.
+- **`busy[hh]` in the census.** Behind `deep(slots)` like every busy row;
+  only the demo's `free` sees the bridge.
 
 ## What the gate holds
 
