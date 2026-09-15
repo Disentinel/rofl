@@ -86,14 +86,10 @@ export function add(s: Store, text: string): number {
   const home = table(s.r, 'base', 'B')[0]?.B ?? bad('в мире нет base/1');
   const code = rule(s, ['add', `place(${p.atom}). ru_name(${p.atom}, "${p.name}").${p.min === undefined ? '' : ` travel(${home}, ${p.atom}, ${p.min}).`}`]);
   if (code !== 0 && code !== 3) return code;
-  // WHAT THE RULES DO WITH IT, said at the door — measured 2026-09-15 on the fixture: with no travel the pair
-  // has no `tt`, so a child's run there is `no_way` («некому везти», a block there is code 3) and an adult's
-  // chain into it has no slack; with the minutes both are known FROM HOME ONLY — between this place and any
-  // other (school → here, here → pool) the model still knows nothing, and a chain through such a pair is the
-  // same silence, which `spat` lists as «НЕТ ВРЕМЕНИ В ПУТИ». Any pair is one more line: rule add 'travel(school, here, 10).'
-  console.log(p.min === undefined
-    ? `  время дороги от дома не задано: для модели поездки туда нет — ребёнка везти некому (no_way, блок там даст код 3), у взрослого цепочка туда без запаса;\n  задать: spat rule add 'travel(${home}, ${p.atom}, <минут>).'`
-    : `  дорога известна от дома и домой; между ${p.atom} и другим местом (школа, садик, бассейн) время не задано — такая цепочка без запаса, ребёнка везти некому;\n  задать: spat rule add 'travel(school, ${p.atom}, <минут>).'`);
+  // rule add has said what a place without a road is (rules.ts, worldSaid); with the minutes the road is known FROM HOME
+  // ONLY — between this place and any other (school → here, here → pool) the model still knows nothing, a chain through
+  // such a pair is the lint's silence («НЕТ ВРЕМЕНИ В ПУТИ»), and any pair is one more line
+  if (p.min !== undefined) console.log(`  дорога известна от дома и домой; между ${p.atom} и другим местом (школа, садик, бассейн) время не задано — такая цепочка без запаса, ребёнка везти некому;\n  задать: spat rule add 'travel(school, ${p.atom}, <минут>).'`);
   return code;
 }
 

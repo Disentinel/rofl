@@ -28,8 +28,8 @@ async function places(): Promise<Group> {
   const a = await spat(root, 'robin', ['place', 'add', 'American Academy'], at(0));
   g.code('robin: place add "American Academy"', a, 0);
   const A = rid(a);
-  g.check('= rule add: «в мир семьи: place(american_academy)», «ru_name(american_academy, "American Academy")»; ответ называет следствие без дороги («ребёнка везти некому (no_way …)»); в clauses 2 факта под r_…, travel нет',
-    /в мир семьи: place\(american_academy\)/.test(a.out) && /в мир семьи: ru_name\(american_academy, "American Academy"\)/.test(a.out) && /время дороги от дома не задано/.test(a.out) && /везти некому \(no_way/.test(a.out)
+  g.check('= rule add: «в мир семьи: place(american_academy) «American Academy»», «ru_name(…)»; ответ называет следствие без дороги («дороги от дома нет: ребёнка везти туда некому (no_way …)»); в clauses 2 факта под r_…, travel нет',
+    /в мир семьи: place\(american_academy\) «American Academy»/.test(a.out) && /в мир семьи: ru_name\(american_academy, "American Academy"\)/.test(a.out) && /дороги от дома нет: ребёнка везти туда некому \(no_way/.test(a.out)
     && sql<{ head: string }[]>(root, 'SELECT head FROM clauses WHERE id = ?', A).map((x) => /"rel":"([a-z_]+)"/.exec(x.head)?.[1]).sort().join(',') === 'place,ru_name', a.out);
   const who = await spat(root, 'robin', ['whoami'], at(1));
   g.check('whoami: под «места (правила семьи):» — r_… american_academy «American Academy», дорога от дома не задана', new RegExp(`места \\(правила семьи\\):\n  ${A}  действует  american_academy «American Academy», дорога от дома не задана`).test(who.out), who.out);
@@ -125,6 +125,14 @@ async function extendsWorld(): Promise<Group> {
   const e2 = await spat(root, 'robin', ['edit', 'add math every thu 15:00-16:30 kit american_academy'], at(3));
   g.check('rule add travel(school, american_academy, 10) → 0; та же правка → 0, каждую неделю', r2.code === 0 && e2.code === 0 && /каждую неделю/.test(e2.out), `${r2.out} | ${e2.out}`);
   g.check('show thu: math в American Academy [правка e_…], kit везут', /math\s+American Academy\s+\[правка/.test((await spat(root, 'robin', ['show', 'thu'], at(4))).out));
+  // PLANTED (E1b): the lead's line — a place with a Russian name and no road, then a block there by atom and by the name
+  const zoo = await spat(root, 'robin', ['rule', 'add', 'place(zoo). ru_name(zoo, "Зоопарк").'], at(20));
+  g.check('rule add place(zoo). ru_name(zoo, "Зоопарк") → 0, «в мир семьи: place(zoo) «Зоопарк»» и «дороги от дома нет: … задать: rule add \'travel(home, zoo, <минут>).\'»', zoo.code === 0 && /в мир семьи: place\(zoo\) «Зоопарк»/.test(zoo.out) && /дороги от дома нет: .*rule add 'travel\(home, zoo, <минут>\)\.'/.test(zoo.out), zoo.out);
+  const zk = await spat(root, 'robin', ['edit', 'add trip sat 10:00-12:00 kit zoo'], at(21));
+  const za = await spat(root, 'robin', ['edit', 'add trip sun 10:00-12:00 alex zoo'], at(22));
+  const zq = await spat(root, 'robin', ['edit', 'add trip sun 13:00-14:00 alex "Зоопарк"'], at(23));
+  g.check('add trip sat 10:00-12:00 kit zoo: был 2 «мир такого не знает» — теперь 3 «ломает сб: no_way» (дороги нет, ребёнка везти некому); add trip sun … alex zoo → 0; alex "Зоопарк" (по ru_name) → 0',
+    zk.code === 3 && !/мир такого не знает/.test(zk.out) && /ломает сб: no_way/.test(zk.out) && za.code === 0 && zq.code === 0, `${zk.out.split('\n').slice(0, 2).join(' | ')} || ${za.out} || ${zq.out}`);
   // PLANTED (E2): the principle — a fact of the book does not override the world's; what it may not say is withheld with the reason
   const r3 = await spat(root, 'alex', ['rule', 'add', 'travel(home, school, 5). person(uncle, adult). person(aunt, helper). person(cousin, visitor). work_needed(nanny, 300). constraint(e_skipwalk, nanny, external). needs(x, y). person(nico, child). want(x, alex, home, 60).'], at(5));
   g.check('rule add девяти фактов → 0; ответ по каждому: travel(home, school, 5) НЕ ДЕЙСТВУЕТ (мир задаёт 20); uncle/aunt — учётная запись; cousin — в мир; nanny — за помощника не говорит; constraint(e_skipwalk…) — правка; needs — не edb; nico — уже в мире; want — переключатель',

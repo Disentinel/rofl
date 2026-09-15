@@ -452,13 +452,22 @@ k(...))` for a fact, the reason in `rule add`'s answer:
   cannot use it either — `retract <id>` needs the entry, `skip` needs the
   block, and every other reader's world withholds it.
 
-**`rule add` says what each fact did**: «в мир семьи: place(american_academy)»,
+**`rule add` says what each fact did**: «в мир семьи: place(zoo) «Зоопарк»» —
+and, for a place with no road from home, what the rules make of it: «дороги от
+дома нет: ребёнка везти туда некому (no_way, блок там даст код 3), у взрослого
+цепочка туда без запаса; задать: rule add 'travel(home, zoo, <минут>).'» —
 «travel(home, school, 5) — НЕ ДЕЙСТВУЕТ: мир уже задаёт travel(home, school,
 20)», «person(uncle, adult) — книга семьи не заводит: adult — учётная запись»,
 «work_needed(nanny, 300) — … за помощника (няня) книга семьи не говорит»,
 «person(nico, child) — уже в мире», «needs(x, y) — факт правил семьи, миру не
 виден (needs не edb)», «want(…) — миру не передаётся: переключатель одного
 вызова»; the four points' preview follows for a rule.
+
+Measured for the demo: `rule add 'place(zoo). ru_name(zoo, "Зоопарк").'` then
+`add trip sat 10:00-12:00 kit zoo` — code 2 «мир такого не знает» on 1a78e14 —
+is code 3 «ломает сб: no_way» (the place is known; nobody can drive a child
+to a place with no road), `add trip sun 10:00-12:00 alex zoo` is 0 (an adult's
+chain into it is silent), and «"Зоопарк"» in the where resolves by `ru_name`.
 
 **A place is three of those facts.** `spat place add [<atom>] "<Название>"
 [<минут> от дома]` (`место добавить …`) is sugar over `rule add 'place(a).
@@ -707,7 +716,7 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 39 scenarios in four
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 41 scenarios in four
   groups (18–21: places, the one-off «every», the author's own book at the
   door, the book extending the world) in 50–75 s; `examples/spat_edits/demo.ts` (groups 12–17); and
   `examples/spat/demo.ts`, 108 scenarios in eleven

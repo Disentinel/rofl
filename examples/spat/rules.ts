@@ -91,7 +91,15 @@ function worldSaid(f: Store['r'], cs: Clause[], had: Set<string>): string[] {
     const why = f.query(`not_extended(${rel}, W)`).rows[0]?.bindings.W;
     if (key === undefined) { out.push(why === undefined ? `${l} — факт правил семьи, миру не виден (${rel} не edb)` : `${l} — миру не передаётся: ${why === 'books' ? 'блоки недели идут через add/skip/move' : 'переключатель одного вызова'}; правилам семьи видно`); continue; }
     if (had.has(l)) { out.push(`${l} — уже в мире`); continue; }
-    if (f.holds(l)) { out.push(`в мир семьи: ${l}`); continue; }
+    if (f.holds(l)) {
+      // a place by its name, and what the rules do with one that has no road from home — measured 2026-09-15: no tt, so a
+      // child's run there is no_way (a block there is code 3) and an adult's chain into it has no slack, silently
+      const name = rel === 'place' ? f.query(`ru_name(${args[0]}, N)`).rows[0]?.bindings.N : undefined;
+      const home = table(f, 'base', 'B')[0]?.B;
+      const road = rel === 'place' && home !== undefined && f.query(`tt(${home}, ${args[0]}, M)`).rows.length === 0
+        ? `\n    дороги от дома нет: ребёнка везти туда некому (no_way, блок там даст код 3), у взрослого цепочка туда без запаса; задать: rule add 'travel(${home}, ${args[0]}, <минут>).'` : '';
+      out.push(`в мир семьи: ${l}${name === undefined ? '' : ` ${String(name).replace(/^"(.*)"$/, '«$1»')}`}${road}`); continue;
+    }
     const k = Number(key); const kargs = k === 0 ? args : args.slice(0, k);
     if (f.holds(`overrides[audit](${rel}, k(${kargs.join(', ')}))`)) {
       const rest = args.slice(k).map((_, i) => `V${i}`);

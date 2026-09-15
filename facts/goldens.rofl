@@ -118,8 +118,8 @@ golden_host("spat_edits", "8de392a3f722b4f2", 0, 94).
 golden_host("yak", "9f3bd0ccd881163f", 0, 208).
 golden_host("aka", "b270886e061521b6", 0, 341).
 golden_host("rip", "b6be7e21b8485b59", 0, 377).
+golden_host("spat_places", "be674463cf9003f1", 0, 52).
 golden_host("bleep", "d9403eaac329d7d6", 0, 183).
-golden_host("spat_places", "e1caa6f44d946b27", 0, 50).
 golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
 golden_host("jopa", "e9c3c46e0b70633c", 0, 311).
 golden_host("iffy", "ef87d1378307aad1", 0, 254).
