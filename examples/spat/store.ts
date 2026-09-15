@@ -108,8 +108,9 @@ export function operator(e0: Env, tenant: string, users: Clause[]): Env {
 export interface Book { book: string; user: string; where: string; }
 export const bookOf = (user: string): string => `p_${user}`;
 
-/** `opened`: every book the loader read, in order — a stranger's proof. */
-export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; week: string; opened: string[]; r: Rofl; }
+/** `opened`: every book the loader read, in order — a stranger's proof; `maybes`: the
+ *  hypothesis books (`m_`), registered in the volume and never given to the rules. */
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
@@ -170,7 +171,8 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   const opened: string[] = [];
   const e = resolve(e0, opened);
   const vol = openVolume(e.root, e.tenant);
-  const books = booksOf(vol).map((b) => ({ ...b, where: bookPath(vol, b.book) }));
+  const all = booksOf(vol).map((b) => ({ ...b, where: bookPath(vol, b.book) }));
+  const books = all.filter((b) => b.book.startsWith('p_')); const maybes = all.filter((b) => b.book.startsWith('m_'));
   const read = (ledger: string): Clause[] => {
     const p = bookPath(vol, ledger);
     if (!opened.includes(p)) opened.push(p);
@@ -203,7 +205,7 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   };
   setSource(source);
   const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
-  return { env: e, vol, books, open, week, opened, r };
+  return { env: e, vol, books, open, maybes, week, opened, r };
 }
 
 /** Base facts of one relation off the store's keys — no evaluation, so the week can be swapped before the first. */

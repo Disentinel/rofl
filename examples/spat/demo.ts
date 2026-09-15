@@ -479,6 +479,48 @@ async function recurring(): Promise<Group> {
   return g;
 }
 
+// ------------------- 14. a hypothesis is a book
+async function hypotheses(): Promise<Group> {
+  const g = new Group('14. a hypothesis is a book — maybe writes [m_<id>], show is unchanged, compare is two columns, apply is an ordinary edit');
+  const root = fresh();
+  const mid = (r: Res): string => /гипотеза (m_[0-9a-f]+)/.exec(r.out)?.[1] ?? '';
+  const a = await spat(root, 'robin', ['maybe', 'add greek mon 16:00-17:00 kit home']);
+  g.code('robin: maybe add greek mon', a, 0);
+  const mon = mid(a);
+  const bookRow = sql<{ user: string }[]>(root, 'SELECT user FROM books WHERE ledger = ?', mon);
+  g.check('книга m_ зарегистрирована за robin; факты под ledger=m_: e_add, edit_at, edit_via, for_week; в p_robin — ничего нового',
+    bookRow[0]?.user === 'robin' && sql<{ pred: string }[]>(root, 'SELECT pred FROM facts WHERE ledger = ? ORDER BY seq', mon).map((x) => x.pred).join(',') === 'e_add,edit_at,edit_via,for_week'
+    && sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'e_add' AND args LIKE '%\"greek\"%'")[0].n === 0, JSON.stringify(bookRow));
+  const b = await spat(root, 'robin', ['maybe', 'add greek wed 16:00-17:00 kit home'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
+  const wed = mid(b);
+  // PLANTED (C1): a hypothesis does not change the week — show is the same world
+  g.check('show mon: greek нет (гипотеза не в силе; правила m_ книг не читают)', b.code === 0 && !/greek/.test((await spat(root, 'robin', ['show', 'mon'])).out));
+  const c = await spat(root, 'robin', ['maybe', 'compare'], { SPAT_NOW: '2026-08-31T21:32:00+03:00' });
+  g.code('maybe compare', c, 0);
+  // PLANTED (C2): «пн или ср» is two columns, each with its day, what breaks, holes, slack, and why down to the axiom in its own book
+  g.check('две колонки: оба id в одной строке, день пн/ср, why доходит до e_add[m_…] [axiom]',
+    new RegExp(`${mon}\\s+${wed}`).test(c.out) && /день\s+пн\s+ср/.test(c.out) && new RegExp(`e_add\\[${mon}\\]\\(${mon},greek,mon.*\\[axiom\\]`).test(c.out) && new RegExp(`e_add\\[${wed}\\]`).test(c.out), c.out);
+  g.check('alex: своих гипотез нет (гипотеза — своя книга)', /гипотез нет/.test((await spat(root, 'alex', ['maybe', 'list'])).out));
+  const n0 = [count(root, 'p_robin'), count(root, wed)];
+  const ap = await spat(root, 'robin', ['maybe', 'apply', wed], { SPAT_NOW: '2026-08-31T21:33:00+03:00' });
+  g.code('robin: maybe apply <ср>', ap, 0);
+  const eid = /\((e_[0-9a-f]+)\)/.exec(ap.out)?.[1] ?? '';
+  // PLANTED (C3): apply is an entry in p_robin; the m_ book only grows, by its `applied` row
+  g.check('в p_robin +4 строки под новым e_-id; книга m_ +1 (applied); show ср: greek [правка e_…]',
+    count(root, 'p_robin') === n0[0] + 4 && count(root, wed) === n0[1] + 1
+    && sql<{ pred: string }[]>(root, 'SELECT pred FROM facts WHERE ledger = ? ORDER BY seq DESC LIMIT 1', wed)[0].pred === 'applied'
+    && new RegExp(`greek.*правка ${eid}`).test((await spat(root, 'robin', ['show', 'wed'])).out), `${n0} -> ${count(root, 'p_robin')},${count(root, wed)}`);
+  g.code('apply повторно', await spat(root, 'robin', ['maybe', 'apply', wed]), 2);
+  g.check('maybe list: ср — применена как e_…, пн — живая', new RegExp(`${wed}.*применена как ${eid}`).test((await spat(root, 'robin', ['maybe', 'list'])).out));
+  g.check('через двое суток: живых гипотез нет (TTL по edit_at)', /живых гипотез нет/.test((await spat(root, 'robin', ['maybe', 'compare'], { SPAT_NOW: '2026-09-02T22:00:00+03:00' })).out));
+  g.check('nanny: гипотеза о чужом ограничении пишется (0) и в compare — «без права»',
+    (await spat(root, 'nanny', ['maybe', 'move pickup wed 15:00'])).code === 0 && /ломает\s+без права/.test((await spat(root, 'nanny', ['maybe', 'compare'])).out));
+  const pl = await spat(root, 'robin', ['place', 'tutoring', '60', 'robin', 'home']);
+  g.code('robin: place tutoring 60 robin home', pl, 0);
+  g.check('три лучших, каждый с «ломает/дыр/запас» и готовой строкой maybe; отсев по cand_bad', /1\. .*ломает: .*дыр \d+ .*запас/.test(pl.out) && /3\. /.test(pl.out) && /spat maybe 'add tutoring/.test(pl.out) && /отсеяно правилами \(cand_bad\): \w+ \d+/.test(pl.out), pl.out);
+  return g;
+}
+
 // ------------------- 8. the rules materialise; every reason has Russian
 function reasons(): Group {
   const g = new Group('8. every rule of the store materialises; every reason has Russian (from a scan, not a list)');
@@ -500,7 +542,7 @@ function reasons(): Group {
 }
 
 const t0 = Date.now();
-const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate(), volume(), datedEdits(), recurring()]);
+const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate(), volume(), datedEdits(), recurring(), hypotheses()]);
 groups.push(reasons());
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);

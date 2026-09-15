@@ -994,7 +994,7 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
-const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll']);
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe']);
 
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
@@ -1029,6 +1029,8 @@ async function main(argv: string[]): Promise<void> {
     if (cmd === 'volume') { process.exitCode = (await import('./volume.ts')).run(e, rest); return; }
     const store = st.openStore(e, { weekOf, extra });
     if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
+    // over the store, `place` tries its best slots as hypotheses (maybe.ts)
+    if (cmd === 'place') { process.exitCode = (await import('./maybe.ts')).place(store, rest); return; }
     r = store.r;
   } else r = world(weekFile, { weekOf, extra });
 

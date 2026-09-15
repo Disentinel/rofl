@@ -46,7 +46,7 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
         at: b.from,
         text: `    ${hhmm(b.from)}–${hhmm(b.to)}  ${ru(b.ev).padEnd(18)} ${ru(b.place).padEnd(10)}`
           + ((withs.get(b.ev) ?? []).length > 0 ? ' + ' + withs.get(b.ev)!.map((x) => ru(x.Ch)).join(', ') : '')
-          + (b.c.startsWith('e_') ? `  [правка ${b.c}]` : ''),
+          + (/^[emh]_/.test(b.c) ? `  [правка ${b.c}]` : ''),
       }));
       for (const t of trips.filter((x) => x.day === d && x.who === who)) {
         lines.push({ at: t.dep, text: `    ${hhmm(t.dep)}–${hhmm(t.ret)}  ВЕЗЁТ ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait}м)` : ''}` });

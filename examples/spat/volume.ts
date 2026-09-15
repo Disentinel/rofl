@@ -29,8 +29,9 @@ export const volumeFile = (root: string, tenant: string): string => path.join(ro
 /** Every tenant with a volume under the root, by name — a name that is not an atom is not a tenant. */
 export const volumes = (root: string): string[] =>
   (fs.existsSync(root) ? fs.readdirSync(root) : []).filter((f) => f.endsWith('.sqlite')).map((f) => f.slice(0, -7)).filter((t) => ATOM.test(t)).sort();
-/** The perspective a ledger loads into: a person's book is its own, the world and the users are the main book. */
-export const perspOf = (ledger: string): string => (ledger.startsWith('p_') ? ledger : 'main');
+/** The perspective a ledger loads into: a person's book (`p_`), a hypothesis (`m_`) and the
+ *  household's rule book (`hh`) are their own; the world and the users are the main book. */
+export const perspOf = (ledger: string): string => (/^(p_|m_)/.test(ledger) || ledger === 'hh' ? ledger : 'main');
 
 const DDL = `
 CREATE TABLE facts(seq INTEGER PRIMARY KEY, ledger TEXT NOT NULL, pred TEXT NOT NULL, args TEXT NOT NULL,
@@ -97,11 +98,13 @@ const termsOf = (v: Volume, ledger: string, r: Row): Term[] => {
  *  column's and the terms are the row's — no text, so no line can say which
  *  book it is in. The whole book is read before one clause is returned. */
 export const readBook = (v: Volume, ledger: string): Clause[] => rowsOf(v, ledger).map((r) => ({
-  head: { rel: r.pred, persp: mka(perspOf(ledger)), perspExplicit: ledger.startsWith('p_'), args: termsOf(v, ledger, r), temporal: 'now' as const },
+  head: { rel: r.pred, persp: mka(perspOf(ledger)), perspExplicit: perspOf(ledger) !== 'main', args: termsOf(v, ledger, r), temporal: 'now' as const },
   body: [],
 }));
 
 export interface Trail { at: string; via: string; edit: string | null; }
+/** The trail of a book's first row — what was said when a hypothesis was written. */
+export const trailOf = (v: Volume, ledger: string): Trail | undefined => rowsOf(v, ledger)[0];
 /** ONE ENTRY, ONE TRANSACTION. The wall stands at the writer: every clause is
  *  a ground fact in THIS ledger's own perspective, or nothing is written.
  *  Two processes writing one book both land, whole, in seq order: BEGIN
@@ -152,7 +155,7 @@ export function fromText(file: string, ledger: string): Clause[] {
  *  line naming another book, or a rule, refuses the whole file: not one row. */
 export function load(v: Volume, file: string, trail: Trail, ledger?: string): { ledger: string; rows: number } {
   const name = path.basename(file).replace(/\.rofl$/, '');
-  const led = ledger ?? (name === 'world' || name === 'users' ? name : `p_${name}`);
+  const led = ledger ?? (name === 'world' || name === 'users' || perspOf(name) !== 'main' ? name : `p_${name}`);
   if (!ATOM.test(led)) throw new SpatError(2, `${file}: имя книги не атом: ${led}`);
   const cs = fromText(file, led);
   const user = led.startsWith('p_') ? led.slice(2) : led;

@@ -12,6 +12,7 @@ import { SpatError, bookOf, calDay, dateIn, editId, isoNow, must, myBook, operat
 import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
+import { run as maybe } from './maybe.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -161,22 +162,27 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
 }
 
 /** A fact of the caller's book, tagged as the book's — parsed once, tried and written as the same clauses. */
-const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.map((l) => l.replace(/^([a-z_]+)\(/, `$1[${book}](`)).join('\n'));
+export const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.map((l) => l.replace(/^([a-z_]+)\(/, `$1[${book}](`)).join('\n'));
+/** One entry's facts: the operation, its moment, its channel, its week — tagged as the book's. */
+export const entryClauses = (book: string, e: Edit, id: string, as: string, at: string, via: string, week: string): Clause[] =>
+  tagged(book, [...e.facts(id).map((l) => l.replace('$ME', as)), `edit_at(${id}, "${at}").`, `edit_via(${id}, ${via}).`, `for_week(${id}, ${week}).`]);
 
 /** `spat edit '<text>'`: the trial in a world with the candidate, then one
  *  transaction — or none. Codes 0, 2, 3, 4 as the contract lists them. */
 export function edit(s: Store, text: string): number {
-  const book = myBook(s);
   const e = parseEdit(s.r, text, s.env);
   const at = isoNow(s.env);
-  const id = editId(s.env.as, at, text.trim());
   // A DATED EDIT LANDS IN THE DATE'S OWN WEEK and is tried under it; a day
   // named by name lands in the week in force, as before.
   const week = e.on ? weekOf(s, e.on).week : s.week;
+  const id = editId(s.env.as, at, text.trim());
+  return commit(s, id, entryClauses(myBook(s).book, e, id, s.env.as, at, s.env.via, week), week, e, text);
+}
+/** THE CANDIDATE TRIED AND WRITTEN, or refused — `edit` and `maybe apply` end here. */
+export function commit(s: Store, id: string, clauses: Clause[], week: string, e: { summary: string; on?: Dated; every?: boolean }, text: string): number {
+  const book = myBook(s);
   const warn = stale(s);
   under(s, week);
-  const clauses = tagged(book.book, [...e.facts(id).map((l) => l.replace('$ME', s.env.as)),
-    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${week}).`]);
   const v = trial(s, id, clauses);
   if (v.noRight) {
     const o = v.owner!;
@@ -275,8 +281,11 @@ export function whoami(s: Store): number {
  *  edits recorded for W — never the same weekday of another week. A date
  *  with no `week_starts` is refused: the world does not have that week. */
 export function weekOf(s: Store, d: Dated): { day: string; ymd: string; week: string } {
-  if (d.which === 'on') { must(s.r.assert(`date_monday(on, "${d.monday}").`), 'date'); s.r.evaluate(); bust(s.r); }
-  const w = table(s.r, 'week_of', 'Which, W').find((x) => x.Which === d.which)?.W;
+  // today and tomorrow are the loader's `date_monday` rows and the rules' `week_of`; any
+  // other date is the same join over `week_starts`, read here rather than asserted and
+  // re-evaluated — one evaluation less per dated edit (measured: 0.5 s each)
+  const w = d.which === 'on' ? table(s.r, 'week_starts', 'W, M').find((x) => x.M.replace(/^"|"$/g, '') === d.monday)?.W
+    : table(s.r, 'week_of', 'Which, W').find((x) => x.Which === d.which)?.W;
   if (!w) throw new SpatError(2, `неделя с понедельника ${d.monday} не заведена: в мире нет week_starts(W, "${d.monday}") — ${d.ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
   return { day: dayAtom(s.r, d.n), ymd: d.ymd, week: w };
 }
@@ -316,6 +325,7 @@ export function run(s: Store, cmd: string, rest: string[]): number {
       console.log(renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
     }
     case 'ics': { process.stdout.write(renderIcs(s, rest.indexOf('--for') >= 0 ? rest[rest.indexOf('--for') + 1] : undefined)); return 0; }
+    case 'maybe': return maybe(s, rest);
     default: return bad(`глагол '${cmd}'`);
   }
 }
