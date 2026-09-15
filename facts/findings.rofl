@@ -6484,3 +6484,9 @@ finding_note(f_a_place_of_the_world_is_a_line_a_book_added, "MEASURED ON THE STA
 addressed_by(f_a_place_of_the_world_is_a_line_a_book_added, "examples/spat/places.ts").
 addressed_by(f_a_place_of_the_world_is_a_line_a_book_added, "examples/spat/access.rofl").
 addressed_by(f_a_place_of_the_world_is_a_line_a_book_added, "examples/spat/STORE.md").
+
+finding(f_skip_every_of_a_one_off_took_nothing_off_and_said_it_did, defect).
+recorded(f_skip_every_of_a_one_off_took_nothing_off_and_said_it_did, "2026-09-15").
+demands(f_skip_every_of_a_one_off_took_nothing_off_and_said_it_did, rule_and_test).
+finding_note(f_skip_every_of_a_one_off_took_nothing_off_and_said_it_did, "MEASURED BY S1e ON 1a78e14: `skip <block a book added this week> every <day>` was code 0 «отменён каждую неделю» and the block stood. block() resolves a name over the schedule as the human sees it — the typical week AND what a book added — so a one-off passed, e_unusual was written, and the recurring skip found no usual/7 to act on: a gate that said yes and did nothing. A one-off of THIS week is on no other week, so «every» has nothing to take off: code 2 naming the entry and the take-back («chess — разовая правка этой недели (пн [правка e_…]) … отзыв: skip chess <день>»), the book does not grow; a recurring line and a world block are as before (demo group 19: the same text on greek and on walk is still 0).").
+addressed_by(f_skip_every_of_a_one_off_took_nothing_off_and_said_it_did, "examples/spat/edits.ts").

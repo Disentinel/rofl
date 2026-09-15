@@ -534,6 +534,15 @@ Thursday (`breaks` 1→2) — a confirmed `warn` from the bot, a `needs_cover`
 row for the Friday guest (468→469), a `busy` row the census cannot see
 (gated) and the forged `may_edit[hh]`.
 
+## A defect of v4, from the stand
+
+- `skip <added block> every <day>` was code 0 «отменён каждую неделю» with no
+  effect: `block()` accepted a book's one-off, `e_unusual` was written, and
+  the recurring skip found no `usual` to act on. A one-off of this week is on
+  no other week, so it is code 2 naming the entry and the take-back («chess —
+  разовая правка этой недели (пн [правка e_…]) … отзыв: skip chess <день>»);
+  a recurring line and a world block are as before (demo group 19).
+
 ## What is deliberately not decided
 
 - **A helper in two households.** The users book keys a user to one tenant
@@ -623,8 +632,8 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 24 scenarios (group
-  18: places) in 40 s; `examples/spat_edits/demo.ts` (groups 12–17); and
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 28 scenarios in two
+  groups (18: places, 19: the one-off «every») in 45 s; `examples/spat_edits/demo.ts` (groups 12–17); and
   `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under

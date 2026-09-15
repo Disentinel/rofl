@@ -145,6 +145,9 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   if (verb === 'skip') {
     if (w[2] !== undefined && EVERY.test(w[2])) {
       const ev = block(w[1]); const sp = spec(w[3]);
+      // a block a book added THIS WEEK is not on any other week: «every» has nothing to take off — measured on 1a78e14,
+      // `skip <added> every <day>` was code 0 «отменён каждую неделю» and the block stood. The take-back is `skip <name> <day>`
+      if (!usuals.some((x) => x.E === ev)) throw new SpatError(2, `${ru(ev)} — разовая правка этой недели (${adds.filter((x) => x.E === ev).map((x) => `${ru(x.D)} [правка ${x.C}]`).join(', ')}), не повторяемый блок; отзыв: skip ${ev} <день>`);
       return done(4, { kind: 'skip', every: true, summary: `${ru(ev)} отменён каждую неделю: ${ru(sp)}`, facts: (id) => [`e_unusual(${id}, ${ev}, ${sp}).`] });
     }
     const d = w[2] === undefined ? 'all' : day(w[2]);

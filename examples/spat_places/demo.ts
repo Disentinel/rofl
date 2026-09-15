@@ -1,7 +1,8 @@
 // demo.ts — SPAT, 2026-09-15 evening: a place of the world is a line a book
-// added (group 18). A file of its own for the reason demolib.ts states — a
-// demo has 120 s in scripts/goldens.ts and spat_edits is at 97 — on the same
-// fixture through the same helpers.
+// added (group 18), and a one-off block has no «every» to take off (19). A
+// file of its own for the reason demolib.ts states — a demo has 120 s in
+// scripts/goldens.ts and spat_edits is at 97 — on the same fixture through
+// the same helpers.
 //
 //   node --experimental-strip-types examples/spat_places/demo.ts
 
@@ -77,11 +78,29 @@ async function places(): Promise<Group> {
   return g;
 }
 
+// ------------------- 19. a one-off block has no «every» to take off
+async function skipEvery(): Promise<Group> {
+  const g = new Group('19. skip <added block> every <day> — a one-off of this week is not on any other week: code 2 with the take-back, not «отменён каждую неделю» (measured on 1a78e14: code 0 and the block stood)');
+  const root = fresh();
+  const a = await spat(root, 'robin', ['edit', 'add chess mon 16:00-17:00 kit home'], at(0));
+  const A = idOf(a);
+  const n0 = count(root, 'p_robin');
+  const sk = await spat(root, 'robin', ['edit', 'skip chess every mon'], at(1));
+  g.check(`add chess mon, skip chess every mon → 2 «разовая правка этой недели (пн [правка ${A}]) … отзыв: skip chess <день>»; книга не выросла; chess стоит`,
+    a.code === 0 && sk.code === 2 && new RegExp(`chess — разовая правка этой недели \\(пн \\[правка ${A}\\]\\)`).test(sk.out) && /отзыв: skip chess <день>/.test(sk.out)
+    && count(root, 'p_robin') === n0 && /chess/.test((await spat(root, 'robin', ['show', 'mon'], at(2))).out), sk.out);
+  g.code('skip greek every tue (повторяемая строка фикстуры) — как было, 0', await spat(root, 'robin', ['edit', 'skip greek every tue'], at(3)), 0);
+  g.code('skip walk every mon (типовой блок мира) — как было, 0', await spat(root, 'robin', ['edit', 'skip walk every mon'], at(4)), 0);
+  const back = await spat(root, 'robin', ['edit', 'skip chess mon'], at(5));
+  g.check(`skip chess mon — отзыв «отозвана ${A} (chess пн)», show mon без chess`, back.code === 0 && new RegExp(`отозвана ${A} \\(chess пн\\)`).test(back.out) && !/chess/.test((await spat(root, 'robin', ['show', 'mon'], at(6))).out), back.out);
+  return g;
+}
+
 const t0 = Date.now();
-const todo = [places];
+const todo = [places, skipEvery];
 const groups: Group[] = new Array(todo.length);
 let next = 0;
-await Promise.all(Array.from({ length: 1 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));
+await Promise.all(Array.from({ length: 2 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);
 const fails = groups.reduce((a, g) => a + g.fails, 0);
